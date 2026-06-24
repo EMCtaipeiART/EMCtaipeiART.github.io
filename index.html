@@ -274,6 +274,8 @@
     .login-remember{display:flex!important;grid-template-columns:none!important;align-items:center;gap:8px;margin:8px 0 4px;color:#43524b;font-size:12px;font-weight:800}
     .google-login-box{display:grid;gap:10px;justify-items:center;margin:12px 0 8px;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}
     .google-login-hint{font-size:12px;color:#66736d;font-weight:800;text-align:center;line-height:1.5}
+    .google-oauth-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:12px!important;width:260px!important;min-height:44px!important;border-radius:999px!important;border:1px solid #cfd8dc!important;background:#fff!important;color:#344641!important;font-size:15px!important;font-weight:900!important;box-shadow:0 3px 10px rgba(16,24,40,.08)!important}
+    .google-oauth-mark{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;color:#fff;background:#4285f4;font-weight:950;font-family:Arial,sans-serif}
     .login-remember input{width:16px!important;height:16px!important;min-height:16px!important;margin:0;accent-color:var(--green)}
     .login-email-row{display:flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:#fff;overflow:hidden}
     .login-email-row input{border:0!important;border-radius:0!important;min-height:38px;box-shadow:none;flex:1 1 auto}
@@ -2015,6 +2017,7 @@ let requestBatchRows = [];
 let currentEditor = localStorage.getItem('designRequestEditorUser') || '';
 let currentEditorAccount = localStorage.getItem('designRequestEditorAccount') || '';
 let currentEditorToken = localStorage.getItem('designRequestEditorToken') || '';
+let googleCodeClient = null;
 const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
@@ -2617,6 +2620,18 @@ function googleLoginByJsonp(credential){
   });
   return jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,30000,'Google 登入驗證逾時。請確認 Apps Script 已重新部署最新版本，或按「測試連線」檢查權限。');
 }
+function googleCodeLoginByJsonp(code){
+  const payload=withSheetTarget({action:'googleCodeLogin',code});
+  const params=new URLSearchParams({
+    action:'googleCodeLogin',
+    payload:JSON.stringify(payload),
+    targetSpreadsheetId,
+    targetSheetName,
+    targetSheetId:String(targetSheetId),
+    ts:Date.now()
+  });
+  return jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,30000,'Google 登入驗證逾時。請確認 Apps Script 已重新部署最新版本，或按「測試連線」檢查權限。');
+}
 function postToSheetByFrame(payload){
   return new Promise((resolve,reject)=>{
     const callbackId = `sheetPost_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -3007,8 +3022,8 @@ function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPasswo
 function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
 function logoutEditor(){currentEditor=''; currentEditorAccount=''; currentEditorToken=''; localStorage.removeItem('designRequestEditorUser'); localStorage.removeItem('designRequestEditorAccount'); localStorage.removeItem('designRequestEditorToken'); selectedCaseIds.clear(); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出，編輯功能已鎖定')}
 function loginEditor(user,token,settings=null,account=''){currentEditor=user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; localStorage.setItem('designRequestEditorUser',user); localStorage.setItem('designRequestEditorAccount',currentEditorAccount); localStorage.setItem('designRequestEditorToken',currentEditorToken); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${user}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${user}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
-function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; if(!window.google?.accounts?.id){setLoginNote('Google 登入元件載入中，請稍候再試。'); if(!target.dataset.retrying){target.dataset.retrying='1'; setTimeout(()=>{target.dataset.retrying=''; initGoogleLogin()},600)} return} if(target.dataset.ready==='1')return; google.accounts.id.initialize({client_id:googleOAuthClientId,callback:handleGoogleCredential,auto_select:false,cancel_on_tap_outside:true}); google.accounts.id.renderButton(target,{theme:'outline',size:'large',shape:'pill',text:'signin_with',locale:'zh_TW',width:260}); target.dataset.ready='1'}
-async function handleGoogleCredential(response){const credential=response?.credential||''; if(!credential){setLoginNote('Google 沒有回傳登入憑證',true);return} setLoginNote('Google 登入驗證中...'); try{const data=await googleLoginByJsonp(credential); if(!data.ok)throw new Error(data.error||'Google 登入失敗'); if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試'); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); setLoginNote(`登入成功：${data.user}`); await new Promise(resolve=>setTimeout(resolve,320)); hideLoginModal(); loginEditor(data.user,data.token,data.settings,data.account||data.email||'')}catch(err){setLoginNote(`Google 登入失敗：${err.message}`,true); setSync(`Google 登入失敗：${err.message}`,true)}}
+function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; if(!window.google?.accounts?.oauth2){setLoginNote('Google 登入元件載入中，請稍候再試。'); if(!target.dataset.retrying){target.dataset.retrying='1'; setTimeout(()=>{target.dataset.retrying=''; initGoogleLogin()},600)} return} if(!googleCodeClient){googleCodeClient=google.accounts.oauth2.initCodeClient({client_id:googleOAuthClientId,scope:'openid email profile',ux_mode:'popup',callback:handleGoogleCode})} if(target.dataset.ready==='1')return; target.innerHTML='<button type="button" class="google-oauth-button"><span class="google-oauth-mark">G</span><span>使用 Google 帳號登入</span></button>'; target.querySelector('button')?.addEventListener('click',()=>{setLoginNote('正在開啟 Google 登入視窗...'); googleCodeClient.requestCode()}); target.dataset.ready='1'}
+async function handleGoogleCode(response){const code=response?.code||''; if(!code){setLoginNote(response?.error?`Google 登入失敗：${response.error}`:'Google 沒有回傳授權碼',true);return} setLoginNote('Google 登入驗證中...'); try{const data=await googleCodeLoginByJsonp(code); if(!data.ok)throw new Error(data.error||'Google 登入失敗'); if(data.action!=='googleCodeLogin')throw new Error('Apps Script 尚未回傳 Google OAuth 授權碼登入結果，請重新部署最新版本後再試'); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); setLoginNote(`登入成功：${data.user}`); await new Promise(resolve=>setTimeout(resolve,320)); hideLoginModal(); loginEditor(data.user,data.token,data.settings,data.account||data.email||'')}catch(err){setLoginNote(`Google 登入失敗：${err.message}`,true); setSync(`Google 登入失敗：${err.message}`,true)}}
 async function verifyEditorLogin(account,password,newPassword=''){
   if(!apiUrl) throw new Error('尚未設定 Apps Script 網址，無法登入');
   const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword});
