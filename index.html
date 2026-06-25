@@ -1130,6 +1130,23 @@
     .poster-marquee{
       display:none!important;
     }
+    .designer-poster{
+      width:auto!important;
+      max-width:min(calc(100vw - 40px),720px)!important;
+      height:400px!important;
+      aspect-ratio:auto!important;
+      overflow:hidden!important;
+      display:inline-block!important;
+    }
+    .designer-poster .poster-image{
+      width:auto!important;
+      height:400px!important;
+      max-width:min(calc(100vw - 40px),720px)!important;
+      display:block!important;
+      object-fit:contain!important;
+      object-position:center top!important;
+      background:#fff!important;
+    }
     .poster-speech{
       position:absolute;
       left:12px;
@@ -1169,34 +1186,30 @@
       display:flex;
       align-items:center;
       min-height:38px;
-      max-width:220px;
-      padding:8px 14px;
-      border-radius:999px;
-      background:rgba(255,255,255,.84);
+      max-width:240px;
+      padding:11px 17px 12px 20px;
+      border-radius:18px 20px 20px 16px;
+      background:transparent;
       color:#17211d;
       font-size:13px;
       font-weight:900;
       line-height:1.28;
-      box-shadow:0 10px 24px rgba(18,38,28,.18);
-      backdrop-filter:blur(7px);
-      -webkit-backdrop-filter:blur(7px);
+      filter:drop-shadow(0 12px 22px rgba(18,38,28,.18));
     }
-    .poster-speech-bubble::before{
-      content:"";
+    .poster-speech-svg{
       position:absolute;
-      left:-5px;
-      bottom:8px;
-      width:14px;
-      height:14px;
-      border-radius:3px;
-      background:rgba(255,255,255,.84);
-      transform:rotate(45deg);
+      inset:0;
+      width:100%;
+      height:100%;
+      overflow:visible;
+      pointer-events:none;
     }
     .poster-speech-bubble span{
       position:relative;
       z-index:1;
       display:block;
       white-space:normal;
+      text-shadow:0 1px 0 rgba(255,255,255,.75);
     }
     @keyframes posterSpeechWiggle{
       0%,100%{transform:translateY(0) scale(1) rotate(-.35deg)}
@@ -1204,10 +1217,19 @@
       70%{transform:translateY(1px) scale(1) rotate(-.15deg)}
     }
     @media(max-width:640px){
+      .designer-poster{
+        width:auto!important;
+        height:320px!important;
+        max-width:calc(100vw - 28px)!important;
+      }
+      .designer-poster .poster-image{
+        width:auto!important;
+        height:320px!important;
+        max-width:calc(100vw - 28px)!important;
+      }
       .poster-speech{left:10px;bottom:10px;gap:6px}
       .designer-poster .poster-speech-avatar{width:36px!important;height:36px!important;flex-basis:36px!important}
-      .poster-speech-bubble{max-width:170px;min-height:32px;padding:7px 11px;font-size:12px}
-      .poster-speech-bubble::before{left:-4px;bottom:7px;width:12px;height:12px}
+      .poster-speech-bubble{max-width:185px;min-height:34px;padding:9px 13px 10px 16px;font-size:12px}
     }
     .login-modal{
       z-index:1200!important;
@@ -2793,7 +2815,7 @@ function renderDesigners(){
     const fallback=designerFallbackImage(d.name);
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
-    return `<div class="designer-card" tabindex="0" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame">${rota}<img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span></div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" tabindex="0" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame">${rota}<img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span></div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><svg class="poster-speech-svg" viewBox="0 0 260 96" preserveAspectRatio="none" aria-hidden="true"><path d="M29 13H237C248 13 255 21 255 32V66C255 78 247 86 235 86H54C44 86 36 84 29 79L6 94L16 70C12 64 10 58 10 50V32C10 21 18 13 29 13Z" fill="rgba(255,255,255,.92)" stroke="rgba(207,216,220,.95)" stroke-width="2"/><path d="M32 18H233C243 18 250 25 250 35" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3" stroke-linecap="round"/></svg><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
 }
