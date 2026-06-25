@@ -1969,6 +1969,19 @@
       min-height:28px!important;
       margin-top:0!important;
     }
+    #recentPanel{
+      display:flex!important;
+      flex-direction:column!important;
+      overflow:hidden!important;
+    }
+    #recentPanel #modifyRecent{
+      flex:1 1 auto!important;
+      min-height:0!important;
+      overflow:auto!important;
+    }
+    #recentPanel .modify-toolbar{
+      flex:0 0 auto!important;
+    }
     .designer-help-trigger{
       display:block!important;
       max-width:none!important;
@@ -2648,6 +2661,7 @@ function renderDesigners(){
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     return `<div class="designer-card" tabindex="0" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame">${rota}<img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span></div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
+  requestAnimationFrame(syncTopPanelHeights);
 }
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
@@ -3039,7 +3053,19 @@ function accountInitial(name){const text=String(name||'').trim(); return (text.m
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
 function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn)closeAccountMenu(); if(split)split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); syncTimelineHeights(); adjustCaseSplitHeight()}
-function renderCollapsibleSections(){const map={designer:'#designerPanel',recent:'#recentPanel',request:'#requestPanel'}; Object.entries(map).forEach(([key,selector])=>{const panel=$(selector); if(!panel)return; const collapsed=Boolean(collapseSettings[key]); panel.classList.toggle('is-collapsed',collapsed); const button=panel.querySelector('[data-collapse-section]'); if(button){button.setAttribute('aria-expanded',collapsed?'false':'true'); button.title=collapsed?'展開':'收合'}}); requestAnimationFrame(()=>{syncModifyRecentRowHeights(); syncTimelineHeights(); adjustCaseSplitHeight()})}
+function syncTopPanelHeights(){
+  const designer=$('#designerPanel'), recent=$('#recentPanel');
+  if(!designer||!recent)return;
+  recent.style.removeProperty('height');
+  recent.style.removeProperty('max-height');
+  if(window.matchMedia('(max-width:900px)').matches||designer.classList.contains('is-collapsed')||recent.classList.contains('is-collapsed'))return;
+  const height=Math.round(designer.getBoundingClientRect().height);
+  if(height>0){
+    recent.style.setProperty('height',`${height}px`,'important');
+    recent.style.setProperty('max-height',`${height}px`,'important');
+  }
+}
+function renderCollapsibleSections(){const map={designer:'#designerPanel',recent:'#recentPanel',request:'#requestPanel'}; Object.entries(map).forEach(([key,selector])=>{const panel=$(selector); if(!panel)return; const collapsed=Boolean(collapseSettings[key]); panel.classList.toggle('is-collapsed',collapsed); const button=panel.querySelector('[data-collapse-section]'); if(button){button.setAttribute('aria-expanded',collapsed?'false':'true'); button.title=collapsed?'展開':'收合'}}); requestAnimationFrame(()=>{syncTopPanelHeights(); syncModifyRecentRowHeights(); syncTimelineHeights(); adjustCaseSplitHeight()})}
 function toggleSectionCollapsed(key){collapseSettings={...readCollapseSettingsForAccount(),...collapseSettings,[key]:!collapseSettings[key]}; renderCollapsibleSections(); saveCollapseSettingsForAccount()}
 function expandSectionForAction(key){if(!collapseSettings[key])return; collapseSettings={...collapseSettings,[key]:false}; renderCollapsibleSections()}
 function setOverviewLoading(){['#overviewYear','#overviewMonth','#overviewDesigner'].forEach(id=>{const el=$(id); if(el)el.innerHTML='<option>讀取中...</option>'})}
@@ -3199,7 +3225,7 @@ function renderModifyRecent(){
     table.style.tableLayout='fixed';
   }
   if(wrap)wrap.scrollLeft=0;
-  requestAnimationFrame(syncModifyRecentRowHeights);
+  requestAnimationFrame(()=>{syncModifyRecentRowHeights();syncTopPanelHeights()});
   renderModifyPagination(totalPages)
 }
 function renderOverviewOnly(){rows=rows.map(normalizeRow); renderOverviewControls(); renderStats(); renderDesigners()}
@@ -3699,7 +3725,7 @@ document.querySelectorAll('[data-collapse-section]').forEach(button=>button.addE
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
-window.addEventListener('resize',()=>{closeFieldPopover(); scheduleCaseSplitSync(); syncModifyRecentRowHeights()});
+window.addEventListener('resize',()=>{closeFieldPopover(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights()});
 document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault(); applyStatusFilter(card.dataset.status)}})
