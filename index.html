@@ -325,7 +325,7 @@
     html{background:var(--bg)}
     body{background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
     header,.wrap{width:min(100%,1380px)}
-    header{display:grid;gap:4px;padding:28px 28px 16px;text-align:left}
+    header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;padding:28px 28px 16px;text-align:left;align-items:start}
     header h1{font-size:26px!important;line-height:1.2;font-weight:850;color:#1f2a25}
     .subtitle{margin:0!important;color:#7b8580!important;font-size:13px;font-weight:650}
     .wrap{gap:16px;padding:0 28px 48px}
@@ -1802,9 +1802,11 @@
       color:#66736d;
     }
     .account-menu{
-      position:fixed;
-      right:28px;
-      top:24px;
+      position:relative;
+      grid-column:2;
+      grid-row:1 / span 2;
+      align-self:start;
+      justify-self:end;
       z-index:150;
       display:grid;
       justify-items:end;
@@ -1814,9 +1816,9 @@
       display:inline-flex!important;
       align-items:center!important;
       gap:12px!important;
-      min-height:58px!important;
+      min-height:50px!important;
       max-width:min(320px,calc(100vw - 36px))!important;
-      padding:8px 12px 8px 8px!important;
+      padding:6px 12px 6px 6px!important;
       border-radius:999px!important;
       background:#fff!important;
       color:#1f2937!important;
@@ -1828,16 +1830,23 @@
       flex:0 0 auto;
       display:grid;
       place-items:center;
-      width:44px;
-      height:44px;
+      width:38px;
+      height:38px;
       border-radius:999px;
       background:#252d3d;
       color:#fff;
       border:4px solid #fff;
       box-shadow:0 8px 20px rgba(17,24,39,.16);
-      font-size:20px;
+      font-size:17px;
       font-weight:950;
       line-height:1;
+    }
+    .account-avatar img{
+      width:100%;
+      height:100%;
+      display:block;
+      object-fit:cover;
+      border-radius:inherit;
     }
     .account-text{
       min-width:0;
@@ -1852,12 +1861,12 @@
       text-overflow:ellipsis;
       white-space:nowrap;
       color:#172033;
-      font-size:18px;
+      font-size:14px;
       font-weight:950;
     }
     .account-role{
       color:#64748b;
-      font-size:13px;
+      font-size:12px;
       font-weight:900;
     }
     .account-chevron{
@@ -1942,42 +1951,79 @@
     #requestPanel.is-collapsed #msg{
       display:none!important;
     }
+    .top{
+      align-items:start!important;
+    }
+    .designer-help-trigger{
+      display:block!important;
+      max-width:none!important;
+      width:100%!important;
+    }
+    #designerPanel .section-head{
+      width:100%!important;
+    }
+    .sheet-sync-card{
+      padding:0!important;
+      border:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      text-align:center!important;
+    }
+    .sheet-sync-card::before,
+    .sheet-sync-card h2,
+    .sheet-sync-card button{
+      display:none!important;
+    }
+    .sheet-sync-card .syncbar{
+      display:flex!important;
+      justify-content:center!important;
+      align-items:center!important;
+      min-height:24px!important;
+      margin:0!important;
+      padding:0!important;
+    }
+    .sheet-sync-card .syncstatus{
+      display:block!important;
+      width:100%!important;
+      text-align:center!important;
+      min-height:24px!important;
+      color:#66736d!important;
+    }
     @media(max-width:900px){
-      .account-menu{right:18px;top:14px}
-      header{padding-right:210px!important}
-      .account-trigger{min-height:50px!important;gap:9px!important}
-      .account-avatar{width:38px;height:38px;font-size:17px;border-width:3px}
-      .account-name{max-width:118px;font-size:15px}
+      header{grid-template-columns:minmax(0,1fr) auto}
+      .account-trigger{min-height:46px!important;gap:9px!important}
+      .account-avatar{width:34px;height:34px;font-size:15px;border-width:3px}
+      .account-name{max-width:118px;font-size:13px}
     }
     @media(max-width:640px){
-      .account-menu{right:12px;top:10px}
-      header{padding-right:148px!important}
+      header{grid-template-columns:1fr;gap:10px}
+      .account-menu{grid-column:1;grid-row:auto;justify-self:end}
       .account-trigger{padding:6px 9px 6px 6px!important;gap:7px!important}
       .account-avatar{width:34px;height:34px;font-size:15px}
-      .account-name{max-width:80px;font-size:14px}
+      .account-name{max-width:112px;font-size:13px}
       .account-role{font-size:11px}
       .account-dropdown{width:190px}
     }
   </style>
 </head>
 <body>
-<div class="account-menu" id="accountMenu">
-  <button type="button" class="account-trigger" id="loginBtn" aria-haspopup="menu" aria-expanded="false">
-    <span class="account-avatar" id="accountAvatar">登</span>
-    <span class="account-text">
-      <span class="account-name" id="accountName">登入</span>
-      <span class="account-role" id="accountRole">@emctaipei.com</span>
-    </span>
-    <svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-  <div class="account-dropdown" id="accountDropdown" hidden role="menu">
-    <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
-    <button type="button" id="accountLogout" role="menuitem">登出</button>
-  </div>
-</div>
 <header>
   <h1>設計需求系統</h1>
   <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊寄信 → Step4.寄送需求信件</p>
+  <div class="account-menu" id="accountMenu">
+    <button type="button" class="account-trigger" id="loginBtn" aria-haspopup="menu" aria-expanded="false">
+      <span class="account-avatar" id="accountAvatar">登</span>
+      <span class="account-text">
+        <span class="account-name" id="accountName">登入</span>
+        <span class="account-role" id="accountRole">@emctaipei.com</span>
+      </span>
+      <svg class="account-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="account-dropdown" id="accountDropdown" hidden role="menu">
+      <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
+      <button type="button" id="accountLogout" role="menuitem">登出</button>
+    </div>
+  </div>
 </header>
 <main class="wrap grid">
   <section class="grid top">
@@ -2097,7 +2143,7 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card sheet-sync-card">
     <h2>Google Sheet 串接</h2>
     <div class="grid syncbar">
       <button type="button" id="syncNow">立即同步</button>
@@ -2588,7 +2634,7 @@ function renderDesigners(){
     return `<div class="designer-card" tabindex="0" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame">${rota}<img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span></div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
 }
-async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()}}
+async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<div class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-name">${esc(name)}</div><div><div class="designer-skill-checks">${checks}</div></div><label>對話框<textarea name="quote-${esc(name)}" maxlength="80">${esc(d.quote||'')}</textarea></label></div>`}).join('')}
@@ -2975,7 +3021,9 @@ function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
-function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), nameEl=$('#accountName'), roleEl=$('#accountRole'), avatarEl=$('#accountAvatar'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; if(avatarEl)avatarEl.textContent=loggedIn?accountInitial(currentEditor):'登'; if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn)closeAccountMenu(); if(split)split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); syncTimelineHeights(); adjustCaseSplitHeight()}
+function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
+function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
+function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn)closeAccountMenu(); if(split)split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); syncTimelineHeights(); adjustCaseSplitHeight()}
 function renderCollapsibleSections(){const map={designer:'#designerPanel',recent:'#recentPanel',request:'#requestPanel'}; Object.entries(map).forEach(([key,selector])=>{const panel=$(selector); if(!panel)return; const collapsed=Boolean(collapseSettings[key]); panel.classList.toggle('is-collapsed',collapsed); const button=panel.querySelector('[data-collapse-section]'); if(button){button.setAttribute('aria-expanded',collapsed?'false':'true'); button.title=collapsed?'展開':'收合'}}); requestAnimationFrame(()=>{syncModifyRecentRowHeights(); syncTimelineHeights(); adjustCaseSplitHeight()})}
 function toggleSectionCollapsed(key){collapseSettings={...readCollapseSettingsForAccount(),...collapseSettings,[key]:!collapseSettings[key]}; renderCollapsibleSections(); saveCollapseSettingsForAccount()}
 function setOverviewLoading(){['#overviewYear','#overviewMonth','#overviewDesigner'].forEach(id=>{const el=$(id); if(el)el.innerHTML='<option>讀取中...</option>'})}
