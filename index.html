@@ -2620,6 +2620,10 @@ function designerEmailByName(name){
   const raw=String(name||'').trim();
   return raw?`${raw.replace(/\s+/g,'').toLowerCase()}${loginDomain}`:'';
 }
+function designerRecipientByName(name){
+  const raw=String(name||'').trim(), email=designerEmailByName(raw), display=designerRecipientNames[raw]||raw;
+  return display&&email?`${display} <${email}>`:email;
+}
 function designerGroupForMail(name){
   if(flatDesignerOptions.includes(name))return flatDesignerOptions;
   if(videoDesignerOptions.includes(name))return videoDesignerOptions;
@@ -2632,8 +2636,8 @@ function designerCcRecipients(row){
   const designer=String(row?.designer||'').trim(), toEmail=designerEmail(row).toLowerCase();
   return designerGroupForMail(designer)
     .filter(name=>name!==designer)
-    .map(name=>designerEmailByName(name))
-    .filter(email=>email&&email.toLowerCase()!==toEmail);
+    .map(name=>designerRecipientByName(name))
+    .filter(recipient=>recipient&&extractEmail(recipient).toLowerCase()!==toEmail);
 }
 function mailDraft(row){
   const designer=String(row.designer||'設計負責人').trim();
