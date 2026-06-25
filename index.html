@@ -2616,10 +2616,30 @@ function designerRecipient(row){
   const display=designerRecipientNames[raw]||raw||'';
   return display&&email?`${display} <${email}>`:email;
 }
+function designerEmailByName(name){
+  const raw=String(name||'').trim();
+  return raw?`${raw.replace(/\s+/g,'').toLowerCase()}${loginDomain}`:'';
+}
+function designerGroupForMail(name){
+  if(flatDesignerOptions.includes(name))return flatDesignerOptions;
+  if(videoDesignerOptions.includes(name))return videoDesignerOptions;
+  const profile=designerProfile(name), type=String(profile.designType||'').trim();
+  if(type==='平面')return flatDesignerOptions;
+  if(type==='影音')return videoDesignerOptions;
+  return [];
+}
+function designerCcRecipients(row){
+  const designer=String(row?.designer||'').trim(), toEmail=designerEmail(row).toLowerCase();
+  return designerGroupForMail(designer)
+    .filter(name=>name!==designer)
+    .map(name=>designerEmailByName(name))
+    .filter(email=>email&&email.toLowerCase()!==toEmail);
+}
 function mailDraft(row){
   const designer=String(row.designer||'設計負責人').trim();
   const mailSubject=subject(row);
   const to=designerRecipient(row);
+  const cc=designerCcRecipients(row);
   const bodyText=[
     `Hi ${designer},`,
     '',
@@ -2639,15 +2659,17 @@ function mailDraft(row){
     '　　　A. 參考範例',
     '　　　B. 客戶素材',
     '　　　C. CI規範',
-    '　　　D. 其他'
+    '　　　D. 其他',
+    '',
+    '*記得手動加入簽名檔'
   ].join('\n');
-  return {to,subject:mailSubject,bodyText};
+  return {to,cc,subject:mailSubject,bodyText};
 }
 function mailComposeUrl(row,provider){
-  const draft=mailDraft(row), to=encodeURIComponent(draft.to), subjectText=encodeURIComponent(draft.subject), body=encodeURIComponent(draft.bodyText);
-  if(provider==='gmail')return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subjectText}&body=${body}`;
-  if(provider==='outlook')return `https://outlook.office.com/mail/deeplink/compose?to=${to}&subject=${subjectText}&body=${body}`;
-  return `mailto:${to}?subject=${subjectText}&body=${body}`;
+  const draft=mailDraft(row), to=encodeURIComponent(draft.to), cc=encodeURIComponent(draft.cc.join(',')), subjectText=encodeURIComponent(draft.subject), body=encodeURIComponent(draft.bodyText), ccParam=cc?`&cc=${cc}`:'';
+  if(provider==='gmail')return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}${ccParam}&su=${subjectText}&body=${body}`;
+  if(provider==='outlook')return `https://outlook.office.com/mail/deeplink/compose?to=${to}${ccParam}&subject=${subjectText}&body=${body}`;
+  return `mailto:${to}?${cc?`cc=${cc}&`:''}subject=${subjectText}&body=${body}`;
 }
 function composeMail(id,provider){
   const row=rows.find(r=>String(r.id)===String(id));
@@ -2664,7 +2686,7 @@ function openMailComposerMenu(event,id){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row){setSync('找不到案件資料，無法開啟信件',true);return}
   const draft=mailDraft(row);
-  fieldPopover.innerHTML=`<h3>選擇寄信方式</h3><p class="small">收件人：${esc(draft.to||'未指定')}</p><div class="mail-option-list"><button type="button" onclick="composeMail('${jsArg(id)}','gmail')">Gmail 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','outlook')">Outlook 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','default')">預設郵件 App</button></div>`;
+  fieldPopover.innerHTML=`<h3>選擇寄信方式</h3><p class="small">收件人：${esc(draft.to||'未指定')}</p><p class="small">副本：${esc(draft.cc.join(', ')||'無')}</p><div class="mail-option-list"><button type="button" onclick="composeMail('${jsArg(id)}','gmail')">Gmail 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','outlook')">Outlook 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','default')">預設郵件 App</button></div>`;
   fieldPopover.hidden=false;
   positionFieldPopover(event.currentTarget);
 }
