@@ -1772,6 +1772,35 @@
       display:inline-flex!important;
       align-items:center!important;
     }
+    .submit-overlay{
+      z-index:900!important;
+      background:rgba(23,33,29,.46)!important;
+      backdrop-filter:blur(4px)!important;
+    }
+    .submit-card{
+      width:min(430px,calc(100vw - 40px))!important;
+      min-width:0!important;
+      padding:28px 30px 24px!important;
+      border:1px solid rgba(15,143,97,.18)!important;
+    }
+    .submit-message{
+      color:var(--green);
+      font-size:18px;
+      line-height:1.35;
+      font-weight:950;
+    }
+    .submit-quote{
+      min-height:44px;
+      margin-top:12px;
+      color:#43524b;
+      font-size:14px;
+      line-height:1.55;
+      font-weight:800;
+    }
+    .submit-overlay.done .submit-quote{
+      min-height:0;
+      color:#66736d;
+    }
   </style>
 </head>
 <body>
@@ -1901,7 +1930,7 @@
     </div>
   </section>
 </main>
-<div class="submit-overlay" id="submitOverlay" aria-live="polite"><div class="submit-card" id="submitOverlayText">送出中...</div></div>
+<div class="submit-overlay" id="submitOverlay" aria-live="polite"><div class="submit-card" id="submitOverlayText"><div class="submit-message">送出中...</div><div class="submit-quote"></div></div></div>
 <div class="field-popover" id="fieldPopover" hidden></div>
 <div class="login-modal" id="loginModal" hidden>
   <form class="login-card" id="loginForm">
@@ -1910,7 +1939,7 @@
     <div class="google-login-box">
       <div id="googleSignInButton"></div>
       <button type="button" class="google-fallback-login" id="googleFallbackLogin">按鈕沒反應？改用 Google 跳轉登入</button>
-      <div class="google-login-hint">請使用「設定」工作表帳號欄位中的 Google 信箱登入。</div>
+      <div class="google-login-hint">請使用 @emctaipei.com Google 信箱登入。</div>
     </div>
     <input id="loginUser" type="hidden">
     <input id="loginPassword" type="hidden">
@@ -2047,6 +2076,19 @@ const designerSettingsList = $('#designerSettingsList');
 const submitOverlay = $('#submitOverlay');
 const submitOverlayText = $('#submitOverlayText');
 const fieldPopover = $('#fieldPopover');
+const submitQuotes = [
+  '這不是做不好，是客戶還沒想好。',
+  '改一下很簡單。簡單的是嘴巴，不是滑鼠。',
+  '設計師每天都在做兩件事：找靈感，跟找昨天的版本。',
+  '客戶說：隨便發揮。五分鐘後：跟我想的不一樣。',
+  'Ctrl + Z 是我的心理醫生。',
+  '真正的設計流程：初稿 → 修改 → 再修改 → 再再修改 → 還是第一版最好。',
+  '不是沒有創意，是需求一直在進化。',
+  '設計沒有對錯，只有最後點頭的人。',
+  '我不是在發呆，我在等 Illustrator 回應。',
+  '今天不是加班，只是明天提早開始。'
+];
+let submitQuoteTimer = null;
 const ownerContactMap = new Map();
 const weekNames = ['日','一','二','三','四','五','六'];
 const statusOptions = ['未開始','執行中','過稿中','已完成','已取消','暫停中'];
@@ -2110,7 +2152,7 @@ const settingsColumnHeadersByKey = {
   client:'客戶別',
   project:'專案名稱',
   owner:'專案負責人',
-  type:'設計種類',
+  type:'組別',
   stage:'階段',
   qty:'數量',
   start:'開始',
@@ -2121,6 +2163,10 @@ const settingsColumnHeadersByKey = {
   modifications:'修改',
   subject:'主旨',
   actions:'操作'
+};
+const settingsColumnHeaderAliasesByKey = {
+  type:['設計種類','設計總類','設計項目'],
+  name:['名字','設計師名字']
 };
 const displaySettingsKey = 'designRequestDisplaySettingsV1';
 const settingsColumnKeyByHeader = Object.fromEntries(Object.entries(settingsColumnHeadersByKey).map(([key,header])=>[header,key]));
@@ -2178,7 +2224,8 @@ function writeCache(key,value){try{localStorage.setItem(key,JSON.stringify(value
 function readVisibleColumnsForAccount(){return readCache(accountStorageKey(visibleColumnsKey),readCache(visibleColumnsKey,null))||defaultVisibleColumns()}
 function readDisplaySettingsForAccount(){return {...{editEnabled:true,timelineEnabled:true},...(readCache(accountStorageKey(displaySettingsKey),{})||{})}}
 function validVisibleColumns(keys,{fallback=true}={}){const valid=columns.map(c=>c.key); if(!Array.isArray(keys))return fallback?defaultVisibleColumns():[]; const list=unique(keys.filter(key=>valid.includes(key))); return list.length||!fallback?list:defaultVisibleColumns()}
-function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>(flags[key]??flags[header])!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=flags[key]??flags[header]; return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
+function settingFlagValue(flags,key,header){return [key,header,...(settingsColumnHeaderAliasesByKey[key]||[])].map(name=>flags[name]).find(value=>value!==undefined)}
+function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>settingFlagValue(flags,key,header)!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=settingFlagValue(flags,key,header); return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
 function remoteDisplaySettings(settings){if(!settings)return null; const readFlag=(key,header)=>{const value=settings[key]??settings[header]??settings.displaySettings?.[key]??settings.displaySettings?.[header]; if(value===undefined||value===null||value==='')return null; const text=String(value).trim().toLowerCase(); if(value===false||text==='x'||text==='false'||text==='0'||text==='no'||text==='off')return false; return value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'}; const edit=readFlag('editEnabled','編輯'), timeline=readFlag('timelineEnabled','時間表'); return edit===null&&timeline===null?null:{editEnabled:edit??true,timelineEnabled:timeline??true}}
 function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl)return; sheetApi('saveUserSettings',{user:currentEditor,editorToken:currentEditorToken,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
 function saveVisibleColumnsForAccount(){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount()}
@@ -2272,9 +2319,20 @@ function designerFallbackImage(name){
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='42' fill='%23eef3f0'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' dominant-baseline='middle' font-size='54' font-family='Arial,sans-serif' font-weight='800' fill='%2366736d'%3E${label}%3C/text%3E%3C/svg%3E`;
 }
 function setSync(text,isError=false,ms=0){syncStatus.textContent=text;syncStatus.style.color=isError?'var(--red)':'var(--muted)'; if(ms){clearTimeout(setSync.timer); setSync.timer=setTimeout(()=>{if(syncStatus.textContent===text)syncStatus.textContent=''},ms)}}
-function showSubmitOverlay(text='送出中...'){submitOverlayText.textContent=text;submitOverlay.classList.remove('done');submitOverlay.classList.add('show')}
-function finishSubmitOverlay(text='已送出',refresh=false){submitOverlayText.textContent=text;submitOverlay.classList.add('done');setTimeout(()=>{submitOverlay.classList.remove('show','done'); if(refresh) loadSheet()},900)}
-function hideSubmitOverlay(){submitOverlay.classList.remove('show','done')}
+function renderSubmitOverlayText(text='送出中...',quote=''){
+  submitOverlayText.innerHTML=`<div class="submit-message">${esc(text)}</div><div class="submit-quote">${esc(quote)}</div>`;
+}
+function randomSubmitQuote(){return submitQuotes[Math.floor(Math.random()*submitQuotes.length)]||''}
+function startSubmitQuoteRotation(){
+  clearInterval(submitQuoteTimer);
+  const update=()=>renderSubmitOverlayText(submitOverlayText.querySelector('.submit-message')?.textContent||'送出中...',randomSubmitQuote());
+  update();
+  submitQuoteTimer=setInterval(update,3600);
+}
+function stopSubmitQuoteRotation(){clearInterval(submitQuoteTimer); submitQuoteTimer=null}
+function showSubmitOverlay(text='送出中...'){renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.remove('done');submitOverlay.classList.add('show');startSubmitQuoteRotation()}
+function finishSubmitOverlay(text='已送出',refresh=false){stopSubmitQuoteRotation();renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.add('done');setTimeout(()=>{submitOverlay.classList.remove('show','done'); if(refresh) loadSheet()},1100)}
+function hideSubmitOverlay(){stopSubmitQuoteRotation();submitOverlay.classList.remove('show','done')}
 function parseCsv(text){const rows=[];let row=[],cell='',q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(q&&c==='"'&&n==='"'){cell+='"';i++;continue}if(c==='"'){q=!q;continue}if(!q&&c===','){row.push(cell.trim());cell='';continue}if(!q&&(c==='\n'||c==='\r')){if(c==='\r'&&n==='\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell='';continue}cell+=c}row.push(cell.trim());if(row.some(Boolean))rows.push(row);return rows}
 function csvToObjects(text){const table=parseCsv(text), headers=table.shift()||[]; return table.map(row=>Object.fromEntries(headers.map((header,i)=>[header,row[i]||''])))}
 function unique(values){return [...new Set(values.map(v=>String(v||'').trim()).filter(Boolean))]}
@@ -2320,7 +2378,7 @@ function splitDetailHeader(header,types){const text=String(header||'').trim(), t
 function detailsToArray(value){return unique(String(value||'').split(/[、,，\n]/).map(v=>v.trim()))}
 function formatDetails(values){return detailsToArray(Array.isArray(values)?values.join(', '):values).join(', ')}
 function splitSkills(value){return unique(String(value||'').split(/[、,，]/).map(v=>v.trim()))}
-function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['設計師名字']||row.name||'').trim(),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
+function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['名字']||row['設計師名字']||row.name||'').trim(),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
 function mergeDesignerProfile(base={},patch={}){const merged={...base,...patch}; ['avatar','poster','designType','status'].forEach(key=>{if(!patch[key]&&base[key])merged[key]=base[key]}); if(!patch.rotation&&base.rotation)merged.rotation=base.rotation; if(!patch.skills?.length&&base.skills?.length)merged.skills=base.skills; return normalizeDesignerRow(merged)}
 function sortDesigners(list){return [...list].sort((a,b)=>(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hant'))}
 function rowInCurrentMonth(row){const date=new Date(row.start); if(!Number.isNaN(date.getTime()))return date.getFullYear()===new Date().getFullYear()&&date.getMonth()===new Date().getMonth(); return canonicalMonth(row.month)===currentMonth()}
@@ -2542,7 +2600,7 @@ async function fetchAccountSettings(account,user){
   const rows=gvizToObjects(await gvizJsonp(settingsGvizUrl));
   return rows.find(row=>{
     const rowAccount=loginAccountFull(row['帳號']||row.account||'');
-    const rowName=String(row['設計師名字']||row.name||'').trim().toLowerCase();
+    const rowName=String(row['名字']||row['設計師名字']||row.name||'').trim().toLowerCase();
     return (fullAccount&&rowAccount===fullAccount)||(localUser&&rowName===localUser);
   })||null;
 }
@@ -3155,7 +3213,7 @@ function clearRequestBatch(){
 async function submitSingleNewRequest(row){
   const draft=normalizeRow({...row,month:monthFromDate(row.start),status:'未開始',details:''});
   if(!apiUrl){draft.id=nextId(); return {row:draft}}
-  return await sheetApi('add',{row:formCreateRow(draft),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders});
+  return await sheetApi('add',{row:formCreateRow(draft),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
 }
 async function submitRequestBatchRows(){
   const current=currentRequestDraft();
@@ -3169,7 +3227,7 @@ async function submitRequestBatchRows(){
   if(submit)submit.disabled=true;
   try{
     const data=apiUrl
-      ? await sheetApi('batchAdd',{rows:rowsToSubmit.map(formCreateRow),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders})
+      ? await sheetApi('batchAdd',{rows:rowsToSubmit.map(formCreateRow),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})
       : {rows:[]};
     const fallbackBaseId=Number(nextId());
     const added=data.rows?.length
@@ -3312,7 +3370,7 @@ $('#requestForm').addEventListener('submit',async e=>{
     if(editId){
       r.id=editId;
       const rowToWrite=formWriteRow(r);
-      const data=apiUrl?await sheetApi('update',{id:editId,row:{id:editId,...rowToWrite},forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders}):{row:normalizeRow({...existingRow,...r,id:editId})};
+      const data=apiUrl?await sheetApi('update',{id:editId,row:{id:editId,...rowToWrite},forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders,editorToken:currentEditorToken}):{row:normalizeRow({...existingRow,...r,id:editId})};
       if(data.row){
         submittedRow=normalizeRow({...existingRow,...r,...data.row,id:editId});
         rows=rows.map(row=>String(row.id)===String(editId)?submittedRow:row);
@@ -3323,7 +3381,7 @@ $('#requestForm').addEventListener('submit',async e=>{
       setSync(apiUrl?'已更新 Google Sheet':'已更新本機資料');
     }else{
       if(!apiUrl){r.id=nextId()}
-      const data=apiUrl?await sheetApi('add',{row:formCreateRow(r),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders}):{row:r};
+      const data=apiUrl?await sheetApi('add',{row:formCreateRow(r),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken}):{row:r};
       submittedRow=normalizeRow(data.row||{...r,id:r.id||nextId(),status:r.status||'未開始'});
       rows.unshift(submittedRow);
       setSync(apiUrl?`已新增至 database 第 ${data.rowNumber || '新'} 列${submittedRow.id ? `，案件編號 ${submittedRow.id}` : ''}`:'已新增至本機資料');
