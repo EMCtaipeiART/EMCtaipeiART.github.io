@@ -581,6 +581,7 @@
     .field-popover .status-option.過稿中{background:#e0f2fe!important;color:#0369a1!important;border-color:#bae6fd!important}
     .field-popover .status-option.已完成{background:#dcfce7!important;color:#166534!important;border-color:#bbf7d0!important}
     .field-popover .status-option.已取消{background:#f1f3f2!important;color:#6b7280!important;border-color:#e5e7eb!important}
+    .field-popover .status-option.暫停中{background:#e2e8f0!important;color:#1f2937!important;border-color:#94a3b8!important}
     .field-popover .status-option.active{box-shadow:inset 0 0 0 2px rgba(31,41,55,.12)!important}
     .editable-field.detail-edit{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;max-width:130px!important;min-height:0!important;text-align:center!important;color:#344641!important}
     .case-table-wrap th,.case-table-wrap td{height:36px!important;padding-top:3px!important;padding-bottom:3px!important}
@@ -1360,23 +1361,21 @@
     }
     #casesSection .case-table-wrap th.sticky-subject,
     #casesSection .case-table-wrap td.sticky-subject{
-      position:sticky!important;
-      right:160px!important;
-      z-index:88!important;
-      background:#f6f8f7!important;
+      position:static!important;
+      right:auto!important;
+      z-index:auto!important;
       box-shadow:none!important;
     }
     #casesSection .case-table-wrap th.sticky-actions,
     #casesSection .case-table-wrap td.sticky-actions{
-      position:sticky!important;
-      right:0!important;
-      z-index:90!important;
-      background:#f6f8f7!important;
+      position:static!important;
+      right:auto!important;
+      z-index:auto!important;
       box-shadow:none!important;
     }
     #casesSection .case-table-wrap td.sticky-subject,
     #casesSection .case-table-wrap td.sticky-actions{
-      background:#fff!important;
+      background:inherit!important;
     }
     #casesSection .case-table-wrap th.sticky-subject,
     #casesSection .case-table-wrap th.sticky-actions{
@@ -1411,14 +1410,14 @@
     #casesSection .status.已取消,
     #casesSection .editable-status.已取消{background:#f3f4f6!important;color:#4b5563!important;border-color:#d1d5db!important}
     #casesSection .status.暫停中,
-    #casesSection .editable-status.暫停中{background:#ede9fe!important;color:#6d28d9!important;border-color:#ddd6fe!important}
+    #casesSection .editable-status.暫停中{background:#e2e8f0!important;color:#1f2937!important;border-color:#94a3b8!important}
     #casesSection .editable-status:hover{
       transform:translateY(-1px)!important;
       box-shadow:0 8px 16px rgba(15,23,42,.08)!important;
     }
     #casesSection .legend-dot.status-已取消{background:#9ca3af!important}
-    #casesSection .legend-dot.status-暫停中{background:#8b5cf6!important}
-    #casesSection .bar.status-暫停中{background:linear-gradient(90deg,#ede9fe,#8b5cf6)!important}
+    #casesSection .legend-dot.status-暫停中{background:#64748b!important}
+    #casesSection .bar.status-暫停中{background:linear-gradient(90deg,#cbd5e1,#64748b)!important}
     #modifyRecent{
       display:grid!important;
       grid-template-columns:152px minmax(0,1fr)!important;
