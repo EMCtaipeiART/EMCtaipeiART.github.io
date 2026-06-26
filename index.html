@@ -1494,13 +1494,24 @@
       padding-right:5px!important;
     }
     #modifyRecent .recent-subject button{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:5px!important;
       min-width:58px!important;
       min-height:30px!important;
-      padding:5px 10px!important;
-      border-radius:999px!important;
+      padding:5px 9px!important;
+      border-radius:9px!important;
       background:#dcfce7!important;
       color:#166534!important;
       border:1px solid #bbf7d0!important;
+    }
+    #modifyRecent .recent-subject button svg,
+    #modifyRecent .recent-actions .row-actions button svg{
+      width:14px!important;
+      height:14px!important;
+      flex:0 0 14px!important;
+      stroke:currentColor!important;
     }
     #modifyRecent .recent-actions .row-actions{
       gap:0!important;
@@ -1508,10 +1519,14 @@
       justify-content:center!important;
     }
     #modifyRecent .recent-actions .row-actions button{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:5px!important;
       min-width:58px!important;
       min-height:30px!important;
-      padding:5px 10px!important;
-      border-radius:999px!important;
+      padding:5px 9px!important;
+      border-radius:9px!important;
       background:#fff1c7!important;
       color:#8a5a00!important;
       border:1px solid #ffd88a!important;
@@ -2556,8 +2571,8 @@ const settingsColumnHeaderAliasesByKey = {
 const displaySettingsKey = 'designRequestDisplaySettingsV1';
 const settingsColumnKeyByHeader = Object.fromEntries(Object.entries(settingsColumnHeadersByKey).map(([key,header])=>[header,key]));
 const modifyFixedColumns = [
-  {label:'信件',width:76,className:'recent-subject',render:r=>mailAction(r)},
-  {label:'內容',width:76,className:'recent-actions',render:r=>editAction(r)}
+  {label:'信件',width:76,className:'recent-subject',render:r=>mailAction(r,{icon:true})},
+  {label:'內容',width:76,className:'recent-actions',render:r=>editAction(r,{icon:true})}
 ];
 const modifyRecentColumns = [
   {label:'案件編號',width:96,render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
@@ -3239,8 +3254,10 @@ function isEditableRow(r){const y=Number(rowYear(r)); return y>=Number(currentYe
 function canCaseEditRow(r){return isEditableRow(r)}
 function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
-function mailAction(row){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">發信</button>`:historyLock()}
-function editAction(row){return canCaseEditRow(row)?actionButtons(row):historyLock()}
+function mailIcon(){return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 7.5h15v9h-15z" stroke-width="1.8" stroke-linejoin="round"/><path d="m5 8 7 5 7-5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
+function editIcon(){return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19h4l9.5-9.5a2.1 2.1 0 0 0-3-3L6 16v3Z" stroke-width="1.8" stroke-linejoin="round"/><path d="m14 8 3 3" stroke-width="1.8" stroke-linecap="round"/></svg>'}
+function mailAction(row,{icon=false}={}){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`:historyLock()}
+function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButtons(row,{icon}):historyLock()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
@@ -3542,7 +3559,7 @@ function adjustCaseSplitHeight(){
   });
 }
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
-function actionButtons(r){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">編輯</button></div>`}
+function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
 function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const actions=canCaseEditRow(row)?`<div class="case-detail-actions"><button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">發信</button>${actionButtons(row)}</div>`:''; grid.innerHTML=caseDetailRows(row).map(item=>{const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}).join('')+actions; modal.hidden=false}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
