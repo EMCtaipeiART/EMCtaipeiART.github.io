@@ -43,8 +43,12 @@
     .top{grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);align-items:stretch}
     .designer-help{padding-bottom:18px}
     .designer-help-trigger{display:inline-block;max-width:calc(100% - 48px)}
+    .designer-title-wrap{display:flex;align-items:center;gap:8px;min-width:0}
+    .designer-help-info{display:grid!important;place-items:center!important;flex:0 0 22px!important;width:22px!important;height:22px!important;min-height:22px!important;padding:0!important;border-radius:999px!important;background:#fff!important;color:#53625b!important;border:1px solid #d8e0dc!important;box-shadow:0 4px 10px rgba(23,33,29,.06)!important;font-size:13px!important;font-weight:900!important;font-style:normal!important;line-height:1!important}
+    .designer-help-info:hover,.designer-help-info:focus-visible{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important;outline:none!important}
     .designer-help-popover{position:absolute;left:20px;top:58px;z-index:90;display:grid;gap:5px;width:min(430px,calc(100vw - 64px));padding:13px 15px;border:1px solid #cfe5d8;border-radius:12px;background:#fff;box-shadow:0 18px 36px rgba(18,38,28,.14);color:#43524b;font-size:13px;line-height:1.55;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
-    .designer-help-trigger:hover + .designer-help-popover,.designer-help-trigger:focus-within + .designer-help-popover{opacity:1;transform:translateY(0)}
+    .designer-help-trigger:hover + .designer-help-popover,.designer-help-trigger:focus-within + .designer-help-popover{opacity:0;transform:translateY(-4px)}
+    .designer-help-trigger:has(.designer-help-info:hover) + .designer-help-popover,.designer-help-trigger:has(.designer-help-info:focus-visible) + .designer-help-popover{opacity:1;transform:translateY(0)}
     .designer-roster{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
     .designer-card{padding:6px 4px 4px}
     .avatar-shell{position:relative;margin-inline:auto;width:min(100%,112px)}
@@ -427,8 +431,13 @@
     /* restore requested accents and table controls */
     .card{padding-top:24px!important;overflow:visible!important}
     .card::before{display:block!important;content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--green);border-radius:15px 15px 0 0}
-    .rotation-badge{background:var(--green)!important;color:#fff!important;border:0!important;box-shadow:0 8px 18px rgba(15,143,97,.18)!important}
-    .rotation-badge.is-backup{background:#43524b!important;color:#fff!important}
+    .rotation-badge{display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;gap:0!important;left:4px!important;top:-9px!important;right:auto!important;min-height:26px!important;height:26px!important;width:calc(100% - 8px)!important;max-width:104px!important;border-radius:999px!important;padding:4px 28px 4px 8px!important;background:var(--green)!important;color:#fff!important;border:0!important;box-shadow:0 8px 18px rgba(15,143,97,.18)!important;font-size:11px!important;font-weight:900!important;line-height:1!important;letter-spacing:0!important;white-space:nowrap!important;overflow:hidden!important}
+    .rotation-badge span:first-child{display:block!important;flex:0 0 auto!important;min-width:max-content!important;padding-right:4px!important;white-space:nowrap!important}
+    .rotation-badge:not(.is-backup):hover span:first-child,.rotation-badge:not(.is-backup):focus-visible span:first-child{animation:badgeMarquee 2.6s ease-in-out infinite}
+    .rotation-badge.is-backup{background:#43524b!important;color:#fff!important;width:auto!important;max-width:none!important;padding:4px 9px!important}
+    .rotation-badge-arrow{display:inline-grid!important;place-items:center!important;position:absolute!important;right:3px!important;top:50%!important;z-index:2!important;width:20px!important;height:20px!important;border-radius:999px!important;background:#fff!important;color:var(--green)!important;box-shadow:0 2px 5px rgba(15,23,42,.12)!important;flex:0 0 20px!important;transform:translateY(-50%)!important}
+    .rotation-badge-arrow svg{width:13px!important;height:13px!important;display:block!important;stroke:currentColor!important}
+    @keyframes badgeMarquee{0%,18%{transform:translateX(0)}72%,100%{transform:translateX(-38px)}}
     .tab-btn{background:#eef3f0!important;color:#6b7280!important;border-color:#dfe7e2!important;font-size:18px!important;font-weight:900!important;min-height:50px!important;box-shadow:none!important}
     .tab-btn[data-kind="new"].active{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
     .tab-btn[data-kind="modify"].active{background:#fff1c7!important;color:#8a5a00!important;border-color:#ffd88a!important}
@@ -527,6 +536,12 @@
       .designer-card{padding:2px!important}
       .avatar-shell{width:min(100%,82px)!important;margin-bottom:5px!important}
       .avatar-frame{width:82px!important;height:82px!important;border-radius:18px!important}
+      .rotation-badge{left:4px!important;top:-8px!important;width:74px!important;max-width:74px!important;height:22px!important;min-height:22px!important;padding:3px 22px 3px 6px!important;font-size:8.8px!important;gap:0!important}
+      .rotation-badge.is-backup{width:auto!important;max-width:none!important;padding:3px 6px!important}
+      .rotation-badge-arrow{width:17px!important;height:17px!important;flex-basis:17px!important}
+      .rotation-badge-arrow svg{width:11px!important;height:11px!important}
+      .rotation-badge:not(.is-backup):hover span:first-child,.rotation-badge:not(.is-backup):focus-visible span:first-child{animation:badgeMarqueeMobile 2.6s ease-in-out infinite}
+      @keyframes badgeMarqueeMobile{0%,18%{transform:translateX(0)}72%,100%{transform:translateX(-30px)}}
       .designer-name{font-size:11px!important;margin-bottom:4px!important;line-height:1.1!important}
       .designer-tags{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important;min-height:0!important}
       .designer-tags button{min-height:20px!important;padding:3px 2px!important;font-size:9.5px!important;line-height:1!important}
@@ -1493,7 +1508,8 @@
       padding-left:5px!important;
       padding-right:5px!important;
     }
-    #modifyRecent .recent-subject button{
+    #modifyRecent .recent-subject button,
+    #casesSection .case-table-wrap td.sticky-subject button{
       display:inline-flex!important;
       align-items:center!important;
       justify-content:center!important;
@@ -1507,18 +1523,23 @@
       border:1px solid #bbf7d0!important;
     }
     #modifyRecent .recent-subject button svg,
-    #modifyRecent .recent-actions .row-actions button svg{
+    #modifyRecent .recent-actions .row-actions button svg,
+    #casesSection .case-table-wrap td.sticky-subject button svg,
+    #casesSection .case-table-wrap td.sticky-actions .row-actions button svg{
       width:14px!important;
       height:14px!important;
       flex:0 0 14px!important;
-      stroke:currentColor!important;
+      fill:currentColor!important;
+      stroke:none!important;
     }
-    #modifyRecent .recent-actions .row-actions{
+    #modifyRecent .recent-actions .row-actions,
+    #casesSection .case-table-wrap td.sticky-actions .row-actions{
       gap:0!important;
       min-width:0!important;
       justify-content:center!important;
     }
-    #modifyRecent .recent-actions .row-actions button{
+    #modifyRecent .recent-actions .row-actions button,
+    #casesSection .case-table-wrap td.sticky-actions .row-actions button{
       display:inline-flex!important;
       align-items:center!important;
       justify-content:center!important;
@@ -2179,7 +2200,7 @@
     <div class="card help designer-help collapsible-card" id="designerPanel">
       <div class="designer-help-trigger">
         <div class="section-head">
-          <h2>設計師專長與案件分配</h2>
+          <div class="designer-title-wrap"><h2>設計師專長與案件分配</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button></div>
           <button type="button" class="collapse-toggle" data-collapse-section="designer" title="收合/展開設計師專長與案件分配" aria-label="收合/展開設計師專長與案件分配"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
         </div>
         <p class="help-steps">請依案件需求選擇適合的設計負責人。</p>
@@ -2189,7 +2210,7 @@
         <span>• 點擊設計師下方技能標籤，可自動帶入推薦的設計類型與階段。</span>
         <span>• 綠色表示目前案件量正常，可優先安排。</span>
         <span>• 紅色表示目前案件量較高，建議評估時程後再分派。</span>
-        <span>• 「新專案找我」代表目前輪值設計師，適合新案件優先分配。</span>
+        <span>• 「新專案填單」代表目前輪值設計師，適合新案件優先分配。</span>
         <span>• 滑鼠移至頭像可查看設計師個人說明與專長。</span>
         <span>若不確定指派對象，可依技能標籤選擇系統推薦之設計師。</span>
       </div>
@@ -2541,8 +2562,8 @@ const columns = [
   {key:'status',label:'狀態',sort:'text',render:r=>isUpdatingCell(r.id,'status')?'<span class="status updating-cell">更新中....</span>':(canListEditRow(r)?`<button type="button" class="status editable-status ${esc(r.status)}" onclick="openStatusEditor(event,'${jsArg(r.id)}')">${esc(statusLabel(r.status))}</button>`:`<span class="status ${esc(r.status)}">${esc(statusLabel(r.status))}</span>`)},
   {key:'details',label:'項目細節',sort:'text',render:r=>isUpdatingCell(r.id,'details')?'<span class="editable-field detail-edit updating-cell">更新中....</span>':(canListEditRow(r)?`<button type="button" class="editable-field detail-edit" onclick="openDetailsEditor(event,'${jsArg(r.id)}')" title="${esc(r.details||'選擇項目細節')}">${esc(r.details||'選擇')}</button>`:`<span class="detail-edit detail-static" title="${esc(r.details||'')}">${esc(r.details||'-')}</span>`)},
   {key:'modifications',label:'修改',sort:'number',render:r=>revisionControl(r)},
-  {key:'subject',label:'信件',className:'sticky-subject',sort:'text',render:r=>mailAction(r)},
-  {key:'actions',label:'內容',className:'sticky-actions',render:r=>editAction(r)}
+  {key:'subject',label:'信件',className:'sticky-subject',sort:'text',render:r=>mailAction(r,{icon:true})},
+  {key:'actions',label:'內容',className:'sticky-actions',render:r=>editAction(r,{icon:true})}
 ];
 const settingsColumnHeadersByKey = {
   id:'案件編號',
@@ -2825,6 +2846,8 @@ function sortDesigners(list){return [...list].sort((a,b)=>(a.rotation-b.rotation
 function rowInCurrentMonth(row){const date=new Date(row.start); if(!Number.isNaN(date.getTime()))return date.getFullYear()===new Date().getFullYear()&&date.getMonth()===new Date().getMonth(); return canonicalMonth(row.month)===currentMonth()}
 function designerActiveCount(name){return rows.filter(row=>row.designer===name&&['未開始','執行中'].includes(row.status)&&rowInCurrentMonth(row)).length}
 function computedDesignerStatus(name,fallback='普通'){const count=designerActiveCount(name); return count>5?'忙碌':(count>=0?'普通':fallback)}
+function rotationBadgeArrow(){return '<span class="rotation-badge-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v12" stroke-width="2.4" stroke-linecap="round"/><path d="m7 12 5 5 5-5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'}
+function designerGroupLabel(d){return normalizeDesignGroup(d.designType)||fallbackDesignGroupForUser(d.name)||'設計'}
 function renderDesigners(){
   if(!designerRoster)return;
   const list=sortDesigners(designers).filter(d=>d.name);
@@ -2832,9 +2855,10 @@ function renderDesigners(){
     const status=computedDesignerStatus(d.name,d.status);
     const count=designerActiveCount(d.name);
     const busy=status==='忙碌';
+    const groupLabel=designerGroupLabel(d);
     const rota=d.rotation===1&&newProjectDesignerOptions.includes(d.name)
-      ? `<button type="button" class="rotation-badge" data-new-project-designer="${esc(d.name)}">新專案請找我</button>`
-      : (d.rotation===1?'<span class="rotation-badge">新專案請找我</span>':(d.rotation===2?'<span class="rotation-badge is-backup">候補</span>':''));
+      ? `<button type="button" class="rotation-badge" data-new-project-designer="${esc(d.name)}"><span>${esc(groupLabel)}新專案填單</span>${rotationBadgeArrow()}</button>`
+      : (d.rotation===1?`<span class="rotation-badge"><span>${esc(groupLabel)}新專案填單</span>${rotationBadgeArrow()}</span>`:(d.rotation===2?`<span class="rotation-badge is-backup"><span>${esc(groupLabel)}候補</span></span>`:''));
     const skills=(d.skills.length?d.skills:[]).map(skill=>`<button type="button" data-designer="${esc(d.name)}" data-skill="${esc(skill)}">${esc(skill)}</button>`).join('');
     const quote=d.quote||`${d.name} 目前可協助設計需求。`;
     const fallback=designerFallbackImage(d.name);
@@ -3254,8 +3278,8 @@ function isEditableRow(r){const y=Number(rowYear(r)); return y>=Number(currentYe
 function canCaseEditRow(r){return isEditableRow(r)}
 function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
-function mailIcon(){return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 7.5h15v9h-15z" stroke-width="1.8" stroke-linejoin="round"/><path d="m5 8 7 5 7-5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'}
-function editIcon(){return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19h4l9.5-9.5a2.1 2.1 0 0 0-3-3L6 16v3Z" stroke-width="1.8" stroke-linejoin="round"/><path d="m14 8 3 3" stroke-width="1.8" stroke-linecap="round"/></svg>'}
+function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
+function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
 function mailAction(row,{icon=false}={}){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`:historyLock()}
 function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButtons(row,{icon}):historyLock()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
