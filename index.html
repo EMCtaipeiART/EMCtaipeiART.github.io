@@ -2143,7 +2143,7 @@
 <body>
 <header>
   <h1>設計需求系統</h1>
-  <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊寄信 → Step4.寄送需求信件</p>
+  <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊發信 → Step4.寄送需求信件</p>
   <div class="account-menu" id="accountMenu">
     <button type="button" class="account-trigger" id="loginBtn" aria-haspopup="menu" aria-expanded="false">
       <span class="account-avatar" id="accountAvatar">登</span>
@@ -2339,7 +2339,7 @@
     <p><b>Step 2｜新增案件</b><br>確認資料無誤後，點擊【新增案件】。</p>
     <p><b>Step 3｜系統自動產生案件編號</b><br>送出後系統將自動建立案件編號，並產生信件主旨：<br>【案件編號8碼】客戶別_專案名稱</p>
     <p><b>Step 4｜確認案件資料</b><br>系統將顯示於案件列表，可立即確認是否新增成功。</p>
-    <p><b>Step 5｜寄送需求信件</b><br>點擊主旨旁【寄信】按鈕，選擇 Gmail、Outlook 或預設郵件 App。</p>
+    <p><b>Step 5｜寄送需求信件</b><br>點擊信件旁【發信】按鈕，選擇 Gmail、Outlook 或預設郵件 App。</p>
     <p><b>Step 6｜確認信件內容</b><br>系統會帶入主旨、收件人與需求內文，確認後寄出即完成需求建立。</p>
     <p class="login-note">※ 如需追加修改內容，請至【設計修改需求】進行案件更新與修改紀錄。</p>
     <div class="login-actions"><button type="button" class="secondary" id="requestGuideClose">關閉</button></div>
@@ -2526,8 +2526,8 @@ const columns = [
   {key:'status',label:'狀態',sort:'text',render:r=>isUpdatingCell(r.id,'status')?'<span class="status updating-cell">更新中....</span>':(canListEditRow(r)?`<button type="button" class="status editable-status ${esc(r.status)}" onclick="openStatusEditor(event,'${jsArg(r.id)}')">${esc(statusLabel(r.status))}</button>`:`<span class="status ${esc(r.status)}">${esc(statusLabel(r.status))}</span>`)},
   {key:'details',label:'項目細節',sort:'text',render:r=>isUpdatingCell(r.id,'details')?'<span class="editable-field detail-edit updating-cell">更新中....</span>':(canListEditRow(r)?`<button type="button" class="editable-field detail-edit" onclick="openDetailsEditor(event,'${jsArg(r.id)}')" title="${esc(r.details||'選擇項目細節')}">${esc(r.details||'選擇')}</button>`:`<span class="detail-edit detail-static" title="${esc(r.details||'')}">${esc(r.details||'-')}</span>`)},
   {key:'modifications',label:'修改',sort:'number',render:r=>revisionControl(r)},
-  {key:'subject',label:'內容',className:'sticky-subject',sort:'text',render:r=>`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(r.id)}')">寄信</button>`},
-  {key:'actions',label:'修改',className:'sticky-actions',render:r=>canCaseEditRow(r)?actionButtons(r,false):`<span class="history-lock">歷史資料</span>`}
+  {key:'subject',label:'信件',className:'sticky-subject',sort:'text',render:r=>mailAction(r)},
+  {key:'actions',label:'內容',className:'sticky-actions',render:r=>editAction(r)}
 ];
 const settingsColumnHeadersByKey = {
   id:'案件編號',
@@ -2544,20 +2544,20 @@ const settingsColumnHeadersByKey = {
   status:'狀態',
   details:'項目細節',
   modifications:'修改',
-  subject:'內容',
-  actions:'修改'
+  subject:'信件',
+  actions:'內容'
 };
 const settingsColumnHeaderAliasesByKey = {
   type:['設計種類','設計總類','設計項目'],
-  subject:['主旨'],
-  actions:['操作'],
+  subject:['主旨','寄信'],
+  actions:['操作','編輯'],
   name:['名字','設計師名字']
 };
 const displaySettingsKey = 'designRequestDisplaySettingsV1';
 const settingsColumnKeyByHeader = Object.fromEntries(Object.entries(settingsColumnHeadersByKey).map(([key,header])=>[header,key]));
 const modifyFixedColumns = [
-  {label:'內容',width:76,className:'recent-subject',render:r=>`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(r.id)}')">寄信</button>`},
-  {label:'修改',width:76,className:'recent-actions',render:r=>canCaseEditRow(r)?actionButtons(r,true):`<span class="history-lock">歷史資料</span>`}
+  {label:'信件',width:76,className:'recent-subject',render:r=>mailAction(r)},
+  {label:'內容',width:76,className:'recent-actions',render:r=>editAction(r)}
 ];
 const modifyRecentColumns = [
   {label:'案件編號',width:96,render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
@@ -2708,6 +2708,7 @@ function mailComposeUrl(row,provider){
 function composeMail(id,provider){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row){setSync('找不到案件資料，無法開啟信件',true);return}
+  if(!isEditableRow(row)){setSync('歷史資料不提供發信',true);return}
   closeFieldPopover();
   const url=mailComposeUrl(row,provider);
   if(provider==='default')window.location.href=url;
@@ -2719,8 +2720,9 @@ function openMailComposerMenu(event,id){
   event.stopPropagation();
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row){setSync('找不到案件資料，無法開啟信件',true);return}
+  if(!isEditableRow(row)){setSync('歷史資料不提供發信',true);return}
   const draft=mailDraft(row);
-  fieldPopover.innerHTML=`<h3>選擇寄信方式</h3><p class="small">收件人：${esc(draft.to||'未指定')}</p><p class="small">副本：${esc(draft.cc.join(', ')||'無')}</p><div class="mail-option-list"><button type="button" onclick="composeMail('${jsArg(id)}','gmail')">Gmail 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','outlook')">Outlook 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','default')">預設郵件 App</button></div>`;
+  fieldPopover.innerHTML=`<h3>選擇發信方式</h3><p class="small">收件人：${esc(draft.to||'未指定')}</p><p class="small">副本：${esc(draft.cc.join(', ')||'無')}</p><div class="mail-option-list"><button type="button" onclick="composeMail('${jsArg(id)}','gmail')">Gmail 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','outlook')">Outlook 撰寫</button><button type="button" onclick="composeMail('${jsArg(id)}','default')">預設郵件 App</button></div>`;
   fieldPopover.hidden=false;
   positionFieldPopover(event.currentTarget);
 }
@@ -3236,6 +3238,9 @@ function isLoggedIn(){return Boolean(currentEditor&&currentEditorToken)}
 function isEditableRow(r){const y=Number(rowYear(r)); return y>=Number(currentYear())}
 function canCaseEditRow(r){return isEditableRow(r)}
 function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
+function historyLock(){return '<span class="history-lock">歷史資料</span>'}
+function mailAction(row){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">發信</button>`:historyLock()}
+function editAction(row){return canCaseEditRow(row)?actionButtons(row):historyLock()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
@@ -3282,7 +3287,7 @@ function toggleVisibleSelection(checked){if(!isDesignerLogin()){setSync('此功�
 function sameDetailGroup(list){return new Set(list.map(row=>`${row.type}｜${row.stage}`)).size<=1}
 function renderBatchControls(){const selected=selectedCaseRows(), designLogin=isDesignerLogin(), bar=$('#batchBar'), tools=$('#batchTools'), count=$('#batchCount'), details=$('#batchDetails'), apply=$('#batchApply'), clear=$('#batchClear'); if(bar)bar.hidden=!designLogin||!selected.length; if(tools&&(!designLogin||!selected.length))tools.hidden=true; if(count)count.textContent=`已選 ${selected.length} 筆`; if(apply)apply.disabled=!selected.length||!designLogin; if(clear)clear.disabled=!selected.length; if(!details)return; const old=details.value; if(!selected.length){details.innerHTML='<option value="">項目細節不變</option>'; details.disabled=false; return} if(!sameDetailGroup(selected)){details.innerHTML='<option value="">項目細節需同類型</option>'; details.disabled=false; return} const options=unique(selected.flatMap(row=>detailOptionsForRow(row))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')); details.innerHTML='<option value="">項目細節不變</option>'+options.map(option=>`<option value="${esc(option)}">${esc(option)}</option>`).join(''); if(options.includes(old))details.value=old}
 function renderOwnerOptions(){ownerContactMap.clear(); const names=[]; rows.forEach(r=>{const name=ownerDisplay(r.owner), email=r.ownerEmail||extractEmail(r.owner); if(name){names.push(name); if(email)ownerContactMap.set(name,email)} if(email){names.push(email); ownerContactMap.set(email,email)}}); ownerList.innerHTML=unique(names).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')).map(name=>`<option value="${esc(name)}"></option>`).join('')}
-function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=columns.map(c=>`<label class="column-toggle"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=`<label class="column-toggle"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`, timelineControl=designLogin?`<label class="column-toggle"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{visibleColumns=[...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
+function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=columns.map(c=>`<label class="column-toggle"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="column-toggle"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="column-toggle"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{visibleColumns=[...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
 function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const allVisible=selectable.length&&selectable.every(row=>selectedCaseIds.has(String(row.id)));
   const someVisible=selectable.some(row=>selectedCaseIds.has(String(row.id)));
@@ -3538,7 +3543,7 @@ function adjustCaseSplitHeight(){
 }
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
 function actionButtons(r){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">編輯</button></div>`}
-function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const actions=canCaseEditRow(row)?`<div class="case-detail-actions"><button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">寄信</button>${actionButtons(row)}</div>`:''; grid.innerHTML=caseDetailRows(row).map(item=>{const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}).join('')+actions; modal.hidden=false}
+function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const actions=canCaseEditRow(row)?`<div class="case-detail-actions"><button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">發信</button>${actionButtons(row)}</div>`:''; grid.innerHTML=caseDetailRows(row).map(item=>{const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}).join('')+actions; modal.hidden=false}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML=''}
@@ -3945,8 +3950,8 @@ $('#requestMailGuideModal')?.addEventListener('click',event=>{if(event.target.id
 $('#q').value=accountFilterSettings.q||'';
 $('#q').addEventListener('input',()=>{saveFilterSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount(); render()});
 $('#reset').onclick=()=>{$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; closeFilters()};
-$('#showAllColumns').onclick=()=>{visibleColumns=columns.map(c=>c.key); displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
-$('#hideAllColumns').onclick=()=>{visibleColumns=[]; displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
+$('#showAllColumns').onclick=()=>{visibleColumns=columns.map(c=>c.key); if(isDesignerLogin())displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
+$('#hideAllColumns').onclick=()=>{visibleColumns=[]; if(isDesignerLogin())displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#columnToggle').onclick=()=>{$('#columnPopover').hidden=!$('#columnPopover').hidden};
 $('#requestBatchToggle')?.addEventListener('click',()=>{if(editingId){ownerTouchedByUser=false; $('#requestForm').reset(); populateDesignSelects(); setEditMode(null); applyCurrentUserProfile(currentUserProfile); flashMsg('已取消修改需求'); return} if(requestBatchMode){clearRequestBatch(); return} requestBatchMode=!requestBatchMode; if(requestBatchMode&&!requestBatchRows.length)requestBatchRows.push(currentRequestDraft()); updateRequestMode(); flashMsg(requestBatchMode?'已開啟批次新增，可直接編輯下方每筆欄位，或按「往下套用」新增下一筆。':'已關閉批次新增')});
 $('#batchEditToggle').onclick=()=>{$('#batchTools').hidden=!$('#batchTools').hidden; renderBatchControls()};
