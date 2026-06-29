@@ -1267,27 +1267,33 @@
       width:14px;
       height:14px;
       background:#fff;
-      clip-path:polygon(0 100%,100% 18%,100% 100%);
+      clip-path:polygon(0 100%,100% 0,100% 100%);
       transform-origin:left bottom;
       z-index:-1;
     }
     .poster-bubble-text{
       position:relative;
       z-index:2;
-      display:flex;
-      align-items:center;
+      display:grid;
+      place-items:center;
       min-height:28px;
       max-width:190px;
       padding:5px 3px;
       background:#fff;
       color:#17211d;
       overflow:hidden;
-      display:-webkit-box;
-      -webkit-box-orient:vertical;
-      -webkit-line-clamp:2;
+      text-align:center;
       white-space:normal;
       word-break:break-word;
       text-shadow:none;
+    }
+    .poster-bubble-text::before{
+      content:attr(data-text);
+      display:-webkit-box;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:2;
+      overflow:hidden;
+      text-align:center;
     }
     .poster-bubble-right{
       align-self:stretch;
@@ -3628,7 +3634,7 @@ function renderDesigners(){
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     const priorityBadge=isPriorityNewCaseDesigner(d)?'<span class="new-case-priority-badge">新案優先</span>':'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text">${esc(quote)}</span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
   renderRequestProjectButtons();
