@@ -1145,19 +1145,19 @@
       display:none!important;
     }
     .designer-poster{
-      width:300px!important;
-      max-width:min(calc(100vw - 40px),300px)!important;
+      width:max-content!important;
+      max-width:calc(100vw - 40px)!important;
       height:400px!important;
-      aspect-ratio:3/4!important;
+      aspect-ratio:auto!important;
       overflow:hidden!important;
       display:block!important;
     }
     .designer-poster .poster-image{
-      width:100%!important;
-      height:100%!important;
-      max-width:none!important;
+      width:auto!important;
+      height:400px!important;
+      max-width:calc(100vw - 40px)!important;
       display:block!important;
-      object-fit:cover!important;
+      object-fit:contain!important;
       object-position:center top!important;
       background:#fff!important;
     }
@@ -1234,33 +1234,68 @@
     }
     .poster-speech-bubble{
       position:relative;
-      display:flex;
-      align-items:center;
-      min-height:38px;
+      display:grid;
+      grid-template-columns:22px minmax(0,max-content) 18px;
+      align-items:stretch;
+      min-height:28px;
       max-width:240px;
-      padding:11px 17px 12px 20px;
-      border-radius:18px 20px 20px 16px;
+      padding:0;
+      border-radius:0;
       background:transparent;
       color:#17211d;
-      font-size:13px;
+      font-size:10px;
       font-weight:900;
-      line-height:1.28;
+      line-height:1.25;
       filter:drop-shadow(0 12px 22px rgba(18,38,28,.18));
+      isolation:isolate;
     }
-    .poster-speech-svg{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      overflow:visible;
-      pointer-events:none;
-    }
-    .poster-speech-bubble span{
+    .poster-bubble-left{
       position:relative;
+      align-self:stretch;
+      width:22px;
+      height:100%;
+      min-height:28px;
+      border-radius:999px 0 0 999px;
+      background:#fff;
       z-index:1;
-      display:block;
+    }
+    .poster-bubble-left::after{
+      content:"";
+      position:absolute;
+      left:-1px;
+      bottom:2px;
+      width:14px;
+      height:14px;
+      background:#fff;
+      clip-path:polygon(0 100%,100% 18%,100% 100%);
+      transform-origin:left bottom;
+      z-index:-1;
+    }
+    .poster-bubble-text{
+      position:relative;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      min-height:28px;
+      max-width:190px;
+      padding:5px 3px;
+      background:#fff;
+      color:#17211d;
+      overflow:hidden;
+      display:-webkit-box;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:2;
       white-space:normal;
-      text-shadow:0 1px 0 rgba(255,255,255,.75);
+      word-break:break-word;
+      text-shadow:none;
+    }
+    .poster-bubble-right{
+      align-self:stretch;
+      width:18px;
+      height:100%;
+      min-height:28px;
+      border-radius:0 999px 999px 0;
+      background:#fff;
     }
     @keyframes posterSpeechWiggle{
       0%,100%{transform:translateY(0) scale(1) rotate(-.35deg)}
@@ -1269,19 +1304,50 @@
     }
     @media(max-width:640px){
       .designer-poster{
-        width:240px!important;
+        width:max-content!important;
         height:320px!important;
-        max-width:min(calc(100vw - 28px),240px)!important;
+        max-width:calc(100vw - 28px)!important;
       }
       .designer-poster .poster-image{
-        width:100%!important;
-        height:100%!important;
-        max-width:none!important;
+        width:auto!important;
+        height:320px!important;
+        max-width:calc(100vw - 28px)!important;
+      }
+      .designer-card:nth-child(3n+1) .designer-poster{
+        left:0!important;
+        right:auto!important;
+        transform:translate(0,-6px)!important;
+      }
+      .designer-card:nth-child(3n+1) .avatar-shell:hover .designer-poster,
+      .designer-card:nth-child(3n+1) .avatar-shell:focus-within .designer-poster{
+        transform:translate(0,0)!important;
+      }
+      .designer-card:nth-child(3n+2) .designer-poster{
+        left:50%!important;
+        right:auto!important;
+        transform:translate(-50%,-6px)!important;
+      }
+      .designer-card:nth-child(3n+2) .avatar-shell:hover .designer-poster,
+      .designer-card:nth-child(3n+2) .avatar-shell:focus-within .designer-poster{
+        transform:translate(-50%,0)!important;
+      }
+      .designer-card:nth-child(3n) .designer-poster{
+        left:auto!important;
+        right:0!important;
+        transform:translate(0,-6px)!important;
+      }
+      .designer-card:nth-child(3n) .avatar-shell:hover .designer-poster,
+      .designer-card:nth-child(3n) .avatar-shell:focus-within .designer-poster{
+        transform:translate(0,0)!important;
       }
       .new-case-priority-badge{left:3px;bottom:3px;min-height:17px;padding:2px 6px;font-size:9px}
       .poster-speech{left:10px;bottom:10px;gap:6px}
       .designer-poster .poster-speech-avatar{width:36px!important;height:36px!important;flex-basis:36px!important}
-      .poster-speech-bubble{max-width:185px;min-height:34px;padding:9px 13px 10px 16px;font-size:12px}
+      .poster-speech-bubble{max-width:185px;min-height:26px;font-size:10px}
+      .poster-bubble-left{width:20px;min-height:26px}
+      .poster-bubble-left::after{left:-1px;bottom:2px;width:12px;height:12px}
+      .poster-bubble-text{min-height:26px;max-width:145px;padding:5px 2px}
+      .poster-bubble-right{width:16px;min-height:26px}
     }
     .login-modal{
       z-index:1200!important;
@@ -1976,6 +2042,9 @@
       box-shadow:none!important;
       padding:0;
       min-height:24px;
+      -webkit-tap-highlight-color:transparent;
+      appearance:none;
+      -webkit-appearance:none;
     }
     .account-bell:hover{background:transparent!important;color:#15231d!important;border-color:transparent!important}
     .account-bell svg{
@@ -2553,14 +2622,19 @@
       background:transparent!important;
     }
     #accountMenu .account-bell{
+      display:grid!important;
+      place-items:center!important;
       width:30px!important;
       height:30px!important;
       min-height:30px!important;
+      padding:0!important;
       color:#111827!important;
     }
     #accountMenu .account-bell svg{
       width:22px!important;
       height:22px!important;
+      display:block!important;
+      margin:0!important;
       stroke-width:2!important;
       filter:drop-shadow(0 1px 0 rgba(255,255,255,.8));
     }
@@ -2575,6 +2649,19 @@
       min-width:18px!important;
       height:18px!important;
       font-size:10px!important;
+    }
+    @media(hover:none){
+      #accountMenu .account-bell,
+      #accountMenu .account-bell:hover,
+      #accountMenu .account-bell:active,
+      #accountMenu .account-bell:focus,
+      #accountMenu .account-bell:focus-visible{
+        background:transparent!important;
+        border-color:transparent!important;
+        box-shadow:none!important;
+        outline:none!important;
+        -webkit-tap-highlight-color:transparent;
+      }
     }
     #caseDetailModal .case-detail-card{
       width:min(640px,calc(100vw - 28px))!important;
@@ -3541,7 +3628,7 @@ function renderDesigners(){
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     const priorityBadge=isPriorityNewCaseDesigner(d)?'<span class="new-case-priority-badge">新案優先</span>':'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><svg class="poster-speech-svg" viewBox="0 0 260 96" preserveAspectRatio="none" aria-hidden="true"><path d="M29 13H237C248 13 255 21 255 32V66C255 78 247 86 235 86H54C44 86 36 84 29 79L6 94L16 70C12 64 10 58 10 50V32C10 21 18 13 29 13Z" fill="rgba(255,255,255,.92)" stroke="rgba(207,216,220,.95)" stroke-width="2"/><path d="M32 18H233C243 18 250 25 250 35" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3" stroke-linecap="round"/></svg><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text">${esc(quote)}</span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
   renderRequestProjectButtons();
