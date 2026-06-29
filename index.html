@@ -2086,6 +2086,273 @@
       color:#7a5200!important;
       border-color:#f1d28c!important;
     }
+    #caseDetailModal .case-detail-card{
+      width:min(820px,calc(100vw - 28px))!important;
+      max-height:min(780px,calc(100vh - 28px))!important;
+      padding:22px 26px 0!important;
+      border-radius:24px!important;
+      border:1px solid #e0e7e3!important;
+      background:linear-gradient(180deg,#fff 0%,#fff 88%,#f8fbfa 100%)!important;
+      box-shadow:0 22px 58px rgba(16,24,40,.18)!important;
+    }
+    #caseDetailModal .case-detail-head{
+      align-items:flex-start!important;
+      margin-bottom:18px!important;
+    }
+    #caseDetailModal .case-detail-title{
+      display:flex!important;
+      align-items:flex-start!important;
+      gap:12px!important;
+      min-width:0!important;
+    }
+    #caseDetailModal .case-detail-title-icon,
+    #caseDetailModal .case-detail-step-icon{
+      display:grid!important;
+      place-items:center!important;
+      flex:0 0 auto!important;
+      border-radius:999px!important;
+      background:#e8f6f0!important;
+      color:#10946a!important;
+      border:1px solid #cfe8dc!important;
+    }
+    #caseDetailModal .case-detail-title-icon{
+      width:34px!important;
+      height:34px!important;
+    }
+    #caseDetailModal .case-detail-title-icon svg,
+    #caseDetailModal .case-detail-step-icon svg{
+      width:16px!important;
+      height:16px!important;
+      fill:none!important;
+      stroke:currentColor!important;
+      stroke-width:1.8!important;
+      stroke-linecap:round!important;
+      stroke-linejoin:round!important;
+    }
+    #caseDetailModal .case-detail-head h3{
+      margin:0!important;
+      color:#17211d!important;
+      font-size:14px!important;
+      line-height:1.25!important;
+      font-weight:950!important;
+      letter-spacing:0!important;
+    }
+    #caseDetailModal .case-detail-head p{
+      margin:4px 0 0!important;
+      color:#7a8580!important;
+      font-size:11px!important;
+      line-height:1.35!important;
+      font-weight:800!important;
+    }
+    #caseDetailModal .case-detail-close{
+      width:31px!important;
+      height:31px!important;
+      min-height:31px!important;
+      border-radius:999px!important;
+      background:#fff!important;
+      color:#263238!important;
+      border:1px solid #d8e0dc!important;
+      font-size:18px!important;
+      box-shadow:0 4px 12px rgba(16,24,40,.06)!important;
+    }
+    #caseDetailModal .case-detail-grid{
+      display:block!important;
+      background:transparent!important;
+    }
+    #caseDetailModal .case-detail-section{
+      display:grid!important;
+      grid-template-columns:150px minmax(0,1fr)!important;
+      gap:18px!important;
+      padding:16px 0 20px!important;
+      border-top:1px solid #edf1ef!important;
+      position:relative!important;
+    }
+    #caseDetailModal .case-detail-section:first-child{
+      border-top:0!important;
+      padding-top:0!important;
+    }
+    #caseDetailModal .case-detail-section-label{
+      display:grid!important;
+      grid-template-columns:34px minmax(0,1fr)!important;
+      gap:10px!important;
+      align-content:start!important;
+      position:relative!important;
+    }
+    #caseDetailModal .case-detail-section-label::after{
+      content:""!important;
+      position:absolute!important;
+      left:16px!important;
+      top:38px!important;
+      bottom:-16px!important;
+      border-left:1px dashed #cbd6d1!important;
+    }
+    #caseDetailModal .case-detail-section:last-of-type .case-detail-section-label::after{
+      display:none!important;
+    }
+    #caseDetailModal .case-detail-step-icon{
+      width:34px!important;
+      height:34px!important;
+      z-index:1!important;
+    }
+    #caseDetailModal .case-detail-section-label h4{
+      margin:2px 0 2px!important;
+      color:#17211d!important;
+      font-size:15px!important;
+      line-height:1.25!important;
+      font-weight:950!important;
+    }
+    #caseDetailModal .case-detail-section-label p{
+      margin:0!important;
+      color:#7a8580!important;
+      font-size:11px!important;
+      line-height:1.35!important;
+      font-weight:800!important;
+    }
+    #caseDetailModal .case-detail-section-fields{
+      display:grid!important;
+      grid-template-columns:repeat(3,minmax(0,1fr))!important;
+      gap:12px 16px!important;
+      align-items:start!important;
+    }
+    #caseDetailModal .case-detail-section.is-exec .case-detail-section-fields{
+      grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    }
+    #caseDetailModal .case-detail-section.is-other .case-detail-section-fields{
+      grid-template-columns:minmax(0,1.55fr) minmax(150px,.85fr)!important;
+    }
+    #caseDetailModal .case-detail-row{
+      display:grid!important;
+      gap:6px!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      align-content:start!important;
+      min-width:0!important;
+    }
+    #caseDetailModal .case-detail-row.is-wide{
+      grid-column:1/-1!important;
+    }
+    #caseDetailModal .case-detail-section.is-other .case-detail-row.is-wide{
+      grid-column:auto!important;
+    }
+    #caseDetailModal .case-detail-row b{
+      padding:0!important;
+      color:#168060!important;
+      text-align:left!important;
+      font-size:11px!important;
+      line-height:1.25!important;
+      font-weight:950!important;
+    }
+    #caseDetailModal .case-detail-value{
+      display:flex!important;
+      align-items:center!important;
+      gap:6px!important;
+      min-height:36px!important;
+      width:100%!important;
+      padding:7px 11px!important;
+      border-radius:11px!important;
+      background:#fff!important;
+      border:1px solid #dbe3df!important;
+      color:#17211d!important;
+      font-size:12px!important;
+      font-weight:850!important;
+      line-height:1.35!important;
+      box-shadow:0 1px 2px rgba(16,24,40,.02)!important;
+      overflow:hidden!important;
+    }
+    #caseDetailModal .case-detail-row.is-wide .case-detail-value,
+    #caseDetailModal .case-detail-details{
+      min-height:36px!important;
+      align-items:center!important;
+      white-space:normal!important;
+      word-break:break-word!important;
+    }
+    #caseDetailModal .case-detail-value .status,
+    #caseDetailModal .case-detail-value .editable-status,
+    #caseDetailModal .case-detail-value .editable-field,
+    #caseDetailModal .case-detail-value .revision-pill{
+      min-height:24px!important;
+      padding:4px 9px!important;
+      border-radius:999px!important;
+      font-size:12px!important;
+      line-height:1.15!important;
+      max-width:100%!important;
+    }
+    #caseDetailModal .case-detail-value .editable-field.detail-edit{
+      background:#f5f8f6!important;
+      border:1px solid #dfe7e2!important;
+      border-radius:999px!important;
+      padding:5px 10px!important;
+      text-align:center!important;
+    }
+    #caseDetailModal .case-detail-actions{
+      display:flex!important;
+      justify-content:center!important;
+      align-items:center!important;
+      gap:18px!important;
+      margin:0 -26px!important;
+      padding:20px 26px!important;
+      border-top:1px solid #edf1ef!important;
+      background:rgba(248,251,250,.96)!important;
+    }
+    #caseDetailModal .case-detail-actions .row-actions{
+      display:inline-flex!important;
+      gap:0!important;
+      min-width:0!important;
+    }
+    #caseDetailModal .case-detail-actions .mail-compose-btn,
+    #caseDetailModal .case-detail-actions .row-actions button{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      gap:5px!important;
+      min-width:79px!important;
+      min-height:33px!important;
+      padding:6px 12px!important;
+      border-radius:9px!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      line-height:1.1!important;
+      box-shadow:none!important;
+    }
+    #caseDetailModal .case-detail-actions .mail-compose-btn{
+      background:#dcfce7!important;
+      color:#166534!important;
+      border:1px solid #bbf7d0!important;
+    }
+    #caseDetailModal .case-detail-actions .mail-compose-btn:hover{
+      background:#c8f6da!important;
+      color:#14532d!important;
+      border-color:#9ee6bd!important;
+    }
+    #caseDetailModal .case-detail-actions .row-actions button{
+      background:#fff1c7!important;
+      color:#8a5a00!important;
+      border:1px solid #ffd88a!important;
+    }
+    #caseDetailModal .case-detail-actions .row-actions button:hover{
+      background:#ffe8a8!important;
+      color:#7a5200!important;
+      border-color:#f1d28c!important;
+    }
+    #caseDetailModal .case-detail-actions svg{
+      width:14px!important;
+      height:14px!important;
+      flex:0 0 14px!important;
+      fill:currentColor!important;
+      stroke:none!important;
+    }
+    @media(max-width:760px){
+      #caseDetailModal .case-detail-card{padding:18px 18px 0!important}
+      #caseDetailModal .case-detail-section{grid-template-columns:1fr!important;gap:10px!important}
+      #caseDetailModal .case-detail-section-label::after{display:none!important}
+      #caseDetailModal .case-detail-section-fields,
+      #caseDetailModal .case-detail-section.is-exec .case-detail-section-fields,
+      #caseDetailModal .case-detail-section.is-other .case-detail-section-fields{grid-template-columns:1fr!important}
+      #caseDetailModal .case-detail-section.is-other .case-detail-row.is-wide{grid-column:1/-1!important}
+      #caseDetailModal .case-detail-actions{margin:0 -18px!important;padding:16px 18px!important}
+    }
     .section-head{
       display:flex;
       align-items:center;
@@ -2506,7 +2773,7 @@
 </div>
 <div class="login-modal" id="caseDetailModal" hidden>
   <div class="case-detail-card">
-    <div class="case-detail-head"><h3>案件資料</h3><button type="button" class="secondary case-detail-close" id="caseDetailClose" aria-label="關閉">×</button></div>
+    <div class="case-detail-head"><div class="case-detail-title"><span class="case-detail-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.8 8.4V6.8c0-1 .8-1.8 1.8-1.8h4.2l1.8 1.8h6.8c1 0 1.8.8 1.8 1.8v.8"/><path d="M4.7 8.8h14.6c1.1 0 1.9 1 1.6 2l-1.4 6.4c-.2.9-1 1.5-1.9 1.5H6.4c-.9 0-1.7-.6-1.9-1.5L3.1 10.8c-.3-1 .5-2 1.6-2Z"/><path d="M8.2 13.8h7.6"/></svg></span><div><h3>案件資料</h3></div></div><button type="button" class="secondary case-detail-close" id="caseDetailClose" aria-label="關閉">×</button></div>
     <div class="case-detail-grid" id="caseDetailGrid"></div>
   </div>
 </div>
@@ -2962,7 +3229,7 @@ function solidCancelIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><
 function solidProjectIcon(kind){return kind==='影音'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v1.4l2.9-1.8A1.4 1.4 0 0 1 22 6.8v10.4a1.4 1.4 0 0 1-2.1 1.2L17 16.6V18a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6Z"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8.8L20 8.2V21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm8 1.5V9h4.5L14 4.5ZM8 13h8v2H8v-2Zm0 4h6v2H8v-2Z"/></svg>'}
 function designerGroupLabel(d){return normalizeDesignGroup(d.designType)||fallbackDesignGroupForUser(d.name)||'設計'}
 function rotationDesignerForGroup(group){const list=designers.filter(d=>designerGroupLabel(d)===group).sort((a,b)=>(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))); return list.find(d=>newProjectDesignerOptions.includes(d.name))||list[0]||null}
-function renderRequestProjectButtons(){document.querySelectorAll('[data-new-project-group]').forEach(button=>{const group=button.dataset.newProjectGroup, designer=rotationDesignerForGroup(group), label=`${group}新開專案`; button.innerHTML=`${solidProjectIcon(group)}<span>${esc(label)}</span>`; button.disabled=!designer; button.dataset.newProjectDesigner=designer?.name||''; button.title=designer?`預計設計師：${designer.name}`:'目前沒有可填單的設計師'});}
+function renderRequestProjectButtons(){document.querySelectorAll('[data-new-project-group]').forEach(button=>{const group=button.dataset.newProjectGroup, designer=rotationDesignerForGroup(group), label=`${group}新專案填單`; button.innerHTML=`${solidProjectIcon(group)}<span>${esc(label)}</span>`; button.disabled=!designer; button.dataset.newProjectDesigner=designer?.name||''; button.title=designer?`預計設計師：${designer.name}`:'目前沒有可填單的設計師'});}
 function renderDesigners(){
   if(!designerRoster)return;
   const list=sortDesigners(designers).filter(d=>d.name);
@@ -3691,7 +3958,9 @@ function adjustCaseSplitHeight(){
 }
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
 function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
-function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const actions=canCaseEditRow(row)?`<div class="case-detail-actions"><button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">發信</button>${actionButtons(row)}</div>`:''; grid.innerHTML=caseDetailRows(row).map(item=>{const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}).join('')+actions; modal.hidden=false}
+function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
+function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
+function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}</div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','月份','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','狀態','階段','數量','開始','結束']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
