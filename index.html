@@ -1934,24 +1934,47 @@
       align-self:start;
       justify-self:end;
       z-index:150;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+    }
+    .account-bell{
       display:grid;
-      justify-items:end;
-      gap:8px;
+      place-items:center;
+      flex:0 0 auto;
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      color:#43524b;
+      background:#fff;
+      border:1px solid #dfe7e2;
+      box-shadow:0 6px 16px rgba(16,24,40,.06);
+    }
+    .account-bell svg{
+      width:17px;
+      height:17px;
+      display:block;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:1.8;
+      stroke-linecap:round;
+      stroke-linejoin:round;
     }
     .account-trigger{
       display:inline-flex!important;
       align-items:center!important;
-      gap:12px!important;
-      min-height:50px!important;
+      gap:9px!important;
+      min-height:42px!important;
       max-width:min(320px,calc(100vw - 36px))!important;
-      padding:6px 12px 6px 6px!important;
-      border-radius:999px!important;
-      background:#fff!important;
+      padding:0!important;
+      border-radius:0!important;
+      background:transparent!important;
       color:#1f2937!important;
-      border:1px solid #e5e7eb!important;
-      box-shadow:0 12px 30px rgba(16,24,40,.10)!important;
+      border:0!important;
+      box-shadow:none!important;
     }
-    .account-trigger:hover{background:#fff!important;color:#111827!important;border-color:#d8dee6!important}
+    .account-trigger:hover{background:transparent!important;color:#111827!important;border-color:transparent!important}
     .account-avatar{
       flex:0 0 auto;
       display:grid;
@@ -1997,13 +2020,17 @@
     }
     .account-chevron{
       flex:0 0 auto;
-      width:18px;
-      height:18px;
+      width:17px;
+      height:17px;
       color:#334155;
       transition:transform .16s ease;
     }
     .account-menu.is-open .account-chevron{transform:rotate(180deg)}
     .account-dropdown{
+      position:absolute;
+      right:0;
+      top:calc(100% + 8px);
+      z-index:210;
       width:220px;
       border:1px solid #e5e7eb;
       border-radius:18px;
@@ -2510,14 +2537,16 @@
     }
     @media(max-width:900px){
       header{grid-template-columns:minmax(0,1fr) auto}
-      .account-trigger{min-height:46px!important;gap:9px!important}
+      .account-trigger{min-height:42px!important;gap:8px!important}
+      .account-bell{width:30px;height:30px}
       .account-avatar{width:34px;height:34px;font-size:15px;border-width:3px}
       .account-name{max-width:118px;font-size:13px}
     }
     @media(max-width:640px){
       header{grid-template-columns:1fr;gap:10px}
-      .account-menu{grid-column:1;grid-row:auto;justify-self:end}
-      .account-trigger{padding:6px 9px 6px 6px!important;gap:7px!important}
+      .account-menu{grid-column:1;grid-row:auto;justify-self:end;gap:8px}
+      .account-trigger{padding:0!important;gap:7px!important}
+      .account-bell{width:30px;height:30px}
       .account-avatar{width:34px;height:34px;font-size:15px}
       .account-name{max-width:112px;font-size:13px}
       .account-role{font-size:11px}
@@ -2530,6 +2559,7 @@
   <h1>設計需求系統</h1>
   <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊發信 → Step4.寄送需求信件</p>
   <div class="account-menu" id="accountMenu">
+    <span class="account-bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.2 18.4h7.6"/><path d="M10.2 20.2c.4.5 1 .8 1.8.8s1.4-.3 1.8-.8"/><path d="M6.8 16.8h10.4c.8 0 1.2-.9.7-1.5l-.8-1V10a5.1 5.1 0 0 0-10.2 0v4.3l-.8 1c-.5.6-.1 1.5.7 1.5Z"/><path d="M12 4.2V3"/></svg></span>
     <button type="button" class="account-trigger" id="loginBtn" aria-haspopup="menu" aria-expanded="false">
       <span class="account-avatar" id="accountAvatar">登</span>
       <span class="account-text">
