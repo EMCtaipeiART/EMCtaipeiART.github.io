@@ -2388,6 +2388,31 @@
       padding:5px 10px!important;
       text-align:center!important;
     }
+    #caseDetailModal .case-inline-edit{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      width:100%!important;
+      min-height:24px!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      color:#17211d!important;
+      box-shadow:none!important;
+      font-size:12px!important;
+      font-weight:850!important;
+      text-align:left!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+      white-space:nowrap!important;
+    }
+    #caseDetailModal .case-inline-edit:hover,
+    #caseDetailModal .case-inline-edit:focus-visible{
+      background:transparent!important;
+      color:#0f8f61!important;
+      outline:none!important;
+    }
     #caseDetailModal .case-detail-actions{
       display:flex!important;
       justify-content:center!important;
@@ -2417,6 +2442,26 @@
       font-weight:900!important;
       line-height:1.1!important;
       box-shadow:none!important;
+    }
+    #caseDetailModal .case-detail-actions .case-detail-close-action{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      min-width:79px!important;
+      min-height:33px!important;
+      padding:6px 12px!important;
+      border-radius:9px!important;
+      background:#f3f4f6!important;
+      color:#4b5563!important;
+      border:1px solid #d1d5db!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      box-shadow:none!important;
+    }
+    #caseDetailModal .case-detail-actions .case-detail-close-action:hover{
+      background:#e5e7eb!important;
+      color:#374151!important;
+      border-color:#cbd5e1!important;
     }
     #caseDetailModal .case-detail-actions .mail-compose-btn{
       background:#dcfce7!important;
@@ -2508,6 +2553,72 @@
       min-width:18px!important;
       height:18px!important;
       font-size:10px!important;
+    }
+    #caseDetailModal .case-detail-card{
+      width:min(640px,calc(100vw - 28px))!important;
+      max-height:min(640px,calc(100vh - 28px))!important;
+      aspect-ratio:1/1!important;
+      padding:20px 22px 0!important;
+    }
+    #caseDetailModal .case-detail-head{
+      align-items:center!important;
+      margin-bottom:14px!important;
+    }
+    #caseDetailModal .case-detail-title{
+      gap:0!important;
+      padding-left:0!important;
+    }
+    #caseDetailModal .case-detail-section{
+      grid-template-columns:118px minmax(0,1fr)!important;
+      gap:14px!important;
+      padding:13px 0 16px!important;
+    }
+    #caseDetailModal .case-detail-section-label{
+      grid-template-columns:28px minmax(0,1fr)!important;
+      gap:8px!important;
+    }
+    #caseDetailModal .case-detail-section-label::after{
+      left:13px!important;
+      top:34px!important;
+      bottom:-12px!important;
+    }
+    #caseDetailModal .case-detail-step-icon{
+      width:28px!important;
+      height:28px!important;
+    }
+    #caseDetailModal .case-detail-step-icon svg{
+      width:14px!important;
+      height:14px!important;
+    }
+    #caseDetailModal .case-detail-section-label h4{
+      font-size:14px!important;
+      margin:0 0 2px!important;
+    }
+    #caseDetailModal .case-detail-section-label p{
+      font-size:10px!important;
+      line-height:1.3!important;
+    }
+    #caseDetailModal .case-detail-section-fields,
+    #caseDetailModal .case-detail-section.is-exec .case-detail-section-fields{
+      grid-template-columns:repeat(3,minmax(0,1fr))!important;
+      gap:10px 12px!important;
+    }
+    #caseDetailModal .case-detail-section.is-other .case-detail-section-fields{
+      grid-template-columns:minmax(0,1fr) minmax(120px,.72fr)!important;
+      gap:10px 12px!important;
+    }
+    #caseDetailModal .case-detail-value{
+      min-height:34px!important;
+      padding:6px 9px!important;
+      border-radius:10px!important;
+    }
+    #caseDetailModal .case-detail-row.is-wide .case-detail-value,
+    #caseDetailModal .case-detail-details{
+      min-height:34px!important;
+    }
+    #caseDetailModal .case-detail-actions{
+      margin:0 -22px!important;
+      padding:16px 22px!important;
     }
     .section-head{
       display:flex;
@@ -2670,6 +2781,7 @@
       .account-bell{width:24px;height:24px;min-height:24px;background:transparent!important;border:0!important;box-shadow:none!important}
       .account-avatar{width:34px;height:34px;font-size:15px;border-width:3px}
       .account-name{max-width:118px;font-size:13px}
+      #caseDetailModal .case-detail-card{aspect-ratio:auto!important;width:min(640px,calc(100vw - 28px))!important}
     }
     @media(max-width:640px){
       header{grid-template-columns:1fr;gap:10px}
@@ -2936,7 +3048,7 @@
 </div>
 <div class="login-modal" id="caseDetailModal" hidden>
   <div class="case-detail-card">
-    <div class="case-detail-head"><div class="case-detail-title"><span class="case-detail-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.8 8.4V6.8c0-1 .8-1.8 1.8-1.8h4.2l1.8 1.8h6.8c1 0 1.8.8 1.8 1.8v.8"/><path d="M4.7 8.8h14.6c1.1 0 1.9 1 1.6 2l-1.4 6.4c-.2.9-1 1.5-1.9 1.5H6.4c-.9 0-1.7-.6-1.9-1.5L3.1 10.8c-.3-1 .5-2 1.6-2Z"/><path d="M8.2 13.8h7.6"/></svg></span><div><h3>案件資料</h3></div></div><button type="button" class="secondary case-detail-close" id="caseDetailClose" aria-label="關閉">×</button></div>
+    <div class="case-detail-head"><div class="case-detail-title"><div><h3>案件資料</h3></div></div><button type="button" class="secondary case-detail-close" id="caseDetailClose" aria-label="關閉">×</button></div>
     <div class="case-detail-grid" id="caseDetailGrid"></div>
   </div>
 </div>
@@ -3352,17 +3464,18 @@ function formCreateRow(row){return {...formWriteRow(row),status:row.status||'未
 function changedWritePayload(id,changes){return {id,...changes}}
 function rowWriteAnchor(row){return {sheetRow:row.sheetRow||row._sheetRow||row.rowNumber||'',match:{client:row.client,project:row.project,owner:row.owner,start:row.start,end:row.end,designer:row.designer}}}
 function statusLabel(value){return value==='未開始'?'未執行':value}
+function caseInlineEdit(row,key,value,label=value){return canListEditRow(row)?`<button type="button" class="case-inline-edit" onclick="openCaseFieldEditor(event,'${jsArg(row.id)}','${jsArg(key)}')">${esc(label||'選擇')}</button>`:esc(label||'')}
 function caseDetailRows(row){return [
   {label:'案件編號',value:row.id},
   {label:'月份',value:row.month},
   {label:'客戶別',value:row.client},
   {label:'專案名稱',value:row.project,wide:true},
   {label:'專案負責人',value:ownerDisplay(row.owner)},
-  {label:'設計類型',value:row.type},
-  {label:'階段',value:row.stage},
-  {label:'數量',value:row.qty},
-  {label:'開始',value:slashDate(row.start)},
-  {label:'結束',value:slashDate(row.end)},
+  {label:'設計類型',html:caseInlineEdit(row,'type',row.type)},
+  {label:'階段',html:caseInlineEdit(row,'stage',row.stage)},
+  {label:'數量',html:caseInlineEdit(row,'qty',row.qty)},
+  {label:'開始時間',html:caseInlineEdit(row,'start',row.start,slashDate(row.start))},
+  {label:'結束時間',html:caseInlineEdit(row,'end',row.end,slashDate(row.end))},
   {label:'設計負責人',value:row.designer},
   {label:'狀態',html:isUpdatingCell(row.id,'status')?'<span class="status updating-cell">更新中....</span>':(canListEditRow(row)?`<button type="button" class="status editable-status ${esc(row.status)}" onclick="openStatusEditor(event,'${jsArg(row.id)}')">${esc(statusLabel(row.status))}</button>`:`<span class="status ${esc(row.status)}">${esc(statusLabel(row.status))}</span>`)},
   {label:'修改',html:revisionControl(row)},
@@ -4133,7 +4246,7 @@ async function copyText(t,options={}){const text=String(t||''), target=options.t
 function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
-function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}</div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','月份','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','狀態','階段','數量','開始','結束']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false}
+function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','月份','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','狀態','階段','數量','開始時間','結束時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
@@ -4141,8 +4254,9 @@ function positionFieldPopover(anchor){const width=Math.min(320,window.innerWidth
 function refreshAfterInlineWrite(message){if(!apiUrl){setSync(message||'已於本機更新');return} const text=message||'已更新'; setSync(`${text}，背景同步最新資料中...`); setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步最新資料`)).catch(err=>setSync(`${text}，但重新讀取失敗：${err.message}`,true)),0)}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
 async function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const keys=Object.keys(changes), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)})); selected.forEach(row=>markUpdatingCell(row.id,keys)); render(); setSync(`批次寫入 ${selected.length} 筆中...`); try{if(apiUrl){const data=await postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); if(!data.ok)throw new Error(data.error||'批次寫入失敗')} rows=rows.map(row=>selectedCaseIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selected.forEach(row=>clearUpdatingCell(row.id)); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}catch(err){selected.forEach(row=>clearUpdatingCell(row.id)); render(); setSync(`批次寫入失敗：${err.message}`,true)}}
-async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), successMessage=message||'已更新'; closeFieldPopover(); closeCaseDetail(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); save(); render(); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await sheetApi('update',{id,row:changedWritePayload(id,changes),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}); setSync(successMessage); await refreshAfterInlineWrite(successMessage)}catch(err){rows=rows.map(r=>String(r.id)===String(id)?original:r); save(); render(); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
+async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); closeCaseDetail(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); save(); render(); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}); setSync(successMessage); await refreshAfterInlineWrite(successMessage)}catch(err){rows=rows.map(r=>String(r.id)===String(id)?original:r); save(); render(); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
 function openStatusEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; fieldPopover.innerHTML=`<h3>修改狀態</h3><div class="option-list status-option-list">${statusOptions.map(status=>`<button type="button" class="option status-option ${esc(status)} ${row.status===status?'active':''}" data-status="${esc(status)}"><span>${esc(statusLabel(status))}</span>${row.status===status?'<b>✓</b>':''}</button>`).join('')}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const status=button.dataset.status; updateCaseRow(id,{status},`已更新狀態為 ${statusLabel(status)}`)}))}
+function openCaseFieldEditor(event,id,key){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const titles={type:'設計類型',stage:'階段',qty:'數量',start:'開始時間',end:'結束時間'}, title=titles[key]||'欄位', options=key==='type'?designLists.types:(key==='stage'?(designLists.stages?.[row.type]||unique(Object.values(designLists.stages||{}).flat())):[]); if(key==='type'||key==='stage'){fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><div class="option-list">${options.map(option=>`<button type="button" class="option ${row[key]===option?'active':''}" data-value="${esc(option)}"><span>${esc(option)}</span>${row[key]===option?'<b>✓</b>':''}</button>`).join('')||'<div class="empty">沒有可選項目</div>'}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-value]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const value=button.dataset.value, changes={[key]:value}; if(key==='type'){const stages=designLists.stages?.[value]||[]; if(stages.length&&!stages.includes(row.stage))changes.stage=stages[0]} updateCaseRow(id,changes,`已更新${title}`)})); return} const inputType=key==='qty'?'number':'date', value=key==='qty'?(row.qty??''):(row[key]||todayInputValue()); fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><form class="revision-form" id="caseFieldForm"><label>${esc(title)}<input name="value" type="${inputType}" value="${esc(value)}" ${key==='qty'?'min="0" step="1" inputmode="numeric"':''} required></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">套用</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#caseFieldForm')?.addEventListener('submit',submitEvent=>{submitEvent.preventDefault(); submitEvent.stopPropagation(); const raw=submitEvent.target.elements.value.value, value=key==='qty'?Number(raw):raw; updateCaseRow(id,{[key]:value},`已更新${title}`)})}
 function openModificationEditor(event,id){event.stopPropagation(); const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canCaseEditRow(row)){setSync('此案件目前不可新增修改紀錄',true,3200);return} const nextCount=modificationCount(id)+1, modifier=currentLoginOwnerName()||ownerDisplay(row.owner); fieldPopover.innerHTML=`<h3>新增修改紀錄</h3><form class="revision-form" id="revisionForm" data-case-id="${esc(row.id)}"><div class="revision-meta">案件 ${esc(row.id)}｜修改人 ${esc(modifier)}｜${esc(modificationLabel(nextCount))}</div><label>修改日期<input type="date" name="modifyDate" value="${esc(todayInputValue())}" required></label><label>修改內容<textarea name="content" placeholder="請輸入此次修改內容" required></textarea></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">送出</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#revisionForm')?.addEventListener('submit',submitModificationRecord)}
 async function submitModificationRecord(event){event.preventDefault(); event.stopPropagation(); const form=event.target, id=String(form.dataset.caseId||'').trim(), row=rows.find(r=>String(r.id)===id); if(!row)return; const submit=form.querySelector('button[type="submit"]'), record={caseId:id,modifyDate:form.elements.modifyDate.value,content:form.elements.content.value.trim(),modifier:currentLoginOwnerName()||ownerDisplay(row.owner),editorToken:currentEditorToken}; if(!record.modifyDate||!record.content){setSync('請填寫修改日期與修改內容',true);return} submit.disabled=true; const optimisticCount=modificationCount(id)+1, optimisticRecord={caseId:id,count:optimisticCount,date:record.modifyDate,content:record.content,modifier:record.modifier,confirmedDate:''}; modificationCounts.set(String(id),optimisticCount); modificationRecords.set(String(id),[...modificationRecordsFor(id),optimisticRecord]); closeFieldPopover(); closeRevisionModal(); render(); refreshOpenCaseDetail(id); setSync('修改紀錄寫入中...'); try{const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true}); const finalCount=Number(data.count)||optimisticCount, finalModifier=data.record?.['修改人']||data.record?.modifier||record.modifier; modificationCounts.set(String(id),finalCount); modificationRecords.set(String(id),modificationRecordsFor(id).map(item=>item===optimisticRecord?{...optimisticRecord,count:finalCount,modifier:finalModifier}:item)); render(); refreshOpenCaseDetail(id); setSync(`已新增 ${id} ${modificationLabel(modificationCount(id))} 紀錄`)}catch(err){render(); refreshOpenCaseDetail(id); setSync(`修改紀錄已送出，若畫面未同步請稍後重新整理：${err.message}`,true)}}
 async function confirmModificationRecord(event,id,count){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const records=modificationRecordsFor(id), record=records.find(item=>(Number(item.count)||0)===(Number(count)||0)); if(!record)return; const button=event.currentTarget; if(button)button.disabled=true; const cancel=Boolean(record.confirmedDate), confirmedDate=cancel?'':slashDate(todayInputValue()), oldDate=record.confirmedDate; closeRevisionModal(); setSync(cancel?'取消確認修正日中...':'確認修正日寫入中...'); try{const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count,confirmedDate},editorToken:currentEditorToken}); const finalDate=data.record?.['確認修正日']||data.record?.confirmedDate||''; record.confirmedDate=finalDate; render(); refreshOpenCaseDetail(id); setSync(cancel?`已取消 ${id} ${modificationLabel(count)} 修正確認`:`已確認 ${id} ${modificationLabel(count)} 修正完成，已寫入 ${finalDate}`); setTimeout(()=>fetchModificationCounts().catch(()=>{}),0)}catch(err){record.confirmedDate=oldDate; render(); refreshOpenCaseDetail(id); setSync(`${cancel?'取消確認':'確認修正日寫入'}失敗：${err.message}`,true)}}
