@@ -1170,6 +1170,27 @@
     .designer-card,.avatar-shell,.avatar-frame,.avatar-frame img{cursor:default!important}
     .designer-tags button{cursor:pointer!important}
     .avatar-frame{background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;border-radius:18px!important;overflow:visible!important}
+    .new-case-priority-badge{
+      position:absolute;
+      left:4px;
+      bottom:4px;
+      z-index:5;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:19px;
+      padding:3px 7px;
+      border-radius:999px;
+      background:rgba(17,24,39,.86);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.78);
+      box-shadow:0 6px 14px rgba(15,23,42,.18);
+      font-size:10px;
+      line-height:1;
+      font-weight:900;
+      white-space:nowrap;
+      pointer-events:none;
+    }
     .avatar-shell:hover .designer-poster,
     .avatar-shell:focus-within .designer-poster{
       opacity:1!important;
@@ -1257,6 +1278,7 @@
         height:100%!important;
         max-width:none!important;
       }
+      .new-case-priority-badge{left:3px;bottom:3px;min-height:17px;padding:2px 6px;font-size:9px}
       .poster-speech{left:10px;bottom:10px;gap:6px}
       .designer-poster .poster-speech-avatar{width:36px!important;height:36px!important;flex-basis:36px!important}
       .poster-speech-bubble{max-width:185px;min-height:34px;padding:9px 13px 10px 16px;font-size:12px}
@@ -2834,7 +2856,6 @@
         <span>• 點擊設計師下方技能標籤，可自動帶入推薦的設計類型與階段。</span>
         <span>• 綠色表示目前案件量正常，可優先安排。</span>
         <span>• 紅色表示目前案件量較高，建議評估時程後再分派。</span>
-        <span>• 「新專案填單」代表目前輪值設計師，適合新案件優先分配。</span>
         <span>• 滑鼠移至頭像可查看設計師個人說明與專長。</span>
         <span>若不確定指派對象，可依技能標籤選擇系統推薦之設計師。</span>
       </div>
@@ -2873,7 +2894,7 @@
           <span>• 填寫客戶別、專案名稱、負責人、設計類型、階段、數量與日期。</span>
           <span>• 新增案件後系統會產生案件編號與信件主旨。</span>
           <span>• 若需要追加修改，請從案件列表的修改紀錄新增內容。</span>
-          <span>• 新開平面/影音專案可使用下方填單按鈕。</span>
+          <span>• 新的提案或新的案件請按「平面/影音新開專案」新增，會有輪派的設計師接單。</span>
         </div>
       </div>
       <button type="button" class="collapse-toggle" data-collapse-section="request" title="收合/展開設計需求" aria-label="收合/展開設計需求"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
@@ -3505,7 +3526,8 @@ function solidCancelIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><
 function solidProjectIcon(kind){return kind==='影音'?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3v1.4l2.9-1.8A1.4 1.4 0 0 1 22 6.8v10.4a1.4 1.4 0 0 1-2.1 1.2L17 16.6V18a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6Z"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8.8L20 8.2V21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm8 1.5V9h4.5L14 4.5ZM8 13h8v2H8v-2Zm0 4h6v2H8v-2Z"/></svg>'}
 function designerGroupLabel(d){return normalizeDesignGroup(d.designType)||fallbackDesignGroupForUser(d.name)||'設計'}
 function rotationDesignerForGroup(group){const list=designers.filter(d=>designerGroupLabel(d)===group).sort((a,b)=>(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))); return list.find(d=>newProjectDesignerOptions.includes(d.name))||list[0]||null}
-function renderRequestProjectButtons(){document.querySelectorAll('[data-new-project-group]').forEach(button=>{const group=button.dataset.newProjectGroup, designer=rotationDesignerForGroup(group), label=`${group}新專案填單`; button.innerHTML=`${solidProjectIcon(group)}<span>${esc(label)}</span>`; button.disabled=!designer; button.dataset.newProjectDesigner=designer?.name||''; button.title=designer?`預計設計師：${designer.name}`:'目前沒有可填單的設計師'});}
+function isPriorityNewCaseDesigner(d){const group=designerGroupLabel(d); if(!['平面','影音'].includes(group))return false; const first=rotationDesignerForGroup(group); return first?.name===d.name&&Number(d.rotation)===1}
+function renderRequestProjectButtons(){document.querySelectorAll('[data-new-project-group]').forEach(button=>{const group=button.dataset.newProjectGroup, designer=rotationDesignerForGroup(group), label=`${group}新開專案`; button.innerHTML=`${solidProjectIcon(group)}<span>${esc(label)}</span>`; button.disabled=!designer; button.dataset.newProjectDesigner=designer?.name||''; button.title=designer?`預計設計師：${designer.name}`:'目前沒有可新開專案的設計師'});}
 function renderDesigners(){
   if(!designerRoster)return;
   const list=sortDesigners(designers).filter(d=>d.name);
@@ -3518,7 +3540,8 @@ function renderDesigners(){
     const fallback=designerFallbackImage(d.name);
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span></div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><svg class="poster-speech-svg" viewBox="0 0 260 96" preserveAspectRatio="none" aria-hidden="true"><path d="M29 13H237C248 13 255 21 255 32V66C255 78 247 86 235 86H54C44 86 36 84 29 79L6 94L16 70C12 64 10 58 10 50V32C10 21 18 13 29 13Z" fill="rgba(255,255,255,.92)" stroke="rgba(207,216,220,.95)" stroke-width="2"/><path d="M32 18H233C243 18 250 25 250 35" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3" stroke-linecap="round"/></svg><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    const priorityBadge=isPriorityNewCaseDesigner(d)?'<span class="new-case-priority-badge">新案優先</span>':'';
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><svg class="poster-speech-svg" viewBox="0 0 260 96" preserveAspectRatio="none" aria-hidden="true"><path d="M29 13H237C248 13 255 21 255 32V66C255 78 247 86 235 86H54C44 86 36 84 29 79L6 94L16 70C12 64 10 58 10 50V32C10 21 18 13 29 13Z" fill="rgba(255,255,255,.92)" stroke="rgba(207,216,220,.95)" stroke-width="2"/><path d="M32 18H233C243 18 250 25 250 35" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="3" stroke-linecap="round"/></svg><span>${esc(quote)}</span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
   renderRequestProjectButtons();
