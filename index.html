@@ -1905,6 +1905,10 @@
       color:#263238!important;
       border-color:#cfd8dc!important;
     }
+    .revision-pill.revision-pending{
+      border:.5px solid #dc2626!important;
+      box-shadow:0 0 0 .5px rgba(220,38,38,.28)!important;
+    }
     .revision-pill:hover{
       background:var(--revision-bg,#e6e6e6)!important;
       color:var(--revision-color,#17211d)!important;
@@ -3377,6 +3381,7 @@ const designerRecipientNames = {
   Amber:'Amber Tian',
   Leona:'陳家蓁'
 };
+const requiredMailCcRecipients = ['傅思凱 <eric.fu@emctaipei.com>'];
 let currentUserProfile = null;
 function defaultVisibleColumns(){return columns.filter(c=>!defaultHiddenColumns.includes(c.key)).map(c=>c.key)}
 function accountStorageId(){return currentEditorToken?(currentEditorAccount||currentEditor||'user'):'guest'}
@@ -3465,11 +3470,22 @@ function designerCcRecipients(row){
     .map(name=>designerRecipientByName(name))
     .filter(recipient=>recipient&&extractEmail(recipient).toLowerCase()!==toEmail);
 }
+function uniqueMailRecipients(recipients){
+  const seen=new Set();
+  return recipients.filter(recipient=>{
+    const text=String(recipient||'').trim();
+    if(!text)return false;
+    const key=(extractEmail(text)||text).toLowerCase();
+    if(seen.has(key))return false;
+    seen.add(key);
+    return true;
+  });
+}
 function mailDraft(row){
   const designer=String(row.designer||'設計負責人').trim();
   const mailSubject=subject(row);
   const to=designerRecipient(row);
-  const cc=designerCcRecipients(row);
+  const cc=uniqueMailRecipients([...designerCcRecipients(row),...requiredMailCcRecipients]);
   const bodyText=[
     `Hi ${designer},`,
     '',
@@ -3846,10 +3862,11 @@ async function fetchDatabaseRows(){
 function modificationLabel(count){const n=Number(count)||0, labels=['','一','二','三','四','五','六','七','八','九','十']; if(n<=0)return '修改'; return `${labels[n]||n}修`}
 function modificationCount(id){return modificationCounts.get(String(id||''))||0}
 function modificationRecordsFor(id){return modificationRecords.get(String(id||''))||[]}
+function hasPendingModification(id){return modificationRecordsFor(id).some(record=>!String(record.confirmedDate||'').trim())}
 function revisionStyle(count){const level=Math.min(100,Math.max(10,(Number(count)||0)*10+10)), shade=Math.round(255*(100-level)/100), bg=`rgb(${shade},${shade},${shade})`, color=level>=55?'#fff':'#17211d'; return `--revision-bg:${bg};--revision-color:${color}`}
 function normalizeModificationRecord(record){return {caseId:String(record['案件編號']||record.caseId||record.id||'').trim(),count:Number(record['修改次數']||record.count||0)||0,created:String(record['建立日期']||record.created||'').trim(),date:String(record['修改日期']||record.modifyDate||'').trim(),content:String(record['修改內容']||record.content||'').trim(),modifier:String(record['修改人']||record.modifier||'').trim(),confirmedDate:String(record['確認修正日']||record.confirmedDate||'').trim()}}
 function revisionAddIcon(){return '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>'}
-function revisionControl(row){const count=modificationCount(row.id), editable=canCaseEditRow(row); if(count<=0)return editable?`<button type="button" class="revision-pill revision-add" title="查看修改紀錄" aria-label="查看修改紀錄" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${revisionAddIcon()}</button>`:'<span class="revision-empty">-</span>'; return `<span class="revision-wrap"><button type="button" class="revision-pill" style="${esc(revisionStyle(count))}" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${esc(modificationLabel(count))}</button></span>`}
+function revisionControl(row){const count=modificationCount(row.id), editable=canCaseEditRow(row), pending=hasPendingModification(row.id); if(count<=0)return editable?`<button type="button" class="revision-pill revision-add" title="查看修改紀錄" aria-label="查看修改紀錄" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${revisionAddIcon()}</button>`:'<span class="revision-empty">-</span>'; return `<span class="revision-wrap"><button type="button" class="revision-pill ${pending?'revision-pending':''}" style="${esc(revisionStyle(count))}" title="${pending?'有尚未確認的修改需求':'查看修改紀錄'}" aria-label="${pending?'有尚未確認的修改需求，查看修改紀錄':'查看修改紀錄'}" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${esc(modificationLabel(count))}</button></span>`}
 function revisionConfirmIcon(done=false){return done?'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9" stroke-linecap="round"/></svg>'}
 function revisionShortDate(value){const date=parseDate(value); if(!date)return String(value||'').replace(/^\d{4}[/-]/,'')||'-'; return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function revisionDateRange(record){return `${revisionShortDate(record.created)}-${revisionShortDate(record.date)}`}
