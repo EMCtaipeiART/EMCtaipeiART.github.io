@@ -3188,7 +3188,7 @@ const seed = [
 ['25120018','1 月','金士頓','金士頓_12/9B2B影片修改TOA(中文、日文)','吳懷柔','影音','後製',2,'2026-01-04','2026-01-09','Noise','未開始','字幕字卡'],
 ['25120020','1 月','eufy','12月#2_官網Pmax_E25&E28_1:1','李佳蓉','平面','後製',8,'2026-01-06','2026-01-08','Leona','未開始','廣告素材']
 ].map(r=>({id:r[0],month:r[1],client:r[2],project:r[3],owner:r[4],type:r[5],stage:r[6],qty:r[7],start:r[8],end:r[9],designer:r[10],status:r[11],details:r[12]}));
-const localRowsKey = 'designRequestsDatabaseV1';
+const localRowsKey = 'designRequestsDatabaseV3';
 const cachedRows = JSON.parse(localStorage.getItem(localRowsKey) || 'null');
 let rows = (cachedRows || seed).map(normalizeRow).filter(r=>!r.archived);
 if(!rows.length) rows = seed.map(normalizeRow).filter(r=>!r.archived);
@@ -3722,7 +3722,7 @@ async function submitFlatProject(event){
   try{
     const data=await sheetApi('createFlatProject',{user:currentEditor,editorToken:currentEditorToken,row});
     applyFlatProjectRotations(data.rotations||[]);
-    if(data.databaseRow){
+    if(data.databaseRow&&isCaseId_(data.databaseRow.id||data.databaseRow['案件編號'])){
       const newCase=normalizeRow(data.databaseRow);
       rows=[newCase,...rows.filter(item=>String(item.id)!==String(newCase.id))];
       save();
@@ -3797,9 +3797,31 @@ function gvizJsonp(url,timeoutMs=60000){
 function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
 function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
 async function fetchDatabaseObjects(){return gvizToObjects(await gvizJsonp(databaseGvizUrl))}
-function repairGeneratedIds(list){let lastId=0; return list.map(row=>{const fixed={...row}; if(isCaseId_(fixed.id)){lastId=Number(fixed.id); return fixed} if(lastId&&fixed.client&&fixed.project){lastId+=1; fixed.id=String(lastId).padStart(8,'0')} return fixed})}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
-async function fetchDatabaseRows(){return repairGeneratedIds((await fetchDatabaseObjects()).map(normalizeRow))}
+async function fetchDatabaseRowsByScript(){
+  const params=new URLSearchParams({
+    action:'list',
+    year:'',
+    noCache:'true',
+    targetSpreadsheetId,
+    targetSheetName,
+    targetSheetId:String(targetSheetId),
+    ts:Date.now()
+  });
+  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,60000,'Apps Script 最新案件讀取逾時，請稍候再試');
+  if(!data.ok)throw new Error(data.error||'Apps Script 最新案件讀取失敗');
+  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
+}
+async function fetchDatabaseRows(){
+  if(apiUrl){
+    try{
+      return await fetchDatabaseRowsByScript();
+    }catch(err){
+      console.warn('Apps Script 最新資料讀取失敗，改用公開資料來源',err);
+    }
+  }
+  return (await fetchDatabaseObjects()).map(normalizeRow).filter(row=>isCaseId_(row.id));
+}
 function modificationLabel(count){const n=Number(count)||0, labels=['','一','二','三','四','五','六','七','八','九','十']; if(n<=0)return '修改'; return `${labels[n]||n}修`}
 function modificationCount(id){return modificationCounts.get(String(id||''))||0}
 function modificationRecordsFor(id){return modificationRecords.get(String(id||''))||[]}
@@ -3873,6 +3895,12 @@ async function sheetApi(action,payload={}){
     if(data.action!==action)throw new Error('Apps Script 尚未支援確認修正日寫入，請重新部署最新版本後再試');
     return data;
   }
+  if(action==='addModificationRecord'){
+    const data=await writeToSheetByJsonp({action,...payload},30000,'修改紀錄寫入較慢，請稍後重新整理確認。');
+    if(!data.ok)throw new Error(data.error||'修改紀錄寫入失敗');
+    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
+    return data;
+  }
   if(action==='uploadDesignerImage'){
     const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
     if(!data.ok)throw new Error(data.error||'照片上傳失敗');
@@ -3889,7 +3917,7 @@ async function sheetApi(action,payload={}){
     return data;
   }
   const data = action === 'list'
-    ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
+    ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&noCache=${encodeURIComponent(payload.noCache?'true':'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
     : await postToSheet({action,...payload});
   if(!data.ok) throw new Error(data.error || 'Google Sheet 更新失敗');
   return data;
@@ -4399,8 +4427,8 @@ function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
 function positionFieldPopover(anchor){const width=Math.min(320,window.innerWidth-24), margin=12; fieldPopover.style.width=`${width}px`; fieldPopover.style.removeProperty('transform'); fieldPopover.classList.toggle('is-modal-popover',Boolean(anchor.closest?.('.login-modal'))); if(anchor.closest?.('.login-modal')){fieldPopover.style.left='50%'; fieldPopover.style.top='50%'; fieldPopover.style.transform='translate(-50%,-50%)'; fieldPopover.style.maxHeight=`${Math.max(180,window.innerHeight-48)}px`; return} const rect=anchor.getBoundingClientRect(); fieldPopover.style.left=`${Math.min(Math.max(margin,rect.left),window.innerWidth-width-margin)}px`; const naturalHeight=Math.min(fieldPopover.scrollHeight||280,360), below=window.innerHeight-rect.bottom-margin, above=rect.top-margin, useBelow=below>=Math.min(naturalHeight,220)||below>=above, maxHeight=Math.max(150,Math.min(360,useBelow?below:above)); fieldPopover.style.maxHeight=`${maxHeight}px`; fieldPopover.style.top=`${useBelow?rect.bottom+8:Math.max(margin,rect.top-8-maxHeight)}px`}
-function refreshAfterInlineWrite(message){if(!apiUrl){setSync(message||'已於本機更新');return} const text=message||'已更新'; setSync(`${text}，背景同步最新資料中...`); setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步最新資料`)).catch(err=>setSync(`${text}，但重新讀取失敗：${err.message}`,true)),0)}
-function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步試算表案件編號`)).catch(err=>setSync(`${text}，但案件編號同步失敗：${err.message}`,true)),0)}
+function refreshAfterInlineWrite(message){if(!apiUrl){setSync(message||'已於本機更新');return} const text=message||'已更新'; setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步最新資料`)).catch(err=>setSync(`${text}，但重新讀取失敗：${err.message}`,true)),1600)}
+function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步試算表案件編號`)).catch(err=>setSync(`${text}，但案件編號同步失敗：${err.message}`,true)),1800)}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
 async function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const keys=Object.keys(changes), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)})); selected.forEach(row=>markUpdatingCell(row.id,keys)); render(); setSync(`批次寫入 ${selected.length} 筆中...`); try{if(apiUrl){const data=await postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); if(!data.ok)throw new Error(data.error||'批次寫入失敗')} rows=rows.map(row=>selectedCaseIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selected.forEach(row=>clearUpdatingCell(row.id)); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}catch(err){selected.forEach(row=>clearUpdatingCell(row.id)); render(); setSync(`批次寫入失敗：${err.message}`,true)}}
 async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); closeCaseDetail(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); save(); render(); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}); setSync(successMessage); await refreshAfterInlineWrite(successMessage)}catch(err){rows=rows.map(r=>String(r.id)===String(id)?original:r); save(); render(); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
@@ -4564,11 +4592,10 @@ async function submitRequestBatchRows(){
     const data=apiUrl
       ? await sheetApi('batchAdd',{rows:rowsToSubmit.map(formCreateRow),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})
       : {rows:[]};
-    const fallbackBaseId=Number(nextId());
     const added=data.rows?.length
-      ? data.rows.map(normalizeRow)
-      : rowsToSubmit.map((row,index)=>normalizeRow({...row,id:row.id||String(fallbackBaseId+index).padStart(8,'0'),status:row.status||'未開始'}));
-    rows=[...added.reverse(),...rows];
+      ? data.rows.map(normalizeRow).filter(row=>isCaseId_(row.id))
+      : (apiUrl?[]:rowsToSubmit.map((row,index)=>normalizeRow({...row,id:row.id||String(Number(nextId())+index).padStart(8,'0'),status:row.status||'未開始'})));
+    if(added.length)rows=[...added.reverse(),...rows];
     save();
     requestBatchRows=[];
     requestBatchMode=false;
@@ -4720,8 +4747,8 @@ $('#requestForm').addEventListener('submit',async e=>{
       if(!apiUrl){r.id=nextId()}
       const data=apiUrl?await sheetApi('add',{row:formCreateRow(r),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken}):{row:r};
       submittedRow=normalizeRow(data.row||{...r,id:r.id||nextId(),status:r.status||'未開始'});
-      rows.unshift(submittedRow);
-      setSync(apiUrl?`已新增至 database 第 ${data.rowNumber || '新'} 列${submittedRow.id ? `，案件編號 ${submittedRow.id}` : ''}`:'已新增至本機資料');
+      if(!apiUrl||isCaseId_(submittedRow.id))rows.unshift(submittedRow);
+      setSync(apiUrl?`已新增至 database 第 ${data.rowNumber || '新'} 列${isCaseId_(submittedRow.id) ? `，案件編號 ${submittedRow.id}` : '，正在同步案件編號'}`:'已新增至本機資料');
     }
     save();
     e.target.reset();
