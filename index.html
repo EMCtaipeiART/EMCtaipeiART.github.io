@@ -1906,8 +1906,8 @@
       border-color:#cfd8dc!important;
     }
     .revision-pill.revision-pending{
-      border:.5px solid #dc2626!important;
-      box-shadow:0 0 0 .5px rgba(220,38,38,.28)!important;
+      border:1px solid #dc2626!important;
+      box-shadow:0 0 0 .5px rgba(220,38,38,.26)!important;
     }
     .revision-pill:hover{
       background:var(--revision-bg,#e6e6e6)!important;
@@ -3397,6 +3397,8 @@ let updatingCells = new Map();
 let modificationCounts = new Map();
 let modificationRecords = new Map();
 let renderQueued = false;
+let timelineRenderQueued = false;
+let pendingTimelineList = [];
 let columnControlsRenderedKey = '';
 let activeSettingsAccount = accountStorageId();
 let accountFilterSettings = JSON.parse(localStorage.getItem(accountStorageKey(filterSettingsKey)) || 'null') || {};
@@ -4342,7 +4344,15 @@ function renderModifyRecent(){
   renderModifyPagination(totalPages)
 }
 function renderOverviewOnly(){rows=rows.map(normalizeRow); renderOverviewControls(); renderStats(); renderDesigners()}
-function renderHeavyParts(){fillMultiFilter('#fYear','year','全部年度');fillMultiFilter('#fMonth','month','全部月份');fillMultiFilter('#fStatus','status','全部狀態');fillMultiFilter('#fDesigner','designer','全部設計負責人'); accountSettingsJustApplied=false; initYearFilter(); initMonthFilter(); const list=filtered(); renderOwnerOptions(); renderColumnControls(); renderTable(list); renderModifyRecent(); renderTimeline(list)}
+function scheduleTimelineRender(list){
+  pendingTimelineList=list;
+  if(timelineRenderQueued)return;
+  timelineRenderQueued=true;
+  const run=()=>{timelineRenderQueued=false; renderTimeline(pendingTimelineList)};
+  if(window.requestIdleCallback)requestIdleCallback(run,{timeout:900});
+  else setTimeout(run,80);
+}
+function renderHeavyParts({deferTimeline=true}={}){fillMultiFilter('#fYear','year','全部年度');fillMultiFilter('#fMonth','month','全部月份');fillMultiFilter('#fStatus','status','全部狀態');fillMultiFilter('#fDesigner','designer','全部設計負責人'); accountSettingsJustApplied=false; initYearFilter(); initMonthFilter(); const list=filtered(); renderOwnerOptions(); renderColumnControls(); renderTable(list); renderModifyRecent(); if(deferTimeline)scheduleTimelineRender(list); else renderTimeline(list)}
 function scheduleHeavyRender(){if(renderQueued)return; renderQueued=true; requestAnimationFrame(()=>{renderQueued=false; renderHeavyParts()})}
 function render(){renderOverviewOnly(); renderHeavyParts(); updateLoginUi()}
 async function refreshModifyList(){const btn=$('#refreshModify'); if(!btn||btn.disabled)return; const original=btn.textContent; btn.disabled=true; btn.textContent='重新整理中...'; try{await loadSheet(); btn.textContent='已更新'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},900)}catch(err){btn.textContent='重新整理失敗'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},1400)}}
@@ -4894,7 +4904,7 @@ $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
 $('#loginForm').addEventListener('submit',event=>{event.preventDefault(); setLoginNote('請按 Google 登入按鈕。')});
-populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); loadSheet(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600); setInterval(()=>{if(apiUrl&&!editingId) loadSheet()},60000);
+	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet(); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600); setInterval(()=>{if(apiUrl&&!editingId) loadSheet()},60000);
 </script>
 </body>
 </html>
