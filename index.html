@@ -3731,6 +3731,7 @@ async function submitFlatProject(event){
     }
     finishSubmitOverlay('已送出',false);
     setSync(`已建立${data.projectKind||group?.kind||''}新專案並新增至案件列表${data.databaseRow?.id?`：${data.databaseRow.id}`:''}`);
+    refreshAfterFormWrite('新專案已建立');
   }catch(err){
     hideSubmitOverlay();
     setSync(`新專案建立失敗：${err.message}`,true);
@@ -4399,6 +4400,7 @@ function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hid
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
 function positionFieldPopover(anchor){const width=Math.min(320,window.innerWidth-24), margin=12; fieldPopover.style.width=`${width}px`; fieldPopover.style.removeProperty('transform'); fieldPopover.classList.toggle('is-modal-popover',Boolean(anchor.closest?.('.login-modal'))); if(anchor.closest?.('.login-modal')){fieldPopover.style.left='50%'; fieldPopover.style.top='50%'; fieldPopover.style.transform='translate(-50%,-50%)'; fieldPopover.style.maxHeight=`${Math.max(180,window.innerHeight-48)}px`; return} const rect=anchor.getBoundingClientRect(); fieldPopover.style.left=`${Math.min(Math.max(margin,rect.left),window.innerWidth-width-margin)}px`; const naturalHeight=Math.min(fieldPopover.scrollHeight||280,360), below=window.innerHeight-rect.bottom-margin, above=rect.top-margin, useBelow=below>=Math.min(naturalHeight,220)||below>=above, maxHeight=Math.max(150,Math.min(360,useBelow?below:above)); fieldPopover.style.maxHeight=`${maxHeight}px`; fieldPopover.style.top=`${useBelow?rect.bottom+8:Math.max(margin,rect.top-8-maxHeight)}px`}
 function refreshAfterInlineWrite(message){if(!apiUrl){setSync(message||'已於本機更新');return} const text=message||'已更新'; setSync(`${text}，背景同步最新資料中...`); setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步最新資料`)).catch(err=>setSync(`${text}，但重新讀取失敗：${err.message}`,true)),0)}
+function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; setTimeout(()=>loadSheet().then(()=>setSync(`${text}，已同步試算表案件編號`)).catch(err=>setSync(`${text}，但案件編號同步失敗：${err.message}`,true)),0)}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
 async function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const keys=Object.keys(changes), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)})); selected.forEach(row=>markUpdatingCell(row.id,keys)); render(); setSync(`批次寫入 ${selected.length} 筆中...`); try{if(apiUrl){const data=await postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); if(!data.ok)throw new Error(data.error||'批次寫入失敗')} rows=rows.map(row=>selectedCaseIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selected.forEach(row=>clearUpdatingCell(row.id)); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}catch(err){selected.forEach(row=>clearUpdatingCell(row.id)); render(); setSync(`批次寫入失敗：${err.message}`,true)}}
 async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); closeCaseDetail(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); save(); render(); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}); setSync(successMessage); await refreshAfterInlineWrite(successMessage)}catch(err){rows=rows.map(r=>String(r.id)===String(id)?original:r); save(); render(); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
@@ -4579,6 +4581,7 @@ async function submitRequestBatchRows(){
     render();
     renderRequestBatchRows();
     finishSubmitOverlay(`已批次新增 ${added.length} 筆`,false);
+    refreshAfterFormWrite(`已批次新增 ${added.length} 筆`);
   }catch(err){
     hideSubmitOverlay();
     setSync(`批次新增失敗：${err.message}`,true);
@@ -4730,6 +4733,7 @@ $('#requestForm').addEventListener('submit',async e=>{
     render();
     if(!isModify) await copyText(subject(submittedRow),{silent:true});
     finishSubmitOverlay(!isModify?'已送出':(wasEditing?'已更新':'已送出'),false);
+    refreshAfterFormWrite(isModify?'案件已更新':'案件已新增');
   }catch(err){
     hideSubmitOverlay();
     setSync(err.message,true);
