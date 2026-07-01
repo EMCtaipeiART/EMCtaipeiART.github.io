@@ -1167,7 +1167,8 @@
     .designer-photo-tools input[type=file]{font-size:12px;min-height:34px;padding:5px;background:#fff}
     .designer-photo-status{font-size:12px;color:var(--muted);font-weight:800}
     .designer-card{background:transparent!important}
-    .designer-card,.avatar-shell,.avatar-frame,.avatar-frame img{cursor:default!important}
+    .designer-card,.avatar-frame,.avatar-frame img{cursor:default!important}
+    .avatar-shell{cursor:pointer!important}
     .designer-tags button{cursor:pointer!important}
     .avatar-frame{background:transparent!important;box-shadow:none!important;border:0!important;padding:0!important;border-radius:18px!important;overflow:visible!important}
     .new-case-priority-badge{
@@ -1191,10 +1192,10 @@
       white-space:nowrap;
       pointer-events:none;
     }
-    .avatar-shell:hover .designer-poster,
-    .avatar-shell:focus-within .designer-poster{
+    .avatar-shell.poster-open .designer-poster{
       opacity:1!important;
       transform:translate(-50%,0)!important;
+      pointer-events:auto!important;
     }
     .avatar-frame:hover,.avatar-frame:focus-visible{background:transparent!important;box-shadow:none!important;outline:2px solid rgba(15,143,97,.16)!important;outline-offset:3px}
     .avatar-frame img{border-radius:18px!important;box-shadow:none!important}
@@ -1214,8 +1215,7 @@
       pointer-events:none;
       transition:opacity .18s ease,visibility .18s ease,transform .18s ease;
     }
-    .avatar-shell:hover .poster-speech,
-    .avatar-shell:focus-within .poster-speech{
+    .avatar-shell.poster-open .poster-speech{
       opacity:1;
       visibility:visible;
       animation:posterSpeechWiggle 3.1s ease-in-out .08s infinite;
@@ -1324,8 +1324,7 @@
         right:auto!important;
         transform:translate(0,-6px)!important;
       }
-      .designer-card:nth-child(3n+1) .avatar-shell:hover .designer-poster,
-      .designer-card:nth-child(3n+1) .avatar-shell:focus-within .designer-poster{
+      .designer-card:nth-child(3n+1) .avatar-shell.poster-open .designer-poster{
         transform:translate(0,0)!important;
       }
       .designer-card:nth-child(3n+2) .designer-poster{
@@ -1333,8 +1332,7 @@
         right:auto!important;
         transform:translate(-50%,-6px)!important;
       }
-      .designer-card:nth-child(3n+2) .avatar-shell:hover .designer-poster,
-      .designer-card:nth-child(3n+2) .avatar-shell:focus-within .designer-poster{
+      .designer-card:nth-child(3n+2) .avatar-shell.poster-open .designer-poster{
         transform:translate(-50%,0)!important;
       }
       .designer-card:nth-child(3n) .designer-poster{
@@ -1342,8 +1340,7 @@
         right:0!important;
         transform:translate(0,-6px)!important;
       }
-      .designer-card:nth-child(3n) .avatar-shell:hover .designer-poster,
-      .designer-card:nth-child(3n) .avatar-shell:focus-within .designer-poster{
+      .designer-card:nth-child(3n) .avatar-shell.poster-open .designer-poster{
         transform:translate(0,0)!important;
       }
       .new-case-priority-badge{left:3px;bottom:3px;min-height:17px;padding:2px 6px;font-size:9px}
@@ -3607,8 +3604,7 @@ function splitSkills(value){return unique(String(value||'').split(/[、,，]/).m
 function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['名字']||row['設計師名字']||row.name||'').trim(),account:loginAccountFull(row['帳號']||row.account||row.email||''),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
 function mergeDesignerProfile(base={},patch={}){const merged={...base,...patch}; ['avatar','poster','designType','status','account'].forEach(key=>{if(!patch[key]&&base[key])merged[key]=base[key]}); if(!patch.rotation&&base.rotation)merged.rotation=base.rotation; if(!patch.skills?.length&&base.skills?.length)merged.skills=base.skills; return normalizeDesignerRow(merged)}
 function sortDesigners(list){return [...list].sort((a,b)=>(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hant'))}
-function rowInCurrentMonth(row){const date=new Date(row.start); if(!Number.isNaN(date.getTime()))return date.getFullYear()===new Date().getFullYear()&&date.getMonth()===new Date().getMonth(); return canonicalMonth(row.month)===currentMonth()}
-function designerActiveCount(name){return rows.filter(row=>row.designer===name&&['未開始','執行中'].includes(row.status)&&rowInCurrentMonth(row)).length}
+function designerActiveCount(name){return rows.filter(row=>row.designer===name&&['未開始','執行中'].includes(row.status)).length}
 function computedDesignerStatus(name,fallback='普通'){const count=designerActiveCount(name); return count>5?'忙碌':(count>=0?'普通':fallback)}
 function rotationBadgeArrow(){return '<span class="rotation-badge-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v12" stroke-width="2.4" stroke-linecap="round"/><path d="m7 12 5 5 5-5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'}
 function solidAddIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a1 1 0 0 1 2 0v7h7a1 1 0 1 1 0 2h-7v7a1 1 0 1 1-2 0v-7H4a1 1 0 1 1 0-2h7V4Z"/></svg>'}
@@ -3633,7 +3629,7 @@ function renderDesigners(){
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     const priorityBadge=isPriorityNewCaseDesigner(d)?'<span class="new-case-priority-badge">新案優先</span>':'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：當月未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
   renderRequestProjectButtons();
@@ -4747,12 +4743,26 @@ $('#flatProjectForm')?.elements?.qty?.addEventListener('input',event=>{event.tar
 formEl.elements.type.addEventListener('change',()=>populateDesignSelects(formEl.elements.type.value,null,''));
 formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
 designerRoster?.addEventListener('click',event=>{
+  const shell=event.target.closest('.avatar-shell');
+  if(shell&&designerRoster.contains(shell)){
+    if(event.target.closest('.load-dot'))return;
+    event.preventDefault();
+    event.stopPropagation();
+    const willOpen=!shell.classList.contains('poster-open');
+    designerRoster.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)item.classList.remove('poster-open')});
+    shell.classList.toggle('poster-open',willOpen);
+    return;
+  }
   const button=event.target.closest('.designer-tags button');
   if(button){
     event.preventDefault();
     event.stopPropagation();
     applyDesignerSkill(button.dataset.designer,button.dataset.skill);
   }
+});
+document.addEventListener('click',event=>{
+  if(event.target.closest?.('.avatar-shell'))return;
+  designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>item.classList.remove('poster-open'));
 });
 $('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
 $('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
