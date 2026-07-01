@@ -3882,6 +3882,15 @@ async function sheetApi(action,payload={}){
     if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
     return data;
   }
+  if(action==='add'||action==='update'){
+    const writePayload={action,...payload};
+    const payloadLength=JSON.stringify(writePayload).length;
+    const data=payloadLength<6500
+      ? await writeToSheetByJsonp(writePayload,30000,`${action==='add'?'新增':'編輯'}寫入較慢，正在改用備援方式。`).catch(()=>postToSheet(writePayload))
+      : await postToSheet(writePayload);
+    if(!data.ok)throw new Error(data.error||(action==='add'?'新增失敗':'更新失敗'));
+    return data;
+  }
   const data = action === 'list'
     ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
     : await postToSheet({action,...payload});
