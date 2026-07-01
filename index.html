@@ -3812,15 +3812,36 @@ async function fetchDatabaseRowsByScript(){
   if(!data.ok)throw new Error(data.error||'Apps Script 最新案件讀取失敗');
   return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
+async function fetchRecentDatabaseRowsByScript(limit=320){
+  if(!apiUrl)return [];
+  const params=new URLSearchParams({
+    action:'recent',
+    limit:String(limit),
+    targetSpreadsheetId,
+    targetSheetName,
+    targetSheetId:String(targetSheetId),
+    ts:Date.now()
+  });
+  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,12000,'最近案件讀取逾時，先顯示快取資料');
+  if(!data.ok)throw new Error(data.error||'最近案件讀取失敗');
+  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
+}
+function mergeRowsById(baseRows=[],patchRows=[]){
+  const byId=new Map();
+  baseRows.forEach(row=>{if(isCaseId_(row.id))byId.set(String(row.id),normalizeRow(row))});
+  patchRows.forEach(row=>{if(isCaseId_(row.id))byId.set(String(row.id),normalizeRow(row))});
+  return [...byId.values()].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
+}
 async function fetchDatabaseRows(){
-  if(apiUrl){
-    try{
-      return await fetchDatabaseRowsByScript();
-    }catch(err){
-      console.warn('Apps Script 最新資料讀取失敗，改用公開資料來源',err);
-    }
+  const baseRows=(await fetchDatabaseObjects()).map(normalizeRow).filter(row=>isCaseId_(row.id));
+  if(!apiUrl)return baseRows;
+  try{
+    return mergeRowsById(baseRows,await fetchRecentDatabaseRowsByScript());
+  }catch(err){
+    console.warn('最近案件讀取失敗，先顯示公開資料來源',err);
+    setTimeout(()=>fetchDatabaseRowsByScript().then(latestRows=>{rows=activeRowsOnly(latestRows); dataReady=true; save(); renderOverviewOnly(); scheduleHeavyRender(); renderNotifications(); setSync(`已補上最新 database ${rows.length} 筆資料`)}).catch(error=>console.warn('完整最新資料背景讀取失敗',error)),0);
+    return baseRows;
   }
-  return (await fetchDatabaseObjects()).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
 function modificationLabel(count){const n=Number(count)||0, labels=['','一','二','三','四','五','六','七','八','九','十']; if(n<=0)return '修改'; return `${labels[n]||n}修`}
 function modificationCount(id){return modificationCounts.get(String(id||''))||0}
@@ -4068,7 +4089,7 @@ function postToSheetByFrame(payload){
 function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案')return '已完成'; if(s==='未執行')return '未開始'; return s||'未開始'}
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
 function normalizeRow(r={}){const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??''; return {id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',archived:Boolean(r.archived||r['archived'])}}
-async function loadSheet(){if(loadingSheet)return; loadingSheet=true; try{setSync('讀取 database 最新資料中…'); const [databaseRows]=await Promise.all([fetchDatabaseRows(),fetchModificationCounts()]), current=activeRowsOnly(databaseRows); rows=current; dataReady=true; updatingCells.clear(); save(); renderOverviewOnly(); scheduleHeavyRender(); renderNotifications(); setSync(`已從 database 同步 ${current.length} 筆資料`);}catch(err){setSync(err.message,true)}finally{loadingSheet=false}}
+async function loadSheet(){if(loadingSheet)return; loadingSheet=true; try{setSync('讀取 database 最新資料中…'); const databaseRows=await fetchDatabaseRows(), current=activeRowsOnly(databaseRows); rows=current; dataReady=true; updatingCells.clear(); save(); renderOverviewOnly(); scheduleHeavyRender(); renderNotifications(); setSync(`已從 database 同步 ${current.length} 筆資料`); setTimeout(()=>fetchModificationCounts().then(()=>{renderModifyRecent(); renderTable(filtered()); refreshOpenCaseDetail?.($('#caseDetailModal')?.dataset?.caseId)}).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),0)}catch(err){setSync(err.message,true)}finally{loadingSheet=false}}
 function monthNumber(value){const n=Number(String(value).match(/\d+/)?.[0]||0); return n || 99}
 function selectedValues(id){return [...$(id).querySelectorAll('input:checked')].map(input=>input.value)}
 function filterLabel(id,value){return id==='#fStatus'&&value==='未開始'?'未執行':value}
