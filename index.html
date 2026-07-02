@@ -3016,6 +3016,20 @@
       max-height:var(--case-row-height)!important;
       box-sizing:border-box!important;
     }
+    #casesSection .case-table-wrap tbody{
+      display:grid!important;
+      grid-auto-rows:var(--case-row-height)!important;
+      gap:0!important;
+    }
+    #casesSection .case-table-wrap tbody tr{
+      display:table!important;
+      table-layout:fixed!important;
+      width:100%!important;
+      overflow:hidden!important;
+    }
+    #casesSection .case-table-wrap tbody td{
+      display:table-cell!important;
+    }
     #casesSection .case-timeline-panel .timeline-inner,
     #casesSection .case-sticky-timeline-head .timeline-inner{
       gap:0!important;
@@ -3029,17 +3043,37 @@
       line-height:1.15!important;
       vertical-align:middle!important;
     }
+    #casesSection .case-table-wrap tbody td > *{
+      max-height:calc(var(--case-row-height) - 8px)!important;
+      box-sizing:border-box!important;
+      vertical-align:middle!important;
+    }
+    #casesSection .case-table-wrap .select-col input,
+    #casesSection .case-table-wrap .row-select{
+      width:16px!important;
+      height:16px!important;
+      min-width:16px!important;
+      min-height:16px!important;
+      max-width:16px!important;
+      max-height:16px!important;
+      margin:0!important;
+    }
     #casesSection .case-table-wrap .status,
     #casesSection .case-table-wrap .editable-field,
     #casesSection .case-table-wrap .revision-pill:not(.revision-add),
     #casesSection .case-table-wrap .history-lock,
     #casesSection .case-table-wrap .mail-compose-btn,
     #casesSection .case-table-wrap .row-actions button{
-      max-height:34px!important;
+      height:30px!important;
+      max-height:30px!important;
       min-height:30px!important;
+      padding-top:0!important;
+      padding-bottom:0!important;
       line-height:1.1!important;
       align-items:center!important;
+      justify-content:center!important;
       box-sizing:border-box!important;
+      overflow:hidden!important;
     }
     #casesSection .case-table-wrap .revision-pill.revision-add{
       width:24px!important;
