@@ -2982,6 +2982,13 @@
       box-shadow:0 5px 13px rgba(18,38,28,.08)!important;
     }
     .column-popover .column-toggle input{
+      position:absolute!important;
+      width:1px!important;
+      height:1px!important;
+      min-width:1px!important;
+      min-height:1px!important;
+      opacity:0!important;
+      pointer-events:none!important;
       accent-color:var(--toggle-on-ink)!important;
     }
     .column-toggle-editEnabled,.column-toggle-actions{--toggle-bg:#ecfdf5;--toggle-border:#bbf7d0;--toggle-ink:#166534;--toggle-on-bg:#d1fae5;--toggle-on-border:#34d399;--toggle-on-ink:#047857}
@@ -2991,6 +2998,11 @@
     .column-toggle-designer,.column-toggle-qty{--toggle-bg:#f0fdfa;--toggle-border:#99f6e4;--toggle-ink:#0f766e;--toggle-on-bg:#ccfbf1;--toggle-on-border:#2dd4bf;--toggle-on-ink:#0f766e}
     .column-toggle-status,.column-toggle-modifications{--toggle-bg:#fff1f2;--toggle-border:#fecdd3;--toggle-ink:#be123c;--toggle-on-bg:#ffe4e6;--toggle-on-border:#fb7185;--toggle-on-ink:#be123c}
     .column-toggle-subject,.column-toggle-timelineEnabled{--toggle-bg:#fefce8;--toggle-border:#fde68a;--toggle-ink:#854d0e;--toggle-on-bg:#fef3c7;--toggle-on-border:#f59e0b;--toggle-on-ink:#92400e}
+    .column-popover .column-toggle:nth-child(-n+4){--toggle-bg:#f0fdfa;--toggle-border:#99f6e4;--toggle-ink:#0f766e;--toggle-on-bg:#ccfbf1;--toggle-on-border:#2dd4bf;--toggle-on-ink:#0f766e}
+    .column-popover .column-toggle:nth-child(n+5):nth-child(-n+8){--toggle-bg:#eff6ff;--toggle-border:#bfdbfe;--toggle-ink:#1d4ed8;--toggle-on-bg:#dbeafe;--toggle-on-border:#60a5fa;--toggle-on-ink:#1d4ed8}
+    .column-popover .column-toggle:nth-child(n+9):nth-child(-n+12){--toggle-bg:#fff7ed;--toggle-border:#fed7aa;--toggle-ink:#c2410c;--toggle-on-bg:#ffedd5;--toggle-on-border:#fb923c;--toggle-on-ink:#c2410c}
+    .column-popover .column-toggle:nth-child(n+13):nth-child(-n+16){--toggle-bg:#fff1f2;--toggle-border:#fecdd3;--toggle-ink:#be123c;--toggle-on-bg:#ffe4e6;--toggle-on-border:#fb7185;--toggle-on-ink:#be123c}
+    .column-popover .column-toggle:nth-child(n+17){--toggle-bg:#f5f3ff;--toggle-border:#ddd6fe;--toggle-ink:#6d28d9;--toggle-on-bg:#ede9fe;--toggle-on-border:#a78bfa;--toggle-on-ink:#6d28d9}
 
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
