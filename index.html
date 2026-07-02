@@ -3281,6 +3281,7 @@ const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsh
 const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
 const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
 const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
+function modificationStatsGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent(query)}`}
 const settingsGvizUrl = designerGvizUrl;
 const $=s=>document.querySelector(s), tbody=$('#tbody'), thead=$('#thead'), modifyTbody=$('#modifyTbody'), modifyThead=$('#modifyThead'), modifyFixedTbody=$('#modifyFixedTbody'), modifyFixedThead=$('#modifyFixedThead'), msg=$('#msg');
 const syncStatus = $('#syncStatus');
@@ -3710,8 +3711,8 @@ function renderDesigners(){
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
-function openIssueReportModal(){const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
-function closeIssueReportModal(){const modal=$('#issueReportModal'); if(modal)modal.hidden=true}
+function openIssueReportModal(){const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
+function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function submitIssueReport(event){
   event.preventDefault();
   const form=event.target, submit=$('#issueReportSubmit'), content=form.elements.content.value.trim(), suggestion=form.elements.suggestion.value.trim();
@@ -3724,19 +3725,14 @@ async function submitIssueReport(event){
   renderSubmitOverlayText('問題回報送出中...',feedbackQuote);
   submitOverlay.classList.remove('done','login-pending');
   submitOverlay.classList.add('show');
+  setTimeout(()=>hideSubmitOverlay(),900);
   setSync('問題回報送出中...');
   try{
     await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
-    stopSubmitQuoteRotation();
-    renderSubmitOverlayText('已收到問題回報',feedbackQuote);
-    submitOverlay.classList.add('done');
-    setTimeout(()=>submitOverlay.classList.remove('show','done'),1300);
     form.reset();
     setSync('問題回報已送出，謝謝回報');
   }catch(err){
     hideSubmitOverlay();
-    const modal=$('#issueReportModal');
-    if(modal)modal.hidden=false;
     setSync(`問題回報送出失敗：${err.message}`,true);
   }finally{
     submit.disabled=false;
@@ -3983,15 +3979,24 @@ function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id
 function openRevisionModal(event,id){event?.stopPropagation?.(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){const modal=$('#revisionModal'); if(modal)modal.hidden=true}
 function refreshOpenRevisionModal(id){const modal=$('#revisionModal'); if(modal&&!modal.hidden&&String(modal.dataset.caseId||'')===String(id))renderRevisionModal(id)}
-async function fetchModificationCounts(){
+function modificationQueryForIds(ids=[]){
+  const numbers=ids.map(id=>Number(id)).filter(Number.isFinite);
+  if(!numbers.length)return 'select * where A = 0';
+  const min=Math.min(...numbers), max=Math.max(...numbers);
+  return `select * where A >= ${min} and A <= ${max}`;
+}
+async function fetchModificationCounts({ids=null,full=false}={}){
   try{
-    const records=gvizToObjects(await gvizJsonp(modificationStatsGvizUrl));
+    const idSet=ids&&!full?new Set(ids.map(id=>String(id))):null;
+    const query=idSet?modificationQueryForIds([...idSet]):'select *';
+    const records=gvizToObjects(await gvizJsonp(full?modificationStatsGvizUrl:modificationStatsGvizQueryUrl(query)));
     const counts=new Map();
     const byCase=new Map();
     records.forEach(record=>{
       const normalized=normalizeModificationRecord(record);
       const id=normalized.caseId;
       if(!id)return;
+      if(idSet&&!idSet.has(id))return;
       const count=normalized.count;
       counts.set(id,Math.max(counts.get(id)||0,count));
       if(!byCase.has(id))byCase.set(id,[]);
@@ -4249,8 +4254,9 @@ async function loadSheet({full=false,background=false,quick=false}={}){
       setSync(full?`已從 database 同步 ${current.length} 筆資料`:(quick?`已先同步最新 ${databaseRows.length} 筆資料，舊資料背景補齊中`:`已先同步近期 ${databaseRows.length} 筆資料，舊資料背景補齊中`));
       if(!full)scheduleFullDatabaseLoad();
     }
-    if(background) setTimeout(()=>fetchModificationCounts().then(()=>renderNotifications()).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),1600);
-    else setTimeout(()=>fetchModificationCounts().then(()=>{renderModifyRecent(); renderTable(filtered()); refreshOpenCaseDetail?.($('#caseDetailModal')?.dataset?.caseId)}).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),0);
+    const modificationIds=current.map(row=>row.id).filter(Boolean);
+    if(background) setTimeout(()=>fetchModificationCounts({ids:modificationIds,full}).then(()=>renderNotifications()).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),1600);
+    else setTimeout(()=>fetchModificationCounts({ids:modificationIds,full}).then(()=>{renderModifyRecent(); renderTable(filtered()); refreshOpenCaseDetail?.($('#caseDetailModal')?.dataset?.caseId)}).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),0);
   }catch(err){
     setSync(err.message,true);
   }finally{
