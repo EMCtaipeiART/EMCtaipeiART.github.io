@@ -55,6 +55,9 @@
     .request-help-info:hover,.request-help-info:focus-visible{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important;outline:none!important}
     .request-help-popover{position:absolute;left:0;top:34px;z-index:110;display:grid;gap:5px;width:min(430px,calc(100vw - 64px));padding:13px 15px;border:1px solid #cfe5d8;border-radius:12px;background:#fff;box-shadow:0 18px 36px rgba(18,38,28,.14);color:#43524b;font-size:13px;line-height:1.55;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
     .request-title-wrap:has(.request-help-info:hover) .request-help-popover,.request-title-wrap:has(.request-help-info:focus-visible) .request-help-popover{opacity:1;transform:translateY(0);pointer-events:auto}
+    .recent-title-wrap{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
+    .recent-title-wrap .request-help-popover{width:min(480px,calc(100vw - 64px))}
+    .recent-title-wrap:has(.request-help-info:hover) .request-help-popover,.recent-title-wrap:has(.request-help-info:focus-visible) .request-help-popover{opacity:1;transform:translateY(0);pointer-events:auto}
     .designer-roster{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
     .designer-card{padding:6px 4px 4px}
     .avatar-shell{position:relative;margin-inline:auto;width:min(100%,112px)}
@@ -3252,7 +3255,18 @@
     </div>
     <div class="card collapsible-card" id="recentPanel">
       <div class="section-head">
-        <h2>最新案件列表</h2>
+        <div class="recent-title-wrap">
+          <h2>最新案件列表</h2>
+          <button type="button" class="request-help-info" aria-label="最新案件列表說明">i</button>
+          <div class="request-help-popover" aria-hidden="true">
+            <b>最新案件列表說明：</b>
+            <span>• 新增案件完看有沒有案件編號與資料建立完成。</span>
+            <span>• 完成後如果想要修改，點選「編輯」做調整。</span>
+            <span>• 確認無誤後可以點選「發信」，信件內容會自動帶入相關資訊。</span>
+            <span>• 記得將信件資訊補齊，手動加入簽名檔，確認信件人等資訊。</span>
+            <span>• 搜尋框能輸入案件編號或相關文字快速搜尋。</span>
+          </div>
+        </div>
         <button type="button" class="collapse-toggle" data-collapse-section="recent" title="收合/展開最新案件列表" aria-label="收合/展開最新案件列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
       </div>
       <div id="modifyRecent" class="modify-list modify-shell">
@@ -3281,7 +3295,7 @@
         <div class="request-help-popover" aria-hidden="true">
           <b>需求單填寫說明：</b>
           <span>• 填寫客戶別、專案名稱、負責人、設計類型、階段、數量與日期。</span>
-          <span>• 新增案件後系統會產生案件編號與信件主旨。</span>
+          <span>• 新增案件後確認「最新案件列表」欄有無資訊，點選「發信」進行告知。</span>
           <span>• 若需要追加修改，請從案件列表的修改紀錄新增內容。</span>
           <span>• 新的提案或新的案件請按「平面/影音新開專案」新增，會有輪派的設計師接單。</span>
         </div>
