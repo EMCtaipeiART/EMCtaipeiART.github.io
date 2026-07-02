@@ -4505,26 +4505,27 @@ async function googleLoginByJsonp(credential){
   const name=[profile?.family_name,profile?.given_name].map(value=>String(value||'').trim()).join('')||profile?.name||profile?.given_name||'';
   if(email)return await googleEmailLoginByJsonp(email,name);
   const payload=withSheetTarget({action:'googleLogin',credential});
-  return await googleLoginByPost(payload,'Google 登入驗證沒有回應。請按「測試連線」檢查 Apps Script 權限。',18000);
+  const data=await writeToSheetByJsonp(payload,45000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
+  if(!data.ok)throw new Error(data.error||'Google 登入失敗');
+  if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+  return data;
 }
 async function googleEmailLoginByJsonp(email,name=''){
   const payload=withSheetTarget({action:'googleEmailLogin',email,name});
-  const params=new URLSearchParams({
-    action:'googleEmailLogin',
-    payload:JSON.stringify(payload),
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId:String(targetSheetId),
-    ts:Date.now()
-  });
-  try{
-    const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,12000,'Google 登入驗證較慢，正在改用備援方式。');
-    if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-    if(data.action!=='googleEmailLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-    return data;
-  }catch(jsonpErr){
-    return await googleLoginByPost(payload,'Google 登入驗證沒有回應。請按「測試連線」檢查 Apps Script 權限。',18000);
+  const buildUrl=()=>{const params=new URLSearchParams({action:'googleEmailLogin',payload:JSON.stringify(payload),targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()}); return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`};
+  let lastError=null;
+  for(const [index,timeoutMs] of [30000,45000].entries()){
+    try{
+      const data=await jsonp(buildUrl(),timeoutMs,index?'Google 登入驗證仍未回應，請按「測試連線」檢查 Apps Script 是否可執行。':'Google 登入驗證較慢，正在重試。');
+      if(!data.ok)throw new Error(data.error||'Google 登入失敗');
+      if(data.action!=='googleEmailLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+      return data;
+    }catch(err){
+      lastError=err;
+      console.warn(`Google email 登入 JSONP 第 ${index+1} 次失敗`,{email,error:err});
+    }
   }
+  throw new Error(`Google 登入驗證沒有回應：${lastError?.message||'Apps Script JSONP 逾時'}`);
 }
 function postToSheetByFrame(payload){
   return new Promise((resolve,reject)=>{
@@ -5078,7 +5079,7 @@ function setGoogleLoginEmail(email,source='Google'){const el=$('#googleLoginEmai
 function googleFedCmHint(){return '若 Chrome 封鎖第三方登入，請到 chrome://settings/content/federatedIdentityApi 允許本網站第三方登入。'}
 function decodeGoogleCredentialEmail(credential){try{const payload=String(credential||'').split('.')[1]||''; if(!payload)return ''; const normalized=payload.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(payload.length/4)*4,'='); return JSON.parse(decodeURIComponent(escape(atob(normalized)))).email||''}catch(err){console.warn('Google credential email 解析失敗',err); return ''}}
 function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} editorSessionKeys.forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.removeItem('designRequestGoogleLoginState'); sessionStorage.setItem('designRequestEditorLoggedOut','1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; selectedCaseIds.clear()}
-function handleGoogleLoginError(error,context='Google 登入'){console.error(`[${context}]`,error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${context}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${context}失敗：${message}。${googleFedCmHint()}`,true); setSync(`${context}失敗：${message}`,true); updateLoginUi(); render()}
+function handleGoogleLoginError(error,context='Google 登入'){console.error(`[${context}]`,error); const message=error?.message||error?.error||String(error||'未知錯誤'), scriptLikely=/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=scriptLikely?'請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。':googleFedCmHint(); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${context}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${context}失敗：${message}。${hint}`,true); setSync(`${context}失敗：${message}`,true); updateLoginUi(); render()}
 function loginAccountFull(value){const text=String(value||'').trim().toLowerCase(); if(!text)return ''; return text.includes('@')?text:`${text}${loginDomain}`}
 function loginAccountLocal(value){return String(value||'').trim().replace(new RegExp(`${loginDomain.replace('.','\\.')}$`,'i'),'')}
 function savedLogin(){return {remember:localStorage.getItem('designRequestRememberLogin')==='1',account:localStorage.getItem('designRequestSavedAccount')||'',password:localStorage.getItem('designRequestSavedPassword')||''}}
