@@ -4571,8 +4571,13 @@ function renderModifyRecent(){
   renderModifyPagination(totalPages)
 }
 function renderOverviewOnly(){rows=rows.map(normalizeRow); renderOverviewControls(); renderStats(); renderDesigners()}
+function timelineRowsFor(list){
+  if(list.length||archiveRowsLoading)return list;
+  if(!isDesignerLogin())return list;
+  return editableRowsSorted().filter(row=>row.status!=='已取消').slice(0,80);
+}
 function scheduleTimelineRender(list){
-  pendingTimelineList=list;
+  pendingTimelineList=timelineRowsFor(list);
   if(timelineRenderQueued)return;
   timelineRenderQueued=true;
   const run=()=>{timelineRenderQueued=false; renderTimeline(pendingTimelineList)};
@@ -4580,7 +4585,7 @@ function scheduleTimelineRender(list){
   else setTimeout(run,80);
 }
 function renderTimelineLoading(){const box=$('#timeline'), stickyScale=$('#stickyTimelineScale'); if(box)box.innerHTML='<p class="small">資料讀取中...</p>'; if(stickyScale)stickyScale.innerHTML=''; adjustCaseSplitHeight()}
-function renderHeavyParts({deferTimeline=true}={}){fillMultiFilter('#fYear','year','全部年度');fillMultiFilter('#fMonth','month','全部月份');fillMultiFilter('#fStatus','status','全部狀態');fillMultiFilter('#fDesigner','designer','全部設計負責人'); accountSettingsJustApplied=false; initYearFilter(); initMonthFilter(); const list=filtered(), loadingArchive=archiveRowsLoading&&archiveFilterRequested(); renderOwnerOptions(); renderColumnControls(); renderTable(list); renderModifyRecent(); if(loadingArchive)renderTimelineLoading(); else if(deferTimeline)scheduleTimelineRender(list); else renderTimeline(list)}
+function renderHeavyParts({deferTimeline=true}={}){fillMultiFilter('#fYear','year','全部年度');fillMultiFilter('#fMonth','month','全部月份');fillMultiFilter('#fStatus','status','全部狀態');fillMultiFilter('#fDesigner','designer','全部設計負責人'); accountSettingsJustApplied=false; initYearFilter(); initMonthFilter(); const list=filtered(), loadingArchive=archiveRowsLoading&&archiveFilterRequested(), timelineList=timelineRowsFor(list); renderOwnerOptions(); renderColumnControls(); renderTable(list); renderModifyRecent(); if(loadingArchive)renderTimelineLoading(); else if(deferTimeline)scheduleTimelineRender(timelineList); else renderTimeline(timelineList)}
 function scheduleHeavyRender(){if(renderQueued)return; renderQueued=true; requestAnimationFrame(()=>{renderQueued=false; renderHeavyParts()})}
 function render(){renderOverviewOnly(); renderHeavyParts(); updateLoginUi()}
 async function refreshModifyList(){const btn=$('#refreshModify'); if(!btn||btn.disabled)return; const original=btn.textContent; btn.disabled=true; btn.textContent='重新整理中...'; try{await loadSheet(); btn.textContent='已更新'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},900)}catch(err){btn.textContent='重新整理失敗'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},1400)}}
@@ -4926,7 +4931,7 @@ async function submitRequestBatchRows(){
 function requestButtonHtml(label,icon){return `${icon}<span>${esc(label)}</span>`}
 function updateRequestMode(){const isEditing=Boolean(editingId), isBatch=requestBatchMode&&!isEditing, hint=$('#requestModeHint'), submitBtn=$('#submitBtn'), title=$('#requestPanelTitle'); document.querySelector('.request-card')?.classList.toggle('is-browsing-modify',isEditing); if(isEditing)requestBatchMode=false; formEl.hidden=false; if(title)title.textContent=isEditing?'修改設計需求':'填寫設計需求'; if(submitBtn){submitBtn.hidden=isBatch; submitBtn.innerHTML=requestButtonHtml(isEditing?'修改需求':'新增案件',isEditing?solidEditIcon():solidAddIcon())} if(hint){hint.textContent=isEditing?`目前模式：修改需求${editingId?`｜案件 ${editingId}`:''}`:(isBatch?'目前模式：批次新增':'目前模式：新增案件'); hint.classList.toggle('is-editing',isEditing)} const batchBtn=$('#requestBatchToggle'); if(batchBtn){batchBtn.hidden=false; batchBtn.innerHTML=requestButtonHtml(isEditing?'取消':(isBatch?'清空批次':'批次'),isEditing?solidCancelIcon():solidBatchIcon()); batchBtn.classList.toggle('active',isBatch)} renderRequestBatchRows(); renderRequestProjectButtons()}
 function setRequestKind(kind){requestKind=kind==='modify'?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',requestKind==='設計修改需求' || Boolean(editingId)); populateDetailsOptions(formEl.elements.details.value); updateRequestMode()}
-function setListView(){renderTimeline(filtered())}
+function setListView(){renderTimeline(timelineRowsFor(filtered()))}
 function initTimelineResizer(){
   const split=document.querySelector('.case-split'), handle=$('#timelineResizer');
   if(!split||!handle)return;
