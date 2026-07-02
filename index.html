@@ -2956,6 +2956,56 @@
       .account-role{font-size:11px}
       .account-dropdown{width:190px}
     }
+
+    /* final row-height contract: table rows and timeline rows must share one source */
+    #casesSection{
+      --case-head-height:38px;
+      --case-row-height:38px;
+    }
+    #casesSection .case-table-wrap thead tr,
+    #casesSection .case-table-wrap th,
+    #casesSection .case-sticky-head table tr,
+    #casesSection .case-sticky-head th,
+    #casesSection .case-timeline-panel .timeline-scale,
+    #casesSection .case-sticky-timeline-head .timeline-scale,
+    #casesSection .case-timeline-panel .scale-track,
+    #casesSection .case-sticky-timeline-head .scale-track,
+    #casesSection .case-timeline-panel .scale-tick,
+    #casesSection .case-sticky-timeline-head .scale-tick{
+      height:var(--case-head-height)!important;
+      min-height:var(--case-head-height)!important;
+      max-height:var(--case-head-height)!important;
+      box-sizing:border-box!important;
+    }
+    #casesSection .case-table-wrap tbody tr,
+    #casesSection .case-table-wrap tbody td,
+    #casesSection .case-timeline-panel .barrow{
+      height:var(--case-row-height)!important;
+      min-height:var(--case-row-height)!important;
+      max-height:var(--case-row-height)!important;
+      box-sizing:border-box!important;
+    }
+    #casesSection .case-table-wrap tbody td{
+      padding-top:4px!important;
+      padding-bottom:4px!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+      white-space:nowrap!important;
+    }
+    #casesSection .case-timeline-panel .barbox{
+      height:26px!important;
+      margin:6px 0!important;
+    }
+    @media(max-width:900px){
+      #casesSection{
+        --case-head-height:34px;
+        --case-row-height:34px;
+      }
+      #casesSection .case-timeline-panel .barbox{
+        height:24px!important;
+        margin:5px 0!important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -4641,20 +4691,19 @@ function syncTimelineHeights(){
   requestAnimationFrame(()=>{
     const timelinePanel=document.querySelector('.case-timeline-panel');
     if(!timelinePanel||getComputedStyle(timelinePanel).display==='none')return;
+    const root=document.querySelector('#casesSection')||document.documentElement;
+    const css=getComputedStyle(root);
+    const readPx=(name,fallback)=>Number(String(css.getPropertyValue(name)||'').replace('px','').trim())||fallback;
+    const headHeight=readPx('--case-head-height',window.innerWidth<=900?34:38);
+    const rowHeight=readPx('--case-row-height',window.innerWidth<=900?34:38);
     const timelineRows=[...document.querySelectorAll('.case-timeline-panel .barrow')];
     const ticks=[...document.querySelectorAll('.case-timeline-panel .scale-tick,.case-sticky-timeline-head .scale-tick')];
     const scales=[...document.querySelectorAll('.case-timeline-panel .timeline-scale,.case-sticky-timeline-head .timeline-scale')];
     const scaleTracks=[...document.querySelectorAll('.case-timeline-panel .scale-track,.case-sticky-timeline-head .scale-track')];
-    const head=document.querySelector('#stickyThead tr')||document.querySelector('.case-table-wrap thead tr');
-    const tableRows=[...document.querySelectorAll('.case-table-wrap tbody tr')];
-    const headHeight=Math.max(window.innerWidth<=900?34:38,Math.round(head?.getBoundingClientRect().height||(window.innerWidth<=900?34:38)));
     scales.forEach(scale=>scale.style.setProperty('height',`${headHeight}px`,'important'));
     scaleTracks.forEach(track=>track.style.setProperty('height',`${headHeight}px`,'important'));
     ticks.forEach(tick=>tick.style.setProperty('height',`${headHeight}px`,'important'));
-    timelineRows.forEach((row,index)=>{
-      const height=Math.max(window.innerWidth<=900?34:36,Math.round(tableRows[index]?.getBoundingClientRect().height||(window.innerWidth<=900?34:38)));
-      row.style.setProperty('height',`${height}px`,'important');
-    });
+    timelineRows.forEach(row=>row.style.setProperty('height',`${rowHeight}px`,'important'));
   });
 }
 function syncCaseHeaderScroll(){
