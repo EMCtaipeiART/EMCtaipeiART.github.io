@@ -3608,7 +3608,7 @@ function openMailComposerMenu(event,id){
 function monthFromDate(d){const date=parseDate(d); if(!date)return ''; const m=date.getMonth()+1;return `${m} 月`}
 function currentMonth(){return `${new Date().getMonth()+1} 月`}
 function currentYear(){return String(new Date().getFullYear())}
-function fullYearOptions(){return [currentYear()]}
+function fullYearOptions(){const year=Number(currentYear())||new Date().getFullYear(); return Array.from({length:Math.max(1,year-2023+1)},(_,i)=>String(year-i))}
 function fullMonthOptions(){return Array.from({length:12},(_,i)=>`${i+1} 月`)}
 function canonicalMonth(value){const n=monthNumber(value); return n < 99 ? `${n} 月` : ''}
 function nextId(){const max=Math.max(...rows.map(r=>+r.id||0),25120000);return String(max+1).padStart(8,'0')}
@@ -3987,31 +3987,38 @@ async function fetchDatabaseRows({full=false,quick=false}={}){
   }
 }
 function searchHasText(){return Boolean($('#q')?.value.trim())}
+function archiveFilterRequested(){
+  const year=Number(currentYear())||new Date().getFullYear(), currentMonthNo=monthNumber(currentMonth());
+  const years=selectedValues('#fYear').map(value=>Number(value)).filter(Boolean);
+  const months=selectedValues('#fMonth').map(monthNumber).filter(value=>value<99);
+  return searchHasText()||years.some(value=>value<year)||months.some(value=>value<currentMonthNo);
+}
 function rowsForSearch(){
-  return searchHasText()&&archiveRows.length?mergeRowsById(rows,archiveRows):rows;
+  return archiveFilterRequested()&&archiveRows.length?mergeRowsById(rows,archiveRows):rows;
 }
 function scheduleArchiveSearchLoad(){
   clearTimeout(archiveSearchTimer);
-  if(!searchHasText()||archiveRowsLoaded||archiveRowsLoading)return;
+  if(!archiveFilterRequested()||archiveRowsLoaded||archiveRowsLoading)return;
   archiveSearchTimer=setTimeout(()=>loadArchiveRowsForSearch(),280);
 }
 async function loadArchiveRowsForSearch(){
   if(archiveRowsLoaded||archiveRowsLoading)return;
   archiveRowsLoading=true;
+  render();
   setSync('搜尋歷史資料中...');
   try{
     archiveRows=(await fetchDatabaseObjects('select *',archiveSheetId))
       .map(row=>normalizeRow({...row,archived:true}))
       .filter(row=>isCaseId_(row.id));
     archiveRowsLoaded=true;
-    if(searchHasText()){
+    archiveRowsLoading=false;
+    if(archiveFilterRequested()){
       render();
       setSync(`已加入歷史資料 ${archiveRows.length} 筆搜尋`);
     }
   }catch(err){
-    setSync(`歷史資料讀取失敗：${err.message}`,true);
-  }finally{
     archiveRowsLoading=false;
+    setSync(`歷史資料讀取失敗：${err.message}`,true);
   }
 }
 function modificationLabel(count){const n=Number(count)||0, labels=['','一','二','三','四','五','六','七','八','九','十']; if(n<=0)return '修改'; return `${labels[n]||n}修`}
@@ -4324,7 +4331,7 @@ function moveApplyButton(panel,targetLabel=null){}
 function setMultiFilterSelection(id,values,allLabel){const el=$(id), selected=Array.isArray(values)?values:[values].filter(Boolean); el.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); summarizeFilter(el,allLabel)}
 function filterValuesFor(key,extra=[]){
   const baseline=key==='year'?fullYearOptions():key==='month'?fullMonthOptions():key==='designer'?designerOptions:key==='status'?statusOptions:[];
-  const rowSource=searchHasText()?rowsForSearch():rows;
+  const rowSource=archiveFilterRequested()?rowsForSearch():rows;
   const source=key==='designer'?[]:rowSource.map(r=>key==='month'?canonicalMonth(r[key]):key==='year'?rowYear(r):r[key]).filter(Boolean);
   const values=[...baseline,...savedFilterValues(key),...extra,...source];
   const uniqueValues=[...new Set(values)];
@@ -4344,7 +4351,8 @@ function filtered({includeStatus=true}={}){
     months=selectedValues('#fMonth').map(monthNumber),
     statuses=includeStatus?selectedValues('#fStatus'):[],
     designers=selectedValues('#fDesigner');
-  return source.filter(r=>(!q || Object.values(r).join(' ').toLowerCase().includes(q))&&(!years.length||years.includes(rowYear(r)))&&(!months.length||months.includes(monthNumber(r.month)))&&(!statuses.length||statuses.includes(r.status))&&(!designers.length||designers.includes(r.designer)));
+  const effectiveYears=archiveFilterRequested()&&years.length===1&&years[0]===currentYear()?[]:years;
+  return source.filter(r=>(!q || Object.values(r).join(' ').toLowerCase().includes(q))&&(!effectiveYears.length||effectiveYears.includes(rowYear(r)))&&(!months.length||months.includes(monthNumber(r.month)))&&(!statuses.length||statuses.includes(r.status))&&(!designers.length||designers.includes(r.designer)));
 }
 function closeFilters(){['#fYear','#fMonth','#fStatus','#fDesigner'].forEach(id=>$(id).open=false)}
 function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnabled?rows.filter(r=>selectedCaseIds.has(String(r.id))&&canListEditRow(r)) : []}
@@ -4464,7 +4472,8 @@ function syncCaseListTableWidth(){
 function renderTable(list){
   selectedCaseIds=new Set([...selectedCaseIds].filter(id=>rows.some(row=>String(row.id)===id)));
   if(!isDesignerLogin())selectedCaseIds.clear();
-  const ordered=sorted(list);
+  const loadingArchive=archiveRowsLoading&&archiveFilterRequested();
+  const ordered=loadingArchive?[]:sorted(list);
   const active=columns.filter(c=>visibleColumns.includes(c.key));
   const selectRows=isDesignerLogin()&&displaySettings.editEnabled;
   const split=document.querySelector('.case-split');
@@ -4484,7 +4493,9 @@ function renderTable(list){
   thead.innerHTML=normalHead.html;
   const stickyThead=$('#stickyThead');
   if(stickyThead)stickyThead.innerHTML=stickyHead.html;
-  tbody.innerHTML=ordered.map(r=>`<tr id="case-row-${esc(r.id)}">${selectRows?selectCell(r):''}${active.map(c=>cell(c.label,c.render(r),c.className||'',columnWidth(c))).join('')}</tr>`).join('');
+  tbody.innerHTML=loadingArchive
+    ? `<tr><td colspan="${active.length+(selectRows?1:0)}" data-label="讀取狀態">資料讀取中...</td></tr>`
+    : ordered.map(r=>`<tr id="case-row-${esc(r.id)}">${selectRows?selectCell(r):''}${active.map(c=>cell(c.label,c.render(r),c.className||'',columnWidth(c))).join('')}</tr>`).join('');
   syncCaseListTableWidth();
   ['#selectVisible','#selectVisibleSticky'].forEach(selector=>{
     const selectAll=$(selector);
