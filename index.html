@@ -5053,7 +5053,6 @@ $('#requestForm').addEventListener('submit',async e=>{
     applyCurrentUserProfile(currentUserProfile);
     dataReady=true;
     render();
-    if(!isModify) await copyText(subject(submittedRow),{silent:true});
     finishSubmitOverlay(!isModify?'已送出':(wasEditing?'已更新':'已送出'),false);
     refreshAfterFormWrite(isModify?'案件已更新':'案件已新增');
   }catch(err){
