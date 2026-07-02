@@ -1833,10 +1833,22 @@
       align-items:start!important;
       align-content:start!important;
     }
+    #casesSection .case-split.timeline-enabled.compact-cases{
+      min-height:0!important;
+      max-height:none!important;
+      overflow-y:visible!important;
+      align-items:start!important;
+      align-content:start!important;
+    }
     #casesSection .case-split.compact-cases .case-list-panel,
     #casesSection .case-split.compact-cases .case-timeline-panel,
     #casesSection .case-split.compact-cases .case-table-wrap,
-    #casesSection .case-split.compact-cases .timeline{
+    #casesSection .case-split.compact-cases .timeline,
+    #casesSection .case-split.timeline-enabled.compact-cases .case-list-panel,
+    #casesSection .case-split.timeline-enabled.compact-cases .case-timeline-panel,
+    #casesSection .case-split.timeline-enabled.compact-cases .case-table-wrap,
+    #casesSection .case-split.timeline-enabled.compact-cases .timeline{
+      height:auto!important;
       min-height:0!important;
       max-height:none!important;
       align-self:start!important;
@@ -4683,8 +4695,12 @@ function adjustCaseSplitHeight(){
       requestAnimationFrame(()=>{
         if(!split.classList.contains('compact-cases'))return;
         const headHeight=Math.ceil(stickyHead?.getBoundingClientRect().height||0);
-        const listHeight=Math.ceil(tableWrap?.scrollHeight||listPanel?.scrollHeight||0);
-        const timelineHeight=Math.ceil(timeline?.scrollHeight||timelinePanel?.scrollHeight||0);
+        const tableHeadHeight=Math.ceil(tableWrap?.querySelector('thead')?.getBoundingClientRect().height||0);
+        const tableRowsHeight=[...document.querySelectorAll('.case-table-wrap tbody tr')].reduce((sum,row)=>sum+Math.ceil(row.getBoundingClientRect().height||0),0);
+        const timelineScaleHeight=Math.ceil(timeline?.querySelector('.timeline-scale')?.getBoundingClientRect().height||0);
+        const timelineRowsHeight=[...document.querySelectorAll('.case-timeline-panel .barrow')].reduce((sum,row)=>sum+Math.ceil(row.getBoundingClientRect().height||0),0);
+        const listHeight=tableHeadHeight+tableRowsHeight;
+        const timelineHeight=timelineScaleHeight+timelineRowsHeight;
         const bodyHeight=Math.max(listHeight,timelineHeight);
         const borderHeight=2;
         split.style.setProperty('height',`${headHeight+bodyHeight+borderHeight}px`,'important');
