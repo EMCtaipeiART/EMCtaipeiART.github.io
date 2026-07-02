@@ -3254,6 +3254,10 @@ let yearFilterInitialized = false;
 let filtersResetting = false;
 let selectedCaseIds = new Set();
 let dataReady = Array.isArray(sanitizedCachedRows) && sanitizedCachedRows.length > 0;
+let archiveRows = [];
+let archiveRowsLoaded = false;
+let archiveRowsLoading = false;
+let archiveSearchTimer = null;
 let overviewInitialized = false;
 let requestKind = '設計新增需求';
 let requestBatchMode = false;
@@ -3271,6 +3275,7 @@ const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8M
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
 const targetSheetId = 1244538986;
+const archiveSheetId = 646199020;
 const designerSheetId = 988186149;
 const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
@@ -3278,6 +3283,7 @@ const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const databaseListUrl = 'https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/export?format=csv&gid=1244538986';
 const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent('select *')}`;
+const databaseArchiveGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${archiveSheetId}&tq=${encodeURIComponent('select *')}`;
 const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
 const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
 const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
@@ -3914,8 +3920,8 @@ function gvizJsonp(url,timeoutMs=60000){
 }
 function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
 function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
-function databaseGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent(query)}`}
-async function fetchDatabaseObjects(query='select *'){return gvizToObjects(await gvizJsonp(databaseGvizQueryUrl(query)))}
+function databaseGvizQueryUrl(query='select *',sheetId=targetSheetId){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${sheetId}&tq=${encodeURIComponent(query)}`}
+async function fetchDatabaseObjects(query='select *',sheetId=targetSheetId){return gvizToObjects(await gvizJsonp(databaseGvizQueryUrl(query,sheetId)))}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
 function caseIdMonthRange(date){
   const yy=date.getFullYear()%100, month=date.getMonth()+1, prefix=yy*100+month;
@@ -3978,6 +3984,34 @@ async function fetchDatabaseRows({full=false,quick=false}={}){
   }catch(err){
     console.warn('最近案件讀取失敗，先顯示公開資料來源',err);
     return baseRows;
+  }
+}
+function searchHasText(){return Boolean($('#q')?.value.trim())}
+function rowsForSearch(){
+  return searchHasText()&&archiveRows.length?mergeRowsById(rows,archiveRows):rows;
+}
+function scheduleArchiveSearchLoad(){
+  clearTimeout(archiveSearchTimer);
+  if(!searchHasText()||archiveRowsLoaded||archiveRowsLoading)return;
+  archiveSearchTimer=setTimeout(()=>loadArchiveRowsForSearch(),280);
+}
+async function loadArchiveRowsForSearch(){
+  if(archiveRowsLoaded||archiveRowsLoading)return;
+  archiveRowsLoading=true;
+  setSync('搜尋歷史資料中...');
+  try{
+    archiveRows=(await fetchDatabaseObjects('select *',archiveSheetId))
+      .map(row=>normalizeRow({...row,archived:true}))
+      .filter(row=>isCaseId_(row.id));
+    archiveRowsLoaded=true;
+    if(searchHasText()){
+      render();
+      setSync(`已加入歷史資料 ${archiveRows.length} 筆搜尋`);
+    }
+  }catch(err){
+    setSync(`歷史資料讀取失敗：${err.message}`,true);
+  }finally{
+    archiveRowsLoading=false;
   }
 }
 function modificationLabel(count){const n=Number(count)||0, labels=['','一','二','三','四','五','六','七','八','九','十']; if(n<=0)return '修改'; return `${labels[n]||n}修`}
@@ -4290,7 +4324,8 @@ function moveApplyButton(panel,targetLabel=null){}
 function setMultiFilterSelection(id,values,allLabel){const el=$(id), selected=Array.isArray(values)?values:[values].filter(Boolean); el.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); summarizeFilter(el,allLabel)}
 function filterValuesFor(key,extra=[]){
   const baseline=key==='year'?fullYearOptions():key==='month'?fullMonthOptions():key==='designer'?designerOptions:key==='status'?statusOptions:[];
-  const source=key==='designer'?[]:rows.map(r=>key==='month'?canonicalMonth(r[key]):key==='year'?rowYear(r):r[key]).filter(Boolean);
+  const rowSource=searchHasText()?rowsForSearch():rows;
+  const source=key==='designer'?[]:rowSource.map(r=>key==='month'?canonicalMonth(r[key]):key==='year'?rowYear(r):r[key]).filter(Boolean);
   const values=[...baseline,...savedFilterValues(key),...extra,...source];
   const uniqueValues=[...new Set(values)];
   if(key==='status')return uniqueValues.sort((a,b)=>(statusOrder[a]??99)-(statusOrder[b]??99)||String(a).localeCompare(String(b),'zh-Hant'));
@@ -4302,12 +4337,14 @@ function checkInitialFilter(id,value,allLabel){const el=$(id), input=[...el.quer
 function initYearFilter(){if(yearFilterInitialized)return; if(!savedFilterValues('year').length)checkInitialFilter('#fYear',currentYear(),'全部年度'); yearFilterInitialized=true;}
 function initMonthFilter(){if(monthFilterInitialized)return; if(!savedFilterValues('month').length)checkInitialFilter('#fMonth',currentMonth(),'全部月份'); monthFilterInitialized=true;}
 function filtered({includeStatus=true}={}){
+  scheduleArchiveSearchLoad();
+  const source=rowsForSearch();
   const q=$('#q').value.trim().toLowerCase(),
     years=selectedValues('#fYear'),
     months=selectedValues('#fMonth').map(monthNumber),
     statuses=includeStatus?selectedValues('#fStatus'):[],
     designers=selectedValues('#fDesigner');
-  return rows.filter(r=>(!q || Object.values(r).join(' ').toLowerCase().includes(q))&&(!years.length||years.includes(rowYear(r)))&&(!months.length||months.includes(monthNumber(r.month)))&&(!statuses.length||statuses.includes(r.status))&&(!designers.length||designers.includes(r.designer)));
+  return source.filter(r=>(!q || Object.values(r).join(' ').toLowerCase().includes(q))&&(!years.length||years.includes(rowYear(r)))&&(!months.length||months.includes(monthNumber(r.month)))&&(!statuses.length||statuses.includes(r.status))&&(!designers.length||designers.includes(r.designer)));
 }
 function closeFilters(){['#fYear','#fMonth','#fStatus','#fDesigner'].forEach(id=>$(id).open=false)}
 function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnabled?rows.filter(r=>selectedCaseIds.has(String(r.id))&&canListEditRow(r)) : []}
@@ -5109,7 +5146,7 @@ $('#requestGuideModal')?.addEventListener('click',event=>{if(event.target.id==='
 $('#requestMailGuideClose')?.addEventListener('click',()=>{$('#requestMailGuideModal').hidden=true});
 $('#requestMailGuideModal')?.addEventListener('click',event=>{if(event.target.id==='requestMailGuideModal')$('#requestMailGuideModal').hidden=true});
 $('#q').value=accountFilterSettings.q||'';
-$('#q').addEventListener('input',()=>{saveFilterSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount(); render()});
+$('#q').addEventListener('input',()=>{saveFilterSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount(); scheduleArchiveSearchLoad(); render()});
 $('#reset').onclick=()=>{$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; closeFilters()};
 $('#showAllColumns').onclick=()=>{visibleColumns=columns.map(c=>c.key); if(isDesignerLogin())displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#hideAllColumns').onclick=()=>{visibleColumns=[]; if(isDesignerLogin())displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
