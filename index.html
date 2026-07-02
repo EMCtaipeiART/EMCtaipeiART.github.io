@@ -2670,13 +2670,21 @@
       color:#111827!important;
       transform:none!important;
     }
-    #accountMenu .account-bell-badge{
-      right:-4px!important;
-      top:-5px!important;
-      min-width:18px!important;
-      height:18px!important;
-      font-size:10px!important;
-    }
+	    #accountMenu .account-bell-badge{
+	      right:-4px!important;
+	      top:-5px!important;
+	      min-width:18px!important;
+	      height:18px!important;
+	      font-size:10px!important;
+	      display:grid!important;
+	      place-items:center!important;
+	      background:#dc2626!important;
+	      color:#fff!important;
+	      border:2px solid #fff!important;
+	      opacity:1!important;
+	      visibility:visible!important;
+	    }
+	    #accountMenu .account-bell-badge[hidden]{display:none!important}
     @media(hover:none){
       #accountMenu .account-bell,
       #accountMenu .account-bell:hover,
@@ -4241,11 +4249,11 @@ function rowOwnerMatchesCurrentUser(row){
   const owner=normalizedUserText(ownerDisplay(row.owner)), editor=normalizedUserText(currentEditor), account=normalizedUserText(loginAccountFull(currentEditorAccount)), ownerEmail=normalizedUserText(row.ownerEmail||extractEmail(row.owner));
   return Boolean((owner&&editor&&owner===editor)||(owner&&account&&owner===account)||(ownerEmail&&account&&ownerEmail===account));
 }
-function notificationItems(){if(!isLoggedIn())return []; const designerItems=isDesignerLogin()?(()=>{const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成'), newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`})), modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`}))); return [...modifyItems,...newCases]})():[]; const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`revisionDone:${row.id}:${record.count}:${record.confirmedDate}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`}))); return [...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20)}
+function notificationItems(){if(!isLoggedIn())return []; const version='n2', designerItems=isDesignerLogin()?(()=>{const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成'), newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`})), modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`}))); return [...modifyItems,...newCases]})():[]; const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`}))); return [...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20)}
 function unreadNotificationItems(items=notificationItems()){const read=readNotificationIds(); return items.filter(item=>!read.has(item.key))}
 function markNotificationsRead(items=notificationItems()){if(!items.length)return; const read=readNotificationIds(); items.forEach(item=>read.add(item.key)); writeNotificationIds(read)}
-function renderNotifications(highlightKeys=null){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-case-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求或完成通知</div>'}
-function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnread=new Set(unreadNotificationItems().map(item=>item.key)); renderNotifications(open?openingUnread:null); popover.hidden=!open; if(open){markNotificationsRead(); renderNotifications(openingUnread)} if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
+function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-case-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求或完成通知</div>'}
+function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnreadItems=unreadNotificationItems(), openingUnread=new Set(openingUnreadItems.map(item=>item.key)); renderNotifications(open?openingUnread:null,{hideBadge:open&&openingUnreadItems.length>0}); popover.hidden=!open; if(open&&openingUnreadItems.length)markNotificationsRead(openingUnreadItems); if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
 function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); const show=()=>{if(document.getElementById(`case-row-${id}`)){jumpToCase(id);return} if($('#q'))$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; requestAnimationFrame(()=>jumpToCase(id))}; requestAnimationFrame(show)}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
