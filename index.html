@@ -3949,7 +3949,7 @@ async function fetchRecentDatabaseRowsByScript(limit=320){
     targetSheetId:String(targetSheetId),
     ts:Date.now()
   });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,12000,'最近案件讀取逾時，先顯示快取資料');
+  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,2500,'最近案件讀取較慢，先顯示公開資料來源');
   if(!data.ok)throw new Error(data.error||'最近案件讀取失敗');
   return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
