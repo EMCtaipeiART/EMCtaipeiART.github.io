@@ -337,6 +337,13 @@
     header,.wrap{width:min(100%,1380px)}
     header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 18px;padding:28px 28px 16px;text-align:left;align-items:start}
     header h1{font-size:26px!important;line-height:1.2;font-weight:850;color:#1f2a25}
+    .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .issue-report-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-width:0!important;min-height:20px!important;height:20px!important;border-radius:999px!important;padding:3px 8px!important;background:rgba(17,24,39,.9)!important;color:#fff!important;border:1px solid rgba(255,255,255,.8)!important;box-shadow:0 4px 10px rgba(15,23,42,.16)!important;font-size:10px!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important}
+    .issue-report-btn:hover,.issue-report-btn:focus-visible{background:rgba(17,24,39,.94)!important;color:#fff!important;outline:1px solid rgba(17,24,39,.2);outline-offset:1px}
+    .issue-report-card{width:min(420px,100%);border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:16px}
+    .issue-report-card h3{margin:0 0 12px;color:#17211d;font-size:17px}
+    .issue-report-card label{display:grid;gap:6px;margin-bottom:10px;font-size:13px;color:#43524b;font-weight:850}
+    .issue-report-card textarea{min-height:92px;border-radius:12px;resize:vertical}
     .subtitle{margin:0!important;color:#7b8580!important;font-size:13px;font-weight:650}
     .wrap{gap:16px;padding:0 28px 48px}
     .grid{gap:16px}
@@ -2941,7 +2948,7 @@
 </head>
 <body>
 <header>
-  <h1>設計需求系統 v4.0</h1>
+  <div class="title-row"><h1>設計需求系統 v4.0</h1><button type="button" class="issue-report-btn" id="issueReportOpen">問題回報</button></div>
   <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊發信 → Step4.寄送需求信件</p>
   <div class="account-menu" id="accountMenu">
     <button type="button" class="account-bell" id="accountBell" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 18.4h7.6"/><path d="M10.2 20.2c.4.5 1 .8 1.8.8s1.4-.3 1.8-.8"/><path d="M6.8 16.8h10.4c.8 0 1.2-.9.7-1.5l-.8-1V10a5.1 5.1 0 0 0-10.2 0v4.3l-.8 1c-.5.6-.1 1.5.7 1.5Z"/><path d="M12 4.2V3"/></svg><span class="account-bell-badge" id="accountBellBadge" hidden>0</span></button>
@@ -3205,6 +3212,17 @@
     </div>
     <div class="revision-modal-list" id="revisionModalList"></div>
   </div>
+</div>
+<div class="login-modal" id="issueReportModal" hidden>
+  <form class="issue-report-card" id="issueReportForm">
+    <h3>問題回報</h3>
+    <label>內容<textarea name="content" placeholder="請描述遇到的問題" required></textarea></label>
+    <label>修改建議<textarea name="suggestion" placeholder="希望怎麼調整" required></textarea></label>
+    <div class="login-actions">
+      <button type="button" class="secondary" id="issueReportCancel">取消</button>
+      <button type="submit" id="issueReportSubmit">送出</button>
+    </div>
+  </form>
 </div>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -3692,6 +3710,25 @@ function renderDesigners(){
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
+function openIssueReportModal(){const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
+function closeIssueReportModal(){const modal=$('#issueReportModal'); if(modal)modal.hidden=true}
+async function submitIssueReport(event){
+  event.preventDefault();
+  const form=event.target, submit=$('#issueReportSubmit'), content=form.elements.content.value.trim(), suggestion=form.elements.suggestion.value.trim();
+  if(!content||!suggestion){setSync('請填寫內容與修改建議',true);return}
+  const reporter=currentLoginOwnerName()||currentEditorAccount||'未登入';
+  submit.disabled=true;
+  setSync('問題回報送出中...');
+  try{
+    await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
+    closeIssueReportModal();
+    setSync('問題回報已送出，謝謝回報');
+  }catch(err){
+    setSync(`問題回報送出失敗：${err.message}`,true);
+  }finally{
+    submit.disabled=false;
+  }
+}
 function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<div class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-name">${esc(name)}</div><div><div class="designer-skill-checks">${checks}</div></div><div class="designer-photo-tools"><label>頭像照片<input type="file" accept="image/*" data-photo-kind="avatar"></label><label>大海報照片<input type="file" accept="image/*" data-photo-kind="poster"></label><input type="hidden" data-photo-url="avatar" value="${esc(d.avatar||'')}"><input type="hidden" data-photo-url="poster" value="${esc(d.poster||d.avatar||'')}"><div class="designer-photo-status" data-photo-status>${d.avatar||d.poster?'已綁定照片連結':'尚未上傳照片'}</div></div><label>對話框<textarea name="quote-${esc(name)}" maxlength="80">${esc(d.quote||'')}</textarea></label></div>`}).join(''); designerSettingsList.querySelectorAll('input[type="file"][data-photo-kind]').forEach(input=>input.addEventListener('change',uploadDesignerPhoto))}
 function collectDesignerSettings(){return designerOptions.map(name=>{const row=[...document.querySelectorAll('.designer-setting-row')].find(item=>item.dataset.designer===name), current=designerProfile(name), skills=row?[...row.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):current.skills||[], quote=row?.querySelector('textarea')?.value.trim()||'', avatar=row?.querySelector('[data-photo-url="avatar"]')?.value.trim()||current.avatar||'', poster=row?.querySelector('[data-photo-url="poster"]')?.value.trim()||current.poster||current.avatar||''; return {name,skills,quote,designType:current.designType||'',account:current.account||'',avatar,poster,status:current.status||'',rotation:current.rotation||99}})}
 function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result||'')); reader.onerror=()=>reject(reader.error||new Error('讀取檔案失敗')); reader.readAsDataURL(file)})}
@@ -3997,13 +4034,19 @@ async function sheetApi(action,payload={}){
     if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
     return data;
   }
-  if(action==='uploadDesignerImage'){
-    const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
-    if(!data.ok)throw new Error(data.error||'照片上傳失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
-    return data;
-  }
-  if(action==='add'||action==='update'){
+	  if(action==='uploadDesignerImage'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
+	    if(!data.ok)throw new Error(data.error||'照片上傳失敗');
+	    if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
+	    return data;
+	  }
+	  if(action==='reportIssue'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'問題回報寫入逾時，請稍後再試。'});
+	    if(!data.ok)throw new Error(data.error||'問題回報送出失敗');
+	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
+	    return data;
+	  }
+	  if(action==='add'||action==='update'){
     const writePayload={action,...payload};
     const payloadLength=JSON.stringify(writePayload).length;
     const data=payloadLength<6500
@@ -4963,10 +5006,14 @@ document.addEventListener('click',event=>{
   if(event.target.closest?.('.avatar-shell'))return;
   designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>item.classList.remove('poster-open'));
 });
-$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
-$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
-$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
-$('#designerSettingsCancel')?.addEventListener('click',hideDesignerSettings);
+	$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
+	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
+	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
+	$('#issueReportOpen')?.addEventListener('click',openIssueReportModal);
+	$('#issueReportCancel')?.addEventListener('click',closeIssueReportModal);
+	$('#issueReportModal')?.addEventListener('click',event=>{if(event.target.id==='issueReportModal')closeIssueReportModal()});
+	$('#issueReportForm')?.addEventListener('submit',submitIssueReport);
+	$('#designerSettingsCancel')?.addEventListener('click',hideDesignerSettings);
 $('#designerSettingsClose')?.addEventListener('click',hideDesignerSettings);
 $('#designerSettingsModal')?.addEventListener('click',event=>{if(event.target.id==='designerSettingsModal')hideDesignerSettings()});
 $('#designerSettingsForm')?.addEventListener('submit',saveDesignerSettings);
