@@ -3454,6 +3454,7 @@ let timelineRenderQueued = false;
 let pendingTimelineList = [];
 let fullDatabaseLoadQueued = false;
 let inlineWriteQueue = Promise.resolve();
+let inlineWritePending = 0;
 let inlineRefreshTimer = null;
 let columnControlsRenderedKey = '';
 let activeSettingsAccount = accountStorageId();
@@ -4638,9 +4639,18 @@ function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hid
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
 function positionFieldPopover(anchor){const width=Math.min(320,window.innerWidth-24), margin=12; fieldPopover.style.width=`${width}px`; fieldPopover.style.removeProperty('transform'); fieldPopover.classList.toggle('is-modal-popover',Boolean(anchor.closest?.('.login-modal'))); if(anchor.closest?.('.login-modal')){fieldPopover.style.left='50%'; fieldPopover.style.top='50%'; fieldPopover.style.transform='translate(-50%,-50%)'; fieldPopover.style.maxHeight=`${Math.max(180,window.innerHeight-48)}px`; return} const rect=anchor.getBoundingClientRect(); fieldPopover.style.left=`${Math.min(Math.max(margin,rect.left),window.innerWidth-width-margin)}px`; const naturalHeight=Math.min(fieldPopover.scrollHeight||280,360), below=window.innerHeight-rect.bottom-margin, above=rect.top-margin, useBelow=below>=Math.min(naturalHeight,220)||below>=above, maxHeight=Math.max(150,Math.min(360,useBelow?below:above)); fieldPopover.style.maxHeight=`${maxHeight}px`; fieldPopover.style.top=`${useBelow?rect.bottom+8:Math.max(margin,rect.top-8-maxHeight)}px`}
 function enqueueInlineWrite(task){
-  const run=inlineWriteQueue.catch(()=>{}).then(task);
+  const run=inlineWriteQueue.catch(()=>{}).then(async()=>{
+    inlineWritePending++;
+    try{return await task()}
+    finally{inlineWritePending=Math.max(0,inlineWritePending-1)}
+  });
   inlineWriteQueue=run.catch(()=>{});
   return run;
+}
+function hasPriorityWritePending(){return inlineWritePending>0||updatingCells.size>0}
+function refreshLatestInBackground(){
+  if(!apiUrl||editingId||hasPriorityWritePending()||loadingSheet)return;
+  loadSheet({quick:true,background:true}).catch(err=>console.warn('定時刷新最新資料失敗',err));
 }
 function rowStillHasChanges(row,changes){
   return Object.entries(changes).every(([key,value])=>String(row?.[key]??'')===String(value??''));
@@ -5101,7 +5111,7 @@ $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
 $('#loginForm').addEventListener('submit',event=>{event.preventDefault(); setLoginNote('請按 Google 登入按鈕。')});
-	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600);
+	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,60000);
 </script>
 </body>
 </html>
