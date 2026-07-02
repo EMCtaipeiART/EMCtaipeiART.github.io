@@ -2982,6 +2982,21 @@
       color:var(--toggle-on-ink)!important;
       box-shadow:0 5px 13px rgba(18,38,28,.08)!important;
     }
+    .column-popover .column-toggle:has(input:checked)::after{
+      content:"✓";
+      display:inline-grid;
+      place-items:center;
+      width:15px;
+      height:15px;
+      margin-left:2px;
+      border-radius:999px;
+      background:var(--toggle-on-ink);
+      color:#fff;
+      font-size:10px;
+      line-height:1;
+      font-weight:900;
+      flex:0 0 15px;
+    }
     .column-popover .column-toggle input{
       position:absolute!important;
       width:1px!important;
@@ -2992,11 +3007,11 @@
       pointer-events:none!important;
       accent-color:var(--toggle-on-ink)!important;
     }
-    .column-popover .column-toggle:nth-child(-n+4){--toggle-on-bg:#fff5f7;--toggle-on-border:#f6cbd5;--toggle-on-ink:#9f3a56}
-    .column-popover .column-toggle:nth-child(n+5):nth-child(-n+8){--toggle-on-bg:#ffedf3;--toggle-on-border:#f2b4c6;--toggle-on-ink:#a72f55}
-    .column-popover .column-toggle:nth-child(n+9):nth-child(-n+12){--toggle-on-bg:#ffe4ee;--toggle-on-border:#ed94b2;--toggle-on-ink:#ad2456}
-    .column-popover .column-toggle:nth-child(n+13):nth-child(-n+16){--toggle-on-bg:#fbd3e4;--toggle-on-border:#e5729d;--toggle-on-ink:#a81852}
-    .column-popover .column-toggle:nth-child(n+17){--toggle-on-bg:#f8bfd8;--toggle-on-border:#d94e83;--toggle-on-ink:#951247}
+    .column-popover .column-toggle:nth-child(-n+4){--toggle-on-bg:#fff7fa;--toggle-on-border:#f2c4d0;--toggle-on-ink:#93405a}
+    .column-popover .column-toggle:nth-child(n+5):nth-child(-n+8){--toggle-on-bg:#ffeaf1;--toggle-on-border:#efa6bb;--toggle-on-ink:#9f2f55}
+    .column-popover .column-toggle:nth-child(n+9):nth-child(-n+12){--toggle-on-bg:#ffd8e6;--toggle-on-border:#e97f9f;--toggle-on-ink:#a51f50}
+    .column-popover .column-toggle:nth-child(n+13):nth-child(-n+16){--toggle-on-bg:#ffc3d8;--toggle-on-border:#dc5f88;--toggle-on-ink:#951747}
+    .column-popover .column-toggle:nth-child(n+17){--toggle-on-bg:#f8a9c7;--toggle-on-border:#c94373;--toggle-on-ink:#7f123d}
 
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
