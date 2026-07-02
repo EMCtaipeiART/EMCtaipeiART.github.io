@@ -2957,6 +2957,41 @@
       .account-dropdown{width:190px}
     }
 
+    /* column picker pills: varied but quiet colors */
+    .column-popover .column-toggle{
+      --toggle-bg:#f8faf9;
+      --toggle-border:#dfe7e2;
+      --toggle-ink:#344641;
+      --toggle-on-bg:#e7f6ef;
+      --toggle-on-border:#8fd4b0;
+      --toggle-on-ink:#0f6b4c;
+      background:var(--toggle-bg)!important;
+      border-color:var(--toggle-border)!important;
+      color:var(--toggle-ink)!important;
+      box-shadow:0 3px 8px rgba(18,38,28,.04)!important;
+      transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease!important;
+    }
+    .column-popover .column-toggle:hover{
+      box-shadow:0 5px 12px rgba(18,38,28,.08)!important;
+      filter:saturate(1.04);
+    }
+    .column-popover .column-toggle:has(input:checked){
+      background:var(--toggle-on-bg)!important;
+      border-color:var(--toggle-on-border)!important;
+      color:var(--toggle-on-ink)!important;
+      box-shadow:0 5px 13px rgba(18,38,28,.08)!important;
+    }
+    .column-popover .column-toggle input{
+      accent-color:var(--toggle-on-ink)!important;
+    }
+    .column-toggle-editEnabled,.column-toggle-actions{--toggle-bg:#ecfdf5;--toggle-border:#bbf7d0;--toggle-ink:#166534;--toggle-on-bg:#d1fae5;--toggle-on-border:#34d399;--toggle-on-ink:#047857}
+    .column-toggle-id,.column-toggle-month,.column-toggle-start,.column-toggle-end{--toggle-bg:#f0f9ff;--toggle-border:#bae6fd;--toggle-ink:#075985;--toggle-on-bg:#dff3ff;--toggle-on-border:#38bdf8;--toggle-on-ink:#0369a1}
+    .column-toggle-client,.column-toggle-project,.column-toggle-owner{--toggle-bg:#fff7ed;--toggle-border:#fed7aa;--toggle-ink:#9a3412;--toggle-on-bg:#ffedd5;--toggle-on-border:#fb923c;--toggle-on-ink:#c2410c}
+    .column-toggle-type,.column-toggle-stage,.column-toggle-details{--toggle-bg:#f5f3ff;--toggle-border:#ddd6fe;--toggle-ink:#5b21b6;--toggle-on-bg:#ede9fe;--toggle-on-border:#a78bfa;--toggle-on-ink:#6d28d9}
+    .column-toggle-designer,.column-toggle-qty{--toggle-bg:#f0fdfa;--toggle-border:#99f6e4;--toggle-ink:#0f766e;--toggle-on-bg:#ccfbf1;--toggle-on-border:#2dd4bf;--toggle-on-ink:#0f766e}
+    .column-toggle-status,.column-toggle-modifications{--toggle-bg:#fff1f2;--toggle-border:#fecdd3;--toggle-ink:#be123c;--toggle-on-bg:#ffe4e6;--toggle-on-border:#fb7185;--toggle-on-ink:#be123c}
+    .column-toggle-subject,.column-toggle-timelineEnabled{--toggle-bg:#fefce8;--toggle-border:#fde68a;--toggle-ink:#854d0e;--toggle-on-bg:#fef3c7;--toggle-on-border:#f59e0b;--toggle-on-ink:#92400e}
+
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
       --case-head-height:38px;
@@ -4525,6 +4560,14 @@ function fillMultiFilter(id,key,allLabel,extra=[]){const el=$(id), panel=el.quer
 function checkInitialFilter(id,value,allLabel){const el=$(id), input=[...el.querySelectorAll('input')].find(i=>i.value===value); if(input)input.checked=true; summarizeFilter(el,allLabel)}
 function initYearFilter(){if(yearFilterInitialized)return; if(!savedFilterValues('year').length)checkInitialFilter('#fYear',currentYear(),'全部年度'); yearFilterInitialized=true;}
 function initMonthFilter(){if(monthFilterInitialized)return; if(!savedFilterValues('month').length)checkInitialFilter('#fMonth',currentMonth(),'全部月份'); monthFilterInitialized=true;}
+function applyOpenFiltersOnOutsideClick(event){
+  const openFilters=[...document.querySelectorAll('.multi-filter[open]')];
+  if(!openFilters.length)return;
+  if(openFilters.some(filter=>filter.contains(event.target)))return;
+  saveFilterSettingsForAccount(true);
+  openFilters.forEach(filter=>filter.open=false);
+  setTimeout(()=>render(),0);
+}
 function filtered({includeStatus=true}={}){
   scheduleArchiveSearchLoad();
   const source=rowsForSearch();
@@ -4610,7 +4653,8 @@ function toggleVisibleSelection(checked){if(!isDesignerLogin()){setSync('此功�
 function sameDetailGroup(list){return new Set(list.map(row=>`${row.type}｜${row.stage}`)).size<=1}
 function renderBatchControls(){const selected=selectedCaseRows(), designLogin=isDesignerLogin(), bar=$('#batchBar'), tools=$('#batchTools'), count=$('#batchCount'), details=$('#batchDetails'), apply=$('#batchApply'), clear=$('#batchClear'); if(bar)bar.hidden=!designLogin||!selected.length; if(tools&&(!designLogin||!selected.length))tools.hidden=true; if(count)count.textContent=`已選 ${selected.length} 筆`; if(apply)apply.disabled=!selected.length||!designLogin; if(clear)clear.disabled=!selected.length; if(!details)return; const old=details.value; if(!selected.length){details.innerHTML='<option value="">項目細節不變</option>'; details.disabled=false; return} if(!sameDetailGroup(selected)){details.innerHTML='<option value="">項目細節需同類型</option>'; details.disabled=false; return} const options=unique(selected.flatMap(row=>detailOptionsForRow(row))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')); details.innerHTML='<option value="">項目細節不變</option>'+options.map(option=>`<option value="${esc(option)}">${esc(option)}</option>`).join(''); if(options.includes(old))details.value=old}
 function renderOwnerOptions(){ownerContactMap.clear(); const names=[]; rows.forEach(r=>{const name=ownerDisplay(r.owner), email=r.ownerEmail||extractEmail(r.owner); if(name){names.push(name); if(email)ownerContactMap.set(name,email)} if(email){names.push(email); ownerContactMap.set(email,email)}}); ownerList.innerHTML=unique(names).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')).map(name=>`<option value="${esc(name)}"></option>`).join('')}
-function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=columns.map(c=>`<label class="column-toggle"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="column-toggle"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="column-toggle"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{visibleColumns=[...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
+function columnToggleClass(key){return `column-toggle column-toggle-${String(key||'').replace(/[^a-zA-Z0-9_-]/g,'-')}`}
+function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=columns.map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{visibleColumns=[...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
 function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const allVisible=selectable.length&&selectable.every(row=>selectedCaseIds.has(String(row.id)));
   const someVisible=selectable.some(row=>selectedCaseIds.has(String(row.id)));
@@ -5322,6 +5366,7 @@ $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revi
 $('#revisionModalAdd')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id)});
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});
+document.addEventListener('pointerdown',applyOpenFiltersOnOutsideClick,true);
 document.querySelectorAll('[data-collapse-section]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation(); toggleSectionCollapsed(button.dataset.collapseSection)}));
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
