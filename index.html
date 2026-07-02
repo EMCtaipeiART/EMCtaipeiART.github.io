@@ -3717,13 +3717,26 @@ async function submitIssueReport(event){
   const form=event.target, submit=$('#issueReportSubmit'), content=form.elements.content.value.trim(), suggestion=form.elements.suggestion.value.trim();
   if(!content||!suggestion){setSync('請填寫內容與修改建議',true);return}
   const reporter=currentLoginOwnerName()||currentEditorAccount||'未登入';
+  const feedbackQuote='感謝您的回饋，我不是在修改，就是我不會修改。';
   submit.disabled=true;
+  closeIssueReportModal();
+  stopSubmitQuoteRotation();
+  renderSubmitOverlayText('問題回報送出中...',feedbackQuote);
+  submitOverlay.classList.remove('done','login-pending');
+  submitOverlay.classList.add('show');
   setSync('問題回報送出中...');
   try{
     await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
-    closeIssueReportModal();
+    stopSubmitQuoteRotation();
+    renderSubmitOverlayText('已收到問題回報',feedbackQuote);
+    submitOverlay.classList.add('done');
+    setTimeout(()=>submitOverlay.classList.remove('show','done'),1300);
+    form.reset();
     setSync('問題回報已送出，謝謝回報');
   }catch(err){
+    hideSubmitOverlay();
+    const modal=$('#issueReportModal');
+    if(modal)modal.hidden=false;
     setSync(`問題回報送出失敗：${err.message}`,true);
   }finally{
     submit.disabled=false;
