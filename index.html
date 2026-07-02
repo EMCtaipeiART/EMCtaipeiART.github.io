@@ -2959,8 +2959,8 @@
 
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
-      --case-head-height:38px;
-      --case-row-height:38px;
+      --case-head-height:44px;
+      --case-row-height:56px;
     }
     #casesSection .case-table-wrap thead tr,
     #casesSection .case-table-wrap th,
@@ -2985,25 +2985,47 @@
       max-height:var(--case-row-height)!important;
       box-sizing:border-box!important;
     }
+    #casesSection .case-timeline-panel .timeline-inner,
+    #casesSection .case-sticky-timeline-head .timeline-inner{
+      gap:0!important;
+    }
     #casesSection .case-table-wrap tbody td{
-      padding-top:4px!important;
-      padding-bottom:4px!important;
+      padding-top:6px!important;
+      padding-bottom:6px!important;
       overflow:hidden!important;
       text-overflow:ellipsis!important;
       white-space:nowrap!important;
+      line-height:1.15!important;
+      vertical-align:middle!important;
+    }
+    #casesSection .case-table-wrap .status,
+    #casesSection .case-table-wrap .editable-field,
+    #casesSection .case-table-wrap .revision-pill,
+    #casesSection .case-table-wrap .history-lock,
+    #casesSection .case-table-wrap .mail-compose-btn,
+    #casesSection .case-table-wrap .row-actions button{
+      max-height:34px!important;
+      min-height:30px!important;
+      line-height:1.1!important;
+      align-items:center!important;
+      box-sizing:border-box!important;
+    }
+    #casesSection .case-timeline-panel .barrow{
+      align-items:center!important;
+      overflow:hidden!important;
     }
     #casesSection .case-timeline-panel .barbox{
-      height:26px!important;
-      margin:6px 0!important;
+      height:28px!important;
+      margin:14px 0!important;
     }
     @media(max-width:900px){
       #casesSection{
-        --case-head-height:34px;
-        --case-row-height:34px;
+        --case-head-height:38px;
+        --case-row-height:46px;
       }
       #casesSection .case-timeline-panel .barbox{
         height:24px!important;
-        margin:5px 0!important;
+        margin:11px 0!important;
       }
     }
   </style>
@@ -4694,8 +4716,8 @@ function syncTimelineHeights(){
     const root=document.querySelector('#casesSection')||document.documentElement;
     const css=getComputedStyle(root);
     const readPx=(name,fallback)=>Number(String(css.getPropertyValue(name)||'').replace('px','').trim())||fallback;
-    const headHeight=readPx('--case-head-height',window.innerWidth<=900?34:38);
-    const rowHeight=readPx('--case-row-height',window.innerWidth<=900?34:38);
+    const headHeight=readPx('--case-head-height',window.innerWidth<=900?38:44);
+    const rowHeight=readPx('--case-row-height',window.innerWidth<=900?46:56);
     const timelineRows=[...document.querySelectorAll('.case-timeline-panel .barrow')];
     const ticks=[...document.querySelectorAll('.case-timeline-panel .scale-tick,.case-sticky-timeline-head .scale-tick')];
     const scales=[...document.querySelectorAll('.case-timeline-panel .timeline-scale,.case-sticky-timeline-head .timeline-scale')];
