@@ -3991,7 +3991,7 @@ function archiveFilterRequested(){
   const year=Number(currentYear())||new Date().getFullYear(), currentMonthNo=monthNumber(currentMonth());
   const years=selectedValues('#fYear').map(value=>Number(value)).filter(Boolean);
   const months=selectedValues('#fMonth').map(monthNumber).filter(value=>value<99);
-  return searchHasText()||years.some(value=>value<year)||months.some(value=>value<currentMonthNo);
+  return searchHasText()||years.some(value=>value<year)||(!years.length&&months.some(value=>value<currentMonthNo));
 }
 function rowsForSearch(){
   return archiveFilterRequested()&&archiveRows.length?mergeRowsById(rows,archiveRows):rows;
@@ -4353,7 +4353,7 @@ function filtered({includeStatus=true}={}){
     months=selectedValues('#fMonth').map(monthNumber),
     statuses=includeStatus?selectedValues('#fStatus'):[],
     designers=selectedValues('#fDesigner');
-  const effectiveYears=archiveFilterRequested()&&years.length===1&&years[0]===currentYear()?[]:years;
+  const effectiveYears=years;
   return source.filter(r=>(!q || Object.values(r).join(' ').toLowerCase().includes(q))&&(!effectiveYears.length||effectiveYears.includes(rowYear(r)))&&(!months.length||months.includes(monthNumber(r.month)))&&(!statuses.length||statuses.includes(r.status))&&(!designers.length||designers.includes(r.designer)));
 }
 function closeFilters(){['#fYear','#fMonth','#fStatus','#fDesigner'].forEach(id=>$(id).open=false)}
@@ -4575,8 +4575,7 @@ function renderModifyRecent(){
 function renderOverviewOnly(){rows=rows.map(normalizeRow); renderOverviewControls(); renderStats(); renderDesigners()}
 function timelineRowsFor(list){
   const databaseList=(list||[]).map(normalizeRow).filter(row=>!row.archived);
-  if(databaseList.length)return databaseList;
-  return rows.map(normalizeRow).filter(row=>!row.archived);
+  return databaseList;
 }
 function scheduleTimelineRender(list){
   pendingTimelineList=timelineRowsFor(list);
