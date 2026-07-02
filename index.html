@@ -2959,13 +2959,36 @@
 
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
-      --case-head-height:40px;
+      --case-head-height:38px;
       --case-row-height:45px;
+    }
+    #casesSection .case-sticky-head,
+    #casesSection .case-sticky-list-head,
+    #casesSection .case-sticky-timeline-head,
+    #casesSection .timeline-resizer-head{
+      height:var(--case-head-height)!important;
+      min-height:var(--case-head-height)!important;
+      max-height:var(--case-head-height)!important;
+      box-sizing:border-box!important;
+      overflow:hidden!important;
+    }
+    #casesSection .case-sticky-head{
+      grid-template-rows:var(--case-head-height)!important;
+      align-items:stretch!important;
+    }
+    #casesSection .case-sticky-list-head table,
+    #casesSection .case-sticky-list-head thead,
+    #casesSection .case-sticky-list-head tr{
+      height:var(--case-head-height)!important;
+      min-height:var(--case-head-height)!important;
+      max-height:var(--case-head-height)!important;
+      box-sizing:border-box!important;
     }
     #casesSection .case-table-wrap thead tr,
     #casesSection .case-table-wrap th,
     #casesSection .case-sticky-head table tr,
     #casesSection .case-sticky-head th,
+    #casesSection .case-sticky-list-head th,
     #casesSection .case-timeline-panel .timeline-scale,
     #casesSection .case-sticky-timeline-head .timeline-scale,
     #casesSection .case-timeline-panel .scale-track,
@@ -2976,6 +2999,14 @@
       min-height:var(--case-head-height)!important;
       max-height:var(--case-head-height)!important;
       box-sizing:border-box!important;
+    }
+    #casesSection .case-sticky-list-head th,
+    #casesSection .case-table-wrap th{
+      padding-top:0!important;
+      padding-bottom:0!important;
+      line-height:1.1!important;
+      vertical-align:middle!important;
+      overflow:hidden!important;
     }
     #casesSection .case-table-wrap tbody tr,
     #casesSection .case-table-wrap tbody td,
@@ -4729,7 +4760,7 @@ function syncTimelineHeights(){
     const root=document.querySelector('#casesSection')||document.documentElement;
     const css=getComputedStyle(root);
     const readPx=(name,fallback)=>Number(String(css.getPropertyValue(name)||'').replace('px','').trim())||fallback;
-    const headHeight=readPx('--case-head-height',window.innerWidth<=900?38:40);
+    const headHeight=readPx('--case-head-height',38);
     const rowHeight=readPx('--case-row-height',window.innerWidth<=900?42:45);
     const timelineRows=[...document.querySelectorAll('.case-timeline-panel .barrow')];
     const ticks=[...document.querySelectorAll('.case-timeline-panel .scale-tick,.case-sticky-timeline-head .scale-tick')];
