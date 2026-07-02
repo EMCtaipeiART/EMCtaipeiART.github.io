@@ -2997,6 +2997,30 @@
       font-weight:900;
       flex:0 0 15px;
     }
+    .column-popover .column-toggle[draggable="true"]{
+      cursor:grab;
+    }
+    .column-popover .column-toggle.is-dragging{
+      opacity:.52;
+      cursor:grabbing;
+      transform:scale(.98);
+    }
+    .column-popover .column-toggle.drag-over{
+      outline:2px solid rgba(196,67,115,.35);
+      outline-offset:2px;
+      box-shadow:0 8px 18px rgba(196,67,115,.14)!important;
+    }
+    #casesSection th[data-column-key]{
+      cursor:grab;
+    }
+    #casesSection th[data-column-key].is-dragging{
+      opacity:.55;
+      cursor:grabbing;
+    }
+    #casesSection th[data-column-key].drag-over{
+      box-shadow:inset 0 -3px 0 rgba(196,67,115,.45);
+      background:#fff2f6!important;
+    }
     .column-popover .column-toggle input{
       position:absolute!important;
       width:1px!important;
@@ -3703,6 +3727,7 @@ let recentLocalWrites = new Map();
 const localWriteTtlMs = 120000;
 const backgroundRefreshMs = 10000;
 let columnControlsRenderedKey = '';
+let draggedColumnKey = '';
 let activeSettingsAccount = accountStorageId();
 let accountFilterSettings = JSON.parse(localStorage.getItem(accountStorageKey(filterSettingsKey)) || 'null') || {};
 let accountSettingsJustApplied = false;
@@ -3717,6 +3742,8 @@ function readVisibleColumnsForAccount(){return readCache(accountStorageKey(visib
 function readDisplaySettingsForAccount(){return {...{editEnabled:true,timelineEnabled:true},...(readCache(accountStorageKey(displaySettingsKey),{})||{})}}
 function readCollapseSettingsForAccount(){return {...{designer:false,recent:false,request:false},...(readCache(accountStorageKey('designRequestCollapseSettingsV1'),{})||{})}}
 function validVisibleColumns(keys,{fallback=true}={}){const valid=columns.map(c=>c.key); if(!Array.isArray(keys))return fallback?defaultVisibleColumns():[]; const list=unique(keys.filter(key=>valid.includes(key))); return list.length||!fallback?list:defaultVisibleColumns()}
+function orderedColumns(){const order=validVisibleColumns(visibleColumns,{fallback:false}), known=new Set(order); return [...order.map(key=>columns.find(c=>c.key===key)).filter(Boolean),...columns.filter(c=>!known.has(c.key))]}
+function reorderVisibleColumn(fromKey,toKey){if(!fromKey||!toKey||fromKey===toKey)return; const visibleSet=new Set(visibleColumns), order=orderedColumns().map(c=>c.key), fromIndex=order.indexOf(fromKey), toIndex=order.indexOf(toKey); if(fromIndex<0||toIndex<0)return; order.splice(toIndex,0,order.splice(fromIndex,1)[0]); visibleColumns=order.filter(key=>visibleSet.has(key)); saveVisibleColumnsForAccount('欄位順序已儲存'); columnControlsRenderedKey=''; render()}
 function settingFlagValue(flags,key,header){return [key,header,...(settingsColumnHeaderAliasesByKey[key]||[])].map(name=>flags[name]).find(value=>value!==undefined)}
 function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>settingFlagValue(flags,key,header)!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=settingFlagValue(flags,key,header); return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
 function remoteDisplaySettings(settings){if(!settings)return null; const readFlag=(keys)=>{for(const key of keys){const value=settings[key]??settings.displaySettings?.[key]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); if(value===false||text==='x'||text==='false'||text==='0'||text==='no'||text==='off')return false; return value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'} return null}; const select=readFlag(['selectEnabled','選擇','editEnabled','編輯']), timeline=readFlag(['timelineEnabled','時間表']); return select===null&&timeline===null?null:{editEnabled:select??true,timelineEnabled:timeline??true}}
@@ -3725,7 +3752,7 @@ function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/�
 function remoteDesignGroup(settings){return normalizeDesignGroup(settings?.designType||settings?.['設計類型']||settings?.designGroup)}
 function remoteDisplayName(settings){return String(settings?.name||settings?.['名字']||settings?.['設計師名字']||'').trim()}
 function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl)return; sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
-function saveVisibleColumnsForAccount(){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount()}
+function saveVisibleColumnsForAccount(message='個人設定已儲存'){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount(message)}
 function saveDisplaySettingsForAccount(){writeCache(accountStorageKey(displaySettingsKey),displaySettings); saveRemoteSettingsForAccount()}
 function saveCollapseSettingsForAccount(){writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); saveRemoteSettingsForAccount('收合設定已儲存')}
 function readFilterSettingsForAccount(){return readCache(accountStorageKey(filterSettingsKey),{})||{}}
@@ -4691,7 +4718,14 @@ function sameDetailGroup(list){return new Set(list.map(row=>`${row.type}｜${row
 function renderBatchControls(){const selected=selectedCaseRows(), designLogin=isDesignerLogin(), bar=$('#batchBar'), tools=$('#batchTools'), count=$('#batchCount'), details=$('#batchDetails'), apply=$('#batchApply'), clear=$('#batchClear'); if(bar)bar.hidden=!designLogin||!selected.length; if(tools&&(!designLogin||!selected.length))tools.hidden=true; if(count)count.textContent=`已選 ${selected.length} 筆`; if(apply)apply.disabled=!selected.length||!designLogin; if(clear)clear.disabled=!selected.length; if(!details)return; const old=details.value; if(!selected.length){details.innerHTML='<option value="">項目細節不變</option>'; details.disabled=false; return} if(!sameDetailGroup(selected)){details.innerHTML='<option value="">項目細節需同類型</option>'; details.disabled=false; return} const options=unique(selected.flatMap(row=>detailOptionsForRow(row))).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')); details.innerHTML='<option value="">項目細節不變</option>'+options.map(option=>`<option value="${esc(option)}">${esc(option)}</option>`).join(''); if(options.includes(old))details.value=old}
 function renderOwnerOptions(){ownerContactMap.clear(); const names=[]; rows.forEach(r=>{const name=ownerDisplay(r.owner), email=r.ownerEmail||extractEmail(r.owner); if(name){names.push(name); if(email)ownerContactMap.set(name,email)} if(email){names.push(email); ownerContactMap.set(email,email)}}); ownerList.innerHTML=unique(names).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')).map(name=>`<option value="${esc(name)}"></option>`).join('')}
 function columnToggleClass(key){return `column-toggle column-toggle-${String(key||'').replace(/[^a-zA-Z0-9_-]/g,'-')}`}
-function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=columns.map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{visibleColumns=[...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
+function attachColumnDragHandlers(box){box.querySelectorAll('[data-column-key][draggable="true"]').forEach(label=>{label.addEventListener('dragstart',event=>{draggedColumnKey=label.dataset.columnKey||''; label.classList.add('is-dragging'); event.dataTransfer.effectAllowed='move'; event.dataTransfer.setData('text/plain',draggedColumnKey)}); label.addEventListener('dragover',event=>{event.preventDefault(); if(label.dataset.columnKey!==draggedColumnKey)label.classList.add('drag-over')}); label.addEventListener('dragleave',()=>label.classList.remove('drag-over')); label.addEventListener('drop',event=>{event.preventDefault(); label.classList.remove('drag-over'); const from=event.dataTransfer.getData('text/plain')||draggedColumnKey, to=label.dataset.columnKey||''; reorderVisibleColumn(from,to)}); label.addEventListener('dragend',()=>{label.classList.remove('is-dragging'); box.querySelectorAll('.drag-over').forEach(node=>node.classList.remove('drag-over')); draggedColumnKey=''})})}
+function columnHeaderFromEvent(event){return event.target.closest?.('#casesSection th[data-column-key][draggable="true"]')||null}
+function clearColumnHeaderDragState(){document.querySelectorAll('#casesSection th.is-dragging,#casesSection th.drag-over').forEach(node=>node.classList.remove('is-dragging','drag-over'))}
+function handleColumnHeaderDragStart(event){const th=columnHeaderFromEvent(event); if(!th)return; draggedColumnKey=th.dataset.columnKey||''; th.classList.add('is-dragging'); event.dataTransfer.effectAllowed='move'; event.dataTransfer.setData('text/plain',draggedColumnKey)}
+function handleColumnHeaderDragOver(event){const th=columnHeaderFromEvent(event); if(!th||!draggedColumnKey)return; event.preventDefault(); document.querySelectorAll('#casesSection th.drag-over').forEach(node=>{if(node!==th)node.classList.remove('drag-over')}); if(th.dataset.columnKey!==draggedColumnKey)th.classList.add('drag-over')}
+function handleColumnHeaderDrop(event){const th=columnHeaderFromEvent(event); if(!th)return; event.preventDefault(); const from=event.dataTransfer.getData('text/plain')||draggedColumnKey, to=th.dataset.columnKey||''; clearColumnHeaderDragState(); reorderVisibleColumn(from,to)}
+function handleColumnHeaderDragEnd(){clearColumnHeaderDragState(); draggedColumnKey=''}
+function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${orderedColumns().map(c=>c.key).join('|')}|visible:${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=orderedColumns().map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; attachColumnDragHandlers(box); box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{const checked=new Set([...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value)); visibleColumns=orderedColumns().map(c=>c.key).filter(key=>checked.has(key)); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
 function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const allVisible=selectable.length&&selectable.every(row=>selectedCaseIds.has(String(row.id)));
   const someVisible=selectable.some(row=>selectedCaseIds.has(String(row.id)));
@@ -4700,12 +4734,12 @@ function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const cells=active.map(c=>{
     const width=columnWidth(c);
     const content=c.sort?`<button type="button" class="sort-btn" onclick="setSort('${esc(c.key)}')" title="排序：${esc(sortLabel(c))}">${esc(c.label)}<span class="sort-mark">${sortState.key===c.key?(sortState.dir==='asc'?'▲':'▼'):'↕'}</span></button>`:esc(c.label);
-    return `<th class="${esc(c.className||'')}" style="width:${width}px!important;min-width:${width}px!important">${content}</th>`;
+    return `<th class="${esc(c.className||'')}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序" style="width:${width}px!important;min-width:${width}px!important">${content}</th>`;
   }).join('');
   return {html:`<tr>${selectHead}${cells}</tr>`,allVisible,someVisible};
 }
 function visibleCaseTableMinWidth(){
-  const active=columns.filter(c=>visibleColumns.includes(c.key));
+  const active=orderedColumns().filter(c=>visibleColumns.includes(c.key));
   return active.reduce((sum,c)=>sum+columnWidth(c),isDesignerLogin()&&displaySettings.editEnabled?48:0);
 }
 let caseSplitSyncFrame=0;
@@ -4737,7 +4771,7 @@ function renderTable(list){
   if(!isDesignerLogin())selectedCaseIds.clear();
   const loadingArchive=archiveRowsLoading&&archiveFilterRequested();
   const ordered=loadingArchive?[]:sorted(list);
-  const active=columns.filter(c=>visibleColumns.includes(c.key));
+  const active=orderedColumns().filter(c=>visibleColumns.includes(c.key));
   const selectRows=isDesignerLogin()&&displaySettings.editEnabled;
   const split=document.querySelector('.case-split');
   if(split){
@@ -5430,7 +5464,7 @@ $('#requestMailGuideModal')?.addEventListener('click',event=>{if(event.target.id
 $('#q').value=accountFilterSettings.q||'';
 $('#q').addEventListener('input',()=>{saveFilterSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount(); scheduleArchiveSearchLoad(); render()});
 $('#reset').onclick=()=>{$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; closeFilters()};
-$('#showAllColumns').onclick=()=>{visibleColumns=columns.map(c=>c.key); if(isDesignerLogin())displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
+$('#showAllColumns').onclick=()=>{visibleColumns=orderedColumns().map(c=>c.key); if(isDesignerLogin())displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#hideAllColumns').onclick=()=>{visibleColumns=[]; if(isDesignerLogin())displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#columnToggle').onclick=()=>{$('#columnPopover').hidden=!$('#columnPopover').hidden};
 $('#requestBatchToggle')?.addEventListener('click',()=>{if(editingId){ownerTouchedByUser=false; $('#requestForm').reset(); populateDesignSelects(); setEditMode(null); applyCurrentUserProfile(currentUserProfile); flashMsg('已取消修改需求'); return} if(requestBatchMode){clearRequestBatch(); return} requestBatchMode=!requestBatchMode; if(requestBatchMode&&!requestBatchRows.length)requestBatchRows.push(currentRequestDraft()); updateRequestMode(); flashMsg(requestBatchMode?'已開啟批次新增，可直接編輯下方每筆欄位，或按「往下套用」新增下一筆。':'已關閉批次新增')});
@@ -5446,6 +5480,10 @@ $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
 $('#loginForm').addEventListener('submit',event=>{event.preventDefault(); setLoginNote('請按 Google 登入按鈕。')});
+document.addEventListener('dragstart',handleColumnHeaderDragStart);
+document.addEventListener('dragover',handleColumnHeaderDragOver);
+document.addEventListener('drop',handleColumnHeaderDrop);
+document.addEventListener('dragend',handleColumnHeaderDragEnd);
 	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
 </script>
 </body>
