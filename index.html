@@ -3022,13 +3022,17 @@
       gap:0!important;
     }
     #casesSection .case-table-wrap tbody tr{
-      display:table!important;
-      table-layout:fixed!important;
+      display:flex!important;
+      align-items:stretch!important;
       width:100%!important;
+      min-width:max-content!important;
       overflow:hidden!important;
     }
     #casesSection .case-table-wrap tbody td{
-      display:table-cell!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      flex:0 0 auto!important;
     }
     #casesSection .case-timeline-panel .timeline-inner,
     #casesSection .case-sticky-timeline-head .timeline-inner{
