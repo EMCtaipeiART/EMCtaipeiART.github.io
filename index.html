@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260702-login-fix-1" />
+  <meta name="app-version" content="20260702-login-fix-2" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3561,7 +3561,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260702-login-fix-1';
+const appBuildVersion = '20260702-login-fix-2';
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
 const databaseListUrl = 'https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/export?format=csv&gid=1244538986';
 const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent('select *')}`;
@@ -4511,8 +4511,7 @@ async function googleLoginByJsonp(credential){
   return data;
 }
 async function googleEmailLoginByJsonp(email,name=''){
-  const payload=withSheetTarget({action:'googleEmailLogin',email,name});
-  const buildUrl=()=>{const params=new URLSearchParams({action:'googleEmailLogin',payload:JSON.stringify(payload),targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()}); return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`};
+  const buildUrl=()=>{const params=new URLSearchParams({action:'googleEmailLogin',email,name,ts:Date.now()}); return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`};
   let lastError=null;
   for(const [index,timeoutMs] of [30000,45000].entries()){
     try{
