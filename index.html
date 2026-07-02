@@ -2959,8 +2959,8 @@
 
     /* final row-height contract: table rows and timeline rows must share one source */
     #casesSection{
-      --case-head-height:44px;
-      --case-row-height:56px;
+      --case-head-height:40px;
+      --case-row-height:45px;
     }
     #casesSection .case-table-wrap thead tr,
     #casesSection .case-table-wrap th,
@@ -2990,8 +2990,8 @@
       gap:0!important;
     }
     #casesSection .case-table-wrap tbody td{
-      padding-top:6px!important;
-      padding-bottom:6px!important;
+      padding-top:4px!important;
+      padding-bottom:4px!important;
       overflow:hidden!important;
       text-overflow:ellipsis!important;
       white-space:nowrap!important;
@@ -3000,7 +3000,7 @@
     }
     #casesSection .case-table-wrap .status,
     #casesSection .case-table-wrap .editable-field,
-    #casesSection .case-table-wrap .revision-pill,
+    #casesSection .case-table-wrap .revision-pill:not(.revision-add),
     #casesSection .case-table-wrap .history-lock,
     #casesSection .case-table-wrap .mail-compose-btn,
     #casesSection .case-table-wrap .row-actions button{
@@ -3010,22 +3010,35 @@
       align-items:center!important;
       box-sizing:border-box!important;
     }
+    #casesSection .case-table-wrap .revision-pill.revision-add{
+      width:24px!important;
+      min-width:24px!important;
+      max-width:24px!important;
+      height:24px!important;
+      min-height:24px!important;
+      max-height:24px!important;
+      padding:0!important;
+      border-radius:50%!important;
+      line-height:1!important;
+      flex:0 0 24px!important;
+      box-sizing:border-box!important;
+    }
     #casesSection .case-timeline-panel .barrow{
       align-items:center!important;
       overflow:hidden!important;
     }
     #casesSection .case-timeline-panel .barbox{
-      height:28px!important;
-      margin:14px 0!important;
+      height:27px!important;
+      margin:9px 0!important;
     }
     @media(max-width:900px){
       #casesSection{
         --case-head-height:38px;
-        --case-row-height:46px;
+        --case-row-height:42px;
       }
       #casesSection .case-timeline-panel .barbox{
         height:24px!important;
-        margin:11px 0!important;
+        margin:9px 0!important;
       }
     }
   </style>
@@ -4716,8 +4729,8 @@ function syncTimelineHeights(){
     const root=document.querySelector('#casesSection')||document.documentElement;
     const css=getComputedStyle(root);
     const readPx=(name,fallback)=>Number(String(css.getPropertyValue(name)||'').replace('px','').trim())||fallback;
-    const headHeight=readPx('--case-head-height',window.innerWidth<=900?38:44);
-    const rowHeight=readPx('--case-row-height',window.innerWidth<=900?46:56);
+    const headHeight=readPx('--case-head-height',window.innerWidth<=900?38:40);
+    const rowHeight=readPx('--case-row-height',window.innerWidth<=900?42:45);
     const timelineRows=[...document.querySelectorAll('.case-timeline-panel .barrow')];
     const ticks=[...document.querySelectorAll('.case-timeline-panel .scale-tick,.case-sticky-timeline-head .scale-tick')];
     const scales=[...document.querySelectorAll('.case-timeline-panel .timeline-scale,.case-sticky-timeline-head .timeline-scale')];
