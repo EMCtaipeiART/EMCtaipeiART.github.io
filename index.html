@@ -154,7 +154,7 @@
       padding-left:72px;
     }
     .case-split{max-height:min(72vh,680px);overflow-y:auto;overscroll-behavior:contain}
-    .case-split.timeline-enabled{grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(240px,var(--timeline-panel-width,1fr));gap:0}
+    .case-split.timeline-enabled{grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(240px,var(--timeline-panel-width,1fr));gap:0}
     .timeline-resizer{display:none;background:#dfe7e2;cursor:col-resize;min-height:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
     .case-split.timeline-enabled .timeline-resizer{display:block}
     .case-table-wrap{overflow-x:auto;overflow-y:visible}
@@ -540,7 +540,7 @@
     @media(min-width:901px){
       #casesSection{overflow:hidden}
       #casesSection .case-split{display:grid!important;max-width:100%!important;width:100%!important;overflow:auto!important;overflow-y:auto!important;max-height:min(72vh,680px)!important;align-items:start!important}
-      #casesSection .case-split.timeline-enabled{grid-template-columns:minmax(360px,var(--list-panel-width,2fr)) 8px minmax(240px,var(--timeline-panel-width,1fr))!important}
+      #casesSection .case-split.timeline-enabled{grid-template-columns:minmax(360px,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(240px,var(--timeline-panel-width,1fr))!important}
       #casesSection .case-split.compact-cases{max-height:none!important;overflow:auto!important}
       #casesSection .case-table-wrap,#casesSection .case-timeline-panel .timeline{overflow:visible!important}
       #casesSection .case-list-panel,#casesSection .case-timeline-panel{overflow:visible!important}
@@ -661,7 +661,7 @@
     /* integrated case grid: sticky headers, aligned timeline, responsive horizontal scroll */
     #casesSection .case-split{
       display:grid!important;
-      grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+      grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
       gap:0!important;
       width:100%!important;
       max-width:100%!important;
@@ -855,7 +855,7 @@
       grid-column:1 / -1!important;
       grid-row:1!important;
       display:grid!important;
-      grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+      grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
       gap:0!important;
       position:sticky!important;
       top:0!important;
@@ -1020,13 +1020,13 @@
       grid-template-columns:minmax(0,1fr)!important;
     }
     #casesSection .case-split.timeline-enabled{
-      grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+      grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
     }
     #casesSection .case-sticky-head{
       grid-template-columns:minmax(0,1fr)!important;
     }
     #casesSection .case-split.timeline-enabled .case-sticky-head{
-      grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+      grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
     }
     #casesSection .case-split:not(.timeline-enabled) .timeline-resizer,
     #casesSection .case-split:not(.timeline-enabled) .timeline-resizer-head,
@@ -1065,10 +1065,10 @@
     }
     @media(min-width:901px){
       #casesSection .case-split.timeline-enabled{
-        grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+        grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
       }
       #casesSection .case-split.timeline-enabled .case-sticky-head{
-        grid-template-columns:minmax(0,var(--list-panel-width,2fr)) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
+        grid-template-columns:minmax(0,var(--case-list-panel-width,var(--list-panel-width,2fr))) 8px minmax(260px,var(--timeline-panel-width,1fr))!important;
       }
       #casesSection .case-split.timeline-enabled .case-list-panel,
       #casesSection .case-split.timeline-enabled .case-sticky-list-head{
@@ -4697,7 +4697,7 @@ function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); con
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
-function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn){closeAccountMenu(); closeNotifications()} renderNotifications(); if(split)split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); syncTimelineHeights(); adjustCaseSplitHeight()}
+function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn){closeAccountMenu(); closeNotifications()} renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
 function syncTopPanelHeights(){
   const designer=$('#designerPanel'), recent=$('#recentPanel');
   if(!designer||!recent)return;
@@ -4763,11 +4763,30 @@ function visibleCaseTableMinWidth(){
   const active=orderedColumns().filter(c=>visibleColumns.includes(c.key));
   return active.reduce((sum,c)=>sum+columnWidth(c),isDesignerLogin()&&displaySettings.editEnabled?48:0);
 }
+function updateCaseSplitPanelWidths({force=false}={}){
+  const split=document.querySelector('.case-split');
+  if(!split)return;
+  if(window.innerWidth<=900||!split.classList.contains('timeline-enabled')){
+    split.style.removeProperty('--case-list-panel-width');
+    return;
+  }
+  if(split.dataset.manualPanelWidth==='1'&&!force)return;
+  const handleWidth=8;
+  const minTimeline=260;
+  const minList=360;
+  const total=Math.max(0,Math.round(split.getBoundingClientRect().width||split.clientWidth||0)-handleWidth);
+  if(!total)return;
+  const contentWidth=Math.max(visibleCaseTableMinWidth(),minList);
+  const maxList=Math.max(minList,total-minTimeline);
+  const listWidth=Math.min(contentWidth,maxList);
+  split.style.setProperty('--case-list-panel-width',`${listWidth}px`);
+}
 let caseSplitSyncFrame=0;
 function scheduleCaseSplitSync(){
   if(caseSplitSyncFrame)return;
   caseSplitSyncFrame=requestAnimationFrame(()=>{
     caseSplitSyncFrame=0;
+    updateCaseSplitPanelWidths();
     syncCaseListTableWidth();
     syncCaseHeaderScroll();
     syncTimelineHeights();
@@ -4775,6 +4794,7 @@ function scheduleCaseSplitSync(){
   });
 }
 function syncCaseListTableWidth(){
+  updateCaseSplitPanelWidths();
   const table=document.querySelector('.case-table-wrap table');
   const stickyTable=document.querySelector('.case-sticky-list-head table');
   const tableWrap=document.querySelector('.case-table-wrap');
@@ -4796,6 +4816,8 @@ function renderTable(list){
   const selectRows=isDesignerLogin()&&displaySettings.editEnabled;
   const split=document.querySelector('.case-split');
   if(split){
+    split.dataset.manualPanelWidth='';
+    updateCaseSplitPanelWidths({force:true});
     split.classList.toggle('compact-cases',!loadingArchive&&ordered.length<=20);
     if(!loadingArchive&&ordered.length<=20)split.scrollTop=0;
     split.dataset.rowCount=String(ordered.length);
@@ -5263,7 +5285,7 @@ function initTimelineResizer(){
   if(!split||!handle)return;
   let dragging=false;
   const stop=()=>{dragging=false;document.body.style.cursor='';document.body.style.userSelect='';scheduleCaseSplitSync()};
-  handle.addEventListener('pointerdown',event=>{if(!split.classList.contains('timeline-enabled'))return; dragging=true; handle.setPointerCapture?.(event.pointerId); document.body.style.cursor='col-resize'; document.body.style.userSelect='none'; event.preventDefault()});
+  handle.addEventListener('pointerdown',event=>{if(!split.classList.contains('timeline-enabled'))return; dragging=true; split.dataset.manualPanelWidth='1'; handle.setPointerCapture?.(event.pointerId); document.body.style.cursor='col-resize'; document.body.style.userSelect='none'; event.preventDefault()});
   window.addEventListener('pointermove',event=>{
     if(!dragging)return;
     const rect=split.getBoundingClientRect(), handleWidth=8, total=Math.max(320,rect.width-handleWidth), minTimeline=240, minList=360;
@@ -5272,6 +5294,7 @@ function initTimelineResizer(){
     if(window.innerWidth<=900)return;
     split.style.setProperty('--timeline-panel-width',`${timelineWidth}px`);
     split.style.setProperty('--list-panel-width',`${Math.max(minList,total-timelineWidth)}px`);
+    split.style.setProperty('--case-list-panel-width',`${Math.max(minList,total-timelineWidth)}px`);
     scheduleCaseSplitSync();
   });
   window.addEventListener('pointerup',stop);
