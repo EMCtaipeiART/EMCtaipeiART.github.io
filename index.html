@@ -5284,7 +5284,57 @@ async function handleGoogleAccessToken(response){handleGoogleLoginError(new Erro
 async function erpLoginConfig(){try{const data=await readActionWithFrameFallback({action:'erpLoginConfig'},20000,'ERP 登入設定讀取逾時，請按「測試連線」確認 Apps Script。'); if(!data.ok)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:(data.error||'ERP OAuth 尚未設定')); return data}catch(err){if(err?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|iframe|JSONP/i.test(err?.message||'')){console.warn('[ERP 登入設定] Apps Script 讀取失敗，使用公開備援設定',err); setSync('ERP 設定讀取較慢，改用備援登入設定...'); return erpPublicFallbackConfig} throw err}}
 async function startErpLogin(){try{const config=erpPublicFallbackConfig; const state=`erp_${Date.now()}_${randomBase64Url(16)}`, verifier=randomBase64Url(32), challenge=await sha256Base64Url(verifier); sessionStorage.setItem('designRequestErpLoginState',state); sessionStorage.setItem('designRequestErpCodeVerifier',verifier); sessionStorage.setItem('designRequestErpRedirectUri',config.redirectUri); showLoginPendingOverlay('正在前往 ERP 登入...'); const params=new URLSearchParams({response_type:'code',client_id:config.clientId,redirect_uri:config.redirectUri,scope:config.scope||'openid profile',state,code_challenge:challenge,code_challenge_method:'S256'}); location.href=`${String(config.baseUrl||'https://manage.emctaipei.com').replace(/\/+$/,'')}/oauth/authorize?${params.toString()}`}catch(err){handleErpLoginError(err)}}
 function continueErpLoginViaAppsScript(code,verifier,redirectUri){showLoginPendingOverlay('ERP 登入驗證中...'); redirectFullPageToAppsScript({action:'erpLoginRedirect',code,codeVerifier:verifier,redirectUri})}
-async function handleErpRedirectReturn(){const hashParams=new URLSearchParams(location.hash.replace(/^#/,'')); const encodedErp=hashParams.get('erp_login_result')||'', encodedGoogle=hashParams.get('google_login_result')||'', encodedAdmin=hashParams.get('admin_login_result')||''; if(encodedErp||encodedGoogle||encodedAdmin){history.replaceState(null,document.title,location.pathname+location.search); const source=encodedGoogle?'Google 登入':encodedAdmin?'管理者登入':'ERP 登入'; showLoginPendingOverlay(`${source}結果套用中...`); try{applyLoginRedirectResult(decodeBase64UrlJson(encodedErp||encodedGoogle||encodedAdmin),source)}catch(err){encodedErp?handleErpLoginError(err):encodedGoogle?handleGoogleLoginError(err,source):handleAdminLoginError(err)} return true} const params=new URLSearchParams(location.search), code=params.get('code')||'', state=params.get('state')||'', error=params.get('error')||'', errorDescription=params.get('error_description')||''; if(!code&&!error)return false; if(state&&!state.startsWith('erp_'))return false; history.replaceState(null,document.title,location.pathname+location.hash); if(error){handleErpLoginError(new Error(errorDescription||error)); return true} const savedState=sessionStorage.getItem('designRequestErpLoginState')||'', verifier=sessionStorage.getItem('designRequestErpCodeVerifier')||'', redirectUri=sessionStorage.getItem('designRequestErpRedirectUri')||''; sessionStorage.removeItem('designRequestErpLoginState'); sessionStorage.removeItem('designRequestErpCodeVerifier'); sessionStorage.removeItem('designRequestErpRedirectUri'); if(!savedState||state!==savedState){handleErpLoginError(new Error('ERP 登入 state 不一致，請重新登入。')); return true} continueErpLoginViaAppsScript(code,verifier,redirectUri); return true}
+async function handleErpRedirectReturn(){
+  const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
+  const encodedErp=hashParams.get('erp_login_result')||'';
+  const encodedGoogle=hashParams.get('google_login_result')||'';
+  const encodedAdmin=hashParams.get('admin_login_result')||'';
+  if(encodedErp||encodedGoogle||encodedAdmin){
+    history.replaceState(null,document.title,location.pathname+location.search);
+    const source=encodedGoogle?'Google 登入':encodedAdmin?'管理者登入':'ERP 登入';
+    showLoginPendingOverlay(`${source}結果套用中...`);
+    try{
+      applyLoginRedirectResult(decodeBase64UrlJson(encodedErp||encodedGoogle||encodedAdmin),source);
+    }catch(err){
+      encodedErp?handleErpLoginError(err):encodedGoogle?handleGoogleLoginError(err,source):handleAdminLoginError(err);
+    }
+    return true;
+  }
+
+  const params=new URLSearchParams(location.search);
+  const code=params.get('code')||'';
+  const state=params.get('state')||'';
+  const error=params.get('error')||'';
+  const errorDescription=params.get('error_description')||'';
+  if(!code&&!error)return false;
+  if(state&&!state.startsWith('erp_'))return false;
+  history.replaceState(null,document.title,location.pathname+location.hash);
+  if(error){
+    handleErpLoginError(new Error(errorDescription||error));
+    return true;
+  }
+
+  const savedState=sessionStorage.getItem('designRequestErpLoginState')||'';
+  const verifier=sessionStorage.getItem('designRequestErpCodeVerifier')||'';
+  const redirectUri=sessionStorage.getItem('designRequestErpRedirectUri')||'';
+  sessionStorage.removeItem('designRequestErpLoginState');
+  sessionStorage.removeItem('designRequestErpCodeVerifier');
+  sessionStorage.removeItem('designRequestErpRedirectUri');
+  if(!savedState||state!==savedState){
+    handleErpLoginError(new Error('ERP 登入 state 不一致，請重新登入。'));
+    return true;
+  }
+
+  showLoginPendingOverlay('ERP 登入驗證中...');
+  try{
+    const data=await readActionWithFrameFallback({action:'erpLogin',code,codeVerifier:verifier,redirectUri},30000,'ERP 登入驗證沒有回應，請稍候再試。');
+    applyLoginRedirectResult(data,'ERP 登入');
+  }catch(err){
+    console.warn('[ERP 登入] 前台驗證失敗，改用 Apps Script 返回頁',err);
+    continueErpLoginViaAppsScript(code,verifier,redirectUri);
+  }
+  return true;
+}
 async function verifyEditorLogin(account,password,newPassword=''){
   if(!apiUrl) throw new Error('尚未設定 Apps Script 網址，無法登入');
   const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API login 沒有回應。'});
