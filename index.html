@@ -4399,6 +4399,10 @@ function pingUrl(){
   const params=new URLSearchParams({action:'ping',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
   return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
 }
+function urlFetchAuthCheckUrl(){
+  const params=new URLSearchParams({action:'urlFetchAuthCheck',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
+  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
+}
 async function testAppsScriptConnection(){
   const status=scriptUrlStatus();
   console.info('[Apps Script 測試連線]',status);
@@ -4415,9 +4419,18 @@ async function testAppsScriptConnection(){
     const version=data.version||data.scriptVersion||'(未回傳版本)';
     const latestVersion='google-login-tokeninfo-2026-07-06';
     const isLatest=version===latestVersion;
-    const text=`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}`;
-    setSync(text,!isLatest);
-    alert(`${text}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${apiUrl}`);
+    const authCheck=await jsonp(urlFetchAuthCheckUrl(),15000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
+    console.info('[Apps Script UrlFetchApp 權限檢查]',authCheck);
+    const fetchOk=Boolean(authCheck?.ok);
+    const authActionMissing=String(authCheck?.error||'').includes('Unknown action')||String(authCheck?.reason||'').includes('Unknown action');
+    const fetchMessage=fetchOk
+      ? `UrlFetchApp.fetch：可執行（測試狀態 ${authCheck.status}）`
+      : (authActionMissing
+        ? 'UrlFetchApp.fetch：目前線上部署缺少權限檢查 action，請重新部署最新版 Apps Script。'
+        : `UrlFetchApp.fetch：尚未授權或執行失敗｜${authCheck?.error||authCheck?.rawError||'未回傳錯誤'}`);
+    const text=`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}｜${fetchOk?'UrlFetchApp 已授權':(authActionMissing?'需重新部署':'UrlFetchApp 需重新授權')}`;
+    setSync(text,!isLatest||!fetchOk);
+    alert(`${text}\n${fetchMessage}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${fetchOk||authActionMissing?'':'請在 Apps Script 編輯器執行一次 checkUrlFetchAuthorization_，允許權限後重新部署。\\n'}${apiUrl}`);
   }catch(err){
     console.error('[Apps Script ping 失敗]',{error:err,scriptUrl:apiUrl});
     const message=`Apps Script API 讀取失敗：${err.message||err}\\nSCRIPT_URL：${apiUrl}\\n請確認 Web App 設定 Execute as: Me、Who has access: Anyone，且使用 /exec。`;
@@ -4562,6 +4575,23 @@ async function googleLoginByJsonp(credential){
   if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
   return data;
 }
+async function diagnoseAppsScriptApi(){
+  const result={scriptUrl:apiUrl};
+  try{
+    const ping=await jsonp(pingUrl(),8000,`Apps Script ping 逾時。SCRIPT_URL：${apiUrl}`);
+    result.ping=ping;
+    result.version=ping?.version||ping?.scriptVersion||'';
+  }catch(err){
+    result.pingError=err.message||String(err);
+  }
+  try{
+    const auth=await jsonp(urlFetchAuthCheckUrl(),10000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
+    result.urlFetchAuth=auth;
+  }catch(err){
+    result.urlFetchAuthError=err.message||String(err);
+  }
+  return result;
+}
 async function googleLoginByFrame(credential){
   const profile=googleProfileFromCredential(credential);
   const email=String(profile?.email||'').trim();
@@ -4571,9 +4601,15 @@ async function googleLoginByFrame(credential){
   try{
     data=await postToSheetByFrame(payload);
   }catch(err){
-    console.error('[Google 登入 Apps Script API 讀取失敗]',{error:err,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||'',payloadAction:'googleLogin'});
-    const apiError=new Error(`Apps Script API 讀取失敗：${err.message||err}`);
-    Object.assign(apiError,{reason:'APPS_SCRIPT_API_READ_FAILED',receivedEmail:email,receivedAud:profile?.aud||'',scriptUrl:apiUrl});
+    const diagnostic=await diagnoseAppsScriptApi();
+    console.error('[Google 登入 Apps Script API 讀取失敗]',{error:err,diagnostic,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||'',payloadAction:'googleLogin'});
+    const urlFetch=diagnostic.urlFetchAuth;
+    const urlFetchDetail=urlFetch
+      ? (urlFetch.ok?`UrlFetchApp：可執行（status ${urlFetch.status}）`:`UrlFetchApp：失敗｜${urlFetch.error||urlFetch.rawError||urlFetch.reason||'未回傳錯誤'}`)
+      : `UrlFetchApp：檢查失敗｜${diagnostic.urlFetchAuthError||'未回應'}`;
+    const versionDetail=diagnostic.version?`SCRIPT_VERSION：${diagnostic.version}`:`ping：${diagnostic.pingError||'未回應'}`;
+    const apiError=new Error(`Apps Script API 讀取失敗：${err.message||err}\n${versionDetail}\n${urlFetchDetail}`);
+    Object.assign(apiError,{reason:'APPS_SCRIPT_API_READ_FAILED',receivedEmail:email,receivedAud:profile?.aud||'',scriptUrl:apiUrl,diagnostic});
     throw apiError;
   }
   console.info('[Google 登入 Apps Script API 回傳]',data);
