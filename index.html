@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260702-login-fix-2" />
+  <meta name="app-version" content="20260706-google-tokeninfo-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3504,7 +3504,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260706-google-tokeninfo-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3543,14 +3543,21 @@ let requestKind = '設計新增需求';
 let requestBatchMode = false;
 let requestBatchRows = [];
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup'];
+const legacyAuthStorageKeys = ['authToken','currentUser','isLoggedIn','editorToken'];
 function editorSessionValue(key){return sessionStorage.getItem('designRequestEditorLoggedOut')==='1'?'':(sessionStorage.getItem(key)||'')}
 function writeEditorSessionValue(key,value){localStorage.removeItem(key); if(value)sessionStorage.setItem(key,value); else sessionStorage.removeItem(key)}
 function persistEditorSession(){sessionStorage.removeItem('designRequestEditorLoggedOut'); writeEditorSessionValue('designRequestEditorUser',currentEditor); writeEditorSessionValue('designRequestEditorAccount',currentEditorAccount); writeEditorSessionValue('designRequestEditorToken',currentEditorToken); writeEditorSessionValue('designRequestEditorGroup',currentEditorGroup)}
 function clearEditorWindowSession(){editorSessionKeys.forEach(key=>sessionStorage.removeItem(key)); sessionStorage.setItem('designRequestEditorLoggedOut','1')}
-let currentEditor = editorSessionValue('designRequestEditorUser');
-let currentEditorAccount = editorSessionValue('designRequestEditorAccount');
-let currentEditorToken = editorSessionValue('designRequestEditorToken');
-let currentEditorGroup = editorSessionValue('designRequestEditorGroup');
+const pendingEditorSession = {
+  user: editorSessionValue('designRequestEditorUser'),
+  account: editorSessionValue('designRequestEditorAccount'),
+  token: editorSessionValue('designRequestEditorToken'),
+  group: editorSessionValue('designRequestEditorGroup')
+};
+let currentEditor = '';
+let currentEditorAccount = '';
+let currentEditorToken = '';
+let currentEditorGroup = '';
 const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
@@ -3561,7 +3568,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260702-login-fix-2';
+const appBuildVersion = '20260706-google-tokeninfo-1';
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
 const databaseListUrl = 'https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/export?format=csv&gid=1244538986';
 const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent('select *')}`;
@@ -4393,9 +4400,15 @@ async function sheetApi(action,payload={}){
     return data;
   }
   if(action==='googleLogin'){
-    const data=await googleLoginByPost({action,...payload});
+    const data=await googleLoginByJsonp(payload.credential||payload.idToken||'');
     if(!data.ok)throw new Error(data.error||'Google 登入失敗');
     if(data.action!==action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+    return data;
+  }
+  if(action==='verifyToken'||action==='logout'){
+    const data=await writeToSheetByJsonp({action,...payload},20000,`${action==='verifyToken'?'登入狀態驗證':'登出'}沒有回應，請稍後再試。`);
+    if(!data.ok)throw new Error(data.error||`${action} 失敗`);
+    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
     return data;
   }
   if(action==='updateModificationConfirm'){
@@ -4501,29 +4514,21 @@ function googleProfileFromCredential(credential){
 async function googleLoginByJsonp(credential){
   const profile=googleProfileFromCredential(credential);
   const email=String(profile?.email||'').trim();
-  const name=[profile?.family_name,profile?.given_name].map(value=>String(value||'').trim()).join('')||profile?.name||profile?.given_name||'';
-  if(email)return await googleEmailLoginByJsonp(email,name);
   const payload=withSheetTarget({action:'googleLogin',credential});
-  const data=await writeToSheetByJsonp(payload,45000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
-  if(!data.ok)throw new Error(data.error||'Google 登入失敗');
+  console.info('[Google 登入送後端驗證]',{email:email||'(未解析)',aud:profile?.aud||'', appBuildVersion});
+  const data=await writeToSheetByJsonp(payload,60000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
+  console.info('[Google 登入後端回傳]',{ok:data?.ok, action:data?.action, error:data?.error, reason:data?.reason, receivedAud:data?.receivedAud, receivedEmail:data?.receivedEmail, emailVerified:data?.emailVerified, loginDebug:data?.loginDebug});
+  if(!data.ok){
+    const error=new Error(data.error||'Google 登入失敗');
+    Object.assign(error,{reason:data.reason,expectedClientId:data.expectedClientId,receivedAud:data.receivedAud,receivedEmail:data.receivedEmail,emailVerified:data.emailVerified});
+    throw error;
+  }
   if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
   return data;
 }
 async function googleEmailLoginByJsonp(email,name=''){
-  const buildUrl=()=>{const params=new URLSearchParams({action:'googleEmailLogin',email,name,ts:Date.now()}); return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`};
-  let lastError=null;
-  for(const [index,timeoutMs] of [30000,45000].entries()){
-    try{
-      const data=await jsonp(buildUrl(),timeoutMs,index?'Google 登入驗證仍未回應，請按「測試連線」檢查 Apps Script 是否可執行。':'Google 登入驗證較慢，正在重試。');
-      if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-      if(data.action!=='googleEmailLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-      return data;
-    }catch(err){
-      lastError=err;
-      console.warn(`Google email 登入 JSONP 第 ${index+1} 次失敗`,{email,error:err});
-    }
-  }
-  throw new Error(`Google 登入驗證沒有回應：${lastError?.message||'Apps Script JSONP 逾時'}`);
+  console.warn('googleEmailLogin 已停用', {email, name});
+  throw new Error('googleEmailLogin 已停用，請使用 Google credential / idToken 登入');
 }
 function postToSheetByFrame(payload){
   return new Promise((resolve,reject)=>{
@@ -5098,8 +5103,8 @@ function setLoginNote(text,isError=false){const note=$('#loginNote'); if(!note)r
 function setGoogleLoginEmail(email,source='Google'){const el=$('#googleLoginEmail'); if(!el)return; const value=String(email||'').trim(); el.hidden=!value; el.textContent=value?`${source} 回傳帳號：${value}`:''}
 function googleFedCmHint(){return '若 Chrome 封鎖第三方登入，請到 chrome://settings/content/federatedIdentityApi 允許本網站第三方登入。'}
 function decodeGoogleCredentialEmail(credential){try{const payload=String(credential||'').split('.')[1]||''; if(!payload)return ''; const normalized=payload.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(payload.length/4)*4,'='); return JSON.parse(decodeURIComponent(escape(atob(normalized)))).email||''}catch(err){console.warn('Google credential email 解析失敗',err); return ''}}
-function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} editorSessionKeys.forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.removeItem('designRequestGoogleLoginState'); sessionStorage.setItem('designRequestEditorLoggedOut','1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; selectedCaseIds.clear()}
-function handleGoogleLoginError(error,context='Google 登入'){console.error(`[${context}]`,error); const message=error?.message||error?.error||String(error||'未知錯誤'), scriptLikely=/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=scriptLikely?'請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。':googleFedCmHint(); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${context}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${context}失敗：${message}。${hint}`,true); setSync(`${context}失敗：${message}`,true); updateLoginUi(); render()}
+function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.removeItem('designRequestGoogleLoginState'); sessionStorage.setItem('designRequestEditorLoggedOut','1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; selectedCaseIds.clear()}
+function handleGoogleLoginError(error,context='Google 登入'){console.error(`[${context}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), scriptLikely=/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(scriptLikely?'請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。':googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${context}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${context}失敗：${message}。${hint}`,true); setSync(`${context}失敗：${message}`,true); updateLoginUi(); render()}
 function loginAccountFull(value){const text=String(value||'').trim().toLowerCase(); if(!text)return ''; return text.includes('@')?text:`${text}${loginDomain}`}
 function loginAccountLocal(value){return String(value||'').trim().replace(new RegExp(`${loginDomain.replace('.','\\.')}$`,'i'),'')}
 function savedLogin(){return {remember:localStorage.getItem('designRequestRememberLogin')==='1',account:localStorage.getItem('designRequestSavedAccount')||'',password:localStorage.getItem('designRequestSavedPassword')||''}}
@@ -5108,15 +5113,16 @@ function showLoginModal(message='',{skipGoogleInit=false}={}){const modal=$('#lo
 function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'); if(!modal)return; modal.hidden=true; password.value=''; newPassword.value=''; newWrap.hidden=true; setLoginNote('請輸入公司信箱 @ 前方帳號。')}
 function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
 function resetGoogleLoginState(account=currentEditorAccount,{revoke=false}={}){try{google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} sessionStorage.removeItem('designRequestGoogleLoginState'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin')}
-function logoutEditor(){const oldAccount=currentEditorAccount; resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
+async function verifyStoredEditorToken(){const token=currentEditorToken||pendingEditorSession.token; if(!token){clearLoginAuthState(); updateLoginUi(); return false} try{const data=await sheetApi('verifyToken',{editorToken:token}); if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED'); console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user, appBuildVersion}); currentEditor=pendingEditorSession.user||data.user||''; currentEditorAccount=pendingEditorSession.account||data.account||data.email||''; currentEditorToken=token; currentEditorGroup=pendingEditorSession.group||''; loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount); return true}catch(err){console.warn('[登入狀態驗證失敗]',err); clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false}}
+async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
 function loginEditor(user,token,settings=null,account=''){currentEditor=user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${user}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${user}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
 function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; const configError=googleLoginConfigError(); console.info(`[登入診斷] app=${appBuildVersion}, origin=${location.origin}, expectedOrigin=${googleAuthorizedOrigin}, clientId=${googleOAuthClientId}`); if(configError){setLoginNote(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`,true); console.error('[Google OAuth 設定錯誤]',configError); return} if(!window.google?.accounts?.id){setLoginNote('Google 登入元件載入中，請稍候再試。'); if(!target.dataset.retrying){target.dataset.retrying='1'; setTimeout(()=>{target.dataset.retrying=''; initGoogleLogin()},600)} return} try{google.accounts.id.initialize({client_id:googleOAuthClientId,callback:handleGoogleCredential,error_callback:error=>handleGoogleLoginError(error,'Google 初始化'),auto_select:false,cancel_on_tap_outside:false,use_fedcm_for_prompt:false,itp_support:true}); target.innerHTML=''; google.accounts.id.renderButton(target,{type:'standard',theme:'outline',size:'large',shape:'pill',text:'signin_with',logo_alignment:'left',width:280}); target.dataset.ready='1'}catch(err){handleGoogleLoginError(err,'Google 初始化')}}
-async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential)}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByJsonp(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${data.user}`)}catch(err){handleGoogleLoginError(err,googleEmail?`Google 登入（${googleEmail}）`:'Google 登入')}}
+async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByJsonp(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${data.user}`)}catch(err){handleGoogleLoginError(err,googleEmail?`Google 登入（${googleEmail}）`:'Google 登入')}}
 function startGooglePopupLogin(){startGoogleRedirectLogin()}
-function startGoogleRedirectLogin(){const configError=googleLoginConfigError(); if(configError){handleGoogleLoginError(new Error(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`),'Google 跳轉登入'); return} const state=`machi_login_${Date.now()}_${Math.random().toString(36).slice(2)}`; sessionStorage.setItem('designRequestGoogleLoginState',state); showLoginPendingOverlay('正在前往 Google 登入...'); const params=new URLSearchParams({client_id:googleOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'token',scope:'openid email profile',include_granted_scopes:'true',prompt:'select_account',state}); location.href=`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
-async function handleGoogleRedirectReturn(){const hash=new URLSearchParams(location.hash.replace(/^#/,'')); const accessToken=hash.get('access_token')||'', error=hash.get('error')||'', errorDescription=hash.get('error_description')||''; if(!accessToken&&!error)return false; history.replaceState(null,document.title,location.pathname+location.search); if(error){handleGoogleLoginError(new Error(errorDescription||error),'Google 跳轉登入'); return true} const returnedState=hash.get('state')||'', savedState=sessionStorage.getItem('designRequestGoogleLoginState')||''; sessionStorage.removeItem('designRequestGoogleLoginState'); if(savedState&&returnedState!==savedState){handleGoogleLoginError(new Error('Google 登入狀態不一致，請重新登入。'),'Google 跳轉登入'); return true} showLoginPendingOverlay('Google 登入驗證中...'); await handleGoogleAccessToken({access_token:accessToken,source:'redirect'}); return true}
-async function handleGoogleAccessToken(response){if(response?.error){handleGoogleLoginError(new Error(response.error),'Google 登入');return} const accessToken=response?.access_token||''; if(!accessToken){handleGoogleLoginError(new Error('Google 沒有回傳授權資料'),'Google 登入');return} showLoginPendingOverlay('正在讀取 Google 信箱...'); try{const profileRes=await fetchWithTimeout('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:`Bearer ${accessToken}`}},15000); if(!profileRes.ok)throw new Error(`Google 信箱讀取失敗：${profileRes.status}`); const profile=await profileRes.json(), email=profile.email||'', name=[profile.family_name,profile.given_name].map(v=>String(v||'').trim()).join('')||profile.name||profile.given_name||''; if(!email)throw new Error('Google 沒有回傳信箱'); setGoogleLoginEmail(email,'Google 跳轉登入'); console.info('[Google 跳轉登入回傳]',{email,source:response?.source||''}); showLoginPendingOverlay(`正在確認登入權限：${email}`); clearLoginAuthState({account:email}); const data=await googleEmailLoginByJsonp(email,name); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||email); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||email); finishLoginOverlay(`登入成功：${data.user}`)}catch(err){handleGoogleLoginError(err,'Google 登入')}}
+function startGoogleRedirectLogin(){const configError=googleLoginConfigError(); if(configError){handleGoogleLoginError(new Error(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`),'Google 跳轉登入'); return} const state=`machi_login_${Date.now()}_${Math.random().toString(36).slice(2)}`, nonce=`machi_nonce_${Date.now()}_${Math.random().toString(36).slice(2)}`; sessionStorage.setItem('designRequestGoogleLoginState',state); sessionStorage.setItem('designRequestGoogleLoginNonce',nonce); showLoginPendingOverlay('正在前往 Google 登入...'); const params=new URLSearchParams({client_id:googleOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state,nonce}); location.href=`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
+async function handleGoogleRedirectReturn(){const hash=new URLSearchParams(location.hash.replace(/^#/,'')); const idToken=hash.get('id_token')||'', error=hash.get('error')||'', errorDescription=hash.get('error_description')||''; if(!idToken&&!error)return false; history.replaceState(null,document.title,location.pathname+location.search); if(error){handleGoogleLoginError(new Error(errorDescription||error),'Google 跳轉登入'); return true} const returnedState=hash.get('state')||'', savedState=sessionStorage.getItem('designRequestGoogleLoginState')||''; sessionStorage.removeItem('designRequestGoogleLoginState'); sessionStorage.removeItem('designRequestGoogleLoginNonce'); if(savedState&&returnedState!==savedState){handleGoogleLoginError(new Error('Google 登入狀態不一致，請重新登入。'),'Google 跳轉登入'); return true} showLoginPendingOverlay('Google 登入驗證中...'); await handleGoogleCredential({credential:idToken,select_by:'redirect'}); return true}
+async function handleGoogleAccessToken(response){handleGoogleLoginError(new Error('access_token 登入已停用，請使用 Google id_token 登入。'),'Google 登入')}
 async function verifyEditorLogin(account,password,newPassword=''){
   if(!apiUrl) throw new Error('尚未設定 Apps Script 網址，無法登入');
   const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword});
@@ -5534,7 +5540,7 @@ document.addEventListener('dragstart',handleColumnHeaderDragStart);
 document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
-	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); updateLoginUi(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(handled=>{if(!handled)trySavedLogin()}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
+	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleGoogleRedirectReturn().then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
 </script>
 </body>
 </html>
