@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260706-case-modal-direct-edit-1" />
+  <meta name="app-version" content="20260706-batch-select-layer-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1501,6 +1501,24 @@
     }
     #casesSection .multi-panel{
       z-index:900!important;
+    }
+    #casesSection .batch-stable-slot{
+      position:relative!important;
+      z-index:920!important;
+      overflow:visible!important;
+      isolation:isolate!important;
+    }
+    #casesSection .batch-stable-slot:focus-within{
+      z-index:980!important;
+    }
+    #casesSection .batch-stable-slot .batch-tools{
+      z-index:960!important;
+      pointer-events:auto!important;
+    }
+    #casesSection .batch-stable-slot .batch-tools select,
+    #casesSection .batch-stable-slot .batch-tools button{
+      position:relative!important;
+      z-index:961!important;
     }
     #casesSection .case-split{
       overflow-x:auto!important;
