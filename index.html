@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-07 09:20 Asia/Taipei | build: 20260707-filter-layer-1 -->
+<!-- LAST_MODIFIED: 2026-07-07 16:24 Asia/Taipei | build: 20260707-csv-download-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260707-filter-layer-1" />
+  <meta name="app-version" content="20260707-csv-download-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1421,6 +1421,9 @@
     #designerSettingsModal,
     #requestGuideModal{
       z-index:1220!important;
+    }
+    #caseDetailModal{
+      z-index:2600!important;
     }
     #revisionModal{
       z-index:1260!important;
@@ -3435,7 +3438,7 @@
       </button>
       <div class="column-popover" id="columnPopover" hidden>
         <div class="column-controls" id="columnControls"></div>
-        <div class="column-controls column-action-controls"><button type="button" class="secondary" id="showAllColumns">顯示全部欄位</button><button type="button" class="secondary" id="hideAllColumns">隱藏全部欄位</button></div>
+        <div class="column-controls column-action-controls"><button type="button" class="secondary" id="showAllColumns">顯示全部欄位</button><button type="button" class="secondary" id="hideAllColumns">隱藏全部欄位</button><button type="button" class="secondary" id="downloadCsv" hidden>下載 CSV</button></div>
       </div>
     </div>
     <div class="case-split">
@@ -4919,7 +4922,7 @@ function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); con
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
-function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(!loggedIn){closeAccountMenu(); closeNotifications()} renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
+function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), settingsBtn=$('#accountDesignerSettings'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){closeAccountMenu(); closeNotifications()} renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
 function syncTopPanelHeights(){
   const designer=$('#designerPanel'), recent=$('#recentPanel');
   if(!designer||!recent)return;
@@ -4950,6 +4953,39 @@ function applyStatusFilter(status){
 }
 function sortValue(r,c){if(c.key==='subject')return subject(r); if(c.key==='modifications')return modificationCount(r.id); const v=r[c.key]; if(c.sort==='number')return Number(v)||0; if(c.sort==='date')return new Date(v).getTime()||0; if(c.sort==='month')return monthNumber(v); return String(v??'').toLocaleLowerCase();}
 function sorted(list){const c=columns.find(col=>col.key===sortState.key&&col.sort); if(!c)return list; return [...list].sort((a,b)=>{const av=sortValue(a,c), bv=sortValue(b,c); const result=typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'zh-Hant',{numeric:true}); return sortState.dir==='desc'?-result:result;});}
+function csvEscape(value){const text=String(value??'').replace(/\r?\n/g,' ').trim(); return /[",\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text}
+function csvFileDate(){const now=new Date(), pad=n=>String(n).padStart(2,'0'); return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`}
+function downloadFilteredCsv(){
+  if(!isDesignerLogin()){setSync('下載 CSV 僅開放設計組使用',true);return}
+  const exportRows=sorted(filtered());
+  if(!exportRows.length){setSync('目前篩選結果沒有可下載資料',true);return}
+  const exportColumns=[
+    ['案件編號',row=>row.id],
+    ['月份',row=>row.month],
+    ['客戶別',row=>row.client],
+    ['專案名稱',row=>row.project],
+    ['專案負責人',row=>ownerDisplay(row.owner)],
+    ['設計類型',row=>row.type],
+    ['階段',row=>row.stage],
+    ['數量',row=>row.qty],
+    ['開始',row=>slashDate(row.start)],
+    ['結束',row=>slashDate(row.end)],
+    ['設計負責人',row=>row.designer],
+    ['狀態',row=>statusLabel(row.status)],
+    ['項目細節',row=>row.details],
+    ['修改',row=>modificationCount(row.id)]
+  ];
+  const lines=[exportColumns.map(([label])=>csvEscape(label)).join(',')].concat(exportRows.map(row=>exportColumns.map(([,getter])=>csvEscape(getter(row))).join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob), link=document.createElement('a');
+  link.href=url;
+  link.download=`設計需求_案件列表_${csvFileDate()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  setSync(`已下載 ${exportRows.length} 筆 CSV`);
+}
 function setSort(key){const c=columns.find(col=>col.key===key&&col.sort); if(!c)return; sortState={key,dir:sortState.key===key&&sortState.dir==='asc'?'desc':'asc'}; localStorage.setItem('designRequestSort',JSON.stringify(sortState)); render();}
 function sortLabel(c){if(sortState.key!==c.key)return c.sort==='text'?'a-z':'小到大'; return sortState.dir==='asc'?(c.sort==='text'?'a-z':'小到大'):(c.sort==='text'?'z-a':'大到小');}
 function columnWidth(c){return ({id:108,month:72,client:112,project:220,owner:128,type:92,stage:92,qty:66,start:108,end:108,designer:136,status:136,details:184,modifications:92,subject:104,actions:160}[c.key]||110)}
@@ -4968,7 +5004,7 @@ function handleColumnHeaderDragStart(event){const th=columnHeaderFromEvent(event
 function handleColumnHeaderDragOver(event){const th=columnHeaderFromEvent(event); if(!th||!draggedColumnKey)return; event.preventDefault(); document.querySelectorAll('#casesSection th.drag-over').forEach(node=>{if(node!==th)node.classList.remove('drag-over')}); if(th.dataset.columnKey!==draggedColumnKey)th.classList.add('drag-over')}
 function handleColumnHeaderDrop(event){const th=columnHeaderFromEvent(event); if(!th)return; event.preventDefault(); const from=event.dataTransfer.getData('text/plain')||draggedColumnKey, to=th.dataset.columnKey||''; clearColumnHeaderDragState(); reorderVisibleColumn(from,to)}
 function handleColumnHeaderDragEnd(){clearColumnHeaderDragState(); draggedColumnKey=''}
-function renderColumnControls(){const designLogin=isDesignerLogin(), key=`${orderedColumns().map(c=>c.key).join('|')}|visible:${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=orderedColumns().map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; attachColumnDragHandlers(box); box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{const checked=new Set([...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value)); visibleColumns=orderedColumns().map(c=>c.key).filter(key=>checked.has(key)); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
+function renderColumnControls(){const designLogin=isDesignerLogin(), csvBtn=$('#downloadCsv'), key=`${orderedColumns().map(c=>c.key).join('|')}|visible:${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(csvBtn)csvBtn.hidden=!designLogin; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=orderedColumns().map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; attachColumnDragHandlers(box); box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{const checked=new Set([...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value)); visibleColumns=orderedColumns().map(c=>c.key).filter(key=>checked.has(key)); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
 function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const allVisible=selectable.length&&selectable.every(row=>selectedCaseIds.has(String(row.id)));
   const someVisible=selectable.some(row=>selectedCaseIds.has(String(row.id)));
@@ -5267,7 +5303,7 @@ async function copyText(t,options={}){const text=String(t||''), target=options.t
 function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
-function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','月份','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','狀態','階段','數量','開始時間','結束時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false}
+function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','月份','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','狀態','階段','數量','開始時間','結束時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
 function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
@@ -5793,6 +5829,7 @@ $('#q').addEventListener('input',()=>{saveFilterSettingsForAccount(); accountFil
 $('#reset').onclick=()=>{$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; closeFilters()};
 $('#showAllColumns').onclick=()=>{visibleColumns=orderedColumns().map(c=>c.key); if(isDesignerLogin())displaySettings.editEnabled=true; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#hideAllColumns').onclick=()=>{visibleColumns=[]; if(isDesignerLogin())displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
+$('#downloadCsv')?.addEventListener('click',downloadFilteredCsv);
 $('#columnToggle').onclick=()=>{$('#columnPopover').hidden=!$('#columnPopover').hidden};
 $('#requestBatchToggle')?.addEventListener('click',()=>{if(editingId){ownerTouchedByUser=false; $('#requestForm').reset(); populateDesignSelects(); setEditMode(null); applyCurrentUserProfile(currentUserProfile); flashMsg('已取消修改需求'); return} if(requestBatchMode){clearRequestBatch(); return} requestBatchMode=!requestBatchMode; if(requestBatchMode&&!requestBatchRows.length)requestBatchRows.push(currentRequestDraft()); updateRequestMode(); flashMsg(requestBatchMode?'已開啟批次新增，可直接編輯下方每筆欄位，或按「往下套用」新增下一筆。':'已關閉批次新增')});
 $('#batchEditToggle').onclick=()=>{$('#batchTools').hidden=!$('#batchTools').hidden; renderBatchControls()};
