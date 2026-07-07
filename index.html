@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-07 16:24 Asia/Taipei | build: 20260707-csv-download-1 -->
+<!-- LAST_MODIFIED: 2026-07-07 16:36 Asia/Taipei | build: 20260707-admin-date-password-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260707-csv-download-1" />
+  <meta name="app-version" content="20260707-admin-date-password-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3482,7 +3482,7 @@
     <button type="button" class="admin-login-toggle" id="adminLoginToggle">管理者帳號登入</button>
     <div class="admin-login-panel" id="adminLoginPanel" hidden>
       <input id="loginUser" type="email" autocomplete="username" placeholder="帳號 email">
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密碼">
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="今日日期四碼，例如 0707">
       <button type="submit">登入</button>
     </div>
     <input id="loginNewPassword" type="hidden">
@@ -3586,7 +3586,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260706-login-stable-2" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260707-admin-date-password-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3650,7 +3650,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260706-login-stable-2';
+const appBuildVersion = '20260707-admin-date-password-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
