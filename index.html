@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-07 16:36 Asia/Taipei | build: 20260707-admin-date-password-1 -->
+<!-- LAST_MODIFIED: 2026-07-07 16:46 Asia/Taipei | build: 20260707-local-admin-mmdd-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260707-admin-date-password-1" />
+  <meta name="app-version" content="20260707-local-admin-mmdd-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3479,10 +3479,9 @@
       <div class="google-login-hint">請使用 @emctaipei.com Google 信箱登入。</div>
       <div class="google-login-email" id="googleLoginEmail" hidden></div>
     </div>
-    <button type="button" class="admin-login-toggle" id="adminLoginToggle">管理者帳號登入</button>
+    <button type="button" class="admin-login-toggle" id="adminLoginToggle">管理者登入</button>
     <div class="admin-login-panel" id="adminLoginPanel" hidden>
-      <input id="loginUser" type="email" autocomplete="username" placeholder="帳號 email">
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="今日日期四碼，例如 0707">
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密碼">
       <button type="submit">登入</button>
     </div>
     <input id="loginNewPassword" type="hidden">
@@ -3586,7 +3585,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260707-admin-date-password-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260707-local-admin-mmdd-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3650,7 +3649,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260707-admin-date-password-1';
+const appBuildVersion = '20260707-local-admin-mmdd-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -3868,10 +3867,10 @@ function settingFlagValue(flags,key,header){return [key,header,...(settingsColum
 function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>settingFlagValue(flags,key,header)!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=settingFlagValue(flags,key,header); return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
 function remoteDisplaySettings(settings){if(!settings)return null; const readFlag=(keys)=>{for(const key of keys){const value=settings[key]??settings.displaySettings?.[key]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); if(value===false||text==='x'||text==='false'||text==='0'||text==='no'||text==='off')return false; return value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'} return null}; const select=readFlag(['selectEnabled','選擇','editEnabled','編輯']), timeline=readFlag(['timelineEnabled','時間表']); return select===null&&timeline===null?null:{editEnabled:select??true,timelineEnabled:timeline??true}}
 function remoteCollapseSettings(settings){if(!settings)return null; const map={designer:['collapseDesigner','收合設計師專長與案件分配'],recent:['collapseRecent','收合最新案件列表'],request:['collapseRequest','收合設計需求']}, result={}; let found=false; Object.entries(map).forEach(([key,names])=>{for(const name of names){const value=settings.collapseSettings?.[key]??settings[name]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); result[key]=value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'; found=true; break}}); return found?{...readCollapseSettingsForAccount(),...result}:null}
-function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/平面/.test(text))return '平面'; if(/影音|影像|影片|video/i.test(text))return '影音'; return ''}
+function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/管理者|admin/i.test(text))return '管理者'; if(/平面/.test(text))return '平面'; if(/影音|影像|影片|video/i.test(text))return '影音'; return ''}
 function remoteDesignGroup(settings){return normalizeDesignGroup(settings?.designType||settings?.['設計類型']||settings?.designGroup)}
 function remoteDisplayName(settings){return String(settings?.name||settings?.['名字']||settings?.['設計師名字']||'').trim()}
-function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl)return; sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
+function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return; sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
 function saveVisibleColumnsForAccount(message='個人設定已儲存'){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount(message)}
 function saveDisplaySettingsForAccount(){writeCache(accountStorageKey(displaySettingsKey),displaySettings); saveRemoteSettingsForAccount()}
 function saveCollapseSettingsForAccount(){writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); saveRemoteSettingsForAccount('收合設定已儲存')}
@@ -4058,7 +4057,7 @@ function ownerForSheet(value){return ownerDisplay(value)}
 function currentLoginOwnerName(){return isLoggedIn()?String(currentEditor||'').trim():''}
 function fallbackDesignGroupForUser(user=currentEditor){if(flatDesignerOptions.includes(user))return '平面'; if(videoDesignerOptions.includes(user))return '影音'; return ''}
 function currentDesignGroup(){return normalizeDesignGroup(currentEditorGroup)||fallbackDesignGroupForUser()}
-function isDesignerLogin(){return ['平面','影音'].includes(currentDesignGroup())}
+function isDesignerLogin(){return ['平面','影音','管理者'].includes(currentDesignGroup())}
 function parseDate(value){const text=String(value||'').trim(); if(!text)return null; const match=text.match(/(19\d{2}|20\d{2}|2100)[/-](\d{1,2})[/-](\d{1,2})/); if(!match)return null; const y=Number(match[1]), m=Number(match[2]), d=Number(match[3]), date=new Date(y,m-1,d); return date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d?date:null}
 function slashDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function shortMonthDayDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
@@ -5363,6 +5362,12 @@ async function sha256Base64Url(text){const bytes=new TextEncoder().encode(text),
 function submitFullPageToAppsScript(fields){const form=document.createElement('form'); form.method='POST'; form.action=apiUrl; form.hidden=true; Object.entries({...fields,returnUri:location.origin}).forEach(([name,value])=>{const input=document.createElement('input'); input.type='hidden'; input.name=name; input.value=String(value??''); form.appendChild(input)}); document.body.appendChild(form); form.submit()}
 function redirectFullPageToAppsScript(fields){const params=new URLSearchParams({...fields,returnUri:location.origin}); location.href=`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`}
 function applyLoginRedirectResult(data,source='登入'){if(!data?.ok||!data?.token||!data?.user)throw Object.assign(new Error(data?.error||`${source}未完成驗證`),{rawResponse:data}); console.info(`[${source}成功]`,data.loginDebug||{account:data.account,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||''); finishLoginOverlay(`登入成功：${data.user}`)}
+function taipeiDateParts(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value])); return {year:parts.year,month:parts.month,day:parts.day}}
+function todayAdminPassword(){const {month,day}=taipeiDateParts(); return `${month}${day}`}
+function todayAdminToken(){const {year,month,day}=taipeiDateParts(); return `local-admin:${year}${month}${day}`}
+function isLocalAdminToken(token=currentEditorToken){return String(token||'').startsWith('local-admin:')}
+function isLocalAdminTokenValid(token=currentEditorToken){return String(token||'')===todayAdminToken()}
+function loginLocalAdmin(){currentEditor='管理者'; currentEditorAccount='local-admin'; currentEditorToken=todayAdminToken(); currentEditorGroup='管理者'; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); setSync('已登入：管理者'); finishLoginOverlay('登入成功：管理者')}
 function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem('designRequestEditorLoggedOut','1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; selectedCaseIds.clear()}
 function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|ping|frameCallback/i.test(error?.message||''); const displayContext=apiReadFailed?'Apps Script API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,scriptUrl:error?.scriptUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), scriptLikely=apiReadFailed||/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(scriptLikely?`請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。SCRIPT_URL：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
@@ -5371,11 +5376,11 @@ function loginAccountFull(value){const text=String(value||'').trim().toLowerCase
 function loginAccountLocal(value){return String(value||'').trim().replace(new RegExp(`${loginDomain.replace('.','\\.')}$`,'i'),'')}
 function savedLogin(){return {remember:localStorage.getItem('designRequestRememberLogin')==='1',account:localStorage.getItem('designRequestSavedAccount')||'',password:localStorage.getItem('designRequestSavedPassword')||''}}
 function saveLoginPreference(account,password,remember){localStorage.setItem('designRequestRememberLogin',remember?'1':'0'); if(remember){localStorage.setItem('designRequestSavedAccount',account); localStorage.setItem('designRequestSavedPassword',password)}else{localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword')}}
-function showLoginModal(message='',{skipGoogleInit=false}={}){const modal=$('#loginModal'), account=$('#loginUser'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), remember=$('#loginRemember'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; account.value=''; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel&&!message)adminPanel.hidden=true; remember.checked=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 ERP 或 Google 帳號登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#googleSignInButton')?.focus?.(),50)}
+function showLoginModal(message='',{skipGoogleInit=false}={}){const modal=$('#loginModal'), account=$('#loginUser'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), remember=$('#loginRemember'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; if(account)account.value=''; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel&&!message)adminPanel.hidden=true; remember.checked=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 ERP 或 Google 帳號登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#googleSignInButton')?.focus?.(),50)}
 function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=true; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel)adminPanel.hidden=true; setLoginNote('請使用 ERP 或 Google 帳號登入。')}
 function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
 function resetGoogleLoginState(account=currentEditorAccount,{revoke=false}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} sessionStorage.removeItem('designRequestGoogleLoginState'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin')}
-async function verifyStoredEditorToken(){const token=currentEditorToken||pendingEditorSession.token; if(!token){clearLoginAuthState(); updateLoginUi(); return false} try{const data=await sheetApi('verifyToken',{editorToken:token}); if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED'); console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user, appBuildVersion}); currentEditor=pendingEditorSession.user||data.user||''; currentEditorAccount=pendingEditorSession.account||data.account||data.email||''; currentEditorToken=token; currentEditorGroup=pendingEditorSession.group||''; loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount); return true}catch(err){console.warn('[登入狀態驗證失敗]',err); clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false}}
+async function verifyStoredEditorToken(){const token=currentEditorToken||pendingEditorSession.token; if(!token){clearLoginAuthState(); updateLoginUi(); return false} if(isLocalAdminToken(token)){if(!isLocalAdminTokenValid(token)){clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false} currentEditor='管理者'; currentEditorAccount='local-admin'; currentEditorToken=token; currentEditorGroup='管理者'; persistEditorSession(); applyCurrentUserProfile(); updateLoginUi(); render(); return true} try{const data=await sheetApi('verifyToken',{editorToken:token}); if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED'); console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user, appBuildVersion}); currentEditor=pendingEditorSession.user||data.user||''; currentEditorAccount=pendingEditorSession.account||data.account||data.email||''; currentEditorToken=token; currentEditorGroup=pendingEditorSession.group||''; loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount); return true}catch(err){console.warn('[登入狀態驗證失敗]',err); clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false}}
 async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
 function loginEditor(user,token,settings=null,account=''){currentEditor=user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${user}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${user}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
@@ -5448,7 +5453,7 @@ async function verifyEditorLogin(account,password,newPassword=''){
   if(!data.ok) throw new Error(data.error || '登入失敗');
   return data;
 }
-async function startAdminPasswordLogin(){const account=loginAccountFull($('#loginUser')?.value||''), password=String($('#loginPassword')?.value||'').trim(); if(!account||!password){setLoginNote('請輸入管理者帳號與密碼。',true); return} showLoginPendingOverlay('管理者登入驗證中...'); try{const data=await verifyEditorLogin(account,password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
+async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
 async function trySavedLogin(){return}
 function validateSubmit(isModify){
   if(currentLoginOwnerName()&&!String(formEl.elements.owner.value||'').trim())formEl.elements.owner.value=currentLoginOwnerName();
@@ -5843,7 +5848,7 @@ $('#notificationList')?.addEventListener('click',event=>{const item=event.target
 $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#erpLoginButton')?.addEventListener('click',startErpLogin);
-$('#adminLoginToggle')?.addEventListener('click',()=>{const panel=$('#adminLoginPanel'); if(!panel)return; panel.hidden=!panel.hidden; if(!panel.hidden)setTimeout(()=>$('#loginUser')?.focus(),30)});
+$('#adminLoginToggle')?.addEventListener('click',()=>{const panel=$('#adminLoginPanel'); if(!panel)return; panel.hidden=!panel.hidden; if(!panel.hidden)setTimeout(()=>$('#loginPassword')?.focus(),30)});
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
 $('#loginForm').addEventListener('submit',event=>{event.preventDefault(); startAdminPasswordLogin()});
 document.addEventListener('dragstart',handleColumnHeaderDragStart);
