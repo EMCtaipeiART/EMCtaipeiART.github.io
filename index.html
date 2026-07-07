@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-06 18:45 Asia/Taipei | build: 20260706-batch-select-layer-1 -->
+<!-- LAST_MODIFIED: 2026-07-07 09:20 Asia/Taipei | build: 20260707-filter-layer-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260706-batch-select-layer-1" />
+  <meta name="app-version" content="20260707-filter-layer-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1520,6 +1520,34 @@
     #casesSection .batch-stable-slot .batch-tools button{
       position:relative!important;
       z-index:961!important;
+    }
+    #casesSection .filters{
+      position:relative!important;
+      z-index:1500!important;
+      overflow:visible!important;
+    }
+    #casesSection .filters .multi-filter{
+      position:relative!important;
+      z-index:1510!important;
+    }
+    #casesSection .filters:has(.multi-filter[open]){
+      z-index:1500!important;
+      overflow:visible!important;
+      isolation:isolate!important;
+    }
+    #casesSection .filters .multi-filter[open]{
+      z-index:1520!important;
+    }
+    #casesSection .filters .multi-filter[open] .multi-panel{
+      z-index:1530!important;
+      pointer-events:auto!important;
+    }
+    #casesSection .filters .multi-filter[open] .multi-panel,
+    #casesSection .filters .multi-filter[open] .multi-options,
+    #casesSection .filters .multi-filter[open] .multi-panel label,
+    #casesSection .filters .multi-filter[open] .multi-panel input,
+    #casesSection .filters .multi-filter[open] .multi-apply{
+      pointer-events:auto!important;
     }
     #casesSection .case-split{
       overflow-x:auto!important;
