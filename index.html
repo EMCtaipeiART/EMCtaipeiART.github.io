@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-08 09:18 Asia/Taipei | build: 20260708-timeline-today-offset-1 -->
+<!-- LAST_MODIFIED: 2026-07-08 09:36 Asia/Taipei | build: 20260708-resizable-case-columns-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260708-timeline-today-offset-1" />
+  <meta name="app-version" content="20260708-resizable-case-columns-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3287,6 +3287,13 @@
         margin:9px 0!important;
       }
     }
+    #casesSection .case-table-wrap th[data-column-key],#casesSection .case-sticky-list-head th[data-column-key]{position:sticky!important}
+    #casesSection .case-table-wrap .column-resize-handle,#casesSection .case-sticky-list-head .column-resize-handle{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:70;touch-action:none}
+    #casesSection .case-table-wrap .column-resize-handle::after,#casesSection .case-sticky-list-head .column-resize-handle::after{content:"";position:absolute;right:3px;top:28%;bottom:28%;width:2px;border-radius:999px;background:rgba(67,82,75,.22);opacity:0;transition:opacity .12s ease,background .12s ease}
+    #casesSection .case-table-wrap th:hover .column-resize-handle::after,#casesSection .case-table-wrap .column-resize-handle:hover::after,#casesSection .case-sticky-list-head th:hover .column-resize-handle::after,#casesSection .case-sticky-list-head .column-resize-handle:hover::after{opacity:1;background:rgba(15,143,97,.45)}
+    #casesSection .case-table-wrap.is-column-resizing,#casesSection .case-table-wrap.is-column-resizing *{cursor:col-resize!important;user-select:none!important}
+    #casesSection .case-table-wrap .project-text{max-width:calc(100% - 4px)!important}
+    @media(max-width:640px){#casesSection .case-table-wrap .column-resize-handle,#casesSection .case-sticky-list-head .column-resize-handle{display:none!important}}
   </style>
 </head>
 <body>
@@ -3585,7 +3592,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260708-timeline-today-offset-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260708-resizable-case-columns-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3649,7 +3656,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260708-timeline-today-offset-1';
+const appBuildVersion = '20260708-resizable-case-columns-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -3810,6 +3817,7 @@ const modifyRecentColumns = [
 ];
 const defaultHiddenColumns = ['month','owner','type','stage'];
 const visibleColumnsKey = 'designRequestVisibleColumnsV2';
+const caseColumnWidthsKey = 'designRequestCaseColumnWidthsV1';
 const filterSettingsKey = 'designRequestFilterSettingsV1';
 const ownerDraftKey = 'designRequestOwnerDraftV1';
 const designerRecipientNames = {
@@ -3826,6 +3834,7 @@ function defaultVisibleColumns(){return columns.filter(c=>!defaultHiddenColumns.
 function accountStorageId(){return currentEditorToken?(currentEditorAccount||currentEditor||'user'):'guest'}
 function accountStorageKey(key){return `${key}:${accountStorageId()}`}
 let visibleColumns = JSON.parse(localStorage.getItem(accountStorageKey(visibleColumnsKey)) || localStorage.getItem(visibleColumnsKey) || 'null') || defaultVisibleColumns();
+let caseColumnWidths = JSON.parse(localStorage.getItem(accountStorageKey(caseColumnWidthsKey)) || localStorage.getItem(caseColumnWidthsKey) || '{}') || {};
 let displaySettings = readCache(accountStorageKey(displaySettingsKey),null) || {editEnabled:true,timelineEnabled:true};
 let collapseSettings = readCache(accountStorageKey('designRequestCollapseSettingsV1'),{}) || {};
 let sortState = JSON.parse(localStorage.getItem('designRequestSort') || 'null') || {key:'id',dir:'desc'};
@@ -3847,6 +3856,7 @@ const localWriteTtlMs = 120000;
 const backgroundRefreshMs = 10000;
 let columnControlsRenderedKey = '';
 let draggedColumnKey = '';
+let columnResizeState = null;
 let activeSettingsAccount = accountStorageId();
 let accountFilterSettings = JSON.parse(localStorage.getItem(accountStorageKey(filterSettingsKey)) || 'null') || {};
 let accountSettingsJustApplied = false;
@@ -3882,7 +3892,7 @@ function normalizeFilterDesigner(value){const text=String(value||'').trim(); ret
 function normalizeFilterYear(value){const year=String(value||'').match(/(19\d{2}|20\d{2}|2100)/)?.[1]||''; return year}
 function normalizeRemoteFilterList(settings,headers,normalizer=value=>value){return unique(headers.flatMap(header=>splitSettingList(settings?.[header]).map(normalizer)))}
 function remoteFilterSettings(settings){if(!settings)return null; const headers=['篩選年份','篩選月份','篩選狀態','篩選姓名']; const hasHeaders=headers.some(header=>Object.prototype.hasOwnProperty.call(settings,header)); if(!hasHeaders)return null; return {year:normalizeRemoteFilterList(settings,['篩選年份'],normalizeFilterYear),month:normalizeRemoteFilterList(settings,['篩選月份'],canonicalMonth),status:normalizeRemoteFilterList(settings,['篩選狀態'],normalizeStatus),designer:normalizeRemoteFilterList(settings,['篩選姓名'],normalizeFilterDesigner)}}
-function applyAccountSettingsIfNeeded(remoteSettings=null){const key=accountStorageId(), accountChanged=activeSettingsAccount!==key; if(accountChanged){activeSettingsAccount=key; visibleColumns=readVisibleColumnsForAccount(); displaySettings=readDisplaySettingsForAccount(); collapseSettings=readCollapseSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount()} const remoteColumns=remoteVisibleColumns(remoteSettings), remoteDisplay=remoteDisplaySettings(remoteSettings), remoteCollapse=remoteCollapseSettings(remoteSettings), remoteFilters=remoteFilterSettings(remoteSettings), remoteGroup=remoteDesignGroup(remoteSettings), remoteName=remoteDisplayName(remoteSettings); let sessionChanged=false; if(remoteName&&remoteName!==currentEditor){currentEditor=remoteName; sessionChanged=true} if(remoteGroup&&remoteGroup!==currentEditorGroup){currentEditorGroup=remoteGroup; sessionChanged=true} if(sessionChanged)persistEditorSession(); if(remoteColumns){visibleColumns=remoteColumns; writeCache(accountStorageKey(visibleColumnsKey),visibleColumns)} if(remoteDisplay){displaySettings=remoteDisplay; writeCache(accountStorageKey(displaySettingsKey),displaySettings)} if(remoteCollapse){collapseSettings=remoteCollapse; writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); renderCollapsibleSections()} if(remoteFilters){accountFilterSettings={...accountFilterSettings,...remoteFilters}; writeCache(accountStorageKey(filterSettingsKey),accountFilterSettings)} if(accountChanged||remoteColumns||remoteDisplay||remoteCollapse||remoteFilters||remoteGroup||remoteName){accountSettingsJustApplied=true; columnControlsRenderedKey=''; yearFilterInitialized=false; monthFilterInitialized=false; renderCollapsibleSections(); if($('#q'))$('#q').value=accountFilterSettings.q||''}}
+function applyAccountSettingsIfNeeded(remoteSettings=null){const key=accountStorageId(), accountChanged=activeSettingsAccount!==key; if(accountChanged){activeSettingsAccount=key; visibleColumns=readVisibleColumnsForAccount(); caseColumnWidths=readCache(accountStorageKey(caseColumnWidthsKey),{})||{}; displaySettings=readDisplaySettingsForAccount(); collapseSettings=readCollapseSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount()} const remoteColumns=remoteVisibleColumns(remoteSettings), remoteDisplay=remoteDisplaySettings(remoteSettings), remoteCollapse=remoteCollapseSettings(remoteSettings), remoteFilters=remoteFilterSettings(remoteSettings), remoteGroup=remoteDesignGroup(remoteSettings), remoteName=remoteDisplayName(remoteSettings); let sessionChanged=false; if(remoteName&&remoteName!==currentEditor){currentEditor=remoteName; sessionChanged=true} if(remoteGroup&&remoteGroup!==currentEditorGroup){currentEditorGroup=remoteGroup; sessionChanged=true} if(sessionChanged)persistEditorSession(); if(remoteColumns){visibleColumns=remoteColumns; writeCache(accountStorageKey(visibleColumnsKey),visibleColumns)} if(remoteDisplay){displaySettings=remoteDisplay; writeCache(accountStorageKey(displaySettingsKey),displaySettings)} if(remoteCollapse){collapseSettings=remoteCollapse; writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); renderCollapsibleSections()} if(remoteFilters){accountFilterSettings={...accountFilterSettings,...remoteFilters}; writeCache(accountStorageKey(filterSettingsKey),accountFilterSettings)} if(accountChanged||remoteColumns||remoteDisplay||remoteCollapse||remoteFilters||remoteGroup||remoteName){accountSettingsJustApplied=true; columnControlsRenderedKey=''; yearFilterInitialized=false; monthFilterInitialized=false; renderCollapsibleSections(); if($('#q'))$('#q').value=accountFilterSettings.q||''}}
 function subject(r){return `【${r.id}】${r.client}_${r.project}`}
 function designerEmail(row){
   const raw=String(row?.designer||'').trim();
@@ -4987,8 +4997,20 @@ function downloadFilteredCsv(){
 }
 function setSort(key){const c=columns.find(col=>col.key===key&&col.sort); if(!c)return; sortState={key,dir:sortState.key===key&&sortState.dir==='asc'?'desc':'asc'}; localStorage.setItem('designRequestSort',JSON.stringify(sortState)); render();}
 function sortLabel(c){if(sortState.key!==c.key)return c.sort==='text'?'a-z':'小到大'; return sortState.dir==='asc'?(c.sort==='text'?'a-z':'小到大'):(c.sort==='text'?'z-a':'大到小');}
-function columnWidth(c){return ({id:108,month:72,client:112,project:220,owner:128,type:92,stage:92,qty:66,start:108,end:108,designer:136,status:136,details:184,modifications:92,subject:104,actions:160}[c.key]||110)}
-function cell(label,value,className='',width=110){return `<td class="${esc(className)}" data-label="${esc(label)}" style="width:${width}px!important;min-width:${width}px!important">${value}</td>`}
+function baseColumnWidth(key){return ({id:108,month:72,client:112,project:220,owner:128,type:92,stage:92,qty:66,start:108,end:108,designer:136,status:136,details:184,modifications:92,subject:104,actions:160}[key]||110)}
+function columnMinWidth(key){return ({id:92,month:64,client:92,project:160,owner:104,type:82,stage:82,qty:58,start:92,end:92,designer:112,status:104,details:132,modifications:80,subject:88,actions:128}[key]||80)}
+function columnMaxWidth(key){return key==='project'?760:(key==='details'?520:380)}
+function clampColumnWidth(key,width){return Math.max(columnMinWidth(key),Math.min(columnMaxWidth(key),Math.round(Number(width)||baseColumnWidth(key))))}
+function columnWidth(c){const key=typeof c==='string'?c:c.key, saved=caseColumnWidths[key]; return saved?clampColumnWidth(key,saved):baseColumnWidth(key)}
+function saveCaseColumnWidths(){writeCache(accountStorageKey(caseColumnWidthsKey),caseColumnWidths)}
+function applyColumnWidthLive(key,width){
+  document.querySelectorAll('#casesSection th[data-column-key],#casesSection td[data-column-key]').forEach(node=>{
+    if(node.dataset.columnKey!==key)return;
+    node.style.setProperty('width',`${width}px`,'important');
+    node.style.setProperty('min-width',`${width}px`,'important');
+  });
+}
+function cell(label,value,className='',width=110,key=''){return `<td class="${esc(className)}" data-label="${esc(label)}" ${key?`data-column-key="${esc(key)}"`:''} style="width:${width}px!important;min-width:${width}px!important">${value}</td>`}
 function selectCell(row){const disabled=!canListEditRow(row); return `<td class="select-col" data-label="選取" style="width:48px!important;min-width:48px!important"><input type="checkbox" class="row-select" value="${esc(row.id)}" ${selectedCaseIds.has(String(row.id))?'checked':''} ${disabled?'disabled':''} onchange="toggleCaseSelection('${jsArg(row.id)}',this.checked)"></td>`}
 function toggleCaseSelection(id,checked){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row||!canListEditRow(row)){setSync('此案件不可批次修改',true);return} checked?selectedCaseIds.add(String(id)):selectedCaseIds.delete(String(id)); renderBatchControls()}
 function toggleVisibleSelection(checked){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} sorted(filtered()).filter(canListEditRow).forEach(row=>{checked?selectedCaseIds.add(String(row.id)):selectedCaseIds.delete(String(row.id))}); render()}
@@ -4997,12 +5019,44 @@ function renderBatchControls(){const selected=selectedCaseRows(), designLogin=is
 function renderOwnerOptions(){ownerContactMap.clear(); const names=[]; rows.forEach(r=>{const name=ownerDisplay(r.owner), email=r.ownerEmail||extractEmail(r.owner); if(name){names.push(name); if(email)ownerContactMap.set(name,email)} if(email){names.push(email); ownerContactMap.set(email,email)}}); ownerList.innerHTML=unique(names).sort((a,b)=>String(a).localeCompare(String(b),'zh-Hant')).map(name=>`<option value="${esc(name)}"></option>`).join('')}
 function columnToggleClass(key){return `column-toggle column-toggle-${String(key||'').replace(/[^a-zA-Z0-9_-]/g,'-')}`}
 function attachColumnDragHandlers(box){box.querySelectorAll('[data-column-key][draggable="true"]').forEach(label=>{label.addEventListener('dragstart',event=>{draggedColumnKey=label.dataset.columnKey||''; label.classList.add('is-dragging'); event.dataTransfer.effectAllowed='move'; event.dataTransfer.setData('text/plain',draggedColumnKey)}); label.addEventListener('dragover',event=>{event.preventDefault(); if(label.dataset.columnKey!==draggedColumnKey)label.classList.add('drag-over')}); label.addEventListener('dragleave',()=>label.classList.remove('drag-over')); label.addEventListener('drop',event=>{event.preventDefault(); label.classList.remove('drag-over'); const from=event.dataTransfer.getData('text/plain')||draggedColumnKey, to=label.dataset.columnKey||''; reorderVisibleColumn(from,to)}); label.addEventListener('dragend',()=>{label.classList.remove('is-dragging'); box.querySelectorAll('.drag-over').forEach(node=>node.classList.remove('drag-over')); draggedColumnKey=''})})}
-function columnHeaderFromEvent(event){return event.target.closest?.('#casesSection th[data-column-key][draggable="true"]')||null}
+function columnHeaderFromEvent(event){if(event.target.closest?.('.column-resize-handle'))return null; return event.target.closest?.('#casesSection th[data-column-key][draggable="true"]')||null}
 function clearColumnHeaderDragState(){document.querySelectorAll('#casesSection th.is-dragging,#casesSection th.drag-over').forEach(node=>node.classList.remove('is-dragging','drag-over'))}
 function handleColumnHeaderDragStart(event){const th=columnHeaderFromEvent(event); if(!th)return; draggedColumnKey=th.dataset.columnKey||''; th.classList.add('is-dragging'); event.dataTransfer.effectAllowed='move'; event.dataTransfer.setData('text/plain',draggedColumnKey)}
 function handleColumnHeaderDragOver(event){const th=columnHeaderFromEvent(event); if(!th||!draggedColumnKey)return; event.preventDefault(); document.querySelectorAll('#casesSection th.drag-over').forEach(node=>{if(node!==th)node.classList.remove('drag-over')}); if(th.dataset.columnKey!==draggedColumnKey)th.classList.add('drag-over')}
 function handleColumnHeaderDrop(event){const th=columnHeaderFromEvent(event); if(!th)return; event.preventDefault(); const from=event.dataTransfer.getData('text/plain')||draggedColumnKey, to=th.dataset.columnKey||''; clearColumnHeaderDragState(); reorderVisibleColumn(from,to)}
 function handleColumnHeaderDragEnd(){clearColumnHeaderDragState(); draggedColumnKey=''}
+function columnResizeHandle(key){return `<span class="column-resize-handle" data-resize-column="${esc(key)}" title="拖拉調整欄寬" aria-hidden="true"></span>`}
+function startColumnResize(event,key){
+  const column=columns.find(c=>c.key===key);
+  if(!column)return;
+  event.preventDefault();
+  event.stopPropagation();
+  const startX=event.clientX, startWidth=columnWidth(column), tableWrap=document.querySelector('.case-table-wrap');
+  columnResizeState={key,startX,startWidth};
+  tableWrap?.classList.add('is-column-resizing');
+  const move=moveEvent=>{
+    if(!columnResizeState)return;
+    const width=clampColumnWidth(key,columnResizeState.startWidth+(moveEvent.clientX-columnResizeState.startX));
+    caseColumnWidths[key]=width;
+    applyColumnWidthLive(key,width);
+    syncCaseListTableWidth();
+    syncCaseHeaderScroll();
+  };
+  const stop=()=>{
+    if(!columnResizeState)return;
+    saveCaseColumnWidths();
+    columnResizeState=null;
+    tableWrap?.classList.remove('is-column-resizing');
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',stop);
+    window.removeEventListener('pointercancel',stop);
+    syncTimelineHeights();
+    adjustCaseSplitHeight();
+  };
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',stop);
+  window.addEventListener('pointercancel',stop);
+}
 function renderColumnControls(){const designLogin=isDesignerLogin(), csvBtn=$('#downloadCsv'), key=`${orderedColumns().map(c=>c.key).join('|')}|visible:${visibleColumns.join('|')}|select:${displaySettings.editEnabled?'1':'0'}|timeline:${displaySettings.timelineEnabled?'1':'0'}|design:${designLogin?'1':'0'}`; if(csvBtn)csvBtn.hidden=!designLogin; if(columnControlsRenderedKey===key)return; columnControlsRenderedKey=key; const box=$('#columnControls'), columnControls=orderedColumns().map(c=>`<label class="${esc(columnToggleClass(c.key))}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序"><input type="checkbox" value="${esc(c.key)}" ${visibleColumns.includes(c.key)?'checked':''}>${esc(c.label)}</label>`).join(''), selectControl=designLogin?`<label class="${esc(columnToggleClass('editEnabled'))}" data-column-key="editEnabled"><input type="checkbox" value="editEnabled" data-display-setting="editEnabled" ${displaySettings.editEnabled?'checked':''}>選擇</label>`:'', timelineControl=designLogin?`<label class="${esc(columnToggleClass('timelineEnabled'))}" data-column-key="timelineEnabled"><input type="checkbox" value="timelineEnabled" data-display-setting="timelineEnabled" ${displaySettings.timelineEnabled?'checked':''}>時間表</label>`:''; box.innerHTML=`${selectControl}${columnControls}${timelineControl}`; attachColumnDragHandlers(box); box.querySelectorAll('input[data-display-setting]').forEach(input=>input.addEventListener('change',()=>{displaySettings[input.dataset.displaySetting]=input.checked; saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render();})); box.querySelectorAll('input:not([data-display-setting])').forEach(input=>input.addEventListener('change',()=>{const checked=new Set([...box.querySelectorAll('input:not([data-display-setting]):checked')].map(i=>i.value)); visibleColumns=orderedColumns().map(c=>c.key).filter(key=>checked.has(key)); saveVisibleColumnsForAccount(); columnControlsRenderedKey=''; render();}));}
 function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const allVisible=selectable.length&&selectable.every(row=>selectedCaseIds.has(String(row.id)));
@@ -5012,13 +5066,17 @@ function caseHeaderHtml(active,selectRows,selectable,{sticky=false}={}){
   const cells=active.map(c=>{
     const width=columnWidth(c);
     const content=c.sort?`<button type="button" class="sort-btn" onclick="setSort('${esc(c.key)}')" title="排序：${esc(sortLabel(c))}">${esc(c.label)}<span class="sort-mark">${sortState.key===c.key?(sortState.dir==='asc'?'▲':'▼'):'↕'}</span></button>`:esc(c.label);
-    return `<th class="${esc(c.className||'')}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序" style="width:${width}px!important;min-width:${width}px!important">${content}</th>`;
+    return `<th class="${esc(c.className||'')}" data-column-key="${esc(c.key)}" draggable="true" title="可拖曳調整欄位順序" style="width:${width}px!important;min-width:${width}px!important">${content}${columnResizeHandle(c.key)}</th>`;
   }).join('');
   return {html:`<tr>${selectHead}${cells}</tr>`,allVisible,someVisible};
 }
 function visibleCaseTableMinWidth(){
   const active=orderedColumns().filter(c=>visibleColumns.includes(c.key));
   return active.reduce((sum,c)=>sum+columnWidth(c),isDesignerLogin()&&displaySettings.editEnabled?48:0);
+}
+function visibleCaseBaseTableMinWidth(){
+  const active=orderedColumns().filter(c=>visibleColumns.includes(c.key));
+  return active.reduce((sum,c)=>sum+baseColumnWidth(c.key),isDesignerLogin()&&displaySettings.editEnabled?48:0);
 }
 function updateCaseSplitPanelWidths({force=false}={}){
   const split=document.querySelector('.case-split');
@@ -5033,7 +5091,7 @@ function updateCaseSplitPanelWidths({force=false}={}){
   const minList=360;
   const total=Math.max(0,Math.round(split.getBoundingClientRect().width||split.clientWidth||0)-handleWidth);
   if(!total)return;
-  const contentWidth=Math.max(visibleCaseTableMinWidth(),minList);
+  const contentWidth=Math.max(visibleCaseBaseTableMinWidth(),minList);
   const maxList=Math.max(minList,total-minTimeline);
   const listWidth=Math.min(contentWidth,maxList);
   split.style.setProperty('--case-list-panel-width',`${listWidth}px`);
@@ -5092,7 +5150,7 @@ function renderTable(list){
   if(stickyThead)stickyThead.innerHTML=stickyHead.html;
   tbody.innerHTML=loadingArchive
     ? `<tr><td colspan="${active.length+(selectRows?1:0)}" data-label="讀取狀態">資料讀取中...</td></tr>`
-    : ordered.map(r=>`<tr id="case-row-${esc(r.id)}">${selectRows?selectCell(r):''}${active.map(c=>cell(c.label,c.render(r),c.className||'',columnWidth(c))).join('')}</tr>`).join('');
+    : ordered.map(r=>`<tr id="case-row-${esc(r.id)}">${selectRows?selectCell(r):''}${active.map(c=>cell(c.label,c.render(r),c.className||'',columnWidth(c),c.key)).join('')}</tr>`).join('');
   syncCaseListTableWidth();
   ['#selectVisible','#selectVisibleSticky'].forEach(selector=>{
     const selectAll=$(selector);
@@ -5872,6 +5930,7 @@ document.addEventListener('dragstart',handleColumnHeaderDragStart);
 document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
+document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
 </script>
 </body>
