@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-07 16:46 Asia/Taipei | build: 20260707-local-admin-mmdd-1 -->
+<!-- LAST_MODIFIED: 2026-07-08 09:18 Asia/Taipei | build: 20260708-timeline-today-offset-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260707-local-admin-mmdd-1" />
+  <meta name="app-version" content="20260708-timeline-today-offset-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3585,7 +3585,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260707-local-admin-mmdd-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260708-timeline-today-offset-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3649,7 +3649,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260707-local-admin-mmdd-1';
+const appBuildVersion = '20260708-timeline-today-offset-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -5190,6 +5190,22 @@ function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart
 function isHoliday(d){return d.getDay()===0||d.getDay()===6||nationalHolidays.has(dateKey(d))}
 function statusClass(s){return ['未開始','執行中','過稿中','已完成','已取消','暫停中'].includes(s)?s:'未開始'}
 function timelineProjectIcon(row,today=dayStart(new Date())){if(!['未開始','未執行','執行中'].includes(String(row.status||'').trim()))return ''; const day=86400000, start=row.startDate instanceof Date?row.startDate:dayStart(row.start), end=row.endDate instanceof Date?row.endDate:dayStart(row.end); if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return ''; const durationDays=Math.max(1,Math.round((end-start)/day)+1), daysUntilEnd=Math.round((end-today)/day); if(durationDays<=3)return '🔥'; if(daysUntilEnd===1)return '⚠️'; return ''}
+function positionCaseTimelineNearToday({minDate,today,day,dayWidth,timelineWidth}){
+  const timeline=document.querySelector('.case-timeline-panel .timeline');
+  if(!timeline||getComputedStyle(timeline).display==='none')return;
+  requestAnimationFrame(()=>{
+    const maxScroll=Math.max(0,timeline.scrollWidth-timeline.clientWidth);
+    if(maxScroll<=1)return;
+    const todayDays=Math.round((today-minDate)/day);
+    if(todayDays<0)return;
+    const targetLeft=Math.min(maxScroll,Math.max(0,(todayDays-2)*dayWidth));
+    const key=`${dateKey(minDate)}|${dateKey(today)}|${timelineWidth}|${timeline.clientWidth}`;
+    if(timeline.dataset.autoTodayKey===key)return;
+    timeline.dataset.autoTodayKey=key;
+    timeline.scrollLeft=targetLeft;
+    syncCaseHeaderScroll();
+  });
+}
 function renderTimeline(list){
   const box=$('#timeline');
   const stickyScale=$('#stickyTimelineScale');
@@ -5214,6 +5230,7 @@ function renderTimeline(list){
   }).join('');
   box.innerHTML=`<div class="timeline-inner" style="--timeline-width:${timelineWidth}px;width:${timelineWidth}px">${scale}${rowsHtml}</div>`;
   if(stickyScale)stickyScale.innerHTML=`<div class="timeline-inner" style="--timeline-width:${timelineWidth}px;width:${timelineWidth}px">${scale}</div>`;
+  if(todayInRange)positionCaseTimelineNearToday({minDate,today,day,dayWidth,timelineWidth});
   syncCaseHeaderScroll();
   syncTimelineHeights();
   adjustCaseSplitHeight();
