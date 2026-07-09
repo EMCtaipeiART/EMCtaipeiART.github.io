@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-08 09:36 Asia/Taipei | build: 20260708-resizable-case-columns-1 -->
+<!-- LAST_MODIFIED: 2026-07-09 09:24 Asia/Taipei | build: 20260709-filter-layer-project-align-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260708-resizable-case-columns-1" />
+  <meta name="app-version" content="20260709-filter-layer-project-align-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3294,6 +3294,38 @@
     #casesSection .case-table-wrap.is-column-resizing,#casesSection .case-table-wrap.is-column-resizing *{cursor:col-resize!important;user-select:none!important}
     #casesSection .case-table-wrap .project-text{max-width:calc(100% - 4px)!important}
     @media(max-width:640px){#casesSection .case-table-wrap .column-resize-handle,#casesSection .case-sticky-list-head .column-resize-handle{display:none!important}}
+    #casesSection .case-table-wrap th.col-project,
+    #casesSection .case-table-wrap td.col-project,
+    #casesSection .case-table-wrap td[data-label="專案名稱"]{
+      text-align:left!important;
+    }
+    #casesSection .case-table-wrap .project-text{
+      text-align:left!important;
+      margin-left:0!important;
+      margin-right:auto!important;
+    }
+    #casesSection .filters,
+    #casesSection .filters .multi-filter,
+    #casesSection .filters .multi-filter[open],
+    #casesSection .filters .multi-panel{
+      z-index:320!important;
+    }
+    #casesSection .column-popover{
+      z-index:340!important;
+    }
+    .login-modal{
+      z-index:5000!important;
+    }
+    .submit-overlay,
+    .submit-overlay.login-pending{
+      z-index:6000!important;
+    }
+    .field-popover{
+      z-index:5200!important;
+    }
+    .field-popover.is-modal-popover{
+      z-index:7000!important;
+    }
   </style>
 </head>
 <body>
@@ -3592,7 +3624,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260708-resizable-case-columns-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260709-filter-layer-project-align-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -3656,7 +3688,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260708-resizable-case-columns-1';
+const appBuildVersion = '20260709-filter-layer-project-align-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -4025,10 +4057,10 @@ function startSubmitQuoteRotation(){
   submitQuoteTimer=setInterval(update,3600);
 }
 function stopSubmitQuoteRotation(){clearInterval(submitQuoteTimer); submitQuoteTimer=null}
-function showSubmitOverlay(text='送出中...'){renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.remove('done');submitOverlay.classList.add('show');startSubmitQuoteRotation()}
+function showSubmitOverlay(text='送出中...'){closeFilters(); renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.remove('done');submitOverlay.classList.add('show');startSubmitQuoteRotation()}
 function finishSubmitOverlay(text='已送出',refresh=false){stopSubmitQuoteRotation();renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.add('done');setTimeout(()=>{submitOverlay.classList.remove('show','done'); if(refresh) loadSheet()},1100)}
 function hideSubmitOverlay(){stopSubmitQuoteRotation();submitOverlay.classList.remove('show','done','login-pending')}
-function showLoginPendingOverlay(text='登入中...'){hideLoginModal(); renderSubmitOverlayText(text,randomSubmitQuote()); submitOverlay.classList.remove('done'); submitOverlay.classList.add('show','login-pending'); startSubmitQuoteRotation()}
+function showLoginPendingOverlay(text='登入中...'){closeFilters(); hideLoginModal(); renderSubmitOverlayText(text,randomSubmitQuote()); submitOverlay.classList.remove('done'); submitOverlay.classList.add('show','login-pending'); startSubmitQuoteRotation()}
 function finishLoginOverlay(text='登入成功'){stopSubmitQuoteRotation(); renderSubmitOverlayText(text,randomSubmitQuote()); submitOverlay.classList.add('done'); setTimeout(()=>submitOverlay.classList.remove('show','done','login-pending'),900)}
 function parseCsv(text){const rows=[];let row=[],cell='',q=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(q&&c==='"'&&n==='"'){cell+='"';i++;continue}if(c==='"'){q=!q;continue}if(!q&&c===','){row.push(cell.trim());cell='';continue}if(!q&&(c==='\n'||c==='\r')){if(c==='\r'&&n==='\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell='';continue}cell+=c}row.push(cell.trim());if(row.some(Boolean))rows.push(row);return rows}
 function csvToObjects(text){const table=parseCsv(text), headers=table.shift()||[]; return table.map(row=>Object.fromEntries(headers.map((header,i)=>[header,row[i]||''])))}
@@ -4139,7 +4171,7 @@ function renderDesigners(){
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
-function openIssueReportModal(){const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
+function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function submitIssueReport(event){
   event.preventDefault();
@@ -4205,6 +4237,7 @@ function updateFlatProjectReasonVisibility(){
   if(!shouldShow)form.elements.reason.value='';
 }
 function openFlatProjectModal(designer){
+  closeFilters();
   const group=newProjectGroupForDesigner(designer);
   if(!group){setSync('目前新專案輪值僅支援平面組與影音組設計師',true);return}
   const modal=$('#flatProjectModal'), form=$('#flatProjectForm');
@@ -5451,7 +5484,7 @@ function loginAccountFull(value){const text=String(value||'').trim().toLowerCase
 function loginAccountLocal(value){return String(value||'').trim().replace(new RegExp(`${loginDomain.replace('.','\\.')}$`,'i'),'')}
 function savedLogin(){return {remember:localStorage.getItem('designRequestRememberLogin')==='1',account:localStorage.getItem('designRequestSavedAccount')||'',password:localStorage.getItem('designRequestSavedPassword')||''}}
 function saveLoginPreference(account,password,remember){localStorage.setItem('designRequestRememberLogin',remember?'1':'0'); if(remember){localStorage.setItem('designRequestSavedAccount',account); localStorage.setItem('designRequestSavedPassword',password)}else{localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword')}}
-function showLoginModal(message='',{skipGoogleInit=false}={}){const modal=$('#loginModal'), account=$('#loginUser'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), remember=$('#loginRemember'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; if(account)account.value=''; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel&&!message)adminPanel.hidden=true; remember.checked=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 ERP 或 Google 帳號登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#googleSignInButton')?.focus?.(),50)}
+function showLoginModal(message='',{skipGoogleInit=false}={}){closeFilters(); const modal=$('#loginModal'), account=$('#loginUser'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), remember=$('#loginRemember'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; if(account)account.value=''; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel&&!message)adminPanel.hidden=true; remember.checked=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 ERP 或 Google 帳號登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#googleSignInButton')?.focus?.(),50)}
 function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=true; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel)adminPanel.hidden=true; setLoginNote('請使用 ERP 或 Google 帳號登入。')}
 function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
 function resetGoogleLoginState(account=currentEditorAccount,{revoke=false}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} sessionStorage.removeItem('designRequestGoogleLoginState'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin')}
