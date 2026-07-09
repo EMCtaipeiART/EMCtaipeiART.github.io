@@ -143,10 +143,10 @@ let raw=[],filtered=[],typeChart,userSettings={},typeTooltipData={};
 const $=id=>document.getElementById(id);
 const DESIGNERS=['Machi','Anna','Karl','Noise','Amber','Leona'];
 const DESIGNER_GROUPS=[['平面組',['Machi','Anna','Amber','Leona']],['影音組',['Karl','Noise']]];
-const MIN_YEAR=2022;
-const DEFAULT_YEAR=2026;
-const DEFAULT_MONTH=6;
 const REPORT_TODAY=new Date();
+const MIN_YEAR=2022;
+const DEFAULT_YEAR=REPORT_TODAY.getFullYear();
+const DEFAULT_MONTH=REPORT_TODAY.getMonth()+1;
 const COLORS=['#111827','#7c2d12','#be185d','#0f766e','#6d28d9','#1d4ed8','#047857','#b45309'];
 const BRAND_COLORS=['#2fbd6b','#5aa6ff','#f7c84b','#a855f7','#14b8a6','#98a2b3'];
 const WEEK=['一','二','三','四','五'];
@@ -363,11 +363,23 @@ function renderTypes(sc){
 function renderClients(){
   const list=group(filtered,r=>r['客戶別'],qty);const total=list.reduce((a,x)=>a+x[1],0)||1;const colorMap=brandColorMap();
   $('clientList').innerHTML=list.length?list.map(([k,v],i)=>{const p=Math.round(v/total*100),color=colorMap[k]||BRAND_COLORS[i%BRAND_COLORS.length];return `<div class="client-row"><span class="client-rank">${i+1}</span><b title="${k}">${k}</b><small>${p}%</small><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(p,100)}%;background:${color}"></div></div></div>`}).join(''):'<div class="empty">無資料</div>';
-  document.querySelector('.scroll-hint').style.display=list.length>8?'flex':'none'
+  $('clientList').scrollTop=0;
+  updateClientScrollHint()
+}
+function updateClientScrollHint(){
+  const list=$('clientList'),hint=document.querySelector('.scroll-hint'),path=hint.querySelector('path'),rows=list.querySelectorAll('.client-row');
+  const show=rows.length>8;
+  hint.style.display=show?'flex':'none';
+  if(!show)return;
+  const atBottom=list.scrollTop+list.clientHeight>=list.scrollHeight-2;
+  hint.dataset.direction=atBottom?'up':'down';
+  hint.setAttribute('aria-label',atBottom?'回到頂部':'向下滑動查看更多');
+  path.setAttribute('d',atBottom?'M4 12l10-8 10 8':'M4 4l10 8 10-8')
 }
 function scrollClientListByPage(){
   const list=$('clientList'),rows=[...list.querySelectorAll('.client-row')];
   if(rows.length<=8)return;
+  if(list.scrollTop+list.clientHeight>=list.scrollHeight-2){list.scrollTo({top:0,behavior:'smooth'});return}
   const current=rows.findIndex(row=>row.offsetTop-list.offsetTop>=list.scrollTop-2);
   const next=current<7?7:Math.min(rows.length-1,current+7);
   list.scrollTo({top:rows[next].offsetTop-list.offsetTop,behavior:'smooth'})
@@ -495,6 +507,7 @@ $('yearFilter').addEventListener('change',()=>{const y=+$('yearFilter').value;co
 $('monthFilter').addEventListener('change',applyFilter);$('designerFilter').addEventListener('change',applyFilter);
 $('prevMonth').addEventListener('click',()=>shiftMonth(-1));$('nextMonth').addEventListener('click',()=>shiftMonth(1));
 document.querySelector('.scroll-hint').addEventListener('click',scrollClientListByPage);
+$('clientList').addEventListener('scroll',updateClientScrollHint);
 document.querySelectorAll('.topnav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPage(a.dataset.page)}));
 load();
 </script>
