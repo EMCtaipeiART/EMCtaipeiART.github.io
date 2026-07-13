@@ -212,7 +212,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <div class="top-tools">
       <button class="notif" id="dashboardBell" type="button" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-bell"/></svg><span class="notif-badge" id="dashboardBellBadge" hidden>0</span></button>
       <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
-      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><a id="returnRequestLink" href="design_request_web.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
+      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
       <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
@@ -315,8 +315,8 @@ function dashboardIdentity(){
   const savedDesigner=normalizeDesigner(saved.designer||'');
   const name=DESIGNERS.includes(designer)?designer:(DESIGNERS.includes(savedDesigner)?savedDesigner:'Anna');
   let returnUrl='';
-  try{const candidate=new URL(saved.returnUrl||'',location.href),sameDesigner=savedDesigner===name,isRequestPage=!/design_dashboard(?:\.html)?\/?$/i.test(candidate.pathname);if(sameDesigner&&isRequestPage&&(location.protocol==='file:'||candidate.origin===location.origin))returnUrl=candidate.href}catch(e){}
-  return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',returnUrl:returnUrl||new URL('design_request_web.html',location.href).href}
+  try{const candidate=new URL(saved.returnUrl||'',location.href),normalized=/design_request_web(?:\.html)?\/?$/i.test(candidate.pathname)?new URL('index.html',candidate):candidate,sameDesigner=savedDesigner===name,isRequestPage=!/design_dashboard(?:\.html)?\/?$/i.test(normalized.pathname);if(sameDesigner&&isRequestPage&&(location.protocol==='file:'||normalized.origin===location.origin))returnUrl=normalized.href}catch(e){}
+  return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
 }
 const ACCOUNT_IDENTITY=dashboardIdentity();
 const REPORT_TODAY=new Date();
