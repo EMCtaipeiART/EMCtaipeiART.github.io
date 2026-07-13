@@ -192,7 +192,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <div class="top-filters"><div class="designer-pill"><select id="designerFilter"></select><svg class="icon icon-sm"><use href="#i-chevron-down"/></svg></div><div class="date-pill"><button class="date-step" id="prevMonth" title="上一月">‹</button><span id="dateTitle">讀取中</span><button class="date-step" id="nextMonth" title="下一月">›</button></div></div>
     <div class="top-tools">
       <div class="notif"><svg class="icon"><use href="#i-bell"/></svg></div>
-      <div class="profile"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span>設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></div>
+      <div class="profile"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></div>
     </div>
   </header>
   <aside class="nav-side" aria-label="側邊選單"><div class="side-nav"><nav class="topnav" aria-label="主選單"><a class="active" href="#" data-page="dashboard"><svg class="icon"><use href="#i-dashboard"/></svg>設計總覽</a><a href="#" data-page="analysis"><svg class="icon"><use href="#i-chart"/></svg>分析中心</a><a href="#" data-page="cases"><svg class="icon"><use href="#i-folder"/></svg>案件中心</a><a href="#" data-page="work"><svg class="icon"><use href="#i-user"/></svg>我的工作</a></nav><a class="side-settings" href="#"><svg class="icon"><use href="#i-settings"/></svg>系統設定</a></div></aside>
@@ -274,6 +274,19 @@ let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTool
 const $=id=>document.getElementById(id);
 const DESIGNERS=['Machi','Anna','Karl','Noise','Amber','Leona'];
 const DESIGNER_GROUPS=[['平面組',['Machi','Anna','Amber','Leona']],['影音組',['Karl','Noise']]];
+function defaultDesignerType(name){
+  const group=DESIGNER_GROUPS.find(([,names])=>names.includes(name));
+  return group?group[0].replace('組',''):'設計師'
+}
+function profileTypeLabel(type,name){
+  const text=String(type||defaultDesignerType(name)||'').replace(/組$/,'').trim();
+  if(!text)return '設計師';
+  return text.includes('設計師')?text:`${text}設計師`
+}
+function requestedDesigner(){
+  try{return normalizeDesigner(new URLSearchParams(location.search).get('designer')||'')}
+  catch(e){return ''}
+}
 const REPORT_TODAY=new Date();
 const MIN_YEAR=2022;
 const DEFAULT_YEAR=REPORT_TODAY.getFullYear();
@@ -375,12 +388,13 @@ function normalizeRows(rows){
   })
 }
 function normalizeSettings(rows){
-  userSettings=Object.fromEntries(rows.map(r=>[normalizeDesigner(r['設計師名字']),{
-    name:normalizeDesigner(r['設計師名字']),
-    avatar:r['頭像連結']||'',
+  userSettings=Object.fromEntries(rows.map(r=>{const name=normalizeDesigner(r['設計師名字']||r['名字']||r.name);return [name,{
+    name,
+    avatar:r['頭像連結']||r.avatar||'',
+    designType:r['設計類型']||r.designType||'',
     account:r['帳號']||'',
     password:r['密碼']||''
-  }]).filter(([name])=>DESIGNERS.includes(name)))
+  }]}).filter(([name])=>DESIGNERS.includes(name)))
 }
 function normDate(v){if(!v)return null;const s=String(v).trim();let m=s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3]);return d.getFullYear()<MIN_YEAR?null:d}
 function dateKey(d){return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
@@ -415,6 +429,8 @@ function populateFilters(){
   $('yearFilter').innerHTML=years.map(y=>`<option value="${y}" ${y===defaultYear?'selected':''}>${y}</option>`).join('');
   $('monthFilter').innerHTML=Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===defaultMonth?'selected':''}>${String(m).padStart(2,'0')}月</option>`).join('');
   const designers=['所有設計師',...DESIGNERS];$('designerFilter').innerHTML=designers.map(d=>`<option>${d}</option>`).join('');
+  const requested=requestedDesigner();
+  if(DESIGNERS.includes(requested))$('designerFilter').value=requested;
 }
 function applyFilter(){
   const y=+$('yearFilter').value,m=+$('monthFilter').value,des=$('designerFilter').value,cli='全部';
@@ -425,6 +441,7 @@ function applyFilter(){
 function updateProfile(designer){
   const name=(designer==='全部'||designer==='所有設計師')?'Anna':designer,settings=userSettings[name]||{};
   $('currentDesignerName').textContent=name;
+  $('currentDesignerType').textContent=profileTypeLabel(settings.designType,name);
   $('profileAvatar').textContent=settings.avatar?'':name.slice(0,1);
   $('profileAvatar').style.backgroundImage=settings.avatar?`url("${settings.avatar}")`:'';
   $('profileAvatar').dataset.account=settings.account||'';
