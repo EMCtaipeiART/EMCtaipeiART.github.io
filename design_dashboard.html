@@ -170,6 +170,25 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 .enterprise .menu-btn{color:var(--green-600)}
 .enterprise .kpi .kpi-solid{fill:currentColor;stroke:none}
 .enterprise .rank-row .medal.fourth{color:#b45309}
+.enterprise .top-tools{position:relative}
+.enterprise .notif,.enterprise .profile{font:inherit;border:0;background:transparent;cursor:pointer;padding:0}
+.enterprise .notif::after{display:none}
+.enterprise .notif-badge{position:absolute;right:0;top:-2px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;display:grid;place-items:center;background:#dc2626;color:#fff;border:2px solid #fff;font-size:9px;font-weight:900;line-height:1}
+.enterprise .notif-badge[hidden],.enterprise .account-dropdown[hidden],.enterprise .notification-popover[hidden]{display:none!important}
+.enterprise .account-dropdown,.enterprise .notification-popover{position:absolute;right:0;top:calc(100% + 10px);z-index:100;border:1px solid #e2e8f0;border-radius:8px;background:#fff;box-shadow:0 16px 36px rgba(16,24,40,.16)}
+.enterprise .account-dropdown{width:190px;padding:7px}
+.enterprise .account-dropdown a{height:38px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:9px;color:#344054;text-decoration:none;font-size:12px;font-weight:800}
+.enterprise .account-dropdown a:hover{background:#ecfdf3;color:#067647}
+.enterprise .account-dropdown .icon{width:16px;height:16px}
+.enterprise .notification-popover{width:min(350px,calc(100vw - 28px));padding:10px;text-align:left}
+.enterprise .notification-head{display:grid;gap:2px;padding:3px 4px 9px;border-bottom:1px solid #edf1ef;margin-bottom:7px}
+.enterprise .notification-head b{font-size:13px}.enterprise .notification-head span{color:#667085;font-size:10px;font-weight:700}
+.enterprise .notification-list{display:grid;gap:5px;max-height:360px;overflow:auto}
+.enterprise .notification-item{width:100%;min-height:58px;padding:9px;border:0;border-radius:7px;background:#fff;display:grid;grid-template-columns:8px minmax(0,1fr);gap:9px;text-align:left;font:inherit;cursor:pointer}
+.enterprise .notification-item:hover{background:#f7faf9}.enterprise .notification-dot{width:7px;height:7px;margin-top:5px;border-radius:999px;background:#98a2b3}.enterprise .notification-item.is-new .notification-dot{background:#12b76a}
+.enterprise .notification-title,.enterprise .notification-meta{display:block}.enterprise .notification-title{color:#182230;font-size:11px;font-weight:900}.enterprise .notification-meta{margin-top:3px;color:#667085;font-size:10px;line-height:1.45;font-weight:600}
+.enterprise .notification-empty{padding:18px 10px;color:#667085;text-align:center;font-size:11px;font-weight:700}
+.enterprise .profile[aria-expanded="true"] .chev{transform:rotate(180deg)}.enterprise .profile .chev{transition:transform .16s ease}
 @media(max-width:980px){.enterprise .topbar{padding-right:14px}}
 @media(max-width:760px){
   .enterprise .ai-card{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
@@ -191,8 +210,10 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <div class="top-query"><input type="search" aria-label="搜尋案件" placeholder="搜尋案件、品牌或設計師"><svg class="icon"><use href="#i-search"/></svg></div>
     <div class="top-filters"><div class="designer-pill"><select id="designerFilter"></select><svg class="icon icon-sm"><use href="#i-chevron-down"/></svg></div><div class="date-pill"><button class="date-step" id="prevMonth" title="上一月">‹</button><span id="dateTitle">讀取中</span><button class="date-step" id="nextMonth" title="下一月">›</button></div></div>
     <div class="top-tools">
-      <div class="notif"><svg class="icon"><use href="#i-bell"/></svg></div>
-      <div class="profile"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></div>
+      <button class="notif" id="dashboardBell" type="button" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-bell"/></svg><span class="notif-badge" id="dashboardBellBadge" hidden>0</span></button>
+      <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
+      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><a id="returnRequestLink" href="design_request_web.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
+      <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
   <aside class="nav-side" aria-label="側邊選單"><div class="side-nav"><nav class="topnav" aria-label="主選單"><a class="active" href="#" data-page="dashboard"><svg class="icon"><use href="#i-dashboard"/></svg>設計總覽</a><a href="#" data-page="analysis"><svg class="icon"><use href="#i-chart"/></svg>分析中心</a><a href="#" data-page="cases"><svg class="icon"><use href="#i-folder"/></svg>案件中心</a><a href="#" data-page="work"><svg class="icon"><use href="#i-user"/></svg>我的工作</a></nav><a class="side-settings" href="#"><svg class="icon"><use href="#i-settings"/></svg>系統設定</a></div></aside>
@@ -264,13 +285,14 @@ Chart.defaults.font.family="'Geist','Noto Sans TC',sans-serif";
 const SHEET_ID='1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const GID='646199020';
 const SETTINGS_GID='988186149';
+const MODIFICATION_GID='1240020248';
 const SHEET_URLS=[
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`,
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`,
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`
 ];
 const SHEET_JSONP_URL=gid=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:json`;
-let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={};
+let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map();
 const $=id=>document.getElementById(id);
 const DESIGNERS=['Machi','Anna','Karl','Noise','Amber','Leona'];
 const DESIGNER_GROUPS=[['平面組',['Machi','Anna','Amber','Leona']],['影音組',['Karl','Noise']]];
@@ -287,6 +309,16 @@ function requestedDesigner(){
   try{return normalizeDesigner(new URLSearchParams(location.search).get('designer')||'')}
   catch(e){return ''}
 }
+function dashboardIdentity(){
+  const designer=requestedDesigner();let saved={};
+  try{saved=JSON.parse(localStorage.getItem('designDashboardIdentityV1')||'{}')||{}}catch(e){}
+  const savedDesigner=normalizeDesigner(saved.designer||'');
+  const name=DESIGNERS.includes(designer)?designer:(DESIGNERS.includes(savedDesigner)?savedDesigner:'Anna');
+  let returnUrl='';
+  try{const candidate=new URL(saved.returnUrl||'',location.href),sameDesigner=savedDesigner===name,isRequestPage=!/design_dashboard(?:\.html)?\/?$/i.test(candidate.pathname);if(sameDesigner&&isRequestPage&&(location.protocol==='file:'||candidate.origin===location.origin))returnUrl=candidate.href}catch(e){}
+  return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',returnUrl:returnUrl||new URL('design_request_web.html',location.href).href}
+}
+const ACCOUNT_IDENTITY=dashboardIdentity();
 const REPORT_TODAY=new Date();
 const MIN_YEAR=2022;
 const DEFAULT_YEAR=REPORT_TODAY.getFullYear();
@@ -435,11 +467,11 @@ function populateFilters(){
 function applyFilter(){
   const y=+$('yearFilter').value,m=+$('monthFilter').value,des=$('designerFilter').value,cli='全部';
   filtered=raw.filter(r=>yearOf(r)===y&&monthOf(r)===m&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli));
-  $('dateTitle').textContent=`${y} / ${String(m).padStart(2,'0')}`;updateProfile(des);
+  $('dateTitle').textContent=`${y} / ${String(m).padStart(2,'0')}`;updateProfile();
   render(y,m,des,cli)
 }
-function updateProfile(designer){
-  const name=(designer==='全部'||designer==='所有設計師')?'Anna':designer,settings=userSettings[name]||{};
+function updateProfile(){
+  const name=ACCOUNT_IDENTITY.designer,settings=userSettings[name]||{};
   $('currentDesignerName').textContent=name;
   $('currentDesignerType').textContent=profileTypeLabel(settings.designType,name);
   $('profileAvatar').textContent=settings.avatar?'':name.slice(0,1);
@@ -674,6 +706,28 @@ function renderRank(){
     $(groupIndex===0?'rankGraphic':'rankVideo').innerHTML=html
   })
 }
+function normalizeModificationRecord(record){return {caseId:String(record['案件編號']||record.caseId||record.id||'').trim(),count:Number(record['修改次數']||record.count||0)||0,created:String(record['建立日期']||record.created||'').trim(),date:String(record['修改日期']||record.modifyDate||'').trim(),content:String(record['修改內容']||record.content||'').trim(),confirmedDate:String(record['確認修正日']||record.confirmedDate||'').trim()}}
+function notificationReadKey(){const settings=userSettings[ACCOUNT_IDENTITY.designer]||{},account=ACCOUNT_IDENTITY.account||settings.account||ACCOUNT_IDENTITY.designer||'user';return `designRequestReadNotificationsV1:${account}`}
+function readNotificationIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(e){return new Set()}}
+function writeNotificationIds(ids){localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-300)))}
+function shortDate(value){const d=normDate(value);return d?`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:String(value||'-').replace(/^\d{4}[\/-]/,'')}
+function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
+function dashboardNotificationItems(){
+  const designer=ACCOUNT_IDENTITY.designer,version='n2',assigned=raw.filter(r=>r['設計負責人']===designer&&yearOf(r)>=REPORT_TODAY.getFullYear()&&!['已取消','已完成'].includes(normalizeStatus(r['案件狀態']))),items=[];
+  assigned.filter(r=>normalizeStatus(r['案件狀態'])==='未開始').forEach(r=>items.push({kind:'case',key:`${version}:case:${r['案件編號']}`,id:String(r['案件編號']),title:`新案件｜${r['客戶別']||'未填客戶'}`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(r['開始日期'])}-${shortDate(r['結束日期'])}`}));
+  assigned.forEach(r=>(dashboardModificationRecords.get(String(r['案件編號']))||[]).filter(record=>!record.confirmedDate).forEach(record=>items.push({kind:'revision',key:`${version}:revision:${r['案件編號']}:${record.count}:${record.date||record.created||''}`,id:String(r['案件編號']),title:`新修改需求｜第 ${record.count} 次修改`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(record.created)}-${shortDate(record.date)}｜${record.content||'未填寫修改內容'}`})));
+  return items.sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20)
+}
+function renderDashboardNotifications(highlight=null,{hideBadge=false}={}){
+  const items=dashboardNotificationItems(),read=readNotificationIds(),unread=items.filter(item=>!read.has(item.key)),active=highlight||new Set(unread.map(item=>item.key));
+  $('dashboardBellBadge').hidden=hideBadge||!unread.length;$('dashboardBellBadge').textContent=unread.length>99?'99+':String(unread.length);
+  $('dashboardNotificationSummary').textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒';
+  $('dashboardNotificationList').innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${escapeHtml(item.kind)} ${active.has(item.key)?'is-new':''}" data-case-id="${escapeHtml(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${escapeHtml(item.title)}</span><span class="notification-meta">${escapeHtml(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件或修改需求</div>'
+}
+async function loadDashboardModifications(){
+  try{const records=(await fetchGvizJSONP(MODIFICATION_GID,rows=>rows)).map(normalizeModificationRecord),byCase=new Map();records.forEach(record=>{if(!record.caseId)return;if(!byCase.has(record.caseId))byCase.set(record.caseId,[]);byCase.get(record.caseId).push(record)});dashboardModificationRecords=byCase}catch(e){console.warn('修改紀錄讀取失敗',e)}
+  renderDashboardNotifications()
+}
 async function fetchCSV(){
   let lastErr;
   if(location.protocol==='file:')return fetchGvizJSONP();
@@ -688,7 +742,7 @@ async function load(){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
   try{raw=await fetchCSV();try{normalizeSettings(await fetchGvizJSONP(SETTINGS_GID,rows=>rows))}catch(e){console.warn('設定分頁讀取失敗',e)}$('lastUpdated').textContent='最後更新：'+new Date().toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent='資料來源：Google 試算表';}
   catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法直接讀取 Google 試算表，已先顯示示範資料。請確認試算表「知道連結者可檢視」或已發佈到網路。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
-  finally{populateFilters();applyFilter();loading.classList.remove('show')}
+  finally{populateFilters();applyFilter();updateProfile();renderDashboardNotifications();loadDashboardModifications();loading.classList.remove('show')}
 }
 function shiftMonth(step){
   let y=+$('yearFilter').value,m=+$('monthFilter').value+step;
@@ -713,6 +767,12 @@ $('menuToggle').addEventListener('click',()=>{const nav=document.querySelector('
 document.querySelectorAll('.topnav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPage(a.dataset.page)}));
 document.querySelector('.ai-action').addEventListener('click',()=>showPage('analysis'));
 $('allBrandsBtn').addEventListener('click',()=>showPage('analysis'));
+$('returnRequestLink').href=ACCOUNT_IDENTITY.returnUrl;
+$('dashboardProfileButton').addEventListener('click',event=>{event.stopPropagation();const menu=$('dashboardAccountDropdown'),open=menu.hidden;$('dashboardNotificationPopover').hidden=true;$('dashboardBell').setAttribute('aria-expanded','false');menu.hidden=!open;$('dashboardProfileButton').setAttribute('aria-expanded',String(open))});
+$('dashboardBell').addEventListener('click',event=>{event.stopPropagation();const popover=$('dashboardNotificationPopover'),open=popover.hidden;$('dashboardAccountDropdown').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');const items=dashboardNotificationItems(),read=readNotificationIds(),unread=items.filter(item=>!read.has(item.key)),highlight=new Set(unread.map(item=>item.key));renderDashboardNotifications(open?highlight:null,{hideBadge:open&&unread.length>0});popover.hidden=!open;$('dashboardBell').setAttribute('aria-expanded',String(open));if(open&&unread.length){unread.forEach(item=>read.add(item.key));writeNotificationIds(read)}});
+$('dashboardNotificationList').addEventListener('click',event=>{const item=event.target.closest('[data-case-id]');if(!item)return;localStorage.setItem('designRequestFocusCaseV1',item.dataset.caseId);location.href=ACCOUNT_IDENTITY.returnUrl});
+document.addEventListener('click',event=>{if(!document.querySelector('.top-tools').contains(event.target)){$('dashboardAccountDropdown').hidden=true;$('dashboardNotificationPopover').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');$('dashboardBell').setAttribute('aria-expanded','false')}});
+window.addEventListener('storage',event=>{if(event.key===notificationReadKey())renderDashboardNotifications()});
 load();
 </script>
 </body>
