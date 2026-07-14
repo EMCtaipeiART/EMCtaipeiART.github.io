@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-14 10:46 Asia/Taipei | build: 20260714-modify-yellow-fields-1 -->
+<!-- LAST_MODIFIED: 2026-07-14 10:58 Asia/Taipei | build: 20260714-ui-surface-drag-fix-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260714-modify-yellow-fields-1" />
+  <meta name="app-version" content="20260714-ui-surface-drag-fix-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3062,14 +3062,14 @@
       .account-dropdown{width:190px}
     }
 
-    /* column picker pills: unchecked stays gray; checked uses a soft pink ramp by row */
+    /* Column picker pills: unchecked stays gray; checked uses green. */
     .column-popover .column-toggle{
       --toggle-bg:#f7f8f7;
       --toggle-border:#dfe5e1;
       --toggle-ink:#65726d;
-      --toggle-on-bg:#fff5f7;
-      --toggle-on-border:#f6cbd5;
-      --toggle-on-ink:#9f3a56;
+      --toggle-on-bg:#e7f6ef;
+      --toggle-on-border:#9bd4b4;
+      --toggle-on-ink:#0b8156;
       background:var(--toggle-bg)!important;
       border-color:var(--toggle-border)!important;
       color:var(--toggle-ink)!important;
@@ -3111,9 +3111,9 @@
       transform:scale(.98);
     }
     .column-popover .column-toggle.drag-over{
-      outline:2px solid rgba(196,67,115,.35);
+      outline:2px solid rgba(11,129,86,.36);
       outline-offset:2px;
-      box-shadow:0 8px 18px rgba(196,67,115,.14)!important;
+      box-shadow:0 8px 18px rgba(11,129,86,.16)!important;
     }
     #casesSection th[data-column-key]{
       cursor:grab;
@@ -3123,8 +3123,8 @@
       cursor:grabbing;
     }
     #casesSection th[data-column-key].drag-over{
-      box-shadow:inset 0 -3px 0 rgba(196,67,115,.45);
-      background:#fff2f6!important;
+      box-shadow:inset 0 -3px 0 rgba(11,129,86,.48);
+      background:#edf8f2!important;
     }
     .column-popover .column-toggle input{
       position:absolute!important;
@@ -4717,6 +4717,119 @@
     html[data-theme="dark"] #casesSection .bar.status-已取消{background:#8f969f!important;border-color:#b3b8bf!important}
     html[data-theme="dark"] #casesSection .legend-dot.status-暫停中,
     html[data-theme="dark"] #casesSection .bar.status-暫停中{background:#8973bd!important;border-color:#aa96da!important}
+    .card::before{
+      display:block!important;
+      background:#0b8156!important;
+    }
+    html[data-theme="dark"] .card::before{
+      display:block!important;
+      background:#35c48b!important;
+    }
+    .account-dropdown button,
+    .account-dropdown button:hover,
+    .account-dropdown button:focus-visible,
+    .account-dropdown button:active,
+    .account-dropdown button *{
+      background:transparent!important;
+      background-image:none!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .account-dropdown button,
+    html[data-theme="dark"] .account-dropdown button:hover,
+    html[data-theme="dark"] .account-dropdown button:focus-visible,
+    html[data-theme="dark"] .account-dropdown button:active,
+    html[data-theme="dark"] .account-dropdown button *{
+      background:transparent!important;
+      background-image:none!important;
+      box-shadow:none!important;
+    }
+    .multi-panel .multi-options,
+    .multi-panel label,
+    .multi-panel label:hover,
+    .multi-panel label:focus-within{
+      background:transparent!important;
+      background-image:none!important;
+      border-color:transparent!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .multi-panel .multi-options,
+    html[data-theme="dark"] .multi-panel label,
+    html[data-theme="dark"] .multi-panel label:hover,
+    html[data-theme="dark"] .multi-panel label:focus-within{
+      background:transparent!important;
+      background-image:none!important;
+      border-color:transparent!important;
+      box-shadow:none!important;
+    }
+    .designer-settings-card{
+      background:#fff!important;
+      color:#17211d!important;
+      border-color:#dfe7e2!important;
+    }
+    .designer-settings-card .designer-setting-row{
+      background:#f7faf8!important;
+      color:#17211d!important;
+      border-color:#dfe7e2!important;
+    }
+    .designer-settings-card .designer-setting-name{color:#17211d!important}
+    .designer-settings-card .designer-skill-checks label{
+      background:#fff!important;
+      color:#344641!important;
+      border-color:#dfe7e2!important;
+    }
+    .designer-settings-card textarea{
+      background:#fff!important;
+      color:#17211d!important;
+      border-color:#cbd3cf!important;
+    }
+    html[data-theme="dark"] .designer-settings-card{
+      background:#151618!important;
+      background-image:none!important;
+      color:#e9eaeb!important;
+      border-color:#414449!important;
+    }
+    html[data-theme="dark"] .designer-settings-card .designer-setting-row{
+      background:#1d1e21!important;
+      color:#e9eaeb!important;
+      border-color:#414449!important;
+    }
+    html[data-theme="dark"] .designer-settings-card .designer-setting-name{color:#f1f2f3!important}
+    html[data-theme="dark"] .designer-settings-card .designer-skill-checks label{
+      background:#242629!important;
+      color:#d9dbdd!important;
+      border-color:#494d51!important;
+    }
+    html[data-theme="dark"] .designer-settings-card textarea{
+      background:#0d0e10!important;
+      color:#e7e8e9!important;
+      border-color:#3b3e42!important;
+    }
+    .column-popover .column-toggle{
+      --toggle-on-bg:#e7f6ef;
+      --toggle-on-border:#9bd4b4;
+      --toggle-on-ink:#0b8156;
+    }
+    .column-popover .column-toggle.drag-over{
+      outline-color:rgba(11,129,86,.36)!important;
+      box-shadow:0 8px 18px rgba(11,129,86,.16)!important;
+    }
+    #casesSection th[data-column-key].drag-over{
+      background:#edf8f2!important;
+      box-shadow:inset 0 -3px 0 rgba(11,129,86,.48)!important;
+    }
+    html[data-theme="dark"] .column-popover .column-toggle:has(input:checked){
+      background:#1c3c2f!important;
+      color:#b9f3d0!important;
+      border-color:#4c956b!important;
+    }
+    html[data-theme="dark"] .column-popover .column-toggle:has(input:checked)::after{
+      background:#35c48b!important;
+      color:#082a1d!important;
+    }
+    html[data-theme="dark"] #casesSection th[data-column-key].drag-over{
+      background:#1c3c2f!important;
+      box-shadow:inset 0 -3px 0 rgba(53,196,139,.58)!important;
+    }
     #casesSection .case-table-wrap.drag-scroll-ready{
       cursor:grab;
       overscroll-behavior-x:contain;
@@ -5057,7 +5170,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260714-modify-yellow-fields-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260714-ui-surface-drag-fix-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5121,7 +5234,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260714-modify-yellow-fields-1';
+const appBuildVersion = '20260714-ui-surface-drag-fix-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7244,7 +7357,7 @@ function initCaseTableDragScroll(){
   wrap.dataset.dragScrollReady='1';
   wrap.classList.add('drag-scroll-ready');
   let dragging=false, moved=false, suppressClick=false, pointerId=null, startX=0, startY=0, startLeft=0;
-  const blockedTarget=target=>target.closest?.('button,input,select,textarea,a,[contenteditable="true"],[draggable="true"],.column-resize-handle');
+  const blockedTarget=target=>target.closest?.('input,select,textarea,[contenteditable="true"],[draggable="true"],.column-resize-handle');
   const clearDrag=()=>{
     dragging=false;
     moved=false;
@@ -7274,7 +7387,6 @@ function initCaseTableDragScroll(){
     startX=event.clientX;
     startY=event.clientY;
     startLeft=wrap.scrollLeft;
-    wrap.setPointerCapture?.(event.pointerId);
   });
   wrap.addEventListener('pointermove',event=>{
     if(!dragging||event.pointerId!==pointerId)return;
@@ -7286,6 +7398,7 @@ function initCaseTableDragScroll(){
       return;
     }
     if(Math.abs(dx)<=4&&!moved)return;
+    if(!moved)wrap.setPointerCapture?.(event.pointerId);
     moved=true;
     wrap.classList.add('is-dragging');
     document.body.style.userSelect='none';
