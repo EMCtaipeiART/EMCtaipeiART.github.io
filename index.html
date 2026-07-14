@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-09 09:38 Asia/Taipei | build: 20260709-revision-layer-fix-1 -->
+<!-- LAST_MODIFIED: 2026-07-14 10:46 Asia/Taipei | build: 20260714-modify-yellow-fields-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260709-revision-layer-fix-1" />
+  <meta name="app-version" content="20260714-modify-yellow-fields-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1610,16 +1610,34 @@
       background:#eef3f0!important;
       color:#334155!important;
     }
+    .status.未開始,
+    .editable-status.未開始,
+    .editable-status.未開始:hover,
     #casesSection .status.未開始,
     #casesSection .editable-status.未開始{background:#fff1f2!important;color:#be123c!important;border-color:#fecdd3!important}
+    .status.執行中,
+    .editable-status.執行中,
+    .editable-status.執行中:hover,
     #casesSection .status.執行中,
     #casesSection .editable-status.執行中{background:#fff7cc!important;color:#9a6500!important;border-color:#fde68a!important}
+    .status.過稿中,
+    .editable-status.過稿中,
+    .editable-status.過稿中:hover,
     #casesSection .status.過稿中,
     #casesSection .editable-status.過稿中{background:#e0f2fe!important;color:#0369a1!important;border-color:#bae6fd!important}
+    .status.已完成,
+    .editable-status.已完成,
+    .editable-status.已完成:hover,
     #casesSection .status.已完成,
     #casesSection .editable-status.已完成{background:#dcfce7!important;color:#166534!important;border-color:#bbf7d0!important}
+    .status.已取消,
+    .editable-status.已取消,
+    .editable-status.已取消:hover,
     #casesSection .status.已取消,
     #casesSection .editable-status.已取消{background:#f3f4f6!important;color:#4b5563!important;border-color:#d1d5db!important}
+    .status.暫停中,
+    .editable-status.暫停中,
+    .editable-status.暫停中:hover,
     #casesSection .status.暫停中,
     #casesSection .editable-status.暫停中{background:#e2e8f0!important;color:#1f2937!important;border-color:#94a3b8!important}
     #casesSection .editable-status:hover{
@@ -1874,9 +1892,10 @@
     .request-card .form.is-modify input:not([type="hidden"]),
     .request-card .form.is-modify select,
     .request-card .form.is-modify textarea{
-      background-color:#fff8df!important;
-      border-color:#f1d28c!important;
-      box-shadow:inset 0 0 0 1px rgba(246,178,61,.14)!important;
+      background-color:#fff!important;
+      color:#111!important;
+      border-color:#cbd3cf!important;
+      box-shadow:none!important;
     }
     .request-card.is-browsing-modify .form input:focus,
     .request-card.is-browsing-modify .form select:focus,
@@ -1884,14 +1903,14 @@
     .request-card .form.is-modify input:focus,
     .request-card .form.is-modify select:focus,
     .request-card .form.is-modify textarea:focus{
-      background-color:#fff3bf!important;
-      border-color:#f6b23d!important;
+      background-color:#fff!important;
+      border-color:#9bd4b4!important;
       outline:0!important;
-      box-shadow:0 0 0 3px rgba(246,178,61,.18)!important;
+      box-shadow:0 0 0 3px rgba(15,143,97,.12)!important;
     }
     .request-card.is-browsing-modify .form input::placeholder,
     .request-card .form.is-modify input::placeholder{
-      color:#b99a5c!important;
+      color:#aaa!important;
     }
     #casesSection .case-split.compact-cases{
       min-height:0!important;
@@ -4288,6 +4307,9 @@
     html[data-theme="dark"] #casesSection .sort-btn{color:#dadcdf!important}
     html[data-theme="dark"] .未開始,
     html[data-theme="dark"] .editable-status.未開始,
+    html[data-theme="dark"] .status.未開始,
+    html[data-theme="dark"] .editable-status.未開始,
+    html[data-theme="dark"] .editable-status.未開始:hover,
     html[data-theme="dark"] #casesSection .status.未開始,
     html[data-theme="dark"] #casesSection .editable-status.未開始,
     html[data-theme="dark"] .field-popover .status-option.未開始{
@@ -4295,6 +4317,9 @@
     }
     html[data-theme="dark"] .執行中,
     html[data-theme="dark"] .editable-status.執行中,
+    html[data-theme="dark"] .status.執行中,
+    html[data-theme="dark"] .editable-status.執行中,
+    html[data-theme="dark"] .editable-status.執行中:hover,
     html[data-theme="dark"] #casesSection .status.執行中,
     html[data-theme="dark"] #casesSection .editable-status.執行中,
     html[data-theme="dark"] .field-popover .status-option.執行中{
@@ -4302,6 +4327,9 @@
     }
     html[data-theme="dark"] .過稿中,
     html[data-theme="dark"] .editable-status.過稿中,
+    html[data-theme="dark"] .status.過稿中,
+    html[data-theme="dark"] .editable-status.過稿中,
+    html[data-theme="dark"] .editable-status.過稿中:hover,
     html[data-theme="dark"] #casesSection .status.過稿中,
     html[data-theme="dark"] #casesSection .editable-status.過稿中,
     html[data-theme="dark"] .field-popover .status-option.過稿中{
@@ -4309,6 +4337,9 @@
     }
     html[data-theme="dark"] .已完成,
     html[data-theme="dark"] .editable-status.已完成,
+    html[data-theme="dark"] .status.已完成,
+    html[data-theme="dark"] .editable-status.已完成,
+    html[data-theme="dark"] .editable-status.已完成:hover,
     html[data-theme="dark"] #casesSection .status.已完成,
     html[data-theme="dark"] #casesSection .editable-status.已完成,
     html[data-theme="dark"] .field-popover .status-option.已完成{
@@ -4316,6 +4347,9 @@
     }
     html[data-theme="dark"] .已取消,
     html[data-theme="dark"] .editable-status.已取消,
+    html[data-theme="dark"] .status.已取消,
+    html[data-theme="dark"] .editable-status.已取消,
+    html[data-theme="dark"] .editable-status.已取消:hover,
     html[data-theme="dark"] #casesSection .status.已取消,
     html[data-theme="dark"] #casesSection .editable-status.已取消,
     html[data-theme="dark"] .field-popover .status-option.已取消{
@@ -4323,6 +4357,9 @@
     }
     html[data-theme="dark"] .暫停中,
     html[data-theme="dark"] .editable-status.暫停中,
+    html[data-theme="dark"] .status.暫停中,
+    html[data-theme="dark"] .editable-status.暫停中,
+    html[data-theme="dark"] .editable-status.暫停中:hover,
     html[data-theme="dark"] #casesSection .status.暫停中,
     html[data-theme="dark"] #casesSection .editable-status.暫停中,
     html[data-theme="dark"] .field-popover .status-option.暫停中{
@@ -4402,6 +4439,292 @@
       background:transparent!important;
       border:0!important;
       box-shadow:none!important;
+    }
+    #casesSection .sort-btn,
+    #casesSection .sort-btn:hover,
+    #casesSection .sort-btn:focus-visible,
+    html[data-theme="dark"] #casesSection .sort-btn,
+    html[data-theme="dark"] #casesSection .sort-btn:hover,
+    html[data-theme="dark"] #casesSection .sort-btn:focus-visible{
+      background:transparent!important;
+      background-color:transparent!important;
+      background-image:none!important;
+      color:inherit!important;
+      border:0!important;
+      border-radius:0!important;
+      box-shadow:none!important;
+      outline:none!important;
+    }
+    html[data-theme="dark"] #casesSection .status.未開始,
+    html[data-theme="dark"] #casesSection .editable-status.未開始,
+    html[data-theme="dark"] #casesSection .editable-status.未開始:hover{
+      background:#342125!important;color:#dba0aa!important;border-color:#633f47!important;
+    }
+    html[data-theme="dark"] #casesSection .status.執行中,
+    html[data-theme="dark"] #casesSection .editable-status.執行中,
+    html[data-theme="dark"] #casesSection .editable-status.執行中:hover{
+      background:#342d20!important;color:#d3b97f!important;border-color:#5f5135!important;
+    }
+    html[data-theme="dark"] #casesSection .status.過稿中,
+    html[data-theme="dark"] #casesSection .editable-status.過稿中,
+    html[data-theme="dark"] #casesSection .editable-status.過稿中:hover{
+      background:#202c35!important;color:#94b7cc!important;border-color:#3b5566!important;
+    }
+    html[data-theme="dark"] #casesSection .status.已完成,
+    html[data-theme="dark"] #casesSection .editable-status.已完成,
+    html[data-theme="dark"] #casesSection .editable-status.已完成:hover{
+      background:#203029!important;color:#93b9a7!important;border-color:#3f5d50!important;
+    }
+    html[data-theme="dark"] #casesSection .status.已取消,
+    html[data-theme="dark"] #casesSection .editable-status.已取消,
+    html[data-theme="dark"] #casesSection .editable-status.已取消:hover{
+      background:#292b2e!important;color:#afb2b6!important;border-color:#4a4d52!important;
+    }
+    html[data-theme="dark"] #casesSection .status.暫停中,
+    html[data-theme="dark"] #casesSection .editable-status.暫停中,
+    html[data-theme="dark"] #casesSection .editable-status.暫停中:hover{
+      background:#2a2834!important;color:#b5aec6!important;border-color:#504b62!important;
+    }
+    #requestForm:not(.is-modify) #submitBtn,
+    .new-project-actions button[type="submit"]{
+      background:#0b8156!important;
+      color:#fff!important;
+      border-color:#086b47!important;
+      box-shadow:0 7px 16px rgba(11,129,86,.28)!important;
+    }
+    #requestForm:not(.is-modify) #submitBtn:hover,
+    .new-project-actions button[type="submit"]:hover{
+      background:#086b47!important;
+      border-color:#06563a!important;
+      box-shadow:0 9px 20px rgba(11,129,86,.34)!important;
+      transform:translateY(-1px);
+    }
+    #requestForm:not(.is-modify) #submitBtn:focus-visible,
+    .new-project-actions button[type="submit"]:focus-visible{
+      outline:3px solid rgba(11,129,86,.3)!important;
+      outline-offset:2px;
+    }
+    html[data-theme="dark"] #requestForm:not(.is-modify) #submitBtn,
+    html[data-theme="dark"] .new-project-actions button[type="submit"]{
+      background:#35c48b!important;
+      color:#082a1d!important;
+      border-color:#65ddb1!important;
+      box-shadow:0 8px 20px rgba(53,196,139,.34)!important;
+    }
+    html[data-theme="dark"] #requestForm:not(.is-modify) #submitBtn:hover,
+    html[data-theme="dark"] .new-project-actions button[type="submit"]:hover{
+      background:#48d49d!important;
+      color:#082a1d!important;
+      border-color:#8ae8c4!important;
+      box-shadow:0 10px 24px rgba(53,196,139,.42)!important;
+    }
+    #requestPanel.is-browsing-modify{
+      border:1px solid var(--line)!important;
+    }
+    #requestPanel.is-browsing-modify #requestModeHint{
+      color:#64746d!important;
+    }
+    #requestPanel.is-browsing-modify .form input:not([type="hidden"]),
+    #requestPanel.is-browsing-modify .form select,
+    #requestPanel.is-browsing-modify .form textarea,
+    #requestPanel .form.is-modify input:not([type="hidden"]),
+    #requestPanel .form.is-modify select,
+    #requestPanel .form.is-modify textarea{
+      background-color:#fff!important;
+      color:#111!important;
+      border:2px solid #f6b23d!important;
+      box-shadow:none!important;
+    }
+    #requestPanel.is-browsing-modify .form input:focus,
+    #requestPanel.is-browsing-modify .form select:focus,
+    #requestPanel.is-browsing-modify .form textarea:focus,
+    #requestPanel .form.is-modify input:focus,
+    #requestPanel .form.is-modify select:focus,
+    #requestPanel .form.is-modify textarea:focus{
+      background-color:#fff!important;
+      border-color:#d89415!important;
+      outline:0!important;
+      box-shadow:0 0 0 3px rgba(246,178,61,.2)!important;
+    }
+    #requestPanel .form.is-modify #submitBtn{
+      background:#f6b23d!important;
+      color:#3f2d00!important;
+      border-color:#d89415!important;
+      box-shadow:0 7px 16px rgba(246,178,61,.3)!important;
+    }
+    #requestPanel .form.is-modify #submitBtn:hover{
+      background:#e7a21f!important;
+      color:#322300!important;
+      border-color:#c4860f!important;
+      box-shadow:0 9px 20px rgba(246,178,61,.38)!important;
+    }
+    #requestPanel .form.is-modify #submitBtn:focus-visible{
+      outline:3px solid rgba(246,178,61,.32)!important;
+      outline-offset:2px;
+    }
+    html[data-theme="dark"] #requestPanel.is-browsing-modify{
+      border-color:#34373a!important;
+    }
+    html[data-theme="dark"] #requestPanel.is-browsing-modify #requestModeHint{
+      color:#9da1a5!important;
+    }
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form input:not([type="hidden"]),
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form select,
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form textarea,
+    html[data-theme="dark"] #requestPanel .form.is-modify input:not([type="hidden"]),
+    html[data-theme="dark"] #requestPanel .form.is-modify select,
+    html[data-theme="dark"] #requestPanel .form.is-modify textarea{
+      background-color:#0d0e10!important;
+      color:#e7e8e9!important;
+      border:2px solid #e4ad3b!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form input:focus,
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form select:focus,
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form textarea:focus,
+    html[data-theme="dark"] #requestPanel .form.is-modify input:focus,
+    html[data-theme="dark"] #requestPanel .form.is-modify select:focus,
+    html[data-theme="dark"] #requestPanel .form.is-modify textarea:focus{
+      background-color:#0d0e10!important;
+      border-color:#f5c451!important;
+      box-shadow:0 0 0 3px rgba(228,173,59,.2)!important;
+    }
+    html[data-theme="dark"] #requestPanel.is-browsing-modify .form input::placeholder,
+    html[data-theme="dark"] #requestPanel .form.is-modify input::placeholder{
+      color:#7f8783!important;
+    }
+    html[data-theme="dark"] #requestPanel .form.is-modify #submitBtn{
+      background:#f2b94b!important;
+      color:#271b00!important;
+      border-color:#ffd06a!important;
+      box-shadow:0 8px 20px rgba(242,185,75,.34)!important;
+    }
+    html[data-theme="dark"] #requestPanel .form.is-modify #submitBtn:hover{
+      background:#ffc95f!important;
+      color:#271b00!important;
+      border-color:#ffe08f!important;
+      box-shadow:0 10px 24px rgba(242,185,75,.42)!important;
+    }
+    #casesSection .status.未開始,
+    #casesSection .editable-status.未開始,
+    #casesSection .editable-status.未開始:hover,
+    .field-popover .status-option.未開始{
+      background:#ffe4e8!important;color:#a91f39!important;border-color:#ff9aac!important;
+    }
+    #casesSection .status.執行中,
+    #casesSection .editable-status.執行中,
+    #casesSection .editable-status.執行中:hover,
+    .field-popover .status-option.執行中{
+      background:#fff0b3!important;color:#735000!important;border-color:#f5c542!important;
+    }
+    #casesSection .status.過稿中,
+    #casesSection .editable-status.過稿中,
+    #casesSection .editable-status.過稿中:hover,
+    .field-popover .status-option.過稿中{
+      background:#dff3ff!important;color:#075b89!important;border-color:#7ccbf2!important;
+    }
+    #casesSection .status.已完成,
+    #casesSection .editable-status.已完成,
+    #casesSection .editable-status.已完成:hover,
+    .field-popover .status-option.已完成{
+      background:#dcf8e7!important;color:#0d6335!important;border-color:#76d39b!important;
+    }
+    #casesSection .status.已取消,
+    #casesSection .editable-status.已取消,
+    #casesSection .editable-status.已取消:hover,
+    .field-popover .status-option.已取消{
+      background:#eef0f3!important;color:#3f4855!important;border-color:#aeb5c0!important;
+    }
+    #casesSection .status.暫停中,
+    #casesSection .editable-status.暫停中,
+    #casesSection .editable-status.暫停中:hover,
+    .field-popover .status-option.暫停中{
+      background:#eee8ff!important;color:#51358f!important;border-color:#b9a3ee!important;
+    }
+    .kpi.status-未開始{background:#ffe4e8!important;border-color:#ff9aac!important}
+    .kpi.status-執行中{background:#fff0b3!important;border-color:#f5c542!important}
+    .kpi.status-過稿中{background:#dff3ff!important;border-color:#7ccbf2!important}
+    .kpi.status-已完成{background:#dcf8e7!important;border-color:#76d39b!important}
+    .kpi.status-未開始 b,.kpi.status-未開始 span{color:#a91f39!important}
+    .kpi.status-執行中 b,.kpi.status-執行中 span{color:#735000!important}
+    .kpi.status-過稿中 b,.kpi.status-過稿中 span{color:#075b89!important}
+    .kpi.status-已完成 b,.kpi.status-已完成 span{color:#0d6335!important}
+    #casesSection .legend-dot.status-未開始{background:#f26f83!important}
+    #casesSection .legend-dot.status-執行中{background:#f2c23e!important}
+    #casesSection .legend-dot.status-過稿中{background:#55b9e9!important}
+    #casesSection .legend-dot.status-已完成{background:#4ec47a!important}
+    #casesSection .legend-dot.status-已取消{background:#aeb5c0!important}
+    #casesSection .legend-dot.status-暫停中{background:#8b78c7!important}
+    #casesSection .bar.status-未開始{background:#f26f83!important;border:1px solid #fa9aaa!important}
+    #casesSection .bar.status-執行中{background:#f2c23e!important;border:1px solid #ffdc73!important}
+    #casesSection .bar.status-過稿中{background:#55b9e9!important;border:1px solid #8ed7f8!important}
+    #casesSection .bar.status-已完成{background:#4ec47a!important;border:1px solid #80dea3!important}
+    #casesSection .bar.status-已取消{background:#aeb5c0!important;border:1px solid #cdd2d9!important}
+    #casesSection .bar.status-暫停中{background:#8b78c7!important;border:1px solid #b7a8e2!important}
+    html[data-theme="dark"] #casesSection .status.未開始,
+    html[data-theme="dark"] #casesSection .editable-status.未開始,
+    html[data-theme="dark"] #casesSection .editable-status.未開始:hover,
+    html[data-theme="dark"] .field-popover .status-option.未開始{
+      background:#5a2f38!important;color:#ffd1d8!important;border-color:#c66b7c!important;
+    }
+    html[data-theme="dark"] #casesSection .status.執行中,
+    html[data-theme="dark"] #casesSection .editable-status.執行中,
+    html[data-theme="dark"] #casesSection .editable-status.執行中:hover,
+    html[data-theme="dark"] .field-popover .status-option.執行中{
+      background:#594719!important;color:#ffe39a!important;border-color:#c79c2d!important;
+    }
+    html[data-theme="dark"] #casesSection .status.過稿中,
+    html[data-theme="dark"] #casesSection .editable-status.過稿中,
+    html[data-theme="dark"] #casesSection .editable-status.過稿中:hover,
+    html[data-theme="dark"] .field-popover .status-option.過稿中{
+      background:#203f54!important;color:#c5ebff!important;border-color:#5ca8d5!important;
+    }
+    html[data-theme="dark"] #casesSection .status.已完成,
+    html[data-theme="dark"] #casesSection .editable-status.已完成,
+    html[data-theme="dark"] #casesSection .editable-status.已完成:hover,
+    html[data-theme="dark"] .field-popover .status-option.已完成{
+      background:#214b37!important;color:#b9f3d0!important;border-color:#59ad7d!important;
+    }
+    html[data-theme="dark"] #casesSection .status.已取消,
+    html[data-theme="dark"] #casesSection .editable-status.已取消,
+    html[data-theme="dark"] #casesSection .editable-status.已取消:hover,
+    html[data-theme="dark"] .field-popover .status-option.已取消{
+      background:#3b3e43!important;color:#f1f3f5!important;border-color:#7d838b!important;
+    }
+    html[data-theme="dark"] #casesSection .status.暫停中,
+    html[data-theme="dark"] #casesSection .editable-status.暫停中,
+    html[data-theme="dark"] #casesSection .editable-status.暫停中:hover,
+    html[data-theme="dark"] .field-popover .status-option.暫停中{
+      background:#41395a!important;color:#e0d5ff!important;border-color:#8d76c6!important;
+    }
+    html[data-theme="dark"] .kpi.status-未開始{background:#4a2830!important;border-color:#a55b6a!important}
+    html[data-theme="dark"] .kpi.status-執行中{background:#4b3d19!important;border-color:#a98228!important}
+    html[data-theme="dark"] .kpi.status-過稿中{background:#1c394c!important;border-color:#4d8db5!important}
+    html[data-theme="dark"] .kpi.status-已完成{background:#1c412f!important;border-color:#4c956b!important}
+    html[data-theme="dark"] .kpi.status-未開始 b,html[data-theme="dark"] .kpi.status-未開始 span{color:#ffd1d8!important}
+    html[data-theme="dark"] .kpi.status-執行中 b,html[data-theme="dark"] .kpi.status-執行中 span{color:#ffe39a!important}
+    html[data-theme="dark"] .kpi.status-過稿中 b,html[data-theme="dark"] .kpi.status-過稿中 span{color:#c5ebff!important}
+    html[data-theme="dark"] .kpi.status-已完成 b,html[data-theme="dark"] .kpi.status-已完成 span{color:#b9f3d0!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-未開始,
+    html[data-theme="dark"] #casesSection .bar.status-未開始{background:#d96378!important;border-color:#ef8798!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-執行中,
+    html[data-theme="dark"] #casesSection .bar.status-執行中{background:#e0ad32!important;border-color:#f4ce67!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-過稿中,
+    html[data-theme="dark"] #casesSection .bar.status-過稿中{background:#4c9fd0!important;border-color:#79c4ee!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-已完成,
+    html[data-theme="dark"] #casesSection .bar.status-已完成{background:#4caf74!important;border-color:#78d19b!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-已取消,
+    html[data-theme="dark"] #casesSection .bar.status-已取消{background:#8f969f!important;border-color:#b3b8bf!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-暫停中,
+    html[data-theme="dark"] #casesSection .bar.status-暫停中{background:#8973bd!important;border-color:#aa96da!important}
+    #casesSection .case-table-wrap.drag-scroll-ready{
+      cursor:grab;
+      overscroll-behavior-x:contain;
+    }
+    #casesSection .case-table-wrap.drag-scroll-ready.is-dragging,
+    #casesSection .case-table-wrap.drag-scroll-ready.is-dragging *{
+      cursor:grabbing!important;
+      user-select:none!important;
     }
     @media(max-width:640px){
       html[data-theme="dark"] tr{
@@ -4734,7 +5057,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260709-revision-layer-fix-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260714-modify-yellow-fields-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -4798,7 +5121,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260709-revision-layer-fix-1';
+const appBuildVersion = '20260714-modify-yellow-fields-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6915,6 +7238,71 @@ function initTimelineDragScroll(){
     }
   },true);
 }
+function initCaseTableDragScroll(){
+  const wrap=document.querySelector('#casesSection .case-table-wrap');
+  if(!wrap||wrap.dataset.dragScrollReady==='1')return;
+  wrap.dataset.dragScrollReady='1';
+  wrap.classList.add('drag-scroll-ready');
+  let dragging=false, moved=false, suppressClick=false, pointerId=null, startX=0, startY=0, startLeft=0;
+  const blockedTarget=target=>target.closest?.('button,input,select,textarea,a,[contenteditable="true"],[draggable="true"],.column-resize-handle');
+  const clearDrag=()=>{
+    dragging=false;
+    moved=false;
+    pointerId=null;
+    wrap.classList.remove('is-dragging');
+    document.body.style.userSelect='';
+    syncCaseHeaderScroll();
+  };
+  const stop=event=>{
+    if(!dragging)return;
+    const didMove=moved;
+    const activePointer=pointerId;
+    clearDrag();
+    try{if(activePointer!==null&&wrap.hasPointerCapture?.(activePointer))wrap.releasePointerCapture(activePointer)}catch(err){}
+    if(didMove){
+      suppressClick=true;
+      event?.preventDefault?.();
+      setTimeout(()=>{suppressClick=false},0);
+    }
+  };
+  wrap.addEventListener('pointerdown',event=>{
+    if(event.button!==0||event.isPrimary===false||blockedTarget(event.target))return;
+    if(wrap.scrollWidth<=wrap.clientWidth+1)return;
+    dragging=true;
+    moved=false;
+    pointerId=event.pointerId;
+    startX=event.clientX;
+    startY=event.clientY;
+    startLeft=wrap.scrollLeft;
+    wrap.setPointerCapture?.(event.pointerId);
+  });
+  wrap.addEventListener('pointermove',event=>{
+    if(!dragging||event.pointerId!==pointerId)return;
+    const dx=event.clientX-startX, dy=event.clientY-startY;
+    if(!moved&&Math.abs(dy)>6&&Math.abs(dy)>Math.abs(dx)){
+      const activePointer=pointerId;
+      clearDrag();
+      try{if(activePointer!==null&&wrap.hasPointerCapture?.(activePointer))wrap.releasePointerCapture(activePointer)}catch(err){}
+      return;
+    }
+    if(Math.abs(dx)<=4&&!moved)return;
+    moved=true;
+    wrap.classList.add('is-dragging');
+    document.body.style.userSelect='none';
+    wrap.scrollLeft=startLeft-dx;
+    syncCaseHeaderScroll();
+    event.preventDefault();
+  });
+  wrap.addEventListener('pointerup',stop);
+  wrap.addEventListener('pointercancel',stop);
+  wrap.addEventListener('lostpointercapture',stop);
+  wrap.addEventListener('click',event=>{
+    if(!suppressClick)return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClick=false;
+  },true);
+}
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
@@ -7084,7 +7472,7 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
 </script>
 </body>
 </html>
