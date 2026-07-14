@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-07-13T17:05:00+08:00" />
+<meta name="last-modified" content="2026-07-14T12:00:00+08:00" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -189,6 +189,10 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 .enterprise .notification-title,.enterprise .notification-meta{display:block}.enterprise .notification-title{color:#182230;font-size:11px;font-weight:900}.enterprise .notification-meta{margin-top:3px;color:#667085;font-size:10px;line-height:1.45;font-weight:600}
 .enterprise .notification-empty{padding:18px 10px;color:#667085;text-align:center;font-size:11px;font-weight:700}
 .enterprise .profile[aria-expanded="true"] .chev{transform:rotate(180deg)}.enterprise .profile .chev{transition:transform .16s ease}
+.enterprise .dashboard-grid .panel-title h3{font-size:18px;line-height:1.3}
+.enterprise .data-fill,.enterprise .load-fill,.enterprise .bar-fill{transform-origin:left center;animation:dashboard-bar-enter .8s cubic-bezier(.22,1,.36,1) both;animation-delay:var(--enter-delay,0ms)}
+@keyframes dashboard-bar-enter{from{transform:scaleX(0);opacity:.45}to{transform:scaleX(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.enterprise .data-fill,.enterprise .load-fill,.enterprise .bar-fill{animation:none}}
 @media(max-width:980px){.enterprise .topbar{padding-right:14px}}
 @media(max-width:760px){
   .enterprise .ai-card{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
@@ -201,18 +205,44 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
   .enterprise .ai-icon{width:28px;height:28px}
   .enterprise .ai-item strong,.enterprise .ai-item span{white-space:normal;overflow-wrap:anywhere}
 }
+
+/* Compact search, daily administrator access, and larger dashboard detail text. */
+.enterprise .top-query{width:38px;transition:width .2s ease}
+.enterprise .top-query:focus-within,.enterprise .top-query.has-query{width:min(100%,300px)}
+.enterprise .top-query input{border-color:transparent;background:transparent;padding-left:0;color:transparent;cursor:pointer;transition:border-color .16s ease,background-color .16s ease,padding .2s ease,color .16s ease,box-shadow .16s ease}
+.enterprise .top-query:focus-within input,.enterprise .top-query.has-query input{border-color:#dfe5ec;background:#fff;padding-left:13px;color:#182230;cursor:text}
+.enterprise .top-query .icon{pointer-events:none}
+.enterprise .kpi:nth-child(1){border-top-color:var(--blue)}
+.enterprise .kpi:nth-child(1) .bubble{background:var(--blue-100);color:var(--blue)}
+.enterprise .brand-name{font-size:12px}.enterprise .brand-value,.enterprise .data-tip::after{font-size:11px}.enterprise .brand-all-btn{font-size:12px}
+.enterprise .status-legend-row,.enterprise .status-legend-row b{font-size:11px}
+.enterprise .load-row .person,.enterprise .load-pct{font-size:12px}.enterprise .load-status,.enterprise .status{font-size:11px}
+.enterprise .rank-row,.enterprise .rank-score{font-size:12px}.enterprise .rank-delta{font-size:10px}
+.enterprise .account-dropdown button{width:100%;height:38px;padding:0 11px;border:0;border-radius:6px;display:flex;align-items:center;gap:9px;background:#fff;color:#344054;text-align:left;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+.enterprise .account-dropdown button:hover{background:#ecfdf3;color:#067647}.enterprise .account-dropdown button .icon{width:16px;height:16px}
+.dashboard-login-modal[hidden]{display:none!important}.dashboard-login-modal{position:fixed;inset:0;z-index:180;display:grid;place-items:center;padding:18px;background:rgba(16,24,40,.38);backdrop-filter:blur(2px)}
+.dashboard-login-card{width:min(340px,100%);padding:20px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;box-shadow:0 20px 48px rgba(16,24,40,.18)}
+.dashboard-login-card h2{margin:0 0 16px;font-size:19px}.dashboard-login-card label{display:grid;gap:7px;color:#344054;font-size:13px;font-weight:800}.dashboard-login-card input{width:100%;height:42px;padding:0 12px;border:1px solid #cfd8e3;border-radius:7px;font:inherit;outline:0}.dashboard-login-card input:focus{border-color:#6fd49a;box-shadow:0 0 0 3px rgba(18,183,106,.10)}
+.dashboard-login-note{min-height:18px;margin:9px 0 0;color:#667085;font-size:12px;font-weight:700}.dashboard-login-note.error{color:#d92d20}.dashboard-login-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.dashboard-login-actions button{height:38px;padding:0 15px;border:1px solid #d0d5dd;border-radius:7px;background:#fff;font:inherit;font-weight:800;cursor:pointer}.dashboard-login-actions button[type="submit"]{border-color:#079455;background:#079455;color:#fff}
+@media(max-width:980px){
+  .enterprise .topbar{grid-template-columns:minmax(0,1fr) 38px auto}
+  .enterprise .top-query{display:block;grid-column:2;grid-row:1}
+  .enterprise .top-query:focus-within,.enterprise .top-query.has-query{position:absolute;right:14px;top:10px;width:min(300px,calc(100vw - 28px));z-index:65}
+  .enterprise .top-filters{grid-column:1/4}
+  .enterprise .top-tools{grid-column:3;grid-row:1}
+}
 </style>
 </head>
 <body class="enterprise">
 <div class="app">
   <header class="topbar">
     <div class="top-left"><button class="menu-btn" id="menuToggle" title="選單" aria-label="開啟選單" aria-expanded="false"><svg class="icon menu-icon"><use href="#i-menu"/></svg></button><div class="product-title">EMC 設計部儀表板</div></div>
-    <div class="top-query"><input type="search" aria-label="搜尋案件" placeholder="搜尋案件、品牌或設計師"><svg class="icon"><use href="#i-search"/></svg></div>
+    <div class="top-query" id="dashboardSearchWrap"><input id="dashboardSearch" type="search" aria-label="搜尋案件、品牌或設計師"><svg class="icon"><use href="#i-search"/></svg></div>
     <div class="top-filters"><div class="designer-pill"><select id="designerFilter"></select><svg class="icon icon-sm"><use href="#i-chevron-down"/></svg></div><div class="date-pill"><button class="date-step" id="prevMonth" title="上一月">‹</button><span id="dateTitle">讀取中</span><button class="date-step" id="nextMonth" title="下一月">›</button></div></div>
     <div class="top-tools">
       <button class="notif" id="dashboardBell" type="button" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-bell"/></svg><span class="notif-badge" id="dashboardBellBadge" hidden>0</span></button>
-      <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">A</div><div><b id="currentDesignerName">Anna</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
-      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
+      <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">凱</div><div><b id="currentDesignerName">凱曜</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
+      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><button id="dashboardAdminLogin" type="button" role="menuitem"><svg class="icon"><use href="#i-user"/></svg><span id="dashboardAdminLoginText">管理者登入</span></button><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
       <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
@@ -252,6 +282,14 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
   </main>
 </div>
 <div class="loading show" id="loading">讀取 Google 試算表中...</div>
+<div class="dashboard-login-modal" id="dashboardLoginModal" hidden>
+  <form class="dashboard-login-card" id="dashboardLoginForm">
+    <h2>管理者登入</h2>
+    <label>密碼<input id="dashboardAdminPassword" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" required></label>
+    <p class="dashboard-login-note" id="dashboardLoginNote">請輸入管理者密碼。</p>
+    <div class="dashboard-login-actions"><button id="dashboardLoginCancel" type="button">取消</button><button type="submit">登入</button></div>
+  </form>
+</div>
 <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M5 7.5h14M5 12h14M5 16.5h14"/></symbol>
   <symbol id="i-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
@@ -313,7 +351,7 @@ function dashboardIdentity(){
   const designer=requestedDesigner();let saved={};
   try{saved=JSON.parse(localStorage.getItem('designDashboardIdentityV1')||'{}')||{}}catch(e){}
   const savedDesigner=normalizeDesigner(saved.designer||'');
-  const name=DESIGNERS.includes(designer)?designer:(DESIGNERS.includes(savedDesigner)?savedDesigner:'Anna');
+  const name=DESIGNERS.includes(designer)?designer:'凱曜';
   let returnUrl='';
   try{const candidate=new URL(saved.returnUrl||'',location.href),normalized=/design_request_web(?:\.html)?\/?$/i.test(candidate.pathname)?new URL('index.html',candidate):candidate,sameDesigner=savedDesigner===name,isRequestPage=!/design_dashboard(?:\.html)?\/?$/i.test(normalized.pathname);if(sameDesigner&&isRequestPage&&(location.protocol==='file:'||normalized.origin===location.origin))returnUrl=normalized.href}catch(e){}
   return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
@@ -451,6 +489,19 @@ function anchorDate(y,m){
 function dueInSevenDays(arr,baseDate){
   return arr.filter(r=>{const d=normDate(r['結束日期']);const left=d?(strip(d)-baseDate)/864e5:null;return d&&!DUE_EXCLUDED_STATUS.has(r['案件狀態'])&&left>=0&&left<=7}).length
 }
+function taipeiDateParts(){
+  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  return {year:parts.year,month:parts.month,day:parts.day}
+}
+function todayAdminPassword(){const {month,day}=taipeiDateParts();return `${month}${day}`}
+function todayAdminToken(){const {year,month,day}=taipeiDateParts();return `local-admin:${year}${month}${day}`}
+function isDashboardAdmin(){return sessionStorage.getItem('designDashboardAdminTokenV1')===todayAdminToken()}
+function dashboardSearchQuery(){return String($('dashboardSearch')?.value||'').trim().toLocaleLowerCase('zh-Hant')}
+function matchesDashboardSearch(row){
+  const query=dashboardSearchQuery();
+  if(!query)return true;
+  return ['案件編號','客戶別','專案名稱','設計負責人','設計總類','項目細節','案件狀態'].some(key=>String(row[key]||'').toLocaleLowerCase('zh-Hant').includes(query))
+}
 function populateFilters(){
   const years=uniq(raw.map(yearOf)).filter(y=>y>=MIN_YEAR).sort((a,b)=>b-a);
   if(!years.includes(MIN_YEAR))years.push(MIN_YEAR);
@@ -461,30 +512,38 @@ function populateFilters(){
   $('yearFilter').innerHTML=years.map(y=>`<option value="${y}" ${y===defaultYear?'selected':''}>${y}</option>`).join('');
   $('monthFilter').innerHTML=Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===defaultMonth?'selected':''}>${String(m).padStart(2,'0')}月</option>`).join('');
   const designers=['所有設計師',...DESIGNERS];$('designerFilter').innerHTML=designers.map(d=>`<option>${d}</option>`).join('');
-  const requested=requestedDesigner();
-  if(DESIGNERS.includes(requested))$('designerFilter').value=requested;
+  $('designerFilter').value='所有設計師';
 }
 function applyFilter(){
   const y=+$('yearFilter').value,m=+$('monthFilter').value,des=$('designerFilter').value,cli='全部';
-  filtered=raw.filter(r=>yearOf(r)===y&&monthOf(r)===m&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli));
+  filtered=raw.filter(r=>yearOf(r)===y&&monthOf(r)===m&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli)&&matchesDashboardSearch(r));
   $('dateTitle').textContent=`${y} / ${String(m).padStart(2,'0')}`;updateProfile();
   render(y,m,des,cli)
 }
 function updateProfile(){
+  if(isDashboardAdmin()){
+    $('currentDesignerName').textContent='管理者';
+    $('currentDesignerType').textContent='系統管理';
+    $('profileAvatar').textContent='管';
+    $('profileAvatar').style.backgroundImage='';
+    $('dashboardAdminLoginText').textContent='管理者登出';
+    return
+  }
   const name=ACCOUNT_IDENTITY.designer,settings=userSettings[name]||{};
   $('currentDesignerName').textContent=name;
   $('currentDesignerType').textContent=profileTypeLabel(settings.designType,name);
   $('profileAvatar').textContent=settings.avatar?'':name.slice(0,1);
   $('profileAvatar').style.backgroundImage=settings.avatar?`url("${settings.avatar}")`:'';
   $('profileAvatar').dataset.account=settings.account||'';
-  $('profileAvatar').dataset.password=settings.password||''
+  $('profileAvatar').dataset.password=settings.password||'';
+  $('dashboardAdminLoginText').textContent='管理者登入'
 }
 function avatarHtml(name,style=''){
   const settings=userSettings[name]||{},safeAvatar=String(settings.avatar||'').replace(/'/g,'%27'),bg=settings.avatar?`background-image:url('${safeAvatar}');`:style;
   return `<div class="mini-avatar" style="${bg}">${settings.avatar?'':(name||'?').slice(0,1)}</div>`
 }
 function render(y,m,des,cli){
-  const [py,pm]=prevYM(y,m);const previous=raw.filter(r=>sameYM(py,pm)(r)&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli));
+  const [py,pm]=prevYM(y,m);const previous=raw.filter(r=>sameYM(py,pm)(r)&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli)&&matchesDashboardSearch(r));
   const total=filtered.length,prevTotal=previous.length;const sc=Math.round(filtered.reduce((a,r)=>a+score(r),0)),prevSc=Math.round(previous.reduce((a,r)=>a+score(r),0));
   const done=filtered.filter(r=>DONE_STATUS.has(r['案件狀態'])).length;const prevDone=previous.filter(r=>DONE_STATUS.has(r['案件狀態'])).length;
   const today=anchorDate(y,m);const due=dueInSevenDays(filtered,today);const prevDue=dueInSevenDays(previous,anchorDate(py,pm));
@@ -542,7 +601,7 @@ function renderTypes(sc){
   typeChart=new Chart($('typeChart'),{
     type:'pie',
     data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,radius:'68%'}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{left:44,right:44,top:10,bottom:8}},plugins:{legend:{display:false},tooltip:{enabled:true,usePointStyle:true,boxWidth:8,boxHeight:8,callbacks:{title(){return ''},label(ctx){return typeTooltipData[ctx.label]||[`${ctx.label} ${ctx.formattedValue}`]},labelPointStyle(){return {pointStyle:'circle',rotation:0}},labelColor(ctx){const c=ctx.dataset.backgroundColor[ctx.dataIndex];return {borderColor:c,backgroundColor:c,borderWidth:0,borderRadius:999}}}}}},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:850,easing:'easeOutQuart',animateRotate:true,animateScale:true},layout:{padding:{left:44,right:44,top:10,bottom:8}},plugins:{legend:{display:false},tooltip:{enabled:true,usePointStyle:true,boxWidth:8,boxHeight:8,callbacks:{title(){return ''},label(ctx){return typeTooltipData[ctx.label]||[`${ctx.label} ${ctx.formattedValue}`]},labelPointStyle(){return {pointStyle:'circle',rotation:0}},labelColor(ctx){const c=ctx.dataset.backgroundColor[ctx.dataIndex];return {borderColor:c,backgroundColor:c,borderWidth:0,borderRadius:999}}}}}},
     plugins:[{id:'detailLines',afterDatasetsDraw(chart){
       if(chart.width<240)return;
       const {ctx,chartArea}=chart,meta=chart.getDatasetMeta(0),items=[];
@@ -560,19 +619,19 @@ function renderTypes(sc){
 }
 function renderClients(){
   const list=brandGroups(9);const max=Math.max(...list.map(x=>x[1]),1);const total=list.reduce((a,x)=>a+x[1],0)||1;
-  $('clientList').innerHTML=list.length?list.map(([k,v],i)=>{const width=Math.round(v/max*100),share=Math.round(v/total*100),color=k==='其他'?'#98a2b3':BRAND_COLORS[i%BRAND_COLORS.length];return `<div class="brand-row"><span class="brand-name" title="${k}">${k}</span><div class="data-track data-tip" tabindex="0" data-tooltip="${k}：${Math.round(v)} 件，占目前品牌工作量 ${share}%"><div class="data-fill" style="width:${width}%;--bar-color:${color}"></div></div><span class="brand-value">${Math.round(v)} 件</span></div>`}).join(''):'<div class="empty">無資料</div>'
+  $('clientList').innerHTML=list.length?list.map(([k,v],i)=>{const width=Math.round(v/max*100),share=Math.round(v/total*100),color=k==='其他'?'#98a2b3':BRAND_COLORS[i%BRAND_COLORS.length];return `<div class="brand-row"><span class="brand-name" title="${k}">${k}</span><div class="data-track data-tip" tabindex="0" data-tooltip="${k}：${Math.round(v)} 件，占目前品牌工作量 ${share}%"><div class="data-fill" style="width:${width}%;--bar-color:${color};--enter-delay:${i*45}ms"></div></div><span class="brand-value">${Math.round(v)} 件</span></div>`}).join(''):'<div class="empty">無資料</div>'
 }
 function monthSequence(y,m,count=13){const out=[];for(let i=count-1;i>=0;i--){const d=new Date(y,m-1-i,1);out.push([d.getFullYear(),d.getMonth()+1])}return out}
 function renderTrend(y,m,designer){
-  const months=monthSequence(y,m),values=months.map(([yy,mm])=>raw.filter(r=>yearOf(r)===yy&&monthOf(r)===mm&&(designer==='所有設計師'||r['設計負責人']===designer)).length);
+  const months=monthSequence(y,m),values=months.map(([yy,mm])=>raw.filter(r=>yearOf(r)===yy&&monthOf(r)===mm&&(designer==='所有設計師'||r['設計負責人']===designer)&&matchesDashboardSearch(r)).length);
   const [sy,sm]=months[0],[ey,em]=months[months.length-1];$('trendRange').textContent=`${sy}/${String(sm).padStart(2,'0')}–${ey}/${String(em).padStart(2,'0')}`;
   const currentMonthMarker={id:'currentMonthMarker',afterDatasetsDraw(chart){const currentValue=chart.data.datasets[0].data.at(-1),y=chart.scales.y.getPixelForValue(currentValue);if(!Number.isFinite(y))return;const {ctx,chartArea}=chart;ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);ctx.lineWidth=1.5;ctx.strokeStyle='#067647';ctx.moveTo(chartArea.left,y);ctx.lineTo(chartArea.right,y);ctx.stroke();ctx.restore()}};
-  if(trendChart)trendChart.destroy();trendChart=new Chart($('trendChart'),{type:'bar',data:{labels:months.map(([,mm])=>`${mm}月`),datasets:[{data:values,backgroundColor:values.map(()=>'#50c878'),hoverBackgroundColor:'#079455',borderRadius:3,maxBarThickness:15,categoryPercentage:.92,barPercentage:.9}]},options:{responsive:true,maintainAspectRatio:false,animation:false,onHover(event,elements,chart){const next=elements.length?elements[0].index:-1;if(chart.$hoverIndex===next)return;chart.$hoverIndex=next;chart.canvas.style.cursor=next<0?'default':'pointer';chart.data.datasets[0].backgroundColor=values.map((_,i)=>next<0||i===next?'#50c878':'#d0d5dd');chart.update('none')},plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{title:items=>{const [yy,mm]=months[items[0].dataIndex];return `${yy}/${String(mm).padStart(2,'0')}`},label:c=>`${c.raw} 件案件`}}},scales:{x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:0,color:'#667085',font:{size:8,weight:'700'}},border:{display:false}},y:{beginAtZero:true,ticks:{precision:0,color:'#98a2b3',font:{size:9}},grid:{color:'#eef2f6'},border:{display:false}}}},plugins:[currentMonthMarker]})
+  if(trendChart)trendChart.destroy();trendChart=new Chart($('trendChart'),{type:'bar',data:{labels:months.map(([,mm])=>`${mm}月`),datasets:[{data:values,backgroundColor:values.map(()=>'#50c878'),hoverBackgroundColor:'#079455',borderRadius:3,maxBarThickness:15,categoryPercentage:.92,barPercentage:.9}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:850,easing:'easeOutQuart'},onHover(event,elements,chart){const next=elements.length?elements[0].index:-1;if(chart.$hoverIndex===next)return;chart.$hoverIndex=next;chart.canvas.style.cursor=next<0?'default':'pointer';chart.data.datasets[0].backgroundColor=values.map((_,i)=>next<0||i===next?'#50c878':'#d0d5dd');chart.update('none')},plugins:{legend:{display:false},tooltip:{displayColors:false,callbacks:{title:items=>{const [yy,mm]=months[items[0].dataIndex];return `${yy}/${String(mm).padStart(2,'0')}`},label:c=>`${c.raw} 件案件`}}},scales:{x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:0,color:'#667085',font:{size:9,weight:'700'}},border:{display:false}},y:{beginAtZero:true,ticks:{precision:0,color:'#98a2b3',font:{size:10}},grid:{color:'#eef2f6'},border:{display:false}}}},plugins:[currentMonthMarker]})
 }
 function renderStatus(y,m,designer){
   const colors=['#12b76a','#2e90fa','#f79009','#7a5af8','#98a2b3'],allRows=detailQtyRows(filtered).filter(([name])=>name!=='未分類'),rows=allRows.slice(0,5),total=allRows.reduce((sum,row)=>sum+row[1],0)||1,labels=rows.map(x=>x[0]),values=rows.map(x=>Math.round(x[1]));
-  const [py,pm]=prevYM(y,m),previous=raw.filter(r=>yearOf(r)===py&&monthOf(r)===pm&&(designer==='所有設計師'||designer==='全部'||r['設計負責人']===designer)),previousMap=Object.fromEntries(detailQtyRows(previous).filter(([name])=>name!=='未分類'));
-  if(statusChart)statusChart.destroy();statusChart=new Chart($('statusChart'),{type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:[...colors],hoverBackgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverOffset:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',animation:false,onHover(event,elements,chart){const next=elements.length?elements[0].index:-1;if(chart.$detailHoverIndex===next)return;chart.$detailHoverIndex=next;chart.canvas.style.cursor=next<0?'default':'pointer';chart.data.datasets[0].backgroundColor=colors.map((color,i)=>next<0||i===next?color:'#d0d5dd');document.querySelectorAll('#statusLegend .status-legend-row').forEach((row,i)=>row.classList.toggle('is-muted',next>=0&&i!==next));chart.update('none')},plugins:{legend:{display:false},tooltip:{enabled:false}}},plugins:[{id:'centerTotal',afterDraw(chart){const {ctx,chartArea}=chart,x=(chartArea.left+chartArea.right)/2,y=(chartArea.top+chartArea.bottom)/2;ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#667085';ctx.font='700 9px Geist, "Noto Sans TC"';ctx.fillText('總數量',x,y-8);ctx.fillStyle='#101828';ctx.font='900 16px Geist, "Noto Sans TC"';ctx.fillText(`${Math.round(total)}件`,x,y+9);ctx.restore()}}]});
+  const [py,pm]=prevYM(y,m),previous=raw.filter(r=>yearOf(r)===py&&monthOf(r)===pm&&(designer==='所有設計師'||designer==='全部'||r['設計負責人']===designer)&&matchesDashboardSearch(r)),previousMap=Object.fromEntries(detailQtyRows(previous).filter(([name])=>name!=='未分類'));
+  if(statusChart)statusChart.destroy();statusChart=new Chart($('statusChart'),{type:'doughnut',data:{labels,datasets:[{data:values,backgroundColor:[...colors],hoverBackgroundColor:colors,borderWidth:3,borderColor:'#fff',hoverOffset:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',animation:{duration:850,easing:'easeOutQuart',animateRotate:true,animateScale:true},onHover(event,elements,chart){const next=elements.length?elements[0].index:-1;if(chart.$detailHoverIndex===next)return;chart.$detailHoverIndex=next;chart.canvas.style.cursor=next<0?'default':'pointer';chart.data.datasets[0].backgroundColor=colors.map((color,i)=>next<0||i===next?color:'#d0d5dd');document.querySelectorAll('#statusLegend .status-legend-row').forEach((row,i)=>row.classList.toggle('is-muted',next>=0&&i!==next));chart.update('none')},plugins:{legend:{display:false},tooltip:{enabled:false}}},plugins:[{id:'centerTotal',afterDraw(chart){const {ctx,chartArea}=chart,x=(chartArea.left+chartArea.right)/2,y=(chartArea.top+chartArea.bottom)/2;ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#667085';ctx.font='700 10px Geist, "Noto Sans TC"';ctx.fillText('總數量',x,y-8);ctx.fillStyle='#101828';ctx.font='900 17px Geist, "Noto Sans TC"';ctx.fillText(`${Math.round(total)}件`,x,y+9);ctx.restore()}}]});
   $('statusLegend').innerHTML=rows.length?rows.map(([name,value],i)=>{const share=Math.round(value/total*100),delta=pct(value,previousMap[name]||0);return `<div class="status-legend-row"><i style="background:${colors[i]}"></i><span title="${name}">${name}</span><b class="status-metric"><span>${Math.round(value)}件 (${share}%)</span><span class="status-delta ${trendClass(delta)}">${delta}</span></b></div>`}).join(''):'<div class="empty">無資料</div>'
   $('statusChart').onmouseleave=()=>{if(!statusChart)return;statusChart.$detailHoverIndex=-1;statusChart.canvas.style.cursor='default';statusChart.data.datasets[0].backgroundColor=[...colors];document.querySelectorAll('#statusLegend .status-legend-row').forEach(row=>row.classList.remove('is-muted'));statusChart.update('none')}
 }
@@ -693,7 +752,7 @@ function renderHeatmap(y,m){
   const rows=designerLoadRows(y,m);if(!rows.length){$('heatmap').innerHTML='<div class="empty">無資料</div>';return}
   const stateColor={normal:'#22c55e',high:'#fbbf24',busy:'#f97316',over:'#f04438'};
   let html='';
-  html+=rows.map(r=>`<div class="load-row"><div class="person">${avatarHtml(r.name,`background:${COLORS[r.idx%COLORS.length]}`)}<span>${r.name}</span></div><div class="data-track load-track data-tip" tabindex="0" data-tooltip="本月 ${r.monthScore} 分｜本週 ${r.weeklyScore} 分｜進行中 ${r.active} 件｜7 天到期 ${r.due} 件"><div class="load-fill" style="width:${Math.min(r.loadPercent,100)}%;--load-color:${stateColor[r.state.cls]}"></div></div><div class="load-pct">${r.loadPercent}%</div><div class="load-status ${r.state.cls}">${r.state.label}</div></div>`).join('');
+  html+=rows.map((r,i)=>`<div class="load-row"><div class="person">${avatarHtml(r.name,`background:${COLORS[r.idx%COLORS.length]}`)}<span>${r.name}</span></div><div class="data-track load-track data-tip" tabindex="0" data-tooltip="本月 ${r.monthScore} 分｜本週 ${r.weeklyScore} 分｜進行中 ${r.active} 件｜7 天到期 ${r.due} 件"><div class="load-fill" style="width:${Math.min(r.loadPercent,100)}%;--load-color:${stateColor[r.state.cls]};--enter-delay:${i*55}ms"></div></div><div class="load-pct">${r.loadPercent}%</div><div class="load-status ${r.state.cls}">${r.state.label}</div></div>`).join('');
   $('heatmap').innerHTML=html
 }
 function renderRank(){
@@ -701,7 +760,7 @@ function renderRank(){
   const y=+$('yearFilter').value,m=+$('monthFilter').value,[py,pm]=prevYM(y,m);
   DESIGNER_GROUPS.forEach(([title,names],groupIndex)=>{
     const list=group(filtered.filter(r=>names.includes(r['設計負責人'])),r=>r['設計負責人'],score);
-    const previousScores=Object.fromEntries(names.map(name=>[name,raw.filter(r=>r['設計負責人']===name&&yearOf(r)===py&&monthOf(r)===pm).reduce((sum,r)=>sum+score(r),0)]));
+    const previousScores=Object.fromEntries(names.map(name=>[name,raw.filter(r=>r['設計負責人']===name&&yearOf(r)===py&&monthOf(r)===pm&&matchesDashboardSearch(r)).reduce((sum,r)=>sum+score(r),0)]));
     const html=list.length?list.map(([name,val],i)=>{const delta=pct(val,previousScores[name]||0);return `<div class="rank-row"><div class="rank-num">${medal(i)||i+1}</div><div class="person">${avatarHtml(name,`background:${COLORS[DESIGNERS.indexOf(name)%COLORS.length]}`)}<span>${name}</span></div><div class="rank-metric"><b class="rank-score">${Math.round(val)}<small>分</small></b><span class="rank-delta ${trendClass(delta)}">${delta}</span></div></div>`}).join(''):'<div class="empty">無資料</div>';
     $(groupIndex===0?'rankGraphic':'rankVideo').innerHTML=html
   })
@@ -715,7 +774,12 @@ function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'
 function dashboardNotificationItems(){
   const designer=ACCOUNT_IDENTITY.designer,version='n2',assigned=raw.filter(r=>r['設計負責人']===designer&&yearOf(r)>=REPORT_TODAY.getFullYear()&&!['已取消','已完成'].includes(normalizeStatus(r['案件狀態']))),items=[];
   assigned.filter(r=>normalizeStatus(r['案件狀態'])==='未開始').forEach(r=>items.push({kind:'case',key:`${version}:case:${r['案件編號']}`,id:String(r['案件編號']),title:`新案件｜${r['客戶別']||'未填客戶'}`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(r['開始日期'])}-${shortDate(r['結束日期'])}`}));
-  assigned.forEach(r=>(dashboardModificationRecords.get(String(r['案件編號']))||[]).filter(record=>!record.confirmedDate).forEach(record=>items.push({kind:'revision',key:`${version}:revision:${r['案件編號']}:${record.count}:${record.date||record.created||''}`,id:String(r['案件編號']),title:`新修改需求｜第 ${record.count} 次修改`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(record.created)}-${shortDate(record.date)}｜${record.content||'未填寫修改內容'}`})));
+  assigned.forEach(r=>{
+    const records=dashboardModificationRecords.get(String(r['案件編號']))||[];
+    records.filter(record=>!record.confirmedDate).forEach(record=>{
+      items.push({kind:'revision',key:`${version}:revision:${r['案件編號']}:${record.count}:${record.date||record.created||''}`,id:String(r['案件編號']),title:`新修改需求｜第 ${record.count} 次修改`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(record.created)}-${shortDate(record.date)}｜${record.content||'未填寫修改內容'}`})
+    })
+  });
   return items.sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20)
 }
 function renderDashboardNotifications(highlight=null,{hideBadge=false}={}){
@@ -759,19 +823,40 @@ function showPage(name){
   document.querySelector('.nav-side').classList.remove('open');
   $('menuToggle').setAttribute('aria-expanded','false')
 }
+function showDashboardLogin(){
+  $('dashboardAccountDropdown').hidden=true;
+  $('dashboardProfileButton').setAttribute('aria-expanded','false');
+  $('dashboardLoginModal').hidden=false;
+  $('dashboardLoginNote').textContent='請輸入管理者密碼。';
+  $('dashboardLoginNote').classList.remove('error');
+  $('dashboardAdminPassword').value='';
+  setTimeout(()=>$('dashboardAdminPassword').focus(),30)
+}
+function hideDashboardLogin(){
+  $('dashboardLoginModal').hidden=true;
+  $('dashboardAdminPassword').value=''
+}
 $('reloadBtn').addEventListener('click',load);
 $('yearFilter').addEventListener('change',()=>{const y=+$('yearFilter').value;const months=uniq(raw.filter(r=>yearOf(r)===y).map(monthOf)).sort((a,b)=>b-a);$('monthFilter').innerHTML=Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===months[0]?'selected':''}>${String(m).padStart(2,'0')}月</option>`).join('');applyFilter()});
 $('monthFilter').addEventListener('change',applyFilter);$('designerFilter').addEventListener('change',applyFilter);
 $('prevMonth').addEventListener('click',()=>shiftMonth(-1));$('nextMonth').addEventListener('click',()=>shiftMonth(1));
+$('dashboardSearchWrap').addEventListener('click',()=>$('dashboardSearch').focus());
+$('dashboardSearch').addEventListener('input',()=>{const wrap=$('dashboardSearchWrap');wrap.classList.toggle('has-query',Boolean($('dashboardSearch').value));applyFilter()});
+$('dashboardSearch').addEventListener('blur',()=>{$('dashboardSearchWrap').classList.toggle('has-query',Boolean($('dashboardSearch').value))});
 $('menuToggle').addEventListener('click',()=>{const nav=document.querySelector('.nav-side'),open=nav.classList.toggle('open');$('menuToggle').setAttribute('aria-expanded',String(open))});
 document.querySelectorAll('.topnav a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();showPage(a.dataset.page)}));
 document.querySelector('.ai-action').addEventListener('click',()=>showPage('analysis'));
 $('allBrandsBtn').addEventListener('click',()=>showPage('analysis'));
 $('returnRequestLink').href=ACCOUNT_IDENTITY.returnUrl;
+$('dashboardAdminLogin').addEventListener('click',()=>{if(isDashboardAdmin()){sessionStorage.removeItem('designDashboardAdminTokenV1');updateProfile();return}showDashboardLogin()});
+$('dashboardLoginCancel').addEventListener('click',hideDashboardLogin);
+$('dashboardLoginModal').addEventListener('click',event=>{if(event.target===$('dashboardLoginModal'))hideDashboardLogin()});
+$('dashboardLoginForm').addEventListener('submit',event=>{event.preventDefault();const password=String($('dashboardAdminPassword').value||'').trim();if(password!==todayAdminPassword()){$('dashboardLoginNote').textContent='密碼不正確。';$('dashboardLoginNote').classList.add('error');$('dashboardAdminPassword').select();return}sessionStorage.setItem('designDashboardAdminTokenV1',todayAdminToken());hideDashboardLogin();updateProfile()});
 $('dashboardProfileButton').addEventListener('click',event=>{event.stopPropagation();const menu=$('dashboardAccountDropdown'),open=menu.hidden;$('dashboardNotificationPopover').hidden=true;$('dashboardBell').setAttribute('aria-expanded','false');menu.hidden=!open;$('dashboardProfileButton').setAttribute('aria-expanded',String(open))});
 $('dashboardBell').addEventListener('click',event=>{event.stopPropagation();const popover=$('dashboardNotificationPopover'),open=popover.hidden;$('dashboardAccountDropdown').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');const items=dashboardNotificationItems(),read=readNotificationIds(),unread=items.filter(item=>!read.has(item.key)),highlight=new Set(unread.map(item=>item.key));renderDashboardNotifications(open?highlight:null,{hideBadge:open&&unread.length>0});popover.hidden=!open;$('dashboardBell').setAttribute('aria-expanded',String(open));if(open&&unread.length){unread.forEach(item=>read.add(item.key));writeNotificationIds(read)}});
 $('dashboardNotificationList').addEventListener('click',event=>{const item=event.target.closest('[data-case-id]');if(!item)return;localStorage.setItem('designRequestFocusCaseV1',item.dataset.caseId);location.href=ACCOUNT_IDENTITY.returnUrl});
 document.addEventListener('click',event=>{if(!document.querySelector('.top-tools').contains(event.target)){$('dashboardAccountDropdown').hidden=true;$('dashboardNotificationPopover').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');$('dashboardBell').setAttribute('aria-expanded','false')}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('dashboardLoginModal').hidden)hideDashboardLogin()});
 window.addEventListener('storage',event=>{if(event.key===notificationReadKey())renderDashboardNotifications()});
 load();
 </script>
