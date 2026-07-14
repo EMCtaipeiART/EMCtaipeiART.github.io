@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-14 14:24 Asia/Taipei | build: 20260714-table-pan-sync-no-accent-1 -->
+<!-- LAST_MODIFIED: 2026-07-14 16:16 Asia/Taipei | build: 20260714-timeline-list-background-sync-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260714-table-pan-sync-no-accent-1" />
+  <meta name="app-version" content="20260714-timeline-list-background-sync-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -4844,6 +4844,41 @@
       cursor:grabbing!important;
       user-select:none!important;
     }
+    #casesSection{
+      --case-surface-bg:#f6f8f7;
+      --case-row-odd-bg:#fff;
+      --case-row-even-bg:#fafbfa;
+    }
+    #casesSection .case-table-wrap table,
+    #casesSection .case-timeline-panel,
+    #casesSection .case-timeline-panel .timeline,
+    #casesSection .case-timeline-panel .timeline-inner,
+    #casesSection .case-sticky-timeline-head{
+      background:var(--case-surface-bg)!important;
+      background-color:var(--case-surface-bg)!important;
+    }
+    #casesSection .case-table-wrap tbody tr:nth-child(odd),
+    #casesSection .case-timeline-panel .timeline-row-odd{
+      background:var(--case-row-odd-bg)!important;
+      background-color:var(--case-row-odd-bg)!important;
+    }
+    #casesSection .case-table-wrap tbody tr:nth-child(even),
+    #casesSection .case-timeline-panel .timeline-row-even{
+      background:var(--case-row-even-bg)!important;
+      background-color:var(--case-row-even-bg)!important;
+    }
+    #casesSection .case-timeline-panel .timeline-scale,
+    #casesSection .case-timeline-panel .scale-track,
+    #casesSection .case-sticky-timeline-head .timeline-scale,
+    #casesSection .case-sticky-timeline-head .scale-track{
+      background:transparent!important;
+      background-color:transparent!important;
+    }
+    html[data-theme="dark"] #casesSection{
+      --case-surface-bg:#121315;
+      --case-row-odd-bg:#131416;
+      --case-row-even-bg:#191a1d;
+    }
     @media(max-width:640px){
       html[data-theme="dark"] tr{
         background:#22302b!important;
@@ -5175,7 +5210,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260714-table-pan-sync-no-accent-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260714-timeline-list-background-sync-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5239,7 +5274,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260714-table-pan-sync-no-accent-1';
+const appBuildVersion = '20260714-timeline-list-background-sync-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
