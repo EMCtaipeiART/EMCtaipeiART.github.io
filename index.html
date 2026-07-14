@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-14 10:58 Asia/Taipei | build: 20260714-ui-surface-drag-fix-1 -->
+<!-- LAST_MODIFIED: 2026-07-14 14:24 Asia/Taipei | build: 20260714-table-pan-sync-no-accent-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260714-ui-surface-drag-fix-1" />
+  <meta name="app-version" content="20260714-table-pan-sync-no-accent-1" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -4725,6 +4725,11 @@
       display:block!important;
       background:#35c48b!important;
     }
+    .sheet-sync-card::before,
+    html[data-theme="dark"] .sheet-sync-card::before{
+      display:none!important;
+      content:none!important;
+    }
     .account-dropdown button,
     .account-dropdown button:hover,
     .account-dropdown button:focus-visible,
@@ -5170,7 +5175,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260714-ui-surface-drag-fix-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260714-table-pan-sync-no-accent-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5234,7 +5239,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260714-ui-surface-drag-fix-1';
+const appBuildVersion = '20260714-table-pan-sync-no-accent-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7353,10 +7358,11 @@ function initTimelineDragScroll(){
 }
 function initCaseTableDragScroll(){
   const wrap=document.querySelector('#casesSection .case-table-wrap');
-  if(!wrap||wrap.dataset.dragScrollReady==='1')return;
+  const split=document.querySelector('#casesSection .case-split');
+  if(!wrap||!split||wrap.dataset.dragScrollReady==='1')return;
   wrap.dataset.dragScrollReady='1';
   wrap.classList.add('drag-scroll-ready');
-  let dragging=false, moved=false, suppressClick=false, pointerId=null, startX=0, startY=0, startLeft=0;
+  let dragging=false, moved=false, suppressClick=false, pointerId=null, startX=0, startY=0, startLeft=0, startTop=0;
   const blockedTarget=target=>target.closest?.('input,select,textarea,[contenteditable="true"],[draggable="true"],.column-resize-handle');
   const clearDrag=()=>{
     dragging=false;
@@ -7380,29 +7386,27 @@ function initCaseTableDragScroll(){
   };
   wrap.addEventListener('pointerdown',event=>{
     if(event.button!==0||event.isPrimary===false||blockedTarget(event.target))return;
-    if(wrap.scrollWidth<=wrap.clientWidth+1)return;
+    const canScrollX=wrap.scrollWidth>wrap.clientWidth+1;
+    const canScrollY=split.scrollHeight>split.clientHeight+1;
+    if(!canScrollX&&!canScrollY)return;
     dragging=true;
     moved=false;
     pointerId=event.pointerId;
     startX=event.clientX;
     startY=event.clientY;
     startLeft=wrap.scrollLeft;
+    startTop=split.scrollTop;
   });
   wrap.addEventListener('pointermove',event=>{
     if(!dragging||event.pointerId!==pointerId)return;
     const dx=event.clientX-startX, dy=event.clientY-startY;
-    if(!moved&&Math.abs(dy)>6&&Math.abs(dy)>Math.abs(dx)){
-      const activePointer=pointerId;
-      clearDrag();
-      try{if(activePointer!==null&&wrap.hasPointerCapture?.(activePointer))wrap.releasePointerCapture(activePointer)}catch(err){}
-      return;
-    }
-    if(Math.abs(dx)<=4&&!moved)return;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<=4&&!moved)return;
     if(!moved)wrap.setPointerCapture?.(event.pointerId);
     moved=true;
     wrap.classList.add('is-dragging');
     document.body.style.userSelect='none';
     wrap.scrollLeft=startLeft-dx;
+    split.scrollTop=startTop-dy;
     syncCaseHeaderScroll();
     event.preventDefault();
   });
