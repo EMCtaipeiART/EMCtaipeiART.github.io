@@ -9,6 +9,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>設計需求系統 v4.0</title>
+  <script>
+    (()=>{try{const saved=localStorage.getItem('designRequestThemeV1'); document.documentElement.dataset.theme=saved==='dark'?'dark':'light'}catch(err){document.documentElement.dataset.theme='light'}})();
+  </script>
   <style>
     :root{
       --bg:#f6f8f7;--panel:#fff;--ink:#17211d;--muted:#66736d;--line:#dfe7e2;
@@ -3329,6 +3332,1101 @@
     .field-popover.is-modal-popover{
       z-index:7000!important;
     }
+    .theme-toggle{
+      display:inline-grid!important;
+      place-items:center!important;
+      flex:0 0 auto!important;
+      width:48px!important;
+      height:28px!important;
+      min-height:28px!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:999px!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .theme-toggle-track{
+      position:relative;
+      display:block;
+      width:46px;
+      height:26px;
+      border-radius:999px;
+      background:#dfe8e3;
+      border:1px solid #cbd8d1;
+      transition:background .18s ease,border-color .18s ease;
+    }
+    .theme-toggle-thumb{
+      position:absolute;
+      left:3px;
+      top:3px;
+      display:grid;
+      place-items:center;
+      width:20px;
+      height:20px;
+      border-radius:999px;
+      background:#fff;
+      color:#61736a;
+      box-shadow:0 2px 7px rgba(15,23,42,.18);
+      transition:transform .18s ease,background .18s ease,color .18s ease;
+    }
+    .theme-icon{
+      grid-area:1 / 1;
+      width:14px;
+      height:14px;
+      fill:none;
+      stroke:currentColor;
+      stroke-width:2;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+      transition:opacity .16s ease,transform .16s ease;
+    }
+    .theme-icon-moon{opacity:0;transform:scale(.72)}
+    html[data-theme="dark"]{
+      color-scheme:dark;
+      --bg:#18221f;
+      --panel:#22302b;
+      --ink:#edf5f1;
+      --muted:#a8b8b1;
+      --line:#3a4943;
+      --green:#35c48b;
+      --green-dark:#27a774;
+      --green2:#183f32;
+      --yellow:#3a3521;
+      --orange:#f2b84b;
+      --blue:#7cb7ff;
+      --red:#f17983;
+      --soft-blue:#61b9d7;
+      --soft-warm:#3e3520;
+      --soft-warm-border:#8d7440;
+      --soft-warm-ink:#ffd67d;
+      --soft-warm-solid:#dba84b;
+      --shadow:0 16px 34px rgba(0,0,0,.18);
+    }
+    html[data-theme="dark"] body,
+    html[data-theme="dark"] html{
+      background:#18221f!important;
+      color:var(--ink)!important;
+    }
+    html[data-theme="dark"] body{
+      background:
+        radial-gradient(circle at 20% -10%,rgba(53,196,139,.10),transparent 34%),
+        linear-gradient(180deg,#1e2a26 0%,#18221f 42%,#17201d 100%)!important;
+    }
+    html[data-theme="dark"] header h1,
+    html[data-theme="dark"] .card h2,
+    html[data-theme="dark"] .request-guide-example h4,
+    html[data-theme="dark"] .issue-report-card h3,
+    html[data-theme="dark"] .case-detail-head h3{
+      color:#f2faf6!important;
+    }
+    html[data-theme="dark"] .subtitle,
+    html[data-theme="dark"] .help-steps,
+    html[data-theme="dark"] .small,
+    html[data-theme="dark"] .syncstatus,
+    html[data-theme="dark"] .login-note,
+    html[data-theme="dark"] .notification-meta,
+    html[data-theme="dark"] .notification-head span,
+    html[data-theme="dark"] .notification-empty,
+    html[data-theme="dark"] .batch-count,
+    html[data-theme="dark"] .detail-empty,
+    html[data-theme="dark"] .legend-chip,
+    html[data-theme="dark"] .scale-label{
+      color:var(--muted)!important;
+    }
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .help,
+    html[data-theme="dark"] .filters,
+    html[data-theme="dark"] .batch-tools,
+    html[data-theme="dark"] .batch-request-list,
+    html[data-theme="dark"] .detail-options,
+    html[data-theme="dark"] .column-panel,
+    html[data-theme="dark"] .batch-panel,
+    html[data-theme="dark"] table,
+    html[data-theme="dark"] .login-card,
+    html[data-theme="dark"] .issue-report-card,
+    html[data-theme="dark"] .designer-settings-card,
+    html[data-theme="dark"] .request-guide-card,
+    html[data-theme="dark"] .case-detail-card,
+    html[data-theme="dark"] .field-popover,
+    html[data-theme="dark"] .column-popover,
+    html[data-theme="dark"] .multi-panel,
+    html[data-theme="dark"] .account-dropdown,
+    html[data-theme="dark"] .notification-popover,
+    html[data-theme="dark"] #casesSection .case-timeline-panel{
+      background:var(--panel)!important;
+      border-color:var(--line)!important;
+      color:var(--ink)!important;
+      box-shadow:0 18px 40px rgba(0,0,0,.18)!important;
+    }
+    html[data-theme="dark"] .card::before{
+      background:linear-gradient(90deg,#2fbd86,#56d49f)!important;
+    }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] textarea,
+    html[data-theme="dark"] .multi-filter summary,
+    html[data-theme="dark"] .login-email-row,
+    html[data-theme="dark"] .admin-login-panel input,
+    html[data-theme="dark"] .request-card .form input,
+    html[data-theme="dark"] .request-card .form select,
+    html[data-theme="dark"] .batch-request-list input,
+    html[data-theme="dark"] .batch-request-list select{
+      background:#1b2823!important;
+      color:#edf5f1!important;
+      border-color:#40524b!important;
+    }
+    html[data-theme="dark"] input::placeholder,
+    html[data-theme="dark"] textarea::placeholder{
+      color:#7f928a!important;
+    }
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] .request-card .form select,
+    html[data-theme="dark"] .batch-request-list select,
+    html[data-theme="dark"] #batchStatus,
+    html[data-theme="dark"] #batchDetails,
+    html[data-theme="dark"] .overview-filters select{
+      background-color:#1b2823!important;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24'%3E%3Cpath d='M7 9.5 12 14.5 17 9.5' fill='none' stroke='%23a8b8b1' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;
+    }
+    html[data-theme="dark"] .form label,
+    html[data-theme="dark"] .overview-filters label,
+    html[data-theme="dark"] .login-card label,
+    html[data-theme="dark"] .batch-request-list label,
+    html[data-theme="dark"] .detail-field,
+    html[data-theme="dark"] .multi-panel label,
+    html[data-theme="dark"] .column-toggle,
+    html[data-theme="dark"] .detail-options label,
+    html[data-theme="dark"] .designer-skill-checks label,
+    html[data-theme="dark"] .column-panel summary,
+    html[data-theme="dark"] .batch-panel summary,
+    html[data-theme="dark"] .case-detail-row b{
+      color:#c5d3ce!important;
+    }
+    html[data-theme="dark"] button.secondary,
+    html[data-theme="dark"] .login-btn,
+    html[data-theme="dark"] .modify-refresh,
+    html[data-theme="dark"] #requestBatchToggle,
+    html[data-theme="dark"] .request-help-actions button,
+    html[data-theme="dark"] .row-actions button.secondary,
+    html[data-theme="dark"] .column-action-controls button,
+    html[data-theme="dark"] .designer-settings-btn,
+    html[data-theme="dark"] .column-settings-btn,
+    html[data-theme="dark"] .google-fallback-login,
+    html[data-theme="dark"] .modify-pager button{
+      background:#26362f!important;
+      color:#dce9e4!important;
+      border-color:#41544c!important;
+    }
+    html[data-theme="dark"] button.secondary:hover,
+    html[data-theme="dark"] .login-btn:hover,
+    html[data-theme="dark"] .modify-refresh:hover,
+    html[data-theme="dark"] #requestBatchToggle:hover,
+    html[data-theme="dark"] .request-help-actions button:hover,
+    html[data-theme="dark"] .row-actions button.secondary:hover,
+    html[data-theme="dark"] .column-action-controls button:hover,
+    html[data-theme="dark"] .designer-settings-btn:hover,
+    html[data-theme="dark"] .column-settings-btn:hover,
+    html[data-theme="dark"] .google-fallback-login:hover,
+    html[data-theme="dark"] .account-dropdown button:hover,
+    html[data-theme="dark"] .multi-panel label:hover{
+      background:#30453c!important;
+      color:#f1faf6!important;
+      border-color:#4f6a5e!important;
+    }
+    html[data-theme="dark"] button,
+    html[data-theme="dark"] .tab-btn[data-kind="new"].active,
+    html[data-theme="dark"] .tab-btn[data-view="list"].active{
+      background:var(--green)!important;
+      color:#0d2018!important;
+      border-color:var(--green)!important;
+    }
+    html[data-theme="dark"] button:not(.revision-pill):hover{
+      background:#51d29d!important;
+      color:#0d2018!important;
+    }
+    html[data-theme="dark"] button.warn,
+    html[data-theme="dark"] .row-actions button.warn{
+      background:#111a18!important;
+      color:#edf5f1!important;
+      border-color:#3a4943!important;
+    }
+    html[data-theme="dark"] .tab-btn,
+    html[data-theme="dark"] .tab-btn:hover{
+      background:#26362f!important;
+      color:#bac9c3!important;
+      border-color:#40524b!important;
+    }
+    html[data-theme="dark"] .tab-btn[data-kind="modify"].active,
+    html[data-theme="dark"] .tab-btn[data-view="timeline"].active,
+    html[data-theme="dark"] .form.is-modify #submitBtn,
+    html[data-theme="dark"] .tab-btn[data-kind="modify"].active:hover,
+    html[data-theme="dark"] .tab-btn[data-view="timeline"].active:hover,
+    html[data-theme="dark"] .form.is-modify #submitBtn:hover{
+      background:#4a3b20!important;
+      color:#ffd67d!important;
+      border-color:#8d7440!important;
+    }
+    html[data-theme="dark"] th,
+    html[data-theme="dark"] #casesSection .case-table-wrap th,
+    html[data-theme="dark"] #casesSection .case-sticky-head,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head th,
+    html[data-theme="dark"] #casesSection .case-sticky-timeline-head,
+    html[data-theme="dark"] #casesSection .case-sticky-timeline-head .timeline-scale,
+    html[data-theme="dark"] #casesSection .case-timeline-panel .timeline-scale{
+      background:#22302b!important;
+      color:#c5d3ce!important;
+      border-color:var(--line)!important;
+    }
+    html[data-theme="dark"] td,
+    html[data-theme="dark"] .case-id-btn,
+    html[data-theme="dark"] .sort-btn{
+      color:#e8f1ed!important;
+      border-color:#33433d!important;
+    }
+    html[data-theme="dark"] .case-table-wrap tbody tr:nth-child(even),
+    html[data-theme="dark"] .modify-list tbody tr:nth-child(even),
+    html[data-theme="dark"] .case-timeline-panel .timeline-row-even,
+    html[data-theme="dark"] #casesSection .case-table-wrap tbody tr:nth-child(even){
+      background:#1f2d28!important;
+    }
+    html[data-theme="dark"] .case-table-wrap tbody tr:nth-child(odd),
+    html[data-theme="dark"] .modify-list tbody tr:nth-child(odd),
+    html[data-theme="dark"] .case-timeline-panel .timeline-row-odd,
+    html[data-theme="dark"] #casesSection .case-table-wrap tbody tr:nth-child(odd){
+      background:#22302b!important;
+    }
+    html[data-theme="dark"] .case-table-wrap tbody tr:hover,
+    html[data-theme="dark"] .modify-list tbody tr:hover{
+      background:#293b34!important;
+    }
+    html[data-theme="dark"] .kpi,
+    html[data-theme="dark"] .designer-card,
+    html[data-theme="dark"] .batch-request-list li,
+    html[data-theme="dark"] .case-detail-row,
+    html[data-theme="dark"] .case-detail-value,
+    html[data-theme="dark"] .editable-field,
+    html[data-theme="dark"] .field-popover button.option,
+    html[data-theme="dark"] .field-popover label.option,
+    html[data-theme="dark"] .column-toggle,
+    html[data-theme="dark"] .detail-options label,
+    html[data-theme="dark"] .pill-name,
+    html[data-theme="dark"] .history-lock,
+    html[data-theme="dark"] .updating-cell{
+      background:#1b2823!important;
+      color:#edf5f1!important;
+      border-color:#40524b!important;
+    }
+    html[data-theme="dark"] .kpi b,
+    html[data-theme="dark"] .designer-name,
+    html[data-theme="dark"] .notification-title,
+    html[data-theme="dark"] .notification-head b,
+    html[data-theme="dark"] .account-name,
+    html[data-theme="dark"] .request-guide-example .mail-sample,
+    html[data-theme="dark"] .request-guide-card p{
+      color:#edf5f1!important;
+    }
+    html[data-theme="dark"] .kpi span,
+    html[data-theme="dark"] .account-role,
+    html[data-theme="dark"] .login-email-row span{
+      color:#a8b8b1!important;
+    }
+    html[data-theme="dark"] .account-avatar{
+      background:#2fbd86!important;
+      color:#102019!important;
+      border-color:#1b2823!important;
+      box-shadow:0 8px 20px rgba(0,0,0,.28)!important;
+    }
+    html[data-theme="dark"] #accountMenu .account-bell,
+    html[data-theme="dark"] #accountMenu .account-bell:hover,
+    html[data-theme="dark"] #accountMenu .account-bell:focus-visible,
+    html[data-theme="dark"] .account-chevron{
+      color:#dce9e4!important;
+    }
+    html[data-theme="dark"] #accountMenu .account-bell svg{
+      filter:none!important;
+    }
+    html[data-theme="dark"] .account-bell-badge,
+    html[data-theme="dark"] #accountMenu .account-bell-badge{
+      background:#f17983!important;
+      color:#241316!important;
+      border-color:#18221f!important;
+    }
+    html[data-theme="dark"] .theme-toggle,
+    html[data-theme="dark"] .theme-toggle:hover,
+    html[data-theme="dark"] .theme-toggle:focus-visible{
+      background:transparent!important;
+      border-color:transparent!important;
+      color:inherit!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .theme-toggle-track{
+      background:#1f3b31;
+      border-color:#39775f;
+    }
+    html[data-theme="dark"] .theme-toggle-thumb{
+      transform:translateX(20px);
+      background:#35c48b;
+      color:#102019;
+    }
+    html[data-theme="dark"] .theme-icon-sun{opacity:0;transform:scale(.72)}
+    html[data-theme="dark"] .theme-icon-moon{opacity:1;transform:scale(1)}
+    html[data-theme="dark"] .notification-item{
+      background:#1b2823!important;
+      color:#edf5f1!important;
+      border-color:#40524b!important;
+    }
+    html[data-theme="dark"] .notification-item:hover{
+      background:#26362f!important;
+      border-color:#4f6a5e!important;
+      color:#f2faf6!important;
+    }
+    html[data-theme="dark"] .notification-item.is-new,
+    html[data-theme="dark"] .notification-item.is-new:hover{
+      background:linear-gradient(90deg,rgba(53,196,139,.20),rgba(31,45,40,.98) 62%,#1b2823)!important;
+      border-color:#39775f!important;
+    }
+    html[data-theme="dark"] .notification-dot{
+      background:#f17983!important;
+      box-shadow:0 0 0 3px rgba(241,121,131,.14)!important;
+    }
+    html[data-theme="dark"] .notification-item.is-case .notification-dot{
+      background:#35c48b!important;
+      box-shadow:0 0 0 3px rgba(53,196,139,.14)!important;
+    }
+    html[data-theme="dark"] .未開始,
+    html[data-theme="dark"] .editable-status.未開始,
+    html[data-theme="dark"] .editable-status.未開始:hover{
+      background:#4a2430!important;
+      color:#ffb6c3!important;
+    }
+    html[data-theme="dark"] .執行中,
+    html[data-theme="dark"] .editable-status.執行中,
+    html[data-theme="dark"] .editable-status.執行中:hover{
+      background:#473719!important;
+      color:#ffd36b!important;
+    }
+    html[data-theme="dark"] .過稿中,
+    html[data-theme="dark"] .editable-status.過稿中,
+    html[data-theme="dark"] .editable-status.過稿中:hover{
+      background:#17364a!important;
+      color:#9bdcff!important;
+    }
+    html[data-theme="dark"] .已完成,
+    html[data-theme="dark"] .editable-status.已完成,
+    html[data-theme="dark"] .editable-status.已完成:hover{
+      background:#173d2d!important;
+      color:#8ee8b6!important;
+    }
+    html[data-theme="dark"] .已取消,
+    html[data-theme="dark"] .editable-status.已取消,
+    html[data-theme="dark"] .editable-status.已取消:hover{
+      background:#303a36!important;
+      color:#c1cbc6!important;
+    }
+    html[data-theme="dark"] .kpi.status-未開始{background:#37242b!important;border-color:#6b3947!important}
+    html[data-theme="dark"] .kpi.status-執行中{background:#362d1b!important;border-color:#765f2d!important}
+    html[data-theme="dark"] .kpi.status-過稿中{background:#1a3040!important;border-color:#315d78!important}
+    html[data-theme="dark"] .kpi.status-已完成{background:#1a3529!important;border-color:#376e52!important}
+    html[data-theme="dark"] .kpi.status-未開始 b,
+    html[data-theme="dark"] .kpi.status-未開始 span{color:#ffb6c3!important}
+    html[data-theme="dark"] .kpi.status-執行中 b,
+    html[data-theme="dark"] .kpi.status-執行中 span{color:#ffd36b!important}
+    html[data-theme="dark"] .kpi.status-過稿中 b,
+    html[data-theme="dark"] .kpi.status-過稿中 span{color:#9bdcff!important}
+    html[data-theme="dark"] .kpi.status-已完成 b,
+    html[data-theme="dark"] .kpi.status-已完成 span{color:#8ee8b6!important}
+    html[data-theme="dark"] .pill-type,
+    html[data-theme="dark"] .pill-type-平面{
+      background:#442832!important;
+      color:#ffb2cb!important;
+      border-color:#704659!important;
+    }
+    html[data-theme="dark"] .pill-type-影音,
+    html[data-theme="dark"] .pill-stage-提案{
+      background:#1e3448!important;
+      color:#acd9ff!important;
+      border-color:#3b5f79!important;
+    }
+    html[data-theme="dark"] .pill-type-採購,
+    html[data-theme="dark"] .pill-stage-印刷{
+      background:#41351e!important;
+      color:#ffd98a!important;
+      border-color:#756035!important;
+    }
+    html[data-theme="dark"] .pill-stage,
+    html[data-theme="dark"] .pill-stage-前製{
+      background:#302b4a!important;
+      color:#cbbdff!important;
+      border-color:#514779!important;
+    }
+    html[data-theme="dark"] .pill-stage-拍攝{
+      background:#472836!important;
+      color:#ffb6cf!important;
+      border-color:#77475e!important;
+    }
+    html[data-theme="dark"] .pill-stage-後製{
+      background:#1d3b2c!important;
+      color:#9fe8bd!important;
+      border-color:#3d6d52!important;
+    }
+    html[data-theme="dark"] .pill-stage-結案{
+      background:#2c3733!important;
+      color:#c6d1cc!important;
+      border-color:#465851!important;
+    }
+    html[data-theme="dark"] .barbox,
+    html[data-theme="dark"] #casesSection .case-timeline-panel .barbox{
+      background:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--day-width,44px) - 1px),rgba(168,184,177,.13) calc(var(--day-width,44px) - 1px),rgba(168,184,177,.13) var(--day-width,44px))!important;
+    }
+    html[data-theme="dark"] .scale-tick,
+    html[data-theme="dark"] #casesSection .case-timeline-panel .scale-tick,
+    html[data-theme="dark"] #casesSection .case-sticky-timeline-head .scale-tick{
+      background:rgba(168,184,177,.16)!important;
+    }
+    html[data-theme="dark"] .today-band{background:rgba(77,183,255,.18)!important}
+    html[data-theme="dark"] .holiday-band{background:rgba(168,184,177,.11)!important}
+    html[data-theme="dark"] .timeline-project,
+    html[data-theme="dark"] .barlabel{
+      color:#11211b!important;
+    }
+    html[data-theme="dark"] .submit-overlay,
+    html[data-theme="dark"] .login-modal{
+      background:rgba(10,16,14,.58)!important;
+    }
+    html[data-theme="dark"] .submit-card{
+      background:#22302b!important;
+      color:#35c48b!important;
+      border-color:#39775f!important;
+    }
+    html[data-theme="dark"] .submit-overlay.login-pending .submit-message,
+    html[data-theme="dark"] .submit-quote{
+      color:#dce9e4!important;
+    }
+    /* Dark theme contrast and component completion. */
+    html[data-theme="dark"]{
+      --bg:#0f1714;
+      --panel:#18241f;
+      --line:#34463e;
+      --shadow:0 18px 42px rgba(0,0,0,.30);
+    }
+    html[data-theme="dark"] body,
+    html[data-theme="dark"] html{
+      background:#0f1714!important;
+    }
+    html[data-theme="dark"] body{
+      background:linear-gradient(180deg,#14201b 0%,#0f1714 48%,#0c1311 100%)!important;
+    }
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .help{
+      background:#18241f!important;
+      border-color:#34463e!important;
+      box-shadow:0 18px 42px rgba(0,0,0,.24)!important;
+    }
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] .request-card .form select,
+    html[data-theme="dark"] .batch-request-list select,
+    html[data-theme="dark"] #batchStatus,
+    html[data-theme="dark"] #batchDetails,
+    html[data-theme="dark"] .overview-filters select{
+      -webkit-appearance:none!important;
+      appearance:none!important;
+      background-repeat:no-repeat!important;
+      background-position:right 11px center!important;
+      background-size:18px 18px!important;
+      padding-right:38px!important;
+    }
+    html[data-theme="dark"] #modifyRecent,
+    html[data-theme="dark"] #modifyRecent .modify-fixed,
+    html[data-theme="dark"] #modifyRecent .modify-scroll,
+    html[data-theme="dark"] #modifyRecent table{
+      background:#16211d!important;
+      border-color:#34463e!important;
+    }
+    html[data-theme="dark"] #modifyRecent .modify-fixed{
+      border-right-color:#41564c!important;
+    }
+    html[data-theme="dark"] #modifyRecent th,
+    html[data-theme="dark"] #modifyRecent th.recent-subject,
+    html[data-theme="dark"] #modifyRecent th.recent-actions{
+      background:#1c2a24!important;
+      color:#d8e5df!important;
+      border-color:#3a4d44!important;
+    }
+    html[data-theme="dark"] #modifyRecent td{
+      color:#e5eee9!important;
+      border-color:#304139!important;
+    }
+    html[data-theme="dark"] #modifyRecent tbody tr:nth-child(odd){background:#18241f!important}
+    html[data-theme="dark"] #modifyRecent tbody tr:nth-child(even){background:#1b2923!important}
+    html[data-theme="dark"] #modifyRecent tbody tr:hover{background:#24362e!important}
+    html[data-theme="dark"] #modifyRecent .recent-subject button,
+    html[data-theme="dark"] #casesSection .case-table-wrap td.sticky-subject button,
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .mail-compose-btn{
+      background:#1d4938!important;
+      color:#a4e7c3!important;
+      border-color:#397158!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #modifyRecent .recent-subject button:hover,
+    html[data-theme="dark"] #casesSection .case-table-wrap td.sticky-subject button:hover,
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .mail-compose-btn:hover{
+      background:#285d48!important;
+      color:#c5f2d9!important;
+      border-color:#4b8d6e!important;
+    }
+    html[data-theme="dark"] #modifyRecent .recent-actions .row-actions button,
+    html[data-theme="dark"] #casesSection .case-table-wrap td.sticky-actions .row-actions button,
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .row-actions button{
+      background:#4a3b1f!important;
+      color:#f2cd79!important;
+      border-color:#77602f!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #modifyRecent .recent-actions .row-actions button:hover,
+    html[data-theme="dark"] #casesSection .case-table-wrap td.sticky-actions .row-actions button:hover,
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .row-actions button:hover{
+      background:#5b4825!important;
+      color:#ffe09a!important;
+      border-color:#94763c!important;
+    }
+    html[data-theme="dark"] #casesSection .case-table-wrap th,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head th,
+    html[data-theme="dark"] #casesSection .case-sticky-head{
+      background:#1a2822!important;
+      color:#dce8e2!important;
+      border-color:#3b4f46!important;
+    }
+    html[data-theme="dark"] #casesSection .sort-btn{
+      color:#dce8e2!important;
+      text-decoration:none!important;
+    }
+    html[data-theme="dark"] .case-id-btn,
+    html[data-theme="dark"] #casesSection .case-id-btn,
+    html[data-theme="dark"] #modifyRecent .case-id-btn,
+    html[data-theme="dark"] #caseDetailModal .case-id-btn{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      min-height:26px!important;
+      padding:4px 8px!important;
+      border-radius:7px!important;
+      background:#12382c!important;
+      color:#83e3b1!important;
+      border:1px solid #2c6b51!important;
+      box-shadow:inset 0 0 0 1px rgba(131,227,177,.04)!important;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      line-height:1!important;
+      text-decoration:none!important;
+    }
+    html[data-theme="dark"] .case-id-btn:hover,
+    html[data-theme="dark"] #casesSection .case-id-btn:hover,
+    html[data-theme="dark"] #modifyRecent .case-id-btn:hover{
+      background:#194a39!important;
+      color:#b6f2d1!important;
+      border-color:#428568!important;
+      text-decoration:none!important;
+    }
+    html[data-theme="dark"] #casesSection .editable-field.detail-edit{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      min-height:27px!important;
+      padding:4px 9px!important;
+      border-radius:999px!important;
+      background:#28362f!important;
+      color:#d4e1db!important;
+      border:1px solid #45594f!important;
+    }
+    html[data-theme="dark"] #casesSection .status,
+    html[data-theme="dark"] #casesSection .editable-status{
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-card{
+      background:linear-gradient(180deg,#1a2721 0%,#16211d 100%)!important;
+      border-color:#3b4d45!important;
+      box-shadow:0 26px 70px rgba(0,0,0,.46)!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-head h3,
+    html[data-theme="dark"] #caseDetailModal .case-detail-section-label h4{
+      color:#f0f7f3!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-head p,
+    html[data-theme="dark"] #caseDetailModal .case-detail-section-label p{
+      color:#9bada5!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-close{
+      background:#24332c!important;
+      color:#e3ede8!important;
+      border-color:#40534a!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-section{
+      border-color:#304139!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-section-label::after{
+      border-color:#43574e!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-title-icon,
+    html[data-theme="dark"] #caseDetailModal .case-detail-step-icon{
+      background:#173b2f!important;
+      color:#75d6a4!important;
+      border-color:#2f6650!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-row{
+      background:transparent!important;
+      border-color:transparent!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-row b{
+      color:#7dd7ab!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-value{
+      background:#111b17!important;
+      color:#e7f0eb!important;
+      border-color:#3a4c43!important;
+      box-shadow:0 1px 2px rgba(0,0,0,.18)!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-id{
+      display:inline-flex!important;
+      align-items:center!important;
+      min-height:24px!important;
+      padding:4px 8px!important;
+      border-radius:7px!important;
+      background:#12382c!important;
+      color:#83e3b1!important;
+      border:1px solid #2c6b51!important;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace!important;
+      font-size:12px!important;
+      font-weight:900!important;
+      line-height:1!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-inline-edit{
+      background:transparent!important;
+      color:#e7f0eb!important;
+      border:0!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-value .editable-field.detail-edit{
+      background:#26352e!important;
+      color:#d9e5df!important;
+      border-color:#45594f!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions{
+      background:#121c18!important;
+      border-color:#304139!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .case-detail-close-action{
+      background:#28332e!important;
+      color:#cbd7d1!important;
+      border-color:#46564f!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .case-detail-close-action:hover{
+      background:#34423b!important;
+      color:#eef5f1!important;
+      border-color:#5a6e64!important;
+    }
+    html[data-theme="dark"] #casesSection .revision-pill.revision-add,
+    html[data-theme="dark"] #caseDetailModal .revision-pill.revision-add{
+      background:#26352e!important;
+      color:#b9ccc3!important;
+      border-color:#45594f!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #casesSection .revision-pill.revision-add:hover,
+    html[data-theme="dark"] #caseDetailModal .revision-pill.revision-add:hover{
+      background:#34473e!important;
+      color:#edf5f1!important;
+      border-color:#5a7367!important;
+    }
+    /* Neutral black dark theme. */
+    html[data-theme="dark"]{
+      --bg:#050505;
+      --panel:#121315;
+      --ink:#eeeeef;
+      --muted:#9da1a5;
+      --line:#35383c;
+      --green:#7fa993;
+      --green-dark:#6f9582;
+      --green2:#202522;
+      --shadow:0 20px 48px rgba(0,0,0,.42);
+    }
+    html[data-theme="dark"] body,
+    html[data-theme="dark"] html{
+      background:#050505!important;
+      color:#eeeeef!important;
+    }
+    html[data-theme="dark"] body{
+      background:linear-gradient(180deg,#111214 0%,#090a0b 45%,#030303 100%)!important;
+    }
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .help,
+    html[data-theme="dark"] .request-card{
+      background:#121315!important;
+      border-color:#34373a!important;
+      box-shadow:0 20px 48px rgba(0,0,0,.34)!important;
+    }
+    html[data-theme="dark"] .card::before{
+      background:linear-gradient(90deg,#3b3e41,#55595c)!important;
+    }
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select,
+    html[data-theme="dark"] textarea,
+    html[data-theme="dark"] .request-card .form input,
+    html[data-theme="dark"] .request-card .form select,
+    html[data-theme="dark"] .multi-filter summary{
+      background-color:#0d0e10!important;
+      color:#e7e8e9!important;
+      border-color:#3b3e42!important;
+    }
+    html[data-theme="dark"] .designer-card,
+    html[data-theme="dark"] .kpi,
+    html[data-theme="dark"] .batch-request-list li,
+    html[data-theme="dark"] .detail-options,
+    html[data-theme="dark"] .detail-options label,
+    html[data-theme="dark"] .column-toggle{
+      background:#17181a!important;
+      border-color:#383b3f!important;
+      color:#e2e3e4!important;
+    }
+    html[data-theme="dark"] .designer-help-info,
+    html[data-theme="dark"] .request-help-info,
+    html[data-theme="dark"] .collapse-toggle,
+    html[data-theme="dark"] .designer-help-info:hover,
+    html[data-theme="dark"] .request-help-info:hover,
+    html[data-theme="dark"] .collapse-toggle:hover,
+    html[data-theme="dark"] .designer-help-info:focus-visible,
+    html[data-theme="dark"] .request-help-info:focus-visible,
+    html[data-theme="dark"] .collapse-toggle:focus-visible{
+      background:transparent!important;
+      color:#b8bdc1!important;
+      border:1px solid #5a5f63!important;
+      box-shadow:none!important;
+      outline:none!important;
+    }
+    html[data-theme="dark"] .designer-help-info:hover,
+    html[data-theme="dark"] .request-help-info:hover,
+    html[data-theme="dark"] .collapse-toggle:hover,
+    html[data-theme="dark"] .designer-help-info:focus-visible,
+    html[data-theme="dark"] .request-help-info:focus-visible,
+    html[data-theme="dark"] .collapse-toggle:focus-visible{
+      color:#f1f2f2!important;
+      border-color:#858b90!important;
+    }
+    html[data-theme="dark"] .designer-help-popover,
+    html[data-theme="dark"] .request-help-popover,
+    html[data-theme="dark"] .designer-marquee,
+    html[data-theme="dark"] .field-popover,
+    html[data-theme="dark"] .multi-panel,
+    html[data-theme="dark"] .column-popover,
+    html[data-theme="dark"] .notification-popover,
+    html[data-theme="dark"] .account-dropdown{
+      background:#151618!important;
+      color:#dedfe1!important;
+      border-color:#414449!important;
+      box-shadow:0 22px 48px rgba(0,0,0,.48)!important;
+    }
+    html[data-theme="dark"] .designer-marquee::before,
+    html[data-theme="dark"] .revision-tooltip::before{
+      background:#151618!important;
+      border-color:#414449!important;
+    }
+    html[data-theme="dark"] .field-popover h3,
+    html[data-theme="dark"] .designer-help-popover b,
+    html[data-theme="dark"] .request-help-popover b{
+      color:#f0f0f1!important;
+    }
+    html[data-theme="dark"] .field-popover button.option,
+    html[data-theme="dark"] .field-popover label.option,
+    html[data-theme="dark"] .field-popover .mail-option-list button,
+    html[data-theme="dark"] .multi-panel label{
+      background:#1d1e21!important;
+      color:#d9dbdd!important;
+      border-color:#414449!important;
+    }
+    html[data-theme="dark"] .field-popover button.option:hover,
+    html[data-theme="dark"] .field-popover button.option.active,
+    html[data-theme="dark"] .field-popover .mail-option-list button:hover,
+    html[data-theme="dark"] .multi-panel label:hover{
+      background:#292b2e!important;
+      color:#f1f2f3!important;
+      border-color:#5b5f64!important;
+    }
+    html[data-theme="dark"] .new-project-card,
+    html[data-theme="dark"] .revision-modal-card,
+    html[data-theme="dark"] .issue-report-card,
+    html[data-theme="dark"] .designer-settings-card,
+    html[data-theme="dark"] .login-card,
+    html[data-theme="dark"] .request-guide-card{
+      background:linear-gradient(180deg,#17181a 0%,#101113 100%)!important;
+      color:#e9eaeb!important;
+      border-color:#414449!important;
+      box-shadow:0 28px 76px rgba(0,0,0,.58)!important;
+    }
+    html[data-theme="dark"] .new-project-head h3,
+    html[data-theme="dark"] .revision-modal-head h3,
+    html[data-theme="dark"] .issue-report-card h3,
+    html[data-theme="dark"] .designer-settings-head h3,
+    html[data-theme="dark"] .login-card h3{
+      color:#f1f2f3!important;
+    }
+    html[data-theme="dark"] .new-project-form label,
+    html[data-theme="dark"] .issue-report-card label,
+    html[data-theme="dark"] .designer-settings-card label{
+      color:#c7c9cc!important;
+    }
+    html[data-theme="dark"] .new-project-head button,
+    html[data-theme="dark"] .new-project-actions button,
+    html[data-theme="dark"] .issue-report-actions button,
+    html[data-theme="dark"] .designer-settings-card .login-actions button,
+    html[data-theme="dark"] .request-guide-card .login-actions button,
+    html[data-theme="dark"] .login-card .login-actions button{
+      background:#242629!important;
+      color:#c9cccf!important;
+      border:1px solid #494d51!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .new-project-actions button[type="submit"],
+    html[data-theme="dark"] .issue-report-actions button[type="submit"],
+    html[data-theme="dark"] .designer-settings-card .login-actions button[type="submit"]{
+      background:#2b312e!important;
+      color:#c4cdc8!important;
+      border-color:#4b5650!important;
+    }
+    html[data-theme="dark"] .new-project-head button:hover,
+    html[data-theme="dark"] .new-project-actions button:hover,
+    html[data-theme="dark"] .issue-report-actions button:hover,
+    html[data-theme="dark"] .designer-settings-card .login-actions button:hover,
+    html[data-theme="dark"] .request-guide-card .login-actions button:hover,
+    html[data-theme="dark"] .login-card .login-actions button:hover{
+      background:#303236!important;
+      color:#f0f1f2!important;
+      border-color:#62676c!important;
+    }
+    html[data-theme="dark"] .revision-modal-item,
+    html[data-theme="dark"] .revision-modal-empty{
+      background:#1a1b1e!important;
+      color:#d6d8da!important;
+      border-color:#3e4145!important;
+    }
+    html[data-theme="dark"] .revision-modal-content,
+    html[data-theme="dark"] .revision-tooltip-title,
+    html[data-theme="dark"] .revision-tooltip-content{
+      color:#e0e1e3!important;
+    }
+    html[data-theme="dark"] .revision-modal-meta,
+    html[data-theme="dark"] .revision-tooltip-meta{
+      color:#a7aaae!important;
+    }
+    html[data-theme="dark"] .revision-tooltip{
+      background:#151618!important;
+      color:#dedfe1!important;
+      border-color:#414449!important;
+      box-shadow:0 22px 48px rgba(0,0,0,.48)!important;
+    }
+    html[data-theme="dark"] .submit-overlay,
+    html[data-theme="dark"] .login-modal{
+      background:rgba(0,0,0,.72)!important;
+    }
+    html[data-theme="dark"] .submit-card{
+      background:#17181a!important;
+      color:#cfd2d4!important;
+      border-color:#44474b!important;
+    }
+    html[data-theme="dark"] .request-card #submitBtn,
+    html[data-theme="dark"] .request-card #submitBtn:hover{
+      background:#26312c!important;
+      color:#b8c9c0!important;
+      border:1px solid #46554d!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .request-help-actions .request-project-btn[data-kind="平面"],
+    html[data-theme="dark"] .request-help-actions .request-project-btn[data-kind="平面"]:hover{
+      background:#242a27!important;
+      color:#b7c5be!important;
+      border-color:#454d49!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] .request-help-actions .request-project-btn[data-kind="影音"],
+    html[data-theme="dark"] .request-help-actions .request-project-btn[data-kind="影音"]:hover{
+      background:#22272d!important;
+      color:#b3c0cd!important;
+      border-color:#434b54!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #modifyRecent,
+    html[data-theme="dark"] #modifyRecent .modify-fixed,
+    html[data-theme="dark"] #modifyRecent .modify-scroll,
+    html[data-theme="dark"] #modifyRecent table{
+      background:#101113!important;
+      border-color:#35383c!important;
+    }
+    html[data-theme="dark"] #modifyRecent th,
+    html[data-theme="dark"] #modifyRecent th.recent-subject,
+    html[data-theme="dark"] #modifyRecent th.recent-actions{
+      background:#1b1c1f!important;
+      color:#dadcdf!important;
+      border-color:#3c3f43!important;
+    }
+    html[data-theme="dark"] #modifyRecent tbody tr:nth-child(odd),
+    html[data-theme="dark"] #casesSection .case-table-wrap tbody tr:nth-child(odd){background:#131416!important}
+    html[data-theme="dark"] #modifyRecent tbody tr:nth-child(even),
+    html[data-theme="dark"] #casesSection .case-table-wrap tbody tr:nth-child(even){background:#191a1d!important}
+    html[data-theme="dark"] #modifyRecent tbody tr:hover,
+    html[data-theme="dark"] #casesSection .case-table-wrap tbody tr:hover{background:#232529!important}
+    html[data-theme="dark"] #casesSection .case-table-wrap th,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head th,
+    html[data-theme="dark"] #casesSection .case-sticky-head,
+    html[data-theme="dark"] #casesSection .case-sticky-timeline-head,
+    html[data-theme="dark"] #casesSection .case-sticky-timeline-head .timeline-scale,
+    html[data-theme="dark"] #casesSection .case-timeline-panel .timeline-scale{
+      background:#1b1c1f!important;
+      color:#dadcdf!important;
+      border-color:#3c3f43!important;
+    }
+    html[data-theme="dark"] #casesSection .sort-btn{color:#dadcdf!important}
+    html[data-theme="dark"] .未開始,
+    html[data-theme="dark"] .editable-status.未開始,
+    html[data-theme="dark"] #casesSection .status.未開始,
+    html[data-theme="dark"] #casesSection .editable-status.未開始,
+    html[data-theme="dark"] .field-popover .status-option.未開始{
+      background:#342125!important;color:#dba0aa!important;border-color:#633f47!important;
+    }
+    html[data-theme="dark"] .執行中,
+    html[data-theme="dark"] .editable-status.執行中,
+    html[data-theme="dark"] #casesSection .status.執行中,
+    html[data-theme="dark"] #casesSection .editable-status.執行中,
+    html[data-theme="dark"] .field-popover .status-option.執行中{
+      background:#342d20!important;color:#d3b97f!important;border-color:#5f5135!important;
+    }
+    html[data-theme="dark"] .過稿中,
+    html[data-theme="dark"] .editable-status.過稿中,
+    html[data-theme="dark"] #casesSection .status.過稿中,
+    html[data-theme="dark"] #casesSection .editable-status.過稿中,
+    html[data-theme="dark"] .field-popover .status-option.過稿中{
+      background:#202c35!important;color:#94b7cc!important;border-color:#3b5566!important;
+    }
+    html[data-theme="dark"] .已完成,
+    html[data-theme="dark"] .editable-status.已完成,
+    html[data-theme="dark"] #casesSection .status.已完成,
+    html[data-theme="dark"] #casesSection .editable-status.已完成,
+    html[data-theme="dark"] .field-popover .status-option.已完成{
+      background:#203029!important;color:#93b9a7!important;border-color:#3f5d50!important;
+    }
+    html[data-theme="dark"] .已取消,
+    html[data-theme="dark"] .editable-status.已取消,
+    html[data-theme="dark"] #casesSection .status.已取消,
+    html[data-theme="dark"] #casesSection .editable-status.已取消,
+    html[data-theme="dark"] .field-popover .status-option.已取消{
+      background:#292b2e!important;color:#afb2b6!important;border-color:#4a4d52!important;
+    }
+    html[data-theme="dark"] .暫停中,
+    html[data-theme="dark"] .editable-status.暫停中,
+    html[data-theme="dark"] #casesSection .status.暫停中,
+    html[data-theme="dark"] #casesSection .editable-status.暫停中,
+    html[data-theme="dark"] .field-popover .status-option.暫停中{
+      background:#2a2834!important;color:#b5aec6!important;border-color:#504b62!important;
+    }
+    html[data-theme="dark"] .kpi.status-未開始{background:#2a1d20!important;border-color:#593940!important}
+    html[data-theme="dark"] .kpi.status-執行中{background:#2b261c!important;border-color:#55472f!important}
+    html[data-theme="dark"] .kpi.status-過稿中{background:#1b252c!important;border-color:#344b5a!important}
+    html[data-theme="dark"] .kpi.status-已完成{background:#1b2822!important;border-color:#395347!important}
+    html[data-theme="dark"] .kpi.status-未開始 b,
+    html[data-theme="dark"] .kpi.status-未開始 span{color:#d39aa4!important}
+    html[data-theme="dark"] .kpi.status-執行中 b,
+    html[data-theme="dark"] .kpi.status-執行中 span{color:#cbb37d!important}
+    html[data-theme="dark"] .kpi.status-過稿中 b,
+    html[data-theme="dark"] .kpi.status-過稿中 span{color:#8fadc0!important}
+    html[data-theme="dark"] .kpi.status-已完成 b,
+    html[data-theme="dark"] .kpi.status-已完成 span{color:#8daf9f!important}
+    html[data-theme="dark"] #caseDetailModal .case-detail-card{
+      background:linear-gradient(180deg,#18191b 0%,#101113 100%)!important;
+      border-color:#414449!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-value{
+      background:#0d0e10!important;
+      border-color:#3b3e42!important;
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions{
+      background:#0b0c0d!important;
+      border-color:#34373a!important;
+    }
+    #casesSection .case-table-wrap th,
+    #casesSection .case-sticky-list-head,
+    #casesSection .case-sticky-list-head table,
+    #casesSection .case-sticky-list-head thead,
+    #casesSection .case-sticky-list-head tr,
+    #casesSection .case-sticky-list-head th,
+    html[data-theme="dark"] #casesSection .case-table-wrap th,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head table,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head thead,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head tr,
+    html[data-theme="dark"] #casesSection .case-sticky-list-head th{
+      background:transparent!important;
+      background-color:transparent!important;
+      box-shadow:none!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-未開始{
+      background:#5a343c!important;
+      border:1px solid #774751!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-執行中{
+      background:#5b4b2e!important;
+      border:1px solid #78633c!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-過稿中{
+      background:#304958!important;
+      border:1px solid #45677a!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-已完成{
+      background:#30493d!important;
+      border:1px solid #466957!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-已取消{
+      background:#414449!important;
+      border:1px solid #5b5f65!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-暫停中{
+      background:#464154!important;
+      border:1px solid #625b76!important;
+    }
+    html[data-theme="dark"] #casesSection .bar .timeline-project{
+      color:#f0f0f1!important;
+      text-shadow:0 1px 1px rgba(0,0,0,.28)!important;
+    }
+    html[data-theme="dark"] .sheet-sync-card,
+    html[data-theme="dark"] .sheet-sync-card .syncbar,
+    html[data-theme="dark"] .sheet-sync-card .syncstatus{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+    }
+    @media(max-width:640px){
+      html[data-theme="dark"] tr{
+        background:#22302b!important;
+        border-color:var(--line)!important;
+        box-shadow:0 10px 24px rgba(0,0,0,.22)!important;
+      }
+      .account-menu{
+        gap:9px!important;
+      }
+      .theme-toggle{
+        width:44px!important;
+      }
+      .theme-toggle-track{
+        width:42px;
+        height:24px;
+      }
+      .theme-toggle-thumb{
+        width:18px;
+        height:18px;
+      }
+      html[data-theme="dark"] .theme-toggle-thumb{
+        transform:translateX(18px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -3336,6 +4434,14 @@
   <div class="title-row"><h1>設計需求系統 v4.0</h1><button type="button" class="issue-report-btn" id="issueReportOpen">問題回報</button></div>
   <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊發信 → Step4.寄送需求信件</p>
   <div class="account-menu" id="accountMenu">
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="切換深色模式" aria-pressed="false" title="切換深色模式">
+      <span class="theme-toggle-track" aria-hidden="true">
+        <span class="theme-toggle-thumb">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.8"/><path d="M12 2.8v2.3M12 18.9v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.8 12h2.3M18.9 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"/></svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24"><path d="M19.2 15.6A7.4 7.4 0 0 1 8.4 4.8 8 8 0 1 0 19.2 15.6Z"/></svg>
+        </span>
+      </span>
+    </button>
     <button type="button" class="account-bell" id="accountBell" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 18.4h7.6"/><path d="M10.2 20.2c.4.5 1 .8 1.8.8s1.4-.3 1.8-.8"/><path d="M6.8 16.8h10.4c.8 0 1.2-.9.7-1.5l-.8-1V10a5.1 5.1 0 0 0-10.2 0v4.3l-.8 1c-.5.6-.1 1.5.7 1.5Z"/><path d="M12 4.2V3"/></svg><span class="account-bell-badge" id="accountBellBadge" hidden>0</span></button>
     <button type="button" class="account-trigger" id="loginBtn" aria-haspopup="menu" aria-expanded="false">
       <span class="account-avatar" id="accountAvatar">登</span>
@@ -3913,11 +5019,12 @@ function reorderVisibleColumn(fromKey,toKey){if(!fromKey||!toKey||fromKey===toKe
 function settingFlagValue(flags,key,header){return [key,header,...(settingsColumnHeaderAliasesByKey[key]||[])].map(name=>flags[name]).find(value=>value!==undefined)}
 function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>settingFlagValue(flags,key,header)!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=settingFlagValue(flags,key,header); return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
 function remoteDisplaySettings(settings){if(!settings)return null; const readFlag=(keys)=>{for(const key of keys){const value=settings[key]??settings.displaySettings?.[key]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); if(value===false||text==='x'||text==='false'||text==='0'||text==='no'||text==='off')return false; return value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'} return null}; const select=readFlag(['selectEnabled','選擇','editEnabled','編輯']), timeline=readFlag(['timelineEnabled','時間表']); return select===null&&timeline===null?null:{editEnabled:select??true,timelineEnabled:timeline??true}}
+function remoteTheme(settings){const value=String(settings?.theme??settings?.['深淺模式']??'').trim().toLowerCase(); if(value==='dark'||value==='深色'||value==='深色模式')return 'dark'; if(value==='light'||value==='淺色'||value==='淺色模式')return 'light'; return ''}
 function remoteCollapseSettings(settings){if(!settings)return null; const map={designer:['collapseDesigner','收合設計師專長與案件分配'],recent:['collapseRecent','收合最新案件列表'],request:['collapseRequest','收合設計需求']}, result={}; let found=false; Object.entries(map).forEach(([key,names])=>{for(const name of names){const value=settings.collapseSettings?.[key]??settings[name]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); result[key]=value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'; found=true; break}}); return found?{...readCollapseSettingsForAccount(),...result}:null}
 function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/管理者|admin/i.test(text))return '管理者'; if(/平面/.test(text))return '平面'; if(/影音|影像|影片|video/i.test(text))return '影音'; return ''}
 function remoteDesignGroup(settings){return normalizeDesignGroup(settings?.designType||settings?.['設計類型']||settings?.designGroup)}
 function remoteDisplayName(settings){return String(settings?.name||settings?.['名字']||settings?.['設計師名字']||'').trim()}
-function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return; sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
+function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return; const theme=currentTheme(); sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,theme,'深淺模式':theme==='dark'?'深色':'淺色',collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
 function saveVisibleColumnsForAccount(message='個人設定已儲存'){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount(message)}
 function saveDisplaySettingsForAccount(){writeCache(accountStorageKey(displaySettingsKey),displaySettings); saveRemoteSettingsForAccount()}
 function saveCollapseSettingsForAccount(){writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); saveRemoteSettingsForAccount('收合設定已儲存')}
@@ -3929,7 +5036,7 @@ function normalizeFilterDesigner(value){const text=String(value||'').trim(); ret
 function normalizeFilterYear(value){const year=String(value||'').match(/(19\d{2}|20\d{2}|2100)/)?.[1]||''; return year}
 function normalizeRemoteFilterList(settings,headers,normalizer=value=>value){return unique(headers.flatMap(header=>splitSettingList(settings?.[header]).map(normalizer)))}
 function remoteFilterSettings(settings){if(!settings)return null; const headers=['篩選年份','篩選月份','篩選狀態','篩選姓名']; const hasHeaders=headers.some(header=>Object.prototype.hasOwnProperty.call(settings,header)); if(!hasHeaders)return null; return {year:normalizeRemoteFilterList(settings,['篩選年份'],normalizeFilterYear),month:normalizeRemoteFilterList(settings,['篩選月份'],canonicalMonth),status:normalizeRemoteFilterList(settings,['篩選狀態'],normalizeStatus),designer:normalizeRemoteFilterList(settings,['篩選姓名'],normalizeFilterDesigner)}}
-function applyAccountSettingsIfNeeded(remoteSettings=null){const key=accountStorageId(), accountChanged=activeSettingsAccount!==key; if(accountChanged){activeSettingsAccount=key; visibleColumns=readVisibleColumnsForAccount(); caseColumnWidths=readCache(accountStorageKey(caseColumnWidthsKey),{})||{}; displaySettings=readDisplaySettingsForAccount(); collapseSettings=readCollapseSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount()} const remoteColumns=remoteVisibleColumns(remoteSettings), remoteDisplay=remoteDisplaySettings(remoteSettings), remoteCollapse=remoteCollapseSettings(remoteSettings), remoteFilters=remoteFilterSettings(remoteSettings), remoteGroup=remoteDesignGroup(remoteSettings), remoteName=remoteDisplayName(remoteSettings); let sessionChanged=false; if(remoteName&&remoteName!==currentEditor){currentEditor=remoteName; sessionChanged=true} if(remoteGroup&&remoteGroup!==currentEditorGroup){currentEditorGroup=remoteGroup; sessionChanged=true} if(sessionChanged)persistEditorSession(); if(remoteColumns){visibleColumns=remoteColumns; writeCache(accountStorageKey(visibleColumnsKey),visibleColumns)} if(remoteDisplay){displaySettings=remoteDisplay; writeCache(accountStorageKey(displaySettingsKey),displaySettings)} if(remoteCollapse){collapseSettings=remoteCollapse; writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); renderCollapsibleSections()} if(remoteFilters){accountFilterSettings={...accountFilterSettings,...remoteFilters}; writeCache(accountStorageKey(filterSettingsKey),accountFilterSettings)} if(accountChanged||remoteColumns||remoteDisplay||remoteCollapse||remoteFilters||remoteGroup||remoteName){accountSettingsJustApplied=true; columnControlsRenderedKey=''; yearFilterInitialized=false; monthFilterInitialized=false; renderCollapsibleSections(); if($('#q'))$('#q').value=accountFilterSettings.q||''}}
+function applyAccountSettingsIfNeeded(remoteSettings=null){const key=accountStorageId(), accountChanged=activeSettingsAccount!==key; if(accountChanged){activeSettingsAccount=key; visibleColumns=readVisibleColumnsForAccount(); caseColumnWidths=readCache(accountStorageKey(caseColumnWidthsKey),{})||{}; displaySettings=readDisplaySettingsForAccount(); collapseSettings=readCollapseSettingsForAccount(); accountFilterSettings=readFilterSettingsForAccount()} const remoteColumns=remoteVisibleColumns(remoteSettings), remoteDisplay=remoteDisplaySettings(remoteSettings), remoteThemeSetting=remoteTheme(remoteSettings), remoteCollapse=remoteCollapseSettings(remoteSettings), remoteFilters=remoteFilterSettings(remoteSettings), remoteGroup=remoteDesignGroup(remoteSettings), remoteName=remoteDisplayName(remoteSettings); let sessionChanged=false; if(remoteName&&remoteName!==currentEditor){currentEditor=remoteName; sessionChanged=true} if(remoteGroup&&remoteGroup!==currentEditorGroup){currentEditorGroup=remoteGroup; sessionChanged=true} if(sessionChanged)persistEditorSession(); if(remoteColumns){visibleColumns=remoteColumns; writeCache(accountStorageKey(visibleColumnsKey),visibleColumns)} if(remoteDisplay){displaySettings=remoteDisplay; writeCache(accountStorageKey(displaySettingsKey),displaySettings)} if(remoteThemeSetting)applyTheme(remoteThemeSetting); if(remoteCollapse){collapseSettings=remoteCollapse; writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); renderCollapsibleSections()} if(remoteFilters){accountFilterSettings={...accountFilterSettings,...remoteFilters}; writeCache(accountStorageKey(filterSettingsKey),accountFilterSettings)} if(accountChanged||remoteColumns||remoteDisplay||remoteThemeSetting||remoteCollapse||remoteFilters||remoteGroup||remoteName){accountSettingsJustApplied=true; columnControlsRenderedKey=''; yearFilterInitialized=false; monthFilterInitialized=false; renderCollapsibleSections(); if($('#q'))$('#q').value=accountFilterSettings.q||''}}
 function subject(r){return `【${r.id}】${r.client}_${r.project}`}
 function designerEmail(row){
   const raw=String(row?.designer||'').trim();
@@ -4115,7 +5222,7 @@ function rowWriteAnchor(row){return {sheetRow:row.sheetRow||row._sheetRow||row.r
 function statusLabel(value){return value==='未開始'?'未執行':value}
 function caseInlineEdit(row,key,value,label=value){return canListEditRow(row)?`<button type="button" class="case-inline-edit" onclick="openCaseFieldEditor(event,'${jsArg(row.id)}','${jsArg(key)}')">${esc(label||'選擇')}</button>`:esc(label||'')}
 function caseDetailRows(row){return [
-  {label:'案件編號',value:row.id},
+  {label:'案件編號',html:`<span class="case-detail-id">${esc(row.id)}</span>`},
   {label:'月份',value:row.month},
   {label:'客戶別',value:row.client},
   {label:'專案名稱',value:row.project,wide:true},
@@ -4952,6 +6059,9 @@ function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButton
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; closeNotifications(); const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function closeNotifications(){const popover=$('#notificationPopover'), bell=$('#accountBell'); if(popover)popover.hidden=true; if(bell)bell.setAttribute('aria-expanded','false')}
+function currentTheme(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
+function applyTheme(theme,{save=true}={}){const next=theme==='dark'?'dark':'light'; document.documentElement.dataset.theme=next; const toggle=$('#themeToggle'), isDark=next==='dark'; if(toggle){toggle.setAttribute('aria-pressed',isDark?'true':'false'); toggle.setAttribute('aria-label',isDark?'切換淺色模式':'切換深色模式'); toggle.title=isDark?'切換淺色模式':'切換深色模式'} if(save)localStorage.setItem('designRequestThemeV1',next)}
+function toggleTheme(){applyTheme(currentTheme()==='dark'?'light':'dark'); saveRemoteSettingsForAccount('深淺模式已儲存')}
 function notificationReadKey(){return accountStorageKey('designRequestReadNotificationsV1')}
 function readNotificationIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(err){return new Set()}}
 function writeNotificationIds(ids){localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-300)))}
@@ -5960,6 +7070,7 @@ $('#batchClear').onclick=()=>{selectedCaseIds.clear(); render()};
 $('#batchStatus').addEventListener('change',()=>renderBatchControls());
 $('#batchDetails').addEventListener('change',()=>renderBatchControls());
 $('#loginBtn').onclick=event=>{event.stopPropagation(); toggleAccountMenu()};
+$('#themeToggle')?.addEventListener('click',event=>{event.stopPropagation(); toggleTheme()});
 $('#accountBell')?.addEventListener('click',event=>{event.stopPropagation(); toggleNotifications()});
 $('#notificationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-case-id]'); if(!item)return; event.preventDefault(); event.stopPropagation(); focusNotificationCase(item.dataset.caseId)});
 $('#loginCancel').onclick=()=>hideLoginModal();
@@ -5973,7 +7084,7 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
 </script>
 </body>
 </html>
