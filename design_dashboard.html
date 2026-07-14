@@ -378,10 +378,11 @@ function dashboardIdentity(){
   const designer=requestedDesigner();let saved={};
   try{saved=JSON.parse(localStorage.getItem('designDashboardIdentityV1')||'{}')||{}}catch(e){}
   const savedDesigner=normalizeDesigner(saved.designer||'');
-  const name=DESIGNERS.includes(designer)?designer:'凱曜';
+  const isAdmin=designer==='管理者'&&savedDesigner==='管理者'&&String(saved.group||'').trim()==='管理者';
+  const name=isAdmin?'管理者':(DESIGNERS.includes(designer)?designer:'凱曜');
   let returnUrl='';
   try{const candidate=new URL(saved.returnUrl||'',location.href),normalized=/design_request_web(?:\.html)?\/?$/i.test(candidate.pathname)?new URL('index.html',candidate):candidate,sameDesigner=savedDesigner===name,isRequestPage=!/design_dashboard(?:\.html)?\/?$/i.test(normalized.pathname);if(sameDesigner&&isRequestPage&&(location.protocol==='file:'||normalized.origin===location.origin))returnUrl=normalized.href}catch(e){}
-  return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
+  return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',authToken:savedDesigner===name?String(saved.authToken||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
 }
 const ACCOUNT_IDENTITY=dashboardIdentity();
 const REPORT_TODAY=new Date();
@@ -522,7 +523,7 @@ function taipeiDateParts(){
 }
 function todayAdminPassword(){const {month,day}=taipeiDateParts();return `${month}${day}`}
 function todayAdminToken(){const {year,month,day}=taipeiDateParts();return `local-admin:${year}${month}${day}`}
-function isDashboardAdmin(){return sessionStorage.getItem('designDashboardAdminTokenV1')===todayAdminToken()}
+function isDashboardAdmin(){return sessionStorage.getItem('designDashboardAdminTokenV1')===todayAdminToken()||(ACCOUNT_IDENTITY.group==='管理者'&&ACCOUNT_IDENTITY.authToken===todayAdminToken())}
 function dashboardSearchQuery(){return String($('dashboardSearch')?.value||'').trim().toLocaleLowerCase('zh-Hant')}
 function matchesDashboardSearch(row){
   const query=dashboardSearchQuery();
