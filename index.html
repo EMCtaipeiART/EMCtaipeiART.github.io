@@ -1186,6 +1186,62 @@
       object-position:center top!important;
       background:#fff!important;
     }
+    .avatar-frame.has-unread-story img{
+      box-shadow:0 0 0 3px #16a66a,0 0 0 6px rgba(22,166,106,.2)!important;
+    }
+    .designer-poster.story-playing{
+      width:min(300px,calc(100vw - 40px))!important;
+      background:#0b0f0d!important;
+    }
+    .designer-poster.story-playing .poster-image{
+      width:100%!important;
+      height:400px!important;
+      object-fit:contain!important;
+      object-position:center!important;
+      background:#0b0f0d!important;
+    }
+    .designer-story-progress{
+      position:absolute;
+      left:10px;
+      right:10px;
+      top:10px;
+      z-index:8;
+      display:flex;
+      gap:4px;
+      height:3px;
+      pointer-events:none;
+      filter:drop-shadow(0 1px 2px rgba(0,0,0,.42));
+    }
+    .designer-story-progress[hidden]{display:none!important}
+    .designer-story-progress-segment{
+      position:relative;
+      flex:1 1 0;
+      overflow:hidden;
+      border-radius:999px;
+      background:rgba(255,255,255,.35);
+    }
+    .designer-story-progress-segment::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:inherit;
+      background:#fff;
+      transform:scaleX(0);
+      transform-origin:left center;
+    }
+    .designer-story-progress-segment.is-complete::after{transform:scaleX(1)}
+    .designer-story-progress-segment.is-active::after{
+      animation:designerStoryProgress 10s linear forwards;
+    }
+    .designer-poster.story-playing .poster-speech{
+      opacity:0!important;
+      visibility:hidden!important;
+      animation:none!important;
+    }
+    @keyframes designerStoryProgress{
+      from{transform:scaleX(0)}
+      to{transform:scaleX(1)}
+    }
     .designer-setting-row{grid-template-columns:90px minmax(210px,.9fr) minmax(260px,1.1fr)!important}
     .designer-photo-tools{display:grid;gap:7px}
     .designer-photo-tools label{display:grid;gap:4px;color:#43524b;font-size:12px;font-weight:850}
@@ -1352,6 +1408,13 @@
         width:auto!important;
         height:320px!important;
         max-width:calc(100vw - 28px)!important;
+      }
+      .designer-poster.story-playing{
+        width:min(260px,calc(100vw - 28px))!important;
+      }
+      .designer-poster.story-playing .poster-image{
+        width:100%!important;
+        height:320px!important;
       }
       .designer-card:nth-child(3n+1) .designer-poster{
         left:0!important;
@@ -4985,7 +5048,7 @@
         <span>• 點擊設計師下方技能標籤，可自動帶入推薦的設計類型與階段。</span>
         <span>• 綠色表示目前案件量正常，可優先安排。</span>
         <span>• 紅色表示目前案件量較高，建議評估時程後再分派。</span>
-        <span>• 滑鼠移至頭像可查看設計師個人說明與專長。</span>
+        <span>• 點擊頭像可觀看限時動態與大海報，綠色頭像框代表有未讀動態。</span>
         <span>若不確定指派對象，可依技能標籤選擇系統推薦之設計師。</span>
       </div>
       <div class="designer-roster" id="designerRoster" aria-label="設計師功能"></div>
@@ -5388,6 +5451,8 @@ const flatProjectTypeOptions = ['主視覺提案','社群提案','活動提案']
 const videoProjectTypeOptions = ['活動提案','社群影音','平面拍攝'];
 const designerSkillOptions = ['平面','輸出','影片','動畫','拍攝'];
 const designerImageMaxBytes = 8 * 1024 * 1024;
+const designerStoryDurationMs = 10000;
+const designerStorySeenStorageKey = 'designerStorySeenV1';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const designerUploadPageUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
 const defaultDesigners = [
@@ -5764,7 +5829,8 @@ function splitDetailHeader(header,types){const text=String(header||'').trim(), t
 function detailsToArray(value){return unique(String(value||'').split(/[、,，\n]/).map(v=>v.trim()))}
 function formatDetails(values){return detailsToArray(Array.isArray(values)?values.join(', '):values).join(', ')}
 function splitSkills(value){return unique(String(value||'').split(/[、,，]/).map(v=>v.trim()))}
-function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['名字']||row['設計師名字']||row.name||'').trim(),account:loginAccountFull(row['帳號']||row.account||row.email||''),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),imageFolder:String(row['圖片資料夾']||row.imageFolder||row.folderId||'').trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
+function normalizeDesignerStoryLinks(value){const values=Array.isArray(value)?value:String(value||'').split(/\r?\n/); return unique(values.map(item=>imageUrl(item)).filter(Boolean))}
+function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['名字']||row['設計師名字']||row.name||'').trim(),account:loginAccountFull(row['帳號']||row.account||row.email||''),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),stories:normalizeDesignerStoryLinks(row['限時動態連結']||row.storyLinks||row.stories||[]),imageFolder:String(row['圖片資料夾']||row.imageFolder||row.folderId||'').trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
 function mergeDesignerProfile(base={},patch={}){const merged={...base,...patch}; ['avatar','poster','imageFolder','designType','status','account'].forEach(key=>{if(!patch[key]&&base[key])merged[key]=base[key]}); if(!patch.rotation&&base.rotation)merged.rotation=base.rotation; if(!patch.skills?.length&&base.skills?.length)merged.skills=base.skills; return normalizeDesignerRow(merged)}
 function sortDesigners(list){return [...list].sort((a,b)=>(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hant'))}
 function designerActiveCount(name){return rows.filter(row=>row.designer===name&&['未開始','執行中'].includes(row.status)).length}
@@ -5781,6 +5847,16 @@ function isPriorityNewCaseDesigner(d){const group=designerGroupLabel(d); if(!['�
 function renderRequestProjectButtons(){document.querySelectorAll('[data-new-project-group]').forEach(button=>{const group=button.dataset.newProjectGroup, designer=rotationDesignerForGroup(group), label=`${group}新開專案`; button.innerHTML=`${solidProjectIcon(group)}<span>${esc(label)}</span>`; button.disabled=!designer; button.dataset.newProjectDesigner=designer?.name||''; button.title=designer?`預計設計師：${designer.name}`:'目前沒有可新開專案的設計師'});}
 function renderDesigners(){
   if(!designerRoster)return;
+  // 案件資料會定時背景刷新；限動或海報開啟期間保留現有 DOM，
+  // 避免重繪中斷 10 秒播放計時。
+  if(designerRoster.querySelector('.avatar-shell.poster-open')){
+    designerRoster.querySelectorAll('.designer-card').forEach(card=>{
+      const designer=designerProfile(card.dataset.designer||'');
+      card.querySelector('.avatar-frame')?.classList.toggle('has-unread-story',designerHasUnreadStory(designer));
+    });
+    return;
+  }
+  stopDesignerStoryPlayback();
   const list=sortDesigners(designers).filter(d=>d.name);
   designerRoster.innerHTML=list.map(d=>{
     const status=computedDesignerStatus(d.name,d.status);
@@ -5791,13 +5867,28 @@ function renderDesigners(){
     const fallback=designerFallbackImage(d.name);
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
+    const hasUnreadStory=designerHasUnreadStory(d);
     const priorityBadge=isPriorityNewCaseDesigner(d)?`<button type="button" class="new-case-priority-badge" data-new-project-designer="${esc(d.name)}" title="開啟 ${esc(d.name)} 的新開專案表單">新案優先</button>`:'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster"><img class="poster-image" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame${hasUnreadStory?' has-unread-story':''}" role="button" tabindex="0" aria-expanded="false" aria-label="開啟 ${esc(d.name)} 限時動態與大海報"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster" data-story-viewer><div class="designer-story-progress" data-story-progress hidden aria-hidden="true"></div><img class="poster-image" data-poster-url="${esc(poster)}" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="handleDesignerPosterImageError(this)"><div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   requestAnimationFrame(syncTopPanelHeights);
   renderRequestProjectButtons();
 }
-async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
+let activeDesignerStoryPlayback=null;
+function readSeenDesignerStories(){return readCache(accountStorageKey(designerStorySeenStorageKey),{})||{}}
+function designerHasUnreadStory(designer){const stories=normalizeDesignerStoryLinks(designer?.stories||[]); if(!stories.length)return false; const seen=readSeenDesignerStories(), viewed=new Set(Array.isArray(seen[designer.name])?seen[designer.name]:[]); return stories.some(url=>!viewed.has(url))}
+function markDesignerStorySeen(name,url){if(!name||!url)return; const seen=readSeenDesignerStories(), current=Array.isArray(seen[name])?seen[name]:[]; seen[name]=unique([...current,url]); writeCache(accountStorageKey(designerStorySeenStorageKey),seen)}
+function syncDesignerUnreadFrame(shell,designer){shell?.querySelector('.avatar-frame')?.classList.toggle('has-unread-story',designerHasUnreadStory(designer))}
+function renderDesignerStoryProgress(progress,total,index){if(!progress)return; progress.hidden=false; progress.innerHTML=Array.from({length:total},(_,i)=>`<span class="designer-story-progress-segment ${i<index?'is-complete':(i===index?'is-active':'')}" aria-hidden="true"></span>`).join('')}
+function showDesignerFinalPoster(shell){if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const viewer=shell?.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'); if(viewer)viewer.classList.remove('story-playing'); if(progress){progress.hidden=true;progress.innerHTML=''} if(image){image.src=image.dataset.posterUrl||'';image.alt=`${shell.closest('.designer-card')?.dataset.designer||''} 海報`} activeDesignerStoryPlayback=null}
+function showDesignerStorySlide(shell,index){const name=shell?.closest('.designer-card')?.dataset.designer||'', designer=designerProfile(name), stories=normalizeDesignerStoryLinks(designer.stories||[]); if(!stories.length||index>=stories.length){showDesignerFinalPoster(shell);syncDesignerUnreadFrame(shell,designer);return} if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const viewer=shell.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'); if(!viewer||!image){showDesignerFinalPoster(shell);return} viewer.classList.add('story-playing'); renderDesignerStoryProgress(progress,stories.length,index); image.src=stories[index]; image.alt=`${name} 限時動態 ${index+1}`; markDesignerStorySeen(name,stories[index]); syncDesignerUnreadFrame(shell,designer); activeDesignerStoryPlayback={shell,index,stories,timer:setTimeout(()=>showDesignerStorySlide(shell,index+1),designerStoryDurationMs)}}
+function startDesignerStoryPlayback(shell){const name=shell?.closest('.designer-card')?.dataset.designer||'', designer=designerProfile(name), stories=normalizeDesignerStoryLinks(designer.stories||[]); if(stories.length)showDesignerStorySlide(shell,0); else showDesignerFinalPoster(shell)}
+function advanceDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index+1)}
+function stopDesignerStoryPlayback(){if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
+function closeDesignerPoster(shell){if(!shell)return; if(activeDesignerStoryPlayback?.shell===shell)stopDesignerStoryPlayback(); shell.classList.remove('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','false')}
+function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item)}); shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerStoryPlayback(shell)}
+function handleDesignerPosterImageError(image){const shell=image?.closest('.avatar-shell'); if(image?.closest('.designer-poster')?.classList.contains('story-playing')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return} const name=shell?.closest('.designer-card')?.dataset.designer||''; image.onerror=null; image.src=designerFallbackImage(name)}
+async function loadDesignerRoster({background=false}={}){if(!background)renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); if(!background)renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(designer)}`,'_blank','noopener')}
@@ -7576,9 +7667,9 @@ formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
     if(event.target.closest('.load-dot'))return;
     event.preventDefault();
     event.stopPropagation();
+    if(event.target.closest('[data-story-viewer]')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return}
     const willOpen=!shell.classList.contains('poster-open');
-    designerRoster.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)item.classList.remove('poster-open')});
-    shell.classList.toggle('poster-open',willOpen);
+    if(willOpen)openDesignerPoster(shell); else closeDesignerPoster(shell);
     return;
   }
   const button=event.target.closest('.designer-tags button');
@@ -7588,9 +7679,10 @@ formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
     applyDesignerSkill(button.dataset.designer,button.dataset.skill);
   }
 });
+designerRoster?.addEventListener('keydown',event=>{if(!['Enter',' '].includes(event.key))return; const frame=event.target.closest('.avatar-frame'); if(!frame||!designerRoster.contains(frame))return; event.preventDefault(); const shell=frame.closest('.avatar-shell'); if(shell.classList.contains('poster-open'))closeDesignerPoster(shell); else openDesignerPoster(shell)});
 document.addEventListener('click',event=>{
   if(event.target.closest?.('.avatar-shell'))return;
-  designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>item.classList.remove('poster-open'));
+  designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(closeDesignerPoster);
 });
 	$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
@@ -7667,7 +7759,7 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000);
 </script>
 </body>
 </html>
