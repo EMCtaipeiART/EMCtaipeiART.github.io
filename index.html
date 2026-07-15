@@ -4935,9 +4935,9 @@
     .avatar-music-icon{display:grid;place-items:center;flex:0 0 9px;width:9px;height:9px;color:#fff;animation:musicListeningBeat 1.1s ease-in-out infinite;transform-origin:center bottom}
     .avatar-music-icon svg{width:9px;height:9px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
     .avatar-music-marquee{position:relative;display:block;flex:1 1 auto;min-width:0;height:10px;overflow:hidden;color:#fff;font-size:8px!important;line-height:10px!important;font-weight:850;white-space:nowrap}
-    .avatar-music-marquee span{position:absolute;left:0;top:0;width:max-content;min-width:100%;font-size:8px!important;line-height:10px!important;text-align:left;animation:avatarMusicMarqueeLTR 8s linear infinite}
+    .avatar-music-marquee span{position:absolute;left:0;top:0;width:max-content;min-width:100%;font-size:8px!important;line-height:10px!important;text-align:left;animation:avatarMusicMarqueeLeft 10s linear infinite}
     @keyframes musicListeningBeat{0%,100%{opacity:.62;transform:translateY(0) scale(.9)}45%{opacity:1;transform:translateY(-1px) scale(1.1)}70%{opacity:.82;transform:translateY(0) scale(1)}}
-    @keyframes avatarMusicMarqueeLTR{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+    @keyframes avatarMusicMarqueeLeft{0%,20%{transform:translateX(0)}100%{transform:translateX(-100%)}}
     .poster-music-player{position:absolute;left:0;bottom:0;z-index:0;width:300px;height:80px;max-width:100%;overflow:hidden;opacity:.001;pointer-events:none}
     .poster-music-player iframe{display:block!important;width:300px!important;height:80px!important;max-width:100%!important;border:0!important}
     .designer-poster.has-music .designer-story-progress{top:10px}
