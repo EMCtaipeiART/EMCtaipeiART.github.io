@@ -4812,6 +4812,35 @@
       color:#e7e8e9!important;
       border-color:#3b3e42!important;
     }
+    .designer-settings-card{width:min(900px,100%)!important;padding:20px!important}
+    .designer-settings-head{margin-bottom:16px!important;padding-bottom:14px;border-bottom:1px solid #e6ece8}
+    .designer-settings-head-copy{display:grid;gap:3px}
+    .designer-settings-head-copy h3{margin:0!important;font-size:20px!important}
+    .designer-settings-head-copy p{margin:0;color:#66736d;font-size:12px;font-weight:700}
+    .designer-settings-list{gap:14px!important}
+    .designer-settings-card .designer-setting-row{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(180px,.7fr)!important;gap:12px!important;padding:14px!important;border-radius:16px!important;align-items:stretch!important}
+    .designer-setting-headline{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;border-bottom:1px solid #e1e8e4}
+    .designer-setting-name{padding:0!important;font-size:17px!important;font-weight:950!important}
+    .designer-setting-account{color:#7a857f;font-size:11px;font-weight:800}
+    .designer-setting-block{display:grid;align-content:start;gap:10px;min-width:0;padding:13px;border:1px solid #e1e8e4;border-radius:13px;background:#fff}
+    .designer-setting-block-title{display:grid;gap:2px}
+    .designer-setting-block-title b{color:#26342d;font-size:13px;font-weight:950}
+    .designer-setting-block-title span{color:#7a857f;font-size:11px;font-weight:700;line-height:1.4}
+    .designer-setting-block .designer-skill-checks{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px!important}
+    .designer-setting-block .designer-skill-checks label{min-width:0;justify-content:flex-start!important;margin:0!important;padding:7px 9px!important}
+    .designer-setting-message textarea{width:100%;min-height:104px!important;resize:vertical}
+    .designer-setting-photo{align-content:space-between;text-align:left}
+    .designer-photo-manage-button{width:100%;min-height:42px;border-radius:10px;background:#e7f6ef;color:#075d42;border:1px solid #9bd4b4;font-weight:900}
+    .designer-photo-manage-button:hover{background:#d8f0e3;color:#064e3b}
+    html[data-theme="dark"] .designer-settings-head{border-bottom-color:#414449}
+    html[data-theme="dark"] .designer-settings-head-copy p,
+    html[data-theme="dark"] .designer-setting-account,
+    html[data-theme="dark"] .designer-setting-block-title span{color:#a9adb2!important}
+    html[data-theme="dark"] .designer-setting-headline{border-bottom-color:#414449}
+    html[data-theme="dark"] .designer-setting-block{background:#242629!important;border-color:#414449!important}
+    html[data-theme="dark"] .designer-setting-block-title b{color:#f1f2f3!important}
+    html[data-theme="dark"] .designer-photo-manage-button{background:#173a2d;color:#b7f0d2;border-color:#2c6a50}
+    @media(max-width:760px){.designer-settings-card{padding:15px!important}.designer-settings-card .designer-setting-row{grid-template-columns:1fr!important}.designer-setting-headline{grid-column:1}.designer-setting-block .designer-skill-checks{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
     .column-popover .column-toggle{
       --toggle-on-bg:#e7f6ef;
       --toggle-on-border:#9bd4b4;
@@ -5121,7 +5150,7 @@
 </div>
 <div class="login-modal designer-settings-modal" id="designerSettingsModal" hidden>
   <form class="designer-settings-card" id="designerSettingsForm">
-    <div class="designer-settings-head"><h3>設計師設定</h3><a class="designer-upload-page-link" id="designerUploadPageLink" href="#">開啟我的圖片上傳頁</a><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
+    <div class="designer-settings-head"><div class="designer-settings-head-copy"><h3>設計師設定</h3><p>設定技能、留言內容與個人照片</p></div><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
     <div class="designer-settings-list" id="designerSettingsList"></div>
     <div class="login-actions"><button type="submit">儲存設定</button></div>
   </form>
@@ -5771,7 +5800,7 @@ function renderDesigners(){
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
-function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} if(!designerOptions.includes(currentEditor)){setSync('找不到對應的設計師上傳資料夾',true);return} window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(currentEditor)}`,'_blank','noopener')}
+function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(designer)}`,'_blank','noopener')}
 function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function submitIssueReport(event){
@@ -5799,7 +5828,7 @@ async function submitIssueReport(event){
     submit.disabled=false;
   }
 }
-function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''), defaultFolder=designerImageFolderDefaults[name]||''; return `<div class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-name">${esc(name)}</div><div><div class="designer-skill-checks">${checks}</div><label>對話框<textarea name="quote-${esc(name)}" maxlength="80">${esc(d.quote||'')}</textarea></label></div><div class="designer-photo-tools"><label>Drive 圖片資料夾<input class="designer-folder-input" data-folder-id type="text" value="${esc(d.imageFolder||defaultFolder)}" placeholder="貼上資料夾網址或 ID"></label><label>頭像<input type="file" accept="image/*" data-photo-kind="avatar"><input type="hidden" data-photo-url="avatar" value="${esc(d.avatar||'')}"></label><label>大圖／海報<input type="file" accept="image/*" data-photo-kind="poster"><input type="hidden" data-photo-url="poster" value="${esc(d.poster||d.avatar||'')}"></label><div class="designer-photo-status" data-photo-status>單張上限 8 MB</div></div></div>`}).join(''); designerSettingsList.querySelectorAll('[data-photo-kind]').forEach(input=>input.addEventListener('change',uploadDesignerPhoto))}
+function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>上傳並替換頭像或海報</span></div><button class="designer-photo-manage-button" type="button" data-manage-designer-photo="${esc(name)}">管理照片</button></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-manage-designer-photo]').forEach(button=>button.addEventListener('click',openDesignerUploadPage))}
 function collectDesignerSettings(){return designerOptions.map(name=>{const row=[...document.querySelectorAll('.designer-setting-row')].find(item=>item.dataset.designer===name), current=designerProfile(name), skills=row?[...row.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):current.skills||[], quote=row?.querySelector('textarea')?.value.trim()||'', avatar=row?.querySelector('[data-photo-url="avatar"]')?.value.trim()||current.avatar||'', poster=row?.querySelector('[data-photo-url="poster"]')?.value.trim()||current.poster||current.avatar||'', imageFolder=row?.querySelector('[data-folder-id]')?.value.trim()||current.imageFolder||''; return {name,skills,quote,designType:current.designType||'',account:current.account||'',avatar,poster,imageFolder,status:current.status||'',rotation:current.rotation||99}})}
 function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result||'')); reader.onerror=()=>reject(reader.error||new Error('讀取檔案失敗')); reader.readAsDataURL(file)})}
 async function uploadDesignerPhotoWithAppsScript(file,{name,kind,folderId}){const dataUrl=await readFileAsDataUrl(file); const data=await sheetApi('uploadDesignerImage',{editorToken:currentEditorToken,name,kind,folderId,fileName:file.name,mimeType:file.type,dataUrl,_requireResponse:true}); const url=data.url||data.fileUrl||''; if(!url)throw new Error('未取得上傳後連結'); return {url,fileId:data.fileId||'',folderId:data.folderId||'',folderName:data.folderName||'',isPublic:data.isPublic!==false,sharingWarning:data.sharingWarning||'',source:'apps-script'}}
@@ -7564,7 +7593,6 @@ document.addEventListener('click',event=>{
   designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>item.classList.remove('poster-open'));
 });
 	$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
-	$('#designerUploadPageLink')?.addEventListener('click',openDesignerUploadPage);
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
