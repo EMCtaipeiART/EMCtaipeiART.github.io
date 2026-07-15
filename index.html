@@ -1191,6 +1191,7 @@
     .designer-photo-tools label{display:grid;gap:4px;color:#43524b;font-size:12px;font-weight:850}
     .designer-photo-tools input[type=file]{font-size:12px;min-height:34px;padding:5px;background:#fff}
     .designer-photo-status{font-size:12px;color:var(--muted);font-weight:800}
+    .designer-upload-page-link{display:inline-flex;align-items:center;justify-content:center;min-height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#43524b;text-decoration:none;font-size:12px;font-weight:850}
     .designer-folder-input{font-size:12px!important;min-height:34px!important;padding:6px 8px!important}
     .designer-card{background:transparent!important}
     .designer-card{cursor:default!important}
@@ -5120,7 +5121,7 @@
 </div>
 <div class="login-modal designer-settings-modal" id="designerSettingsModal" hidden>
   <form class="designer-settings-card" id="designerSettingsForm">
-    <div class="designer-settings-head"><h3>設計師設定</h3><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
+    <div class="designer-settings-head"><h3>設計師設定</h3><a class="designer-upload-page-link" href="https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec" target="_blank" rel="noopener">獨立圖片上傳頁</a><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
     <div class="designer-settings-list" id="designerSettingsList"></div>
     <div class="login-actions"><button type="submit">儲存設定</button></div>
   </form>
@@ -5266,7 +5267,7 @@ let currentEditor = '';
 let currentEditorAccount = '';
 let currentEditorToken = '';
 let currentEditorGroup = '';
-const apiUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
+const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
 const targetSheetId = 1244538986;
