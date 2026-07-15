@@ -5121,7 +5121,7 @@
 </div>
 <div class="login-modal designer-settings-modal" id="designerSettingsModal" hidden>
   <form class="designer-settings-card" id="designerSettingsForm">
-    <div class="designer-settings-head"><h3>設計師設定</h3><a class="designer-upload-page-link" href="https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec" target="_blank" rel="noopener">獨立圖片上傳頁</a><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
+    <div class="designer-settings-head"><h3>設計師設定</h3><a class="designer-upload-page-link" id="designerUploadPageLink" href="#">開啟我的圖片上傳頁</a><button type="button" class="secondary" id="designerSettingsCancel">關閉</button></div>
     <div class="designer-settings-list" id="designerSettingsList"></div>
     <div class="login-actions"><button type="submit">儲存設定</button></div>
   </form>
@@ -5360,6 +5360,7 @@ const videoProjectTypeOptions = ['活動提案','社群影音','平面拍攝'];
 const designerSkillOptions = ['平面','輸出','影片','動畫','拍攝'];
 const designerImageMaxBytes = 8 * 1024 * 1024;
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
+const designerUploadPageUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
 const defaultDesigners = [
   {designType:'平面',name:'Machi',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4y7KgeNbB2ORCa32XzaexZxt4rq9QfGWiPppN8IXW2KWldvfH0KYvuVfQG5i9R096axQ2TJ7oI5oBQl',skills:['平面','輸出','動畫'],quote:'今天也把需求整理得清清楚楚。',rotation:1,status:'普通'},
   {designType:'平面',name:'Anna',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4zHvoa1GHX5gexC25l4YrHhBZn2mNJ8_gthNd7mMkSdrgbwLysHCBNopbNwbYSPyNBGu5gzU_g8cazt',skills:['平面','輸出'],quote:'好的節奏，會讓作品更穩。',rotation:2,status:'普通'},
@@ -5770,6 +5771,7 @@ function renderDesigners(){
 async function loadDesignerRoster(){renderDesigners(); try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length){designers=list; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); renderDesigners()} updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
+function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()||!currentEditorToken){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} if(!designerOptions.includes(currentEditor)||isLocalAdminToken()){setSync('圖片上傳頁僅開放已登入的設計師本人使用',true);return} const accessParams=new URLSearchParams({token:currentEditorToken,designer:currentEditor,account:currentEditorAccount||''}); window.open(`${designerUploadPageUrl}#${accessParams.toString()}`,'_blank','noopener')}
 function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function submitIssueReport(event){
@@ -7562,6 +7564,7 @@ document.addEventListener('click',event=>{
   designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>item.classList.remove('poster-open'));
 });
 	$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
+	$('#designerUploadPageLink')?.addEventListener('click',openDesignerUploadPage);
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
