@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-14 16:16 Asia/Taipei | build: 20260714-timeline-list-background-sync-1 -->
+<!-- LAST_MODIFIED: 2026-07-16 18:08 Asia/Taipei | build: 20260716-dark-issue-status-stamp-4 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260714-timeline-list-background-sync-1" />
+  <meta name="app-version" content="20260716-dark-issue-status-stamp-4" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -5105,6 +5105,17 @@
     html[data-theme="dark"] .issue-report-divider{background:#414449!important}
     html[data-theme="dark"] .issue-report-empty{border-color:#414449!important}
     html[data-theme="dark"] .issue-report-actions{background:#101113!important;border-color:#414449!important}
+    html[data-theme="dark"] .issue-status-回報中{background:#2c3238!important;color:#d7dde3!important;border-color:#66717d!important}
+    html[data-theme="dark"] .issue-status-評估中{background:#173a54!important;color:#8ed5ff!important;border-color:#3176a5!important}
+    html[data-theme="dark"] .issue-status-處理中{background:#4a3812!important;color:#ffd978!important;border-color:#9b7625!important}
+    html[data-theme="dark"] .issue-status-已完成{background:#173d2d!important;color:#8ee8b6!important;border-color:#3c8b62!important}
+    html[data-theme="dark"] .issue-status-已否決{background:#4b2026!important;color:#ffabb5!important;border-color:#9e4651!important}
+    html[data-theme="dark"] select.issue-report-status{
+      background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%)!important;
+      background-position:calc(100% - 16px) 14px,calc(100% - 11px) 14px!important;
+      background-size:5px 5px,5px 5px!important;
+      background-repeat:no-repeat!important;
+    }
     @media(max-width:640px){
       html[data-theme="dark"] tr{
         background:#22302b!important;
@@ -5445,7 +5456,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-fast-sync-3" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260716-dark-issue-status-stamp-4" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5514,7 +5525,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260716-issue-report-fast-sync-3';
+const appBuildVersion = '20260716-dark-issue-status-stamp-4';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
