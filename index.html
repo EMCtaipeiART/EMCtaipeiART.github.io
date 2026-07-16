@@ -2444,6 +2444,7 @@
       box-shadow:0 0 0 3px rgba(220,38,38,.1);
     }
     .notification-item.is-case .notification-dot{background:#10946a;box-shadow:0 0 0 3px rgba(16,148,106,.12)}
+    .notification-item.is-issue .notification-dot{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
     .notification-title{display:block;font-size:12px;font-weight:950;line-height:1.25;color:#17211d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .notification-meta{display:block;margin-top:3px;font-size:11px;font-weight:800;line-height:1.35;color:#66736d;white-space:normal}
     .notification-empty{padding:18px 8px;text-align:center;color:#7a8580;font-size:12px;font-weight:850}
@@ -5444,7 +5445,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-workflow-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-notifications-2" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5511,7 +5512,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260716-issue-report-workflow-1';
+const appBuildVersion = '20260716-issue-report-notifications-2';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -5528,6 +5529,8 @@ const databaseArchiveGvizUrl = `https://docs.google.com/spreadsheets/d/${targetS
 const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
 const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
 const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
+const issueReportSheetId = 1284883392;
+const issueReportGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${issueReportSheetId}&tq=${encodeURIComponent('select *')}`;
 function modificationStatsGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent(query)}`}
 const settingsGvizUrl = designerGvizUrl;
 const $=s=>document.querySelector(s), tbody=$('#tbody'), thead=$('#thead'), modifyTbody=$('#modifyTbody'), modifyThead=$('#modifyThead'), modifyFixedTbody=$('#modifyFixedTbody'), modifyFixedThead=$('#modifyFixedThead'), msg=$('#msg');
@@ -6067,6 +6070,14 @@ function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
 function issueReportStatusClass(status){return `issue-status-${issueReportStatuses.includes(status)?status:'回報中'}`}
 function updateIssueReportCount(input){const counter=$(`[data-count-for="${input.name}"]`); if(counter)counter.textContent=`${input.value.length}/300`}
+function normalizeIssueReport(report={},rowNumber=''){
+  const status=issueReportStatuses.includes(String(report['狀態']||'').trim())?String(report['狀態']).trim():'回報中';
+  return {rowNumber:Number(report.rowNumber||rowNumber)||0,'姓名':String(report['姓名']||''),'時間':String(report['時間']||''),'內容':String(report['內容']||''),'修改建議':String(report['修改建議']||''),'狀態':status,'狀態更改時間':String(report['狀態更改時間']||report[status]||report['時間']||'')};
+}
+async function fetchIssueReportsFromGviz(){
+  const rows=gvizToObjects(await gvizJsonp(issueReportGvizUrl,8000));
+  return rows.map((report,index)=>normalizeIssueReport(report,index+2)).filter(report=>report['內容']).reverse();
+}
 function renderIssueReports(){
   const list=$('#issueReportList'), total=$('#issueReportTotal');
   if(!list)return;
@@ -6079,25 +6090,34 @@ function renderIssueReports(){
     const statusControl=canManage
       ? `<select class="issue-report-status ${issueReportStatusClass(status)}" data-report-row="${Number(report.rowNumber)||0}" aria-label="回報狀態">${issueReportStatuses.map(option=>`<option value="${option}" ${option===status?'selected':''}>${option}</option>`).join('')}</select>`
       : `<span class="issue-report-status-readonly ${issueReportStatusClass(status)}">${esc(status)}</span>`;
-    return `<article class="issue-report-item"><div class="issue-report-item-main"><div class="issue-report-content">${esc(report['內容']||'')}</div><div class="issue-report-meta">回報時間：${esc(report['時間']||'-')}${report['姓名']?` ・ ${esc(report['姓名'])}`:''}</div><div class="issue-report-suggestion">修改建議：${esc(report['修改建議']||'無')}</div></div><div class="issue-report-item-side">${statusControl}<div class="issue-report-updated">狀態更改時間：${esc(report['狀態更改時間']||report['時間']||'-')}</div></div></article>`;
+    return `<article class="issue-report-item" data-report-row="${Number(report.rowNumber)||0}"><div class="issue-report-item-main"><div class="issue-report-content">${esc(report['內容']||'')}</div><div class="issue-report-meta">回報時間：${esc(report['時間']||'-')}${report['姓名']?` ・ ${esc(report['姓名'])}`:''}</div><div class="issue-report-suggestion">修改建議：${esc(report['修改建議']||'無')}</div></div><div class="issue-report-item-side">${statusControl}<div class="issue-report-updated">狀態更改時間：${esc(report['狀態更改時間']||report['時間']||'-')}</div></div></article>`;
   }).join('');
 }
-async function loadIssueReports(){
+async function loadIssueReports({background=false}={}){
   const loadId=++issueReportsLoadId;
-  issueReportsLoading=true; renderIssueReports();
+  const modalOpen=!$('#issueReportModal')?.hidden;
+  if(!background||modalOpen){issueReportsLoading=true; renderIssueReports()}
   try{
-    const data=await sheetApi('listIssueReports',{_requireResponse:true});
+    let loaded;
+    try{
+      const data=await sheetApi('listIssueReports',{_requireResponse:true});
+      loaded=Array.isArray(data.rows)?data.rows.map(report=>normalizeIssueReport(report)):[];
+    }catch(apiError){
+      console.warn('Apps Script 回報列表讀取失敗，改用試算表備援',apiError);
+      loaded=await fetchIssueReportsFromGviz();
+    }
     if(loadId!==issueReportsLoadId)return;
-    issueReports=Array.isArray(data.rows)?data.rows:[];
+    issueReports=loaded;
   }catch(err){
     if(loadId!==issueReportsLoadId)return;
     console.warn('回報列表讀取失敗',err);
     issueReportsLoading=false;
     const list=$('#issueReportList');
-    if(list&&!issueReports.length)list.innerHTML=`<div class="issue-report-empty">列表載入失敗：${esc(err.message)}</div>`;
+    if(list){if(issueReports.length)renderIssueReports(); else list.innerHTML=`<div class="issue-report-empty">列表載入失敗：${esc(err.message)}</div>`}
+    renderNotifications();
     return;
   }
-  if(loadId===issueReportsLoadId){issueReportsLoading=false; renderIssueReports()}
+  if(loadId===issueReportsLoadId){issueReportsLoading=false; if(!$('#issueReportModal')?.hidden)renderIssueReports(); renderNotifications()}
 }
 function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); form.querySelectorAll('textarea').forEach(updateIssueReportCount); modal.style.removeProperty('display'); modal.hidden=false; renderIssueReports(); loadIssueReports(); setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
@@ -6127,10 +6147,12 @@ async function submitIssueReport(event){
   try{
     const data=await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
     issueReportsLoadId+=1; issueReportsLoading=false;
-    if(data.row)issueReports=[data.row,...issueReports.filter(report=>Number(report.rowNumber)!==Number(data.row.rowNumber))];
+    if(data.row){const created=normalizeIssueReport(data.row,data.rowNumber); issueReports=[created,...issueReports.filter(report=>Number(report.rowNumber)!==Number(created.rowNumber))]}
     form.reset();
     form.querySelectorAll('textarea').forEach(updateIssueReportCount);
     renderIssueReports();
+    renderNotifications();
+    closeIssueReportModal();
     setSync('問題回報已送出，謝謝回報');
   }catch(err){
     hideSubmitOverlay();
@@ -6559,8 +6581,14 @@ async function sheetApi(action,payload={}){
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
 	    return data;
 	  }
-	  if(action==='listIssueReports'||action==='updateIssueReportStatus'){
-	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'回報列表同步逾時，請稍後再試。'});
+	  if(action==='listIssueReports'){
+	    const data=await writeToSheetByJsonp({action,...payload},8000,'回報列表讀取逾時');
+	    if(!data.ok)throw new Error(data.error||'回報列表讀取失敗');
+	    if(data.action!==action)throw new Error('Apps Script 尚未支援回報列表');
+	    return data;
+	  }
+	  if(action==='updateIssueReportStatus'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'回報狀態同步逾時，請稍後再試。'});
 	    if(!data.ok)throw new Error(data.error||'回報列表同步失敗');
 	    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
 	    return data;
@@ -6907,12 +6935,26 @@ function rowOwnerMatchesCurrentUser(row){
   const owner=normalizedUserText(ownerDisplay(row.owner)), editor=normalizedUserText(currentEditor), account=normalizedUserText(loginAccountFull(currentEditorAccount)), ownerEmail=normalizedUserText(row.ownerEmail||extractEmail(row.owner));
   return Boolean((owner&&editor&&owner===editor)||(owner&&account&&owner===account)||(ownerEmail&&account&&ownerEmail===account));
 }
-function notificationItems(){if(!isLoggedIn())return []; const version='n2', designerItems=isDesignerLogin()?(()=>{const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成'), newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`})), modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`}))); return [...modifyItems,...newCases]})():[]; const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`}))); return [...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20)}
+function notificationItems(){
+  if(!isLoggedIn())return [];
+  const version='n2';
+  const designerItems=isDesignerLogin()?(()=>{
+    const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成');
+    const newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`}));
+    const modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`})));
+    return [...modifyItems,...newCases];
+  })():[];
+  const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`})));
+  const issueItems=isIssueReportManager()?issueReports.map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`})):[];
+  const regularItems=[...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true}));
+  return [...issueItems,...regularItems].slice(0,20);
+}
 function unreadNotificationItems(items=notificationItems()){const read=readNotificationIds(); return items.filter(item=>!read.has(item.key))}
 function markNotificationsRead(items=notificationItems()){if(!items.length)return; const read=readNotificationIds(); items.forEach(item=>read.add(item.key)); writeNotificationIds(read)}
-function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-case-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求或完成通知</div>'}
+function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、問題回報或完成通知</div>'}
 function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnreadItems=unreadNotificationItems(), openingUnread=new Set(openingUnreadItems.map(item=>item.key)); renderNotifications(open?openingUnread:null,{hideBadge:open&&openingUnreadItems.length>0}); popover.hidden=!open; if(open&&openingUnreadItems.length)markNotificationsRead(openingUnreadItems); if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
 function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); const show=()=>{if(document.getElementById(`case-row-${id}`)){jumpToCase(id);return} if($('#q'))$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; requestAnimationFrame(()=>jumpToCase(id))}; requestAnimationFrame(show)}
+function openNotificationItem(kind,id){if(kind==='issue'){closeNotifications();closeAccountMenu();openIssueReportModal();return} focusNotificationCase(id)}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
@@ -7988,7 +8030,7 @@ $('#batchDetails').addEventListener('change',()=>renderBatchControls());
 $('#loginBtn').onclick=event=>{event.stopPropagation(); toggleAccountMenu()};
 $('#themeToggle')?.addEventListener('click',event=>{event.stopPropagation(); toggleTheme()});
 $('#accountBell')?.addEventListener('click',event=>{event.stopPropagation(); toggleNotifications()});
-$('#notificationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-case-id]'); if(!item)return; event.preventDefault(); event.stopPropagation(); focusNotificationCase(item.dataset.caseId)});
+$('#notificationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-notification-kind]'); if(!item)return; event.preventDefault(); event.stopPropagation(); openNotificationItem(item.dataset.notificationKind,item.dataset.notificationId)});
 $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#erpLoginButton')?.addEventListener('click',startErpLogin);
@@ -8000,7 +8042,7 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
