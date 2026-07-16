@@ -5445,7 +5445,7 @@
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-notifications-2" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-fast-sync-3" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5499,7 +5499,9 @@ let currentEditor = '';
 let currentEditorAccount = '';
 let currentEditorToken = '';
 let currentEditorGroup = '';
-let issueReports = [];
+const issueReportsCacheKey = 'designRequestIssueReportsV1';
+function readIssueReportsCache(){try{const cached=JSON.parse(localStorage.getItem(issueReportsCacheKey)||'[]');return Array.isArray(cached)?cached:[]}catch(err){return []}}
+let issueReports = readIssueReportsCache();
 let issueReportsLoading = false;
 let issueReportsLoadId = 0;
 const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
@@ -5512,7 +5514,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260716-issue-report-notifications-2';
+const appBuildVersion = '20260716-issue-report-fast-sync-3';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6074,6 +6076,8 @@ function normalizeIssueReport(report={},rowNumber=''){
   const status=issueReportStatuses.includes(String(report['狀態']||'').trim())?String(report['狀態']).trim():'回報中';
   return {rowNumber:Number(report.rowNumber||rowNumber)||0,'姓名':String(report['姓名']||''),'時間':String(report['時間']||''),'內容':String(report['內容']||''),'修改建議':String(report['修改建議']||''),'狀態':status,'狀態更改時間':String(report['狀態更改時間']||report[status]||report['時間']||'')};
 }
+function saveIssueReportsCache(){try{localStorage.setItem(issueReportsCacheKey,JSON.stringify(issueReports.slice(0,100)))}catch(err){}}
+function currentTaipeiTimestamp(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`}
 async function fetchIssueReportsFromGviz(){
   const rows=gvizToObjects(await gvizJsonp(issueReportGvizUrl,8000));
   return rows.map((report,index)=>normalizeIssueReport(report,index+2)).filter(report=>report['內容']).reverse();
@@ -6096,7 +6100,7 @@ function renderIssueReports(){
 async function loadIssueReports({background=false}={}){
   const loadId=++issueReportsLoadId;
   const modalOpen=!$('#issueReportModal')?.hidden;
-  if(!background||modalOpen){issueReportsLoading=true; renderIssueReports()}
+  if((!background||modalOpen)&&!issueReports.length){issueReportsLoading=true; renderIssueReports()}
   try{
     let loaded;
     try{
@@ -6108,6 +6112,7 @@ async function loadIssueReports({background=false}={}){
     }
     if(loadId!==issueReportsLoadId)return;
     issueReports=loaded;
+    saveIssueReportsCache();
   }catch(err){
     if(loadId!==issueReportsLoadId)return;
     console.warn('回報列表讀取失敗',err);
@@ -6119,17 +6124,17 @@ async function loadIssueReports({background=false}={}){
   }
   if(loadId===issueReportsLoadId){issueReportsLoading=false; if(!$('#issueReportModal')?.hidden)renderIssueReports(); renderNotifications()}
 }
-function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); form.querySelectorAll('textarea').forEach(updateIssueReportCount); modal.style.removeProperty('display'); modal.hidden=false; renderIssueReports(); loadIssueReports(); setTimeout(()=>form.elements.content?.focus?.(),40)}
+function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); form.querySelectorAll('textarea').forEach(updateIssueReportCount); modal.style.removeProperty('display'); modal.hidden=false; renderIssueReports(); loadIssueReports({background:Boolean(issueReports.length)}); setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function changeIssueReportStatus(event){
   const select=event.target.closest('.issue-report-status'); if(!select)return;
-  const rowNumber=Number(select.dataset.reportRow), report=issueReports.find(item=>Number(item.rowNumber)===rowNumber), previous=report?.['狀態']||'回報中', status=select.value;
-  if(!report||status===previous)return;
-  select.disabled=true; setSync(`回報狀態更新為${status}中...`);
+  const rowNumber=Number(select.dataset.reportRow), report=issueReports.find(item=>Number(item.rowNumber)===rowNumber), previousReport=report?{...report}:null, status=select.value;
+  if(!report||status===report['狀態'])return;
+  report['狀態']=status; report['狀態更改時間']=currentTaipeiTimestamp(); saveIssueReportsCache(); renderIssueReports(); setSync(`已更新為${status}，背景寫入中...`);
   try{
     const data=await sheetApi('updateIssueReportStatus',{rowNumber,status,editorToken:currentEditorToken,_requireResponse:true});
-    Object.assign(report,data.row||{'狀態':status}); renderIssueReports(); setSync(`回報狀態已更新為${status}`);
-  }catch(err){select.value=previous; select.disabled=false; setSync(`回報狀態更新失敗：${err.message}`,true)}
+    Object.assign(report,normalizeIssueReport(data.row||{...report,'狀態':status},rowNumber)); saveIssueReportsCache(); renderIssueReports(); setSync(`回報狀態已更新為${status}`);
+  }catch(err){if(previousReport)Object.assign(report,previousReport); saveIssueReportsCache(); renderIssueReports(); setSync(`回報狀態寫入失敗，已還原：${err.message}`,true)}
 }
 async function submitIssueReport(event){
   event.preventDefault();
@@ -6138,24 +6143,30 @@ async function submitIssueReport(event){
   const reporter=currentLoginOwnerName()||currentEditorAccount||'未登入';
   const feedbackQuote='感謝您的回饋，我不是在修改，就是我不會修改。';
   submit.disabled=true;
+  closeIssueReportModal();
   stopSubmitQuoteRotation();
   renderSubmitOverlayText('問題回報送出中...',feedbackQuote);
   submitOverlay.classList.remove('done','login-pending');
   submitOverlay.classList.add('show');
-  setTimeout(()=>hideSubmitOverlay(),900);
   setSync('問題回報送出中...');
   try{
     const data=await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
     issueReportsLoadId+=1; issueReportsLoading=false;
     if(data.row){const created=normalizeIssueReport(data.row,data.rowNumber); issueReports=[created,...issueReports.filter(report=>Number(report.rowNumber)!==Number(created.rowNumber))]}
+    saveIssueReportsCache();
     form.reset();
     form.querySelectorAll('textarea').forEach(updateIssueReportCount);
     renderIssueReports();
     renderNotifications();
-    closeIssueReportModal();
+    submitOverlay.classList.add('done');
+    renderSubmitOverlayText('問題回報已送出',feedbackQuote);
+    setTimeout(()=>hideSubmitOverlay(),650);
     setSync('問題回報已送出，謝謝回報');
   }catch(err){
     hideSubmitOverlay();
+    openIssueReportModal();
+    form.elements.content.value=content; form.elements.suggestion.value=suggestion;
+    form.querySelectorAll('textarea').forEach(updateIssueReportCount);
     setSync(`問題回報送出失敗：${err.message}`,true);
   }finally{
     submit.disabled=false;
@@ -6576,19 +6587,19 @@ async function sheetApi(action,payload={}){
 	    return data;
 	  }
 	  if(action==='reportIssue'){
-	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'問題回報寫入逾時，請稍後再試。'});
+	    const data=await writeToSheetByJsonp({action,...payload},20000,'問題回報寫入逾時，請稍後再試。');
 	    if(!data.ok)throw new Error(data.error||'問題回報送出失敗');
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
 	    return data;
 	  }
 	  if(action==='listIssueReports'){
-	    const data=await writeToSheetByJsonp({action,...payload},8000,'回報列表讀取逾時');
+	    const data=await writeToSheetByJsonp({action,...payload},5000,'回報列表讀取逾時');
 	    if(!data.ok)throw new Error(data.error||'回報列表讀取失敗');
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援回報列表');
 	    return data;
 	  }
 	  if(action==='updateIssueReportStatus'){
-	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'回報狀態同步逾時，請稍後再試。'});
+	    const data=await writeToSheetByJsonp({action,...payload},15000,'回報狀態同步逾時，請稍後再試。');
 	    if(!data.ok)throw new Error(data.error||'回報列表同步失敗');
 	    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
 	    return data;
