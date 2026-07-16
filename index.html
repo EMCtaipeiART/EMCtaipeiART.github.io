@@ -358,10 +358,36 @@
     .title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .issue-report-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-width:0!important;min-height:20px!important;height:20px!important;border-radius:999px!important;padding:3px 8px!important;background:rgba(17,24,39,.9)!important;color:#fff!important;border:1px solid rgba(255,255,255,.8)!important;box-shadow:0 4px 10px rgba(15,23,42,.16)!important;font-size:10px!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important}
     .issue-report-btn:hover,.issue-report-btn:focus-visible{background:rgba(17,24,39,.94)!important;color:#fff!important;outline:1px solid rgba(17,24,39,.2);outline-offset:1px}
-    .issue-report-card{width:min(420px,100%);border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:16px}
-    .issue-report-card h3{margin:0 0 12px;color:#17211d;font-size:17px}
-    .issue-report-card label{display:grid;gap:6px;margin-bottom:10px;font-size:13px;color:#43524b;font-weight:850}
-    .issue-report-card textarea{min-height:92px;border-radius:12px;resize:vertical}
+    .issue-report-card{width:min(820px,100%);max-height:min(900px,calc(100vh - 36px));overflow:auto;border-radius:18px;background:#fff;border:1px solid var(--line);box-shadow:0 24px 70px rgba(16,24,40,.2);padding:26px 30px}
+    .issue-report-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+    .issue-report-card h3{margin:0;color:#17211d;font-size:26px}
+    .issue-report-close{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;border:0!important;background:transparent!important;color:#66736d!important;font-size:27px!important;font-weight:400!important;line-height:1!important}
+    .issue-report-card label{display:grid;gap:8px;margin-bottom:14px;font-size:15px;color:#35423c;font-weight:850}
+    .issue-report-optional{color:#7b8580;font-size:12px;font-weight:700}
+    .issue-report-field{position:relative}
+    .issue-report-card textarea{min-height:106px;border-radius:12px;resize:vertical;padding:12px 14px 28px!important}
+    .issue-report-count{position:absolute;right:13px;bottom:9px;color:#7b8580;font-size:12px;font-weight:650;pointer-events:none}
+    .issue-report-divider{height:1px;background:var(--line);margin:22px 0 18px}
+    .issue-report-list-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;color:#27342e}
+    .issue-report-list-head svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+    .issue-report-list-head h4{margin:0;font-size:16px}
+    .issue-report-list{display:grid;gap:8px;max-height:318px;overflow:auto;padding-right:2px}
+    .issue-report-item{display:grid;grid-template-columns:minmax(0,1fr) 158px;gap:10px 18px;border:1px solid #dbe2de;border-radius:10px;padding:13px 15px;background:#fff}
+    .issue-report-item-main{min-width:0}
+    .issue-report-content{font-size:14px;font-weight:850;color:#24302a;white-space:pre-wrap;overflow-wrap:anywhere}
+    .issue-report-meta,.issue-report-suggestion,.issue-report-updated{margin-top:3px;color:#77817c;font-size:12px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+    .issue-report-item-side{display:flex;flex-direction:column;align-items:stretch;justify-content:center;min-width:0}
+    .issue-report-status,.issue-report-status-readonly{width:100%;min-height:32px!important;border:1px solid transparent!important;border-radius:999px!important;padding:5px 28px 5px 12px!important;text-align:center;font-size:12px!important;font-weight:850!important}
+    .issue-report-status-readonly{display:grid;place-items:center;padding-right:12px!important}
+    .issue-status-回報中{background:#f3f4f6!important;color:#4b5563!important;border-color:#e5e7eb!important}
+    .issue-status-評估中{background:#e0f2fe!important;color:#0369a1!important;border-color:#bae6fd!important}
+    .issue-status-處理中{background:#fff3cd!important;color:#9a6500!important;border-color:#f6d982!important}
+    .issue-status-已完成{background:#dcfce7!important;color:#166534!important;border-color:#bbf7d0!important}
+    .issue-status-已否決{background:#fee2e2!important;color:#991b1b!important;border-color:#fecaca!important}
+    .issue-report-empty{padding:24px 12px;text-align:center;color:#7b8580;border:1px dashed #dbe2de;border-radius:10px}
+    .issue-report-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+    .issue-report-actions button{min-width:92px;min-height:42px!important;border-radius:999px!important}
+    @media(max-width:640px){.issue-report-card{padding:20px 16px;border-radius:14px}.issue-report-card h3{font-size:22px}.issue-report-item{grid-template-columns:1fr}.issue-report-item-side{align-items:flex-start}.issue-report-status,.issue-report-status-readonly{width:min(170px,100%)}.issue-report-actions{position:sticky;bottom:-20px;margin:18px -16px -20px;padding:12px 16px;background:#fff;border-top:1px solid var(--line)}}
     .subtitle{margin:0!important;color:#7b8580!important;font-size:13px;font-weight:650}
     .wrap{gap:16px;padding:0 28px 48px}
     .grid{gap:16px}
@@ -5067,6 +5093,17 @@
       --case-row-odd-bg:#131416;
       --case-row-even-bg:#191a1d;
     }
+    html[data-theme="dark"] .issue-report-list-head,
+    html[data-theme="dark"] .issue-report-content{color:#eef0ef!important}
+    html[data-theme="dark"] .issue-report-item{background:#191a1d!important;border-color:#414449!important}
+    html[data-theme="dark"] .issue-report-meta,
+    html[data-theme="dark"] .issue-report-suggestion,
+    html[data-theme="dark"] .issue-report-updated,
+    html[data-theme="dark"] .issue-report-count,
+    html[data-theme="dark"] .issue-report-empty{color:#aeb2b0!important}
+    html[data-theme="dark"] .issue-report-divider{background:#414449!important}
+    html[data-theme="dark"] .issue-report-empty{border-color:#414449!important}
+    html[data-theme="dark"] .issue-report-actions{background:#101113!important;border-color:#414449!important}
     @media(max-width:640px){
       html[data-theme="dark"] tr{
         background:#22302b!important;
@@ -5395,16 +5432,19 @@
 </div>
 <div class="login-modal" id="issueReportModal" hidden>
   <form class="issue-report-card" id="issueReportForm">
-    <h3>問題回報</h3>
-    <label>內容<textarea name="content" placeholder="請描述遇到的問題" required></textarea></label>
-    <label>修改建議<textarea name="suggestion" placeholder="希望怎麼調整" required></textarea></label>
-    <div class="login-actions">
+    <div class="issue-report-head"><h3>問題回報</h3><button type="button" class="issue-report-close" id="issueReportClose" aria-label="關閉">&times;</button></div>
+    <label><span>內容</span><div class="issue-report-field"><textarea name="content" maxlength="300" placeholder="請描述遇到的問題" required></textarea><span class="issue-report-count" data-count-for="content">0/300</span></div></label>
+    <label><span>修改建議 <span class="issue-report-optional">（選填）</span></span><div class="issue-report-field"><textarea name="suggestion" maxlength="300" placeholder="希望怎麼調整或改善"></textarea><span class="issue-report-count" data-count-for="suggestion">0/300</span></div></label>
+    <div class="issue-report-divider"></div>
+    <div class="issue-report-list-head"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg><h4>回報列表 <span id="issueReportTotal"></span></h4></div>
+    <div class="issue-report-list" id="issueReportList"><div class="issue-report-empty">載入中...</div></div>
+    <div class="issue-report-actions">
       <button type="button" class="secondary" id="issueReportCancel">取消</button>
       <button type="submit" id="issueReportSubmit">送出</button>
     </div>
   </form>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260714-timeline-list-background-sync-1" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260716-issue-report-workflow-1" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -5458,6 +5498,9 @@ let currentEditor = '';
 let currentEditorAccount = '';
 let currentEditorToken = '';
 let currentEditorGroup = '';
+let issueReports = [];
+let issueReportsLoading = false;
+let issueReportsLoadId = 0;
 const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
@@ -5468,7 +5511,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260714-timeline-list-background-sync-1';
+const appBuildVersion = '20260716-issue-report-workflow-1';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -5533,6 +5576,7 @@ const ownerContactMap = new Map();
 const weekNames = ['日','一','二','三','四','五','六'];
 const statusOptions = ['未開始','執行中','過稿中','已完成','已取消','暫停中'];
 const statusOrder = {'未開始':0,'執行中':1,'過稿中':2,'已完成':3,'已取消':4,'暫停中':5};
+const issueReportStatuses = ['回報中','評估中','處理中','已完成','已否決'];
 const editorAccounts = ['Machi','Anna','Karl','Noise','Amber','Leona'];
 const designerOptions = ['Machi','Anna','Karl','Noise','Amber','Leona'];
 const designerImageFolderDefaults = {
@@ -6020,16 +6064,60 @@ async function loadDesignerRoster({background=false}={}){if(!background)renderDe
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(designer)}`,'_blank','noopener')}
-function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); modal.style.removeProperty('display'); modal.hidden=false; setTimeout(()=>form.elements.content?.focus?.(),40)}
+function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
+function issueReportStatusClass(status){return `issue-status-${issueReportStatuses.includes(status)?status:'回報中'}`}
+function updateIssueReportCount(input){const counter=$(`[data-count-for="${input.name}"]`); if(counter)counter.textContent=`${input.value.length}/300`}
+function renderIssueReports(){
+  const list=$('#issueReportList'), total=$('#issueReportTotal');
+  if(!list)return;
+  if(total)total.textContent=issueReports.length?`(${issueReports.length})`:'';
+  if(issueReportsLoading){list.innerHTML='<div class="issue-report-empty">載入中...</div>';return}
+  if(!issueReports.length){list.innerHTML='<div class="issue-report-empty">目前尚無回報</div>';return}
+  const canManage=isIssueReportManager();
+  list.innerHTML=issueReports.map(report=>{
+    const status=issueReportStatuses.includes(report['狀態'])?report['狀態']:'回報中';
+    const statusControl=canManage
+      ? `<select class="issue-report-status ${issueReportStatusClass(status)}" data-report-row="${Number(report.rowNumber)||0}" aria-label="回報狀態">${issueReportStatuses.map(option=>`<option value="${option}" ${option===status?'selected':''}>${option}</option>`).join('')}</select>`
+      : `<span class="issue-report-status-readonly ${issueReportStatusClass(status)}">${esc(status)}</span>`;
+    return `<article class="issue-report-item"><div class="issue-report-item-main"><div class="issue-report-content">${esc(report['內容']||'')}</div><div class="issue-report-meta">回報時間：${esc(report['時間']||'-')}${report['姓名']?` ・ ${esc(report['姓名'])}`:''}</div><div class="issue-report-suggestion">修改建議：${esc(report['修改建議']||'無')}</div></div><div class="issue-report-item-side">${statusControl}<div class="issue-report-updated">狀態更改時間：${esc(report['狀態更改時間']||report['時間']||'-')}</div></div></article>`;
+  }).join('');
+}
+async function loadIssueReports(){
+  const loadId=++issueReportsLoadId;
+  issueReportsLoading=true; renderIssueReports();
+  try{
+    const data=await sheetApi('listIssueReports',{_requireResponse:true});
+    if(loadId!==issueReportsLoadId)return;
+    issueReports=Array.isArray(data.rows)?data.rows:[];
+  }catch(err){
+    if(loadId!==issueReportsLoadId)return;
+    console.warn('回報列表讀取失敗',err);
+    issueReportsLoading=false;
+    const list=$('#issueReportList');
+    if(list&&!issueReports.length)list.innerHTML=`<div class="issue-report-empty">列表載入失敗：${esc(err.message)}</div>`;
+    return;
+  }
+  if(loadId===issueReportsLoadId){issueReportsLoading=false; renderIssueReports()}
+}
+function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal'), form=$('#issueReportForm'); if(!modal||!form)return; form.reset(); form.querySelectorAll('textarea').forEach(updateIssueReportCount); modal.style.removeProperty('display'); modal.hidden=false; renderIssueReports(); loadIssueReports(); setTimeout(()=>form.elements.content?.focus?.(),40)}
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
+async function changeIssueReportStatus(event){
+  const select=event.target.closest('.issue-report-status'); if(!select)return;
+  const rowNumber=Number(select.dataset.reportRow), report=issueReports.find(item=>Number(item.rowNumber)===rowNumber), previous=report?.['狀態']||'回報中', status=select.value;
+  if(!report||status===previous)return;
+  select.disabled=true; setSync(`回報狀態更新為${status}中...`);
+  try{
+    const data=await sheetApi('updateIssueReportStatus',{rowNumber,status,editorToken:currentEditorToken,_requireResponse:true});
+    Object.assign(report,data.row||{'狀態':status}); renderIssueReports(); setSync(`回報狀態已更新為${status}`);
+  }catch(err){select.value=previous; select.disabled=false; setSync(`回報狀態更新失敗：${err.message}`,true)}
+}
 async function submitIssueReport(event){
   event.preventDefault();
   const form=event.target, submit=$('#issueReportSubmit'), content=form.elements.content.value.trim(), suggestion=form.elements.suggestion.value.trim();
-  if(!content||!suggestion){setSync('請填寫內容與修改建議',true);return}
+  if(!content){setSync('請填寫問題內容',true);return}
   const reporter=currentLoginOwnerName()||currentEditorAccount||'未登入';
   const feedbackQuote='感謝您的回饋，我不是在修改，就是我不會修改。';
   submit.disabled=true;
-  closeIssueReportModal();
   stopSubmitQuoteRotation();
   renderSubmitOverlayText('問題回報送出中...',feedbackQuote);
   submitOverlay.classList.remove('done','login-pending');
@@ -6037,8 +6125,12 @@ async function submitIssueReport(event){
   setTimeout(()=>hideSubmitOverlay(),900);
   setSync('問題回報送出中...');
   try{
-    await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
+    const data=await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
+    issueReportsLoadId+=1; issueReportsLoading=false;
+    if(data.row)issueReports=[data.row,...issueReports.filter(report=>Number(report.rowNumber)!==Number(data.row.rowNumber))];
     form.reset();
+    form.querySelectorAll('textarea').forEach(updateIssueReportCount);
+    renderIssueReports();
     setSync('問題回報已送出，謝謝回報');
   }catch(err){
     hideSubmitOverlay();
@@ -6465,6 +6557,12 @@ async function sheetApi(action,payload={}){
 	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'問題回報寫入逾時，請稍後再試。'});
 	    if(!data.ok)throw new Error(data.error||'問題回報送出失敗');
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
+	    return data;
+	  }
+	  if(action==='listIssueReports'||action==='updateIssueReportStatus'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'回報列表同步逾時，請稍後再試。'});
+	    if(!data.ok)throw new Error(data.error||'回報列表同步失敗');
+	    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
 	    return data;
 	  }
 	  if(action==='add'||action==='update'){
@@ -7828,8 +7926,11 @@ document.addEventListener('click',event=>{
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
 	$('#issueReportOpen')?.addEventListener('click',openIssueReportModal);
 	$('#issueReportCancel')?.addEventListener('click',closeIssueReportModal);
+	$('#issueReportClose')?.addEventListener('click',closeIssueReportModal);
 	$('#issueReportModal')?.addEventListener('click',event=>{if(event.target.id==='issueReportModal')closeIssueReportModal()});
 	$('#issueReportForm')?.addEventListener('submit',submitIssueReport);
+	$('#issueReportForm')?.querySelectorAll('textarea').forEach(input=>input.addEventListener('input',()=>updateIssueReportCount(input)));
+	$('#issueReportList')?.addEventListener('change',changeIssueReportStatus);
 	$('#designerSettingsCancel')?.addEventListener('click',hideDesignerSettings);
 $('#designerSettingsClose')?.addEventListener('click',hideDesignerSettings);
 $('#designerSettingsModal')?.addEventListener('click',event=>{if(event.target.id==='designerSettingsModal')hideDesignerSettings()});
