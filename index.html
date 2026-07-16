@@ -2978,6 +2978,31 @@
       box-shadow:0 4px 10px rgba(23,33,29,.06)!important;
     }
     .collapse-toggle:hover{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important}
+    .section-panel-actions{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      flex:0 0 auto;
+    }
+    .panel-visibility-toggle{
+      display:grid!important;
+      place-items:center!important;
+      flex:0 0 auto!important;
+      width:28px!important;
+      height:28px!important;
+      min-height:28px!important;
+      padding:0!important;
+      border-radius:999px!important;
+      background:#fff!important;
+      color:#53625b!important;
+      border:1px solid #d8e0dc!important;
+      box-shadow:0 4px 10px rgba(23,33,29,.06)!important;
+      font-size:19px!important;
+      font-weight:700!important;
+      line-height:1!important;
+    }
+    .panel-visibility-toggle:hover{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important}
+    .panel-visibility-toggle[hidden]{display:none!important}
     .collapse-toggle svg{
       width:15px;
       height:15px;
@@ -3000,6 +3025,12 @@
     #requestPanel.is-collapsed #batchRows,
     #requestPanel.is-collapsed #requestHelpActions,
     #requestPanel.is-collapsed #msg{
+      display:none!important;
+    }
+    .top.is-designer-hidden{
+      grid-template-columns:minmax(0,1fr)!important;
+    }
+    .top.is-designer-hidden #designerPanel{
       display:none!important;
     }
     .top{
@@ -3032,6 +3063,22 @@
     }
     #recentPanel .modify-toolbar{
       flex:0 0 auto!important;
+    }
+    #recentPanel .modify-list td[data-label="專案名稱"]{
+      height:auto!important;
+      white-space:normal!important;
+      overflow:visible!important;
+      text-overflow:clip!important;
+    }
+    #recentPanel .modify-list .project-text{
+      display:block!important;
+      max-width:none!important;
+      white-space:normal!important;
+      overflow:visible!important;
+      text-overflow:clip!important;
+      overflow-wrap:anywhere!important;
+      word-break:break-word!important;
+      line-height:1.35!important;
     }
     @media(max-width:640px){
       #recentPanel .modify-toolbar{
@@ -4177,12 +4224,15 @@
     html[data-theme="dark"] .designer-help-info,
     html[data-theme="dark"] .request-help-info,
     html[data-theme="dark"] .collapse-toggle,
+    html[data-theme="dark"] .panel-visibility-toggle,
     html[data-theme="dark"] .designer-help-info:hover,
     html[data-theme="dark"] .request-help-info:hover,
     html[data-theme="dark"] .collapse-toggle:hover,
+    html[data-theme="dark"] .panel-visibility-toggle:hover,
     html[data-theme="dark"] .designer-help-info:focus-visible,
     html[data-theme="dark"] .request-help-info:focus-visible,
-    html[data-theme="dark"] .collapse-toggle:focus-visible{
+    html[data-theme="dark"] .collapse-toggle:focus-visible,
+    html[data-theme="dark"] .panel-visibility-toggle:focus-visible{
       background:transparent!important;
       color:#b8bdc1!important;
       border:1px solid #5a5f63!important;
@@ -4192,9 +4242,11 @@
     html[data-theme="dark"] .designer-help-info:hover,
     html[data-theme="dark"] .request-help-info:hover,
     html[data-theme="dark"] .collapse-toggle:hover,
+    html[data-theme="dark"] .panel-visibility-toggle:hover,
     html[data-theme="dark"] .designer-help-info:focus-visible,
     html[data-theme="dark"] .request-help-info:focus-visible,
-    html[data-theme="dark"] .collapse-toggle:focus-visible{
+    html[data-theme="dark"] .collapse-toggle:focus-visible,
+    html[data-theme="dark"] .panel-visibility-toggle:focus-visible{
       color:#f1f2f2!important;
       border-color:#858b90!important;
     }
@@ -5080,7 +5132,10 @@
       <div class="designer-help-trigger">
         <div class="section-head">
           <div class="designer-title-wrap"><h2>設計師專長與案件分配</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button></div>
-          <button type="button" class="collapse-toggle" data-collapse-section="designer" title="收合/展開設計師專長與案件分配" aria-label="收合/展開設計師專長與案件分配"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+          <div class="section-panel-actions">
+            <button type="button" class="panel-visibility-toggle" id="hideDesignerPanel" title="隱藏設計師專長與案件分配" aria-label="隱藏設計師專長與案件分配" hidden>&times;</button>
+            <button type="button" class="collapse-toggle" data-collapse-section="designer" title="收合/展開設計師專長與案件分配" aria-label="收合/展開設計師專長與案件分配"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+          </div>
         </div>
         <p class="help-steps">請依案件需求選擇適合的設計負責人。</p>
       </div>
@@ -5108,7 +5163,10 @@
             <span>• 搜尋框能輸入案件編號或相關文字快速搜尋。</span>
           </div>
         </div>
-        <button type="button" class="collapse-toggle" data-collapse-section="recent" title="收合/展開最新案件列表" aria-label="收合/展開最新案件列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+        <div class="section-panel-actions">
+          <button type="button" class="panel-visibility-toggle" id="restoreDesignerPanel" title="顯示設計師專長與案件分配" aria-label="顯示設計師專長與案件分配" hidden>+</button>
+          <button type="button" class="collapse-toggle" data-collapse-section="recent" title="收合/展開最新案件列表" aria-label="收合/展開最新案件列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+        </div>
       </div>
       <div id="modifyRecent" class="modify-list modify-shell">
         <div class="modify-fixed">
@@ -5635,7 +5693,7 @@ function readCache(key,fallback=null){try{return JSON.parse(localStorage.getItem
 function writeCache(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch(err){console.warn('本機快取已滿，略過儲存',err)}}
 function readVisibleColumnsForAccount(){return readCache(accountStorageKey(visibleColumnsKey),readCache(visibleColumnsKey,null))||defaultVisibleColumns()}
 function readDisplaySettingsForAccount(){return {...{editEnabled:true,timelineEnabled:true},...(readCache(accountStorageKey(displaySettingsKey),{})||{})}}
-function readCollapseSettingsForAccount(){return {...{designer:false,recent:false,request:false},...(readCache(accountStorageKey('designRequestCollapseSettingsV1'),{})||{})}}
+function readCollapseSettingsForAccount(){return {...{designer:false,recent:false,request:false,designerHidden:false},...(readCache(accountStorageKey('designRequestCollapseSettingsV1'),{})||{})}}
 function validVisibleColumns(keys,{fallback=true}={}){const valid=columns.map(c=>c.key); if(!Array.isArray(keys))return fallback?defaultVisibleColumns():[]; const list=unique(keys.filter(key=>valid.includes(key))); return list.length||!fallback?list:defaultVisibleColumns()}
 function orderedColumns(){const order=validVisibleColumns(visibleColumns,{fallback:false}), known=new Set(order); return [...order.map(key=>columns.find(c=>c.key===key)).filter(Boolean),...columns.filter(c=>!known.has(c.key))]}
 function reorderVisibleColumn(fromKey,toKey){if(!fromKey||!toKey||fromKey===toKey)return; const visibleSet=new Set(visibleColumns), order=orderedColumns().map(c=>c.key), fromIndex=order.indexOf(fromKey), toIndex=order.indexOf(toKey); if(fromIndex<0||toIndex<0)return; order.splice(toIndex,0,order.splice(fromIndex,1)[0]); visibleColumns=order.filter(key=>visibleSet.has(key)); saveVisibleColumnsForAccount('欄位順序已儲存'); columnControlsRenderedKey=''; render()}
@@ -5643,7 +5701,7 @@ function settingFlagValue(flags,key,header){return [key,header,...(settingsColum
 function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns))return validVisibleColumns(settings.visibleColumns,{fallback:false}); const flags=settings.visibleColumnFlags||settings.columns||settings; const hasColumnFlags=Object.entries(settingsColumnHeadersByKey).some(([key,header])=>settingFlagValue(flags,key,header)!==undefined); if(!hasColumnFlags)return null; return Object.entries(settingsColumnHeadersByKey).filter(([key,header])=>{const value=settingFlagValue(flags,key,header); return value===true||String(value||'').trim().toLowerCase()==='v'}).map(([key])=>key)}
 function remoteDisplaySettings(settings){if(!settings)return null; const readFlag=(keys)=>{for(const key of keys){const value=settings[key]??settings.displaySettings?.[key]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); if(value===false||text==='x'||text==='false'||text==='0'||text==='no'||text==='off')return false; return value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'} return null}; const select=readFlag(['selectEnabled','選擇','editEnabled','編輯']), timeline=readFlag(['timelineEnabled','時間表']); return select===null&&timeline===null?null:{editEnabled:select??true,timelineEnabled:timeline??true}}
 function remoteTheme(settings){const value=String(settings?.theme??settings?.['深淺模式']??'').trim().toLowerCase(); if(value==='dark'||value==='深色'||value==='深色模式')return 'dark'; if(value==='light'||value==='淺色'||value==='淺色模式')return 'light'; return ''}
-function remoteCollapseSettings(settings){if(!settings)return null; const map={designer:['collapseDesigner','收合設計師專長與案件分配'],recent:['collapseRecent','收合最新案件列表'],request:['collapseRequest','收合設計需求']}, result={}; let found=false; Object.entries(map).forEach(([key,names])=>{for(const name of names){const value=settings.collapseSettings?.[key]??settings[name]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); result[key]=value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'; found=true; break}}); return found?{...readCollapseSettingsForAccount(),...result}:null}
+function remoteCollapseSettings(settings){if(!settings)return null; const map={designer:['collapseDesigner','收合設計師專長與案件分配'],recent:['collapseRecent','收合最新案件列表'],request:['collapseRequest','收合設計需求']}, result={}; let found=false; Object.entries(map).forEach(([key,names])=>{for(const name of names){const value=settings.collapseSettings?.[key]??settings[name]; if(value===undefined||value===null||value==='')continue; const text=String(value).trim().toLowerCase(); result[key]=value===true||text==='v'||text==='true'||text==='1'||text==='yes'||text==='on'; found=true; break}}); const hiddenValue=settings.collapseSettings?.designerHidden??settings.designerHidden, designerCell=String(settings['收合設計師專長與案件分配']??'').trim().toLowerCase(); if(hiddenValue!==undefined||designerCell==='x'||designerCell==='v'){const hiddenText=String(hiddenValue??'').trim().toLowerCase(); result.designerHidden=designerCell==='x'||hiddenValue===true||hiddenText==='true'||hiddenText==='1'||hiddenText==='yes'||hiddenText==='on'; found=true} return found?{...readCollapseSettingsForAccount(),...result}:null}
 function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/管理者|admin/i.test(text))return '管理者'; if(/平面/.test(text))return '平面'; if(/影音|影像|影片|video/i.test(text))return '影音'; return ''}
 function remoteDesignGroup(settings){return normalizeDesignGroup(settings?.designType||settings?.['設計類型']||settings?.designGroup)}
 function remoteDisplayName(settings){return String(settings?.name||settings?.['名字']||settings?.['設計師名字']||'').trim()}
@@ -6769,15 +6827,16 @@ function syncTopPanelHeights(){
   if(!designer||!recent)return;
   recent.style.removeProperty('height');
   recent.style.removeProperty('max-height');
-  if(window.matchMedia('(max-width:900px)').matches||designer.classList.contains('is-collapsed')||recent.classList.contains('is-collapsed'))return;
+  if(collapseSettings.designerHidden||window.matchMedia('(max-width:900px)').matches||designer.classList.contains('is-collapsed')||recent.classList.contains('is-collapsed'))return;
   const height=Math.round(designer.getBoundingClientRect().height);
   if(height>0){
     recent.style.setProperty('height',`${height}px`,'important');
     recent.style.setProperty('max-height',`${height}px`,'important');
   }
 }
-function renderCollapsibleSections(){const map={designer:'#designerPanel',recent:'#recentPanel',request:'#requestPanel'}; Object.entries(map).forEach(([key,selector])=>{const panel=$(selector); if(!panel)return; const collapsed=Boolean(collapseSettings[key]); panel.classList.toggle('is-collapsed',collapsed); const button=panel.querySelector('[data-collapse-section]'); if(button){button.setAttribute('aria-expanded',collapsed?'false':'true'); button.title=collapsed?'展開':'收合'}}); requestAnimationFrame(()=>{syncTopPanelHeights(); syncModifyRecentRowHeights(); syncTimelineHeights(); adjustCaseSplitHeight()})}
+function renderCollapsibleSections(){const map={designer:'#designerPanel',recent:'#recentPanel',request:'#requestPanel'}; Object.entries(map).forEach(([key,selector])=>{const panel=$(selector); if(!panel)return; const collapsed=Boolean(collapseSettings[key]); panel.classList.toggle('is-collapsed',collapsed); const button=panel.querySelector('[data-collapse-section]'); if(button){button.setAttribute('aria-expanded',collapsed?'false':'true'); button.title=collapsed?'展開':'收合'}}); const designerHidden=Boolean(collapseSettings.designerHidden), top=document.querySelector('.top'), hideButton=$('#hideDesignerPanel'), restoreButton=$('#restoreDesignerPanel'); top?.classList.toggle('is-designer-hidden',designerHidden); if(hideButton)hideButton.hidden=designerHidden||!collapseSettings.designer; if(restoreButton)restoreButton.hidden=!designerHidden; requestAnimationFrame(()=>{syncTopPanelHeights(); syncModifyRecentRowHeights(); syncTimelineHeights(); adjustCaseSplitHeight()})}
 function toggleSectionCollapsed(key){collapseSettings={...readCollapseSettingsForAccount(),...collapseSettings,[key]:!collapseSettings[key]}; renderCollapsibleSections(); saveCollapseSettingsForAccount()}
+function setDesignerPanelHidden(hidden){collapseSettings={...readCollapseSettingsForAccount(),...collapseSettings,designerHidden:Boolean(hidden),designer:hidden?true:false}; renderCollapsibleSections(); saveCollapseSettingsForAccount()}
 function expandSectionForAction(key){if(!collapseSettings[key])return; collapseSettings={...collapseSettings,[key]:false}; renderCollapsibleSections()}
 function setOverviewLoading(){['#overviewYear','#overviewMonth','#overviewDesigner'].forEach(id=>{const el=$(id); if(el)el.innerHTML='<option>讀取中...</option>'})}
 function fillOverviewSelect(id,values,current){const el=$(id); if(!el)return; const old=overviewInitialized?el.value:current; el.innerHTML=values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); if(values.includes(old))el.value=old}
@@ -7789,6 +7848,8 @@ document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});
 document.addEventListener('pointerdown',applyOpenFiltersOnOutsideClick,true);
 document.querySelectorAll('[data-collapse-section]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation(); toggleSectionCollapsed(button.dataset.collapseSection)}));
+$('#hideDesignerPanel')?.addEventListener('click',event=>{event.stopPropagation(); setDesignerPanelHidden(true)});
+$('#restoreDesignerPanel')?.addEventListener('click',event=>{event.stopPropagation(); setDesignerPanelHidden(false)});
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
