@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 13:20 Asia/Taipei | build: 20260717-settings-x-no-legacy-spotify-29 -->
+<!-- LAST_MODIFIED: 2026-07-17 13:20 Asia/Taipei | build: 20260717-test-user-password-30 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-settings-x-no-legacy-spotify-29" />
+  <meta name="app-version" content="20260717-test-user-password-30" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6044,7 +6044,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-settings-x-no-legacy-spotify-29';
+const appBuildVersion = '20260717-test-user-password-30';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -8222,7 +8222,7 @@ async function verifyEditorLogin(account,password,newPassword=''){
   if(!data.ok) throw new Error(data.error || '登入失敗');
   return data;
 }
-async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
+async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('test.user@emctaipei.com',password); applyLoginRedirectResult(data,'測試使用者登入')}catch(err){handleAdminLoginError(err)} return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
 async function trySavedLogin(){return}
 function validateSubmit(isModify){
   if(currentLoginOwnerName()&&!String(formEl.elements.owner.value||'').trim())formEl.elements.owner.value=currentLoginOwnerName();
