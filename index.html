@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 16:22 Asia/Taipei | build: 20260717-reels-interactions-37 -->
+<!-- LAST_MODIFIED: 2026-07-17 16:33 Asia/Taipei | build: 20260717-reels-interactions-38 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-reels-interactions-37" />
+  <meta name="app-version" content="20260717-reels-interactions-38" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1428,10 +1428,10 @@
       color:#17211d;
     }
     .designer-poster.story-playing{
-      height:auto!important;
-      max-height:min(680px,calc(100vh - 64px))!important;
+      height:400px!important;
+      max-height:400px!important;
       overflow-x:hidden!important;
-      overflow-y:auto!important;
+      overflow-y:hidden!important;
     }
     .story-action-bar{
       position:absolute;
@@ -1466,7 +1466,13 @@
       cursor:pointer;
       filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));
     }
-    .story-action-button:hover,.story-action-button:focus-visible{background:transparent!important;outline:1px solid rgba(255,255,255,.8);outline-offset:2px}
+    .story-action-button:hover,.story-action-button:focus-visible{
+      border:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      outline:0!important;
+      transform:none!important;
+    }
     .story-action-button svg{
       width:21px;
       height:21px;
@@ -1515,13 +1521,21 @@
     }
     .story-reaction-avatar-fallback{display:grid;place-items:center;color:#52605a;font-size:9px;font-weight:900}
     .story-comments{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:11;
       display:block;
       height:62px;
       overflow-y:auto;
       padding:4px 10px;
-      background:#f7f9f8;
+      background:transparent;
       scroll-snap-type:y mandatory;
       scrollbar-width:none;
+      overscroll-behavior:contain;
+      touch-action:pan-y;
+      -webkit-overflow-scrolling:touch;
     }
     .story-comments::-webkit-scrollbar{display:none}
     .story-comments:empty{display:none}
@@ -1570,12 +1584,17 @@
       clip-path:polygon(100% 0,100% 100%,0 0);
     }
     .story-comment-form{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:14;
       display:grid;
       grid-template-columns:minmax(0,1fr) 38px;
       gap:7px;
       padding:8px 10px 10px;
-      border-top:1px solid #e7ece9;
-      background:#fff;
+      border:0;
+      background:transparent;
     }
     .story-comment-form[hidden]{display:none!important}
     .story-comment-input{
@@ -1617,6 +1636,8 @@
       }
       .designer-poster.story-playing{
         width:min(260px,calc(100vw - 28px))!important;
+        height:320px!important;
+        max-height:320px!important;
       }
       .designer-poster.story-playing .poster-image{
         width:100%!important;
@@ -6191,7 +6212,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-37" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-38" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6265,7 +6286,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-reels-interactions-37';
+const appBuildVersion = '20260717-reels-interactions-38';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
