@@ -5645,6 +5645,29 @@
     #accountMenu .account-dropdown button[hidden]{
       display:none!important;
     }
+    body.upload-modal-open{overflow:hidden!important}
+    #uploadModal{z-index:1250!important;padding:14px!important}
+    .upload-modal-card{
+      display:grid;grid-template-rows:auto minmax(0,1fr);width:min(920px,100%);height:min(880px,calc(100vh - 28px));
+      overflow:hidden;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 24px 70px rgba(16,24,40,.24)
+    }
+    .upload-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:10px 14px;border-bottom:1px solid var(--line);background:#f8fbf9}
+    .upload-modal-head h3{margin:0;color:#17211d;font-size:15px;line-height:1.3}
+    .upload-modal-close{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;padding:0!important;border:1px solid var(--line)!important;border-radius:7px!important;background:#fff!important;color:#43524b!important}
+    .upload-modal-close svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+    .upload-modal-frame-wrap{position:relative;min-width:0;min-height:0;background:#f4f7f5}
+    .upload-modal-loading{position:absolute;inset:0;z-index:1;display:grid;place-items:center;color:#66736d;font-size:13px;font-weight:800;background:#f4f7f5}
+    .upload-modal-loading[hidden]{display:none!important}
+    #uploadFrame{display:block;width:100%;height:100%;border:0;background:#f4f7f5}
+    html[data-theme="dark"] .upload-modal-card{border-color:#3b403e;background:#171918}
+    html[data-theme="dark"] .upload-modal-head{border-color:#3b403e;background:#202321}
+    html[data-theme="dark"] .upload-modal-head h3{color:#f0f3f1}
+    html[data-theme="dark"] .upload-modal-close{border-color:#4a504d!important;background:#292d2b!important;color:#e5e9e7!important}
+    @media(max-width:640px){
+      #uploadModal{padding:0!important;place-items:stretch!important}
+      .upload-modal-card{width:100%;height:100dvh;max-height:none;border:0;border-radius:0}
+      .upload-modal-head{padding:8px 10px}
+    }
   </style>
 </head>
 <body>
@@ -5973,6 +5996,20 @@
     </div>
   </form>
 </div>
+<div class="login-modal" id="uploadModal" hidden>
+  <section class="upload-modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+    <div class="upload-modal-head">
+      <h3 id="uploadModalTitle">圖片上傳</h3>
+      <button type="button" class="upload-modal-close ui-close-button" id="uploadModalClose" aria-label="關閉">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg>
+      </button>
+    </div>
+    <div class="upload-modal-frame-wrap">
+      <div class="upload-modal-loading" id="uploadModalLoading">上傳系統載入中...</div>
+      <iframe id="uploadFrame" title="圖片上傳系統" src="about:blank" allow="camera"></iframe>
+    </div>
+  </section>
+</div>
 <script src="https://accounts.google.com/gsi/client?v=20260717-case-detail-layout-14" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
@@ -6044,7 +6081,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-account-settings-avatar-32';
+const appBuildVersion = '20260717-inline-upload-modal-33';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6632,8 +6669,13 @@ function handleDesignerPosterImageError(image){const shell=image?.closest('.avat
 async function loadDesignerRoster({background=false}={}){if(!background)renderDesigners(); let changed=false; try{const list=(await gvizToObjects(await gvizJsonp(designerGvizUrl))).map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name)); if(list.length&&designerProfilesKey(list)!==designerProfilesKey(designers)){designers=list; changed=true; renderDesigners()}}catch(err){console.warn('設計師資料讀取失敗，暫用預設清單',err); if(!background)renderDesigners()} if(!background||changed)updateLoginUi()}
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
-function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(designer)}`,'_blank','noopener')}
-function openUserAvatarUploadPage(){if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return} closeAccountMenu(); if(isDesignerLogin()){window.open(`${designerUploadPageUrl}?designer=${encodeURIComponent(currentEditor)}`,'_blank','noopener');return} const url=new URL(designerUploadPageUrl); url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); window.open(url.toString(),'_blank','noopener')}
+let uploadModalReturnFocus=null;
+function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
+function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
+function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
+function userAvatarUploadUrl(){const url=new URL(designerUploadPageUrl); url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
+function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
+function openUserAvatarUploadPage(){if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return} closeAccountMenu(); if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return} openUploadModal(userAvatarUploadUrl(),'設定我的頭像')}
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
 function issueReportStatusClass(status){return `issue-status-${issueReportStatuses.includes(status)?status:'回報中'}`}
@@ -8628,6 +8670,10 @@ document.addEventListener('click',event=>{
 	$('#designerSettingsToggle')?.addEventListener('click',showDesignerSettings);
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountAvatarSettings')?.addEventListener('click',openUserAvatarUploadPage);
+	$('#uploadModalClose')?.addEventListener('click',closeUploadModal);
+	$('#uploadModal')?.addEventListener('click',event=>{if(event.target.id==='uploadModal')closeUploadModal()});
+	$('#uploadFrame')?.addEventListener('load',()=>{const frame=$('#uploadFrame'), loading=$('#uploadModalLoading'); if(frame?.src&&frame.src!=='about:blank'&&loading)loading.hidden=true});
+	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#uploadModal')?.hidden){event.preventDefault();closeUploadModal()}});
 	window.addEventListener('focus',()=>refreshCurrentAccountAvatar());
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
