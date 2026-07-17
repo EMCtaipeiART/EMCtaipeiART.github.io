@@ -1,14 +1,20 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 17:20 Asia/Taipei | build: 20260717-reels-interactions-40 -->
+<!-- LAST_MODIFIED: 2026-07-17 18:00 Asia/Taipei | build: 20260717-avatar-first-paint-44 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-reels-interactions-40" />
+  <meta name="app-version" content="20260717-avatar-first-paint-44" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>設計需求系統 v4.0</title>
+  <link rel="preload" as="image" href="assets/designers/Machi-avatar.jpg" fetchpriority="high" />
+  <link rel="preload" as="image" href="assets/designers/Anna-avatar.jpg" fetchpriority="high" />
+  <link rel="preload" as="image" href="assets/designers/Karl-avatar.jpg" fetchpriority="high" />
+  <link rel="preload" as="image" href="assets/designers/Noise-avatar.jpg" fetchpriority="high" />
+  <link rel="preload" as="image" href="assets/designers/Amber-avatar.jpg" fetchpriority="high" />
+  <link rel="preload" as="image" href="assets/designers/Leona-avatar.jpg" fetchpriority="high" />
   <script>
     (()=>{try{const saved=localStorage.getItem('designRequestThemeV1'); document.documentElement.dataset.theme=saved==='dark'?'dark':'light'}catch(err){document.documentElement.dataset.theme='light'}})();
   </script>
@@ -5911,6 +5917,36 @@
     html .designer-poster .story-action-button.is-active[data-reel-reaction="dislike"]{
       color:#dce4e0!important;
     }
+    #designerRoster .avatar-placeholder{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      display:grid;
+      place-items:center;
+      overflow:hidden;
+      border-radius:inherit;
+      background-color:#e7f1ec;
+      background-position:center;
+      background-size:cover;
+      color:#466158;
+      font-size:24px;
+      font-weight:900;
+      line-height:1;
+    }
+    #designerRoster .designer-card[data-designer="Anna"] .avatar-placeholder{background-color:#f7e8ee;color:#80566a}
+    #designerRoster .designer-card[data-designer="Karl"] .avatar-placeholder{background-color:#e4eef7;color:#4d6478}
+    #designerRoster .designer-card[data-designer="Noise"] .avatar-placeholder{background-color:#e9e9e6;color:#5d615d}
+    #designerRoster .designer-card[data-designer="Amber"] .avatar-placeholder{background-color:#fff0cf;color:#80652d}
+    #designerRoster .designer-card[data-designer="Leona"] .avatar-placeholder{background-color:#e6f0e4;color:#536c4e}
+    #designerRoster .avatar-frame > .designer-avatar-image{
+      position:absolute!important;
+      inset:0!important;
+      z-index:1;
+      opacity:0;
+      transition:opacity .16s ease;
+    }
+    #designerRoster .avatar-frame > .designer-avatar-image.is-loaded{opacity:1}
+    html[data-theme="dark"] #designerRoster .avatar-placeholder{filter:brightness(.72);color:#fff}
   </style>
 </head>
 <body>
@@ -6327,7 +6363,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-user-avatar-auto-close-42';
+const appBuildVersion = '20260717-avatar-first-paint-44';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6727,6 +6763,7 @@ function nextId(){const max=Math.max(...rows.map(r=>+r.id||0),25120000);return S
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function jsArg(s){return String(s??'').replaceAll('\\','\\\\').replaceAll("'","\\'")}
 function imageUrl(value){const url=String(value||'').trim(), id=url.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1]||url.match(/[?&]id=([^&]+)/)?.[1]; return id?`https://drive.google.com/thumbnail?id=${id}&sz=w700`:url}
+function designerLocalAvatar(name){return designerOptions.includes(String(name||''))?`assets/designers/${String(name)}-avatar.jpg`:''}
 function designerFallbackImage(name){
   const label=encodeURIComponent(String(name||'?').slice(0,2));
   return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Crect width='240' height='240' rx='42' fill='%23eef3f0'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' dominant-baseline='middle' font-size='54' font-family='Arial,sans-serif' font-weight='800' fill='%2366736d'%3E${label}%3C/text%3E%3C/svg%3E`;
@@ -6882,7 +6919,8 @@ function renderDesigners(){
     const busy=status==='忙碌';
     const skills=(d.skills.length?d.skills:[]).map(skill=>`<button type="button" data-designer="${esc(d.name)}" data-skill="${esc(skill)}">${esc(skill)}</button>`).join('');
     const quote=d.quote||`${d.name} 目前可協助設計需求。`;
-    const fallback=designerFallbackImage(d.name);
+    const localAvatar=designerLocalAvatar(d.name);
+    const fallback=localAvatar||designerFallbackImage(d.name);
     const avatar=imageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     const music=sharedMusicInfo(d.musicUrl), musicFallback=music?`${music.providerLabel} 單曲`:'', musicStartAt=Math.max(0,Number(d.musicStartAt)||0);
@@ -6891,7 +6929,7 @@ function renderDesigners(){
     const avatarMusicMarkup=music?`<div class="avatar-music-badge" aria-label="現在收聽 ${esc(musicFallback)}"><span class="avatar-music-icon">${musicListeningIcon()}</span><span class="avatar-music-marquee"><span data-music-avatar-title>現在收聽 · ${esc(musicFallback)}</span></span></div>`:'';
     const hasUnreadStory=designerHasUnreadStory(d);
     const priorityBadge=isPriorityNewCaseDesigner(d)?`<button type="button" class="new-case-priority-badge" data-new-project-designer="${esc(d.name)}" title="開啟 ${esc(d.name)} 的新開專案表單">新案優先</button>`:'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame${hasUnreadStory?' has-unread-story':''}" role="button" tabindex="0" aria-expanded="false" aria-label="開啟 ${esc(d.name)} 限時動態與大海報"><img src="${esc(avatar)}" alt="${esc(d.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'">${avatarMusicMarkup}<span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster${music?' has-music':''}" data-story-viewer>${musicMarkup}<div class="designer-story-progress" data-story-progress hidden aria-hidden="true"></div><img class="poster-image" data-poster-url="${esc(poster)}" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="handleDesignerPosterImageError(this)">${storyInteractionShell()}<div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame${hasUnreadStory?' has-unread-story':''}" role="button" tabindex="0" aria-expanded="false" aria-label="開啟 ${esc(d.name)} 限時動態與大海報"><span class="avatar-placeholder" aria-hidden="true" style="${localAvatar?`background-image:url('${esc(localAvatar)}')`:''}">${esc(d.name.slice(0,2).toUpperCase())}</span><img class="designer-avatar-image" src="${esc(avatar)}" alt="${esc(d.name)} 頭像" loading="eager" decoding="async" fetchpriority="high" onload="this.classList.add('is-loaded')" onerror="this.onerror=null;this.src='${esc(fallback)}'">${avatarMusicMarkup}<span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始與執行中 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster${music?' has-music':''}" data-story-viewer>${musicMarkup}<div class="designer-story-progress" data-story-progress hidden aria-hidden="true"></div><img class="poster-image" data-poster-url="${esc(poster)}" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="handleDesignerPosterImageError(this)">${storyInteractionShell()}<div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   designerRosterRenderKey=renderKey;
   hydrateSharedMusic();
@@ -6967,11 +7005,12 @@ async function loadDesignerRoster({background=false}={}){
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 let uploadModalReturnFocus=null;
+let activeUserAvatarUploadNonce='';
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
-function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
-function handleUploadFrameMessage(event){const frame=$('#uploadFrame'),data=event.data||{}; if(!frame||event.source!==frame.contentWindow||data.type!=='machi-user-avatar-updated')return; closeUploadModal(); setSync('頭像已更新',false,2200)}
+function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
+function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(data.type!=='machi-user-avatar-updated'||!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return; closeUploadModal(); setSync('頭像已更新',false,2200)}
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
-function userAvatarUploadUrl(){const url=new URL(designerUploadPageUrl); url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
+function userAvatarUploadUrl(){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
 function openUserAvatarUploadPage(){if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return} closeAccountMenu(); if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return} openUploadModal(userAvatarUploadUrl(),'設定我的頭像')}
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
