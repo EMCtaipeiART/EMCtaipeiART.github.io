@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 17:10 Asia/Taipei | build: 20260717-reels-interactions-39 -->
+<!-- LAST_MODIFIED: 2026-07-17 17:20 Asia/Taipei | build: 20260717-reels-interactions-40 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-reels-interactions-39" />
+  <meta name="app-version" content="20260717-reels-interactions-40" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6253,7 +6253,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-39" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-40" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6327,7 +6327,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-reels-interactions-39';
+const appBuildVersion = '20260717-reels-interactions-40';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7033,11 +7033,11 @@ async function changeIssueReportStatus(event){
   const select=event.target.closest('.issue-report-status'); if(!select)return;
   const rowNumber=Number(select.dataset.reportRow), report=issueReports.find(item=>Number(item.rowNumber)===rowNumber), previousReport=report?{...report}:null, status=select.value;
   if(!report||status===report['狀態'])return;
-  report['狀態']=status; report['狀態更改時間']=currentTaipeiTimestamp(); saveIssueReportsCache(); renderIssueReports(); setSync(`已更新為${status}，背景寫入中...`);
+  report['狀態']=status; report['狀態更改時間']=currentTaipeiTimestamp(); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`已更新為${status}，背景寫入中...`);
   try{
     const data=await sheetApi('updateIssueReportStatus',{rowNumber,status,editorToken:currentEditorToken,_requireResponse:true});
-    Object.assign(report,normalizeIssueReport(data.row||{...report,'狀態':status},rowNumber)); saveIssueReportsCache(); renderIssueReports(); setSync(`回報狀態已更新為${status}`);
-  }catch(err){if(previousReport)Object.assign(report,previousReport); saveIssueReportsCache(); renderIssueReports(); setSync(`回報狀態寫入失敗，已還原：${err.message}`,true)}
+    Object.assign(report,normalizeIssueReport(data.row||{...report,'狀態':status},rowNumber)); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`回報狀態已更新為${status}`);
+  }catch(err){if(previousReport)Object.assign(report,previousReport); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`回報狀態寫入失敗，已還原：${err.message}`,true)}
 }
 async function submitIssueReport(event){
   event.preventDefault();
@@ -7916,19 +7916,34 @@ function rowOwnerMatchesCurrentUser(row){
   const owner=normalizedUserText(ownerDisplay(row.owner)), editor=normalizedUserText(currentEditor), account=normalizedUserText(loginAccountFull(currentEditorAccount)), ownerEmail=normalizedUserText(row.ownerEmail||extractEmail(row.owner));
   return Boolean((owner&&editor&&owner===editor)||(owner&&account&&owner===account)||(ownerEmail&&account&&ownerEmail===account));
 }
+const storyNotificationLifetimeMs=24*60*60*1000;
+const storyReactionNotificationTimesKey='designRequestStoryReactionNotificationTimesV1';
 function storyActivityTimeLabel(value){const date=new Date(value||''); if(Number.isNaN(date.getTime()))return ''; return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date)}
 function storyNotificationItems(){
   if(!isDesignerLogin())return [];
-  const items=[];
+  const items=[], now=Date.now(), reactionTimes=readCache(accountStorageKey(storyReactionNotificationTimesKey),{})||{}, activeReactionKeys=new Set();
+  const addReaction=(reel,reaction,name,index)=>{
+    if(!name||name===currentEditor)return;
+    const key=`story-v1:${reaction}:${reel.id}:${name}`, startedAt=Number(reactionTimes[key])||now;
+    activeReactionKeys.add(key);
+    reactionTimes[key]=startedAt;
+    if(now-startedAt>=storyNotificationLifetimeMs)return;
+    const liked=reaction==='like';
+    items.push({kind:'story',key,id:String(reel.id),title:`${liked?'限動按讚':'限動倒讚'}｜${name}`,meta:`${name} 對你的限時動態${liked?'按讚':'按了倒讚'}`,sortTime:startedAt-index});
+  };
   designerReels.filter(reel=>reel.name===currentEditor).forEach(reel=>{
     [...(reel.comments||[])].reverse().forEach(comment=>{
       if(!comment.name||comment.name===currentEditor)return;
+      const createdAt=Date.parse(comment.createdAt||'');
+      if(!createdAt||now-createdAt>=storyNotificationLifetimeMs)return;
       const time=storyActivityTimeLabel(comment.createdAt), identity=comment.id||`${comment.name}:${comment.createdAt}:${comment.text}`;
-      items.push({kind:'story',key:`story-v1:comment:${reel.id}:${identity}`,id:String(reel.id),title:`限動新留言｜${comment.name}`,meta:`${String(comment.text||'').slice(0,80)}${time?`｜${time}`:''}`,sortTime:Date.parse(comment.createdAt||'')||0});
+      items.push({kind:'story',key:`story-v1:comment:${reel.id}:${identity}`,id:String(reel.id),title:`限動新留言｜${comment.name}`,meta:`${String(comment.text||'').slice(0,80)}${time?`｜${time}`:''}`,sortTime:createdAt});
     });
-    [...(reel.likes||[])].reverse().forEach((name,index)=>{if(name&&name!==currentEditor)items.push({kind:'story',key:`story-v1:like:${reel.id}:${name}`,id:String(reel.id),title:`限動按讚｜${name}`,meta:`${name} 對你的限時動態按讚`,sortTime:-100-index})});
-    [...(reel.dislikes||[])].reverse().forEach((name,index)=>{if(name&&name!==currentEditor)items.push({kind:'story',key:`story-v1:dislike:${reel.id}:${name}`,id:String(reel.id),title:`限動倒讚｜${name}`,meta:`${name} 對你的限時動態按了倒讚`,sortTime:-200-index})});
+    [...(reel.likes||[])].reverse().forEach((name,index)=>addReaction(reel,'like',name,index));
+    [...(reel.dislikes||[])].reverse().forEach((name,index)=>addReaction(reel,'dislike',name,index));
   });
+  Object.keys(reactionTimes).forEach(key=>{if(!activeReactionKeys.has(key))delete reactionTimes[key]});
+  writeCache(accountStorageKey(storyReactionNotificationTimesKey),reactionTimes);
   return items.sort((a,b)=>(b.sortTime-a.sortTime)||String(a.key).localeCompare(String(b.key),'zh-Hant'));
 }
 function notificationItems(){
@@ -7941,7 +7956,7 @@ function notificationItems(){
     return [...modifyItems,...newCases];
   })():[];
   const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`})));
-  const issueItems=isIssueReportManager()?issueReports.map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`})):[];
+  const issueItems=isIssueReportManager()?issueReports.filter(report=>report['狀態']==='回報中').map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`})):[];
   const storyItems=storyNotificationItems();
   const regularItems=[...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true}));
   return [...issueItems,...storyItems,...regularItems].slice(0,20);
@@ -9103,7 +9118,7 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
