@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 16:07 Asia/Taipei | build: 20260717-reels-interactions-36 -->
+<!-- LAST_MODIFIED: 2026-07-17 16:22 Asia/Taipei | build: 20260717-reels-interactions-37 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-reels-interactions-36" />
+  <meta name="app-version" content="20260717-reels-interactions-37" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1423,8 +1423,8 @@
     .designer-story-interactions[hidden]{display:none!important}
     .designer-poster.story-playing .designer-story-interactions{
       display:block;
-      border-top:1px solid #e5e7eb;
-      background:#fff;
+      border:0;
+      background:transparent;
       color:#17211d;
     }
     .designer-poster.story-playing{
@@ -1434,29 +1434,39 @@
       overflow-y:auto!important;
     }
     .story-action-bar{
+      position:absolute;
+      right:8px;
+      top:200px;
+      z-index:12;
       display:flex;
+      flex-direction:column;
       align-items:center;
-      gap:5px;
-      min-height:46px;
-      padding:5px 8px;
-      border-bottom:1px solid #edf0ee;
+      gap:7px;
+      padding:0;
+      border:0;
+      transform:translateY(-50%);
     }
     .story-action-group{position:relative}
     .story-action-button{
       display:inline-flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
-      gap:4px;
-      min-width:42px;
-      height:36px;
-      padding:6px 8px;
-      border:0;
-      border-radius:8px;
-      background:transparent;
-      color:#52605a;
+      gap:1px;
+      width:34px;
+      min-width:34px;
+      height:38px;
+      min-height:38px;
+      padding:2px;
+      border:0!important;
+      border-radius:0!important;
+      background:transparent!important;
+      box-shadow:none!important;
+      color:#fff;
       cursor:pointer;
+      filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));
     }
-    .story-action-button:hover,.story-action-button:focus-visible{background:#f2f5f3;outline:none}
+    .story-action-button:hover,.story-action-button:focus-visible{background:transparent!important;outline:1px solid rgba(255,255,255,.8);outline-offset:2px}
     .story-action-button svg{
       width:21px;
       height:21px;
@@ -1468,45 +1478,61 @@
     }
     .story-action-button.is-active[data-reel-reaction="like"]{color:#dc2626}
     .story-action-button.is-active[data-reel-reaction="like"] svg{fill:#ef4444;stroke:#ef4444}
-    .story-action-button.is-active[data-reel-reaction="dislike"]{color:#334155}
-    .story-action-button.is-active[data-reel-reaction="dislike"] svg{fill:#475569;stroke:#475569}
-    .story-action-count{min-width:10px;font-size:11px;font-weight:900;line-height:1}
+    .story-action-button.is-active[data-reel-reaction="dislike"]{color:#dce4e0}
+    .story-action-button.is-active[data-reel-reaction="dislike"] svg{fill:#64748b;stroke:#e2e8f0}
+    .story-action-count{min-width:10px;color:currentColor;font-size:9px;font-weight:900;line-height:1}
     .story-reaction-popover{
       position:absolute;
-      left:0;
-      bottom:calc(100% + 6px);
+      right:calc(100% + 8px);
+      top:50%;
       z-index:15;
       display:none;
-      min-width:110px;
-      max-width:210px;
-      padding:7px 9px;
-      border:1px solid #dfe6e1;
+      grid-auto-flow:column;
+      grid-auto-columns:26px;
+      align-items:center;
+      gap:4px;
+      max-width:170px;
+      min-height:34px;
+      padding:4px;
+      overflow-x:auto;
+      border:0;
       border-radius:8px;
       background:#fff;
       box-shadow:0 12px 24px rgba(18,38,28,.18);
-      color:#33413b;
-      font-size:11px;
-      font-weight:800;
-      line-height:1.45;
-      white-space:normal;
+      transform:translateY(-50%);
+      scrollbar-width:none;
     }
+    .story-reaction-popover::-webkit-scrollbar{display:none}
     .story-action-group:hover .story-reaction-popover,
-    .story-action-group:focus-within .story-reaction-popover{display:block}
-    .story-comments{
-      display:grid;
-      gap:8px;
-      max-height:154px;
-      overflow-y:auto;
-      padding:9px 10px;
-      background:#f7f9f8;
-      scrollbar-width:thin;
+    .story-action-group:focus-within .story-reaction-popover{display:grid}
+    .story-reaction-avatar,.story-reaction-avatar-fallback{
+      width:26px!important;
+      height:26px!important;
+      border:0!important;
+      border-radius:50%!important;
+      object-fit:cover!important;
+      background:#edf1ee!important;
     }
-    .story-comments-empty{padding:5px;color:#7b8781;font-size:11px;text-align:center}
+    .story-reaction-avatar-fallback{display:grid;place-items:center;color:#52605a;font-size:9px;font-weight:900}
+    .story-comments{
+      display:block;
+      height:62px;
+      overflow-y:auto;
+      padding:4px 10px;
+      background:#f7f9f8;
+      scroll-snap-type:y mandatory;
+      scrollbar-width:none;
+    }
+    .story-comments::-webkit-scrollbar{display:none}
+    .story-comments:empty{display:none}
     .story-comment{
       display:grid;
       grid-template-columns:30px minmax(0,1fr);
-      align-items:start;
+      align-items:center;
       gap:7px;
+      min-height:54px;
+      scroll-snap-align:start;
+      scroll-snap-stop:always;
     }
     .story-comment-avatar,.story-comment-avatar-fallback{
       width:30px!important;
@@ -1518,7 +1544,6 @@
     }
     .story-comment-avatar-fallback{display:grid;place-items:center;color:#52605a;font-size:11px;font-weight:900}
     .story-comment-content{min-width:0}
-    .story-comment-name{margin:0 0 3px 5px;color:#52605a;font-size:10px;font-weight:900}
     .story-comment-bubble{
       position:relative;
       width:fit-content;
@@ -1552,6 +1577,7 @@
       border-top:1px solid #e7ece9;
       background:#fff;
     }
+    .story-comment-form[hidden]{display:none!important}
     .story-comment-input{
       min-height:36px!important;
       padding:7px 10px!important;
@@ -1596,6 +1622,7 @@
         width:100%!important;
         height:320px!important;
       }
+      .story-action-bar{top:160px}
       .designer-card:nth-child(3n+1) .designer-poster{
         left:0!important;
         right:auto!important;
@@ -6164,7 +6191,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-36" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-37" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6238,7 +6265,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-reels-interactions-36';
+const appBuildVersion = '20260717-reels-interactions-37';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6814,9 +6841,10 @@ function designerHasUnreadStory(designer){const stories=storiesForDesigner(desig
 function markDesignerStorySeen(name,storyId){if(!name||!storyId)return; const seen=readSeenDesignerStories(), current=Array.isArray(seen[name])?seen[name]:[]; seen[name]=unique([...current,storyId]); writeCache(accountStorageKey(designerStorySeenStorageKey),seen)}
 function syncDesignerUnreadFrame(shell,designer){shell?.querySelector('.avatar-frame')?.classList.toggle('has-unread-story',designerHasUnreadStory(designer))}
 function renderDesignerStoryProgress(progress,total,index){if(!progress)return; progress.hidden=false; progress.innerHTML=Array.from({length:total},(_,i)=>`<span class="designer-story-progress-segment ${i<index?'is-complete':(i===index?'is-active':'')}" aria-hidden="true"></span>`).join('')}
-function storyReactionNames(names){return names.length?names.map(esc).join('、'):'尚無回應'}
-function storyCommentMarkup(comment){const fallback=designerFallbackImage(comment.name), avatar=comment.avatar?`<img class="story-comment-avatar" src="${esc(comment.avatar)}" alt="${esc(comment.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'">`:`<span class="story-comment-avatar-fallback" aria-hidden="true">${esc(accountInitial(comment.name))}</span>`; return `<article class="story-comment">${avatar}<div class="story-comment-content"><div class="story-comment-name">${esc(comment.name)}</div><div class="story-comment-bubble">${esc(comment.text)}</div></div></article>`}
-function renderStoryInteractions(shell,story){const panel=shell?.querySelector('[data-story-interactions]'); if(!panel)return; const liked=story.likes.includes(currentEditor), disliked=story.dislikes.includes(currentEditor), comments=story.comments||[]; panel.hidden=false; panel.innerHTML=`<div class="story-action-bar"><div class="story-action-group"><button class="story-action-button${liked?' is-active':''}" type="button" data-reel-reaction="like" aria-label="按讚" aria-pressed="${liked}">${storyLikeIcon()}<span class="story-action-count">${story.likeCount||0}</span></button><div class="story-reaction-popover" role="tooltip">${storyReactionNames(story.likes)}</div></div><div class="story-action-group"><button class="story-action-button${disliked?' is-active':''}" type="button" data-reel-reaction="dislike" aria-label="倒讚" aria-pressed="${disliked}">${storyDislikeIcon()}<span class="story-action-count">${story.dislikeCount||0}</span></button><div class="story-reaction-popover" role="tooltip">${storyReactionNames(story.dislikes)}</div></div><button class="story-action-button" type="button" data-story-comment-focus aria-label="留言">${storyCommentIcon()}<span class="story-action-count">${comments.length}</span></button></div><div class="story-comments" data-story-comments>${comments.length?comments.map(storyCommentMarkup).join(''):'<div class="story-comments-empty">還沒有留言</div>'}</div><form class="story-comment-form" data-reel-comment-form><input class="story-comment-input" name="comment" maxlength="200" autocomplete="off" placeholder="寫下留言…" aria-label="限時動態留言"><button class="story-comment-send" type="submit" aria-label="送出留言">${storySendIcon()}</button></form>`; const list=panel.querySelector('[data-story-comments]'); if(list)list.scrollTop=list.scrollHeight}
+function storyReactionAvatarMarkup(name,story){const fallback=designerFallbackImage(name), comment=story.comments?.find(item=>item.name===name&&item.avatar), profile=designerProfile(name), avatar=name===currentEditor?currentAccountAvatarUrl():(comment?.avatar||imageUrl(profile?.avatar||'')); return avatar?`<img class="story-reaction-avatar" src="${esc(avatar)}" alt="${esc(name)}" onerror="this.onerror=null;this.src='${esc(fallback)}'">`:`<span class="story-reaction-avatar-fallback" aria-label="${esc(name)}">${esc(accountInitial(name))}</span>`}
+function storyReactionPopover(names,story){return names.length?`<div class="story-reaction-popover" role="tooltip">${names.map(name=>storyReactionAvatarMarkup(name,story)).join('')}</div>`:''}
+function storyCommentMarkup(comment){const fallback=designerFallbackImage(comment.name), avatar=comment.avatar?`<img class="story-comment-avatar" src="${esc(comment.avatar)}" alt="${esc(comment.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'">`:`<span class="story-comment-avatar-fallback" aria-label="${esc(comment.name)}">${esc(accountInitial(comment.name))}</span>`; return `<article class="story-comment">${avatar}<div class="story-comment-content"><div class="story-comment-bubble">${esc(comment.text)}</div></div></article>`}
+function renderStoryInteractions(shell,story){const panel=shell?.querySelector('[data-story-interactions]'); if(!panel)return; const liked=story.likes.includes(currentEditor), disliked=story.dislikes.includes(currentEditor), comments=story.comments||[]; panel.hidden=false; panel.innerHTML=`<div class="story-action-bar"><div class="story-action-group"><button class="story-action-button${liked?' is-active':''}" type="button" data-reel-reaction="like" aria-label="按讚" aria-pressed="${liked}">${storyLikeIcon()}<span class="story-action-count">${story.likeCount||0}</span></button>${storyReactionPopover(story.likes,story)}</div><div class="story-action-group"><button class="story-action-button${disliked?' is-active':''}" type="button" data-reel-reaction="dislike" aria-label="倒讚" aria-pressed="${disliked}">${storyDislikeIcon()}<span class="story-action-count">${story.dislikeCount||0}</span></button>${storyReactionPopover(story.dislikes,story)}</div><button class="story-action-button" type="button" data-story-comment-focus aria-label="留言">${storyCommentIcon()}<span class="story-action-count">${comments.length}</span></button></div><div class="story-comments" data-story-comments>${comments.map(storyCommentMarkup).join('')}</div><form class="story-comment-form" data-reel-comment-form hidden><input class="story-comment-input" name="comment" maxlength="200" autocomplete="off" placeholder="寫下留言…" aria-label="限時動態留言"><button class="story-comment-send" type="submit" aria-label="送出留言">${storySendIcon()}</button></form>`; const list=panel.querySelector('[data-story-comments]'); if(list)list.scrollTop=list.scrollHeight}
 function pauseDesignerStoryTimer(){if(activeDesignerStoryPlayback?.timer){clearTimeout(activeDesignerStoryPlayback.timer);activeDesignerStoryPlayback.timer=null} activeDesignerStoryPlayback?.shell?.querySelector('[data-story-viewer]')?.classList.add('story-paused')}
 function showDesignerFinalPoster(shell){pauseDesignerStoryTimer(); const viewer=shell?.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), interactions=viewer?.querySelector('[data-story-interactions]'); if(viewer){viewer.classList.remove('story-playing','story-paused');delete viewer.dataset.reelId} if(progress){progress.hidden=true;progress.innerHTML=''} if(interactions){interactions.hidden=true;interactions.innerHTML=''} if(image){image.src=image.dataset.posterUrl||'';image.alt=`${shell.closest('.designer-card')?.dataset.designer||''} 海報`} activeDesignerStoryPlayback=null}
 function showDesignerStorySlide(shell,index){const name=shell?.closest('.designer-card')?.dataset.designer||'', designer=designerProfile(name), stories=storiesForDesigner(name); if(!stories.length||index>=stories.length){showDesignerFinalPoster(shell);syncDesignerUnreadFrame(shell,designer);return} pauseDesignerStoryTimer(); const viewer=shell.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), story=stories[index]; if(!viewer||!image){showDesignerFinalPoster(shell);return} viewer.classList.add('story-playing'); viewer.classList.remove('story-paused'); viewer.dataset.reelId=story.id; renderDesignerStoryProgress(progress,stories.length,index); image.src=story.imageUrl; image.alt=`${name} 限時動態 ${index+1}`; renderStoryInteractions(shell,story); markDesignerStorySeen(name,story.id); syncDesignerUnreadFrame(shell,designer); activeDesignerStoryPlayback={shell,index,stories,story,timer:setTimeout(()=>showDesignerStorySlide(shell,index+1),designerStoryDurationMs)}}
@@ -8855,7 +8883,8 @@ formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
 	    event.preventDefault();
 	    event.stopPropagation();
 	    pauseDesignerStoryTimer();
-	    commentFocus.closest('[data-story-interactions]')?.querySelector('.story-comment-input')?.focus();
+	    const commentForm=commentFocus.closest('[data-story-interactions]')?.querySelector('[data-reel-comment-form]');
+	    if(commentForm){commentForm.hidden=false;commentForm.querySelector('.story-comment-input')?.focus()}
 	    return;
 	  }
 	  if(event.target.closest('[data-story-interactions]')){
