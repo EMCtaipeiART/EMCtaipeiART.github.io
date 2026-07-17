@@ -5882,6 +5882,32 @@
       .upload-modal-card{width:100%;height:100dvh;max-height:none;border:0;border-radius:0}
       .upload-modal-head{padding:8px 10px}
     }
+    /* Story reactions stay icon-only in every theme and interaction state. */
+    html .designer-poster .story-action-button,
+    html .designer-poster .story-action-button:hover,
+    html .designer-poster .story-action-button:focus,
+    html .designer-poster .story-action-button:focus-visible,
+    html .designer-poster .story-action-button:active,
+    html[data-theme="dark"] .designer-poster .story-action-button,
+    html[data-theme="dark"] .designer-poster .story-action-button:hover,
+    html[data-theme="dark"] .designer-poster .story-action-button:focus,
+    html[data-theme="dark"] .designer-poster .story-action-button:focus-visible,
+    html[data-theme="dark"] .designer-poster .story-action-button:active{
+      background:transparent!important;
+      background-color:transparent!important;
+      background-image:none!important;
+      border-color:transparent!important;
+      box-shadow:none!important;
+      outline:none!important;
+      color:#fff!important;
+      -webkit-tap-highlight-color:transparent;
+    }
+    html .designer-poster .story-action-button.is-active[data-reel-reaction="like"]{
+      color:#dc2626!important;
+    }
+    html .designer-poster .story-action-button.is-active[data-reel-reaction="dislike"]{
+      color:#dce4e0!important;
+    }
   </style>
 </head>
 <body>
