@@ -7108,7 +7108,13 @@ async function checkRegularUserWriteAccess(){
   setSync('正在檢查一般使用者寫入權限...');
   try{
     const data=await jsonp(writeAccessCheckUrl(),15000,'寫入權限檢查逾時，請確認 Apps Script 已重新部署。');
-    if(!data?.ok||data.action!=='writeAccessCheck')throw new Error(data?.error||'Apps Script 尚未支援寫入權限檢查，請重新部署最新版本');
+    if(!data?.ok||data.action!=='writeAccessCheck'){
+      const detail=String(data?.error||'');
+      const message=detail==='Unknown action'
+        ?'Apps Script 線上版本過舊，尚未包含一般使用者寫入權限檢查，請將 google_apps_script.gs 重新部署為 Web App'
+        :(detail||'Apps Script 尚未支援寫入權限檢查，請重新部署最新版本');
+      throw new Error(message);
+    }
     regularUserWriteCheck={canCreate:Boolean(data.permissions?.createRequest),checkedAt:data.checkedAt||''};
     renderPermissionPreview();
     const createText=regularUserWriteCheck.canCreate?'可寫入':'無法寫入';
