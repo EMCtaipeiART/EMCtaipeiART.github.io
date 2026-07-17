@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 16:33 Asia/Taipei | build: 20260717-reels-interactions-38 -->
+<!-- LAST_MODIFIED: 2026-07-17 17:10 Asia/Taipei | build: 20260717-reels-interactions-39 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-reels-interactions-38" />
+  <meta name="app-version" content="20260717-reels-interactions-39" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1616,20 +1616,22 @@
       font-size:11px!important;
     }
     .story-comment-send{
-      display:grid;
-      place-items:center;
+      display:grid!important;
+      align-items:center!important;
+      justify-items:center!important;
       width:38px;
       height:36px;
       min-height:36px;
-      padding:0;
+      padding:0!important;
       border:1px solid #f2b84b;
       border-radius:9px;
       background:#fff8df;
       color:#9a4d00;
       cursor:pointer;
+      line-height:0;
     }
     .story-comment-send:disabled{cursor:wait;opacity:.5}
-    .story-comment-send svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .story-comment-send svg{display:block;width:18px;height:18px;margin:0!important;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
     @keyframes posterSpeechWiggle{
       0%,100%{transform:translateY(0) scale(1) rotate(-.35deg)}
       35%{transform:translateY(-3px) scale(1.01) rotate(.55deg)}
@@ -2659,6 +2661,7 @@
     }
     .notification-item.is-case .notification-dot{background:#10946a;box-shadow:0 0 0 3px rgba(16,148,106,.12)}
     .notification-item.is-issue .notification-dot{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+    .notification-item.is-story .notification-dot{background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
     .notification-title{display:block;font-size:12px;font-weight:950;line-height:1.25;color:#17211d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .notification-meta{display:block;margin-top:3px;font-size:11px;font-weight:800;line-height:1.35;color:#66736d;white-space:normal}
     .notification-empty{padding:18px 8px;text-align:center;color:#7a8580;font-size:12px;font-weight:850}
@@ -6250,7 +6253,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-38" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-39" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6324,7 +6327,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-reels-interactions-38';
+const appBuildVersion = '20260717-reels-interactions-39';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6852,7 +6855,7 @@ function designerRosterStateKey(list){return JSON.stringify({designers:(list||[]
 function storyLikeIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.2 11 3.8c.5-.9 1.9-.6 2 .5l.2 4.2h4.9c1.6 0 2.7 1.5 2.2 3l-2.1 6.4a2.5 2.5 0 0 1-2.4 1.7H7.5V10.2Z"/><path d="M3.5 10.2h4v9.4h-4z"/></svg>'}
 function storyDislikeIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 13.8 3.5 6.4c.5.9 1.9.6 2-.5l.2-4.2h4.9c1.6 0 2.7-1.5 2.2-3l-2.1-6.4a2.5 2.5 0 0 0-2.4-1.7H7.5v9.4Z"/><path d="M3.5 4.4h4v9.4h-4z"/></svg>'}
 function storyCommentIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.2h14a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2h-8.4L6 21v-3.6H5a2 2 0 0 1-2-2V7.2a2 2 0 0 1 2-2Z"/></svg>'}
-function storySendIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 4.5 17 7.5-17 7.5 2.2-6 8.8-1.5-8.8-1.5-2.2-6Z"/></svg>'}
+function storySendIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 9.6 14.4"/><path d="m22 2-7.2 20-4.3-9.5L2 8.6 22 2Z"/></svg>'}
 function storyInteractionShell(){return '<section class="designer-story-interactions" data-story-interactions hidden></section>'}
 function syncDesignerUnreadFrames(){designerRoster?.querySelectorAll('.designer-card').forEach(card=>{const designer=designerProfile(card.dataset.designer||''); card.querySelector('.avatar-frame')?.classList.toggle('has-unread-story',designerHasUnreadStory(designer))})}
 function renderDesigners(){
@@ -7913,6 +7916,21 @@ function rowOwnerMatchesCurrentUser(row){
   const owner=normalizedUserText(ownerDisplay(row.owner)), editor=normalizedUserText(currentEditor), account=normalizedUserText(loginAccountFull(currentEditorAccount)), ownerEmail=normalizedUserText(row.ownerEmail||extractEmail(row.owner));
   return Boolean((owner&&editor&&owner===editor)||(owner&&account&&owner===account)||(ownerEmail&&account&&ownerEmail===account));
 }
+function storyActivityTimeLabel(value){const date=new Date(value||''); if(Number.isNaN(date.getTime()))return ''; return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date)}
+function storyNotificationItems(){
+  if(!isDesignerLogin())return [];
+  const items=[];
+  designerReels.filter(reel=>reel.name===currentEditor).forEach(reel=>{
+    [...(reel.comments||[])].reverse().forEach(comment=>{
+      if(!comment.name||comment.name===currentEditor)return;
+      const time=storyActivityTimeLabel(comment.createdAt), identity=comment.id||`${comment.name}:${comment.createdAt}:${comment.text}`;
+      items.push({kind:'story',key:`story-v1:comment:${reel.id}:${identity}`,id:String(reel.id),title:`限動新留言｜${comment.name}`,meta:`${String(comment.text||'').slice(0,80)}${time?`｜${time}`:''}`,sortTime:Date.parse(comment.createdAt||'')||0});
+    });
+    [...(reel.likes||[])].reverse().forEach((name,index)=>{if(name&&name!==currentEditor)items.push({kind:'story',key:`story-v1:like:${reel.id}:${name}`,id:String(reel.id),title:`限動按讚｜${name}`,meta:`${name} 對你的限時動態按讚`,sortTime:-100-index})});
+    [...(reel.dislikes||[])].reverse().forEach((name,index)=>{if(name&&name!==currentEditor)items.push({kind:'story',key:`story-v1:dislike:${reel.id}:${name}`,id:String(reel.id),title:`限動倒讚｜${name}`,meta:`${name} 對你的限時動態按了倒讚`,sortTime:-200-index})});
+  });
+  return items.sort((a,b)=>(b.sortTime-a.sortTime)||String(a.key).localeCompare(String(b.key),'zh-Hant'));
+}
 function notificationItems(){
   if(!isLoggedIn())return [];
   const version='n2';
@@ -7924,15 +7942,17 @@ function notificationItems(){
   })():[];
   const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`})));
   const issueItems=isIssueReportManager()?issueReports.map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`})):[];
+  const storyItems=storyNotificationItems();
   const regularItems=[...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true}));
-  return [...issueItems,...regularItems].slice(0,20);
+  return [...issueItems,...storyItems,...regularItems].slice(0,20);
 }
 function unreadNotificationItems(items=notificationItems()){const read=readNotificationIds(); return items.filter(item=>!read.has(item.key))}
 function markNotificationsRead(items=notificationItems()){if(!items.length)return; const read=readNotificationIds(); items.forEach(item=>read.add(item.key)); writeNotificationIds(read)}
-function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、問題回報或完成通知</div>'}
+function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、限動互動、問題回報或完成通知</div>'}
 function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnreadItems=unreadNotificationItems(), openingUnread=new Set(openingUnreadItems.map(item=>item.key)); renderNotifications(open?openingUnread:null,{hideBadge:open&&openingUnreadItems.length>0}); popover.hidden=!open; if(open&&openingUnreadItems.length)markNotificationsRead(openingUnreadItems); if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
 function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); const show=()=>{if(document.getElementById(`case-row-${id}`)){jumpToCase(id);return} if($('#q'))$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; requestAnimationFrame(()=>jumpToCase(id))}; requestAnimationFrame(show)}
-function openNotificationItem(kind,id){if(kind==='issue'){closeNotifications();closeAccountMenu();openIssueReportModal();return} focusNotificationCase(id)}
+function openStoryNotification(id){closeNotifications();closeAccountMenu(); const reel=designerReels.find(item=>String(item.id)===String(id)); if(!reel)return; const card=[...(designerRoster?.querySelectorAll('.designer-card')||[])].find(item=>item.dataset.designer===reel.name), shell=card?.querySelector('.avatar-shell'), stories=storiesForDesigner(reel.name), index=stories.findIndex(item=>String(item.id)===String(id)); if(!shell||index<0)return; openDesignerPoster(shell); showDesignerStorySlide(shell,index); card.scrollIntoView({behavior:'smooth',block:'center',inline:'center'})}
+function openNotificationItem(kind,id){if(kind==='issue'){closeNotifications();closeAccountMenu();openIssueReportModal();return} if(kind==='story'){openStoryNotification(id);return} focusNotificationCase(id)}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return currentAccountAvatar||imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
