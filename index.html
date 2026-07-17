@@ -1469,9 +1469,20 @@
     .story-action-button:hover,.story-action-button:focus-visible{
       border:0!important;
       background:transparent!important;
+      background-color:transparent!important;
+      background-image:none!important;
       box-shadow:none!important;
       outline:0!important;
       transform:none!important;
+    }
+    .designer-poster.story-playing .story-action-bar,
+    .designer-poster.story-playing .story-action-group,
+    .designer-poster.story-playing .story-action-group:hover,
+    .designer-poster.story-playing .story-action-group:focus-within{
+      background:transparent!important;
+      background-color:transparent!important;
+      background-image:none!important;
+      box-shadow:none!important;
     }
     .story-action-button svg{
       width:21px;
@@ -1498,13 +1509,13 @@
       align-items:center;
       gap:4px;
       max-width:170px;
-      min-height:34px;
-      padding:4px;
+      min-height:26px;
+      padding:0;
       overflow-x:auto;
       border:0;
-      border-radius:8px;
-      background:#fff;
-      box-shadow:0 12px 24px rgba(18,38,28,.18);
+      border-radius:0;
+      background:transparent;
+      box-shadow:none;
       transform:translateY(-50%);
       scrollbar-width:none;
     }
@@ -1531,6 +1542,7 @@
       overflow-y:auto;
       padding:4px 10px;
       background:transparent;
+      scroll-behavior:smooth;
       scroll-snap-type:y mandatory;
       scrollbar-width:none;
       overscroll-behavior:contain;
@@ -2261,7 +2273,7 @@
       border-color:#f9a8d4!important;
     }
     /* Neutral hover pass: keep interactions visible, but remove green hover states. */
-    button:not(.revision-pill):hover,
+    button:not(.revision-pill):not(.story-action-button):hover,
     .button:hover,
     .login-btn:hover,
     .column-settings-btn:hover,
@@ -6865,13 +6877,16 @@ function renderDesignerStoryProgress(progress,total,index){if(!progress)return; 
 function storyReactionAvatarMarkup(name,story){const fallback=designerFallbackImage(name), comment=story.comments?.find(item=>item.name===name&&item.avatar), profile=designerProfile(name), avatar=name===currentEditor?currentAccountAvatarUrl():(comment?.avatar||imageUrl(profile?.avatar||'')); return avatar?`<img class="story-reaction-avatar" src="${esc(avatar)}" alt="${esc(name)}" onerror="this.onerror=null;this.src='${esc(fallback)}'">`:`<span class="story-reaction-avatar-fallback" aria-label="${esc(name)}">${esc(accountInitial(name))}</span>`}
 function storyReactionPopover(names,story){return names.length?`<div class="story-reaction-popover" role="tooltip">${names.map(name=>storyReactionAvatarMarkup(name,story)).join('')}</div>`:''}
 function storyCommentMarkup(comment){const fallback=designerFallbackImage(comment.name), avatar=comment.avatar?`<img class="story-comment-avatar" src="${esc(comment.avatar)}" alt="${esc(comment.name)} 頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'">`:`<span class="story-comment-avatar-fallback" aria-label="${esc(comment.name)}">${esc(accountInitial(comment.name))}</span>`; return `<article class="story-comment">${avatar}<div class="story-comment-content"><div class="story-comment-bubble">${esc(comment.text)}</div></div></article>`}
-function renderStoryInteractions(shell,story){const panel=shell?.querySelector('[data-story-interactions]'); if(!panel)return; const liked=story.likes.includes(currentEditor), disliked=story.dislikes.includes(currentEditor), comments=story.comments||[]; panel.hidden=false; panel.innerHTML=`<div class="story-action-bar"><div class="story-action-group"><button class="story-action-button${liked?' is-active':''}" type="button" data-reel-reaction="like" aria-label="按讚" aria-pressed="${liked}">${storyLikeIcon()}<span class="story-action-count">${story.likeCount||0}</span></button>${storyReactionPopover(story.likes,story)}</div><div class="story-action-group"><button class="story-action-button${disliked?' is-active':''}" type="button" data-reel-reaction="dislike" aria-label="倒讚" aria-pressed="${disliked}">${storyDislikeIcon()}<span class="story-action-count">${story.dislikeCount||0}</span></button>${storyReactionPopover(story.dislikes,story)}</div><button class="story-action-button" type="button" data-story-comment-focus aria-label="留言">${storyCommentIcon()}<span class="story-action-count">${comments.length}</span></button></div><div class="story-comments" data-story-comments>${comments.map(storyCommentMarkup).join('')}</div><form class="story-comment-form" data-reel-comment-form hidden><input class="story-comment-input" name="comment" maxlength="200" autocomplete="off" placeholder="寫下留言…" aria-label="限時動態留言"><button class="story-comment-send" type="submit" aria-label="送出留言">${storySendIcon()}</button></form>`; const list=panel.querySelector('[data-story-comments]'); if(list)list.scrollTop=list.scrollHeight}
+function renderStoryInteractions(shell,story){const panel=shell?.querySelector('[data-story-interactions]'); if(!panel)return; const liked=story.likes.includes(currentEditor), disliked=story.dislikes.includes(currentEditor), comments=story.comments||[]; panel.hidden=false; panel.innerHTML=`<div class="story-action-bar"><div class="story-action-group"><button class="story-action-button${liked?' is-active':''}" type="button" data-reel-reaction="like" aria-label="按讚" aria-pressed="${liked}">${storyLikeIcon()}<span class="story-action-count">${story.likeCount||0}</span></button>${storyReactionPopover(story.likes,story)}</div><div class="story-action-group"><button class="story-action-button${disliked?' is-active':''}" type="button" data-reel-reaction="dislike" aria-label="倒讚" aria-pressed="${disliked}">${storyDislikeIcon()}<span class="story-action-count">${story.dislikeCount||0}</span></button>${storyReactionPopover(story.dislikes,story)}</div><button class="story-action-button" type="button" data-story-comment-focus aria-label="留言">${storyCommentIcon()}<span class="story-action-count">${comments.length}</span></button></div><div class="story-comments" data-story-comments>${comments.map(storyCommentMarkup).join('')}</div><form class="story-comment-form" data-reel-comment-form hidden><input class="story-comment-input" name="comment" maxlength="200" autocomplete="off" placeholder="寫下留言…" aria-label="限時動態留言"><button class="story-comment-send" type="submit" aria-label="送出留言">${storySendIcon()}</button></form>`; const list=panel.querySelector('[data-story-comments]'), items=list?[...list.querySelectorAll('.story-comment')]:[]; if(items.length){list.scrollTop=0;list.dataset.commentIndex='0';requestAnimationFrame(()=>startDesignerStoryCommentRotation(shell,story.id))}}
+function clearDesignerStoryCommentRotation(){if(activeDesignerStoryPlayback?.commentTimer){clearInterval(activeDesignerStoryPlayback.commentTimer);activeDesignerStoryPlayback.commentTimer=null}}
+function startDesignerStoryCommentRotation(shell,storyId){const playback=activeDesignerStoryPlayback; if(!playback||playback.shell!==shell||playback.story?.id!==storyId)return; clearDesignerStoryCommentRotation(); const list=shell.querySelector('[data-story-comments]'), items=list?[...list.querySelectorAll('.story-comment')]:[]; if(items.length<2)return; let index=Math.max(0,Math.min(items.length-1,Number(list.dataset.commentIndex)||0)); playback.commentTimer=setInterval(()=>{if(!list.isConnected){clearDesignerStoryCommentRotation();return} index=(index+1)%items.length; const firstTop=items[0].offsetTop; list.dataset.commentIndex=String(index); list.scrollTo({top:items[index].offsetTop-firstTop,behavior:'smooth'})},1000)}
 function pauseDesignerStoryTimer(){if(activeDesignerStoryPlayback?.timer){clearTimeout(activeDesignerStoryPlayback.timer);activeDesignerStoryPlayback.timer=null} activeDesignerStoryPlayback?.shell?.querySelector('[data-story-viewer]')?.classList.add('story-paused')}
-function showDesignerFinalPoster(shell){pauseDesignerStoryTimer(); const viewer=shell?.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), interactions=viewer?.querySelector('[data-story-interactions]'); if(viewer){viewer.classList.remove('story-playing','story-paused');delete viewer.dataset.reelId} if(progress){progress.hidden=true;progress.innerHTML=''} if(interactions){interactions.hidden=true;interactions.innerHTML=''} if(image){image.src=image.dataset.posterUrl||'';image.alt=`${shell.closest('.designer-card')?.dataset.designer||''} 海報`} activeDesignerStoryPlayback=null}
-function showDesignerStorySlide(shell,index){const name=shell?.closest('.designer-card')?.dataset.designer||'', designer=designerProfile(name), stories=storiesForDesigner(name); if(!stories.length||index>=stories.length){showDesignerFinalPoster(shell);syncDesignerUnreadFrame(shell,designer);return} pauseDesignerStoryTimer(); const viewer=shell.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), story=stories[index]; if(!viewer||!image){showDesignerFinalPoster(shell);return} viewer.classList.add('story-playing'); viewer.classList.remove('story-paused'); viewer.dataset.reelId=story.id; renderDesignerStoryProgress(progress,stories.length,index); image.src=story.imageUrl; image.alt=`${name} 限時動態 ${index+1}`; renderStoryInteractions(shell,story); markDesignerStorySeen(name,story.id); syncDesignerUnreadFrame(shell,designer); activeDesignerStoryPlayback={shell,index,stories,story,timer:setTimeout(()=>showDesignerStorySlide(shell,index+1),designerStoryDurationMs)}}
+function showDesignerFinalPoster(shell){clearDesignerStoryCommentRotation();pauseDesignerStoryTimer(); const viewer=shell?.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), interactions=viewer?.querySelector('[data-story-interactions]'); if(viewer){viewer.classList.remove('story-playing','story-paused');delete viewer.dataset.reelId} if(progress){progress.hidden=true;progress.innerHTML=''} if(interactions){interactions.hidden=true;interactions.innerHTML=''} if(image){image.src=image.dataset.posterUrl||'';image.alt=`${shell.closest('.designer-card')?.dataset.designer||''} 海報`} activeDesignerStoryPlayback=null}
+function showDesignerStorySlide(shell,index){const name=shell?.closest('.designer-card')?.dataset.designer||'', designer=designerProfile(name), stories=storiesForDesigner(name); if(!stories.length||index>=stories.length){showDesignerFinalPoster(shell);syncDesignerUnreadFrame(shell,designer);return} clearDesignerStoryCommentRotation();pauseDesignerStoryTimer(); const viewer=shell.querySelector('[data-story-viewer]'), image=viewer?.querySelector('.poster-image'), progress=viewer?.querySelector('[data-story-progress]'), story=stories[index]; if(!viewer||!image){showDesignerFinalPoster(shell);return} viewer.classList.add('story-playing'); viewer.classList.remove('story-paused'); viewer.dataset.reelId=story.id; renderDesignerStoryProgress(progress,stories.length,index); image.src=story.imageUrl; image.alt=`${name} 限時動態 ${index+1}`; activeDesignerStoryPlayback={shell,index,stories,story,commentTimer:null,timer:null}; renderStoryInteractions(shell,story); markDesignerStorySeen(name,story.id); syncDesignerUnreadFrame(shell,designer); activeDesignerStoryPlayback.timer=setTimeout(()=>showDesignerStorySlide(shell,index+1),designerStoryDurationMs)}
 function startDesignerStoryPlayback(shell){const name=shell?.closest('.designer-card')?.dataset.designer||'', stories=storiesForDesigner(name); if(stories.length)showDesignerStorySlide(shell,0); else showDesignerFinalPoster(shell)}
 function advanceDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index+1)}
-function stopDesignerStoryPlayback(){if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
+function previousDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell||activeDesignerStoryPlayback.index<=0)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index-1)}
+function stopDesignerStoryPlayback(){clearDesignerStoryCommentRotation();if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
 function applyUpdatedActiveReel(updated){const reel=mergeDesignerReel(updated); if(activeDesignerStoryPlayback?.story?.id===reel.id){activeDesignerStoryPlayback.story=reel; activeDesignerStoryPlayback.stories[activeDesignerStoryPlayback.index]=reel; renderStoryInteractions(activeDesignerStoryPlayback.shell,reel)} return reel}
 async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
 async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
@@ -8927,7 +8942,13 @@ formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
     if(event.target.closest('.load-dot'))return;
     event.preventDefault();
     event.stopPropagation();
-    if(event.target.closest('[data-story-viewer]')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return}
+	    const storyViewer=event.target.closest('[data-story-viewer]');
+	    if(storyViewer&&activeDesignerStoryPlayback?.shell===shell){
+	      const bounds=storyViewer.getBoundingClientRect();
+	      const clickedInPreviousZone=event.clientX<=bounds.left+(bounds.width/3);
+	      if(clickedInPreviousZone)previousDesignerStory(shell); else advanceDesignerStory(shell);
+	      return;
+	    }
     const willOpen=!shell.classList.contains('poster-open');
     if(willOpen)openDesignerPoster(shell); else closeDesignerPoster(shell);
     return;
