@@ -6327,7 +6327,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-reels-interactions-40';
+const appBuildVersion = '20260717-user-avatar-auto-close-42';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6418,14 +6418,15 @@ const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const designerUploadPageUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
 const defaultDesigners = [
-  {designType:'平面',name:'Machi',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4y7KgeNbB2ORCa32XzaexZxt4rq9QfGWiPppN8IXW2KWldvfH0KYvuVfQG5i9R096axQ2TJ7oI5oBQl',skills:['平面','輸出','動畫'],quote:'今天也把需求整理得清清楚楚。',rotation:1,status:'普通'},
-  {designType:'平面',name:'Anna',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4zHvoa1GHX5gexC25l4YrHhBZn2mNJ8_gthNd7mMkSdrgbwLysHCBNopbNwbYSPyNBGu5gzU_g8cazt',skills:['平面','輸出'],quote:'好的節奏，會讓作品更穩。',rotation:2,status:'普通'},
-  {designType:'影音',name:'Karl',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4w05-S1bwGXgzA4CHa6uro-FW5_h7MKcn51JjS7UFCaDf4gK-_yYKxCVV5vF9z_TbNsEjBi1hr6zVsB',skills:['影片','動畫','拍攝'],quote:'影像先抓情緒，再抓細節。',rotation:1,status:'普通'},
-  {designType:'影音',name:'Noise',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4yjbHTfmhEVNL43w_8_uilkmE_g8QunHjg304Kqi90dZz_q_nt8xkobN5VFfzHTIURk7srN5Mk9jyKJ',skills:['影片','動畫','拍攝'],quote:'動態要準，也要有呼吸。',rotation:2,status:'普通'},
-  {designType:'平面',name:'Amber',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4wVTmZUiry83JlQnaRwVBHUxKYDPRtzWteDefh5McJAGNVPpwWeu5j8YqjOi9-1RPJ-Vshg3gbA3zBJ',skills:['平面','輸出'],quote:'畫面乾淨，訊息就會清楚。',rotation:3,status:'普通'},
-  {designType:'平面',name:'Leona',avatar:'https://ci3.googleusercontent.com/mail-sig/AIorK4x1oPJo4eDNf1ryCpjDwtNDPrauWnW17WLvgUzzLRc5FO9I5zmR3x_QQIL1bdSbvVjGAl5_6dEhiK6r',skills:['平面','輸出'],quote:'細節收好，品牌感就出來。',rotation:4,status:'普通'}
+  {designType:'平面',name:'Machi',avatar:'assets/designers/Machi-avatar.jpg',skills:['平面','輸出','動畫'],quote:'今天也把需求整理得清清楚楚。',rotation:1,status:'普通'},
+  {designType:'平面',name:'Anna',avatar:'assets/designers/Anna-avatar.jpg',skills:['平面','輸出'],quote:'好的節奏，會讓作品更穩。',rotation:2,status:'普通'},
+  {designType:'影音',name:'Karl',avatar:'assets/designers/Karl-avatar.jpg',skills:['影片','動畫','拍攝'],quote:'影像先抓情緒，再抓細節。',rotation:1,status:'普通'},
+  {designType:'影音',name:'Noise',avatar:'assets/designers/Noise-avatar.jpg',skills:['影片','動畫','拍攝'],quote:'動態要準，也要有呼吸。',rotation:2,status:'普通'},
+  {designType:'平面',name:'Amber',avatar:'assets/designers/Amber-avatar.jpg',skills:['平面','輸出'],quote:'畫面乾淨，訊息就會清楚。',rotation:3,status:'普通'},
+  {designType:'平面',name:'Leona',avatar:'assets/designers/Leona-avatar.jpg',skills:['平面','輸出'],quote:'細節收好，品牌感就出來。',rotation:4,status:'普通'}
 ];
-let designers = defaultDesigners.slice();
+const designerProfilesCacheKey = 'designerProfilesV1';
+let designers = initialDesignerProfiles();
 let designerReels = [];
 const formWriteHeaders = ['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人'];
 const formCreateHeaders = [...formWriteHeaders,'案件狀態'];
@@ -6829,6 +6830,8 @@ function storiesForDesigner(name){return designerReels.filter(reel=>reel.name===
 function designerReelsStateKey(name=''){return JSON.stringify((name?storiesForDesigner(name):designerReels).map(reel=>[reel.id,reel.imageUrl,reel.likes,reel.dislikes,reel.comments]))}
 function mergeDesignerReel(updated){const reel=normalizeDesignerReel(updated), index=designerReels.findIndex(item=>item.id===reel.id||item.rawImageUrl===reel.rawImageUrl); if(index>=0)designerReels.splice(index,1,reel); else designerReels.push(reel); return reel}
 function normalizeDesignerRow(row={}){const avatar=String(row['頭像連結']||row.avatar||'').trim(); return {designType:String(row['設計類型']||row.designType||'').trim(),name:String(row['名字']||row['設計師名字']||row.name||'').trim(),account:loginAccountFull(row['帳號']||row.account||row.email||''),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),stories:normalizeDesignerStoryLinks(row['限時動態連結']||row.storyLinks||row.stories||[]),musicUrl:String(row['分享音樂']||row.musicUrl||row.appleMusicUrl||'').trim(),musicStartAt:Math.max(0,Number(row['音樂起始秒數']??row.musicStartAt??row.startAt??0)||0),imageFolder:String(row['圖片資料夾']||row.imageFolder||row.folderId||'').trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills:splitSkills(row['技能']||row.skills||''),quote:String(row['對話框']||row.quote||'').trim(),rotation:Number(row['新專案輪值']||row.rotation||99)||99}}
+function initialDesignerProfiles(){try{const cached=JSON.parse(localStorage.getItem(designerProfilesCacheKey)||'null'); if(Array.isArray(cached)&&cached.length){const byName=new Map(cached.map(profile=>[profile.name,profile])); return defaultDesigners.map(profile=>mergeDesignerProfile(profile,byName.get(profile.name)||{}))}}catch(err){} return defaultDesigners.slice()}
+function cacheDesignerProfiles(list){try{localStorage.setItem(designerProfilesCacheKey,JSON.stringify(list||[]))}catch(err){console.warn('設計師資料快取寫入失敗',err)}}
 function mergeDesignerProfile(base={},patch={}){const merged={...base,...patch}; ['avatar','poster','imageFolder','designType','status','account'].forEach(key=>{if(!patch[key]&&base[key])merged[key]=base[key]}); if(!patch.rotation&&base.rotation)merged.rotation=base.rotation; if(!patch.skills?.length&&base.skills?.length)merged.skills=base.skills; return normalizeDesignerRow(merged)}
 const sharedMusicMetadataCache=new Map();
 function sharedMusicInfo(value){const text=String(value||'').trim(); if(!text)return null; try{const parsed=new URL(text); if(/(^|\.)spotify\.com$/i.test(parsed.hostname)){const match=parsed.pathname.match(/^\/(?:embed\/)?track\/([A-Za-z0-9]{22})(?:\/|$)/); if(!match)return null; const id=match[1]; return {provider:'spotify',providerLabel:'Spotify',id,url:`https://open.spotify.com/track/${id}`}} if(/(^|\.)music\.apple\.com$/i.test(parsed.hostname)){const parts=parsed.pathname.split('/').filter(Boolean), storefront=String(parts[0]||'us').toLowerCase(), pathId=[...parts].reverse().find(part=>/^\d+$/.test(part))||'', id=String(parsed.searchParams.get('i')||pathId); if(!/^[a-z]{2}$/.test(storefront)||!/^\d+$/.test(id))return null; const locale=parsed.searchParams.get('l')||'', lookupCountry=/TW/i.test(locale)?'tw':storefront; return {provider:'apple',providerLabel:'Apple Music',id,url:parsed.href,storefront,lookupCountry}} return null}catch(err){return null}}
@@ -6948,7 +6951,7 @@ async function loadDesignerRoster({background=false}={}){
   ]);
   if(profilesResult.status==='fulfilled'){
     const list=profilesResult.value.map(normalizeDesignerRow).filter(d=>designerOptions.includes(d.name));
-    if(list.length&&designerProfilesKey(list)!==designerProfilesKey(designers)){designers=list;changed=true}
+    if(list.length){cacheDesignerProfiles(list); if(designerProfilesKey(list)!==designerProfilesKey(designers)){designers=list;changed=true}}
   }else{
     console.warn('設計師資料讀取失敗，暫用預設清單',profilesResult.reason);
   }
@@ -6966,6 +6969,7 @@ function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(moda
 let uploadModalReturnFocus=null;
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
 function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
+function handleUploadFrameMessage(event){const frame=$('#uploadFrame'),data=event.data||{}; if(!frame||event.source!==frame.contentWindow||data.type!=='machi-user-avatar-updated')return; closeUploadModal(); setSync('頭像已更新',false,2200)}
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
 function userAvatarUploadUrl(){const url=new URL(designerUploadPageUrl); url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
@@ -9033,6 +9037,7 @@ document.addEventListener('click',event=>{
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountAvatarSettings')?.addEventListener('click',openUserAvatarUploadPage);
 	$('#uploadModalClose')?.addEventListener('click',closeUploadModal);
+	window.addEventListener('message',handleUploadFrameMessage);
 	$('#uploadModal')?.addEventListener('click',event=>{if(event.target.id==='uploadModal')closeUploadModal()});
 	$('#uploadFrame')?.addEventListener('load',()=>{const frame=$('#uploadFrame'), loading=$('#uploadModalLoading'); if(frame?.src&&frame.src!=='about:blank'&&loading)loading.hidden=true});
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#uploadModal')?.hidden){event.preventDefault();closeUploadModal()}});
