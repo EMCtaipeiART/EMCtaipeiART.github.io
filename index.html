@@ -2464,6 +2464,36 @@
       text-align:left!important;
     }
     .account-dropdown button:hover{background:#f3f6f4!important;color:#15231d!important}
+    .account-dropdown .permission-menu-divider{
+      height:1px;
+      margin:6px 8px;
+      background:#e8eeeb;
+    }
+    .permission-preview-banner{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      min-height:38px;
+      padding:7px 18px;
+      border-bottom:1px solid #f2d18a;
+      background:#fff8e7;
+      color:#6b4b0e;
+      font-size:12px;
+      font-weight:900;
+      text-align:center;
+    }
+    .permission-preview-banner[hidden]{display:none!important}
+    .permission-preview-banner button{
+      min-height:28px!important;
+      padding:4px 10px!important;
+      border-radius:7px!important;
+      background:#fff!important;
+      color:#6b4b0e!important;
+      border:1px solid #dfbd72!important;
+      box-shadow:none!important;
+      font-size:12px!important;
+    }
     .request-card #submitBtn,
     .request-card #requestBatchToggle,
     .request-help-actions .request-project-btn{
@@ -3814,6 +3844,16 @@
       background:#f17983!important;
       color:#241316!important;
       border-color:#18221f!important;
+    }
+    html[data-theme="dark"] .permission-preview-banner{
+      background:#3a2f19!important;
+      color:#f5d68c!important;
+      border-color:#6d5730!important;
+    }
+    html[data-theme="dark"] .permission-preview-banner button{
+      background:#251f15!important;
+      color:#f5d68c!important;
+      border-color:#80683a!important;
     }
     html[data-theme="dark"] .theme-toggle,
     html[data-theme="dark"] .theme-toggle:hover,
@@ -5639,6 +5679,9 @@
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
+      <div class="permission-menu-divider" id="adminPermissionDivider" hidden></div>
+      <button type="button" id="accountPermissionMode" role="menuitem" hidden>切換一般使用者預覽</button>
+      <button type="button" id="accountWriteCheck" role="menuitem" hidden>檢查一般使用者寫入權限</button>
       <button type="button" id="accountLogout" role="menuitem">登出</button>
     </div>
     <div class="notification-popover" id="notificationPopover" hidden role="menu" aria-label="設計師提醒">
@@ -5647,6 +5690,10 @@
     </div>
   </div>
 </header>
+<div class="permission-preview-banner" id="permissionPreviewBanner" role="status" hidden>
+  <span id="permissionPreviewStatus">一般使用者預覽中｜新增/修改需求：待檢查｜狀態與細節：唯讀</span>
+  <button type="button" id="permissionPreviewExit">返回管理者</button>
+</div>
 <main class="wrap grid">
   <section class="grid top">
     <div class="card help designer-help panel-managed" id="designerPanel">
@@ -5980,6 +6027,8 @@ let currentEditor = '';
 let currentEditorAccount = '';
 let currentEditorToken = '';
 let currentEditorGroup = '';
+let adminUserPreview = sessionStorage.getItem('designRequestAdminUserPreview') === '1';
+let regularUserWriteCheck = null;
 const issueReportsCacheKey = 'designRequestIssueReportsV1';
 function readIssueReportsCache(){try{const cached=JSON.parse(localStorage.getItem(issueReportsCacheKey)||'[]');return Array.isArray(cached)?cached:[]}catch(err){return []}}
 let issueReports = readIssueReportsCache();
@@ -6449,7 +6498,9 @@ function ownerForSheet(value){return ownerDisplay(value)}
 function currentLoginOwnerName(){return isLoggedIn()?String(currentEditor||'').trim():''}
 function fallbackDesignGroupForUser(user=currentEditor){if(flatDesignerOptions.includes(user))return '平面'; if(videoDesignerOptions.includes(user))return '影音'; return ''}
 function currentDesignGroup(){return normalizeDesignGroup(currentEditorGroup)||fallbackDesignGroupForUser()}
-function isDesignerLogin(){return ['平面','影音','管理者'].includes(currentDesignGroup())}
+function isAdministrator(){return isLoggedIn()&&(currentDesignGroup()==='管理者'||isLocalAdminToken())}
+function isAdminUserPreview(){return isAdministrator()&&adminUserPreview}
+function isDesignerLogin(){return !isAdminUserPreview()&&['平面','影音','管理者'].includes(currentDesignGroup())}
 function parseDate(value){const text=String(value||'').trim(); if(!text)return null; const match=text.match(/(19\d{2}|20\d{2}|2100)[/-](\d{1,2})[/-](\d{1,2})/); if(!match)return null; const y=Number(match[1]), m=Number(match[2]), d=Number(match[3]), date=new Date(y,m-1,d); return date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d?date:null}
 function slashDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function shortMonthDayDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
@@ -7027,6 +7078,51 @@ function urlFetchAuthCheckUrl(){
   const params=new URLSearchParams({action:'urlFetchAuthCheck',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
   return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
 }
+function writeAccessCheckUrl(){
+  const params=new URLSearchParams({action:'writeAccessCheck',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
+  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
+}
+function regularWriteStatusText(){
+  if(!regularUserWriteCheck)return '一般使用者預覽中｜新增/修改需求：待檢查｜狀態與細節：唯讀';
+  return `一般使用者預覽中｜新增/修改需求：${regularUserWriteCheck.canCreate?'可寫入':'無法寫入'}｜狀態與細節：唯讀`;
+}
+function renderPermissionPreview(){
+  const preview=isAdminUserPreview(), banner=$('#permissionPreviewBanner'), status=$('#permissionPreviewStatus');
+  if(banner)banner.hidden=!preview;
+  if(status)status.textContent=regularWriteStatusText();
+}
+function setAdminUserPreview(enabled){
+  if(!isAdministrator())return;
+  adminUserPreview=Boolean(enabled);
+  sessionStorage.setItem('designRequestAdminUserPreview',adminUserPreview?'1':'0');
+  selectedCaseIds.clear();
+  closeAccountMenu();
+  columnControlsRenderedKey='';
+  updateLoginUi();
+  render();
+  setSync(adminUserPreview?'已切換為一般使用者預覽':'已返回管理者權限');
+}
+async function checkRegularUserWriteAccess(){
+  if(!isAdministrator())return;
+  closeAccountMenu();
+  setSync('正在檢查一般使用者寫入權限...');
+  try{
+    const data=await jsonp(writeAccessCheckUrl(),15000,'寫入權限檢查逾時，請確認 Apps Script 已重新部署。');
+    if(!data?.ok||data.action!=='writeAccessCheck')throw new Error(data?.error||'Apps Script 尚未支援寫入權限檢查，請重新部署最新版本');
+    regularUserWriteCheck={canCreate:Boolean(data.permissions?.createRequest),checkedAt:data.checkedAt||''};
+    renderPermissionPreview();
+    const createText=regularUserWriteCheck.canCreate?'可寫入':'無法寫入';
+    const message=`一般使用者寫入檢查｜新增/修改需求：${createText}｜狀態與細節：唯讀｜本次檢查未新增資料`;
+    setSync(message,!regularUserWriteCheck.canCreate);
+    alert(message);
+  }catch(err){
+    regularUserWriteCheck={canCreate:false,checkedAt:''};
+    renderPermissionPreview();
+    const message=`寫入權限檢查失敗：${err.message||err}`;
+    setSync(message,true);
+    alert(message);
+  }
+}
 async function testAppsScriptConnection(){
   const status=scriptUrlStatus();
   console.info('[Apps Script 測試連線]',status);
@@ -7041,7 +7137,7 @@ async function testAppsScriptConnection(){
     console.info('[Apps Script ping 回傳]',data);
     if(!data?.ok)throw Object.assign(new Error(data?.error||'Apps Script ping 失敗'),{rawResponse:data});
     const version=data.version||data.scriptVersion||'(未回傳版本)';
-    const latestVersion='google-login-tokeninfo-2026-07-06';
+    const latestVersion='admin-user-preview-write-check-2026-07-17-1';
     const isLatest=version===latestVersion;
     const authCheck=await jsonp(urlFetchAuthCheckUrl(),15000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
     console.info('[Apps Script UrlFetchApp 權限檢查]',authCheck);
@@ -7495,8 +7591,8 @@ function openNotificationItem(kind,id){if(kind==='issue'){closeNotifications();c
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return currentAccountAvatar||imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():''; if(url){const fallback=accountInitial(currentEditor); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(currentEditor)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(currentEditor):'登'}}
-function canOpenDesignDashboard(){return designerOptions.includes(currentEditor)||currentDesignGroup()==='管理者'||isLocalAdminToken()}
-function updateLoginUi(){const loggedIn=isLoggedIn(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${group?`｜${group}`:''}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(group||'一般使用者'):'@emctaipei.com'; renderAccountAvatar(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){closeAccountMenu(); closeNotifications()} renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
+function canOpenDesignDashboard(){return !isAdminUserPreview()&&(designerOptions.includes(currentEditor)||currentDesignGroup()==='管理者'||isLocalAdminToken())}
+function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const group=currentDesignGroup(); if(btn){btn.title=loggedIn?`${currentEditor}${preview?'｜一般使用者預覽':(group?`｜${group}`:'')}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?currentEditor:'登入'; if(roleEl)roleEl.textContent=loggedIn?(preview?'一般使用者預覽':(group||'一般使用者')):'@emctaipei.com'; renderAccountAvatar(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
 function openDesignDashboard(){if(!canOpenDesignDashboard()){setSync('設計儀表板僅開放設計師與管理者使用',true);return} localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:currentEditor,account:currentEditorAccount,group:currentDesignGroup(),authToken:isLocalAdminToken()?currentEditorToken:'',returnUrl:location.href,updatedAt:Date.now()})); const url=new URL(designDashboardUrl); url.searchParams.set('designer',currentEditor); window.open(url.toString(),'_blank','noopener')}
 function consumeDashboardCaseFocus(){const id=localStorage.getItem('designRequestFocusCaseV1')||'';if(!id||!rows.some(row=>String(row.id)===String(id)))return false;localStorage.removeItem('designRequestFocusCaseV1');focusNotificationCase(id);return true}
 function syncTopPanelHeights(){
@@ -8528,6 +8624,9 @@ document.addEventListener('click',event=>{
 	$('#accountAvatarSettings')?.addEventListener('click',openUserAvatarUploadPage);
 	window.addEventListener('focus',()=>refreshCurrentAccountAvatar());
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
+	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
+	$('#accountWriteCheck')?.addEventListener('click',checkRegularUserWriteAccess);
+	$('#permissionPreviewExit')?.addEventListener('click',()=>setAdminUserPreview(false));
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
 	$('#issueReportOpen')?.addEventListener('click',openIssueReportModal);
 	$('#issueReportCancel')?.addEventListener('click',closeIssueReportModal);
