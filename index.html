@@ -6363,7 +6363,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260717-settings-design-type-45';
+const appBuildVersion = '20260731-settings-sync-session-46';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6578,9 +6578,15 @@ let fullDatabaseLoadQueued = false;
 let inlineWriteQueue = Promise.resolve();
 let inlineWritePending = 0;
 let inlineRefreshTimer = null;
+let remoteSettingsSaveTimer = null;
+let remoteSettingsSaveSequence = 0;
+let remoteSettingsSaveQueue = Promise.resolve();
+let lastEditorSessionKeepAliveAt = 0;
+let lastBackgroundRefreshInputAt = 0;
 let recentLocalWrites = new Map();
 const localWriteTtlMs = 120000;
-const backgroundRefreshMs = 30000;
+const backgroundRefreshMs = 10000;
+const editorSessionKeepAliveMs = 60 * 60 * 1000;
 let designerRosterRenderKey = '';
 let columnControlsRenderedKey = '';
 let draggedColumnKey = '';
@@ -6634,7 +6640,23 @@ function remoteDepartment(settings){return String(settings?.department||settings
 function remoteDisplayName(settings){return String(settings?.name||settings?.['名字']||settings?.['設計師名字']||'').trim()}
 function hasRemoteAccountAvatar(settings){return Boolean(settings)&&(['avatar','頭像連結'].some(key=>Object.prototype.hasOwnProperty.call(settings,key)))}
 function remoteAccountAvatar(settings){return imageUrl(settings?.avatar??settings?.['頭像連結']??'')}
-function saveRemoteSettingsForAccount(message='個人設定已儲存'){if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return; const theme=currentTheme(); sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,_requireResponse:true,settings:{visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,theme,'深淺模式':theme==='dark'?'深色':'淺色',collapseSettings,filters:{year:accountFilterSettings.year||[],month:accountFilterSettings.month||[],status:accountFilterSettings.status||[],designer:accountFilterSettings.designer||[]}}}).then(()=>setSync(`${currentEditor} 的${message}`)).catch(err=>setSync(`設定已套用，但寫回表單失敗：${err.message}`,true))}
+function remoteSettingsPayload(){const theme=currentTheme(); return {visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,theme,'深淺模式':theme==='dark'?'深色':'淺色',collapseSettings:{...collapseSettings},filters:{year:[...(accountFilterSettings.year||[])],month:[...(accountFilterSettings.month||[])],status:[...(accountFilterSettings.status||[])],designer:[...(accountFilterSettings.designer||[])]}}}
+function saveRemoteSettingsForAccount(message='個人設定已儲存'){
+  if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return;
+  const account=currentEditorAccount, editor=currentEditor, token=currentEditorToken, settings=remoteSettingsPayload(), sequence=++remoteSettingsSaveSequence;
+  clearTimeout(remoteSettingsSaveTimer);
+  remoteSettingsSaveTimer=setTimeout(()=>{
+    remoteSettingsSaveQueue=remoteSettingsSaveQueue.catch(()=>{}).then(async()=>{
+      try{
+        const data=await sheetApi('saveUserSettings',{account,editorToken:token,settings});
+        if(data.action!=='saveUserSettings')throw new Error('Apps Script 尚未支援個人設定寫入，請重新部署最新版本');
+        if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`${editor} 的${message}`);
+      }catch(err){
+        if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`設定已套用，但寫回表單失敗：${err.message}`,true);
+      }
+    });
+  },450);
+}
 function saveVisibleColumnsForAccount(message='個人設定已儲存'){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount(message)}
 function saveDisplaySettingsForAccount(){writeCache(accountStorageKey(displaySettingsKey),displaySettings); saveRemoteSettingsForAccount()}
 function saveCollapseSettingsForAccount(){writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); saveRemoteSettingsForAccount('視窗設定已儲存')}
@@ -7571,6 +7593,12 @@ async function sheetApi(action,payload={}){
     if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
     return data;
   }
+  if(action==='saveUserSettings'){
+    const data=await writeToSheetByJsonp({action,...payload},30000,'個人設定寫入逾時，請稍後再試。');
+    if(!data.ok)throw new Error(data.error||'個人設定寫入失敗');
+    if(data.action!==action)throw new Error('Apps Script 尚未回傳個人設定寫入結果，請重新部署最新版本');
+    return data;
+  }
   if(action==='updateModificationConfirm'){
     const data=await writeToSheetByJsonp({action,...payload},60000,'確認修正日寫入逾時，請稍後重新整理確認。');
     if(!data.ok)throw new Error(data.error||'確認修正日寫入失敗');
@@ -7962,6 +7990,24 @@ function rowOwnerMatchesCurrentUser(row){
 const storyNotificationLifetimeMs=24*60*60*1000;
 const storyReactionNotificationTimesKey='designRequestStoryReactionNotificationTimesV1';
 function storyActivityTimeLabel(value){const date=new Date(value||''); if(Number.isNaN(date.getTime()))return ''; return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date)}
+function notificationDateTime(value){
+  const text=String(value||'').trim();
+  if(!text)return 0;
+  const normalized=text.replace(/[年月]/g,'/').replace(/日/g,'').replace(/\s+/g,' ');
+  const parsed=Date.parse(normalized);
+  if(!Number.isNaN(parsed))return parsed;
+  const match=normalized.match(/(20\d{2})[/-](\d{1,2})[/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+  return match?new Date(Number(match[1]),Number(match[2])-1,Number(match[3]),Number(match[4])||0,Number(match[5])||0).getTime():0;
+}
+function notificationCaseTime(row){
+  const id=String(row?.id||'').replace(/\D/g,'');
+  const match=id.match(/^(\d{2})(\d{2})(\d{4,})$/);
+  if(match){
+    const year=2000+Number(match[1]), month=Number(match[2]), sequence=Number(match[3])||0;
+    if(month>=1&&month<=12)return new Date(year,month-1,1).getTime()+sequence;
+  }
+  return notificationDateTime(row?.start||row?.end)||Number(id)||0;
+}
 function storyNotificationItems(){
   if(!isDesignerLogin())return [];
   const items=[], now=Date.now(), reactionTimes=readCache(accountStorageKey(storyReactionNotificationTimesKey),{})||{}, activeReactionKeys=new Set();
@@ -7994,15 +8040,14 @@ function notificationItems(){
   const version='n2';
   const designerItems=isDesignerLogin()?(()=>{
     const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成');
-    const newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`}));
-    const modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`})));
+    const newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`,sortTime:notificationCaseTime(row)}));
+    const modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(record)}｜${record.content||'未填寫修改內容'}`,sortTime:notificationDateTime(record.date||record.created)||notificationCaseTime(row)+(Number(record.count)||0)})));
     return [...modifyItems,...newCases];
   })():[];
-  const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`})));
-  const issueItems=isIssueReportManager()?issueReports.filter(report=>report['狀態']==='回報中').map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`})):[];
+  const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`,sortTime:notificationDateTime(record.confirmedDate)||notificationCaseTime(row)+(Number(record.count)||0)})));
+  const issueItems=isIssueReportManager()?issueReports.filter(report=>report['狀態']==='回報中').map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`,sortTime:notificationDateTime(report['時間'])||Number(report.rowNumber)||0})):[];
   const storyItems=storyNotificationItems();
-  const regularItems=[...ownerItems,...designerItems].sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true}));
-  return [...issueItems,...storyItems,...regularItems].slice(0,20);
+  return [...issueItems,...storyItems,...ownerItems,...designerItems].sort((a,b)=>(Number(b.sortTime)||0)-(Number(a.sortTime)||0)||String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true})).slice(0,20);
 }
 function unreadNotificationItems(items=notificationItems()){const read=readNotificationIds(); return items.filter(item=>!read.has(item.key))}
 function markNotificationsRead(items=notificationItems()){if(!items.length)return; const read=readNotificationIds(); items.forEach(item=>read.add(item.key)); writeNotificationIds(read)}
@@ -8502,7 +8547,7 @@ function enqueueInlineWrite(task){
   return run;
 }
 function hasPriorityWritePending(){return inlineWritePending>0||updatingCells.size>0}
-function backgroundRefreshInteractionActive(){const active=document.activeElement, editing=active&&(/^(INPUT|SELECT|TEXTAREA)$/.test(active.tagName)||active.isContentEditable); return document.hidden||editing||Boolean(document.querySelector('.login-modal:not([hidden]),.field-popover:not([hidden]),.multi-filter[open]'))}
+function backgroundRefreshInteractionActive(){const recentlyTyping=Date.now()-lastBackgroundRefreshInputAt<1500; return document.hidden||recentlyTyping||Boolean(document.querySelector('.login-modal:not([hidden]),.field-popover:not([hidden]),.multi-filter[open]'))}
 function refreshLatestInBackground(){
   if(!apiUrl||editingId||hasPriorityWritePending()||loadingSheet||backgroundRefreshInteractionActive())return;
   loadSheet({quick:true,background:true}).catch(err=>console.warn('定時刷新最新資料失敗',err));
@@ -8566,9 +8611,58 @@ function showLoginModal(message='',{skipGoogleInit=false}={}){closeFilters(); co
 function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=true; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel)adminPanel.hidden=true; setLoginNote('請使用 ERP 或 Google 帳號登入。')}
 function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
 function resetGoogleLoginState(account=currentEditorAccount,{revoke=false}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} sessionStorage.removeItem('designRequestGoogleLoginState'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin')}
-async function verifyStoredEditorToken(){const token=currentEditorToken||pendingEditorSession.token; if(!token){clearLoginAuthState(); updateLoginUi(); return false} if(isLocalAdminToken(token)){if(!isLocalAdminTokenValid(token)){clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false} currentEditor='管理者'; currentEditorAccount='local-admin'; currentEditorToken=token; currentEditorGroup='管理者'; currentEditorDepartment='管理者'; persistEditorSession(); applyCurrentUserProfile(); updateLoginUi(); render(); return true} try{const data=await sheetApi('verifyToken',{editorToken:token}); if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED'); console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user, appBuildVersion}); currentEditor=pendingEditorSession.user||data.user||''; currentEditorAccount=pendingEditorSession.account||data.account||data.email||''; currentEditorToken=token; currentEditorGroup=pendingEditorSession.group||''; currentEditorDepartment=pendingEditorSession.department||''; loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount); return true}catch(err){console.warn('[登入狀態驗證失敗]',err); clearLoginAuthState(); applyAccountSettingsIfNeeded(); updateLoginUi(); render(); return false}}
+function isExpiredEditorSessionError(error){return /TOKEN_EXPIRED|登入狀態已失效|token.*expired/i.test(String(error?.message||error||''))}
+async function verifyStoredEditorToken(){
+  const token=currentEditorToken||pendingEditorSession.token;
+  if(!token){clearLoginAuthState();updateLoginUi();return false}
+  if(isLocalAdminToken(token)){
+    if(!isLocalAdminTokenValid(token)){clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();return false}
+    currentEditor='管理者';currentEditorAccount='local-admin';currentEditorToken=token;currentEditorGroup='管理者';currentEditorDepartment='管理者';persistEditorSession();applyCurrentUserProfile();updateLoginUi();render();return true;
+  }
+  try{
+    const data=await sheetApi('verifyToken',{editorToken:token});
+    if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
+    console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user,appBuildVersion});
+    currentEditor=pendingEditorSession.user||data.user||'';
+    currentEditorAccount=pendingEditorSession.account||data.account||data.email||'';
+    currentEditorToken=token;
+    currentEditorGroup=pendingEditorSession.group||'';
+    currentEditorDepartment=pendingEditorSession.department||'';
+    loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount);
+    return true;
+  }catch(err){
+    console.warn('[登入狀態驗證失敗]',err);
+    if(isExpiredEditorSessionError(err)){
+      clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();return false;
+    }
+    currentEditor=pendingEditorSession.user||currentEditor;
+    currentEditorAccount=pendingEditorSession.account||currentEditorAccount;
+    currentEditorToken=token;
+    currentEditorGroup=pendingEditorSession.group||currentEditorGroup;
+    currentEditorDepartment=pendingEditorSession.department||currentEditorDepartment;
+    persistEditorSession();applyCurrentUserProfile();updateLoginUi();render();
+    setSync('登入驗證暫時沒有回應，已保留登入狀態並稍後重試',true,5000);
+    return true;
+  }
+}
 async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
-function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${user}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${user}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
+function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${user}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${user}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
+async function keepEditorSessionAlive(){
+  if(!isLoggedIn()||isLocalAdminToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
+  lastEditorSessionKeepAliveAt=Date.now();
+  try{
+    const data=await sheetApi('verifyToken',{editorToken:currentEditorToken});
+    if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
+    persistEditorSession();
+    return true;
+  }catch(err){
+    console.warn('[登入狀態保活失敗]',err);
+    if(isExpiredEditorSessionError(err)){
+      clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();setSync('登入狀態已到期，請重新登入',true);
+    }
+    return false;
+  }
+}
 function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
 function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; const configError=googleLoginConfigError(); console.info(`[登入診斷] app=${appBuildVersion}, origin=${location.origin}, expectedOrigin=${googleAuthorizedOrigin}, clientId=${googleOAuthClientId}`); if(configError){setLoginNote(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`,true); console.error('[Google OAuth 設定錯誤]',configError); return} target.innerHTML='<button type="button" class="google-redirect-login" aria-label="使用 Google 帳號登入"><span class="google-g">G</span><span>使用 Google 帳號登入</span></button>'; const button=target.querySelector('button'); if(button)button.onclick=startGoogleRedirectLogin; target.dataset.ready='1'}
 async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByFrame(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${data.user}`)}catch(err){const context=err?.reason==='APPS_SCRIPT_API_READ_FAILED'?'Apps Script API':(googleEmail?`Google 登入（${googleEmail}）`:'Google 登入'); handleGoogleLoginError(err,context)}}
@@ -9162,7 +9256,8 @@ document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshLatestInBackground();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
