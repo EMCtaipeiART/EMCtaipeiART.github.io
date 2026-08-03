@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-07-17 18:10 Asia/Taipei | build: 20260717-settings-design-type-45 -->
+<!-- LAST_MODIFIED: 2026-08-03 18:46 Asia/Taipei | build: 20260803-case-auto-refresh-48 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260717-settings-design-type-45" />
+  <meta name="app-version" content="20260803-case-auto-refresh-48" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6289,7 +6289,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260717-reels-interactions-40" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260803-case-auto-refresh-48" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6363,7 +6363,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260731-settings-columns-cleanup-47';
+const appBuildVersion = '20260803-case-auto-refresh-48';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6586,6 +6586,8 @@ let lastBackgroundRefreshInputAt = 0;
 let recentLocalWrites = new Map();
 const localWriteTtlMs = 120000;
 const backgroundRefreshMs = 10000;
+const backgroundFullRefreshMs = 60000;
+let lastFullBackgroundRefreshAt = 0;
 const editorSessionKeepAliveMs = 60 * 60 * 1000;
 let designerRosterRenderKey = '';
 let columnControlsRenderedKey = '';
@@ -7327,11 +7329,12 @@ async function fetchDatabaseRowsByScript(){
   if(!data.ok)throw new Error(data.error||'Apps Script 最新案件讀取失敗');
   return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
-async function fetchRecentDatabaseRowsByScript(limit=320){
+async function fetchRecentDatabaseRowsByScript(limit=320,{noCache=false}={}){
   if(!apiUrl)return [];
   const params=new URLSearchParams({
     action:'recent',
     limit:String(limit),
+    noCache:noCache?'true':'',
     targetSpreadsheetId,
     targetSheetName,
     targetSheetId:String(targetSheetId),
@@ -7347,9 +7350,12 @@ function mergeRowsById(baseRows=[],patchRows=[]){
   patchRows.forEach(row=>{if(isCaseId_(row.id))byId.set(String(row.id),normalizeRow(row))});
   return [...byId.values()].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
 }
-async function fetchDatabaseRows({full=false,quick=false}={}){
+async function fetchDatabaseRows({full=false,quick=false,forceFresh=false}={}){
+  if(full&&forceFresh&&apiUrl){
+    try{return await fetchDatabaseRowsByScript()}catch(err){console.warn('完整即時資料讀取失敗，改用公開資料來源',err)}
+  }
   if(quick&&apiUrl){
-    try{return await fetchRecentDatabaseRowsByScript(30)}catch(err){console.warn('最新 30 筆讀取失敗，改用近期公開資料來源',err)}
+    try{return await fetchRecentDatabaseRowsByScript(120,{noCache:forceFresh})}catch(err){console.warn('最新 120 筆讀取失敗，改用近期公開資料來源',err)}
   }
   let objects=[];
   try{
@@ -7879,12 +7885,12 @@ function scheduleFullDatabaseLoad(delay=4500){
   fullDatabaseLoadQueued=true;
   setTimeout(()=>{fullDatabaseLoadQueued=false; loadSheet({full:true,background:true})},delay);
 }
-async function loadSheet({full=false,background=false,quick=false}={}){
+async function loadSheet({full=false,background=false,quick=false,forceFresh=false}={}){
   if(loadingSheet)return false;
   loadingSheet=true;
   try{
     if(!background)setSync(full?'讀取完整 database 中…':(quick?'讀取最新 30 筆資料中…':'讀取近期 database 最新資料中…'));
-    const databaseRows=await fetchDatabaseRows({full,quick}), current=applyRecentLocalWrites(activeRowsOnly(full?databaseRows:mergeRowsById(rows,databaseRows))), changed=rowsRefreshKey(current)!==rowsRefreshKey(rows);
+    const databaseRows=await fetchDatabaseRows({full,quick,forceFresh}), current=applyRecentLocalWrites(activeRowsOnly(full?databaseRows:mergeRowsById(rows,databaseRows))), changed=rowsRefreshKey(current)!==rowsRefreshKey(rows);
     if(background&&!changed){
       dataReady=true;
       const modificationIds=rows.map(row=>row.id).filter(Boolean);
@@ -8549,7 +8555,12 @@ function hasPriorityWritePending(){return inlineWritePending>0||updatingCells.si
 function backgroundRefreshInteractionActive(){const recentlyTyping=Date.now()-lastBackgroundRefreshInputAt<1500; return document.hidden||recentlyTyping||Boolean(document.querySelector('.login-modal:not([hidden]),.field-popover:not([hidden]),.multi-filter[open]'))}
 function refreshLatestInBackground(){
   if(!apiUrl||editingId||hasPriorityWritePending()||loadingSheet||backgroundRefreshInteractionActive())return;
-  loadSheet({quick:true,background:true}).catch(err=>console.warn('定時刷新最新資料失敗',err));
+  const now=Date.now(), full=now-lastFullBackgroundRefreshAt>=backgroundFullRefreshMs;
+  if(full)lastFullBackgroundRefreshAt=now;
+  loadSheet({full,quick:!full,background:true,forceFresh:true}).catch(err=>{
+    if(full)lastFullBackgroundRefreshAt=0;
+    console.warn(full?'定時完整同步失敗':'定時刷新最新資料失敗',err);
+  });
 }
 function rowStillHasChanges(row,changes){
   return Object.entries(changes).every(([key,value])=>String(row?.[key]??'')===String(value??''));
@@ -9173,7 +9184,9 @@ document.addEventListener('click',event=>{
 	$('#uploadModal')?.addEventListener('click',event=>{if(event.target.id==='uploadModal')closeUploadModal()});
 	$('#uploadFrame')?.addEventListener('load',()=>{const frame=$('#uploadFrame'), loading=$('#uploadModalLoading'); if(frame?.src&&frame.src!=='about:blank'&&loading)loading.hidden=true});
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#uploadModal')?.hidden){event.preventDefault();closeUploadModal()}});
-	window.addEventListener('focus',()=>refreshCurrentAccountAvatar());
+	window.addEventListener('focus',()=>{refreshCurrentAccountAvatar();refreshLatestInBackground()});
+	window.addEventListener('pageshow',event=>{if(event.persisted)refreshLatestInBackground()});
+	window.addEventListener('online',refreshLatestInBackground);
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
 	$('#accountWriteCheck')?.addEventListener('click',checkRegularUserWriteAccess);
