@@ -6558,7 +6558,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-faster-idempotent-create-52';
+const appBuildVersion = '20260804-create-response-fallback-53';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7846,7 +7846,7 @@ async function sheetApi(action,payload={}){
 	    return data;
 	  }
 	  if(action==='add'||action==='batchAdd'){
-    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'新增寫入較慢，請勿重複送出；可稍後重新整理確認。'});
+    const data=await writeCreateToSheet(action,payload);
     if(!data.ok)throw new Error(data.error||(action==='batchAdd'?'批次新增失敗':'新增失敗'));
     return data;
   }
@@ -7906,6 +7906,34 @@ function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處�
     ts: Date.now()
   });
   return jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,timeoutMs,timeoutMessage);
+}
+function createResultResponse(action,result){
+  if(action==='batchAdd')return {ok:true,action:'batchAdd',count:result.rows?.length||0,rowNumbers:result.rowNumbers||[],rows:result.rows||[],deduplicated:Boolean(result.deduplicated)};
+  return {ok:true,action:'append',rowNumber:result.rowNumber,row:result.row,deduplicated:Boolean(result.deduplicated)};
+}
+async function waitForCreateResult(action,requestId,timeoutMs=60000){
+  const deadline=Date.now()+timeoutMs;
+  while(Date.now()<deadline){
+    await new Promise(resolve=>setTimeout(resolve,700));
+    try{
+      const data=await writeToSheetByJsonp({action:'createRequestStatus',requestId},8000,'等待新增結果中...');
+      if(data.ok&&!data.pending&&data.result)return createResultResponse(action,data.result);
+    }catch(err){console.warn('[新增案件] 結果查詢暫時失敗',err)}
+  }
+  throw new Error('案件可能已寫入，但尚未取得回應。請重新整理確認，不需要重複送出。');
+}
+async function writeCreateToSheet(action,payload){
+  const statusPromise=waitForCreateResult(action,payload.requestId,60000)
+    .then(data=>({data}))
+    .catch(error=>({statusError:error}));
+  const framePromise=postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'新增寫入較慢，正在查詢試算表寫入結果。'})
+    .then(data=>({data}))
+    .catch(error=>({frameError:error}));
+  const first=await Promise.race([framePromise,statusPromise]);
+  if(first.data)return first.data;
+  const second=await (first.frameError?statusPromise:framePromise);
+  if(second.data)return second.data;
+  throw second.frameError||second.statusError||first.frameError||first.statusError||new Error('無法取得新增結果');
 }
 async function readActionWithFrameFallback(payload,timeoutMs=20000,timeoutMessage='Apps Script API 沒有回應。'){
   const actionName=payload?.action||'(未指定)';
