@@ -6522,6 +6522,7 @@ let requestBatchMode = false;
 let requestBatchRows = [];
 let requestSubmitInFlight = false;
 let pendingCreateRequest = null;
+let requestPlatformCloseTimer = null;
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment'];
 const legacyAuthStorageKeys = ['authToken','currentUser','isLoggedIn','editorToken'];
 function editorSessionValue(key){return sessionStorage.getItem('designRequestEditorLoggedOut')==='1'?'':(sessionStorage.getItem(key)||'')}
@@ -6558,7 +6559,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-create-response-fallback-53';
+const appBuildVersion = '20260804-platform-auto-close-54';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -8989,6 +8990,8 @@ async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}
 function syncRequestPlatforms(){const select=$('#requestPlatformSelect'), input=formEl.elements.platforms; if(!select||!input)return ''; const value=platformText([...select.querySelectorAll('input[type="checkbox"]:checked')].map(item=>item.value)); input.value=value; const summary=select.querySelector('summary'); if(summary){summary.textContent=value||'請選擇平台'; summary.classList.toggle('is-placeholder',!value)} return value}
+function closeRequestPlatformSelect({restoreFocus=false}={}){const select=$('#requestPlatformSelect'); clearTimeout(requestPlatformCloseTimer); requestPlatformCloseTimer=null; if(!select?.open)return; const shouldRestore=restoreFocus&&select.contains(document.activeElement); select.open=false; if(shouldRestore)select.querySelector('summary')?.focus({preventScroll:true})}
+function scheduleRequestPlatformClose(){clearTimeout(requestPlatformCloseTimer); requestPlatformCloseTimer=setTimeout(()=>closeRequestPlatformSelect({restoreFocus:true}),550)}
 function setRequestPlatformValues(value=''){const selected=new Set(normalizePlatformList(value)), select=$('#requestPlatformSelect'); select?.querySelectorAll('input[type="checkbox"]').forEach(input=>{input.checked=selected.has(input.value)}); syncRequestPlatforms()}
 function requestSupplementHasData(row={}){return ['briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'].some(key=>String(row[key]||'').trim())}
 function resetRequestExtras(){setRequestPlatformValues(''); const platform=$('#requestPlatformSelect'), supplement=formEl.querySelector('.request-supplement'); if(platform)platform.open=false; if(supplement)supplement.open=false}
@@ -9380,7 +9383,10 @@ $('#requestForm').addEventListener('submit',async e=>{
 });
 formEl.elements.owner.addEventListener('input',()=>{ownerTouchedByUser=true; const value=formEl.elements.owner.value.trim(); if(value){localStorage.setItem(ownerDraftKey,value); ownerAutoFillDone=true}});
 formEl.elements.qty.addEventListener('input',()=>{formEl.elements.qty.value=formEl.elements.qty.value.replace(/[^0-9]/g,'')});
-$('#requestPlatformSelect')?.addEventListener('change',syncRequestPlatforms);
+$('#requestPlatformSelect')?.addEventListener('change',()=>{syncRequestPlatforms();scheduleRequestPlatformClose()});
+$('#requestPlatformSelect')?.addEventListener('toggle',event=>{if(!event.currentTarget.open){clearTimeout(requestPlatformCloseTimer);requestPlatformCloseTimer=null}});
+$('#requestPlatformSelect')?.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeRequestPlatformSelect({restoreFocus:true})}});
+document.addEventListener('pointerdown',event=>{const select=$('#requestPlatformSelect');if(select?.open&&!select.contains(event.target))closeRequestPlatformSelect()});
 $('#flatProjectForm')?.elements?.qty?.addEventListener('input',event=>{event.target.value=event.target.value.replace(/[^0-9]/g,'')});
 formEl.elements.type.addEventListener('change',()=>populateDesignSelects(formEl.elements.type.value,null,''));
 formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
