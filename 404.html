@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>連結轉址中</title>
+  <style>
+    :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#24302a;background:#f5f8f6}
+    body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;box-sizing:border-box}
+    main{width:min(420px,100%);padding:24px;border:1px solid #dce5e0;border-radius:8px;background:#fff;text-align:center;box-shadow:0 12px 30px rgba(16,24,40,.09)}
+    h1{margin:0 0 10px;font-size:20px}p{margin:0;color:#66736d;font-size:14px;line-height:1.6}
+    a{color:#08714d;font-weight:700}
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">連結轉址中</h1>
+    <p id="message">正在開啟補充資料…</p>
+  </main>
+  <script>
+    (() => {
+      const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+      const match = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
+      const title = document.querySelector('#title');
+      const message = document.querySelector('#message');
+      const fail = text => {
+        title.textContent = '無法開啟連結';
+        message.innerHTML = `${text}<br><a href="/">回到設計需求系統</a>`;
+      };
+      if (!match) {
+        fail('找不到這個頁面。');
+        return;
+      }
+
+      const slot = match[1].toLowerCase();
+      const id = match[2];
+      const callback = `__supplementRedirect_${Date.now()}`;
+      const script = document.createElement('script');
+      const timer = setTimeout(() => {
+        delete window[callback];
+        script.remove();
+        fail('連結查詢逾時，請稍後再試。');
+      }, 12000);
+
+      window[callback] = data => {
+        clearTimeout(timer);
+        delete window[callback];
+        script.remove();
+        if (!data || !data.ok || !/^https?:\/\//i.test(data.url || '')) {
+          fail(data && data.error ? data.error : '找不到對應的補充資料連結。');
+          return;
+        }
+        location.replace(data.url);
+      };
+      script.onerror = () => {
+        clearTimeout(timer);
+        delete window[callback];
+        fail('連結查詢失敗，請稍後再試。');
+      };
+      script.src = `${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${callback}`;
+      document.head.appendChild(script);
+    })();
+  </script>
+</body>
+</html>
