@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-04 17:48 Asia/Taipei | build: 20260804-avatar-account-identity-62 -->
+<!-- LAST_MODIFIED: 2026-08-04 18:24 Asia/Taipei | build: 20260804-modification-record-post-63 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260804-avatar-account-identity-62" />
+  <meta name="app-version" content="20260804-modification-record-post-63" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6557,7 +6557,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260804-avatar-account-identity-62" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260804-modification-record-post-63" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6639,7 +6639,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-avatar-account-identity-62';
+const appBuildVersion = '20260804-modification-record-post-63';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7952,10 +7952,10 @@ async function sheetApi(action,payload={}){
     if(data.action!==action)throw new Error('Apps Script 尚未支援確認修正日寫入，請重新部署最新版本後再試');
     return data;
   }
-  if(action==='addModificationRecord'){
-    const data=await writeToSheetByJsonp({action,...payload},30000,'修改紀錄寫入較慢，請稍後重新整理確認。');
-    if(!data.ok)throw new Error(data.error||'修改紀錄寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
+	  if(action==='addModificationRecord'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'修改紀錄寫入較慢，請稍後重新整理確認。'});
+	    if(!data.ok)throw new Error(data.error||'修改紀錄寫入失敗');
+	    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
     return data;
   }
 	  if(action==='uploadDesignerImage'){
