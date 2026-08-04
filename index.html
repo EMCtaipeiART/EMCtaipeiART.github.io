@@ -6559,7 +6559,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-platform-auto-close-54';
+const appBuildVersion = '20260804-recent-owner-pill-order-55';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6731,11 +6731,11 @@ const modifyRecentColumns = [
   {label:'案件編號',width:96,render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {label:'客戶別',width:112,render:r=>esc(r.client)},
   {label:'專案名稱',width:190,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
-  {label:'專案負責人',width:96,render:r=>esc(ownerDisplay(r.owner))},
+  {label:'專案負責人',width:96,render:r=>`<span class="pill-name">${esc(ownerDisplay(r.owner))}</span>`},
+  {label:'設計負責人',width:96,render:r=>`<span class="pill-name">${esc(r.designer)}</span>`},
   {label:'數量',width:78,render:r=>esc(r.qty)},
   {label:'開始',width:78,render:r=>esc(shortMonthDayDate(r.start))},
-  {label:'結束',width:78,render:r=>esc(shortMonthDayDate(r.end))},
-  {label:'設計負責人',width:96,render:r=>`<span class="pill-name">${esc(r.designer)}</span>`}
+  {label:'結束',width:78,render:r=>esc(shortMonthDayDate(r.end))}
 ];
 const defaultHiddenColumns = ['month','owner','type','stage'];
 const visibleColumnsKey = 'designRequestVisibleColumnsV2';
