@@ -5380,6 +5380,56 @@
       background-size:5px 5px,5px 5px!important;
       background-repeat:no-repeat!important;
     }
+    .owner-project-pill{
+      width:auto!important;max-width:100%!important;min-height:26px!important;margin:0 auto!important;
+      padding:5px 11px!important;background:#f3f4f6!important;color:#4b5563!important;
+      border:1px solid #e5e7eb!important;box-shadow:none!important;overflow:hidden!important;
+      text-overflow:ellipsis!important;white-space:nowrap!important;
+    }
+    .owner-project-pill:hover,.owner-project-pill:focus-visible{background:#e5e7eb!important;color:#1f2937!important;border-color:#d1d5db!important;outline:none!important}
+    #ownerProjectsModal{z-index:2600!important;padding:18px!important;background:rgba(22,30,27,.42)!important;backdrop-filter:blur(7px)!important}
+    .owner-projects-card{
+      width:min(1040px,calc(100vw - 36px));max-height:min(780px,calc(100vh - 36px));
+      display:flex;flex-direction:column;overflow:hidden;border:1px solid #dde4e0;border-radius:22px;
+      background:#fff;box-shadow:0 28px 80px rgba(16,24,40,.24);
+    }
+    .owner-projects-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 30px 20px;border-bottom:1px solid #e3e8e5}
+    .owner-projects-head h3{margin:0;color:#112033;font-size:26px;line-height:1.2;font-weight:950}
+    .owner-projects-head p{margin:7px 0 0;color:#68716d;font-size:14px;font-weight:700}
+    .owner-projects-close{flex:0 0 42px!important;width:42px!important;height:42px!important;min-height:42px!important;padding:0!important;border-radius:999px!important;background:#fff!important;color:#172635!important;border:1px solid #dce2df!important;box-shadow:0 5px 16px rgba(16,24,40,.07)!important}
+    .owner-projects-close svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+    .owner-projects-table-wrap{min-height:0;overflow:auto;padding:0 30px 28px}
+    .owner-projects-table{min-width:860px;border:0;border-radius:0;box-shadow:none;table-layout:fixed}
+    .owner-projects-table th{top:0;z-index:2;height:46px;background:#f6f8f7;color:#5f6965;font-size:12px}
+    .owner-projects-table td{height:52px;padding:9px 10px;font-size:13px}
+    .owner-projects-table .owner-project-mail,.owner-projects-table .owner-project-edit{width:76px;min-width:76px}
+    .owner-projects-table .mail-compose-btn,.owner-projects-table .row-actions button{display:inline-grid!important;place-items:center!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;padding:0!important;border-radius:9px!important}
+    .owner-projects-table .mail-compose-btn span,.owner-projects-table .row-actions button span{display:none}
+    .owner-projects-table .mail-compose-btn svg,.owner-projects-table .row-actions button svg{width:16px;height:16px;fill:currentColor}
+    .owner-projects-table .row-actions{justify-content:center;flex-wrap:nowrap}
+    .owner-projects-table .project-text{max-width:220px}
+    .case-detail-head-actions{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+    #caseDetailModal .case-detail-back{min-height:42px!important;padding:8px 17px!important;border-radius:10px!important;background:#f3f4f6!important;color:#374151!important;border:1px solid #d1d5db!important;font-size:14px!important;font-weight:900!important;box-shadow:none!important}
+    #caseDetailModal .case-detail-back[hidden]{display:none!important}
+    #caseDetailModal .case-detail-back:hover{background:#e5e7eb!important;color:#1f2937!important}
+    html[data-theme="dark"] .owner-project-pill{background:#292c30!important;color:#d7dcda!important;border-color:#44484c!important}
+    html[data-theme="dark"] .owner-projects-card{background:#151618;border-color:#3b3e42;box-shadow:0 30px 90px rgba(0,0,0,.65)}
+    html[data-theme="dark"] .owner-projects-head{border-color:#35383b}
+    html[data-theme="dark"] .owner-projects-head h3{color:#f2f5f4}
+    html[data-theme="dark"] .owner-projects-head p{color:#aeb6b2}
+    html[data-theme="dark"] .owner-projects-close{background:#1c1e21!important;color:#f1f4f2!important;border-color:#494d51!important;box-shadow:none!important}
+    html[data-theme="dark"] .owner-projects-table th{background:#202326!important;color:#c4cbc7!important}
+    html[data-theme="dark"] #caseDetailModal .case-detail-back{background:#272a2e!important;color:#e5e9e7!important;border-color:#494d51!important}
+    @media(max-width:640px){
+      #ownerProjectsModal{padding:10px!important}.owner-projects-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px}
+      .owner-projects-head{padding:20px 18px 16px}.owner-projects-head h3{font-size:21px}.owner-projects-table-wrap{padding:0 18px 20px}
+      .owner-projects-table{display:table!important;width:860px!important;min-width:860px!important;max-width:none!important;border-collapse:separate!important;table-layout:fixed!important}
+      .owner-projects-table thead{display:table-header-group!important}.owner-projects-table tbody{display:table-row-group!important}
+      .owner-projects-table tr{display:table-row!important;width:auto!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important}
+      .owner-projects-table th,.owner-projects-table td{display:table-cell!important;width:auto;min-width:0;height:46px!important;padding:8px 10px!important;white-space:nowrap!important;word-break:normal!important;text-align:center!important;vertical-align:middle!important}
+      .owner-projects-table td::before{content:none!important}
+      .case-detail-head-actions{gap:7px}#caseDetailModal .case-detail-back{min-height:40px!important;padding:7px 12px!important;font-size:13px!important}
+    }
     /* Case detail presentation: keep existing data bindings, replace only layout and color. */
     #caseDetailModal{padding:18px!important;background:rgba(22,30,27,.42)!important;backdrop-filter:blur(7px)!important}
     #caseDetailModal .case-detail-card{
@@ -6436,9 +6486,23 @@
     <div class="login-actions"><button type="button" class="secondary" id="requestMailGuideClose">關閉</button></div>
   </div>
 </div>
+<div class="login-modal" id="ownerProjectsModal" hidden>
+  <div class="owner-projects-card">
+    <div class="owner-projects-head">
+      <div><h3 id="ownerProjectsTitle">專案負責人</h3><p id="ownerProjectsSummary"></p></div>
+      <button type="button" class="secondary owner-projects-close ui-close-button" id="ownerProjectsClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
+    </div>
+    <div class="owner-projects-table-wrap">
+      <table class="owner-projects-table">
+        <thead id="ownerProjectsThead"></thead>
+        <tbody id="ownerProjectsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 <div class="login-modal" id="caseDetailModal" hidden>
   <div class="case-detail-card">
-    <div class="case-detail-head"><div class="case-detail-title"><div><h3>案件資料</h3><p>快速檢視案件的重點資訊</p></div></div><button type="button" class="secondary case-detail-close ui-close-button" id="caseDetailClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button></div>
+    <div class="case-detail-head"><div class="case-detail-title"><div><h3>案件資料</h3><p>快速檢視案件的重點資訊</p></div></div><div class="case-detail-head-actions"><button type="button" class="secondary case-detail-back" id="caseDetailBack" hidden>返回</button><button type="button" class="secondary case-detail-close ui-close-button" id="caseDetailClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button></div></div>
     <div class="case-detail-grid" id="caseDetailGrid"></div>
   </div>
 </div>
@@ -6523,6 +6587,9 @@ let requestBatchRows = [];
 let requestSubmitInFlight = false;
 let pendingCreateRequest = null;
 let requestPlatformCloseTimer = null;
+let ownerProjectsReturnName = '';
+let ownerProjectsFullDataLoaded = false;
+let ownerProjectsFullLoadPromise = null;
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment'];
 const legacyAuthStorageKeys = ['authToken','currentUser','isLoggedIn','editorToken'];
 function editorSessionValue(key){return sessionStorage.getItem('designRequestEditorLoggedOut')==='1'?'':(sessionStorage.getItem(key)||'')}
@@ -6559,7 +6626,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-recent-owner-pill-order-55';
+const appBuildVersion = '20260804-owner-projects-modal-56';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6731,11 +6798,22 @@ const modifyRecentColumns = [
   {label:'案件編號',width:96,render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {label:'客戶別',width:112,render:r=>esc(r.client)},
   {label:'專案名稱',width:190,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
-  {label:'專案負責人',width:96,render:r=>`<span class="pill-name">${esc(ownerDisplay(r.owner))}</span>`},
+  {label:'專案負責人',width:96,render:r=>`<button type="button" class="pill-name owner-project-pill" title="查看 ${esc(ownerDisplay(r.owner))} 填寫的專案" onclick="openOwnerProjects(event,'${jsArg(ownerDisplay(r.owner))}')">${esc(ownerDisplay(r.owner))}</button>`},
   {label:'設計負責人',width:96,render:r=>`<span class="pill-name">${esc(r.designer)}</span>`},
   {label:'數量',width:78,render:r=>esc(r.qty)},
   {label:'開始',width:78,render:r=>esc(shortMonthDayDate(r.start))},
   {label:'結束',width:78,render:r=>esc(shortMonthDayDate(r.end))}
+];
+const ownerProjectColumns = [
+  {label:'發信',width:76,className:'owner-project-mail',render:r=>mailAction(r,{icon:true})},
+  {label:'編輯',width:76,className:'owner-project-edit',render:r=>ownerProjectEditAction(r)},
+  {label:'案件編號',width:100,render:r=>`<button type="button" class="case-id-btn" onclick="openOwnerProjectCase(event,'${jsArg(r.id)}')">${esc(r.id)}</button>`},
+  {label:'客戶別',width:120,render:r=>esc(r.client)},
+  {label:'專案名稱',width:230,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
+  {label:'設計負責人',width:104,render:r=>`<span class="pill-name">${esc(r.designer)}</span>`},
+  {label:'開始',width:90,render:r=>esc(shortMonthDayDate(r.start))},
+  {label:'結束',width:90,render:r=>esc(shortMonthDayDate(r.end))},
+  {label:'狀態',width:96,render:r=>`<span class="status ${esc(r.status)}">${esc(statusLabel(r.status))}</span>`}
 ];
 const defaultHiddenColumns = ['month','owner','type','stage'];
 const visibleColumnsKey = 'designRequestVisibleColumnsV2';
@@ -7251,7 +7329,7 @@ function normalizeIssueReport(report={},rowNumber=''){
   return {rowNumber:Number(report.rowNumber||rowNumber)||0,'姓名':String(report['姓名']||''),'時間':String(report['時間']||''),'內容':String(report['內容']||''),'修改建議':String(report['修改建議']||''),'狀態':status,'狀態更改時間':String(report['狀態更改時間']||report[status]||report['時間']||'')};
 }
 function saveIssueReportsCache(){try{localStorage.setItem(issueReportsCacheKey,JSON.stringify(issueReports.slice(0,100)))}catch(err){}}
-function currentTaipeiTimestamp(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`}
+function currentTaipeiTimestamp(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`}
 async function fetchIssueReportsFromGviz(){
   const rows=gvizToObjects(await gvizJsonp(issueReportGvizUrl,8000));
   return rows.map((report,index)=>normalizeIssueReport(report,index+2)).filter(report=>report['內容']).reverse();
@@ -8219,6 +8297,33 @@ function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d=
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
 function mailAction(row,{icon=false}={}){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`:historyLock()}
 function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButtons(row,{icon}):historyLock()}
+function ownerProjectEditAction(row){return canCaseEditRow(row)?`<div class="row-actions"><button type="button" class="secondary" title="編輯案件" onclick="closeOwnerProjects();editRow('${jsArg(row.id)}')">${editIcon()}<span>編輯</span></button></div>`:historyLock()}
+function ownerProjectNameKey(value){return ownerDisplay(value).trim().toLowerCase()}
+function ownerProjectRows(owner){const key=ownerProjectNameKey(owner); return rows.filter(row=>!row.archived&&ownerProjectNameKey(row.owner)===key).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0))}
+function renderOwnerProjects(owner){
+  const list=ownerProjectRows(owner), thead=$('#ownerProjectsThead'), tbody=$('#ownerProjectsTbody'), title=$('#ownerProjectsTitle'), summary=$('#ownerProjectsSummary');
+  if(!thead||!tbody)return;
+  if(title)title.textContent=`${owner} 的專案`;
+  if(summary)summary.textContent=`共 ${list.length} 筆，依案件編號由新到舊排列${apiUrl&&!ownerProjectsFullDataLoaded?'，完整資料更新中...':''}`;
+  thead.innerHTML=`<tr>${ownerProjectColumns.map(column=>`<th class="${esc(column.className||'')}" style="width:${column.width}px!important;min-width:${column.width}px!important">${esc(column.label)}</th>`).join('')}</tr>`;
+  tbody.innerHTML=list.length
+    ? list.map(row=>`<tr>${ownerProjectColumns.map(column=>cell(column.label,column.render(row),column.className||'',column.width)).join('')}</tr>`).join('')
+    : `<tr><td colspan="${ownerProjectColumns.length}">目前找不到此負責人填寫的專案。</td></tr>`;
+}
+function ensureOwnerProjectsFullData(){
+  if(!apiUrl||ownerProjectsFullDataLoaded||ownerProjectsFullLoadPromise)return ownerProjectsFullLoadPromise;
+  ownerProjectsFullLoadPromise=(async()=>{
+    let loaded=await loadSheet({full:true,background:true});
+    if(loaded===false){await new Promise(resolve=>setTimeout(resolve,800));loaded=await loadSheet({full:true,background:true})}
+    if(loaded!==false)ownerProjectsFullDataLoaded=true;
+    if(ownerProjectsReturnName&&!$('#ownerProjectsModal')?.hidden)renderOwnerProjects(ownerProjectsReturnName);
+  })().catch(error=>console.warn('負責人完整專案讀取失敗',error)).finally(()=>{ownerProjectsFullLoadPromise=null});
+  return ownerProjectsFullLoadPromise;
+}
+function openOwnerProjects(event,owner){event?.preventDefault?.();event?.stopPropagation?.(); const name=ownerDisplay(owner).trim(); if(!name)return; closeFieldPopover(); ownerProjectsReturnName=name; renderOwnerProjects(name); const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=false; ensureOwnerProjectsFullData()}
+function closeOwnerProjects({preserveReturn=false}={}){const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=true; closeFieldPopover(); if(!preserveReturn)ownerProjectsReturnName=''}
+function openOwnerProjectCase(event,id){event?.preventDefault?.();event?.stopPropagation?.(); closeOwnerProjects({preserveReturn:true}); openCaseDetail(id,{preserveOwnerReturn:true})}
+function returnToOwnerProjects(){const owner=ownerProjectsReturnName; const modal=$('#caseDetailModal'); if(modal)modal.hidden=true; if(owner)openOwnerProjects(null,owner); else closeCaseDetail()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; closeNotifications(); const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function closeNotifications(){const popover=$('#notificationPopover'), bell=$('#accountBell'); if(popover)popover.hidden=true; if(bell)bell.setAttribute('aria-expanded','false')}
@@ -8778,9 +8883,9 @@ async function copyText(t,options={}){const text=String(t||''), target=options.t
 function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}" data-field-label="${esc(item.label)}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
-function openCaseDetail(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','數量','狀態','階段','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; modal.hidden=false; syncCaseDetailScale()}
-function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id)}
-function closeCaseDetail(){const modal=$('#caseDetailModal'); if(modal)modal.hidden=true}
+function openCaseDetail(id,{preserveOwnerReturn=false}={}){if(!preserveOwnerReturn)ownerProjectsReturnName=''; const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','數量','狀態','階段','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!ownerProjectsReturnName; modal.hidden=false; syncCaseDetailScale()}
+function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id,{preserveOwnerReturn:true})}
+function closeCaseDetail(){const modal=$('#caseDetailModal'), back=$('#caseDetailBack'); if(modal)modal.hidden=true; if(back)back.hidden=true; ownerProjectsReturnName=''}
 function syncCaseDetailScale(){const modal=$('#caseDetailModal'); if(!modal)return; ['--case-detail-mobile-scale','--case-detail-mobile-body-size','--case-detail-mobile-title-size','--case-detail-mobile-section-size','--case-detail-mobile-separator-size'].forEach(name=>modal.style.removeProperty(name))}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
 function positionFieldPopover(anchor){const width=Math.min(320,window.innerWidth-24), margin=12; fieldPopover.style.width=`${width}px`; fieldPopover.style.removeProperty('transform'); fieldPopover.classList.toggle('is-modal-popover',Boolean(anchor.closest?.('.login-modal'))); if(anchor.closest?.('.login-modal')){fieldPopover.style.left='50%'; fieldPopover.style.top='50%'; fieldPopover.style.transform='translate(-50%,-50%)'; fieldPopover.style.maxHeight=`${Math.max(180,window.innerHeight-48)}px`; return} const rect=anchor.getBoundingClientRect(); fieldPopover.style.left=`${Math.min(Math.max(margin,rect.left),window.innerWidth-width-margin)}px`; const naturalHeight=Math.min(fieldPopover.scrollHeight||280,360), below=window.innerHeight-rect.bottom-margin, above=rect.top-margin, useBelow=below>=Math.min(naturalHeight,220)||below>=above, maxHeight=Math.max(150,Math.min(360,useBelow?below:above)); fieldPopover.style.maxHeight=`${maxHeight}px`; fieldPopover.style.top=`${useBelow?rect.bottom+8:Math.max(margin,rect.top-8-maxHeight)}px`}
@@ -9492,6 +9597,9 @@ $('#flatProjectModal')?.addEventListener('click',event=>{if(event.target.id==='f
 $('#flatProjectReplacement')?.addEventListener('change',updateFlatProjectReasonVisibility);
 $('#flatProjectReset')?.addEventListener('click',()=>{const designer=$('#flatProjectExpectedDesigner')?.value||''; openFlatProjectModal(designer)});
 $('#flatProjectForm')?.addEventListener('submit',submitFlatProject);
+$('#ownerProjectsClose')?.addEventListener('click',()=>closeOwnerProjects());
+$('#ownerProjectsModal')?.addEventListener('click',event=>{if(event.target.id==='ownerProjectsModal')closeOwnerProjects()});
+$('#caseDetailBack')?.addEventListener('click',returnToOwnerProjects);
 $('#caseDetailClose')?.addEventListener('click',closeCaseDetail);
 $('#caseDetailModal')?.addEventListener('click',event=>{if(event.target.id==='caseDetailModal')closeCaseDetail()});
 $('#revisionModalClose')?.addEventListener('click',()=>{closeFieldPopover();closeRevisionModal()});
@@ -9499,6 +9607,7 @@ $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revi
 $('#revisionModalAdd')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id)});
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#ownerProjectsModal')?.hidden){event.preventDefault();closeOwnerProjects()}});
 document.addEventListener('pointerdown',applyOpenFiltersOnOutsideClick,true);
 document.querySelectorAll('[data-close-panel]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation(); setPanelClosed(button.dataset.closePanel,true)}));
 document.querySelectorAll('[data-restore-panel]').forEach(button=>button.addEventListener('click',()=>setPanelClosed(button.dataset.restorePanel,false,{reveal:true})));
