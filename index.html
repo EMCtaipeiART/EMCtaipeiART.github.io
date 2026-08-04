@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-03 18:46 Asia/Taipei | build: 20260803-case-auto-refresh-48 -->
+<!-- LAST_MODIFIED: 2026-08-04 11:41 Asia/Taipei | build: 20260804-mail-content-cleanup-51 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260803-case-auto-refresh-48" />
+  <meta name="app-version" content="20260804-mail-content-cleanup-51" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -118,13 +118,15 @@
     .modify-list .row-actions{gap:6px;min-width:0}
     .modify-list .row-actions button{min-height:28px;padding:5px 10px;font-size:12px}
     .batch-request-list{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px}
-    .batch-request-list h3{margin:0 0 8px;color:#344641;font-size:15px}
+    .batch-request-list h3{margin:0;color:#344641;font-size:15px}
+    .batch-request-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px}
+    .batch-request-list .batch-row-heading{grid-column:1/-1;margin:0;color:#344641;font-size:14px;font-weight:900}
     .batch-request-list ul{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:10px}
     .batch-request-list li{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:10px;align-items:end;padding:12px;border-radius:12px;background:#f7f8f7;color:#43524b;font-size:13px}
     .batch-request-list label{display:grid;gap:4px;font-size:12px;font-weight:800;color:#43524b;min-width:0}
     .batch-request-list input,.batch-request-list select{min-height:34px;border-radius:9px;font-size:13px;padding:6px 9px}
     .batch-client,.batch-owner{grid-column:span 2}.batch-project{grid-column:span 3}.batch-type,.batch-stage,.batch-qty,.batch-start,.batch-end{grid-column:span 1}.batch-designer{grid-column:span 2}.batch-remove{grid-column:span 1;align-self:end;min-height:34px}
-    .batch-request-list .batch-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .batch-request-list .batch-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .request-guide-card{width:min(560px,100%);max-height:min(760px,calc(100vh - 36px));overflow:auto}
     .request-guide-card h3{color:#344641}
     .request-guide-card p{margin:0 0 10px;color:#43524b;font-size:14px}
@@ -5947,6 +5949,174 @@
     }
     #designerRoster .avatar-frame > .designer-avatar-image.is-loaded{opacity:1}
     html[data-theme="dark"] #designerRoster .avatar-placeholder{filter:brightness(.72);color:#fff}
+    /* Five-column design request form and collapsible optional inputs. */
+    #requestForm{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:16px 14px!important;align-items:end}
+    #requestForm .field-client,#requestForm .field-owner,#requestForm .field-designer{grid-column:span 2!important}
+    #requestForm .field-project{grid-column:span 3!important}
+    #requestForm .field-type,#requestForm .field-stage,#requestForm .field-qty,#requestForm .field-start,#requestForm .field-end,#requestForm .field-platform{grid-column:span 1!important}
+    #requestForm .field-supplement,#requestForm .form-actions{grid-column:1/-1!important}
+    #requestForm .form-actions{justify-content:flex-end!important}
+    #requestForm input:not([type="checkbox"]),#requestForm select,#requestForm textarea,.request-platform-select>summary,.request-supplement>summary,.batch-request-list input:not([type="checkbox"]),.batch-request-list select,.batch-platform-select>summary{border-radius:12px!important}
+    .request-platform-field{display:grid;gap:7px;min-width:0;position:relative}
+    .request-field-label{color:#344641;font-size:14px;font-weight:800;line-height:1.25}
+    .request-platform-select{position:relative;min-width:0}
+    .request-platform-select>summary,.batch-platform-select>summary{display:flex;align-items:center;min-height:40px;padding:8px 36px 8px 12px;border:1px solid #cbd3cf;background:#fff;color:#111;font-size:14px;font-weight:650;cursor:pointer;list-style:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .request-platform-select>summary::-webkit-details-marker,.batch-platform-select>summary::-webkit-details-marker,.request-supplement>summary::-webkit-details-marker{display:none}
+    .request-platform-select>summary::after,.batch-platform-select>summary::after{content:"";position:absolute;right:14px;top:50%;width:7px;height:7px;border-right:2px solid #66736d;border-bottom:2px solid #66736d;transform:translateY(-65%) rotate(45deg)}
+    .request-platform-select[open]>summary::after,.batch-platform-select[open]>summary::after{transform:translateY(-25%) rotate(225deg)}
+    .request-platform-options{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:120;display:grid;gap:3px;padding:7px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 14px 30px rgba(16,24,40,.14)}
+    .request-platform-options label{display:flex!important;align-items:center;gap:8px;min-height:32px;padding:5px 7px;border-radius:8px;font-size:12px!important;cursor:pointer}
+    .request-platform-options label:hover{background:#eef7f2}
+    .request-platform-options input{width:15px!important;height:15px!important;min-height:15px!important;margin:0;accent-color:var(--green)}
+    .request-supplement{border:1px solid var(--line);border-radius:12px;background:#f8faf9;overflow:visible}
+    .request-supplement>summary{min-height:42px;padding:10px 42px 10px 14px;display:flex;align-items:center;position:relative;cursor:pointer;color:#344641;font-size:14px;font-weight:900;list-style:none}
+    .request-supplement>summary::after{content:"+";position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px;font-weight:500;color:#66736d}
+    .request-supplement[open]>summary::after{content:"\2212"}
+    .request-supplement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 12px 12px}
+    .request-supplement-grid section{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .request-supplement-grid h3{grid-column:1/-1;margin:0;color:#344641;font-size:13px}
+    .request-supplement-grid label{font-size:12px!important}
+    .request-supplement-grid input{min-height:36px!important;font-size:12px!important}
+    .request-help-actions{justify-content:flex-start!important}
+    .request-help-actions .request-mail-guide{margin-left:0!important}
+    .batch-platform{grid-column:span 2;display:grid;gap:4px;min-width:0;position:relative;color:#43524b;font-size:12px;font-weight:800}
+    .batch-platform-select{position:relative;min-width:0}
+    .batch-platform-select>summary{min-height:34px;padding:6px 30px 6px 9px;font-size:12px}
+    .batch-platform-select .request-platform-options{z-index:140}
+    .batch-supplement{grid-column:1/-1;min-width:0}
+    .batch-supplement .request-supplement-grid{padding-top:0}
+    @media(max-width:900px){
+      #requestForm{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      #requestForm .field-client,#requestForm .field-project,#requestForm .field-owner,#requestForm .field-designer,#requestForm .field-supplement,#requestForm .form-actions{grid-column:1/-1!important}
+      #requestForm .field-type,#requestForm .field-stage,#requestForm .field-qty,#requestForm .field-start,#requestForm .field-end,#requestForm .field-platform{grid-column:span 1!important}
+      .request-supplement-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:560px){
+      #requestForm{grid-template-columns:1fr!important}
+      #requestForm>*{grid-column:1/-1!important}
+      .request-supplement-grid section{grid-template-columns:1fr}
+      .request-supplement-grid h3{grid-column:1}
+      .batch-platform{grid-column:1/-1}
+    }
+    html[data-theme="dark"] .request-platform-select>summary,html[data-theme="dark"] .batch-platform-select>summary,html[data-theme="dark"] .request-platform-options,html[data-theme="dark"] .request-supplement-grid section{background:#1d201f!important;border-color:#3b403e!important;color:#f0f3f1!important}
+    html[data-theme="dark"] .request-supplement{background:#181b1a!important;border-color:#3b403e!important}
+    html[data-theme="dark"] .request-field-label,html[data-theme="dark"] .request-supplement>summary,html[data-theme="dark"] .request-supplement-grid h3,html[data-theme="dark"] .batch-platform{color:#e7ebe9!important}
+    html[data-theme="dark"] .request-platform-options label:hover{background:#29322e!important}
+
+    /* Keep request actions aligned and make edit state visually unmistakable. */
+    #requestForm .form-actions.request-help-actions{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      flex-wrap:nowrap!important;
+      gap:10px!important;
+      margin:0!important;
+    }
+    #requestForm .form-actions.request-help-actions > button{
+      flex:0 0 auto!important;
+      width:auto!important;
+      min-height:40px!important;
+      margin:0!important;
+      white-space:nowrap!important;
+    }
+    #requestForm .form-actions.request-help-actions #submitBtn{
+      flex:0 0 168px!important;
+      min-width:168px!important;
+      margin-left:auto!important;
+    }
+    #requestForm .form-actions.request-help-actions #requestBatchToggle{
+      min-width:88px!important;
+    }
+    #requestForm .form-actions.request-help-actions #requestBatchToggle.active{
+      min-width:128px!important;
+    }
+    #requestForm .form-actions.request-help-actions #submitBtn[hidden]{
+      display:none!important;
+    }
+    #requestForm .form-actions.request-help-actions #requestBatchToggle[hidden]{
+      display:none!important;
+    }
+    #requestForm .form-actions.request-help-actions .request-mail-guide{
+      min-height:40px!important;
+      padding:8px 16px!important;
+      border:1px solid #dce5e0!important;
+      border-radius:9px!important;
+      background:#f3f6f4!important;
+      color:#2e3b35!important;
+      box-shadow:none!important;
+    }
+    #requestForm .form-actions.request-help-actions .request-mail-guide:hover{
+      background:#e8efeb!important;
+      color:#17211d!important;
+      border-color:#cfd8d3!important;
+    }
+    #requestForm.is-modify .request-project-btn,
+    #requestForm.is-modify .request-mail-guide,
+    .request-card.is-browsing-modify .request-project-btn,
+    .request-card.is-browsing-modify .request-mail-guide{
+      display:none!important;
+    }
+    .request-field-label{
+      font-size:12px!important;
+      line-height:1.25!important;
+    }
+    .request-platform-select > summary{
+      font-size:13px!important;
+    }
+    .request-platform-select > summary.is-placeholder,
+    .batch-platform-select > summary.is-placeholder{
+      color:#8a9490!important;
+    }
+    .request-platform-select > summary::after,
+    .batch-platform-select > summary::after{
+      width:6px!important;
+      height:6px!important;
+      border-width:0 1.5px 1.5px 0!important;
+    }
+    .request-card.is-browsing-modify .form input:not([type="hidden"]),
+    .request-card.is-browsing-modify .form select,
+    .request-card.is-browsing-modify .form textarea,
+    .request-card.is-browsing-modify .request-platform-select > summary,
+    .request-card.is-browsing-modify .request-supplement,
+    .request-card .form.is-modify input:not([type="hidden"]),
+    .request-card .form.is-modify select,
+    .request-card .form.is-modify textarea,
+    .request-card .form.is-modify .request-platform-select > summary,
+    .request-card .form.is-modify .request-supplement{
+      border-color:#e8bd55!important;
+      box-shadow:0 0 0 2px rgba(246,178,61,.14)!important;
+    }
+    .request-card.is-browsing-modify .form input:focus,
+    .request-card.is-browsing-modify .form select:focus,
+    .request-card.is-browsing-modify .form textarea:focus,
+    .request-card.is-browsing-modify .request-platform-select > summary:focus,
+    .request-card .form.is-modify input:focus,
+    .request-card .form.is-modify select:focus,
+    .request-card .form.is-modify textarea:focus,
+    .request-card .form.is-modify .request-platform-select > summary:focus{
+      border-color:#d99a12!important;
+      box-shadow:0 0 0 3px rgba(246,178,61,.24)!important;
+    }
+    @media(max-width:1100px){
+      #requestForm .form-actions.request-help-actions{flex-wrap:wrap!important}
+    }
+    @media(max-width:900px){
+      #requestForm .form-actions.request-help-actions > button{flex:1 1 180px!important}
+      #requestForm .form-actions.request-help-actions #submitBtn{min-width:0!important}
+      #requestForm .form-actions.request-help-actions #requestBatchToggle{min-width:0!important}
+    }
+    @media(max-width:560px){
+      .request-platform-select > summary{font-size:12px!important}
+      #requestForm .form-actions.request-help-actions > button{flex:1 1 100%!important}
+      #requestForm .form-actions.request-help-actions #submitBtn,
+      #requestForm .form-actions.request-help-actions #requestBatchToggle{
+        flex:1 1 100%!important;
+        width:100%!important;
+        margin-left:0!important;
+      }
+    }
+    html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
+    html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
   </style>
 </head>
 <body>
@@ -6061,7 +6231,7 @@
         <button type="button" class="request-help-info" aria-label="需求單填寫說明">i</button>
         <div class="request-help-popover" aria-hidden="true">
           <b>需求單填寫說明：</b>
-          <span>• 填寫客戶別、專案名稱、負責人、設計類型、階段、數量與日期。</span>
+          <span>• 填寫客戶別、專案名稱、負責人、設計種類、階段、數量、日期與使用平台。</span>
           <span>• 新增案件後確認「最新案件列表」欄有無資訊，點選「發信」進行告知。</span>
           <span>• 若需要追加修改，請從案件列表的修改紀錄新增內容。</span>
           <span>• 新的提案或新的案件請按「平面/影音新開專案」新增，會有輪派的設計師接單。</span>
@@ -6076,21 +6246,44 @@
       <label class="field-client">客戶別<input name="client" required placeholder="例：金士頓"></label>
       <label class="field-project">專案名稱<input name="project" required placeholder="例：12月社群貼文_resize"></label>
       <label class="field-owner">專案負責人<input name="owner" list="ownerList" required placeholder="請填寫您的稱呼"><datalist id="ownerList"></datalist></label>
-      <label class="field-type">設計類型<select name="type"></select></label>
+      <label class="field-type">設計種類<select name="type"></select></label>
       <label class="field-stage">階段<select name="stage"></select></label>
       <label class="field-qty">數量<input name="qty" inputmode="numeric" pattern="[0-9]*" required placeholder="例：5 張圖片填 5、2 支影片填 2"></label>
-      <label class="field-start">開始日期<input name="start" type="date" required></label>
-      <label class="field-end">結束日期<input name="end" type="date" required></label>
       <label class="field-designer">設計負責人<select name="designer"><option value=""></option><option>Machi</option><option>Anna</option><option>Karl</option><option>Noise</option><option>Amber</option><option>Leona</option></select></label>
+      <label class="field-start">開始時間<input name="start" type="date" required></label>
+      <label class="field-end">結束時間<input name="end" type="date" required></label>
+      <div class="field-platform request-platform-field">
+        <span class="request-field-label">使用平台（可複選）</span>
+        <details class="request-platform-select" id="requestPlatformSelect">
+          <summary class="is-placeholder">請選擇平台</summary>
+          <div class="request-platform-options">
+            <label><input type="checkbox" value="Facebook">Facebook</label>
+            <label><input type="checkbox" value="Instagram">Instagram</label>
+            <label><input type="checkbox" value="Line">Line</label>
+            <label><input type="checkbox" value="其他平台">其他平台</label>
+          </div>
+        </details>
+        <input type="hidden" name="platforms" value="">
+      </div>
       <div id="detailsOptions" hidden></div>
-      <div class="form-actions toolbar"><button type="submit" id="submitBtn">新增案件</button><button type="button" class="secondary" id="requestBatchToggle">批次</button></div>
+      <details class="request-supplement field-supplement">
+        <summary>補充資料（選填）</summary>
+        <div class="request-supplement-grid">
+          <section><h3>A. 設計簡報</h3><label>說明<input name="briefNote" placeholder="例：設計簡報頁碼或注意事項"></label><label>連結網址<input name="briefUrl" type="url" inputmode="url" placeholder="https://"></label></section>
+          <section><h3>B. 客戶素材</h3><label>說明<input name="assetNote" placeholder="例：素材夾內容"></label><label>連結網址<input name="assetUrl" type="url" inputmode="url" placeholder="https://"></label></section>
+          <section><h3>C. 參考範例</h3><label>說明<input name="referenceNote" placeholder="例：參考的風格與重點"></label><label>連結網址<input name="referenceUrl" type="url" inputmode="url" placeholder="https://"></label></section>
+          <section><h3>D. 其他</h3><label>說明<input name="otherNote" placeholder="其他補充說明"></label><label>連結網址<input name="otherUrl" type="url" inputmode="url" placeholder="https://"></label></section>
+        </div>
+      </details>
+      <div class="form-actions toolbar request-help-actions" id="requestHelpActions">
+        <button type="button" class="request-project-btn" data-kind="平面" data-new-project-group="平面"></button>
+        <button type="button" class="request-project-btn" data-kind="影音" data-new-project-group="影音"></button>
+        <button type="button" class="request-mail-guide" id="requestMailGuideBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm1.2 2 6.8 5 6.8-5H5.2Z"/></svg><span>設計信件範例</span></button>
+        <button type="submit" id="submitBtn">新增案件</button>
+        <button type="button" class="secondary" id="requestBatchToggle">批次</button>
+      </div>
     </form>
     <div id="batchRows" class="batch-request-list" hidden></div>
-    <div class="request-help-actions" id="requestHelpActions">
-      <button type="button" class="request-project-btn" data-kind="平面" data-new-project-group="平面"></button>
-      <button type="button" class="request-project-btn" data-kind="影音" data-new-project-group="影音"></button>
-      <button type="button" class="request-mail-guide" id="requestMailGuideBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm1.2 2 6.8 5 6.8-5H5.2Z"/></svg><span>設計信件範例</span></button>
-    </div>
     <div class="msg" id="msg"></div>
   </section>
 
@@ -6206,7 +6399,7 @@
 <div class="login-modal request-guide-modal" id="requestGuideModal" hidden>
   <div class="login-card request-guide-card">
     <h3>設計需求單填寫說明</h3>
-    <p><b>Step 1｜填寫案件資料</b><br>依序填寫客戶別、專案名稱、專案負責人、設計類型、階段、數量、開始日期、結束日期與設計負責人。</p>
+    <p><b>Step 1｜填寫案件資料</b><br>依序填寫客戶別、專案名稱、專案負責人、設計種類、階段、數量、設計負責人、開始時間、結束時間與使用平台。</p>
     <p><b>Step 2｜新增案件</b><br>確認資料無誤後，點擊【新增案件】。</p>
     <p><b>Step 3｜系統自動產生案件編號</b><br>送出後系統將自動建立案件編號，並產生信件主旨：<br>【案件編號8碼】客戶別_專案名稱</p>
     <p><b>Step 4｜確認案件資料</b><br>系統將顯示於案件列表，可立即確認是否新增成功。</p>
@@ -6229,14 +6422,14 @@
         <div class="mail-line"><span class="bold">•　相關資訊：</span></div>
         <div class="mail-line indent">1.　大標：</div>
         <div class="mail-line indent">2.　數量：</div>
-        <div class="mail-line indent">3.　尺寸規格：</div>
+        <div class="mail-line indent">3.　尺寸規格：（依所選平台自動帶入）</div>
         <div class="mail-line indent">4.　是否印刷：　是/否</div>
-        <div class="mail-line indent">5.　使用平台：　FB/IG/LINE</div>
+        <div class="mail-line indent">5.　使用平台：　Facebook / Instagram / Line / 其他平台</div>
         <div class="mail-line indent">6.　交件日期：</div>
         <div class="mail-section mail-line"><span class="bold">•　補充資料</span></div>
-        <div class="mail-line indent">A.　參考範例</div>
+        <div class="mail-line indent">A.　設計簡報</div>
         <div class="mail-line indent">B.　客戶素材</div>
-        <div class="mail-line indent">C.　CI規範</div>
+        <div class="mail-line indent">C.　參考範例</div>
         <div class="mail-line indent">D.　其他</div>
       </div>
     </div>
@@ -6289,7 +6482,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260803-case-auto-refresh-48" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260804-mail-content-cleanup-51" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6363,7 +6556,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260803-case-auto-refresh-48';
+const appBuildVersion = '20260804-mail-content-cleanup-51';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6448,6 +6641,7 @@ const newProjectDesignerOptions = [...flatDesignerOptions,...videoDesignerOption
 const flatProjectTypeOptions = ['主視覺提案','社群提案','活動提案'];
 const videoProjectTypeOptions = ['活動提案','社群影音','平面拍攝'];
 const designerSkillOptions = ['平面','輸出','影片','動畫','拍攝'];
+const requestPlatformOptions = ['Facebook','Instagram','Line','其他平台'];
 const designerImageMaxBytes = 8 * 1024 * 1024;
 const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
@@ -6464,10 +6658,10 @@ const defaultDesigners = [
 const designerProfilesCacheKey = 'designerProfilesV1';
 let designers = initialDesignerProfiles();
 let designerReels = [];
-const formWriteHeaders = ['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人'];
+const formWriteHeaders = ['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
 const formCreateHeaders = [...formWriteHeaders,'案件狀態'];
 const formUpdateHeaders = formWriteHeaders;
-const formWriteKeys = ['client','project','owner','type','stage','qty','start','end','designer'];
+const formWriteKeys = ['client','project','owner','type','stage','qty','start','end','designer','platforms','briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'];
 const nationalHolidays = new Set([
   '2026-01-01','2026-02-14','2026-02-15','2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-21','2026-02-27','2026-02-28',
   '2026-04-03','2026-04-04','2026-04-05','2026-04-06','2026-05-01','2026-06-19','2026-09-25','2026-09-28','2026-10-09','2026-10-10','2026-10-25','2026-10-26'
@@ -6720,6 +6914,11 @@ function uniqueMailRecipients(recipients){
     return true;
   });
 }
+function mailDimensionSpecs(platforms){
+  const specs={Facebook:'1:1，1200 x 1200px',Instagram:'4:5，1080 x 1350px',Line:'1:1，1040 x 1040px'};
+  return normalizePlatformList(platforms).map(platform=>specs[platform]).filter(Boolean).join('；');
+}
+function mailSupplementText(note,url){return [note||'',url||''].filter(Boolean).join(' | ')}
 function mailDraft(row){
   const designer=String(row.designer||'設計負責人').trim();
   const mailSubject=subject(row);
@@ -6735,16 +6934,16 @@ function mailDraft(row){
     ' ・ 相關資訊：',
     '　　　1. 大標：',
     `　　　2. 數量：${row.qty||''}`,
-    '　　　3. 尺寸規格：',
+    `　　　3. 尺寸規格：${mailDimensionSpecs(row.platforms)}`,
     '　　　4. 是否印刷：是/否',
-    '　　　5. 使用平台：FB/IG/LINE',
+    `　　　5. 使用平台：${platformText(row.platforms)||row.platforms||''}`,
     `　　　6. 交件日期：${slashDate(row.end)}`,
     '',
     ' ・ 補充資料：',
-    '　　　A. 參考範例',
-    '　　　B. 客戶素材',
-    '　　　C. CI規範',
-    '　　　D. 其他',
+    `　　　A. 設計簡報：${mailSupplementText(row.briefNote,row.briefUrl)}`,
+    `　　　B. 客戶素材：${mailSupplementText(row.assetNote,row.assetUrl)}`,
+    `　　　C. 參考範例：${mailSupplementText(row.referenceNote,row.referenceUrl)}`,
+    `　　　D. 其他：${mailSupplementText(row.otherNote,row.otherUrl)}`,
     '',
     '*記得手動加入簽名檔'
   ].join('\n');
@@ -6852,8 +7051,9 @@ function isDesignerLogin(){return !isAdminUserPreview()&&['平面','影音','管
 function parseDate(value){const text=String(value||'').trim(); if(!text)return null; const match=text.match(/(19\d{2}|20\d{2}|2100)[/-](\d{1,2})[/-](\d{1,2})/); if(!match)return null; const y=Number(match[1]), m=Number(match[2]), d=Number(match[3]), date=new Date(y,m-1,d); return date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d?date:null}
 function slashDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function shortMonthDayDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
+function taipeiDateTime(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).filter(part=>part.type!=='literal').map(part=>[part.type,part.value])); return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`}
 function formWriteRow(row){return Object.fromEntries(formWriteKeys.map(key=>[key,key==='start'||key==='end'?slashDate(row[key]):row[key] ?? '']))}
-function formCreateRow(row){return {...formWriteRow(row),status:row.status||'未開始'}}
+function formCreateRow(row){return {...formWriteRow(row),status:row.status||'未開始',submittedAt:row.submittedAt||taipeiDateTime()}}
 function changedWritePayload(id,changes){return {id,...changes}}
 function rowWriteAnchor(row){return {sheetRow:row.sheetRow||row._sheetRow||row.rowNumber||'',match:{client:row.client,project:row.project,owner:row.owner,start:row.start,end:row.end,designer:row.designer}}}
 function statusLabel(value){return value==='未開始'?'未執行':value}
@@ -7872,8 +8072,11 @@ function postToSheetByFrame(payload){
 }
 function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案')return '已完成'; if(s==='未執行')return '未開始'; return s||'未開始'}
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
-function normalizeRow(r={}){const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??''; return {id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',archived:Boolean(r.archived||r['archived'])}}
-function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.status,row.details,row.archived]}))}
+function normalizeRow(r={}){
+  const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??'';
+  return {id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',archived:Boolean(r.archived||r['archived'])};
+}
+function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.platforms,row.submittedAt,row.briefNote,row.briefUrl,row.assetNote,row.assetUrl,row.referenceNote,row.referenceUrl,row.otherNote,row.otherUrl,row.status,row.details,row.archived]}))}
 function captureRefreshViewState(){const selectors=['.case-split','.case-table-wrap','.case-timeline-panel .timeline','#modifyRecent .modify-scroll']; return {windowX:window.scrollX,windowY:window.scrollY,elements:selectors.map(selector=>{const element=document.querySelector(selector); return element?{selector,left:element.scrollLeft,top:element.scrollTop}:null}).filter(Boolean)}}
 function restoreRefreshViewState(state){if(!state)return; requestAnimationFrame(()=>{window.scrollTo(state.windowX,state.windowY); state.elements.forEach(saved=>{const element=document.querySelector(saved.selector); if(element){element.scrollLeft=saved.left;element.scrollTop=saved.top}}); syncCaseHeaderScroll()})}
 function scheduleIdleRender(delay=1200){
@@ -8745,6 +8948,12 @@ async function verifyEditorLogin(account,password,newPassword=''){
 }
 async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); submitFullPageToAppsScript({action:'loginRedirect',account:'test.user@emctaipei.com',password}); return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
 async function trySavedLogin(){return}
+function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
+function platformText(value){return normalizePlatformList(value).join(', ')}
+function syncRequestPlatforms(){const select=$('#requestPlatformSelect'), input=formEl.elements.platforms; if(!select||!input)return ''; const value=platformText([...select.querySelectorAll('input[type="checkbox"]:checked')].map(item=>item.value)); input.value=value; const summary=select.querySelector('summary'); if(summary){summary.textContent=value||'請選擇平台'; summary.classList.toggle('is-placeholder',!value)} return value}
+function setRequestPlatformValues(value=''){const selected=new Set(normalizePlatformList(value)), select=$('#requestPlatformSelect'); select?.querySelectorAll('input[type="checkbox"]').forEach(input=>{input.checked=selected.has(input.value)}); syncRequestPlatforms()}
+function requestSupplementHasData(row={}){return ['briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'].some(key=>String(row[key]||'').trim())}
+function resetRequestExtras(){setRequestPlatformValues(''); const platform=$('#requestPlatformSelect'), supplement=formEl.querySelector('.request-supplement'); if(platform)platform.open=false; if(supplement)supplement.open=false}
 function validateSubmit(isModify){
   if(currentLoginOwnerName()&&!String(formEl.elements.owner.value||'').trim())formEl.elements.owner.value=currentLoginOwnerName();
   const qtyValue=formEl.elements.qty.value.trim();
@@ -8755,7 +8964,7 @@ function validateSubmit(isModify){
   }
   if(isModify)return true;
   const fields=[
-    ['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計類型'],['stage','階段'],['qty','數量'],['start','開始日期'],['end','結束日期'],['designer','設計負責人']
+    ['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計種類'],['stage','階段'],['qty','數量'],['start','開始時間'],['end','結束時間'],['designer','設計負責人']
   ];
   const missing=fields.filter(([name])=>!String(formEl.elements[name]?.value||'').trim());
   if(missing.length){
@@ -8767,6 +8976,7 @@ function validateSubmit(isModify){
 }
 function currentRequestDraft(){
   if(currentLoginOwnerName()&&!String(formEl.elements.owner.value||'').trim())formEl.elements.owner.value=currentLoginOwnerName();
+  syncRequestPlatforms();
   formEl.elements.details.value=formatDetails(selectedDetails());
   const r=normalizeRow(Object.fromEntries(new FormData(formEl).entries()));
   r.owner=ownerForSheet(r.owner);
@@ -8776,30 +8986,41 @@ function currentRequestDraft(){
   return r;
 }
 function batchSummary(row,index){return `${index+1}. ${row.client || '未填客戶'}｜${row.project || '未填專案'}｜${row.designer || '未指定'}｜${slashDate(row.start) || '-'} ~ ${slashDate(row.end) || '-'}`}
-const batchRequiredFields=[['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計類型'],['stage','階段'],['qty','數量'],['start','開始日期'],['end','結束日期'],['designer','設計負責人']];
-function batchRowHasAnyValue(row){return batchRequiredFields.some(([key])=>String(row[key]||'').trim())}
+const batchRequiredFields=[['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計種類'],['stage','階段'],['qty','數量'],['start','開始時間'],['end','結束時間'],['designer','設計負責人']];
 function batchRowValid(row){return batchRequiredFields.every(([key])=>String(row[key]||'').trim())&&/^[0-9]+$/.test(String(row.qty||''))}
-function sameBatchRow(a,b){return batchRequiredFields.every(([key])=>String(a?.[key]||'').trim()===String(b?.[key]||'').trim())}
 function rowsForBatchSubmit(){
-  const current=currentRequestDraft(), list=requestBatchRows.map(row=>normalizeRow(row));
-  if(batchRowValid(current)&&!sameBatchRow(current,list[0]))return [current,...list];
-  return list;
+  return [currentRequestDraft(),...requestBatchRows.map(row=>normalizeRow(row))];
 }
 function optionHtml(options,value){return options.map(option=>`<option value="${esc(option)}" ${String(option)===String(value)?'selected':''}>${esc(option)}</option>`).join('')}
+function batchPlatformOptionsHtml(row,index){const selected=new Set(normalizePlatformList(row.platforms)); return requestPlatformOptions.map(option=>`<label><input type="checkbox" value="${esc(option)}" ${selected.has(option)?'checked':''} onchange="setRequestBatchPlatform(${index},this.value,this.checked,this)">${esc(option)}</label>`).join('')}
+function batchSupplementInput(index,key,label,value,type='text',placeholder=''){
+  return `<label>${esc(label)}<input name="${esc(key)}" type="${esc(type)}" ${type==='url'?'inputmode="url"':''} value="${esc(value||'')}" placeholder="${esc(placeholder)}" oninput="setRequestBatchValue(${index},'${esc(key)}',this.value)"></label>`;
+}
 function batchRequestRowHtml(row,index){
   const stages=designLists.stages?.[row.type]||unique(Object.values(designLists.stages||{}).flat());
   const stageValue=stages.includes(row.stage)?row.stage:(stages[0]||'');
   if(row.stage!==stageValue)row.stage=stageValue;
   return `<li data-index="${index}">
+    <h4 class="batch-row-heading">批次新增第 ${index+2} 筆</h4>
     <label class="batch-client">客戶別<input value="${esc(row.client)}" oninput="setRequestBatchValue(${index},'client',this.value)"></label>
     <label class="batch-project">專案名稱<input value="${esc(row.project)}" oninput="setRequestBatchValue(${index},'project',this.value)"></label>
     <label class="batch-owner">專案負責人<input value="${esc(ownerDisplay(row.owner))}" oninput="setRequestBatchValue(${index},'owner',this.value)"></label>
-    <label class="batch-type">設計類型<select onchange="setRequestBatchValue(${index},'type',this.value)">${optionHtml(designLists.types,row.type)}</select></label>
+    <label class="batch-type">設計種類<select onchange="setRequestBatchValue(${index},'type',this.value)">${optionHtml(designLists.types,row.type)}</select></label>
     <label class="batch-stage">階段<select onchange="setRequestBatchValue(${index},'stage',this.value)">${optionHtml(stages,stageValue)}</select></label>
     <label class="batch-qty">數量<input inputmode="numeric" pattern="[0-9]*" value="${esc(row.qty)}" oninput="this.value=this.value.replace(/[^0-9]/g,'');setRequestBatchValue(${index},'qty',this.value)"></label>
-    <label class="batch-start">開始日期<input type="date" value="${esc(row.start)}" onchange="setRequestBatchValue(${index},'start',this.value)"></label>
-    <label class="batch-end">結束日期<input type="date" value="${esc(row.end)}" onchange="setRequestBatchValue(${index},'end',this.value)"></label>
+    <label class="batch-start">開始時間<input type="date" value="${esc(row.start)}" onchange="setRequestBatchValue(${index},'start',this.value)"></label>
+    <label class="batch-end">結束時間<input type="date" value="${esc(row.end)}" onchange="setRequestBatchValue(${index},'end',this.value)"></label>
     <label class="batch-designer">設計負責人<select onchange="setRequestBatchValue(${index},'designer',this.value)"><option value=""></option>${optionHtml(designerOptions,row.designer)}</select></label>
+    <div class="batch-platform"><span>使用平台（可複選）</span><details class="batch-platform-select"><summary>${esc(platformText(row.platforms)||'請選擇平台')}</summary><div class="request-platform-options">${batchPlatformOptionsHtml(row,index)}</div></details></div>
+    <details class="request-supplement batch-supplement" ${requestSupplementHasData(row)?'open':''}>
+      <summary>補充資料（選填）</summary>
+      <div class="request-supplement-grid">
+        <section><h3>A. 設計簡報</h3>${batchSupplementInput(index,'briefNote','說明',row.briefNote,'text','例：設計簡報頁碼或注意事項')}${batchSupplementInput(index,'briefUrl','連結網址',row.briefUrl,'url','https://')}</section>
+        <section><h3>B. 客戶素材</h3>${batchSupplementInput(index,'assetNote','說明',row.assetNote,'text','例：素材夾內容')}${batchSupplementInput(index,'assetUrl','連結網址',row.assetUrl,'url','https://')}</section>
+        <section><h3>C. 參考範例</h3>${batchSupplementInput(index,'referenceNote','說明',row.referenceNote,'text','例：參考的風格與重點')}${batchSupplementInput(index,'referenceUrl','連結網址',row.referenceUrl,'url','https://')}</section>
+        <section><h3>D. 其他</h3>${batchSupplementInput(index,'otherNote','說明',row.otherNote,'text','其他補充說明')}${batchSupplementInput(index,'otherUrl','連結網址',row.otherUrl,'url','https://')}</section>
+      </div>
+    </details>
     <button type="button" class="secondary batch-remove" onclick="removeRequestBatchRow(${index})">移除</button>
   </li>`;
 }
@@ -8810,9 +9031,10 @@ function renderRequestBatchRows(){
   if(toggle)toggle.classList.toggle('active',requestBatchMode);
   if(!requestBatchMode){box.innerHTML='';return}
   const list=requestBatchRows.map(batchRequestRowHtml).join('');
-  box.innerHTML=`<h3>批次新增 ${requestBatchRows.length} 筆</h3><ul>${list}</ul><div class="batch-actions"><button type="button" id="requestBatchSubmit" ${requestBatchRows.length?'':'disabled'}>送出批次新增</button><button type="button" class="secondary" id="requestBatchClear">往下套用</button></div>`;
+  box.innerHTML=`<div class="batch-request-head"><h3>批次新增</h3><button type="button" class="panel-close-toggle ui-close-button" id="requestBatchClose" title="關閉批次" aria-label="關閉批次"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button></div><ul>${list}</ul><div class="batch-actions"><button type="button" id="requestBatchSubmit" ${requestBatchRows.length?'':'disabled'}>送出批次新增</button><button type="button" class="secondary" id="requestBatchClear">往下套用</button></div>`;
   $('#requestBatchSubmit')?.addEventListener('click',submitRequestBatchRows);
-  $('#requestBatchClear')?.addEventListener('click',addCurrentRequestToBatch);
+  $('#requestBatchClear')?.addEventListener('click',duplicateLastRequestBatchRow);
+  $('#requestBatchClose')?.addEventListener('click',closeRequestBatch);
 }
 function setRequestBatchValue(index,key,value){
   const row=requestBatchRows[index];
@@ -8827,20 +9049,21 @@ function setRequestBatchValue(index,key,value){
   if(key==='start')row.month=monthFromDate(row.start);
   if(needsRender)renderRequestBatchRows();
 }
+function setRequestBatchPlatform(index,value,checked,input){const row=requestBatchRows[index]; if(!row)return; const selected=new Set(normalizePlatformList(row.platforms)); checked?selected.add(value):selected.delete(value); row.platforms=platformText([...selected]); const summary=input?.closest('details')?.querySelector('summary'); if(summary)summary.textContent=row.platforms||'請選擇平台'}
 function removeRequestBatchRow(index){requestBatchRows.splice(index,1);renderRequestBatchRows()}
-function addCurrentRequestToBatch(){
-  if(!validateSubmit(false))return;
-  const draft=currentRequestDraft();
-  requestBatchRows.push(draft);
+function duplicateLastRequestBatchRow(){
+  const source=requestBatchRows[requestBatchRows.length-1];
+  if(!source){flashMsg('請先建立批次新增第 2 筆');return}
+  requestBatchRows.push(normalizeRow({...source}));
   renderRequestBatchRows();
-  flashMsg(`已加入批次第 ${requestBatchRows.length} 筆，可調整欄位後繼續往下套用。`);
+  flashMsg(`已將第 ${requestBatchRows.length} 筆資料套用至第 ${requestBatchRows.length+1} 筆。`);
 }
-function clearRequestBatch(){
+function closeRequestBatch(){
   requestBatchRows=[];
   requestBatchMode=false;
   updateRequestMode();
   renderRequestBatchRows();
-  flashMsg('已清空批次資料');
+  flashMsg('已關閉批次新增');
 }
 async function submitSingleNewRequest(row){
   const draft=normalizeRow({...row,month:monthFromDate(row.start),status:'未開始',details:''});
@@ -8848,12 +9071,9 @@ async function submitSingleNewRequest(row){
   return await sheetApi('add',{row:formCreateRow(draft),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
 }
 async function submitRequestBatchRows(){
-  const current=currentRequestDraft();
-  if(batchRowHasAnyValue(current)&&!batchRowValid(current)){flashMsg('請補齊主表單第一筆資料，數量需為阿拉伯數字。');return}
   const rowsToSubmit=rowsForBatchSubmit();
-  if(!rowsToSubmit.length)return;
   const invalidIndex=rowsToSubmit.findIndex(row=>!batchRowValid(row));
-  if(invalidIndex>=0){flashMsg(`請補齊批次第 ${invalidIndex+1} 筆資料，數量需為阿拉伯數字。`);return}
+  if(invalidIndex>=0){flashMsg(invalidIndex===0?'請補齊第 1 筆主表單資料，數量需為阿拉伯數字。':`請補齊批次新增第 ${invalidIndex+1} 筆資料，數量需為阿拉伯數字。`);return}
   showSubmitOverlay(`批次送出 ${rowsToSubmit.length} 筆中...`);
   const submit=$('#requestBatchSubmit');
   if(submit)submit.disabled=true;
@@ -8869,6 +9089,7 @@ async function submitRequestBatchRows(){
     requestBatchRows=[];
     requestBatchMode=false;
     $('#requestForm').reset();
+    resetRequestExtras();
     ownerTouchedByUser=false;
     populateDesignSelects();
     setEditMode(null);
@@ -8886,7 +9107,7 @@ async function submitRequestBatchRows(){
   }
 }
 function requestButtonHtml(label,icon){return `${icon}<span>${esc(label)}</span>`}
-function updateRequestMode(){const isEditing=Boolean(editingId), isBatch=requestBatchMode&&!isEditing, hint=$('#requestModeHint'), submitBtn=$('#submitBtn'), title=$('#requestPanelTitle'); document.querySelector('.request-card')?.classList.toggle('is-browsing-modify',isEditing); if(isEditing)requestBatchMode=false; formEl.hidden=false; if(title)title.textContent=isEditing?'修改設計需求':'填寫設計需求'; if(submitBtn){submitBtn.hidden=isBatch; submitBtn.innerHTML=requestButtonHtml(isEditing?'修改需求':'新增案件',isEditing?solidEditIcon():solidAddIcon())} if(hint){hint.textContent=isEditing?`目前模式：修改需求${editingId?`｜案件 ${editingId}`:''}`:(isBatch?'目前模式：批次新增':'目前模式：新增案件'); hint.classList.toggle('is-editing',isEditing)} const batchBtn=$('#requestBatchToggle'); if(batchBtn){batchBtn.hidden=false; batchBtn.innerHTML=requestButtonHtml(isEditing?'取消':(isBatch?'清空批次':'批次'),isEditing?solidCancelIcon():solidBatchIcon()); batchBtn.classList.toggle('active',isBatch)} renderRequestBatchRows(); renderRequestProjectButtons()}
+function updateRequestMode(){const isEditing=Boolean(editingId), isBatch=requestBatchMode&&!isEditing, hint=$('#requestModeHint'), submitBtn=$('#submitBtn'), title=$('#requestPanelTitle'); document.querySelector('.request-card')?.classList.toggle('is-browsing-modify',isEditing); if(isEditing)requestBatchMode=false; formEl.hidden=false; if(title)title.textContent=isEditing?'修改設計需求':'填寫設計需求'; if(submitBtn){submitBtn.hidden=isBatch; submitBtn.innerHTML=requestButtonHtml(isEditing?'修改需求':'新增案件',isEditing?solidEditIcon():solidAddIcon())} if(hint){hint.textContent=isEditing?`目前模式：修改需求${editingId?`｜案件 ${editingId}`:''}`:(isBatch?'目前模式：批次新增':'目前模式：新增案件'); hint.classList.toggle('is-editing',isEditing)} const batchBtn=$('#requestBatchToggle'); if(batchBtn){batchBtn.hidden=isBatch; batchBtn.innerHTML=requestButtonHtml(isEditing?'取消':'批次',isEditing?solidCancelIcon():solidBatchIcon()); batchBtn.classList.toggle('active',isBatch)} renderRequestBatchRows(); renderRequestProjectButtons()}
 function setRequestKind(kind){requestKind=kind==='modify'?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',requestKind==='設計修改需求' || Boolean(editingId)); populateDetailsOptions(formEl.elements.details.value); updateRequestMode()}
 function setListView(){renderTimeline(timelineRowsFor(filtered()))}
 function initTimelineResizer(){
@@ -9044,19 +9265,20 @@ function initCaseTableDragScroll(){
   },true);
 }
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
-function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
-function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
+function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
+function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
 async function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; try{if(apiUrl) await sheetApi('delete',{id}); rows=rows.filter(r=>String(r.id)!==String(id)); save(); render(); setSync(apiUrl?'已從 Google Sheet 刪除':'已從本機刪除');}catch(err){setSync(err.message,true)}}
 async function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; const updated={...row,status:'已取消'}, successMessage='已更新為已取消'; rememberLocalWrite(id,{status:'已取消'}); markUpdatingCell(id,['status']); render(); setSync('寫入中...'); try{if(apiUrl) await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,{status:'已取消'}),...rowWriteAnchor(row),forceHeaders:['案件狀態'],writeHeaders:['案件狀態'],editorToken:currentEditorToken})); rows=rows.map(r=>String(r.id)===String(id)?normalizeRow(updated):r); save(); clearUpdatingCell(id); render(); setSync(apiUrl?successMessage:'已於本機更新為已取消'); refreshAfterInlineWrite(successMessage)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id); render(); setSync(err.message,true)}}
 $('#requestForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const wasEditing=Boolean(editingId), editId=editingId, isModify=Boolean(editingId);
-  if(requestBatchMode&&!isModify){addCurrentRequestToBatch();return}
+  if(requestBatchMode&&!isModify){duplicateLastRequestBatchRow();return}
   if(!validateSubmit(isModify))return;
   showSubmitOverlay(wasEditing?'更新中...':'送出中...');
   $('#submitBtn').disabled=true;
   const existingRow=editId?rows.find(row=>String(row.id)===String(editId)):null;
   formEl.elements.details.value=formatDetails(selectedDetails());
+  syncRequestPlatforms();
   const f=new FormData(e.target);
   const r=normalizeRow(Object.fromEntries(f.entries()));
   r.owner=ownerForSheet(r.owner);
@@ -9086,6 +9308,7 @@ $('#requestForm').addEventListener('submit',async e=>{
     }
     save();
     e.target.reset();
+    resetRequestExtras();
     ownerTouchedByUser=false;
     populateDesignSelects();
     setEditMode(null);
@@ -9103,6 +9326,7 @@ $('#requestForm').addEventListener('submit',async e=>{
 });
 formEl.elements.owner.addEventListener('input',()=>{ownerTouchedByUser=true; const value=formEl.elements.owner.value.trim(); if(value){localStorage.setItem(ownerDraftKey,value); ownerAutoFillDone=true}});
 formEl.elements.qty.addEventListener('input',()=>{formEl.elements.qty.value=formEl.elements.qty.value.replace(/[^0-9]/g,'')});
+$('#requestPlatformSelect')?.addEventListener('change',syncRequestPlatforms);
 $('#flatProjectForm')?.elements?.qty?.addEventListener('input',event=>{event.target.value=event.target.value.replace(/[^0-9]/g,'')});
 formEl.elements.type.addEventListener('change',()=>populateDesignSelects(formEl.elements.type.value,null,''));
 formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
@@ -9247,7 +9471,7 @@ $('#showAllColumns').onclick=()=>{visibleColumns=orderedColumns().map(c=>c.key);
 $('#hideAllColumns').onclick=()=>{visibleColumns=[]; if(isDesignerLogin())displaySettings.editEnabled=false; saveVisibleColumnsForAccount(); if(isDesignerLogin())saveDisplaySettingsForAccount(); columnControlsRenderedKey=''; render()};
 $('#downloadCsv')?.addEventListener('click',downloadFilteredCsv);
 $('#columnToggle').onclick=()=>{$('#columnPopover').hidden=!$('#columnPopover').hidden};
-$('#requestBatchToggle')?.addEventListener('click',()=>{if(editingId){ownerTouchedByUser=false; $('#requestForm').reset(); populateDesignSelects(); setEditMode(null); applyCurrentUserProfile(currentUserProfile); flashMsg('已取消修改需求'); return} if(requestBatchMode){clearRequestBatch(); return} requestBatchMode=!requestBatchMode; if(requestBatchMode&&!requestBatchRows.length)requestBatchRows.push(currentRequestDraft()); updateRequestMode(); flashMsg(requestBatchMode?'已開啟批次新增，可直接編輯下方每筆欄位，或按「往下套用」新增下一筆。':'已關閉批次新增')});
+$('#requestBatchToggle')?.addEventListener('click',()=>{if(editingId){ownerTouchedByUser=false; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setEditMode(null); applyCurrentUserProfile(currentUserProfile); flashMsg('已取消修改需求'); return} if(requestBatchMode)return; if(!validateSubmit(false))return; requestBatchMode=true; requestBatchRows=[normalizeRow(currentRequestDraft())]; updateRequestMode(); flashMsg('已保留上方主表單為第 1 筆，下方可編輯批次新增第 2 筆。')});
 $('#batchEditToggle').onclick=()=>{$('#batchTools').hidden=!$('#batchTools').hidden; renderBatchControls()};
 $('#batchApply').onclick=()=>applyBatchEdit();
 $('#batchClear').onclick=()=>{selectedCaseIds.clear(); render()};
