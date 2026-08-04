@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-04 19:09 Asia/Taipei | build: 20260804-avatar-popup-68 -->
+<!-- LAST_MODIFIED: 2026-08-04 19:21 Asia/Taipei | build: 20260804-native-avatar-reels-69 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260804-avatar-popup-68" />
+  <meta name="app-version" content="20260804-native-avatar-reels-69" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -5935,6 +5935,16 @@
     .upload-modal-loading{position:absolute;inset:0;z-index:1;display:grid;place-items:center;color:#66736d;font-size:13px;font-weight:800;background:#f4f7f5}
     .upload-modal-loading[hidden]{display:none!important}
     #uploadFrame{display:block;width:100%;height:100%;border:0;background:#f4f7f5}
+    .user-avatar-card{width:min(440px,100%);padding:18px!important}
+    .user-avatar-card h3{margin:0 0 14px}
+    .user-avatar-picker{display:grid;place-items:center;min-height:132px;padding:18px;border:2px dashed #b8c8bc;border-radius:8px;background:#f8fbf9;color:#43524b;text-align:center;font-size:14px;font-weight:850;cursor:pointer}
+    .user-avatar-picker:hover{border-color:var(--green);background:var(--green2);color:#075d42}
+    .user-avatar-picker input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+    .user-avatar-preview{display:block;width:132px;height:132px;margin:14px auto 0;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:#eef3f0}
+    .user-avatar-preview[hidden]{display:none!important}
+    .user-avatar-status{min-height:20px;margin:10px 0 0;color:#66736d;font-size:12px;font-weight:750;text-align:center}
+    .user-avatar-status.is-error{color:var(--red)}
+    html[data-theme="dark"] .user-avatar-picker{border-color:#4a504d;background:#202321;color:#d7ddd9}
     html[data-theme="dark"] .upload-modal-card{border-color:#3b403e;background:#171918}
     html[data-theme="dark"] .upload-modal-head{border-color:#3b403e;background:#202321}
     html[data-theme="dark"] .upload-modal-head h3{color:#f0f3f1}
@@ -6543,6 +6553,18 @@
     </div>
   </form>
 </div>
+<div class="login-modal" id="userAvatarModal" hidden>
+  <form class="login-card user-avatar-card" id="userAvatarForm">
+    <button type="button" class="login-close ui-close-button" id="userAvatarClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
+    <h3>設定我的頭像</h3>
+    <label class="user-avatar-picker">選擇頭像圖片
+      <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" required>
+    </label>
+    <img class="user-avatar-preview" id="userAvatarPreview" alt="頭像預覽" hidden>
+    <p class="user-avatar-status" id="userAvatarStatus" role="status" aria-live="polite">支援 JPG、PNG、WebP、GIF，上限 8 MB</p>
+    <div class="login-actions"><button type="button" class="secondary" id="userAvatarCancel">取消</button><button type="submit" id="userAvatarSubmit">上傳並設為頭像</button></div>
+  </form>
+</div>
 <div class="login-modal" id="uploadModal" hidden>
   <section class="upload-modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
     <div class="upload-modal-head">
@@ -6557,7 +6579,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260804-avatar-popup-68" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260804-native-avatar-reels-69" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6639,7 +6661,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-avatar-popup-68';
+const appBuildVersion = '20260804-native-avatar-reels-69';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7080,7 +7102,7 @@ function canonicalMonth(value){const n=monthNumber(value); return n < 99 ? `${n}
 function nextId(){const max=Math.max(...rows.map(r=>+r.id||0),25120000);return String(max+1).padStart(8,'0')}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function jsArg(s){return String(s??'').replaceAll('\\','\\\\').replaceAll("'","\\'")}
-function imageUrl(value){const url=String(value||'').trim(), id=url.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1]||url.match(/[?&]id=([^&]+)/)?.[1]; return id?`https://drive.google.com/thumbnail?id=${id}&sz=w700`:url}
+function imageUrl(value){const url=String(value||'').trim(), id=url.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1]||url.match(/lh3\.googleusercontent\.com\/d\/([^=/?]+)/)?.[1]||url.match(/[?&]id=([^&]+)/)?.[1]; return id?`https://lh3.googleusercontent.com/d/${id}=w1000`:url}
 function designerLocalAvatar(name){return designerOptions.includes(String(name||''))?`assets/designers/${String(name)}-avatar.jpg`:''}
 function designerFallbackImage(name){
   const label=encodeURIComponent(String(name||'?').slice(0,2));
@@ -7184,7 +7206,7 @@ function formatDetails(values){return detailsToArray(Array.isArray(values)?value
 function splitSkills(value){return unique(String(value||'').split(/[、,，]/).map(v=>v.trim()))}
 function normalizeReelNames(value){return unique((Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/)).map(item=>String(item||'').trim()).filter(Boolean))}
 function normalizeReelComments(value){if(Array.isArray(value))return value.map(comment=>({id:String(comment?.id||''),name:String(comment?.name||'').trim(),avatar:imageUrl(comment?.avatar||''),text:String(comment?.text||'').trim(),createdAt:String(comment?.createdAt||'')})).filter(comment=>comment.name&&comment.text); const text=String(value||'').trim(); if(!text)return []; try{return normalizeReelComments(JSON.parse(text))}catch(err){return []}}
-function reelDriveFileId(value){const text=String(value||''), match=text.match(/drive\.google\.com\/file\/d\/([^/]+)/)||text.match(/[?&]id=([^&]+)/); return match?.[1]||''}
+function reelDriveFileId(value){const text=String(value||''), match=text.match(/drive\.google\.com\/file\/d\/([^/]+)/)||text.match(/lh3\.googleusercontent\.com\/d\/([^=/?]+)/)||text.match(/[?&]id=([^&]+)/); return match?.[1]||''}
 function normalizeDesignerReel(row={},index=0){const rawUrl=String(row['限時動態連結']||row.imageUrl||row.url||'').trim(), likes=normalizeReelNames(row['按讚']??row.likes??[]), dislikes=normalizeReelNames(row['倒讚']??row.dislikes??[]); return {id:String(row.id||reelDriveFileId(rawUrl)||`row-${row.rowNumber||index+2}`),rowNumber:Number(row.rowNumber)||index+2,name:String(row['名字']||row.name||'').trim(),imageUrl:imageUrl(rawUrl),rawImageUrl:rawUrl,likes,dislikes,likeCount:likes.length,dislikeCount:dislikes.length,comments:normalizeReelComments(row['留言']??row.comments??[])}}
 function storiesForDesigner(name){return designerReels.filter(reel=>reel.name===name&&reel.imageUrl)}
 function designerReelsStateKey(name=''){return JSON.stringify((name?storiesForDesigner(name):designerReels).map(reel=>[reel.id,reel.imageUrl,reel.likes,reel.dislikes,reel.comments]))}
@@ -7379,17 +7401,19 @@ function handleUploadFrameMessage(event){const modal=$('#uploadModal'),loading=$
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
 function userAvatarUploadUrl(account=currentEditorAccount,editorToken=currentEditorToken){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.searchParams.set('ts',Date.now()); url.hash=new URLSearchParams({token:editorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
+let userAvatarPreviewUrl='';
+function setUserAvatarStatus(text,isError=false){const status=$('#userAvatarStatus');if(!status)return;status.textContent=text;status.classList.toggle('is-error',isError)}
+function openNativeUserAvatarModal(){const modal=$('#userAvatarModal'),form=$('#userAvatarForm'),preview=$('#userAvatarPreview');if(!modal||!form)return;form.reset();if(userAvatarPreviewUrl)URL.revokeObjectURL(userAvatarPreviewUrl);userAvatarPreviewUrl='';if(preview){preview.removeAttribute('src');preview.hidden=true}setUserAvatarStatus('支援 JPG、PNG、WebP、GIF，上限 8 MB');modal.hidden=false;setTimeout(()=>form.elements.avatar?.focus?.(),40)}
+function closeNativeUserAvatarModal(){const modal=$('#userAvatarModal');if(!modal)return;modal.hidden=true;if(userAvatarPreviewUrl)URL.revokeObjectURL(userAvatarPreviewUrl);userAvatarPreviewUrl=''}
+function previewNativeUserAvatar(event){const file=event.target.files?.[0],preview=$('#userAvatarPreview');if(userAvatarPreviewUrl)URL.revokeObjectURL(userAvatarPreviewUrl);userAvatarPreviewUrl='';if(!file||!preview){if(preview)preview.hidden=true;return}if(!String(file.type||'').startsWith('image/')){event.target.value='';preview.hidden=true;setUserAvatarStatus('請選擇圖片檔案',true);return}if(file.size>designerImageMaxBytes){event.target.value='';preview.hidden=true;setUserAvatarStatus('頭像檔案不可超過 8 MB',true);return}userAvatarPreviewUrl=URL.createObjectURL(file);preview.src=userAvatarPreviewUrl;preview.hidden=false;setUserAvatarStatus(`${file.name} 已選取`)}
+async function submitNativeUserAvatar(event){event.preventDefault();const form=event.target,file=form.elements.avatar.files?.[0],submit=$('#userAvatarSubmit');if(!file){setUserAvatarStatus('請先選擇頭像圖片',true);return}if(file.size>designerImageMaxBytes){setUserAvatarStatus('頭像檔案不可超過 8 MB',true);return}submit.disabled=true;setUserAvatarStatus('頭像上傳中...');setSync('頭像上傳中...');try{const dataUrl=await readFileAsDataUrl(file);const data=await sheetApi('uploadUserAvatar',{account:currentEditorAccount,editorToken:currentEditorToken,fileName:file.name,mimeType:file.type,dataUrl});currentAccountAvatar=imageUrl(data.url||'');if(data.settings)applyAccountSettingsIfNeeded(data.settings);renderAccountAvatar();closeNativeUserAvatarModal();setSync(data.sharingWarning||'頭像已更新',Boolean(data.sharingWarning),3200)}catch(err){setUserAvatarStatus(`上傳失敗：${err?.message||err}`,true);setSync(`頭像上傳失敗：${err?.message||err}`,true)}finally{submit.disabled=false}}
 function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
   if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
   closeAccountMenu();
   if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return}
-  const account=loginAccountFull(currentEditorAccount),token=currentEditorToken;
-  if(!account||!token){setSync('頭像設定的登入狀態已失效，請重新登入',true);return}
-  const url=userAvatarUploadUrl(account,token);
-  if(openUserAvatarUploadWindow(url)){setSync('頭像設定已在新視窗開啟');return}
-  openUploadModal(url,'設定我的頭像');
-  setSync('瀏覽器已阻擋新視窗，改用頁內頭像設定',true);
+  if(!currentEditorAccount||!currentEditorToken){setSync('頭像設定的登入狀態已失效，請重新登入',true);return}
+  openNativeUserAvatarModal();
 }
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
@@ -7971,10 +7995,16 @@ async function sheetApi(action,payload={}){
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
     return data;
   }
-	  if(action==='uploadDesignerImage'){
+  if(action==='uploadDesignerImage'){
 	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
 	    if(!data.ok)throw new Error(data.error||'照片上傳失敗');
 	    if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
+	    return data;
+	  }
+	  if(action==='uploadUserAvatar'){
+	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:90000,_timeoutMessage:'頭像上傳處理時間較長，請稍後重試。'});
+	    if(!data.ok)throw new Error(data.error||'頭像上傳失敗');
+	    if(data.action!==action)throw new Error('Apps Script 尚未支援一般帳號頭像上傳，請重新部署最新版本');
 	    return data;
 	  }
 	  if(action==='reportIssue'){
@@ -9647,10 +9677,16 @@ document.addEventListener('click',event=>{
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#personalSettingsModal')?.hidden){event.preventDefault();hidePersonalSettings()}});
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountAvatarSettings')?.addEventListener('click',openUserAvatarUploadPage);
+	$('#userAvatarForm')?.elements.avatar?.addEventListener('change',previewNativeUserAvatar);
+	$('#userAvatarForm')?.addEventListener('submit',submitNativeUserAvatar);
+	$('#userAvatarClose')?.addEventListener('click',closeNativeUserAvatarModal);
+	$('#userAvatarCancel')?.addEventListener('click',closeNativeUserAvatarModal);
+	$('#userAvatarModal')?.addEventListener('click',event=>{if(event.target.id==='userAvatarModal')closeNativeUserAvatarModal()});
 	$('#uploadModalClose')?.addEventListener('click',closeUploadModal);
 	window.addEventListener('message',handleUploadFrameMessage);
 	$('#uploadModal')?.addEventListener('click',event=>{if(event.target.id==='uploadModal')closeUploadModal()});
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#uploadModal')?.hidden){event.preventDefault();closeUploadModal()}});
+	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#userAvatarModal')?.hidden){event.preventDefault();closeNativeUserAvatarModal()}});
 	window.addEventListener('focus',()=>{refreshCurrentAccountAvatar();refreshLatestInBackground()});
 	window.addEventListener('pageshow',event=>{if(event.persisted)refreshLatestInBackground()});
 	window.addEventListener('online',refreshLatestInBackground);
