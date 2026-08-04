@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-04 17:30 Asia/Taipei | build: 20260804-login-unicode-settings-60 -->
+<!-- LAST_MODIFIED: 2026-08-04 17:48 Asia/Taipei | build: 20260804-avatar-account-identity-62 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260804-login-unicode-settings-60" />
+  <meta name="app-version" content="20260804-avatar-account-identity-62" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6557,7 +6557,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260804-login-unicode-settings-60" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260804-avatar-account-identity-62" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6639,7 +6639,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-login-unicode-settings-60';
+const appBuildVersion = '20260804-avatar-account-identity-62';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6884,6 +6884,7 @@ let columnResizeState = null;
 let activeSettingsAccount = accountStorageId();
 let accountFilterSettings = JSON.parse(localStorage.getItem(accountStorageKey(filterSettingsKey)) || 'null') || {};
 let accountSettingsJustApplied = false;
+let accountSettingsRevision = 0;
 let modifyPage = 1;
 let modifySearchQuery = '';
 const modifyPageSize = 7;
@@ -7336,12 +7337,13 @@ async function savePersonalSettings(event){
   input.setCustomValidity('');
   submit.disabled=true;
   submit.textContent='儲存中...';
-  setPersonalSettingsStatus('正在寫入試算表...');
+  setPersonalSettingsStatus('正在寫入...');
   setSync('個人設定儲存中...');
   try{
     const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName}});
     const savedSettings=data.settings||{}, savedName=remoteDisplayName(savedSettings);
     if(!savedName||savedName!==displayName)throw new Error('後端未回傳已儲存的顯示名');
+    accountSettingsRevision++;
     applyAccountSettingsIfNeeded(savedSettings);
     currentEditorDisplayName=savedName;
     persistEditorSession();
@@ -7367,9 +7369,15 @@ function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal')
 function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
 function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(data.type!=='machi-user-avatar-updated'||!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return; closeUploadModal(); setSync('頭像已更新',false,2200)}
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
-function userAvatarUploadUrl(){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('user',currentEditor); url.searchParams.set('account',loginAccountFull(currentEditorAccount)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
+function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
-function openUserAvatarUploadPage(){if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return} closeAccountMenu(); if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return} openUploadModal(userAvatarUploadUrl(),'設定我的頭像')}
+function openUserAvatarUploadPage(){
+  if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
+  if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
+  closeAccountMenu();
+  if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return}
+  openUploadModal(userAvatarUploadUrl(),'設定我的頭像');
+}
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
 function issueReportStatusClass(status){return `issue-status-${issueReportStatuses.includes(status)?status:'回報中'}`}
@@ -9055,7 +9063,7 @@ async function verifyStoredEditorToken(){
   }
 }
 async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
-function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorDisplayName=remoteDisplayName(settings)||user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
+function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorDisplayName=remoteDisplayName(settings)||user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user, settingsRevision=accountSettingsRevision; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount||accountSettingsRevision!==settingsRevision)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 async function keepEditorSessionAlive(){
   if(!isLoggedIn()||isLocalAdminToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
   lastEditorSessionKeepAliveAt=Date.now();
