@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-04 17:18 Asia/Taipei | build: 20260804-owner-modal-polish-59 -->
+<!-- LAST_MODIFIED: 2026-08-04 17:30 Asia/Taipei | build: 20260804-login-unicode-settings-60 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260804-owner-modal-polish-59" />
+  <meta name="app-version" content="20260804-login-unicode-settings-60" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -323,6 +323,7 @@
     .login-email-row span{flex:0 0 auto;padding:0 13px 0 4px;color:#66736d;font-weight:900;font-size:13px;white-space:nowrap}
     .login-note.is-error{color:#dc2626;font-weight:900}
     .login-note.is-ok{color:#0f8f61;font-weight:900}
+    .personal-settings-status{min-height:18px;margin:2px 0 0}
     .case-id-btn{border:0;background:transparent;color:#5f7f73;font-weight:900;padding:0;min-height:0;text-decoration:none}
     .case-id-btn:hover{color:#0f8f61}
     .case-detail-card{width:min(620px,calc(100vw - 28px));max-height:min(760px,calc(100vh - 28px));overflow:auto;border-radius:28px;background:#fff;border:1px solid #dfeee5;box-shadow:0 18px 46px rgba(54,86,72,.14);padding:16px}
@@ -6427,6 +6428,7 @@
     <button type="button" class="login-close ui-close-button" id="personalSettingsClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
     <h3>個人設定</h3>
     <label>顯示名<input type="text" name="displayName" maxlength="40" autocomplete="nickname" required></label>
+    <p class="login-note personal-settings-status" id="personalSettingsStatus" role="status" aria-live="polite"></p>
     <div class="login-actions"><button type="button" class="secondary" id="personalSettingsCancel">取消</button><button type="submit">儲存</button></div>
   </form>
 </div>
@@ -6555,7 +6557,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260804-owner-modal-polish-59" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260804-login-unicode-settings-60" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6637,7 +6639,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-owner-modal-polish-59';
+const appBuildVersion = '20260804-login-unicode-settings-60';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7323,9 +7325,42 @@ async function loadDesignerRoster({background=false}={}){
 }
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
-function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
+function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
+function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(isLocalAdminToken()){setSync('管理者測試帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); setPersonalSettingsStatus(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
 function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(modal)modal.hidden=true}
-async function savePersonalSettings(event){event.preventDefault(); if(!isLoggedIn()||isLocalAdminToken())return; const form=event.target, input=form.elements.displayName, displayName=input.value.trim(), submit=form.querySelector('button[type="submit"]'); if(!displayName){input.setCustomValidity('請輸入顯示名');input.reportValidity();return} input.setCustomValidity(''); submit.disabled=true; setSync('個人設定儲存中...'); try{const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName}}); const savedSettings=data.settings||{displayName}; applyAccountSettingsIfNeeded(savedSettings); currentEditorDisplayName=remoteDisplayName(savedSettings)||displayName; persistEditorSession(); fillOwnerFromDraft(); hidePersonalSettings(); updateLoginUi(); render(); setSync(`顯示名已更新為 ${currentEditorDisplayName}`)}catch(err){setSync(`顯示名儲存失敗：${err.message}`,true)}finally{submit.disabled=false}}
+async function savePersonalSettings(event){
+  event.preventDefault();
+  if(!isLoggedIn()||isLocalAdminToken())return;
+  const form=event.target, input=form.elements.displayName, displayName=input.value.trim(), submit=form.querySelector('button[type="submit"]'), submitLabel=submit.textContent;
+  if(!displayName){input.setCustomValidity('請輸入顯示名');input.reportValidity();return}
+  input.setCustomValidity('');
+  submit.disabled=true;
+  submit.textContent='儲存中...';
+  setPersonalSettingsStatus('正在寫入試算表...');
+  setSync('個人設定儲存中...');
+  try{
+    const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName}});
+    const savedSettings=data.settings||{}, savedName=remoteDisplayName(savedSettings);
+    if(!savedName||savedName!==displayName)throw new Error('後端未回傳已儲存的顯示名');
+    applyAccountSettingsIfNeeded(savedSettings);
+    currentEditorDisplayName=savedName;
+    persistEditorSession();
+    fillOwnerFromDraft();
+    updateLoginUi();
+    render();
+    setPersonalSettingsStatus(`已儲存為 ${savedName}`);
+    setSync(`顯示名已更新為 ${savedName}`);
+    setTimeout(hidePersonalSettings,350);
+  }catch(err){
+    const message=err?.message||String(err);
+    setPersonalSettingsStatus(`儲存失敗：${message}`,true);
+    setSync(`顯示名儲存失敗：${message}`,true);
+    input.focus();
+  }finally{
+    submit.disabled=false;
+    submit.textContent=submitLabel;
+  }
+}
 let uploadModalReturnFocus=null;
 let activeUserAvatarUploadNonce='';
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
@@ -7898,7 +7933,7 @@ async function sheetApi(action,payload={}){
     return data;
   }
   if(action==='saveUserSettings'){
-    const data=await writeToSheetByJsonp({action,...payload},30000,'個人設定寫入逾時，請稍後再試。');
+    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'個人設定寫入逾時，請稍後再試。'});
     if(!data.ok)throw new Error(data.error||'個人設定寫入失敗');
     if(data.action!==action)throw new Error('Apps Script 尚未回傳個人設定寫入結果，請重新部署最新版本');
     return data;
