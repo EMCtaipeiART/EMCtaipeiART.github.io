@@ -21,6 +21,8 @@
   <script>
     (() => {
       const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+      const spreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
+      const linkSheetName = '補充資料連結';
       const match = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
       const title = document.querySelector('#title');
       const message = document.querySelector('#message');
@@ -35,31 +37,71 @@
 
       const slot = match[1].toLowerCase();
       const id = match[2];
-      const callback = `__supplementRedirect_${Date.now()}`;
-      const script = document.createElement('script');
-      const timer = setTimeout(() => {
-        delete window[callback];
-        script.remove();
-        fail('連結查詢逾時，請稍後再試。');
-      }, 12000);
-
-      window[callback] = data => {
-        clearTimeout(timer);
-        delete window[callback];
-        script.remove();
-        if (!data || !data.ok || !/^https?:\/\//i.test(data.url || '')) {
-          fail(data && data.error ? data.error : '找不到對應的補充資料連結。');
-          return;
+      const cacheKey = `supplementLink:${slot}:${id}`;
+      let settled = false;
+      let failures = 0;
+      let overallTimer = null;
+      const scripts = [];
+      const callbacks = [];
+      const cleanup = () => {
+        scripts.forEach(script => script.remove());
+        callbacks.forEach(callback => delete window[callback]);
+      };
+      const redirect = url => {
+        if (settled || !/^https?:\/\//i.test(url || '')) return false;
+        settled = true;
+        clearTimeout(overallTimer);
+        try { localStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + 600000 })); } catch (error) {}
+        cleanup();
+        location.replace(url);
+        return true;
+      };
+      const rejectSource = () => {
+        failures += 1;
+        if (!settled && failures >= 2) {
+          clearTimeout(overallTimer);
+          cleanup();
+          fail('找不到對應的補充資料連結。');
         }
-        location.replace(data.url);
       };
-      script.onerror = () => {
-        clearTimeout(timer);
-        delete window[callback];
-        fail('連結查詢失敗，請稍後再試。');
+      const addJsonp = (src, callback, onData) => {
+        const script = document.createElement('script');
+        callbacks.push(callback);
+        scripts.push(script);
+        window[callback] = data => {
+          delete window[callback];
+          script.remove();
+          onData(data);
+        };
+        script.onerror = rejectSource;
+        script.src = src;
+        document.head.appendChild(script);
       };
-      script.src = `${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${callback}`;
-      document.head.appendChild(script);
+
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (cached && cached.expires > Date.now() && redirect(cached.url)) return;
+      } catch (error) {}
+
+      overallTimer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        fail('連結查詢逾時，請稍後再試。');
+      }, 8000);
+      const gvizCallback = `__supplementGviz_${Date.now()}`;
+      const apiCallback = `__supplementApi_${Date.now()}`;
+      const column = String.fromCharCode(66 + slot.charCodeAt(0) - 97);
+      const query = `select ${column} where A = '${id}' limit 1`;
+      const gvizBase = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodeURIComponent(linkSheetName)}&tq=${encodeURIComponent(query)}`;
+      const tqx = encodeURIComponent(`out:json;responseHandler:${gvizCallback}`);
+      addJsonp(`${gvizBase}&tqx=${tqx}&ts=${Date.now()}`, gvizCallback, data => {
+        const cell = data && data.table && data.table.rows && data.table.rows[0] && data.table.rows[0].c && data.table.rows[0].c[0];
+        if (!redirect(cell && (cell.f || cell.v))) rejectSource();
+      });
+      addJsonp(`${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${apiCallback}`, apiCallback, data => {
+        if (!redirect(data && data.ok && data.url)) rejectSource();
+      });
     })();
   </script>
 </body>
