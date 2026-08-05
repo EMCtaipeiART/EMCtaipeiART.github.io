@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-05 09:05 Asia/Taipei | build: 20260805-notification-toast-74 -->
+<!-- LAST_MODIFIED: 2026-08-05 09:23 Asia/Taipei | build: 20260805-owner-modal-mobile-75 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260805-notification-toast-74" />
+  <meta name="app-version" content="20260805-owner-modal-mobile-75" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -5488,18 +5488,19 @@
       text-overflow:ellipsis!important;white-space:nowrap!important;
     }
     .owner-project-pill:hover,.owner-project-pill:focus-visible{background:#e5e7eb!important;color:#1f2937!important;border-color:#d1d5db!important;outline:none!important}
-    #ownerProjectsModal{z-index:2600!important;padding:18px!important;background:rgba(22,30,27,.42)!important;backdrop-filter:blur(7px)!important}
+    html.owner-projects-modal-open,body.owner-projects-modal-open{overflow:hidden!important;overscroll-behavior:none!important}
+    #ownerProjectsModal{z-index:2600!important;padding:18px!important;background:rgba(22,30,27,.42)!important;backdrop-filter:blur(7px)!important;overflow:hidden!important;overscroll-behavior:none!important}
     .owner-projects-card{
       width:min(1040px,calc(100vw - 36px));max-height:min(780px,calc(100vh - 36px));
       display:flex;flex-direction:column;overflow:hidden;border:1px solid #dde4e0;border-radius:22px;
       background:#fff;box-shadow:0 28px 80px rgba(16,24,40,.24);
     }
-    .owner-projects-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 30px 20px;border-bottom:1px solid #e3e8e5}
+    .owner-projects-head{position:relative;z-index:4;display:flex;flex:0 0 auto;align-items:flex-start;justify-content:space-between;gap:18px;padding:28px 30px 20px;border-bottom:1px solid #e3e8e5;background:#fff}
     .owner-projects-head h3{margin:0;color:#112033;font-size:26px;line-height:1.2;font-weight:950}
     .owner-projects-head p{margin:7px 0 0;color:#68716d;font-size:14px;font-weight:700}
     .owner-projects-close{display:grid!important;place-items:center!important;flex:0 0 32px!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;padding:0!important;border-radius:999px!important;background:#fff!important;color:#172635!important;border:1px solid #dce2df!important;box-shadow:0 5px 16px rgba(16,24,40,.07)!important;line-height:0!important}
     .owner-projects-close svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-    .owner-projects-table-wrap{min-height:0;overflow:auto;padding:0 30px 28px}
+    .owner-projects-table-wrap{flex:1 1 auto;min-width:0;min-height:0;overflow:auto;padding:0 30px 28px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
     .owner-projects-table{min-width:860px;border:0;border-radius:0!important;box-shadow:none;table-layout:fixed}
     .owner-projects-table thead,.owner-projects-table th{border-radius:0!important}
     .owner-projects-table th{top:0;z-index:2;height:46px;background:#f6f8f7;color:#5f6965;font-size:12px}
@@ -5516,15 +5517,18 @@
     #caseDetailModal .case-detail-back:hover{background:#e5e7eb!important;color:#1f2937!important}
     html[data-theme="dark"] .owner-project-pill{background:#292c30!important;color:#d7dcda!important;border-color:#44484c!important}
     html[data-theme="dark"] .owner-projects-card{background:#151618;border-color:#3b3e42;box-shadow:0 30px 90px rgba(0,0,0,.65)}
-    html[data-theme="dark"] .owner-projects-head{border-color:#35383b}
+    html[data-theme="dark"] .owner-projects-head{background:#151618;border-color:#35383b}
     html[data-theme="dark"] .owner-projects-head h3{color:#f2f5f4}
     html[data-theme="dark"] .owner-projects-head p{color:#aeb6b2}
     html[data-theme="dark"] .owner-projects-close{background:#1c1e21!important;color:#f1f4f2!important;border-color:#494d51!important;box-shadow:none!important}
     html[data-theme="dark"] .owner-projects-table th{background:#202326!important;color:#c4cbc7!important}
     html[data-theme="dark"] #caseDetailModal .case-detail-back{background:#272a2e!important;color:#e5e9e7!important;border-color:#494d51!important}
     @media(max-width:640px){
-      #ownerProjectsModal{padding:10px!important}.owner-projects-card{width:calc(100vw - 20px);max-height:calc(100vh - 20px);border-radius:16px}
-      .owner-projects-head{padding:20px 18px 16px}.owner-projects-head h3{font-size:21px}.owner-projects-table-wrap{padding:0 18px 20px}
+      #ownerProjectsModal{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))!important}
+      .owner-projects-card{width:min(350px,calc(100vw - 32px));height:auto;max-height:min(70dvh,560px);border-radius:14px}
+      .owner-projects-head{min-height:84px;padding:15px 14px 12px;gap:10px}.owner-projects-head>div{min-width:0}.owner-projects-head h3{font-size:19px}.owner-projects-head p{display:-webkit-box;margin-top:5px;font-size:12px;line-height:1.45;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+      .owner-projects-close{flex-basis:34px!important;width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important}
+      .owner-projects-table-wrap{padding:0 0 10px;scrollbar-gutter:stable;isolation:isolate}
       .owner-projects-table{display:table!important;width:860px!important;min-width:860px!important;max-width:none!important;border-collapse:separate!important;table-layout:fixed!important}
       .owner-projects-table thead{display:table-header-group!important}.owner-projects-table tbody{display:table-row-group!important}
       .owner-projects-table tr{display:table-row!important;width:auto!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:visible!important}
@@ -6688,7 +6692,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260805-notification-toast-74" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260805-owner-modal-mobile-75" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6774,7 +6778,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260805-notification-toast-74';
+const appBuildVersion = '20260805-owner-modal-mobile-75';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -8516,8 +8520,8 @@ function ensureOwnerProjectsFullData(){
   })().catch(error=>console.warn('負責人完整專案讀取失敗',error)).finally(()=>{ownerProjectsFullLoadPromise=null});
   return ownerProjectsFullLoadPromise;
 }
-function openOwnerProjects(event,owner){event?.preventDefault?.();event?.stopPropagation?.(); const name=ownerDisplay(owner).trim(); if(!name)return; closeFieldPopover(); ownerProjectsReturnName=name; renderOwnerProjects(name); const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=false; ensureOwnerProjectsFullData()}
-function closeOwnerProjects({preserveReturn=false}={}){const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=true; closeFieldPopover(); if(!preserveReturn)ownerProjectsReturnName=''}
+function openOwnerProjects(event,owner){event?.preventDefault?.();event?.stopPropagation?.(); const name=ownerDisplay(owner).trim(); if(!name)return; closeFieldPopover(); ownerProjectsReturnName=name; renderOwnerProjects(name); const modal=$('#ownerProjectsModal'), scroll=$('.owner-projects-table-wrap'); if(modal)modal.hidden=false; document.documentElement.classList.add('owner-projects-modal-open'); document.body.classList.add('owner-projects-modal-open'); if(scroll){scroll.scrollLeft=0;scroll.scrollTop=0} ensureOwnerProjectsFullData()}
+function closeOwnerProjects({preserveReturn=false}={}){const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=true; document.documentElement.classList.remove('owner-projects-modal-open'); document.body.classList.remove('owner-projects-modal-open'); closeFieldPopover(); if(!preserveReturn)ownerProjectsReturnName=''}
 function openOwnerProjectCase(event,id){event?.preventDefault?.();event?.stopPropagation?.(); closeOwnerProjects({preserveReturn:true}); openCaseDetail(id,{preserveOwnerReturn:true})}
 function returnToOwnerProjects(){const owner=ownerProjectsReturnName; const modal=$('#caseDetailModal'); if(modal)modal.hidden=true; if(owner)openOwnerProjects(null,owner); else closeCaseDetail()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
