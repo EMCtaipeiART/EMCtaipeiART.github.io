@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-04 21:03 Asia/Taipei | build: 20260804-dark-mail-guide-73 -->
+<!-- LAST_MODIFIED: 2026-08-05 09:05 Asia/Taipei | build: 20260805-notification-toast-74 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260804-dark-mail-guide-73" />
+  <meta name="app-version" content="20260805-notification-toast-74" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -2677,6 +2677,88 @@
     .notification-title{display:block;font-size:12px;font-weight:950;line-height:1.25;color:#17211d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .notification-meta{display:block;margin-top:3px;font-size:11px;font-weight:800;line-height:1.35;color:#66736d;white-space:normal}
     .notification-empty{padding:18px 8px;text-align:center;color:#7a8580;font-size:12px;font-weight:850}
+    .notification-toast-region{
+      position:fixed;
+      top:max(18px,env(safe-area-inset-top));
+      right:max(18px,env(safe-area-inset-right));
+      z-index:1850;
+      width:min(370px,calc(100vw - 36px));
+      pointer-events:none;
+    }
+    .notification-toast{
+      --toast-accent:#10946a;
+      position:relative;
+      display:grid;
+      grid-template-columns:36px minmax(0,1fr) 28px;
+      gap:10px;
+      align-items:start;
+      width:100%;
+      min-height:106px;
+      padding:13px 12px 12px;
+      overflow:hidden;
+      border:1px solid #d8e4de;
+      border-left:4px solid var(--toast-accent);
+      border-radius:8px;
+      background:rgba(255,255,255,.98);
+      color:#17211d;
+      box-shadow:0 20px 50px rgba(16,24,40,.18),0 5px 14px rgba(16,24,40,.08);
+      pointer-events:auto;
+      transform:translateX(calc(100% + 30px));
+      opacity:0;
+      visibility:hidden;
+      transition:transform .28s cubic-bezier(.22,.9,.3,1),opacity .2s ease,visibility .28s;
+    }
+    .notification-toast.is-visible{transform:translateX(0);opacity:1;visibility:visible}
+    .notification-toast.is-issue{--toast-accent:#dc2626}
+    .notification-toast.is-story{--toast-accent:#2563eb}
+    .notification-toast.is-revision,.notification-toast.is-revision-done{--toast-accent:#f59e0b}
+    .notification-toast-icon{
+      display:grid;
+      place-items:center;
+      width:36px;
+      height:36px;
+      border-radius:999px;
+      background:color-mix(in srgb,var(--toast-accent) 12%,#fff);
+      color:var(--toast-accent);
+    }
+    .notification-toast-icon svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .notification-toast-copy{min-width:0;padding-top:1px}
+    .notification-toast-eyebrow{display:flex;align-items:center;gap:6px;color:var(--toast-accent);font-size:11px;font-weight:950;line-height:1.2}
+    .notification-toast-title{display:block;margin-top:4px;color:#17211d;font-size:14px;font-weight:950;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .notification-toast-meta{display:-webkit-box;margin-top:3px;color:#66736d;font-size:12px;font-weight:800;line-height:1.45;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+    .notification-toast-more{display:block;margin-top:5px;color:#66736d;font-size:11px;font-weight:850}
+    .notification-toast-close{
+      display:grid!important;
+      place-items:center!important;
+      width:28px!important;
+      height:28px!important;
+      min-height:28px!important;
+      padding:0!important;
+      border:0!important;
+      border-radius:999px!important;
+      background:transparent!important;
+      color:#7a8580!important;
+      box-shadow:none!important;
+    }
+    .notification-toast-close:hover,.notification-toast-close:focus-visible{background:#f0f3f1!important;color:#17211d!important}
+    .notification-toast-close svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+    .notification-toast-actions{grid-column:2/4;display:flex;justify-content:flex-end;gap:7px;margin-top:1px}
+    .notification-toast-actions button{min-height:30px!important;padding:6px 11px!important;border-radius:7px!important;font-size:12px!important;font-weight:900!important}
+    .notification-toast-later{background:#eef3f0!important;color:#43524b!important}
+    .notification-toast-open{background:var(--toast-accent)!important;color:#fff!important}
+    .notification-toast-progress{position:absolute;left:0;right:0;bottom:0;height:3px;background:color-mix(in srgb,var(--toast-accent) 16%,transparent)}
+    .notification-toast-progress::after{content:"";display:block;width:100%;height:100%;background:var(--toast-accent);transform-origin:left;animation:none}
+    .notification-toast.is-visible .notification-toast-progress::after{animation:notificationToastProgress 9s linear forwards}
+    @keyframes notificationToastProgress{to{transform:scaleX(0)}}
+    @media(max-width:640px){
+      .notification-toast-region{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));width:min(360px,calc(100vw - 20px))}
+      .notification-toast{min-height:102px;grid-template-columns:34px minmax(0,1fr) 28px;padding:12px 10px 11px}
+      .notification-toast-icon{width:34px;height:34px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .notification-toast{transition:opacity .12s ease;transform:none}
+      .notification-toast-progress::after{animation:none}
+    }
     .account-dropdown button{
       display:flex!important;
       align-items:center!important;
@@ -4126,6 +4208,21 @@
       background:#35c48b!important;
       box-shadow:0 0 0 3px rgba(53,196,139,.14)!important;
     }
+    html[data-theme="dark"] .notification-toast{
+      background:rgba(21,22,24,.98)!important;
+      color:#f2faf6!important;
+      border-color:#414449!important;
+      border-left-color:var(--toast-accent)!important;
+      box-shadow:0 22px 54px rgba(0,0,0,.5),0 5px 16px rgba(0,0,0,.28)!important;
+    }
+    html[data-theme="dark"] .notification-toast-icon{background:color-mix(in srgb,var(--toast-accent) 18%,#151618)!important}
+    html[data-theme="dark"] .notification-toast-title{color:#f2faf6!important}
+    html[data-theme="dark"] .notification-toast-meta,
+    html[data-theme="dark"] .notification-toast-more{color:#aeb9b4!important}
+    html[data-theme="dark"] .notification-toast-close{color:#aeb9b4!important}
+    html[data-theme="dark"] .notification-toast-close:hover,
+    html[data-theme="dark"] .notification-toast-close:focus-visible{background:#2a2d2b!important;color:#fff!important}
+    html[data-theme="dark"] .notification-toast-later{background:#2a312e!important;color:#dbe5e0!important}
     html[data-theme="dark"] .未開始,
     html[data-theme="dark"] .editable-status.未開始,
     html[data-theme="dark"] .editable-status.未開始:hover{
@@ -6229,6 +6326,25 @@
     </div>
   </div>
 </header>
+<aside class="notification-toast-region" id="notificationToastRegion" aria-live="polite" aria-atomic="true">
+  <section class="notification-toast" id="notificationToast" aria-label="新通知" hidden>
+    <span class="notification-toast-icon" aria-hidden="true" id="notificationToastIcon"></span>
+    <span class="notification-toast-copy">
+      <span class="notification-toast-eyebrow" id="notificationToastEyebrow">新通知</span>
+      <strong class="notification-toast-title" id="notificationToastTitle"></strong>
+      <span class="notification-toast-meta" id="notificationToastMeta"></span>
+      <span class="notification-toast-more" id="notificationToastMore" hidden></span>
+    </span>
+    <button type="button" class="notification-toast-close" id="notificationToastClose" aria-label="關閉通知">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+    </button>
+    <span class="notification-toast-actions">
+      <button type="button" class="notification-toast-later" id="notificationToastLater">稍後</button>
+      <button type="button" class="notification-toast-open" id="notificationToastOpen">查看</button>
+    </span>
+    <span class="notification-toast-progress" aria-hidden="true"></span>
+  </section>
+</aside>
 <div class="permission-preview-banner" id="permissionPreviewBanner" role="status" hidden>
   <span id="permissionPreviewStatus">一般使用者預覽中｜新增/修改需求：待檢查｜狀態與細節：唯讀</span>
   <button type="button" id="permissionPreviewExit">返回管理者</button>
@@ -6572,7 +6688,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260804-dark-mail-guide-73" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260805-notification-toast-74" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6616,6 +6732,10 @@ let requestPlatformCloseTimer = null;
 let ownerProjectsReturnName = '';
 let ownerProjectsFullDataLoaded = false;
 let ownerProjectsFullLoadPromise = null;
+let notificationToastTimer = null;
+let notificationToastKnownKeys = null;
+let notificationToastAccount = '';
+let notificationToastItemKey = '';
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment'];
 const legacyAuthStorageKeys = ['authToken','currentUser','isLoggedIn','editorToken'];
 function editorSessionValue(key){return sessionStorage.getItem('designRequestEditorLoggedOut')==='1'?'':(sessionStorage.getItem(key)||'')}
@@ -6654,7 +6774,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260804-dark-mail-guide-73';
+const appBuildVersion = '20260805-notification-toast-74';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -8479,7 +8599,77 @@ function notificationItems(){
 }
 function unreadNotificationItems(items=notificationItems()){const read=readNotificationIds(); return items.filter(item=>!read.has(item.key))}
 function markNotificationsRead(items=notificationItems()){if(!items.length)return; const read=readNotificationIds(); items.forEach(item=>read.add(item.key)); writeNotificationIds(read)}
-function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、限動互動、問題回報或完成通知</div>'}
+function notificationToastIdentity(){return normalizedUserText(loginAccountFull(currentEditorAccount)||currentEditor||currentUserDisplayName())}
+function notificationToastKindLabel(kind){return ({case:'新案件通知',revision:'修改需求通知','revision-done':'修改完成通知',issue:'問題回報通知',story:'限動互動通知'})[kind]||'新通知'}
+function notificationToastIcon(kind){
+  if(kind==='issue')return '<svg viewBox="0 0 24 24"><path d="M12 3 2.9 19h18.2L12 3Z"/><path d="M12 9v4.5M12 17h.01"/></svg>';
+  if(kind==='story')return '<svg viewBox="0 0 24 24"><path d="M5 5.5h14v10H9l-4 3v-13Z"/><path d="M9 9.5h6M9 12.5h4"/></svg>';
+  if(kind==='revision-done')return '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8 12.2 2.5 2.5 5.5-5.5"/></svg>';
+  if(kind==='revision')return '<svg viewBox="0 0 24 24"><path d="M4.5 19.5h4l10-10-4-4-10 10v4Z"/><path d="m12.8 7.2 4 4"/></svg>';
+  return '<svg viewBox="0 0 24 24"><path d="M5 7.5h14v11H5zM8 7.5V5h8v2.5M5 12h14"/></svg>';
+}
+function hideNotificationToast(){
+  clearTimeout(notificationToastTimer);
+  notificationToastTimer=null;
+  const toast=$('#notificationToast');
+  if(!toast)return;
+  toast.classList.remove('is-visible');
+  setTimeout(()=>{if(!toast.classList.contains('is-visible'))toast.hidden=true},300);
+}
+function resetNotificationToastTracking(){
+  hideNotificationToast();
+  notificationToastKnownKeys=null;
+  notificationToastAccount='';
+  notificationToastItemKey='';
+}
+function positionNotificationToastRegion(){
+  const region=$('#notificationToastRegion'), toast=$('#notificationToast'), menu=$('#accountMenu');
+  if(!region||!toast)return;
+  const menuRect=menu?.getBoundingClientRect(), edge=window.innerWidth<=640?10:18, belowHeader=menuRect&&menuRect.bottom>0&&menuRect.top<window.innerHeight?menuRect.bottom+10:edge, maxTop=Math.max(edge,window.innerHeight-Math.max(toast.offsetHeight,106)-edge);
+  region.style.top=`${Math.min(Math.max(edge,belowHeader),maxTop)}px`;
+}
+function showNotificationToast(item,newCount=1){
+  const toast=$('#notificationToast'), icon=$('#notificationToastIcon'), eyebrow=$('#notificationToastEyebrow'), title=$('#notificationToastTitle'), meta=$('#notificationToastMeta'), more=$('#notificationToastMore');
+  if(!toast||!item)return;
+  clearTimeout(notificationToastTimer);
+  notificationToastItemKey=item.key;
+  toast.className=`notification-toast is-${item.kind}`;
+  toast.hidden=false;
+  if(icon)icon.innerHTML=notificationToastIcon(item.kind);
+  if(eyebrow)eyebrow.textContent=notificationToastKindLabel(item.kind);
+  if(title)title.textContent=item.title;
+  if(meta)meta.textContent=item.meta;
+  if(more){more.hidden=newCount<2;more.textContent=newCount>1?`另有 ${newCount-1} 則新通知`:''}
+  void toast.offsetWidth;
+  positionNotificationToastRegion();
+  toast.classList.add('is-visible');
+  notificationToastTimer=setTimeout(hideNotificationToast,9000);
+}
+function syncNotificationToast(items,unread){
+  if(!isLoggedIn()){resetNotificationToastTracking();return}
+  const account=notificationToastIdentity();
+  if(notificationToastAccount!==account||notificationToastKnownKeys===null){
+    notificationToastAccount=account;
+    notificationToastKnownKeys=new Set(items.map(item=>item.key));
+    hideNotificationToast();
+    return;
+  }
+  const unreadKeys=new Set(unread.map(item=>item.key));
+  const newlyArrived=items.filter(item=>unreadKeys.has(item.key)&&!notificationToastKnownKeys.has(item.key));
+  if(!newlyArrived.length)return;
+  if(document.hidden)return;
+  items.forEach(item=>notificationToastKnownKeys.add(item.key));
+  showNotificationToast(newlyArrived[0],newlyArrived.length);
+}
+function openCurrentNotificationToast(){
+  const item=notificationItems().find(entry=>entry.key===notificationToastItemKey);
+  hideNotificationToast();
+  if(!item)return;
+  markNotificationsRead([item]);
+  renderNotifications();
+  openNotificationItem(item.kind,item.id);
+}
+function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); syncNotificationToast(items,unread); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、限動互動、問題回報或完成通知</div>'}
 function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnreadItems=unreadNotificationItems(), openingUnread=new Set(openingUnreadItems.map(item=>item.key)); renderNotifications(open?openingUnread:null,{hideBadge:open&&openingUnreadItems.length>0}); popover.hidden=!open; if(open&&openingUnreadItems.length)markNotificationsRead(openingUnreadItems); if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
 function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); const show=()=>{if(document.getElementById(`case-row-${id}`)){jumpToCase(id);return} if($('#q'))$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; requestAnimationFrame(()=>jumpToCase(id))}; requestAnimationFrame(show)}
 function openStoryNotification(id){closeNotifications();closeAccountMenu(); const reel=designerReels.find(item=>String(item.id)===String(id)); if(!reel)return; const card=[...(designerRoster?.querySelectorAll('.designer-card')||[])].find(item=>item.dataset.designer===reel.name), shell=card?.querySelector('.avatar-shell'), stories=storiesForDesigner(reel.name), index=stories.findIndex(item=>String(item.id)===String(id)); if(!shell||index<0)return; openDesignerPoster(shell); showDesignerStorySlide(shell,index); card.scrollIntoView({behavior:'smooth',block:'center',inline:'center'})}
@@ -9699,7 +9889,7 @@ $('#restoreAllPanels')?.addEventListener('click',restoreAllPanels);
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
-window.addEventListener('resize',()=>{closeFieldPopover(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
+window.addEventListener('resize',()=>{closeFieldPopover(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
 document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault(); applyStatusFilter(card.dataset.status)}})
@@ -9734,6 +9924,9 @@ $('#loginBtn').onclick=event=>{event.stopPropagation(); toggleAccountMenu()};
 $('#themeToggle')?.addEventListener('click',event=>{event.stopPropagation(); toggleTheme()});
 $('#accountBell')?.addEventListener('click',event=>{event.stopPropagation(); toggleNotifications()});
 $('#notificationList')?.addEventListener('click',event=>{const item=event.target.closest('[data-notification-kind]'); if(!item)return; event.preventDefault(); event.stopPropagation(); openNotificationItem(item.dataset.notificationKind,item.dataset.notificationId)});
+$('#notificationToastClose')?.addEventListener('click',hideNotificationToast);
+$('#notificationToastLater')?.addEventListener('click',hideNotificationToast);
+$('#notificationToastOpen')?.addEventListener('click',openCurrentNotificationToast);
 $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#erpLoginButton')?.addEventListener('click',startErpLogin);
