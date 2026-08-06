@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-06 09:49 Asia/Taipei | build: 20260806-notification-delivery-76 -->
+<!-- LAST_MODIFIED: 2026-08-06 11:30 Asia/Taipei | build: 20260806-credentialless-api-77 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260806-notification-delivery-76" />
+  <meta name="app-version" content="20260806-credentialless-api-77" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6692,7 +6692,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260806-notification-delivery-76" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260806-credentialless-api-77" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6778,7 +6778,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260806-notification-delivery-76';
+const appBuildVersion = '20260806-credentialless-api-77';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7517,8 +7517,28 @@ function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
   if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
   closeAccountMenu();
-  if(isDesignerLogin()){openUploadModal(designerUploadUrl(currentEditor),`${currentEditor} 圖片上傳`);return}
-  openUploadModal(userAvatarUploadUrl(),'設定我的頭像');
+  const input=document.createElement('input');
+  input.type='file';
+  input.accept='image/jpeg,image/png,image/webp,image/gif';
+  input.addEventListener('change',async()=>{
+    const file=input.files?.[0];
+    if(!file)return;
+    if(!String(file.type||'').startsWith('image/')){setSync('請選擇圖片檔案',true);return}
+    if(file.size>designerImageMaxBytes){setSync('頭像檔案不可超過 8 MB',true);return}
+    setSync('頭像上傳至 Google Drive 中...');
+    try{
+      const dataUrl=await readFileAsDataUrl(file);
+      const data=await sheetApi('uploadUserAvatar',{editorToken:currentEditorToken,fileName:file.name,mimeType:file.type,dataUrl,_timeoutMs:120000});
+      currentAccountAvatar=String(data.url||remoteAccountAvatar(data.settings)||'').trim();
+      if(data.settings)applyAccountSettingsIfNeeded(data.settings);
+      persistEditorSession();
+      renderAccountAvatar();
+      setSync(data.sharingWarning||'頭像已更新',Boolean(data.sharingWarning),3500);
+    }catch(err){
+      setSync(`頭像上傳失敗：${err.message||err}`,true,6000);
+    }
+  },{once:true});
+  input.click();
 }
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
@@ -7625,7 +7645,7 @@ async function submitIssueReport(event){
     submit.disabled=false;
   }
 }
-function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>上傳並替換頭像或海報</span></div><button class="designer-photo-manage-button" type="button" data-manage-designer-photo="${esc(name)}">管理照片</button></section><section class="designer-setting-block designer-setting-music"><div class="designer-setting-block-title"><b>4. 分享音樂</b><span>貼上 Spotify 或 Apple Music 單曲連結</span></div><input type="url" name="music-${esc(name)}" value="${esc(d.musicUrl||'')}" placeholder="https://open.spotify.com/... 或 https://music.apple.com/..." aria-label="${esc(name)} 分享音樂"><label class="designer-music-start">起始秒數<input type="number" name="music-start-${esc(name)}" value="${Math.max(0,Number(d.musicStartAt)||0)}" min="0" step="1" inputmode="numeric" aria-label="${esc(name)} 音樂起始秒數"></label></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-manage-designer-photo]').forEach(button=>button.addEventListener('click',openDesignerUploadPage))}
+function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>直接上傳並替換頭像或海報</span></div><div class="designer-photo-tools"><input type="hidden" data-photo-url="avatar" value="${esc(d.avatar||'')}"><input type="hidden" data-photo-url="poster" value="${esc(d.poster||d.avatar||'')}"><input type="hidden" data-folder-id value="${esc(d.imageFolder||'')}"><label>頭像圖片<input type="file" accept="image/*" data-photo-kind="avatar"></label><label>大海報圖片<input type="file" accept="image/*" data-photo-kind="poster"></label><div class="designer-photo-status" data-photo-status>支援 JPG、PNG、WebP，最大 8 MB</div></div></section><section class="designer-setting-block designer-setting-music"><div class="designer-setting-block-title"><b>4. 分享音樂</b><span>貼上 Spotify 或 Apple Music 單曲連結</span></div><input type="url" name="music-${esc(name)}" value="${esc(d.musicUrl||'')}" placeholder="https://open.spotify.com/... 或 https://music.apple.com/..." aria-label="${esc(name)} 分享音樂"><label class="designer-music-start">起始秒數<input type="number" name="music-start-${esc(name)}" value="${Math.max(0,Number(d.musicStartAt)||0)}" min="0" step="1" inputmode="numeric" aria-label="${esc(name)} 音樂起始秒數"></label></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-photo-kind]').forEach(input=>input.addEventListener('change',uploadDesignerPhoto))}
 function collectDesignerSettings(){return designerOptions.map(name=>{const row=[...document.querySelectorAll('.designer-setting-row')].find(item=>item.dataset.designer===name), current=designerProfile(name), skills=row?[...row.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):current.skills||[], quote=row?.querySelector('textarea')?.value.trim()||'', musicInput=row?.querySelector(`[name="music-${name}"]`)?.value.trim()||'', musicUrl=sharedMusicInfo(musicInput)?.url||'', musicStartAt=Math.max(0,Number(row?.querySelector(`[name="music-start-${name}"]`)?.value)||0), avatar=row?.querySelector('[data-photo-url="avatar"]')?.value.trim()||current.avatar||'', poster=row?.querySelector('[data-photo-url="poster"]')?.value.trim()||current.poster||current.avatar||'', imageFolder=row?.querySelector('[data-folder-id]')?.value.trim()||current.imageFolder||''; return {name,skills,quote,musicUrl,musicStartAt,account:current.account||'',avatar,poster,imageFolder,status:current.status||'',rotation:current.rotation||99}})}
 function validateDesignerMusicInputs(){const invalid=[...designerSettingsList.querySelectorAll('.designer-setting-music input[type="url"]')].find(input=>input.value.trim()&&!sharedMusicInfo(input.value)); if(!invalid)return true; invalid.focus(); invalid.setCustomValidity('請貼上正確的 Spotify 或 Apple Music 單曲連結'); invalid.reportValidity(); invalid.addEventListener('input',()=>invalid.setCustomValidity(''),{once:true}); setSync('請檢查分享音樂連結',true); return false}
 function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result||'')); reader.onerror=()=>reject(reader.error||new Error('讀取檔案失敗')); reader.readAsDataURL(file)})}
@@ -7770,20 +7790,12 @@ function designListsFromStageSheet(data){
   return next;
 }
 function gvizJsonp(url,timeoutMs=60000){
-  return new Promise((resolve,reject)=>{
-    const callback = `gvizCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    const timer = setTimeout(()=>cleanup(new Error('database 讀取逾時，請稍候再試')),timeoutMs);
-    function cleanup(value){
-      clearTimeout(timer);
-      script.remove();
-      delete window[callback];
-      value instanceof Error ? reject(value) : resolve(value);
-    }
-    window[callback] = data => cleanup(data);
-    script.onerror = () => cleanup(new Error('database 讀取失敗，請確認試算表已開放讀取'));
-    script.src = `${url}&tqx=${encodeURIComponent(`out:json;responseHandler:${callback}`)}&ts=${Date.now()}`;
-    document.body.appendChild(script);
+  const requestUrl=`${url}&tqx=${encodeURIComponent('out:json')}&ts=${Date.now()}`;
+  return fetchWithTimeout(requestUrl,{method:'GET',credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs).then(async response=>{
+    if(!response.ok)throw new Error(`database 回應失敗：${response.status}`);
+    const text=await response.text(), start=text.indexOf('('), end=text.lastIndexOf(')');
+    if(start<0||end<=start)throw new Error('database 回傳格式錯誤');
+    return JSON.parse(text.slice(start+1,end));
   });
 }
 function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
@@ -7824,7 +7836,7 @@ async function fetchRecentDatabaseRowsByScript(limit=320,{noCache=false}={}){
     targetSheetId:String(targetSheetId),
     ts:Date.now()
   });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,2500,'最近案件讀取較慢，先顯示公開資料來源');
+  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,30000,'最近案件讀取較慢，先顯示公開資料來源');
   if(!data.ok)throw new Error(data.error||'最近案件讀取失敗');
   return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
@@ -8145,46 +8157,42 @@ async function sheetApi(action,payload={}){
   return data;
 }
 function fetchWithTimeout(url,options={},ms=25000){const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),ms); return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
+async function appsScriptFetch(url,options={},timeoutMs=25000){
+  const response=await fetchWithTimeout(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs);
+  if(!response.ok)throw new Error(`Apps Script 回應失敗：${response.status}`);
+  const text=await response.text();
+  try{return JSON.parse(text)}catch(error){
+    const looksLikeGooglePage=/<(?:html|title|body)|無法開啟這個檔案|Google Drive/i.test(text);
+    throw new Error(looksLikeGooglePage?'Apps Script 被 Google 工作階段錯誤導向':'Apps Script 回傳格式錯誤');
+  }
+}
+function appsScriptGet(url,timeoutMs=25000){return appsScriptFetch(url,{method:'GET'},timeoutMs)}
+function appsScriptPost(payload={},timeoutMs=60000){
+  const body={...withSheetTarget(payload)};
+  delete body._timeoutMs;
+  delete body._timeoutMessage;
+  delete body._requireResponse;
+  return appsScriptFetch(apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)},timeoutMs);
+}
 async function fetchFromSheet(action,payload={}){
   const options = action === 'list'
     ? {}
     : {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})};
   const params = action === 'list' ? `action=list&year=${encodeURIComponent(payload.year||'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}` : '';
   const url = action === 'list' ? `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params}` : apiUrl;
-  const res = await fetchWithTimeout(url,options);
-  if(!res.ok) throw new Error(`Google Sheet 回應失敗：${res.status}`);
-  return await res.json();
+  return action==='list'
+    ? appsScriptGet(url,60000)
+    : appsScriptFetch(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},Number(payload._timeoutMs)||60000);
 }
 function jsonp(url,timeoutMs=20000,timeoutMessage='讀取逾時。請直接打開測試連線，確認畫面是否出現 testCallback(...)'){
-  return new Promise((resolve,reject)=>{
-    const callback = `sheetCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const script = document.createElement('script');
-    const timer = setTimeout(()=>cleanup(new Error(timeoutMessage)),timeoutMs);
-    function cleanup(value){
-      clearTimeout(timer);
-      script.remove();
-      delete window[callback];
-      value instanceof Error ? reject(value) : resolve(value);
-    }
-    window[callback] = data => cleanup(data);
-    script.onerror = () => cleanup(new Error(`Apps Script API 讀取失敗。SCRIPT_URL：${url.split('&callback=')[0]}`));
-    script.src = `${url}&callback=${callback}`;
-    document.body.appendChild(script);
-  });
+  return appsScriptGet(String(url).replace(/([?&])callback=[^&]*/,'$1').replace(/[?&]$/,''),timeoutMs)
+    .catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
 }
 function postToSheet(payload){
-  return postToSheetByFrame(payload);
+  return appsScriptPost(payload,Number(payload?._timeoutMs)||60000);
 }
 function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處理時間較久，請稍候重新整理確認；若仍未更新，請按「測試連線」檢查 Apps Script 權限。'){
-  const params = new URLSearchParams({
-    action: payload.action || '',
-    payload: JSON.stringify(payload),
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId: String(targetSheetId),
-    ts: Date.now()
-  });
-  return jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,timeoutMs,timeoutMessage);
+  return appsScriptPost(payload,timeoutMs).catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
 }
 function createResultResponse(action,result){
   if(action==='batchAdd')return {ok:true,action:'batchAdd',count:result.rows?.length||0,rowNumbers:result.rowNumbers||[],rows:result.rows||[],deduplicated:Boolean(result.deduplicated)};
@@ -8219,21 +8227,22 @@ async function readActionWithFrameFallback(payload,timeoutMs=20000,timeoutMessag
   try{
     return await writeToSheetByJsonp(payload,timeoutMs,timeoutMessage);
   }catch(jsonpError){
-    console.warn(`[Apps Script API] ${actionName} JSONP 失敗，改用 iframe 備援`,jsonpError);
+    console.warn(`[Apps Script API] ${actionName} 第一次匿名請求失敗，正在重試`,jsonpError);
     try{
-      return await postToSheetByFrame({...withSheetTarget(payload),_requireResponse:true,_timeoutMs:timeoutMs,_timeoutMessage:`${timeoutMessage}\n已改用 iframe 備援仍未收到回應。`});
+      await new Promise(resolve=>setTimeout(resolve,450));
+      return await appsScriptPost(payload,timeoutMs);
     }catch(frameError){
       const message=[
         `Apps Script API 讀取失敗。`,
-        `JSONP：${jsonpError?.message||jsonpError}`,
-        `iframe：${frameError?.message||frameError}`
+        `第一次請求：${jsonpError?.message||jsonpError}`,
+        `第二次請求：${frameError?.message||frameError}`
       ].join('\n');
       throw Object.assign(new Error(message),{reason:'APPS_SCRIPT_API_READ_FAILED',jsonpError,frameError,scriptUrl:apiUrl,action:actionName});
     }
   }
 }
 async function googleLoginByPost(payload,timeoutMessage='Google 登入驗證沒有回應。請按「測試連線」檢查 Apps Script 權限。',timeoutMs=20000){
-  const data=await postToSheetByFrame({...withSheetTarget(payload),_requireResponse:true,_timeoutMessage:timeoutMessage,_timeoutMs:timeoutMs});
+  const data=await appsScriptPost(payload,timeoutMs);
   if(!data.ok)throw new Error(data.error||'Google 登入失敗');
   if(data.action!==payload.action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
   return data;
@@ -8255,7 +8264,7 @@ async function googleLoginByJsonp(credential){
   const profile=googleProfileFromCredential(credential);
   const email=String(profile?.email||'').trim();
   const payload=withSheetTarget({action:'googleLogin',credential});
-  console.info('[Google 登入送後端驗證]',{transport:'jsonp',email:email||'(未解析)',aud:profile?.aud||'', appBuildVersion});
+  console.info('[Google 登入送後端驗證]',{transport:'credentialless-fetch',email:email||'(未解析)',aud:profile?.aud||'', appBuildVersion});
   const data=await writeToSheetByJsonp(payload,20000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
   console.info('[Google 登入後端回傳]',{ok:data?.ok, action:data?.action, error:data?.error, reason:data?.reason, receivedAud:data?.receivedAud, receivedEmail:data?.receivedEmail, emailVerified:data?.emailVerified, loginDebug:data?.loginDebug});
   if(!data.ok){
@@ -8292,10 +8301,10 @@ async function googleLoginByFrame(credential){
     if(jsonpError?.reason){
       throw jsonpError;
     }
-    console.warn('[Google 登入 JSONP 未完成，改用 iframe 備援]',{error:jsonpError,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||''});
+    console.warn('[Google 登入第一次匿名請求未完成，正在重試]',{error:jsonpError,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||''});
   }
   const payload=withSheetTarget({action:'googleLogin',credential,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API 登入驗證沒有回應。'});
-  console.info('[Google 登入送 Apps Script API]',{transport:'iframe+frameCallback',scriptUrl:apiUrl,email:email||'(未解析)',aud:profile?.aud||'',appBuildVersion});
+  console.info('[Google 登入送 Apps Script API]',{transport:'credentialless-fetch-retry',scriptUrl:apiUrl,email:email||'(未解析)',aud:profile?.aud||'',appBuildVersion});
   let data;
   try{
     data=await postToSheetByFrame(payload);
@@ -8325,67 +8334,7 @@ async function googleEmailLoginByJsonp(email,name=''){
   throw new Error('googleEmailLogin 已停用，請使用 Google credential / idToken 登入');
 }
 function postToSheetByFrame(payload){
-  return new Promise((resolve,reject)=>{
-    const callbackId = `sheetPost_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const iframeName = `sheetFrame_${callbackId}`;
-    const iframe = document.createElement('iframe');
-    const form = document.createElement('form');
-    const payloadField = document.createElement('textarea');
-    const callbackField = document.createElement('input');
-    const timeoutMs=Number(payload._timeoutMs)||60000;
-    const actionName=payload.action||'(未指定)';
-    const timeoutMessage=[
-      payload._timeoutMessage||'Apps Script API 沒有回應。',
-      `SCRIPT_URL：${apiUrl}`,
-      `action：${actionName}`,
-      `callbackId：${callbackId}`,
-      '請確認 Web App 設定 Execute as: Me、Who has access: Anyone，且使用 /exec。',
-      '若剛新增 UrlFetchApp.fetch 驗證 tokeninfo，請重新授權並重新部署新版本。'
-    ].join('\n');
-    const timer = setTimeout(()=>cleanup(Object.assign(new Error(timeoutMessage),{reason:'APPS_SCRIPT_API_TIMEOUT',scriptUrl:apiUrl,action:actionName,callbackId})),timeoutMs);
-    let submitted=false, settled=false, loadFallbackTimer=null;
-    function cleanup(value){
-      if(settled)return;
-      settled=true;
-      clearTimeout(timer);
-      clearTimeout(loadFallbackTimer);
-      window.removeEventListener('message',onMessage);
-      iframe.removeEventListener('load',onFrameLoad);
-      iframe.remove();
-      form.remove();
-      value instanceof Error ? reject(value) : resolve(value);
-    }
-    function onMessage(event){
-      const data = event.data || {};
-      if(data.type!=='design-request-sheet-response'||data.callbackId!==callbackId)return;
-      cleanup(data.payload || {ok:false,error:'Google Sheet 沒有回傳寫入結果'});
-    }
-    function onFrameLoad(){
-      if(!submitted||settled)return;
-      if(payload._requireResponse)return;
-      loadFallbackTimer=setTimeout(()=>cleanup({ok:true,pending:true,message:'寫入已完成，但未收到 Apps Script 回傳內容'}),1200);
-    }
-    window.addEventListener('message',onMessage);
-    iframe.addEventListener('load',onFrameLoad);
-    iframe.name = iframeName;
-    iframe.hidden = true;
-    form.method = 'POST';
-    form.action = `${apiUrl}${apiUrl.includes('?')?'&':'?'}frameCallback=${encodeURIComponent(callbackId)}&ts=${Date.now()}`;
-    form.target = iframeName;
-    form.hidden = true;
-    form.acceptCharset = 'UTF-8';
-    payloadField.name = 'payload';
-    const framePayload={...payload};
-    delete framePayload._timeoutMs;
-    delete framePayload._timeoutMessage;
-    payloadField.value = JSON.stringify(framePayload);
-    callbackField.type = 'hidden';
-    callbackField.name = 'frameCallback';
-    callbackField.value = callbackId;
-    form.append(payloadField,callbackField);
-    document.body.append(iframe,form);
-    setTimeout(()=>{submitted=true;form.submit()},0);
-  });
+  return appsScriptPost(payload,Number(payload?._timeoutMs)||60000);
 }
 function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案')return '已完成'; if(s==='未執行')return '未開始'; return s||'未開始'}
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
@@ -9221,8 +9170,8 @@ function base64UrlFromBytes(bytes){return btoa(String.fromCharCode(...bytes)).re
 function decodeBase64UrlJson(value){const text=decodeURIComponent(String(value||'')), normalized=text.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(text.length/4)*4,'='); const binary=atob(normalized); return JSON.parse(decodeURIComponent([...binary].map(char=>`%${char.charCodeAt(0).toString(16).padStart(2,'0')}`).join('')))}
 function randomBase64Url(byteLength=32){const bytes=new Uint8Array(byteLength); crypto.getRandomValues(bytes); return base64UrlFromBytes(bytes)}
 async function sha256Base64Url(text){const bytes=new TextEncoder().encode(text), digest=await crypto.subtle.digest('SHA-256',bytes); return base64UrlFromBytes(new Uint8Array(digest))}
-function submitFullPageToAppsScript(fields){const form=document.createElement('form'); form.method='POST'; form.action=apiUrl; form.hidden=true; Object.entries({...fields,returnUri:location.origin}).forEach(([name,value])=>{const input=document.createElement('input'); input.type='hidden'; input.name=name; input.value=String(value??''); form.appendChild(input)}); document.body.appendChild(form); form.submit()}
-function redirectFullPageToAppsScript(fields){const params=new URLSearchParams({...fields,returnUri:location.origin}); location.href=`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`}
+function submitFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
+function redirectFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
 function applyLoginRedirectResult(data,source='登入'){if(!data?.ok||!data?.token||!data?.user)throw Object.assign(new Error(data?.error||`${source}未完成驗證`),{rawResponse:data}); console.info(`[${source}成功]`,data.loginDebug||{account:data.account,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}
 function taipeiDateParts(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value])); return {year:parts.year,month:parts.month,day:parts.day}}
 function todayAdminPassword(){const {month,day}=taipeiDateParts(); return `${month}${day}`}
@@ -9305,7 +9254,7 @@ async function handleGoogleRedirectReturn(){const hash=new URLSearchParams(locat
 async function handleGoogleAccessToken(response){handleGoogleLoginError(new Error('access_token 登入已停用，請使用 Google id_token 登入。'),'Google 登入')}
 async function erpLoginConfig(){try{const data=await readActionWithFrameFallback({action:'erpLoginConfig'},20000,'ERP 登入設定讀取逾時，請按「測試連線」確認 Apps Script。'); if(!data.ok)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:(data.error||'ERP OAuth 尚未設定')); return data}catch(err){if(err?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|iframe|JSONP/i.test(err?.message||'')){console.warn('[ERP 登入設定] Apps Script 讀取失敗，使用公開備援設定',err); setSync('ERP 設定讀取較慢，改用備援登入設定...'); return erpPublicFallbackConfig} throw err}}
 async function startErpLogin(){try{const config=erpPublicFallbackConfig; const state=`erp_${Date.now()}_${randomBase64Url(16)}`, verifier=randomBase64Url(32), challenge=await sha256Base64Url(verifier); sessionStorage.setItem('designRequestErpLoginState',state); sessionStorage.setItem('designRequestErpCodeVerifier',verifier); sessionStorage.setItem('designRequestErpRedirectUri',config.redirectUri); localStorage.setItem('designRequestErpLoginState',state); localStorage.setItem('designRequestErpCodeVerifier',verifier); localStorage.setItem('designRequestErpRedirectUri',config.redirectUri); showLoginPendingOverlay('正在前往 ERP 登入...'); const params=new URLSearchParams({response_type:'code',client_id:config.clientId,redirect_uri:config.redirectUri,scope:config.scope||'openid profile',state,code_challenge:challenge,code_challenge_method:'S256'}); location.href=`${String(config.baseUrl||'https://manage.emctaipei.com').replace(/\/+$/,'')}/oauth/authorize?${params.toString()}`}catch(err){handleErpLoginError(err)}}
-function continueErpLoginViaAppsScript(code,verifier,redirectUri){showLoginPendingOverlay('ERP 登入驗證中...'); redirectFullPageToAppsScript({action:'erpLoginRedirect',code,codeVerifier:verifier,redirectUri})}
+async function continueErpLoginViaAppsScript(code,verifier,redirectUri){showLoginPendingOverlay('ERP 登入驗證中...'); try{const data=await readActionWithFrameFallback({action:'erpLogin',code,codeVerifier:verifier,redirectUri},30000,'ERP 登入驗證沒有回應，請稍候再試。'); applyLoginRedirectResult(data,'ERP 登入')}catch(err){handleErpLoginError(err)}}
 async function handleErpRedirectReturn(){
   const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
   const encodedErp=hashParams.get('erp_login_result')||'';
@@ -9366,7 +9315,7 @@ async function verifyEditorLogin(account,password,newPassword=''){
   if(!data.ok) throw new Error(data.error || '登入失敗');
   return data;
 }
-async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); submitFullPageToAppsScript({action:'loginRedirect',account:'test.user@emctaipei.com',password}); return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
+async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('test.user@emctaipei.com',password); applyLoginRedirectResult(data,'測試使用者登入')}catch(err){handleAdminLoginError(err)} return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
 async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}

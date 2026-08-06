@@ -68,33 +68,37 @@
   <script>
     (() => {
       const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
-      const spreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
-      const linkSheetName = '補充資料連結';
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
       const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
       const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
       const creator = document.querySelector('#creator');
       const redirector = document.querySelector('#redirector');
 
-      const jsonp = (params, timeoutMs = 10000) => new Promise((resolve, reject) => {
-        const callback = `__shortLink_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        const script = document.createElement('script');
-        const timer = setTimeout(() => cleanup(new Error('連線逾時，請稍後再試。')), timeoutMs);
-        const cleanup = error => {
+      const jsonp = async (params, timeoutMs = 10000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            credentials: 'omit',
+            cache: 'no-store',
+            redirect: 'follow',
+            referrerPolicy: 'no-referrer',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+            body: JSON.stringify(params),
+            signal: controller.signal
+          });
+          if (!response.ok) throw new Error(`短連結服務回應失敗：${response.status}`);
+          const data = await response.json();
+          if (!data || !data.ok) throw new Error(data && data.error || '系統暫時無法處理。');
+          return data;
+        } catch (error) {
+          if (error && error.name === 'AbortError') throw new Error('連線逾時，請稍後再試。');
+          throw error;
+        } finally {
           clearTimeout(timer);
-          script.remove();
-          delete window[callback];
-          if (error) reject(error);
-        };
-        window[callback] = data => {
-          cleanup();
-          data && data.ok ? resolve(data) : reject(new Error(data && data.error || '系統暫時無法處理。'));
-        };
-        script.onerror = () => cleanup(new Error('無法連上短連結服務。'));
-        const query = new URLSearchParams(Object.assign({}, params, { callback }));
-        script.src = `${apiUrl}?${query}`;
-        document.head.appendChild(script);
-      });
+        }
+      };
 
       const showRedirector = () => {
         creator.hidden = true;
@@ -127,65 +131,25 @@
         }
       };
 
-      const resolveLegacyLink = (slot, id) => {
+      const resolveLegacyLink = async (slot, id) => {
         showRedirector();
         const cacheKey = `supplementLink:${slot}:${id}`;
-        let settled = false;
-        let failures = 0;
-        const scripts = [];
-        const callbacks = [];
-        const cleanup = () => {
-          scripts.forEach(script => script.remove());
-          callbacks.forEach(callback => delete window[callback]);
-        };
         const finish = url => {
-          if (settled || !/^https?:\/\//i.test(url || '')) return false;
-          settled = true;
+          if (!/^https?:\/\//i.test(url || '')) return false;
           try { localStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + 600000 })); } catch (error) {}
-          cleanup();
           location.replace(url);
           return true;
-        };
-        const rejectSource = () => {
-          failures += 1;
-          if (!settled && failures >= 2) {
-            settled = true;
-            cleanup();
-            redirectFail('找不到對應的補充資料連結。');
-          }
-        };
-        const addJsonp = (src, callback, onData) => {
-          const script = document.createElement('script');
-          callbacks.push(callback);
-          scripts.push(script);
-          window[callback] = data => { delete window[callback]; script.remove(); onData(data); };
-          script.onerror = rejectSource;
-          script.src = src;
-          document.head.appendChild(script);
         };
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
           if (cached && cached.expires > Date.now() && finish(cached.url)) return;
         } catch (error) {}
-        setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          cleanup();
-          redirectFail('連結查詢逾時，請稍後再試。');
-        }, 8000);
-        const gvizCallback = `__supplementGviz_${Date.now()}`;
-        const apiCallback = `__supplementApi_${Date.now()}`;
-        const column = String.fromCharCode(66 + slot.charCodeAt(0) - 97);
-        const query = `select ${column} where A = '${id}' limit 1`;
-        const gvizBase = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodeURIComponent(linkSheetName)}&tq=${encodeURIComponent(query)}`;
-        const tqx = encodeURIComponent(`out:json;responseHandler:${gvizCallback}`);
-        addJsonp(`${gvizBase}&tqx=${tqx}&ts=${Date.now()}`, gvizCallback, data => {
-          const cell = data && data.table && data.table.rows && data.table.rows[0] && data.table.rows[0].c && data.table.rows[0].c[0];
-          if (!finish(cell && (cell.f || cell.v))) rejectSource();
-        });
-        addJsonp(`${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${apiCallback}`, apiCallback, data => {
-          if (!finish(data && data.ok && data.url)) rejectSource();
-        });
+        try {
+          const data = await jsonp({ action: 'resolveSupplementLink', id, slot }, 8000);
+          if (!finish(data.url)) throw new Error('目的網址格式不正確。');
+        } catch (error) {
+          redirectFail(error.message || '找不到對應的補充資料連結。');
+        }
       };
 
       if (legacyMatch) {
