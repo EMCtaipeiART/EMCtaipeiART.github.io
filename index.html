@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-05 09:23 Asia/Taipei | build: 20260805-owner-modal-mobile-75 -->
+<!-- LAST_MODIFIED: 2026-08-06 09:49 Asia/Taipei | build: 20260806-notification-delivery-76 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260805-owner-modal-mobile-75" />
+  <meta name="app-version" content="20260806-notification-delivery-76" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6692,7 +6692,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260805-owner-modal-mobile-75" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260806-notification-delivery-76" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6737,7 +6737,7 @@ let ownerProjectsReturnName = '';
 let ownerProjectsFullDataLoaded = false;
 let ownerProjectsFullLoadPromise = null;
 let notificationToastTimer = null;
-let notificationToastKnownKeys = null;
+let notificationToastShownKeys = null;
 let notificationToastAccount = '';
 let notificationToastItemKey = '';
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment'];
@@ -6778,7 +6778,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260805-owner-modal-mobile-75';
+const appBuildVersion = '20260806-notification-delivery-76';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -8533,6 +8533,9 @@ function toggleTheme(){applyTheme(currentTheme()==='dark'?'light':'dark'); saveR
 function notificationReadKey(){return accountStorageKey('designRequestReadNotificationsV1')}
 function readNotificationIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(err){return new Set()}}
 function writeNotificationIds(ids){localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-300)))}
+function notificationToastShownKey(){return accountStorageKey('designRequestShownNotificationToastsV2')}
+function readNotificationToastShownIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationToastShownKey())||'[]'))}catch(err){return new Set()}}
+function writeNotificationToastShownIds(ids){localStorage.setItem(notificationToastShownKey(),JSON.stringify([...ids].slice(-500)))}
 function normalizedUserText(value){return String(value||'').trim().toLowerCase()}
 function rowOwnerMatchesCurrentUser(row){
   if(!isLoggedIn())return false;
@@ -8622,7 +8625,7 @@ function hideNotificationToast(){
 }
 function resetNotificationToastTracking(){
   hideNotificationToast();
-  notificationToastKnownKeys=null;
+  notificationToastShownKeys=null;
   notificationToastAccount='';
   notificationToastItemKey='';
 }
@@ -8634,7 +8637,7 @@ function positionNotificationToastRegion(){
 }
 function showNotificationToast(item,newCount=1){
   const toast=$('#notificationToast'), icon=$('#notificationToastIcon'), eyebrow=$('#notificationToastEyebrow'), title=$('#notificationToastTitle'), meta=$('#notificationToastMeta'), more=$('#notificationToastMore');
-  if(!toast||!item)return;
+  if(!toast||!item)return false;
   clearTimeout(notificationToastTimer);
   notificationToastItemKey=item.key;
   toast.className=`notification-toast is-${item.kind}`;
@@ -8648,22 +8651,23 @@ function showNotificationToast(item,newCount=1){
   positionNotificationToastRegion();
   toast.classList.add('is-visible');
   notificationToastTimer=setTimeout(hideNotificationToast,9000);
+  return true;
 }
 function syncNotificationToast(items,unread){
   if(!isLoggedIn()){resetNotificationToastTracking();return}
   const account=notificationToastIdentity();
-  if(notificationToastAccount!==account||notificationToastKnownKeys===null){
+  if(notificationToastAccount!==account||notificationToastShownKeys===null){
     notificationToastAccount=account;
-    notificationToastKnownKeys=new Set(items.map(item=>item.key));
+    notificationToastShownKeys=readNotificationToastShownIds();
     hideNotificationToast();
-    return;
   }
-  const unreadKeys=new Set(unread.map(item=>item.key));
-  const newlyArrived=items.filter(item=>unreadKeys.has(item.key)&&!notificationToastKnownKeys.has(item.key));
-  if(!newlyArrived.length)return;
+  const awaitingToast=unread.filter(item=>!notificationToastShownKeys.has(item.key));
+  if(!awaitingToast.length)return;
   if(document.hidden)return;
-  items.forEach(item=>notificationToastKnownKeys.add(item.key));
-  showNotificationToast(newlyArrived[0],newlyArrived.length);
+  if(showNotificationToast(awaitingToast[0],awaitingToast.length)){
+    awaitingToast.forEach(item=>notificationToastShownKeys.add(item.key));
+    writeNotificationToastShownIds(notificationToastShownKeys);
+  }
 }
 function openCurrentNotificationToast(){
   const item=notificationItems().find(entry=>entry.key===notificationToastItemKey);
