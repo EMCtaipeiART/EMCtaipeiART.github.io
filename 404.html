@@ -1,9 +1,13 @@
 <!doctype html>
+<!-- LAST_MODIFIED: 2026-08-06 12:32 Asia/Taipei | build: 20260806-fast-short-redirect-2 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
+  <meta name="app-version" content="20260806-fast-short-redirect-2">
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <title>EMC 短連結</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
@@ -71,6 +75,7 @@
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
       const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
       const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
+      const shortLinkCacheMs = 30 * 24 * 60 * 60 * 1000;
       const creator = document.querySelector('#creator');
       const redirector = document.querySelector('#redirector');
 
@@ -114,6 +119,10 @@
         location.replace(url);
         return true;
       };
+      const cacheShortLink = (code, url) => {
+        if (!code || !/^https?:\/\//i.test(url || '')) return;
+        try { localStorage.setItem(`shortLink:${code}`, JSON.stringify({ url, expires: Date.now() + shortLinkCacheMs })); } catch (error) {}
+      };
 
       const resolveShortLink = async code => {
         showRedirector();
@@ -124,7 +133,7 @@
         } catch (error) {}
         try {
           const data = await jsonp({ action: 'resolveShortLink', code });
-          try { localStorage.setItem(cacheKey, JSON.stringify({ url: data.url, expires: Date.now() + 600000 })); } catch (error) {}
+          cacheShortLink(code, data.url);
           if (!redirect(data.url)) throw new Error('目的網址格式不正確。');
         } catch (error) {
           redirectFail(error.message || '找不到這個短連結。');
@@ -193,6 +202,7 @@
         try {
           const data = await jsonp({ action: 'createShortLink', url: value }, 15000);
           const generatedUrl = `${location.origin}/${data.code}`;
+          cacheShortLink(data.code, data.url || value);
           shortUrl.href = generatedUrl;
           shortUrl.textContent = generatedUrl;
           result.hidden = false;
