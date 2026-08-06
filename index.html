@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-06 11:30 Asia/Taipei | build: 20260806-credentialless-api-77 -->
+<!-- LAST_MODIFIED: 2026-08-06 12:18 Asia/Taipei | build: 20260806-designer-upload-modal-79 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260806-credentialless-api-77" />
+  <meta name="app-version" content="20260806-designer-upload-modal-79" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -1282,10 +1282,6 @@
       to{transform:scaleX(1)}
     }
     .designer-setting-row{grid-template-columns:90px minmax(210px,.9fr) minmax(260px,1.1fr)!important}
-    .designer-photo-tools{display:grid;gap:7px}
-    .designer-photo-tools label{display:grid;gap:4px;color:#43524b;font-size:12px;font-weight:850}
-    .designer-photo-tools input[type=file]{font-size:12px;min-height:34px;padding:5px;background:#fff}
-    .designer-photo-status{font-size:12px;color:var(--muted);font-weight:800}
     .designer-upload-page-link{display:inline-flex;align-items:center;justify-content:center;min-height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#43524b;text-decoration:none;font-size:12px;font-weight:850}
     .designer-folder-input{font-size:12px!important;min-height:34px!important;padding:6px 8px!important}
     .designer-card{background:transparent!important}
@@ -6688,11 +6684,11 @@
     </div>
     <div class="upload-modal-frame-wrap">
       <div class="upload-modal-loading" id="uploadModalLoading">上傳系統載入中...</div>
-      <iframe id="uploadFrame" title="圖片上傳系統" src="about:blank" allow="camera"></iframe>
+      <iframe id="uploadFrame" title="圖片上傳系統" src="about:blank" allow="camera" credentialless referrerpolicy="no-referrer"></iframe>
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260806-credentialless-api-77" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260806-designer-upload-modal-79" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6778,7 +6774,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260806-credentialless-api-77';
+const appBuildVersion = '20260806-designer-upload-modal-79';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7507,38 +7503,18 @@ async function savePersonalSettings(event){
 }
 let uploadModalReturnFocus=null;
 let activeUserAvatarUploadNonce='';
-function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
-function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); refreshCurrentAccountAvatar({force:true})}
+let activeDesignerUploadName='';
+function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
+function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; const refreshUserAvatar=Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(refreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
 function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(data.type!=='machi-user-avatar-updated'||!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return; closeUploadModal(); setSync('頭像已更新',false,2200)}
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
 function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
-function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} openUploadModal(designerUploadUrl(designer),`${designer} 圖片上傳`)}
+function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} activeDesignerUploadName=designer; openUploadModal(designerUploadUrl(designer),`${designer} 頭像與 Reels`)}
 function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
   if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
   closeAccountMenu();
-  const input=document.createElement('input');
-  input.type='file';
-  input.accept='image/jpeg,image/png,image/webp,image/gif';
-  input.addEventListener('change',async()=>{
-    const file=input.files?.[0];
-    if(!file)return;
-    if(!String(file.type||'').startsWith('image/')){setSync('請選擇圖片檔案',true);return}
-    if(file.size>designerImageMaxBytes){setSync('頭像檔案不可超過 8 MB',true);return}
-    setSync('頭像上傳至 Google Drive 中...');
-    try{
-      const dataUrl=await readFileAsDataUrl(file);
-      const data=await sheetApi('uploadUserAvatar',{editorToken:currentEditorToken,fileName:file.name,mimeType:file.type,dataUrl,_timeoutMs:120000});
-      currentAccountAvatar=String(data.url||remoteAccountAvatar(data.settings)||'').trim();
-      if(data.settings)applyAccountSettingsIfNeeded(data.settings);
-      persistEditorSession();
-      renderAccountAvatar();
-      setSync(data.sharingWarning||'頭像已更新',Boolean(data.sharingWarning),3500);
-    }catch(err){
-      setSync(`頭像上傳失敗：${err.message||err}`,true,6000);
-    }
-  },{once:true});
-  input.click();
+  openUploadModal(userAvatarUploadUrl(),'設定我的頭像');
 }
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
 function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
@@ -7645,13 +7621,9 @@ async function submitIssueReport(event){
     submit.disabled=false;
   }
 }
-function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>直接上傳並替換頭像或海報</span></div><div class="designer-photo-tools"><input type="hidden" data-photo-url="avatar" value="${esc(d.avatar||'')}"><input type="hidden" data-photo-url="poster" value="${esc(d.poster||d.avatar||'')}"><input type="hidden" data-folder-id value="${esc(d.imageFolder||'')}"><label>頭像圖片<input type="file" accept="image/*" data-photo-kind="avatar"></label><label>大海報圖片<input type="file" accept="image/*" data-photo-kind="poster"></label><div class="designer-photo-status" data-photo-status>支援 JPG、PNG、WebP，最大 8 MB</div></div></section><section class="designer-setting-block designer-setting-music"><div class="designer-setting-block-title"><b>4. 分享音樂</b><span>貼上 Spotify 或 Apple Music 單曲連結</span></div><input type="url" name="music-${esc(name)}" value="${esc(d.musicUrl||'')}" placeholder="https://open.spotify.com/... 或 https://music.apple.com/..." aria-label="${esc(name)} 分享音樂"><label class="designer-music-start">起始秒數<input type="number" name="music-start-${esc(name)}" value="${Math.max(0,Number(d.musicStartAt)||0)}" min="0" step="1" inputmode="numeric" aria-label="${esc(name)} 音樂起始秒數"></label></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-photo-kind]').forEach(input=>input.addEventListener('change',uploadDesignerPhoto))}
+function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>頭像、海報與 Reels</span></div><button class="designer-photo-manage-button" type="button" data-manage-designer-photo="${esc(name)}">管理圖片與 Reels</button></section><section class="designer-setting-block designer-setting-music"><div class="designer-setting-block-title"><b>4. 分享音樂</b><span>貼上 Spotify 或 Apple Music 單曲連結</span></div><input type="url" name="music-${esc(name)}" value="${esc(d.musicUrl||'')}" placeholder="https://open.spotify.com/... 或 https://music.apple.com/..." aria-label="${esc(name)} 分享音樂"><label class="designer-music-start">起始秒數<input type="number" name="music-start-${esc(name)}" value="${Math.max(0,Number(d.musicStartAt)||0)}" min="0" step="1" inputmode="numeric" aria-label="${esc(name)} 音樂起始秒數"></label></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-manage-designer-photo]').forEach(button=>button.addEventListener('click',openDesignerUploadPage))}
 function collectDesignerSettings(){return designerOptions.map(name=>{const row=[...document.querySelectorAll('.designer-setting-row')].find(item=>item.dataset.designer===name), current=designerProfile(name), skills=row?[...row.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):current.skills||[], quote=row?.querySelector('textarea')?.value.trim()||'', musicInput=row?.querySelector(`[name="music-${name}"]`)?.value.trim()||'', musicUrl=sharedMusicInfo(musicInput)?.url||'', musicStartAt=Math.max(0,Number(row?.querySelector(`[name="music-start-${name}"]`)?.value)||0), avatar=row?.querySelector('[data-photo-url="avatar"]')?.value.trim()||current.avatar||'', poster=row?.querySelector('[data-photo-url="poster"]')?.value.trim()||current.poster||current.avatar||'', imageFolder=row?.querySelector('[data-folder-id]')?.value.trim()||current.imageFolder||''; return {name,skills,quote,musicUrl,musicStartAt,account:current.account||'',avatar,poster,imageFolder,status:current.status||'',rotation:current.rotation||99}})}
 function validateDesignerMusicInputs(){const invalid=[...designerSettingsList.querySelectorAll('.designer-setting-music input[type="url"]')].find(input=>input.value.trim()&&!sharedMusicInfo(input.value)); if(!invalid)return true; invalid.focus(); invalid.setCustomValidity('請貼上正確的 Spotify 或 Apple Music 單曲連結'); invalid.reportValidity(); invalid.addEventListener('input',()=>invalid.setCustomValidity(''),{once:true}); setSync('請檢查分享音樂連結',true); return false}
-function readFileAsDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result||'')); reader.onerror=()=>reject(reader.error||new Error('讀取檔案失敗')); reader.readAsDataURL(file)})}
-async function uploadDesignerPhotoWithAppsScript(file,{name,kind,folderId}){const dataUrl=await readFileAsDataUrl(file); const data=await sheetApi('uploadDesignerImage',{editorToken:currentEditorToken,name,kind,folderId,fileName:file.name,mimeType:file.type,dataUrl,_requireResponse:true}); const url=data.url||data.fileUrl||''; if(!url)throw new Error('未取得上傳後連結'); return {url,fileId:data.fileId||'',folderId:data.folderId||'',folderName:data.folderName||'',isPublic:data.isPublic!==false,sharingWarning:data.sharingWarning||'',source:'apps-script'}}
-async function persistDesignerPhotoUrl(name){if(!apiUrl)throw new Error('尚未設定 Apps Script，無法寫入試算表'); const profile=collectDesignerSettings().find(item=>item.name===name); if(!profile)throw new Error('找不到設計師設定列'); const data=await sheetApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles:[profile]}); const saved=data.profiles?.[0]?normalizeDesignerRow(data.profiles[0]):profile; designers=designers.map(item=>item.name===name?mergeDesignerProfile(item,saved):item); renderDesigners(); return saved}
-async function uploadDesignerPhoto(event){const input=event.target, file=input.files?.[0], row=input.closest('.designer-setting-row'), kind=input.dataset.photoKind, name=row?.dataset.designer||'', folderId=row?.querySelector('[data-folder-id]')?.value.trim()||'', status=row?.querySelector('[data-photo-status]'); if(!file||!row||!kind)return; if(!apiUrl){setSync('尚未設定 Apps Script，無法寫入試算表',true); input.value=''; return} if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true); input.value=''; return} if(!String(file.type||'').startsWith('image/')){setSync('請選擇圖片檔案',true); input.value=''; return} if(file.size>designerImageMaxBytes){setSync('圖片檔案過大，請壓到 8MB 以下再上傳',true); input.value=''; return} status.textContent='照片上傳至 Google Drive 中...'; try{const result=await uploadDesignerPhotoWithAppsScript(file,{name,kind,folderId}); row.querySelector(`[data-photo-url="${kind}"]`).value=result.url; if(result.folderId)row.querySelector('[data-folder-id]').value=result.folderId; status.textContent=result.sharingWarning||'Drive 已建立連結，正在寫入設定表...'; await persistDesignerPhotoUrl(name); status.textContent=result.sharingWarning||`${kind==='avatar'?'頭像':'大海報'}已上傳並寫入試算表`; setSync(result.sharingWarning||`${name} ${kind==='avatar'?'頭像':'大海報'}已更新`,Boolean(result.sharingWarning))}catch(err){status.textContent='照片上傳失敗'; setSync(`照片上傳失敗：${err.message}`,true)}finally{input.value=''}}
 async function saveDesignerSettings(event){event.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再儲存設計師設定',true);return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} if(!validateDesignerMusicInputs())return; const submit=event.target.querySelector('button[type="submit"]'), profiles=collectDesignerSettings(); submit.disabled=true; setSync('設計師設定儲存中...'); try{let savedProfiles=profiles; if(apiUrl){const data=await sheetApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles}); if(data.profiles?.length)savedProfiles=data.profiles.map(normalizeDesignerRow)} const currentByName=new Map(designers.map(profile=>[profile.name,profile])); const savedByName=new Map(savedProfiles.map(profile=>[profile.name,profile])); designers=designerOptions.map(name=>mergeDesignerProfile(currentByName.get(name)||designerProfile(name),savedByName.get(name)||profiles.find(profile=>profile.name===name)||{})); hideDesignerSettings(); renderDesigners(); setSync('設計師設定已更新，重新讀取設計師資料中...'); await loadDesignerRoster(); render(); setSync('設計師設定已更新')}catch(err){setSync(`設計師設定儲存失敗：${err.message}`,true)}finally{submit.disabled=false}}
 function selectedDetails(){return detailsToArray(formEl.elements.details?.value||'')}
 function setDetailsValue(value){const selected=detailsToArray(value), box=$('#detailsOptions'); if(!box){if(formEl.elements.details)formEl.elements.details.value=formatDetails(selected); return} box.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); formEl.elements.details.value=formatDetails(selected)}
