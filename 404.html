@@ -4,103 +4,255 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>連結轉址中</title>
+  <title>EMC 短連結</title>
   <style>
-    :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#24302a;background:#f5f8f6}
-    body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;box-sizing:border-box}
-    main{width:min(420px,100%);padding:24px;border:1px solid #dce5e0;border-radius:8px;background:#fff;text-align:center;box-shadow:0 12px 30px rgba(16,24,40,.09)}
-    h1{margin:0 0 10px;font-size:20px}p{margin:0;color:#66736d;font-size:14px;line-height:1.6}
-    a{color:#08714d;font-weight:700}
+    :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
+    *{box-sizing:border-box}
+    body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:linear-gradient(180deg,#edf5f0 0,#f7f8f7 55%,#eef1f0 100%)}
+    main{width:min(560px,100%);padding:32px;border:1px solid #d9e2dd;border-radius:8px;background:#fff;box-shadow:0 18px 46px rgba(22,39,31,.11)}
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;color:#08714d;font-size:13px;font-weight:900}
+    .brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:7px;background:#08714d;color:#fff;font-size:12px}
+    h1{margin:0 0 8px;font-size:28px;line-height:1.2;color:#17211d}
+    .lead{margin:0 0 24px;color:#66736d;font-size:14px;line-height:1.65}
+    form{display:grid;gap:10px}
+    label{font-size:13px;font-weight:800;color:#3e5048}
+    .input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+    input{width:100%;min-width:0;height:46px;border:1px solid #cbd7d1;border-radius:7px;padding:0 13px;background:#fff;color:#17211d;font:inherit;font-size:15px;outline:none}
+    input:focus{border-color:#0f8f61;box-shadow:0 0 0 3px rgba(15,143,97,.13)}
+    button{min-height:46px;border:0;border-radius:7px;padding:0 18px;background:#08714d;color:#fff;font:inherit;font-weight:900;cursor:pointer}
+    button:hover{background:#075d40}button:disabled{cursor:wait;opacity:.62}
+    .status{min-height:22px;margin:8px 0 0;color:#66736d;font-size:13px;line-height:1.55}
+    .status.error{color:#b42318}
+    .result{margin-top:18px;padding-top:18px;border-top:1px solid #e4ebe7}
+    .result[hidden]{display:none}
+    .result-label{margin:0 0 8px;color:#66736d;font-size:12px;font-weight:800}
+    .result-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+    .short-url{display:flex;align-items:center;min-height:44px;overflow:hidden;border:1px solid #bcd8ca;border-radius:7px;padding:0 12px;background:#f1faf5;color:#075d40;font-weight:900;text-decoration:none;text-overflow:ellipsis;white-space:nowrap}
+    .copy-button{min-height:44px;background:#e8efeb;color:#274339;border:1px solid #d1ded7}
+    .copy-button:hover{background:#dce9e2}
+    .redirect{text-align:center}
+    .redirect .spinner{width:34px;height:34px;margin:2px auto 18px;border:3px solid #dce9e2;border-top-color:#08714d;border-radius:50%;animation:spin .8s linear infinite}
+    .redirect h1{font-size:22px}.redirect p{margin:0;color:#66736d;font-size:14px;line-height:1.6}
+    .home-link{display:inline-block;margin-top:14px;color:#08714d;font-weight:800}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){body{padding:16px}main{padding:24px 18px}.input-row,.result-row{grid-template-columns:1fr}h1{font-size:24px}button{width:100%}}
+    @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   </style>
 </head>
 <body>
-  <main>
-    <h1 id="title">連結轉址中</h1>
-    <p id="message">正在開啟補充資料…</p>
+  <main id="creator">
+    <div class="brand"><span class="brand-mark">EMC</span><span>EMC SHORT LINK</span></div>
+    <h1>建立短連結</h1>
+    <p class="lead">貼上完整網址，系統會自動產生一組 6 碼短連結。</p>
+    <form id="shortenForm" novalidate>
+      <label for="longUrl">長連結</label>
+      <div class="input-row">
+        <input id="longUrl" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/very-long-link" required>
+        <button id="createButton" type="submit">產生短連結</button>
+      </div>
+    </form>
+    <p class="status" id="status" aria-live="polite"></p>
+    <section class="result" id="result" hidden>
+      <p class="result-label">你的短連結</p>
+      <div class="result-row">
+        <a class="short-url" id="shortUrl" href="#" target="_blank" rel="noopener"></a>
+        <button class="copy-button" id="copyButton" type="button">複製</button>
+      </div>
+    </section>
+  </main>
+  <main class="redirect" id="redirector" hidden>
+    <div class="spinner" id="spinner" aria-hidden="true"></div>
+    <h1 id="redirectTitle">連結轉址中</h1>
+    <p id="redirectMessage">正在開啟目的頁面…</p>
   </main>
   <script>
     (() => {
       const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
       const spreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
       const linkSheetName = '補充資料連結';
-      const match = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
-      const title = document.querySelector('#title');
-      const message = document.querySelector('#message');
-      const fail = text => {
-        title.textContent = '無法開啟連結';
-        message.innerHTML = `${text}<br><a href="/">回到設計需求系統</a>`;
-      };
-      if (!match) {
-        fail('找不到這個頁面。');
-        return;
-      }
+      const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
+      const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
+      const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
+      const creator = document.querySelector('#creator');
+      const redirector = document.querySelector('#redirector');
 
-      const slot = match[1].toLowerCase();
-      const id = match[2];
-      const cacheKey = `supplementLink:${slot}:${id}`;
-      let settled = false;
-      let failures = 0;
-      let overallTimer = null;
-      const scripts = [];
-      const callbacks = [];
-      const cleanup = () => {
-        scripts.forEach(script => script.remove());
-        callbacks.forEach(callback => delete window[callback]);
+      const jsonp = (params, timeoutMs = 10000) => new Promise((resolve, reject) => {
+        const callback = `__shortLink_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement('script');
+        const timer = setTimeout(() => cleanup(new Error('連線逾時，請稍後再試。')), timeoutMs);
+        const cleanup = error => {
+          clearTimeout(timer);
+          script.remove();
+          delete window[callback];
+          if (error) reject(error);
+        };
+        window[callback] = data => {
+          cleanup();
+          data && data.ok ? resolve(data) : reject(new Error(data && data.error || '系統暫時無法處理。'));
+        };
+        script.onerror = () => cleanup(new Error('無法連上短連結服務。'));
+        const query = new URLSearchParams(Object.assign({}, params, { callback }));
+        script.src = `${apiUrl}?${query}`;
+        document.head.appendChild(script);
+      });
+
+      const showRedirector = () => {
+        creator.hidden = true;
+        redirector.hidden = false;
+      };
+      const redirectFail = text => {
+        document.querySelector('#spinner').hidden = true;
+        document.querySelector('#redirectTitle').textContent = '無法開啟連結';
+        document.querySelector('#redirectMessage').innerHTML = `${text}<br><a class="home-link" href="/404.html">建立新的短連結</a>`;
       };
       const redirect = url => {
-        if (settled || !/^https?:\/\//i.test(url || '')) return false;
-        settled = true;
-        clearTimeout(overallTimer);
-        try { localStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + 600000 })); } catch (error) {}
-        cleanup();
+        if (!/^https?:\/\//i.test(url || '')) return false;
         location.replace(url);
         return true;
       };
-      const rejectSource = () => {
-        failures += 1;
-        if (!settled && failures >= 2) {
-          clearTimeout(overallTimer);
-          cleanup();
-          fail('找不到對應的補充資料連結。');
+
+      const resolveShortLink = async code => {
+        showRedirector();
+        const cacheKey = `shortLink:${code}`;
+        try {
+          const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+          if (cached && cached.expires > Date.now() && redirect(cached.url)) return;
+        } catch (error) {}
+        try {
+          const data = await jsonp({ action: 'resolveShortLink', code });
+          try { localStorage.setItem(cacheKey, JSON.stringify({ url: data.url, expires: Date.now() + 600000 })); } catch (error) {}
+          if (!redirect(data.url)) throw new Error('目的網址格式不正確。');
+        } catch (error) {
+          redirectFail(error.message || '找不到這個短連結。');
         }
       };
-      const addJsonp = (src, callback, onData) => {
-        const script = document.createElement('script');
-        callbacks.push(callback);
-        scripts.push(script);
-        window[callback] = data => {
-          delete window[callback];
-          script.remove();
-          onData(data);
+
+      const resolveLegacyLink = (slot, id) => {
+        showRedirector();
+        const cacheKey = `supplementLink:${slot}:${id}`;
+        let settled = false;
+        let failures = 0;
+        const scripts = [];
+        const callbacks = [];
+        const cleanup = () => {
+          scripts.forEach(script => script.remove());
+          callbacks.forEach(callback => delete window[callback]);
         };
-        script.onerror = rejectSource;
-        script.src = src;
-        document.head.appendChild(script);
+        const finish = url => {
+          if (settled || !/^https?:\/\//i.test(url || '')) return false;
+          settled = true;
+          try { localStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + 600000 })); } catch (error) {}
+          cleanup();
+          location.replace(url);
+          return true;
+        };
+        const rejectSource = () => {
+          failures += 1;
+          if (!settled && failures >= 2) {
+            settled = true;
+            cleanup();
+            redirectFail('找不到對應的補充資料連結。');
+          }
+        };
+        const addJsonp = (src, callback, onData) => {
+          const script = document.createElement('script');
+          callbacks.push(callback);
+          scripts.push(script);
+          window[callback] = data => { delete window[callback]; script.remove(); onData(data); };
+          script.onerror = rejectSource;
+          script.src = src;
+          document.head.appendChild(script);
+        };
+        try {
+          const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+          if (cached && cached.expires > Date.now() && finish(cached.url)) return;
+        } catch (error) {}
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          redirectFail('連結查詢逾時，請稍後再試。');
+        }, 8000);
+        const gvizCallback = `__supplementGviz_${Date.now()}`;
+        const apiCallback = `__supplementApi_${Date.now()}`;
+        const column = String.fromCharCode(66 + slot.charCodeAt(0) - 97);
+        const query = `select ${column} where A = '${id}' limit 1`;
+        const gvizBase = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodeURIComponent(linkSheetName)}&tq=${encodeURIComponent(query)}`;
+        const tqx = encodeURIComponent(`out:json;responseHandler:${gvizCallback}`);
+        addJsonp(`${gvizBase}&tqx=${tqx}&ts=${Date.now()}`, gvizCallback, data => {
+          const cell = data && data.table && data.table.rows && data.table.rows[0] && data.table.rows[0].c && data.table.rows[0].c[0];
+          if (!finish(cell && (cell.f || cell.v))) rejectSource();
+        });
+        addJsonp(`${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${apiCallback}`, apiCallback, data => {
+          if (!finish(data && data.ok && data.url)) rejectSource();
+        });
       };
 
-      try {
-        const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-        if (cached && cached.expires > Date.now() && redirect(cached.url)) return;
-      } catch (error) {}
+      if (legacyMatch) {
+        resolveLegacyLink(legacyMatch[1].toLowerCase(), legacyMatch[2]);
+        return;
+      }
+      if (shortMatch) {
+        resolveShortLink(shortMatch[1]);
+        return;
+      }
+      if (!isCreatorPage) {
+        showRedirector();
+        redirectFail('找不到這個短連結。');
+        return;
+      }
 
-      overallTimer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        fail('連結查詢逾時，請稍後再試。');
-      }, 8000);
-      const gvizCallback = `__supplementGviz_${Date.now()}`;
-      const apiCallback = `__supplementApi_${Date.now()}`;
-      const column = String.fromCharCode(66 + slot.charCodeAt(0) - 97);
-      const query = `select ${column} where A = '${id}' limit 1`;
-      const gvizBase = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?sheet=${encodeURIComponent(linkSheetName)}&tq=${encodeURIComponent(query)}`;
-      const tqx = encodeURIComponent(`out:json;responseHandler:${gvizCallback}`);
-      addJsonp(`${gvizBase}&tqx=${tqx}&ts=${Date.now()}`, gvizCallback, data => {
-        const cell = data && data.table && data.table.rows && data.table.rows[0] && data.table.rows[0].c && data.table.rows[0].c[0];
-        if (!redirect(cell && (cell.f || cell.v))) rejectSource();
+      const form = document.querySelector('#shortenForm');
+      const input = document.querySelector('#longUrl');
+      const button = document.querySelector('#createButton');
+      const status = document.querySelector('#status');
+      const result = document.querySelector('#result');
+      const shortUrl = document.querySelector('#shortUrl');
+      const copyButton = document.querySelector('#copyButton');
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const value = input.value.trim();
+        status.classList.remove('error');
+        result.hidden = true;
+        try {
+          const parsed = new URL(value);
+          if (!/^https?:$/.test(parsed.protocol)) throw new Error();
+        } catch (error) {
+          status.textContent = '請輸入以 http:// 或 https:// 開頭的完整網址。';
+          status.classList.add('error');
+          input.focus();
+          return;
+        }
+        button.disabled = true;
+        button.textContent = '產生中…';
+        status.textContent = '正在建立短連結…';
+        try {
+          const data = await jsonp({ action: 'createShortLink', url: value }, 15000);
+          const generatedUrl = `${location.origin}/${data.code}`;
+          shortUrl.href = generatedUrl;
+          shortUrl.textContent = generatedUrl;
+          result.hidden = false;
+          status.textContent = '短連結已建立。';
+          copyButton.textContent = '複製';
+        } catch (error) {
+          status.textContent = error.message || '短連結建立失敗，請稍後再試。';
+          status.classList.add('error');
+        } finally {
+          button.disabled = false;
+          button.textContent = '產生短連結';
+        }
       });
-      addJsonp(`${apiUrl}?action=resolveSupplementLink&id=${encodeURIComponent(id)}&slot=${slot}&callback=${apiCallback}`, apiCallback, data => {
-        if (!redirect(data && data.ok && data.url)) rejectSource();
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(shortUrl.href);
+          copyButton.textContent = '已複製';
+          status.textContent = '短連結已複製到剪貼簿。';
+        } catch (error) {
+          input.value = shortUrl.href;
+          input.select();
+          document.execCommand('copy');
+          copyButton.textContent = '已複製';
+        }
       });
     })();
   </script>
