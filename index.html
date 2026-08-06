@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-06 12:18 Asia/Taipei | build: 20260806-designer-upload-modal-79 -->
+<!-- LAST_MODIFIED: 2026-08-06 12:25 Asia/Taipei | build: 20260806-shared-login-session-80 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260806-designer-upload-modal-79" />
+  <meta name="app-version" content="20260806-shared-login-session-80" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6688,7 +6688,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260806-designer-upload-modal-79" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260806-shared-login-session-80" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6738,10 +6738,11 @@ let notificationToastAccount = '';
 let notificationToastItemKey = '';
 const editorSessionKeys = ['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment'];
 const legacyAuthStorageKeys = ['authToken','currentUser','isLoggedIn','editorToken'];
-function editorSessionValue(key){return sessionStorage.getItem('designRequestEditorLoggedOut')==='1'?'':(sessionStorage.getItem(key)||'')}
-function writeEditorSessionValue(key,value){localStorage.removeItem(key); if(value)sessionStorage.setItem(key,value); else sessionStorage.removeItem(key)}
-function persistEditorSession(){sessionStorage.removeItem('designRequestEditorLoggedOut'); writeEditorSessionValue('designRequestEditorUser',currentEditor); writeEditorSessionValue('designRequestEditorDisplayName',currentEditorDisplayName); writeEditorSessionValue('designRequestEditorAccount',currentEditorAccount); writeEditorSessionValue('designRequestEditorToken',currentEditorToken); writeEditorSessionValue('designRequestEditorGroup',currentEditorGroup); writeEditorSessionValue('designRequestEditorDepartment',currentEditorDepartment)}
-function clearEditorWindowSession(){editorSessionKeys.forEach(key=>sessionStorage.removeItem(key)); sessionStorage.setItem('designRequestEditorLoggedOut','1')}
+const editorLoggedOutKey = 'designRequestEditorLoggedOut';
+function editorSessionValue(key){return localStorage.getItem(editorLoggedOutKey)==='1'||sessionStorage.getItem(editorLoggedOutKey)==='1'?'':(localStorage.getItem(key)||sessionStorage.getItem(key)||'')}
+function writeEditorSessionValue(key,value){if(value){localStorage.setItem(key,value);sessionStorage.setItem(key,value)}else{localStorage.removeItem(key);sessionStorage.removeItem(key)}}
+function persistEditorSession(){localStorage.removeItem(editorLoggedOutKey);sessionStorage.removeItem(editorLoggedOutKey); writeEditorSessionValue('designRequestEditorUser',currentEditor); writeEditorSessionValue('designRequestEditorDisplayName',currentEditorDisplayName); writeEditorSessionValue('designRequestEditorAccount',currentEditorAccount); writeEditorSessionValue('designRequestEditorToken',currentEditorToken); writeEditorSessionValue('designRequestEditorGroup',currentEditorGroup); writeEditorSessionValue('designRequestEditorDepartment',currentEditorDepartment)}
+function clearEditorWindowSession(){editorSessionKeys.forEach(key=>{localStorage.removeItem(key);sessionStorage.removeItem(key)}); localStorage.setItem(editorLoggedOutKey,'1');sessionStorage.setItem(editorLoggedOutKey,'1')}
 const pendingEditorSession = {
   user: editorSessionValue('designRequestEditorUser'),
   displayName: editorSessionValue('designRequestEditorDisplayName'),
@@ -6774,7 +6775,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260806-designer-upload-modal-79';
+const appBuildVersion = '20260806-shared-login-session-80';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -9151,7 +9152,7 @@ function todayAdminToken(){const {year,month,day}=taipeiDateParts(); return `loc
 function isLocalAdminToken(token=currentEditorToken){return String(token||'').startsWith('local-admin:')}
 function isLocalAdminTokenValid(token=currentEditorToken){return String(token||'')===todayAdminToken()}
 function loginLocalAdmin(){currentEditor='管理者'; currentEditorDisplayName='管理者'; currentEditorAccount='local-admin'; currentEditorToken=todayAdminToken(); currentEditorGroup='管理者'; currentEditorDepartment='管理者'; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); setSync('已登入：管理者'); finishLoginOverlay('登入成功：管理者')}
-function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem('designRequestEditorLoggedOut','1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; selectedCaseIds.clear()}
+function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; selectedCaseIds.clear()}
 function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|ping|frameCallback/i.test(error?.message||''); const displayContext=apiReadFailed?'Apps Script API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,scriptUrl:error?.scriptUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), scriptLikely=apiReadFailed||/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(scriptLikely?`請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。SCRIPT_URL：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
 function handleAdminLoginError(error){console.error('[管理者登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`管理者登入失敗：${message}`,{skipGoogleInit:false}); const panel=$('#adminLoginPanel'); if(panel)panel.hidden=false; setLoginNote(`管理者登入失敗：${message}`,true); setSync(`管理者登入失敗：${message}`,true); updateLoginUi(); render()}
