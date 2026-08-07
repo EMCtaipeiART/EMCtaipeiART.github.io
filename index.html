@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-urgent-multiplier-live-97" />
+  <meta name="app-version" content="20260808-json-refresh-rollback-98" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6790,6 +6790,12 @@ async function fetchGithubJsonDatabase({fresh=false}={}){
   if(!response.ok)throw new Error(`GitHub JSON 讀取失敗：HTTP ${response.status}`);
   const database=await response.json();
   if(!database?.tables?.database?.rows)throw new Error('GitHub JSON 資料庫格式錯誤');
+  const incomingRevision=Number(database.revision)||0, cachedRevision=Number(githubJsonDatabaseCache?.revision)||0;
+  if(githubJsonDatabaseCache&&incomingRevision<cachedRevision){
+    console.warn(`忽略較舊的 GitHub JSON 修訂版 ${incomingRevision}；目前已載入 ${cachedRevision}`);
+    githubJsonDatabaseLoadedAt=Date.now();
+    return githubJsonDatabaseCache;
+  }
   syncWeightRulesFromDatabase(database);
   githubJsonDatabaseCache=database;
   githubJsonDatabaseLoadedAt=Date.now();
@@ -6811,7 +6817,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260808-front-database-init-97';
+const appBuildVersion = '20260808-json-refresh-rollback-98';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7076,6 +7082,7 @@ function readRecentLocalWrites(){
 }
 let recentLocalWrites = readRecentLocalWrites();
 const localWriteTtlMs = 10*60*1000;
+const localWriteConfirmedGraceMs = 2*60*1000;
 const backgroundRefreshMs = 10000;
 const backgroundFullRefreshMs = 60000;
 let lastFullBackgroundRefreshAt = 0;
@@ -7313,7 +7320,7 @@ function markUpdatingCell(id,keys){const key=String(id), current=updatingCells.g
 function clearUpdatingCell(id,keys=null){const key=String(id); if(!keys){updatingCells.delete(key);return} const current=updatingCells.get(key); if(!current)return; keys.forEach(item=>current.delete(item)); if(!current.size)updatingCells.delete(key)}
 function isUpdatingCell(id,key){return updatingCells.get(String(id))?.has(key)}
 function persistRecentLocalWrites(){try{localStorage.setItem(recentLocalWritesKey,JSON.stringify([...recentLocalWrites]))}catch(err){console.warn('無法儲存近期 JSON 寫入保護',err)}}
-function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id); recentLocalWrites.set(key,{changes:{...changes},expires:Date.now()+ttl});persistRecentLocalWrites()}
+function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id); recentLocalWrites.set(key,{changes:{...changes},expires:Date.now()+ttl,confirmedAt:0});persistRecentLocalWrites()}
 function forgetLocalWrite(id){if(recentLocalWrites.delete(String(id)))persistRecentLocalWrites()}
 function localWriteValueMatches(row,key,value){
   const actual=row?.[key]??'';
@@ -7337,16 +7344,22 @@ function applyRecentLocalWrites(list){
     if(!entry)return [row];
     if(entry.changes?.__deleted)return [];
     if(localWriteHasReachedSheet(row,entry.changes)){
-      forgetLocalWrite(row.id);
+      if(!entry.confirmedAt){entry.confirmedAt=now;changed=true}
+      else if(now-entry.confirmedAt>=localWriteConfirmedGraceMs){recentLocalWrites.delete(String(row.id));changed=true}
       return [row];
     }
     return [normalizeRow({...row,...entry.changes})];
   });
   recentLocalWrites.forEach((entry,id)=>{
     if(presentIds.has(id))return;
-    if(entry.changes?.__deleted){forgetLocalWrite(id);return}
+    if(entry.changes?.__deleted){
+      if(!entry.confirmedAt){entry.confirmedAt=now;changed=true}
+      else if(now-entry.confirmedAt>=localWriteConfirmedGraceMs){recentLocalWrites.delete(id);changed=true}
+      return;
+    }
     if(entry.changes?.__created)protectedRows.push(normalizeRow(entry.changes));
   });
+  if(changed)persistRecentLocalWrites();
   return protectedRows.sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
 }
 function extractEmail(value){return String(value||'').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]||''}
