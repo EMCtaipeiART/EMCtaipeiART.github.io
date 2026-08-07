@@ -2,4 +2,5 @@ backend/data/backups/
 backend/data/*.bak
 backend/data/*.tmp
 backend/.env
+backend/media/uploads/
 .DS_Store

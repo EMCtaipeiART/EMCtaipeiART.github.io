@@ -1,6 +1,6 @@
 import { createServer as createHttpServer } from 'node:http';
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import { TABLE_NAMES, TABLE_SCHEMAS } from './schema.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-2026-08-07-1';
+const VERSION = 'json-backend-2026-08-07-2';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -19,8 +19,13 @@ const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvw
 const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
   'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment',
-  'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'logout'
+  'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
+  'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia'
 ]);
+const PROJECT_GROUPS = {
+  '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
+  '影音': { designers: ['Karl', 'Noise'], type: '影音' }
+};
 
 const KEY_TO_HEADER = {
   id: '案件編號', month: '月份', client: '客戶別', project: '專案名稱', owner: '專案負責人', type: '設計種類',
@@ -45,6 +50,13 @@ const SUPPLEMENT_SLOTS = {
   c: { key: 'referenceUrl', header: '參考範例連結', column: 'C' },
   d: { key: 'otherUrl', header: '其他連結', column: 'D' }
 };
+const IMAGE_MIME_EXTENSIONS = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif'
+};
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function text(value) { return String(value ?? '').trim(); }
 function truthy(value) { return value === true || /^(?:true|1|yes|on)$/i.test(text(value)); }
@@ -65,6 +77,32 @@ function canonicalAccount(value) {
   return account && !account.includes('@') ? `${account}${LOGIN_DOMAIN}` : account;
 }
 function isHttpUrl(value) { try { return /^https?:$/.test(new URL(text(value)).protocol); } catch { return false; } }
+function decodeImagePayload(payload = {}) {
+  const input = text(payload.dataUrl || payload.data || payload.base64);
+  const match = input.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=\s]+)$/i);
+  const mimeType = text(match?.[1] || payload.mimeType).toLowerCase();
+  const base64 = (match?.[2] || input).replace(/\s+/g, '');
+  if (!IMAGE_MIME_EXTENSIONS[mimeType] || !base64) throw new Error('圖片僅支援 JPG、PNG、WebP 或 GIF');
+  const bytes = Buffer.from(base64, 'base64');
+  if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('圖片檔案必須小於 8 MB');
+  const valid = mimeType === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8
+    || mimeType === 'image/png' && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    || mimeType === 'image/gif' && /^GIF8[79]a$/.test(bytes.subarray(0, 6).toString('ascii'))
+    || mimeType === 'image/webp' && bytes.subarray(0, 4).toString('ascii') === 'RIFF' && bytes.subarray(8, 12).toString('ascii') === 'WEBP';
+  if (!valid) throw new Error('圖片內容與檔案格式不符');
+  return { bytes, mimeType, extension: IMAGE_MIME_EXTENSIONS[mimeType] };
+}
+function mediaFilePathFromUrl(urlValue, mediaRoot, mediaUrlPath) {
+  try {
+    const pathname = new URL(text(urlValue), 'http://local.invalid').pathname;
+    const prefix = `/${text(mediaUrlPath).replace(/^\/+|\/+$/g, '')}/`;
+    if (!pathname.startsWith(prefix)) return '';
+    const fileName = decodeURIComponent(pathname.slice(prefix.length));
+    if (!/^[A-Za-z0-9._-]+$/.test(fileName)) return '';
+    const resolved = path.resolve(mediaRoot, fileName);
+    return resolved.startsWith(`${path.resolve(mediaRoot)}${path.sep}`) ? resolved : '';
+  } catch { return ''; }
+}
 function rowYear(row) { return (text(row['開始日期'] || row['結束日期']).match(/(19\d{2}|20\d{2}|2100)/) || [])[1] || ''; }
 function monthFromDate(value) { const match = text(value).match(/(?:19\d{2}|20\d{2}|2100)[/-](\d{1,2})/); return match ? `${Number(match[1])}月` : ''; }
 function unique(list) { return [...new Set(list.filter(Boolean))]; }
@@ -240,6 +278,80 @@ function updateSettingsRow(row, settings = {}) {
 export function createActionHandler(database, options = {}) {
   const loginPassword = options.loginPassword ?? process.env.JSON_DB_LOGIN_PASSWORD ?? '';
   const googleClientId = options.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || GOOGLE_CLIENT_ID;
+  const erpBaseUrl = text(options.erpBaseUrl || process.env.ERP_BASE_URL || 'https://manage.emctaipei.com').replace(/\/+$/, '');
+  const erpClientId = text(options.erpClientId || process.env.ERP_CLIENT_ID);
+  const erpClientSecret = text(options.erpClientSecret || process.env.ERP_CLIENT_SECRET);
+  const erpRedirectUri = text(options.erpRedirectUri || process.env.ERP_REDIRECT_URI);
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  const mediaRoot = path.resolve(options.mediaRoot || process.env.MEDIA_ROOT || path.join(options.rootDir || ROOT, 'media', 'uploads'));
+  const mediaUrlPath = `/${text(options.mediaUrlPath || process.env.MEDIA_URL_PATH || '/media/uploads').replace(/^\/+|\/+$/g, '')}`;
+
+  async function fetchExternalJson(url, init, label) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.max(1000, Number(options.oauthTimeoutMs) || 15000));
+    try {
+      const response = await fetchImpl(url, { ...init, signal: controller.signal });
+      const raw = await response.text();
+      let data;
+      try { data = JSON.parse(raw || '{}'); } catch { return { ok: false, status: response.status, error: `${label}回傳格式錯誤`, reason: `${label.toUpperCase()}_JSON_ERROR` }; }
+      return { ok: response.ok, status: response.status, data };
+    } catch (error) {
+      return { ok: false, status: 0, error: error?.name === 'AbortError' ? `${label}連線逾時` : `${label}連線失敗：${error?.message || error}`, reason: `${label.toUpperCase()}_FETCH_FAILED` };
+    } finally { clearTimeout(timer); }
+  }
+
+  async function loginFromErpProfile(action, profile) {
+    if (!profile || profile.is_active === false) return { ok: false, action, error: 'ERP 帳號已停用或無效', reason: 'ERP_ACCOUNT_INACTIVE' };
+    const account = canonicalAccount(profile.email);
+    if (!account) return { ok: false, action, error: 'ERP 身份未回傳 email', reason: 'ERP_EMAIL_MISSING' };
+    if (!account.endsWith(LOGIN_DOMAIN)) return { ok: false, action, error: `請使用 ${LOGIN_DOMAIN} 公司帳號登入`, reason: 'DOMAIN_NOT_ALLOWED' };
+    return database.transaction(draft => {
+      let row = settingsRow(draft, account);
+      if (!row) {
+        row = Object.fromEntries(TABLE_SCHEMAS['設定'].headers.map(header => [header, '']));
+        row['帳號'] = account;
+        row['名字'] = text(profile.name || profile.name_en) || account.split('@')[0];
+        row['顯示名'] = row['名字'];
+        row['部門'] = text(profile.department);
+        draft.tables['設定'].rows.push(row);
+      } else if (!text(row['部門']) && profile.department) row['部門'] = text(profile.department);
+      const token = randomUUID();
+      const user = text(row['名字'] || profile.name || profile.name_en || account.split('@')[0]);
+      draft.internal.sessions[token] = {
+        user, account, provider: 'erp', erpEmployeeId: text(profile.employee_id),
+        role: text(profile.role), department: text(profile.department), expiresAt: Date.now() + SESSION_SECONDS * 1000
+      };
+      return {
+        ok: true, action, provider: 'erp', user, account, email: account, token, expiresIn: SESSION_SECONDS,
+        settings: settingsResponse(row),
+        erpProfile: {
+          employee_id: text(profile.employee_id), name: text(profile.name), name_en: text(profile.name_en), email: account,
+          role: text(profile.role), department: text(profile.department), rank: text(profile.rank), title: text(profile.title),
+          is_active: profile.is_active !== false, is_pm: Boolean(profile.is_pm)
+        }
+      };
+    }, 'erp login');
+  }
+
+  async function saveUploadedImage(payload, context, label) {
+    const image = decodeImagePayload(payload);
+    await mkdir(mediaRoot, { recursive: true });
+    const prefix = text(label).replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'image';
+    const fileName = `${prefix}-${Date.now()}-${randomUUID()}${image.extension}`;
+    await writeFile(path.join(mediaRoot, fileName), image.bytes, { mode: 0o600 });
+    return {
+      fileName,
+      mimeType: image.mimeType,
+      size: image.bytes.length,
+      url: `${String(context.baseUrl || process.env.PUBLIC_BASE_URL || 'http://localhost:8787').replace(/\/$/, '')}${mediaUrlPath}/${encodeURIComponent(fileName)}`
+    };
+  }
+
+  async function removeUploadedFile(url) {
+    const filePath = mediaFilePathFromUrl(url, mediaRoot, mediaUrlPath);
+    if (!filePath) return false;
+    try { await unlink(filePath); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+  }
 
   async function loginFromProfile(action, profile) {
     if (profile.aud !== googleClientId) return { ok: false, action, error: 'Google OAuth client_id 不符合', reason: 'CLIENT_ID_MISMATCH' };
@@ -271,6 +383,16 @@ export function createActionHandler(database, options = {}) {
     if (action === 'diagnose') return { ok: true, action, version: VERSION, storage: 'json', revision: snapshot.revision, tables: Object.fromEntries(TABLE_NAMES.map(name => [name, snapshot.tables[name].rows.length])) };
     if (action === 'urlFetchAuthCheck') return { ok: true, action, status: 200, message: 'Node.js fetch 可執行', version: VERSION };
     if (action === 'writeAccessCheck') return { ok: true, action, checkedAt: new Date().toISOString(), nonMutating: true, permissions: { createRequest: true, updateRequest: true, updateStatusDetails: false, reason: 'JSON 資料庫可寫入；狀態與細節需登入' }, checks: { databaseWritable: true } };
+
+    if (action === 'adminLogin') {
+      const password = text(payload.password);
+      if (!password || password !== (loginPassword || currentPassword())) return { ok: false, action, error: '管理密碼不正確' };
+      return database.transaction(draft => {
+        const token = randomUUID();
+        draft.internal.sessions[token] = { user: '管理者', account: 'admin@local', provider: 'admin', expiresAt: Date.now() + SESSION_SECONDS * 1000 };
+        return { ok: true, action, user: '管理者', token, expiresIn: SESSION_SECONDS };
+      }, 'admin login');
+    }
 
     if (action === 'list' || action === 'recent') {
       const year = text(payload.year);
@@ -330,6 +452,54 @@ export function createActionHandler(database, options = {}) {
       if (!response.ok) return { ok: false, action, error: 'Google token 驗證失敗', reason: 'TOKENINFO_FAILED' };
       return loginFromProfile(action, await response.json());
     }
+    if (action === 'erpLoginConfig') {
+      const missing = [
+        erpClientId ? '' : 'ERP_CLIENT_ID',
+        erpClientSecret ? '' : 'ERP_CLIENT_SECRET',
+        erpRedirectUri ? '' : 'ERP_REDIRECT_URI'
+      ].filter(Boolean);
+      return {
+        ok: missing.length === 0,
+        action,
+        baseUrl: erpBaseUrl,
+        clientId: erpClientId,
+        redirectUri: erpRedirectUri,
+        scope: 'openid profile',
+        missing,
+        ...(missing.length ? { error: `ERP OAuth 尚未完成後端設定：${missing.join(', ')}` } : {})
+      };
+    }
+    if (action === 'erpLogin') {
+      const code = text(payload.code), codeVerifier = text(payload.codeVerifier || payload.code_verifier);
+      const redirectUri = text(payload.redirectUri || payload.redirect_uri || erpRedirectUri);
+      const missing = [erpClientId ? '' : 'ERP_CLIENT_ID', erpClientSecret ? '' : 'ERP_CLIENT_SECRET', erpRedirectUri ? '' : 'ERP_REDIRECT_URI'].filter(Boolean);
+      if (missing.length) return { ok: false, action, error: 'ERP OAuth 尚未完成後端設定', reason: 'ERP_CONFIG_MISSING', missing };
+      if (!code) return { ok: false, action, error: '缺少 ERP 授權碼', reason: 'ERP_CODE_MISSING' };
+      if (!codeVerifier) return { ok: false, action, error: '缺少 ERP PKCE verifier', reason: 'ERP_VERIFIER_MISSING' };
+      if (redirectUri !== erpRedirectUri) return { ok: false, action, error: 'ERP redirect_uri 與後端設定不一致', reason: 'ERP_REDIRECT_URI_MISMATCH' };
+      const tokenResult = await fetchExternalJson(`${erpBaseUrl}/api/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code', code, redirect_uri: erpRedirectUri,
+          client_id: erpClientId, client_secret: erpClientSecret, code_verifier: codeVerifier
+        })
+      }, 'ERP token');
+      if (!tokenResult.ok || !text(tokenResult.data?.access_token)) return {
+        ok: false, action,
+        error: tokenResult.data?.error_description || tokenResult.data?.error || tokenResult.error || `ERP token 換取失敗：${tokenResult.status}`,
+        reason: tokenResult.data?.error || tokenResult.reason || 'ERP_TOKEN_FAILED', status: tokenResult.status
+      };
+      const infoResult = await fetchExternalJson(`${erpBaseUrl}/api/oauth/userinfo`, {
+        method: 'GET', headers: { Authorization: `Bearer ${text(tokenResult.data.access_token)}`, Accept: 'application/json' }
+      }, 'ERP userinfo');
+      if (!infoResult.ok) return {
+        ok: false, action,
+        error: infoResult.data?.error_description || infoResult.data?.error || infoResult.error || `ERP userinfo 讀取失敗：${infoResult.status}`,
+        reason: infoResult.data?.error || infoResult.reason || 'ERP_USERINFO_FAILED', status: infoResult.status
+      };
+      return loginFromErpProfile(action, infoResult.data);
+    }
     if (action === 'verifyToken') {
       const session = sessionFor(snapshot, payload.editorToken);
       if (!session) return { ok: false, action, error: 'TOKEN_EXPIRED' };
@@ -384,6 +554,70 @@ export function createActionHandler(database, options = {}) {
         }));
         return { ok: true, action, profiles };
       }, 'save designer profiles');
+    }
+
+    if (action === 'listDesignerMedia') {
+      requireSession(snapshot, payload);
+      const name = text(payload.name || payload.designer);
+      const profile = snapshot.tables['設定'].rows.find(row => text(row['名字']) === name);
+      if (!profile) throw new Error('找不到設計師設定');
+      const reels = snapshot.tables.reels.rows.map(publicReel).filter(reel => reel.name === name);
+      return { ok: true, action, name, profile: settingsResponse(profile), reels };
+    }
+    if (action === 'uploadDesignerImage') {
+      requireSession(snapshot, payload);
+      const name = text(payload.name || payload.designer), rawKind = text(payload.kind).toLowerCase();
+      const kind = rawKind === 'poster' ? 'poster' : (/^(?:story|reel)$/.test(rawKind) ? 'story' : 'avatar');
+      if (!PROJECT_GROUPS['平面'].designers.includes(name) && !PROJECT_GROUPS['影音'].designers.includes(name)) throw new Error('找不到設計師');
+      const uploaded = await saveUploadedImage(payload, context, `${name}-${kind}`);
+      try {
+        return await database.transaction(draft => {
+          const row = draft.tables['設定'].rows.find(item => text(item['名字']) === name);
+          if (!row) throw new Error('找不到設計師設定');
+          if (kind === 'avatar') row['頭像連結'] = uploaded.url;
+          else if (kind === 'poster') row['頭像大圖連結'] = uploaded.url;
+          else draft.tables.reels.rows.push({ '名字': name, '限時動態連結': uploaded.url, '按讚': '', '倒讚': '', '留言': '[]' });
+          return { ok: true, action, name, kind, url: uploaded.url, fileName: uploaded.fileName, size: uploaded.size };
+        }, `upload designer ${kind}`);
+      } catch (error) { await removeUploadedFile(uploaded.url).catch(() => {}); throw error; }
+    }
+    if (action === 'uploadUserAvatar') {
+      const session = requireSession(snapshot, payload);
+      const account = canonicalAccount(payload.account || session.account);
+      if (account !== canonicalAccount(session.account) && !isManager(snapshot, session)) throw new Error('不可修改其他帳號的頭像');
+      const uploaded = await saveUploadedImage(payload, context, `${account.split('@')[0]}-avatar`);
+      try {
+        return await database.transaction(draft => {
+          const row = settingsRow(draft, account);
+          if (!row) throw new Error('找不到個人設定資料');
+          row['頭像連結'] = uploaded.url;
+          return { ok: true, action, account, url: uploaded.url, fileName: uploaded.fileName, size: uploaded.size, settings: settingsResponse(row) };
+        }, 'upload user avatar');
+      } catch (error) { await removeUploadedFile(uploaded.url).catch(() => {}); throw error; }
+    }
+    if (action === 'deleteDesignerMedia') {
+      requireSession(snapshot, payload);
+      const name = text(payload.name || payload.designer), kind = text(payload.kind).toLowerCase();
+      const result = await database.transaction(draft => {
+        if (kind === 'avatar' || kind === 'poster') {
+          const row = draft.tables['設定'].rows.find(item => text(item['名字']) === name);
+          if (!row) throw new Error('找不到設計師設定');
+          const header = kind === 'poster' ? '頭像大圖連結' : '頭像連結', url = text(row[header]);
+          row[header] = '';
+          return { ok: true, action, name, kind, url };
+        }
+        const rows = draft.tables.reels.rows;
+        const requestedId = text(payload.reelId || payload.id), requestedUrl = text(payload.url || payload.imageUrl);
+        const index = rows.findIndex((row, rowIndex) => text(row['名字']) === name && (
+          (requestedUrl && text(row['限時動態連結']) === requestedUrl)
+          || (requestedId && publicReel(row, rowIndex).id === requestedId)
+        ));
+        if (index < 0) throw new Error('找不到限時動態');
+        const [row] = rows.splice(index, 1);
+        return { ok: true, action, name, kind: 'story', url: text(row['限時動態連結']) };
+      }, 'delete designer media');
+      result.fileDeleted = await removeUploadedFile(result.url).catch(() => false);
+      return result;
     }
 
     if (action === 'listReels') return { ok: true, action, reels: snapshot.tables.reels.rows.map(publicReel).filter(reel => reel.name && reel.imageUrl) };
@@ -467,6 +701,42 @@ export function createActionHandler(database, options = {}) {
       }, 'confirm modification');
     }
 
+    if (action === 'createFlatProject') {
+      const session = requireSession(snapshot, payload);
+      const source = payload.row || payload.data || {};
+      const expected = text(source.expectedDesigner || source['預計設計師']);
+      const groupEntry = Object.entries(PROJECT_GROUPS).find(([, config]) => config.designers.includes(expected));
+      if (!groupEntry) throw new Error('預計設計師必須為平面組或影音組輪值名單');
+      const [projectKind, config] = groupEntry;
+      const replacement = text(source.replacement || source['替換(選填)']);
+      const designer = replacement && replacement !== expected ? replacement : expected;
+      if (!config.designers.includes(designer)) throw new Error('替換設計師不在同一輪值組別');
+      if (designer !== expected && !text(source.reason || source['調整原因(選填)'])) throw new Error('有替換設計師時，請填寫調整原因');
+      return database.transaction(draft => {
+        const row = toSheetRow({
+          client: source.client, project: source.project, owner: source.owner,
+          type: config.type, stage: projectKind === '影音' && text(source.projectType).includes('拍攝') ? '拍攝' : '後製',
+          qty: source.qty, start: source.start, end: source.end, designer, status: '未開始'
+        });
+        for (const header of ['客戶別', '專案名稱', '專案負責人', '數量', '開始日期', '結束日期']) if (!text(row[header])) throw new Error(`請填寫「${header}」`);
+        row['案件編號'] = nextCaseId(draft.tables.database.rows);
+        row['填單時間'] = nowTaipei().slice(0, 10).replace(/\//g, '-');
+        row['月份'] = monthFromDate(row['開始日期']);
+        draft.tables.database.rows.push(row);
+
+        const settingsRows = draft.tables['設定'].rows;
+        const ranked = config.designers.map((name, index) => {
+          const settings = settingsRows.find(item => text(item['名字']) === name);
+          return { name, settings, rotation: Number(settings?.['新專案輪值']) || index + 1 };
+        }).sort((a, b) => a.rotation - b.rotation || config.designers.indexOf(a.name) - config.designers.indexOf(b.name));
+        const consumedIndex = ranked.findIndex(item => item.name === designer);
+        const reordered = [...ranked.slice(0, consumedIndex), ...ranked.slice(consumedIndex + 1), ranked[consumedIndex]];
+        reordered.forEach((item, index) => { if (item.settings) item.settings['新專案輪值'] = String(index + 1); });
+        const rotations = config.designers.map(name => ({ name, rotation: Number(settingsRows.find(item => text(item['名字']) === name)?.['新專案輪值']) || 99 }));
+        return { ok: true, action, projectKind, rowNumber: draft.tables.database.rows.length + 1, databaseRowNumber: draft.tables.database.rows.length + 1, databaseRow: toApiRow(row, draft.tables.database.rows.length - 1), rotations, user: session.user };
+      }, 'create project');
+    }
+
     if (['append', 'create', 'add', 'submit', 'save'].includes(action)) {
       const source = payload.row || payload.data || payload, requestId = text(payload.requestId);
       return database.transaction(draft => {
@@ -521,14 +791,13 @@ export function createActionHandler(database, options = {}) {
       }, 'delete request');
     }
     if (action === 'detailOptions' || action === 'options') return { ok: true, action, types: [], stages: [], details: {} };
-    if (action === 'erpLoginConfig') return { ok: false, action, error: 'JSON 後台尚未設定 ERP OAuth；請設定 ERP_BASE_URL、ERP_CLIENT_ID、ERP_CLIENT_SECRET、ERP_REDIRECT_URI' };
     if (WRITE_ACTIONS.has(action)) throw new Error(`尚未支援寫入動作：${action}`);
     return { ok: false, action, error: 'Unknown action' };
   };
 }
 
 function contentType(filePath) {
-  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.md': 'text/markdown; charset=utf-8' };
+  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.md': 'text/markdown; charset=utf-8' };
   return types[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
 }
 async function bodyJson(req, limit = 12 * 1024 * 1024) {
@@ -557,11 +826,19 @@ export async function createApp(options = {}) {
   const rootDir = path.resolve(options.rootDir || ROOT);
   const database = options.database || await new JsonDatabase(options.dbPath || process.env.JSON_DB_PATH || DEFAULT_DB_PATH).init();
   const handleAction = createActionHandler(database, options);
+  const configuredOrigins = text(options.corsOrigins || process.env.CORS_ORIGINS || 'https://emctaipeiart.github.io,http://127.0.0.1:8787,http://localhost:8787')
+    .split(',').map(value => value.trim()).filter(Boolean);
   const server = createHttpServer(async (req, res) => {
     const url = new URL(req.url || '/', requestBaseUrl(req));
     try {
+      const requestOrigin = text(req.headers.origin);
+      if (requestOrigin && (configuredOrigins.includes('*') || configuredOrigins.includes(requestOrigin))) {
+        res.setHeader('Access-Control-Allow-Origin', configuredOrigins.includes('*') ? '*' : requestOrigin);
+        res.setHeader('Vary', 'Origin');
+      }
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, { 'Access-Control-Allow-Origin': req.headers.origin || '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Max-Age': '600' });
+        if (requestOrigin && !configuredOrigins.includes('*') && !configuredOrigins.includes(requestOrigin)) return sendJson(res, 403, { ok: false, error: '不允許的網站來源' });
+        res.writeHead(204, { 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS', 'Access-Control-Max-Age': '600' });
         return res.end();
       }
 
@@ -599,16 +876,37 @@ export async function createApp(options = {}) {
         if (!genericAuthorized(snapshot, payload, req)) return sendJson(res, 401, { ok: false, error: '需要管理者權限' });
         if (req.method === 'GET') {
           const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0), limit = Math.min(1000, Math.max(1, Number(url.searchParams.get('limit')) || 100));
-          const rows = snapshot.tables[tableName].rows.slice(offset, offset + limit);
-          return sendJson(res, 200, { ok: true, table: tableName, offset, limit, total: snapshot.tables[tableName].rows.length, rows });
+          const query = text(url.searchParams.get('q')).toLocaleLowerCase('zh-Hant');
+          const sortKey = text(url.searchParams.get('sort')), descending = text(url.searchParams.get('order')).toLowerCase() === 'desc';
+          let rows = snapshot.tables[tableName].rows.map((row, index) => ({ ...row, _rowNumber: index + 2 }));
+          if (query) rows = rows.filter(row => Object.entries(row).some(([key, value]) => key !== '_rowNumber' && text(value).toLocaleLowerCase('zh-Hant').includes(query)));
+          if (sortKey && snapshot.tables[tableName].headers.includes(sortKey)) rows.sort((a, b) => {
+            const av = text(a[sortKey]), bv = text(b[sortKey]);
+            const result = av.localeCompare(bv, 'zh-Hant', { numeric: true, sensitivity: 'base' });
+            return descending ? -result : result;
+          });
+          const total = rows.length;
+          return sendJson(res, 200, { ok: true, table: tableName, offset, limit, total, rows: rows.slice(offset, offset + limit) });
         }
         const result = await database.transaction(draft => {
           const table = draft.tables[tableName], primaryKey = table.primaryKey;
-          if (req.method === 'POST') { const row = payload.row || payload; table.rows.push(row); return { ok: true, table: tableName, rowNumber: table.rows.length + 1, row }; }
+          if (req.method === 'POST') {
+            const input = payload.row || payload;
+            const row = Object.fromEntries(table.headers.map(header => [header, input[header] == null ? '' : String(input[header])]));
+            if (primaryKey && !text(row[primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
+            if (primaryKey && table.rows.some(item => text(item[primaryKey]) === text(row[primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
+            table.rows.push(row); return { ok: true, table: tableName, rowNumber: table.rows.length + 1, row };
+          }
           if (!key) throw new Error('缺少資料鍵值');
           const index = primaryKey ? table.rows.findIndex(row => text(row[primaryKey]) === key) : Number(key) - 2;
           if (index < 0 || !table.rows[index]) throw new Error('找不到資料');
-          if (req.method === 'PATCH') { Object.assign(table.rows[index], payload.row || payload); return { ok: true, table: tableName, rowNumber: index + 2, row: table.rows[index] }; }
+          if (req.method === 'PATCH') {
+            const patch = payload.row || payload;
+            for (const header of table.headers) if (Object.hasOwn(patch, header)) table.rows[index][header] = patch[header] == null ? '' : String(patch[header]);
+            if (primaryKey && !text(table.rows[index][primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
+            if (primaryKey && table.rows.some((item, itemIndex) => itemIndex !== index && text(item[primaryKey]) === text(table.rows[index][primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
+            return { ok: true, table: tableName, rowNumber: index + 2, row: table.rows[index] };
+          }
           if (req.method === 'DELETE') { const [row] = table.rows.splice(index, 1); return { ok: true, table: tableName, deleted: row }; }
           throw new Error('不支援的 HTTP 方法');
         }, `generic ${req.method} ${tableName}`);

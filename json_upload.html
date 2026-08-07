@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="app-version" content="20260807-json-upload-2">
+  <title>JSON 圖片管理｜EMC 設計部</title>
+  <style>
+    :root{--bg:#f2f6f4;--panel:#fff;--ink:#17211d;--muted:#68756f;--line:#dce5e0;--green:#0f8f61;--green2:#e7f6ef;--red:#c93636;--shadow:0 16px 40px rgba(18,38,28,.1)}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#eaf6f0,var(--bg));color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!important}
+    main{width:min(900px,100%);margin:auto;padding:24px}.head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.head h1{margin:0;font-size:24px}.head p{margin:6px 0 0;color:var(--muted)}.close{border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 12px;font-weight:800}
+    .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);padding:18px}.notice{min-height:42px;margin-bottom:14px;border:1px solid var(--line);border-radius:9px;background:#f8faf9;padding:10px 12px;color:var(--muted);font-size:13px;font-weight:750}.notice.ok{border-color:#8bd1b0;background:var(--green2);color:#087249}.notice.error{border-color:#e7aaaa;background:#fff3f3;color:var(--red)}
+    .upload{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:14px}.fields{display:grid;gap:12px}.field{display:grid;gap:6px;color:var(--muted);font-size:13px;font-weight:800}.field input,.field select{width:100%;min-height:42px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 10px}.drop{display:grid;place-items:center;min-height:150px;border:2px dashed #a9c8b8;border-radius:12px;background:#f7fbf9;text-align:center;padding:18px}.drop input{width:100%}.preview{width:180px;height:180px;border:1px solid var(--line);border-radius:12px;background:#f2f4f3;object-fit:cover}.actions{display:flex;gap:8px;margin-top:14px}.btn{min-height:40px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 13px;font-weight:850}.btn.primary{border-color:var(--green);background:var(--green);color:#fff}.btn.danger{color:var(--red)}.btn:disabled{opacity:.5;cursor:not-allowed}
+    h2{margin:22px 0 10px;font-size:17px}.media{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.item{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff}.item img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#eef2f0}.item-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px}.item-foot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px;font-weight:800}.item-foot button{border:0;background:#fff;color:var(--red);font-size:12px;font-weight:850}.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted)}
+    @media(max-width:650px){main{padding:14px}.upload{grid-template-columns:1fr}.preview{width:100%;height:auto;aspect-ratio:1/1}.media{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="head"><div><h1 id="title">圖片管理</h1><p id="subtitle">圖片直接存入 JSON 後端媒體目錄。</p></div><button class="close" id="close" type="button">關閉</button></header>
+    <section class="card">
+      <div class="notice" id="notice">正在驗證登入狀態…</div>
+      <div class="upload">
+        <div class="fields">
+          <label class="field" id="kindWrap">圖片用途<select id="kind"><option value="avatar">頭像</option><option value="poster">海報</option><option value="story">Reels／限時動態</option></select></label>
+          <label class="drop">選擇 JPG、PNG、WebP 或 GIF（8 MB 以內）<input id="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label>
+        </div>
+        <img class="preview" id="preview" alt="圖片預覽">
+      </div>
+      <div class="actions"><button class="btn primary" id="upload" type="button" disabled>上傳並套用</button><button class="btn" id="clear" type="button">清除</button></div>
+      <section id="mediaSection"><h2>目前圖片</h2><div class="media" id="media"><div class="empty">載入中…</div></div></section>
+    </section>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),hash=new URLSearchParams(location.hash.slice(1));
+    const mode=params.get('mode')==='user'?'user':'designer',designer=String(params.get('designer')||'').trim(),account=String(params.get('account')||'').trim().toLowerCase(),closeNonce=params.get('closeNonce')||'',token=hash.get('token')||'';
+    history.replaceState(null,document.title,location.pathname+location.search);
+    function apiBase(){const query=params.get('api'),saved=localStorage.getItem('designRequestApiUrl')||'',meta=document.querySelector('meta[name="design-api-url"]')?.content||'';const configured=String(query||meta||saved).trim();if(configured)return configured;return location.protocol==='file:'?'http://127.0.0.1:8787/api':new URL('/api',location.origin).href}
+    const API=apiBase();let selected=null,previewUrl='';
+    function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
+    async function api(action,payload={},timeoutMs=60000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({action,editorToken:token,...payload}),cache:'no-store',signal:controller.signal});const data=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||!data.ok)throw new Error(data.error||`HTTP ${response.status}`);return data}finally{clearTimeout(timer)}}
+    function notify(type,details={}){const message={type,closeNonce,...details};try{window.parent.postMessage(message,'*')}catch{}try{window.opener?.postMessage(message,'*')}catch{}}
+    function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
+    function fileDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('無法讀取圖片'));reader.readAsDataURL(file)})}
+    function selectFile(file){if(!file){selected=null;$('upload').disabled=true;return}if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)){note('僅支援 JPG、PNG、WebP 或 GIF','error');return}if(file.size>8*1024*1024){note('圖片不可超過 8 MB','error');return}selected=file;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(file);$('preview').src=previewUrl;$('upload').disabled=false;note(`已選擇 ${file.name}`)}
+    async function upload(){if(!selected)return;const button=$('upload');button.disabled=true;note('圖片上傳中…');try{const dataUrl=await fileDataUrl(selected);if(mode==='user'){const data=await api('uploadUserAvatar',{account,fileName:selected.name,mimeType:selected.type,dataUrl});note('頭像已更新','ok');notify('machi-user-avatar-updated',{account,imageUrl:data.url});setTimeout(()=>window.close(),350)}else{const kind=$('kind').value,data=await api('uploadDesignerImage',{designer,kind,fileName:selected.name,mimeType:selected.type,dataUrl});note(`${kind==='story'?'限時動態':'圖片'}已更新`,'ok');notify('machi-designer-media-updated',{designer,kind,url:data.url});clearSelection();await loadMedia()}}catch(error){note(`上傳失敗：${error.message}`,'error')}finally{button.disabled=!selected}}
+    function clearSelection(){selected=null;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl='';$('file').value='';$('preview').removeAttribute('src');$('upload').disabled=true}
+    function mediaItem(url,label,kind,id=''){if(!url)return '';return `<article class="item"><img src="${esc(url)}" alt="${esc(label)}"><div class="item-foot"><span>${esc(label)}</span><button type="button" data-delete-kind="${esc(kind)}" data-delete-id="${esc(id)}" data-delete-url="${esc(url)}">移除</button></div></article>`}
+    async function loadMedia(){if(mode==='user'){$('mediaSection').hidden=true;return}const data=await api('listDesignerMedia',{designer});const profile=data.profile||{},items=[mediaItem(profile.avatar||profile['頭像連結'],`${designer} 頭像`,'avatar'),mediaItem(profile.poster||profile['頭像大圖連結'],`${designer} 海報`,'poster'),...(data.reels||[]).map((reel,index)=>mediaItem(reel.imageUrl,`限時動態 ${index+1}`,'story',reel.id))].filter(Boolean);$('media').innerHTML=items.join('')||'<div class="empty">目前沒有圖片</div>'}
+    async function deleteMedia(button){if(!confirm('確定從 JSON 資料庫移除這張圖片？'))return;button.disabled=true;try{await api('deleteDesignerMedia',{designer,kind:button.dataset.deleteKind,reelId:button.dataset.deleteId,url:button.dataset.deleteUrl});note('圖片已移除','ok');notify('machi-designer-media-updated',{designer,kind:button.dataset.deleteKind});await loadMedia()}catch(error){button.disabled=false;note(`移除失敗：${error.message}`,'error')}}
+    async function init(){if(!token){note('缺少登入憑證，請關閉後從主頁重新開啟','error');return}try{const session=await api('verifyToken');if(mode==='user'){if(!account)throw new Error('缺少帳號');$('title').textContent='設定我的頭像';$('subtitle').textContent=`${session.user||account}｜圖片直接存入 JSON 後端`;$('kindWrap').hidden=true}else{if(!designer)throw new Error('缺少設計師名稱');$('title').textContent=`${designer} 圖片與 Reels`;$('subtitle').textContent='頭像、海報與限時動態皆由 JSON 後端管理'}note(`已登入：${session.user}`,'ok');await loadMedia()}catch(error){note(`驗證失敗：${error.message}`,'error')}}
+    $('file').addEventListener('change',event=>selectFile(event.target.files[0]));$('upload').addEventListener('click',upload);$('clear').addEventListener('click',clearSelection);$('close').addEventListener('click',()=>window.close());$('media').addEventListener('click',event=>{const button=event.target.closest('[data-delete-kind]');if(button)deleteMedia(button)});init();
+  </script>
+</body>
+</html>

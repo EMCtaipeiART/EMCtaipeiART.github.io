@@ -7,7 +7,7 @@ import { JsonDatabase } from '../json_database.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
 
-async function fixture() {
+async function fixture(appOptions = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'machi-json-backend-'));
   const dbPath = path.join(dir, 'db.json');
   const database = await new JsonDatabase(dbPath, { backupDir: path.join(dir, 'backups'), maxBackups: 5 }).init();
@@ -20,7 +20,7 @@ async function fixture() {
       '名字': 'Machi', '限時動態連結': 'https://lh3.googleusercontent.com/d/reel-file=w1600', '按讚': '', '倒讚': '', '留言': '[]'
     });
   }, 'test fixture');
-  const { server } = await createApp({ database, rootDir: path.resolve('..'), loginPassword: 'secret' });
+  const { server } = await createApp({ database, rootDir: dir, loginPassword: 'secret', ...appOptions });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', resolve);
@@ -42,6 +42,16 @@ async function api(baseUrl, action, payload = {}) {
   });
   assert.equal(response.status, 200);
   return response.json();
+}
+
+async function request(baseUrl, pathname, { method = 'GET', token = '', body } = {}) {
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method,
+    headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+  });
+  const data = await response.json();
+  return { response, data };
 }
 
 test('CSV parser preserves commas, quotes and embedded newlines', () => {
@@ -164,4 +174,107 @@ test('concurrent creates are serialized and generate unique case IDs', async t =
   const ids = results.map(result => result.row.id);
   assert.equal(new Set(ids).size, 12);
   assert.equal(app.database.table('database').rows.length, 12);
+});
+
+test('admin API manages all seven JSON tables with search and authorization', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+
+  const unauthorized = await request(app.baseUrl, '/api/tables');
+  assert.equal(unauthorized.response.status, 401);
+
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  assert.equal(login.ok, true);
+  const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
+  assert.equal(metadata.response.status, 200);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report']);
+
+  const fixtures = {
+    database: { '案件編號': '26990001', '專案名稱': '七表管理驗收' },
+    '短連結': { '短碼': 'Adm001', '原始網址': 'https://example.com/admin' },
+    '修改統計表': { '案件編號': '26990001', '修改次數': '1', '修改內容': '後台新增' },
+    '補充資料連結': { '案件編號': '26990001', A: 'https://example.com/a' },
+    '設定': { '帳號': 'admin.test@emctaipei.com', '名字': 'Admin Test' },
+    reels: { '名字': 'Machi', '限時動態連結': 'https://example.com/reel-admin.jpg' },
+    bug_report: { '姓名': 'Admin', '內容': '七表後台測試' }
+  };
+  for (const [table, row] of Object.entries(fixtures)) {
+    const created = await request(app.baseUrl, `/api/table/${encodeURIComponent(table)}`, { method: 'POST', token: login.token, body: { row } });
+    assert.equal(created.response.status, 200, table);
+    assert.equal(created.data.ok, true, table);
+  }
+  const searched = await request(app.baseUrl, `/api/table/database?q=${encodeURIComponent('七表管理')}&sort=${encodeURIComponent('案件編號')}&order=desc`, { token: login.token });
+  assert.equal(searched.data.total, 1);
+  assert.equal(searched.data.rows[0]['案件編號'], '26990001');
+  const patched = await request(app.baseUrl, '/api/table/database/26990001', { method: 'PATCH', token: login.token, body: { row: { '專案名稱': '七表管理已更新' } } });
+  assert.equal(patched.data.row['專案名稱'], '七表管理已更新');
+  const deleted = await request(app.baseUrl, '/api/table/database/26990001', { method: 'DELETE', token: login.token, body: {} });
+  assert.equal(deleted.data.deleted['案件編號'], '26990001');
+});
+
+test('ERP OAuth exchanges PKCE code, reads identity and creates a JSON session', async t => {
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    if (String(url).endsWith('/api/oauth/token')) return new Response(JSON.stringify({ access_token: 'erp-access', token_type: 'Bearer', expires_in: 3600 }), { status: 200 });
+    if (String(url).endsWith('/api/oauth/userinfo')) return new Response(JSON.stringify({
+      employee_id: 'E-1024', name: '王小明', name_en: 'Ming Wang', email: 'ming@emctaipei.com',
+      role: 'staff', department: '專案部', rank: 'Senior', title: '資深專案經理', is_active: true, is_pm: true
+    }), { status: 200 });
+    throw new Error(`unexpected URL: ${url}`);
+  };
+  const app = await fixture({
+    fetchImpl,
+    erpBaseUrl: 'https://erp.example.test',
+    erpClientId: 'oauth_test',
+    erpClientSecret: 'secret-on-server',
+    erpRedirectUri: 'https://design.example.test/'
+  });
+  t.after(() => app.close());
+
+  const config = await api(app.baseUrl, 'erpLoginConfig');
+  assert.equal(config.ok, true);
+  assert.equal(config.clientId, 'oauth_test');
+  assert.equal('clientSecret' in config, false);
+
+  const login = await api(app.baseUrl, 'erpLogin', { code: 'authorization-code', codeVerifier: 'pkce-verifier', redirectUri: 'https://design.example.test/' });
+  assert.equal(login.ok, true);
+  assert.equal(login.provider, 'erp');
+  assert.equal(login.account, 'ming@emctaipei.com');
+  assert.equal(login.erpProfile.employee_id, 'E-1024');
+  assert.equal(login.settings.department, '專案部');
+  assert.match(String(calls[0].init.body), /client_secret=secret-on-server/);
+  assert.match(String(calls[0].init.body), /code_verifier=pkce-verifier/);
+  assert.equal(calls[1].init.headers.Authorization, 'Bearer erp-access');
+
+  const verified = await api(app.baseUrl, 'verifyToken', { editorToken: login.token });
+  assert.equal(verified.user, '王小明');
+  assert.equal(app.database.table('設定').rows.some(row => row['帳號'] === 'ming@emctaipei.com'), true);
+});
+
+test('JSON media upload updates settings and reels and serves stored images', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
+  const pngDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+  const avatar = await api(app.baseUrl, 'uploadDesignerImage', { editorToken: login.token, designer: 'Machi', kind: 'avatar', mimeType: 'image/png', dataUrl: pngDataUrl });
+  assert.equal(avatar.ok, true);
+  assert.match(avatar.url, /\/media\/uploads\/Machi-avatar-/);
+  const imageResponse = await fetch(avatar.url);
+  assert.equal(imageResponse.status, 200);
+  assert.equal(imageResponse.headers.get('content-type'), 'image/png');
+
+  const story = await api(app.baseUrl, 'uploadDesignerImage', { editorToken: login.token, designer: 'Machi', kind: 'story', mimeType: 'image/png', dataUrl: pngDataUrl });
+  assert.equal(app.database.table('reels').rows.some(row => row['限時動態連結'] === story.url), true);
+  const media = await api(app.baseUrl, 'listDesignerMedia', { editorToken: login.token, designer: 'Machi' });
+  assert.equal(media.profile.avatar, avatar.url);
+  assert.equal(media.reels.some(reel => reel.imageUrl === story.url), true);
+
+  const removed = await api(app.baseUrl, 'deleteDesignerMedia', { editorToken: login.token, designer: 'Machi', kind: 'story', url: story.url });
+  assert.equal(removed.ok, true);
+  assert.equal(app.database.table('reels').rows.some(row => row['限時動態連結'] === story.url), false);
+
+  const userAvatar = await api(app.baseUrl, 'uploadUserAvatar', { editorToken: login.token, account: 'machi.chen@emctaipei.com', mimeType: 'image/png', dataUrl: pngDataUrl });
+  assert.equal(userAvatar.settings.avatar, userAvatar.url);
 });

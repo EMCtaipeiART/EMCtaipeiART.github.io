@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 16:40 Asia/Taipei | build: 20260807-archive-manager-82 -->
+<!-- LAST_MODIFIED: 2026-08-07 20:30 Asia/Taipei | build: 20260807-json-production-84 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260807-archive-manager-82" />
+  <meta name="app-version" content="20260807-json-production-84" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6522,7 +6522,7 @@
   </section>
 
   <section class="card sheet-sync-card">
-    <h2>Google Sheet 串接</h2>
+    <h2>JSON 資料庫串接</h2>
     <div class="grid syncbar">
       <button type="button" id="syncNow">立即同步</button>
       <button type="button" class="secondary" id="testApi">測試連線</button>
@@ -6765,7 +6765,6 @@ function readIssueReportsCache(){try{const cached=JSON.parse(localStorage.getIte
 let issueReports = readIssueReportsCache();
 let issueReportsLoading = false;
 let issueReportsLoadId = 0;
-const appsScriptFallbackApiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 function resolveDesignApiUrl(){
   const queryValue=new URLSearchParams(location.search).get('api')||'';
   const metaValue=document.querySelector('meta[name="design-api-url"]')?.content||'';
@@ -6773,43 +6772,15 @@ function resolveDesignApiUrl(){
   try{savedValue=localStorage.getItem('designRequestApiUrl')||''}catch(err){}
   const configured=String(queryValue||metaValue||savedValue).trim();
   if(configured)return configured;
-  if(location.protocol==='file:'||location.hostname==='emctaipeiart.github.io')return appsScriptFallbackApiUrl;
-  return `${location.origin}/api`;
+  if(location.protocol==='file:')return 'http://127.0.0.1:8787/api';
+  return new URL('/api',location.origin).href;
 }
 const apiUrl = resolveDesignApiUrl();
 document.documentElement.dataset.apiBackend=apiUrl;
-const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
-const targetSheetName = 'database';
-const targetSheetId = 1244538986;
-const archiveSheetId = 646199020;
-const designerSheetId = 988186149;
-const reelsSheetId = 1503122183;
-const stagesSheetId = 462593697;
-const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260807-archive-manager-82';
-const erpPublicFallbackConfig = {
-  ok: true,
-  action: 'erpLoginConfig',
-  baseUrl: 'https://manage.emctaipei.com',
-  clientId: 'oauth_n3gUqm5r84Mu',
-  redirectUri: 'https://emctaipeiart.github.io',
-  scope: 'openid profile',
-  fallback: true
-};
+const appBuildVersion = '20260807-json-production-84';
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
-const databaseListUrl = 'https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/export?format=csv&gid=1244538986';
-const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent('select *')}`;
-const databaseArchiveGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${archiveSheetId}&tq=${encodeURIComponent('select *')}`;
-const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
-const reelsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${reelsSheetId}&tq=${encodeURIComponent('select *')}`;
-const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
-const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
-const issueReportSheetId = 1284883392;
-const issueReportGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${issueReportSheetId}&tq=${encodeURIComponent('select *')}`;
-function modificationStatsGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent(query)}`}
-const settingsGvizUrl = designerGvizUrl;
 const $=s=>document.querySelector(s), tbody=$('#tbody'), thead=$('#thead'), modifyTbody=$('#modifyTbody'), modifyThead=$('#modifyThead'), modifyFixedTbody=$('#modifyFixedTbody'), modifyFixedThead=$('#modifyFixedThead'), msg=$('#msg');
 const syncStatus = $('#syncStatus');
 const ownerList = $('#ownerList');
@@ -6878,8 +6849,8 @@ const designerImageMaxBytes = 8 * 1024 * 1024;
 const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
-const archiveManagerUrl = 'database_archive_admin.html';
-const designerUploadPageUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
+const archiveManagerUrl = 'json_database_admin.html';
+const designerUploadPageUrl = 'json_upload.html';
 const defaultDesigners = [
   {designType:'平面',name:'Machi',avatar:'assets/designers/Machi-avatar.jpg',skills:['平面','輸出','動畫'],quote:'今天也把需求整理得清清楚楚。',rotation:1,status:'普通'},
   {designType:'平面',name:'Anna',avatar:'assets/designers/Anna-avatar.jpg',skills:['平面','輸出'],quote:'好的節奏，會讓作品更穩。',rotation:2,status:'普通'},
@@ -7090,8 +7061,8 @@ function saveRemoteSettingsForAccount(message='個人設定已儲存'){
   remoteSettingsSaveTimer=setTimeout(()=>{
     remoteSettingsSaveQueue=remoteSettingsSaveQueue.catch(()=>{}).then(async()=>{
       try{
-        const data=await sheetApi('saveUserSettings',{account,editorToken:token,settings});
-        if(data.action!=='saveUserSettings')throw new Error('Apps Script 尚未支援個人設定寫入，請重新部署最新版本');
+        const data=await jsonApi('saveUserSettings',{account,editorToken:token,settings});
+        if(data.action!=='saveUserSettings')throw new Error('JSON 後端未回傳個人設定寫入結果');
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`${editor} 的${message}`);
       }catch(err){
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`設定已套用，但寫回表單失敗：${err.message}`,true);
@@ -7434,8 +7405,8 @@ function advanceDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==she
 function previousDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell||activeDesignerStoryPlayback.index<=0)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index-1)}
 function stopDesignerStoryPlayback(){clearDesignerStoryCommentRotation();if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
 function applyUpdatedActiveReel(updated){const reel=mergeDesignerReel(updated); if(activeDesignerStoryPlayback?.story?.id===reel.id){activeDesignerStoryPlayback.story=reel; activeDesignerStoryPlayback.stories[activeDesignerStoryPlayback.index]=reel; renderStoryInteractions(activeDesignerStoryPlayback.shell,reel)} return reel}
-async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
-async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
+async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await jsonApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
+async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await jsonApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
 let spotifyIframeApi=null;
 const spotifyEmbedControllers=new WeakMap();
 const spotifyEmbedPending=new WeakSet();
@@ -7455,8 +7426,8 @@ function stopDesignerMusic(shell){if(!shell)return; const audio=shell.querySelec
 function closeDesignerPoster(shell){if(!shell)return; if(activeDesignerStoryPlayback?.shell===shell)stopDesignerStoryPlayback(); stopDesignerMusic(shell); shell.classList.remove('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','false')}
 function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item)}); shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerMusic(shell); startDesignerStoryPlayback(shell)}
 function handleDesignerPosterImageError(image){const shell=image?.closest('.avatar-shell'); if(image?.closest('.designer-poster')?.classList.contains('story-playing')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return} const name=shell?.closest('.designer-card')?.dataset.designer||''; image.onerror=null; image.src=designerFallbackImage(name)}
-async function fetchDesignerReels(){if(apiUrl){try{const data=await sheetApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}catch(err){console.warn('限時動態 API 讀取失敗，改用公開資料來源',err)}} return (await gvizToObjects(await gvizJsonp(reelsGvizUrl))).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}
-async function fetchDesignerProfiles(){if(apiUrl){try{const data=await sheetApi('listDesignerProfiles'); return Array.isArray(data.profiles)?data.profiles:[]}catch(err){console.warn('設計師設定 API 讀取失敗，改用公開資料來源',err)}} return gvizToObjects(await gvizJsonp(designerGvizUrl))}
+async function fetchDesignerReels(){const data=await jsonApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}
+async function fetchDesignerProfiles(){const data=await jsonApi('listDesignerProfiles'); return Array.isArray(data.profiles)?data.profiles:[]}
 async function loadDesignerRoster({background=false}={}){
   if(!background)renderDesigners();
   let changed=false;
@@ -7495,7 +7466,7 @@ async function savePersonalSettings(event){
   setPersonalSettingsStatus('正在寫入...');
   setSync('個人設定儲存中...');
   try{
-    const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName}});
+    const data=await jsonApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName}});
     const savedSettings=data.settings||{}, savedName=remoteDisplayName(savedSettings);
     if(!savedName||savedName!==displayName)throw new Error('後端未回傳已儲存的顯示名');
     accountSettingsRevision++;
@@ -7523,9 +7494,9 @@ let activeUserAvatarUploadNonce='';
 let activeDesignerUploadName='';
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
 function closeUploadModal(){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; const refreshUserAvatar=Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(refreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
-function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(data.type!=='machi-user-avatar-updated'||!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return; closeUploadModal(); setSync('頭像已更新',false,2200)}
-function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); return url}
-function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
+function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(!modal||modal.hidden)return; if(data.type==='machi-user-avatar-updated'&&activeUserAvatarUploadNonce&&data.closeNonce===activeUserAvatarUploadNonce){closeUploadModal();setSync('頭像已更新',false,2200);return} if(data.type==='machi-designer-media-updated'&&data.designer===activeDesignerUploadName){loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片更新失敗',err));setSync('設計師圖片已更新',false,2200)}}
+function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl,location.href); url.searchParams.set('designer',designer); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
+function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl,location.href); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} activeDesignerUploadName=designer; openUploadModal(designerUploadUrl(designer),`${designer} 頭像與 Reels`)}
 function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
@@ -7543,10 +7514,6 @@ function normalizeIssueReport(report={},rowNumber=''){
 }
 function saveIssueReportsCache(){try{localStorage.setItem(issueReportsCacheKey,JSON.stringify(issueReports.slice(0,100)))}catch(err){}}
 function currentTaipeiTimestamp(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`}
-async function fetchIssueReportsFromGviz(){
-  const rows=gvizToObjects(await gvizJsonp(issueReportGvizUrl,8000));
-  return rows.map((report,index)=>normalizeIssueReport(report,index+2)).filter(report=>report['內容']).reverse();
-}
 function renderIssueReports(){
   const list=$('#issueReportList'), total=$('#issueReportTotal');
   if(!list)return;
@@ -7568,14 +7535,8 @@ async function loadIssueReports({background=false}={}){
   let changed=false;
   if((!background||modalOpen)&&!issueReports.length){issueReportsLoading=true; renderIssueReports()}
   try{
-    let loaded;
-    try{
-      const data=await sheetApi('listIssueReports',{_requireResponse:true});
-      loaded=Array.isArray(data.rows)?data.rows.map(report=>normalizeIssueReport(report)):[];
-    }catch(apiError){
-      console.warn('Apps Script 回報列表讀取失敗，改用試算表備援',apiError);
-      loaded=await fetchIssueReportsFromGviz();
-    }
+    const data=await jsonApi('listIssueReports');
+    const loaded=Array.isArray(data.rows)?data.rows.map(report=>normalizeIssueReport(report)):[];
     if(loadId!==issueReportsLoadId)return;
     changed=JSON.stringify(loaded)!==JSON.stringify(issueReports);
     if(changed){issueReports=loaded; saveIssueReportsCache()}
@@ -7598,7 +7559,7 @@ async function changeIssueReportStatus(event){
   if(!report||status===report['狀態'])return;
   report['狀態']=status; report['狀態更改時間']=currentTaipeiTimestamp(); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`已更新為${status}，背景寫入中...`);
   try{
-    const data=await sheetApi('updateIssueReportStatus',{rowNumber,status,editorToken:currentEditorToken,_requireResponse:true});
+    const data=await jsonApi('updateIssueReportStatus',{rowNumber,status,editorToken:currentEditorToken,_requireResponse:true});
     Object.assign(report,normalizeIssueReport(data.row||{...report,'狀態':status},rowNumber)); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`回報狀態已更新為${status}`);
   }catch(err){if(previousReport)Object.assign(report,previousReport); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`回報狀態寫入失敗，已還原：${err.message}`,true)}
 }
@@ -7616,7 +7577,7 @@ async function submitIssueReport(event){
   submitOverlay.classList.add('show');
   setSync('問題回報送出中...');
   try{
-    const data=await sheetApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
+    const data=await jsonApi('reportIssue',{report:{name:reporter,content,suggestion},editorToken:currentEditorToken});
     issueReportsLoadId+=1; issueReportsLoading=false;
     if(data.row){const created=normalizeIssueReport(data.row,data.rowNumber); issueReports=[created,...issueReports.filter(report=>Number(report.rowNumber)!==Number(created.rowNumber))]}
     saveIssueReportsCache();
@@ -7641,7 +7602,7 @@ async function submitIssueReport(event){
 function renderDesignerSettingsForm(){if(!designerSettingsList)return; const byName=new Map(designers.map(d=>[d.name,d])); designerSettingsList.innerHTML=designerOptions.map(name=>{const d=byName.get(name)||designerProfile(name), selected=new Set(d.skills||[]), checks=designerSkillOptions.map(skill=>`<label><input type="checkbox" name="skill-${esc(name)}" value="${esc(skill)}" ${selected.has(skill)?'checked':''}>${esc(skill)}</label>`).join(''); return `<article class="designer-setting-row" data-designer="${esc(name)}"><div class="designer-setting-headline"><div class="designer-setting-name">${esc(name)}</div><div class="designer-setting-account">${esc(d.account||`${name}@emctaipei.com`)}</div></div><section class="designer-setting-block"><div class="designer-setting-block-title"><b>1. 設計師技能設定</b><span>可複選五項專業技能</span></div><div class="designer-skill-checks">${checks}</div></section><section class="designer-setting-block designer-setting-message"><div class="designer-setting-block-title"><b>2. 留言對話框</b><span>顯示於設計師個人說明</span></div><textarea name="quote-${esc(name)}" maxlength="80" aria-label="${esc(name)} 留言對話框">${esc(d.quote||'')}</textarea></section><section class="designer-setting-block designer-setting-photo"><div class="designer-setting-block-title"><b>3. 管理照片</b><span>頭像、海報與 Reels</span></div><button class="designer-photo-manage-button" type="button" data-manage-designer-photo="${esc(name)}">管理圖片與 Reels</button></section><section class="designer-setting-block designer-setting-music"><div class="designer-setting-block-title"><b>4. 分享音樂</b><span>貼上 Spotify 或 Apple Music 單曲連結</span></div><input type="url" name="music-${esc(name)}" value="${esc(d.musicUrl||'')}" placeholder="https://open.spotify.com/... 或 https://music.apple.com/..." aria-label="${esc(name)} 分享音樂"><label class="designer-music-start">起始秒數<input type="number" name="music-start-${esc(name)}" value="${Math.max(0,Number(d.musicStartAt)||0)}" min="0" step="1" inputmode="numeric" aria-label="${esc(name)} 音樂起始秒數"></label></section></article>`}).join(''); designerSettingsList.querySelectorAll('[data-manage-designer-photo]').forEach(button=>button.addEventListener('click',openDesignerUploadPage))}
 function collectDesignerSettings(){return designerOptions.map(name=>{const row=[...document.querySelectorAll('.designer-setting-row')].find(item=>item.dataset.designer===name), current=designerProfile(name), skills=row?[...row.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):current.skills||[], quote=row?.querySelector('textarea')?.value.trim()||'', musicInput=row?.querySelector(`[name="music-${name}"]`)?.value.trim()||'', musicUrl=sharedMusicInfo(musicInput)?.url||'', musicStartAt=Math.max(0,Number(row?.querySelector(`[name="music-start-${name}"]`)?.value)||0), avatar=row?.querySelector('[data-photo-url="avatar"]')?.value.trim()||current.avatar||'', poster=row?.querySelector('[data-photo-url="poster"]')?.value.trim()||current.poster||current.avatar||'', imageFolder=row?.querySelector('[data-folder-id]')?.value.trim()||current.imageFolder||''; return {name,skills,quote,musicUrl,musicStartAt,account:current.account||'',avatar,poster,imageFolder,status:current.status||'',rotation:current.rotation||99}})}
 function validateDesignerMusicInputs(){const invalid=[...designerSettingsList.querySelectorAll('.designer-setting-music input[type="url"]')].find(input=>input.value.trim()&&!sharedMusicInfo(input.value)); if(!invalid)return true; invalid.focus(); invalid.setCustomValidity('請貼上正確的 Spotify 或 Apple Music 單曲連結'); invalid.reportValidity(); invalid.addEventListener('input',()=>invalid.setCustomValidity(''),{once:true}); setSync('請檢查分享音樂連結',true); return false}
-async function saveDesignerSettings(event){event.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再儲存設計師設定',true);return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} if(!validateDesignerMusicInputs())return; const submit=event.target.querySelector('button[type="submit"]'), profiles=collectDesignerSettings(); submit.disabled=true; setSync('設計師設定儲存中...'); try{let savedProfiles=profiles; if(apiUrl){const data=await sheetApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles}); if(data.profiles?.length)savedProfiles=data.profiles.map(normalizeDesignerRow)} const currentByName=new Map(designers.map(profile=>[profile.name,profile])); const savedByName=new Map(savedProfiles.map(profile=>[profile.name,profile])); designers=designerOptions.map(name=>mergeDesignerProfile(currentByName.get(name)||designerProfile(name),savedByName.get(name)||profiles.find(profile=>profile.name===name)||{})); hideDesignerSettings(); renderDesigners(); setSync('設計師設定已更新，重新讀取設計師資料中...'); await loadDesignerRoster(); render(); setSync('設計師設定已更新')}catch(err){setSync(`設計師設定儲存失敗：${err.message}`,true)}finally{submit.disabled=false}}
+async function saveDesignerSettings(event){event.preventDefault();if(!isLoggedIn()){setSync('請先登入後再儲存設計師設定',true);return}if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return}if(!validateDesignerMusicInputs())return;const submit=event.target.querySelector('button[type="submit"]'),profiles=collectDesignerSettings();submit.disabled=true;setSync('設計師設定儲存中...');try{const data=await jsonApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles});const savedProfiles=data.profiles?.length?data.profiles.map(normalizeDesignerRow):profiles,currentByName=new Map(designers.map(profile=>[profile.name,profile])),savedByName=new Map(savedProfiles.map(profile=>[profile.name,profile]));designers=designerOptions.map(name=>mergeDesignerProfile(currentByName.get(name)||designerProfile(name),savedByName.get(name)||profiles.find(profile=>profile.name===name)||{}));hideDesignerSettings();renderDesigners();setSync('設計師設定已更新，重新讀取設計師資料中...');await loadDesignerRoster();render();setSync('設計師設定已更新')}catch(err){setSync(`設計師設定儲存失敗：${err.message}`,true)}finally{submit.disabled=false}}
 function selectedDetails(){return detailsToArray(formEl.elements.details?.value||'')}
 function setDetailsValue(value){const selected=detailsToArray(value), box=$('#detailsOptions'); if(!box){if(formEl.elements.details)formEl.elements.details.value=formatDetails(selected); return} box.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); formEl.elements.details.value=formatDetails(selected)}
 function populateDetailsOptions(value=''){const box=$('#detailsOptions'); if(box){box.hidden=true; box.className=''; box.innerHTML=''} if(formEl.elements.details)formEl.elements.details.value=formatDetails(value)}
@@ -7721,7 +7682,7 @@ async function submitFlatProject(event){
   closeFlatProjectModal();
   showSubmitOverlay(`${group?.kind||''}新專案送出中...`);
   try{
-    const data=await sheetApi('createFlatProject',{user:currentEditor,editorToken:currentEditorToken,row});
+    const data=await jsonApi('createFlatProject',{user:currentEditor,editorToken:currentEditorToken,row});
     applyFlatProjectRotations(data.rotations||[]);
     if(data.databaseRow&&isCaseId_(data.databaseRow.id||data.databaseRow['案件編號'])){
       const newCase=normalizeRow(data.databaseRow);
@@ -7754,81 +7715,7 @@ function showDesignerMonthlyCases(designer){
   setSync(`已切換至 ${designer} ${year} 年 ${month} 總案件：${total} 件`);
   requestAnimationFrame(()=>$('#casesSection')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
-function designListsFromStageSheet(data){
-  const table=data?.table;
-  if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'項目細節設定表回應錯誤');
-  let headers=(table?.cols||[]).map(col=>String(col.label||'').trim());
-  let matrix=(table?.rows||[]).map(row=>(row.c||[]).map(gvizCellValue));
-  if(!headers.some(Boolean)&&matrix.length)headers=matrix.shift().map(value=>String(value||'').trim());
-  const types=baseDesignLists.types.slice();
-  const next={types,stages:Object.fromEntries(types.map(type=>[type,[]])),details:Object.fromEntries(types.map(type=>[type,{}]))};
-  headers.forEach((header,columnIndex)=>{
-    const parsed=splitDetailHeader(header,types);
-    if(!parsed)return;
-    const values=unique(matrix.map(row=>row[columnIndex]).filter(Boolean));
-    if(!values.length)return;
-    if(!next.stages[parsed.type].includes(parsed.stage))next.stages[parsed.type].push(parsed.stage);
-    next.details[parsed.type][parsed.stage]=values;
-  });
-  types.forEach(type=>{
-    if(!next.stages[type].length)next.stages[type]=baseDesignLists.stages[type].slice();
-    next.stages[type].forEach(stage=>{
-      if(!next.details[type][stage])next.details[type][stage]=baseDesignLists.details[type]?.[stage]||[];
-    });
-  });
-  return next;
-}
-function gvizJsonp(url,timeoutMs=60000){
-  const requestUrl=`${url}&tqx=${encodeURIComponent('out:json')}&ts=${Date.now()}`;
-  return fetchWithTimeout(requestUrl,{method:'GET',credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs).then(async response=>{
-    if(!response.ok)throw new Error(`database 回應失敗：${response.status}`);
-    const text=await response.text(), start=text.indexOf('('), end=text.lastIndexOf(')');
-    if(start<0||end<=start)throw new Error('database 回傳格式錯誤');
-    return JSON.parse(text.slice(start+1,end));
-  });
-}
-function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
-function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
-function databaseGvizQueryUrl(query='select *',sheetId=targetSheetId){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${sheetId}&tq=${encodeURIComponent(query)}`}
-async function fetchDatabaseObjects(query='select *',sheetId=targetSheetId){return gvizToObjects(await gvizJsonp(databaseGvizQueryUrl(query,sheetId)))}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
-function caseIdMonthRange(date){
-  const yy=date.getFullYear()%100, month=date.getMonth()+1, prefix=yy*100+month;
-  return {start:prefix*10000,end:(prefix+1)*10000};
-}
-function recentMonthCaseQuery(date=new Date()){
-  const current=caseIdMonthRange(date), previousDate=new Date(date.getFullYear(),date.getMonth()-1,1), previous=caseIdMonthRange(previousDate);
-  return `select * where (A >= ${previous.start} and A < ${previous.end}) or (A >= ${current.start} and A < ${current.end})`;
-}
-async function fetchDatabaseRowsByScript(){
-  const params=new URLSearchParams({
-    action:'list',
-    year:'',
-    noCache:'true',
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId:String(targetSheetId),
-    ts:Date.now()
-  });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,60000,'Apps Script 最新案件讀取逾時，請稍候再試');
-  if(!data.ok)throw new Error(data.error||'Apps Script 最新案件讀取失敗');
-  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
-}
-async function fetchRecentDatabaseRowsByScript(limit=320,{noCache=false}={}){
-  if(!apiUrl)return [];
-  const params=new URLSearchParams({
-    action:'recent',
-    limit:String(limit),
-    noCache:noCache?'true':'',
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId:String(targetSheetId),
-    ts:Date.now()
-  });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,30000,'最近案件讀取較慢，先顯示公開資料來源');
-  if(!data.ok)throw new Error(data.error||'最近案件讀取失敗');
-  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
-}
 function mergeRowsById(baseRows=[],patchRows=[]){
   const byId=new Map();
   baseRows.forEach(row=>{if(isCaseId_(row.id))byId.set(String(row.id),normalizeRow(row))});
@@ -7836,28 +7723,10 @@ function mergeRowsById(baseRows=[],patchRows=[]){
   return [...byId.values()].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
 }
 async function fetchDatabaseRows({full=false,quick=false,forceFresh=false}={}){
-  if(full&&forceFresh&&apiUrl){
-    try{return await fetchDatabaseRowsByScript()}catch(err){console.warn('完整即時資料讀取失敗，改用公開資料來源',err)}
-  }
-  if(quick&&apiUrl){
-    try{return await fetchRecentDatabaseRowsByScript(120,{noCache:forceFresh})}catch(err){console.warn('最新 120 筆讀取失敗，改用近期公開資料來源',err)}
-  }
-  let objects=[];
-  try{
-    objects=await fetchDatabaseObjects(full?'select *':recentMonthCaseQuery());
-  }catch(err){
-    if(full)throw err;
-    console.warn('近期 database 查詢失敗，改用完整公開資料來源',err);
-    objects=await fetchDatabaseObjects('select *');
-  }
-  const baseRows=objects.map(normalizeRow).filter(row=>isCaseId_(row.id));
-  if(!apiUrl)return baseRows;
-  try{
-    return full?baseRows:mergeRowsById(baseRows,await fetchRecentDatabaseRowsByScript(120));
-  }catch(err){
-    console.warn('最近案件讀取失敗，先顯示公開資料來源',err);
-    return baseRows;
-  }
+  const action=full?'list':'recent';
+  const payload=action==='recent'?{limit:quick?120:320}:{year:''};
+  const data=await jsonApi(action,payload,forceFresh?60000:30000);
+  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
 function searchHasText(){return Boolean($('#q')?.value.trim())}
 function archiveFilterRequested(){
@@ -7880,7 +7749,10 @@ async function loadArchiveRowsForSearch(){
   render();
   setSync('搜尋歷史資料中...');
   try{
-    archiveRows=(await fetchDatabaseObjects('select *',archiveSheetId))
+    const response=await fetch(new URL('data/database_archive.json',location.href),{cache:'no-store'});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const archive=await response.json();
+    archiveRows=(Array.isArray(archive.rows)?archive.rows:[])
       .map(row=>normalizeRow({...row,archived:true}))
       .filter(row=>isCaseId_(row.id));
     archiveRowsLoaded=true;
@@ -7910,24 +7782,11 @@ function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){const modal=$('#revisionModal'); if(modal)modal.hidden=true}
 function refreshOpenRevisionModal(id){const modal=$('#revisionModal'); if(modal&&!modal.hidden&&String(modal.dataset.caseId||'')===String(id))renderRevisionModal(id)}
-function modificationQueryForIds(ids=[]){
-  const numbers=ids.map(id=>Number(id)).filter(Number.isFinite);
-  if(!numbers.length)return 'select * where A = 0';
-  const min=Math.min(...numbers), max=Math.max(...numbers);
-  return `select * where A >= ${min} and A <= ${max}`;
-}
 async function fetchModificationCounts({ids=null,full=false}={}){
   try{
     const idSet=ids&&!full?new Set(ids.map(id=>String(id))):null;
-    let records=[];
-    try{
-      const data=await sheetApi('listModificationRecords',{ids:idSet?[...idSet]:[]});
-      records=Array.isArray(data.rows)?data.rows:[];
-    }catch(apiError){
-      console.warn('修改統計表 API 讀取失敗，改用試算表備援',apiError);
-      const query=idSet?modificationQueryForIds([...idSet]):'select *';
-      records=gvizToObjects(await gvizJsonp(full?modificationStatsGvizUrl:modificationStatsGvizQueryUrl(query)));
-    }
+    const data=await jsonApi('listModificationRecords',{ids:idSet?[...idSet]:[]});
+    const records=Array.isArray(data.rows)?data.rows:[];
     const counts=new Map();
     const byCase=new Map();
     records.forEach(record=>{
@@ -7950,38 +7809,12 @@ async function fetchModificationCounts({ids=null,full=false}={}){
 async function fetchAccountSettings(account,user){
   const fullAccount=loginAccountFull(account||currentEditorAccount), localUser=String(user||currentEditor||'').trim().toLowerCase();
   if(!fullAccount&&!localUser)return null;
-  if(apiUrl&&currentEditorToken){try{const data=await sheetApi('getUserSettings',{account:fullAccount,editorToken:currentEditorToken}); if(data.settings)return data.settings}catch(err){console.warn('個人設定 API 讀取失敗，改用公開資料來源',err)}}
-  const rows=gvizToObjects(await gvizJsonp(settingsGvizUrl));
-  const byAccount=fullAccount?rows.find(row=>loginAccountFull(row['帳號']||row.account||'')===fullAccount):null;
-  if(byAccount)return byAccount;
-  if(fullAccount)return null;
-  return rows.find(row=>String(row['名字']||row['設計師名字']||row.name||'').trim().toLowerCase()===localUser)||null;
+  if(!currentEditorToken)return null;
+  const data=await jsonApi('getUserSettings',{account:fullAccount,editorToken:currentEditorToken});
+  return data.settings||null;
 }
-async function loadDesignLists(){populateDesignSelects(); populateDesignerSelect(); try{designLists=designListsFromStageSheet(await gvizJsonp(stagesGvizUrl)); populateDesignSelects(formEl.elements.type.value,formEl.elements.stage.value,formEl.elements.details.value); populateDesignerSelect()}catch(err){console.warn('設計類型/階段/細項清單讀取失敗，暫用預設清單',err)}}
-function diagnosticUrl(){
-  if(!apiUrl) return '';
-  const params = new URLSearchParams({action:'diagnose',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
-  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}&callback=testCallback`;
-}
-function scriptUrlStatus(){
-  if(!apiUrl)return {ok:false,message:'SCRIPT_URL 未設定'};
-  if(/\/api(?:\/|\?|$)/.test(apiUrl))return {ok:true,message:`JSON API：${apiUrl}`};
-  if(/\/dev(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 目前是 /dev，請改用 /exec：${apiUrl}`};
-  if(!/\/exec(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 不是 /exec 部署網址：${apiUrl}`};
-  return {ok:true,message:`SCRIPT_URL：${apiUrl}`};
-}
-function pingUrl(){
-  const params=new URLSearchParams({action:'ping',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
-  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
-}
-function urlFetchAuthCheckUrl(){
-  const params=new URLSearchParams({action:'urlFetchAuthCheck',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
-  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
-}
-function writeAccessCheckUrl(){
-  const params=new URLSearchParams({action:'writeAccessCheck',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
-  return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`;
-}
+async function loadDesignLists(){designLists=structuredClone(baseDesignLists); populateDesignSelects(formEl.elements.type.value,formEl.elements.stage.value,formEl.elements.details.value); populateDesignerSelect()}
+function scriptUrlStatus(){return apiUrl?{ok:true,message:`JSON API：${apiUrl}`}:{ok:false,message:'JSON API 網址未設定'}}
 function regularWriteStatusText(){
   if(!regularUserWriteCheck)return '一般使用者預覽中｜新增/修改需求：待檢查｜狀態與細節：唯讀';
   return `一般使用者預覽中｜新增/修改需求：${regularUserWriteCheck.canCreate?'可寫入':'無法寫入'}｜狀態與細節：唯讀`;
@@ -8007,13 +7840,9 @@ async function checkRegularUserWriteAccess(){
   closeAccountMenu();
   setSync('正在檢查一般使用者寫入權限...');
   try{
-    const data=await jsonp(writeAccessCheckUrl(),15000,'寫入權限檢查逾時，請確認 Apps Script 已重新部署。');
+    const data=await jsonApi('writeAccessCheck',{},15000);
     if(!data?.ok||data.action!=='writeAccessCheck'){
-      const detail=String(data?.error||'');
-      const message=detail==='Unknown action'
-        ?'Apps Script 線上版本過舊，尚未包含一般使用者寫入權限檢查，請將 google_apps_script.gs 重新部署為 Web App'
-        :(detail||'Apps Script 尚未支援寫入權限檢查，請重新部署最新版本');
-      throw new Error(message);
+      throw new Error(String(data?.error||'JSON 後端未回傳權限檢查結果'));
     }
     regularUserWriteCheck={canCreate:Boolean(data.permissions?.createRequest),checkedAt:data.checkedAt||''};
     renderPermissionPreview();
@@ -8029,313 +7858,37 @@ async function checkRegularUserWriteAccess(){
     alert(message);
   }
 }
-async function testAppsScriptConnection(){
+async function testJsonBackendConnection(){
   const status=scriptUrlStatus();
-  console.info('[Apps Script 測試連線]',status);
+  console.info('[JSON 後端測試連線]',status);
   if(!status.ok){
     setSync(status.message,true);
     alert(status.message);
     return;
   }
-  setSync('Apps Script 測試連線中...');
+  setSync('JSON 後端測試連線中...');
   try{
-    const data=await jsonp(pingUrl(),15000,`Apps Script ping 逾時。SCRIPT_URL：${apiUrl}`);
-    console.info('[Apps Script ping 回傳]',data);
-    if(!data?.ok)throw Object.assign(new Error(data?.error||'Apps Script ping 失敗'),{rawResponse:data});
-    const version=data.version||data.scriptVersion||'(未回傳版本)';
-    const latestVersion='admin-user-preview-write-check-2026-07-17-1';
-    const isJsonBackend=data.storage==='json';
-    const isLatest=isJsonBackend||version===latestVersion;
-    const authCheck=await jsonp(urlFetchAuthCheckUrl(),15000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
-    console.info('[Apps Script UrlFetchApp 權限檢查]',authCheck);
-    const fetchOk=Boolean(authCheck?.ok);
-    const authActionMissing=String(authCheck?.error||'').includes('Unknown action')||String(authCheck?.reason||'').includes('Unknown action');
-    const fetchMessage=fetchOk
-      ? `UrlFetchApp.fetch：可執行（測試狀態 ${authCheck.status}）`
-      : (authActionMissing
-        ? 'UrlFetchApp.fetch：目前線上部署缺少權限檢查 action，請重新部署最新版 Apps Script。'
-        : `UrlFetchApp.fetch：尚未授權或執行失敗｜${authCheck?.error||authCheck?.rawError||'未回傳錯誤'}`);
-    const text=isJsonBackend
-      ?`JSON 後台連線成功｜版本：${version}｜資料修訂：${data.revision??'-'}`
-      :`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}｜${fetchOk?'UrlFetchApp 已授權':(authActionMissing?'需重新部署':'UrlFetchApp 需重新授權')}`;
-    setSync(text,!isLatest||!fetchOk);
-    alert(isJsonBackend?`${text}\n${apiUrl}`:`${text}\n${fetchMessage}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${fetchOk||authActionMissing?'':'請在 Apps Script 編輯器執行一次 checkUrlFetchAuthorization_，允許權限後重新部署。\\n'}${apiUrl}`);
+    const data=await jsonApi('ping',{},15000);
+    if(!data?.ok||data.storage!=='json')throw new Error(data?.error||'回應不是 JSON 後端');
+    const text=`JSON 後台連線成功｜版本：${data.version||'-'}｜資料修訂：${data.revision??'-'}`;
+    setSync(text);
+    alert(`${text}\n${apiUrl}`);
   }catch(err){
-    console.error('[Apps Script ping 失敗]',{error:err,scriptUrl:apiUrl});
-    const message=`Apps Script API 讀取失敗：${err.message||err}\\nSCRIPT_URL：${apiUrl}\\n請確認 Web App 設定 Execute as: Me、Who has access: Anyone，且使用 /exec。`;
+    console.error('[JSON 後端連線失敗]',{error:err,apiUrl});
+    const message=`JSON API 讀取失敗：${err.message||err}\\nAPI：${apiUrl}`;
     setSync(message,true);
     alert(message);
   }
 }
-function withSheetTarget(payload={}){return {...payload,targetSpreadsheetId,targetSheetName,targetSheetId}}
-async function sheetApi(action,payload={}){
-  if(!apiUrl) throw new Error('尚未設定 Apps Script 網址');
-  payload = withSheetTarget(payload);
-  if(['listReels','toggleReelReaction','addReelComment'].includes(action)){
-    const data=await writeToSheetByJsonp({action,...payload},20000,action==='listReels'?'限時動態載入逾時':'限時動態回應同步逾時');
-    if(!data.ok)throw new Error(data.error||'限時動態同步失敗');
-    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本`);
-    return data;
-  }
-  if(action==='createFlatProject'){
-    const data=await writeToSheetByJsonp({action,...payload});
-    if(!data.ok)throw new Error(data.error||'新專案寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳新專案寫入結果，請重新部署最新版本後再試');
-    return data;
-  }
-  if(action==='googleLogin'){
-    const data=await googleLoginByFrame(payload.credential||payload.idToken||'');
-    if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-    return data;
-  }
-  if(action==='verifyToken'||action==='logout'){
-    const data=await writeToSheetByJsonp({action,...payload},20000,`${action==='verifyToken'?'登入狀態驗證':'登出'}沒有回應，請稍後再試。`);
-    if(!data.ok)throw new Error(data.error||`${action} 失敗`);
-    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
-    return data;
-  }
-  if(action==='saveUserSettings'){
-    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'個人設定寫入逾時，請稍後再試。'});
-    if(!data.ok)throw new Error(data.error||'個人設定寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳個人設定寫入結果，請重新部署最新版本');
-    return data;
-  }
-  if(action==='updateModificationConfirm'){
-    const data=await writeToSheetByJsonp({action,...payload},60000,'確認修正日寫入逾時，請稍後重新整理確認。');
-    if(!data.ok)throw new Error(data.error||'確認修正日寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未支援確認修正日寫入，請重新部署最新版本後再試');
-    return data;
-  }
-	  if(action==='addModificationRecord'){
-	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'修改紀錄寫入較慢，請稍後重新整理確認。'});
-	    if(!data.ok)throw new Error(data.error||'修改紀錄寫入失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
-    return data;
-  }
-  if(action==='uploadDesignerImage'){
-	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
-	    if(!data.ok)throw new Error(data.error||'照片上傳失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
-	    return data;
-	  }
-	  if(action==='reportIssue'){
-	    const data=await writeToSheetByJsonp({action,...payload},20000,'問題回報寫入逾時，請稍後再試。');
-	    if(!data.ok)throw new Error(data.error||'問題回報送出失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
-	    return data;
-	  }
-	  if(action==='listIssueReports'){
-	    const data=await writeToSheetByJsonp({action,...payload},5000,'回報列表讀取逾時');
-	    if(!data.ok)throw new Error(data.error||'回報列表讀取失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援回報列表');
-	    return data;
-	  }
-	  if(action==='updateIssueReportStatus'){
-	    const data=await writeToSheetByJsonp({action,...payload},15000,'回報狀態同步逾時，請稍後再試。');
-	    if(!data.ok)throw new Error(data.error||'回報列表同步失敗');
-	    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
-	    return data;
-	  }
-	  if(action==='add'||action==='batchAdd'){
-    const data=await writeCreateToSheet(action,payload);
-    if(!data.ok)throw new Error(data.error||(action==='batchAdd'?'批次新增失敗':'新增失敗'));
-    return data;
-  }
-	  if(action==='update'){
-    const writePayload={action,...payload};
-    const payloadLength=JSON.stringify(writePayload).length;
-    const data=payloadLength<6500
-      ? await writeToSheetByJsonp(writePayload,30000,'編輯寫入較慢，正在改用備援方式。').catch(()=>postToSheet(writePayload))
-      : await postToSheet(writePayload);
-    if(!data.ok)throw new Error(data.error||'更新失敗');
-    return data;
-  }
-  const data = action === 'list'
-    ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&noCache=${encodeURIComponent(payload.noCache?'true':'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
-    : await postToSheet({action,...payload});
-  if(!data.ok) throw new Error(data.error || 'Google Sheet 更新失敗');
+function fetchWithTimeout(url,options={},ms=25000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),ms);return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
+async function jsonApi(action,payload={},timeoutMs=60000){
+  if(!apiUrl)throw new Error('尚未設定 JSON API 網址');
+  const body={action,...payload};
+  delete body._timeoutMs;delete body._timeoutMessage;delete body._requireResponse;
+  const response=await fetchWithTimeout(apiUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),cache:'no-store'},Number(timeoutMs)||60000);
+  const data=await response.json().catch(()=>({ok:false,error:`JSON API 回傳格式錯誤（HTTP ${response.status}）`}));
+  if(!response.ok||!data?.ok){const error=new Error(data?.error||`JSON API 回應失敗：${response.status}`);Object.assign(error,{reason:data?.reason,rawResponse:data,status:response.status});throw error}
   return data;
-}
-function fetchWithTimeout(url,options={},ms=25000){const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),ms); return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
-async function appsScriptFetch(url,options={},timeoutMs=25000){
-  const response=await fetchWithTimeout(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs);
-  if(!response.ok)throw new Error(`Apps Script 回應失敗：${response.status}`);
-  const text=await response.text();
-  try{return JSON.parse(text)}catch(error){
-    const looksLikeGooglePage=/<(?:html|title|body)|無法開啟這個檔案|Google Drive/i.test(text);
-    throw new Error(looksLikeGooglePage?'Apps Script 被 Google 工作階段錯誤導向':'Apps Script 回傳格式錯誤');
-  }
-}
-function appsScriptGet(url,timeoutMs=25000){return appsScriptFetch(url,{method:'GET'},timeoutMs)}
-function appsScriptPost(payload={},timeoutMs=60000){
-  const body={...withSheetTarget(payload)};
-  delete body._timeoutMs;
-  delete body._timeoutMessage;
-  delete body._requireResponse;
-  return appsScriptFetch(apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body)},timeoutMs);
-}
-async function fetchFromSheet(action,payload={}){
-  const options = action === 'list'
-    ? {}
-    : {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})};
-  const params = action === 'list' ? `action=list&year=${encodeURIComponent(payload.year||'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}` : '';
-  const url = action === 'list' ? `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params}` : apiUrl;
-  return action==='list'
-    ? appsScriptGet(url,60000)
-    : appsScriptFetch(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},Number(payload._timeoutMs)||60000);
-}
-function jsonp(url,timeoutMs=20000,timeoutMessage='讀取逾時。請直接打開測試連線，確認畫面是否出現 testCallback(...)'){
-  return appsScriptGet(String(url).replace(/([?&])callback=[^&]*/,'$1').replace(/[?&]$/,''),timeoutMs)
-    .catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
-}
-function postToSheet(payload){
-  return appsScriptPost(payload,Number(payload?._timeoutMs)||60000);
-}
-function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處理時間較久，請稍候重新整理確認；若仍未更新，請按「測試連線」檢查 Apps Script 權限。'){
-  return appsScriptPost(payload,timeoutMs).catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
-}
-function createResultResponse(action,result){
-  if(action==='batchAdd')return {ok:true,action:'batchAdd',count:result.rows?.length||0,rowNumbers:result.rowNumbers||[],rows:result.rows||[],deduplicated:Boolean(result.deduplicated)};
-  return {ok:true,action:'append',rowNumber:result.rowNumber,row:result.row,deduplicated:Boolean(result.deduplicated)};
-}
-async function waitForCreateResult(action,requestId,timeoutMs=60000){
-  const deadline=Date.now()+timeoutMs;
-  while(Date.now()<deadline){
-    await new Promise(resolve=>setTimeout(resolve,700));
-    try{
-      const data=await writeToSheetByJsonp({action:'createRequestStatus',requestId},8000,'等待新增結果中...');
-      if(data.ok&&!data.pending&&data.result)return createResultResponse(action,data.result);
-    }catch(err){console.warn('[新增案件] 結果查詢暫時失敗',err)}
-  }
-  throw new Error('案件可能已寫入，但尚未取得回應。請重新整理確認，不需要重複送出。');
-}
-async function writeCreateToSheet(action,payload){
-  const statusPromise=waitForCreateResult(action,payload.requestId,60000)
-    .then(data=>({data}))
-    .catch(error=>({statusError:error}));
-  const framePromise=postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'新增寫入較慢，正在查詢試算表寫入結果。'})
-    .then(data=>({data}))
-    .catch(error=>({frameError:error}));
-  const first=await Promise.race([framePromise,statusPromise]);
-  if(first.data)return first.data;
-  const second=await (first.frameError?statusPromise:framePromise);
-  if(second.data)return second.data;
-  throw second.frameError||second.statusError||first.frameError||first.statusError||new Error('無法取得新增結果');
-}
-async function readActionWithFrameFallback(payload,timeoutMs=20000,timeoutMessage='Apps Script API 沒有回應。'){
-  const actionName=payload?.action||'(未指定)';
-  try{
-    return await writeToSheetByJsonp(payload,timeoutMs,timeoutMessage);
-  }catch(jsonpError){
-    console.warn(`[Apps Script API] ${actionName} 第一次匿名請求失敗，正在重試`,jsonpError);
-    try{
-      await new Promise(resolve=>setTimeout(resolve,450));
-      return await appsScriptPost(payload,timeoutMs);
-    }catch(frameError){
-      const message=[
-        `Apps Script API 讀取失敗。`,
-        `第一次請求：${jsonpError?.message||jsonpError}`,
-        `第二次請求：${frameError?.message||frameError}`
-      ].join('\n');
-      throw Object.assign(new Error(message),{reason:'APPS_SCRIPT_API_READ_FAILED',jsonpError,frameError,scriptUrl:apiUrl,action:actionName});
-    }
-  }
-}
-async function googleLoginByPost(payload,timeoutMessage='Google 登入驗證沒有回應。請按「測試連線」檢查 Apps Script 權限。',timeoutMs=20000){
-  const data=await appsScriptPost(payload,timeoutMs);
-  if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-  if(data.action!==payload.action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-  return data;
-}
-function googleProfileFromCredential(credential){
-  try{
-    const payload=String(credential||'').split('.')[1]||'';
-    if(!payload)return null;
-    const normalized=payload.replace(/-/g,'+').replace(/_/g,'/');
-    const padded=normalized+'==='.slice((normalized.length+3)%4);
-    const binary=atob(padded);
-    const json=decodeURIComponent([...binary].map(char=>`%${char.charCodeAt(0).toString(16).padStart(2,'0')}`).join(''));
-    return JSON.parse(json);
-  }catch(err){
-    return null;
-  }
-}
-async function googleLoginByJsonp(credential){
-  const profile=googleProfileFromCredential(credential);
-  const email=String(profile?.email||'').trim();
-  const payload=withSheetTarget({action:'googleLogin',credential});
-  console.info('[Google 登入送後端驗證]',{transport:'credentialless-fetch',email:email||'(未解析)',aud:profile?.aud||'', appBuildVersion});
-  const data=await writeToSheetByJsonp(payload,20000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
-  console.info('[Google 登入後端回傳]',{ok:data?.ok, action:data?.action, error:data?.error, reason:data?.reason, receivedAud:data?.receivedAud, receivedEmail:data?.receivedEmail, emailVerified:data?.emailVerified, loginDebug:data?.loginDebug});
-  if(!data.ok){
-    const error=new Error(data.error||'Google 登入失敗');
-    Object.assign(error,{reason:data.reason,expectedClientId:data.expectedClientId,receivedAud:data.receivedAud,receivedEmail:data.receivedEmail,emailVerified:data.emailVerified});
-    throw error;
-  }
-  if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-  return data;
-}
-async function diagnoseAppsScriptApi(){
-  const result={scriptUrl:apiUrl};
-  try{
-    const ping=await jsonp(pingUrl(),8000,`Apps Script ping 逾時。SCRIPT_URL：${apiUrl}`);
-    result.ping=ping;
-    result.version=ping?.version||ping?.scriptVersion||'';
-  }catch(err){
-    result.pingError=err.message||String(err);
-  }
-  try{
-    const auth=await jsonp(urlFetchAuthCheckUrl(),10000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
-    result.urlFetchAuth=auth;
-  }catch(err){
-    result.urlFetchAuthError=err.message||String(err);
-  }
-  return result;
-}
-async function googleLoginByFrame(credential){
-  const profile=googleProfileFromCredential(credential);
-  const email=String(profile?.email||'').trim();
-  try{
-    return await googleLoginByJsonp(credential);
-  }catch(jsonpError){
-    if(jsonpError?.reason){
-      throw jsonpError;
-    }
-    console.warn('[Google 登入第一次匿名請求未完成，正在重試]',{error:jsonpError,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||''});
-  }
-  const payload=withSheetTarget({action:'googleLogin',credential,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API 登入驗證沒有回應。'});
-  console.info('[Google 登入送 Apps Script API]',{transport:'credentialless-fetch-retry',scriptUrl:apiUrl,email:email||'(未解析)',aud:profile?.aud||'',appBuildVersion});
-  let data;
-  try{
-    data=await postToSheetByFrame(payload);
-  }catch(err){
-    const diagnostic=await diagnoseAppsScriptApi();
-    console.error('[Google 登入 Apps Script API 讀取失敗]',{error:err,diagnostic,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||'',payloadAction:'googleLogin'});
-    const urlFetch=diagnostic.urlFetchAuth;
-    const urlFetchDetail=urlFetch
-      ? (urlFetch.ok?`UrlFetchApp：可執行（status ${urlFetch.status}）`:`UrlFetchApp：失敗｜${urlFetch.error||urlFetch.rawError||urlFetch.reason||'未回傳錯誤'}`)
-      : `UrlFetchApp：檢查失敗｜${diagnostic.urlFetchAuthError||'未回應'}`;
-    const versionDetail=diagnostic.version?`SCRIPT_VERSION：${diagnostic.version}`:`ping：${diagnostic.pingError||'未回應'}`;
-    const apiError=new Error(`Apps Script API 讀取失敗：${err.message||err}\n${versionDetail}\n${urlFetchDetail}`);
-    Object.assign(apiError,{reason:'APPS_SCRIPT_API_READ_FAILED',receivedEmail:email,receivedAud:profile?.aud||'',scriptUrl:apiUrl,diagnostic});
-    throw apiError;
-  }
-  console.info('[Google 登入 Apps Script API 回傳]',data);
-  if(!data?.ok){
-    const error=new Error(data?.error||'Apps Script API 登入驗證失敗');
-    Object.assign(error,{reason:data?.reason||'APPS_SCRIPT_API_ERROR',expectedClientId:data?.expectedClientId,receivedAud:data?.receivedAud,receivedEmail:data?.receivedEmail||email,emailVerified:data?.emailVerified,rawResponse:data,scriptUrl:apiUrl});
-    throw error;
-  }
-  if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
-  return data;
-}
-async function googleEmailLoginByJsonp(email,name=''){
-  console.warn('googleEmailLogin 已停用', {email, name});
-  throw new Error('googleEmailLogin 已停用，請使用 Google credential / idToken 登入');
-}
-function postToSheetByFrame(payload){
-  return appsScriptPost(payload,Number(payload?._timeoutMs)||60000);
 }
 function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案')return '已完成'; if(s==='未執行')return '未開始'; return s||'未開始'}
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
@@ -9176,13 +8729,13 @@ async function refreshAfterInlineWrite(message){
 }
 function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; setTimeout(()=>loadSheet({quick:true,background:true,forceFresh:true}).then(()=>setSync(`${text}，已完成背景校驗`)).catch(err=>setSync(`${text}，但背景校驗失敗：${err.message}`,true)),6000)}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
-async function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const keys=Object.keys(changes), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)})); selected.forEach(row=>{rememberLocalWrite(row.id,changes); markUpdatingCell(row.id,keys)}); render(); setSync(`批次寫入 ${selected.length} 筆中...`); try{if(apiUrl){const data=await postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); if(!data.ok)throw new Error(data.error||'批次寫入失敗')} rows=rows.map(row=>selectedCaseIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selected.forEach(row=>clearUpdatingCell(row.id)); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}catch(err){selected.forEach(row=>{forgetLocalWrite(row.id); clearUpdatingCell(row.id)}); render(); setSync(`批次寫入失敗：${err.message}`,true)}}
-async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); rememberLocalWrite(id,changes); markUpdatingCell(id,keys); save(); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); clearUpdatingCell(id,keys); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，同步最新資料中...`); await refreshAfterInlineWrite(successMessage); refreshOpenCaseDetail(id)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id,keys); rows=rows.map(r=>String(r.id)===String(id)&&rowStillHasChanges(r,changes)?original:r); save(); render(); refreshOpenCaseDetail(id); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
+async function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value,detail=$('#batchDetails').value,changes={};if(status)changes.status=status;if(detail)changes.details=detail;if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return}if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return}const keys=Object.keys(changes),forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean),batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)}));selected.forEach(row=>{rememberLocalWrite(row.id,changes);markUpdatingCell(row.id,keys)});render();setSync(`批次寫入 ${selected.length} 筆中...`);try{await jsonApi('batchUpdate',{row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken});rows=rows.map(row=>selectedCaseIds.has(String(row.id))?normalizeRow({...row,...changes}):row);selected.forEach(row=>clearUpdatingCell(row.id));selectedCaseIds.clear();save();render();$('#batchStatus').value='';$('#batchDetails').value='';await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}catch(err){selected.forEach(row=>{forgetLocalWrite(row.id);clearUpdatingCell(row.id)});render();setSync(`批次寫入失敗：${err.message}`,true)}}
+async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); rememberLocalWrite(id,changes); markUpdatingCell(id,keys); save(); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await enqueueInlineWrite(()=>jsonApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); clearUpdatingCell(id,keys); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，同步最新資料中...`); await refreshAfterInlineWrite(successMessage); refreshOpenCaseDetail(id)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id,keys); rows=rows.map(r=>String(r.id)===String(id)&&rowStillHasChanges(r,changes)?original:r); save(); render(); refreshOpenCaseDetail(id); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
 function openStatusEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; fieldPopover.innerHTML=`<h3>修改狀態</h3><div class="option-list status-option-list">${statusOptions.map(status=>`<button type="button" class="option status-option ${esc(status)} ${row.status===status?'active':''}" data-status="${esc(status)}"><span>${esc(statusLabel(status))}</span>${row.status===status?'<b>✓</b>':''}</button>`).join('')}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const status=button.dataset.status; updateCaseRow(id,{status},`已更新狀態為 ${statusLabel(status)}`)}))}
 function openCaseFieldEditor(event,id,key){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const titles={type:'設計類型',stage:'階段',qty:'數量',start:'開始時間',end:'結束時間'}, title=titles[key]||'欄位', options=key==='type'?designLists.types:(key==='stage'?(designLists.stages?.[row.type]||unique(Object.values(designLists.stages||{}).flat())):[]); if(key==='type'||key==='stage'){fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><div class="option-list">${options.map(option=>`<button type="button" class="option ${row[key]===option?'active':''}" data-value="${esc(option)}"><span>${esc(option)}</span>${row[key]===option?'<b>✓</b>':''}</button>`).join('')||'<div class="empty">沒有可選項目</div>'}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-value]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const value=button.dataset.value, changes={[key]:value}; if(key==='type'){const stages=designLists.stages?.[value]||[]; if(stages.length&&!stages.includes(row.stage))changes.stage=stages[0]} updateCaseRow(id,changes,`已更新${title}`)})); return} const inputType=key==='qty'?'number':'date', value=key==='qty'?(row.qty??''):(row[key]||todayInputValue()); fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><form class="revision-form" id="caseFieldForm"><label>${esc(title)}<input name="value" type="${inputType}" value="${esc(value)}" ${key==='qty'?'min="0" step="1" inputmode="numeric"':''} required></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">套用</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#caseFieldForm')?.addEventListener('submit',submitEvent=>{submitEvent.preventDefault(); submitEvent.stopPropagation(); const raw=submitEvent.target.elements.value.value, value=key==='qty'?Number(raw):raw; updateCaseRow(id,{[key]:value},`已更新${title}`)})}
 function openModificationEditor(event,id){event.stopPropagation(); closeFilters(); const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canCaseEditRow(row)){setSync('此案件目前不可新增修改紀錄',true,3200);return} const nextCount=modificationCount(id)+1, modifier=currentLoginOwnerName()||ownerDisplay(row.owner); fieldPopover.innerHTML=`<h3>新增修改紀錄</h3><form class="revision-form" id="revisionForm" data-case-id="${esc(row.id)}"><div class="revision-meta">案件 ${esc(row.id)}｜修改人 ${esc(modifier)}｜${esc(modificationLabel(nextCount))}</div><label>修改日期<input type="date" name="modifyDate" value="${esc(todayInputValue())}" required></label><label>修改內容<textarea name="content" placeholder="請輸入此次修改內容" required></textarea></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">送出</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#revisionForm')?.addEventListener('submit',submitModificationRecord)}
-async function submitModificationRecord(event){event.preventDefault(); event.stopPropagation(); const form=event.target, id=String(form.dataset.caseId||'').trim(), row=rows.find(r=>String(r.id)===id); if(!row)return; const submit=form.querySelector('button[type="submit"]'), record={caseId:id,modifyDate:form.elements.modifyDate.value,content:form.elements.content.value.trim(),modifier:currentLoginOwnerName()||ownerDisplay(row.owner),editorToken:currentEditorToken}; if(!record.modifyDate||!record.content){setSync('請填寫修改日期與修改內容',true);return} submit.disabled=true; const optimisticCount=modificationCount(id)+1, optimisticRecord={caseId:id,count:optimisticCount,date:record.modifyDate,content:record.content,modifier:record.modifier,confirmedDate:''}; modificationCounts.set(String(id),optimisticCount); modificationRecords.set(String(id),[...modificationRecordsFor(id),optimisticRecord]); closeFieldPopover(); closeRevisionModal(); render(); refreshOpenCaseDetail(id); setSync('修改紀錄寫入中...'); try{const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true}); const finalCount=Number(data.count)||optimisticCount, finalModifier=data.record?.['修改人']||data.record?.modifier||record.modifier; modificationCounts.set(String(id),finalCount); modificationRecords.set(String(id),modificationRecordsFor(id).map(item=>item===optimisticRecord?{...optimisticRecord,count:finalCount,modifier:finalModifier}:item)); render(); refreshOpenCaseDetail(id); setSync(`已新增 ${id} ${modificationLabel(modificationCount(id))} 紀錄`)}catch(err){render(); refreshOpenCaseDetail(id); setSync(`修改紀錄已送出，若畫面未同步請稍後重新整理：${err.message}`,true)}}
-async function confirmModificationRecord(event,id,count){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const records=modificationRecordsFor(id), record=records.find(item=>(Number(item.count)||0)===(Number(count)||0)); if(!record)return; const button=event.currentTarget; if(button)button.disabled=true; const cancel=Boolean(record.confirmedDate), confirmedDate=cancel?'':slashDate(todayInputValue()), oldDate=record.confirmedDate; closeRevisionModal(); setSync(cancel?'取消確認修正日中...':'確認修正日寫入中...'); try{const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count,confirmedDate},editorToken:currentEditorToken}); const finalDate=data.record?.['確認修正日']||data.record?.confirmedDate||''; record.confirmedDate=finalDate; render(); refreshOpenCaseDetail(id); setSync(cancel?`已取消 ${id} ${modificationLabel(count)} 修正確認`:`已確認 ${id} ${modificationLabel(count)} 修正完成，已寫入 ${finalDate}`); setTimeout(()=>fetchModificationCounts().catch(()=>{}),0)}catch(err){record.confirmedDate=oldDate; render(); refreshOpenCaseDetail(id); setSync(`${cancel?'取消確認':'確認修正日寫入'}失敗：${err.message}`,true)}}
+async function submitModificationRecord(event){event.preventDefault(); event.stopPropagation(); const form=event.target, id=String(form.dataset.caseId||'').trim(), row=rows.find(r=>String(r.id)===id); if(!row)return; const submit=form.querySelector('button[type="submit"]'), record={caseId:id,modifyDate:form.elements.modifyDate.value,content:form.elements.content.value.trim(),modifier:currentLoginOwnerName()||ownerDisplay(row.owner),editorToken:currentEditorToken}; if(!record.modifyDate||!record.content){setSync('請填寫修改日期與修改內容',true);return} submit.disabled=true; const optimisticCount=modificationCount(id)+1, optimisticRecord={caseId:id,count:optimisticCount,date:record.modifyDate,content:record.content,modifier:record.modifier,confirmedDate:''}; modificationCounts.set(String(id),optimisticCount); modificationRecords.set(String(id),[...modificationRecordsFor(id),optimisticRecord]); closeFieldPopover(); closeRevisionModal(); render(); refreshOpenCaseDetail(id); setSync('修改紀錄寫入中...'); try{const data=await jsonApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true}); const finalCount=Number(data.count)||optimisticCount, finalModifier=data.record?.['修改人']||data.record?.modifier||record.modifier; modificationCounts.set(String(id),finalCount); modificationRecords.set(String(id),modificationRecordsFor(id).map(item=>item===optimisticRecord?{...optimisticRecord,count:finalCount,modifier:finalModifier}:item)); render(); refreshOpenCaseDetail(id); setSync(`已新增 ${id} ${modificationLabel(modificationCount(id))} 紀錄`)}catch(err){render(); refreshOpenCaseDetail(id); setSync(`修改紀錄已送出，若畫面未同步請稍後重新整理：${err.message}`,true)}}
+async function confirmModificationRecord(event,id,count){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const records=modificationRecordsFor(id), record=records.find(item=>(Number(item.count)||0)===(Number(count)||0)); if(!record)return; const button=event.currentTarget; if(button)button.disabled=true; const cancel=Boolean(record.confirmedDate), confirmedDate=cancel?'':slashDate(todayInputValue()), oldDate=record.confirmedDate; closeRevisionModal(); setSync(cancel?'取消確認修正日中...':'確認修正日寫入中...'); try{const data=await jsonApi('updateModificationConfirm',{record:{caseId:id,count,confirmedDate},editorToken:currentEditorToken}); const finalDate=data.record?.['確認修正日']||data.record?.confirmedDate||''; record.confirmedDate=finalDate; render(); refreshOpenCaseDetail(id); setSync(cancel?`已取消 ${id} ${modificationLabel(count)} 修正確認`:`已確認 ${id} ${modificationLabel(count)} 修正完成，已寫入 ${finalDate}`); setTimeout(()=>fetchModificationCounts().catch(()=>{}),0)}catch(err){record.confirmedDate=oldDate; render(); refreshOpenCaseDetail(id); setSync(`${cancel?'取消確認':'確認修正日寫入'}失敗：${err.message}`,true)}}
 function detailOptionsForRow(row){return designLists.details?.[row.type]?.[row.stage]||detailsToArray(row.details)}
 function openDetailsEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const selected=detailsToArray(row.details), options=unique([...detailOptionsForRow(row),...selected]); fieldPopover.innerHTML=`<h3>修改項目細節</h3><div class="option-list detail-option-list">${options.length?options.map(option=>`<label class="option"><input type="checkbox" value="${esc(option)}" ${selected.includes(option)?'checked':''}>${esc(option)}</label>`).join(''):'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><div class="popover-actions"><button type="button" class="secondary" data-close>關閉</button><button type="button" data-apply>套用</button></div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('[data-apply]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); saveDetailsEditor(id)})}
 function saveDetailsEditor(id){const row=rows.find(r=>String(r.id)===String(id)), values=[...fieldPopover.querySelectorAll('input:checked')].map(input=>input.value), changes={details:formatDetails(values)}; if(row&&row.status==='未開始'&&changes.details)changes.status='執行中'; updateCaseRow(id,changes,changes.status?'已更新項目細節，狀態已改為執行中':'已更新項目細節')}
@@ -9204,7 +8757,7 @@ function isLocalAdminToken(token=currentEditorToken){return String(token||'').st
 function isLocalAdminTokenValid(token=currentEditorToken){return String(token||'')===todayAdminToken()}
 function loginLocalAdmin(){currentEditor='管理者'; currentEditorDisplayName='管理者'; currentEditorAccount='local-admin'; currentEditorToken=todayAdminToken(); currentEditorGroup='管理者'; currentEditorDepartment='管理者'; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); setSync('已登入：管理者'); finishLoginOverlay('登入成功：管理者')}
 function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; selectedCaseIds.clear()}
-function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|ping|frameCallback/i.test(error?.message||''); const displayContext=apiReadFailed?'Apps Script API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,scriptUrl:error?.scriptUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), scriptLikely=apiReadFailed||/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(scriptLikely?`請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。SCRIPT_URL：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
+function handleGoogleLoginError(error,context='Google 登入'){console.error(`[${context}]`,error);const message=error?.message||error?.error||String(error||'未知錯誤'),hint=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message)?'請確認目前網域已加入 Google OAuth 授權來源。':`請按「測試連線」確認 JSON API：${apiUrl}`;clearLoginAuthState();hideSubmitOverlay();showLoginModal(`${context}失敗：${message}`,{skipGoogleInit:true});setLoginNote(`${context}失敗：${message}。${hint}`,true);setSync(`${context}失敗：${message}`,true);updateLoginUi();render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
 function handleAdminLoginError(error){console.error('[管理者登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`管理者登入失敗：${message}`,{skipGoogleInit:false}); const panel=$('#adminLoginPanel'); if(panel)panel.hidden=false; setLoginNote(`管理者登入失敗：${message}`,true); setSync(`管理者登入失敗：${message}`,true); updateLoginUi(); render()}
 function loginAccountFull(value){const text=String(value||'').trim().toLowerCase(); if(!text)return ''; return text.includes('@')?text:`${text}${loginDomain}`}
@@ -9224,7 +8777,7 @@ async function verifyStoredEditorToken(){
     currentEditor='管理者';currentEditorDisplayName='管理者';currentEditorAccount='local-admin';currentEditorToken=token;currentEditorGroup='管理者';currentEditorDepartment='管理者';persistEditorSession();applyCurrentUserProfile();updateLoginUi();render();return true;
   }
   try{
-    const data=await sheetApi('verifyToken',{editorToken:token});
+    const data=await jsonApi('verifyToken',{editorToken:token});
     if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
     console.info('[登入狀態驗證成功]',{account:data.account||data.email,user:data.user,appBuildVersion});
     currentEditor=pendingEditorSession.user||data.user||'';
@@ -9251,13 +8804,13 @@ async function verifyStoredEditorToken(){
     return true;
   }
 }
-async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
+async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await jsonApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
 function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorDisplayName=remoteDisplayName(settings)||user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user, settingsRevision=accountSettingsRevision; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount||accountSettingsRevision!==settingsRevision)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 async function keepEditorSessionAlive(){
   if(!isLoggedIn()||isLocalAdminToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
   lastEditorSessionKeepAliveAt=Date.now();
   try{
-    const data=await sheetApi('verifyToken',{editorToken:currentEditorToken});
+    const data=await jsonApi('verifyToken',{editorToken:currentEditorToken});
     if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
     persistEditorSession();
     return true;
@@ -9271,14 +8824,13 @@ async function keepEditorSessionAlive(){
 }
 function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
 function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; const configError=googleLoginConfigError(); console.info(`[登入診斷] app=${appBuildVersion}, origin=${location.origin}, expectedOrigin=${googleAuthorizedOrigin}, clientId=${googleOAuthClientId}`); if(configError){setLoginNote(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`,true); console.error('[Google OAuth 設定錯誤]',configError); return} target.innerHTML='<button type="button" class="google-redirect-login" aria-label="使用 Google 帳號登入"><span class="google-g">G</span><span>使用 Google 帳號登入</span></button>'; const button=target.querySelector('button'); if(button)button.onclick=startGoogleRedirectLogin; target.dataset.ready='1'}
-async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByFrame(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}catch(err){const context=err?.reason==='APPS_SCRIPT_API_READ_FAILED'?'Apps Script API':(googleEmail?`Google 登入（${googleEmail}）`:'Google 登入'); handleGoogleLoginError(err,context)}}
+async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'',hasCredential:Boolean(credential),appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await jsonApi('googleLogin',{credential},20000); if(!data?.token||!data?.user)throw new Error(data?.error||'JSON 後端未完成登入驗證'); localStorage.removeItem('designRequestSavedPassword');localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||'');localStorage.setItem('designRequestRememberLogin','0');loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||'');finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}catch(err){handleGoogleLoginError(err,googleEmail?`Google 登入（${googleEmail}）`:'Google 登入')}}
 function startGooglePopupLogin(){startGoogleRedirectLogin()}
 function startGoogleRedirectLogin(){const configError=googleLoginConfigError(); if(configError){handleGoogleLoginError(new Error(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`),'Google 跳轉登入'); return} const state=`machi_login_${Date.now()}_${Math.random().toString(36).slice(2)}`, nonce=`machi_nonce_${Date.now()}_${Math.random().toString(36).slice(2)}`; sessionStorage.setItem('designRequestGoogleLoginState',state); sessionStorage.setItem('designRequestGoogleLoginNonce',nonce); showLoginPendingOverlay('正在前往 Google 登入...'); const params=new URLSearchParams({client_id:googleOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state,nonce}); location.href=`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
 async function handleGoogleRedirectReturn(){const hash=new URLSearchParams(location.hash.replace(/^#/,'')); const idToken=hash.get('id_token')||'', error=hash.get('error')||'', errorDescription=hash.get('error_description')||''; if(!idToken&&!error)return false; history.replaceState(null,document.title,location.pathname+location.search); if(error){handleGoogleLoginError(new Error(errorDescription||error),'Google 跳轉登入'); return true} const returnedState=hash.get('state')||'', savedState=sessionStorage.getItem('designRequestGoogleLoginState')||''; sessionStorage.removeItem('designRequestGoogleLoginState'); sessionStorage.removeItem('designRequestGoogleLoginNonce'); if(savedState&&returnedState!==savedState){handleGoogleLoginError(new Error('Google 登入狀態不一致，請重新登入。'),'Google 跳轉登入'); return true} showLoginPendingOverlay('Google 登入驗證中...'); await handleGoogleCredential({credential:idToken,select_by:'redirect'}); return true}
 async function handleGoogleAccessToken(response){handleGoogleLoginError(new Error('access_token 登入已停用，請使用 Google id_token 登入。'),'Google 登入')}
-async function erpLoginConfig(){try{const data=await readActionWithFrameFallback({action:'erpLoginConfig'},20000,'ERP 登入設定讀取逾時，請按「測試連線」確認 Apps Script。'); if(!data.ok)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:(data.error||'ERP OAuth 尚未設定')); return data}catch(err){if(err?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|iframe|JSONP/i.test(err?.message||'')){console.warn('[ERP 登入設定] Apps Script 讀取失敗，使用公開備援設定',err); setSync('ERP 設定讀取較慢，改用備援登入設定...'); return erpPublicFallbackConfig} throw err}}
-async function startErpLogin(){try{const config=erpPublicFallbackConfig; const state=`erp_${Date.now()}_${randomBase64Url(16)}`, verifier=randomBase64Url(32), challenge=await sha256Base64Url(verifier); sessionStorage.setItem('designRequestErpLoginState',state); sessionStorage.setItem('designRequestErpCodeVerifier',verifier); sessionStorage.setItem('designRequestErpRedirectUri',config.redirectUri); localStorage.setItem('designRequestErpLoginState',state); localStorage.setItem('designRequestErpCodeVerifier',verifier); localStorage.setItem('designRequestErpRedirectUri',config.redirectUri); showLoginPendingOverlay('正在前往 ERP 登入...'); const params=new URLSearchParams({response_type:'code',client_id:config.clientId,redirect_uri:config.redirectUri,scope:config.scope||'openid profile',state,code_challenge:challenge,code_challenge_method:'S256'}); location.href=`${String(config.baseUrl||'https://manage.emctaipei.com').replace(/\/+$/,'')}/oauth/authorize?${params.toString()}`}catch(err){handleErpLoginError(err)}}
-async function continueErpLoginViaAppsScript(code,verifier,redirectUri){showLoginPendingOverlay('ERP 登入驗證中...'); try{const data=await readActionWithFrameFallback({action:'erpLogin',code,codeVerifier:verifier,redirectUri},30000,'ERP 登入驗證沒有回應，請稍候再試。'); applyLoginRedirectResult(data,'ERP 登入')}catch(err){handleErpLoginError(err)}}
+async function erpLoginConfig(){const data=await jsonApi('erpLoginConfig',{},20000);if(!data.clientId||!data.redirectUri)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:'ERP OAuth 尚未設定');return data}
+async function startErpLogin(){try{const config=await erpLoginConfig();const state=`erp_${Date.now()}_${randomBase64Url(16)}`,verifier=randomBase64Url(32),challenge=await sha256Base64Url(verifier);sessionStorage.setItem('designRequestErpLoginState',state);sessionStorage.setItem('designRequestErpCodeVerifier',verifier);sessionStorage.setItem('designRequestErpRedirectUri',config.redirectUri);localStorage.setItem('designRequestErpLoginState',state);localStorage.setItem('designRequestErpCodeVerifier',verifier);localStorage.setItem('designRequestErpRedirectUri',config.redirectUri);showLoginPendingOverlay('正在前往 ERP 登入...');const params=new URLSearchParams({response_type:'code',client_id:config.clientId,redirect_uri:config.redirectUri,scope:config.scope||'openid profile',state,code_challenge:challenge,code_challenge_method:'S256'});location.href=`${String(config.baseUrl||'https://manage.emctaipei.com').replace(/\/+$/,'')}/oauth/authorize?${params.toString()}`}catch(err){handleErpLoginError(err)}}
 async function handleErpRedirectReturn(){
   const hashParams=new URLSearchParams(location.hash.replace(/^#/,''));
   const encodedErp=hashParams.get('erp_login_result')||'';
@@ -9325,7 +8877,7 @@ async function handleErpRedirectReturn(){
 
   showLoginPendingOverlay('ERP 登入驗證中...');
   try{
-    const data=await readActionWithFrameFallback({action:'erpLogin',code,codeVerifier:verifier,redirectUri},30000,'ERP 登入驗證沒有回應，請稍候再試。');
+    const data=await jsonApi('erpLogin',{code,codeVerifier:verifier,redirectUri},30000);
     applyLoginRedirectResult(data,'ERP 登入');
   }catch(err){
     handleErpLoginError(err);
@@ -9333,11 +8885,8 @@ async function handleErpRedirectReturn(){
   return true;
 }
 async function verifyEditorLogin(account,password,newPassword=''){
-  if(!apiUrl) throw new Error('尚未設定 Apps Script 網址，無法登入');
-  const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API login 沒有回應。'});
-  const data=await postToSheetByFrame(payload);
-  if(!data.ok) throw new Error(data.error || '登入失敗');
-  return data;
+  if(!apiUrl)throw new Error('尚未設定 JSON API 網址，無法登入');
+  return jsonApi('login',{account:loginAccountFull(account),password,newPassword},20000);
 }
 async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('test.user@emctaipei.com',password); applyLoginRedirectResult(data,'測試使用者登入')}catch(err){handleAdminLoginError(err)} return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
 async function trySavedLogin(){return}
@@ -9462,9 +9011,8 @@ function closeRequestBatch(){
 }
 async function submitSingleNewRequest(row){
   const draft=normalizeRow({...row,month:monthFromDate(row.start),status:'未開始',details:''});
-  if(!apiUrl){draft.id=nextId(); return {row:draft}}
   const createRow=formCreateRow(draft), requestId=createRequestIdForPayload({action:'add',row:createRow});
-  const data=await sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
+  const data=await jsonApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
   completeCreateRequest(requestId);
   return data;
 }
@@ -9480,12 +9028,8 @@ async function submitRequestBatchRows(){
   const submit=$('#requestBatchSubmit');
   if(submit)submit.disabled=true;
   try{
-    const data=apiUrl
-      ? await sheetApi('batchAdd',{requestId,rows:createRows,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})
-      : {rows:[]};
-    const added=data.rows?.length
-      ? data.rows.map(normalizeRow).filter(row=>isCaseId_(row.id))
-      : (apiUrl?[]:rowsToSubmit.map((row,index)=>normalizeRow({...row,id:row.id||String(Number(nextId())+index).padStart(8,'0'),status:row.status||'未開始'})));
+    const data=await jsonApi('batchAdd',{requestId,rows:createRows,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
+    const added=(data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
     if(added.length)rows=[...added.reverse(),...rows];
     save();
     requestBatchRows=[];
@@ -9671,8 +9215,8 @@ function initCaseTableDragScroll(){
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
-async function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; try{if(apiUrl) await sheetApi('delete',{id}); rows=rows.filter(r=>String(r.id)!==String(id)); save(); render(); setSync(apiUrl?'已從 Google Sheet 刪除':'已從本機刪除');}catch(err){setSync(err.message,true)}}
-async function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; const updated={...row,status:'已取消'}, successMessage='已更新為已取消'; rememberLocalWrite(id,{status:'已取消'}); markUpdatingCell(id,['status']); render(); setSync('寫入中...'); try{if(apiUrl) await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,{status:'已取消'}),...rowWriteAnchor(row),forceHeaders:['案件狀態'],writeHeaders:['案件狀態'],editorToken:currentEditorToken})); rows=rows.map(r=>String(r.id)===String(id)?normalizeRow(updated):r); save(); clearUpdatingCell(id); render(); setSync(apiUrl?successMessage:'已於本機更新為已取消'); refreshAfterInlineWrite(successMessage)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id); render(); setSync(err.message,true)}}
+async function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return}if(!confirm(`確定刪除案件 ${id}？`))return;try{await jsonApi('delete',{id,editorToken:currentEditorToken});rows=rows.filter(r=>String(r.id)!==String(id));save();render();setSync('已從 JSON 資料庫刪除')}catch(err){setSync(err.message,true)}}
+async function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id));if(!row)return;if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return}if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`);return}if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return;const updated={...row,status:'已取消'},successMessage='已更新為已取消';rememberLocalWrite(id,{status:'已取消'});markUpdatingCell(id,['status']);render();setSync('寫入中...');try{await enqueueInlineWrite(()=>jsonApi('update',{id,row:changedWritePayload(id,{status:'已取消'}),...rowWriteAnchor(row),forceHeaders:['案件狀態'],writeHeaders:['案件狀態'],editorToken:currentEditorToken}));rows=rows.map(r=>String(r.id)===String(id)?normalizeRow(updated):r);save();clearUpdatingCell(id);render();setSync(successMessage);refreshAfterInlineWrite(successMessage)}catch(err){forgetLocalWrite(id);clearUpdatingCell(id);render();setSync(err.message,true)}}
 $('#requestForm').addEventListener('submit',async e=>{
   e.preventDefault();
   if(requestSubmitInFlight)return;
@@ -9697,7 +9241,7 @@ $('#requestForm').addEventListener('submit',async e=>{
     if(editId){
       r.id=editId;
       const rowToWrite=formWriteRow(r);
-      const data=apiUrl?await sheetApi('update',{id:editId,row:{id:editId,...rowToWrite},forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders,editorToken:currentEditorToken}):{row:normalizeRow({...existingRow,...r,id:editId})};
+      const data=await jsonApi('update',{id:editId,row:{id:editId,...rowToWrite},forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders,editorToken:currentEditorToken});
       if(data.row){
         submittedRow=normalizeRow({...existingRow,...r,...data.row,id:editId});
         rows=rows.map(row=>String(row.id)===String(editId)?submittedRow:row);
@@ -9705,15 +9249,14 @@ $('#requestForm').addEventListener('submit',async e=>{
         submittedRow=normalizeRow({...existingRow,...r,id:editId});
         rows=rows.map(row=>String(row.id)===String(editId)?submittedRow:row);
       }
-      setSync(apiUrl?'已更新 Google Sheet':'已更新本機資料');
+      setSync('已更新 JSON 資料庫');
     }else{
-      if(!apiUrl){r.id=nextId()}
       const createRow=formCreateRow(r);
       requestId=createRequestIdForPayload({action:'add',row:createRow});
-      const data=apiUrl?await sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken}):{row:r};
+      const data=await jsonApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
       submittedRow=normalizeRow(data.row||{...r,id:r.id||nextId(),status:r.status||'未開始'});
-      if(!apiUrl||isCaseId_(submittedRow.id))rows.unshift(submittedRow);
-      setSync(apiUrl?`已新增至 database 第 ${data.rowNumber || '新'} 列${isCaseId_(submittedRow.id) ? `，案件編號 ${submittedRow.id}` : '，正在同步案件編號'}`:'已新增至本機資料');
+      if(isCaseId_(submittedRow.id))rows.unshift(submittedRow);
+      setSync(`已新增至 database 第 ${data.rowNumber || '新'} 列${isCaseId_(submittedRow.id)?`，案件編號 ${submittedRow.id}`:''}`);
     }
     save();
     e.target.reset();
@@ -9878,7 +9421,7 @@ document.querySelectorAll('.kpi[data-status]').forEach(card=>{
 });
 $('#syncNow').onclick=()=>loadSheet({full:true,forceFresh:true});
 $('#testApi').onclick=()=>{
-  testAppsScriptConnection();
+  testJsonBackendConnection();
 };
 $('#reloadSheet').onclick=()=>loadSheet({full:true,forceFresh:true});
 $('#refreshModify').onclick=()=>refreshModifyList();

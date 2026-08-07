@@ -1,6 +1,6 @@
 # Machi 設計需求 JSON 後台
 
-此後台將原 Google 試算表的七個分頁整合到單一 JSON 檔，並保留前台現有的 `action` API 介面：
+這個 Node.js 後台是設計需求系統的唯一即時資料來源。原 Google 試算表的七個分頁已整合到 `backend/data/db.json`：
 
 - `database`
 - `短連結`
@@ -10,7 +10,9 @@
 - `reels`
 - `bug_report`
 
-## 啟動
+前台、七表管理頁、登入、圖片上傳、限時動態及問題回報均直接使用 JSON API，不會在失敗時回退讀寫 Google Sheets。
+
+## 本機啟動與驗收
 
 需要 Node.js 20 以上版本。
 
@@ -18,39 +20,49 @@
 npm start
 ```
 
-預設網址：`http://127.0.0.1:8787`
+預設入口：
 
 - 前台：`http://127.0.0.1:8787/`
-- API：`http://127.0.0.1:8787/api?action=ping`
-- JSON 資料：`backend/data/db.json`（不會由靜態網站公開）
+- 健康檢查：`http://127.0.0.1:8787/api?action=ping`
+- 七表管理：`http://127.0.0.1:8787/json_database_admin.html`
+- JSON 圖片管理：`http://127.0.0.1:8787/json_upload.html`
+- 資料檔：`backend/data/db.json`（內建靜態伺服器不會公開此路徑）
 
-前台在 GitHub Pages 上仍使用原 Apps Script；在其他網域或本機伺服器上會自動使用同網域 `/api`。也可透過 `?api=https://example.com/api` 或瀏覽器的 `designRequestApiUrl` 設定覆寫。
+本機測試帳號為 `test.user@emctaipei.com`，密碼為 `test`。七表管理頁使用 `JSON_DB_LOGIN_PASSWORD`；未設定時沿用每日 `MMDD` 密碼規則。
 
-## 從 Google 試算表重新匯入
+## 正式部署
 
-```bash
-npm run import:sheets
-```
+GitHub Pages 只能發布靜態檔，不能執行可寫入的 Node.js API。正式環境必須讓這個 repository 由 Node.js 20 服務執行，或把 `backend/` 部署到具有持久磁碟的 Node 主機，再將 Pages 前端指向該 API。
 
-匯入器會讀取七個指定分頁、保留精確欄位名稱，並在覆寫前留下 `.bak` 備份。正式啟用 JSON 後台後，請先確認 JSON 端沒有較新的寫入，再執行重新匯入，避免用試算表舊資料覆蓋 JSON 新資料。
+建議的單一網域部署方式是：
+
+1. 在 Node 主機執行 `npm start`，由反向代理提供 HTTPS。
+2. 將 `JSON_DB_PATH` 與 `MEDIA_ROOT` 指到備份中的持久磁碟。
+3. 設定固定 `JSON_DB_LOGIN_PASSWORD`、`PUBLIC_BASE_URL`、`CORS_ORIGINS` 與 OAuth 環境變數。
+4. 前端與後端同網域時會自動使用 `/api`；跨網域時，在 `index.html`、`json_database_admin.html`、`json_upload.html` 的 `design-api-url` meta 設定完整 API URL，或用 `?api=https://api.example.com/api` 驗收。
+5. ERP 控制台登記的 redirect URI 必須與 `ERP_REDIRECT_URI` 完全一致；`ERP_CLIENT_SECRET` 只能存在伺服器環境變數。
 
 ## 環境設定
 
-可參考 `backend/.env.example`；程式直接讀取程序環境變數。
+複製 `backend/.env.example` 的欄位到部署平台的環境變數。程式不會自動讀取 `.env` 檔。
 
 | 變數 | 用途 |
 | --- | --- |
 | `HOST` / `PORT` | 監聽位址與連接埠 |
 | `JSON_DB_PATH` | JSON 資料庫絕對路徑 |
-| `JSON_DB_LOGIN_PASSWORD` | 固定登入密碼；未設定時沿用每日 `MMDD` 規則 |
-| `PUBLIC_BASE_URL` | 產生 `/a`–`/d` 補充資料短網址時使用的公開網域 |
+| `JSON_DB_LOGIN_PASSWORD` | 固定登入與管理密碼；未設定時使用每日 `MMDD` |
+| `PUBLIC_BASE_URL` | 圖片網址與 `/a`–`/d` 補充資料短網址的公開網域 |
+| `CORS_ORIGINS` | 可呼叫 API 的前端來源，以逗號分隔 |
+| `MEDIA_ROOT` | 圖片上傳的持久目錄 |
 | `GOOGLE_OAUTH_CLIENT_ID` | Google ID token 驗證的 OAuth client ID |
-
-正式環境建議設定固定登入密碼、HTTPS 與反向代理，並把 `backend/data` 放在定期備份的持久磁碟。
+| `ERP_BASE_URL` | ERP OAuth 服務根網址 |
+| `ERP_CLIENT_ID` | ERP OAuth client ID |
+| `ERP_CLIENT_SECRET` | ERP OAuth client secret，禁止寫入 Git |
+| `ERP_REDIRECT_URI` | ERP OAuth 回跳網址 |
 
 ## API
 
-前台相容端點使用：
+前台相容端點：
 
 ```http
 GET  /api?action=list&year=2026
@@ -60,24 +72,25 @@ Content-Type: application/json
 {"action":"add","row":{"client":"客戶","project":"專案"}}
 ```
 
-已支援的主要動作：
+主要動作：
 
 - 案件：`list`、`recent`、`add`、`batchAdd`、`update`、`batchUpdate`、`delete`
 - 短網址：`createShortLink`、`resolveShortLink`、`resolveSupplementLink`
-- 設定與登入：`login`、`googleLogin`、`verifyToken`、`logout`、`getUserSettings`、`listDesignerProfiles`、`saveUserSettings`、`saveDesignerProfiles`
+- 設定與登入：`login`、`googleLogin`、`erpLoginConfig`、`erpLogin`、`verifyToken`、`logout`、`getUserSettings`、`listDesignerProfiles`、`saveUserSettings`、`saveDesignerProfiles`
+- JSON 媒體：`listDesignerMedia`、`uploadDesignerImage`、`uploadUserAvatar`、`deleteDesignerMedia`
 - 限時動態：`listReels`、`toggleReelReaction`、`addReelComment`
 - 問題回報：`reportIssue`、`listIssueReports`、`updateIssueReportStatus`
 - 修改紀錄：`listModificationRecords`、`addModificationRecord`、`updateModificationConfirm`
 
-管理者可用 Bearer session token 存取通用資料表 API：
+管理者可用 Bearer session token 操作七張資料表：
 
 ```http
 GET    /api/tables
-GET    /api/table/database?offset=0&limit=100
+GET    /api/table/database?offset=0&limit=100&q=關鍵字&sort=案件編號&order=desc
 POST   /api/table/database
 PATCH  /api/table/database/26080001
 DELETE /api/table/database/26080001
-Authorization: Bearer <editor token>
+Authorization: Bearer <admin token>
 ```
 
 ## 資料安全與持久化
@@ -86,7 +99,12 @@ Authorization: Bearer <editor token>
 - 使用暫存檔加原子更名，避免半寫入 JSON。
 - 每次變更前自動備份到 `backend/data/backups/`，預設保留最近 20 份。
 - `backend` 路徑不會由內建靜態伺服器公開。
-- 案件新增支援 `requestId` 冪等處理，避免前台逾時重送產生重複案件。
+- 圖片僅接受 JPG、PNG、WebP、GIF，單檔上限 8 MB。
+- 案件新增支援 `requestId` 冪等處理，避免逾時重送產生重複案件。
+
+## 重新匯入舊資料
+
+`npm run import:sheets` 只保留作為一次性遷移工具。它會從原七張試算表重新建立 JSON，覆寫前先產生 `.bak`；正式切換後不要排程執行，以免試算表舊資料覆蓋 JSON 新資料。
 
 ## 驗證
 
@@ -94,4 +112,4 @@ Authorization: Bearer <editor token>
 npm test
 ```
 
-測試涵蓋 CSV 解析、七個資料表持久化、案件新增/更新、短連結、設定、限動、問題回報、修改紀錄、登入權限與並行寫入。
+測試涵蓋七表持久化與管理 CRUD、案件流程、短連結、設定、限時動態、問題回報、修改紀錄、權限、並行寫入、ERP OAuth PKCE，以及圖片上傳／讀取／刪除。
