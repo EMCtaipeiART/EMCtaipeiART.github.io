@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - main
+  repository_dispatch:
+    types:
+      - database_changed
   schedule:
-    - cron: "2-59/5 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +18,7 @@ permissions:
 
 concurrency:
   group: database-archive-snapshot
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   update-snapshot:
