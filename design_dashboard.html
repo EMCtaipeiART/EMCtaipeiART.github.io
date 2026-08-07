@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-07-14T21:05:00+08:00" />
+<meta name="last-modified" content="2026-08-07T15:35:00+08:00" />
+<meta name="app-version" content="20260807-archive-json-snapshot-1" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -350,13 +351,14 @@ const SHEET_ID='1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const GID='646199020';
 const SETTINGS_GID='988186149';
 const MODIFICATION_GID='1240020248';
+const ARCHIVE_SNAPSHOT_URL='data/database_archive.json';
 const SHEET_URLS=[
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`,
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`,
   `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`
 ];
 const SHEET_JSONP_URL=gid=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:json`;
-let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map();
+let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map(),archiveSnapshotMeta=null;
 let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='';
 const $=id=>document.getElementById(id);
 const DESIGNERS=['Machi','Anna','Karl','Noise','Amber','Leona'];
@@ -940,8 +942,20 @@ async function loadDashboardModifications(){
   try{const records=(await fetchGvizJSONP(MODIFICATION_GID,rows=>rows)).map(normalizeModificationRecord),byCase=new Map();records.forEach(record=>{if(!record.caseId)return;if(!byCase.has(record.caseId))byCase.set(record.caseId,[]);byCase.get(record.caseId).push(record)});dashboardModificationRecords=byCase}catch(e){console.warn('修改紀錄讀取失敗',e)}
   renderDashboardNotifications();if(raw.length)renderAnalysis(+$('yearFilter').value,+$('monthFilter').value,$('designerFilter').value)
 }
+async function fetchArchiveSnapshot(){
+  const response=await fetch(`${ARCHIVE_SNAPSHOT_URL}?v=${Date.now()}`,{cache:'no-store'});
+  if(!response.ok)throw new Error(`JSON 快照回應失敗：${response.status}`);
+  const snapshot=await response.json(),rows=Array.isArray(snapshot)?snapshot:snapshot?.rows;
+  if(!Array.isArray(rows)||!rows.length)throw new Error('JSON 快照沒有可用資料');
+  archiveSnapshotMeta=Array.isArray(snapshot)?{rowCount:rows.length}:snapshot;
+  return normalizeRows(rows)
+}
 async function fetchCSV(){
-  let lastErr;
+  let lastErr;archiveSnapshotMeta=null;
+  if(location.protocol!=='file:'){
+    try{return await fetchArchiveSnapshot()}
+    catch(e){lastErr=e;console.warn('database_archive JSON 快照讀取失敗，改讀 Google 試算表',e)}
+  }
   if(location.protocol==='file:')return fetchGvizJSONP();
   for(const url of SHEET_URLS){
     try{const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error(`${res.status} ${res.statusText}`);const text=await res.text();if(!text||text.includes('<!DOCTYPE html'))throw new Error('回傳不是 CSV');const data=normalizeRows(parseCSV(text));if(data.length)return data;throw new Error('CSV 無可用資料')}
@@ -952,7 +966,7 @@ async function fetchCSV(){
 }
 async function load(){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
-  try{raw=await fetchCSV();try{normalizeSettings(await fetchGvizJSONP(SETTINGS_GID,rows=>rows))}catch(e){console.warn('設定分頁讀取失敗',e)}$('lastUpdated').textContent='最後更新：'+new Date().toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent='資料來源：Google 試算表';}
+  try{raw=await fetchCSV();try{normalizeSettings(await fetchGvizJSONP(SETTINGS_GID,rows=>rows))}catch(e){console.warn('設定分頁讀取失敗',e)}const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=archiveSnapshotMeta?`資料來源：database_archive JSON 快照（${archiveSnapshotMeta.rowCount||raw.length} 筆）`:'資料來源：Google 試算表';}
   catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法直接讀取 Google 試算表，已先顯示示範資料。請確認試算表「知道連結者可檢視」或已發佈到網路。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
   finally{populateFilters();applyFilter();updateProfile();renderDashboardNotifications();loadDashboardModifications();loading.classList.remove('show')}
 }
