@@ -6712,6 +6712,7 @@ const localRowsKey = 'designRequestsDatabaseV3';
 const cachedRows = JSON.parse(localStorage.getItem(localRowsKey) || 'null');
 const deprecatedSeedIds = new Set(['25120001','25120002','25120003','25120004','25120005','25120011','25120012','25120013','25120018','25120020']);
 const sanitizedCachedRows = Array.isArray(cachedRows) ? cachedRows.filter(row=>!deprecatedSeedIds.has(String(row?.id||row?.['案件編號']||''))) : null;
+let activeWeightRules=[];
 let rows = (sanitizedCachedRows?.length ? sanitizedCachedRows : seed).map(normalizeRow).filter(r=>!r.archived);
 if(!rows.length) rows = seed.map(normalizeRow).filter(r=>!r.archived);
 let editingId = null;
@@ -6810,7 +6811,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260808-weight-rules-live-96';
+const appBuildVersion = '20260808-front-database-init-97';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6938,7 +6939,6 @@ const baseDesignLists = {
   }
 };
 let designLists = JSON.parse(JSON.stringify(baseDesignLists));
-let activeWeightRules=[];
 function normalizeWeightType(value){const type=String(value||'').trim();return ['影片','影像','影音'].includes(type)?'影音':type}
 function splitWeightDetails(value){return [...new Set(String(value||'').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).filter(Boolean))]}
 function defaultDetailWeight(type,stage,detail){
