@@ -111,9 +111,18 @@ test('designer roster uses JSON group and rotation for priority new-project butt
 test('archive snapshot and dashboard use JSON database sources only', async () => {
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
+  const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
+  const archive = JSON.parse(await readFile(new URL('../../data/database_archive.json', import.meta.url), 'utf8'));
   assert.match(generator, /backend\/data\/db\.json/);
+  assert.match(generator, /mode: 'mirror-primary-database'/);
+  assert.doesNotMatch(generator, /preserve-history-and-merge-primary-database/);
   assert.doesNotMatch(generator, /docs\.google\.com|script\.google\.com/);
+  assert.equal(archive.rowCount, database.tables.database.rows.length);
+  assert.equal(archive.rows.length, database.tables.database.rows.length);
+  assert.deepEqual(archive.rows, database.tables.database.rows);
   assert.match(dashboard, /const ARCHIVE_JSON_URL='data\/database_archive\.json'/);
+  assert.match(dashboard, /fetch\(ARCHIVE_JSON_URL,\{cache:'no-cache'\}\)/);
+  assert.doesNotMatch(dashboard, /ARCHIVE_JSON_URL\}\?v=\$\{Date\.now\(\)\}|cache:'no-store'/);
   assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
   assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
   assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
@@ -121,6 +130,7 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(dashboard, /qty\(r\)\*regularScore\*urgentMultiplier/);
   assert.doesNotMatch(dashboard, /qty\(r\)\*regularScore\+urgentScore/);
   assert.doesNotMatch(dashboard, /raw\.githubusercontent\.com\/EMCtaipeiART\/EMCtaipeiART\.github\.io\/main\/backend\/data\/db\.json/);
+  assert.doesNotMatch(dashboard, /renderHeatmap\(y,m\);renderRank\(\);renderAnalysis\(y,m,des\)/);
 });
 
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
