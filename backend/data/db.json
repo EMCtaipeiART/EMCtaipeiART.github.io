@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 39,
+  "revision": 40,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T13:57:37.768Z",
+  "updatedAt": "2026-08-07T13:58:08.097Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16841,6 +16841,31 @@
           "案件編號": "26080043",
           "月份": "8月",
           "加權": "4"
+        },
+        {
+          "客戶別": "測試",
+          "專案名稱": "測試",
+          "專案負責人": "Machi",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/07",
+          "結束日期": "2026/08/14",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook, Instagram, Line, 其他平台",
+          "填單時間": "2026/08/07 21:58",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "案件編號": "26080044",
+          "月份": "8月",
+          "加權": "1"
         }
       ]
     },
@@ -19357,6 +19382,39 @@
           "weight": "4",
           "sheetRow": 602,
           "_sheetRow": 602
+        }
+      },
+      "d1a92fee-e3bb-4bd2-a628-e56365868ce3": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 601,
+        "row": {
+          "id": "26080044",
+          "month": "8月",
+          "client": "測試",
+          "project": "測試",
+          "owner": "Machi",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/07",
+          "end": "2026/08/14",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram, Line, 其他平台",
+          "submittedAt": "2026/08/07 21:58",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "1",
+          "sheetRow": 601,
+          "_sheetRow": 601
         }
       }
     }
