@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 68,
+  "revision": 69,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T20:20:31.963Z",
+  "updatedAt": "2026-08-07T20:20:38.765Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19018,7 +19018,7 @@
           "限時動態連結": "https://lh3.googleusercontent.com/d/1Ny1_FVHQ5AWHS33XxnYGJ7r1dK2cWjgg=w1600",
           "按讚": "Machi",
           "倒讚": "",
-          "留言": ""
+          "留言": "[{\"id\":\"c0ff1223-d083-4146-8805-45abe4c6082b\",\"name\":\"Machi\",\"account\":\"machi.chen@emctaipei.com\",\"avatar\":\"https://ci3.googleusercontent.com/mail-sig/AIorK4y7KgeNbB2ORCa32XzaexZxt4rq9QfGWiPppN8IXW2KWldvfH0KYvuVfQG5i9R096axQ2TJ7oI5oBQl\",\"text\":\"tst\",\"createdAt\":\"2026-08-07T20:20:38.764Z\"}]"
         }
       ]
     },
