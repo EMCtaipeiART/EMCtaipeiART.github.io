@@ -721,6 +721,26 @@ export function createActionHandler(database, options = {}) {
       if (!config.designers.includes(designer)) throw new Error('替換設計師不在同一輪值組別');
       if (designer !== expected && !text(source.reason || source['調整原因(選填)'])) throw new Error('有替換設計師時，請填寫調整原因');
       return database.transaction(draft => {
+        const replacementName = designer !== expected ? designer : '';
+        const projectRow = {
+          '客戶別': text(source.client || source['客戶別']),
+          '專案名稱': text(source.project || source['專案名稱']),
+          '專案負責人': text(source.owner || source['專案負責人']),
+          '專案類型': text(source.projectType || source['專案類型']),
+          '數量': text(source.qty || source['數量']),
+          '開始時間': text(source.start || source['開始時間']),
+          '結束時間': text(source.end || source['結束時間']),
+          '預計設計師': expected,
+          '替換(選填)': replacementName,
+          '調整原因(選填)': replacementName ? text(source.reason || source['調整原因(選填)']) : ''
+        };
+        for (const header of ['客戶別', '專案名稱', '專案負責人', '專案類型', '數量', '開始時間', '結束時間', '預計設計師']) {
+          if (!projectRow[header]) throw new Error(`請填寫「${header}」`);
+        }
+        const projectTable = draft.tables[`${projectKind}新開專案`];
+        if (!projectTable) throw new Error(`JSON 資料庫缺少「${projectKind}新開專案」資料表`);
+        projectTable.rows.push(projectRow);
+
         const row = toSheetRow({
           client: source.client, project: source.project, owner: source.owner,
           type: config.type, stage: projectKind === '影音' && text(source.projectType).includes('拍攝') ? '拍攝' : '後製',
@@ -741,7 +761,7 @@ export function createActionHandler(database, options = {}) {
         const reordered = [...ranked.slice(0, consumedIndex), ...ranked.slice(consumedIndex + 1), ranked[consumedIndex]];
         reordered.forEach((item, index) => { if (item.settings) item.settings['新專案輪值'] = String(index + 1); });
         const rotations = config.designers.map(name => ({ name, rotation: Number(settingsRows.find(item => text(item['名字']) === name)?.['新專案輪值']) || 99 }));
-        return { ok: true, action, projectKind, rowNumber: draft.tables.database.rows.length + 1, databaseRowNumber: draft.tables.database.rows.length + 1, databaseRow: toApiRow(row, draft.tables.database.rows.length - 1), rotations, user: session.user };
+        return { ok: true, action, projectKind, rowNumber: projectTable.rows.length + 1, row: projectRow, databaseRowNumber: draft.tables.database.rows.length + 1, databaseRow: toApiRow(row, draft.tables.database.rows.length - 1), rotations, user: session.user };
       }, 'create project');
     }
 
