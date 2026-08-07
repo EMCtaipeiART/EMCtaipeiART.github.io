@@ -60,11 +60,11 @@ export function calculateWeight({type='',stage='',qty='',details='',rules=DEFAUL
   const regularScore=selected
     .filter(detail=>detail!=='急件')
     .reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
-  const urgentScore=selected.includes('急件')
+  const urgentMultiplier=selected.includes('急件')
     ? (scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000急件`) ?? 3)
-    : 0;
+    : 1;
   const quantity=Number(String(qty ?? '').replace(/,/g,''));
-  const weighted=(Number.isFinite(quantity)?quantity:0)*regularScore+urgentScore;
+  const weighted=(Number.isFinite(quantity)?quantity:0)*regularScore*urgentMultiplier;
   return Number(weighted.toFixed(4));
 }
 
