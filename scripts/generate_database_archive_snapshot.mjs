@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
 const SHEETS = {
   databaseArchive: { sheetName: 'database_archive', gid: '646199020' },
   database: { sheetName: 'database', gid: '1244538986' }
@@ -45,7 +46,7 @@ function parseCsv(text) {
 }
 
 async function readSheet(source) {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${source.gid}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${source.gid}&ts=${Date.now()}`;
   const response = await fetch(url, { redirect: 'follow' });
   if (!response.ok) throw new Error(`${source.sheetName} 讀取失敗：HTTP ${response.status}`);
   const csv = await response.text();
@@ -62,6 +63,62 @@ async function readSheet(source) {
     rows,
     rowCount: rows.length,
     csvSha256: createHash('sha256').update(csv).digest('hex')
+  };
+}
+
+function apiRowToSheetRow(row = {}) {
+  const clean = value => String(value ?? '').trim();
+  const slashDate = value => /^\d{4}-\d{2}-\d{2}$/.test(clean(value)) ? clean(value).replaceAll('-', '/') : clean(value);
+  return {
+    '案件編號': clean(row.id),
+    '月份': clean(row.month),
+    '客戶別': clean(row.client),
+    '專案名稱': clean(row.project),
+    '專案負責人': clean(row.owner),
+    '設計種類': clean(row.type),
+    '階段': clean(row.stage),
+    '數量': clean(row.qty),
+    '開始日期': slashDate(row.start),
+    '結束日期': slashDate(row.end),
+    '設計負責人': clean(row.designer),
+    '項目細節': clean(row.details),
+    '狀態': clean(row.status),
+    '加權': clean(row.weight),
+    '填單時間': clean(row.submittedAt),
+    '使用平台': clean(row.platforms),
+    '設計簡報說明': clean(row.briefNote),
+    '設計簡報連結': clean(row.briefUrl),
+    '客戶素材說明': clean(row.assetNote),
+    '客戶素材連結': clean(row.assetUrl),
+    '參考範例說明': clean(row.referenceNote),
+    '參考範例連結': clean(row.referenceUrl),
+    '其他說明': clean(row.otherNote),
+    '其他連結': clean(row.otherUrl)
+  };
+}
+
+async function readDatabaseApi(source) {
+  const params = new URLSearchParams({
+    action: 'list',
+    noCache: 'true',
+    targetSpreadsheetId: SPREADSHEET_ID,
+    targetSheetName: source.sheetName,
+    targetSheetId: source.gid,
+    ts: String(Date.now())
+  });
+  const response = await fetch(`${API_URL}?${params}`, { redirect: 'follow' });
+  if (!response.ok) throw new Error(`${source.sheetName} 即時 API 讀取失敗：HTTP ${response.status}`);
+  const data = await response.json();
+  if (!data.ok || !Array.isArray(data.rows)) throw new Error(data.error || `${source.sheetName} 即時 API 未回傳 rows`);
+  const rows = data.rows.map(apiRowToSheetRow);
+  const serialized = JSON.stringify(rows);
+  return {
+    ...source,
+    headers: [...new Set(rows.flatMap(row => Object.keys(row)))],
+    rows,
+    rowCount: rows.length,
+    csvSha256: createHash('sha256').update(serialized).digest('hex'),
+    transport: 'apps-script-no-cache'
   };
 }
 
@@ -90,31 +147,42 @@ function comparableRow(row) {
 
 const [archiveData, databaseData] = await Promise.all([
   readSheet(SHEETS.databaseArchive),
-  readSheet(SHEETS.database)
+  readDatabaseApi(SHEETS.database)
 ]);
 const rows = archiveData.rows.map(row => ({ ...row }));
 const archiveIndexesById = new Map();
 rows.forEach((row, index) => {
   const id = caseId(row);
-  if (id) archiveIndexesById.set(id, index);
+  if (!id) return;
+  if (!archiveIndexesById.has(id)) archiveIndexesById.set(id, []);
+  archiveIndexesById.get(id).push(index);
 });
+const databaseOccurrencesById = new Map();
 const addedCaseIds = [];
 const updatedCaseIds = [];
 const unchangedCaseIds = [];
 
 databaseData.rows.forEach(currentRow => {
   const id = caseId(currentRow);
-  const archiveIndex = id ? archiveIndexesById.get(id) : undefined;
+  const occurrence = id ? (databaseOccurrencesById.get(id) || 0) : 0;
+  if (id) databaseOccurrencesById.set(id, occurrence + 1);
+  const archiveIndex = id ? archiveIndexesById.get(id)?.[occurrence] : undefined;
+  const occurrenceLabel = id ? `${id}${occurrence ? `#${occurrence + 1}` : ''}` : `row:${rows.length + 1}`;
   if (archiveIndex === undefined) {
     rows.push({ ...currentRow });
-    if (id) archiveIndexesById.set(id, rows.length - 1);
-    addedCaseIds.push(id || `row:${rows.length}`);
+    if (id) {
+      if (!archiveIndexesById.has(id)) archiveIndexesById.set(id, []);
+      archiveIndexesById.get(id).push(rows.length - 1);
+    }
+    addedCaseIds.push(occurrenceLabel);
     return;
   }
   const archiveRow = rows[archiveIndex];
   const changed = JSON.stringify(comparableRow(archiveRow)) !== JSON.stringify(comparableRow(currentRow));
-  rows[archiveIndex] = { ...archiveRow, ...currentRow };
-  (changed ? updatedCaseIds : unchangedCaseIds).push(id);
+  const mergedRow = { ...archiveRow, ...currentRow };
+  if (String(archiveRow['填單時間'] || '').length > String(currentRow['填單時間'] || '').length) mergedRow['填單時間'] = archiveRow['填單時間'];
+  rows[archiveIndex] = mergedRow;
+  (changed ? updatedCaseIds : unchangedCaseIds).push(occurrenceLabel);
 });
 const columns = [...new Set([...archiveData.headers, ...databaseData.headers])];
 let previousRows = [];
@@ -124,26 +192,30 @@ try {
 } catch (error) {
   if (error?.code !== 'ENOENT') console.warn(`舊快照無法比對：${error.message}`);
 }
-const previousById = new Map();
-previousRows.forEach(row => {
-  const id = caseId(row);
-  if (id) previousById.set(id, row);
-});
-const currentById = new Map();
-rows.forEach(row => {
-  const id = caseId(row);
-  if (id) currentById.set(id, row);
-});
+function rowsByOccurrence(list) {
+  const occurrences = new Map();
+  const indexed = new Map();
+  list.forEach(row => {
+    const id = caseId(row);
+    if (!id) return;
+    const occurrence = occurrences.get(id) || 0;
+    occurrences.set(id, occurrence + 1);
+    indexed.set(`${id}#${occurrence + 1}`, { row, label: `${id}${occurrence ? `#${occurrence + 1}` : ''}` });
+  });
+  return indexed;
+}
+const previousById = rowsByOccurrence(previousRows);
+const currentById = rowsByOccurrence(rows);
 const snapshotAddedCaseIds = [];
 const snapshotUpdatedCaseIds = [];
 const snapshotUnchangedCaseIds = [];
-currentById.forEach((row, id) => {
-  const previous = previousById.get(id);
-  if (!previous) snapshotAddedCaseIds.push(id);
-  else if (JSON.stringify(comparableRow(previous)) !== JSON.stringify(comparableRow(row))) snapshotUpdatedCaseIds.push(id);
-  else snapshotUnchangedCaseIds.push(id);
+currentById.forEach((current, identity) => {
+  const previous = previousById.get(identity);
+  if (!previous) snapshotAddedCaseIds.push(current.label);
+  else if (JSON.stringify(comparableRow(previous.row)) !== JSON.stringify(comparableRow(current.row))) snapshotUpdatedCaseIds.push(current.label);
+  else snapshotUnchangedCaseIds.push(current.label);
 });
-const snapshotRemovedCaseIds = [...previousById.keys()].filter(id => !currentById.has(id));
+const snapshotRemovedCaseIds = [...previousById.entries()].filter(([identity]) => !currentById.has(identity)).map(([, value]) => value.label);
 const snapshot = {
   schemaVersion: 2,
   generatedAt: new Date().toISOString(),
@@ -160,7 +232,8 @@ const snapshot = {
       sheetName: databaseData.sheetName,
       gid: databaseData.gid,
       rowCount: databaseData.rowCount,
-      csvSha256: databaseData.csvSha256
+      csvSha256: databaseData.csvSha256,
+      transport: databaseData.transport || 'gviz-csv'
     }
   },
   mergeSummary: {
