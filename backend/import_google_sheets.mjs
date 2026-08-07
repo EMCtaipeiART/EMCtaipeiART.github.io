@@ -77,7 +77,7 @@ export async function importGoogleSheets(outputPath = DEFAULT_OUTPUT) {
   db.updatedAt = importedAt;
   db.source = { type: 'google-sheets', spreadsheetId: SPREADSHEET_ID, importedAt, tables: {} };
   for (const [name, url, data] of results) {
-    if (name === 'database') data.rows.forEach(applyWeightToRow);
+    if (name === 'database') data.rows.forEach(row => applyWeightToRow(row, db.tables['加權計分標準'].rows));
     db.tables[name] = { headers: data.headers, primaryKey: TABLE_SCHEMAS[name].primaryKey, rows: data.rows };
     db.source.tables[name] = { url, rowCount: data.rows.length };
   }

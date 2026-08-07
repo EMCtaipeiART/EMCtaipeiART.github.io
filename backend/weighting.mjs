@@ -20,7 +20,27 @@ const SCORE_ROWS = [
   ...['平面','動態','音樂','模板'].flatMap(stage=>['Shutterstock','Envato','Freepik'].map(detail=>['採購',stage,detail,0]))
 ];
 
-export const DETAIL_SCORE_MAP = new Map(SCORE_ROWS.map(([type,stage,detail,score])=>[`${type}\u0000${stage}\u0000${detail}`,score]));
+export const DEFAULT_WEIGHT_RULE_ROWS = Object.freeze(SCORE_ROWS.map(([type,stage,detail,score])=>Object.freeze({
+  '設計種類':type,
+  '階段':stage,
+  '項目細節':detail,
+  '權重':String(score),
+  '備註':''
+})));
+
+export function detailScoreMap(rules=DEFAULT_WEIGHT_RULE_ROWS) {
+  const map=new Map();
+  for(const rule of Array.isArray(rules)?rules:[]) {
+    const type=normalizeDesignType(Array.isArray(rule)?rule[0]:rule?.['設計種類']);
+    const stage=String(Array.isArray(rule)?rule[1]:rule?.['階段'] ?? '').trim();
+    const detail=String(Array.isArray(rule)?rule[2]:rule?.['項目細節'] ?? '').trim();
+    const score=Number(Array.isArray(rule)?rule[3]:rule?.['權重']);
+    if(type&&stage&&detail&&Number.isFinite(score))map.set(`${type}\u0000${stage}\u0000${detail}`,score);
+  }
+  return map;
+}
+
+export const DETAIL_SCORE_MAP = detailScoreMap();
 
 export function splitDetailValues(value) {
   return [...new Set(String(value ?? '').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).filter(Boolean))];
@@ -32,22 +52,24 @@ export function normalizeDesignType(value) {
   return type;
 }
 
-export function calculateWeight({type='',stage='',qty='',details=''}={}) {
+export function calculateWeight({type='',stage='',qty='',details='',rules=DEFAULT_WEIGHT_RULE_ROWS}={}) {
   const selected=splitDetailValues(details);
   if(!selected.length)return null;
   const normalizedType=normalizeDesignType(type),normalizedStage=String(stage ?? '').trim();
-  const multiplier=selected.reduce((sum,detail)=>sum+(DETAIL_SCORE_MAP.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
+  const scoreMap=rules===DEFAULT_WEIGHT_RULE_ROWS?DETAIL_SCORE_MAP:detailScoreMap(rules);
+  const multiplier=selected.reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
   const quantity=Number(String(qty ?? '').replace(/,/g,''));
   const weighted=(Number.isFinite(quantity)?quantity:0)*multiplier;
   return Number(weighted.toFixed(4));
 }
 
-export function applyWeightToRow(row={}) {
+export function applyWeightToRow(row={},rules=DEFAULT_WEIGHT_RULE_ROWS) {
   const weight=calculateWeight({
     type:row['設計種類'] ?? row['設計類型'] ?? row['設計總類'],
     stage:row['階段'],
     qty:row['數量'],
-    details:row['項目細節']
+    details:row['項目細節'],
+    rules
   });
   row['加權']=weight===null?'':String(weight);
   return row;

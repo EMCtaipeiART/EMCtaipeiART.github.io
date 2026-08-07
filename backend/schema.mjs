@@ -1,3 +1,5 @@
+import { DEFAULT_WEIGHT_RULE_ROWS } from './weighting.mjs';
+
 export const DATABASE_HEADERS = [
   '案件編號', '月份', '客戶別', '專案名稱', '專案負責人', '設計種類', '階段', '數量',
   '開始日期', '結束日期', '設計負責人', '項目細節', '狀態', '加權', '填單時間',
@@ -9,6 +11,10 @@ export const TABLE_SCHEMAS = {
   database: {
     primaryKey: '案件編號',
     headers: DATABASE_HEADERS
+  },
+  '加權計分標準': {
+    primaryKey: null,
+    headers: ['設計種類', '階段', '項目細節', '權重', '備註']
   },
   '短連結': {
     primaryKey: '短碼',
@@ -57,7 +63,7 @@ export function emptyDatabase() {
     tables: Object.fromEntries(TABLE_NAMES.map(name => [name, {
       headers: [...TABLE_SCHEMAS[name].headers],
       primaryKey: TABLE_SCHEMAS[name].primaryKey,
-      rows: []
+      rows: name === '加權計分標準' ? DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row })) : []
     }])),
     internal: {
       sessions: {},
@@ -79,6 +85,7 @@ export function normalizeDatabaseShape(input) {
     table.headers = [...new Set([...(Array.isArray(table.headers) ? table.headers : []), ...schema.headers])];
     table.primaryKey = schema.primaryKey;
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];
+    if (name === '加權計分標準' && !table.rows.length) table.rows = DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }));
     db.tables[name] = table;
   }
   db.internal ||= {};

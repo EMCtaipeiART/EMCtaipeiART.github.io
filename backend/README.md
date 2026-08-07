@@ -1,8 +1,9 @@
 # Machi 設計需求 JSON 後台
 
-這個 Node.js 後台是設計需求系統的唯一即時資料來源。原 Google 試算表的七個分頁已整合到 `backend/data/db.json`：
+這個 Node.js 後台是設計需求系統的唯一即時資料來源。原 Google 試算表資料及加權規則已整合到 `backend/data/db.json`：
 
 - `database`
+- `加權計分標準`
 - `短連結`
 - `修改統計表`
 - `補充資料連結`
@@ -24,7 +25,7 @@ npm start
 
 - 前台：`http://127.0.0.1:8787/`
 - 健康檢查：`http://127.0.0.1:8787/api?action=ping`
-- 七表管理：`http://127.0.0.1:8787/json_database_admin.html`
+- JSON 資料庫管理：`http://127.0.0.1:8787/json_database_admin.html`
 - JSON 圖片管理：`http://127.0.0.1:8787/json_upload.html`
 - 資料檔：`backend/data/db.json`（內建靜態伺服器不會公開此路徑）
 
@@ -82,7 +83,7 @@ Content-Type: application/json
 - 問題回報：`reportIssue`、`listIssueReports`、`updateIssueReportStatus`
 - 修改紀錄：`listModificationRecords`、`addModificationRecord`、`updateModificationConfirm`
 
-管理者可用 Bearer session token 操作七張資料表：
+管理者可用 Bearer session token 操作八張資料表：
 
 ```http
 GET    /api/tables
@@ -102,7 +103,7 @@ Authorization: Bearer <admin token>
 
 ## 加權分數
 
-`加權` 依 `backend/weighting.mjs` 的項目細節計分表計算：數量乘以所有已選項目細節的分數總和。項目細節空白時不計分，欄位保持空白。可執行 `npm run weights:recalculate` 重新計算既有 JSON 案件。
+`加權` 依 JSON 的 `加權計分標準` 資料表計算：數量乘以所有已選項目細節的權重總和。管理者可在資料庫後台直接編輯 `權重`；Node API 修改規則後會在同一筆交易內重算全部 `database` 案件。項目細節空白時不計分，欄位保持空白。可執行 `npm run weights:recalculate` 重新計算既有 JSON 案件。
 - 圖片僅接受 JPG、PNG、WebP、GIF，單檔上限 8 MB。
 - 案件新增支援 `requestId` 冪等處理，避免逾時重送產生重複案件。
 
@@ -116,4 +117,4 @@ Authorization: Bearer <admin token>
 npm test
 ```
 
-測試涵蓋七表持久化與管理 CRUD、案件流程、短連結、設定、限時動態、問題回報、修改紀錄、權限、並行寫入、ERP OAuth PKCE，以及圖片上傳／讀取／刪除。
+測試涵蓋八表持久化與管理 CRUD、可編輯加權規則、案件流程、短連結、設定、限時動態、問題回報、修改紀錄、權限、並行寫入、ERP OAuth PKCE，以及圖片上傳／讀取／刪除。

@@ -142,7 +142,13 @@ function firstValue(source, header, key) {
   for (const alias of HEADER_ALIASES[header] || []) if (source[alias] !== undefined) return source[alias];
   return undefined;
 }
-function toSheetRow(source = {}, existing = {}) {
+function weightRules(database) { return database?.tables?.['加權計分標準']?.rows || []; }
+function recalculateDatabaseWeights(database) {
+  const rules=weightRules(database);
+  for(const row of database?.tables?.database?.rows || [])applyWeightToRow(row,rules);
+  return database?.tables?.database?.rows?.length || 0;
+}
+function toSheetRow(source = {}, existing = {}, rules = undefined) {
   const row = { ...existing };
   for (const [key, header] of Object.entries(KEY_TO_HEADER)) {
     const value = firstValue(source, header, key);
@@ -153,7 +159,7 @@ function toSheetRow(source = {}, existing = {}) {
   }
   if (row['數量'] !== '' && row['數量'] !== undefined) row['數量'] = String(Number(row['數量']) || 1);
   if (row['開始日期']) row['月份'] = monthFromDate(row['開始日期']) || row['月份'] || '';
-  applyWeightToRow(row);
+  applyWeightToRow(row,rules);
   return row;
 }
 function toApiRow(row, index = -1) {
@@ -719,7 +725,7 @@ export function createActionHandler(database, options = {}) {
           client: source.client, project: source.project, owner: source.owner,
           type: config.type, stage: projectKind === '影音' && text(source.projectType).includes('拍攝') ? '拍攝' : '後製',
           qty: source.qty, start: source.start, end: source.end, designer, status: '未開始'
-        });
+        }, {}, weightRules(draft));
         for (const header of ['客戶別', '專案名稱', '專案負責人', '數量', '開始日期', '結束日期']) if (!text(row[header])) throw new Error(`請填寫「${header}」`);
         row['案件編號'] = nextCaseId(draft.tables.database.rows);
         row['填單時間'] = nowTaipei().slice(0, 10).replace(/\//g, '-');
@@ -743,7 +749,7 @@ export function createActionHandler(database, options = {}) {
       const source = payload.row || payload.data || payload, requestId = text(payload.requestId);
       return database.transaction(draft => {
         if (requestId && draft.internal.idempotency[requestId]) return { ...draft.internal.idempotency[requestId], deduplicated: true };
-        const row = toSheetRow(source); row['案件編號'] ||= nextCaseId(draft.tables.database.rows); row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-'); row['月份'] ||= monthFromDate(row['開始日期']);
+        const row = toSheetRow(source, {}, weightRules(draft)); row['案件編號'] ||= nextCaseId(draft.tables.database.rows); row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-'); row['月份'] ||= monthFromDate(row['開始日期']);
         syncSupplementLinks(draft, row, baseUrl); draft.tables.database.rows.push(row);
         const result = { ok: true, action: 'append', rowNumber: draft.tables.database.rows.length + 1, row: toApiRow(row, draft.tables.database.rows.length - 1) };
         if (requestId) draft.internal.idempotency[requestId] = result;
@@ -757,7 +763,7 @@ export function createActionHandler(database, options = {}) {
         if (requestId && draft.internal.idempotency[requestId]) return { ...draft.internal.idempotency[requestId], deduplicated: true };
         const created = [], rowNumbers = [];
         for (const source of sources) {
-          const row = toSheetRow(source); row['案件編號'] ||= nextCaseId(draft.tables.database.rows); row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-'); row['月份'] ||= monthFromDate(row['開始日期']);
+          const row = toSheetRow(source, {}, weightRules(draft)); row['案件編號'] ||= nextCaseId(draft.tables.database.rows); row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-'); row['月份'] ||= monthFromDate(row['開始日期']);
           syncSupplementLinks(draft, row, baseUrl); draft.tables.database.rows.push(row); rowNumbers.push(draft.tables.database.rows.length + 1); created.push(toApiRow(row, draft.tables.database.rows.length - 1));
         }
         const result = { ok: true, action: 'batchAdd', count: created.length, rowNumbers, rows: created };
@@ -778,7 +784,7 @@ export function createActionHandler(database, options = {}) {
           const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
           if (index < 0) throw new Error(`找不到案件：${id}`);
           const patch = { ...(action === 'batchUpdate' ? changes : {}), ...(item.row || item.changes || {}) };
-          const row = toSheetRow(patch, draft.tables.database.rows[index]); row['案件編號'] = id; syncSupplementLinks(draft, row, baseUrl); draft.tables.database.rows[index] = row;
+          const row = toSheetRow(patch, draft.tables.database.rows[index], weightRules(draft)); row['案件編號'] = id; syncSupplementLinks(draft, row, baseUrl); draft.tables.database.rows[index] = row;
           updated.push(toApiRow(row, index));
         }
         return action === 'batchUpdate' ? { ok: true, action, count: updated.length, rows: updated, updated: writeHeaders } : { ok: true, action, id: updated[0].id, row: updated[0], updated: writeHeaders };
@@ -895,10 +901,12 @@ export async function createApp(options = {}) {
           if (req.method === 'POST') {
             const input = payload.row || payload;
             const row = Object.fromEntries(table.headers.map(header => [header, input[header] == null ? '' : String(input[header])]));
-            if (tableName === 'database') applyWeightToRow(row);
+            if (tableName === 'database') applyWeightToRow(row,weightRules(draft));
             if (primaryKey && !text(row[primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
             if (primaryKey && table.rows.some(item => text(item[primaryKey]) === text(row[primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
-            table.rows.push(row); return { ok: true, table: tableName, rowNumber: table.rows.length + 1, row };
+            table.rows.push(row);
+            const recalculatedRows=tableName==='加權計分標準'?recalculateDatabaseWeights(draft):0;
+            return { ok: true, table: tableName, rowNumber: table.rows.length + 1, row, recalculatedRows };
           }
           if (!key) throw new Error('缺少資料鍵值');
           const index = primaryKey ? table.rows.findIndex(row => text(row[primaryKey]) === key) : Number(key) - 2;
@@ -906,12 +914,13 @@ export async function createApp(options = {}) {
           if (req.method === 'PATCH') {
             const patch = payload.row || payload;
             for (const header of table.headers) if (Object.hasOwn(patch, header)) table.rows[index][header] = patch[header] == null ? '' : String(patch[header]);
-            if (tableName === 'database') applyWeightToRow(table.rows[index]);
+            if (tableName === 'database') applyWeightToRow(table.rows[index],weightRules(draft));
             if (primaryKey && !text(table.rows[index][primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
             if (primaryKey && table.rows.some((item, itemIndex) => itemIndex !== index && text(item[primaryKey]) === text(table.rows[index][primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
-            return { ok: true, table: tableName, rowNumber: index + 2, row: table.rows[index] };
+            const recalculatedRows=tableName==='加權計分標準'?recalculateDatabaseWeights(draft):0;
+            return { ok: true, table: tableName, rowNumber: index + 2, row: table.rows[index], recalculatedRows };
           }
-          if (req.method === 'DELETE') { const [row] = table.rows.splice(index, 1); return { ok: true, table: tableName, deleted: row }; }
+          if (req.method === 'DELETE') { const [row] = table.rows.splice(index, 1); const recalculatedRows=tableName==='加權計分標準'?recalculateDatabaseWeights(draft):0; return { ok: true, table: tableName, deleted: row, recalculatedRows }; }
           throw new Error('不支援的 HTTP 方法');
         }, `generic ${req.method} ${tableName}`);
         return sendJson(res, 200, result);
