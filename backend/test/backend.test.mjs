@@ -91,6 +91,9 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
   assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
   assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
+  assert.match(dashboard, /urgentMultiplier=details\.includes\('急件'\)/);
+  assert.match(dashboard, /qty\(r\)\*regularScore\*urgentMultiplier/);
+  assert.doesNotMatch(dashboard, /qty\(r\)\*regularScore\+urgentScore/);
   assert.doesNotMatch(dashboard, /raw\.githubusercontent\.com\/EMCtaipeiART\/EMCtaipeiART\.github\.io\/main\/backend\/data\/db\.json/);
 });
 
