@@ -109,6 +109,7 @@ test('designer roster uses JSON group and rotation for priority new-project butt
 });
 
 test('archive snapshot and dashboard use JSON database sources only', async () => {
+  // The archive is append-preserving: current database rows are upserted without deleting historical rows.
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
   const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
