@@ -87,6 +87,13 @@ for (const sourceRow of databaseTable.rows) {
   (changed ? updatedCaseIds : unchangedCaseIds).push(label);
 }
 
+let recalculatedArchiveRows = 0;
+for (const row of rows) {
+  const before = text(row['加權']);
+  applyWeightToRow(row, weightRules.length ? weightRules : undefined);
+  if (before !== text(row['加權'])) recalculatedArchiveRows += 1;
+}
+
 const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
 const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
 const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
@@ -107,7 +114,7 @@ const snapshot = {
     primaryDatabase: { path: 'backend/data/db.json', revision: database.revision, updatedAt: database.updatedAt, rowCount: databaseTable.rows.length, rowsSha256: sourceRowsSha256 },
     archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'preserve-history-and-merge-primary-database' }
   },
-  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), addedCaseIds, updatedCaseIds },
+  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), recalculatedArchiveRows, addedCaseIds, updatedCaseIds },
   updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds: [] },
   rowCount: rows.length,
   rowsSha256,
@@ -119,4 +126,4 @@ const snapshot = {
 
 await mkdir(dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, `${JSON.stringify(snapshot)}\n`, 'utf8');
-console.log(JSON.stringify({ ok: true, source: 'backend/data/db.json', databaseRevision: database.revision, databaseRows: databaseTable.rows.length, archiveRows: rows.length, added: addedCaseIds.length, updated: updatedCaseIds.length }, null, 2));
+console.log(JSON.stringify({ ok: true, source: 'backend/data/db.json', databaseRevision: database.revision, databaseRows: databaseTable.rows.length, archiveRows: rows.length, added: addedCaseIds.length, updated: updatedCaseIds.length, recalculatedArchiveRows }, null, 2));
