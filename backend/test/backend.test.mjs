@@ -82,6 +82,14 @@ test('front end initializes weight rules before normalizing cached database rows
   );
 });
 
+test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /incomingRevision<cachedRevision/);
+  assert.match(html, /localWriteConfirmedGraceMs\s*=\s*2\*60\*1000/);
+  assert.match(html, /confirmedAt:0/);
+  assert.match(html, /now-entry\.confirmedAt>=localWriteConfirmedGraceMs/);
+});
+
 test('archive snapshot and dashboard use JSON database sources only', async () => {
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
