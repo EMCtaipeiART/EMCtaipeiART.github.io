@@ -71,7 +71,10 @@
   </main>
   <script>
     (() => {
-      const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+      const appsScriptFallbackApiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+      let savedApiUrl = '';
+      try { savedApiUrl = localStorage.getItem('designRequestApiUrl') || ''; } catch (error) {}
+      const apiUrl = savedApiUrl || (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io' ? appsScriptFallbackApiUrl : `${location.origin}/api`);
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
       const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
       const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
