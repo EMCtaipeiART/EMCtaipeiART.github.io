@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 67,
+  "revision": 68,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T20:18:47.780Z",
+  "updatedAt": "2026-08-07T20:20:31.963Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19016,7 +19016,7 @@
         {
           "名字": "Machi",
           "限時動態連結": "https://lh3.googleusercontent.com/d/1Ny1_FVHQ5AWHS33XxnYGJ7r1dK2cWjgg=w1600",
-          "按讚": "",
+          "按讚": "Machi",
           "倒讚": "",
           "留言": ""
         }
