@@ -187,7 +187,7 @@ test('concurrent creates are serialized and generate unique case IDs', async t =
   assert.equal(app.database.table('database').rows.length, 12);
 });
 
-test('admin API manages all seven JSON tables with search and authorization', async t => {
+test('admin API manages JSON tables and editable weighting rules', async t => {
   const app = await fixture();
   t.after(() => app.close());
 
@@ -198,10 +198,14 @@ test('admin API manages all seven JSON tables with search and authorization', as
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report']);
+
+  const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
+  assert.equal(weightRule.data.row['項目細節'], '社群貼文');
+  assert.equal(weightRule.data.row['權重'], '9');
 
   const fixtures = {
-    database: { '案件編號': '26990001', '專案名稱': '七表管理驗收' },
+    database: { '案件編號': '26990001', '專案名稱': 'JSON 管理驗收', '設計種類': '平面', '階段': '提案', '數量': '2', '項目細節': '社群貼文' },
     '短連結': { '短碼': 'Adm001', '原始網址': 'https://example.com/admin' },
     '修改統計表': { '案件編號': '26990001', '修改次數': '1', '修改內容': '後台新增' },
     '補充資料連結': { '案件編號': '26990001', A: 'https://example.com/a' },
@@ -213,10 +217,14 @@ test('admin API manages all seven JSON tables with search and authorization', as
     const created = await request(app.baseUrl, `/api/table/${encodeURIComponent(table)}`, { method: 'POST', token: login.token, body: { row } });
     assert.equal(created.response.status, 200, table);
     assert.equal(created.data.ok, true, table);
+    if (table === 'database') assert.equal(created.data.row['加權'], '18');
   }
-  const searched = await request(app.baseUrl, `/api/table/database?q=${encodeURIComponent('七表管理')}&sort=${encodeURIComponent('案件編號')}&order=desc`, { token: login.token });
+  const revisedRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '4' } } });
+  assert.equal(revisedRule.data.recalculatedRows, 1);
+  const searched = await request(app.baseUrl, `/api/table/database?q=${encodeURIComponent('JSON 管理')}&sort=${encodeURIComponent('案件編號')}&order=desc`, { token: login.token });
   assert.equal(searched.data.total, 1);
   assert.equal(searched.data.rows[0]['案件編號'], '26990001');
+  assert.equal(searched.data.rows[0]['加權'], '8');
   const patched = await request(app.baseUrl, '/api/table/database/26990001', { method: 'PATCH', token: login.token, body: { row: { '專案名稱': '七表管理已更新' } } });
   assert.equal(patched.data.row['專案名稱'], '七表管理已更新');
   const deleted = await request(app.baseUrl, '/api/table/database/26990001', { method: 'DELETE', token: login.token, body: {} });
