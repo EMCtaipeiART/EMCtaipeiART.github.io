@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 15:10 Asia/Taipei | build: 20260807-case-list-freshness-81 -->
+<!-- LAST_MODIFIED: 2026-08-07 16:40 Asia/Taipei | build: 20260807-archive-manager-82 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260807-case-list-freshness-81" />
+  <meta name="app-version" content="20260807-archive-manager-82" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6315,6 +6315,7 @@
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
+      <button type="button" id="accountArchiveManager" role="menuitem" hidden>封存資料管理</button>
       <div class="permission-menu-divider" id="adminPermissionDivider" hidden></div>
       <button type="button" id="accountPermissionMode" role="menuitem" hidden>切換一般使用者預覽</button>
       <button type="button" id="accountWriteCheck" role="menuitem" hidden>檢查一般使用者寫入權限</button>
@@ -6764,7 +6765,19 @@ function readIssueReportsCache(){try{const cached=JSON.parse(localStorage.getIte
 let issueReports = readIssueReportsCache();
 let issueReportsLoading = false;
 let issueReportsLoadId = 0;
-const apiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+const appsScriptFallbackApiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+function resolveDesignApiUrl(){
+  const queryValue=new URLSearchParams(location.search).get('api')||'';
+  const metaValue=document.querySelector('meta[name="design-api-url"]')?.content||'';
+  let savedValue='';
+  try{savedValue=localStorage.getItem('designRequestApiUrl')||''}catch(err){}
+  const configured=String(queryValue||metaValue||savedValue).trim();
+  if(configured)return configured;
+  if(location.protocol==='file:'||location.hostname==='emctaipeiart.github.io')return appsScriptFallbackApiUrl;
+  return `${location.origin}/api`;
+}
+const apiUrl = resolveDesignApiUrl();
+document.documentElement.dataset.apiBackend=apiUrl;
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
 const targetSheetId = 1244538986;
@@ -6775,7 +6788,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260807-case-list-freshness-81';
+const appBuildVersion = '20260807-archive-manager-82';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6865,6 +6878,7 @@ const designerImageMaxBytes = 8 * 1024 * 1024;
 const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
+const archiveManagerUrl = 'database_archive_admin.html';
 const designerUploadPageUrl = 'https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
 const defaultDesigners = [
   {designType:'平面',name:'Machi',avatar:'assets/designers/Machi-avatar.jpg',skills:['平面','輸出','動畫'],quote:'今天也把需求整理得清清楚楚。',rotation:1,status:'普通'},
@@ -7442,11 +7456,12 @@ function closeDesignerPoster(shell){if(!shell)return; if(activeDesignerStoryPlay
 function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item)}); shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerMusic(shell); startDesignerStoryPlayback(shell)}
 function handleDesignerPosterImageError(image){const shell=image?.closest('.avatar-shell'); if(image?.closest('.designer-poster')?.classList.contains('story-playing')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return} const name=shell?.closest('.designer-card')?.dataset.designer||''; image.onerror=null; image.src=designerFallbackImage(name)}
 async function fetchDesignerReels(){if(apiUrl){try{const data=await sheetApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}catch(err){console.warn('限時動態 API 讀取失敗，改用公開資料來源',err)}} return (await gvizToObjects(await gvizJsonp(reelsGvizUrl))).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}
+async function fetchDesignerProfiles(){if(apiUrl){try{const data=await sheetApi('listDesignerProfiles'); return Array.isArray(data.profiles)?data.profiles:[]}catch(err){console.warn('設計師設定 API 讀取失敗，改用公開資料來源',err)}} return gvizToObjects(await gvizJsonp(designerGvizUrl))}
 async function loadDesignerRoster({background=false}={}){
   if(!background)renderDesigners();
   let changed=false;
   const [profilesResult,reelsResult]=await Promise.allSettled([
-    gvizJsonp(designerGvizUrl).then(gvizToObjects),
+    fetchDesignerProfiles(),
     fetchDesignerReels()
   ]);
   if(profilesResult.status==='fulfilled'){
@@ -7904,8 +7919,15 @@ function modificationQueryForIds(ids=[]){
 async function fetchModificationCounts({ids=null,full=false}={}){
   try{
     const idSet=ids&&!full?new Set(ids.map(id=>String(id))):null;
-    const query=idSet?modificationQueryForIds([...idSet]):'select *';
-    const records=gvizToObjects(await gvizJsonp(full?modificationStatsGvizUrl:modificationStatsGvizQueryUrl(query)));
+    let records=[];
+    try{
+      const data=await sheetApi('listModificationRecords',{ids:idSet?[...idSet]:[]});
+      records=Array.isArray(data.rows)?data.rows:[];
+    }catch(apiError){
+      console.warn('修改統計表 API 讀取失敗，改用試算表備援',apiError);
+      const query=idSet?modificationQueryForIds([...idSet]):'select *';
+      records=gvizToObjects(await gvizJsonp(full?modificationStatsGvizUrl:modificationStatsGvizQueryUrl(query)));
+    }
     const counts=new Map();
     const byCase=new Map();
     records.forEach(record=>{
@@ -7928,6 +7950,7 @@ async function fetchModificationCounts({ids=null,full=false}={}){
 async function fetchAccountSettings(account,user){
   const fullAccount=loginAccountFull(account||currentEditorAccount), localUser=String(user||currentEditor||'').trim().toLowerCase();
   if(!fullAccount&&!localUser)return null;
+  if(apiUrl&&currentEditorToken){try{const data=await sheetApi('getUserSettings',{account:fullAccount,editorToken:currentEditorToken}); if(data.settings)return data.settings}catch(err){console.warn('個人設定 API 讀取失敗，改用公開資料來源',err)}}
   const rows=gvizToObjects(await gvizJsonp(settingsGvizUrl));
   const byAccount=fullAccount?rows.find(row=>loginAccountFull(row['帳號']||row.account||'')===fullAccount):null;
   if(byAccount)return byAccount;
@@ -7942,6 +7965,7 @@ function diagnosticUrl(){
 }
 function scriptUrlStatus(){
   if(!apiUrl)return {ok:false,message:'SCRIPT_URL 未設定'};
+  if(/\/api(?:\/|\?|$)/.test(apiUrl))return {ok:true,message:`JSON API：${apiUrl}`};
   if(/\/dev(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 目前是 /dev，請改用 /exec：${apiUrl}`};
   if(!/\/exec(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 不是 /exec 部署網址：${apiUrl}`};
   return {ok:true,message:`SCRIPT_URL：${apiUrl}`};
@@ -8020,7 +8044,8 @@ async function testAppsScriptConnection(){
     if(!data?.ok)throw Object.assign(new Error(data?.error||'Apps Script ping 失敗'),{rawResponse:data});
     const version=data.version||data.scriptVersion||'(未回傳版本)';
     const latestVersion='admin-user-preview-write-check-2026-07-17-1';
-    const isLatest=version===latestVersion;
+    const isJsonBackend=data.storage==='json';
+    const isLatest=isJsonBackend||version===latestVersion;
     const authCheck=await jsonp(urlFetchAuthCheckUrl(),15000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
     console.info('[Apps Script UrlFetchApp 權限檢查]',authCheck);
     const fetchOk=Boolean(authCheck?.ok);
@@ -8030,9 +8055,11 @@ async function testAppsScriptConnection(){
       : (authActionMissing
         ? 'UrlFetchApp.fetch：目前線上部署缺少權限檢查 action，請重新部署最新版 Apps Script。'
         : `UrlFetchApp.fetch：尚未授權或執行失敗｜${authCheck?.error||authCheck?.rawError||'未回傳錯誤'}`);
-    const text=`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}｜${fetchOk?'UrlFetchApp 已授權':(authActionMissing?'需重新部署':'UrlFetchApp 需重新授權')}`;
+    const text=isJsonBackend
+      ?`JSON 後台連線成功｜版本：${version}｜資料修訂：${data.revision??'-'}`
+      :`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}｜${fetchOk?'UrlFetchApp 已授權':(authActionMissing?'需重新部署':'UrlFetchApp 需重新授權')}`;
     setSync(text,!isLatest||!fetchOk);
-    alert(`${text}\n${fetchMessage}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${fetchOk||authActionMissing?'':'請在 Apps Script 編輯器執行一次 checkUrlFetchAuthorization_，允許權限後重新部署。\\n'}${apiUrl}`);
+    alert(isJsonBackend?`${text}\n${apiUrl}`:`${text}\n${fetchMessage}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${fetchOk||authActionMissing?'':'請在 Apps Script 編輯器執行一次 checkUrlFetchAuthorization_，允許權限後重新部署。\\n'}${apiUrl}`);
   }catch(err){
     console.error('[Apps Script ping 失敗]',{error:err,scriptUrl:apiUrl});
     const message=`Apps Script API 讀取失敗：${err.message||err}\\nSCRIPT_URL：${apiUrl}\\n請確認 Web App 設定 Execute as: Me、Who has access: Anyone，且使用 /exec。`;
@@ -8636,7 +8663,7 @@ function accountInitial(name){const text=String(name||'').trim(); return (text.m
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return currentAccountAvatar||imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():'', displayName=currentUserDisplayName(); if(url){const fallback=accountInitial(displayName); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(displayName)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(displayName):'登'}}
 function canOpenDesignDashboard(){return !isAdminUserPreview()&&(designerOptions.includes(currentEditor)||currentDesignGroup()==='管理者'||isLocalAdminToken())}
-function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designerRole=hasDesignerAccountRole(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), displayName=currentUserDisplayName(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), personalSettingsBtn=$('#accountPersonalSettings'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const department=currentEditorDepartment||'', accountSubtitle=preview?'一般使用者預覽':(department||'未設定部門'); if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?displayName:'登入'; if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com'; renderAccountAvatar(); if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||designerRole||isLocalAdminToken(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
+function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designerRole=hasDesignerAccountRole(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), displayName=currentUserDisplayName(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), personalSettingsBtn=$('#accountPersonalSettings'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), archiveBtn=$('#accountArchiveManager'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const department=currentEditorDepartment||'', accountSubtitle=preview?'一般使用者預覽':(department||'未設定部門'); if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?displayName:'登入'; if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com'; renderAccountAvatar(); if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||designerRole||isLocalAdminToken(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(archiveBtn)archiveBtn.hidden=!admin||preview; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
 function openDesignDashboard(){if(!canOpenDesignDashboard()){setSync('設計儀表板僅開放設計師與管理者使用',true);return} localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:currentEditor,account:currentEditorAccount,group:currentDesignGroup(),authToken:isLocalAdminToken()?currentEditorToken:'',returnUrl:location.href,updatedAt:Date.now()})); const url=new URL(designDashboardUrl); url.searchParams.set('designer',currentEditor); window.open(url.toString(),'_blank','noopener')}
 function consumeDashboardCaseFocus(){const id=localStorage.getItem('designRequestFocusCaseV1')||'';if(!id||!rows.some(row=>String(row.id)===String(id)))return false;localStorage.removeItem('designRequestFocusCaseV1');focusNotificationCase(id);return true}
 function syncTopPanelHeights(){
@@ -9805,6 +9832,7 @@ document.addEventListener('click',event=>{
 	window.addEventListener('pageshow',event=>{if(event.persisted)refreshLatestInBackground()});
 	window.addEventListener('online',refreshLatestInBackground);
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
+	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!isAdministrator()||isAdminUserPreview())return;closeAccountMenu();location.href=archiveManagerUrl});
 	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
 	$('#accountWriteCheck')?.addEventListener('click',checkRegularUserWriteAccess);
 	$('#permissionPreviewExit')?.addEventListener('click',()=>setAdminUserPreview(false));
