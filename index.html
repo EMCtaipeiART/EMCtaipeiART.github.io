@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-06 12:25 Asia/Taipei | build: 20260806-shared-login-session-80 -->
+<!-- LAST_MODIFIED: 2026-08-07 15:10 Asia/Taipei | build: 20260807-case-list-freshness-81 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260806-shared-login-session-80" />
+  <meta name="app-version" content="20260807-case-list-freshness-81" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6688,7 +6688,7 @@
     </div>
   </section>
 </div>
-<script src="https://accounts.google.com/gsi/client?v=20260806-shared-login-session-80" async defer></script>
+<script src="https://accounts.google.com/gsi/client?v=20260807-case-list-freshness-81" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
 const seed = [{
@@ -6775,7 +6775,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260806-shared-login-session-80';
+const appBuildVersion = '20260807-case-list-freshness-81';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6990,6 +6990,7 @@ let displaySettings = readCache(accountStorageKey(displaySettingsKey),null) || {
 let collapseSettings = readCache(accountStorageKey('designRequestCollapseSettingsV1'),{}) || {};
 let sortState = JSON.parse(localStorage.getItem('designRequestSort') || 'null') || {key:'id',dir:'desc'};
 let loadingSheet = false;
+let queuedSheetLoad = null;
 let ownerAutoFillDone = false;
 let ownerTouchedByUser = false;
 let updatingCells = new Map();
@@ -7235,7 +7236,7 @@ function startSubmitQuoteRotation(){
 }
 function stopSubmitQuoteRotation(){clearInterval(submitQuoteTimer); submitQuoteTimer=null}
 function showSubmitOverlay(text='送出中...'){closeFilters(); renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.remove('done');submitOverlay.classList.add('show');startSubmitQuoteRotation()}
-function finishSubmitOverlay(text='已送出',refresh=false){stopSubmitQuoteRotation();renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.add('done');setTimeout(()=>{submitOverlay.classList.remove('show','done'); if(refresh) loadSheet()},1100)}
+function finishSubmitOverlay(text='已送出',refresh=false){stopSubmitQuoteRotation();renderSubmitOverlayText(text,randomSubmitQuote());submitOverlay.classList.add('done');setTimeout(()=>{submitOverlay.classList.remove('show','done'); if(refresh) loadSheet({quick:true,forceFresh:true})},1100)}
 function hideSubmitOverlay(){stopSubmitQuoteRotation();submitOverlay.classList.remove('show','done','login-pending')}
 function showLoginPendingOverlay(text='登入中...'){closeFilters(); hideLoginModal(); renderSubmitOverlayText(text,randomSubmitQuote()); submitOverlay.classList.remove('done'); submitOverlay.classList.add('show','login-pending'); startSubmitQuoteRotation()}
 function finishLoginOverlay(text='登入成功'){stopSubmitQuoteRotation(); renderSubmitOverlayText(text,randomSubmitQuote()); submitOverlay.classList.add('done'); setTimeout(()=>submitOverlay.classList.remove('show','done','login-pending'),900)}
@@ -8327,8 +8328,34 @@ function scheduleFullDatabaseLoad(delay=4500){
   fullDatabaseLoadQueued=true;
   setTimeout(()=>{fullDatabaseLoadQueued=false; loadSheet({full:true,background:true})},delay);
 }
+function queueSheetLoad(options){
+  return new Promise((resolve,reject)=>{
+    const incoming={full:Boolean(options.full),background:Boolean(options.background),quick:Boolean(options.quick),forceFresh:Boolean(options.forceFresh)};
+    if(!queuedSheetLoad){
+      queuedSheetLoad={options:incoming,waiters:[{resolve,reject}]};
+      return;
+    }
+    const current=queuedSheetLoad.options, preferRecent=!current.full||!incoming.full;
+    queuedSheetLoad.options={
+      full:!preferRecent,
+      background:current.background&&incoming.background,
+      quick:preferRecent&&(current.quick||incoming.quick),
+      forceFresh:current.forceFresh||incoming.forceFresh
+    };
+    queuedSheetLoad.waiters.push({resolve,reject});
+  });
+}
+function runQueuedSheetLoad(){
+  const queued=queuedSheetLoad;
+  queuedSheetLoad=null;
+  if(!queued)return;
+  Promise.resolve().then(()=>loadSheet(queued.options)).then(
+    result=>queued.waiters.forEach(waiter=>waiter.resolve(result)),
+    error=>queued.waiters.forEach(waiter=>waiter.reject(error))
+  );
+}
 async function loadSheet({full=false,background=false,quick=false,forceFresh=false}={}){
-  if(loadingSheet)return false;
+  if(loadingSheet)return queueSheetLoad({full,background,quick,forceFresh});
   loadingSheet=true;
   try{
     if(!background)setSync(full?'讀取完整 database 中…':(quick?'讀取最新 30 筆資料中…':'讀取近期 database 最新資料中…'));
@@ -8366,6 +8393,7 @@ async function loadSheet({full=false,background=false,quick=false,forceFresh=fal
     throw err;
   }finally{
     loadingSheet=false;
+    runQueuedSheetLoad();
   }
 }
 function monthNumber(value){const n=Number(String(value).match(/\d+/)?.[0]||0); return n || 99}
@@ -8944,7 +8972,7 @@ function renderTimelineLoading(){const box=$('#timeline'), stickyScale=$('#stick
 function renderHeavyParts({deferTimeline=true}={}){fillMultiFilter('#fYear','year','全部年度');fillMultiFilter('#fMonth','month','全部月份');fillMultiFilter('#fStatus','status','全部狀態');fillMultiFilter('#fDesigner','designer','全部設計負責人'); accountSettingsJustApplied=false; initYearFilter(); initMonthFilter(); const list=filtered(), timelineList=timelineRowsFor(list); renderOwnerOptions(); renderColumnControls(); renderTable(list); renderModifyRecent(); if(deferTimeline)scheduleTimelineRender(timelineList); else renderTimeline(timelineList)}
 function scheduleHeavyRender(){if(renderQueued)return; renderQueued=true; requestAnimationFrame(()=>{renderQueued=false; renderHeavyParts()})}
 function render(){renderOverviewOnly(); renderHeavyParts(); updateLoginUi()}
-async function refreshModifyList(){const btn=$('#refreshModify'); if(!btn||btn.disabled)return; const original=btn.textContent; btn.disabled=true; btn.textContent='重新整理中...'; try{await loadSheet(); btn.textContent='已更新'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},900)}catch(err){btn.textContent='重新整理失敗'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},1400)}}
+async function refreshModifyList(){const btn=$('#refreshModify'); if(!btn||btn.disabled)return; const original=btn.textContent; btn.disabled=true; btn.textContent='重新整理中...'; try{await loadSheet({quick:true,forceFresh:true}); btn.textContent='已更新'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},900)}catch(err){btn.textContent='重新整理失敗'; setTimeout(()=>{btn.textContent=original; btn.disabled=false},1400)}}
 function dayStart(d){const date=new Date(d); date.setHours(0,0,0,0); return date}
 function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function isHoliday(d){return d.getDay()===0||d.getDay()===6||nationalHolidays.has(dateKey(d))}
@@ -9097,7 +9125,7 @@ function enqueueInlineWrite(task){
 function hasPriorityWritePending(){return inlineWritePending>0||updatingCells.size>0}
 function backgroundRefreshInteractionActive(){const recentlyTyping=Date.now()-lastBackgroundRefreshInputAt<1500; return document.hidden||recentlyTyping||Boolean(document.querySelector('.login-modal:not([hidden]),.field-popover:not([hidden]),.multi-filter[open]'))}
 function refreshLatestInBackground(){
-  if(!apiUrl||editingId||hasPriorityWritePending()||loadingSheet||backgroundRefreshInteractionActive())return;
+  if(!apiUrl||editingId||hasPriorityWritePending()||backgroundRefreshInteractionActive())return;
   const now=Date.now(), full=now-lastFullBackgroundRefreshAt>=backgroundFullRefreshMs;
   if(full)lastFullBackgroundRefreshAt=now;
   loadSheet({full,quick:!full,background:true,forceFresh:true}).catch(err=>{
@@ -9113,11 +9141,7 @@ async function refreshAfterInlineWrite(message){
   const text=message||'已更新';
   clearTimeout(inlineRefreshTimer);
   try{
-    let refreshed=await loadSheet({quick:true});
-    if(refreshed===false){
-      await new Promise(resolve=>setTimeout(resolve,700));
-      refreshed=await loadSheet({quick:true});
-    }
+    await loadSheet({quick:true,forceFresh:true});
     setSync(`${text}，已同步最新資料`);
   }catch(err){
     setSync(`${text}，但重新讀取失敗：${err.message}`,true);
@@ -9824,11 +9848,11 @@ document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault(); applyStatusFilter(card.dataset.status)}})
 });
-$('#syncNow').onclick=()=>loadSheet({full:true});
+$('#syncNow').onclick=()=>loadSheet({full:true,forceFresh:true});
 $('#testApi').onclick=()=>{
   testAppsScriptConnection();
 };
-$('#reloadSheet').onclick=()=>loadSheet({full:true});
+$('#reloadSheet').onclick=()=>loadSheet({full:true,forceFresh:true});
 $('#refreshModify').onclick=()=>refreshModifyList();
 $('#modifySearch')?.addEventListener('input',event=>{modifySearchQuery=event.target.value||''; modifyPage=1; renderModifyRecent()});
 document.querySelectorAll('[data-new-project-group]').forEach(button=>button.addEventListener('click',()=>{const designer=button.dataset.newProjectDesigner; if(designer)openFlatProjectModal(designer); else setSync('目前沒有可用的新專案輪值設計師',true,2600)}));
@@ -9869,7 +9893,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshLatestInBackground();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshLatestInBackground();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
