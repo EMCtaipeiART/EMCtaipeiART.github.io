@@ -36,13 +36,16 @@ jobs:
         with:
           node-version: 22
 
+      - name: Recalculate database weights
+        run: node scripts/recalculate_database_weights.mjs
+
       - name: Generate snapshot
         run: node scripts/generate_database_archive_snapshot.mjs
 
       - name: Check for snapshot changes
         id: changes
         run: |
-          if git diff --quiet -- data/database_archive.json; then
+          if git diff --quiet -- backend/data/db.json data/database_archive.json; then
             echo "snapshot=false" >> "$GITHUB_OUTPUT"
           else
             echo "snapshot=true" >> "$GITHUB_OUTPUT"
@@ -53,8 +56,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/database_archive.json
-          git commit -m "chore: update database archive snapshot"
+          git add backend/data/db.json data/database_archive.json
+          git commit -m "chore: recalculate weights and update archive"
 
       - name: Push changed snapshot
         if: steps.changes.outputs.snapshot == 'true'
