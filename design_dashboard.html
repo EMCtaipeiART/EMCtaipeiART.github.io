@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-08-07T23:50:00+08:00" />
-<meta name="app-version" content="20260808-archive-json-only-8" />
+<meta name="app-version" content="20260808-weight-multiplier-all-data-9" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -477,8 +477,8 @@ function score(r){
   if(!details.length)return 0;
   const type=scoringType(r['設計種類']||r['設計類型']||r['設計總類']),stage=String(r['階段']||'').trim();
   const regularScore=details.filter(detail=>detail!=='急件').reduce((sum,detail)=>sum+(DETAIL_SCORE_MAP.get(`${type}\u0000${stage}\u0000${detail}`)??0),0);
-  const urgentScore=details.includes('急件')?(DETAIL_SCORE_MAP.get(`${type}\u0000${stage}\u0000急件`)??3):0;
-  return qty(r)*regularScore+urgentScore
+  const urgentMultiplier=details.includes('急件')?(DETAIL_SCORE_MAP.get(`${type}\u0000${stage}\u0000急件`)??3):1;
+  return qty(r)*regularScore*urgentMultiplier
 }
 function qty(r){const n=parseFloat(String(r['數量']||'').replace(/,/g,''));return Number.isFinite(n)?n:0}
 function dailyScore(r){const s=normDate(r['開始日期']),e=normDate(r['結束日期']);if(!s||!e)return score(r);return score(r)/daysBetween(s,e)}
