@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 44,
+  "revision": 45,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T17:01:47.572Z",
+  "updatedAt": "2026-08-07T17:02:05.737Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16607,7 +16607,7 @@
           "設計負責人": "Machi",
           "項目細節": "AI 影片, 急件",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "32",
           "填單時間": "2026/08/06 17:14",
           "時間標記": "",
           "繳交時間": "",
@@ -19989,6 +19989,6 @@
   },
   "lastWrite": {
     "reason": "recalculate weights from item-detail score table",
-    "at": "2026-08-07T16:47:26.732Z"
+    "at": "2026-08-07T17:02:05.737Z"
   }
 }
