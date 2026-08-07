@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyWeightToRow } from '../backend/weighting.mjs';
 
 const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
@@ -184,6 +185,8 @@ databaseData.rows.forEach(currentRow => {
   rows[archiveIndex] = mergedRow;
   (changed ? updatedCaseIds : unchangedCaseIds).push(occurrenceLabel);
 });
+
+rows.forEach(applyWeightToRow);
 const columns = [...new Set([...archiveData.headers, ...databaseData.headers])];
 let previousRows = [];
 let previousSnapshot = null;
