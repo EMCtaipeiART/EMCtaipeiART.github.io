@@ -6,6 +6,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { JsonDatabase } from './json_database.mjs';
 import { TABLE_NAMES, TABLE_SCHEMAS } from './schema.mjs';
+import { applyWeightToRow } from './weighting.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -152,6 +153,7 @@ function toSheetRow(source = {}, existing = {}) {
   }
   if (row['數量'] !== '' && row['數量'] !== undefined) row['數量'] = String(Number(row['數量']) || 1);
   if (row['開始日期']) row['月份'] = monthFromDate(row['開始日期']) || row['月份'] || '';
+  applyWeightToRow(row);
   return row;
 }
 function toApiRow(row, index = -1) {
@@ -893,6 +895,7 @@ export async function createApp(options = {}) {
           if (req.method === 'POST') {
             const input = payload.row || payload;
             const row = Object.fromEntries(table.headers.map(header => [header, input[header] == null ? '' : String(input[header])]));
+            if (tableName === 'database') applyWeightToRow(row);
             if (primaryKey && !text(row[primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
             if (primaryKey && table.rows.some(item => text(item[primaryKey]) === text(row[primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
             table.rows.push(row); return { ok: true, table: tableName, rowNumber: table.rows.length + 1, row };
@@ -903,6 +906,7 @@ export async function createApp(options = {}) {
           if (req.method === 'PATCH') {
             const patch = payload.row || payload;
             for (const header of table.headers) if (Object.hasOwn(patch, header)) table.rows[index][header] = patch[header] == null ? '' : String(patch[header]);
+            if (tableName === 'database') applyWeightToRow(table.rows[index]);
             if (primaryKey && !text(table.rows[index][primaryKey])) throw new Error(`「${primaryKey}」不可空白`);
             if (primaryKey && table.rows.some((item, itemIndex) => itemIndex !== index && text(item[primaryKey]) === text(table.rows[index][primaryKey]))) throw new Error(`「${primaryKey}」已經存在`);
             return { ok: true, table: tableName, rowNumber: index + 2, row: table.rows[index] };

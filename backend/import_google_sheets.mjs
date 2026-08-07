@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, writeFile, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { emptyDatabase, TABLE_SCHEMAS } from './schema.mjs';
+import { applyWeightToRow } from './weighting.mjs';
 
 const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -76,6 +77,7 @@ export async function importGoogleSheets(outputPath = DEFAULT_OUTPUT) {
   db.updatedAt = importedAt;
   db.source = { type: 'google-sheets', spreadsheetId: SPREADSHEET_ID, importedAt, tables: {} };
   for (const [name, url, data] of results) {
+    if (name === 'database') data.rows.forEach(applyWeightToRow);
     db.tables[name] = { headers: data.headers, primaryKey: TABLE_SCHEMAS[name].primaryKey, rows: data.rows };
     db.source.tables[name] = { url, rowCount: data.rows.length };
   }

@@ -99,6 +99,10 @@ Authorization: Bearer <admin token>
 - 使用暫存檔加原子更名，避免半寫入 JSON。
 - 每次變更前自動備份到 `backend/data/backups/`，預設保留最近 20 份。
 - `backend` 路徑不會由內建靜態伺服器公開。
+
+## 加權分數
+
+`加權` 依 `backend/weighting.mjs` 的項目細節計分表計算：數量乘以所有已選項目細節的分數總和。項目細節空白時不計分，欄位保持空白。可執行 `npm run weights:recalculate` 重新計算既有 JSON 案件。
 - 圖片僅接受 JPG、PNG、WebP、GIF，單檔上限 8 MB。
 - 案件新增支援 `requestId` 冪等處理，避免逾時重送產生重複案件。
 
