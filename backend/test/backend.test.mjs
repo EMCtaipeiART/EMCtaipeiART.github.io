@@ -88,6 +88,9 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(generator, /backend\/data\/db\.json/);
   assert.doesNotMatch(generator, /docs\.google\.com|script\.google\.com/);
   assert.match(dashboard, /const ARCHIVE_JSON_URL='data\/database_archive\.json'/);
+  assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
+  assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
+  assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
   assert.doesNotMatch(dashboard, /raw\.githubusercontent\.com\/EMCtaipeiART\/EMCtaipeiART\.github\.io\/main\/backend\/data\/db\.json/);
 });
 
