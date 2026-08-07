@@ -48,6 +48,16 @@ function indexRowsByOccurrence(rows) {
 const database = await readJson(PRIMARY_DATABASE_PATH, null);
 const databaseTable = database?.tables?.database;
 if (!databaseTable || !Array.isArray(databaseTable.rows)) throw new Error('backend/data/db.json is missing tables.database.rows');
+const settingsRows = Array.isArray(database?.tables?.['設定']?.rows) ? database.tables['設定'].rows : [];
+const modificationRows = Array.isArray(database?.tables?.['修改統計表']?.rows) ? database.tables['修改統計表'].rows : [];
+const dashboardData = {
+  settings: settingsRows.map(row => ({
+    '名字': text(row['名字']),
+    '顯示名': text(row['顯示名']),
+    '頭像連結': text(row['頭像連結'])
+  })),
+  modifications: clone(modificationRows)
+};
 
 const previousSnapshot = await readJson(OUTPUT_PATH, { rows: [], columns: [] });
 const previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : (Array.isArray(previousSnapshot.rows) ? previousSnapshot.rows : []);
@@ -78,17 +88,18 @@ for (const sourceRow of databaseTable.rows) {
 }
 
 const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
-const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows);
+const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
 const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
 const rowsChanged = previousSnapshot?.rowsSha256 !== rowsSha256;
 const columnsChanged = JSON.stringify(previousSnapshot?.columns || []) !== JSON.stringify(columns);
-if (process.env.FORCE_SNAPSHOT !== '1' && !sourceChanged && !rowsChanged && !columnsChanged) {
+const dashboardDataChanged = previousSnapshot?.dashboardDataSha256 !== dashboardDataSha256;
+if (process.env.FORCE_SNAPSHOT !== '1' && !sourceChanged && !rowsChanged && !columnsChanged && !dashboardDataChanged) {
   console.log(`database_archive JSON unchanged: ${rows.length} rows`);
   process.exit(0);
 }
 
 const snapshot = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   generatedAt: new Date().toISOString(),
   linkedDatabaseRevision: database.revision,
   linkedDatabaseUpdatedAt: database.updatedAt,
@@ -100,6 +111,8 @@ const snapshot = {
   updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds: [] },
   rowCount: rows.length,
   rowsSha256,
+  dashboardDataSha256,
+  dashboardData,
   columns,
   rows
 };
