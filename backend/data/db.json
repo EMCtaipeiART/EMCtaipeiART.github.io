@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 52,
+  "revision": 53,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T19:39:38.656Z",
+  "updatedAt": "2026-08-07T19:39:50.227Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16863,7 +16863,7 @@
           "其他說明": "9000",
           "其他連結": "9000",
           "狀態": "未開始",
-          "加權": "1",
+          "加權": "",
           "案件編號": "26080044",
           "月份": "8月"
         }
@@ -20047,6 +20047,6 @@
   },
   "lastWrite": {
     "reason": "recalculate weights from item-detail score table",
-    "at": "2026-08-07T18:30:00.550Z"
+    "at": "2026-08-07T19:39:50.227Z"
   }
 }
