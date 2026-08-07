@@ -114,12 +114,26 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
   const archive = JSON.parse(await readFile(new URL('../../data/database_archive.json', import.meta.url), 'utf8'));
   assert.match(generator, /backend\/data\/db\.json/);
-  assert.match(generator, /mode: 'mirror-primary-database'/);
-  assert.doesNotMatch(generator, /preserve-history-and-merge-primary-database/);
+  assert.match(generator, /mode: 'preserve-history-and-upsert-primary-database'/);
+  assert.match(generator, /const rows = clone\(previousRows\)/);
   assert.doesNotMatch(generator, /docs\.google\.com|script\.google\.com/);
-  assert.equal(archive.rowCount, database.tables.database.rows.length);
-  assert.equal(archive.rows.length, database.tables.database.rows.length);
-  assert.deepEqual(archive.rows, database.tables.database.rows);
+  assert.equal(archive.rowCount, archive.rows.length);
+  assert.ok(archive.rows.length >= database.tables.database.rows.length);
+  assert.equal(archive.sources.archiveBase.mode, 'preserve-history-and-upsert-primary-database');
+  const archiveById = new Map();
+  for (const row of archive.rows) {
+    const id = String(row['案件編號'] || '').trim();
+    if (!archiveById.has(id)) archiveById.set(id, []);
+    archiveById.get(id).push(row);
+  }
+  const occurrences = new Map();
+  for (const sourceRow of database.tables.database.rows) {
+    const id = String(sourceRow['案件編號'] || '').trim(), occurrence = occurrences.get(id) || 0;
+    occurrences.set(id, occurrence + 1);
+    const archivedRow = archiveById.get(id)?.[occurrence];
+    assert.ok(archivedRow, `archive is missing database row ${id}#${occurrence + 1}`);
+    for (const [key, value] of Object.entries(sourceRow)) assert.equal(archivedRow[key], value, `${id}.${key} is stale`);
+  }
   assert.match(dashboard, /const ARCHIVE_JSON_URL='data\/database_archive\.json'/);
   assert.match(dashboard, /fetch\(ARCHIVE_JSON_URL,\{cache:'no-cache'\}\)/);
   assert.doesNotMatch(dashboard, /ARCHIVE_JSON_URL\}\?v=\$\{Date\.now\(\)\}|cache:'no-store'/);
