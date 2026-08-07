@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-08-07T15:55:00+08:00" />
-<meta name="app-version" content="20260807-archive-database-merge-2" />
+<meta name="last-modified" content="2026-08-07T16:40:00+08:00" />
+<meta name="app-version" content="20260807-archive-manager-3" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -260,7 +260,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <div class="top-tools">
       <button class="notif" id="dashboardBell" type="button" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-bell"/></svg><span class="notif-badge" id="dashboardBellBadge" hidden>0</span></button>
       <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">凱</div><div><b id="currentDesignerName">凱曜</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
-      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><button id="dashboardAdminLogin" type="button" role="menuitem"><svg class="icon"><use href="#i-user"/></svg><span id="dashboardAdminLoginText">管理者登入</span></button><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
+      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><button id="dashboardAdminLogin" type="button" role="menuitem"><svg class="icon"><use href="#i-user"/></svg><span id="dashboardAdminLoginText">管理者登入</span></button><a id="dashboardArchiveManager" href="database_archive_admin.html" role="menuitem" hidden><svg class="icon"><use href="#i-folder"/></svg>封存資料管理</a><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
       <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
@@ -551,6 +551,7 @@ function applyFilter(){
   render(y,m,des,cli)
 }
 function updateProfile(){
+  $('dashboardArchiveManager').hidden=!isDashboardAdmin();
   if(isDashboardAdmin()){
     $('currentDesignerName').textContent='管理者';
     $('currentDesignerType').textContent='系統管理';
