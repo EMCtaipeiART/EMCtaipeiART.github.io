@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 49,
+  "revision": 50,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T19:25:16.568Z",
+  "updatedAt": "2026-08-07T19:34:06.698Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16605,9 +16605,9 @@
           "開始日期": "2026/08/06",
           "結束日期": "2026/08/11",
           "設計負責人": "Machi",
-          "項目細節": "AI 影片, 急件",
+          "項目細節": "",
           "狀態": "執行中",
-          "加權": "60",
+          "加權": "",
           "填單時間": "2026/08/06 17:14",
           "時間標記": "",
           "繳交時間": "",
