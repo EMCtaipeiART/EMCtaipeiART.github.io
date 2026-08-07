@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 18:25 Asia/Taipei | build: 20260807-database-editor-89 -->
+<!-- LAST_MODIFIED: 2026-08-07 18:49 Asia/Taipei | build: 20260807-database-editor-90 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260807-database-editor-89" />
+  <meta name="app-version" content="20260807-database-editor-90" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6523,7 +6523,7 @@
   </section>
 
   <section class="card sheet-sync-card">
-    <h2>Google Sheet 串接</h2>
+    <h2>GitHub JSON 串接</h2>
     <div class="grid syncbar">
       <button type="button" id="syncNow">立即同步</button>
       <button type="button" class="secondary" id="testApi">測試連線</button>
@@ -6779,6 +6779,25 @@ function resolveDesignApiUrl(){
 }
 const apiUrl = resolveDesignApiUrl();
 document.documentElement.dataset.apiBackend=apiUrl;
+const githubJsonDatabaseUrl = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
+let githubJsonDatabaseCache = null;
+let githubJsonDatabaseLoadedAt = 0;
+async function fetchGithubJsonDatabase({fresh=false}={}){
+  if(!fresh&&githubJsonDatabaseCache&&Date.now()-githubJsonDatabaseLoadedAt<10000)return githubJsonDatabaseCache;
+  const response=await fetch(`${githubJsonDatabaseUrl}?v=${fresh?Date.now():appBuildVersion}`,{cache:fresh?'no-store':'default'});
+  if(!response.ok)throw new Error(`GitHub JSON 讀取失敗：HTTP ${response.status}`);
+  const database=await response.json();
+  if(!database?.tables?.database?.rows)throw new Error('GitHub JSON 資料庫格式錯誤');
+  githubJsonDatabaseCache=database;
+  githubJsonDatabaseLoadedAt=Date.now();
+  return database;
+}
+async function githubJsonTableRows(name,{fresh=false}={}){
+  const database=await fetchGithubJsonDatabase({fresh});
+  const rows=database?.tables?.[name]?.rows;
+  if(!Array.isArray(rows))throw new Error(`GitHub JSON 缺少資料表：${name}`);
+  return rows;
+}
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
 const targetSheetId = 1244538986;
@@ -6789,7 +6808,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260807-database-editor-89';
+const appBuildVersion = '20260807-database-editor-90';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7838,28 +7857,9 @@ function mergeRowsById(baseRows=[],patchRows=[]){
   return [...byId.values()].sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
 }
 async function fetchDatabaseRows({full=false,quick=false,forceFresh=false}={}){
-  if(full&&forceFresh&&apiUrl){
-    try{return await fetchDatabaseRowsByScript()}catch(err){console.warn('完整即時資料讀取失敗，改用公開資料來源',err)}
-  }
-  if(quick&&apiUrl){
-    try{return await fetchRecentDatabaseRowsByScript(120,{noCache:forceFresh})}catch(err){console.warn('最新 120 筆讀取失敗，改用近期公開資料來源',err)}
-  }
-  let objects=[];
-  try{
-    objects=await fetchDatabaseObjects(full?'select *':recentMonthCaseQuery());
-  }catch(err){
-    if(full)throw err;
-    console.warn('近期 database 查詢失敗，改用完整公開資料來源',err);
-    objects=await fetchDatabaseObjects('select *');
-  }
-  const baseRows=objects.map(normalizeRow).filter(row=>isCaseId_(row.id));
-  if(!apiUrl)return baseRows;
-  try{
-    return full?baseRows:mergeRowsById(baseRows,await fetchRecentDatabaseRowsByScript(120));
-  }catch(err){
-    console.warn('最近案件讀取失敗，先顯示公開資料來源',err);
-    return baseRows;
-  }
+  const objects=await githubJsonTableRows('database',{fresh:forceFresh});
+  const list=objects.map(normalizeRow).filter(row=>isCaseId_(row.id)).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
+  return quick&&!full?list.slice(0,120):list;
 }
 function searchHasText(){return Boolean($('#q')?.value.trim())}
 function archiveFilterRequested(){
@@ -8156,7 +8156,7 @@ async function sheetApi(action,payload={}){
   const data = action === 'list'
     ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&noCache=${encodeURIComponent(payload.noCache?'true':'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
     : await postToSheet({action,...payload});
-  if(!data.ok) throw new Error(data.error || 'Google Sheet 更新失敗');
+  if(!data.ok) throw new Error(data.error || 'GitHub JSON 更新失敗');
   return data;
 }
 function fetchWithTimeout(url,options={},ms=25000){const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),ms); return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
@@ -8198,8 +8198,8 @@ function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處�
   return appsScriptPost(payload,timeoutMs).catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
 }
 function createResultResponse(action,result){
-  if(action==='batchAdd')return {ok:true,action:'batchAdd',count:result.rows?.length||0,rowNumbers:result.rowNumbers||[],rows:result.rows||[],deduplicated:Boolean(result.deduplicated)};
-  return {ok:true,action:'append',rowNumber:result.rowNumber,row:result.row,deduplicated:Boolean(result.deduplicated)};
+  if(action==='batchAdd')return {ok:true,action:'batchAdd',count:result.rows?.length||0,rowNumbers:result.rowNumbers||[],rows:result.rows||[],deduplicated:Boolean(result.deduplicated),jsonRevision:result.jsonRevision,githubCommitSha:result.githubCommitSha,backup:result.backup};
+  return {ok:true,action:'append',rowNumber:result.rowNumber,row:result.row,deduplicated:Boolean(result.deduplicated),jsonRevision:result.jsonRevision,githubCommitSha:result.githubCommitSha,backup:result.backup};
 }
 async function waitForCreateResult(action,requestId,timeoutMs=60000){
   const deadline=Date.now()+timeoutMs;
@@ -9678,7 +9678,7 @@ function initCaseTableDragScroll(){
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
-async function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; try{if(apiUrl) await sheetApi('delete',{id}); rows=rows.filter(r=>String(r.id)!==String(id)); save(); render(); setSync(apiUrl?'已從 Google Sheet 刪除':'已從本機刪除');}catch(err){setSync(err.message,true)}}
+async function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; try{const data=apiUrl?await sheetApi('delete',{id,editorToken:currentEditorToken}):null; rows=rows.filter(r=>String(r.id)!==String(id)); save(); render(); setSync(apiUrl?(data?.backup?.ok?'已從 GitHub JSON 刪除，試算表備份完成':'已從 GitHub JSON 刪除，試算表備份等待重試'):'已從本機刪除');}catch(err){setSync(err.message,true)}}
 async function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; const updated={...row,status:'已取消'}, successMessage='已更新為已取消'; rememberLocalWrite(id,{status:'已取消'}); markUpdatingCell(id,['status']); render(); setSync('寫入中...'); try{if(apiUrl) await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,{status:'已取消'}),...rowWriteAnchor(row),forceHeaders:['案件狀態'],writeHeaders:['案件狀態'],editorToken:currentEditorToken})); rows=rows.map(r=>String(r.id)===String(id)?normalizeRow(updated):r); save(); clearUpdatingCell(id); render(); setSync(apiUrl?successMessage:'已於本機更新為已取消'); refreshAfterInlineWrite(successMessage)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id); render(); setSync(err.message,true)}}
 $('#requestForm').addEventListener('submit',async e=>{
   e.preventDefault();
@@ -9712,7 +9712,7 @@ $('#requestForm').addEventListener('submit',async e=>{
         submittedRow=normalizeRow({...existingRow,...r,id:editId});
         rows=rows.map(row=>String(row.id)===String(editId)?submittedRow:row);
       }
-      setSync(apiUrl?'已更新 Google Sheet':'已更新本機資料');
+      setSync(apiUrl?(data?.backup?.ok?'已更新 GitHub JSON，試算表備份完成':'已更新 GitHub JSON，試算表備份等待重試'):'已更新本機資料');
     }else{
       if(!apiUrl){r.id=nextId()}
       const createRow=formCreateRow(r);
@@ -9720,7 +9720,7 @@ $('#requestForm').addEventListener('submit',async e=>{
       const data=apiUrl?await sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken}):{row:r};
       submittedRow=normalizeRow(data.row||{...r,id:r.id||nextId(),status:r.status||'未開始'});
       if(!apiUrl||isCaseId_(submittedRow.id))rows.unshift(submittedRow);
-      setSync(apiUrl?`已新增至 database 第 ${data.rowNumber || '新'} 列${isCaseId_(submittedRow.id) ? `，案件編號 ${submittedRow.id}` : '，正在同步案件編號'}`:'已新增至本機資料');
+      setSync(apiUrl?`已新增至 GitHub JSON${isCaseId_(submittedRow.id) ? `，案件編號 ${submittedRow.id}` : ''}${data?.backup?.ok?'，試算表備份完成':'，試算表備份等待重試'}`:'已新增至本機資料');
     }
     save();
     e.target.reset();
