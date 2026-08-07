@@ -74,6 +74,14 @@ test('item details calculate weights from the scoring table only after selection
   assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '影音剪輯, 人聲配樂, 字幕字卡' }), 3);
 });
 
+test('front end initializes weight rules before normalizing cached database rows', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.ok(
+    html.indexOf('let activeWeightRules=[];') < html.indexOf("let rows = (sanitizedCachedRows?.length"),
+    'activeWeightRules must be initialized before normalizeRow reads cached rows'
+  );
+});
+
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
   const app = await fixture();
   t.after(() => app.close());
