@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "revision": 0,
+  "revision": 1,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T07:39:26.514Z",
+  "updatedAt": "2026-08-07T10:43:14.371Z",
   "source": {
-    "type": "google-sheets",
+    "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
     "importedAt": "2026-08-07T07:39:26.514Z",
     "tables": {
@@ -36,7 +36,10 @@
         "url": "https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/gviz/tq?tqx=out:csv&sheet=bug_report",
         "rowCount": 7
       }
-    }
+    },
+    "repository": "EMCtaipeiART/EMCtaipeiART.github.io",
+    "path": "backend/data/db.json",
+    "branch": "main"
   },
   "tables": {
     "database": {
