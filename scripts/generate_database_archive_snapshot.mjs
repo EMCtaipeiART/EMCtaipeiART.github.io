@@ -4,281 +4,106 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyWeightToRow } from '../backend/weighting.mjs';
 
-const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
-const API_URL = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
-const SHEETS = {
-  databaseArchive: { sheetName: 'database_archive', gid: '646199020' },
-  database: { sheetName: 'database', gid: '1244538986' }
-};
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = resolve(SCRIPT_DIR, '../data/database_archive.json');
 const PRIMARY_DATABASE_PATH = resolve(SCRIPT_DIR, '../backend/data/db.json');
 
-function parseCsv(text) {
-  const records = [];
-  let record = [];
-  let value = '';
-  let quoted = false;
+const clone = value => JSON.parse(JSON.stringify(value));
+const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const text = value => String(value ?? '').trim();
 
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    const next = text[index + 1];
-    if (char === '"' && quoted && next === '"') {
-      value += '"';
-      index += 1;
-    } else if (char === '"') {
-      quoted = !quoted;
-    } else if (char === ',' && !quoted) {
-      record.push(value);
-      value = '';
-    } else if ((char === '\n' || char === '\r') && !quoted) {
-      if (char === '\r' && next === '\n') index += 1;
-      record.push(value);
-      if (record.some(cell => String(cell).trim() !== '')) records.push(record);
-      record = [];
-      value = '';
-    } else {
-      value += char;
-    }
-  }
-
-  record.push(value);
-  if (record.some(cell => String(cell).trim() !== '')) records.push(record);
-  return records;
+function caseId(row = {}) {
+  return text(row['案件編號'] ?? row.id);
 }
 
-async function readSheet(source) {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${source.gid}&ts=${Date.now()}`;
-  const response = await fetch(url, { redirect: 'follow' });
-  if (!response.ok) throw new Error(`${source.sheetName} 讀取失敗：HTTP ${response.status}`);
-  const csv = await response.text();
-  if (!csv || /<!doctype html/i.test(csv)) throw new Error(`${source.sheetName} 回傳內容不是 CSV`);
-  const records = parseCsv(csv);
-  const headers = (records.shift() || []).map(header => String(header).trim());
-  const rows = records.map(record => Object.fromEntries(
-    headers.flatMap((header, index) => header ? [[header, String(record[index] ?? '').trim()]] : [])
-  ));
+function comparableRow(row = {}) {
   return {
-    ...source,
-    csv,
-    headers: headers.filter(Boolean),
-    rows,
-    rowCount: rows.length,
-    csvSha256: createHash('sha256').update(csv).digest('hex')
+    id: caseId(row), month: text(row['月份']), client: text(row['客戶別']),
+    project: text(row['專案名稱']), owner: text(row['專案負責人']),
+    type: text(row['設計種類'] ?? row['設計類型'] ?? row['設計總類']),
+    stage: text(row['階段']), qty: text(row['數量']), start: text(row['開始日期']),
+    end: text(row['結束日期']), designer: text(row['設計負責人']),
+    details: text(row['項目細節']), status: text(row['狀態'] ?? row['案件狀態']),
+    weight: text(row['加權'])
   };
 }
 
-function apiRowToSheetRow(row = {}) {
-  const clean = value => String(value ?? '').trim();
-  const slashDate = value => /^\d{4}-\d{2}-\d{2}$/.test(clean(value)) ? clean(value).replaceAll('-', '/') : clean(value);
-  return {
-    '案件編號': clean(row.id),
-    '月份': clean(row.month),
-    '客戶別': clean(row.client),
-    '專案名稱': clean(row.project),
-    '專案負責人': clean(row.owner),
-    '設計種類': clean(row.type),
-    '階段': clean(row.stage),
-    '數量': clean(row.qty),
-    '開始日期': slashDate(row.start),
-    '結束日期': slashDate(row.end),
-    '設計負責人': clean(row.designer),
-    '項目細節': clean(row.details),
-    '狀態': clean(row.status),
-    '加權': clean(row.weight),
-    '填單時間': clean(row.submittedAt),
-    '使用平台': clean(row.platforms),
-    '設計簡報說明': clean(row.briefNote),
-    '設計簡報連結': clean(row.briefUrl),
-    '客戶素材說明': clean(row.assetNote),
-    '客戶素材連結': clean(row.assetUrl),
-    '參考範例說明': clean(row.referenceNote),
-    '參考範例連結': clean(row.referenceUrl),
-    '其他說明': clean(row.otherNote),
-    '其他連結': clean(row.otherUrl)
-  };
+async function readJson(path, fallback) {
+  try { return JSON.parse(await readFile(path, 'utf8')); }
+  catch (error) { if (error?.code === 'ENOENT') return fallback; throw error; }
 }
 
-async function readDatabaseApi(source) {
-  const params = new URLSearchParams({
-    action: 'list',
-    noCache: 'true',
-    targetSpreadsheetId: SPREADSHEET_ID,
-    targetSheetName: source.sheetName,
-    targetSheetId: source.gid,
-    ts: String(Date.now())
-  });
-  const response = await fetch(`${API_URL}?${params}`, { redirect: 'follow' });
-  if (!response.ok) throw new Error(`${source.sheetName} 即時 API 讀取失敗：HTTP ${response.status}`);
-  const data = await response.json();
-  if (!data.ok || !Array.isArray(data.rows)) throw new Error(data.error || `${source.sheetName} 即時 API 未回傳 rows`);
-  const rows = data.rows.map(apiRowToSheetRow);
-  const serialized = JSON.stringify(rows);
-  return {
-    ...source,
-    headers: [...new Set(rows.flatMap(row => Object.keys(row)))],
-    rows,
-    rowCount: rows.length,
-    csvSha256: createHash('sha256').update(serialized).digest('hex'),
-    transport: 'apps-script-no-cache'
-  };
-}
-
-function caseId(row) {
-  return String(row?.['案件編號'] || '').trim();
-}
-
-function comparableRow(row) {
-  return {
-    id: caseId(row),
-    month: row['月份'] || '',
-    client: row['客戶別'] || '',
-    project: row['專案名稱'] || '',
-    owner: row['專案負責人'] || '',
-    type: row['設計種類'] || row['設計類型'] || row['設計總類'] || '',
-    stage: row['階段'] || '',
-    qty: row['數量'] || '',
-    start: row['開始日期'] || '',
-    end: row['結束日期'] || '',
-    designer: row['設計負責人'] || '',
-    details: row['項目細節'] || '',
-    status: row['狀態'] || row['案件狀態'] || '',
-    weight: row['加權'] || ''
-  };
-}
-
-const [archiveData, databaseData] = await Promise.all([
-  readSheet(SHEETS.databaseArchive),
-  readDatabaseApi(SHEETS.database)
-]);
-const rows = archiveData.rows.map(row => ({ ...row }));
-const archiveIndexesById = new Map();
-rows.forEach((row, index) => {
-  const id = caseId(row);
-  if (!id) return;
-  if (!archiveIndexesById.has(id)) archiveIndexesById.set(id, []);
-  archiveIndexesById.get(id).push(index);
-});
-const databaseOccurrencesById = new Map();
-const addedCaseIds = [];
-const updatedCaseIds = [];
-const unchangedCaseIds = [];
-
-databaseData.rows.forEach(currentRow => {
-  const id = caseId(currentRow);
-  const occurrence = id ? (databaseOccurrencesById.get(id) || 0) : 0;
-  if (id) databaseOccurrencesById.set(id, occurrence + 1);
-  const archiveIndex = id ? archiveIndexesById.get(id)?.[occurrence] : undefined;
-  const occurrenceLabel = id ? `${id}${occurrence ? `#${occurrence + 1}` : ''}` : `row:${rows.length + 1}`;
-  if (archiveIndex === undefined) {
-    rows.push({ ...currentRow });
-    if (id) {
-      if (!archiveIndexesById.has(id)) archiveIndexesById.set(id, []);
-      archiveIndexesById.get(id).push(rows.length - 1);
-    }
-    addedCaseIds.push(occurrenceLabel);
-    return;
-  }
-  const archiveRow = rows[archiveIndex];
-  const changed = JSON.stringify(comparableRow(archiveRow)) !== JSON.stringify(comparableRow(currentRow));
-  const mergedRow = { ...archiveRow, ...currentRow };
-  if (String(archiveRow['填單時間'] || '').length > String(currentRow['填單時間'] || '').length) mergedRow['填單時間'] = archiveRow['填單時間'];
-  rows[archiveIndex] = mergedRow;
-  (changed ? updatedCaseIds : unchangedCaseIds).push(occurrenceLabel);
-});
-
-let weightRules=[];
-try { weightRules=JSON.parse(await readFile(PRIMARY_DATABASE_PATH,'utf8'))?.tables?.['加權計分標準']?.rows || []; }
-catch(error) { console.warn(`加權規則讀取失敗，改用內建標準：${error.message}`); }
-rows.forEach(row=>applyWeightToRow(row,weightRules.length?weightRules:undefined));
-const columns = [...new Set([...archiveData.headers, ...databaseData.headers])];
-let previousRows = [];
-let previousSnapshot = null;
-try {
-  previousSnapshot = JSON.parse(await readFile(OUTPUT_PATH, 'utf8'));
-  previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : previousSnapshot.rows || [];
-} catch (error) {
-  if (error?.code !== 'ENOENT') console.warn(`舊快照無法比對：${error.message}`);
-}
-function rowsByOccurrence(list) {
-  const occurrences = new Map();
-  const indexed = new Map();
-  list.forEach(row => {
+function indexRowsByOccurrence(rows) {
+  const occurrences = new Map(), indexes = new Map();
+  rows.forEach((row, index) => {
     const id = caseId(row);
     if (!id) return;
     const occurrence = occurrences.get(id) || 0;
     occurrences.set(id, occurrence + 1);
-    indexed.set(`${id}#${occurrence + 1}`, { row, label: `${id}${occurrence ? `#${occurrence + 1}` : ''}` });
+    indexes.set(`${id}#${occurrence + 1}`, index);
   });
-  return indexed;
+  return indexes;
 }
-const previousById = rowsByOccurrence(previousRows);
-const currentById = rowsByOccurrence(rows);
-const snapshotAddedCaseIds = [];
-const snapshotUpdatedCaseIds = [];
-const snapshotUnchangedCaseIds = [];
-currentById.forEach((current, identity) => {
-  const previous = previousById.get(identity);
-  if (!previous) snapshotAddedCaseIds.push(current.label);
-  else if (JSON.stringify(comparableRow(previous.row)) !== JSON.stringify(comparableRow(current.row))) snapshotUpdatedCaseIds.push(current.label);
-  else snapshotUnchangedCaseIds.push(current.label);
-});
-const snapshotRemovedCaseIds = [...previousById.entries()].filter(([identity]) => !currentById.has(identity)).map(([, value]) => value.label);
-const rowsSha256 = createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+
+const database = await readJson(PRIMARY_DATABASE_PATH, null);
+const databaseTable = database?.tables?.database;
+if (!databaseTable || !Array.isArray(databaseTable.rows)) throw new Error('backend/data/db.json is missing tables.database.rows');
+
+const previousSnapshot = await readJson(OUTPUT_PATH, { rows: [], columns: [] });
+const previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : (Array.isArray(previousSnapshot.rows) ? previousSnapshot.rows : []);
+const rows = clone(previousRows), archiveIndex = indexRowsByOccurrence(rows), databaseOccurrences = new Map();
+const addedCaseIds = [], updatedCaseIds = [], unchangedCaseIds = [];
+const weightRules = database?.tables?.['加權計分標準']?.rows || [];
+
+for (const sourceRow of databaseTable.rows) {
+  const currentRow = clone(sourceRow);
+  applyWeightToRow(currentRow, weightRules.length ? weightRules : undefined);
+  const id = caseId(currentRow), occurrence = id ? (databaseOccurrences.get(id) || 0) : 0;
+  if (id) databaseOccurrences.set(id, occurrence + 1);
+  const identity = id ? `${id}#${occurrence + 1}` : '';
+  const label = id ? `${id}${occurrence ? `#${occurrence + 1}` : ''}` : `row:${rows.length + 1}`;
+  const index = identity ? archiveIndex.get(identity) : undefined;
+  if (index === undefined) {
+    rows.push(currentRow);
+    if (identity) archiveIndex.set(identity, rows.length - 1);
+    addedCaseIds.push(label);
+    continue;
+  }
+  const archiveRow = rows[index];
+  const changed = JSON.stringify(comparableRow(archiveRow)) !== JSON.stringify(comparableRow(currentRow));
+  const mergedRow = { ...archiveRow, ...currentRow };
+  if (text(archiveRow['填單時間']).length > text(currentRow['填單時間']).length) mergedRow['填單時間'] = archiveRow['填單時間'];
+  rows[index] = mergedRow;
+  (changed ? updatedCaseIds : unchangedCaseIds).push(label);
+}
+
+const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
+const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows);
+const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
+const rowsChanged = previousSnapshot?.rowsSha256 !== rowsSha256;
+const columnsChanged = JSON.stringify(previousSnapshot?.columns || []) !== JSON.stringify(columns);
+if (process.env.FORCE_SNAPSHOT !== '1' && !sourceChanged && !rowsChanged && !columnsChanged) {
+  console.log(`database_archive JSON unchanged: ${rows.length} rows`);
+  process.exit(0);
+}
+
 const snapshot = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   generatedAt: new Date().toISOString(),
+  linkedDatabaseRevision: database.revision,
+  linkedDatabaseUpdatedAt: database.updatedAt,
   sources: {
-    databaseArchive: {
-      spreadsheetId: SPREADSHEET_ID,
-      sheetName: archiveData.sheetName,
-      gid: archiveData.gid,
-      rowCount: archiveData.rowCount,
-      csvSha256: archiveData.csvSha256
-    },
-    database: {
-      spreadsheetId: SPREADSHEET_ID,
-      sheetName: databaseData.sheetName,
-      gid: databaseData.gid,
-      rowCount: databaseData.rowCount,
-      csvSha256: databaseData.csvSha256,
-      transport: databaseData.transport || 'gviz-csv'
-    }
+    primaryDatabase: { path: 'backend/data/db.json', revision: database.revision, updatedAt: database.updatedAt, rowCount: databaseTable.rows.length, rowsSha256: sourceRowsSha256 },
+    archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'preserve-history-and-merge-primary-database' }
   },
-  mergeSummary: {
-    added: addedCaseIds.length,
-    updated: updatedCaseIds.length,
-    unchanged: unchangedCaseIds.length,
-    addedCaseIds,
-    updatedCaseIds
-  },
-  updateSummary: {
-    added: snapshotAddedCaseIds.length,
-    updated: snapshotUpdatedCaseIds.length,
-    removed: snapshotRemovedCaseIds.length,
-    unchanged: snapshotUnchangedCaseIds.length,
-    addedCaseIds: snapshotAddedCaseIds,
-    updatedCaseIds: snapshotUpdatedCaseIds,
-    removedCaseIds: snapshotRemovedCaseIds
-  },
+  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), addedCaseIds, updatedCaseIds },
+  updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds: [] },
   rowCount: rows.length,
   rowsSha256,
   columns,
   rows
 };
 
-const previousRowsSha256 = previousSnapshot && !Array.isArray(previousSnapshot)
-  ? previousSnapshot.rowsSha256 || createHash('sha256').update(JSON.stringify(previousRows)).digest('hex')
-  : '';
-const previousColumns = previousSnapshot && !Array.isArray(previousSnapshot) ? previousSnapshot.columns || [] : [];
-if (process.env.FORCE_SNAPSHOT !== '1' && previousRowsSha256 === rowsSha256 && JSON.stringify(previousColumns) === JSON.stringify(columns)) {
-  console.log(`database_archive JSON 無變動：${rows.length} 筆，略過寫入 -> ${OUTPUT_PATH}`);
-  process.exit(0);
-}
-
 await mkdir(dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, `${JSON.stringify(snapshot)}\n`, 'utf8');
-console.log(
-  `database_archive JSON 快照已更新：${rows.length} 筆` +
-  `（相較上次快照：新增 ${snapshotAddedCaseIds.length}、更新 ${snapshotUpdatedCaseIds.length}、移除 ${snapshotRemovedCaseIds.length}） -> ${OUTPUT_PATH}`
-);
+console.log(JSON.stringify({ ok: true, source: 'backend/data/db.json', databaseRevision: database.revision, databaseRows: databaseTable.rows.length, archiveRows: rows.length, added: addedCaseIds.length, updated: updatedCaseIds.length }, null, 2));
