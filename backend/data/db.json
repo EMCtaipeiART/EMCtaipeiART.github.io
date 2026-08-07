@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 15,
+  "revision": 16,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T11:40:58.838Z",
+  "updatedAt": "2026-08-07T11:44:41.181Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16841,7 +16841,7 @@
           "案件編號": "26080041",
           "月份": "8月",
           "加權": "1",
-          "項目細節": "社群貼文"
+          "項目細節": "廣告素材, 美術設計, 網站網頁, 素材重置"
         }
       ]
     },
