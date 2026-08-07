@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 21:55 Asia/Taipei | build: 20260807-realtime-database-refresh-94 -->
+<!-- LAST_MODIFIED: 2026-08-07 23:30 Asia/Taipei | build: 20260807-json-read-only-95 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260807-realtime-database-refresh-94" />
+  <meta name="app-version" content="20260807-json-read-only-95" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6809,7 +6809,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260807-realtime-database-refresh-94';
+const appBuildVersion = '20260807-json-read-only-95';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6820,9 +6820,6 @@ const erpPublicFallbackConfig = {
   fallback: true
 };
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
-const databaseListUrl = 'https://docs.google.com/spreadsheets/d/1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY/export?format=csv&gid=1244538986';
-const databaseGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${targetSheetId}&tq=${encodeURIComponent('select *')}`;
-const databaseArchiveGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${archiveSheetId}&tq=${encodeURIComponent('select *')}`;
 const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
 const reelsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${reelsSheetId}&tq=${encodeURIComponent('select *')}`;
 const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
@@ -6900,7 +6897,7 @@ const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
-const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260807-database-admin-9';
+const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260807-database-admin-json-10';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
@@ -7053,8 +7050,15 @@ let remoteSettingsSaveSequence = 0;
 let remoteSettingsSaveQueue = Promise.resolve();
 let lastEditorSessionKeepAliveAt = 0;
 let lastBackgroundRefreshInputAt = 0;
-let recentLocalWrites = new Map();
-const localWriteTtlMs = 120000;
+const recentLocalWritesKey = 'designRequestRecentJsonWritesV1';
+function readRecentLocalWrites(){
+  try{
+    const entries=JSON.parse(localStorage.getItem(recentLocalWritesKey)||'[]');
+    return new Map((Array.isArray(entries)?entries:[]).filter(entry=>Array.isArray(entry)&&entry.length===2&&entry[1]?.expires>Date.now()));
+  }catch(err){return new Map()}
+}
+let recentLocalWrites = readRecentLocalWrites();
+const localWriteTtlMs = 10*60*1000;
 const backgroundRefreshMs = 10000;
 const backgroundFullRefreshMs = 60000;
 let lastFullBackgroundRefreshAt = 0;
@@ -7291,8 +7295,9 @@ function unique(values){return [...new Set(values.map(v=>String(v||'').trim()).f
 function markUpdatingCell(id,keys){const key=String(id), current=updatingCells.get(key)||new Set(); keys.forEach(item=>current.add(item)); updatingCells.set(key,current)}
 function clearUpdatingCell(id,keys=null){const key=String(id); if(!keys){updatingCells.delete(key);return} const current=updatingCells.get(key); if(!current)return; keys.forEach(item=>current.delete(item)); if(!current.size)updatingCells.delete(key)}
 function isUpdatingCell(id,key){return updatingCells.get(String(id))?.has(key)}
-function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id); recentLocalWrites.set(key,{changes:{...changes},expires:Date.now()+ttl})}
-function forgetLocalWrite(id){recentLocalWrites.delete(String(id))}
+function persistRecentLocalWrites(){try{localStorage.setItem(recentLocalWritesKey,JSON.stringify([...recentLocalWrites]))}catch(err){console.warn('無法儲存近期 JSON 寫入保護',err)}}
+function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id); recentLocalWrites.set(key,{changes:{...changes},expires:Date.now()+ttl});persistRecentLocalWrites()}
+function forgetLocalWrite(id){if(recentLocalWrites.delete(String(id)))persistRecentLocalWrites()}
 function localWriteValueMatches(row,key,value){
   const actual=row?.[key]??'';
   if(key==='start'||key==='end')return slashDate(actual)===slashDate(value);
@@ -7300,21 +7305,32 @@ function localWriteValueMatches(row,key,value){
   return String(actual??'')===String(value??'');
 }
 function localWriteHasReachedSheet(row,changes){
-  return Object.entries(changes||{}).every(([key,value])=>localWriteValueMatches(row,key,value));
+  if(changes?.__deleted)return !row;
+  return Object.entries(changes||{}).filter(([key])=>!key.startsWith('__')).every(([key,value])=>localWriteValueMatches(row,key,value));
 }
 function applyRecentLocalWrites(list){
   const now=Date.now();
-  recentLocalWrites.forEach((entry,id)=>{if(entry.expires<=now)recentLocalWrites.delete(id)});
+  let changed=false;
+  recentLocalWrites.forEach((entry,id)=>{if(entry.expires<=now){recentLocalWrites.delete(id);changed=true}});
+  if(changed)persistRecentLocalWrites();
   if(!recentLocalWrites.size)return list;
-  return list.map(row=>{
+  const presentIds=new Set(list.map(row=>String(row.id)));
+  const protectedRows=list.flatMap(row=>{
     const entry=recentLocalWrites.get(String(row.id));
-    if(!entry)return row;
+    if(!entry)return [row];
+    if(entry.changes?.__deleted)return [];
     if(localWriteHasReachedSheet(row,entry.changes)){
-      recentLocalWrites.delete(String(row.id));
-      return row;
+      forgetLocalWrite(row.id);
+      return [row];
     }
-    return normalizeRow({...row,...entry.changes});
+    return [normalizeRow({...row,...entry.changes})];
   });
+  recentLocalWrites.forEach((entry,id)=>{
+    if(presentIds.has(id))return;
+    if(entry.changes?.__deleted){forgetLocalWrite(id);return}
+    if(entry.changes?.__created)protectedRows.push(normalizeRow(entry.changes));
+  });
+  return protectedRows.sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
 }
 function extractEmail(value){return String(value||'').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]||''}
 function ownerDisplay(value){const text=String(value||'').trim(); return text.startsWith('@')&&extractEmail(text)?extractEmail(text):text}
@@ -7820,8 +7836,8 @@ function gvizJsonp(url,timeoutMs=60000){
 }
 function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
 function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
-function databaseGvizQueryUrl(query='select *',sheetId=targetSheetId){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${sheetId}&tq=${encodeURIComponent(query)}`}
-async function fetchDatabaseObjects(query='select *',sheetId=targetSheetId){return gvizToObjects(await gvizJsonp(databaseGvizQueryUrl(query,sheetId)))}
+function archiveDatabaseGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${archiveSheetId}&tq=${encodeURIComponent(query)}`}
+async function fetchArchiveDatabaseObjects(query='select *'){return gvizToObjects(await gvizJsonp(archiveDatabaseGvizQueryUrl(query)))}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
 function caseIdMonthRange(date){
   const yy=date.getFullYear()%100, month=date.getMonth()+1, prefix=yy*100+month;
@@ -7830,35 +7846,6 @@ function caseIdMonthRange(date){
 function recentMonthCaseQuery(date=new Date()){
   const current=caseIdMonthRange(date), previousDate=new Date(date.getFullYear(),date.getMonth()-1,1), previous=caseIdMonthRange(previousDate);
   return `select * where (A >= ${previous.start} and A < ${previous.end}) or (A >= ${current.start} and A < ${current.end})`;
-}
-async function fetchDatabaseRowsByScript(){
-  const params=new URLSearchParams({
-    action:'list',
-    year:'',
-    noCache:'true',
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId:String(targetSheetId),
-    ts:Date.now()
-  });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,60000,'Apps Script 最新案件讀取逾時，請稍候再試');
-  if(!data.ok)throw new Error(data.error||'Apps Script 最新案件讀取失敗');
-  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
-}
-async function fetchRecentDatabaseRowsByScript(limit=320,{noCache=false}={}){
-  if(!apiUrl)return [];
-  const params=new URLSearchParams({
-    action:'recent',
-    limit:String(limit),
-    noCache:noCache?'true':'',
-    targetSpreadsheetId,
-    targetSheetName,
-    targetSheetId:String(targetSheetId),
-    ts:Date.now()
-  });
-  const data=await jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}`,30000,'最近案件讀取較慢，先顯示公開資料來源');
-  if(!data.ok)throw new Error(data.error||'最近案件讀取失敗');
-  return (data.rows||[]).map(normalizeRow).filter(row=>isCaseId_(row.id));
 }
 function mergeRowsById(baseRows=[],patchRows=[]){
   const byId=new Map();
@@ -7892,7 +7879,7 @@ async function loadArchiveRowsForSearch(){
   render();
   setSync('搜尋歷史資料中...');
   try{
-    archiveRows=(await fetchDatabaseObjects('select *',archiveSheetId))
+    archiveRows=(await fetchArchiveDatabaseObjects('select *'))
       .map(row=>normalizeRow({...row,archived:true}))
       .filter(row=>isCaseId_(row.id));
     archiveRowsLoaded=true;
@@ -8176,9 +8163,8 @@ async function sheetApi(action,payload={}){
     if(!data.ok)throw new Error(data.error||'更新失敗');
     return data;
   }
-  const data = action === 'list'
-    ? await fetchFromSheet(action,payload).catch(()=>jsonp(`${apiUrl}${apiUrl.includes('?')?'&':'?'}action=list&year=${encodeURIComponent(payload.year||'')}&noCache=${encodeURIComponent(payload.noCache?'true':'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}`,60000,'資料讀取較慢，請稍候再試，或按「重新整理」'))
-    : await postToSheet({action,...payload});
+  if(action==='list')throw new Error('database 案件列表僅允許直接讀取 JSON');
+  const data = await postToSheet({action,...payload});
   if(!data.ok) throw new Error(data.error || 'GitHub JSON 更新失敗');
   return data;
 }
@@ -8202,16 +8188,6 @@ async function appsScriptPost(payload={},timeoutMs=60000){
   const data=await appsScriptFetch(apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:content,keepalive:content.length<60000},timeoutMs);
   if(data?.ok)publishDatabaseRefresh(String(body.action||''),data);
   return data;
-}
-async function fetchFromSheet(action,payload={}){
-  const options = action === 'list'
-    ? {}
-    : {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...payload})};
-  const params = action === 'list' ? `action=list&year=${encodeURIComponent(payload.year||'')}&targetSpreadsheetId=${encodeURIComponent(targetSpreadsheetId)}&targetSheetName=${encodeURIComponent(targetSheetName)}&targetSheetId=${encodeURIComponent(targetSheetId)}&ts=${Date.now()}` : '';
-  const url = action === 'list' ? `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params}` : apiUrl;
-  return action==='list'
-    ? appsScriptGet(url,60000)
-    : appsScriptFetch(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},Number(payload._timeoutMs)||60000);
 }
 function jsonp(url,timeoutMs=20000,timeoutMessage='讀取逾時。請直接打開測試連線，確認畫面是否出現 testCallback(...)'){
   return appsScriptGet(String(url).replace(/([?&])callback=[^&]*/,'$1').replace(/[?&]$/,''),timeoutMs)
@@ -9544,6 +9520,7 @@ function submitRequestBatchRows(){
     const added=data.rows?.length
       ? data.rows.map(normalizeRow).filter(row=>isCaseId_(row.id))
       : [];
+    added.forEach(row=>rememberLocalWrite(row.id,{...row,__created:true}));
     if(added.length)rows=[...added.reverse(),...rows];
     save();
     render();
@@ -9713,7 +9690,7 @@ function initCaseTableDragScroll(){
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
-function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
+function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
 function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; updateCaseRow(id,{status:'已取消'},'已更新為已取消')}
 $('#requestForm').addEventListener('submit',e=>{
   e.preventDefault();
@@ -9798,6 +9775,7 @@ $('#requestForm').addEventListener('submit',e=>{
   void enqueueInlineWrite(()=>sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})).then(data=>{
     const submittedRow=normalizeRow(data.row||{});
     if(!isCaseId_(submittedRow.id))throw new Error('寫入完成但未取得案件編號，請重新整理確認');
+    rememberLocalWrite(submittedRow.id,{...submittedRow,__created:true});
     if(!rows.some(row=>String(row.id)===String(submittedRow.id)))rows.unshift(submittedRow);
     save();
     render();
