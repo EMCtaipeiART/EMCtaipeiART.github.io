@@ -186,8 +186,9 @@ databaseData.rows.forEach(currentRow => {
 });
 const columns = [...new Set([...archiveData.headers, ...databaseData.headers])];
 let previousRows = [];
+let previousSnapshot = null;
 try {
-  const previousSnapshot = JSON.parse(await readFile(OUTPUT_PATH, 'utf8'));
+  previousSnapshot = JSON.parse(await readFile(OUTPUT_PATH, 'utf8'));
   previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : previousSnapshot.rows || [];
 } catch (error) {
   if (error?.code !== 'ENOENT') console.warn(`舊快照無法比對：${error.message}`);
@@ -216,6 +217,7 @@ currentById.forEach((current, identity) => {
   else snapshotUnchangedCaseIds.push(current.label);
 });
 const snapshotRemovedCaseIds = [...previousById.entries()].filter(([identity]) => !currentById.has(identity)).map(([, value]) => value.label);
+const rowsSha256 = createHash('sha256').update(JSON.stringify(rows)).digest('hex');
 const snapshot = {
   schemaVersion: 2,
   generatedAt: new Date().toISOString(),
@@ -253,9 +255,19 @@ const snapshot = {
     removedCaseIds: snapshotRemovedCaseIds
   },
   rowCount: rows.length,
+  rowsSha256,
   columns,
   rows
 };
+
+const previousRowsSha256 = previousSnapshot && !Array.isArray(previousSnapshot)
+  ? previousSnapshot.rowsSha256 || createHash('sha256').update(JSON.stringify(previousRows)).digest('hex')
+  : '';
+const previousColumns = previousSnapshot && !Array.isArray(previousSnapshot) ? previousSnapshot.columns || [] : [];
+if (process.env.FORCE_SNAPSHOT !== '1' && previousRowsSha256 === rowsSha256 && JSON.stringify(previousColumns) === JSON.stringify(columns)) {
+  console.log(`database_archive JSON 無變動：${rows.length} 筆，略過寫入 -> ${OUTPUT_PATH}`);
+  process.exit(0);
+}
 
 await mkdir(dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, `${JSON.stringify(snapshot)}\n`, 'utf8');
