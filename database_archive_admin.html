@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 18:00 Asia/Taipei | build: 20260807-archive-manager-json-3 -->
+<!-- LAST_MODIFIED: 2026-08-07 19:00 Asia/Taipei | build: 20260807-archive-manager-live-4 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="app-version" content="20260807-archive-manager-json-3">
+  <meta name="app-version" content="20260807-archive-manager-live-4">
   <title>封存資料管理｜EMC 設計部</title>
   <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('designRequestThemeV1')==='dark'?'dark':'light'}catch(error){document.documentElement.dataset.theme='light'}})()</script>
   <style>
@@ -34,8 +34,7 @@
       <div class="top-actions">
         <button class="btn" id="loadRemote" type="button">↻ <span>讀取線上快照</span></button>
         <button class="btn" id="openFile" type="button">▣ <span>開啟本機 JSON</span></button>
-        <button class="btn primary" id="saveFile" type="button" disabled>✓ <span>儲存至檔案</span></button>
-        <button class="icon-btn" id="downloadFile" type="button" title="下載 JSON" aria-label="下載 JSON" disabled>↓</button>
+        <button class="btn primary" id="saveFile" type="button" disabled>↓ <span>儲存 / 下載 JSON</span></button>
       </div>
     </header>
     <main>
@@ -61,10 +60,11 @@
   <div class="modal" id="editModal" hidden><form class="modal-card" id="editForm"><header class="modal-head"><h2 id="modalTitle">編輯資料</h2><button class="close" id="modalClose" type="button" aria-label="關閉">×</button></header><div class="fields" id="editFields"></div><footer class="modal-actions"><button class="btn" id="modalCancel" type="button">取消</button><button class="btn primary" type="submit">儲存變更</button></footer></form></div>
   <script>
     const SNAPSHOT_URL='data/database_archive.json';
+    const AUTO_REFRESH_MS=15000;
     const DEFAULT_COLUMNS=['案件編號','月份','客戶別','專案名稱','專案負責人','設計種類','階段','數量','開始日期','結束日期','設計負責人','項目細節','狀態','加權','填單時間','時間標記','繳交時間','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     const LONG_FIELDS=new Set(['項目細節','設計簡報說明','客戶素材說明','參考範例說明','其他說明']);
     const $=id=>document.getElementById(id);
-    let snapshot=null,fileHandle=null,page=1,filteredRows=[],editingRow=null,editingIsNew=false,dirty=false,changeCount=0,baseGeneratedAt='',sortKey='__latest',sortDirection='desc';
+    let snapshot=null,fileHandle=null,page=1,filteredRows=[],editingRow=null,editingIsNew=false,dirty=false,changeCount=0,baseGeneratedAt='',sortKey='__latest',sortDirection='desc',currentSource='remote',lastRemoteVersion='';
     function sessionValue(key){return localStorage.getItem(key)||sessionStorage.getItem(key)||''}
     function taipeiParts(){return Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]))}
     function todayAdminToken(){const p=taipeiParts();return `local-admin:${p.year}${p.month}${p.day}`}
@@ -77,10 +77,11 @@
     function duplicateIds(){const seen=new Set(),duplicates=new Set();snapshot?.rows.forEach(row=>{const id=String(row['案件編號']||'').trim();if(!id)return;if(seen.has(id))duplicates.add(id);else seen.add(id)});return duplicates}
     function displayDate(value){const date=new Date(value);return Number.isNaN(date.getTime())?['—','—']:[date.toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'}),date.toLocaleTimeString('zh-TW',{timeZone:'Asia/Taipei',hour12:false})]}
     function touch(amount=1){if(!snapshot)return;dirty=true;changeCount+=Math.max(1,Number(amount)||1);snapshot.rowCount=snapshot.rows.length;snapshot.generatedAt=new Date().toISOString();snapshot.manualEdit={baseGeneratedAt:baseGeneratedAt||snapshot.generatedAt,editedAt:snapshot.generatedAt,editor:sessionValue('designRequestEditorDisplayName')||sessionValue('designRequestEditorUser')||'管理者'};updateSummary()}
-    function updateSummary(){if(!snapshot)return;const [date,time]=displayDate(snapshot.generatedAt),duplicates=duplicateIds();$('rowCount').textContent=snapshot.rows.length.toLocaleString('zh-TW');$('columnCount').textContent=`${snapshot.columns.length} 個欄位`;$('generatedDate').textContent=date;$('generatedTime').textContent=time;$('changeCount').textContent=changeCount.toLocaleString('zh-TW');$('changeSummary').textContent=dirty?'尚未儲存至檔案':'已與目前載入版本同步';$('validationState').textContent='格式正常';$('duplicateState').textContent=duplicates.size?`${duplicates.size} 個重複案件編號`:'無重複案件編號';$('dirtyState').textContent=dirty?'● 有尚未儲存的變更':'';$('saveFile').disabled=false;$('downloadFile').disabled=false}
-    function setSnapshot(data,{name='database_archive.json',handle=null}={}){snapshot=validate(data);snapshot.rowCount=snapshot.rows.length;baseGeneratedAt=snapshot.generatedAt||'';fileHandle=handle;page=1;dirty=false;changeCount=0;sortKey='__latest';sortDirection='desc';$('fileName').textContent=name;updateFilterOptions();applyFilters();updateSummary();notice(`已載入 ${snapshot.rows.length.toLocaleString('zh-TW')} 筆資料。`,'success')}
-    async function loadRemote(){if(dirty&&!confirm('尚未儲存的變更會被取代，繼續嗎？'))return;notice('正在讀取線上快照...');try{const response=await fetch(`${SNAPSHOT_URL}?v=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);setSnapshot(await response.json())}catch(error){notice(`線上快照讀取失敗：${error.message}`,'error')}}
-    async function readFile(file,handle=null){try{setSnapshot(JSON.parse(await file.text()),{name:file.name,handle})}catch(error){notice(`JSON 開啟失敗：${error.message}`,'error')}}
+    function updateSummary(){if(!snapshot)return;const [date,time]=displayDate(snapshot.generatedAt),duplicates=duplicateIds();$('rowCount').textContent=snapshot.rows.length.toLocaleString('zh-TW');$('columnCount').textContent=`${snapshot.columns.length} 個欄位`;$('generatedDate').textContent=date;$('generatedTime').textContent=time;$('changeCount').textContent=changeCount.toLocaleString('zh-TW');$('changeSummary').textContent=dirty?'尚未儲存至檔案':'已與目前載入版本同步';$('validationState').textContent='格式正常';$('duplicateState').textContent=duplicates.size?`${duplicates.size} 個重複案件編號`:'無重複案件編號';$('dirtyState').textContent=dirty?'● 有尚未儲存的變更':'';$('saveFile').disabled=false}
+    function snapshotVersion(data){return String(data?.rowsSha256||data?.generatedAt||'')}
+    function setSnapshot(data,{name='database_archive.json',handle=null,source='remote',message=''}={}){snapshot=validate(data);snapshot.rowCount=snapshot.rows.length;baseGeneratedAt=snapshot.generatedAt||'';fileHandle=handle;currentSource=source;if(source==='remote')lastRemoteVersion=snapshotVersion(snapshot);page=1;dirty=false;changeCount=0;sortKey='__latest';sortDirection='desc';$('fileName').textContent=name;updateFilterOptions();applyFilters();updateSummary();notice(message||`已載入 ${snapshot.rows.length.toLocaleString('zh-TW')} 筆資料。`,'success')}
+    async function loadRemote(options={}){const automatic=options?.automatic===true;if(automatic&&(dirty||currentSource!=='remote'||document.hidden))return;if(!automatic&&dirty&&!confirm('尚未儲存的變更會被取代，繼續嗎？'))return;if(!automatic)notice('正在讀取線上快照...');try{const response=await fetch(`${SNAPSHOT_URL}?v=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json(),version=snapshotVersion(data);if(automatic&&version&&version===lastRemoteVersion)return;setSnapshot(data,{source:'remote',message:automatic?`偵測到 database 更新，已自動載入 ${data.rows.length.toLocaleString('zh-TW')} 筆最新資料。`:''})}catch(error){if(!automatic)notice(`線上快照讀取失敗：${error.message}`,'error')}}
+    async function readFile(file,handle=null){try{setSnapshot(JSON.parse(await file.text()),{name:file.name,handle,source:'local'})}catch(error){notice(`JSON 開啟失敗：${error.message}`,'error')}}
     async function openFile(){if(dirty&&!confirm('尚未儲存的變更會被取代，繼續嗎？'))return;try{if('showOpenFilePicker'in window){const [handle]=await showOpenFilePicker({types:[{description:'JSON',accept:{'application/json':['.json']}}],multiple:false});await readFile(await handle.getFile(),handle)}else $('fileInput').click()}catch(error){if(error.name!=='AbortError')notice(`檔案開啟失敗：${error.message}`,'error')}}
     function serialize(){snapshot.rowCount=snapshot.rows.length;return `${JSON.stringify(snapshot,null,2)}\n`}
     async function saveFile(){if(!snapshot)return;try{if(!fileHandle&&'showSaveFilePicker'in window)fileHandle=await showSaveFilePicker({suggestedName:'database_archive.json',types:[{description:'JSON',accept:{'application/json':['.json']}}]});if(!fileHandle){downloadFile();notice('瀏覽器不支援直接覆寫，已下載 JSON 副本。','success');return}const writable=await fileHandle.createWritable();await writable.write(serialize());await writable.close();dirty=false;changeCount=0;$('fileName').textContent=fileHandle.name;updateSummary();notice(`已儲存至 ${fileHandle.name}。`,'success')}catch(error){if(error.name!=='AbortError')notice(`儲存失敗：${error.message}`,'error')}}
@@ -99,15 +100,15 @@
     function deleteRow(row){const label=row['案件編號']||row['專案名稱']||'這筆資料';if(!confirm(`確定刪除「${label}」？`))return;const index=snapshot.rows.indexOf(row);if(index>=0)snapshot.rows.splice(index,1);touch();updateFilterOptions();applyFilters();notice('已刪除資料。','success')}
     function showPane(name){const raw=name==='raw';$('tablePane').hidden=raw;$('rawPane').hidden=!raw;$('tableTab').classList.toggle('active',!raw);$('rawTab').classList.toggle('active',raw);$('tableTab').setAttribute('aria-selected',String(!raw));$('rawTab').setAttribute('aria-selected',String(raw));if(raw&&snapshot)$('rawJson').value=serialize()}
     function applyRaw(){try{const parsed=validate(JSON.parse($('rawJson').value));snapshot=parsed;baseGeneratedAt=baseGeneratedAt||snapshot.generatedAt||'';touch();updateFilterOptions();applyFilters();$('rawJson').value=serialize();notice('JSON 已套用。','success')}catch(error){notice(`JSON 驗證失敗：${error.message}`,'error')}}
-    if(!hasAdminAccess())$('accessGate').hidden=false;else{$('app').hidden=false;loadRemote()}
+    if(!hasAdminAccess())$('accessGate').hidden=false;else{$('app').hidden=false;loadRemote();setInterval(()=>loadRemote({automatic:true}),AUTO_REFRESH_MS)}
     $('backButton').addEventListener('click',()=>{if(dirty&&!confirm('尚未儲存的變更會遺失，繼續嗎？'))return;if(window.opener&&!window.opener.closed){window.opener.focus();window.close();setTimeout(()=>location.href='design_dashboard.html',100)}else location.href='design_dashboard.html'});
-    $('loadRemote').addEventListener('click',loadRemote);$('openFile').addEventListener('click',openFile);$('saveFile').addEventListener('click',saveFile);$('downloadFile').addEventListener('click',downloadFile);$('fileInput').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)readFile(file);event.target.value=''});
+    $('loadRemote').addEventListener('click',()=>loadRemote());$('openFile').addEventListener('click',openFile);$('saveFile').addEventListener('click',saveFile);$('fileInput').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)readFile(file);event.target.value=''});
     $('searchInput').addEventListener('input',()=>{page=1;applyFilters()});['yearFilter','monthFilter','statusFilter','pageSize'].forEach(id=>$(id).addEventListener('change',()=>{page=1;applyFilters()}));$('addRow').addEventListener('click',()=>openEditor());
     $('tableHead').addEventListener('click',event=>{const th=event.target.closest('th[data-sort]');if(!th)return;const key=th.dataset.sort;if(sortKey===key)sortDirection=sortDirection==='asc'?'desc':'asc';else{sortKey=key;sortDirection=['案件編號','加權','開始日期','結束日期'].includes(key)?'desc':'asc'}page=1;applyFilters()});
     $('tableBody').addEventListener('click',event=>{const button=event.target.closest('[data-action]'),tr=event.target.closest('tr[data-index]');if(!button||!tr)return;const row=snapshot.rows[Number(tr.dataset.index)];if(button.dataset.action==='edit')openEditor(row);else deleteRow(row)});
     $('firstPage').addEventListener('click',()=>{page=1;renderTable()});$('prevPage').addEventListener('click',()=>{page=Math.max(1,page-1);renderTable()});$('nextPage').addEventListener('click',()=>{page++;renderTable()});$('lastPage').addEventListener('click',()=>{page=Math.max(1,Math.ceil(filteredRows.length/Number($('pageSize').value)));renderTable()});
     $('tableTab').addEventListener('click',()=>showPane('table'));$('rawTab').addEventListener('click',()=>showPane('raw'));$('formatJson').addEventListener('click',()=>{try{$('rawJson').value=`${JSON.stringify(JSON.parse($('rawJson').value),null,2)}\n`;notice('JSON 格式正常。','success')}catch(error){notice(`JSON 格式錯誤：${error.message}`,'error')}});$('applyJson').addEventListener('click',applyRaw);
-    $('editForm').addEventListener('submit',saveEditor);$('modalClose').addEventListener('click',closeEditor);$('modalCancel').addEventListener('click',closeEditor);$('editModal').addEventListener('click',event=>{if(event.target===$('editModal'))closeEditor()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('editModal').hidden)closeEditor()});window.addEventListener('beforeunload',event=>{if(!dirty)return;event.preventDefault();event.returnValue=''})
+    $('editForm').addEventListener('submit',saveEditor);$('modalClose').addEventListener('click',closeEditor);$('modalCancel').addEventListener('click',closeEditor);$('editModal').addEventListener('click',event=>{if(event.target===$('editModal'))closeEditor()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('editModal').hidden)closeEditor()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('app').hidden)loadRemote({automatic:true})});window.addEventListener('beforeunload',event=>{if(!dirty)return;event.preventDefault();event.returnValue=''})
   </script>
 </body>
 </html>
