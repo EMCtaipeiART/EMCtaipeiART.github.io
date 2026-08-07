@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5,
+  "revision": 6,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T11:20:21.491Z",
+  "updatedAt": "2026-08-07T11:24:13.368Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -11226,7 +11226,7 @@
           "設計種類": "影音",
           "階段": "後製",
           "數量": "1",
-          "開始日期": "2027/07/13",
+          "開始日期": "2026/07/13",
           "結束日期": "2026/07/14",
           "設計負責人": "Karl",
           "項目細節": "",
