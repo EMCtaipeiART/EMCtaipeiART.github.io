@@ -1,0 +1,14 @@
+{
+  "name": "machi-design-request-json-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node backend/server.mjs",
+    "dev": "node --watch backend/server.mjs",
+    "import:sheets": "node backend/import_google_sheets.mjs",
+    "test": "node --test backend/test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
