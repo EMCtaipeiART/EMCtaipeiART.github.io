@@ -57,9 +57,14 @@ export function calculateWeight({type='',stage='',qty='',details='',rules=DEFAUL
   if(!selected.length)return null;
   const normalizedType=normalizeDesignType(type),normalizedStage=String(stage ?? '').trim();
   const scoreMap=rules===DEFAULT_WEIGHT_RULE_ROWS?DETAIL_SCORE_MAP:detailScoreMap(rules);
-  const multiplier=selected.reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
+  const regularScore=selected
+    .filter(detail=>detail!=='急件')
+    .reduce((sum,detail)=>sum+(scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000${detail}`) ?? 0),0);
+  const urgentScore=selected.includes('急件')
+    ? (scoreMap.get(`${normalizedType}\u0000${normalizedStage}\u0000急件`) ?? 3)
+    : 0;
   const quantity=Number(String(qty ?? '').replace(/,/g,''));
-  const weighted=(Number.isFinite(quantity)?quantity:0)*multiplier;
+  const weighted=(Number.isFinite(quantity)?quantity:0)*regularScore+urgentScore;
   return Number(weighted.toFixed(4));
 }
 
