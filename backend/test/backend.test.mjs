@@ -90,6 +90,24 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /now-entry\.confirmedAt>=localWriteConfirmedGraceMs/);
 });
 
+test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
+  const designers = database.tables['設定'].rows
+    .filter(row => ['Machi', 'Anna', 'Karl', 'Noise', 'Amber', 'Leona'].includes(row['名字']))
+    .map(row => ({ name: row['名字'], group: row['組別'], rotation: Number(row['新專案輪值']) }));
+  const firstByGroup = Object.fromEntries(['平面', '影音'].map(group => [
+    group,
+    designers.filter(designer => designer.group === group).sort((a, b) => a.rotation - b.rotation)[0]?.name
+  ]));
+
+  assert.deepEqual(firstByGroup, { 平面: 'Leona', 影音: 'Noise' });
+  assert.match(html, /row\['組別'\]\|\|row\['設計類型'\]/);
+  assert.match(html, /githubJsonTableRows\('設定',\{fresh:true\}\)/);
+  assert.match(html, /groupOrder=\{平面:0,影音:1\}/);
+  assert.match(html, />新專案找我<\/button>/);
+});
+
 test('archive snapshot and dashboard use JSON database sources only', async () => {
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
@@ -207,6 +225,48 @@ test('password session protects settings, reels and manager-only issue status wr
   assert.equal(expired.ok, false);
 });
 
+test('new project writes database and group JSON table while rotating only the actual assignee', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  await app.database.transaction(draft => {
+    const machi = draft.tables['設定'].rows.find(row => row['名字'] === 'Machi');
+    Object.assign(machi, { '組別': '平面', '新專案輪值': '4' });
+    draft.tables['設定'].rows.push(
+      { '名字': 'Leona', '帳號': 'leona.chen@emctaipei.com', '組別': '平面', '新專案輪值': '1' },
+      { '名字': 'Anna', '帳號': 'anna.hsu@emctaipei.com', '組別': '平面', '新專案輪值': '2' },
+      { '名字': 'Amber', '帳號': 'amber.tian@emctaipei.com', '組別': '平面', '新專案輪值': '3' },
+      { '名字': 'Karl', '帳號': 'karl.lee@emctaipei.com', '組別': '影音', '新專案輪值': '1' },
+      { '名字': 'Noise', '帳號': 'noise.zhong@emctaipei.com', '組別': '影音', '新專案輪值': '2' }
+    );
+  }, 'seed project rotations');
+  const login = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
+
+  const flat = await api(app.baseUrl, 'createFlatProject', {
+    editorToken: login.token,
+    row: {
+      client: '輪值測試客戶', project: '平面替換測試', owner: 'Machi', projectType: '平面設計', qty: 1,
+      start: '2026-08-08', end: '2026-08-09', expectedDesigner: 'Leona', replacement: 'Amber', reason: '指定專案延續'
+    }
+  });
+  assert.equal(flat.databaseRow.designer, 'Amber');
+  assert.deepEqual(Object.fromEntries(flat.rotations.map(item => [item.name, item.rotation])), { Machi: 3, Anna: 2, Amber: 4, Leona: 1 });
+  assert.equal(app.database.table('平面新開專案').rows.length, 1);
+  assert.equal(app.database.table('平面新開專案').rows[0]['預計設計師'], 'Leona');
+  assert.equal(app.database.table('平面新開專案').rows[0]['替換(選填)'], 'Amber');
+
+  const video = await api(app.baseUrl, 'createFlatProject', {
+    editorToken: login.token,
+    row: {
+      client: '輪值測試客戶', project: '影音輪值測試', owner: 'Machi', projectType: '社群影音', qty: 1,
+      start: '2026-08-08', end: '2026-08-09', expectedDesigner: 'Karl'
+    }
+  });
+  assert.equal(video.databaseRow.designer, 'Karl');
+  assert.deepEqual(Object.fromEntries(video.rotations.map(item => [item.name, item.rotation])), { Karl: 2, Noise: 1 });
+  assert.equal(app.database.table('影音新開專案').rows.length, 1);
+  assert.equal(app.database.table('database').rows.length, 2);
+});
+
 test('concurrent creates are serialized and generate unique case IDs', async t => {
   const app = await fixture();
   t.after(() => app.close());
@@ -230,7 +290,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
 
   const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');
