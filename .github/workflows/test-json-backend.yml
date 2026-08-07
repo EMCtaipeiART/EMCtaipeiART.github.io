@@ -1,0 +1,29 @@
+name: Test JSON backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'package.json'
+      - '.github/workflows/test-json-backend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JSON database
+        run: node -e "JSON.parse(require('node:fs').readFileSync('backend/data/db.json', 'utf8'))"
+      - name: Run backend tests
+        run: npm test
