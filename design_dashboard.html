@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-08-07T16:40:00+08:00" />
-<meta name="app-version" content="20260807-archive-manager-3" />
+<meta name="last-modified" content="2026-08-07T18:00:00+08:00" />
+<meta name="app-version" content="20260807-json-archive-manager-4" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -260,12 +260,12 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <div class="top-tools">
       <button class="notif" id="dashboardBell" type="button" aria-label="提醒" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-bell"/></svg><span class="notif-badge" id="dashboardBellBadge" hidden>0</span></button>
       <button class="profile" id="dashboardProfileButton" type="button" aria-haspopup="menu" aria-expanded="false"><div class="avatar" id="profileAvatar">凱</div><div><b id="currentDesignerName">凱曜</b><span id="currentDesignerType">設計師</span></div><svg class="icon icon-sm chev"><use href="#i-chevron-down"/></svg></button>
-      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><button id="dashboardAdminLogin" type="button" role="menuitem"><svg class="icon"><use href="#i-user"/></svg><span id="dashboardAdminLoginText">管理者登入</span></button><a id="dashboardArchiveManager" href="database_archive_admin.html" role="menuitem" hidden><svg class="icon"><use href="#i-folder"/></svg>封存資料管理</a><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
+      <div class="account-dropdown" id="dashboardAccountDropdown" hidden role="menu"><button id="dashboardAdminLogin" type="button" role="menuitem"><svg class="icon"><use href="#i-user"/></svg><span id="dashboardAdminLoginText">管理者登入</span></button><a id="dashboardArchiveManager" href="database_archive_admin.html" target="_blank" rel="opener" role="menuitem" hidden><svg class="icon"><use href="#i-folder"/></svg>封存資料管理</a><a id="returnRequestLink" href="index.html" role="menuitem"><svg class="icon"><use href="#i-home"/></svg>返回需求系統</a></div>
       <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
   <aside class="nav-side" aria-label="側邊選單"><div class="side-nav"><nav class="topnav" aria-label="主選單"><a class="active" href="#" data-page="dashboard"><svg class="icon"><use href="#i-dashboard"/></svg>設計總覽</a><a href="#" data-page="analysis"><svg class="icon"><use href="#i-chart"/></svg>分析中心</a><a href="#" data-page="cases"><svg class="icon"><use href="#i-folder"/></svg>案件中心</a><a href="#" data-page="work"><svg class="icon"><use href="#i-user"/></svg>我的工作</a></nav><a class="side-settings" href="#"><svg class="icon"><use href="#i-settings"/></svg>系統設定</a></div></aside>
-  <div class="hidden-controls" aria-hidden="true"><select id="yearFilter"></select><select id="monthFilter"></select><div id="sourceNote">資料來源：Google 試算表</div></div>
+  <div class="hidden-controls" aria-hidden="true"><select id="yearFilter"></select><select id="monthFilter"></select><div id="sourceNote">資料來源：JSON 資料庫</div></div>
   <main class="main">
     <section class="page active" id="page-dashboard">
     <div class="dashboard-heading"><div><h1>設計總覽</h1><p>掌握本月案件進度、團隊負載與品牌工作量</p></div><div class="heading-actions"><span class="update" id="lastUpdated">最後更新：讀取中</span><button class="icon-btn" id="reloadBtn" title="重新讀取"><svg class="icon"><use href="#i-refresh"/></svg></button></div></div>
@@ -348,15 +348,9 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 <script>
 Chart.defaults.font.family="'Geist','Noto Sans TC',sans-serif";
 const SHEET_ID='1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
-const GID='646199020';
 const SETTINGS_GID='988186149';
 const MODIFICATION_GID='1240020248';
 const ARCHIVE_SNAPSHOT_URL='data/database_archive.json';
-const SHEET_URLS=[
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`,
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`,
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/pub?gid=${GID}&single=true&output=csv`
-];
 const SHEET_JSONP_URL=gid=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:json`;
 let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map(),archiveSnapshotMeta=null;
 let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='';
@@ -952,23 +946,13 @@ async function fetchArchiveSnapshot(){
   return normalizeRows(rows)
 }
 async function fetchCSV(){
-  let lastErr;archiveSnapshotMeta=null;
-  if(location.protocol!=='file:'){
-    try{return await fetchArchiveSnapshot()}
-    catch(e){lastErr=e;console.warn('database_archive JSON 快照讀取失敗，改讀 Google 試算表',e)}
-  }
-  if(location.protocol==='file:')return fetchGvizJSONP();
-  for(const url of SHEET_URLS){
-    try{const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error(`${res.status} ${res.statusText}`);const text=await res.text();if(!text||text.includes('<!DOCTYPE html'))throw new Error('回傳不是 CSV');const data=normalizeRows(parseCSV(text));if(data.length)return data;throw new Error('CSV 無可用資料')}
-    catch(e){lastErr=e}
-  }
-  try{return await fetchGvizJSONP()}
-  catch(e){throw lastErr||e||new Error('無法讀取試算表')}
+  archiveSnapshotMeta=null;
+  return fetchArchiveSnapshot()
 }
 async function load(){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
-  try{raw=await fetchCSV();try{normalizeSettings(await fetchGvizJSONP(SETTINGS_GID,rows=>rows))}catch(e){console.warn('設定分頁讀取失敗',e)}const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date(),merged=Boolean(archiveSnapshotMeta?.sources?.database);$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=archiveSnapshotMeta?`資料來源：${merged?'database_archive + database':'database_archive'} JSON 快照（${archiveSnapshotMeta.rowCount||raw.length} 筆）`:'資料來源：Google 試算表';}
-  catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法直接讀取 Google 試算表，已先顯示示範資料。請確認試算表「知道連結者可檢視」或已發佈到網路。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
+  try{raw=await fetchCSV();try{normalizeSettings(await fetchGvizJSONP(SETTINGS_GID,rows=>rows))}catch(e){console.warn('設定分頁讀取失敗',e)}const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：JSON 資料庫（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
+  catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法讀取 JSON 資料庫，已先顯示示範資料。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
   finally{populateFilters();applyFilter();updateProfile();renderDashboardNotifications();loadDashboardModifications();loading.classList.remove('show')}
 }
 function shiftMonth(step){
@@ -1022,6 +1006,7 @@ $('analysisQuarterBrandNext').addEventListener('click',()=>{const brands=['全�
 $('analysisQuarterBrandName').addEventListener('click',event=>{event.stopPropagation();const menu=$('analysisQuarterBrandMenu'),open=menu.hidden;closeAnalysisMenus();menu.hidden=!open;$('analysisQuarterBrandName').setAttribute('aria-expanded',String(open))});
 $('analysisQuarterBrandMenu').addEventListener('click',event=>{event.stopPropagation();const option=event.target.closest('[data-brand-name]');if(!option)return;analysisQuarterBrand=option.dataset.brandName;renderAnalysisQuarterDetail(+$('yearFilter').value,$('designerFilter').value)});
 $('returnRequestLink').href=ACCOUNT_IDENTITY.returnUrl;
+$('dashboardArchiveManager').addEventListener('click',()=>{if(!isDashboardAdmin())return;localStorage.setItem('designArchiveAccessHandoffV1',JSON.stringify({token:todayAdminToken(),expiresAt:Date.now()+30000}))});
 $('dashboardAdminLogin').addEventListener('click',()=>{if(isDashboardAdmin()){sessionStorage.removeItem('designDashboardAdminTokenV1');updateProfile();return}showDashboardLogin()});
 $('dashboardLoginCancel').addEventListener('click',hideDashboardLogin);
 $('dashboardLoginModal').addEventListener('click',event=>{if(event.target===$('dashboardLoginModal'))hideDashboardLogin()});
