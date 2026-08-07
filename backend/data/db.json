@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 32,
+  "revision": 33,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-07T13:52:03.909Z",
+  "updatedAt": "2026-08-07T13:52:13.462Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18274,7 +18274,7 @@
           "對話框": "7/19-24 本公主休假",
           "新專案輪值": "4",
           "篩選年份": "2026年",
-          "篩選月份": "7月 , 8月",
+          "篩選月份": "8月",
           "篩選狀態": "",
           "篩選姓名": "",
           "選擇": "v",
