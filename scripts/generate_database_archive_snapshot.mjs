@@ -6,7 +6,8 @@ import { applyWeightToRow } from '../backend/weighting.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = resolve(SCRIPT_DIR, '../data/database_archive.json');
-const PRIMARY_DATABASE_PATH = resolve(SCRIPT_DIR, '../backend/data/db.json');
+const PRIMARY_DATABASE_PATH = process.env.PRIMARY_DATABASE_PATH ? resolve(process.env.PRIMARY_DATABASE_PATH) : resolve(SCRIPT_DIR, '../backend/data/db.json');
+const ARCHIVE_BASE_PATH = process.env.ARCHIVE_BASE_PATH ? resolve(process.env.ARCHIVE_BASE_PATH) : OUTPUT_PATH;
 
 const clone = value => JSON.parse(JSON.stringify(value));
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -59,50 +60,37 @@ const dashboardData = {
   modifications: clone(modificationRows)
 };
 
-const previousSnapshot = await readJson(OUTPUT_PATH, { rows: [], columns: [] });
+const previousSnapshot = await readJson(ARCHIVE_BASE_PATH, { rows: [], columns: [] });
 const previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : (Array.isArray(previousSnapshot.rows) ? previousSnapshot.rows : []);
-const archiveIndex = indexRowsByOccurrence(previousRows), databaseOccurrences = new Map(), activeIdentities = new Set();
-const rows = [];
+const rows = clone(previousRows), archiveIndex = indexRowsByOccurrence(rows), databaseOccurrences = new Map();
 const addedCaseIds = [], updatedCaseIds = [], unchangedCaseIds = [];
 const weightRules = database?.tables?.['加權計分標準']?.rows || [];
+let recalculatedArchiveRows = 0;
 
 for (const [sourceIndex, sourceRow] of databaseTable.rows.entries()) {
   const currentRow = clone(sourceRow);
+  const weightBefore = text(currentRow['加權']);
   applyWeightToRow(currentRow, weightRules.length ? weightRules : undefined);
+  if (weightBefore !== text(currentRow['加權'])) recalculatedArchiveRows += 1;
   const id = caseId(currentRow), occurrence = id ? (databaseOccurrences.get(id) || 0) : 0;
   if (id) databaseOccurrences.set(id, occurrence + 1);
   const identity = id ? `${id}#${occurrence + 1}` : `__row__#${sourceIndex + 1}`;
   const label = id ? `${id}${occurrence ? `#${occurrence + 1}` : ''}` : `row:${sourceIndex + 1}`;
-  activeIdentities.add(identity);
   const index = archiveIndex.get(identity);
   if (index === undefined) {
     rows.push(currentRow);
+    archiveIndex.set(identity, rows.length - 1);
     addedCaseIds.push(label);
     continue;
   }
-  const archiveRow = previousRows[index];
-  const changed = JSON.stringify(archiveRow) !== JSON.stringify(currentRow);
-  rows.push(currentRow);
+  const archiveRow = rows[index], mergedRow = { ...archiveRow, ...currentRow };
+  const changed = JSON.stringify(archiveRow) !== JSON.stringify(mergedRow);
+  rows[index] = mergedRow;
   (changed ? updatedCaseIds : unchangedCaseIds).push(label);
 }
 
 const removedCaseIds = [];
-const previousOccurrences = new Map();
-previousRows.forEach((row, index) => {
-  const id = caseId(row), occurrence = id ? (previousOccurrences.get(id) || 0) : 0;
-  if (id) previousOccurrences.set(id, occurrence + 1);
-  const identity = id ? `${id}#${occurrence + 1}` : `__row__#${index + 1}`;
-  if (!activeIdentities.has(identity)) removedCaseIds.push(id ? `${id}${occurrence ? `#${occurrence + 1}` : ''}` : `row:${index + 1}`);
-});
-
-let recalculatedArchiveRows = 0;
-for (const row of rows) {
-  const before = text(row['加權']);
-  applyWeightToRow(row, weightRules.length ? weightRules : undefined);
-  if (before !== text(row['加權'])) recalculatedArchiveRows += 1;
-}
-
-const columns = [...new Set([...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
+const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
 const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
 const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
 const rowsChanged = previousSnapshot?.rowsSha256 !== rowsSha256;
@@ -120,10 +108,10 @@ const snapshot = {
   linkedDatabaseUpdatedAt: database.updatedAt,
   sources: {
     primaryDatabase: { path: 'backend/data/db.json', revision: database.revision, updatedAt: database.updatedAt, rowCount: databaseTable.rows.length, rowsSha256: sourceRowsSha256 },
-    archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'mirror-primary-database' }
+    archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'preserve-history-and-upsert-primary-database' }
   },
-  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: removedCaseIds.length, unchanged: unchangedCaseIds.length, preservedHistorical: 0, recalculatedArchiveRows, addedCaseIds, updatedCaseIds, removedCaseIds },
-  updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: removedCaseIds.length, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds },
+  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), recalculatedArchiveRows, addedCaseIds, updatedCaseIds, removedCaseIds },
+  updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds },
   rowCount: rows.length,
   rowsSha256,
   dashboardDataSha256,
