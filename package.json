@@ -6,6 +6,7 @@
     "start": "node backend/server.mjs",
     "dev": "node --watch backend/server.mjs",
     "import:sheets": "node backend/import_google_sheets.mjs",
+    "weights:recalculate": "node scripts/recalculate_database_weights.mjs",
     "test": "node --test backend/test/*.test.mjs"
   },
   "engines": {
