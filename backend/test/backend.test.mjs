@@ -67,7 +67,8 @@ test('CSV parser preserves commas, quotes and embedded newlines', () => {
 test('item details calculate weights from the scoring table only after selection', () => {
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '' }), null);
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 2, details: '素材重置' }), 1);
-  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '廣告素材, 急件' }), 16);
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '廣告素材, 急件' }), 7);
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 8, details: '急件' }), 3);
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 1, details: '2D 動畫' }), 2);
   assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '2D 動畫' }), 1);
   assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '影音剪輯, 人聲配樂, 字幕字卡' }), 3);
