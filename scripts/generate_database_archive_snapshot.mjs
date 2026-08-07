@@ -12,6 +12,7 @@ const SHEETS = {
 };
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = resolve(SCRIPT_DIR, '../data/database_archive.json');
+const PRIMARY_DATABASE_PATH = resolve(SCRIPT_DIR, '../backend/data/db.json');
 
 function parseCsv(text) {
   const records = [];
@@ -186,7 +187,10 @@ databaseData.rows.forEach(currentRow => {
   (changed ? updatedCaseIds : unchangedCaseIds).push(occurrenceLabel);
 });
 
-rows.forEach(applyWeightToRow);
+let weightRules=[];
+try { weightRules=JSON.parse(await readFile(PRIMARY_DATABASE_PATH,'utf8'))?.tables?.['加權計分標準']?.rows || []; }
+catch(error) { console.warn(`加權規則讀取失敗，改用內建標準：${error.message}`); }
+rows.forEach(row=>applyWeightToRow(row,weightRules.length?weightRules:undefined));
 const columns = [...new Set([...archiveData.headers, ...databaseData.headers])];
 let previousRows = [];
 let previousSnapshot = null;
