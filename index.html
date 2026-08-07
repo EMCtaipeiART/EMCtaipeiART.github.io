@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-07 23:30 Asia/Taipei | build: 20260807-json-read-only-95 -->
+<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-weight-rules-live-96 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260807-json-read-only-95" />
+  <meta name="app-version" content="20260808-weight-rules-live-96" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6789,6 +6789,7 @@ async function fetchGithubJsonDatabase({fresh=false}={}){
   if(!response.ok)throw new Error(`GitHub JSON 讀取失敗：HTTP ${response.status}`);
   const database=await response.json();
   if(!database?.tables?.database?.rows)throw new Error('GitHub JSON 資料庫格式錯誤');
+  syncWeightRulesFromDatabase(database);
   githubJsonDatabaseCache=database;
   githubJsonDatabaseLoadedAt=Date.now();
   return database;
@@ -6809,7 +6810,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260807-json-read-only-95';
+const appBuildVersion = '20260808-weight-rules-live-96';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6897,7 +6898,7 @@ const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
-const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260807-database-admin-json-10';
+const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260808-weight-rules-live-11';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
@@ -6920,8 +6921,8 @@ const designerProfilesCacheKey = 'designerProfilesV1';
 let designers = initialDesignerProfiles();
 let designerReels = [];
 const formWriteHeaders = ['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
-const formCreateHeaders = [...formWriteHeaders,'案件狀態'];
-const formUpdateHeaders = formWriteHeaders;
+const formCreateHeaders = [...formWriteHeaders,'案件狀態','加權'];
+const formUpdateHeaders = [...formWriteHeaders,'加權'];
 const formWriteKeys = ['client','project','owner','type','stage','qty','start','end','designer','platforms','briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'];
 const nationalHolidays = new Set([
   '2026-01-01','2026-02-14','2026-02-15','2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-21','2026-02-27','2026-02-28',
@@ -6937,6 +6938,22 @@ const baseDesignLists = {
   }
 };
 let designLists = JSON.parse(JSON.stringify(baseDesignLists));
+let activeWeightRules=[];
+function normalizeWeightType(value){const type=String(value||'').trim();return ['影片','影像','影音'].includes(type)?'影音':type}
+function splitWeightDetails(value){return [...new Set(String(value||'').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).filter(Boolean))]}
+function defaultDetailWeight(type,stage,detail){
+  if(type==='採購')return 0;
+  if(detail==='急件')return 3;
+  if(type==='平面'&&stage==='提案'&&['視覺設計','字體設計'].includes(detail))return 2;
+  if(type==='平面'&&stage==='提案'&&['色號設計','素材參考'].includes(detail))return 0;
+  if(type==='平面'&&stage==='後製'&&['影音包框','2D 動畫'].includes(detail))return 2;
+  if(type==='平面'&&stage==='後製'&&['修圖','素材重置'].includes(detail))return .5;
+  if(type==='平面'&&stage==='後製'&&detail==='AI 影片')return 5;
+  return 1;
+}
+function syncWeightRulesFromDatabase(database){const rows=database?.tables?.['加權計分標準']?.rows;if(Array.isArray(rows)&&rows.length)activeWeightRules=rows.map(row=>({type:normalizeWeightType(row['設計種類']),stage:String(row['階段']||'').trim(),detail:String(row['項目細節']||'').trim(),weight:Number(row['權重'])})).filter(rule=>rule.type&&rule.stage&&rule.detail&&Number.isFinite(rule.weight))}
+function detailWeight(type,stage,detail){const normalizedType=normalizeWeightType(type),normalizedStage=String(stage||'').trim(),rule=activeWeightRules.find(item=>item.type===normalizedType&&item.stage===normalizedStage&&item.detail===detail);return rule?rule.weight:defaultDetailWeight(normalizedType,normalizedStage,detail)}
+function calculateRowWeight(row={}){const details=splitWeightDetails(row.details??row['項目細節']);if(!details.length)return '';const quantity=Number(String(row.qty??row['數量']??'').replace(/,/g,'')),type=row.type??row['設計種類']??row['設計類型'],stage=row.stage??row['階段'];const value=(Number.isFinite(quantity)?quantity:0)*details.reduce((sum,detail)=>sum+detailWeight(type,stage,detail),0);return String(Number(value.toFixed(4)))}
 const columns = [
   {key:'id',label:'案件編號',sort:'number',render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {key:'month',label:'月份',sort:'month',render:r=>esc(r.month)},
@@ -7347,7 +7364,7 @@ function parseDate(value){const text=String(value||'').trim(); if(!text)return n
 function slashDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function shortMonthDayDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function taipeiDateTime(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()).filter(part=>part.type!=='literal').map(part=>[part.type,part.value])); return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`}
-function formWriteRow(row){return Object.fromEntries(formWriteKeys.map(key=>[key,key==='start'||key==='end'?slashDate(row[key]):row[key] ?? '']))}
+function formWriteRow(row){return {...Object.fromEntries(formWriteKeys.map(key=>[key,key==='start'||key==='end'?slashDate(row[key]):row[key] ?? ''])),weight:calculateRowWeight(row)}}
 function formCreateRow(row){return {...formWriteRow(row),status:row.status||'未開始',submittedAt:row.submittedAt||taipeiDateTime()}}
 function createWriteRequestId(){return globalThis.crypto?.randomUUID?.()||`create-${Date.now()}-${Math.random().toString(36).slice(2)}`}
 function createRequestIdForPayload(payload){const signature=JSON.stringify(payload,(key,value)=>key==='submittedAt'?undefined:value); if(pendingCreateRequest?.signature===signature)return pendingCreateRequest.id; const id=createWriteRequestId(); pendingCreateRequest={id,signature}; return id}
@@ -8093,7 +8110,7 @@ async function sheetApi(action,payload={}){
     const data=await writeToSheetByJsonp({action,...payload});
     if(!data.ok)throw new Error(data.error||'新專案寫入失敗');
     if(data.action!==action)throw new Error('Apps Script 尚未回傳新專案寫入結果，請重新部署最新版本後再試');
-    return data;
+    publishDatabaseRefresh(action,data);return data;
   }
   if(action==='googleLogin'){
     const data=await googleLoginByFrame(payload.credential||payload.idToken||'');
@@ -8152,7 +8169,7 @@ async function sheetApi(action,payload={}){
 	  if(action==='add'||action==='batchAdd'){
     const data=await writeCreateToSheet(action,payload);
     if(!data.ok)throw new Error(data.error||(action==='batchAdd'?'批次新增失敗':'新增失敗'));
-    return data;
+    publishDatabaseRefresh(action,data);return data;
   }
 	  if(action==='update'){
     const writePayload={action,...payload};
@@ -8161,7 +8178,7 @@ async function sheetApi(action,payload={}){
       ? await writeToSheetByJsonp(writePayload,30000,'編輯寫入較慢，正在改用備援方式。').catch(()=>postToSheet(writePayload))
       : await postToSheet(writePayload);
     if(!data.ok)throw new Error(data.error||'更新失敗');
-    return data;
+    publishDatabaseRefresh(action,data);return data;
   }
   if(action==='list')throw new Error('database 案件列表僅允許直接讀取 JSON');
   const data = await postToSheet({action,...payload});
@@ -8345,9 +8362,11 @@ function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
 function normalizeRow(r={}){
   const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??'';
-  return {id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',archived:Boolean(r.archived||r['archived'])};
+  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived'])};
+  if(normalized.details)normalized.weight=calculateRowWeight(normalized);
+  return normalized;
 }
-function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.platforms,row.submittedAt,row.briefNote,row.briefUrl,row.assetNote,row.assetUrl,row.referenceNote,row.referenceUrl,row.otherNote,row.otherUrl,row.status,row.details,row.archived]}))}
+function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.platforms,row.submittedAt,row.briefNote,row.briefUrl,row.assetNote,row.assetUrl,row.referenceNote,row.referenceUrl,row.otherNote,row.otherUrl,row.status,row.details,row.weight,row.archived]}))}
 function captureRefreshViewState(){const selectors=['.case-split','.case-table-wrap','.case-timeline-panel .timeline','#modifyRecent .modify-scroll']; return {windowX:window.scrollX,windowY:window.scrollY,elements:selectors.map(selector=>{const element=document.querySelector(selector); return element?{selector,left:element.scrollLeft,top:element.scrollTop}:null}).filter(Boolean)}}
 function restoreRefreshViewState(state){if(!state)return; requestAnimationFrame(()=>{window.scrollTo(state.windowX,state.windowY); state.elements.forEach(saved=>{const element=document.querySelector(saved.selector); if(element){element.scrollLeft=saved.left;element.scrollTop=saved.top}}); syncCaseHeaderScroll()})}
 function scheduleIdleRender(delay=1200){
@@ -9180,8 +9199,8 @@ async function refreshAfterInlineWrite(message){
 }
 function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; void loadSheet({quick:true,background:true,forceFresh:true}).then(()=>setSync(`${text}，已立即刷新資料庫`)).catch(err=>setSync(`${text}，但即時刷新失敗：${err.message}`,true))}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
-function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const keys=Object.keys(changes), selectedIds=new Set(selected.map(row=>String(row.id))), originals=new Map(selected.map(row=>[String(row.id),normalizeRow(row)])), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節'}[key])).filter(Boolean), batchRows=selected.map(row=>({id:row.id,...rowWriteAnchor(row)})); selected.forEach(row=>{rememberLocalWrite(row.id,changes); markUpdatingCell(row.id,keys)}); rows=rows.map(row=>selectedIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; setSync(`已更新 ${selected.length} 筆畫面，背景寫入 JSON 資料庫中...`); if(!apiUrl){selected.forEach(row=>clearUpdatingCell(row.id,keys));render();setSync(`已於本機批次更新 ${selected.length} 筆`);return} void enqueueInlineWrite(()=>postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}))).then(async data=>{if(!data.ok)throw new Error(data.error||'批次寫入失敗');selected.forEach(row=>clearUpdatingCell(row.id,keys));render();await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}).catch(err=>{selected.forEach(row=>{forgetLocalWrite(row.id);clearUpdatingCell(row.id,keys)});rows=rows.map(row=>selectedIds.has(String(row.id))&&rowStillHasChanges(row,changes)?originals.get(String(row.id))||row:row);save();render();setSync(`批次寫入失敗，已還原畫面：${err.message}`,true)})}
-async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), keys=Object.keys(changes), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(changes).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); rows=rows.map(r=>String(r.id)===String(id)?updated:r); rememberLocalWrite(id,changes); markUpdatingCell(id,keys); save(); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl) await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})); clearUpdatingCell(id,keys); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，同步最新資料中...`); await refreshAfterInlineWrite(successMessage); refreshOpenCaseDetail(id)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id,keys); rows=rows.map(r=>String(r.id)===String(id)&&rowStillHasChanges(r,changes)?original:r); save(); render(); refreshOpenCaseDetail(id); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
+function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const scoringChanged=Object.hasOwn(changes,'details'),keys=[...Object.keys(changes),...(scoringChanged?['weight']:[])], selectedIds=new Set(selected.map(row=>String(row.id))), originals=new Map(selected.map(row=>[String(row.id),normalizeRow(row)])), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節',weight:'加權'}[key])).filter(Boolean), batchRows=selected.map(row=>{const updated=normalizeRow({...row,...changes}),rowChanges=scoringChanged?{...changes,weight:calculateRowWeight(updated)}:changes;return {id:row.id,...rowWriteAnchor(row),row:rowChanges}}); selected.forEach(row=>{const updatedChanges=scoringChanged?{...changes,weight:calculateRowWeight({...row,...changes})}:changes;rememberLocalWrite(row.id,updatedChanges); markUpdatingCell(row.id,keys)}); rows=rows.map(row=>selectedIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; setSync(`已更新 ${selected.length} 筆畫面，背景寫入 JSON 資料庫中...`); if(!apiUrl){selected.forEach(row=>clearUpdatingCell(row.id,keys));render();setSync(`已於本機批次更新 ${selected.length} 筆`);return} void enqueueInlineWrite(()=>postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}))).then(async data=>{if(!data.ok)throw new Error(data.error||'批次寫入失敗');publishDatabaseRefresh('batchUpdate',data);selected.forEach(row=>clearUpdatingCell(row.id,keys));render();await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}).catch(err=>{selected.forEach(row=>{forgetLocalWrite(row.id);clearUpdatingCell(row.id,keys)});rows=rows.map(row=>selectedIds.has(String(row.id))&&rowStillHasChanges(row,changes)?originals.get(String(row.id))||row:row);save();render();setSync(`批次寫入失敗，已還原畫面：${err.message}`,true)})}
+async function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), scoringChanged=['details','type','stage','qty'].some(key=>Object.hasOwn(changes,key)), updatedChanges=scoringChanged?{...changes,weight:calculateRowWeight(updated)}:changes, keys=Object.keys(updatedChanges), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期',weight:'加權'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(updatedChanges).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...updated,...updatedChanges}):r); rememberLocalWrite(id,updatedChanges); markUpdatingCell(id,keys); save(); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，背景寫入中...`); try{if(apiUrl){const data=await enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}));publishDatabaseRefresh('update',data)} clearUpdatingCell(id,keys); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，同步最新資料中...`); await refreshAfterInlineWrite(successMessage); refreshOpenCaseDetail(id)}catch(err){forgetLocalWrite(id); clearUpdatingCell(id,keys); rows=rows.map(r=>String(r.id)===String(id)&&rowStillHasChanges(r,updatedChanges)?original:r); save(); render(); refreshOpenCaseDetail(id); setSync(`寫入失敗，已還原畫面：${err.message}`,true)}}
 function openStatusEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; fieldPopover.innerHTML=`<h3>修改狀態</h3><div class="option-list status-option-list">${statusOptions.map(status=>`<button type="button" class="option status-option ${esc(status)} ${row.status===status?'active':''}" data-status="${esc(status)}"><span>${esc(statusLabel(status))}</span>${row.status===status?'<b>✓</b>':''}</button>`).join('')}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const status=button.dataset.status; updateCaseRow(id,{status},`已更新狀態為 ${statusLabel(status)}`)}))}
 function openCaseFieldEditor(event,id,key){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const titles={type:'設計類型',stage:'階段',qty:'數量',start:'開始時間',end:'結束時間'}, title=titles[key]||'欄位', options=key==='type'?designLists.types:(key==='stage'?(designLists.stages?.[row.type]||unique(Object.values(designLists.stages||{}).flat())):[]); if(key==='type'||key==='stage'){fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><div class="option-list">${options.map(option=>`<button type="button" class="option ${row[key]===option?'active':''}" data-value="${esc(option)}"><span>${esc(option)}</span>${row[key]===option?'<b>✓</b>':''}</button>`).join('')||'<div class="empty">沒有可選項目</div>'}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-value]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const value=button.dataset.value, changes={[key]:value}; if(key==='type'){const stages=designLists.stages?.[value]||[]; if(stages.length&&!stages.includes(row.stage))changes.stage=stages[0]} updateCaseRow(id,changes,`已更新${title}`)})); return} const inputType=key==='qty'?'number':'date', value=key==='qty'?(row.qty??''):(row[key]||todayInputValue()); fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><form class="revision-form" id="caseFieldForm"><label>${esc(title)}<input name="value" type="${inputType}" value="${esc(value)}" ${key==='qty'?'min="0" step="1" inputmode="numeric"':''} required></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">套用</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#caseFieldForm')?.addEventListener('submit',submitEvent=>{submitEvent.preventDefault(); submitEvent.stopPropagation(); const raw=submitEvent.target.elements.value.value, value=key==='qty'?Number(raw):raw; updateCaseRow(id,{[key]:value},`已更新${title}`)})}
 function openModificationEditor(event,id){event.stopPropagation(); closeFilters(); const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canCaseEditRow(row)){setSync('此案件目前不可新增修改紀錄',true,3200);return} const nextCount=modificationCount(id)+1, modifier=currentLoginOwnerName()||ownerDisplay(row.owner); fieldPopover.innerHTML=`<h3>新增修改紀錄</h3><form class="revision-form" id="revisionForm" data-case-id="${esc(row.id)}"><div class="revision-meta">案件 ${esc(row.id)}｜修改人 ${esc(modifier)}｜${esc(modificationLabel(nextCount))}</div><label>修改日期<input type="date" name="modifyDate" value="${esc(todayInputValue())}" required></label><label>修改內容<textarea name="content" placeholder="請輸入此次修改內容" required></textarea></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">送出</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#revisionForm')?.addEventListener('submit',submitModificationRecord)}

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-08-07T23:50:00+08:00" />
-<meta name="app-version" content="20260807-detail-weighting-5" />
+<meta name="app-version" content="20260808-editable-weighting-6" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -350,7 +350,7 @@ Chart.defaults.font.family="'Geist','Noto Sans TC',sans-serif";
 const SHEET_ID='1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const SETTINGS_GID='988186149';
 const MODIFICATION_GID='1240020248';
-const ARCHIVE_SNAPSHOT_URL='data/database_archive.json';
+const DATABASE_JSON_URL='https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
 const SHEET_JSONP_URL=gid=>`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?gid=${gid}&tqx=out:json`;
 let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map(),archiveSnapshotMeta=null;
 let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='';
@@ -405,7 +405,7 @@ const DETAIL_SCORE_ROWS=[
   ['影音','結案','預算結帳',1],['影音','結案','素材備份',1],
   ...['平面','動態','音樂','模板'].flatMap(stage=>['Shutterstock','Envato','Freepik'].map(detail=>['採購',stage,detail,0]))
 ];
-const DETAIL_SCORE_MAP=new Map(DETAIL_SCORE_ROWS.map(([type,stage,detail,value])=>[`${type}\u0000${stage}\u0000${detail}`,value]));
+let DETAIL_SCORE_MAP=new Map(DETAIL_SCORE_ROWS.map(([type,stage,detail,value])=>[`${type}\u0000${stage}\u0000${detail}`,value]));
 const FALLBACK=[
  {案件編號:'demo001',客戶別:'Epson',專案名稱:'年中活動 KV',設計總類:'平面',數量:'35',加權:'35',開始日期:'2026/6/1',結束日期:'2026/6/24',設計負責人:'Anna',案件狀態:'執行中'},
  {案件編號:'demo002',客戶別:'DJI',專案名稱:'新品發表會主視覺',設計總類:'平面',數量:'10',加權:'10',開始日期:'2026/6/5',結束日期:'2026/6/25',設計負責人:'Ricky',案件狀態:'執行中'},
@@ -960,11 +960,12 @@ async function loadDashboardModifications(){
   renderDashboardNotifications();if(raw.length)renderAnalysis(+$('yearFilter').value,+$('monthFilter').value,$('designerFilter').value)
 }
 async function fetchArchiveSnapshot(){
-  const response=await fetch(`${ARCHIVE_SNAPSHOT_URL}?v=${Date.now()}`,{cache:'no-store'});
-  if(!response.ok)throw new Error(`JSON 快照回應失敗：${response.status}`);
-  const snapshot=await response.json(),rows=Array.isArray(snapshot)?snapshot:snapshot?.rows;
-  if(!Array.isArray(rows)||!rows.length)throw new Error('JSON 快照沒有可用資料');
-  archiveSnapshotMeta=Array.isArray(snapshot)?{rowCount:rows.length}:snapshot;
+  const response=await fetch(`${DATABASE_JSON_URL}?v=${Date.now()}`,{cache:'no-store'});
+  if(!response.ok)throw new Error(`JSON 資料庫回應失敗：${response.status}`);
+  const database=await response.json(),rows=database?.tables?.database?.rows,rules=database?.tables?.['加權計分標準']?.rows;
+  if(!Array.isArray(rows)||!rows.length)throw new Error('JSON 資料庫沒有可用資料');
+  if(Array.isArray(rules)&&rules.length)DETAIL_SCORE_MAP=new Map(rules.map(rule=>[`${scoringType(rule['設計種類'])}\u0000${String(rule['階段']||'').trim()}\u0000${String(rule['項目細節']||'').trim()}`,Number(rule['權重'])]).filter(([,value])=>Number.isFinite(value)));
+  archiveSnapshotMeta={rowCount:rows.length,generatedAt:database.updatedAt,revision:database.revision};
   return normalizeRows(rows)
 }
 async function fetchCSV(){
