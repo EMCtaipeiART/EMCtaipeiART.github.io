@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-weight-rules-live-96 -->
+<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-urgent-multiplier-live-97 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-weight-rules-live-96" />
+  <meta name="app-version" content="20260808-urgent-multiplier-live-97" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6953,7 +6953,7 @@ function defaultDetailWeight(type,stage,detail){
 }
 function syncWeightRulesFromDatabase(database){const rows=database?.tables?.['加權計分標準']?.rows;if(Array.isArray(rows)&&rows.length)activeWeightRules=rows.map(row=>({type:normalizeWeightType(row['設計種類']),stage:String(row['階段']||'').trim(),detail:String(row['項目細節']||'').trim(),weight:Number(row['權重'])})).filter(rule=>rule.type&&rule.stage&&rule.detail&&Number.isFinite(rule.weight))}
 function detailWeight(type,stage,detail){const normalizedType=normalizeWeightType(type),normalizedStage=String(stage||'').trim(),rule=activeWeightRules.find(item=>item.type===normalizedType&&item.stage===normalizedStage&&item.detail===detail);return rule?rule.weight:defaultDetailWeight(normalizedType,normalizedStage,detail)}
-function calculateRowWeight(row={}){const details=splitWeightDetails(row.details??row['項目細節']);if(!details.length)return '';const quantity=Number(String(row.qty??row['數量']??'').replace(/,/g,'')),type=row.type??row['設計種類']??row['設計類型'],stage=row.stage??row['階段'],regularScore=details.filter(detail=>detail!=='急件').reduce((sum,detail)=>sum+detailWeight(type,stage,detail),0),urgentScore=details.includes('急件')?detailWeight(type,stage,'急件'):0;const value=(Number.isFinite(quantity)?quantity:0)*regularScore+urgentScore;return String(Number(value.toFixed(4)))}
+function calculateRowWeight(row={}){const details=splitWeightDetails(row.details??row['項目細節']);if(!details.length)return '';const quantity=Number(String(row.qty??row['數量']??'').replace(/,/g,'')),type=row.type??row['設計種類']??row['設計類型'],stage=row.stage??row['階段'],regularScore=details.filter(detail=>detail!=='急件').reduce((sum,detail)=>sum+detailWeight(type,stage,detail),0),urgentMultiplier=details.includes('急件')?detailWeight(type,stage,'急件'):1;const value=(Number.isFinite(quantity)?quantity:0)*regularScore*urgentMultiplier;return String(Number(value.toFixed(4)))}
 const columns = [
   {key:'id',label:'案件編號',sort:'number',render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {key:'month',label:'月份',sort:'month',render:r=>esc(r.month)},
