@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { JsonDatabase } from '../json_database.mjs';
+import { calculateWeight } from '../weighting.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
 
@@ -63,6 +64,15 @@ test('CSV parser preserves commas, quotes and embedded newlines', () => {
   ]);
 });
 
+test('item details calculate weights from the scoring table only after selection', () => {
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '' }), null);
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 2, details: '素材重置' }), 1);
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '廣告素材, 急件' }), 16);
+  assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 1, details: '2D 動畫' }), 2);
+  assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '2D 動畫' }), 1);
+  assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '影音剪輯, 人聲配樂, 字幕字卡' }), 3);
+});
+
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
   const app = await fixture();
   t.after(() => app.close());
@@ -77,6 +87,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
   });
   assert.equal(created.ok, true);
   assert.match(created.row.id, /^\d{8}$/);
+  assert.equal(created.row.weight, '2');
   assert.equal(created.row.briefUrl, `${app.baseUrl}/a/${created.row.id}`);
 
   const duplicate = await api(app.baseUrl, 'add', { requestId: 'test-create-1', row: { project: '不應重複' } });
