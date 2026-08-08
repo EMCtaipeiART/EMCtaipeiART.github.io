@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 105,
+  "revision": 106,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T08:43:20.308Z",
+  "updatedAt": "2026-08-08T08:52:06.086Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16847,7 +16847,7 @@
           "專案名稱": "test",
           "專案負責人": "管理者",
           "設計種類": "平面",
-          "階段": "提案",
+          "階段": "後製",
           "數量": "3",
           "開始日期": "2026/08/08",
           "結束日期": "2026/08/08",
