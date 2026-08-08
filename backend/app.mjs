@@ -384,7 +384,7 @@ export function createActionHandler(database, options = {}) {
 
   return async function handleAction(action, payload = {}, context = {}) {
     action = text(action || 'list');
-    const baseUrl = context.baseUrl || process.env.PUBLIC_BASE_URL || 'http://localhost:8787';
+    const baseUrl = text(payload.supplementBaseUrl) || process.env.PUBLIC_BASE_URL || context.baseUrl || 'http://localhost:8787';
     const snapshot = database.snapshot();
 
     if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'json', revision: snapshot.revision, message: 'connected' };
