@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 108,
+  "revision": 109,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T08:52:36.355Z",
+  "updatedAt": "2026-08-08T08:59:20.300Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18432,7 +18432,7 @@
           "音樂起始秒數": "0",
           "技能": "平面 , 輸出",
           "對話框": "9/3-9/7 查無此人 🫥",
-          "新專案輪值": "4",
+          "新專案輪值": "3",
           "篩選年份": "2026年",
           "篩選月份": "7月 , 8月",
           "篩選狀態": "未執行 , 執行中 , 過稿中",
