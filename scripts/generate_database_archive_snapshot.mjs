@@ -46,6 +46,36 @@ function indexRowsByOccurrence(rows) {
   return indexes;
 }
 
+function rowKeysByOccurrence(rows) {
+  const occurrences = new Map(), keys = [];
+  rows.forEach(row => {
+    const id = caseId(row);
+    if (!id) return;
+    const occurrence = (occurrences.get(id) || 0) + 1;
+    occurrences.set(id, occurrence);
+    keys.push(`${id}#${occurrence}`);
+  });
+  return keys;
+}
+
+function removeDeletedCurrentRows(previousRows, previousCurrentKeys, currentKeySet, explicitRemovedIds = new Set()) {
+  if (!previousCurrentKeys.size && !explicitRemovedIds.size) return { rows: clone(previousRows), removedCaseIds: [] };
+  const occurrences = new Map(), rows = [], removedCaseIds = [];
+  previousRows.forEach(row => {
+    const id = caseId(row);
+    if (!id) { rows.push(clone(row)); return; }
+    const occurrence = (occurrences.get(id) || 0) + 1;
+    occurrences.set(id, occurrence);
+    const key = `${id}#${occurrence}`;
+    if (explicitRemovedIds.has(id) || (previousCurrentKeys.has(key) && !currentKeySet.has(key))) {
+      removedCaseIds.push(occurrence === 1 ? id : key);
+      return;
+    }
+    rows.push(clone(row));
+  });
+  return { rows, removedCaseIds };
+}
+
 const database = await readJson(PRIMARY_DATABASE_PATH, null);
 const databaseTable = database?.tables?.database;
 if (!databaseTable || !Array.isArray(databaseTable.rows)) throw new Error('backend/data/db.json is missing tables.database.rows');
@@ -62,7 +92,11 @@ const dashboardData = {
 
 const previousSnapshot = await readJson(ARCHIVE_BASE_PATH, { rows: [], columns: [] });
 const previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : (Array.isArray(previousSnapshot.rows) ? previousSnapshot.rows : []);
-const rows = clone(previousRows), archiveIndex = indexRowsByOccurrence(rows), databaseOccurrences = new Map();
+const currentDatabaseRowKeys = rowKeysByOccurrence(databaseTable.rows);
+const previousCurrentKeys = new Set(Array.isArray(previousSnapshot?.currentDatabaseRowKeys) ? previousSnapshot.currentDatabaseRowKeys : []);
+const explicitRemovedIds = new Set(String(process.env.ARCHIVE_DELETE_CASE_IDS || '').split(',').map(text).filter(Boolean));
+const deletionSync = removeDeletedCurrentRows(previousRows, previousCurrentKeys, new Set(currentDatabaseRowKeys), explicitRemovedIds);
+const rows = deletionSync.rows, archiveIndex = indexRowsByOccurrence(rows), databaseOccurrences = new Map();
 const addedCaseIds = [], updatedCaseIds = [], unchangedCaseIds = [];
 const weightRules = database?.tables?.['加權計分標準']?.rows || [];
 let recalculatedArchiveRows = 0;
@@ -89,7 +123,7 @@ for (const [sourceIndex, sourceRow] of databaseTable.rows.entries()) {
   (changed ? updatedCaseIds : unchangedCaseIds).push(label);
 }
 
-const removedCaseIds = [];
+const removedCaseIds = deletionSync.removedCaseIds;
 const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
 const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
 const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
@@ -108,10 +142,11 @@ const snapshot = {
   linkedDatabaseUpdatedAt: database.updatedAt,
   sources: {
     primaryDatabase: { path: 'backend/data/db.json', revision: database.revision, updatedAt: database.updatedAt, rowCount: databaseTable.rows.length, rowsSha256: sourceRowsSha256 },
-    archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'preserve-history-and-upsert-primary-database' }
+    archiveBase: { path: 'data/database_archive.json', previousRowCount: previousRows.length, mode: 'preserve-history-and-sync-primary-database-deletions' }
   },
-  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), recalculatedArchiveRows, addedCaseIds, updatedCaseIds, removedCaseIds },
-  updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: 0, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds },
+  currentDatabaseRowKeys,
+  mergeSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: removedCaseIds.length, unchanged: unchangedCaseIds.length, preservedHistorical: Math.max(0, rows.length - databaseTable.rows.length), recalculatedArchiveRows, addedCaseIds, updatedCaseIds, removedCaseIds },
+  updateSummary: { added: addedCaseIds.length, updated: updatedCaseIds.length, removed: removedCaseIds.length, unchanged: unchangedCaseIds.length, addedCaseIds, updatedCaseIds, removedCaseIds },
   rowCount: rows.length,
   rowsSha256,
   dashboardDataSha256,
