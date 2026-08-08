@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 142,
+  "revision": 143,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T16:56:58.596Z",
+  "updatedAt": "2026-08-08T16:57:13.115Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18789,7 +18789,7 @@
           "部門": "測試組",
           "組別": "測試專員",
           "名字": "測試使用者",
-          "顯示名": "測試使用者t",
+          "顯示名": "測試使用者",
           "帳號": "test.user@emctaipei.com",
           "頭像連結": "https://drive.google.com/thumbnail?id=1hnmsCDRksjsU6OEhOxzY-0-XeuSlUabd&sz=w1000",
           "頭像大圖連結": "",
