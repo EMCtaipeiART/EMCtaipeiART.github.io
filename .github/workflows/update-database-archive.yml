@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'index.html'
       - 'backend/data/db.json'
       - 'scripts/recalculate_database_weights.mjs'
       - 'scripts/generate_database_archive_snapshot.mjs'
@@ -79,17 +80,14 @@ jobs:
           exit 1
 
       - name: Configure GitHub Pages
-        if: steps.sync.outputs.snapshot == 'true'
         uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        if: steps.sync.outputs.snapshot == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: .
 
       - name: Deploy GitHub Pages
-        if: steps.sync.outputs.snapshot == 'true'
         id: deployment
         continue-on-error: true
         uses: actions/deploy-pages@v5
