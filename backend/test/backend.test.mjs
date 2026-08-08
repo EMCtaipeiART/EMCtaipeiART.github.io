@@ -7,6 +7,7 @@ import { JsonDatabase } from '../json_database.mjs';
 import { calculateWeight } from '../weighting.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
+import { mergeUserDirectory, USER_DIRECTORY } from '../../scripts/migrate_user_directory_to_settings.mjs';
 
 async function fixture(appOptions = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'machi-json-backend-'));
@@ -266,8 +267,26 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /if\(weightView\)\$\('head'\)\.innerHTML='<th>設計分類<\/th>/);
   assert.match(html, /tableName==='修改統計表'.*sortKey='建立日期'.*sortOrder='desc'/);
   assert.match(html, /latest\.get\(String\(right\['案件編號'\]\)\)/);
+  assert.match(html, /function updateAddButton\(\).*tableName!=='設定'/);
+  assert.match(html, /appsScriptRequest\(original\?'adminTableUpdate':'adminTableInsert'/);
+  assert.match(html, /\+ 新增人員/);
   const save = html.match(/async function saveEditor\([\s\S]*?\n    async function deleteRow/)?.[0] || '';
   assert.doesNotMatch(save, /loadMetadata\(\{fresh:/);
+});
+
+test('Apps Script user directory is sourced from JSON settings and can insert settings rows', async () => {
+  const source = await readFile(new URL('../../user_directory.gs', import.meta.url), 'utf8');
+  assert.match(source, /database\.tables\['設定'\]\.rows/);
+  assert.match(source, /const USER_DIRECTORY = readJsonUserDirectory_\(\)/);
+  assert.match(source, /function adminTableInsert_\(payload\)/);
+  assert.doesNotMatch(source, /SpreadsheetApp|getSettingsSheet_/);
+
+  const database = { revision: 1, tables: { '設定': { headers: ['部門','組別','名字','顯示名','帳號'], rows: [] } } };
+  const summary = mergeUserDirectory(database);
+  assert.equal(USER_DIRECTORY.length, 62);
+  assert.equal(summary.added, 62);
+  assert.equal(database.tables['設定'].rows.find(row => row['帳號'] === 'machi.chen@emctaipei.com')['部門'], '設計部');
+  assert.equal(database.tables['設定'].rows.find(row => row['帳號'] === 'riley.pan@emctaipei.com')['組別'], 'Celine組');
 });
 
 test('password session protects settings, reels and manager-only issue status writes', async t => {
