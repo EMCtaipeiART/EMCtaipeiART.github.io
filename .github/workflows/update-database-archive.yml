@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'index.html'
+      - 'json_database_admin.html'
       - 'backend/data/db.json'
       - 'scripts/recalculate_database_weights.mjs'
       - 'scripts/generate_database_archive_snapshot.mjs'
