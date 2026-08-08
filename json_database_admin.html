@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="app-version" content="20260808-admin-layout-13">
+  <meta name="app-version" content="20260808-json-user-directory-14">
   <title>資料庫後台｜EMC 設計部</title>
   <style>
     :root{--bg:#f3f6f4;--panel:#fff;--soft:#f7faf8;--ink:#17211d;--muted:#68756f;--line:#dce4df;--green:#0f8f61;--green2:#e7f6ef;--red:#c93636;--shadow:0 12px 32px rgba(18,38,28,.09)}
@@ -60,8 +60,9 @@
     function tableLabel(name){return name==='database'?'資料庫':name}
     function taipeiDateParts(){return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]))}
     function validFrontAdmin(){const group=stored(FRONT_GROUP_KEY),user=stored(FRONT_USER_KEY),value=stored(FRONT_TOKEN_KEY);if(!value)return false;if(value.startsWith('local-admin:')){const parts=taipeiDateParts();return value===`local-admin:${parts.year}${parts.month}${parts.day}`}return group==='管理者'||user==='管理者'}
-    async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');$('add').hidden=APPS_SCRIPT_MODE;renderTabs();await loadRows();return data}
-    function renderTabs(){$('tabs').innerHTML=TABLE_ORDER.filter(name=>metadata[name]).map(name=>`<button class="tab ${name===tableName?'active':''}" type="button" data-table="${name}">${tableLabel(name)}<small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`).join('')}
+    async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');renderTabs();await loadRows();return data}
+    function updateAddButton(){$('add').hidden=APPS_SCRIPT_MODE&&tableName!=='設定';$('add').textContent=tableName==='設定'?'+ 新增人員':'+ 新增資料'}
+    function renderTabs(){$('tabs').innerHTML=TABLE_ORDER.filter(name=>metadata[name]).map(name=>`<button class="tab ${name===tableName?'active':''}" type="button" data-table="${name}">${tableLabel(name)}<small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`).join('');updateAddButton()}
     function queryPath(){const params=new URLSearchParams({offset:String((page-1)*Number($('pageSize').value)),limit:$('pageSize').value});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}return `/table/${encodeURIComponent(tableName)}?${params}`}
     function combinedLinkRows(){
       const base='https://emctaipeiart.github.io',shortRows=directDatabase.tables['短連結']?.rows||[],supplementRows=directDatabase.tables['補充資料連結']?.rows||[];
@@ -99,13 +100,17 @@
     async function saveEditor(event){
       event.preventDefault();
       const editedTable=editingTableName||tableName,editedLabel=tableLabel(editedTable),headers=metadata[editedTable].headers||[],row=Object.fromEntries(headers.map(header=>[header,String(new FormData(event.currentTarget).get(header)||'').trim()])),table=metadata[editedTable],original=editing,key=original?(table.primaryKey?original[table.primaryKey]:original._rowNumber):'',index=original?directRowIndex(table,original,editedTable):-1,previous=index>=0?{...directDatabase.tables[editedTable].rows[index]}:null,button=$('saveEditor'),buttonText=button.textContent;
+      let insertedIndex=-1;
       button.disabled=true;button.textContent='儲存中…';note(`${editedLabel} 正在寫入 JSON…`);
       try{
         let data=null;
         if(APPS_SCRIPT_MODE){
-          if(!original||index<0)throw new Error('找不到要編輯的資料，請重新讀取');
-          directDatabase.tables[editedTable].rows[index]={...row};closeEditor();refreshCachedTableView();note(`${editedLabel} 已先更新畫面，JSON 背景寫入中…`);
-          data=await appsScriptRequest('adminTableUpdate',{table:editedTable,rowNumber:original._rowNumber,expectedRow:original,row,...spreadsheetBackupOptions(editedTable)});
+          if(original&&index<0)throw new Error('找不到要編輯的資料，請重新讀取');
+          if(!original&&editedTable!=='設定')throw new Error('目前僅開放從後台新增人員設定');
+          if(original)directDatabase.tables[editedTable].rows[index]={...row};
+          else{insertedIndex=directDatabase.tables[editedTable].rows.length;directDatabase.tables[editedTable].rows.push({...row})}
+          closeEditor();refreshCachedTableView();note(`${editedLabel} 已先更新畫面，JSON 背景寫入中…`);
+          data=await appsScriptRequest(original?'adminTableUpdate':'adminTableInsert',original?{table:editedTable,rowNumber:original._rowNumber,expectedRow:original,row,...spreadsheetBackupOptions(editedTable)}:{table:editedTable,row,...spreadsheetBackupOptions(editedTable)});
           if(data.jsonRevision)directDatabase.revision=data.jsonRevision;refreshCachedTableView();
         }else{
           data=await request(`/table/${encodeURIComponent(editedTable)}${key?`/${encodeURIComponent(key)}`:''}`,{method:key?'PATCH':'POST',body:JSON.stringify({row})});closeEditor();await loadMetadata();
@@ -114,6 +119,7 @@
         else note(editedTable==='database'?`${editedLabel} 已寫入 JSON；試算表備份由背景處理。`:`${editedLabel} 已寫入 JSON，不等待試算表備份。`,'ok');
       }catch(error){
         if(APPS_SCRIPT_MODE&&previous){directDatabase.tables[editedTable].rows[index]=previous;refreshCachedTableView();openEditor({...previous,_rowNumber:original._rowNumber})}
+        else if(APPS_SCRIPT_MODE&&insertedIndex>=0){directDatabase.tables[editedTable].rows.splice(insertedIndex,1);refreshCachedTableView();openEditor()}
         note(`儲存失敗：${error.message}`,'error');
       }finally{button.disabled=false;button.textContent=buttonText}
     }
@@ -156,7 +162,7 @@
     $('head').addEventListener('click',event=>{const button=event.target.closest('[data-sort]');if(!button)return;if(sortKey===button.dataset.sort)sortOrder=sortOrder==='asc'?'desc':'asc';else{sortKey=button.dataset.sort;sortOrder='asc'}page=1;loadRows()});
     $('body').addEventListener('change',event=>{const select=event.target.closest('[data-weight-select]');if(!select)return;const custom=select.closest('tr')?.querySelector('[data-weight-other]');if(custom){custom.hidden=select.value!=='other';if(!custom.hidden)custom.focus()}});
     $('body').addEventListener('click',event=>{const tr=event.target.closest('tr[data-key]');if(!tr)return;if(event.target.closest('[data-weight-save]')){saveInlineWeight(tr._row,tr);return}if(event.target.closest('[data-edit]'))openEditor(tr._row);if(event.target.closest('[data-delete]'))deleteRow(tr._row)});
-    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(!APPS_SCRIPT_MODE)openEditor()});$('reload').addEventListener('click',()=>loadMetadata({fresh:true}));$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
+    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>openEditor());$('reload').addEventListener('click',()=>loadMetadata({fresh:true}));$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/Number($('pageSize').value)));loadRows()});
     async function start(){if(!validFrontAdmin()){showLogin();return}token=stored(FRONT_TOKEN_KEY)||token;sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
