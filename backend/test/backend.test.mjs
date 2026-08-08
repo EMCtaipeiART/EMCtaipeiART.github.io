@@ -247,7 +247,8 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
-  assert.match(html, /innerHTML='<th class="action-col">.*<\/th>'\+headers\.map/);
+  assert.match(html, /function tableLabel\(name\)\{return name==='database'\?'資料庫':name\}/);
+  assert.match(html, /else \$\('head'\)\.innerHTML='<th class="action-col">.*<\/th>'\+headers\.map/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
   assert.doesNotMatch(html, /DATABASE_CONTENTS_API|api\.github\.com\/repos\/EMCtaipeiART/);
@@ -256,6 +257,15 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /skipSpreadsheetBackup:!backupToSpreadsheet/);
   assert.match(html, /已先更新畫面，JSON 背景寫入中/);
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
+  assert.match(html, /const TABLE_ORDER=\['database','加權計分標準','連結管理','修改統計表'/);
+  assert.match(html, /function combinedLinkRows\(\)/);
+  assert.match(html, /_sourceTable:'短連結'/);
+  assert.match(html, /_sourceTable:'補充資料連結'/);
+  assert.match(html, /function weightEditorHtml\(row\)/);
+  assert.match(html, /<option value="other".*>其他<\/option>/);
+  assert.match(html, /if\(weightView\)\$\('head'\)\.innerHTML='<th>設計分類<\/th>/);
+  assert.match(html, /tableName==='修改統計表'.*sortKey='建立日期'.*sortOrder='desc'/);
+  assert.match(html, /latest\.get\(String\(right\['案件編號'\]\)\)/);
   const save = html.match(/async function saveEditor\([\s\S]*?\n    async function deleteRow/)?.[0] || '';
   assert.doesNotMatch(save, /loadMetadata\(\{fresh:/);
 });
