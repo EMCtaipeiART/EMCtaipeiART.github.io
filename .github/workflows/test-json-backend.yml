@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'index.html'
       - 'backend/**'
       - 'package.json'
       - '.github/workflows/test-json-backend.yml'
