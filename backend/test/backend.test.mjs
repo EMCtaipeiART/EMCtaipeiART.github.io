@@ -91,6 +91,10 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /filter\(row=>row\.pendingCreate\|\|isEditableRow\(row\)\)/);
   assert.match(html, /r\.pendingCreate\?'<span class="status updating-cell">建立中<\/span>'/);
   assert.match(html, /id:'建立中…'.*pendingCreate:true,pendingCreateKey/);
+  const inlineUpdate = html.match(/function updateCaseRow\([\s\S]*?\nfunction openStatusEditor/)?.[0] || '';
+  assert.match(inlineUpdate, /已立即更新畫面，背景寫入 JSON 資料庫中/);
+  assert.match(inlineUpdate, /void enqueueInlineWrite/);
+  assert.doesNotMatch(inlineUpdate, /markUpdatingCell|await refreshAfterInlineWrite/);
 });
 
 test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {
