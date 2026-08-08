@@ -99,6 +99,11 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /function initDatabaseRefreshListener\(\)/);
   assert.match(html, /receiveDatabaseRefresh\(JSON\.parse\(event\.newValue\)\)/);
   assert.match(html, /window\.databaseRefreshChannel\.onmessage=event=>receiveDatabaseRefresh\(event\.data\)/);
+  assert.match(html, /const supplementShortBaseUrl = 'https:\/\/emctaipeiart\.github\.io'/);
+  assert.match(html, /function supplementShortUrl\(row,key\)/);
+  assert.match(html, /supplementShortUrl\(row,'briefUrl'\)/);
+  assert.match(html, /\.\.\.supplementWriteMetadata\(createRow\)/);
+  assert.match(html, /supplementBaseUrl:supplementShortBaseUrl/);
   assert.match(html, /window\.addEventListener\('focus',\(\)=>\{refreshCurrentAccountAvatar\(\);refreshWhenPageReturns\(\)\}\)/);
   assert.match(html, /document\.addEventListener\('visibilitychange'.*refreshWhenPageReturns\(\)/);
   assert.match(html, /const current=queuedSheetLoad\.options, requireFull=current\.full\|\|incoming\.full/);
@@ -188,6 +193,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
   const created = await api(app.baseUrl, 'add', {
     requestId: 'test-create-1',
+    supplementBaseUrl: 'https://emctaipeiart.github.io',
     row: {
       client: '測試客戶', project: 'JSON 後台串接', owner: 'Machi', type: '平面', stage: '後製', qty: 2,
       start: '2026-08-07', end: '2026-08-08', designer: 'Machi', status: '未開始', details: '社群貼文',
@@ -197,7 +203,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
   assert.equal(created.ok, true);
   assert.match(created.row.id, /^\d{8}$/);
   assert.equal(created.row.weight, '2');
-  assert.equal(created.row.briefUrl, `${app.baseUrl}/a/${created.row.id}`);
+  assert.equal(created.row.briefUrl, `https://emctaipeiart.github.io/a/${created.row.id}`);
 
   const duplicate = await api(app.baseUrl, 'add', { requestId: 'test-create-1', row: { project: '不應重複' } });
   assert.equal(duplicate.deduplicated, true);
