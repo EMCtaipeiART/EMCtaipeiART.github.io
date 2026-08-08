@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-history-json-align-102" />
+  <meta name="app-version" content="20260808-foreground-refresh-103" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6781,7 +6781,7 @@ function resolveDesignApiUrl(){
 }
 const apiUrl = resolveDesignApiUrl();
 document.documentElement.dataset.apiBackend=apiUrl;
-const githubJsonDatabaseUrl = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
+const githubJsonDatabaseUrl = 'backend/data/db.json';
 let githubJsonDatabaseCache = null;
 let githubJsonDatabaseLoadedAt = 0;
 async function fetchGithubJsonDatabase({fresh=false}={}){
@@ -6817,7 +6817,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260808-json-refresh-rollback-98';
+const appBuildVersion = '20260808-foreground-refresh-103';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7068,6 +7068,10 @@ let fullDatabaseLoadQueued = false;
 let inlineWriteQueue = Promise.resolve();
 let inlineWritePending = 0;
 let inlineRefreshTimer = null;
+let postWriteRefreshSequence = 0;
+let returnRefreshTimer = null;
+let returnRefreshPromise = null;
+let lastReturnRefreshAt = 0;
 let remoteSettingsSaveTimer = null;
 let remoteSettingsSaveSequence = 0;
 let remoteSettingsSaveQueue = Promise.resolve();
@@ -7083,8 +7087,8 @@ function readRecentLocalWrites(){
 let recentLocalWrites = readRecentLocalWrites();
 const localWriteTtlMs = 10*60*1000;
 const localWriteConfirmedGraceMs = 2*60*1000;
-const backgroundRefreshMs = 10000;
-const backgroundFullRefreshMs = 60000;
+const backgroundRefreshMs = 6000;
+const backgroundFullRefreshMs = 30000;
 let lastFullBackgroundRefreshAt = 0;
 const editorSessionKeepAliveMs = 60 * 60 * 1000;
 let designerRosterRenderKey = '';
@@ -7320,7 +7324,7 @@ function markUpdatingCell(id,keys){const key=String(id), current=updatingCells.g
 function clearUpdatingCell(id,keys=null){const key=String(id); if(!keys){updatingCells.delete(key);return} const current=updatingCells.get(key); if(!current)return; keys.forEach(item=>current.delete(item)); if(!current.size)updatingCells.delete(key)}
 function isUpdatingCell(id,key){return updatingCells.get(String(id))?.has(key)}
 function persistRecentLocalWrites(){try{localStorage.setItem(recentLocalWritesKey,JSON.stringify([...recentLocalWrites]))}catch(err){console.warn('無法儲存近期 JSON 寫入保護',err)}}
-function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id); recentLocalWrites.set(key,{changes:{...changes},expires:Date.now()+ttl,confirmedAt:0});persistRecentLocalWrites()}
+function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id), previous=recentLocalWrites.get(key), nextChanges=changes?.__deleted?{__deleted:true}:{...(previous?.changes?.__deleted?{}:previous?.changes||{}),...changes}; recentLocalWrites.set(key,{changes:nextChanges,expires:Date.now()+ttl,confirmedAt:0});persistRecentLocalWrites()}
 function forgetLocalWrite(id){if(recentLocalWrites.delete(String(id)))persistRecentLocalWrites()}
 function localWriteValueMatches(row,key,value){
   const actual=row?.[key]??'';
@@ -7886,7 +7890,15 @@ function mergeRowsById(baseRows=[],patchRows=[]){
 async function fetchDatabaseRows({full=false,quick=false,forceFresh=false}={}){
   const objects=await githubJsonTableRows('database',{fresh:forceFresh});
   const list=objects.map(normalizeRow).filter(row=>isCaseId_(row.id)).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0));
-  return quick&&!full?list.slice(0,120):list;
+  const result=quick&&!full?list.slice(0,120):list;
+  Object.defineProperty(result,'authoritativeCaseIds',{value:new Set(list.map(row=>String(row.id))),enumerable:false});
+  return result;
+}
+function reconcileCurrentDatabaseRows(cachedRows=[],databaseRows=[],full=false){
+  if(full)return databaseRows;
+  const authoritativeIds=databaseRows.authoritativeCaseIds;
+  const survivingRows=authoritativeIds instanceof Set?cachedRows.filter(row=>!isCaseId_(row.id)||authoritativeIds.has(String(row.id))):cachedRows;
+  return mergeRowsById(survivingRows,databaseRows);
 }
 function searchHasText(){return Boolean($('#q')?.value.trim())}
 function archiveFilterRequested(){
@@ -8398,11 +8410,11 @@ function queueSheetLoad(options){
       queuedSheetLoad={options:incoming,waiters:[{resolve,reject}]};
       return;
     }
-    const current=queuedSheetLoad.options, preferRecent=!current.full||!incoming.full;
+    const current=queuedSheetLoad.options, requireFull=current.full||incoming.full;
     queuedSheetLoad.options={
-      full:!preferRecent,
+      full:requireFull,
       background:current.background&&incoming.background,
-      quick:preferRecent&&(current.quick||incoming.quick),
+      quick:!requireFull&&(current.quick||incoming.quick),
       forceFresh:current.forceFresh||incoming.forceFresh
     };
     queuedSheetLoad.waiters.push({resolve,reject});
@@ -8422,7 +8434,7 @@ async function loadSheet({full=false,background=false,quick=false,forceFresh=fal
   loadingSheet=true;
   try{
     if(!background)setSync(full?'讀取完整 database 中…':(quick?'讀取最新 30 筆資料中…':'讀取近期 database 最新資料中…'));
-    const databaseRows=await fetchDatabaseRows({full,quick,forceFresh}), current=applyRecentLocalWrites(activeRowsOnly(full?databaseRows:mergeRowsById(rows,databaseRows))), changed=rowsRefreshKey(current)!==rowsRefreshKey(rows);
+    const databaseRows=await fetchDatabaseRows({full,quick,forceFresh}), current=applyRecentLocalWrites(activeRowsOnly(reconcileCurrentDatabaseRows(rows,databaseRows,full))), changed=rowsRefreshKey(current)!==rowsRefreshKey(rows);
     if(background&&!changed){
       dataReady=true;
       const modificationIds=rows.map(row=>row.id).filter(Boolean);
@@ -9196,6 +9208,43 @@ function refreshLatestInBackground(){
     console.warn(full?'定時完整同步失敗':'定時刷新最新資料失敗',err);
   });
 }
+function refreshWhenPageReturns(){
+  if(!apiUrl||document.hidden)return;
+  clearTimeout(returnRefreshTimer);
+  returnRefreshTimer=setTimeout(()=>{
+    const now=Date.now();
+    if(now-lastReturnRefreshAt<700||returnRefreshPromise)return;
+    if(hasPriorityWritePending()){
+      inlineWriteQueue.finally(()=>setTimeout(refreshWhenPageReturns,80));
+      return;
+    }
+    lastReturnRefreshAt=now;
+    lastFullBackgroundRefreshAt=now;
+    setSync('回到頁面，正在同步最新案件...');
+    returnRefreshPromise=loadSheet({full:true,background:true,forceFresh:true})
+      .then(()=>{setSync('已同步最新案件'); return Promise.allSettled([loadDesignerRoster({background:true}),loadIssueReports({background:true})])})
+      .catch(err=>{lastReturnRefreshAt=0;setSync(`回到頁面後同步失敗：${err.message}`,true)})
+      .finally(()=>{returnRefreshPromise=null});
+  },80);
+}
+function receiveDatabaseRefresh(message){
+  if(message?.type!=='machi-database-refresh')return;
+  const tables=Array.isArray(message.tables)?message.tables:[];
+  if(tables.length&&!tables.includes('database'))return;
+  refreshWhenPageReturns();
+}
+function initDatabaseRefreshListener(){
+  window.addEventListener('storage',event=>{
+    if(event.key!==databaseRefreshStorageKey||!event.newValue)return;
+    try{receiveDatabaseRefresh(JSON.parse(event.newValue))}catch(error){}
+  });
+  if('BroadcastChannel' in window){
+    try{
+      window.databaseRefreshChannel=new BroadcastChannel(databaseRefreshChannelName);
+      window.databaseRefreshChannel.onmessage=event=>receiveDatabaseRefresh(event.data);
+    }catch(error){}
+  }
+}
 function rowStillHasChanges(row,changes){
   return Object.entries(changes).every(([key,value])=>String(row?.[key]??'')===String(value??''));
 }
@@ -9210,7 +9259,16 @@ async function refreshAfterInlineWrite(message){
     setSync(`${text}，但重新讀取失敗：${err.message}`,true);
   }
 }
-function refreshAfterFormWrite(message){if(!apiUrl)return; const text=message||'已寫入'; void loadSheet({quick:true,background:true,forceFresh:true}).then(()=>setSync(`${text}，已立即刷新資料庫`)).catch(err=>setSync(`${text}，但即時刷新失敗：${err.message}`,true))}
+function refreshAfterFormWrite(message){
+  if(!apiUrl)return;
+  const text=message||'已寫入', sequence=++postWriteRefreshSequence;
+  [350,1800,5000].forEach((delay,index)=>setTimeout(()=>{
+    if(sequence!==postWriteRefreshSequence)return;
+    void loadSheet({full:true,background:true,forceFresh:true})
+      .then(()=>{if(index===2)setSync(`${text}，已確認同步最新資料庫`)})
+      .catch(err=>{if(index===2)setSync(`${text}，但重新確認資料失敗：${err.message}`,true)});
+  },delay));
+}
 function jumpToCase(id){requestAnimationFrame(()=>{const row=document.getElementById(`case-row-${id}`); if(!row){setSync(`目前篩選沒有顯示案件 ${id}`,true); return} row.scrollIntoView({behavior:'smooth',block:'center'}); row.classList.add('case-focus'); setTimeout(()=>row.classList.remove('case-focus'),1800)})}
 function applyBatchEdit(){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const selected=selectedCaseRows(); if(!selected.length){setSync('請先選取案件',true);return} const status=$('#batchStatus').value, detail=$('#batchDetails').value, changes={}; if(status)changes.status=status; if(detail)changes.details=detail; if(!Object.keys(changes).length){setSync('請選擇要批次修改的狀態或項目細節',true);return} if(changes.details&&!sameDetailGroup(selected)){alert('選取案件的設計類型或階段不同，無法批次修改項目細節。');return} const scoringChanged=Object.hasOwn(changes,'details'),keys=[...Object.keys(changes),...(scoringChanged?['weight']:[])], selectedIds=new Set(selected.map(row=>String(row.id))), originals=new Map(selected.map(row=>[String(row.id),normalizeRow(row)])), forceHeaders=keys.map(key=>({status:'案件狀態',details:'項目細節',weight:'加權'}[key])).filter(Boolean), batchRows=selected.map(row=>{const updated=normalizeRow({...row,...changes}),rowChanges=scoringChanged?{...changes,weight:calculateRowWeight(updated)}:changes;return {id:row.id,...rowWriteAnchor(row),row:rowChanges}}); selected.forEach(row=>{const updatedChanges=scoringChanged?{...changes,weight:calculateRowWeight({...row,...changes})}:changes;rememberLocalWrite(row.id,updatedChanges); markUpdatingCell(row.id,keys)}); rows=rows.map(row=>selectedIds.has(String(row.id))?normalizeRow({...row,...changes}):row); selectedCaseIds.clear(); save(); render(); $('#batchStatus').value=''; $('#batchDetails').value=''; setSync(`已更新 ${selected.length} 筆畫面，背景寫入 JSON 資料庫中...`); if(!apiUrl){selected.forEach(row=>clearUpdatingCell(row.id,keys));render();setSync(`已於本機批次更新 ${selected.length} 筆`);return} void enqueueInlineWrite(()=>postToSheetByFrame(withSheetTarget({action:'batchUpdate',row:changes,rows:batchRows,forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken}))).then(async data=>{if(!data.ok)throw new Error(data.error||'批次寫入失敗');publishDatabaseRefresh('batchUpdate',data);selected.forEach(row=>clearUpdatingCell(row.id,keys));render();await refreshAfterInlineWrite(`已批次更新 ${selected.length} 筆`)}).catch(err=>{selected.forEach(row=>{forgetLocalWrite(row.id);clearUpdatingCell(row.id,keys)});rows=rows.map(row=>selectedIds.has(String(row.id))&&rowStillHasChanges(row,changes)?originals.get(String(row.id))||row:row);save();render();setSync(`批次寫入失敗，已還原畫面：${err.message}`,true)})}
 function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const original=normalizeRow(row), updated=normalizeRow({...row,...changes}), scoringChanged=['details','type','stage','qty'].some(key=>Object.hasOwn(changes,key)), updatedChanges=scoringChanged?{...changes,weight:calculateRowWeight(updated)}:changes, keys=Object.keys(updatedChanges), headerMap={status:'案件狀態',details:'項目細節',type:'設計類型',stage:'階段',qty:'數量',start:'開始日期',end:'結束日期',weight:'加權'}, forceHeaders=keys.map(key=>headerMap[key]).filter(Boolean), successMessage=message||'已更新', writeChanges=Object.fromEntries(Object.entries(updatedChanges).map(([key,value])=>[key,key==='start'||key==='end'?slashDate(value):value])); closeFieldPopover(); rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...updated,...updatedChanges}):r); rememberLocalWrite(id,updatedChanges); save(); render(); refreshOpenCaseDetail(id); setSync(`${successMessage}，已立即更新畫面，背景寫入 JSON 資料庫中...`); if(!apiUrl){setSync(`${successMessage}，已於本機更新`);return} void enqueueInlineWrite(()=>sheetApi('update',{id,row:changedWritePayload(id,writeChanges),...rowWriteAnchor(original),forceHeaders,writeHeaders:forceHeaders,editorToken:currentEditorToken})).then(data=>{publishDatabaseRefresh('update',data);setSync(data?.backup?.ok?`${successMessage}，JSON 與試算表備份完成`:`${successMessage}，JSON 已更新，試算表備份等待重試`);refreshAfterFormWrite(successMessage)}).catch(err=>{forgetLocalWrite(id);rows=rows.map(r=>String(r.id)===String(id)&&rowStillHasChanges(r,updatedChanges)?original:r);save();render();refreshOpenCaseDetail(id);setSync(`寫入失敗，已還原畫面：${err.message}`,true)})}
@@ -9919,9 +9977,9 @@ document.addEventListener('click',event=>{
 	window.addEventListener('message',handleUploadFrameMessage);
 	$('#uploadModal')?.addEventListener('click',event=>{if(event.target.id==='uploadModal')closeUploadModal()});
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#uploadModal')?.hidden){event.preventDefault();closeUploadModal()}});
-	window.addEventListener('focus',()=>{refreshCurrentAccountAvatar();refreshLatestInBackground()});
-	window.addEventListener('pageshow',event=>{if(event.persisted)refreshLatestInBackground()});
-	window.addEventListener('online',refreshLatestInBackground);
+	window.addEventListener('focus',()=>{refreshCurrentAccountAvatar();refreshWhenPageReturns()});
+	window.addEventListener('pageshow',()=>refreshWhenPageReturns());
+	window.addEventListener('online',refreshWhenPageReturns);
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!isAdministrator()||isAdminUserPreview())return;closeAccountMenu();location.href=archiveManagerUrl});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!isAdministrator()||isAdminUserPreview())return;closeAccountMenu();location.href=jsonDatabaseAdminUrl});
@@ -10013,7 +10071,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshLatestInBackground();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
