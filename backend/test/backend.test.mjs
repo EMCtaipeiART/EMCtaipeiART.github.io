@@ -119,6 +119,8 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   // The archive is append-preserving: current database rows are upserted without deleting historical rows.
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
+  const archiveAdmin = await readFile(new URL('../../database_archive_admin.html', import.meta.url), 'utf8');
+  const indexHtml = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
   const archive = JSON.parse(await readFile(new URL('../../data/database_archive.json', import.meta.url), 'utf8'));
   assert.match(generator, /backend\/data\/db\.json/);
@@ -143,8 +145,8 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
     for (const [key, value] of Object.entries(sourceRow)) assert.equal(archivedRow[key], value, `${id}.${key} is stale`);
   }
   assert.match(dashboard, /const ARCHIVE_JSON_URL='data\/database_archive\.json'/);
-  assert.match(dashboard, /fetch\(ARCHIVE_JSON_URL,\{cache:'no-cache'\}\)/);
-  assert.doesNotMatch(dashboard, /ARCHIVE_JSON_URL\}\?v=\$\{Date\.now\(\)\}|cache:'no-store'/);
+  assert.match(dashboard, /Promise\.all\(\[fetch\(`\$\{ARCHIVE_JSON_URL\}\?v=\$\{stamp\}`/);
+  assert.match(dashboard, /fetch\(`\$\{PRIMARY_DATABASE_URL\}\?v=\$\{stamp\}`/);
   assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
   assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
   assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
@@ -153,6 +155,15 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.doesNotMatch(dashboard, /qty\(r\)\*regularScore\+urgentScore/);
   assert.doesNotMatch(dashboard, /raw\.githubusercontent\.com\/EMCtaipeiART\/EMCtaipeiART\.github\.io\/main\/backend\/data\/db\.json/);
   assert.doesNotMatch(dashboard, /renderHeatmap\(y,m\);renderRank\(\);renderAnalysis\(y,m,des\)/);
+  assert.match(archiveAdmin, /<h1>歷史資料庫管理<\/h1>/);
+  assert.match(archiveAdmin, /function alignHistoryWithPrimary\(history,primary\)/);
+  assert.match(archiveAdmin, /Promise\.all\(\[fetch\(`\$\{SNAPSHOT_URL\}/);
+  assert.match(archiveAdmin, /fetch\(`\$\{PRIMARY_DATABASE_URL\}/);
+  assert.match(archiveAdmin, /machi-database-refresh-v1/);
+  assert.match(indexHtml, /const HISTORY_DATABASE_JSON_URL='data\/database_archive\.json'/);
+  assert.match(indexHtml, /mergeRowsById\(archiveRows,rows\)/);
+  assert.doesNotMatch(indexHtml, /function fetchArchiveDatabaseObjects\([^)]*\)\{return gvizToObjects/);
+  assert.match(dashboard, /歷史 JSON 資料庫，已與目前 database 對齊/);
 });
 
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
