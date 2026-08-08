@@ -18,12 +18,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Validate JSON database
         run: node -e "JSON.parse(require('node:fs').readFileSync('backend/data/db.json', 'utf8'))"
+      - name: Align history snapshot for this database revision
+        run: |
+          node scripts/recalculate_database_weights.mjs
+          node scripts/generate_database_archive_snapshot.mjs
       - name: Run backend tests
         run: npm test
