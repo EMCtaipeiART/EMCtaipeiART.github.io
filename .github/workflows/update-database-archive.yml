@@ -1,4 +1,4 @@
-name: Update database archive snapshot
+name: Sync history database with current database
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: database-archive-snapshot
+  group: history-database-sync
   cancel-in-progress: true
 
 jobs:
@@ -39,10 +39,10 @@ jobs:
       - name: Recalculate database weights
         run: node scripts/recalculate_database_weights.mjs
 
-      - name: Generate snapshot
+      - name: Align history database with current database
         run: node scripts/generate_database_archive_snapshot.mjs
 
-      - name: Check for snapshot changes
+      - name: Check for history database changes
         id: changes
         run: |
           if git diff --quiet -- backend/data/db.json data/database_archive.json; then
@@ -51,15 +51,15 @@ jobs:
             echo "snapshot=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit changed snapshot
+      - name: Commit aligned history database
         if: steps.changes.outputs.snapshot == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/data/db.json data/database_archive.json
-          git commit -m "chore: recalculate weights and update archive"
+          git commit -m "data: align history database with current database"
 
-      - name: Push changed snapshot
+      - name: Push aligned history database
         if: steps.changes.outputs.snapshot == 'true'
         run: |
           for attempt in 1 2 3; do
