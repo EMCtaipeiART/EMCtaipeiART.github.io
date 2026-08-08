@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-optimistic-list-99 -->
+<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-optimistic-recent-100 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-optimistic-list-99" />
+  <meta name="app-version" content="20260808-optimistic-recent-100" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7005,11 +7005,11 @@ const settingsColumnHeaderAliasesByKey = {
 const displaySettingsKey = 'designRequestDisplaySettingsV1';
 const settingsColumnKeyByHeader = Object.fromEntries(Object.entries(settingsColumnHeadersByKey).map(([key,header])=>[header,key]));
 const modifyFixedColumns = [
-  {label:'信件',width:76,className:'recent-subject',render:r=>mailAction(r,{icon:true})},
-  {label:'內容',width:76,className:'recent-actions',render:r=>editAction(r,{icon:true})}
+  {label:'信件',width:76,className:'recent-subject',render:r=>r.pendingCreate?'<span class="status updating-cell">建立中</span>':mailAction(r,{icon:true})},
+  {label:'內容',width:76,className:'recent-actions',render:r=>r.pendingCreate?'<span class="status updating-cell">等待編號</span>':editAction(r,{icon:true})}
 ];
 const modifyRecentColumns = [
-  {label:'案件編號',width:96,render:r=>`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
+  {label:'案件編號',width:96,render:r=>r.pendingCreate?`<span class="status updating-cell">${esc(r.id)}</span>`:`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {label:'客戶別',width:112,render:r=>esc(r.client)},
   {label:'專案名稱',width:190,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
   {label:'專案負責人',width:96,render:r=>`<button type="button" class="pill-name owner-project-pill" title="查看 ${esc(ownerDisplay(r.owner))} 填寫的專案" onclick="openOwnerProjects(event,'${jsArg(ownerDisplay(r.owner))}')">${esc(ownerDisplay(r.owner))}</button>`},
@@ -8953,7 +8953,7 @@ function renderTable(list){
   syncTimelineHeights();
   adjustCaseSplitHeight();
 }
-function editableRowsSorted(){return [...rows].filter(isEditableRow).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0))}
+function editableRowsSorted(){return [...rows].filter(row=>row.pendingCreate||isEditableRow(row)).sort((a,b)=>{if(Boolean(a.pendingCreate)!==Boolean(b.pendingCreate))return a.pendingCreate?-1:1;return (Number(b.id)||0)-(Number(a.id)||0)})}
 function latestEditableRows(limit=modifyPageSize){return editableRowsSorted().slice(0,limit)}
 function modifyPageItems(totalPages){const start=Math.floor((modifyPage-1)/4)*4+1, end=Math.min(totalPages,start+3); return Array.from({length:end-start+1},(_,i)=>start+i)}
 function setModifyPage(page){modifyPage=Number(page)||1; renderModifyRecent()}
