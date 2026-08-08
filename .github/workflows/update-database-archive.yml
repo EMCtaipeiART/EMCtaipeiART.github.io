@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/data/db.json'
+      - 'scripts/recalculate_database_weights.mjs'
+      - 'scripts/generate_database_archive_snapshot.mjs'
+      - '.github/workflows/update-database-archive.yml'
   repository_dispatch:
     types:
       - database_changed
@@ -26,13 +31,13 @@ jobs:
     timeout-minutes: 10
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment_retry.outputs.page_url || steps.deployment.outputs.page_url }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -74,16 +79,26 @@ jobs:
           exit 1
 
       - name: Configure GitHub Pages
-        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
-        uses: actions/configure-pages@v5
+        if: steps.sync.outputs.snapshot == 'true'
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
-        uses: actions/upload-pages-artifact@v3
+        if: steps.sync.outputs.snapshot == 'true'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: .
 
       - name: Deploy GitHub Pages
-        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
+        if: steps.sync.outputs.snapshot == 'true'
         id: deployment
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+
+      - name: Wait for Pages artifact indexing
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 12
+
+      - name: Retry GitHub Pages deployment
+        if: steps.deployment.outcome == 'failure'
+        id: deployment_retry
+        uses: actions/deploy-pages@v5
