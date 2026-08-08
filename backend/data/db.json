@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 118,
+  "revision": 119,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T13:54:40.622Z",
+  "updatedAt": "2026-08-08T14:02:39.706Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16866,6 +16866,31 @@
           "加權": "",
           "案件編號": "26080044",
           "月份": "8月"
+        },
+        {
+          "客戶別": "yrd",
+          "專案名稱": "test",
+          "專案負責人": "管理者",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "5",
+          "開始日期": "2026/08/13",
+          "結束日期": "2026/08/27",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook, Instagram, Line, 其他平台",
+          "填單時間": "2026/08/08 22:02",
+          "設計簡報說明": "1212",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080045",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "3131",
+          "其他連結": "https://emctaipeiart.github.io/d/26080045",
+          "狀態": "未開始",
+          "加權": "",
+          "案件編號": "26080045",
+          "月份": "8月"
         }
       ]
     },
@@ -18244,6 +18269,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/07 11:15"
+        },
+        {
+          "案件編號": "26080045",
+          "A": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
+          "B": "",
+          "C": "",
+          "D": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
+          "更新時間": "2026/08/08 22:02"
         }
       ]
     },
@@ -20725,6 +20758,39 @@
           "weight": "",
           "sheetRow": 601,
           "_sheetRow": 601
+        }
+      },
+      "446ed276-b67e-4cc7-92a6-0a1d02eb047d": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 602,
+        "row": {
+          "id": "26080045",
+          "month": "8月",
+          "client": "yrd",
+          "project": "test",
+          "owner": "管理者",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 5,
+          "start": "2026/08/13",
+          "end": "2026/08/27",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram, Line, 其他平台",
+          "submittedAt": "2026/08/08 22:02",
+          "briefNote": "1212",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080045",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "3131",
+          "otherUrl": "https://emctaipeiart.github.io/d/26080045",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "sheetRow": 602,
+          "_sheetRow": 602
         }
       }
     }
