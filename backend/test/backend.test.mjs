@@ -245,6 +245,21 @@ test('front-end action API reads and atomically writes all requested JSON tables
   assert.equal(persisted.tables.bug_report.rows.length, 1);
 });
 
+test('JSON database admin renders actions first and updates JSON optimistically', async () => {
+  const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  assert.match(html, /innerHTML='<th class="action-col">.*<\/th>'\+headers\.map/);
+  assert.match(html, /\.action-col\{position:sticky!important;left:0/);
+  assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
+  assert.doesNotMatch(html, /DATABASE_CONTENTS_API|api\.github\.com\/repos\/EMCtaipeiART/);
+  assert.match(html, /function spreadsheetBackupOptions\(name=tableName\)/);
+  assert.match(html, /backupToSpreadsheet=name==='database'/);
+  assert.match(html, /skipSpreadsheetBackup:!backupToSpreadsheet/);
+  assert.match(html, /已先更新畫面，JSON 背景寫入中/);
+  assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
+  const save = html.match(/async function saveEditor\([\s\S]*?\n    async function deleteRow/)?.[0] || '';
+  assert.doesNotMatch(save, /loadMetadata\(\{fresh:/);
+});
+
 test('password session protects settings, reels and manager-only issue status writes', async t => {
   const app = await fixture();
   t.after(() => app.close());
