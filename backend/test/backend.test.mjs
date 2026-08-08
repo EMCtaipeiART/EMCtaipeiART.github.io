@@ -124,12 +124,14 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
   const archive = JSON.parse(await readFile(new URL('../../data/database_archive.json', import.meta.url), 'utf8'));
   assert.match(generator, /backend\/data\/db\.json/);
-  assert.match(generator, /mode: 'preserve-history-and-upsert-primary-database'/);
-  assert.match(generator, /const rows = clone\(previousRows\)/);
+  assert.match(generator, /mode: 'preserve-history-and-sync-primary-database-deletions'/);
+  assert.match(generator, /function removeDeletedCurrentRows\(/);
+  assert.match(generator, /previousSnapshot\?\.currentDatabaseRowKeys/);
   assert.doesNotMatch(generator, /docs\.google\.com|script\.google\.com/);
   assert.equal(archive.rowCount, archive.rows.length);
   assert.ok(archive.rows.length >= database.tables.database.rows.length);
-  assert.equal(archive.sources.archiveBase.mode, 'preserve-history-and-upsert-primary-database');
+  assert.equal(archive.sources.archiveBase.mode, 'preserve-history-and-sync-primary-database-deletions');
+  assert.ok(Array.isArray(archive.currentDatabaseRowKeys));
   const archiveById = new Map();
   for (const row of archive.rows) {
     const id = String(row['案件編號'] || '').trim();
