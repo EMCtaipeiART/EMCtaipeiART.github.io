@@ -88,6 +88,9 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /localWriteConfirmedGraceMs\s*=\s*2\*60\*1000/);
   assert.match(html, /confirmedAt:0/);
   assert.match(html, /now-entry\.confirmedAt>=localWriteConfirmedGraceMs/);
+  assert.match(html, /filter\(row=>row\.pendingCreate\|\|isEditableRow\(row\)\)/);
+  assert.match(html, /r\.pendingCreate\?'<span class="status updating-cell">建立中<\/span>'/);
+  assert.match(html, /id:'建立中…'.*pendingCreate:true,pendingCreateKey/);
 });
 
 test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {
