@@ -367,14 +367,8 @@ export function createActionHandler(database, options = {}) {
     const account = canonicalAccount(profile.email);
     if (!account.endsWith(LOGIN_DOMAIN)) return { ok: false, action, error: `請使用 ${LOGIN_DOMAIN} 公司信箱登入`, reason: 'DOMAIN_NOT_ALLOWED' };
     return database.transaction(draft => {
-      let row = settingsRow(draft, account);
-      if (!row) {
-        row = Object.fromEntries(TABLE_SCHEMAS['設定'].headers.map(header => [header, '']));
-        row['帳號'] = account;
-        row['名字'] = text(profile.name) || account.split('@')[0];
-        row['顯示名'] = row['名字'];
-        draft.tables['設定'].rows.push(row);
-      }
+      const row = settingsRow(draft, account);
+      if (!row) return { ok: false, action, error: '此帳號尚未加入 JSON 資料庫「設定」，請聯絡管理者新增人員', reason: 'JSON_USER_NOT_REGISTERED' };
       const token = randomUUID();
       const user = text(row['名字'] || profile.name || account.split('@')[0]);
       draft.internal.sessions[token] = { user, account, provider: 'google', expiresAt: Date.now() + SESSION_SECONDS * 1000 };
