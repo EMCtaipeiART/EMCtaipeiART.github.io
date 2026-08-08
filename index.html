@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-urgent-multiplier-live-97 -->
+<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-optimistic-list-99 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-json-refresh-rollback-98" />
+  <meta name="app-version" content="20260808-optimistic-list-99" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7427,7 +7427,7 @@ function musicListeningIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true
 function spotifyPlaybackIcon(playing=false){return playing?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6V5Zm8 0h4v14h-4V5Z"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.8v14.4c0 .8.9 1.3 1.6.8l10.5-7.2a1 1 0 0 0 0-1.6L8.6 4C7.9 3.5 7 4 7 4.8Z"/></svg>'}
 async function sharedMusicMetadata(info){if(!info)return {title:'分享音樂',previewUrl:''}; const key=`${info.provider}:${info.id}:${info.lookupCountry||''}`; if(sharedMusicMetadataCache.has(key))return sharedMusicMetadataCache.get(key); let metadata={title:`${info.providerLabel} 單曲`,previewUrl:''}; try{if(info.provider==='spotify'){const response=await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(info.url)}`); if(response.ok){const data=await response.json(); metadata.title=String(data.title||metadata.title).trim()||metadata.title}}else{const response=await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(info.id)}&country=${encodeURIComponent(info.lookupCountry||info.storefront||'us')}`); if(response.ok){const data=await response.json(), track=(data.results||[]).find(item=>String(item.trackId||'')===info.id)||data.results?.[0]; if(track)metadata={title:String(track.trackName||metadata.title).trim()||metadata.title,previewUrl:String(track.previewUrl||'').trim()}}}}catch(err){} sharedMusicMetadataCache.set(key,metadata); return metadata}
 function hydrateSharedMusic(root=designerRoster){root?.querySelectorAll('[data-music-url]').forEach(link=>{const info=sharedMusicInfo(link.dataset.musicUrl||''); sharedMusicMetadata(info).then(metadata=>{if(!link.isConnected)return; const card=link.closest('.designer-card'), label=link.querySelector('[data-music-title]'), avatarLabel=card?.querySelector('[data-music-avatar-title]'), audio=card?.querySelector('.poster-apple-player'); if(label)label.textContent=metadata.title; if(avatarLabel)avatarLabel.textContent=`現在收聽 · ${metadata.title}`; if(audio&&metadata.previewUrl&&!audio.getAttribute('src'))audio.src=metadata.previewUrl; link.title=`在 ${info?.providerLabel||'音樂服務'} 開啟：${metadata.title}`})})}
-function sortDesigners(list){const groupOrder={平面:0,影音:1}; return [...list].sort((a,b)=>((groupOrder[designerGroupLabel(a)]??99)-(groupOrder[designerGroupLabel(b)]??99))||(a.rotation-b.rotation)||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hant'))}
+function sortDesigners(list){const groupOrder={平面:0,影音:1}; return [...list].sort((a,b)=>(a.rotation-b.rotation)||((groupOrder[designerGroupLabel(a)]??99)-(groupOrder[designerGroupLabel(b)]??99))||(designerOptions.indexOf(a.name)-designerOptions.indexOf(b.name))||String(a.name).localeCompare(String(b.name),'zh-Hant'))}
 function designerActiveCount(name){return rows.filter(row=>row.designer===name&&['未開始','執行中'].includes(row.status)).length}
 function computedDesignerStatus(name,fallback='普通'){const count=designerActiveCount(name); return count>5?'忙碌':(count>=0?'普通':fallback)}
 function rotationBadgeArrow(){return '<span class="rotation-badge-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v12" stroke-width="2.4" stroke-linecap="round"/><path d="m7 12 5 5 5-5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'}
@@ -8375,11 +8375,11 @@ function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
 function normalizeRow(r={}){
   const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??'';
-  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived'])};
+  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived']),pendingCreate:Boolean(r.pendingCreate),pendingCreateKey:String(r.pendingCreateKey||'')};
   if(normalized.details)normalized.weight=calculateRowWeight(normalized);
   return normalized;
 }
-function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.platforms,row.submittedAt,row.briefNote,row.briefUrl,row.assetNote,row.assetUrl,row.referenceNote,row.referenceUrl,row.otherNote,row.otherUrl,row.status,row.details,row.weight,row.archived]}))}
+function rowsRefreshKey(list){return JSON.stringify((list||[]).map(item=>{const row=normalizeRow(item); return [row.id,row.sheetRow,row.month,row.client,row.project,row.owner,row.ownerEmail,row.type,row.stage,row.qty,row.start,row.end,row.designer,row.platforms,row.submittedAt,row.briefNote,row.briefUrl,row.assetNote,row.assetUrl,row.referenceNote,row.referenceUrl,row.otherNote,row.otherUrl,row.status,row.details,row.weight,row.archived,row.pendingCreate,row.pendingCreateKey]}))}
 function captureRefreshViewState(){const selectors=['.case-split','.case-table-wrap','.case-timeline-panel .timeline','#modifyRecent .modify-scroll']; return {windowX:window.scrollX,windowY:window.scrollY,elements:selectors.map(selector=>{const element=document.querySelector(selector); return element?{selector,left:element.scrollLeft,top:element.scrollTop}:null}).filter(Boolean)}}
 function restoreRefreshViewState(state){if(!state)return; requestAnimationFrame(()=>{window.scrollTo(state.windowX,state.windowY); state.elements.forEach(saved=>{const element=document.querySelector(saved.selector); if(element){element.scrollLeft=saved.left;element.scrollTop=saved.top}}); syncCaseHeaderScroll()})}
 function scheduleIdleRender(delay=1200){
@@ -8502,7 +8502,7 @@ function closeFilters(){['#fYear','#fMonth','#fStatus','#fDesigner'].forEach(id=
 function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnabled?rows.filter(r=>selectedCaseIds.has(String(r.id))&&canListEditRow(r)) : []}
 function rowYear(r){const d=new Date(r.start||r.end); if(Number.isNaN(d.getTime()))return ''; const y=d.getFullYear(); return y>=1900&&y<=2100?String(y):''}
 function isLoggedIn(){return Boolean(currentEditor&&currentEditorToken)}
-function isEditableRow(r){const y=Number(rowYear(r)); return y>=Number(currentYear())}
+function isEditableRow(r){if(r?.pendingCreate)return false;const y=Number(rowYear(r)); return y>=Number(currentYear())}
 function canCaseEditRow(r){return isEditableRow(r)}
 function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
@@ -8753,7 +8753,7 @@ function applyStatusFilter(status){
   requestAnimationFrame(()=>$('#casesSection').scrollIntoView({behavior:'smooth',block:'start'}));
 }
 function sortValue(r,c){if(c.key==='subject')return subject(r); if(c.key==='modifications')return modificationCount(r.id); const v=r[c.key]; if(c.sort==='number')return Number(v)||0; if(c.sort==='date')return new Date(v).getTime()||0; if(c.sort==='month')return monthNumber(v); return String(v??'').toLocaleLowerCase();}
-function sorted(list){const c=columns.find(col=>col.key===sortState.key&&col.sort); if(!c)return list; return [...list].sort((a,b)=>{const av=sortValue(a,c), bv=sortValue(b,c); const result=typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'zh-Hant',{numeric:true}); return sortState.dir==='desc'?-result:result;});}
+function sorted(list){const c=columns.find(col=>col.key===sortState.key&&col.sort); if(!c)return list; return [...list].sort((a,b)=>{if(Boolean(a.pendingCreate)!==Boolean(b.pendingCreate))return a.pendingCreate?-1:1;const av=sortValue(a,c), bv=sortValue(b,c); const result=typeof av==='number'&&typeof bv==='number'?av-bv:String(av).localeCompare(String(bv),'zh-Hant',{numeric:true}); return sortState.dir==='desc'?-result:result;});}
 function csvEscape(value){const text=String(value??'').replace(/\r?\n/g,' ').trim(); return /[",\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text}
 function csvFileDate(){const now=new Date(), pad=n=>String(n).padStart(2,'0'); return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`}
 function downloadFilteredCsv(){
@@ -9528,6 +9528,9 @@ function submitRequestBatchRows(){
   requestSubmitInFlight=true;
   const createRows=rowsToSubmit.map(formCreateRow);
   const requestId=createRequestIdForPayload({action:'batchAdd',rows:createRows});
+  const pendingBatchKey=`batch:${requestId}`;
+  const pendingRows=rowsToSubmit.map((row,index)=>normalizeRow({...row,id:`建立中 ${index+1}`,status:row.status||'未開始',pendingCreate:true,pendingCreateKey:pendingBatchKey}));
+  rows=[...pendingRows,...rows];
   showSubmitOverlay(`已接收 ${rowsToSubmit.length} 筆資料`);
   const submit=$('#requestBatchSubmit');
   if(submit)submit.disabled=true;
@@ -9541,6 +9544,7 @@ function submitRequestBatchRows(){
   if(!apiUrl){
     const base=Number(nextId());
     const added=rowsToSubmit.map((row,index)=>normalizeRow({...row,id:String(base+index).padStart(8,'0'),status:row.status||'未開始'}));
+    rows=rows.filter(row=>row.pendingCreateKey!==pendingBatchKey);
     rows=[...added.reverse(),...rows];
     save();
     render();
@@ -9553,13 +9557,14 @@ function submitRequestBatchRows(){
       ? data.rows.map(normalizeRow).filter(row=>isCaseId_(row.id))
       : [];
     added.forEach(row=>rememberLocalWrite(row.id,{...row,__created:true}));
+    rows=rows.filter(row=>row.pendingCreateKey!==pendingBatchKey);
     if(added.length)rows=[...added.reverse(),...rows];
     save();
     render();
     completeCreateRequest(requestId);
     setSync(`已批次新增 ${added.length} 筆至 JSON 資料庫`);
     refreshAfterFormWrite(`已批次新增 ${added.length} 筆`);
-  }).catch(err=>setSync(`批次新增背景寫入失敗：${err.message}`,true));
+  }).catch(err=>{rows=rows.filter(row=>row.pendingCreateKey!==pendingBatchKey);render();setSync(`批次新增背景寫入失敗：${err.message}`,true)});
 }
 function requestButtonHtml(label,icon){return `${icon}<span>${esc(label)}</span>`}
 function updateRequestMode(){const isEditing=Boolean(editingId), isBatch=requestBatchMode&&!isEditing, hint=$('#requestModeHint'), submitBtn=$('#submitBtn'), title=$('#requestPanelTitle'); document.querySelector('.request-card')?.classList.toggle('is-browsing-modify',isEditing); if(isEditing)requestBatchMode=false; formEl.hidden=false; if(title)title.textContent=isEditing?'修改設計需求':'填寫設計需求'; if(submitBtn){submitBtn.hidden=isBatch; submitBtn.innerHTML=requestButtonHtml(isEditing?'修改需求':'新增案件',isEditing?solidEditIcon():solidAddIcon())} if(hint){hint.textContent=isEditing?`目前模式：修改需求${editingId?`｜案件 ${editingId}`:''}`:(isBatch?'目前模式：批次新增':'目前模式：新增案件'); hint.classList.toggle('is-editing',isEditing)} const batchBtn=$('#requestBatchToggle'); if(batchBtn){batchBtn.hidden=isBatch; batchBtn.innerHTML=requestButtonHtml(isEditing?'取消':'批次',isEditing?solidCancelIcon():solidBatchIcon()); batchBtn.classList.toggle('active',isBatch)} renderRequestBatchRows(); renderRequestProjectButtons()}
@@ -9788,6 +9793,9 @@ $('#requestForm').addEventListener('submit',e=>{
   }
   const createRow=formCreateRow(r);
   requestId=createRequestIdForPayload({action:'add',row:createRow});
+  const pendingCreateKey=`single:${requestId}`;
+  const pendingRow=normalizeRow({...r,id:'建立中…',status:r.status||'未開始',pendingCreate:true,pendingCreateKey});
+  rows=[pendingRow,...rows];
   resetRequestComposerAfterSubmit();
   dataReady=true;
   render();
@@ -9797,6 +9805,7 @@ $('#requestForm').addEventListener('submit',e=>{
   $('#submitBtn').disabled=false;
   if(!apiUrl){
     const submittedRow=normalizeRow({...r,id:nextId(),status:r.status||'未開始'});
+    rows=rows.filter(row=>row.pendingCreateKey!==pendingCreateKey);
     rows.unshift(submittedRow);
     save();
     render();
@@ -9808,13 +9817,14 @@ $('#requestForm').addEventListener('submit',e=>{
     const submittedRow=normalizeRow(data.row||{});
     if(!isCaseId_(submittedRow.id))throw new Error('寫入完成但未取得案件編號，請重新整理確認');
     rememberLocalWrite(submittedRow.id,{...submittedRow,__created:true});
+    rows=rows.filter(row=>row.pendingCreateKey!==pendingCreateKey);
     if(!rows.some(row=>String(row.id)===String(submittedRow.id)))rows.unshift(submittedRow);
     save();
     render();
     completeCreateRequest(requestId);
     setSync(`已新增至 JSON 資料庫，案件編號 ${submittedRow.id}${data?.backup?.ok?'，試算表備份完成':'，試算表備份等待重試'}`);
     refreshAfterFormWrite('案件已新增');
-  }).catch(err=>setSync(`新增資料背景寫入失敗：${err.message}`,true));
+  }).catch(err=>{rows=rows.filter(row=>row.pendingCreateKey!==pendingCreateKey);render();setSync(`新增資料背景寫入失敗：${err.message}`,true)});
 });
 formEl.elements.owner.addEventListener('input',()=>{ownerTouchedByUser=true; const value=formEl.elements.owner.value.trim(); if(value){localStorage.setItem(ownerDraftKey,value); ownerAutoFillDone=true}});
 formEl.elements.qty.addEventListener('input',()=>{formEl.elements.qty.value=formEl.elements.qty.value.replace(/[^0-9]/g,'')});
