@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 117,
+  "revision": 118,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T13:53:05.603Z",
+  "updatedAt": "2026-08-08T13:54:40.622Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16921,6 +16921,11 @@
           "短碼": "kfVBuA",
           "原始網址": "https://example.com/#emc-short-link-speed-test",
           "建立時間": "2026/08/06 12:43:42"
+        },
+        {
+          "短碼": "2Vnj7J",
+          "原始網址": "https://www.youtube.com/watch?v=qrCrAJyjvmQ&ab_channel=LIONS%7CTheHomeofCreativity",
+          "建立時間": "2026/08/08 21:54:40"
         }
       ]
     },
