@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-fast-inline-update-101 -->
+<!-- LAST_MODIFIED: 2026-08-08 Asia/Taipei | build: 20260808-history-json-align-102 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260808-fast-inline-update-101" />
+  <meta name="app-version" content="20260808-history-json-align-102" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6315,7 +6315,7 @@
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
-      <button type="button" id="accountArchiveManager" role="menuitem" hidden>封存資料管理</button>
+      <button type="button" id="accountArchiveManager" role="menuitem" hidden>歷史資料庫管理</button>
       <button type="button" id="accountJsonDatabaseAdmin" role="menuitem" hidden>資料庫後台</button>
       <div class="permission-menu-divider" id="adminPermissionDivider" hidden></div>
       <button type="button" id="accountPermissionMode" role="menuitem" hidden>切換一般使用者預覽</button>
@@ -7866,8 +7866,8 @@ function gvizJsonp(url,timeoutMs=60000){
 }
 function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
 function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
-function archiveDatabaseGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${archiveSheetId}&tq=${encodeURIComponent(query)}`}
-async function fetchArchiveDatabaseObjects(query='select *'){return gvizToObjects(await gvizJsonp(archiveDatabaseGvizQueryUrl(query)))}
+const HISTORY_DATABASE_JSON_URL='data/database_archive.json';
+async function fetchArchiveDatabaseObjects(){const response=await fetch(`${HISTORY_DATABASE_JSON_URL}?v=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`歷史資料庫回應失敗：${response.status}`);const data=await response.json();if(!Array.isArray(data?.rows))throw new Error('歷史資料庫缺少 rows');return data.rows}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
 function caseIdMonthRange(date){
   const yy=date.getFullYear()%100, month=date.getMonth()+1, prefix=yy*100+month;
@@ -7896,7 +7896,7 @@ function archiveFilterRequested(){
   return searchHasText()||years.some(value=>value<year)||(!years.length&&months.some(value=>value<currentMonthNo));
 }
 function rowsForSearch(){
-  return archiveFilterRequested()&&archiveRows.length?mergeRowsById(rows,archiveRows):rows;
+  return archiveFilterRequested()&&archiveRows.length?mergeRowsById(archiveRows,rows):rows;
 }
 function scheduleArchiveSearchLoad(){
   clearTimeout(archiveSearchTimer);
