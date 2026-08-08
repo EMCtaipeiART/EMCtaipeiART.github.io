@@ -36,53 +36,54 @@ jobs:
         with:
           node-version: 22
 
-      - name: Recalculate database weights
-        run: node scripts/recalculate_database_weights.mjs
-
-      - name: Align history database with current database
-        run: node scripts/generate_database_archive_snapshot.mjs
-
-      - name: Check for history database changes
-        id: changes
-        run: |
-          if git diff --quiet -- backend/data/db.json data/database_archive.json; then
-            echo "snapshot=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "snapshot=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Commit aligned history database
-        if: steps.changes.outputs.snapshot == 'true'
+      - name: Align and push history database from latest current database
+        id: sync
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/data/db.json data/database_archive.json
-          git commit -m "data: align history database with current database"
 
-      - name: Push aligned history database
-        if: steps.changes.outputs.snapshot == 'true'
-        run: |
-          for attempt in 1 2 3; do
-            if git pull --rebase origin main && git push origin HEAD:main; then
+          # A database write can land while this workflow is running. Always
+          # regenerate from the newest main instead of rebasing an archive that
+          # was generated from an older database revision.
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            node scripts/recalculate_database_weights.mjs
+            node scripts/generate_database_archive_snapshot.mjs
+
+            if git diff --quiet -- backend/data/db.json data/database_archive.json; then
+              echo "snapshot=false" >> "$GITHUB_OUTPUT"
+              echo "History database already matches current database."
               exit 0
             fi
-            git rebase --abort 2>/dev/null || true
-            echo "Push attempt ${attempt} failed; retrying after remote refresh."
-            sleep $((attempt * 3))
+
+            git add backend/data/db.json data/database_archive.json
+            git commit -m "data: align history database with current database"
+            if git push origin HEAD:main; then
+              echo "snapshot=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "Main changed during snapshot attempt ${attempt}; regenerating from the newest database revision."
+            sleep $((attempt * 2))
           done
-          echo "::warning::Snapshot push was deferred because main changed repeatedly; Pages will still deploy the generated JSON."
+
+          echo "::error::Could not align history database after five attempts because main kept changing."
+          exit 1
 
       - name: Configure GitHub Pages
-        if: steps.changes.outputs.snapshot == 'true' || github.event_name != 'schedule'
+        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: steps.changes.outputs.snapshot == 'true' || github.event_name != 'schedule'
+        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
       - name: Deploy GitHub Pages
-        if: steps.changes.outputs.snapshot == 'true' || github.event_name != 'schedule'
+        if: steps.sync.outputs.snapshot == 'true' || github.event_name != 'schedule'
         id: deployment
         uses: actions/deploy-pages@v4
