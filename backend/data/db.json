@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 134,
+  "revision": 135,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-08T14:22:19.166Z",
+  "updatedAt": "2026-08-08T14:22:35.999Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18219,14 +18219,6 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/07 11:15"
-        },
-        {
-          "案件編號": "26080044",
-          "A": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
-          "B": "",
-          "C": "",
-          "D": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
-          "更新時間": "2026/08/08 22:16"
         }
       ]
     },
