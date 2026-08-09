@@ -65,6 +65,17 @@ test('CSV parser preserves commas, quotes and embedded newlines', () => {
   ]);
 });
 
+test('404 short redirects use the small static JSON index before Apps Script fallback', async () => {
+  const root = path.resolve(import.meta.dirname, '..', '..');
+  const page = await readFile(path.join(root, '404.html'), 'utf8');
+  const index = JSON.parse(await readFile(path.join(root, 'data', 'short_link_index.json'), 'utf8'));
+  assert.match(page, /loadResolverIndex/);
+  assert.match(page, /index\.shortLinks\[code\]/);
+  assert.match(page, /index\.supplements\[id\]\[slot\]/);
+  assert.equal(index.shortLinks['2Vnj7J'], 'https://www.youtube.com/watch?v=qrCrAJyjvmQ&ab_channel=LIONS%7CTheHomeofCreativity');
+  assert.equal(index.supplements['26080033'].a, 'https://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing');
+});
+
 test('item details calculate weights from the scoring table only after selection', () => {
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 4, details: '' }), null);
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 2, details: '素材重置' }), 1);
@@ -514,3 +525,4 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
   const deleted = await api(app.baseUrl, 'deleteDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'] });
   assert.equal(deleted.deleted, 1);
 });
+
