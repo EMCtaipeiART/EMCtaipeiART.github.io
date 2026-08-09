@@ -333,9 +333,10 @@ test('password session protects settings, reels and manager-only issue status wr
 
   const saved = await api(app.baseUrl, 'saveUserSettings', {
     editorToken: login.token,
-    settings: { displayName: 'Machi JSON', theme: 'dark', collapseSettings: { recent: true } }
+    settings: { displayName: 'Machi JSON', avatar: 'https://example.com/new-avatar.jpg', theme: 'dark', collapseSettings: { recent: true } }
   });
   assert.equal(saved.settings.displayName, 'Machi JSON');
+  assert.equal(saved.settings.avatar, 'https://example.com/new-avatar.jpg');
   assert.equal(saved.settings.theme, 'dark');
 
   const reaction = await api(app.baseUrl, 'toggleReelReaction', {

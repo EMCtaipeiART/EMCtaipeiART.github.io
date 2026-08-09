@@ -272,6 +272,7 @@ function findReelIndex(rows, payload) {
   return rows.findIndex((row, index) => (fileId && text(row['限時動態連結']).includes(fileId)) || (requestedUrl && text(row['限時動態連結']) === requestedUrl) || requestedRow === index + 2);
 }
 function updateSettingsRow(row, settings = {}) {
+  if ('avatar' in settings || '頭像連結' in settings) row['頭像連結'] = text(settings.avatar ?? settings['頭像連結']);
   if ('displayName' in settings || '顯示名' in settings) {
     const value = text(settings.displayName || settings['顯示名']);
     if (!value || value.length > 40) throw new Error('顯示名必須為 1–40 個字');
