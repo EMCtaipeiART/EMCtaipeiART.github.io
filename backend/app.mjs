@@ -21,7 +21,7 @@ const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
   'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment',
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
-  'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia'
+  'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories'
 ]);
 const PROJECT_GROUPS = {
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
@@ -118,6 +118,18 @@ function reelFileId(value) {
   const source = text(value);
   return (source.match(/drive\.google\.com\/file\/d\/([^/]+)/) || source.match(/lh3\.googleusercontent\.com\/d\/([^=/?]+)/) || source.match(/[?&]id=([^&]+)/) || [])[1] || '';
 }
+function reelExpirationMs(row = {}) {
+  const raw = text(row['到期時間'] || row.expiresAt);
+  if (!raw) return 0;
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function activeReel(row, now = Date.now()) {
+  const expiresAt = reelExpirationMs(row);
+  return !expiresAt || expiresAt > now;
+}
 function generateShortCode(existing) {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const bytes = randomBytes(6);
@@ -173,10 +185,13 @@ function publicReel(row, index) {
   const likes = splitNames(row['按讚']);
   const dislikes = splitNames(row['倒讚']);
   const comments = parseComments(row['留言']).map(({ id, name, avatar, text: commentText, createdAt }) => ({ id, name, avatar, text: commentText, createdAt }));
+  const expiresAt = reelExpirationMs(row);
   return {
     id: reelFileId(row['限時動態連結']) || `row-${index + 2}`,
     rowNumber: index + 2,
-    name: text(row['名字']), imageUrl: text(row['限時動態連結']), likes, dislikes,
+    name: text(row['名字']), imageUrl: text(row['限時動態連結']),
+    retention: text(row['保留期限']) || (expiresAt ? '24小時' : '永久'),
+    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : '', likes, dislikes,
     likeCount: likes.length, dislikeCount: dislikes.length, comments
   };
 }
@@ -578,7 +593,11 @@ export function createActionHandler(database, options = {}) {
           if (!row) throw new Error('找不到設計師設定');
           if (kind === 'avatar') row['頭像連結'] = uploaded.url;
           else if (kind === 'poster') row['頭像大圖連結'] = uploaded.url;
-          else draft.tables.reels.rows.push({ '名字': name, '限時動態連結': uploaded.url, '按讚': '', '倒讚': '', '留言': '[]' });
+          else {
+            const durationMinutes = Math.max(0, Number(payload.durationMinutes) || 0);
+            const expiresAt = durationMinutes ? Date.now() + durationMinutes * 60 * 1000 : 0;
+            draft.tables.reels.rows.push({ '名字': name, '限時動態連結': uploaded.url, '保留期限': expiresAt ? '24小時' : '永久', '到期時間': expiresAt ? new Date(expiresAt).toISOString() : '', '按讚': '', '倒讚': '', '留言': '[]' });
+          }
           return { ok: true, action, name, kind, url: uploaded.url, fileName: uploaded.fileName, size: uploaded.size };
         }, `upload designer ${kind}`);
       } catch (error) { await removeUploadedFile(uploaded.url).catch(() => {}); throw error; }
@@ -622,7 +641,36 @@ export function createActionHandler(database, options = {}) {
       return result;
     }
 
-    if (action === 'listReels') return { ok: true, action, reels: snapshot.tables.reels.rows.map(publicReel).filter(reel => reel.name && reel.imageUrl) };
+    if (action === 'upsertDesignerStories') {
+      requireSession(snapshot, payload);
+      const name = text(payload.name || payload.designer);
+      if (!PROJECT_GROUPS['平面'].designers.includes(name) && !PROJECT_GROUPS['影音'].designers.includes(name)) throw new Error('找不到設計師');
+      const fileIds = Array.isArray(payload.fileIds) ? payload.fileIds.map(text) : [];
+      const imageUrls = Array.isArray(payload.imageUrls) ? payload.imageUrls.map(text) : [];
+      const expiresAtMs = Math.max(0, Number(payload.expiresAt) || 0);
+      if (!imageUrls.length) throw new Error('沒有可同步的限時動態');
+      return database.transaction(draft => {
+        const rows = draft.tables.reels.rows;
+        const synced = imageUrls.map((url, index) => {
+          const fileId = fileIds[index] || reelFileId(url);
+          let row = rows.find(item => (fileId && reelFileId(item['限時動態連結']) === fileId) || text(item['限時動態連結']) === url);
+          if (!row) { row = {}; rows.push(row); }
+          Object.assign(row, { '名字': name, '限時動態連結': url, '保留期限': expiresAtMs ? '24小時' : '永久', '到期時間': expiresAtMs ? new Date(expiresAtMs).toISOString() : '', '按讚': row['按讚'] || '', '倒讚': row['倒讚'] || '', '留言': row['留言'] || '[]' });
+          return publicReel(row, rows.indexOf(row));
+        });
+        return { ok: true, action, designer: name, count: synced.length, reels: synced };
+      }, 'sync designer stories');
+    }
+    if (action === 'deleteDesignerStories') {
+      requireSession(snapshot, payload);
+      const name = text(payload.name || payload.designer), ids = new Set((payload.fileIds || []).map(text).filter(Boolean));
+      return database.transaction(draft => {
+        const before = draft.tables.reels.rows.length;
+        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))));
+        return { ok: true, action, designer: name, deleted: before - draft.tables.reels.rows.length };
+      }, 'delete designer stories');
+    }
+    if (action === 'listReels') return { ok: true, action, reels: snapshot.tables.reels.rows.filter(activeReel).map(publicReel).filter(reel => reel.name && reel.imageUrl) };
     if (action === 'toggleReelReaction' || action === 'addReelComment') {
       const session = requireSession(snapshot, payload);
       return database.transaction(draft => {

@@ -40,7 +40,7 @@ export const TABLE_SCHEMAS = {
   },
   reels: {
     primaryKey: null,
-    headers: ['名字', '限時動態連結', '按讚', '倒讚', '留言']
+    headers: ['名字', '限時動態連結', '保留期限', '到期時間', '按讚', '倒讚', '留言']
   },
   bug_report: {
     primaryKey: null,
