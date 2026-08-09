@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 144,
+  "revision": 145,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-09T15:00:37.814Z",
+  "updatedAt": "2026-08-09T15:21:55.640Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18275,7 +18275,7 @@
           "頭像大圖連結": "https://emctaipeiart.github.io/images/Machi.jpg",
           "分享音樂": "https://open.spotify.com/track/62lok5DKdhSRSpdWB3UTmx",
           "音樂起始秒數": "0",
-          "技能": "平面 , 輸出 , 動畫",
+          "技能": "平面 , 輸出 , 影片 , 動畫",
           "對話框": "",
           "新專案輪值": "4",
           "篩選年份": "2026年",
