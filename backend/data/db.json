@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 151,
+  "revision": 152,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-09T15:58:02.590Z",
+  "updatedAt": "2026-08-09T16:06:19.226Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18276,7 +18276,7 @@
           "分享音樂": "https://open.spotify.com/track/62lok5DKdhSRSpdWB3UTmx",
           "音樂起始秒數": "20",
           "技能": "平面 , 輸出 , 動畫",
-          "對話框": "TEST",
+          "對話框": "",
           "新專案輪值": "4",
           "篩選年份": "2026年",
           "篩選月份": "7月 , 8月",
