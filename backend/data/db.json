@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 155,
+  "revision": 156,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-09T16:17:46.814Z",
+  "updatedAt": "2026-08-09T16:47:11.309Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18791,7 +18791,7 @@
           "名字": "測試使用者",
           "顯示名": "測試使用者",
           "帳號": "test.user@emctaipei.com",
-          "頭像連結": "https://drive.google.com/thumbnail?id=1hnmsCDRksjsU6OEhOxzY-0-XeuSlUabd&sz=w1000",
+          "頭像連結": "https://drive.google.com/thumbnail?id=17s3siM6vSsHemBQdE8T8WxbTfMqOkJcR&sz=w1000",
           "頭像大圖連結": "",
           "分享音樂": "",
           "音樂起始秒數": "",
