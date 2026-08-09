@@ -10,6 +10,8 @@ on:
       - 'backend/data/db.json'
       - 'scripts/recalculate_database_weights.mjs'
       - 'scripts/generate_database_archive_snapshot.mjs'
+      - 'scripts/generate_short_link_index.mjs'
+      - '404.html'
       - '.github/workflows/update-database-archive.yml'
   repository_dispatch:
     types:
@@ -59,14 +61,15 @@ jobs:
 
             node scripts/recalculate_database_weights.mjs
             node scripts/generate_database_archive_snapshot.mjs
+            node scripts/generate_short_link_index.mjs
 
-            if git diff --quiet -- backend/data/db.json data/database_archive.json; then
+            if git diff --quiet -- backend/data/db.json data/database_archive.json data/short_link_index.json; then
               echo "snapshot=false" >> "$GITHUB_OUTPUT"
               echo "History database already matches current database."
               exit 0
             fi
 
-            git add backend/data/db.json data/database_archive.json
+            git add backend/data/db.json data/database_archive.json data/short_link_index.json
             git commit -m "data: align history database with current database"
             if git push origin HEAD:main; then
               echo "snapshot=true" >> "$GITHUB_OUTPUT"
@@ -101,3 +104,4 @@ jobs:
         if: steps.deployment.outcome == 'failure'
         id: deployment_retry
         uses: actions/deploy-pages@v5
+
