@@ -146,6 +146,22 @@ test('designer roster uses JSON group and rotation for priority new-project butt
   assert.match(html, />新專案找我<\/button>/);
 });
 
+test('designer music uses one timeline, JSON-only settings, and seeks Spotify after play', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const settingsFetch = html.match(/async function fetchDesignerProfiles\(\)[\s\S]*?\nasync function loadDesignerRoster/)?.[0] || '';
+  const settingsSaveStart = html.indexOf('async function saveDesignerSettings(event)');
+  const settingsSaveEnd = html.indexOf('\nfunction ', settingsSaveStart);
+  const settingsSave = html.slice(settingsSaveStart, settingsSaveEnd);
+
+  assert.match(html, /type="hidden" name="music-start-/);
+  assert.doesNotMatch(html, /type="number" name="music-start-/);
+  assert.match(html, /function playSpotifyFromConfiguredStart[\s\S]*?controller\.play\(\); setTimeout\(\(\)=>applySpotifyStart/);
+  assert.match(html, /if\(playing&&!spotifyStartApplied\.has\(shell\)\)applySpotifyStart/);
+  assert.doesNotMatch(settingsFetch, /gvizJsonp\(designerGvizUrl\)/);
+  assert.match(settingsSave, /jsonOnly:true/);
+  assert.doesNotMatch(settingsSave, /backup/);
+});
+
 test('archive snapshot and dashboard use JSON database sources only', async () => {
   // The archive is append-preserving: current database rows are upserted without deleting historical rows.
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
@@ -525,4 +541,3 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
   const deleted = await api(app.baseUrl, 'deleteDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'] });
   assert.equal(deleted.deleted, 1);
 });
-
