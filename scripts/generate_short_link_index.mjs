@@ -36,7 +36,7 @@ for (const row of rows('補充資料連結')) {
 const index = {
   version: 1,
   databaseRevision: Number(database.revision || 0),
-  generatedAt: new Date().toISOString(),
+  generatedAt: String(database.updatedAt || database.lastWrite?.at || ''),
   shortLinks,
   supplements
 };
