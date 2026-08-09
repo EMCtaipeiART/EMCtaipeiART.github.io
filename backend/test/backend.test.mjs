@@ -542,3 +542,9 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
   const deleted = await api(app.baseUrl, 'deleteDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'] });
   assert.equal(deleted.deleted, 1);
 });
+
+test('member avatar upload keeps the returned JSON avatar without an immediate stale refresh', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /lastAccountAvatarRefreshAt=Date\.now\(\);renderAccountAvatar\(\)/);
+  assert.match(html, /closeUploadModal\(\{refreshUserAvatar:false\}\)/);
+});
