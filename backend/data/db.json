@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 147,
+  "revision": 148,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-09T15:35:23.964Z",
+  "updatedAt": "2026-08-09T15:54:41.126Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18314,7 +18314,7 @@
           "頭像連結": "https://ci3.googleusercontent.com/mail-sig/AIorK4zHvoa1GHX5gexC25l4YrHhBZn2mNJ8_gthNd7mMkSdrgbwLysHCBNopbNwbYSPyNBGu5gzU_g8cazt",
           "頭像大圖連結": "https://emctaipeiart.github.io/images/Anna.jpg",
           "分享音樂": "https://open.spotify.com/track/55UDXtbNJBAdTdUdbRu8T3",
-          "音樂起始秒數": "38",
+          "音樂起始秒數": "437",
           "技能": "平面 , 輸出",
           "對話框": "沒回就是在忙。",
           "新專案輪值": "2",
