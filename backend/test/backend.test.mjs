@@ -485,8 +485,9 @@ test('JSON media upload updates settings and reels and serves stored images', as
   assert.equal(imageResponse.status, 200);
   assert.equal(imageResponse.headers.get('content-type'), 'image/png');
 
-  const story = await api(app.baseUrl, 'uploadDesignerImage', { editorToken: login.token, designer: 'Machi', kind: 'story', mimeType: 'image/png', dataUrl: pngDataUrl });
+  const story = await api(app.baseUrl, 'uploadDesignerImage', { editorToken: login.token, designer: 'Machi', kind: 'story', durationMinutes: 1440, mimeType: 'image/png', dataUrl: pngDataUrl });
   assert.equal(app.database.table('reels').rows.some(row => row['限時動態連結'] === story.url), true);
+  assert.equal(app.database.table('reels').rows.find(row => row['限時動態連結'] === story.url)['保留期限'], '24小時');
   const media = await api(app.baseUrl, 'listDesignerMedia', { editorToken: login.token, designer: 'Machi' });
   assert.equal(media.profile.avatar, avatar.url);
   assert.equal(media.reels.some(reel => reel.imageUrl === story.url), true);
@@ -497,4 +498,19 @@ test('JSON media upload updates settings and reels and serves stored images', as
 
   const userAvatar = await api(app.baseUrl, 'uploadUserAvatar', { editorToken: login.token, account: 'machi.chen@emctaipei.com', mimeType: 'image/png', dataUrl: pngDataUrl });
   assert.equal(userAvatar.settings.avatar, userAvatar.url);
+});
+
+test('designer story sync stores 24-hour and permanent expiration in JSON', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
+  const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+  const synced = await api(app.baseUrl, 'upsertDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-24'], imageUrls: ['https://drive.google.com/thumbnail?id=story-24&sz=w1000'], expiresAt });
+  assert.equal(synced.count, 1);
+  assert.equal(app.database.table('reels').rows.find(row => row['限時動態連結'].includes('story-24'))['保留期限'], '24小時');
+  await api(app.baseUrl, 'upsertDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'], imageUrls: ['https://drive.google.com/thumbnail?id=story-forever&sz=w1000'], expiresAt: 0 });
+  const listed = await api(app.baseUrl, 'listReels');
+  assert.equal(listed.reels.find(reel => reel.id === 'story-forever').retention, '永久');
+  const deleted = await api(app.baseUrl, 'deleteDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'] });
+  assert.equal(deleted.deleted, 1);
 });
