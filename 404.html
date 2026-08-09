@@ -1,11 +1,12 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-06 12:32 Asia/Taipei | build: 20260806-fast-short-redirect-2 -->
+<!-- LAST_MODIFIED: 2026-08-09 23:10 Asia/Taipei | build: 20260809-static-short-index-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta name="app-version" content="20260806-fast-short-redirect-2">
+  <meta name="app-version" content="20260809-static-short-index-1">
+  <link rel="preload" href="/data/short_link_index.json" as="fetch" crossorigin="anonymous">
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <title>EMC 短連結</title>
@@ -79,8 +80,27 @@
       const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
       const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
       const shortLinkCacheMs = 30 * 24 * 60 * 60 * 1000;
+      const resolverIndexUrl = '/data/short_link_index.json';
       const creator = document.querySelector('#creator');
       const redirector = document.querySelector('#redirector');
+      let resolverIndexPromise;
+
+      const loadResolverIndex = () => {
+        if (!resolverIndexPromise) {
+          resolverIndexPromise = fetch(resolverIndexUrl, {
+            credentials: 'omit',
+            cache: 'force-cache',
+            referrerPolicy: 'no-referrer'
+          }).then(response => {
+            if (!response.ok) throw new Error(`短連結索引回應失敗：${response.status}`);
+            return response.json();
+          }).catch(error => {
+            resolverIndexPromise = null;
+            throw error;
+          });
+        }
+        return resolverIndexPromise;
+      };
 
       const jsonp = async (params, timeoutMs = 10000) => {
         const controller = new AbortController();
@@ -135,6 +155,14 @@
           if (cached && cached.expires > Date.now() && redirect(cached.url)) return;
         } catch (error) {}
         try {
+          const index = await loadResolverIndex();
+          const indexedUrl = index && index.shortLinks && index.shortLinks[code];
+          if (indexedUrl) {
+            cacheShortLink(code, indexedUrl);
+            if (redirect(indexedUrl)) return;
+          }
+        } catch (error) {}
+        try {
           const data = await jsonp({ action: 'resolveShortLink', code });
           cacheShortLink(code, data.url);
           if (!redirect(data.url)) throw new Error('目的網址格式不正確。');
@@ -155,6 +183,11 @@
         try {
           const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
           if (cached && cached.expires > Date.now() && finish(cached.url)) return;
+        } catch (error) {}
+        try {
+          const index = await loadResolverIndex();
+          const indexedUrl = index && index.supplements && index.supplements[id] && index.supplements[id][slot];
+          if (indexedUrl && finish(indexedUrl)) return;
         } catch (error) {}
         try {
           const data = await jsonp({ action: 'resolveSupplementLink', id, slot }, 8000);
@@ -235,3 +268,4 @@
   </script>
 </body>
 </html>
+
