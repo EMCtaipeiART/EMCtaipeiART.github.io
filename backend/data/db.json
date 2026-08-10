@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 167,
+  "revision": 168,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T02:33:14.333Z",
+  "updatedAt": "2026-08-10T02:33:33.002Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18102,7 +18102,7 @@
           "修改日期": "2026/08/10",
           "修改內容": "如稍早溝通，圖片仍須調整，再請協助將黃底文字做置換，謝謝。",
           "修改人": "Andrea Chou",
-          "確認修正日": ""
+          "確認修正日": "2026/08/10 10:33:33"
         }
       ]
     },
