@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 207,
+  "revision": 208,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T05:54:02.236Z",
+  "updatedAt": "2026-08-10T06:12:12.287Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16894,6 +16894,31 @@
           "加權": "",
           "案件編號": "26080045",
           "月份": "8月"
+        },
+        {
+          "客戶別": "金士頓",
+          "專案名稱": "2026/08月貼文「IPC Medical (IN)」中、日文版本製作",
+          "專案負責人": "古晟如",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "2",
+          "開始日期": "2026/08/10",
+          "結束日期": "2026/08/11",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram, 其他平台",
+          "填單時間": "2026/08/10 14:12",
+          "設計簡報說明": "p3.4",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080046",
+          "客戶素材說明": "",
+          "客戶素材連結": "https://emctaipeiart.github.io/b/26080046",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "案件編號": "26080046",
+          "月份": "8月"
         }
       ]
     },
@@ -18298,6 +18323,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/10 13:40"
+        },
+        {
+          "案件編號": "26080046",
+          "A": "https://docs.google.com/presentation/d/1DPguhNQApI8t-0kdUK_2Nv9SMG1ox9HSBJH3-syScDg/edit?usp=sharing",
+          "B": "https://drive.google.com/drive/folders/1g7ygEtU2IB1Hi5fKrr-VQsdcpVxbOyPO?usp=sharing",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/10 14:12"
         }
       ]
     },
@@ -22770,6 +22803,39 @@
           "weight": "",
           "sheetRow": 602,
           "_sheetRow": 602
+        }
+      },
+      "4719ecf1-f595-4b1d-a41c-cf04e03b76d1": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 603,
+        "row": {
+          "id": "26080046",
+          "month": "8月",
+          "client": "金士頓",
+          "project": "2026/08月貼文「IPC Medical (IN)」中、日文版本製作",
+          "owner": "古晟如",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 2,
+          "start": "2026/08/10",
+          "end": "2026/08/11",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram, 其他平台",
+          "submittedAt": "2026/08/10 14:12",
+          "briefNote": "p3.4",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080046",
+          "assetNote": "",
+          "assetUrl": "https://emctaipeiart.github.io/b/26080046",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "sheetRow": 603,
+          "_sheetRow": 603
         }
       }
     }
