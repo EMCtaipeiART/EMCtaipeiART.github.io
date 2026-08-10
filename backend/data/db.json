@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 168,
+  "revision": 169,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T02:33:33.002Z",
+  "updatedAt": "2026-08-10T02:34:24.881Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18289,7 +18289,7 @@
           "新專案輪值": "4",
           "篩選年份": "2026年",
           "篩選月份": "7月 , 8月",
-          "篩選狀態": "未執行 , 執行中 , 過稿中 , 已完成",
+          "篩選狀態": "未執行 , 執行中 , 過稿中",
           "篩選姓名": "Machi",
           "選擇": "v",
           "案件編號": "1",
