@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 214,
+  "revision": 215,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T07:04:35.426Z",
+  "updatedAt": "2026-08-10T07:13:52.589Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16920,6 +16920,31 @@
           "加權": "",
           "案件編號": "26080046",
           "月份": "8月"
+        },
+        {
+          "客戶別": "金士頓",
+          "專案名稱": "8月社群貼文_IPC",
+          "專案負責人": "Lorraine Luo",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "2",
+          "開始日期": "2026/08/10",
+          "結束日期": "2026/08/14",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/10 15:13",
+          "設計簡報說明": "設計簡報",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080047",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "案件編號": "26080047",
+          "月份": "8月"
         }
       ]
     },
@@ -18341,6 +18366,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/10 14:12"
+        },
+        {
+          "案件編號": "26080047",
+          "A": "https://docs.google.com/presentation/d/1-bb7-OstCehKqX2Vwkf1EGA57MXIDBbb/edit?slide=id.g3f08e6650df_0_379#slide=id.g3f08e6650df_0_379",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/10 15:13"
         }
       ]
     },
@@ -22846,6 +22879,39 @@
           "weight": "",
           "sheetRow": 603,
           "_sheetRow": 603
+        }
+      },
+      "6f4d41c5-c5c5-477d-b484-6c10d8f1e87d": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 604,
+        "row": {
+          "id": "26080047",
+          "month": "8月",
+          "client": "金士頓",
+          "project": "8月社群貼文_IPC",
+          "owner": "Lorraine Luo",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 2,
+          "start": "2026/08/10",
+          "end": "2026/08/14",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/10 15:13",
+          "briefNote": "設計簡報",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080047",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "sheetRow": 604,
+          "_sheetRow": 604
         }
       }
     }
