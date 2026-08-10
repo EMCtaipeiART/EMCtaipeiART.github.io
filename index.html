@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-10 Asia/Taipei | build: 20260810-fast-batch-story-controls-105 -->
+<!-- LAST_MODIFIED: 2026-08-10 Asia/Taipei | build: 20260810-story-json-sync-106 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260810-fast-batch-story-controls-105" />
+  <meta name="app-version" content="20260810-story-json-sync-106" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6824,7 +6824,7 @@ const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260810-fast-batch-story-controls-105';
+const appBuildVersion = '20260810-story-json-sync-106';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7628,7 +7628,25 @@ let activeUserAvatarUploadNonce='';
 let activeDesignerUploadName='';
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
 function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||modal.hidden)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
-function handleUploadFrameMessage(event){const modal=$('#uploadModal'),data=event.data||{}; if(data.type!=='machi-user-avatar-updated'||!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return; const uploadedAvatar=imageUrl(data.imageUrl||data.url||''); if(uploadedAvatar){currentAccountAvatar=uploadedAvatar;lastAccountAvatarRefreshAt=Date.now();renderAccountAvatar()} closeUploadModal({refreshUserAvatar:false}); setSync('頭像已更新',false,2200)}
+function handleUploadFrameMessage(event){
+  const modal=$('#uploadModal'),data=event.data||{};
+  if(data.type==='machi-user-avatar-updated'){
+    if(!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return;
+    const uploadedAvatar=imageUrl(data.imageUrl||data.url||'');
+    if(uploadedAvatar){currentAccountAvatar=uploadedAvatar;lastAccountAvatarRefreshAt=Date.now();renderAccountAvatar()}
+    closeUploadModal({refreshUserAvatar:false});
+    setSync('頭像已更新',false,2200);
+    return;
+  }
+  if(data.type!=='machi-designer-stories-updated'||!modal||modal.hidden)return;
+  const designer=String(data.designer||'').trim();
+  if(!designer||designer!==activeDesignerUploadName)return;
+  if(activeDesignerStoryPlayback?.shell?.closest('.designer-card')?.dataset.designer===designer)stopDesignerStoryPlayback();
+  setSync(data.action==='story-cancel'?'限時動態已取消，正在更新前台...':'限時動態已設定，正在更新前台...');
+  void loadDesignerRoster({background:true})
+    .then(()=>{render();setSync(data.action==='story-cancel'?'前台限時動態已移除':'前台限時動態已更新',false,2200)})
+    .catch(err=>setSync(`限時動態已寫入，但前台重新載入失敗：${err.message}`,true));
+}
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} activeDesignerUploadName=designer; openUploadModal(designerUploadUrl(designer),`${designer} 頭像與 Reels`)}
