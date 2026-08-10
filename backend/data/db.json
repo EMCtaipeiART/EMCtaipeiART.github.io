@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 171,
+  "revision": 172,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T02:43:33.427Z",
+  "updatedAt": "2026-08-10T02:44:38.524Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -14218,9 +14218,9 @@
           "月份": "7月",
           "客戶別": "金士頓",
           "專案名稱": "8月社群貼文-鬼月紅包-carousel ",
-          "專案負責人": "Kevin",
+          "專案負責人": "Amber",
           "設計種類": "平面",
-          "階段": "前製",
+          "階段": "後製",
           "數量": "4",
           "開始日期": "2026/07/28",
           "結束日期": "2026/08/10",
