@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 204,
+  "revision": 205,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T05:53:19.229Z",
+  "updatedAt": "2026-08-10T05:53:31.564Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18156,6 +18156,15 @@
           "修改內容": "如稍早溝通，圖片仍須調整，再請協助將黃底文字做置換，謝謝。",
           "修改人": "Andrea Chou",
           "確認修正日": "2026/08/10 10:33:33"
+        },
+        {
+          "案件編號": "26070246",
+          "修改次數": "1",
+          "建立日期": "2026/08/10 13:53:31",
+          "修改日期": "2026/08/11",
+          "修改內容": "希望可以personal一點，現在很像每個gamer都是這個setup",
+          "修改人": "Noise",
+          "確認修正日": ""
         }
       ]
     },
