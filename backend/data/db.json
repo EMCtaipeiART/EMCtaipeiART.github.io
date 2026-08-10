@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 206,
+  "revision": 207,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T05:53:37.708Z",
+  "updatedAt": "2026-08-10T05:54:02.236Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15231,7 +15231,7 @@
           "階段": "提案",
           "數量": "1",
           "開始日期": "2026/07/30",
-          "結束日期": "2026/08/07",
+          "結束日期": "2026/08/11",
           "設計負責人": "Noise",
           "項目細節": "腳本大綱",
           "狀態": "執行中",
