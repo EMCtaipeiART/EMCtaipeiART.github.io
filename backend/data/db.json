@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 199,
+  "revision": 200,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T05:17:05.891Z",
+  "updatedAt": "2026-08-10T05:35:25.940Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16869,6 +16869,31 @@
           "項目細節": "美術設計",
           "時間標記": "",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "DJI",
+          "專案名稱": "電商BN_Osmo 360 II 倒數三天",
+          "專案負責人": "李明庭",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/10",
+          "結束日期": "2026/08/10",
+          "設計負責人": "Machi",
+          "使用平台": "其他平台",
+          "填單時間": "2026/08/10 13:35",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "PSD原檔",
+          "客戶素材連結": "https://emctaipeiart.github.io/b/26080045",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "案件編號": "26080045",
+          "月份": "8月"
         }
       ]
     },
@@ -18256,6 +18281,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/07 11:15"
+        },
+        {
+          "案件編號": "26080045",
+          "A": "",
+          "B": "https://drive.google.com/drive/folders/16-79Fojz7HTcLtFIiWZsFJSEFRZrjrXW?usp=drive_link",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/10 13:35"
         }
       ]
     },
@@ -22695,6 +22728,39 @@
           "weight": "",
           "sheetRow": 601,
           "_sheetRow": 601
+        }
+      },
+      "80cfa185-ae93-445d-ba77-db00947e6db7": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 602,
+        "row": {
+          "id": "26080045",
+          "month": "8月",
+          "client": "DJI",
+          "project": "電商BN_Osmo 360 II 倒數三天",
+          "owner": "李明庭",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/10",
+          "end": "2026/08/10",
+          "designer": "Machi",
+          "platforms": "其他平台",
+          "submittedAt": "2026/08/10 13:35",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "PSD原檔",
+          "assetUrl": "https://emctaipeiart.github.io/b/26080045",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "sheetRow": 602,
+          "_sheetRow": 602
         }
       }
     }
