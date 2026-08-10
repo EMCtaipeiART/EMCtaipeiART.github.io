@@ -3054,25 +3054,9 @@ function adminTableUpdate_(payload) {
   });
 }
 
-function adminTableInsert_(payload) {
-  assertDatabaseAdmin_(payload);
-  const tableName = String(payload && payload.table || '').trim();
-  const config = adminTableConfig_(tableName).config;
-  return mutateGithubJsonDatabase_('admin insert ' + tableName, payload, database => {
-    const table = githubJsonTable_(database, tableName);
-    const patch = payload && payload.row && typeof payload.row === 'object' ? payload.row : {};
-    const row = {};
-    table.headers.forEach(header => { row[header] = Object.prototype.hasOwnProperty.call(patch, header) ? (patch[header] == null ? '' : String(patch[header])) : ''; });
-    if (config.primaryKey) {
-      const keyValue = String(row[config.primaryKey] || '').trim();
-      if (!keyValue) throw new Error('「' + config.primaryKey + '」不可空白');
-      if (table.rows.some(item => String(item[config.primaryKey] || '').trim() === keyValue)) throw new Error('「' + config.primaryKey + '」已經存在');
-    }
-    table.rows.push(row);
-    const rowNumber = table.rows.length + 1;
-    return { changed: true, changedTables: [tableName], result: { ok: true, action: 'adminTableInsert', table: tableName, rowNumber, row: Object.assign({ _rowNumber: rowNumber }, row) } };
-  });
-}
+// adminTableInsert_ lives in user_directory.gs (loaded after this file in the
+// Apps Script project) so there is exactly one definition; see that file for
+// the generic-table + 設定-specific-validation implementation.
 
 function adminTableDelete_(payload) {
   assertDatabaseAdmin_(payload);

@@ -41,11 +41,17 @@ function readJsonUserDirectory_() {
 
 const USER_DIRECTORY = readJsonUserDirectory_();
 
-/** 僅供資料庫後台新增「設定」人員；直接提交至 GitHub JSON，不寫試算表。 */
+/**
+ * 資料庫後台新增資料列；直接提交至 GitHub JSON，不寫試算表。
+ * database 有自己專屬的「填寫設計需求」新增流程，不走這裡。
+ * 設定表額外要求帳號／名字／部門，並在成功後清除使用者名錄快取；
+ * 其餘表（加權計分標準、短連結、補充資料連結、修改統計表、reels、bug_report）
+ * 只依主鍵做基本檢查。
+ */
 function adminTableInsert_(payload) {
   assertDatabaseAdmin_(payload);
   const tableName = String(payload && payload.table || '').trim();
-  if (tableName !== '設定') throw new Error('目前僅開放新增人員設定');
+  if (tableName === 'database') throw new Error('請使用「填寫設計需求」表單新增案件');
   const config = adminTableConfig_(tableName).config;
   return mutateGithubJsonDatabase_('admin insert ' + tableName, payload, function(database) {
     const table = githubJsonTable_(database, tableName);
@@ -56,17 +62,25 @@ function adminTableInsert_(payload) {
         ? String(patch[header]).trim()
         : '';
     });
-    const account = String(row[config.primaryKey] || '').trim().toLowerCase();
-    if (!account) throw new Error('「帳號」不可空白');
-    if (table.rows.some(function(item) { return String(item[config.primaryKey] || '').trim().toLowerCase() === account; })) {
-      throw new Error('「帳號」已經存在');
+    if (tableName === '設定') {
+      const account = String(row[config.primaryKey] || '').trim().toLowerCase();
+      if (!account) throw new Error('「帳號」不可空白');
+      if (table.rows.some(function(item) { return String(item[config.primaryKey] || '').trim().toLowerCase() === account; })) {
+        throw new Error('「帳號」已經存在');
+      }
+      row[config.primaryKey] = account;
+      if (!String(row['名字'] || '').trim()) throw new Error('「名字」不可空白');
+      if (!String(row['部門'] || '').trim()) throw new Error('「部門」不可空白');
+      if (!String(row['顯示名'] || '').trim()) row['顯示名'] = row['名字'];
+    } else if (config.primaryKey) {
+      const keyValue = String(row[config.primaryKey] || '').trim();
+      if (!keyValue) throw new Error('「' + config.primaryKey + '」不可空白');
+      if (table.rows.some(function(item) { return String(item[config.primaryKey] || '').trim() === keyValue; })) {
+        throw new Error('「' + config.primaryKey + '」已經存在');
+      }
     }
-    row[config.primaryKey] = account;
-    if (!String(row['名字'] || '').trim()) throw new Error('「名字」不可空白');
-    if (!String(row['部門'] || '').trim()) throw new Error('「部門」不可空白');
-    if (!String(row['顯示名'] || '').trim()) row['顯示名'] = row['名字'];
     table.rows.push(row);
-    CacheService.getScriptCache().remove(USER_DIRECTORY_JSON_CACHE_KEY);
+    if (tableName === '設定') CacheService.getScriptCache().remove(USER_DIRECTORY_JSON_CACHE_KEY);
     return {
       changed: true,
       changedTables: [tableName],
