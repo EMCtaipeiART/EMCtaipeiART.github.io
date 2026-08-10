@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 174,
+  "revision": 175,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T02:45:13.888Z",
+  "updatedAt": "2026-08-10T02:45:19.290Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18450,7 +18450,7 @@
           "篩選年份": "2026年",
           "篩選月份": "7月 , 8月",
           "篩選狀態": "未執行 , 執行中 , 過稿中",
-          "篩選姓名": "Amber",
+          "篩選姓名": "Noise",
           "選擇": "v",
           "案件編號": "1",
           "月份": "",
