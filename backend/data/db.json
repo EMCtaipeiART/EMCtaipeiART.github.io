@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 217,
+  "revision": 218,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T07:46:30.929Z",
+  "updatedAt": "2026-08-10T07:46:42.705Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17081,7 +17081,7 @@
           "開始日期": "2026/08/10",
           "結束日期": "2026/08/13",
           "設計負責人": "Amber",
-          "使用平台": "Facebook",
+          "使用平台": "Facebook, Instagram",
           "填單時間": "2026/08/10 15:46",
           "設計簡報說明": "",
           "設計簡報連結": "",
