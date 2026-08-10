@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 165,
+  "revision": 166,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T02:32:57.650Z",
+  "updatedAt": "2026-08-10T02:33:06.077Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -12293,9 +12293,9 @@
           "開始日期": "2026/07/20",
           "結束日期": "2026/08/03",
           "設計負責人": "Leona",
-          "項目細節": "",
-          "狀態": "未開始",
-          "加權": "",
+          "項目細節": "廣告素材",
+          "狀態": "執行中",
+          "加權": "5",
           "填單時間": "",
           "時間標記": "",
           "繳交時間": "",
