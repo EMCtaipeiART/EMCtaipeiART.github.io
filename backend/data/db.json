@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 216,
+  "revision": 217,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T07:36:39.130Z",
+  "updatedAt": "2026-08-10T07:46:30.929Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17070,6 +17070,31 @@
           "加權": "",
           "案件編號": "26080052",
           "月份": "8月"
+        },
+        {
+          "客戶別": "ANKER",
+          "專案名稱": "追加_8月CPAS_momo_轉換_包框影片",
+          "專案負責人": "Lorraine Luo",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/10",
+          "結束日期": "2026/08/13",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/10 15:46",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "案件編號": "26080053",
+          "月份": "8月"
         }
       ]
     },
@@ -23077,6 +23102,39 @@
           "weight": "",
           "sheetRow": 604,
           "_sheetRow": 604
+        }
+      },
+      "73312eb1-519e-4ffa-9d54-03616eec571e": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 610,
+        "row": {
+          "id": "26080053",
+          "month": "8月",
+          "client": "ANKER",
+          "project": "追加_8月CPAS_momo_轉換_包框影片",
+          "owner": "Lorraine Luo",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/10",
+          "end": "2026/08/13",
+          "designer": "Amber",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/10 15:46",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "sheetRow": 610,
+          "_sheetRow": 610
         }
       }
     }
