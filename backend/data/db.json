@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 211,
+  "revision": 212,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T06:32:59.399Z",
+  "updatedAt": "2026-08-10T06:33:33.876Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16847,7 +16847,7 @@
           "專案名稱": "2026年度酒標設計",
           "專案負責人": "Eric",
           "設計種類": "平面",
-          "階段": "後製",
+          "階段": "印刷",
           "數量": "2",
           "開始日期": "2026/08/03",
           "結束日期": "2026/08/07",
