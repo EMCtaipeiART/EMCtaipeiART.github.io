@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 225,
+  "revision": 226,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T08:28:47.863Z",
+  "updatedAt": "2026-08-10T09:34:13.345Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17120,6 +17120,31 @@
           "加權": "",
           "案件編號": "26080054",
           "月份": "8月"
+        },
+        {
+          "客戶別": "Epson",
+          "專案名稱": "8月社群貼文ˍEpson x V4000 UV印刷機發表會",
+          "專案負責人": "朱祖翎",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/11",
+          "結束日期": "2026/08/14",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/10 17:34",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "1",
+          "案件編號": "26080055",
+          "月份": "8月"
         }
       ]
     },
@@ -23193,6 +23218,39 @@
           "weight": "",
           "sheetRow": 611,
           "_sheetRow": 611
+        }
+      },
+      "2c9048c2-0956-4004-8e8b-f584d98aaa9e": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 612,
+        "row": {
+          "id": "26080055",
+          "month": "8月",
+          "client": "Epson",
+          "project": "8月社群貼文ˍEpson x V4000 UV印刷機發表會",
+          "owner": "朱祖翎",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/11",
+          "end": "2026/08/14",
+          "designer": "Machi",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/10 17:34",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "1",
+          "sheetRow": 612,
+          "_sheetRow": 612
         }
       }
     }
