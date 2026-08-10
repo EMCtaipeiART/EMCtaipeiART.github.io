@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 218,
+  "revision": 219,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T07:46:42.705Z",
+  "updatedAt": "2026-08-10T07:50:15.657Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16461,7 +16461,7 @@
           "專案負責人": "廖秦葦",
           "設計種類": "平面",
           "階段": "後製",
-          "數量": "3",
+          "數量": "1",
           "開始日期": "2026/08/06",
           "結束日期": "2026/08/10",
           "設計負責人": "Anna",
