@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 196,
+  "revision": 197,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T04:23:09.397Z",
+  "updatedAt": "2026-08-10T04:57:55.743Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20914,20 +20914,6 @@
       ],
       "primaryKey": null,
       "rows": [
-        {
-          "名字": "Machi",
-          "限時動態連結": "https://lh3.googleusercontent.com/d/1u5jq4rib_mfBv7tdnvhF5IiAlJPIi0f4=w1600",
-          "按讚": "Leona",
-          "倒讚": "Machi , Anna",
-          "留言": "[{\"id\":\"3ced353e-f6ee-45c9-9303-1b01ee66f056\",\"name\":\"Machi\",\"account\":\"machi.chen@emctaipei.com\",\"avatar\":\"https://ci3.googleusercontent.com/mail-sig/AIorK4y7KgeNbB2ORCa32XzaexZxt4rq9QfGWiPppN8IXW2KWldvfH0KYvuVfQG5i9R096axQ2TJ7oI5oBQl\",\"text\":\"test\",\"createdAt\":\"2026-07-17T08:14:04.519Z\"},{\"id\":\"5975bc18-dc6a-419d-8ee7-66dd6bf58ad8\",\"name\":\"Amber\",\"account\":\"amber.tian@emctaipei.com\",\"avatar\":\"https://ci3.googleusercontent.com/mail-sig/AIorK4wVTmZUiry83JlQnaRwVBHUxKYDPRtzWteDefh5McJAGNVPpwWeu5j8YqjOi9-1RPJ-Vshg3gbA3zBJ\",\"text\":\"666666666\",\"createdAt\":\"2026-07-17T08:55:41.743Z\"},{\"id\":\"e972fcb6-c46b-4b3b-90fd-1d14845acd5e\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"\",\"text\":\"這三小\",\"createdAt\":\"2026-07-17T09:00:21.904Z\"},{\"id\":\"611de330-86e8-42b7-9483-58ea0febc2b7\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"💩💩💩💩💩\",\"createdAt\":\"2026-07-17T09:03:47.618Z\"},{\"id\":\"49f98f40-8044-44bf-b2df-55b0338feba9\",\"name\":\"余采馨\",\"account\":\"cindy.yu@emctaipei.com\",\"avatar\":\"\",\"text\":\"第一名\",\"createdAt\":\"2026-07-17T12:12:29.392Z\"},{\"id\":\"c06a4932-94c2-4c48-a551-85f6f0bf4b8f\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"回來了???\",\"createdAt\":\"2026-07-27T06:43:06.072Z\"}]"
-        },
-        {
-          "名字": "Machi",
-          "限時動態連結": "https://lh3.googleusercontent.com/d/13we64japkEAQZs46TxRSk2d2EMx5GtGO=w1600",
-          "按讚": "",
-          "倒讚": "",
-          "留言": "[{\"id\":\"1de4b31d-8de1-4476-a949-294df3286e65\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"\",\"text\":\"罵急沒P言\",\"createdAt\":\"2026-07-17T09:00:45.553Z\"},{\"id\":\"f42fa817-9540-4b2a-a6d5-0082251d96ef\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"💩💩💩💩💩\",\"createdAt\":\"2026-07-17T09:04:39.179Z\"},{\"id\":\"406d2d58-43cc-42b3-bb18-bf07860a49b7\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"回來啦\",\"createdAt\":\"2026-07-27T06:42:53.040Z\"}]"
-        },
         {
           "名字": "Anna",
           "限時動態連結": "https://lh3.googleusercontent.com/d/1LSzAxomWo57cQ-48hZX8d_IygbFnQqPv=w1600",
