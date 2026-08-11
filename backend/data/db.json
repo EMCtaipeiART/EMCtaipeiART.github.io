@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 304,
+  "revision": 305,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T08:13:51.503Z",
+  "updatedAt": "2026-08-11T08:26:28.653Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17287,6 +17287,11 @@
           "短碼": "9eBQ5o",
           "原始網址": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
           "建立時間": "2026/08/11 8:48:12"
+        },
+        {
+          "短碼": "MRQLTV",
+          "原始網址": "https://example.com/",
+          "建立時間": "Worker QA 2026-08-11T08:26:28.435Z"
         }
       ]
     },
@@ -21391,7 +21396,9 @@
         "限時動態連結",
         "按讚",
         "倒讚",
-        "留言"
+        "留言",
+        "保留期限",
+        "到期時間"
       ],
       "primaryKey": null,
       "rows": [
