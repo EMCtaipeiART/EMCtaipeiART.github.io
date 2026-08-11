@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 236,
+  "revision": 237,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-10T12:29:43.684Z",
+  "updatedAt": "2026-08-11T00:48:16.214Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17280,6 +17280,11 @@
           "短碼": "2Vnj7J",
           "原始網址": "https://www.youtube.com/watch?v=qrCrAJyjvmQ&ab_channel=LIONS%7CTheHomeofCreativity",
           "建立時間": "2026/08/08 21:54:40"
+        },
+        {
+          "短碼": "9eBQ5o",
+          "原始網址": "https://emctaipeiart.github.io/json_database_admin.html?v=20260808-weight-rules-live-11",
+          "建立時間": "2026/08/11 8:48:12"
         }
       ]
     },
