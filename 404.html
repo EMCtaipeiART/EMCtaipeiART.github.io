@@ -7,8 +7,6 @@
   <meta name="robots" content="noindex">
   <meta name="app-version" content="20260809-static-short-index-1">
   <link rel="preload" href="/data/short_link_index.json" as="fetch" crossorigin="anonymous">
-  <link rel="preconnect" href="https://script.google.com" crossorigin>
-  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <title>EMC 短連結</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
@@ -43,7 +41,7 @@
     @media(max-width:520px){body{padding:16px}main{padding:24px 18px}.input-row,.result-row{grid-template-columns:1fr}h1{font-size:24px}button{width:100%}}
     @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   </style>
-  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
+  <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body>
   <main id="creator">
@@ -73,10 +71,10 @@
   </main>
   <script>
     (() => {
-      const appsScriptFallbackApiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+      const cloudflareWorkerApiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
       let savedApiUrl = '';
       try { savedApiUrl = localStorage.getItem('designRequestApiUrl') || ''; } catch (error) {}
-      const apiUrl = savedApiUrl || (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io' ? appsScriptFallbackApiUrl : `${location.origin}/api`);
+      const apiUrl = savedApiUrl || (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io' ? cloudflareWorkerApiUrl : `${location.origin}/api`);
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
       const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
       const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';

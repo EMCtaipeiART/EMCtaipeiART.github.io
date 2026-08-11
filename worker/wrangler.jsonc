@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "machi-design-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "vars": {
+    "ENVIRONMENT": "production",
+    "ALLOWED_ORIGINS": "https://emctaipeiart.github.io,http://127.0.0.1:8787,http://localhost:8787",
+    "GITHUB_OWNER": "EMCtaipeiART",
+    "GITHUB_REPO": "EMCtaipeiART.github.io",
+    "GITHUB_BRANCH": "main",
+    "GITHUB_DATABASE_PATH": "backend/data/db.json",
+    "GOOGLE_OAUTH_CLIENT_ID": "501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com",
+    "ERP_BASE_URL": "https://manage.emctaipei.com",
+    "ERP_CLIENT_ID": "oauth_n3gUqm5r84Mu",
+    "ERP_REDIRECT_URI": "https://emctaipeiart.github.io",
+    "ADMIN_LOGIN_ACCOUNTS": "machi.chen@emctaipei.com",
+    "SESSION_TTL_SECONDS": "2592000"
+  },
+  "secrets": {
+    "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DATABASE_COORDINATOR",
+        "class_name": "DatabaseCoordinator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DatabaseCoordinator"]
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    }
+  }
+}

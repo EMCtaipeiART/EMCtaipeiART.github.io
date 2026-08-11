@@ -3,4 +3,8 @@ backend/data/*.bak
 backend/data/*.tmp
 backend/.env
 backend/media/uploads/
+worker/node_modules/
+worker/.dev.vars
+worker/.wrangler/
+worker/dist/
 .DS_Store

@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-10 Asia/Taipei | build: 20260810-story-json-sync-106 -->
+<!-- LAST_MODIFIED: 2026-08-11 Asia/Taipei | build: 20260811-cloudflare-worker-auth-109 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
@@ -6281,7 +6281,7 @@
     html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
     html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
   </style>
-  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
+  <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body>
 <header>
@@ -6774,7 +6774,7 @@ function readIssueReportsCache(){try{const cached=JSON.parse(localStorage.getIte
 let issueReports = readIssueReportsCache();
 let issueReportsLoading = false;
 let issueReportsLoadId = 0;
-const appsScriptFallbackApiUrl = 'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+const cloudflareWorkerApiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
 function resolveDesignApiUrl(){
   const queryValue=new URLSearchParams(location.search).get('api')||'';
   const metaValue=document.querySelector('meta[name="design-api-url"]')?.content||'';
@@ -6782,7 +6782,7 @@ function resolveDesignApiUrl(){
   try{savedValue=localStorage.getItem('designRequestApiUrl')||''}catch(err){}
   const configured=String(queryValue||metaValue||savedValue).trim();
   if(configured)return configured;
-  if(location.protocol==='file:'||location.hostname==='emctaipeiart.github.io')return appsScriptFallbackApiUrl;
+  if(location.protocol==='file:'||location.hostname==='emctaipeiart.github.io')return cloudflareWorkerApiUrl;
   return `${location.origin}/api`;
 }
 const apiUrl = resolveDesignApiUrl();
@@ -6825,7 +6825,7 @@ const reelsSheetId = 1503122183;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260811-role-template-defaults-108';
+const appBuildVersion = '20260811-cloudflare-worker-auth-109';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6912,7 +6912,7 @@ const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
-const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260811-role-template-defaults-5';
+const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260811-permission-background-writes-6';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
@@ -7182,7 +7182,7 @@ function saveRemoteSettingsForAccount(message='個人設定已儲存'){
     remoteSettingsSaveQueue=remoteSettingsSaveQueue.catch(()=>{}).then(async()=>{
       try{
         const data=await sheetApi('saveUserSettings',{account,editorToken:token,settings});
-        if(data.action!=='saveUserSettings')throw new Error('Apps Script 尚未支援個人設定寫入，請重新部署最新版本');
+        if(data.action!=='saveUserSettings')throw new Error('Cloudflare Worker 尚未回傳個人設定寫入結果');
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`${editor} 的${message}`);
       }catch(err){
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`設定已套用，但寫回表單失敗：${err.message}`,true);
@@ -7719,7 +7719,7 @@ async function loadIssueReports({background=false}={}){
       const data=await sheetApi('listIssueReports',{_requireResponse:true});
       loaded=Array.isArray(data.rows)?data.rows.map(report=>normalizeIssueReport(report)):[];
     }catch(apiError){
-      console.warn('Apps Script 回報列表讀取失敗，改用試算表備援',apiError);
+      console.warn('Cloudflare Worker 回報列表讀取失敗，改用公開 JSON 備援',apiError);
       loaded=await fetchIssueReportsFromGviz();
     }
     if(loadId!==issueReportsLoadId)return;
@@ -8057,11 +8057,9 @@ function diagnosticUrl(){
   return `${apiUrl}${apiUrl.includes('?')?'&':'?'}${params.toString()}&callback=testCallback`;
 }
 function scriptUrlStatus(){
-  if(!apiUrl)return {ok:false,message:'SCRIPT_URL 未設定'};
-  if(/\/api(?:\/|\?|$)/.test(apiUrl))return {ok:true,message:`JSON API：${apiUrl}`};
-  if(/\/dev(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 目前是 /dev，請改用 /exec：${apiUrl}`};
-  if(!/\/exec(?:\?|$)/.test(apiUrl))return {ok:false,message:`SCRIPT_URL 不是 /exec 部署網址：${apiUrl}`};
-  return {ok:true,message:`SCRIPT_URL：${apiUrl}`};
+  if(!apiUrl)return {ok:false,message:'Cloudflare Worker API 尚未設定'};
+  try{const url=new URL(apiUrl,location.href);return {ok:/^https?:$/.test(url.protocol),message:`Cloudflare Worker API：${url.href}`}}
+  catch(error){return {ok:false,message:`Cloudflare Worker API 網址錯誤：${apiUrl}`}}
 }
 function pingUrl(){
   const params=new URLSearchParams({action:'ping',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
@@ -8100,12 +8098,12 @@ async function checkRegularUserWriteAccess(){
   closeAccountMenu();
   setSync('正在檢查一般使用者寫入權限...');
   try{
-    const data=await jsonp(writeAccessCheckUrl(),15000,'寫入權限檢查逾時，請確認 Apps Script 已重新部署。');
+    const data=await jsonp(writeAccessCheckUrl(),15000,'寫入權限檢查逾時，請確認 Cloudflare Worker 是否正常。');
     if(!data?.ok||data.action!=='writeAccessCheck'){
       const detail=String(data?.error||'');
       const message=detail==='Unknown action'
-        ?'Apps Script 線上版本過舊，尚未包含一般使用者寫入權限檢查，請將 google_apps_script.gs 重新部署為 Web App'
-        :(detail||'Apps Script 尚未支援寫入權限檢查，請重新部署最新版本');
+        ?'Cloudflare Worker 版本尚未包含一般使用者寫入權限檢查'
+        :(detail||'Cloudflare Worker 尚未支援寫入權限檢查');
       throw new Error(message);
     }
     regularUserWriteCheck={canCreate:Boolean(data.permissions?.createRequest),checkedAt:data.checkedAt||''};
@@ -8124,38 +8122,24 @@ async function checkRegularUserWriteAccess(){
 }
 async function testAppsScriptConnection(){
   const status=scriptUrlStatus();
-  console.info('[Apps Script 測試連線]',status);
+  console.info('[Cloudflare Worker 測試連線]',status);
   if(!status.ok){
     setSync(status.message,true);
     alert(status.message);
     return;
   }
-  setSync('Apps Script 測試連線中...');
+  setSync('Cloudflare Worker 測試連線中...');
   try{
-    const data=await jsonp(pingUrl(),15000,`Apps Script ping 逾時。SCRIPT_URL：${apiUrl}`);
-    console.info('[Apps Script ping 回傳]',data);
-    if(!data?.ok)throw Object.assign(new Error(data?.error||'Apps Script ping 失敗'),{rawResponse:data});
+    const data=await jsonp(pingUrl(),15000,`Cloudflare Worker ping 逾時。API：${apiUrl}`);
+    console.info('[Cloudflare Worker ping 回傳]',data);
+    if(!data?.ok)throw Object.assign(new Error(data?.error||'Cloudflare Worker ping 失敗'),{rawResponse:data});
     const version=data.version||data.scriptVersion||'(未回傳版本)';
-    const latestVersion='admin-user-preview-write-check-2026-07-17-1';
-    const isJsonBackend=data.storage==='json';
-    const isLatest=isJsonBackend||version===latestVersion;
-    const authCheck=await jsonp(urlFetchAuthCheckUrl(),15000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
-    console.info('[Apps Script UrlFetchApp 權限檢查]',authCheck);
-    const fetchOk=Boolean(authCheck?.ok);
-    const authActionMissing=String(authCheck?.error||'').includes('Unknown action')||String(authCheck?.reason||'').includes('Unknown action');
-    const fetchMessage=fetchOk
-      ? `UrlFetchApp.fetch：可執行（測試狀態 ${authCheck.status}）`
-      : (authActionMissing
-        ? 'UrlFetchApp.fetch：目前線上部署缺少權限檢查 action，請重新部署最新版 Apps Script。'
-        : `UrlFetchApp.fetch：尚未授權或執行失敗｜${authCheck?.error||authCheck?.rawError||'未回傳錯誤'}`);
-    const text=isJsonBackend
-      ?`JSON 後台連線成功｜版本：${version}｜資料修訂：${data.revision??'-'}`
-      :`Apps Script 連線成功｜SCRIPT_VERSION：${version}${isLatest?'':'｜目前不是最新部署'}｜${fetchOk?'UrlFetchApp 已授權':(authActionMissing?'需重新部署':'UrlFetchApp 需重新授權')}`;
-    setSync(text,!isLatest||!fetchOk);
-    alert(isJsonBackend?`${text}\n${apiUrl}`:`${text}\n${fetchMessage}\n${isLatest?'':'請重新部署最新版 Apps Script。\\n'}${fetchOk||authActionMissing?'':'請在 Apps Script 編輯器執行一次 checkUrlFetchAuthorization_，允許權限後重新部署。\\n'}${apiUrl}`);
+    const text=`Cloudflare Worker 連線成功｜版本：${version}｜資料修訂：${data.revision??'-'}｜儲存：${data.storage||'—'}`;
+    setSync(text);
+    alert(`${text}\n${apiUrl}`);
   }catch(err){
-    console.error('[Apps Script ping 失敗]',{error:err,scriptUrl:apiUrl});
-    const message=`Apps Script API 讀取失敗：${err.message||err}\\nSCRIPT_URL：${apiUrl}\\n請確認 Web App 設定 Execute as: Me、Who has access: Anyone，且使用 /exec。`;
+    console.error('[Cloudflare Worker ping 失敗]',{error:err,apiUrl});
+    const message=`Cloudflare Worker API 讀取失敗：${err.message||err}\\nAPI：${apiUrl}`;
     setSync(message,true);
     alert(message);
   }
@@ -8175,72 +8159,72 @@ function publishDatabaseRefresh(action,data={}){
   if('BroadcastChannel' in window){try{const channel=new BroadcastChannel(databaseRefreshChannelName);channel.postMessage(message);channel.close()}catch(error){}}
 }
 async function sheetApi(action,payload={}){
-  if(!apiUrl) throw new Error('尚未設定 Apps Script 網址');
+  if(!apiUrl) throw new Error('尚未設定 Cloudflare Worker API 網址');
   payload = withSheetTarget(payload);
   if(['listReels','toggleReelReaction','addReelComment'].includes(action)){
     const data=await writeToSheetByJsonp({action,...payload},20000,action==='listReels'?'限時動態載入逾時':'限時動態回應同步逾時');
     if(!data.ok)throw new Error(data.error||'限時動態同步失敗');
-    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本`);
+    if(data.action!==action)throw new Error(`Cloudflare Worker 尚未支援 ${action}`);
     return data;
   }
   if(action==='createFlatProject'){
     const data=await writeToSheetByJsonp({action,...payload});
     if(!data.ok)throw new Error(data.error||'新專案寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳新專案寫入結果，請重新部署最新版本後再試');
+    if(data.action!==action)throw new Error('Cloudflare Worker 尚未回傳新專案寫入結果');
     publishDatabaseRefresh(action,data);return data;
   }
   if(action==='googleLogin'){
     const data=await googleLoginByFrame(payload.credential||payload.idToken||'');
     if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+    if(data.action!==action)throw new Error('Cloudflare Worker 尚未回傳 Google 登入結果');
     return data;
   }
   if(action==='verifyToken'||action==='logout'){
     const data=await writeToSheetByJsonp({action,...payload},20000,`${action==='verifyToken'?'登入狀態驗證':'登出'}沒有回應，請稍後再試。`);
     if(!data.ok)throw new Error(data.error||`${action} 失敗`);
-    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
+    if(data.action!==action)throw new Error(`Cloudflare Worker 尚未支援 ${action}`);
     return data;
   }
   if(action==='saveUserSettings'){
     const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:30000,_timeoutMessage:'個人設定寫入逾時，請稍後再試。'});
     if(!data.ok)throw new Error(data.error||'個人設定寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未回傳個人設定寫入結果，請重新部署最新版本');
+    if(data.action!==action)throw new Error('Cloudflare Worker 尚未回傳個人設定寫入結果');
     return data;
   }
   if(action==='updateModificationConfirm'){
     const data=await writeToSheetByJsonp({action,...payload},60000,'確認修正日寫入逾時，請稍後重新整理確認。');
     if(!data.ok)throw new Error(data.error||'確認修正日寫入失敗');
-    if(data.action!==action)throw new Error('Apps Script 尚未支援確認修正日寫入，請重新部署最新版本後再試');
+    if(data.action!==action)throw new Error('Cloudflare Worker 尚未支援確認修正日寫入');
     return data;
   }
 	  if(action==='addModificationRecord'){
 	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true,_timeoutMs:60000,_timeoutMessage:'修改紀錄寫入較慢，請稍後重新整理確認。'});
 	    if(!data.ok)throw new Error(data.error||'修改紀錄寫入失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援修改紀錄寫入，請重新部署最新版本後再試');
+	    if(data.action!==action)throw new Error('Cloudflare Worker 尚未支援修改紀錄寫入');
     return data;
   }
   if(action==='uploadDesignerImage'){
 	    const data=await postToSheetByFrame({action,...payload,_requireResponse:true});
 	    if(!data.ok)throw new Error(data.error||'照片上傳失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援照片上傳，請重新部署最新版本後再試');
+	    if(data.action!==action)throw new Error('圖片上傳服務尚未回傳照片上傳結果');
 	    return data;
 	  }
 	  if(action==='reportIssue'){
 	    const data=await writeToSheetByJsonp({action,...payload},20000,'問題回報寫入逾時，請稍後再試。');
 	    if(!data.ok)throw new Error(data.error||'問題回報送出失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援問題回報，請重新部署最新版本後再試');
+	    if(data.action!==action)throw new Error('Cloudflare Worker 尚未支援問題回報');
 	    return data;
 	  }
 	  if(action==='listIssueReports'){
 	    const data=await writeToSheetByJsonp({action,...payload},5000,'回報列表讀取逾時');
 	    if(!data.ok)throw new Error(data.error||'回報列表讀取失敗');
-	    if(data.action!==action)throw new Error('Apps Script 尚未支援回報列表');
+	    if(data.action!==action)throw new Error('Cloudflare Worker 尚未支援回報列表');
 	    return data;
 	  }
 	  if(action==='updateIssueReportStatus'){
 	    const data=await writeToSheetByJsonp({action,...payload},15000,'回報狀態同步逾時，請稍後再試。');
 	    if(!data.ok)throw new Error(data.error||'回報列表同步失敗');
-	    if(data.action!==action)throw new Error(`Apps Script 尚未支援 ${action}，請重新部署最新版本後再試`);
+	    if(data.action!==action)throw new Error(`Cloudflare Worker 尚未支援 ${action}`);
 	    return data;
 	  }
 	  if(action==='add'||action==='batchAdd'){
@@ -8265,11 +8249,10 @@ async function sheetApi(action,payload={}){
 function fetchWithTimeout(url,options={},ms=25000){const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),ms); return fetch(url,{...options,signal:controller.signal}).finally(()=>clearTimeout(timer))}
 async function appsScriptFetch(url,options={},timeoutMs=25000){
   const response=await fetchWithTimeout(url,{...options,credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs);
-  if(!response.ok)throw new Error(`Apps Script 回應失敗：${response.status}`);
+  if(!response.ok)throw new Error(`Cloudflare Worker 回應失敗：${response.status}`);
   const text=await response.text();
   try{return JSON.parse(text)}catch(error){
-    const looksLikeGooglePage=/<(?:html|title|body)|無法開啟這個檔案|Google Drive/i.test(text);
-    throw new Error(looksLikeGooglePage?'Apps Script 被 Google 工作階段錯誤導向':'Apps Script 回傳格式錯誤');
+    throw new Error('Cloudflare Worker 回傳格式錯誤');
   }
 }
 function appsScriptGet(url,timeoutMs=25000){return appsScriptFetch(url,{method:'GET'},timeoutMs)}
@@ -8290,7 +8273,7 @@ function jsonp(url,timeoutMs=20000,timeoutMessage='讀取逾時。請直接打�
 function postToSheet(payload){
   return appsScriptPost(payload,Number(payload?._timeoutMs)||60000);
 }
-function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處理時間較久，請稍候重新整理確認；若仍未更新，請按「測試連線」檢查 Apps Script 權限。'){
+function writeToSheetByJsonp(payload,timeoutMs=120000,timeoutMessage='寫入處理時間較久，請稍候重新整理確認；若仍未更新，請按「測試連線」檢查 Cloudflare Worker。'){
   return appsScriptPost(payload,timeoutMs).catch(error=>{throw new Error(`${timeoutMessage} ${error.message||error}`)});
 }
 function createResultResponse(action,result){
@@ -8321,29 +8304,29 @@ async function writeCreateToSheet(action,payload){
   if(second.data)return second.data;
   throw second.frameError||second.statusError||first.frameError||first.statusError||new Error('無法取得新增結果');
 }
-async function readActionWithFrameFallback(payload,timeoutMs=20000,timeoutMessage='Apps Script API 沒有回應。'){
+async function readActionWithFrameFallback(payload,timeoutMs=20000,timeoutMessage='Cloudflare Worker API 沒有回應。'){
   const actionName=payload?.action||'(未指定)';
   try{
     return await writeToSheetByJsonp(payload,timeoutMs,timeoutMessage);
   }catch(jsonpError){
-    console.warn(`[Apps Script API] ${actionName} 第一次匿名請求失敗，正在重試`,jsonpError);
+    console.warn(`[Cloudflare Worker API] ${actionName} 第一次請求失敗，正在重試`,jsonpError);
     try{
       await new Promise(resolve=>setTimeout(resolve,450));
       return await appsScriptPost(payload,timeoutMs);
     }catch(frameError){
       const message=[
-        `Apps Script API 讀取失敗。`,
+        `Cloudflare Worker API 讀取失敗。`,
         `第一次請求：${jsonpError?.message||jsonpError}`,
         `第二次請求：${frameError?.message||frameError}`
       ].join('\n');
-      throw Object.assign(new Error(message),{reason:'APPS_SCRIPT_API_READ_FAILED',jsonpError,frameError,scriptUrl:apiUrl,action:actionName});
+      throw Object.assign(new Error(message),{reason:'WORKER_API_READ_FAILED',jsonpError,frameError,apiUrl,action:actionName});
     }
   }
 }
-async function googleLoginByPost(payload,timeoutMessage='Google 登入驗證沒有回應。請按「測試連線」檢查 Apps Script 權限。',timeoutMs=20000){
+async function googleLoginByPost(payload,timeoutMessage='Google 登入驗證沒有回應。請按「測試連線」檢查 Cloudflare Worker。',timeoutMs=20000){
   const data=await appsScriptPost(payload,timeoutMs);
   if(!data.ok)throw new Error(data.error||'Google 登入失敗');
-  if(data.action!==payload.action)throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+  if(data.action!==payload.action)throw new Error('Cloudflare Worker 尚未回傳 Google 登入結果');
   return data;
 }
 function googleProfileFromCredential(credential){
@@ -8364,27 +8347,27 @@ async function googleLoginByJsonp(credential){
   const email=String(profile?.email||'').trim();
   const payload=withSheetTarget({action:'googleLogin',credential});
   console.info('[Google 登入送後端驗證]',{transport:'credentialless-fetch',email:email||'(未解析)',aud:profile?.aud||'', appBuildVersion});
-  const data=await writeToSheetByJsonp(payload,20000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Apps Script 是否可執行。');
+  const data=await writeToSheetByJsonp(payload,20000,'Google 登入驗證沒有回應，請按「測試連線」檢查 Cloudflare Worker。');
   console.info('[Google 登入後端回傳]',{ok:data?.ok, action:data?.action, error:data?.error, reason:data?.reason, receivedAud:data?.receivedAud, receivedEmail:data?.receivedEmail, emailVerified:data?.emailVerified, loginDebug:data?.loginDebug});
   if(!data.ok){
     const error=new Error(data.error||'Google 登入失敗');
     Object.assign(error,{reason:data.reason,expectedClientId:data.expectedClientId,receivedAud:data.receivedAud,receivedEmail:data.receivedEmail,emailVerified:data.emailVerified});
     throw error;
   }
-  if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+  if(data.action!=='googleLogin')throw new Error('Cloudflare Worker 尚未回傳 Google 登入結果');
   return data;
 }
 async function diagnoseAppsScriptApi(){
-  const result={scriptUrl:apiUrl};
+  const result={apiUrl};
   try{
-    const ping=await jsonp(pingUrl(),8000,`Apps Script ping 逾時。SCRIPT_URL：${apiUrl}`);
+    const ping=await jsonp(pingUrl(),8000,`Cloudflare Worker ping 逾時。API：${apiUrl}`);
     result.ping=ping;
     result.version=ping?.version||ping?.scriptVersion||'';
   }catch(err){
     result.pingError=err.message||String(err);
   }
   try{
-    const auth=await jsonp(urlFetchAuthCheckUrl(),10000,`UrlFetchApp 權限檢查逾時。SCRIPT_URL：${apiUrl}`);
+    const auth=await jsonp(urlFetchAuthCheckUrl(),10000,`Cloudflare Worker 外部連線檢查逾時。API：${apiUrl}`);
     result.urlFetchAuth=auth;
   }catch(err){
     result.urlFetchAuthError=err.message||String(err);
@@ -8402,30 +8385,30 @@ async function googleLoginByFrame(credential){
     }
     console.warn('[Google 登入第一次匿名請求未完成，正在重試]',{error:jsonpError,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||''});
   }
-  const payload=withSheetTarget({action:'googleLogin',credential,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API 登入驗證沒有回應。'});
-  console.info('[Google 登入送 Apps Script API]',{transport:'credentialless-fetch-retry',scriptUrl:apiUrl,email:email||'(未解析)',aud:profile?.aud||'',appBuildVersion});
+  const payload=withSheetTarget({action:'googleLogin',credential,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Cloudflare Worker API 登入驗證沒有回應。'});
+  console.info('[Google 登入送 Cloudflare Worker API]',{transport:'credentialless-fetch-retry',apiUrl,email:email||'(未解析)',aud:profile?.aud||'',appBuildVersion});
   let data;
   try{
     data=await postToSheetByFrame(payload);
   }catch(err){
     const diagnostic=await diagnoseAppsScriptApi();
-    console.error('[Google 登入 Apps Script API 讀取失敗]',{error:err,diagnostic,scriptUrl:apiUrl,email:email||'',aud:profile?.aud||'',payloadAction:'googleLogin'});
+    console.error('[Google 登入 Cloudflare Worker API 讀取失敗]',{error:err,diagnostic,apiUrl,email:email||'',aud:profile?.aud||'',payloadAction:'googleLogin'});
     const urlFetch=diagnostic.urlFetchAuth;
     const urlFetchDetail=urlFetch
-      ? (urlFetch.ok?`UrlFetchApp：可執行（status ${urlFetch.status}）`:`UrlFetchApp：失敗｜${urlFetch.error||urlFetch.rawError||urlFetch.reason||'未回傳錯誤'}`)
-      : `UrlFetchApp：檢查失敗｜${diagnostic.urlFetchAuthError||'未回應'}`;
-    const versionDetail=diagnostic.version?`SCRIPT_VERSION：${diagnostic.version}`:`ping：${diagnostic.pingError||'未回應'}`;
-    const apiError=new Error(`Apps Script API 讀取失敗：${err.message||err}\n${versionDetail}\n${urlFetchDetail}`);
-    Object.assign(apiError,{reason:'APPS_SCRIPT_API_READ_FAILED',receivedEmail:email,receivedAud:profile?.aud||'',scriptUrl:apiUrl,diagnostic});
+      ? (urlFetch.ok?`外部驗證：可執行（status ${urlFetch.status}）`:`外部驗證：失敗｜${urlFetch.error||urlFetch.rawError||urlFetch.reason||'未回傳錯誤'}`)
+      : `外部驗證：檢查失敗｜${diagnostic.urlFetchAuthError||'未回應'}`;
+    const versionDetail=diagnostic.version?`Worker 版本：${diagnostic.version}`:`ping：${diagnostic.pingError||'未回應'}`;
+    const apiError=new Error(`Cloudflare Worker API 讀取失敗：${err.message||err}\n${versionDetail}\n${urlFetchDetail}`);
+    Object.assign(apiError,{reason:'WORKER_API_READ_FAILED',receivedEmail:email,receivedAud:profile?.aud||'',apiUrl,diagnostic});
     throw apiError;
   }
-  console.info('[Google 登入 Apps Script API 回傳]',data);
+  console.info('[Google 登入 Cloudflare Worker API 回傳]',data);
   if(!data?.ok){
-    const error=new Error(data?.error||'Apps Script API 登入驗證失敗');
-    Object.assign(error,{reason:data?.reason||'APPS_SCRIPT_API_ERROR',expectedClientId:data?.expectedClientId,receivedAud:data?.receivedAud,receivedEmail:data?.receivedEmail||email,emailVerified:data?.emailVerified,rawResponse:data,scriptUrl:apiUrl});
+    const error=new Error(data?.error||'Cloudflare Worker API 登入驗證失敗');
+    Object.assign(error,{reason:data?.reason||'WORKER_API_ERROR',expectedClientId:data?.expectedClientId,receivedAud:data?.receivedAud,receivedEmail:data?.receivedEmail||email,emailVerified:data?.emailVerified,rawResponse:data,apiUrl});
     throw error;
   }
-  if(data.action!=='googleLogin')throw new Error('Apps Script 尚未回傳 Google 登入結果，請重新部署最新版本後再試');
+  if(data.action!=='googleLogin')throw new Error('Cloudflare Worker 尚未回傳 Google 登入結果');
   return data;
 }
 async function googleEmailLoginByJsonp(email,name=''){
@@ -8764,7 +8747,7 @@ function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor);
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():'', displayName=currentUserDisplayName(); if(url){const fallback=accountInitial(displayName); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(displayName)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(displayName):'登'}}
 function canOpenDesignDashboard(){return !isAdminUserPreview()&&(designerOptions.includes(currentEditor)||currentDesignGroup()==='管理者'||isLocalAdminToken())}
 function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designerRole=hasDesignerAccountRole(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), displayName=currentUserDisplayName(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), personalSettingsBtn=$('#accountPersonalSettings'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), archiveBtn=$('#accountArchiveManager'), jsonAdminBtn=$('#accountJsonDatabaseAdmin'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const department=currentEditorDepartment||'', accountSubtitle=preview?'一般使用者預覽':(department||'未設定部門'); if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?displayName:'登入'; if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com'; renderAccountAvatar(); if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||designerRole||isLocalAdminToken(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(archiveBtn)archiveBtn.hidden=!admin||preview; if(jsonAdminBtn)jsonAdminBtn.hidden=!admin||preview; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
-function openDesignDashboard(){if(!canOpenDesignDashboard()){setSync('設計儀表板僅開放設計師與管理者使用',true);return} localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:currentEditor,account:currentEditorAccount,group:currentDesignGroup(),authToken:isLocalAdminToken()?currentEditorToken:'',returnUrl:location.href,updatedAt:Date.now()})); const url=new URL(designDashboardUrl); url.searchParams.set('designer',currentEditor); window.open(url.toString(),'_blank','noopener')}
+function openDesignDashboard(){if(!canOpenDesignDashboard()){setSync('設計儀表板僅開放設計師與管理者使用',true);return} localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:currentEditor,account:currentEditorAccount,group:currentDesignGroup(),authToken:currentEditorToken,returnUrl:location.href,updatedAt:Date.now()})); const url=new URL(designDashboardUrl); url.searchParams.set('designer',currentEditor); window.open(url.toString(),'_blank','noopener')}
 function consumeDashboardCaseFocus(){const id=localStorage.getItem('designRequestFocusCaseV1')||'';if(!id||!rows.some(row=>String(row.id)===String(id)))return false;localStorage.removeItem('designRequestFocusCaseV1');focusNotificationCase(id);return true}
 function syncTopPanelHeights(){
   const designer=$('#designerPanel'), recent=$('#recentPanel');
@@ -9402,13 +9385,11 @@ function submitFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
 function redirectFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
 function applyLoginRedirectResult(data,source='登入'){if(!data?.ok||!data?.token||!data?.user)throw Object.assign(new Error(data?.error||`${source}未完成驗證`),{rawResponse:data}); console.info(`[${source}成功]`,data.loginDebug||{account:data.account,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}
 function taipeiDateParts(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value])); return {year:parts.year,month:parts.month,day:parts.day}}
-function todayAdminPassword(){const {month,day}=taipeiDateParts(); return `${month}${day}`}
-function todayAdminToken(){const {year,month,day}=taipeiDateParts(); return `local-admin:${year}${month}${day}`}
-function isLocalAdminToken(token=currentEditorToken){return String(token||'').startsWith('local-admin:')}
-function isLocalAdminTokenValid(token=currentEditorToken){return String(token||'')===todayAdminToken()}
-function loginLocalAdmin(){currentEditor='管理者'; currentEditorDisplayName='管理者'; currentEditorAccount='local-admin'; currentEditorToken=todayAdminToken(); currentEditorGroup='管理者'; currentEditorDepartment='管理者'; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); setSync('已登入：管理者'); finishLoginOverlay('登入成功：管理者')}
+function isLocalAdminToken(){return false}
+function isLocalAdminTokenValid(){return false}
+function loginLocalAdmin(){throw new Error('本機管理者登入已停用，請透過 Cloudflare Worker 驗證')}
 function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; selectedCaseIds.clear()}
-function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|ping|frameCallback/i.test(error?.message||''); const displayContext=apiReadFailed?'Apps Script API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,scriptUrl:error?.scriptUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), scriptLikely=apiReadFailed||/Apps Script|測試連線|驗證沒有回應|JSONP|重新部署|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(scriptLikely?`請按「測試連線」確認 Apps Script 是否可執行，並確認已重新部署最新版本。SCRIPT_URL：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
+function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='WORKER_API_READ_FAILED'||/Cloudflare Worker API 讀取失敗|ping/i.test(error?.message||''); const displayContext=apiReadFailed?'Cloudflare Worker API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,apiUrl:error?.apiUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), apiLikely=apiReadFailed||/Cloudflare Worker|測試連線|驗證沒有回應|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(apiLikely?`請按「測試連線」確認 Cloudflare Worker 是否可執行。API：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
 function handleAdminLoginError(error){console.error('[管理者登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`管理者登入失敗：${message}`,{skipGoogleInit:false}); const panel=$('#adminLoginPanel'); if(panel)panel.hidden=false; setLoginNote(`管理者登入失敗：${message}`,true); setSync(`管理者登入失敗：${message}`,true); updateLoginUi(); render()}
 function loginAccountFull(value){const text=String(value||'').trim().toLowerCase(); if(!text)return ''; return text.includes('@')?text:`${text}${loginDomain}`}
@@ -9423,10 +9404,6 @@ function isExpiredEditorSessionError(error){return /TOKEN_EXPIRED|登入狀態�
 async function verifyStoredEditorToken(){
   const token=currentEditorToken||pendingEditorSession.token;
   if(!token){clearLoginAuthState();updateLoginUi();return false}
-  if(isLocalAdminToken(token)){
-    if(!isLocalAdminTokenValid(token)){clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();return false}
-    currentEditor='管理者';currentEditorDisplayName='管理者';currentEditorAccount='local-admin';currentEditorToken=token;currentEditorGroup='管理者';currentEditorDepartment='管理者';persistEditorSession();applyCurrentUserProfile();updateLoginUi();render();return true;
-  }
   try{
     const data=await sheetApi('verifyToken',{editorToken:token});
     if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
@@ -9475,7 +9452,7 @@ async function keepEditorSessionAlive(){
 }
 function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
 function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; const configError=googleLoginConfigError(); console.info(`[登入診斷] app=${appBuildVersion}, origin=${location.origin}, expectedOrigin=${googleAuthorizedOrigin}, clientId=${googleOAuthClientId}`); if(configError){setLoginNote(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`,true); console.error('[Google OAuth 設定錯誤]',configError); return} ensureGoogleOauthChannel(); target.innerHTML='<button type="button" class="google-redirect-login" aria-label="使用 Google 帳號登入"><span class="google-g">G</span><span>使用 Google 帳號登入</span></button>'; const button=target.querySelector('button'); if(button)button.onclick=startGooglePopupLogin; target.dataset.ready='1'}
-async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByFrame(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Apps Script 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}catch(err){const context=err?.reason==='APPS_SCRIPT_API_READ_FAILED'?'Apps Script API':(googleEmail?`Google 登入（${googleEmail}）`:'Google 登入'); handleGoogleLoginError(err,context)}}
+async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(googleEmail?`Google 登入驗證中：${googleEmail}`:'Google 登入驗證中...'); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByFrame(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Cloudflare Worker 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}catch(err){const context=err?.reason==='WORKER_API_READ_FAILED'?'Cloudflare Worker API':(googleEmail?`Google 登入（${googleEmail}）`:'Google 登入'); handleGoogleLoginError(err,context)}}
 const googleOauthChannelName='machi-google-oauth-v1';
 let googleOauthChannel=null,googleLoginPopup=null;
 function googleAuthorizationUrl(state,nonce){const params=new URLSearchParams({client_id:googleOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state,nonce});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
@@ -9485,7 +9462,7 @@ function startGooglePopupLogin(){const configError=googleLoginConfigError();if(c
 function startGoogleRedirectLogin(){startGooglePopupLogin()}
 async function handleGoogleRedirectReturn(){const hash=new URLSearchParams(location.hash.replace(/^#/,''));const idToken=hash.get('id_token')||'',error=hash.get('error')||'',errorDescription=hash.get('error_description')||'';if(!idToken&&!error)return false;const returnedState=hash.get('state')||'',popupResult={type:'machi-google-oauth-result',idToken,state:returnedState,error,errorDescription};history.replaceState(null,document.title,location.pathname+location.search);if(window.name==='machiGoogleLogin'){let delivered=false;try{const channel=new BroadcastChannel(googleOauthChannelName);channel.postMessage(popupResult);channel.close();delivered=true}catch(err){}if(!delivered&&window.opener){try{window.opener.postMessage(popupResult,googleAuthorizedOrigin);delivered=true}catch(err){}}if(delivered){document.body.innerHTML='<main style="font-family:-apple-system,sans-serif;padding:32px;text-align:center"><h2>Google 登入完成</h2><p>正在返回設計需求系統...</p></main>';setTimeout(()=>window.close(),180);return true}}if(error){handleGoogleLoginError(new Error(errorDescription||error),'Google 跳轉登入');return true}const savedState=sessionStorage.getItem('designRequestGoogleLoginState')||'';sessionStorage.removeItem('designRequestGoogleLoginState');sessionStorage.removeItem('designRequestGoogleLoginNonce');if(savedState&&returnedState!==savedState){handleGoogleLoginError(new Error('Google 登入 state 不一致，請重新登入。'),'Google 跳轉登入');return true}showLoginPendingOverlay('Google 登入驗證中...');await handleGoogleCredential({credential:idToken,select_by:'redirect'});return true}
 async function handleGoogleAccessToken(response){handleGoogleLoginError(new Error('access_token 登入已停用，請使用 Google id_token 登入。'),'Google 登入')}
-async function erpLoginConfig(){try{const data=await readActionWithFrameFallback({action:'erpLoginConfig'},20000,'ERP 登入設定讀取逾時，請按「測試連線」確認 Apps Script。'); if(!data.ok)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:(data.error||'ERP OAuth 尚未設定')); return data}catch(err){if(err?.reason==='APPS_SCRIPT_API_READ_FAILED'||/Apps Script API 讀取失敗|SCRIPT_URL|iframe|JSONP/i.test(err?.message||'')){console.warn('[ERP 登入設定] Apps Script 讀取失敗，使用公開備援設定',err); setSync('ERP 設定讀取較慢，改用備援登入設定...'); return erpPublicFallbackConfig} throw err}}
+async function erpLoginConfig(){try{const data=await readActionWithFrameFallback({action:'erpLoginConfig'},20000,'ERP 登入設定讀取逾時，請按「測試連線」確認 Cloudflare Worker。'); if(!data.ok)throw new Error(data.missing?.length?`ERP OAuth 尚未設定：${data.missing.join(', ')}`:(data.error||'ERP OAuth 尚未設定')); return data}catch(err){if(err?.reason==='WORKER_API_READ_FAILED'||/Cloudflare Worker API 讀取失敗/i.test(err?.message||'')){console.warn('[ERP 登入設定] Worker 讀取失敗，使用公開備援設定',err); setSync('ERP 設定讀取較慢，改用備援登入設定...'); return erpPublicFallbackConfig} throw err}}
 async function startErpLogin(){try{const config=erpPublicFallbackConfig; const state=`erp_${Date.now()}_${randomBase64Url(16)}`, verifier=randomBase64Url(32), challenge=await sha256Base64Url(verifier); sessionStorage.setItem('designRequestErpLoginState',state); sessionStorage.setItem('designRequestErpCodeVerifier',verifier); sessionStorage.setItem('designRequestErpRedirectUri',config.redirectUri); localStorage.setItem('designRequestErpLoginState',state); localStorage.setItem('designRequestErpCodeVerifier',verifier); localStorage.setItem('designRequestErpRedirectUri',config.redirectUri); showLoginPendingOverlay('正在前往 ERP 登入...'); const params=new URLSearchParams({response_type:'code',client_id:config.clientId,redirect_uri:config.redirectUri,scope:config.scope||'openid profile',state,code_challenge:challenge,code_challenge_method:'S256'}); location.href=`${String(config.baseUrl||'https://manage.emctaipei.com').replace(/\/+$/,'')}/oauth/authorize?${params.toString()}`}catch(err){handleErpLoginError(err)}}
 async function continueErpLoginViaAppsScript(code,verifier,redirectUri){showLoginPendingOverlay('ERP 登入驗證中...'); try{const data=await readActionWithFrameFallback({action:'erpLogin',code,codeVerifier:verifier,redirectUri},30000,'ERP 登入驗證沒有回應，請稍候再試。'); applyLoginRedirectResult(data,'ERP 登入')}catch(err){handleErpLoginError(err)}}
 async function handleErpRedirectReturn(){
@@ -9542,13 +9519,13 @@ async function handleErpRedirectReturn(){
   return true;
 }
 async function verifyEditorLogin(account,password,newPassword=''){
-  if(!apiUrl) throw new Error('尚未設定 Apps Script 網址，無法登入');
-  const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Apps Script API login 沒有回應。'});
+  if(!apiUrl) throw new Error('尚未設定 Cloudflare Worker API，無法登入');
+  const payload=withSheetTarget({action:'login',account:loginAccountFull(account),password,newPassword,_requireResponse:true,_timeoutMs:20000,_timeoutMessage:'Cloudflare Worker API login 沒有回應。'});
   const data=await postToSheetByFrame(payload);
   if(!data.ok) throw new Error(data.error || '登入失敗');
   return data;
 }
-async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay('測試使用者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('test.user@emctaipei.com',password); applyLoginRedirectResult(data,'測試使用者登入')}catch(err){handleAdminLoginError(err)} return} if(password!==todayAdminPassword()){setLoginNote('密碼不正確。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); loginLocalAdmin()}
+async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
 async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}

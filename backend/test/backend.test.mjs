@@ -302,6 +302,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function roleTemplateAdminHtml\(rows\)/);
   assert.match(html, /data-template-save/);
   assert.match(html, /同角色且未使用自訂權限的帳號會同步套用/);
+  assert.match(html, /function enqueueAccessWrite\(task\)/);
+  assert.match(html, /已先套用；JSON 正在背景依序寫入，可繼續設定其他帳號/);
+  assert.match(html, /permissionWritesPending\.has\(account\)/);
+  assert.match(html, /if\(data\?\.tables\)MachiAccess\.applyRoleTemplates\(data\)/);
+  const accessControl = await readFile(new URL('../../assets/access-control.js', import.meta.url), 'utf8');
+  assert.match(accessControl, /if \(refreshPromise\) return refreshPromise/);
+  assert.match(accessControl, /if \(refreshPromise === operation\) refreshPromise = null/);
   assert.match(front, /accountJsonDatabaseAdmin.*accessAllowed\('page\.database_admin',false\).*accessAllowed\('database\.manage',false\)/s);
   assert.doesNotMatch(front, /accountJsonDatabaseAdmin'\)\?\.addEventListener\('click',\(\)=>\{if\(!isAdministrator\(\)/);
   assert.match(html, /button\.textContent=pending\?'套用新資料':'重新讀取'/);
@@ -332,6 +339,29 @@ test('Apps Script user directory is sourced from JSON settings and can insert se
   assert.equal(summary.added, 62);
   assert.equal(database.tables['設定'].rows.find(row => row['帳號'] === 'machi.chen@emctaipei.com')['部門'], '設計部');
   assert.equal(database.tables['設定'].rows.find(row => row['帳號'] === 'riley.pan@emctaipei.com')['組別'], 'Celine組');
+});
+
+test('Apps Script admin mutations resolve stale row numbers by stable primary key', async () => {
+  const source = await readFile(new URL('../../GS/google_apps_script.gs', import.meta.url), 'utf8')
+    .catch(() => readFile(new URL('../../google_apps_script.gs', import.meta.url), 'utf8'));
+  const helperSource = source.match(/function adminTablePrimaryKeyValue_[\s\S]*?(?=\nfunction adminTableUpdate_)/)?.[0] || '';
+  assert.ok(helperSource);
+  const { adminTableMutationTarget_ } = new Function(`${helperSource}; return { adminTableMutationTarget_ };`)();
+  const table = { rows: [
+    { '帳號': 'first@emctaipei.com' },
+    { '帳號': 'allen.li@emctaipei.com' },
+    { '帳號': 'third@emctaipei.com' }
+  ] };
+  const config = { primaryKey: '帳號' };
+  const stalePayload = { rowNumber: 2, expectedRow: { '帳號': 'ALLEN.LI@EMCTAIPEI.COM' } };
+  assert.deepEqual(adminTableMutationTarget_(table, config, stalePayload, '刪除'), {
+    index: 1,
+    rowNumber: 3,
+    expected: stalePayload.expectedRow
+  });
+  assert.throws(() => adminTableMutationTarget_(table, config, { rowNumber: 2, expectedRow: { '帳號': 'missing@emctaipei.com' } }, '編輯'), /找不到要編輯的資料/);
+  assert.match(source, /const target = adminTableMutationTarget_\(table, config, payload, '編輯'\)/);
+  assert.match(source, /const target = adminTableMutationTarget_\(table, config, payload, '刪除'\)/);
 });
 
 test('password session protects settings, reels and manager-only issue status writes', async t => {

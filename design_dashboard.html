@@ -250,7 +250,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
   .enterprise .top-tools{grid-column:3;grid-row:1}
 }
 </style>
-  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
+  <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body class="enterprise">
 <div class="app">
@@ -350,6 +350,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 Chart.defaults.font.family="'Geist','Noto Sans TC',sans-serif";
 const ARCHIVE_JSON_URL='data/database_archive.json';
 const PRIMARY_DATABASE_URL='backend/data/db.json';
+const CLOUDFLARE_WORKER_API='https://machi-design-api.machi-chen.workers.dev/api';
 let raw=[],filtered=[],typeChart,trendChart,statusChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map(),archiveSnapshotMeta=null;
 let archiveDashboardData={settings:[],modifications:[]};
 let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='';
@@ -380,6 +381,7 @@ function dashboardIdentity(){
   return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',authToken:savedDesigner===name?String(saved.authToken||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
 }
 const ACCOUNT_IDENTITY=dashboardIdentity();
+let dashboardAdminAccess=false;
 const REPORT_TODAY=new Date();
 const MIN_YEAR=2022;
 const DEFAULT_YEAR=REPORT_TODAY.getFullYear();
@@ -498,13 +500,14 @@ function anchorDate(y,m){
 function dueInSevenDays(arr,baseDate){
   return arr.filter(r=>{const d=normDate(r['結束日期']);const left=d?(strip(d)-baseDate)/864e5:null;return d&&!DUE_EXCLUDED_STATUS.has(r['案件狀態'])&&left>=0&&left<=7}).length
 }
-function taipeiDateParts(){
-  const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
-  return {year:parts.year,month:parts.month,day:parts.day}
+function dashboardApiUrl(){let saved='';try{saved=localStorage.getItem('designRequestApiUrl')||''}catch(error){}return saved||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href)}
+function isDashboardAdmin(){return dashboardAdminAccess}
+async function refreshDashboardAccess(token=ACCOUNT_IDENTITY.authToken){
+  const access=await window.MachiAccess?.refresh({token,account:ACCOUNT_IDENTITY.account,user:ACCOUNT_IDENTITY.designer,group:ACCOUNT_IDENTITY.group});
+  dashboardAdminAccess=Boolean(access?.status!=='停用'&&access?.pages?.includes('archive')&&access?.capabilities?.includes('archive.edit'));
+  updateProfile();
+  return dashboardAdminAccess;
 }
-function todayAdminPassword(){const {month,day}=taipeiDateParts();return `${month}${day}`}
-function todayAdminToken(){const {year,month,day}=taipeiDateParts();return `local-admin:${year}${month}${day}`}
-function isDashboardAdmin(){return sessionStorage.getItem('designDashboardAdminTokenV1')===todayAdminToken()||(ACCOUNT_IDENTITY.group==='管理者'&&ACCOUNT_IDENTITY.authToken===todayAdminToken())}
 function dashboardSearchQuery(){return String($('dashboardSearch')?.value||'').trim().toLocaleLowerCase('zh-Hant')}
 function matchesDashboardSearch(row){
   const query=dashboardSearchQuery();
@@ -1004,18 +1007,18 @@ $('analysisQuarterBrandNext').addEventListener('click',()=>{const brands=['全�
 $('analysisQuarterBrandName').addEventListener('click',event=>{event.stopPropagation();const menu=$('analysisQuarterBrandMenu'),open=menu.hidden;closeAnalysisMenus();menu.hidden=!open;$('analysisQuarterBrandName').setAttribute('aria-expanded',String(open))});
 $('analysisQuarterBrandMenu').addEventListener('click',event=>{event.stopPropagation();const option=event.target.closest('[data-brand-name]');if(!option)return;analysisQuarterBrand=option.dataset.brandName;renderAnalysisQuarterDetail(+$('yearFilter').value,$('designerFilter').value)});
 $('returnRequestLink').href=ACCOUNT_IDENTITY.returnUrl;
-$('dashboardArchiveManager').addEventListener('click',()=>{if(!isDashboardAdmin())return;localStorage.setItem('designArchiveAccessHandoffV1',JSON.stringify({token:todayAdminToken(),expiresAt:Date.now()+30000}))});
-$('dashboardAdminLogin').addEventListener('click',()=>{if(isDashboardAdmin()){sessionStorage.removeItem('designDashboardAdminTokenV1');updateProfile();return}showDashboardLogin()});
+$('dashboardArchiveManager').addEventListener('click',event=>{if(!isDashboardAdmin())event.preventDefault()});
+$('dashboardAdminLogin').addEventListener('click',async()=>{if(isDashboardAdmin()){['designRequestEditorToken','designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorGroup','designRequestEditorDepartment'].forEach(key=>{localStorage.removeItem(key);sessionStorage.removeItem(key)});ACCOUNT_IDENTITY.authToken='';dashboardAdminAccess=false;await window.MachiAccess?.refresh({token:'',account:'',user:'',group:''});updateProfile();return}showDashboardLogin()});
 $('dashboardLoginCancel').addEventListener('click',hideDashboardLogin);
 $('dashboardLoginModal').addEventListener('click',event=>{if(event.target===$('dashboardLoginModal'))hideDashboardLogin()});
-$('dashboardLoginForm').addEventListener('submit',event=>{event.preventDefault();const password=String($('dashboardAdminPassword').value||'').trim();if(password!==todayAdminPassword()){$('dashboardLoginNote').textContent='密碼不正確。';$('dashboardLoginNote').classList.add('error');$('dashboardAdminPassword').select();return}sessionStorage.setItem('designDashboardAdminTokenV1',todayAdminToken());hideDashboardLogin();updateProfile()});
+$('dashboardLoginForm').addEventListener('submit',async event=>{event.preventDefault();const password=String($('dashboardAdminPassword').value||'').trim();if(!password)return;const submit=event.currentTarget.querySelector('[type="submit"]');submit.disabled=true;$('dashboardLoginNote').textContent='Cloudflare Worker 驗證中...';$('dashboardLoginNote').classList.remove('error');try{const response=await fetch(dashboardApiUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',account:'machi.chen@emctaipei.com',password}),cache:'no-store',credentials:'omit'}),data=await response.json();if(!response.ok||!data?.ok||!data?.token)throw new Error(data?.error||`HTTP ${response.status}`);ACCOUNT_IDENTITY.authToken=data.token;ACCOUNT_IDENTITY.account=data.account||data.email||'machi.chen@emctaipei.com';ACCOUNT_IDENTITY.group='管理者';localStorage.setItem('designRequestEditorToken',data.token);localStorage.setItem('designRequestEditorUser',data.user||'Machi');localStorage.setItem('designRequestEditorAccount',ACCOUNT_IDENTITY.account);localStorage.setItem('designRequestEditorGroup','管理者');sessionStorage.setItem('designRequestEditorToken',data.token);await refreshDashboardAccess(data.token);if(!dashboardAdminAccess)throw new Error('此帳號沒有歷史資料庫管理權限');hideDashboardLogin()}catch(error){$('dashboardLoginNote').textContent=`登入失敗：${error.message}`;$('dashboardLoginNote').classList.add('error');$('dashboardAdminPassword').select()}finally{submit.disabled=false}});
 $('dashboardProfileButton').addEventListener('click',event=>{event.stopPropagation();const menu=$('dashboardAccountDropdown'),open=menu.hidden;$('dashboardNotificationPopover').hidden=true;$('dashboardBell').setAttribute('aria-expanded','false');menu.hidden=!open;$('dashboardProfileButton').setAttribute('aria-expanded',String(open))});
 $('dashboardBell').addEventListener('click',event=>{event.stopPropagation();const popover=$('dashboardNotificationPopover'),open=popover.hidden;$('dashboardAccountDropdown').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');const items=dashboardNotificationItems(),read=readNotificationIds(),unread=items.filter(item=>!read.has(item.key)),highlight=new Set(unread.map(item=>item.key));renderDashboardNotifications(open?highlight:null,{hideBadge:open&&unread.length>0});popover.hidden=!open;$('dashboardBell').setAttribute('aria-expanded',String(open));if(open&&unread.length){unread.forEach(item=>read.add(item.key));writeNotificationIds(read)}});
 $('dashboardNotificationList').addEventListener('click',event=>{const item=event.target.closest('[data-case-id]');if(!item)return;localStorage.setItem('designRequestFocusCaseV1',item.dataset.caseId);location.href=ACCOUNT_IDENTITY.returnUrl});
 document.addEventListener('click',event=>{if(!event.target.closest('.analysis-switch-wrap'))closeAnalysisMenus();if(!document.querySelector('.top-tools').contains(event.target)){$('dashboardAccountDropdown').hidden=true;$('dashboardNotificationPopover').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');$('dashboardBell').setAttribute('aria-expanded','false')}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('dashboardLoginModal').hidden)hideDashboardLogin()});
 window.addEventListener('storage',event=>{if(event.key===notificationReadKey())renderDashboardNotifications()});
-load();
+refreshDashboardAccess().catch(error=>console.warn('[儀表板權限] Cloudflare Worker 驗證失敗',error)).finally(load);
 </script>
 </body>
 </html>

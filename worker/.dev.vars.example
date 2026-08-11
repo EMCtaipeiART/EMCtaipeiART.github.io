@@ -1,0 +1,3 @@
+GITHUB_TOKEN=github-fine-grained-token
+ERP_CLIENT_SECRET=erp-oauth-client-secret
+ADMIN_LOGIN_PASSWORD=replace-with-a-long-random-password

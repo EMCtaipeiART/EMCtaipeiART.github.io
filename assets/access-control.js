@@ -55,6 +55,7 @@
   });
   let state = { loaded: false, account: '', role: '', status: '啟用', pages: [], capabilities: [], explicit: false };
   let refreshPromise = null;
+  let lastDatabase = null;
 
   function storageValue(key) {
     try {
@@ -64,7 +65,7 @@
   }
   function canonicalAccount(value) {
     const account = String(value || '').trim().toLowerCase();
-    if (!account || account === 'local-admin') return account;
+    if (!account) return account;
     return account.includes('@') ? account : `${account}@emctaipei.com`;
   }
   function parseList(value) {
@@ -76,7 +77,7 @@
   }
   function roleFromIdentity(identity = {}) {
     const group = String(identity.group || '').trim(), department = String(identity.department || '').trim();
-    if (identity.localAdmin || group === '管理者' || department === '管理者') return '管理者';
+    if (group === '管理者' || department === '管理者') return '管理者';
     if (/^(?:平面|影音)$/.test(group)) return '設計師';
     return '一般使用者';
   }
@@ -85,8 +86,7 @@
     const token = overrides.token || storageValue(STORAGE_KEYS.token) || hash.get('token') || '', account = canonicalAccount(overrides.account || storageValue(STORAGE_KEYS.account) || query.get('account'));
     return {
       account, user: overrides.user || storageValue(STORAGE_KEYS.user) || query.get('designer') || '', group: overrides.group || storageValue(STORAGE_KEYS.group),
-      department: overrides.department || storageValue(STORAGE_KEYS.department), token,
-      localAdmin: String(token).startsWith('local-admin:') || account === 'local-admin'
+      department: overrides.department || storageValue(STORAGE_KEYS.department), token
     };
   }
   function applyRoleTemplates(database) {
@@ -110,7 +110,7 @@
     const custom = explicit && role === '自訂';
     const pages = custom ? parseList(row['頁面權限']) : [...template.pages];
     const capabilities = custom ? parseList(row['功能權限']) : [...template.capabilities];
-    if (identity.localAdmin || role === '管理者') return { loaded: true, account: identity.account, role: '管理者', status: '啟用', pages: [...ALL_PAGES], capabilities: [...ALL_CAPABILITIES], explicit };
+    if (role === '管理者') return { loaded: true, account: identity.account, role: '管理者', status: '啟用', pages: [...ALL_PAGES], capabilities: [...ALL_CAPABILITIES], explicit };
     return { loaded: true, account: identity.account, role, status: String(row?.['狀態'] || '啟用').trim() || '啟用', pages, capabilities, explicit };
   }
   function currentPageKey() {
@@ -125,10 +125,46 @@
     return new URL(`${depth}backend/data/db.json`, current).href;
   }
   async function fetchDatabase() {
-    if (global.fetchGithubJsonDatabase && typeof global.fetchGithubJsonDatabase === 'function') return global.fetchGithubJsonDatabase({ fresh: true });
+    if (global.fetchGithubJsonDatabase && typeof global.fetchGithubJsonDatabase === 'function') {
+      lastDatabase = await global.fetchGithubJsonDatabase({ fresh: true });
+      return lastDatabase;
+    }
     const response = await fetch(`${databaseUrl()}?access=${Date.now()}`, { cache: 'no-store', credentials: 'omit' });
     if (!response.ok) throw new Error(`權限資料讀取失敗：HTTP ${response.status}`);
-    return response.json();
+    lastDatabase = await response.json();
+    return lastDatabase;
+  }
+  function accessApiUrl() {
+    const query = new URLSearchParams(location.search).get('api') || '';
+    const meta = document.querySelector('meta[name="design-api-url"]')?.content || '';
+    let saved = '';
+    try { saved = localStorage.getItem('designRequestApiUrl') || ''; } catch (error) {}
+    const configured = String(query || meta || saved).trim();
+    if (configured) return configured;
+    if (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io') return 'https://machi-design-api.machi-chen.workers.dev/api';
+    return new URL('/api', location.origin).href;
+  }
+  async function fetchServerAccess(identity) {
+    const response = await fetch(accessApiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${identity.token}` },
+      body: JSON.stringify({ action: 'verifyToken' }),
+      cache: 'no-store',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer'
+    });
+    const data = await response.json().catch(() => ({ ok: false, error: `HTTP ${response.status}` }));
+    if (!response.ok || !data?.ok) throw new Error(data?.error || `HTTP ${response.status}`);
+    const access = data.access || {};
+    return {
+      loaded: true,
+      account: canonicalAccount(data.account || data.email || identity.account),
+      role: String(access.role || '一般使用者'),
+      status: String(access.status || '啟用'),
+      pages: parseList(access.pages).filter(key => ALL_PAGES.includes(key)),
+      capabilities: parseList(access.capabilities).filter(key => ALL_CAPABILITIES.includes(key)),
+      explicit: Boolean(access.explicit)
+    };
   }
   function profileFromDatabase(database, identity) {
     applyRoleTemplates(database);
@@ -183,16 +219,22 @@
   function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
   async function refresh(overrides = {}) {
     const identity = identityFromStorage(overrides);
-    if (!identity.account && !identity.user && !identity.localAdmin && !identity.token) {
+    if (!identity.token) {
       state = { loaded: true, account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
       apply(); removeDeniedOverlay(); return state;
     }
-    refreshPromise = (async () => {
-      try { state = profileFromDatabase(await fetchDatabase(), identity); }
-      catch (error) { console.warn('[帳號權限] 讀取失敗，暫用角色預設值', error); state = rowProfile(null, identity); }
+    if (refreshPromise) return refreshPromise;
+    const operation = (async () => {
+      try { state = await fetchServerAccess(identity); }
+      catch (error) {
+        console.warn('[帳號權限] Cloudflare Worker 驗證失敗', error);
+        state = { loaded: true, account: canonicalAccount(identity.account), role: '未驗證', status: '停用', pages: [], capabilities: [], explicit: false };
+      }
       apply(); guardPage(); return state;
     })();
-    return refreshPromise;
+    refreshPromise = operation;
+    try { return await operation; }
+    finally { if (refreshPromise === operation) refreshPromise = null; }
   }
   function requirePermission(key, message = '此帳號沒有這個操作權限') {
     if (can(key)) return true;
@@ -206,6 +248,7 @@
     roleFromIdentity, templateFor, applyRoleTemplates, refresh, apply, guardPage, can, require: requirePermission,
     get templates() { return Object.fromEntries(Object.entries(roleTemplates).map(([role, template]) => [role, { pages: [...template.pages], capabilities: [...template.capabilities] }])); },
     get state() { return { ...state, pages: [...state.pages], capabilities: [...state.capabilities] }; },
+    get database() { return lastDatabase; },
     get ready() { return refreshPromise || Promise.resolve(state); }
   });
   function refreshFromDatabaseMessage(value) {

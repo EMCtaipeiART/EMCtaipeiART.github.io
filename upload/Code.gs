@@ -37,7 +37,7 @@ const UPLOAD_TARGETS = {
 const USER_UPLOAD_ROOT_FOLDER_ID =
   '1KHtmAVbSh7kht0ge3b9lDZpmCClwkiJk';
 const MAIN_APP_API_URL =
-  'https://script.google.com/macros/s/AKfycbxNi2pdh70uzRyTF7Fo6OZ8MTROwHSZpqITwwHBs6UHLPhtSeZEHxkga5N_fPT4_qW15A/exec';
+  'https://machi-design-api.machi-chen.workers.dev/api';
 
 // 設計師設定工作表。
 const DESIGNER_SPREADSHEET_ID =
@@ -488,13 +488,15 @@ function deleteUserImages(payload) {
 function replaceDesignerImage(payload) {
   try {
     payload = payload || {};
+    verifyMediaManager_(payload.editorToken);
     const kind = String(payload.kind || '').trim();
 
     if (kind === 'story') {
       return setDesignerStories({
         designer: payload.designer,
         fileIds: [payload.fileId],
-        durationMinutes: payload.durationMinutes
+        durationMinutes: payload.durationMinutes,
+        editorToken: payload.editorToken
       });
     }
 
@@ -550,6 +552,7 @@ function replaceDesignerImage(payload) {
 function setDesignerStories(payload) {
   try {
     payload = payload || {};
+    verifyMediaManager_(payload.editorToken);
     const target = getUploadTarget_(payload.designer);
     const durationMinutes = normalizeStoryDuration_(payload.durationMinutes);
     const fileIds = Array.from(new Set(
@@ -658,6 +661,7 @@ function setDesignerStories(payload) {
 function unsetDesignerStories(payload) {
   try {
     payload = payload || {};
+    verifyMediaManager_(payload.editorToken);
     const target = getUploadTarget_(payload.designer);
     const fileIds = Array.from(new Set(
       (Array.isArray(payload.fileIds) ? payload.fileIds : [])
@@ -1278,6 +1282,7 @@ function getUploadTargetFromContext_(context) {
         context.editorToken
       );
     }
+    verifyMediaManager_(context.editorToken);
     return getUploadTarget_(context.designer);
   }
   return getUploadTarget_(context);
@@ -1357,6 +1362,28 @@ function verifyUserUploadIdentity_(editorToken) {
   };
   cache.put(cacheKey, JSON.stringify(identity), USER_IDENTITY_CACHE_SECONDS);
   return identity;
+}
+
+function verifyMediaManager_(editorToken) {
+  const token = String(editorToken || '').trim();
+  if (!token) throw new Error('圖片管理連結已失效，請回主系統重新開啟');
+  const response = UrlFetchApp.fetch(MAIN_APP_API_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ action: 'verifyToken', editorToken: token }),
+    muteHttpExceptions: true,
+    followRedirects: true
+  });
+  let result = {};
+  try { result = JSON.parse(response.getContentText()); }
+  catch (error) { throw new Error('Cloudflare Worker 登入驗證回應格式錯誤'); }
+  const capabilities = result && result.access && Array.isArray(result.access.capabilities)
+    ? result.access.capabilities
+    : [];
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300 || !result.ok || capabilities.indexOf('media.manage') < 0) {
+    throw new Error(result.error || '此帳號沒有圖片與 Reels 管理權限');
+  }
+  return result;
 }
 
 function getOrCreateUserFolder_(userName) {
@@ -1449,8 +1476,9 @@ function validatePayload_(payload) {
     if (!payload.editorToken) {
       throw new Error('頭像設定連結已失效，請回主系統重新開啟');
     }
-  } else if (!payload.designer) {
-    throw new Error('缺少設計師參數');
+  } else {
+    if (!payload.designer) throw new Error('缺少設計師參數');
+    if (!payload.editorToken) throw new Error('圖片管理連結已失效，請回主系統重新開啟');
   }
 
   const allowedTypes = [

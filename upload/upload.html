@@ -671,7 +671,6 @@
       }
     }
   </style>
-  <script src="../assets/access-control.js?v=20260811-role-templates-2"></script>
 </head>
 
 <body>
@@ -1346,7 +1345,11 @@
               account: requestedAccount,
               editorToken: editorToken
             }
-          : requestedDesigner);
+          : {
+              mode: 'designer',
+              designer: requestedDesigner,
+              editorToken: editorToken
+            });
     }
 
     function replaceCurrentDesignerImage(kind, storyDurationMinutes) {
@@ -1448,7 +1451,8 @@
         runner.replaceDesignerImage({
           designer: authorizedDesigner,
           fileId: lastUploadedFile.id,
-          kind: kind
+          kind: kind,
+          editorToken: editorToken
         });
       }
     }
@@ -1566,7 +1570,8 @@
           }
         : {
             mode: 'designer',
-            designer: authorizedDesigner || requestedDesigner
+            designer: authorizedDesigner || requestedDesigner,
+            editorToken: editorToken
           };
     }
 

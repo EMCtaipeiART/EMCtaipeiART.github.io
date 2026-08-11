@@ -28,7 +28,7 @@ const DESIGNER_IMAGE_UPLOAD_SCOPES = [
 const HEADER_SCAN_COLUMNS = 40;
 const CACHE_SECONDS = 180;
 const DETAIL_SHEET_NAMES = ['階段', '項目細節', 'detail', 'details'];
-const SCRIPT_VERSION = 'role-template-defaults-2026-08-11';
+const SCRIPT_VERSION = 'permission-primary-key-2026-08-11';
 const DATABASE_ARCHIVE_GITHUB_TOKEN_PROPERTY = 'DATABASE_ARCHIVE_GITHUB_TOKEN';
 const DATABASE_ARCHIVE_GITHUB_REPOSITORY = 'EMCtaipeiART/EMCtaipeiART.github.io';
 const DATABASE_ARCHIVE_GITHUB_EVENT_TYPE = 'database_changed';
@@ -2590,7 +2590,9 @@ function accountAccessProfile_(token) {
   if (isLocalAdminToken_(token)) return { account: 'local-admin', role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
   const session = readEditorSession_(token, false);
   if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
-  const account = normalizeLoginAccount_(session.account || ''), user = String(session.user || '').trim(), data = readAccountAccessData_();
+  const account = normalizeLoginAccount_(session.account || ''), user = String(session.user || '').trim();
+  if (user === '管理者' || user === 'Machi') return { account, role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
+  const data = readAccountAccessData_();
   const settings = data.settings.find(row => normalizeLoginAccount_(row['帳號'] || '') === account || String(row['名字'] || '').trim() === user) || {};
   const manager = user === '管理者' || user === 'Machi' || /^(?:管理者|admin)$/i.test(String(settings['部門'] || settings['組別'] || '').trim());
   if (manager) return { account, role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
@@ -3125,18 +3127,45 @@ function adminTableRows_(payload) {
   return { ok: true, action: 'adminTableRows', table: tableName, revision: source.database.revision, offset, limit, total, rows: rows.slice(offset, offset + limit) };
 }
 
+function adminTablePrimaryKeyValue_(config, value) {
+  const normalized = String(value == null ? '' : value).trim();
+  return config && config.primaryKey === '帳號' ? normalized.toLowerCase() : normalized;
+}
+
+function adminTableMutationTarget_(table, config, payload, operationLabel) {
+  const expected = payload && payload.expectedRow && typeof payload.expectedRow === 'object' ? payload.expectedRow : null;
+  const patch = payload && payload.row && typeof payload.row === 'object' ? payload.row : null;
+  let index = Number(payload && payload.rowNumber) - 2;
+  if (config.primaryKey) {
+    const requestedKey = adminTablePrimaryKeyValue_(config,
+      payload && (payload.primaryKeyValue || payload.key)
+      || expected && expected[config.primaryKey]
+      || patch && patch[config.primaryKey]
+    );
+    if (requestedKey) {
+      index = table.rows.findIndex(row => adminTablePrimaryKeyValue_(config, row[config.primaryKey]) === requestedKey);
+      if (index < 0) throw new Error('找不到要' + operationLabel + '的資料（' + config.primaryKey + '：' + requestedKey + '）');
+    }
+  }
+  if (!Number.isInteger(index) || index < 0 || !table.rows[index]) throw new Error('找不到要' + operationLabel + '的資料');
+  return { index, rowNumber: index + 2, expected };
+}
+
 function adminTableUpdate_(payload) {
   assertDatabaseAdmin_(payload);
   const tableName = String(payload && payload.table || '').trim();
   const config = adminTableConfig_(tableName).config;
   return mutateGithubJsonDatabase_('admin update ' + tableName, payload, database => {
     const table = githubJsonTable_(database, tableName);
-    const rowNumber = Number(payload && payload.rowNumber);
-    const index = rowNumber - 2;
-    if (!Number.isInteger(rowNumber) || rowNumber < 2 || !table.rows[index]) throw new Error('找不到要編輯的資料');
-    const expected = payload && payload.expectedRow;
+    const target = adminTableMutationTarget_(table, config, payload, '編輯');
+    const index = target.index;
+    const rowNumber = target.rowNumber;
+    const expected = target.expected;
     const compareHeaders = config.primaryKey ? [config.primaryKey] : table.headers;
-    if (expected && !compareHeaders.every(header => String(table.rows[index][header] || '') === String(expected[header] || ''))) throw new Error('這筆資料已被其他操作變更，請重新讀取後再試一次');
+    if (expected && !compareHeaders.every(header => config.primaryKey === header
+      ? adminTablePrimaryKeyValue_(config, table.rows[index][header]) === adminTablePrimaryKeyValue_(config, expected[header])
+      : String(table.rows[index][header] || '') === String(expected[header] || '')
+    )) throw new Error('這筆資料已被其他操作變更，請重新讀取後再試一次');
     const patch = payload && payload.row && typeof payload.row === 'object' ? payload.row : {};
     const updated = Object.assign({}, table.rows[index]);
     table.headers.forEach(header => { if (Object.prototype.hasOwnProperty.call(patch, header)) updated[header] = patch[header] == null ? '' : String(patch[header]); });
@@ -3170,12 +3199,15 @@ function adminTableDelete_(payload) {
   const config = adminTableConfig_(tableName).config;
   return mutateGithubJsonDatabase_('admin delete ' + tableName, payload, database => {
     const table = githubJsonTable_(database, tableName);
-    const rowNumber = Number(payload && payload.rowNumber);
-    const index = rowNumber - 2;
-    if (!Number.isInteger(rowNumber) || rowNumber < 2 || !table.rows[index]) throw new Error('找不到要刪除的資料');
-    const expected = payload && payload.expectedRow;
+    const target = adminTableMutationTarget_(table, config, payload, '刪除');
+    const index = target.index;
+    const rowNumber = target.rowNumber;
+    const expected = target.expected;
     const compareHeaders = config.primaryKey ? [config.primaryKey] : table.headers;
-    if (expected && !compareHeaders.every(header => String(table.rows[index][header] || '') === String(expected[header] || ''))) throw new Error('這筆資料已被其他操作變更，請重新讀取後再試一次');
+    if (expected && !compareHeaders.every(header => config.primaryKey === header
+      ? adminTablePrimaryKeyValue_(config, table.rows[index][header]) === adminTablePrimaryKeyValue_(config, expected[header])
+      : String(table.rows[index][header] || '') === String(expected[header] || '')
+    )) throw new Error('這筆資料已被其他操作變更，請重新讀取後再試一次');
     const deleted = table.rows.splice(index, 1)[0];
     const changedTables = [tableName];
     if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');

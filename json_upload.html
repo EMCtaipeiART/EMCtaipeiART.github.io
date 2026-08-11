@@ -14,7 +14,7 @@
     h2{margin:22px 0 10px;font-size:17px}.media{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.item{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff}.item img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#eef2f0}.item-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px}.item-foot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px;font-weight:800}.item-foot button{border:0;background:#fff;color:var(--red);font-size:12px;font-weight:850}.empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted)}
     @media(max-width:650px){main{padding:14px}.upload{grid-template-columns:1fr}.preview{width:100%;height:auto;aspect-ratio:1/1}.media{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
-  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
+  <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body>
   <main>
@@ -36,7 +36,7 @@
     const $=id=>document.getElementById(id),params=new URLSearchParams(location.search),hash=new URLSearchParams(location.hash.slice(1));
     const mode=params.get('mode')==='user'?'user':'designer',designer=String(params.get('designer')||'').trim(),account=String(params.get('account')||'').trim().toLowerCase(),closeNonce=params.get('closeNonce')||'',token=hash.get('token')||'';
     history.replaceState(null,document.title,location.pathname+location.search);
-    function apiBase(){const query=params.get('api'),saved=localStorage.getItem('designRequestApiUrl')||'',meta=document.querySelector('meta[name="design-api-url"]')?.content||'';const configured=String(query||meta||saved).trim();if(configured)return configured;return location.protocol==='file:'?'http://127.0.0.1:8787/api':new URL('/api',location.origin).href}
+    function apiBase(){const query=params.get('api'),saved=localStorage.getItem('designRequestApiUrl')||'',meta=document.querySelector('meta[name="design-api-url"]')?.content||'';const configured=String(query||meta||saved).trim();if(configured)return configured;return location.protocol==='file:'||location.hostname==='emctaipeiart.github.io'?'https://machi-design-api.machi-chen.workers.dev/api':new URL('/api',location.origin).href}
     const API=apiBase();let selected=null,previewUrl='';
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
     async function api(action,payload={},timeoutMs=60000){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({action,editorToken:token,...payload}),cache:'no-store',signal:controller.signal});const data=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||!data.ok)throw new Error(data.error||`HTTP ${response.status}`);return data}finally{clearTimeout(timer)}}
