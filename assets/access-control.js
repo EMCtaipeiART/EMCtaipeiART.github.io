@@ -33,7 +33,7 @@
 
   const ALL_PAGES = PAGE_CATALOG.map(item => item.key);
   const ALL_CAPABILITIES = CAPABILITY_CATALOG.map(item => item.key);
-  const ROLE_TEMPLATES = Object.freeze({
+  const DEFAULT_ROLE_TEMPLATES = Object.freeze({
     '管理者': { pages: ALL_PAGES, capabilities: ALL_CAPABILITIES },
     '設計師': {
       pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
@@ -45,6 +45,9 @@
     },
     '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
   });
+  let roleTemplates = Object.fromEntries(Object.entries(DEFAULT_ROLE_TEMPLATES).map(([role, template]) => [role, {
+    pages: [...template.pages], capabilities: [...template.capabilities]
+  }]));
 
   const STORAGE_KEYS = Object.freeze({
     account: 'designRequestEditorAccount', user: 'designRequestEditorUser', group: 'designRequestEditorGroup',
@@ -86,13 +89,27 @@
       localAdmin: String(token).startsWith('local-admin:') || account === 'local-admin'
     };
   }
-  function templateFor(role) { return ROLE_TEMPLATES[role] || ROLE_TEMPLATES['一般使用者']; }
+  function applyRoleTemplates(database) {
+    const rows = database?.tables?.['角色權限範本']?.rows || [];
+    const saved = new Map(rows.map(row => [String(row?.['角色範本'] || '').trim(), row]));
+    roleTemplates = Object.fromEntries(Object.entries(DEFAULT_ROLE_TEMPLATES).map(([role, fallback]) => {
+      const row = saved.get(role);
+      if (role === '管理者') return [role, { pages: [...ALL_PAGES], capabilities: [...ALL_CAPABILITIES] }];
+      return [role, {
+        pages: row ? parseList(row['頁面權限']).filter(key => ALL_PAGES.includes(key)) : [...fallback.pages],
+        capabilities: row ? parseList(row['功能權限']).filter(key => ALL_CAPABILITIES.includes(key)) : [...fallback.capabilities]
+      }];
+    }));
+    return roleTemplates;
+  }
+  function templateFor(role) { return roleTemplates[role] || roleTemplates['一般使用者']; }
   function rowProfile(row, identity) {
     const role = String(row?.['角色範本'] || roleFromIdentity(identity)).trim() || '一般使用者';
     const template = templateFor(role);
     const explicit = Boolean(row);
-    const pages = explicit ? parseList(row['頁面權限']) : [...template.pages];
-    const capabilities = explicit ? parseList(row['功能權限']) : [...template.capabilities];
+    const custom = explicit && role === '自訂';
+    const pages = custom ? parseList(row['頁面權限']) : [...template.pages];
+    const capabilities = custom ? parseList(row['功能權限']) : [...template.capabilities];
     if (identity.localAdmin || role === '管理者') return { loaded: true, account: identity.account, role: '管理者', status: '啟用', pages: [...ALL_PAGES], capabilities: [...ALL_CAPABILITIES], explicit };
     return { loaded: true, account: identity.account, role, status: String(row?.['狀態'] || '啟用').trim() || '啟用', pages, capabilities, explicit };
   }
@@ -114,6 +131,7 @@
     return response.json();
   }
   function profileFromDatabase(database, identity) {
+    applyRoleTemplates(database);
     const rows = database?.tables?.['帳號權限']?.rows || [], settingsRows = database?.tables?.['設定']?.rows || [];
     const matchedSettings = settingsRows.find(item => canonicalAccount(item['帳號']) === canonicalAccount(identity.account) || String(item['名字'] || '').trim() === String(identity.user || '').trim()) || {};
     const account = canonicalAccount(identity.account || matchedSettings['帳號']);
@@ -183,9 +201,10 @@
   }
 
   global.MachiAccess = Object.freeze({
-    pages: PAGE_CATALOG, capabilities: CAPABILITY_CATALOG, templates: ROLE_TEMPLATES,
+    pages: PAGE_CATALOG, capabilities: CAPABILITY_CATALOG,
     allPages: ALL_PAGES, allCapabilities: ALL_CAPABILITIES, parseList, canonicalAccount,
-    roleFromIdentity, templateFor, refresh, apply, guardPage, can, require: requirePermission,
+    roleFromIdentity, templateFor, applyRoleTemplates, refresh, apply, guardPage, can, require: requirePermission,
+    get templates() { return Object.fromEntries(Object.entries(roleTemplates).map(([role, template]) => [role, { pages: [...template.pages], capabilities: [...template.capabilities] }])); },
     get state() { return { ...state, pages: [...state.pages], capabilities: [...state.capabilities] }; },
     get ready() { return refreshPromise || Promise.resolve(state); }
   });
@@ -193,7 +212,7 @@
     let message = value;
     if (typeof value === 'string') { try { message = JSON.parse(value); } catch (error) { return; } }
     const tables = Array.isArray(message?.tables) ? message.tables : [];
-    if (tables.length && !tables.includes('帳號權限') && !tables.includes('設定')) return;
+    if (tables.length && !tables.includes('帳號權限') && !tables.includes('角色權限範本') && !tables.includes('設定')) return;
     refresh().catch(error => console.warn('[帳號權限] 即時更新失敗', error));
   }
   global.addEventListener('storage', event => { if (event.key === 'machiDatabaseRefreshV1') refreshFromDatabaseMessage(event.newValue); });

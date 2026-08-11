@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="app-version" content="20260811-nondisruptive-refresh-4">
+  <meta name="app-version" content="20260811-role-template-defaults-5">
   <title>資料庫後台｜EMC 設計部</title>
   <style>
     :root{--bg:#f4f6f5;--panel:#fff;--soft:#f7f9f8;--ink:#1c2521;--muted:#707b76;--line:#e0e6e2;--green:#0f8f61;--green2:#eaf6f0;--red:#c93636;--shadow:0 10px 28px rgba(18,38,28,.07)}
@@ -153,7 +153,7 @@
     .permission-section{padding:14px 0;border-top:1px solid var(--line)}.permission-section:first-of-type{border-top:0}.permission-section h4{margin:0 0 10px;font-size:12.5px}.permission-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.permission-check{display:flex;align-items:center;gap:8px;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--soft);font-weight:600}.permission-check input{width:16px;height:16px;accent-color:var(--green)}.permission-group-title{grid-column:1/-1;margin:6px 0 0;color:var(--muted);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.permission-empty{padding:28px;color:var(--muted);text-align:center}.permission-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.permission-summary span{border-radius:999px;background:var(--soft);padding:3px 8px;color:var(--muted);font-size:11px;font-weight:700}
     @media(max-width:900px){.permission-layout{grid-template-columns:1fr}.permission-users{max-height:260px}.permission-checks{grid-template-columns:1fr}}
   </style>
-  <script src="assets/access-control.js?v=20260811-acl-1"></script>
+  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
 </head>
 <body>
   <section class="gate" id="loginGate" hidden>
@@ -188,7 +188,7 @@
   </div>
   <div class="modal" id="editor" hidden><form class="modal-card" id="editorForm"><header class="modal-head"><h2 id="editorTitle">編輯資料</h2><button class="icon-btn" id="closeEditor" type="button">×</button></header><div class="fields" id="fields"></div><footer class="modal-actions"><button class="btn" id="cancelEditor" type="button">取消</button><button class="btn primary" id="saveEditor" type="submit">儲存變更</button></footer></form></div>
   <script>
-    const TABLE_ORDER=['database','加權計分標準','短連結','補充資料連結','修改統計表','設定','帳號權限','reels','bug_report'];
+    const TABLE_ORDER=['database','加權計分標準','短連結','補充資料連結','修改統計表','設定','角色權限範本','帳號權限','reels','bug_report'];
     const TABLE_INFO={
       database:{desc:'所有設計需求案件的完整清單'},
       '加權計分標準':{desc:'依設計種類與階段分組的加權分數規則'},
@@ -196,11 +196,12 @@
       '補充資料連結':{desc:'各案件的補充資料 A–D 連結，依更新時間新到舊'},
       '修改統計表':{desc:'依案件編號分組的修改歷程'},
       '設定':{desc:'設計師與使用者個人設定'},
+      '角色權限範本':{desc:'一次設定四種角色的預設權限；套用該角色的帳號會同步生效'},
       '帳號權限':{desc:'綁定帳號，控制可查看的頁面與可編輯的功能'},
       reels:{desc:'限時動態、按讚倒讚與留言（含已過期，僅後台顯示）'},
       bug_report:{desc:'問題回報進度看板'}
     };
-    const BOARD_VIEWS=['加權計分標準','補充資料連結','修改統計表','設定','帳號權限','reels','bug_report'];
+    const BOARD_VIEWS=['加權計分標準','補充資料連結','修改統計表','設定','角色權限範本','帳號權限','reels','bug_report'];
     const NO_INSERT_TABLES=['database'];
     const SETTINGS_PRIMARY=['部門','組別','名字','顯示名','帳號','頭像連結','頭像大圖連結','分享音樂','音樂起始秒數','技能','對話框','新專案輪值'];
     const BUG_STATUSES=['回報中','評估中','處理中','已完成','已否決'];
@@ -220,13 +221,13 @@
     const API=CONFIGURED_API||(location.hostname==='emctaipeiart.github.io'?APPS_SCRIPT_FALLBACK:(location.protocol==='file:'?'http://127.0.0.1:8787/api':new URL('/api',location.origin).href));
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
-    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionModelsCache=[],permissionSelectedAccount='';
+    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionModelsCache=[],permissionSelectedAccount='',roleTemplateRowsCache=[],roleTemplateSelected='一般使用者';
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
     async function request(path='',options={}){const response=await fetch(`${API.replace(/\/$/,'')}${path}`,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const data=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);return data}
     async function appsScriptRequest(action,payload={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action,editorToken:token,...payload}),credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer',signal:controller.signal});if(!response.ok)throw new Error(`Apps Script HTTP ${response.status}`);const data=await response.json().catch(()=>({ok:false,error:'Apps Script 回傳格式錯誤'}));if(data.ok===false)throw new Error(data.error||'Apps Script 處理失敗');if(['adminTableUpdate','adminTableDelete','adminTableInsert'].includes(action))publishDatabaseRefresh(action,data);return data}catch(error){if(error?.name==='AbortError')throw new Error('JSON 寫入超過 45 秒，請重新讀取確認結果');throw error}finally{clearTimeout(timer)}}
     function decodeGithubContent(value=''){const binary=atob(String(value).replace(/\s+/g,'')),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
-    async function loadDatabaseFile({fresh=false,commitSha='',store=true}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260811-nondisruptive-refresh-4');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');if(store)directDatabase=database;return database}
+    async function loadDatabaseFile({fresh=false,commitSha='',store=true}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260811-role-template-defaults-5');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');if(store)directDatabase=database;return database}
     const loadDatabaseFileCached=loadDatabaseFile;
     loadDatabaseFile=function(options={}){return loadDatabaseFileCached({...options,fresh:true})};
     function metadataFromDatabase(database){return Object.fromEntries(Object.entries(database.tables||{}).map(([name,table])=>[name,{headers:Array.isArray(table.headers)?table.headers:[],primaryKey:table.primaryKey||'',rowCount:Array.isArray(table.rows)?table.rows.length:0}]))}
@@ -240,11 +241,11 @@
     function updateRefreshButton(){const pending=Boolean(stagedDatabase),button=$('reload');button.textContent=pending?'套用新資料':'重新讀取';button.classList.toggle('primary',pending);button.title=pending?'背景已偵測到新資料；點擊後才更新目前畫面。':'立即重新讀取最新資料。'}
     function clearStagedRefresh(){stagedDatabase=null;stagedRefreshMessage=null;updateRefreshButton()}
     function discardStagedRefreshIfCurrent(){if(stagedDatabase&&databaseRevision(stagedDatabase)<=currentDatabaseRevision())clearStagedRefresh()}
-    async function applyMetadataSnapshot(data,{clearPending=true}={}){if(APPS_SCRIPT_MODE)directDatabase=data;appliedRevision=databaseRevision(data);metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');if(clearPending)clearStagedRefresh();renderTabs();await loadRows();return data}
+    async function applyMetadataSnapshot(data,{clearPending=true}={}){if(APPS_SCRIPT_MODE)directDatabase=data;if(data?.tables)MachiAccess.applyRoleTemplates(data);appliedRevision=databaseRevision(data);metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');if(clearPending)clearStagedRefresh();renderTabs();await loadRows();return data}
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
     async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
-    function updateAddButton(){const hidden=tableName==='帳號權限'||(APPS_SCRIPT_MODE&&NO_INSERT_TABLES.includes(tableName));$('add').hidden=hidden;$('add').textContent=tableName==='設定'?'+ 新增人員':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料')}
+    function updateAddButton(){const hidden=['帳號權限','角色權限範本'].includes(tableName)||(APPS_SCRIPT_MODE&&NO_INSERT_TABLES.includes(tableName));$('add').hidden=hidden;$('add').textContent=tableName==='設定'?'+ 新增人員':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料')}
     function updateContentHead(){const info=TABLE_INFO[tableName]||{};$('tableTitle').textContent=tableLabel(tableName);$('tableSubtitle').textContent=info.desc||''}
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function renderTabs(){$('tabs').innerHTML=TABLE_ORDER.filter(name=>metadata[name]).map(name=>`<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`).join('');updateAddButton();updateContentHead()}
@@ -268,7 +269,7 @@
     function permissionRoleForSettings(row={}){const group=String(row['組別']||'').trim(),department=String(row['部門']||'').trim();return group==='管理者'||department==='管理者'?'管理者':(/^(?:平面|影音)$/.test(group)?'設計師':'一般使用者')}
     function permissionModels(settingsRows,permissionRows){
       const settingsByAccount=new Map(settingsRows.map(row=>[MachiAccess.canonicalAccount(row['帳號']),row]).filter(([account])=>account)),permissionByAccount=new Map(permissionRows.map(row=>[MachiAccess.canonicalAccount(row['帳號']),row]).filter(([account])=>account)),accounts=[...new Set([...settingsByAccount.keys(),...permissionByAccount.keys()])],query=$('search').value.trim().toLocaleLowerCase();
-      return accounts.map(account=>{const settings=settingsByAccount.get(account)||{},saved=permissionByAccount.get(account)||null,role=String(saved?.['角色範本']||permissionRoleForSettings(settings)),template=MachiAccess.templateFor(role);return {...(saved||{}),_rowNumber:saved?._rowNumber,_explicit:Boolean(saved),'帳號':account,'名字':settings['顯示名']||settings['名字']||account.split('@')[0],'部門':settings['部門']||'','組別':settings['組別']||'','角色範本':role,'狀態':String(saved?.['狀態']||'啟用'),'頁面權限':saved?MachiAccess.parseList(saved['頁面權限']):[...template.pages],'功能權限':saved?MachiAccess.parseList(saved['功能權限']):[...template.capabilities]}}).filter(row=>!query||Object.values(row).some(value=>String(value||'').toLocaleLowerCase().includes(query))).sort((a,b)=>String(a['部門']).localeCompare(String(b['部門']),'zh-Hant')||String(a['名字']).localeCompare(String(b['名字']),'zh-Hant'));
+      return accounts.map(account=>{const settings=settingsByAccount.get(account)||{},saved=permissionByAccount.get(account)||null,role=String(saved?.['角色範本']||permissionRoleForSettings(settings)),template=MachiAccess.templateFor(role),custom=Boolean(saved)&&role==='自訂';return {...(saved||{}),_rowNumber:saved?._rowNumber,_explicit:Boolean(saved),'帳號':account,'名字':settings['顯示名']||settings['名字']||account.split('@')[0],'部門':settings['部門']||'','組別':settings['組別']||'','角色範本':role,'狀態':String(saved?.['狀態']||'啟用'),'頁面權限':custom?MachiAccess.parseList(saved['頁面權限']):[...template.pages],'功能權限':custom?MachiAccess.parseList(saved['功能權限']):[...template.capabilities]}}).filter(row=>!query||Object.values(row).some(value=>String(value||'').toLocaleLowerCase().includes(query))).sort((a,b)=>String(a['部門']).localeCompare(String(b['部門']),'zh-Hant')||String(a['名字']).localeCompare(String(b['名字']),'zh-Hant'));
     }
     async function permissionRowsData(){
       let settingsRows=[],permissionRows=[];
@@ -276,7 +277,7 @@
       else{const [settingsData,permissionData]=await Promise.all([request('/table/%E8%A8%AD%E5%AE%9A?offset=0&limit=1000'),request('/table/%E5%B8%B3%E8%99%9F%E6%AC%8A%E9%99%90?offset=0&limit=1000')]);settingsRows=settingsData.rows||[];permissionRows=permissionData.rows||[]}
       permissionDirectoryRows=settingsRows;permissionModelsCache=permissionModels(settingsRows,permissionRows);if(!permissionModelsCache.some(row=>row['帳號']===permissionSelectedAccount))permissionSelectedAccount=permissionModelsCache[0]?.['帳號']||'';return {table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache};
     }
-    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();const data=requestedTable==='帳號權限'?await permissionRowsData():(APPS_SCRIPT_MODE?databaseFileRows():await request(path));if(sequence!==rowLoadSequence||requestedTable!==tableName)return;renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號，未儲存者會使用角色預設值。`:`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`,'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
+    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();const data=requestedTable==='帳號權限'?await permissionRowsData():(APPS_SCRIPT_MODE?databaseFileRows():await request(path));if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
     function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
     function rowKeyFor(row){const table=metadata[tableName];return table?.primaryKey?String(row[table.primaryKey]??''):String(row._rowNumber)}
     function actionCell(){return '<td class="action-col"><div class="row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></td>'}
@@ -395,13 +396,35 @@
         ${manager?'<div class="notice ok">管理者帳號固定擁有所有權限，避免將系統管理者鎖在後台外。</div>':''}
         <section class="permission-section"><h4>可查看的頁面</h4><div class="permission-checks">${MachiAccess.pages.map(item=>permissionCheckbox(item.key,item.label,pages.has(item.key)||manager,'page')).join('')}</div></section>
         <section class="permission-section"><h4>可編輯與操作的功能</h4><div class="permission-checks">${capabilityHtml}</div></section>
-        <div class="permission-summary"><span>${model._explicit?'已儲存個別設定':'目前使用角色預設值'}</span><span>${pages.size} 個頁面</span><span>${capabilities.size} 項功能</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
+        <div class="permission-summary"><span>${model['角色範本']==='自訂'?'使用個別自訂權限':(model._explicit?'已指定角色，繼承範本':'自動角色，繼承範本')}</span><span>${pages.size} 個頁面</span><span>${capabilities.size} 項功能</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
       </section>`;
     }
     function permissionAdminHtml(rows){
       const selected=rows.find(row=>row['帳號']===permissionSelectedAccount)||rows[0]||null;if(selected)permissionSelectedAccount=selected['帳號'];
-      const users=rows.length?rows.map(row=>`<button class="permission-user ${row['帳號']===permissionSelectedAccount?'active':''}" type="button" data-permission-account="${esc(row['帳號'])}"><b>${esc(row['名字'])}</b><small>${esc(row['帳號'])}</small><span class="permission-state ${row['狀態']==='停用'?'off':(row._explicit?'explicit':'')}">${row['狀態']==='停用'?'停用':(row._explicit?'已設定':esc(row['角色範本']))}</span></button>`).join(''):'<div class="permission-empty">無帳號</div>';
+      const users=rows.length?rows.map(row=>`<button class="permission-user ${row['帳號']===permissionSelectedAccount?'active':''}" type="button" data-permission-account="${esc(row['帳號'])}"><b>${esc(row['名字'])}</b><small>${esc(row['帳號'])}</small><span class="permission-state ${row['狀態']==='停用'?'off':(row._explicit?'explicit':'')}">${row['狀態']==='停用'?'停用':esc(row['角色範本'])}</span></button>`).join(''):'<div class="permission-empty">無帳號</div>';
       return `<div class="permission-layout"><aside class="permission-users">${users}</aside>${permissionEditorHtml(selected)}</div>`;
+    }
+    function normalizedRoleTemplateRows(rows){
+      return ['管理者','設計師','一般使用者','唯讀'].map((role,index)=>{const saved=rows.find(row=>String(row['角色範本']||'')===role),template=MachiAccess.templateFor(role);return {...(saved||{}),_rowNumber:saved?saved._rowNumber:index+2,'角色範本':role,'頁面權限':saved?MachiAccess.parseList(saved['頁面權限']):[...template.pages],'功能權限':saved?MachiAccess.parseList(saved['功能權限']):[...template.capabilities]}})
+    }
+    function templatePermissionCheckbox(key,label,checked,type,disabled=false){return `<label class="permission-check"><input type="checkbox" data-template-${type}="${esc(key)}" ${checked?'checked':''} ${disabled?'disabled':''}><span>${esc(label)}</span></label>`}
+    function roleTemplateEditorHtml(model){
+      if(!model)return '<div class="permission-editor permission-empty">找不到角色範本。</div>';
+      const pages=new Set(model['頁面權限']),capabilities=new Set(model['功能權限']),manager=model['角色範本']==='管理者',groups=new Map();
+      MachiAccess.capabilities.forEach(item=>{if(!groups.has(item.group))groups.set(item.group,[]);groups.get(item.group).push(item)});
+      const capabilityHtml=[...groups.entries()].map(([group,items])=>`<div class="permission-group-title">${esc(group)}</div>${items.map(item=>templatePermissionCheckbox(item.key,item.label,capabilities.has(item.key)||manager,'capability',manager)).join('')}`).join('');
+      return `<section class="permission-editor" data-role-template-editor="${esc(model['角色範本'])}">
+        <header class="permission-editor-head"><div><h3>${esc(model['角色範本'])}預設權限</h3><p>儲存後，所有使用「${esc(model['角色範本'])}」且未設為自訂的帳號會同步套用。</p></div><div class="permission-editor-actions">${manager?'':'<button class="btn" type="button" data-template-readonly>設為唯讀</button><button class="btn" type="button" data-template-all>全部開啟</button>'}<button class="btn primary" type="button" data-template-save ${manager?'disabled':''}>儲存範本</button></div></header>
+        ${manager?'<div class="notice ok">管理者範本固定保留所有權限，避免所有管理帳號同時被鎖在系統外。</div>':''}
+        <section class="permission-section"><h4>預設可查看的頁面</h4><div class="permission-checks">${MachiAccess.pages.map(item=>templatePermissionCheckbox(item.key,item.label,pages.has(item.key)||manager,'page',manager)).join('')}</div></section>
+        <section class="permission-section"><h4>預設可編輯與操作的功能</h4><div class="permission-checks">${capabilityHtml}</div></section>
+        <div class="permission-summary"><span>${pages.size} 個頁面</span><span>${capabilities.size} 項功能</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}<span>${esc(model['更新者']||'系統預設')}</span></div>
+      </section>`;
+    }
+    function roleTemplateAdminHtml(rows){
+      roleTemplateRowsCache=normalizedRoleTemplateRows(rows);const selected=roleTemplateRowsCache.find(row=>row['角色範本']===roleTemplateSelected)||roleTemplateRowsCache[0]||null;if(selected)roleTemplateSelected=selected['角色範本'];
+      const roles=roleTemplateRowsCache.map(row=>`<button class="permission-user ${row['角色範本']===roleTemplateSelected?'active':''}" type="button" data-role-template="${esc(row['角色範本'])}"><b>${esc(row['角色範本'])}</b><small>${row['角色範本']==='管理者'?'固定完整權限':'套用至同角色所有帳號'}</small><span class="permission-state">${row['頁面權限'].length} 頁 / ${row['功能權限'].length} 項</span></button>`).join('');
+      return `<div class="permission-layout"><aside class="permission-users">${roles}</aside>${roleTemplateEditorHtml(selected)}</div>`;
     }
 
     function renderTable(data){
@@ -416,6 +439,7 @@
       else if(tableName==='補充資料連結')view.innerHTML=supplementCardsHtml(data.rows);
       else if(tableName==='修改統計表')view.innerHTML=modificationGroupsHtml(data.rows);
       else if(tableName==='設定')view.innerHTML=settingsCardsHtml(data.rows);
+      else if(tableName==='角色權限範本')view.innerHTML=roleTemplateAdminHtml(data.rows);
       else if(tableName==='帳號權限')view.innerHTML=permissionAdminHtml(data.rows);
       else if(tableName==='reels')view.innerHTML=reelsCardsHtml(data.rows);
       else if(tableName==='bug_report')view.innerHTML=bugBoardHtml(data.rows);
@@ -472,6 +496,20 @@
     async function resetPermission(){
       const editor=permissionEditorElement(),account=editor?.dataset.permissionEditor,model=permissionModelsCache.find(row=>row['帳號']===account);if(!model?._explicit||!confirm(`確定讓 ${account} 改回角色預設權限？`))return;note(`正在移除 ${account} 的個別權限…`);
       try{if(APPS_SCRIPT_MODE){const table=directDatabase.tables['帳號權限'],index=table.rows.findIndex(item=>MachiAccess.canonicalAccount(item['帳號'])===account);if(index<0)throw new Error('找不到權限資料');table.rows.splice(index,1);const data=await appsScriptRequest('adminTableDelete',{table:'帳號權限',rowNumber:index+2,expectedRow:model,...spreadsheetBackupOptions('帳號權限')});if(data.jsonRevision)directDatabase.revision=data.jsonRevision;metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows()}else{await request(`/table/${encodeURIComponent('帳號權限')}/${encodeURIComponent(account)}`,{method:'DELETE',body:'{}'});await loadMetadata()}note(`${account} 已改回角色預設權限。`,'ok')}catch(error){if(APPS_SCRIPT_MODE)await loadMetadata({fresh:true}).catch(()=>{});note(`還原預設值失敗：${error.message}`,'error')}
+    }
+    function roleTemplateEditorElement(){return $('view').querySelector('[data-role-template-editor]')}
+    function setRoleTemplateEditorMode(mode){const editor=roleTemplateEditorElement();if(!editor||editor.dataset.roleTemplateEditor==='管理者')return;editor.querySelectorAll('[data-template-page],[data-template-capability]').forEach(input=>{input.checked=mode==='all'})}
+    function roleTemplatePayloadFromEditor(){
+      const editor=roleTemplateEditorElement();if(!editor)throw new Error('找不到角色範本編輯器');const role=editor.dataset.roleTemplateEditor,model=roleTemplateRowsCache.find(row=>row['角色範本']===role);if(!model)throw new Error('找不到角色範本');if(role==='管理者')throw new Error('管理者範本固定為完整權限');const pages=[...editor.querySelectorAll('[data-template-page]:checked')].map(input=>input.dataset.templatePage),capabilities=[...editor.querySelectorAll('[data-template-capability]:checked')].map(input=>input.dataset.templateCapability),timestamp=new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).replace(/\//g,'-');
+      return {model,row:{'角色範本':role,'頁面權限':JSON.stringify(pages),'功能權限':JSON.stringify(capabilities),'更新時間':timestamp,'更新者':stored(FRONT_USER_KEY)||'管理者'}};
+    }
+    async function saveRoleTemplate(){
+      const editor=roleTemplateEditorElement(),button=editor?.querySelector('[data-template-save]');if(!editor||!button)return;const {model,row}=roleTemplatePayloadFromEditor(),originalText=button.textContent;button.disabled=true;button.textContent='儲存中…';note(`正在儲存「${row['角色範本']}」角色預設權限…`);
+      try{
+        if(APPS_SCRIPT_MODE){const table=directDatabase.tables['角色權限範本'],index=table.rows.findIndex(item=>String(item['角色範本']||'')===row['角色範本']);if(index<0)throw new Error('找不到角色範本資料，請重新讀取');const previous={...table.rows[index]};table.rows[index]={...row};MachiAccess.applyRoleTemplates(directDatabase);const data=await appsScriptRequest('adminTableUpdate',{table:'角色權限範本',rowNumber:index+2,expectedRow:previous,row,...spreadsheetBackupOptions('角色權限範本')});if(data.jsonRevision)directDatabase.revision=data.jsonRevision;metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows()}
+        else{await request(`/table/${encodeURIComponent('角色權限範本')}/${encodeURIComponent(row['角色範本'])}`,{method:'PATCH',body:JSON.stringify({row})});const data=await request(`/table/${encodeURIComponent('角色權限範本')}?offset=0&limit=10`);roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}});renderTable(data)}
+        note(`「${row['角色範本']}」預設已更新；同角色且未使用自訂權限的帳號會同步套用。`,'ok')
+      }catch(error){if(APPS_SCRIPT_MODE)await loadMetadata({fresh:true}).catch(()=>{});note(`角色範本儲存失敗：${error.message}`,'error')}finally{button.disabled=false;button.textContent=originalText}
     }
     async function saveEditor(event){
       event.preventDefault();
@@ -542,6 +580,11 @@
     $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;tableName=button.dataset.table;page=1;if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{const select=event.target.closest('[data-weight-select]');if(!select)return;const custom=select.closest('[data-key]')?.querySelector('[data-weight-other]');if(custom){custom.hidden=select.value!=='other';if(!custom.hidden)custom.focus()}});
     $('view').addEventListener('click',event=>{
+      const roleTemplate=event.target.closest('[data-role-template]');
+      if(roleTemplate){roleTemplateSelected=roleTemplate.dataset.roleTemplate;renderTable({table:'角色權限範本',total:roleTemplateRowsCache.length,offset:0,limit:10,rows:roleTemplateRowsCache});return}
+      if(event.target.closest('[data-template-save]')){saveRoleTemplate();return}
+      if(event.target.closest('[data-template-all]')){setRoleTemplateEditorMode('all');return}
+      if(event.target.closest('[data-template-readonly]')){setRoleTemplateEditorMode('readonly');return}
       const permissionAccount=event.target.closest('[data-permission-account]');
       if(permissionAccount){permissionSelectedAccount=permissionAccount.dataset.permissionAccount;renderTable({table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache});return}
       if(event.target.closest('[data-permission-save]')){savePermission();return}

@@ -28,7 +28,7 @@ const DESIGNER_IMAGE_UPLOAD_SCOPES = [
 const HEADER_SCAN_COLUMNS = 40;
 const CACHE_SECONDS = 180;
 const DETAIL_SHEET_NAMES = ['階段', '項目細節', 'detail', 'details'];
-const SCRIPT_VERSION = 'account-access-2026-08-11';
+const SCRIPT_VERSION = 'role-template-defaults-2026-08-11';
 const DATABASE_ARCHIVE_GITHUB_TOKEN_PROPERTY = 'DATABASE_ARCHIVE_GITHUB_TOKEN';
 const DATABASE_ARCHIVE_GITHUB_REPOSITORY = 'EMCtaipeiART/EMCtaipeiART.github.io';
 const DATABASE_ARCHIVE_GITHUB_EVENT_TYPE = 'database_changed';
@@ -85,6 +85,7 @@ const ADMIN_TABLE_CONFIG = {
   '補充資料連結': { sheetName: SUPPLEMENT_LINK_SHEET_NAME, primaryKey: '案件編號' },
   '設定': { sheetId: SETTINGS_SHEET_ID, primaryKey: '帳號' },
   '帳號權限': { primaryKey: '帳號' },
+  '角色權限範本': { primaryKey: '角色範本' },
   reels: { sheetId: REELS_SHEET_ID, primaryKey: '' },
   bug_report: { sheetId: ISSUE_REPORT_SHEET_ID, primaryKey: '' }
 };
@@ -2556,7 +2557,7 @@ function isIssueReportManagerToken_(token) {
 }
 
 const ACCOUNT_ACCESS_JSON_URL = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
-const ACCOUNT_ACCESS_CACHE_KEY = 'machi-account-access-v1';
+const ACCOUNT_ACCESS_CACHE_KEY = 'machi-account-access-v2';
 const ACCOUNT_ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
 const ACCOUNT_ACCESS_CAPABILITIES = ['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'short_link.create', 'archive.edit', 'database.manage'];
 const ACCOUNT_ACCESS_TEMPLATES = {
@@ -2579,7 +2580,7 @@ function readAccountAccessData_() {
   if (cached) { try { return JSON.parse(cached); } catch (error) {} }
   const response = UrlFetchApp.fetch(ACCOUNT_ACCESS_JSON_URL + '?v=' + Date.now(), { method: 'get', muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
   if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) throw new Error('帳號權限 JSON 讀取失敗：HTTP ' + response.getResponseCode());
-  const database = JSON.parse(response.getContentText()), data = { settings: database?.tables?.['設定']?.rows || [], permissions: database?.tables?.['帳號權限']?.rows || [] };
+  const database = JSON.parse(response.getContentText()), data = { settings: database?.tables?.['設定']?.rows || [], permissions: database?.tables?.['帳號權限']?.rows || [], templates: database?.tables?.['角色權限範本']?.rows || [] };
   cache.put(ACCOUNT_ACCESS_CACHE_KEY, JSON.stringify(data), 60);
   return data;
 }
@@ -2595,8 +2596,13 @@ function accountAccessProfile_(token) {
   if (manager) return { account, role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
   const row = data.permissions.find(item => normalizeLoginAccount_(item['帳號'] || '') === account) || null;
   const defaultRole = /^(?:平面|影音)$/.test(String(settings['組別'] || '').trim()) ? '設計師' : '一般使用者';
-  const role = String(row?.['角色範本'] || defaultRole).trim(), template = ACCOUNT_ACCESS_TEMPLATES[role] || ACCOUNT_ACCESS_TEMPLATES['一般使用者'];
-  return { account, role, status: String(row?.['狀態'] || '啟用').trim(), pages: row ? accountAccessList_(row['頁面權限']) : template.pages.slice(), capabilities: row ? accountAccessList_(row['功能權限']) : template.capabilities.slice(), explicit: Boolean(row) };
+  const role = String(row?.['角色範本'] || defaultRole).trim(), fallback = ACCOUNT_ACCESS_TEMPLATES[role] || ACCOUNT_ACCESS_TEMPLATES['一般使用者'];
+  const savedTemplate = (data.templates || []).find(item => String(item['角色範本'] || '').trim() === role) || null;
+  const template = role === '管理者'
+    ? { pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice() }
+    : (savedTemplate ? { pages: accountAccessList_(savedTemplate['頁面權限']), capabilities: accountAccessList_(savedTemplate['功能權限']) } : fallback);
+  const custom = Boolean(row) && role === '自訂';
+  return { account, role, status: String(row?.['狀態'] || '啟用').trim(), pages: custom ? accountAccessList_(row['頁面權限']) : template.pages.slice(), capabilities: custom ? accountAccessList_(row['功能權限']) : template.capabilities.slice(), explicit: Boolean(row) };
 }
 
 function assertAccountCapability_(payload, capability, allowAnonymous) {
@@ -2946,7 +2952,7 @@ function mutateGithubJsonDatabase_(action, payload, mutator, options) {
       });
       try {
         const written = writeGithubJsonDatabase_(source.database, source.sha, action);
-        if ((outcome.changedTables || []).indexOf('帳號權限') >= 0) CacheService.getScriptCache().remove(ACCOUNT_ACCESS_CACHE_KEY);
+        if ((outcome.changedTables || []).some(name => name === '帳號權限' || name === '角色權限範本')) CacheService.getScriptCache().remove(ACCOUNT_ACCESS_CACHE_KEY);
         const backup = payload && payload._skipSheetBackup
           ? { ok: true, skipped: true, source: 'sheet-snapshot', tables: [...new Set(outcome.changedTables || [])] }
           : allowSheetBackup

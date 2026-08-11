@@ -1,5 +1,36 @@
 import { DEFAULT_WEIGHT_RULE_ROWS } from './weighting.mjs';
 
+export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
+  {
+    '角色範本': '管理者',
+    '頁面權限': JSON.stringify(['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link']),
+    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'short_link.create', 'archive.edit', 'database.manage']),
+    '更新時間': '',
+    '更新者': '系統預設'
+  },
+  {
+    '角色範本': '設計師',
+    '頁面權限': JSON.stringify(['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link']),
+    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']),
+    '更新時間': '',
+    '更新者': '系統預設'
+  },
+  {
+    '角色範本': '一般使用者',
+    '頁面權限': JSON.stringify(['request', 'avatar_upload', 'short_link']),
+    '功能權限': JSON.stringify(['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create']),
+    '更新時間': '',
+    '更新者': '系統預設'
+  },
+  {
+    '角色範本': '唯讀',
+    '頁面權限': JSON.stringify(['request', 'dashboard', 'short_link']),
+    '功能權限': '[]',
+    '更新時間': '',
+    '更新者': '系統預設'
+  }
+]);
+
 export const DATABASE_HEADERS = [
   '案件編號', '月份', '客戶別', '專案名稱', '專案負責人', '設計種類', '階段', '數量',
   '開始日期', '結束日期', '設計負責人', '項目細節', '狀態', '加權', '填單時間',
@@ -42,6 +73,10 @@ export const TABLE_SCHEMAS = {
     primaryKey: '帳號',
     headers: ['帳號', '角色範本', '狀態', '頁面權限', '功能權限', '更新時間', '更新者']
   },
+  '角色權限範本': {
+    primaryKey: '角色範本',
+    headers: ['角色範本', '頁面權限', '功能權限', '更新時間', '更新者']
+  },
   reels: {
     primaryKey: null,
     headers: ['名字', '限時動態連結', '保留期限', '到期時間', '按讚', '倒讚', '留言']
@@ -75,7 +110,9 @@ export function emptyDatabase() {
     tables: Object.fromEntries(TABLE_NAMES.map(name => [name, {
       headers: [...TABLE_SCHEMAS[name].headers],
       primaryKey: TABLE_SCHEMAS[name].primaryKey,
-      rows: name === '加權計分標準' ? DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row })) : []
+      rows: name === '加權計分標準'
+        ? DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }))
+        : (name === '角色權限範本' ? DEFAULT_ROLE_TEMPLATE_ROWS.map(row => ({ ...row })) : [])
     }])),
     internal: {
       sessions: {},
@@ -98,6 +135,10 @@ export function normalizeDatabaseShape(input) {
     table.primaryKey = schema.primaryKey;
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];
     if (name === '加權計分標準' && !table.rows.length) table.rows = DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }));
+    if (name === '角色權限範本') {
+      const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));
+      table.rows = DEFAULT_ROLE_TEMPLATE_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByRole.get(defaultRow['角色範本']) || {}) }));
+    }
     db.tables[name] = table;
   }
   db.internal ||= {};

@@ -275,6 +275,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /function tableLabel\(name\)\{return name==='database'\?'資料庫':name\}/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
@@ -295,9 +296,14 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /tableName==='修改統計表'.*sortKey='建立日期'.*sortOrder='desc'/);
   assert.match(html, /latest\.get\(String\(right\['案件編號'\]\)\)/);
   assert.match(html, /const NO_INSERT_TABLES=\['database'\]/);
-  assert.match(html, /function updateAddButton\(\)\{const hidden=tableName==='帳號權限'\|\|\(APPS_SCRIPT_MODE&&NO_INSERT_TABLES\.includes\(tableName\)\)/);
+  assert.match(html, /function updateAddButton\(\)\{const hidden=\['帳號權限','角色權限範本'\]\.includes\(tableName\)/);
   assert.match(html, /function permissionAdminHtml\(rows\)/);
   assert.match(html, /data-permission-save/);
+  assert.match(html, /function roleTemplateAdminHtml\(rows\)/);
+  assert.match(html, /data-template-save/);
+  assert.match(html, /同角色且未使用自訂權限的帳號會同步套用/);
+  assert.match(front, /accountJsonDatabaseAdmin.*accessAllowed\('page\.database_admin',false\).*accessAllowed\('database\.manage',false\)/s);
+  assert.doesNotMatch(front, /accountJsonDatabaseAdmin'\)\?\.addEventListener\('click',\(\)=>\{if\(!isAdministrator\(\)/);
   assert.match(html, /button\.textContent=pending\?'套用新資料':'重新讀取'/);
   assert.match(html, /目前畫面與閱讀位置已保留/);
   assert.match(html, /loadDatabaseFile\(\{fresh:true,commitSha,store:false\}\)/);
@@ -378,7 +384,10 @@ test('account access rows control capabilities and can delegate database adminis
   const app = await fixture();
   t.after(() => app.close());
   await app.database.transaction(draft => {
-    draft.tables['設定'].rows.push({ '部門': '業務部', '組別': 'A組', '名字': '權限測試', '顯示名': '權限測試', '帳號': 'acl.user@emctaipei.com' });
+    draft.tables['設定'].rows.push(
+      { '部門': '業務部', '組別': 'A組', '名字': '權限測試', '顯示名': '權限測試', '帳號': 'acl.user@emctaipei.com' },
+      { '部門': '業務部', '組別': 'B組', '名字': '範本測試', '顯示名': '範本測試', '帳號': 'template.user@emctaipei.com' }
+    );
     draft.tables['帳號權限'].rows.push({
       '帳號': 'acl.user@emctaipei.com', '角色範本': '自訂', '狀態': '啟用',
       '頁面權限': JSON.stringify(['request', 'database_admin']),
@@ -398,6 +407,19 @@ test('account access rows control capabilities and can delegate database adminis
 
   const delegated = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(delegated.response.status, 200);
+
+  const updatedTemplate = await request(app.baseUrl, `/api/table/${encodeURIComponent('角色權限範本')}/${encodeURIComponent('一般使用者')}`, {
+    method: 'PATCH', token: login.token, body: { row: {
+      '頁面權限': JSON.stringify(['request', 'database_admin']),
+      '功能權限': JSON.stringify(['request.create', 'database.manage'])
+    } }
+  });
+  assert.equal(updatedTemplate.response.status, 200);
+  const templateLogin = await api(app.baseUrl, 'login', { account: 'template.user', password: 'secret' });
+  const templateVerified = await api(app.baseUrl, 'verifyToken', { editorToken: templateLogin.token });
+  assert.equal(templateVerified.access.role, '一般使用者');
+  assert.deepEqual(templateVerified.access.pages, ['request', 'database_admin']);
+  assert.deepEqual(templateVerified.access.capabilities, ['request.create', 'database.manage']);
 });
 
 test('new project writes database and group JSON table while rotating only the actual assignee', async t => {
@@ -465,7 +487,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', '帳號權限', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', '帳號權限', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
 
   const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');

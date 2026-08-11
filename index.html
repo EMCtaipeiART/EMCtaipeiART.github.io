@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260811-account-access-107" />
+  <meta name="app-version" content="20260811-role-template-defaults-108" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6281,7 +6281,7 @@
     html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
     html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
   </style>
-  <script src="assets/access-control.js?v=20260811-acl-1"></script>
+  <script src="assets/access-control.js?v=20260811-role-templates-2"></script>
 </head>
 <body>
 <header>
@@ -6825,7 +6825,7 @@ const reelsSheetId = 1503122183;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260811-account-access-107';
+const appBuildVersion = '20260811-role-template-defaults-108';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -6912,7 +6912,7 @@ const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
-const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260811-nondisruptive-refresh-4';
+const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260811-role-template-defaults-5';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
@@ -10144,8 +10144,8 @@ document.addEventListener('click',event=>{
 	window.addEventListener('pageshow',()=>refreshWhenPageReturns());
 	window.addEventListener('online',refreshWhenPageReturns);
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
-	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!isAdministrator()||isAdminUserPreview())return;closeAccountMenu();location.href=archiveManagerUrl});
-	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!isAdministrator()||isAdminUserPreview())return;closeAccountMenu();location.href=jsonDatabaseAdminUrl});
+	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false)||isAdminUserPreview())return;closeAccountMenu();location.href=archiveManagerUrl});
+	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false)||isAdminUserPreview())return;closeAccountMenu();location.href=jsonDatabaseAdminUrl});
 	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
 	$('#accountWriteCheck')?.addEventListener('click',checkRegularUserWriteAccess);
 	$('#permissionPreviewExit')?.addEventListener('click',()=>setAdminUserPreview(false));

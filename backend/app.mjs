@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-account-access-2026-08-11';
+const VERSION = 'json-backend-role-template-defaults-2026-08-11';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -272,16 +272,25 @@ function accessRole(snapshot, session) {
   const settings = settingsRow(snapshot, session?.account || session?.user) || {};
   return /^(?:平面|影音)$/.test(text(settings['組別'])) ? '設計師' : '一般使用者';
 }
+function accessTemplate(snapshot, role) {
+  const fallback = ACCESS_ROLE_TEMPLATES[role] || ACCESS_ROLE_TEMPLATES['一般使用者'];
+  if (role === '管理者') return { pages: [...ACCESS_PAGES], capabilities: [...ACCESS_CAPABILITIES] };
+  const row = snapshot.tables['角色權限範本']?.rows?.find(item => text(item['角色範本']) === role) || null;
+  return row ? {
+    pages: accessList(row['頁面權限']).filter(key => ACCESS_PAGES.includes(key)),
+    capabilities: accessList(row['功能權限']).filter(key => ACCESS_CAPABILITIES.includes(key))
+  } : { pages: [...fallback.pages], capabilities: [...fallback.capabilities] };
+}
 function accessProfile(snapshot, session) {
   if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
   const account = canonicalAccount(session.account || session.user);
   if (isManager(snapshot, session)) return { account, role: '管理者', status: '啟用', pages: [...ACCESS_PAGES], capabilities: [...ACCESS_CAPABILITIES], explicit: true };
   const row = snapshot.tables['帳號權限']?.rows?.find(item => canonicalAccount(item['帳號']) === account) || null;
-  const role = text(row?.['角色範本']) || accessRole(snapshot, session), template = ACCESS_ROLE_TEMPLATES[role] || ACCESS_ROLE_TEMPLATES['一般使用者'];
+  const role = text(row?.['角色範本']) || accessRole(snapshot, session), template = accessTemplate(snapshot, role), custom = Boolean(row) && role === '自訂';
   return {
     account, role, status: text(row?.['狀態']) || '啟用',
-    pages: row ? accessList(row['頁面權限']) : [...template.pages],
-    capabilities: row ? accessList(row['功能權限']) : [...template.capabilities], explicit: Boolean(row)
+    pages: custom ? accessList(row['頁面權限']) : [...template.pages],
+    capabilities: custom ? accessList(row['功能權限']) : [...template.capabilities], explicit: Boolean(row)
   };
 }
 function hasCapability(snapshot, session, capability) {
