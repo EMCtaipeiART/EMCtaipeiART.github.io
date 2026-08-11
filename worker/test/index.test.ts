@@ -160,4 +160,60 @@ describe('Machi Design API Worker', () => {
     expect(database.revision).toBe(8);
     expect(database.tables['短連結'].rows).toContainEqual(expect.objectContaining({ '短碼': 'Abc234' }));
   });
+
+  it('saves account settings and permissions in one GitHub commit', async () => {
+    const token = await login();
+    const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'account-file-sha' }, commit: { sha: 'account-commit-sha' } });
+    });
+    const account = 'designer.qa@emctaipei.com';
+    const saved = await api({
+      action: 'adminAccountSave',
+      account,
+      expectSettingsMissing: true,
+      expectPermissionMissing: true,
+      settingsRow: {
+        '帳號': account,
+        '部門': '設計部',
+        '組別': '影音',
+        '名字': 'Designer QA',
+        '顯示名': 'QA Designer',
+        '頭像連結': 'https://example.com/avatar.png',
+        '頭像大圖連結': 'https://example.com/poster.png',
+        '分享音樂': 'https://example.com/music',
+        '音樂起始秒數': '8',
+        '技能': '影片, 動畫',
+        '對話框': '品質確認',
+        '新專案輪值': '2',
+        '篩選月份': '8月 , 9月',
+        '深淺模式': '深色'
+      },
+      permissionRow: {
+        '帳號': account,
+        '角色範本': '設計師',
+        '狀態': '啟用',
+        '頁面權限': JSON.stringify(['request', 'dashboard']),
+        '功能權限': JSON.stringify(['request.create', 'profile.edit'])
+      }
+    }, token);
+    expect(saved).toMatchObject({
+      ok: true,
+      account,
+      revision: 8,
+      githubCommitSha: 'account-commit-sha',
+      changedTables: ['設定', '帳號權限'],
+      settingsRow: { '帳號': account, '技能': '影片 , 動畫' },
+      permissionRow: { '帳號': account, '角色範本': '設計師' }
+    });
+    expect(githubPut).toHaveBeenCalledTimes(1);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '對話框': '品質確認' }));
+    expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '角色範本': '設計師' }));
+  });
 });

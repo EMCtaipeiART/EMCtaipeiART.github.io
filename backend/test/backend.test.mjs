@@ -296,14 +296,22 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /tableName==='修改統計表'.*sortKey='建立日期'.*sortOrder='desc'/);
   assert.match(html, /latest\.get\(String\(right\['案件編號'\]\)\)/);
   assert.match(html, /const NO_INSERT_TABLES=\['database'\]/);
-  assert.match(html, /function updateAddButton\(\)\{const hidden=\['帳號權限','角色權限範本'\]\.includes\(tableName\)/);
+  assert.match(html, /function updateAddButton\(\)\{const hidden=tableName==='角色權限範本'/);
   assert.match(html, /function permissionAdminHtml\(rows\)/);
   assert.match(html, /data-permission-save/);
+  assert.match(html, /action:'adminAccountSave'/);
+  assert.match(html, /accountField\('頭像大圖連結'/);
+  assert.match(html, /data:image\/svg\+xml;charset=UTF-8,\$\{encodeURIComponent\(svg\)\}/);
+  assert.doesNotMatch(html, /xmlns='http:\/\/www\.w3\.org\/2000\/svg'/);
+  assert.match(html, /accountChoice\('篩選月份'/);
+  assert.match(html, /function accountColumnChoices\(model\)/);
+  assert.match(html, /一次儲存個人設定與帳號權限/);
+  assert.doesNotMatch(html.match(/const TABLE_ORDER=\[[^;]+/)?.[0] || '', /'設定'/);
   assert.match(html, /function roleTemplateAdminHtml\(rows\)/);
   assert.match(html, /data-template-save/);
   assert.match(html, /同角色且未使用自訂權限的帳號會同步套用/);
   assert.match(html, /function enqueueAccessWrite\(task\)/);
-  assert.match(html, /已先套用；JSON 正在背景依序寫入，可繼續設定其他帳號/);
+  assert.match(html, /個人設定與權限已先套用；JSON 正在背景原子寫入/);
   assert.match(html, /permissionWritesPending\.has\(account\)/);
   assert.match(html, /if\(data\?\.tables\)MachiAccess\.applyRoleTemplates\(data\)/);
   const accessControl = await readFile(new URL('../../assets/access-control.js', import.meta.url), 'utf8');
@@ -319,7 +327,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.doesNotMatch(backgroundRefresh, /loadMetadata\(/);
   assert.match(backgroundRefresh, /stageDatabaseSnapshot\(data,message\)/);
   assert.match(html, /appsScriptRequest\(original\?'adminTableUpdate':'adminTableInsert'/);
-  assert.match(html, /\+ 新增人員/);
+  assert.match(html, /\+ 新增帳號/);
   assert.match(html, /\+ 新增項目/);
   const save = html.match(/async function saveEditor\([\s\S]*?\n    async function deleteRow/)?.[0] || '';
   assert.doesNotMatch(save, /loadMetadata\(\{fresh:/);
@@ -378,6 +386,13 @@ test('password session protects settings, reels and manager-only issue status wr
 
   const verified = await api(app.baseUrl, 'verifyToken', { editorToken: login.token });
   assert.equal(verified.user, 'Machi');
+
+  const bearerVerified = await request(app.baseUrl, '/api', {
+    method: 'POST', token: login.token, body: { action: 'verifyToken' }
+  });
+  assert.equal(bearerVerified.response.status, 200);
+  assert.equal(bearerVerified.data.ok, true);
+  assert.equal(bearerVerified.data.account, 'machi.chen@emctaipei.com');
 
   const saved = await api(app.baseUrl, 'saveUserSettings', {
     editorToken: login.token,
@@ -548,6 +563,46 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(patched.data.row['專案名稱'], '七表管理已更新');
   const deleted = await request(app.baseUrl, '/api/table/database/26990001', { method: 'DELETE', token: login.token, body: {} });
   assert.equal(deleted.data.deleted['案件編號'], '26990001');
+});
+
+test('admin account save atomically creates personal settings and access', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  const account = 'new.designer@emctaipei.com';
+  const saved = await api(app.baseUrl, 'adminAccountSave', {
+    editorToken: login.token,
+    account,
+    expectSettingsMissing: true,
+    expectPermissionMissing: true,
+    settingsRow: {
+      '帳號': account, '部門': '設計部', '組別': '平面', '名字': 'New Designer', '顯示名': '新設計師',
+      '頭像連結': 'https://example.com/new-avatar.jpg', '頭像大圖連結': 'https://example.com/new-poster.jpg',
+      '分享音樂': 'https://example.com/music', '音樂起始秒數': '12', '技能': '平面, 動畫', '對話框': '測試對話框',
+      '新專案輪值': '3', '篩選月份': '8月 , 9月', '篩選狀態': '未開始 , 執行中', '深淺模式': '深色'
+    },
+    permissionRow: {
+      '帳號': account, '角色範本': '設計師', '狀態': '啟用',
+      '頁面權限': JSON.stringify(['request', 'dashboard']),
+      '功能權限': JSON.stringify(['request.create', 'profile.edit'])
+    }
+  });
+  assert.deepEqual(saved.changedTables, ['設定', '帳號權限']);
+  assert.equal(saved.settingsRow['技能'], '平面 , 動畫');
+  assert.equal(saved.permissionRow['角色範本'], '設計師');
+  assert.equal(app.database.table('設定').rows.filter(row => row['帳號'] === account).length, 1);
+  assert.equal(app.database.table('帳號權限').rows.filter(row => row['帳號'] === account).length, 1);
+
+  const rejected = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'adminAccountSave', editorToken: login.token, account: 'broken.account@emctaipei.com',
+    expectSettingsMissing: true, expectPermissionMissing: true,
+    settingsRow: { '帳號': 'broken.account@emctaipei.com', '名字': 'Broken Account' },
+    permissionRow: { '帳號': 'broken.account@emctaipei.com', '角色範本': '不存在', '狀態': '啟用' }
+  } });
+  assert.equal(rejected.response.status, 400);
+  assert.equal(rejected.data.ok, false);
+  assert.equal(app.database.table('設定').rows.some(row => row['帳號'] === 'broken.account@emctaipei.com'), false);
+  assert.equal(app.database.table('帳號權限').rows.some(row => row['帳號'] === 'broken.account@emctaipei.com'), false);
 });
 
 test('ERP OAuth exchanges PKCE code, reads identity and creates a JSON session', async t => {

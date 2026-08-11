@@ -2,7 +2,7 @@ import { TABLE_SCHEMAS, TABLE_NAMES, normalizeDatabaseShape } from '../../backen
 import { applyWeightToRow } from '../../backend/weighting.mjs';
 import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 
-export const VERSION = 'cloudflare-worker-auth-2026-08-11-1';
+export const VERSION = 'cloudflare-worker-account-profile-2026-08-11-2';
 export const LOGIN_DOMAIN = '@emctaipei.com';
 export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
 export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';

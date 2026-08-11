@@ -2,6 +2,16 @@
 
 這份文件用來記錄系統欄位綁定、修改規則、容易互相影響的功能，以及每次修改後必須檢查的項目。之後任何功能調整都先看這份文件，再補上新的紀錄。
 
+## 2026-08-11｜「設定」合併「帳號權限」
+
+- 資料庫後台不再顯示獨立「設定」頁籤；底層 `設定` 表繼續保留供前台相容，但由「帳號權限」的單一帳號編輯器統一維護個人資料、喜愛設定與權限。
+- 喜愛設定改為下拉選單與複選格，包含主題、年／月／狀態／設計師篩選、區塊收合、顯示欄位與順序。
+- 設計師帳號額外顯示頭像、頭像大圖、分享音樂與起始秒數、多選技能、自訂技能、對話框與新專案輪值。
+- Worker 與 Node 後端新增 `adminAccountSave`，在同一個交易中更新／建立 `設定` 與 `帳號權限`，並用預期資料列防止舊畫面覆寫新資料。
+- 本機 Node `/api` 現在會將 Bearer token 傳給 `verifyToken`，與正式 Worker 的驗證合約一致；另修正頭像載入失敗時，SVG 備援圖的內嵌事件語法錯誤。
+- 驗收：Node 22/22、Worker 5/5、Worker 型別檢查與乾跑部署、HTML 內嵌程式與 `git diff --check` 均通過。瀏覽器以臨時資料庫實際新增設計師帳號，兩張表同時寫入、Karl 自訂技能保留，無後台 console 錯誤。
+- 版本：資料庫後台 `20260811-account-profile-merge-9`、Worker `cloudflare-worker-account-profile-2026-08-11-2`、Node `json-backend-account-profile-2026-08-11-2`。
+
 ## 2026-08-11｜正式驗證全面切換 Cloudflare Worker
 
 - 正式登入驗證、雜湊 session、即時權限、資料 API 與 GitHub JSON 寫入已切換至 `https://machi-design-api.machi-chen.workers.dev/api`；前端不再以每日 `local-admin` token 或主系統 Apps Script 作為正式驗證來源。

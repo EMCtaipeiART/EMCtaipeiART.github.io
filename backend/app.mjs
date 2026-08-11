@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-role-template-defaults-2026-08-11';
+const VERSION = 'json-backend-account-profile-2026-08-11-2';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -21,7 +21,8 @@ const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
   'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment',
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
-  'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories'
+  'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
+  'adminAccountSave'
 ]);
 const PROJECT_GROUPS = {
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
@@ -361,6 +362,28 @@ function updateSettingsRow(row, settings = {}) {
   }
 }
 
+function normalizedTableRow(headers, value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return Object.fromEntries(headers.map(header => [header, text(source[header])]));
+}
+
+function rowsDiffer(headers, left, right) {
+  return headers.some(header => text(left?.[header]) !== text(right?.[header]));
+}
+
+function normalizedAccessList(value, allowed) {
+  let values = [];
+  if (Array.isArray(value)) values = value;
+  else {
+    const raw = text(value);
+    if (raw) {
+      try { const parsed = JSON.parse(raw); values = Array.isArray(parsed) ? parsed : []; }
+      catch { values = raw.split(/[\n,，、|｜]/); }
+    }
+  }
+  return unique(values.map(text).filter(item => allowed.includes(item)));
+}
+
 export function createActionHandler(database, options = {}) {
   const loginPassword = options.loginPassword ?? process.env.JSON_DB_LOGIN_PASSWORD ?? '';
   const googleClientId = options.googleClientId || process.env.GOOGLE_OAUTH_CLIENT_ID || GOOGLE_CLIENT_ID;
@@ -619,6 +642,59 @@ export function createActionHandler(database, options = {}) {
         updateSettingsRow(row, payload.settings || {});
         return { ok: true, action, account, settings: settingsResponse(row) };
       }, 'save user settings');
+    }
+    if (action === 'adminAccountSave') {
+      const session = requireCapability(snapshot, payload, 'database.manage');
+      const requestedSettings = payload.settingsRow || payload.settings || {};
+      const requestedPermission = payload.permissionRow || payload.permission || {};
+      const expectedSettings = payload.expectedSettingsRow || {};
+      const expectedPermission = payload.expectedPermissionRow || {};
+      const account = canonicalAccount(payload.account || requestedSettings['帳號'] || requestedPermission['帳號']);
+      if (!account || !account.endsWith(LOGIN_DOMAIN)) throw new Error(`帳號必須使用 ${LOGIN_DOMAIN} 公司信箱`);
+      return database.transaction(draft => {
+        const settingsTable = draft.tables['設定'], permissionTable = draft.tables['帳號權限'];
+        let settingsIndex = settingsTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
+        let permissionIndex = permissionTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
+        if (Object.keys(expectedSettings).length) {
+          if (settingsIndex < 0 || rowsDiffer(settingsTable.headers, expectedSettings, settingsTable.rows[settingsIndex])) throw new Error('個人設定已被其他人更新，請重新讀取後再操作');
+        } else if (payload.expectSettingsMissing === true && settingsIndex >= 0) throw new Error('這個帳號已經存在，請重新讀取後再操作');
+        if (Object.keys(expectedPermission).length) {
+          if (permissionIndex < 0 || rowsDiffer(permissionTable.headers, expectedPermission, permissionTable.rows[permissionIndex])) throw new Error('帳號權限已被其他人更新，請重新讀取後再操作');
+        } else if (payload.expectPermissionMissing === true && permissionIndex >= 0) throw new Error('帳號權限已被其他人建立，請重新讀取後再操作');
+
+        const settings = normalizedTableRow(settingsTable.headers, requestedSettings);
+        settings['帳號'] = account;
+        if (!text(settings['名字'])) throw new Error('請填寫帳號姓名');
+        if (text(settings['名字']).length > 60 || text(settings['顯示名']).length > 60) throw new Error('姓名與顯示名不得超過 60 個字');
+        settings['顯示名'] ||= settings['名字'];
+        for (const header of ['頭像連結', '頭像大圖連結', '分享音樂']) if (text(settings[header]) && !isHttpUrl(settings[header])) throw new Error(`「${header}」必須是 http 或 https 網址`);
+        if (text(settings['音樂起始秒數'])) settings['音樂起始秒數'] = String(Math.max(0, Math.floor(Number(settings['音樂起始秒數']) || 0)));
+        if (text(settings['新專案輪值'])) {
+          const rotation = Number(settings['新專案輪值']);
+          if (!Number.isInteger(rotation) || rotation < 1 || rotation > 99) throw new Error('新專案輪值必須是 1–99 的整數');
+          settings['新專案輪值'] = String(rotation);
+        }
+        settings['技能'] = splitNames(settings['技能']).join(' , ');
+        if (text(settings['對話框']).length > 120) throw new Error('對話框不得超過 120 個字');
+        if (text(settings['深淺模式']) && !['淺色', '深色'].includes(text(settings['深淺模式']))) throw new Error('深淺模式格式不正確');
+
+        const permission = normalizedTableRow(permissionTable.headers, requestedPermission);
+        permission['帳號'] = account;
+        const roles = ['管理者', '設計師', '一般使用者', '唯讀', '自訂'];
+        if (!roles.includes(text(permission['角色範本']))) throw new Error('角色範本格式不正確');
+        if (!['啟用', '停用'].includes(text(permission['狀態']))) throw new Error('帳號狀態格式不正確');
+        const manager = permission['角色範本'] === '管理者';
+        permission['頁面權限'] = JSON.stringify(manager ? ACCESS_PAGES : normalizedAccessList(permission['頁面權限'], ACCESS_PAGES));
+        permission['功能權限'] = JSON.stringify(manager ? ACCESS_CAPABILITIES : normalizedAccessList(permission['功能權限'], ACCESS_CAPABILITIES));
+        permission['更新時間'] ||= nowTaipei();
+        permission['更新者'] ||= session.user || session.account;
+
+        if (settingsIndex < 0) { settingsTable.rows.push(settings); settingsIndex = settingsTable.rows.length - 1; }
+        else settingsTable.rows[settingsIndex] = settings;
+        if (permissionIndex < 0) { permissionTable.rows.push(permission); permissionIndex = permissionTable.rows.length - 1; }
+        else permissionTable.rows[permissionIndex] = permission;
+        return { ok: true, action, account, settingsRow: { _rowNumber: settingsIndex + 2, ...settings }, permissionRow: { _rowNumber: permissionIndex + 2, ...permission }, changedTables: ['設定', '帳號權限'] };
+      }, 'admin account save');
     }
     if (action === 'saveDesignerProfiles') {
       requireCapability(snapshot, payload, 'designer.settings');
@@ -997,6 +1073,8 @@ export async function createApp(options = {}) {
       if (url.pathname === '/api' || url.pathname === '/api/') {
         const query = Object.fromEntries(url.searchParams.entries());
         const payload = req.method === 'POST' ? { ...query, ...(await bodyJson(req)) } : query;
+        const bearerToken = text(req.headers.authorization).replace(/^Bearer\s+/i, '');
+        if (bearerToken && !payload.editorToken && !payload.token) payload.editorToken = bearerToken;
         const action = payload.action || 'list';
         const result = await handleAction(action, payload, { baseUrl: requestBaseUrl(req), req });
         // Apps Script historically returns HTTP 200 with an {ok:false} body. Keep

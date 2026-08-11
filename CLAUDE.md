@@ -11,7 +11,7 @@
 
 1. [系統是什麼](#1-系統是什麼)
 2. [整體架構：Cloudflare Worker 為正式驗證與資料 API](#2-整體架構cloudflare-worker-為正式驗證與資料-api)
-3. [資料層：八張 JSON 表](#3-資料層八張-json-表)
+3. [資料層：十張 JSON 表](#3-資料層十張-json-表)
 4. [寫入與備份規則（重要）](#4-寫入與備份規則重要)
 5. [前台 index.html](#5-前台-indexhtml)
 6. [後台 json_database_admin.html](#6-後台-json_database_adminhtml)
@@ -76,7 +76,7 @@ backend/data/db.json 更新後
 
 Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在**不是資料的主要來源**，只在「新增案件」時被動接收一份備份，其餘七張表（設定、reels、加權計分標準…）完全不會寫回試算表。試算表上另外還有「階段」分頁等舊資料，那些已經跟即時系統無關，只是歷史殘留。
 
-## 3. 資料層：八張 JSON 表
+## 3. 資料層：十張 JSON 表
 
 全部存在 `backend/data/db.json` 一個檔案裡的 `tables` 物件底下，`backend/schema.mjs` 定義了 canonical 欄位。
 
@@ -87,7 +87,9 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 | `短連結` | 短碼 | 一般短網址對照表 |
 | `補充資料連結` | 案件編號 | 每個案件的補充資料 A–D 連結 |
 | `修改統計表` | （無，用列序） | 案件修改歷程 |
-| `設定` | 帳號 | 設計師與一般使用者的個人設定（頭像、技能、對話框…），有 37 個欄位，其中約 26 個是介面暫存/草稿欄位，不是真正的「個人資料」 |
+| `設定` | 帳號 | 人員身分、喜愛設定與設計師公開資料（頭像、大圖、音樂、技能、對話框、輪值等）；後台不再獨立顯示此表，由「帳號權限」合併編輯 |
+| `帳號權限` | 帳號 | 帳號狀態、角色範本、可查看頁面與可執行功能 |
+| `角色權限範本` | 角色權限範本 | 管理者、設計師、一般使用者與唯讀的共用權限範本 |
 | `reels` | （無，用列序） | 限時動態、按讚倒讚、留言 |
 | `bug_report` | （無，用列序） | 問題回報，用 5 個狀態時間戳記錄流程 |
 
@@ -124,7 +126,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - `短連結`：表格，短碼用徽章樣式。
 - `補充資料連結`：卡片，依更新時間新到舊排序。
 - `修改統計表`：依案件編號分組的時間軸。
-- `設定`：一人一張卡片，37 個欄位裡只有 12 個「主要欄位」直接顯示，其餘 26 個收進可折疊的「進階」區塊。
+- `帳號權限`：將底層 `設定` 與 `帳號權限` 合併為單一帳號編輯器，可新增帳號、維護身分與喜愛設定，並顯示角色／自訂權限；設計師另有頭像、大圖、音樂、技能、對話框與新專案輪值。「設定」已從側邊頁籤移除。
+- `角色權限範本`：維護四種共用角色的頁面與功能權限；非「自訂」帳號會自動繼承。
 - `reels`：卡片＋留言泡泡，會顯示已過期但保留的限動。
 - `bug_report`：依狀態分欄的看板（Kanban）。
 
@@ -182,6 +185,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 ---
 
 ## 11. 修改紀錄
+
+### 2026-08-11 17:55 Asia/Taipei — 喜愛設定與帳號權限合併
+
+- 修改目的：把原本獨立的「設定」資料編輯整合到每個帳號，以下拉選單與複選格維護喜愛設定，並補齊設計師專屬欄位。
+- 影響檔案：`json_database_admin.html`、`backend/app.mjs`、`backend/test/backend.test.mjs`、`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/README.md`、`CODEX.md`、`CLAUDE.md`。
+- 影響功能：帳號合併編輯器、新增帳號、設計師公開資料、喜愛設定、角色與自訂權限；`adminAccountSave` 在單一 Worker／Node 交易中寫入兩張底層表。
+- 風險區塊：帳號與權限是高影響資料，因此保留舊的 `設定` 表結構供前台相容，並用預期資料列做樂觀並行檢查。
+- 附帶修正：本機 Node API 會將 `Authorization: Bearer` 傳入 action payload，避免剛登入就被判定 `TOKEN_EXPIRED`；頭像失敗備援 SVG 全字串編碼，避免內嵌 `onerror` 因 URL 引號產生語法錯誤。
+- 已檢查／驗證方式：HTML 內嵌 JS、Node 語法、`git diff --check`、Node 22/22、Worker 5/5、Worker types/tsc 與 dry-run；隔離資料庫瀏覽器 QA 完成新增設計師帳號、兩表交易寫入、既有自訂技能保留與頭像失敗備援，後台新分頁 console 無錯誤。
+- 部署狀態：尚未推送 GitHub，也未重新部署 Worker；目前是本機已完成且可發布的狀態。
+- commit：尚未建立。
 
 ### 2026-08-10 16:03 Asia/Taipei — 補上遺失的設計師大頭貼檔案
 
