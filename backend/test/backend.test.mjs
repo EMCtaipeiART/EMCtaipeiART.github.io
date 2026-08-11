@@ -276,7 +276,12 @@ test('front-end action API reads and atomically writes all requested JSON tables
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /function tableLabel\(name\)\{return name==='database'\?'資料庫':\(name==='帳號權限'\?'帳號設定':name\)\}/);
+  assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報'\};/);
+  assert.match(html, /function tableLabel\(name\)\{return TABLE_LABELS\[name\]\|\|name\}/);
+  // reels 不再列進側邊選單，改由「帳號設定」的 REELS 小卡直接編輯／刪除
+  assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'reels'/);
+  assert.match(html, /data-account-reel-edit=/);
+  assert.match(html, /data-account-reel-delete=/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
@@ -300,7 +305,9 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function permissionAdminHtml\(rows\)/);
   assert.match(html, /data-permission-save/);
   assert.match(html, /action:'adminAccountSave'/);
-  assert.match(html, /accountField\('頭像大圖連結'/);
+  // 頭像大圖／分享音樂改用 accountLinkField：單行輸入框＋截斷顯示的連結，完整網址留在 href/title
+  assert.match(html, /accountLinkField\('頭像大圖連結'/);
+  assert.match(html, /function accountLinkField\(label,header,value\)\{/);
   assert.match(html, /data:image\/svg\+xml;charset=UTF-8,\$\{encodeURIComponent\(svg\)\}/);
   assert.doesNotMatch(html, /xmlns='http:\/\/www\.w3\.org\/2000\/svg'/);
   assert.match(html, /accountChoice\('篩選月份'/);
