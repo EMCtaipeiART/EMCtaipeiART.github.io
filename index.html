@@ -7203,7 +7203,7 @@ function hasRemoteAccountAvatar(settings){return Boolean(settings)&&(['avatar','
 function remoteAccountAvatar(settings){return imageUrl(settings?.avatar??settings?.['頭像連結']??'')}
 function remoteSettingsPayload(){const theme=currentTheme(); return {visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,theme,'深淺模式':theme==='dark'?'深色':'淺色',collapseSettings:{...collapseSettings},filters:{year:[...(accountFilterSettings.year||[])],month:[...(accountFilterSettings.month||[])],status:[...(accountFilterSettings.status||[])],designer:[...(accountFilterSettings.designer||[])]}}}
 function saveRemoteSettingsForAccount(message='個人設定已儲存'){
-  if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalAdminToken())return;
+  if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalPreviewToken())return;
   const account=currentEditorAccount, editor=currentEditor, token=currentEditorToken, settings=remoteSettingsPayload(), sequence=++remoteSettingsSaveSequence;
   clearTimeout(remoteSettingsSaveTimer);
   remoteSettingsSaveTimer=setTimeout(()=>{
@@ -7637,11 +7637,11 @@ async function loadDesignerRoster({background=false}={}){
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!requireAccess('designer.settings','此帳號沒有設計師設定權限'))return; renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
-function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return; if(hasDesignerAccountRole()){closeAccountMenu();setSync('設計師顯示名由帳號資料統一管理',true,3200);return} if(isLocalAdminToken()){setSync('管理者測試帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); setPersonalSettingsStatus(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
+function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return; if(hasDesignerAccountRole()){closeAccountMenu();setSync('設計師顯示名由帳號資料統一管理',true,3200);return} if(isLocalPreviewToken()){setSync('本機檢視帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); setPersonalSettingsStatus(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
 function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(modal)modal.hidden=true}
 async function savePersonalSettings(event){
   event.preventDefault();
-  if(!isLoggedIn()||hasDesignerAccountRole()||isLocalAdminToken()||!requireAccess('profile.edit'))return;
+  if(!isLoggedIn()||hasDesignerAccountRole()||isLocalPreviewToken()||!requireAccess('profile.edit'))return;
   const form=event.target, input=form.elements.displayName, displayName=input.value.trim(), submit=form.querySelector('button[type="submit"]'), submitLabel=submit.textContent;
   if(!displayName){input.setCustomValidity('請輸入顯示名');input.reportValidity();return}
   input.setCustomValidity('');
@@ -7703,7 +7703,7 @@ function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()
 function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
   if(!requireAccess('profile.edit','此帳號沒有設定頭像權限'))return;
-  if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
+  if(isLocalPreviewToken()){setSync('本機檢視帳號無法設定個人頭像',true);return}
   closeAccountMenu();
   openUploadModal(userAvatarUploadUrl(),'設定我的頭像');
 }
@@ -8774,7 +8774,7 @@ function accountInitial(name){const text=String(name||'').trim(); return (text.m
 function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return currentAccountAvatar||imageUrl(profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():'', displayName=currentUserDisplayName(); if(url){const fallback=accountInitial(displayName); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(displayName)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(displayName):'登'}}
 function canOpenDesignDashboard(){return !isAdminUserPreview()&&(designerOptions.includes(currentEditor)||currentDesignGroup()==='管理者'||isLocalAdminToken())}
-function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designerRole=hasDesignerAccountRole(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), displayName=currentUserDisplayName(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), personalSettingsBtn=$('#accountPersonalSettings'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), archiveBtn=$('#accountArchiveManager'), jsonAdminBtn=$('#accountJsonDatabaseAdmin'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const department=currentEditorDepartment||'', accountSubtitle=preview?'一般使用者預覽':(department||'未設定部門'); if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?displayName:'登入'; if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com'; renderAccountAvatar(); if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||designerRole||isLocalAdminToken(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalAdminToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(archiveBtn)archiveBtn.hidden=!admin||preview; if(jsonAdminBtn)jsonAdminBtn.hidden=!admin||preview; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
+function updateLoginUi(){const loggedIn=isLoggedIn(), admin=isAdministrator(), preview=isAdminUserPreview(), designerRole=hasDesignerAccountRole(), designLogin=isDesignerLogin(), dashboardLogin=canOpenDesignDashboard(), displayName=currentUserDisplayName(), btn=$('#loginBtn'), split=document.querySelector('.case-split'), casesSection=$('#casesSection'), nameEl=$('#accountName'), roleEl=$('#accountRole'), personalSettingsBtn=$('#accountPersonalSettings'), avatarSettingsBtn=$('#accountAvatarSettings'), settingsBtn=$('#accountDesignerSettings'), dashboardBtn=$('#accountDesignDashboard'), archiveBtn=$('#accountArchiveManager'), jsonAdminBtn=$('#accountJsonDatabaseAdmin'), permissionBtn=$('#accountPermissionMode'), writeCheckBtn=$('#accountWriteCheck'), permissionDivider=$('#adminPermissionDivider'), logoutBtn=$('#accountLogout'), csvBtn=$('#downloadCsv'); const department=currentEditorDepartment||'', accountSubtitle=preview?'一般使用者預覽':(department||'未設定部門'); if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入'; btn.classList.toggle('signed-in',loggedIn)} if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin); if(nameEl)nameEl.textContent=loggedIn?displayName:'登入'; if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com'; renderAccountAvatar(); if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||designerRole||isLocalPreviewToken(); if(avatarSettingsBtn)avatarSettingsBtn.hidden=!loggedIn||designLogin||isLocalPreviewToken(); if(settingsBtn)settingsBtn.hidden=!designLogin; if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin; if(archiveBtn)archiveBtn.hidden=!admin||preview; if(jsonAdminBtn)jsonAdminBtn.hidden=!admin||preview; if(permissionBtn){permissionBtn.hidden=!admin; permissionBtn.textContent=preview?'返回管理者權限':'切換一般使用者預覽'} if(writeCheckBtn)writeCheckBtn.hidden=!admin; if(permissionDivider)permissionDivider.hidden=!admin; if(logoutBtn)logoutBtn.hidden=!loggedIn; if(csvBtn)csvBtn.hidden=!designLogin; if(!loggedIn){adminUserPreview=false; sessionStorage.removeItem('designRequestAdminUserPreview'); closeAccountMenu(); closeNotifications()} renderPermissionPreview(); renderNotifications(); if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled); updateCaseSplitPanelWidths({force:true}); syncCaseListTableWidth()} syncTimelineHeights(); adjustCaseSplitHeight()}
 function openDesignDashboard(){if(!canOpenDesignDashboard()){setSync('設計儀表板僅開放設計師與管理者使用',true);return} localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:currentEditor,account:currentEditorAccount,group:currentDesignGroup(),authToken:currentEditorToken,returnUrl:location.href,updatedAt:Date.now()})); const url=new URL(designDashboardUrl); url.searchParams.set('designer',currentEditor); window.open(url.toString(),'_blank','noopener')}
 function consumeDashboardCaseFocus(){const id=localStorage.getItem('designRequestFocusCaseV1')||'';if(!id||!rows.some(row=>String(row.id)===String(id)))return false;localStorage.removeItem('designRequestFocusCaseV1');focusNotificationCase(id);return true}
 function syncTopPanelHeights(){
@@ -9414,9 +9414,16 @@ function submitFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
 function redirectFullPageToAppsScript(fields){return appsScriptPost(fields,30000)}
 function applyLoginRedirectResult(data,source='登入'){if(!data?.ok||!data?.token||!data?.user)throw Object.assign(new Error(data?.error||`${source}未完成驗證`),{rawResponse:data}); console.info(`[${source}成功]`,data.loginDebug||{account:data.account,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}
 function taipeiDateParts(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value])); return {year:parts.year,month:parts.month,day:parts.day}}
-function isLocalAdminToken(){return false}
-function isLocalAdminTokenValid(){return false}
-function loginLocalAdmin(){throw new Error('本機管理者登入已停用，請透過 Cloudflare Worker 驗證')}
+function todayAdminPassword(){const {month,day}=taipeiDateParts(); return `${month}${day}`}
+function todayAdminToken(){const {year,month,day}=taipeiDateParts(); return `local-admin:${year}${month}${day}`}
+function todayTesterToken(){const {year,month,day}=taipeiDateParts(); return `local-tester:${year}${month}${day}`}
+function isLocalAdminToken(token=currentEditorToken){return String(token||'').startsWith('local-admin:')}
+function isLocalTesterToken(token=currentEditorToken){return String(token||'').startsWith('local-tester:')}
+function isLocalPreviewToken(token=currentEditorToken){return isLocalAdminToken(token)||isLocalTesterToken(token)}
+function isLocalAdminTokenValid(token=currentEditorToken){const value=String(token||''); return value===todayAdminToken()||value===todayTesterToken()}
+function applyLocalPreviewSession(role,{announce=true}={}){const admin=role==='管理者'; currentEditor=admin?'管理者':'測試者'; currentEditorDisplayName=currentEditor; currentEditorAccount=admin?'local-admin':'local-tester'; currentEditorToken=admin?todayAdminToken():todayTesterToken(); currentEditorGroup=admin?'管理者':'一般使用者'; currentEditorDepartment=admin?'管理者':'測試'; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); if(announce){setSync(`已登入：${currentEditor}（檢視模式，無法寫入）`); finishLoginOverlay(`登入成功：${currentEditor}`)}}
+function loginLocalAdmin(){applyLocalPreviewSession('管理者')}
+function loginLocalTester(){applyLocalPreviewSession('測試者')}
 function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; selectedCaseIds.clear()}
 function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='WORKER_API_READ_FAILED'||/Cloudflare Worker API 讀取失敗|ping/i.test(error?.message||''); const displayContext=apiReadFailed?'Cloudflare Worker API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,apiUrl:error?.apiUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), apiLikely=apiReadFailed||/Cloudflare Worker|測試連線|驗證沒有回應|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(apiLikely?`請按「測試連線」確認 Cloudflare Worker 是否可執行。API：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
@@ -9433,6 +9440,11 @@ function isExpiredEditorSessionError(error){return /TOKEN_EXPIRED|登入狀態�
 async function verifyStoredEditorToken(){
   const token=currentEditorToken||pendingEditorSession.token;
   if(!token){clearLoginAuthState();updateLoginUi();return false}
+  if(isLocalPreviewToken(token)){
+    if(!isLocalAdminTokenValid(token)){clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();return false}
+    applyLocalPreviewSession(isLocalAdminToken(token)?'管理者':'測試者',{announce:false});
+    return true;
+  }
   try{
     const data=await sheetApi('verifyToken',{editorToken:token});
     if(!data?.ok||!data?.user)throw new Error(data?.error||'TOKEN_EXPIRED');
@@ -9464,7 +9476,7 @@ async function verifyStoredEditorToken(){
 async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
 function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorDisplayName=remoteDisplayName(settings)||user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user, settingsRevision=accountSettingsRevision; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount||accountSettingsRevision!==settingsRevision)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 async function keepEditorSessionAlive(){
-  if(!isLoggedIn()||isLocalAdminToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
+  if(!isLoggedIn()||isLocalPreviewToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
   lastEditorSessionKeepAliveAt=Date.now();
   try{
     const data=await sheetApi('verifyToken',{editorToken:currentEditorToken});
@@ -9555,7 +9567,7 @@ async function verifyEditorLogin(account,password,newPassword=''){
   return data;
 }
 function startEmailLogin(){setGoogleLoginEmail(''); startGooglePopupLogin(localStorage.getItem('designRequestSavedAccount')||'')}
-async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
+async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test'){showLoginPendingOverlay(loginPendingText('測試者')); clearLoginAuthState(); loginLocalTester(); return} if(password===todayAdminPassword()){showLoginPendingOverlay(loginPendingText('管理者')); clearLoginAuthState(); loginLocalAdmin(); return} showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
 async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}
@@ -9937,8 +9949,8 @@ const updateLoginUiWithoutAccess=updateLoginUi;
 updateLoginUi=function(...args){
   const result=updateLoginUiWithoutAccess(...args),loggedIn=isLoggedIn();
   const show=(selector,allowed)=>{const element=$(selector);if(element)element.hidden=!allowed};
-  show('#accountPersonalSettings',loggedIn&&!hasDesignerAccountRole()&&!isLocalAdminToken()&&accessAllowed('profile.edit',true));
-  show('#accountAvatarSettings',loggedIn&&!isLocalAdminToken()&&accessAllowed('profile.edit',true));
+  show('#accountPersonalSettings',loggedIn&&!hasDesignerAccountRole()&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true));
+  show('#accountAvatarSettings',loggedIn&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true));
   show('#accountDesignerSettings',loggedIn&&accessAllowed('designer.settings',hasDesignerAccountRole()));
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
   show('#accountArchiveManager',loggedIn&&accessAllowed('page.archive',isAdministrator())&&accessAllowed('archive.edit',isAdministrator()));
@@ -9953,8 +9965,8 @@ const loginEditorWithoutAccess=loginEditor;
 loginEditor=function(...args){const result=loginEditorWithoutAccess(...args);void refreshSignedInAccess();return result};
 const logoutEditorWithoutAccess=logoutEditor;
 logoutEditor=async function(...args){const result=await logoutEditorWithoutAccess(...args);await window.MachiAccess?.refresh({account:'',user:'',group:'',department:'',token:''});return result};
-const loginLocalAdminWithoutAccess=loginLocalAdmin;
-loginLocalAdmin=function(...args){const result=loginLocalAdminWithoutAccess(...args);void refreshSignedInAccess();return result};
+const applyLocalPreviewSessionWithoutAccess=applyLocalPreviewSession;
+applyLocalPreviewSession=function(...args){const result=applyLocalPreviewSessionWithoutAccess(...args);void refreshSignedInAccess();return result};
 
 $('#requestForm').addEventListener('submit',e=>{
   e.preventDefault();

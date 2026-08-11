@@ -223,6 +223,11 @@
       state = { loaded: true, account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
       apply(); removeDeniedOverlay(); return state;
     }
+    if (/^local-(?:admin|tester):/.test(identity.token)) {
+      const role = roleFromIdentity(identity), template = templateFor(role);
+      state = { loaded: true, account: canonicalAccount(identity.account), role, status: '啟用', pages: [...template.pages], capabilities: [...template.capabilities], explicit: false };
+      apply(); removeDeniedOverlay(); return state;
+    }
     if (refreshPromise) return refreshPromise;
     const operation = (async () => {
       try { state = await fetchServerAccess(identity); }
