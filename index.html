@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260810-story-json-sync-106" />
+  <meta name="app-version" content="20260811-account-access-107" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6281,6 +6281,7 @@
     html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
     html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
   </style>
+  <script src="assets/access-control.js?v=20260811-acl-1"></script>
 </head>
 <body>
 <header>
@@ -6824,7 +6825,7 @@ const reelsSheetId = 1503122183;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
-const appBuildVersion = '20260810-story-json-sync-106';
+const appBuildVersion = '20260811-account-access-107';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -7416,7 +7417,9 @@ function currentDesignGroup(){return normalizeDesignGroup(currentEditorGroup)||f
 function hasDesignerAccountRole(){return ['平面','影音','管理者'].includes(currentDesignGroup())}
 function isAdministrator(){return isLoggedIn()&&(currentDesignGroup()==='管理者'||isLocalAdminToken())}
 function isAdminUserPreview(){return isAdministrator()&&adminUserPreview}
-function isDesignerLogin(){return !isAdminUserPreview()&&hasDesignerAccountRole()}
+function accessAllowed(key,fallback=true){const access=window.MachiAccess;if(!access||!access.state.loaded)return fallback;return access.can(key)}
+function requireAccess(key,message='此帳號沒有這個操作權限'){if(accessAllowed(key,false))return true;setSync(message,true,3200);return false}
+function isDesignerLogin(){return !isAdminUserPreview()&&accessAllowed('request.status',hasDesignerAccountRole())}
 function parseDate(value){const text=String(value||'').trim(); if(!text)return null; const match=text.match(/(19\d{2}|20\d{2}|2100)[/-](\d{1,2})[/-](\d{1,2})/); if(!match)return null; const y=Number(match[1]), m=Number(match[2]), d=Number(match[3]), date=new Date(y,m-1,d); return date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d?date:null}
 function slashDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
 function shortMonthDayDate(value){const date=parseDate(value); if(!date)return String(value||''); return `${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`}
@@ -7554,8 +7557,8 @@ function advanceDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==she
 function previousDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell||activeDesignerStoryPlayback.index<=0)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index-1)}
 function stopDesignerStoryPlayback(){clearDesignerStoryCommentRotation();if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
 function applyUpdatedActiveReel(updated){const reel=mergeDesignerReel(updated); if(activeDesignerStoryPlayback?.story?.id===reel.id){activeDesignerStoryPlayback.story=reel; activeDesignerStoryPlayback.stories[activeDesignerStoryPlayback.index]=reel; renderStoryInteractions(activeDesignerStoryPlayback.shell,reel)} return reel}
-async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
-async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
+async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
+async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
 let spotifyIframeApi=null;
 const spotifyEmbedControllers=new WeakMap();
 const spotifyEmbedPending=new WeakSet();
@@ -7603,14 +7606,14 @@ async function loadDesignerRoster({background=false}={}){
   if(changed||!background)renderDesigners();
   if(!background||changed)updateLoginUi();
 }
-function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
+function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!requireAccess('designer.settings','此帳號沒有設計師設定權限'))return; renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
-function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(hasDesignerAccountRole()){closeAccountMenu();setSync('設計師顯示名由帳號資料統一管理',true,3200);return} if(isLocalAdminToken()){setSync('管理者測試帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); setPersonalSettingsStatus(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
+function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return} if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return; if(hasDesignerAccountRole()){closeAccountMenu();setSync('設計師顯示名由帳號資料統一管理',true,3200);return} if(isLocalAdminToken()){setSync('管理者測試帳號無法儲存個人設定',true);return} closeAccountMenu(); const modal=$('#personalSettingsModal'), form=$('#personalSettingsForm'); if(!modal||!form)return; form.elements.displayName.value=currentUserDisplayName(); setPersonalSettingsStatus(); modal.hidden=false; setTimeout(()=>form.elements.displayName?.focus?.(),40)}
 function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(modal)modal.hidden=true}
 async function savePersonalSettings(event){
   event.preventDefault();
-  if(!isLoggedIn()||hasDesignerAccountRole()||isLocalAdminToken())return;
+  if(!isLoggedIn()||hasDesignerAccountRole()||isLocalAdminToken()||!requireAccess('profile.edit'))return;
   const form=event.target, input=form.elements.displayName, displayName=input.value.trim(), submit=form.querySelector('button[type="submit"]'), submitLabel=submit.textContent;
   if(!displayName){input.setCustomValidity('請輸入顯示名');input.reportValidity();return}
   input.setCustomValidity('');
@@ -7671,12 +7674,13 @@ function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(des
 function openDesignerUploadPage(event){event?.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再開啟圖片上傳頁',true);showLoginModal();return} const designer=event?.currentTarget?.dataset?.manageDesignerPhoto||currentEditor; if(!designerOptions.includes(designer)){setSync('找不到對應的設計師上傳資料夾',true);return} activeDesignerUploadName=designer; openUploadModal(designerUploadUrl(designer),`${designer} 頭像與 Reels`)}
 function openUserAvatarUploadPage(){
   if(!isLoggedIn()){setSync('請先登入後再設定頭像',true);showLoginModal();return}
+  if(!requireAccess('profile.edit','此帳號沒有設定頭像權限'))return;
   if(isLocalAdminToken()){setSync('管理者測試帳號無法設定個人頭像',true);return}
   closeAccountMenu();
   openUploadModal(userAvatarUploadUrl(),'設定我的頭像');
 }
 async function refreshCurrentAccountAvatar({force=false}={}){if(!isLoggedIn())return; const now=Date.now(); if(!force&&now-lastAccountAvatarRefreshAt<5000)return; lastAccountAvatarRefreshAt=now; try{const settings=await fetchAccountSettings(currentEditorAccount,currentEditor); if(!settings)return; currentAccountAvatar=remoteAccountAvatar(settings); renderAccountAvatar()}catch(err){console.warn('個人頭像更新失敗',err)}}
-function isIssueReportManager(){return currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者'}
+function isIssueReportManager(){return accessAllowed('issue.manage',currentEditor==='Machi'||currentEditor==='管理者'||currentDesignGroup()==='管理者')}
 function issueReportStatusClass(status){return `issue-status-${issueReportStatuses.includes(status)?status:'回報中'}`}
 function updateIssueReportCount(input){const counter=$(`[data-count-for="${input.name}"]`); if(counter)counter.textContent=`${input.value.length}/300`}
 function normalizeIssueReport(report={},rowNumber=''){
@@ -7736,6 +7740,7 @@ function openIssueReportModal(){closeFilters(); const modal=$('#issueReportModal
 function closeIssueReportModal(){const modal=$('#issueReportModal'); if(!modal)return; document.activeElement?.blur?.(); modal.hidden=true; modal.style.display='none'; setTimeout(()=>modal.style.removeProperty('display'),120)}
 async function changeIssueReportStatus(event){
   const select=event.target.closest('.issue-report-status'); if(!select)return;
+  if(!requireAccess('issue.manage','此帳號沒有更新問題狀態權限'))return;
   const rowNumber=Number(select.dataset.reportRow), report=issueReports.find(item=>Number(item.rowNumber)===rowNumber), previousReport=report?{...report}:null, status=select.value;
   if(!report||status===report['狀態'])return;
   report['狀態']=status; report['狀態更改時間']=currentTaipeiTimestamp(); saveIssueReportsCache(); renderIssueReports(); renderNotifications(); setSync(`已更新為${status}，背景寫入中...`);
@@ -7746,6 +7751,7 @@ async function changeIssueReportStatus(event){
 }
 async function submitIssueReport(event){
   event.preventDefault();
+  if(isLoggedIn()&&!requireAccess('issue.report','此帳號沒有新增問題回報權限'))return;
   const form=event.target, submit=$('#issueReportSubmit'), content=form.elements.content.value.trim(), suggestion=form.elements.suggestion.value.trim();
   if(!content){setSync('請填寫問題內容',true);return}
   const reporter=currentLoginOwnerName()||currentEditorAccount||'未登入';
@@ -7790,7 +7796,7 @@ function collectDesignerSettings(){return designerOptions.map(name=>{const row=[
 function validateDesignerMusicInputs(){const invalid=[...designerSettingsList.querySelectorAll('.designer-setting-music input[type="url"]')].find(input=>input.value.trim()&&!sharedMusicInfo(input.value)); if(!invalid)return true; invalid.focus(); invalid.setCustomValidity('請貼上正確的 Spotify 或 Apple Music 單曲連結'); invalid.reportValidity(); invalid.addEventListener('input',()=>invalid.setCustomValidity(''),{once:true}); setSync('請檢查分享音樂連結',true); return false}
 function designerProfileEditableKey(profile={}){return JSON.stringify([profile.name,[...(profile.skills||[])].sort(),profile.quote||'',profile.avatar||'',profile.poster||'',profile.musicUrl||'',Math.max(0,Number(profile.musicStartAt)||0)])}
 function applyDesignerProfiles(profiles){const currentByName=new Map(designers.map(profile=>[profile.name,profile])), savedByName=new Map((profiles||[]).map(profile=>[profile.name,normalizeDesignerRow(profile)])); designers=designerOptions.map(name=>mergeDesignerProfile(currentByName.get(name)||designerProfile(name),savedByName.get(name)||{}));cacheDesignerProfiles(designers);renderDesigners();updateLoginUi()}
-async function saveDesignerSettings(event){event.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再儲存設計師設定',true);return} if(!isDesignerLogin()){setSync('此帳號沒有設計師設定權限',true);return} if(!validateDesignerMusicInputs())return; const profiles=collectDesignerSettings(), previous=designers.map(profile=>({...profile,skills:[...(profile.skills||[])]})), currentByName=new Map(previous.map(profile=>[profile.name,profile])), changed=profiles.filter(profile=>designerProfileEditableKey(profile)!==designerProfileEditableKey(currentByName.get(profile.name)||{})); applyDesignerProfiles(profiles);hideDesignerSettings();render(); if(!changed.length){setSync('設定沒有變更');return} setSync(`已更新畫面，${changed.length} 位設計師設定正在寫入 JSON...`); if(!apiUrl){setSync('已更新本機設計師設定');return} void enqueueInlineWrite(()=>sheetApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles:changed,jsonOnly:true})).then(data=>{if(data.profiles?.length)applyDesignerProfiles(data.profiles);render();setSync('設計師設定已寫入 JSON')}).catch(err=>{designers=previous;cacheDesignerProfiles(designers);renderDesigners();render();setSync(`設計師設定寫入失敗，已還原：${err.message}`,true)})}
+async function saveDesignerSettings(event){event.preventDefault(); if(!isLoggedIn()){setSync('請先登入後再儲存設計師設定',true);return} if(!requireAccess('designer.settings','此帳號沒有設計師設定權限'))return; if(!validateDesignerMusicInputs())return; const profiles=collectDesignerSettings(), previous=designers.map(profile=>({...profile,skills:[...(profile.skills||[])]})), currentByName=new Map(previous.map(profile=>[profile.name,profile])), changed=profiles.filter(profile=>designerProfileEditableKey(profile)!==designerProfileEditableKey(currentByName.get(profile.name)||{})); applyDesignerProfiles(profiles);hideDesignerSettings();render(); if(!changed.length){setSync('設定沒有變更');return} setSync(`已更新畫面，${changed.length} 位設計師設定正在寫入 JSON...`); if(!apiUrl){setSync('已更新本機設計師設定');return} void enqueueInlineWrite(()=>sheetApi('saveDesignerProfiles',{editorToken:currentEditorToken,profiles:changed,jsonOnly:true})).then(data=>{if(data.profiles?.length)applyDesignerProfiles(data.profiles);render();setSync('設計師設定已寫入 JSON')}).catch(err=>{designers=previous;cacheDesignerProfiles(designers);renderDesigners();render();setSync(`設計師設定寫入失敗，已還原：${err.message}`,true)})}
 function selectedDetails(){return detailsToArray(formEl.elements.details?.value||'')}
 function setDetailsValue(value){const selected=detailsToArray(value), box=$('#detailsOptions'); if(!box){if(formEl.elements.details)formEl.elements.details.value=formatDetails(selected); return} box.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); formEl.elements.details.value=formatDetails(selected)}
 function populateDetailsOptions(value=''){const box=$('#detailsOptions'); if(box){box.hidden=true; box.className=''; box.innerHTML=''} if(formEl.elements.details)formEl.elements.details.value=formatDetails(value)}
@@ -7823,6 +7829,7 @@ function updateFlatProjectReasonVisibility(){
   if(!shouldShow)form.elements.reason.value='';
 }
 function openFlatProjectModal(designer){
+  if(!requireAccess('project.create','此帳號沒有建立新專案權限'))return;
   closeFilters();
   const group=newProjectGroupForDesigner(designer);
   if(!group){setSync('目前新專案輪值僅支援平面組與影音組設計師',true);return}
@@ -7848,6 +7855,7 @@ function applyFlatProjectRotations(rotations=[]){
 }
 async function submitFlatProject(event){
   event.preventDefault();
+  if(!requireAccess('project.create','此帳號沒有建立新專案權限'))return;
   const form=event.target;
   const row={
     client:form.elements.client.value.trim(),
@@ -8559,8 +8567,8 @@ function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnable
 function rowYear(r){const d=new Date(r.start||r.end); if(Number.isNaN(d.getTime()))return ''; const y=d.getFullYear(); return y>=1900&&y<=2100?String(y):''}
 function isLoggedIn(){return Boolean(currentEditor&&currentEditorToken)}
 function isEditableRow(r){if(r?.pendingCreate)return false;const y=Number(rowYear(r)); return y>=Number(currentYear())}
-function canCaseEditRow(r){return isEditableRow(r)}
-function canListEditRow(r){return isDesignerLogin()&&isEditableRow(r)}
+function canCaseEditRow(r){return accessAllowed('request.edit',hasDesignerAccountRole())&&isEditableRow(r)}
+function canListEditRow(r){return accessAllowed('request.status',hasDesignerAccountRole())&&isEditableRow(r)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
 function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
@@ -9890,8 +9898,60 @@ function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
 function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
 function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; updateCaseRow(id,{status:'已取消'},'已更新為已取消')}
+
+/* Central permission guards keep every entry point consistent, including inline table actions. */
+const updateCaseRowWithoutAccess=updateCaseRow;
+updateCaseRow=function(...args){if(!requireAccess('request.status','此帳號沒有修改狀態與項目細節權限'))return;return updateCaseRowWithoutAccess(...args)};
+const editRowWithoutAccess=editRow;
+editRow=function(...args){if(!requireAccess('request.edit','此帳號沒有編輯案件內容權限'))return;return editRowWithoutAccess(...args)};
+const deleteRowWithoutAccess=deleteRow;
+deleteRow=function(...args){if(!requireAccess('request.delete','此帳號沒有刪除案件權限'))return;return deleteRowWithoutAccess(...args)};
+const openCaseFieldEditorWithoutAccess=openCaseFieldEditor;
+openCaseFieldEditor=function(...args){if(!requireAccess('request.status','此帳號沒有修改案件欄位權限'))return;return openCaseFieldEditorWithoutAccess(...args)};
+const openModificationEditorWithoutAccess=openModificationEditor;
+openModificationEditor=function(...args){if(!requireAccess('modification.create','此帳號沒有新增修改紀錄權限'))return;return openModificationEditorWithoutAccess(...args)};
+const submitModificationRecordWithoutAccess=submitModificationRecord;
+submitModificationRecord=function(...args){if(!requireAccess('modification.create','此帳號沒有新增修改紀錄權限'))return;return submitModificationRecordWithoutAccess(...args)};
+const confirmModificationRecordWithoutAccess=confirmModificationRecord;
+confirmModificationRecord=function(...args){if(!requireAccess('modification.confirm','此帳號沒有確認修正日權限'))return;return confirmModificationRecordWithoutAccess(...args)};
+const openDesignerUploadPageWithoutAccess=openDesignerUploadPage;
+openDesignerUploadPage=function(...args){if(!requireAccess('media.manage','此帳號沒有管理圖片與 Reels 權限'))return;return openDesignerUploadPageWithoutAccess(...args)};
+const submitRequestBatchRowsWithoutAccess=submitRequestBatchRows;
+submitRequestBatchRows=function(...args){if(!requireAccess('request.create','此帳號沒有新增需求權限'))return;return submitRequestBatchRowsWithoutAccess(...args)};
+const openDesignDashboardWithoutAccess=openDesignDashboard;
+openDesignDashboard=function(...args){if(!accessAllowed('page.dashboard',canOpenDesignDashboard())){setSync('此帳號沒有查看設計儀表板權限',true);return}return openDesignDashboardWithoutAccess(...args)};
+const downloadFilteredCsvWithoutAccess=downloadFilteredCsv;
+downloadFilteredCsv=function(...args){if(!requireAccess('request.export','此帳號沒有匯出 CSV 權限'))return;return downloadFilteredCsvWithoutAccess(...args)};
+const updateRequestModeWithoutAccess=updateRequestMode;
+updateRequestMode=function(...args){const result=updateRequestModeWithoutAccess(...args),submit=$('#submitBtn'),batch=$('#requestBatchToggle');if(submit)submit.hidden=editingId?!accessAllowed('request.edit',hasDesignerAccountRole()):!accessAllowed('request.create',true);if(batch)batch.hidden=batch.hidden||!accessAllowed('request.create',true);return result};
+const renderRequestProjectButtonsWithoutAccess=renderRequestProjectButtons;
+renderRequestProjectButtons=function(...args){const result=renderRequestProjectButtonsWithoutAccess(...args),allowed=accessAllowed('project.create',hasDesignerAccountRole());document.querySelectorAll('[data-new-project-group],[data-new-project-designer]').forEach(button=>{button.hidden=!allowed;button.disabled=button.disabled||!allowed});return result};
+const updateLoginUiWithoutAccess=updateLoginUi;
+updateLoginUi=function(...args){
+  const result=updateLoginUiWithoutAccess(...args),loggedIn=isLoggedIn();
+  const show=(selector,allowed)=>{const element=$(selector);if(element)element.hidden=!allowed};
+  show('#accountPersonalSettings',loggedIn&&!hasDesignerAccountRole()&&!isLocalAdminToken()&&accessAllowed('profile.edit',true));
+  show('#accountAvatarSettings',loggedIn&&!isLocalAdminToken()&&accessAllowed('profile.edit',true));
+  show('#accountDesignerSettings',loggedIn&&accessAllowed('designer.settings',hasDesignerAccountRole()));
+  show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
+  show('#accountArchiveManager',loggedIn&&accessAllowed('page.archive',isAdministrator())&&accessAllowed('archive.edit',isAdministrator()));
+  show('#accountJsonDatabaseAdmin',loggedIn&&accessAllowed('page.database_admin',isAdministrator())&&accessAllowed('database.manage',isAdministrator()));
+  show('#downloadCsv',loggedIn&&accessAllowed('request.export',hasDesignerAccountRole()));
+  show('#issueReportOpen',!loggedIn||accessAllowed('issue.report',true)||accessAllowed('issue.manage',isAdministrator()));
+  updateRequestMode();renderRequestProjectButtons();
+  return result;
+};
+function refreshSignedInAccess(){return window.MachiAccess?.refresh({account:currentEditorAccount,user:currentEditor,group:currentEditorGroup,department:currentEditorDepartment,token:currentEditorToken}).then(()=>{columnControlsRenderedKey='';render()})}
+const loginEditorWithoutAccess=loginEditor;
+loginEditor=function(...args){const result=loginEditorWithoutAccess(...args);void refreshSignedInAccess();return result};
+const logoutEditorWithoutAccess=logoutEditor;
+logoutEditor=async function(...args){const result=await logoutEditorWithoutAccess(...args);await window.MachiAccess?.refresh({account:'',user:'',group:'',department:'',token:''});return result};
+const loginLocalAdminWithoutAccess=loginLocalAdmin;
+loginLocalAdmin=function(...args){const result=loginLocalAdminWithoutAccess(...args);void refreshSignedInAccess();return result};
+
 $('#requestForm').addEventListener('submit',e=>{
   e.preventDefault();
+  if(!requireAccess(editingId?'request.edit':'request.create',editingId?'此帳號沒有編輯案件內容權限':'此帳號沒有新增需求權限'))return;
   if(requestSubmitInFlight)return;
   const wasEditing=Boolean(editingId), editId=editingId, isModify=Boolean(editingId);
   if(requestBatchMode&&!isModify){duplicateLastRequestBatchRow();return}

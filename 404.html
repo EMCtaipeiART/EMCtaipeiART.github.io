@@ -43,6 +43,7 @@
     @media(max-width:520px){body{padding:16px}main{padding:24px 18px}.input-row,.result-row{grid-template-columns:1fr}h1{font-size:24px}button{width:100%}}
     @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   </style>
+  <script src="assets/access-control.js?v=20260811-acl-1"></script>
 </head>
 <body>
   <main id="creator">
@@ -220,6 +221,10 @@
       const copyButton = document.querySelector('#copyButton');
       form.addEventListener('submit', async event => {
         event.preventDefault();
+        await window.MachiAccess?.ready;
+        if(window.MachiAccess?.state.account&&!window.MachiAccess.can('short_link.create')){
+          status.textContent='此帳號沒有建立短網址權限。';status.classList.add('error');return;
+        }
         const value = input.value.trim();
         status.classList.remove('error');
         result.hidden = true;
@@ -236,7 +241,8 @@
         button.textContent = '產生中…';
         status.textContent = '正在建立短連結…';
         try {
-          const data = await jsonp({ action: 'createShortLink', url: value }, 15000);
+          let editorToken='';try{editorToken=localStorage.getItem('designRequestEditorToken')||sessionStorage.getItem('designRequestEditorToken')||''}catch(error){}
+          const data = await jsonp({ action: 'createShortLink', url: value, editorToken }, 15000);
           const generatedUrl = `${location.origin}/${data.code}`;
           cacheShortLink(data.code, data.url || value);
           shortUrl.href = generatedUrl;

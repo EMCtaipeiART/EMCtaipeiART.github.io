@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 271,
+  "revision": 272,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T03:57:03.905Z",
+  "updatedAt": "2026-08-11T04:40:12.513Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22669,6 +22669,19 @@
           "下一位": "Noise"
         }
       ]
+    },
+    "帳號權限": {
+      "headers": [
+        "帳號",
+        "角色範本",
+        "狀態",
+        "頁面權限",
+        "功能權限",
+        "更新時間",
+        "更新者"
+      ],
+      "primaryKey": "帳號",
+      "rows": []
     }
   },
   "internal": {
@@ -23469,7 +23482,7 @@
     }
   },
   "lastWrite": {
-    "reason": "recalculate weights from item-detail score table",
-    "at": "2026-08-11T03:36:18.852Z"
+    "reason": "add account access control schema",
+    "at": "2026-08-11T04:40:12.513Z"
   }
 }

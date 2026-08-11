@@ -8,6 +8,7 @@
 - `修改統計表`
 - `補充資料連結`
 - `設定`
+- `帳號權限`
 - `reels`
 - `bug_report`
 
@@ -77,7 +78,7 @@ Content-Type: application/json
 
 - 案件：`list`、`recent`、`add`、`batchAdd`、`update`、`batchUpdate`、`delete`
 - 短網址：`createShortLink`、`resolveShortLink`、`resolveSupplementLink`
-- 設定與登入：`login`、`googleLogin`、`erpLoginConfig`、`erpLogin`、`verifyToken`、`logout`、`getUserSettings`、`listDesignerProfiles`、`saveUserSettings`、`saveDesignerProfiles`
+- 設定、權限與登入：`login`、`googleLogin`、`erpLoginConfig`、`erpLogin`、`verifyToken`、`getAccessProfile`、`logout`、`getUserSettings`、`listDesignerProfiles`、`saveUserSettings`、`saveDesignerProfiles`
 - JSON 媒體：`listDesignerMedia`、`uploadDesignerImage`、`uploadUserAvatar`、`deleteDesignerMedia`
 - 限時動態：`listReels`、`toggleReelReaction`、`addReelComment`
 - 問題回報：`reportIssue`、`listIssueReports`、`updateIssueReportStatus`
@@ -100,6 +101,10 @@ Authorization: Bearer <admin token>
 - 使用暫存檔加原子更名，避免半寫入 JSON。
 - 每次變更前自動備份到 `backend/data/backups/`，預設保留最近 20 份。
 - `backend` 路徑不會由內建靜態伺服器公開。
+
+## 帳號權限
+
+`json_database_admin.html` 的「帳號權限」頁籤會將 `設定` 人員名錄與 `帳號權限` 資料表合併，依帳號設定可查看頁面及可執行功能。未建立個別設定的帳號會依「管理者／設計師／一般使用者」角色套用預設值；已建立的設定同時由前台介面與 Node.js／Apps Script 寫入端驗證。管理者固定保留全部權限，避免管理帳號被鎖定。
 
 ## 加權分數
 

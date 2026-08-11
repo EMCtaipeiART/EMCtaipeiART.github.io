@@ -28,7 +28,7 @@ const DESIGNER_IMAGE_UPLOAD_SCOPES = [
 const HEADER_SCAN_COLUMNS = 40;
 const CACHE_SECONDS = 180;
 const DETAIL_SHEET_NAMES = ['階段', '項目細節', 'detail', 'details'];
-const SCRIPT_VERSION = 'realtime-seven-table-json-2026-08-07';
+const SCRIPT_VERSION = 'account-access-2026-08-11';
 const DATABASE_ARCHIVE_GITHUB_TOKEN_PROPERTY = 'DATABASE_ARCHIVE_GITHUB_TOKEN';
 const DATABASE_ARCHIVE_GITHUB_REPOSITORY = 'EMCtaipeiART/EMCtaipeiART.github.io';
 const DATABASE_ARCHIVE_GITHUB_EVENT_TYPE = 'database_changed';
@@ -84,6 +84,7 @@ const ADMIN_TABLE_CONFIG = {
   '修改統計表': { sheetId: MODIFICATION_STATS_SHEET_ID, primaryKey: '' },
   '補充資料連結': { sheetName: SUPPLEMENT_LINK_SHEET_NAME, primaryKey: '案件編號' },
   '設定': { sheetId: SETTINGS_SHEET_ID, primaryKey: '帳號' },
+  '帳號權限': { primaryKey: '帳號' },
   reels: { sheetId: REELS_SHEET_ID, primaryKey: '' },
   bug_report: { sheetId: ISSUE_REPORT_SHEET_ID, primaryKey: '' }
 };
@@ -390,6 +391,8 @@ function handleAction_(action, payload, params) {
     };
   }
 
+  enforceActionAccess_(action, payload);
+
   if (action === 'list') {
     const source = readGithubJsonDatabase_();
     const table = githubJsonTable_(source.database, 'database');
@@ -496,6 +499,12 @@ function handleAction_(action, payload, params) {
 
   if (action === 'verifyToken') {
     return verifyEditorToken_(payload);
+  }
+
+  if (action === 'getAccessProfile') {
+    const token = String(payload && payload.editorToken || '').trim();
+    if (!token || (!isLocalAdminToken_(token) && !readEditorSession_(token, true))) return { ok: false, action: 'getAccessProfile', error: 'TOKEN_EXPIRED' };
+    return { ok: true, action: 'getAccessProfile', access: accountAccessProfile_(token) };
   }
 
   if (action === 'logout') {
@@ -1326,7 +1335,8 @@ function verifyEditorToken_(payload) {
     account,
     email: account,
     expiresIn: EDITOR_SESSION_PERSIST_SECONDS,
-    settings: readEditorSettings_(account || user)
+    settings: readEditorSettings_(account || user),
+    access: accountAccessProfile_(token)
   };
 }
 
@@ -2545,10 +2555,86 @@ function isIssueReportManagerToken_(token) {
   ).trim());
 }
 
+const ACCOUNT_ACCESS_JSON_URL = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
+const ACCOUNT_ACCESS_CACHE_KEY = 'machi-account-access-v1';
+const ACCOUNT_ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
+const ACCOUNT_ACCESS_CAPABILITIES = ['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'short_link.create', 'archive.edit', 'database.manage'];
+const ACCOUNT_ACCESS_TEMPLATES = {
+  '管理者': { pages: ACCOUNT_ACCESS_PAGES, capabilities: ACCOUNT_ACCESS_CAPABILITIES },
+  '設計師': { pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create'] },
+  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
+  '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
+};
+
+function accountAccessList_(value) {
+  if (Array.isArray(value)) return [...new Set(value.map(item => String(item || '').trim()).filter(Boolean))];
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return accountAccessList_(parsed); } catch (error) {}
+  return [...new Set(raw.split(/[\n,，、|｜]/).map(item => String(item || '').trim()).filter(Boolean))];
+}
+
+function readAccountAccessData_() {
+  const cache = CacheService.getScriptCache(), cached = cache.get(ACCOUNT_ACCESS_CACHE_KEY);
+  if (cached) { try { return JSON.parse(cached); } catch (error) {} }
+  const response = UrlFetchApp.fetch(ACCOUNT_ACCESS_JSON_URL + '?v=' + Date.now(), { method: 'get', muteHttpExceptions: true, followRedirects: true, headers: { Accept: 'application/json' } });
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) throw new Error('帳號權限 JSON 讀取失敗：HTTP ' + response.getResponseCode());
+  const database = JSON.parse(response.getContentText()), data = { settings: database?.tables?.['設定']?.rows || [], permissions: database?.tables?.['帳號權限']?.rows || [] };
+  cache.put(ACCOUNT_ACCESS_CACHE_KEY, JSON.stringify(data), 60);
+  return data;
+}
+
+function accountAccessProfile_(token) {
+  token = String(token || '').trim();
+  if (isLocalAdminToken_(token)) return { account: 'local-admin', role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
+  const session = readEditorSession_(token, false);
+  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+  const account = normalizeLoginAccount_(session.account || ''), user = String(session.user || '').trim(), data = readAccountAccessData_();
+  const settings = data.settings.find(row => normalizeLoginAccount_(row['帳號'] || '') === account || String(row['名字'] || '').trim() === user) || {};
+  const manager = user === '管理者' || user === 'Machi' || /^(?:管理者|admin)$/i.test(String(settings['部門'] || settings['組別'] || '').trim());
+  if (manager) return { account, role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
+  const row = data.permissions.find(item => normalizeLoginAccount_(item['帳號'] || '') === account) || null;
+  const defaultRole = /^(?:平面|影音)$/.test(String(settings['組別'] || '').trim()) ? '設計師' : '一般使用者';
+  const role = String(row?.['角色範本'] || defaultRole).trim(), template = ACCOUNT_ACCESS_TEMPLATES[role] || ACCOUNT_ACCESS_TEMPLATES['一般使用者'];
+  return { account, role, status: String(row?.['狀態'] || '啟用').trim(), pages: row ? accountAccessList_(row['頁面權限']) : template.pages.slice(), capabilities: row ? accountAccessList_(row['功能權限']) : template.capabilities.slice(), explicit: Boolean(row) };
+}
+
+function assertAccountCapability_(payload, capability, allowAnonymous) {
+  const token = String(payload && (payload.editorToken || payload.token) || '').trim(), access = accountAccessProfile_(token);
+  if (!access.account && allowAnonymous) return access;
+  if (!access.account) throw new Error('請先登入後再執行此操作');
+  if (access.status === '停用' || access.capabilities.indexOf(capability) < 0) throw new Error('此帳號沒有「' + capability + '」權限');
+  return access;
+}
+
 function assertDatabaseAdmin_(payload) {
   const token = String(payload && (payload.editorToken || payload.token) || '').trim();
-  if (!isIssueReportManagerToken_(token)) throw new Error('需要管理者權限');
+  assertAccountCapability_(payload, 'database.manage', false);
   return token;
+}
+
+function enforceActionAccess_(action, payload) {
+  const direct = {
+    saveUserSettings: 'profile.edit', uploadUserAvatar: 'profile.edit',
+    saveDesignerProfiles: 'designer.settings', testDesignerImageUploadAuth: 'media.manage', uploadDesignerImage: 'media.manage', deleteDesignerMedia: 'media.manage', upsertDesignerStories: 'media.manage', deleteDesignerStories: 'media.manage',
+    toggleReelReaction: 'reel.interact', addReelComment: 'reel.interact', updateIssueReportStatus: 'issue.manage',
+    updateModificationConfirm: 'modification.confirm', createFlatProject: 'project.create', delete: payload && payload.accessContext === 'archive' ? 'archive.edit' : 'request.delete'
+  };
+  if (direct[action]) return assertAccountCapability_(payload, direct[action], false);
+  if (action === 'reportIssue') return assertAccountCapability_(payload, 'issue.report', true);
+  if (action === 'createShortLink') return assertAccountCapability_(payload, 'short_link.create', true);
+  if (action === 'addModificationRecord') return assertAccountCapability_(payload, 'modification.create', true);
+  if (['append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows'].indexOf(action) >= 0) {
+    if (String(payload && payload.editorToken || '').trim()) return assertAccountCapability_(payload, 'request.create', false);
+    return null;
+  }
+  if (action === 'update' || action === 'batchUpdate') {
+    if (!String(payload && payload.editorToken || '').trim()) return null;
+    const row = payload && (payload.row || payload.changes) || {}, headers = [].concat(payload && payload.writeHeaders || [], payload && payload.forceHeaders || []);
+    const protectedWrite = headers.some(header => ['案件狀態', '狀態', '項目細節'].indexOf(header) >= 0) || Object.prototype.hasOwnProperty.call(row, 'status') || Object.prototype.hasOwnProperty.call(row, 'details');
+    return assertAccountCapability_(payload, payload && payload.accessContext === 'archive' ? 'archive.edit' : (protectedWrite ? 'request.status' : 'request.edit'), false);
+  }
+  return null;
 }
 
 function githubJsonDatabaseToken_() {
@@ -2764,7 +2850,7 @@ function githubJsonDatabaseAction_(database, action, payload) {
       : { ok: true, action: 'update', id: output[0].id, row: output[0], updated: payload.writeHeaders || [] } };
   }
   if (normalizedAction === 'delete') {
-    if (!isIssueReportManagerToken_(payload.editorToken)) throw new Error('僅管理者可刪除案件');
+    assertAccountCapability_(payload, payload && payload.accessContext === 'archive' ? 'archive.edit' : 'request.delete', false);
     const id = String(payload.id || payload.caseId || '').trim();
     const index = rows.findIndex(row => String(row[githubJsonCaseHeader_(table, 'id')] || '').trim() === id);
     if (index < 0) throw new Error('找不到案件：' + id);
@@ -2832,11 +2918,14 @@ function retryGithubJsonDatabaseBackups() {
   return { ok: true, tables, revision: source.database.revision };
 }
 
-// allowSheetBackup 只有「填單」產生的案件寫入（githubJsonDatabaseWriteAction_，
-// 也就是 add/batchAdd/update/batchUpdate/delete）才會是 true；資料庫後台的
-// adminTableUpdate_/adminTableDelete_/adminTableInsert_（八張表管理介面）
-// 一律不回寫試算表，JSON 才是唯一資料來源，避免後台編輯（尤其是加權計分標準）
-// 意外把整張分頁覆寫回試算表。
+// allowSheetBackup 為 true 的情況：(1) 「填單」產生的案件寫入
+// （githubJsonDatabaseWriteAction_，也就是 add/batchAdd/update/batchUpdate/delete）；
+// (2) 資料庫後台（八張表管理介面）對 database 表的 adminTableUpdate_/adminTableDelete_
+// （2026-08-11 起比照填單行為，回寫 gid=1244538986 那個「案件資料」分頁）。
+// 其餘 7 張表（加權計分標準、短連結、補充資料連結、修改統計表、設定、reels、
+// bug_report）以及 database 表的 adminTableInsert_（新案件一律走填單表單，見下方
+// user_directory.gs 的說明）一律不回寫試算表，JSON 才是唯一資料來源，避免後台編輯
+// （尤其是加權計分標準）意外把整張分頁覆寫回試算表。
 function mutateGithubJsonDatabase_(action, payload, mutator, options) {
   const allowSheetBackup = Boolean(options && options.allowSheetBackup);
   const lock = LockService.getScriptLock();
@@ -2857,6 +2946,7 @@ function mutateGithubJsonDatabase_(action, payload, mutator, options) {
       });
       try {
         const written = writeGithubJsonDatabase_(source.database, source.sha, action);
+        if ((outcome.changedTables || []).indexOf('帳號權限') >= 0) CacheService.getScriptCache().remove(ACCOUNT_ACCESS_CACHE_KEY);
         const backup = payload && payload._skipSheetBackup
           ? { ok: true, skipped: true, source: 'sheet-snapshot', tables: [...new Set(outcome.changedTables || [])] }
           : allowSheetBackup
@@ -3061,7 +3151,7 @@ function adminTableUpdate_(payload) {
     const changedTables = [tableName];
     if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');
     return { changed: true, changedTables, result: { ok: true, action: 'adminTableUpdate', table: tableName, rowNumber, row: Object.assign({ _rowNumber: rowNumber }, updated) } };
-  });
+  }, { allowSheetBackup: tableName === 'database' });
 }
 
 // adminTableInsert_ lives in user_directory.gs (loaded after this file in the
@@ -3084,7 +3174,7 @@ function adminTableDelete_(payload) {
     const changedTables = [tableName];
     if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');
     return { changed: true, changedTables, result: { ok: true, action: 'adminTableDelete', table: tableName, rowNumber, deleted: Object.assign({ _rowNumber: rowNumber }, deleted) } };
-  });
+  }, { allowSheetBackup: tableName === 'database' });
 }
 
 function updateIssueReportStatus_(payload) {

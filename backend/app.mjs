@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-2026-08-07-2';
+const VERSION = 'json-backend-account-access-2026-08-11';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -26,6 +26,22 @@ const WRITE_ACTIONS = new Set([
 const PROJECT_GROUPS = {
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
   '影音': { designers: ['Karl', 'Noise'], type: '影音' }
+};
+const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
+const ACCESS_CAPABILITIES = [
+  'request.create', 'request.edit', 'request.status', 'request.delete', 'request.export',
+  'modification.create', 'modification.confirm', 'project.create', 'designer.settings',
+  'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage',
+  'short_link.create', 'archive.edit', 'database.manage'
+];
+const ACCESS_ROLE_TEMPLATES = {
+  '管理者': { pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES },
+  '設計師': {
+    pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
+    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+  },
+  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
+  '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
 };
 
 const KEY_TO_HEADER = {
@@ -244,6 +260,43 @@ function isManager(snapshot, session) {
   const row = settingsRow(snapshot, session.account || session.user);
   return /^(?:管理者|admin)$/i.test(text(row?.['部門'] || row?.['組別']));
 }
+function accessList(value) {
+  if (Array.isArray(value)) return unique(value.map(text));
+  const raw = text(value);
+  if (!raw) return [];
+  try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return accessList(parsed); } catch {}
+  return unique(raw.split(/[\n,，、|｜]/).map(text));
+}
+function accessRole(snapshot, session) {
+  if (isManager(snapshot, session)) return '管理者';
+  const settings = settingsRow(snapshot, session?.account || session?.user) || {};
+  return /^(?:平面|影音)$/.test(text(settings['組別'])) ? '設計師' : '一般使用者';
+}
+function accessProfile(snapshot, session) {
+  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+  const account = canonicalAccount(session.account || session.user);
+  if (isManager(snapshot, session)) return { account, role: '管理者', status: '啟用', pages: [...ACCESS_PAGES], capabilities: [...ACCESS_CAPABILITIES], explicit: true };
+  const row = snapshot.tables['帳號權限']?.rows?.find(item => canonicalAccount(item['帳號']) === account) || null;
+  const role = text(row?.['角色範本']) || accessRole(snapshot, session), template = ACCESS_ROLE_TEMPLATES[role] || ACCESS_ROLE_TEMPLATES['一般使用者'];
+  return {
+    account, role, status: text(row?.['狀態']) || '啟用',
+    pages: row ? accessList(row['頁面權限']) : [...template.pages],
+    capabilities: row ? accessList(row['功能權限']) : [...template.capabilities], explicit: Boolean(row)
+  };
+}
+function hasCapability(snapshot, session, capability) {
+  const access = accessProfile(snapshot, session);
+  return access.status !== '停用' && access.capabilities.includes(capability);
+}
+function requireCapability(snapshot, payload, capability, { allowAnonymous = false } = {}) {
+  const session = sessionFor(snapshot, payload.editorToken || payload.token);
+  if (!session) {
+    if (allowAnonymous) return null;
+    throw new Error('請先登入後再執行此操作');
+  }
+  if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
+  return session;
+}
 function syncSupplementLinks(draft, sheetRow, baseUrl) {
   const id = text(sheetRow['案件編號']);
   if (!/^\d{8}$/.test(id)) return;
@@ -442,6 +495,7 @@ export function createActionHandler(database, options = {}) {
       return { ok: true, action, code, url: record['原始網址'] };
     }
     if (action === 'createShortLink') {
+      if (sessionFor(snapshot, payload.editorToken)) requireCapability(snapshot, payload, 'short_link.create');
       const url = text(payload.url);
       if (!isHttpUrl(url) || url.length > 2048) throw new Error('請輸入有效的 http 或 https 網址');
       return database.transaction(draft => {
@@ -521,7 +575,11 @@ export function createActionHandler(database, options = {}) {
     if (action === 'verifyToken') {
       const session = sessionFor(snapshot, payload.editorToken);
       if (!session) return { ok: false, action, error: 'TOKEN_EXPIRED' };
-      return { ok: true, action, user: session.user, account: session.account, email: session.account, expiresIn: SESSION_SECONDS, settings: settingsResponse(settingsRow(snapshot, session.account || session.user) || {}) };
+      return { ok: true, action, user: session.user, account: session.account, email: session.account, expiresIn: SESSION_SECONDS, settings: settingsResponse(settingsRow(snapshot, session.account || session.user) || {}), access: accessProfile(snapshot, session) };
+    }
+    if (action === 'getAccessProfile') {
+      const session = requireSession(snapshot, payload);
+      return { ok: true, action, access: accessProfile(snapshot, session) };
     }
     if (action === 'logout') {
       const token = text(payload.editorToken);
@@ -544,7 +602,7 @@ export function createActionHandler(database, options = {}) {
       return { ok: true, action, profiles };
     }
     if (action === 'saveUserSettings') {
-      const session = requireSession(snapshot, payload);
+      const session = requireCapability(snapshot, payload, 'profile.edit');
       const account = canonicalAccount(payload.account || session.account);
       return database.transaction(draft => {
         const row = settingsRow(draft, account || session.user);
@@ -554,7 +612,7 @@ export function createActionHandler(database, options = {}) {
       }, 'save user settings');
     }
     if (action === 'saveDesignerProfiles') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'designer.settings');
       return database.transaction(draft => {
         for (const profile of Array.isArray(payload.profiles) ? payload.profiles : []) {
           const row = draft.tables['設定'].rows.find(item => text(item['名字']) === text(profile.name));
@@ -575,7 +633,7 @@ export function createActionHandler(database, options = {}) {
     }
 
     if (action === 'listDesignerMedia') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer);
       const profile = snapshot.tables['設定'].rows.find(row => text(row['名字']) === name);
       if (!profile) throw new Error('找不到設計師設定');
@@ -583,7 +641,7 @@ export function createActionHandler(database, options = {}) {
       return { ok: true, action, name, profile: settingsResponse(profile), reels };
     }
     if (action === 'uploadDesignerImage') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer), rawKind = text(payload.kind).toLowerCase();
       const kind = rawKind === 'poster' ? 'poster' : (/^(?:story|reel)$/.test(rawKind) ? 'story' : 'avatar');
       if (!PROJECT_GROUPS['平面'].designers.includes(name) && !PROJECT_GROUPS['影音'].designers.includes(name)) throw new Error('找不到設計師');
@@ -604,7 +662,7 @@ export function createActionHandler(database, options = {}) {
       } catch (error) { await removeUploadedFile(uploaded.url).catch(() => {}); throw error; }
     }
     if (action === 'uploadUserAvatar') {
-      const session = requireSession(snapshot, payload);
+      const session = requireCapability(snapshot, payload, 'profile.edit');
       const account = canonicalAccount(payload.account || session.account);
       if (account !== canonicalAccount(session.account) && !isManager(snapshot, session)) throw new Error('不可修改其他帳號的頭像');
       const uploaded = await saveUploadedImage(payload, context, `${account.split('@')[0]}-avatar`);
@@ -618,7 +676,7 @@ export function createActionHandler(database, options = {}) {
       } catch (error) { await removeUploadedFile(uploaded.url).catch(() => {}); throw error; }
     }
     if (action === 'deleteDesignerMedia') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer), kind = text(payload.kind).toLowerCase();
       const result = await database.transaction(draft => {
         if (kind === 'avatar' || kind === 'poster') {
@@ -643,7 +701,7 @@ export function createActionHandler(database, options = {}) {
     }
 
     if (action === 'upsertDesignerStories') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer);
       if (!PROJECT_GROUPS['平面'].designers.includes(name) && !PROJECT_GROUPS['影音'].designers.includes(name)) throw new Error('找不到設計師');
       const fileIds = Array.isArray(payload.fileIds) ? payload.fileIds.map(text) : [];
@@ -663,7 +721,7 @@ export function createActionHandler(database, options = {}) {
       }, 'sync designer stories');
     }
     if (action === 'deleteDesignerStories') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer), ids = new Set((payload.fileIds || []).map(text).filter(Boolean));
       return database.transaction(draft => {
         const before = draft.tables.reels.rows.length;
@@ -673,7 +731,7 @@ export function createActionHandler(database, options = {}) {
     }
     if (action === 'listReels') return { ok: true, action, reels: snapshot.tables.reels.rows.filter(activeReel).map(publicReel).filter(reel => reel.name && reel.imageUrl) };
     if (action === 'toggleReelReaction' || action === 'addReelComment') {
-      const session = requireSession(snapshot, payload);
+      const session = requireCapability(snapshot, payload, 'reel.interact');
       return database.transaction(draft => {
         const rows = draft.tables.reels.rows, index = findReelIndex(rows, payload);
         if (index < 0) throw new Error('找不到這則限時動態');
@@ -708,6 +766,7 @@ export function createActionHandler(database, options = {}) {
     if (action === 'reportIssue') {
       const report = payload.report || payload.row || payload.data || payload;
       const session = sessionFor(snapshot, payload.editorToken);
+      if (session) requireCapability(snapshot, payload, 'issue.report');
       const content = text(report.content || report['內容']), suggestion = text(report.suggestion || report['修改建議']);
       if (!content || content.length > 300 || suggestion.length > 300) throw new Error('問題內容必填，內容與修改建議不得超過 300 字');
       return database.transaction(draft => {
@@ -718,8 +777,7 @@ export function createActionHandler(database, options = {}) {
       }, 'report issue');
     }
     if (action === 'updateIssueReportStatus') {
-      const session = requireSession(snapshot, payload);
-      if (!isManager(snapshot, session)) throw new Error('僅管理者與 Machi 可修改回報狀態');
+      requireCapability(snapshot, payload, 'issue.manage');
       const rowNumber = Number(payload.rowNumber || payload.id), status = text(payload.status);
       if (!Number.isInteger(rowNumber) || rowNumber < 2 || !ISSUE_STATUSES.includes(status)) throw new Error('回報狀態或列號不正確');
       return database.transaction(draft => {
@@ -733,6 +791,7 @@ export function createActionHandler(database, options = {}) {
       const record = payload.record || payload.row || payload.data || payload;
       const caseId = text(record.caseId || record.id || record['案件編號']), modifyDate = text(record.modifyDate || record['修改日期']), content = text(record.content || record['修改內容']);
       const session = sessionFor(snapshot, payload.editorToken || record.editorToken), modifier = text(session?.user || record.modifier || record.owner || record['修改人'] || record['專案負責人']);
+      if (session) requireCapability(snapshot, payload, 'modification.create');
       if (!caseId || !modifyDate || !content || !modifier) throw new Error('案件編號、修改日期、修改內容與修改人皆為必填');
       return database.transaction(draft => {
         const rows = draft.tables['修改統計表'].rows;
@@ -742,7 +801,7 @@ export function createActionHandler(database, options = {}) {
       }, 'add modification');
     }
     if (action === 'updateModificationConfirm') {
-      requireSession(snapshot, payload);
+      requireCapability(snapshot, payload, 'modification.confirm');
       const record = payload.record || payload.row || payload.data || payload, caseId = text(record.caseId || record.id || record['案件編號']), count = Number(record.count || record['修改次數']);
       return database.transaction(draft => {
         const index = draft.tables['修改統計表'].rows.findIndex(row => text(row['案件編號']) === caseId && Number(row['修改次數']) === count);
@@ -753,7 +812,7 @@ export function createActionHandler(database, options = {}) {
     }
 
     if (action === 'createFlatProject') {
-      const session = requireSession(snapshot, payload);
+      const session = requireCapability(snapshot, payload, 'project.create');
       const source = payload.row || payload.data || {};
       const expected = text(source.expectedDesigner || source['預計設計師']);
       const groupEntry = Object.entries(PROJECT_GROUPS).find(([, config]) => config.designers.includes(expected));
@@ -809,6 +868,7 @@ export function createActionHandler(database, options = {}) {
     }
 
     if (['append', 'create', 'add', 'submit', 'save'].includes(action)) {
+      if (sessionFor(snapshot, payload.editorToken)) requireCapability(snapshot, payload, 'request.create');
       const source = payload.row || payload.data || payload, requestId = text(payload.requestId);
       return database.transaction(draft => {
         if (requestId && draft.internal.idempotency[requestId]) return { ...draft.internal.idempotency[requestId], deduplicated: true };
@@ -820,6 +880,7 @@ export function createActionHandler(database, options = {}) {
       }, 'append request');
     }
     if (['batchAdd', 'batchAppend', 'addRows'].includes(action)) {
+      if (sessionFor(snapshot, payload.editorToken)) requireCapability(snapshot, payload, 'request.create');
       const sources = Array.isArray(payload.rows || payload.data) ? payload.rows || payload.data : [], requestId = text(payload.requestId);
       if (!sources.length) throw new Error('沒有可新增的資料');
       return database.transaction(draft => {
@@ -839,6 +900,7 @@ export function createActionHandler(database, options = {}) {
       const changes = payload.row || payload.changes || payload;
       const touchesProtected = writeHeaders.some(header => ['案件狀態', '狀態', '項目細節'].includes(header)) || ['status', 'details'].some(key => changes[key] !== undefined);
       if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '已取消') throw new Error('請先登入後再修改狀態或項目細節');
+      if (session) requireCapability(snapshot, payload, payload.accessContext === 'archive' ? 'archive.edit' : (touchesProtected ? 'request.status' : 'request.edit'));
       const items = action === 'batchUpdate' ? (Array.isArray(payload.rows) ? payload.rows : []) : [{ id: payload.id || payload.caseId || changes.id, row: changes }];
       return database.transaction(draft => {
         const updated = [];
@@ -854,7 +916,7 @@ export function createActionHandler(database, options = {}) {
       }, action);
     }
     if (action === 'delete') {
-      const session = requireSession(snapshot, payload); if (!isManager(snapshot, session)) throw new Error('僅管理者可刪除案件');
+      requireCapability(snapshot, payload, payload.accessContext === 'archive' ? 'archive.edit' : 'request.delete');
       const id = text(payload.id || payload.caseId);
       return database.transaction(draft => {
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id); if (index < 0) throw new Error('找不到案件');
@@ -890,7 +952,7 @@ function sendJson(res, status, payload, callback = '') {
 function genericAuthorized(snapshot, payload, req) {
   const token = text(req.headers.authorization).replace(/^Bearer\s+/i, '') || text(payload.editorToken || payload.token);
   const session = sessionFor(snapshot, token);
-  return isManager(snapshot, session);
+  return Boolean(session) && hasCapability(snapshot, session, 'database.manage');
 }
 
 export async function createApp(options = {}) {

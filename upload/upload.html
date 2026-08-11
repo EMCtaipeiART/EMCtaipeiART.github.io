@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <style>
+    :root {
+      --primary: #008214;
+      --primary-dark: #006c11;
+      --background: #f4f7f5;
+      --surface: #ffffff;
+      --text: #17211a;
+      --muted: #6b756e;
+      --border: #dfe6e1;
+      --danger: #bd2929;
+      --shadow: 0 14px 36px rgba(25, 55, 34, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 22px;
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(0, 130, 20, 0.09),
+          transparent 34%
+        ),
+        var(--background);
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Noto Sans TC",
+        Arial,
+        sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(100%, 760px);
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0, 130, 20, 0.1);
+      color: var(--primary-dark);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    h1 {
+      margin: 12px 0 5px;
+      font-size: clamp(25px, 5vw, 36px);
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    .card {
+      padding: 22px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .target-picker {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 9px;
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fafcfb;
+    }
+
+    .target-picker[hidden] {
+      display: none;
+    }
+
+    .target-picker label {
+      grid-column: 1 / -1;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .target-select {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      padding: 9px 36px 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+      font-weight: 750;
+    }
+
+    .target-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 9px 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .target-link[hidden] {
+      display: none;
+    }
+
+    .upload-zone {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 210px;
+      padding: 26px 18px;
+      border: 2px dashed #b8c8bc;
+      border-radius: 18px;
+      background: #fbfdfb;
+      cursor: pointer;
+      text-align: center;
+      transition: 0.2s ease;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: #f4fbf5;
+      transform: translateY(-1px);
+    }
+
+    .upload-zone input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .upload-icon {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 14px;
+      border-radius: 18px;
+      background: rgba(0, 130, 20, 0.1);
+      color: var(--primary);
+      font-size: 0;
+    }
+
+    .upload-icon::before,
+    .upload-icon::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 999px;
+      background: currentColor;
+      transform: translate(-50%, -50%);
+    }
+
+    .upload-icon::before {
+      width: 24px;
+      height: 3px;
+    }
+
+    .upload-icon::after {
+      width: 3px;
+      height: 24px;
+    }
+
+    .upload-title {
+      margin-bottom: 5px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .upload-help {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .selected-file {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 15px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fafcfb;
+    }
+
+    .selected-file.visible {
+      display: flex;
+    }
+
+    .selected-thumb {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+      border-radius: 11px;
+      object-fit: cover;
+      background: #edf1ee;
+    }
+
+    .selected-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .selected-name {
+      overflow: hidden;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .selected-size {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .button {
+      min-height: 48px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 13px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: 0.18s ease;
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .button-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .button-primary:not(:disabled):hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .button-secondary {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .button[hidden],
+    .result[hidden] {
+      display: none;
+    }
+
+    .status {
+      display: none;
+      margin-top: 15px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.loading {
+      background: #edf7ef;
+      color: #176526;
+    }
+
+    .status.error {
+      background: #fff0f0;
+      color: var(--danger);
+    }
+
+    .status.success {
+      background: #edf7ef;
+      color: #176526;
+    }
+
+    .progress {
+      display: none;
+      overflow: hidden;
+      height: 7px;
+      margin-top: 12px;
+      border-radius: 999px;
+      background: #e8ede9;
+    }
+
+    .progress.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      width: 20%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+      animation: progress 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes progress {
+      from {
+        transform: translateX(-60%);
+      }
+
+      to {
+        transform: translateX(420%);
+      }
+    }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .replace-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 9px;
+    }
+
+    .replace-button {
+      min-height: 50px;
+      padding: 12px 14px;
+      border: 1px solid #9bd4b4;
+      border-radius: 11px;
+      background: #edf7ef;
+      color: var(--primary-dark);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .replace-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .replace-button.avatar,
+    .recent-action-button.avatar {
+      border-color: #86c99a;
+      background: #eaf7ee;
+      color: #176526;
+    }
+
+    .replace-button.poster,
+    .recent-action-button.poster {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .replace-button.story {
+      border-color: #f6c453;
+      background: #fff8df;
+      color: #9a4d00;
+    }
+
+    .recent {
+      margin-top: 18px;
+    }
+
+    .recent[hidden] {
+      display: none;
+    }
+
+    .recent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .recent-title {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .recent-actions {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fafcfb;
+    }
+
+    .recent-actions[hidden],
+    .story-duration-wrap[hidden],
+    .replace-story-duration[hidden] {
+      display: none !important;
+    }
+
+    .recent-selection-status {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .recent-action-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .recent-action-button {
+      min-width: 0;
+      min-height: 48px;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .recent-action-button {
+      cursor: pointer;
+    }
+
+    .recent-action-button:disabled,
+    .story-duration-option:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+    }
+
+    .recent-action-button.story {
+      border-color: #f6c453;
+      background: #fff8df;
+      color: #9a4d00;
+    }
+
+    .recent-action-button.delete {
+      border-color: #fecaca;
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    .story-duration-wrap {
+      display: grid;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .replace-story-duration {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid #f6c453;
+      border-radius: 11px;
+      background: #fffdf5;
+    }
+
+    .story-duration-label {
+      color: #71400b;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .story-duration-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .story-duration-option {
+      min-width: 0;
+      min-height: 46px;
+      padding: 10px 12px;
+      border: 1px solid #f2b84b;
+      border-radius: 10px;
+      background: #fff;
+      color: #8a4300;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .story-duration-option:hover:not(:disabled) {
+      background: #fff3c4;
+    }
+
+    .story-duration-option.cancel {
+      border-color: #fecaca;
+      background: #fff1f2;
+      color: #b91c1c;
+    }
+
+    .story-duration-option.cancel:hover:not(:disabled) {
+      background: #ffe4e6;
+    }
+
+    .refresh-button {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .recent-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .recent-item {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fff;
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .recent-item.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 130, 20, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .recent-image {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      background: #edf1ee;
+    }
+
+    .recent-body {
+      padding: 9px;
+    }
+
+    .recent-name {
+      overflow: hidden;
+      font-size: 12px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .recent-date {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .recent-select {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 9px;
+      padding: 10px 12px;
+      border: 1px solid #9bd4b4;
+      border-radius: 11px;
+      background: #edf7ef;
+      color: var(--primary-dark);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .recent-item.selected .recent-select {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      padding: 30px;
+      border: 1px dashed var(--border);
+      border-radius: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 14px;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 18px;
+      }
+
+      .upload-zone {
+        min-height: 185px;
+      }
+
+      .replace-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .recent-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .target-picker {
+        grid-template-columns: 1fr;
+      }
+
+      .recent-action-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <script src="../assets/access-control.js?v=20260811-acl-1"></script>
+</head>
+
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="eyebrow">GOOGLE DRIVE IMAGE UPLOADER</div>
+
+      <h1 id="pageTitle">圖片上傳</h1>
+
+      <p class="subtitle" id="pageSubtitle">
+        選擇手機照片或直接拍攝。
+      </p>
+    </header>
+
+    <section class="card">
+      <div class="target-picker" id="targetPicker">
+        <label for="targetSelect" id="targetLabel">目前設計師與上傳資料夾</label>
+
+        <select
+          class="target-select"
+          id="targetSelect"
+          disabled
+        >
+          <option value="">載入資料夾中…</option>
+        </select>
+
+        <a
+          class="target-link"
+          id="targetFolderLink"
+          href="#"
+          target="_blank"
+          rel="noopener"
+          hidden
+        >
+          開啟資料夾
+        </a>
+      </div>
+
+      <label
+        class="upload-zone"
+        id="uploadZone"
+        for="imageInput"
+      >
+        <input
+          id="imageInput"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+        >
+
+        <div>
+          <div class="upload-icon" aria-hidden="true"></div>
+          <div class="upload-title">選擇照片或拍照</div>
+
+          <div class="upload-help">
+            支援 JPG、PNG、WebP、GIF<br>
+            單張圖片上限 10 MB
+          </div>
+        </div>
+      </label>
+
+      <div class="selected-file" id="selectedFile">
+        <img
+          class="selected-thumb"
+          id="selectedThumb"
+          alt="圖片預覽"
+        >
+
+        <div class="selected-info">
+          <div class="selected-name" id="selectedName"></div>
+          <div class="selected-size" id="selectedSize"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          class="button button-primary"
+          id="uploadButton"
+          type="button"
+          disabled
+        >
+          上傳至 Google Drive
+        </button>
+
+        <button
+          class="button button-secondary"
+          id="clearButton"
+          type="button"
+          disabled
+        >
+          重新選擇
+        </button>
+      </div>
+
+      <div class="progress" id="progress">
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <section class="result" id="result">
+        <div class="replace-actions">
+          <button
+            class="replace-button avatar"
+            id="replaceAvatarButton"
+            type="button"
+            disabled
+          >
+            替換頭像
+          </button>
+
+          <button
+            class="replace-button poster"
+            id="replacePosterButton"
+            type="button"
+            disabled
+          >
+            替換海報
+          </button>
+
+          <button
+            class="replace-button story"
+            id="replaceStoryButton"
+            type="button"
+            disabled
+          >
+            設定為限時動態
+          </button>
+        </div>
+
+        <div class="replace-story-duration" id="replaceStoryDuration" hidden>
+          <div class="story-duration-label">選擇限時動態保留時間</div>
+          <div class="story-duration-options">
+            <button class="story-duration-option" id="replaceStory24" type="button">24 小時</button>
+            <button class="story-duration-option" id="replaceStoryForever" type="button">不自動刪除</button>
+            <button class="story-duration-option cancel" id="replaceStoryCancel" type="button">取消設定</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="card recent" id="recentSection">
+      <div class="recent-header">
+        <h2 class="recent-title" id="recentTitle">最近上傳</h2>
+
+        <button
+          class="refresh-button"
+          id="refreshButton"
+          type="button"
+        >
+          重新整理
+        </button>
+      </div>
+
+      <div class="recent-grid" id="recentGrid">
+        <div class="empty">載入中…</div>
+      </div>
+
+      <div class="recent-actions" id="recentActions" hidden>
+        <div class="recent-selection-status" id="recentSelectionStatus" aria-live="polite">
+          可選取多張並批次刪除；頭像與海報限單張
+        </div>
+
+        <div class="recent-action-buttons">
+          <button class="recent-action-button avatar" id="recentSetAvatar" type="button" disabled>替換頭像</button>
+          <button class="recent-action-button poster" id="recentSetPoster" type="button" disabled>替換海報</button>
+          <button class="recent-action-button story" id="recentSetStory" type="button" disabled>設定為限時動態</button>
+          <button class="recent-action-button delete" id="recentDelete" type="button" disabled>刪除已選取</button>
+        </div>
+
+        <div class="story-duration-wrap" id="storyDurationWrap" hidden>
+          <div class="story-duration-label">選擇限時動態保留時間</div>
+          <div class="story-duration-options">
+            <button class="story-duration-option" id="recentStory24" type="button">24 小時</button>
+            <button class="story-duration-option" id="recentStoryForever" type="button">不自動刪除</button>
+            <button class="story-duration-option cancel" id="recentStoryCancel" type="button">取消設定</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const MAX_FILE_SIZE_MB = 10;
+
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const targetPicker = document.getElementById('targetPicker');
+    const targetLabel = document.getElementById('targetLabel');
+    const targetSelect = document.getElementById('targetSelect');
+    const targetFolderLink = document.getElementById('targetFolderLink');
+
+    const imageInput = document.getElementById('imageInput');
+    const uploadZone = document.getElementById('uploadZone');
+    const selectedFile = document.getElementById('selectedFile');
+    const selectedThumb = document.getElementById('selectedThumb');
+    const selectedName = document.getElementById('selectedName');
+    const selectedSize = document.getElementById('selectedSize');
+
+    const uploadButton = document.getElementById('uploadButton');
+    const clearButton = document.getElementById('clearButton');
+    const progress = document.getElementById('progress');
+    const statusBox = document.getElementById('status');
+
+    const result = document.getElementById('result');
+    const replaceAvatarButton = document.getElementById('replaceAvatarButton');
+    const replacePosterButton = document.getElementById('replacePosterButton');
+    const replaceStoryButton = document.getElementById('replaceStoryButton');
+    const replaceStoryDuration = document.getElementById('replaceStoryDuration');
+    const replaceStory24 = document.getElementById('replaceStory24');
+    const replaceStoryForever = document.getElementById('replaceStoryForever');
+    const replaceStoryCancel = document.getElementById('replaceStoryCancel');
+
+    const recentSection = document.getElementById('recentSection');
+    const recentGrid = document.getElementById('recentGrid');
+    const recentTitle = document.getElementById('recentTitle');
+    const refreshButton = document.getElementById('refreshButton');
+    const recentActions = document.getElementById('recentActions');
+    const recentSelectionStatus = document.getElementById('recentSelectionStatus');
+    const storyDurationWrap = document.getElementById('storyDurationWrap');
+    const recentStory24 = document.getElementById('recentStory24');
+    const recentStoryForever = document.getElementById('recentStoryForever');
+    const recentStoryCancel = document.getElementById('recentStoryCancel');
+    const recentSetAvatar = document.getElementById('recentSetAvatar');
+    const recentSetPoster = document.getElementById('recentSetPoster');
+    const recentSetStory = document.getElementById('recentSetStory');
+    const recentDelete = document.getElementById('recentDelete');
+
+    let selectedImage = null;
+    let selectedPreviewUrl = null;
+    let uploadMode = 'designer';
+    let requestedDesigner = '';
+    let requestedUser = '';
+    let requestedAccount = '';
+    let editorToken = '';
+    let closeNonce = '';
+    let authorizedDesigner = '';
+    let authorizedUser = '';
+    let authorizedAccount = '';
+    let lastUploadedFile = null;
+    const selectedRecentFiles = new Map();
+    let recentActionsBusy = false;
+
+    function notifyUploadHost(type, details) {
+      const message = {
+        type: type,
+        closeNonce: closeNonce,
+        ...(details || {})
+      };
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(message, '*');
+        }
+      } catch (error) {}
+      try {
+        window.top.postMessage(message, '*');
+      } catch (error) {}
+      try {
+        if (window.parent !== window.top) {
+          window.parent.postMessage(message, '*');
+        }
+      } catch (error) {}
+    }
+
+    imageInput.addEventListener('change', function () {
+      const file = imageInput.files[0];
+
+      if (file) {
+        selectFile(file);
+      }
+    });
+
+    uploadZone.addEventListener('dragover', function (event) {
+      event.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function () {
+      uploadZone.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function (event) {
+      event.preventDefault();
+      uploadZone.classList.remove('dragover');
+
+      const file = event.dataTransfer.files[0];
+
+      if (file) {
+        selectFile(file);
+      }
+    });
+
+    uploadButton.addEventListener('click', uploadSelectedImage);
+    clearButton.addEventListener('click', clearSelection);
+    refreshButton.addEventListener('click', loadRecentImages);
+    recentSetAvatar.addEventListener('click', function () {
+      resetStoryDurationPrompt();
+      applyRecentImageAction('avatar');
+    });
+    recentSetPoster.addEventListener('click', function () {
+      resetStoryDurationPrompt();
+      applyRecentImageAction('poster');
+    });
+    recentSetStory.addEventListener('click', function () {
+      storyDurationWrap.hidden = false;
+      recentStory24.focus();
+    });
+    recentStory24.addEventListener('click', function () {
+      applyRecentImageAction('story', 1440);
+    });
+    recentStoryForever.addEventListener('click', function () {
+      applyRecentImageAction('story', 0);
+    });
+    recentStoryCancel.addEventListener('click', function () {
+      applyRecentImageAction('story-cancel');
+    });
+    recentDelete.addEventListener('click', deleteSelectedRecentImages);
+    replaceAvatarButton.addEventListener('click', function () {
+      resetReplaceStoryDurationPrompt();
+      replaceCurrentDesignerImage('avatar');
+    });
+    replacePosterButton.addEventListener('click', function () {
+      resetReplaceStoryDurationPrompt();
+      replaceCurrentDesignerImage('poster');
+    });
+    replaceStoryButton.addEventListener('click', function () {
+      replaceStoryDuration.hidden = false;
+      replaceStory24.focus();
+    });
+    replaceStory24.addEventListener('click', function () {
+      replaceCurrentDesignerImage('story', 1440);
+    });
+    replaceStoryForever.addEventListener('click', function () {
+      replaceCurrentDesignerImage('story', 0);
+    });
+    replaceStoryCancel.addEventListener('click', function () {
+      replaceCurrentDesignerImage('story-cancel');
+    });
+    targetSelect.addEventListener('change', function () {
+      updateTargetLink();
+      resetReplaceStoryDurationPrompt();
+      result.classList.remove('visible');
+      loadRecentImages();
+      uploadButton.disabled = !selectedImage || !targetSelect.value;
+    });
+
+    function selectFile(file) {
+      hideStatus();
+      resetReplaceStoryDurationPrompt();
+      result.classList.remove('visible');
+
+      if (!file.type.startsWith('image/')) {
+        showStatus('請選擇圖片檔案', 'error');
+        return;
+      }
+
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        showStatus('僅支援 JPG、PNG、WebP、GIF', 'error');
+        return;
+      }
+
+      const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+      if (file.size > maxBytes) {
+        showStatus(
+          `圖片不可超過 ${MAX_FILE_SIZE_MB} MB`,
+          'error'
+        );
+        return;
+      }
+
+      selectedImage = file;
+
+      if (selectedPreviewUrl) {
+        URL.revokeObjectURL(selectedPreviewUrl);
+      }
+
+      selectedPreviewUrl = URL.createObjectURL(file);
+
+      selectedThumb.src = selectedPreviewUrl;
+      selectedName.textContent = file.name;
+      selectedSize.textContent = formatFileSize(file.size);
+
+      selectedFile.classList.add('visible');
+      uploadButton.disabled = !targetSelect.value;
+      clearButton.disabled = false;
+    }
+
+    async function uploadSelectedImage() {
+      if (!selectedImage) {
+        showStatus('請先選擇圖片', 'error');
+        return;
+      }
+
+      if (!targetSelect.value) {
+        showStatus('請先指定上傳資料夾', 'error');
+        return;
+      }
+
+      setUploading(true);
+      showStatus('圖片上傳中，請不要關閉頁面…', 'loading');
+
+      try {
+        const base64 = await fileToDataUrl(selectedImage);
+
+        const payload = {
+          fileName: selectedImage.name,
+          mimeType: selectedImage.type,
+          base64: base64,
+          ...uploadRequestContext()
+        };
+
+        google.script.run
+          .withSuccessHandler(handleUploadSuccess)
+          .withFailureHandler(handleUploadFailure)
+          .uploadImage(payload);
+      } catch (error) {
+        handleUploadFailure(error);
+      }
+    }
+
+    function handleUploadSuccess(response) {
+      if (!response || !response.success) {
+        setUploading(false);
+        showStatus(
+          response?.message || '圖片上傳失敗',
+          'error'
+        );
+        return;
+      }
+
+      const file = response.file;
+      lastUploadedFile = file;
+
+      if (uploadMode === 'user') {
+        if (file.avatarUpdated) {
+          completeUserAvatarUpload(file, file.imageUrl || '');
+        } else {
+          applyUploadedUserAvatar(file);
+        }
+        return;
+      }
+
+      setUploading(false);
+      resetReplaceStoryDurationPrompt();
+      replaceAvatarButton.disabled = false;
+      replacePosterButton.disabled = uploadMode === 'user';
+      replaceStoryButton.disabled = uploadMode === 'user';
+
+      showStatus(
+        file.sharingWarning || '圖片已成功上傳至 Google Drive',
+        file.sharingWarning ? 'loading' : 'success'
+      );
+
+      result.classList.add('visible');
+
+      if (uploadMode !== 'user') loadRecentImages();
+
+      result.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+
+    function applyUploadedUserAvatar(file) {
+      uploadButton.textContent = '正在設定頭像…';
+      showStatus('圖片已上傳，正在更新頭像…', 'loading');
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          if (!response || !response.success) {
+            setUploading(false);
+            showStatus(response?.message || '頭像設定失敗，請重試', 'error');
+            return;
+          }
+
+          completeUserAvatarUpload(file, response.imageUrl || '');
+        })
+        .withFailureHandler(function (error) {
+          setUploading(false);
+          showStatus(error?.message || '頭像設定失敗，請重試', 'error');
+        })
+        .replaceUserAvatar({
+          ...uploadRequestContext(),
+          fileId: file.id
+        });
+    }
+
+    function completeUserAvatarUpload(file, imageUrl) {
+      setUploading(false);
+      showStatus('頭像已更新，視窗即將關閉', 'success');
+      const message = {
+        type: 'machi-user-avatar-updated',
+        closeNonce: closeNonce,
+        account: authorizedAccount || requestedAccount,
+        imageUrl: imageUrl || '',
+        fileId: file?.id || ''
+      };
+
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage(message, '*');
+        }
+      } catch (error) {}
+      try {
+        window.top.postMessage(message, '*');
+      } catch (error) {}
+      try {
+        if (window.parent !== window.top) {
+          window.parent.postMessage(message, '*');
+        }
+      } catch (error) {}
+
+      setTimeout(function () {
+        window.close();
+      }, 300);
+    }
+
+    function handleUploadFailure(error) {
+      setUploading(false);
+
+      const message =
+        error && error.message
+          ? error.message
+          : String(error || '圖片上傳失敗');
+
+      showStatus(`錯誤：${message}`, 'error');
+    }
+
+    function setUploading(uploading) {
+      progress.classList.toggle('visible', uploading);
+      uploadButton.disabled =
+        uploading || !selectedImage || !targetSelect.value;
+      clearButton.disabled = uploading || !selectedImage;
+
+      uploadButton.textContent =
+        uploading
+          ? '正在上傳…'
+          : '上傳至 Google Drive';
+    }
+
+    function clearSelection() {
+      selectedImage = null;
+      lastUploadedFile = null;
+      imageInput.value = '';
+
+      if (selectedPreviewUrl) {
+        URL.revokeObjectURL(selectedPreviewUrl);
+        selectedPreviewUrl = null;
+      }
+
+      selectedThumb.removeAttribute('src');
+      selectedName.textContent = '';
+      selectedSize.textContent = '';
+
+      selectedFile.classList.remove('visible');
+
+      uploadButton.disabled = true;
+      clearButton.disabled = true;
+      replaceAvatarButton.disabled = true;
+      replacePosterButton.disabled = true;
+      replaceStoryButton.disabled = true;
+      resetReplaceStoryDurationPrompt();
+
+      result.classList.remove('visible');
+      hideStatus();
+    }
+
+    function loadRecentImages() {
+      if (uploadMode === 'user') return;
+
+      const targetKey = targetSelect.value;
+
+      if (!targetKey) {
+        recentGrid.innerHTML =
+          '<div class="empty">請先指定上傳資料夾</div>';
+        return;
+      }
+
+      clearRecentSelection();
+
+      recentGrid.innerHTML =
+        '<div class="empty">載入中…</div>';
+
+      refreshButton.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          refreshButton.disabled = false;
+
+          if (!response || !response.success) {
+            recentGrid.innerHTML =
+              `<div class="empty">${
+                escapeHtml(response?.message || '讀取失敗')
+              }</div>`;
+            return;
+          }
+
+          renderRecentImages(response.files || []);
+          recentTitle.textContent =
+            `${response.targetName || selectedTargetName()} 最近上傳`;
+        })
+        .withFailureHandler(function (error) {
+          refreshButton.disabled = false;
+
+          recentGrid.innerHTML =
+            `<div class="empty">${
+              escapeHtml(error?.message || '讀取失敗')
+            }</div>`;
+        })
+        .getRecentImages(uploadRequestContext());
+    }
+
+    function loadUploadTargets() {
+      google.script.run
+        .withSuccessHandler(function (response) {
+          if (!response || !response.success || !response.targets?.length) {
+            const message = response?.message || '無法載入上傳資料夾設定';
+            showStatus(
+              message,
+              'error'
+            );
+            recentGrid.innerHTML =
+              '<div class="empty">無法取得上傳資料夾設定</div>';
+            notifyUploadHost('machi-upload-error', { message: message });
+            return;
+          }
+
+          targetSelect.innerHTML = response.targets
+            .map(function (target) {
+              return `<option
+                value="${escapeAttribute(target.key)}"
+                data-folder-url="${escapeAttribute(target.folderUrl)}"
+              >${escapeHtml(target.name)}</option>`;
+            })
+            .join('');
+
+          uploadMode = response.mode === 'user' ? 'user' : 'designer';
+          authorizedDesigner = response.designer || '';
+          authorizedUser = response.user || '';
+          authorizedAccount = response.account || '';
+          targetSelect.value = response.defaultKey || response.targets[0].key;
+          targetSelect.disabled = true;
+          configureModeUi();
+          updateTargetLink();
+          uploadButton.disabled = !selectedImage;
+          if (uploadMode !== 'user') loadRecentImages();
+          notifyUploadHost('machi-upload-ready', {
+            mode: uploadMode,
+            account: authorizedAccount || ''
+          });
+        })
+        .withFailureHandler(function (error) {
+          showStatus(
+            error?.message || '無法載入上傳資料夾設定',
+            'error'
+          );
+          notifyUploadHost('machi-upload-error', {
+            message: error?.message || '無法載入上傳資料夾設定'
+          });
+        })
+        .getUploadTargets(uploadMode === 'user'
+          ? {
+              mode: 'user',
+              user: requestedUser,
+              account: requestedAccount,
+              editorToken: editorToken
+            }
+          : requestedDesigner);
+    }
+
+    function replaceCurrentDesignerImage(kind, storyDurationMinutes) {
+      if (!lastUploadedFile?.id) {
+        showStatus('請先完成圖片上傳', 'error');
+        return;
+      }
+      const isStoryAction = kind === 'story' || kind === 'story-cancel';
+      if (isStoryAction && uploadMode === 'user') return;
+
+      const labels = {
+        avatar: '頭像',
+        poster: '海報',
+        story: '限時動態',
+        'story-cancel': '限時動態設定'
+      };
+      const label = labels[kind] || '圖片';
+      const durationMinutes = kind === 'story'
+        ? Number(storyDurationMinutes)
+        : 0;
+      replaceAvatarButton.disabled = true;
+      replacePosterButton.disabled = true;
+      replaceStoryButton.disabled = true;
+      replaceStory24.disabled = true;
+      replaceStoryForever.disabled = true;
+      replaceStoryCancel.disabled = true;
+      showStatus(
+        kind === 'story-cancel'
+          ? '正在取消限時動態設定…'
+          : kind === 'story'
+          ? `正在設定${durationMinutes > 0 ? ' 24 小時' : '不自動刪除的'}限時動態…`
+          : `正在替換${label}…`,
+        'loading'
+      );
+
+      const runner = google.script.run
+        .withSuccessHandler(function (response) {
+          replaceAvatarButton.disabled = false;
+          replacePosterButton.disabled = uploadMode === 'user';
+          replaceStoryButton.disabled = uploadMode === 'user';
+          replaceStory24.disabled = false;
+          replaceStoryForever.disabled = false;
+          replaceStoryCancel.disabled = false;
+
+          if (!response || !response.success) {
+            showStatus(response?.message || `${label}設定失敗`, 'error');
+            return;
+          }
+
+          showStatus(
+            kind === 'story-cancel'
+              ? '已取消限時動態設定，原始圖片仍保留'
+              : kind === 'story'
+              ? (durationMinutes > 0
+                  ? '已設定為限時動態，24 小時後將自動移除並刪除圖片'
+                  : '已設定為限時動態，圖片不會自動刪除')
+              : `${label}替換完成`,
+            'success'
+          );
+          if (isStoryAction) {
+            notifyUploadHost('machi-designer-stories-updated', {
+              designer: authorizedDesigner,
+              action: kind,
+              fileIds: [lastUploadedFile.id],
+              jsonRevision: Number(response.jsonRevision) || 0
+            });
+          }
+          if (isStoryAction) resetReplaceStoryDurationPrompt();
+        })
+        .withFailureHandler(function (error) {
+          replaceAvatarButton.disabled = false;
+          replacePosterButton.disabled = uploadMode === 'user';
+          replaceStoryButton.disabled = uploadMode === 'user';
+          replaceStory24.disabled = false;
+          replaceStoryForever.disabled = false;
+          replaceStoryCancel.disabled = false;
+          showStatus(error?.message || `${label}設定失敗`, 'error');
+        });
+
+      if (kind === 'story') {
+        runner.setDesignerStories({
+          designer: authorizedDesigner,
+          fileIds: [lastUploadedFile.id],
+          durationMinutes: durationMinutes,
+          editorToken: editorToken
+        });
+      } else if (kind === 'story-cancel') {
+        runner.unsetDesignerStories({
+          designer: authorizedDesigner,
+          fileIds: [lastUploadedFile.id],
+          editorToken: editorToken
+        });
+      } else if (uploadMode === 'user') {
+        runner.replaceUserAvatar({
+          ...uploadRequestContext(),
+          fileId: lastUploadedFile.id
+        });
+      } else {
+        runner.replaceDesignerImage({
+          designer: authorizedDesigner,
+          fileId: lastUploadedFile.id,
+          kind: kind
+        });
+      }
+    }
+
+    function loadAccessContext() {
+      const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      editorToken = String(hashParams.get('token') || '').trim();
+      const directDesigner = String(params.get('designer') || '').trim();
+      const directUser = String(params.get('user') || '').trim();
+      const directAccount = String(params.get('account') || '').trim();
+      const directMode = String(params.get('mode') || '').trim().toLowerCase();
+      closeNonce = String(params.get('closeNonce') || '').trim();
+
+      if (directMode === 'user' || directUser || directAccount) {
+        applyUserFromUrl(directUser, directAccount);
+        return;
+      }
+
+      if (directDesigner) {
+        applyDesignerFromUrl(directDesigner);
+        return;
+      }
+
+      if (window.google?.script?.url?.getLocation) {
+        google.script.url.getLocation(function (location) {
+          if (!editorToken) {
+            editorToken = tokenFromLocationHash(location?.hash);
+          }
+          if (!closeNonce) {
+            closeNonce = String(
+              location?.parameter?.closeNonce || ''
+            ).trim();
+          }
+          const mode = String(location?.parameter?.mode || '').trim().toLowerCase();
+          const user = String(location?.parameter?.user || '').trim();
+          const account = String(location?.parameter?.account || '').trim();
+          if (mode === 'user' || user || account) {
+            applyUserFromUrl(user, account);
+            return;
+          }
+          const designer = String(
+            location?.parameter?.designer || ''
+          ).trim();
+          applyDesignerFromUrl(designer);
+        });
+        return;
+      }
+
+      applyDesignerFromUrl('');
+    }
+
+    function tokenFromLocationHash(hash) {
+      const value = String(hash || '').replace(/^#/, '');
+      return String(new URLSearchParams(value).get('token') || '').trim();
+    }
+
+    function applyDesignerFromUrl(designer) {
+      requestedDesigner = String(designer || '').trim();
+
+      if (!requestedDesigner) {
+        showStatus(
+          '網址缺少 designer 參數，請從設計需求系統的設計師設定開啟本頁。',
+          'error'
+        );
+        recentGrid.innerHTML =
+          '<div class="empty">尚未指定設計師</div>';
+        return;
+      }
+
+      loadUploadTargets();
+    }
+
+    function applyUserFromUrl(user, account) {
+      uploadMode = 'user';
+      requestedUser = String(user || '').trim();
+      requestedAccount = String(account || '').trim();
+
+      if (!requestedUser && !requestedAccount) {
+        notifyUploadHost('machi-upload-error', {
+          message: '網址缺少使用者資料'
+        });
+        showStatus(
+          '網址缺少使用者資料，請從設計需求系統登入後開啟頭像設定。',
+          'error'
+        );
+        recentGrid.innerHTML =
+          '<div class="empty">尚未指定使用者</div>';
+        return;
+      }
+      if (!editorToken) {
+        notifyUploadHost('machi-upload-error', {
+          message: '頭像設定連結已失效'
+        });
+        showStatus(
+          '頭像設定連結已失效，請回設計需求系統重新開啟。',
+          'error'
+        );
+        recentGrid.innerHTML =
+          '<div class="empty">缺少登入驗證</div>';
+        return;
+      }
+
+      configureModeUi();
+      loadUploadTargets();
+    }
+
+    function uploadRequestContext() {
+      return uploadMode === 'user'
+        ? {
+            mode: 'user',
+            user: authorizedUser || requestedUser,
+            account: authorizedAccount || requestedAccount,
+            editorToken: editorToken
+          }
+        : {
+            mode: 'designer',
+            designer: authorizedDesigner || requestedDesigner
+          };
+    }
+
+    function configureModeUi() {
+      const isUser = uploadMode === 'user';
+      targetPicker.hidden = isUser;
+      recentSection.hidden = isUser;
+      clearButton.hidden = isUser;
+      result.hidden = isUser;
+      pageTitle.textContent = isUser ? '我的頭像' : '圖片上傳';
+      pageSubtitle.textContent = isUser
+        ? '上傳個人照片並設為設計需求系統的帳號頭像。'
+        : '選擇手機照片或直接拍攝。';
+      targetLabel.textContent = isUser
+        ? '我的上傳資料夾'
+        : '目前設計師與上傳資料夾';
+      replaceAvatarButton.textContent = isUser ? '設為我的頭像' : '替換頭像';
+      replacePosterButton.hidden = isUser;
+      replaceStoryButton.hidden = isUser;
+      recentSetAvatar.textContent = isUser ? '設為我的頭像' : '替換頭像';
+      recentSetPoster.textContent = '替換海報';
+      recentSetPoster.hidden = isUser;
+      recentSetStory.hidden = isUser;
+      resetStoryDurationPrompt();
+      recentSelectionStatus.textContent = isUser
+        ? '可選取一張設為頭像，也可批次刪除'
+        : '可選取多張並批次刪除；頭像與海報限單張';
+    }
+
+    function updateTargetLink() {
+      const option = targetSelect.options[targetSelect.selectedIndex];
+      const folderUrl = option?.dataset.folderUrl || '';
+
+      targetFolderLink.href = folderUrl || '#';
+      targetFolderLink.hidden = !folderUrl;
+      recentTitle.textContent = targetSelect.value
+        ? `${selectedTargetName()} 最近上傳`
+        : '最近上傳';
+    }
+
+    function selectedTargetName() {
+      const option = targetSelect.options[targetSelect.selectedIndex];
+      return option?.textContent?.trim() || '';
+    }
+
+    function renderRecentImages(files) {
+      if (!files.length) {
+        recentGrid.innerHTML =
+          '<div class="empty">目前還沒有圖片</div>';
+        return;
+      }
+
+      recentGrid.innerHTML = files
+        .map(function (file) {
+          return `
+            <article
+              class="recent-item"
+              data-file-id="${escapeAttribute(file.id)}"
+            >
+              <a
+                href="${escapeAttribute(file.driveViewUrl)}"
+                target="_blank"
+                rel="noopener"
+              >
+                <img
+                  class="recent-image"
+                  src="${escapeAttribute(file.thumbnailUrl)}"
+                  alt="${escapeAttribute(file.name)}"
+                  loading="lazy"
+                >
+              </a>
+
+              <div class="recent-body">
+                <div
+                  class="recent-name"
+                  title="${escapeAttribute(file.name)}"
+                >
+                  ${escapeHtml(file.name)}
+                </div>
+
+                <div class="recent-date">
+                  ${escapeHtml(file.dateCreatedText)}
+                </div>
+
+                <button
+                  class="recent-select"
+                  type="button"
+                  data-file-id="${escapeAttribute(file.id)}"
+                  aria-pressed="false"
+                >
+                  選取
+                </button>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+
+      recentGrid
+        .querySelectorAll('.recent-select')
+        .forEach(function (button) {
+          button.addEventListener('click', function () {
+            const file = files.find(function (item) {
+              return item.id === button.dataset.fileId;
+            });
+            if (file) selectRecentFile(file);
+          });
+        });
+    }
+
+    function selectRecentFile(file) {
+      resetStoryDurationPrompt();
+      if (selectedRecentFiles.has(file.id)) {
+        selectedRecentFiles.delete(file.id);
+      } else {
+        selectedRecentFiles.set(file.id, file);
+      }
+
+      recentGrid.querySelectorAll('.recent-item').forEach(function (item) {
+        const selected = selectedRecentFiles.has(item.dataset.fileId);
+        item.classList.toggle('selected', selected);
+        const button = item.querySelector('.recent-select');
+        if (button) {
+          button.textContent = selected ? '已選取' : '選取';
+          button.setAttribute('aria-pressed', String(selected));
+        }
+      });
+
+      updateRecentSelectionStatus();
+      updateRecentActionsState();
+    }
+
+    function clearRecentSelection() {
+      selectedRecentFiles.clear();
+      recentActionsBusy = false;
+      resetStoryDurationPrompt();
+      recentSelectionStatus.textContent =
+        uploadMode === 'user'
+          ? '可選取一張設為頭像，也可批次刪除'
+          : '可選取多張並批次刪除；頭像與海報限單張';
+      updateRecentActionsState();
+    }
+
+    function updateRecentSelectionStatus() {
+      const files = Array.from(selectedRecentFiles.values());
+      if (!files.length) {
+        recentSelectionStatus.textContent =
+          uploadMode === 'user'
+            ? '可選取一張設為頭像，也可批次刪除'
+            : '可選取多張並批次刪除；頭像與海報限單張';
+      } else if (files.length === 1) {
+        recentSelectionStatus.textContent = `已選取：${files[0].name}`;
+      } else {
+        recentSelectionStatus.textContent = `已選取 ${files.length} 張圖片`;
+      }
+    }
+
+    function updateRecentActionsState() {
+      const count = selectedRecentFiles.size;
+      recentActions.hidden = count === 0;
+      const requiresSingle = recentActionsBusy || count !== 1;
+      recentSetAvatar.disabled = requiresSingle;
+      recentSetPoster.disabled = requiresSingle;
+      recentDelete.disabled = recentActionsBusy || count === 0;
+      recentDelete.textContent = count > 0
+        ? `刪除已選取（${count}）`
+        : '刪除已選取';
+      recentSetStory.disabled = recentActionsBusy || count === 0;
+      recentStory24.disabled = recentActionsBusy || count === 0;
+      recentStoryForever.disabled = recentActionsBusy || count === 0;
+      recentStoryCancel.disabled = recentActionsBusy || count === 0;
+    }
+
+    function resetStoryDurationPrompt() {
+      storyDurationWrap.hidden = true;
+    }
+
+    function resetReplaceStoryDurationPrompt() {
+      replaceStoryDuration.hidden = true;
+      replaceStory24.disabled = false;
+      replaceStoryForever.disabled = false;
+      replaceStoryCancel.disabled = false;
+    }
+
+    function setRecentActionsBusy(busy) {
+      recentActionsBusy = busy;
+      updateRecentActionsState();
+    }
+
+    function applyRecentImageAction(kind, storyDurationMinutes) {
+      const files = Array.from(selectedRecentFiles.values());
+      if (!files.length) return;
+      const isStoryAction = kind === 'story' || kind === 'story-cancel';
+      if (!isStoryAction && files.length !== 1) return;
+      const durationMinutes = kind === 'story'
+        ? Number(storyDurationMinutes)
+        : 0;
+      if (isStoryAction) resetStoryDurationPrompt();
+
+      const labels = {
+        avatar: '頭像',
+        poster: '海報',
+        story: '限時動態',
+        'story-cancel': '限時動態設定'
+      };
+      const label = labels[kind] || '圖片';
+      const countText = isStoryAction && files.length > 1
+        ? `${files.length} 張`
+        : '';
+      setRecentActionsBusy(true);
+      recentSelectionStatus.textContent = kind === 'story-cancel'
+        ? `正在取消${countText}圖片的限時動態設定…`
+        : `正在將${countText}圖片設定為${label}…`;
+
+      const runner = google.script.run
+        .withSuccessHandler(function (response) {
+          setRecentActionsBusy(false);
+          if (!response || !response.success) {
+            recentSelectionStatus.textContent =
+              response?.message || `設定${label}失敗`;
+            return;
+          }
+
+          const expiration = response.expiresAtText
+            ? `，預計 ${response.expiresAtText} 後清除並刪除`
+            : '';
+          const retention = kind === 'story' && durationMinutes === 0
+            ? '，不會自動刪除'
+            : expiration;
+          const completedCount = isStoryAction
+            ? Number(response.count || files.length)
+            : 1;
+          const completedLabel = kind === 'story-cancel'
+            ? (completedCount > 1
+                ? `${completedCount} 張圖片已取消限時動態設定`
+                : '已取消限時動態設定')
+            : (completedCount > 1
+                ? `${completedCount} 張圖片已設定為${label}`
+                : `已設定為${label}`);
+          const completedRetention = kind === 'story-cancel'
+            ? '，原始圖片仍保留'
+            : retention;
+          recentSelectionStatus.textContent =
+            `${completedLabel}${completedRetention}`;
+          showStatus(`${completedLabel}${completedRetention}`, 'success');
+          if (isStoryAction) {
+            notifyUploadHost('machi-designer-stories-updated', {
+              designer: authorizedDesigner,
+              action: kind,
+              fileIds: files.map(function (file) {
+                return file.id;
+              }),
+              jsonRevision: Number(response.jsonRevision) || 0
+            });
+          }
+        })
+        .withFailureHandler(function (error) {
+          setRecentActionsBusy(false);
+          recentSelectionStatus.textContent =
+            error?.message || `設定${label}失敗`;
+        });
+
+      if (kind === 'story') {
+        runner.setDesignerStories({
+          designer: authorizedDesigner,
+          fileIds: files.map(function (file) {
+            return file.id;
+          }),
+          durationMinutes: durationMinutes,
+          editorToken: editorToken
+        });
+      } else if (kind === 'story-cancel') {
+        runner.unsetDesignerStories({
+          designer: authorizedDesigner,
+          fileIds: files.map(function (file) {
+            return file.id;
+          }),
+          editorToken: editorToken
+        });
+      } else if (uploadMode === 'user') {
+        runner.replaceUserAvatar({
+          ...uploadRequestContext(),
+          fileId: files[0].id
+        });
+      } else {
+        runner.replaceDesignerImage({
+          designer: authorizedDesigner,
+          fileId: files[0].id,
+          kind: kind
+        });
+      }
+    }
+
+    function deleteSelectedRecentImages() {
+      const files = Array.from(selectedRecentFiles.values());
+      if (!files.length) return;
+      const confirmText = files.length === 1
+        ? `確定刪除「${files[0].name}」？`
+        : `確定刪除已選取的 ${files.length} 張圖片？`;
+      if (!window.confirm(`${confirmText}此動作會將圖片移到 Google Drive 垃圾桶。`)) {
+        return;
+      }
+
+      setRecentActionsBusy(true);
+      recentSelectionStatus.textContent = files.length > 1
+        ? `${files.length} 張圖片刪除中…`
+        : '圖片刪除中…';
+
+      const runner = google.script.run
+        .withSuccessHandler(function (response) {
+          if (!response || !response.success) {
+            setRecentActionsBusy(false);
+            recentSelectionStatus.textContent =
+              response?.message || '圖片刪除失敗';
+            return;
+          }
+
+          const deletedIds = new Set(response.fileIds || files.map(function (file) {
+            return file.id;
+          }));
+          if (lastUploadedFile?.id && deletedIds.has(lastUploadedFile.id)) {
+            lastUploadedFile = null;
+            result.classList.remove('visible');
+          }
+          const deletedCount = Number(response.count || files.length);
+          showStatus(
+            deletedCount > 1 ? `${deletedCount} 張圖片已刪除` : '圖片已刪除',
+            'success'
+          );
+          loadRecentImages();
+        })
+        .withFailureHandler(function (error) {
+          setRecentActionsBusy(false);
+          recentSelectionStatus.textContent =
+            error?.message || '圖片刪除失敗';
+        });
+      const deletePayload = {
+        ...uploadRequestContext(),
+        fileIds: files.map(function (file) {
+          return file.id;
+        })
+      };
+      if (uploadMode === 'user') {
+        runner.deleteUserImages(deletePayload);
+      } else {
+        runner.deleteDesignerImages(deletePayload);
+      }
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function () {
+          resolve(reader.result);
+        };
+
+        reader.onerror = function () {
+          reject(new Error('無法讀取圖片'));
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function showStatus(message, type) {
+      statusBox.textContent = message;
+      statusBox.className = `status visible ${type}`;
+    }
+
+    function hideStatus() {
+      statusBox.textContent = '';
+      statusBox.className = 'status';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) {
+        return `${bytes} B`;
+      }
+
+      if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(1)} KB`;
+      }
+
+      return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value);
+    }
+
+    loadAccessContext();
+  </script>
+</body>
+</html>

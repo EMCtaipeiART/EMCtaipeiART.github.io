@@ -295,7 +295,9 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /tableName==='修改統計表'.*sortKey='建立日期'.*sortOrder='desc'/);
   assert.match(html, /latest\.get\(String\(right\['案件編號'\]\)\)/);
   assert.match(html, /const NO_INSERT_TABLES=\['database'\]/);
-  assert.match(html, /function updateAddButton\(\)\{const hidden=APPS_SCRIPT_MODE&&NO_INSERT_TABLES\.includes\(tableName\)/);
+  assert.match(html, /function updateAddButton\(\)\{const hidden=tableName==='帳號權限'\|\|\(APPS_SCRIPT_MODE&&NO_INSERT_TABLES\.includes\(tableName\)\)/);
+  assert.match(html, /function permissionAdminHtml\(rows\)/);
+  assert.match(html, /data-permission-save/);
   assert.match(html, /appsScriptRequest\(original\?'adminTableUpdate':'adminTableInsert'/);
   assert.match(html, /\+ 新增人員/);
   assert.match(html, /\+ 新增項目/);
@@ -304,7 +306,8 @@ test('JSON database admin renders actions first and updates JSON optimistically'
 });
 
 test('Apps Script user directory is sourced from JSON settings and can insert settings rows', async () => {
-  const source = await readFile(new URL('../../user_directory.gs', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../../GS/user_directory.gs', import.meta.url), 'utf8')
+    .catch(() => readFile(new URL('../../user_directory.gs', import.meta.url), 'utf8'));
   assert.match(source, /database\.tables\['設定'\]\.rows/);
   assert.match(source, /const USER_DIRECTORY = readJsonUserDirectory_\(\)/);
   assert.match(source, /function adminTableInsert_\(payload\)/);
@@ -362,6 +365,32 @@ test('password session protects settings, reels and manager-only issue status wr
   assert.equal(logout.ok, true);
   const expired = await api(app.baseUrl, 'verifyToken', { editorToken: login.token });
   assert.equal(expired.ok, false);
+});
+
+test('account access rows control capabilities and can delegate database administration', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  await app.database.transaction(draft => {
+    draft.tables['設定'].rows.push({ '部門': '業務部', '組別': 'A組', '名字': '權限測試', '顯示名': '權限測試', '帳號': 'acl.user@emctaipei.com' });
+    draft.tables['帳號權限'].rows.push({
+      '帳號': 'acl.user@emctaipei.com', '角色範本': '自訂', '狀態': '啟用',
+      '頁面權限': JSON.stringify(['request', 'database_admin']),
+      '功能權限': JSON.stringify(['database.manage'])
+    });
+  }, 'seed account access');
+
+  const login = await api(app.baseUrl, 'login', { account: 'acl.user', password: 'secret' });
+  const verified = await api(app.baseUrl, 'verifyToken', { editorToken: login.token });
+  assert.equal(verified.access.explicit, true);
+  assert.deepEqual(verified.access.pages, ['request', 'database_admin']);
+  assert.deepEqual(verified.access.capabilities, ['database.manage']);
+
+  const denied = await request(app.baseUrl, '/api', { method: 'POST', body: { action: 'saveUserSettings', editorToken: login.token, settings: { displayName: '不應寫入' } } });
+  assert.equal(denied.response.status, 400);
+  assert.match(denied.data.error, /profile\.edit/);
+
+  const delegated = await request(app.baseUrl, '/api/tables', { token: login.token });
+  assert.equal(delegated.response.status, 200);
 });
 
 test('new project writes database and group JSON table while rotating only the actual assignee', async t => {
@@ -429,7 +458,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', '帳號權限', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
 
   const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');

@@ -24,7 +24,9 @@
     .gate{min-height:100vh;display:grid;place-items:center;padding:24px}.gate-card{width:min(420px,100%);padding:28px;border:1px solid var(--line);border-radius:8px;background:var(--panel);text-align:center;box-shadow:var(--shadow)}.gate-card h1{font-size:22px}.gate-card p{color:var(--muted);line-height:1.6}
     @media(max-width:900px){.topbar{align-items:flex-start;padding:10px 14px}.top-actions{flex-wrap:wrap;justify-content:flex-end}.top-actions .btn span{display:none}main{padding:14px}.summary{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr 1fr}.table-wrap{max-height:none}.result-count{width:100%;margin-left:0}.brand span{display:none}.search{flex-basis:100%;width:100%}}
     @media(max-width:560px){.brand h1{font-size:15px}.summary{grid-template-columns:1fr}.fields{grid-template-columns:1fr}.field.wide{grid-column:auto}.metric{min-height:78px}.top-actions .btn{padding-inline:9px}.workspace-head{align-items:flex-start;flex-direction:column}.footer{align-items:flex-start;flex-direction:column}.raw-pane textarea{min-height:58vh}}
+    #app.archive-readonly [data-action],#app.archive-readonly #addRow,#app.archive-readonly #openFile,#app.archive-readonly #saveFile,#app.archive-readonly #rawTab{display:none!important}
   </style>
+  <script src="assets/access-control.js?v=20260811-acl-1"></script>
 </head>
 <body>
   <section class="gate" id="accessGate" hidden><div class="gate-card"><h1>無法開啟歷史資料庫管理</h1><p>此頁面僅限管理者權限。</p><a class="btn primary" href="design_dashboard.html">返回設計儀表板</a></div></section>
@@ -111,9 +113,19 @@
     function showPane(name){const raw=name==='raw';$('tablePane').hidden=raw;$('rawPane').hidden=!raw;$('tableTab').classList.toggle('active',!raw);$('rawTab').classList.toggle('active',raw);$('tableTab').setAttribute('aria-selected',String(!raw));$('rawTab').setAttribute('aria-selected',String(raw));if(raw&&snapshot)$('rawJson').value=serialize()}
     function applyRaw(){try{const parsed=validate(JSON.parse($('rawJson').value));snapshot=parsed;baseGeneratedAt=baseGeneratedAt||snapshot.generatedAt||'';touch();updateFilterOptions();applyFilters();$('rawJson').value=serialize();notice('JSON 已套用。','success')}catch(error){notice(`JSON 驗證失敗：${error.message}`,'error')}}
     let historySyncTimer=null;function scheduleHistoryDatabaseSync(delay=900){clearTimeout(historySyncTimer);historySyncTimer=setTimeout(()=>loadRemote({automatic:true}),delay)}
+    const databaseRequestWithoutAccessContext=databaseRequest;
+    databaseRequest=function(action,payload={}){return databaseRequestWithoutAccessContext(action,{accessContext:'archive',...payload})};
     window.addEventListener('storage',event=>{if(['designDatabaseRefreshV1','designDatabaseRefreshPingV1','machiDatabaseRefreshV1'].includes(event.key))scheduleHistoryDatabaseSync()});
     const historySyncChannels=[];if('BroadcastChannel'in window){for(const name of ['design-database-refresh','machi-database-refresh-v1']){try{const channel=new BroadcastChannel(name);channel.addEventListener('message',()=>scheduleHistoryDatabaseSync());historySyncChannels.push(channel)}catch(error){}}}
-    if(!hasAdminAccess())$('accessGate').hidden=false;else{$('app').hidden=false;loadRemote();setInterval(()=>loadRemote({automatic:true}),AUTO_REFRESH_MS)}
+    async function startArchiveAdmin(){
+      await window.MachiAccess?.refresh({account:sessionValue('designRequestEditorAccount'),user:sessionValue('designRequestEditorUser'),group:sessionValue('designRequestEditorGroup'),department:sessionValue('designRequestEditorDepartment'),token:sessionValue('designRequestEditorToken')});
+      const legacyAdmin=hasAdminAccess(),canView=legacyAdmin||Boolean(window.MachiAccess?.can('page.archive')),canEdit=legacyAdmin||Boolean(window.MachiAccess?.can('archive.edit'));
+      if(!canView){$('accessGate').hidden=false;return}
+      $('app').hidden=false;
+      if(!canEdit){$('app').classList.add('archive-readonly');notice('目前為唯讀權限，可查看但不可修改歷史資料庫。')}
+      await loadRemote();setInterval(()=>loadRemote({automatic:true}),AUTO_REFRESH_MS);
+    }
+    startArchiveAdmin();
     $('backButton').addEventListener('click',()=>{if(dirty&&!confirm('尚未儲存的變更會遺失，繼續嗎？'))return;if(window.opener&&!window.opener.closed){window.opener.focus();window.close();setTimeout(()=>location.href='design_dashboard.html',100)}else location.href='design_dashboard.html'});
     $('loadRemote').addEventListener('click',()=>loadRemote());$('openFile').addEventListener('click',openFile);$('saveFile').addEventListener('click',saveFile);$('fileInput').addEventListener('change',event=>{const file=event.target.files?.[0];if(file)readFile(file);event.target.value=''});
     $('searchInput').addEventListener('input',()=>{page=1;applyFilters()});['yearFilter','monthFilter','statusFilter','pageSize'].forEach(id=>$(id).addEventListener('change',()=>{page=1;applyFilters()}));$('addRow').addEventListener('click',()=>openEditor());
