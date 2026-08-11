@@ -81,6 +81,8 @@
     .kv-list b{color:var(--ink);font-weight:600}
     .kv-list a{color:#1769aa;overflow-wrap:anywhere}
     .kv-list a.trunc{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .link-cell{display:flex;flex-direction:column;gap:4px;min-width:0}
+    a.short-badge{align-self:flex-start;text-decoration:none;font-weight:700}
     details.adv{margin-top:14px}
     details.adv summary{cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600;padding:6px 0}
     details.adv .kv-list{margin-top:10px}
@@ -279,6 +281,11 @@
       }
       return html;
     }
+    function supplementShortUrl(slot,caseId){
+      const id=String(caseId||'').trim();
+      if(!/^\d{8}$/.test(id))return '';
+      return `https://emctaipeiart.github.io/${slot.toLowerCase()}/${id}`;
+    }
     function supplementCardsHtml(rows){
       if(!rows.length)return '<div class="notice">沒有符合條件的資料</div>';
       const sorted=[...rows].sort((left,right)=>parseDateLike(right['更新時間'])-parseDateLike(left['更新時間']));
@@ -286,7 +293,11 @@
         const slots=['A','B','C','D'].map(slot=>({slot,url:row[slot]}));
         return `<article class="card" data-key="${esc(rowKeyFor(row))}">
           <div class="card-head"><div class="card-title"><b>案件 ${esc(row['案件編號'])}</b><span>更新於 ${esc(row['更新時間']||'—')}</span></div>${actionButtons()}</div>
-          <div class="kv-list">${slots.map(({slot,url})=>`<div><b>${slot} 項</b>${url?`<a class="trunc" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">${esc(url)}</a>`:'<span>未提供</span>'}</div>`).join('')}</div>
+          <div class="kv-list">${slots.map(({slot,url})=>{
+            if(!url)return `<div><b>${slot} 項</b><span>未提供</span></div>`;
+            const shortUrl=supplementShortUrl(slot,row['案件編號']);
+            return `<div><b>${slot} 項</b><div class="link-cell"><a class="trunc" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">${esc(url)}</a>${shortUrl?`<a class="badge short-badge" href="${esc(shortUrl)}" target="_blank" rel="noopener" title="短網址：${esc(shortUrl)}">/${esc(slot.toLowerCase())}/${esc(row['案件編號'])}</a>`:''}</div></div>`;
+          }).join('')}</div>
         </article>`;
       }).join('')}</div>`;
     }
