@@ -7033,8 +7033,8 @@ const columns = [
   {key:'status',label:'狀態',sort:'text',render:r=>isUpdatingCell(r.id,'status')?'<span class="status updating-cell">更新中...</span>':(canListEditRow(r)?`<button type="button" class="status editable-status ${esc(r.status)}" onclick="openStatusEditor(event,'${jsArg(r.id)}')">${esc(statusLabel(r.status))}</button>`:`<span class="status ${esc(r.status)}">${esc(statusLabel(r.status))}</span>`)},
   {key:'details',label:'項目細節',sort:'text',render:r=>isUpdatingCell(r.id,'details')?'<span class="editable-field detail-edit updating-cell">更新中...</span>':(canListEditRow(r)?`<button type="button" class="editable-field detail-edit" onclick="openDetailsEditor(event,'${jsArg(r.id)}')" title="${esc(r.details||'選擇項目細節')}">${esc(r.details||'選擇')}</button>`:`<span class="detail-edit detail-static" title="${esc(r.details||'')}">${esc(r.details||'-')}</span>`)},
   {key:'modifications',label:'修改',sort:'number',render:r=>revisionControl(r)},
-  {key:'subject',label:'信件',className:'sticky-subject',sort:'text',render:r=>mailAction(r,{icon:true})},
-  {key:'actions',label:'內容',className:'sticky-actions',render:r=>editAction(r,{icon:true})}
+  {key:'subject',label:'信件',className:'sticky-subject',sort:'text',visible:()=>canSendMailNow(),render:r=>mailAction(r,{icon:true})},
+  {key:'actions',label:'內容',className:'sticky-actions',visible:()=>canEditCasesNow(),render:r=>editAction(r,{icon:true})}
 ];
 const settingsColumnHeadersByKey = {
   id:'案件編號',
@@ -7062,9 +7062,9 @@ const settingsColumnHeaderAliasesByKey = {
 };
 const displaySettingsKey = 'designRequestDisplaySettingsV1';
 const settingsColumnKeyByHeader = Object.fromEntries(Object.entries(settingsColumnHeadersByKey).map(([key,header])=>[header,key]));
-const modifyFixedColumns = [
-  {label:'信件',width:76,className:'recent-subject',render:r=>r.pendingCreate?'<span class="status updating-cell">建立中</span>':mailAction(r,{icon:true})},
-  {label:'內容',width:76,className:'recent-actions',render:r=>r.pendingCreate?'<span class="status updating-cell">等待編號</span>':editAction(r,{icon:true})}
+const modifyFixedColumnsAll = [
+  {label:'信件',width:76,className:'recent-subject',visible:()=>canSendMailNow(),render:r=>r.pendingCreate?'<span class="status updating-cell">建立中</span>':mailAction(r,{icon:true})},
+  {label:'內容',width:76,className:'recent-actions',visible:()=>canEditCasesNow(),render:r=>r.pendingCreate?'<span class="status updating-cell">等待編號</span>':editAction(r,{icon:true})}
 ];
 const modifyRecentColumns = [
   {label:'案件編號',width:96,render:r=>r.pendingCreate?`<span class="status updating-cell">${esc(r.id)}</span>`:`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
@@ -7076,9 +7076,9 @@ const modifyRecentColumns = [
   {label:'開始',width:78,render:r=>esc(shortMonthDayDate(r.start))},
   {label:'結束',width:78,render:r=>esc(shortMonthDayDate(r.end))}
 ];
-const ownerProjectColumns = [
-  {label:'發信',width:54,className:'owner-project-mail',render:r=>mailAction(r,{icon:true})},
-  {label:'編輯',width:54,className:'owner-project-edit',render:r=>ownerProjectEditAction(r)},
+const ownerProjectColumnsAll = [
+  {label:'發信',width:54,className:'owner-project-mail',visible:()=>canSendMailNow(),render:r=>mailAction(r,{icon:true})},
+  {label:'編輯',width:54,className:'owner-project-edit',visible:()=>canEditCasesNow(),render:r=>ownerProjectEditAction(r)},
   {label:'案件編號',width:100,render:r=>`<button type="button" class="case-id-btn" onclick="openOwnerProjectCase(event,'${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {label:'客戶別',width:120,render:r=>esc(r.client)},
   {label:'專案名稱',width:230,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
@@ -7088,6 +7088,12 @@ const ownerProjectColumns = [
   {label:'狀態',width:96,render:r=>`<span class="status ${esc(r.status)}">${esc(statusLabel(r.status))}</span>`}
 ];
 const defaultHiddenColumns = ['month','owner','type','stage'];
+// 發信／編輯沒有權限時，整欄（含表頭）都不顯示，而不是留一排空格子。
+function canSendMailNow(){return accessAllowed('request.mail',true)}
+function canEditCasesNow(){return accessAllowed('request.edit',hasDesignerAccountRole())}
+function allowedColumns(list){return list.filter(column=>typeof column.visible!=='function'||column.visible())}
+function modifyFixedColumns(){return allowedColumns(modifyFixedColumnsAll)}
+function ownerProjectColumns(){return allowedColumns(ownerProjectColumnsAll)}
 const visibleColumnsKey = 'designRequestVisibleColumnsV2';
 const caseColumnWidthsKey = 'designRequestCaseColumnWidthsV1';
 const filterSettingsKey = 'designRequestFilterSettingsV1';
@@ -7168,7 +7174,7 @@ function readVisibleColumnsForAccount(){return readCache(accountStorageKey(visib
 function readDisplaySettingsForAccount(){return {...{editEnabled:true,timelineEnabled:true},...(readCache(accountStorageKey(displaySettingsKey),{})||{})}}
 function readCollapseSettingsForAccount(){return {...{designer:false,recent:false,request:false,designerHidden:false},...(readCache(accountStorageKey('designRequestCollapseSettingsV1'),{})||{})}}
 function validVisibleColumns(keys,{fallback=true}={}){const valid=columns.map(c=>c.key); if(!Array.isArray(keys))return fallback?defaultVisibleColumns():[]; const list=unique(keys.filter(key=>valid.includes(key))); return list.length||!fallback?list:defaultVisibleColumns()}
-function orderedColumns(){const order=validVisibleColumns(visibleColumns,{fallback:false}), known=new Set(order); return [...order.map(key=>columns.find(c=>c.key===key)).filter(Boolean),...columns.filter(c=>!known.has(c.key))]}
+function orderedColumns(){const available=allowedColumns(columns), order=validVisibleColumns(visibleColumns,{fallback:false}), known=new Set(order); return [...order.map(key=>available.find(c=>c.key===key)).filter(Boolean),...available.filter(c=>!known.has(c.key))]}
 function reorderVisibleColumn(fromKey,toKey){if(!fromKey||!toKey||fromKey===toKey)return; const visibleSet=new Set(visibleColumns), order=orderedColumns().map(c=>c.key), fromIndex=order.indexOf(fromKey), toIndex=order.indexOf(toKey); if(fromIndex<0||toIndex<0)return; order.splice(toIndex,0,order.splice(fromIndex,1)[0]); visibleColumns=order.filter(key=>visibleSet.has(key)); saveVisibleColumnsForAccount('欄位順序已儲存'); columnControlsRenderedKey=''; render()}
 function settingFlagValue(flags,key,header){return [key,header,...(settingsColumnHeaderAliasesByKey[key]||[])].map(name=>flags[name]).find(value=>value!==undefined)}
 function remoteVisibleColumns(settings){if(!settings)return null; if(Array.isArray(settings.visibleColumns)){const columns=validVisibleColumns(settings.visibleColumns,{fallback:false}); return columns.length?columns:null} const flags=settings.visibleColumnFlags||settings.columns||settings, entries=Object.entries(settingsColumnHeadersByKey), flagValue=([key,header])=>settingFlagValue(flags,key,header), isExplicit=value=>value===true||value===false||['v','x'].includes(String(value??'').trim().toLowerCase())||/^\d+$/.test(String(value??'').trim()); if(!entries.some(entry=>isExplicit(flagValue(entry))))return null; const columns=entries.filter(entry=>{const value=flagValue(entry), text=String(value??'').trim().toLowerCase(); return value===true||text==='v'||(/^\d+$/.test(text)&&Number(text)>0)}).map(([key])=>key); return columns.length?columns:null}
@@ -8597,10 +8603,10 @@ function renderOwnerProjects(owner){
   if(!thead||!tbody)return;
   if(title)title.textContent=`${owner} 的專案`;
   if(summary)summary.textContent=`共 ${list.length} 筆，依案件編號由新到舊排列${apiUrl&&!ownerProjectsFullDataLoaded?'，完整資料更新中...':''}`;
-  thead.innerHTML=`<tr>${ownerProjectColumns.map(column=>`<th class="${esc(column.className||'')}" style="width:${column.width}px!important;min-width:${column.width}px!important">${esc(column.label)}</th>`).join('')}</tr>`;
+  thead.innerHTML=`<tr>${ownerProjectColumns().map(column=>`<th class="${esc(column.className||'')}" style="width:${column.width}px!important;min-width:${column.width}px!important">${esc(column.label)}</th>`).join('')}</tr>`;
   tbody.innerHTML=list.length
-    ? list.map(row=>`<tr>${ownerProjectColumns.map(column=>cell(column.label,column.render(row),column.className||'',column.width)).join('')}</tr>`).join('')
-    : `<tr><td colspan="${ownerProjectColumns.length}">目前找不到此負責人填寫的專案。</td></tr>`;
+    ? list.map(row=>`<tr>${ownerProjectColumns().map(column=>cell(column.label,column.render(row),column.className||'',column.width)).join('')}</tr>`).join('')
+    : `<tr><td colspan="${ownerProjectColumns().length}">目前找不到此負責人填寫的專案。</td></tr>`;
 }
 function ensureOwnerProjectsFullData(){
   if(!apiUrl||ownerProjectsFullDataLoaded||ownerProjectsFullLoadPromise)return ownerProjectsFullLoadPromise;
@@ -9075,15 +9081,17 @@ function renderModifyRecent(){
   if(modifyPage>totalPages)modifyPage=totalPages;
   if(modifyPage<1)modifyPage=1;
   const list=matched.slice((modifyPage-1)*modifyPageSize,modifyPage*modifyPageSize);
-  modifyFixedThead.innerHTML=`<tr>${modifyFixedColumns.map(c=>`<th class="${esc(c.className||'')}" style="width:${c.width}px!important;min-width:${c.width}px!important">${esc(c.label)}</th>`).join('')}</tr>`;
-  modifyFixedTbody.innerHTML=list.length?list.map(r=>`<tr>${modifyFixedColumns.map(c=>cell(c.label,c.render(r),c.className||'',c.width)).join('')}</tr>`).join(''):`<tr><td colspan="${modifyFixedColumns.length}" data-label="最新案件">沒有符合搜尋條件的案件。</td></tr>`;
+  modifyFixedThead.innerHTML=`<tr>${modifyFixedColumns().map(c=>`<th class="${esc(c.className||'')}" style="width:${c.width}px!important;min-width:${c.width}px!important">${esc(c.label)}</th>`).join('')}</tr>`;
+  modifyFixedTbody.innerHTML=list.length?list.map(r=>`<tr>${modifyFixedColumns().map(c=>cell(c.label,c.render(r),c.className||'',c.width)).join('')}</tr>`).join(''):`<tr><td colspan="${modifyFixedColumns().length}" data-label="最新案件">沒有符合搜尋條件的案件。</td></tr>`;
   modifyThead.innerHTML=`<tr>${modifyRecentColumns.map(c=>`<th class="${esc(c.className||'')}" style="width:${c.width}px!important;min-width:${c.width}px!important">${esc(c.label)}</th>`).join('')}</tr>`;
   modifyTbody.innerHTML=list.length?list.map(r=>`<tr>${modifyRecentColumns.map(c=>cell(c.label,c.render(r),c.className||'',c.width)).join('')}</tr>`).join(''):`<tr><td colspan="${modifyRecentColumns.length}" data-label="最新案件">${q?'沒有符合搜尋條件的案件。':'目前沒有可修改的案件。'}</td></tr>`;
   const baseWidth=modifyRecentColumns.reduce((sum,c)=>sum+(c.width||110),0);
-  const fixedWidth=modifyFixedColumns.reduce((sum,c)=>sum+(c.width||76),0);
+  const fixedWidth=modifyFixedColumns().reduce((sum,c)=>sum+(c.width||76),0);
   const fullWidthRecent=document.querySelector('.top')?.classList.contains('is-designer-hidden')&&window.matchMedia('(min-width:901px)').matches;
   const targetWidth=Math.max(baseWidth,(wrap?.clientWidth||0)+(fullWidthRecent?0:120));
   if(fixedTable){
+    // 信件與內容兩欄都沒權限時整張固定表格收起來，避免留下一條空白直欄
+    fixedTable.hidden=fixedWidth===0;
     fixedTable.style.setProperty('width',`${fixedWidth}px`,'important');
     fixedTable.style.setProperty('min-width',`${fixedWidth}px`,'important');
     fixedTable.style.tableLayout='fixed';
