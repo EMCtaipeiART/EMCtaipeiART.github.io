@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 292,
+  "revision": 293,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T06:54:52.353Z",
+  "updatedAt": "2026-08-11T06:55:07.026Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22707,6 +22707,15 @@
           "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
           "功能權限": "[\"request.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
           "更新時間": "2026-08-11 14:53",
+          "更新者": "管理者"
+        },
+        {
+          "帳號": "allen.li@emctaipei.com",
+          "角色範本": "一般使用者",
+          "狀態": "啟用",
+          "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-11 14:55",
           "更新者": "管理者"
         }
       ]
