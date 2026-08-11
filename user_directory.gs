@@ -81,9 +81,11 @@ function adminTableInsert_(payload) {
     }
     table.rows.push(row);
     if (tableName === '設定') CacheService.getScriptCache().remove(USER_DIRECTORY_JSON_CACHE_KEY);
+    const changedTables = [tableName];
+    if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');
     return {
       changed: true,
-      changedTables: [tableName],
+      changedTables: changedTables,
       result: { ok: true, action: 'adminTableInsert', table: tableName, rowNumber: table.rows.length + 1, row: row }
     };
   });

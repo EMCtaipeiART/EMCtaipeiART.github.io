@@ -2832,7 +2832,13 @@ function retryGithubJsonDatabaseBackups() {
   return { ok: true, tables, revision: source.database.revision };
 }
 
-function mutateGithubJsonDatabase_(action, payload, mutator) {
+// allowSheetBackup 只有「填單」產生的案件寫入（githubJsonDatabaseWriteAction_，
+// 也就是 add/batchAdd/update/batchUpdate/delete）才會是 true；資料庫後台的
+// adminTableUpdate_/adminTableDelete_/adminTableInsert_（八張表管理介面）
+// 一律不回寫試算表，JSON 才是唯一資料來源，避免後台編輯（尤其是加權計分標準）
+// 意外把整張分頁覆寫回試算表。
+function mutateGithubJsonDatabase_(action, payload, mutator, options) {
+  const allowSheetBackup = Boolean(options && options.allowSheetBackup);
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
@@ -2853,7 +2859,9 @@ function mutateGithubJsonDatabase_(action, payload, mutator) {
         const written = writeGithubJsonDatabase_(source.database, source.sha, action);
         const backup = payload && payload._skipSheetBackup
           ? { ok: true, skipped: true, source: 'sheet-snapshot', tables: [...new Set(outcome.changedTables || [])] }
-          : queueGithubJsonBackupRetry_(outcome.changedTables || [], source.database.revision, 'JSON 寫入完成，試算表備份改由背景執行');
+          : allowSheetBackup
+            ? queueGithubJsonBackupRetry_(outcome.changedTables || [], source.database.revision, 'JSON 寫入完成，試算表備份改由背景執行')
+            : { ok: true, skipped: true, source: 'json-only', tables: [...new Set(outcome.changedTables || [])] };
         return Object.assign({}, outcome.result, { jsonRevision: source.database.revision, githubCommitSha: written.commitSha, backup });
       } catch (error) {
         lastError = error;
@@ -2867,7 +2875,7 @@ function mutateGithubJsonDatabase_(action, payload, mutator) {
 }
 
 function githubJsonDatabaseWriteAction_(action, payload) {
-  return mutateGithubJsonDatabase_(action, payload, githubJsonDatabaseAction_);
+  return mutateGithubJsonDatabase_(action, payload, githubJsonDatabaseAction_, { allowSheetBackup: true });
 }
 
 function readAdminTableSnapshot_(tableName) {
@@ -3050,7 +3058,9 @@ function adminTableUpdate_(payload) {
       };
     }
     table.rows[index] = updated;
-    return { changed: true, changedTables: [tableName], result: { ok: true, action: 'adminTableUpdate', table: tableName, rowNumber, row: Object.assign({ _rowNumber: rowNumber }, updated) } };
+    const changedTables = [tableName];
+    if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');
+    return { changed: true, changedTables, result: { ok: true, action: 'adminTableUpdate', table: tableName, rowNumber, row: Object.assign({ _rowNumber: rowNumber }, updated) } };
   });
 }
 
@@ -3071,7 +3081,9 @@ function adminTableDelete_(payload) {
     const compareHeaders = config.primaryKey ? [config.primaryKey] : table.headers;
     if (expected && !compareHeaders.every(header => String(table.rows[index][header] || '') === String(expected[header] || ''))) throw new Error('這筆資料已被其他操作變更，請重新讀取後再試一次');
     const deleted = table.rows.splice(index, 1)[0];
-    return { changed: true, changedTables: [tableName], result: { ok: true, action: 'adminTableDelete', table: tableName, rowNumber, deleted: Object.assign({ _rowNumber: rowNumber }, deleted) } };
+    const changedTables = [tableName];
+    if (tableName === '加權計分標準' && recalculateDatabaseWeights_(database)) changedTables.push('database');
+    return { changed: true, changedTables, result: { ok: true, action: 'adminTableDelete', table: tableName, rowNumber, deleted: Object.assign({ _rowNumber: rowNumber }, deleted) } };
   });
 }
 
@@ -4377,6 +4389,31 @@ function weightMap_() {
     map[item] = score;
   });
   return map;
+}
+
+// database 的加權分數以 JSON 的「加權計分標準」為主。管理者透過後台編輯
+// 權重規則後，這裡會在同一次交易內重算所有 database 案件的「加權」，
+// 不依賴上面 weightMap_()（試算表，僅供舊的 Sheet-primary 路徑相容使用，
+// 目前的動作路由器不會呼叫到它）。
+function weightMapFromJsonRows_(rows) {
+  const map = {};
+  (rows || []).forEach(row => {
+    const item = normalizedWeightKey_(row['項目細節']);
+    if (!item) return;
+    map[item] = numberValue_(row['權重']);
+  });
+  return map;
+}
+function recalculateDatabaseWeights_(database) {
+  const table = database && database.tables && database.tables.database;
+  if (!table || !Array.isArray(table.rows)) return 0;
+  const weightsTable = database.tables['加權計分標準'];
+  const weights = weightMapFromJsonRows_(weightsTable && weightsTable.rows);
+  table.rows.forEach(row => {
+    if (!detailItems_(row['項目細節']).length) return;
+    row['加權'] = String(calculateWeight_(row['項目細節'], row['數量'], weights));
+  });
+  return table.rows.length;
 }
 
 function calculateWeight_(details, qty, weights) {
