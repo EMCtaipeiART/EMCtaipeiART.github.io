@@ -2,6 +2,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, PROJECT_GROUPS, SUPPLEMENT_SLOTS,
+  SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessProfile, activeReel, canonicalAccount, findReelIndex, generateShortCode,
   hasCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseWeights, reelFileId, requireCapability,
@@ -58,6 +59,23 @@ function normalizedAccessList(value: unknown, allowed: string[]): string[] {
 
 function sessionToken(payload: ApiPayload): string {
   return text(payload.editorToken || payload.token);
+}
+/** 台北時區的當日 MMDD，作為管理者捷徑密碼；每天自動失效。 */
+function taipeiMonthDay(now = new Date()): string {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' })
+    .formatToParts(now).map(part => [part.type, part.value]));
+  return `${parts.month}${parts.day}`;
+}
+/**
+ * 測試捷徑登入：密碼 test → 測試使用者、當日 MMDD → 管理員。
+ * 這是刻意保留的弱密碼入口，僅對應這兩個帳號，其餘帳號一律走 ADMIN_LOGIN_ACCOUNTS + ADMIN_LOGIN_PASSWORD。
+ */
+function shortcutLoginAccount(password: string, now = new Date()): string {
+  const value = text(password);
+  if (!value) return '';
+  if (value === 'test') return SHORTCUT_TESTER_ACCOUNT;
+  if (value === taipeiMonthDay(now)) return SHORTCUT_ADMIN_ACCOUNT;
+  return '';
 }
 
 function commitMessage(action: string, session: SessionRecord | null): string {
@@ -315,10 +333,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private async passwordLogin(payload: ApiPayload, context: RequestContext): Promise<ApiResult> {
     await this.assertLoginRate(context);
-    const account = canonicalAccount(payload.account || payload.user);
     const password = text(payload.password);
-    const allowed = this.env.ADMIN_LOGIN_ACCOUNTS.split(',').map(canonicalAccount).includes(account);
-    if (!allowed || !password || !(await secureEqual(password, this.env.ADMIN_LOGIN_PASSWORD))) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
+    const shortcut = shortcutLoginAccount(password);
+    const account = shortcut || canonicalAccount(payload.account || payload.user);
+    if (!shortcut) {
+      const allowed = this.env.ADMIN_LOGIN_ACCOUNTS.split(',').map(canonicalAccount).includes(account);
+      if (!allowed || !password || !(await secureEqual(password, this.env.ADMIN_LOGIN_PASSWORD))) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
+    }
     const { database } = await this.snapshot();
     const row = settingsRow(database, account);
     if (!row) return { ok: false, action: 'login', error: '帳號或密碼不正確' };

@@ -18,6 +18,21 @@ function testDatabase(): DatabaseSnapshot {
     '顯示名': 'Machi',
     '帳號': 'machi.chen@emctaipei.com'
   });
+  // 刻意留空的部門／組別，跟正式資料一致：管理者權限必須由 SHORTCUT_ADMIN_ACCOUNT 授權，不能靠這兩個欄位。
+  database.tables['設定'].rows.push({
+    '部門': '',
+    '組別': '',
+    '名字': '管理員',
+    '顯示名': '管理員',
+    '帳號': 'admin@emctaipei.com'
+  });
+  database.tables['設定'].rows.push({
+    '部門': '測試組',
+    '組別': '測試專員',
+    '名字': '測試使用者',
+    '顯示名': '測試使用者',
+    '帳號': 'test.user@emctaipei.com'
+  });
   database.tables.database.rows.push({
     '案件編號': '26080001',
     '月份': '8月',
@@ -111,6 +126,29 @@ describe('Machi Design API Worker', () => {
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
     expect(stored.migrations).toEqual([{ version: 1 }]);
+  });
+
+  it('issues real sessions for the tester and admin shortcut passwords', async () => {
+    const tester = await api({ action: 'login', password: 'test' });
+    expect(tester).toMatchObject({
+      ok: true, provider: 'password', account: 'test.user@emctaipei.com', user: '測試使用者',
+      access: { role: '一般使用者', status: '啟用' }
+    });
+    expect(String(tester.token)).not.toBe('');
+
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date()).map(part => [part.type, part.value]));
+    const admin = await api({ action: 'login', password: `${parts.month}${parts.day}` });
+    expect(admin).toMatchObject({
+      ok: true, provider: 'password', account: 'admin@emctaipei.com', user: '管理員',
+      access: { role: '管理者', status: '啟用' }
+    });
+
+    // 捷徑密碼不能拿來冒充其他帳號，也不能讓任意密碼通過
+    const spoofed = await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test' });
+    expect(spoofed).toMatchObject({ ok: true, account: 'test.user@emctaipei.com' });
+    const rejected = await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'not-the-password' });
+    expect(rejected).toMatchObject({ ok: false, error: '帳號或密碼不正確' });
   });
 
   it('blocks anonymous admin reads and serves authorized table data', async () => {

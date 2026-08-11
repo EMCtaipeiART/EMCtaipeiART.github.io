@@ -175,9 +175,14 @@ function accessList(value: unknown): string[] {
   try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) return accessList(parsed); } catch {}
   return unique(raw.split(/[\n,，、|｜]/).map(text));
 }
+/** 捷徑登入帳號：密碼 test → 測試使用者、當日 MMDD → 管理員。 */
+export const SHORTCUT_TESTER_ACCOUNT = 'test.user@emctaipei.com';
+export const SHORTCUT_ADMIN_ACCOUNT = 'admin@emctaipei.com';
 export function isManager(snapshot: DatabaseSnapshot, session: SessionRecord | null): boolean {
   if (!session) return false;
   if (session.user === '管理者' || session.user === 'Machi') return true;
+  // admin@emctaipei.com 在「設定」表的部門／組別是空的，這裡直接授權，避免管理者捷徑登入只拿到一般使用者權限。
+  if (canonicalAccount(session.account) === SHORTCUT_ADMIN_ACCOUNT) return true;
   const row = settingsRow(snapshot, session.account || session.user);
   return /^(?:管理者|admin)$/i.test(text(row?.['部門'] || row?.['組別']));
 }
