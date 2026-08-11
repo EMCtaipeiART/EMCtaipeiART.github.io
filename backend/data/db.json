@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 298,
+  "revision": 299,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T07:38:09.686Z",
+  "updatedAt": "2026-08-11T07:40:03.613Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22726,10 +22726,10 @@
         },
         {
           "角色範本": "唯讀",
-          "頁面權限": "[\"request\",\"dashboard\",\"short_link\"]",
+          "頁面權限": "[\"request\",\"short_link\"]",
           "功能權限": "[]",
-          "更新時間": "",
-          "更新者": "系統預設"
+          "更新時間": "2026-08-11 15:40",
+          "更新者": "Machi"
         }
       ]
     }
