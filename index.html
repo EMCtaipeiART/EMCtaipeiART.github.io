@@ -6804,6 +6804,7 @@ async function fetchGithubJsonDatabase({fresh=false}={}){
     return githubJsonDatabaseCache;
   }
   syncWeightRulesFromDatabase(database);
+  syncDesignListsFromDatabase(database);
   githubJsonDatabaseCache=database;
   githubJsonDatabaseLoadedAt=Date.now();
   return database;
@@ -6820,7 +6821,6 @@ const targetSheetId = 1244538986;
 const archiveSheetId = 646199020;
 const designerSheetId = 988186149;
 const reelsSheetId = 1503122183;
-const stagesSheetId = 462593697;
 const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
@@ -6837,7 +6837,6 @@ const erpPublicFallbackConfig = {
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
 const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
 const reelsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${reelsSheetId}&tq=${encodeURIComponent('select *')}`;
-const stagesGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${stagesSheetId}&tq=${encodeURIComponent('select *')}`;
 const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
 const issueReportSheetId = 1284883392;
 const issueReportGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${issueReportSheetId}&tq=${encodeURIComponent('select *')}`;
@@ -6965,6 +6964,27 @@ function defaultDetailWeight(type,stage,detail){
   return 1;
 }
 function syncWeightRulesFromDatabase(database){const rows=database?.tables?.['加權計分標準']?.rows;if(Array.isArray(rows)&&rows.length)activeWeightRules=rows.map(row=>({type:normalizeWeightType(row['設計種類']),stage:String(row['階段']||'').trim(),detail:String(row['項目細節']||'').trim(),weight:Number(row['權重'])})).filter(rule=>rule.type&&rule.stage&&rule.detail&&Number.isFinite(rule.weight))}
+function designListsFromWeightTable(database){
+  const rows=database?.tables?.['加權計分標準']?.rows;
+  if(!Array.isArray(rows)||!rows.length)return null;
+  const types=baseDesignLists.types.slice();
+  const next={types,stages:Object.fromEntries(types.map(type=>[type,[]])),details:Object.fromEntries(types.map(type=>[type,{}]))};
+  rows.forEach(row=>{
+    const type=normalizeWeightType(row['設計種類']),stage=String(row['階段']||'').trim(),detail=String(row['項目細節']||'').trim();
+    if(!type||!stage||!detail||!next.stages[type])return;
+    if(!next.stages[type].includes(stage))next.stages[type].push(stage);
+    if(!next.details[type][stage])next.details[type][stage]=[];
+    if(!next.details[type][stage].includes(detail))next.details[type][stage].push(detail);
+  });
+  types.forEach(type=>{
+    if(!next.stages[type].length)next.stages[type]=baseDesignLists.stages[type].slice();
+    next.stages[type].forEach(stage=>{
+      if(!next.details[type][stage]||!next.details[type][stage].length)next.details[type][stage]=baseDesignLists.details[type]?.[stage]||[];
+    });
+  });
+  return next;
+}
+function syncDesignListsFromDatabase(database){const next=designListsFromWeightTable(database);if(next)designLists=next}
 function detailWeight(type,stage,detail){const normalizedType=normalizeWeightType(type),normalizedStage=String(stage||'').trim(),rule=activeWeightRules.find(item=>item.type===normalizedType&&item.stage===normalizedStage&&item.detail===detail);return rule?rule.weight:defaultDetailWeight(normalizedType,normalizedStage,detail)}
 function calculateRowWeight(row={}){const details=splitWeightDetails(row.details??row['項目細節']);if(!details.length)return '';const quantity=Number(String(row.qty??row['數量']??'').replace(/,/g,'')),type=row.type??row['設計種類']??row['設計類型'],stage=row.stage??row['階段'],regularScore=details.filter(detail=>detail!=='急件').reduce((sum,detail)=>sum+detailWeight(type,stage,detail),0),urgentMultiplier=details.includes('急件')?detailWeight(type,stage,'急件'):1;const value=(Number.isFinite(quantity)?quantity:0)*regularScore*urgentMultiplier;return String(Number(value.toFixed(4)))}
 const columns = [
@@ -7430,7 +7450,6 @@ function applyCurrentUserProfile(){fillOwnerFromDraft(); applyAccountSettingsIfN
 async function loadCurrentUserOwner(){applyCurrentUserProfile()}
 function populateSelect(el,options,value){const old=value??el.value; el.innerHTML=options.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); if(options.includes(old))el.value=old}
 function populateDesignerSelect(){const designerEl=formEl.elements.designer, old=designerEl.value; designerEl.innerHTML='<option value=""></option>'+designerOptions.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join(''); if(designerOptions.includes(old))designerEl.value=old}
-function splitDetailHeader(header,types){const text=String(header||'').trim(), type=types.sort((a,b)=>b.length-a.length).find(t=>text.startsWith(t)); return type?{type,stage:text.slice(type.length)}:null}
 function detailsToArray(value){return unique(String(value||'').split(/[、,，\n]/).map(v=>v.trim()))}
 function formatDetails(values){return detailsToArray(Array.isArray(values)?values.join(', '):values).join(', ')}
 function splitSkills(value){return unique(String(value||'').split(/[、,，]/).map(v=>v.trim()))}
@@ -7884,30 +7903,6 @@ function showDesignerMonthlyCases(designer){
   setSync(`已切換至 ${designer} ${year} 年 ${month} 總案件：${total} 件`);
   requestAnimationFrame(()=>$('#casesSection')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
-function designListsFromStageSheet(data){
-  const table=data?.table;
-  if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'項目細節設定表回應錯誤');
-  let headers=(table?.cols||[]).map(col=>String(col.label||'').trim());
-  let matrix=(table?.rows||[]).map(row=>(row.c||[]).map(gvizCellValue));
-  if(!headers.some(Boolean)&&matrix.length)headers=matrix.shift().map(value=>String(value||'').trim());
-  const types=baseDesignLists.types.slice();
-  const next={types,stages:Object.fromEntries(types.map(type=>[type,[]])),details:Object.fromEntries(types.map(type=>[type,{}]))};
-  headers.forEach((header,columnIndex)=>{
-    const parsed=splitDetailHeader(header,types);
-    if(!parsed)return;
-    const values=unique(matrix.map(row=>row[columnIndex]).filter(Boolean));
-    if(!values.length)return;
-    if(!next.stages[parsed.type].includes(parsed.stage))next.stages[parsed.type].push(parsed.stage);
-    next.details[parsed.type][parsed.stage]=values;
-  });
-  types.forEach(type=>{
-    if(!next.stages[type].length)next.stages[type]=baseDesignLists.stages[type].slice();
-    next.stages[type].forEach(stage=>{
-      if(!next.details[type][stage])next.details[type][stage]=baseDesignLists.details[type]?.[stage]||[];
-    });
-  });
-  return next;
-}
 function gvizJsonp(url,timeoutMs=60000){
   const requestUrl=`${url}&tqx=${encodeURIComponent('out:json')}&ts=${Date.now()}`;
   return fetchWithTimeout(requestUrl,{method:'GET',credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs).then(async response=>{
@@ -8047,7 +8042,7 @@ async function fetchAccountSettings(account,user){
   if(fullAccount)return null;
   return rows.find(row=>String(row['名字']||row['設計師名字']||row.name||'').trim().toLowerCase()===localUser)||null;
 }
-async function loadDesignLists(){populateDesignSelects(); populateDesignerSelect(); try{designLists=designListsFromStageSheet(await gvizJsonp(stagesGvizUrl)); populateDesignSelects(formEl.elements.type.value,formEl.elements.stage.value,formEl.elements.details.value); populateDesignerSelect()}catch(err){console.warn('設計類型/階段/細項清單讀取失敗，暫用預設清單',err)}}
+async function loadDesignLists(){populateDesignSelects(); populateDesignerSelect(); try{await fetchGithubJsonDatabase({}); populateDesignSelects(formEl.elements.type.value,formEl.elements.stage.value,formEl.elements.details.value); populateDesignerSelect()}catch(err){console.warn('設計類型/階段/細項清單讀取失敗，暫用預設清單',err)}}
 function diagnosticUrl(){
   if(!apiUrl) return '';
   const params = new URLSearchParams({action:'diagnose',targetSpreadsheetId,targetSheetName,targetSheetId:String(targetSheetId),ts:Date.now()});
