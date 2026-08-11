@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 322,
+  "revision": 323,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T10:18:56.153Z",
+  "updatedAt": "2026-08-11T10:36:43.921Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20786,14 +20786,14 @@
         },
         {
           "部門": "專案部",
-          "組別": "Helen組",
+          "組別": "Odin組",
           "名字": "曹又晨",
           "顯示名": "曹又晨",
           "帳號": "viola.tsao@emctaipei.com",
           "頭像連結": "",
           "頭像大圖連結": "",
           "分享音樂": "",
-          "音樂起始秒數": "",
+          "音樂起始秒數": "0",
           "技能": "",
           "對話框": "",
           "新專案輪值": "",
@@ -20801,7 +20801,7 @@
           "篩選月份": "",
           "篩選狀態": "",
           "篩選姓名": "",
-          "選擇": "",
+          "選擇": "v",
           "案件編號": "",
           "月份": "",
           "客戶別": "",
@@ -20813,12 +20813,12 @@
           "開始": "",
           "結束": "",
           "設計負責人": "",
-          "狀態": "",
+          "狀態": "1",
           "項目細節": "",
           "修改": "",
           "主旨": "",
           "操作": "",
-          "時間表": "",
+          "時間表": "v",
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
           "收合設計需求": "",
@@ -22701,6 +22701,15 @@
           "頁面權限": "[\"request\",\"dashboard\",\"archive\",\"database_admin\",\"media_admin\",\"avatar_upload\",\"short_link\"]",
           "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.delete\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"issue.manage\",\"short_link.create\",\"archive.edit\",\"database.manage\"]",
           "更新時間": "2026-08-11 18:08",
+          "更新者": "Machi"
+        },
+        {
+          "帳號": "viola.tsao@emctaipei.com",
+          "角色範本": "一般使用者",
+          "狀態": "啟用",
+          "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"request.edit\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-11 18:36",
           "更新者": "Machi"
         }
       ]
