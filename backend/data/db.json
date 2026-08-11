@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 311,
+  "revision": 312,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T09:20:15.207Z",
+  "updatedAt": "2026-08-11T09:20:20.757Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17118,9 +17118,10 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "0.5",
           "案件編號": "26080054",
-          "月份": "8月"
+          "月份": "8月",
+          "項目細節": "素材重置"
         },
         {
           "客戶別": "Epson",
