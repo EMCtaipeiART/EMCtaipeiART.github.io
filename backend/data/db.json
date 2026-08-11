@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 238,
+  "revision": 239,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T02:11:14.908Z",
+  "updatedAt": "2026-08-11T02:11:47.870Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17220,6 +17220,31 @@
           "加權": "",
           "案件編號": "26080058",
           "月份": "8月"
+        },
+        {
+          "客戶別": "test",
+          "專案名稱": "test",
+          "專案負責人": "管理者",
+          "設計種類": "平面",
+          "階段": "提案",
+          "數量": "1",
+          "開始日期": "2026/08/11",
+          "結束日期": "2026/08/14",
+          "設計負責人": "Machi",
+          "使用平台": "",
+          "填單時間": "2026/08/11 10:11",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "1",
+          "案件編號": "26080059",
+          "月份": "8月"
         }
       ]
     },
@@ -23380,6 +23405,39 @@
           "weight": "1",
           "sheetRow": 613,
           "_sheetRow": 613
+        }
+      },
+      "dd39d972-f610-42a2-b2d1-5f50a0fc9e99": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 616,
+        "row": {
+          "id": "26080059",
+          "month": "8月",
+          "client": "test",
+          "project": "test",
+          "owner": "管理者",
+          "type": "平面",
+          "stage": "提案",
+          "qty": 1,
+          "start": "2026/08/11",
+          "end": "2026/08/14",
+          "designer": "Machi",
+          "platforms": "",
+          "submittedAt": "2026/08/11 10:11",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "1",
+          "sheetRow": 616,
+          "_sheetRow": 616
         }
       }
     }
