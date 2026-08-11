@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 272,
+  "revision": 273,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T04:40:12.513Z",
+  "updatedAt": "2026-08-11T04:51:47.188Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22681,7 +22681,17 @@
         "更新者"
       ],
       "primaryKey": "帳號",
-      "rows": []
+      "rows": [
+        {
+          "帳號": "machi.chen@emctaipei.com",
+          "角色範本": "管理者",
+          "狀態": "啟用",
+          "頁面權限": "[\"request\",\"dashboard\",\"archive\",\"database_admin\",\"media_admin\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.delete\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"issue.manage\",\"short_link.create\",\"archive.edit\",\"database.manage\"]",
+          "更新時間": "2026-08-11 12:51",
+          "更新者": "管理者"
+        }
+      ]
     }
   },
   "internal": {
