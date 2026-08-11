@@ -209,20 +209,45 @@
     const API=CONFIGURED_API||(location.hostname==='emctaipeiart.github.io'?APPS_SCRIPT_FALLBACK:(location.protocol==='file:'?'http://127.0.0.1:8787/api':new URL('/api',location.origin).href));
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
+    const DATABASE_CONTENTS_API='https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json';
     let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map();
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
     async function request(path='',options={}){const response=await fetch(`${API.replace(/\/$/,'')}${path}`,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const data=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);return data}
     async function appsScriptRequest(action,payload={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action,editorToken:token,...payload}),credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer',signal:controller.signal});if(!response.ok)throw new Error(`Apps Script HTTP ${response.status}`);const data=await response.json().catch(()=>({ok:false,error:'Apps Script 回傳格式錯誤'}));if(data.ok===false)throw new Error(data.error||'Apps Script 處理失敗');if(['adminTableUpdate','adminTableDelete','adminTableInsert'].includes(action))publishDatabaseRefresh(action,data);return data}catch(error){if(error?.name==='AbortError')throw new Error('JSON 寫入超過 45 秒，請重新讀取確認結果');throw error}finally{clearTimeout(timer)}}
     function decodeGithubContent(value=''){const binary=atob(String(value).replace(/\s+/g,'')),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
-    async function loadDatabaseFile({fresh=false,commitSha=''}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260811-admin-polish-2');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');directDatabase=database;return database}
+    async function loadDatabaseFile({fresh=false,commitSha='',useApi=true}={}){
+      if(directDatabase&&!fresh&&!commitSha)return directDatabase;
+      let database=null,lastError=null;
+      if(useApi&&location.hostname==='emctaipeiart.github.io'){
+        try{
+          const apiUrl=new URL(DATABASE_CONTENTS_API);
+          apiUrl.searchParams.set('ref',commitSha||'main');
+          apiUrl.searchParams.set('v',String(Date.now()));
+          const apiResponse=await fetch(apiUrl,{cache:'no-store',headers:{Accept:'application/vnd.github+json'},credentials:'omit',referrerPolicy:'no-referrer'});
+          if(!apiResponse.ok)throw new Error(`GitHub API HTTP ${apiResponse.status}`);
+          const payload=await apiResponse.json();
+          database=decodeGithubContent(payload.content);
+        }catch(error){lastError=error}
+      }
+      if(!database){
+        const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);
+        url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260811-admin-polish-2');
+        const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});
+        if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}${lastError?`；${lastError.message}`:''}`);
+        database=await response.json();
+      }
+      if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');
+      directDatabase=database;
+      return database;
+    }
     function metadataFromDatabase(database){return Object.fromEntries(Object.entries(database.tables||{}).map(([name,table])=>[name,{headers:Array.isArray(table.headers)?table.headers:[],primaryKey:table.primaryKey||'',rowCount:Array.isArray(table.rows)?table.rows.length:0}]))}
     function tableLabel(name){return name==='database'?'資料庫':name}
     function isBoardView(name=tableName){return BOARD_VIEWS.includes(name)}
     function effectivePageSize(){return isBoardView()?100000:Number($('pageSize').value)}
     function taipeiDateParts(){return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]))}
     function validFrontAdmin(){const group=stored(FRONT_GROUP_KEY),user=stored(FRONT_USER_KEY),value=stored(FRONT_TOKEN_KEY);if(!value)return false;if(value.startsWith('local-admin:')){const parts=taipeiDateParts();return value===`local-admin:${parts.year}${parts.month}${parts.day}`}return group==='管理者'||user==='管理者'}
-    async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');renderTabs();await loadRows();return data}
+    async function loadMetadata({fresh=false,commitSha='',useApi=true}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha,useApi}):await request('/tables');metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');renderTabs();await loadRows();return data}
     function updateAddButton(){const hidden=APPS_SCRIPT_MODE&&NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='設定'?'+ 新增人員':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料')}
     function updateContentHead(){const info=TABLE_INFO[tableName]||{};$('tableTitle').textContent=tableLabel(tableName);$('tableSubtitle').textContent=info.desc||''}
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
@@ -463,7 +488,7 @@
     window.addEventListener('storage',event=>{if(event.key===DATABASE_REFRESH_STORAGE_KEY)receiveDatabaseRefresh(event.newValue)});
     if('BroadcastChannel' in window){try{const databaseChannel=new BroadcastChannel(DATABASE_REFRESH_CHANNEL);databaseChannel.onmessage=event=>receiveDatabaseRefresh(event.data);window.addEventListener('pagehide',()=>databaseChannel.close(),{once:true})}catch(error){}}
     const backgroundPollMs=18000;
-    async function backgroundPollTick(){if($('app').hidden||document.hidden||!$('editor').hidden||refreshInFlight)return;refreshInFlight=true;try{await loadMetadata({fresh:true})}catch(error){}finally{refreshInFlight=false}}
+    async function backgroundPollTick(){if($('app').hidden||document.hidden||!$('editor').hidden||refreshInFlight)return;refreshInFlight=true;try{await loadMetadata({fresh:true,useApi:false})}catch(error){}finally{refreshInFlight=false}}
     setInterval(backgroundPollTick,backgroundPollMs);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(pendingRefresh){const next=pendingRefreshMessage||{tables:[tableName]};pendingRefreshMessage=null;refreshFromBackend(next)}else backgroundPollTick()});
     $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;tableName=button.dataset.table;page=1;if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
@@ -479,7 +504,7 @@
     });
     $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>openEditor());$('reload').addEventListener('click',()=>loadMetadata({fresh:true}));$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
-    async function start(){if(!validFrontAdmin()){showLogin();return}token=stored(FRONT_TOKEN_KEY)||token;sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
+    async function start(){if(!validFrontAdmin()){showLogin();return}token=stored(FRONT_TOKEN_KEY)||token;sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata({fresh:true})}catch(error){if(/401|權限|TOKEN_EXPIRED/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
   </script>
 </body>
