@@ -298,6 +298,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function updateAddButton\(\)\{const hidden=tableName==='帳號權限'\|\|\(APPS_SCRIPT_MODE&&NO_INSERT_TABLES\.includes\(tableName\)\)/);
   assert.match(html, /function permissionAdminHtml\(rows\)/);
   assert.match(html, /data-permission-save/);
+  assert.match(html, /button\.textContent=pending\?'套用新資料':'重新讀取'/);
+  assert.match(html, /目前畫面與閱讀位置已保留/);
+  assert.match(html, /loadDatabaseFile\(\{fresh:true,commitSha,store:false\}\)/);
+  assert.match(html, /backgroundPollTick\(\).*refreshFromBackend\(\{quiet:true\}\)/);
+  const backgroundRefresh = html.match(/async function refreshFromBackend\(message=\{\}\)[\s\S]*?\n    window\.addEventListener\('storage'/)?.[0] || '';
+  assert.doesNotMatch(backgroundRefresh, /loadMetadata\(/);
+  assert.match(backgroundRefresh, /stageDatabaseSnapshot\(data,message\)/);
   assert.match(html, /appsScriptRequest\(original\?'adminTableUpdate':'adminTableInsert'/);
   assert.match(html, /\+ 新增人員/);
   assert.match(html, /\+ 新增項目/);
