@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 341,
+  "revision": 342,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T16:28:28.269Z",
+  "updatedAt": "2026-08-11T16:28:45.080Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21403,7 +21403,7 @@
           "限時動態連結": "https://lh3.googleusercontent.com/d/15n-NqRT8UCgbLk5QvQCJHSM6aAezrEYf=w1600",
           "保留期限": "24小時",
           "到期時間": "2026-08-12T16:28:25.736Z",
-          "按讚": "",
+          "按讚": "Machi",
           "倒讚": "",
           "留言": "[]"
         }
