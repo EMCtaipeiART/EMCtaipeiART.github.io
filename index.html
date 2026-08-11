@@ -6788,8 +6788,7 @@ const apiUrl = resolveDesignApiUrl();
 document.documentElement.dataset.apiBackend=apiUrl;
 const supplementShortBaseUrl = 'https://emctaipeiart.github.io';
 const supplementUrlSlots = Object.freeze({briefUrl:'a',assetUrl:'b',referenceUrl:'c',otherUrl:'d'});
-const githubJsonDatabaseRawUrl = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
-const githubJsonDatabaseUrl = location.hostname==='emctaipeiart.github.io'?githubJsonDatabaseRawUrl:'backend/data/db.json';
+const githubJsonDatabaseUrl = 'backend/data/db.json';
 let githubJsonDatabaseCache = null;
 let githubJsonDatabaseLoadedAt = 0;
 async function fetchGithubJsonDatabase({fresh=false}={}){
