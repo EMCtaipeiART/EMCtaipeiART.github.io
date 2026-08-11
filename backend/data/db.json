@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 325,
+  "revision": 326,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T10:41:33.938Z",
+  "updatedAt": "2026-08-11T10:42:30.332Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18517,6 +18517,15 @@
           "修改內容": "大神午安，這邊新增兩篇 Lito 1 素材，\n數量已+2，感恩感恩！\n\nhttps://emctaipeiart.github.io/a/26080030",
           "修改人": "李明庭",
           "確認修正日": "2026/08/11 16:13:39"
+        },
+        {
+          "案件編號": "26070189",
+          "修改次數": "1",
+          "建立日期": "2026/08/11 18:42:30",
+          "修改日期": "2026-08-10",
+          "修改內容": "修改優惠內容",
+          "修改人": "Anna",
+          "確認修正日": ""
         }
       ]
     },
