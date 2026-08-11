@@ -80,6 +80,7 @@
     .kv-list div{display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center;color:var(--muted)}
     .kv-list b{color:var(--ink);font-weight:600}
     .kv-list a{color:#1769aa;overflow-wrap:anywhere}
+    .kv-list a.trunc{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
     details.adv{margin-top:14px}
     details.adv summary{cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600;padding:6px 0}
     details.adv .kv-list{margin-top:10px}
@@ -285,7 +286,7 @@
         const slots=['A','B','C','D'].map(slot=>({slot,url:row[slot]}));
         return `<article class="card" data-key="${esc(rowKeyFor(row))}">
           <div class="card-head"><div class="card-title"><b>案件 ${esc(row['案件編號'])}</b><span>更新於 ${esc(row['更新時間']||'—')}</span></div>${actionButtons()}</div>
-          <div class="kv-list">${slots.map(({slot,url})=>`<div><b>${slot} 項</b>${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`:'<span>未提供</span>'}</div>`).join('')}</div>
+          <div class="kv-list">${slots.map(({slot,url})=>`<div><b>${slot} 項</b>${url?`<a class="trunc" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">${esc(url)}</a>`:'<span>未提供</span>'}</div>`).join('')}</div>
         </article>`;
       }).join('')}</div>`;
     }
@@ -364,11 +365,14 @@
         $('last').disabled=$('next').disabled=page>=pages;
       }
     }
-    function fieldHtml(header,value){const wide=String(value).length>80||/(內容|說明|留言|建議|連結|網址)/.test(header);return `<label class="field ${wide?'wide':''}">${esc(header)}${wide?`<textarea name="${esc(header)}">${esc(value)}</textarea>`:`<input name="${esc(header)}" value="${esc(value)}">`}</label>`}
+    function fieldHtml(header,value,forceWide){const wide=forceWide!==undefined?forceWide:(String(value).length>80||/(內容|說明|留言|建議|連結|網址)/.test(header));return `<label class="field ${wide?'wide':''}">${esc(header)}${wide?`<textarea name="${esc(header)}">${esc(value)}</textarea>`:`<input name="${esc(header)}" value="${esc(value)}">`}</label>`}
     function editorFieldsHtml(table,headers,current){
       if(table==='設定'){
         const primary=headers.filter(header=>SETTINGS_PRIMARY.includes(header)),secondary=headers.filter(header=>!SETTINGS_PRIMARY.includes(header));
         return primary.map(header=>fieldHtml(header,current[header]??'')).join('')+(secondary.length?`<details class="field-adv"><summary>進階／介面暫存欄位（${secondary.length}）</summary><div class="fields-inner">${secondary.map(header=>fieldHtml(header,current[header]??'')).join('')}</div></details>`:'');
+      }
+      if(table==='補充資料連結'){
+        return headers.map(header=>fieldHtml(header,current[header]??'',['A','B','C','D'].includes(header))).join('');
       }
       return headers.map(header=>fieldHtml(header,current[header]??'')).join('');
     }
