@@ -6575,8 +6575,8 @@
     </div>
     <button type="button" class="admin-login-toggle" id="adminLoginToggle">管理者登入</button>
     <div class="admin-login-panel" id="adminLoginPanel" hidden>
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼">
-      <button type="submit">登入</button>
+      <input id="loginPassword" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="請輸入密碼">
+      <button type="button" id="adminLoginSubmit">登入</button>
     </div>
     <input id="loginNewPassword" type="hidden">
     <label id="loginNewPasswordWrap" hidden>設定新密碼<input type="password" autocomplete="new-password" placeholder="請設定新的密碼"></label>
@@ -9573,7 +9573,7 @@ async function startShortcutLogin(account,password,role){showLoginPendingOverlay
   try{const data=await verifyEditorLogin(account,password); applyLoginRedirectResult(data,`${role}登入`); return}
   catch(err){console.warn(`[${role}登入] Worker 未接受捷徑密碼，改用本機唯讀檢視`,err)}
   applyLocalPreviewSession(role); setSync(`已登入：${currentUserDisplayName()}（檢視模式，Worker 尚未開放此密碼，無法寫入）`,true,6000)}
-async function startAdminPasswordLogin(){const password=String($('#loginPassword')?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(password==='test')return startShortcutLogin(localTesterAccount,password,'測試者'); if(password===todayAdminPassword())return startShortcutLogin(localAdminAccount,password,'管理者'); showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
+async function startAdminPasswordLogin(){const field=$('#loginPassword'), password=String(field?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(field)field.value=''; if(password==='test')return startShortcutLogin(localTesterAccount,password,'測試者'); if(password===todayAdminPassword())return startShortcutLogin(localAdminAccount,password,'管理者'); showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
 async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}
@@ -10251,7 +10251,11 @@ $('#loginCancel').onclick=()=>hideLoginModal();
 $('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#adminLoginToggle')?.addEventListener('click',()=>{const panel=$('#adminLoginPanel'); if(!panel)return; panel.hidden=!panel.hidden; if(!panel.hidden)setTimeout(()=>$('#loginPassword')?.focus(),30)});
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
-$('#loginForm').addEventListener('submit',event=>{event.preventDefault(); const panel=$('#adminLoginPanel'); if(panel&&!panel.hidden&&String($('#loginPassword')?.value||'').trim()){startAdminPasswordLogin(); return} startEmailLogin()});
+$('#adminLoginSubmit')?.addEventListener('click',()=>startAdminPasswordLogin());
+// 密碼欄位刻意不參與 form submit：一旦瀏覽器看到「表單送出＋密碼欄位」，就會跳出儲存／更新密碼提示，
+// 而管理者密碼每天都不一樣（MMDD），會變成天天被問。Enter 在這裡自己處理，不往上冒泡成 submit。
+$('#loginPassword')?.addEventListener('keydown',event=>{if(event.key!=='Enter')return; event.preventDefault(); startAdminPasswordLogin()});
+$('#loginForm').addEventListener('submit',event=>{event.preventDefault(); startEmailLogin()});
 document.addEventListener('dragstart',handleColumnHeaderDragStart);
 document.addEventListener('dragover',handleColumnHeaderDragOver);
 document.addEventListener('drop',handleColumnHeaderDrop);
