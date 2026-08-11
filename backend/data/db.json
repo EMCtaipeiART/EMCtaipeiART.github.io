@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 337,
+  "revision": 338,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T16:20:58.963Z",
+  "updatedAt": "2026-08-11T16:24:48.132Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21397,6 +21397,15 @@
           "按讚": "",
           "倒讚": "Machi",
           "留言": "[{\"id\":\"8a392f37-472f-40a1-b610-2f45ca5f5429\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"💩💩💩💩💩\",\"createdAt\":\"2026-07-17T09:03:55.263Z\"}]"
+        },
+        {
+          "名字": "Machi",
+          "限時動態連結": "https://lh3.googleusercontent.com/d/1u5jq4rib_mfBv7tdnvhF5IiAlJPIi0f4=w1600",
+          "保留期限": "24小時",
+          "到期時間": "2026-08-12T16:24:45.651Z",
+          "按讚": "",
+          "倒讚": "",
+          "留言": "[]"
         }
       ]
     },
