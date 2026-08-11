@@ -439,11 +439,11 @@
           <div class="account-choice-group"><p>技能（可複選）</p><div class="account-choice-grid">${ACCOUNT_SKILL_OPTIONS.map(skill=>accountChoice('技能',skill,skill,skills.includes(skill))).join('')}</div>${accountField('其他技能','技能自訂',customSkills.join(' , '),{wide:true,placeholder:'多個技能請用逗號分隔'})}</div>
           ${accountReelsCardsHtml(model)}
         </section>
-        <section class="permission-section"><h4>帳號權限</h4><div class="permission-controls"><label>角色範本<select data-permission-role ${manager&&!creating||pending?'disabled':''}>${roleOptions}</select></label><label>帳號狀態<select data-permission-status ${manager||pending?'disabled':''}><option ${model['狀態']!=='停用'?'selected':''}>啟用</option><option ${model['狀態']==='停用'?'selected':''}>停用</option></select></label></div>
+        <details class="account-section-fold"><summary>帳號權限</summary><div class="account-section-fold-body"><div class="permission-controls"><label>角色範本<select data-permission-role ${manager&&!creating||pending?'disabled':''}>${roleOptions}</select></label><label>帳號狀態<select data-permission-status ${manager||pending?'disabled':''}><option ${model['狀態']!=='停用'?'selected':''}>啟用</option><option ${model['狀態']==='停用'?'selected':''}>停用</option></select></label></div>
           ${manager?'<div class="notice ok" data-manager-notice>管理者帳號固定擁有所有權限，但仍可更新上方個人設定。</div>':'<div class="notice ok" data-manager-notice hidden>管理者帳號固定擁有所有權限，但仍可更新上方個人設定。</div>'}
           <section class="permission-section"><h4>可查看的頁面</h4><div class="permission-checks">${MachiAccess.pages.map(item=>permissionCheckbox(item.key,item.label,pages.has(item.key)||manager,'page',permissionLocked)).join('')}</div></section>
           <section class="permission-section"><h4>可編輯與操作的功能</h4><div class="permission-checks">${capabilityHtml}</div></section>
-        </section>
+        </div></details>
         <div class="permission-summary"><span>${model['角色範本']==='自訂'?'使用個別自訂權限':(model._explicit?'已指定角色，繼承範本':'自動角色，繼承範本')}</span><span>${pages.size} 個頁面</span><span>${capabilities.size} 項功能</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
       </section>`;
     }
