@@ -276,7 +276,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /function tableLabel\(name\)\{return name==='database'\?'資料庫':name\}/);
+  assert.match(html, /function tableLabel\(name\)\{return name==='database'\?'資料庫':\(name==='帳號權限'\?'帳號設定':name\)\}/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
@@ -305,6 +305,14 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.doesNotMatch(html, /xmlns='http:\/\/www\.w3\.org\/2000\/svg'/);
   assert.match(html, /accountChoice\('篩選月份'/);
   assert.match(html, /function accountColumnChoices\(model\)/);
+  assert.match(html, /data-account-column-move="-1"/);
+  assert.match(html, /data-account-column-grid/);
+  assert.match(html, /function selectPermissionAccount\(account\)/);
+  assert.match(html, /data-account-group=/);
+  assert.match(html, /class="account-section-fold"/);
+  assert.match(html, /所有帳號皆可設定個人頭像/);
+  assert.match(html, /function accountReelsCardsHtml\(model\)/);
+  assert.match(html, /REELS 小卡/);
   assert.match(html, /一次儲存個人設定與帳號權限/);
   assert.doesNotMatch(html.match(/const TABLE_ORDER=\[[^;]+/)?.[0] || '', /'設定'/);
   assert.match(html, /function roleTemplateAdminHtml\(rows\)/);
