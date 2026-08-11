@@ -6316,6 +6316,7 @@
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountDesignerSettings" role="menuitem">設計師設定</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
+      <button type="button" id="accountShortLinkTool" role="menuitem" hidden>短網址工具</button>
       <button type="button" id="accountArchiveManager" role="menuitem" hidden>歷史資料庫管理</button>
       <button type="button" id="accountJsonDatabaseAdmin" role="menuitem" hidden>資料庫後台</button>
       <div class="permission-menu-divider" id="adminPermissionDivider" hidden></div>
@@ -6941,6 +6942,7 @@ const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
 const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260811-cloudflare-worker-auth-7';
+const shortLinkToolUrl = '404.html';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
@@ -7334,6 +7336,7 @@ function mailComposeUrl(row,provider){
   return `mailto:${to}?${cc?`cc=${cc}&`:''}subject=${subjectText}&body=${body}`;
 }
 function composeMail(id,provider){
+  if(!requireAccess('request.mail','此帳號沒有發送信件權限'))return;
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row){setSync('找不到案件資料，無法開啟信件',true);return}
   if(!isEditableRow(row)){setSync('歷史資料不提供發信',true);return}
@@ -7346,6 +7349,7 @@ function composeMail(id,provider){
 function openMailComposerMenu(event,id){
   event.preventDefault();
   event.stopPropagation();
+  if(!requireAccess('request.mail','此帳號沒有發送信件權限'))return;
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row){setSync('找不到案件資料，無法開啟信件',true);return}
   if(!isEditableRow(row)){setSync('歷史資料不提供發信',true);return}
@@ -8583,7 +8587,7 @@ function canListEditRow(r){return accessAllowed('request.status',hasDesignerAcco
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
 function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
-function mailAction(row,{icon=false}={}){return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`:historyLock()}
+function mailAction(row,{icon=false}={}){if(!accessAllowed('request.mail',true))return ''; return isEditableRow(row)?`<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`:historyLock()}
 function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButtons(row,{icon}):historyLock()}
 function ownerProjectEditAction(row){return canCaseEditRow(row)?`<div class="row-actions"><button type="button" class="secondary" title="編輯案件" onclick="closeOwnerProjects();editRow('${jsArg(row.id)}')">${editIcon()}<span>編輯</span></button></div>`:historyLock()}
 function ownerProjectNameKey(value){return ownerDisplay(value).trim().toLowerCase()}
@@ -9959,6 +9963,7 @@ updateLoginUi=function(...args){
   show('#accountAvatarSettings',loggedIn&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true));
   show('#accountDesignerSettings',loggedIn&&accessAllowed('designer.settings',hasDesignerAccountRole()));
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
+  show('#accountShortLinkTool',loggedIn&&accessAllowed('page.short_link',true));
   show('#accountArchiveManager',loggedIn&&accessAllowed('page.archive',isAdministrator())&&accessAllowed('archive.edit',isAdministrator()));
   show('#accountJsonDatabaseAdmin',loggedIn&&accessAllowed('page.database_admin',isAdministrator())&&accessAllowed('database.manage',isAdministrator()));
   show('#downloadCsv',loggedIn&&accessAllowed('request.export',hasDesignerAccountRole()));
@@ -10171,6 +10176,8 @@ document.addEventListener('click',event=>{
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false)||isAdminUserPreview())return;closeAccountMenu();location.href=archiveManagerUrl});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false)||isAdminUserPreview())return;closeAccountMenu();location.href=jsonDatabaseAdminUrl});
+	// 短網址工具就是 404.html：帶短碼時是轉址頁，直接開則是「建立短連結」表單。
+	$('#accountShortLinkTool')?.addEventListener('click',()=>{if(!accessAllowed('page.short_link',false))return;closeAccountMenu();window.open(shortLinkToolUrl,'_blank','noopener')});
 	$('#accountPermissionMode')?.addEventListener('click',()=>setAdminUserPreview(!isAdminUserPreview()));
 	$('#accountWriteCheck')?.addEventListener('click',checkRegularUserWriteAccess);
 	$('#permissionPreviewExit')?.addEventListener('click',()=>setAdminUserPreview(false));

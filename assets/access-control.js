@@ -17,6 +17,7 @@
     { group: '設計需求', key: 'request.status', label: '修改狀態與項目細節' },
     { group: '設計需求', key: 'request.delete', label: '刪除案件' },
     { group: '設計需求', key: 'request.export', label: '匯出 CSV' },
+    { group: '設計需求', key: 'request.mail', label: '發送信件' },
     { group: '修改紀錄', key: 'modification.create', label: '新增修改紀錄' },
     { group: '修改紀錄', key: 'modification.confirm', label: '確認修正日' },
     { group: '專案與設計師', key: 'project.create', label: '建立平面／影音新專案' },
@@ -37,11 +38,11 @@
     '管理者': { pages: ALL_PAGES, capabilities: ALL_CAPABILITIES },
     '設計師': {
       pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
-      capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+      capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
     },
     '一般使用者': {
       pages: ['request', 'avatar_upload', 'short_link'],
-      capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create']
+      capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create']
     },
     '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
   });

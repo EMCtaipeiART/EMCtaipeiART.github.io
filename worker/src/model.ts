@@ -8,7 +8,7 @@ export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成
 export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 export const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
 export const ACCESS_CAPABILITIES = [
-  'request.create', 'request.edit', 'request.status', 'request.delete', 'request.export',
+  'request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'request.mail',
   'modification.create', 'modification.confirm', 'project.create', 'designer.settings',
   'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage',
   'short_link.create', 'archive.edit', 'database.manage'
@@ -17,9 +17,9 @@ export const ACCESS_ROLE_TEMPLATES: Record<string, { pages: string[]; capabiliti
   '管理者': { pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES },
   '設計師': {
     pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
-    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
   },
-  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
+  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
   '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
 };
 
