@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 257,
+  "revision": 258,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-11T03:17:40.957Z",
+  "updatedAt": "2026-08-11T03:18:06.997Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17143,10 +17143,10 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "未開始",
-          "加權": "",
+          "加權": "1",
           "案件編號": "26080055",
           "月份": "8月",
-          "項目細節": ""
+          "項目細節": "社群貼文"
         },
         {
           "客戶別": "Epson",
