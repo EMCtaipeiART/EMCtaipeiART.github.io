@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 591,
+  "revision": 592,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T12:02:28.964Z",
+  "updatedAt": "2026-08-12T12:02:43.412Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -13820,7 +13820,8 @@
           "參考範例說明": "",
           "參考範例連結": "",
           "其他說明": "",
-          "其他連結": ""
+          "其他連結": "",
+          "設計圖資料夾連結": "/設計部/專案企劃部/執行中/ANKER/廣告素材/8月_CPAS/momo/combo_2"
         },
         {
           "案件編號": "26070196",
