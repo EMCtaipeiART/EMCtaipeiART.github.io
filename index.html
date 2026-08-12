@@ -6849,9 +6849,6 @@ const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';
 const targetSheetId = 1244538986;
 const archiveSheetId = 646199020;
-const designerSheetId = 988186149;
-const reelsSheetId = 1503122183;
-const modificationStatsSheetId = 1240020248;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const appBuildVersion = '20260811-cloudflare-worker-auth-109';
@@ -6865,13 +6862,6 @@ const erpPublicFallbackConfig = {
   fallback: true
 };
 const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
-const designerGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${designerSheetId}&tq=${encodeURIComponent('select *')}`;
-const reelsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${reelsSheetId}&tq=${encodeURIComponent('select *')}`;
-const modificationStatsGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent('select *')}`;
-const issueReportSheetId = 1284883392;
-const issueReportGvizUrl = `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${issueReportSheetId}&tq=${encodeURIComponent('select *')}`;
-function modificationStatsGvizQueryUrl(query='select *'){return `https://docs.google.com/spreadsheets/d/${targetSpreadsheetId}/gviz/tq?gid=${modificationStatsSheetId}&tq=${encodeURIComponent(query)}`}
-const settingsGvizUrl = designerGvizUrl;
 const $=s=>document.querySelector(s), tbody=$('#tbody'), thead=$('#thead'), modifyTbody=$('#modifyTbody'), modifyThead=$('#modifyThead'), modifyFixedTbody=$('#modifyFixedTbody'), modifyFixedThead=$('#modifyFixedThead'), msg=$('#msg');
 const syncStatus = $('#syncStatus');
 const ownerList = $('#ownerList');
@@ -7620,7 +7610,7 @@ function stopDesignerMusic(shell){if(!shell)return; const audio=shell.querySelec
 function closeDesignerPoster(shell){if(!shell)return; if(activeDesignerStoryPlayback?.shell===shell)stopDesignerStoryPlayback(); stopDesignerMusic(shell); shell.classList.remove('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','false')}
 function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item)}); shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerMusic(shell); startDesignerStoryPlayback(shell)}
 function handleDesignerPosterImageError(image){const shell=image?.closest('.avatar-shell'); if(image?.closest('.designer-poster')?.classList.contains('story-playing')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return} const name=shell?.closest('.designer-card')?.dataset.designer||''; image.onerror=null; image.src=designerFallbackImage(name)}
-async function fetchDesignerReels(){if(apiUrl){try{const data=await sheetApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}catch(err){console.warn('限時動態 API 讀取失敗，改用公開資料來源',err)}} return (await gvizToObjects(await gvizJsonp(reelsGvizUrl))).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}
+async function fetchDesignerReels(){if(!apiUrl)throw new Error('尚未設定 Cloudflare Worker API 網址'); const data=await sheetApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>designerOptions.includes(reel.name)&&reel.imageUrl)}
 async function fetchDesignerProfiles(){try{const rows=await githubJsonTableRows('設定',{fresh:true}); if(Array.isArray(rows)&&rows.length)return rows}catch(err){console.warn('設計師設定 GitHub JSON 讀取失敗，改用 JSON API',err)} if(apiUrl){try{const data=await sheetApi('listDesignerProfiles'); return Array.isArray(data.profiles)?data.profiles:[]}catch(err){console.warn('設計師設定 JSON API 讀取失敗，保留目前快取資料',err)}} return designers.length?designers:[]}
 async function loadDesignerRoster({background=false}={}){
   if(!background)renderDesigners();
@@ -7727,10 +7717,6 @@ function normalizeIssueReport(report={},rowNumber=''){
 }
 function saveIssueReportsCache(){try{localStorage.setItem(issueReportsCacheKey,JSON.stringify(issueReports.slice(0,100)))}catch(err){}}
 function currentTaipeiTimestamp(){const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`}
-async function fetchIssueReportsFromGviz(){
-  const rows=gvizToObjects(await gvizJsonp(issueReportGvizUrl,8000));
-  return rows.map((report,index)=>normalizeIssueReport(report,index+2)).filter(report=>report['內容']).reverse();
-}
 function renderIssueReports(){
   const list=$('#issueReportList'), total=$('#issueReportTotal');
   if(!list)return;
@@ -7752,14 +7738,8 @@ async function loadIssueReports({background=false}={}){
   let changed=false;
   if((!background||modalOpen)&&!issueReports.length){issueReportsLoading=true; renderIssueReports()}
   try{
-    let loaded;
-    try{
-      const data=await sheetApi('listIssueReports',{_requireResponse:true});
-      loaded=Array.isArray(data.reports)?data.reports.map(report=>normalizeIssueReport(report)):[];
-    }catch(apiError){
-      console.warn('Cloudflare Worker 回報列表讀取失敗，改用公開 JSON 備援',apiError);
-      loaded=await fetchIssueReportsFromGviz();
-    }
+    const data=await sheetApi('listIssueReports',{_requireResponse:true});
+    const loaded=Array.isArray(data.reports)?data.reports.map(report=>normalizeIssueReport(report)):[];
     if(loadId!==issueReportsLoadId)return;
     changed=JSON.stringify(loaded)!==JSON.stringify(issueReports);
     if(changed){issueReports=loaded; saveIssueReportsCache()}
@@ -7949,17 +7929,6 @@ function showDesignerMonthlyCases(designer){
   setSync(`已切換至 ${designer} ${year} 年 ${month} 總案件：${total} 件`);
   requestAnimationFrame(()=>$('#casesSection')?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
-function gvizJsonp(url,timeoutMs=60000){
-  const requestUrl=`${url}&tqx=${encodeURIComponent('out:json')}&ts=${Date.now()}`;
-  return fetchWithTimeout(requestUrl,{method:'GET',credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer'},timeoutMs).then(async response=>{
-    if(!response.ok)throw new Error(`database 回應失敗：${response.status}`);
-    const text=await response.text(), start=text.indexOf('('), end=text.lastIndexOf(')');
-    if(start<0||end<=start)throw new Error('database 回傳格式錯誤');
-    return JSON.parse(text.slice(start+1,end));
-  });
-}
-function gvizCellValue(cell){if(!cell)return ''; return cell.f ?? cell.v ?? ''}
-function gvizToObjects(data){const table=data?.table; if(data?.status&&data.status!=='ok')throw new Error(data.errors?.[0]?.detailed_message||'database 回應錯誤'); const headers=(table?.cols||[]).map(col=>String(col.label||'').trim()); return (table?.rows||[]).map(row=>Object.fromEntries(headers.map((header,i)=>[header,gvizCellValue(row.c?.[i])])))}
 const HISTORY_DATABASE_JSON_URL='data/database_archive.json';
 async function fetchArchiveDatabaseObjects(){const response=await fetch(`${HISTORY_DATABASE_JSON_URL}?v=${Date.now()}`,{cache:'no-store'});if(!response.ok)throw new Error(`歷史資料庫回應失敗：${response.status}`);const data=await response.json();if(!Array.isArray(data?.rows))throw new Error('歷史資料庫缺少 rows');return data.rows}
 function isCaseId_(value){return /^\d{8}$/.test(String(value||'').trim())}
@@ -8041,24 +8010,11 @@ function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){const modal=$('#revisionModal'); if(modal)modal.hidden=true}
 function refreshOpenRevisionModal(id){const modal=$('#revisionModal'); if(modal&&!modal.hidden&&String(modal.dataset.caseId||'')===String(id))renderRevisionModal(id)}
-function modificationQueryForIds(ids=[]){
-  const numbers=ids.map(id=>Number(id)).filter(Number.isFinite);
-  if(!numbers.length)return 'select * where A = 0';
-  const min=Math.min(...numbers), max=Math.max(...numbers);
-  return `select * where A >= ${min} and A <= ${max}`;
-}
 async function fetchModificationCounts({ids=null,full=false}={}){
   try{
     const idSet=ids&&!full?new Set(ids.map(id=>String(id))):null;
-    let records=[];
-    try{
-      const data=await sheetApi('listModificationRecords',{ids:idSet?[...idSet]:[]});
-      records=Array.isArray(data.rows)?data.rows:[];
-    }catch(apiError){
-      console.warn('修改統計表 API 讀取失敗，改用試算表備援',apiError);
-      const query=idSet?modificationQueryForIds([...idSet]):'select *';
-      records=gvizToObjects(await gvizJsonp(full?modificationStatsGvizUrl:modificationStatsGvizQueryUrl(query)));
-    }
+    const data=await sheetApi('listModificationRecords',{ids:idSet?[...idSet]:[]});
+    const records=Array.isArray(data.rows)?data.rows:[];
     const counts=new Map();
     const byCase=new Map();
     records.forEach(record=>{
@@ -8081,12 +8037,9 @@ async function fetchModificationCounts({ids=null,full=false}={}){
 async function fetchAccountSettings(account,user){
   const fullAccount=loginAccountFull(account||currentEditorAccount), localUser=String(user||currentEditor||'').trim().toLowerCase();
   if(!fullAccount&&!localUser)return null;
-  if(apiUrl&&currentEditorToken){try{const data=await sheetApi('getUserSettings',{account:fullAccount,editorToken:currentEditorToken}); if(data.settings)return data.settings}catch(err){console.warn('個人設定 API 讀取失敗，改用公開資料來源',err)}}
-  const rows=gvizToObjects(await gvizJsonp(settingsGvizUrl));
-  const byAccount=fullAccount?rows.find(row=>loginAccountFull(row['帳號']||row.account||'')===fullAccount):null;
-  if(byAccount)return byAccount;
-  if(fullAccount)return null;
-  return rows.find(row=>String(row['名字']||row['設計師名字']||row.name||'').trim().toLowerCase()===localUser)||null;
+  if(!apiUrl||!currentEditorToken)return null;
+  const data=await sheetApi('getUserSettings',{account:fullAccount,editorToken:currentEditorToken});
+  return data.settings||null;
 }
 async function loadDesignLists(){populateDesignSelects(); populateDesignerSelect(); try{await fetchGithubJsonDatabase({}); populateDesignSelects(formEl.elements.type.value,formEl.elements.stage.value,formEl.elements.details.value); populateDesignerSelect()}catch(err){console.warn('設計類型/階段/細項清單讀取失敗，暫用預設清單',err)}}
 function diagnosticUrl(){
