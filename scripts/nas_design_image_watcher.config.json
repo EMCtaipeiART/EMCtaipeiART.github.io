@@ -10,5 +10,5 @@
   "previewDir": "./nas_design_image_watcher.state/previews",
   "secretsFile": "./nas_design_image_watcher.secrets.json",
   "dbJsonUrl": "https://emctaipeiart.github.io/backend/data/db.json",
-  "appsScriptUploadUrl": ""
+  "appsScriptUploadUrl": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec"
 }
