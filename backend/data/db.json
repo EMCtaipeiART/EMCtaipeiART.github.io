@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 595,
+  "revision": 596,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T14:35:27.893Z",
+  "updatedAt": "2026-08-12T14:35:32.410Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19295,7 +19295,7 @@
           "對話框": "",
           "新專案輪值": "",
           "篩選年份": "2026",
-          "篩選月份": "8 月",
+          "篩選月份": "7 月 , 8 月",
           "篩選狀態": "",
           "篩選姓名": "Amber",
           "選擇": "v",
