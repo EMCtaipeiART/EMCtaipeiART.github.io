@@ -263,7 +263,7 @@ async function scanProject(project, config, state, previewDir, warnings) {
   }
 
   const mediaFiles = await walkMedia(folderPath, config);
-  const previousState = state[project.caseId] || { files: {}, lastCapturedRound: -1 };
+  const previousState = state[project.caseId] || { files: {} };
   const previousFiles = previousState.files || {};
   const nextFiles = {};
   const newItems = [];
@@ -317,7 +317,7 @@ async function scanProject(project, config, state, previewDir, warnings) {
     changedItems,
     unchangedCount,
     pendingPreviews,
-    nextState: { files: nextFiles, lastCapturedRound: previousState.lastCapturedRound ?? -1 }
+    nextState: { files: nextFiles }
   };
 }
 
@@ -498,9 +498,7 @@ async function main() {
             console.log(`  [輪次判斷] 這輪只鎖定 ${targetImages.length} 張指定圖片，資料夾內其餘 ${skipped} 個變動已略過`);
           }
         }
-        if (round === result.nextState.lastCapturedRound) {
-          console.log(`  [輪次判斷] 第 ${round} 輪已經抓取過，略過`);
-        } else if (!targetedPreviews.length) {
+        if (!targetedPreviews.length) {
           console.log(`  [輪次判斷] 案件已進入第 ${round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`);
         } else {
           const { year, month } = computeYearMonth(project.start);
@@ -515,7 +513,6 @@ async function main() {
           for (const item of targetedPreviews) {
             if (files[item.relPath]) files[item.relPath].assignedRound = round;
           }
-          nextState[result.caseId].lastCapturedRound = round;
         }
       } catch (error) {
         warnings.push(`案件 ${result.caseId} 輪次判斷/上傳失敗：${error.message}`);
