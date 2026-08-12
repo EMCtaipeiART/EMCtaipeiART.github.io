@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 420,
+  "revision": 421,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T07:38:33.190Z",
+  "updatedAt": "2026-08-12T07:38:36.035Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -12574,7 +12574,7 @@
           "結束日期": "2026/07/22",
           "設計負責人": "Leona",
           "項目細節": "2D 動畫",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "2",
           "填單時間": "",
           "時間標記": "",
