@@ -698,6 +698,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const roundNumber = Math.trunc(Number(payload.round ?? payload['修改次數']));
       const images = (Array.isArray(payload.images) ? payload.images : []).map(text).filter(isHttpUrl);
       const source = text(payload.source) || (serviceAuthorized ? 'nas-watcher' : 'manual');
+      const sourceLabel = source === 'drive-folder-link' ? '設計圖資料夾同步' : (serviceAuthorized ? 'NAS 自動同步' : text(session?.user || '系統'));
+      const draftNote = source === 'drive-folder-link' ? '初稿完成（依來源資料夾自動同步）' : '初稿完成（NAS 自動建立）';
       if (!caseId) throw new Error('缺少案件編號');
       if (!Number.isFinite(roundNumber) || roundNumber < 0) throw new Error('缺少修改輪次（0=初稿）');
       if (!images.length) throw new Error('沒有可寫入的圖片網址');
@@ -712,8 +714,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             '修改次數': String(roundNumber),
             '建立日期': now,
             '修改日期': roundNumber === 0 ? now : '',
-            '修改內容': roundNumber === 0 ? '初稿完成（NAS 自動建立）' : '',
-            '修改人': serviceAuthorized ? 'NAS 自動同步' : text(session?.user || '系統'),
+            '修改內容': roundNumber === 0 ? draftNote : '',
+            '修改人': sourceLabel,
             // 第 0 輪（初稿）本身就代表「已完成」，不是一筆待處理的修改請求，
             // 直接標記確認修正日，避免被現有的「待確認修改」通知邏輯誤判成
             // 一筆還沒處理的修改需求。真正的修改請求（第 1 輪以後）維持空白，
@@ -733,6 +735,58 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         row['圖片更新時間'] = now;
         return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: ['修改統計表'] };
       });
+    }
+    if (action === 'syncCaseDesignImages') {
+      const current = this.requireAccess(database, session, 'media.manage');
+      const caseId = text(payload.caseId || payload.id || payload['案件編號']);
+      if (!caseId) throw new Error('缺少案件編號');
+      const caseRow = database.tables.database.rows.find(row => text(row['案件編號']) === caseId);
+      if (!caseRow) throw new Error('找不到案件');
+      const providedLink = text(payload.folderLink);
+      const folderLink = providedLink || text(caseRow['設計圖資料夾連結']);
+      if (!folderLink) throw new Error('尚未設定來源資料夾連結');
+      let roundNumber = Number(payload.round);
+      if (!Number.isFinite(roundNumber) || roundNumber < 0) {
+        roundNumber = database.tables['修改統計表'].rows
+          .filter(row => text(row['案件編號']) === caseId)
+          .reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0);
+      }
+      if (providedLink && providedLink !== text(caseRow['設計圖資料夾連結'])) {
+        await this.mutate(action, current, draft => {
+          const row = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+          if (row) row['設計圖資料夾連結'] = providedLink;
+          return { result: { ok: true, action: 'syncCaseDesignImages:saveFolderLink' }, changedTables: ['database'] };
+        });
+      }
+      const start = text(caseRow['開始日期']);
+      const dateParts = /^(\d{4})[-/](\d{1,2})/.exec(start);
+      const now = new Date();
+      const year = dateParts ? dateParts[1] : String(now.getFullYear());
+      const month = dateParts ? dateParts[2].padStart(2, '0') : String(now.getMonth() + 1).padStart(2, '0');
+      const designer = text(caseRow['設計負責人']) || '未指定設計師';
+      const client = text(caseRow['客戶別']) || '未分類客戶';
+      let response: Response;
+      try {
+        response = await fetch(this.env.UPLOAD_APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'syncCaseDesignImagesFromFolder',
+            serviceKey: this.env.NAS_WATCHER_API_KEY,
+            caseId, folderLink, round: roundNumber, designer, client, year, month
+          })
+        });
+      } catch (error) {
+        throw new Error('無法連線設計圖上傳服務：' + String((error as { message?: string })?.message || error));
+      }
+      let result: { success?: boolean; message?: string; count?: number; imageUrls?: string[]; folderUrl?: string };
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error('設計圖上傳服務回應格式錯誤');
+      }
+      if (!response.ok || !result.success) throw new Error(result.message || `設計圖同步失敗（HTTP ${response.status}）`);
+      return { ok: true, action, caseId, round: roundNumber, count: result.count || 0, imageUrls: result.imageUrls || [], folderUrl: result.folderUrl || '' };
     }
     if (action === 'createFlatProject') return this.createProject(payload, database, session);
     if (['append', 'create', 'add', 'submit', 'save'].includes(action)) return this.addRequests(action, payload, database, session, baseUrl, false);
