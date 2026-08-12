@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 616,
+  "revision": 617,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T15:41:54.528Z",
+  "updatedAt": "2026-08-12T15:41:57.796Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16789,7 +16789,8 @@
           "參考範例說明": "",
           "參考範例連結": "",
           "其他說明": "",
-          "其他連結": ""
+          "其他連結": "",
+          "設計圖資料夾連結": "/設計部/公司計畫/集團研討會/2026/貼文"
         },
         {
           "案件編號": "26080040",
