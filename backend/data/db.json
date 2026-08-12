@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 359,
+  "revision": 360,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T03:35:51.865Z",
+  "updatedAt": "2026-08-12T03:35:55.175Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15598,7 +15598,7 @@
           "結束日期": "2026/08/07",
           "設計負責人": "Amber",
           "項目細節": "社群貼文",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "4",
           "填單時間": "",
           "時間標記": "",
