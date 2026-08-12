@@ -8,3 +8,5 @@ worker/.dev.vars
 worker/.wrangler/
 worker/dist/
 .DS_Store
+scripts/nas_design_image_watcher.state/
+scripts/nas_design_image_watcher.secrets.json

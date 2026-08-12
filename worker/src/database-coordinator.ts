@@ -687,6 +687,53 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { result: { ok: true, action, rowNumber: index + 2, record: row }, changedTables: ['修改統計表'] };
       });
     }
+    if (action === 'addCaseDesignImages') {
+      const apiKey = text(payload.serviceKey || payload.apiKey);
+      const serviceAuthorized = Boolean(apiKey && this.env.NAS_WATCHER_API_KEY) && await secureEqual(apiKey, this.env.NAS_WATCHER_API_KEY);
+      if (!serviceAuthorized) {
+        if (!session) throw new Error('缺少服務金鑰或登入權限，無法寫入設計圖紀錄');
+        this.requireAccess(database, session, 'media.manage');
+      }
+      const caseId = text(payload.caseId || payload.id || payload['案件編號']);
+      const roundNumber = Math.trunc(Number(payload.round ?? payload['修改次數']));
+      const images = (Array.isArray(payload.images) ? payload.images : []).map(text).filter(isHttpUrl);
+      const source = text(payload.source) || (serviceAuthorized ? 'nas-watcher' : 'manual');
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Number.isFinite(roundNumber) || roundNumber < 0) throw new Error('缺少修改輪次（0=初稿）');
+      if (!images.length) throw new Error('沒有可寫入的圖片網址');
+      return this.mutate(action, session, draft => {
+        if (!draft.tables.database.rows.some(row => text(row['案件編號']) === caseId)) throw new Error('找不到案件');
+        const rows = draft.tables['修改統計表'].rows;
+        let row = rows.find(item => text(item['案件編號']) === caseId && Number(item['修改次數']) === roundNumber);
+        const now = nowTaipei();
+        if (!row) {
+          row = {
+            '案件編號': caseId,
+            '修改次數': String(roundNumber),
+            '建立日期': now,
+            '修改日期': roundNumber === 0 ? now : '',
+            '修改內容': roundNumber === 0 ? '初稿完成（NAS 自動建立）' : '',
+            '修改人': serviceAuthorized ? 'NAS 自動同步' : text(session?.user || '系統'),
+            // 第 0 輪（初稿）本身就代表「已完成」，不是一筆待處理的修改請求，
+            // 直接標記確認修正日，避免被現有的「待確認修改」通知邏輯誤判成
+            // 一筆還沒處理的修改需求。真正的修改請求（第 1 輪以後）維持空白，
+            // 走原本「設計師確認修正完成」才寫入的流程。
+            '確認修正日': roundNumber === 0 ? now : ''
+          };
+          rows.push(row);
+        }
+        let existing: string[] = [];
+        try {
+          const parsed = JSON.parse(text(row['圖片連結']) || '[]');
+          if (Array.isArray(parsed)) existing = parsed.map(text).filter(isHttpUrl);
+        } catch { existing = []; }
+        const merged = unique([...existing, ...images]);
+        row['圖片連結'] = JSON.stringify(merged);
+        row['圖片來源'] = source;
+        row['圖片更新時間'] = now;
+        return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: ['修改統計表'] };
+      });
+    }
     if (action === 'createFlatProject') return this.createProject(payload, database, session);
     if (['append', 'create', 'add', 'submit', 'save'].includes(action)) return this.addRequests(action, payload, database, session, baseUrl, false);
     if (['batchAdd', 'batchAppend', 'addRows'].includes(action)) return this.addRequests(action, payload, database, session, baseUrl, true);

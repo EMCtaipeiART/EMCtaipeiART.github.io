@@ -17,6 +17,7 @@ interface __BaseEnv_Env {
 	GITHUB_TOKEN: string;
 	ERP_CLIENT_SECRET: string;
 	ADMIN_LOGIN_PASSWORD: string;
+	NAS_WATCHER_API_KEY: string;
 	DATABASE_COORDINATOR: DurableObjectNamespace<import("./src/index").DatabaseCoordinator>;
 }
 declare namespace Cloudflare {
@@ -31,7 +32,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ALLOWED_ORIGINS" | "GITHUB_OWNER" | "GITHUB_REPO" | "GITHUB_BRANCH" | "GITHUB_DATABASE_PATH" | "GOOGLE_OAUTH_CLIENT_ID" | "ERP_BASE_URL" | "ERP_CLIENT_ID" | "ERP_REDIRECT_URI" | "ADMIN_LOGIN_ACCOUNTS" | "SESSION_TTL_SECONDS" | "GITHUB_TOKEN" | "ERP_CLIENT_SECRET" | "ADMIN_LOGIN_PASSWORD">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ALLOWED_ORIGINS" | "GITHUB_OWNER" | "GITHUB_REPO" | "GITHUB_BRANCH" | "GITHUB_DATABASE_PATH" | "GOOGLE_OAUTH_CLIENT_ID" | "ERP_BASE_URL" | "ERP_CLIENT_ID" | "ERP_REDIRECT_URI" | "ADMIN_LOGIN_ACCOUNTS" | "SESSION_TTL_SECONDS" | "GITHUB_TOKEN" | "ERP_CLIENT_SECRET" | "ADMIN_LOGIN_PASSWORD" | "NAS_WATCHER_API_KEY">> {}
 }
 
 // Begin runtime types

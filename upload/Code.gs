@@ -65,6 +65,14 @@ const STORY_EXPIRATION_HANDLER = 'expireDesignerStories_';
 // 單張圖片大小限制，單位 MB
 const MAX_FILE_SIZE_MB = 10;
 
+// 案件設計圖（NAS 監控程式自動同步用）的 Drive 母資料夾。
+// 部署前請先在 Drive 手動建立一個資料夾、把 ID 貼進來——這裡先留空，
+// 沒有設定就直接擋掉上傳，不會用到未預期的資料夾。
+const CASE_DESIGN_IMAGE_ROOT_FOLDER_ID = '';
+
+// 一次最多接受的圖片數量，避免單次請求過大或誤傳整個資料夾。
+const MAX_CASE_DESIGN_IMAGES_PER_REQUEST = 20;
+
 // 最近圖片顯示數量
 const RECENT_FILE_LIMIT = 12;
 const USER_IDENTITY_CACHE_SECONDS = 300;
@@ -78,6 +86,45 @@ function doGet() {
     .createHtmlOutputFromFile('upload')
     .setTitle('圖片上傳')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * 給非瀏覽器呼叫端用的 API 入口（例如 NAS 設計圖檔監控程式），
+ * 因為 `google.script.run` 只能在這個 Web App 自己的 upload.html
+ * 裡面用，外部程式沒辦法用那套機制呼叫 uploadImage() 這類函式，
+ * 需要一個一般的 HTTP POST 入口。
+ *
+ * 部署設定要注意：這個部署（Deploy → Manage deployments）的
+ * 「具有存取權的使用者」必須是「任何人」，不能是「必須是 Google 帳戶」，
+ * 否則外部腳本呼叫會被導去 Google 登入頁，收到的不是 JSON 而是 HTML。
+ * 這件事沒辦法在這裡自動驗證，部署後要實際用 curl 或監控程式測一次。
+ *
+ * 每個動作各自用 `NAS_WATCHER_API_KEY` 這組指令碼屬性驗證身分，
+ * 不吃一般使用者的登入 token，所以本身不會因為 Web App 開放給「任何人」
+ * 就變成任何人都能寫入——沒有正確金鑰一律被擋。
+ */
+function doPost(e) {
+  let payload = {};
+  try {
+    payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+  } catch (error) {
+    return jsonOutput_({ success: false, message: '請求內容不是合法的 JSON' });
+  }
+
+  const action = String(payload.action || '').trim();
+  let result;
+  if (action === 'uploadCaseDesignImages') {
+    result = uploadCaseDesignImages(payload);
+  } else {
+    result = { success: false, message: '不支援的動作：' + (action || '（空白）') };
+  }
+  return jsonOutput_(result);
+}
+
+function jsonOutput_(body) {
+  return ContentService
+    .createTextOutput(JSON.stringify(body))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /**
@@ -304,6 +351,117 @@ function uploadImage(payload) {
       message: error.message || '圖片上傳失敗'
     };
   }
+}
+
+/**
+ * 案件設計圖上傳（NAS 監控程式呼叫的入口，走 doPost，不是 google.script.run）。
+ *
+ * 跟 uploadImage() 的差異：uploadImage() 是給登入中的使用者在瀏覽器裡用，
+ * 靠 editorToken 驗證身分；這支是給沒有登入畫面的背景程式用，靠
+ * NAS_WATCHER_API_KEY 這組獨立金鑰驗證，兩者互相獨立、不共用同一種
+ * 驗證方式，其中一邊金鑰外流不會連帶讓另一邊也被冒用。
+ *
+ * @param {Object} payload
+ *   serviceKey  必填，需與指令碼屬性 NAS_WATCHER_API_KEY 相符
+ *   caseId      必填，案件編號
+ *   round       必填，修改輪次，0 代表初稿
+ *   source      選填，預設 'nas-watcher'
+ *   images      必填，[{fileName, mimeType, base64}, ...]
+ */
+function uploadCaseDesignImages(payload) {
+  try {
+    payload = payload || {};
+    verifyNasWatcherServiceKey_(payload.serviceKey);
+
+    const caseId = String(payload.caseId || '').trim();
+    const round = Number(payload.round);
+    const images = Array.isArray(payload.images) ? payload.images : [];
+
+    if (!caseId) throw new Error('缺少案件編號');
+    if (!Number.isFinite(round) || round < 0) throw new Error('缺少修改輪次（0=初稿）');
+    if (!images.length) throw new Error('沒有收到任何圖片');
+    if (images.length > MAX_CASE_DESIGN_IMAGES_PER_REQUEST) {
+      throw new Error(`一次最多上傳 ${MAX_CASE_DESIGN_IMAGES_PER_REQUEST} 張`);
+    }
+
+    const folder = getOrCreateCaseDesignImageFolder_(caseId);
+    const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+    const uploadedUrls = images.map(function (image) {
+      image = image || {};
+      const mimeType = String(image.mimeType || '').trim();
+      if (!mimeType.startsWith('image/')) {
+        throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
+      }
+
+      const extension = getExtension_(image.fileName, mimeType);
+      const finalFileName = createFileName_(image.fileName || 'case-image', extension);
+      const base64Content = removeDataUrlPrefix_(image.base64 || '');
+      const bytes = Utilities.base64Decode(base64Content);
+
+      if (bytes.length > maxBytes) {
+        throw new Error(`圖片超過 ${MAX_FILE_SIZE_MB}MB：` + (image.fileName || '（未命名）'));
+      }
+
+      const blob = Utilities.newBlob(bytes, mimeType, finalFileName);
+      const file = folder.createFile(blob);
+
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (sharingError) {
+        // 檔案已建立成功，只是網域政策可能不允許「知道連結的人皆可查看」，
+        // 不應該讓整次上傳失敗，記個警告即可。
+        console.warn('案件設計圖分享設定失敗', sharingError);
+      }
+
+      return createUploadedImageUrl_(file.getId());
+    });
+
+    const databaseSync = callMainAppJsonAction_('addCaseDesignImages', {
+      serviceKey: payload.serviceKey,
+      caseId: caseId,
+      round: round,
+      images: uploadedUrls,
+      source: payload.source || 'nas-watcher'
+    });
+
+    return {
+      success: true,
+      caseId: caseId,
+      round: round,
+      count: uploadedUrls.length,
+      imageUrls: uploadedUrls,
+      folderUrl: createFolderUrl_(folder.getId()),
+      jsonRevision: databaseSync.jsonRevision || 0,
+      githubCommitSha: databaseSync.githubCommitSha || ''
+    };
+  } catch (error) {
+    console.error(error);
+    return { success: false, message: error.message || '案件設計圖上傳失敗' };
+  }
+}
+
+function verifyNasWatcherServiceKey_(serviceKey) {
+  const expected = PropertiesService.getScriptProperties().getProperty('NAS_WATCHER_API_KEY');
+  const provided = String(serviceKey || '').trim();
+  if (!expected) {
+    throw new Error('Apps Script 尚未設定 NAS_WATCHER_API_KEY 指令碼屬性，請先設定後再部署');
+  }
+  if (!provided || provided !== expected) {
+    throw new Error('服務金鑰不正確，拒絕上傳');
+  }
+}
+
+function getOrCreateCaseDesignImageFolder_(caseId) {
+  if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) {
+    throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID，請先在 Drive 建立母資料夾並填入 ID');
+  }
+  const safeName = sanitizeUserFolderName_(caseId);
+  if (!safeName) throw new Error('案件編號格式錯誤，無法建立資料夾');
+
+  const root = DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID);
+  const existing = root.getFoldersByName(safeName);
+  return existing.hasNext() ? existing.next() : root.createFolder(safeName);
 }
 
 /**
@@ -1116,7 +1274,8 @@ function createUploadedImageUrl_(fileId) {
 function callMainAppJsonAction_(action, payload) {
   payload = payload || {};
   const editorToken = String(payload.editorToken || '').trim();
-  if (!editorToken) {
+  const serviceKey = String(payload.serviceKey || '').trim();
+  if (!editorToken && !serviceKey) {
     throw new Error('登入狀態已失效，請回主系統重新開啟圖片管理');
   }
 

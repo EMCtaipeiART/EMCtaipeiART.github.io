@@ -21,7 +21,7 @@
     "SESSION_TTL_SECONDS": "2592000"
   },
   "secrets": {
-    "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD"]
+    "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD", "NAS_WATCHER_API_KEY"]
   },
   "durable_objects": {
     "bindings": [
