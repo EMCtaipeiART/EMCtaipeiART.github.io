@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 519,
+  "revision": 520,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:39:44.500Z",
+  "updatedAt": "2026-08-12T10:39:47.346Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16271,7 +16271,7 @@
           "結束日期": "2026/08/05",
           "設計負責人": "Anna",
           "項目細節": "廣告素材, 急件",
-          "狀態": "執行中",
+          "狀態": "已完成",
           "加權": "12",
           "填單時間": "2026/08/04 20:28",
           "時間標記": "",
