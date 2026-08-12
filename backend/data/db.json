@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 370,
+  "revision": 371,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:16:13.387Z",
+  "updatedAt": "2026-08-12T04:18:37.699Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22033,6 +22033,13 @@
           "階段": "結案",
           "項目細節": "素材備份",
           "權重": "1",
+          "備註": ""
+        },
+        {
+          "設計種類": "平面",
+          "階段": "提案",
+          "項目細節": "測試專用",
+          "權重": "5",
           "備註": ""
         }
       ]
