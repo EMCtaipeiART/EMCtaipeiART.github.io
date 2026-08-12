@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 466,
+  "revision": 467,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:10:34.482Z",
+  "updatedAt": "2026-08-12T10:14:47.662Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18567,6 +18567,18 @@
           "修改內容": "字體修改、新增片尾、刪除段落",
           "修改人": "Noise",
           "確認修正日": ""
+        },
+        {
+          "案件編號": "26080059",
+          "修改次數": "0",
+          "建立日期": "2026/08/12 18:14:47",
+          "修改日期": "2026/08/12 18:14:47",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/12 18:14:47",
+          "圖片連結": "[\"https://lh3.googleusercontent.com/d/1qL45Gp6vrxnfRnUpy-TADSTptPfo_0Wp=w1600\",\"https://lh3.googleusercontent.com/d/1vDCGF1DZ7d7EbGYI9XX3NMT4Wbj-6gEJ=w1600\"]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/12 18:14:47"
         }
       ]
     },
