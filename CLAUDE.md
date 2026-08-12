@@ -186,6 +186,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-13 Asia/Taipei（稍晚）— 修正「設計師設定」顯示全部人的資料、以及過稿中無法填寫 NAS 路徑的權限誤擋
+
+- 修改目的：使用者回報兩個問題：①前台「設計師設定」彈窗應該只顯示登入者本人的設定，其餘設計師不該顯示；②設計師把案件改成「過稿中」後跳出視窗要填 NAS 路徑，送出時卻被擋「權限不足」，問後台是不是沒有開放對應的權限設定。追查後兩者都是既有邏輯的 bug，不是後台權限沒開放：
+  1. `renderDesignerSettingsForm()`（`index.html`）本來無條件把 `designerOptions`（寫死的 6 位設計師清單）全部列出來，沒有依登入者過濾，任何有 `designer.settings` 權限的設計師都能看到、也能修改其他 5 位設計師的技能／留言／頭像／音樂設定。
+  2. NAS 路徑欄位（`designImageFolderUrl`／`設計圖資料夾連結`）在前台是靠 `media.manage` 權限把關（案件詳情面板的「設定來源資料夾」按鈕即是如此），但 `worker/src/database-coordinator.ts` 的 `updateRequests` 判斷寫入需要哪個權限時，只認「有沒有動到狀態／項目細節」——動到就要 `request.status`，其餘一律要 `request.edit`，完全沒有替 `designImageFolderUrl` 開特例。正式資料庫的「設計師」角色範本（`角色權限範本` 表）目前**沒有 `request.edit`**（只有 `request.status`／`media.manage` 等），所以設計師在前端能打開視窗、能打字，送出時卻被後端用 `request.edit` 擋下，收到「此帳號沒有『request.edit』權限」——這就是使用者看到的「權限不足」。
+- 影響檔案：
+  - `index.html`：新增 `visibleDesignerSettingsOptions()`——管理者（`isAdministrator()`）維持看得到全部 6 位設計師（保留前台團隊管理能力，跟後台 `json_database_admin.html`「帳號設定」可編輯任何帳號一致）；非管理者只回傳 `designerOptions.filter(name=>name===currentEditor)`，也就是只有自己那一筆。`renderDesignerSettingsForm()` 改用這份過濾後的清單渲染；沒有對到任何設計師名字時（理論上不會發生，防呆用）顯示提示文字而不是空白。`collectDesignerSettings()`（送出儲存時讀表單）**沒有改**——它本來就是對每個 `designerOptions` 逐一找 DOM 列，找不到列時 fallback 用現有資料（`current`），所以非管理者畫面上看不到的其他 5 位設計師，儲存時會原樣帶回去、不會被清空或覆蓋，只有畫面上看得到、改得到的自己那筆會被判定為「有變更」送出。
+  - `worker/src/database-coordinator.ts`：`updateRequests()` 新增 `onlyDesignImageFolderLink` 判斷——這次寫入的欄位（`changes` 扣掉 `id`、以及 `writeHeaders`）只包含 `designImageFolderUrl`／`設計圖資料夾連結` 時，權限判斷改成 `media.manage`；只要同時動到其他任何欄位（例如同時想改客戶別、專案名稱），就退回原本的 `request.edit`，不會因此讓 `media.manage` 變成可以繞過一般欄位編輯限制的後門。
+  - `worker/test/index.test.ts`：新增一支測試——帳號權限设成「自訂」且只有 `request.create`／`request.status`／`media.manage`（刻意不給 `request.edit`，比照正式資料庫「設計師」角色範本現況）；驗證只改 `designImageFolderUrl` 會成功寫入，但接著嘗試改 `client` 欄位會被擋下、錯誤訊息是 `此帳號沒有「request.edit」權限`，證明這個放寬只精準對應到來源資料夾這個欄位，沒有擴大範圍。
+- 影響功能：
+  - 一般設計師打開「設計師設定」，現在只會看到、也只能編輯自己的技能／留言對話框／頭像海報／分享音樂；管理者不受影響，行為跟改之前一樣可以看到並編輯全部 6 位。
+  - 設計師把案件標記為「過稿中」跳出的 NAS 路徑視窗，現在只要該帳號有 `media.manage` 權限（正式資料庫的「設計師」角色範本本來就有）就能成功儲存，不再被要求額外的 `request.edit`。案件其他欄位（狀態、項目細節以外的一般編輯）維持原本需要 `request.edit` 才能改，這次沒有放寬。
+- 風險區塊：
+  - 「設計師設定」這次改動是**前端過濾**，不是新增後端權限檢查——`showDesignerSettings()` 原本的 `requireAccess('designer.settings',...)` 閘門沒有變，理論上如果有人繞過前端（直接呼叫 `saveDesignerSettings` 之類的函式並偽造 DOM），後端 `designer.settings` 這個 action 本身目前設計上就是允許任何有這個能力的帳號改任一位設計師的資料（`worker/src/database-coordinator.ts` 第 552 行 `requireAccess(database,session,'designer.settings')` 沒有限制只能改自己）——這次沒有動後端這一段，因為使用者只回報「畫面上顯示了不該顯示的人」，範圍限定在前端可見性；如果之後要徹底鎖死「即使繞過前端也不能改別人」，需要另外在後端 `saveDesignerProfiles` 這個 action 加上「非管理者只能寫自己那筆」的檢查，這次沒有一併做，留在已知技術債。
+  - `onlyDesignImageFolderLink` 的判斷是看「這次送出的欄位是否『只有』`designImageFolderUrl`」——如果前端未來改成把來源資料夾路徑跟其他欄位包在同一次 `update` 呼叫裡一起送出，會自動退回需要 `request.edit`，不會誤放行；反過來說也不會不小心放寬到其他欄位，因為判斷條件是嚴格的「僅有這一個欄位」而不是「包含這個欄位」。
+- 已檢查／驗證方式：`index.html` 兩段 `<script>` 語法檢查（`new Function`）通過；本機靜態伺服器＋ Browser pane 直接呼叫 `visibleDesignerSettingsOptions()`／`renderDesignerSettingsForm()` 驗證：模擬非管理者登入（`currentEditorGroup='影音'`）時只回傳／只渲染自己那一筆；模擬管理者登入（`currentEditorGroup='管理者'`）時回傳／渲染全部 6 位，符合預期。Worker：`npx tsc --noEmit` 無錯、`npx vitest run` 7/7（新增的測試在套用修正前會先重現使用者回報的「權限不足」現象，套用修正後轉綠燈，且驗證了「改其他欄位仍被擋」這個沒有被過度放寬的邊界）、`wrangler deploy --dry-run` 打包成功。`node --test backend/test/*.test.mjs` 22/22（確認沒有既有測試鎖住這次改到的函式或字串）。
+- 部署狀態：`index.html` 純前端，git push 後自動生效；**`worker/` 需要手動部署才會生效**（`cd worker && pnpm deploy`）——沒部署前，設計師填寫 NAS 路徑仍會遇到一樣的「權限不足」錯誤。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-13 Asia/Taipei — 修正 NAS 監控程式「同一輪已抓取過」誤判導致新圖片被卡住不上傳
 
 - 修改目的：使用者手動執行監控程式，回報「沒看到新增至雲端，前台也沒顯示」，貼出的執行 log 顯示 8 張全新圖片都正確被偵測為「新增」且產生預覽圖，但最後印出「[輪次判斷] 第 0 輪已經抓取過，略過」——完全沒有呼叫上傳。追查發現 `scanProject`／主迴圈裡有一個 `lastCapturedRound` 欄位，記錄「這個案件上次成功上傳過的輪次」，只要這次算出的 `round` 跟它相等就整輪跳過，**完全不看這次到底有沒有新的待上傳檔案**。這在同一輪內第一次上傳成功、之後設計師又陸續加了更多圖進同一個 NAS 資料夾的情境下（很常見——過稿中狀態下最初可能只放了 1 張，後續才補齊全部圖），會讓所有後補的圖永遠卡住，不管重跑幾次監控程式都不會上傳，直到案件進到下一個修改輪次為止。這個判斷邏輯本來就是多餘的：每個檔案是否已經上傳過，`assignedRound`（每個檔案各自的欄位）早就有在追蹤，`lastCapturedRound` 這層額外的整輪短路判斷只是幫倒忙。

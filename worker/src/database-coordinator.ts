@@ -803,7 +803,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const writeHeaders = [...(Array.isArray(payload.writeHeaders) ? payload.writeHeaders.map(text) : []), ...(Array.isArray(payload.forceHeaders) ? payload.forceHeaders.map(text) : [])];
     const touchesProtected = writeHeaders.some(header => ['案件狀態', '狀態', '項目細節'].includes(header)) || ['status', 'details'].some(key => changes[key] !== undefined);
     if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '已取消') throw new Error('請先登入後再修改狀態或項目細節');
-    if (session) this.requireAccess(database, session, payload.accessContext === 'archive' ? 'archive.edit' : (touchesProtected ? 'request.status' : 'request.edit'));
+    const changedKeys = Object.keys(changes).filter(key => key !== 'id');
+    const onlyDesignImageFolderLink = !touchesProtected && changedKeys.length > 0 && changedKeys.every(key => key === 'designImageFolderUrl')
+      && writeHeaders.every(header => header === '設計圖資料夾連結');
+    if (session) {
+      this.requireAccess(database, session, payload.accessContext === 'archive' ? 'archive.edit'
+        : touchesProtected ? 'request.status' : onlyDesignImageFolderLink ? 'media.manage' : 'request.edit');
+    }
     const items = action === 'batchUpdate' ? asRows(payload.rows) : [{ id: payload.id || payload.caseId || changes.id, row: changes }];
     return this.mutate(action, session, draft => {
       const updated: Row[] = [];

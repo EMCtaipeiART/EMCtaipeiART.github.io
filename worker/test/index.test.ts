@@ -55,6 +55,19 @@ async function seedDatabase(): Promise<void> {
   });
 }
 
+async function seedAccountPermission(account: string, role: string, capabilities: string[]): Promise<void> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+    const database = JSON.parse(stored.json) as DatabaseSnapshot;
+    database.tables['帳號權限'].rows.push({
+      '帳號': account, '角色範本': role, '狀態': '啟用',
+      '頁面權限': JSON.stringify(['request']), '功能權限': JSON.stringify(capabilities)
+    });
+    state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+  });
+}
+
 async function api(payload: Record<string, unknown>, token = ''): Promise<Record<string, unknown>> {
   const response = await SELF.fetch('https://worker.test/api', {
     method: 'POST',
@@ -253,5 +266,32 @@ describe('Machi Design API Worker', () => {
     });
     expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '對話框': '品質確認' }));
     expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '角色範本': '設計師' }));
+  });
+
+  it('lets an account with only media.manage (no request.edit) save the design image source folder link, but still blocks other field edits', async () => {
+    // 對應 26080059 案件過稿中無法填入 NAS 路徑的回報：production 的「設計師」角色範本目前沒有 request.edit，
+    // 只靠 media.manage 授權「設定來源資料夾」這個動作，其餘一般欄位編輯仍然要 request.edit。
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.create', 'request.status', 'media.manage']);
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'link-file-sha' }, commit: { sha: 'link-commit-sha' } });
+    });
+
+    const linkUpdate = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', designImageFolderUrl: '專案企劃部/執行中/客戶/案件資料夾' }
+    }, token);
+    expect(linkUpdate).toMatchObject({ ok: true, id: '26080001' });
+    expect((linkUpdate.row as Record<string, unknown>).designImageFolderUrl).toBe('專案企劃部/執行中/客戶/案件資料夾');
+
+    const editAttempt = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', client: '應該被擋下' }
+    }, token);
+    expect(editAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
   });
 });
