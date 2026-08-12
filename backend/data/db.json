@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 361,
+  "revision": 362,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T03:49:45.109Z",
+  "updatedAt": "2026-08-12T03:49:49.423Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18534,7 +18534,7 @@
           "修改日期": "2026-08-12",
           "修改內容": "拍寫客戶臨時調整優惠，有幾處要麻煩改改，\n感恩感恩！\n（因為 BN 變多一張，設計系統我 +1 了）\n\nhttps://emctaipeiart.github.io/a/26080033",
           "修改人": "李明庭",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 11:49:49"
         }
       ]
     },
