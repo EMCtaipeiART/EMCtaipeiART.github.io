@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 442,
+  "revision": 443,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T08:08:39.036Z",
+  "updatedAt": "2026-08-12T08:08:44.909Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19011,7 +19011,7 @@
           "對話框": "7/27-8/7離線，出國深造",
           "新專案輪值": "1",
           "篩選年份": "2026",
-          "篩選月份": "7 月",
+          "篩選月份": "7 月 , 8 月",
           "篩選狀態": "",
           "篩選姓名": "Leona",
           "選擇": "v",
