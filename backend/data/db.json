@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 548,
+  "revision": 549,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T11:03:36.033Z",
+  "updatedAt": "2026-08-12T11:11:49.605Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17252,6 +17252,31 @@
           "月份": "8月",
           "案件編號": "26080059",
           "設計圖資料夾連結": "/設計部/專案企劃部/執行中/Epson/FB發文圖檔/2026/8月/260806_Epson_LW新手爸媽"
+        },
+        {
+          "客戶別": "測試2",
+          "專案名稱": "測試2測試2",
+          "專案負責人": "Machi",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/12",
+          "結束日期": "2026/08/27",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/12 19:11",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080060"
         }
       ]
     },
@@ -23839,6 +23864,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 616,
           "sheetRow": 616
+        }
+      },
+      "6e84f1c1-26e7-46d7-adbd-f6df680d1006": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 617,
+        "row": {
+          "id": "26080060",
+          "month": "8月",
+          "client": "測試2",
+          "project": "測試2測試2",
+          "owner": "Machi",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/12",
+          "end": "2026/08/27",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/12 19:11",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 617,
+          "sheetRow": 617
         }
       }
     }
