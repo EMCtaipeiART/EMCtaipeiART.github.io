@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 613,
+  "revision": 614,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T15:40:39.516Z",
+  "updatedAt": "2026-08-12T15:40:42.528Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17150,7 +17150,8 @@
           "加權": "1",
           "案件編號": "26080055",
           "月份": "8月",
-          "項目細節": "社群貼文"
+          "項目細節": "社群貼文",
+          "設計圖資料夾連結": "/設計部/專案企劃部/執行中/Epson/FB發文圖檔/2026/8月/260811_Epson_V4000UV印刷機發表會"
         },
         {
           "客戶別": "Epson",
