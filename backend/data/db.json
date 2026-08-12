@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 526,
+  "revision": 527,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:43:55.761Z",
+  "updatedAt": "2026-08-12T10:44:05.621Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18496,7 +18496,7 @@
           "修改日期": "2026-08-12",
           "修改內容": "客戶回饋，表示讚的，僅一處微調，\n希望移除產品型號＋名稱（LW-C610 智慧藍牙奶茶標籤機）​\n\nFB、IG 都麻煩移除了，感謝！",
           "修改人": "李明庭",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 18:44:05"
         }
       ]
     },
