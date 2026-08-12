@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 377,
+  "revision": 380,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:27:24.051Z",
+  "updatedAt": "2026-08-12T04:37:26.668Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15990,7 +15990,7 @@
           "結束日期": "2026/08/04",
           "設計負責人": "Machi",
           "項目細節": "社群貼文, 急件",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "3",
           "填單時間": "",
           "時間標記": "",
@@ -18544,7 +18544,7 @@
           "修改日期": "2026-08-12",
           "修改內容": "感謝大神支援！\nDJI 兩版 A4，各有小地方沒改到，再麻煩哥：\n\nhttps://emctaipeiart.github.io/a/26080033",
           "修改人": "李明庭",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 12:29:20"
         }
       ]
     },
@@ -22771,9 +22771,9 @@
         {
           "角色範本": "設計師",
           "頁面權限": "[\"request\",\"dashboard\",\"media_admin\"]",
-          "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-12 00:20",
-          "更新者": "管理員"
+          "功能權限": "[\"request.create\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-12 12:37",
+          "更新者": "Machi"
         },
         {
           "角色範本": "一般使用者",
