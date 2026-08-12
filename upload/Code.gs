@@ -66,9 +66,7 @@ const STORY_EXPIRATION_HANDLER = 'expireDesignerStories_';
 const MAX_FILE_SIZE_MB = 10;
 
 // 案件設計圖（自動同步用）的 Drive 母資料夾。
-// 部署前請先在 Drive 手動建立一個資料夾、把 ID 貼進來——這裡先留空，
-// 沒有設定就直接擋掉上傳，不會用到未預期的資料夾。
-const CASE_DESIGN_IMAGE_ROOT_FOLDER_ID = '';
+const CASE_DESIGN_IMAGE_ROOT_FOLDER_ID = '1rBJQ3uvDeFruf7Th2yF2xQWr0c0F2-nH';
 
 // 一次最多接受的圖片數量，避免單次請求過大或誤傳整個資料夾。
 const MAX_CASE_DESIGN_IMAGES_PER_REQUEST = 20;
