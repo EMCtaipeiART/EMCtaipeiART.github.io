@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 468,
+  "revision": 469,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:16:13.871Z",
+  "updatedAt": "2026-08-12T10:16:18.717Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18587,7 +18587,7 @@
           "修改日期": "2026-08-12",
           "修改內容": "wtw4t4",
           "修改人": "Machi",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 18:16:18"
         }
       ]
     },
