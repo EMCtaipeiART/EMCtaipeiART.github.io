@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 479,
+  "revision": 480,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:28:11.040Z",
+  "updatedAt": "2026-08-12T10:28:17.214Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17309,15 +17309,6 @@
       ],
       "primaryKey": null,
       "rows": [
-        {
-          "案件編號": "26060100",
-          "修改次數": "1",
-          "建立日期": "2026/6/23",
-          "修改日期": "2026/6/29",
-          "修改內容": "和Ultra1200有關 >> 全面調整成：Ultra 1200W 旗艦營養子彈機",
-          "修改人": "朱柏戎",
-          "確認修正日": "2026/6/23"
-        },
         {
           "案件編號": "26060172",
           "修改次數": "1",
