@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 472,
+  "revision": 473,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:23:50.464Z",
+  "updatedAt": "2026-08-12T10:26:16.382Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17309,15 +17309,6 @@
       ],
       "primaryKey": null,
       "rows": [
-        {
-          "案件編號": "26060232",
-          "修改次數": "1",
-          "建立日期": "2026/6/23",
-          "修改日期": "2026/6/24",
-          "修改內容": "右上角 April 再麻煩改成 May 即可",
-          "修改人": "李明庭",
-          "確認修正日": "2026/6/23"
-        },
         {
           "案件編號": "26050100",
           "修改次數": "1",
