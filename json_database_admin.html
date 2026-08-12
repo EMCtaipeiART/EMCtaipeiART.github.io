@@ -162,6 +162,7 @@
 .account-reel-actions{display:flex;gap:6px;padding:0 8px 8px}
 .account-reel-actions button{flex:1;min-height:26px;padding:0 6px;border-radius:6px;font-size:10.5px}
 .account-reels-block{margin-top:14px}.account-reels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.account-reels-head p{margin:0;color:var(--muted);font-size:11.5px;font-weight:700}.account-reels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.account-reel-card{overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.account-reel-card img{width:100%;height:145px;display:block;object-fit:cover;background:#111}.account-reel-meta{display:grid;gap:4px;padding:8px}.account-reel-meta b{font-size:11.5px}.account-reel-meta span{color:var(--muted);font-size:10.5px}.account-reels-empty{padding:12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center;font-size:11.5px}.account-help{margin:5px 0 0;color:var(--muted);font-size:11px}.account-new-marker{margin-bottom:10px;border:1px dashed #99cdb7;border-radius:8px;background:var(--green2);color:#0b6b4c;padding:9px 11px;font-weight:600}.permission-section.account-designer[hidden]{display:none!important}
+.account-rotation-list{display:grid;gap:6px}.account-rotation-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#fff}.account-rotation-item.dragging{opacity:.45}.account-rotation-item.current{border-color:#9bd4b4;background:var(--green2)}.account-rotation-handle{border:0;background:transparent;color:var(--muted);cursor:grab;font-size:15px;padding:0 2px;line-height:1}.account-rotation-order{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:var(--soft);color:var(--muted);font-size:11px;font-weight:800}.account-rotation-item.current .account-rotation-order{background:var(--green);color:#fff}.account-rotation-name{font-weight:700;font-size:12.5px}.account-rotation-actions{display:flex;align-items:center;gap:8px;margin-top:8px}.account-rotation-hint{color:var(--muted);font-size:11px}
     @media(max-width:1050px){.account-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.account-designer-grid{grid-template-columns:1fr}.account-reels-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:900px){.permission-layout{grid-template-columns:1fr}.permission-users{max-height:260px}.permission-checks,.account-fields,.account-choice-grid,.account-avatar-settings,.account-reels-grid{grid-template-columns:1fr}.account-field.wide{grid-column:auto}}
   </style>
@@ -237,7 +238,7 @@
     const API=CONFIGURED_API||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
-    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve();
+    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve();
     const permissionWritesPending=new Set(),roleTemplateWritesPending=new Set(),accountGroupOpenState=new Map();
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
@@ -450,7 +451,8 @@
           <div class="account-choice-group"><p>預設顯示欄位與順序（拖曳或使用箭頭排序，依 1、2、3… 儲存）</p><div class="account-column-grid" data-account-column-grid>${accountColumnChoices(model)}</div></div>
         </div></details>
         <details class="account-section-fold account-designer" data-account-designer ${accountIsDesigner(model)?'':'hidden'}><summary>設計師公開資料</summary><div class="account-section-fold-body">
-          <div class="account-fields">${accountLinkField('頭像大圖連結','頭像大圖連結',model['頭像大圖連結'])}${accountLinkField('分享音樂','分享音樂',model['分享音樂'])}${accountField('音樂起始秒數','音樂起始秒數',model['音樂起始秒數']||'0',{type:'number',min:'0'})}${accountField('新專案輪值','新專案輪值',model['新專案輪值'],{options:Array.from({length:10},(_,index)=>String(index+1))})}${accountField('對話框','對話框',model['對話框'],{type:'textarea',wide:true,placeholder:'顯示於設計師海報上的短句'})}</div>
+          <div class="account-fields">${accountLinkField('頭像大圖連結','頭像大圖連結',model['頭像大圖連結'])}${accountLinkField('分享音樂','分享音樂',model['分享音樂'])}${accountField('音樂起始秒數','音樂起始秒數',model['音樂起始秒數']||'0',{type:'number',min:'0'})}${accountField('對話框','對話框',model['對話框'],{type:'textarea',wide:true,placeholder:'顯示於設計師海報上的短句'})}</div>
+          ${accountRotationListHtml(model)}
           <div class="account-choice-group"><p>技能（可複選）</p><div class="account-choice-grid">${ACCOUNT_SKILL_OPTIONS.map(skill=>accountChoice('技能',skill,skill,skills.includes(skill))).join('')}</div>${accountField('其他技能','技能自訂',customSkills.join(' , '),{wide:true,placeholder:'多個技能請用逗號分隔'})}</div>
           ${accountReelsCardsHtml(model)}
         </div></details>
@@ -471,6 +473,41 @@
     function selectPermissionAccount(account){const model=permissionModelsCache.find(row=>row['帳號']===account);if(!model)return;accountCreating=false;permissionSelectedAccount=account;const list=$('view').querySelector('.permission-users'),listScroll=list?.scrollTop||0,pageScroll=window.scrollY;list?.querySelectorAll('[data-permission-account]').forEach(button=>button.classList.toggle('active',button.dataset.permissionAccount===account));const editor=permissionEditorElement();if(editor)editor.outerHTML=permissionEditorHtml(model);else renderTable({table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache});requestAnimationFrame(()=>{if(list)list.scrollTop=listScroll;window.scrollTo(0,pageScroll)})}
     function refreshAccountColumnOrder(editor=permissionEditorElement()){if(!editor)return;let order=0;editor.querySelectorAll('[data-account-column-item]').forEach(item=>{const input=item.querySelector('[data-account-column]'),badge=item.querySelector('.account-column-order'),enabled=Boolean(input?.checked);item.classList.toggle('enabled',enabled);if(badge)badge.textContent=enabled?String(++order):'—'})}
     function moveAccountColumn(button){const item=button.closest('[data-account-column-item]'),grid=item?.parentElement,direction=Number(button.dataset.accountColumnMove);if(!item||!grid||!direction)return;if(direction<0&&item.previousElementSibling)grid.insertBefore(item,item.previousElementSibling);if(direction>0&&item.nextElementSibling)grid.insertBefore(item.nextElementSibling,item);refreshAccountColumnOrder()}
+    function designerRotationGroup(model){const group=String(model['組別']||'').trim();if(!/^(?:平面|影音)$/.test(group))return [];return permissionModelsCache.filter(row=>String(row['組別']||'').trim()===group&&accountIsDesigner(row)).sort((a,b)=>(Number(a['新專案輪值'])||99)-(Number(b['新專案輪值'])||99)||String(a['名字']).localeCompare(String(b['名字']),'zh-Hant'))}
+    function accountRotationListHtml(model){
+      const group=String(model['組別']||'').trim();if(!/^(?:平面|影音)$/.test(group))return '';
+      const list=designerRotationGroup(model),account=model['帳號'];
+      if(!list.length)return '';
+      return `<div class="account-choice-group"><p>新專案輪值順序（拖曳名牌調整，儲存後套用至整個「${esc(group)}」組別）</p>
+        <div class="account-rotation-list" data-account-rotation-list>${list.map((row,index)=>`<div class="account-rotation-item ${row['帳號']===account?'current':''}" draggable="true" data-account-rotation-item="${esc(row['帳號'])}"><button type="button" class="account-rotation-handle" tabindex="-1" aria-label="拖曳調整順序">⋮⋮</button><span class="account-rotation-order">${index+1}</span><span class="account-rotation-name">${esc(row['顯示名']||row['名字'])}</span></div>`).join('')}</div>
+        <div class="account-rotation-actions"><button class="btn" type="button" data-account-rotation-save>儲存輪值順序</button><span class="account-rotation-hint" data-account-rotation-hint></span></div>
+      </div>`;
+    }
+    function refreshAccountRotationOrder(editor=permissionEditorElement()){if(!editor)return;let order=0;editor.querySelectorAll('[data-account-rotation-item]').forEach(item=>{const badge=item.querySelector('.account-rotation-order');if(badge)badge.textContent=String(++order)});const hint=editor.querySelector('[data-account-rotation-hint]');if(hint)hint.textContent=''}
+    async function saveAccountRotation(){
+      const editor=permissionEditorElement();if(!editor)return;
+      const list=editor.querySelector('[data-account-rotation-list]');if(!list)return;
+      const items=[...list.querySelectorAll('[data-account-rotation-item]')];
+      const button=editor.querySelector('[data-account-rotation-save]'),hint=editor.querySelector('[data-account-rotation-hint]');
+      const changes=items.map((item,index)=>({account:item.dataset.accountRotationItem,newValue:String(index+1)})).filter(change=>{const model=permissionModelsCache.find(row=>row['帳號']===change.account);return model&&String(model['新專案輪值']||'')!==change.newValue});
+      if(!changes.length){if(hint)hint.textContent='順序未變更';return}
+      if(button)button.disabled=true;if(hint)hint.textContent=`儲存中…（共 ${changes.length} 位）`;
+      let succeeded=0;
+      try{
+        for(const change of changes){
+          const model=permissionModelsCache.find(row=>row['帳號']===change.account);if(!model)continue;
+          const row={...(model._settingsRow||{}),'新專案輪值':change.newValue};
+          await request(`/table/${encodeURIComponent('設定')}/${encodeURIComponent(change.account)}`,{method:'PATCH',body:JSON.stringify({row})});
+          succeeded++;
+        }
+        note(`已更新 ${succeeded} 位設計師的輪值順序。`,'ok');
+      }catch(error){
+        note(`輪值順序儲存失敗（已完成 ${succeeded}/${changes.length} 位）：${error.message}`,'error');
+      }finally{
+        if(button)button.disabled=false;
+        await loadMetadata({fresh:true});
+      }
+    }
     function normalizedRoleTemplateRows(rows){
       return ['管理者','設計師','一般使用者','唯讀'].map((role,index)=>{const saved=rows.find(row=>String(row['角色範本']||'')===role),template=MachiAccess.templateFor(role);return {...(saved||{}),_rowNumber:saved?saved._rowNumber:index+2,'角色範本':role,'頁面權限':saved?MachiAccess.parseList(saved['頁面權限']):[...template.pages],'功能權限':saved?MachiAccess.parseList(saved['功能權限']):[...template.capabilities]}})
     }
@@ -677,6 +714,7 @@
       if(event.target.closest('[data-template-all]')){setRoleTemplateEditorMode('all');return}
       if(event.target.closest('[data-template-readonly]')){setRoleTemplateEditorMode('readonly');return}
       const columnMove=event.target.closest('[data-account-column-move]');if(columnMove){moveAccountColumn(columnMove);return}
+      if(event.target.closest('[data-account-rotation-save]')){saveAccountRotation();return}
       const reelEdit=event.target.closest('[data-account-reel-edit]');
       if(reelEdit){const row=accountReelsRows.find(item=>String(item._rowNumber)===reelEdit.dataset.accountReelEdit);if(row)openEditor(row,'reels');else note('找不到這筆 REELS，請重新讀取','error');return}
       const reelDelete=event.target.closest('[data-account-reel-delete]');
@@ -699,10 +737,10 @@
     $('view').addEventListener('change',event=>{const role=event.target.closest('[data-permission-role]');if(role){syncAccountEditorState({applyRole:true});return}if(event.target.matches('[data-account-column]')){refreshAccountColumnOrder();return}if(event.target.matches('[data-account-field="組別"]')){syncAccountEditorState();return}if(event.target.matches('[data-permission-page],[data-permission-capability]')){const select=permissionEditorElement()?.querySelector('[data-permission-role]');if(select&&!select.disabled)select.value='自訂';syncAccountEditorState()}});
     $('view').addEventListener('input',event=>{if(event.target.matches('[data-account-field="顯示名"],[data-account-field="名字"],[data-account-field="頭像連結"]'))syncAccountEditorState()});
     $('view').addEventListener('toggle',event=>{const group=event.target.closest?.('[data-account-group]');if(group)accountGroupOpenState.set(group.dataset.accountGroup,group.open)},true);
-    $('view').addEventListener('dragstart',event=>{const item=event.target.closest('[data-account-column-item]');if(!item)return;accountColumnDragged=item;item.classList.add('dragging');event.dataTransfer.effectAllowed='move'});
-    $('view').addEventListener('dragover',event=>{const target=event.target.closest('[data-account-column-item]');if(!accountColumnDragged||!target||target===accountColumnDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountColumnDragged,before?target:target.nextElementSibling);refreshAccountColumnOrder()});
-    $('view').addEventListener('drop',event=>{if(!accountColumnDragged)return;event.preventDefault();accountColumnDragged.classList.remove('dragging');accountColumnDragged=null;refreshAccountColumnOrder()});
-    $('view').addEventListener('dragend',()=>{accountColumnDragged?.classList.remove('dragging');accountColumnDragged=null});
+    $('view').addEventListener('dragstart',event=>{const columnItem=event.target.closest('[data-account-column-item]');if(columnItem){accountColumnDragged=columnItem;columnItem.classList.add('dragging');event.dataTransfer.effectAllowed='move';return}const rotationItem=event.target.closest('[data-account-rotation-item]');if(rotationItem){accountRotationDragged=rotationItem;rotationItem.classList.add('dragging');event.dataTransfer.effectAllowed='move'}});
+    $('view').addEventListener('dragover',event=>{if(accountColumnDragged){const target=event.target.closest('[data-account-column-item]');if(!target||target===accountColumnDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountColumnDragged,before?target:target.nextElementSibling);refreshAccountColumnOrder();return}if(accountRotationDragged){const target=event.target.closest('[data-account-rotation-item]');if(!target||target===accountRotationDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountRotationDragged,before?target:target.nextElementSibling);refreshAccountRotationOrder()}});
+    $('view').addEventListener('drop',event=>{if(accountColumnDragged){event.preventDefault();accountColumnDragged.classList.remove('dragging');accountColumnDragged=null;refreshAccountColumnOrder();return}if(accountRotationDragged){event.preventDefault();accountRotationDragged.classList.remove('dragging');accountRotationDragged=null;refreshAccountRotationOrder()}});
+    $('view').addEventListener('dragend',()=>{accountColumnDragged?.classList.remove('dragging');accountColumnDragged=null;accountRotationDragged?.classList.remove('dragging');accountRotationDragged=null});
     $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='帳號權限')beginAccountCreate();else openEditor()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
     async function start(){token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
