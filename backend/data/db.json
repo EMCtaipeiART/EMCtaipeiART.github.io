@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 524,
+  "revision": 525,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:39:58.580Z",
+  "updatedAt": "2026-08-12T10:43:49.157Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17305,7 +17305,8 @@
         "確認修正日",
         "圖片連結",
         "圖片來源",
-        "圖片更新時間"
+        "圖片更新時間",
+        "待修改圖片"
       ],
       "primaryKey": null,
       "rows": [
@@ -18499,15 +18500,6 @@
           "圖片連結": "[\"https://lh3.googleusercontent.com/d/1qL45Gp6vrxnfRnUpy-TADSTptPfo_0Wp=w1600\",\"https://lh3.googleusercontent.com/d/1vDCGF1DZ7d7EbGYI9XX3NMT4Wbj-6gEJ=w1600\"]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/12 18:14:47"
-        },
-        {
-          "案件編號": "26080059",
-          "修改次數": "1",
-          "建立日期": "2026/08/12 18:16:13",
-          "修改日期": "2026-08-12",
-          "修改內容": "wtw4t4",
-          "修改人": "Machi",
-          "確認修正日": "2026/08/12 18:16:18"
         },
         {
           "案件編號": "26080017",
