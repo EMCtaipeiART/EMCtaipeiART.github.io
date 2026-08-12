@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 454,
+  "revision": 455,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T09:16:09.137Z",
+  "updatedAt": "2026-08-12T09:16:38.192Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21401,7 +21401,7 @@
           "部門": "專案部",
           "組別": "Cherry組",
           "名字": "sudi.su",
-          "顯示名": "sudi.su",
+          "顯示名": "SUDI SU",
           "帳號": "sudi.su@emctaipei.com",
           "頭像連結": "",
           "頭像大圖連結": "",
