@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 391,
+  "revision": 392,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:59:53.575Z",
+  "updatedAt": "2026-08-12T04:59:56.531Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18808,7 +18808,7 @@
           "音樂起始秒數": "0",
           "技能": "平面 , 輸出 , 動畫 , 跳火圈 , 吞火球",
           "對話框": "",
-          "新專案輪值": "1",
+          "新專案輪值": "4",
           "篩選年份": "2026",
           "篩選月份": "",
           "篩選狀態": "",
