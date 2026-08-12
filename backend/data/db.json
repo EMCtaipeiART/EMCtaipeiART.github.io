@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 377,
+  "revision": 378,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:27:24.051Z",
+  "updatedAt": "2026-08-12T04:29:20.605Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18544,7 +18544,7 @@
           "修改日期": "2026-08-12",
           "修改內容": "感謝大神支援！\nDJI 兩版 A4，各有小地方沒改到，再麻煩哥：\n\nhttps://emctaipeiart.github.io/a/26080033",
           "修改人": "李明庭",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 12:29:20"
         }
       ]
     },
