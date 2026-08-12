@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 550,
+  "revision": 551,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T11:14:48.713Z",
+  "updatedAt": "2026-08-12T11:14:51.720Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17276,7 +17276,8 @@
           "狀態": "過稿中",
           "加權": "",
           "月份": "8月",
-          "案件編號": "26080060"
+          "案件編號": "26080060",
+          "設計圖資料夾連結": "/設計部/專案企劃部/執行中/ANKER/廣告素材/8月_CPAS/蝦皮/A1665"
         }
       ]
     },
