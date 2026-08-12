@@ -113,8 +113,6 @@ function doPost(e) {
   let result;
   if (action === 'uploadCaseDesignImages') {
     result = uploadCaseDesignImages(payload);
-  } else if (action === 'syncCaseDesignImagesFromFolder') {
-    result = syncCaseDesignImagesFromFolder(payload);
   } else {
     result = { success: false, message: '不支援的動作：' + (action || '（空白）') };
   }
@@ -365,6 +363,10 @@ function uploadImage(payload) {
  *   serviceKey  必填，需與指令碼屬性 NAS_WATCHER_API_KEY 相符
  *   caseId      必填，案件編號
  *   round       必填，修改輪次，0 代表初稿
+ *   designer    必填，設計負責人（用於目的地資料夾路徑）
+ *   client      必填，客戶別（用於目的地資料夾路徑）
+ *   year        必填，年度（用於目的地資料夾路徑）
+ *   month       必填，月份（用於目的地資料夾路徑）
  *   source      選填，預設 'nas-watcher'
  *   images      必填，[{fileName, mimeType, base64}, ...]
  */
@@ -383,8 +385,18 @@ function uploadCaseDesignImages(payload) {
     if (images.length > MAX_CASE_DESIGN_IMAGES_PER_REQUEST) {
       throw new Error(`一次最多上傳 ${MAX_CASE_DESIGN_IMAGES_PER_REQUEST} 張`);
     }
+    if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) {
+      throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID，請先在 Drive 建立母資料夾並填入 ID');
+    }
 
-    const folder = getOrCreateCaseDesignImageFolder_(caseId);
+    const rootFolder = DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID);
+    const folder = getOrCreateNestedFolder_(rootFolder, [
+      payload.designer || '未指定設計師',
+      payload.client || '未分類客戶',
+      payload.year || String(new Date().getFullYear()),
+      payload.month || String(new Date().getMonth() + 1).padStart(2, '0'),
+      caseId
+    ]);
     const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
 
     const uploadedUrls = images.map(function (image) {
@@ -452,18 +464,6 @@ function verifyNasWatcherServiceKey_(serviceKey) {
   }
 }
 
-function getOrCreateCaseDesignImageFolder_(caseId) {
-  if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) {
-    throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID，請先在 Drive 建立母資料夾並填入 ID');
-  }
-  const safeName = sanitizeUserFolderName_(caseId);
-  if (!safeName) throw new Error('案件編號格式錯誤，無法建立資料夾');
-
-  const root = DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID);
-  const existing = root.getFoldersByName(safeName);
-  return existing.hasNext() ? existing.next() : root.createFolder(safeName);
-}
-
 /**
  * 依序取得/建立巢狀資料夾（例如 設計師/客戶別/年度/月份/案件編號）。
  */
@@ -475,146 +475,6 @@ function getOrCreateNestedFolder_(rootFolder, names) {
     folder = existing.hasNext() ? existing.next() : folder.createFolder(safeName);
   });
   return folder;
-}
-
-/**
- * 從常見的 Google Drive 資料夾連結格式解析出資料夾 ID。
- * 支援 .../folders/<id>、.../folders/<id>?usp=sharing、?id=<id> 等形式，
- * 解析不出來就直接把整個字串當成 ID 試試看（使用者可能直接貼 ID）。
- */
-function extractDriveFolderId_(link) {
-  const value = String(link || '').trim();
-  const folderMatch = value.match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
-  if (folderMatch) return folderMatch[1];
-  const idParamMatch = value.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-  if (idParamMatch) return idParamMatch[1];
-  if (/^[a-zA-Z0-9_-]{10,}$/.test(value)) return value;
-  return '';
-}
-
-/**
- * 依案件的來源 Drive 資料夾連結，抓取尚未同步過的圖片／影片截圖，
- * 複製進依 設計師/客戶別/年度/月份/案件編號 自動建立的目的地資料夾，
- * 再回寫進主系統的修改統計表（透過既有的 addCaseDesignImages）。
- *
- * @param {Object} payload
- *   serviceKey  必填，需與指令碼屬性 NAS_WATCHER_API_KEY 相符
- *   caseId      必填，案件編號
- *   folderLink  必填，來源 Google Drive 資料夾連結
- *   round       必填，修改輪次，0 代表初稿
- *   designer    必填，設計負責人（用於目的地資料夾路徑）
- *   client      必填，客戶別（用於目的地資料夾路徑）
- *   year        必填，年度（用於目的地資料夾路徑）
- *   month       必填，月份（用於目的地資料夾路徑）
- */
-function syncCaseDesignImagesFromFolder(payload) {
-  try {
-    payload = payload || {};
-    verifyNasWatcherServiceKey_(payload.serviceKey);
-
-    const caseId = String(payload.caseId || '').trim();
-    const round = Number(payload.round);
-    const folderLink = String(payload.folderLink || '').trim();
-    if (!caseId) throw new Error('缺少案件編號');
-    if (!Number.isFinite(round) || round < 0) throw new Error('缺少修改輪次（0=初稿）');
-    if (!folderLink) throw new Error('缺少來源資料夾連結');
-    if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) {
-      throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID，請先在 Drive 建立母資料夾並填入 ID');
-    }
-
-    const sourceFolderId = extractDriveFolderId_(folderLink);
-    if (!sourceFolderId) throw new Error('無法辨識來源資料夾連結格式');
-
-    let sourceFolder;
-    try {
-      sourceFolder = DriveApp.getFolderById(sourceFolderId);
-    } catch (openError) {
-      throw new Error('無法開啟來源資料夾，請確認連結正確且共用設定為「知道連結的人皆可查看」');
-    }
-
-    const rootFolder = DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID);
-    const destFolder = getOrCreateNestedFolder_(rootFolder, [
-      payload.designer || '未指定設計師',
-      payload.client || '未分類客戶',
-      payload.year || String(new Date().getFullYear()),
-      payload.month || String(new Date().getMonth() + 1).padStart(2, '0'),
-      caseId
-    ]);
-
-    const alreadyCopied = {};
-    const destFiles = destFolder.getFiles();
-    while (destFiles.hasNext()) {
-      const existingFile = destFiles.next();
-      const description = String(existingFile.getDescription() || '');
-      const match = description.match(/^src:(.+)$/);
-      if (match) alreadyCopied[match[1]] = true;
-    }
-
-    const newUrls = [];
-    const sourceFiles = sourceFolder.getFiles();
-    while (sourceFiles.hasNext()) {
-      const file = sourceFiles.next();
-      const fileId = file.getId();
-      if (alreadyCopied[fileId]) continue;
-
-      const mimeType = file.getMimeType() || '';
-      let newFile = null;
-      if (mimeType.startsWith('image/')) {
-        newFile = file.makeCopy(file.getName(), destFolder);
-      } else if (mimeType.startsWith('video/')) {
-        const thumbnail = file.getThumbnail();
-        if (!thumbnail) {
-          console.warn('影片尚無縮圖，略過：' + file.getName());
-          continue;
-        }
-        newFile = destFolder.createFile(thumbnail).setName(file.getName() + '.jpg');
-      } else {
-        continue;
-      }
-
-      newFile.setDescription('src:' + fileId);
-      try {
-        newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch (sharingError) {
-        console.warn('案件設計圖分享設定失敗', sharingError);
-      }
-      newUrls.push(createUploadedImageUrl_(newFile.getId()));
-    }
-
-    if (!newUrls.length) {
-      return {
-        success: true,
-        caseId: caseId,
-        round: round,
-        count: 0,
-        imageUrls: [],
-        folderUrl: createFolderUrl_(destFolder.getId()),
-        message: '沒有新的圖片或截圖'
-      };
-    }
-
-    const databaseSync = callMainAppJsonAction_('addCaseDesignImages', {
-      serviceKey: payload.serviceKey,
-      caseId: caseId,
-      round: round,
-      images: newUrls,
-      source: 'drive-folder-link'
-    });
-
-    return {
-      success: true,
-      caseId: caseId,
-      round: round,
-      count: newUrls.length,
-      imageUrls: newUrls,
-      folderUrl: createFolderUrl_(destFolder.getId()),
-      jsonRevision: databaseSync.jsonRevision || 0,
-      githubCommitSha: databaseSync.githubCommitSha || ''
-    };
-  } catch (error) {
-    console.error(error);
-    return { success: false, message: error.message || '設計圖同步失敗' };
-  }
 }
 
 /**

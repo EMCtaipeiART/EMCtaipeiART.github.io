@@ -186,6 +186,34 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-12 Asia/Taipei（再更晚之後又一次）— 實測發現「來源用 Drive 連結」的前提不成立，改回 NAS 路徑＋復原本機監控程式（案件清單改動態產生）
+
+- 修改目的：上一則把「過稿中自動抓圖」的來源改成「設計師貼 Google Drive 資料夾連結」，部署後使用者用真實案件 `26080059` 實測，回報「填入資料也給了連結，後續沒有在修改列表中看到第一筆圖片的產生」。追查發現兩個問題：①使用者貼的其實是 NAS 路徑（`smb://EMCNAS_Prod.../設計部/專案企劃部/.../案件資料夾`），不是 Drive 連結；②即使是 Drive 連結，直接對 Apps Script 網址 `curl` 測試也收到 Google 的 HTML 頁面而不是 JSON，代表 Web App 部署設定當時也還沒到位。使用者當場明確表示希望的方式其實是：「設計師直接貼上 NAS 路徑（例如 `/設計部/專案企劃部/執行中/Epson/FB發文圖檔/2026/8月/260811_Epson_V4000UV印刷機發表會`），爬蟲自動判定，之前測試也抓得到資料」——這代表上一則「Worker→Apps Script 直接抓 Drive 資料夾」的整條路線，**技術前提從一開始就不成立**：Apps Script 跑在 Google 雲端沙箱，完全連不到公司內網 NAS，這不是部署設定問題，是硬限制；只有跑在使用者自己 Mac 上、對內網有連線能力的程式才碰得到 NAS，也就是回到[[2026-08-12（更晚）被刪掉的本機監控程式|更早一次被整個刪掉的 scripts/nas_design_image_watcher.mjs]]。這是同一個功能（過稿中自動記錄設計圖）**第三次調整方向**：NAS 背景監控程式（手動維護案件對照表）→ 互動式詢問 Drive 連結（Worker 直接呼叫 Apps Script）→ 這次：互動式詢問 NAS 路徑＋復原本機監控程式，但案件對照表改成從即時資料動態產生，不用再手動維護設定檔。
+- 影響檔案：
+  - **拆除上一則做的東西**：`worker/src/database-coordinator.ts` 移除 `syncCaseDesignImages` action 整段；`upload/Code.gs` 移除 `syncCaseDesignImagesFromFolder`、`extractDriveFolderId_`、`doPost` 對應分支；`worker/wrangler.jsonc` 移除 `UPLOAD_APPS_SCRIPT_URL`（重新跑 `wrangler types` 更新 `worker-configuration.d.ts`）；`addCaseDesignImages` 裡上一則新增的 `sourceLabel`／`draftNote` 判斷邏輯改回原本寫死的 `'NAS 自動同步'`／`'初稿完成（NAS 自動建立）'`（source 只會是 `'nas-watcher'`，不需要分支）。
+  - **`upload/Code.gs`**：`uploadCaseDesignImages` 函式簽章新增 `designer`／`client`／`year`／`month`（本機監控程式算好後隨每次上傳一起傳進來），改呼叫上一則寫的 `getOrCreateNestedFolder_(root,[designer,client,year,month,caseId])` 建立巢狀目的地資料夾（這個函式本身**保留沿用**，只是換了呼叫端），刪除舊的扁平版 `getOrCreateCaseDesignImageFolder_`。
+  - **`scripts/nas_design_image_watcher.mjs`／`.config.json`／`.setup.mjs`**：從 `git show 78d7320:scripts/nas_design_image_watcher.mjs` 復原（掃描/壓縮/影片截圖/去重這些已經測過能動的核心邏輯完全沒動），改造的只有「案件從哪裡來」這段：拿掉設定檔 `projects` 陣列，`main()` 改成一開始先 `fetch(dbJsonUrl)` 一次，篩出「狀態＝過稿中 且 設計圖資料夾連結非空」的案件動態組出清單；新增 `resolveCaseFolderPath(mountRoot,rawFolderPath)` 判斷使用者填的路徑開頭是否已經包含分享名稱本身（例如 `/設計部/...`）、是的話去除重複再接到 `mountRoot`；`year`/`month` 從案件的開始日期算；輪次判斷合併進同一次 fetch，不再另外發請求；上傳 payload 多帶 `designer`/`client`/`year`/`month` 四欄。`setup.mjs`（NAS 掛載偵測/自動連線）不依賴 `projects`，原封不動復原。`config.json` 拿掉 `projects`，`dbJsonUrl` 改成必填。
+  - **`.gitignore`**：加回 `scripts/nas_design_image_watcher.state/`／`scripts/nas_design_image_watcher.secrets.json` 兩行。
+  - **`scripts/nas_design_image_watcher.README.md`**：整份重寫，拿掉「手動維護 projects 清單」的段落，新增案件清單動態產生的說明、排程執行段落（`crontab`／`launchd` 兩種範例，呼應使用者確認要「背景定時輪詢」）、更新開通自動上傳步驟（Drive 母資料夾已完成、`uploadCaseDesignImages` 簽章改了需要重新部署 Apps Script）與已測試/未測試段落。
+  - **`index.html`**：`openDesignImageFolderPrompt` 改成單純呼叫既有的 `updateCaseRow(id,{designImageFolderUrl:path},...)` 存路徑（不再呼叫任何同步 API），標題/說明文字與 placeholder 改成 NAS 路徑格式；移除 `triggerDesignImageSync` 函式整個；`confirmModificationRecord` 裡呼叫它的那一行移除（現在抓不抓得到新一輪圖片完全交給背景監控程式自己判斷輪次，前端不用主動觸發任何東西）；`openStatusEditor` 過稿中分支只保留「沒有連結時跳出視窗」，移除「已有連結就直接同步」那段。
+- 影響功能：設計師標記過稿中時，如果案件還沒設定過來源資料夾，會跳出視窗要求填寫 **NAS 路徑**（不是 Drive 連結）；填了或跳過，狀態都照樣立刻改成過稿中（這個行為跟上一則一樣沒變）。真正的抓圖動作完全交給使用者 Mac 上背景執行的監控程式，每次執行會自己讀最新的案件資料庫，找出所有「過稿中且已填路徑」的案件（不用像最早那版一樣手動在設定檔逐筆維護），依輪次判斷該不該上傳、上傳到哪個 Drive 巢狀資料夾。
+- 風險區塊：
+  - **這是三次調整中，第一次有機會用「已知會動」的核心邏輯**——`scanProject`/`buildPreview`/影片截圖/去重這些函式，在更早一次工作中就已經用假指令+假 HTTP 伺服器測過八種情境全部正確，這次只是換了「案件從哪裡來」這一小段，核心風險比前兩次都低。但**這次同樣沒有連過真正的 NAS**，`qlmanage`/`sips` 的真實執行效果、真的把圖傳上 Google Drive、真的在 Drive 裡看到巢狀資料夾結構，都還是只能靠使用者自己在 Mac 上跑過一次才能確認——這點在三次嘗試裡完全沒有變過，是這支工具本質上的驗證邊界（Cowork/Claude Code 這個對話環境連不到公司內網，也沒有 macOS 專屬指令）。
+  - **`resolveCaseFolderPath` 的「去除重複分享名稱」判斷是新邏輯**，只用假資料測過兩種情況（路徑開頭含分享名稱、路徑是純相對路徑），使用者實際貼的路徑格式如果跟這兩種假設不同（例如中間夾雜大小寫不一致的分享名稱、或路徑用反斜線），可能解析錯誤——已經用 `path.basename(mountRoot)` 做**精確字串比對**（不是模糊比對），這代表如果分享名稱大小寫或全半形跟 `mountRoot` 設定不完全一致，會判斷成「不含分享名稱」而整段當相對路徑接上去，導致路徑多一層、資料夾找不到；發生時錯誤訊息會清楚寫「找不到資料夾」而不是靜默失敗，使用者可以直接比對訊息裡印出的完整路徑看出問題在哪。
+  - **`uploadCaseDesignImages` 這次改了函式簽章（新增必填的 designer/client/year/month 概念，缺的話會 fallback 成「未指定設計師」/「未分類客戶」/系統當下年月，不會整個失敗）**，代表舊版部署的 Apps Script 完全不相容，**一定要重新部署**才能用；使用者上一輪已經回報過「Apps Script 網址收到 HTML 不是 JSON」，這次的 README 新增了明確的 `curl` 驗證指令，協助使用者自己確認部署設定是否正確，而不是又要等下一次實測才發現。
+- 已檢查／驗證方式：
+  - `upload/Code.gs`：`node --check` 語法檢查通過；確認移除 `syncCaseDesignImagesFromFolder`/`extractDriveFolderId_`/`getOrCreateCaseDesignImageFolder_` 後沒有任何殘留呼叫（`grep` 全檔案確認）。
+  - `scripts/nas_design_image_watcher.mjs`：`node --check` 語法檢查通過；用假的 `sips`／`qlmanage`（放進暫存 bin 目錄、加進 `PATH`）＋本機 Node HTTP 伺服器模擬 `dbJsonUrl`（回傳含 4 種案件：過稿中+已填路徑×2、執行中未過稿、過稿中但未填路徑）與 Apps Script 上傳端點，完整測過：案件清單正確只動態抓出 2 筆該抓的案件（另外 2 筆正確被排除）、路徑開頭含分享名稱「設計部」與純相對路徑兩種寫法都正確解析到同一層掃描目錄、影片正確產生預覽圖、第 0 輪正確上傳且上傳 payload 正確帶上 designer/client/year/month（`{"caseId":"TESTCASE1","round":0,"designer":"Machi","client":"Epson","year":"2026","month":"08",...}` 這類）、同一輪重跑正確略過不重複上傳、`修改統計表` 出現第 1 輪紀錄後重跑正確只上傳新增的那 1 個檔案（不重傳第 0 輪已經傳過的 2 個）。全部用完即刪，沒有留下任何暫存檔案在正式目錄。
+  - `worker/`：`npx tsc --noEmit` 無錯、`npx vitest run` 6/6（跟拆除前後數量一致，代表沒有測試依賴被刪掉的 action）。
+  - `backend/`：`node --test backend/test/*.test.mjs` 22/22。
+  - `index.html`：兩段 `<script>` 語法檢查通過；本機靜態伺服器＋ Browser pane 載入真實正式站資料（全程 stub 掉 `sheetApi`，沒有真的打任何網路請求／沒有寫入任何資料）逐一驗證：沒存過路徑時標記過稿中會立刻變更狀態＋跳出視窗且文案/placeholder 已改成 NAS 路徑格式、送出後正確呼叫既有的 `update` action（沒有呼叫任何已刪除的 sync action）、已存過路徑時標記過稿中只呼叫狀態更新、不再跳出視窗（因為現在完全交給背景監控程式處理，不需要前端主動同步）。
+- 部署狀態：
+  - `backend/schema.mjs`（沿用既有欄位，這次沒改）、`index.html`、`.gitignore`、`scripts/nas_design_image_watcher.*`、`CLAUDE.md` 純前端／本機工具檔案，git push 後自動生效／本機直接可用。
+  - `worker/` 這次由我在使用者的 Mac 上直接執行 `wrangler deploy` 完成部署（不需要重設 `NAS_WATCHER_API_KEY`，沿用上一輪已經設定好的值）。
+  - `upload/Code.gs` 仍然只能使用者手動部署——這次 `uploadCaseDesignImages` 簽章改了，**一定要重新部署**新版本才會生效；部署後請用 README 裡新增的 `curl` 指令自行驗證有沒有收到 JSON（不是 Google 登入/警告頁面）。
+  - `scripts/nas_design_image_watcher.*` 純本機工具，需要使用者在自己 Mac 上執行或排程（README 新增了 `crontab`／`launchd` 兩種排程範例），我這裡連不到公司內網 NAS，沒辦法代為執行或驗證。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-12 Asia/Taipei（再更晚之後）— 過稿中改成互動式詢問來源資料夾連結，取代前一則的 NAS 背景監控程式方向
 
 - 修改目的：上一則「NAS 資料夾監控程式」是根據使用者當時在另一個對話（Codex/「project」）討論出的規劃寫的，本機已經 commit（`78d7320`）但尚未 push。這次使用者直接在本對話重新描述了實際想要的流程，經追問確認後發現跟已寫好的版本方向不同：不是背景程式每 5-10 分鐘輪詢、案件要先在設定檔手動維護「案件編號→NAS路徑」對照表，而是**設計師把案件狀態改成「過稿中」時，即時跳出視窗詢問該案件的設計圖來源 Google Drive 資料夾連結**，系統依此抓圖／截圖上傳「第一版」；之後每次設計師在修改紀錄按「確認」，系統用同一個來源連結自動抓一批新圖歸到新的一輪。跟使用者逐項確認三個關鍵決定：①來源資料夾連結是設計師手動貼上（系統不會自動猜工作資料夾在哪）；②目的地資料夾（依 設計師/客戶別/年度/月份/案件編號 分類存放）完全由系統自動算路徑、自動建立，不問；③案件狀態改成「過稿中」這個核心操作不能被擋——沒填來源連結就先跳過抓圖，狀態照樣改，之後可以再補。

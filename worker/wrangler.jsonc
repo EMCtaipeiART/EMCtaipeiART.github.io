@@ -18,8 +18,7 @@
     "ERP_CLIENT_ID": "oauth_n3gUqm5r84Mu",
     "ERP_REDIRECT_URI": "https://emctaipeiart.github.io",
     "ADMIN_LOGIN_ACCOUNTS": "machi.chen@emctaipei.com",
-    "SESSION_TTL_SECONDS": "2592000",
-    "UPLOAD_APPS_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec"
+    "SESSION_TTL_SECONDS": "2592000"
   },
   "secrets": {
     "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD", "NAS_WATCHER_API_KEY"]
