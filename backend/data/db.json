@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 551,
+  "revision": 552,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T11:14:51.720Z",
+  "updatedAt": "2026-08-12T11:16:17.510Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18574,6 +18574,18 @@
           "圖片連結": "[{\"fileName\":\"260806_Epson_LW新手爸媽_IG_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DFY1wwuKMOG6qZdbpLar4N32Txnccwqh=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/12 19:02:32"
+        },
+        {
+          "案件編號": "26080060",
+          "修改次數": "0",
+          "建立日期": "2026/08/12 19:16:17",
+          "修改日期": "2026/08/12 19:16:17",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/12 19:16:17",
+          "圖片連結": "[{\"fileName\":\"260717_ANKER_A1665_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1arsaNsF2Eksa0NQ9pq6_h4no8tA2wuJG=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hDUdFX10H6DaKFYVNYY--lPxAwAsBKeV=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WadSVXUAI3LkPbUhNmh6k5Vs9cKZ8h-e=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Q-jH5x3ymX3cqerDY1kRRGPtPbwUMOsv=w1600\"},{\"fileName\":\"260722_ANKER_A1665_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QTFukS0d48jQr39GXisCz8Bq0MRKCLUM=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/12 19:16:17"
         }
       ]
     },
