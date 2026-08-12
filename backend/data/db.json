@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 376,
+  "revision": 377,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:23:16.131Z",
+  "updatedAt": "2026-08-12T04:27:24.051Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18536,6 +18536,15 @@
           "修改內容": "拍寫客戶臨時調整優惠，有幾處要麻煩改改，\n感恩感恩！\n（因為 BN 變多一張，設計系統我 +1 了）\n\nhttps://emctaipeiart.github.io/a/26080033",
           "修改人": "李明庭",
           "確認修正日": "2026/08/12 11:49:49"
+        },
+        {
+          "案件編號": "26080033",
+          "修改次數": "2",
+          "建立日期": "2026/08/12 12:27:24",
+          "修改日期": "2026-08-12",
+          "修改內容": "感謝大神支援！\nDJI 兩版 A4，各有小地方沒改到，再麻煩哥：\n\nhttps://emctaipeiart.github.io/a/26080033",
+          "修改人": "李明庭",
+          "確認修正日": ""
         }
       ]
     },
