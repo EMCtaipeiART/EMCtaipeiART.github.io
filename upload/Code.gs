@@ -399,13 +399,14 @@ function uploadCaseDesignImages(payload) {
     ]);
     const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-    const uploadedUrls = images.map(function (image) {
+    const uploadedImages = images.map(function (image) {
       image = image || {};
       const mimeType = String(image.mimeType || '').trim();
       if (!mimeType.startsWith('image/')) {
         throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
       }
 
+      const originalFileName = String(image.fileName || '').trim();
       const extension = getExtension_(image.fileName, mimeType);
       const finalFileName = createFileName_(image.fileName || 'case-image', extension);
       const base64Content = removeDataUrlPrefix_(image.base64 || '');
@@ -426,14 +427,18 @@ function uploadCaseDesignImages(payload) {
         console.warn('案件設計圖分享設定失敗', sharingError);
       }
 
-      return createUploadedImageUrl_(file.getId());
+      // fileName 保留呼叫端傳入的原始檔名（不是 finalFileName 這個時間戳記+
+      // 亂碼尾綴過的 Drive 內部檔名），讓主系統能依原始檔名對照「這輪要抓
+      // 哪些指定圖片」，Drive 上實際存的檔名跟這個身份用途無關。
+      return { fileName: originalFileName, url: createUploadedImageUrl_(file.getId()) };
     });
+    const uploadedUrls = uploadedImages.map(function (item) { return item.url; });
 
     const databaseSync = callMainAppJsonAction_('addCaseDesignImages', {
       serviceKey: payload.serviceKey,
       caseId: caseId,
       round: round,
-      images: uploadedUrls,
+      images: uploadedImages,
       source: payload.source || 'nas-watcher'
     });
 

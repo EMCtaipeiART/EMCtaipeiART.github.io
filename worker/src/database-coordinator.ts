@@ -666,11 +666,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const modifyDate = text(record.modifyDate || record['修改日期']);
       const content = text(record.content || record['修改內容']);
       const modifier = text(session?.user || record.modifier || record.owner || record['修改人'] || record['專案負責人']);
+      const targetImages = unique((Array.isArray(record.targetImages) ? record.targetImages : []).map(text).filter(Boolean));
       if (!caseId || !modifyDate || !content || !modifier) throw new Error('案件編號、修改日期、修改內容與修改人皆為必填');
       return this.mutate(action, session, draft => {
         const rows = draft.tables['修改統計表'].rows;
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
-        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '' };
+        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         return { result: { ok: true, action, rowNumber: rows.length + 1, record: row, count }, changedTables: ['修改統計表'] };
       });
@@ -696,7 +697,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       const caseId = text(payload.caseId || payload.id || payload['案件編號']);
       const roundNumber = Math.trunc(Number(payload.round ?? payload['修改次數']));
-      const images = (Array.isArray(payload.images) ? payload.images : []).map(text).filter(isHttpUrl);
+      const images = (Array.isArray(payload.images) ? payload.images : [])
+        .map(item => (item && typeof item === 'object' && !Array.isArray(item))
+          ? { fileName: text((item as Row).fileName), url: text((item as Row).url) }
+          : { fileName: '', url: text(item) })
+        .filter(item => isHttpUrl(item.url));
       const source = text(payload.source) || (serviceAuthorized ? 'nas-watcher' : 'manual');
       if (!caseId) throw new Error('缺少案件編號');
       if (!Number.isFinite(roundNumber) || roundNumber < 0) throw new Error('缺少修改輪次（0=初稿）');
@@ -722,12 +727,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           };
           rows.push(row);
         }
-        let existing: string[] = [];
+        let existing: { fileName: string; url: string }[] = [];
         try {
           const parsed = JSON.parse(text(row['圖片連結']) || '[]');
-          if (Array.isArray(parsed)) existing = parsed.map(text).filter(isHttpUrl);
+          if (Array.isArray(parsed)) {
+            existing = parsed
+              .map(item => (item && typeof item === 'object' && !Array.isArray(item))
+                ? { fileName: text((item as Row).fileName), url: text((item as Row).url) }
+                : { fileName: '', url: text(item) })
+              .filter(item => isHttpUrl(item.url));
+          }
         } catch { existing = []; }
-        const merged = unique([...existing, ...images]);
+        const seenUrls = new Set<string>();
+        const merged: { fileName: string; url: string }[] = [];
+        for (const item of [...existing, ...images]) {
+          if (seenUrls.has(item.url)) continue;
+          seenUrls.add(item.url);
+          merged.push(item);
+        }
         row['圖片連結'] = JSON.stringify(merged);
         row['圖片來源'] = source;
         row['圖片更新時間'] = now;
@@ -941,8 +958,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (primaryKey) {
           const key = text(expected[primaryKey] || incoming[primaryKey] || payload.key);
           index = target.rows.findIndex(row => text(row[primaryKey]) === key);
-        } else index = Number(payload.rowNumber || expected._rowNumber) - 2;
-        if (index < 0 || index >= target.rows.length) throw new Error(`找不到要${action === 'adminTableDelete' ? '刪除' : '編輯'}的資料`);
+        } else index = Number(payload.rowNumber || expected._rowNumber || payload.key) - 2;
+        if (!Number.isInteger(index) || index < 0 || index >= target.rows.length) throw new Error(`找不到要${action === 'adminTableDelete' ? '刪除' : '編輯'}的資料`);
         if (Object.keys(expected).length) {
           const currentRow = target.rows[index];
           const changed = target.headers.some(header => text(expected[header]) !== text(currentRow[header]));

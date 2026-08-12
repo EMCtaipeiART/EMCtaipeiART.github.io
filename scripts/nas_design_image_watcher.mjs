@@ -354,6 +354,24 @@ function computeRound(dbData, caseId) {
     .reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0);
 }
 
+/**
+ * 讀這個案件這一輪的「待修改圖片」清單（PM 填修改需求時勾選的檔名）。
+ * 沒有紀錄、或清單是空的，回傳 null（代表這輪不限制，抓所有變動）。
+ */
+function computeTargetImages(dbData, caseId, round) {
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const row = rows.find(item => String(item['案件編號'] || '') === caseId && (Number(item['修改次數']) || 0) === round);
+  if (!row) return null;
+  const raw = String(row['待修改圖片'] || '').trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed.map(String) : null;
+  } catch {
+    return null;
+  }
+}
+
 function computeYearMonth(startDateText) {
   const match = /^(\d{4})[-/](\d{1,2})/.exec(startDateText || '');
   const now = new Date();
@@ -368,7 +386,7 @@ async function uploadRound({ config, secrets, caseId, round, designer, client, y
   for (const item of pendingPreviews) {
     const buffer = await fs.readFile(item.previewPath);
     images.push({
-      fileName: path.basename(item.previewPath),
+      fileName: path.basename(item.relPath),
       mimeType: 'image/jpeg',
       base64: buffer.toString('base64')
     });
@@ -470,21 +488,31 @@ async function main() {
     if (canUpload) {
       try {
         const round = computeRound(dbData, result.caseId);
+        const targetImages = computeTargetImages(dbData, result.caseId, round);
+        let targetedPreviews = result.pendingPreviews;
+        if (targetImages) {
+          const targetSet = new Set(targetImages);
+          targetedPreviews = result.pendingPreviews.filter(item => targetSet.has(path.basename(item.relPath)));
+          const skipped = result.pendingPreviews.length - targetedPreviews.length;
+          if (skipped > 0) {
+            console.log(`  [輪次判斷] 這輪只鎖定 ${targetImages.length} 張指定圖片，資料夾內其餘 ${skipped} 個變動已略過`);
+          }
+        }
         if (round === result.nextState.lastCapturedRound) {
           console.log(`  [輪次判斷] 第 ${round} 輪已經抓取過，略過`);
-        } else if (!result.pendingPreviews.length) {
-          console.log(`  [輪次判斷] 案件已進入第 ${round} 輪過稿中，但資料夾裡沒有偵測到任何新的圖片/影片可上傳`);
+        } else if (!targetedPreviews.length) {
+          console.log(`  [輪次判斷] 案件已進入第 ${round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`);
         } else {
           const { year, month } = computeYearMonth(project.start);
-          console.log(`  [上傳] 第 ${round} 輪，${result.pendingPreviews.length} 張預覽圖上傳中...`);
+          console.log(`  [上傳] 第 ${round} 輪，${targetedPreviews.length} 張預覽圖上傳中...`);
           const uploadResult = await uploadRound({
             config, secrets, caseId: result.caseId, round,
             designer: project.designer, client: project.client, year, month,
-            pendingPreviews: result.pendingPreviews
+            pendingPreviews: targetedPreviews
           });
           console.log(`  [上傳完成] 已寫入 ${uploadResult.count} 張圖片，案件修訂版 ${uploadResult.jsonRevision}`);
           const files = nextState[result.caseId].files;
-          for (const item of result.pendingPreviews) {
+          for (const item of targetedPreviews) {
             if (files[item.relPath]) files[item.relPath].assignedRound = round;
           }
           nextState[result.caseId].lastCapturedRound = round;
