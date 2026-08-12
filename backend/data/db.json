@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 610,
+  "revision": 611,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T15:40:30.156Z",
+  "updatedAt": "2026-08-12T15:40:33.507Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17176,7 +17176,8 @@
           "加權": "2",
           "案件編號": "26080056",
           "月份": "8月",
-          "項目細節": "2D 動畫"
+          "項目細節": "2D 動畫",
+          "設計圖資料夾連結": "/設計部/專案企劃部/執行中/Epson/FB發文圖檔/2026/8月/260811_Epson_V4000UV印刷機發表會"
         },
         {
           "客戶別": "soundcore",
