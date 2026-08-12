@@ -9095,6 +9095,9 @@ function renderModifyRecent(){
     fixedTable.style.setProperty('width',`${fixedWidth}px`,'important');
     fixedTable.style.setProperty('min-width',`${fixedWidth}px`,'important');
     fixedTable.style.tableLayout='fixed';
+    const shell=document.querySelector('#modifyRecent'), fixedWrap=document.querySelector('#modifyRecent .modify-fixed');
+    if(shell)shell.style.setProperty('grid-template-columns',`${fixedWidth}px minmax(0,1fr)`,'important');
+    if(fixedWrap)fixedWrap.style.setProperty('border-right',fixedWidth?'':'0','important');
   }
   if(table){
     table.style.setProperty('width',`${targetWidth}px`,'important');
