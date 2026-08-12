@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 565,
+  "revision": 566,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T11:37:36.953Z",
+  "updatedAt": "2026-08-12T11:37:47.938Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18522,18 +18522,6 @@
           "圖片連結": "[{\"fileName\":\"260806_Epson_LW新手爸媽_IG_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DFY1wwuKMOG6qZdbpLar4N32Txnccwqh=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/12 19:02:32"
-        },
-        {
-          "案件編號": "26080060",
-          "修改次數": "0",
-          "建立日期": "2026/08/12 19:16:17",
-          "修改日期": "2026/08/12 19:16:17",
-          "修改內容": "初稿完成（NAS 自動建立）",
-          "修改人": "NAS 自動同步",
-          "確認修正日": "2026/08/12 19:16:17",
-          "圖片連結": "[{\"fileName\":\"260717_ANKER_A1665_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1arsaNsF2Eksa0NQ9pq6_h4no8tA2wuJG=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hDUdFX10H6DaKFYVNYY--lPxAwAsBKeV=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WadSVXUAI3LkPbUhNmh6k5Vs9cKZ8h-e=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Q-jH5x3ymX3cqerDY1kRRGPtPbwUMOsv=w1600\"},{\"fileName\":\"260722_ANKER_A1665_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QTFukS0d48jQr39GXisCz8Bq0MRKCLUM=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ObLvuGIcXAwqW_hKM-RSwyJCRWLsAtfe=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yQgGO75Fzj4C3rAJjHm-NY8v1EQq_pSq=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RzHxusMaYooLAVtFCvkA6fr0JEil_g6S=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1utW2vWWTx5LT2UHljPk75SO45r1Mlieg=w1600\"},{\"fileName\":\"260722_ANKER_A1665_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/16QfIoiR2p4ZoCwtK2WkH3kROx_0aAv8a=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Vjuc8skb3XWgtaPSv9u-vJcgFXmvig3d=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1imO1H7MRqpXvsad_1uhhHKxi8_A4CViQ=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ox3iZ3FJxJwKE-JLGtxyZTTKZWgIfPIT=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1N6tuasZcX_WN1dn2WDn9VrLHtPnWKT9J=w1600\"},{\"fileName\":\"260722_ANKER_A1665_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iw6FLxtswdy-WXEcgtlLwUiK333P-4XN=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ziTGkYSpyQNOIrBTgl_7I1el-ecHjpGU=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1H7AEy8N4SWZMVwJB0fLdhXdkyy5xP7mD=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QMvj-NXoIy6T1Rzwml3AEeNl7cQhlyW9=w1600\"},{\"fileName\":\"260717_ANKER_A1665_蝦皮_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GExrhPqm0pZKBRiSDU3IzZtkmPsvAQod=w1600\"},{\"fileName\":\"260722_ANKER_A1665_蝦皮.png\",\"url\":\"https://lh3.googleusercontent.com/d/11gpknroxvcFej9iRJD7qVEi828VYvhfT=w1600\"}]",
-          "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/12 19:19:19"
         }
       ]
     },
