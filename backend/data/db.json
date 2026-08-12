@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 447,
+  "revision": 448,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T08:16:31.847Z",
+  "updatedAt": "2026-08-12T08:17:05.516Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -13190,7 +13190,7 @@
           "結束日期": "2026/08/11",
           "設計負責人": "Leona",
           "項目細節": "",
-          "狀態": "未開始",
+          "狀態": "已取消",
           "加權": "",
           "填單時間": "",
           "時間標記": "",
