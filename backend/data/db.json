@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 622,
+  "revision": 623,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T23:37:42.517Z",
+  "updatedAt": "2026-08-12T23:38:46.798Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19298,8 +19298,8 @@
           "對話框": "",
           "新專案輪值": "",
           "篩選年份": "2026",
-          "篩選月份": "",
-          "篩選狀態": "未開始",
+          "篩選月份": "8 月",
+          "篩選狀態": "執行中",
           "篩選姓名": "",
           "選擇": "v",
           "案件編號": 1,
