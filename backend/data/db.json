@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 366,
+  "revision": 376,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T03:56:24.249Z",
+  "updatedAt": "2026-08-12T04:23:16.131Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18526,7 +18526,7 @@
           "修改日期": "2026/8/11",
           "修改內容": "移除手機要素",
           "修改人": "吳冠賢",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 12:16:13"
         },
         {
           "案件編號": "26080033",
@@ -18820,7 +18820,7 @@
           "項目細節": 3,
           "修改": 5,
           "主旨": "",
-          "操作": 7,
+          "操作": "",
           "時間表": "v",
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
@@ -19316,7 +19316,7 @@
           "頭像連結": "https://drive.google.com/thumbnail?id=17s3siM6vSsHemBQdE8T8WxbTfMqOkJcR&sz=w1000",
           "頭像大圖連結": "",
           "分享音樂": "",
-          "音樂起始秒數": "",
+          "音樂起始秒數": "0",
           "技能": "",
           "對話框": "",
           "新專案輪值": "",
@@ -19331,16 +19331,16 @@
           "專案名稱": "4",
           "專案負責人": "5",
           "設計種類": "",
-          "階段": "7",
-          "數量": "8",
-          "開始": "9",
-          "結束": "10",
-          "設計負責人": "11",
-          "狀態": "12",
-          "項目細節": "13",
-          "修改": "14",
-          "主旨": "15",
-          "操作": "16",
+          "階段": "6",
+          "數量": "7",
+          "開始": "8",
+          "結束": "9",
+          "設計負責人": "10",
+          "狀態": "15",
+          "項目細節": "11",
+          "修改": "12",
+          "主旨": "13",
+          "操作": "14",
           "時間表": "v",
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
@@ -22034,6 +22034,13 @@
           "項目細節": "素材備份",
           "權重": "1",
           "備註": ""
+        },
+        {
+          "設計種類": "平面",
+          "階段": "提案",
+          "項目細節": "測試專用",
+          "權重": "5",
+          "備註": ""
         }
       ]
     },
@@ -22722,6 +22729,15 @@
           "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
           "功能權限": "[\"request.create\",\"request.edit\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
           "更新時間": "2026-08-11 18:36",
+          "更新者": "Machi"
+        },
+        {
+          "帳號": "test.user@emctaipei.com",
+          "角色範本": "一般使用者",
+          "狀態": "啟用",
+          "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"request.mail\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-12 12:14",
           "更新者": "Machi"
         }
       ]
@@ -23580,6 +23596,39 @@
           "designer": "Machi",
           "platforms": "Facebook, Instagram",
           "submittedAt": "2026/08/11 23:37",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "_sheetRow": 616,
+          "sheetRow": 616
+        }
+      },
+      "6b861685-e557-42ce-9e01-e650b71d5eb0": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 616,
+        "row": {
+          "id": "26080059",
+          "month": "8月",
+          "client": "測試",
+          "project": "測試",
+          "owner": "Machi",
+          "type": "平面",
+          "stage": "提案",
+          "qty": 1,
+          "start": "2026/08/14",
+          "end": "2026/08/28",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/12 12:19",
           "briefNote": "",
           "briefUrl": "",
           "assetNote": "",
