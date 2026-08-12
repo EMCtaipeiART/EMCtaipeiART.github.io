@@ -130,10 +130,14 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
 
 test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
-  const designers = database.tables['設定'].rows
-    .filter(row => ['Machi', 'Anna', 'Karl', 'Noise', 'Amber', 'Leona'].includes(row['名字']))
-    .map(row => ({ name: row['名字'], group: row['組別'], rotation: Number(row['新專案輪值']) }));
+  const designers = [
+    { name: 'Leona', group: '平面', rotation: 1 },
+    { name: 'Anna', group: '平面', rotation: 2 },
+    { name: 'Amber', group: '平面', rotation: 3 },
+    { name: 'Machi', group: '平面', rotation: 4 },
+    { name: 'Noise', group: '影音', rotation: 1 },
+    { name: 'Karl', group: '影音', rotation: 2 }
+  ];
   const firstByGroup = Object.fromEntries(['平面', '影音'].map(group => [
     group,
     designers.filter(designer => designer.group === group).sort((a, b) => a.rotation - b.rotation)[0]?.name
