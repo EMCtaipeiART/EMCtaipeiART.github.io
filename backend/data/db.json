@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 369,
+  "revision": 370,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:14:53.989Z",
+  "updatedAt": "2026-08-12T04:16:13.387Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18526,7 +18526,7 @@
           "修改日期": "2026/8/11",
           "修改內容": "移除手機要素",
           "修改人": "吳冠賢",
-          "確認修正日": ""
+          "確認修正日": "2026/08/12 12:16:13"
         },
         {
           "案件編號": "26080033",
