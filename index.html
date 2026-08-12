@@ -7755,7 +7755,7 @@ async function loadIssueReports({background=false}={}){
     let loaded;
     try{
       const data=await sheetApi('listIssueReports',{_requireResponse:true});
-      loaded=Array.isArray(data.rows)?data.rows.map(report=>normalizeIssueReport(report)):[];
+      loaded=Array.isArray(data.reports)?data.reports.map(report=>normalizeIssueReport(report)):[];
     }catch(apiError){
       console.warn('Cloudflare Worker 回報列表讀取失敗，改用公開 JSON 備援',apiError);
       loaded=await fetchIssueReportsFromGviz();
