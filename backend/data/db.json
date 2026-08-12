@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 385,
+  "revision": 386,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:58:50.983Z",
+  "updatedAt": "2026-08-12T04:58:54.068Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19008,7 +19008,7 @@
           "音樂起始秒數": "0",
           "技能": "平面 , 輸出",
           "對話框": "7/27-8/7離線，出國深造",
-          "新專案輪值": "1",
+          "新專案輪值": "2",
           "篩選年份": "2026年",
           "篩選月份": "8月",
           "篩選狀態": "",
