@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 542,
+  "revision": 543,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T10:49:55.708Z",
+  "updatedAt": "2026-08-12T10:59:17.753Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18523,6 +18523,18 @@
           "修改內容": "客戶回饋，表示讚的，僅一處微調，\n希望移除產品型號＋名稱（LW-C610 智慧藍牙奶茶標籤機）​\n\nFB、IG 都麻煩移除了，感謝！",
           "修改人": "李明庭",
           "確認修正日": "2026/08/12 18:44:05"
+        },
+        {
+          "案件編號": "26080059",
+          "修改次數": "0",
+          "建立日期": "2026/08/12 18:59:17",
+          "修改日期": "2026/08/12 18:59:17",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/12 18:59:17",
+          "圖片連結": "[{\"fileName\":\"260806_Epson_LW新手爸媽_01_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Lc1EbAfZiXeKE3rNy8dP58ou8WPaeY1z=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_01_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1AKu1QJ1qD_8OGN8-Y3SBULlSHLHx6Io5=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_01_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/17mb-LatgWcGx1pDwpgUUp3qHhO9TcxD8=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_01_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GYVHMk1hkPZQmHPjrA80-jFV5m2Apfnr=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_IG_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1I-AwzrZCltpZ4Xgvy3ZLX8zFukcdN5U6=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_IG_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xrIzuP_Kvm_sk1hKg7ykpl8dDM54AK2y=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_IG_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1V87ekGA3JFb12hozZzSzKmYHpoTYRepE=w1600\"},{\"fileName\":\"260806_Epson_LW新手爸媽_IG_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XTLadlp1WsZkUbiFdwjT-VIJ-ySkJDMH=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/12 18:59:17"
         }
       ]
     },
