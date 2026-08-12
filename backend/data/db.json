@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 368,
+  "revision": 369,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T04:13:56.796Z",
+  "updatedAt": "2026-08-12T04:14:53.989Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22726,11 +22726,11 @@
         },
         {
           "帳號": "test.user@emctaipei.com",
-          "角色範本": "設計師",
+          "角色範本": "一般使用者",
           "狀態": "啟用",
-          "頁面權限": "[\"request\",\"dashboard\",\"media_admin\",\"avatar_upload\",\"short_link\"]",
-          "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.export\",\"request.mail\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-12 12:13",
+          "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"request.mail\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-12 12:14",
           "更新者": "Machi"
         }
       ]
