@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 757,
+  "revision": 758,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:13:13.880Z",
+  "updatedAt": "2026-08-13T04:13:26.869Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18699,6 +18699,18 @@
           "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1XnW_1EXPVwqjoBzBNcFiyS1gqcMgLnpH=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 12:06:10"
+        },
+        {
+          "案件編號": "26070217",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 12:13:26",
+          "修改日期": "2026/08/13 12:13:26",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/13 12:13:26",
+          "圖片連結": "[{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_3D模擬.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1V2_UXG_9dzJVqZH95bsLqjiCXJOU-bmk=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_直式口碑.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1fJ38yIxGGNarYwu1BvPx95_Ne3vHo6Xi=w1600\"},{\"fileName\":\"260608_櫻花整體廚房_SP活動_動態素材.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1PWSw2hZhIT5aynAUk6bJDBzkA0wFgU0d=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_3D模擬_動態素材_v03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1woUcnF3vZ4kC-K7P4I7hLUcR7FTNzJOv=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/13 12:13:26"
         }
       ]
     },
