@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 817,
+  "revision": 818,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T05:38:02.999Z",
+  "updatedAt": "2026-08-13T06:19:46.227Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -6555,7 +6555,7 @@
           "結束日期": "2026/08/14",
           "設計負責人": "Noise",
           "項目細節": "腳本大綱",
-          "狀態": "未開始",
+          "狀態": "執行中",
           "加權": "1",
           "填單時間": "",
           "時間標記": "",
