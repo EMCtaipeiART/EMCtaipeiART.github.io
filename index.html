@@ -6781,6 +6781,10 @@
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke-linecap="round"/></svg>
   </button>
 </div>
+<div class="case-design-upload-badge" id="nasFolderBackupBadge" hidden role="status" aria-live="polite">
+  <span class="case-design-upload-badge-dot" aria-hidden="true"></span>
+  <span class="case-design-upload-badge-text" id="nasFolderBackupBadgeText">NAS 資料夾備份中...</span>
+</div>
 <script src="https://accounts.google.com/gsi/client?v=20260807-case-list-freshness-81" async defer></script>
 <script>
 const loadingText = '資料讀取中...';
@@ -7755,6 +7759,8 @@ function showCaseDesignUploadBadge(){const badge=$('#caseDesignUploadBadge'); if
 function hideCaseDesignUploadBadge(){const badge=$('#caseDesignUploadBadge'); if(badge)badge.hidden=true}
 function updateCaseDesignUploadBadge(done,total,currentFileName){const text=$('#caseDesignUploadBadgeText'); if(text)text.textContent=`設計圖上傳中 ${done}/${total}${currentFileName?`：${currentFileName}`:''}`; if($('#uploadModal')?.hidden)showCaseDesignUploadBadge()}
 function cancelCaseDesignUpload(event){event?.stopPropagation(); if(!confirm('確定要取消上傳嗎？已經上傳成功的圖片會保留，尚未上傳的檔案會捨棄。'))return; $('#uploadFrame')?.contentWindow?.postMessage({type:'machi-cancel-case-design-upload'},'*')}
+function showNasFolderBackupBadge(text){const badge=$('#nasFolderBackupBadge'), textEl=$('#nasFolderBackupBadgeText'); if(textEl&&text)textEl.textContent=text; if(badge)badge.hidden=false}
+function hideNasFolderBackupBadge(){const badge=$('#nasFolderBackupBadge'); if(badge)badge.hidden=true}
 function handleUploadFrameMessage(event){
   const modal=$('#uploadModal'),data=event.data||{};
   if(data.type==='machi-user-avatar-updated'){
@@ -7784,12 +7790,18 @@ function handleUploadFrameMessage(event){
       .catch(err=>setSync(`圖片已上傳，但畫面同步失敗，請重新整理：${err.message}`,true));
     return;
   }
+  if(data.type==='machi-nas-folder-backup-started'){
+    if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
+    nasFolderPickerBackupInProgress=true;
+    showNasFolderBackupBadge('NAS 資料夾備份中，可以繼續操作頁面其他地方...');
+    return;
+  }
   if(data.type==='machi-nas-folder-selected'){
     if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
-    const id=activeNasFolderPickerCaseId, folderPath=String(data.path||'').trim();
-    activeNasFolderPickerNonce=''; clearNasFolderPickerWatch();
+    const id=activeNasFolderPickerCaseId, folderPath=String(data.path||'').trim(), summary=String(data.summary||'').trim();
+    activeNasFolderPickerNonce=''; clearNasFolderPickerWatch(); hideNasFolderBackupBadge();
     if(!folderPath){setSync('未選擇任何資料夾',true,3000);return}
-    updateCaseRow(id,{designImageFolderUrl:folderPath},'已設定 NAS 來源資料夾');
+    updateCaseRow(id,{designImageFolderUrl:folderPath},summary||'已設定 NAS 來源資料夾');
     return;
   }
   const designerMediaMessage=data.type==='machi-designer-media-updated';
@@ -9491,10 +9503,10 @@ function openCaseDesignImageUploadModal(id,round){if(!requireAccess('media.manag
 function openCaseDesignImageSourceChooser(id,round,anchorEl){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl); fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round)}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round)})}
 const nasFolderPickerBaseUrl='http://192.168.1.64:8877/picker';
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
-let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerWatchTimer=0;
+let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerWatchTimer=0, nasFolderPickerBackupInProgress=false;
 function nasFolderPickerConfigured(){return Boolean(nasFolderPickerBaseUrl&&nasFolderPickerToken)}
-function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0}}
-function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; setSync('NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
+function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0} nasFolderPickerBackupInProgress=false}
+function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; hideNasFolderBackupBadge(); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
 function openNasFolderPicker(id,round){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); const url=new URL(nasFolderPickerBaseUrl); url.searchParams.set('caseId',row.id); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',activeNasFolderPickerNonce); url.searchParams.set('origin',location.origin); const win=window.open(url.toString(),'machiNasFolderPicker','width=520,height=640'); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 function openCaseFieldEditor(event,id,key){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const titles={type:'設計類型',stage:'階段',qty:'數量',start:'開始時間',end:'結束時間'}, title=titles[key]||'欄位', options=key==='type'?designLists.types:(key==='stage'?(designLists.stages?.[row.type]||unique(Object.values(designLists.stages||{}).flat())):[]); if(key==='type'||key==='stage'){fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><div class="option-list">${options.map(option=>`<button type="button" class="option ${row[key]===option?'active':''}" data-value="${esc(option)}"><span>${esc(option)}</span>${row[key]===option?'<b>✓</b>':''}</button>`).join('')||'<div class="empty">沒有可選項目</div>'}</div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelectorAll('[data-value]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const value=button.dataset.value, changes={[key]:value}; if(key==='type'){const stages=designLists.stages?.[value]||[]; if(stages.length&&!stages.includes(row.stage))changes.stage=stages[0]} updateCaseRow(id,changes,`已更新${title}`)})); return} const inputType=key==='qty'?'number':'date', value=key==='qty'?(row.qty??''):(row[key]||todayInputValue()); fieldPopover.innerHTML=`<h3>修改${esc(title)}</h3><form class="revision-form" id="caseFieldForm"><label>${esc(title)}<input name="value" type="${inputType}" value="${esc(value)}" ${key==='qty'?'min="0" step="1" inputmode="numeric"':''} required></label><div class="popover-actions"><button type="button" class="secondary" data-close>取消</button><button type="submit">套用</button></div></form>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('#caseFieldForm')?.addEventListener('submit',submitEvent=>{submitEvent.preventDefault(); submitEvent.stopPropagation(); const raw=submitEvent.target.elements.value.value, value=key==='qty'?Number(raw):raw; updateCaseRow(id,{[key]:value},`已更新${title}`)})}
 function modificationImagePickerHtml(pickable){if(pickable.length<2)return ''; return `<div class="revision-image-picker"><div class="revision-image-picker-header"><span>指定要修改的圖片</span><button type="button" class="secondary" data-select-all>全選</button></div><div class="revision-image-picker-grid">${pickable.map(img=>`<label class="revision-image-picker-item"><input type="checkbox" name="targetImages" value="${esc(img.fileName)}"><img src="${esc(img.url)}" alt="${esc(img.fileName)}" loading="lazy"><span>${esc(img.fileName)}</span></label>`).join('')}</div></div>`}

@@ -186,7 +186,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 資料庫後台「資料庫」表移除時間標記、過稿中自動蓋繳交時間戳、新增修改次數欄位、連結可點擊、新增結構化篩選器；備份至雲端試算表改成只覆寫同名欄位
+### 2026-08-13 Asia/Taipei（最新）— NAS 資料夾選擇器「選擇這個資料夾並備份」不再於彈出視窗內轉圈，改成主頁面右下角小提示卡片顯示進度
+
+- 修改目的：使用者回報標記過稿中、選「選擇 NAS 資料夾」跳出的彈出視窗，按下「選擇這個資料夾並備份」之後畫面會在**那個彈出視窗裡**轉圈很久（掃描＋壓縮＋上傳到 Google Drive 需要一段時間），要求改成：按下按鈕後那個視窗直接收合、不要再顯示轉圈畫面，改成回到主頁面（`index.html`）右下角出現一張跟「設計圖上傳中」同一種樣式的小提示卡片顯示進度，備份完成後小卡片自動隱藏。
+- 影響檔案：`scripts/nas_folder_picker_server.mjs`、`index.html`。
+- 影響功能：
+  1. **彈出視窗（`nas_folder_picker_server.mjs` 的 `/picker` 頁面）**：`doConfirm()` 點擊當下不再呼叫會把整個視窗畫面換成大轉圈的 `showCollapsed()`（這個函式與對應的 `.collapsed-view`／`.collapsed-spinner` CSS 已整個移除，改成一開始就用 `window.opener.postMessage({type:'machi-nas-folder-backup-started',caseId,nonce,path},origin)` 通知主頁面「備份開始了」，接著呼叫新函式 `shrinkWindowOutOfView()`（`window.resizeTo(1,1)`＋`window.moveTo(screen.availWidth,screen.availHeight)`）把視窗縮到看不到的地方——**視窗本身沒有真的關閉，只是縮小移到螢幕外**，因為 fetch 請求是綁在這個瀏覽器分頁的生命週期上，如果直接 `window.close()`，瀏覽器會連帶把還在進行中的 `/api/confirm` 請求（也就是真正在跑的掃描＋上傳）一起取消掉，備份就會做到一半中斷。原本的「選擇這個資料夾並備份」／「取消」兩顆按鈕在點擊當下會先停用並顯示一行忙碌狀態文字（`背景備份中，可以忽略或縮小這個視窗...`），當作 `resizeTo`／`moveTo` 在某些瀏覽器環境下可能被忽略時的備援畫面，不會讓使用者對著完全沒反應的畫面發呆。備份成功時，直接把備份摘要（`已立即備份 N 張圖片（第 X 輪）` 或 `資料夾已登記...`）一併塞進最終回傳給主頁面的 `machi-nas-folder-selected` 訊息（新增 `summary` 欄位），視窗本身不再顯示「即將關閉...」這類過場文字，直接 `window.close()`；備份請求本身失敗（token 不對、路徑不存在這類「請求層級」錯誤，跟先前「備份失敗不擋路徑登記」的既有分野一致，這次沒有改變）時，新函式 `restoreWindowForPrompt()` 會把視窗還原回原本的 520×640 大小＋置中位置並 `focus()`，讓使用者能看到需要互動的錯誤提示框（重試／仍然登記路徑／取消）——只有這個真的需要使用者決定的情境，視窗才會重新出現在螢幕上。
+  2. **主頁面（`index.html`）新增右下角「NAS 資料夾備份中」小提示卡片**：新增 `#nasFolderBackupBadge`（沿用既有 `.case-design-upload-badge` 的圓角白底卡片樣式，跟原本「設計圖上傳中」是同一種視覺語言，只是這次沒有取消按鈕——備份是在另一個獨立視窗裡進行，主頁面沒有簡單乾淨的方式可以中途取消它），新增 `showNasFolderBackupBadge(text)`／`hideNasFolderBackupBadge()` 兩個輔助函式。`handleUploadFrameMessage()` 新增處理 `machi-nas-folder-backup-started` 訊息（比對 `nonce` 正確才處理，避免過期/偽造訊息誤觸發）：顯示小卡片、把模組層級旗標 `nasFolderPickerBackupInProgress` 設成 `true`；既有的 `machi-nas-folder-selected`（備份完成，不論成功或請求失敗但選擇仍然登記）訊息處理，新增呼叫 `hideNasFolderBackupBadge()` 隱藏小卡片，並把彈出視窗這次一併送回來的 `summary` 摘要文字帶進 `updateCaseRow(...)` 的第三個參數（畫面上原本「已設定 NAS 來源資料夾」的提示文字，現在如果備份有真的上傳到圖片，會改顯示更精確的「已立即備份 N 張圖片（第 X 輪）」）。
+  3. **視窗被使用者意外關閉時的偵測邏輯，區分「備份中」與「還在選資料夾」兩種情境**：既有的 `watchNasFolderPickerWindow()`（每秒檢查一次彈出視窗是否還開著）新增讀取 `nasFolderPickerBackupInProgress` 這個旗標——如果視窗是在**已經按下確認、備份進行中**的階段被關閉（例如使用者手動找到那個縮到螢幕外的視窗、或用系統快捷鍵把它結束掉），會先隱藏右下角小卡片（`hideNasFolderBackupBadge()`）並顯示「NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認」；如果是在**還沒按下確認、使用者還在挑資料夾**的階段被關閉，維持原本「NAS 資料夾選擇視窗已關閉，尚未選擇資料夾」的既有文案不變。原本備份開始後會停用的「20 秒還沒選好就提醒」邏輯（`還在等待 NAS 資料夾選擇結果...`），這次也一併排除在備份進行中的階段，避免使用者正在等待背景備份完成時被一則不相干的「還在等待選擇結果」訊息打斷。
+- 風險區塊：
+  - **`shrinkWindowOutOfView()`／`restoreWindowForPrompt()` 都包在 `try/catch` 裡、失敗會安靜略過**——`window.resizeTo`／`window.moveTo` 在部分瀏覽器（尤其是分頁式瀏覽器，如果這個彈出視窗被瀏覽器判定成一般分頁而不是獨立視窗，或使用者裝了限制腳本控制視窗的擴充功能）可能完全不生效或被忽略；沒有生效時，使用者會看到彈出視窗停留在原本大小、顯示「背景備份中，可以忽略或縮小這個視窗...」這行文字＋兩顆停用的按鈕，這是刻意設計的備援畫面（不是空白或卡死的畫面），跟這次要解決的「不要一直轉圈很久」這個核心訴求相比，影響有限——使用者最多是看到一個靜止不動、文字說明清楚在幹嘛的視窗，而不是原本那個持續轉圈的畫面。
+  - **視窗刻意不會真的關閉，只是縮小移到螢幕外**，如果使用者不知道這件事、自己手動去 Dock／視窗清單裡把它找出來關掉，會觸發上面第 3 點新增的「意外關閉」偵測與提示，但**這個偵測完全依賴主頁面那個分頁本身還開著、還在跑那個 1 秒一次的計時器**——如果使用者在按下確認之後、備份完成之前就直接整個關掉瀏覽器或這台電腦，主頁面收不到任何後續訊息，右下角小卡片會停留在「NAS 資料夾備份中」不會消失、也不會有任何錯誤提示（這不是這次新引入的風險，是這整套「用另一個視窗＋postMessage 橋接」架構原本就有的已知邊界，[[NAS 資料夾選擇器新增連線逾時／視窗關閉偵測|上一次補齊視窗關閉偵測時就已經記錄過同樣的限制]]）。
+  - **這次沒有改動 `/api/confirm` 這支後端 API 本身**（`backupSelectedFolder()`、掃描/壓縮/上傳邏輯完全沒動），純粹是前端呈現層的改動——備份的實際行為（掃到哪些檔案、上傳到哪裡、輪次怎麼判斷）跟改動前完全一致，只是使用者在等待時看到的畫面不同。
+- 已檢查／驗證方式：
+  - `node --check scripts/nas_folder_picker_server.mjs` 通過；額外把檔案裡 `<script>...</script>` 內嵌的瀏覽器端程式碼抽出來單獨用 `node --check` 語法檢查，通過。
+  - `index.html` 抽出主要 `<script>` 區塊（`sed` 依目前實際行號切出，不是憑印象猜行號）用 `node --check` 語法檢查通過。
+  - 用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（stub 掉 `updateCaseRow`／`setSync`，沒有真的打任何網路請求）：①模擬 `nonce` 不符的 `machi-nas-folder-backup-started` 訊息，確認正確被忽略、小卡片維持隱藏；②模擬 `nonce` 相符的訊息，確認小卡片正確顯示、文字正確、`nasFolderPickerBackupInProgress` 正確變成 `true`；③模擬最終的 `machi-nas-folder-selected` 訊息（帶 `summary` 摘要文字），確認小卡片正確隱藏、`updateCaseRow` 收到正確的 `id`／`changes`／`message`（`message` 正確是備份摘要文字，不是預設的「已設定 NAS 來源資料夾」）、`nonce` 正確被清空；④用假的 `win` 物件（只有 `closed` 屬性）搭配 `watchNasFolderPickerWindow()` 驗證兩種關閉情境——備份進行中被關閉，正確顯示「備份視窗已意外關閉，備份可能未完成」且小卡片正確隱藏；還沒開始備份就被關閉，正確維持顯示既有的「尚未選擇資料夾」文案；這一步**過程中先抓到一個真的會發生的 bug**：第一版寫法是在 `win.closed` 分支裡先呼叫 `clearNasFolderPickerWatch()`（這支函式本身會把 `nasFolderPickerBackupInProgress` 重設成 `false`）才去讀這個旗標判斷該顯示哪一則訊息，導致不管是不是備份中關閉，永遠都顯示「尚未選擇資料夾」這則錯的文案——已經在讀取旗標之前先用一個區域變數 `wasBackingUp` 存下當下的值，改完之後重新測試兩種情境都正確區分。
+  - `node --test backend/test/*.test.mjs` 26/26 全過（沒有任何既有測試字串鎖住這次改到的檔案或函式）。
+  - **實際部署**：這次工作環境對使用者的 Mac 有直接執行權限（跟 2026-08-13 稍早「填入真實 pickerToken」那則發現的環境能力一致），已經直接用 `launchctl kickstart -k` 重啟 `com.emctaipei.nas-folder-picker` 這個 launchd 服務套用新版程式碼，並用 `curl` 確認正在跑的 `/picker` 頁面內容已經是新版（含 `machi-nas-folder-backup-started`／`shrinkWindowOutOfView`，不再含舊版的 `collapsed-view`）——這次修改**不需要使用者自己手動重啟任何東西**。
+  - **未做的驗證**：沒有用真實瀏覽器實際點過一次完整流程（開啟主頁面→標記過稿中→選 NAS 資料夾→在真實彈出視窗裡點「選擇這個資料夾並備份」→肉眼確認視窗真的從畫面上消失、右下角小卡片真的出現、備份完成後小卡片真的消失）；`window.resizeTo`／`window.moveTo` 在使用者實際使用的瀏覽器（Safari／Chrome）上的真實效果也還沒有肉眼確認過，只驗證了程式碼呼叫本身有包在 `try/catch` 裡不會因為被瀏覽器忽略而報錯。
+- 部署狀態：`index.html` 純前端，git push 後自動生效；`scripts/nas_folder_picker_server.mjs` 是純本機工具，這次已經直接在使用者的 Mac 上重啟對應的 launchd 服務套用新版，不需要使用者額外操作。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（次新）— 資料庫後台「資料庫」表移除時間標記、過稿中自動蓋繳交時間戳、新增修改次數欄位、連結可點擊、新增結構化篩選器；備份至雲端試算表改成只覆寫同名欄位
 
 - 修改目的：接續前一則「備份至雲端試算表」功能，使用者再提出五項：①「資料庫後台」的「資料庫」表移除「時間標記」欄（舊資料殘留、前台從未使用）；②案件狀態改成「過稿中」時，把當下時間寫進「繳交時間」欄；③新增「修改次數」欄，反映這個案件目前已經有幾輪修改紀錄；④「資料庫」表裡的連結類欄位（設計簡報連結／客戶素材連結／參考範例連結／其他連結等）目前只顯示截斷的純文字，要改成可以直接點擊；⑤「資料庫」表要新增結構化篩選器（不是純文字搜尋），且視覺樣式要跟現有後台一致、不能跑版。使用者同時明確要求：既然 JSON 端的欄位這次會跟試算表產生落差（拿掉時間標記、多了修改次數），「備份至雲端試算表」不該再像上一版那樣整批清空重寫，只能覆寫「JSON 欄位名稱」跟「試算表表頭」剛好同名的欄位，其餘試算表本來就有、JSON 沒有的欄位（例如舊的時間標記）不該被動到。
 - 影響檔案：`backend/schema.mjs`、`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`worker/vitest.config.ts`、`upload/Code.gs`、`json_database_admin.html`。
