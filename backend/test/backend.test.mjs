@@ -355,7 +355,15 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /action:'adminDesignerSave'/);
   assert.match(html, /action:'adminDesignerRemove'/);
   assert.match(html, /function designerAdminHtml\(rows\)/);
-  assert.match(html, /技能與點擊後帶入表單的「設計種類／階段」/);
+  assert.match(html, /技能與表單預設/);
+  assert.match(html, /基本與輪值設定/);
+  assert.match(html, /前台媒體設定/);
+  assert.match(html, /designer-skill-columns/);
+  assert.match(html, /function designerRotationBoardHtml\(rows\)/);
+  assert.match(html, /新專案輪值順序/);
+  assert.match(html, /data-account-rotation-item=.*draggable="true"|draggable="true" data-account-rotation-item=/);
+  assert.match(html, /data-designer-rotation-move/);
+  assert.match(html, /target\.parentElement!==accountRotationDragged\.parentElement/);
   assert.doesNotMatch(html, /<summary>設計師公開資料<\/summary>/);
   assert.match(html, /data-account-delete/);
   assert.match(html, /function organizationManagerHtml\(\)/);
