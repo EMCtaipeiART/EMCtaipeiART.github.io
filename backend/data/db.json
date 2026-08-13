@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 844,
+  "revision": 845,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:14:23.829Z",
+  "updatedAt": "2026-08-13T08:14:28.367Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -23129,17 +23129,6 @@
           "功能權限": "[\"request.create\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
           "更新時間": "2026-08-13 16:08",
           "更新者": "管理員"
-        },
-        {
-          "帳號": "local:02594840-91da-423d-bab9-4862fd04acfe",
-          "角色範本": "唯讀",
-          "狀態": "啟用",
-          "頁面權限": "[\"request\"]",
-          "功能權限": "[]",
-          "更新時間": "2026/08/13 16:14:20",
-          "更新者": "Codex 部署驗證",
-          "登入方式": "密碼",
-          "密碼雜湊": "pbkdf2-sha256$100000$lGKhAvsRmGG5Ua_XL1vMMw$8Q_i5ttD3C9xUFSeZM-y9nHINqA9QSu9wcVKHirNQQc"
         }
       ]
     },
