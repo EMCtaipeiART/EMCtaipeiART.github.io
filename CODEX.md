@@ -9,7 +9,7 @@
 - `upload/upload.html` 在替換設計師圖片時補送 `editorToken`，讓最近上傳流程可以正確寫回。
 - Worker `saveDesignerProfiles` 新增 `media.manage` 相容判斷，並補上前端與後端測試。
 - 驗收：`node --test backend/test/*.test.mjs`、`pnpm test`、`pnpm check` 通過。
-- 版本：待本次 commit 完成後補記。
+- 版本：`8d81f6d`。
 
 ## 2026-08-11｜帳號設定分組、排序與 REELS 整合
 
