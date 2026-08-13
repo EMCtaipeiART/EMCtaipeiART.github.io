@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 687,
+  "revision": 688,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:54:57.235Z",
+  "updatedAt": "2026-08-13T02:55:16.245Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18585,6 +18585,18 @@
           "圖片連結": "[{\"fileName\":\"260810_Liberty-5-Pro規格比較貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lC-BDd-BNczsn_h2Rjfe4AIzv0f__qzG=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 10:54:16"
+        },
+        {
+          "案件編號": "26080031",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 10:55:16",
+          "修改日期": "2026/08/13 10:55:16",
+          "修改內容": "初稿完成",
+          "修改人": "Anna",
+          "確認修正日": "2026/08/13 10:55:16",
+          "圖片連結": "[{\"fileName\":\"260812_Sealy_抽獎得獎公告貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1XGYG5udDQgA7z8fVZc9haWxuXNYYGEDQ=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 10:55:16"
         }
       ]
     },
