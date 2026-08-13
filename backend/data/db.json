@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 915,
+  "revision": 916,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T10:56:54.599Z",
+  "updatedAt": "2026-08-13T10:57:23.553Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -23871,14 +23871,7 @@
         "排序"
       ],
       "primaryKey": "代碼",
-      "rows": [
-        {
-          "代碼": "部門:c0dcff2b-a769-4d05-bf81-5292ad03ae39",
-          "種類": "部門",
-          "名稱": "AI部",
-          "排序": "1"
-        }
-      ]
+      "rows": []
     }
   },
   "internal": {
