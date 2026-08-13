@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 908,
+  "revision": 909,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T10:27:20.590Z",
+  "updatedAt": "2026-08-13T10:28:04.009Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17289,6 +17289,31 @@
           "加權": "",
           "月份": "8月",
           "案件編號": "26080060"
+        },
+        {
+          "客戶別": "金士頓",
+          "專案名稱": "2026/08月貼文「UGC暑假清單」FB、IG、X版本製作",
+          "專案負責人": "古晟如",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "3",
+          "開始日期": "2026/08/13",
+          "結束日期": "2026/08/18",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/13 18:28",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080061"
         }
       ]
     },
@@ -24303,6 +24328,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 617,
           "sheetRow": 617
+        }
+      },
+      "f1952668-fd0d-4ef0-b04a-1328d63bd65a": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 618,
+        "row": {
+          "id": "26080061",
+          "month": "8月",
+          "client": "金士頓",
+          "project": "2026/08月貼文「UGC暑假清單」FB、IG、X版本製作",
+          "owner": "古晟如",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 3,
+          "start": "2026/08/13",
+          "end": "2026/08/18",
+          "designer": "Amber",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/13 18:28",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 618,
+          "sheetRow": 618
         }
       }
     }
