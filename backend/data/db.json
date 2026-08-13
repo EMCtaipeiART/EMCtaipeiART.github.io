@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 934,
+  "revision": 935,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:39:55.208Z",
+  "updatedAt": "2026-08-13T11:40:00.384Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19577,7 +19577,7 @@
           "修改日期": "2026-08-21",
           "修改內容": "test",
           "修改人": "管理員",
-          "確認修正日": "",
+          "確認修正日": "2026/08/13 19:40:00",
           "待修改圖片": "[\"260729_添可_送長輩禮物_i7Fold.png\",\"260803_添可_中元節_S7StretchStream.png\"]"
         }
       ]
