@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 758,
+  "revision": 759,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:13:26.869Z",
+  "updatedAt": "2026-08-13T04:13:33.738Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18708,9 +18708,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 12:13:26",
-          "圖片連結": "[{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_3D模擬.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1V2_UXG_9dzJVqZH95bsLqjiCXJOU-bmk=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_直式口碑.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1fJ38yIxGGNarYwu1BvPx95_Ne3vHo6Xi=w1600\"},{\"fileName\":\"260608_櫻花整體廚房_SP活動_動態素材.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1PWSw2hZhIT5aynAUk6bJDBzkA0wFgU0d=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_3D模擬_動態素材_v03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1woUcnF3vZ4kC-K7P4I7hLUcR7FTNzJOv=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_3D模擬.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1V2_UXG_9dzJVqZH95bsLqjiCXJOU-bmk=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_直式口碑.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1fJ38yIxGGNarYwu1BvPx95_Ne3vHo6Xi=w1600\"},{\"fileName\":\"260608_櫻花整體廚房_SP活動_動態素材.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1PWSw2hZhIT5aynAUk6bJDBzkA0wFgU0d=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_3D模擬_動態素材_v03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1woUcnF3vZ4kC-K7P4I7hLUcR7FTNzJOv=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_3D模擬.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1tNY7fofsBsQAvaaqe8ISBXPU7Y-H-nHH=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_SP活動_影片包框_直式口碑.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1H-MtwDnQDWlFXZgeqD-5O72IHCYHgujh=w1600\"},{\"fileName\":\"260608_櫻花整體廚房_SP活動_動態素材.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Mv9e57cB5uJQtWiSiFeOnIlyLee-CSec=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_3D模擬_動態素材_v03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1jdgA8eI7qAvcFhP7wgUFH6ikLWP3CHJ7=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 12:13:26"
+          "圖片更新時間": "2026/08/13 12:13:33"
         }
       ]
     },
