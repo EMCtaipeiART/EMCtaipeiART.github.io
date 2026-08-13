@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 777,
+  "revision": 778,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:37:43.845Z",
+  "updatedAt": "2026-08-13T04:38:13.672Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18748,6 +18748,18 @@
           "圖片連結": "[{\"fileName\":\"260731_Epson_IPSD 圖片resize.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1p0HR__9eZalfFEBofkNlDdLU6GWyKXKo=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 12:18:16"
+        },
+        {
+          "案件編號": "26070244",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 12:38:13",
+          "修改日期": "2026/08/13 12:38:13",
+          "修改內容": "初稿完成",
+          "修改人": "Machi",
+          "確認修正日": "2026/08/13 12:38:13",
+          "圖片連結": "[{\"fileName\":\"口碑行銷戰術包.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/17LY0qdZ1ItjVflSml75wp50q4ym17ppA=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 12:38:13"
         }
       ]
     },
