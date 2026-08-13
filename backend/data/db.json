@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 753,
+  "revision": 754,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:10:42.403Z",
+  "updatedAt": "2026-08-13T04:12:15.892Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18332,7 +18332,10 @@
           "修改日期": "2026/8/3",
           "修改內容": "標題斷句換行調整",
           "修改人": "Emily Chen",
-          "確認修正日": "2026/8/3"
+          "確認修正日": "2026/8/3",
+          "圖片連結": "[{\"fileName\":\"260630_櫻花整體廚房_名單型廣告_教育型內容_v01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rHi6HSc1dYhdkLxsXQJY0UTsYX02AK-3=w1600\"},{\"fileName\":\"260630_櫻花整體廚房_名單型廣告_教育型內容_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Fy0XdKX6_35E3Zp2cozdpEDtsEsmqBmU=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_名單型廣告_品牌選材_v01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pq3sSlMTJSQJ5HLOcI74PL0Cyv_LodEC=w1600\"},{\"fileName\":\"260731_櫻花整體廚房_名單型廣告_孝親改造_v01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kFKAtbMjGzw6oiVv7nnoFuR6b2sNx3XN=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/13 12:12:15"
         },
         {
           "案件編號": "26070215",
