@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 747,
+  "revision": 748,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:07:58.523Z",
+  "updatedAt": "2026-08-13T04:08:09.463Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -14424,7 +14424,7 @@
           "結束日期": "2026/08/04",
           "設計負責人": "Machi",
           "項目細節": "影音包框",
-          "狀態": "已完成",
+          "狀態": "過稿中",
           "加權": "4",
           "填單時間": "",
           "時間標記": "",
