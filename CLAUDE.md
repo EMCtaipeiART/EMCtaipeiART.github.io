@@ -186,7 +186,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 修改紀錄多選刪除微調：勾選框移到左下角、選取工具列預設隱藏
+### 2026-08-13 Asia/Taipei（最新）— 案件詳情「設計圖記錄」改成每輪左右滾動一排，避免圖片過多撐爆彈窗
+
+- 修改目的：使用者回報案件資料彈窗（案件詳情）新增的「設計圖記錄」區塊，原本用 `flex-wrap` 讓縮圖自動換行——如果某一輪備份圖片很多（例如 NAS 背景監控程式陸續抓了十幾張），縮圖會一直往下疊、把整個彈窗撐得很高，要求改成「由左至右一排」用左右滑動瀏覽，圖片再多也收在彈窗裡面、不要把版面撐壞。
+- 影響檔案：`index.html`。
+- 影響功能：`caseDetailDesignImagesHtml()` 每一輪的縮圖容器新增 `case-detail-design-images-row` 這個額外 class（跟既有的 `.revision-modal-images` 共用同一批縮圖樣式，只是疊加這個新 class 改變排列方式），並把所有輪次的分組整個包進外層的 `.case-detail-design-images-scroll` 容器裡。新增兩條 CSS：①`.case-detail-design-images-row{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden}`——把原本 `.revision-modal-images` 的 `flex-wrap:wrap` 改成單行不換行＋超出寬度時橫向捲動，每張縮圖本來就有 `flex:0 0 auto`（既有樣式，不會被壓縮變形），所以不管這一輪有幾張圖，都是同一排、用滑鼠/觸控左右滑動看完，不會往下擠壓其他輪次或撐高彈窗；②`.case-detail-design-images-scroll{max-height:220px;overflow-y:auto}`——如果案件修改輪次很多（例如過稿中反覆修改十幾輪，每輪都有圖），整個「設計圖記錄」區塊也設了高度上限，超過就整塊垂直捲動，而不是無限往下長，這樣不管輪次多或單輪圖片多，案件詳情彈窗本身的高度都維持穩定。這次沒有動到「修改紀錄」彈窗（`revisionImagesHtml`／`renderRevisionModal`）裡縮圖的排列方式——使用者這次只提到「案件資料彈窗」，修改紀錄彈窗維持原本 `flex-wrap` 換行的排法不變，兩處雖然共用底層縮圖樣式，這次是額外疊加 class 只影響案件詳情這一處，不會互相牽動。
+- 風險區塊：捲動區塊目前沒有加自訂捲軸樣式指示器（只有 `scrollbar-width:thin` 這個 Firefox 專屬的細捲軸提示，Chrome/Safari 沒有對應效果），如果使用者不知道可以左右滑動、畫面上又剛好每排只看得到 1-2 張縮圖被截斷，可能不容易注意到還有更多圖片——這次沒有額外加「還有更多→」的視覺提示，之後如果使用者反映找不到怎麼看更多圖，可以考慮加上漸層遮罩或箭頭提示。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過。因為這次要驗證的是實際版面尺寸（橫向/縱向是否真的可以捲動、寬高有沒有被正確限制），主分頁的 `window.innerWidth/innerHeight` 在這個測試環境量到的是 0（跟過去幾次踩過的同樣限制），改用**在頁面內建立 1280×800 的 iframe 載入同一份 `index.html`、並用 `iframe.contentWindow.eval()`（不是 `iframe.contentWindow.xxx=`，因為後者只會在 window 物件上新增屬性、不會覆寫頁面內用 `let` 宣告的模組層級變數，這是先前 session 已經踩過並記錄下來的坑）注入假資料**：模擬 4 輪修改紀錄、共 39 張圖片（6/8/10/15 張分散在四輪），開啟案件詳情後量測：外層 `.case-detail-design-images-scroll` 的 `scrollHeight(390px) > clientHeight(220px)`，確認整塊在圖片輪次多的情況下真的會被限制在 220px 並可垂直捲動；四排 `.case-detail-design-images-row` 全部 `scrollWidth > clientWidth`（每排實際可視寬度 143px，內容寬度依張數從 414px 到 1044px 不等），確認橫向真的會捲動而不是把彈窗撐寬或整排換行；額外截圖確認彈窗版面沒有跑版、縮圖裁切整齊。`node --test backend/test/*.test.mjs` 25/25 全過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（較早）— 修改紀錄多選刪除微調：勾選框移到左下角、選取工具列預設隱藏
 
 - 修改目的：使用者對上一輪的多選刪除功能提出兩個體驗微調：①每張縮圖左上角的勾選框跟圖片內容重疊，希望移到左下角比較不擋畫面；②原本只要案件有 2 張以上圖片，選取工具列就會常駐顯示「勾選圖片可批次刪除」的提示，使用者覺得平常沒有要刪圖時這條列一直佔位置，希望改成預設隱藏，點選了圖片（開始勾選）才出現。
 - 影響檔案：`index.html`。
