@@ -208,7 +208,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 用本機 Node 靜態伺服器＋ Browser pane：①型別過濾兩種嚴格程度（資料夾選取靜默略過 `.DS_Store`、明確選取顯示略過訊息）皆正確；②用真實 3000×2000 PNG 測試 `compressImageBlob()`，確認正確等比縮到 1600×1067、轉成 JPEG、檔案從 121KB 壓到 12KB；③用 `MediaRecorder`＋`canvas.captureStream()` 現場產生一段真實 webm 測試影片，`extractVideoFrame()` 確認能正確取出一張 320×240 的 JPEG 畫面；④模擬 3 個真實圖片檔（1 張故意讓伺服器端回傳失敗）跑完整序列上傳流程，確認：每個檔案各自呼叫一次 `uploadCaseDesignImagesInteractive`（`images` 陣列長度都是 1）、檔名正確轉成 `.jpg`、progress 訊息四則（初始 0/3 與三次完成）done 正確遞增、失敗的那張不會中斷後續、最終彙總訊息 `count`／`failedCount` 正確；⑤`index.html`：確認 progress 訊息在大彈窗前景時不會顯示浮動小卡片（避免前景+背景重複顯示）、背景時正確顯示並即時更新文字；確認 X／背景遮罩／Escape 在上傳進行中時呼叫 `backgroundizeCaseDesignUpload()` 而非 `closeUploadModal()`（iframe 不會被砍掉）；確認點小卡片會恢復大彈窗；確認不論收到完成訊息當下是前景還是背景，都會正確重設 `frame.src`／`uploadModalActive`／nonce／隱藏小卡片，並觸發 `fetchModificationCounts()`。取消按鈕的 `postMessage` 呼叫本身因為 iframe 是 `credentialless` 沙箱、`about:blank` 狀態下無法從父視窗攔截驗證（`SecurityError: cross-origin`），改用程式碼人工比對確認邏輯正確（`confirm()` 二次確認後才呼叫 `contentWindow.postMessage`）。
   - **未做的驗證**：無法在這個沙箱環境測試真正的 Google Drive 上傳（連不到 Google API），也沒有測過真實使用者裝置上的各種影片格式與瀏覽器版本組合，需要使用者實機測試至少一次含真實影片的批次上傳。
 - 部署狀態：`index.html` 純前端，git push 後自動生效；**`upload/upload.html` 需要使用者自行手動部署**（Apps Script 編輯器「部署 → 管理部署 → 新版本」，這次跟上一則一樣沒有改動 `upload/Code.gs`，所以只需要更新 `upload.html` 這個檔案內容，不用重新走一次授權流程）。`worker/`、`upload/Code.gs` 這次完全沒有修改，不需要重新部署 Worker。
-- commit：（見下方 push 紀錄）
+- commit：`10054ca`
 
 ### 2026-08-13 Asia/Taipei（較早）— 過稿中設計圖改成「選擇電腦檔案上傳」、修改紀錄可編輯圖片（新增/刪除）
 
