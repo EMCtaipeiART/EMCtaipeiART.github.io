@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 728,
+  "revision": 729,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T03:46:19.091Z",
+  "updatedAt": "2026-08-13T03:46:59.232Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18657,6 +18657,18 @@
           "圖片連結": "[{\"fileName\":\"260806_保誠人壽_國際狗狗日_v01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Qkdjcth8tl7QxbnUDKXaFIcKVKAX4Dob=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 11:28:45"
+        },
+        {
+          "案件編號": "26080006",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 11:46:59",
+          "修改日期": "2026/08/13 11:46:59",
+          "修改內容": "初稿完成",
+          "修改人": "Machi",
+          "確認修正日": "2026/08/13 11:46:59",
+          "圖片連結": "[{\"fileName\":\"260803_Epson_Eric新圖素上架_FB.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1_dBTRdPiFwU_KBrS8hJW7OKMh44q9TIs=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 11:46:59"
         }
       ]
     },
