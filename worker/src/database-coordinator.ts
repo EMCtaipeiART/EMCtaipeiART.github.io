@@ -20,7 +20,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
-const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', 'reels', 'bug_report'];
+const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 
@@ -213,6 +213,38 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(2)) {
+        this.ctx.storage.transactionSync(() => {
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS local_password_accounts (
+              account TEXT PRIMARY KEY,
+              password_hash TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+          `);
+          const snapshots = this.ctx.storage.sql.exec<{ json: string }>(
+            'SELECT json FROM database_state WHERE id = ?', STATE_KEY
+          ).toArray();
+          if (snapshots.length) {
+            try {
+              const legacy = JSON.parse(snapshots[0].json) as DatabaseSnapshot;
+              for (const row of legacy.tables?.['帳號權限']?.rows || []) {
+                const account = canonicalAccount(row['帳號']);
+                const passwordHash = text(row['密碼雜湊']);
+                if (!account || !passwordHash) continue;
+                this.ctx.storage.sql.exec(
+                  'INSERT OR REPLACE INTO local_password_accounts(account, password_hash, updated_at) VALUES (?, ?, ?)',
+                  account, passwordHash, new Date().toISOString()
+                );
+              }
+            } catch { /* a malformed cached snapshot will be replaced by the next GitHub refresh */ }
+          }
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            2, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -293,6 +325,35 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const token = sessionToken(payload);
     if (!token) return;
     this.ctx.storage.sql.exec('DELETE FROM sessions WHERE token_hash = ?', await sha256Base64Url(token));
+  }
+
+  private localPasswordHash(account: unknown): string {
+    const rows = this.ctx.storage.sql.exec<{ password_hash: string }>(
+      'SELECT password_hash FROM local_password_accounts WHERE account = ?', canonicalAccount(account)
+    ).toArray();
+    return rows.length ? text(rows[0].password_hash) : '';
+  }
+
+  private setLocalPasswordHash(account: unknown, passwordHash: string): void {
+    this.ctx.storage.sql.exec(
+      `INSERT INTO local_password_accounts(account, password_hash, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(account) DO UPDATE SET password_hash=excluded.password_hash, updated_at=excluded.updated_at`,
+      canonicalAccount(account), passwordHash, new Date().toISOString()
+    );
+  }
+
+  private deleteAccountPrivateState(accountValue: unknown): void {
+    const account = canonicalAccount(accountValue);
+    this.ctx.storage.sql.exec('DELETE FROM local_password_accounts WHERE account = ?', account);
+    const sessions = this.ctx.storage.sql.exec<{ token_hash: string; payload: string }>('SELECT token_hash, payload FROM sessions').toArray();
+    for (const row of sessions) {
+      try {
+        if (canonicalAccount((JSON.parse(row.payload) as SessionRecord).account) === account) {
+          this.ctx.storage.sql.exec('DELETE FROM sessions WHERE token_hash = ?', row.token_hash);
+        }
+      } catch { /* malformed sessions are removed by their normal expiry path */ }
+    }
   }
 
   private async assertLoginRate(context: RequestContext): Promise<void> {
@@ -408,11 +469,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (allowed && await secureEqual(password, this.env.ADMIN_LOGIN_PASSWORD)) account = requestedAccount;
     }
     if (!account) {
-      const passwordRows = database.tables['帳號權限'].rows.filter(row => text(row['登入方式']) === '密碼' && text(row['密碼雜湊']));
+      const passwordRows = database.tables['帳號權限'].rows.filter(row => text(row['登入方式']) === '密碼' || canonicalAccount(row['帳號']).startsWith('local:'));
       for (const permissionRow of passwordRows) {
-        if (!await verifyLocalPassword(password, permissionRow['密碼雜湊'])) continue;
+        const candidateAccount = canonicalAccount(permissionRow['帳號']);
+        const passwordHash = this.localPasswordHash(candidateAccount) || text(permissionRow['密碼雜湊']);
+        if (!passwordHash || !await verifyLocalPassword(password, passwordHash)) continue;
         if (text(permissionRow['狀態']) === '停用') return { ok: false, action: 'login', error: '帳號已停用', reason: 'ACCOUNT_DISABLED' };
-        account = canonicalAccount(permissionRow['帳號']);
+        account = candidateAccount;
         break;
       }
     }
@@ -589,7 +652,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const query = text(payload.q).toLocaleLowerCase();
     const sort = text(payload.sort);
     const order = text(payload.order).toLowerCase() === 'desc' ? -1 : 1;
-    let rows = table.rows.map<Row>((row, index) => ({ _rowNumber: index + 2, ...row }));
+    let rows = table.rows.map<Row>((row, index) => {
+      const result = { _rowNumber: index + 2, ...row } as Row;
+      if (tableName === '帳號權限') {
+        delete result['密碼雜湊'];
+        result._credentialConfigured = Boolean(this.localPasswordHash(row['帳號']) || text(row['密碼雜湊']));
+      }
+      return result;
+    });
     if (query) rows = rows.filter(row => Object.values(row).some(value => text(value).toLocaleLowerCase().includes(query)));
     if (sort) rows.sort((left, right) => text(left[sort]).localeCompare(text(right[sort]), 'zh-Hant', { numeric: true }) * order);
     return { ok: true, action: 'adminTableRows', table: tableName, revision: database.revision, offset, limit, total: rows.length, rows: rows.slice(offset, offset + limit) };
@@ -887,6 +957,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       });
     }
     if (action === 'adminAccountSave') return this.adminAccountSave(payload, database, session);
+    if (action === 'adminAccountDelete') return this.adminAccountDelete(payload, database, session);
+    if (action === 'adminOrganizationOptionSave') return this.adminOrganizationOptionSave(payload, database, session);
+    if (action === 'adminOrganizationOptionDelete') return this.adminOrganizationOptionDelete(payload, database, session);
     if (['adminTableUpdate', 'adminTableDelete', 'adminTableInsert'].includes(action)) return this.adminMutation(action, payload, database, session);
     if (action === 'detailOptions' || action === 'options') return { ok: true, action, types: [], stages: [], details: {} };
     if (['uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'listDesignerMedia'].includes(action)) return { ok: false, action, error: '圖片檔案仍由獨立上傳服務處理，請從系統圖片視窗操作' };
@@ -1014,7 +1087,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (loginPassword && isReservedShortcutPassword(loginPassword)) throw new Error('這組密碼與內建測試密碼保留格式重複，請改用其他密碼');
     if (loginPassword && await secureEqual(loginPassword, this.env.ADMIN_LOGIN_PASSWORD)) throw new Error('這組密碼與系統管理者密碼重複，請改用其他密碼');
 
-    return this.mutate('adminAccountSave', current, async draft => {
+    const existingPrivateHash = this.localPasswordHash(account);
+    let preparedHash = existingPrivateHash;
+    if (loginMethod === '密碼') {
+      const legacyPermission = database.tables['帳號權限'].rows.find(row => canonicalAccount(row['帳號']) === account);
+      preparedHash ||= text(legacyPermission?.['密碼雜湊']);
+      if (!loginPassword && !preparedHash) throw new Error('這個帳號尚未設定登入密碼，請輸入新密碼');
+      if (loginPassword) {
+        for (const other of database.tables['帳號權限'].rows) {
+          const otherAccount = canonicalAccount(other['帳號']);
+          if (!otherAccount || otherAccount === account) continue;
+          const otherHash = this.localPasswordHash(otherAccount) || text(other['密碼雜湊']);
+          if (otherHash && await verifyLocalPassword(loginPassword, otherHash)) throw new Error('這組登入密碼已由其他帳號使用，請改用不同密碼');
+        }
+        preparedHash = await hashLocalPassword(loginPassword);
+      }
+    }
+
+    const result = await this.mutate('adminAccountSave', current, draft => {
       const settingsTable = draft.tables['設定'];
       const permissionTable = draft.tables['帳號權限'];
       let settingsIndex = settingsTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
@@ -1048,19 +1138,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const permission = normalizedTableRow(permissionTable.headers, requestedPermission);
       permission['帳號'] = account;
       permission['登入方式'] = loginMethod;
-      if (loginMethod === '密碼') {
-        const existingHash = permissionIndex >= 0 ? text(permissionTable.rows[permissionIndex]['密碼雜湊']) : '';
-        if (!loginPassword && !existingHash) throw new Error('請輸入密碼登入帳號的登入密碼');
-        if (loginPassword) {
-          for (let index = 0; index < permissionTable.rows.length; index += 1) {
-            if (index === permissionIndex) continue;
-            const other = permissionTable.rows[index];
-            if (text(other['登入方式']) !== '密碼' || !text(other['密碼雜湊'])) continue;
-            if (await verifyLocalPassword(loginPassword, other['密碼雜湊'])) throw new Error('這組登入密碼已由其他帳號使用，請改用不同密碼');
-          }
-        }
-        permission['密碼雜湊'] = loginPassword ? await hashLocalPassword(loginPassword) : existingHash;
-      } else permission['密碼雜湊'] = '';
       const roles = ['管理者', '設計師', '一般使用者', '唯讀', '自訂'];
       if (!roles.includes(text(permission['角色範本']))) throw new Error('角色範本格式不正確');
       if (!['啟用', '停用'].includes(text(permission['狀態']))) throw new Error('帳號狀態格式不正確');
@@ -1083,11 +1160,102 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           action: 'adminAccountSave',
           account,
           settingsRow: { _rowNumber: settingsIndex + 2, ...settings },
-          permissionRow: { _rowNumber: permissionIndex + 2, ...permission }
+          permissionRow: { _rowNumber: permissionIndex + 2, ...permission, _credentialConfigured: loginMethod === '密碼' }
         },
         changed: settingsChanged || permissionChanged,
         changedTables: [settingsChanged ? '設定' : '', permissionChanged ? '帳號權限' : ''].filter(Boolean)
       };
+    });
+    if (loginMethod === '密碼' && preparedHash) this.setLocalPasswordHash(account, preparedHash);
+    else if (loginMethod !== '密碼') this.ctx.storage.sql.exec('DELETE FROM local_password_accounts WHERE account = ?', account);
+    return result;
+  }
+
+  private async adminAccountDelete(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const account = canonicalAccount(payload.account);
+    if (!account) throw new Error('缺少要刪除的帳號');
+    if (account === canonicalAccount(current.account)) throw new Error('不可刪除目前登入中的管理帳號');
+    if (account === SHORTCUT_ADMIN_ACCOUNT) throw new Error('系統管理者帳號不可刪除');
+    const permission = database.tables['帳號權限'].rows.find(row => canonicalAccount(row['帳號']) === account);
+    if (text(permission?.['角色範本']) === '管理者') throw new Error('管理者帳號不可直接刪除，請先調整角色');
+    const expectedSettings = asRow(payload.expectedSettingsRow);
+    const expectedPermission = asRow(payload.expectedPermissionRow);
+    const result = await this.mutate('adminAccountDelete', current, draft => {
+      const settingsTable = draft.tables['設定'];
+      const permissionTable = draft.tables['帳號權限'];
+      const settingsIndex = settingsTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
+      const permissionIndex = permissionTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
+      if (settingsIndex < 0 && permissionIndex < 0) throw new Error('找不到要刪除的帳號');
+      if (Object.keys(expectedSettings).length && (settingsIndex < 0 || rowsDiffer(settingsTable.headers, expectedSettings, settingsTable.rows[settingsIndex]))) throw new Error('個人設定已被其他人更新，請重新讀取後再操作');
+      if (Object.keys(expectedPermission).length && (permissionIndex < 0 || rowsDiffer(permissionTable.headers, expectedPermission, permissionTable.rows[permissionIndex]))) throw new Error('帳號權限已被其他人更新，請重新讀取後再操作');
+      const names = new Set<string>();
+      if (settingsIndex >= 0) names.add(text(settingsTable.rows[settingsIndex]['名字']));
+      if (settingsIndex >= 0) settingsTable.rows.splice(settingsIndex, 1);
+      if (permissionIndex >= 0) permissionTable.rows.splice(permissionIndex, 1);
+      const reelsBefore = draft.tables.reels.rows.length;
+      draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !names.has(text(row['名字'])));
+      const deletedReels = reelsBefore - draft.tables.reels.rows.length;
+      return {
+        result: { ok: true, action: 'adminAccountDelete', account, deletedReels },
+        changedTables: ['設定', '帳號權限', ...(deletedReels ? ['reels'] : [])]
+      };
+    });
+    this.deleteAccountPrivateState(account);
+    return result;
+  }
+
+  private organizationKind(value: unknown): '部門' | '組別' {
+    const kind = text(value);
+    if (kind !== '部門' && kind !== '組別') throw new Error('組織選項種類格式不正確');
+    return kind;
+  }
+
+  private async adminOrganizationOptionSave(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const kind = this.organizationKind(payload.kind || payload['種類']);
+    const oldName = text(payload.oldName);
+    const name = text(payload.name || payload['名稱']);
+    if (!name) throw new Error(`請輸入${kind}名稱`);
+    if (name.length > 40) throw new Error(`${kind}名稱不得超過 40 個字`);
+    return this.mutate('adminOrganizationOptionSave', current, draft => {
+      const options = draft.tables['組織選項'];
+      const duplicate = options.rows.find(row => text(row['種類']) === kind && text(row['名稱']) === name && text(row['名稱']) !== oldName);
+      if (duplicate) throw new Error(`這個${kind}名稱已經存在`);
+      let option = options.rows.find(row => text(row['種類']) === kind && text(row['名稱']) === oldName);
+      if (!option) {
+        option = Object.fromEntries(options.headers.map(header => [header, ''])) as Row;
+        option['代碼'] = `${kind}:${crypto.randomUUID()}`;
+        option['種類'] = kind;
+        option['排序'] = String(options.rows.filter(row => text(row['種類']) === kind).length + 1);
+        options.rows.push(option);
+      }
+      option['名稱'] = name;
+      let affectedAccounts = 0;
+      if (oldName && oldName !== name) {
+        for (const row of draft.tables['設定'].rows) {
+          if (text(row[kind]) === oldName) { row[kind] = name; affectedAccounts += 1; }
+        }
+      }
+      return { result: { ok: true, action: 'adminOrganizationOptionSave', kind, oldName, name, affectedAccounts, option }, changedTables: ['組織選項', ...(affectedAccounts ? ['設定'] : [])] };
+    });
+  }
+
+  private async adminOrganizationOptionDelete(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const kind = this.organizationKind(payload.kind || payload['種類']);
+    const name = text(payload.name || payload['名稱']);
+    if (!name) throw new Error(`缺少要刪除的${kind}名稱`);
+    return this.mutate('adminOrganizationOptionDelete', current, draft => {
+      const options = draft.tables['組織選項'];
+      const before = options.rows.length;
+      options.rows = options.rows.filter(row => !(text(row['種類']) === kind && text(row['名稱']) === name));
+      let affectedAccounts = 0;
+      for (const row of draft.tables['設定'].rows) {
+        if (text(row[kind]) === name) { row[kind] = ''; affectedAccounts += 1; }
+      }
+      if (before === options.rows.length && !affectedAccounts) throw new Error(`找不到這個${kind}名稱`);
+      return { result: { ok: true, action: 'adminOrganizationOptionDelete', kind, name, affectedAccounts }, changedTables: ['組織選項', ...(affectedAccounts ? ['設定'] : [])] };
     });
   }
 

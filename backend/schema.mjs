@@ -72,7 +72,11 @@ export const TABLE_SCHEMAS = {
   },
   '帳號權限': {
     primaryKey: '帳號',
-    headers: ['帳號', '登入方式', '密碼雜湊', '角色範本', '狀態', '頁面權限', '功能權限', '更新時間', '更新者']
+    headers: ['帳號', '登入方式', '角色範本', '狀態', '頁面權限', '功能權限', '更新時間', '更新者']
+  },
+  '組織選項': {
+    primaryKey: '代碼',
+    headers: ['代碼', '種類', '名稱', '排序']
   },
   '角色權限範本': {
     primaryKey: '角色範本',
@@ -133,8 +137,10 @@ export function normalizeDatabaseShape(input) {
     const schema = TABLE_SCHEMAS[name];
     const table = db.tables[name] && typeof db.tables[name] === 'object' ? db.tables[name] : {};
     table.headers = [...new Set([...(Array.isArray(table.headers) ? table.headers : []), ...schema.headers])];
+    if (name === '帳號權限') table.headers = table.headers.filter(header => header !== '密碼雜湊');
     table.primaryKey = schema.primaryKey;
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];
+    if (name === '帳號權限') table.rows.forEach(row => { delete row['密碼雜湊']; });
     if (name === '加權計分標準' && !table.rows.length) table.rows = DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }));
     if (name === '角色權限範本') {
       const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));

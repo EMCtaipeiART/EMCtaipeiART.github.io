@@ -138,7 +138,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -303,7 +303,12 @@ describe('Machi Design API Worker', () => {
       account,
       permissionRow: { '登入方式': '密碼', '角色範本': '唯讀' }
     });
-    const savedHash = String((saved.permissionRow as Record<string, unknown>)['密碼雜湊']);
+    expect(saved.permissionRow).toMatchObject({ _credentialConfigured: true });
+    expect((saved.permissionRow as Record<string, unknown>)['密碼雜湊']).toBeUndefined();
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const savedHash = await runInDurableObject(stub, async (_instance, state) => state.storage.sql.exec<{ password_hash: string }>(
+      'SELECT password_hash FROM local_password_accounts WHERE account = ?', account
+    ).one().password_hash);
     expect(savedHash).toMatch(/^pbkdf2-sha256\$100000\$/);
     expect(savedHash).not.toContain(password);
 
@@ -322,7 +327,7 @@ describe('Machi Design API Worker', () => {
     expect(updated).toMatchObject({
       ok: true,
       settingsRow: { '部門': '', '組別': '已修改測試組' },
-      permissionRow: { '登入方式': '密碼', '密碼雜湊': savedHash }
+      permissionRow: { '登入方式': '密碼', _credentialConfigured: true }
     });
 
     const signedIn = await api({ action: 'login', password });
@@ -336,6 +341,44 @@ describe('Machi Design API Worker', () => {
       access: { role: '唯讀', status: '啟用' }
     });
     expect(String(signedIn.token)).not.toBe('');
+
+    const deleted = await api({
+      action: 'adminAccountDelete',
+      account,
+      expectedSettingsRow: updated.settingsRow,
+      expectedPermissionRow: updated.permissionRow
+    }, token);
+    expect(deleted).toMatchObject({ ok: true, action: 'adminAccountDelete', account });
+    const afterDelete = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return {
+        database: JSON.parse(stored.json) as DatabaseSnapshot,
+        credentials: state.storage.sql.exec<{ count: number }>('SELECT COUNT(*) AS count FROM local_password_accounts WHERE account = ?', account).one().count
+      };
+    });
+    expect(afterDelete.database.tables['設定'].rows.some(row => row['帳號'] === account)).toBe(false);
+    expect(afterDelete.database.tables['帳號權限'].rows.some(row => row['帳號'] === account)).toBe(false);
+    expect(afterDelete.credentials).toBe(0);
+    expect(await api({ action: 'login', password })).toMatchObject({ ok: false, error: '帳號或密碼不正確' });
+  });
+
+  it('adds, renames and deletes department/group options while synchronizing account values', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: `organization-file-${crypto.randomUUID()}` }, commit: { sha: 'organization-commit' } });
+    });
+    const renamed = await api({ action: 'adminOrganizationOptionSave', kind: '部門', oldName: '測試組', name: '測試部門' }, token);
+    expect(renamed).toMatchObject({ ok: true, kind: '部門', oldName: '測試組', name: '測試部門', affectedAccounts: 1 });
+    const removed = await api({ action: 'adminOrganizationOptionDelete', kind: '部門', name: '測試部門' }, token);
+    expect(removed).toMatchObject({ ok: true, kind: '部門', name: '測試部門', affectedAccounts: 1 });
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['設定'].rows.find(row => row['帳號'] === 'test.user@emctaipei.com')?.['部門']).toBe('');
+    expect(database.tables['組織選項'].rows.some(row => row['種類'] === '部門' && row['名稱'] === '測試部門')).toBe(false);
   });
 
   it('lets an account with only media.manage (no request.edit) save the design image source folder link, but still blocks other field edits', async () => {

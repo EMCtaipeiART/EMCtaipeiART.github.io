@@ -309,6 +309,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function permissionAdminHtml\(rows\)/);
   assert.match(html, /data-permission-save/);
   assert.match(html, /action:'adminAccountSave'/);
+  assert.match(html, /action:'adminAccountDelete'/);
+  assert.match(html, /data-account-delete/);
+  assert.match(html, /function organizationManagerHtml\(\)/);
+  assert.match(html, /adminOrganizationOptionSave/);
+  assert.match(html, /adminOrganizationOptionDelete/);
+  assert.match(html, /data-password-configured/);
+  assert.match(html, /此帳號尚未建立可用的登入密碼/);
   // 頭像大圖／分享音樂改用 accountLinkField：單行輸入框＋截斷顯示的連結，完整網址留在 href/title
   assert.match(html, /accountLinkField\('頭像大圖連結'/);
   assert.match(html, /function accountLinkField\(label,header,value\)\{/);
@@ -551,7 +558,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', '帳號權限', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '修改統計表', '補充資料連結', '設定', '帳號權限', '組織選項', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
 
   const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');
