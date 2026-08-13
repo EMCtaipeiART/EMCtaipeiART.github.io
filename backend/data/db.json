@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 677,
+  "revision": 678,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:34:24.925Z",
+  "updatedAt": "2026-08-13T02:35:41.330Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18880,7 +18880,7 @@
           "篩選年份": "2026",
           "篩選月份": "7 月 , 8 月",
           "篩選狀態": "未開始 , 執行中 , 過稿中",
-          "篩選姓名": "Machi",
+          "篩選姓名": "Anna",
           "選擇": "v",
           "案件編號": "",
           "月份": "",
