@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 901,
+  "revision": 902,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T09:27:07.562Z",
+  "updatedAt": "2026-08-13T09:28:06.664Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18835,9 +18835,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 17:27:07",
-          "圖片連結": "[{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1k9Bv5G3Bmd9CvVVyiIUDrd03eEU8Wn7o=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1k9Bv5G3Bmd9CvVVyiIUDrd03eEU8Wn7o=w1600\"},{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FUjbAPsIPD_Cufl4-uugb-sJQD0pKe50=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 17:27:07"
+          "圖片更新時間": "2026/08/13 17:28:06"
         }
       ]
     },
