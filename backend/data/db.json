@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 880,
+  "revision": 881,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:50:24.347Z",
+  "updatedAt": "2026-08-13T08:50:39.761Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21086,7 +21086,7 @@
         },
         {
           "部門": "專案部",
-          "組別": "odin組",
+          "組別": "Odin組",
           "名字": "曹又晨",
           "顯示名": "曹又晨",
           "帳號": "viola.tsao@emctaipei.com",
