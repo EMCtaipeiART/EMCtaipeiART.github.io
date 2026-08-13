@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 935,
+  "revision": 936,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:40:00.384Z",
+  "updatedAt": "2026-08-13T11:42:37.257Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20307,10 +20307,10 @@
           "技能": "",
           "對話框": "",
           "新專案輪值": "",
-          "篩選年份": "2026",
+          "篩選年份": "",
           "篩選月份": "",
           "篩選狀態": "",
-          "篩選姓名": "Machi",
+          "篩選姓名": "",
           "選擇": "",
           "案件編號": 1,
           "月份": "",
