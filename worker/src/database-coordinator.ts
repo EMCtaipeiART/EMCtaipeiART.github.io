@@ -17,7 +17,8 @@ import type {
 const STATE_KEY = 'primary';
 const MAX_LOGIN_ATTEMPTS = 12;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
-const LOCAL_PASSWORD_ITERATIONS = 210_000;
+// Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
+const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
 const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', 'reels', 'bug_report'];
 

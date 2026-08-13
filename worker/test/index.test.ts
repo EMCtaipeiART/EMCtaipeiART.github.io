@@ -304,7 +304,7 @@ describe('Machi Design API Worker', () => {
       permissionRow: { '登入方式': '密碼', '角色範本': '唯讀' }
     });
     const savedHash = String((saved.permissionRow as Record<string, unknown>)['密碼雜湊']);
-    expect(savedHash).toMatch(/^pbkdf2-sha256\$210000\$/);
+    expect(savedHash).toMatch(/^pbkdf2-sha256\$100000\$/);
     expect(savedHash).not.toContain(password);
 
     const updated = await api({
