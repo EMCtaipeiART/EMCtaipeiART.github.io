@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 807,
+  "revision": 808,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:45:38.895Z",
+  "updatedAt": "2026-08-13T04:45:41.322Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18710,9 +18710,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 12:04:27",
-          "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UgHGoxIe34wmTNlqV0vLmA_c4m6L4GjQ=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜_直式.png\",\"url\":\"https://lh3.googleusercontent.com/d/19jCWlkhO_gqaXh_G2a0eHLk9x1eNcyCQ=w1600\"},{\"fileName\":\"nutribullet Ultra_Pink Smoothie_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1lMq6mUS6jNsKcmLXW0EVtZfN3br0jlqT=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UgHGoxIe34wmTNlqV0vLmA_c4m6L4GjQ=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜_直式.png\",\"url\":\"https://lh3.googleusercontent.com/d/19jCWlkhO_gqaXh_G2a0eHLk9x1eNcyCQ=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 12:45:38"
+          "圖片更新時間": "2026/08/13 12:45:41"
         },
         {
           "案件編號": "26070247",
