@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 684,
+  "revision": 685,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:53:47.556Z",
+  "updatedAt": "2026-08-13T02:54:16.845Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18573,6 +18573,18 @@
           "圖片連結": "[{\"fileName\":\"260810_EMC_酒標_v03-01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1y_Wfah9dMaUH0mPtwOt1h39ZZzCR75oz=w1600\"},{\"fileName\":\"260810_EMC_酒標_v03-02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iTUQtmmzGBZxy6jVb690K1sW377dUfF-=w1600\"},{\"fileName\":\"260810_EMC_酒標_v03-03.png\",\"url\":\"https://lh3.googleusercontent.com/d/104LURDHnmuuJcnRuMJh1rzBWa4HCgbxt=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 10:28:50"
+        },
+        {
+          "案件編號": "26080020",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 10:54:16",
+          "修改日期": "2026/08/13 10:54:16",
+          "修改內容": "初稿完成",
+          "修改人": "Anna",
+          "確認修正日": "2026/08/13 10:54:16",
+          "圖片連結": "[{\"fileName\":\"260810_Liberty-5-Pro規格比較貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lC-BDd-BNczsn_h2Rjfe4AIzv0f__qzG=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 10:54:16"
         }
       ]
     },
