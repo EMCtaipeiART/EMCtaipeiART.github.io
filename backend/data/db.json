@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 945,
+  "revision": 946,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:53:10.110Z",
+  "updatedAt": "2026-08-13T11:54:16.964Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19956,7 +19956,7 @@
           "頭像大圖連結": "https://drive.google.com/thumbnail?id=1VVnFeGjdiq2SWPQkHeEhtVNcjmFoQWpm&sz=w1000",
           "分享音樂": "https://music.apple.com/tw/album/%E5%86%8D%E8%A6%8B/892835365?i=892835425",
           "音樂起始秒數": "9",
-          "技能": "",
+          "技能": "已登出",
           "對話框": "2026/07/31 登出",
           "新專案輪值": "2",
           "篩選年份": "2026年",
@@ -19984,7 +19984,9 @@
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
           "收合設計需求": "",
-          "深淺模式": "淺色"
+          "深淺模式": "淺色",
+          "設計師顯示": "v",
+          "技能表單設定": "[{\"name\":\"已登出\",\"type\":\"平面\",\"stage\":\"後製\"}]"
         },
         {
           "部門": "設計部",
