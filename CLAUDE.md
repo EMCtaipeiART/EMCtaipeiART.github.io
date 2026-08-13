@@ -210,12 +210,14 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 用本機 Node 靜態伺服器＋ Browser pane 對 `json_database_admin.html` 做隔離測試：篩選列只在切到「資料庫」表籤時顯示、切到其他表籤正確隱藏；三個篩選下拉選單的選項清單正確對應既有的狀態／設計種類／設計負責人清單；選擇篩選條件後 `queryPath()` 正確組出帶 `filters` JSON 的查詢字串、「清除篩選」按鈕正確依有無生效條件顯示/隱藏、點擊後正確清空狀態；`databaseTableHtml()` 對含「連結」字樣的欄位、內容是合法網址時正確輸出 `target="_blank" rel="noopener"` 的可點擊連結（且維持 `.clip` 截斷樣式），非網址文字內容正確維持純文字不被誤包成連結；「備份至雲端試算表」按鈕點擊後的成功訊息正確顯示新的「已同步 N 個相符欄位：更新 X 筆、新增 Y 筆」格式文字。
   - `node --test backend/test/*.test.mjs` **25/25 全過**（確認 schema 變動、`normalizeDatabaseShape` 的表頭排除邏輯沒有被任何既有測試鎖住或破壞）。
   - `npx wrangler deploy --dry-run` 打包成功。
-  - **未做的驗證**：沒有實際透過 Apps Script 編輯器部署新版 `upload/Code.gs` 並跑一次真實的「同一個真實 Google 試算表」端對端備份（沙箱環境沒有 Google 帳號登入能力，見下方部署狀態說明）；沒有用真實登入的設計師帳號在正式站標記一次過稿中，實機確認「繳交時間」欄真的被寫入且前台其他畫面沒有意外受影響（例如是否有任何既有畫面用到「繳交時間」這個欄位名稱，這次程式碼層面已核對過整個 repo 沒有其他消費者，理論上安全，但沒有實機跑過完整流程）。
+  - **正式端對端備份驗收已完成（2026-08-13 18:12 Asia/Taipei）**：以正式管理者 session 呼叫正式 Cloudflare Worker 的 `backupDatabaseToSheet`，完整走過 Worker → Apps Script 第 49 版 → 真實 Google 試算表 `database` 分頁；回傳 `ok:true`、JSON 來源 615 筆、25 個同名欄位、更新 614 筆、新增 1 筆、revision 905，證明兩端 service key 相符且新版「只覆寫同名欄位」路徑可實際完成。
+  - **仍未做的驗證**：沒有用真實登入的設計師帳號在正式站標記一次過稿中，實機確認「繳交時間」欄真的被寫入且前台其他畫面沒有意外受影響（例如是否有任何既有畫面用到「繳交時間」這個欄位名稱，這次程式碼層面已核對過整個 repo 沒有其他消費者，理論上安全，但沒有實機跑過完整流程）。
 - 部署狀態：
   - `backend/schema.mjs`、`json_database_admin.html`、`CLAUDE.md` 純前端／共用檔案，git push 後自動生效。
   - **`worker/` 這次已經在本機直接執行 `wrangler secret put DATABASE_BACKUP_API_KEY`（產生隨機值）＋ `wrangler deploy` 完成部署並實測 `ping` action 確認新版本已生效（`version: cloudflare-worker-account-directory-2026-08-13-3`）**——跟前一則紀錄不同，這次不是留給使用者手動做，是這個工作階段內直接在使用者本機用已登入的 `wrangler` CLI 完成的。
-  - **`upload/Code.gs` 仍然需要使用者手動部署，這點沒有改變**：①在 Apps Script 編輯器「專案設定 → 指令碼屬性」新增 `DATABASE_BACKUP_API_KEY`（值需要向這次工作階段索取，已經设定進 Cloudflare Secret、只有這裡還沒同步過去）；②把這次修改後的 `upload/Code.gs` 內容貼回 Apps Script 編輯器、「部署 → 管理部署 → 編輯 → 新版本」。**這兩步沒有比照 Worker 一起自動完成**——嘗試過用 `clasp`（Google 官方的 Apps Script 命令列工具，比起在瀏覽器編輯器裡手動貼上整份程式碼更不容易出錯）在本機安裝並啟動登入流程，但 `clasp login` 需要完成一次會請求 `script.deployments`／`drive.file`／`cloud-platform` 等高權限範圍的 Google OAuth 同意畫面，且這個環境的瀏覽器分頁對 `localhost` 回呼網址有存取限制，整個流程需要即時、持續的人工互動（登入帳號、勾選同意、視需要複製貼上一次性授權網址），沒辦法在沒有你在場操作瀏覽器的情況下安全、可靠地完成——這類會取得帳號較高權限的 OAuth 授權，不是應該由我在沒有你即時在場確認的情況下代為完成的動作，所以這次改成把清楚步驟寫在這裡，而不是嘗試自動化到底、冒著在正式帳號上留下不完整或有風險的授權狀態的風險。部署完成前，「備份至雲端試算表」按鈕會收到明確的錯誤訊息（不會靜默失敗、不會寫入垃圾資料）。
-- commit：（見下方 push 紀錄）
+  - **`upload/Code.gs` 已由後續工作階段完成部署**：沿用公司 Chrome 的既有 Google 登入狀態，將 `DATABASE_BACKUP_API_KEY` 寫入 `upload` Apps Script 專案的指令碼屬性、把本機最新版 1,999 行 `upload/Code.gs` 完整同步並儲存，原正式 Web App 部署更新為 **第 49 版**（說明：`資料庫備份只更新同名欄位 2026-08-13`）。部署作業 ID、Web App `/exec` 網址、執行身分與「所有人」存取設定均維持不變。
+  - 前端與共用程式已在吸收遠端最新資料 commit 後推送至 `main`，功能 commit：`5d97064`。
+- commit：`5d97064`（功能與部署紀錄；本段最終驗收紀錄另以後續文件 commit 補上）
 
 - 修改目的：使用者一次提出三項：①前台設計師登入後，帳號選單裡的「設計儀表板」連結會失效（點了沒反應）；②管理者帳號選單裡的「資料庫後台」與「歷史資料庫管理」目前點擊會直接在同一個分頁導航過去，要求改成開新分頁；③資料庫後台要新增一個功能，可以把目前「資料庫」表（`database`，也就是所有案件）的最新資料整批備份到雲端 Google 試算表。
 - 影響檔案：`index.html`、`json_database_admin.html`、`worker/src/database-coordinator.ts`、`worker/wrangler.jsonc`、`worker/worker-configuration.d.ts`（`npx wrangler types` 自動重新產生）、`upload/Code.gs`。
