@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 709,
+  "revision": 710,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T03:28:04.472Z",
+  "updatedAt": "2026-08-13T03:28:12.511Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18642,9 +18642,9 @@
           "修改內容": "初稿完成",
           "修改人": "Machi",
           "確認修正日": "2026/08/13 11:27:55",
-          "圖片連結": "[{\"fileName\":\"260804_王品_雙星熱年菜_v01_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16ruF7Zt1DVY4ZYQmgibhCCelnfD3G6fx=w1600\"},{\"fileName\":\"260804_王品_雙星熱年菜_v01_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18c3Cnh5ZmbayeuPfw30UZ3EPE2o2eMkT=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260804_王品_雙星熱年菜_v01_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16ruF7Zt1DVY4ZYQmgibhCCelnfD3G6fx=w1600\"},{\"fileName\":\"260804_王品_雙星熱年菜_v01_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18c3Cnh5ZmbayeuPfw30UZ3EPE2o2eMkT=w1600\"},{\"fileName\":\"260804_王品_雙星熱年菜_v01_03.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ocBf0ItpzXe2Z4ltjRwzxz2iXdq4t4mq=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/13 11:28:04"
+          "圖片更新時間": "2026/08/13 11:28:12"
         }
       ]
     },
