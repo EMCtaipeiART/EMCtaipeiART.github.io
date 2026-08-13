@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 690,
+  "revision": 691,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:55:41.474Z",
+  "updatedAt": "2026-08-13T02:55:44.316Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16636,7 +16636,7 @@
           "結束日期": "2026/08/13",
           "設計負責人": "Anna",
           "項目細節": "社群貼文",
-          "狀態": "執行中",
+          "狀態": "過稿中",
           "加權": "1",
           "填單時間": "2026/08/06 18:00",
           "時間標記": "",
