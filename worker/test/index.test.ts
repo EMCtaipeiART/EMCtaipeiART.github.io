@@ -347,4 +347,31 @@ describe('Machi Design API Worker', () => {
     }, token);
     expect(removeAgain).toMatchObject({ ok: false, error: '找不到該張圖片' });
   });
+
+  it('lets a media.manage-only account save designer profiles for poster management', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['media.manage']);
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'designer-file-sha' }, commit: { sha: 'designer-commit-sha' } });
+    });
+
+    const saved = await api({
+      action: 'saveDesignerProfiles',
+      editorToken: token,
+      profiles: [{ name: 'Machi', poster: 'https://example.com/new-poster.jpg' }]
+    }, token);
+    expect(saved).toMatchObject({ ok: true, action: 'saveDesignerProfiles' });
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({
+      '名字': 'Machi',
+      '頭像大圖連結': 'https://example.com/new-poster.jpg'
+    }));
+  });
 });

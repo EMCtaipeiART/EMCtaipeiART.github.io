@@ -712,3 +712,16 @@ test('member avatar upload keeps the returned JSON avatar without an immediate s
   assert.match(html, /lastAccountAvatarRefreshAt=Date\.now\(\);renderAccountAvatar\(\)/);
   assert.match(html, /closeUploadModal\(\{refreshUserAvatar:false\}\)/);
 });
+
+test('designer settings are reachable from media management accounts as well as designer settings accounts', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /function canAccessDesignerSettings\(\)\{return accessAllowed\('designer\.settings',hasDesignerAccountRole\(\)\)\|\|accessAllowed\('media\.manage',hasDesignerAccountRole\(\)\)\}/);
+  assert.match(html, /if\(!canAccessDesignerSettings\(\)\)\{setSync\('此帳號沒有設計師設定或圖片管理權限',true\);return\}/);
+  assert.match(html, /show\('#accountDesignerSettings',loggedIn&&canAccessDesignerSettings\(\)\)/);
+});
+
+test('upload page forwards editorToken when replacing a designer poster from recent uploads', async () => {
+  const html = await readFile(new URL('../../upload/upload.html', import.meta.url), 'utf8');
+  assert.match(html, /runner\.replaceDesignerImage\(\{\s*designer:\s*authorizedDesigner,\s*fileId:\s*files\[0\]\.id,\s*kind:\s*kind,\s*editorToken:\s*editorToken\s*\}\);/s);
+  assert.match(html, /runner\.replaceDesignerImage\(\{\s*designer:\s*authorizedDesigner,\s*fileId:\s*lastUploadedFile\.id,\s*kind:\s*kind,\s*editorToken:\s*editorToken\s*\}\);/s);
+});

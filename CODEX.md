@@ -2,6 +2,15 @@
 
 這份文件用來記錄系統欄位綁定、修改規則、容易互相影響的功能，以及每次修改後必須檢查的項目。之後任何功能調整都先看這份文件，再補上新的紀錄。
 
+## 2026-08-13｜設計師設定與圖片管理權限共用
+
+- 前台新增 `canAccessDesignerSettings()`，讓 `designer.settings` 與 `media.manage` 都能進入設計師設定頁，帳號選單顯示也一起改用這個判斷。
+- `saveDesignerSettings()` 改成接受圖片管理權限帳號，避免只負責海報／圖片管理的人被擋在設計師設定外。
+- `upload/upload.html` 在替換設計師圖片時補送 `editorToken`，讓最近上傳流程可以正確寫回。
+- Worker `saveDesignerProfiles` 新增 `media.manage` 相容判斷，並補上前端與後端測試。
+- 驗收：`node --test backend/test/*.test.mjs`、`pnpm test`、`pnpm check` 通過。
+- 版本：待本次 commit 完成後補記。
+
 ## 2026-08-11｜帳號設定分組、排序與 REELS 整合
 
 - 資料庫後台的可見名稱由「帳號權限」改為「帳號設定」；底層 JSON 表名仍保留 `帳號權限`，避免破壞既有 API 與權限判斷。

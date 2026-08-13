@@ -316,6 +316,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return requireCapability(database, session, capability) as SessionRecord;
   }
 
+  private requireAnyAccess(database: DatabaseSnapshot, session: SessionRecord | null, capabilities: string[]): SessionRecord {
+    const current = this.requireSession(session);
+    if (capabilities.some(capability => hasCapability(database, current, capability))) return current;
+    throw new Error(`此帳號沒有「${capabilities.join('／')}」權限`);
+  }
+
   private async googleLogin(payload: ApiPayload, context: RequestContext): Promise<ApiResult> {
     await this.assertLoginRate(context);
     const credential = text(payload.credential || payload.idToken);
@@ -561,7 +567,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       });
     }
     if (action === 'saveDesignerProfiles') {
-      const current = this.requireAccess(database, session, 'designer.settings');
+      const current = this.requireAnyAccess(database, session, ['designer.settings', 'media.manage']);
       return this.mutate(action, current, draft => {
         for (const profile of asRows(payload.profiles)) {
           const row = draft.tables['設定'].rows.find(item => text(item['名字']) === text(profile.name));
