@@ -295,6 +295,15 @@ function uploadImage(payload) {
         .getRange(context.rowNumber, avatarColumn)
         .setValue(userAvatarUrl);
       SpreadsheetApp.flush();
+
+      // 前台實際讀取的是 Worker 的 JSON 資料庫，不是這份試算表；
+      // 沒有這一步，頭像只會寫進舊試算表，前台會在下一次讀取設定時
+      // 被打回原本的頭像，使用者會覺得「上傳完頭像沒有換」。
+      callMainAppJsonAction_('saveUserSettings', {
+        editorToken: payload.editorToken,
+        account: target.account,
+        settings: { avatar: userAvatarUrl }
+      });
     }
 
     return {
@@ -398,40 +407,7 @@ function uploadCaseDesignImages(payload) {
       caseId
     ]);
     const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
-
-    const uploadedImages = images.map(function (image) {
-      image = image || {};
-      const mimeType = String(image.mimeType || '').trim();
-      if (!mimeType.startsWith('image/')) {
-        throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
-      }
-
-      const originalFileName = String(image.fileName || '').trim();
-      const extension = getExtension_(image.fileName, mimeType);
-      const finalFileName = createFileName_(image.fileName || 'case-image', extension);
-      const base64Content = removeDataUrlPrefix_(image.base64 || '');
-      const bytes = Utilities.base64Decode(base64Content);
-
-      if (bytes.length > maxBytes) {
-        throw new Error(`圖片超過 ${MAX_FILE_SIZE_MB}MB：` + (image.fileName || '（未命名）'));
-      }
-
-      const blob = Utilities.newBlob(bytes, mimeType, finalFileName);
-      const file = folder.createFile(blob);
-
-      try {
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch (sharingError) {
-        // 檔案已建立成功，只是網域政策可能不允許「知道連結的人皆可查看」，
-        // 不應該讓整次上傳失敗，記個警告即可。
-        console.warn('案件設計圖分享設定失敗', sharingError);
-      }
-
-      // fileName 保留呼叫端傳入的原始檔名（不是 finalFileName 這個時間戳記+
-      // 亂碼尾綴過的 Drive 內部檔名），讓主系統能依原始檔名對照「這輪要抓
-      // 哪些指定圖片」，Drive 上實際存的檔名跟這個身份用途無關。
-      return { fileName: originalFileName, url: createUploadedImageUrl_(file.getId()) };
-    });
+    const uploadedImages = uploadImagesToFolder_(images, folder, maxBytes);
     const uploadedUrls = uploadedImages.map(function (item) { return item.url; });
 
     const databaseSync = callMainAppJsonAction_('addCaseDesignImages', {
@@ -466,6 +442,120 @@ function verifyNasWatcherServiceKey_(serviceKey) {
   }
   if (!provided || provided !== expected) {
     throw new Error('服務金鑰不正確，拒絕上傳');
+  }
+}
+
+/**
+ * 把一批 base64 圖片存進指定資料夾，設定分享權限並回傳可公開讀取的網址。
+ * uploadCaseDesignImages()（NAS 監控程式）與 uploadCaseDesignImagesInteractive()
+ * （瀏覽器選檔案上傳）共用這段邏輯，差異只在呼叫端的身分驗證方式。
+ */
+function uploadImagesToFolder_(images, folder, maxBytes) {
+  return images.map(function (image) {
+    image = image || {};
+    const mimeType = String(image.mimeType || '').trim();
+    if (!mimeType.startsWith('image/')) {
+      throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
+    }
+
+    const originalFileName = String(image.fileName || '').trim();
+    const extension = getExtension_(image.fileName, mimeType);
+    const finalFileName = createFileName_(image.fileName || 'case-image', extension);
+    const base64Content = removeDataUrlPrefix_(image.base64 || '');
+    const bytes = Utilities.base64Decode(base64Content);
+
+    if (bytes.length > maxBytes) {
+      throw new Error(`圖片超過 ${MAX_FILE_SIZE_MB}MB：` + (image.fileName || '（未命名）'));
+    }
+
+    const blob = Utilities.newBlob(bytes, mimeType, finalFileName);
+    const file = folder.createFile(blob);
+
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (sharingError) {
+      // 檔案已建立成功，只是網域政策可能不允許「知道連結的人皆可查看」，
+      // 不應該讓整次上傳失敗，記個警告即可。
+      console.warn('案件設計圖分享設定失敗', sharingError);
+    }
+
+    // fileName 保留呼叫端傳入的原始檔名（不是 finalFileName 這個時間戳記+
+    // 亂碼尾綴過的 Drive 內部檔名），讓主系統能依原始檔名對照「這輪要抓
+    // 哪些指定圖片」，Drive 上實際存的檔名跟這個身份用途無關。
+    return { fileName: originalFileName, url: createUploadedImageUrl_(file.getId()) };
+  });
+}
+
+/**
+ * 案件設計圖上傳（互動式，設計師/管理者直接在瀏覽器裡選電腦檔案多選上傳，
+ * 走 upload.html 的 mode=case-design 區塊、透過 google.script.run 呼叫）。
+ *
+ * 跟 uploadCaseDesignImages() 的差異：那支是給沒有登入畫面的服務對服務
+ * 呼叫（NAS 監控程式）用，靠 NAS_WATCHER_API_KEY 驗證；這支是給登入中的
+ * 使用者用，靠 editorToken 驗證 media.manage 權限（跟案件詳情面板「上傳
+ * 設計圖」按鈕、修改紀錄彈窗的新增/刪除圖片，都是同一個權限）。
+ *
+ * @param {Object} payload
+ *   editorToken 必填，需具備 media.manage 權限
+ *   caseId      必填，案件編號
+ *   round       必填，修改輪次，0 代表初稿
+ *   designer    必填，設計負責人（用於目的地資料夾路徑）
+ *   client      必填，客戶別（用於目的地資料夾路徑）
+ *   year        必填，年度（用於目的地資料夾路徑）
+ *   month       必填，月份（用於目的地資料夾路徑）
+ *   images      必填，[{fileName, mimeType, base64}, ...]
+ */
+function uploadCaseDesignImagesInteractive(payload) {
+  try {
+    payload = payload || {};
+    verifyMediaManager_(payload.editorToken);
+
+    const caseId = String(payload.caseId || '').trim();
+    const round = Number(payload.round);
+    const images = Array.isArray(payload.images) ? payload.images : [];
+
+    if (!caseId) throw new Error('缺少案件編號');
+    if (!Number.isFinite(round) || round < 0) throw new Error('缺少修改輪次（0=初稿）');
+    if (!images.length) throw new Error('沒有收到任何圖片');
+    if (images.length > MAX_CASE_DESIGN_IMAGES_PER_REQUEST) {
+      throw new Error(`一次最多上傳 ${MAX_CASE_DESIGN_IMAGES_PER_REQUEST} 張`);
+    }
+    if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) {
+      throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID，請先在 Drive 建立母資料夾並填入 ID');
+    }
+
+    const rootFolder = DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID);
+    const folder = getOrCreateNestedFolder_(rootFolder, [
+      payload.designer || '未指定設計師',
+      payload.client || '未分類客戶',
+      payload.year || String(new Date().getFullYear()),
+      payload.month || String(new Date().getMonth() + 1).padStart(2, '0'),
+      caseId
+    ]);
+    const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+    const uploadedImages = uploadImagesToFolder_(images, folder, maxBytes);
+
+    const databaseSync = callMainAppJsonAction_('addCaseDesignImages', {
+      editorToken: payload.editorToken,
+      caseId: caseId,
+      round: round,
+      images: uploadedImages,
+      source: 'manual-upload'
+    });
+
+    return {
+      success: true,
+      caseId: caseId,
+      round: round,
+      count: uploadedImages.length,
+      images: uploadedImages,
+      folderUrl: createFolderUrl_(folder.getId()),
+      jsonRevision: databaseSync.jsonRevision || 0,
+      githubCommitSha: databaseSync.githubCommitSha || ''
+    };
+  } catch (error) {
+    console.error(error);
+    return { success: false, message: error.message || '案件設計圖上傳失敗' };
   }
 }
 
@@ -565,6 +655,12 @@ function replaceUserAvatar(payload) {
       .getRange(context.rowNumber, avatarColumn)
       .setValue(imageUrl);
     SpreadsheetApp.flush();
+
+    callMainAppJsonAction_('saveUserSettings', {
+      editorToken: payload.editorToken,
+      account: target.account,
+      settings: { avatar: imageUrl }
+    });
 
     return {
       success: true,
@@ -1616,7 +1712,7 @@ function userFolderNameFromAccount_(account) {
 
 function sanitizeUserFolderName_(value) {
   return String(value || '')
-    .replace(/[\\/\u0000-\u001f\u007f]/g, '')
+    .replace(/[\\/ -]/g, '')
     .trim()
     .slice(0, 80);
 }

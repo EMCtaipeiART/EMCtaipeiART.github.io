@@ -113,6 +113,18 @@ function parseCommentList(value: unknown): Row[] {
   return parseComments(value).map(item => ({ ...item }));
 }
 
+function parseCaseDesignImages_(row: Row): { fileName: string; url: string }[] {
+  try {
+    const parsed = JSON.parse(text(row['圖片連結']) || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(item => (item && typeof item === 'object' && !Array.isArray(item))
+        ? { fileName: text((item as Row).fileName), url: text((item as Row).url) }
+        : { fileName: '', url: text(item) })
+      .filter(item => isHttpUrl(item.url));
+  } catch { return []; }
+}
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -717,7 +729,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             '修改次數': String(roundNumber),
             '建立日期': now,
             '修改日期': roundNumber === 0 ? now : '',
-            '修改內容': roundNumber === 0 ? '初稿完成（NAS 自動建立）' : '',
+            '修改內容': roundNumber === 0 ? (serviceAuthorized ? '初稿完成（NAS 自動建立）' : '初稿完成') : '',
             '修改人': serviceAuthorized ? 'NAS 自動同步' : text(session?.user || '系統'),
             // 第 0 輪（初稿）本身就代表「已完成」，不是一筆待處理的修改請求，
             // 直接標記確認修正日，避免被現有的「待確認修改」通知邏輯誤判成
@@ -727,17 +739,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           };
           rows.push(row);
         }
-        let existing: { fileName: string; url: string }[] = [];
-        try {
-          const parsed = JSON.parse(text(row['圖片連結']) || '[]');
-          if (Array.isArray(parsed)) {
-            existing = parsed
-              .map(item => (item && typeof item === 'object' && !Array.isArray(item))
-                ? { fileName: text((item as Row).fileName), url: text((item as Row).url) }
-                : { fileName: '', url: text(item) })
-              .filter(item => isHttpUrl(item.url));
-          }
-        } catch { existing = []; }
+        const existing = parseCaseDesignImages_(row);
         const seenUrls = new Set<string>();
         const merged: { fileName: string; url: string }[] = [];
         for (const item of [...existing, ...images]) {
@@ -749,6 +751,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         row['圖片來源'] = source;
         row['圖片更新時間'] = now;
         return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: ['修改統計表'] };
+      });
+    }
+    if (action === 'removeCaseDesignImage') {
+      const current = this.requireAccess(database, session, 'media.manage');
+      const caseId = text(payload.caseId || payload.id || payload['案件編號']);
+      const roundNumber = Math.trunc(Number(payload.round ?? payload['修改次數']));
+      const url = text(payload.url);
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Number.isFinite(roundNumber) || roundNumber < 0) throw new Error('缺少修改輪次（0=初稿）');
+      if (!url) throw new Error('缺少要刪除的圖片網址');
+      return this.mutate(action, current, draft => {
+        const row = draft.tables['修改統計表'].rows.find(item => text(item['案件編號']) === caseId && Number(item['修改次數']) === roundNumber);
+        if (!row) throw new Error('找不到指定的修改紀錄');
+        const existing = parseCaseDesignImages_(row);
+        const filtered = existing.filter(item => item.url !== url);
+        if (filtered.length === existing.length) throw new Error('找不到該張圖片');
+        row['圖片連結'] = JSON.stringify(filtered);
+        row['圖片更新時間'] = nowTaipei();
+        return { result: { ok: true, action, caseId, round: roundNumber, images: filtered, record: row }, changedTables: ['修改統計表'] };
       });
     }
     if (action === 'createFlatProject') return this.createProject(payload, database, session);

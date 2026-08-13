@@ -294,4 +294,57 @@ describe('Machi Design API Worker', () => {
     }, token);
     expect(editAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
   });
+
+  it('lets a media.manage account add and remove case design images from the modification log, blocking accounts without the capability', async () => {
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'images-file-sha' }, commit: { sha: 'images-commit-sha' } });
+    });
+
+    const blocked = await api({
+      action: 'removeCaseDesignImage',
+      caseId: '26080001',
+      round: 0,
+      url: 'https://example.com/a.jpg'
+    }, token);
+    expect(blocked).toMatchObject({ ok: false, error: '此帳號沒有「media.manage」權限' });
+
+    // 比照 26080059 案件過稿中的權限現況：正式資料庫的「設計師」角色範本沒有 request.edit，
+    // 這裡只給 media.manage，驗證「瀏覽器選檔案上傳」與「修改紀錄彈窗刪除圖片」都只靠這個權限就能動作。
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.create', 'request.status', 'media.manage']);
+
+    const added = await api({
+      action: 'addCaseDesignImages',
+      caseId: '26080001',
+      round: 0,
+      images: [
+        { fileName: 'a.jpg', url: 'https://example.com/a.jpg' },
+        { fileName: 'b.jpg', url: 'https://example.com/b.jpg' }
+      ]
+    }, token);
+    expect(added).toMatchObject({ ok: true, caseId: '26080001', round: 0 });
+    expect(added.images).toEqual([
+      { fileName: 'a.jpg', url: 'https://example.com/a.jpg' },
+      { fileName: 'b.jpg', url: 'https://example.com/b.jpg' }
+    ]);
+
+    const removed = await api({
+      action: 'removeCaseDesignImage',
+      caseId: '26080001',
+      round: 0,
+      url: 'https://example.com/a.jpg'
+    }, token);
+    expect(removed).toMatchObject({ ok: true, caseId: '26080001', round: 0 });
+    expect(removed.images).toEqual([{ fileName: 'b.jpg', url: 'https://example.com/b.jpg' }]);
+
+    const removeAgain = await api({
+      action: 'removeCaseDesignImage',
+      caseId: '26080001',
+      round: 0,
+      url: 'https://example.com/a.jpg'
+    }, token);
+    expect(removeAgain).toMatchObject({ ok: false, error: '找不到該張圖片' });
+  });
 });

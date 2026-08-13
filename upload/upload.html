@@ -640,6 +640,55 @@
       text-align: center;
     }
 
+    .case-design-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .case-design-preview-item {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fafcfb;
+    }
+
+    .case-design-preview-thumb {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      background: #edf1ee;
+    }
+
+    .case-design-preview-name {
+      overflow: hidden;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .case-design-preview-remove {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(23, 33, 29, 0.72);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
     @media (max-width: 640px) {
       body {
         padding: 14px;
@@ -685,7 +734,7 @@
       </p>
     </header>
 
-    <section class="card">
+    <section class="card" id="mainUploadCard">
       <div class="target-picker" id="targetPicker">
         <label for="targetSelect" id="targetLabel">目前設計師與上傳資料夾</label>
 
@@ -850,6 +899,55 @@
         </div>
       </div>
     </section>
+
+    <section class="card" id="caseDesignSection" hidden>
+      <label class="upload-zone" id="caseDesignZone" for="caseDesignFileInput">
+        <input
+          id="caseDesignFileInput"
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp,image/gif"
+        >
+
+        <div>
+          <div class="upload-icon" aria-hidden="true"></div>
+          <div class="upload-title">選擇設計圖（可多選）</div>
+
+          <div class="upload-help">
+            支援 JPG、PNG、WebP、GIF<br>
+            單張圖片上限 10 MB
+          </div>
+        </div>
+      </label>
+
+      <div class="case-design-preview-grid" id="caseDesignPreviewGrid"></div>
+
+      <div class="actions">
+        <button
+          class="button button-primary"
+          id="caseDesignUploadButton"
+          type="button"
+          disabled
+        >
+          上傳全部
+        </button>
+
+        <button
+          class="button button-secondary"
+          id="caseDesignClearButton"
+          type="button"
+          disabled
+        >
+          清空重選
+        </button>
+      </div>
+
+      <div class="progress" id="caseDesignProgress">
+        <div class="progress-bar"></div>
+      </div>
+
+      <div class="status" id="caseDesignStatus"></div>
+    </section>
   </main>
 
   <script>
@@ -857,6 +955,7 @@
 
     const pageTitle = document.getElementById('pageTitle');
     const pageSubtitle = document.getElementById('pageSubtitle');
+    const mainUploadCard = document.getElementById('mainUploadCard');
     const targetPicker = document.getElementById('targetPicker');
     const targetLabel = document.getElementById('targetLabel');
     const targetSelect = document.getElementById('targetSelect');
@@ -897,6 +996,15 @@
     const recentSetPoster = document.getElementById('recentSetPoster');
     const recentSetStory = document.getElementById('recentSetStory');
     const recentDelete = document.getElementById('recentDelete');
+
+    const caseDesignSection = document.getElementById('caseDesignSection');
+    const caseDesignZone = document.getElementById('caseDesignZone');
+    const caseDesignFileInput = document.getElementById('caseDesignFileInput');
+    const caseDesignPreviewGrid = document.getElementById('caseDesignPreviewGrid');
+    const caseDesignUploadButton = document.getElementById('caseDesignUploadButton');
+    const caseDesignClearButton = document.getElementById('caseDesignClearButton');
+    const caseDesignProgress = document.getElementById('caseDesignProgress');
+    const caseDesignStatusBox = document.getElementById('caseDesignStatus');
 
     let selectedImage = null;
     let selectedPreviewUrl = null;
@@ -1015,6 +1123,168 @@
       loadRecentImages();
       uploadButton.disabled = !selectedImage || !targetSelect.value;
     });
+
+    let caseDesignFiles = [];
+    let caseDesignUploading = false;
+
+    caseDesignFileInput.addEventListener('change', function () {
+      addCaseDesignFiles(Array.from(caseDesignFileInput.files || []));
+      caseDesignFileInput.value = '';
+    });
+
+    caseDesignZone.addEventListener('dragover', function (event) {
+      event.preventDefault();
+      caseDesignZone.classList.add('dragover');
+    });
+
+    caseDesignZone.addEventListener('dragleave', function () {
+      caseDesignZone.classList.remove('dragover');
+    });
+
+    caseDesignZone.addEventListener('drop', function (event) {
+      event.preventDefault();
+      caseDesignZone.classList.remove('dragover');
+      addCaseDesignFiles(Array.from(event.dataTransfer.files || []));
+    });
+
+    caseDesignClearButton.addEventListener('click', function () {
+      caseDesignFiles = [];
+      renderCaseDesignPreview();
+      hideCaseDesignStatus();
+    });
+
+    caseDesignUploadButton.addEventListener('click', uploadCaseDesignImagesFlow);
+
+    function modificationLabelForRound(round) {
+      const labels = ['初稿', '一修', '二修', '三修', '四修', '五修', '六修', '七修', '八修', '九修', '十修'];
+      const n = Number(round) || 0;
+      return labels[n] || `第 ${n} 修`;
+    }
+
+    function addCaseDesignFiles(files) {
+      hideCaseDesignStatus();
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+      const rejected = [];
+
+      files.forEach(function (file) {
+        if (!allowedTypes.includes(file.type)) {
+          rejected.push(`${file.name}（格式不支援）`);
+          return;
+        }
+        if (file.size > maxBytes) {
+          rejected.push(`${file.name}（超過 ${MAX_FILE_SIZE_MB}MB）`);
+          return;
+        }
+        caseDesignFiles.push(file);
+      });
+
+      if (rejected.length) {
+        showCaseDesignStatus(`已略過 ${rejected.length} 個檔案：${rejected.join('、')}`, 'error');
+      }
+
+      renderCaseDesignPreview();
+    }
+
+    function removeCaseDesignFile(index) {
+      caseDesignFiles.splice(index, 1);
+      renderCaseDesignPreview();
+    }
+
+    function renderCaseDesignPreview() {
+      caseDesignPreviewGrid.innerHTML = caseDesignFiles.map(function (file, index) {
+        const url = URL.createObjectURL(file);
+        return `
+          <div class="case-design-preview-item">
+            <img class="case-design-preview-thumb" src="${url}" alt="${file.name}">
+            <div class="case-design-preview-name">${file.name}</div>
+            <button type="button" class="case-design-preview-remove" data-index="${index}" aria-label="移除">×</button>
+          </div>
+        `;
+      }).join('');
+
+      caseDesignPreviewGrid.querySelectorAll('.case-design-preview-remove').forEach(function (button) {
+        button.addEventListener('click', function () {
+          removeCaseDesignFile(Number(button.dataset.index));
+        });
+      });
+
+      const hasFiles = caseDesignFiles.length > 0;
+      caseDesignUploadButton.disabled = !hasFiles || caseDesignUploading;
+      caseDesignClearButton.disabled = !hasFiles || caseDesignUploading;
+    }
+
+    async function uploadCaseDesignImagesFlow() {
+      if (caseDesignUploading || !caseDesignFiles.length || !caseDesignContext) return;
+      caseDesignUploading = true;
+      caseDesignUploadButton.disabled = true;
+      caseDesignClearButton.disabled = true;
+      caseDesignProgress.classList.add('visible');
+      showCaseDesignStatus('上傳中...', '');
+
+      try {
+        const images = await Promise.all(caseDesignFiles.map(async function (file) {
+          const base64 = await fileToDataUrl(file);
+          return { fileName: file.name, mimeType: file.type, base64: base64 };
+        }));
+
+        google.script.run
+          .withSuccessHandler(handleCaseDesignUploadSuccess)
+          .withFailureHandler(handleCaseDesignUploadFailure)
+          .uploadCaseDesignImagesInteractive({
+            editorToken: editorToken,
+            caseId: caseDesignContext.caseId,
+            round: caseDesignContext.round,
+            designer: caseDesignContext.designer,
+            client: caseDesignContext.client,
+            year: caseDesignContext.year,
+            month: caseDesignContext.month,
+            images: images
+          });
+      } catch (error) {
+        handleCaseDesignUploadFailure(error);
+      }
+    }
+
+    function handleCaseDesignUploadSuccess(result) {
+      caseDesignProgress.classList.remove('visible');
+      if (!result || !result.success) {
+        caseDesignUploading = false;
+        renderCaseDesignPreview();
+        showCaseDesignStatus((result && result.message) || '上傳失敗，請重試', 'error');
+        return;
+      }
+
+      caseDesignUploading = false;
+      caseDesignFiles = [];
+      renderCaseDesignPreview();
+      showCaseDesignStatus(`已上傳 ${result.count} 張設計圖`, 'success');
+      notifyUploadHost('machi-case-design-images-updated', {
+        caseId: result.caseId,
+        round: result.round,
+        count: result.count
+      });
+      setTimeout(function () {
+        window.close();
+      }, 600);
+    }
+
+    function handleCaseDesignUploadFailure(error) {
+      caseDesignUploading = false;
+      caseDesignProgress.classList.remove('visible');
+      renderCaseDesignPreview();
+      showCaseDesignStatus((error && error.message) || '上傳失敗，請重試', 'error');
+    }
+
+    function showCaseDesignStatus(message, type) {
+      caseDesignStatusBox.textContent = message;
+      caseDesignStatusBox.className = `status visible ${type}`;
+    }
+
+    function hideCaseDesignStatus() {
+      caseDesignStatusBox.textContent = '';
+      caseDesignStatusBox.className = 'status';
+    }
 
     function selectFile(file) {
       hideStatus();
@@ -1467,6 +1737,18 @@
       const directMode = String(params.get('mode') || '').trim().toLowerCase();
       closeNonce = String(params.get('closeNonce') || '').trim();
 
+      if (directMode === 'case-design') {
+        applyCaseDesignFromUrl({
+          caseId: params.get('caseId'),
+          round: params.get('round'),
+          designer: params.get('designer'),
+          client: params.get('client'),
+          year: params.get('year'),
+          month: params.get('month')
+        });
+        return;
+      }
+
       if (directMode === 'user' || directUser || directAccount) {
         applyUserFromUrl(directUser, directAccount);
         return;
@@ -1488,6 +1770,17 @@
             ).trim();
           }
           const mode = String(location?.parameter?.mode || '').trim().toLowerCase();
+          if (mode === 'case-design') {
+            applyCaseDesignFromUrl({
+              caseId: location?.parameter?.caseId,
+              round: location?.parameter?.round,
+              designer: location?.parameter?.designer,
+              client: location?.parameter?.client,
+              year: location?.parameter?.year,
+              month: location?.parameter?.month
+            });
+            return;
+          }
           const user = String(location?.parameter?.user || '').trim();
           const account = String(location?.parameter?.account || '').trim();
           if (mode === 'user' || user || account) {
@@ -1503,6 +1796,34 @@
       }
 
       applyDesignerFromUrl('');
+    }
+
+    let caseDesignContext = null;
+
+    function applyCaseDesignFromUrl(params) {
+      uploadMode = 'case-design';
+      const caseId = String(params.caseId || '').trim();
+      const round = Number(params.round);
+
+      if (!caseId || !Number.isFinite(round) || round < 0) {
+        showCaseDesignStatus('網址缺少案件資料，請從設計需求系統重新開啟。', 'error');
+        return;
+      }
+      if (!editorToken) {
+        showCaseDesignStatus('上傳連結已失效，請回設計需求系統重新開啟。', 'error');
+        return;
+      }
+
+      caseDesignContext = {
+        caseId: caseId,
+        round: round,
+        designer: String(params.designer || '').trim(),
+        client: String(params.client || '').trim(),
+        year: String(params.year || '').trim(),
+        month: String(params.month || '').trim()
+      };
+
+      configureModeUi();
     }
 
     function tokenFromLocationHash(hash) {
@@ -1576,6 +1897,16 @@
     }
 
     function configureModeUi() {
+      const isCaseDesign = uploadMode === 'case-design';
+      mainUploadCard.hidden = isCaseDesign;
+      recentSection.hidden = isCaseDesign;
+      caseDesignSection.hidden = !isCaseDesign;
+      if (isCaseDesign) {
+        pageTitle.textContent = `上傳設計圖・${caseDesignContext.caseId}`;
+        pageSubtitle.textContent = `${modificationLabelForRound(caseDesignContext.round)}，可一次選取多張圖片上傳`;
+        return;
+      }
+
       const isUser = uploadMode === 'user';
       targetPicker.hidden = isUser;
       recentSection.hidden = isUser;
