@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 700,
+  "revision": 701,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T03:25:10.393Z",
+  "updatedAt": "2026-08-13T03:25:33.881Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18621,6 +18621,18 @@
           "圖片連結": "[{\"fileName\":\"260810_Nutribullet_夏日瓜瓜狂想曲_食譜.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1R70LvMYXxjXz62KRh2LZ4Ys0z52fJ8qS=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 11:24:35"
+        },
+        {
+          "案件編號": "26080018",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 11:25:33",
+          "修改日期": "2026/08/13 11:25:33",
+          "修改內容": "初稿完成",
+          "修改人": "Machi",
+          "確認修正日": "2026/08/13 11:25:33",
+          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14DBUN5u_04JDkZcIIo2jGHyFY5X4fhn9=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 11:25:33"
         }
       ]
     },
