@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 663,
+  "revision": 664,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:25:57.615Z",
+  "updatedAt": "2026-08-13T02:27:21.387Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18549,6 +18549,18 @@
           "圖片連結": "[{\"fileName\":\"260811_Epson_V4000UV印刷機發表會_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/15y8RIGbjHL6zOWTA8qJkp3jO6RuSzOmS=w1600\"},{\"fileName\":\"260812_Epson_V4000UV印刷機發表會_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FaBvO7NJhBdl24tHP0tW6r4B_lMd3AyE=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 08:55:50"
+        },
+        {
+          "案件編號": "26080033",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 10:27:21",
+          "修改日期": "2026/08/13 10:27:21",
+          "修改內容": "初稿完成",
+          "修改人": "Machi",
+          "確認修正日": "2026/08/13 10:27:21",
+          "圖片連結": "[{\"fileName\":\"260811_八月CPAS廣告素材_lito_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/17RL8uDbInN2noMU9OiVZIrW9mgMn9LDB=w1600\"},{\"fileName\":\"260811_八月CPAS廣告素材_lito_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VyusLwI0nDIEjziBcfh_ir37Ivt3Cqdv=w1600\"},{\"fileName\":\"260806_八月CPAS廣告素材_avata360_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WcVOpHua6mP-Kk66Dg3VujSbKbxvERSy=w1600\"},{\"fileName\":\"260806_八月CPAS廣告素材_neo2_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bdrV-vYc9_RcM9gm8q5olPc0ITx8TJQ5=w1600\"},{\"fileName\":\"260806_八月CPAS廣告素材_neo2_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q2n1aV5FUMeh1kxE0SdlxGtWNXEmJA_v=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 10:27:21"
         }
       ]
     },
