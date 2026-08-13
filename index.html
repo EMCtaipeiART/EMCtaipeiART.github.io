@@ -7736,7 +7736,9 @@ function handleUploadFrameMessage(event){
   }
   if(data.type==='machi-case-design-upload-progress'){
     if(!activeCaseImageUploadNonce||data.closeNonce!==activeCaseImageUploadNonce)return;
+    const wasInFlight=caseDesignUploadInFlight;
     caseDesignUploadInFlight=true;
+    if(!wasInFlight)backgroundizeCaseDesignUpload();
     updateCaseDesignUploadBadge(Number(data.done)||0,Number(data.total)||0,String(data.currentFileName||''));
     return;
   }

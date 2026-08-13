@@ -186,6 +186,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-13 Asia/Taipei（更晚）— 設計圖上傳按下「上傳全部」自動收合成右下角進度提示
+
+- 修改目的：使用者回報案件設計圖上傳彈窗（`upload/upload.html?mode=case-design`）目前的行為是：按下 iframe 裡的「上傳全部」後，外層大彈窗仍然停留在前景，要使用者自己手動點 X／背景遮罩／Escape 才會收合成右下角的「設計圖上傳中」小卡片。使用者希望改成按下上傳按鈕當下就自動收合，只留右下角進度提示；上傳全部結束後這個提示也要跟著收合——後者其實既有程式碼已經做到（`closeUploadModal()` 本來就會呼叫 `hideCaseDesignUploadBadge()`），這次真正要修的只有「按下上傳按鈕當下要自動收合」這一段。
+- 影響檔案：`index.html`。
+- 影響功能：`handleUploadFrameMessage()` 處理 `machi-case-design-upload-progress` 訊息的分支（`upload/upload.html` 在 `uploadCaseDesignImagesFlow()` 一開始，也就是使用者按下「上傳全部」的當下，就會送出第一則 `{done:0,total:N}` 的進度訊息，這是既有機制，這次沒有動 `upload/upload.html`）——新增判斷「這是不是這次上傳第一次收到進度訊息（`wasInFlight` 從 false 變 true 的那一刻）」，是的話立刻呼叫既有的 `backgroundizeCaseDesignUpload()`（隱藏大彈窗、顯示右下角小卡片），不用再等使用者手動關閉。**刻意只在「第一次」觸發**，不是每一則進度訊息都觸發：如果使用者事後點小卡片重新展開大彈窗查看進度（既有的 `restoreCaseDesignUploadModal()` 功能，這次沒有改動），之後陸續傳來的進度訊息不會把畫面硬拉回收合狀態、打斷使用者正在看的畫面。
+- 風險區塊：無新增風險——`backgroundizeCaseDesignUpload()`／`closeUploadModal()`／`restoreCaseDesignUploadModal()` 三個函式本身完全沒有修改，這次只是多了一個「符合條件時自動呼叫既有函式」的觸發點，沒有新增狀態或改變既有函式的行為。
+- 已檢查／驗證方式：`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 22/22 全過。用真實頁面＋console 直接呼叫 `handleUploadFrameMessage()` 模擬完整情境並逐一驗證：①大彈窗前景開著時收到第一則進度訊息（`done:0`）→ 彈窗立刻收合、右下角提示卡片立刻出現、文字正確顯示「設計圖上傳中 0/3」；②使用者手動點小卡片重新展開大彈窗後，再收到下一則進度訊息（`done:1`）→ 彈窗維持展開、不會被強制收合，只有文字更新（「設計圖上傳中 1/3：a.jpg」），不打斷使用者正在查看的畫面；③收到全部完成的訊息（`machi-case-design-images-updated`）→ 大彈窗與右下角提示卡片都正確收合／隱藏，`uploadModalActive`／`caseDesignUploadInFlight` 都正確重設。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-13 Asia/Taipei（最新之後再更晚）— 填入真實 pickerToken／區網位址，並意外發現這次工作環境連得到使用者辦公室內網，完成真實 NAS 端對端驗證
 
 - 修改目的：接續前兩則「NAS 資料夾選擇器」的工作，使用者依 README 指示在自己的 Mac 上執行 `node scripts/nas_folder_picker_server.mjs`，貼回實際印出的 `pickerToken` 與這台機器的區網 IP（`192.168.1.64`）。
