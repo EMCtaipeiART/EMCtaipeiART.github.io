@@ -359,6 +359,9 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /基本與輪值設定/);
   assert.match(html, /前台媒體設定/);
   assert.match(html, /designer-skill-columns/);
+  assert.match(html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(html, /designer-skill-editor-head \.btn\{align-self:center/);
+  assert.match(html, /class="btn danger delete"/);
   assert.match(html, /function designerRotationBoardHtml\(rows\)/);
   assert.match(html, /新專案輪值順序/);
   assert.match(html, /data-account-rotation-item=.*draggable="true"|draggable="true" data-account-rotation-item=/);
