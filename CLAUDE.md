@@ -186,7 +186,31 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 過稿中設計圖改成「選擇電腦檔案上傳」、修改紀錄可編輯圖片（新增/刪除）
+### 2026-08-13 Asia/Taipei（更新）— 案件設計圖上傳改成選資料夾／多選檔案＋背景上傳＋自動壓縮／影片截圖；修改紀錄新增圖片按鈕縮小
+
+- 修改目的：上一則「選擇電腦檔案上傳」使用者實際用起來覺得：①上傳要等很久會不耐煩；②想要更接近「選資料夾」而不是零散選檔案，比之前打 NAS 路徑更容易也更不會選錯專案；③大圖佔空間；④影片檔應該只抓一張截圖不要整支上傳。另外修改紀錄彈窗裡「新增圖片」那顆按鈕因為 CSS 漏加 `!important` 被全域按鈕樣式蓋掉，變成一個 64px 的綠色圓形大按鈕，使用者反映「過大、不精緻」。
+- 技術限制與設計取捨：跟使用者確認過，瀏覽器選資料夾（`webkitdirectory`）沒辦法把使用者電腦上的絕對路徑交出來（瀏覽器安全限制），原本設想的「選資料夾→只寫路徑紀錄→背景追蹤器自己去抓」做不到；但選資料夾當下瀏覽器已經把裡面所有檔案內容讀進來了，不需要另外的追蹤器，直接在瀏覽器端做背景上傳＋用戶端壓縮／影片擷圖即可達到同樣效果，且完全不用碰 `worker/` 或 `upload/Code.gs`（`uploadCaseDesignImagesInteractive` 現有介面本來就支援「一張一張呼叫」，這次只是呼叫端行為改變）。
+- 影響檔案：`upload/upload.html`（主要改動）、`index.html`。
+- 影響功能：
+  1. **選檔 UI**：`mode=case-design` 區塊原本單一個「選擇設計圖」拖放框，改成「選擇資料夾」／「選擇檔案（可多選）」兩個按鈕＋保留拖放。透過「選擇資料夾」進來的檔案只靜靜篩出圖片／影片（資料夾裡難免有 `.DS_Store`、設計來源檔等雜項，不逐一跳錯誤訊息）；透過「選擇檔案」／拖放明確選取的維持原本「型別或超過大小會顯示已略過」的提示行為。新增用戶端上限 `MAX_CASE_DESIGN_FILES_CLIENT=40`。
+  2. **影片只上傳一張截圖**：新增 `extractVideoFrame(file)`，用離屏 `<video>`＋`<canvas>` 在時長 10%（最多 1 秒）處擷取一張畫面，影片原始檔完全不上傳；`MAX_VIDEO_SOURCE_SIZE_MB=500` 當用戶端防呆上限。支援常見影片格式（mp4/mov/webm/m4v，`accept` 屬性擴充成 `image/*,video/*`）。
+  3. **圖片自動壓縮**：新增 `compressImageBlob(blob,{maxDimension,quality})`，用 `createImageBitmap`（不支援時退回 `<img>`）＋canvas 等比縮到最長邊 1600px、重新編碼成 JPEG 品質 70%——參數跟現有 `scripts/nas_design_image_watcher.mjs` 的壓縮設定一致。影片擷圖後的畫面也會送進同一支函式，統一規格。
+  4. **序列上傳＋逐張回報進度**：原本「一次把全部檔案轉 base64、一次呼叫 `uploadCaseDesignImagesInteractive`」改成 `for` 迴圈逐一處理（影片先擷圖→都壓縮→轉 base64→呼叫一次帶單張 `images:[oneImage]` 的既有函式），每張處理完（不論成功失敗）都會 `postMessage` 一則 `machi-case-design-upload-progress`（`{done,total,currentFileName}`）給父視窗；單張失敗會記錄下來、繼續處理下一張，不會讓整批中斷；全部跑完後送出彙總的 `machi-case-design-images-updated`（新增 `failedCount` 欄位）。新增 `window.addEventListener('message',...)` 監聽父視窗傳來的 `machi-cancel-case-design-upload` 取消訊號（這是這個檔案第一次需要接收父視窗的訊息，之前都只有單向 iframe→父視窗）。
+  5. **背景上傳（不擋畫面）**：`index.html` 這邊，`#uploadModalClose`（右上角 X）、背景遮罩點擊、Escape 鍵這三個既有關閉途徑，改成偵測到 `caseDesignUploadInFlight`（收到第一個 progress 訊息就設 true）時呼叫新函式 `backgroundizeCaseDesignUpload()`——只隱藏 `#uploadModal`（沿用既有 `hidden` 機制，沒改任何 CSS 結構）、移除 body 的捲動鎖，**不會**把 iframe 砍掉，讓上傳在背景繼續跑，使用者可以正常操作頁面其他地方。新增一個固定在右下角的浮動小卡片 `#caseDesignUploadBadge`（不是重用 `#uploadModal` 也不是重用既有的 `#syncStatus`，因為 `#syncStatus` 只是主案件列表工具列裡的一個 `<span>`，不是全畫面都看得到的 toast），只在背景上傳時顯示，顯示「設計圖上傳中 3/12：xxx.jpg」，點卡片本體恢復大彈窗（`restoreCaseDesignUploadModal()`），點卡片上的小「×」跳 `confirm()` 二次確認後透過 `postMessage` 通知 iframe 取消（迴圈跑完手上這張就提前結束，不會讓上傳到一半的檔案被硬中斷）。真正的收尾（`frame.src` 設回 `about:blank`、清空 nonce）只在收到最終完成訊息時才發生，不論當下是前景還是背景。為了讓 `closeUploadModal()` 在「已背景化（`modal.hidden=true`）」狀態下仍然能被完成訊息正確觸發收尾，新增獨立的 `uploadModalActive` 旗標取代原本用 `modal.hidden` 當作「是否有東西開著」的判斷依據（`modal.hidden` 現在同時可能代表「真的關閉」或「背景化中」兩種意思，不能再共用同一個判斷）。
+  6. **「新增圖片」按鈕縮小精緻化**：`.revision-image-add` 這條 CSS 補上 `!important`（跟同一區塊其他按鈕如 `.revision-confirm-btn` 一致），尺寸從失控的 64px 圓形綠色大按鈕改成 26px 小巧的白底虛線圓圈，hover 時邊框與圖示變綠提示可點擊，視覺上跟旁邊的刪除小按鈕、縮圖尺寸更協調。
+- 風險區塊：
+  - 影片畫面擷取（`extractVideoFrame`）用真的 `MediaRecorder`＋`canvas.captureStream()` 產生一段測試影片實測過整條流程可以正確取得 JPEG 畫面，但這是在無頭 Chrome 環境測試的，正式站使用者的瀏覽器版本、影片編碼（尤其 `.mov`／H.265 等 Safari 常見格式）解碼支援度可能有落差，需要使用者實機測試含真實影片的批次上傳。
+  - 背景上傳仍然需要瀏覽器分頁保持開啟才能繼續（關分頁或整頁重新整理會中斷，未上傳的檔案會遺失，已經上傳成功的不受影響）——這是瀏覽器背景執行的硬限制，已跟使用者說明並確認可接受。
+  - `uploadModalActive` 這個新旗標取代了原本 `closeUploadModal()`／各關閉途徑依賴 `modal.hidden` 判斷「是否有上傳在進行」的邏輯——已經用實際情境（前景時點 X、背景時點 X 兩次、背景時收到完成訊息、前景時收到完成訊息）在瀏覽器裡逐一驗證行為正確，但這是這次改動裡耦合最多既有程式碼路徑的一段，之後如果要再改 `#uploadModal` 的開關邏輯要留意這個旗標。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` 22/22（沒有動到 schema／後端，`worker/`、`upload/Code.gs` 這次完全沒改）。
+  - `index.html`／`upload/upload.html` 抽出 `<script>` 內容 `node --check` 語法檢查皆通過。
+  - 用本機 Node 靜態伺服器＋ Browser pane：①型別過濾兩種嚴格程度（資料夾選取靜默略過 `.DS_Store`、明確選取顯示略過訊息）皆正確；②用真實 3000×2000 PNG 測試 `compressImageBlob()`，確認正確等比縮到 1600×1067、轉成 JPEG、檔案從 121KB 壓到 12KB；③用 `MediaRecorder`＋`canvas.captureStream()` 現場產生一段真實 webm 測試影片，`extractVideoFrame()` 確認能正確取出一張 320×240 的 JPEG 畫面；④模擬 3 個真實圖片檔（1 張故意讓伺服器端回傳失敗）跑完整序列上傳流程，確認：每個檔案各自呼叫一次 `uploadCaseDesignImagesInteractive`（`images` 陣列長度都是 1）、檔名正確轉成 `.jpg`、progress 訊息四則（初始 0/3 與三次完成）done 正確遞增、失敗的那張不會中斷後續、最終彙總訊息 `count`／`failedCount` 正確；⑤`index.html`：確認 progress 訊息在大彈窗前景時不會顯示浮動小卡片（避免前景+背景重複顯示）、背景時正確顯示並即時更新文字；確認 X／背景遮罩／Escape 在上傳進行中時呼叫 `backgroundizeCaseDesignUpload()` 而非 `closeUploadModal()`（iframe 不會被砍掉）；確認點小卡片會恢復大彈窗；確認不論收到完成訊息當下是前景還是背景，都會正確重設 `frame.src`／`uploadModalActive`／nonce／隱藏小卡片，並觸發 `fetchModificationCounts()`。取消按鈕的 `postMessage` 呼叫本身因為 iframe 是 `credentialless` 沙箱、`about:blank` 狀態下無法從父視窗攔截驗證（`SecurityError: cross-origin`），改用程式碼人工比對確認邏輯正確（`confirm()` 二次確認後才呼叫 `contentWindow.postMessage`）。
+  - **未做的驗證**：無法在這個沙箱環境測試真正的 Google Drive 上傳（連不到 Google API），也沒有測過真實使用者裝置上的各種影片格式與瀏覽器版本組合，需要使用者實機測試至少一次含真實影片的批次上傳。
+- 部署狀態：`index.html` 純前端，git push 後自動生效；**`upload/upload.html` 需要使用者自行手動部署**（Apps Script 編輯器「部署 → 管理部署 → 新版本」，這次跟上一則一樣沒有改動 `upload/Code.gs`，所以只需要更新 `upload.html` 這個檔案內容，不用重新走一次授權流程）。`worker/`、`upload/Code.gs` 這次完全沒有修改，不需要重新部署 Worker。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（較早）— 過稿中設計圖改成「選擇電腦檔案上傳」、修改紀錄可編輯圖片（新增/刪除）
 
 - 修改目的：使用者認為過稿中要求填寫 NAS 資料夾路徑不夠直覺，希望改成直接在瀏覽器選電腦上的圖片檔案（可多選）上傳，系統自動算好目的地 Drive 資料夾（設計師/客戶別/年度/月份/案件編號），不用使用者自己管路徑；同時要求修改紀錄追蹤（修改紀錄彈窗）要能對每一輪設計圖新增/刪除，權限比照既有「設定來源資料夾」用的 `media.manage`；刪除只從系統紀錄移除連結，不刪 Drive 原始檔。跟使用者確認過這是**完全取代**填 NAS 路徑這個互動流程，不是並存的第二個選項。
 - 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`upload/Code.gs`、`upload/upload.html`、`index.html`。

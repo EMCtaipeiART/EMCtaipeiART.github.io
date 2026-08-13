@@ -689,6 +689,42 @@
       cursor: pointer;
     }
 
+    .case-design-preview-video {
+      display: grid;
+      place-items: center;
+      background: #2a332e;
+    }
+
+    .case-design-preview-video-badge {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(23, 33, 29, 0.72);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .case-design-picker {
+      cursor: default;
+    }
+
+    .case-design-picker-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .case-design-picker-buttons .button {
+      min-height: 40px;
+      padding: 9px 16px;
+    }
+
     @media (max-width: 640px) {
       body {
         padding: 14px;
@@ -901,24 +937,25 @@
     </section>
 
     <section class="card" id="caseDesignSection" hidden>
-      <label class="upload-zone" id="caseDesignZone" for="caseDesignFileInput">
-        <input
-          id="caseDesignFileInput"
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,image/webp,image/gif"
-        >
+      <div class="upload-zone case-design-picker" id="caseDesignZone">
+        <input id="caseDesignFolderInput" type="file" webkitdirectory multiple hidden>
+        <input id="caseDesignFileInput" type="file" multiple accept="image/*,video/*" hidden>
 
         <div>
           <div class="upload-icon" aria-hidden="true"></div>
-          <div class="upload-title">選擇設計圖（可多選）</div>
+          <div class="upload-title">選擇設計圖或影片</div>
+
+          <div class="case-design-picker-buttons">
+            <button type="button" class="button button-secondary" id="caseDesignPickFolder">選擇資料夾</button>
+            <button type="button" class="button button-secondary" id="caseDesignPickFiles">選擇檔案（可多選）</button>
+          </div>
 
           <div class="upload-help">
-            支援 JPG、PNG、WebP、GIF<br>
-            單張圖片上限 10 MB
+            支援 JPG、PNG、WebP、GIF 與常見影片格式（影片只會擷取一張畫面上傳）<br>
+            也可以直接把檔案拖放到這裡，圖片會自動壓縮，影片來源檔上限 500 MB
           </div>
         </div>
-      </label>
+      </div>
 
       <div class="case-design-preview-grid" id="caseDesignPreviewGrid"></div>
 
@@ -999,12 +1036,21 @@
 
     const caseDesignSection = document.getElementById('caseDesignSection');
     const caseDesignZone = document.getElementById('caseDesignZone');
+    const caseDesignFolderInput = document.getElementById('caseDesignFolderInput');
     const caseDesignFileInput = document.getElementById('caseDesignFileInput');
+    const caseDesignPickFolder = document.getElementById('caseDesignPickFolder');
+    const caseDesignPickFiles = document.getElementById('caseDesignPickFiles');
     const caseDesignPreviewGrid = document.getElementById('caseDesignPreviewGrid');
     const caseDesignUploadButton = document.getElementById('caseDesignUploadButton');
     const caseDesignClearButton = document.getElementById('caseDesignClearButton');
     const caseDesignProgress = document.getElementById('caseDesignProgress');
     const caseDesignStatusBox = document.getElementById('caseDesignStatus');
+
+    const CASE_DESIGN_MAX_DIMENSION = 1600;
+    const CASE_DESIGN_JPEG_QUALITY = 0.7;
+    const MAX_CASE_DESIGN_FILES_CLIENT = 40;
+    const MAX_VIDEO_SOURCE_SIZE_MB = 500;
+    const CASE_DESIGN_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
 
     let selectedImage = null;
     let selectedPreviewUrl = null;
@@ -1126,9 +1172,23 @@
 
     let caseDesignFiles = [];
     let caseDesignUploading = false;
+    let caseDesignCancelRequested = false;
+
+    caseDesignPickFolder.addEventListener('click', function () {
+      caseDesignFolderInput.click();
+    });
+
+    caseDesignPickFiles.addEventListener('click', function () {
+      caseDesignFileInput.click();
+    });
+
+    caseDesignFolderInput.addEventListener('change', function () {
+      addCaseDesignFiles(Array.from(caseDesignFolderInput.files || []), { strict: false });
+      caseDesignFolderInput.value = '';
+    });
 
     caseDesignFileInput.addEventListener('change', function () {
-      addCaseDesignFiles(Array.from(caseDesignFileInput.files || []));
+      addCaseDesignFiles(Array.from(caseDesignFileInput.files || []), { strict: true });
       caseDesignFileInput.value = '';
     });
 
@@ -1144,7 +1204,7 @@
     caseDesignZone.addEventListener('drop', function (event) {
       event.preventDefault();
       caseDesignZone.classList.remove('dragover');
-      addCaseDesignFiles(Array.from(event.dataTransfer.files || []));
+      addCaseDesignFiles(Array.from(event.dataTransfer.files || []), { strict: true });
     });
 
     caseDesignClearButton.addEventListener('click', function () {
@@ -1155,32 +1215,73 @@
 
     caseDesignUploadButton.addEventListener('click', uploadCaseDesignImagesFlow);
 
+    // 父視窗（index.html）可能會在使用者把上傳視窗縮成背景小進度條後，
+    // 由使用者按下取消，透過這個訊息通知這個 iframe 在跑完手上這一張後
+    // 提前結束整批上傳，不會讓上傳到一半的檔案被硬生生中斷。
+    window.addEventListener('message', function (event) {
+      if (event.data && event.data.type === 'machi-cancel-case-design-upload') {
+        caseDesignCancelRequested = true;
+      }
+    });
+
     function modificationLabelForRound(round) {
       const labels = ['初稿', '一修', '二修', '三修', '四修', '五修', '六修', '七修', '八修', '九修', '十修'];
       const n = Number(round) || 0;
       return labels[n] || `第 ${n} 修`;
     }
 
-    function addCaseDesignFiles(files) {
+    function isCaseDesignVideoFile(file) {
+      const type = String(file.type || '').toLowerCase();
+      if (CASE_DESIGN_VIDEO_TYPES.includes(type)) return true;
+      return type.startsWith('video/');
+    }
+
+    function isCaseDesignImageFile(file) {
+      return String(file.type || '').toLowerCase().startsWith('image/');
+    }
+
+    /**
+     * strict=true（使用者透過「選擇檔案」或拖放明確選取）：不支援的格式／
+     * 超過大小上限的檔案會列出來提示使用者。strict=false（透過「選擇資料夾」
+     * 選取，資料夾裡難免夾雜 .DS_Store、設計來源檔等不相干檔案）：只靜靜
+     * 篩出圖片／影片，其餘略過不特別提示，避免每次選資料夾都跳一堆錯誤訊息。
+     */
+    function addCaseDesignFiles(files, options) {
+      const strict = !options || options.strict !== false;
       hideCaseDesignStatus();
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-      const maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
       const rejected = [];
+      let skippedForLimit = 0;
 
       files.forEach(function (file) {
-        if (!allowedTypes.includes(file.type)) {
-          rejected.push(`${file.name}（格式不支援）`);
+        if (caseDesignFiles.length >= MAX_CASE_DESIGN_FILES_CLIENT) {
+          skippedForLimit++;
           return;
         }
-        if (file.size > maxBytes) {
-          rejected.push(`${file.name}（超過 ${MAX_FILE_SIZE_MB}MB）`);
+        const isVideo = isCaseDesignVideoFile(file);
+        const isImage = !isVideo && isCaseDesignImageFile(file);
+
+        if (!isVideo && !isImage) {
+          if (strict) rejected.push(`${file.name}（格式不支援）`);
+          return;
+        }
+        if (isVideo && file.size > MAX_VIDEO_SOURCE_SIZE_MB * 1024 * 1024) {
+          rejected.push(`${file.name}（影片超過 ${MAX_VIDEO_SOURCE_SIZE_MB}MB）`);
+          return;
+        }
+        if (isImage && file.size > MAX_FILE_SIZE_MB * 1024 * 1024 * 5) {
+          // 圖片上傳前一律會在瀏覽器端壓縮，來源檔案本身給比較寬的上限，
+          // 只用來擋明顯異常的超大檔案（例如誤選到掃描檔）。
+          rejected.push(`${file.name}（超過來源檔案上限）`);
           return;
         }
         caseDesignFiles.push(file);
       });
 
+      if (skippedForLimit) {
+        rejected.push(`已達單次上傳上限 ${MAX_CASE_DESIGN_FILES_CLIENT} 個檔案，略過 ${skippedForLimit} 個`);
+      }
       if (rejected.length) {
-        showCaseDesignStatus(`已略過 ${rejected.length} 個檔案：${rejected.join('、')}`, 'error');
+        showCaseDesignStatus(`已略過 ${rejected.length} 項：${rejected.join('、')}`, 'error');
       }
 
       renderCaseDesignPreview();
@@ -1193,10 +1294,14 @@
 
     function renderCaseDesignPreview() {
       caseDesignPreviewGrid.innerHTML = caseDesignFiles.map(function (file, index) {
-        const url = URL.createObjectURL(file);
+        const isVideo = isCaseDesignVideoFile(file);
+        const thumb = isVideo
+          ? '<div class="case-design-preview-thumb case-design-preview-video"></div>'
+          : `<img class="case-design-preview-thumb" src="${URL.createObjectURL(file)}" alt="${file.name}">`;
         return `
           <div class="case-design-preview-item">
-            <img class="case-design-preview-thumb" src="${url}" alt="${file.name}">
+            ${thumb}
+            ${isVideo ? '<span class="case-design-preview-video-badge">影片</span>' : ''}
             <div class="case-design-preview-name">${file.name}</div>
             <button type="button" class="case-design-preview-remove" data-index="${index}" aria-label="移除">×</button>
           </div>
@@ -1214,23 +1319,126 @@
       caseDesignClearButton.disabled = !hasFiles || caseDesignUploading;
     }
 
-    async function uploadCaseDesignImagesFlow() {
-      if (caseDesignUploading || !caseDesignFiles.length || !caseDesignContext) return;
-      caseDesignUploading = true;
-      caseDesignUploadButton.disabled = true;
-      caseDesignClearButton.disabled = true;
-      caseDesignProgress.classList.add('visible');
-      showCaseDesignStatus('上傳中...', '');
+    function loadImageElementFromBlob(blob) {
+      return new Promise(function (resolve, reject) {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = function () {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = function () {
+          URL.revokeObjectURL(url);
+          reject(new Error('無法讀取圖片內容'));
+        };
+        img.src = url;
+      });
+    }
 
-      try {
-        const images = await Promise.all(caseDesignFiles.map(async function (file) {
-          const base64 = await fileToDataUrl(file);
-          return { fileName: file.name, mimeType: file.type, base64: base64 };
-        }));
+    function loadImageSourceFromBlob(blob) {
+      if (window.createImageBitmap) {
+        return createImageBitmap(blob).catch(function () {
+          return loadImageElementFromBlob(blob);
+        });
+      }
+      return loadImageElementFromBlob(blob);
+    }
 
+    /**
+     * 把任意圖片 Blob（含影片擷圖後的畫面）等比縮到最長邊 maxDimension、
+     * 重新編碼成 JPEG。跟 scripts/nas_design_image_watcher.mjs 現有的壓縮
+     * 參數（最長邊 1600px、品質 70%）保持一致，避免圖片過大佔用 Drive 空間。
+     */
+    function compressImageBlob(blob, options) {
+      const maxDimension = (options && options.maxDimension) || CASE_DESIGN_MAX_DIMENSION;
+      const quality = (options && options.quality) || CASE_DESIGN_JPEG_QUALITY;
+
+      return loadImageSourceFromBlob(blob).then(function (source) {
+        const width = source.width || source.naturalWidth || 1;
+        const height = source.height || source.naturalHeight || 1;
+        const scale = Math.min(1, maxDimension / Math.max(width, height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+        if (source.close) source.close();
+
+        return new Promise(function (resolve, reject) {
+          canvas.toBlob(function (result) {
+            if (!result) { reject(new Error('圖片壓縮失敗')); return; }
+            resolve(result);
+          }, 'image/jpeg', quality);
+        });
+      });
+    }
+
+    /**
+     * 影片檔案本身不上傳，只在瀏覽器端擷取一張畫面（時長 10% 處，最多 1 秒）
+     * 當作這輪修改的設計圖紀錄，擷取完的畫面一樣會再送進 compressImageBlob()
+     * 壓縮，跟真正的圖片走同一套流程。
+     */
+    function extractVideoFrame(file) {
+      return new Promise(function (resolve, reject) {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        const url = URL.createObjectURL(file);
+        let settled = false;
+
+        const cleanup = function () {
+          URL.revokeObjectURL(url);
+          video.removeAttribute('src');
+          video.load();
+        };
+        const fail = function (message) {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(new Error(message));
+        };
+
+        video.addEventListener('loadeddata', function () {
+          const seekTime = Math.min(1, (video.duration || 1) * 0.1);
+          try {
+            video.currentTime = seekTime;
+          } catch (error) {
+            fail('無法讀取影片畫面：' + file.name);
+          }
+        });
+
+        video.addEventListener('seeked', function () {
+          if (settled) return;
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 1280;
+          canvas.height = video.videoHeight || 720;
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            settled = true;
+            cleanup();
+            if (!blob) { reject(new Error('無法擷取影片畫面：' + file.name)); return; }
+            resolve(blob);
+          }, 'image/jpeg', 0.85);
+        });
+
+        video.addEventListener('error', function () {
+          fail('無法讀取影片檔案：' + file.name);
+        });
+
+        video.src = url;
+      });
+    }
+
+    function jpegFileNameFor(originalName) {
+      const base = String(originalName || 'design-image').replace(/\.[^/.]+$/, '');
+      return `${base}.jpg`;
+    }
+
+    function callUploadCaseDesignImageInteractive(image) {
+      return new Promise(function (resolve, reject) {
         google.script.run
-          .withSuccessHandler(handleCaseDesignUploadSuccess)
-          .withFailureHandler(handleCaseDesignUploadFailure)
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
           .uploadCaseDesignImagesInteractive({
             editorToken: editorToken,
             caseId: caseDesignContext.caseId,
@@ -1239,41 +1447,85 @@
             client: caseDesignContext.client,
             year: caseDesignContext.year,
             month: caseDesignContext.month,
-            images: images
+            images: [image]
           });
-      } catch (error) {
-        handleCaseDesignUploadFailure(error);
-      }
+      });
     }
 
-    function handleCaseDesignUploadSuccess(result) {
-      caseDesignProgress.classList.remove('visible');
-      if (!result || !result.success) {
-        caseDesignUploading = false;
-        renderCaseDesignPreview();
-        showCaseDesignStatus((result && result.message) || '上傳失敗，請重試', 'error');
-        return;
+    /**
+     * 依序處理每個檔案（不是一次全部轉 base64 再一次送出）：影片先擷圖、
+     * 圖片直接用，都送進 compressImageBlob() 壓縮後個別呼叫一次
+     * uploadCaseDesignImagesInteractive()，每張處理完都會 postMessage 進度
+     * 給父視窗，讓父視窗可以在使用者把視窗縮到背景後仍持續更新小進度條。
+     * 單一檔案處理失敗不會中斷整批，會記下來、繼續處理下一張。
+     */
+    async function uploadCaseDesignImagesFlow() {
+      if (caseDesignUploading || !caseDesignFiles.length || !caseDesignContext) return;
+      caseDesignUploading = true;
+      caseDesignCancelRequested = false;
+      caseDesignUploadButton.disabled = true;
+      caseDesignClearButton.disabled = true;
+      caseDesignProgress.classList.add('visible');
+
+      const queue = caseDesignFiles.slice();
+      const total = queue.length;
+      let done = 0;
+      let succeeded = 0;
+      const failed = [];
+
+      notifyUploadHost('machi-case-design-upload-progress', { done: 0, total: total, currentFileName: '' });
+      showCaseDesignStatus(`上傳中 0/${total}...`, '');
+
+      for (let i = 0; i < queue.length; i++) {
+        if (caseDesignCancelRequested) break;
+        const file = queue[i];
+        showCaseDesignStatus(`上傳中 ${done}/${total}：${file.name}`, '');
+
+        try {
+          const sourceBlob = isCaseDesignVideoFile(file) ? await extractVideoFrame(file) : file;
+          const compressed = await compressImageBlob(sourceBlob, {
+            maxDimension: CASE_DESIGN_MAX_DIMENSION,
+            quality: CASE_DESIGN_JPEG_QUALITY
+          });
+          const base64 = await fileToDataUrl(compressed);
+          const result = await callUploadCaseDesignImageInteractive({
+            fileName: jpegFileNameFor(file.name),
+            mimeType: 'image/jpeg',
+            base64: base64
+          });
+          if (!result || !result.success) {
+            throw new Error((result && result.message) || '上傳失敗');
+          }
+          succeeded++;
+        } catch (error) {
+          failed.push({ fileName: file.name, reason: (error && error.message) || '上傳失敗' });
+        }
+
+        done++;
+        notifyUploadHost('machi-case-design-upload-progress', { done: done, total: total, currentFileName: file.name });
       }
 
       caseDesignUploading = false;
       caseDesignFiles = [];
       renderCaseDesignPreview();
-      showCaseDesignStatus(`已上傳 ${result.count} 張設計圖`, 'success');
+      caseDesignProgress.classList.remove('visible');
+
+      const cancelledEarly = caseDesignCancelRequested && done < total;
+      const summary = failed.length
+        ? `已上傳 ${succeeded} 張，${failed.length} 張失敗：${failed.map(function (item) { return item.fileName; }).join('、')}`
+        : `已上傳 ${succeeded} 張設計圖${cancelledEarly ? '（已取消剩餘檔案）' : ''}`;
+      showCaseDesignStatus(summary, failed.length ? 'error' : 'success');
+
       notifyUploadHost('machi-case-design-images-updated', {
-        caseId: result.caseId,
-        round: result.round,
-        count: result.count
+        caseId: caseDesignContext.caseId,
+        round: caseDesignContext.round,
+        count: succeeded,
+        failedCount: failed.length
       });
+
       setTimeout(function () {
         window.close();
-      }, 600);
-    }
-
-    function handleCaseDesignUploadFailure(error) {
-      caseDesignUploading = false;
-      caseDesignProgress.classList.remove('visible');
-      renderCaseDesignPreview();
-      showCaseDesignStatus((error && error.message) || '上傳失敗，請重試', 'error');
+      }, succeeded ? 900 : 1600);
     }
 
     function showCaseDesignStatus(message, type) {
