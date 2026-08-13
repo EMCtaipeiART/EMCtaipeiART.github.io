@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 903,
+  "revision": 904,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T09:38:06.519Z",
+  "updatedAt": "2026-08-13T09:39:05.894Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18547,9 +18547,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/12 20:04:19",
-          "圖片連結": "[{\"fileName\":\"260806_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PaShjoWooyTXpZqD4uCD04iGgxq9W-UR=w1600\"},{\"fileName\":\"260806_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1T5ShbDCnOIdtc8DdAWm8UNzI1ByxYPzv=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIeRGp2Z6VA8olgbuWBlwo6ox9VE3Xol=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EEZpk4QzM0nZ0ZVa_DExnDbNZfazs6Bp=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/16JLor3EDT46nqEvTZAkHjJW5CsRBodpZ=w1600\"},{\"fileName\":\"260806_ANKER_Combo_2_momo_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LuRAzO49QnnSiIBvpPZcXPLDZdzFJWGg=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1I8CQ5M2DhXIoSVgoy7arj7WmFEC7Vbb4=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260806_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PaShjoWooyTXpZqD4uCD04iGgxq9W-UR=w1600\"},{\"fileName\":\"260806_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1T5ShbDCnOIdtc8DdAWm8UNzI1ByxYPzv=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIeRGp2Z6VA8olgbuWBlwo6ox9VE3Xol=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EEZpk4QzM0nZ0ZVa_DExnDbNZfazs6Bp=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/16JLor3EDT46nqEvTZAkHjJW5CsRBodpZ=w1600\"},{\"fileName\":\"260806_ANKER_Combo_2_momo_2_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LuRAzO49QnnSiIBvpPZcXPLDZdzFJWGg=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1I8CQ5M2DhXIoSVgoy7arj7WmFEC7Vbb4=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SkZM9wyOUObfVURuTlf1ifMXI_Ry9bY8=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 17:38:06"
+          "圖片更新時間": "2026/08/13 17:39:05"
         },
         {
           "案件編號": "26080039",
