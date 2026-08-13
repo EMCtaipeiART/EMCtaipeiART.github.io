@@ -1,8 +1,9 @@
 {
-  "_說明": "mountRoot 是 NAS 分享掛載後的本機根目錄——如果用 nas_design_image_watcher.setup.mjs 執行，這欄會自動偵測更新，不用手動改。smbUrl／expectedVolumeName 是自動掛載用的連線位址與預期分享名稱。案件清單不用在這裡維護：程式每次執行會讀 dbJsonUrl，自動找出「狀態＝過稿中」且已經在網頁上填過來源資料夾路徑的案件。appsScriptUploadUrl 留空時，程式只會掃描＋產生本機預覽圖，不會嘗試上傳；serviceKey 不寫在這個檔案裡，是寫在同資料夾、不進 git 的 nas_design_image_watcher.secrets.json。",
+  "_說明": "mountRoot 是 NAS 分享掛載後的本機根目錄——如果用 nas_design_image_watcher.setup.mjs 執行，這欄會自動偵測更新，不用手動改。smbUrl／expectedVolumeName 是自動掛載用的連線位址與預期分享名稱。案件清單不用在這裡維護：程式每次執行會讀 dbJsonUrl，自動找出「狀態＝過稿中」且已經在網頁上選過來源資料夾（用 nas_folder_picker_server.mjs 這支資料夾選擇器，或手動貼路徑）的案件。appsScriptUploadUrl 留空時，程式只會掃描＋產生本機預覽圖，不會嘗試上傳；serviceKey／pickerToken 不寫在這個檔案裡，是寫在同資料夾、不進 git 的 nas_design_image_watcher.secrets.json。pickerPort 是 nas_folder_picker_server.mjs（資料夾選擇器伺服器，跟這支掃描程式共用同一份設定檔）監聽的埠號，只有跑那支程式時才會用到。",
   "smbUrl": "smb://EMCNAS_Prod.local/設計部",
   "expectedVolumeName": "設計部",
   "mountRoot": "/Volumes/設計部",
+  "pickerPort": 8877,
   "useHash": false,
   "maxDimension": 1600,
   "jpegQuality": 70,

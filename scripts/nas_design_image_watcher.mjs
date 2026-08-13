@@ -7,9 +7,10 @@
  * 一張畫面當紀錄圖），統一壓縮成小尺寸 JPEG 預覽圖。
  *
  * 案件清單完全動態產生：每次執行會先讀一次正式站的案件資料庫（dbJsonUrl），
- * 篩出「狀態＝過稿中」且「設計圖資料夾連結」欄位有值（設計師在網頁上把案
- * 件狀態改成過稿中時，跳出視窗填的 NAS 路徑）的案件，不需要在這支程式的
- * 設定檔手動維護一份案件對照表。
+ * 篩出「狀態＝過稿中」且「設計圖資料夾連結」欄位有值的案件，不需要在這支
+ * 程式的設定檔手動維護一份案件對照表。這個欄位的值來自設計師在網頁上用
+ * nas_folder_picker_server.mjs（資料夾選擇器伺服器，另一支獨立的程式，見
+ * README「用滑鼠選 NAS 資料夾」一節）選的路徑，或資料庫後台手動填入。
  *
  * 如果設定檔有填 appsScriptUploadUrl，而且 nas_design_image_watcher.secrets.json
  * 有填 serviceKey，還會做「輪次判斷＋自動上傳」：這一輪還沒抓取過的時候，
@@ -41,7 +42,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
+const DEFAULT_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const DEFAULT_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v'];
 const DEFAULT_MAX_DIMENSION = 1600;
 const DEFAULT_JPEG_QUALITY = 70;
