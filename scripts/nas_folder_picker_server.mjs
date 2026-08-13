@@ -285,6 +285,19 @@ const PICKER_PAGE = `<!doctype html>
   .status.ok{color:#0f6b3c}
   .current{margin:0 0 12px;font-size:13px;color:#43524b;word-break:break-all}
   .current b{color:#17251d}
+  .collapsed-view{padding:36px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;color:#43524b}
+  .collapsed-spinner{width:30px;height:30px;margin:0 auto 14px;border:3px solid #cfe4d7;border-top-color:#0f6b3c;border-radius:50%;animation:machiPickerSpin .9s linear infinite}
+  @keyframes machiPickerSpin{to{transform:rotate(360deg)}}
+  .error-prompt{padding:28px 20px;max-width:440px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;text-align:center}
+  .error-prompt .icon{font-size:30px;margin-bottom:6px}
+  .error-prompt h2{margin:0 0 8px;font-size:16px;color:#b91c1c}
+  .error-prompt p{margin:0 0 16px;font-size:13px;color:#43524b;word-break:break-all;line-height:1.5}
+  .error-prompt .prompt-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .error-prompt .prompt-actions button{min-height:40px;padding:0 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+  .error-prompt .btn-retry{border:1px solid #dbe4de;background:#fff;color:#17251d}
+  .error-prompt .btn-register-anyway{border:1px solid #0f6b3c;background:#0f6b3c;color:#fff}
+  .error-prompt .btn-cancel-prompt{border:1px solid #dbe4de;background:#fff;color:#43524b}
+  .error-prompt .path-caption{margin:14px 0 0;font-size:11.5px;color:#8a948e;word-break:break-all}
 </style>
 </head>
 <body>
@@ -312,7 +325,6 @@ const PICKER_PAGE = `<!doctype html>
   const origin = params.get('origin') || '';
   document.getElementById('caseLabel').textContent = caseId ? ('案件編號：' + caseId) : '';
   let relPath = '';
-  let confirming = false;
 
   function escapeHtml(text){
     return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -365,17 +377,36 @@ const PICKER_PAGE = `<!doctype html>
     }));
   }
 
-  function setBusy(busy){
-    confirming = busy;
-    document.getElementById('confirmBtn').disabled = busy;
-    document.getElementById('cancelBtn').disabled = busy;
+  function showCollapsed(message){
+    document.body.innerHTML = '<main class="collapsed-view"><div class="collapsed-spinner" aria-hidden="true"></div><p>' + escapeHtml(message) + '</p></main>';
   }
 
-  document.getElementById('cancelBtn').addEventListener('click', () => { if(!confirming) window.close(); });
-  document.getElementById('confirmBtn').addEventListener('click', async () => {
-    if(confirming) return;
-    setBusy(true);
-    setStatus('正在備份「' + (relPath || '（根目錄）') + '」目前的圖片/影片，請稍候...');
+  function showErrorPrompt(errorMessage){
+    document.body.innerHTML = '<main class="error-prompt">'
+      + '<div class="icon" aria-hidden="true">⚠️</div>'
+      + '<h2>備份時發生問題</h2>'
+      + '<p>' + escapeHtml(errorMessage) + '</p>'
+      + '<div class="prompt-actions">'
+      + '<button type="button" class="btn-retry" id="retryConfirmBtn">重試</button>'
+      + '<button type="button" class="btn-register-anyway" id="registerAnywayBtn">仍然登記路徑</button>'
+      + '<button type="button" class="btn-cancel-prompt" id="cancelPromptBtn">取消</button>'
+      + '</div>'
+      + '<p class="path-caption">資料夾：' + escapeHtml(relPath || '（根目錄）') + '</p>'
+      + '</main>';
+    document.getElementById('retryConfirmBtn').addEventListener('click', doConfirm);
+    document.getElementById('registerAnywayBtn').addEventListener('click', () => {
+      if(window.opener){
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath }, origin || '*');
+      }
+      window.close();
+    });
+    document.getElementById('cancelPromptBtn').addEventListener('click', () => window.close());
+  }
+
+  async function doConfirm(){
+    // 點選當下立刻收合成小巧的等待畫面，備份請求在背景繼續進行，不用讓使用者
+    // 一直盯著資料夾瀏覽畫面等待；只有真的發生問題時才跳出明顯的提示框。
+    showCollapsed('正在背景備份「' + (relPath || '（根目錄）') + '」...');
     let result = null;
     try{
       const res = await fetch('/api/confirm', {
@@ -387,8 +418,7 @@ const PICKER_PAGE = `<!doctype html>
       if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
       result = data;
     }catch(error){
-      setBusy(false);
-      setStatus('備份時發生錯誤，資料夾未登記：' + error.message);
+      showErrorPrompt(error.message);
       return;
     }
 
@@ -399,9 +429,12 @@ const PICKER_PAGE = `<!doctype html>
     const summary = backup.uploadedCount
       ? ('已立即備份 ' + backup.uploadedCount + ' 張圖片（第 ' + backup.round + ' 輪）')
       : ('資料夾已登記' + (backup.message ? '，' + backup.message : ''));
-    document.body.innerHTML = '<main style="padding:40px 20px;text-align:center;font-family:-apple-system,sans-serif"><h2>已選擇：' + escapeHtml(relPath || '（根目錄）') + '</h2><p>' + escapeHtml(summary) + '</p><p>請回到原本的分頁，這個分頁即將自動關閉...</p></main>';
-    setTimeout(() => window.close(), 1800);
-  });
+    showCollapsed(summary + '，即將關閉...');
+    setTimeout(() => window.close(), 1400);
+  }
+
+  document.getElementById('cancelBtn').addEventListener('click', () => window.close());
+  document.getElementById('confirmBtn').addEventListener('click', doConfirm);
 
   (async function init(){
     let initialPath = '';
