@@ -257,14 +257,32 @@ describe('Machi Design API Worker', () => {
       settingsRow: { '帳號': account, '技能': '影片 , 動畫' },
       permissionRow: { '帳號': account, '角色範本': '設計師' }
     });
-    expect(githubPut).toHaveBeenCalledTimes(1);
+    const hiddenProfiles = await api({ action: 'listDesignerProfiles' });
+    expect((hiddenProfiles.profiles as Array<Record<string, unknown>>).some(profile => profile.account === account)).toBe(false);
+    const designerSaved = await api({
+      action: 'adminDesignerSave', account, expectedSettingsRow: saved.settingsRow,
+      profile: {
+        group: '影音', rotation: 9, avatar: 'https://example.com/avatar.png', poster: 'https://example.com/poster.png',
+        musicUrl: 'https://example.com/music', musicStartAt: 5, quote: '影音設計 QA',
+        skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }]
+      }
+    }, token);
+    expect(designerSaved).toMatchObject({
+      ok: true, action: 'adminDesignerSave', changedTables: ['設定'],
+      settingsRow: { '帳號': account, '設計師顯示': 'v', '技能': '短影音' }
+    });
+    const activeProfiles = await api({ action: 'listDesignerProfiles' });
+    expect((activeProfiles.profiles as Array<Record<string, unknown>>).find(profile => profile.account === account)).toMatchObject({
+      name: 'Designer QA', designType: '影音', skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }]
+    });
+    expect(githubPut).toHaveBeenCalledTimes(2);
 
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
     const database = await runInDurableObject(stub, async (_instance, state) => {
       const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
       return JSON.parse(stored.json) as DatabaseSnapshot;
     });
-    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '對話框': '品質確認' }));
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '對話框': '影音設計 QA', '設計師顯示': 'v' }));
     expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '角色範本': '設計師' }));
   });
 

@@ -173,6 +173,12 @@ test('designer roster uses JSON group and rotation for priority new-project butt
   assert.match(html, /githubJsonTableRows\('設定',\{fresh:true\}\)/);
   assert.match(html, /groupOrder=\{平面:0,影音:1\}/);
   assert.match(html, />新專案找我<\/button>/);
+  assert.match(html, /let designerOptions = \['Machi','Anna','Karl','Noise','Amber','Leona'\]/);
+  assert.match(html, /function syncDesignerOptionLists\(list=designers\)/);
+  assert.match(html, /profile\.skillTargets\?\.\[skill\]/);
+  assert.match(html, /type:String\(configured\?\.type\|\|'平面'\),stage:String\(configured\?\.stage\|\|'後製'\)/);
+  assert.match(html, /button\.disabled=!allowed\|\|missingDesigner/);
+  assert.doesNotMatch(html, /button\.disabled=button\.disabled\|\|!allowed/);
 });
 
 test('designer music uses one timeline, JSON-only settings, and seeks Spotify after play', async () => {
@@ -307,8 +313,9 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報'\};/);
   assert.match(html, /function tableLabel\(name\)\{return TABLE_LABELS\[name\]\|\|name\}/);
-  // reels 不再列進側邊選單，改由「帳號設定」的 REELS 小卡直接編輯／刪除
+  // reels 不另列側邊頁；設計師公開資料與 REELS 統一由「設計列表」管理。
   assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'reels'/);
+  assert.match(html, /const TABLE_ORDER=\['database','設計列表'/);
   assert.match(html, /data-account-reel-edit=/);
   assert.match(html, /data-account-reel-delete=/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
@@ -330,7 +337,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /skipSpreadsheetBackup:!backupToSpreadsheet/);
   assert.match(html, /已先更新畫面，JSON 背景寫入中/);
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
-  assert.match(html, /const TABLE_ORDER=\['database','加權計分標準','短連結','補充資料連結','修改統計表'/);
+  assert.match(html, /const TABLE_ORDER=\['database','設計列表','加權計分標準','短連結','補充資料連結','修改統計表'/);
   assert.match(html, /function shortLinkTableHtml\(data\)/);
   assert.match(html, /function supplementCardsHtml\(rows\)/);
   assert.doesNotMatch(html, /function combinedLinkRows\(\)|_sourceTable/);
@@ -345,15 +352,20 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /data-permission-save/);
   assert.match(html, /action:'adminAccountSave'/);
   assert.match(html, /action:'adminAccountDelete'/);
+  assert.match(html, /action:'adminDesignerSave'/);
+  assert.match(html, /action:'adminDesignerRemove'/);
+  assert.match(html, /function designerAdminHtml\(rows\)/);
+  assert.match(html, /技能與點擊後帶入表單的「設計種類／階段」/);
+  assert.doesNotMatch(html, /<summary>設計師公開資料<\/summary>/);
   assert.match(html, /data-account-delete/);
   assert.match(html, /function organizationManagerHtml\(\)/);
   assert.match(html, /adminOrganizationOptionSave/);
   assert.match(html, /adminOrganizationOptionDelete/);
   assert.match(html, /data-password-configured/);
   assert.match(html, /此帳號尚未建立可用的登入密碼/);
-  // 頭像大圖／分享音樂改用 accountLinkField：單行輸入框＋截斷顯示的連結，完整網址留在 href/title
-  assert.match(html, /accountLinkField\('頭像大圖連結'/);
-  assert.match(html, /function accountLinkField\(label,header,value\)\{/);
+  // 公開頭像、音樂與技能已移至設計列表；帳號設定不再覆寫這些欄位。
+  assert.match(html, /designerAdminField\('頭像大圖連結'/);
+  assert.match(html, /\['部門','組別','名字','顯示名','帳號','頭像連結','深淺模式'\]/);
   assert.match(html, /data:image\/svg\+xml;charset=UTF-8,\$\{encodeURIComponent\(svg\)\}/);
   assert.doesNotMatch(html, /xmlns='http:\/\/www\.w3\.org\/2000\/svg'/);
   assert.match(html, /accountChoice\('篩選月份'/);
@@ -653,6 +665,36 @@ test('admin account save atomically creates personal settings and access', async
   assert.equal(saved.permissionRow['角色範本'], '設計師');
   assert.equal(app.database.table('設定').rows.filter(row => row['帳號'] === account).length, 1);
   assert.equal(app.database.table('帳號權限').rows.filter(row => row['帳號'] === account).length, 1);
+
+  const hiddenProfiles = await api(app.baseUrl, 'listDesignerProfiles');
+  assert.equal(hiddenProfiles.profiles.some(profile => profile.account === account), false);
+  const designerSaved = await api(app.baseUrl, 'adminDesignerSave', {
+    editorToken: login.token,
+    account,
+    expectedSettingsRow: saved.settingsRow,
+    profile: {
+      group: '影音', rotation: 99, avatar: 'https://example.com/new-avatar.jpg', poster: 'https://example.com/new-poster.jpg',
+      musicUrl: 'https://example.com/music', musicStartAt: 8, quote: '新的動態設計師',
+      skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }, { name: '動態貼文', type: '平面', stage: '後製' }]
+    }
+  });
+  assert.equal(designerSaved.settingsRow['設計師顯示'], 'v');
+  assert.equal(designerSaved.settingsRow['技能'], '短影音 , 動態貼文');
+  assert.deepEqual(JSON.parse(designerSaved.settingsRow['技能表單設定']), [
+    { name: '短影音', type: '影音', stage: '後製' },
+    { name: '動態貼文', type: '平面', stage: '後製' }
+  ]);
+  const activeProfiles = await api(app.baseUrl, 'listDesignerProfiles');
+  assert.deepEqual(activeProfiles.profiles.find(profile => profile.account === account)?.skillMappings, [
+    { name: '短影音', type: '影音', stage: '後製' },
+    { name: '動態貼文', type: '平面', stage: '後製' }
+  ]);
+  const designerRemoved = await api(app.baseUrl, 'adminDesignerRemove', {
+    editorToken: login.token, account, expectedSettingsRow: designerSaved.settingsRow
+  });
+  assert.equal(designerRemoved.ok, true);
+  const removedProfiles = await api(app.baseUrl, 'listDesignerProfiles');
+  assert.equal(removedProfiles.profiles.some(profile => profile.account === account), false);
 
   const rejected = await request(app.baseUrl, '/api', { method: 'POST', body: {
     action: 'adminAccountSave', editorToken: login.token, account: 'broken.account@emctaipei.com',

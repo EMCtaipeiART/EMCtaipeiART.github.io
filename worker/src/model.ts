@@ -51,6 +51,22 @@ export const PROJECT_GROUPS: Record<string, { designers: string[]; type: string 
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
   '影音': { designers: ['Karl', 'Noise'], type: '影音' }
 };
+export const DEFAULT_DESIGNER_NAMES = Object.freeze(Object.values(PROJECT_GROUPS).flatMap(group => group.designers));
+
+export function isDesignerSettingsRow(row: Row = {}): boolean {
+  const group = text(row['組別']);
+  if (!/^(?:平面|影音)$/.test(group) || !text(row['名字'])) return false;
+  const visible = text(row['設計師顯示']).toLowerCase();
+  if (visible) return !/^(?:x|false|0|停用|否)$/.test(visible);
+  return DEFAULT_DESIGNER_NAMES.includes(text(row['名字']));
+}
+
+export function designerRowsForGroup(snapshot: DatabaseSnapshot, group: string): Row[] {
+  return snapshot.tables['設定'].rows
+    .filter(row => isDesignerSettingsRow(row) && text(row['組別']) === group)
+    .sort((left, right) => (Number(left['新專案輪值']) || 99) - (Number(right['新專案輪值']) || 99)
+      || text(left['名字']).localeCompare(text(right['名字']), 'zh-Hant'));
+}
 
 export function text(value: unknown): string { return String(value ?? '').trim(); }
 export function canonicalAccount(value: unknown): string {

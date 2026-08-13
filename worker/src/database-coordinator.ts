@@ -1,11 +1,12 @@
 import { DurableObject } from 'cloudflare:workers';
 import { TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
-  VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, PROJECT_GROUPS, SUPPLEMENT_SLOTS,
+  VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessProfile, activeReel, canonicalAccount, findReelIndex, generateShortCode,
   hasCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
+  designerRowsForGroup, isDesignerSettingsRow,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules
 } from './model';
@@ -58,6 +59,14 @@ function normalizedAccessList(value: unknown, allowed: string[]): string[] {
     }
   }
   return unique(values.map(text).filter(item => allowed.includes(item)));
+}
+
+function normalizedSkillMappings(value: unknown): Array<{ name: string; type: string; stage: string }> {
+  const rows = Array.isArray(value) ? value : (() => { try { const parsed = JSON.parse(text(value)); return Array.isArray(parsed) ? parsed : []; } catch { return []; } })();
+  const seen = new Set<string>();
+  return rows.map(asRow).map(row => ({
+    name: text(row.name || row['技能']), type: text(row.type || row['設計種類']) || '平面', stage: text(row.stage || row['階段']) || '後製'
+  })).filter(row => row.name && !seen.has(row.name) && (seen.add(row.name), true)).slice(0, 30);
 }
 
 function sessionToken(payload: ApiPayload): string {
@@ -606,11 +615,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { ok: true, action, account, settings: settingsResponse(settingsRow(database, account || current.user) || {}) };
       }
       if (action === 'listDesignerProfiles') {
-        const profiles = database.tables['設定'].rows.filter(row => text(row['名字'])).map(row => ({
+        const profiles = database.tables['設定'].rows.filter(isDesignerSettingsRow).map(row => ({
           name: text(row['名字']), account: canonicalAccount(row['帳號']), avatar: text(row['頭像連結']),
           poster: text(row['頭像大圖連結'] || row['頭像連結']), musicUrl: text(row['分享音樂']),
           musicStartAt: Math.max(0, Number(row['音樂起始秒數']) || 0), skills: splitNames(row['技能']),
           quote: text(row['對話框']), rotation: Number(row['新專案輪值']) || 99,
+          skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
           designType: /影音|影像|影片/i.test(text(row['組別'])) ? '影音' : (/平面/.test(text(row['組別'])) ? '平面' : '')
         }));
         return { ok: true, action, profiles };
@@ -790,7 +800,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (action === 'upsertDesignerStories') {
       const current = this.requireAccess(database, session, 'media.manage');
       const name = text(payload.name || payload.designer);
-      if (![...PROJECT_GROUPS['平面'].designers, ...PROJECT_GROUPS['影音'].designers].includes(name)) throw new Error('找不到設計師');
+      if (!database.tables['設定'].rows.some(row => isDesignerSettingsRow(row) && text(row['名字']) === name)) throw new Error('找不到設計師');
       const fileIds = Array.isArray(payload.fileIds) ? payload.fileIds.map(text) : [];
       const imageUrls = Array.isArray(payload.imageUrls) ? payload.imageUrls.map(text) : [];
       const expiresAtMs = Math.max(0, Number(payload.expiresAt) || 0);
@@ -1007,6 +1017,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if (action === 'adminAccountSave') return this.adminAccountSave(payload, database, session);
     if (action === 'adminAccountDelete') return this.adminAccountDelete(payload, database, session);
+    if (action === 'adminDesignerSave') return this.adminDesignerSave(payload, database, session);
+    if (action === 'adminDesignerRemove') return this.adminDesignerRemove(payload, database, session);
     if (action === 'adminOrganizationOptionSave') return this.adminOrganizationOptionSave(payload, database, session);
     if (action === 'adminOrganizationOptionDelete') return this.adminOrganizationOptionDelete(payload, database, session);
     if (['adminTableUpdate', 'adminTableDelete', 'adminTableInsert'].includes(action)) return this.adminMutation(action, payload, database, session);
@@ -1079,7 +1091,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = this.requireAccess(database, session, 'project.create');
     const source = asRow(payload.row || payload.data);
     const expected = text(source.expectedDesigner || source['預計設計師']);
-    const groupEntry = Object.entries(PROJECT_GROUPS).find(([, config]) => config.designers.includes(expected));
+    const groupEntry = ['平面', '影音'].map(group => [group, { designers: designerRowsForGroup(database, group).map(row => text(row['名字'])), type: group }] as const).find(([, config]) => config.designers.includes(expected));
     if (!groupEntry) throw new Error('預計設計師必須為平面組或影音組輪值名單');
     const [projectKind, config] = groupEntry;
     const replacement = text(source.replacement || source['替換(選填)']);
@@ -1253,6 +1265,65 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
     this.deleteAccountPrivateState(account);
     return result;
+  }
+
+  private async adminDesignerSave(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const account = canonicalAccount(payload.account);
+    const profile = asRow(payload.profile || payload.settings);
+    const expected = asRow(payload.expectedSettingsRow);
+    const group = text(profile.group || profile.designType || profile['組別']);
+    if (!account) throw new Error('請選擇設計師帳號');
+    if (!['平面', '影音'].includes(group)) throw new Error('設計師組別必須是平面或影音');
+    const mappings = normalizedSkillMappings(profile.skillMappings || profile['技能表單設定']);
+    if (!mappings.length) mappings.push({ name: '平面', type: '平面', stage: '後製' });
+    if (mappings.some(item => item.name.length > 40 || item.type.length > 40 || item.stage.length > 40)) throw new Error('技能、設計種類與階段不得超過 40 個字');
+    for (const [key, label] of [['avatar', '頭像連結'], ['poster', '頭像大圖連結'], ['musicUrl', '分享音樂']] as const) {
+      if (text(profile[key]) && !isHttpUrl(profile[key])) throw new Error(`「${label}」必須是 http 或 https 網址`);
+    }
+    if (text(profile.quote).length > 120) throw new Error('對話框不得超過 120 個字');
+    return this.mutate('adminDesignerSave', current, draft => {
+      const table = draft.tables['設定'];
+      const row = table.rows.find(item => canonicalAccount(item['帳號']) === account);
+      if (!row) throw new Error('找不到此帳號；請先在帳號設定建立帳號');
+      if (Object.keys(expected).length && rowsDiffer(table.headers, expected, row)) throw new Error('設計師資料已被其他人更新，請重新讀取後再操作');
+      row['組別'] = group;
+      row['設計師顯示'] = 'v';
+      row['頭像連結'] = text(profile.avatar);
+      row['頭像大圖連結'] = text(profile.poster);
+      row['分享音樂'] = text(profile.musicUrl);
+      row['音樂起始秒數'] = String(Math.max(0, Math.floor(Number(profile.musicStartAt) || 0)));
+      row['技能'] = mappings.map(item => item.name).join(' , ');
+      row['技能表單設定'] = JSON.stringify(mappings);
+      row['對話框'] = text(profile.quote);
+      row['新專案輪值'] = String(Math.max(1, Math.floor(Number(profile.rotation) || 99)));
+      designerRowsForGroup(draft, group).forEach((item, index) => { item['新專案輪值'] = String(index + 1); });
+      return {
+        result: { ok: true, action: 'adminDesignerSave', account, settingsRow: { ...row }, changedTables: ['設定'] },
+        changedTables: ['設定']
+      };
+    });
+  }
+
+  private async adminDesignerRemove(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const account = canonicalAccount(payload.account);
+    const expected = asRow(payload.expectedSettingsRow);
+    if (!account) throw new Error('缺少要移除的設計師帳號');
+    return this.mutate('adminDesignerRemove', current, draft => {
+      const table = draft.tables['設定'];
+      const row = table.rows.find(item => canonicalAccount(item['帳號']) === account);
+      if (!row || !isDesignerSettingsRow(row)) throw new Error('找不到啟用中的設計師');
+      if (Object.keys(expected).length && rowsDiffer(table.headers, expected, row)) throw new Error('設計師資料已被其他人更新，請重新讀取後再操作');
+      const group = text(row['組別']);
+      row['設計師顯示'] = 'x';
+      row['新專案輪值'] = '';
+      designerRowsForGroup(draft, group).forEach((item, index) => { item['新專案輪值'] = String(index + 1); });
+      return {
+        result: { ok: true, action: 'adminDesignerRemove', account, name: text(row['名字']), changedTables: ['設定'] },
+        changedTables: ['設定']
+      };
+    });
   }
 
   private organizationKind(value: unknown): '部門' | '組別' {
