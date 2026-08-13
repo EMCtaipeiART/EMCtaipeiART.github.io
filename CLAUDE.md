@@ -186,7 +186,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 案件詳情「設計圖記錄」改成每輪左右滾動一排，避免圖片過多撐爆彈窗
+### 2026-08-13 Asia/Taipei（最新）— 修正「設計圖記錄」寬度太窄的問題：真正生效的是後面那組未加 media query 的樣式覆寫
+
+- 修改目的：上一輪把「設計圖記錄」改成橫向捲動後，使用者回報「只露出兩張太短了，寬度可以拉到大概對齊上方『數量』欄位的位置」。追查後發現：上一輪加的 `grid-column:1/-1!important`（讓這個欄位跨滿「其他資訊」整列）寫在 `index.html` 大約 3044 行那組樣式裡，但**那組樣式其實已經不是實際生效的版本**——`#caseDetailModal` 這個彈窗在檔案後段（約 5570 行開始，`/* Case detail presentation: keep existing data bindings, replace only layout and color. */` 這行註解之後）還有**第二組完整的樣式覆寫，而且沒有包在任何 `@media` 裡、一律生效**，這組後來的樣式對 `.case-detail-row.is-wide` 又重新設回 `grid-column:auto!important`（約 5628 行），跟我上一輪加的規則選擇器特異度（specificity）打平，但因為在檔案裡排序更後面，瀏覽器最終套用的是這一組——導致我上一輪的「跨滿整列」設定實際上完全沒生效，欄位還是被限制在「其他資訊」2 欄版面裡的其中一欄，只有 143px 寬，跟使用者原本反映的「只露出兩張」完全吻合。
+- 影響檔案：`index.html`。
+- 影響功能：在後面那組真正生效的樣式區塊裡（約 5810 行，緊接在既有的 `[data-field-label="項目細節"]{grid-column:1/3}`／`[data-field-label="修改"]{grid-column:3/5}` 這兩條同類型欄位覆寫規則後面，照抄同一種寫法），新增 `#caseDetailModal .case-detail-section.is-other .case-detail-row[data-field-label="設計圖記錄"]{grid-column:1/-1!important;border-left:0!important}`——這次是直接沿用這組樣式裡「其他資訊」區塊既有的、真的會生效的欄位覆寫模式，不是自創一條新規則去跟既有規則比誰的特異度高。上一輪加在 3044 行附近的規則**沒有刪除**（留著也不會造成衝突，只是在目前的樣式結構下是死規則，不會被套用；`.case-detail-value{align-items:stretch;flex-direction:column}` 那條也是同樣情況——後面那組生效樣式裡 `.case-detail-value` 其實是 `display:block`，不是 flex，所以這條也用不到，但同樣留著無害）。修好之後，「設計圖記錄」的可視寬度會撐滿「其他資訊」整個區塊，右邊界跟「執行資訊」裡「數量」欄位的右邊界對齊（都是同一張卡片的整體寬度）。
+- 風險區塊：這次意外發現這個檔案的 `#caseDetailModal` 樣式**存在兩組互相覆蓋的定義**（前面 2984-3200 行左右一組，後面 5570 行以後一組），後面那組沒有任何 `@media` 保護、一律生效，等於前面那組除了極少數沒被後面重複定義到的規則以外，大多是死代碼。這不是這次改動造成的（這次只是在追查寬度問題時意外發現），但代表**之後如果要再調整案件詳情彈窗的任何樣式，都必須先確認是在後面那組（約 5570 行起）加規則，不能只改前面那組**，否則會重演這次「改了但畫面沒反應」的狀況。這個「兩組樣式互相覆蓋」的技術債這次沒有清理（範圍太大、風險超出這次要處理的問題），先記錄下來提醒之後的修改者。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過。沿用上一輪「1280×800 iframe＋`iframe.contentWindow.eval()`」的測試方式，重新量測：`.case-detail-design-images-row` 的 `clientWidth` 從修正前的 143px 變成 680px；`designRowRect.right`（1021px）現在精確對齊 `qtyFieldRect.right`（同樣 1021px，即「執行資訊」裡「數量」欄位的右邊界）；6 張、8 張圖片的輪次現在整排都放得下不用捲動（`scrollWidth===clientWidth`），10 張、15 張的輪次仍然正確橫向捲動（`scrollWidth>clientWidth`）；額外截圖確認畫面上一排可以看到 6 張縮圖、版面沒有跑版。`node --test backend/test/*.test.mjs` 25/25 全過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（較早）— 案件詳情「設計圖記錄」改成每輪左右滾動一排，避免圖片過多撐爆彈窗
 
 - 修改目的：使用者回報案件資料彈窗（案件詳情）新增的「設計圖記錄」區塊，原本用 `flex-wrap` 讓縮圖自動換行——如果某一輪備份圖片很多（例如 NAS 背景監控程式陸續抓了十幾張），縮圖會一直往下疊、把整個彈窗撐得很高，要求改成「由左至右一排」用左右滑動瀏覽，圖片再多也收在彈窗裡面、不要把版面撐壞。
 - 影響檔案：`index.html`。
