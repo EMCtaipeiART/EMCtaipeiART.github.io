@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 916,
+  "revision": 917,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T10:57:23.553Z",
+  "updatedAt": "2026-08-13T11:07:16.505Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22404,7 +22404,7 @@
           "深淺模式": ""
         },
         {
-          "部門": "設計部",
+          "部門": "測試專員",
           "組別": "影音",
           "名字": "設計測試組",
           "顯示名": "設計測試組",
@@ -23817,7 +23817,7 @@
           "狀態": "啟用",
           "頁面權限": "[\"request\",\"dashboard\",\"media_admin\",\"avatar_upload\",\"short_link\"]",
           "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.export\",\"request.mail\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-13 17:39",
+          "更新時間": "2026-08-13 19:07",
           "更新者": "管理員",
           "登入方式": "密碼"
         }
