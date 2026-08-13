@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 947,
+  "revision": 948,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:55:17.105Z",
+  "updatedAt": "2026-08-13T11:55:35.081Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19528,18 +19528,6 @@
           "圖片連結": "[{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1k9Bv5G3Bmd9CvVVyiIUDrd03eEU8Wn7o=w1600\"},{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FUjbAPsIPD_Cufl4-uugb-sJQD0pKe50=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 17:28:06"
-        },
-        {
-          "案件編號": "26080062",
-          "修改次數": "0",
-          "建立日期": "2026/08/13 19:36:20",
-          "修改日期": "2026/08/13 19:36:20",
-          "修改內容": "初稿完成（NAS 自動建立）",
-          "修改人": "NAS 自動同步",
-          "確認修正日": "2026/08/13 19:36:20",
-          "圖片連結": "[{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/13ngIxx_9IvjPv9zuhd7zyVzFqltF6ojQ=w1600\"}]",
-          "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 19:48:05"
         },
         {
           "案件編號": "26080062",
