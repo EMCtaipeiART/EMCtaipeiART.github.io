@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 878,
+  "revision": 879,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:46:37.724Z",
+  "updatedAt": "2026-08-13T08:46:42.580Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21723,46 +21723,6 @@
           "收合最新案件列表": "",
           "收合設計需求": "",
           "深淺模式": ""
-        },
-        {
-          "部門": "設計部",
-          "組別": "影音",
-          "名字": "設計測試組",
-          "顯示名": "設計測試組",
-          "帳號": "local:cfce2b29-0c70-42b4-92ac-1fedbe08abaa@emctaipei.com",
-          "頭像連結": "",
-          "頭像大圖連結": "",
-          "分享音樂": "",
-          "音樂起始秒數": "0",
-          "技能": "",
-          "對話框": "",
-          "新專案輪值": "",
-          "篩選年份": "",
-          "篩選月份": "",
-          "篩選狀態": "",
-          "篩選姓名": "",
-          "選擇": "v",
-          "案件編號": "",
-          "月份": "",
-          "客戶別": "",
-          "專案名稱": "",
-          "專案負責人": "",
-          "設計種類": "",
-          "階段": "",
-          "數量": "",
-          "開始": "",
-          "結束": "",
-          "設計負責人": "",
-          "狀態": "1",
-          "項目細節": "",
-          "修改": "",
-          "主旨": "",
-          "操作": "",
-          "時間表": "v",
-          "收合設計師專長與案件分配": "",
-          "收合最新案件列表": "",
-          "收合設計需求": "",
-          "深淺模式": ""
         }
       ]
     },
@@ -23117,15 +23077,6 @@
           "功能權限": "[\"request.create\",\"request.edit\",\"request.mail\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
           "更新時間": "2026-08-12 18:23",
           "更新者": "Machi"
-        },
-        {
-          "帳號": "local:cfce2b29-0c70-42b4-92ac-1fedbe08abaa@emctaipei.com",
-          "角色範本": "設計師",
-          "狀態": "啟用",
-          "頁面權限": "[\"request\",\"dashboard\",\"media_admin\"]",
-          "功能權限": "[\"request.create\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-13 16:08",
-          "更新者": "管理員"
         }
       ]
     },
