@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 918,
+  "revision": 919,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:07:46.158Z",
+  "updatedAt": "2026-08-13T11:08:43.668Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22404,7 +22404,7 @@
           "深淺模式": ""
         },
         {
-          "部門": "測試專員",
+          "部門": "測試員",
           "組別": "",
           "名字": "設計測試組",
           "顯示名": "設計測試組",
@@ -23871,7 +23871,14 @@
         "排序"
       ],
       "primaryKey": "代碼",
-      "rows": []
+      "rows": [
+        {
+          "代碼": "部門:ccdb9989-4968-4912-97bb-117c48f9cec3",
+          "種類": "部門",
+          "名稱": "測試員",
+          "排序": "1"
+        }
+      ]
     }
   },
   "internal": {
