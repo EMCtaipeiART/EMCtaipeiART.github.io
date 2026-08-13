@@ -186,7 +186,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 修正「設計圖記錄」寬度太窄的問題：真正生效的是後面那組未加 media query 的樣式覆寫
+### 2026-08-13 Asia/Taipei（最新）— 修改紀錄初版日期改用案件起訖時間、縮圖勾選框改成懸停才出現
+
+- 修改目的：使用者提出三項「修改紀錄」彈窗的微調：①初版（第 0 輪／初稿）目前顯示的日期是「這批圖片第一次被備份上傳的時間」（NAS 監控程式或選擇器立即備份寫入的 `建立日期`／`修改日期`），跟這個案件實際的執行區間常常對不上（例如案件 7 月就開始執行，但設計師到 8 月才第一次過稿備份，畫面上初版卻顯示 8 月），要求初版改成顯示案件本身的「開始日期－結束日期」；②縮圖左下角的勾選框想再往下移一點，讓它離底部邊緣有一點呼吸空間，不要整個貼齊邊角；③勾選框平常應該完全隱藏，滑鼠移到縮圖上才出現（跟右上角既有的刪除「✕」按鈕一樣是滑鼠移過去才需要看到的操作，不需要一直佔位置提醒使用者「這裡可以勾選」）。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. `revisionDateRange(row,record)`（原本簽章是 `revisionDateRange(record)`，這次改成要吃 `row` 才能拿到案件的 `start`／`end`）新增判斷：`record.count<=0`（初版／第 0 輪）時改回傳 `${revisionShortDate(row.start)}-${revisionShortDate(row.end)}`（案件開始日期－結束日期），其餘輪次維持原本的 `${revisionShortDate(record.created)}-${revisionShortDate(record.date)}`（這批修改實際建立/送出的日期）不變。兩個呼叫點（`revisionRecordMeta(row,record)` 與案件列表右側「新修改需求」通知清單的 `modifyItems`）都已經在自己的作用域內有 `row` 可用，一併把呼叫改成 `revisionDateRange(row,record)`。
+  2. `.revision-image-select` 的 `bottom` 從 `2px` 調整為 `5px`、`left` 從 `2px` 調整為 `3px`，離縮圖邊緣稍微留一點距離，視覺上不會整個貼在角落。
+  3. `.revision-image-select` 新增 `opacity:0` 搭配 `.12s` 淡入淡出的 transition，平常完全看不到；新增 `.revision-image-item:hover .revision-image-select`／`.revision-image-select:checked`／`.revision-image-select:focus-visible` 三條規則把 `opacity` 設回 `1`——滑鼠移到縮圖上、這張圖片已經被勾選、或用鍵盤 Tab 移到這個勾選框上時都會顯示。**刻意讓「已勾選」的狀態不受 hover 影響、永遠顯示**：如果只有 hover 才顯示，使用者勾選完幾張圖片後把滑鼠移開，畫面上會完全看不出來剛剛勾了哪些、容易誤以為勾選被清空，所以已勾選的圖片即使滑鼠移開也維持看得到勾選框。
+- 風險區塊：無新增風險。日期改動純粹是顯示層（`revisionDateRange` 只用於畫面呈現的文字組合），沒有動到任何寫入邏輯或後端資料結構，`record.created`／`record.date` 本身還是照樣存在資料庫裡，只是初版這筆紀錄的畫面顯示改用案件的 `開始日期`／`結束日期`。勾選框的 hover 顯示是純 CSS `opacity`（不是 `display:none`），複選框在隱藏狀態下依然存在於 DOM、依然可以被程式操作（`toggleAllRevisionImageSelection` 等既有邏輯完全不受影響），只是視覺上預設不顯示。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過。用 1280×800 iframe＋`iframe.contentWindow.eval()` 灌入假資料（案件 `開始日期=2026-07-01`／`結束日期=2026-07-20`，第 0 輪的 `建立日期`／`修改日期` 刻意設成完全不同的 `2026-08-10` 用來製造反差）呼叫 `renderRevisionModal()`，確認畫面上「初稿」那一列正確顯示「07/01-07/20」（案件起訖），不是「08/10-08/10」（備份時間）；同一份假資料裡第 1 輪（一修）維持顯示自己的 `建立日期`／`修改日期`，證明只有第 0 輪的顯示邏輯改變，其餘輪次不受影響。勾選框：`getComputedStyle` 確認預設 `opacity:0`、`bottom:5px`、`left:3px`；直接走訪 `document.styleSheets` 確認 `.revision-image-item:hover .revision-image-select` 與 `.revision-image-select:checked` 兩條規則都存在；手動把一個 checkbox 設成 `checked=true` 後 `getComputedStyle` 確認 `opacity` 變成 `1`（驗證「已勾選維持顯示」這條規則生效）。`node --test backend/test/*.test.mjs` 25/25 全過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（較早）— 修正「設計圖記錄」寬度太窄的問題：真正生效的是後面那組未加 media query 的樣式覆寫
 
 - 修改目的：上一輪把「設計圖記錄」改成橫向捲動後，使用者回報「只露出兩張太短了，寬度可以拉到大概對齊上方『數量』欄位的位置」。追查後發現：上一輪加的 `grid-column:1/-1!important`（讓這個欄位跨滿「其他資訊」整列）寫在 `index.html` 大約 3044 行那組樣式裡，但**那組樣式其實已經不是實際生效的版本**——`#caseDetailModal` 這個彈窗在檔案後段（約 5570 行開始，`/* Case detail presentation: keep existing data bindings, replace only layout and color. */` 這行註解之後）還有**第二組完整的樣式覆寫，而且沒有包在任何 `@media` 裡、一律生效**，這組後來的樣式對 `.case-detail-row.is-wide` 又重新設回 `grid-column:auto!important`（約 5628 行），跟我上一輪加的規則選擇器特異度（specificity）打平，但因為在檔案裡排序更後面，瀏覽器最終套用的是這一組——導致我上一輪的「跨滿整列」設定實際上完全沒生效，欄位還是被限制在「其他資訊」2 欄版面裡的其中一欄，只有 143px 寬，跟使用者原本反映的「只露出兩張」完全吻合。
 - 影響檔案：`index.html`。
