@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 811,
+  "revision": 812,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:46:20.890Z",
+  "updatedAt": "2026-08-13T04:46:28.312Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18770,9 +18770,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 12:41:25",
-          "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜 resize.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15S_YZlXGonb6csU28GQ4z1EsCaEYmGeb=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1-J_eYAK_kdnWwgtUloJLWNCyLQTF-2WB=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/16LpGkgI2Af9hx1fLacyGAXMW1VxFj4Ft=w1600\"},{\"fileName\":\"260810_Nutribullet_夏日瓜瓜狂想曲_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Xl6FbH5dJSDeG50ANZe0hprfav21vLyy=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜_直式.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YfXIlCNjgNjOiAPbh460XX5yuym_KX8T=w1600\"},{\"fileName\":\"nutribullet Ultra_Pink Smoothie_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1rplycg7sDpLdhNnI94QeJtLlvNuDOw0X=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1-J_eYAK_kdnWwgtUloJLWNCyLQTF-2WB=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/16LpGkgI2Af9hx1fLacyGAXMW1VxFj4Ft=w1600\"},{\"fileName\":\"260810_Nutribullet_夏日瓜瓜狂想曲_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Xl6FbH5dJSDeG50ANZe0hprfav21vLyy=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜_直式.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YfXIlCNjgNjOiAPbh460XX5yuym_KX8T=w1600\"},{\"fileName\":\"nutribullet Ultra_Pink Smoothie_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1rplycg7sDpLdhNnI94QeJtLlvNuDOw0X=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 12:46:20"
+          "圖片更新時間": "2026/08/13 12:46:28"
         }
       ]
     },
