@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 843,
+  "revision": 844,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:14:20.134Z",
+  "updatedAt": "2026-08-13T08:14:23.829Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21727,8 +21727,8 @@
           "深淺模式": ""
         },
         {
-          "部門": "部署驗證部",
-          "組別": "原始驗證組",
+          "部門": "",
+          "組別": "已修改驗證組",
           "名字": "部署驗證測試員",
           "顯示名": "部署驗證測試員",
           "帳號": "local:02594840-91da-423d-bab9-4862fd04acfe",
