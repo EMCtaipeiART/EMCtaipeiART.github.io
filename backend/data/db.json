@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 869,
+  "revision": 870,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:23:08.193Z",
+  "updatedAt": "2026-08-13T08:24:11.325Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18812,6 +18812,18 @@
           "圖片連結": "[{\"fileName\":\"260729_Epson_設計師成功案例_YT_BN_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-uXAI5HealXjivzWzNr9v0bZ7czRny10=w1600\"},{\"fileName\":\"260729_Epson_設計師成功案例_YT_BN_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dO9qqVXBH8hRrlw6tx1QLZ9lM-6uN5u9=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 16:19:54"
+        },
+        {
+          "案件編號": "26070209",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 16:24:11",
+          "修改日期": "2026/08/13 16:24:11",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/13 16:24:11",
+          "圖片連結": "[{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oTB1gudtfW-RYq8ARbs_tB2s0zBKluUx=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CgYV0fSZIDi2EIXMcmb5O71BtWEtwfiG=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A03.png\",\"url\":\"https://lh3.googleusercontent.com/d/12lOajso2qjWjZCrvR8CS_O_h68lm3OUD=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-ywSyPyWfBNEs3L_N1Mkdn3eIy_LFUXG=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/19pjUAEk2X-GLZk-rUxLVu8RR2bAsnUvX=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HE8p0sHE4hJiAuvbDS_PUtUHjfRiOytM=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1c3YQKv4GGz8h0HfezyS7aidcrxhLG6HU=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_D.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G4lyZ7JFV6_6qOWJOEwILaM0veMt-B9D=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/13 16:24:11"
         }
       ]
     },
