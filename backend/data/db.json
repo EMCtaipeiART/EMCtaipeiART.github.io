@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 691,
+  "revision": 692,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:55:44.316Z",
+  "updatedAt": "2026-08-13T02:56:02.393Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18597,6 +18597,18 @@
           "圖片連結": "[{\"fileName\":\"260812_Sealy_抽獎得獎公告貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1XGYG5udDQgA7z8fVZc9haWxuXNYYGEDQ=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 10:55:16"
+        },
+        {
+          "案件編號": "26080034",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 10:56:02",
+          "修改日期": "2026/08/13 10:56:02",
+          "修改內容": "初稿完成",
+          "修改人": "Anna",
+          "確認修正日": "2026/08/13 10:56:02",
+          "圖片連結": "[{\"fileName\":\"260811_Emfusion_8月FB貼文_產品多維度評測.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ywNJYjGeB4rnYj3D1ncZj4FDCgvJ0QPO=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 10:56:02"
         }
       ]
     },
