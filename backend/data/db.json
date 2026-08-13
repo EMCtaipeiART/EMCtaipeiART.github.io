@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 680,
+  "revision": 681,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:36:53.131Z",
+  "updatedAt": "2026-08-13T02:37:14.447Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18347,7 +18347,7 @@
           "修改日期": "2026/8/3",
           "修改內容": "順序調整，標題小改",
           "修改人": "吳冠賢",
-          "確認修正日": ""
+          "確認修正日": "2026/08/13 10:37:14"
         },
         {
           "案件編號": "26070220",
