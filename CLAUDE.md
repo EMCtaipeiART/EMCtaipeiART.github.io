@@ -199,7 +199,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 風險區塊：`index.html` 現在的原始碼裡會出現真實的內網 IP（`192.168.1.64`）與 `pickerToken`——這兩者都會隨這次修改一起 push 到公開的 GitHub repo，屬於前一則已經說明過、可接受的設計取捨（`192.168.1.64` 是 RFC1918 私有位址，外部網際網路連不到；`pickerToken` 本來就不是設計成機密，見前則風險區塊說明）。**如果這台 Mac 之後改用 DHCP 動態配發的 IP 且該 IP 之後被路由器重新配給別的裝置，這個網址會失效**，需要重新取得新 IP 後回來更新這兩個常數——比較穩定的作法是在路由器上幫這台機器的 MAC 位址設定固定 IP（DHCP reservation），或改用 `<這台機器的電腦名稱>.local` 這種 Bonjour 主機名稱（比 IP 穩定，但依賴辦公室網路是否支援 mDNS），這點還沒有跟使用者確認要用哪一種，先用使用者提供的 IP 位址頂著。
 - 已檢查／驗證方式：見上方「意外發現」段落；另外照慣例跑過 `index.html` 兩段 `<script>` 語法檢查與 `node --test backend/test/*.test.mjs`，22/22 全過。
 - 部署狀態：純前端，git push 後自動生效。
-- commit：（見下方 push 紀錄）
+- commit：`63ba379`
 
 ### 2026-08-13 Asia/Taipei（最新之後）— NAS 資料夾選擇器補上連線逾時／視窗關閉偵測
 
@@ -209,7 +209,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 風險區塊：`win.closed` 是唯一能跨來源（新分頁是不同網域/協定）合法讀取的視窗狀態屬性，讀取它不會被瀏覽器安全機制擋下；但無法讀取 `win.location`／新分頁內容本身（會丟 `SecurityError`），所以沒辦法區分「使用者手動關閉」跟「連線失敗後使用者關閉錯誤頁」這兩種情境，訊息文字刻意寫成「如果顯示連不上網站」這種涵蓋兩種可能性的措辭，不會誤判成單一原因。20 秒的提醒不是「判定失敗」，只是善意提醒——真的在瀏覽多層資料夾找對案件資料夾，花超過 20 秒是很正常的，所以這則訊息不會清空 `activeNasFolderPickerNonce`、也不會關閉視窗，使用者可以完全不理會繼續選。
 - 已檢查／驗證方式：`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 22/22 全過。用真實頁面＋console 存根 `window.setInterval`／`window.clearInterval`（捕捉回呼函式後手動觸發模擬「經過幾秒」，不用真的等 20 秒）逐一驗證三種情境：①視窗立刻關閉（`{closed:true}`）→ 第一次 tick 就正確清空 nonce、停止監看、顯示「視窗已關閉」訊息；②視窗持續開著，模擬 19 次 tick（19 秒）不顯示任何訊息、第 20 次 tick 正確顯示提醒、第 21 次 tick 不重複顯示、監看仍在繼續（沒有被清除）；③模擬訊息已經被處理（`activeNasFolderPickerNonce` 被外部清空，代表 `handleUploadFrameMessage` 已經處理過），下一次 tick 正確偵測到 nonce 不符、安靜停止監看、不顯示任何訊息。另外用暫時把 `nasFolderPickerBaseUrl`／`nasFolderPickerToken` 改成測試值（測完立刻改回空字串、重新語法檢查與跑過 22 個既有測試確認沒有殘留）確認 `openNasFolderPicker()` 真的呼叫 `window.open()` 成功後會啟動 `activeNasFolderPickerWatchTimer`。
 - 部署狀態：純前端，git push 後自動生效，不需要重新部署 Worker 或 Apps Script、也不影響 `nas_folder_picker_server.mjs`／`nas_design_image_watcher.mjs` 這兩支本機工具（它們完全沒有被這次改動觸碰）。
-- commit：（見下方 push 紀錄）
+- commit：`63ba379`
 
 ### 2026-08-13 Asia/Taipei（最新）— 新增「NAS 資料夾選擇器」，過稿中可用滑鼠選 NAS 資料夾（跟選電腦檔案上傳並存）
 
@@ -232,7 +232,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - **`index.html` 新增的函式有用真實頁面＋console 存根做隔離測試**（`accessAllowed`／`window.open`／`updateCaseRow`／`openUploadModal`／`isDesignerLogin` 換成記錄呼叫參數的假函式，`nasFolderPickerBaseUrl`／`nasFolderPickerToken` 暫時改成測試值、測完再改回空字串並重新跑過語法檢查與 22 個既有測試確認沒有殘留），逐一驗證：①標記過稿中會叫出「NAS 資料夾／電腦檔案上傳」選擇彈窗、選「電腦檔案上傳」行為與改動前完全一致（`openUploadModal` 收到的網址參數不變）；②選「NAS 資料夾」在未設定時顯示「尚未設定」提示、不會呼叫 `window.open`；③設定測試值後選「NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 四個查詢參數呼叫 `window.open()`；④模擬資料夾選擇器分頁傳回帶正確 nonce 的 `machi-nas-folder-selected` 訊息，確認 `updateCaseRow` 收到正確的 `{designImageFolderUrl:<選的路徑>}`，且 nonce 用過一次後被清空（防止重複套用同一則訊息）；⑤模擬帶錯誤 nonce 或空路徑的訊息，確認正確被忽略／顯示錯誤提示、不會誤寫入；⑥狀態改成過稿中以外的其他狀態（例如已完成）不會叫出這個選擇彈窗。
   - **未做的驗證**（跟過去所有 NAS 相關修改一樣的邊界，這個環境連不到公司內網也沒有 macOS）：真的連上你的 NAS、真的在辦公室內網另一台機器用區網 IP／`.local` 主機名稱連到這支選擇器伺服器、真實瀏覽器（尤其 Safari）對「從 HTTPS 頁面 `window.open()` 開 HTTP 新分頁」的實際行為與提示訊息、`launchd` 常駐設定真的重開機/長時間運作是否穩定、`sips` 對 WebP 來源檔的實際支援度。這些都需要使用者在自己的環境實測。
 - 部署狀態：`index.html`、`CLAUDE.md` 純前端／文件，git push 後自動生效（`nasFolderPickerBaseUrl`／`nasFolderPickerToken` 這兩個常數目前是空字串，設定好資料夾選擇器伺服器並拿到區網位址與 token 後，還需要再手動編輯 `index.html` 填入這兩個值、重新 push 一次才會真的啟用「選擇 NAS 資料夾」——這點沒辦法透過設定檔或後台介面設定，是寫死在前端原始碼裡的兩個常數，之後如果想避免每次換機器都要改程式碼重新部署，可以考慮改成從資料庫後台的某張設定表讀取，目前先用最簡單的寫死方式）；`scripts/nas_folder_picker_server.mjs`／`scripts/nas_design_image_watcher.*` 都是純本機工具，不需要 git push 就能在你的 Mac 上執行，需要你手動啟動（或依 README 設定 `launchd` 常駐）；`worker/`、`upload/Code.gs` 這次完全沒有修改，不需要重新部署。
-- commit：（見下方 push 紀錄）
+- commit：`63ba379`
 
 ### 2026-08-13 Asia/Taipei（更新）— 案件設計圖上傳改成選資料夾／多選檔案＋背景上傳＋自動壓縮／影片截圖；修改紀錄新增圖片按鈕縮小
 
