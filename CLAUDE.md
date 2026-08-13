@@ -186,6 +186,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-13 Asia/Taipei（最新）— 右下角上傳進度提示平常完全隱藏
+
+- 修改目的：使用者回報「設計圖上傳中」進度提示在沒有上傳時仍顯示於右下角；期望只在實際上傳進行中顯示。
+- 影響檔案：`index.html`。
+- 影響功能：新增 `.case-design-upload-badge[hidden]{display:none!important}`，確保元件的 `hidden` 屬性不會被基礎 `.case-design-upload-badge{display:flex}` 規則覆蓋。進度訊息開始時仍會由 `showCaseDesignUploadBadge()` 移除隱藏，完成時由 `closeUploadModal()` 呼叫 `hideCaseDesignUploadBadge()` 恢復隱藏。
+- 風險區塊：只調整提示元件的隱藏顯示優先順序，不改動上傳、取消或進度訊息邏輯。
+- 已檢查／驗證方式：`index.html` 內嵌 JavaScript 語法檢查；`node --test backend/test/*.test.mjs` 回歸測試；確認初始 HTML 保留 `hidden` 屬性且 CSS 具有專用的 `display:none!important` 規則。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見本次 push 紀錄）
+
 ### 2026-08-13 Asia/Taipei（更晚）— 設計圖上傳按下「上傳全部」自動收合成右下角進度提示
 
 - 修改目的：使用者回報案件設計圖上傳彈窗（`upload/upload.html?mode=case-design`）目前的行為是：按下 iframe 裡的「上傳全部」後，外層大彈窗仍然停留在前景，要使用者自己手動點 X／背景遮罩／Escape 才會收合成右下角的「設計圖上傳中」小卡片。使用者希望改成按下上傳按鈕當下就自動收合，只留右下角進度提示；上傳全部結束後這個提示也要跟著收合——後者其實既有程式碼已經做到（`closeUploadModal()` 本來就會呼叫 `hideCaseDesignUploadBadge()`），這次真正要修的只有「按下上傳按鈕當下要自動收合」這一段。
