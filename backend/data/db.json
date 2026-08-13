@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 933,
+  "revision": 934,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:36:25.276Z",
+  "updatedAt": "2026-08-13T11:39:55.208Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17974,7 +17974,7 @@
           "加權": "3",
           "月份": "8月",
           "案件編號": "26080062",
-          "修改次數": "0",
+          "修改次數": "1",
           "繳交時間": "2026/08/13 19:36:20",
           "項目細節": "社群貼文",
           "設計圖資料夾連結": "專案企劃部/執行中/添可/FB貼文/2026/8月"
@@ -19569,6 +19569,16 @@
           "圖片連結": "[{\"fileName\":\"260729_添可_送長輩禮物_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1AAMErjTqPTVBRzPNZdanojJ7nVrS5bc5=w1600\"},{\"fileName\":\"260803_添可_七夕_StationS9Artist.png\",\"url\":\"https://lh3.googleusercontent.com/d/18ehdAnKQ6A3NIwU3g_ApwAy81t_1x3CQ=w1600\"},{\"fileName\":\"260803_添可_中元節_S7StretchStream.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hXlInh0v55JuYNr0g0mSLw2J61Hdfq4s=w1600\"},{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/13ngIxx_9IvjPv9zuhd7zyVzFqltF6ojQ=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 19:36:20"
+        },
+        {
+          "案件編號": "26080062",
+          "修改次數": "1",
+          "建立日期": "2026/08/13 19:39:55",
+          "修改日期": "2026-08-21",
+          "修改內容": "test",
+          "修改人": "管理員",
+          "確認修正日": "",
+          "待修改圖片": "[\"260729_添可_送長輩禮物_i7Fold.png\",\"260803_添可_中元節_S7StretchStream.png\"]"
         }
       ]
     },
