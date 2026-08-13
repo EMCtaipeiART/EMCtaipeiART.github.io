@@ -314,10 +314,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /async function refreshWorkerDatabase\(\).*action:'refreshDatabase'/);
   assert.match(html, /async function start\(\).*await refreshWorkerDatabase\(\);await loadMetadata\(\)/);
-  assert.match(html, /class="database-link"[^>]+aria-label="開啟連結">\.\.\.<\/a>/);
+  assert.match(html, /class="database-link"[^>]+aria-label="開啟連結">前往連結<\/a>/);
+  assert.match(html, /function isDatabaseDesignPathHeader\(header\).*設計圖資料/);
+  assert.match(html, /isDatabaseDesignPathHeader\(header\).*databaseDesignPathCellHtml\(row\[header\]\)/);
   assert.match(html, /database-details[^}]+width:150px/);
   assert.match(html, /database-supplement-note[^}]+width:132px/);
-  assert.match(html, /database-link-column[^}]+width:66px/);
+  assert.match(html, /database-link-column[^}]+width:92px/);
+  assert.match(html, /database-design-path[^}]+width:360px[^}]+white-space:normal[^}]+overflow-wrap:anywhere/);
   assert.match(html, /\.database-link\{[^}]*color:var\(--ink\)/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
