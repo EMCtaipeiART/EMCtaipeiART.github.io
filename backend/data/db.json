@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 874,
+  "revision": 875,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:46:25.278Z",
+  "updatedAt": "2026-08-13T08:46:28.450Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21766,7 +21766,7 @@
         },
         {
           "部門": "驗證部門已改名",
-          "組別": "驗證組別",
+          "組別": "驗證組別已改名",
           "名字": "Codex 帳號管理驗證",
           "顯示名": "Codex 帳號管理驗證",
           "帳號": "local:e2e-6570f5fc-32fa-4a69-b3c3-bba2c44f2fc4",
@@ -23232,6 +23232,12 @@
           "代碼": "部門:c1f8ac94-492b-4fa4-be6b-120e87c8e8b0",
           "種類": "部門",
           "名稱": "驗證部門已改名",
+          "排序": "1"
+        },
+        {
+          "代碼": "組別:b13cef4f-d6bd-49af-930f-ce3477effd3d",
+          "種類": "組別",
+          "名稱": "驗證組別已改名",
           "排序": "1"
         }
       ]
