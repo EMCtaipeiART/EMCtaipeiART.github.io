@@ -67,6 +67,7 @@
   function canonicalAccount(value) {
     const account = String(value || '').trim().toLowerCase();
     if (!account) return account;
+    if (account.startsWith('local:')) return account;
     return account.includes('@') ? account : `${account}@emctaipei.com`;
   }
   function parseList(value) {

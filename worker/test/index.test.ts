@@ -268,6 +268,76 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '角色範本': '設計師' }));
   });
 
+  it('creates a password-only account without email and logs in with its assigned role', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'local-account-file-sha' }, commit: { sha: 'local-account-commit-sha' } });
+    });
+    const account = 'local:5f248437-c19c-4efa-9b03-18dce289b882';
+    const password = 'qa-designer-2026';
+    const saved = await api({
+      action: 'adminAccountSave',
+      account,
+      loginPassword: password,
+      expectSettingsMissing: true,
+      expectPermissionMissing: true,
+      settingsRow: {
+        '帳號': account,
+        '部門': '測試部',
+        '組別': '自訂測試組',
+        '名字': '權限測試員',
+        '顯示名': '權限測試員'
+      },
+      permissionRow: {
+        '帳號': account,
+        '登入方式': '密碼',
+        '角色範本': '唯讀',
+        '狀態': '啟用',
+        '頁面權限': JSON.stringify(['request']),
+        '功能權限': JSON.stringify([])
+      }
+    }, token);
+    expect(saved).toMatchObject({
+      ok: true,
+      account,
+      permissionRow: { '登入方式': '密碼', '角色範本': '唯讀' }
+    });
+    const savedHash = String((saved.permissionRow as Record<string, unknown>)['密碼雜湊']);
+    expect(savedHash).toMatch(/^pbkdf2-sha256\$210000\$/);
+    expect(savedHash).not.toContain(password);
+
+    const updated = await api({
+      action: 'adminAccountSave',
+      account,
+      settingsRow: {
+        ...(saved.settingsRow as Record<string, unknown>),
+        '部門': '',
+        '組別': '已修改測試組'
+      },
+      permissionRow: saved.permissionRow,
+      expectedSettingsRow: saved.settingsRow,
+      expectedPermissionRow: saved.permissionRow
+    }, token);
+    expect(updated).toMatchObject({
+      ok: true,
+      settingsRow: { '部門': '', '組別': '已修改測試組' },
+      permissionRow: { '登入方式': '密碼', '密碼雜湊': savedHash }
+    });
+
+    const signedIn = await api({ action: 'login', password });
+    expect(signedIn).toMatchObject({
+      ok: true,
+      provider: 'password',
+      account,
+      email: '',
+      user: '權限測試員',
+      settings: { department: '', group: '已修改測試組' },
+      access: { role: '唯讀', status: '啟用' }
+    });
+    expect(String(signedIn.token)).not.toBe('');
+  });
+
   it('lets an account with only media.manage (no request.edit) save the design image source folder link, but still blocks other field edits', async () => {
     // 對應 26080059 案件過稿中無法填入 NAS 路徑的回報：production 的「設計師」角色範本目前沒有 request.edit，
     // 只靠 media.manage 授權「設定來源資料夾」這個動作，其餘一般欄位編輯仍然要 request.edit。

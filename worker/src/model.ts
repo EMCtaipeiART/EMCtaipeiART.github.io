@@ -2,7 +2,7 @@ import { TABLE_SCHEMAS, TABLE_NAMES, normalizeDatabaseShape } from '../../backen
 import { applyWeightToRow } from '../../backend/weighting.mjs';
 import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 
-export const VERSION = 'cloudflare-worker-designer-media-json-2026-08-13-1';
+export const VERSION = 'cloudflare-worker-local-password-accounts-2026-08-13-1';
 export const LOGIN_DOMAIN = '@emctaipei.com';
 export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
 export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -55,6 +55,7 @@ export const PROJECT_GROUPS: Record<string, { designers: string[]; type: string 
 export function text(value: unknown): string { return String(value ?? '').trim(); }
 export function canonicalAccount(value: unknown): string {
   const account = text(value).toLowerCase();
+  if (account.startsWith('local:')) return account;
   return account && !account.includes('@') ? `${account}${LOGIN_DOMAIN}` : account;
 }
 export function isHttpUrl(value: unknown): boolean {

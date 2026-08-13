@@ -17,6 +17,8 @@ import type {
 const STATE_KEY = 'primary';
 const MAX_LOGIN_ATTEMPTS = 12;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOCAL_PASSWORD_ITERATIONS = 210_000;
+const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
 const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
@@ -107,6 +109,49 @@ async function secureEqual(actual: string, expected: string): Promise<boolean> {
     timingSafeEqual(a: ArrayBuffer | ArrayBufferView, b: ArrayBuffer | ArrayBufferView): boolean;
   };
   return subtle.timingSafeEqual(left, right);
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const binary = atob(padded);
+  return Uint8Array.from(binary, character => character.charCodeAt(0));
+}
+
+async function deriveLocalPassword(password: string, salt: Uint8Array<ArrayBuffer>, iterations = LOCAL_PASSWORD_ITERATIONS): Promise<Uint8Array<ArrayBuffer>> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256);
+  return new Uint8Array(bits);
+}
+
+async function hashLocalPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const derived = await deriveLocalPassword(password, salt);
+  return `${LOCAL_PASSWORD_PREFIX}$${LOCAL_PASSWORD_ITERATIONS}$${bytesToBase64Url(salt)}$${bytesToBase64Url(derived)}`;
+}
+
+async function verifyLocalPassword(password: string, encoded: unknown): Promise<boolean> {
+  const [prefix, iterationText, saltText, expectedText, ...extra] = text(encoded).split('$');
+  const iterations = Number(iterationText);
+  if (prefix !== LOCAL_PASSWORD_PREFIX || extra.length || !Number.isInteger(iterations) || iterations < 100_000 || iterations > 1_000_000 || !saltText || !expectedText) return false;
+  try {
+    const expected = base64UrlToBytes(expectedText);
+    const actual = await deriveLocalPassword(password, base64UrlToBytes(saltText), iterations);
+    if (actual.byteLength !== expected.byteLength) return false;
+    const subtle = crypto.subtle as SubtleCrypto & {
+      timingSafeEqual(a: ArrayBuffer | ArrayBufferView, b: ArrayBuffer | ArrayBufferView): boolean;
+    };
+    return subtle.timingSafeEqual(actual, expected);
+  } catch { return false; }
+}
+
+function isReservedShortcutPassword(password: string): boolean {
+  return password === 'test' || /^\d{4}$/.test(password);
 }
 
 function parseCommentList(value: unknown): Row[] {
@@ -352,18 +397,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async passwordLogin(payload: ApiPayload, context: RequestContext): Promise<ApiResult> {
     await this.assertLoginRate(context);
     const password = text(payload.password);
+    if (!password) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
     const shortcut = shortcutLoginAccount(password);
-    const account = shortcut || canonicalAccount(payload.account || payload.user);
-    if (!shortcut) {
-      const allowed = this.env.ADMIN_LOGIN_ACCOUNTS.split(',').map(canonicalAccount).includes(account);
-      if (!allowed || !password || !(await secureEqual(password, this.env.ADMIN_LOGIN_PASSWORD))) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
-    }
+    const requestedAccount = canonicalAccount(payload.account || payload.user);
     const { database } = await this.snapshot();
+    let account = shortcut;
+    if (!account) {
+      const allowed = this.env.ADMIN_LOGIN_ACCOUNTS.split(',').map(canonicalAccount).includes(requestedAccount);
+      if (allowed && await secureEqual(password, this.env.ADMIN_LOGIN_PASSWORD)) account = requestedAccount;
+    }
+    if (!account) {
+      const passwordRows = database.tables['帳號權限'].rows.filter(row => text(row['登入方式']) === '密碼' && text(row['密碼雜湊']));
+      for (const permissionRow of passwordRows) {
+        if (!await verifyLocalPassword(password, permissionRow['密碼雜湊'])) continue;
+        if (text(permissionRow['狀態']) === '停用') return { ok: false, action: 'login', error: '帳號已停用', reason: 'ACCOUNT_DISABLED' };
+        account = canonicalAccount(permissionRow['帳號']);
+        break;
+      }
+    }
+    if (!account) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
     const row = settingsRow(database, account);
     if (!row) return { ok: false, action: 'login', error: '帳號或密碼不正確' };
     const user = text(row['名字'] || account.split('@')[0]);
     const issued = await this.createSession({ user, account, provider: 'password' });
-    return { ok: true, action: 'login', provider: 'password', user, account, email: account, token: issued.token, expiresIn: issued.expiresIn, settings: settingsResponse(row), access: accessProfile(database, issued.session) };
+    return { ok: true, action: 'login', provider: 'password', user, account, email: account.includes('@') ? account : '', token: issued.token, expiresIn: issued.expiresIn, settings: settingsResponse(row), access: accessProfile(database, issued.session) };
   }
 
   private async erpLogin(payload: ApiPayload, context: RequestContext): Promise<ApiResult> {
@@ -945,10 +1002,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const requestedPermission = asRow(payload.permissionRow || payload.permission);
     const expectedSettings = asRow(payload.expectedSettingsRow);
     const expectedPermission = asRow(payload.expectedPermissionRow);
-    const account = canonicalAccount(payload.account || requestedSettings['帳號'] || requestedPermission['帳號']);
-    if (!account || !account.endsWith('@emctaipei.com')) throw new Error('帳號必須使用 @emctaipei.com 公司信箱');
+    const loginMethod = text(requestedPermission['登入方式']) || '公司信箱';
+    if (!['公司信箱', '密碼'].includes(loginMethod)) throw new Error('登入方式格式不正確');
+    const requestedAccount = text(payload.account || requestedSettings['帳號'] || requestedPermission['帳號']);
+    const account = canonicalAccount(requestedAccount || (loginMethod === '密碼' ? `local:${crypto.randomUUID()}` : ''));
+    if (loginMethod === '公司信箱' && (!account || !account.endsWith('@emctaipei.com'))) throw new Error('帳號必須使用 @emctaipei.com 公司信箱');
+    if (loginMethod === '密碼' && !account) throw new Error('無法建立密碼登入帳號');
+    const loginPassword = text(payload.loginPassword);
+    if (loginPassword && (loginPassword.length < 4 || loginPassword.length > 128)) throw new Error('登入密碼長度必須是 4–128 個字');
+    if (loginPassword && isReservedShortcutPassword(loginPassword)) throw new Error('這組密碼與內建測試密碼保留格式重複，請改用其他密碼');
+    if (loginPassword && await secureEqual(loginPassword, this.env.ADMIN_LOGIN_PASSWORD)) throw new Error('這組密碼與系統管理者密碼重複，請改用其他密碼');
 
-    return this.mutate('adminAccountSave', current, draft => {
+    return this.mutate('adminAccountSave', current, async draft => {
       const settingsTable = draft.tables['設定'];
       const permissionTable = draft.tables['帳號權限'];
       let settingsIndex = settingsTable.rows.findIndex(row => canonicalAccount(row['帳號']) === account);
@@ -981,6 +1046,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
       const permission = normalizedTableRow(permissionTable.headers, requestedPermission);
       permission['帳號'] = account;
+      permission['登入方式'] = loginMethod;
+      if (loginMethod === '密碼') {
+        const existingHash = permissionIndex >= 0 ? text(permissionTable.rows[permissionIndex]['密碼雜湊']) : '';
+        if (!loginPassword && !existingHash) throw new Error('請輸入密碼登入帳號的登入密碼');
+        if (loginPassword) {
+          for (let index = 0; index < permissionTable.rows.length; index += 1) {
+            if (index === permissionIndex) continue;
+            const other = permissionTable.rows[index];
+            if (text(other['登入方式']) !== '密碼' || !text(other['密碼雜湊'])) continue;
+            if (await verifyLocalPassword(loginPassword, other['密碼雜湊'])) throw new Error('這組登入密碼已由其他帳號使用，請改用不同密碼');
+          }
+        }
+        permission['密碼雜湊'] = loginPassword ? await hashLocalPassword(loginPassword) : existingHash;
+      } else permission['密碼雜湊'] = '';
       const roles = ['管理者', '設計師', '一般使用者', '唯讀', '自訂'];
       if (!roles.includes(text(permission['角色範本']))) throw new Error('角色範本格式不正確');
       if (!['啟用', '停用'].includes(text(permission['狀態']))) throw new Error('帳號狀態格式不正確');
