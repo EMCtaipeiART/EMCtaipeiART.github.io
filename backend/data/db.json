@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 909,
+  "revision": 910,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T10:28:04.009Z",
+  "updatedAt": "2026-08-13T10:29:39.710Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17314,6 +17314,31 @@
           "加權": "",
           "月份": "8月",
           "案件編號": "26080061"
+        },
+        {
+          "客戶別": "金士頓",
+          "專案名稱": "2026/08月貼文「UGC暑假清單」FB、IG、X版本製作",
+          "專案負責人": "古晟如",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "3",
+          "開始日期": "2026/08/13",
+          "結束日期": "2026/08/18",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram, 其他平台",
+          "填單時間": "2026/08/13 18:29",
+          "設計簡報說明": "p7~9",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080062",
+          "客戶素材說明": "產品素材",
+          "客戶素材連結": "https://emctaipeiart.github.io/b/26080062",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080062"
         }
       ]
     },
@@ -19114,6 +19139,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/13 18:27"
+        },
+        {
+          "案件編號": "26080062",
+          "A": "https://docs.google.com/presentation/d/1DPguhNQApI8t-0kdUK_2Nv9SMG1ox9HSBJH3-syScDg/edit?usp=sharing",
+          "B": "https://drive.google.com/drive/folders/1aiKjG6mh-QZMw5vd_K6FD_n48dCJtIOF?usp=sharing",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/13 18:29"
         }
       ]
     },
@@ -24362,6 +24395,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 618,
           "sheetRow": 618
+        }
+      },
+      "ab8dcb50-79f9-4a8c-abfc-4ec2bfb65aa2": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 619,
+        "row": {
+          "id": "26080062",
+          "month": "8月",
+          "client": "金士頓",
+          "project": "2026/08月貼文「UGC暑假清單」FB、IG、X版本製作",
+          "owner": "古晟如",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 3,
+          "start": "2026/08/13",
+          "end": "2026/08/18",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram, 其他平台",
+          "submittedAt": "2026/08/13 18:29",
+          "briefNote": "p7~9",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080062",
+          "assetNote": "產品素材",
+          "assetUrl": "https://emctaipeiart.github.io/b/26080062",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 619,
+          "sheetRow": 619
         }
       }
     }
