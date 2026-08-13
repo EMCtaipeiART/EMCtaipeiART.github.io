@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 907,
+  "revision": 908,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T10:24:05.281Z",
+  "updatedAt": "2026-08-13T10:27:20.590Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17264,6 +17264,31 @@
           "加權": "",
           "月份": "8月",
           "案件編號": "26080059"
+        },
+        {
+          "客戶別": "金士頓",
+          "專案名稱": "2026/08月貼文「Office Rumors Meme」中、日文版本製作",
+          "專案負責人": "古晟如",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "2",
+          "開始日期": "2026/08/13",
+          "結束日期": "2026/08/14",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram, 其他平台",
+          "填單時間": "2026/08/13 18:27",
+          "設計簡報說明": "p5.6",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080060",
+          "客戶素材說明": "PSD",
+          "客戶素材連結": "https://emctaipeiart.github.io/b/26080060",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080060"
         }
       ]
     },
@@ -19056,6 +19081,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/13 12:14"
+        },
+        {
+          "案件編號": "26080060",
+          "A": "https://docs.google.com/presentation/d/1DPguhNQApI8t-0kdUK_2Nv9SMG1ox9HSBJH3-syScDg/edit?usp=sharing",
+          "B": "https://drive.google.com/drive/folders/1rgxqk3tTP83JoMT9-laF_3i-ONUF26Tm?usp=sharing",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/13 18:27"
         }
       ]
     },
@@ -24236,6 +24269,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 616,
           "sheetRow": 616
+        }
+      },
+      "f2ea6d41-83ac-4aa1-a848-504338121ad1": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 617,
+        "row": {
+          "id": "26080060",
+          "month": "8月",
+          "client": "金士頓",
+          "project": "2026/08月貼文「Office Rumors Meme」中、日文版本製作",
+          "owner": "古晟如",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 2,
+          "start": "2026/08/13",
+          "end": "2026/08/14",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram, 其他平台",
+          "submittedAt": "2026/08/13 18:27",
+          "briefNote": "p5.6",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080060",
+          "assetNote": "PSD",
+          "assetUrl": "https://emctaipeiart.github.io/b/26080060",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 617,
+          "sheetRow": 617
         }
       }
     }
