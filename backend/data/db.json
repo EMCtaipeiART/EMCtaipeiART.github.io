@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 697,
+  "revision": 698,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T03:23:58.605Z",
+  "updatedAt": "2026-08-13T03:24:35.473Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18609,6 +18609,18 @@
           "圖片連結": "[{\"fileName\":\"260811_Emfusion_8月FB貼文_產品多維度評測.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ywNJYjGeB4rnYj3D1ncZj4FDCgvJ0QPO=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/13 10:56:02"
+        },
+        {
+          "案件編號": "26080022",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 11:24:35",
+          "修改日期": "2026/08/13 11:24:35",
+          "修改內容": "初稿完成",
+          "修改人": "Machi",
+          "確認修正日": "2026/08/13 11:24:35",
+          "圖片連結": "[{\"fileName\":\"260810_Nutribullet_夏日瓜瓜狂想曲_食譜.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1R70LvMYXxjXz62KRh2LZ4Ys0z52fJ8qS=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/13 11:24:35"
         }
       ]
     },
