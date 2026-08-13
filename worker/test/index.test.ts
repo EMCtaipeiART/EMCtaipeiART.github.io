@@ -374,4 +374,56 @@ describe('Machi Design API Worker', () => {
       '頭像大圖連結': 'https://example.com/new-poster.jpg'
     }));
   });
+
+  it('removes deleted Drive media references from settings and reels in one JSON commit', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['media.manage']);
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    const avatarId = 'drive-avatar-file';
+    const posterId = 'drive-poster-file';
+    const storyId = 'drive-story-file';
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      const profile = database.tables['設定'].rows.find(row => row['名字'] === 'Machi')!;
+      profile['頭像連結'] = `https://drive.google.com/thumbnail?id=${avatarId}&sz=w1000`;
+      profile['頭像大圖連結'] = `https://drive.google.com/thumbnail?id=${posterId}&sz=w1000`;
+      database.tables.reels.rows.push({
+        '名字': 'Machi',
+        '限時動態連結': `https://lh3.googleusercontent.com/d/${storyId}=w1600`,
+        '保留期限': '永久',
+        '留言': '[]'
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'media-file-sha' }, commit: { sha: 'media-commit-sha' } });
+    });
+
+    const deleted = await api({
+      action: 'deleteDesignerMediaFiles',
+      designer: 'Machi',
+      fileIds: [avatarId, posterId, storyId]
+    }, token);
+    expect(deleted).toMatchObject({
+      ok: true,
+      action: 'deleteDesignerMediaFiles',
+      cleared: ['avatar', 'poster'],
+      deletedStories: 1,
+      changedTables: ['設定', 'reels'],
+      githubCommitSha: 'media-commit-sha'
+    });
+    expect(githubPut).toHaveBeenCalledTimes(1);
+
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const profile = database.tables['設定'].rows.find(row => row['名字'] === 'Machi')!;
+    expect(profile['頭像連結']).toBe('');
+    expect(profile['頭像大圖連結']).toBe('');
+    expect(database.tables.reels.rows.some(row => String(row['限時動態連結']).includes(storyId))).toBe(false);
+  });
 });

@@ -653,6 +653,42 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { result: { ok: true, action, designer: name, deleted: before - draft.tables.reels.rows.length }, changedTables: ['reels'] };
       });
     }
+    if (action === 'deleteDesignerMediaFiles') {
+      const current = this.requireAccess(database, session, 'media.manage');
+      const name = text(payload.name || payload.designer);
+      const ids = new Set((Array.isArray(payload.fileIds) ? payload.fileIds : []).map(text).filter(Boolean));
+      if (!name || !ids.size) throw new Error('缺少設計師或圖片檔案');
+      return this.mutate(action, current, draft => {
+        const profile = draft.tables['設定'].rows.find(row => text(row['名字']) === name);
+        if (!profile) throw new Error('找不到設計師設定');
+        const cleared: string[] = [];
+        const mediaFields: Array<[string, string]> = [
+          ['avatar', '頭像連結'],
+          ['poster', '頭像大圖連結']
+        ];
+        for (const [kind, header] of mediaFields) {
+          const value = text(profile[header]);
+          if (value && [...ids].some(id => value.includes(id))) {
+            profile[header] = '';
+            cleared.push(kind);
+          }
+        }
+        const before = draft.tables.reels.rows.length;
+        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(
+          text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))
+        ));
+        const deletedStories = before - draft.tables.reels.rows.length;
+        const changedTables = [
+          ...(cleared.length ? ['設定'] : []),
+          ...(deletedStories ? ['reels'] : [])
+        ];
+        return {
+          result: { ok: true, action, designer: name, fileIds: [...ids], cleared, deletedStories },
+          changed: changedTables.length > 0,
+          changedTables
+        };
+      });
+    }
     if (action === 'reportIssue') {
       if (session) this.requireAccess(database, session, 'issue.report');
       const report = asRow(payload.report || payload.row || payload.data || payload);

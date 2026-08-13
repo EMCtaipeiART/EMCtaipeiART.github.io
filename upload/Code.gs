@@ -797,6 +797,14 @@ function replaceDesignerImage(payload) {
       .setValue(imageUrl);
     SpreadsheetApp.flush();
 
+    const profile = { name: target.key };
+    profile[kind] = imageUrl;
+    const databaseSync = callMainAppJsonAction_('saveDesignerProfiles', {
+      editorToken: payload.editorToken,
+      profiles: [profile],
+      jsonOnly: true
+    });
+
     return {
       success: true,
       designer: target.key,
@@ -805,7 +813,9 @@ function replaceDesignerImage(payload) {
       imageUrl: imageUrl,
       fileId: file.getId(),
       expiresAt: 0,
-      expiresAtText: ''
+      expiresAtText: '',
+      jsonRevision: databaseSync.jsonRevision || 0,
+      githubCommitSha: databaseSync.githubCommitSha || ''
     };
   } catch (error) {
     console.error(error);
@@ -1005,7 +1015,8 @@ function deleteDesignerImage(payload) {
   payload = payload || {};
   const response = deleteDesignerImages({
     designer: payload.designer,
-    fileIds: [payload.fileId]
+    fileIds: [payload.fileId],
+    editorToken: payload.editorToken
   });
   if (response && response.success) {
     response.fileId = response.fileIds[0];
@@ -1019,6 +1030,7 @@ function deleteDesignerImage(payload) {
 function deleteDesignerImages(payload) {
   try {
     payload = payload || {};
+    verifyMediaManager_(payload.editorToken);
     const target = getUploadTarget_(payload.designer);
     const fileIds = Array.from(new Set(
       (Array.isArray(payload.fileIds) ? payload.fileIds : [])
@@ -1066,11 +1078,21 @@ function deleteDesignerImages(payload) {
       });
       SpreadsheetApp.flush();
 
+      const databaseSync = callMainAppJsonAction_('deleteDesignerMediaFiles', {
+        editorToken: payload.editorToken,
+        designer: target.key,
+        fileIds: fileIds
+      });
+
       return {
         success: true,
         designer: target.key,
         count: fileIds.length,
         fileIds: fileIds,
+        cleared: databaseSync.cleared || [],
+        deletedStories: Number(databaseSync.deletedStories) || 0,
+        jsonRevision: databaseSync.jsonRevision || 0,
+        githubCommitSha: databaseSync.githubCommitSha || '',
         message: fileIds.length > 1
           ? `${fileIds.length} 張圖片已刪除`
           : '圖片已刪除'
@@ -1712,7 +1734,7 @@ function userFolderNameFromAccount_(account) {
 
 function sanitizeUserFolderName_(value) {
   return String(value || '')
-    .replace(/[\\/ -]/g, '')
+    .replace(/[\\/\x00-\x1F\x7F]/g, '')
     .trim()
     .slice(0, 80);
 }

@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-account-profile-2026-08-11-2';
+const VERSION = 'json-backend-designer-media-json-2026-08-13-1';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -22,6 +22,7 @@ const WRITE_ACTIONS = new Set([
   'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment',
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
+  'deleteDesignerMediaFiles',
   'adminAccountSave'
 ]);
 const PROJECT_GROUPS = {
@@ -697,7 +698,10 @@ export function createActionHandler(database, options = {}) {
       }, 'admin account save');
     }
     if (action === 'saveDesignerProfiles') {
-      requireCapability(snapshot, payload, 'designer.settings');
+      const session = requireSession(snapshot, payload);
+      if (!hasCapability(snapshot, session, 'designer.settings') && !hasCapability(snapshot, session, 'media.manage')) {
+        throw new Error('此帳號沒有「designer.settings／media.manage」權限');
+      }
       return database.transaction(draft => {
         for (const profile of Array.isArray(payload.profiles) ? payload.profiles : []) {
           const row = draft.tables['設定'].rows.find(item => text(item['名字']) === text(profile.name));
@@ -813,6 +817,36 @@ export function createActionHandler(database, options = {}) {
         draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))));
         return { ok: true, action, designer: name, deleted: before - draft.tables.reels.rows.length };
       }, 'delete designer stories');
+    }
+    if (action === 'deleteDesignerMediaFiles') {
+      requireCapability(snapshot, payload, 'media.manage');
+      const name = text(payload.name || payload.designer);
+      const ids = new Set((Array.isArray(payload.fileIds) ? payload.fileIds : []).map(text).filter(Boolean));
+      if (!name || !ids.size) throw new Error('缺少設計師或圖片檔案');
+      return database.transaction(draft => {
+        const profile = draft.tables['設定'].rows.find(row => text(row['名字']) === name);
+        if (!profile) throw new Error('找不到設計師設定');
+        const cleared = [];
+        for (const [kind, header] of [['avatar', '頭像連結'], ['poster', '頭像大圖連結']]) {
+          const value = text(profile[header]);
+          if (value && [...ids].some(id => value.includes(id))) {
+            profile[header] = '';
+            cleared.push(kind);
+          }
+        }
+        const before = draft.tables.reels.rows.length;
+        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(
+          text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))
+        ));
+        return {
+          ok: true,
+          action,
+          designer: name,
+          fileIds: [...ids],
+          cleared,
+          deletedStories: before - draft.tables.reels.rows.length
+        };
+      }, 'delete designer media files');
     }
     if (action === 'listReels') return { ok: true, action, reels: snapshot.tables.reels.rows.filter(activeReel).map(publicReel).filter(reel => reel.name && reel.imageUrl) };
     if (action === 'toggleReelReaction' || action === 'addReelComment') {

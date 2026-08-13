@@ -1938,6 +1938,14 @@
               fileIds: [lastUploadedFile.id],
               jsonRevision: Number(response.jsonRevision) || 0
             });
+          } else if (uploadMode !== 'user') {
+            notifyUploadHost('machi-designer-media-updated', {
+              designer: authorizedDesigner,
+              action: kind,
+              fileIds: [lastUploadedFile.id],
+              imageUrl: response.imageUrl || '',
+              jsonRevision: Number(response.jsonRevision) || 0
+            });
           }
           if (isStoryAction) resetReplaceStoryDurationPrompt();
         })
@@ -2409,6 +2417,14 @@
               }),
               jsonRevision: Number(response.jsonRevision) || 0
             });
+          } else if (uploadMode !== 'user') {
+            notifyUploadHost('machi-designer-media-updated', {
+              designer: authorizedDesigner,
+              action: kind,
+              fileIds: [files[0].id],
+              imageUrl: response.imageUrl || '',
+              jsonRevision: Number(response.jsonRevision) || 0
+            });
           }
         })
         .withFailureHandler(function (error) {
@@ -2485,6 +2501,16 @@
             deletedCount > 1 ? `${deletedCount} 張圖片已刪除` : '圖片已刪除',
             'success'
           );
+          if (uploadMode !== 'user') {
+            notifyUploadHost('machi-designer-media-updated', {
+              designer: authorizedDesigner,
+              action: 'delete',
+              fileIds: Array.from(deletedIds),
+              cleared: response.cleared || [],
+              deletedStories: Number(response.deletedStories) || 0,
+              jsonRevision: Number(response.jsonRevision) || 0
+            });
+          }
           loadRecentImages();
         })
         .withFailureHandler(function (error) {

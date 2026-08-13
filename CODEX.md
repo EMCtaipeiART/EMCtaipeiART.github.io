@@ -2,6 +2,15 @@
 
 這份文件用來記錄系統欄位綁定、修改規則、容易互相影響的功能，以及每次修改後必須檢查的項目。之後任何功能調整都先看這份文件，再補上新的紀錄。
 
+## 2026-08-13｜管理照片按鈕完整寫入 JSON
+
+- 設計師「管理圖片與 Reels」彈窗的替換頭像、替換海報、24 小時／永久／取消限時動態、刪除已選圖片均統一要求 `media.manage` 權限並回傳 JSON revision。
+- 頭像與海報替換新增 `saveDesignerProfiles` JSON 寫入；刪除新增 `deleteDesignerMediaFiles`，單一交易同時清除「設定」的頭像／海報及 `reels` 引用。
+- 彈窗完成後透過 `machi-designer-media-updated` 立即通知主畫面重讀，不需關閉彈窗才看到新頭像、海報或刪除結果。
+- Node 後端同步開放 `media.manage` 使用 `saveDesignerProfiles`，與正式 Worker 權限合約一致。
+- 驗收：Node 25/25、Worker 10/10、Worker 型別檢查、乾跑部署、HTML／Apps Script 語法與 `git diff --check` 通過；線上 Apps Script 內容已可讀到新通知事件，Worker 新 action 無 token 時正確拒絕。
+- 部署：Worker 版本 `363c41d2-d17c-4f27-94a2-cfd74c04cf44`；上傳 Apps Script 原部署 ID 更新為第 48 版。
+
 ## 2026-08-13｜設計師設定與圖片管理權限共用
 
 - 前台新增 `canAccessDesignerSettings()`，讓 `designer.settings` 與 `media.manage` 都能進入設計師設定頁，帳號選單顯示也一起改用這個判斷。

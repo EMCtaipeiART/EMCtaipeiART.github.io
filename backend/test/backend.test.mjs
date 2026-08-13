@@ -707,6 +707,45 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
   assert.equal(deleted.deleted, 1);
 });
 
+test('designer media buttons persist replacements and deleted references in JSON', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
+  const avatarId = 'drive-avatar-file';
+  const posterId = 'drive-poster-file';
+  const storyId = 'drive-story-file';
+
+  const replaced = await api(app.baseUrl, 'saveDesignerProfiles', {
+    editorToken: login.token,
+    profiles: [{
+      name: 'Machi',
+      avatar: `https://drive.google.com/thumbnail?id=${avatarId}&sz=w1000`,
+      poster: `https://drive.google.com/thumbnail?id=${posterId}&sz=w1000`
+    }]
+  });
+  assert.equal(replaced.ok, true);
+  await api(app.baseUrl, 'upsertDesignerStories', {
+    editorToken: login.token,
+    designer: 'Machi',
+    fileIds: [storyId],
+    imageUrls: [`https://lh3.googleusercontent.com/d/${storyId}=w1600`],
+    expiresAt: 0
+  });
+
+  const deleted = await api(app.baseUrl, 'deleteDesignerMediaFiles', {
+    editorToken: login.token,
+    designer: 'Machi',
+    fileIds: [avatarId, posterId, storyId]
+  });
+  assert.equal(deleted.ok, true);
+  assert.deepEqual(deleted.cleared, ['avatar', 'poster']);
+  assert.equal(deleted.deletedStories, 1);
+  const profile = app.database.table('設定').rows.find(row => row['名字'] === 'Machi');
+  assert.equal(profile['頭像連結'], '');
+  assert.equal(profile['頭像大圖連結'], '');
+  assert.equal(app.database.table('reels').rows.some(row => String(row['限時動態連結']).includes(storyId)), false);
+});
+
 test('member avatar upload keeps the returned JSON avatar without an immediate stale refresh', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /lastAccountAvatarRefreshAt=Date\.now\(\);renderAccountAvatar\(\)/);
@@ -722,6 +761,11 @@ test('designer settings are reachable from media management accounts as well as 
 
 test('upload page forwards editorToken when replacing a designer poster from recent uploads', async () => {
   const html = await readFile(new URL('../../upload/upload.html', import.meta.url), 'utf8');
+  const code = await readFile(new URL('../../upload/Code.gs', import.meta.url), 'utf8');
   assert.match(html, /runner\.replaceDesignerImage\(\{\s*designer:\s*authorizedDesigner,\s*fileId:\s*files\[0\]\.id,\s*kind:\s*kind,\s*editorToken:\s*editorToken\s*\}\);/s);
   assert.match(html, /runner\.replaceDesignerImage\(\{\s*designer:\s*authorizedDesigner,\s*fileId:\s*lastUploadedFile\.id,\s*kind:\s*kind,\s*editorToken:\s*editorToken\s*\}\);/s);
+  assert.match(html, /runner\.deleteDesignerImages\(deletePayload\)/);
+  assert.match(html, /machi-designer-media-updated/);
+  assert.match(code, /verifyMediaManager_\(payload\.editorToken\);[\s\S]*callMainAppJsonAction_\('deleteDesignerMediaFiles'/);
+  assert.match(code, /callMainAppJsonAction_\('saveDesignerProfiles',[\s\S]*profiles:\s*\[profile\]/);
 });

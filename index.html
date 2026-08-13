@@ -7763,14 +7763,16 @@ function handleUploadFrameMessage(event){
     updateCaseRow(id,{designImageFolderUrl:folderPath},'已設定 NAS 來源資料夾');
     return;
   }
-  if(data.type!=='machi-designer-stories-updated'||!modal||modal.hidden)return;
+  const designerMediaMessage=data.type==='machi-designer-media-updated';
+  if((data.type!=='machi-designer-stories-updated'&&!designerMediaMessage)||!modal||modal.hidden)return;
   const designer=String(data.designer||'').trim();
   if(!designer||designer!==activeDesignerUploadName)return;
   if(activeDesignerStoryPlayback?.shell?.closest('.designer-card')?.dataset.designer===designer)stopDesignerStoryPlayback();
-  setSync(data.action==='story-cancel'?'限時動態已取消，正在更新前台...':'限時動態已設定，正在更新前台...');
+  const mediaActionLabel=data.action==='avatar'?'頭像':data.action==='poster'?'海報':data.action==='delete'?'圖片':'圖片';
+  setSync(designerMediaMessage?`${mediaActionLabel}已寫入 JSON，正在更新前台...`:(data.action==='story-cancel'?'限時動態已取消，正在更新前台...':'限時動態已設定，正在更新前台...'));
   void loadDesignerRoster({background:true})
-    .then(()=>{render();setSync(data.action==='story-cancel'?'前台限時動態已移除':'前台限時動態已更新',false,2200)})
-    .catch(err=>setSync(`限時動態已寫入，但前台重新載入失敗：${err.message}`,true));
+    .then(()=>{render();setSync(designerMediaMessage?`${mediaActionLabel}已更新`:data.action==='story-cancel'?'前台限時動態已移除':'前台限時動態已更新',false,2200)})
+    .catch(err=>setSync(`${designerMediaMessage?mediaActionLabel:'限時動態'}已寫入 JSON，但前台重新載入失敗：${err.message}`,true));
 }
 function designerUploadUrl(designer){const url=new URL(designerUploadPageUrl); url.searchParams.set('designer',designer); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function userAvatarUploadUrl(account=currentEditorAccount){const url=new URL(designerUploadPageUrl); activeUserAvatarUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; url.searchParams.set('mode','user'); url.searchParams.set('account',loginAccountFull(account)); url.searchParams.set('closeNonce',activeUserAvatarUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
