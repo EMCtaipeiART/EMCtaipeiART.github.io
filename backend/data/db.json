@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 733,
+  "revision": 734,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:02:25.963Z",
+  "updatedAt": "2026-08-13T04:03:17.465Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15305,7 +15305,8 @@
           "參考範例說明": "",
           "參考範例連結": "",
           "其他說明": "",
-          "其他連結": ""
+          "其他連結": "",
+          "設計圖資料夾連結": "專案企劃部/執行中/Nutribullet/FB貼文/2026/8月"
         },
         {
           "案件編號": "26070249",
