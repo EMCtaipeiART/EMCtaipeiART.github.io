@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 625,
+  "revision": 626,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-12T23:39:19.483Z",
+  "updatedAt": "2026-08-13T00:55:25.039Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18513,6 +18513,18 @@
           "圖片連結": "[{\"fileName\":\"260806_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PaShjoWooyTXpZqD4uCD04iGgxq9W-UR=w1600\"},{\"fileName\":\"260806_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1T5ShbDCnOIdtc8DdAWm8UNzI1ByxYPzv=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIeRGp2Z6VA8olgbuWBlwo6ox9VE3Xol=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EEZpk4QzM0nZ0ZVa_DExnDbNZfazs6Bp=w1600\"},{\"fileName\":\"260812_ANKER_Combo_2_momo_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/16JLor3EDT46nqEvTZAkHjJW5CsRBodpZ=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/12 20:04:19"
+        },
+        {
+          "案件編號": "26080039",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 08:55:25",
+          "修改日期": "2026/08/13 08:55:25",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/13 08:55:25",
+          "圖片連結": "[{\"fileName\":\"260803_2026集團研討會_貼文_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dO5XW7dJWnDIJ0NkAKPQVgJM_pMQsaMp=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pfjVjqCyb6rCw4VdNiIU0YR0xZjxrWx1=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YcH-HWZBAg2yz7baD02P_xqYhM3BHMwz=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zDgEzph0aZ0CHsWJlZI27Zy2b7_MQ_Ix=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eZvoM5VPYW7wWnefzbhJX0ZcrZBBHUTM=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_06.png\",\"url\":\"https://lh3.googleusercontent.com/d/1s5Sb8nzsTnmS3YSOE9VApO-YyuDbQqHr=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_07.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oa8nSy9prhyY5pUkg0IvSTHGQsIQH-Ec=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/13 08:55:25"
         }
       ]
     },
