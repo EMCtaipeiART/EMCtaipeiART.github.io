@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 893,
+  "revision": 894,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T09:15:45.545Z",
+  "updatedAt": "2026-08-13T09:15:48.702Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21705,7 +21705,7 @@
           "案件編號": 2,
           "月份": "",
           "客戶別": 3,
-          "專案名稱": "",
+          "專案名稱": 8,
           "專案負責人": "",
           "設計種類": "",
           "階段": "",
