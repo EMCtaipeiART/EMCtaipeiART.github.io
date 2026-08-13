@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 632,
+  "revision": 633,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T01:41:39.793Z",
+  "updatedAt": "2026-08-13T01:42:20.273Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18931,7 +18931,7 @@
           "分享音樂": "",
           "音樂起始秒數": "0",
           "技能": "影片 , 動畫 , 拍攝",
-          "對話框": "動態要準，也要有呼吸。",
+          "對話框": "",
           "新專案輪值": "1",
           "篩選年份": "2026年",
           "篩選月份": "6月 , 7月 , 8月",
