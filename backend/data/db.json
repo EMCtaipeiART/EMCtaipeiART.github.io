@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 701,
+  "revision": 702,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T03:25:33.881Z",
+  "updatedAt": "2026-08-13T03:25:42.474Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18630,9 +18630,9 @@
           "修改內容": "初稿完成",
           "修改人": "Machi",
           "確認修正日": "2026/08/13 11:25:33",
-          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14DBUN5u_04JDkZcIIo2jGHyFY5X4fhn9=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14DBUN5u_04JDkZcIIo2jGHyFY5X4fhn9=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SvLqLk-oQm9Y6psSBHgeYVDpr2IXETAI=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/13 11:25:33"
+          "圖片更新時間": "2026/08/13 11:25:42"
         }
       ]
     },
