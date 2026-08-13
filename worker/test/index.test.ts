@@ -540,7 +540,7 @@ describe('Machi Design API Worker', () => {
     expect(database.tables.reels.rows.some(row => String(row['限時動態連結']).includes(storyId))).toBe(false);
   });
 
-  it('stamps 繳交時間 the moment a case first transitions to 過稿中, but not on later edits or on the second 過稿中 transition', async () => {
+  it('derives 繳交時間 from the initial-draft record and never from status changes', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       expect(init?.method).toBe('PUT');
@@ -556,20 +556,23 @@ describe('Machi Design API Worker', () => {
       return String(database.tables.database.rows.find(row => row['案件編號'] === '26080001')?.['繳交時間']);
     };
 
-    const toPastDue = await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '過稿中' } }, token);
-    expect(toPastDue).toMatchObject({ ok: true, id: '26080001' });
-    const firstStamp = await submittedAtFor();
-    expect(firstStamp).toMatch(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+    const toReview = await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '過稿中' } }, token);
+    expect(toReview).toMatchObject({ ok: true, id: '26080001' });
+    expect(await submittedAtFor()).toBe('');
 
-    await api({ action: 'update', id: '26080001', row: { id: '26080001', client: '改客戶別' } }, token);
-    expect(await submittedAtFor()).toBe(firstStamp);
+    const initialDraft = await api({
+      action: 'addCaseDesignImages',
+      caseId: '26080001',
+      round: 0,
+      images: [{ fileName: 'initial.jpg', url: 'https://example.com/initial.jpg' }]
+    }, token);
+    const draftCreatedAt = String((initialDraft.record as Record<string, unknown>)['建立日期']);
+    expect(draftCreatedAt).toMatch(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/);
+    expect(await submittedAtFor()).toBe(draftCreatedAt);
 
     await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '執行中' } }, token);
-    expect(await submittedAtFor()).toBe(firstStamp);
-    // 兩個測試呼叫可能落在同一分鐘內，時間戳只到分鐘精度時無法斷言「一定不同」，
-    // 這裡只驗證再次轉入過稿中會重新蓋一次戳記（格式仍正確），而不是保留舊值不變。
     await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '過稿中' } }, token);
-    expect(await submittedAtFor()).toMatch(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+    expect(await submittedAtFor()).toBe(draftCreatedAt);
   });
 
   it('recalculates the database row 修改次數 whenever a modification round is added, but only reduces it on an explicit admin delete', async () => {
@@ -618,6 +621,7 @@ describe('Machi Design API Worker', () => {
     const databaseHeaders = ((tables.tables as Record<string, { headers: string[] }>).database).headers;
     expect(databaseHeaders).not.toContain('時間標記');
     expect(databaseHeaders).toContain('修改次數');
+    expect(databaseHeaders.indexOf('修改次數')).toBe(databaseHeaders.indexOf('狀態') - 1);
 
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
     await runInDurableObject(stub, async (_instance, state) => {

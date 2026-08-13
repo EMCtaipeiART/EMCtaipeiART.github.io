@@ -33,7 +33,7 @@ export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
 
 export const DATABASE_HEADERS = [
   '案件編號', '月份', '客戶別', '專案名稱', '專案負責人', '設計種類', '階段', '數量',
-  '開始日期', '結束日期', '設計負責人', '項目細節', '狀態', '加權', '修改次數', '填單時間',
+  '開始日期', '結束日期', '設計負責人', '項目細節', '修改次數', '狀態', '加權', '填單時間',
   '繳交時間', '使用平台', '設計簡報說明', '設計簡報連結',
   '客戶素材說明', '客戶素材連結', '參考範例說明', '參考範例連結', '其他說明', '其他連結',
   '設計圖資料夾連結'
@@ -145,7 +145,10 @@ export function normalizeDatabaseShape(input) {
     const table = db.tables[name] && typeof db.tables[name] === 'object' ? db.tables[name] : {};
     const deprecated = DEPRECATED_TABLE_HEADERS[name] || [];
     const existingHeaders = (Array.isArray(table.headers) ? table.headers : []).filter(header => !deprecated.includes(header));
-    table.headers = [...new Set([...existingHeaders, ...schema.headers])];
+    // database 是對外備份的主表，因此依 schema 固定欄位順序；舊檔額外欄位仍放在最後保留。
+    table.headers = name === 'database'
+      ? [...schema.headers, ...existingHeaders.filter(header => !schema.headers.includes(header))]
+      : [...new Set([...existingHeaders, ...schema.headers])];
     if (name === '帳號權限') table.headers = table.headers.filter(header => header !== '密碼雜湊');
     table.primaryKey = schema.primaryKey;
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];
@@ -157,8 +160,34 @@ export function normalizeDatabaseShape(input) {
     }
     db.tables[name] = table;
   }
+  recalculateDatabaseModificationStats(db);
   db.internal ||= {};
   db.internal.sessions ||= {};
   db.internal.idempotency ||= {};
   return db;
+}
+
+// 「修改次數」與「繳交時間」都是修改統計表的派生資料：
+// 0 號紀錄代表初稿，其建立時間就是繳交時間；正整數最大值是目前修改輪次。
+// 沒有初稿紀錄的舊案件保留既有繳交時間，避免清除歷史資料。
+export function recalculateDatabaseModificationStats(database) {
+  const maxByCase = new Map();
+  const firstDraftTimeByCase = new Map();
+  for (const row of database?.tables?.['修改統計表']?.rows || []) {
+    const caseId = String(row['案件編號'] ?? '').trim();
+    if (!caseId) continue;
+    const count = Math.max(0, Number(row['修改次數']) || 0);
+    maxByCase.set(caseId, Math.max(maxByCase.get(caseId) || 0, count));
+    if (count !== 0 || firstDraftTimeByCase.has(caseId)) continue;
+    const draftTime = String(row['建立日期'] || row['修改日期'] || row['圖片更新時間'] || '').trim();
+    if (draftTime) firstDraftTimeByCase.set(caseId, draftTime);
+  }
+  const rows = database?.tables?.database?.rows || [];
+  for (const row of rows) {
+    const caseId = String(row['案件編號'] ?? '').trim();
+    row['修改次數'] = String(maxByCase.get(caseId) || 0);
+    if (firstDraftTimeByCase.has(caseId)) row['繳交時間'] = firstDraftTimeByCase.get(caseId);
+    else if (!Object.hasOwn(row, '繳交時間')) row['繳交時間'] = '';
+  }
+  return rows.length;
 }

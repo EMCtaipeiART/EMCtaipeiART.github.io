@@ -390,6 +390,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const draft = cloneDatabase(stored.database);
         const outcome = await mutator(draft);
         if (outcome.changed === false) return { ...outcome.result, jsonRevision: draft.revision, revision: draft.revision, unchanged: true };
+        // 這兩欄是修改統計表的派生值，任何寫入在送往 GitHub 前都再校正一次。
+        recalculateDatabaseModificationCounts(draft);
         draft.revision = Math.max(0, Number(draft.revision) || 0) + 1;
         draft.updatedAt = new Date().toISOString();
         draft.internal.sessions = {};
@@ -1062,7 +1064,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const patch = { ...(action === 'batchUpdate' ? changes : {}), ...asRow(item.row || item.changes) };
         const row = toSheetRow(patch, previous, weightRules(draft));
         row['案件編號'] = id;
-        if (row['狀態'] === '過稿中' && previous['狀態'] !== '過稿中') row['繳交時間'] = nowTaipei().slice(0, 16);
         syncSupplementLinks(draft, row, baseUrl);
         draft.tables.database.rows[index] = row;
         updated.push(toApiRow(row, index));

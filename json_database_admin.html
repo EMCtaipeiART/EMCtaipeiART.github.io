@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="app-version" content="20260811-account-settings-10">
+  <meta name="app-version" content="20260813-derived-stats-layout-11">
   <title>資料庫後台｜EMC 設計部</title>
   <style>
     :root{--bg:#f4f6f5;--panel:#fff;--soft:#f7f9f8;--ink:#1c2521;--muted:#707b76;--line:#e0e6e2;--green:#0f8f61;--green2:#eaf6f0;--red:#c93636;--shadow:0 10px 28px rgba(18,38,28,.07)}
@@ -53,6 +53,11 @@
     .action-col{position:sticky!important;left:0;z-index:3;background:#fff;box-shadow:1px 0 0 var(--line)}th.action-col{top:0;z-index:5;background:var(--soft)}
     .sort{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:inherit;padding:0;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.02em}.sort::after{content:'↕';opacity:.4}.sort.active::after{content:'↑';opacity:1;color:var(--green)}.sort.active.desc::after{content:'↓'}
     td.clip{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+    .database-table th.database-details,.database-table td.database-details{width:150px;min-width:150px;max-width:150px}
+    .database-table th.database-supplement-note,.database-table td.database-supplement-note{width:132px;min-width:132px;max-width:132px}
+    .database-table th.database-link-column,.database-table td.database-link-column{width:66px;min-width:66px;max-width:66px;text-align:center}
+    .database-link{display:inline-block;color:var(--ink);font-weight:700;letter-spacing:.08em;text-decoration:none;opacity:.78}
+    .database-link:hover,.database-link:focus{color:var(--ink);opacity:1;text-decoration:underline}
     .row-actions{display:flex;align-items:center;gap:6px}.row-actions button{min-height:28px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:4px 8px;font-size:11.5px;font-weight:600}.row-actions button:disabled{opacity:.55;cursor:wait}.row-actions .delete{color:var(--red)}
     .stack{display:grid;gap:4px;white-space:normal;min-width:150px;align-content:center}.stack b{color:var(--ink);font-weight:600}.stack small{color:var(--muted)}
     .link-lines{display:grid;gap:7px;min-width:260px;max-width:480px;white-space:normal}.link-line{display:grid;grid-template-columns:28px minmax(0,1fr);gap:6px;align-items:center}.link-line b{color:var(--green);font-weight:600}.link-line a{overflow-wrap:anywhere;color:#1769aa}
@@ -255,9 +260,10 @@
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
     async function request(path='',options={}){const response=await fetch(`${API.replace(/\/$/,'')}${path}`,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{}) ,...(options.headers||{})}});const data=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);return data}
+    async function refreshWorkerDatabase(){if(APPS_SCRIPT_MODE)return null;return request('',{method:'POST',body:JSON.stringify({action:'refreshDatabase'})})}
     async function appsScriptRequest(action,payload={}){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action,editorToken:token,...payload}),credentials:'omit',cache:'no-store',redirect:'follow',referrerPolicy:'no-referrer',signal:controller.signal});if(!response.ok)throw new Error(`Apps Script HTTP ${response.status}`);const data=await response.json().catch(()=>({ok:false,error:'Apps Script 回傳格式錯誤'}));if(data.ok===false)throw new Error(data.error||'Apps Script 處理失敗');if(['adminTableUpdate','adminTableDelete','adminTableInsert'].includes(action))publishDatabaseRefresh(action,data);return data}catch(error){if(error?.name==='AbortError')throw new Error('JSON 寫入超過 45 秒，請重新讀取確認結果');throw error}finally{clearTimeout(timer)}}
     function decodeGithubContent(value=''){const binary=atob(String(value).replace(/\s+/g,'')),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
-    async function loadDatabaseFile({fresh=false,commitSha='',store=true}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260811-account-settings-10');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');if(store)directDatabase=database;return database}
+    async function loadDatabaseFile({fresh=false,commitSha='',store=true}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260813-derived-stats-layout-11');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');if(store)directDatabase=database;return database}
     function metadataFromDatabase(database){return Object.fromEntries(Object.entries(database.tables||{}).map(([name,table])=>[name,{headers:Array.isArray(table.headers)?table.headers:[],primaryKey:table.primaryKey||'',rowCount:Array.isArray(table.rows)?table.rows.length:0}]))}
     const TABLE_LABELS={database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報'};
     function tableLabel(name){return TABLE_LABELS[name]||name}
@@ -273,7 +279,7 @@
     async function applyMetadataSnapshot(data,{clearPending=true}={}){if(APPS_SCRIPT_MODE)directDatabase=data;if(data?.tables)MachiAccess.applyRoleTemplates(data);appliedRevision=databaseRevision(data);metadata=APPS_SCRIPT_MODE?metadataFromDatabase(data):(data.tables||{});$('revision').textContent=String(data.revision??'—');if(clearPending)clearStagedRefresh();renderTabs();await loadRows();return data}
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
-    async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
+    async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
     function updateAddButton(){const hidden=tableName==='角色權限範本'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料');$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database'}
     function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
     function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
@@ -324,17 +330,19 @@
     function databaseLinkCellHtml(value){
       const raw=String(value||'').trim();
       if(!/^https?:\/\//i.test(raw))return esc(raw);
-      return `<a href="${esc(raw)}" target="_blank" rel="noopener">${esc(raw)}</a>`;
+      return `<a class="database-link" href="${esc(raw)}" target="_blank" rel="noopener" aria-label="開啟連結">...</a>`;
     }
+    function databaseColumnClass(header){if(header==='項目細節')return 'database-details';if(/說明$/.test(header))return 'database-supplement-note';if(/連結/.test(header))return 'database-link-column';return ''}
     function databaseTableHtml(table,data){
       const headers=table.headers||[];
-      const head='<th class="action-col">編輯／刪除</th>'+headers.map(header=>`<th>${sortButton(header)}</th>`).join('');
+      const head='<th class="action-col">編輯／刪除</th>'+headers.map(header=>`<th class="${databaseColumnClass(header)}">${sortButton(header)}</th>`).join('');
       const body=data.rows.length?data.rows.map(row=>`<tr data-key="${esc(rowKeyFor(row))}">${actionCell()}${headers.map(header=>{
-        if(/網址/.test(header))return `<td title="${esc(row[header])}">${linkLinesHtml(row[header])}</td>`;
-        if(/連結/.test(header))return `<td class="clip" title="${esc(row[header])}">${databaseLinkCellHtml(row[header])}</td>`;
-        return `<td class="clip" title="${esc(row[header])}">${esc(row[header])}</td>`;
+        const columnClass=databaseColumnClass(header);
+        if(/網址/.test(header))return `<td class="${columnClass}" title="${esc(row[header])}">${linkLinesHtml(row[header])}</td>`;
+        if(/連結/.test(header))return `<td class="clip ${columnClass}" title="${esc(row[header])}">${databaseLinkCellHtml(row[header])}</td>`;
+        return `<td class="clip ${columnClass}" title="${esc(row[header])}">${esc(row[header])}</td>`;
       }).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length+1}">沒有符合條件的資料</td></tr>`;
-      return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      return `<div class="table-wrap"><table class="database-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
     function shortLinkTableHtml(data){
       const head=`<th class="action-col">編輯／刪除</th><th>${sortButton('短碼')}</th><th>短網址</th><th>${sortButton('原始網址')}</th><th>${sortButton('建立時間')}</th>`;
@@ -809,7 +817,7 @@
     $('view').addEventListener('dragend',()=>{accountColumnDragged?.classList.remove('dragging');accountColumnDragged=null;accountRotationDragged?.classList.remove('dragging');accountRotationDragged=null});
     $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='帳號權限')beginAccountCreate();else openEditor()});$('backupToSheet').addEventListener('click',backupDatabaseToSheet);DATABASE_FILTER_FIELDS.forEach(([id,header])=>{$(id).addEventListener('change',()=>{databaseFilters[header]=$(id).value;page=1;updateFilterClearButton();loadRows()})});$('filterClear').addEventListener('click',()=>{resetDatabaseFilters();page=1;loadRows()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
-    async function start(){populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
+    async function start(){populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await refreshWorkerDatabase();await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
   </script>
 </body>

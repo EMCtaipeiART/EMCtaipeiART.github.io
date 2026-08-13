@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { JsonDatabase } from '../json_database.mjs';
+import { emptyDatabase, normalizeDatabaseShape } from '../schema.mjs';
 import { calculateWeight } from '../weighting.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
@@ -84,6 +85,30 @@ test('item details calculate weights from the scoring table only after selection
   assert.equal(calculateWeight({ type: '平面', stage: '後製', qty: 1, details: '2D 動畫' }), 2);
   assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '2D 動畫' }), 1);
   assert.equal(calculateWeight({ type: '影音', stage: '後製', qty: 1, details: '影音剪輯, 人聲配樂, 字幕字卡' }), 3);
+});
+
+test('database modification stats are derived from the modification table', () => {
+  const database = emptyDatabase();
+  database.tables.database.rows.push(
+    { '案件編號': '26080001', '狀態': '過稿中', '修改次數': '', '繳交時間': '' },
+    { '案件編號': '26080002', '修改次數': '', '繳交時間': '2026/07/01' }
+  );
+  database.tables['修改統計表'].rows.push(
+    { '案件編號': '26080001', '修改次數': '0', '建立日期': '2026/08/13 09:15:20' },
+    { '案件編號': '26080001', '修改次數': '1', '建立日期': '2026/08/13 10:00:00' },
+    { '案件編號': '26080001', '修改次數': '2', '建立日期': '2026/08/13 11:00:00' },
+    { '案件編號': '26080002', '修改次數': '1', '建立日期': '2026/08/13 12:00:00' }
+  );
+
+  normalizeDatabaseShape(database);
+
+  const first = database.tables.database.rows[0];
+  const legacy = database.tables.database.rows[1];
+  assert.equal(first['修改次數'], '2');
+  assert.equal(first['繳交時間'], '2026/08/13 09:15:20');
+  assert.equal(legacy['修改次數'], '1');
+  assert.equal(legacy['繳交時間'], '2026/07/01');
+  assert.equal(database.tables.database.headers.indexOf('修改次數'), database.tables.database.headers.indexOf('狀態') - 1);
 });
 
 test('front end initializes weight rules before normalizing cached database rows', async () => {
@@ -287,6 +312,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /data-account-reel-edit=/);
   assert.match(html, /data-account-reel-delete=/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
+  assert.match(html, /async function refreshWorkerDatabase\(\).*action:'refreshDatabase'/);
+  assert.match(html, /async function start\(\).*await refreshWorkerDatabase\(\);await loadMetadata\(\)/);
+  assert.match(html, /class="database-link"[^>]+aria-label="開啟連結">\.\.\.<\/a>/);
+  assert.match(html, /database-details[^}]+width:150px/);
+  assert.match(html, /database-supplement-note[^}]+width:132px/);
+  assert.match(html, /database-link-column[^}]+width:66px/);
+  assert.match(html, /\.database-link\{[^}]*color:var\(--ink\)/);
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
   assert.doesNotMatch(html, /DATABASE_CONTENTS_API|api\.github\.com\/repos\/EMCtaipeiART/);

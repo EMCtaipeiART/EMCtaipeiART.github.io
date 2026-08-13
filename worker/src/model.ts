@@ -1,4 +1,4 @@
-import { TABLE_SCHEMAS, TABLE_NAMES, normalizeDatabaseShape } from '../../backend/schema.mjs';
+import { TABLE_SCHEMAS, TABLE_NAMES, normalizeDatabaseShape, recalculateDatabaseModificationStats } from '../../backend/schema.mjs';
 import { applyWeightToRow } from '../../backend/weighting.mjs';
 import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 
@@ -111,16 +111,7 @@ export function recalculateDatabaseWeights(database: DatabaseSnapshot): number {
   return database.tables.database?.rows?.length || 0;
 }
 export function recalculateDatabaseModificationCounts(database: DatabaseSnapshot): number {
-  const maxByCase = new Map<string, number>();
-  for (const row of database.tables['修改統計表']?.rows || []) {
-    const caseId = text(row['案件編號']);
-    if (!caseId) continue;
-    const count = Number(row['修改次數']) || 0;
-    if (count > (maxByCase.get(caseId) ?? -1)) maxByCase.set(caseId, count);
-  }
-  const rows = database.tables.database?.rows || [];
-  for (const row of rows) row['修改次數'] = String(maxByCase.get(text(row['案件編號'])) || 0);
-  return rows.length;
+  return recalculateDatabaseModificationStats(database);
 }
 function firstValue(source: Row, header: string, key: string): unknown {
   if (source[key] !== undefined) return source[key];
