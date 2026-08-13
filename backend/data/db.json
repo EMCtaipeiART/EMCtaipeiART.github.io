@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 679,
+  "revision": 680,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T02:35:58.275Z",
+  "updatedAt": "2026-08-13T02:36:53.131Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18464,7 +18464,7 @@
           "修改日期": "2026/8/10",
           "修改內容": "首圖小標的文字需要微調",
           "修改人": "朱祖翎",
-          "確認修正日": ""
+          "確認修正日": "2026/08/13 10:36:53"
         },
         {
           "案件編號": "26080030",
