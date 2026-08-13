@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 938,
+  "revision": 939,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:48:02.353Z",
+  "updatedAt": "2026-08-13T11:48:05.525Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19566,9 +19566,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 19:36:20",
-          "圖片連結": "[{\"fileName\":\"260803_添可_中元節_S7StretchStream.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hXlInh0v55JuYNr0g0mSLw2J61Hdfq4s=w1600\"},{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/13ngIxx_9IvjPv9zuhd7zyVzFqltF6ojQ=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/13ngIxx_9IvjPv9zuhd7zyVzFqltF6ojQ=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 19:48:02"
+          "圖片更新時間": "2026/08/13 19:48:05"
         },
         {
           "案件編號": "26080062",
