@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 871,
+  "revision": 872,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T08:24:26.807Z",
+  "updatedAt": "2026-08-13T08:25:38.873Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18822,9 +18822,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 16:24:11",
-          "圖片連結": "[{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oTB1gudtfW-RYq8ARbs_tB2s0zBKluUx=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CgYV0fSZIDi2EIXMcmb5O71BtWEtwfiG=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A03.png\",\"url\":\"https://lh3.googleusercontent.com/d/12lOajso2qjWjZCrvR8CS_O_h68lm3OUD=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-ywSyPyWfBNEs3L_N1Mkdn3eIy_LFUXG=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/19pjUAEk2X-GLZk-rUxLVu8RR2bAsnUvX=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HE8p0sHE4hJiAuvbDS_PUtUHjfRiOytM=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1c3YQKv4GGz8h0HfezyS7aidcrxhLG6HU=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_D.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G4lyZ7JFV6_6qOWJOEwILaM0veMt-B9D=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oTB1gudtfW-RYq8ARbs_tB2s0zBKluUx=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CgYV0fSZIDi2EIXMcmb5O71BtWEtwfiG=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A03.png\",\"url\":\"https://lh3.googleusercontent.com/d/12lOajso2qjWjZCrvR8CS_O_h68lm3OUD=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-ywSyPyWfBNEs3L_N1Mkdn3eIy_LFUXG=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/19pjUAEk2X-GLZk-rUxLVu8RR2bAsnUvX=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HE8p0sHE4hJiAuvbDS_PUtUHjfRiOytM=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1c3YQKv4GGz8h0HfezyS7aidcrxhLG6HU=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_D.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G4lyZ7JFV6_6qOWJOEwILaM0veMt-B9D=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1IYVnQxNwhnnJxvP7-3v_ZxyIwe11WeBU=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A02.png\",\"url\":\"https://lh3.googleusercontent.com/d/138L-viH4zQH6va7M4BbbEzJFWdVRqfWW=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_A03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1b8GN4G5V4UenlmRjb9mZezHMKrpHTqGL=w1600\"},{\"fileName\":\"260724_Epson_社群貼文_印表機標籤機暑假出遊_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/16fXMoYCgP6A-UKPP4VKP9g2Y7EtDrPbz=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yYGvYzP47ywryd5E2ZG_r2UG4QBZPq1e=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/19l7gIlko27D569GPgQR36aQsu3Eqhztv=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_C_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CTBAchCQXVkTHao3oME_QGJeUO0NUzsW=w1600\"},{\"fileName\":\"260727_Epson_社群貼文_印表機標籤機暑假出遊_D.png\",\"url\":\"https://lh3.googleusercontent.com/d/10gosJp4BtwPoNWzdGDTrIjUddJFbhU_G=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 16:24:11"
+          "圖片更新時間": "2026/08/13 16:25:38"
         }
       ]
     },
