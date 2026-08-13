@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 925,
+  "revision": 926,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:13:27.298Z",
+  "updatedAt": "2026-08-13T11:13:46.012Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17976,7 +17976,8 @@
           "案件編號": "26080062",
           "修改次數": "0",
           "繳交時間": "",
-          "項目細節": "社群貼文"
+          "項目細節": "社群貼文",
+          "設計圖資料夾連結": "專案企劃部/執行中/開市指南站/提案/社群貼文/人物素材"
         }
       ]
     },
