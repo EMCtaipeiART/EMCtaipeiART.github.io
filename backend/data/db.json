@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 948,
+  "revision": 949,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:55:35.081Z",
+  "updatedAt": "2026-08-13T11:55:41.678Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19528,16 +19528,6 @@
           "圖片連結": "[{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1k9Bv5G3Bmd9CvVVyiIUDrd03eEU8Wn7o=w1600\"},{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FUjbAPsIPD_Cufl4-uugb-sJQD0pKe50=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 17:28:06"
-        },
-        {
-          "案件編號": "26080062",
-          "修改次數": "1",
-          "建立日期": "2026/08/13 19:39:55",
-          "修改日期": "2026-08-21",
-          "修改內容": "test",
-          "修改人": "管理員",
-          "確認修正日": "2026/08/13 19:40:00",
-          "待修改圖片": "[\"260729_添可_送長輩禮物_i7Fold.png\",\"260803_添可_中元節_S7StretchStream.png\"]"
         },
         {
           "案件編號": "26080062",
