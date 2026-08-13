@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 748,
+  "revision": 749,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:08:09.463Z",
+  "updatedAt": "2026-08-13T04:09:16.150Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -14437,7 +14437,8 @@
           "參考範例說明": "",
           "參考範例連結": "",
           "其他說明": "",
-          "其他連結": ""
+          "其他連結": "",
+          "設計圖資料夾連結": "專案企劃部/執行中/櫻花整體廚房/廣告素材/7月/SP活動影片包框"
         },
         {
           "案件編號": "26070218",
