@@ -186,7 +186,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-13 Asia/Taipei（最新）— 案件詳情顯示設計圖縮圖、修改紀錄多選刪除、NAS 選擇器確認後立即收合背景執行
+### 2026-08-13 Asia/Taipei（最新）— 修改紀錄多選刪除微調：勾選框移到左下角、選取工具列預設隱藏
+
+- 修改目的：使用者對上一輪的多選刪除功能提出兩個體驗微調：①每張縮圖左上角的勾選框跟圖片內容重疊，希望移到左下角比較不擋畫面；②原本只要案件有 2 張以上圖片，選取工具列就會常駐顯示「勾選圖片可批次刪除」的提示，使用者覺得平常沒有要刪圖時這條列一直佔位置，希望改成預設隱藏，點選了圖片（開始勾選）才出現。
+- 影響檔案：`index.html`。
+- 影響功能：`.revision-image-select` 的定位從 `top:2px;left:2px` 改成 `bottom:2px;left:2px`（跟右上角既有的單張刪除「✕」按鈕不再同一個角落，兩個控制項視覺上分開）。`revisionSelectionToolbarHtml()` 產生的工具列固定加上 `id="revisionSelectionBar"`，並依目前選取數量決定要不要帶 `hidden` 屬性（`renderRevisionModal()` 每次重繪都會先清空選取狀態，所以工具列一開始一定是隱藏的）；`updateRevisionSelectionBar()`（原本只更新文字與刪除鈕的 disabled 狀態）新增同步切換 `bar.hidden`，選取數量從 0 變成 1 以上時工具列才會出現，取消到剩 0 張時自動再隱藏。**這次也補上 `.revision-modal-selection-bar[hidden]{display:none!important}`**——工具列的基礎樣式本來就有 `display:flex`，跟瀏覽器內建的 `[hidden]{display:none}` 規則同屬「作者一般樣式」層級時，沒有這條 `!important` 覆寫的話 `hidden` 屬性會被 `display:flex` 蓋掉、視覺上還是看得到（這是 [CLAUDE.md](CLAUDE.md) 之前處理「設計圖上傳中」右下角提示卡片時就踩過的同一類坑，這次先補上不讓它重演）。
+- 風險區塊：無新增風險，純樣式與顯示時機調整，沒有動到刪除邏輯本身（`removeSelectedCaseDesignImages`／`toggleRevisionImageSelection`／`toggleAllRevisionImageSelection` 都沒有修改）。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過；本機靜態伺服器＋ Browser pane 直接驗證：工具列一開始 `hidden=true`、`getComputedStyle` 確認 `display:none`；勾選第一張圖片後 `hidden` 變 `false`、`display` 變 `flex`；取消勾選回到 0 張後again 隱藏；勾選框的 `getComputedStyle` 確認 `bottom:2px`（不是 `top`），單張刪除鈕仍在 `top:2px;right:2px`，兩者互不重疊。`node --test backend/test/*.test.mjs` 25/25 全過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-13 Asia/Taipei（較早）— 案件詳情顯示設計圖縮圖、修改紀錄多選刪除、NAS 選擇器確認後立即收合背景執行
 
 - 修改目的：使用者接續前一輪「選 NAS 資料夾即備份」的工作，一次提出三個體驗需求：①設計師陸續備份的設計圖，目前只有點開「修改紀錄」彈窗才看得到，希望案件資料彈窗（案件詳情）的「其他資訊」區塊下方也能直接看到；②「修改紀錄」彈窗要刪圖片目前只能一張一張點，案件圖片一多很花時間，希望能多選批次刪除；③NAS 資料夾選擇器點下「選擇這個資料夾並備份」後，畫面會停在「正在備份中，請稍候」擋著使用者，希望改成點下去就立刻收合成一個小的等待畫面、備份在背景進行，只有真的發生問題時才跳出明顯的提示視窗。
 - 影響檔案：`index.html`、`scripts/nas_folder_picker_server.mjs`。
