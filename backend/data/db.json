@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 782,
+  "revision": 783,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T04:38:43.203Z",
+  "updatedAt": "2026-08-13T04:38:49.896Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18757,9 +18757,9 @@
           "修改內容": "初稿完成",
           "修改人": "Machi",
           "確認修正日": "2026/08/13 12:38:13",
-          "圖片連結": "[{\"fileName\":\"口碑行銷戰術包.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/17LY0qdZ1ItjVflSml75wp50q4ym17ppA=w1600\"},{\"fileName\":\"行銷人戰術包.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1yg4tsMsVD4nTt_12xYu5r9R6_iZB2Xsp=w1600\"},{\"fileName\":\"客戶協作管理.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1x7YxtMIhTe9BG4ht4HiGnimkgdHuGSXU=w1600\"},{\"fileName\":\"督導型Agent助理.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16n2PLelRIdxGerBaHGpodkYQlBVSyGRj=w1600\"},{\"fileName\":\"廣告組合拳.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eu9aeESmWOPeYkq3rX09mQONTuhucPXM=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"口碑行銷戰術包.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/17LY0qdZ1ItjVflSml75wp50q4ym17ppA=w1600\"},{\"fileName\":\"行銷人戰術包.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1yg4tsMsVD4nTt_12xYu5r9R6_iZB2Xsp=w1600\"},{\"fileName\":\"客戶協作管理.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1x7YxtMIhTe9BG4ht4HiGnimkgdHuGSXU=w1600\"},{\"fileName\":\"督導型Agent助理.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16n2PLelRIdxGerBaHGpodkYQlBVSyGRj=w1600\"},{\"fileName\":\"廣告組合拳.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eu9aeESmWOPeYkq3rX09mQONTuhucPXM=w1600\"},{\"fileName\":\"HTML成效報告模組.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1c4rzT3Wp2hn_3Nx5WDlr-Ay_e81pszbb=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/13 12:38:43"
+          "圖片更新時間": "2026/08/13 12:38:49"
         }
       ]
     },
