@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 823,
+  "revision": 841,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T06:33:19.137Z",
+  "updatedAt": "2026-08-13T07:48:27.722Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16902,7 +16902,8 @@
           "加權": "1.5",
           "案件編號": "26080045",
           "月份": "8月",
-          "項目細節": "素材重置, 急件"
+          "項目細節": "素材重置, 急件",
+          "設計圖資料夾連結": "專案企劃部/執行中/DJI/FB貼文/2026/8月"
         },
         {
           "客戶別": "金士頓",
@@ -18774,6 +18775,18 @@
           "圖片連結": "[{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/16LpGkgI2Af9hx1fLacyGAXMW1VxFj4Ft=w1600\"},{\"fileName\":\"260810_Nutribullet_夏日瓜瓜狂想曲_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Xl6FbH5dJSDeG50ANZe0hprfav21vLyy=w1600\"},{\"fileName\":\"260729_Nutribullet_盛夏特調粉紅莓果優格果昔_食譜_直式.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YfXIlCNjgNjOiAPbh460XX5yuym_KX8T=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 12:46:36"
+        },
+        {
+          "案件編號": "26080045",
+          "修改次數": "0",
+          "建立日期": "2026/08/13 14:59:29",
+          "修改日期": "2026/08/13 14:59:29",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/13 14:59:29",
+          "圖片連結": "[{\"fileName\":\"260729_產品體驗會_八月.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dFRcvlUa6HwEtRfInuhBBmbh1AmazcTi=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/14Os49iLzYU6yZpwzNmY76Di39kv_pCem=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nhC_wr-T4nbL-OICJAZ5F6ie4-F3Hff-=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oHpS6LjvuC-jt3x5ywCc_NWEFo4ivrEB=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iPCnkMEXV6NG3UU_hO54wxfsn2TTikY2=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HenJP9BR9INdXUMNud2tOixbrsvoks6Y=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIOxY88ocAAvsaH3-lx5Vh7_Y-7WgS-6=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uxqY6DU4eHjmHWksRnD_dxAvMvJfuiKE=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eCc0Za26ayYG_PZiR-BlvOJbrhwKB0sj=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4_v02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mpaPfGbucpvxM7c_2qTtI-KdEMyHXL4A=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wCmRiMtN_PZa-cjqHdeNOPC0hJKEKVQj=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/13 14:59:29"
         }
       ]
     },
@@ -19088,7 +19101,7 @@
           "新專案輪值": "2",
           "篩選年份": "2026",
           "篩選月份": "7 月 , 8 月",
-          "篩選狀態": "未開始 , 執行中 , 過稿中",
+          "篩選狀態": "未開始 , 執行中",
           "篩選姓名": "Anna",
           "選擇": "v",
           "案件編號": "",
@@ -19359,16 +19372,16 @@
           "名字": "廖秦葦",
           "顯示名": "廖秦葦",
           "帳號": "david.liao@emctaipei.com",
-          "頭像連結": "https://drive.google.com/thumbnail?id=1yMKGCPWJTbdfMfnkkGmp47Fw0JLQpvRO&sz=w1000",
+          "頭像連結": "https://lh3.googleusercontent.com/d/15TeYH1HCcAIC8FJ1Q7TlCkUo6YeArJv9=w1600",
           "頭像大圖連結": "",
           "分享音樂": "",
           "音樂起始秒數": "",
           "技能": "",
           "對話框": "",
           "新專案輪值": "",
-          "篩選年份": "2026",
-          "篩選月份": "8 月",
-          "篩選狀態": "已完成",
+          "篩選年份": "",
+          "篩選月份": "",
+          "篩選狀態": "",
           "篩選姓名": "",
           "選擇": "v",
           "案件編號": 1,
