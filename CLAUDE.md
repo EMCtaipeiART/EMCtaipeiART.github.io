@@ -206,8 +206,10 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - `upload/Code.gs` 複製成 `.js` 副檔名 `node --check` 語法檢查通過；`index.html`／`upload/upload.html` 抽出 `<script>` 內容 `node --check` 語法檢查通過。
   - 用本機 Node 靜態伺服器＋ Browser pane 載入真實正式站資料（`backend/data/db.json`，614 筆案件），全程 stub 掉 `sheetApi`／`accessAllowed`／`google.script.run`，沒有真的打任何網路請求：確認 `revisionImagesHtml` 在有／無 `media.manage` 權限、有／無圖片四種組合下正確顯示或隱藏刪除鈕／新增鈕；確認 `caseDesignImageUploadUrl` 組出的網址參數（`mode`／`caseId`／`round`／`designer`／`client`／`year`／`month`／`closeNonce`／`token`）全部正確；確認 `openCaseDesignImageUploadModal` 正確呼叫 `openUploadModal`；確認 `openStatusEditor` 已經不再參照 `designImageFolderUrl`；確認 `removeCaseDesignImage` 沒有權限時被 `requireAccess` 正確擋下並顯示錯誤訊息；確認案件詳情面板按鈕文字與 onclick 已改成新函式。另外用同一支本機伺服器單獨載入 `upload/upload.html?mode=case-design&...#token=...`：確認畫面正確切到新區塊（隱藏原本單檔上傳卡片與最近上傳清單）、標題／說明文字正確；用假 File 物件模擬選檔驗證型別／大小驗證正確篩掉不合格檔案、預覽格可個別移除；stub `google.script.run` 模擬成功／失敗兩種回應，確認成功時正確清空檔案清單、呼叫 `notifyUploadHost` 帶正確的 `type`／`caseId`／`round`／`count`、呼叫 `window.close()`，失敗時正確顯示錯誤訊息、按鈕恢復可重試、檔案清單保留（過程中發現並修正一個小狀態問題：一開始 `handleCaseDesignUploadSuccess` 沒有把 `caseDesignUploading` 重設為 `false`，正常情況下父視窗會在收到訊息後立刻把整個 iframe 導向 `about:blank` 摧毀這段 JS 狀態、不影響實際使用，但修好比較乾淨，一併清空已上傳完的檔案清單）。
   - **未做的驗證**：沒有實際透過 Apps Script 編輯器部署新版 `upload/Code.gs`／`upload/upload.html` 並跑一次真實的「瀏覽器選檔案→真的傳到 Google Drive」，這條端對端路徑在這個環境連不到 Google API，需要使用者手動部署後自己測一次。
-- 部署狀態：`worker/`、`index.html` 純前端／需重新部署 Worker 才會生效——`cd worker && pnpm deploy`（沒部署前 `removeCaseDesignImage` 這個 action 在正式站不存在，前端刪除圖片會失敗）；`index.html` 純前端，git push 後自動生效。**`upload/Code.gs`＋`upload/upload.html` 需要手動部署**（同一個 Apps Script 專案，Apps Script 編輯器「部署 → 管理部署 → 編輯 → 新版本」）——沒部署前，過稿中跳出的上傳視窗會因為 `uploadCaseDesignImagesInteractive` 這支新函式不存在而上傳失敗。
-- commit：（見下方 push 紀錄）
+- 部署狀態：`worker/` 已執行 `npx wrangler deploy` 完成部署（`removeCaseDesignImage`／`addCaseDesignImages` 的 session 分支已生效）；`index.html`、`CLAUDE.md` 已 push 到 GitHub，GitHub Pages 會自動重新部署。**`upload/Code.gs`＋`upload/upload.html` 這次由使用者自行手動部署**（同一個 Apps Script 專案，Apps Script 編輯器「部署 → 管理部署 → 編輯 → 新版本」）——這兩個檔案本身已經跟著這次 commit 一起進了 git（方便追蹤紀錄），但 git 裡的內容不會自動同步到 Apps Script 專案，沒部署前，過稿中跳出的上傳視窗會因為 `uploadCaseDesignImagesInteractive` 這支新函式不存在而上傳失敗。
+
+  （附註：這次工作期間 `upload/Code.gs` 曾經被意外整個覆蓋成不相關的文字內容，靠使用者從 Apps Script 編輯器複製當時線上還保留的正確原始碼貼回來才救回；救回後逐一比對函式清單（53 個，跟預期的「51 個原有＋2 個這次新增」一致）、跑過語法檢查、確認沒有任何內容遺漏或誤植才繼續。）
+- commit：`873ace9`
 
 ### 2026-08-13 Asia/Taipei（更晚）— 修正限時動態到期／取消後仍持續顯示、一般使用者上傳頭像後不會更換
 
