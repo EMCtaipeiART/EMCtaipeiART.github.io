@@ -6599,7 +6599,7 @@
       <div class="google-login-email" id="googleLoginEmail" hidden></div>
       <div id="googleSignInButton" hidden></div>
     </div>
-    <button type="button" class="admin-login-toggle" id="adminLoginToggle">管理者登入</button>
+    <button type="button" class="admin-login-toggle" id="adminLoginToggle">密碼登入</button>
     <div class="admin-login-panel" id="adminLoginPanel" hidden>
       <input id="loginPassword" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="請輸入密碼">
       <button type="button" id="adminLoginSubmit">登入</button>
@@ -7474,8 +7474,9 @@ function currentUserDisplayName(){return String(currentEditorDisplayName||curren
 function currentLoginOwnerName(){return isLoggedIn()?currentUserDisplayName():''}
 function fallbackDesignGroupForUser(user=currentEditor){if(flatDesignerOptions.includes(user))return '平面'; if(videoDesignerOptions.includes(user))return '影音'; return ''}
 function currentDesignGroup(){return normalizeDesignGroup(currentEditorGroup)||fallbackDesignGroupForUser()}
-function hasDesignerAccountRole(){return ['平面','影音','管理者'].includes(currentDesignGroup())}
-function isAdministrator(){return isLoggedIn()&&(currentDesignGroup()==='管理者'||isLocalAdminToken())}
+function currentAccessRole(){return window.MachiAccess?.state?.loaded?String(window.MachiAccess.state.role||''):''}
+function hasDesignerAccountRole(){return ['設計師','管理者'].includes(currentAccessRole())||['平面','影音','管理者'].includes(currentDesignGroup())}
+function isAdministrator(){return isLoggedIn()&&(currentAccessRole()==='管理者'||currentDesignGroup()==='管理者'||isLocalAdminToken())}
 function isAdminUserPreview(){return isAdministrator()&&adminUserPreview}
 function accessAllowed(key,fallback=true){const access=window.MachiAccess;if(!access||!access.state.loaded)return fallback;return access.can(key)}
 function requireAccess(key,message='此帳號沒有這個操作權限'){if(accessAllowed(key,false))return true;setSync(message,true,3200);return false}
@@ -9452,7 +9453,7 @@ function openStatusEditor(event,id){event.stopPropagation(); if(!isDesignerLogin
 function currentModificationRound(id){const list=modificationRecordsFor(id); return list.length?Math.max(0,...list.map(r=>Number(r.count)||0)):0}
 function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPageUrl); activeCaseImageUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; const start=parseDate(row.start); url.searchParams.set('mode','case-design'); url.searchParams.set('caseId',row.id); url.searchParams.set('round',String(round)); url.searchParams.set('designer',row.designer||''); url.searchParams.set('client',row.client||''); url.searchParams.set('year',start?String(start.getFullYear()):''); url.searchParams.set('month',start?String(start.getMonth()+1).padStart(2,'0'):''); url.searchParams.set('closeNonce',activeCaseImageUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
 function openCaseDesignImageUploadModal(id,round){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
-function openCaseDesignImageSourceChooser(id,round,anchorEl){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>之後設計師持續在同一個資料夾放新圖，系統會自動追蹤上傳，直到案件離開過稿中</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl); fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round)}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round)})}
+function openCaseDesignImageSourceChooser(id,round,anchorEl){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl); fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round)}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round)})}
 const nasFolderPickerBaseUrl='http://192.168.1.64:8877/picker';
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
 let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerWatchTimer=0;
@@ -9641,7 +9642,7 @@ async function startShortcutLogin(account,password,role){showLoginPendingOverlay
   try{const data=await verifyEditorLogin(account,password); applyLoginRedirectResult(data,`${role}登入`); return}
   catch(err){console.warn(`[${role}登入] Worker 未接受捷徑密碼，改用本機唯讀檢視`,err)}
   applyLocalPreviewSession(role); setSync(`已登入：${currentUserDisplayName()}（檢視模式，Worker 尚未開放此密碼，無法寫入）`,true,6000)}
-async function startAdminPasswordLogin(){const field=$('#loginPassword'), password=String(field?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(field)field.value=''; if(password==='test')return startShortcutLogin(localTesterAccount,password,'測試者'); if(password===todayAdminPassword())return startShortcutLogin(localAdminAccount,password,'管理者'); showLoginPendingOverlay('管理者登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'管理者登入')}catch(err){handleAdminLoginError(err)}}
+async function startAdminPasswordLogin(){const field=$('#loginPassword'), password=String(field?.value||'').trim(); if(!password){setLoginNote('請輸入密碼。',true); return} if(field)field.value=''; if(password==='test')return startShortcutLogin(localTesterAccount,password,'測試者'); if(password===todayAdminPassword())return startShortcutLogin(localAdminAccount,password,'管理者'); showLoginPendingOverlay('密碼登入中...'); clearLoginAuthState(); try{const data=await verifyEditorLogin('machi.chen@emctaipei.com',password); applyLoginRedirectResult(data,'密碼登入')}catch(err){handleAdminLoginError(err)}}
 async function trySavedLogin(){return}
 function normalizePlatformList(value){const values=Array.isArray(value)?value:String(value||'').split(/\s*,\s*|，|、|\r?\n/); const selected=new Set(values.map(item=>String(item||'').trim()).filter(Boolean)); return requestPlatformOptions.filter(option=>selected.has(option))}
 function platformText(value){return normalizePlatformList(value).join(', ')}

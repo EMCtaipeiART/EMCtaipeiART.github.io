@@ -186,6 +186,160 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-13 Asia/Taipei（最新）— 「選擇 NAS 資料夾」合併成「點選即備份＋登記」，並依客戶別自動猜起始資料夾
+
+- 修改目的：使用者指出案件設計圖目前有兩種記錄方式——「選擇 NAS 資料夾」
+  （只登記路徑，交給背景監控程式 `nas_design_image_watcher.mjs` 之後定時
+  輪詢追蹤）跟「選擇電腦檔案上傳」（立即上傳，但完全不會記錄 NAS 路徑，
+  之後這個案件就無法被背景程式接手追蹤）——兩者互不相通，用「電腦檔案上
+  傳」開頭的案件之後永遠得手動補圖。討論後決定的方向不是幫「電腦檔案上
+  傳」額外補一個選填的路徑欄位，而是把兩件事合併進「選擇 NAS 資料夾」這
+  條路徑本身：選定資料夾當下，`nas_folder_picker_server.mjs`（資料夾選擇
+  器伺服器，跟背景監控程式一樣跑在同一台連得到 NAS 的 Mac 上）立即用跟背
+  景監控程式共用的同一套邏輯掃描並上傳一次資料夾裡目前已有的圖片/影片，
+  再登記路徑——「電腦檔案上傳」維持不變，純粹作為選擇器伺服器沒開機/沒
+  設定時的備援選項。使用者接著追加一個體驗要求：目前 NAS 路徑幾乎都是
+  「/設計部/專案企劃部/執行中/<客戶別>」這個固定前綴，希望選擇器能依案件
+  的「客戶別」自動猜、直接打開到那一層，不用每次都從根目錄逐層點過去，
+  同時要保留麵包屑可以點回上層資料夾。
+- 影響檔案：新增 `scripts/nas_design_image_lib.mjs`；改寫
+  `scripts/nas_design_image_watcher.mjs`（改成 import 共用模組，行為不
+  變）、`scripts/nas_folder_picker_server.mjs`（新增立即備份與預設路徑猜
+  測）；`scripts/nas_design_image_watcher.config.json` 新增
+  `defaultBrowseRoot` 欄位；`scripts/nas_design_image_watcher.README.md`
+  補上新流程說明、設定欄位、已測試/未測試段落；`index.html` 只改了「選擇
+  NAS 資料夾」選項的說明文字。
+- 影響功能：
+  1. **共用核心邏輯抽成 `nas_design_image_lib.mjs`**：把原本寫在
+     `nas_design_image_watcher.mjs` 裡的 `scanProject`／影片截圖／圖片壓
+     縮／`computeRound`／`computeTargetImages`／`uploadRound` 等函式整批
+     搬過去，新增 `findCaseMeta(dbData,caseId)`（不篩狀態／不篩是否已填
+     路徑，單純依案件編號查設計師/客戶別/開始日期，給資料夾選擇器在使用
+     者選好資料夾、`designImageFolderUrl` 都還沒寫回資料庫的那個當下就能
+     用）與 `uploadPendingRound(...)`（把「算輪次→套用待修改圖片清單過
+     濾→上傳→標記 assignedRound」包成一個函式，`nas_design_image_watcher.mjs`
+     的批次迴圈與資料夾選擇器的「立即備份」現在呼叫的是同一份程式碼）。
+     這樣做的原因：兩支程式都會讀寫同一份 `sync-state.json`，「這個檔案
+     算不算處理過」的判斷邏輯只要有一絲不一致，就可能造成同一批圖片被上
+     傳兩次或漏傳，寫成同一份程式碼比各自維護一份、之後改一邊忘記改另一
+     邊安全得多。`nas_design_image_watcher.mjs` 本身的執行邏輯與輸出格式
+     沒有改變，只是內部函式來源換成 import。
+  2. **`nas_folder_picker_server.mjs` 新增 `/api/confirm`（立即備份）**：
+     使用者在資料夾選擇器頁面按「選擇這個資料夾並備份」（原本按鈕文字是
+     「選擇目前這個資料夾」，這次改名反映新行為）時，前端先 `POST` 這個
+     端點並顯示「正在備份...」，伺服器端驗證路徑合法後，呼叫
+     `lib.scanProject`＋`lib.uploadPendingRound`（跟 `findCaseMeta` 查到的
+     設計師/客戶別/開始日期）立即掃描並上傳這個資料夾目前的內容，回傳結
+     果後前端才真正 `postMessage` 把路徑丟回原本分頁（沿用既有機制寫入
+     `designImageFolderUrl`）並關閉分頁。刻意的設計：**立即備份失敗不會
+     擋住路徑登記**——案件編號在資料庫查不到、Apps Script 上傳失敗、掃描
+     過程出錯，這幾種情況 `/api/confirm` 都還是回傳 `success:true`（只要
+     路徑本身合法存在），只是 `backup` 欄位帶著失敗原因，前端顯示「資料
+     夾已登記，但備份失敗：...」而不是整個操作失敗——因為路徑登記本身跟
+     這次備份成不成功是兩件事，登記成功之後背景監控程式下一輪還會再試。
+     只有「路徑本身不存在」或「token 不對」這種請求層級的錯誤才會讓整個
+     `/api/confirm` 回傳失敗，不讓前端誤登記一個查無此路徑的資料夾。
+  3. **`nas_folder_picker_server.mjs` 新增 `/api/default-path`（依客戶別
+     猜起始資料夾）**：選擇器頁面載入時先打這支端點，帶案件編號查資料
+     庫，依新增的設定欄位 `defaultBrowseRoot`（相對於 `mountRoot`，例如
+     `專案企劃部/執行中`）在那一層底下找跟案件「客戶別」同名的子資料夾
+     （先精確比對，再嘗試去頭尾空白＋忽略英文大小寫比對一次），找到就直
+     接把選擇器開到那一層並在畫面上方顯示綠色提示「已自動開啟到『Epson』
+     資料夾」；沒對到（客戶別沒填、資料夾裡沒有對應名稱、案件編號查不
+     到、`defaultBrowseRoot` 沒設定或路徑不存在）就 fallback 到
+     `defaultBrowseRoot` 這一層或根目錄，並顯示相應的提示文字說明為什麼
+     沒有自動跳更深。**不管猜對還是猜錯，麵包屑永遠顯示完整路徑，使用者
+     隨時可以點回任何上層資料夾**——這是刻意的設計，避免自動跳轉變成使
+     用者找不到其他資料夾的陷阱，符合使用者「保留前面資料夾位置路徑方便
+     回頭查找」的要求。
+  4. **`index.html`**：只改了 `openCaseDesignImageSourceChooser()` 裡兩個
+     選項的說明文字，反映「選 NAS 資料夾＝立即備份＋之後自動追蹤」「選電
+     腦檔案＝備援選項」的新分工；沒有改動任何 JS 邏輯（`openNasFolderPicker`
+     的呼叫方式、`machi-nas-folder-selected` 訊息處理都不用改，因為「立即
+     備份」完全發生在資料夾選擇器伺服器端，前台這邊收到的還是同一種
+     `postMessage`）。
+- 風險區塊：
+  - **`/api/confirm` 跟背景監控程式的排程執行是兩支獨立行程，共用同一份
+    `sync-state.json`，理論上存在極小的競態窗口**：如果使用者按「選擇這
+    個資料夾並備份」的當下，背景監控程式剛好也在跑同一個案件的那一輪掃
+    描，兩邊各自讀狀態、各自寫回，最壞結果是同一批圖片被上傳兩次（Drive
+    多一份重複檔案，不會遺失資料或寫壞狀態檔）。目前沒有加檔案鎖處理——
+    背景排程通常 5-10 分鐘一次，跟使用者手動點選重疊的機率很低，這次選
+    擇先接受這個已知風險並記錄下來，而不是為了低機率情境增加檔案鎖的複
+    雜度；已經在 README 新增「已知但刻意接受的風險」段落說明。
+  - **「依客戶別猜起始資料夾」用的是完整字串相等比對（含一次去頭尾空白
+    ＋忽略大小寫的寬鬆比對），不是模糊比對**：如果 NAS 資料夾名稱跟資料
+    庫「客戶別」欄位有更複雜的落差（例如資料夾多了年份後綴、客戶別欄位
+    用了不同的全形/半形符號），會判斷成「找不到對應資料夾」而 fallback
+    到上一層——這是刻意保守的行為（寧可猜不到、退回讓使用者手動點選，也
+    不要猜錯跳進不相干客戶的資料夾），只是沒有像「立即備份失敗」那樣做
+    更寬鬆的模糊比對。沙箱測試只驗證過 ASCII 客戶名稱（如 `Epson`／
+    `epson`）的精確與大小寫寬鬆比對，真實客戶別大多是中文，中文字串比對
+    理論上不受大小寫轉換影響（用的是完整字串相等，不是英文專屬邏輯），
+    但沒有用真實中文客戶別＋真實 NAS 資料夾名稱實測過。
+  - `nas_folder_picker_server.mjs` 現在除了「列資料夾清單」，也會實際觸
+    發 Apps Script 上傳（跟背景監控程式呼叫的是同一個 `appsScriptUploadUrl`
+    端點）——代表這支伺服器現在的職責範圍比原本單純的「選資料夾」大了一
+    圈，如果之後要稽核「誰有能力觸發圖片上傳到 Drive」，需要把這支伺服
+    器也算進去，不能只看 Worker／Apps Script 兩端。
+- 已檢查／驗證方式：
+  - `node --check` 對 `nas_design_image_lib.mjs`／`nas_design_image_watcher.mjs`／
+    `nas_folder_picker_server.mjs` 三個檔案，以及從 `PICKER_PAGE` 樣板字
+    串抽出的內嵌 `<script>` 內容，語法檢查全數通過；`index.html` 抽出的
+    主要 `<script>` 區塊（348KB 那一段）用 `new Function()` 語法檢查通
+    過。
+  - 用假的 `sips`／`qlmanage`（模擬執行成功，只做複製檔案）＋假掛載目錄
+    （含中文資料夾層層巢狀結構，模擬 `專案企劃部/執行中/Epson/...`）＋假
+    HTTP 伺服器同時模擬 `dbJsonUrl` 與 Apps Script 上傳端點，**真的啟動
+    `nas_folder_picker_server.mjs`** 用 `curl` 逐一驗證：`/api/list` 的
+    token 驗證（沒帶/帶錯回 401）與路徑穿越保護（`../../../etc` 正確被
+    過濾、不會跳出假掛載範圍）；`/api/default-path` 四種情境全部正確
+    ——客戶別對到資料夾（`matched:true`，回傳深層路徑）、客戶別存在但資
+    料夾裡沒有對應名稱（fallback 到上一層＋提示文字）、案件沒填客戶別
+    （fallback＋對應提示）、案件編號查不到（同樣安全 fallback，不會讓選
+    擇器打不開），以及客戶別大小寫不同（`epson` 對 `Epson` 資料夾）也正
+    確配對成功；`/api/confirm` 完整驗證：選定含 1 張圖片的資料夾，正確
+    立即上傳並回傳 `backup.uploadedCount:1`；**對同一個案件/資料夾重複呼
+    叫第二次，正確判斷「沒有新檔案可上傳」（`uploadedCount:0`），Apps
+    Script 上傳端點的呼叫次數沒有增加**，證明沒有重複上傳；模擬 Apps
+    Script 回傳上傳失敗時，`/api/confirm` 仍正確回應 `success:true`（路徑
+    正常登記）且 `backup.message` 帶著失敗原因；案件編號在資料庫查不到
+    時同樣正確回應 `success:true`、`backup.attempted:false`；選了一個不
+    存在的資料夾路徑時正確回應 `success:false`（這種情況前端不會登記路
+    徑）；token 錯誤時正確回應 401 等級的拒絕。
+  - **兩支程式共用狀態檔的一致性有實測，不是只靠邏輯推導**：先用資料夾
+    選擇器的 `/api/confirm` 對某案件的資料夾（含 1 張圖）立即備份一次，
+    再模擬前台把 `designImageFolderUrl` 寫回資料庫（更新假 `dbJsonUrl`
+    回應）、實際執行一次 `nas_design_image_watcher.mjs` 的批次流程，確認
+    正確判斷「沒有偵測到可上傳的圖片」（不會把選擇器已經上傳過的那張圖
+    再傳一次，Apps Script 呼叫次數維持 0）；接著在同一個資料夾放一張新
+    圖，再跑一次批次流程，正確只上傳新增的那 1 張（`fileNames` 只有新檔
+    名，不含第一次選擇器上傳過的檔案），證明兩支程式對「這個檔案處理過
+    了沒」的判斷完全一致。
+  - `node --test backend/test/*.test.mjs` 25/25 全過（沒有任何測試鎖住這
+    次改動的字串或行為）。
+  - **未做的驗證**：真正的 `qlmanage`／`sips` 執行效果（沙箱沒有
+    macOS）；真實中文客戶別＋真實 NAS 資料夾名稱的比對結果；瀏覽器實機
+    載入資料夾選擇器頁面、看到綠色提示文字、點「選擇這個資料夾並備份」
+    等待期間畫面呈現是否符合預期（沙箱只用 `curl` 測 API，沒有用真實瀏
+    覽器操作過新版頁面，前一版頁面的瀏覽器互動雖然之前測過，但這次改了
+    確認按鈕的文字與流程，等待中禁用按鈕、成功/失敗訊息文字這幾塊都沒有
+    用真實瀏覽器點過）；「立即備份」跟背景排程真的同時執行的競態情況
+    （只能理論推導，沙箱沒辦法真的讓兩支程式搶同一份狀態檔驗證實際後
+    果）；真的連上你的 NAS、真的把圖傳進 Google Drive 端對端測試。
+- 部署狀態：`index.html`、`CLAUDE.md` 純前端／文件，git push 後自動生
+  效；`scripts/nas_design_image_lib.mjs`／`nas_design_image_watcher.mjs`／
+  `nas_folder_picker_server.mjs`／`nas_design_image_watcher.config.json`／
+  `nas_design_image_watcher.README.md` 都是純本機工具，不需要 git push、
+  不需要部署 Worker 或 Apps Script——但**這是本機檔案異動，你需要重新啟
+  動（或用 `launchd`／`cron` 排程重啟）`nas_folder_picker_server.mjs` 才
+  會套用新版本**（`/api/confirm`／`/api/default-path` 這兩個新端點在舊版
+  程式裡不存在），`nas_design_image_watcher.mjs` 同理，下次排程觸發時會
+  自動用到新版程式碼，不用手動介入；如果想讓「依客戶別自動開啟」這個功
+  能生效，需要確認 `nas_design_image_watcher.config.json` 的
+  `defaultBrowseRoot` 欄位符合你實際的 NAS 資料夾結構（目前預設填的是
+  `專案企劃部/執行中`，如果實際結構不同要手動改）。
+
 ### 2026-08-13 Asia/Taipei（最新）— 右下角上傳進度提示平常完全隱藏
 
 - 修改目的：使用者回報「設計圖上傳中」進度提示在沒有上傳時仍顯示於右下角；期望只在實際上傳進行中顯示。

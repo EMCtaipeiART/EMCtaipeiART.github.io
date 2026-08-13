@@ -10,8 +10,9 @@
 位有值的案件——這個欄位是設計師在網頁上（把案件狀態改成「過稿中」時，
 或案件詳情面板的「上傳設計圖」按鈕）選「選擇 NAS 資料夾」時填入的。設計
 師可以用滑鼠瀏覽 NAS 資料夾樹狀結構點選，不用自己手動輸入路徑——這是
-`nas_folder_picker_server.mjs`（跟這支掃描程式是兩支獨立的程式，各自負
-責「選資料夾」與「掃描上傳」，見下面「用滑鼠選 NAS 資料夾」那一節）。
+`nas_folder_picker_server.mjs`（跟這支掃描程式共用同一份核心邏輯
+`nas_design_image_lib.mjs`，各自負責「選資料夾＋立即備份一次」與「定時
+掃描接手追蹤後續新增的圖」，見下面「用滑鼠選 NAS 資料夾」那一節）。
 
 如果設定齊全，還會做「輪次判斷＋自動上傳」：這一輪還沒抓取過的時候，才
 把資料夾裡「還沒歸類到任何一輪」的預覽圖打包，透過 Apps Script 上傳到
@@ -227,7 +228,24 @@ launchctl load ~/Library/LaunchAgents/com.emctaipei.nas-watcher.plist
 師在新分頁裡瀏覽/點選資料夾後，這個新分頁用 `postMessage` 把選到的路徑
 丟回原本的分頁，寫回案件資料庫的還是網站本身既有的邏輯（跟過去手動貼路
 徑寫回的是同一個欄位、同一套權限檢查），這支伺服器完全不需要知道任何登
-入 token 或資料庫寫入邏輯，只負責「列出資料夾名稱」。
+入 token 或資料庫寫入邏輯。
+
+**點「選擇這個資料夾並備份」時會立即備份一次**：這支伺服器不只列出資料
+夾名稱，選定資料夾的當下還會用 `nas_design_image_lib.mjs`（跟
+`nas_design_image_watcher.mjs` 共用同一份核心邏輯）立刻掃描這個資料夾、
+把目前已經存在的圖片/影片打包上傳一次，不用等背景監控程式下一輪輪詢（5-
+10 分鐘）才處理；之後案件維持過稿中期間，同一資料夾若又新增圖片，就交給
+背景監控程式接手——兩支程式讀寫同一份 `sync-state.json`，不會對同一批圖
+重複上傳。就算這次立即備份失敗（例如網路不穩、Apps Script 暫時連不上），
+資料夾路徑一樣會登記成功，只是提示「備份失敗，背景程式下次輪詢會自動重
+試」，不會因為備份失敗就連路徑都沒登記到。
+
+**開啟時會自動猜一個起始資料夾**：不用每次都從根目錄一層一層點——伺服器
+會依這個案件的「客戶別」，在 `defaultBrowseRoot`（設定檔欄位，例如
+`專案企劃部/執行中`）底下找同名子資料夾，找到就直接開到那一層（畫面上方
+會有一行綠色提示「已自動開啟到『Epson』資料夾」之類的文字）；找不到就停
+在 `defaultBrowseRoot` 這一層。不管哪種情況，麵包屑都會顯示完整路徑，隨
+時可以點回任何上層資料夾，不會被鎖死在猜測結果裡。
 
 **執行方式**（跟 `nas_design_image_watcher.mjs` 共用同一份
 `nas_design_image_watcher.config.json`，讀同一個 `mountRoot`）：
@@ -291,6 +309,7 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 | `appsScriptUploadUrl` | Apps Script Web App 的 `.../exec` 網址，留空＝只掃描不上傳 |
 | `secretsFile` | 存 `serviceKey`／`pickerToken` 的檔案路徑，預設同資料夾的 `nas_design_image_watcher.secrets.json`（不進 git） |
 | `pickerPort` | `nas_folder_picker_server.mjs`（資料夾選擇器伺服器）監聽的埠號，預設 8877，只有跑那支程式時才會用到 |
+| `defaultBrowseRoot` | 資料夾選擇器開啟時的預設瀏覽起點（相對於 `mountRoot`），選擇器會在這一層底下找跟案件客戶別同名的子資料夾直接打開；留空＝從根目錄開始，只有跑 `nas_folder_picker_server.mjs` 時才會用到 |
 
 狀態快取存在 `scripts/nas_design_image_watcher.state/sync-state.json`
 （已加進 `.gitignore`），記錄每個檔案的大小/修改時間、有沒有被歸類到某一
@@ -312,17 +331,48 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 圖、上傳 payload 內容正確帶上 designer/client/year/month。
 
 **資料夾選擇器伺服器（`nas_folder_picker_server.mjs`）**：因為這支伺服器
-本身是純 Node.js（不需要 macOS 專屬指令），用假的掛載資料夾（一般暫存目
-錄，不是真的 SMB 掛載點）在沙箱裡實際啟動、實際測過：token 驗證（沒帶/
-帶錯 token 正確回 401）、路徑穿越保護（`../../etc` 這類會被過濾掉，不會
-跳出 `mountRoot` 範圍）、資料夾列表 API 正確回傳子資料夾清單、瀏覽器實際
-載入 `/picker` 頁面並點擊資料夾逐層深入、麵包屑導覽正確可以跳回上層、按
-「選擇目前這個資料夾」正確關閉分頁（`window.close()` 真的把分頁關掉
-了）。也在 `index.html` 端用假的 `window.open`／`accessAllowed` 存根，驗
-證了：標記過稿中會跳出「NAS 資料夾／電腦檔案上傳」選擇彈窗（不是直接跳
-其中一個）、點「選擇 NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/
-`origin` 開新分頁、收到帶正確 nonce 的 `postMessage` 會正確寫回
-`designImageFolderUrl`、nonce 不符或路徑是空的都正確被擋下不會誤寫。
+本身是純 Node.js（不需要 macOS 專屬指令，「立即備份」用到的 `sips`／
+`qlmanage` 除外），用假的掛載資料夾（一般暫存目錄，不是真的 SMB 掛載點）
+在沙箱裡實際啟動、實際測過：token 驗證（沒帶/帶錯 token 正確回 401）、路
+徑穿越保護（`../../etc` 這類會被過濾掉，不會跳出 `mountRoot` 範圍）、資
+料夾列表 API 正確回傳子資料夾清單、瀏覽器實際載入 `/picker` 頁面並點擊
+資料夾逐層深入、麵包屑導覽正確可以跳回上層、按「選擇這個資料夾並備份」
+正確關閉分頁（`window.close()` 真的把分頁關掉了）。也在 `index.html` 端
+用假的 `window.open`／`accessAllowed` 存根，驗證了：標記過稿中會跳出
+「NAS 資料夾／電腦檔案上傳」選擇彈窗（不是直接跳其中一個）、點「選擇
+NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 開新分頁、收到
+帶正確 nonce 的 `postMessage` 會正確寫回 `designImageFolderUrl`、nonce 不
+符或路徑是空的都正確被擋下不會誤寫。
+
+**`/api/default-path`（依客戶別猜起始資料夾）**：用假的 `dbJsonUrl` 與假
+掛載目錄完整測過三種情境——①客戶別有對應到子資料夾，正確回傳該子資料夾
+路徑且 `matched:true`；②客戶別存在但資料夾裡沒有對應名稱，正確 fallback
+回 `defaultBrowseRoot` 這一層並附上「找不到對應資料夾」的提示；③案件編
+號在資料庫裡查不到，正確 fallback 回 `defaultBrowseRoot`（讀不到 dbJsonUrl
+也一樣正確 fallback，不會讓整個選擇器打不開）。大小寫不同（如 `epson` vs
+`Epson`）也驗證過能正確配對。
+
+**`/api/confirm`（立即備份）**：用假的 `sips`／`qlmanage`（模擬執行成功，
+只做複製檔案）＋假 `dbJsonUrl`／Apps Script 上傳端點完整測過：選定資料夾
+後正確跑一次 `scanProject`＋輪次判斷＋上傳，回傳的 `backup.uploadedCount`
+正確反映實際上傳張數；上傳端點刻意回傳失敗時，`/api/confirm` 仍然回應
+`success:true`（路徑本身有效）且 `backup.message` 帶著失敗原因，不會讓整
+個資料夾選擇流程失敗；案件編號在資料庫查不到時，同樣正確回應
+`success:true`（僅登記路徑，不嘗試備份）；同一個資料夾連續呼叫兩次
+`/api/confirm`，第二次正確判斷「沒有新的檔案可上傳」（因為第一次已經把
+檔案標記為已歸類到該輪），不會重複上傳同一批圖片；跟
+`nas_design_image_watcher.mjs` 的批次執行共用同一份假狀態檔測試，確認兩
+支程式對同一批檔案的「已處理」判斷完全一致，不會互相重複上傳。
+
+**已知但刻意接受的風險（不是 bug）**：`nas_folder_picker_server.mjs` 的
+`/api/confirm` 跟 `nas_design_image_watcher.mjs` 的排程執行是兩支各自獨
+立的行程（process），如果剛好同一時間都在處理同一個案件（例如使用者剛
+好在點「選擇這個資料夾並備份」的當下，背景排程也剛好在跑那一輪掃描），
+兩邊各自讀狀態檔、各自寫回，存在極小的競態窗口：最壞結果是同一批圖片被
+上傳兩次（Google Drive 裡多一份重複檔案），不會遺失資料或寫壞狀態檔。目
+前沒有加檔案鎖處理這個情況——機率很低（背景排程一般是 5-10 分鐘一次，跟
+使用者手動點選重疊的機率很小），加鎖的複雜度暫時不划算，先接受這個風險
+並記錄下來。
 
 **還沒測試、也沒辦法在這個環境測試的部分**：
 - 真正的 `qlmanage`／`sips` 執行結果（畫質、影片格式支援度、少見編碼的
@@ -343,8 +393,16 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
   Worker 的 `addCaseDesignImages`、真的在 Google Drive 裡看到
   設計師/客戶別/年度/月份/案件編號 這樣的巢狀資料夾結構——這幾段都需要
   照上面「開通自動上傳」的步驟部署完成後，才有辦法端對端測試。
-- 中文檔名／案件資料夾名稱在真實 SMB 掛載下的行為。
+- 中文檔名／案件資料夾名稱在真實 SMB 掛載下的行為，包含「依客戶別猜起始
+  資料夾」這個新功能——沙箱測試只用過純 ASCII 的假客戶名稱（如
+  `Epson`），真實客戶別大多是中文，中文資料夾名稱在比對時理論上不受影響
+  （用的是完整字串相等比對，不是英文專屬的大小寫轉換），但沒有用真實中
+  文客戶名稱＋真實 NAS 資料夾實測過，全形/半形空白、中英文混排這類邊界
+  情況也還沒驗證。
 - `open smb://...` 觸發 Finder 連線視窗、等待掛載完成這段（macOS 專屬，
   沙箱沒有 `open` 指令）。
 - `launchd`／`cron` 排程本身有沒有正確按時觸發（只能在真正排程一段時間
   後看 log 檔案確認）。
+- 「立即備份」跟背景排程真的同時對同一個案件執行的競態情況（見上面「已
+  知但刻意接受的風險」），只能在理論上推導，沒辦法在沙箱裡真的讓兩支程
+  式同時搶同一份狀態檔測試出實際後果。
