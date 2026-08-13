@@ -71,6 +71,11 @@ const CASE_DESIGN_IMAGE_ROOT_FOLDER_ID = '1rBJQ3uvDeFruf7Th2yF2xQWr0c0F2-nH';
 // 一次最多接受的圖片數量，避免單次請求過大或誤傳整個資料夾。
 const MAX_CASE_DESIGN_IMAGES_PER_REQUEST = 20;
 
+// 資料庫後台「備份至雲端試算表」寫入的分頁名稱（gid=1244538986，跟填單
+// 案件寫入的是同一個「database」分頁），以及一次最多接受的案件筆數。
+const DATABASE_BACKUP_SHEET_NAME = 'database';
+const MAX_DATABASE_BACKUP_ROWS = 20000;
+
 // 最近圖片顯示數量
 const RECENT_FILE_LIMIT = 12;
 const USER_IDENTITY_CACHE_SECONDS = 300;
@@ -113,6 +118,8 @@ function doPost(e) {
   let result;
   if (action === 'uploadCaseDesignImages') {
     result = uploadCaseDesignImages(payload);
+  } else if (action === 'backupDatabaseTableToSheet') {
+    result = backupDatabaseTableToSheet(payload);
   } else {
     result = { success: false, message: '不支援的動作：' + (action || '（空白）') };
   }
@@ -442,6 +449,129 @@ function verifyNasWatcherServiceKey_(serviceKey) {
   }
   if (!provided || provided !== expected) {
     throw new Error('服務金鑰不正確，拒絕上傳');
+  }
+}
+
+/**
+ * 資料庫後台「備份至雲端試算表」按鈕的服務端對服務端呼叫入口，走 doPost，
+ * 由 Cloudflare Worker 的 backupDatabaseToSheet action 呼叫。
+ *
+ * 跟 uploadCaseDesignImages() 一樣不吃使用者登入 token，改用獨立的
+ * DATABASE_BACKUP_API_KEY 指令碼屬性驗證身分，跟 NAS_WATCHER_API_KEY
+ * 刻意分開，其中一組外流不會連帶讓另一組也被冒用。
+ *
+ * 這支函式**只覆寫「JSON 欄位名稱」跟「試算表表頭列」剛好同名的欄位**：
+ * 讀出試算表「database」分頁（gid=1244538986）目前第一列的表頭，只有出現
+ * 在兩邊的欄位才會被寫入新值；試算表上有、JSON 沒有的欄位（例如舊資料還
+ * 留著的「時間標記」欄）完全不會被清空或搬動，JSON 有、試算表還沒手動加
+ * 上的新欄位（例如新增的「修改次數」欄）也不會被硬塞進試算表。案件用主鍵
+ * （預設「案件編號」）比對既有列：對得到就地更新相符的欄位，對不到就在
+ * 最後新增一列（新列只會填相符的欄位，其餘欄位留空，因為那些欄位本來就
+ * 不是這次備份的資料來源）。既有的案件列如果在 JSON 裡已經被刪除，這支
+ * 函式不會主動刪除試算表上對應的那一列，避免試算表被誤判成「垃圾列」而
+ * 遺失使用者可能還需要的歷史紀錄。
+ *
+ * @param {Object} payload
+ *   serviceKey  必填，需與指令碼屬性 DATABASE_BACKUP_API_KEY 相符
+ *   headers     必填，JSON 端目前的欄位名稱清單
+ *   primaryKey  選填，比對案件列用的主鍵欄位名稱，預設「案件編號」
+ *   rows        必填，物件陣列，每個物件的 key 需對應 headers 裡的欄位名稱
+ */
+function backupDatabaseTableToSheet(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    payload = payload || {};
+    verifyDatabaseBackupServiceKey_(payload.serviceKey);
+
+    const headers = Array.isArray(payload.headers) ? payload.headers.map(String) : [];
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const primaryKey = String(payload.primaryKey || '案件編號').trim();
+    if (!headers.length) throw new Error('缺少欄位清單');
+    if (headers.indexOf(primaryKey) < 0) throw new Error('欄位清單缺少主鍵欄位：' + primaryKey);
+    if (rows.length > MAX_DATABASE_BACKUP_ROWS) {
+      throw new Error(`資料筆數超過上限（最多 ${MAX_DATABASE_BACKUP_ROWS} 筆）`);
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(DESIGNER_SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(DATABASE_BACKUP_SHEET_NAME);
+    if (!sheet) throw new Error('找不到「' + DATABASE_BACKUP_SHEET_NAME + '」試算表分頁');
+
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    if (lastRow < 1 || lastColumn < 1) {
+      throw new Error('試算表分頁目前是空的，請先手動建立跟 JSON 對應的表頭列再備份');
+    }
+
+    const grid = sheet.getRange(1, 1, lastRow, lastColumn).getValues();
+    const sheetHeaders = grid[0].map(String);
+    const matchedHeaders = headers.filter(function (header) {
+      return sheetHeaders.indexOf(header) >= 0;
+    });
+    const primaryKeyColumnIndex = sheetHeaders.indexOf(primaryKey);
+    if (!matchedHeaders.length || primaryKeyColumnIndex < 0) {
+      throw new Error('試算表欄位跟目前 JSON 的欄位沒有任何相符，或試算表缺少主鍵欄位「' + primaryKey + '」');
+    }
+
+    const rowIndexByKey = {};
+    for (let r = 1; r < grid.length; r++) {
+      const key = String(grid[r][primaryKeyColumnIndex] || '').trim();
+      if (key) rowIndexByKey[key] = r;
+    }
+
+    let updated = 0;
+    let appended = 0;
+    rows.forEach(function (row) {
+      row = row || {};
+      const key = String(row[primaryKey] || '').trim();
+      if (!key) return;
+      let rowIndex = rowIndexByKey[key];
+      if (rowIndex === undefined) {
+        rowIndex = grid.length;
+        grid.push(new Array(lastColumn).fill(''));
+        rowIndexByKey[key] = rowIndex;
+        appended += 1;
+      } else {
+        updated += 1;
+      }
+      matchedHeaders.forEach(function (header) {
+        const column = sheetHeaders.indexOf(header);
+        const value = row[header];
+        grid[rowIndex][column] = value == null ? '' : value;
+      });
+    });
+
+    const totalRows = grid.length;
+    if (sheet.getMaxRows() < totalRows) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), totalRows - sheet.getMaxRows());
+    }
+    sheet.getRange(1, 1, totalRows, lastColumn).setValues(grid);
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      matchedColumns: matchedHeaders.length,
+      updated: updated,
+      appended: appended,
+      sheetName: DATABASE_BACKUP_SHEET_NAME,
+      updatedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error(error);
+    return { success: false, message: error.message || '備份至雲端試算表失敗' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function verifyDatabaseBackupServiceKey_(serviceKey) {
+  const expected = PropertiesService.getScriptProperties().getProperty('DATABASE_BACKUP_API_KEY');
+  const provided = String(serviceKey || '').trim();
+  if (!expected) {
+    throw new Error('Apps Script 尚未設定 DATABASE_BACKUP_API_KEY 指令碼屬性，請先設定後再部署');
+  }
+  if (!provided || provided !== expected) {
+    throw new Error('服務金鑰不正確，拒絕備份');
   }
 }
 

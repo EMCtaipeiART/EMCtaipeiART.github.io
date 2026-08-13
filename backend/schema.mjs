@@ -33,11 +33,18 @@ export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
 
 export const DATABASE_HEADERS = [
   '案件編號', '月份', '客戶別', '專案名稱', '專案負責人', '設計種類', '階段', '數量',
-  '開始日期', '結束日期', '設計負責人', '項目細節', '狀態', '加權', '填單時間',
-  '時間標記', '繳交時間', '使用平台', '設計簡報說明', '設計簡報連結',
+  '開始日期', '結束日期', '設計負責人', '項目細節', '狀態', '加權', '修改次數', '填單時間',
+  '繳交時間', '使用平台', '設計簡報說明', '設計簡報連結',
   '客戶素材說明', '客戶素材連結', '參考範例說明', '參考範例連結', '其他說明', '其他連結',
   '設計圖資料夾連結'
 ];
+
+// 已經從 DATABASE_HEADERS 移除、但舊資料列裡可能還留著的欄位。normalizeDatabaseShape()
+// 會把這些欄位從「表頭清單」裡主動排除，不讓它們透過既有的「聯集既有表頭＋schema 表頭」
+// 邏輯被永久保留下去；既有資料列本身的值不會被刪除，只是不再出現在表頭／後台欄位清單裡。
+const DEPRECATED_TABLE_HEADERS = {
+  database: ['時間標記']
+};
 
 export const TABLE_SCHEMAS = {
   database: {
@@ -136,7 +143,9 @@ export function normalizeDatabaseShape(input) {
   for (const name of TABLE_NAMES) {
     const schema = TABLE_SCHEMAS[name];
     const table = db.tables[name] && typeof db.tables[name] === 'object' ? db.tables[name] : {};
-    table.headers = [...new Set([...(Array.isArray(table.headers) ? table.headers : []), ...schema.headers])];
+    const deprecated = DEPRECATED_TABLE_HEADERS[name] || [];
+    const existingHeaders = (Array.isArray(table.headers) ? table.headers : []).filter(header => !deprecated.includes(header));
+    table.headers = [...new Set([...existingHeaders, ...schema.headers])];
     if (name === '帳號權限') table.headers = table.headers.filter(header => header !== '密碼雜湊');
     table.primaryKey = schema.primaryKey;
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];

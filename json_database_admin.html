@@ -189,9 +189,17 @@
           <div class="content-actions">
             <input id="search" type="search" placeholder="搜尋目前資料表" aria-label="搜尋目前資料表">
             <span id="pageSizeWrap"><select id="pageSize" aria-label="每頁筆數"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></span>
+            <button class="btn" id="backupToSheet" type="button" hidden>備份至雲端試算表</button>
             <button class="btn primary" id="add" type="button">+ 新增資料</button>
             <span class="count" id="count">0 筆</span>
           </div>
+        </div>
+        <div class="content-actions" id="databaseFilters" hidden>
+          <span class="count">篩選</span>
+          <select id="filterStatus" aria-label="依狀態篩選"><option value="">全部狀態</option></select>
+          <select id="filterType" aria-label="依設計種類篩選"><option value="">全部種類</option></select>
+          <select id="filterDesigner" aria-label="依設計負責人篩選"><option value="">全部設計負責人</option></select>
+          <button class="btn" id="filterClear" type="button" hidden>清除篩選</button>
         </div>
         <div class="notice" id="notice" role="status">正在連線...</div>
         <section class="metrics"><div class="metric"><span>資料庫修訂版</span><b id="revision">—</b></div><div class="metric"><span>目前資料表</span><b id="currentTable">—</b></div><div class="metric"><span>資料總數</span><b id="totalRows">0</b></div></section>
@@ -221,6 +229,9 @@
     const ACCOUNT_COLUMN_FIELDS=[['案件編號','案件編號'],['月份','月份'],['客戶別','客戶別'],['專案名稱','專案名稱'],['專案負責人','專案負責人'],['設計種類','設計類型'],['階段','階段'],['數量','數量'],['開始','開始'],['結束','結束'],['設計負責人','設計負責人'],['狀態','狀態'],['項目細節','項目細節'],['修改','修改'],['主旨','信件'],['操作','內容']];
     const ACCOUNT_STATUS_OPTIONS=['未開始','執行中','過稿中','已完成','已取消','暫停中'];
     const ACCOUNT_DESIGNER_OPTIONS=['Machi','Anna','Karl','Noise','Amber','Leona'];
+    const DATABASE_TYPE_OPTIONS=['平面','影音','採購'];
+    const DATABASE_FILTER_FIELDS=[['filterStatus','狀態',ACCOUNT_STATUS_OPTIONS,'全部狀態'],['filterType','設計種類',DATABASE_TYPE_OPTIONS,'全部種類'],['filterDesigner','設計負責人',ACCOUNT_DESIGNER_OPTIONS,'全部設計負責人']];
+    let databaseFilters={};
     const ACCOUNT_SKILL_OPTIONS=['平面','輸出','影片','動畫','拍攝'];
     const BUG_STATUSES=['回報中','評估中','處理中','已完成','已否決'];
     const TOKEN_KEY='machiJsonAdminTokenV1';
@@ -263,11 +274,15 @@
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
     async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
-    function updateAddButton(){const hidden=tableName==='角色權限範本'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料')}
+    function updateAddButton(){const hidden=tableName==='角色權限範本'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':'+ 新增資料');$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database'}
+    function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
+    function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
+    function resetDatabaseFilters(){databaseFilters={};DATABASE_FILTER_FIELDS.forEach(([id])=>{$(id).value=''});updateFilterClearButton()}
+    async function backupDatabaseToSheet(){const button=$('backupToSheet');if(!confirm('確定要把目前「資料庫」的最新資料同步到雲端試算表嗎？只有欄位名稱相符的欄位會被覆寫，其餘欄位不受影響。'))return;button.disabled=true;const originalText=button.textContent;button.textContent='備份中...';try{const data=await appsScriptRequest('backupDatabaseToSheet');const when=data.updatedAt?new Date(data.updatedAt).toLocaleString('zh-TW'):'完成';note(`已同步 ${Number(data.matchedColumns||0)} 個相符欄位：更新 ${Number(data.updated||0).toLocaleString('zh-TW')} 筆、新增 ${Number(data.appended||0).toLocaleString('zh-TW')} 筆（${when}）。`,'ok')}catch(error){note(`備份至雲端試算表失敗：${error.message}`,'error')}finally{button.disabled=false;button.textContent=originalText}}
     function updateContentHead(){const info=TABLE_INFO[tableName]||{};$('tableTitle').textContent=tableLabel(tableName);$('tableSubtitle').textContent=info.desc||''}
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function renderTabs(){$('tabs').innerHTML=TABLE_ORDER.filter(name=>metadata[name]).map(name=>`<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`).join('');updateAddButton();updateContentHead()}
-    function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}return `/table/${encodeURIComponent(tableName)}?${params}`}
+    function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}
     function databaseFileRows(){
@@ -306,10 +321,19 @@
 
     /* ---- per-table renderers ---- */
     function sortButton(header){return `<button class="sort ${sortKey===header?'active':''} ${sortKey===header&&sortOrder==='desc'?'desc':''}" type="button" data-sort="${esc(header)}">${esc(header)}</button>`}
+    function databaseLinkCellHtml(value){
+      const raw=String(value||'').trim();
+      if(!/^https?:\/\//i.test(raw))return esc(raw);
+      return `<a href="${esc(raw)}" target="_blank" rel="noopener">${esc(raw)}</a>`;
+    }
     function databaseTableHtml(table,data){
       const headers=table.headers||[];
       const head='<th class="action-col">編輯／刪除</th>'+headers.map(header=>`<th>${sortButton(header)}</th>`).join('');
-      const body=data.rows.length?data.rows.map(row=>`<tr data-key="${esc(rowKeyFor(row))}">${actionCell()}${headers.map(header=>`<td class="${/網址/.test(header)?'':'clip'}" title="${esc(row[header])}">${/網址/.test(header)?linkLinesHtml(row[header]):esc(row[header])}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length+1}">沒有符合條件的資料</td></tr>`;
+      const body=data.rows.length?data.rows.map(row=>`<tr data-key="${esc(rowKeyFor(row))}">${actionCell()}${headers.map(header=>{
+        if(/網址/.test(header))return `<td title="${esc(row[header])}">${linkLinesHtml(row[header])}</td>`;
+        if(/連結/.test(header))return `<td class="clip" title="${esc(row[header])}">${databaseLinkCellHtml(row[header])}</td>`;
+        return `<td class="clip" title="${esc(row[header])}">${esc(row[header])}</td>`;
+      }).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length+1}">沒有符合條件的資料</td></tr>`;
       return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
     function shortLinkTableHtml(data){
@@ -743,7 +767,7 @@
     async function backgroundPollTick(){if($('app').hidden||document.hidden||!$('editor').hidden||refreshInFlight)return;await refreshFromBackend({quiet:true})}
     setInterval(backgroundPollTick,backgroundPollMs);
     document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(pendingRefresh){const next=pendingRefreshMessage||{tables:[tableName]};pendingRefreshMessage=null;refreshFromBackend(next)}else backgroundPollTick()});
-    $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;tableName=button.dataset.table;page=1;if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
+    $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{const select=event.target.closest('[data-weight-select]');if(!select)return;const custom=select.closest('[data-key]')?.querySelector('[data-weight-other]');if(custom){custom.hidden=select.value!=='other';if(!custom.hidden)custom.focus()}});
     $('view').addEventListener('click',event=>{
       const roleTemplate=event.target.closest('[data-role-template]');
@@ -783,9 +807,9 @@
     $('view').addEventListener('dragover',event=>{if(accountColumnDragged){const target=event.target.closest('[data-account-column-item]');if(!target||target===accountColumnDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountColumnDragged,before?target:target.nextElementSibling);refreshAccountColumnOrder();return}if(accountRotationDragged){const target=event.target.closest('[data-account-rotation-item]');if(!target||target===accountRotationDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountRotationDragged,before?target:target.nextElementSibling);refreshAccountRotationOrder()}});
     $('view').addEventListener('drop',event=>{if(accountColumnDragged){event.preventDefault();accountColumnDragged.classList.remove('dragging');accountColumnDragged=null;refreshAccountColumnOrder();return}if(accountRotationDragged){event.preventDefault();accountRotationDragged.classList.remove('dragging');accountRotationDragged=null;refreshAccountRotationOrder()}});
     $('view').addEventListener('dragend',()=>{accountColumnDragged?.classList.remove('dragging');accountColumnDragged=null;accountRotationDragged?.classList.remove('dragging');accountRotationDragged=null});
-    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='帳號權限')beginAccountCreate();else openEditor()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
+    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='帳號權限')beginAccountCreate();else openEditor()});$('backupToSheet').addEventListener('click',backupDatabaseToSheet);DATABASE_FILTER_FIELDS.forEach(([id,header])=>{$(id).addEventListener('change',()=>{databaseFilters[header]=$(id).value;page=1;updateFilterClearButton();loadRows()})});$('filterClear').addEventListener('click',()=>{resetDatabaseFilters();page=1;loadRows()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
-    async function start(){token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
+    async function start(){populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();
   </script>
 </body>

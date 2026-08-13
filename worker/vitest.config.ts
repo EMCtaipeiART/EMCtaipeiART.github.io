@@ -10,7 +10,9 @@ export default defineConfig({
         bindings: {
           GITHUB_TOKEN: 'test-github-token',
           ERP_CLIENT_SECRET: 'test-erp-secret',
-          ADMIN_LOGIN_PASSWORD: 'test-admin-password'
+          ADMIN_LOGIN_PASSWORD: 'test-admin-password',
+          NAS_WATCHER_API_KEY: 'test-nas-watcher-key',
+          DATABASE_BACKUP_API_KEY: 'test-database-backup-key'
         }
       }
     })

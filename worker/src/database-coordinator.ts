@@ -5,7 +5,7 @@ import {
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessProfile, activeReel, canonicalAccount, findReelIndex, generateShortCode,
   hasCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
-  nowTaipei, parseComments, publicReel, recalculateDatabaseWeights, reelFileId, requireCapability,
+  nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules
 } from './model';
@@ -635,6 +635,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         this.requireAccess(database, session, 'database.manage');
         return this.adminTableRows(database, payload);
       }
+      if (action === 'backupDatabaseToSheet') {
+        this.requireAccess(database, session, 'database.manage');
+        return await this.backupDatabaseToSheet(database);
+      }
 
       return await this.handleWriteAction(action, payload, context, database, session, baseUrl);
     } catch (error) {
@@ -652,6 +656,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const query = text(payload.q).toLocaleLowerCase();
     const sort = text(payload.sort);
     const order = text(payload.order).toLowerCase() === 'desc' ? -1 : 1;
+    let filters: Row = {};
+    if (payload.filters && typeof payload.filters === 'object' && !Array.isArray(payload.filters)) filters = payload.filters as Row;
+    else if (text(payload.filters)) { try { const parsed = JSON.parse(text(payload.filters)); if (parsed && typeof parsed === 'object') filters = parsed; } catch { /* ignore malformed filters */ } }
+    const activeFilters = Object.entries(filters).map(([header, value]) => [header, text(value)] as const).filter(([, value]) => value);
     let rows = table.rows.map<Row>((row, index) => {
       const result = { _rowNumber: index + 2, ...row } as Row;
       if (tableName === '帳號權限') {
@@ -660,9 +668,44 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       return result;
     });
+    if (activeFilters.length) rows = rows.filter(row => activeFilters.every(([header, value]) => text(row[header]) === value));
     if (query) rows = rows.filter(row => Object.values(row).some(value => text(value).toLocaleLowerCase().includes(query)));
     if (sort) rows.sort((left, right) => text(left[sort]).localeCompare(text(right[sort]), 'zh-Hant', { numeric: true }) * order);
     return { ok: true, action: 'adminTableRows', table: tableName, revision: database.revision, offset, limit, total: rows.length, rows: rows.slice(offset, offset + limit) };
+  }
+
+  private async backupDatabaseToSheet(database: DatabaseSnapshot): Promise<ApiResult> {
+    const table = database.tables.database;
+    if (!table) throw new Error('找不到資料庫資料表');
+    const headers = table.headers;
+    const primaryKey = text(table.primaryKey) || '案件編號';
+    const rows = table.rows.map(row => Object.fromEntries(headers.map(header => [header, row[header] ?? ''])));
+    const scriptUrl = text(this.env.UPLOAD_APPS_SCRIPT_URL);
+    const serviceKey = text(this.env.DATABASE_BACKUP_API_KEY);
+    if (!scriptUrl || !serviceKey) throw new Error('尚未設定雲端試算表備份服務（UPLOAD_APPS_SCRIPT_URL／DATABASE_BACKUP_API_KEY）');
+    let response: Response;
+    try {
+      response = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'backupDatabaseTableToSheet', serviceKey, headers, primaryKey, rows })
+      });
+    } catch (error) {
+      throw new Error('無法連線雲端試算表備份服務：' + String((error as { message?: string })?.message || error));
+    }
+    let result: { success?: boolean; message?: string; matchedColumns?: number; updated?: number; appended?: number; sheetName?: string; updatedAt?: string };
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error('雲端試算表備份服務回應格式錯誤');
+    }
+    if (!response.ok || !result.success) throw new Error(result.message || `雲端試算表備份失敗（HTTP ${response.status}）`);
+    return {
+      ok: true, action: 'backupDatabaseToSheet', rows: rows.length,
+      matchedColumns: result.matchedColumns ?? 0, updated: result.updated ?? 0, appended: result.appended ?? 0,
+      sheetName: result.sheetName || 'database', updatedAt: result.updatedAt || new Date().toISOString(),
+      revision: database.revision
+    };
   }
 
   private async handleWriteAction(
@@ -855,7 +898,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
-        return { result: { ok: true, action, rowNumber: rows.length + 1, record: row, count }, changedTables: ['修改統計表'] };
+        recalculateDatabaseModificationCounts(draft);
+        return { result: { ok: true, action, rowNumber: rows.length + 1, record: row, count }, changedTables: ['修改統計表', 'database'] };
       });
     }
     if (action === 'updateModificationConfirm') {
@@ -893,6 +937,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const rows = draft.tables['修改統計表'].rows;
         let row = rows.find(item => text(item['案件編號']) === caseId && Number(item['修改次數']) === roundNumber);
         const now = nowTaipei();
+        let createdRound = false;
         if (!row) {
           row = {
             '案件編號': caseId,
@@ -908,6 +953,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             '確認修正日': roundNumber === 0 ? now : ''
           };
           rows.push(row);
+          createdRound = true;
         }
         const existing = parseCaseDesignImages_(row);
         const seenUrls = new Set<string>();
@@ -920,7 +966,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         row['圖片連結'] = JSON.stringify(merged);
         row['圖片來源'] = source;
         row['圖片更新時間'] = now;
-        return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: ['修改統計表'] };
+        if (createdRound) recalculateDatabaseModificationCounts(draft);
+        return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
       });
     }
     if (action === 'removeCaseDesignImage') {
@@ -1011,9 +1058,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const id = text(item.id || item.caseId || asRow(item.row).id || changes.id);
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
         if (index < 0) throw new Error(`找不到案件：${id}`);
+        const previous = draft.tables.database.rows[index];
         const patch = { ...(action === 'batchUpdate' ? changes : {}), ...asRow(item.row || item.changes) };
-        const row = toSheetRow(patch, draft.tables.database.rows[index], weightRules(draft));
+        const row = toSheetRow(patch, previous, weightRules(draft));
         row['案件編號'] = id;
+        if (row['狀態'] === '過稿中' && previous['狀態'] !== '過稿中') row['繳交時間'] = nowTaipei().slice(0, 16);
         syncSupplementLinks(draft, row, baseUrl);
         draft.tables.database.rows[index] = row;
         updated.push(toApiRow(row, index));
@@ -1286,7 +1335,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'adminTableDelete') {
         const [deleted] = target.rows.splice(index, 1);
         if (tableName === '加權計分標準') recalculateDatabaseWeights(draft);
-        return { result: { ok: true, action, table: tableName, rowNumber: index + 2, deleted: { _rowNumber: index + 2, ...deleted } }, changedTables: tableName === '加權計分標準' ? [tableName, 'database'] : [tableName] };
+        if (tableName === '修改統計表') recalculateDatabaseModificationCounts(draft);
+        const syncsDatabase = tableName === '加權計分標準' || tableName === '修改統計表';
+        return { result: { ok: true, action, table: tableName, rowNumber: index + 2, deleted: { _rowNumber: index + 2, ...deleted } }, changedTables: syncsDatabase ? [tableName, 'database'] : [tableName] };
       }
       const normalized = Object.fromEntries(target.headers.map(header => [header, text(incoming[header])])) as Row;
       if (primaryKey && !text(normalized[primaryKey])) throw new Error(`「${primaryKey}」不得空白`);
@@ -1303,7 +1354,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         target.rows[index] = normalized;
       }
       if (tableName === '加權計分標準') recalculateDatabaseWeights(draft);
-      return { result: { ok: true, action, table: tableName, rowNumber: index + 2, row: { _rowNumber: index + 2, ...normalized } }, changedTables: tableName === '加權計分標準' ? [tableName, 'database'] : [tableName] };
+      if (tableName === '修改統計表') recalculateDatabaseModificationCounts(draft);
+      const syncsDatabase = tableName === '加權計分標準' || tableName === '修改統計表';
+      return { result: { ok: true, action, table: tableName, rowNumber: index + 2, row: { _rowNumber: index + 2, ...normalized } }, changedTables: syncsDatabase ? [tableName, 'database'] : [tableName] };
     });
   }
 }

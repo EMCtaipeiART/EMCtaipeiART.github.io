@@ -539,4 +539,121 @@ describe('Machi Design API Worker', () => {
     expect(profile['頭像大圖連結']).toBe('');
     expect(database.tables.reels.rows.some(row => String(row['限時動態連結']).includes(storyId))).toBe(false);
   });
+
+  it('stamps 繳交時間 the moment a case first transitions to 過稿中, but not on later edits or on the second 過稿中 transition', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'status-file-sha' }, commit: { sha: 'status-commit-sha' } });
+    });
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const submittedAtFor = async (): Promise<string> => {
+      const database = await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        return JSON.parse(stored.json) as DatabaseSnapshot;
+      });
+      return String(database.tables.database.rows.find(row => row['案件編號'] === '26080001')?.['繳交時間']);
+    };
+
+    const toPastDue = await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '過稿中' } }, token);
+    expect(toPastDue).toMatchObject({ ok: true, id: '26080001' });
+    const firstStamp = await submittedAtFor();
+    expect(firstStamp).toMatch(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+
+    await api({ action: 'update', id: '26080001', row: { id: '26080001', client: '改客戶別' } }, token);
+    expect(await submittedAtFor()).toBe(firstStamp);
+
+    await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '執行中' } }, token);
+    expect(await submittedAtFor()).toBe(firstStamp);
+    // 兩個測試呼叫可能落在同一分鐘內，時間戳只到分鐘精度時無法斷言「一定不同」，
+    // 這裡只驗證再次轉入過稿中會重新蓋一次戳記（格式仍正確），而不是保留舊值不變。
+    await api({ action: 'update', id: '26080001', row: { id: '26080001', status: '過稿中' } }, token);
+    expect(await submittedAtFor()).toMatch(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/);
+  });
+
+  it('recalculates the database row 修改次數 whenever a modification round is added, but only reduces it on an explicit admin delete', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'mod-file-sha' }, commit: { sha: 'mod-commit-sha' } });
+    });
+
+    const first = await api({
+      action: 'addModificationRecord',
+      record: { caseId: '26080001', modifyDate: '2026-08-13', content: '一修內容' }
+    }, token);
+    expect(first).toMatchObject({ ok: true, count: 1, changedTables: ['修改統計表', 'database'] });
+
+    const second = await api({
+      action: 'addModificationRecord',
+      record: { caseId: '26080001', modifyDate: '2026-08-14', content: '二修內容' }
+    }, token);
+    expect(second).toMatchObject({ ok: true, count: 2 });
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const afterAdd = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(afterAdd.tables.database.rows.find(row => row['案件編號'] === '26080001')?.['修改次數']).toBe('2');
+
+    const deleted = await api({
+      action: 'adminTableDelete',
+      table: '修改統計表',
+      rowNumber: 3
+    }, token);
+    expect(deleted).toMatchObject({ ok: true, changedTables: ['修改統計表', 'database'] });
+
+    const afterDelete = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(afterDelete.tables.database.rows.find(row => row['案件編號'] === '26080001')?.['修改次數']).toBe('1');
+  });
+
+  it('drops the deprecated 時間標記 header while keeping 修改次數 in adminTables, and filters adminTableRows by structured field match', async () => {
+    const token = await login();
+    const tables = await api({ action: 'adminTables' }, token);
+    const databaseHeaders = ((tables.tables as Record<string, { headers: string[] }>).database).headers;
+    expect(databaseHeaders).not.toContain('時間標記');
+    expect(databaseHeaders).toContain('修改次數');
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.push({ '案件編號': '26080002', '客戶別': '測試客戶', '狀態': '過稿中' });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    const filtered = await api({ action: 'adminTableRows', table: 'database', filters: { '狀態': '過稿中' } }, token);
+    expect((filtered.rows as Record<string, unknown>[]).map(row => row['案件編號'])).toEqual(['26080002']);
+    expect(filtered.total).toBe(1);
+
+    const unfiltered = await api({ action: 'adminTableRows', table: 'database' }, token);
+    expect(unfiltered.total).toBe(2);
+  });
+
+  it('backs up the database table to the spreadsheet by matching column names only, and rejects when the secret is missing', async () => {
+    const token = await login();
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      expect(String(input)).toBe('https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec');
+      const body = JSON.parse(String(init?.body));
+      expect(body.action).toBe('backupDatabaseTableToSheet');
+      expect(body.serviceKey).toBe('test-database-backup-key');
+      expect(body.primaryKey).toBe('案件編號');
+      expect(body.headers).toContain('修改次數');
+      expect(body.headers).not.toContain('時間標記');
+      expect(body.rows.find((row: Record<string, unknown>) => row['案件編號'] === '26080001')).toBeTruthy();
+      return Response.json({ success: true, matchedColumns: 20, updated: 1, appended: 0, sheetName: 'database', updatedAt: '2026-08-13T09:00:00.000Z' });
+    });
+
+    const result = await api({ action: 'backupDatabaseToSheet' }, token);
+    expect(result).toMatchObject({ ok: true, matchedColumns: 20, updated: 1, appended: 0, sheetName: 'database' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const denied = await api({ action: 'backupDatabaseToSheet' });
+    expect(denied).toMatchObject({ ok: false });
+  });
 });
