@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 917,
+  "revision": 918,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-13T11:07:16.505Z",
+  "updatedAt": "2026-08-13T11:07:46.158Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22405,7 +22405,7 @@
         },
         {
           "部門": "測試專員",
-          "組別": "影音",
+          "組別": "",
           "名字": "設計測試組",
           "顯示名": "設計測試組",
           "帳號": "local:e20d9847-cfa6-4363-8cff-12fb76913661",
