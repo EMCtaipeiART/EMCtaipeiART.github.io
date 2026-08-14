@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1048,
+  "revision": 1049,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T04:06:10.861Z",
+  "updatedAt": "2026-08-14T04:06:24.865Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17432,7 +17432,7 @@
           "階段": "後製",
           "數量": "4",
           "開始日期": "2026/08/07",
-          "結束日期": "2026/08/12",
+          "結束日期": "2026/08/17",
           "設計負責人": "Noise",
           "使用平台": "",
           "填單時間": "2026/08/07 21:44",
