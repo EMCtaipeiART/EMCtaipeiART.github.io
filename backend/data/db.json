@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 999,
+  "revision": 1000,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T01:20:57.792Z",
+  "updatedAt": "2026-08-14T01:21:28.950Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16188,9 +16188,9 @@
           "開始日期": "2026/08/03",
           "結束日期": "2026/08/07",
           "設計負責人": "Amber",
-          "項目細節": "",
+          "項目細節": "素材重置",
           "狀態": "已完成",
-          "加權": "",
+          "加權": "1.5",
           "填單時間": "",
           "時間標記": "",
           "繳交時間": "",
