@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1020,
+  "revision": 1021,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T03:30:09.011Z",
+  "updatedAt": "2026-08-14T03:31:13.850Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19541,9 +19541,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/14 11:30:05",
-          "圖片連結": "[{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q7bVZZ6KGu1ZE7ZphEyrQThHV4AWrKRP=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ePBFgPkpRyuOnKpj5pMzhf56gbsKtOrg=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q7bVZZ6KGu1ZE7ZphEyrQThHV4AWrKRP=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ePBFgPkpRyuOnKpj5pMzhf56gbsKtOrg=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1gjaQ__ueG7EYkO8vZHW6z2JEmURtijLY=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UxdCbNJBNnrw5XPJu-4Ka97Y1fLrgbLZ=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/14 11:30:05"
+          "圖片更新時間": "2026/08/14 11:31:13"
         }
       ]
     },
