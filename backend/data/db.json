@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1037,
+  "revision": 1038,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T03:40:53.490Z",
+  "updatedAt": "2026-08-14T03:41:02.191Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19962,7 +19962,7 @@
           "新專案輪值": "1",
           "篩選年份": "2026",
           "篩選月份": "5 月 , 6 月 , 7 月 , 8 月 , 9 月",
-          "篩選狀態": "執行中 , 過稿中 , 已完成",
+          "篩選狀態": "未開始 , 執行中",
           "篩選姓名": "Noise",
           "選擇": "",
           "案件編號": 1,
