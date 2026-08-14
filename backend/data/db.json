@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 969,
+  "revision": 970,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T01:09:44.686Z",
+  "updatedAt": "2026-08-14T01:10:05.181Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16885,7 +16885,7 @@
           "結束日期": "2026/08/12",
           "設計負責人": "Machi",
           "項目細節": "社群貼文",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "1",
           "填單時間": "2026/08/05 14:17",
           "時間標記": "",
