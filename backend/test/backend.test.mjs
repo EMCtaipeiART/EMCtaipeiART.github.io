@@ -368,7 +368,12 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /前台媒體設定/);
   assert.match(html, /designer-skill-columns/);
   assert.match(html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(html, /designer-skill-editor-head \.btn\{align-self:center/);
+  // 技能列改成單排（名稱｜設計種類｜預設階段｜小型刪除鈕），新增技能按鈕搬到區塊標題列右側。
+  assert.match(html, /designer-skill-editor-head\{display:flex;align-items:flex-start;justify-content:space-between/);
+  assert.doesNotMatch(html, /designer-skill-editor-head \.btn\{align-self:center/);
+  assert.match(html, /designer-skill-row\{display:flex;flex-wrap:wrap/);
+  assert.match(html, /designer-skill-row button\{flex:0 0 34px;width:34px;height:34px/);
+  assert.doesNotMatch(html, /designer-skill-row button\{grid-column:1\/-1;width:100%/);
   assert.match(html, /class="btn danger delete"/);
   assert.match(html, /function designerRotationBoardHtml\(rows\)/);
   assert.match(html, /新專案輪值順序/);

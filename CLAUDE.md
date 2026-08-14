@@ -186,7 +186,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-14 Asia/Taipei（最新）— 資料庫後台「修改統計表」改成專業案件時間軸版面，並合併「補充資料連結」頁面
+### 2026-08-14 Asia/Taipei（最新）— 資料庫後台「設計列表」技能編輯區排版整理：欄位排成一排、刪除鈕縮小、新增技能按鈕歸位、技能區塊改滿版
+
+- 修改目的：使用者回報「設計列表」的技能編輯區排版錯亂——技能名稱／設計種類／預設階段三個欄位沒有排在同一排、刪除技能的按鈕過大（原本是撐滿整排寬度的 32px 高紅框按鈕）、「＋新增技能」按鈕位置很怪，要求整理成同一排、統一框線/選單大小與樣式、按鈕放在合理位置且不要過大；並明確指定「新專案輪值順序」（輪值面板）不需要調整。
+- 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **真正的排版錯亂根因**：「技能與表單預設」這個區塊（`.designer-skill-editor`）跟「基本與輪值設定」「前台媒體設定」一樣，只佔卡片版面 3 欄式 grid（`.designer-admin-body{grid-template-columns:repeat(3,minmax(0,1fr))}`）裡的 1 欄，實際可用寬度只有約 280–380px——技能名稱＋設計種類＋預設階段＋刪除鈕四樣東西，就算把 CSS 改成單排 flex，這麼窄的欄位也塞不下，一定會被迫換行、擠壓變形。這是「該欄排版錯亂」的真正原因，不只是內部欄位排列方式的問題。修法：讓 `.designer-skill-editor`（技能區塊）比照既有的 REELS 區塊（`.designer-admin-section.account-reels-block`，原本就因為同樣理由已經是滿版），一起加進 `grid-column:1/-1` 這條規則，讓技能區塊跳出 3 欄限制、佔滿卡片整列寬度（約 936px，視卡片寬度而定），「基本與輪值設定」「前台媒體設定」兩個區塊維持原本的 2 欄並排不受影響。
+  2. **技能列改成真正的單排**：`designerSkillRowHtml()` 拿掉每個欄位外層的 `<label><span>標籤文字</span>...</label>` 包裝，改成扁平的 `<input>`／`<select>`／`<select>`／`<button>` 四個元素直接排在 `.designer-skill-row` 裡，用 flexbox（`display:flex;flex-wrap:wrap`）＋各自的 `flex-basis`（名稱 2:1:160px、種類與階段各 1:1:110px、刪除鈕固定 34px）排成一排；技能名稱輸入框補上 `aria-label="技能名稱"`（原本用可見的 `<span>` 標籤，拿掉後改用無障礙屬性延續同樣的語意，不影響螢幕閱讀器使用者）。原本已經存在、卻被設成 `display:none` 的欄位標題列 `.designer-skill-columns`（技能名稱／設計種類／預設階段／操作）**這次改成顯示出來**（`display:flex`，用跟資料列相同的 `flex-basis` 比例對齊），讓使用者一眼就知道每一欄是什麼，不用每一列都重複顯示標籤文字（原本重複標籤正是排版擁擠的另一個原因）。
+  3. **刪除技能按鈕縮小、位置合理化**：原本 `.designer-skill-row button{grid-column:1/-1;width:100%;height:32px}`——一個純粹的「×」符號卻撐滿整排寬度、樣子突兀；改成 `width:34px;height:34px`（跟輸入框高度相近的正方形小按鈕），用 `display:grid;place-items:center` 讓「×」置中，放在該列最右側（原本欄位排列的自然位置，不再需要另外佔一整排）。
+  4. **「＋新增技能」按鈕搬到區塊標題列右側**：原本 `.designer-skill-editor-head{flex-direction:column;align-items:stretch}` 讓按鈕整個獨立飄在標題文字下方、置中顯示，跟頁面裡其他區塊「標題在左、操作在右」的既有版面語言（`.designer-admin-section-head`、`.content-head` 等）不一致；改成 `display:flex;align-items:flex-start;justify-content:space-between`（同一排、標題在左、按鈕靠右），跟其他區塊標題列同一種樣式語言。手機窄螢幕（480px 以下）維持原本既有的「按鈕改滿版、疊在標題下方」的響應式行為不變（`@media(max-width:480px)` 那條規則沒有動）。
+  5. **清掉技能相關的響應式斷點重複規則**：720px 這個中間斷點原本針對 `.designer-skill-columns`／`.designer-skill-table`／`.designer-skill-row` 又重新宣告了一次跟基礎規則幾乎一樣（只是 grid 版）的樣式，這次拿掉——改用 flexbox 的 `flex-wrap` 之後，欄位在窄螢幕會自然換行，不需要另外用 media query 手動改成 2 欄 grid；只保留一條 720px 規則把欄位標題列（`.designer-skill-columns`）隱藏起來，因為换行後的資料列跟單排的標題文字對不齊，隱藏比對不齊更清楚。
+  6. **明確沒有更動「新專案輪值順序」**：`designerRotationBoardHtml()`、`.designer-rotation-board`／`.designer-rotation-group`／`.account-rotation-item` 這一整組 class 完全沒有被這次改動觸碰，符合使用者「僅『新專案輪值順序』不需調整」的明確指示。
+- 風險區塊：
+  - 技能區塊改成滿版（`grid-column:1/-1`）之後，它在卡片裡的視覺順序變成：01 基本設定／02 媒體設定（兩者並排半版）→ 03 技能設定（滿版，換到新的一整排）→ REELS（滿版）——跟改動前「01/02/03 三欄並排，REELS 另外滿版換行」的視覺順序不同（03 現在會自己獨立一整排，因為前面 01/02 只占了 2/3 寬、03 這個滿版區塊會被 grid 自動推到下一整行開始）。這是配合「同一排要放得下四個欄位」這個核心需求必然的取捨，使用者沒有另外要求維持三欄並排的外觀。
+  - 拿掉技能欄位的可見文字標籤、改成只在窄螢幕隱藏欄位標題列的設計，代表**視窗寬度剛好落在標題列被隱藏、但資料列本身還沒真正換行到看起來像卡片的中間地帶時**（720px 上下），使用者可能會有一小段時間看不到欄位標題、只能靠輸入框的 placeholder／select 目前選取的值本身來判斷每一欄是什麼——這是刻意的取捨（比起兩種排法在中間寬度打架、對不齊更混亂，選擇單純隱藏標題），多數使用者是在桌面環境（陳述的後台使用情境本來就是桌面優先）操作，這個中間地帶影響有限。
+- 已檢查／驗證方式：
+  - `json_database_admin.html` 主要 `<script>` 區塊用 `new Function()` 語法檢查通過。
+  - `node --test backend/test/*.test.mjs` 26/26 全過——事先 `grep` 過 `backend/test/backend.test.mjs`，找到並更新了鎖住舊版 `.designer-skill-editor-head .btn{align-self:center` CSS 的既有斷言，改成鎖住新的 flex-row 版面與新的按鈕尺寸規則；`designer-skill-columns`／`grid-template-columns:repeat(3,minmax(0,1fr))` 這兩條既有斷言是比對通用字串／別處也會用到的規則，沒有受這次改動影響，維持原樣通過。
+  - **用 1280×800 的 iframe（沿用先前 session 已經記錄過的「主分頁量不到真實視窗尺寸」既有限制與既有解法）做了完整的排版與互動隔離測試**：①用假資料（4 項技能）呼叫 `designerAdminCardHtml()`，第一次測量發現真正生效前技能列寬度只有 280px、欄位確實沒有排在同一排（`fieldsOnSameLine:false`）——**先重現了使用者回報的問題**，證實是欄寬不足，不是單純 CSS 排列方式的問題；套用「技能區塊改滿版」的修正後，重新測量欄寬變成 936px，技能名稱／設計種類／預設階段／刪除鈕四個元素的 `getBoundingClientRect().top` 完全一致（`fieldsOnSameLine:true`），確認真的排在同一排；②欄位標題列（技能名稱／設計種類／預設階段／操作）與資料列實際欄位的 `left` 座標逐一比對，確認對齊（`headerAlignsWithFields:true`）；③刪除鈕量到 34×34px（不再是撐滿整排的大按鈕）；④「＋新增技能」按鈕跟區塊標題確認在同一條水平線上、按鈕在標題右側（`addButtonOnRightOfTitle:true`／`addButtonSameLineAsTitle:true`）；⑤模擬點擊「＋新增技能」／刪除技能兩個既有事件委派邏輯，確認技能列數量正確增減（4→5→4）、新增的技能列同樣是 936px 單排排列、DOM 結構正確是 `INPUT`／`SELECT`／`SELECT`／`BUTTON` 四個扁平元素（不是舊版的 `LABEL` 包裝）；⑥載入正式站真實資料快照（`backend/data/db.json`）跑完整的 `designerAdminHtml()` 產生全部 6 位設計師、共 13 列真實技能資料，確認「新專案輪值順序」面板（`.designer-rotation-board`）正確render、6 個輪值項目正確顯示，第一位真實設計師的技能列同樣是 936px 單排、欄位同一排——用真實資料而不只是假資料再次確認修正有效。
+  - **未做的驗證**：沒有肉眼截圖確認整體視覺效果（這個沙箱環境的截圖工具在這次測試中持續回傳空白畫面，這次改用 `getBoundingClientRect()`／`getComputedStyle()` 逐項數值比對取代，這個環境限制在稍早「修改統計表」那次改版已經記錄過同樣的狀況）；也沒有用真實管理者帳號登入正式站，實際點開「設計列表」某位設計師的卡片，肉眼確認技能區塊、刪除鈕、新增按鈕的實際觀感是否符合「不要過大」的主觀期待，也沒有實際測試中間寬度（約 700-900px 視窗）時欄位標題列隱藏後的實際使用體驗。建議之後有機會用真實帳號登入後台看一次實際畫面。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-14 Asia/Taipei（次新）— 資料庫後台「修改統計表」改成專業案件時間軸版面，並合併「補充資料連結」頁面
 
 - 修改目的：使用者回報「修改統計表」排版不直覺、不易閱讀，要求比照專業企業後台的資料呈現方式調整；同時認為「補充資料連結」（每個案件的 A–D 參考連結）感覺可以一起合併進來，並要求新樣式延續整體既有設計風格，不要另起一套。
 - 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。
