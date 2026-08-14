@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1043,
+  "revision": 1044,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T04:02:38.433Z",
+  "updatedAt": "2026-08-14T04:04:09.654Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -23884,9 +23884,9 @@
         {
           "角色範本": "設計師",
           "頁面權限": "[\"request\",\"dashboard\",\"media_admin\"]",
-          "功能權限": "[\"request.create\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-12 12:37",
-          "更新者": "Machi"
+          "功能權限": "[\"request.create\",\"request.edit\",\"request.status\",\"request.export\",\"modification.create\",\"modification.confirm\",\"project.create\",\"designer.settings\",\"profile.edit\",\"media.manage\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-14 12:04",
+          "更新者": "管理員"
         },
         {
           "角色範本": "一般使用者",
