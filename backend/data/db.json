@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1045,
+  "revision": 1046,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T04:04:50.255Z",
+  "updatedAt": "2026-08-14T04:05:09.201Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17449,7 +17449,7 @@
           "月份": "8月",
           "加權": "8",
           "項目細節": "影音剪輯, 字幕字卡",
-          "修改次數": "0",
+          "修改次數": "1",
           "繳交時間": ""
         },
         {
@@ -19571,6 +19571,16 @@
           "圖片連結": "[{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q7bVZZ6KGu1ZE7ZphEyrQThHV4AWrKRP=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ePBFgPkpRyuOnKpj5pMzhf56gbsKtOrg=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1gjaQ__ueG7EYkO8vZHW6z2JEmURtijLY=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UxdCbNJBNnrw5XPJu-4Ka97Y1fLrgbLZ=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/14 11:31:13"
+        },
+        {
+          "案件編號": "26080043",
+          "修改次數": "1",
+          "建立日期": "2026/08/14 12:05:09",
+          "修改日期": "2026-08-17",
+          "修改內容": "來信更新TOT修改需求， Before需增加\n1、箭頭指標凸顯細菌區域\n2、加上文字\"*紅色螢光部分為細菌殘留\"跟下圖11秒處相同",
+          "修改人": "Noise",
+          "確認修正日": "",
+          "待修改圖片": ""
         }
       ]
     },
