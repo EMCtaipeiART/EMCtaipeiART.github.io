@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1018,
+  "revision": 1019,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T03:29:03.832Z",
+  "updatedAt": "2026-08-14T03:30:05.535Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17923,7 +17923,7 @@
           "月份": "8月",
           "案件編號": "26080060",
           "修改次數": "0",
-          "繳交時間": "",
+          "繳交時間": "2026/08/14 11:30:05",
           "項目細節": "素材重置"
         },
         {
@@ -19531,6 +19531,18 @@
           "圖片連結": "[{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1k9Bv5G3Bmd9CvVVyiIUDrd03eEU8Wn7o=w1600\"},{\"fileName\":\"260813_ANKER_combo1_動態素材_momo_video.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FUjbAPsIPD_Cufl4-uugb-sJQD0pKe50=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/13 17:28:06"
+        },
+        {
+          "案件編號": "26080060",
+          "修改次數": "0",
+          "建立日期": "2026/08/14 11:30:05",
+          "修改日期": "2026/08/14 11:30:05",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/14 11:30:05",
+          "圖片連結": "[{\"fileName\":\"260814_金士頓_Office Rumors Meme_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q7bVZZ6KGu1ZE7ZphEyrQThHV4AWrKRP=w1600\"},{\"fileName\":\"260814_金士頓_Office Rumors Meme_TC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ePBFgPkpRyuOnKpj5pMzhf56gbsKtOrg=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/14 11:30:05"
         }
       ]
     },
