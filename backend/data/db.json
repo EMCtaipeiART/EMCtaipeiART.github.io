@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1028,
+  "revision": 1029,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T03:36:41.955Z",
+  "updatedAt": "2026-08-14T03:36:46.888Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19961,7 +19961,7 @@
           "對話框": "",
           "新專案輪值": "1",
           "篩選年份": "2026",
-          "篩選月份": "6 月 , 7 月 , 8 月 , 9 月",
+          "篩選月份": "5 月 , 6 月 , 7 月 , 8 月 , 9 月",
           "篩選狀態": "未開始 , 執行中 , 過稿中",
           "篩選姓名": "Noise",
           "選擇": "",
