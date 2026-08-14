@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 973,
+  "revision": 974,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T01:11:03.168Z",
+  "updatedAt": "2026-08-14T01:11:20.463Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17506,7 +17506,7 @@
           "案件編號": "26080045",
           "月份": "8月",
           "項目細節": "素材重置, 急件",
-          "設計圖資料夾連結": "專案企劃部/執行中/DJI/FB貼文/2026/8月",
+          "設計圖資料夾連結": "專案企劃部/執行中/DJI/廣告素材/2026/8月",
           "修改次數": "0",
           "繳交時間": "2026/08/13 14:59:29"
         },
