@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1008,
+  "revision": 1009,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T02:16:57.045Z",
+  "updatedAt": "2026-08-14T02:44:53.230Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20032,7 +20032,7 @@
           "篩選年份": "2026",
           "篩選月份": "8 月",
           "篩選狀態": "",
-          "篩選姓名": "Leona",
+          "篩選姓名": "Amber",
           "選擇": "v",
           "案件編號": 1,
           "月份": "",
