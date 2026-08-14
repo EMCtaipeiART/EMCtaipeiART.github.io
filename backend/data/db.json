@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 976,
+  "revision": 977,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T01:11:54.433Z",
+  "updatedAt": "2026-08-14T01:11:57.238Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19477,9 +19477,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 14:59:29",
-          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nhC_wr-T4nbL-OICJAZ5F6ie4-F3Hff-=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oHpS6LjvuC-jt3x5ywCc_NWEFo4ivrEB=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iPCnkMEXV6NG3UU_hO54wxfsn2TTikY2=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HenJP9BR9INdXUMNud2tOixbrsvoks6Y=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIOxY88ocAAvsaH3-lx5Vh7_Y-7WgS-6=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uxqY6DU4eHjmHWksRnD_dxAvMvJfuiKE=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eCc0Za26ayYG_PZiR-BlvOJbrhwKB0sj=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4_v02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mpaPfGbucpvxM7c_2qTtI-KdEMyHXL4A=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wCmRiMtN_PZa-cjqHdeNOPC0hJKEKVQj=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oHpS6LjvuC-jt3x5ywCc_NWEFo4ivrEB=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iPCnkMEXV6NG3UU_hO54wxfsn2TTikY2=w1600\"},{\"fileName\":\"260805_DJI_RS穩定器選購_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HenJP9BR9INdXUMNud2tOixbrsvoks6Y=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bIOxY88ocAAvsaH3-lx5Vh7_Y-7WgS-6=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1uxqY6DU4eHjmHWksRnD_dxAvMvJfuiKE=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eCc0Za26ayYG_PZiR-BlvOJbrhwKB0sj=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4_v02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mpaPfGbucpvxM7c_2qTtI-KdEMyHXL4A=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wCmRiMtN_PZa-cjqHdeNOPC0hJKEKVQj=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/14 09:11:54"
+          "圖片更新時間": "2026/08/14 09:11:57"
         },
         {
           "案件編號": "26070214",
