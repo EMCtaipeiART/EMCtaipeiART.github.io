@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1066,
+  "revision": 1067,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T10:12:56.195Z",
+  "updatedAt": "2026-08-14T10:15:21.612Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17614,7 +17614,7 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "狀態": "未開始",
+          "狀態": "執行中",
           "加權": "",
           "案件編號": "26080049",
           "月份": "8月",
