@@ -7786,7 +7786,7 @@ function handleUploadFrameMessage(event){
     closeUploadModal({refreshUserAvatar:false});
     setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，同步中...`:(count?`已上傳 ${count} 張設計圖，同步中...`:'圖片上傳完成，同步中...'));
     fetchModificationCounts()
-      .then(()=>{render();refreshOpenRevisionModal(id);refreshOpenCaseDetail(id);setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200)})
+      .then(()=>{render();const revisionModalEl=$('#revisionModal');if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}refreshOpenCaseDetail(id);setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200)})
       .catch(err=>setSync(`圖片已上傳，但畫面同步失敗，請重新整理：${err.message}`,true));
     return;
   }

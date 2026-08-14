@@ -136,6 +136,9 @@ async function main() {
         if (upload.skippedByTarget > 0) {
           console.log(`  [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);
         }
+        if (upload.targetFallback) {
+          console.log('  [輪次判斷] PM 指定的待修改圖片檔名這次一個都對不上（可能是設計師存成新檔名），改成把這輪所有待歸類的新檔案都當回覆上傳');
+        }
         if (!upload.uploadedCount) {
           console.log(`  [輪次判斷] 案件已進入第 ${upload.round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`);
         } else {

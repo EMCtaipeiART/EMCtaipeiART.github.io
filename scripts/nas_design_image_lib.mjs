@@ -415,10 +415,25 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   const targetImages = computeTargetImages(dbData, caseId, round);
   let targetedPreviews = pendingPreviews;
   let skippedByTarget = 0;
+  let targetFallback = false;
   if (targetImages) {
     const targetSet = new Set(targetImages);
-    targetedPreviews = pendingPreviews.filter(item => targetSet.has(path.basename(item.relPath)));
-    skippedByTarget = pendingPreviews.length - targetedPreviews.length;
+    const matched = pendingPreviews.filter(item => targetSet.has(path.basename(item.relPath)));
+    if (matched.length) {
+      targetedPreviews = matched;
+      skippedByTarget = pendingPreviews.length - matched.length;
+    } else if (pendingPreviews.length) {
+      // PM 指定的「待修改圖片」檔名，這次資料夾裡的新增/變動檔案一個都對不
+      // 上——最常見的原因是設計師把修好的檔案存成新檔名（例如補上新的日期／
+      // 版本號，跟原始檔名不同），不是真的沒有東西可以上傳。與其讓這一輪永
+      // 遠卡在「偵測到檔案、卻每次都被過濾掉」（狀態快取會把這些檔案標記成
+      // 「還沒歸類」，下次掃描只要檔案內容沒再變動就不會重新判斷成新增，等
+      // 於永久卡住），改成退回「沒有指定清單」的行為，把這輪所有待歸類的新
+      // 檔案都當作這次修改的回覆一併上傳；多傳的檔案之後可以在案件詳情／修
+      // 改紀錄彈窗裡個別刪除，比整輪永遠卡住不上傳更安全。
+      targetFallback = true;
+      skippedByTarget = 0;
+    }
   }
   if (!targetedPreviews.length) {
     return { round, uploadedCount: 0, skippedByTarget, message: '沒有偵測到可上傳的圖片/影片' };
@@ -428,5 +443,5 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   for (const item of targetedPreviews) {
     if (stateFiles[item.relPath]) stateFiles[item.relPath].assignedRound = round;
   }
-  return { round, uploadedCount: uploadResult.count, skippedByTarget, jsonRevision: uploadResult.jsonRevision };
+  return { round, uploadedCount: uploadResult.count, skippedByTarget, targetFallback, jsonRevision: uploadResult.jsonRevision };
 }
