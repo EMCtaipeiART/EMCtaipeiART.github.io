@@ -1728,12 +1728,6 @@
       background:#e7f6ef!important;
       color:#0f5138!important;
     }
-    #loginNewPasswordWrap[hidden]{
-      display:none!important;
-    }
-    #loginChangePassword{
-      margin-right:auto!important;
-    }
     #caseDetailModal,
     #loginModal,
     #designerSettingsModal,
@@ -6603,7 +6597,7 @@
     #loginModal .admin-login-panel input{min-height:38px!important;border-radius:9px!important;border:1px solid #d1d5db!important;font-size:14px!important;font-weight:600!important}
     #loginModal .admin-login-panel button{min-height:38px!important;border-radius:9px!important;font-size:13px!important;font-weight:800!important}
     #loginModal .login-note{margin-top:14px!important;text-align:center;line-height:1.6}
-    #loginModal .login-actions{margin-top:8px!important;justify-content:center!important}
+    #loginPassword{-webkit-text-security:disc!important}
     html[data-theme="dark"] #loginModal .login-card{background:linear-gradient(180deg,#17181a 0%,#101113 100%)!important;border-color:#3a3d42!important}
     html[data-theme="dark"] #loginModal .emc-login-head h3{color:#f1f2f3!important}
     html[data-theme="dark"] #loginModal .emc-login-sub{color:#9a9ea3!important}
@@ -6625,14 +6619,10 @@
     </div>
     <button type="button" class="admin-login-toggle" id="adminLoginToggle">密碼登入</button>
     <div class="admin-login-panel" id="adminLoginPanel" hidden>
-      <input id="loginPassword" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="請輸入密碼">
+      <input id="loginPassword" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" placeholder="請輸入密碼">
       <button type="button" id="adminLoginSubmit">登入</button>
     </div>
-    <input id="loginNewPassword" type="hidden">
-    <label id="loginNewPasswordWrap" hidden>設定新密碼<input type="password" autocomplete="new-password" placeholder="請設定新的密碼"></label>
-    <input id="loginRemember" type="checkbox" checked hidden>
     <div class="login-note" id="loginNote">請使用 @emctaipei.com 公司 Email 登入。</div>
-    <div class="login-actions"><button type="button" class="secondary" id="loginChangePassword" hidden>修改密碼</button></div>
   </form>
 </div>
 <div class="login-modal" id="personalSettingsModal" hidden>
@@ -9549,9 +9539,8 @@ function loginAccountFull(value){const text=String(value||'').trim().toLowerCase
 function loginAccountLocal(value){return String(value||'').trim().replace(new RegExp(`${loginDomain.replace('.','\\.')}$`,'i'),'')}
 function savedLogin(){return {remember:localStorage.getItem('designRequestRememberLogin')==='1',account:localStorage.getItem('designRequestSavedAccount')||'',password:localStorage.getItem('designRequestSavedPassword')||''}}
 function saveLoginPreference(account,password,remember){localStorage.setItem('designRequestRememberLogin',remember?'1':'0'); if(remember){localStorage.setItem('designRequestSavedAccount',account); localStorage.setItem('designRequestSavedPassword',password)}else{localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword')}}
-function showLoginModal(message='',{skipGoogleInit=false}={}){closeFilters(); const modal=$('#loginModal'), account=$('#loginUser'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), remember=$('#loginRemember'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; if(account)account.value=''; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel&&!message)adminPanel.hidden=true; remember.checked=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 @emctaipei.com 公司 Email 登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#loginSubmit')?.focus?.(),50)}
-function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), newPassword=$('#loginNewPassword'), newWrap=$('#loginNewPasswordWrap'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=true; password.value=''; newPassword.value=''; newWrap.hidden=true; if(adminPanel)adminPanel.hidden=true; setLoginNote('請使用 @emctaipei.com 公司 Email 登入。')}
-function showNewPasswordField(message='請輸入目前密碼與新的密碼。'){const newWrap=$('#loginNewPasswordWrap'), newPassword=$('#loginNewPassword'); if(!newWrap)return; newWrap.hidden=false; setLoginNote(message); setTimeout(()=>newPassword?.focus(),40)}
+function showLoginModal(message='',{skipGoogleInit=false}={}){closeFilters(); const modal=$('#loginModal'), password=$('#loginPassword'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=false; password.value=''; if(adminPanel&&!message)adminPanel.hidden=true; if(!message)setGoogleLoginEmail(''); setLoginNote(message||'請使用 @emctaipei.com 公司 Email 登入。'); if(!skipGoogleInit)initGoogleLogin(); setTimeout(()=>$('#loginSubmit')?.focus?.(),50)}
+function hideLoginModal(){const modal=$('#loginModal'), password=$('#loginPassword'), adminPanel=$('#adminLoginPanel'); if(!modal)return; modal.hidden=true; password.value=''; if(adminPanel)adminPanel.hidden=true; setLoginNote('請使用 @emctaipei.com 公司 Email 登入。')}
 function resetGoogleLoginState(account=currentEditorAccount,{revoke=false}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} sessionStorage.removeItem('designRequestGoogleLoginState'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin')}
 function isExpiredEditorSessionError(error){return /TOKEN_EXPIRED|登入狀態已失效|token.*expired/i.test(String(error?.message||error||''))}
 async function verifyStoredEditorToken(){
@@ -10371,7 +10360,6 @@ $('#notificationToastClose')?.addEventListener('click',hideNotificationToast);
 $('#notificationToastLater')?.addEventListener('click',hideNotificationToast);
 $('#notificationToastOpen')?.addEventListener('click',openCurrentNotificationToast);
 $('#loginCancel').onclick=()=>hideLoginModal();
-$('#loginChangePassword')?.addEventListener('click',()=>showNewPasswordField());
 $('#adminLoginToggle')?.addEventListener('click',()=>{const panel=$('#adminLoginPanel'); if(!panel)return; panel.hidden=!panel.hidden; if(!panel.hidden)setTimeout(()=>$('#loginPassword')?.focus(),30)});
 $('#loginModal').addEventListener('click',event=>{if(event.target.id==='loginModal')hideLoginModal()});
 $('#adminLoginSubmit')?.addEventListener('click',()=>startAdminPasswordLogin());

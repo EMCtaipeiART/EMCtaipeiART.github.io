@@ -186,7 +186,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-14 Asia/Taipei（最新）— 資料庫後台「設計列表」技能編輯區排版整理：欄位排成一排、刪除鈕縮小、新增技能按鈕歸位、技能區塊改滿版
+### 2026-08-14 Asia/Taipei（最新）— 前台密碼登入欄位不再觸發瀏覽器「儲存密碼」提示
+
+- 修改目的：使用者回報 `index.html` 登入後瀏覽器還是會跳出「要不要儲存這組密碼」的提示，要求不要再出現。追查後發現 [[2026-08-11 管理者密碼欄位脫離 form submit|2026-08-11 那次修正]] 只解決了「表單送出時密碼欄位是空的」這一半問題，但沒有解決根本原因：Chrome 對於 `type="password"` 的輸入框，**刻意不理會網頁自己設定的 `autocomplete="off"`**（這是 Chrome 從 2014 年（Chrome 34）就有的既定政策，防止網站濫用這個屬性擋掉使用者自己的密碼管理員，官方明確不會為此提供繞過方式）；而且 Chrome 判斷「要不要跳出儲存密碼」的依據，不是只看有沒有觸發傳統表單送出，**也會偵測「使用者在密碼欄位輸入過內容 → 接著頁面出現非同步登入成功的訊號（例如 XHR/fetch 呼叫回應成功）」這種現代 SPA 常見的登入模式**——`startAdminPasswordLogin()` 正好就是這個模式：讀取 `#loginPassword` 的值、清空欄位、呼叫 `verifyEditorLogin()`（一支 fetch）、成功後導向登入完成畫面。就算欄位在「表單送出」當下是空的，Chrome 早就已經記錄「這個分頁的這個密碼欄位剛剛被輸入過東西」，配上後面 fetch 成功的訊號，還是會跳出提示。也就是說，只要 `#loginPassword` 還是 `type="password"`，光靠 `autocomplete`／`data-lpignore`／`data-1p-ignore` 這些屬性從一開始就攔不住 Chrome 內建的密碼管理員（那幾個屬性對 LastPass／1Password 這類第三方密碼管理外掛才有效）。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. **`#loginPassword` 從 `type="password"` 改成 `type="text"`，改用 CSS `-webkit-text-security:disc` 讓輸入內容照樣顯示成圓點遮罩**——這是業界常見用來做「PIN 碼輸入框」的既有技巧：視覺上看起來還是密碼欄位（打字會顯示黑點，不會把密碼用明碼顯示在畫面上，管理者密碼打字時不會被旁人看到），但底層 DOM 型別是 `text`，Chrome 判斷「要不要跳出儲存密碼」的偵測邏輯是綁定在 `type="password"` 這個屬性本身，改成 `text` 之後這整套偵測機制根本不會被觸發，從根源解決問題，而不是繼續在「Chrome 刻意忽略」的 `autocomplete` 屬性上打轉。`-webkit-text-security` 是 WebKit／Blink 專屬的 CSS 屬性（Chrome、Safari、Edge 都支援），Firefox 沒有對應屬性、會直接顯示明碼——這個系統的既有文件（`worker/README.md` 等）多次提到內部主要使用 Chrome／Safari，這個取捨可接受；如果之後真的有人用 Firefox 登入管理者密碼，最多是打字時看得到明碼，不影響功能本身。
+  2. **順手清掉「設定新密碼」這組確認是死代碼的欄位**：`#loginNewPassword`（隱藏的 input）、`#loginNewPasswordWrap`（內含另一個 `type="password"` 的欄位）、`#loginRemember`（一個永遠勾選、從來沒有被讀取過的隱藏checkbox）、`#loginChangePassword`（觸發顯示上述欄位的按鈕，但這顆按鈕本身也是永遠 `hidden`、整個程式碼庫裡沒有任何地方會把它取消隱藏）——這四個元素在 [[2026-08-11 管理者密碼欄位脫離 form submit|上一次處理登入畫面時]] 就已經確認過是舊架構（本機 `local-admin:YYYYMMDD` 繞過機制年代）留下的死代碼，這次一併清除，理由有二：一是常規的「不留死代碼」原則；二是 `#loginNewPasswordWrap` 裡面也是一個 `type="password"` 欄位，就算平常被 `hidden`，Chrome 的密碼管理員在分析頁面時仍然可能把它納入「這是一個變更密碼表單」的判斷依據（这类隐藏欄位常是 Chrome 密碼管理員偵測「change password」表單樣式的訊號之一），拿掉之後可以順便排除這個額外的風險因子，不只是為了乾淨。連帶清掉 `showLoginModal()`／`hideLoginModal()` 裡讀寫這些已刪除欄位的程式碼（避免拿掉 HTML 後這兩個函式因為 `null.value=''` 之類的操作直接報錯損毀整個登入流程）、`showNewPasswordField()` 函式本體（唯一呼叫它的按鈕已經不存在）、以及對應的 CSS 規則（`#loginNewPasswordWrap[hidden]`、`#loginChangePassword`、`#loginModal .login-actions`——最後這條原本專門用來排列「修改密碼」按鈕，該按鈕拿掉後整個 `.login-actions` 容器在登入表單裡也一併移除，這條規則變成無效字串故一併刪除）。
+- 風險區塊：
+  - **這個修法只對 Chrome 內建的密碼管理員有效，改的是「Chrome 判斷這是不是密碼欄位」這個根本前提，不是額外加一層防禦**——理論上應該完全解決使用者回報的問題，但沒辦法涵蓋所有瀏覽器/所有密碼管理外掛可能各自獨立的偵測邏輯（例如某些第三方密碼管理外掛可能改用文字內容特徵、而非 `type` 屬性來判斷欄位性質，這種極端情況這次沒有處理，機率評估很低）。
+  - **Firefox 使用者打管理者密碼時會看到明碼**（`-webkit-text-security` 在 Firefox 上完全沒有效果，等同沒有遮罩）——這是刻意的取捨，這個系統的管理者密碼登入本來就是給極少數內部管理者用的功能，不是一般使用者日常會用到的路徑，且既有文件已多次確認團隊主要用 Chrome／Safari，影響範圍評估很小；如果之後真的需要顧到 Firefox，可以再加一層 JS-based 的字元遮罩（即時把顯示值換成圓點、實際值另外存在別的變數），但這次沒有做到這麼複雜。
+  - **拿掉 `#loginNewPasswordWrap` 等於徹底放棄了「管理者密碼登入面板可以改密碼」這個從未真正上線過的功能入口**——如果之後真的要做「讓管理者自己改密碼」這個功能，需要重新設計整套流程（目前的管理者密碼是 Worker 端固定或每日輪替的 `MMDD`，不是每個使用者各自獨立的密碼，改密碼這個概念在目前架構下語意本來就不完整），這不是這次的範圍，只是誠實記錄這個死代碼移除後，之後如果有人想找回這個入口，需要知道它從一開始其實就沒有真正接上任何後端邏輯。
+- 已檢查／驗證方式：
+  - `index.html` 抽出主要 `<script>` 區塊用 `node --check` 語法檢查通過。
+  - `node --test backend/test/*.test.mjs` 26/26 全過（事先 `grep` 過 `backend/test/`／`worker/test/`，確認沒有任何既有測試字串鎖住這次刪除的欄位 ID 或函式名稱）。
+  - 用本機 Node 靜態伺服器＋ Browser pane，透過 1280×800 的 iframe 做隔離測試：①確認 `#loginPassword` 的 `type` 正確變成 `text`，`getComputedStyle` 確認 `-webkit-text-security` 正確套用 `disc`；②確認 `#loginNewPassword`／`#loginNewPasswordWrap`／`#loginRemember`／`#loginChangePassword` 四個元素在 DOM 裡全部確認不存在；③呼叫 `showLoginModal()`／`hideLoginModal()` 確認都不會因為讀取已刪除的元素而報錯，且彈窗顯示/隱藏狀態正確切換；④完整模擬一次密碼登入流程（點「密碼登入」展開面板→輸入密碼→觸發 `startAdminPasswordLogin()`，攔截 `verifyEditorLogin`／`applyLoginRedirectResult` 等函式）：確認送出前密碼值正確、送出後密碼欄位正確清空、`verifyEditorLogin` 收到正確帳號與密碼、`applyLoginRedirectResult` 正確被觸發；⑤手動對 `#loginForm` 觸發 `submit` 事件，確認不會報錯（表單本來就一律 `preventDefault()`，這次的欄位刪除沒有影響這個既有行為）。
+  - **未做的驗證**：這次的核心訴求（Chrome 是否真的不再跳出「儲存密碼」提示）**沒辦法在這個自動化環境裡驗證**——瀏覽器原生的密碼管理員 UI 是瀏覽器 chrome（介面本身，非頁面內容）層級的提示，不是頁面 DOM 的一部分，自動化測試工具讀不到、也無法觸發。這次的驗證完全建立在「`type="password"` 是 Chrome 判斷要不要跳出儲存密碼提示的已知、有文件記載的必要條件」這個公開技術事實上，加上程式邏輯正確性的隔離測試，但沒有實機在真正的 Chrome 視窗跑一次「輸入管理者密碼→登入成功→確認畫面右上角網址列真的沒有跳出儲存密碼的圖示/提示框」這個端對端流程。強烈建議使用者之後在正式站用 Chrome 實際測一次管理者密碼登入，確認提示真的消失；如果還有殘留，很可能是瀏覽器已經**先前**存過這組密碼（這次修改只能防止「未來」不再被詢問要不要儲存，沒辦法清除「過去」已經存進 Chrome 密碼管理員裡的舊紀錄），需要使用者自行到 `chrome://password-manager/passwords` 找到 `emctaipeiart.github.io` 對應的紀錄手動刪除。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-14 Asia/Taipei（次新）— 資料庫後台「設計列表」技能編輯區排版整理：欄位排成一排、刪除鈕縮小、新增技能按鈕歸位、技能區塊改滿版
 
 - 修改目的：使用者回報「設計列表」的技能編輯區排版錯亂——技能名稱／設計種類／預設階段三個欄位沒有排在同一排、刪除技能的按鈕過大（原本是撐滿整排寬度的 32px 高紅框按鈕）、「＋新增技能」按鈕位置很怪，要求整理成同一排、統一框線/選單大小與樣式、按鈕放在合理位置且不要過大；並明確指定「新專案輪值順序」（輪值面板）不需要調整。
 - 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。
