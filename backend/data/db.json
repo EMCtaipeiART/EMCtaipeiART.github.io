@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1049,
+  "revision": 1050,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T04:06:24.865Z",
+  "updatedAt": "2026-08-14T04:06:53.758Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -12641,7 +12641,7 @@
           "階段": "後製",
           "數量": "1",
           "開始日期": "2026/07/17",
-          "結束日期": "2026/07/24",
+          "結束日期": "2026/08/14",
           "設計負責人": "Noise",
           "項目細節": "影音剪輯, 人聲配樂, 字幕字卡",
           "狀態": "執行中",
