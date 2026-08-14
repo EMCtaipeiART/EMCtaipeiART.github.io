@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 994,
+  "revision": 995,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T01:14:43.839Z",
+  "updatedAt": "2026-08-14T01:14:46.982Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19477,9 +19477,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 14:59:29",
-          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CdxBuJVC2GeOXNPmTEb_AubMsi20QqiO=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_A4_v02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/19TGBUS_NZEEip8SQD3f8yWLI5ILMl0Da=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SsT6WbsJXKYWNMLMeKlQoM1djQXhb3Uq=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260805_DJI_RS穩定器選購_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CdxBuJVC2GeOXNPmTEb_AubMsi20QqiO=w1600\"},{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SsT6WbsJXKYWNMLMeKlQoM1djQXhb3Uq=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/14 09:14:43"
+          "圖片更新時間": "2026/08/14 09:14:46"
         },
         {
           "案件編號": "26070214",
