@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1050,
+  "revision": 1051,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T04:06:53.758Z",
+  "updatedAt": "2026-08-14T04:10:44.948Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20334,7 +20334,7 @@
           "篩選年份": "2026",
           "篩選月份": "7 月 , 8 月",
           "篩選狀態": "",
-          "篩選姓名": "Amber , Machi",
+          "篩選姓名": "Machi , Noise",
           "選擇": "",
           "案件編號": 1,
           "月份": "",
