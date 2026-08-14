@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1019,
+  "revision": 1020,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T03:30:05.535Z",
+  "updatedAt": "2026-08-14T03:30:09.011Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17924,7 +17924,8 @@
           "案件編號": "26080060",
           "修改次數": "0",
           "繳交時間": "2026/08/14 11:30:05",
-          "項目細節": "素材重置"
+          "項目細節": "素材重置",
+          "設計圖資料夾連結": "專案企劃部/執行中/Kingston/社群貼文/2026/8月/260814_金士頓_Office Rumors Meme"
         },
         {
           "客戶別": "ANKER",
