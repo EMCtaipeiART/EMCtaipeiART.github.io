@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1065,
+  "revision": 1066,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T09:25:59.679Z",
+  "updatedAt": "2026-08-14T10:12:56.195Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18010,6 +18010,33 @@
           "修改次數": "0",
           "繳交時間": "",
           "項目細節": "影音剪輯"
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月社群貼文/常態品項Boom Go 3i/颱風季停電應急包(單圖)",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/19",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/14 18:12",
+          "設計簡報說明": "P16",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080064",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080064",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -19850,6 +19877,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/14 12:04"
+        },
+        {
+          "案件編號": "26080064",
+          "A": "https://docs.google.com/presentation/d/1GMUQBhx5PgZMSx4P6see4t4kbhXUQ4k8IgI6K9ny8-E/edit?slide=id.g3f70f413b3d_0_0#slide=id.g3f70f413b3d_0_0",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/14 18:12"
         }
       ]
     },
@@ -25300,6 +25335,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 620,
           "sheetRow": 620
+        }
+      },
+      "1c6329ad-6149-4639-9797-1e3bfec7477f": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 621,
+        "row": {
+          "id": "26080064",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "8月社群貼文/常態品項Boom Go 3i/颱風季停電應急包(單圖)",
+          "owner": "吳冠賢",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/17",
+          "end": "2026/08/19",
+          "designer": "Anna",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/14 18:12",
+          "briefNote": "P16",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080064",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 621,
+          "sheetRow": 621
         }
       }
     }
