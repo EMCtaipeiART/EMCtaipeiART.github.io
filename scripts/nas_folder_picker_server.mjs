@@ -396,34 +396,32 @@ const PICKER_PAGE = `<!doctype html>
     document.getElementById('cancelPromptBtn').addEventListener('click', () => window.close());
   }
 
-  function shrinkWindowOutOfView(){
-    // 備份請求在背景繼續進行，不需要使用者一直盯著這個視窗看——把視窗縮到
-    // 看不到的地方（不是關閉，關閉會讓瀏覽器連帶取消掉還在進行中的備份請
-    // 求），真正的進度改由主頁面右下角的小提示卡片顯示；只有真的發生問題
-    // 時才把視窗還原顯示錯誤提示。部分瀏覽器可能不允許 script 調整視窗大
-    // 小/位置（例如視窗不是由這支頁面自己的 window.open 開啟），失敗就當
-    // 作沒發生，視窗留在原本大小，畫面上的忙碌狀態文字仍會說明現況。
-    try{ window.resizeTo(1, 1); window.moveTo(screen.availWidth, screen.availHeight); }catch(error){}
+  function hideBehindOpener(){
+    // 備份請求在背景繼續進行，不需要使用者一直盯著這個視窗看——不縮小或搬
+    // 動視窗（縮到螢幕角落在部分瀏覽器/視窗管理員下仍會留下一小塊看得到
+    // 的視窗殘影），改成直接把焦點還給原本開啟這個視窗的主頁面分頁，讓瀏
+    // 覽器把這個視窗自然地蓋到主頁面後面、整個看不到；這個視窗本身沒有真
+    // 的關閉，也沒有改變大小/位置，fetch 請求繼續正常進行，真正的進度改
+    // 由主頁面右下角的小提示卡片顯示。只有真的發生問題時才會把這個視窗重
+    // 新叫到前面顯示錯誤提示。如果 opener 已經不在了（例如使用者關掉了主
+    // 頁面分頁）就什麼都不做，視窗留在原本畫面。
+    try{ if(window.opener && !window.opener.closed) window.opener.focus(); }catch(error){}
   }
 
   function restoreWindowForPrompt(){
-    try{
-      window.resizeTo(520, 640);
-      window.moveTo(Math.max(0, (screen.availWidth - 520) / 2), Math.max(0, (screen.availHeight - 640) / 2));
-      window.focus();
-    }catch(error){}
+    try{ window.focus(); }catch(error){}
   }
 
   async function doConfirm(){
-    // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把這個視窗縮到
-    // 看不到的地方，不在這個視窗裡顯示大轉圈畫面。
+    // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁
+    // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。
     if(window.opener){
       window.opener.postMessage({ type: 'machi-nas-folder-backup-started', caseId, nonce, path: relPath }, origin || '*');
     }
     document.getElementById('confirmBtn').disabled = true;
     document.getElementById('cancelBtn').disabled = true;
-    setStatus('背景備份中，可以忽略或縮小這個視窗...', true);
-    shrinkWindowOutOfView();
+    setStatus('背景備份中，可以忽略這個視窗...', true);
+    hideBehindOpener();
     let result = null;
     try{
       const res = await fetch('/api/confirm', {
