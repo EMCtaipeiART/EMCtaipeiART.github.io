@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1059,
+  "revision": 1060,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T07:02:50.631Z",
+  "updatedAt": "2026-08-14T07:02:53.717Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17587,11 +17587,12 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "2",
           "案件編號": "26080048",
           "月份": "8月",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "項目細節": "廣告素材"
         },
         {
           "客戶別": "soundcore",
