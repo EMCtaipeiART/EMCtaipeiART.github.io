@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1006,
+  "revision": 1007,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T02:14:23.053Z",
+  "updatedAt": "2026-08-14T02:14:56.827Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19310,9 +19310,9 @@
           "修改內容": "初稿完成",
           "修改人": "Anna",
           "確認修正日": "2026/08/13 10:54:16",
-          "圖片連結": "[{\"fileName\":\"260810_Liberty-5-Pro規格比較貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lC-BDd-BNczsn_h2Rjfe4AIzv0f__qzG=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260810_Liberty-5-Pro規格比較貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lC-BDd-BNczsn_h2Rjfe4AIzv0f__qzG=w1600\"},{\"fileName\":\"260813_Liberty-5-Pro規格比較貼文_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1YNn_zA2eCQA89zY6LiCBO5wR_gOEq432=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/13 10:54:16"
+          "圖片更新時間": "2026/08/14 10:14:56"
         },
         {
           "案件編號": "26080031",
