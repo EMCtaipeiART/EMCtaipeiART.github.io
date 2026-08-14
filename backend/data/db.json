@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1074,
+  "revision": 1075,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-14T10:20:30.756Z",
+  "updatedAt": "2026-08-14T10:20:39.054Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19658,9 +19658,9 @@
           "修改內容": "初稿完成",
           "修改人": "Amber",
           "確認修正日": "2026/08/14 18:20:30",
-          "圖片連結": "[{\"fileName\":\"260814_金士頓_8月IPC_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/17G-lovqcOYqEI59BOCiQXrXj7M1zDS7z=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260814_金士頓_8月IPC_02.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/17G-lovqcOYqEI59BOCiQXrXj7M1zDS7z=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1jYi9aCf1Q17eUj5thLK1hMevj4o117Mk=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/14 18:20:30"
+          "圖片更新時間": "2026/08/14 18:20:39"
         }
       ]
     },
