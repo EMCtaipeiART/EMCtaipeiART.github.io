@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1084,
+  "revision": 1085,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-16T15:33:25.485Z",
+  "updatedAt": "2026-08-16T15:47:59.466Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18146,6 +18146,33 @@
           "案件編號": "26080068",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月CPAS_PChome24力_電商*4",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "4",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/19",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/16 23:48",
+          "設計簡報說明": "P115~P119",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080069",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080069",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20030,6 +20057,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/16 18:49"
+        },
+        {
+          "案件編號": "26080069",
+          "A": "https://docs.google.com/presentation/d/1gY8A73MYAzZca0tr2M-5ZDVtWgK7pmGTB1Hzw7N6Mvc/edit?slide=id.g3f9a696684f_0_0#slide=id.g3f9a696684f_0_0",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/16 23:47"
         }
       ]
     },
@@ -25648,6 +25683,40 @@
             "sheetRow": 625
           }
         ]
+      },
+      "5f2d4cf8-f024-4eea-9e12-4150cb2b3bfc": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 626,
+        "row": {
+          "id": "26080069",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "8月CPAS_PChome24力_電商*4",
+          "owner": "吳冠賢",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 4,
+          "start": "2026/08/17",
+          "end": "2026/08/19",
+          "designer": "Anna",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/16 23:48",
+          "briefNote": "P115~P119",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080069",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 626,
+          "sheetRow": 626
+        }
       }
     }
   },
