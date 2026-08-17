@@ -186,7 +186,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-14 Asia/Taipei（最新）— 前台密碼登入欄位不再觸發瀏覽器「儲存密碼」提示
+### 2026-08-14 Asia/Taipei（最新）— 移除前台管理者帳號選單「切換一般使用者預覽」與「檢查一般使用者寫入權限」
+
+- 修改目的：使用者要求移除 `index.html` 管理者帳號選單裡的「切換一般使用者預覽」（`adminUserPreview` 模式，登入中的管理者可以切換成「用一般使用者的眼光看畫面」）與「檢查一般使用者寫入權限」（呼叫 Worker 的 `writeAccessCheck` action，回報一般使用者能不能新增案件）這兩項功能。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. **移除選單項目與頂部提示橫幅**：帳號下拉選單拿掉「切換一般使用者預覽」「檢查一般使用者寫入權限」兩顆按鈕，以及原本只用來把這兩顆跟其他選單項目隔開的分隔線 `#adminPermissionDivider`；同時移除切到預覽模式時會出現在畫面最上方的黃色提示橫幅（`#permissionPreviewBanner`，含「返回管理者」按鈕），這個橫幅只有在預覽模式開啟時才會顯示，功能拿掉後這塊 DOM 跟對應的 CSS（含 `.permission-preview-banner` 本體樣式與深色模式覆蓋）都變成永遠用不到的死代碼，一併清除。
+  2. **拔除 `isAdminUserPreview()` 這個貫穿多處判斷的旗標**：`adminUserPreview`（session 狀態，存在 `sessionStorage`）、`isAdminUserPreview()` 函式本身、`setAdminUserPreview()`（切換預覽狀態並重繪畫面）、`renderPermissionPreview()`（畫橫幅內容）全部移除；連帶影響到的既有判斷式全部簡化——`isDesignerLogin()` 原本是 `!isAdminUserPreview()&&accessAllowed(...)`，拿掉前半段只剩 `accessAllowed(...)`；`canOpenDesignDashboard()` 同樣拿掉 `!isAdminUserPreview()&&` 這段；`updateLoginUi()`（登入狀態變動時統一重繪帳號選單/頭像/顯示名等的核心函式）拿掉 `preview` 這個區域變數與所有用到它的地方——包含「帳號名稱旁的副標題」（原本預覽模式會顯示「一般使用者預覽」取代部門名稱，現在一律顯示部門）、「歷史資料庫管理／資料庫後台」兩個選單項目原本除了看權限、還要看「目前是不是在預覽模式」才決定要不要隱藏（`archiveBtn.hidden=!admin||preview`），現在單純看是不是管理者（`!admin`）；`accountArchiveManager`／`accountJsonDatabaseAdmin` 兩個選單項目的點擊事件處理常式，一樣拿掉了 `||isAdminUserPreview())return` 這段守門。
+  3. **移除「檢查一般使用者寫入權限」專用的支援函式**：`checkRegularUserWriteAccess()`（呼叫 `writeAccessCheckUrl()` 組出的網址、用 `jsonp()` 打 Worker 的 `writeAccessCheck` action，結果存進 `regularUserWriteCheck` 並跳 `alert()` 顯示）、`writeAccessCheckUrl()`、`regularWriteStatusText()`（組橫幅裡「可寫入／無法寫入」那行文字）——這三個函式只被這個功能自己使用，確認沒有其他呼叫點後整組移除，不是只藏起來不給點。**這次沒有動 `worker/` 的 `writeAccessCheck` action 本身**——那是 Worker 端既有的一個獨立診斷 API，除了這個前台入口，理論上仍然可以被其他工具（例如手動 `curl`）呼叫來檢查一般使用者權限設定，這次的範圍只限縮在「拿掉前台這個按鈕入口」，不是連 Worker 端的能力都廢掉。
+- 風險區塊：
+  - **這個功能原本是給管理者用來快速驗證「權限設定改完之後，一般使用者真的看得到/看不到、寫得進/寫不進」的除錯工具，拿掉之後管理者要驗證權限設定，只能用一般使用者帳號實際登入測試，或直接看「權限設定」頁籤的設定值本身**——這是使用者明確要求移除的功能，不是這次意外拿掉的，只是誠實記錄一下移除後少了這一條除錯捷徑，之後如果常常需要快速驗證權限設定，可能需要另外想辦法（例如在資料庫後台補一個類似的檢查工具）。
+  - `isDesignerLogin()`／`canOpenDesignDashboard()` 這兩個函式被拿掉的判斷式（`!isAdminUserPreview()&&`）**在正常情況下本來就恆為 `true`**（因為預覽模式關閉時 `isAdminUserPreview()` 一律回傳 `false`），只有「管理者主動切換成預覽模式」時才會是 `false`——這次移除等於直接假設「這個分支再也不會被觸發」，語意上完全對應「拿掉切換預覽模式的唯一入口」這件事，兩者是同一次改動、互相配套，不會出現「入口拿掉了、但判斷式還留著舊分支」這種不一致狀態。
+- 已檢查／驗證方式：
+  - `index.html` 抽出主要 `<script>` 區塊用 `node --check` 語法檢查通過。
+  - `node --test backend/test/*.test.mjs` 26/26 全過（事先確認 `backend/test/`／`worker/test/` 沒有任何測試字串鎖住這次刪除的函式或元素 ID）。
+  - 用本機 Node 靜態伺服器＋ Browser pane，透過 1280×800 的 iframe 做隔離測試：①確認 `#accountPermissionMode`／`#accountWriteCheck`／`#adminPermissionDivider`／`#permissionPreviewBanner`／`#permissionPreviewStatus`／`#permissionPreviewExit` 六個元素在 DOM 裡全部確認不存在；②帳號選單清單只剩 8 個項目（個人設定／設定我的頭像／設計師設定／設計儀表板／短網址工具／歷史資料庫管理／資料庫後台／登出），確認乾淨；③模擬管理者登入狀態呼叫 `updateLoginUi()`，確認不會因為讀取已刪除的元素而報錯，且「歷史資料庫管理」「資料庫後台」正確顯示（不隱藏）；④模擬登出狀態呼叫 `updateLoginUi()`，同樣不報錯，且兩個選單項目正確隱藏；⑤模擬設計師登入狀態，確認 `isDesignerLogin()`／`canOpenDesignDashboard()` 都正確回傳 `true`，證明拿掉 `isAdminUserPreview()` 判斷式後這兩個函式的正常路徑沒有被破壞。
+  - **未做的驗證**：沒有用真實管理者帳號登入正式站，實際確認整個帳號選單畫面外觀（本機測試只驗證 DOM 結構與函式回傳值，沒有肉眼截圖比對）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-14 Asia/Taipei（次新）— 前台密碼登入欄位不再觸發瀏覽器「儲存密碼」提示
 
 - 修改目的：使用者回報 `index.html` 登入後瀏覽器還是會跳出「要不要儲存這組密碼」的提示，要求不要再出現。追查後發現 [[2026-08-11 管理者密碼欄位脫離 form submit|2026-08-11 那次修正]] 只解決了「表單送出時密碼欄位是空的」這一半問題，但沒有解決根本原因：Chrome 對於 `type="password"` 的輸入框，**刻意不理會網頁自己設定的 `autocomplete="off"`**（這是 Chrome 從 2014 年（Chrome 34）就有的既定政策，防止網站濫用這個屬性擋掉使用者自己的密碼管理員，官方明確不會為此提供繞過方式）；而且 Chrome 判斷「要不要跳出儲存密碼」的依據，不是只看有沒有觸發傳統表單送出，**也會偵測「使用者在密碼欄位輸入過內容 → 接著頁面出現非同步登入成功的訊號（例如 XHR/fetch 呼叫回應成功）」這種現代 SPA 常見的登入模式**——`startAdminPasswordLogin()` 正好就是這個模式：讀取 `#loginPassword` 的值、清空欄位、呼叫 `verifyEditorLogin()`（一支 fetch）、成功後導向登入完成畫面。就算欄位在「表單送出」當下是空的，Chrome 早就已經記錄「這個分頁的這個密碼欄位剛剛被輸入過東西」，配上後面 fetch 成功的訊號，還是會跳出提示。也就是說，只要 `#loginPassword` 還是 `type="password"`，光靠 `autocomplete`／`data-lpignore`／`data-1p-ignore` 這些屬性從一開始就攔不住 Chrome 內建的密碼管理員（那幾個屬性對 LastPass／1Password 這類第三方密碼管理外掛才有效）。
 - 影響檔案：`index.html`。
