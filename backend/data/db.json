@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1098,
+  "revision": 1099,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T01:48:35.265Z",
+  "updatedAt": "2026-08-17T01:48:52.905Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -12078,7 +12078,7 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "修改次數": "1"
+          "修改次數": "2"
         },
         {
           "案件編號": "26070119",
@@ -19840,6 +19840,16 @@
           "圖片連結": "[{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_比較_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VtwPKQJzspDe5Ly7PAN0j3i4_T1Jr46e=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_送長輩禮物_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kY3yadfD8C3o_JyWiilq0OOea5GjehWz=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/17 09:07:33"
+        },
+        {
+          "案件編號": "26070118",
+          "修改次數": "2",
+          "建立日期": "2026/08/17 09:48:52",
+          "修改日期": "2026-08-17",
+          "修改內容": "客戶選B版，但情境圖需要改為產品型錄圖，不用對比畫面，另外也需要加上小字，詳細請看：附件。\n再麻煩了，謝謝！",
+          "修改人": "Machi",
+          "確認修正日": "",
+          "待修改圖片": "[\"260717_Epson_EB-L270F_新品上市_02.jpg\"]"
         }
       ]
     },
