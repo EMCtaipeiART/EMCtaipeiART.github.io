@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1189,
+  "revision": 1190,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:57:51.071Z",
+  "updatedAt": "2026-08-17T03:57:57.202Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20445,7 +20445,7 @@
           "新專案輪值": "3",
           "篩選年份": "2026",
           "篩選月份": "7 月 , 8 月 , 9 月",
-          "篩選狀態": "未開始",
+          "篩選狀態": "未開始 , 執行中 , 過稿中",
           "篩選姓名": "Amber",
           "選擇": "v",
           "案件編號": 1,
