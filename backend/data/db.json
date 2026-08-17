@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1269,
+  "revision": 1270,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T08:19:22.768Z",
+  "updatedAt": "2026-08-17T08:19:35.850Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19720,9 +19720,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 08:55:40",
-          "圖片連結": "[{\"fileName\":\"260811_Epson_V4000UV印刷機發表會_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cD32GhET1DC4VmiMMSZn_EgW811TCNQi=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260811_Epson_V4000UV印刷機發表會_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cD32GhET1DC4VmiMMSZn_EgW811TCNQi=w1600\"},{\"fileName\":\"260812_Epson_V4000UV印刷機發表會_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1At938Ff7nPA4Cz_zX62S-El_Kts-ECHY=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 11:29:10"
+          "圖片更新時間": "2026/08/17 16:19:35"
         },
         {
           "案件編號": "26080056",
