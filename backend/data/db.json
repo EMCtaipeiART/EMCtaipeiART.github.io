@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1233,
+  "revision": 1234,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T06:16:14.198Z",
+  "updatedAt": "2026-08-17T06:17:16.954Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16224,7 +16224,7 @@
           "加權": "4",
           "填單時間": "",
           "時間標記": "",
-          "繳交時間": "",
+          "繳交時間": "2026/08/17 14:17:16",
           "使用平台": "",
           "設計簡報說明": "",
           "設計簡報連結": "",
@@ -20059,6 +20059,18 @@
           "圖片連結": "[{\"fileName\":\"260811_eufy_C28_再製_滾筒當道入門首選.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1vYPCwEMJIFJnrfl87WH0s2e6OJ3skf6D=w1600\"},{\"fileName\":\"260811_eufy_C28_新素材_五星口碑狂推.png\",\"url\":\"https://lh3.googleusercontent.com/d/16ia-vSFsUVXNkqdJ_ywFwLQ1IDAv30w6=w1600\"},{\"fileName\":\"260811_eufy_C28_蝦皮_再製_五星口碑狂推.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lWGPuBkkekZCiYUROJM2scgk8QJFSrDV=w1600\"},{\"fileName\":\"260811_eufy_C28_蝦皮_再製_滾筒當道入門首選.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1CnqbaUkRhrbfv9T4gQtwXXujD3ED0kPu=w1600\"},{\"fileName\":\"260811_eufy_E25_再製_見白就休.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yrPKXLDvpQK2nYe04XW8V4K5gyKji6nw=w1600\"},{\"fileName\":\"260811_eufy_E25_再製_閃避界的MVP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KmOVPD8NI4TZpjJIowpLa2HIHy7pk6DZ=w1600\"},{\"fileName\":\"260811_eufy_E25_新素材_只留回憶不留腳印.png\",\"url\":\"https://lh3.googleusercontent.com/d/14jFLx026Bx-Ww83AErBmANdR82I7_vzW=w1600\"},{\"fileName\":\"260811_eufy_S2_新素材_理想生活.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FIYoFezA7SENWQEUxbmfufV5fIX8stwP=w1600\"},{\"fileName\":\"260811_eufy_S2_蝦皮_再製_理想生活.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1VmnV7nenh2Vzasb9zOB4D3MYj-eoKuy9=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/17 14:14:55"
+        },
+        {
+          "案件編號": "26070261",
+          "修改次數": "0",
+          "建立日期": "2026/08/17 14:17:16",
+          "修改日期": "2026/08/17 14:17:16",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/17 14:17:16",
+          "圖片連結": "[{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB.png\",\"url\":\"https://lh3.googleusercontent.com/d/18I8_r01BdIHRZdiNaI5meQ0ekDOqXeYH=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Yu_Og-whSrvITlpHGhP8NCVCguYZgfLs=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12iuaoAtbYFs98wrKbl20lrtgvoMDrnsj=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TZraOQ_m5RYFTWFBRVloEAUDyR-I-FJL=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1fmWL9LCFQbzON6G9T5hv0ViEJPARcowe=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZcskAcoc0KpYczeJGYmMVFNvz6_k2mFR=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hoD8P8sHIlvONIzvBFfzkdo6KXSuooYM=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wOpaSaPYFrhs219PU7qiONfxRC5scrjh=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1BKP1pltlG-UpxmvFRP95TjXVuJsZMDSL=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/17 14:17:16"
         }
       ]
     },
