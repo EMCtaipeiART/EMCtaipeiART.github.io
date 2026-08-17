@@ -186,7 +186,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-17 21:10 Asia/Taipei（最新）— 資料庫後台「設計列表」01/02/03 併列一排、刪除輪值提示、對話框改成長度建議、select／checkbox 跨瀏覽器尺寸統一
+### 2026-08-17 22:05 Asia/Taipei（最新）— 修正「修改紀錄」開著時背景輪詢不會刷新新圖片；案件資料彈窗設計圖記錄改用輪次色標區分；案件列表「初稿」膠囊改白底
+
+- 修改目的：使用者提出三項：①前台「修改紀錄」彈窗裡，案件進入一修後，NAS 背景監控程式會自動把最新修改圖片抓進系統，但圖片沒有正確顯示在「一修」這個欄位裡；②希望「案件資料」彈窗裡的設計圖記錄能清楚區分「初稿」「一修」「二修」等等；③案件列表裡「修改」欄的「初稿」小膠囊樣式改成白色，跟其他修改輪次（灰階漸層）稍微區隔開來。
+- 追查過程：①這一項一開始無法確定是後端「圖片被歸到錯的輪次」還是前端「畫面沒有刷新」，逐一追查 Worker 的 `addCaseDesignImages` action（[worker/src/database-coordinator.ts:1217](worker/src/database-coordinator.ts:1217)）與 NAS 監控程式的 `computeRound()`（[scripts/nas_design_image_lib.mjs:377](scripts/nas_design_image_lib.mjs:377)）邏輯，兩者對「這一輪要歸到哪個修改次數」的判斷是一致的（都是取『修改統計表』目前最大的『修改次數』），也用正式資料庫裡真實案件 `26070118` 核對過（第一輪 2 張圖確實掛在「一修」、第二輪 1 張圖確實掛在「二修」，資料本身沒有錯）；真正的問題出在前端 `index.html` 的背景刷新機制——`refreshLatestInBackground()`（每 6 秒觸發一次，[index.html:9351](index.html:9351)）呼叫的 `loadSheet({background:true})` 在資料同步完成後，雖然會呼叫 `fetchModificationCounts()` 重新抓取每個案件最新的修改紀錄（含圖片），但接下來只呼叫了 `renderNotifications()`，完全沒有呼叫 `refreshOpenRevisionModal()`／`refreshOpenCaseDetail()`——也就是說，如果使用者當下正開著某個案件的「修改紀錄」彈窗，NAS 監控程式在背景把新圖片寫進系統之後，前端確實有抓到最新資料（`modificationRecords` 這個 Map 已經更新），但已經開著的彈窗畫面不會自動重繪，使用者會看不到新圖片，除非手動關閉再重新打開彈窗。这連foreground（非背景）分支的同一段程式碼也一樣缺這個刷新呼叫。用真實案件情境重現：先開啟一個案件的「修改紀錄」彈窗（此時只有「初稿」），接著模擬 NAS 監控程式在背景把「一修」與其圖片寫進 `modificationRecords`，這時候彈窗畫面確實還停留在只有「初稿」的舊畫面（`staleContainsRound1:false`），成功重現使用者回報的現象。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. **背景輪詢後自動刷新已開啟的彈窗**：新增共用函式 `refreshOpenModificationViews()`（[index.html:8574](index.html:8574) 附近），內部呼叫既有的 `refreshOpenRevisionModal($('#revisionModal')?.dataset?.caseId)`（該函式本身已經有「是否為目前開著的那個案件」的判斷，不會誤刷新不相干的畫面）與 `refreshOpenCaseDetail?.($('#caseDetailModal')?.dataset?.caseId)`。`loadSheet()` 裡三個原本呼叫 `fetchModificationCounts(...).then(...)` 的地方（背景輪詢「資料沒變」的早退分支、背景輪詢「資料有變」的分支、前景手動刷新的分支）全部補上呼叫這個共用函式；前景分支原本手動重複寫的 `refreshOpenCaseDetail?.(...)` 一併改用同一個共用函式，避免同一段邏輯散落兩個地方以後改一邊忘記改另一邊。修好之後，只要案件的「修改紀錄」或「案件資料」彈窗開著，背景輪詢（預設每 6 秒一次）一旦抓到新的修改紀錄或圖片，畫面會自動更新，不需要使用者手動關閉重開。
+  2. **「案件資料」彈窗設計圖記錄改用輪次色標區分**：`caseDetailDesignImagesHtml()`（[index.html:7518](index.html:7518)）原本每一輪只用一行 11px 灰字「一修設計圖（N 張）」當標籤，新增 `.case-detail-design-round-badge`——每一輪前面加一個小圓角色標（沿用案件列表「修改」欄同一套 `revisionStyle(count)` 算色邏輯：輪次愈高背景愈深、初稿是白底），文字改成「輪次色標＋設計圖・N 張」，一眼就能分辨這批圖片屬於初稿還是第幾修，不用再逐字讀標籤文字。
+  3. **案件列表「初稿」膠囊改白色**：`revisionStyle(count)`（[index.html:8112](index.html:8112)）新增 `count<=0`（初稿）的特例，直接回傳白底＋一條淺色邊框（`#c9d3cd`，沿用全站慣用的 `--line` 邊框色調）；其餘輪次維持原本「輪次愈高背景愈深、輪次≥5 轉白字」的灰階漸層不變，只是額外多回傳一個 `--revision-border` 自訂屬性（其餘輪次是 `transparent`，維持原本無邊框的樣子）。`.revision-pill` 這個共用樣式（[index.html:44](index.html:44)）補上 `border:1px solid var(--revision-border,transparent)!important`——事先確認過整個檔案裡所有其他覆寫 `.revision-pill` 的規則（`.revision-pill.revision-pending`、`.revision-pill.revision-add`、`#caseDetailModal .revision-pill` 等共 10 幾處）都沒有另外設定 `border`（`#caseDetailModal .revision-pill` 唯一例外是本來就有自己的綠色半透明邊框，因為它的選擇器特異度更高，會繼續蓋過這次新增的樣式，行為不受影響），所以這個新邊框只會在原本沒有邊框的地方（案件列表、案件資料彈窗的「修改」欄位以外）生效，不會跟既有規則打架。因為「設計圖記錄」的色標（上一點新增）跟這裡共用同一套 `revisionStyle()`，白底＋邊框的初稿樣式會在案件列表跟案件資料彈窗兩處自動保持一致，不用維護兩份配色邏輯。
+- 風險區塊：
+  - 背景輪詢現在每次都會額外呼叫 `refreshOpenRevisionModal`／`refreshOpenCaseDetail`，但這兩個函式內部本來就有「彈窗是否開著、是不是同一個案件」的守門判斷，沒有彈窗開著時呼叫成本極低（幾個 DOM 查詢＋提前 return），不會造成明顯的效能負擔或不必要的重繪；已經用程式碼確認彈窗關閉時呼叫這個新函式完全不會拋出例外。
+  - 「初稿」改白底之後，理論上跟頁面本身的白色背景（案件列表奇數列、部分卡片底色）沒有邊框就會融在一起看不出來是個膠囊——這正是這次特別加上淺色邊框的原因，已經用電腦運算後的樣式數值確認邊框顏色（`rgb(201,211,205)`）確實有套用上去，不是只有白底看起來像空白。
+  - 這次沒有動 NAS 監控程式（`scripts/nas_design_image_lib.mjs`）或 Worker（`worker/src/database-coordinator.ts`）——追查後確認圖片歸屬輪次的判斷邏輯本身沒有問題（用正式資料庫裡真實案件核對過），問題完全出在前端畫面沒有跟著背景資料更新重繪，這次修正的範圍精準對應到真正的根因，沒有動到已經運作正常的部分。
+- 已檢查／驗證方式：
+  - `<script>` 主要區塊用 `new Function()` 語法檢查通過。
+  - `node --test backend/test/*.test.mjs`：25/26 通過，1 個失敗（`archive snapshot and dashboard use JSON database sources only`）——已確認這個失敗跟這次改動無關，是這次工作階段稍早 `git rebase origin/main` 拉入多筆自動化資料同步 commit 後，本機的 `data/database_archive.json` 快照跟最新的 `backend/data/db.json` 產生落差（正式站由 GitHub Actions 在每次 push 後自動重新產生這份快照，本機沒有另外重跑那支腳本），用 `git stash` 暫時移除這次的程式碼改動、在完全相同的既有 commit 上重跑同一份測試，同樣的斷言依然失敗，證明是既有資料落差、不是這次程式碼改動造成的迴歸；也已確認 `backend/test/backend.test.mjs` 沒有任何斷言鎖住這次改動到的 `revisionStyle`／`.case-detail-design-images-label`／`.revision-pill` 相關字串。
+  - 用本機 Node 後台＋ Browser pane 對 `index.html` 做隔離測試（直接在頁面全域作用域呼叫函式，不需要先登入，因為這些都是非 module `<script>` 的頂層函式宣告）：①`revisionStyle(0)` 正確回傳白底＋`rgb(201,211,205)` 邊框，`revisionStyle(1)`／`revisionStyle(2)`／`revisionStyle(5)` 維持原本灰階漸層且邊框為透明，套進真實的 `.revision-pill` 按鈕後用 `getComputedStyle` 逐一核對背景色／文字色／邊框都正確；②`caseDetailDesignImagesHtml()` 餵入假的三輪修改紀錄（初稿 1 張、一修 2 張、二修 1 張），確認渲染出三個色標且顏色分別對應白底／中灰／深灰，文字正確顯示「設計圖・N 張」，排序新到舊（二修→一修→初稿）；③**完整重現並驗證修好使用者回報的核心問題**：先呼叫 `openRevisionModal()` 開啟某案件「修改紀錄」彈窗（此時只有初稿一筆紀錄），接著直接竄改 `modificationRecords`／`modificationCounts`（模擬背景輪詢已經抓到 NAS 監控程式新寫入的一修圖片，但畫面還沒重繪），確認此時彈窗內容確實還是舊的（`staleContainsRound1:false`，重現 bug），呼叫新增的 `refreshOpenModificationViews()` 後，彈窗正確重繪並顯示「一修」與對應的圖片（`afterContainsRound1:true`、`afterContainsRound1Image:true`）；④確認彈窗關閉狀態下呼叫 `refreshOpenModificationViews()` 不會拋出例外、也不會意外把彈窗打開。
+  - **未做的驗證**：沒有用真實的 NAS 監控程式、真實 Cloudflare Worker、真實瀏覽器背景分頁跑一次完整的端對端流程（設計師改檔名→背景監控程式偵測到新圖→實際等 6 秒背景輪詢觸發→肉眼確認開著的彈窗真的自動跳出新圖片），這次的驗證是直接呼叫程式內部函式模擬資料變化，沒有真的觸發 `setInterval(refreshLatestInBackground,6000)` 這個計時器本身；也沒有肉眼截圖比對白色初稿膠囊與色標徽章的實際視覺效果（這次環境的截圖工具在測試過程中持續回傳空白畫面，前幾次修改也記錄過同樣的環境限制，改用 `getComputedStyle` 逐項數值驗證取代）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-17 21:10 Asia/Taipei — 資料庫後台「設計列表」01/02/03 併列一排、刪除輪值提示、對話框改成長度建議、select／checkbox 跨瀏覽器尺寸統一
 
 - 修改目的：使用者一次提出四項針對「設計列表」帳號卡片的調整：①把卡片裡「01 基本與輪值設定／02 前台媒體設定／03 技能與表單預設」三個區塊排在同一排；②刪除 01 區塊裡「目前輪值順序」這行提示文字（輪值已經有獨立的拖曳面板，這行是多餘的重複提示）；③把「前台對話框」欄位的說明文字縮短，改成明確建議輸入 15–18 個字元；④修正 `<select>` 下拉選單與核取方塊在不同瀏覽器（特別是 Safari 下拉選單框看起來過扁）尺寸呈現不一致的問題。
 - 影響檔案：`json_database_admin.html`。
