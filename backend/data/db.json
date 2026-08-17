@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1096,
+  "revision": 1097,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T01:47:15.108Z",
+  "updatedAt": "2026-08-17T01:48:27.614Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19018,7 +19018,10 @@
           "修改日期": "2026/7/27",
           "修改內容": "1.左邊拿掉?，畫面不要全暗(加個對比''VS''  )\n2.右邊投影機投影機一樣懸掛式呈現，可直接用型錄上的圖",
           "修改人": "朱祖翎",
-          "確認修正日": "2026/07/27"
+          "確認修正日": "2026/07/27",
+          "圖片連結": "[{\"fileName\":\"260717_Epson_EB-L270F_新品上市_01.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1iH65TkCDN0L31rQeBo4TXN9ZG8hSbaZ2=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/17 09:48:27"
         },
         {
           "案件編號": "26070137",
