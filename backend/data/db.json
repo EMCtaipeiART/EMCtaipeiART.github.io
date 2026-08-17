@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1290,
+  "revision": 1291,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T10:12:56.672Z",
+  "updatedAt": "2026-08-17T10:12:59.853Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17702,11 +17702,12 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "2",
           "案件編號": "26080052",
           "月份": "8月",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "項目細節": "廣告素材"
         },
         {
           "客戶別": "ANKER",
