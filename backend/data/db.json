@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1101,
+  "revision": 1102,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T01:49:11.532Z",
+  "updatedAt": "2026-08-17T01:49:55.596Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19847,12 +19847,12 @@
           "建立日期": "2026/08/17 09:48:52",
           "修改日期": "2026-08-17",
           "修改內容": "客戶選B版，但情境圖需要改為產品型錄圖，不用對比畫面，另外也需要加上小字，詳細請看：附件。\n再麻煩了，謝謝！",
-          "修改人": "Machi",
+          "修改人": "朱祖翎",
           "確認修正日": "2026/08/17 09:49:08",
-          "待修改圖片": "[\"260717_Epson_EB-L270F_新品上市_02.jpg\"]",
           "圖片連結": "[{\"fileName\":\"260817_Epson_EB-L270F_新品上市_03.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1vf4_WdRLIC0X98zhFQLOxu8Zbu5xJio1=w1600\"}]",
           "圖片來源": "manual-upload",
-          "圖片更新時間": "2026/08/17 09:49:11"
+          "圖片更新時間": "2026/08/17 09:49:11",
+          "待修改圖片": "[\"260717_Epson_EB-L270F_新品上市_02.jpg\"]"
         }
       ]
     },
