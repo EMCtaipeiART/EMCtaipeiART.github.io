@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1306,
+  "revision": 1307,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T10:52:20.671Z",
+  "updatedAt": "2026-08-17T10:53:18.336Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18521,7 +18521,7 @@
         },
         {
           "客戶別": "soundcore",
-          "專案名稱": "8月CPAS_蝦皮商城日_ANKER館_電商*3",
+          "專案名稱": "8月CPAS_蝦皮商城日_ANKER館_電商*4",
           "專案負責人": "吳冠賢",
           "設計種類": "平面",
           "階段": "後製",
