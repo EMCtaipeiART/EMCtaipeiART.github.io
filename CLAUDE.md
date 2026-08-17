@@ -186,7 +186,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-17 15:00 Asia/Taipei（最新）— 新增 Gmail API 整合：案件可直接用 Gmail 寄信、在頁面內查看信件串並回信（限該案件寄出的那封信）
+### 2026-08-17 21:10 Asia/Taipei（最新）— 資料庫後台「設計列表」01/02/03 併列一排、刪除輪值提示、對話框改成長度建議、select／checkbox 跨瀏覽器尺寸統一
+
+- 修改目的：使用者一次提出四項針對「設計列表」帳號卡片的調整：①把卡片裡「01 基本與輪值設定／02 前台媒體設定／03 技能與表單預設」三個區塊排在同一排；②刪除 01 區塊裡「目前輪值順序」這行提示文字（輪值已經有獨立的拖曳面板，這行是多餘的重複提示）；③把「前台對話框」欄位的說明文字縮短，改成明確建議輸入 15–18 個字元；④修正 `<select>` 下拉選單與核取方塊在不同瀏覽器（特別是 Safari 下拉選單框看起來過扁）尺寸呈現不一致的問題。
+- 影響檔案：`json_database_admin.html`。
+- 影響功能：
+  1. **01/02/03 併列一排**：`.designer-admin-body{grid-template-columns:repeat(3,minmax(0,1fr))}` 這個 3 欄 grid 本來就存在，但 `.designer-skill-editor`（03 技能與表單預設）先前跟 REELS 區塊一起被設成 `grid-column:1/-1` 強制跨滿整列，導致 03 永遠自己另起一行、01/02 只排半排。這次把 `designer-skill-editor` 從這條跨欄規則中拿掉，只留 `account-reels-block` 繼續跨滿整列——01/02/03 現在會在夠寬的畫面（>1180px）上排在同一排，各佔 1/3 寬度；技能列（技能名稱／設計種類／預設階段／刪除鈕）原本就有 `flex-wrap:wrap`，欄位變窄時會自動換行，不會破版；1180px 以下仍沿用既有的「全部區塊各自佔滿一整排」響應式規則，不受影響。連帶把一直以來只在窄螢幕（≤720px）才隱藏的技能欄位標題列（技能名稱／設計種類／預設階段／操作）改成預設就隱藏——這排標題原本設計是給滿版單排配置用的，欄寬縮到 1/3 後標題文字位置會對不齊換行後的欄位，且每個輸入框本來就有 `aria-label`，隱藏標題不影響輔助技術使用者。
+  2. **刪除「目前輪值順序」提示**：`designerAdminCardHtml()` 移除 `<div class="designer-rotation-card-summary">目前輪值順序／第 N 位／請在上方輪值面板拖曳調整</div>` 這個區塊；保留 `<input type="hidden" data-designer-field="rotation">` 不動（`designerProfileFromCard()` 儲存時仍然讀這個隱藏欄位，卡片本身不再需要重複顯示輪值數字，因為卡片最上方的 `<div class="designer-admin-meta">` 本來就已經有「輪值第 N 位」這行摘要，加上獨立的輪值面板本身就能看到與調整順序，這行提示純屬重複）。因為這個 class 只在這一處被使用，順手把對應的 `.designer-rotation-card-summary` 系列 CSS 規則一併移除，不留死代碼。
+  3. **「前台對話框」改成長度建議**：`placeholder` 從「輸入顯示於設計師海報上的短句」簡化成「輸入海報短句」，新增 `help:'建議 15–18 字，避免海報顯示過長。'` 顯示在欄位下方，並加上 `maxlength="18"`（`designerAdminField()` 新增 `maxlength` 參數支援）。加這個上限前已經先查過目前正式資料庫「設定」表裡所有已填的「對話框」內容，最長的一筆是 15 字，加上 18 字上限不會截斷任何既有資料。
+  4. **select／checkbox 跨瀏覽器尺寸一致**：新增一條合併選擇器規則，涵蓋這個頁面所有出現 `<select>` 的情境（工具列篩選、權限範本、新增設計師、01 區塊設計組別、帳號欄位共用樣式、技能列、加權分數編輯器），統一加上 `-webkit-appearance:none;-moz-appearance:none;appearance:none`——Safari 的原生下拉選單（`menulist` 外觀）在計算方框高度時會優先採用系統原生尺寸、常常忽略 CSS 設定的 `height`／`padding`，因此即使跟 Chrome 用同一份 CSS，Safari 看起來仍會比較「扁」；拿掉原生外觀樣式後，改由 CSS 的 `height`／`padding`／`box-sizing:border-box` 全權決定方框大小，兩種瀏覽器計算方式一致。拿掉原生外觀會連帶失去系統內建的下拉箭頭圖示，所以另外用 CSS `background-image` 加回一個手繪的小箭頭（沿用專案既有的「SVG 轉 `data:` URI」慣例，且比照 `initialsAvatar()` 已經在用的 `encodeURIComponent` 编碼方式，避免把未編碼的 `xmlns='http://www.w3.org/2000/svg'` 這類字串直接寫進頁面——`backend/test/backend.test.mjs` 有一條既有測試專門擋這個字串，是先前修帳號頭像備援圖示、因為未編碼字串在 HTML 屬性裡跟外層引號衝突而留下的既有規則，這次先用 `node -e` 手動跑過一次 `encodeURIComponent` 產生正確的百分比編碼字串再貼進 CSS，繞開同一個坑，也符合這個檔案既有的編碼慣例）。核取方塊（權限清單、帳號選擇、欄位排序清單三處）原本各自宣告 15px／16px 不完全一致的尺寸，統一成 16×16px，並新增 `box-sizing:border-box`、`margin:0`、`flex:0 0 auto`，避免 Safari 預設的方框邊距與 flex 收縮行為造成視覺上比 Chrome 略小。
+- 風險區塊：
+  - 01/02/03 併列一排後，桌面寬螢幕（>1180px）下技能列的可用欄寬只剩約 300px，四個欄位（技能名稱／設計種類／預設階段／刪除鈕）不一定能排在同一行內，會依賴既有的 `flex-wrap:wrap` 自動換成兩行——這是配合這次「三區塊併排」明確需求的必然取捨，換行本身不影響資料填寫或儲存，只是視覺上不再是單排。
+  - `maxlength="18"` 只限制往後在這個欄位新輸入的字數，不會截斷或修改任何既有已經存在資料庫裡、超過 18 字的舊資料（目前查證沒有這種資料，但即使未來因為其他管道寫入了更長的內容，這個上限也只會擋住透過這個表單「繼續加長」，不會自動裁切既有內容）。
+  - 拿掉 `<select>` 的原生外觀後，改用 CSS 背景圖模擬下拉箭頭；如果之後有人新增其他 `<select>` 元素卻沒有掛進這次新增的合併選擇器清單裡，該欄位會維持 `appearance:none` 之前的樣子還是普通瀏覽器樣式差異，不會統一——不是這次新增了風險，是延續原本「每個 select 各自要在對應的 CSS 規則裡出現才吃得到共用樣式」的既有結構，只是這次至少把目前所有找得到的 select 出現位置都涵蓋了。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` 26/26 全過（改動前已經 `grep` 過測試檔案，確認沒有任何既有斷言鎖住被刪除的 `.designer-rotation-card-summary`／「目前輪值順序」字串；也確認到既有測試 `assert.doesNotMatch(html, /xmlns='http:\/\/www\.w3\.org\/2000\/svg'/)` 會擋住未編碼的 SVG data URI，因此改用 `encodeURIComponent` 編碼後的版本，重新跑測試後確認轉綠燈）。
+  - `<script>` 主要區塊用 `new Function()` 語法檢查通過。
+  - 啟動本機 Node 後台（`node backend/server.mjs`），用 Browser pane 載入 `json_database_admin.html`，繞過登入流程、直接在頁面全域作用域呼叫 `designerAdminCardHtml()`／`designerRotationBoardHtml()`／`weightEditorHtml()`／`permissionCheckbox()`／`accountChoice()`（這些函式都是非 module `<script>` 裡的頂層宣告，會掛在 `window` 上，可以在瀏覽器 console 直接呼叫，不需要先登入）注入假資料後量測實際渲染結果：①01／02／03 三個區塊的 `getBoundingClientRect()` 確認 `top` 座標完全一致（同一排）、寬度均分為 311px；REELS 區塊（04）確認維持在下一整排、寬度跨滿；②確認 `.designer-rotation-card-summary` 不存在於渲染結果、頁面文字不再包含「目前輪值順序」；③確認「前台對話框」欄位的 `placeholder`／`maxlength`／`help` 文字皆正確；④確認 01 區塊設計組別 select、技能列 select、輪值面板、加權分數編輯器 select 的 `getComputedStyle` 皆正確顯示 `appearance:none`、`box-sizing:border-box`、對應的 `background-image` 已套用；⑤確認兩種核取方塊（權限清單、帳號選擇）的 `getComputedStyle` 皆為 16×16px、`box-sizing:border-box`、`margin:0`。
+  - **未做的驗證**：這個環境沒有真正的 Safari 可以實機比對「過扁」問題修好前後的視覺差異，這次的驗證完全依賴「拿掉原生 `appearance` 交由 CSS 全權決定尺寸」這個已知、有文件記載的跨瀏覽器技巧，加上程式邏輯與電腦運算後的樣式數值驗證，沒有肉眼在真正的 macOS Safari 視窗裡比對過前後差異；也沒有用真實管理者帳號登入正式站，實際點開「設計列表」某位設計師的卡片，肉眼確認排版與新箭頭圖示的實際觀感。建議之後有機會在 Safari 實機看一次確認。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-17 15:00 Asia/Taipei — 新增 Gmail API 整合：案件可直接用 Gmail 寄信、在頁面內查看信件串並回信（限該案件寄出的那封信）
 
 - 修改目的：使用者要求「發信」不要只停在開新分頁到 Gmail 網頁版讓人手動送出，而是要能真正彈出 Gmail、直接寄信，也要能直接回信，不用離開系統。跟使用者確認三個關鍵前提後才動手：①`emctaipei.com` 是 Google Workspace 企業帳號，OAuth 同意畫面可以設成 Internal，`gmail.send`／`gmail.readonly` 這類敏感範圍能跳過 Google 應用程式驗證審查；②「回信」範圍只鎖定該案件寄出的那一封信（不是完整收件匣瀏覽），大幅縮小 OAuth 範圍與資料模型複雜度；③Google Cloud Console 設定（啟用 Gmail API、加範圍、拿 Client Secret）由使用者自己執行，我沒有帳號權限代勞。這次先用 `EnterPlanMode` 走了完整規劃流程（含兩個平行 Explore agent 分別調查 Worker 的 session／OAuth 既有模式與前端的發信／彈窗／schema 既有模式），確認可以整套沿用既有的 ERP PKCE 登入範本、`sessions`/`local_password_accounts` 這類 DO 內建 SQL 表模式、`request.mail` 這個已經存在但一直沒有真正被任何 action 檢查的權限，才落地實作，避免另外發明一套新機制。
 - 影響檔案：`backend/schema.mjs`、`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`worker/wrangler.jsonc`、`worker/vitest.config.ts`、`worker/test/index.test.ts`、`index.html`。
