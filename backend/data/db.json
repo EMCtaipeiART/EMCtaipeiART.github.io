@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1277,
+  "revision": 1278,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T08:58:03.468Z",
+  "updatedAt": "2026-08-17T09:01:08.529Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18405,6 +18405,33 @@
           "案件編號": "26080077",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "DJI",
+          "專案名稱": "廣告素材_Osmo 360 II新素材",
+          "專案負責人": "李明庭",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "5",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/20",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/17 17:01",
+          "設計簡報說明": "設計示意圖",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080078",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080078",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20534,6 +20561,14 @@
           "C": "https://www.instagram.com/p/DZpNB8VDsmo/",
           "D": "",
           "更新時間": "2026/08/17 13:03"
+        },
+        {
+          "案件編號": "26080078",
+          "A": "https://docs.google.com/presentation/d/1nX_hSacXIEnwUkzBULy-VN5NxQYX747VJ-xzrNngn30/edit?usp=sharing",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/17 17:01"
         }
       ]
     },
@@ -26457,6 +26492,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 634,
           "sheetRow": 634
+        }
+      },
+      "f35ef819-4071-4247-bf20-2dd932a48f90": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 635,
+        "row": {
+          "id": "26080078",
+          "month": "8月",
+          "client": "DJI",
+          "project": "廣告素材_Osmo 360 II新素材",
+          "owner": "李明庭",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 5,
+          "start": "2026/08/17",
+          "end": "2026/08/20",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/17 17:01",
+          "briefNote": "設計示意圖",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080078",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 635,
+          "sheetRow": 635
         }
       }
     }
