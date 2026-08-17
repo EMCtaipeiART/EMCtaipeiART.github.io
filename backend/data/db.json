@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1159,
+  "revision": 1160,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:52:40.879Z",
+  "updatedAt": "2026-08-17T03:52:43.597Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -8120,7 +8120,7 @@
           "結束日期": "2026/07/15",
           "設計負責人": "Amber",
           "項目細節": "美術設計",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "7",
           "填單時間": "",
           "時間標記": "",
