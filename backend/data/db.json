@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1279,
+  "revision": 1280,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T09:02:48.948Z",
+  "updatedAt": "2026-08-17T09:13:36.179Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18410,9 +18410,9 @@
           "客戶別": "DJI",
           "專案名稱": "廣告素材_Osmo 360 II新素材",
           "專案負責人": "李明庭",
-          "設計種類": "平面",
+          "設計種類": "影音",
           "階段": "後製",
-          "數量": "5",
+          "數量": "3",
           "開始日期": "2026/08/17",
           "結束日期": "2026/08/20",
           "設計負責人": "Machi",
