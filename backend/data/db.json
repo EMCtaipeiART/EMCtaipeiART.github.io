@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1284,
+  "revision": 1285,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T09:16:14.084Z",
+  "updatedAt": "2026-08-17T09:20:10.627Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21220,7 +21220,7 @@
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
           "收合設計需求": "",
-          "深淺模式": "淺色"
+          "深淺模式": "深色"
         },
         {
           "部門": "專案部",
