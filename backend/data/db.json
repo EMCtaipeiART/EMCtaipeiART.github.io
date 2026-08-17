@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1286,
+  "revision": 1287,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T09:20:54.658Z",
+  "updatedAt": "2026-08-17T09:31:05.480Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18459,6 +18459,33 @@
           "案件編號": "26080079",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "ANKER",
+          "專案名稱": "9月CPAS_momo_全館促銷_流量",
+          "專案負責人": "羅珮云",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "3",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/19",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/17 17:31",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080080",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -26595,6 +26622,40 @@
           "designImageFolderUrl": "",
           "_sheetRow": 636,
           "sheetRow": 636
+        }
+      },
+      "7fa6b540-0692-4a65-9c70-1a032d131256": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 637,
+        "row": {
+          "id": "26080080",
+          "month": "8月",
+          "client": "ANKER",
+          "project": "9月CPAS_momo_全館促銷_流量",
+          "owner": "羅珮云",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 3,
+          "start": "2026/08/17",
+          "end": "2026/08/19",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/17 17:31",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "_sheetRow": 637,
+          "sheetRow": 637
         }
       }
     }
