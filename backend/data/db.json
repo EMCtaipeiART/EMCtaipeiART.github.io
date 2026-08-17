@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1317,
+  "revision": 1318,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T11:47:01.429Z",
+  "updatedAt": "2026-08-17T11:47:18.520Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21242,7 +21242,7 @@
           "對話框": "",
           "新專案輪值": "",
           "篩選年份": "2026",
-          "篩選月份": "7 月 , 8 月",
+          "篩選月份": "8 月",
           "篩選狀態": "",
           "篩選姓名": "Machi",
           "選擇": "",
