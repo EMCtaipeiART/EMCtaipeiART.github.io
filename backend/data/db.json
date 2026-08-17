@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1299,
+  "revision": 1300,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T10:44:55.498Z",
+  "updatedAt": "2026-08-17T10:49:45.479Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18490,6 +18490,60 @@
           "案件編號": "26080080",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月CPAS_蝦皮商城日_soundcore館_電商*3",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "3",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/20",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/17 18:49",
+          "設計簡報說明": "P122~P125",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080081",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080081",
+          "修改次數": "0",
+          "繳交時間": ""
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月CPAS_蝦皮商城日_ANKER館_電商*3",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "4",
+          "開始日期": "2026/08/17",
+          "結束日期": "2026/08/20",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/17 18:49",
+          "設計簡報說明": "P126~P130",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080082",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080082",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20647,6 +20701,22 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/17 17:14"
+        },
+        {
+          "案件編號": "26080081",
+          "A": "https://docs.google.com/presentation/d/1gY8A73MYAzZca0tr2M-5ZDVtWgK7pmGTB1Hzw7N6Mvc/edit?slide=id.g3f73bc0e44e_1_32#slide=id.g3f73bc0e44e_1_32",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/17 18:49"
+        },
+        {
+          "案件編號": "26080082",
+          "A": "https://docs.google.com/presentation/d/1gY8A73MYAzZca0tr2M-5ZDVtWgK7pmGTB1Hzw7N6Mvc/edit?slide=id.g3f73bc0e44e_1_77#slide=id.g3f73bc0e44e_1_77",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/17 18:49"
         }
       ]
     },
@@ -26673,6 +26743,75 @@
           "_sheetRow": 637,
           "sheetRow": 637
         }
+      },
+      "084a74f2-3575-4a77-a7f0-676cccbbe381": {
+        "ok": true,
+        "action": "batchAdd",
+        "count": 2,
+        "rowNumbers": [
+          638,
+          639
+        ],
+        "rows": [
+          {
+            "id": "26080081",
+            "month": "8月",
+            "client": "soundcore",
+            "project": "8月CPAS_蝦皮商城日_soundcore館_電商*3",
+            "owner": "吳冠賢",
+            "type": "平面",
+            "stage": "後製",
+            "qty": 3,
+            "start": "2026/08/17",
+            "end": "2026/08/20",
+            "designer": "Anna",
+            "platforms": "Facebook",
+            "submittedAt": "2026/08/17 18:49",
+            "briefNote": "P122~P125",
+            "briefUrl": "https://emctaipeiart.github.io/a/26080081",
+            "assetNote": "",
+            "assetUrl": "",
+            "referenceNote": "",
+            "referenceUrl": "",
+            "otherNote": "",
+            "otherUrl": "",
+            "status": "未開始",
+            "details": "",
+            "weight": "",
+            "designImageFolderUrl": "",
+            "_sheetRow": 638,
+            "sheetRow": 638
+          },
+          {
+            "id": "26080082",
+            "month": "8月",
+            "client": "soundcore",
+            "project": "8月CPAS_蝦皮商城日_ANKER館_電商*3",
+            "owner": "吳冠賢",
+            "type": "平面",
+            "stage": "後製",
+            "qty": 4,
+            "start": "2026/08/17",
+            "end": "2026/08/20",
+            "designer": "Anna",
+            "platforms": "Facebook",
+            "submittedAt": "2026/08/17 18:49",
+            "briefNote": "P126~P130",
+            "briefUrl": "https://emctaipeiart.github.io/a/26080082",
+            "assetNote": "",
+            "assetUrl": "",
+            "referenceNote": "",
+            "referenceUrl": "",
+            "otherNote": "",
+            "otherUrl": "",
+            "status": "未開始",
+            "details": "",
+            "weight": "",
+            "designImageFolderUrl": "",
+            "_sheetRow": 639,
+            "sheetRow": 639
+          }
+        ]
       }
     }
   },
