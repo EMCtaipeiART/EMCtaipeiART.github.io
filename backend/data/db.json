@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1307,
+  "revision": 1308,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T10:53:18.336Z",
+  "updatedAt": "2026-08-17T10:54:28.111Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18406,7 +18406,7 @@
           "月份": "8月",
           "案件編號": "26080077",
           "修改次數": "0",
-          "繳交時間": "",
+          "繳交時間": "2026/08/17 18:54:28",
           "項目細節": "素材重置"
         },
         {
@@ -20393,6 +20393,18 @@
           "圖片連結": "[{\"fileName\":\"260817_360II_包框影片_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/147iJRE5Lhh8FKo193h7cI_avy3wabXu3=w1600\"},{\"fileName\":\"260817_360II_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BvkQRQAUokVTxSTw2C9vS29EfaHl8PwO=w1600\"},{\"fileName\":\"260817_360II_包框影片_03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1bxw84XNBw1ibGhHqEdmI-aZq1huEwYGH=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/17 18:44:52"
+        },
+        {
+          "案件編號": "26080077",
+          "修改次數": "0",
+          "建立日期": "2026/08/17 18:54:28",
+          "修改日期": "2026/08/17 18:54:28",
+          "修改內容": "初稿完成",
+          "修改人": "Amber",
+          "確認修正日": "2026/08/17 18:54:28",
+          "圖片連結": "[{\"fileName\":\"260817_ANKER_A121D_包框影片.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kOSSMQC-3F5Y2JH9QyLjk_MsGgbV6MOK=w1600\"}]",
+          "圖片來源": "manual-upload",
+          "圖片更新時間": "2026/08/17 18:54:28"
         }
       ]
     },
