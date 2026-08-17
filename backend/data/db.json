@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1178,
+  "revision": 1179,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:53:32.702Z",
+  "updatedAt": "2026-08-17T03:53:35.824Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -14268,7 +14268,7 @@
           "結束日期": "2026/08/11",
           "設計負責人": "Amber",
           "項目細節": "廣告素材",
-          "狀態": "過稿中",
+          "狀態": "已完成",
           "加權": "4",
           "填單時間": "",
           "時間標記": "",
