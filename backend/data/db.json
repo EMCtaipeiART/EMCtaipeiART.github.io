@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1113,
+  "revision": 1114,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T02:55:25.819Z",
+  "updatedAt": "2026-08-17T03:12:15.773Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19864,9 +19864,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/17 09:07:33",
-          "圖片連結": "[{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_比較_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VtwPKQJzspDe5Ly7PAN0j3i4_T1Jr46e=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_送長輩禮物_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kY3yadfD8C3o_JyWiilq0OOea5GjehWz=w1600\"},{\"fileName\":\"前導噴水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1nNRspuWcjM7bQqLO3l8nEW9UeOaeYZmf=w1600\"},{\"fileName\":\"基站補水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1xoMrRiUOw9wBl1LjSzXmhf534dbY6f2G=w1600\"},{\"fileName\":\"高溫烘乾.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15Ugno2DDpWV7_khDk-18lES8UpzxxNcd=w1600\"},{\"fileName\":\"前導噴水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1GEOQfgSWoLhvMTYkqAmRF-fB3mXB83rD=w1600\"},{\"fileName\":\"基站補水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/14KV8ZRDZUOz8BHnhigSbf-aY4GxyCJfP=w1600\"},{\"fileName\":\"高溫烘乾.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1MXl210KkNlUJVANnBansyIbr4Ry8bXtS=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1sfjHISpOqrhiYUHSWuXHt8CmJHfDou47=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_比較_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VtwPKQJzspDe5Ly7PAN0j3i4_T1Jr46e=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_送長輩禮物_重陽節9999.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kY3yadfD8C3o_JyWiilq0OOea5GjehWz=w1600\"},{\"fileName\":\"前導噴水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1nNRspuWcjM7bQqLO3l8nEW9UeOaeYZmf=w1600\"},{\"fileName\":\"基站補水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1xoMrRiUOw9wBl1LjSzXmhf534dbY6f2G=w1600\"},{\"fileName\":\"高溫烘乾.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15Ugno2DDpWV7_khDk-18lES8UpzxxNcd=w1600\"},{\"fileName\":\"前導噴水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1GEOQfgSWoLhvMTYkqAmRF-fB3mXB83rD=w1600\"},{\"fileName\":\"基站補水.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/14KV8ZRDZUOz8BHnhigSbf-aY4GxyCJfP=w1600\"},{\"fileName\":\"高溫烘乾.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1MXl210KkNlUJVANnBansyIbr4Ry8bXtS=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1sfjHISpOqrhiYUHSWuXHt8CmJHfDou47=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/1j2KhmKns_KPYZuxnn7iqmqOr9iqZCroe=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/17 10:49:13"
+          "圖片更新時間": "2026/08/17 11:12:15"
         },
         {
           "案件編號": "26070118",
