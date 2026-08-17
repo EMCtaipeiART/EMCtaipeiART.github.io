@@ -103,7 +103,7 @@ async function main() {
       continue;
     }
 
-    console.log(`  共 ${result.totalFiles} 個檔案，未變動 ${result.unchangedCount} 個`);
+    console.log(`  共 ${result.totalFiles} 個檔案，未變動 ${result.unchangedCount} 個${result.skippedByKeywordCount?`（另有 ${result.skippedByKeywordCount} 個檔名不含關鍵字，已略過不列入本案件）`:''}`);
     if (result.newItems.length) {
       console.log(`  新增 ${result.newItems.length} 個：`);
       for (const item of result.newItems) {

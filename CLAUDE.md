@@ -186,7 +186,43 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-17 10:09 Asia/Taipei（最新）— 資料庫後台「修改統計表」改名為「修改列表」，案件群組標題新增顯示客戶別/專案名稱/專案負責人/設計負責人
+### 2026-08-17 12:25 Asia/Taipei（最新）— 「設計圖上傳方式」彈窗改成置中顯示
+
+- 修改目的：使用者回報前一則修改新增的「設計圖上傳方式」彈窗（`openCaseDesignImageSourceChooser`，過稿中或點「上傳設計圖」時跳出、讓使用者選 NAS 資料夾或電腦檔案上傳）位置固定貼在觸發按鈕旁邊，如果按鈕剛好在畫面左上角，彈窗就會跟著擠在左上角不夠醒目，要求改成在畫面正中央顯示。
+- 影響檔案：`index.html`。
+- 影響功能：`positionFieldPopover(anchor)` 這支共用函式（案件狀態、項目細節、修改紀錄等多個既有「貼在按鈕旁邊」的彈出選單都共用它）新增第二個可選參數 `{center=false}`；原本只有「觸發來源在登入彈窗（`.login-modal`）內」才會套用置中＋全螢幕深色背景（`.field-popover.is-modal-popover`，這個 class 既有的 CSS 已經做好置中定位與陰影背景，這次沒有新增任何 CSS，純粹是重用），現在改成「`center===true` 或觸發來源在登入彈窗內」都會套用同一套置中樣式。只有 `openCaseDesignImageSourceChooser()` 這個呼叫點改成傳入 `positionFieldPopover(anchorEl,{center:true})`；其餘全部呼叫點（狀態、項目細節、修改紀錄新增/確認、欄位快速編輯等）維持原本只傳一個參數，行為完全不變，仍然貼在觸發按鈕旁邊。
+- 風險區塊：`.field-popover.is-modal-popover` 的 CSS 規則在檔案裡有兩處宣告（[index.html:1746](index.html:1746) 與後面 [index.html:3807](index.html:3807) 附近，這是 [CLAUDE.md](CLAUDE.md) 之前處理案件詳情彈窗寬度時就記錄過的既有技術債——同一個選擇器被宣告兩次，屬性合併採用「後面覆蓋前面」規則）；這次確認過兩處宣告的屬性沒有互相衝突（第一處定義 `left/top/transform/box-shadow`，第二處只覆寫 `z-index`），所以置中效果仍然正確生效，沒有重演「改了東西沒生效」的舊坑，只是誠實記錄這個既有技術債還在，之後如果要調整 `.is-modal-popover` 的樣式要注意這兩處都要看。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過；`node --test backend/test/*.test.mjs` 26/26 全過；人工比對 `.field-popover.is-modal-popover` 兩處 CSS 宣告確認屬性不衝突、`positionFieldPopover` 的其餘既有呼叫點都只傳一個參數，新增的第二參數不影響既有行為。**未做的驗證**：這次沒有用瀏覽器實際點開「設計圖上傳方式」彈窗肉眼確認置中效果與背景遮罩，這個環境沒有可用的瀏覽器/截圖工具；邏輯上直接重用了既有「登入彈窗」路徑本來就在正式站正常運作的同一套置中機制，風險低，但仍建議驗收時實際點一次確認。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-17 12:17 Asia/Taipei — NAS 自動追蹤設計圖新增「檔名關鍵字」比對＋忽略資料夾清單，解決共用月份資料夾誤抓其他案件/Links 素材的問題
+
+- 修改目的：使用者回報「過稿中」跳出的 NAS 資料夾選擇器，選定的資料夾實際上是跟其他案件共用的月份資料夾（例如同一個客戶 8 月份所有平面案件的檔案都混在同一層），會把該資料夾底下其他案件的圖片、以及專門放參考素材的 `Links` 子資料夾內容一起誤抓進這個案件的設計圖記錄；並詢問一修、二修等後續修改輪次能不能也只抓這個案件自己的圖。追查程式碼（`scripts/nas_design_image_lib.mjs` 的 `walkMedia`／`scanProject`）確認：既有邏輯是「遞迴掃描選定資料夾底下所有圖片/影片，一律當成候選」，完全沒有依案件過濾機制，也沒有排除任何子資料夾——這正是使用者回報現象的根因。用 `AskUserQuestion` 跟使用者確認兩件事：①每個案件在 NAS 上目前**沒有**各自獨立的專案子資料夾，檔案本來就跟其他案件混在同一層；②希望的解法是替每個案件加一道「檔名關鍵字」比對（設計師填一個產品代號/專案名稱片段，只有檔名包含它的圖片才算這個案件的），確認後才動手實作，避免自己猜測資料夾/檔名慣例後做錯方向。
+- 影響檔案：`backend/schema.mjs`、`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_folder_picker_server.mjs`、`scripts/nas_design_image_watcher.mjs`、`scripts/nas_design_image_watcher.config.json`、`scripts/nas_design_image_watcher.README.md`、`index.html`。
+- 影響功能：
+  1. **新欄位「設計圖檔名關鍵字」**：`database` 表新增 `設計圖檔名關鍵字`（`backend/schema.mjs` 的 `DATABASE_HEADERS`，緊接在既有的「設計圖資料夾連結」之後），`worker/src/model.ts` 的 `KEY_TO_HEADER` 新增 `designImageFolderKeyword:'設計圖檔名關鍵字'` 映射；`index.html` 的 `normalizeRow` 一併解析這個欄位。這個欄位跟「設計圖資料夾連結」一樣，只由 NAS 相關流程讀寫，不影響填單表單或其他既有欄位。
+  2. **忽略資料夾名稱（`ignoreFolderNames`）**：`nas_design_image_lib.mjs` 新增 `DEFAULT_IGNORE_FOLDER_NAMES=['Links']` 與 `isIgnoredFolderName()`，`walkMedia()` 遞迴掃描時遇到名稱符合這份清單（去頭尾空白、不分英文大小寫）的子資料夾，整個跳過、完全不遞迴進去——不管這個案件有沒有設定關鍵字，`Links` 資料夾裡的內容永遠不會被當成候選。這份清單在 `nas_design_image_watcher.config.json` 新增 `ignoreFolderNames:["Links"]` 欄位可以自行增列其他要排除的資料夾名稱，不用改程式碼。
+  3. **檔名關鍵字比對（`matchesKeyword`）**：新增 `matchesKeyword(fileName,keyword)`——關鍵字留白時回傳 `true`（不做任何篩選，向下相容沒填關鍵字的舊案件與只有專屬資料夾、不需要關鍵字的案件）；有填的話用不分大小寫的子字串比對。`scanProject()` 在 `walkMedia()` 掃出結果後，**先**用這個關鍵字把不屬於這個案件的檔案整批濾掉，才進入既有的「跟上次掃描狀態比對」邏輯——不符合的檔案完全不會被記錄進狀態快取，也不會出現在 `newItems`/`changedItems`/`pendingPreviews` 裡。這代表**一修、二修等後續每一輪都會自動沿用同一個關鍵字**，不需要每輪重新設定；如果案件事後才補填/修改關鍵字，之前被關鍵字擋下（因此從未被追蹤過）的檔案會在下次掃描時被當成「全新」重新判斷一次，不會因為曾經被略過而卡住。`discoverProjects()`／`findCaseMeta()` 都新增回傳 `keyword` 欄位供 `scanProject` 使用。
+  4. **NAS 資料夾選擇器畫面新增關鍵字輸入框**：`nas_folder_picker_server.mjs` 的 `/picker` 頁面，在資料夾瀏覽器上方新增「設計圖檔名關鍵字（強烈建議填寫）」輸入框與說明文字；開啟時 `/api/default-path` 會一併把這個案件目前已存的關鍵字回傳，自動帶出（重新設定資料夾或補填關鍵字時不用重新輸入）。按下「選擇這個資料夾並備份」時：留白會先跳一次 `confirm()` 警告（說明可能誤抓其他案件的圖），使用者可以選擇仍要繼續（例如案件真的有專屬資料夾）；確認後連同關鍵字一起送到 `/api/confirm`，新增的 `backupSelectedFolder()` 參數 `keyword` 會覆蓋（而不是等前端先寫回資料庫再讀取——這時候通常還沒寫回）資料庫裡的既有值，讓「立即備份」這一次就套用剛剛填的關鍵字；最終回傳給前台分頁的 `postMessage` 一併帶上 `keyword`，`index.html` 的 `machi-nas-folder-selected` 處理常式改成 `updateCaseRow(id,{designImageFolderUrl:folderPath,designImageFolderKeyword:keyword},...)`，兩個欄位一次寫入。
+  5. **Worker 權限放寬同步涵蓋新欄位**：`database-coordinator.ts` 的 `updateRequests()` 原本只有「這次只改 `designImageFolderUrl` 一個欄位」才會放寬成只需要 `media.manage`（不用 `request.edit`）；這次擴充成「這次改動的欄位集合是 `designImageFolderUrl`／`designImageFolderKeyword` 的子集合」都算——資料夾連結與關鍵字通常是同一個操作（在選擇器畫面一起填），一起送出時應該套用同一個較寬鬆的權限，不應該因為多帶了一個關鍵字欄位就被要求 `request.edit`。
+  6. **前台選擇器入口文案更新**：`openCaseDesignImageSourceChooser()` 裡「選擇 NAS 資料夾」選項的說明文字，補上「下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片」，讓設計師事先知道會有這一步。
+- 風險區塊：
+  - **關鍵字比對是簡單的不分大小寫子字串比對，不是模糊比對**——如果設計師把檔案存成完全不含關鍵字的新檔名，仍然會被關鍵字擋下抓不到，這點跟既有「待修改圖片」目標檔名比對是同一種限制，這次沒有嘗試做更聰明的模糊匹配（風險更高、行為更難預期）。
+  - **留白關鍵字不是強制擋下、只是警告**——使用者確認的方向是「強烈建議」而非「必填」（保留給真的有專屬資料夾、不需要關鍵字的案件），代表如果設計師選擇忽略警告繼續，還是會退回舊版「整個資料夾都算」的行為，誤抓風險依然存在，只是多了一層提醒。
+  - **既有案件如果先前已經在沒設定關鍵字的情況下抓過幾輪、可能已經誤抓了其他案件的圖，事後補填關鍵字不會自動清掉先前誤抓的圖片**——需要到案件詳情或「修改紀錄」彈窗手動用既有的刪除圖片功能（`removeCaseDesignImage`）個別移除，這次沒有新增批次清理工具。
+  - **Worker 端的 TypeScript 改動這次沒有機會在這個環境跑 `tsc`／`vitest`**——`worker/node_modules` 是 macOS arm64 原生執行檔，這個工作環境是 Linux，`tsc --noEmit`／`vitest run` 都因為平台不合直接報錯（跟過去幾次修改 Worker 遇到的環境限制一樣）。這次的改動範圍很小（一行欄位映射、把單一字串比對換成兩個字串陣列的比對），已人工比對型別正確並在 `worker/test/index.test.ts` 補了對應測試案例，但**沒有在這次的工作環境裡真的跑過測試通過**，需要使用者在自己的 Mac 上執行 `cd worker && pnpm test && pnpm check && pnpm deploy:dry` 確認過關後才 `pnpm deploy`。
+- 已檢查／驗證方式：
+  - `node --check` 對 `scripts/nas_design_image_lib.mjs`／`scripts/nas_design_image_watcher.mjs`／`scripts/nas_folder_picker_server.mjs`／`backend/schema.mjs` 語法檢查全數通過；`index.html`／`nas_folder_picker_server.mjs` 內嵌的 `<script>` 區塊用 `new Function()` 語法檢查通過；`nas_design_image_watcher.config.json` 確認仍是合法 JSON。
+  - `node --test backend/test/*.test.mjs` 26/26 全過。
+  - **完整重現使用者回報的情境並驗證修好**：在沙箱裡建立假掛載目錄，結構完全比照使用者描述——`專案企劃部/執行中/Epson/FB發文圖檔/2026/8月/` 底下同時放這個案件的檔案（`260810_DJI_360II_...png`）、另一個不相關案件的檔案（`260811_OtherProduct_...png`）、以及一個 `Links` 參考素材子資料夾；用假的 `sips`／`qlmanage`（模擬執行成功）逐項驗證：①`walkMedia` 完全不會遞迴進 `Links` 資料夾；②設定關鍵字 `DJI_360II` 後，`scanProject` 只把符合的 1 個檔案當候選，另一個不相關案件的檔案正確被濾掉並計入 `skippedByKeywordCount`；③沒設定關鍵字時退回舊行為（`Links` 以外全部算數）；④**一修情境**：第 0 輪上傳、標記 `assignedRound` 之後，資料夾新增一個符合關鍵字的「一修」檔案＋一個不符合的其他案件「一修」檔案，重新掃描正確只把符合關鍵字的判定成新增、另一個被關鍵字擋下，且第 0 輪檔案不會被重複判定成新增。
+  - **真的啟動 `nas_folder_picker_server.mjs`＋假 `dbJsonUrl`／Apps Script 上傳端點做端對端測試**（不是只測程式邏輯，是完整走一次真實的 HTTP 請求）：`/api/default-path` 正確把案件既有的關鍵字回傳；`/api/confirm` 帶關鍵字 `DJI_360II` 時，用 `curl` 確認真正送到 Apps Script 上傳端點的 `images` 陣列裡確實只有那 1 張符合的圖、檔名正確，回應的 `warnings` 正確顯示「已依關鍵字「DJI_360II」略過 1 個檔名不符的檔案」；接著同一資料夾改用空白關鍵字重新確認一次，正確把先前被關鍵字擋下（因此從未被追蹤過）的另一張圖片當成新增項目上傳，同時第 0 輪已上傳過的檔案沒有被重複上傳、`Links` 資料夾內容全程都沒有被觸碰。
+  - `discoverProjects()`／`findCaseMeta()` 用假資料庫資料驗證正確回傳/排除 `keyword` 欄位（有填關鍵字、沒填資料夾連結的案件正確不出現在 `discoverProjects()` 結果裡）。
+  - **未做的驗證**：Worker 端的 `tsc`／`vitest`（見上方風險區塊說明，需要使用者在自己 Mac 上執行）；NAS 資料夾選擇器新增的關鍵字輸入框、留白警告視窗、`showErrorPrompt()` 之後「重試」是否正確沿用剛填過的關鍵字，這幾塊沒有用真實瀏覽器點過，只用程式碼推理＋API 層級驗證；真的連上使用者的 NAS、用真實中文檔名/案件關鍵字測試比對效果。
+- 部署狀態：`backend/schema.mjs`、`index.html`、`CLAUDE.md` 純前端／共用檔案，git push 後自動生效；**`worker/` 需要手動部署才會生效**（`cd worker && pnpm test && pnpm check && pnpm deploy:dry` 過關後 `pnpm deploy`）——沒部署前，設計師在 NAS 資料夾選擇器畫面填的關鍵字仍然可以正常送出（`onlyDesignImageFolderLink` 的舊版判斷式只認 `designImageFolderUrl` 單一欄位，同時送兩個欄位會被要求 `request.edit`，如果該帳號沒有這個權限會被擋下、寫入失敗，需要重新確認後單獨送出資料夾連結，或直接部署新版 Worker）；`scripts/nas_design_image_lib.mjs`／`nas_folder_picker_server.mjs`／`nas_design_image_watcher.mjs`／`.config.json`／`.README.md` 都是純本機工具，不需要 git push，但需要使用者重新啟動（或用 `launchd`／`cron` 排程重啟）`nas_folder_picker_server.mjs` 與 `nas_design_image_watcher.mjs` 才會套用新版程式碼。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-17 10:09 Asia/Taipei — 資料庫後台「修改統計表」改名為「修改列表」，案件群組標題新增顯示客戶別/專案名稱/專案負責人/設計負責人
 
 - 修改目的：使用者要求把資料庫後台側邊選單的「修改統計表」改名為「修改列表」，並且每個案件群組要顯示該案件的「案件編號」「客戶別」「專案名稱」「專案負責人」「設計負責人」，不只是案件編號。
 - 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。

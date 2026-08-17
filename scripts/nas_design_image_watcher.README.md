@@ -278,6 +278,41 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 例，`RunAtLoad`＋`KeepAlive` 那個寫法就是為了常駐服務設計的，跟排程用的
 `StartInterval` 是兩種不同的 launchd 用法）。
 
+## 同一個資料夾混有多個案件的檔案怎麼辦（檔名關鍵字比對＋忽略資料夾）
+
+實務上很多客戶的 NAS 資料夾不是「一個案件一個專屬資料夾」，而是「一個月
+份資料夾底下同時放好幾個案件的檔案」（例如 `.../2026/8月/` 裡混著這個月
+所有平面案件的圖），選資料夾時只能選到這個共用的月份資料夾，沒有更細的
+層級可以選。這支程式用兩道機制處理這個情況：
+
+1. **忽略資料夾名稱（`ignoreFolderNames`）**：掃描時會整個跳過、不遞迴進
+   去某些已知不是設計交付圖的資料夾——預設是 `["Links"]`（很多資料夾底下
+   會有一個「Links」子資料夾放共用參考素材，不是這次要交的設計圖）。可以
+   在 `nas_design_image_watcher.config.json` 的 `ignoreFolderNames` 陣列裡
+   加更多名稱，不用改程式碼；比對時去頭尾空白、不分英文大小寫。
+2. **檔名關鍵字（案件的「設計圖檔名關鍵字」欄位）**：設計師在 NAS 資料夾
+   選擇器（`nas_folder_picker_server.mjs`）選好資料夾的畫面上，除了選資料
+   夾本身，還有一個文字欄位可以填「檔名關鍵字」（例如產品代號
+   `DJI_360II`，或專案名稱片段）。填了之後，這個資料夾底下**只有檔名包含
+   這個關鍵字的圖片/影片**才會被當成這個案件的設計圖，同資料夾裡其他案件
+   的檔案（檔名不含這個關鍵字）完全不會被抓取——不只是初稿，**一修、二修
+   等後續每一輪也會沿用同一個關鍵字**，所以不需要每一輪重新設定。這個欄
+   位留白的話，行為退回舊版（資料夾底下所有檔案都算，只排除
+   `ignoreFolderNames` 裡的資料夾），選擇器畫面上留白按下確認時會另外跳一
+   次警告，提醒可能誤抓其他案件的圖，但不會強制擋下（有些案件真的有專屬
+   資料夾，不需要關鍵字也沒問題）。
+   - 重新開啟選擇器（例如換一個資料夾、或想幫舊案件補填關鍵字）時，畫面
+     會自動帶出這個案件目前已經存的關鍵字，不用重新輸入。
+   - 也可以直接到資料庫後台（`json_database_admin.html`）的「database」表
+     手動編輯該案件列的「設計圖檔名關鍵字」欄位，不透過選擇器畫面。
+   - 關鍵字比對是「檔名裡有沒有包含這段文字」（不分大小寫的子字串比對），
+     不是規則運算式，也不會嘗試模糊比對相似的檔名——設計師如果把檔案存成
+     完全不含關鍵字的新檔名，仍然會抓不到，這點跟既有的「待修改圖片」目
+     標檔名比對是同一種限制。
+   - 如果案件先前已經在沒有設定關鍵字的情況下抓過幾輪（可能已經誤抓了其
+     他案件的圖），事後補填關鍵字不會自動清掉先前誤抓的圖片，需要到案件
+     詳情或「修改紀錄」彈窗手動用既有的刪除圖片功能個別移除。
+
 ## 「NAS 資料夾路徑」要怎麼寫（備用：資料庫後台手動改欄位）
 
 前台目前沒有「手動貼路徑」的輸入框，只有「選擇 NAS 資料夾」（用上面的選
@@ -310,6 +345,7 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 | `secretsFile` | 存 `serviceKey`／`pickerToken` 的檔案路徑，預設同資料夾的 `nas_design_image_watcher.secrets.json`（不進 git） |
 | `pickerPort` | `nas_folder_picker_server.mjs`（資料夾選擇器伺服器）監聽的埠號，預設 8877，只有跑那支程式時才會用到 |
 | `defaultBrowseRoot` | 資料夾選擇器開啟時的預設瀏覽起點（相對於 `mountRoot`），選擇器會在這一層底下找跟案件客戶別同名的子資料夾直接打開；留空＝從根目錄開始，只有跑 `nas_folder_picker_server.mjs` 時才會用到 |
+| `ignoreFolderNames` | 掃描時整個跳過、不遞迴進去的資料夾名稱清單（不分大小寫比對），預設 `["Links"]`；同一個案件底下實際要抓哪些檔案主要靠案件的「設計圖檔名關鍵字」欄位比對檔名，這裡只負責排除整個資料夾層級的已知非設計圖來源 |
 
 狀態快取存在 `scripts/nas_design_image_watcher.state/sync-state.json`
 （已加進 `.gitignore`），記錄每個檔案的大小/修改時間、有沒有被歸類到某一
@@ -329,6 +365,28 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 檔案、同一輪重複執行正確略過不重複上傳、修改統計表出現第 1 輪紀錄後正
 確只上傳新增的那 1 個檔案（不重傳第 0 輪已經傳過的）、影片正確產生預覽
 圖、上傳 payload 內容正確帶上 designer/client/year/month。
+
+**檔名關鍵字比對＋忽略資料夾（`ignoreFolderNames`／案件「設計圖檔名關鍵
+字」）**：用假的 `sips`／`qlmanage`＋假掛載資料夾完整重現使用者實際回報
+的情境——同一個「8月」共用資料夾底下同時放著這個案件的檔案
+（`260810_DJI_360II_...png`）、另一個不相關案件的檔案
+（`260811_OtherProduct_...png`）、以及一個 `Links` 參考素材子資料夾——驗
+證過：①`walkMedia` 完全不會遞迴進 `Links` 資料夾，裡面的檔案不管有沒有
+設定關鍵字都不會出現在掃描結果裡；②設定關鍵字後，`scanProject` 只會把
+檔名包含關鍵字的檔案視為這個案件的候選（不分大小寫），不相關案件的檔案
+正確被排除、並算進 `skippedByKeywordCount`；③沒有設定關鍵字（舊案件相容
+情境）時退回原本行為，`Links` 以外的檔案全部算數；④**一修/二修驗證**：
+第 0 輪上傳成功、標記 `assignedRound` 之後，同資料夾新增一個仍符合關鍵字
+的「一修」檔案＋一個不符合關鍵字的其他案件「一修」檔案，重新掃描只會把
+符合關鍵字的那個判定成新增項目，另一個正確被關鍵字擋下，且第 0 輪的檔案
+不會被重複判定成新增（不會重複上傳）；⑤透過真的啟動
+`nas_folder_picker_server.mjs`＋假 `dbJsonUrl`／Apps Script 端點做端對端
+測試：`/api/default-path` 正確把案件既有的關鍵字一併回傳（供選擇器畫面
+預先帶出）；`/api/confirm` 帶關鍵字時只會把符合的那一張圖真的傳給 Apps
+Script（`curl` 驗證上傳呼叫的 `images` 陣列裡確實只有那一張、檔名正
+確）；同一資料夾之後改用空白關鍵字重新確認一次，正確把先前被關鍵字擋下
+（因此從未被追蹤過）的另一張圖片當成新增項目上傳，同時第 0 輪已上傳過的
+檔案不會被重複上傳、`Links` 資料夾內容全程都沒有被觸碰。
 
 **資料夾選擇器伺服器（`nas_folder_picker_server.mjs`）**：因為這支伺服器
 本身是純 Node.js（不需要 macOS 專屬指令，「立即備份」用到的 `sips`／
@@ -406,3 +464,21 @@ NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 開新分頁�
 - 「立即備份」跟背景排程真的同時對同一個案件執行的競態情況（見上面「已
   知但刻意接受的風險」），只能在理論上推導，沒辦法在沙箱裡真的讓兩支程
   式同時搶同一份狀態檔測試出實際後果。
+- **「設計圖檔名關鍵字」的選擇器畫面互動沒有用真實瀏覽器點過**：新增的
+  關鍵字輸入框、留白時跳出的 `confirm()` 警告視窗、`showErrorPrompt()`
+  換掉整個畫面之後「重試」是否正確沿用剛剛填過的關鍵字（`lastKeywordValue`
+  這個備援變數），這幾塊只用程式碼推理＋沙箱裡直接呼叫 API 驗證邏輯正
+  確，沒有像上一輪那樣實際用 Browser pane 點過 `/picker` 頁面操作一次。
+- 這次同時修改了 `worker/src/model.ts`／`worker/src/database-coordinator.ts`
+  （新增 `designImageFolderKeyword` 欄位映射與權限放寬），這台機器的
+  `worker/node_modules` 是 macOS arm64 原生執行檔，這個沙箱是 Linux，
+  `tsc --noEmit`／`vitest run` 都因為平台不合直接報錯（`Unable to resolve
+  @typescript/typescript-linux-arm64`／`Cannot find module
+  '@rolldown/binding-wasm32-wasi'`），跟過去幾次修改 Worker 時遇到的環境
+  限制一樣。這次的 TypeScript 改動範圍很小（一行 `KEY_TO_HEADER` 映射、
+  把單一字串比對換成兩個字串陣列的 `.every(...includes(...))` 比對），
+  已經人工比對過既有寫法確認型別正確，並在 `worker/test/index.test.ts`
+  補了新的測試案例，但**這次沒有機會真的在這個環境跑過 `pnpm test`／
+  `pnpm check`／`pnpm deploy:dry`**，需要你在自己的 Mac 上執行一次確
+  認，部署前務必照 [CLAUDE.md](CLAUDE.md) 慣例跑 `cd worker && pnpm test
+  && pnpm check && pnpm deploy:dry`，過關後才 `pnpm deploy`。

@@ -207,7 +207,7 @@ function readJsonBody(req) {
  * 記路徑」跟「這次順便備份成不成功」是兩件事，備份失敗不該讓路徑登記跟著
  * 失敗（背景監控程式下一輪還會再試）。
  */
-async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId }) {
+async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword }) {
   const dbData = await lib.fetchDatabase(config.dbJsonUrl);
   const meta = lib.findCaseMeta(dbData, caseId);
   if (!meta) {
@@ -219,11 +219,18 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
   const secrets = await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile));
   const state = await lib.loadState(stateFile);
   const warnings = [];
-  const project = { caseId, rawFolderPath: relPath, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
+  // keyword 優先用這次請求帶來的值（使用者在選擇器畫面當下填的，這時候通常還沒寫回資料
+  // 庫——前端要等這支立即備份完成、拿到路徑＋關鍵字之後才會一起 updateCaseRow()），沒帶
+  // 才退回讀資料庫既有值（例如重新設定既有資料夾，關鍵字欄位留白代表沿用原本設定）。
+  const effectiveKeyword = keyword != null ? String(keyword).trim() : meta.keyword;
+  const project = { caseId, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
 
   const scanResult = await lib.scanProject(project, config, state, previewDir, warnings);
   if (scanResult.error) {
     return { attempted: true, uploadedCount: 0, message: scanResult.error, warnings };
+  }
+  if (scanResult.skippedByKeywordCount) {
+    warnings.push(`已依關鍵字「${effectiveKeyword}」略過 ${scanResult.skippedByKeywordCount} 個檔名不符的檔案（可能是其他案件或參考素材）`);
   }
   state[caseId] = scanResult.nextState;
   await lib.saveState(stateFile, state); // 掃描結果（有沒有變動、預覽圖）先落地，就算後面上傳失敗也不會遺失這次掃描
@@ -296,6 +303,12 @@ const PICKER_PAGE = `<!doctype html>
   .error-prompt .btn-register-anyway{border:1px solid #0f6b3c;background:#0f6b3c;color:#fff}
   .error-prompt .btn-cancel-prompt{border:1px solid #dbe4de;background:#fff;color:#43524b}
   .error-prompt .path-caption{margin:14px 0 0;font-size:11.5px;color:#8a948e;word-break:break-all}
+  .keyword-field{margin:0 0 14px;padding:10px 12px;border:1px solid #dbe4de;border-radius:10px;background:#fff}
+  .keyword-field label{display:block;font-size:12.5px;font-weight:700;color:#17251d;margin-bottom:4px}
+  .keyword-field input{width:100%;box-sizing:border-box;border:1px solid #cfd9d2;border-radius:8px;padding:9px 10px;font-size:14px;font-family:inherit}
+  .keyword-field input:focus{outline:2px solid #0f6b3c;outline-offset:1px}
+  .keyword-field .note{margin:6px 0 0;font-size:11.5px;color:#6b756f;line-height:1.5}
+  .keyword-field .note.warn{color:#b45309}
 </style>
 </head>
 <body>
@@ -305,6 +318,11 @@ const PICKER_PAGE = `<!doctype html>
 </header>
 <main>
   <p class="hint" id="defaultHint" hidden></p>
+  <div class="keyword-field">
+    <label for="keywordInput">設計圖檔名關鍵字（強烈建議填寫）</label>
+    <input type="text" id="keywordInput" placeholder="例如產品代號 DJI_360II，或專案名稱片段">
+    <p class="note" id="keywordNote">如果這個資料夾同時放了其他案件的檔案（例如同一個月份共用資料夾），只有檔名包含這個關鍵字的圖片/影片會被視為本案件的設計圖，其餘（包含 Links 等參考資料夾）一律不會被抓取；一修、二修也會沿用同一個關鍵字判斷。</p>
+  </div>
   <p class="current">目前瀏覽：<b id="currentPath">（根目錄）</b></p>
   <div class="breadcrumb" id="breadcrumb"></div>
   <ul class="folder-list" id="folderList"></ul>
@@ -323,6 +341,10 @@ const PICKER_PAGE = `<!doctype html>
   const origin = params.get('origin') || '';
   document.getElementById('caseLabel').textContent = caseId ? ('案件編號：' + caseId) : '';
   let relPath = '';
+  // showErrorPrompt() 會把 document.body 整個換成錯誤畫面，keywordInput 這個元素會
+  // 跟著消失；「重試」按鈕重新呼叫 doConfirm() 時讀不到 DOM 裡的值，改用這個變數記住
+  // 使用者最後一次輸入/確認過的關鍵字，讓重試不會遺失剛剛填的內容。
+  let lastKeywordValue = '';
 
   function escapeHtml(text){
     return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -390,7 +412,7 @@ const PICKER_PAGE = `<!doctype html>
     document.getElementById('retryConfirmBtn').addEventListener('click', doConfirm);
     document.getElementById('registerAnywayBtn').addEventListener('click', () => {
       if(window.opener){
-        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath }, origin || '*');
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath, keyword: lastKeywordValue }, origin || '*');
       }
       window.close();
     });
@@ -422,6 +444,16 @@ const PICKER_PAGE = `<!doctype html>
   }
 
   async function doConfirm(){
+    const keywordInput = document.getElementById('keywordInput');
+    const keyword = keywordInput ? (keywordInput.value || '').trim() : lastKeywordValue;
+    lastKeywordValue = keyword;
+    if(!keyword){
+      // 留白代表「這個資料夾底下所有圖片都算這個案件」，如果資料夾其實是跟其他案件
+      // 共用的（例如同一個月份資料夾），這樣會誤抓其他案件的圖，所以留白時額外跳一次
+      // 確認，不是直接擋掉——有些案件真的有專屬資料夾、不需要關鍵字也沒問題。
+      const proceed = confirm('尚未填寫「設計圖檔名關鍵字」。如果這個資料夾同時放了其他案件的檔案，之後可能會誤抓進不相關的圖片。\n\n確定要不填關鍵字、直接選擇這個資料夾嗎？');
+      if(!proceed) return;
+    }
     // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁
     // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。
     if(window.opener){
@@ -436,7 +468,7 @@ const PICKER_PAGE = `<!doctype html>
       const res = await fetch('/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caseId, token, path: relPath })
+        body: JSON.stringify({ caseId, token, path: relPath, keyword })
       });
       const data = await res.json();
       if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
@@ -452,7 +484,7 @@ const PICKER_PAGE = `<!doctype html>
       ? ('已立即備份 ' + backup.uploadedCount + ' 張圖片（第 ' + backup.round + ' 輪）')
       : ('資料夾已登記' + (backup.message ? '，' + backup.message : ''));
     if(window.opener){
-      window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath, summary }, origin || '*');
+      window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath, keyword, summary }, origin || '*');
     }
     window.close();
   }
@@ -471,6 +503,10 @@ const PICKER_PAGE = `<!doctype html>
           const hint = document.getElementById('defaultHint');
           hint.textContent = data.note;
           hint.hidden = false;
+        }
+        if(data.keyword){
+          document.getElementById('keywordInput').value = data.keyword;
+          lastKeywordValue = data.keyword;
         }
       }
     }catch{ /* 猜預設路徑失敗就從根目錄開始，不影響手動瀏覽 */ }
@@ -756,18 +792,21 @@ async function main() {
       try {
         const caseId = url.searchParams.get('caseId') || '';
         let client = '';
+        let existingKeyword = '';
         if (caseId) {
           try {
             const dbData = await lib.fetchDatabase(config.dbJsonUrl);
-            client = lib.findCaseMeta(dbData, caseId)?.client || '';
+            const meta = lib.findCaseMeta(dbData, caseId);
+            client = meta?.client || '';
+            existingKeyword = meta?.keyword || ''; // 重新開啟選擇器（換資料夾/補填關鍵字）時，先帶出這個案件目前已經存的關鍵字，讓輸入框不是空的
           } catch {
-            // 讀不到案件資料庫也不影響瀏覽，只是猜不出預設路徑，從 defaultBrowseRoot 或根目錄開始
+            // 讀不到案件資料庫也不影響瀏覽，只是猜不出預設路徑/既有關鍵字，從 defaultBrowseRoot 或根目錄開始
           }
         }
         const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client);
-        sendJson(res, 200, { success: true, relPath: guess.relPath, matched: guess.matched, note: guess.note });
+        sendJson(res, 200, { success: true, relPath: guess.relPath, matched: guess.matched, note: guess.note, keyword: existingKeyword });
       } catch (error) {
-        sendJson(res, 200, { success: true, relPath: '', matched: false, note: '' });
+        sendJson(res, 200, { success: true, relPath: '', matched: false, note: '', keyword: '' });
       }
       return;
     }
@@ -800,8 +839,9 @@ async function main() {
         sendJson(res, 400, { success: false, message: '選擇的資料夾不存在，請重新整理後再選一次' });
         return;
       }
+      const keyword = typeof body.keyword === 'string' ? body.keyword : undefined;
       try {
-        const backup = await backupSelectedFolder({ config, configDir, mountRoot, relPath: safe.relPath, caseId });
+        const backup = await backupSelectedFolder({ config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword });
         sendJson(res, 200, { success: true, path: safe.relPath, backup });
       } catch (error) {
         // 就算立即備份這段整個爆炸（例如讀資料庫失敗），路徑本身已經驗證過存在，

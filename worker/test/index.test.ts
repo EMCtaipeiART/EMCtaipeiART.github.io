@@ -418,12 +418,39 @@ describe('Machi Design API Worker', () => {
     expect(linkUpdate).toMatchObject({ ok: true, id: '26080001' });
     expect((linkUpdate.row as Record<string, unknown>).designImageFolderUrl).toBe('專案企劃部/執行中/客戶/案件資料夾');
 
+    // 同一組操作也要能一起帶「設計圖檔名關鍵字」（NAS 資料夾選擇器同一個畫面收集，用來從
+    // 共用月份資料夾裡篩出只屬於這個案件的檔案），一起送出時一樣只需要 media.manage。
+    const linkAndKeywordUpdate = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', designImageFolderUrl: '專案企劃部/執行中/客戶/案件資料夾', designImageFolderKeyword: 'DJI_360II' }
+    }, token);
+    expect(linkAndKeywordUpdate).toMatchObject({ ok: true, id: '26080001' });
+    expect((linkAndKeywordUpdate.row as Record<string, unknown>).designImageFolderKeyword).toBe('DJI_360II');
+
+    // 單獨改關鍵字（重新設定既有資料夾的關鍵字，不動路徑）也只需要 media.manage。
+    const keywordOnlyUpdate = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', designImageFolderKeyword: 'Epson_V4000' }
+    }, token);
+    expect(keywordOnlyUpdate).toMatchObject({ ok: true, id: '26080001' });
+
     const editAttempt = await api({
       action: 'update',
       id: '26080001',
       row: { id: '26080001', client: '應該被擋下' }
     }, token);
     expect(editAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+
+    // 混著改其他一般欄位時，即使同一次也帶了資料夾連結，仍然要退回需要 request.edit，
+    // 不能靠夾帶這兩個欄位繞過一般欄位編輯的權限限制。
+    const mixedAttempt = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', designImageFolderUrl: '專案企劃部/執行中/客戶/案件資料夾', client: '不應該被放行' }
+    }, token);
+    expect(mixedAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
   });
 
   it('lets a media.manage account add and remove case design images from the modification log, blocking accounts without the capability', async () => {

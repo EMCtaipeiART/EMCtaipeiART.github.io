@@ -20,6 +20,12 @@ export const DEFAULT_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 export const DEFAULT_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v'];
 export const DEFAULT_MAX_DIMENSION = 1600;
 export const DEFAULT_JPEG_QUALITY = 70;
+// 很多客戶的 NAS 資料夾是「一個月份資料夾裡混著多個案件的檔案」，同一層底下常見會
+// 額外有一個純粹放共用參考素材（不是這次要交的設計圖）的子資料夾，設計師習慣叫它
+// 「Links」。這份清單是 walkMedia() 掃描時一律跳過（不遞迴進去、裡面的圖片/影片
+// 完全不會被當成候選）的資料夾名稱，比對時去頭尾空白＋忽略英文大小寫。可以在
+// config 裡用 ignoreFolderNames 覆蓋或加長這份清單，不需要改程式碼。
+export const DEFAULT_IGNORE_FOLDER_NAMES = ['Links'];
 
 export async function loadJsonFile(filePath, fallback = null) {
   try {
@@ -47,6 +53,7 @@ export async function loadConfig(configPath) {
     secretsFile: './nas_design_image_watcher.secrets.json',
     appsScriptUploadUrl: '',
     defaultBrowseRoot: '',
+    ignoreFolderNames: DEFAULT_IGNORE_FOLDER_NAMES,
     ...config
   };
 }
@@ -82,6 +89,17 @@ export function classify(fileName, config) {
   return null;
 }
 
+/**
+ * 判斷資料夾名稱是不是應該整個跳過（例如「Links」這類共用參考素材資料夾，
+ * 不是這個案件實際要交付的設計圖）。去頭尾空白＋忽略英文大小寫比對，
+ * 沿用跟 resolveDefaultBrowsePath 猜客戶資料夾一樣的寬鬆比對慣例。
+ */
+export function isIgnoredFolderName(name, ignoreFolderNames) {
+  const trimmed = String(name || '').trim().toLowerCase();
+  if (!trimmed) return false;
+  return (ignoreFolderNames || []).some(entry => String(entry || '').trim().toLowerCase() === trimmed);
+}
+
 export async function walkMedia(dir, config) {
   const results = [];
   let entries;
@@ -94,6 +112,7 @@ export async function walkMedia(dir, config) {
     if (entry.name.startsWith('.')) continue;
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (isIgnoredFolderName(entry.name, config.ignoreFolderNames)) continue;
       results.push(...(await walkMedia(fullPath, config)));
     } else if (entry.isFile()) {
       const kind = classify(entry.name, config);
@@ -101,6 +120,22 @@ export async function walkMedia(dir, config) {
     }
   }
   return results;
+}
+
+/**
+ * 判斷一個檔案是不是屬於這個案件——同一個月份/客戶資料夾常常混著好幾個
+ * 案件的檔案（沒有各自獨立的子資料夾），只能靠檔名裡有沒有包含案件專屬
+ * 的關鍵字（例如產品代號）來分辨。沒有設定關鍵字時（案件還沒補填、或
+ * 真的是專屬資料夾不需要）回傳 true，不做任何篩選，維持原本「整個資料夾
+ * 都算」的行為，向下相容舊案件。有設定關鍵字時，用不分大小寫的子字串比對
+ * ——關鍵字通常是產品代號/專案名稱片段，不會剛好是正規表示式特殊字元，
+ * 用簡單的 includes 比對，不做模糊比對（寧可比對不到、少抓，也不要比對
+ * 錯、抓進其他案件的圖）。
+ */
+export function matchesKeyword(fileName, keyword) {
+  const trimmedKeyword = String(keyword || '').trim();
+  if (!trimmedKeyword) return true;
+  return String(fileName || '').toLowerCase().includes(trimmedKeyword.toLowerCase());
 }
 
 export function formatBytes(bytes) {
@@ -225,7 +260,14 @@ export async function scanProject(project, config, state, previewDir, warnings) 
     return { caseId: project.caseId, folderPath, error: '路徑存在，但不是資料夾' };
   }
 
-  const mediaFiles = await walkMedia(folderPath, config);
+  const allMediaFiles = await walkMedia(folderPath, config);
+  // 有設定「檔名關鍵字」時，先把不屬於這個案件的檔案整批濾掉——它們完全不會被
+  // 拿去跟上次掃描的狀態比對，不會被記錄進 state、也不會出現在 newItems/
+  // changedItems/pendingPreviews 裡，就像它們根本不在這個資料夾一樣。這是刻意
+  // 的設計：如果之後案件補填/修改了關鍵字，之前沒對到的檔案會被當成「全新」重新
+  // 判斷一次（而不是因為曾經被略過而卡住），行為比較好預期。
+  const mediaFiles = allMediaFiles.filter(media => matchesKeyword(path.basename(media.filePath), project.keyword));
+  const skippedByKeywordCount = allMediaFiles.length - mediaFiles.length;
   const previousState = state[project.caseId] || { files: {} };
   const previousFiles = previousState.files || {};
   const nextFiles = {};
@@ -276,6 +318,7 @@ export async function scanProject(project, config, state, previewDir, warnings) 
     caseId: project.caseId,
     folderPath,
     totalFiles: mediaFiles.length,
+    skippedByKeywordCount,
     newItems,
     changedItems,
     unchangedCount,
@@ -303,6 +346,7 @@ export function discoverProjects(dbData) {
     .map(row => ({
       caseId: String(row['案件編號'] || ''),
       rawFolderPath: String(row['設計圖資料夾連結'] || '').trim(),
+      keyword: String(row['設計圖檔名關鍵字'] || '').trim(),
       designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
       client: String(row['客戶別'] || '').trim() || '未分類客戶',
       start: String(row['開始日期'] || '').trim()
@@ -325,7 +369,8 @@ export function findCaseMeta(dbData, caseId) {
     designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
     client: String(row['客戶別'] || '').trim(),
     start: String(row['開始日期'] || '').trim(),
-    status: String(row['狀態'] || '').trim()
+    status: String(row['狀態'] || '').trim(),
+    keyword: String(row['設計圖檔名關鍵字'] || '').trim()
   };
 }
 

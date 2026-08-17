@@ -1059,8 +1059,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const touchesProtected = writeHeaders.some(header => ['案件狀態', '狀態', '項目細節'].includes(header)) || ['status', 'details'].some(key => changes[key] !== undefined);
     if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '已取消') throw new Error('請先登入後再修改狀態或項目細節');
     const changedKeys = Object.keys(changes).filter(key => key !== 'id');
-    const onlyDesignImageFolderLink = !touchesProtected && changedKeys.length > 0 && changedKeys.every(key => key === 'designImageFolderUrl')
-      && writeHeaders.every(header => header === '設計圖資料夾連結');
+    // 「設計圖資料夾連結」與「設計圖檔名關鍵字」是同一組操作（設計師在 NAS 資料夾選擇器
+    // 裡一起填），一起寫入時一樣只需要 media.manage、不需要完整的 request.edit——理由跟
+    // 只改資料夾連結時一致：這兩個欄位不影響案件的其他業務欄位，只是控制自動追蹤設計圖
+    // 的來源與篩選條件。只要這次送出的欄位/表頭完全落在這兩者範圍內，就套用這個放寬。
+    const DESIGN_IMAGE_FOLDER_KEYS = ['designImageFolderUrl', 'designImageFolderKeyword'];
+    const DESIGN_IMAGE_FOLDER_HEADERS = ['設計圖資料夾連結', '設計圖檔名關鍵字'];
+    const onlyDesignImageFolderLink = !touchesProtected && changedKeys.length > 0 && changedKeys.every(key => DESIGN_IMAGE_FOLDER_KEYS.includes(key))
+      && writeHeaders.every(header => DESIGN_IMAGE_FOLDER_HEADERS.includes(header));
     if (session) {
       this.requireAccess(database, session, payload.accessContext === 'archive' ? 'archive.edit'
         : touchesProtected ? 'request.status' : onlyDesignImageFolderLink ? 'media.manage' : 'request.edit');
