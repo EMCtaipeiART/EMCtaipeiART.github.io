@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1260,
+  "revision": 1261,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T08:18:19.027Z",
+  "updatedAt": "2026-08-17T08:18:24.457Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21757,9 +21757,9 @@
           "開始": 5,
           "結束": 6,
           "設計負責人": 7,
-          "狀態": 9,
+          "狀態": 10,
           "項目細節": 8,
-          "修改": 10,
+          "修改": 9,
           "主旨": 11,
           "操作": 12,
           "時間表": "",
