@@ -186,7 +186,27 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-17 22:05 Asia/Taipei（最新）— 修正「修改紀錄」開著時背景輪詢不會刷新新圖片；案件資料彈窗設計圖記錄改用輪次色標區分；案件列表「初稿」膠囊改白底
+### 2026-08-17 22:30 Asia/Taipei（最新）— 「初稿」小膠囊改成比照「項目細節」樣式（含深色模式）
+
+- 修改目的：上一則修改把案件列表「修改」欄的「初稿」膠囊改成白底，使用者接著要求進一步「比照『項目細節』的小膠囊樣式一樣」，也就是不要自己另外配色，直接用跟「項目細節」欄位那顆白底圓角膠囊完全相同的視覺規格。
+- 追查過程：`.editable-field.detail-edit`（項目細節欄位按鈕）在案件列表這個情境下，真正生效的樣式是 `.case-table-wrap .detail-edit`（[index.html:1166](index.html:1166)，這個檔案有多處同名class在不同層級被覆寫，這條是實際套用在案件列表裡的那一條，已用瀏覽器 `getComputedStyle` 逐一核對確認）：白底 `#fff`、邊框 `1px solid #dfe7e2`、文字色 `#43524b`、圓角 `999px`、陰影 `0 2px 8px rgba(18,38,28,.04)`；深色模式則是 `#casesSection .editable-field.detail-edit`（[index.html:4428](index.html:4428)）：底色 `#28362f`、文字 `#d4e1db`、邊框 `#45594f`。上一則新增的「初稿」白色樣式只做了淺色模式、邊框顏色是隨手挑的 `#c9d3cd`、也完全沒有處理陰影跟深色模式，這次逐項核對後統一改成跟「項目細節」完全一致的數值。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. `revisionStyle(count)`（[index.html:8114](index.html:8114)）count<=0（初稿）分支的顏色數值改成與「項目細節」相同：邊框 `#c9d3cd`→`#dfe7e2`、文字 `#17211d`→`#43524b`（背景本來就已經是 `#fff`，不用改）。這個函式同時餵給案件列表的「修改」欄膠囊、案件詳情彈窗的「修改」欄膠囊、以及上一則新增的「案件資料」彈窗設計圖記錄色標，三處會同步套用新配色，不用個別調整。
+  2. 新增 `is-draft` 這個 CSS class 標記，只在 `count<=0`（`revisionControl()`，[index.html:8119](index.html:8119)）與設計圖記錄色標的輪次 `<=0`（`caseDetailDesignImagesHtml()`，[index.html:7520](index.html:7520)）才會加上去；`.revision-pill.is-draft,.case-detail-design-round-badge.is-draft{box-shadow:0 2px 8px rgba(18,38,28,.04)!important}`（[index.html:44](index.html:44) 附近）補上「項目細節」原本就有、但先前「初稿」膠囊沒有的淺陰影，讓兩者質感一致。
+  3. **新增深色模式支援**：先前「初稿」膠囊完全沒有深色模式覆寫（跟其餘輪次一樣，色彩固定寫死在行內樣式變數裡，不會隨主題切換），這次比照既有 `.revision-pill.revision-add` 深色模式覆寫的寫法（[index.html:4525](index.html:4525) 附近），新增 `html[data-theme="dark"] #casesSection .revision-pill.is-draft, html[data-theme="dark"] #caseDetailModal .revision-pill.is-draft, html[data-theme="dark"] .case-detail-design-round-badge.is-draft{background:#28362f!important;color:#d4e1db!important;border-color:#45594f!important;box-shadow:none!important}`——數值直接抄「項目細節」深色模式的既有數值，確保深色模式下「初稿」跟「項目細節」看起來還是同一種膠囊。**其餘輪次（一修、二修…）這次仍然沒有深色模式適配，維持原本就有的既有限制**（灰階漸層是行內樣式算出來的固定色，不隨主題切換），這次只精準針對使用者這次點名的「初稿」補上，沒有擴大處理其他輪次。
+- 風險區塊：
+  - `is-draft` 是全新的 class 名稱，已經用 `grep` 確認過整個檔案沒有其他地方用到這個名字，不會跟既有樣式或邏輯衝突。
+  - 深色模式覆寫的選擇器刻意寫成三個目標（`#casesSection .revision-pill.is-draft`／`#caseDetailModal .revision-pill.is-draft`／`.case-detail-design-round-badge.is-draft`，最後一個沒有限定容器 ID），因為設計圖記錄的色標只會出現在 `#caseDetailModal` 裡、不需要額外限定容器就已經夠精準，而且這樣寫比較不會因為之後容器結構調整而失效。
+  - 案件列表「修改」欄的膠囊本身尺寸（`padding`／`font-weight`）沒有跟著「項目細節」一起改（項目細節是 `padding:4px 11px;font-weight:850`，修改欄位膠囊維持原本的 `padding:5px 12px;font-weight:900`）——這是刻意保留的差異：案件列表「修改」欄本來就要容納「初稿」到「十修」等不同輪次的膠囊，所有輪次共用同一組尺寸設定才不會讓欄位寬度、對齊在切換輪次時忽大忽小；使用者這次的訴求聚焦在「顏色／邊框／陰影／深色模式」這些讓初稿「看起來像項目細節」的視覺特徵，不包含把單一輪次的膠囊尺寸改得跟其他輪次不一樣，所以沒有動尺寸相關屬性。
+- 已檢查／驗證方式：
+  - `<script>` 主要區塊用 `new Function()` 語法檢查通過；`node --test backend/test/*.test.mjs` 26/26 全過；事先 `grep` 確認 `backend/test/backend.test.mjs` 沒有任何斷言鎖住這次改到的字串。
+  - 用本機 Node 後台＋ Browser pane 對 `index.html` 做隔離測試：①在有 `.case-table-wrap` 祖先容器的正確情境下，比對真實「項目細節」按鈕（`.editable-field.detail-edit`）與新版「初稿」膠囊的 `getComputedStyle`，確認背景色、邊框顏色與寬度、文字顏色、圓角、陰影完全一致；②把測試節點直接掛進真實頁面的 `#casesSection` 底下、切換 `html[data-theme="dark"]`，再次比對兩者的 `getComputedStyle`，確認深色模式下背景、邊框、文字顏色同樣完全一致（`rgb(40,54,47)`／`rgb(69,89,79)`／`rgb(212,225,219)`）。
+  - **未做的驗證**：沒有肉眼截圖比對（這個環境的截圖工具在測試過程中持續回傳空白畫面，前幾次修改也記錄過同樣的環境限制，改用 `getComputedStyle` 逐項數值驗證取代）；也沒有用真實登入帳號在正式站切換淺色／深色模式，實際看一次案件列表與案件資料彈窗的呈現效果。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-17 22:05 Asia/Taipei — 修正「修改紀錄」開著時背景輪詢不會刷新新圖片；案件資料彈窗設計圖記錄改用輪次色標區分；案件列表「初稿」膠囊改白底
 
 - 修改目的：使用者提出三項：①前台「修改紀錄」彈窗裡，案件進入一修後，NAS 背景監控程式會自動把最新修改圖片抓進系統，但圖片沒有正確顯示在「一修」這個欄位裡；②希望「案件資料」彈窗裡的設計圖記錄能清楚區分「初稿」「一修」「二修」等等；③案件列表裡「修改」欄的「初稿」小膠囊樣式改成白色，跟其他修改輪次（灰階漸層）稍微區隔開來。
 - 追查過程：①這一項一開始無法確定是後端「圖片被歸到錯的輪次」還是前端「畫面沒有刷新」，逐一追查 Worker 的 `addCaseDesignImages` action（[worker/src/database-coordinator.ts:1217](worker/src/database-coordinator.ts:1217)）與 NAS 監控程式的 `computeRound()`（[scripts/nas_design_image_lib.mjs:377](scripts/nas_design_image_lib.mjs:377)）邏輯，兩者對「這一輪要歸到哪個修改次數」的判斷是一致的（都是取『修改統計表』目前最大的『修改次數』），也用正式資料庫裡真實案件 `26070118` 核對過（第一輪 2 張圖確實掛在「一修」、第二輪 1 張圖確實掛在「二修」，資料本身沒有錯）；真正的問題出在前端 `index.html` 的背景刷新機制——`refreshLatestInBackground()`（每 6 秒觸發一次，[index.html:9351](index.html:9351)）呼叫的 `loadSheet({background:true})` 在資料同步完成後，雖然會呼叫 `fetchModificationCounts()` 重新抓取每個案件最新的修改紀錄（含圖片），但接下來只呼叫了 `renderNotifications()`，完全沒有呼叫 `refreshOpenRevisionModal()`／`refreshOpenCaseDetail()`——也就是說，如果使用者當下正開著某個案件的「修改紀錄」彈窗，NAS 監控程式在背景把新圖片寫進系統之後，前端確實有抓到最新資料（`modificationRecords` 這個 Map 已經更新），但已經開著的彈窗畫面不會自動重繪，使用者會看不到新圖片，除非手動關閉再重新打開彈窗。这連foreground（非背景）分支的同一段程式碼也一樣缺這個刷新呼叫。用真實案件情境重現：先開啟一個案件的「修改紀錄」彈窗（此時只有「初稿」），接著模擬 NAS 監控程式在背景把「一修」與其圖片寫進 `modificationRecords`，這時候彈窗畫面確實還停留在只有「初稿」的舊畫面（`staleContainsRound1:false`），成功重現使用者回報的現象。
