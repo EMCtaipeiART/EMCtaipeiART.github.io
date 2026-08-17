@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1301,
+  "revision": 1302,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T10:52:00.552Z",
+  "updatedAt": "2026-08-17T10:52:05.431Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18499,7 +18499,7 @@
           "設計種類": "平面",
           "階段": "後製",
           "數量": "3",
-          "開始日期": "2026/08/17",
+          "開始日期": "2026/08/18",
           "結束日期": "2026/08/20",
           "設計負責人": "Anna",
           "使用平台": "Facebook",
