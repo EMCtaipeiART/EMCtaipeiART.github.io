@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1229,
+  "revision": 1230,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T06:11:13.245Z",
+  "updatedAt": "2026-08-17T06:14:55.428Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17355,7 +17355,7 @@
           "加權": "18",
           "填單時間": "2026/08/07 10:28",
           "時間標記": "",
-          "繳交時間": "",
+          "繳交時間": "2026/08/17 14:14:55",
           "使用平台": "Facebook",
           "設計簡報說明": "P.56~P.68",
           "設計簡報連結": "https://emctaipeiart.github.io/a/26080038",
@@ -20046,6 +20046,18 @@
           "圖片連結": "[{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-JeaqgKruYTIYi2RPuZIILxnbNqk3AGc=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_IG.png\",\"url\":\"https://lh3.googleusercontent.com/d/104ZdH_ISLQ8qPfjXIlnooEq9M0YAu8gp=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1huqkJuBLiGR8XcRGbavRoR3Y4DgutTvy=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/17 14:10:17"
+        },
+        {
+          "案件編號": "26080038",
+          "修改次數": "0",
+          "建立日期": "2026/08/17 14:14:55",
+          "修改日期": "2026/08/17 14:14:55",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/17 14:14:55",
+          "圖片連結": "[{\"fileName\":\"260811_eufy_C28_再製_滾筒當道入門首選.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1vYPCwEMJIFJnrfl87WH0s2e6OJ3skf6D=w1600\"},{\"fileName\":\"260811_eufy_C28_新素材_五星口碑狂推.png\",\"url\":\"https://lh3.googleusercontent.com/d/16ia-vSFsUVXNkqdJ_ywFwLQ1IDAv30w6=w1600\"},{\"fileName\":\"260811_eufy_C28_蝦皮_再製_五星口碑狂推.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lWGPuBkkekZCiYUROJM2scgk8QJFSrDV=w1600\"},{\"fileName\":\"260811_eufy_C28_蝦皮_再製_滾筒當道入門首選.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1CnqbaUkRhrbfv9T4gQtwXXujD3ED0kPu=w1600\"},{\"fileName\":\"260811_eufy_E25_再製_見白就休.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yrPKXLDvpQK2nYe04XW8V4K5gyKji6nw=w1600\"},{\"fileName\":\"260811_eufy_E25_再製_閃避界的MVP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KmOVPD8NI4TZpjJIowpLa2HIHy7pk6DZ=w1600\"},{\"fileName\":\"260811_eufy_E25_新素材_只留回憶不留腳印.png\",\"url\":\"https://lh3.googleusercontent.com/d/14jFLx026Bx-Ww83AErBmANdR82I7_vzW=w1600\"},{\"fileName\":\"260811_eufy_S2_新素材_理想生活.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1FIYoFezA7SENWQEUxbmfufV5fIX8stwP=w1600\"},{\"fileName\":\"260811_eufy_S2_蝦皮_再製_理想生活.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1VmnV7nenh2Vzasb9zOB4D3MYj-eoKuy9=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/17 14:14:55"
         }
       ]
     },
