@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1194,
+  "revision": 1195,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:59:11.374Z",
+  "updatedAt": "2026-08-17T03:59:19.143Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20413,7 +20413,7 @@
           "專案負責人": "",
           "設計種類": "",
           "階段": "",
-          "數量": "",
+          "數量": 8,
           "開始": "",
           "結束": "",
           "設計負責人": 5,
