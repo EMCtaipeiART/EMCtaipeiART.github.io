@@ -127,8 +127,13 @@ async function main() {
     if (canUpload) {
       try {
         console.log('  [輪次判斷] 檢查這輪是否有待上傳的圖片...');
+        // 這一輪要歸到哪個修改次數，必須用「即將上傳的當下」最新的資料庫狀態
+        // 判斷，不能沿用整個掃描開始時抓的那份 dbData——如果 PM 在掃描這批案
+        // 件的過程中新增了修改需求，沿用舊快照會讓這次抓到的圖片被錯誤歸到
+        // 舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪。
+        const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
         const upload = await lib.uploadPendingRound({
-          config, secrets, dbData, caseId: result.caseId,
+          config, secrets, dbData: latestDbData, caseId: result.caseId,
           designer: project.designer, client: project.client, start: project.start,
           pendingPreviews: result.pendingPreviews,
           stateFiles: nextState[result.caseId].files
