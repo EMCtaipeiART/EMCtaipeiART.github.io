@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1203,
+  "revision": 1204,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T04:41:16.898Z",
+  "updatedAt": "2026-08-17T04:41:20.348Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15114,7 +15114,7 @@
           "結束日期": "2026/07/30",
           "設計負責人": "Machi",
           "項目細節": "廣告素材, 急件",
-          "狀態": "執行中",
+          "狀態": "過稿中",
           "加權": "12",
           "填單時間": "",
           "時間標記": "",
