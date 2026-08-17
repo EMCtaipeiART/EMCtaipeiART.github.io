@@ -29,7 +29,8 @@ export const KEY_TO_HEADER: Record<string, string> = {
   submittedAt: '填單時間', briefNote: '設計簡報說明', briefUrl: '設計簡報連結', assetNote: '客戶素材說明',
   assetUrl: '客戶素材連結', referenceNote: '參考範例說明', referenceUrl: '參考範例連結', otherNote: '其他說明',
   otherUrl: '其他連結', status: '狀態', details: '項目細節', weight: '加權',
-  designImageFolderUrl: '設計圖資料夾連結', designImageFolderKeyword: '設計圖檔名關鍵字'
+  designImageFolderUrl: '設計圖資料夾連結', designImageFolderKeyword: '設計圖檔名關鍵字',
+  gmailThreadId: 'Gmail信件串ID', gmailThreadOwnerAccount: 'Gmail寄件帳號'
 };
 export const HEADER_ALIASES: Record<string, string[]> = {
   '設計種類': ['設計類型', '設計總類', '設計項目'],

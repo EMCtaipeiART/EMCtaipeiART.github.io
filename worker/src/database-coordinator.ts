@@ -24,6 +24,7 @@ const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
 const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
+type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null };
 
 function cloneDatabase(database: DatabaseSnapshot): DatabaseSnapshot {
   return structuredClone(database);
@@ -180,6 +181,58 @@ function parseCaseDesignImages_(row: Row): { fileName: string; url: string }[] {
   } catch { return []; }
 }
 
+function utf8ToBase64Url(value: string): string {
+  return bytesToBase64Url(new TextEncoder().encode(value));
+}
+
+/** RFC 2047 encoded-word，避免中文主旨在信件標頭裡變成亂碼。 */
+function encodeMimeHeaderText(value: string): string {
+  return `=?UTF-8?B?${btoa(String.fromCharCode(...new TextEncoder().encode(value)))}?=`;
+}
+
+function mimeAddressList(value: string): string {
+  return value.split(',').map(part => part.trim()).filter(Boolean).join(', ');
+}
+
+/** 組出寄送用的 RFC822 MIME 純文字信件，回傳 Gmail API 需要的 base64url raw 字串。 */
+function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyText: string; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
+  const headers: string[] = [];
+  headers.push(`To: ${mimeAddressList(options.to)}`);
+  if (options.cc && mimeAddressList(options.cc)) headers.push(`Cc: ${mimeAddressList(options.cc)}`);
+  const subjectText = options.threadHeaders ? options.threadHeaders.subject : options.subject;
+  headers.push(`Subject: ${encodeMimeHeaderText(subjectText)}`);
+  if (options.threadHeaders) {
+    headers.push(`In-Reply-To: ${options.threadHeaders.inReplyTo}`);
+    headers.push(`References: ${options.threadHeaders.references}`);
+  }
+  headers.push('MIME-Version: 1.0');
+  headers.push('Content-Type: text/plain; charset="UTF-8"');
+  headers.push('Content-Transfer-Encoding: base64');
+  const bodyBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(options.bodyText))).replace(/(.{76})/g, '$1\n');
+  const mime = `${headers.join('\r\n')}\r\n\r\n${bodyBase64}`;
+  return utf8ToBase64Url(mime);
+}
+
+type GmailMessagePart = { mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
+
+/** 遞迴走訪 Gmail 訊息的 MIME parts，只取 text/plain 內容，避免把原始 HTML 塞進畫面造成注入風險。 */
+function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
+  if (!payload) return '';
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    try { return new TextDecoder('utf-8').decode(base64UrlToBytes(payload.body.data)); } catch { return ''; }
+  }
+  for (const part of payload.parts || []) {
+    const found = extractPlainTextFromGmailPayload(part);
+    if (found) return found;
+  }
+  return '';
+}
+
+function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | undefined, name: string): string {
+  const match = (headers || []).find(header => text(header.name).toLowerCase() === name.toLowerCase());
+  return text(match?.value);
+}
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -251,6 +304,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           this.ctx.storage.sql.exec(
             'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
             2, new Date().toISOString()
+          );
+        });
+      }
+      if (!applied.has(3)) {
+        this.ctx.storage.transactionSync(() => {
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS gmail_tokens (
+              account TEXT PRIMARY KEY,
+              refresh_token TEXT NOT NULL,
+              access_token TEXT,
+              access_token_expires_at INTEGER,
+              gmail_address TEXT,
+              connected_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+          `);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            3, new Date().toISOString()
           );
         });
       }
@@ -352,9 +424,63 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     );
   }
 
+  private getGmailTokens(accountValue: unknown): GmailTokenRow | null {
+    const account = canonicalAccount(accountValue);
+    const rows = this.ctx.storage.sql.exec<GmailTokenRow>(
+      'SELECT account, refresh_token, access_token, access_token_expires_at, gmail_address FROM gmail_tokens WHERE account = ?', account
+    ).toArray();
+    return rows.length ? rows[0] : null;
+  }
+
+  private setGmailTokens(accountValue: unknown, tokens: { refreshToken?: string; accessToken?: string; accessTokenExpiresAt?: number; gmailAddress?: string }): void {
+    const account = canonicalAccount(accountValue);
+    const existing = this.getGmailTokens(account);
+    const refreshToken = text(tokens.refreshToken) || text(existing?.refresh_token);
+    if (!refreshToken) throw new Error('缺少 Gmail refresh token，無法儲存連線');
+    this.ctx.storage.sql.exec(
+      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, connected_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(account) DO UPDATE SET refresh_token=excluded.refresh_token, access_token=excluded.access_token,
+         access_token_expires_at=excluded.access_token_expires_at, gmail_address=excluded.gmail_address, updated_at=excluded.updated_at`,
+      account, refreshToken, text(tokens.accessToken), Number(tokens.accessTokenExpiresAt) || null,
+      text(tokens.gmailAddress) || text(existing?.gmail_address), new Date().toISOString(), new Date().toISOString()
+    );
+  }
+
+  private deleteGmailTokens(accountValue: unknown): void {
+    this.ctx.storage.sql.exec('DELETE FROM gmail_tokens WHERE account = ?', canonicalAccount(accountValue));
+  }
+
+  /** 取得目前帳號可用的 Gmail access token；過期就用 refresh_token 換新的，換不到就清掉連線並丟出錯誤。 */
+  private async getValidGmailAccessToken(accountValue: unknown): Promise<string> {
+    const account = canonicalAccount(accountValue);
+    const stored = this.getGmailTokens(account);
+    if (!stored) throw new Error('尚未連接 Gmail，請先在「發信」選單裡連接 Gmail 帳號');
+    const expiresAt = Number(stored.access_token_expires_at) || 0;
+    if (stored.access_token && expiresAt - 60_000 > Date.now()) return stored.access_token;
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token', refresh_token: stored.refresh_token,
+        client_id: this.env.GOOGLE_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET
+      })
+    });
+    const data = await response.json().catch(() => ({})) as Row;
+    if (!response.ok || !text(data.access_token)) {
+      this.deleteGmailTokens(account);
+      throw new Error('Gmail 連結已失效，請重新連接');
+    }
+    const accessToken = text(data.access_token);
+    const expiresIn = Number(data.expires_in) || 3600;
+    this.setGmailTokens(account, { accessToken, accessTokenExpiresAt: Date.now() + expiresIn * 1000 });
+    return accessToken;
+  }
+
   private deleteAccountPrivateState(accountValue: unknown): void {
     const account = canonicalAccount(accountValue);
     this.ctx.storage.sql.exec('DELETE FROM local_password_accounts WHERE account = ?', account);
+    this.deleteGmailTokens(account);
     const sessions = this.ctx.storage.sql.exec<{ token_hash: string; payload: string }>('SELECT token_hash, payload FROM sessions').toArray();
     for (const row of sessions) {
       try {
@@ -554,6 +680,162 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     };
   }
 
+  /** 已登入使用者額外連接 Gmail（授權碼交換，換 refresh_token 存進 gmail_tokens）。 */
+  private async gmailOauthConnect(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const code = text(payload.code);
+    const codeVerifier = text(payload.codeVerifier || payload.code_verifier);
+    const redirectUri = text(payload.redirectUri || payload.redirect_uri || this.env.ERP_REDIRECT_URI);
+    if (!code) return { ok: false, action: 'gmailOauthConnect', error: '缺少 Google 授權碼', reason: 'GMAIL_CODE_MISSING' };
+    if (redirectUri !== this.env.ERP_REDIRECT_URI) return { ok: false, action: 'gmailOauthConnect', error: 'redirect_uri 與後端設定不一致', reason: 'GMAIL_REDIRECT_URI_MISMATCH' };
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code', code, redirect_uri: redirectUri,
+        client_id: this.env.GOOGLE_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET,
+        ...(codeVerifier ? { code_verifier: codeVerifier } : {})
+      })
+    });
+    const tokenData = await tokenResponse.json().catch(() => ({})) as Row;
+    if (!tokenResponse.ok || !text(tokenData.access_token)) {
+      return { ok: false, action: 'gmailOauthConnect', error: text(tokenData.error_description || tokenData.error) || `Gmail 授權碼換取失敗：${tokenResponse.status}`, reason: text(tokenData.error) || 'GMAIL_TOKEN_FAILED' };
+    }
+    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${text(tokenData.access_token)}`, Accept: 'application/json' }
+    });
+    const profile = await profileResponse.json().catch(() => ({})) as Row;
+    const gmailAddress = text(profile.email);
+    this.setGmailTokens(current.account, {
+      refreshToken: text(tokenData.refresh_token), accessToken: text(tokenData.access_token),
+      accessTokenExpiresAt: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000, gmailAddress
+    });
+    return { ok: true, action: 'gmailOauthConnect', gmailAddress };
+  }
+
+  private gmailStatus(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const stored = this.getGmailTokens(current.account);
+    return { ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address) };
+  }
+
+  private async gmailDisconnect(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const stored = this.getGmailTokens(current.account);
+    if (stored?.refresh_token) {
+      try {
+        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(stored.refresh_token)}`, { method: 'POST' });
+      } catch { /* Google 撤銷失敗不擋斷線本身，DO 端連線紀錄仍會被刪除 */ }
+    }
+    this.deleteGmailTokens(current.account);
+    return { ok: true, action: 'gmailDisconnect' };
+  }
+
+  /** 透過 Gmail API 寄出案件信件（限第一次，該案件已經有信件串就拒絕，請改用回信）。 */
+  private async sendCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const caseId = text(payload.caseId || payload.id);
+    const to = text(payload.to);
+    const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
+    const subject = text(payload.subject);
+    const bodyText = text(payload.bodyText);
+    if (!caseId) return { ok: false, action: 'sendCaseMail', error: '缺少案件編號' };
+    if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
+    if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const raw = buildGmailRawMessage({ to, cc, subject, bodyText });
+    const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw })
+    });
+    const sendData = await sendResponse.json().catch(() => ({})) as Row;
+    if (!sendResponse.ok || !text(sendData.threadId)) {
+      return { ok: false, action: 'sendCaseMail', error: text((sendData.error as Row)?.message) || `Gmail 寄送失敗：${sendResponse.status}` };
+    }
+    const threadId = text(sendData.threadId);
+    await this.mutate('sendCaseMail', current, draft => {
+      const target = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+      if (!target) throw new Error('找不到案件資料');
+      target['Gmail信件串ID'] = threadId;
+      target['Gmail寄件帳號'] = current.account;
+      return { result: { ok: true, action: 'sendCaseMail' }, changedTables: ['database'] };
+    });
+    return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
+  }
+
+  /** 讀取案件已寄出的 Gmail 信件串（限寄件帳號本人）。只回傳 text/plain 內容，不回傳原始 HTML。 */
+  private async getCaseMailThread(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const caseId = text(payload.caseId || payload.id);
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!row) return { ok: false, action: 'getCaseMailThread', error: '找不到案件資料' };
+    const threadId = text(row['Gmail信件串ID']);
+    const owner = canonicalAccount(row['Gmail寄件帳號']);
+    if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
+    if (owner !== canonicalAccount(current.account)) return { ok: false, action: 'getCaseMailThread', error: `此信件串由 ${owner} 寄出，只有該帳號能查看`, reason: 'GMAIL_THREAD_OWNER_MISMATCH' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data = await response.json().catch(() => ({})) as Row;
+    if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
+    const messages = (Array.isArray(data.messages) ? data.messages : []).map((message: unknown) => {
+      const messageRow = asRow(message);
+      const payloadPart = messageRow.payload as GmailMessagePart & { headers?: Array<{ name?: string; value?: string }> } | undefined;
+      const bodyText = extractPlainTextFromGmailPayload(payloadPart) || text(messageRow.snippet);
+      return {
+        id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
+        date: gmailHeaderValue(payloadPart?.headers, 'Date'), snippet: text(messageRow.snippet), bodyText
+      };
+    });
+    return { ok: true, action: 'getCaseMailThread', threadId, messages };
+  }
+
+  /** 在既有信件串裡回覆一封信（限寄件帳號本人）；先抓最後一封信的標頭組出正確的 In-Reply-To/References。 */
+  private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const caseId = text(payload.caseId || payload.id);
+    const bodyText = text(payload.bodyText);
+    if (!bodyText) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
+    const threadId = text(row['Gmail信件串ID']);
+    const owner = canonicalAccount(row['Gmail寄件帳號']);
+    if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
+    if (owner !== canonicalAccount(current.account)) return { ok: false, action: 'replyCaseMail', error: `此信件串由 ${owner} 寄出，只有該帳號能回覆`, reason: 'GMAIL_THREAD_OWNER_MISMATCH' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const threadResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const threadData = await threadResponse.json().catch(() => ({})) as Row;
+    const threadMessages = Array.isArray(threadData.messages) ? threadData.messages : [];
+    if (!threadResponse.ok || !threadMessages.length) return { ok: false, action: 'replyCaseMail', error: '找不到原始信件串，無法回覆' };
+    const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
+    const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+    const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
+    const lastReferences = gmailHeaderValue(headers, 'References');
+    const lastSubject = gmailHeaderValue(headers, 'Subject');
+    if (!lastMessageId) return { ok: false, action: 'replyCaseMail', error: '無法取得原始信件標頭，無法回覆' };
+    const stored = this.getGmailTokens(current.account);
+    const selfAddress = text(stored?.gmail_address).toLowerCase();
+    const fromHeader = gmailHeaderValue(headers, 'From');
+    const toHeader = gmailHeaderValue(headers, 'To');
+    const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
+    if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
+    const raw = buildGmailRawMessage({
+      to, subject: lastSubject, bodyText,
+      threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
+    });
+    const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw, threadId })
+    });
+    const sendData = await sendResponse.json().catch(() => ({})) as Row;
+    if (!sendResponse.ok) return { ok: false, action: 'replyCaseMail', error: text((sendData.error as Row)?.message) || `Gmail 回覆失敗：${sendResponse.status}` };
+    return { ok: true, action: 'replyCaseMail', gmailMessageId: text(sendData.id) };
+  }
+
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
@@ -580,6 +862,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       if (action === 'getAccessProfile') { this.requireSession(session); return { ok: true, action, access: accessProfile(database, session) }; }
       if (action === 'logout') { await this.deleteSession(payload); return { ok: true, action }; }
+      if (action === 'gmailStatus') return this.gmailStatus(database, session);
+      if (action === 'gmailOauthConnect') return await this.gmailOauthConnect(payload, database, session);
+      if (action === 'gmailDisconnect') return await this.gmailDisconnect(database, session);
+      if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);
+      if (action === 'getCaseMailThread') return await this.getCaseMailThread(payload, database, session);
+      if (action === 'replyCaseMail') return await this.replyCaseMail(payload, database, session);
 
       if (action === 'list' || action === 'recent') {
         const year = text(payload.year);

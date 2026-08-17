@@ -7,6 +7,13 @@ import type { DatabaseSnapshot } from '../src/types';
 
 const ORIGIN = 'https://emctaipeiart.github.io';
 
+function toBase64Url(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
 function testDatabase(): DatabaseSnapshot {
   const database = emptyDatabase() as DatabaseSnapshot;
   database.revision = 7;
@@ -138,7 +145,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -704,5 +711,179 @@ describe('Machi Design API Worker', () => {
 
     const denied = await api({ action: 'backupDatabaseToSheet' });
     expect(denied).toMatchObject({ ok: false });
+  });
+
+  it('gates the Gmail feature behind request.mail, connects an account, sends one case mail, blocks a second send, and refreshes an expired access token before reading the thread', async () => {
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+
+    const blocked = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+    expect(blocked).toMatchObject({ ok: false, error: '此帳號沒有「request.mail」權限' });
+
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://oauth2.googleapis.com/token') {
+        const body = new URLSearchParams(String(init?.body));
+        expect(body.get('client_id')).toBe('501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com');
+        expect(body.get('client_secret')).toBe('test-gmail-oauth-secret');
+        if (body.get('grant_type') === 'authorization_code') {
+          expect(body.get('code')).toBe('auth-code');
+          return Response.json({ access_token: 'gmail-access-1', refresh_token: 'gmail-refresh-1', expires_in: 3600 });
+        }
+        throw new Error(`unexpected token grant_type: ${body.get('grant_type')}`);
+      }
+      if (url === 'https://www.googleapis.com/oauth2/v2/userinfo') {
+        return Response.json({ email: 'designer.mailbox@gmail.com' });
+      }
+      throw new Error(`unexpected fetch during connect: ${url}`);
+    });
+    const connected = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+    expect(connected).toMatchObject({ ok: true, gmailAddress: 'designer.mailbox@gmail.com' });
+
+    const status = await api({ action: 'gmailStatus' }, token);
+    expect(status).toMatchObject({ ok: true, connected: true, gmailAddress: 'designer.mailbox@gmail.com' });
+
+    let githubPutCount = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        const body = JSON.parse(String(init?.body));
+        expect(typeof body.raw).toBe('string');
+        return Response.json({ id: 'gmail-msg-1', threadId: 'gmail-thread-1' });
+      }
+      if (url.startsWith('https://api.github.com/')) {
+        githubPutCount += 1;
+        return Response.json({ content: { sha: `sha-${githubPutCount}` }, commit: { sha: `commit-${githubPutCount}` } });
+      }
+      throw new Error(`unexpected fetch during send: ${url}`);
+    });
+    const sent = await api({
+      action: 'sendCaseMail', caseId: '26080001',
+      to: 'designer@emctaipei.com', cc: '', subject: '【26080001】測試客戶_Worker 測試案件', bodyText: 'Hi，這是測試信件內容'
+    }, token);
+    expect(sent).toMatchObject({ ok: true, threadId: 'gmail-thread-1', gmailMessageId: 'gmail-msg-1' });
+
+    const listed = await api({ action: 'list' }, token);
+    const caseRow = (listed.rows as Array<Record<string, unknown>>).find(row => row.id === '26080001');
+    expect(caseRow).toMatchObject({ gmailThreadId: 'gmail-thread-1', gmailThreadOwnerAccount: 'test.user@emctaipei.com' });
+
+    const secondSend = await api({
+      action: 'sendCaseMail', caseId: '26080001', to: 'designer@emctaipei.com', subject: '再寄一次', bodyText: '不應該成功'
+    }, token);
+    expect(secondSend).toMatchObject({ ok: false, reason: 'THREAD_EXISTS' });
+
+    // 換另一個沒有寄過這封信的帳號嘗試查看／回覆同一個信件串，應該被寄件帳號檢查擋下。
+    // admin@emctaipei.com 是保留給每日 shortcut 密碼（當日 MMDD）登入的帳號，直接沿用同一套機制取得它的 token。
+    const todayMonthDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date()).reduce((acc, part) => (part.type === 'month' || part.type === 'day' ? acc + part.value : acc), '');
+    const adminLogin = await api({ action: 'login', password: todayMonthDay });
+    expect(adminLogin.ok).toBe(true);
+    const adminToken = String(adminLogin.token);
+    const mismatchedRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, adminToken);
+    expect(mismatchedRead).toMatchObject({ ok: false, reason: 'GMAIL_THREAD_OWNER_MISMATCH' });
+
+    // 讀信件串：用真正的寄件帳號讀取，應該成功並只回傳純文字內容。
+    const plainTextBody = 'Hi，這是設計師的回覆內容';
+    const plainTextBodyBase64Url = toBase64Url(plainTextBody);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({
+          id: 'gmail-thread-1',
+          messages: [
+            {
+              id: 'gmail-msg-1', snippet: 'Hi，這是測試信件內容',
+              payload: {
+                mimeType: 'text/plain', body: { data: toBase64Url('Hi，這是測試信件內容') },
+                headers: [
+                  { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
+                  { name: 'Date', value: 'Mon, 17 Aug 2026 10:00:00 +0800' }
+                ]
+              }
+            },
+            {
+              id: 'gmail-msg-2', snippet: plainTextBody,
+              payload: {
+                mimeType: 'text/plain', body: { data: plainTextBodyBase64Url },
+                headers: [
+                  { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+                  { name: 'Date', value: 'Mon, 17 Aug 2026 11:00:00 +0800' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
+                  { name: 'References', value: '<msg1@mail.gmail.com>' }, { name: 'Subject', value: 'Re: 測試主旨' }
+                ]
+              }
+            }
+          ]
+        });
+      }
+      throw new Error(`unexpected fetch during thread read: ${url}`);
+    });
+    const thread = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    expect(thread.ok).toBe(true);
+    const messages = thread.messages as Array<Record<string, unknown>>;
+    expect(messages).toHaveLength(2);
+    expect(messages[1]).toMatchObject({ from: 'designer@emctaipei.com', bodyText: plainTextBody });
+
+    // 回覆：先抓最後一封信的標頭組出 In-Reply-To/References，再送出，threadId 要跟著帶上。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes('/threads/gmail-thread-1?format=metadata')) {
+        return Response.json({
+          id: 'gmail-thread-1',
+          messages: [{
+            id: 'gmail-msg-2', payload: {
+              headers: [
+                { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+                { name: 'Message-Id', value: '<msg2@mail.gmail.com>' }, { name: 'References', value: '<msg1@mail.gmail.com>' },
+                { name: 'Subject', value: 'Re: 測試主旨' }
+              ]
+            }
+          }]
+        });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        const body = JSON.parse(String(init?.body));
+        expect(body.threadId).toBe('gmail-thread-1');
+        return Response.json({ id: 'gmail-msg-3', threadId: 'gmail-thread-1' });
+      }
+      throw new Error(`unexpected fetch during reply: ${url}`);
+    });
+    const replied = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報' }, token);
+    expect(replied).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-3' });
+
+    // 手動把 access token 改成已過期，驗證下一次呼叫會先用 refresh_token 換一組新的再讀信。
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      state.storage.sql.exec('UPDATE gmail_tokens SET access_token_expires_at = ? WHERE account = ?', 1, 'test.user@emctaipei.com');
+    });
+    let refreshedAccessTokenUsed = false;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://oauth2.googleapis.com/token') {
+        const body = new URLSearchParams(String(init?.body));
+        expect(body.get('grant_type')).toBe('refresh_token');
+        expect(body.get('refresh_token')).toBe('gmail-refresh-1');
+        return Response.json({ access_token: 'gmail-access-2', expires_in: 3600 });
+      }
+      if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-2');
+        refreshedAccessTokenUsed = true;
+        return Response.json({ id: 'gmail-thread-1', messages: [] });
+      }
+      throw new Error(`unexpected fetch during token refresh: ${url}`);
+    });
+    const threadAfterRefresh = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    expect(threadAfterRefresh.ok).toBe(true);
+    expect(refreshedAccessTokenUsed).toBe(true);
+
+    // 中斷連線：Google 撤銷呼叫失敗也不擋斷線，DO 端的紀錄一樣會被清掉。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => { throw new Error('network down'); });
+    const disconnected = await api({ action: 'gmailDisconnect' }, token);
+    expect(disconnected).toMatchObject({ ok: true });
+    const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
+    expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
   });
 });

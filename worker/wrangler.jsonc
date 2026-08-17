@@ -22,7 +22,7 @@
     "UPLOAD_APPS_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec"
   },
   "secrets": {
-    "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD", "NAS_WATCHER_API_KEY", "DATABASE_BACKUP_API_KEY"]
+    "required": ["GITHUB_TOKEN", "ERP_CLIENT_SECRET", "ADMIN_LOGIN_PASSWORD", "NAS_WATCHER_API_KEY", "DATABASE_BACKUP_API_KEY", "GMAIL_OAUTH_CLIENT_SECRET"]
   },
   "durable_objects": {
     "bindings": [
