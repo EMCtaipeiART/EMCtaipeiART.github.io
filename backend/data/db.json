@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1133,
+  "revision": 1134,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:18:12.083Z",
+  "updatedAt": "2026-08-17T03:25:27.965Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19564,9 +19564,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/13 08:55:25",
-          "圖片連結": "[{\"fileName\":\"260803_2026集團研討會_貼文_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dO5XW7dJWnDIJ0NkAKPQVgJM_pMQsaMp=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pfjVjqCyb6rCw4VdNiIU0YR0xZjxrWx1=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YcH-HWZBAg2yz7baD02P_xqYhM3BHMwz=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zDgEzph0aZ0CHsWJlZI27Zy2b7_MQ_Ix=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eZvoM5VPYW7wWnefzbhJX0ZcrZBBHUTM=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_06.png\",\"url\":\"https://lh3.googleusercontent.com/d/1s5Sb8nzsTnmS3YSOE9VApO-YyuDbQqHr=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_07.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oa8nSy9prhyY5pUkg0IvSTHGQsIQH-Ec=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260803_2026集團研討會_貼文_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dO5XW7dJWnDIJ0NkAKPQVgJM_pMQsaMp=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pfjVjqCyb6rCw4VdNiIU0YR0xZjxrWx1=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YcH-HWZBAg2yz7baD02P_xqYhM3BHMwz=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zDgEzph0aZ0CHsWJlZI27Zy2b7_MQ_Ix=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eZvoM5VPYW7wWnefzbhJX0ZcrZBBHUTM=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_06.png\",\"url\":\"https://lh3.googleusercontent.com/d/1s5Sb8nzsTnmS3YSOE9VApO-YyuDbQqHr=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_07.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oa8nSy9prhyY5pUkg0IvSTHGQsIQH-Ec=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CTZsW0C0XYWZpqRqfM-0bfgPMHRMyHO2=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VPxe7-5SqqafMLYLohYlyFFcD_-DvK_5=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bRWleRSuyS2CW5kLzLS05sKbpSE43W3B=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1fQ38BTi8NjjFp27SpMVxy2Kr8Su0Af3a=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jRbtRIb08edzcP689R8W8dTStDme4X_C=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_06.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XttcL6L-ii8VbkijCv-f2GwB2x-bYblK=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_07.png\",\"url\":\"https://lh3.googleusercontent.com/d/18nYMM6UnMGXAk1N1_z7huwic0BL_krDl=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_08.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-Fr4zdtnrxMnRE7TUq4FkzUAxhPkEYEs=w1600\"},{\"fileName\":\"260803_2026集團研討會_貼文_09.png\",\"url\":\"https://lh3.googleusercontent.com/d/108NOZ2AlYfzZSG72fJ6yqxL8clMnnjL5=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/13 08:55:25"
+          "圖片更新時間": "2026/08/17 11:25:27"
         },
         {
           "案件編號": "26080055",
