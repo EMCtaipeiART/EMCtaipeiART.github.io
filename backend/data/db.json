@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1213,
+  "revision": 1214,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T04:54:15.956Z",
+  "updatedAt": "2026-08-17T04:54:20.058Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -15128,7 +15128,8 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "修改次數": "0"
+          "修改次數": "0",
+          "設計圖資料夾連結": "專案企劃部/執行中/添可/廣告素材/2026/8月/第一波"
         },
         {
           "案件編號": "26070224",
