@@ -186,7 +186,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-14 Asia/Taipei（最新）— 移除前台管理者帳號選單「切換一般使用者預覽」與「檢查一般使用者寫入權限」
+### 2026-08-17 10:09 Asia/Taipei（最新）— 資料庫後台「修改統計表」改名為「修改列表」，案件群組標題新增顯示客戶別/專案名稱/專案負責人/設計負責人
+
+- 修改目的：使用者要求把資料庫後台側邊選單的「修改統計表」改名為「修改列表」，並且每個案件群組要顯示該案件的「案件編號」「客戶別」「專案名稱」「專案負責人」「設計負責人」，不只是案件編號。
+- 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **改名只動顯示層，不動資料表本身**：`TABLE_LABELS` 新增 `'修改統計表':'修改列表'` 一筆，沿用既有的 `帳號權限→帳號設定`／`加權計分標準→加權設定`／`角色權限範本→權限設定` 同一套做法——側邊選單標題、頁面標題（`updateContentHead()`）都是透過 `tableLabel(name)` 查這張對照表產生，所以只加一行就讓側邊選單、頁面標題全部顯示「修改列表」。`TABLE_ORDER`／`TABLE_INFO`／`BOARD_VIEWS`／`NO_INSERT_TABLES`／`updateAddButton()`／排序邏輯等內部程式碼**完全維持使用原本的 `修改統計表` 字串**（這是 JSON 資料庫裡真正的表名，改了會連到 `backend/schema.mjs` 的 `修改統計表` 表定義對不上），只有「使用者看到的文字」變了。
+  2. **案件群組標題新增客戶別／專案名稱／專案負責人／設計負責人**：這四個欄位只存在 `database` 表（案件本身），不在「修改統計表」列本身裡，過去 `modificationHistoryHtml()` 只能顯示案件編號。新增 `caseInfoRowsCache`（模組層級快取）與 `ensureCaseInfoRows()`——比照既有 `supplementLinkRowsCache`／`ensureSupplementLinkRows()`（補充資料連結併入同一頁面）的做法：APPS_SCRIPT 模式直接讀 `directDatabase.tables.database.rows`；Worker REST 模式另外打一次 `/table/database?offset=0&limit=100000` 抓全部案件。`loadRows()` 切到「修改統計表」頁籤時，跟 `ensureSupplementLinkRows()` 一起呼叫；`refreshCachedTableView()`（APPS_SCRIPT 模式寫入後即時刷新畫面用）同步更新這份快取。
+  3. **新增 `caseInfoLineHtml(info)`**：依案件編號查 `caseInfoRowsCache`，把客戶別／專案名稱／專案負責人／設計負責人四個欄位裡「有值」的部分組成一行（`<b>欄位名</b>值` 的 chip 排列，樣式沿用既有 `.mod-case-meta` 的字級／顏色慣例），插在每個案件群組的 `<summary>` 裡、「案件 {編號}」徽章下方；四個欄位全部空白時（例如案件編號在 database 表裡查不到，或案件本身四個欄位都沒填）回傳空字串，不會顯示一整排空白標籤洗版。新增 CSS `.mod-case-info{flex:1 1 100%}`——利用 flexbox 換行機制，讓這行資訊固定佔滿整列寬度、自動把後面的「N 輪修改」「已提供補充資料」「待確認」徽章推到下一行，不需要額外的 `order` 排序技巧。
+- 風險區塊：
+  - `caseInfoRowsCache` 的抓取邏輯直接複製 `ensureSupplementLinkRows()` 的既有模式，風險與既有機制相同——REST 模式下多一次 `/table/database` 請求（跟現有補充資料連結的額外請求同等級，資料量約 600 多筆案件、27 個欄位，遠低於後端限制）；APPS_SCRIPT 模式完全不多發請求，直接讀已經在記憶體裡的 `directDatabase`。
+  - 案件在 `database` 表裡查不到對應資料時（理論上不該發生，除非案件被後台手動刪除但修改紀錄列還留著），`caseInfoLineHtml()` 回傳空字串、案件群組標題會維持只顯示「案件 {編號}」，不會報錯或顯示 `undefined`。
+- 已檢查／驗證方式：
+  - `json_database_admin.html` 主要 `<script>` 區塊用 `new Function()` 語法檢查通過。
+  - `node --test backend/test/*.test.mjs` 26/26 全過——事先 `grep` 過 `backend/test/backend.test.mjs`，找到並更新了鎖住舊版 `TABLE_LABELS`（不含修改統計表）的既有斷言，改成鎖住新的 `TABLE_LABELS`（含 `'修改統計表':'修改列表'`）。
+  - 用本機 Node 靜態伺服器＋ Browser pane 做隔離測試（直接對頁面注入一段 `<script>` 設定假的 `caseInfoRowsCache`／`supplementLinkRowsCache` 並呼叫 `modificationHistoryHtml()`，避免走完整登入流程）：①`tableLabel('修改統計表')` 正確回傳「修改列表」；②案件有完整客戶別／專案名稱／專案負責人／設計負責人時，產生的 HTML 正確含 `.mod-case-info` 區塊且四個值都在，`getComputedStyle` 確認 `.mod-case-info{display:flex;flex-basis:100%}` 生效、確實佔滿整列寬度；③案件四個欄位在 database 表裡都是空字串時，該案件群組正確**沒有** `.mod-case-info` 區塊（不顯示空白列）。
+  - **未做的驗證**：沒有用真實管理者帳號登入正式站，實際點開「修改列表」頁籤肉眼確認排版與真實案件資料的顯示效果（例如客戶別/專案名稱很長時的換行/截斷觀感）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：`ca56b59`
+
+### 2026-08-14 Asia/Taipei — 移除前台管理者帳號選單「切換一般使用者預覽」與「檢查一般使用者寫入權限」
 
 - 修改目的：使用者要求移除 `index.html` 管理者帳號選單裡的「切換一般使用者預覽」（`adminUserPreview` 模式，登入中的管理者可以切換成「用一般使用者的眼光看畫面」）與「檢查一般使用者寫入權限」（呼叫 Worker 的 `writeAccessCheck` action，回報一般使用者能不能新增案件）這兩項功能。
 - 影響檔案：`index.html`。
