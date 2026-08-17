@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1153,
+  "revision": 1154,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T03:51:58.098Z",
+  "updatedAt": "2026-08-17T03:52:01.475Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19922,9 +19922,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/17 11:15:13",
-          "圖片連結": "[{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1RkRgbgo1UgM1hlk9YbtbqbmgXtlE1I0W=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pOVMK-jOZBbpHEN84ZzBmzmJ0oIK6XTQ=w1600\"},{\"fileName\":\"高溫自清潔.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1W_St9_uRF2njW7dkN14F6kxRXEKjYPL_=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_九月常態_長輩系列_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1tYzco24jl93kJYhG0OBY98_2LGp0HKPR=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_九月常態_長輩系列_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CDXU97J34VtXGJ6zItTVyutsfmG3_o2F=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1RkRgbgo1UgM1hlk9YbtbqbmgXtlE1I0W=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_StationS9Artist_九月常態_基站補給_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pOVMK-jOZBbpHEN84ZzBmzmJ0oIK6XTQ=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_九月常態_長輩系列_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1tYzco24jl93kJYhG0OBY98_2LGp0HKPR=w1600\"},{\"fileName\":\"260817_添可_八月_CPAS_i7Fold_九月常態_長輩系列_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CDXU97J34VtXGJ6zItTVyutsfmG3_o2F=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/17 11:51:58"
+          "圖片更新時間": "2026/08/17 11:52:01"
         },
         {
           "案件編號": "26080068",
