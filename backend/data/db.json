@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1250,
+  "revision": 1251,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-17T08:07:28.106Z",
+  "updatedAt": "2026-08-17T08:09:51.651Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -12281,7 +12281,7 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "修改次數": "0"
+          "修改次數": "1"
         },
         {
           "案件編號": "26070126",
@@ -20127,6 +20127,16 @@
           "圖片連結": "[{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB.png\",\"url\":\"https://lh3.googleusercontent.com/d/18I8_r01BdIHRZdiNaI5meQ0ekDOqXeYH=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Yu_Og-whSrvITlpHGhP8NCVCguYZgfLs=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12iuaoAtbYFs98wrKbl20lrtgvoMDrnsj=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TZraOQ_m5RYFTWFBRVloEAUDyR-I-FJL=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_FB04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1fmWL9LCFQbzON6G9T5hv0ViEJPARcowe=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZcskAcoc0KpYczeJGYmMVFNvz6_k2mFR=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hoD8P8sHIlvONIzvBFfzkdo6KXSuooYM=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wOpaSaPYFrhs219PU7qiONfxRC5scrjh=w1600\"},{\"fileName\":\"260811_富美家_8月社群貼文_空間從表面開始升級｜Homapal® Local Made 系列_IG04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1BKP1pltlG-UpxmvFRP95TjXVuJsZMDSL=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/17 14:17:16"
+        },
+        {
+          "案件編號": "26070125",
+          "修改次數": "1",
+          "建立日期": "2026/08/17 16:09:51",
+          "修改日期": "2026-08-17",
+          "修改內容": "字體效果、產品特點、圖片調整",
+          "修改人": "羅珮云",
+          "確認修正日": "",
+          "待修改圖片": ""
         }
       ]
     },
