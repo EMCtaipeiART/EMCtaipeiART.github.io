@@ -311,7 +311,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報'\};/);
+  assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報','修改統計表':'修改列表'\};/);
   assert.match(html, /function tableLabel\(name\)\{return TABLE_LABELS\[name\]\|\|name\}/);
   // reels 不另列側邊頁；設計師公開資料與 REELS 統一由「設計列表」管理。
   assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'reels'/);

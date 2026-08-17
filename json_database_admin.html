@@ -121,6 +121,8 @@
     .mod-case>summary::before{content:'›';color:var(--muted);font-size:16px;line-height:1;transition:transform .15s;flex:0 0 auto}
     .mod-case[open]>summary::before{transform:rotate(90deg)}
     .mod-case-id{display:inline-flex;align-items:center;border-radius:999px;background:var(--green2);color:var(--green);padding:4px 11px;font-size:12.5px;font-weight:800;flex:0 0 auto}
+    .mod-case-info{display:flex;flex-wrap:wrap;flex:1 1 100%;gap:3px 14px;color:var(--muted);font-size:11px;font-weight:600}
+    .mod-case-info b{margin-right:4px;color:var(--ink);font-weight:800}
     .mod-case-meta{flex:1 1 auto;min-width:0;color:var(--muted);font-size:11.5px;font-weight:600}
     .mod-case-meta b{color:var(--ink);font-weight:800}
     .mod-case-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;background:var(--soft);color:var(--muted);flex:0 0 auto}
@@ -306,7 +308,7 @@
     const API=CONFIGURED_API||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
-    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),supplementLinkRowsCache=[];
+    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),supplementLinkRowsCache=[],caseInfoRowsCache=[];
     const permissionWritesPending=new Set(),roleTemplateWritesPending=new Set(),accountGroupOpenState=new Map();
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
@@ -316,7 +318,7 @@
     function decodeGithubContent(value=''){const binary=atob(String(value).replace(/\s+/g,'')),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes))}
     async function loadDatabaseFile({fresh=false,commitSha='',store=true}={}){if(directDatabase&&!fresh&&!commitSha)return directDatabase;const source=commitSha&&location.hostname==='emctaipeiart.github.io'?`https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/${encodeURIComponent(commitSha)}/backend/data/db.json`:DATABASE_FILE_URL,url=new URL(source);url.searchParams.set('v',fresh||commitSha?String(Date.now()):'20260813-database-link-labels-12');const response=await fetch(url,{cache:fresh||commitSha?'no-store':'default',credentials:'omit',referrerPolicy:'no-referrer'});if(!response.ok)throw new Error(`JSON 資料庫 HTTP ${response.status}`);const database=await response.json();if(!database?.tables||typeof database.tables!=='object')throw new Error('JSON 資料庫格式錯誤');if(store)directDatabase=database;return database}
     function metadataFromDatabase(database){return Object.fromEntries(Object.entries(database.tables||{}).map(([name,table])=>[name,{headers:Array.isArray(table.headers)?table.headers:[],primaryKey:table.primaryKey||'',rowCount:Array.isArray(table.rows)?table.rows.length:0}]))}
-    const TABLE_LABELS={database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報'};
+    const TABLE_LABELS={database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報','修改統計表':'修改列表'};
     function tableLabel(name){return TABLE_LABELS[name]||name}
     function isBoardView(name=tableName){return BOARD_VIEWS.includes(name)}
     function effectivePageSize(){return isBoardView()?100000:Number($('pageSize').value)}
@@ -374,7 +376,15 @@
       const data=await request(`/table/${encodeURIComponent('補充資料連結')}?offset=0&limit=100000`);
       supplementLinkRowsCache=data.rows||[];
     }
-    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表')await ensureSupplementLinkRows();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
+    // 「修改列表」案件群組標題要顯示客戶別／專案名稱／專案負責人／設計負責人，這些欄位
+    // 只存在 database 表本身、不在修改統計表列裡，所以額外快取一份完整 database 表資料
+    // 供查找，跟 supplementLinkRowsCache（補充資料連結併入同一個畫面）同樣的做法。
+    async function ensureCaseInfoRows(){
+      if(APPS_SCRIPT_MODE){caseInfoRowsCache=directDatabase?.tables?.database?.rows||[];return}
+      const data=await request(`/table/database?offset=0&limit=100000`);
+      caseInfoRowsCache=data.rows||[];
+    }
+    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureSupplementLinkRows();await ensureCaseInfoRows()}if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
     function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
     function rowKeyFor(row){const table=metadata[tableName];return table?.primaryKey?String(row[table.primaryKey]??''):String(row._rowNumber)}
     function actionCell(){return '<td class="action-col"><div class="row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></td>'}
@@ -477,10 +487,19 @@
     // 這裡改成單一頁面就能看到一個案件的完整脈絡。案件清單取「有修改紀錄」跟「有補充資
     // 料連結」兩邊案件編號的聯集——正式資料裡有案件只填了補充資料、還沒有任何修改紀錄
     // （反之亦然），任一邊都不能漏掉，否則那些案件會從畫面上完全消失、後台反而少了入口。
+    // 客戶別／專案名稱／專案負責人／設計負責人只存在 database 表，用 caseInfoRowsCache
+    // （見 ensureCaseInfoRows）查對應案件，四個欄位任一有值才顯示，避免空白標籤洗版。
+    function caseInfoLineHtml(info){
+      if(!info)return '';
+      const fields=[['客戶別',info['客戶別']],['專案名稱',info['專案名稱']],['專案負責人',info['專案負責人']],['設計負責人',info['設計負責人']]].filter(([,value])=>String(value||'').trim());
+      if(!fields.length)return '';
+      return `<span class="mod-case-info">${fields.map(([key,value])=>`<b>${esc(key)}</b>${esc(value)}`).join('')}</span>`;
+    }
     function modificationHistoryHtml(rows){
       const byCase=new Map();
       for(const row of rows){const id=String(row['案件編號']||'').trim()||'未指定';if(!byCase.has(id))byCase.set(id,[]);byCase.get(id).push(row)}
       const supplementByCase=new Map(supplementLinkRowsCache.map(row=>[String(row['案件編號']||'').trim(),row]));
+      const caseInfoByCase=new Map(caseInfoRowsCache.map(row=>[String(row['案件編號']||'').trim(),row]));
       const query=$('search').value.trim().toLocaleLowerCase();
       const allIds=new Set([...byCase.keys(),...supplementLinkRowsCache.map(row=>String(row['案件編號']||'').trim())]);
       const caseIds=[...allIds].filter(id=>{
@@ -499,6 +518,7 @@
         return `<details class="mod-case" ${index<8?'open':''}>
           <summary>
             <span class="mod-case-id">案件 ${esc(id)}</span>
+            ${caseInfoLineHtml(caseInfoByCase.get(id))}
             <span class="mod-case-meta">${items.length?`<b>${items.length}</b> 輪修改`:'尚無修改紀錄'}${supRow?'　·　已提供補充資料':''}</span>
             ${pendingCount?`<span class="mod-case-status pending">${pendingCount} 輪待確認</span>`:(items.length?'<span class="mod-case-status confirmed">全部已確認</span>':'')}
           </summary>
@@ -769,7 +789,7 @@
       if(roleTemplateSelected===role){renderTable({table:'角色權限範本',total:roleTemplateRowsCache.length,offset:0,limit:10,rows:roleTemplateRowsCache});return}
       const model=roleTemplateRowsCache.find(row=>row['角色範本']===role),button=$('view').querySelector(`[data-role-template="${CSS.escape(role)}"]`),badge=button?.querySelector('.permission-state');if(!model||!badge)return;const pending=roleTemplateWritesPending.has(role);badge.className=`permission-state ${pending?'explicit':''}`;badge.textContent=pending?'寫入中':`${model['頁面權限'].length} 頁 / ${model['功能權限'].length} 項`
     }
-    function refreshCachedTableView(){if(!APPS_SCRIPT_MODE||!directDatabase)return;appliedRevision=databaseRevision(directDatabase)||appliedRevision;discardStagedRefreshIfCurrent();metadata=metadataFromDatabase(directDatabase);renderTabs();if(tableName==='修改統計表')supplementLinkRowsCache=(directDatabase?.tables?.['補充資料連結']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));renderTable(databaseFileRows());$('revision').textContent=String(directDatabase.revision??'—')}
+    function refreshCachedTableView(){if(!APPS_SCRIPT_MODE||!directDatabase)return;appliedRevision=databaseRevision(directDatabase)||appliedRevision;discardStagedRefreshIfCurrent();metadata=metadataFromDatabase(directDatabase);renderTabs();if(tableName==='修改統計表'){supplementLinkRowsCache=(directDatabase?.tables?.['補充資料連結']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));caseInfoRowsCache=directDatabase?.tables?.database?.rows||[]}renderTable(databaseFileRows());$('revision').textContent=String(directDatabase.revision??'—')}
     function scheduleWeightRuleRefresh(){[8000,20000,40000].forEach(delay=>setTimeout(()=>{if(document.hidden)return;refreshFromBackend({tables:['database','加權計分標準']})},delay))}
     function permissionEditorElement(){return $('view').querySelector('[data-permission-editor]')}
     function applyPermissionTemplate(role){const editor=permissionEditorElement(),template=MachiAccess.templates[role];if(!editor||!template)return;editor.querySelectorAll('[data-permission-page]').forEach(input=>{input.checked=template.pages.includes(input.dataset.permissionPage)});editor.querySelectorAll('[data-permission-capability]').forEach(input=>{input.checked=template.capabilities.includes(input.dataset.permissionCapability)})}
