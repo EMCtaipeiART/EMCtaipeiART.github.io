@@ -60,6 +60,7 @@ import * as lib from './nas_design_image_lib.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PICKER_PORT = 8877;
 const MAX_BODY_BYTES = 1024 * 1024; // 這支端點只收 { caseId, path }，1MB 綽綽有餘，避免被灌爆記憶體
+const SERVER_STARTED_AT = Date.now(); // 每次行程啟動（含 launchd 重啟）都會重新賦值，前台狀態頁靠這個算「已執行多久」
 
 function parseArgs(argv) {
   const args = { config: path.join(__dirname, 'nas_design_image_watcher.config.json') };
@@ -397,18 +398,26 @@ const PICKER_PAGE = `<!doctype html>
   }
 
   function hideBehindOpener(){
-    // 備份請求在背景繼續進行，不需要使用者一直盯著這個視窗看——不縮小或搬
-    // 動視窗（縮到螢幕角落在部分瀏覽器/視窗管理員下仍會留下一小塊看得到
-    // 的視窗殘影），改成直接把焦點還給原本開啟這個視窗的主頁面分頁，讓瀏
-    // 覽器把這個視窗自然地蓋到主頁面後面、整個看不到；這個視窗本身沒有真
-    // 的關閉，也沒有改變大小/位置，fetch 請求繼續正常進行，真正的進度改
-    // 由主頁面右下角的小提示卡片顯示。只有真的發生問題時才會把這個視窗重
-    // 新叫到前面顯示錯誤提示。如果 opener 已經不在了（例如使用者關掉了主
-    // 頁面分頁）就什麼都不做，視窗留在原本畫面。
+    // 備份請求在背景繼續進行，不需要使用者一直盯著這個視窗看。單靠「把焦點
+    // 還給主頁面分頁」（window.opener.focus()）讓瀏覽器自然把這個視窗蓋到
+    // 後面，在部分瀏覽器/視窗管理員下並不可靠——會停留在原本位置直到備份
+    // 完成才收合，跟這裡要的「點下去立刻看不到」不符。改成把視窗縮小並搬到
+    // 螢幕可視範圍以外（不是像更早版本那樣搬到螢幕角落，那樣仍留在畫面上
+    // 看得到一小塊殘影），確保不管視窗管理員怎麼處理 focus，畫面上都不會
+    // 再看到這個視窗；同時仍呼叫 opener.focus() 當作額外的保險。這個視窗
+    // 本身沒有真的關閉，fetch 請求繼續正常進行，真正的進度改由主頁面右下
+    // 角的小提示卡片顯示。只有真的發生問題時才會把這個視窗重新叫回螢幕內
+    // 顯示錯誤提示。如果 opener 已經不在了（例如使用者關掉了主頁面分頁）
+    // 視窗仍會被搬出畫面，只是少了 focus() 這道保險。
+    try{ window.resizeTo(1,1); }catch(error){}
+    try{ window.moveTo(-32000,-32000); }catch(error){}
     try{ if(window.opener && !window.opener.closed) window.opener.focus(); }catch(error){}
   }
 
   function restoreWindowForPrompt(){
+    const width=520,height=640,left=Math.max(0,Math.round((screen.width-width)/2)),top=Math.max(0,Math.round((screen.height-height)/2));
+    try{ window.resizeTo(width,height); }catch(error){}
+    try{ window.moveTo(left,top); }catch(error){}
     try{ window.focus(); }catch(error){}
   }
 
@@ -472,6 +481,193 @@ const PICKER_PAGE = `<!doctype html>
 </body>
 </html>`;
 
+const ADMIN_PAGE = `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NAS 資料夾選擇器狀態</title>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Microsoft JhengHei",sans-serif;background:#f4f7f5;color:#17251d}
+  header{padding:16px 20px;background:#0f6b3c;color:#fff}
+  header h1{margin:0;font-size:16px}
+  header p{margin:4px 0 0;font-size:12.5px;opacity:.85}
+  main{padding:16px 20px;max-width:480px;margin:0 auto}
+  .status-card{background:#fff;border:1px solid #dbe4de;border-radius:12px;padding:14px 16px;margin-bottom:16px}
+  .status-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .status-dot{width:10px;height:10px;border-radius:50%;background:#b91c1c;flex:0 0 auto}
+  .status-dot.ok{background:#0f6b3c}
+  .status-dot.pending{background:#c98a12;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .status-title{font-size:14px;font-weight:700}
+  .kv{list-style:none;margin:0;padding:0;font-size:13px}
+  .kv li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid #eef2ef}
+  .kv li:first-child{border-top:0}
+  .kv .k{color:#6b756f}
+  .kv .v{color:#17251d;text-align:right;word-break:break-all}
+  .kv .v.warn{color:#b91c1c;font-weight:700}
+  .kv .v.good{color:#0f6b3c;font-weight:700}
+  .actions{display:flex;gap:10px}
+  .actions button{flex:1;min-height:44px;border-radius:10px;border:1px solid #dbe4de;font-size:14px;font-weight:700;cursor:pointer;background:#fff;color:#17251d}
+  .btn-restart{background:#0f6b3c;color:#fff;border-color:#0f6b3c}
+  .btn-restart[disabled]{opacity:.6;cursor:default}
+  .btn-refresh[disabled]{opacity:.6;cursor:default}
+  .msg{margin:10px 0 0;font-size:13px;color:#b91c1c;min-height:18px}
+  .msg.ok{color:#0f6b3c}
+</style>
+</head>
+<body>
+<header>
+  <h1>NAS 資料夾選擇器狀態</h1>
+  <p>本機服務（nas_folder_picker_server.mjs）即時狀態</p>
+</header>
+<main>
+  <div class="status-card">
+    <div class="status-head">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-title" id="statusTitle">讀取中...</span>
+    </div>
+    <ul class="kv" id="statusList"></ul>
+  </div>
+  <div class="actions">
+    <button type="button" class="btn-refresh" id="refreshBtn">重新整理狀態</button>
+    <button type="button" class="btn-restart" id="restartBtn">重新啟動服務</button>
+  </div>
+  <p class="msg" id="msg"></p>
+</main>
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || '';
+  let lastPid = null;
+  let pollTimer = 0;
+
+  function setMsg(text, ok){
+    const el = document.getElementById('msg');
+    el.textContent = text || '';
+    el.classList.toggle('ok', Boolean(ok));
+  }
+
+  function formatDateTime(ms){
+    if(!ms) return '—';
+    try{
+      return new Date(ms).toLocaleString('zh-TW', { hour12:false, timeZone:'Asia/Taipei' });
+    }catch{ return new Date(ms).toISOString(); }
+  }
+
+  function formatDuration(seconds){
+    seconds = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const parts = [];
+    if(h) parts.push(h + ' 小時');
+    if(m || h) parts.push(m + ' 分');
+    parts.push(s + ' 秒');
+    return parts.join(' ');
+  }
+
+  function row(label, value, cls){
+    return '<li><span class="k">' + label + '</span><span class="v' + (cls ? ' ' + cls : '') + '">' + value + '</span></li>';
+  }
+
+  function renderStatus(data){
+    document.getElementById('statusDot').className = 'status-dot ok';
+    document.getElementById('statusTitle').textContent = '運作中';
+    const list = [
+      row('目前 PID', data.pid),
+      row('啟動時間', formatDateTime(data.startedAt)),
+      row('已執行時間', formatDuration(data.uptimeSeconds)),
+      row('監聽埠', data.port),
+      row('Node 版本', data.nodeVersion),
+      row('掛載根目錄', data.mountRoot),
+      row('掛載狀態', data.mountRootExists ? '可讀取' : '讀取失敗（請確認 NAS 是否已掛載）', data.mountRootExists ? 'good' : 'warn')
+    ];
+    document.getElementById('statusList').innerHTML = list.join('');
+    lastPid = data.pid;
+  }
+
+  function renderOffline(){
+    document.getElementById('statusDot').className = 'status-dot';
+    document.getElementById('statusTitle').textContent = '目前連不上服務';
+    document.getElementById('statusList').innerHTML = row('狀態', '服務可能沒開機、還沒啟動，或正在重新啟動中', 'warn');
+  }
+
+  async function loadStatus(){
+    try{
+      const res = await fetch('/api/status?token=' + encodeURIComponent(token), { cache: 'no-store' });
+      const data = await res.json();
+      if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
+      renderStatus(data);
+      return data;
+    }catch(error){
+      renderOffline();
+      throw error;
+    }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    setMsg('');
+    loadStatus().catch(() => setMsg('讀取狀態失敗，請確認服務是否還在執行', false));
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', async () => {
+    if(!confirm('確定要重新啟動 NAS 資料夾選擇器服務嗎？\\n重啟期間（約 1-2 秒）服務會短暫離線，正在選擇資料夾的其他人可能需要重新整理分頁。')) return;
+    const restartBtn = document.getElementById('restartBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    restartBtn.disabled = true;
+    refreshBtn.disabled = true;
+    document.getElementById('statusDot').className = 'status-dot pending';
+    document.getElementById('statusTitle').textContent = '重新啟動中...';
+    setMsg('已送出重新啟動指令，正在等待服務恢復...', true);
+    const pidBeforeRestart = lastPid;
+    try{
+      const res = await fetch('/api/restart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
+    }catch(error){
+      setMsg('送出重新啟動指令失敗：' + error.message, false);
+      restartBtn.disabled = false;
+      refreshBtn.disabled = false;
+      return;
+    }
+    let attempts = 0;
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      attempts += 1;
+      try{
+        const data = await loadStatus();
+        if(data.pid !== pidBeforeRestart || pidBeforeRestart == null){
+          clearInterval(pollTimer);
+          pollTimer = 0;
+          restartBtn.disabled = false;
+          refreshBtn.disabled = false;
+          setMsg('已重新啟動完成，新的 PID：' + data.pid, true);
+        }
+      }catch{
+        // 服務重啟中，連不上是預期現象，繼續等待下一次輪詢
+      }
+      if(attempts >= 20 && pollTimer){
+        clearInterval(pollTimer);
+        pollTimer = 0;
+        restartBtn.disabled = false;
+        refreshBtn.disabled = false;
+        setMsg('等待逾時（20 秒），服務可能沒有正常恢復，請確認 launchd 是否運作正常，或聯絡管理者用終端機執行 launchctl kickstart -k', false);
+      }
+    }, 1000);
+  });
+
+  loadStatus().catch(() => setMsg('讀取狀態失敗，請確認服務是否還在執行', false));
+})();
+</script>
+</body>
+</html>`;
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const config = await lib.loadConfig(args.config);
@@ -488,6 +684,52 @@ async function main() {
     if (url.pathname === '/picker' || url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(PICKER_PAGE);
+      return;
+    }
+
+    if (url.pathname === '/admin') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(ADMIN_PAGE);
+      return;
+    }
+
+    if (url.pathname === '/api/status') {
+      if (requestToken(url) !== pickerToken) {
+        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        return;
+      }
+      const mountRootExists = await dirExists(mountRoot);
+      sendJson(res, 200, {
+        success: true,
+        pid: process.pid,
+        startedAt: SERVER_STARTED_AT,
+        uptimeSeconds: Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+        nodeVersion: process.version,
+        port,
+        mountRoot,
+        mountRootExists
+      });
+      return;
+    }
+
+    if (url.pathname === '/api/restart' && req.method === 'POST') {
+      let body;
+      try {
+        body = await readJsonBody(req);
+      } catch (error) {
+        sendJson(res, 400, { success: false, message: error.message });
+        return;
+      }
+      if (String(body.token || '') !== pickerToken) {
+        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        return;
+      }
+      sendJson(res, 200, { success: true, message: '重啟指令已送出' });
+      console.log(`${new Date().toISOString()} 收到前台重啟指令，準備結束目前行程（依賴 launchd KeepAlive 自動重新啟動）...`);
+      // 留一點時間讓上面的回應確實寫出去，再結束行程；如果不是透過 launchd
+      // （KeepAlive）常駐執行，行程結束後不會自動重啟，需要使用者自己手動
+      // 重新執行這支程式。
+      setTimeout(() => process.exit(0), 300);
       return;
     }
 
