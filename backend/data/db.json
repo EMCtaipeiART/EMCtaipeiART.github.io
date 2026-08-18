@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1510,
+  "revision": 1511,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:43:14.123Z",
+  "updatedAt": "2026-08-18T08:43:43.982Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18795,6 +18795,33 @@
           "案件編號": "26080090",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "測試",
+          "專案名稱": "測試用",
+          "專案負責人": "Machi",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/20",
+          "結束日期": "2026/08/28",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/18 16:43",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080091",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -27825,6 +27852,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 647,
           "sheetRow": 647
+        }
+      },
+      "a1cdb779-fc52-46a7-9f3a-b39e5e7ef9b0": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 648,
+        "row": {
+          "id": "26080091",
+          "month": "8月",
+          "client": "測試",
+          "project": "測試用",
+          "owner": "Machi",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/20",
+          "end": "2026/08/28",
+          "designer": "Machi",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/18 16:43",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 648,
+          "sheetRow": 648
         }
       }
     }
