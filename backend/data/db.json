@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1400,
+  "revision": 1401,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T03:20:19.120Z",
+  "updatedAt": "2026-08-18T03:20:42.846Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -24920,9 +24920,9 @@
         },
         {
           "角色範本": "唯讀",
-          "頁面權限": "[\"request\"]",
+          "頁面權限": "[]",
           "功能權限": "[]",
-          "更新時間": "2026-08-11 18:38",
+          "更新時間": "2026-08-18 11:20",
           "更新者": "Machi"
         }
       ]
