@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1468,
+  "revision": 1469,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:13:43.852Z",
+  "updatedAt": "2026-08-18T08:13:52.710Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18224,7 +18224,7 @@
           "月份": "8月",
           "案件編號": "26080070",
           "修改次數": "0",
-          "繳交時間": "",
+          "繳交時間": "2026/08/18 16:13:52",
           "項目細節": "社群貼文"
         },
         {
@@ -20646,6 +20646,18 @@
           "圖片連結": "[{\"fileName\":\"260819_eufy_S2__新素材_潔淨表現全面登頂.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1GI7yhYevEn_x-FLNr-3Pcd_ixujeV-7g=w1600\"},{\"fileName\":\"260819_eufy_S2_蝦皮_再製_潔淨表現全面登頂.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UuHBgue_DbxdTBVKf7sLweTHj0z2aPTw=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/18 15:24:18"
+        },
+        {
+          "案件編號": "26080070",
+          "修改次數": "0",
+          "建立日期": "2026/08/18 16:13:52",
+          "修改日期": "2026/08/18 16:13:52",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/18 16:13:52",
+          "圖片連結": "[{\"fileName\":\"260819_王品熱年菜_11月享鴨.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RFnKa1QqSR8LQzhlMDX-VJL-XJox2vVf=w1600\"},{\"fileName\":\"260819_王品熱年菜_11月莆田.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Qp3JQCKtHMX1AV0m-ZA2Ty073_QHr3ic=w1600\"},{\"fileName\":\"260819_王品熱年菜_11月雙品牌.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oMjMdS4Y0xZhMtAI08V2JYOR3USC1mJb=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/18 16:13:52"
         }
       ]
     },
