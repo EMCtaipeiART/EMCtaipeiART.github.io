@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1364,
+  "revision": 1365,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T02:33:38.699Z",
+  "updatedAt": "2026-08-18T02:34:00.018Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20434,9 +20434,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/17 18:44:52",
-          "圖片連結": "[{\"fileName\":\"260817_360II_包框影片_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/147iJRE5Lhh8FKo193h7cI_avy3wabXu3=w1600\"},{\"fileName\":\"260817_360II_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BvkQRQAUokVTxSTw2C9vS29EfaHl8PwO=w1600\"},{\"fileName\":\"260817_360II_包框影片_03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1bxw84XNBw1ibGhHqEdmI-aZq1huEwYGH=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260817_360II_包框影片_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/147iJRE5Lhh8FKo193h7cI_avy3wabXu3=w1600\"},{\"fileName\":\"260817_360II_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BvkQRQAUokVTxSTw2C9vS29EfaHl8PwO=w1600\"},{\"fileName\":\"260817_360II_包框影片_03.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1bxw84XNBw1ibGhHqEdmI-aZq1huEwYGH=w1600\"},{\"fileName\":\"260810_DJI_360II_預熱倒數_電商BN_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1OTlrEKUas0ZpIeWrniwYmSeXu5zVNcVg=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_avata360_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QMR1aOeueUZ-sVJUXI1QhASHYC0S3Sz4=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_avata360_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1BM55pkzQYE3EoexClSvwCYNpncRR52u-=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_lito_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_iZCUTRH3WXnoeMnqj4Dg3w6PlQ3cnjJ=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_lito_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yt7HraQ6shM2v19ZerP40aXJsZSmK7gz=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_lito_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Dyvf6bfy3pAF3iPrPbEXm2BrvjmqJU1t=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_mini5pro_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xE0gPkdXTyG_VviL5JdjHGFn1YdZeWld=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_mini5pro_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1agjdFYoK8NRtiSHSzs3Y7l0-h3UbxNN7=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_mini5pro_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LCChyhVS1mcwpvq7_hTnLsHPB2Vru_D-=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_neo2_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hOo6VcCzdrKuy1xwYtLaL9q3gmDK77pe=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_neo2_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/10UqAcc5WNzeMVeqZVOqxQZfisDAEGnoO=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_neo2_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NGQhnTJcLK_1K0KX8iQy_uFr9QjWfm_J=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_oa5&6_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1feIJoH7h7KBA_qCwiXIxwSFo8CzHEzBJ=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_oa5&6_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hC5uS-10QnXzcMO-v99UAzchNsHjeEYy=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_oa5&6_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ixFsE_ulDQo4Mbk1BJIBYQjmH1f5tUI9=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_op3&4&4p_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1N7SOCJ4n2tvATgrs2b_Lel_QbC9VPSGI=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_op3&4&4p_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wz-Q7ASt69p4UKMN-i3-BFOasiKKCW5m=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_op3&4&4p_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VUoEIdxoQ8gslGDSP_QPvfp1t2R-b8vF=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_手持三品項_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hhhyaGv2tUQkEJ2uaxM6DPUWL2BDEF6t=w1600\"},{\"fileName\":\"260728_八月CPAS廣告素材_手持三品項_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Gy9L1NVQXEn52uf_CI3eQG8rN9kfm1fE=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/17 18:44:52"
+          "圖片更新時間": "2026/08/18 10:34:00"
         },
         {
           "案件編號": "26080077",
