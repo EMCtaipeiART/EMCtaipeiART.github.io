@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1496,
+  "revision": 1497,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:29:13.622Z",
+  "updatedAt": "2026-08-18T08:29:38.369Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25251,8 +25251,8 @@
           "客戶別": "添可",
           "專案負責人": "[]",
           "設計負責人": "[\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:22",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
+          "更新時間": "2026-08-18 16:29",
           "更新者": "Machi"
         },
         {
