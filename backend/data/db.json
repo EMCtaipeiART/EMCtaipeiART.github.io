@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1454,
+  "revision": 1455,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T07:17:18.507Z",
+  "updatedAt": "2026-08-18T07:17:22.356Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21044,7 +21044,7 @@
           "篩選月份": "8 月",
           "篩選狀態": "",
           "篩選姓名": "",
-          "選擇": "",
+          "選擇": "v",
           "案件編號": 1,
           "月份": "",
           "客戶別": 2,
