@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1548,
+  "revision": 1549,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T11:10:29.906Z",
+  "updatedAt": "2026-08-18T11:11:26.599Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18883,6 +18883,33 @@
           "繳交時間": "",
           "Gmail信件串ID": "1a0148c2dd1c4fb6",
           "Gmail寄件帳號": "david.liao@emctaipei.com"
+        },
+        {
+          "客戶別": "測試",
+          "專案名稱": "測試",
+          "專案負責人": "Machi",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/18",
+          "結束日期": "2026/08/21",
+          "設計負責人": "Machi",
+          "使用平台": "",
+          "填單時間": "2026/08/18 19:11",
+          "設計簡報說明": "測試用",
+          "設計簡報連結": "http://www.google.com",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080093",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -21192,6 +21219,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 18:57"
+        },
+        {
+          "案件編號": "26080093",
+          "A": "http://www.google.com",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/18 19:11"
         }
       ]
     },
@@ -28076,6 +28111,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 649,
           "sheetRow": 649
+        }
+      },
+      "60ca9377-a15e-4aaa-96db-b8f93e493ddf": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 650,
+        "row": {
+          "id": "26080093",
+          "month": "8月",
+          "client": "測試",
+          "project": "測試",
+          "owner": "Machi",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/18",
+          "end": "2026/08/21",
+          "designer": "Machi",
+          "platforms": "",
+          "submittedAt": "2026/08/18 19:11",
+          "briefNote": "測試用",
+          "briefUrl": "http://www.google.com",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 650,
+          "sheetRow": 650
         }
       }
     }
