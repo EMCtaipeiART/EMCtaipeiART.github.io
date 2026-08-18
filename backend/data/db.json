@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1497,
+  "revision": 1498,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:29:38.369Z",
+  "updatedAt": "2026-08-18T08:30:06.810Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25259,8 +25259,8 @@
           "客戶別": "富美家",
           "專案負責人": "[]",
           "設計負責人": "[\"Leona\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:22",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Celine組\",\"Ann組\"]",
+          "更新時間": "2026-08-18 16:30",
           "更新者": "Machi"
         },
         {
