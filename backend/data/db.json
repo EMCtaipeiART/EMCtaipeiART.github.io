@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1503,
+  "revision": 1504,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:32:57.909Z",
+  "updatedAt": "2026-08-18T08:33:07.519Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25239,10 +25239,10 @@
       "rows": [
         {
           "客戶別": "丹士特",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"anna.hsu@emctaipei.com\"]",
           "設計負責人": "[\"Anna\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"負責人\",\"平面\",\"影音\"]",
-          "更新時間": "2026-08-18 16:16",
+          "更新時間": "2026-08-18 16:33",
           "更新者": "Machi"
         },
         {
