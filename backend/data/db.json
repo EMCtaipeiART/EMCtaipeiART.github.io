@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1493,
+  "revision": 1494,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:27:27.365Z",
+  "updatedAt": "2026-08-18T08:28:18.415Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25203,8 +25203,8 @@
           "客戶別": "欣格家居",
           "專案負責人": "[]",
           "設計負責人": "[\"Anna\",\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:21",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
+          "更新時間": "2026-08-18 16:28",
           "更新者": "Machi"
         },
         {
