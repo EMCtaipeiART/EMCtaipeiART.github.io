@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1492,
+  "revision": 1493,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:24:04.761Z",
+  "updatedAt": "2026-08-18T08:27:27.365Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25195,8 +25195,8 @@
           "客戶別": "王品",
           "專案負責人": "[]",
           "設計負責人": "[\"Leona\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:20",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\"]",
+          "更新時間": "2026-08-18 16:27",
           "更新者": "Machi"
         },
         {
