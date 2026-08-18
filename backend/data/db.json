@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1437,
+  "revision": 1438,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:25:36.907Z",
+  "updatedAt": "2026-08-18T06:36:56.274Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18621,6 +18621,33 @@
           "案件編號": "26080084",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "Epson",
+          "專案名稱": "社群貼文_開學季",
+          "專案負責人": "李明庭",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "2",
+          "開始日期": "2026/08/18",
+          "結束日期": "2026/08/24",
+          "設計負責人": "Leona",
+          "使用平台": "Instagram",
+          "填單時間": "2026/08/18 14:36",
+          "設計簡報說明": "設計示",
+          "設計簡報連結": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080085",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20840,6 +20867,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 12:53"
+        },
+        {
+          "案件編號": "26080085",
+          "A": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/18 14:36"
         }
       ]
     },
@@ -27134,6 +27169,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 641,
           "sheetRow": 641
+        }
+      },
+      "7494a816-3a4e-414f-9cee-3eb0a56575d5": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 642,
+        "row": {
+          "id": "26080085",
+          "month": "8月",
+          "client": "Epson",
+          "project": "社群貼文_開學季",
+          "owner": "李明庭",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 2,
+          "start": "2026/08/18",
+          "end": "2026/08/24",
+          "designer": "Leona",
+          "platforms": "Instagram",
+          "submittedAt": "2026/08/18 14:36",
+          "briefNote": "設計示",
+          "briefUrl": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 642,
+          "sheetRow": 642
         }
       }
     }
