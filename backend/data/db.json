@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1473,
+  "revision": 1474,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:16:09.814Z",
+  "updatedAt": "2026-08-18T08:20:51.251Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25194,10 +25194,10 @@
         {
           "客戶別": "王品",
           "專案負責人": "[]",
-          "設計負責人": "[]",
+          "設計負責人": "[\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "系統預設"
+          "更新時間": "2026-08-18 16:20",
+          "更新者": "Machi"
         },
         {
           "客戶別": "欣格家居",
