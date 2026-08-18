@@ -26,6 +26,11 @@ export const DEFAULT_JPEG_QUALITY = 70;
 // 完全不會被當成候選）的資料夾名稱，比對時去頭尾空白＋忽略英文大小寫。可以在
 // config 裡用 ignoreFolderNames 覆蓋或加長這份清單，不需要改程式碼。
 export const DEFAULT_IGNORE_FOLDER_NAMES = ['Links'];
+// 跟 upload/Code.gs 的 MAX_CASE_DESIGN_IMAGES_PER_REQUEST 保持一致——Apps Script
+// 那端一次請求超過這個數量會直接整批拒絕（丟錯，不會部分成功）。這裡在送出前
+// 先依這個上限切成多個請求，避免案件資料夾一次有超過上限的待上傳檔案時，
+// 整個案件永遠卡住（每次排程都重新嘗試同一批、每次都整批失敗，見 uploadPendingRound()）。
+export const MAX_IMAGES_PER_UPLOAD_REQUEST = 20;
 
 export async function loadJsonFile(filePath, fallback = null) {
   try {
@@ -484,9 +489,21 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     return { round, uploadedCount: 0, skippedByTarget, message: '沒有偵測到可上傳的圖片/影片' };
   }
   const { year, month } = computeYearMonth(start);
-  const uploadResult = await uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews: targetedPreviews });
-  for (const item of targetedPreviews) {
-    if (stateFiles[item.relPath]) stateFiles[item.relPath].assignedRound = round;
+  // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
+  // request）——Apps Script 端對單次請求的圖片數量有硬性上限，超過會整批拒絕；
+  // 這裡改成一批一批送，每批成功就先把該批檔案標記成已歸類這一輪並繼續下一批，
+  // 就算送到一半失敗，前面已經成功的批次也不會遺失或下次重傳，只有還沒送成功
+  // 的部分會在下次排程時當作「還沒歸類」重新嘗試（届時待處理數量已經變少）。
+  let uploadedCount = 0;
+  let jsonRevision;
+  for (let offset = 0; offset < targetedPreviews.length; offset += MAX_IMAGES_PER_UPLOAD_REQUEST) {
+    const chunk = targetedPreviews.slice(offset, offset + MAX_IMAGES_PER_UPLOAD_REQUEST);
+    const uploadResult = await uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews: chunk });
+    for (const item of chunk) {
+      if (stateFiles[item.relPath]) stateFiles[item.relPath].assignedRound = round;
+    }
+    uploadedCount += uploadResult.count;
+    jsonRevision = uploadResult.jsonRevision;
   }
-  return { round, uploadedCount: uploadResult.count, skippedByTarget, targetFallback, jsonRevision: uploadResult.jsonRevision };
+  return { round, uploadedCount, skippedByTarget, targetFallback, jsonRevision };
 }

@@ -44,9 +44,48 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promises as fs } from 'node:fs';
 import * as lib from './nas_design_image_lib.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * 排程（crontab 每分鐘一次）沒有內建的「上一次還沒跑完，這次先跳過」防護——
+ * 如果 NAS／網路變慢，單次掃描超過一分鐘很正常（掃描多個案件的資料夾＋壓縮
+ * 圖片＋上傳到 Apps Script，每一步都可能卡在網路 I/O），沒有這道鎖的話，
+ * crontab 會每分鐘疊加一個新的執行個體，多個行程同時讀寫同一份
+ * sync-state.json、同時搶同一段內網頻寬，愈疊愈多、愈跑愈慢，最後看起來就
+ * 像「整支程式停住不動了」。這裡用一個簡單的 PID 鎖檔案擋掉重疊執行：
+ * 檔案存在且裡面的 PID 還活著就直接跳過這次；PID 已經不存在（上次意外中斷
+ * 留下的舊鎖）就視為過期、正常接手執行。
+ */
+async function acquireLock(lockFile) {
+  try {
+    const raw = await fs.readFile(lockFile, 'utf8');
+    const pid = Number(raw.trim());
+    if (Number.isInteger(pid) && pid > 0) {
+      try {
+        process.kill(pid, 0);
+        return false; // 那個 PID 還活著，代表上一次還在跑，這次跳過。
+      } catch {
+        // PID 已經不存在，是過期的鎖，可以蓋掉繼續。
+      }
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  await fs.mkdir(path.dirname(lockFile), { recursive: true });
+  await fs.writeFile(lockFile, String(process.pid));
+  return true;
+}
+
+async function releaseLock(lockFile) {
+  try {
+    await fs.unlink(lockFile);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
 
 function parseArgs(argv) {
   const args = {
@@ -66,6 +105,20 @@ async function main() {
   const config = await lib.loadConfig(args.config);
   const configDir = path.dirname(args.config);
   const stateFile = lib.resolvePath(configDir, config.stateFile);
+  const lockFile = `${stateFile}.lock`;
+  if (!(await acquireLock(lockFile))) {
+    console.log('=== NAS 設計圖檔監控 ===');
+    console.log('上一次執行還沒結束（NAS／網路可能比較慢），這次先跳過，避免同時疊加多個執行個體。');
+    return;
+  }
+  try {
+    await runScan(args, config, configDir, stateFile);
+  } finally {
+    await releaseLock(lockFile);
+  }
+}
+
+async function runScan(args, config, configDir, stateFile) {
   const previewDir = lib.resolvePath(configDir, config.previewDir);
   const secrets = await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile));
   const state = await lib.loadState(stateFile);
