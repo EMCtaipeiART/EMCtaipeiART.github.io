@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1476,
+  "revision": 1477,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:21:14.978Z",
+  "updatedAt": "2026-08-18T08:21:30.862Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25210,10 +25210,10 @@
         {
           "客戶別": "金士頓",
           "專案負責人": "[]",
-          "設計負責人": "[]",
+          "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "系統預設"
+          "更新時間": "2026-08-18 16:21",
+          "更新者": "Machi"
         },
         {
           "客戶別": "保誠人壽",
