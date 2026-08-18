@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1436,
+  "revision": 1437,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T04:55:35.747Z",
+  "updatedAt": "2026-08-18T06:25:36.907Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18594,6 +18594,33 @@
           "繳交時間": "",
           "Gmail信件串ID": "1a0133993433cfd9",
           "Gmail寄件帳號": "saurman.wu@emctaipei.com"
+        },
+        {
+          "客戶別": "ANKER",
+          "專案名稱": "9月CPAS_三平台_全館促銷_轉換_第三批",
+          "專案負責人": "Lorraine Luo",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "3",
+          "開始日期": "2026/08/18",
+          "結束日期": "2026/08/20",
+          "設計負責人": "Amber",
+          "使用平台": "Facebook, Instagram",
+          "填單時間": "2026/08/18 14:25",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080084",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -27070,6 +27097,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 640,
           "sheetRow": 640
+        }
+      },
+      "10a614bf-f225-4f8f-99a2-0802ecbb83b5": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 641,
+        "row": {
+          "id": "26080084",
+          "month": "8月",
+          "client": "ANKER",
+          "project": "9月CPAS_三平台_全館促銷_轉換_第三批",
+          "owner": "Lorraine Luo",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 3,
+          "start": "2026/08/18",
+          "end": "2026/08/20",
+          "designer": "Amber",
+          "platforms": "Facebook, Instagram",
+          "submittedAt": "2026/08/18 14:25",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 641,
+          "sheetRow": 641
         }
       }
     }
