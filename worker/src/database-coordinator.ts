@@ -194,8 +194,40 @@ function mimeAddressList(value: string): string {
   return value.split(',').map(part => part.trim()).filter(Boolean).join(', ');
 }
 
-/** 組出寄送用的 RFC822 MIME 純文字信件，回傳 Gmail API 需要的 base64url raw 字串。 */
-function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyText: string; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
+/** 把 HTML 內容轉成陽春的純文字版本，當 multipart/alternative 的 text/plain 備援分支——Workers 執行環境沒有 DOM，用正規表達式手動處理，不追求完美還原格式，只求可讀。 */
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function base64Encode(value: string): string {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(value))).replace(/(.{76})/g, '$1\n');
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/** payload 沒有帶 bodyHtml（例如舊呼叫端還在傳純文字）時的備援：把純文字逃脫後轉成等效的 HTML 段落。 */
+function resolveBodyHtml(payload: ApiPayload): string {
+  const bodyHtml = text(payload.bodyHtml);
+  if (bodyHtml) return bodyHtml;
+  return escapeHtml(text(payload.bodyText)).replace(/\n/g, '<br>');
+}
+
+/** 組出寄送用的 RFC822 MIME 信件（multipart/alternative：純文字備援＋HTML 正式內容，讓簽名檔與超連結能正確顯示），回傳 Gmail API 需要的 base64url raw 字串。 */
+function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
   const headers: string[] = [];
   headers.push(`To: ${mimeAddressList(options.to)}`);
   if (options.cc && mimeAddressList(options.cc)) headers.push(`Cc: ${mimeAddressList(options.cc)}`);
@@ -206,10 +238,23 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
     headers.push(`References: ${options.threadHeaders.references}`);
   }
   headers.push('MIME-Version: 1.0');
-  headers.push('Content-Type: text/plain; charset="UTF-8"');
-  headers.push('Content-Transfer-Encoding: base64');
-  const bodyBase64 = btoa(String.fromCharCode(...new TextEncoder().encode(options.bodyText))).replace(/(.{76})/g, '$1\n');
-  const mime = `${headers.join('\r\n')}\r\n\r\n${bodyBase64}`;
+  const boundary = `machi_${crypto.randomUUID().replace(/-/g, '')}`;
+  headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+  const plainPart = [
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    base64Encode(htmlToPlainText(options.bodyHtml))
+  ].join('\r\n');
+  const htmlPart = [
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    base64Encode(options.bodyHtml)
+  ].join('\r\n');
+  const mime = `${headers.join('\r\n')}\r\n\r\n${plainPart}\r\n${htmlPart}\r\n--${boundary}--`;
   return utf8ToBase64Url(mime);
 }
 
@@ -719,6 +764,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address) };
   }
 
+  /** 讀取目前連接的 Gmail 帳號設定的簽名檔（需要 gmail.settings.basic 範圍；沒有這個範圍的舊連線會收到 403，回傳明確的 reason 讓前端可以提示重新連接而不是整個擋住）。 */
+  private async getGmailSignature(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'request.mail');
+    const stored = this.getGmailTokens(current.account);
+    if (!stored) return { ok: false, action: 'getGmailSignature', error: '尚未連接 Gmail' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (response.status === 403) return { ok: false, action: 'getGmailSignature', error: '需要重新連接 Gmail 才能讀取簽名檔', reason: 'INSUFFICIENT_SCOPE' };
+    const data = await response.json().catch(() => ({})) as Row;
+    if (!response.ok) return { ok: false, action: 'getGmailSignature', error: text((data.error as Row)?.message) || `讀取簽名檔失敗：${response.status}` };
+    const sendAsList = Array.isArray(data.sendAs) ? data.sendAs.map(asRow) : [];
+    const match = sendAsList.find(item => text(item.sendAsEmail).toLowerCase() === text(stored.gmail_address).toLowerCase())
+      || sendAsList.find(item => item.isPrimary);
+    return { ok: true, action: 'getGmailSignature', signature: text(match?.signature) };
+  }
+
   private async gmailDisconnect(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireAccess(database, session, 'request.mail');
     const stored = this.getGmailTokens(current.account);
@@ -738,14 +801,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const to = text(payload.to);
     const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
     const subject = text(payload.subject);
-    const bodyText = text(payload.bodyText);
+    const bodyHtml = resolveBodyHtml(payload);
     if (!caseId) return { ok: false, action: 'sendCaseMail', error: '缺少案件編號' };
     if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
     const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
     if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
-    const raw = buildGmailRawMessage({ to, cc, subject, bodyText });
+    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw })
     });
@@ -796,8 +859,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireAccess(database, session, 'request.mail');
     const caseId = text(payload.caseId || payload.id);
-    const bodyText = text(payload.bodyText);
-    if (!bodyText) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
+    const bodyHtml = resolveBodyHtml(payload);
+    if (!htmlToPlainText(bodyHtml)) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
     const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
@@ -825,7 +888,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
     const raw = buildGmailRawMessage({
-      to, subject: lastSubject, bodyText,
+      to, subject: lastSubject, bodyHtml,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -863,6 +926,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getAccessProfile') { this.requireSession(session); return { ok: true, action, access: accessProfile(database, session) }; }
       if (action === 'logout') { await this.deleteSession(payload); return { ok: true, action }; }
       if (action === 'gmailStatus') return this.gmailStatus(database, session);
+      if (action === 'getGmailSignature') return await this.getGmailSignature(database, session);
       if (action === 'gmailOauthConnect') return await this.gmailOauthConnect(payload, database, session);
       if (action === 'gmailDisconnect') return await this.gmailDisconnect(database, session);
       if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);

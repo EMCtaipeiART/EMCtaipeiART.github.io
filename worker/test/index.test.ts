@@ -14,6 +14,13 @@ function toBase64Url(value: string): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
+function decodeBase64UrlText(value: string): string {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
 function testDatabase(): DatabaseSnapshot {
   const database = emptyDatabase() as DatabaseSnapshot;
   database.revision = 7;
@@ -746,12 +753,14 @@ describe('Machi Design API Worker', () => {
     expect(status).toMatchObject({ ok: true, connected: true, gmailAddress: 'designer.mailbox@gmail.com' });
 
     let githubPutCount = 0;
+    let capturedRaw = '';
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         const body = JSON.parse(String(init?.body));
         expect(typeof body.raw).toBe('string');
+        capturedRaw = body.raw;
         return Response.json({ id: 'gmail-msg-1', threadId: 'gmail-thread-1' });
       }
       if (url.startsWith('https://api.github.com/')) {
@@ -760,11 +769,24 @@ describe('Machi Design API Worker', () => {
       }
       throw new Error(`unexpected fetch during send: ${url}`);
     });
+    const sentBodyHtml = 'Hi，這是測試信件內容<br><br>參考連結：<a href="https://example.com/brief">簡報連結</a><br>-- <br>Machi 敬上';
     const sent = await api({
       action: 'sendCaseMail', caseId: '26080001',
-      to: 'designer@emctaipei.com', cc: '', subject: '【26080001】測試客戶_Worker 測試案件', bodyText: 'Hi，這是測試信件內容'
+      to: 'designer@emctaipei.com', cc: '', subject: '【26080001】測試客戶_Worker 測試案件', bodyHtml: sentBodyHtml
     }, token);
     expect(sent).toMatchObject({ ok: true, threadId: 'gmail-thread-1', gmailMessageId: 'gmail-msg-1' });
+    // raw 應該是 multipart/alternative：text/plain 備援（連結被拿掉標籤但保留文字）＋text/html（保留完整超連結與簽名檔）。
+    const decodedMime = decodeBase64UrlText(capturedRaw);
+    expect(decodedMime).toContain('Content-Type: multipart/alternative');
+    const extractPart = (contentType: string) => {
+      const match = decodedMime.match(new RegExp(`Content-Type: ${contentType}[\\s\\S]*?\\r\\n\\r\\n([\\s\\S]*?)(?=\\r\\n--|$)`, 'i'));
+      return decodeBase64UrlText((match?.[1] || '').replace(/\r?\n/g, ''));
+    };
+    const plainPartBody = extractPart('text/plain');
+    expect(plainPartBody).toContain('簡報連結');
+    expect(plainPartBody).not.toContain('<a href');
+    const htmlPartBody = extractPart('text/html');
+    expect(htmlPartBody).toBe(sentBodyHtml);
 
     const listed = await api({ action: 'list' }, token);
     const caseRow = (listed.rows as Array<Record<string, unknown>>).find(row => row.id === '26080001');
@@ -885,5 +907,43 @@ describe('Machi Design API Worker', () => {
     expect(disconnected).toMatchObject({ ok: true });
     const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
+  });
+
+  it('reads the Gmail signature for the connected send-as address, and reports a clear reason when the token lacks gmail.settings.basic', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://oauth2.googleapis.com/token') return Response.json({ access_token: 'gmail-access-1', refresh_token: 'gmail-refresh-1', expires_in: 3600 });
+      if (url === 'https://www.googleapis.com/oauth2/v2/userinfo') return Response.json({ email: 'designer.mailbox@gmail.com' });
+      throw new Error(`unexpected fetch during connect: ${url}`);
+    });
+    await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({
+          sendAs: [
+            { sendAsEmail: 'someone.else@gmail.com', isPrimary: false, signature: '不該被選到的簽名' },
+            { sendAsEmail: 'designer.mailbox@gmail.com', isPrimary: true, signature: '<b>Machi</b><br>EMC 設計組' }
+          ]
+        });
+      }
+      throw new Error(`unexpected fetch during signature read: ${url}`);
+    });
+    const signature = await api({ action: 'getGmailSignature' }, token);
+    expect(signature).toMatchObject({ ok: true, signature: '<b>Machi</b><br>EMC 設計組' });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs') return new Response('insufficient scope', { status: 403 });
+      throw new Error(`unexpected fetch during insufficient-scope read: ${url}`);
+    });
+    const insufficientScope = await api({ action: 'getGmailSignature' }, token);
+    expect(insufficientScope).toMatchObject({ ok: false, reason: 'INSUFFICIENT_SCOPE' });
   });
 });

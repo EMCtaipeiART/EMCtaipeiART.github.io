@@ -267,7 +267,31 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
 - commit：（見下方 push 紀錄）
 
-### 2026-08-18 08:59 Asia/Taipei（最新）— Gmail 功能正式部署完成；「透過 Gmail 寄出」改成先跳出可編輯的撰寫視窗，不再直接寄出
+### 2026-08-18 09:13 Asia/Taipei（最新）— Gmail 撰寫/回信改成真正的 HTML 富文字（簽名檔自動帶入＋可插入超連結）
+
+- 修改目的：使用者接續上一則「可編輯撰寫視窗」的回饋，提出兩個更進一步的需求：①視窗裡要能自動帶入 Gmail 帳號設定好的簽名檔，不用手動貼；②內文文字要能插入超連結（例如補充資料的連結）。原本的實作是單純的 `<textarea>`＋Gmail API 的 `text/plain` 純文字信件，兩者都做不到。跟使用者確認過三個方向後（A：加強自己做的撰寫視窗／B：改回開真正的 Gmail 網頁版撰寫視窗，但會失去「回信」功能），使用者選擇 A——保留系統內回信功能，我方另外做簽名檔自動帶入＋超連結插入。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`。
+- 影響功能：
+  1. **新增 OAuth 範圍 `gmail.settings.basic`**：前端 `gmailOauthAuthorizationUrl()` 的 `scope` 參數新增這個範圍（跟既有的 `gmail.send`／`gmail.readonly` 一起請求）。**這代表已經連接過 Gmail 的帳號，舊的授權沒有這個範圍，必須重新走一次「連接 Gmail」流程**（斷線再重連，或直接重新點「連接 Gmail 帳號」用 `prompt=consent` 強制重新同意）才能讀到簽名檔；沒有重新連接前，讀簽名檔會收到 `INSUFFICIENT_SCOPE`（見下方第 3 點），但完全不影響既有的寄信/讀信/回信功能，這幾個既有動作只需要 `gmail.send`／`gmail.readonly`，不受這次新增範圍影響。這個範圍是在既有的 Google Cloud 專案（[[2026-08-18 08:59 Asia/Taipei — Gmail 功能正式部署完成|上一則新建的那個獨立 Gmail 專案]]）的 OAuth 同意畫面追加，不需要再建立新的 OAuth Client。
+  2. **Worker 新增 `getGmailSignature` action**（`request.mail` 權限把關）：呼叫 Gmail API `users.settings.sendAs.list`，比對目前連接帳號的 `gmail_address`（找不到就退回 `isPrimary===true` 那筆）取出 `signature` 欄位（Gmail 回傳的簽名檔本身就是 HTML）。**收到 403 時明確回傳 `reason:'INSUFFICIENT_SCOPE'`**（而不是籠統的錯誤），讓前端可以判斷「這是舊連線缺少新範圍」而不是「Gmail 出錯了」，目前前端選擇對這個情況直接安靜略過（不阻擋撰寫/回信，只是不會自動帶入簽名檔）。
+  3. **`buildGmailRawMessage()` 整個重寫，從單一 `text/plain` 改成 `multipart/alternative`**（`text/plain` 備援分支＋`text/html` 正式分支）：新增 `htmlToPlainText()`（Workers 執行環境沒有 DOM，用正規表達式手動把標籤拿掉、`<br>`/`</p>` 等轉換行、常見 HTML entity 解碼，產生陽春但可讀的純文字備援版本，不追求完美還原格式）；`text/html` 分支保留完整的超連結與簽名檔格式。`sendCaseMail`／`replyCaseMail` 的 payload 欄位從 `bodyText` 改成 `bodyHtml`（新增 `resolveBodyHtml()` 相容層——沒有帶 `bodyHtml` 時退回把 `bodyText` 逃脫後轉成等效 HTML 段落，避免舊呼叫端或忘記更新的呼叫路徑直接壞掉）。**讀信那邊完全不用改**：`getCaseMailThread()` 的 `extractPlainTextFromGmailPayload()` 本來就只抓 `text/plain` 分支，因為現在寄出的信固定都會帶 `text/plain` 備援分支，讀回來的內容跟改動前一樣正常可讀（不會因為改成 HTML 寄信，讀信這邊反而讀不到內容）。
+  4. **前端把 `#gmailComposeModal`／`#gmailThreadModal` 的內文欄位從 `<textarea>` 換成 `contenteditable` 的 `<div>`**（`#gmailComposeEditor`／`#gmailThreadReplyEditor`），上方各加一顆「插入超連結」工具列按鈕（`data-rich-link-for` 屬性指定要操作哪個編輯區）。新增 `insertRichLink(editorId)`：有選取文字時用 `document.execCommand('createLink',...)` 直接把選取範圍包成連結；沒有選取文字時跳兩次 `prompt()`（網址、顯示文字）在游標位置插入一個新的 `<a>`。**這裡刻意用了已經被標記為過時（deprecated）的 `execCommand` API**——Chrome／Safari（本專案文件裡多次確認的主要支援瀏覽器）都還完整支援，換一套完整的富文字編輯器（例如做選取範圍管理、復原/重做堆疊）跟這裡「插入超連結」這一個單純需求的複雜度完全不成比例，這次刻意選擇最小可行的做法。
+  5. **簽名檔自動帶入**：新增 `ensureGmailSignatureLoaded()`（同一次登入 session 內只呼叫一次 `getGmailSignature`、快取結果，`clearLoginAuthState()` 登出時重置，跟既有 `gmailConnectionChecked` 同一套快取模式）。`openGmailComposeModal()` 開啟撰寫視窗時，先用純文字版的既有 `mailDraft(row).bodyText`（逃脫後轉 `<br>` 分行）立即填入編輯區，簽名檔抓回來後再補接在後面（不阻擋視窗開啟，簽名檔載入是非同步、視窗不用等）。`openGmailThreadModal()` 開啟回信視窗時，回覆欄位預先填入「兩個換行＋簽名檔」（模仿 Gmail 本身「按回覆，游標停在簽名檔上方」的既有體驗），新增 `placeCursorAtStart()`（用 `Range`/`Selection` API 把游標移到編輯區最前面並 focus），讓使用者打字時自然接在簽名檔上方，不用自己手動把游標往前移。
+  6. **順手清掉一句過時的提醒文字**：`mailDraft()` 內文模板原本結尾固定有一行「\*記得手動加入簽名檔」——這行是在完全沒有任何簽名檔整合機制的年代寫的提醒；這次已經有真正自動帶入簽名檔的機制，這行文字如果留著會變成「提醒你手動加，結果後面緊接著系統自動加好的簽名檔」這種自相矛盾的畫面（實測時真的看到這個現象），直接移除。這個範本是「透過 Gmail 撰寫並寄出」跟舊版三個網頁版撰寫連結（Gmail 撰寫／Outlook 撰寫／預設郵件 App）共用的，拿掉這行對舊版三個連結也沒有負面影響——那幾個網頁版介面本來就會用自己帳號設定的簽名檔，不需要這行文字提醒。
+- 風險區塊：
+  - **已經連接過 Gmail 的帳號（包含這次工作階段稍早我陪使用者測試連接的那次）都需要重新連接一次才能取得簽名檔**——這是新增 OAuth 範圍的必然結果，Google 的授權是「當時同意的範圍」而不是「之後追加範圍會自動生效」；沒有重新連接前，`getGmailSignature` 會收到 403、被 `INSUFFICIENT_SCOPE` 攔下並安靜略過，使用者能正常撰寫/寄信/回信，只是暫時看不到自動帶入的簽名檔，不會整個功能卡住。
+  - **`insertRichLink()` 完全依賴瀏覽器原生的 `Selection`/`Range` API 讀取「使用者目前選了哪段文字」**——如果使用者在點擊「插入超連結」按鈕之前，選取範圍已經跑到編輯區以外（例如選了旁邊的收件人欄位文字），程式碼有檢查 `editor.contains(selection.anchorNode)`，會正確判定成「沒有選取」，改用兩次 `prompt()` 詢問網址與顯示文字、插入到編輯區最後面，不會誤把外部選取範圍包成連結、也不會報錯。
+  - **`multipart/alternative` 的 `text/plain` 備援分支是用正規表達式手動從 HTML 轉換，不是真正的 HTML parser**——遇到巢狀很深、格式很複雜的 HTML（目前的編輯器產生的內容其實很單純，只有 `<br>`、`<a>`、簽名檔可能帶的 `<b>`/`<div>` 等基本標籤）轉換結果可能不夠精確，但這個分支只是「收件人的郵件軟體不支援 HTML 時的備援顯示」，絕大多數情況根本不會被使用者看到（現代郵件軟體幾乎都支援顯示 HTML 版本），不是這次的風險重點。
+- 已檢查／驗證方式：
+  - **Worker**：`npx tsc --noEmit` 無錯；`npx vitest run` **18/18 全過**（17 個既有測試＋1 個新增的 `getGmailSignature` 測試，涵蓋：成功依 `sendAsEmail` 比對抓到正確簽名檔、忽略清單裡其他不相符的 `sendAs` 項目、Google 回 403 時正確回傳 `INSUFFICIENT_SCOPE`）；**既有的 `sendCaseMail` 測試升級成完整驗證 `multipart/alternative`**：送出內容改成含超連結與模擬簽名檔的 HTML，解碼 Worker 實際送給 Gmail API 的 `raw` 欄位，確認外層是 `multipart/alternative`、正確拆出兩個分支，`text/plain` 分支正確保留文字但拿掉 `<a href` 標籤、`text/html` 分支跟原始輸入完全一致（超連結原封不動保留）；`npx wrangler types --check`／`npx wrangler deploy --dry-run` 皆通過。
+  - `node --test backend/test/*.test.mjs` 26/26 全過（這次沒有動到 `backend/schema.mjs`，純粹確認沒有意外牽動共用邏輯）。
+  - **前端**：主要 `<script>` 區塊 `node --check` 語法檢查通過。用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（stub `sheetApi`／`accessAllowed`，沒有真的打任何網路請求）：兩個編輯區與兩顆「插入超連結」按鈕都正確存在於 DOM；開啟撰寫視窗後編輯區正確同時包含 `mailDraft()` 的內文與（非同步抓回的）模擬簽名檔；模擬「選取文字後插入連結」正確用 `execCommand` 把選取範圍包成 `<a href>`；模擬「沒有選取、直接插入連結」正確跳兩次 prompt（網址、顯示文字）並插入新連結；開啟回信視窗後，回覆編輯區正確預填「換行＋簽名檔」，且游標正確落在編輯區最前面（`Selection` 確認 `anchorNode` 在編輯區內、`isCollapsed` 為真）；完整模擬一次「開啟撰寫視窗→插入連結→呼叫寄出」流程，確認送給 `sheetApi('sendCaseMail',...)` 的 payload 正確帶 `bodyHtml`（內容包含插入的連結＋簽名檔的完整 HTML），不再是舊的 `bodyText` 欄位。
+  - **實際部署驗證**：`npx wrangler deploy` 成功部署（Version ID `adfe493a-525e-4b2f-bd99-a69aad4519aa`），部署後用 `curl` 直接打正式 Worker 驗證 `getGmailSignature` 未登入時正確回「請先登入後再執行此操作」，確認新 action 已生效。
+  - **未做的驗證**：沒有機會請使用者實際重新連接一次 Gmail、確認真的能抓到 Google Cloud Console 那邊設定好的真實簽名檔並正確顯示在撰寫視窗裡；也沒有實際測試 `execCommand('createLink',...)` 在真實 Safari（不只是這個沙箱環境的 Chromium 內核瀏覽器）上的行為是否完全一致——這個 API 屬於瀏覽器共通的舊標準，跨瀏覽器差異風險低，但沒有實機驗證過。
+- 部署狀態：`index.html` 純前端，git push 後自動生效；`worker/` 這次的六個既有 Gmail action MIME 格式改動與新增的 `getGmailSignature` action **已經正式部署到 Cloudflare**（`npx wrangler deploy` 已執行成功）。**需要使用者自行到 Google Cloud Console（那個新建的 Gmail 專屬專案）的 OAuth 同意畫面，補加 `gmail.settings.basic` 這個範圍**，才能讓「連接 Gmail」流程真的請求到這個新權限；範圍加好之後，使用者需要重新走一次「連接 Gmail」（可以先斷線再重連，或直接點連接、`prompt=consent` 會強制重新走一次同意畫面）才能讓簽名檔功能生效，這步驟還沒有請使用者做。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-18 08:59 Asia/Taipei — Gmail 功能正式部署完成；「透過 Gmail 寄出」改成先跳出可編輯的撰寫視窗，不再直接寄出
 
 - 修改目的：接續前一則 Gmail 整合工作，這次完成兩件事：①實際把 Worker 部署上線並排除部署過程中的問題；②使用者體驗回饋：「透過 Gmail 直接寄出」原本是點下去就立刻把 `mailDraft(row)` 算好的內容送出，使用者希望寄出前能先看到、也能編輯收件人/副本/主旨/內容，比照 Gmail 網頁版撰寫視窗的體驗，而不是盲目直接送出。
 - 部署過程中發生並排除的問題：
