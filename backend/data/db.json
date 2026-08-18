@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1399,
+  "revision": 1400,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T03:20:05.528Z",
+  "updatedAt": "2026-08-18T03:20:19.120Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18445,7 +18445,8 @@
           "修改次數": "0",
           "繳交時間": "2026/08/17 18:44:52",
           "項目細節": "影音包框",
-          "設計圖資料夾連結": "專案企劃部/執行中/DJI/廣告素材/2026/8月"
+          "設計圖資料夾連結": "專案企劃部/執行中/DJI/廣告素材/2026/8月",
+          "設計圖檔名關鍵字": "360II"
         },
         {
           "客戶別": "DJI",
