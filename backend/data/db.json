@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1423,
+  "revision": 1424,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T04:36:03.354Z",
+  "updatedAt": "2026-08-18T04:37:00.995Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18020,7 +18020,7 @@
           "月份": "8月",
           "案件編號": "26080063",
           "修改次數": "0",
-          "繳交時間": "",
+          "繳交時間": "2026/08/18 12:37:00",
           "項目細節": "影音剪輯"
         },
         {
@@ -20425,6 +20425,18 @@
           "圖片連結": "[{\"fileName\":\"260817_ANKER_A121D_包框影片.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kOSSMQC-3F5Y2JH9QyLjk_MsGgbV6MOK=w1600\"},{\"fileName\":\"260817_ANKER_A1695_動態素材_pchome.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1T42zYnaJGoIvWgdyuGJJnN3-L1sAuJ50=w1600\"}]",
           "圖片來源": "manual-upload",
           "圖片更新時間": "2026/08/17 18:54:36"
+        },
+        {
+          "案件編號": "26080063",
+          "修改次數": "0",
+          "建立日期": "2026/08/18 12:37:00",
+          "修改日期": "2026/08/18 12:37:00",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/18 12:37:00",
+          "圖片連結": "[{\"fileName\":\"T13_DT501_TCN_1080x1920_cutdown.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Khv3nYKxO9OvXOgnfwTAi0vj77DG3FVe=w1600\"},{\"fileName\":\"T36_DT501_TCN_1920x1920_cutdown.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Pl3VwdcLVvFJP5iJ_VjLitTIKMZYyS0h=w1600\"},{\"fileName\":\"T6_DT501_TCN_1920x1080_cutdown.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1InxyzkjRrKYk1xS1G6_yy_9ZDSndG7n2=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/18 12:37:00"
         }
       ]
     },
