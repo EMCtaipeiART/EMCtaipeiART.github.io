@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1508,
+  "revision": 1509,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:40:22.735Z",
+  "updatedAt": "2026-08-18T08:42:11.432Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25405,14 +25405,6 @@
           "部門組別": "[]",
           "更新時間": "2026-08-18 16:23",
           "更新者": "Machi"
-        },
-        {
-          "客戶別": "BAT",
-          "專案負責人": "[]",
-          "設計負責人": "[]",
-          "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "系統預設"
         },
         {
           "客戶別": "BAT英美菸草",
