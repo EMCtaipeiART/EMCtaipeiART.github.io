@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1459,
+  "revision": 1460,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T07:23:47.513Z",
+  "updatedAt": "2026-08-18T07:24:18.339Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17908,7 +17908,7 @@
           "月份": "8月",
           "案件編號": "26080059",
           "修改次數": "0",
-          "繳交時間": "",
+          "繳交時間": "2026/08/18 15:24:18",
           "項目細節": "廣告素材"
         },
         {
@@ -20631,6 +20631,18 @@
           "修改人": "羅珮云",
           "確認修正日": "",
           "待修改圖片": ""
+        },
+        {
+          "案件編號": "26080059",
+          "修改次數": "0",
+          "建立日期": "2026/08/18 15:24:18",
+          "修改日期": "2026/08/18 15:24:18",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/18 15:24:18",
+          "圖片連結": "[{\"fileName\":\"260819_eufy_S2__新素材_潔淨表現全面登頂.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1GI7yhYevEn_x-FLNr-3Pcd_ixujeV-7g=w1600\"},{\"fileName\":\"260819_eufy_S2_蝦皮_再製_潔淨表現全面登頂.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UuHBgue_DbxdTBVKf7sLweTHj0z2aPTw=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/18 15:24:18"
         }
       ]
     },
