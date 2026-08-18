@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1566,
+  "revision": 1567,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T14:07:01.194Z",
+  "updatedAt": "2026-08-18T15:58:54.461Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18883,6 +18883,33 @@
           "繳交時間": "",
           "Gmail信件串ID": "1a0148c2dd1c4fb6",
           "Gmail寄件帳號": "david.liao@emctaipei.com"
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "9月社群貼文/常態品項OWS AeroClip/上班族日常情境(多圖)",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "4",
+          "開始日期": "2026/08/19",
+          "結束日期": "2026/08/24",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/18 23:58",
+          "設計簡報說明": "P21~P25",
+          "設計簡報連結": "https://docs.google.com/presentation/d/1GMUQBhx5PgZMSx4P6see4t4kbhXUQ4k8IgI6K9ny8-E/edit?slide=id.g3f9ac729ce0_0_0#slide=id.g3f9ac729ce0_0_0",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080093",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -21180,6 +21207,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 18:57"
+        },
+        {
+          "案件編號": "26080093",
+          "A": "https://docs.google.com/presentation/d/1GMUQBhx5PgZMSx4P6see4t4kbhXUQ4k8IgI6K9ny8-E/edit?slide=id.g3f9ac729ce0_0_0#slide=id.g3f9ac729ce0_0_0",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/18 23:58"
         }
       ]
     },
@@ -28086,6 +28121,43 @@
           "submittedAt": "2026/08/18 19:11",
           "briefNote": "測試用",
           "briefUrl": "http://www.google.com",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 650,
+          "sheetRow": 650
+        }
+      },
+      "235c276e-6678-44a8-8af8-2ccadfdeffca": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 650,
+        "row": {
+          "id": "26080093",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "9月社群貼文/常態品項OWS AeroClip/上班族日常情境(多圖)",
+          "owner": "吳冠賢",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 4,
+          "start": "2026/08/19",
+          "end": "2026/08/24",
+          "designer": "Anna",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/18 23:58",
+          "briefNote": "P21~P25",
+          "briefUrl": "https://docs.google.com/presentation/d/1GMUQBhx5PgZMSx4P6see4t4kbhXUQ4k8IgI6K9ny8-E/edit?slide=id.g3f9ac729ce0_0_0#slide=id.g3f9ac729ce0_0_0",
           "assetNote": "",
           "assetUrl": "",
           "referenceNote": "",
