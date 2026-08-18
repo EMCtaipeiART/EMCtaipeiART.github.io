@@ -321,7 +321,7 @@ const PICKER_PAGE = `<!doctype html>
   <div class="keyword-field">
     <label for="keywordInput">設計圖檔名關鍵字（強烈建議填寫）</label>
     <input type="text" id="keywordInput" placeholder="例如產品代號 DJI_360II，或專案名稱片段">
-    <p class="note" id="keywordNote">如果這個資料夾同時放了其他案件的檔案（例如同一個月份共用資料夾），只有檔名包含這個關鍵字的圖片/影片會被視為本案件的設計圖，其餘（包含 Links 等參考資料夾）一律不會被抓取；一修、二修也會沿用同一個關鍵字判斷。</p>
+    <p class="note" id="keywordNote">掃描只認這個資料夾本身的檔案，不會進去任何子資料夾（例如 Links 等參考素材）；如果這個資料夾同時放了其他案件的檔案（例如同一個月份共用資料夾），只有檔名包含這個關鍵字的圖片/影片會被視為本案件的設計圖，其餘一律不會被抓取；一修、二修也會沿用同一個關鍵字判斷。</p>
   </div>
   <p class="current">目前瀏覽：<b id="currentPath">（根目錄）</b></p>
   <div class="breadcrumb" id="breadcrumb"></div>

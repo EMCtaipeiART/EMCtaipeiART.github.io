@@ -105,6 +105,16 @@ export function isIgnoredFolderName(name, ignoreFolderNames) {
   return (ignoreFolderNames || []).some(entry => String(entry || '').trim().toLowerCase() === trimmed);
 }
 
+/**
+ * 只掃描 dir「這一層」的檔案，刻意不遞迴進任何子資料夾——案件指定的來源
+ * 資料夾底下常常還有其他子資料夾（例如舊版本、參考素材、或單純是設計師
+ * 習慣分類用的子目錄），如果遞迴進去，很容易把不屬於這次交付、甚至不屬於
+ * 這個案件的檔案也一併抓進來（案件 26080078 的關鍵字比對問題排除之後，
+ * 使用者又進一步反映希望連子資料夾的內容都完全不要考慮，只認資料夾本層）。
+ * `isIgnoredFolderName()`／`ignoreFolderNames` 這兩個既有的「忽略特定子
+ * 資料夾名稱」機制，在不遞迴的前提下已經沒有實際作用（本來就不會進去任何
+ * 子資料夾），保留只是避免不必要的變動，沒有清除。
+ */
 export async function walkMedia(dir, config) {
   const results = [];
   let entries;
@@ -114,15 +124,10 @@ export async function walkMedia(dir, config) {
     throw new Error(`無法讀取資料夾：${dir}（${error.code || error.message}）`);
   }
   for (const entry of entries) {
-    if (entry.name.startsWith('.')) continue;
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (isIgnoredFolderName(entry.name, config.ignoreFolderNames)) continue;
-      results.push(...(await walkMedia(fullPath, config)));
-    } else if (entry.isFile()) {
-      const kind = classify(entry.name, config);
-      if (kind) results.push({ filePath: fullPath, kind });
-    }
+    if (entry.name.startsWith('.') || entry.isDirectory()) continue;
+    if (!entry.isFile()) continue;
+    const kind = classify(entry.name, config);
+    if (kind) results.push({ filePath: path.join(dir, entry.name), kind });
   }
   return results;
 }
