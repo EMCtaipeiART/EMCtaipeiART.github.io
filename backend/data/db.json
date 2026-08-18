@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1564,
+  "revision": 1565,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T14:01:42.140Z",
+  "updatedAt": "2026-08-18T14:06:38.293Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21192,14 +21192,6 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 18:57"
-        },
-        {
-          "案件編號": "26080093",
-          "A": "http://www.google.com",
-          "B": "",
-          "C": "",
-          "D": "",
-          "更新時間": "2026/08/18 19:11"
         }
       ]
     },
