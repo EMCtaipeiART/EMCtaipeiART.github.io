@@ -226,6 +226,38 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['短連結'].rows).toContainEqual(expect.objectContaining({ '短碼': 'Abc234' }));
   });
 
+  it('keeps supplement URLs long and pauses creation of new short links', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'supplement-file-sha' }, commit: { sha: 'supplement-commit-sha' } });
+    });
+    const longUrl = 'https://example.com/brief/with/a/long/path?source=form';
+    const created = await api({
+      action: 'add', requestId: 'long-supplement-url',
+      row: { client: '測試客戶', project: '長網址案件', briefUrl: longUrl, briefNote: '設計簡報' }
+    });
+    expect(created.ok).toBe(true);
+    expect((created.row as Record<string, unknown>).briefUrl).toBe(longUrl);
+    const createdId = String((created.row as Record<string, unknown>).id);
+    const migrated = await api({
+      action: 'update', id: createdId,
+      row: { briefUrl: `https://emctaipeiart.github.io/a/${createdId}` },
+      writeHeaders: ['設計簡報連結']
+    });
+    expect((migrated.row as Record<string, unknown>).briefUrl).toBe(longUrl);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['補充資料連結'].rows).toContainEqual(expect.objectContaining({ A: longUrl }));
+
+    const paused = await api({ action: 'createShortLink', url: longUrl });
+    expect(paused).toMatchObject({ ok: false, error: expect.stringContaining('短網址建立功能目前暫停') });
+    expect(database.tables['短連結'].rows).toHaveLength(0);
+  });
+
   it('saves account settings and permissions in one GitHub commit', async () => {
     const token = await login();
     const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

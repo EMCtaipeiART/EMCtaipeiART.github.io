@@ -3,7 +3,7 @@ import { TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
-  accessProfile, activeReel, canonicalAccount, findReelIndex, generateShortCode,
+  accessProfile, activeReel, canonicalAccount, findReelIndex,
   hasCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow,
@@ -1168,14 +1168,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     baseUrl: string
   ): Promise<ApiResult> {
     if (action === 'createShortLink') {
-      if (session) this.requireAccess(database, session, 'short_link.create');
-      const url = text(payload.url);
-      if (!isHttpUrl(url) || url.length > 2048) throw new Error('請輸入有效的 http 或 https 網址');
-      return this.mutate(action, session, draft => {
-        const code = generateShortCode(new Set(draft.tables['短連結'].rows.map(row => text(row['短碼']))));
-        draft.tables['短連結'].rows.push({ '短碼': code, '原始網址': url, '建立時間': nowTaipei() });
-        return { result: { ok: true, action, code, url }, changedTables: ['短連結'] };
-      });
+      throw new Error('短網址建立功能目前暫停；請直接使用原始長網址');
     }
     if (action === 'saveUserSettings') {
       const current = this.requireAccess(database, session, 'profile.edit');

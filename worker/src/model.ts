@@ -248,7 +248,8 @@ export function requireCapability(snapshot: DatabaseSnapshot, session: SessionRe
   if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
   return session;
 }
-export function syncSupplementLinks(draft: DatabaseSnapshot, sheetRow: Row, baseUrl: string): void {
+/** 補充資料只保存原始長網址；既有短網址仍可解析，但新寫入不再改寫案件主表。 */
+export function syncSupplementLinks(draft: DatabaseSnapshot, sheetRow: Row, _baseUrl: string): void {
   const id = text(sheetRow['案件編號']);
   if (!/^\d{8}$/.test(id)) return;
   const rows = draft.tables['補充資料連結'].rows;
@@ -256,12 +257,18 @@ export function syncSupplementLinks(draft: DatabaseSnapshot, sheetRow: Row, base
   let changed = false;
   for (const [slot, config] of Object.entries(SUPPLEMENT_SLOTS)) {
     const value = text(sheetRow[config.header]);
-    const ownShort = new RegExp(`/${slot}/${id}/?$`, 'i').test(value);
-    if (!value || ownShort || !isHttpUrl(value)) continue;
+    const legacyShort = new RegExp(`/${slot}/${id}/?$`, 'i').test(value);
+    if (legacyShort) {
+      const savedLongUrl = text(record?.[config.column]);
+      if (isHttpUrl(savedLongUrl)) sheetRow[config.header] = savedLongUrl;
+      continue;
+    }
+    if (!value || !isHttpUrl(value)) continue;
     if (!record) record = { '案件編號': id, A: '', B: '', C: '', D: '', '更新時間': '' };
-    record[config.column] = value;
-    sheetRow[config.header] = `${baseUrl.replace(/\/$/, '')}/${slot}/${id}`;
-    changed = true;
+    if (text(record[config.column]) !== value) {
+      record[config.column] = value;
+      changed = true;
+    }
   }
   if (changed && record) {
     record['更新時間'] = nowTaipei().slice(0, 16);

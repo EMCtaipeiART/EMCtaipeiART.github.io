@@ -6308,6 +6308,17 @@
     .gmail-rich-image-input{display:none!important}
     .gmail-rich-editor.is-image-dragover{border-color:#16a34a!important;background:#effbf4!important;box-shadow:inset 0 0 0 2px rgba(22,163,74,.18)}
     .gmail-rich-editor img.gmail-inline-image{display:block;max-width:min(100%,680px);height:auto;margin:8px 0;border-radius:8px}
+    .gmail-recipient-row{align-items:flex-start}
+    .gmail-recipient-control{display:flex;align-items:center;align-content:center;flex:1 1 auto;min-width:0;min-height:36px;box-sizing:border-box;gap:5px;flex-wrap:wrap;padding:4px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:text}
+    .gmail-recipient-control:focus-within{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}
+    .gmail-compose-fields .gmail-recipient-control input[type=text]{flex:1 1 170px;min-width:120px;min-height:26px!important;height:26px!important;padding:0 3px!important;border:0!important;border-radius:5px!important;outline:0!important;background:transparent!important;box-shadow:none!important}
+    .gmail-recipient-chips{display:contents}
+    .gmail-recipient-chip{display:inline-flex;align-items:center;max-width:100%;min-height:26px;gap:5px;padding:0 5px 0 9px;border:1px solid #cfe3d8;border-radius:999px;background:#eef8f2;color:#24513d;font-size:12px;font-weight:800;line-height:1}
+    .gmail-recipient-chip-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .gmail-recipient-chip-remove{display:grid!important;place-items:center!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border:0!important;border-radius:999px!important;background:transparent!important;color:#628071!important;font-size:15px!important;line-height:1!important;box-shadow:none!important}
+    .gmail-recipient-chip-remove:hover{background:#d8ecdf!important;color:#16452f!important}
+    .gmail-recipient-list{max-height:320px}
+    .gmail-recipient-group-label{text-transform:none;letter-spacing:.03em}
     html[data-theme="dark"] .gmail-modal-card{background:#121416!important;color:#e8eaed!important;border-color:#3c4043!important;box-shadow:0 28px 76px rgba(0,0,0,.62)!important;color-scheme:dark}
     html[data-theme="dark"] .gmail-modal-head{background:linear-gradient(180deg,#202326 0%,#181a1d 100%)!important;border-bottom-color:#3c4043!important}
     html[data-theme="dark"] .gmail-modal-head-title h3{color:#f1f3f4!important}
@@ -6321,6 +6332,12 @@
     html[data-theme="dark"] .gmail-compose-fields label{color:#bdc1c6!important}
     html[data-theme="dark"] .gmail-compose-fields input[type=text],
     html[data-theme="dark"] .gmail-recipient-search{background:#1b1d20!important;color:#f1f3f4!important;border-color:#454a4f!important;box-shadow:none!important}
+    html[data-theme="dark"] .gmail-recipient-control{background:#1b1d20!important;border-color:#454a4f!important}
+    html[data-theme="dark"] .gmail-recipient-control:focus-within{outline-color:rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
+    html[data-theme="dark"] .gmail-compose-fields .gmail-recipient-control input[type=text]{background:transparent!important;color:#f1f3f4!important}
+    html[data-theme="dark"] .gmail-recipient-chip{background:#263d34;color:#b9ead2;border-color:#3d6252}
+    html[data-theme="dark"] .gmail-recipient-chip-remove{color:#91bca6!important}
+    html[data-theme="dark"] .gmail-recipient-chip-remove:hover{background:#355345!important;color:#d8f5e6!important}
     html[data-theme="dark"] .gmail-compose-fields input[type=text]::placeholder,
     html[data-theme="dark"] .gmail-recipient-search::placeholder{color:#858b90!important}
     html[data-theme="dark"] .gmail-compose-fields input[type=text]:focus,
@@ -6817,10 +6834,10 @@
     <div class="gmail-modal-body">
       <div class="gmail-compose-fields">
         <label>收件人
-          <div class="gmail-recipient-row"><input type="text" id="gmailComposeTo" placeholder="收件人 Email"><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeTo">選擇聯絡人</button></div>
+          <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailComposeTo"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailComposeTo"></span><input type="text" id="gmailComposeTo" placeholder="輸入信箱後按 Enter" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeTo">選擇聯絡人</button></div>
         </label>
         <label>副本
-          <div class="gmail-recipient-row"><input type="text" id="gmailComposeCc" placeholder="副本 Email，可用逗號分隔多個"><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeCc">選擇聯絡人</button></div>
+          <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailComposeCc"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailComposeCc"></span><input type="text" id="gmailComposeCc" placeholder="可手動輸入信箱" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeCc">選擇聯絡人</button></div>
         </label>
         <label>主旨<input type="text" id="gmailComposeSubject" placeholder="主旨"></label>
         <label class="gmail-compose-body-field">內容
@@ -6974,8 +6991,7 @@ function resolveDesignApiUrl(){
 }
 const apiUrl = resolveDesignApiUrl();
 document.documentElement.dataset.apiBackend=apiUrl;
-const supplementShortBaseUrl = 'https://emctaipeiart.github.io';
-const supplementUrlSlots = Object.freeze({briefUrl:'a',assetUrl:'b',referenceUrl:'c',otherUrl:'d'});
+const supplementLinkFields = Object.freeze({briefUrl:{slot:'a',column:'A'},assetUrl:{slot:'b',column:'B'},referenceUrl:{slot:'c',column:'C'},otherUrl:{slot:'d',column:'D'}});
 const githubJsonDatabaseUrl = 'backend/data/db.json';
 let githubJsonDatabaseCache = null;
 let githubJsonDatabaseLoadedAt = 0;
@@ -7440,26 +7456,34 @@ function mailDimensionSpecs(platforms){
   const specs={Facebook:'1:1，1200 x 1200px',Instagram:'4:5，1080 x 1350px',Line:'1:1，1040 x 1040px'};
   return normalizePlatformList(platforms).map(platform=>specs[platform]).filter(Boolean).join('；');
 }
-function supplementShortUrl(row,key){
-  const raw=String(row?.[key]||'').trim(), slot=supplementUrlSlots[key], id=String(row?.id||'').trim();
-  if(!raw||!slot||!isCaseId_(id))return raw;
-  return `${supplementShortBaseUrl}/${slot}/${id}`;
-}
-function withSupplementShortUrls(row={}){
-  const normalized=normalizeRow(row);
-  for(const key of Object.keys(supplementUrlSlots))if(normalized[key])normalized[key]=supplementShortUrl(normalized,key);
-  return normalized;
-}
-function supplementWriteMetadata(row={}){
-  return {supplementBaseUrl:supplementShortBaseUrl,supplementLinks:Object.fromEntries(Object.entries(supplementUrlSlots).map(([key,slot])=>[slot,String(row?.[key]||'').trim()]))};
+function supplementLongUrl(row,key){
+  const raw=String(row?.[key]||'').trim(), config=supplementLinkFields[key], id=String(row?.id||'').trim();
+  if(!config)return raw;
+  const legacyShort=isCaseId_(id)&&new RegExp(`/${config.slot}/${id}/?$`,'i').test(raw);
+  if(/^https?:\/\//i.test(raw)&&!legacyShort)return raw;
+  const records=githubJsonDatabaseCache?.tables?.['補充資料連結']?.rows||[];
+  const saved=records.find(item=>String(item?.['案件編號']||'').trim()===id);
+  const longUrl=String(saved?.[config.column]||'').trim();
+  return /^https?:\/\//i.test(longUrl)?longUrl:raw;
 }
 function mailSupplementText(note,url){return [note||'',url||''].filter(Boolean).join(' | ')}
+function mailSupplementHtml(note,url){
+  const label=String(note||url||'').trim(),href=String(url||'').trim();
+  if(!label)return '';
+  return /^https?:\/\//i.test(href)?`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:esc(label);
+}
 function mailDraft(row){
   const designer=String(row.designer||'設計負責人').trim();
   const mailSubject=subject(row);
   const to=designerRecipient(row);
   const cc=uniqueMailRecipients([...designerCcRecipients(row),...requiredMailCcRecipients]);
-  const bodyText=[
+  const supplements={
+    brief:{note:row.briefNote,url:supplementLongUrl(row,'briefUrl')},
+    asset:{note:row.assetNote,url:supplementLongUrl(row,'assetUrl')},
+    reference:{note:row.referenceNote,url:supplementLongUrl(row,'referenceUrl')},
+    other:{note:row.otherNote,url:supplementLongUrl(row,'otherUrl')}
+  };
+  const bodyLines=[
     `Hi ${designer},`,
     '',
     '來信提供此篇貼文下方資訊列，設計需求如下。',
@@ -7475,12 +7499,33 @@ function mailDraft(row){
     `　　　6. 交件日期：${slashDate(row.end)}`,
     '',
     ' ・ 補充資料：',
-    `　　　A. 設計簡報：${mailSupplementText(row.briefNote,supplementShortUrl(row,'briefUrl'))}`,
-    `　　　B. 客戶素材：${mailSupplementText(row.assetNote,supplementShortUrl(row,'assetUrl'))}`,
-    `　　　C. 參考範例：${mailSupplementText(row.referenceNote,supplementShortUrl(row,'referenceUrl'))}`,
-    `　　　D. 其他：${mailSupplementText(row.otherNote,supplementShortUrl(row,'otherUrl'))}`
-  ].join('\n');
-  return {to,cc,subject:mailSubject,bodyText};
+    `　　　A. 設計簡報：${mailSupplementText(supplements.brief.note,supplements.brief.url)}`,
+    `　　　B. 客戶素材：${mailSupplementText(supplements.asset.note,supplements.asset.url)}`,
+    `　　　C. 參考範例：${mailSupplementText(supplements.reference.note,supplements.reference.url)}`,
+    `　　　D. 其他：${mailSupplementText(supplements.other.note,supplements.other.url)}`
+  ];
+  const bodyHtml=[
+    `Hi ${esc(designer)},`,
+    '',
+    '來信提供此篇貼文下方資訊列，設計需求如下。',
+    '',
+    ' ・ 設計項目：',
+    ` ・ 需求描述：${esc(row.project||'')}`,
+    ' ・ 相關資訊：',
+    '　　　1. 大標：',
+    `　　　2. 數量：${esc(row.qty||'')}`,
+    `　　　3. 尺寸規格：${esc(mailDimensionSpecs(row.platforms))}`,
+    '　　　4. 是否印刷：是/否',
+    `　　　5. 使用平台：${esc(platformText(row.platforms)||row.platforms||'')}`,
+    `　　　6. 交件日期：${esc(slashDate(row.end))}`,
+    '',
+    ' ・ 補充資料：',
+    `　　　A. 設計簡報：${mailSupplementHtml(supplements.brief.note,supplements.brief.url)}`,
+    `　　　B. 客戶素材：${mailSupplementHtml(supplements.asset.note,supplements.asset.url)}`,
+    `　　　C. 參考範例：${mailSupplementHtml(supplements.reference.note,supplements.reference.url)}`,
+    `　　　D. 其他：${mailSupplementHtml(supplements.other.note,supplements.other.url)}`
+  ].join('<br>');
+  return {to,cc,subject:mailSubject,bodyText:bodyLines.join('\n'),bodyHtml};
 }
 function mailComposeUrl(row,provider){
   const draft=mailDraft(row), to=encodeURIComponent(draft.to), cc=encodeURIComponent(draft.cc.join(',')), subjectText=encodeURIComponent(draft.subject), body=encodeURIComponent(draft.bodyText), ccParam=cc?`&cc=${cc}`:'';
@@ -7726,7 +7771,57 @@ function bindGmailInlineImageEditor(editor){
     if(!files.length)return;event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();addGmailInlineImages(editor.id,files);
   });
 }
-/** 聯絡人清單不再只有 6 位設計師＋固定副本——額外併入 ownerContactMap（renderOwnerOptions() 依全部案件的「專案負責人」動態彙整出來的姓名→Email 對照），讓收件人／副本picker 也能連動到帳號在系統裡實際出現過的聯絡人，不只是設計組內部。 */
+const gmailRecipientState=new Map();
+function mailAddressEntry(value){
+  const raw=String(value||'').trim(),email=extractEmail(raw);
+  if(!email||!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email))return null;
+  const match=raw.match(/^"?([^"<]*?)"?\s*<[^<>]+>$/),name=String(match?.[1]||'').trim();
+  return {email:email.toLowerCase(),name,full:name?`${name} <${email.toLowerCase()}>`:email.toLowerCase()};
+}
+function splitMailAddresses(value){return String(value||'').split(/[,，;；\n]+/).map(item=>item.trim()).filter(Boolean)}
+function uniqueMailAddressEntries(values){
+  const seen=new Set(),entries=[];
+  values.forEach(value=>{const entry=typeof value==='string'?mailAddressEntry(value):value;if(!entry||seen.has(entry.email))return;seen.add(entry.email);entries.push(entry)});
+  return entries;
+}
+function gmailRecipientEntries(fieldId){return gmailRecipientState.get(fieldId)||[]}
+function renderGmailRecipientChips(fieldId){
+  const host=document.querySelector(`[data-recipient-chips-for="${fieldId}"]`);if(!host)return;
+  host.innerHTML=gmailRecipientEntries(fieldId).map(entry=>`<span class="gmail-recipient-chip" title="${esc(entry.full)}"><span class="gmail-recipient-chip-label">${esc(entry.name||entry.email)}</span><button type="button" class="gmail-recipient-chip-remove" data-recipient-remove="${esc(entry.email)}" aria-label="移除 ${esc(entry.name||entry.email)}">×</button></span>`).join('');
+}
+function setGmailRecipientEntries(fieldId,values){
+  gmailRecipientState.set(fieldId,uniqueMailAddressEntries(values));
+  const field=document.getElementById(fieldId);if(field)field.value='';
+  renderGmailRecipientChips(fieldId);
+}
+function removeGmailRecipient(fieldId,email){setGmailRecipientEntries(fieldId,gmailRecipientEntries(fieldId).filter(entry=>entry.email!==String(email||'').toLowerCase()))}
+function commitGmailRecipientInput(fieldId,{report=true}={}){
+  const field=document.getElementById(fieldId),raw=String(field?.value||'').trim();
+  if(!raw)return true;
+  const parts=splitMailAddresses(raw),entries=parts.map(mailAddressEntry),invalid=parts.filter((_,index)=>!entries[index]);
+  if(invalid.length){if(report)setSync(`Email 格式不正確：${invalid.join('、')}`,true);return false}
+  setGmailRecipientEntries(fieldId,[...gmailRecipientEntries(fieldId),...entries]);
+  return true;
+}
+function gmailRecipientHeaderValue(fieldId){return commitGmailRecipientInput(fieldId)?gmailRecipientEntries(fieldId).map(entry=>entry.full).join(', '):null}
+function bindGmailRecipientControl(fieldId){
+  const field=document.getElementById(fieldId),control=document.querySelector(`[data-recipient-control="${fieldId}"]`);if(!field||!control)return;
+  control.addEventListener('click',event=>{const remove=event.target.closest('[data-recipient-remove]');if(remove){event.stopPropagation();removeGmailRecipient(fieldId,remove.dataset.recipientRemove);return}field.focus()});
+  field.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===','||event.key===';')&&field.value.trim()){event.preventDefault();commitGmailRecipientInput(fieldId)}});
+  field.addEventListener('blur',()=>commitGmailRecipientInput(fieldId,{report:false}));
+}
+function accountSettingsMailContacts(){
+  const settings=githubJsonDatabaseCache?.tables?.['設定']?.rows||[],permissions=githubJsonDatabaseCache?.tables?.['帳號權限']?.rows||[];
+  const disabled=new Set(permissions.filter(row=>String(row?.['狀態']||'').trim()==='停用').map(row=>String(row?.['帳號']||'').trim().toLowerCase()));
+  return settings.map(row=>{
+    const account=String(row?.['帳號']||'').trim(),email=extractEmail(account).toLowerCase();
+    if(!email||disabled.has(email))return null;
+    const name=String(row?.['顯示名']||row?.['名字']||'').trim()||email;
+    const department=String(row?.['部門']||'').trim(),group=String(row?.['組別']||'').trim();
+    return {name,full:`${name} <${email}>`,group:[department,group].filter(Boolean).join(' / ')||'帳號設定'};
+  }).filter(Boolean).sort((a,b)=>a.group.localeCompare(b.group,'zh-Hant')||a.name.localeCompare(b.name,'zh-Hant'));
+}
+/** 聯絡人以「帳號設定」的部門／組別為主要名錄，再補上設計師 fallback、固定副本與案件中曾出現的專案負責人。 */
 function knownMailContacts(){
   const seen=new Set(), list=[];
   const add=(name,full,group)=>{
@@ -7735,6 +7830,7 @@ function knownMailContacts(){
     seen.add(email.toLowerCase());
     list.push({name:(name||'').trim()||email,full,group});
   };
+  accountSettingsMailContacts().forEach(contact=>add(contact.name,contact.full,contact.group));
   designerOptions.forEach(name=>add(designerRecipientNames[name]||name,designerRecipientByName(name),'設計組'));
   requiredMailCcRecipients.forEach(full=>add(full.replace(/\s*<.*?>\s*/,'').trim(),full,'固定副本'));
   [...ownerContactMap.entries()]
@@ -7746,16 +7842,17 @@ function knownMailContacts(){
 function openRecipientPicker(fieldId,anchorEl){
   const field=document.getElementById(fieldId);
   if(!field)return;
+  if(!commitGmailRecipientInput(fieldId))return;
   closeFieldPopover();
   const contacts=knownMailContacts();
-  const currentEmails=new Set(field.value.split(',').map(part=>extractEmail(part).toLowerCase()).filter(Boolean));
+  const currentEmails=new Set(gmailRecipientEntries(fieldId).map(entry=>entry.email));
   const groups=[];
   contacts.forEach(contact=>{
     let group=groups.find(g=>g.name===contact.group);
     if(!group){group={name:contact.group,items:[]};groups.push(group)}
     group.items.push(contact);
   });
-  const groupsHtml=groups.map(group=>`<div class="gmail-recipient-group"><div class="gmail-recipient-group-label">${esc(group.name)}</div>${group.items.map(contact=>`<label class="gmail-recipient-option" data-contact-search="${esc((contact.name+' '+extractEmail(contact.full)).toLowerCase())}"><input type="checkbox" value="${esc(contact.full)}" ${currentEmails.has(extractEmail(contact.full).toLowerCase())?'checked':''}><span class="gmail-recipient-option-name">${esc(contact.name)}</span><span class="gmail-recipient-option-email">${esc(extractEmail(contact.full))}</span></label>`).join('')}</div>`).join('');
+  const groupsHtml=groups.map(group=>`<div class="gmail-recipient-group"><div class="gmail-recipient-group-label">${esc(group.name)}</div>${group.items.map(contact=>`<label class="gmail-recipient-option" data-contact-search="${esc((contact.group+' '+contact.name+' '+extractEmail(contact.full)).toLowerCase())}"><input type="checkbox" value="${esc(contact.full)}" ${currentEmails.has(extractEmail(contact.full).toLowerCase())?'checked':''}><span class="gmail-recipient-option-name">${esc(contact.name)}</span><span class="gmail-recipient-option-email">${esc(extractEmail(contact.full))}</span></label>`).join('')}</div>`).join('');
   fieldPopover.innerHTML=`<h3>選擇聯絡人</h3><input type="text" class="gmail-recipient-search" id="gmailRecipientSearch" placeholder="搜尋姓名或 Email"><div class="gmail-recipient-list">${groupsHtml||'<p class="small">目前沒有可選擇的聯絡人</p>'}</div><div class="gmail-recipient-actions"><button type="button" id="gmailRecipientApply">套用</button></div>`;
   fieldPopover.hidden=false;
   positionFieldPopover(anchorEl);
@@ -7773,7 +7870,9 @@ function openRecipientPicker(fieldId,anchorEl){
   });
   $('#gmailRecipientApply').onclick=()=>{
     const chosen=[...fieldPopover.querySelectorAll('.gmail-recipient-list input:checked')].map(box=>box.value);
-    field.value=chosen.join(', ');
+    const knownEmails=new Set(contacts.map(contact=>extractEmail(contact.full).toLowerCase()));
+    const manual=gmailRecipientEntries(fieldId).filter(entry=>!knownEmails.has(entry.email));
+    setGmailRecipientEntries(fieldId,[...manual,...chosen]);
     closeFieldPopover();
   };
 }
@@ -7788,12 +7887,11 @@ async function openGmailComposeModal(id){
   if(!modal)return;
   modal.dataset.caseId=String(id);
   const fromLabel=$('#gmailComposeModalFrom'); if(fromLabel)fromLabel.textContent=[subject(row),gmailConnectionState.gmailAddress?`寄件人：${gmailConnectionState.gmailAddress}`:''].filter(Boolean).join('　·　');
-  $('#gmailComposeTo').value=draft.to;
-  $('#gmailComposeCc').value=draft.cc.join(', ');
+  setGmailRecipientEntries('gmailComposeTo',[draft.to]);
+  setGmailRecipientEntries('gmailComposeCc',draft.cc);
   $('#gmailComposeSubject').value=draft.subject;
   const editor=$('#gmailComposeEditor');
-  const draftBodyHtml=esc(draft.bodyText).replace(/\n/g,'<br>');
-  editor.innerHTML=draftBodyHtml;
+  editor.innerHTML=draft.bodyHtml;
   clearGmailInlineImages(editor.id);
   modal.hidden=false;
   ensureGmailSignatureLoaded();
@@ -7810,7 +7908,8 @@ async function sendGmailComposeModal(){
   const modal=$('#gmailComposeModal'), id=modal?.dataset.caseId, button=$('#gmailComposeSend');
   if(!id)return;
   const editor=$('#gmailComposeEditor');
-  const to=$('#gmailComposeTo').value.trim(), cc=$('#gmailComposeCc').value.trim(), subject=$('#gmailComposeSubject').value.trim();
+  const to=gmailRecipientHeaderValue('gmailComposeTo'),cc=gmailRecipientHeaderValue('gmailComposeCc'),subject=$('#gmailComposeSubject').value.trim();
+  if(to===null||cc===null)return;
   if(!to||!subject){setSync('請填寫收件人與主旨',true);return}
   if(button)button.disabled=true;
   setSync('透過 Gmail 寄出中...');
@@ -10304,9 +10403,9 @@ async function submitSingleNewRequest(row){
   const draft=normalizeRow({...row,month:monthFromDate(row.start),status:'未開始',details:''});
   if(!apiUrl){draft.id=nextId(); return {row:draft}}
   const createRow=formCreateRow(draft), requestId=createRequestIdForPayload({action:'add',row:createRow});
-  const data=await sheetApi('add',{requestId,row:createRow,...supplementWriteMetadata(createRow),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
+  const data=await sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken});
   completeCreateRequest(requestId);
-  if(data.row)data.row=withSupplementShortUrls(data.row);
+  if(data.row)data.row=normalizeRow(data.row);
   return data;
 }
 function resetRequestComposerAfterSubmit(){
@@ -10352,9 +10451,9 @@ function submitRequestBatchRows(){
     setSync(`已於本機新增 ${added.length} 筆`);
     return;
   }
-  void enqueueInlineWrite(()=>sheetApi('batchAdd',{requestId,rows:createRows,supplementBaseUrl:supplementShortBaseUrl,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})).then(data=>{
+  void enqueueInlineWrite(()=>sheetApi('batchAdd',{requestId,rows:createRows,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})).then(data=>{
     const added=data.rows?.length
-      ? data.rows.map(withSupplementShortUrls).filter(row=>isCaseId_(row.id))
+      ? data.rows.map(normalizeRow).filter(row=>isCaseId_(row.id))
       : [];
     added.forEach(row=>rememberLocalWrite(row.id,{...row,__created:true}));
     rows=rows.filter(row=>row.pendingCreateKey!==pendingBatchKey);
@@ -10567,7 +10666,7 @@ updateLoginUi=function(...args){
   show('#accountAvatarSettings',loggedIn&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true));
   show('#accountDesignerSettings',loggedIn&&canAccessDesignerSettings());
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
-  show('#accountShortLinkTool',loggedIn&&accessAllowed('page.short_link',true));
+  show('#accountShortLinkTool',false);
   show('#accountNasPickerStatus',loggedIn&&accessAllowed('media.manage',isAdministrator()));
   show('#accountArchiveManager',loggedIn&&accessAllowed('page.archive',isAdministrator())&&accessAllowed('archive.edit',isAdministrator()));
   show('#accountJsonDatabaseAdmin',loggedIn&&accessAllowed('page.database_admin',isAdministrator())&&accessAllowed('database.manage',isAdministrator()));
@@ -10606,7 +10705,7 @@ $('#requestForm').addEventListener('submit',e=>{
   if(!isModify){r.status='未開始'; r.details=''}else{r.status=existingRow?.status||r.status||'未開始'; r.details=r.details||existingRow?.details||''}
   if(editId){
     r.id=editId;
-    const rowToWrite=formWriteRow(r), optimisticRow=withSupplementShortUrls({...existingRow,...r,id:editId}), optimisticChanges=Object.fromEntries(formWriteKeys.map(key=>[key,optimisticRow[key]])), writeToken=createWriteRequestId();
+    const rowToWrite=formWriteRow(r), optimisticRow=normalizeRow({...existingRow,...r,id:editId}), optimisticChanges=Object.fromEntries(formWriteKeys.map(key=>[key,optimisticRow[key]])), writeToken=createWriteRequestId();
     backgroundFormEditTokens.set(String(editId),writeToken);
     rows=rows.map(row=>String(row.id)===String(editId)?optimisticRow:row);
     rememberLocalWrite(editId,optimisticChanges);
@@ -10626,10 +10725,10 @@ $('#requestForm').addEventListener('submit',e=>{
       setSync('已更新本機資料');
       return;
     }
-    void enqueueInlineWrite(()=>sheetApi('update',{id:editId,row:{id:editId,...rowToWrite},...supplementWriteMetadata(rowToWrite),forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders,editorToken:currentEditorToken})).then(data=>{
+    void enqueueInlineWrite(()=>sheetApi('update',{id:editId,row:{id:editId,...rowToWrite},forceHeaders:formUpdateHeaders,writeHeaders:formUpdateHeaders,editorToken:currentEditorToken})).then(data=>{
       if(backgroundFormEditTokens.get(String(editId))!==writeToken)return;
       backgroundFormEditTokens.delete(String(editId));
-      if(data.row)rows=rows.map(row=>String(row.id)===String(editId)?withSupplementShortUrls({...row,...data.row,id:editId}):row);
+      if(data.row)rows=rows.map(row=>String(row.id)===String(editId)?normalizeRow({...row,...data.row,id:editId}):row);
       clearUpdatingCell(editId,formWriteKeys);
       save();
       render();
@@ -10660,7 +10759,7 @@ $('#requestForm').addEventListener('submit',e=>{
   requestSubmitInFlight=false;
   $('#submitBtn').disabled=false;
   if(!apiUrl){
-    const submittedRow=withSupplementShortUrls({...r,id:nextId(),status:r.status||'未開始'});
+    const submittedRow=normalizeRow({...r,id:nextId(),status:r.status||'未開始'});
     rows=rows.filter(row=>row.pendingCreateKey!==pendingCreateKey);
     rows.unshift(submittedRow);
     save();
@@ -10669,8 +10768,8 @@ $('#requestForm').addEventListener('submit',e=>{
     setSync(`已新增至本機資料，案件編號 ${submittedRow.id}`);
     return;
   }
-  void enqueueInlineWrite(()=>sheetApi('add',{requestId,row:createRow,...supplementWriteMetadata(createRow),forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})).then(data=>{
-    const submittedRow=withSupplementShortUrls(data.row||{});
+  void enqueueInlineWrite(()=>sheetApi('add',{requestId,row:createRow,forceHeaders:formCreateHeaders,writeHeaders:formCreateHeaders,editorToken:currentEditorToken})).then(data=>{
+    const submittedRow=normalizeRow(data.row||{});
     if(!isCaseId_(submittedRow.id))throw new Error('寫入完成但未取得案件編號，請重新整理確認');
     rememberLocalWrite(submittedRow.id,{...submittedRow,__created:true});
     rows=rows.filter(row=>row.pendingCreateKey!==pendingCreateKey);
@@ -10783,7 +10882,7 @@ document.addEventListener('click',event=>{
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false))return;closeAccountMenu();window.open(archiveManagerUrl,'_blank','noopener')});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false))return;closeAccountMenu();window.open(jsonDatabaseAdminUrl,'_blank','noopener')});
-	// 短網址工具就是 404.html：帶短碼時是轉址頁，直接開則是「建立短連結」表單。
+	// 短網址建立功能已暫停；按鈕維持隱藏，既有 404.html 短碼解析仍保留相容性。
 	$('#accountShortLinkTool')?.addEventListener('click',()=>{if(!accessAllowed('page.short_link',false))return;closeAccountMenu();window.open(shortLinkToolUrl,'_blank','noopener')});
 	$('#accountNasPickerStatus')?.addEventListener('click',()=>{if(!accessAllowed('media.manage',false))return;closeAccountMenu();openNasFolderPickerAdmin()});
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
@@ -10834,6 +10933,7 @@ document.querySelectorAll('.gmail-rich-image-btn').forEach(button=>{
 });
 document.querySelectorAll('.gmail-rich-image-input').forEach(input=>input.addEventListener('change',()=>{addGmailInlineImages(input.dataset.richImageInputFor,input.files);input.value=''}));
 document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
+['gmailComposeTo','gmailComposeCc'].forEach(bindGmailRecipientControl);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover();if(gmailColorPaletteEl&&!gmailColorPaletteEl.hidden&&!gmailColorPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-color-btn'))closeGmailColorPalette()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});

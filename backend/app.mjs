@@ -328,7 +328,8 @@ function requireCapability(snapshot, payload, capability, { allowAnonymous = fal
   if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
   return session;
 }
-function syncSupplementLinks(draft, sheetRow, baseUrl) {
+// 補充資料只保存原始長網址；既有短網址仍可解析，但新寫入不再改寫案件主表。
+function syncSupplementLinks(draft, sheetRow, _baseUrl) {
   const id = text(sheetRow['案件編號']);
   if (!/^\d{8}$/.test(id)) return;
   const rows = draft.tables['補充資料連結'].rows;
@@ -336,12 +337,18 @@ function syncSupplementLinks(draft, sheetRow, baseUrl) {
   let changed = false;
   for (const [slot, config] of Object.entries(SUPPLEMENT_SLOTS)) {
     const value = text(sheetRow[config.header]);
-    const ownShort = new RegExp(`/${slot}/${id}/?$`, 'i').test(value);
-    if (!value || ownShort || !isHttpUrl(value)) continue;
+    const legacyShort = new RegExp(`/${slot}/${id}/?$`, 'i').test(value);
+    if (legacyShort) {
+      const savedLongUrl = text(record?.[config.column]);
+      if (isHttpUrl(savedLongUrl)) sheetRow[config.header] = savedLongUrl;
+      continue;
+    }
+    if (!value || !isHttpUrl(value)) continue;
     if (!record) record = { '案件編號': id, A: '', B: '', C: '', D: '', '更新時間': '' };
-    record[config.column] = value;
-    sheetRow[config.header] = `${baseUrl.replace(/\/$/, '')}/${slot}/${id}`;
-    changed = true;
+    if (text(record[config.column]) !== value) {
+      record[config.column] = value;
+      changed = true;
+    }
   }
   if (changed) {
     record['更新時間'] = nowTaipei().slice(0, 16);
@@ -549,14 +556,7 @@ export function createActionHandler(database, options = {}) {
       return { ok: true, action, code, url: record['原始網址'] };
     }
     if (action === 'createShortLink') {
-      if (sessionFor(snapshot, payload.editorToken)) requireCapability(snapshot, payload, 'short_link.create');
-      const url = text(payload.url);
-      if (!isHttpUrl(url) || url.length > 2048) throw new Error('請輸入有效的 http 或 https 網址');
-      return database.transaction(draft => {
-        const code = generateShortCode(new Set(draft.tables['短連結'].rows.map(row => text(row['短碼']))));
-        draft.tables['短連結'].rows.push({ '短碼': code, '原始網址': url, '建立時間': nowTaipei() });
-        return { ok: true, action, code, url };
-      }, 'create short link');
+      throw new Error('短網址建立功能目前暫停；請直接使用原始長網址');
     }
 
     if (action === 'login') {

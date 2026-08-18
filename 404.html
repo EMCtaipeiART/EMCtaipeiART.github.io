@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-09 23:10 Asia/Taipei | build: 20260809-static-short-index-1 -->
+<!-- LAST_MODIFIED: 2026-08-18 13:10 Asia/Taipei | build: 20260818-short-link-paused-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta name="app-version" content="20260809-static-short-index-1">
+  <meta name="app-version" content="20260818-short-link-paused-1">
   <link rel="preload" href="/data/short_link_index.json" as="fetch" crossorigin="anonymous">
   <title>EMC 短連結</title>
   <style>
@@ -17,7 +17,7 @@
     .brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:7px;background:#08714d;color:#fff;font-size:12px}
     h1{margin:0 0 8px;font-size:28px;line-height:1.2;color:#17211d}
     .lead{margin:0 0 24px;color:#66736d;font-size:14px;line-height:1.65}
-    form{display:grid;gap:10px}
+    form{display:grid;gap:10px}form[hidden]{display:none!important}
     label{font-size:13px;font-weight:800;color:#3e5048}
     .input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
     input{width:100%;min-width:0;height:46px;border:1px solid #cbd7d1;border-radius:7px;padding:0 13px;background:#fff;color:#17211d;font:inherit;font-size:15px;outline:none}
@@ -46,13 +46,13 @@
 <body>
   <main id="creator">
     <div class="brand"><span class="brand-mark">EMC</span><span>EMC SHORT LINK</span></div>
-    <h1>建立短連結</h1>
-    <p class="lead">貼上完整網址，系統會自動產生一組 6 碼短連結。</p>
-    <form id="shortenForm" novalidate>
+    <h1>短網址功能已暫停</h1>
+    <p class="lead">新連結請直接使用原始長網址；既有短網址仍會維持轉址，不受影響。</p>
+    <form id="shortenForm" novalidate hidden>
       <label for="longUrl">長連結</label>
       <div class="input-row">
         <input id="longUrl" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/very-long-link" required>
-        <button id="createButton" type="submit">產生短連結</button>
+        <button id="createButton" type="submit" disabled>暫停使用</button>
       </div>
     </form>
     <p class="status" id="status" aria-live="polite"></p>

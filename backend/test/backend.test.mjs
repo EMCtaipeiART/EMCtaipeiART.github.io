@@ -136,11 +136,15 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /function initDatabaseRefreshListener\(\)/);
   assert.match(html, /receiveDatabaseRefresh\(JSON\.parse\(event\.newValue\)\)/);
   assert.match(html, /window\.databaseRefreshChannel\.onmessage=event=>receiveDatabaseRefresh\(event\.data\)/);
-  assert.match(html, /const supplementShortBaseUrl = 'https:\/\/emctaipeiart\.github\.io'/);
-  assert.match(html, /function supplementShortUrl\(row,key\)/);
-  assert.match(html, /supplementShortUrl\(row,'briefUrl'\)/);
-  assert.match(html, /\.\.\.supplementWriteMetadata\(createRow\)/);
-  assert.match(html, /supplementBaseUrl:supplementShortBaseUrl/);
+  assert.match(html, /const supplementLinkFields = Object\.freeze/);
+  assert.match(html, /function supplementLongUrl\(row,key\)/);
+  assert.match(html, /function mailSupplementHtml\(note,url\)/);
+  assert.match(html, /editor\.innerHTML=draft\.bodyHtml/);
+  assert.doesNotMatch(html, /function supplementShortUrl\(row,key\)/);
+  assert.doesNotMatch(html, /supplementBaseUrl:supplementShortBaseUrl/);
+  assert.match(html, /function accountSettingsMailContacts\(\)/);
+  assert.match(html, /data-recipient-chips-for="gmailComposeTo"/);
+  assert.match(html, /function gmailRecipientHeaderValue\(fieldId\)/);
   assert.match(html, /window\.addEventListener\('focus',\(\)=>\{refreshCurrentAccountAvatar\(\);refreshWhenPageReturns\(\)\}\)/);
   assert.match(html, /document\.addEventListener\('visibilitychange'.*refreshWhenPageReturns\(\)/);
   assert.match(html, /const current=queuedSheetLoad\.options, requireFull=current\.full\|\|incoming\.full/);
@@ -256,7 +260,6 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
   const created = await api(app.baseUrl, 'add', {
     requestId: 'test-create-1',
-    supplementBaseUrl: 'https://emctaipeiart.github.io',
     row: {
       client: '測試客戶', project: 'JSON 後台串接', owner: 'Machi', type: '平面', stage: '後製', qty: 2,
       start: '2026-08-07', end: '2026-08-08', designer: 'Machi', status: '未開始', details: '社群貼文',
@@ -266,7 +269,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
   assert.equal(created.ok, true);
   assert.match(created.row.id, /^\d{8}$/);
   assert.equal(created.row.weight, '2');
-  assert.equal(created.row.briefUrl, `https://emctaipeiart.github.io/a/${created.row.id}`);
+  assert.equal(created.row.briefUrl, 'https://example.com/brief');
 
   const duplicate = await api(app.baseUrl, 'add', { requestId: 'test-create-1', row: { project: '不應重複' } });
   assert.equal(duplicate.deduplicated, true);
@@ -280,10 +283,14 @@ test('front-end action API reads and atomically writes all requested JSON tables
   assert.equal(list.rows.length, 1);
   assert.equal(list.rows[0].project, 'JSON 後台串接');
 
-  const short = await api(app.baseUrl, 'createShortLink', { url: 'https://example.com/long/path' });
-  assert.match(short.code, /^[23456789A-HJ-NP-Za-km-z]{6}$/);
-  const resolved = await api(app.baseUrl, 'resolveShortLink', { code: short.code });
-  assert.equal(resolved.url, 'https://example.com/long/path');
+  const shortResponse = await fetch(`${app.baseUrl}/api`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'createShortLink', url: 'https://example.com/long/path' })
+  });
+  assert.equal(shortResponse.status, 400);
+  const short = await shortResponse.json();
+  assert.equal(short.ok, false);
+  assert.match(short.error, /短網址建立功能目前暫停/);
 
   const issue = await api(app.baseUrl, 'reportIssue', { report: { name: '訪客', content: '測試問題', suggestion: '測試建議' } });
   assert.equal(issue.row['狀態'], '回報中');
@@ -300,7 +307,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
   const persisted = JSON.parse(await readFile(app.dbPath, 'utf8'));
   assert.equal(persisted.tables.database.rows.length, 1);
-  assert.equal(persisted.tables['短連結'].rows.length, 1);
+  assert.equal(persisted.tables['短連結'].rows.length, 0);
   assert.equal(persisted.tables['修改統計表'].rows.length, 1);
   assert.equal(persisted.tables['補充資料連結'].rows.length, 1);
   assert.equal(persisted.tables['設定'].rows.length, 1);
