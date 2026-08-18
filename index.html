@@ -6299,6 +6299,65 @@
     }
     html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
     html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
+    .gmail-rich-color-swatch{display:block;width:17px;height:17px;border-radius:999px;background:var(--swatch-color);border:1px solid rgba(0,0,0,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+    .gmail-color-palette{position:fixed;z-index:7100;display:grid;grid-template-columns:repeat(8,22px);gap:6px;width:max-content;padding:10px;border:1px solid #cfd6d2;border-radius:13px;background:#fff;box-shadow:0 14px 34px rgba(16,24,40,.2)}
+    .gmail-color-palette[hidden]{display:none!important}
+    .gmail-color-option{display:grid!important;place-items:center!important;width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(0,0,0,.13)!important;background:var(--option-color)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.26)!important}
+    .gmail-color-option:hover,.gmail-color-option:focus-visible{border-color:#111!important;outline:2px solid rgba(15,143,97,.24)!important;outline-offset:1px}
+    .gmail-color-option.is-selected::after{content:'\2713';font-size:13px;font-weight:950;line-height:1;color:var(--check-color,#fff);text-shadow:0 1px 2px rgba(0,0,0,.45)}
+    .gmail-rich-image-input{display:none!important}
+    .gmail-rich-editor.is-image-dragover{border-color:#16a34a!important;background:#effbf4!important;box-shadow:inset 0 0 0 2px rgba(22,163,74,.18)}
+    .gmail-rich-editor img.gmail-inline-image{display:block;max-width:min(100%,680px);height:auto;margin:8px 0;border-radius:8px}
+    html[data-theme="dark"] .gmail-modal-card{background:#121416!important;color:#e8eaed!important;border-color:#3c4043!important;box-shadow:0 28px 76px rgba(0,0,0,.62)!important;color-scheme:dark}
+    html[data-theme="dark"] .gmail-modal-head{background:linear-gradient(180deg,#202326 0%,#181a1d 100%)!important;border-bottom-color:#3c4043!important}
+    html[data-theme="dark"] .gmail-modal-head-title h3{color:#f1f3f4!important}
+    html[data-theme="dark"] .gmail-modal-from{color:#aeb4b9!important}
+    html[data-theme="dark"] .gmail-modal-icon{background:#263d34!important;color:#91d4b2!important;border:1px solid #3d6252!important}
+    html[data-theme="dark"] .gmail-modal-head .revision-modal-close{background:#24272a!important;color:#d7dadc!important;border-color:#464b4f!important}
+    html[data-theme="dark"] .gmail-modal-head .revision-modal-close:hover{background:#303438!important;color:#fff!important;border-color:#62686d!important}
+    html[data-theme="dark"] .gmail-modal-body{background:#121416!important;scrollbar-color:#4c5350 #17191b}
+    html[data-theme="dark"] .gmail-modal-compose{border-top-color:#3c4043!important}
+    html[data-theme="dark"] .gmail-modal-section-label,
+    html[data-theme="dark"] .gmail-compose-fields label{color:#bdc1c6!important}
+    html[data-theme="dark"] .gmail-compose-fields input[type=text],
+    html[data-theme="dark"] .gmail-recipient-search{background:#1b1d20!important;color:#f1f3f4!important;border-color:#454a4f!important;box-shadow:none!important}
+    html[data-theme="dark"] .gmail-compose-fields input[type=text]::placeholder,
+    html[data-theme="dark"] .gmail-recipient-search::placeholder{color:#858b90!important}
+    html[data-theme="dark"] .gmail-compose-fields input[type=text]:focus,
+    html[data-theme="dark"] .gmail-recipient-search:focus{outline:2px solid rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
+    html[data-theme="dark"] .gmail-recipient-pick{background:#24272a!important;color:#d4d8db!important;border-color:#484d52!important}
+    html[data-theme="dark"] .gmail-recipient-pick:hover{background:#303438!important;color:#a9e7c8!important;border-color:#5d806f!important}
+    html[data-theme="dark"] .gmail-rich-toolbar{background:#1a1d1f!important;border-color:#41464a!important}
+    html[data-theme="dark"] .gmail-rich-toolbar button{background:transparent!important;color:#c9cdd1!important;border-color:transparent!important}
+    html[data-theme="dark"] .gmail-rich-toolbar button:hover,
+    html[data-theme="dark"] .gmail-rich-toolbar button:focus-visible{background:#2b2f32!important;color:#9ce0bd!important;border-color:#50565b!important}
+    html[data-theme="dark"] .gmail-rich-toolbar-divider{background:#454a4f!important}
+    html[data-theme="dark"] .gmail-rich-color-swatch{border-color:rgba(255,255,255,.42);box-shadow:0 0 0 1px rgba(0,0,0,.48)}
+    html[data-theme="dark"] .gmail-rich-editor{background:#181a1d!important;color:#edf0f2!important;border-color:#454a4f!important;caret-color:#a9e7c8!important;box-shadow:none!important}
+    html[data-theme="dark"] .gmail-rich-editor:focus{outline:2px solid rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
+    html[data-theme="dark"] .gmail-rich-editor:empty::before{color:#858b90!important}
+    html[data-theme="dark"] .gmail-rich-editor a{color:#8ab4f8!important}
+    html[data-theme="dark"] .gmail-rich-editor img.gmail-inline-image{background:#25282b;border:1px solid #454a4f}
+    html[data-theme="dark"] .gmail-rich-editor.is-image-dragover{background:#173126!important;border-color:#4cc38a!important;box-shadow:inset 0 0 0 2px rgba(76,195,138,.22)!important}
+    html[data-theme="dark"] .gmail-thread-msg{background:#1a1d1f!important;border-color:#3f4448!important}
+    html[data-theme="dark"] .gmail-thread-msg-meta{color:#aeb4b9!important}
+    html[data-theme="dark"] .gmail-thread-msg-body{color:#e6e9eb!important}
+    html[data-theme="dark"] .gmail-thread-owner-note{color:#ffaaa5!important}
+    html[data-theme="dark"] .gmail-modal-footer{background:#181a1d!important;border-top-color:#3c4043!important}
+    html[data-theme="dark"] .gmail-btn-ghost{background:#24272a!important;color:#d4d8db!important;border-color:#484d52!important}
+    html[data-theme="dark"] .gmail-btn-ghost:hover{background:#303438!important;color:#fff!important;border-color:#62686d!important}
+    html[data-theme="dark"] .gmail-btn-primary{background:#4f9f78!important;color:#07140e!important;border:1px solid #66b88f!important;box-shadow:none!important}
+    html[data-theme="dark"] .gmail-btn-primary:hover{background:#65b68d!important;color:#04100b!important;border-color:#7dcca3!important;filter:none!important}
+    html[data-theme="dark"] .gmail-btn-primary[disabled]{background:#3b5147!important;color:#929c97!important;border-color:#4d6459!important}
+    html[data-theme="dark"] .gmail-color-palette{background:#202326!important;border-color:#50555a!important;box-shadow:0 18px 44px rgba(0,0,0,.62)!important;color-scheme:dark}
+    html[data-theme="dark"] .gmail-color-option:hover,
+    html[data-theme="dark"] .gmail-color-option:focus-visible{border-color:#f1f3f4!important;outline-color:rgba(139,218,178,.42)!important}
+    html[data-theme="dark"] .gmail-recipient-group+.gmail-recipient-group{border-top-color:#3f4448!important}
+    html[data-theme="dark"] .gmail-recipient-group-label,
+    html[data-theme="dark"] .gmail-recipient-option-email{color:#9ba1a6!important}
+    html[data-theme="dark"] .gmail-recipient-option{color:#e4e7e9!important}
+    html[data-theme="dark"] .gmail-recipient-option:hover{background:#292d30!important}
+    html[data-theme="dark"] .gmail-recipient-actions button{background:#4f9f78!important;color:#07140e!important;border-color:#66b88f!important}
   </style>
   <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
@@ -6398,7 +6457,7 @@
             <span>• 新增案件完看有沒有案件編號與資料建立完成。</span>
             <span>• 完成後如果想要修改，點選「編輯」做調整。</span>
             <span>• 確認無誤後可以點選「發信」，信件內容會自動帶入相關資訊。</span>
-            <span>• 記得將信件資訊補齊，手動加入簽名檔，確認信件人等資訊。</span>
+            <span>• 請補齊信件資訊並確認收件人；Gmail 簽名檔會在寄出時自動附上，不顯示在編輯框。</span>
             <span>• 搜尋框能輸入案件編號或相關文字快速搜尋。</span>
           </div>
         </div>
@@ -6729,8 +6788,10 @@
           <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
           <button type="button" data-rich-cmd="justifyRight" title="靠右對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
           <span class="gmail-rich-toolbar-divider"></span>
-          <input type="color" class="gmail-rich-color" title="文字顏色" value="#17211d">
+          <button type="button" class="gmail-rich-color-btn" data-rich-color-for="gmailThreadReplyEditor" title="文字顏色" aria-label="文字顏色" aria-expanded="false"><span class="gmail-rich-color-swatch" style="--swatch-color:#17211d"></span></button>
           <button type="button" class="gmail-rich-link-btn" data-rich-link-for="gmailThreadReplyEditor" title="插入超連結"><svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg></button>
+          <button type="button" class="gmail-rich-image-btn" data-rich-image-for="gmailThreadReplyEditor" title="上傳照片" aria-label="上傳照片"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM7 15l3.1-3.3 2.6 2.5 2.2-2.1 3.1 3.2M15.8 9h.1"/></svg></button>
+          <input type="file" class="gmail-rich-image-input" data-rich-image-input-for="gmailThreadReplyEditor" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
         </div>
         <div id="gmailThreadReplyEditor" class="gmail-rich-editor" contenteditable="true" data-placeholder="輸入回覆內容..."></div>
       </div>
@@ -6770,8 +6831,10 @@
             <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
             <button type="button" data-rich-cmd="justifyRight" title="靠右對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>
             <span class="gmail-rich-toolbar-divider"></span>
-            <input type="color" class="gmail-rich-color" title="文字顏色" value="#17211d">
+            <button type="button" class="gmail-rich-color-btn" data-rich-color-for="gmailComposeEditor" title="文字顏色" aria-label="文字顏色" aria-expanded="false"><span class="gmail-rich-color-swatch" style="--swatch-color:#17211d"></span></button>
             <button type="button" class="gmail-rich-link-btn" data-rich-link-for="gmailComposeEditor" title="插入超連結"><svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg></button>
+            <button type="button" class="gmail-rich-image-btn" data-rich-image-for="gmailComposeEditor" title="上傳照片" aria-label="上傳照片"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM7 15l3.1-3.3 2.6 2.5 2.2-2.1 3.1 3.2M15.8 9h.1"/></svg></button>
+            <input type="file" class="gmail-rich-image-input" data-rich-image-input-for="gmailComposeEditor" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
           </div>
           <div id="gmailComposeEditor" class="gmail-rich-editor" contenteditable="true" data-placeholder="信件內容"></div>
         </label>
@@ -7477,15 +7540,6 @@ async function ensureGmailSignatureLoaded(){
   }
   return gmailSignatureHtml;
 }
-function placeCursorAtStart(el){
-  const range=document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(true);
-  const selection=window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
-  el.focus();
-}
 /** 用 execCommand 做最陽春的「選取文字→插入超連結」，這個 API 雖然已標記為過時，但 Chrome／Safari（本專案主要支援的瀏覽器）都還完整支援，換一套完整富文字編輯器的成本跟這裡的需求不成比例。 */
 function insertRichLink(editorId){
   const editor=document.getElementById(editorId);
@@ -7525,6 +7579,152 @@ function restoreRichSelection(){
   selection.removeAllRanges();
   selection.addRange(savedRichSelectionRange);
   return true;
+}
+const gmailTextColors=[
+  '#000000','#434343','#666666','#999999','#cccccc','#d9d9d9','#efefef','#ffffff',
+  '#ff0000','#ff9900','#ffff00','#00ff00','#00ffff','#0000ff','#9900ff','#ff00ff',
+  '#f4cccc','#fce5cd','#fff2cc','#d9ead3','#d0e0e3','#c9daf8','#d9d2e9','#ead1dc',
+  '#ea9999','#f9cb9c','#ffe599','#b6d7a8','#a2c4c9','#9fc5e8','#b4a7d6','#d5a6bd',
+  '#e06666','#f6b26b','#ffd966','#93c47d','#76a5af','#6fa8dc','#8e7cc3','#c27ba0',
+  '#cc0000','#e69138','#f1c232','#6aa84f','#45818e','#3d85c6','#674ea7','#a64d79',
+  '#990000','#b45f06','#bf9000','#38761d','#134f5c','#0b5394','#351c75','#741b47',
+  '#660000','#783f04','#7f6000','#274e13','#0c343d','#073763','#20124d','#4c1130'
+];
+let gmailColorPaletteEl=null,gmailColorTargetButton=null;
+function gmailColorCheckColor(hex){
+  const value=parseInt(hex.slice(1),16),r=(value>>16)&255,g=(value>>8)&255,b=value&255;
+  return (.299*r+.587*g+.114*b)>175?'#111':'#fff';
+}
+function ensureGmailColorPalette(){
+  if(gmailColorPaletteEl)return gmailColorPaletteEl;
+  const palette=document.createElement('div');
+  palette.className='gmail-color-palette';
+  palette.id='gmailColorPalette';
+  palette.setAttribute('role','menu');
+  palette.setAttribute('aria-label','Gmail 文字顏色');
+  palette.hidden=true;
+  palette.innerHTML=gmailTextColors.map(color=>`<button type="button" class="gmail-color-option" data-gmail-color="${color}" title="${color}" aria-label="${color}" style="--option-color:${color};--check-color:${gmailColorCheckColor(color)}"></button>`).join('');
+  palette.addEventListener('mousedown',event=>event.preventDefault());
+  palette.addEventListener('click',event=>{
+    const option=event.target.closest('[data-gmail-color]');
+    if(!option||!gmailColorTargetButton)return;
+    const color=option.dataset.gmailColor;
+    if(restoreRichSelection())document.execCommand('foreColor',false,color);
+    const swatch=gmailColorTargetButton.querySelector('.gmail-rich-color-swatch');
+    if(swatch)swatch.style.setProperty('--swatch-color',color);
+    gmailColorTargetButton.dataset.selectedColor=color;
+    closeGmailColorPalette();
+  });
+  document.body.appendChild(palette);
+  gmailColorPaletteEl=palette;
+  return palette;
+}
+function openGmailColorPalette(button){
+  const palette=ensureGmailColorPalette();
+  const color=button.dataset.selectedColor||'#17211d';
+  palette.querySelectorAll('[data-gmail-color]').forEach(option=>option.classList.toggle('is-selected',option.dataset.gmailColor===color));
+  gmailColorTargetButton=button;
+  document.querySelectorAll('.gmail-rich-color-btn').forEach(item=>item.setAttribute('aria-expanded',String(item===button)));
+  palette.hidden=false;
+  const rect=button.getBoundingClientRect(),margin=8,paletteWidth=palette.offsetWidth,paletteHeight=palette.offsetHeight;
+  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-paletteWidth-margin));
+  const below=rect.bottom+6,top=below+paletteHeight<=window.innerHeight-margin?below:Math.max(margin,rect.top-paletteHeight-6);
+  palette.style.left=`${left}px`;
+  palette.style.top=`${top}px`;
+}
+function closeGmailColorPalette(){
+  if(gmailColorPaletteEl)gmailColorPaletteEl.hidden=true;
+  document.querySelectorAll('.gmail-rich-color-btn').forEach(item=>item.setAttribute('aria-expanded','false'));
+  gmailColorTargetButton=null;
+}
+const gmailInlineImagesByEditor=new Map();
+const gmailInlineImageTypes=new Set(['image/jpeg','image/png','image/webp','image/gif']);
+const gmailInlineImageMaxCount=10,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
+function gmailInlineImageStore(editorId){
+  if(!gmailInlineImagesByEditor.has(editorId))gmailInlineImagesByEditor.set(editorId,new Map());
+  return gmailInlineImagesByEditor.get(editorId);
+}
+function clearGmailInlineImages(editorId){
+  gmailInlineImageStore(editorId).clear();
+  const input=document.querySelector(`[data-rich-image-input-for="${editorId}"]`);
+  if(input)input.value='';
+}
+function pruneGmailInlineImages(editor){
+  const store=gmailInlineImageStore(editor.id),activeIds=new Set([...editor.querySelectorAll('img[data-gmail-inline-image-id]')].map(image=>image.dataset.gmailInlineImageId));
+  [...store.keys()].forEach(id=>{if(!activeIds.has(id))store.delete(id)});
+  return store;
+}
+function gmailFileDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error(`無法讀取 ${file.name}`));reader.readAsDataURL(file)})}
+function gmailInlineContentId(){return `machi-${crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`}@inline`}
+function rangeInsideEditor(range,editor){return Boolean(range&&editor.contains(range.commonAncestorContainer))}
+function placeRichRangeAtPoint(editor,x,y){
+  let range=null;
+  if(document.caretRangeFromPoint)range=document.caretRangeFromPoint(x,y);
+  else if(document.caretPositionFromPoint){const pos=document.caretPositionFromPoint(x,y);if(pos){range=document.createRange();range.setStart(pos.offsetNode,pos.offset);range.collapse(true)}}
+  if(!rangeInsideEditor(range,editor)){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
+  savedRichSelectionRange=range.cloneRange();
+}
+function insertGmailInlineImage(editor,item){
+  const image=document.createElement('img');
+  image.src=item.dataUrl;
+  image.alt=item.fileName;
+  image.className='gmail-inline-image';
+  image.dataset.gmailInlineImageId=item.contentId;
+  image.setAttribute('contenteditable','false');
+  const spacer=document.createElement('br');
+  let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange:document.createRange();
+  if(!rangeInsideEditor(range,editor)){range.selectNodeContents(editor);range.collapse(false)}
+  range.deleteContents();
+  range.insertNode(spacer);
+  range.insertNode(image);
+  range.setStartAfter(spacer);
+  range.collapse(true);
+  const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+  savedRichSelectionRange=range.cloneRange();
+}
+async function addGmailInlineImages(editorId,fileList){
+  const editor=document.getElementById(editorId);if(!editor)return;
+  const files=[...fileList].filter(file=>file&&file.type.startsWith('image/'));
+  if(!files.length){setSync('請選擇 JPG、PNG、WebP 或 GIF 照片',true);return}
+  const store=pruneGmailInlineImages(editor);
+  let totalBytes=[...store.values()].reduce((sum,item)=>sum+item.size,0),added=0;
+  for(const file of files){
+    if(store.size>=gmailInlineImageMaxCount){setSync(`每封信最多可放 ${gmailInlineImageMaxCount} 張照片`,true);break}
+    if(!gmailInlineImageTypes.has(file.type)){setSync(`${file.name} 的圖片格式不支援`,true);continue}
+    if(file.size>gmailInlineImageMaxBytes){setSync(`${file.name} 超過 8 MB，請先壓縮後再上傳`,true);continue}
+    if(totalBytes+file.size>gmailInlineImageMaxTotalBytes){setSync('信件內嵌照片總量不可超過 18 MB',true);break}
+    const dataUrl=await gmailFileDataUrl(file);
+    const item={contentId:gmailInlineContentId(),fileName:file.name||'照片',mimeType:file.type,size:file.size,dataUrl,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
+    store.set(item.contentId,item);totalBytes+=file.size;insertGmailInlineImage(editor,item);added++;
+  }
+  editor.focus();
+  if(added)setSync(`已加入 ${added} 張照片`,false,1800);
+}
+function gmailEditorMailPayload(editor){
+  const clone=editor.cloneNode(true),store=pruneGmailInlineImages(editor),inlineImages=[];
+  clone.querySelectorAll('img[data-gmail-inline-image-id]').forEach(image=>{
+    const item=store.get(image.dataset.gmailInlineImageId);
+    if(!item){image.remove();return}
+    image.src=`cid:${item.contentId}`;
+    image.removeAttribute('class');image.removeAttribute('data-gmail-inline-image-id');image.removeAttribute('contenteditable');
+    image.setAttribute('style','display:block;max-width:100%;height:auto;margin:8px 0;border-radius:8px');
+    inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
+  });
+  return {bodyHtml:clone.innerHTML,inlineImages};
+}
+function bindGmailInlineImageEditor(editor){
+  if(!editor)return;
+  editor.addEventListener('dragover',event=>{if([...event.dataTransfer.types].includes('Files')){event.preventDefault();editor.classList.add('is-image-dragover')}});
+  editor.addEventListener('dragleave',event=>{if(!editor.contains(event.relatedTarget))editor.classList.remove('is-image-dragover')});
+  editor.addEventListener('drop',event=>{
+    editor.classList.remove('is-image-dragover');
+    const files=[...event.dataTransfer.files].filter(file=>file.type.startsWith('image/'));if(!files.length)return;
+    event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);addGmailInlineImages(editor.id,files);
+  });
+  editor.addEventListener('paste',event=>{
+    const files=[...event.clipboardData.items].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
+    if(!files.length)return;event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();addGmailInlineImages(editor.id,files);
+  });
 }
 /** 聯絡人清單不再只有 6 位設計師＋固定副本——額外併入 ownerContactMap（renderOwnerOptions() 依全部案件的「專案負責人」動態彙整出來的姓名→Email 對照），讓收件人／副本picker 也能連動到帳號在系統裡實際出現過的聯絡人，不只是設計組內部。 */
 function knownMailContacts(){
@@ -7594,10 +7794,9 @@ async function openGmailComposeModal(id){
   const editor=$('#gmailComposeEditor');
   const draftBodyHtml=esc(draft.bodyText).replace(/\n/g,'<br>');
   editor.innerHTML=draftBodyHtml;
+  clearGmailInlineImages(editor.id);
   modal.hidden=false;
-  const signature=await ensureGmailSignatureLoaded();
-  if(modal.hidden||modal.dataset.caseId!==String(id))return;
-  if(signature)editor.innerHTML=`${draftBodyHtml}<br><br>${signature}`;
+  ensureGmailSignatureLoaded();
 }
 /** 點擊遮罩層外部才收合彈窗——只認「mousedown 跟 click 兩次都真的落在遮罩本身」的情況，而不是單看 click 那一下的 event.target。這是為了修正在編輯區／收件人欄位裡拖曳選取文字時，滑鼠放開的座標剛好超出卡片範圍，瀏覽器會把那次 click 事件的 target 判定成遮罩本身（因為 mousedown 與 mouseup 落在不同元素時，click 會冒泡到兩者最近的共同祖先），導致彈窗被誤判成「點擊外部」而意外關閉。 */
 function bindModalOverlayDismiss(modalEl,onClose){
@@ -7610,12 +7809,14 @@ function closeGmailComposeModal(){const modal=$('#gmailComposeModal'); if(modal)
 async function sendGmailComposeModal(){
   const modal=$('#gmailComposeModal'), id=modal?.dataset.caseId, button=$('#gmailComposeSend');
   if(!id)return;
-  const to=$('#gmailComposeTo').value.trim(), cc=$('#gmailComposeCc').value.trim(), subject=$('#gmailComposeSubject').value.trim(), bodyHtml=$('#gmailComposeEditor').innerHTML;
+  const editor=$('#gmailComposeEditor');
+  const to=$('#gmailComposeTo').value.trim(), cc=$('#gmailComposeCc').value.trim(), subject=$('#gmailComposeSubject').value.trim();
   if(!to||!subject){setSync('請填寫收件人與主旨',true);return}
   if(button)button.disabled=true;
   setSync('透過 Gmail 寄出中...');
   try{
-    const data=await sheetApi('sendCaseMail',{caseId:id,to,cc,subject,bodyHtml,editorToken:currentEditorToken});
+    const [{bodyHtml,inlineImages},signatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
+    const data=await sheetApi('sendCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,editorToken:currentEditorToken});
     rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...r,gmailThreadId:data.threadId||'',gmailThreadOwnerAccount:currentEditorAccount}):r);
     save();
     render();
@@ -8350,7 +8551,7 @@ async function removeSelectedCaseDesignImages(event){event?.stopPropagation?.();
 function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#revisionModal'), list=$('#revisionModalList'), add=$('#revisionModalAdd'); if(!row||!modal||!list)return; modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); revisionImageSelection.clear(); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${esc(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'))}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>')}
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){const modal=$('#revisionModal'); if(modal)modal.hidden=true; revisionImageSelection.clear()}
-function gmailThreadMessageHtml(message){return `<div class="gmail-thread-msg"><div class="gmail-thread-msg-meta"><span>${esc(message.from||'')}</span><span>${esc(message.date||'')}</span></div><div class="gmail-thread-msg-body">${esc(message.bodyText||message.snippet||'')}</div></div>`}
+function gmailThreadMessageHtml(message){const visibleBody=message.bodyText??message.snippet??'';return `<div class="gmail-thread-msg"><div class="gmail-thread-msg-meta"><span>${esc(message.from||'')}</span><span>${esc(message.date||'')}</span></div><div class="gmail-thread-msg-body">${esc(visibleBody)}</div></div>`}
 function renderGmailThreadMessages(list,messages){list.innerHTML=(messages&&messages.length)?messages.map(gmailThreadMessageHtml).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 async function openGmailThreadModal(id){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
@@ -8360,16 +8561,12 @@ async function openGmailThreadModal(id){
   closeFieldPopover();
   modal.dataset.caseId=String(row.id);
   const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=[subject(row),row.gmailThreadOwnerAccount?`寄件人：${row.gmailThreadOwnerAccount}`:''].filter(Boolean).join('　·　');
-  if(replyEditor)replyEditor.innerHTML='';
+  if(replyEditor){replyEditor.innerHTML='';clearGmailInlineImages(replyEditor.id)}
   list.innerHTML='<div class="revision-modal-empty">載入中...</div>';
   modal.hidden=false;
-  ensureGmailSignatureLoaded().then(signature=>{
-    if(!signature||modal.hidden||modal.dataset.caseId!==String(id)||!replyEditor)return;
-    replyEditor.innerHTML=`<br><br>${signature}`;
-    placeCursorAtStart(replyEditor);
-  });
   try{
-    const data=await sheetApi('getCaseMailThread',{caseId:id,editorToken:currentEditorToken});
+    const signatureHtml=await ensureGmailSignatureLoaded();
+    const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
     renderGmailThreadMessages(list,data.messages||[]);
   }catch(err){
     list.innerHTML=`<div class="gmail-thread-owner-note">${esc(err.message||'讀取信件串失敗')}</div>`;
@@ -8379,12 +8576,13 @@ function closeGmailThreadModal(){const modal=$('#gmailThreadModal'); if(modal)mo
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
   if(!id||!editor)return;
-  const bodyHtml=editor.innerHTML.trim();
-  if(!bodyHtml){setSync('請先輸入回覆內容',true);return}
+  const editorPayload=gmailEditorMailPayload(editor);
+  if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
   if(button)button.disabled=true;
   setSync('回覆寄送中...');
   try{
-    await sheetApi('replyCaseMail',{caseId:id,bodyHtml,editorToken:currentEditorToken});
+    const signatureHtml=await ensureGmailSignatureLoaded();
+    await sheetApi('replyCaseMail',{caseId:id,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,editorToken:currentEditorToken});
     editor.innerHTML='';
     setSync('回覆已寄出',false,2200);
     const list=$('#gmailThreadModalList');
@@ -8889,7 +9087,7 @@ function canListEditRow(r){return accessAllowed('request.status',hasDesignerAcco
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
 function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
-function gmailReplyIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6 5 12l6 6M5 12h9a5 5 0 0 1 5 5v1"/></svg>'}
+function gmailReplyIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M10 5v3.1C5.7 8.7 2.7 11.6 2 17c2.1-3 4.7-4.4 8-4.5V16l7-5.5L10 5Z"/></svg>'}
 /** 案件一旦透過 Gmail 建立過信件串（row.gmailThreadId 有值），按鈕直接從「發信」變成「回信」並跳過選擇發信方式的選單，直接開啟該信件串——同一顆按鈕、同一個位置，不再另外並排一顆獨立的回信按鈕。 */
 function mailAction(row,{icon=false}={}){
   if(!accessAllowed('request.mail',true))return '';
@@ -10626,12 +10824,18 @@ document.querySelectorAll('[data-rich-cmd]').forEach(button=>{
   button.addEventListener('mousedown',event=>event.preventDefault());
   button.addEventListener('click',()=>document.execCommand(button.dataset.richCmd));
 });
-document.querySelectorAll('.gmail-rich-color').forEach(input=>{
-  input.addEventListener('mousedown',()=>{savedRichSelectionRange=captureCurrentRichSelection()});
-  input.addEventListener('input',()=>{if(restoreRichSelection())document.execCommand('foreColor',false,input.value)});
+document.querySelectorAll('.gmail-rich-color-btn').forEach(button=>{
+  button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
+  button.addEventListener('click',event=>{event.stopPropagation();if(gmailColorTargetButton===button&&!ensureGmailColorPalette().hidden)closeGmailColorPalette();else openGmailColorPalette(button)});
 });
+document.querySelectorAll('.gmail-rich-image-btn').forEach(button=>{
+  button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
+  button.addEventListener('click',()=>document.querySelector(`[data-rich-image-input-for="${button.dataset.richImageFor}"]`)?.click());
+});
+document.querySelectorAll('.gmail-rich-image-input').forEach(input=>input.addEventListener('change',()=>{addGmailInlineImages(input.dataset.richImageInputFor,input.files);input.value=''}));
+document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));
-document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover()});
+document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover();if(gmailColorPaletteEl&&!gmailColorPaletteEl.hidden&&!gmailColorPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-color-btn'))closeGmailColorPalette()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#ownerProjectsModal')?.hidden){event.preventDefault();closeOwnerProjects()}});
 document.addEventListener('pointerdown',applyOpenFiltersOnOutsideClick,true);
@@ -10641,7 +10845,7 @@ $('#restoreAllPanels')?.addEventListener('click',restoreAllPanels);
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
-window.addEventListener('resize',()=>{closeFieldPopover(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
+window.addEventListener('resize',()=>{closeFieldPopover();closeGmailColorPalette(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
 document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault(); applyStatusFilter(card.dataset.status)}})

@@ -186,7 +186,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-18 11:32 Asia/Taipei（最新）— NAS 掃描改成完全不遞迴進子資料夾，只認案件指定資料夾這一層
+### 2026-08-18 12:40 Asia/Taipei（最新）— Gmail 編輯器隱藏內建簽名、圓形色盤、照片內嵌上傳、回信串簽名過濾與完整深色模式
+
+- 修改目的：前台「發信」與「回信」的編輯區不再顯示 Gmail 簽名檔，但寄出時仍自動附上；文字顏色改為參照 Gmail 的 64 色圓形色盤；兩個編輯器都支援選檔、拖放與貼上照片；回信入口改為實心 SVG 小圖示，回信串移除簽名內容。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`。
+- 影響功能：簽名 HTML 改為寄送時以獨立 `signatureHtml` 附加，不放入 `contenteditable` 編輯區；照片在前端預覽並轉成 CID，Worker 用 `multipart/related` 包住 `multipart/alternative` 與內嵌圖片，支援 JPG、PNG、WebP、GIF，上限 10 張、單張 8 MB、總量 18 MB；回信串依標準 `-- ` 分隔線、目前 Gmail 簽名的純文字尾段與常見手機簽名過濾顯示內容；發信／回信視窗的標題列、內容區、表單欄位、聯絡人選擇、富文字工具列、編輯框、信件串卡片、照片拖放狀態、色盤與底部按鈕均有專屬深色樣式。
+- 風險區塊：舊信件中若是對方使用非標準、且與目前寄件帳號不同的簽名格式，無法完全可靠地自動辨識，這類內容可能仍會出現；系統自己寄出的新信件與目前 Gmail 簽名均已有精確過濾路徑。
+- 已檢查／驗證方式：前端兩段內嵌 script 語法解析與 `git diff --check` 通過；Node 後端測試 26/26 通過；Worker `npm test` 18/18 通過（測試含隱藏簽名附加、`multipart/related`/CID 圖片與回信串簽名過濾）；`npm run check` 的 Wrangler types 與 TypeScript 檢查、`npm run deploy:dry` 打包均通過；本機瀏覽器確認兩個編輯器預設內容為空、兩組圓形色盤按鈕、照片按鈕與多檔 accept 屬性均正確存在；深色主題下另以瀏覽器 `getComputedStyle` 確認兩個視窗的 card、header、input、toolbar、editor、footer 與主要／次要按鈕均實際套用深色背景、高對比文字與深色邊框。
+- 部署狀態：Cloudflare Worker 已正式部署（版本 `4ff846ea-344e-4aed-8750-2b712d51e4a1`）；前端與程式碼已推送 `main`，由 GitHub Pages 自動發布。
+- commit：（見本次 push 紀錄）
+
+### 2026-08-18 11:32 Asia/Taipei — NAS 掃描改成完全不遞迴進子資料夾，只認案件指定資料夾這一層
 
 - 修改目的：使用者接續上一則案件 26080078 的問題，進一步要求「初稿不要再抓在資料夾下層的資料夾內容，只抓指定資料夾本層圖片即可」。
 - 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.README.md`、`scripts/nas_folder_picker_server.mjs`。

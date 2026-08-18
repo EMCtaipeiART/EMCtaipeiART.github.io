@@ -769,16 +769,21 @@ describe('Machi Design API Worker', () => {
       }
       throw new Error(`unexpected fetch during send: ${url}`);
     });
-    const sentBodyHtml = 'Hi，這是測試信件內容<br><br>參考連結：<a href="https://example.com/brief">簡報連結</a><br>-- <br>Machi 敬上';
+    const sentBodyHtml = 'Hi，這是測試信件內容<br><br>參考連結：<a href="https://example.com/brief">簡報連結</a><br><img src="cid:machi-test@inline">';
+    const sentSignatureHtml = '<strong>Machi</strong> 敬上';
     const sent = await api({
       action: 'sendCaseMail', caseId: '26080001',
       to: '設計師 <designer@emctaipei.com>', cc: '客戶窗口 <client@example.com>',
-      subject: '【26080001】測試客戶_Worker 測試案件', bodyHtml: sentBodyHtml
+      subject: '【26080001】測試客戶_Worker 測試案件', bodyHtml: sentBodyHtml, signatureHtml: sentSignatureHtml,
+      inlineImages: [{ contentId: 'machi-test@inline', fileName: '測試.png', mimeType: 'image/png', base64: 'iVBORw0KGgo=' }]
     }, token);
     expect(sent).toMatchObject({ ok: true, threadId: 'gmail-thread-1', gmailMessageId: 'gmail-msg-1' });
-    // raw 應該是 multipart/alternative：text/plain 備援（連結被拿掉標籤但保留文字）＋text/html（保留完整超連結與簽名檔）。
+    // 含照片時外層是 multipart/related，裡面保留 multipart/alternative 與 CID 內嵌圖片。
     const decodedMime = decodeBase64UrlText(capturedRaw);
+    expect(decodedMime).toContain('Content-Type: multipart/related');
     expect(decodedMime).toContain('Content-Type: multipart/alternative');
+    expect(decodedMime).toContain('Content-ID: <machi-test@inline>');
+    expect(decodedMime).toContain('Content-Disposition: inline; filename="inline-1.png"');
     const extractPart = (contentType: string) => {
       const match = decodedMime.match(new RegExp(`Content-Type: ${contentType}[\\s\\S]*?\\r\\n\\r\\n([\\s\\S]*?)(?=\\r\\n--|$)`, 'i'));
       return decodeBase64UrlText((match?.[1] || '').replace(/\r?\n/g, ''));
@@ -786,8 +791,11 @@ describe('Machi Design API Worker', () => {
     const plainPartBody = extractPart('text/plain');
     expect(plainPartBody).toContain('簡報連結');
     expect(plainPartBody).not.toContain('<a href');
+    expect(plainPartBody).toContain('-- \nMachi 敬上');
     const htmlPartBody = extractPart('text/html');
-    expect(htmlPartBody).toBe(sentBodyHtml);
+    expect(htmlPartBody).toContain(sentBodyHtml);
+    expect(htmlPartBody).toContain('class="gmail_signature"');
+    expect(htmlPartBody).toContain(sentSignatureHtml);
     // 收件人／副本的中文顯示名必須依 RFC 2047 編碼，標頭段落本身只能是 ASCII——否則部分郵件用戶端（含 Gmail 本身）在收件匣清單會把顯示名顯示成亂碼。
     const headerSection = decodedMime.slice(0, decodedMime.indexOf('\r\n\r\n'));
     expect(headerSection).toContain('To: =?UTF-8?B?');
@@ -817,7 +825,7 @@ describe('Machi Design API Worker', () => {
 
     // 讀信件串：用真正的寄件帳號讀取，應該成功並只回傳純文字內容。
     const plainTextBody = 'Hi，這是設計師的回覆內容';
-    const plainTextBodyBase64Url = toBase64Url(plainTextBody);
+    const plainTextBodyBase64Url = toBase64Url(`${plainTextBody}\n\n設計師簽名檔`);
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
@@ -851,7 +859,7 @@ describe('Machi Design API Worker', () => {
       }
       throw new Error(`unexpected fetch during thread read: ${url}`);
     });
-    const thread = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    const thread = await api({ action: 'getCaseMailThread', caseId: '26080001', signatureHtml: '<b>設計師簽名檔</b>' }, token);
     expect(thread.ok).toBe(true);
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);

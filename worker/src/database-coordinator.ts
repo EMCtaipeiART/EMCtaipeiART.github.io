@@ -227,6 +227,10 @@ function base64Encode(value: string): string {
   return btoa(String.fromCharCode(...new TextEncoder().encode(value))).replace(/(.{76})/g, '$1\n');
 }
 
+function wrapMimeBase64(value: string): string {
+  return value.replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n').replace(/\r\n$/, '');
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -238,8 +242,47 @@ function resolveBodyHtml(payload: ApiPayload): string {
   return escapeHtml(text(payload.bodyText)).replace(/\n/g, '<br>');
 }
 
-/** 組出寄送用的 RFC822 MIME 信件（multipart/alternative：純文字備援＋HTML 正式內容，讓簽名檔與超連結能正確顯示），回傳 Gmail API 需要的 base64url raw 字串。 */
-function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
+type GmailInlineImage = { contentId: string; fileName: string; mimeType: string; base64: string; bytes: number };
+const GMAIL_INLINE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const GMAIL_INLINE_IMAGE_MAX_COUNT = 10;
+const GMAIL_INLINE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+const GMAIL_INLINE_IMAGE_MAX_TOTAL_BYTES = 18 * 1024 * 1024;
+
+function resolveGmailInlineImages(payload: ApiPayload): GmailInlineImage[] {
+  const values = Array.isArray(payload.inlineImages) ? payload.inlineImages : [];
+  if (values.length > GMAIL_INLINE_IMAGE_MAX_COUNT) throw new Error(`每封信最多可放 ${GMAIL_INLINE_IMAGE_MAX_COUNT} 張照片`);
+  let totalBytes = 0;
+  return values.map((value, index) => {
+    const row = asRow(value);
+    const mimeType = text(row.mimeType).toLowerCase();
+    const rawBase64 = text(row.base64).replace(/^data:[^;,]+;base64,/i, '').replace(/\s+/g, '');
+    const contentId = text(row.contentId);
+    if (!GMAIL_INLINE_IMAGE_TYPES.has(mimeType)) throw new Error('信件照片僅支援 JPG、PNG、WebP 或 GIF');
+    if (!/^[A-Za-z0-9._@-]{1,160}$/.test(contentId)) throw new Error('信件照片識別碼格式錯誤');
+    if (!rawBase64 || !/^[A-Za-z0-9+/]*={0,2}$/.test(rawBase64)) throw new Error('信件照片內容格式錯誤');
+    const padding = rawBase64.endsWith('==') ? 2 : rawBase64.endsWith('=') ? 1 : 0;
+    const bytes = Math.max(0, Math.floor(rawBase64.length * 3 / 4) - padding);
+    if (bytes > GMAIL_INLINE_IMAGE_MAX_BYTES) throw new Error('單張信件照片不可超過 8 MB');
+    totalBytes += bytes;
+    if (totalBytes > GMAIL_INLINE_IMAGE_MAX_TOTAL_BYTES) throw new Error('信件內嵌照片總量不可超過 18 MB');
+    const extension = mimeType === 'image/jpeg' ? 'jpg' : mimeType.slice('image/'.length);
+    return { contentId, fileName: `inline-${index + 1}.${extension}`, mimeType, base64: rawBase64, bytes };
+  });
+}
+
+function gmailBodyWithSignature(bodyHtml: string, signatureHtml = ''): string {
+  if (!signatureHtml.trim()) return bodyHtml;
+  return `${bodyHtml}<br><br><div class="gmail_signature" data-smartmail="gmail_signature">${signatureHtml}</div>`;
+}
+
+function gmailPlainBodyWithSignature(bodyHtml: string, signatureHtml = ''): string {
+  const bodyText = htmlToPlainText(bodyHtml);
+  const signatureText = htmlToPlainText(signatureHtml);
+  return signatureText ? `${bodyText}\n\n-- \n${signatureText}`.trim() : bodyText;
+}
+
+/** 組出寄送用的 RFC822 MIME 信件：一般信件為 multipart/alternative，含照片時改用 multipart/related 包住內嵌 CID 圖片。 */
+function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; signatureHtml?: string; inlineImages?: GmailInlineImage[]; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
   const headers: string[] = [];
   headers.push(`To: ${mimeAddressList(options.to)}`);
   if (options.cc && mimeAddressList(options.cc)) headers.push(`Cc: ${mimeAddressList(options.cc)}`);
@@ -250,23 +293,39 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
     headers.push(`References: ${options.threadHeaders.references}`);
   }
   headers.push('MIME-Version: 1.0');
-  const boundary = `machi_${crypto.randomUUID().replace(/-/g, '')}`;
-  headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+  const boundary = `machi_alt_${crypto.randomUUID().replace(/-/g, '')}`;
+  const relatedBoundary = `machi_related_${crypto.randomUUID().replace(/-/g, '')}`;
+  const images = options.inlineImages || [];
+  headers.push(`Content-Type: ${images.length ? 'multipart/related' : 'multipart/alternative'}; boundary="${images.length ? relatedBoundary : boundary}"`);
+  const fullHtml = gmailBodyWithSignature(options.bodyHtml, options.signatureHtml);
   const plainPart = [
     `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
-    base64Encode(htmlToPlainText(options.bodyHtml))
+    base64Encode(gmailPlainBodyWithSignature(options.bodyHtml, options.signatureHtml))
   ].join('\r\n');
   const htmlPart = [
     `--${boundary}`,
     'Content-Type: text/html; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
-    base64Encode(options.bodyHtml)
+    base64Encode(fullHtml)
   ].join('\r\n');
-  const mime = `${headers.join('\r\n')}\r\n\r\n${plainPart}\r\n${htmlPart}\r\n--${boundary}--`;
+  const alternativeBody = `${plainPart}\r\n${htmlPart}\r\n--${boundary}--`;
+  const relatedParts = images.map(image => [
+    `--${relatedBoundary}`,
+    `Content-Type: ${image.mimeType}; name="${image.fileName}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-ID: <${image.contentId}>`,
+    `Content-Disposition: inline; filename="${image.fileName}"`,
+    '',
+    wrapMimeBase64(image.base64)
+  ].join('\r\n')).join('\r\n');
+  const body = images.length
+    ? `--${relatedBoundary}\r\nContent-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n${alternativeBody}\r\n${relatedParts}\r\n--${relatedBoundary}--`
+    : alternativeBody;
+  const mime = `${headers.join('\r\n')}\r\n\r\n${body}`;
   return utf8ToBase64Url(mime);
 }
 
@@ -283,6 +342,17 @@ function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined)
     if (found) return found;
   }
   return '';
+}
+
+/** 信件串只顯示來回內容：移除標準簽名分隔線以及常見行動裝置簽名。 */
+function stripSignatureFromPlainText(value: string, knownSignatureText = ''): string {
+  let body = value.replace(/\r\n?/g, '\n');
+  const separator = body.search(/(?:^|\n)--[ \t]*(?:\n|$)/);
+  if (separator >= 0) body = body.slice(0, separator);
+  const known = knownSignatureText.replace(/\r\n?/g, '\n').trim();
+  if (known && body.trimEnd().endsWith(known)) body = body.trimEnd().slice(0, -known.length);
+  body = body.replace(/\n*(?:Sent from my (?:iPhone|iPad|Android)|Get Outlook for (?:iOS|Android)|從我的 iPhone 傳送|由我的 iPhone 送出)[\s\S]*$/i, '');
+  return body.trim();
 }
 
 function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | undefined, name: string): string {
@@ -814,13 +884,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
     const subject = text(payload.subject);
     const bodyHtml = resolveBodyHtml(payload);
+    const signatureHtml = text(payload.signatureHtml);
+    const inlineImages = resolveGmailInlineImages(payload);
     if (!caseId) return { ok: false, action: 'sendCaseMail', error: '缺少案件編號' };
     if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
     const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
     if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
-    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml });
+    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw })
     });
@@ -850,6 +922,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
     if (owner !== canonicalAccount(current.account)) return { ok: false, action: 'getCaseMailThread', error: `此信件串由 ${owner} 寄出，只有該帳號能查看`, reason: 'GMAIL_THREAD_OWNER_MISMATCH' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
+    const knownSignatureText = htmlToPlainText(text(payload.signatureHtml));
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
@@ -858,7 +931,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const messages = (Array.isArray(data.messages) ? data.messages : []).map((message: unknown) => {
       const messageRow = asRow(message);
       const payloadPart = messageRow.payload as GmailMessagePart & { headers?: Array<{ name?: string; value?: string }> } | undefined;
-      const bodyText = extractPlainTextFromGmailPayload(payloadPart) || text(messageRow.snippet);
+      const bodyText = stripSignatureFromPlainText(extractPlainTextFromGmailPayload(payloadPart) || text(messageRow.snippet), knownSignatureText);
       return {
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
         date: gmailHeaderValue(payloadPart?.headers, 'Date'), snippet: text(messageRow.snippet), bodyText
@@ -872,7 +945,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = this.requireAccess(database, session, 'request.mail');
     const caseId = text(payload.caseId || payload.id);
     const bodyHtml = resolveBodyHtml(payload);
-    if (!htmlToPlainText(bodyHtml)) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
+    const signatureHtml = text(payload.signatureHtml);
+    const inlineImages = resolveGmailInlineImages(payload);
+    if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
     const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
@@ -900,7 +975,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
     const raw = buildGmailRawMessage({
-      to, subject: lastSubject, bodyHtml,
+      to, subject: lastSubject, bodyHtml, signatureHtml, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
