@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1544,
+  "revision": 1545,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T11:02:16.765Z",
+  "updatedAt": "2026-08-18T11:05:26.140Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18880,7 +18880,9 @@
           "月份": "8月",
           "案件編號": "26080092",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "Gmail信件串ID": "1a0148c2dd1c4fb6",
+          "Gmail寄件帳號": "david.liao@emctaipei.com"
         }
       ]
     },
