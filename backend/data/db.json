@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1489,
+  "revision": 1490,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:23:37.073Z",
+  "updatedAt": "2026-08-18T08:23:43.253Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25338,10 +25338,10 @@
         {
           "客戶別": "櫻花",
           "專案負責人": "[]",
-          "設計負責人": "[]",
+          "設計負責人": "[\"Machi\"]",
           "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "系統預設"
+          "更新時間": "2026-08-18 16:23",
+          "更新者": "Machi"
         },
         {
           "客戶別": "ANKER",
