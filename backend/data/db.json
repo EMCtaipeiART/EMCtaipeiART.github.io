@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1448,
+  "revision": 1449,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:48:55.178Z",
+  "updatedAt": "2026-08-18T06:49:48.119Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -13735,7 +13735,7 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "修改次數": "1"
+          "修改次數": "2"
         },
         {
           "案件編號": "26070176",
@@ -20620,6 +20620,16 @@
           "圖片連結": "[{\"fileName\":\"260819_ANKER_暑假尾聲出遊_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_p43EM3J6oTrOKnFfJXxbj6AaocZxMux=w1600\"},{\"fileName\":\"260819_ANKER_暑假尾聲出遊_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/185gqJCe-d6bRIGtO6x2XnCeLou1v0gwY=w1600\"},{\"fileName\":\"260819_ANKER_暑假尾聲出遊_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bZ-vcz6yRlf-3JvVKzZDsZFBBxO7tHkr=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/18 12:49:57"
+        },
+        {
+          "案件編號": "26070175",
+          "修改次數": "2",
+          "建立日期": "2026/08/18 14:49:48",
+          "修改日期": "2026-08-18",
+          "修改內容": "要求畫面中使用者要使用【行動電源】，故直接改為更換官方素材替換",
+          "修改人": "羅珮云",
+          "確認修正日": "",
+          "待修改圖片": ""
         }
       ]
     },
