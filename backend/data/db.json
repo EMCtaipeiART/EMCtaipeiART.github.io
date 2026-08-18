@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1504,
+  "revision": 1505,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:33:07.519Z",
+  "updatedAt": "2026-08-18T08:34:51.483Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25455,10 +25455,10 @@
         },
         {
           "客戶別": "soundcore",
-          "專案負責人": "[]",
+          "專案負責人": "[\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"leona.chen@emctaipei.com\"]",
           "設計負責人": "[\"Anna\",\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "2026-08-18 16:22",
+          "更新時間": "2026-08-18 16:34",
           "更新者": "Machi"
         }
       ]
