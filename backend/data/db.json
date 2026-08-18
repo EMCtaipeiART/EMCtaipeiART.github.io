@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1568,
+  "revision": 1569,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T15:59:51.773Z",
+  "updatedAt": "2026-08-18T16:05:31.860Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18909,7 +18909,9 @@
           "月份": "8月",
           "案件編號": "26080093",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "Gmail信件串ID": "1a0159eea7b9aa06",
+          "Gmail寄件帳號": "saurman.wu@emctaipei.com"
         },
         {
           "客戶別": "soundcore",
