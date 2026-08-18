@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1424,
+  "revision": 1425,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T04:37:00.995Z",
+  "updatedAt": "2026-08-18T04:37:05.439Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18021,7 +18021,9 @@
           "案件編號": "26080063",
           "修改次數": "0",
           "繳交時間": "2026/08/18 12:37:00",
-          "項目細節": "影音剪輯"
+          "項目細節": "影音剪輯",
+          "設計圖資料夾連結": "專案企劃部/執行中/DJI/影片/2026/預熱影片cutdown",
+          "設計圖檔名關鍵字": ""
         },
         {
           "客戶別": "soundcore",
