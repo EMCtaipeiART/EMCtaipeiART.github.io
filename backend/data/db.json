@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1440,
+  "revision": 1441,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:41:56.454Z",
+  "updatedAt": "2026-08-18T06:41:59.982Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18587,13 +18587,14 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "1",
           "月份": "8月",
           "案件編號": "26080083",
           "修改次數": "0",
           "繳交時間": "",
           "Gmail信件串ID": "1a0133993433cfd9",
-          "Gmail寄件帳號": "saurman.wu@emctaipei.com"
+          "Gmail寄件帳號": "saurman.wu@emctaipei.com",
+          "項目細節": "廣告素材"
         },
         {
           "客戶別": "ANKER",
