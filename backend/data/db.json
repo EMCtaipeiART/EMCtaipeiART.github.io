@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1433,
+  "revision": 1434,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T04:52:48.568Z",
+  "updatedAt": "2026-08-18T04:53:28.549Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18565,6 +18565,33 @@
           "案件編號": "26080082",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月CPAS_PChome24力_電商追加*1",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/18",
+          "結束日期": "2026/08/18",
+          "設計負責人": "Anna",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/18 12:53",
+          "設計簡報說明": "P131~P132",
+          "設計簡報連結": "https://emctaipeiart.github.io/a/26080083",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080083",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20779,11 +20806,11 @@
         },
         {
           "案件編號": "26080083",
-          "A": "https://docs.google.com/presentation/d/1nX_hSacXIEnwUkzBULy-VN5NxQYX747VJ-xzrNngn30/edit?slide=id.g3f9a812cec1_0_28#slide=id.g3f9a812cec1_0_28",
+          "A": "https://docs.google.com/presentation/d/1gY8A73MYAzZca0tr2M-5ZDVtWgK7pmGTB1Hzw7N6Mvc/edit?slide=id.g3f629ffd2b5_0_152#slide=id.g3f629ffd2b5_0_152",
           "B": "",
           "C": "",
           "D": "",
-          "更新時間": "2026/08/18 09:26"
+          "更新時間": "2026/08/18 12:53"
         }
       ]
     },
@@ -27004,6 +27031,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 641,
           "sheetRow": 641
+        }
+      },
+      "ecf1fea3-d161-4451-9600-2de3b3c0d8d6": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 640,
+        "row": {
+          "id": "26080083",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "8月CPAS_PChome24力_電商追加*1",
+          "owner": "吳冠賢",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/18",
+          "end": "2026/08/18",
+          "designer": "Anna",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/18 12:53",
+          "briefNote": "P131~P132",
+          "briefUrl": "https://emctaipeiart.github.io/a/26080083",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 640,
+          "sheetRow": 640
         }
       }
     }
