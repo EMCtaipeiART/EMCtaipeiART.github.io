@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1463,
+  "revision": 1464,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T07:53:48.495Z",
+  "updatedAt": "2026-08-18T07:55:11.946Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18495,10 +18495,10 @@
           "開始日期": "2026/08/17",
           "結束日期": "2026/08/19",
           "設計負責人": "Amber",
-          "項目細節": "廣告素材",
+          "項目細節": "廣告素材, 急件",
           "修改次數": "0",
           "狀態": "執行中",
-          "加權": "3",
+          "加權": "9",
           "填單時間": "2026/08/17 17:31",
           "繳交時間": "",
           "使用平台": "Facebook, Instagram",
