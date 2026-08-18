@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1524,
+  "revision": 1525,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T09:29:48.687Z",
+  "updatedAt": "2026-08-18T09:31:57.306Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25290,10 +25290,10 @@
         },
         {
           "客戶別": "金士頓",
-          "專案負責人": "[]",
+          "專案負責人": "[\"andrew.koo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"leona.chen@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"sudi.su@emctaipei.com\"]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\",\"Cherry組\"]",
-          "更新時間": "2026-08-18 16:28",
+          "更新時間": "2026-08-18 17:31",
           "更新者": "Machi"
         },
         {
