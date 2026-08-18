@@ -726,7 +726,7 @@ describe('Machi Design API Worker', () => {
       const url = String(input);
       if (url === 'https://oauth2.googleapis.com/token') {
         const body = new URLSearchParams(String(init?.body));
-        expect(body.get('client_id')).toBe('501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com');
+        expect(body.get('client_id')).toBe('910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com');
         expect(body.get('client_secret')).toBe('test-gmail-oauth-secret');
         if (body.get('grant_type') === 'authorization_code') {
           expect(body.get('code')).toBe('auth-code');

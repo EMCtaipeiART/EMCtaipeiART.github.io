@@ -463,7 +463,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({
         grant_type: 'refresh_token', refresh_token: stored.refresh_token,
-        client_id: this.env.GOOGLE_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET
+        client_id: this.env.GMAIL_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET
       })
     });
     const data = await response.json().catch(() => ({})) as Row;
@@ -693,7 +693,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({
         grant_type: 'authorization_code', code, redirect_uri: redirectUri,
-        client_id: this.env.GOOGLE_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET,
+        client_id: this.env.GMAIL_OAUTH_CLIENT_ID, client_secret: this.env.GMAIL_OAUTH_CLIENT_SECRET,
         ...(codeVerifier ? { code_verifier: codeVerifier } : {})
       })
     });

@@ -6879,6 +6879,7 @@ const targetSheetId = 1244538986;
 const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
+const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
 const appBuildVersion = '20260811-cloudflare-worker-auth-109';
 const erpPublicFallbackConfig = {
   ok: true,
@@ -9616,7 +9617,7 @@ function startGoogleRedirectLogin(){startGooglePopupLogin()}
 const gmailOauthChannelName='machi-gmail-oauth-v1';
 let gmailOauthChannel=null,gmailConnectPopup=null;
 let gmailConnectionState={connected:false,gmailAddress:''},gmailConnectionChecked=false;
-function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:googleOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
+function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
 function ensureGmailOauthChannel(){if(gmailOauthChannel||!('BroadcastChannel' in window))return gmailOauthChannel;gmailOauthChannel=new BroadcastChannel(gmailOauthChannelName);gmailOauthChannel.onmessage=event=>applyGmailOauthPopupResult(event.data).catch(error=>setSync(`Gmail 連接失敗：${error.message}`,true));return gmailOauthChannel}
 async function applyGmailOauthPopupResult(result={}){
   if(result.type!=='machi-gmail-oauth-result')return;

@@ -14,6 +14,7 @@
     "GITHUB_BRANCH": "main",
     "GITHUB_DATABASE_PATH": "backend/data/db.json",
     "GOOGLE_OAUTH_CLIENT_ID": "501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com",
+    "GMAIL_OAUTH_CLIENT_ID": "910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com",
     "ERP_BASE_URL": "https://manage.emctaipei.com",
     "ERP_CLIENT_ID": "oauth_n3gUqm5r84Mu",
     "ERP_REDIRECT_URI": "https://emctaipeiart.github.io",
