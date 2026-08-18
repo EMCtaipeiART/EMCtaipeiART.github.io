@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1529,
+  "revision": 1530,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T09:33:52.239Z",
+  "updatedAt": "2026-08-18T09:34:26.397Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25426,10 +25426,10 @@
         },
         {
           "客戶別": "ANKER",
-          "專案負責人": "[]",
+          "專案負責人": "[\"amber.tian@emctaipei.com\",\"lorraine.luo@emctaipei.com\"]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "2026-08-18 16:23",
+          "更新時間": "2026-08-18 17:34",
           "更新者": "Machi"
         },
         {
