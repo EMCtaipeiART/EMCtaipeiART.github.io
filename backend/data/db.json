@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1443,
+  "revision": 1444,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:42:50.584Z",
+  "updatedAt": "2026-08-18T06:44:26.272Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18648,7 +18648,9 @@
           "月份": "8月",
           "案件編號": "26080085",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "Gmail信件串ID": "1a0139d3923d86c5",
+          "Gmail寄件帳號": "allen.li@emctaipei.com"
         },
         {
           "客戶別": "ANKER",
