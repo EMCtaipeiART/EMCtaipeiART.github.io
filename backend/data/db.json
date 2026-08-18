@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1444,
+  "revision": 1445,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:44:26.272Z",
+  "updatedAt": "2026-08-18T06:46:33.560Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18705,6 +18705,33 @@
           "案件編號": "26080087",
           "修改次數": "0",
           "繳交時間": ""
+        },
+        {
+          "客戶別": "Epson",
+          "專案名稱": "社群貼文_中秋連假出國",
+          "專案負責人": "李明庭",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "4",
+          "開始日期": "2026/08/18",
+          "結束日期": "2026/08/24",
+          "設計負責人": "Machi",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/18 14:46",
+          "設計簡報說明": "設計示意圖",
+          "設計簡報連結": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080088",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -20932,6 +20959,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 14:36"
+        },
+        {
+          "案件編號": "26080088",
+          "A": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/18 14:46"
         }
       ]
     },
@@ -27337,6 +27372,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 644,
           "sheetRow": 644
+        }
+      },
+      "05bd1f8f-0128-4dba-9609-c753b199baab": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 645,
+        "row": {
+          "id": "26080088",
+          "month": "8月",
+          "client": "Epson",
+          "project": "社群貼文_中秋連假出國",
+          "owner": "李明庭",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 4,
+          "start": "2026/08/18",
+          "end": "2026/08/24",
+          "designer": "Machi",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/18 14:46",
+          "briefNote": "設計示意圖",
+          "briefUrl": "https://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 645,
+          "sheetRow": 645
         }
       }
     }
