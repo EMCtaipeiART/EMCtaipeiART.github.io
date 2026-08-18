@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1539,
+  "revision": 1540,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T09:46:55.087Z",
+  "updatedAt": "2026-08-18T10:05:02.998Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18737,7 +18737,7 @@
           "月份": "8月",
           "案件編號": "26080087",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "2026/08/18 18:05:02"
         },
         {
           "客戶別": "Epson",
@@ -20786,6 +20786,18 @@
           "圖片連結": "[{\"fileName\":\"260819_ANKER_全館促銷_流量_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/166U75ZF9hunRGILxBqk2EtlWMJo78Nqr=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XT9zOtttfPjEjPy2xKE06xPPQWAyHG-_=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-QyoC1vfkLv93Pk6ERFVrjz6-cf7dZ07=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/18 17:46:30"
+        },
+        {
+          "案件編號": "26080087",
+          "修改次數": "0",
+          "建立日期": "2026/08/18 18:05:02",
+          "修改日期": "2026/08/18 18:05:02",
+          "修改內容": "初稿完成（NAS 自動建立）",
+          "修改人": "NAS 自動同步",
+          "確認修正日": "2026/08/18 18:05:02",
+          "圖片連結": "[{\"fileName\":\"260526_臺北市政府社會局_IG限時動態_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jgt_232WBKCzvXBrg1psIjphVLg72Jkl=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_LINE圖文訊息.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1A1nsRjIsGpQs_Ypijqw5OFwAOso-drpp=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_LINE圖文訊息_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/18VekMpENjio5DbXYxTEkScvsJV6Wi3rG=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_影片製作.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1heS7VY63ZrlvrTWWYRrAjH_-zb4I0tqp=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運廣告W300H150cm.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Hr71z4CUDLiW9d5XbrisLY-ylSNK7w9R=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運廣告_示意圖.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/19q-9jPACepdYM9abAPKKRZMTSlBLZcMm=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運車廂W150H30cm.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1qw-TCoLZepkaaSD-XMBocESjWAQsj5Hj=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運車廂_示意圖.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18rthX7LBMaFRZ-w792N3ybkYiGs2b3ux=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_活動主視覺.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1OtNQFyYzeslfvr5rnshP8qTFCyxh1m1_=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rxSCGBJs_LexLrLNWcn-xWSoYxEEYeRZ=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_670x350px.png\",\"url\":\"https://lh3.googleusercontent.com/d/10Lux_7otq75UbPqIaiQ30mobg4vUGXh6=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xo-gwp9zEBJBJohcUfeizgUIZpZ09VQ2=w1600\"}]",
+          "圖片來源": "nas-watcher",
+          "圖片更新時間": "2026/08/18 18:05:02"
         }
       ]
     },
