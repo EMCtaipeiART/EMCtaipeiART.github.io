@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1445,
+  "revision": 1446,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:46:33.560Z",
+  "updatedAt": "2026-08-18T06:46:48.533Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18715,7 +18715,7 @@
           "數量": "4",
           "開始日期": "2026/08/18",
           "結束日期": "2026/08/24",
-          "設計負責人": "Machi",
+          "設計負責人": "Leona",
           "使用平台": "Facebook",
           "填單時間": "2026/08/18 14:46",
           "設計簡報說明": "設計示意圖",
