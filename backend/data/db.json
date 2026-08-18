@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1507,
+  "revision": 1508,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T08:36:18.075Z",
+  "updatedAt": "2026-08-18T08:40:22.735Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25461,6 +25461,14 @@
           "部門組別": "[]",
           "更新時間": "2026-08-18 16:34",
           "更新者": "Machi"
+        },
+        {
+          "客戶別": "測試",
+          "專案負責人": "[]",
+          "設計負責人": "[]",
+          "部門組別": "[]",
+          "更新時間": "2026/08/18 16:40:22",
+          "更新者": "test.user@emctaipei.com"
         }
       ]
     }
