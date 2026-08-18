@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1406,
+  "revision": 1407,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T03:24:04.061Z",
+  "updatedAt": "2026-08-18T03:25:54.408Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -23410,7 +23410,7 @@
           "部門": "專案部",
           "組別": "Cherry組",
           "名字": "sudi.su",
-          "顯示名": "sudi.su",
+          "顯示名": "SUDI SU",
           "帳號": "sudi.su@emctaipei.com",
           "頭像連結": "",
           "頭像大圖連結": "",
@@ -23444,7 +23444,9 @@
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
           "收合設計需求": "",
-          "深淺模式": ""
+          "深淺模式": "",
+          "技能表單設定": "",
+          "設計師顯示": ""
         },
         {
           "部門": "測試員",
@@ -24853,9 +24855,10 @@
           "角色範本": "一般使用者",
           "狀態": "啟用",
           "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
-          "功能權限": "[\"request.create\",\"request.edit\",\"request.mail\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-12 18:23",
-          "更新者": "Machi"
+          "功能權限": "[\"request.create\",\"request.mail\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-18 11:25",
+          "更新者": "Machi",
+          "登入方式": "公司信箱"
         },
         {
           "帳號": "local:e20d9847-cfa6-4363-8cff-12fb76913661",
