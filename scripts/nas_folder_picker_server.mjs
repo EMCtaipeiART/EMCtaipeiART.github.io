@@ -339,7 +339,17 @@ const PICKER_PAGE = `<!doctype html>
   const token = params.get('token') || '';
   const nonce = params.get('nonce') || '';
   const origin = params.get('origin') || '';
+  // mode=insert：只是要挑一個資料夾路徑插進信件內容裡（例如 Gmail 撰寫/回信），
+  // 不需要關鍵字、也不會觸發任何備份／上傳，選好資料夾直接把路徑丟回去、關閉視窗；
+  // 預設（mode 不帶或 'case'）維持既有的「設定案件 NAS 來源資料夾＋立即備份」行為不變。
+  const mode = params.get('mode') === 'insert' ? 'insert' : 'case';
   document.getElementById('caseLabel').textContent = caseId ? ('案件編號：' + caseId) : '';
+  if(mode === 'insert'){
+    const keywordField = document.querySelector('.keyword-field');
+    if(keywordField) keywordField.hidden = true;
+    const confirmBtn0 = document.getElementById('confirmBtn');
+    if(confirmBtn0) confirmBtn0.textContent = '選擇這個資料夾';
+  }
   let relPath = '';
   // showErrorPrompt() 會把 document.body 整個換成錯誤畫面，keywordInput 這個元素會
   // 跟著消失；「重試」按鈕重新呼叫 doConfirm() 時讀不到 DOM 裡的值，改用這個變數記住
@@ -444,6 +454,15 @@ const PICKER_PAGE = `<!doctype html>
   }
 
   async function doConfirm(){
+    if(mode === 'insert'){
+      // 純選路徑模式：不問關鍵字、不呼叫 /api/confirm、不觸發任何備份或上傳，
+      // 選好資料夾就直接把路徑丟回開啟這個視窗的分頁並關閉。
+      if(window.opener){
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath, mode: 'insert' }, origin || '*');
+      }
+      window.close();
+      return;
+    }
     const keywordInput = document.getElementById('keywordInput');
     const keyword = keywordInput ? (keywordInput.value || '').trim() : lastKeywordValue;
     lastKeywordValue = keyword;
