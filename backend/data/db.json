@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1557,
+  "revision": 1558,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T14:01:18.511Z",
+  "updatedAt": "2026-08-18T14:01:21.769Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20824,9 +20824,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/18 18:05:02",
-          "圖片連結": "[{\"fileName\":\"260526_臺北市政府社會局_IG限時動態_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jgt_232WBKCzvXBrg1psIjphVLg72Jkl=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_LINE圖文訊息.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1A1nsRjIsGpQs_Ypijqw5OFwAOso-drpp=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運車廂_示意圖.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18rthX7LBMaFRZ-w792N3ybkYiGs2b3ux=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_活動主視覺.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1OtNQFyYzeslfvr5rnshP8qTFCyxh1m1_=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rxSCGBJs_LexLrLNWcn-xWSoYxEEYeRZ=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_670x350px.png\",\"url\":\"https://lh3.googleusercontent.com/d/10Lux_7otq75UbPqIaiQ30mobg4vUGXh6=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xo-gwp9zEBJBJohcUfeizgUIZpZ09VQ2=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260526_臺北市政府社會局_LINE圖文訊息.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1A1nsRjIsGpQs_Ypijqw5OFwAOso-drpp=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_捷運車廂_示意圖.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/18rthX7LBMaFRZ-w792N3ybkYiGs2b3ux=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_活動主視覺.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1OtNQFyYzeslfvr5rnshP8qTFCyxh1m1_=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rxSCGBJs_LexLrLNWcn-xWSoYxEEYeRZ=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_670x350px.png\",\"url\":\"https://lh3.googleusercontent.com/d/10Lux_7otq75UbPqIaiQ30mobg4vUGXh6=w1600\"},{\"fileName\":\"260526_臺北市政府社會局_網站橫幅廣告_示意圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xo-gwp9zEBJBJohcUfeizgUIZpZ09VQ2=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/18 22:01:18"
+          "圖片更新時間": "2026/08/18 22:01:21"
         }
       ]
     },
