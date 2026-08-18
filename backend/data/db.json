@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1435,
+  "revision": 1436,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T04:54:39.022Z",
+  "updatedAt": "2026-08-18T04:55:35.747Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18591,7 +18591,9 @@
           "月份": "8月",
           "案件編號": "26080083",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "Gmail信件串ID": "1a0133993433cfd9",
+          "Gmail寄件帳號": "saurman.wu@emctaipei.com"
         }
       ]
     },
