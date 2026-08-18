@@ -267,6 +267,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
 - commit：（見下方 push 紀錄）
 
+### 2026-08-18 08:59 Asia/Taipei（最新）— Gmail 功能正式部署完成；「透過 Gmail 寄出」改成先跳出可編輯的撰寫視窗，不再直接寄出
+
+- 修改目的：接續前一則 Gmail 整合工作，這次完成兩件事：①實際把 Worker 部署上線並排除部署過程中的問題；②使用者體驗回饋：「透過 Gmail 直接寄出」原本是點下去就立刻把 `mailDraft(row)` 算好的內容送出，使用者希望寄出前能先看到、也能編輯收件人/副本/主旨/內容，比照 Gmail 網頁版撰寫視窗的體驗，而不是盲目直接送出。
+- 部署過程中發生並排除的問題：
+  1. **Google Cloud Console 原始登入用專案已無人能存取**：使用者用 `machi.chen@emctaipei.com` 與公司 IT 信箱 `service@emctaipei.com` 都在 Google Cloud 專案選擇器裡搜尋不到既有登入用 OAuth Client 的專案編號（`501170620928`）——這代表當初申請這個 OAuth Client 的帳號，現在公司內沒有人能存取。改成**另外建立一個全新、獨立的 Google Cloud 專案與 OAuth Client 專門給 Gmail 這個功能用**（新的 Client ID：`910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com`），完全不去動、也不需要存取那個找不到的原始專案；既有的 Google 登入功能只需要驗證 id_token（不需要主控台存取權就能持續運作），不受影響。程式碼影響：`worker/wrangler.jsonc` 新增 var `GMAIL_OAUTH_CLIENT_ID`，`worker/src/database-coordinator.ts` 的 `gmailOauthConnect`（授權碼交換）與 `getValidGmailAccessToken`（refresh token 換新 access token）改用這個新 var（原本寫死沿用 `GOOGLE_OAUTH_CLIENT_ID` 的地方全部改掉）；`index.html` 新增前端常數 `gmailOAuthClientId`，`gmailOauthAuthorizationUrl()` 改用它；`worker/test/index.test.ts` 對應更新 client_id 斷言。**這代表系統現在同時存在兩個獨立的 Google OAuth Client**（一個給登入用、一個給 Gmail 用），不是理想的單一事實來源，但在原始專案存取權下落不明的情況下，這是能實際落地、且不影響既有登入功能的務實做法；之後如果真的找回原始專案存取權，可以考慮合併回同一個 Client。
+  2. **`wrangler secret put GMAIL_OAUTH_CLIENT_SECRET` 第一次執行方式錯誤，密鑰值被存成密鑰的「名字」**：使用者第一次執行時，密鑰值本身變成了 Cloudflare Secret 的名稱（`wrangler secret list` 直接列出一筆名字就是那組 `GOCSPX-...` 密鑰值的項目），而不是存成正確名字 `GMAIL_OAUTH_CLIENT_SECRET`。這代表**密鑰值透過 `wrangler secret list` 的輸出，短暫出現在我（協助排查的 AI 助理）的工作過程中**——這不是使用者刻意貼給我、也不是我主動去讀取密鑰值本身，而是診斷指令的必要輸出裡意外包含了它（因為它變成了「名字」而不是被遮蔽的「值」）。發現後立刻做兩件事收斂影響：①**沒有**把這個值重新輸入到任何其他指令或系統裡（沒有用它去建立正確命名的 secret，而是請使用者依照原本設計的方式——不經過我——重新走一次 `wrangler secret put` 流程）；②在取得使用者明確同意後，用 `wrangler secret delete "<那組錯誤名字>"` 把這筆錯誤的紀錄從 Cloudflare 帳號徹底刪除，只透過**名字**引用它（刪除動作本身不需要、也沒有再次處理密鑰的「值」）。使用者重新執行一次（這次密鑰值正確輸入在指令跳出的互動提示欄位，而不是接在指令列上）後，`wrangler secret list` 確認 `GMAIL_OAUTH_CLIENT_SECRET` 正確建立。這次事件也發現使用者的 Mac 沒有安裝 `pnpm`（`worker/README.md` 原本的指令都是寫 `pnpm exec wrangler ...`），已經確認 `npx`/`npm`/`node` 都有安裝，之後給使用者的指令改用 `npx wrangler ...`。
+  3. **`wrangler deploy` 成功後第一次 `curl` 測試新 action 收到 `"Unknown action"`**：重新確認過 `worker/src/database-coordinator.ts` 裡新增的六個 action 分派（`gmailStatus`／`gmailOauthConnect`／`gmailDisconnect`／`sendCaseMail`／`getCaseMailThread`／`replyCaseMail`）程式碼本身完全正確存在且順序合理，判斷是 Cloudflare 邊緣節點還沒同步到最新部署版本的短暫傳遞延遲——等待數秒後重新 `curl` 測試 `gmailStatus`，正確回傳「請先登入後再執行此操作」（代表 action 已經被正確辨識、且權限檢查生效），確認只是短暫延遲，不是真正的程式問題。
+- 影響檔案（這次 UX 改動）：`index.html`。
+- 影響功能：
+  1. **新增可編輯的「透過 Gmail 寄出」撰寫視窗 `#gmailComposeModal`**（沿用 `#gmailThreadModal` 已經在用的 `.revision-modal-card`/`.gmail-thread-modal-card` 版型，不另外設計一套）：收件人／副本／主旨都是 `<input>`、內容是 `<textarea>`，四個欄位開啟時都用 `mailDraft(row)` 算好的值預先帶入（跟原本直接寄出時送出的內容完全一樣的起點），使用者可以在送出前自由修改任何欄位。
+  2. `openMailComposerMenu()` 選單裡「透過 Gmail 直接寄出」按鈕文字與行為改成「透過 Gmail 撰寫並寄出」→ `openGmailComposeModal(id)`（開啟撰寫視窗，不會立即發送任何請求）。原本點下去就直接呼叫 `sendCaseMail` action 的 `sendCaseMailViaGmail(id)` 函式整個移除，改成 `openGmailComposeModal(id)`／`closeGmailComposeModal()`／`sendGmailComposeModal()` 三個函式——只有使用者在撰寫視窗裡按下「寄出」（`sendGmailComposeModal()`）才會真正呼叫 Worker 的 `sendCaseMail` action，這時候送出的是**畫面上使用者當下看到、可能已經編輯過**的收件人/副本/主旨/內容，不是背後重新算一次的 `mailDraft(row)`。
+  3. 送出前基本驗證：收件人與主旨為空白時擋下、顯示「請填寫收件人與主旨」，不會呼叫 API；成功後樂觀更新本地 `rows` 的 `gmailThreadId`/`gmailThreadOwnerAccount`（跟原本 `sendCaseMailViaGmail` 的做法一致）、關閉視窗、重繪畫面。
+- 風險區塊：
+  - **這次的密鑰意外曝光事件，雖然已經妥善收斂（沒有重複使用、只用名字引用並刪除），但代表這組密鑰值理論上已經進入這次對話的處理過程**——即使已經刪除該筆錯誤設定，這組值本身仍然是真實有效的 Google OAuth Client Secret（除非使用者之後在 Google Cloud Console 端額外重新產生一組新的密鑰、讓舊的失效）。建議使用者評估是否要到 Google Cloud Console 的 OAuth Client 頁面「重設」/新增一組密鑰、把舊的作廢，徹底排除這個理論風險，即使實務上這組值只短暫出現在自動化診斷輸出裡、沒有被我進一步傳播或使用。
+  - 新的可編輯撰寫視窗**沒有**做「收件人格式驗證」（例如檢查是不是合法 Email 格式），只檢查欄位是否為空——如果使用者手動把收件人改成不合法的格式，會在 Worker 呼叫 Gmail API 時才收到 Gmail 端回傳的錯誤，不會在前端提前擋下；這是刻意的簡化（跟原本網頁版「Gmail 撰寫」連結也沒有做這層驗證的既有行為一致），不是這次新增的弱點。
+- 已檢查／驗證方式：
+  - 主要 `<script>` 區塊 `node --check` 語法檢查通過；`node --test backend/test/*.test.mjs` 26/26 全過。
+  - 用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試：`#gmailComposeModal` 與六個內部欄位/按鈕元素都正確存在於 DOM；`getComputedStyle` 確認 z-index 為 6550（跟 `#gmailThreadModal` 同一層級，兩者不會同時開）；`openGmailComposeModal(id)` 正確用 `mailDraft(row)` 預先帶入收件人/主旨/內容到對應欄位；把「收件人」欄位清空後呼叫 `sendGmailComposeModal()`，確認正確被擋下、**沒有**呼叫 `sheetApi`；點擊關閉按鈕與點擊背景遮罩都能正確關閉視窗。
+  - **實際部署驗證**：`npx wrangler deploy` 成功部署到正式 Worker（Version ID `5c523b86-8ba6-453c-a7a5-d1f19e7e5b29`）；部署後用 `curl` 直接打正式 Worker 網址驗證 `ping`（回應正常）與 `gmailStatus`（未登入時正確回「請先登入後再執行此操作」，代表 action 存在且權限檢查生效）。
+  - **未做的驗證**：這次 UX 改動（撰寫視窗）還沒有請使用者在正式站實際走一次「開啟撰寫視窗→修改內容→按下寄出→確認真的收到編輯後的內容而不是原始 `mailDraft` 內容」的端對端流程；「連接 Gmail → 寄出 → 回信」這整條真正串接 Google 帳號的端對端流程，也仍然只有 Worker 端在 mock 過的 Google API 回應下測試過，還沒有使用者親自用真實帳號完整走過一次。
+- 部署狀態：`index.html` 純前端，git push 後自動生效；`worker/` 這次的 OAuth Client ID 切換與六個 Gmail action **已經正式部署到 Cloudflare**（`npx wrangler deploy` 已執行成功），`GMAIL_OAUTH_CLIENT_SECRET`／`GMAIL_OAUTH_CLIENT_ID` 都已經在正式環境正確設定。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-17 15:00 Asia/Taipei — 新增 Gmail API 整合：案件可直接用 Gmail 寄信、在頁面內查看信件串並回信（限該案件寄出的那封信）
 
 - 修改目的：使用者要求「發信」不要只停在開新分頁到 Gmail 網頁版讓人手動送出，而是要能真正彈出 Gmail、直接寄信，也要能直接回信，不用離開系統。跟使用者確認三個關鍵前提後才動手：①`emctaipei.com` 是 Google Workspace 企業帳號，OAuth 同意畫面可以設成 Internal，`gmail.send`／`gmail.readonly` 這類敏感範圍能跳過 Google 應用程式驗證審查；②「回信」範圍只鎖定該案件寄出的那一封信（不是完整收件匣瀏覽），大幅縮小 OAuth 範圍與資料模型複雜度；③Google Cloud Console 設定（啟用 Gmail API、加範圍、拿 Client Secret）由使用者自己執行，我沒有帳號權限代勞。這次先用 `EnterPlanMode` 走了完整規劃流程（含兩個平行 Explore agent 分別調查 Worker 的 session／OAuth 既有模式與前端的發信／彈窗／schema 既有模式），確認可以整套沿用既有的 ERP PKCE 登入範本、`sessions`/`local_password_accounts` 這類 DO 內建 SQL 表模式、`request.mail` 這個已經存在但一直沒有真正被任何 action 檢查的權限，才落地實作，避免另外發明一套新機制。
