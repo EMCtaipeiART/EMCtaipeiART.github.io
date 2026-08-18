@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1450,
+  "revision": 1451,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T06:50:34.926Z",
+  "updatedAt": "2026-08-18T07:02:29.952Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20431,9 +20431,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/17 14:10:17",
-          "圖片連結": "[{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-JeaqgKruYTIYi2RPuZIILxnbNqk3AGc=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_IG.png\",\"url\":\"https://lh3.googleusercontent.com/d/104ZdH_ISLQ8qPfjXIlnooEq9M0YAu8gp=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1huqkJuBLiGR8XcRGbavRoR3Y4DgutTvy=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-JeaqgKruYTIYi2RPuZIILxnbNqk3AGc=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_IG.png\",\"url\":\"https://lh3.googleusercontent.com/d/104ZdH_ISLQ8qPfjXIlnooEq9M0YAu8gp=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1huqkJuBLiGR8XcRGbavRoR3Y4DgutTvy=w1600\"},{\"fileName\":\"260730_金士頓_UGC－金士頓暑假清單_IG.png\",\"url\":\"https://lh3.googleusercontent.com/d/1L3o317iFHf2F2XhijLcIV9ijpG3UioLN=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/17 14:10:17"
+          "圖片更新時間": "2026/08/18 15:02:29"
         },
         {
           "案件編號": "26080038",
