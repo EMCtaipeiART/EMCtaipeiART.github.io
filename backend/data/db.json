@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1523,
+  "revision": 1524,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-18T09:16:07.171Z",
+  "updatedAt": "2026-08-18T09:29:48.687Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25298,10 +25298,10 @@
         },
         {
           "客戶別": "保誠人壽",
-          "專案負責人": "[]",
+          "專案負責人": "[\"saurman.wu@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"machi.chen@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
-          "更新時間": "2026-08-18 16:29",
+          "更新時間": "2026-08-18 17:29",
           "更新者": "Machi"
         },
         {
