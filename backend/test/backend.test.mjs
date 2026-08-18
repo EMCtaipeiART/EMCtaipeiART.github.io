@@ -143,6 +143,12 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.doesNotMatch(html, /function supplementShortUrl\(row,key\)/);
   assert.doesNotMatch(html, /supplementBaseUrl:supplementShortBaseUrl/);
   assert.match(html, /function accountSettingsMailContacts\(\)/);
+  assert.match(html, /const gmailRecipientGroupOrder=Object\.freeze\(\['企劃部','設計部','負責人','各組'\]\)/);
+  assert.match(html, /const gmailExcludedContactDepartments=Object\.freeze\(\['測試員','監測部','管理部'\]\)/);
+  assert.match(html, /if\(department==='設計部'\)return \{name,full:`\$\{name\} <\$\{email\}>`,group:'設計部',subgroup:''\}/);
+  assert.match(html, /<details class="gmail-recipient-group"/);
+  assert.match(html, /<details class="gmail-recipient-subgroup"/);
+  assert.match(html, /if\(query&&visible\)groupEl\.open=true/);
   assert.match(html, /data-recipient-chips-for="gmailComposeTo"/);
   assert.match(html, /function gmailRecipientHeaderValue\(fieldId\)/);
   assert.match(html, /window\.addEventListener\('focus',\(\)=>\{refreshCurrentAccountAvatar\(\);refreshWhenPageReturns\(\)\}\)/);
@@ -155,6 +161,37 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(inlineUpdate, /已立即更新畫面，背景寫入 JSON 資料庫中/);
   assert.match(inlineUpdate, /void enqueueInlineWrite/);
   assert.doesNotMatch(inlineUpdate, /markUpdatingCell|await refreshAfterInlineWrite/);
+});
+
+test('mail contact picker merges designers, orders groups and excludes internal departments', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf("const gmailExcludedContactDepartments=");
+  const end = html.indexOf('function openRecipientPicker(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  const settings = [
+    { '部門': '企劃部', '組別': '', '顯示名': 'Planner', '帳號': 'planner@example.com' },
+    { '部門': '設計部', '組別': '平面', '顯示名': 'Flat', '帳號': 'flat@example.com' },
+    { '部門': '設計部', '組別': '影音', '顯示名': 'Video', '帳號': 'video@example.com' },
+    { '部門': '負責人', '組別': '', '顯示名': 'Owner', '帳號': 'owner@example.com' },
+    { '部門': '專案部', '組別': 'Celine組', '顯示名': 'Member', '帳號': 'member@example.com' },
+    { '部門': '測試員', '組別': '', '顯示名': 'Tester', '帳號': 'tester@example.com' },
+    { '部門': '監測部', '組別': '', '顯示名': 'Monitor', '帳號': 'monitor@example.com' },
+    { '部門': '管理部', '組別': '人資行政組', '顯示名': 'Admin', '帳號': 'admin@example.com' }
+  ];
+  const extractEmail = value => String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
+  const run = new Function('githubJsonDatabaseCache', 'extractEmail', 'designerOptions', 'designerRecipientNames', 'designerRecipientByName', 'requiredMailCcRecipients', 'ownerContactMap', 'esc', `${source};const contacts=knownMailContacts(),groups=[];contacts.forEach(contact=>{let group=groups.find(item=>item.name===contact.group);if(!group){group={name:contact.group,items:[]};groups.push(group)}group.items.push(contact)});return {contacts,groups,markup:groups.map(group=>gmailRecipientGroupHtml(group,new Set())).join('')};`);
+  const result = run(
+    { tables: { '設定': { rows: settings }, '帳號權限': { rows: [] } } }, extractEmail,
+    ['Flat','Video'], {}, name => `${name} <${name.toLowerCase()}@example.com>`,
+    ['Owner <owner@example.com>'], new Map([['Owner','owner@example.com']]), value => String(value)
+  );
+  assert.deepEqual(result.groups.map(group => group.name), ['企劃部','設計部','負責人','各組']);
+  assert.deepEqual(result.contacts.filter(contact => contact.group === '設計部').map(contact => contact.name), ['Flat','Video']);
+  assert.equal(result.contacts.some(contact => ['Tester','Monitor','Admin'].includes(contact.name)), false);
+  assert.match(result.markup, /<details class="gmail-recipient-group" data-recipient-group="企劃部">/);
+  assert.match(result.markup, /<details class="gmail-recipient-subgroup"><summary class="gmail-recipient-subgroup-label"><span>Celine組<\/span>/);
+  assert.doesNotMatch(result.markup, /<details[^>]+\sopen(?:\s|>)/);
 });
 
 test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {

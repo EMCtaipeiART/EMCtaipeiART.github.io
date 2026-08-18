@@ -6319,6 +6319,17 @@
     .gmail-recipient-chip-remove:hover{background:#d8ecdf!important;color:#16452f!important}
     .gmail-recipient-list{max-height:320px}
     .gmail-recipient-group-label{text-transform:none;letter-spacing:.03em}
+    .gmail-recipient-group[hidden],.gmail-recipient-subgroup[hidden]{display:none}
+    .gmail-recipient-group-label,.gmail-recipient-subgroup-label{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;user-select:none}
+    .gmail-recipient-group-label::-webkit-details-marker,.gmail-recipient-subgroup-label::-webkit-details-marker{display:none}
+    .gmail-recipient-group-label{padding:6px 5px;color:#43524b;font-size:11.5px}
+    .gmail-recipient-group-label::before,.gmail-recipient-subgroup-label::before{content:'';width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(-45deg);transition:transform .14s ease;flex:0 0 auto}
+    .gmail-recipient-group[open]>.gmail-recipient-group-label::before,.gmail-recipient-subgroup[open]>.gmail-recipient-subgroup-label::before{transform:rotate(45deg)}
+    .gmail-recipient-group-count,.gmail-recipient-subgroup-count{margin-left:auto;color:var(--muted);font-size:10px;font-weight:800}
+    .gmail-recipient-group-body{display:grid;gap:2px;padding-left:3px}
+    .gmail-recipient-subgroup{margin-left:12px}
+    .gmail-recipient-subgroup-label{padding:5px;color:#66736d;font-size:11px;font-weight:850}
+    .gmail-recipient-subgroup-body{display:grid;gap:2px;padding-left:12px}
     html[data-theme="dark"] .gmail-modal-card{background:#121416!important;color:#e8eaed!important;border-color:#3c4043!important;box-shadow:0 28px 76px rgba(0,0,0,.62)!important;color-scheme:dark}
     html[data-theme="dark"] .gmail-modal-head{background:linear-gradient(180deg,#202326 0%,#181a1d 100%)!important;border-bottom-color:#3c4043!important}
     html[data-theme="dark"] .gmail-modal-head-title h3{color:#f1f3f4!important}
@@ -6371,6 +6382,7 @@
     html[data-theme="dark"] .gmail-color-option:focus-visible{border-color:#f1f3f4!important;outline-color:rgba(139,218,178,.42)!important}
     html[data-theme="dark"] .gmail-recipient-group+.gmail-recipient-group{border-top-color:#3f4448!important}
     html[data-theme="dark"] .gmail-recipient-group-label,
+    html[data-theme="dark"] .gmail-recipient-subgroup-label,
     html[data-theme="dark"] .gmail-recipient-option-email{color:#9ba1a6!important}
     html[data-theme="dark"] .gmail-recipient-option{color:#e4e7e9!important}
     html[data-theme="dark"] .gmail-recipient-option:hover{background:#292d30!important}
@@ -7810,34 +7822,58 @@ function bindGmailRecipientControl(fieldId){
   field.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===','||event.key===';')&&field.value.trim()){event.preventDefault();commitGmailRecipientInput(fieldId)}});
   field.addEventListener('blur',()=>commitGmailRecipientInput(fieldId,{report:false}));
 }
-function accountSettingsMailContacts(){
+const gmailExcludedContactDepartments=Object.freeze(['測試員','監測部','管理部']);
+function blockedMailContactEmails(){
   const settings=githubJsonDatabaseCache?.tables?.['設定']?.rows||[],permissions=githubJsonDatabaseCache?.tables?.['帳號權限']?.rows||[];
-  const disabled=new Set(permissions.filter(row=>String(row?.['狀態']||'').trim()==='停用').map(row=>String(row?.['帳號']||'').trim().toLowerCase()));
+  const blocked=new Set(permissions.filter(row=>String(row?.['狀態']||'').trim()==='停用').map(row=>extractEmail(row?.['帳號']).toLowerCase()).filter(Boolean));
+  settings.filter(row=>gmailExcludedContactDepartments.includes(String(row?.['部門']||'').trim())).forEach(row=>{const email=extractEmail(row?.['帳號']).toLowerCase();if(email)blocked.add(email)});
+  return blocked;
+}
+function accountSettingsMailContacts(){
+  const settings=githubJsonDatabaseCache?.tables?.['設定']?.rows||[];
+  const blocked=blockedMailContactEmails();
   return settings.map(row=>{
     const account=String(row?.['帳號']||'').trim(),email=extractEmail(account).toLowerCase();
-    if(!email||disabled.has(email))return null;
+    if(!email||blocked.has(email))return null;
     const name=String(row?.['顯示名']||row?.['名字']||'').trim()||email;
     const department=String(row?.['部門']||'').trim(),group=String(row?.['組別']||'').trim();
-    return {name,full:`${name} <${email}>`,group:[department,group].filter(Boolean).join(' / ')||'帳號設定'};
-  }).filter(Boolean).sort((a,b)=>a.group.localeCompare(b.group,'zh-Hant')||a.name.localeCompare(b.name,'zh-Hant'));
+    if(department.includes('企劃部'))return {name,full:`${name} <${email}>`,group:'企劃部',subgroup:''};
+    if(department==='設計部')return {name,full:`${name} <${email}>`,group:'設計部',subgroup:''};
+    if(department==='負責人')return {name,full:`${name} <${email}>`,group:'負責人',subgroup:''};
+    return {name,full:`${name} <${email}>`,group:'各組',subgroup:group||department||'其他'};
+  }).filter(Boolean);
 }
-/** 聯絡人以「帳號設定」的部門／組別為主要名錄，再補上設計師 fallback、固定副本與案件中曾出現的專案負責人。 */
+const gmailRecipientGroupOrder=Object.freeze(['企劃部','設計部','負責人','各組']);
+/** 聯絡人以固定的企劃部、設計部、負責人、各組順序呈現，再補上設計師與案件負責人 fallback。 */
 function knownMailContacts(){
-  const seen=new Set(), list=[];
-  const add=(name,full,group)=>{
+  const seen=new Set(),blocked=blockedMailContactEmails(),list=[];
+  const add=(name,full,group,subgroup='')=>{
     const email=extractEmail(full);
-    if(!email||seen.has(email.toLowerCase()))return;
+    if(!email||blocked.has(email.toLowerCase())||seen.has(email.toLowerCase()))return;
     seen.add(email.toLowerCase());
-    list.push({name:(name||'').trim()||email,full,group});
+    list.push({name:(name||'').trim()||email,full,group,subgroup});
   };
-  accountSettingsMailContacts().forEach(contact=>add(contact.name,contact.full,contact.group));
-  designerOptions.forEach(name=>add(designerRecipientNames[name]||name,designerRecipientByName(name),'設計組'));
-  requiredMailCcRecipients.forEach(full=>add(full.replace(/\s*<.*?>\s*/,'').trim(),full,'固定副本'));
+  accountSettingsMailContacts().forEach(contact=>add(contact.name,contact.full,contact.group,contact.subgroup));
+  designerOptions.forEach(name=>add(designerRecipientNames[name]||name,designerRecipientByName(name),'設計部'));
+  requiredMailCcRecipients.forEach(full=>add(full.replace(/\s*<.*?>\s*/,'').trim(),full,'負責人'));
   [...ownerContactMap.entries()]
     .filter(([name,email])=>name&&email&&!String(name).includes('@')&&String(name).toLowerCase()!==String(email).toLowerCase())
     .sort((a,b)=>String(a[0]).localeCompare(String(b[0]),'zh-Hant'))
-    .forEach(([name,email])=>add(name,`${name} <${email}>`,'專案負責人'));
-  return list;
+    .forEach(([name,email])=>add(name,`${name} <${email}>`,'負責人'));
+  return list.sort((a,b)=>gmailRecipientGroupOrder.indexOf(a.group)-gmailRecipientGroupOrder.indexOf(b.group)||String(a.subgroup).localeCompare(String(b.subgroup),'zh-Hant')||String(a.name).localeCompare(String(b.name),'zh-Hant'));
+}
+function gmailRecipientOptionHtml(contact,currentEmails){
+  const search=[contact.group,contact.subgroup,contact.name,extractEmail(contact.full)].filter(Boolean).join(' ').toLowerCase();
+  return `<label class="gmail-recipient-option" data-contact-search="${esc(search)}"><input type="checkbox" value="${esc(contact.full)}" ${currentEmails.has(extractEmail(contact.full).toLowerCase())?'checked':''}><span class="gmail-recipient-option-name">${esc(contact.name)}</span><span class="gmail-recipient-option-email">${esc(extractEmail(contact.full))}</span></label>`;
+}
+function gmailRecipientGroupHtml(group,currentEmails){
+  let body='';
+  if(group.name==='各組'){
+    const subgroups=[];
+    group.items.forEach(contact=>{let subgroup=subgroups.find(item=>item.name===contact.subgroup);if(!subgroup){subgroup={name:contact.subgroup,items:[]};subgroups.push(subgroup)}subgroup.items.push(contact)});
+    body=subgroups.map(subgroup=>`<details class="gmail-recipient-subgroup"><summary class="gmail-recipient-subgroup-label"><span>${esc(subgroup.name)}</span><span class="gmail-recipient-subgroup-count">${subgroup.items.length}</span></summary><div class="gmail-recipient-subgroup-body">${subgroup.items.map(contact=>gmailRecipientOptionHtml(contact,currentEmails)).join('')}</div></details>`).join('');
+  }else body=group.items.map(contact=>gmailRecipientOptionHtml(contact,currentEmails)).join('');
+  return `<details class="gmail-recipient-group" data-recipient-group="${esc(group.name)}"><summary class="gmail-recipient-group-label"><span>${esc(group.name)}</span><span class="gmail-recipient-group-count">${group.items.length}</span></summary><div class="gmail-recipient-group-body">${body}</div></details>`;
 }
 function openRecipientPicker(fieldId,anchorEl){
   const field=document.getElementById(fieldId);
@@ -7852,7 +7888,7 @@ function openRecipientPicker(fieldId,anchorEl){
     if(!group){group={name:contact.group,items:[]};groups.push(group)}
     group.items.push(contact);
   });
-  const groupsHtml=groups.map(group=>`<div class="gmail-recipient-group"><div class="gmail-recipient-group-label">${esc(group.name)}</div>${group.items.map(contact=>`<label class="gmail-recipient-option" data-contact-search="${esc((contact.group+' '+contact.name+' '+extractEmail(contact.full)).toLowerCase())}"><input type="checkbox" value="${esc(contact.full)}" ${currentEmails.has(extractEmail(contact.full).toLowerCase())?'checked':''}><span class="gmail-recipient-option-name">${esc(contact.name)}</span><span class="gmail-recipient-option-email">${esc(extractEmail(contact.full))}</span></label>`).join('')}</div>`).join('');
+  const groupsHtml=groups.map(group=>gmailRecipientGroupHtml(group,currentEmails)).join('');
   fieldPopover.innerHTML=`<h3>選擇聯絡人</h3><input type="text" class="gmail-recipient-search" id="gmailRecipientSearch" placeholder="搜尋姓名或 Email"><div class="gmail-recipient-list">${groupsHtml||'<p class="small">目前沒有可選擇的聯絡人</p>'}</div><div class="gmail-recipient-actions"><button type="button" id="gmailRecipientApply">套用</button></div>`;
   fieldPopover.hidden=false;
   positionFieldPopover(anchorEl);
@@ -7866,6 +7902,14 @@ function openRecipientPicker(fieldId,anchorEl){
         if(match)visible++;
       });
       groupEl.hidden=visible===0;
+      if(query&&visible)groupEl.open=true;
+      if(!query)groupEl.open=false;
+      groupEl.querySelectorAll('.gmail-recipient-subgroup').forEach(subgroupEl=>{
+        const subgroupVisible=[...subgroupEl.querySelectorAll('.gmail-recipient-option')].some(optionEl=>!optionEl.hidden);
+        subgroupEl.hidden=!subgroupVisible;
+        if(query&&subgroupVisible)subgroupEl.open=true;
+        if(!query)subgroupEl.open=false;
+      });
     });
   });
   $('#gmailRecipientApply').onclick=()=>{
