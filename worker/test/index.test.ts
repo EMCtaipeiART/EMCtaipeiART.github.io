@@ -772,7 +772,8 @@ describe('Machi Design API Worker', () => {
     const sentBodyHtml = 'Hi，這是測試信件內容<br><br>參考連結：<a href="https://example.com/brief">簡報連結</a><br>-- <br>Machi 敬上';
     const sent = await api({
       action: 'sendCaseMail', caseId: '26080001',
-      to: 'designer@emctaipei.com', cc: '', subject: '【26080001】測試客戶_Worker 測試案件', bodyHtml: sentBodyHtml
+      to: '設計師 <designer@emctaipei.com>', cc: '客戶窗口 <client@example.com>',
+      subject: '【26080001】測試客戶_Worker 測試案件', bodyHtml: sentBodyHtml
     }, token);
     expect(sent).toMatchObject({ ok: true, threadId: 'gmail-thread-1', gmailMessageId: 'gmail-msg-1' });
     // raw 應該是 multipart/alternative：text/plain 備援（連結被拿掉標籤但保留文字）＋text/html（保留完整超連結與簽名檔）。
@@ -787,6 +788,13 @@ describe('Machi Design API Worker', () => {
     expect(plainPartBody).not.toContain('<a href');
     const htmlPartBody = extractPart('text/html');
     expect(htmlPartBody).toBe(sentBodyHtml);
+    // 收件人／副本的中文顯示名必須依 RFC 2047 編碼，標頭段落本身只能是 ASCII——否則部分郵件用戶端（含 Gmail 本身）在收件匣清單會把顯示名顯示成亂碼。
+    const headerSection = decodedMime.slice(0, decodedMime.indexOf('\r\n\r\n'));
+    expect(headerSection).toContain('To: =?UTF-8?B?');
+    expect(headerSection).toContain('<designer@emctaipei.com>');
+    expect(headerSection).toContain('Cc: =?UTF-8?B?');
+    expect(headerSection).toContain('<client@example.com>');
+    expect(/^[\x00-\x7f]*$/.test(headerSection)).toBe(true);
 
     const listed = await api({ action: 'list' }, token);
     const caseRow = (listed.rows as Array<Record<string, unknown>>).find(row => row.id === '26080001');

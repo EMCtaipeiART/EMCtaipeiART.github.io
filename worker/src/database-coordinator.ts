@@ -190,8 +190,20 @@ function encodeMimeHeaderText(value: string): string {
   return `=?UTF-8?B?${btoa(String.fromCharCode(...new TextEncoder().encode(value)))}?=`;
 }
 
+/** 把單一個「顯示名 <email>」或純 email 字串，依 RFC 2047 把顯示名編碼——沒有這一步，中文顯示名會以未宣告編碼的原始 UTF-8 位元組寫進標頭，部分郵件用戶端（含 Gmail 本身）會顯示成亂碼。 */
+function encodeMimeAddress(raw: string): string {
+  const trimmed = raw.trim();
+  const match = trimmed.match(/^"?([^"<]*?)"?\s*<([^<>]+)>$/);
+  if (!match) return trimmed;
+  const name = match[1].trim();
+  const email = match[2].trim();
+  if (!name) return `<${email}>`;
+  if (/^[\x20-\x7e]*$/.test(name)) return /[",]/.test(name) ? `"${name.replace(/"/g, '\\"')}" <${email}>` : `${name} <${email}>`;
+  return `${encodeMimeHeaderText(name)} <${email}>`;
+}
+
 function mimeAddressList(value: string): string {
-  return value.split(',').map(part => part.trim()).filter(Boolean).join(', ');
+  return value.split(',').map(part => part.trim()).filter(Boolean).map(encodeMimeAddress).join(', ');
 }
 
 /** 把 HTML 內容轉成陽春的純文字版本，當 multipart/alternative 的 text/plain 備援分支——Workers 執行環境沒有 DOM，用正規表達式手動處理，不追求完美還原格式，只求可讀。 */
