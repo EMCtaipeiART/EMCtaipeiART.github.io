@@ -410,6 +410,9 @@
     button:not(.revision-pill):hover{background:var(--green-dark)!important}
     button.secondary,.login-btn,.modify-refresh,#requestBatchToggle,.request-help-actions button,.row-actions button.secondary,.column-action-controls button{background:#f3f6f4!important;color:#2e3b35!important;border-color:#e1e8e4!important}
     button.secondary:hover,.login-btn:hover,.modify-refresh:hover,#requestBatchToggle:hover,.request-help-actions button:hover,.row-actions button.secondary:hover,.column-action-controls button:hover{background:#e9f0ec!important;color:#15231d!important}
+    /* 案件列表「刪除」按鈕：配色沿用「未開始」狀態的粉紅色，跟旁邊的「編輯」按鈕區隔開。 */
+    .row-actions button.secondary.case-delete-btn{background:#fff1f2!important;color:#be123c!important;border-color:#fecdd3!important}
+    .row-actions button.secondary.case-delete-btn:hover{background:#ffe4e6!important;color:#9f1239!important}
     button.warn{background:#1f2937!important;color:#fff!important;border-color:#1f2937!important}
     button.warn:hover{background:#111827!important}
     .tab-btn{min-height:38px!important;border-radius:999px!important;background:#f3f6f4!important;color:#66736d!important;border:1px solid #e1e8e4!important;font-size:14px!important}
@@ -5180,6 +5183,8 @@
     html[data-theme="dark"] .field-popover .status-option.未開始{
       background:#5a2f38!important;color:#ffd1d8!important;border-color:#c66b7c!important;
     }
+    html[data-theme="dark"] .row-actions button.secondary.case-delete-btn{background:#5a2f38!important;color:#ffd1d8!important;border-color:#c66b7c!important}
+    html[data-theme="dark"] .row-actions button.secondary.case-delete-btn:hover{background:#6d3846!important;color:#ffe1e7!important}
     html[data-theme="dark"] #casesSection .status.執行中,
     html[data-theme="dark"] #casesSection .editable-status.執行中,
     html[data-theme="dark"] #casesSection .editable-status.執行中:hover,
@@ -6531,7 +6536,7 @@
     <form id="requestForm" class="grid form" novalidate>
       <input type="hidden" name="requestKind" value="設計新增需求">
       <input type="hidden" name="details" value="">
-      <label class="field-client">客戶別<input name="client" required placeholder="例：金士頓"></label>
+      <label class="field-client">客戶別<select name="client" required onchange="handleClientSelectChange(this)"></select></label>
       <label class="field-project">專案名稱<input name="project" required placeholder="例：12月社群貼文_resize"></label>
       <label class="field-owner">專案負責人<input name="owner" list="ownerList" required placeholder="請填寫您的稱呼"><datalist id="ownerList"></datalist></label>
       <label class="field-type">設計種類<select name="type"></select></label>
@@ -7021,6 +7026,7 @@ async function fetchGithubJsonDatabase({fresh=false}={}){
   }
   syncWeightRulesFromDatabase(database);
   syncDesignListsFromDatabase(database);
+  syncCustomerDirectoryFromDatabase(database);
   githubJsonDatabaseCache=database;
   githubJsonDatabaseLoadedAt=Date.now();
   return database;
@@ -7159,6 +7165,14 @@ const baseDesignLists = {
   }
 };
 let designLists = JSON.parse(JSON.stringify(baseDesignLists));
+// 跟 designerOptions 一樣先給一份寫死的預設清單，讓下拉選單在 db.json 讀完之前就有內容可選；
+// 之後 syncCustomerDirectoryFromDatabase() 讀到「客戶別」表的即時資料就會整批取代掉。
+const baseCustomerNames = [
+  '丹士特', '王品', '欣格家居', '金士頓', '保誠人壽', '保麗淨', '席伊麗', '高露潔', '添可', '富美家',
+  '統一', '新安東京', '嘉儀家品', '滿意寶寶', '酷澎', '墾丁國家公園管理處', '癌症希望基金會', '聯華食品',
+  '蘇菲', '櫻花', 'ANKER', 'BAT', 'BAT英美菸草', 'DJI', 'EMC', 'Epson', 'eufy', 'soundcore'
+];
+let customerDirectoryRows = baseCustomerNames.map(name=>({'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'}));
 function normalizeWeightType(value){const type=String(value||'').trim();return ['影片','影像','影音'].includes(type)?'影音':type}
 function splitWeightDetails(value){return [...new Set(String(value||'').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).filter(Boolean))]}
 function defaultDetailWeight(type,stage,detail){
@@ -7193,6 +7207,87 @@ function designListsFromWeightTable(database){
   return next;
 }
 function syncDesignListsFromDatabase(database){const next=designListsFromWeightTable(database);if(next)designLists=next}
+// 客戶別下拉選單、專案負責人鎖定與設計負責人自動帶入──資料來源是 db.json 的「客戶別」表（跟加權規則/選單同一份 fetch）。
+function parseNameListValue(value){
+  if(Array.isArray(value))return value.map(v=>String(v||'').trim()).filter(Boolean);
+  const raw=String(value||'').trim();
+  if(!raw)return [];
+  try{const parsed=JSON.parse(raw); if(Array.isArray(parsed))return parsed.map(v=>String(v||'').trim()).filter(Boolean)}catch(err){}
+  return raw.split(/\s*,\s*|，|、|\r?\n/).map(v=>v.trim()).filter(Boolean);
+}
+function canonicalAccountClient(value){const account=String(value||'').trim().toLowerCase();if(!account||account.startsWith('local:'))return account;return account.includes('@')?account:`${account}@emctaipei.com`}
+function customerDirectoryRowFor(name){const key=String(name||'').trim();return key?(customerDirectoryRows||[]).find(row=>String(row['客戶別']||'').trim()===key):null}
+function syncCustomerDirectoryFromDatabase(database){
+  const rows=database?.tables?.['客戶別']?.rows;
+  if(!Array.isArray(rows))return;
+  customerDirectoryRows=rows;
+  populateCustomerSelect();
+  if(!editingId)applyCustomerOwnerLock();
+}
+function populateCustomerSelect(){
+  const el=formEl?.elements?.client;
+  if(!el)return;
+  const old=el.value;
+  const names=(customerDirectoryRows||[]).map(row=>String(row['客戶別']||'').trim()).filter(Boolean);
+  const extra=old&&old!=='__new__'&&!names.includes(old)?[old]:[];
+  el.innerHTML='<option value=""></option>'+[...names,...extra].map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('')+'<option value="__new__">+ 新增客戶別</option>';
+  el.value=old;
+}
+function isCustomerOwnerAccount(){
+  if(!isLoggedIn())return false;
+  const account=canonicalAccountClient(currentEditorAccount||currentEditor);
+  if(!account)return false;
+  return (customerDirectoryRows||[]).some(row=>parseNameListValue(row['專案負責人']).map(canonicalAccountClient).includes(account));
+}
+function matchesOwnerIdentity(ownerText){
+  const owner=String(ownerText||'').trim();
+  if(!owner||!isLoggedIn())return false;
+  const me=String(currentEditorDisplayName||currentEditor||'').trim();
+  return Boolean(me)&&owner.toLowerCase()===me.toLowerCase();
+}
+function isOwnCustomerCase(row){return isCustomerOwnerAccount()&&matchesOwnerIdentity(row?.owner)}
+function applyCustomerDesignerAutoFill(){
+  if(editingId)return;
+  const designerEl=formEl?.elements?.designer;
+  if(!designerEl||String(designerEl.value||'').trim())return;
+  const row=customerDirectoryRowFor(formEl?.elements?.client?.value);
+  if(!row)return;
+  const candidates=parseNameListValue(row['設計負責人']).filter(name=>designerOptions.includes(name));
+  if(candidates.length)designerEl.value=candidates[0];
+}
+function applyCustomerOwnerLock(){
+  const ownerEl=formEl?.elements?.owner;
+  if(!ownerEl||editingId)return;
+  if(isCustomerOwnerAccount()){
+    ownerEl.readOnly=true;
+    ownerEl.value=String(currentEditorDisplayName||currentEditor||'').trim();
+    ownerAutoFillDone=true;
+    applyCustomerDesignerAutoFill();
+  }else{
+    ownerEl.readOnly=false;
+  }
+}
+async function handleClientSelectChange(el){
+  if(el.value!=='__new__'){applyCustomerDesignerAutoFill();return}
+  const name=String(prompt('請輸入新客戶別名稱：')||'').trim();
+  if(!name){el.value='';return}
+  el.disabled=true;
+  try{
+    const result=await sheetApi('addCustomer',{name,editorToken:currentEditorToken});
+    if(!result?.ok)throw new Error(result?.error||'新增客戶別失敗');
+    const row=result.customer||{'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'};
+    customerDirectoryRows=[...(customerDirectoryRows||[]).filter(item=>String(item['客戶別']||'').trim()!==name),row];
+    el.disabled=false;
+    populateCustomerSelect();
+    el.value=name;
+    setSync(`已新增客戶別「${name}」`);
+    applyCustomerDesignerAutoFill();
+  }catch(err){
+    el.disabled=false;
+    el.value='';
+    setSync(`新增客戶別失敗：${err.message}`,true);
+  }
+}
 function detailWeight(type,stage,detail){const normalizedType=normalizeWeightType(type),normalizedStage=String(stage||'').trim(),rule=activeWeightRules.find(item=>item.type===normalizedType&&item.stage===normalizedStage&&item.detail===detail);return rule?rule.weight:defaultDetailWeight(normalizedType,normalizedStage,detail)}
 function calculateRowWeight(row={}){const details=splitWeightDetails(row.details??row['項目細節']);if(!details.length)return '';const quantity=Number(String(row.qty??row['數量']??'').replace(/,/g,'')),type=row.type??row['設計種類']??row['設計類型'],stage=row.stage??row['階段'],regularScore=details.filter(detail=>detail!=='急件').reduce((sum,detail)=>sum+detailWeight(type,stage,detail),0),urgentMultiplier=details.includes('急件')?detailWeight(type,stage,'急件'):1;const value=(Number.isFinite(quantity)?quantity:0)*regularScore*urgentMultiplier;return String(Number(value.toFixed(4)))}
 const columns = [
@@ -7266,8 +7361,8 @@ const ownerProjectColumnsAll = [
 ];
 const defaultHiddenColumns = ['month','owner','type','stage'];
 // 發信／編輯沒有權限時，整欄（含表頭）都不顯示，而不是留一排空格子。
-function canSendMailNow(){return accessAllowed('request.mail',true)}
-function canEditCasesNow(){return accessAllowed('request.edit',hasDesignerAccountRole())}
+function canSendMailNow(){return accessAllowed('request.mail',true)||isCustomerOwnerAccount()}
+function canEditCasesNow(){return accessAllowed('request.edit',hasDesignerAccountRole())||isCustomerOwnerAccount()}
 function allowedColumns(list){return list.filter(column=>typeof column.visible!=='function'||column.visible())}
 function modifyFixedColumns(){return allowedColumns(modifyFixedColumnsAll)}
 function ownerProjectColumns(){return allowedColumns(ownerProjectColumnsAll)}
@@ -8098,7 +8193,7 @@ function caseDetailRows(row){const designImagesHtml=caseDetailDesignImagesHtml(r
 ]}
 function canAutoFillOwner(){return !ownerTouchedByUser&&!editingId&&requestKind==='設計新增需求'}
 function fillOwnerFromDraft(){const value=currentLoginOwnerName()||localStorage.getItem(ownerDraftKey)||''; if(canAutoFillOwner()&&value){formEl.elements.owner.value=value; ownerAutoFillDone=true}}
-function applyCurrentUserProfile(){fillOwnerFromDraft(); applyAccountSettingsIfNeeded()}
+function applyCurrentUserProfile(){fillOwnerFromDraft(); applyCustomerOwnerLock(); applyAccountSettingsIfNeeded()}
 async function loadCurrentUserOwner(){applyCurrentUserProfile()}
 function populateSelect(el,options,value){const old=value??el.value; el.innerHTML=options.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); if(options.includes(old))el.value=old}
 function populateDesignerSelect(){const designerEl=formEl.elements.designer, old=designerEl.value; designerEl.innerHTML='<option value=""></option>'+designerOptions.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join(''); if(designerOptions.includes(old))designerEl.value=old}
@@ -8642,7 +8737,13 @@ function archiveFilterRequested(){
   return searchHasText()||years.some(value=>value<year)||(!years.length&&months.some(value=>value<currentMonthNo));
 }
 function rowsForSearch(){
-  return archiveFilterRequested()&&archiveRows.length?mergeRowsById(archiveRows,rows):rows;
+  return visibleCaseRows(archiveFilterRequested()&&archiveRows.length?mergeRowsById(archiveRows,rows):rows);
+}
+// 客戶別的專案負責人（非管理者）只看得到「專案負責人＝自己」的案件——這只是前端顯示層的過濾，
+// 不是資料存取邊界（db.json 本來就是公開靜態檔，真正的授權邊界在 Worker 寫入端）。
+function visibleCaseRows(source=rows){
+  if(!isCustomerOwnerAccount()||isAdministrator())return source;
+  return source.filter(r=>matchesOwnerIdentity(r.owner));
 }
 function scheduleArchiveSearchLoad(){
   clearTimeout(archiveSearchTimer);
@@ -9225,15 +9326,17 @@ function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnable
 function rowYear(r){const d=new Date(r.start||r.end); if(Number.isNaN(d.getTime()))return ''; const y=d.getFullYear(); return y>=1900&&y<=2100?String(y):''}
 function isLoggedIn(){return Boolean(currentEditor&&currentEditorToken)}
 function isEditableRow(r){if(r?.pendingCreate)return false;const y=Number(rowYear(r)); return y>=Number(currentYear())}
-function canCaseEditRow(r){return accessAllowed('request.edit',hasDesignerAccountRole())&&isEditableRow(r)}
+function canCaseEditRow(r){return (accessAllowed('request.edit',hasDesignerAccountRole())||isOwnCustomerCase(r))&&isEditableRow(r)}
 function canListEditRow(r){return accessAllowed('request.status',hasDesignerAccountRole())&&isEditableRow(r)}
+function canDeleteCaseRow(r){return (accessAllowed('request.delete',false)||isOwnCustomerCase(r))&&isEditableRow(r)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
 function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
+function deleteIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13.1c-.1 1-.9 1.9-2 1.9H9c-1.1 0-1.9-.8-2-1.9L6 7Zm3-3.5c0-.6.4-1 1-1h4c.6 0 1 .4 1 1V5H9V3.5ZM4 5h16v2H4V5Z"/></svg>'}
 function gmailReplyIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M10 5v3.1C5.7 8.7 2.7 11.6 2 17c2.1-3 4.7-4.4 8-4.5V16l7-5.5L10 5Z"/></svg>'}
 /** 案件一旦透過 Gmail 建立過信件串（row.gmailThreadId 有值），按鈕直接從「發信」變成「回信」並跳過選擇發信方式的選單，直接開啟該信件串——同一顆按鈕、同一個位置，不再另外並排一顆獨立的回信按鈕。 */
 function mailAction(row,{icon=false}={}){
-  if(!accessAllowed('request.mail',true))return '';
+  if(!accessAllowed('request.mail',true)&&!isOwnCustomerCase(row))return '';
   if(!isEditableRow(row))return historyLock();
   if(row.gmailThreadId)return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" onclick="openGmailThreadModal('${jsArg(row.id)}')">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
   return `<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`;
@@ -9682,7 +9785,7 @@ function renderTable(list){
   syncTimelineHeights();
   adjustCaseSplitHeight();
 }
-function editableRowsSorted(){return [...rows].filter(row=>row.pendingCreate||isEditableRow(row)).sort((a,b)=>{if(Boolean(a.pendingCreate)!==Boolean(b.pendingCreate))return a.pendingCreate?-1:1;return (Number(b.id)||0)-(Number(a.id)||0)})}
+function editableRowsSorted(){return visibleCaseRows(rows).filter(row=>row.pendingCreate||isEditableRow(row)).sort((a,b)=>{if(Boolean(a.pendingCreate)!==Boolean(b.pendingCreate))return a.pendingCreate?-1:1;return (Number(b.id)||0)-(Number(a.id)||0)})}
 function latestEditableRows(limit=modifyPageSize){return editableRowsSorted().slice(0,limit)}
 function modifyPageItems(totalPages){const start=Math.floor((modifyPage-1)/4)*4+1, end=Math.min(totalPages,start+3); return Array.from({length:end-start+1},(_,i)=>start+i)}
 function setModifyPage(page){modifyPage=Number(page)||1; renderModifyRecent()}
@@ -9901,7 +10004,7 @@ function adjustCaseSplitHeight(){
   });
 }
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
-function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button></div>`}
+function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); const del=canDeleteCaseRow(r)?`<button class="secondary case-delete-btn" onclick="deleteRow('${id}')">${icon?deleteIcon():''}<span>刪除</span></button>`:''; return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button>${del}</div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}" data-field-label="${esc(item.label)}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
 function openCaseDetail(id,{preserveOwnerReturn=false}={}){if(!preserveOwnerReturn)ownerProjectsReturnName=''; const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','階段','狀態','數量','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改','設計圖記錄']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!ownerProjectsReturnName; modal.hidden=false; syncCaseDetailScale()}
@@ -10147,7 +10250,7 @@ async function verifyStoredEditorToken(){
     return true;
   }
 }
-async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); updateLoginUi(); render(); setSync('已登出')}
+async function logoutEditor(){const oldAccount=currentEditorAccount, oldToken=currentEditorToken; try{if(oldToken&&apiUrl)await sheetApi('logout',{editorToken:oldToken})}catch(err){console.warn('後端登出失敗，仍會清除前端登入狀態',err)} resetGoogleLoginState(oldAccount); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentAccountAvatar=''; clearEditorWindowSession(); selectedCaseIds.clear(); setGoogleLoginEmail(''); $('#batchTools').hidden=true; applyAccountSettingsIfNeeded(); applyCustomerOwnerLock(); updateLoginUi(); render(); setSync('已登出')}
 function loginEditor(user,token,settings=null,account=''){currentAccountAvatar=''; currentEditor=user; currentEditorDisplayName=remoteDisplayName(settings)||user; currentEditorAccount=account||currentEditorAccount; currentEditorToken=token||''; currentEditorGroup=remoteDesignGroup(settings)||fallbackDesignGroupForUser(user); currentEditorDepartment=remoteDepartment(settings)||currentEditorDepartment; lastEditorSessionKeepAliveAt=Date.now(); persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); applyAccountSettingsIfNeeded(settings); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已套用個人欄位與篩選設定`); const appliedAccount=currentEditorAccount, appliedUser=user, settingsRevision=accountSettingsRevision; fetchAccountSettings(appliedAccount,appliedUser).then(remoteSettings=>{if(!remoteSettings||currentEditor!==appliedUser||currentEditorAccount!==appliedAccount||accountSettingsRevision!==settingsRevision)return; applyAccountSettingsIfNeeded({...settings,...remoteSettings}); updateLoginUi(); render(); setSync(`已登入：${currentUserDisplayName()}，已同步試算表篩選設定`)}).catch(err=>console.warn('帳號篩選設定讀取失敗',err))}
 async function keepEditorSessionAlive(){
   if(!isLoggedIn()||isLocalPreviewToken()||document.hidden||Date.now()-lastEditorSessionKeepAliveAt<editorSessionKeepAliveMs)return false;
@@ -10670,7 +10773,7 @@ function initCaseTableDragScroll(){
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
-function deleteRow(id){if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
+function deleteRow(id){const target=rows.find(row=>String(row.id)===String(id)); if(!canDeleteCaseRow(target||{})){setSync('此帳號沒有刪除此案件的權限',true);return} if(!confirm(`確定刪除案件 ${id}？`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
 function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; updateCaseRow(id,{status:'已取消'},'已更新為已取消')}
 
 /* Central permission guards keep every entry point consistent, including inline table actions. */
@@ -11041,7 +11144,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>

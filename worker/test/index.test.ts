@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { emptyDatabase } from '../../backend/schema.mjs';
+import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import type { DatabaseSnapshot } from '../src/types';
 
@@ -78,6 +78,23 @@ async function seedAccountPermission(account: string, role: string, capabilities
       '帳號': account, '角色範本': role, '狀態': '啟用',
       '頁面權限': JSON.stringify(['request']), '功能權限': JSON.stringify(capabilities)
     });
+    state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+  });
+}
+
+async function seedCustomerOwner(customerName: string, account: string): Promise<void> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+    const database = JSON.parse(stored.json) as DatabaseSnapshot;
+    let row = database.tables['客戶別'].rows.find(item => item['客戶別'] === customerName);
+    if (!row) {
+      row = { '客戶別': customerName, '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '' };
+      database.tables['客戶別'].rows.push(row);
+    }
+    const owners = JSON.parse(String(row['專案負責人'] || '[]')) as string[];
+    if (!owners.includes(account)) owners.push(account);
+    row['專案負責人'] = JSON.stringify(owners);
     state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
   });
 }
@@ -993,5 +1010,133 @@ describe('Machi Design API Worker', () => {
     });
     const insufficientScope = await api({ action: 'getGmailSignature' }, token);
     expect(insufficientScope).toMatchObject({ ok: false, reason: 'INSUFFICIENT_SCOPE' });
+  });
+
+  it('seeds the 29 default customers on normalize and preserves existing assignments plus extra admin-added customers', async () => {
+    await seedCustomerOwner('Epson', 'test.user@emctaipei.com');
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'customer-extra-file-sha' }, commit: { sha: 'customer-extra-commit-sha' } });
+    });
+    // 後台通用的 adminTableInsert 新增一個不在預設清單裡的客戶別，確認合併邏輯不會把它洗掉。
+    const inserted = await api({
+      action: 'adminTableInsert', table: '客戶別',
+      row: { '客戶別': '後台自訂客戶', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': 'Machi' }
+    }, token);
+    expect(inserted.ok).toBe(true);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const customerRows = database.tables['客戶別'].rows;
+    expect(customerRows).toHaveLength(DEFAULT_CUSTOMER_NAMES.length + 1);
+    expect(customerRows.map(row => row['客戶別'])).toEqual(expect.arrayContaining([...DEFAULT_CUSTOMER_NAMES, '後台自訂客戶']));
+    expect(JSON.parse(String(customerRows.find(row => row['客戶別'] === 'Epson')?.['專案負責人']))).toEqual(['test.user@emctaipei.com']);
+  });
+
+  it('lets any request.create account add a bare customer via addCustomer, rejects duplicates, and also allows anonymous submitters (matching the case-submission form)', async () => {
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: `add-customer-file-${crypto.randomUUID()}` }, commit: { sha: 'add-customer-commit-sha' } });
+    });
+    const created = await api({ action: 'addCustomer', name: '新測試客戶' }, token);
+    expect(created).toMatchObject({ ok: true, action: 'addCustomer', customer: { '客戶別': '新測試客戶' } });
+
+    const duplicate = await api({ action: 'addCustomer', name: '新測試客戶' }, token);
+    expect(duplicate).toMatchObject({ ok: false, error: '這個客戶別已經存在' });
+
+    const empty = await api({ action: 'addCustomer', name: '   ' }, token);
+    expect(empty).toMatchObject({ ok: false, error: '請輸入客戶別名稱' });
+
+    // 比照案件填單本身不強制登入的既有慣例：沒有 session 也能新增客戶別（不需要 request.create 檢查）。
+    const anonymous = await api({ action: 'addCustomer', name: '匿名新增客戶' });
+    expect(anonymous).toMatchObject({ ok: true, customer: { '客戶別': '匿名新增客戶', '更新者': '匿名填單' } });
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['客戶別'].rows.filter(row => row['客戶別'] === '新測試客戶')).toHaveLength(1);
+    expect(database.tables['客戶別'].rows.some(row => row['客戶別'] === '匿名新增客戶')).toBe(true);
+  });
+
+  it('grants request.edit/request.delete/request.mail to a customer-assigned project owner only for their own case row, blocking other rows and unassigned accounts', async () => {
+    // 完全沒有 request.edit／request.delete／request.mail，只靠客戶別的專案負責人身分額外放行。
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.create']);
+    await seedCustomerOwner('測試客戶', 'test.user@emctaipei.com');
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      // 26080001（既有種子案件）的專案負責人比對「設定」表的顯示名，不是帳號本身。
+      database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['專案負責人'] = '測試使用者';
+      database.tables.database.rows.push(
+        { '案件編號': '26080002', '客戶別': '測試客戶', '專案負責人': '別人', '專案名稱': '別人負責的案件', '狀態': '未開始' },
+        { '案件編號': '26080003', '客戶別': '測試客戶', '專案負責人': '測試使用者', '專案名稱': '刪除測試案件', '狀態': '未開始' }
+      );
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: `owner-file-${crypto.randomUUID()}` }, commit: { sha: 'owner-commit-sha' } });
+    });
+
+    // 編輯自己負責的案件：成功。
+    const ownUpdate = await api({ action: 'update', id: '26080001', row: { id: '26080001', project: '自己負責的更新' } }, token);
+    expect(ownUpdate).toMatchObject({ ok: true, id: '26080001' });
+
+    // 編輯同一客戶別、但專案負責人是別人的案件：擋下。
+    const otherUpdate = await api({ action: 'update', id: '26080002', row: { id: '26080002', project: '不該被改' } }, token);
+    expect(otherUpdate).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+
+    // batchUpdate 不套用這個放寬，即使是自己的案件也一樣要求 request.edit。
+    const batchAttempt = await api({ action: 'batchUpdate', rows: [{ id: '26080001', row: { project: '批次不應該成功' } }] }, token);
+    expect(batchAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+
+    // 發信：自己負責的案件成功、別人負責的被擋。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'msg-1', threadId: 'thread-1' });
+      if (url.startsWith('https://api.github.com/')) return Response.json({ content: { sha: `mail-file-${crypto.randomUUID()}` }, commit: { sha: 'mail-commit-sha' } });
+      throw new Error(`unexpected fetch during owner-mail test: ${url}`);
+    });
+    // 尚未連接 Gmail，所以直接呼叫 sendCaseMail 會在權限檢查之後卡在「尚未連接 Gmail」，
+    // 這裡只驗證權限層是否放行／擋下（用是否還是「此帳號沒有「request.mail」權限」這個特定錯誤字串來判斷）。
+    const ownMailAttempt = await api({ action: 'sendCaseMail', caseId: '26080001', to: 'x@example.com', subject: 'test', bodyText: 'x' }, token);
+    expect(ownMailAttempt.error).not.toBe('此帳號沒有「request.mail」權限');
+    const otherMailAttempt = await api({ action: 'sendCaseMail', caseId: '26080002', to: 'x@example.com', subject: 'test', bodyText: 'x' }, token);
+    expect(otherMailAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.mail」權限' });
+
+    // 刪除：自己負責的案件成功，別人負責的被擋。
+    const otherDelete = await api({ action: 'delete', id: '26080002' }, token);
+    expect(otherDelete).toMatchObject({ ok: false, error: '此帳號沒有「request.delete」權限' });
+    const ownDelete = await api({ action: 'delete', id: '26080003' }, token);
+    expect(ownDelete).toMatchObject({ ok: true, id: '26080003' });
+
+    // archive.edit 分支不受這個放寬影響：即使是自己的案件，帶 accessContext:'archive' 一樣要求 archive.edit。
+    const archiveDelete = await api({ action: 'delete', id: '26080001', accessContext: 'archive' }, token);
+    expect(archiveDelete).toMatchObject({ ok: false, error: '此帳號沒有「archive.edit」權限' });
+  });
+
+  it('lets the manager account edit, delete and mail any case regardless of customer assignment', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: `manager-file-${crypto.randomUUID()}` }, commit: { sha: 'manager-commit-sha' } });
+    });
+    const managerUpdate = await api({ action: 'update', id: '26080001', row: { id: '26080001', project: '管理者不受限' } }, token);
+    expect(managerUpdate).toMatchObject({ ok: true, id: '26080001' });
+    const managerDelete = await api({ action: 'delete', id: '26080001' }, token);
+    expect(managerDelete).toMatchObject({ ok: true, id: '26080001' });
   });
 });

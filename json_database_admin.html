@@ -271,7 +271,7 @@
   <script>
     // 設計師公開資料與 REELS 統一由「設計列表」管理；帳號設定只保留身分、偏好與權限。
     // 補充資料連結不另列側邊頁，併入「修改統計表」依案件呈現（見 modificationHistoryHtml）。
-    const TABLE_ORDER=['database','設計列表','加權計分標準','短連結','修改統計表','角色權限範本','帳號權限','bug_report'];
+    const TABLE_ORDER=['database','設計列表','加權計分標準','短連結','修改統計表','角色權限範本','客戶別','帳號權限','bug_report'];
     const TABLE_INFO={
       database:{desc:'所有設計需求案件的完整清單'},
       '設計列表':{desc:'管理前台設計師頭像、公開資料、輪值與技能帶入規則'},
@@ -311,7 +311,7 @@
     const API=CONFIGURED_API||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
-    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),supplementLinkRowsCache=[],caseInfoRowsCache=[];
+    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),supplementLinkRowsCache=[],caseInfoRowsCache=[],customerRowsCache=[],customerSelected='',customerWritesPending=new Set();
     const permissionWritesPending=new Set(),roleTemplateWritesPending=new Set(),accountGroupOpenState=new Map();
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
@@ -336,7 +336,7 @@
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
     async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
-    function updateAddButton(){const hidden=tableName==='角色權限範本'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料')));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database'}
+    function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料')));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database'}
     function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
     function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
     function resetDatabaseFilters(){databaseFilters={};DATABASE_FILTER_FIELDS.forEach(([id])=>{$(id).value=''});updateFilterClearButton()}
@@ -387,7 +387,7 @@
       const data=await request(`/table/database?offset=0&limit=100000`);
       caseInfoRowsCache=data.rows||[];
     }
-    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureSupplementLinkRows();await ensureCaseInfoRows()}if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
+    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureSupplementLinkRows();await ensureCaseInfoRows()}if(requestedTable==='客戶別')await permissionRowsData();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
     function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
     function rowKeyFor(row){const table=metadata[tableName];return table?.primaryKey?String(row[table.primaryKey]??''):String(row._rowNumber)}
     function actionCell(){return '<td class="action-col"><div class="row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></td>'}
@@ -723,6 +723,79 @@
       return `<div class="permission-layout"><aside class="permission-users">${roles}</aside>${roleTemplateEditorHtml(selected)}</div>`;
     }
 
+    /* ---- 客戶別：專案負責人／設計負責人／部門組別指派 ---- */
+    // 專案負責人（多選）取得該客戶案件的存取與新增/編輯/刪除/發信/回信權限（見 worker/src/model.ts 的 hasRowCapability）；
+    // 設計負責人／部門組別純粹是前台填單自動帶入的預設值，不影響任何權限，選項來源沿用既有的帳號目錄／組織選項資料。
+    function normalizedCustomerRows(rows){return rows.map(row=>({...row,'客戶別':String(row['客戶別']||''),'專案負責人':MachiAccess.parseList(row['專案負責人']),'設計負責人':MachiAccess.parseList(row['設計負責人']),'部門組別':MachiAccess.parseList(row['部門組別'])}))}
+    function customerOwnerOptions(){return permissionDirectoryRows.filter(row=>row['帳號']).map(row=>({account:MachiAccess.canonicalAccount(row['帳號']),label:`${row['顯示名']||row['名字']||row['帳號']}（${row['帳號']}）`})).sort((a,b)=>a.label.localeCompare(b.label,'zh-Hant'))}
+    function customerDesignerOptions(){const known=permissionDirectoryRows.filter(row=>/^(?:平面|影音)$/.test(String(row['組別']||''))).map(row=>row['名字']).filter(Boolean);return [...new Set([...ACCOUNT_DESIGNER_OPTIONS,...known])].sort((a,b)=>a.localeCompare(b,'zh-Hant'))}
+    function customerDepartmentOptions(){return [...new Set([...organizationOptions('部門'),...organizationOptions('組別')])]}
+    function customerCheckbox(type,value,label,checked){return `<label class="permission-check"><input type="checkbox" data-customer-${type}="${esc(value)}" ${checked?'checked':''}><span>${esc(label)}</span></label>`}
+    function customerEditorHtml(model){
+      if(!model)return '<div class="permission-editor permission-empty">找不到客戶別，請從左側選擇或新增。</div>';
+      const owners=new Set(model['專案負責人']),designers=new Set(model['設計負責人']),departments=new Set(model['部門組別']),pending=customerWritesPending.has(model['客戶別']);
+      const ownerOptions=customerOwnerOptions(),departmentOptions=customerDepartmentOptions();
+      const ownerHtml=ownerOptions.length?ownerOptions.map(opt=>customerCheckbox('owner',opt.account,opt.label,owners.has(opt.account))).join(''):'<span class="small">尚無帳號可選，請先在「帳號設定」建立帳號。</span>';
+      const designerHtml=customerDesignerOptions().map(name=>customerCheckbox('designer',name,name,designers.has(name))).join('');
+      const departmentHtml=departmentOptions.length?departmentOptions.map(name=>customerCheckbox('department',name,name,departments.has(name))).join(''):'<span class="small">尚無部門／組別選項，可到「帳號設定」新增。</span>';
+      return `<section class="permission-editor" data-customer-editor="${esc(model['客戶別'])}">
+        <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>被列為「專案負責人」的帳號登入後，只會看到自己負責（案件的專案負責人＝自己）的案件，並取得新增／編輯／刪除／發信／回信的額外授權；「設計負責人」與「部門／組別」只用來給前台自動帶入預設值，不影響任何權限。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
+        ${pending?'<div class="notice ok">已先套用；遠端 JSON 正在背景寫入，可先切換設定其他客戶別。</div>':''}
+        <section class="permission-section"><h4>專案負責人（多選，取得案件存取與新增／編輯／刪除／發信／回信權限）</h4><div class="permission-checks">${ownerHtml}</div></section>
+        <section class="permission-section"><h4>設計負責人（多選，前台填單時自動帶入預設值）</h4><div class="permission-checks">${designerHtml}</div></section>
+        <section class="permission-section"><h4>部門／組別（多選，僅供紀錄，不影響權限）</h4><div class="permission-checks">${departmentHtml}</div></section>
+        <div class="permission-summary"><span>${owners.size} 位專案負責人</span><span>${designers.size} 位設計負責人</span><span>${departments.size} 個部門／組別</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
+      </section>`;
+    }
+    function customerAdminHtml(rows){
+      customerRowsCache=normalizedCustomerRows(rows);
+      if(!customerRowsCache.some(row=>row['客戶別']===customerSelected))customerSelected=customerRowsCache[0]?.['客戶別']||'';
+      const selected=customerRowsCache.find(row=>row['客戶別']===customerSelected)||null;
+      const list=customerRowsCache.map(row=>{const pending=customerWritesPending.has(row['客戶別']);return `<button class="permission-user ${row['客戶別']===customerSelected?'active':''}" type="button" data-customer-select="${esc(row['客戶別'])}"><b>${esc(row['客戶別'])}</b><span class="permission-state ${pending?'explicit':''}">${pending?'寫入中':`${row['專案負責人'].length} 位負責人`}</span></button>`}).join('');
+      return `<div class="permission-layout"><aside class="permission-users"><button class="btn" type="button" data-customer-add>+ 新增客戶別</button>${list||'<div class="notice">尚無客戶別，請先新增。</div>'}</aside>${customerEditorHtml(selected)}</div>`;
+    }
+    async function addCustomerFromAdmin(){
+      const name=String(prompt('請輸入新客戶別名稱：')||'').trim();
+      if(!name)return;
+      if(customerRowsCache.some(row=>row['客戶別']===name)){note('這個客戶別已經存在','error');return}
+      try{
+        const row={'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]','更新時間':'','更新者':stored(FRONT_USER_KEY)||'管理者'};
+        await appsScriptRequest('adminTableInsert',{table:'客戶別',row,...spreadsheetBackupOptions('客戶別')});
+        customerSelected=name;
+        await loadRows();
+        note(`已新增客戶別「${name}」。`,'ok');
+      }catch(error){note(`新增客戶別失敗：${error.message}`,'error')}
+    }
+    function selectCustomer(name){customerSelected=name;renderTable({table:'客戶別',total:customerRowsCache.length,offset:0,limit:1000,rows:customerRowsCache})}
+    async function saveCustomer(){
+      const editor=$('view').querySelector('[data-customer-editor]');
+      if(!editor)return;
+      const name=editor.dataset.customerEditor;
+      if(customerWritesPending.has(name)){note(`「${name}」上一筆仍在背景寫入。`,'error');return}
+      const model=customerRowsCache.find(row=>row['客戶別']===name);
+      if(!model){note('找不到客戶別資料，請重新讀取。','error');return}
+      const owners=[...editor.querySelectorAll('[data-customer-owner]:checked')].map(input=>input.dataset.customerOwner);
+      const designers=[...editor.querySelectorAll('[data-customer-designer]:checked')].map(input=>input.dataset.customerDesigner);
+      const departments=[...editor.querySelectorAll('[data-customer-department]:checked')].map(input=>input.dataset.customerDepartment);
+      const timestamp=new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).replace(/\//g,'-');
+      const row={'客戶別':name,'專案負責人':JSON.stringify(owners),'設計負責人':JSON.stringify(designers),'部門組別':JSON.stringify(departments),'更新時間':timestamp,'更新者':stored(FRONT_USER_KEY)||'管理者'};
+      customerWritesPending.add(name);
+      const index=customerRowsCache.findIndex(item=>item['客戶別']===name);
+      customerRowsCache[index]={...model,'專案負責人':owners,'設計負責人':designers,'部門組別':departments,'更新時間':timestamp};
+      renderTable({table:'客戶別',total:customerRowsCache.length,offset:0,limit:1000,rows:customerRowsCache});
+      note(`「${name}」已先套用；JSON 正在背景寫入。`,'ok');
+      try{
+        const data=await appsScriptRequest('adminTableUpdate',{table:'客戶別',key:name,row,...spreadsheetBackupOptions('客戶別')});
+        if(data?.jsonRevision){appliedRevision=Math.max(appliedRevision,Number(data.jsonRevision)||0);$('revision').textContent=String(data.jsonRevision)}
+        if(tableName==='客戶別'&&customerSelected===name)note(`「${name}」已完成寫入 JSON。`,'ok');
+      }catch(error){
+        note(`「${name}」背景寫入失敗，重新讀取還原中：${error.message}`,'error');
+        await loadRows();
+      }finally{
+        customerWritesPending.delete(name);
+      }
+    }
+
     function renderTable(data){
       const table=metadata[tableName];
       $('currentTable').textContent=tableLabel(tableName);
@@ -736,6 +809,7 @@
       else if(tableName==='修改統計表')view.innerHTML=modificationHistoryHtml(data.rows);
       else if(tableName==='設定')view.innerHTML=settingsCardsHtml(data.rows);
       else if(tableName==='角色權限範本')view.innerHTML=roleTemplateAdminHtml(data.rows);
+      else if(tableName==='客戶別')view.innerHTML=customerAdminHtml(data.rows);
       else if(tableName==='帳號權限')view.innerHTML=permissionAdminHtml(data.rows);
       else if(tableName==='reels')view.innerHTML=reelsCardsHtml(data.rows);
       else if(tableName==='bug_report')view.innerHTML=bugBoardHtml(data.rows);
@@ -941,6 +1015,10 @@
       if(event.target.closest('[data-template-save]')){saveRoleTemplate();return}
       if(event.target.closest('[data-template-all]')){setRoleTemplateEditorMode('all');return}
       if(event.target.closest('[data-template-readonly]')){setRoleTemplateEditorMode('readonly');return}
+      const customerSelect=event.target.closest('[data-customer-select]');if(customerSelect){selectCustomer(customerSelect.dataset.customerSelect);return}
+      if(event.target.closest('[data-customer-add]')){addCustomerFromAdmin();return}
+      if(event.target.closest('[data-customer-save]')){saveCustomer();return}
+      const customerDelete=event.target.closest('[data-customer-delete]');if(customerDelete){const row=customerRowsCache.find(item=>item['客戶別']===customerDelete.dataset.customerDelete);if(row)deleteRow(row,'客戶別');else note('找不到這個客戶別，請重新讀取','error');return}
       const columnMove=event.target.closest('[data-account-column-move]');if(columnMove){moveAccountColumn(columnMove);return}
       const rotationSave=event.target.closest('[data-account-rotation-save]');if(rotationSave){saveAccountRotation(rotationSave);return}
       const reelEdit=event.target.closest('[data-account-reel-edit]');

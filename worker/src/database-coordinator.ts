@@ -4,7 +4,7 @@ import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessProfile, activeReel, canonicalAccount, findReelIndex,
-  hasCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
+  hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
@@ -21,7 +21,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
-const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '帳號權限', '組織選項', 'reels', 'bug_report'];
+const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null };
@@ -693,6 +693,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     throw new Error(`此帳號沒有「${capabilities.join('／')}」權限`);
   }
 
+  /** 疊加式的資料列層級授權：角色權限允許就直接放行，否則額外檢查客戶別的專案負責人是否等於這筆案件本人（見 model.ts 的 hasRowCapability）。 */
+  private requireRowAccess(database: DatabaseSnapshot, session: SessionRecord | null, capability: string, row: Row | undefined): SessionRecord {
+    const current = this.requireSession(session);
+    if (hasRowCapability(database, current, capability, row || {})) return current;
+    throw new Error(`此帳號沒有「${capability}」權限`);
+  }
+
   private async googleLogin(payload: ApiPayload, context: RequestContext): Promise<ApiResult> {
     await this.assertLoginRate(context);
     const credential = text(payload.credential || payload.idToken);
@@ -878,8 +885,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 透過 Gmail API 寄出案件信件（限第一次，該案件已經有信件串就拒絕，請改用回信）。 */
   private async sendCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
-    const current = this.requireAccess(database, session, 'request.mail');
     const caseId = text(payload.caseId || payload.id);
+    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
     const to = text(payload.to);
     const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
     const subject = text(payload.subject);
@@ -888,7 +896,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const inlineImages = resolveGmailInlineImages(payload);
     if (!caseId) return { ok: false, action: 'sendCaseMail', error: '缺少案件編號' };
     if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
-    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const row = existingRow;
     if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
     if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
@@ -942,13 +950,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 在既有信件串裡回覆一封信（限寄件帳號本人）；先抓最後一封信的標頭組出正確的 In-Reply-To/References。 */
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
-    const current = this.requireAccess(database, session, 'request.mail');
     const caseId = text(payload.caseId || payload.id);
+    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
     if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
-    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const row = existingRow;
     if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
@@ -986,6 +995,26 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'replyCaseMail', gmailMessageId: text(sendData.id) };
   }
 
+  /**
+   * 前台「填寫設計需求」表單「客戶別」下拉選單的「新增客戶別」——只需要 request.create（跟新增案件同一個
+   * 廣泛授權），任何登入角色都能建立一筆只有名稱、專案負責人／設計負責人／部門組別皆空白的客戶別。
+   * 後台管理者要指派名單，改走通用的 adminTableUpdate（database.manage 權限）。
+   */
+  private async addCustomer(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    // 比照 addRequests（填單新增案件）：有 session 才檢查 request.create，未登入沿用「填單本來就不強制登入」的既有慣例。
+    if (session) this.requireAccess(database, session, 'request.create');
+    const name = text(payload.name || payload['客戶別']);
+    if (!name) throw new Error('請輸入客戶別名稱');
+    if (name.length > 40) throw new Error('客戶別名稱不得超過 40 個字');
+    return this.mutate('addCustomer', session, draft => {
+      const table = draft.tables['客戶別'];
+      if (table.rows.some(row => text(row['客戶別']) === name)) throw new Error('這個客戶別已經存在');
+      const row: Row = { '客戶別': name, '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單' };
+      table.rows.push(row);
+      return { result: { ok: true, action: 'addCustomer', customer: row }, changedTables: ['客戶別'] };
+    });
+  }
+
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
@@ -1019,6 +1048,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);
       if (action === 'getCaseMailThread') return await this.getCaseMailThread(payload, database, session);
       if (action === 'replyCaseMail') return await this.replyCaseMail(payload, database, session);
+      if (action === 'addCustomer') return await this.addCustomer(payload, database, session);
 
       if (action === 'list' || action === 'recent') {
         const year = text(payload.year);
@@ -1438,8 +1468,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (['batchAdd', 'batchAppend', 'addRows'].includes(action)) return this.addRequests(action, payload, database, session, baseUrl, true);
     if (action === 'update' || action === 'batchUpdate') return this.updateRequests(action, payload, database, session, baseUrl);
     if (action === 'delete') {
-      const current = this.requireAccess(database, session, payload.accessContext === 'archive' ? 'archive.edit' : 'request.delete');
       const id = text(payload.id || payload.caseId);
+      const existingRow = database.tables.database.rows.find(row => text(row['案件編號']) === id);
+      const current = payload.accessContext === 'archive'
+        ? this.requireAccess(database, session, 'archive.edit')
+        : this.requireRowAccess(database, session, 'request.delete', existingRow);
       return this.mutate(action, current, draft => {
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
         if (index < 0) throw new Error('找不到案件');
@@ -1500,8 +1533,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const onlyDesignImageFolderLink = !touchesProtected && changedKeys.length > 0 && changedKeys.every(key => DESIGN_IMAGE_FOLDER_KEYS.includes(key))
       && writeHeaders.every(header => DESIGN_IMAGE_FOLDER_HEADERS.includes(header));
     if (session) {
-      this.requireAccess(database, session, payload.accessContext === 'archive' ? 'archive.edit'
-        : touchesProtected ? 'request.status' : onlyDesignImageFolderLink ? 'media.manage' : 'request.edit');
+      const capability = payload.accessContext === 'archive' ? 'archive.edit'
+        : touchesProtected ? 'request.status' : onlyDesignImageFolderLink ? 'media.manage' : 'request.edit';
+      // 單筆更新且落在預設的 request.edit 分支時，額外接受「客戶別專案負責人編輯自己案件」這條路徑
+      // （見 requireRowAccess／model.ts 的 hasRowCapability）；batchUpdate 與其餘分支維持原本的角色權限判斷，不擴大範圍。
+      if (action === 'update' && capability === 'request.edit') {
+        const id = text(payload.id || payload.caseId || changes.id);
+        const existingRow = database.tables.database.rows.find(row => text(row['案件編號']) === id);
+        this.requireRowAccess(database, session, capability, existingRow);
+      } else {
+        this.requireAccess(database, session, capability);
+      }
     }
     const items = action === 'batchUpdate' ? asRows(payload.rows) : [{ id: payload.id || payload.caseId || changes.id, row: changes }];
     return this.mutate(action, session, draft => {

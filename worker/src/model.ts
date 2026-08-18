@@ -190,7 +190,7 @@ export function settingsResponse(row: Row = {}): Row {
     theme: /深色|dark/i.test(rawTheme) ? 'dark' : (/淺色|light/i.test(rawTheme) ? 'light' : '')
   };
 }
-function accessList(value: unknown): string[] {
+export function accessList(value: unknown): string[] {
   if (Array.isArray(value)) return unique(value.map(text));
   const raw = text(value);
   if (!raw) return [];
@@ -248,6 +248,42 @@ export function requireCapability(snapshot: DatabaseSnapshot, session: SessionRe
   if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
   return session;
 }
+export const ROW_SCOPED_CAPABILITIES = ['request.edit', 'request.delete', 'request.mail'];
+
+/** 帳號是否被列為任一「客戶別」的「專案負責人」——這是取得客戶別額外授權（見 hasRowCapability）的前提資格。 */
+export function isCustomerOwnerAccount(database: DatabaseSnapshot, session: SessionRecord | null): boolean {
+  if (!session) return false;
+  const account = canonicalAccount(session.account || session.user);
+  if (!account) return false;
+  return (database.tables['客戶別']?.rows || []).some(row => accessList(row['專案負責人']).map(canonicalAccount).includes(account));
+}
+
+/** 案件「專案負責人」欄位（自由文字）是否等於目前登入帳號本人：比對 canonical email，或比對「設定」表登記的顯示名／名字。 */
+export function matchesOwnerIdentity(database: DatabaseSnapshot, ownerText: unknown, session: SessionRecord | null): boolean {
+  if (!session) return false;
+  const owner = text(ownerText);
+  if (!owner) return false;
+  const account = canonicalAccount(session.account || session.user);
+  if (canonicalAccount(owner) === account) return true;
+  const row = settingsRow(database, session.account || session.user);
+  const displayName = text(row?.['顯示名'] || row?.['名字']);
+  return Boolean(displayName) && owner.toLowerCase() === displayName.toLowerCase();
+}
+
+/**
+ * 疊加式的資料列層級授權：角色權限（帳號權限／角色權限範本）本來就允許的一律放行；
+ * 否則只有「被列為某客戶別的專案負責人」且「這筆案件的專案負責人＝自己」時，
+ * 對 request.edit／request.delete／request.mail 這三個能力額外放行——讓客戶別的專案負責人
+ * 即使角色範本沒有這些權限，也能自行管理自己負責的案件（新增不需要這個機制，
+ * request.create 本來就是所有登入角色的預設權限）。
+ */
+export function hasRowCapability(database: DatabaseSnapshot, session: SessionRecord | null, capability: string, row: Row): boolean {
+  if (hasCapability(database, session, capability)) return true;
+  if (!ROW_SCOPED_CAPABILITIES.includes(capability)) return false;
+  if (!isCustomerOwnerAccount(database, session)) return false;
+  return matchesOwnerIdentity(database, row?.['專案負責人'], session);
+}
+
 /** 補充資料只保存原始長網址；既有短網址仍可解析，但新寫入不再改寫案件主表。 */
 export function syncSupplementLinks(draft: DatabaseSnapshot, sheetRow: Row, _baseUrl: string): void {
   const id = text(sheetRow['案件編號']);

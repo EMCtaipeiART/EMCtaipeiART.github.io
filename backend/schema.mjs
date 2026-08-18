@@ -1,5 +1,17 @@
 import { DEFAULT_WEIGHT_RULE_ROWS } from './weighting.mjs';
 
+// 目前營運中的客戶別，作為「客戶別」表的預設種子資料；normalizeDatabaseShape() 會在既有
+// 資料缺少這些名稱時自動補上（保留既有已指派的專案負責人／設計負責人／部門組別不被覆蓋），
+// 之後透過前台「新增客戶別」或後台新增的客戶不受這份清單限制，會另外附加在後面。
+export const DEFAULT_CUSTOMER_NAMES = Object.freeze([
+  '丹士特', '王品', '欣格家居', '金士頓', '保誠人壽', '保麗淨', '席伊麗', '高露潔', '添可', '富美家',
+  '統一', '新安東京', '嘉儀家品', '滿意寶寶', '酷澎', '墾丁國家公園管理處', '癌症希望基金會', '聯華食品',
+  '蘇菲', '櫻花', 'ANKER', 'BAT', 'BAT英美菸草', 'DJI', 'EMC', 'Epson', 'eufy', 'soundcore'
+]);
+export const DEFAULT_CUSTOMER_ROWS = Object.freeze(DEFAULT_CUSTOMER_NAMES.map(name => Object.freeze({
+  '客戶別': name, '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '系統預設'
+})));
+
 export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
   {
     '角色範本': '管理者',
@@ -85,6 +97,10 @@ export const TABLE_SCHEMAS = {
     primaryKey: '代碼',
     headers: ['代碼', '種類', '名稱', '排序']
   },
+  '客戶別': {
+    primaryKey: '客戶別',
+    headers: ['客戶別', '專案負責人', '設計負責人', '部門組別', '更新時間', '更新者']
+  },
   '角色權限範本': {
     primaryKey: '角色範本',
     headers: ['角色範本', '頁面權限', '功能權限', '更新時間', '更新者']
@@ -124,7 +140,8 @@ export function emptyDatabase() {
       primaryKey: TABLE_SCHEMAS[name].primaryKey,
       rows: name === '加權計分標準'
         ? DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }))
-        : (name === '角色權限範本' ? DEFAULT_ROLE_TEMPLATE_ROWS.map(row => ({ ...row })) : [])
+        : (name === '角色權限範本' ? DEFAULT_ROLE_TEMPLATE_ROWS.map(row => ({ ...row }))
+          : (name === '客戶別' ? DEFAULT_CUSTOMER_ROWS.map(row => ({ ...row })) : []))
     }])),
     internal: {
       sessions: {},
@@ -157,6 +174,12 @@ export function normalizeDatabaseShape(input) {
     if (name === '角色權限範本') {
       const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));
       table.rows = DEFAULT_ROLE_TEMPLATE_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByRole.get(defaultRow['角色範本']) || {}) }));
+    }
+    if (name === '客戶別') {
+      const rowsByName = new Map(table.rows.map(row => [String(row['客戶別'] || '').trim(), row]));
+      const seeded = DEFAULT_CUSTOMER_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByName.get(defaultRow['客戶別']) || {}) }));
+      const extra = table.rows.filter(row => !DEFAULT_CUSTOMER_NAMES.includes(String(row['客戶別'] || '').trim()));
+      table.rows = [...seeded, ...extra];
     }
     db.tables[name] = table;
   }

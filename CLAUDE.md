@@ -11,7 +11,7 @@
 
 1. [系統是什麼](#1-系統是什麼)
 2. [整體架構：Cloudflare Worker 為正式驗證與資料 API](#2-整體架構cloudflare-worker-為正式驗證與資料-api)
-3. [資料層：十張 JSON 表](#3-資料層十張-json-表)
+3. [資料層：十一張 JSON 表](#3-資料層十一張-json-表)
 4. [寫入與備份規則（重要）](#4-寫入與備份規則重要)
 5. [前台 index.html](#5-前台-indexhtml)
 6. [後台 json_database_admin.html](#6-後台-json_database_adminhtml)
@@ -76,7 +76,7 @@ backend/data/db.json 更新後
 
 Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在**不是資料的主要來源**，只在「新增案件」時被動接收一份備份，其餘七張表（設定、reels、加權計分標準…）完全不會寫回試算表。試算表上另外還有「階段」分頁等舊資料，那些已經跟即時系統無關，只是歷史殘留。
 
-## 3. 資料層：十張 JSON 表
+## 3. 資料層：十一張 JSON 表
 
 全部存在 `backend/data/db.json` 一個檔案裡的 `tables` 物件底下，`backend/schema.mjs` 定義了 canonical 欄位。
 
@@ -90,6 +90,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 | `設定` | 帳號 | 人員身分、喜愛設定與設計師公開資料（頭像、大圖、音樂、技能、對話框、輪值等）；後台不再獨立顯示此表，由可見頁籤「帳號設定」合併編輯 |
 | `帳號權限` | 帳號 | 帳號狀態、角色範本、可查看頁面與可執行功能 |
 | `角色權限範本` | 角色權限範本 | 管理者、設計師、一般使用者與唯讀的共用權限範本 |
+| `客戶別` | 客戶別 | （2026-08-18 新增）29 家客戶別各自的「專案負責人／設計負責人／部門組別」指派名單。專案負責人（帳號 email 陣列）決定該帳號登入後只看得到自己負責的案件，並疊加取得新增/編輯/刪除/發信/回信授權（見第 5 節與 `worker/src/model.ts` 的 `hasRowCapability`）；設計負責人／部門組別只用於前台自動帶入預設值，不影響任何權限。 |
 | `reels` | （無，用列序） | 限時動態、按讚倒讚、留言 |
 | `bug_report` | （無，用列序） | 問題回報，用 5 個狀態時間戳記錄流程 |
 
@@ -116,6 +117,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - **項目細節選單**（`designLists`）：2026-08-11 起改成從 `加權計分標準` JSON 表動態產生（`designListsFromWeightTable()`），不再打獨立的 Google 試算表「階段」分頁。「採購」類別沒有對應的加權規則，會 fallback 用寫死在 `baseDesignLists` 的預設值。
 - **限時動態（reels）**：讀取走 `listReels` action，過期的限動不會顯示（伺服器端過濾），但資料列本身不會被刪除（2026-08-11 起）。
 - **圖片上傳**：走上傳用 Apps Script（`designerUploadPageUrl`），不是 `json_upload.html`／Node 後台那條路。
+- **客戶別與案件擁有者權限**（2026-08-18 新增）：「填寫設計需求」表單的「客戶別」是 `<select>` 下拉選單（`syncCustomerDirectoryFromDatabase()` 從 db.json 的 `客戶別` 表同步選項），選「+ 新增客戶別」會呼叫 Worker 的 `addCustomer` action（`request.create` 權限，未登入也可用，比照填單本身不強制登入）。登入帳號若被列為任一客戶別的「專案負責人」（`isCustomerOwnerAccount()`），表單的「專案負責人」欄位會鎖定為本人（`applyCustomerOwnerLock()`），「設計負責人」會自動帶入該客戶別設定的第一位（`applyCustomerDesignerAutoFill()`）；同時「最新案件列表」與「案件列表」只會顯示「案件的專案負責人＝本人」的案件（`visibleCaseRows()`，套用在 `rowsForSearch()`／`editableRowsSorted()`），管理者不受限、看到全部案件。**這個列表過濾只是前端顯示層邏輯，不是安全邊界**——因為 `backend/data/db.json` 本來就是公開靜態檔（見上方資料流程圖），任何人都能直接讀到完整內容；真正的授權邊界在 Worker 的 `delete`／`update`／`sendCaseMail`／`replyCaseMail` 幾個 mutation action，疊加檢查「帳號是否為客戶別專案負責人 且 案件的專案負責人＝自己」（`hasRowCapability()`），讓這類帳號即使角色範本沒有 `request.edit`/`request.delete` 也能管理自己負責的案件；案件列表「內容」欄位會出現粉紅色的「刪除」按鈕（`canDeleteCaseRow()`），配色沿用「未開始」狀態色。批次新增表單（`batchRequestRowHtml`）刻意不套用這套下拉選單／鎖定邏輯，維持原本自由輸入。
 
 ## 6. 後台 `json_database_admin.html`
 
@@ -128,6 +130,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - `修改統計表`：依案件編號分組的時間軸。
 - `帳號設定`：將底層 `設定` 與 `帳號權限` 合併為單一帳號編輯器，可新增帳號、維護身分與喜愛設定，並顯示角色／自訂權限；左側依組別收合，喜愛設定可收合且欄位順序可拖曳／上下移動。所有帳號可設定頭像；設計師另有大圖、音樂、技能、對話框、新專案輪值與 REELS 小卡。「設定」已從側邊頁籤移除。
 - `角色權限範本`：維護四種共用角色的頁面與功能權限；非「自訂」帳號會自動繼承。
+- `客戶別`（2026-08-18 新增）：比照角色權限範本的「左側清單＋右側勾選群組」樣式——左側客戶別清單＋「+ 新增客戶別」（純建立空白列，`request.create`／`database.manage` 皆可），右側勾選「專案負責人」（來源：帳號目錄，有實際權限）／「設計負責人」（來源：`ACCOUNT_DESIGNER_OPTIONS`＋平面/影音帳號，僅供前台自動帶入）／「部門／組別」（來源：`組織選項` 表，僅供紀錄）。不支援改名（新增客戶別後名稱固定），刪除客戶別不會清空既有案件的「客戶別」文字欄位。
 - `reels`：卡片＋留言泡泡，會顯示已過期但保留的限動。
 - `bug_report`：依狀態分欄的看板（Kanban）。
 
@@ -186,7 +189,36 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-18 14:40 Asia/Taipei（最新）— Gmail 聯絡人改為固定順序的收合群組
+### 2026-08-18 15:50 Asia/Taipei（最新）— 新增「客戶別」存取範圍：專案負責人限定案件可見範圍與新增/編輯/刪除/發信/回信權限
+
+- 修改目的：使用者要求導入「客戶別」維度——29 家目前營運中的客戶各自可設定「專案負責人（多選）」「設計負責人（多選）」「部門/組別（多選）」；被列為某客戶別「專案負責人」的帳號，登入後只看得到自己負責（案件的專案負責人＝自己）的案件，並疊加取得新增/編輯/刪除/發信/回信權限（即使角色範本本身沒有這些能力）。前台「填寫設計需求」的「客戶別」欄位改成下拉選單（29 選項＋「新增客戶別」），登入且已被指定的帳號「專案負責人」欄位鎖定為本人、「設計負責人」自動帶入客戶別設定值。「最新案件列表」與「案件列表」的「內容」欄位新增粉紅色「刪除」按鈕。
+- 關鍵架構限制（規劃時就先查證清楚，避免做出不可能達成的設計）：`index.html` 的案件列表資料是直接 fetch 公開的靜態檔 `backend/data/db.json`（`fetchDatabaseRows()`→`githubJsonTableRows()`→`fetchGithubJsonDatabase()`），**不是**經過驗證的 Worker API 呼叫；`grep` 全專案確認 Worker 現有的 `list`/`recent`/`bundle` 這幾個帶 session 的讀取 action 目前完全沒有被任何前端呼叫。這代表「案件列表只顯示自己負責的案件」**只能做成前端 JS 顯示層過濾**，不是真正的伺服器端資料列可見性防線——跟這個系統一貫的信任模型一致（client 組資料，Worker 只在**寫入**時做權限判斷）。「新增/編輯/刪除/發信/回信」則是真正走 Worker mutation action（`delete`／`update`／`sendCaseMail`／`replyCaseMail`），在這幾個 action 疊加真正的伺服器端授權檢查。
+- 影響檔案：
+  - `backend/schema.mjs`：新增 `客戶別` 表（`primaryKey:'客戶別'`，欄位 `客戶別/專案負責人/設計負責人/部門組別/更新時間/更新者`）；`DEFAULT_CUSTOMER_NAMES`／`DEFAULT_CUSTOMER_ROWS`（28 家客戶——使用者訊息裡寫「29 個客戶」但逐一列出後實際是 28 個不重複名稱，已如實依照使用者提供的清單建立，沒有另外湊出第 29 個）；`normalizeDatabaseShape()` 用跟 `角色權限範本` 相同的「以主鍵合併既有資料」寫法自動補上缺少的預設客戶、保留既有指派內容，且不清除後台/前台額外新增的客戶。
+  - `worker/src/model.ts`：`accessList()` 改成 `export`；新增 `isCustomerOwnerAccount()`（帳號是否被列為任一客戶別的專案負責人）、`matchesOwnerIdentity()`（案件「專案負責人」文字欄位是否等於登入帳號本人——比對 canonical email 或「設定」表的顯示名/名字）、`hasRowCapability()`（疊加式資料列層級授權：角色權限本來就允許就放行，否則只在 `isCustomerOwnerAccount()` 且 `matchesOwnerIdentity()` 都成立時，對 `request.edit`/`request.delete`/`request.mail` 三個能力額外放行）。
+  - `worker/src/database-coordinator.ts`：新增 `private requireRowAccess()`；`delete` action、`updateRequests()`（僅單筆 `update` 且落在預設 `request.edit` 分支，`batchUpdate`／`request.status`／`media.manage`／`archive.edit` 分支不受影響）、`sendCaseMail`／`replyCaseMail` 都改成先查出案件 row 再用 `requireRowAccess` 判斷；新增 `addCustomer` action（`request.create` 權限，比照 `addRequests`「有 session 才檢查、匿名也能用」的既有慣例，讓任何人都能透過前台「新增客戶別」建立一筆空白客戶）；`ADMIN_TABLE_ORDER` 加入 `客戶別`，讓既有的通用 `adminTableInsert`/`adminTableUpdate`/`adminTableDelete`（`database.manage` 權限）可以直接管理這張表。
+  - `worker/test/index.test.ts`：新增 4 支測試——預設客戶種子與合併邏輯（含後台新增的額外客戶不被洗掉）；`addCustomer` 成功/重複名稱報錯/空名稱報錯/匿名也能新增；一個只有 `request.create`（無 edit/delete/mail）的帳號被列為客戶別專案負責人後，對自己負責的案件可以 `update`/`delete`/`sendCaseMail`，對同客戶別但別人負責的案件一律被擋，`batchUpdate` 與 `accessContext:'archive'` 分支不受這個放寬影響；管理者不受任何限制。
+  - `backend/test/backend.test.mjs`：更新一處鎖住 `adminTables` 回傳表名清單的既有斷言，補上 `客戶別`。
+  - `index.html`：客戶別 `<input>` 改成 `<select>`（`populateCustomerSelect()`，選項來源 `syncCustomerDirectoryFromDatabase()`——搭 `fetchGithubJsonDatabase()` 既有的 weight rules/design lists 同步時機，另外先給一份寫死的 28 家預設清單`baseCustomerNames`，比照 `designerOptions` 的既有模式，讓下拉選單在 db.json 讀完之前就有內容可選）；「+ 新增客戶別」呼叫新的 `addCustomer` action；新增 `isCustomerOwnerAccount()`／`matchesOwnerIdentity()`／`isOwnCustomerCase()`／`parseNameListValue()`／`applyCustomerOwnerLock()`（掛在既有的 `applyCurrentUserProfile()` 與 `logoutEditor()`）／`applyCustomerDesignerAutoFill()`；新增 `visibleCaseRows()`，套用在 `rowsForSearch()`（案件列表）與 `editableRowsSorted()`（最新案件列表），**刻意不套用在** `ownerProjectRows()`（專案負責人清單維持原本「查某人負責的全部專案」用途不變）；`canCaseEditRow()`／`mailAction()`／`canSendMailNow()`／`canEditCasesNow()` 都疊加 `isOwnCustomerCase(r)`/`isCustomerOwnerAccount()`；新增 `canDeleteCaseRow()`，`actionButtons()` 疊加輸出刪除按鈕（`.case-delete-btn`，配色沿用「未開始」狀態的 `#fff1f2`/`#be123c`，含深色模式覆蓋），`deleteRow(id)` 的 guard 從 `isDesignerLogin()` 改成 `canDeleteCaseRow()`。批次新增表單（`batchRequestRowHtml`）刻意不套用這套下拉選單／鎖定邏輯。
+  - `json_database_admin.html`：`TABLE_ORDER` 在「角色權限範本」後插入「客戶別」；新增 `customerAdminHtml()`／`customerEditorHtml()`（比照 `roleTemplateAdminHtml`／`roleTemplateEditorHtml` 的「左側清單＋右側勾選群組」樣式）、`customerOwnerOptions()`（帳號目錄）／`customerDesignerOptions()`（`ACCOUNT_DESIGNER_OPTIONS`＋平面/影音帳號）／`customerDepartmentOptions()`（`組織選項` 表的部門＋組別）；新增 `addCustomerFromAdmin()`／`selectCustomer()`／`saveCustomer()`，刪除直接重用既有的通用 `deleteRow(row,'客戶別')`；`loadRows()` 切到「客戶別」頁籤時多呼叫一次既有的 `permissionRowsData()` 暖快取（帳號目錄／組織選項），跟「修改統計表」暖 `supplementLinkRowsCache`/`caseInfoRowsCache` 同樣的既有模式；`updateAddButton()` 對「客戶別」隱藏通用的「+ 新增資料」按鈕（改用自己側邊欄的「+ 新增客戶別」）。
+  - `CLAUDE.md`：本文件，第 3／5／6 節與本則紀錄。
+- 風險區塊：
+  - **列表過濾不是安全邊界**——`db.json` 本來就是公開靜態檔，這個限制只是前端顯示層邏輯，任何人技術上仍可直接讀到完整資料（跟這個系統一直以來的信任模型一致，不是這次新引入的弱點）。
+  - `saveCustomer()`／`addCustomerFromAdmin()` 刻意不比照 `saveRoleTemplate()`／`saveInlineWeight()` 使用 `directDatabase` 做樂觀本地更新——追查後確認 `directDatabase` 只有在 `APPS_SCRIPT_MODE`（`API` 網址符合 `script.google.com`）時才會被填入，正式站現在打的是 Cloudflare Worker，`APPS_SCRIPT_MODE` 恆為 `false`，`directDatabase` 恆為 `null`；沿用 `directDatabase.tables[...]` 的既有寫法在正式站會直接丟出 null reference 錯誤。這次改採 `saveOrganizationOption()` 那種不觸碰 `directDatabase`、單純呼叫 `appsScriptRequest()`/`request()` 再 `loadRows()`/`loadMetadata()` 重新整批讀取的安全寫法。**這個 `directDatabase` 只在 Apps Script 模式才會被填入的既有情況，這次沒有動、也不在這次的範圍內**，只是紀錄下來避免之後又在其他 REST-only 情境誤用同一個坑。
+  - `saveCustomer()`/`addCustomerFromAdmin()`/`deleteRow(row,'客戶別')` 都沒有帶 `expectedRow`（樂觀並行檢查），刻意的簡化——客戶別編輯是低頻率的管理操作，犧牲「兩個管理者同時改同一個客戶別時互相偵測衝突」這個保護，換取不用處理「陣列欄位重新 `JSON.stringify` 後是否跟原始儲存字串完全一致」這個更麻煩的問題。
+  - 客戶別後台編輯器**不支援改名**——新增後名稱固定，避免要處理歷史案件「客戶別」文字欄位的連動更新；刪除客戶別也不會清空既有案件的「客戶別」文字欄位（`database` 表的客戶別是獨立自由文字，不是外鍵關聯）。
+  - `matchesOwnerIdentity()`（前端與 Worker 各有一份邏輯相同的實作）依賴案件「專案負責人」欄位的文字**精確**等於登入帳號的顯示名——歷史案件如果專案負責人是自由輸入、跟登入帳號的顯示名不完全一致（大小寫、全形半形、暱稱等差異），不會被判定為本人，這是既有識別慣例的既定限制，不是這次新增的問題。
+- 已檢查／驗證方式：
+  - `node --check` 對 `backend/schema.mjs`、`index.html`／`json_database_admin.html` 抽出的內嵌 `<script>` 全數語法檢查通過。
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **23/23 全過**（19 個既有＋4 個新增，涵蓋上述影響檔案段落列出的情境）；`npx wrangler deploy --dry-run` 打包成功。
+  - `node --test backend/test/*.test.mjs` **27/27 全過**。
+  - 前端：本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（沒有真的打任何網路請求）：客戶別下拉選單正確顯示 28 個選項＋「+ 新增客戶別」；模擬登入帳號被指定為 Epson 的專案負責人，確認 `isCustomerOwnerAccount()` 為真、專案負責人欄位正確鎖定並帶入本人、設計負責人正確自動帶入客戶別設定的第一位；`visibleCaseRows()`／`rowsForSearch()`／`editableRowsSorted()` 對三筆假案件（本人負責兩筆、分屬不同客戶別；別人負責一筆）正確只保留本人負責的兩筆，跟客戶別無關（符合確認過的設計：過濾依據是案件本身的專案負責人欄位，不是客戶別歸屬）；`canCaseEditRow`／`canDeleteCaseRow`／`mailAction`／`actionButtons` 對本人案件正確顯示編輯／刪除／發信、對別人案件正確顯示「歷史資料」鎖或空字串；刪除按鈕的 `getComputedStyle` 確認淺色/深色模式配色都精確等於 `#fff1f2`/`#be123c`/`#fecdd3` 與深色版 `#5a2f38`/`#ffd1d8`/`#c66b7c`；管理者帳號確認 `visibleCaseRows()` 回傳全部案件不受限；「+ 新增客戶別」完整流程（prompt 輸入→呼叫 `addCustomer`→加入 `customerDirectoryRows`→選單新增選項→自動選定）驗證通過。
+  - 後台：本機 Node 靜態伺服器＋ Browser pane 對 `json_database_admin.html` 做隔離測試：`customerAdminHtml()` 正確渲染客戶清單與勾選群組（帳號/設計師/部門組別三種來源的核取方塊數量與勾選狀態皆正確）；`selectCustomer()` 正確切換編輯中的客戶別；`saveCustomer()`（stub `appsScriptRequest`）正確送出 `adminTableUpdate` 且 `專案負責人`/`設計負責人`/`部門組別` 正確 JSON 序列化勾選結果，`customerRowsCache` 正確樂觀更新；`addCustomerFromAdmin()`（stub `prompt`/`appsScriptRequest`/`loadRows`）正確送出 `adminTableInsert` 並選定新客戶；`deleteRow(row,'客戶別')`（stub `confirm`/`request`/`loadMetadata`）正確送出 `DELETE /table/客戶別/{name}` 並重新整批讀取。
+  - **未做的驗證**：沒有部署到正式 Worker、沒有用真實登入帳號在正式站走過一次端對端流程（連接真實 Cloudflare Worker、真實 GitHub commit）；也沒有請使用者確認「29 個客戶」與實際列出的 28 個名稱之間的落差是否為筆誤（已如實依照提供的清單建立，若之後要補第 29 個客戶，可直接透過前台或後台的「新增客戶別」新增，不需要改程式碼）。
+- 部署狀態：`index.html`／`json_database_admin.html`／`backend/schema.mjs`／`CLAUDE.md` 純前端／共用檔案，git push 後自動生效；**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，`客戶別` 表不會出現在正式 db.json（要等下一次任何 Worker 寫入觸發 `normalizeDatabaseShape()` 補上預設種子，或直接部署後主動呼叫一次寫入 action），`addCustomer`／疊加式資料列權限（`hasRowCapability`）也都不會生效，但**完全不影響既有功能**（沒有客戶別資料時，`isCustomerOwnerAccount()` 恆為 `false`，所有帳號的案件列表與權限行為都跟這次改動前完全一致）。
+- commit：（尚未提交，本機檔案異動）
+
+### 2026-08-18 14:40 Asia/Taipei — Gmail 聯絡人改為固定順序的收合群組
 
 - 修改目的：將「選擇聯絡人」的平面／影音設計人員合併成單一「設計部」，並依序顯示「企劃部、設計部、負責人、各組」；群組資料預設收合，點擊標題才展開；移除測試員、監測部、管理部。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
