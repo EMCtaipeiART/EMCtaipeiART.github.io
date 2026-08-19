@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1642,
+  "revision": 1643,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:20:06.471Z",
+  "updatedAt": "2026-08-19T02:20:09.949Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25536,12 +25536,12 @@
         },
         {
           "客戶別": "統一",
-          "排序": "18",
           "專案負責人": "[]",
           "設計負責人": "[]",
           "部門組別": "[]",
           "更新時間": "",
-          "更新者": "系統預設"
+          "更新者": "系統預設",
+          "排序": "19"
         },
         {
           "客戶別": "新安東京",
