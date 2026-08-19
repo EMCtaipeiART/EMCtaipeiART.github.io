@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1908,
+  "revision": 1909,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:08:57.590Z",
+  "updatedAt": "2026-08-19T09:09:08.851Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25853,8 +25853,8 @@
           "客戶別": "欣格家居",
           "專案負責人": "[\"david.liao@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.shih@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"zoe.fan@emctaipei.com\",\"viola.tsao@emctaipei.com\",\"odin.liao@emctaipei.com\"]",
           "設計負責人": "[\"Anna\",\"Machi\"]",
-          "部門組別": "[\"設計部\",\"企劃部\",\"Odin組\"]",
-          "更新時間": "2026-08-19 15:50",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
+          "更新時間": "2026-08-19 17:09",
           "更新者": "Machi",
           "排序": "11"
         },
