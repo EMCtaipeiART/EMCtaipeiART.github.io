@@ -9,7 +9,7 @@ export const DEFAULT_CUSTOMER_NAMES = Object.freeze([
   '蘇菲', '櫻花', 'ANKER', 'BAT', 'BAT英美菸草', 'DJI', 'EMC', 'Epson', 'eufy', 'soundcore'
 ]);
 export const DEFAULT_CUSTOMER_ROWS = Object.freeze(DEFAULT_CUSTOMER_NAMES.map(name => Object.freeze({
-  '客戶別': name, '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '系統預設'
+  '客戶別': name, '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '系統預設'
 })));
 
 export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
@@ -99,7 +99,7 @@ export const TABLE_SCHEMAS = {
   },
   '客戶別': {
     primaryKey: '客戶別',
-    headers: ['客戶別', '專案負責人', '設計負責人', '部門組別', '更新時間', '更新者']
+    headers: ['客戶別', '排序', '專案負責人', '設計負責人', '部門組別', '更新時間', '更新者']
   },
   '角色權限範本': {
     primaryKey: '角色範本',

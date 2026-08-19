@@ -1112,7 +1112,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return this.mutate('addCustomer', session, draft => {
       const table = draft.tables['客戶別'];
       if (table.rows.some(row => text(row['客戶別']) === name)) throw new Error('這個客戶別已經存在');
-      const row: Row = { '客戶別': name, '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單' };
+      const row: Row = { '客戶別': name, '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單' };
       table.rows.push(row);
       return { result: { ok: true, action: 'addCustomer', customer: row }, changedTables: ['客戶別'] };
     });
