@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1747,
+  "revision": 1748,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T04:53:59.488Z",
+  "updatedAt": "2026-08-19T05:03:38.574Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21449,7 +21449,7 @@
           "時間表": "v",
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
-          "收合設計需求": "",
+          "收合設計需求": "x",
           "深淺模式": "淺色",
           "技能表單設定": "",
           "設計師顯示": ""
