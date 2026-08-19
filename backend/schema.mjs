@@ -175,12 +175,11 @@ export function normalizeDatabaseShape(input) {
       const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));
       table.rows = DEFAULT_ROLE_TEMPLATE_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByRole.get(defaultRow['角色範本']) || {}) }));
     }
-    if (name === '客戶別') {
-      const rowsByName = new Map(table.rows.map(row => [String(row['客戶別'] || '').trim(), row]));
-      const seeded = DEFAULT_CUSTOMER_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByName.get(defaultRow['客戶別']) || {}) }));
-      const extra = table.rows.filter(row => !DEFAULT_CUSTOMER_NAMES.includes(String(row['客戶別'] || '').trim()));
-      table.rows = [...seeded, ...extra];
-    }
+    // 客戶別只在資料表完全空白時（第一次啟用）才灌入預設清單；一旦已經有任何一列資料，就不再強制補回
+    // 缺少的預設名稱——跟「角色權限範本」那種「一定要固定存在四種角色」不同，客戶別本來就是可以被使用者
+    // 透過後台「刪除客戶別」刪除的資料，如果每次讀取都重新合併預設清單，删除其中任何一個預設客戶別都會在
+    // 下一次讀取時被無聲地加回來，等於功能上永遠刪不掉（這是 2026-08-19 實際發生過的真人回報 bug）。
+    if (name === '客戶別' && !table.rows.length) table.rows = DEFAULT_CUSTOMER_ROWS.map(row => ({ ...row }));
     db.tables[name] = table;
   }
   recalculateDatabaseModificationStats(db);

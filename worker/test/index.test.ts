@@ -1071,14 +1071,14 @@ describe('Machi Design API Worker', () => {
     expect(insufficientScope).toMatchObject({ ok: false, reason: 'INSUFFICIENT_SCOPE' });
   });
 
-  it('seeds the 29 default customers on normalize and preserves existing assignments plus extra admin-added customers', async () => {
+  it('starts with the 28 default customers, preserves existing assignments plus extra admin-added customers, and does not resurrect a deleted default customer on the next normalize', async () => {
     await seedCustomerOwner('Epson', 'test.user@emctaipei.com');
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       expect(init?.method).toBe('PUT');
       return Response.json({ content: { sha: 'customer-extra-file-sha' }, commit: { sha: 'customer-extra-commit-sha' } });
     });
-    // 後台通用的 adminTableInsert 新增一個不在預設清單裡的客戶別，確認合併邏輯不會把它洗掉。
+    // 後台通用的 adminTableInsert 新增一個不在預設清單裡的客戶別，確認既有的預設客戶別不會被洗掉。
     const inserted = await api({
       action: 'adminTableInsert', table: '客戶別',
       row: { '客戶別': '後台自訂客戶', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': 'Machi' }
@@ -1086,14 +1086,33 @@ describe('Machi Design API Worker', () => {
     expect(inserted.ok).toBe(true);
 
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
-    const database = await runInDurableObject(stub, async (_instance, state) => {
+    const readSnapshot = async () => runInDurableObject(stub, async (_instance, state) => {
       const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
       return JSON.parse(stored.json) as DatabaseSnapshot;
     });
+    const database = await readSnapshot();
     const customerRows = database.tables['客戶別'].rows;
     expect(customerRows).toHaveLength(DEFAULT_CUSTOMER_NAMES.length + 1);
     expect(customerRows.map(row => row['客戶別'])).toEqual(expect.arrayContaining([...DEFAULT_CUSTOMER_NAMES, '後台自訂客戶']));
     expect(JSON.parse(String(customerRows.find(row => row['客戶別'] === 'Epson')?.['專案負責人']))).toEqual(['test.user@emctaipei.com']);
+
+    // 迴歸測試：2026-08-19 實際發生過的真人回報 bug——刪除任何一個「預設」客戶別（不是後台自訂新增的）都會在
+    // 下一次讀取（例如下一個 API 請求重新載入快照，`snapshot()` 每次都會呼叫 `storedSnapshot()`→`normalizeSnapshot()`
+    // 重新從 SQL 儲存讀出並套用 normalizeDatabaseShape）時被舊版合併邏輯無聲加回來，等於功能上永遠刪不掉。
+    // 這裡明確刪除一個預設客戶別（'統一'），並透過兩種完全獨立的後續請求確認它真的消失、不會被重新種回去。
+    const deleted = await api({ action: 'adminTableDelete', table: '客戶別', key: '統一' }, token);
+    expect(deleted).toMatchObject({ ok: true, table: '客戶別' });
+    const afterDeleteDirect = await readSnapshot();
+    expect(afterDeleteDirect.tables['客戶別'].rows.some(row => row['客戶別'] === '統一')).toBe(false);
+    expect(afterDeleteDirect.tables['客戶別'].rows).toHaveLength(DEFAULT_CUSTOMER_NAMES.length);
+
+    const tablesAfterDelete = await api({ action: 'adminTables' }, token);
+    const customerMeta = (tablesAfterDelete.tables as Record<string, { rowCount: number }>)?.['客戶別'];
+    expect(customerMeta?.rowCount).toBe(DEFAULT_CUSTOMER_NAMES.length);
+    const rowsAfterDelete = await api({ action: 'adminTableRows', table: '客戶別', offset: 0, limit: 100 }, token);
+    const rowsList = (rowsAfterDelete.rows as Array<Record<string, unknown>>) || [];
+    expect(rowsList.some(row => row['客戶別'] === '統一')).toBe(false);
+    expect(rowsList).toHaveLength(DEFAULT_CUSTOMER_NAMES.length);
   });
 
   it('lets any request.create account add a bare customer via addCustomer, rejects duplicates, and also allows anonymous submitters (matching the case-submission form)', async () => {
