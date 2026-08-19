@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1897,
+  "revision": 1898,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:07:40.489Z",
+  "updatedAt": "2026-08-19T09:07:47.609Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25989,8 +25989,8 @@
           "客戶別": "DJI",
           "專案負責人": "[\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
-          "部門組別": "[\"設計部\",\"企劃部\",\"Odin組\"]",
-          "更新時間": "2026-08-19 15:25",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
+          "更新時間": "2026-08-19 17:07",
           "更新者": "Machi",
           "排序": "3"
         },
