@@ -247,6 +247,10 @@ const GMAIL_INLINE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp
 const GMAIL_INLINE_IMAGE_MAX_COUNT = 10;
 const GMAIL_INLINE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 const GMAIL_INLINE_IMAGE_MAX_TOTAL_BYTES = 18 * 1024 * 1024;
+/** 瀏覽信件串時，每封信最多回抓幾張內嵌圖片的縮圖、整條信件串最多回抓幾張——只是控制 Worker 對 Gmail API
+ * 額外呼叫次數與回應大小的上限，不是安全性邊界；超過上限的圖片不會顯示縮圖，但文字內容仍然完整顯示。 */
+const GMAIL_THREAD_IMAGE_LIMIT_PER_MESSAGE = 6;
+const GMAIL_THREAD_IMAGE_LIMIT_TOTAL = 24;
 
 function resolveGmailInlineImages(payload: ApiPayload): GmailInlineImage[] {
   const values = Array.isArray(payload.inlineImages) ? payload.inlineImages : [];
@@ -329,7 +333,12 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
   return utf8ToBase64Url(mime);
 }
 
-type GmailMessagePart = { mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
+type GmailMessagePart = {
+  mimeType?: string;
+  headers?: Array<{ name?: string; value?: string }>;
+  body?: { data?: string; attachmentId?: string; size?: number };
+  parts?: GmailMessagePart[];
+};
 
 /** 遞迴走訪 Gmail 訊息的 MIME parts，只取 text/plain 內容，避免把原始 HTML 塞進畫面造成注入風險。 */
 function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
@@ -342,6 +351,48 @@ function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined)
     if (found) return found;
   }
   return '';
+}
+
+/** 遞迴走訪 MIME parts，找出所有「圖片＋有 attachmentId」的 part（不管是不是嚴格的 inline 附件，
+ * 只要是圖片一律當縮圖抓回來顯示——比起去解析 HTML 本文裡的 cid: 參照再一一比對，這樣抓得到的
+ * 圖片集合更完整也更不容易遺漏，反正只是拿來當唯讀縮圖顯示，不是要精確還原原始排版）。 */
+function collectGmailImageParts(payload: GmailMessagePart | undefined, out: GmailMessagePart[] = []): GmailMessagePart[] {
+  if (!payload) return out;
+  if (text(payload.mimeType).toLowerCase().startsWith('image/') && payload.body?.attachmentId) out.push(payload);
+  for (const part of payload.parts || []) collectGmailImageParts(part, out);
+  return out;
+}
+
+/** Gmail 附件 API 回傳的 data 是 base64url，data: URI 需要標準 base64——兩者差別只在 62/63 這兩個字元跟結尾補
+ * 齊，直接字元替換＋補 padding 即可，不需要真的解碼成 bytes 再重新編碼一次。 */
+function gmailAttachmentDataUrl(mimeType: string, base64UrlData: string): string {
+  const standard = base64UrlData.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = standard + '='.repeat((4 - (standard.length % 4)) % 4);
+  return `data:${mimeType || 'image/png'};base64,${padded}`;
+}
+
+/** 從單一標頭值（可能是逗號分隔的多個「顯示名 <email>」或純 email）擷取出所有 email，一律轉小寫方便比對。 */
+function extractEmailAddressesFromHeader(value: string): string[] {
+  return (value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(email => email.toLowerCase());
+}
+
+/** 彙整整條信件串裡（不分哪一封信）出現過的所有收件人／寄件人／副本 email，用來判斷「這個系統帳號算不算
+ * 這封信的相關人」——這是查看/回覆信件串真正的權限依據，取代原本「只有當初按下寄出的那個帳號」的嚴格比對。 */
+function gmailThreadParticipantEmails(messages: unknown[]): Set<string> {
+  const emails = new Set<string>();
+  for (const message of messages) {
+    const headers = (asRow(asRow(message).payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+    for (const name of ['From', 'To', 'Cc']) extractEmailAddressesFromHeader(gmailHeaderValue(headers, name)).forEach(email => emails.add(email));
+  }
+  return emails;
+}
+
+/** 目前登入帳號本身的 email 是否出現在這條信件串的收件人/寄件人/副本裡——只有「信件內容本身相關的人」
+ * 才看得到內容、也才能回信，不是只要有系統層級的發信權限就行，其他帳號完全看不到這個案件的通信內容。 */
+function accountIsGmailThreadParticipant(account: unknown, messages: unknown[]): boolean {
+  const email = canonicalAccount(account);
+  if (!email || !email.includes('@')) return false;
+  return gmailThreadParticipantEmails(messages).has(email);
 }
 
 /** 信件串只顯示來回內容：移除標準簽名分隔線以及常見行動裝置簽名。 */
@@ -919,17 +970,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
   }
 
-  /** 讀取案件已寄出的 Gmail 信件串——只要對這筆案件有 request.mail 權限（角色權限，或客戶別專案負責人疊加授權，
-   * 見 requireRowAccess／model.ts 的 hasRowCapability）都能查看，不再限定「必須是當初寄出這封信的那個帳號」。
-   * Gmail 信件串實際上只存在寄件當下那個帳號自己的信箱裡，所以不論是誰在查看，實際呼叫 Gmail API 一律用
-   * getValidGmailAccessToken(owner) 拿「當初寄件帳號」存的 token，而不是目前登入者自己的 token——這是讓「整串
-   * 信件內容相關的人都能查看」在技術上可行的關鍵：伺服器端本來就保存著寄件帳號的 refresh token，能代表它去讀信，
-   * 只是這次把「誰能觸發這個動作」的權限判斷，從嚴格比對帳號身分改成比對系統權限。只回傳 text/plain 內容，不回傳原始 HTML。 */
+  /** 讀取案件已寄出的 Gmail 信件串——權限依據是「這個系統帳號的 email 有沒有出現在信件串本身的收件人/寄件人/
+   * 副本裡」（見 accountIsGmailThreadParticipant），不是系統層級的 request.mail 權限，也不是只有當初按下寄出
+   * 的那個帳號——只要是這封信原本就會寄給/副本給的人，都算「整串信件內容相關的人」，能看到內容也能回覆；其他
+   * 帳號完全看不到。Gmail 信件串實際上只存在寄件當下那個帳號自己的信箱裡，所以不論是誰在查看，實際呼叫 Gmail
+   * API 一律用 getValidGmailAccessToken(owner) 拿「當初寄件帳號」存的 token，不是目前登入者自己的 token——伺服
+   * 器端本來就保存著寄件帳號的 refresh token，能代表它去讀信，只是這次把「誰能觸發這個動作」的判斷依據換成信
+   * 件內容本身，而不是系統權限或帳號身分。只回傳 text/plain 內容＋內嵌圖片，不回傳原始 HTML（避免注入風險）。 */
   private async getCaseMailThread(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
     const caseId = text(payload.caseId || payload.id);
-    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
-    this.requireRowAccess(database, session, 'request.mail', existingRow);
-    const row = existingRow;
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'getCaseMailThread', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
@@ -941,28 +992,55 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
-    const messages = (Array.isArray(data.messages) ? data.messages : []).map((message: unknown) => {
+    const rawMessages = Array.isArray(data.messages) ? data.messages : [];
+    if (!accountIsGmailThreadParticipant(current.account, rawMessages)) {
+      return { ok: false, action: 'getCaseMailThread', error: '此信件串的收件人/副本裡沒有這個帳號，無法查看內容', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
+    }
+    let remainingImageBudget = GMAIL_THREAD_IMAGE_LIMIT_TOTAL;
+    const messages: Row[] = [];
+    for (const message of rawMessages) {
       const messageRow = asRow(message);
-      const payloadPart = messageRow.payload as GmailMessagePart & { headers?: Array<{ name?: string; value?: string }> } | undefined;
+      const payloadPart = messageRow.payload as GmailMessagePart | undefined;
       const bodyText = stripSignatureFromPlainText(extractPlainTextFromGmailPayload(payloadPart) || text(messageRow.snippet), knownSignatureText);
-      return {
+      const images: Array<{ dataUrl: string }> = [];
+      if (remainingImageBudget > 0) {
+        const imageParts = collectGmailImageParts(payloadPart).slice(0, Math.min(GMAIL_THREAD_IMAGE_LIMIT_PER_MESSAGE, remainingImageBudget));
+        for (const part of imageParts) {
+          const attachmentId = text(part.body?.attachmentId);
+          if (!attachmentId) continue;
+          try {
+            const attResponse = await fetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(text(messageRow.id))}/attachments/${encodeURIComponent(attachmentId)}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            if (!attResponse.ok) continue;
+            const attData = await attResponse.json().catch(() => ({})) as Row;
+            const rawData = text(attData.data);
+            if (!rawData) continue;
+            images.push({ dataUrl: gmailAttachmentDataUrl(text(part.mimeType), rawData) });
+            remainingImageBudget -= 1;
+          } catch { /* 單張圖片抓取失敗不擋整封信的顯示，略過這一張即可 */ }
+        }
+      }
+      messages.push({
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
-        date: gmailHeaderValue(payloadPart?.headers, 'Date'), snippet: text(messageRow.snippet), bodyText
-      };
-    });
+        date: gmailHeaderValue(payloadPart?.headers, 'Date'), snippet: text(messageRow.snippet), bodyText, images
+      });
+    }
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
   }
 
-  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一個放寬：只要對這筆案件有 request.mail 權限就能回覆，
-   * 不再限定「必須是當初寄出這封信的那個帳號」。但實際送出時一律用 getValidGmailAccessToken(owner)（當初寄件
-   * 帳號存的 token）呼叫 Gmail API，讓回覆確實接在同一條 Gmail 信件串裡（Gmail 信件串本來就只存在寄件帳號自己
-   * 的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆
-   * 正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件帳號，不是實際按下「送出回覆」的那個系統帳號，
-   * 這是這個設計必然的結果，等同多人共用同一個對外信箱的概念。先抓最後一封信的標頭組出正確的 In-Reply-To/References。 */
+  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一個依據：目前登入帳號的 email 必須出現在這條信件串的
+   * 收件人/寄件人/副本裡才能回覆，不是只要有系統層級的發信權限、也不是只有當初寄出的那個帳號。但實際送出時一律
+   * 用 getValidGmailAccessToken(owner)（當初寄件帳號存的 token）呼叫 Gmail API，讓回覆確實接在同一條 Gmail 信
+   * 件串裡（Gmail 信件串本來就只存在寄件帳號自己的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail
+   * 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件
+   * 帳號，不是實際按下「送出回覆」的那個系統帳號，這是這個設計必然的結果，等同多人共用同一個對外信箱的概念。
+   * 先抓整條信件串每一封信的標頭（含 Cc，用來判斷誰是「相關人」）組出正確的 In-Reply-To/References。 */
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
     const caseId = text(payload.caseId || payload.id);
     const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
-    this.requireRowAccess(database, session, 'request.mail', existingRow);
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
@@ -974,12 +1052,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
     const threadResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const threadData = await threadResponse.json().catch(() => ({})) as Row;
     const threadMessages = Array.isArray(threadData.messages) ? threadData.messages : [];
     if (!threadResponse.ok || !threadMessages.length) return { ok: false, action: 'replyCaseMail', error: '找不到原始信件串，無法回覆' };
+    if (!accountIsGmailThreadParticipant(current.account, threadMessages)) {
+      return { ok: false, action: 'replyCaseMail', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
+    }
     const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
     const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
     const lastMessageId = gmailHeaderValue(headers, 'Message-Id');

@@ -99,6 +99,29 @@ async function seedCustomerOwner(customerName: string, account: string): Promise
   });
 }
 
+async function sha256Base64UrlForTest(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+/** 直接在 sessions 表插入一筆有效 session，模擬「這個帳號已經登入」——不需要這個帳號在「設定」／「帳號權限」
+ * 表裡有任何資料，因為 Gmail 信件串查看/回覆的權限依據現在是信件內容本身（見 accountIsGmailThreadParticipant），
+ * 不是角色權限，用這個 helper 可以直接測試任意 email 帳號、不用另外走一次完整的登入流程。 */
+async function seedSession(account: string, user = account): Promise<string> {
+  const token = `test-session-${crypto.randomUUID()}`;
+  const tokenHash = await sha256Base64UrlForTest(token);
+  const expiresAt = Date.now() + 60 * 60 * 1000;
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    const payload = JSON.stringify({ user, account, provider: 'password', expiresAt });
+    state.storage.sql.exec('INSERT INTO sessions(token_hash, payload, expires_at) VALUES (?, ?, ?)', tokenHash, payload, expiresAt);
+  });
+  return token;
+}
+
 async function api(payload: Record<string, unknown>, token = ''): Promise<Record<string, unknown>> {
   const response = await SELF.fetch('https://worker.test/api', {
     method: 'POST',
@@ -862,91 +885,107 @@ describe('Machi Design API Worker', () => {
     }, token);
     expect(secondSend).toMatchObject({ ok: false, reason: 'THREAD_EXISTS' });
 
-    // 換另一個沒有寄過這封信、也從沒連接過 Gmail 的帳號查看/回覆同一個信件串——只要這個帳號本身有 request.mail
-    // 權限（不必是當初的寄件帳號），現在應該可以成功；重點是底層實際呼叫 Gmail API 時一律帶著「寄件帳號」自己存的
-    // access token（gmail-access-1），不是（也不可能是，因為它根本沒連接過）目前登入帳號自己的 token——這樣才能
-    // 讀到／回進同一條實際存在寄件帳號信箱裡的 Gmail 信件串。admin@emctaipei.com 是保留給每日 shortcut 密碼
-    // （當日 MMDD）登入的管理者帳號，直接沿用同一套機制取得它的 token，管理者角色範本本來就有 request.mail。
+    // 驗證新的權限依據：不是系統層級的 request.mail 權限，而是「這個帳號的 email 有沒有出現在信件串本身的
+    // 收件人/寄件人/副本裡」——admin@emctaipei.com（每日 shortcut 密碼登入的管理者帳號，角色範本本來就有全部
+    // 權限）故意拿來測試「有系統權限、但不是這封信的相關人」這種情境，應該被擋下，不是像改動前那樣只要有系統
+    // 權限就能看；designer@emctaipei.com 確實出現在下面 mock 訊息的 From/To 裡，用 seedSession 直接模擬「這個
+    // 帳號已經登入」，不需要它在「設定」／「帳號權限」表裡有任何資料，正好驗證權限依據真的是信件內容本身。
     const todayMonthDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' })
       .formatToParts(new Date()).reduce((acc, part) => (part.type === 'month' || part.type === 'day' ? acc + part.value : acc), '');
     const adminLogin = await api({ action: 'login', password: todayMonthDay });
     expect(adminLogin.ok).toBe(true);
     const adminToken = String(adminLogin.token);
+    const designerToken = await seedSession('designer@emctaipei.com');
 
-    // 讀信件串：由非寄件帳號（admin）讀取，應該成功並只回傳純文字內容；Gmail API 呼叫要帶寄件帳號的 token。
     const plainTextBody = 'Hi，這是設計師的回覆內容';
     const plainTextBodyBase64Url = toBase64Url(`${plainTextBody}\n\n設計師簽名檔`);
+    // 第二封信刻意用 multipart/mixed 夾帶一張圖片附件（有 attachmentId），驗證瀏覽信件串時內嵌圖片會被抓回來顯示。
+    const mockThreadMessages = [
+      {
+        id: 'gmail-msg-1', snippet: 'Hi，這是測試信件內容',
+        payload: {
+          mimeType: 'text/plain', body: { data: toBase64Url('Hi，這是測試信件內容') },
+          headers: [
+            { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
+            { name: 'Date', value: 'Mon, 17 Aug 2026 10:00:00 +0800' }
+          ]
+        }
+      },
+      {
+        id: 'gmail-msg-2', snippet: plainTextBody,
+        payload: {
+          mimeType: 'multipart/mixed',
+          headers: [
+            { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+            { name: 'Date', value: 'Mon, 17 Aug 2026 11:00:00 +0800' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
+            { name: 'References', value: '<msg1@mail.gmail.com>' }, { name: 'Subject', value: 'Re: 測試主旨' }
+          ],
+          parts: [
+            { mimeType: 'text/plain', body: { data: plainTextBodyBase64Url } },
+            { mimeType: 'image/png', filename: 'reply-photo.png', body: { attachmentId: 'gmail-att-1', size: 12 } }
+          ]
+        }
+      }
+    ];
+
+    // 讀信件串：admin（不是相關人）應該直接被擋下，只呼叫了 thread 端點，完全不會走到抓圖片附件那一步
+    // （權限檢查在抓圖片之前）。
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
-        return Response.json({
-          id: 'gmail-thread-1',
-          messages: [
-            {
-              id: 'gmail-msg-1', snippet: 'Hi，這是測試信件內容',
-              payload: {
-                mimeType: 'text/plain', body: { data: toBase64Url('Hi，這是測試信件內容') },
-                headers: [
-                  { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
-                  { name: 'Date', value: 'Mon, 17 Aug 2026 10:00:00 +0800' }
-                ]
-              }
-            },
-            {
-              id: 'gmail-msg-2', snippet: plainTextBody,
-              payload: {
-                mimeType: 'text/plain', body: { data: plainTextBodyBase64Url },
-                headers: [
-                  { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
-                  { name: 'Date', value: 'Mon, 17 Aug 2026 11:00:00 +0800' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
-                  { name: 'References', value: '<msg1@mail.gmail.com>' }, { name: 'Subject', value: 'Re: 測試主旨' }
-                ]
-              }
-            }
-          ]
-        });
+        return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
+      }
+      throw new Error(`unexpected fetch while a non-participant reads: ${url}`);
+    });
+    const rejectedRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, adminToken);
+    expect(rejectedRead).toMatchObject({ ok: false, reason: 'GMAIL_THREAD_NOT_PARTICIPANT' });
+
+    // designer（確實是相關人）讀信件串應該成功，只回傳純文字內容，且第二封信的圖片附件要被抓回來轉成 data: URI。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/gmail-msg-2/attachments/gmail-att-1') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({ attachmentId: 'gmail-att-1', size: 12, data: toBase64Url('fake-image-bytes') });
       }
       throw new Error(`unexpected fetch during thread read: ${url}`);
     });
-    const thread = await api({ action: 'getCaseMailThread', caseId: '26080001', signatureHtml: '<b>設計師簽名檔</b>' }, adminToken);
+    const thread = await api({ action: 'getCaseMailThread', caseId: '26080001', signatureHtml: '<b>設計師簽名檔</b>' }, designerToken);
     expect(thread.ok).toBe(true);
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
     expect(messages[1]).toMatchObject({ from: 'designer@emctaipei.com', bodyText: plainTextBody });
+    const secondMessageImages = messages[1].images as Array<{ dataUrl: string }>;
+    expect(secondMessageImages).toHaveLength(1);
+    expect(secondMessageImages[0].dataUrl.startsWith('data:image/png;base64,')).toBe(true);
 
-    // 回覆：同樣由非寄件帳號（admin）觸發，先抓最後一封信的標頭組出 In-Reply-To/References 再送出，
-    // threadId 要跟著帶上，且「回覆對象」的判斷要用寄件帳號自己的 Gmail 地址比對，不是目前登入帳號的。
+    // 回覆：admin（不是相關人）應該被擋下；designer（相關人）應該成功——先抓最後一封信的標頭組出
+    // In-Reply-To/References 再送出，threadId 要跟著帶上，「回覆對象」判斷要用寄件帳號自己的 Gmail 地址比對。
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url.includes('/threads/gmail-thread-1?format=metadata')) {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
-        return Response.json({
-          id: 'gmail-thread-1',
-          messages: [{
-            id: 'gmail-msg-2', payload: {
-              headers: [
-                { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
-                { name: 'Message-Id', value: '<msg2@mail.gmail.com>' }, { name: 'References', value: '<msg1@mail.gmail.com>' },
-                { name: 'Subject', value: 'Re: 測試主旨' }
-              ]
-            }
-          }]
-        });
+        return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
       }
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         const body = JSON.parse(String(init?.body));
         expect(body.threadId).toBe('gmail-thread-1');
         // 最後一封信是「designer@emctaipei.com」寄給「test.user@emctaipei.com」（也就是寄件帳號自己收到的），
-        // 所以應該回覆給 designer@emctaipei.com，不是誤判成回覆給admin自己或其他人。
+        // 所以應該回覆給 designer@emctaipei.com，不是誤判成回覆給觸發者自己或其他人。
         const decodedRaw = decodeBase64UrlText(String(body.raw));
         expect(decodedRaw).toContain('To: designer@emctaipei.com');
         return Response.json({ id: 'gmail-msg-3', threadId: 'gmail-thread-1' });
       }
       throw new Error(`unexpected fetch during reply: ${url}`);
     });
-    const replied = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報' }, adminToken);
+    const rejectedReply = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '不應該成功' }, adminToken);
+    expect(rejectedReply).toMatchObject({ ok: false, reason: 'GMAIL_THREAD_NOT_PARTICIPANT' });
+    const replied = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報' }, designerToken);
     expect(replied).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-3' });
 
     // 手動把 access token 改成已過期，驗證下一次呼叫會先用 refresh_token 換一組新的再讀信。
@@ -966,7 +1005,17 @@ describe('Machi Design API Worker', () => {
       if (url === `https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full`) {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-2');
         refreshedAccessTokenUsed = true;
-        return Response.json({ id: 'gmail-thread-1', messages: [] });
+        // 至少要有一封信讓 test.user（寄件帳號本人）通過「是不是這封信的相關人」檢查，真實的 Gmail 信件串
+        // 本來就不可能是空的（至少有當初寄出的那一封）；這裡不需要圖片附件，用簡化過、沒有圖片的單封信即可。
+        return Response.json({
+          id: 'gmail-thread-1',
+          messages: [{
+            id: 'gmail-msg-1', snippet: '', payload: {
+              mimeType: 'text/plain', body: { data: toBase64Url('') },
+              headers: [{ name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' }]
+            }
+          }]
+        });
       }
       throw new Error(`unexpected fetch during token refresh: ${url}`);
     });
