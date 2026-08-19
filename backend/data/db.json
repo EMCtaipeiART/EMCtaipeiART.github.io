@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1868,
+  "revision": 1869,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:55:13.184Z",
+  "updatedAt": "2026-08-19T07:55:53.378Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -26022,12 +26022,12 @@
         },
         {
           "客戶別": "EMC",
-          "排序": "5",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:22",
-          "更新者": "Machi"
+          "部門組別": "[\"設計部\",\"企劃部\",\"專案部\"]",
+          "更新時間": "2026-08-19 15:55",
+          "更新者": "Machi",
+          "排序": "5"
         },
         {
           "客戶別": "Epson",
