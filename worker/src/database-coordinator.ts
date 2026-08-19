@@ -1054,18 +1054,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
   }
 
-  /** 讀取案件已寄出的 Gmail 信件串——權限依據是「這個系統帳號的 email 有沒有出現在信件串本身的收件人/寄件人/
-   * 副本裡」（見 accountIsGmailThreadParticipant），不是系統層級的 request.mail 權限，也不是只有當初按下寄出
-   * 的那個帳號——只要是這封信原本就會寄給/副本給的人，都算「整串信件內容相關的人」，能看到內容也能回覆；其他
-   * 帳號完全看不到。Gmail 信件串實際上只存在寄件當下那個帳號自己的信箱裡，所以不論是誰在查看，實際呼叫 Gmail
-   * API 一律用 getValidGmailAccessToken(owner) 拿「當初寄件帳號」存的 token，不是目前登入者自己的 token——伺服
-   * 器端本來就保存著寄件帳號的 refresh token，能代表它去讀信，只是這次把「誰能觸發這個動作」的判斷依據換成信
-   * 件內容本身，而不是系統權限或帳號身分。只回傳 text/plain 內容＋內嵌圖片，不回傳原始 HTML（避免注入風險）。 */
+  /** 讀取案件已寄出的 Gmail 信件串——2026-08-19 起需要同時通過兩層檢查才能查看/回覆：①客戶別「權限
+   * 設定」白名單（跟 sendCaseMail／request.edit／request.delete 共用同一套 hasRowCapability，見
+   * model.ts），客戶別沒設定過名單時退回一般角色權限判斷；②這個帳號的 email 是否出現在信件串本身的
+   * 收件人/寄件人/副本裡（見 accountIsGmailThreadParticipant）——只有這封信原本就會寄給/副本給的人，
+   * 才算「整串信件內容相關的人」，能看到內容也能回覆。兩者缺一不可：光是有客戶別權限、但不是這條討論
+   * 串的實際相關人，一樣看不到內容（避免看到不相關的客戶通信內容）；反過來光是討論串相關人、但沒有這
+   * 個客戶別的操作權限，也一樣被擋（跟發信/編輯/刪除的授權範圍保持一致）。Gmail 信件串實際上只存在寄
+   * 件當下那個帳號自己的信箱裡，所以不論是誰在查看，實際呼叫 Gmail API 一律用
+   * getValidGmailAccessToken(owner) 拿「當初寄件帳號」存的 token，不是目前登入者自己的 token——伺服器
+   * 端本來就保存著寄件帳號的 refresh token，能代表它去讀信。只回傳 text/plain 內容＋內嵌圖片，不回傳
+   * 原始 HTML（避免注入風險）。 */
   private async getCaseMailThread(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
     const caseId = text(payload.caseId || payload.id);
     const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     if (!row) return { ok: false, action: 'getCaseMailThread', error: '找不到案件資料' };
+    if (!hasRowCapability(database, current, 'request.mail', row)) {
+      return { ok: false, action: 'getCaseMailThread', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
@@ -1115,8 +1122,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
   }
 
-  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一個依據：目前登入帳號的 email 必須出現在這條信件串的
-   * 收件人/寄件人/副本裡才能回覆，不是只要有系統層級的發信權限、也不是只有當初寄出的那個帳號。但實際送出時一律
+  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一套雙層依據（2026-08-19 起）：①客戶別「權限
+   * 設定」白名單（hasRowCapability，跟發信/編輯/刪除共用），②目前登入帳號的 email 必須出現在這條信件
+   * 串的收件人/寄件人/副本裡（accountIsGmailThreadParticipant）——兩者都通過才能回覆。但實際送出時一律
    * 用 getValidGmailAccessToken(owner)（當初寄件帳號存的 token）呼叫 Gmail API，讓回覆確實接在同一條 Gmail 信
    * 件串裡（Gmail 信件串本來就只存在寄件帳號自己的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail
    * 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件
@@ -1126,13 +1134,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
     const caseId = text(payload.caseId || payload.id);
-    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
+    if (!hasRowCapability(database, current, 'request.mail', row)) {
+      return { ok: false, action: 'replyCaseMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
     if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
-    const row = existingRow;
-    if (!row) return { ok: false, action: 'replyCaseMail', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };

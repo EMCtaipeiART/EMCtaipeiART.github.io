@@ -887,16 +887,22 @@ describe('Machi Design API Worker', () => {
     }, token);
     expect(secondSend).toMatchObject({ ok: false, reason: 'THREAD_EXISTS' });
 
-    // 驗證新的權限依據：不是系統層級的 request.mail 權限，而是「這個帳號的 email 有沒有出現在信件串本身的
-    // 收件人/寄件人/副本裡」——admin@emctaipei.com（每日 shortcut 密碼登入的管理者帳號，角色範本本來就有全部
-    // 權限）故意拿來測試「有系統權限、但不是這封信的相關人」這種情境，應該被擋下，不是像改動前那樣只要有系統
-    // 權限就能看；designer@emctaipei.com 確實出現在下面 mock 訊息的 From/To 裡，用 seedSession 直接模擬「這個
-    // 帳號已經登入」，不需要它在「設定」／「帳號權限」表裡有任何資料，正好驗證權限依據真的是信件內容本身。
+    // 2026-08-19 起查看/回覆信件串需要同時通過兩層檢查：①客戶別「權限設定」白名單（或一般角色 request.mail），
+    // ②這個帳號的 email 有沒有出現在信件串本身的收件人/寄件人/副本裡（accountIsGmailThreadParticipant）——這裡
+    // 專門驗證第②層：admin@emctaipei.com（每日 shortcut 密碼登入的管理者帳號，一律不受客戶別白名單限制）故意
+    // 拿來測試「客戶別權限沒問題、但不是這封信的相關人」這種情境，應該被擋下；designer@emctaipei.com 確實出現
+    // 在下面 mock 訊息的 From/To 裡，用 seedSession 直接模擬「這個帳號已經登入」，不需要它在「設定」／「帳號
+    // 權限」表裡有任何資料——但因為它預設的「一般使用者」角色範本沒有 request.mail，這裡額外把它加進客戶別
+    // 白名單（跟發信的第①層要求一致），讓測試能精準只驗證第②層的討論串相關人判斷。
     const todayMonthDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit' })
       .formatToParts(new Date()).reduce((acc, part) => (part.type === 'month' || part.type === 'day' ? acc + part.value : acc), '');
     const adminLogin = await api({ action: 'login', password: todayMonthDay });
     expect(adminLogin.ok).toBe(true);
     const adminToken = String(adminLogin.token);
+    // test.user 自己是這條信件串的寄件帳號，稍後（threadAfterRefresh）還要再用它讀一次信，一併加進白名單
+    // 才不會因為客戶別白名單一旦非空就不再看一般角色權限（取代不是疊加）而被自己的白名單意外擋下。
+    await seedCustomerOwner('測試客戶', 'designer@emctaipei.com');
+    await seedCustomerOwner('測試客戶', 'test.user@emctaipei.com');
     const designerToken = await seedSession('designer@emctaipei.com');
 
     const plainTextBody = 'Hi，這是設計師的回覆內容';
@@ -1059,6 +1065,63 @@ describe('Machi Design API Worker', () => {
     expect(disconnected).toMatchObject({ ok: true });
     const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
+  });
+
+  it('2026-08-19: getCaseMailThread／replyCaseMail 也納入客戶別「權限設定」白名單——即使是討論串本身的實際收件人，不在白名單裡一樣被擋；加進白名單後才會走到既有的討論串相關人檢查並成功', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    // 白名單只有別人，不含 test.user——即使他之後確實是討論串的收件人也一樣被擋。
+    await seedCustomerOwner('測試客戶', 'someone.else@emctaipei.com');
+
+    // 直接在 DO 裡準備好一個「已經寄出過信、test.user 確實是收件人」的假狀態，不用重跑一次完整的連接
+    // Gmail／寄信流程——這裡只是要驗證「即使是討論串相關人，不在客戶別白名單也一樣被擋」。
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      const row = database.tables.database.rows.find(item => item['案件編號'] === '26080001')!;
+      row['客戶別'] = '測試客戶';
+      row['Gmail信件串ID'] = 'gmail-thread-locked';
+      row['Gmail寄件帳號'] = 'test.user@emctaipei.com';
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      state.storage.sql.exec(
+        `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, connected_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        'test.user@emctaipei.com', 'refresh-locked', 'gmail-access-locked', Date.now() + 3600 * 1000,
+        'test.user@gmail.example', new Date().toISOString(), new Date().toISOString()
+      );
+    });
+
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-locked?format=full') {
+        return Response.json({
+          id: 'gmail-thread-locked',
+          messages: [{
+            id: 'gmail-msg-locked', snippet: '',
+            payload: {
+              mimeType: 'text/plain', body: { data: toBase64Url('hi') },
+              headers: [{ name: 'From', value: 'client@example.com' }, { name: 'To', value: 'test.user@emctaipei.com' }]
+            }
+          }]
+        });
+      }
+      throw new Error(`unexpected fetch while whitelist blocks a real participant: ${url}`);
+    });
+
+    // test.user 確實是這封信的收件人（討論串相關人），但客戶別白名單只有別人——要被客戶別權限擋下
+    // （reason 是 REQUEST_MAIL_DENIED），不是被「不是討論串相關人」擋下（那是完全不同的另一種原因）。
+    const blockedRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    expect(blockedRead).toMatchObject({ ok: false, reason: 'REQUEST_MAIL_DENIED' });
+    const blockedReply = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '不該成功' }, token);
+    expect(blockedReply).toMatchObject({ ok: false, reason: 'REQUEST_MAIL_DENIED' });
+
+    // 白名單放行後，才會真的走到既有的討論串相關人檢查並成功讀信。
+    await seedCustomerOwner('測試客戶', 'test.user@emctaipei.com');
+    const allowedRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    expect(allowedRead.ok).toBe(true);
   });
 
   it('reads the Gmail signature for the connected send-as address, and reports a clear reason when the token lacks gmail.settings.basic', async () => {
