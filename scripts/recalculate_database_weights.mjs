@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stringifyDatabaseForStorage } from '../backend/schema.mjs';
 import { applyWeightToRow, DEFAULT_WEIGHT_RULE_ROWS } from '../backend/weighting.mjs';
 
 const HERE=path.dirname(fileURLToPath(import.meta.url));
@@ -26,5 +27,5 @@ if(!changed&&!rulesAdded){console.log(JSON.stringify({ok:true,rowCount:rows.leng
 database.revision=Number(database.revision||0)+1;
 database.updatedAt=new Date().toISOString();
 database.lastWrite={reason:'recalculate weights from item-detail score table',at:database.updatedAt};
-await writeFile(databasePath,`${JSON.stringify(database,null,2)}\n`,'utf8');
+await writeFile(databasePath,stringifyDatabaseForStorage(database),'utf8');
 console.log(JSON.stringify({ok:true,rowCount:rows.length,changed,revision:database.revision,written:true},null,2));

@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile, copyFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { emptyDatabase, TABLE_SCHEMAS } from './schema.mjs';
+import { emptyDatabase, stringifyDatabaseForStorage, TABLE_SCHEMAS } from './schema.mjs';
 import { applyWeightToRow } from './weighting.mjs';
 
 const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
@@ -91,7 +91,7 @@ export async function importGoogleSheets(outputPath = DEFAULT_OUTPUT) {
     if (error.code !== 'ENOENT') throw error;
   }
   const temp = `${outputPath}.${process.pid}.tmp`;
-  await writeFile(temp, `${JSON.stringify(db, null, 2)}\n`, { mode: 0o600 });
+  await writeFile(temp, stringifyDatabaseForStorage(db), { mode: 0o600 });
   await rename(temp, outputPath);
   return Object.fromEntries(results.map(([name, , data]) => [name, data.rows.length]));
 }

@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, writeFile, copyFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
-import { emptyDatabase, normalizeDatabaseShape, TABLE_SCHEMAS } from './schema.mjs';
+import { emptyDatabase, normalizeDatabaseShape, stringifyDatabaseForStorage, TABLE_SCHEMAS } from './schema.mjs';
 
 function clone(value) {
   return structuredClone(value);
@@ -65,7 +65,7 @@ export class JsonDatabase {
   }
 
   async #persist(state, makeBackup) {
-    const json = `${JSON.stringify(state, null, 2)}\n`;
+    const json = stringifyDatabaseForStorage(state);
     const tempPath = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
     if (makeBackup) {
       try {

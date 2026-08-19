@@ -1,3 +1,4 @@
+import { stringifyDatabaseForStorage } from '../../backend/schema.mjs';
 import { normalizeSnapshot, text } from './model';
 import type { DatabaseSnapshot, GitHubCommitResult, StoredSnapshot } from './types';
 
@@ -37,7 +38,7 @@ function base64ToUtf8(value: string): string {
 }
 
 function encodedDatabase(database: DatabaseSnapshot): string {
-  const json = `${JSON.stringify(database, null, 2)}\n`;
+  const json = stringifyDatabaseForStorage(database);
   return bytesToBase64(new TextEncoder().encode(json));
 }
 
