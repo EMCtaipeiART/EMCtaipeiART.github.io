@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1675,
+  "revision": 1676,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:28:06.345Z",
+  "updatedAt": "2026-08-19T02:30:56.853Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -16627,7 +16627,7 @@
           "參考範例連結": "",
           "其他說明": "",
           "其他連結": "",
-          "修改次數": "1"
+          "修改次數": "2"
         },
         {
           "案件編號": "26080013",
@@ -20876,6 +20876,16 @@
           "圖片連結": "[{\"fileName\":\"260819_ANKER_全館促銷_流量_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/166U75ZF9hunRGILxBqk2EtlWMJo78Nqr=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XT9zOtttfPjEjPy2xKE06xPPQWAyHG-_=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-QyoC1vfkLv93Pk6ERFVrjz6-cf7dZ07=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/18 17:46:30"
+        },
+        {
+          "案件編號": "26080012",
+          "修改次數": "2",
+          "建立日期": "2026/08/19 10:30:56",
+          "修改日期": "2026-08-19",
+          "修改內容": "客戶想要新增小標，讓網友能更明確接收訊息，再請協助依照下圖調整，謝謝。\n\n小標1：好友綁定活動\n小標2：保友專屬活動",
+          "修改人": "Machi",
+          "確認修正日": "",
+          "待修改圖片": ""
         }
       ]
     },
@@ -25626,12 +25636,12 @@
         },
         {
           "客戶別": "ANKER",
+          "排序": "1",
           "專案負責人": "[\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\"]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[]",
           "更新時間": "2026-08-19 10:28",
-          "更新者": "管理員",
-          "排序": "1"
+          "更新者": "管理員"
         },
         {
           "客戶別": "BAT",
