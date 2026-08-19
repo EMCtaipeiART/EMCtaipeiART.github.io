@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stringifyDatabaseForStorage } from '../backend/schema.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATABASE_PATH = path.join(ROOT, 'backend', 'data', 'db.json');
@@ -114,6 +115,6 @@ export function mergeUserDirectory(database) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const database = JSON.parse(await readFile(DATABASE_PATH, 'utf8'));
   const summary = mergeUserDirectory(database);
-  await writeFile(DATABASE_PATH, `${JSON.stringify(database, null, 2)}\n`, 'utf8');
+  await writeFile(DATABASE_PATH, stringifyDatabaseForStorage(database), 'utf8');
   console.log(JSON.stringify(summary));
 }

@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { JsonDatabase } from '../json_database.mjs';
-import { emptyDatabase, normalizeDatabaseShape } from '../schema.mjs';
+import { emptyDatabase, normalizeDatabaseShape, stringifyDatabaseForStorage } from '../schema.mjs';
 import { calculateWeight } from '../weighting.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
@@ -64,6 +64,29 @@ test('CSV parser preserves commas, quotes and embedded newlines', () => {
     ['1', 'two,2', 'line 1\nline 2'],
     ['3', 'say "hi"', '4']
   ]);
+});
+
+test('database storage compacts formatting without changing any JSON value', () => {
+  const database = emptyDatabase();
+  database.tables.database.rows.push({
+    '案件編號': '26080001',
+    '專案名稱': '保留「引號」、換行\n與空欄位',
+    '客戶別': '',
+    '數量': null
+  });
+  database.internal.idempotency['request-test'] = {
+    ok: true,
+    action: 'append',
+    row: { id: '26080001', client: '' }
+  };
+
+  const pretty = `${JSON.stringify(database, null, 2)}\n`;
+  const compact = stringifyDatabaseForStorage(database);
+
+  assert.deepEqual(JSON.parse(compact), database);
+  assert.ok(Buffer.byteLength(compact) < Buffer.byteLength(pretty));
+  assert.match(compact, /    \{"案件編號":"26080001"/);
+  assert.match(compact, /    "request-test": \{"ok":true/);
 });
 
 test('404 short redirects use the small static JSON index before Apps Script fallback', async () => {

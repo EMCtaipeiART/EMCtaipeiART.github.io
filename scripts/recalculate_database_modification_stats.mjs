@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { normalizeDatabaseShape } from '../backend/schema.mjs';
+import { normalizeDatabaseShape, stringifyDatabaseForStorage } from '../backend/schema.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const databasePath = path.resolve(HERE, '../backend/data/db.json');
@@ -34,5 +34,5 @@ if (!changed) {
 database.revision = Number(database.revision || 0) + 1;
 database.updatedAt = new Date().toISOString();
 database.lastWrite = { reason: 'derive modification count and submission time from modification records', at: database.updatedAt };
-await writeFile(databasePath, `${JSON.stringify(database, null, 2)}\n`, 'utf8');
+await writeFile(databasePath, stringifyDatabaseForStorage(database), 'utf8');
 console.log(JSON.stringify({ ok: true, rowCount: mainTable.rows.length, countChanged, submittedAtChanged, headersChanged, revision: database.revision, written: true }, null, 2));

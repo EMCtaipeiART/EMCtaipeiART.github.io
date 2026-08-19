@@ -189,6 +189,35 @@ export function normalizeDatabaseShape(input) {
   return db;
 }
 
+/**
+ * 保留完整資料值與兩格縮排的外層結構，但讓每筆資料列／冪等回應各自維持單行。
+ * 這能顯著減少重複縮排空白，同時讓 GitHub diff 仍可逐筆檢視；JSON.parse 後與輸入完全相同。
+ */
+export function stringifyDatabaseForStorage(input) {
+  const sourceJson = JSON.stringify(input);
+  let markerPrefix = '__MACHI_COMPACT_JSON_VALUE_';
+  while (sourceJson.includes(markerPrefix)) markerPrefix += '_';
+
+  const compact = structuredClone(input);
+  const rawValues = [];
+  const marker = value => {
+    const index = rawValues.push(JSON.stringify(value) ?? 'null') - 1;
+    return `${markerPrefix}${index}__`;
+  };
+
+  for (const table of Object.values(compact?.tables || {})) {
+    if (Array.isArray(table?.rows)) table.rows = table.rows.map(marker);
+  }
+  if (compact?.internal?.idempotency && typeof compact.internal.idempotency === 'object') {
+    for (const key of Object.keys(compact.internal.idempotency)) {
+      compact.internal.idempotency[key] = marker(compact.internal.idempotency[key]);
+    }
+  }
+
+  const markerPattern = new RegExp(`"${markerPrefix}(\\d+)__"`, 'g');
+  return `${JSON.stringify(compact, null, 2).replace(markerPattern, (_match, index) => rawValues[Number(index)])}\n`;
+}
+
 // 「修改次數」與「繳交時間」都是修改統計表的派生資料：
 // 0 號紀錄代表初稿，其建立時間就是繳交時間；正整數最大值是目前修改輪次。
 // 沒有初稿紀錄的舊案件保留既有繳交時間，避免清除歷史資料。
