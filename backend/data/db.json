@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1825,
+  "revision": 1826,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:31:03.812Z",
+  "updatedAt": "2026-08-19T07:31:31.337Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25830,7 +25830,7 @@
         },
         {
           "客戶別": "櫻花",
-          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"orli.wu@emctaipei.com\",\"wendy.lin@emctaipei.com\",\"cherry.kuo@emctaipei.com\",\"sudi.su@emctaipei.com\",\"fallonlee25@gmail.com\",\"deloise.chang@emctaipei.com\",\"emily.chen@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"Emily組\",\"Cherry組\"]",
           "更新時間": "2026-08-19 15:31",
