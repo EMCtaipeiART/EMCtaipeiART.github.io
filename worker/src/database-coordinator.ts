@@ -276,13 +276,13 @@ function resolveGmailInlineImages(payload: ApiPayload): GmailInlineImage[] {
 
 function gmailBodyWithSignature(bodyHtml: string, signatureHtml = ''): string {
   if (!signatureHtml.trim()) return bodyHtml;
-  return `${bodyHtml}<br><br><div class="gmail_signature" data-smartmail="gmail_signature">${signatureHtml}</div>`;
+  return `${bodyHtml}<br><br><div>${signatureHtml}</div>`;
 }
 
 function gmailPlainBodyWithSignature(bodyHtml: string, signatureHtml = ''): string {
   const bodyText = htmlToPlainText(bodyHtml);
   const signatureText = htmlToPlainText(signatureHtml);
-  return signatureText ? `${bodyText}\n\n-- \n${signatureText}`.trim() : bodyText;
+  return signatureText ? `${bodyText}\n\n${signatureText}`.trim() : bodyText;
 }
 
 /** 組出寄送用的 RFC822 MIME 信件：一般信件為 multipart/alternative，含照片時改用 multipart/related 包住內嵌 CID 圖片。 */

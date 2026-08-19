@@ -863,11 +863,13 @@ describe('Machi Design API Worker', () => {
     const plainPartBody = extractPart('text/plain');
     expect(plainPartBody).toContain('簡報連結');
     expect(plainPartBody).not.toContain('<a href');
-    expect(plainPartBody).toContain('-- \nMachi 敬上');
+    expect(plainPartBody).toContain('\n\nMachi 敬上');
+    expect(plainPartBody).not.toContain('-- \n');
     const htmlPartBody = extractPart('text/html');
     expect(htmlPartBody).toContain(sentBodyHtml);
-    expect(htmlPartBody).toContain('class="gmail_signature"');
-    expect(htmlPartBody).toContain(sentSignatureHtml);
+    expect(htmlPartBody).toContain(`<div>${sentSignatureHtml}</div>`);
+    expect(htmlPartBody).not.toContain('class="gmail_signature"');
+    expect(htmlPartBody).not.toContain('data-smartmail="gmail_signature"');
     // 收件人／副本的中文顯示名必須依 RFC 2047 編碼，標頭段落本身只能是 ASCII——否則部分郵件用戶端（含 Gmail 本身）在收件匣清單會把顯示名顯示成亂碼。
     const headerSection = decodedMime.slice(0, decodedMime.indexOf('\r\n\r\n'));
     expect(headerSection).toContain('To: =?UTF-8?B?');
