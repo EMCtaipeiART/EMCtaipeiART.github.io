@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1761,
+  "revision": 1762,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:02:28.743Z",
+  "updatedAt": "2026-08-19T06:02:32.557Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25805,15 +25805,6 @@
           "更新時間": "2026/08/18 16:40:22",
           "更新者": "test.user@emctaipei.com",
           "排序": "29"
-        },
-        {
-          "客戶別": "__debug_edit_lock_test__",
-          "專案負責人": "[\"admin@emctaipei.com\"]",
-          "設計負責人": "[]",
-          "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "",
-          "排序": ""
         }
       ]
     }
