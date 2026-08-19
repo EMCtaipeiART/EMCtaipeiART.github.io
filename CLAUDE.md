@@ -207,8 +207,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - `node --test backend/test/*.test.mjs` **27/27 全過**（這次沒有改動 `backend/`，跑這個純粹確認沒有意外牽動共用邏輯）。
   - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過；用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（stub 掉 `sheetApi`，沒有真的打任何網路請求）：模擬登入帳號（`wang@emctaipei.com`）跟案件記錄的 `gmailThreadOwnerAccount`（`someoneelse@emctaipei.com`）刻意不同，開啟回信串彈窗後確認 `#gmailThreadComposeSection`／`#gmailThreadReplySend` 的 `hidden` 都正確是 `false`（不再隱藏）、`#gmailThreadReplyCancel` 文字正確維持「取消」、「寄件人：someoneelse@emctaipei.com」這行資訊文字仍然正確顯示——證明前端不會再因為帳號不符而擋住回覆功能，同時寄件人資訊仍保留給使用者參考。
   - **未做的驗證**：沒有用真實登入帳號在正式站，實際用兩個不同的系統帳號（一個當初寄信、另一個不同的同事帳號）走過一次「開啟同一案件的回信串→非寄件帳號成功看到內容→送出回覆→確認客戶端收到的信件正確接續同一條 Gmail 討論串、寄件人顯示仍是原寄件帳號」的完整端對端流程；也沒有測試「完全沒有 `request.mail` 權限、也不是客戶別專案負責人」的帳號呼叫 `getCaseMailThread`／`replyCaseMail` 會被擋下——這條路徑用的是既有、這個測試檔案別處已經驗證過的同一套 `requireRowAccess`／`hasRowCapability` 機制（這次完全沒有修改這個機制本身，只是移除了疊加在它之上的額外身分比對），評估不需要重複測試。
-- 部署狀態：`index.html` 純前端，git push 後自動生效，不需要部署 Worker。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，Worker 仍會用舊邏輯擋下非寄件帳號查看/回覆（回傳 `GMAIL_THREAD_OWNER_MISMATCH`），但前端已經不會再隱藏回覆區塊，這代表**沒部署 Worker 之前，非寄件帳號點「送出回覆」會看到清楚的錯誤訊息（`此信件串由 xxx 寄出，只有該帳號能回覆`），不會是無聲失敗，但功能還沒有真的放寬**，需要部署完成才會生效。
-- commit：（見下方 push 紀錄）
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 已於同日執行 `cd worker && npx wrangler deploy` 完成部署**（Version ID `5b1ba71d-b30b-4548-b68c-1b15e050a436`），部署後用 `curl` 打 `ping` action 確認正式站 Worker 正常回應（`revision` 正確遞增，非部署失敗的舊快照）。
+- commit：`5b202bc`
 
 ### 2026-08-18 19:05 Asia/Taipei — 「填寫設計需求」表單：登入後專案負責人自動帶入且鎖定唯讀、設計負責人跟著客戶別即時連動、開始/結束時間改成年/月/日三等分下拉選單
 
