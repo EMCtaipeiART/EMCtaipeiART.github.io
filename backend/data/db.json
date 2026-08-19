@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1669,
+  "revision": 1670,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:22:05.410Z",
+  "updatedAt": "2026-08-19T02:22:25.544Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25689,12 +25689,12 @@
         },
         {
           "客戶別": "soundcore",
-          "排序": "6",
-          "專案負責人": "[\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"leona.chen@emctaipei.com\"]",
+          "專案負責人": "[\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"leona.chen@emctaipei.com\",\"test.user@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\"]",
           "設計負責人": "[\"Anna\",\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "2026-08-18 16:34",
-          "更新者": "Machi"
+          "更新時間": "2026-08-19 10:22",
+          "更新者": "Machi",
+          "排序": "6"
         },
         {
           "客戶別": "測試",
