@@ -207,8 +207,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - `node --test backend/test/*.test.mjs` **27/27 全過**（這次沒有改動 `backend/`）。
   - **NAS 資料夾選擇器服務**：`ps aux` 確認重啟前的行程啟動時間（11:33AM，早於這次工作階段稍早寫入 `mode=insert` 程式碼的時間）；`launchctl kickstart -k` 重啟後 `ps aux` 確認拿到全新的 PID；`curl` 直接打重啟後的 `/picker` 頁面，確認回應內容裡有 `mode === 'insert'` 這段字串（先前用同樣方法測過舊行程「應該」測不到這段，這次的重啟時機點剛好緊接在改完程式碼之後，沒有另外重現「舊行程真的測不到」這一步，但邏輯上足以確認新版程式碼已經生效）。
   - **未做的驗證**：沒有用真實登入帳號在正式站實際發一封信、在信件串裡肉眼確認顯示的時間是正確的台灣時間；也沒有請使用者實際在 Gmail 撰寫視窗點一次「插入 NAS 路徑」、走過真實的資料夾瀏覽選擇流程，確認重啟後的服務真的只插入路徑文字、不再觸發任何備份。
-- 部署狀態：`worker/` 需要手動部署才會生效（`cd worker && npx wrangler deploy`）——這則紀錄完成後緊接著就會部署，見下方 push/deploy 紀錄。`scripts/nas_folder_picker_server.mjs` 這次沒有新的程式碼異動，本機服務已經在這次工作階段內直接重啟套用先前的修正，使用者不需要再自己動手。
-- commit：（見下方 push 紀錄，這次依使用者指示修正完直接 commit/push，不再逐次詢問）
+- 部署狀態：`worker/` 已於同日執行 `cd worker && npx wrangler deploy` 完成部署（Version ID `1e8dd795-bd32-4a58-846b-591b42087bd1`），部署後用 `curl` 打 `ping` action 確認正式站 Worker 正常回應。`scripts/nas_folder_picker_server.mjs` 這次沒有新的程式碼異動，本機服務已經在這次工作階段內直接重啟套用先前的修正，使用者不需要再自己動手。
+- commit：`59f1993`（依使用者指示，之後修正完直接 commit/push，不再逐次詢問確認）
 
 ### 2026-08-18 21:10 Asia/Taipei — Gmail 回信串：權限依據改成「信件本身的收件人/寄件人/副本」、瀏覽時網址變成可點連結、內嵌圖片會顯示縮圖
 
