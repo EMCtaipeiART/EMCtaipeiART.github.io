@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1841,
+  "revision": 1842,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:42:23.898Z",
+  "updatedAt": "2026-08-19T07:42:33.146Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25905,10 +25905,10 @@
         },
         {
           "客戶別": "富美家",
-          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b\",\"sammi.cheng@emctaipei.com\",\"ann.lin@emctaipei.com\",\"xixi.zeng@emctaipei.com\",\"jerry.chang@emctaipei.com\"]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"sammi.cheng@emctaipei.com\",\"ann.lin@emctaipei.com\",\"xixi.zeng@emctaipei.com\",\"jerry.chang@emctaipei.com\"]",
           "設計負責人": "[\"Leona\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"Celine組\",\"Ann組\"]",
-          "更新時間": "2026-08-19 15:40",
+          "更新時間": "2026-08-19 15:42",
           "更新者": "Machi",
           "排序": "17"
         },
