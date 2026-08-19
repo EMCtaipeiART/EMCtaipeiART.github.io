@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1852,
+  "revision": 1853,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:47:01.625Z",
+  "updatedAt": "2026-08-19T07:47:17.895Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -26031,10 +26031,10 @@
         },
         {
           "客戶別": "Epson",
-          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"joyce.wang@emctaipei.com\",\"hsien.meng@emctaipei.com\",\"wendy.zhuang@emctaipei.com\",\"shelly.tseng@emctaipei.com\",\"ivan.huang@emctaipei.com\",\"eddy.chao@emctaipei.com\",\"jennifer.liou@emctaipei.com\",\"bojie.zhong@emctaipei.com\",\"local:d5e9fff2-ad25-41dd-8d0b-23a92941b112\",\"fallonlee25@gmail.com\",\"deloise.chang@emctaipei.com\",\"emily.chen@emctaipei.com\"]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"allen.li@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"joyce.wang@emctaipei.com\",\"hsien.meng@emctaipei.com\",\"wendy.zhuang@emctaipei.com\",\"shelly.tseng@emctaipei.com\",\"ivan.huang@emctaipei.com\",\"eddy.chao@emctaipei.com\",\"jennifer.liou@emctaipei.com\",\"bojie.zhong@emctaipei.com\",\"local:d5e9fff2-ad25-41dd-8d0b-23a92941b112\",\"fallonlee25@gmail.com\",\"deloise.chang@emctaipei.com\",\"emily.chen@emctaipei.com\"]",
           "設計負責人": "[\"Leona\",\"Machi\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"Emily組\",\"Joyce組\"]",
-          "更新時間": "2026-08-19 15:30",
+          "更新時間": "2026-08-19 15:47",
           "更新者": "Machi",
           "排序": "4"
         },
