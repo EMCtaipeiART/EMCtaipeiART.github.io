@@ -151,6 +151,26 @@ test('Gmail thread collapses older messages and expands only the latest message 
   assert.match(html, /gmail-thread-msg\[open\] \.gmail-thread-msg-toggle::after\{content:'收合'\}/);
 });
 
+test('Gmail thread displays names only and keeps email addresses in name tooltips', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('function gmailAddressPeople(');
+  const end = html.indexOf('function gmailThreadMessageHtml(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const renderNames = new Function('esc', `${source};return gmailAddressNamesHtml;`)(escapeHtml);
+  const rendered = renderNames('"David Chen" <david@example.com>, Allen <allen@example.com>');
+  assert.equal(rendered.replace(/<[^>]+>/g, ''), 'David Chen、Allen');
+  assert.match(rendered, /title="david@example\.com"/);
+  assert.match(rendered, /aria-label="David Chen，Email：david@example\.com"/);
+  assert.doesNotMatch(rendered.replace(/<[^>]+>/g, ''), /@example\.com/);
+  assert.equal(renderNames('david.lee@example.com').replace(/<[^>]+>/g, ''), 'David Lee');
+  const messageRenderer = html.match(/function gmailThreadMessageHtml\(message,isLatest=false\)\{[^\n]*\}/)?.[0] || '';
+  assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.from\)/);
+  assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.to\)/);
+  assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.cc\)/);
+});
+
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('function safeHttpPreviewUrl(');

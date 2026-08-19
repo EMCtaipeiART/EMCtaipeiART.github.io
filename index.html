@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-19 Asia/Taipei | build: 20260819-designer-reply-template-labels-111 -->
+<!-- LAST_MODIFIED: 2026-08-19 Asia/Taipei | build: 20260819-gmail-thread-names-112 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260819-designer-reply-template-labels-111" />
+  <meta name="app-version" content="20260819-gmail-thread-names-112" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6466,6 +6466,7 @@
   <style>
     .gmail-thread-msg>summary{list-style:none;cursor:pointer}
     .gmail-thread-msg>summary::-webkit-details-marker{display:none}
+    .gmail-thread-person[title]{cursor:help;text-decoration:underline dotted;text-underline-offset:2px}
     .gmail-thread-msg-toggle{margin-left:auto}
     .gmail-thread-msg-toggle::after{content:'展開'}
     .gmail-thread-msg[open] .gmail-thread-msg-toggle::after{content:'收合'}
@@ -7145,7 +7146,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260819-designer-reply-template-labels-111';
+const appBuildVersion = '20260819-gmail-thread-names-112';
 const erpPublicFallbackConfig = {
   ok: true,
   action: 'erpLoginConfig',
@@ -9141,7 +9142,40 @@ function gmailThreadMessageImagesHtml(images){
   if(!Array.isArray(images)||!images.length)return '';
   return `<div class="gmail-thread-msg-images">${images.map(img=>`<img src="${esc(img.dataUrl)}" loading="lazy" alt="信件內嵌圖片">`).join('')}</div>`;
 }
-function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=message.bodyText??message.snippet??'';return `<details class="gmail-thread-msg" name="gmail-thread-message"${isLatest?' open':''}><summary class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody,message.links)}</div>${gmailThreadMessageImagesHtml(message.images)}</div></details>`}
+function gmailAddressPeople(value=''){
+  const source=String(value||'').trim();
+  if(!source)return [];
+  const parts=[];
+  let token='',quote='',angleDepth=0;
+  for(let index=0;index<source.length;index+=1){
+    const char=source[index];
+    if(quote){token+=char;if(char===quote)quote='';continue}
+    if(char==='"'||char==="'"){quote=char;token+=char;continue}
+    if(char==='<'){angleDepth+=1;token+=char;continue}
+    if(char==='>'){angleDepth=Math.max(0,angleDepth-1);token+=char;continue}
+    if((char===','||char===';')&&!angleDepth){if(token.trim())parts.push(token.trim());token='';continue}
+    token+=char;
+  }
+  if(token.trim())parts.push(token.trim());
+  return parts.map(part=>{
+    const angle=part.match(/^(.*?)<\s*([^<>\s,;]+@[^<>\s,;]+)\s*>/);
+    const email=String(angle?.[2]||part.match(/[^\s<>,;]+@[^\s<>,;]+/)?.[0]||'').trim();
+    let name=String(angle?.[1]||(email?part.replace(email,''):part)).trim().replace(/^["']|["']$/g,'').trim();
+    const comment=name.match(/^\((.*)\)$/);
+    if(comment)name=comment[1].trim();
+    if(!name&&email)name=email.split('@')[0].split(/[._+-]+/).filter(Boolean).map(word=>word.charAt(0).toUpperCase()+word.slice(1)).join(' ');
+    return {name:name||'未知姓名',email};
+  });
+}
+function gmailAddressNamesHtml(value){
+  const people=gmailAddressPeople(value);
+  if(!people.length)return '<span>-</span>';
+  return people.map(person=>{
+    const attrs=person.email?' title="'+esc(person.email)+'" aria-label="'+esc(person.name+'，Email：'+person.email)+'"':'';
+    return '<span class="gmail-thread-person"'+attrs+'>'+esc(person.name)+'</span>';
+  }).join('<span class="gmail-thread-person-separator" aria-hidden="true">、</span>');
+}
+function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=message.bodyText??message.snippet??'';return `<details class="gmail-thread-msg" name="gmail-thread-message"${isLatest?' open':''}><summary class="gmail-thread-msg-meta"><span>寄件人：${gmailAddressNamesHtml(message.from)}</span><span>收件人：${gmailAddressNamesHtml(message.to)}</span><span>副件人：${gmailAddressNamesHtml(message.cc)}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody,message.links)}</div>${gmailThreadMessageImagesHtml(message.images)}</div></details>`}
 function renderGmailThreadMessages(list,messages){const items=Array.isArray(messages)?messages:[];list.innerHTML=items.length?items.map((message,index)=>gmailThreadMessageHtml(message,index===items.length-1)).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 function designerReplyTemplateForCase(row={}){const firstDetail=detailsToArray(row.details)[0]||'',profile=designerProfile(String(row.designer||'').trim());return firstDetail?String(profile.replyTemplates?.[firstDetail]||''):''}
 function setGmailEditorPlainText(editor,value=''){const text=String(value);editor.replaceChildren();if(!text)return;text.split(/\r?\n/).forEach((line,index)=>{if(index)editor.append(document.createElement('br'));editor.append(document.createTextNode(line))})}
