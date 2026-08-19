@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1672,
+  "revision": 1673,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:23:33.227Z",
+  "updatedAt": "2026-08-19T02:24:12.964Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25710,8 +25710,8 @@
           "專案負責人": "[]",
           "設計負責人": "[]",
           "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "debug",
+          "更新時間": "2026-08-19 10:24",
+          "更新者": "管理員",
           "排序": ""
         }
       ]
