@@ -917,7 +917,9 @@ describe('Machi Design API Worker', () => {
           mimeType: 'multipart/mixed',
           headers: [
             { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
-            { name: 'Date', value: 'Mon, 17 Aug 2026 11:00:00 +0800' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
+            // 刻意用 UTC 標示（+0000），驗證顯示時真的有轉換成台北時區，不是原封不動把標頭字串丟給使用者看——
+            // 這個時間換算成台北時間是 11:00（+8 小時），如果沒有正確轉換，顯示出來會誤判成 03:00。
+            { name: 'Date', value: 'Mon, 17 Aug 2026 03:00:00 +0000' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
             { name: 'References', value: '<msg1@mail.gmail.com>' }, { name: 'Subject', value: 'Re: 測試主旨' }
           ],
           parts: [
@@ -958,7 +960,7 @@ describe('Machi Design API Worker', () => {
     expect(thread.ok).toBe(true);
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
-    expect(messages[1]).toMatchObject({ from: 'designer@emctaipei.com', bodyText: plainTextBody });
+    expect(messages[1]).toMatchObject({ from: 'designer@emctaipei.com', bodyText: plainTextBody, date: '2026/08/17 11:00' });
     const secondMessageImages = messages[1].images as Array<{ dataUrl: string }>;
     expect(secondMessageImages).toHaveLength(1);
     expect(secondMessageImages[0].dataUrl.startsWith('data:image/png;base64,')).toBe(true);

@@ -411,6 +411,19 @@ function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | un
   return text(match?.value);
 }
 
+/** Gmail 訊息標頭裡的 Date 是 RFC 2822 格式，時區依寄件當下的伺服器/用戶端設定而定（常常是 UTC 或跟台灣
+ * 差 8 小時的其他時區）——直接把原始字串顯示給使用者看，會被誤判成台灣當地時間，實際上差了好幾小時。
+ * 這裡一律轉成台北時區重新格式化，不管原始標頭是哪個時區都能正確顯示。解析失敗（格式異常）就原樣顯示，
+ * 不讓一筆解析失敗的日期擋住整封信的內容。 */
+function formatGmailDateForDisplay(rawDate: string): string {
+  const parsed = new Date(rawDate);
+  if (!rawDate || Number.isNaN(parsed.getTime())) return rawDate;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(parsed).map(part => [part.type, part.value])) as Record<string, string>;
+  return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -1024,7 +1037,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       messages.push({
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
-        date: gmailHeaderValue(payloadPart?.headers, 'Date'), snippet: text(messageRow.snippet), bodyText, images
+        date: formatGmailDateForDisplay(gmailHeaderValue(payloadPart?.headers, 'Date')), snippet: text(messageRow.snippet), bodyText, images
       });
     }
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
