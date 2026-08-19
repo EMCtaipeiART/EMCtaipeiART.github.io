@@ -900,13 +900,14 @@ describe('Machi Design API Worker', () => {
     const designerToken = await seedSession('designer@emctaipei.com');
 
     const plainTextBody = 'Hi，這是設計師的回覆內容';
-    const plainTextBodyBase64Url = toBase64Url(`${plainTextBody}\n\n設計師簽名檔`);
+    const originalMessageBody = 'Hi，這是測試信件內容';
+    const plainTextBodyBase64Url = toBase64Url(`${plainTextBody}\n\n設計師簽名檔\n\nOn Mon, 17 Aug 2026 at 10:00, test.user@emctaipei.com wrote:\n> ${originalMessageBody}`);
     // 第二封信刻意用 multipart/mixed 夾帶一張圖片附件（有 attachmentId），驗證瀏覽信件串時內嵌圖片會被抓回來顯示。
     const mockThreadMessages = [
       {
-        id: 'gmail-msg-1', snippet: 'Hi，這是測試信件內容',
+        id: 'gmail-msg-1', snippet: '',
         payload: {
-          mimeType: 'text/plain', body: { data: toBase64Url('Hi，這是測試信件內容') },
+          mimeType: 'text/html', body: { data: toBase64Url(`<p>${originalMessageBody}</p>`) },
           headers: [
             { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
             { name: 'Date', value: 'Mon, 17 Aug 2026 10:00:00 +0800' }
@@ -995,11 +996,16 @@ describe('Machi Design API Worker', () => {
         };
         const replyPlainText = extractReplyPart('text/plain');
         expect(replyPlainText).toContain('收到，謝謝回報');
+        expect(replyPlainText).toContain('test.user@emctaipei.com 寫道：');
+        expect(replyPlainText).toContain(`> ${originalMessageBody}`);
         expect(replyPlainText).toContain('designer@emctaipei.com 寫道：');
         expect(replyPlainText).toContain(`> ${plainTextBody}`);
+        expect(replyPlainText.split(originalMessageBody)).toHaveLength(2);
+        expect(replyPlainText.split(plainTextBody)).toHaveLength(2);
         const replyHtml = extractReplyPart('text/html');
         expect(replyHtml).toContain('收到，謝謝回報');
         expect(replyHtml).toContain('class="gmail_quote"');
+        expect(replyHtml).toContain(originalMessageBody);
         expect(replyHtml).toContain(`<blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${plainTextBody}`);
         return Response.json({ id: 'gmail-msg-3', threadId: 'gmail-thread-1' });
       }
@@ -1007,7 +1013,9 @@ describe('Machi Design API Worker', () => {
     });
     const rejectedReply = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '不應該成功' }, adminToken);
     expect(rejectedReply).toMatchObject({ ok: false, reason: 'GMAIL_THREAD_NOT_PARTICIPANT' });
-    const replied = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報' }, designerToken);
+    const replied = await api({
+      action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報', signatureHtml: '<b>設計師簽名檔</b>'
+    }, designerToken);
     expect(replied).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-3' });
 
     // 手動把 access token 改成已過期，驗證下一次呼叫會先用 refresh_token 換一組新的再讀信。
