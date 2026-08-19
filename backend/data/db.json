@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1895,
+  "revision": 1896,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T08:40:06.672Z",
+  "updatedAt": "2026-08-19T09:07:34.295Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25971,8 +25971,8 @@
           "客戶別": "ANKER",
           "專案負責人": "[\"saurman.wu@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"sammi.cheng@emctaipei.com\"]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
-          "部門組別": "[\"設計部\",\"企劃部\",\"Celine組\",\"Cherry組\"]",
-          "更新時間": "2026-08-19 15:46",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Celine組\",\"Cherry組\"]",
+          "更新時間": "2026-08-19 17:07",
           "更新者": "Machi",
           "排序": "1"
         },
