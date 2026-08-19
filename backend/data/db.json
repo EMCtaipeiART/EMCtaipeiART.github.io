@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1937,
+  "revision": 1938,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:51:48.304Z",
+  "updatedAt": "2026-08-19T09:51:55.443Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1436,7 +1436,7 @@
       "primaryKey": "客戶別",
       "rows": [
         {"客戶別":"丹士特","專案負責人":"[\"department:測試員\",\"department:設計部\",\"livia.chu@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"sammi.cheng@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]","設計負責人":"[\"Anna\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Celine組\"]","更新時間":"2026-08-19 17:51","更新者":"Machi","排序":"9"},
-        {"客戶別":"王品","專案負責人":"[\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"mickey.lu@emctaipei.com\",\"cc.hung@emctaipei.com\",\"daniel.chang@emctaipei.com\",\"andrew.koo@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\"]","更新時間":"2026-08-19 17:08","更新者":"Machi","排序":"10"},
+        {"客戶別":"王品","專案負責人":"[\"department:測試員\",\"department:設計部\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"mickey.lu@emctaipei.com\",\"cc.hung@emctaipei.com\",\"daniel.chang@emctaipei.com\",\"andrew.koo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\"]","更新時間":"2026-08-19 17:51","更新者":"Machi","排序":"10"},
         {"客戶別":"欣格家居","專案負責人":"[\"david.liao@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.shih@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"zoe.fan@emctaipei.com\",\"viola.tsao@emctaipei.com\",\"odin.liao@emctaipei.com\"]","設計負責人":"[\"Anna\",\"Machi\"]","部門組別":"[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]","更新時間":"2026-08-19 17:09","更新者":"Machi","排序":"11"},
         {"客戶別":"金士頓","專案負責人":"[\"department:測試員\",\"department:設計部\",\"lorraine.luo@emctaipei.com\",\"orli.wu@emctaipei.com\",\"wendy.lin@emctaipei.com\",\"cherry.kuo@emctaipei.com\",\"sudi.su@emctaipei.com\",\"mickey.lu@emctaipei.com\",\"cc.hung@emctaipei.com\",\"daniel.chang@emctaipei.com\",\"andrew.koo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]","設計負責人":"[\"Amber\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\",\"Cherry組\"]","更新時間":"2026-08-19 17:51","更新者":"Machi","排序":"8"},
         {"客戶別":"保誠人壽","專案負責人":"[\"saurman.wu@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.shih@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"zoe.fan@emctaipei.com\",\"viola.tsao@emctaipei.com\",\"odin.liao@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]","更新時間":"2026-08-19 17:09","更新者":"Machi","排序":"12"},
