@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1910,
+  "revision": 1911,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:09:17.159Z",
+  "updatedAt": "2026-08-19T09:09:25.142Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25880,8 +25880,8 @@
           "客戶別": "保麗淨",
           "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"deloise.chang@emctaipei.com\"]",
           "設計負責人": "[]",
-          "部門組別": "[\"設計部\",\"企劃部\",\"Emily組\"]",
-          "更新時間": "2026-08-19 15:51",
+          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Emily組\"]",
+          "更新時間": "2026-08-19 17:09",
           "更新者": "Machi",
           "排序": "13"
         },
