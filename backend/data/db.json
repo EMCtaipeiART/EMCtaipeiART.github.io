@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1829,
+  "revision": 1830,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:32:20.945Z",
+  "updatedAt": "2026-08-19T07:32:33.833Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25686,12 +25686,12 @@
         },
         {
           "客戶別": "欣格家居",
-          "排序": "11",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.shih@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"zoe.fan@emctaipei.com\",\"viola.tsao@emctaipei.com\",\"odin.liao@emctaipei.com\"]",
           "設計負責人": "[\"Anna\",\"Machi\"]",
-          "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
-          "更新時間": "2026-08-18 16:28",
-          "更新者": "Machi"
+          "部門組別": "[\"設計部\",\"企劃部\",\"Odin組\"]",
+          "更新時間": "2026-08-19 15:32",
+          "更新者": "Machi",
+          "排序": "11"
         },
         {
           "客戶別": "金士頓",
