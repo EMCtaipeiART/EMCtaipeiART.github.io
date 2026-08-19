@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1759,
+  "revision": 1760,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:02:13.087Z",
+  "updatedAt": "2026-08-19T06:02:18.453Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19032,7 +19032,7 @@
         },
         {
           "客戶別": "__debug_edit_lock_test__",
-          "專案名稱": "編輯鎖測試A",
+          "專案名稱": "編輯鎖測試C",
           "專案負責人": "debug",
           "開始日期": "2026-08-19",
           "結束日期": "2026-08-20",
