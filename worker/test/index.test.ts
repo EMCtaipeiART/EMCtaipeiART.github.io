@@ -3,7 +3,8 @@ import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
-import type { DatabaseSnapshot } from '../src/types';
+import { hasRowCapability } from '../src/model';
+import type { DatabaseSnapshot, SessionRecord } from '../src/types';
 
 const ORIGIN = 'https://emctaipeiart.github.io';
 
@@ -157,6 +158,32 @@ afterEach(() => {
 });
 
 describe('Machi Design API Worker', () => {
+  it('resolves customer edit permissions from current department and group membership', () => {
+    const database = testDatabase();
+    const customer = { '客戶別': '動態權限客戶', '專案負責人': JSON.stringify(['department:測試組']), '設計負責人': '[]', '部門組別': '[]' };
+    database.tables['客戶別'].rows.push(customer);
+    const row = { '客戶別': '動態權限客戶' };
+    const session: SessionRecord = {
+      user: '測試使用者', account: 'test.user@emctaipei.com', provider: 'password', expiresAt: Date.now() + 60_000
+    };
+
+    expect(hasRowCapability(database, session, 'request.edit', row)).toBe(true);
+
+    customer['專案負責人'] = JSON.stringify(['group:設計測試組']);
+    database.tables['設定'].rows.find(item => item['帳號'] === session.account)!['組別'] = '設計測試組';
+    expect(hasRowCapability(database, session, 'request.delete', row)).toBe(true);
+
+    // 「設計部」是設計組的上層規則：即使帳號部門是測試員，只要目前組別是平面／影音仍會動態納入。
+    customer['專案負責人'] = JSON.stringify(['department:設計部']);
+    const settings = database.tables['設定'].rows.find(item => item['帳號'] === session.account)!;
+    settings['部門'] = '測試員';
+    settings['組別'] = '平面';
+    expect(hasRowCapability(database, session, 'request.mail', row)).toBe(true);
+
+    settings['組別'] = '非設計組';
+    expect(hasRowCapability(database, session, 'request.mail', row)).toBe(false);
+  });
+
   it('enforces exact-origin CORS and answers health checks', async () => {
     const denied = await SELF.fetch('https://worker.test/api?action=ping', {
       headers: { Origin: 'https://evil.example' }

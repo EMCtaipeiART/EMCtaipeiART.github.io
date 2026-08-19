@@ -729,7 +729,7 @@
 
     /* ---- 客戶別：可拖曳排序清單 + 權限設定（專案負責人）／喜愛設定（設計負責人）／部門組別指派 ---- */
     // 權限設定（專案負責人，多選）取得該客戶案件的存取與新增/編輯/刪除/發信/回信權限（見 worker/src/model.ts 的 hasRowCapability）；
-    // 喜愛設定（設計負責人）／部門組別純粹是前台填單自動帶入的預設值，不影響任何權限。
+    // 可保存 department:/group: 動態規則，也相容既有的個別 Email。喜愛設定（設計負責人）只影響前台填單預設值。
     // 人員名單比照發信彈窗「選擇聯絡人」的樣式：可搜尋、多選、以膠囊呈現，並依部門／組別分類。
     function normalizedCustomerRows(rows){return rows.map(row=>({...row,'客戶別':String(row['客戶別']||''),'排序':String(row['排序']||''),'專案負責人':MachiAccess.parseList(row['專案負責人']),'設計負責人':MachiAccess.parseList(row['設計負責人']),'部門組別':MachiAccess.parseList(row['部門組別'])}))}
     /** 左側清單排序：有明確「排序」值的客戶別依數字排在最前面，其餘（尚未拖曳過的既有／新增客戶別）依名稱 A→Z 排在後面，符合「預設 A→Z」的要求。 */
@@ -755,10 +755,14 @@
       return {group:'各組',subgroup:group||department||'其他'};
     }
     function customerOwnerEntries(){
-      return permissionModelsCache.filter(row=>row['帳號']&&row['狀態']!=='停用').map(row=>{
+      const seenDepartments=new Set(),seenGroups=new Set(),rules=[];
+      organizationOptions('部門').forEach(name=>{if(!name||seenDepartments.has(name))return;seenDepartments.add(name);rules.push({value:`department:${name}`,label:name,secondary:'部門',search:`${name} 部門`.toLowerCase(),group:'部門',subgroup:''})});
+      organizationOptions('組別').forEach(name=>{if(!name||seenGroups.has(name))return;seenGroups.add(name);rules.push({value:`group:${name}`,label:name,secondary:'組別',search:`${name} 組別`.toLowerCase(),group:'組別',subgroup:''})});
+      const people=permissionModelsCache.filter(row=>row['帳號']&&row['狀態']!=='停用').map(row=>{
         const account=MachiAccess.canonicalAccount(row['帳號']),name=String(row['顯示名']||row['名字']||account).trim()||account,department=String(row['部門']||'').trim(),group=String(row['組別']||'').trim(),info=customerPersonGroupInfo(department,group);
-        return {value:account,label:name,secondary:account,search:`${name} ${account} ${department} ${group}`.toLowerCase(),group:info.group,subgroup:info.subgroup,department};
+        return {value:account,label:name,secondary:account,search:`${name} ${account} ${department} ${group}`.toLowerCase(),group:'個別人員',subgroup:info.group==='各組'?(info.subgroup||'其他'):info.group,department};
       }).sort((a,b)=>a.label.localeCompare(b.label,'zh-Hant'));
+      return [...rules,...people];
     }
     /** 設計負責人的值必須是前台 designerOptions 認得的純姓名（見 index.html 的 applyCustomerDesignerAutoFill），
      * 所以候選人來源限定在「組別為平面／影音」的帳號＋既有的 ACCOUNT_DESIGNER_OPTIONS 名單，不是全體員工。 */
@@ -786,15 +790,9 @@
       organizationOptions('組別').forEach(name=>{if(seen.has(name))return;seen.add(name);entries.push({value:name,label:name,secondary:'',search:name.toLowerCase(),group:'組別',subgroup:''})});
       return entries;
     }
-    /** 「權限設定」尚未指派過任何人員時（model['專案負責人'] 是空陣列），編輯器打開當下預先勾選部門
-     * 精確等於「企劃部」或「設計部」的在職帳號（entry.department 是 customerOwnerEntries() 帶出的原始
-     * 部門欄位，不是分組後的 group）——這只是畫面上的預先勾選，沒有按下「儲存客戶別」之前完全不會寫入
-     * 資料庫；已經指派過（即使指派完又清空存成空陣列）的客戶別不受影響，會照舊顯示既有（可能是空的）
-     * 選擇，不會被這個預設蓋掉。 */
-    function customerDefaultOwnerAccounts(entries){
-      return entries.filter(entry=>/^(?:企劃部|設計部)$/.test(entry.department||'')).map(entry=>entry.value);
-    }
-    const CUSTOMER_PEOPLE_GROUP_ORDER=['企劃部','設計部','負責人','各組','其他'];
+    /** 尚未設定權限時預選兩條動態部門規則；未來新增成員會依帳號目前的部門／組別自動取得權限。 */
+    const CUSTOMER_DEFAULT_OWNER_RULES=['department:企劃部','department:設計部'];
+    const CUSTOMER_PEOPLE_GROUP_ORDER=['部門','組別','個別人員','企劃部','設計部','負責人','各組','其他'];
     function customerPeopleChipsHtml(entries){
       if(!entries.length)return '<span class="customer-people-chip-empty">尚未選擇</span>';
       return entries.map(entry=>`<span class="customer-people-chip"><span class="customer-people-chip-label">${esc(entry.label)}</span><button type="button" class="customer-people-chip-remove" data-customer-people-remove="${esc(entry.value)}" aria-label="移除 ${esc(entry.label)}">×</button></span>`).join('');
@@ -839,7 +837,7 @@
     function customerPeopleGroupHtml(fieldKey,group,selectedSet){
       const hasSelected=group.items.some(item=>selectedSet.has(item.value));
       let body;
-      if(group.name==='各組'){
+      if(group.name==='各組'||group.name==='個別人員'){
         const subgroups=[];
         group.items.forEach(item=>{let sub=subgroups.find(s=>s.name===item.subgroup);if(!sub){sub={name:item.subgroup||'其他',items:[]};subgroups.push(sub)}sub.items.push(item)});
         body=subgroups.map(sub=>{const subSelected=sub.items.some(item=>selectedSet.has(item.value));return `<details class="customer-people-subgroup" ${subSelected?'open':''}><summary class="customer-people-subgroup-label"><span>${esc(sub.name)}</span>${customerPeopleSelectAllHtml()}</summary><div class="customer-people-subgroup-body">${sub.items.map(item=>customerPeopleOptionHtml(fieldKey,item,selectedSet.has(item.value))).join('')}</div></details>`}).join('');
@@ -869,16 +867,16 @@
       const ownerEntries=customerOwnerEntries();
       const savedOwners=model['專案負責人'];
       const ownersUsingDefault=!savedOwners.length;
-      const ownerSelected=new Set(ownersUsingDefault?customerDefaultOwnerAccounts(ownerEntries):savedOwners);
+      const ownerSelected=new Set(ownersUsingDefault?CUSTOMER_DEFAULT_OWNER_RULES:savedOwners);
       const designerSelected=new Set(model['設計負責人']);
       return `<section class="permission-editor" data-customer-editor="${esc(model['客戶別'])}">
-        <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>「部門／組別」決定哪些部門／組別的人員能在前台看到這個客戶別的案件（沒有勾選任何值時，預設「企劃部」與「設計部」可見）；「權限設定」決定哪些人員（以及管理者）能發信／編輯／刪除這個客戶別的案件——名單外的人員即使看得到案件，前台的發信／編輯／刪除按鈕也會顯示為灰階無法點選（尚未指派過時，預設先勾選「企劃部」與「設計部」全數人員，可自行增減）；「喜愛設定」只用來給前台自動帶入預設的設計負責人。三者彼此獨立，互不影響。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
+        <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>「部門／組別」決定哪些人員能在前台看到案件；選擇「設計部」時也會包含目前組別為平面／影音的人員。「權限設定」可直接保存部門或組別規則，新增成員會自動繼承，也可另外指定個別人員。「喜愛設定」只用來給前台自動帶入預設的設計負責人。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
         ${pending?'<div class="notice ok">已先套用；遠端 JSON 正在背景寫入，可先切換設定其他客戶別。</div>':''}
         ${departmentsUsingDefault?'<div class="notice ok">尚未設定顯示範圍，目前預設「企劃部」與「設計部」的人員可以在前台看到這個客戶別的案件，可自行增減後再儲存。</div>':''}
-        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，該部門／組別的人員才能在前台看到這個客戶別的案件；沒有勾選的則不會顯示。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p>${departmentPickerHtml}</section>
-        <section class="permission-section"><h4>權限設定</h4><p class="account-help">只有名單內的人員（以及管理者）能發信／編輯／刪除這個客戶別的案件；名單外的人員即使看得到案件，前台的發信／編輯／刪除按鈕都會顯示為灰階無法點選。尚未指派過時，預設先勾選「企劃部」與「設計部」全數人員，可自行增減後再儲存；如果真的想完全不限制，把全部人員取消勾選後儲存空白名單即可。</p>${ownersUsingDefault?'<div class="notice ok">尚未指派過權限，已預設加入「企劃部」與「設計部」全數人員，可自行增減後再儲存。</div>':''}${customerPeoplePickerHtml('owner',ownerEntries,ownerSelected)}</section>
+        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，其目前成員都能在前台看到這個客戶別的案件；「設計部」同時涵蓋組別為平面／影音的人員。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p>${departmentPickerHtml}</section>
+        <section class="permission-section"><h4>權限設定</h4><p class="account-help">可直接勾選「部門」或「組別」規則，該單位日後新增的人員會自動取得發信／編輯／刪除權限，不必逐一回來補選；也可在下方另外指定個別人員。全部取消並儲存空白名單時，會退回帳號原本的角色權限。</p>${ownersUsingDefault?'<div class="notice ok">尚未指派過權限，已預設套用「企劃部」與「設計部」兩條動態規則。</div>':''}${customerPeoplePickerHtml('owner',ownerEntries,ownerSelected)}</section>
         <section class="permission-section"><h4>喜愛設定</h4><p class="account-help">此客戶別的設計負責人，前台填單時會自動帶入清單第一位。</p>${customerPeoplePickerHtml('designer',customerDesignerEntries(),designerSelected)}</section>
-        <div class="permission-summary"><span>${departmentSelected.size} 個顯示部門／組別</span><span>${ownerSelected.size} 位可發信／編輯／刪除</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
+        <div class="permission-summary"><span>${departmentSelected.size} 個顯示部門／組別</span><span>${ownerSelected.size} 項操作權限規則</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
       </section>`;
     }
     function customerListItemHtml(row,index){
@@ -886,7 +884,7 @@
       return `<div class="customer-list-item" draggable="true" data-customer-item="${esc(row['客戶別'])}">
         <button type="button" class="customer-list-handle" tabindex="-1" aria-label="拖曳調整 ${esc(row['客戶別'])} 的順序">⋮⋮</button>
         <span class="customer-list-order-badge">${index+1}</span>
-        <button type="button" class="customer-list-select ${active?'active':''}" data-customer-select="${esc(row['客戶別'])}"><b>${esc(row['客戶別'])}</b><span class="permission-state ${pending?'explicit':''}">${pending?'寫入中':`${row['專案負責人'].length} 位可操作`}</span></button>
+        <button type="button" class="customer-list-select ${active?'active':''}" data-customer-select="${esc(row['客戶別'])}"><b>${esc(row['客戶別'])}</b><span class="permission-state ${pending?'explicit':''}">${pending?'寫入中':`${row['專案負責人'].length} 項規則`}</span></button>
       </div>`;
     }
     function refreshCustomerListOrder(list){
@@ -914,7 +912,16 @@
         note(`已新增客戶別「${name}」。`,'ok');
       }catch(error){note(`新增客戶別失敗：${error.message}`,'error')}
     }
-    function selectCustomer(name){customerSelected=name;renderTable({table:'客戶別',total:customerRowsCache.length,offset:0,limit:1000,rows:customerRowsCache})}
+    /** 只替換右側編輯器，不重建左側清單與整個 view，避免每次選客戶都造成頁面／捲動位置跳動。 */
+    function selectCustomer(name){
+      const selected=customerRowsCache.find(row=>row['客戶別']===name);if(!selected)return;
+      customerSelected=name;
+      const view=$('view');
+      view.querySelectorAll('[data-customer-select]').forEach(button=>button.classList.toggle('active',button.dataset.customerSelect===name));
+      const currentEditor=view.querySelector('.permission-layout>.permission-editor');if(!currentEditor)return;
+      const template=document.createElement('template');template.innerHTML=customerEditorHtml(selected).trim();
+      const nextEditor=template.content.firstElementChild;if(nextEditor)currentEditor.replaceWith(nextEditor);
+    }
     async function saveCustomer(){
       const editor=$('view').querySelector('[data-customer-editor]');
       if(!editor)return;

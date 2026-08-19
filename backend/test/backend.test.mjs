@@ -141,6 +141,39 @@ test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', 
   assert.doesNotMatch(linkify('危險連結', [{ text: '危險連結', url: 'javascript:alert(1)' }]), /<a\b/);
 });
 
+test('customer admin keeps scroll position, front end follows saved order, and organization rules stay dynamic', async () => {
+  const adminHtml = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  const selectStart = adminHtml.indexOf('function selectCustomer(');
+  const selectEnd = adminHtml.indexOf('async function saveCustomer(', selectStart);
+  const selectSource = adminHtml.slice(selectStart, selectEnd);
+  assert.match(selectSource, /currentEditor\.replaceWith\(nextEditor\)/);
+  assert.doesNotMatch(selectSource, /renderTable\(/);
+  assert.match(adminHtml, /CUSTOMER_DEFAULT_OWNER_RULES=\['department:企劃部','department:設計部'\]/);
+  assert.match(adminHtml, /value:`department:\$\{name\}`/);
+  assert.match(adminHtml, /value:`group:\$\{name\}`/);
+
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const sortStart = html.indexOf('const CUSTOMER_DIRECTORY_COLLATOR=');
+  const sortEnd = html.indexOf('function syncCustomerDirectoryFromDatabase(', sortStart);
+  const sortSource = html.slice(sortStart, sortEnd);
+  const sortRows = new Function(`${sortSource};return sortedCustomerDirectoryRows;`)();
+  assert.deepEqual(sortRows([
+    { '客戶別': '第二個', '排序': '2' },
+    { '客戶別': '第一個', '排序': '1' },
+    { '客戶別': '未排序', '排序': '' }
+  ]).map(row => row['客戶別']), ['第一個', '第二個', '未排序']);
+
+  const ruleStart = html.indexOf('function customerEditRuleMatches(');
+  const ruleEnd = html.indexOf('function isCustomerEditRestrictedCase(', ruleStart);
+  const ruleSource = html.slice(ruleStart, ruleEnd);
+  const canonical = value => String(value || '').trim().toLowerCase();
+  const normalizeGroup = value => /平面/.test(String(value || '')) ? '平面' : (/影音|影像|影片|video/i.test(String(value || '')) ? '影音' : '');
+  const matches = new Function('canonicalAccountClient', 'normalizeDesignGroup', `${ruleSource};return customerEditRuleMatches;`)(canonical, normalizeGroup);
+  assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '平面'), true);
+  assert.equal(matches('group:設計測試組', 'tester@example.com', '測試員', '設計測試組'), true);
+  assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '非設計組'), false);
+});
+
 test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /incomingRevision<cachedRevision/);

@@ -256,15 +256,47 @@ export function requireCapability(snapshot: DatabaseSnapshot, session: SessionRe
  * action 不受影響，它們是另一套獨立的 Gmail 討論串實際收件人比對機制，跟這份客戶別白名單無關）。 */
 export const CUSTOMER_EDIT_LOCK_CAPABILITIES = ['request.edit', 'request.delete', 'request.mail'];
 
-/** 客戶別表「專案負責人」欄位目前設定的帳號名單（即後台「權限設定」，2026-08-19 起代表「發信／編輯／
- * 刪除」白名單）；找不到對應客戶別或名單是空的都回傳 []（代表「尚未設定」，呼叫端要退回一般角色權限
- * 判斷，不是「沒有人能操作」）。 */
-export function customerEditCapableAccounts(database: DatabaseSnapshot, customerName: unknown): string[] {
+/** 客戶別「權限設定」的原始規則；相容既有個別帳號，並支援 department:/group: 動態規則。 */
+export function customerEditRules(database: DatabaseSnapshot, customerName: unknown): string[] {
   const name = text(customerName);
   if (!name) return [];
   const row = (database.tables['客戶別']?.rows || []).find(item => text(item['客戶別']) === name);
   if (!row) return [];
-  return accessList(row['專案負責人']).map(canonicalAccount);
+  return accessList(row['專案負責人']);
+}
+
+/** 保留既有匯出介面：只回傳規則裡的個別帳號，不把 department:/group: 誤轉成 Email。 */
+export function customerEditCapableAccounts(database: DatabaseSnapshot, customerName: unknown): string[] {
+  return customerEditRules(database, customerName)
+    .filter(rule => !/^(?:department|group):/i.test(rule))
+    .map(canonicalAccount);
+}
+
+function normalizedDesignGroup(value: unknown): string {
+  const group = text(value);
+  if (/平面/.test(group)) return '平面';
+  if (/影音|影像|影片|video/i.test(group)) return '影音';
+  return '';
+}
+
+/** 依帳號目前的設定即時判斷規則；新增或調整部門成員後不必逐一回寫每個客戶別。 */
+export function matchesCustomerEditRule(database: DatabaseSnapshot, session: SessionRecord | null, rule: unknown): boolean {
+  if (!session) return false;
+  const value = text(rule);
+  const account = canonicalAccount(session.account || session.user);
+  const match = value.match(/^(department|group):(.+)$/i);
+  if (!match) return Boolean(account) && canonicalAccount(value) === account;
+  const profile = settingsRow(database, session.account || session.user) || {};
+  const kind = match[1].toLowerCase();
+  const target = text(match[2]);
+  const department = text(profile['部門'] || session.department);
+  const group = text(profile['組別']);
+  if (kind === 'department') {
+    if (target === '設計部') return department === '設計部' || ['平面', '影音'].includes(normalizedDesignGroup(group));
+    return department === target;
+  }
+  const targetDesignGroup = normalizedDesignGroup(target);
+  return group === target || Boolean(targetDesignGroup) && normalizedDesignGroup(group) === targetDesignGroup;
 }
 
 /**
@@ -277,12 +309,8 @@ export function customerEditCapableAccounts(database: DatabaseSnapshot, customer
 export function hasRowCapability(database: DatabaseSnapshot, session: SessionRecord | null, capability: string, row: Row): boolean {
   if (isManager(database, session)) return true;
   if (CUSTOMER_EDIT_LOCK_CAPABILITIES.includes(capability)) {
-    const editors = customerEditCapableAccounts(database, row?.['客戶別']);
-    if (editors.length) {
-      if (!session) return false;
-      const account = canonicalAccount(session.account || session.user);
-      return Boolean(account) && editors.includes(account);
-    }
+    const rules = customerEditRules(database, row?.['客戶別']);
+    if (rules.length) return rules.some(rule => matchesCustomerEditRule(database, session, rule));
   }
   return hasCapability(database, session, capability);
 }

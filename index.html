@@ -7309,10 +7309,12 @@ function parseNameListValue(value){
 }
 function canonicalAccountClient(value){const account=String(value||'').trim().toLowerCase();if(!account||account.startsWith('local:'))return account;return account.includes('@')?account:`${account}@emctaipei.com`}
 function customerDirectoryRowFor(name){const key=String(name||'').trim();return key?(customerDirectoryRows||[]).find(row=>String(row['客戶別']||'').trim()===key):null}
+const CUSTOMER_DIRECTORY_COLLATOR=new Intl.Collator('zh-Hant-u-co-stroke');
+function sortedCustomerDirectoryRows(rows){return [...(rows||[])].sort((a,b)=>{const rawA=String(a?.['排序']??'').trim(),rawB=String(b?.['排序']??'').trim(),hasA=rawA!==''&&Number.isFinite(Number(rawA)),hasB=rawB!==''&&Number.isFinite(Number(rawB));if(hasA&&hasB)return Number(rawA)-Number(rawB)||CUSTOMER_DIRECTORY_COLLATOR.compare(String(a?.['客戶別']||''),String(b?.['客戶別']||''));if(hasA)return -1;if(hasB)return 1;return CUSTOMER_DIRECTORY_COLLATOR.compare(String(a?.['客戶別']||''),String(b?.['客戶別']||''))})}
 function syncCustomerDirectoryFromDatabase(database){
   const rows=database?.tables?.['客戶別']?.rows;
   if(!Array.isArray(rows))return;
-  customerDirectoryRows=rows;
+  customerDirectoryRows=sortedCustomerDirectoryRows(rows);
   populateCustomerSelect();
   if(!editingId)applyCustomerOwnerLock();
 }
@@ -7329,7 +7331,7 @@ function isCustomerOwnerAccount(){
   if(!isLoggedIn())return false;
   const account=canonicalAccountClient(currentEditorAccount||currentEditor);
   if(!account)return false;
-  return (customerDirectoryRows||[]).some(row=>parseNameListValue(row['專案負責人']).map(canonicalAccountClient).includes(account));
+  return (customerDirectoryRows||[]).some(row=>parseNameListValue(row['專案負責人']).some(rule=>customerEditRuleMatches(rule,account,currentEditorDepartment,currentEditorRawGroup)));
 }
 /** 2026-08-19：「顯示」搬到客戶別的「部門／組別」——有勾選的部門／組別，該部門／組別的人員才看得到
  * 這個客戶別的案件；沒有勾選任何值時（尚未設定過），預設「企劃部」與「設計部」可見，避免這次改版
@@ -7350,22 +7352,28 @@ function canViewCustomerCases(name){
   // （例如「Joyce組」「Mickey組」這類專案分組）都會被 normalizeDesignGroup 收斂成空字串，用它比對
   // 會讓客戶別「部門／組別」裡任何非部門層級的勾選（也就是「各組」底下的所有子分組）永遠比對不到。
   const group=String(currentEditorRawGroup||'').trim();
-  return (Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
+  const designDepartmentMatch=visible.includes('設計部')&&(dept==='設計部'||['平面','影音'].includes(normalizeDesignGroup(group)));
+  return designDepartmentMatch||(Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
 }
-/** 2026-08-19：客戶別的「權限設定」（原本混合了顯示／編輯／刪除／發信）現在代表「發信／編輯／刪除」
- * 白名單。客戶別一旦設定過名單，只有名單內的帳號（加上管理者）能發信／編輯／刪除該客戶別的案件——是
- * 取代一般角色權限判斷，不是疊加；名單留空（尚未設定過）時完全不受影響，維持原本角色權限判斷。 */
-function customerEditCapableAccounts(name){
+/** 權限設定可混用個別 Email 與 department:/group: 動態規則；動態規則依登入者目前設定即時計算。 */
+function customerEditRules(name){
   const row=customerDirectoryRowFor(name);
-  return row?parseNameListValue(row['專案負責人']).map(canonicalAccountClient):[];
+  return row?parseNameListValue(row['專案負責人']):[];
 }
-function isCustomerEditRestrictedCase(row){return customerEditCapableAccounts(row?.client).length>0}
+function customerEditRuleMatches(rule,account,department,group){
+  const value=String(rule||'').trim(),match=value.match(/^(department|group):(.+)$/i);
+  if(!match)return canonicalAccountClient(value)===canonicalAccountClient(account);
+  const kind=match[1].toLowerCase(),target=match[2].trim(),dept=String(department||'').trim(),rawGroup=String(group||'').trim();
+  if(kind==='department')return target==='設計部'?(dept==='設計部'||['平面','影音'].includes(normalizeDesignGroup(rawGroup))):dept===target;
+  return rawGroup===target||normalizeDesignGroup(rawGroup)===normalizeDesignGroup(target)&&Boolean(normalizeDesignGroup(target));
+}
+function isCustomerEditRestrictedCase(row){return customerEditRules(row?.client).length>0}
 function isCustomerEditPermitted(row){
-  const editors=customerEditCapableAccounts(row?.client);
-  if(!editors.length)return true;
+  const rules=customerEditRules(row?.client);
+  if(!rules.length)return true;
   if(isAdministrator())return true;
   const account=canonicalAccountClient(currentEditorAccount||currentEditor);
-  return Boolean(account)&&editors.includes(account);
+  return Boolean(account)&&rules.some(rule=>customerEditRuleMatches(rule,account,currentEditorDepartment,currentEditorRawGroup));
 }
 /** 設計負責人依「客戶別」目前選定的值連動——force=true（使用者真的切換客戶別當下）一律覆寫成
  * 該客戶別設定的第一位設計負責人（沒有設定就清空，不留上一個客戶別殘留的值）；force=false（登入
@@ -7405,7 +7413,7 @@ async function handleClientSelectChange(el){
     const result=await sheetApi('addCustomer',{name,editorToken:currentEditorToken});
     if(!result?.ok)throw new Error(result?.error||'新增客戶別失敗');
     const row=result.customer||{'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'};
-    customerDirectoryRows=[...(customerDirectoryRows||[]).filter(item=>String(item['客戶別']||'').trim()!==name),row];
+    customerDirectoryRows=sortedCustomerDirectoryRows([...(customerDirectoryRows||[]).filter(item=>String(item['客戶別']||'').trim()!==name),row]);
     el.disabled=false;
     populateCustomerSelect();
     el.value=name;
