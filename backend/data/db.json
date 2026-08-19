@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1728,
+  "revision": 1729,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T04:04:12.753Z",
+  "updatedAt": "2026-08-19T04:07:13.850Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20951,9 +20951,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/19 12:04:01",
-          "圖片連結": "[{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1d5cOyPgar6Y95dhpwaSbwhGuT84uLgRC=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UmI1hIEt8emS1Ss3P8mLvA4jWPlgN5or=w1600\"}]",
+          "圖片連結": "[{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1d5cOyPgar6Y95dhpwaSbwhGuT84uLgRC=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UmI1hIEt8emS1Ss3P8mLvA4jWPlgN5or=w1600\"},{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1glRPOsHw_Vgarptk8LHau4j5TiGWvErY=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/13xWGmhzaFvKm2Jk-jbbkLUhJIRm1z4hk=w1600\"}]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/19 12:04:01"
+          "圖片更新時間": "2026/08/19 12:07:13"
         }
       ]
     },
