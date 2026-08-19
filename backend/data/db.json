@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1823,
+  "revision": 1824,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:30:38.218Z",
+  "updatedAt": "2026-08-19T07:30:56.472Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25830,10 +25830,10 @@
         },
         {
           "客戶別": "櫻花",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-19 12:08",
+          "部門組別": "[\"設計部\",\"企劃部\",\"Emily組\"]",
+          "更新時間": "2026-08-19 15:30",
           "更新者": "Machi",
           "排序": "26"
         },
