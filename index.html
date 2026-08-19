@@ -9074,22 +9074,36 @@ async function removeSelectedCaseDesignImages(event){event?.stopPropagation?.();
 function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#revisionModal'), list=$('#revisionModalList'), add=$('#revisionModalAdd'); if(!row||!modal||!list)return; modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); revisionImageSelection.clear(); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${esc(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'))}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>')}
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){const modal=$('#revisionModal'); if(modal)modal.hidden=true; revisionImageSelection.clear()}
-/** 先用既有的 esc() 逃脫整段文字，再把逃脫後文字裡看起來像網址的部分包成可點擊連結——順序很重要：
- * 一定要先逃脫再找網址，不能反過來（先找網址再逃脫會讓 href 屬性裡混進還沒逃脫的原始文字，有注入風險）。 */
-function linkifyPlainText(value){
-  const escaped=esc(value);
-  return escaped.replace(/https?:\/\/\S+/g,match=>{
-    let url=match,trail='';
-    while(url.length&&/[.,;:!?)\]'"]/.test(url[url.length-1])){trail=url[url.length-1]+trail;url=url.slice(0,-1)}
-    if(!url)return match;
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>${trail}`;
+function safeHttpPreviewUrl(value){try{const parsed=new URL(String(value||''));return parsed.protocol==='http:'||parsed.protocol==='https:'?parsed.toString():''}catch{return ''}}
+/** 把明文網址，以及 Worker 安全擷取出的「標籤文字＋網址」位置渲染成連結；其餘文字仍逐段逃脫。 */
+function linkifyPlainText(value,links=[]){
+  const source=String(value??''),candidates=[];
+  let structuredSearchStart=0;
+  (Array.isArray(links)?links:[]).forEach(link=>{
+    const label=String(link?.text||''),url=safeHttpPreviewUrl(link?.url);
+    if(!label||!url)return;
+    let start=source.indexOf(label,structuredSearchStart);
+    if(start<0)start=source.indexOf(label);
+    if(start<0)return;
+    candidates.push({start,end:start+label.length,label,url,priority:0});
+    structuredSearchStart=start+label.length;
   });
+  for(const match of source.matchAll(/https?:\/\/\S+/g)){
+    let label=match[0];
+    while(label.length&&/[.,;:!?)\]'"]/.test(label[label.length-1]))label=label.slice(0,-1);
+    const url=safeHttpPreviewUrl(label);
+    if(label&&url)candidates.push({start:match.index,end:match.index+label.length,label,url,priority:1});
+  }
+  candidates.sort((a,b)=>a.start-b.start||a.priority-b.priority||b.end-a.end);
+  let cursor=0,result='';
+  candidates.forEach(candidate=>{if(candidate.start<cursor)return;result+=esc(source.slice(cursor,candidate.start));result+=`<a href="${esc(candidate.url)}" target="_blank" rel="noopener noreferrer">${esc(candidate.label)}</a>`;cursor=candidate.end});
+  return result+esc(source.slice(cursor));
 }
 function gmailThreadMessageImagesHtml(images){
   if(!Array.isArray(images)||!images.length)return '';
   return `<div class="gmail-thread-msg-images">${images.map(img=>`<img src="${esc(img.dataUrl)}" loading="lazy" alt="信件內嵌圖片">`).join('')}</div>`;
 }
-function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=message.bodyText??message.snippet??'';return `<details class="gmail-thread-msg" name="gmail-thread-message"${isLatest?' open':''}><summary class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody)}</div>${gmailThreadMessageImagesHtml(message.images)}</div></details>`}
+function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=message.bodyText??message.snippet??'';return `<details class="gmail-thread-msg" name="gmail-thread-message"${isLatest?' open':''}><summary class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody,message.links)}</div>${gmailThreadMessageImagesHtml(message.images)}</div></details>`}
 function renderGmailThreadMessages(list,messages){const items=Array.isArray(messages)?messages:[];list.innerHTML=items.length?items.map((message,index)=>gmailThreadMessageHtml(message,index===items.length-1)).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 async function openGmailThreadModal(id){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;

@@ -906,14 +906,15 @@ describe('Machi Design API Worker', () => {
     const designerToken = await seedSession('designer@emctaipei.com');
 
     const plainTextBody = 'Hi，這是設計師的回覆內容';
-    const originalMessageBody = 'Hi，這是測試信件內容';
+    const originalMessageBody = 'A. 設計簡報：P26~P30';
+    const originalMessageUrl = 'https://example.com/design-brief#p26';
     const plainTextBodyBase64Url = toBase64Url(`${plainTextBody}\n\n設計師簽名檔\n\nOn Mon, 17 Aug 2026 at 10:00, test.user@emctaipei.com wrote:\n> ${originalMessageBody}`);
     // 第二封信刻意用 multipart/mixed 夾帶一張圖片附件（有 attachmentId），驗證瀏覽信件串時內嵌圖片會被抓回來顯示。
     const mockThreadMessages = [
       {
         id: 'gmail-msg-1', snippet: '',
         payload: {
-          mimeType: 'text/html', body: { data: toBase64Url(`<p>${originalMessageBody}</p>`) },
+          mimeType: 'text/html', body: { data: toBase64Url(`<p>A. 設計簡報：<a href="${originalMessageUrl}">P26~P30</a></p><div class="gmail_signature"><a href="https://example.com/signature">簽名連結</a></div><div class="gmail_quote"><a href="https://example.com/quoted">引用連結</a></div>`) },
           headers: [
             { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
             { name: 'Date', value: 'Mon, 17 Aug 2026 10:00:00 +0800' }
@@ -970,6 +971,10 @@ describe('Machi Design API Worker', () => {
     expect(thread.ok).toBe(true);
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
+    expect(messages[0]).toMatchObject({
+      bodyText: originalMessageBody,
+      links: [{ text: 'P26~P30', url: originalMessageUrl }]
+    });
     expect(messages[1]).toMatchObject({
       from: 'designer@emctaipei.com', to: 'test.user@emctaipei.com', cc: 'client@example.com',
       bodyText: plainTextBody, date: '2026/08/17 11:00'
