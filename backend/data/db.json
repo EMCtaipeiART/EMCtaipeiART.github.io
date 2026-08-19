@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1692,
+  "revision": 1693,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:40:12.949Z",
+  "updatedAt": "2026-08-19T02:42:18.686Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25555,12 +25555,12 @@
         },
         {
           "客戶別": "新安東京",
-          "排序": "19",
           "專案負責人": "[]",
           "設計負責人": "[]",
           "部門組別": "[]",
           "更新時間": "",
-          "更新者": "系統預設"
+          "更新者": "系統預設",
+          "排序": "18"
         },
         {
           "客戶別": "嘉儀家品",
@@ -25663,12 +25663,12 @@
         },
         {
           "客戶別": "DJI",
+          "排序": "3",
           "專案負責人": "[\"allen.li@emctaipei.com\",\"machi.chen@emctaipei.com\",\"odin.liao@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
           "部門組別": "[]",
           "更新時間": "2026-08-19 10:40",
-          "更新者": "Machi",
-          "排序": "3"
+          "更新者": "Machi"
         },
         {
           "客戶別": "EMC",
