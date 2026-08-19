@@ -8189,7 +8189,15 @@ async function sendGmailComposeModal(){
   try{
     const [{bodyHtml,inlineImages},signatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     const data=await sheetApi('sendCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,editorToken:currentEditorToken});
-    rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...r,gmailThreadId:data.threadId||'',gmailThreadOwnerAccount:currentEditorAccount}):r);
+    const gmailThreadChanges={gmailThreadId:data.threadId||'',gmailThreadOwnerAccount:currentEditorAccount};
+    rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...r,...gmailThreadChanges}):r);
+    // 「發信」→「回信」按鈕能不能馬上、且維持切換過來，需要靠這行：GitHub Pages 的 backend/data/db.json
+    // 是靜態檔案，Worker 這次呼叫的 GitHub commit 完成，不代表 GitHub Actions 已經重新建置/部署完成
+    // （通常還要 1-3 分鐘），這段期間背景輪詢（每 6-30 秒一次）抓到的還是舊版 JSON、沒有這個
+    // gmailThreadId，如果沒有 rememberLocalWrite() 保護，剛剛才樂觀更新的這一步會被背景輪詢的舊資料
+    // 蓋掉，按鈕就會又跳回「發信」，要等下一次部署完成後的輪詢才會再次正確切回「回信」——從使用者
+    // 角度看就是「按鈕過很久才真的轉換」。這裡補上跟 updateCaseRow() 等其他既有寫入路徑同一套保護。
+    rememberLocalWrite(id,gmailThreadChanges);
     save();
     render();
     closeGmailComposeModal();

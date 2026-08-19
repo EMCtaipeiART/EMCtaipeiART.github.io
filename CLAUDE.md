@@ -189,7 +189,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-18 19:55 Asia/Taipei（最新）— Gmail 回信串：改成任何有 request.mail 權限的帳號都能查看/回覆，不再限定當初寄出那個帳號
+### 2026-08-18 20:15 Asia/Taipei（最新）— 修正發信完成後「發信」→「回信」按鈕過一陣子會又跳回「發信」
+
+- 修改目的：使用者回報透過 Gmail 發信完成、按鈕從「發信」變成「回信」之後，「現在有點過很久才轉換」——追查後確認這不是「切換得慢」，而是**切換後又被背景輪詢的舊資料蓋回去，要等很久才會再次真正切換回來**，從使用者角度看起來就像是切換過程異常緩慢。
+- 追查過程：`sendGmailComposeModal()`（Gmail 撰寫視窗按下「寄出」）在收到 Worker 回傳的 `threadId` 後，會直接把 `rows` 裡對應案件的 `gmailThreadId`／`gmailThreadOwnerAccount` 樂觀更新並呼叫 `render()`——這一步本身是同步、立即生效的，按鈕理論上應該馬上從「發信」變成「回信」。但這個檔案裡**其餘所有寫入路徑**（`updateCaseRow()` 等）在做完樂觀更新後，都會額外呼叫 `rememberLocalWrite(id,changes)`，把這次變更登記進 `recentLocalWrites`（保護期預設 10 分鐘）；`loadSheet()`（初次載入與每 6-30 秒一次的背景輪詢都會呼叫）讀到最新的 `backend/data/db.json` 後，一定會先經過 `applyRecentLocalWrites()` 這一層——如果某個案件有登記在 `recentLocalWrites` 裡、但剛抓回來的伺服器資料還沒真的反映這次異動，就會用本機剛才寫入的值蓋過伺服器資料，避免「網頁還沒同步到最新資料」誤把使用者剛做的異動洗掉。`sendGmailComposeModal()` 是這個檔案裡唯一一個「有樂觀更新、卻沒有呼叫 `rememberLocalWrite()`」的例外——這代表按鈕雖然立刻正確切換成「回信」，但下一次背景輪詢只要抓到的還是舊版 `backend/data/db.json`（`backend/data/db.json` 是靜態檔案，Worker 呼叫 GitHub API commit 完成，不代表 GitHub Actions 已經重新建置＋部署 GitHub Pages 完成，這中間依本文件第 8 節通常需要 1-3 分鐘），就會**直接覆蓋掉剛才的樂觀更新**、把按鈕打回「發信」，要等到 GitHub Pages 真的部署完成、下一次背景輪詢抓到含 `gmailThreadId` 的新版 JSON，按鈕才會再次切回「回信」——使用者眼中看到的就是「按鈕跳來跳去、要過一段時間才穩定切換過去」。
+- 影響檔案：`index.html`。
+- 影響功能：`sendGmailComposeModal()` 在樂觀更新 `rows` 之後，補上 `rememberLocalWrite(id,{gmailThreadId,gmailThreadOwnerAccount})`（沿用跟 `updateCaseRow()` 完全相同的既有保護機制，沒有新發明任何邏輯），讓這次異動在接下來 10 分鐘內不會被還沒跟上進度的背景輪詢資料蓋掉；一旦某次背景輪詢抓到的伺服器資料真的已經含有這個 `gmailThreadId`（`localWriteHasReachedSheet()` 判斷相符），保護會在額外 2 分鐘的緩衝期後自動解除，不需要手動呼叫 `forgetLocalWrite()`，這兩個時間常數（10 分鐘／2 分鐘）都是這個檔案既有的全域設定，沒有新增。
+- 風險區塊：這次改動只是把既有、其他寫入路徑都已經在用的保護機制，套用到這一個先前被漏掉的地方，沒有引入新的機制或改變既有保護機制本身的行為，風險極低；`回信`（`sendGmailThreadReply()`）不涉及案件本身欄位變更（信件串早就存在），不受這個問題影響，這次也沒有改動。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過；`node --test backend/test/*.test.mjs` 27/27 全過。
+  - 用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（stub `sheetApi`／`ensureGmailSignatureLoaded`／`gmailEditorMailPayload`，沒有真的打任何網路請求），**完整重現了這個 bug 並驗證修好**：①先確認套用修正後，呼叫 `sendGmailComposeModal()` 成功後 `recentLocalWrites` 正確登記這筆案件；②模擬「背景輪詢抓到還沒反映這次異動的舊版資料」（`gmailThreadId` 仍是空字串）餵給 `applyRecentLocalWrites()`，確認合併結果正確維持剛才樂觀更新的 `gmailThreadId`、`mailAction()` 算出來的按鈕正確維持顯示「回信」，不會被舊資料蓋回「發信」；③接著**刻意清空 `recentLocalWrites`、重新跑一次同樣的舊資料合併，先重現了修正前的真實行為**——按鈕確實會被打回「發信」，證明這是真的會發生的問題、不是臆測，也證明這次的修正是真的解決了它，不是巧合通過測試。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際發一封信、掐表計時確認按鈕真的不會在等待 GitHub Pages 部署期間跳回「發信」——這次的驗證是直接模擬「背景輪詢抓到舊資料」這個關鍵情境並確認合併邏輯正確，理論上已經涵蓋問題的根因，但沒有真的等一輪 GitHub Pages 部署（1-3 分鐘）跑過一次端對端流程。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-18 19:55 Asia/Taipei — Gmail 回信串：改成任何有 request.mail 權限的帳號都能查看/回覆，不再限定當初寄出那個帳號
 
 - 修改目的：使用者回報「回信串只能寄件者帳號看到信件內容」，認為這不合理，應該是「整串信件內容的人」（也就是任何有權限管理這個案件信件的同事）都能回信，不該卡在「一定要是當初按下發信按鈕的那個系統帳號」。
 - 追查過程：`getCaseMailThread`／`replyCaseMail` 這兩個 Worker action 從 2026-08-17 這個功能第一次上線就有一道嚴格的身分比對：`owner!==canonicalAccount(current.account)` 時直接拒絕、回傳 `GMAIL_THREAD_OWNER_MISMATCH`。原始設計文件（見本文件更早的「2026-08-17 15:00」那則紀錄）寫的理由是「Gmail thread 本來就只存在寄件者自己的信箱，用別的帳號的 token 讀不到」——這句話只對了一半：**Gmail API 的存取範圍確實是綁定「拿哪個帳號的 token 去打 API」，不是綁定「誰在操作我們系統」**。追查 `getValidGmailAccessToken()` 的實作（`worker/src/database-coordinator.ts:582`）確認它是單純依「傳進去的帳號字串」去查 Worker 自己 Durable Object 裡的 `gmail_tokens` 表，跟「目前登入的是誰」完全無關——換句話說，**Worker 伺服器端本來就把每個帳號的 Gmail refresh token 存在自己資料庫裡，技術上完全可以代替寄件帳號去讀信/回信**，只是原本的程式碼在讀寫時傳的是 `current.account`（目前登入者自己），而不是 `row['Gmail寄件帳號']`（這個案件實際寄出時記錄的帳號）——因為程式碼前面又疊了一道「這兩者必須相等」的身分比對，兩件事湊在一起，才會表現成「只有寄件者本人能看/回」，但這其實是**選擇上的限制，不是技術上做不到**。
