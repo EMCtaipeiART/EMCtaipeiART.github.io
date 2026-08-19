@@ -6461,6 +6461,20 @@
     .gmail-thread-msg-toggle::after{content:'展開'}
     .gmail-thread-msg[open] .gmail-thread-msg-toggle::after{content:'收合'}
     .gmail-thread-msg-content{display:grid;gap:5px;margin-top:5px}
+    /* 案件資料彈窗：編輯與刪除分開排列，刪除沿用案件列表的粉紅警示配色。 */
+    #caseDetailModal .case-detail-actions .row-actions{gap:10px!important}
+    #caseDetailModal .case-detail-actions .row-actions button.case-delete-btn{
+      background:#ffe4e8!important;color:#a91f39!important;border-color:#ff9aac!important
+    }
+    #caseDetailModal .case-detail-actions .row-actions button.case-delete-btn:hover{
+      background:#ffd0da!important;color:#a91f39!important;border-color:#f26f83!important
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .row-actions button.case-delete-btn{
+      background:#5a2f38!important;color:#ffd1d8!important;border-color:#c66b7c!important
+    }
+    html[data-theme="dark"] #caseDetailModal .case-detail-actions .row-actions button.case-delete-btn:hover{
+      background:#6b3947!important;color:#ffd1d8!important;border-color:#e8899a!important
+    }
   </style>
   <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
