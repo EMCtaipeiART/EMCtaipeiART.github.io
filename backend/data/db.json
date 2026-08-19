@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1918,
+  "revision": 1919,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:10:25.048Z",
+  "updatedAt": "2026-08-19T09:25:35.235Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19068,6 +19068,33 @@
           "繳交時間": "",
           "Gmail信件串ID": "1a01948cd8dad8dd",
           "Gmail寄件帳號": "david.liao@emctaipei.com"
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8月社群貼文_Liberty 5 Pro Max_產品特點介紹(多圖)_IG",
+          "專案負責人": "吳冠賢",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "5",
+          "開始日期": "2026/08/19",
+          "結束日期": "2026/08/19",
+          "設計負責人": "Anna",
+          "使用平台": "Instagram",
+          "填單時間": "2026/08/19 17:25",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080100",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -28949,6 +28976,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 655,
           "sheetRow": 655
+        }
+      },
+      "b2e85f2f-719a-4172-a5cd-f049c7e55ac9": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 656,
+        "row": {
+          "id": "26080100",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "8月社群貼文_Liberty 5 Pro Max_產品特點介紹(多圖)_IG",
+          "owner": "吳冠賢",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 5,
+          "start": "2026/08/19",
+          "end": "2026/08/19",
+          "designer": "Anna",
+          "platforms": "Instagram",
+          "submittedAt": "2026/08/19 17:25",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 656,
+          "sheetRow": 656
         }
       }
     }
