@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1705,
+  "revision": 1706,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:56:50.704Z",
+  "updatedAt": "2026-08-19T02:56:57.980Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -17305,7 +17305,7 @@
           "客戶別": "丹士特",
           "專案名稱": "8月社群貼文_肌膚翻譯機",
           "專案負責人": "朱祖翎",
-          "設計種類": "影音",
+          "設計種類": "平面",
           "階段": "後製",
           "數量": "1",
           "開始日期": "2026/08/07",
