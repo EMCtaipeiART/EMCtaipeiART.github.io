@@ -10,9 +10,9 @@ function databaseApiUrl(env: Env): string {
   return `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 }
 
-function githubHeaders(env: Env): Headers {
+function githubHeaders(env: Env, accept = 'application/vnd.github+json'): Headers {
   const headers = new Headers({
-    Accept: 'application/vnd.github+json',
+    Accept: accept,
     'X-GitHub-Api-Version': GITHUB_API_VERSION,
     'User-Agent': 'machi-design-api-worker'
   });
@@ -59,10 +59,23 @@ export async function loadGitHubDatabase(env: Env): Promise<StoredSnapshot> {
   });
   if (!response.ok) throw await githubError(response, '讀取 GitHub JSON');
   const data = await response.json() as Record<string, unknown>;
-  if (text(data.type) !== 'file' || !text(data.sha) || !text(data.content)) throw new Error('GitHub JSON 回傳格式不正確');
+  const sha = text(data.sha);
+  if (text(data.type) !== 'file' || !sha) throw new Error('GitHub JSON 回傳格式不正確');
+  let json = '';
+  if (text(data.content)) {
+    json = base64ToUtf8(text(data.content));
+  } else {
+    const rawResponse = await fetch(url, {
+      method: 'GET',
+      headers: githubHeaders(env, 'application/vnd.github.raw+json'),
+      redirect: 'follow'
+    });
+    if (!rawResponse.ok) throw await githubError(rawResponse, '讀取 GitHub JSON 內容');
+    json = await rawResponse.text();
+  }
   let parsed: unknown;
-  try { parsed = JSON.parse(base64ToUtf8(text(data.content))); } catch { throw new Error('GitHub JSON 內容無法解析'); }
-  return { database: normalizeSnapshot(parsed), sha: text(data.sha) };
+  try { parsed = JSON.parse(json); } catch { throw new Error('GitHub JSON 內容無法解析'); }
+  return { database: normalizeSnapshot(parsed), sha };
 }
 
 export async function commitGitHubDatabase(
