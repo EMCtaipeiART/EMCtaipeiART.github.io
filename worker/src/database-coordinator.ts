@@ -341,7 +341,7 @@ type GmailMessagePart = {
   parts?: GmailMessagePart[];
 };
 
-/** 遞迴走訪 Gmail 訊息的 MIME parts，只取 text/plain 內容，避免把原始 HTML 塞進畫面造成注入風險。 */
+/** 遞迴走訪 Gmail 訊息的 MIME parts，優先取 text/plain。 */
 function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
   if (!payload) return '';
   if (payload.mimeType === 'text/plain' && payload.body?.data) {
@@ -349,6 +349,19 @@ function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined)
   }
   for (const part of payload.parts || []) {
     const found = extractPlainTextFromGmailPayload(part);
+    if (found) return found;
+  }
+  return '';
+}
+
+/** 少數 HTML-only 信件沒有 text/plain；在 Worker 端轉成純文字，仍不把外部寄件人的原始 HTML 傳給前端。 */
+function extractHtmlAsPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
+  if (!payload) return '';
+  if (payload.mimeType === 'text/html' && payload.body?.data) {
+    try { return htmlToPlainText(new TextDecoder('utf-8').decode(base64UrlToBytes(payload.body.data))); } catch { return ''; }
+  }
+  for (const part of payload.parts || []) {
+    const found = extractHtmlAsPlainTextFromGmailPayload(part);
     if (found) return found;
   }
   return '';
@@ -407,17 +420,61 @@ function stripSignatureFromPlainText(value: string, knownSignatureText = ''): st
   return body.trim();
 }
 
-/** 回覆信只引用上一封內容；上一封如果已含更早的引用，脈絡會自然延續，不會每次重複附加整條 thread。 */
-function gmailReplyQuote(message: Row, knownSignatureText = ''): { html: string; plainText: string } {
+/** 每封信只保留該次新增的內容，移除 Gmail／Outlook 已內嵌的舊引用，避免重建完整 thread 時重複堆疊。 */
+function stripQuotedHistoryFromPlainText(value: string): string {
+  const lines = value.replace(/\r\n?/g, '\n').split('\n');
+  let quoteStart = -1;
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (/^>/.test(trimmed) || /^-{2,}\s*(?:Original Message|原始郵件)\s*-{2,}$/i.test(trimmed)) {
+      quoteStart = index;
+      break;
+    }
+    if (/(?:wrote:|寫道[:：])$/i.test(trimmed)) {
+      quoteStart = index;
+      for (let previous = index - 1; previous >= Math.max(0, index - 3); previous -= 1) {
+        if (!lines[previous].trim()) break;
+        quoteStart = previous;
+        if (/^On\s/i.test(lines[previous].trim())) break;
+      }
+      break;
+    }
+    if (/^(?:From|寄件者|寄件人):\s*/i.test(trimmed)) {
+      if (lines.slice(index, index + 6).some(nextLine => /^(?:Subject|主旨):\s*/i.test(nextLine.trim()))) {
+        quoteStart = index;
+        break;
+      }
+    }
+  }
+  return (quoteStart >= 0 ? lines.slice(0, quoteStart) : lines).join('\n').trim();
+}
+
+function gmailMessagePlainBody(message: Row, knownSignatureText = ''): string {
   const payload = message.payload as GmailMessagePart | undefined;
-  const from = gmailHeaderValue(payload?.headers, 'From');
-  const date = formatGmailDateForDisplay(gmailHeaderValue(payload?.headers, 'Date'));
-  const body = stripSignatureFromPlainText(extractPlainTextFromGmailPayload(payload) || text(message.snippet), knownSignatureText);
-  if (!body) return { html: '', plainText: '' };
-  const intro = [date, from].filter(Boolean).join('，') + ' 寫道：';
-  const html = `<div class="gmail_quote"><div>${escapeHtml(intro)}</div><blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote></div>`;
-  const plainText = `${intro}\n${body.split('\n').map(line => `> ${line}`).join('\n')}`;
-  return { html, plainText };
+  const rawBody = extractPlainTextFromGmailPayload(payload) || extractHtmlAsPlainTextFromGmailPayload(payload) || text(message.snippet);
+  return stripSignatureFromPlainText(stripQuotedHistoryFromPlainText(rawBody), knownSignatureText);
+}
+
+/** 逐封重建完整 Gmail thread，無條件附上先前每一封的新增內容，同時避免已嵌套引用造成重複。 */
+function gmailThreadQuote(messages: unknown[], knownSignatureText = ''): { html: string; plainText: string } {
+  const items = messages.map(asRow).map(message => {
+    const payload = message.payload as GmailMessagePart | undefined;
+    const from = gmailHeaderValue(payload?.headers, 'From');
+    const date = formatGmailDateForDisplay(gmailHeaderValue(payload?.headers, 'Date'));
+    const body = gmailMessagePlainBody(message, knownSignatureText);
+    if (!body) return null;
+    const heading = [date, from].filter(Boolean).join('，');
+    const intro = heading ? `${heading} 寫道：` : '先前信件：';
+    return {
+      html: `<div style="margin-bottom:12px"><div>${escapeHtml(intro)}</div><blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote></div>`,
+      plainText: `${intro}\n${body.split('\n').map(line => `> ${line}`).join('\n')}`
+    };
+  }).filter((item): item is { html: string; plainText: string } => Boolean(item));
+  if (!items.length) return { html: '', plainText: '' };
+  return {
+    html: `<div class="gmail_quote">${items.map(item => item.html).join('')}</div>`,
+    plainText: items.map(item => item.plainText).join('\n\n')
+  };
 }
 
 function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | undefined, name: string): string {
@@ -1028,7 +1085,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     for (const message of rawMessages) {
       const messageRow = asRow(message);
       const payloadPart = messageRow.payload as GmailMessagePart | undefined;
-      const bodyText = stripSignatureFromPlainText(extractPlainTextFromGmailPayload(payloadPart) || text(messageRow.snippet), knownSignatureText);
+      const bodyText = gmailMessagePlainBody(messageRow, knownSignatureText);
       const images: Array<{ dataUrl: string }> = [];
       if (remainingImageBudget > 0) {
         const imageParts = collectGmailImageParts(payloadPart).slice(0, Math.min(GMAIL_THREAD_IMAGE_LIMIT_PER_MESSAGE, remainingImageBudget));
@@ -1102,7 +1159,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const toHeader = gmailHeaderValue(headers, 'To');
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
-    const quote = gmailReplyQuote(lastMessage, htmlToPlainText(signatureHtml));
+    const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml));
     const raw = buildGmailRawMessage({
       to, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
