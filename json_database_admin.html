@@ -733,13 +733,17 @@
     // 人員名單比照發信彈窗「選擇聯絡人」的樣式：可搜尋、多選、以膠囊呈現，並依部門／組別分類。
     function normalizedCustomerRows(rows){return rows.map(row=>({...row,'客戶別':String(row['客戶別']||''),'排序':String(row['排序']||''),'專案負責人':MachiAccess.parseList(row['專案負責人']),'設計負責人':MachiAccess.parseList(row['設計負責人']),'部門組別':MachiAccess.parseList(row['部門組別'])}))}
     /** 左側清單排序：有明確「排序」值的客戶別依數字排在最前面，其餘（尚未拖曳過的既有／新增客戶別）依名稱 A→Z 排在後面，符合「預設 A→Z」的要求。 */
+    // 沒有拖曳過順序的客戶別，預設依中文筆畫數由少到多排列（不是拼音 A→Z）；瀏覽器不支援「-u-co-stroke」筆畫排序
+    // 這個 Unicode 擴充時，Intl.Collator 會自動忽略擴充、安全退回該語系的預設排序，不會拋出例外。
+    const CUSTOMER_STROKE_COLLATOR=new Intl.Collator('zh-Hant-u-co-stroke');
+    function compareCustomerNames(a,b){return CUSTOMER_STROKE_COLLATOR.compare(String(a||''),String(b||''))}
     function sortedCustomerRows(rows){
       return [...rows].sort((a,b)=>{
         const orderA=String(a['排序']||'').trim(),orderB=String(b['排序']||'').trim(),hasA=orderA!==''&&Number.isFinite(Number(orderA)),hasB=orderB!==''&&Number.isFinite(Number(orderB));
-        if(hasA&&hasB)return Number(orderA)-Number(orderB)||String(a['客戶別']).localeCompare(String(b['客戶別']),'zh-Hant');
+        if(hasA&&hasB)return Number(orderA)-Number(orderB)||compareCustomerNames(a['客戶別'],b['客戶別']);
         if(hasA)return -1;
         if(hasB)return 1;
-        return String(a['客戶別']).localeCompare(String(b['客戶別']),'zh-Hant');
+        return compareCustomerNames(a['客戶別'],b['客戶別']);
       });
     }
     /** 依「部門」（+運釀企劃部特例）分類，跟 index.html 前台發信「選擇聯絡人」的分組邏輯一致：企劃部／設計部／負責人／各組（各組再依組別分子分類）。 */
@@ -910,12 +914,15 @@
       try{
         const data=await appsScriptRequest('adminTableUpdate',{table:'客戶別',key:name,row,...spreadsheetBackupOptions('客戶別')});
         if(data?.jsonRevision){appliedRevision=Math.max(appliedRevision,Number(data.jsonRevision)||0);$('revision').textContent=String(data.jsonRevision)}
-        if(tableName==='客戶別'&&customerSelected===name)note(`「${name}」已完成寫入 JSON。`,'ok');
+        customerWritesPending.delete(name);
+        if(tableName==='客戶別'){
+          renderTable({table:'客戶別',total:customerRowsCache.length,offset:0,limit:1000,rows:customerRowsCache});
+          if(customerSelected===name)note(`「${name}」已完成寫入 JSON。`,'ok');
+        }
       }catch(error){
+        customerWritesPending.delete(name);
         note(`「${name}」背景寫入失敗，重新讀取還原中：${error.message}`,'error');
         await loadRows();
-      }finally{
-        customerWritesPending.delete(name);
       }
     }
     async function saveCustomerOrder(){
