@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1585,
+  "revision": 1586,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T01:06:07.556Z",
+  "updatedAt": "2026-08-19T01:06:11.328Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20914,9 +20914,9 @@
           "修改內容": "初稿完成（NAS 自動建立）",
           "修改人": "NAS 自動同步",
           "確認修正日": "2026/08/19 09:02:35",
-          "圖片連結": "[{\"fileName\":\"260810_DJI_八月下半優惠_v02_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/10BAglEJYRoPVKhJWcBOfoUQ0Sf_jzmDb=w1600\"}]",
+          "圖片連結": "[]",
           "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/19 09:06:07"
+          "圖片更新時間": "2026/08/19 09:06:11"
         }
       ]
     },
