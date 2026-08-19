@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1798,
+  "revision": 1799,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:26:58.769Z",
+  "updatedAt": "2026-08-19T06:27:28.553Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25824,8 +25824,8 @@
           "客戶別": "Epson",
           "專案負責人": "[]",
           "設計負責人": "[\"Leona\",\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-19 12:08",
+          "部門組別": "[\"設計部\",\"企劃部\",\"Joyce組\"]",
+          "更新時間": "2026-08-19 14:27",
           "更新者": "Machi",
           "排序": "4"
         },
