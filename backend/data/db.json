@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1635,
+  "revision": 1636,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:19:45.094Z",
+  "updatedAt": "2026-08-19T02:19:48.257Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25491,12 +25491,12 @@
         },
         {
           "客戶別": "保麗淨",
+          "排序": "13",
           "專案負責人": "[]",
           "設計負責人": "[]",
           "部門組別": "[]",
           "更新時間": "",
-          "更新者": "系統預設",
-          "排序": "13"
+          "更新者": "系統預設"
         },
         {
           "客戶別": "席伊麗",
@@ -25635,12 +25635,12 @@
         },
         {
           "客戶別": "BAT",
-          "排序": "",
           "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[]",
           "部門組別": "[]",
           "更新時間": "2026-08-19 10:13",
-          "更新者": "Machi"
+          "更新者": "Machi",
+          "排序": "28"
         },
         {
           "客戶別": "BAT英美菸草",
