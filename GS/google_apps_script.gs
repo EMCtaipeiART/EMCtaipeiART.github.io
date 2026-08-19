@@ -28,7 +28,7 @@ const DESIGNER_IMAGE_UPLOAD_SCOPES = [
 const HEADER_SCAN_COLUMNS = 40;
 const CACHE_SECONDS = 180;
 const DETAIL_SHEET_NAMES = ['階段', '項目細節', 'detail', 'details'];
-const SCRIPT_VERSION = 'permission-primary-key-2026-08-11';
+const SCRIPT_VERSION = 'designer-reply-templates-2026-08-19';
 const DATABASE_ARCHIVE_GITHUB_TOKEN_PROPERTY = 'DATABASE_ARCHIVE_GITHUB_TOKEN';
 const DATABASE_ARCHIVE_GITHUB_REPOSITORY = 'EMCtaipeiART/EMCtaipeiART.github.io';
 const DATABASE_ARCHIVE_GITHUB_EVENT_TYPE = 'database_changed';
@@ -2236,7 +2236,7 @@ function addReelComment_(payload) {
 }
 
 function buildDesignerProfileHeaderMap_(sheet) {
-  const requiredHeaders = [USER_SETTING_NAME_HEADER, '頭像連結', '頭像大圖連結', '分享音樂', '音樂起始秒數', '技能', '對話框'];
+  const requiredHeaders = [USER_SETTING_NAME_HEADER, '頭像連結', '頭像大圖連結', '分享音樂', '音樂起始秒數', '技能', '對話框', '回信範本設定'];
   const lastColumn = Math.max(sheet.getLastColumn(), requiredHeaders.length);
   const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(value => String(value || '').trim());
   const headerMap = {};
@@ -2267,8 +2267,22 @@ function readDesignerProfileRow_(sheet, headerMap, rowNumber) {
     musicUrl: values[headerMap['分享音樂'] - 1] || '',
     musicStartAt: Math.max(0, Number(values[headerMap['音樂起始秒數'] - 1]) || 0),
     skills: values[headerMap['技能'] - 1] || '',
-    quote: values[headerMap['對話框'] - 1] || ''
+    quote: values[headerMap['對話框'] - 1] || '',
+    replyTemplates: normalizeDesignerReplyTemplates_(values[headerMap['回信範本設定'] - 1])
   };
+}
+
+function normalizeDesignerReplyTemplates_(value) {
+  let source = value;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source || '{}'); } catch (error) { source = {}; }
+  }
+  const result = {};
+  const entries = Array.isArray(source)
+    ? source.map(item => [String((item && (item.detail || item['項目細節'])) || '').trim(), String((item && (item.content || item.text || item['回信內容'])) || '').trim()])
+    : (source && typeof source === 'object' ? Object.keys(source).map(detail => [String(detail).trim(), String(source[detail] || '').trim()]) : []);
+  entries.slice(0, 80).forEach(entry => { if (entry[0] && entry[1] && entry[0].length <= 80 && entry[1].length <= 10000) result[entry[0]] = entry[1]; });
+  return result;
 }
 
 function designerDesignTypeFromName_(name) {
@@ -2303,6 +2317,10 @@ function saveDesignerProfiles_(profiles) {
     const musicUrl = String(profile.musicUrl || profile.appleMusicUrl || profile['分享音樂'] || '').trim();
     const musicStartAt = Math.max(0, Number(profile.musicStartAt || profile.startAt || profile['音樂起始秒數']) || 0);
     const existingProfile = readDesignerProfileRow_(sheet, headerMap, rowNumber);
+    const hasReplyTemplates = Object.prototype.hasOwnProperty.call(profile, 'replyTemplates') || Object.prototype.hasOwnProperty.call(profile, '回信範本設定');
+    const replyTemplates = hasReplyTemplates
+      ? normalizeDesignerReplyTemplates_(profile.replyTemplates || profile['回信範本設定'])
+      : existingProfile.replyTemplates;
     const avatar = String(profile.avatar || profile['頭像連結'] || existingProfile.avatar || '').trim();
     const poster = String(profile.poster || profile['頭像大圖連結'] || existingProfile.poster || avatar).trim();
     sheet.getRange(rowNumber, headerMap['頭像連結']).setValue(avatar);
@@ -2311,6 +2329,7 @@ function saveDesignerProfiles_(profiles) {
     sheet.getRange(rowNumber, headerMap['音樂起始秒數']).setValue(musicStartAt);
     sheet.getRange(rowNumber, headerMap['技能']).setValue(skills);
     sheet.getRange(rowNumber, headerMap['對話框']).setValue(quote);
+    sheet.getRange(rowNumber, headerMap['回信範本設定']).setValue(JSON.stringify(replyTemplates));
     saved.push(readDesignerProfileRow_(sheet, headerMap, rowNumber));
   });
   SpreadsheetApp.flush();

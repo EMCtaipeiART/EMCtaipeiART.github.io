@@ -316,6 +316,27 @@ test('designer music uses one timeline, JSON-only settings, and seeks Spotify af
   assert.doesNotMatch(settingsSave, /backup/);
 });
 
+test('designer reply templates persist by item detail and multi-select uses the first detail', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const detailsFunction = html.match(/function detailsToArray\(value\)\{[^\n]*\}/)?.[0] || '';
+  const profileFunction = html.match(/function designerProfile\(name\)\{[^\n]*\}/)?.[0] || '';
+  const templateFunction = html.match(/function designerReplyTemplateForCase\(row=\{\}\)\{[^\n]*\}/)?.[0] || '';
+  assert.match(html, /5\. 回信範本設定/);
+  assert.match(html, /多選時以第一個選項為準/);
+  assert.ok(detailsFunction && profileFunction && templateFunction);
+  const selectTemplate = new Function('designers', 'defaultDesigners', `
+    function unique(values){ return [...new Set(values.filter(Boolean))] }
+    ${detailsFunction}
+    ${profileFunction}
+    ${templateFunction}
+    return designerReplyTemplateForCase({ designer:'Machi', details:'社群貼文, 廣告素材' });
+  `);
+  assert.equal(selectTemplate([{
+    name: 'Machi',
+    replyTemplates: { '社群貼文': '應帶入第一個範本', '廣告素材': '不應帶入第二個範本' }
+  }], []), '應帶入第一個範本');
+});
+
 test('archive snapshot and dashboard use JSON database sources only', async () => {
   // The archive is append-preserving: current database rows are upserted without deleting historical rows.
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
@@ -950,10 +971,18 @@ test('designer media buttons persist replacements and deleted references in JSON
     profiles: [{
       name: 'Machi',
       avatar: `https://drive.google.com/thumbnail?id=${avatarId}&sz=w1000`,
-      poster: `https://drive.google.com/thumbnail?id=${posterId}&sz=w1000`
+      poster: `https://drive.google.com/thumbnail?id=${posterId}&sz=w1000`,
+      replyTemplates: { '社群貼文': '這是社群貼文的回信範本', '廣告素材': '這是廣告素材的回信範本' }
     }]
   });
   assert.equal(replaced.ok, true);
+  const savedProfile = app.database.table('設定').rows.find(row => row['名字'] === 'Machi');
+  assert.deepEqual(JSON.parse(savedProfile['回信範本設定']), {
+    '社群貼文': '這是社群貼文的回信範本',
+    '廣告素材': '這是廣告素材的回信範本'
+  });
+  const profiles = await api(app.baseUrl, 'listDesignerProfiles');
+  assert.equal(profiles.profiles.find(profile => profile.name === 'Machi').replyTemplates['社群貼文'], '這是社群貼文的回信範本');
   await api(app.baseUrl, 'upsertDesignerStories', {
     editorToken: login.token,
     designer: 'Machi',

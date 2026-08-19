@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-designer-media-json-2026-08-13-1';
+const VERSION = 'json-backend-designer-reply-templates-2026-08-19-1';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -48,6 +48,14 @@ function normalizedSkillMappings(value) {
   const seen = new Set();
   return rows.map(row => row && typeof row === 'object' ? row : {}).map(row => ({ name: text(row.name || row['技能']), type: text(row.type || row['設計種類']) || '平面', stage: text(row.stage || row['階段']) || '後製' }))
     .filter(row => row.name && !seen.has(row.name) && (seen.add(row.name), true)).slice(0, 30);
+}
+function normalizedReplyTemplates(value) {
+  let source = value;
+  if (typeof source === 'string') { try { source = JSON.parse(source); } catch { source = {}; } }
+  const entries = Array.isArray(source)
+    ? source.map(item => [text(item?.detail || item?.['項目細節']), text(item?.content || item?.text || item?.['回信內容'])])
+    : (source && typeof source === 'object' ? Object.entries(source).map(([detail, content]) => [text(detail), text(content)]) : []);
+  return Object.fromEntries(entries.filter(([detail, content]) => detail && content && detail.length <= 80 && content.length <= 10000).slice(0, 80));
 }
 const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
 const ACCESS_CAPABILITIES = [
@@ -650,7 +658,7 @@ export function createActionHandler(database, options = {}) {
         name: text(row['名字']), account: canonicalAccount(row['帳號']), avatar: text(row['頭像連結']),
         poster: text(row['頭像大圖連結'] || row['頭像連結']), musicUrl: text(row['分享音樂']),
         musicStartAt: Math.max(0, Number(row['音樂起始秒數']) || 0), skills: splitNames(row['技能']),
-        quote: text(row['對話框']), rotation: Number(row['新專案輪值']) || 99, skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
+        quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), rotation: Number(row['新專案輪值']) || 99, skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
         designType: /影音|影像|影片/i.test(text(row['組別'])) ? '影音' : (/平面/.test(text(row['組別'])) ? '平面' : '')
       }));
       return { ok: true, action, profiles };
@@ -771,10 +779,11 @@ export function createActionHandler(database, options = {}) {
           if ('musicStartAt' in profile) row['音樂起始秒數'] = String(Math.max(0, Number(profile.musicStartAt) || 0));
           if ('skills' in profile) row['技能'] = (Array.isArray(profile.skills) ? profile.skills : splitNames(profile.skills)).join(' , ');
           if ('quote' in profile) row['對話框'] = text(profile.quote);
+          if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
         }
         const profiles = draft.tables['設定'].rows.filter(isDesignerSettingsRow).map(row => ({
           name: row['名字'], account: row['帳號'], avatar: row['頭像連結'], poster: row['頭像大圖連結'], musicUrl: row['分享音樂'],
-          musicStartAt: Number(row['音樂起始秒數']) || 0, skills: splitNames(row['技能']), skillMappings: normalizedSkillMappings(row['技能表單設定']), quote: row['對話框'], rotation: Number(row['新專案輪值']) || 99, designType: row['組別'], enabled: true
+          musicStartAt: Number(row['音樂起始秒數']) || 0, skills: splitNames(row['技能']), skillMappings: normalizedSkillMappings(row['技能表單設定']), quote: row['對話框'], replyTemplates: normalizedReplyTemplates(row['回信範本設定']), rotation: Number(row['新專案輪值']) || 99, designType: row['組別'], enabled: true
         }));
         return { ok: true, action, profiles };
       }, 'save designer profiles');

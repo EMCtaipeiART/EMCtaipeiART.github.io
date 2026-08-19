@@ -631,7 +631,11 @@ describe('Machi Design API Worker', () => {
     const saved = await api({
       action: 'saveDesignerProfiles',
       editorToken: token,
-      profiles: [{ name: 'Machi', poster: 'https://example.com/new-poster.jpg' }]
+      profiles: [{
+        name: 'Machi',
+        poster: 'https://example.com/new-poster.jpg',
+        replyTemplates: { '影音剪輯': '影音剪輯回信內容', '字幕字卡': '字幕字卡回信內容' }
+      }]
     }, token);
     expect(saved).toMatchObject({ ok: true, action: 'saveDesignerProfiles' });
 
@@ -642,7 +646,8 @@ describe('Machi Design API Worker', () => {
     });
     expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({
       '名字': 'Machi',
-      '頭像大圖連結': 'https://example.com/new-poster.jpg'
+      '頭像大圖連結': 'https://example.com/new-poster.jpg',
+      '回信範本設定': JSON.stringify({ '影音剪輯': '影音剪輯回信內容', '字幕字卡': '字幕字卡回信內容' })
     }));
   });
 
