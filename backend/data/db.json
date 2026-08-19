@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1586,
+  "revision": 1587,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T01:06:11.328Z",
+  "updatedAt": "2026-08-19T01:07:28.965Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20905,18 +20905,6 @@
           "圖片連結": "[{\"fileName\":\"260819_ANKER_全館促銷_流量_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/166U75ZF9hunRGILxBqk2EtlWMJo78Nqr=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XT9zOtttfPjEjPy2xKE06xPPQWAyHG-_=w1600\"},{\"fileName\":\"260819_ANKER_全館促銷_流量_3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-QyoC1vfkLv93Pk6ERFVrjz6-cf7dZ07=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/18 17:46:30"
-        },
-        {
-          "案件編號": "26080095",
-          "修改次數": "0",
-          "建立日期": "2026/08/19 09:02:35",
-          "修改日期": "2026/08/19 09:02:35",
-          "修改內容": "初稿完成（NAS 自動建立）",
-          "修改人": "NAS 自動同步",
-          "確認修正日": "2026/08/19 09:02:35",
-          "圖片連結": "[]",
-          "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/19 09:06:11"
         }
       ]
     },
