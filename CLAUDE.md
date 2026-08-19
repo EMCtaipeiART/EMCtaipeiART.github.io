@@ -189,7 +189,27 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-19 14:45 Asia/Taipei（最新）— 客戶別「部門／組別」改成收合式名單、「權限設定」預設企劃/設計全選、發信也納入白名單管制；順手修掉一個「灰階誤顯示成歷史資料」的既有標籤 bug
+### 2026-08-19 15:30 Asia/Taipei（最新）— 真正修正「客戶別部門／組別勾了『各組』底下的分組（如 Joyce組），前台卻完全看不到案件」：找到並修正 currentEditorGroup 被誤用成「原始組別值」的根本問題
+
+- 修改目的：使用者實測回報——後台已經在客戶別「Epson」的「部門／組別」勾選「Joyce組」，用真實測試帳號「Joyce測試人員」（部門＝專案部、組別＝Joyce組）登入前台，「最新案件列表」卻完全空白（「沒有符合搜尋條件的...」「目前沒有可修改的案件」），Epson 底下明明有案件。
+- 追查過程：先用管理者權限直接讀正式資料庫確認資料本身正確——`客戶別` 表裡 Epson 的「部門組別」欄位確實是 `["設計部","企劃部","Emily組","Joyce組"]`，「設定」表裡「Joyce測試人員」（帳號 `local:d5e9fff2-ad25-41dd-8d0b-23a92941b112`）的「部門」＝「專案部」、「組別」＝「Joyce組」——兩邊資料完全吻合，排除「後台沒真的存進去」或「帳號組別打錯字」這兩種最常見的可能性，代表問題出在前台判斷邏輯本身。追到 `canViewCustomerCases()`（2026-08-19 13:20 那次新增）用來比對的 `currentEditorGroup` 這個變數——**這個變數其實不是帳號「組別」欄位的原始值**，而是給另一個完全不同、更早就存在的既有功能（「設計組別」——用來判斷這個人是平面設計師／影音設計師／管理者，進而決定能看到哪些設計師選單、能不能開設計儀表板）在用的**正規化過**的值：`loginEditor()`／`applyAccountSettingsIfNeeded()` 賦值時都是呼叫 `remoteDesignGroup(settings)`，內部呼叫 `normalizeDesignGroup(value)`——這支函式只認得三種輸出（`/管理者|admin/`→「管理者」、`/平面/`→「平面」、`/影音|影像|影片|video/`→「影音」），**其餘任何輸入一律回傳空字串**。也就是說，帳號「組別」欄位只要不是這三種固定分類（例如「Joyce組」「Mickey組」「Emily組」這類 2026-08-18 才新增的專案分組），`currentEditorGroup` 永遠是空字串——這代表**「部門／組別」這個客戶別可見性功能裡，靠「組別」比對的那一半，從 2026-08-19 13:20 那次功能一上線就完全沒有真正生效過**，只有靠「部門」（企劃部／設計部／專案部這類精確字串）比對的那一半是正常的；因為多數既有客戶別的「部門／組別」清單本來就同時含「企劃部」「設計部」這類部門層級的值（見 2026-08-19 09:48 那次改版的預設邏輯），大部分測試時剛好靠「部門」那一半矇混過關，一直到這次使用者專門測試「只靠組別比對」的情境（Joyce測試人員的部門是「專案部」，Epson 的部門/組別清單裡沒有「專案部」，只有「Joyce組」），才第一次真正踩到這個從一開始就存在的邏輯漏洞。
+- 影響檔案：`index.html`。
+- 影響功能：新增一個獨立的模組層級變數 `currentEditorRawGroup`——帳號「組別」欄位**真正未經過濾**的原始值，跟 `currentEditorGroup`（給「設計組別」平面/影音/管理者三分類用，`currentDesignGroup()`／`hasDesignerAccountRole()` 等既有邏輯繼續照舊使用，完全沒有改動）徹底切開，兩者服務不同用途、不能互相取代。新增 `remoteRawGroup(settings)`（單純讀 `settings.group`／`settings['組別']`，不經過 `normalizeDesignGroup`），在所有原本設定 `currentEditorGroup` 的地方（`loginEditor()`、`applyAccountSettingsIfNeeded()`、`verifyStoredEditorToken()` 的成功與失敗兩個分支、`applyLocalPreviewSession()` 本機檢視模式清空為空字串、`clearLoginAuthState()`／`logoutEditor()` 登出清空）比照辦理同步設定 `currentEditorRawGroup`；`persistEditorSession()`／`pendingEditorSession`／`editorSessionKeys` 都補上對應的 `designRequestEditorRawGroup` 儲存/還原欄位，確保重新整理頁面、跨分頁同步都不會遺失這個值。`canViewCustomerCases()` 的 `group` 判斷改成讀 `currentEditorRawGroup`（不再是 `currentEditorGroup`），這是唯一真正修好問題的一行——其餘全部改動都是為了讓這個新變數正確地在登入／還原/登出流程裡被同步賦值。
+- 風險區塊：
+  - **這是一個從功能一上線（2026-08-19 13:20）就存在、直到現在才被抓到的邏輯性 bug**，範圍是「部門／組別」可見性判斷裡**所有透過『組別』欄位比對的情境**——任何客戶別如果過去曾經勾選過「各組」底下的專案分組（Joyce組／Mickey組／Emily組／Celine組／Ann組／Odin組／Cherry組等，只要不是「平面」或「影音」這兩個組別名稱，因為這兩個剛好也會被 `normalizeDesignGroup` 正規化成有意義的值，不受影響），對應組別的成員在這次修正部署前，**即使後台顯示已經勾選、清單也存得進去，實際上這個組別完全沒有真正發揮任何可見性效果**（因為判斷永遠比對的是空字串），只有靠客戶別清單裡同時存在的「部門」層級勾選（企劃部/設計部/專案部等）才可能讓這些人看到案件。這代表**在這次修正部署之前，任何管理者以為「已經幫某個專案組開放某客戶別可見性」的設定，實際上可能完全沒有生效過**，需要提醒使用者：這次修正部署後，重新整理前台或重新登入，才會讓這些原本就已經勾選好的「各組」分組真正開始生效——不需要回後台重新勾選，資料本身沒有問題，只有前台的判斷邏輯是這次才修好。
+  - `currentEditorRawGroup` 目前只服務 `canViewCustomerCases()` 這一個地方；沒有把它擴大用在其他判斷（例如編輯／刪除／發信的客戶別白名單，那些是靠帳號 email 直接比對「權限設定」名單，不是靠部門／組別字串比對，不受這個 bug 影響，這次也沒有需要一併檢查）。
+  - `remoteRawGroup()` 讀值邏輯完全比照 `remoteDesignGroup()` 既有的欄位優先序寫法（`settings.group||settings['組別']`），Worker 端 `settingsResponse()` 回傳的 `group` 欄位本來就是未正規化的原始值（`group = text(row['組別'])`，只是被拿去做 `designType` 判斷用，`group` 本身沒有被動過），確認不需要改動任何 Worker 程式碼，純粹是前台把兩種不同用途的值搞混了。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 用 `node --check` 語法檢查通過；`node --test backend/test/*.test.mjs` 28/28 全過。
+  - 直接對正式 Cloudflare Worker 讀取真實資料，確認 Epson 客戶別「部門組別」與「Joyce測試人員」帳號的「部門」「組別」欄位完全吻合使用者描述的設定，排除資料本身有誤。
+  - 用本機 Node 靜態伺服器＋瀏覽器對 `index.html` 做隔離測試（灌入模擬的 `customerDirectoryRows`，沒有真的打任何網路請求）：**先重現了修正前的錯誤結果，再確認修正後正確**——手動模擬修正前的邏輯（`normalizeDesignGroup('Joyce組')||fallbackDesignGroupForUser(...)` 算出的值去比對），確認 `oldCanView` 為 `false`（完全對應使用者回報的「案件都不顯示」）；改用新的 `canViewCustomerCases('Epson')`（讀 `currentEditorRawGroup`），確認正確回傳 `true`。
+  - 驗證 `remoteRawGroup({group:'Joyce組'})` 正確回傳 `'Joyce組'`（原始值），同一份輸入餵給既有的 `remoteDesignGroup(...)` 正確回傳空字串（證明兩者確實是為不同目的服務、不能互相取代，也確認沒有不小心改壞既有的「設計組別」判斷邏輯）。
+  - 驗證 `persistEditorSession()` 正確把 `currentEditorRawGroup` 寫進 `localStorage`／`sessionStorage` 的 `designRequestEditorRawGroup`；重新整理頁面後 `pendingEditorSession.rawGroup` 正確讀回同一個值，確認登入狀態的還原流程不會遺失這個新欄位。
+  - **未做的驗證**：沒有用「Joyce測試人員」這個真實測試帳號實際登入正式站，肉眼確認「最新案件列表」真的出現 Epson 的案件（這次驗證完全透過程式化模擬帳號狀態＋隔離呼叫函式完成，邏輯上已經精確對應使用者回報的資料與現象，但沒有走過完整的「真實登入→畫面渲染→肉眼看到案件」端對端流程）。
+- 部署狀態：純前端，git push 後自動生效（等一輪 GitHub Pages 部署，通常 1-3 分鐘）；不需要部署 Worker 或任何 Apps Script——這次的根因與修正完全在前台 `index.html` 的登入狀態管理，沒有動到任何伺服器端邏輯。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-19 14:45 Asia/Taipei — 客戶別「部門／組別」改成收合式名單、「權限設定」預設企劃/設計全選、發信也納入白名單管制；順手修掉一個「灰階誤顯示成歷史資料」的既有標籤 bug
 
 - 修改目的：接續上一則「顯示改看部門／組別、權限設定改成編輯／刪除白名單」的改版，使用者這次提出三項：①「部門／組別」的呈現方式改成跟「權限設定」一樣的收合式（搜尋＋分組收合＋已選膠囊），不要再是純粹的核取方塊清單；②「權限設定」預設改成「企劃部／設計部」全選（不是留空）；③「發信」也要納入這套白名單管制——不在名單裡的部門，前台「發信／編輯／刪除」都要顯示灰階不可點選。
 - 追查過程：動手前先確認三件事，避免像過去幾次一樣改了但沒生效或範圍抓錯：
