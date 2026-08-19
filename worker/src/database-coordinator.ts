@@ -286,7 +286,7 @@ function gmailPlainBodyWithSignature(bodyHtml: string, signatureHtml = ''): stri
 }
 
 /** 組出寄送用的 RFC822 MIME 信件：一般信件為 multipart/alternative，含照片時改用 multipart/related 包住內嵌 CID 圖片。 */
-function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; signatureHtml?: string; inlineImages?: GmailInlineImage[]; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
+function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; signatureHtml?: string; quotedHtml?: string; quotedText?: string; inlineImages?: GmailInlineImage[]; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
   const headers: string[] = [];
   headers.push(`To: ${mimeAddressList(options.to)}`);
   if (options.cc && mimeAddressList(options.cc)) headers.push(`Cc: ${mimeAddressList(options.cc)}`);
@@ -301,13 +301,14 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
   const relatedBoundary = `machi_related_${crypto.randomUUID().replace(/-/g, '')}`;
   const images = options.inlineImages || [];
   headers.push(`Content-Type: ${images.length ? 'multipart/related' : 'multipart/alternative'}; boundary="${images.length ? relatedBoundary : boundary}"`);
-  const fullHtml = gmailBodyWithSignature(options.bodyHtml, options.signatureHtml);
+  const fullHtml = `${gmailBodyWithSignature(options.bodyHtml, options.signatureHtml)}${options.quotedHtml ? `<br><br>${options.quotedHtml}` : ''}`;
+  const fullPlainText = `${gmailPlainBodyWithSignature(options.bodyHtml, options.signatureHtml)}${options.quotedText ? `\n\n${options.quotedText}` : ''}`;
   const plainPart = [
     `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: base64',
     '',
-    base64Encode(gmailPlainBodyWithSignature(options.bodyHtml, options.signatureHtml))
+    base64Encode(fullPlainText)
   ].join('\r\n');
   const htmlPart = [
     `--${boundary}`,
@@ -404,6 +405,19 @@ function stripSignatureFromPlainText(value: string, knownSignatureText = ''): st
   if (known && body.trimEnd().endsWith(known)) body = body.trimEnd().slice(0, -known.length);
   body = body.replace(/\n*(?:Sent from my (?:iPhone|iPad|Android)|Get Outlook for (?:iOS|Android)|從我的 iPhone 傳送|由我的 iPhone 送出)[\s\S]*$/i, '');
   return body.trim();
+}
+
+/** 回覆信只引用上一封內容；上一封如果已含更早的引用，脈絡會自然延續，不會每次重複附加整條 thread。 */
+function gmailReplyQuote(message: Row, knownSignatureText = ''): { html: string; plainText: string } {
+  const payload = message.payload as GmailMessagePart | undefined;
+  const from = gmailHeaderValue(payload?.headers, 'From');
+  const date = formatGmailDateForDisplay(gmailHeaderValue(payload?.headers, 'Date'));
+  const body = stripSignatureFromPlainText(extractPlainTextFromGmailPayload(payload) || text(message.snippet), knownSignatureText);
+  if (!body) return { html: '', plainText: '' };
+  const intro = [date, from].filter(Boolean).join('，') + ' 寫道：';
+  const html = `<div class="gmail_quote"><div>${escapeHtml(intro)}</div><blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote></div>`;
+  const plainText = `${intro}\n${body.split('\n').map(line => `> ${line}`).join('\n')}`;
+  return { html, plainText };
 }
 
 function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | undefined, name: string): string {
@@ -1037,7 +1051,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }
       messages.push({
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
-        date: formatGmailDateForDisplay(gmailHeaderValue(payloadPart?.headers, 'Date')), snippet: text(messageRow.snippet), bodyText, images
+        cc: gmailHeaderValue(payloadPart?.headers, 'Cc'), date: formatGmailDateForDisplay(gmailHeaderValue(payloadPart?.headers, 'Date')),
+        snippet: text(messageRow.snippet), bodyText, images
       });
     }
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
@@ -1049,7 +1064,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 件串裡（Gmail 信件串本來就只存在寄件帳號自己的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail
    * 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件
    * 帳號，不是實際按下「送出回覆」的那個系統帳號，這是這個設計必然的結果，等同多人共用同一個對外信箱的概念。
-   * 先抓整條信件串每一封信的標頭（含 Cc，用來判斷誰是「相關人」）組出正確的 In-Reply-To/References。 */
+   * 先抓整條信件串每一封信的標頭（含 Cc，用來判斷誰是「相關人」）組出正確的 In-Reply-To/References，並把
+   * 上一封信的內容放進標準引用區，讓收件端保有前文脈絡。 */
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
     const caseId = text(payload.caseId || payload.id);
@@ -1065,7 +1081,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
     const threadResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const threadData = await threadResponse.json().catch(() => ({})) as Row;
@@ -1086,8 +1102,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const toHeader = gmailHeaderValue(headers, 'To');
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
+    const quote = gmailReplyQuote(lastMessage, htmlToPlainText(signatureHtml));
     const raw = buildGmailRawMessage({
-      to, subject: lastSubject, bodyHtml, signatureHtml, inlineImages,
+      to, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

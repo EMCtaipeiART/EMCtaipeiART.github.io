@@ -919,6 +919,7 @@ describe('Machi Design API Worker', () => {
           mimeType: 'multipart/mixed',
           headers: [
             { name: 'From', value: 'designer@emctaipei.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+            { name: 'Cc', value: 'client@example.com' },
             // 刻意用 UTC 標示（+0000），驗證顯示時真的有轉換成台北時區，不是原封不動把標頭字串丟給使用者看——
             // 這個時間換算成台北時間是 11:00（+8 小時），如果沒有正確轉換，顯示出來會誤判成 03:00。
             { name: 'Date', value: 'Mon, 17 Aug 2026 03:00:00 +0000' }, { name: 'Message-Id', value: '<msg2@mail.gmail.com>' },
@@ -962,7 +963,10 @@ describe('Machi Design API Worker', () => {
     expect(thread.ok).toBe(true);
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
-    expect(messages[1]).toMatchObject({ from: 'designer@emctaipei.com', bodyText: plainTextBody, date: '2026/08/17 11:00' });
+    expect(messages[1]).toMatchObject({
+      from: 'designer@emctaipei.com', to: 'test.user@emctaipei.com', cc: 'client@example.com',
+      bodyText: plainTextBody, date: '2026/08/17 11:00'
+    });
     const secondMessageImages = messages[1].images as Array<{ dataUrl: string }>;
     expect(secondMessageImages).toHaveLength(1);
     expect(secondMessageImages[0].dataUrl.startsWith('data:image/png;base64,')).toBe(true);
@@ -971,7 +975,7 @@ describe('Machi Design API Worker', () => {
     // In-Reply-To/References 再送出，threadId 要跟著帶上，「回覆對象」判斷要用寄件帳號自己的 Gmail 地址比對。
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.includes('/threads/gmail-thread-1?format=metadata')) {
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
       }
@@ -983,6 +987,20 @@ describe('Machi Design API Worker', () => {
         // 所以應該回覆給 designer@emctaipei.com，不是誤判成回覆給觸發者自己或其他人。
         const decodedRaw = decodeBase64UrlText(String(body.raw));
         expect(decodedRaw).toContain('To: designer@emctaipei.com');
+        expect(decodedRaw).toContain('In-Reply-To: <msg2@mail.gmail.com>');
+        expect(decodedRaw).toContain('References: <msg1@mail.gmail.com> <msg2@mail.gmail.com>');
+        const extractReplyPart = (contentType: string) => {
+          const match = decodedRaw.match(new RegExp(`Content-Type: ${contentType}[\\s\\S]*?\\r\\n\\r\\n([\\s\\S]*?)(?=\\r\\n--|$)`, 'i'));
+          return decodeBase64UrlText((match?.[1] || '').replace(/\r?\n/g, ''));
+        };
+        const replyPlainText = extractReplyPart('text/plain');
+        expect(replyPlainText).toContain('收到，謝謝回報');
+        expect(replyPlainText).toContain('designer@emctaipei.com 寫道：');
+        expect(replyPlainText).toContain(`> ${plainTextBody}`);
+        const replyHtml = extractReplyPart('text/html');
+        expect(replyHtml).toContain('收到，謝謝回報');
+        expect(replyHtml).toContain('class="gmail_quote"');
+        expect(replyHtml).toContain(`<blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${plainTextBody}`);
         return Response.json({ id: 'gmail-msg-3', threadId: 'gmail-thread-1' });
       }
       throw new Error(`unexpected fetch during reply: ${url}`);
