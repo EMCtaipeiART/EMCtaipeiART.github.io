@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1861,
+  "revision": 1862,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:51:57.991Z",
+  "updatedAt": "2026-08-19T07:52:30.110Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25878,12 +25878,12 @@
         },
         {
           "客戶別": "席伊麗",
-          "排序": "14",
-          "專案負責人": "[]",
+          "專案負責人": "[\"david.liao@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[\"Anna\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:21",
-          "更新者": "Machi"
+          "部門組別": "[\"設計部\",\"企劃部\"]",
+          "更新時間": "2026-08-19 15:52",
+          "更新者": "Machi",
+          "排序": "14"
         },
         {
           "客戶別": "高露潔",
