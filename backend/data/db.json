@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1820,
+  "revision": 1821,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:28:38.371Z",
+  "updatedAt": "2026-08-19T07:29:18.829Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25893,11 +25893,11 @@
         },
         {
           "客戶別": "soundcore",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"sammi.cheng@emctaipei.com\"]",
           "設計負責人": "[\"Anna\",\"Leona\"]",
-          "部門組別": "[\"企劃部\",\"設計部\",\"測試員\"]",
-          "更新時間": "",
-          "更新者": "",
+          "部門組別": "[\"設計部\",\"企劃部\",\"Celine組\"]",
+          "更新時間": "2026-08-19 15:29",
+          "更新者": "Machi",
           "排序": "6"
         },
         {
