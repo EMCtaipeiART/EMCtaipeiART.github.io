@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1804,
+  "revision": 1805,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:38:01.072Z",
+  "updatedAt": "2026-08-19T06:38:04.871Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -18887,13 +18887,14 @@
           "其他說明": "",
           "其他連結": "",
           "狀態": "執行中",
-          "加權": "",
+          "加權": "6",
           "月份": "8月",
           "案件編號": "26080092",
           "修改次數": "0",
           "繳交時間": "",
           "Gmail信件串ID": "1a0148c2dd1c4fb6",
-          "Gmail寄件帳號": "david.liao@emctaipei.com"
+          "Gmail寄件帳號": "david.liao@emctaipei.com",
+          "項目細節": "廣告素材"
         },
         {
           "客戶別": "soundcore",
