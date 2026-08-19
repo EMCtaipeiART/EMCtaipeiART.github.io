@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1899,
+  "revision": 1900,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T09:07:56.660Z",
+  "updatedAt": "2026-08-19T09:08:00.429Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19039,6 +19039,33 @@
           "設計圖檔名關鍵字": "",
           "Gmail信件串ID": "",
           "Gmail寄件帳號": ""
+        },
+        {
+          "客戶別": "soundcore",
+          "專案名稱": "8/24_momo_99狂購節_電商*2、情境*2",
+          "專案負責人": "廖秦葦",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "4",
+          "開始日期": "2026/08/19",
+          "結束日期": "2026/08/24",
+          "設計負責人": "Leona",
+          "使用平台": "Facebook",
+          "填單時間": "2026/08/19 17:07",
+          "設計簡報說明": "P.9-P.12",
+          "設計簡報連結": "https://docs.google.com/presentation/d/1y2BKtQI3Ypc5ls3Y8xCMxbkLWb1vXYxr-fjxOQCdPQY/edit?slide=id.g3fab18736a1_0_0#slide=id.g3fab18736a1_0_0",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080099",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -21377,6 +21404,14 @@
           "C": "",
           "D": "",
           "更新時間": "2026/08/18 23:59"
+        },
+        {
+          "案件編號": "26080099",
+          "A": "https://docs.google.com/presentation/d/1y2BKtQI3Ypc5ls3Y8xCMxbkLWb1vXYxr-fjxOQCdPQY/edit?slide=id.g3fab18736a1_0_0#slide=id.g3fab18736a1_0_0",
+          "B": "",
+          "C": "",
+          "D": "",
+          "更新時間": "2026/08/19 17:08"
         }
       ]
     },
@@ -28860,6 +28895,43 @@
           "submittedAt": "2026/08/19 16:06",
           "briefNote": "",
           "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 655,
+          "sheetRow": 655
+        }
+      },
+      "8b62dd5e-926e-43ee-81d4-ac72dfce4527": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 655,
+        "row": {
+          "id": "26080099",
+          "month": "8月",
+          "client": "soundcore",
+          "project": "8/24_momo_99狂購節_電商*2、情境*2",
+          "owner": "廖秦葦",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 4,
+          "start": "2026/08/19",
+          "end": "2026/08/24",
+          "designer": "Leona",
+          "platforms": "Facebook",
+          "submittedAt": "2026/08/19 17:07",
+          "briefNote": "P.9-P.12",
+          "briefUrl": "https://docs.google.com/presentation/d/1y2BKtQI3Ypc5ls3Y8xCMxbkLWb1vXYxr-fjxOQCdPQY/edit?slide=id.g3fab18736a1_0_0#slide=id.g3fab18736a1_0_0",
           "assetNote": "",
           "assetUrl": "",
           "referenceNote": "",
