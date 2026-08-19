@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1656,
+  "revision": 1657,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:21:24.171Z",
+  "updatedAt": "2026-08-19T02:21:27.360Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25680,12 +25680,12 @@
         },
         {
           "客戶別": "eufy",
+          "排序": "7",
           "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\"]",
           "設計負責人": "[\"Leona\"]",
           "部門組別": "[]",
           "更新時間": "2026-08-19 10:16",
-          "更新者": "系統預設",
-          "排序": "7"
+          "更新者": "系統預設"
         },
         {
           "客戶別": "soundcore",
@@ -25704,15 +25704,6 @@
           "更新時間": "2026/08/18 16:40:22",
           "更新者": "test.user@emctaipei.com",
           "排序": "18"
-        },
-        {
-          "客戶別": "__debug_test_customer__",
-          "專案負責人": "[]",
-          "設計負責人": "[]",
-          "部門組別": "[]",
-          "更新時間": "",
-          "更新者": "debug",
-          "排序": ""
         }
       ]
     }
