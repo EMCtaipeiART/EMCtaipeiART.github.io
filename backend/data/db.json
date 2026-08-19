@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1893,
+  "revision": 1894,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T08:39:49.399Z",
+  "updatedAt": "2026-08-19T08:39:58.796Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21483,7 +21483,7 @@
           "篩選年份": "2026",
           "篩選月份": "7 月 , 8 月",
           "篩選狀態": "未開始 , 執行中",
-          "篩選姓名": "Amber",
+          "篩選姓名": "Machi",
           "選擇": "v",
           "案件編號": "",
           "月份": "",
