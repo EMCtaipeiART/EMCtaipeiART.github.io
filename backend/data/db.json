@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1967,
+  "revision": 1968,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T10:06:50.186Z",
+  "updatedAt": "2026-08-19T10:06:56.237Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1449,7 +1449,7 @@
         {"客戶別":"富美家","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Celine組\",\"group:Ann組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\",\"Ann組\"]","更新時間":"2026-08-19 17:55","更新者":"Machi","排序":"17"},
         {"客戶別":"新安東京","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Odin組\"]","設計負責人":"[\"Noise\"]","部門組別":"[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]","更新時間":"2026-08-19 18:05","更新者":"Machi","排序":"18"},
         {"客戶別":"嘉儀家品","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Celine組\"]","設計負責人":"[]","部門組別":"[\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 18:06","更新者":"Machi","排序":"19"},
-        {"客戶別":"滿意寶寶","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Mickey組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"設計部\",\"企劃部\",\"Mickey組\"]","更新時間":"2026-08-19 18:06","更新者":"Machi","排序":"20"},
+        {"客戶別":"滿意寶寶","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Mickey組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Mickey組\"]","更新時間":"2026-08-19 18:06","更新者":"Machi","排序":"20"},
         {"客戶別":"酷澎","專案負責人":"[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"sammi.cheng@emctaipei.com\",\"ann.lin@emctaipei.com\",\"xixi.zeng@emctaipei.com\",\"jerry.chang@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"設計部\",\"企劃部\",\"Ann組\"]","更新時間":"2026-08-19 15:42","更新者":"Machi","排序":"21"},
         {"客戶別":"墾丁國家公園管理處","專案負責人":"[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b\",\"sammi.cheng@emctaipei.com\"]","設計負責人":"[]","部門組別":"[\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 15:55","更新者":"Machi","排序":"22"},
         {"客戶別":"癌症希望基金會","專案負責人":"[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b\",\"sammi.cheng@emctaipei.com\"]","設計負責人":"[]","部門組別":"[\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 15:55","更新者":"Machi","排序":"23"},
