@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1792,
+  "revision": 1793,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:23:23.971Z",
+  "updatedAt": "2026-08-19T06:25:02.238Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22455,7 +22455,7 @@
           "部門": "專案部",
           "組別": "Joyce組",
           "名字": "鍾柏捷",
-          "顯示名": "鍾柏捷",
+          "顯示名": "BoJie Zhong",
           "帳號": "bojie.zhong@emctaipei.com",
           "頭像連結": "",
           "頭像大圖連結": "",
@@ -22468,7 +22468,7 @@
           "篩選月份": "",
           "篩選狀態": "",
           "篩選姓名": "",
-          "選擇": "",
+          "選擇": "v",
           "案件編號": "",
           "月份": "",
           "客戶別": "",
@@ -22480,16 +22480,18 @@
           "開始": "",
           "結束": "",
           "設計負責人": "",
-          "狀態": "",
+          "狀態": "1",
           "項目細節": "",
           "修改": "",
           "主旨": "",
           "操作": "",
-          "時間表": "",
+          "時間表": "v",
           "收合設計師專長與案件分配": "",
           "收合最新案件列表": "",
           "收合設計需求": "",
-          "深淺模式": ""
+          "深淺模式": "",
+          "技能表單設定": "",
+          "設計師顯示": ""
         },
         {
           "部門": "專案部",
@@ -25516,6 +25518,16 @@
           "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
           "功能權限": "[\"request.create\",\"request.mail\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
           "更新時間": "2026-08-19 12:14",
+          "更新者": "Machi",
+          "登入方式": "公司信箱"
+        },
+        {
+          "帳號": "bojie.zhong@emctaipei.com",
+          "角色範本": "一般使用者",
+          "狀態": "啟用",
+          "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
+          "功能權限": "[\"request.create\",\"request.mail\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-19 14:25",
           "更新者": "Machi",
           "登入方式": "公司信箱"
         }
