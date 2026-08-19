@@ -248,34 +248,17 @@ export function requireCapability(snapshot: DatabaseSnapshot, session: SessionRe
   if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
   return session;
 }
-// 「request.mail」維持既有的疊加式（自己負責的案件額外放行）；「request.edit」「request.delete」
-// 2026-08-19 改成客戶別「權限設定」名單制（見 hasRowCapability），不再套用這份舊邏輯。
-export const ROW_SCOPED_CAPABILITIES = ['request.mail'];
-/** 客戶別「編輯／刪除」名單改成硬性門檻（不是疊加）的能力：客戶別一旦設定了名單，只有名單內的帳號（與管理者）能動這個客戶別的案件。 */
-export const CUSTOMER_EDIT_LOCK_CAPABILITIES = ['request.edit', 'request.delete'];
+/** 客戶別「權限設定」名單，2026-08-19 起同時管轄前台「發信／編輯／刪除」三個動作——客戶別一旦設定過
+ * 名單，就只有名單內的帳號（與管理者）能對該客戶別的案件執行這三個動作，取代（不是疊加）一般角色權限
+ * 判斷；名單留空（尚未設定過）時完全不受影響，退回原本角色權限判斷。之前 request.mail 單獨一套「客戶別
+ * 專案負責人 且 案件專案負責人文字＝自己」的疊加式邏輯（isCustomerOwnerAccount／matchesOwnerIdentity），
+ * 這次一併改成統一走這份白名單，不再保留（getCaseMailThread／replyCaseMail 這兩個查看/回信信件串的
+ * action 不受影響，它們是另一套獨立的 Gmail 討論串實際收件人比對機制，跟這份客戶別白名單無關）。 */
+export const CUSTOMER_EDIT_LOCK_CAPABILITIES = ['request.edit', 'request.delete', 'request.mail'];
 
-/** 帳號是否被列為任一「客戶別」的「專案負責人」——這是取得客戶別額外授權（見 hasRowCapability）的前提資格。 */
-export function isCustomerOwnerAccount(database: DatabaseSnapshot, session: SessionRecord | null): boolean {
-  if (!session) return false;
-  const account = canonicalAccount(session.account || session.user);
-  if (!account) return false;
-  return (database.tables['客戶別']?.rows || []).some(row => accessList(row['專案負責人']).map(canonicalAccount).includes(account));
-}
-
-/** 案件「專案負責人」欄位（自由文字）是否等於目前登入帳號本人：比對 canonical email，或比對「設定」表登記的顯示名／名字。 */
-export function matchesOwnerIdentity(database: DatabaseSnapshot, ownerText: unknown, session: SessionRecord | null): boolean {
-  if (!session) return false;
-  const owner = text(ownerText);
-  if (!owner) return false;
-  const account = canonicalAccount(session.account || session.user);
-  if (canonicalAccount(owner) === account) return true;
-  const row = settingsRow(database, session.account || session.user);
-  const displayName = text(row?.['顯示名'] || row?.['名字']);
-  return Boolean(displayName) && owner.toLowerCase() === displayName.toLowerCase();
-}
-
-/** 客戶別表「專案負責人」欄位目前設定的帳號名單（即後台「權限設定」，2026-08-19 起代表「編輯／刪除」白名單）；
- * 找不到對應客戶別或名單是空的都回傳 []（代表「尚未設定」，呼叫端要退回一般角色權限判斷，不是「沒有人能編輯」）。 */
+/** 客戶別表「專案負責人」欄位目前設定的帳號名單（即後台「權限設定」，2026-08-19 起代表「發信／編輯／
+ * 刪除」白名單）；找不到對應客戶別或名單是空的都回傳 []（代表「尚未設定」，呼叫端要退回一般角色權限
+ * 判斷，不是「沒有人能操作」）。 */
 export function customerEditCapableAccounts(database: DatabaseSnapshot, customerName: unknown): string[] {
   const name = text(customerName);
   if (!name) return [];
@@ -285,12 +268,11 @@ export function customerEditCapableAccounts(database: DatabaseSnapshot, customer
 }
 
 /**
- * 資料列層級授權。管理者一律放行。
- * request.edit／request.delete：2026-08-19 起改成客戶別「權限設定」白名單制——只要這個案件的客戶別
- * 已經設定過名單（非空），就只有名單內的帳號能編輯／刪除，不再看角色權限（不是疊加，是取代）；
- * 客戶別完全沒設定過名單時，維持原本的角色權限判斷，不額外限制。
- * request.mail：維持既有的疊加式邏輯——角色權限允許就放行，否則只有「被列為某客戶別的專案負責人」
- * 且「這筆案件的專案負責人＝自己」時才額外放行（詳見 matchesOwnerIdentity），這次沒有變動。
+ * 資料列層級授權。管理者一律放行。request.edit／request.delete／request.mail 這三個能力，2026-08-19 起
+ * 統一改成客戶別「權限設定」白名單制——只要這個案件的客戶別已經設定過名單（非空），就只有名單內的帳號
+ * 能對這個客戶別的案件執行這三個動作，不再看角色權限（不是疊加，是取代）；客戶別完全沒設定過名單時，
+ * 維持原本的角色權限判斷，不額外限制。其餘能力（archive.edit／request.status／media.manage 等）不受
+ * 這份白名單影響，一律只看一般角色權限。
  */
 export function hasRowCapability(database: DatabaseSnapshot, session: SessionRecord | null, capability: string, row: Row): boolean {
   if (isManager(database, session)) return true;
@@ -301,12 +283,8 @@ export function hasRowCapability(database: DatabaseSnapshot, session: SessionRec
       const account = canonicalAccount(session.account || session.user);
       return Boolean(account) && editors.includes(account);
     }
-    return hasCapability(database, session, capability);
   }
-  if (hasCapability(database, session, capability)) return true;
-  if (!ROW_SCOPED_CAPABILITIES.includes(capability)) return false;
-  if (!isCustomerOwnerAccount(database, session)) return false;
-  return matchesOwnerIdentity(database, row?.['專案負責人'], session);
+  return hasCapability(database, session, capability);
 }
 
 /** 補充資料只保存原始長網址；既有短網址仍可解析，但新寫入不再改寫案件主表。 */

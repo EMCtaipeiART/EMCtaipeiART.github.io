@@ -2068,6 +2068,18 @@
       color:#166534!important;
       border:1px solid #bbf7d0!important;
     }
+    /* 2026-08-19：這條規則的特異度（ID＋兩層 class＋element）比 .mail-compose-btn:disabled 高，
+       上面那條通用的灰階規則在這三個情境（案件列表／最新案件列表／案件資料彈窗）裡會被蓋回綠色，
+       要疊加同樣選擇器前綴的 :disabled 才能真的顯示灰階（跟稍早 .case-delete-btn:disabled 是同一種坑）。 */
+    #modifyRecent .recent-subject button:disabled,
+    #casesSection .case-table-wrap td.sticky-subject button:disabled,
+    #caseDetailModal .case-detail-actions .mail-compose-btn:disabled{
+      background:#eef1ef!important;
+      color:#9aa39d!important;
+      border-color:#dde4e0!important;
+      opacity:.85!important;
+      cursor:not-allowed!important;
+    }
     #modifyRecent .recent-subject button svg,
     #modifyRecent .recent-actions .row-actions button svg,
     #casesSection .case-table-wrap td.sticky-subject button svg,
@@ -2282,6 +2294,17 @@
       background:#fbcfe8!important;
       color:#9d174d!important;
       border-color:#f472b6!important;
+    }
+    /* 2026-08-19：不在客戶別「權限設定」名單裡時，「發信」按鈕改成灰階不可點擊——:disabled 的特異度
+       （單一 class ＋ 偽類）本來就比上面單純的 .mail-compose-btn（單一 class）高，不需要額外疊 ID 前綴。 */
+    .mail-compose-btn:disabled,
+    .mail-compose-btn:disabled:hover,
+    .mail-compose-btn:disabled:focus{
+      background:#eef1ef!important;
+      color:#9aa39d!important;
+      border-color:#dde4e0!important;
+      opacity:.85!important;
+      cursor:not-allowed!important;
     }
     .field-popover .mail-option-list{
       display:grid!important;
@@ -7287,13 +7310,6 @@ function isCustomerOwnerAccount(){
   if(!account)return false;
   return (customerDirectoryRows||[]).some(row=>parseNameListValue(row['專案負責人']).map(canonicalAccountClient).includes(account));
 }
-function matchesOwnerIdentity(ownerText){
-  const owner=String(ownerText||'').trim();
-  if(!owner||!isLoggedIn())return false;
-  const me=String(currentEditorDisplayName||currentEditor||'').trim();
-  return Boolean(me)&&owner.toLowerCase()===me.toLowerCase();
-}
-function isOwnCustomerCase(row){return isCustomerOwnerAccount()&&matchesOwnerIdentity(row?.owner)}
 /** 2026-08-19：「顯示」搬到客戶別的「部門／組別」——有勾選的部門／組別，該部門／組別的人員才看得到
  * 這個客戶別的案件；沒有勾選任何值時（尚未設定過），預設「企劃部」與「設計部」可見，避免這次改版
  * 讓尚未設定過的客戶別對現有使用者變成完全看不到。跟 json_database_admin.html 的
@@ -7311,10 +7327,9 @@ function canViewCustomerCases(name){
   const group=String(currentEditorGroup||'').trim();
   return (Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
 }
-/** 2026-08-19：客戶別的「權限設定」（原本混合了顯示／編輯／刪除／發信）現在只代表「編輯／刪除」白名單。
- * 客戶別一旦設定過名單，只有名單內的帳號（加上管理者）能編輯／刪除該客戶別的案件——是取代一般角色
- * 權限判斷，不是疊加；名單留空（尚未設定過）時完全不受影響，維持原本角色權限判斷。
- * 「發信」刻意沒有改動，繼續使用上面的 isOwnCustomerCase／matchesOwnerIdentity 舊邏輯。 */
+/** 2026-08-19：客戶別的「權限設定」（原本混合了顯示／編輯／刪除／發信）現在代表「發信／編輯／刪除」
+ * 白名單。客戶別一旦設定過名單，只有名單內的帳號（加上管理者）能發信／編輯／刪除該客戶別的案件——是
+ * 取代一般角色權限判斷，不是疊加；名單留空（尚未設定過）時完全不受影響，維持原本角色權限判斷。 */
 function customerEditCapableAccounts(name){
   const row=customerDirectoryRowFor(name);
   return row?parseNameListValue(row['專案負責人']).map(canonicalAccountClient):[];
@@ -9614,26 +9629,35 @@ function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d=
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
 function deleteIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l-1 13.1c-.1 1-.9 1.9-2 1.9H9c-1.1 0-1.9-.8-2-1.9L6 7Zm3-3.5c0-.6.4-1 1-1h4c.6 0 1 .4 1 1V5H9V3.5ZM4 5h16v2H4V5Z"/></svg>'}
 function gmailReplyIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M10 5v3.1C5.7 8.7 2.7 11.6 2 17c2.1-3 4.7-4.4 8-4.5V16l7-5.5L10 5Z"/></svg>'}
-/** 案件一旦透過 Gmail 建立過信件串（row.gmailThreadId 有值），按鈕直接從「發信」變成「回信」並跳過選擇發信方式的選單，直接開啟該信件串——同一顆按鈕、同一個位置，不再另外並排一顆獨立的回信按鈕。 */
+/** 2026-08-19：「發信」（還沒建立過信件串前的第一次寄信）跟編輯／刪除共用同一套客戶別「權限設定」
+ * 白名單——客戶別一旦設定過名單，就只有名單內帳號（加管理者）能發信，不然退回一般角色權限判斷；名單
+ * 留空時完全不受影響。「回信」（已經有信件串）刻意不受這份白名單影響——它改用 Gmail 討論串本身的實際
+ * 收件人／副本／寄件人名單判斷是否為相關人（見 worker 的 accountIsGmailThreadParticipant），這是完全
+ * 獨立、跟客戶別無關的機制，不能用客戶別白名單覆蓋。 */
+function canSendMailRow(row){if(isCustomerEditRestrictedCase(row))return isCustomerEditPermitted(row);return accessAllowed('request.mail',true)}
+/** 案件一旦透過 Gmail 建立過信件串（row.gmailThreadId 有值），按鈕直接從「發信」變成「回信」並跳過選擇發信方式的選單，直接開啟該信件串——同一顆按鈕、同一個位置，不再另外並排一顆獨立的回信按鈕。
+ * 2026-08-19：「發信」不符合客戶別白名單時，改成灰階不可點擊，不是整個隱藏（比照編輯／刪除）。 */
 function mailAction(row,{icon=false}={}){
-  if(!accessAllowed('request.mail',true)&&!isOwnCustomerCase(row))return '';
   if(!isEditableRow(row))return historyLock();
   if(row.gmailThreadId)return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" onclick="openGmailThreadModal('${jsArg(row.id)}')">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
-  return `<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`;
+  if(canSendMailRow(row))return `<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`;
+  return `<button type="button" class="secondary mail-compose-btn" disabled aria-disabled="true" title="沒有發信權限">${icon?mailIcon():''}<span>發信</span></button>`;
 }
-/** 2026-08-19：案件本身可編輯（非歷史資料）、但因為不在客戶別「權限設定」名單裡而被擋下時，
- * 編輯／刪除按鈕改成灰階顯示且不可點擊，而不是整個隱藏——讓使用者知道案件存在、只是自己沒有權限操作。 */
+/** 2026-08-19：案件本身可編輯（非歷史資料），但沒有編輯／刪除權限時——不論原因是客戶別「權限設定」
+ * 名單排除自己，還是單純一般角色權限本來就沒有 request.edit（例如客戶別的部門／組別已經勾選讓某個
+ * 組別看得到案件，但那個組別的人沒有被加進「權限設定」名單、一般角色也沒有編輯權限）——一律顯示灰階
+ * 不可點擊的按鈕，不再退回顯示容易誤導的「歷史資料」字樣：那個字樣的原意是「案件已超出可編輯的時間
+ * 範圍」，跟「案件本身可以編輯、只是這個帳號沒有權限」是完全不同的兩件事，混在一起顯示會讓使用者誤以
+ * 為案件本身有問題，而不是自己缺少權限。 */
 function editAction(row,{icon=false}={}){
   if(!isEditableRow(row))return historyLock();
   if(canCaseEditRow(row))return actionButtons(row,{icon});
-  if(isCustomerEditRestrictedCase(row))return actionButtons(row,{icon,disabled:true});
-  return historyLock();
+  return actionButtons(row,{icon,disabled:true});
 }
 function ownerProjectEditAction(row){
   if(!isEditableRow(row))return historyLock();
   if(canCaseEditRow(row))return `<div class="row-actions"><button type="button" class="secondary" title="編輯案件" onclick="closeOwnerProjects();editRow('${jsArg(row.id)}')">${editIcon()}<span>編輯</span></button></div>`;
-  if(isCustomerEditRestrictedCase(row))return `<div class="row-actions"><button type="button" class="secondary" disabled aria-disabled="true" title="沒有此客戶別的編輯／刪除權限">${editIcon()}<span>編輯</span></button></div>`;
-  return historyLock();
+  return `<div class="row-actions"><button type="button" class="secondary" disabled aria-disabled="true" title="沒有編輯／刪除權限">${editIcon()}<span>編輯</span></button></div>`;
 }
 function ownerProjectNameKey(value){return ownerDisplay(value).trim().toLowerCase()}
 function ownerProjectRows(owner){const key=ownerProjectNameKey(owner); return rows.filter(row=>!row.archived&&ownerProjectNameKey(row.owner)===key).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0))}
@@ -10298,7 +10322,7 @@ function adjustCaseSplitHeight(){
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
 /** disabled=true（2026-08-19 新增）：不在客戶別「權限設定」名單裡但案件本身可見時，兩顆按鈕都照樣渲染，
  * 只是加上 disabled 呈現灰階、拿掉 onclick，不能點擊——比照使用者要求的「灰階無法點選」而不是整個隱藏。 */
-function actionButtons(r,{icon=false,disabled=false}={}){const id=jsArg(r.id); const lockedTitle='沒有此客戶別的編輯／刪除權限'; const showDelete=disabled||canDeleteCaseRow(r); const del=showDelete?`<button class="secondary case-delete-btn" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`deleteRow('${id}')`}">${icon?deleteIcon():''}<span>刪除</span></button>`:''; return `<div class="row-actions"><button class="secondary" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`editRow('${id}')`}">${icon?editIcon():''}<span>編輯</span></button>${del}</div>`}
+function actionButtons(r,{icon=false,disabled=false}={}){const id=jsArg(r.id); const lockedTitle='沒有編輯／刪除權限'; const showDelete=disabled||canDeleteCaseRow(r); const del=showDelete?`<button class="secondary case-delete-btn" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`deleteRow('${id}')`}">${icon?deleteIcon():''}<span>刪除</span></button>`:''; return `<div class="row-actions"><button class="secondary" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`editRow('${id}')`}">${icon?editIcon():''}<span>編輯</span></button>${del}</div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}" data-field-label="${esc(item.label)}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
 function openCaseDetail(id,{preserveOwnerReturn=false}={}){if(!preserveOwnerReturn)ownerProjectsReturnName=''; const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','階段','狀態','數量','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改','設計圖記錄']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!ownerProjectsReturnName; modal.hidden=false; syncCaseDetailScale()}

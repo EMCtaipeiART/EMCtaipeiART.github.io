@@ -776,8 +776,24 @@
      * 可以看到這個客戶別的案件（避免改版當下讓尚未設定過的客戶別對現有使用者變成完全看不到）；
      * 一旦客戶別已經勾選過任何值，就完全依實際勾選內容決定，不再套用這個預設。 */
     const CUSTOMER_DEFAULT_VISIBLE_DEPARTMENTS=['企劃部','設計部'];
-    function customerDepartmentOptions(){return [...new Set([...organizationOptions('部門'),...organizationOptions('組別')])]}
-    function customerCheckbox(type,value,label,checked){return `<label class="permission-check"><input type="checkbox" data-customer-${type}="${esc(value)}" ${checked?'checked':''}><span>${esc(label)}</span></label>`}
+    /** 「部門／組別」的候選清單，2026-08-19 起呈現方式改成跟「權限設定」／「喜愛設定」一樣的收合式
+     * 名單（搜尋＋分組收合＋已選膠囊），不再是純粹的核取方塊清單——分兩組：「部門」與「組別」，來源分別
+     * 是 organizationOptions('部門')／organizationOptions('組別')；同一個名稱如果部門與組別剛好重複，
+     * 只留在先出現的那一組，避免同一個值在畫面上出現兩次、卻各自獨立勾選狀態的混淆。 */
+    function customerDepartmentEntries(){
+      const seen=new Set(),entries=[];
+      organizationOptions('部門').forEach(name=>{if(seen.has(name))return;seen.add(name);entries.push({value:name,label:name,secondary:'',search:name.toLowerCase(),group:'部門',subgroup:''})});
+      organizationOptions('組別').forEach(name=>{if(seen.has(name))return;seen.add(name);entries.push({value:name,label:name,secondary:'',search:name.toLowerCase(),group:'組別',subgroup:''})});
+      return entries;
+    }
+    /** 「權限設定」尚未指派過任何人員時（model['專案負責人'] 是空陣列），編輯器打開當下預先勾選部門
+     * 精確等於「企劃部」或「設計部」的在職帳號（entry.department 是 customerOwnerEntries() 帶出的原始
+     * 部門欄位，不是分組後的 group）——這只是畫面上的預先勾選，沒有按下「儲存客戶別」之前完全不會寫入
+     * 資料庫；已經指派過（即使指派完又清空存成空陣列）的客戶別不受影響，會照舊顯示既有（可能是空的）
+     * 選擇，不會被這個預設蓋掉。 */
+    function customerDefaultOwnerAccounts(entries){
+      return entries.filter(entry=>/^(?:企劃部|設計部)$/.test(entry.department||'')).map(entry=>entry.value);
+    }
     const CUSTOMER_PEOPLE_GROUP_ORDER=['企劃部','設計部','負責人','各組','其他'];
     function customerPeopleChipsHtml(entries){
       if(!entries.length)return '<span class="customer-people-chip-empty">尚未選擇</span>';
@@ -848,18 +864,21 @@
       const savedDepartments=model['部門組別'];
       const departmentsUsingDefault=!savedDepartments.length;
       const departmentSelected=new Set(departmentsUsingDefault?CUSTOMER_DEFAULT_VISIBLE_DEPARTMENTS:savedDepartments);
-      const departmentOptions=customerDepartmentOptions();
-      const departmentHtml=departmentOptions.length?departmentOptions.map(name=>customerCheckbox('department',name,name,departmentSelected.has(name))).join(''):'<span class="small">尚無部門／組別選項，可到「帳號設定」新增。</span>';
-      const ownerSelected=new Set(model['專案負責人']);
+      const departmentEntries=customerDepartmentEntries();
+      const departmentPickerHtml=departmentEntries.length?customerPeoplePickerHtml('department',departmentEntries,departmentSelected):'<span class="small">尚無部門／組別選項，可到「帳號設定」新增。</span>';
+      const ownerEntries=customerOwnerEntries();
+      const savedOwners=model['專案負責人'];
+      const ownersUsingDefault=!savedOwners.length;
+      const ownerSelected=new Set(ownersUsingDefault?customerDefaultOwnerAccounts(ownerEntries):savedOwners);
       const designerSelected=new Set(model['設計負責人']);
       return `<section class="permission-editor" data-customer-editor="${esc(model['客戶別'])}">
-        <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>「部門／組別」決定哪些部門／組別的人員能在前台看到這個客戶別的案件（沒有勾選任何值時，預設「企劃部」與「設計部」可見）；「權限設定」決定哪些人員（以及管理者）能編輯／刪除這個客戶別的案件——名單外的人員即使看得到案件，前台的編輯／刪除按鈕也會顯示為灰階無法點選（留空則不額外限制，維持原本角色權限判斷）；「喜愛設定」只用來給前台自動帶入預設的設計負責人。三者彼此獨立，互不影響。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
+        <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>「部門／組別」決定哪些部門／組別的人員能在前台看到這個客戶別的案件（沒有勾選任何值時，預設「企劃部」與「設計部」可見）；「權限設定」決定哪些人員（以及管理者）能發信／編輯／刪除這個客戶別的案件——名單外的人員即使看得到案件，前台的發信／編輯／刪除按鈕也會顯示為灰階無法點選（尚未指派過時，預設先勾選「企劃部」與「設計部」全數人員，可自行增減）；「喜愛設定」只用來給前台自動帶入預設的設計負責人。三者彼此獨立，互不影響。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
         ${pending?'<div class="notice ok">已先套用；遠端 JSON 正在背景寫入，可先切換設定其他客戶別。</div>':''}
         ${departmentsUsingDefault?'<div class="notice ok">尚未設定顯示範圍，目前預設「企劃部」與「設計部」的人員可以在前台看到這個客戶別的案件，可自行增減後再儲存。</div>':''}
-        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，該部門／組別的人員才能在前台看到這個客戶別的案件；沒有勾選的則不會顯示。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p><div class="permission-checks">${departmentHtml}</div></section>
-        <section class="permission-section"><h4>權限設定</h4><p class="account-help">只有名單內的人員（以及管理者）能編輯／刪除這個客戶別的案件；名單外的人員即使看得到案件，編輯／刪除按鈕也會顯示為灰階無法點選。留空表示不額外限制，維持原本角色權限的判斷。</p>${customerPeoplePickerHtml('owner',customerOwnerEntries(),ownerSelected)}</section>
+        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，該部門／組別的人員才能在前台看到這個客戶別的案件；沒有勾選的則不會顯示。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p>${departmentPickerHtml}</section>
+        <section class="permission-section"><h4>權限設定</h4><p class="account-help">只有名單內的人員（以及管理者）能發信／編輯／刪除這個客戶別的案件；名單外的人員即使看得到案件，前台的發信／編輯／刪除按鈕都會顯示為灰階無法點選。尚未指派過時，預設先勾選「企劃部」與「設計部」全數人員，可自行增減後再儲存；如果真的想完全不限制，把全部人員取消勾選後儲存空白名單即可。</p>${ownersUsingDefault?'<div class="notice ok">尚未指派過權限，已預設加入「企劃部」與「設計部」全數人員，可自行增減後再儲存。</div>':''}${customerPeoplePickerHtml('owner',ownerEntries,ownerSelected)}</section>
         <section class="permission-section"><h4>喜愛設定</h4><p class="account-help">此客戶別的設計負責人，前台填單時會自動帶入清單第一位。</p>${customerPeoplePickerHtml('designer',customerDesignerEntries(),designerSelected)}</section>
-        <div class="permission-summary"><span>${departmentSelected.size} 個顯示部門／組別</span><span>${ownerSelected.size} 位可編輯／刪除人員</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
+        <div class="permission-summary"><span>${departmentSelected.size} 個顯示部門／組別</span><span>${ownerSelected.size} 位可發信／編輯／刪除</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
       </section>`;
     }
     function customerListItemHtml(row,index){
@@ -867,7 +886,7 @@
       return `<div class="customer-list-item" draggable="true" data-customer-item="${esc(row['客戶別'])}">
         <button type="button" class="customer-list-handle" tabindex="-1" aria-label="拖曳調整 ${esc(row['客戶別'])} 的順序">⋮⋮</button>
         <span class="customer-list-order-badge">${index+1}</span>
-        <button type="button" class="customer-list-select ${active?'active':''}" data-customer-select="${esc(row['客戶別'])}"><b>${esc(row['客戶別'])}</b><span class="permission-state ${pending?'explicit':''}">${pending?'寫入中':`${row['專案負責人'].length} 位可編輯`}</span></button>
+        <button type="button" class="customer-list-select ${active?'active':''}" data-customer-select="${esc(row['客戶別'])}"><b>${esc(row['客戶別'])}</b><span class="permission-state ${pending?'explicit':''}">${pending?'寫入中':`${row['專案負責人'].length} 位可操作`}</span></button>
       </div>`;
     }
     function refreshCustomerListOrder(list){
@@ -1209,7 +1228,7 @@
       if(event.target.closest('[data-edit]'))openEditor(row);
       if(event.target.closest('[data-delete]'))deleteRow(row);
     });
-    $('view').addEventListener('change',event=>{if(event.target.matches('[data-customer-owner],[data-customer-designer]')){syncCustomerPeopleChips(event.target.closest('[data-customer-people]'));return}const role=event.target.closest('[data-permission-role]');if(role){syncAccountEditorState({applyRole:true});return}if(event.target.matches('[data-account-login-method]')){syncAccountEditorState();return}if(event.target.matches('[data-account-column]')){refreshAccountColumnOrder();return}if(event.target.matches('[data-account-field="組別"]')){syncAccountEditorState();return}if(event.target.matches('[data-permission-page],[data-permission-capability]')){const select=permissionEditorElement()?.querySelector('[data-permission-role]');if(select&&!select.disabled)select.value='自訂';syncAccountEditorState()}});
+    $('view').addEventListener('change',event=>{if(event.target.matches('[data-customer-owner],[data-customer-designer],[data-customer-department]')){syncCustomerPeopleChips(event.target.closest('[data-customer-people]'));return}const role=event.target.closest('[data-permission-role]');if(role){syncAccountEditorState({applyRole:true});return}if(event.target.matches('[data-account-login-method]')){syncAccountEditorState();return}if(event.target.matches('[data-account-column]')){refreshAccountColumnOrder();return}if(event.target.matches('[data-account-field="組別"]')){syncAccountEditorState();return}if(event.target.matches('[data-permission-page],[data-permission-capability]')){const select=permissionEditorElement()?.querySelector('[data-permission-role]');if(select&&!select.disabled)select.value='自訂';syncAccountEditorState()}});
     $('view').addEventListener('input',event=>{if(event.target.matches('.customer-people-search')){filterCustomerPeopleList(event.target);return}if(event.target.matches('[data-account-field="顯示名"],[data-account-field="名字"],[data-account-field="頭像連結"]'))syncAccountEditorState();if(event.target.matches('[data-designer-field="avatar"]')){const preview=event.target.closest('[data-designer-card]')?.querySelector('[data-designer-avatar-preview]');if(preview)preview.src=event.target.value||initialsAvatar(event.target.closest('[data-designer-card]')?.dataset.designerCard||'?')}});
     $('view').addEventListener('toggle',event=>{const group=event.target.closest?.('[data-account-group]');if(group)accountGroupOpenState.set(group.dataset.accountGroup,group.open)},true);
     $('view').addEventListener('dragstart',event=>{const columnItem=event.target.closest('[data-account-column-item]');if(columnItem){accountColumnDragged=columnItem;columnItem.classList.add('dragging');event.dataTransfer.effectAllowed='move';return}const rotationItem=event.target.closest('[data-account-rotation-item]');if(rotationItem){accountRotationDragged=rotationItem;rotationItem.classList.add('dragging');event.dataTransfer.effectAllowed='move';return}const customerItem=event.target.closest('[data-customer-item]');if(customerItem){customerItemDragged=customerItem;customerItem.classList.add('dragging');event.dataTransfer.effectAllowed='move'}});
