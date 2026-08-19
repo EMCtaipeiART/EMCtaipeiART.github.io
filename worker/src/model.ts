@@ -248,7 +248,11 @@ export function requireCapability(snapshot: DatabaseSnapshot, session: SessionRe
   if (!hasCapability(snapshot, session, capability)) throw new Error(`此帳號沒有「${capability}」權限`);
   return session;
 }
-export const ROW_SCOPED_CAPABILITIES = ['request.edit', 'request.delete', 'request.mail'];
+// 「request.mail」維持既有的疊加式（自己負責的案件額外放行）；「request.edit」「request.delete」
+// 2026-08-19 改成客戶別「權限設定」名單制（見 hasRowCapability），不再套用這份舊邏輯。
+export const ROW_SCOPED_CAPABILITIES = ['request.mail'];
+/** 客戶別「編輯／刪除」名單改成硬性門檻（不是疊加）的能力：客戶別一旦設定了名單，只有名單內的帳號（與管理者）能動這個客戶別的案件。 */
+export const CUSTOMER_EDIT_LOCK_CAPABILITIES = ['request.edit', 'request.delete'];
 
 /** 帳號是否被列為任一「客戶別」的「專案負責人」——這是取得客戶別額外授權（見 hasRowCapability）的前提資格。 */
 export function isCustomerOwnerAccount(database: DatabaseSnapshot, session: SessionRecord | null): boolean {
@@ -270,14 +274,35 @@ export function matchesOwnerIdentity(database: DatabaseSnapshot, ownerText: unkn
   return Boolean(displayName) && owner.toLowerCase() === displayName.toLowerCase();
 }
 
+/** 客戶別表「專案負責人」欄位目前設定的帳號名單（即後台「權限設定」，2026-08-19 起代表「編輯／刪除」白名單）；
+ * 找不到對應客戶別或名單是空的都回傳 []（代表「尚未設定」，呼叫端要退回一般角色權限判斷，不是「沒有人能編輯」）。 */
+export function customerEditCapableAccounts(database: DatabaseSnapshot, customerName: unknown): string[] {
+  const name = text(customerName);
+  if (!name) return [];
+  const row = (database.tables['客戶別']?.rows || []).find(item => text(item['客戶別']) === name);
+  if (!row) return [];
+  return accessList(row['專案負責人']).map(canonicalAccount);
+}
+
 /**
- * 疊加式的資料列層級授權：角色權限（帳號權限／角色權限範本）本來就允許的一律放行；
- * 否則只有「被列為某客戶別的專案負責人」且「這筆案件的專案負責人＝自己」時，
- * 對 request.edit／request.delete／request.mail 這三個能力額外放行——讓客戶別的專案負責人
- * 即使角色範本沒有這些權限，也能自行管理自己負責的案件（新增不需要這個機制，
- * request.create 本來就是所有登入角色的預設權限）。
+ * 資料列層級授權。管理者一律放行。
+ * request.edit／request.delete：2026-08-19 起改成客戶別「權限設定」白名單制——只要這個案件的客戶別
+ * 已經設定過名單（非空），就只有名單內的帳號能編輯／刪除，不再看角色權限（不是疊加，是取代）；
+ * 客戶別完全沒設定過名單時，維持原本的角色權限判斷，不額外限制。
+ * request.mail：維持既有的疊加式邏輯——角色權限允許就放行，否則只有「被列為某客戶別的專案負責人」
+ * 且「這筆案件的專案負責人＝自己」時才額外放行（詳見 matchesOwnerIdentity），這次沒有變動。
  */
 export function hasRowCapability(database: DatabaseSnapshot, session: SessionRecord | null, capability: string, row: Row): boolean {
+  if (isManager(database, session)) return true;
+  if (CUSTOMER_EDIT_LOCK_CAPABILITIES.includes(capability)) {
+    const editors = customerEditCapableAccounts(database, row?.['客戶別']);
+    if (editors.length) {
+      if (!session) return false;
+      const account = canonicalAccount(session.account || session.user);
+      return Boolean(account) && editors.includes(account);
+    }
+    return hasCapability(database, session, capability);
+  }
   if (hasCapability(database, session, capability)) return true;
   if (!ROW_SCOPED_CAPABILITIES.includes(capability)) return false;
   if (!isCustomerOwnerAccount(database, session)) return false;

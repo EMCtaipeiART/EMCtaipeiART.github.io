@@ -1172,8 +1172,8 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['客戶別'].rows.some(row => row['客戶別'] === '匿名新增客戶')).toBe(true);
   });
 
-  it('grants request.edit/request.delete/request.mail to a customer-assigned project owner only for their own case row, blocking other rows and unassigned accounts', async () => {
-    // 完全沒有 request.edit／request.delete／request.mail，只靠客戶別的專案負責人身分額外放行。
+  it('2026-08-19: 客戶別「權限設定」名單制——只要客戶別設定過名單，名單內帳號可編輯／刪除該客戶別「所有」案件（不再要求案件本身的專案負責人文字＝自己），name單外的客戶別退回一般角色權限；request.mail 維持舊版逐筆比對不變', async () => {
+    // 完全沒有 request.edit／request.delete／request.mail，只靠客戶別的「權限設定」名單額外放行。
     await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.create']);
     await seedCustomerOwner('測試客戶', 'test.user@emctaipei.com');
 
@@ -1184,8 +1184,9 @@ describe('Machi Design API Worker', () => {
       // 26080001（既有種子案件）的專案負責人比對「設定」表的顯示名，不是帳號本身。
       database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['專案負責人'] = '測試使用者';
       database.tables.database.rows.push(
-        { '案件編號': '26080002', '客戶別': '測試客戶', '專案負責人': '別人', '專案名稱': '別人負責的案件', '狀態': '未開始' },
-        { '案件編號': '26080003', '客戶別': '測試客戶', '專案負責人': '測試使用者', '專案名稱': '刪除測試案件', '狀態': '未開始' }
+        { '案件編號': '26080002', '客戶別': '測試客戶', '專案負責人': '別人', '專案名稱': '同客戶別、案件本身寫別人', '狀態': '未開始' },
+        { '案件編號': '26080003', '客戶別': '測試客戶', '專案負責人': '測試使用者', '專案名稱': '刪除測試案件', '狀態': '未開始' },
+        { '案件編號': '26080004', '客戶別': '沒有設定權限名單的客戶', '專案負責人': '測試使用者', '專案名稱': '不同客戶別，即使案件本身寫自己也一樣', '狀態': '未開始' }
       );
       state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
     });
@@ -1201,15 +1202,22 @@ describe('Machi Design API Worker', () => {
     const ownUpdate = await api({ action: 'update', id: '26080001', row: { id: '26080001', project: '自己負責的更新' } }, token);
     expect(ownUpdate).toMatchObject({ ok: true, id: '26080001' });
 
-    // 編輯同一客戶別、但專案負責人是別人的案件：擋下。
-    const otherUpdate = await api({ action: 'update', id: '26080002', row: { id: '26080002', project: '不該被改' } }, token);
-    expect(otherUpdate).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+    // 編輯同一客戶別、但案件本身「專案負責人」文字是別人的案件：2026-08-19 起也放行——
+    // 客戶別「權限設定」現在是整個客戶別的白名單，不再要求案件本身的專案負責人文字要等於自己。
+    const sameCustomerUpdate = await api({ action: 'update', id: '26080002', row: { id: '26080002', project: '同客戶別現在也能改' } }, token);
+    expect(sameCustomerUpdate).toMatchObject({ ok: true, id: '26080002' });
 
-    // batchUpdate 不套用這個放寬，即使是自己的案件也一樣要求 request.edit。
+    // 不同客戶別（該客戶別完全沒有設定「權限設定」名單）：退回一般角色權限判斷——test.user 只有
+    // request.create，所以還是被擋，即使案件本身的專案負責人文字剛好是自己。
+    const otherCustomerUpdate = await api({ action: 'update', id: '26080004', row: { id: '26080004', project: '不該被改' } }, token);
+    expect(otherCustomerUpdate).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+
+    // batchUpdate 不套用這個放寬，即使是自己負責的客戶別也一樣要求 request.edit。
     const batchAttempt = await api({ action: 'batchUpdate', rows: [{ id: '26080001', row: { project: '批次不應該成功' } }] }, token);
     expect(batchAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
 
-    // 發信：自己負責的案件成功、別人負責的被擋。
+    // 發信：這次沒有變動，仍然是「案件本身的專案負責人文字＝自己」才放行——
+    // 26080002 雖然客戶別的編輯權限已經放行，但案件本身寫的是「別人」，發信仍然被擋。
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'msg-1', threadId: 'thread-1' });
@@ -1223,18 +1231,43 @@ describe('Machi Design API Worker', () => {
     const otherMailAttempt = await api({ action: 'sendCaseMail', caseId: '26080002', to: 'x@example.com', subject: 'test', bodyText: 'x' }, token);
     expect(otherMailAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.mail」權限' });
 
-    // 刪除：自己負責的案件成功，別人負責的被擋。
-    const otherDelete = await api({ action: 'delete', id: '26080002' }, token);
-    expect(otherDelete).toMatchObject({ ok: false, error: '此帳號沒有「request.delete」權限' });
+    // 刪除：同客戶別、案件本身專案負責人文字是別人的也放行（跟編輯一致）；不同客戶別仍被擋。
+    const sameCustomerDelete = await api({ action: 'delete', id: '26080002' }, token);
+    expect(sameCustomerDelete).toMatchObject({ ok: true, id: '26080002' });
     const ownDelete = await api({ action: 'delete', id: '26080003' }, token);
     expect(ownDelete).toMatchObject({ ok: true, id: '26080003' });
+    const otherCustomerDelete = await api({ action: 'delete', id: '26080004' }, token);
+    expect(otherCustomerDelete).toMatchObject({ ok: false, error: '此帳號沒有「request.delete」權限' });
 
-    // archive.edit 分支不受這個放寬影響：即使是自己的案件，帶 accessContext:'archive' 一樣要求 archive.edit。
+    // archive.edit 分支不受這個放寬影響：即使是自己負責的客戶別，帶 accessContext:'archive' 一樣要求 archive.edit。
     const archiveDelete = await api({ action: 'delete', id: '26080001', accessContext: 'archive' }, token);
     expect(archiveDelete).toMatchObject({ ok: false, error: '此帳號沒有「archive.edit」權限' });
   });
 
-  it('lets the manager account edit, delete and mail any case regardless of customer assignment', async () => {
+  it('2026-08-19: 客戶別「權限設定」名單制是取代、不是疊加——即使帳號一般角色權限本來就有 request.edit/request.delete，只要不在該客戶別的名單裡一樣被擋', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.create', 'request.edit', 'request.delete']);
+    // 名單只有別人，不包含 test.user——即使案件本身的專案負責人文字寫的剛好是自己也一樣被擋。
+    await seedCustomerOwner('測試客戶', 'someone.else@emctaipei.com');
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['專案負責人'] = '測試使用者';
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    const blockedUpdate = await api({ action: 'update', id: '26080001', row: { id: '26080001', project: '不該被改' } }, token);
+    expect(blockedUpdate).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+    const blockedDelete = await api({ action: 'delete', id: '26080001' }, token);
+    expect(blockedDelete).toMatchObject({ ok: false, error: '此帳號沒有「request.delete」權限' });
+  });
+
+  it('lets the manager account edit, delete and mail any case regardless of customer assignment, even when the customer has a 權限設定 whitelist that excludes them', async () => {
+    // 26080001 的客戶別（測試客戶）刻意設定一份完全不含管理者的白名單，確認管理者仍然不受限。
+    await seedCustomerOwner('測試客戶', 'someone.else@emctaipei.com');
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       expect(init?.method).toBe('PUT');

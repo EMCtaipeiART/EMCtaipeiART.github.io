@@ -423,6 +423,16 @@
     #modifyRecent .recent-actions .row-actions button.case-delete-btn:hover{
       background:#ffd0da!important;border-color:#f26f83!important;color:#a91f39!important;
     }
+    /* 2026-08-19：不在客戶別「權限設定」名單裡時，編輯／刪除按鈕改成灰階不可點擊（而不是整個隱藏）——
+       第一條先蓋掉一般按鈕的預設綠色，第二組再用同樣的 ID 前綴＋:disabled 蓋掉「內容」欄位那條會強制
+       上色（含粉紅色刪除鈕）的高特異度規則，確保灰階真的顯示出來。 */
+    .row-actions button:disabled,.row-actions button[disabled]{background:#eef1ef!important;color:#9aa39d!important;border-color:#dde4e0!important;opacity:.85!important;cursor:not-allowed!important}
+    #casesSection .case-table-wrap td.sticky-actions .row-actions button:disabled,
+    #casesSection .case-table-wrap td.sticky-actions .row-actions button.case-delete-btn:disabled,
+    #modifyRecent .recent-actions .row-actions button:disabled,
+    #modifyRecent .recent-actions .row-actions button.case-delete-btn:disabled{
+      background:#eef1ef!important;color:#9aa39d!important;border-color:#dde4e0!important;
+    }
     button.warn{background:#1f2937!important;color:#fff!important;border-color:#1f2937!important}
     button.warn:hover{background:#111827!important}
     .tab-btn{min-height:38px!important;border-radius:999px!important;background:#f3f6f4!important;color:#66736d!important;border:1px solid #e1e8e4!important;font-size:14px!important}
@@ -7284,6 +7294,39 @@ function matchesOwnerIdentity(ownerText){
   return Boolean(me)&&owner.toLowerCase()===me.toLowerCase();
 }
 function isOwnCustomerCase(row){return isCustomerOwnerAccount()&&matchesOwnerIdentity(row?.owner)}
+/** 2026-08-19：「顯示」搬到客戶別的「部門／組別」——有勾選的部門／組別，該部門／組別的人員才看得到
+ * 這個客戶別的案件；沒有勾選任何值時（尚未設定過），預設「企劃部」與「設計部」可見，避免這次改版
+ * 讓尚未設定過的客戶別對現有使用者變成完全看不到。跟 json_database_admin.html 的
+ * CUSTOMER_DEFAULT_VISIBLE_DEPARTMENTS 是同一份預設值，兩邊改動時要一起改。 */
+function customerVisibleDepartments(name){
+  const row=customerDirectoryRowFor(name);
+  const list=row?parseNameListValue(row['部門組別']):[];
+  return list.length?list:['企劃部','設計部'];
+}
+function canViewCustomerCases(name){
+  if(isAdministrator())return true;
+  if(!isLoggedIn())return true;
+  const visible=customerVisibleDepartments(name);
+  const dept=String(currentEditorDepartment||'').trim();
+  const group=String(currentEditorGroup||'').trim();
+  return (Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
+}
+/** 2026-08-19：客戶別的「權限設定」（原本混合了顯示／編輯／刪除／發信）現在只代表「編輯／刪除」白名單。
+ * 客戶別一旦設定過名單，只有名單內的帳號（加上管理者）能編輯／刪除該客戶別的案件——是取代一般角色
+ * 權限判斷，不是疊加；名單留空（尚未設定過）時完全不受影響，維持原本角色權限判斷。
+ * 「發信」刻意沒有改動，繼續使用上面的 isOwnCustomerCase／matchesOwnerIdentity 舊邏輯。 */
+function customerEditCapableAccounts(name){
+  const row=customerDirectoryRowFor(name);
+  return row?parseNameListValue(row['專案負責人']).map(canonicalAccountClient):[];
+}
+function isCustomerEditRestrictedCase(row){return customerEditCapableAccounts(row?.client).length>0}
+function isCustomerEditPermitted(row){
+  const editors=customerEditCapableAccounts(row?.client);
+  if(!editors.length)return true;
+  if(isAdministrator())return true;
+  const account=canonicalAccountClient(currentEditorAccount||currentEditor);
+  return Boolean(account)&&editors.includes(account);
+}
 /** 設計負責人依「客戶別」目前選定的值連動——force=true（使用者真的切換客戶別當下）一律覆寫成
  * 該客戶別設定的第一位設計負責人（沒有設定就清空，不留上一個客戶別殘留的值）；force=false（登入
  * 時、背景資料重新整理等非使用者主動切換客戶別的情境）維持既有的保守行為，欄位已經有值就不動，
@@ -8949,8 +8992,8 @@ function rowsForSearch(){
 // 客戶別的專案負責人（非管理者）只看得到「專案負責人＝自己」的案件——這只是前端顯示層的過濾，
 // 不是資料存取邊界（db.json 本來就是公開靜態檔，真正的授權邊界在 Worker 寫入端）。
 function visibleCaseRows(source=rows){
-  if(!isCustomerOwnerAccount()||isAdministrator())return source;
-  return source.filter(r=>matchesOwnerIdentity(r.owner));
+  if(isAdministrator())return source;
+  return source.filter(r=>canViewCustomerCases(r.client));
 }
 function scheduleArchiveSearchLoad(){
   clearTimeout(archiveSearchTimer);
@@ -9561,9 +9604,11 @@ function selectedCaseRows(){return isDesignerLogin()&&displaySettings.editEnable
 function rowYear(r){const d=new Date(r.start||r.end); if(Number.isNaN(d.getTime()))return ''; const y=d.getFullYear(); return y>=1900&&y<=2100?String(y):''}
 function isLoggedIn(){return Boolean(currentEditor&&currentEditorToken)}
 function isEditableRow(r){if(r?.pendingCreate)return false;const y=Number(rowYear(r)); return y>=Number(currentYear())}
-function canCaseEditRow(r){return (accessAllowed('request.edit',hasDesignerAccountRole())||isOwnCustomerCase(r))&&isEditableRow(r)}
+/** 2026-08-19：客戶別「權限設定」名單一旦設定過，就取代（不是疊加）一般角色權限判斷——只有名單內的帳號
+ * （加上管理者）能編輯／刪除；名單留空（尚未設定過）時完全不受影響，退回原本的角色權限判斷。 */
+function canCaseEditRow(r){if(!isEditableRow(r))return false;if(isCustomerEditRestrictedCase(r))return isCustomerEditPermitted(r);return accessAllowed('request.edit',hasDesignerAccountRole())}
 function canListEditRow(r){return accessAllowed('request.status',hasDesignerAccountRole())&&isEditableRow(r)}
-function canDeleteCaseRow(r){return (accessAllowed('request.delete',false)||isOwnCustomerCase(r))&&isEditableRow(r)}
+function canDeleteCaseRow(r){if(!isEditableRow(r))return false;if(isCustomerEditRestrictedCase(r))return isCustomerEditPermitted(r);return accessAllowed('request.delete',false)}
 function historyLock(){return '<span class="history-lock">歷史資料</span>'}
 function mailIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.9 3.3 3.8 10.2c-1 .4-1 1.8.1 2.1l4.8 1.4 1.8 5.7c.3 1 1.6 1.2 2.1.3l2.6-4.3 4.7 3.5c.8.6 1.9.1 2-1l1.3-13c.1-1.1-1-1.9-2.3-1.6ZM10 13l8.3-5.8-6.4 7.4-.5 2.1-1.4-3.7Z"/></svg>'}
 function editIcon(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.6V20h2.4l9.9-9.9-2.4-2.4L4 17.6Zm14.7-9.9c.5-.5.5-1.2 0-1.7L17.1 4.4c-.5-.5-1.2-.5-1.7 0l-1.1 1.1 2.4 2.4 2-2Z"/></svg>'}
@@ -9576,8 +9621,20 @@ function mailAction(row,{icon=false}={}){
   if(row.gmailThreadId)return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" onclick="openGmailThreadModal('${jsArg(row.id)}')">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
   return `<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`;
 }
-function editAction(row,{icon=false}={}){return canCaseEditRow(row)?actionButtons(row,{icon}):historyLock()}
-function ownerProjectEditAction(row){return canCaseEditRow(row)?`<div class="row-actions"><button type="button" class="secondary" title="編輯案件" onclick="closeOwnerProjects();editRow('${jsArg(row.id)}')">${editIcon()}<span>編輯</span></button></div>`:historyLock()}
+/** 2026-08-19：案件本身可編輯（非歷史資料）、但因為不在客戶別「權限設定」名單裡而被擋下時，
+ * 編輯／刪除按鈕改成灰階顯示且不可點擊，而不是整個隱藏——讓使用者知道案件存在、只是自己沒有權限操作。 */
+function editAction(row,{icon=false}={}){
+  if(!isEditableRow(row))return historyLock();
+  if(canCaseEditRow(row))return actionButtons(row,{icon});
+  if(isCustomerEditRestrictedCase(row))return actionButtons(row,{icon,disabled:true});
+  return historyLock();
+}
+function ownerProjectEditAction(row){
+  if(!isEditableRow(row))return historyLock();
+  if(canCaseEditRow(row))return `<div class="row-actions"><button type="button" class="secondary" title="編輯案件" onclick="closeOwnerProjects();editRow('${jsArg(row.id)}')">${editIcon()}<span>編輯</span></button></div>`;
+  if(isCustomerEditRestrictedCase(row))return `<div class="row-actions"><button type="button" class="secondary" disabled aria-disabled="true" title="沒有此客戶別的編輯／刪除權限">${editIcon()}<span>編輯</span></button></div>`;
+  return historyLock();
+}
 function ownerProjectNameKey(value){return ownerDisplay(value).trim().toLowerCase()}
 function ownerProjectRows(owner){const key=ownerProjectNameKey(owner); return rows.filter(row=>!row.archived&&ownerProjectNameKey(row.owner)===key).sort((a,b)=>(Number(b.id)||0)-(Number(a.id)||0))}
 function renderOwnerProjects(owner){
@@ -10239,7 +10296,9 @@ function adjustCaseSplitHeight(){
   });
 }
 async function copyText(t,options={}){const text=String(t||''), target=options.target||(!$('#modifyRecent')?.hidden?$('#modifyCopyMsg'):msg); try{let copied=false; if(navigator.clipboard){try{await navigator.clipboard.writeText(text); copied=true}catch(err){copied=false}} if(!copied){const area=document.createElement('textarea'); area.value=text; area.setAttribute('readonly',''); area.style.position='fixed'; area.style.left='12px'; area.style.top='12px'; area.style.opacity='0'; document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,text.length); copied=document.execCommand('copy'); area.remove()} if(!copied)throw new Error('copy command failed'); if(!options.silent&&target){target.textContent='已複製：'+text; setTimeout(()=>target.textContent='',3500)} return true}catch(err){if(!options.silent){window.prompt('請複製以下文字',text); if(target){target.textContent='已開啟手動複製視窗'; setTimeout(()=>target.textContent='',3500)}} return false}}
-function actionButtons(r,{icon=false}={}){const id=jsArg(r.id); const del=canDeleteCaseRow(r)?`<button class="secondary case-delete-btn" onclick="deleteRow('${id}')">${icon?deleteIcon():''}<span>刪除</span></button>`:''; return `<div class="row-actions"><button class="secondary" onclick="editRow('${id}')">${icon?editIcon():''}<span>編輯</span></button>${del}</div>`}
+/** disabled=true（2026-08-19 新增）：不在客戶別「權限設定」名單裡但案件本身可見時，兩顆按鈕都照樣渲染，
+ * 只是加上 disabled 呈現灰階、拿掉 onclick，不能點擊——比照使用者要求的「灰階無法點選」而不是整個隱藏。 */
+function actionButtons(r,{icon=false,disabled=false}={}){const id=jsArg(r.id); const lockedTitle='沒有此客戶別的編輯／刪除權限'; const showDelete=disabled||canDeleteCaseRow(r); const del=showDelete?`<button class="secondary case-delete-btn" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`deleteRow('${id}')`}">${icon?deleteIcon():''}<span>刪除</span></button>`:''; return `<div class="row-actions"><button class="secondary" ${disabled?`disabled aria-disabled="true" title="${lockedTitle}"`:''} onclick="${disabled?'':`editRow('${id}')`}">${icon?editIcon():''}<span>編輯</span></button>${del}</div>`}
 function caseDetailItemHtml(item){const value=item.value??'', wide=item.wide||String(value).length>18; return `<div class="case-detail-row ${wide?'is-wide':''}" data-field-label="${esc(item.label)}"><b>${esc(item.label)}</b><div class="case-detail-value">${item.html??esc(value)}</div></div>`}
 function caseDetailSectionHtml(title,subtitle,icon,items,extraClass=''){return `<section class="case-detail-section ${extraClass}"><div class="case-detail-section-label"><span class="case-detail-step-icon" aria-hidden="true">${icon}</span><div><h4>${esc(title)}</h4><p>${esc(subtitle)}</p></div></div><div class="case-detail-section-fields">${items.map(caseDetailItemHtml).join('')}</div></section>`}
 function openCaseDetail(id,{preserveOwnerReturn=false}={}){if(!preserveOwnerReturn)ownerProjectsReturnName=''; const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','階段','狀態','數量','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改','設計圖記錄']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!ownerProjectsReturnName; modal.hidden=false; syncCaseDetailScale()}
