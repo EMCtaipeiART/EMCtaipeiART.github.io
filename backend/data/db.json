@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1874,
+  "revision": 1875,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T08:04:56.693Z",
+  "updatedAt": "2026-08-19T08:05:56.296Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -26035,6 +26035,15 @@
           "更新時間": "2026/08/18 16:40:22",
           "更新者": "test.user@emctaipei.com",
           "排序": "29"
+        },
+        {
+          "客戶別": "test",
+          "排序": "",
+          "專案負責人": "[]",
+          "設計負責人": "[]",
+          "部門組別": "[]",
+          "更新時間": "2026/08/19 16:05:56",
+          "更新者": "匿名填單"
         }
       ]
     }
