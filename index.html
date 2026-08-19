@@ -9009,7 +9009,7 @@ function gmailThreadMessageImagesHtml(images){
   if(!Array.isArray(images)||!images.length)return '';
   return `<div class="gmail-thread-msg-images">${images.map(img=>`<img src="${esc(img.dataUrl)}" loading="lazy" alt="信件內嵌圖片">`).join('')}</div>`;
 }
-function gmailThreadMessageHtml(message){const visibleBody=message.bodyText??message.snippet??'';return `<div class="gmail-thread-msg"><div class="gmail-thread-msg-meta"><span>${esc(message.from||'')}</span><span>${esc(message.date||'')}</span></div><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody)}</div>${gmailThreadMessageImagesHtml(message.images)}</div>`}
+function gmailThreadMessageHtml(message){const visibleBody=message.bodyText??message.snippet??'';return `<div class="gmail-thread-msg"><div class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span></div><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody)}</div>${gmailThreadMessageImagesHtml(message.images)}</div>`}
 function renderGmailThreadMessages(list,messages){list.innerHTML=(messages&&messages.length)?messages.map(gmailThreadMessageHtml).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 async function openGmailThreadModal(id){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
