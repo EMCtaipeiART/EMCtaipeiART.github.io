@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1611,
+  "revision": 1612,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:18:26.759Z",
+  "updatedAt": "2026-08-19T02:18:30.234Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25473,21 +25473,21 @@
         },
         {
           "客戶別": "金士頓",
+          "排序": "10",
           "專案負責人": "[\"andrew.koo@emctaipei.com\",\"orli.wu@emctaipei.com\",\"amber.tian@emctaipei.com\",\"leona.chen@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"sudi.su@emctaipei.com\"]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Mickey組\",\"Cherry組\"]",
           "更新時間": "2026-08-18 17:33",
-          "更新者": "Machi",
-          "排序": "10"
+          "更新者": "Machi"
         },
         {
           "客戶別": "保誠人壽",
-          "排序": "",
           "專案負責人": "[\"saurman.wu@emctaipei.com\",\"andrea.chou@emctaipei.com\",\"machi.chen@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
           "部門組別": "[\"設計部\",\"企劃部\",\"平面\",\"影音\",\"Odin組\"]",
           "更新時間": "2026-08-18 17:29",
-          "更新者": "Machi"
+          "更新者": "Machi",
+          "排序": "11"
         },
         {
           "客戶別": "保麗淨",
