@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1791,
+  "revision": 1792,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:22:02.131Z",
+  "updatedAt": "2026-08-19T06:23:23.971Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -21010,18 +21010,6 @@
           "圖片連結": "[{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1d5cOyPgar6Y95dhpwaSbwhGuT84uLgRC=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UmI1hIEt8emS1Ss3P8mLvA4jWPlgN5or=w1600\"},{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1glRPOsHw_Vgarptk8LHau4j5TiGWvErY=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/13xWGmhzaFvKm2Jk-jbbkLUhJIRm1z4hk=w1600\"},{\"fileName\":\"260819_OM360II_對比.png\",\"url\":\"https://lh3.googleusercontent.com/d/1krvs7PKhS89IiO8sYH88f11a6xu-bivo=w1600\"},{\"fileName\":\"260819_OM360II_競品便當圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wmRj56DiWC51VKxdE21Og_xDrSGBvOfq=w1600\"}]",
           "圖片來源": "nas-watcher",
           "圖片更新時間": "2026/08/19 12:08:13"
-        },
-        {
-          "案件編號": "26080098",
-          "修改次數": "0",
-          "建立日期": "2026/08/19 14:15:51",
-          "修改日期": "2026/08/19 14:15:51",
-          "修改內容": "初稿完成（NAS 自動建立）",
-          "修改人": "NAS 自動同步",
-          "確認修正日": "2026/08/19 14:15:51",
-          "圖片連結": "[{\"fileName\":\"260729_添可_送長輩禮物_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-t43GE1f5HsrLvuO56Z_2x0duReBES6F=w1600\"},{\"fileName\":\"260803_添可_七夕_StationS9Artist.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QO58aeAO6V_FTgoxmgS0SE6ke0h4VT7W=w1600\"},{\"fileName\":\"260803_添可_中元節_S7StretchStream.png\",\"url\":\"https://lh3.googleusercontent.com/d/17A-dHA50bKa-LR18ty6p91It1dIlvHLF=w1600\"},{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jzGRyLphPDfu8xnX_IaaHnWdXvgOBA_t=w1600\"},{\"fileName\":\"260729_添可_送長輩禮物_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mwuSHkTT0xW-WDQgaWBCb-R3zLqS_7hJ=w1600\"},{\"fileName\":\"260803_添可_七夕_StationS9Artist.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nY-dfORitox_3iPFq0GnuH2b1clYta3L=w1600\"},{\"fileName\":\"260803_添可_中元節_S7StretchStream.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VWGFJe69mdkTBtZrbk9VXtdBQQ04FnvM=w1600\"},{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oXTiIlGfiuQ4hL21jLAytM5IbmGoa_yS=w1600\"},{\"fileName\":\"260729_添可_送長輩禮物_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GUi1Givu09rb6QmtS1hM18DGa5lhcmAr=w1600\"},{\"fileName\":\"260803_添可_七夕_StationS9Artist.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oi_PTfCGt2arukA7_UGNSCLp7mSNTcEU=w1600\"},{\"fileName\":\"260803_添可_中元節_S7StretchStream.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CRM1bDyjXCiWywkmMV9DyqXMLrRjKAsq=w1600\"},{\"fileName\":\"260803_添可_開學季_i7Fold.png\",\"url\":\"https://lh3.googleusercontent.com/d/1stJw_X6Ky_LXLAE8pz2ZCLaUGCF_Lkm-=w1600\"}]",
-          "圖片來源": "nas-watcher",
-          "圖片更新時間": "2026/08/19 14:21:21"
         }
       ]
     },
