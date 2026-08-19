@@ -119,6 +119,15 @@ test('front end initializes weight rules before normalizing cached database rows
   );
 });
 
+test('Gmail thread collapses older messages and expands only the latest message by default', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /function gmailThreadMessageHtml\(message,isLatest=false\)/);
+  assert.match(html, /<details class="gmail-thread-msg" name="gmail-thread-message"\$\{isLatest\?' open':''\}>/);
+  assert.match(html, /items\.map\(\(message,index\)=>gmailThreadMessageHtml\(message,index===items\.length-1\)\)/);
+  assert.match(html, /gmail-thread-msg-toggle::after\{content:'展開'\}/);
+  assert.match(html, /gmail-thread-msg\[open\] \.gmail-thread-msg-toggle::after\{content:'收合'\}/);
+});
+
 test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /incomingRevision<cachedRevision/);
