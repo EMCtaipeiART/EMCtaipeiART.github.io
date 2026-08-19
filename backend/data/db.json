@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1844,
+  "revision": 1845,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T07:43:16.709Z",
+  "updatedAt": "2026-08-19T07:43:51.556Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25968,12 +25968,12 @@
         },
         {
           "客戶別": "聯華食品",
-          "排序": "24",
-          "專案負責人": "[]",
+          "專案負責人": "[\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"allen.li@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"karl.lee@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"cindy.yu@emctaipei.com\",\"lulu.wu@emctaipei.com\",\"wayne.chiu@emctaipei.com\",\"ethan.liao@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\",\"local:d97dc604-04f6-401f-8f65-478ea8b7ce4b\",\"sammi.cheng@emctaipei.com\",\"orli.wu@emctaipei.com\",\"wendy.lin@emctaipei.com\",\"cherry.kuo@emctaipei.com\",\"local:c400e874-29b1-48f9-a28f-379c9c86d429\",\"sudi.su@emctaipei.com\",\"harper.chang@emctaipei.com\",\"eric.tsai@emctaipei.com\",\"poppy.hsieh@emctaipei.com\"]",
           "設計負責人": "[\"Machi\"]",
-          "部門組別": "[]",
-          "更新時間": "2026-08-18 16:32",
-          "更新者": "Machi"
+          "部門組別": "[\"設計部\",\"企劃部\",\"Celine組\",\"Poppy組\",\"Cherry組\"]",
+          "更新時間": "2026-08-19 15:43",
+          "更新者": "Machi",
+          "排序": "24"
         },
         {
           "客戶別": "蘇菲",
