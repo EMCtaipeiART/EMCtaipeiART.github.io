@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1711,
+  "revision": 1712,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T03:23:10.217Z",
+  "updatedAt": "2026-08-19T03:24:09.214Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -22520,7 +22520,7 @@
           "名字": "羅珮云",
           "顯示名": "Lorraine Luo",
           "帳號": "lorraine.luo@emctaipei.com",
-          "頭像連結": "",
+          "頭像連結": "https://lh3.googleusercontent.com/d/1yzkRbfDkAYeWP9pGmjv4CtLAmaHxm2QT=w1600",
           "頭像大圖連結": "",
           "分享音樂": "",
           "音樂起始秒數": "",
