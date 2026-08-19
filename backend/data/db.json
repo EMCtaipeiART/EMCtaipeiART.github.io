@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1746,
+  "revision": 1747,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T04:53:31.588Z",
+  "updatedAt": "2026-08-19T04:53:59.488Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19026,7 +19026,9 @@
           "月份": "8月",
           "案件編號": "26080097",
           "修改次數": "0",
-          "繳交時間": ""
+          "繳交時間": "",
+          "Gmail信件串ID": "1a0185e775e234dd",
+          "Gmail寄件帳號": "machi.chen@emctaipei.com"
         }
       ]
     },
