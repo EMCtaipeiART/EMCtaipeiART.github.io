@@ -9057,7 +9057,7 @@ async function sendGmailThreadReply(){
     editor.innerHTML='';
     setSync('回覆已寄出',false,2200);
     const list=$('#gmailThreadModalList');
-    const data=await sheetApi('getCaseMailThread',{caseId:id,editorToken:currentEditorToken});
+    const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
     if(list)renderGmailThreadMessages(list,data.messages||[]);
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
