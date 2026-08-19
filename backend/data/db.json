@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1743,
+  "revision": 1744,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T04:10:59.695Z",
+  "updatedAt": "2026-08-19T04:12:04.838Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25698,7 +25698,7 @@
           "專案負責人": "[]",
           "設計負責人": "[\"Amber\",\"Leona\"]",
           "部門組別": "[]",
-          "更新時間": "2026-08-19 12:07",
+          "更新時間": "2026-08-19 12:12",
           "更新者": "Machi",
           "排序": "1"
         },
