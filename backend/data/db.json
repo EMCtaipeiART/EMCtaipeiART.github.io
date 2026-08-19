@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1676,
+  "revision": 1677,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:30:56.853Z",
+  "updatedAt": "2026-08-19T02:31:02.995Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -20884,7 +20884,7 @@
           "修改日期": "2026-08-19",
           "修改內容": "客戶想要新增小標，讓網友能更明確接收訊息，再請協助依照下圖調整，謝謝。\n\n小標1：好友綁定活動\n小標2：保友專屬活動",
           "修改人": "Machi",
-          "確認修正日": "",
+          "確認修正日": "2026/08/19 10:31:02",
           "待修改圖片": ""
         }
       ]
