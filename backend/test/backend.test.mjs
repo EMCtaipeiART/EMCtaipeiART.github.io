@@ -128,6 +128,19 @@ test('Gmail thread collapses older messages and expands only the latest message 
   assert.match(html, /gmail-thread-msg\[open\] \.gmail-thread-msg-toggle::after\{content:'收合'\}/);
 });
 
+test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('function safeHttpPreviewUrl(');
+  const end = html.indexOf('function gmailThreadMessageImagesHtml(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const linkify = new Function('esc', `${source};return linkifyPlainText;`)(escapeHtml);
+  const rendered = linkify('A. 設計簡報：P26~P30', [{ text: 'P26~P30', url: 'https://example.com/design-brief#p26' }]);
+  assert.match(rendered, /<a href="https:\/\/example\.com\/design-brief#p26" target="_blank" rel="noopener noreferrer">P26~P30<\/a>/);
+  assert.doesNotMatch(linkify('危險連結', [{ text: '危險連結', url: 'javascript:alert(1)' }]), /<a\b/);
+});
+
 test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /incomingRevision<cachedRevision/);

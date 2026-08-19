@@ -354,17 +354,22 @@ function extractPlainTextFromGmailPayload(payload: GmailMessagePart | undefined)
   return '';
 }
 
-/** 少數 HTML-only 信件沒有 text/plain；在 Worker 端轉成純文字，仍不把外部寄件人的原始 HTML 傳給前端。 */
-function extractHtmlAsPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
+/** 只在 Worker 內部解碼原始 HTML，用於轉純文字及擷取結構化連結；原始 HTML 不會回傳前端。 */
+function extractHtmlFromGmailPayload(payload: GmailMessagePart | undefined): string {
   if (!payload) return '';
   if (payload.mimeType === 'text/html' && payload.body?.data) {
-    try { return htmlToPlainText(new TextDecoder('utf-8').decode(base64UrlToBytes(payload.body.data))); } catch { return ''; }
+    try { return new TextDecoder('utf-8').decode(base64UrlToBytes(payload.body.data)); } catch { return ''; }
   }
   for (const part of payload.parts || []) {
-    const found = extractHtmlAsPlainTextFromGmailPayload(part);
+    const found = extractHtmlFromGmailPayload(part);
     if (found) return found;
   }
   return '';
+}
+
+/** 少數 HTML-only 信件沒有 text/plain；在 Worker 端轉成純文字，仍不把外部寄件人的原始 HTML 傳給前端。 */
+function extractHtmlAsPlainTextFromGmailPayload(payload: GmailMessagePart | undefined): string {
+  return htmlToPlainText(extractHtmlFromGmailPayload(payload));
 }
 
 /** 遞迴走訪 MIME parts，找出所有「圖片＋有 attachmentId」的 part（不管是不是嚴格的 inline 附件，
@@ -449,19 +454,55 @@ function stripQuotedHistoryFromPlainText(value: string): string {
   return (quoteStart >= 0 ? lines.slice(0, quoteStart) : lines).join('\n').trim();
 }
 
-function gmailMessagePlainBody(message: Row, knownSignatureText = ''): string {
+/** 原始 HTML 也只保留該封新增內容，簽名與引用串後方的標記一律截掉。 */
+function gmailMessageVisibleHtml(message: Row, knownSignatureHtml = ''): string {
   const payload = message.payload as GmailMessagePart | undefined;
-  const rawBody = extractPlainTextFromGmailPayload(payload) || extractHtmlAsPlainTextFromGmailPayload(payload) || text(message.snippet);
+  const html = extractHtmlFromGmailPayload(payload);
+  if (!html) return '';
+  let visibleEnd = html.length;
+  const hiddenMarker = html.match(/<(?:div|blockquote)\b[^>]*class\s*=\s*["'][^"']*\bgmail_(?:signature|quote)\b[^"']*["'][^>]*>|<blockquote\b[^>]*type\s*=\s*["']?cite["']?[^>]*>/i);
+  if (hiddenMarker?.index !== undefined) visibleEnd = Math.min(visibleEnd, hiddenMarker.index);
+  const knownSignature = knownSignatureHtml.trim();
+  const knownSignatureIndex = knownSignature ? html.lastIndexOf(knownSignature) : -1;
+  if (knownSignatureIndex >= 0) visibleEnd = Math.min(visibleEnd, knownSignatureIndex);
+  return html.slice(0, visibleEnd);
+}
+
+function gmailMessagePlainBody(message: Row, knownSignatureText = '', knownSignatureHtml = ''): string {
+  const payload = message.payload as GmailMessagePart | undefined;
+  const visibleHtml = gmailMessageVisibleHtml(message, knownSignatureHtml);
+  const rawBody = extractPlainTextFromGmailPayload(payload) || htmlToPlainText(visibleHtml) || extractHtmlAsPlainTextFromGmailPayload(payload) || text(message.snippet);
   return stripSignatureFromPlainText(stripQuotedHistoryFromPlainText(rawBody), knownSignatureText);
 }
 
+type GmailMessageLink = { text: string; url: string };
+
+/** 從已移除簽名與引用串的 HTML 擷取安全的 http(s) 連結，前端只收到文字＋網址，不收到原始 HTML。 */
+function gmailMessageLinks(message: Row, knownSignatureHtml = ''): GmailMessageLink[] {
+  const html = gmailMessageVisibleHtml(message, knownSignatureHtml);
+  const links: GmailMessageLink[] = [];
+  const anchorPattern = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = anchorPattern.exec(html)) && links.length < 40) {
+    const url = (match[1] || match[2] || '').replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").trim();
+    const label = htmlToPlainText(match[3]).trim();
+    if (!label || url.length > 2048) continue;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') continue;
+      links.push({ text: label.slice(0, 500), url: parsed.toString() });
+    } catch { /* 無效或非絕對網址不提供給前端 */ }
+  }
+  return links;
+}
+
 /** 逐封重建完整 Gmail thread，無條件附上先前每一封的新增內容，同時避免已嵌套引用造成重複。 */
-function gmailThreadQuote(messages: unknown[], knownSignatureText = ''): { html: string; plainText: string } {
+function gmailThreadQuote(messages: unknown[], knownSignatureText = '', knownSignatureHtml = ''): { html: string; plainText: string } {
   const items = messages.map(asRow).map(message => {
     const payload = message.payload as GmailMessagePart | undefined;
     const from = gmailHeaderValue(payload?.headers, 'From');
     const date = formatGmailDateForDisplay(gmailHeaderValue(payload?.headers, 'Date'));
-    const body = gmailMessagePlainBody(message, knownSignatureText);
+    const body = gmailMessagePlainBody(message, knownSignatureText, knownSignatureHtml);
     if (!body) return null;
     const heading = [date, from].filter(Boolean).join('，');
     const intro = heading ? `${heading} 寫道：` : '先前信件：';
@@ -1077,7 +1118,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
-    const knownSignatureText = htmlToPlainText(text(payload.signatureHtml));
+    const knownSignatureHtml = text(payload.signatureHtml);
+    const knownSignatureText = htmlToPlainText(knownSignatureHtml);
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
@@ -1092,7 +1134,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     for (const message of rawMessages) {
       const messageRow = asRow(message);
       const payloadPart = messageRow.payload as GmailMessagePart | undefined;
-      const bodyText = gmailMessagePlainBody(messageRow, knownSignatureText);
+      const bodyText = gmailMessagePlainBody(messageRow, knownSignatureText, knownSignatureHtml);
+      const links = gmailMessageLinks(messageRow, knownSignatureHtml);
       const images: Array<{ dataUrl: string }> = [];
       if (remainingImageBudget > 0) {
         const imageParts = collectGmailImageParts(payloadPart).slice(0, Math.min(GMAIL_THREAD_IMAGE_LIMIT_PER_MESSAGE, remainingImageBudget));
@@ -1116,7 +1159,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       messages.push({
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
         cc: gmailHeaderValue(payloadPart?.headers, 'Cc'), date: formatGmailDateForDisplay(gmailHeaderValue(payloadPart?.headers, 'Date')),
-        snippet: text(messageRow.snippet), bodyText, images
+        snippet: text(messageRow.snippet), bodyText, links, images
       });
     }
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
@@ -1169,7 +1212,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const toHeader = gmailHeaderValue(headers, 'To');
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
-    const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml));
+    const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml), signatureHtml);
     const raw = buildGmailRawMessage({
       to, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
