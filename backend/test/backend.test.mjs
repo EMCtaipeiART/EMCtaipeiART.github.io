@@ -498,15 +498,16 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
   assert.match(html, /const TABLE_ORDER=\['database','設計列表','加權計分標準','短連結','修改統計表'/);
   assert.match(html, /function shortLinkTableHtml\(data\)/);
-  // 補充資料連結不再有獨立頁籤，併入「修改統計表」依案件呈現。
+  // 補充資料連結不再有獨立頁籤，也不再併入「修改列表」的案件群組顯示。
   assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'補充資料連結'/);
   assert.doesNotMatch(html, /function supplementCardsHtml\(rows\)/);
   assert.match(html, /function modificationHistoryHtml\(rows\)/);
-  assert.match(html, /function supplementLinksHtml\(caseId,row\)/);
-  assert.match(html, /data-supplement-edit=/);
-  assert.match(html, /data-supplement-delete=/);
-  assert.match(html, /data-supplement-add=/);
-  assert.match(html, /async function ensureSupplementLinkRows\(\)/);
+  assert.doesNotMatch(html, /function supplementLinksHtml\(caseId,row\)/);
+  assert.doesNotMatch(html, /data-supplement-edit=/);
+  assert.doesNotMatch(html, /data-supplement-delete=/);
+  assert.doesNotMatch(html, /data-supplement-add=/);
+  assert.doesNotMatch(html, /async function ensureSupplementLinkRows\(\)/);
+  assert.doesNotMatch(html, /supplementLinkRowsCache/);
   assert.doesNotMatch(html, /function combinedLinkRows\(\)|_sourceTable/);
   assert.match(html, /function weightEditorHtml\(row\)/);
   assert.match(html, /<option value="other".*>其他<\/option>/);

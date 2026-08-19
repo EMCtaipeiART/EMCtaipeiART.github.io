@@ -113,7 +113,7 @@
     .weight-row-score{flex:0 0 auto}
     .weight-row-actions{flex:0 0 auto;display:flex;align-items:center;gap:6px}
 
-    /* Modification history (per-case) + merged supplement links */
+    /* Modification history (per-case) */
     .mod-board{display:grid;gap:12px}
     .mod-case{border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
     .mod-case>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px;background:var(--soft)}
@@ -129,15 +129,6 @@
     .mod-case-status.pending{background:#fff4e0;color:#a15c00}
     .mod-case-status.confirmed{background:var(--green2);color:var(--green)}
     .mod-case-body{padding:14px 16px 16px;background:#fff;border-top:1px solid var(--line)}
-    .mod-links{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #edf1ee}
-    .mod-links-label{color:var(--muted);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
-    .mod-link-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:var(--soft);padding:4px 6px 4px 10px;font-size:11.5px;font-weight:700}
-    .mod-link-chip b{color:var(--green)}
-    .mod-link-chip a{color:#1769aa;text-decoration:none}
-    .mod-link-chip a:hover{text-decoration:underline}
-    .mod-links-empty{color:var(--muted);font-size:11.5px}
-    .mod-links-actions{margin-left:auto;display:flex;gap:6px}
-    .mod-links-actions button{min-height:26px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);padding:3px 9px;font-size:11px;font-weight:700}
     .mod-timeline{display:grid;gap:0}
     .mod-round{position:relative;display:grid;grid-template-columns:34px 1fr;gap:12px;padding-bottom:16px}
     .mod-round:last-child{padding-bottom:0}
@@ -274,14 +265,13 @@
   <div class="modal" id="editor" hidden><form class="modal-card" id="editorForm"><header class="modal-head"><h2 id="editorTitle">編輯資料</h2><button class="icon-btn" id="closeEditor" type="button">×</button></header><div class="fields" id="fields"></div><footer class="modal-actions"><button class="btn" id="cancelEditor" type="button">取消</button><button class="btn primary" id="saveEditor" type="submit">儲存變更</button></footer></form></div>
   <script>
     // 設計師公開資料與 REELS 統一由「設計列表」管理；帳號設定只保留身分、偏好與權限。
-    // 補充資料連結不另列側邊頁，併入「修改統計表」依案件呈現（見 modificationHistoryHtml）。
     const TABLE_ORDER=['database','設計列表','加權計分標準','短連結','修改統計表','角色權限範本','客戶別','帳號權限','bug_report'];
     const TABLE_INFO={
       database:{desc:'所有設計需求案件的完整清單'},
       '設計列表':{desc:'管理前台設計師頭像、公開資料、輪值與技能帶入規則'},
       '加權計分標準':{desc:'依設計種類與階段分組的加權分數規則'},
       '短連結':{desc:'一般短網址與原始網址對照'},
-      '修改統計表':{desc:'依案件分組的修改歷程時間軸，含每案的補充資料 A–D 連結'},
+      '修改統計表':{desc:'依案件分組的修改歷程時間軸'},
       '角色權限範本':{desc:'一次設定四種角色的預設權限；套用該角色的帳號會同步生效'},
       '帳號權限':{desc:'整合個人帳號、喜愛設定與系統權限'},
       reels:{desc:'限時動態、按讚倒讚與留言（含已過期，僅後台顯示）'},
@@ -315,7 +305,7 @@
     const API=CONFIGURED_API||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
     const APPS_SCRIPT_MODE=/script\.google\.com/i.test(API);
     const DATABASE_FILE_URL=new URL('backend/data/db.json',location.href).href;
-    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,customerItemDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),supplementLinkRowsCache=[],caseInfoRowsCache=[],customerRowsCache=[],customerSelected='',customerWritesPending=new Set();
+    let token=stored(FRONT_TOKEN_KEY)||sessionStorage.getItem(TOKEN_KEY)||'',metadata={},directDatabase=null,appliedRevision=0,stagedDatabase=null,stagedRefreshMessage=null,tableName='database',page=1,sortKey='案件編號',sortOrder='desc',editing=null,editingTableName='',searchTimer=null,refreshTimer=null,refreshInFlight=false,pendingRefresh=false,lastRefreshNonce='',rowLoadSequence=0,rowsByKey=new Map(),permissionDirectoryRows=[],permissionAccessRows=[],organizationOptionRows=[],accountReelsRows=[],permissionModelsCache=[],permissionSelectedAccount='',accountCreating=false,accountColumnDragged=null,accountRotationDragged=null,customerItemDragged=null,roleTemplateRowsCache=[],roleTemplateSelected='一般使用者',accessWriteTail=Promise.resolve(),caseInfoRowsCache=[],customerRowsCache=[],customerSelected='',customerWritesPending=new Set();
     const permissionWritesPending=new Set(),roleTemplateWritesPending=new Set(),accountGroupOpenState=new Map();
     $('apiLabel').textContent=APPS_SCRIPT_MODE?'GitHub JSON｜試算表僅備份':API;
     function note(message,type=''){const el=$('notice');el.textContent=message;el.className=`notice ${type}`.trim()}
@@ -376,22 +366,14 @@
       else{const [settingsData,permissionData,organizationData,reelsData]=await Promise.all([request('/table/%E8%A8%AD%E5%AE%9A?offset=0&limit=1000'),request('/table/%E5%B8%B3%E8%99%9F%E6%AC%8A%E9%99%90?offset=0&limit=1000'),request('/table/%E7%B5%84%E7%B9%94%E9%81%B8%E9%A0%85?offset=0&limit=1000'),request('/table/reels?offset=0&limit=1000')]);settingsRows=settingsData.rows||[];permissionRows=permissionData.rows||[];organizationRows=organizationData.rows||[];reelsRows=reelsData.rows||[]}
       permissionDirectoryRows=settingsRows;permissionAccessRows=permissionRows;organizationOptionRows=organizationRows;accountReelsRows=reelsRows;permissionModelsCache=permissionModels(settingsRows,permissionRows);if(!accountCreating&&!permissionModelsCache.some(row=>row['帳號']===permissionSelectedAccount))permissionSelectedAccount=permissionModelsCache[0]?.['帳號']||'';return {table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache};
     }
-    // 補充資料連結沒有自己的側邊頁，但「修改統計表」的每個案件群組要顯示／編輯它，
-    // 所以獨立快取一份，跟 accountReelsRows（併入「帳號設定」的 REELS 小卡）同樣做法。
-    async function ensureSupplementLinkRows(){
-      if(APPS_SCRIPT_MODE){supplementLinkRowsCache=(directDatabase?.tables?.['補充資料連結']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));return}
-      const data=await request(`/table/${encodeURIComponent('補充資料連結')}?offset=0&limit=100000`);
-      supplementLinkRowsCache=data.rows||[];
-    }
     // 「修改列表」案件群組標題要顯示客戶別／專案名稱／專案負責人／設計負責人，這些欄位
-    // 只存在 database 表本身、不在修改統計表列裡，所以額外快取一份完整 database 表資料
-    // 供查找，跟 supplementLinkRowsCache（補充資料連結併入同一個畫面）同樣的做法。
+    // 只存在 database 表本身、不在修改統計表列裡，所以額外快取一份完整 database 表資料供查找。
     async function ensureCaseInfoRows(){
       if(APPS_SCRIPT_MODE){caseInfoRowsCache=directDatabase?.tables?.database?.rows||[];return}
       const data=await request(`/table/database?offset=0&limit=100000`);
       caseInfoRowsCache=data.rows||[];
     }
-    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureSupplementLinkRows();await ensureCaseInfoRows()}if(requestedTable==='客戶別')await permissionRowsData();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
+    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureCaseInfoRows()}if(requestedTable==='客戶別')await permissionRowsData();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
     function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
     function rowKeyFor(row){const table=metadata[tableName];return table?.primaryKey?String(row[table.primaryKey]??''):String(row._rowNumber)}
     function actionCell(){return '<td class="action-col"><div class="row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></td>'}
@@ -446,11 +428,6 @@
       }
       return html;
     }
-    function supplementShortUrl(slot,caseId){
-      const id=String(caseId||'').trim();
-      if(!/^\d{8}$/.test(id))return '';
-      return `https://emctaipeiart.github.io/${slot.toLowerCase()}/${id}`;
-    }
     function modificationRoundLabel(count){
       const n=Number(count)||0,labels=['','一','二','三','四','五','六','七','八','九','十'];
       if(n<=0)return '初稿';
@@ -462,20 +439,6 @@
       if(typeof raw==='string'){try{raw=JSON.parse(raw)}catch{return []}}
       if(!Array.isArray(raw))return [];
       return raw.map(item=>item&&typeof item==='object'?{url:String(item.url||''),fileName:String(item.fileName||'')}:{url:String(item||''),fileName:''}).filter(item=>item.url);
-    }
-    // 補充資料連結沒有獨立頁籤，直接顯示在每個案件群組上方；沒有資料時給一個
-    // 「+ 新增」入口（openEditor 帶 prefill 案件編號，不用手動再打一次），已有
-    // 資料時給編輯／刪除，跟 REELS 併入「帳號設定」用的 data-account-reel-* 是同一種做法。
-    function supplementLinksHtml(caseId,row){
-      const slots=['A','B','C','D'].map(slot=>({slot,url:row?row[slot]:''})).filter(item=>item.url);
-      const chips=slots.map(({slot,url})=>{
-        const shortUrl=supplementShortUrl(slot,caseId);
-        return `<span class="mod-link-chip"><b>${esc(slot)}</b><a href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">${shortUrl?`/${esc(slot.toLowerCase())}/${esc(caseId)}`:'開啟連結'}</a></span>`;
-      }).join('');
-      const actions=row
-        ?`<div class="mod-links-actions"><button type="button" data-supplement-edit="${esc(row._rowNumber)}">編輯</button><button type="button" data-supplement-delete="${esc(row._rowNumber)}">刪除</button></div>`
-        :`<div class="mod-links-actions"><button type="button" data-supplement-add="${esc(caseId)}">+ 新增補充資料</button></div>`;
-      return `<div class="mod-links"><span class="mod-links-label">補充資料</span>${chips||'<span class="mod-links-empty">尚未提供</span>'}${actions}</div>`;
     }
     function modificationRoundHtml(row){
       const count=Number(row['修改次數'])||0,confirmed=Boolean(row['確認修正日']),images=parseModificationImages(row['圖片連結']);
@@ -489,13 +452,9 @@
         </div>
       </div>`;
     }
-    // 依案件分組的修改歷程時間軸，並把「補充資料連結」併進同一個案件群組——兩張表都是
-    // 「圍繞單一案件的補充資訊」，分開兩個頁籤瀏覽時要自己對案件編號來回切換，很不直覺；
-    // 這裡改成單一頁面就能看到一個案件的完整脈絡。案件清單取「有修改紀錄」跟「有補充資
-    // 料連結」兩邊案件編號的聯集——正式資料裡有案件只填了補充資料、還沒有任何修改紀錄
-    // （反之亦然），任一邊都不能漏掉，否則那些案件會從畫面上完全消失、後台反而少了入口。
-    // 客戶別／專案名稱／專案負責人／設計負責人只存在 database 表，用 caseInfoRowsCache
-    // （見 ensureCaseInfoRows）查對應案件，四個欄位任一有值才顯示，避免空白標籤洗版。
+    // 依案件分組的修改歷程時間軸。客戶別／專案名稱／專案負責人／設計負責人只存在
+    // database 表，用 caseInfoRowsCache（見 ensureCaseInfoRows）查對應案件，四個
+    // 欄位任一有值才顯示，避免空白標籤洗版。
     function caseInfoLineHtml(info){
       if(!info)return '';
       const fields=[['客戶別',info['客戶別']],['專案名稱',info['專案名稱']],['專案負責人',info['專案負責人']],['設計負責人',info['設計負責人']]].filter(([,value])=>String(value||'').trim());
@@ -505,32 +464,22 @@
     function modificationHistoryHtml(rows){
       const byCase=new Map();
       for(const row of rows){const id=String(row['案件編號']||'').trim()||'未指定';if(!byCase.has(id))byCase.set(id,[]);byCase.get(id).push(row)}
-      const supplementByCase=new Map(supplementLinkRowsCache.map(row=>[String(row['案件編號']||'').trim(),row]));
       const caseInfoByCase=new Map(caseInfoRowsCache.map(row=>[String(row['案件編號']||'').trim(),row]));
-      const query=$('search').value.trim().toLocaleLowerCase();
-      const allIds=new Set([...byCase.keys(),...supplementLinkRowsCache.map(row=>String(row['案件編號']||'').trim())]);
-      const caseIds=[...allIds].filter(id=>{
-        if(byCase.has(id))return true; // 已經通過「修改統計表」自己的搜尋過濾
-        if(!query)return true;
-        const supRow=supplementByCase.get(id);
-        return id.toLocaleLowerCase().includes(query)||(supRow&&['A','B','C','D','更新時間'].some(key=>String(supRow[key]||'').toLocaleLowerCase().includes(query)));
-      });
+      const caseIds=[...byCase.keys()];
       if(!caseIds.length)return '<div class="notice">沒有符合條件的資料</div>';
-      const activityTime=id=>Math.max(0,...(byCase.get(id)||[]).map(modificationGroupTime),parseDateLike(supplementByCase.get(id)?.['更新時間']));
+      const activityTime=id=>Math.max(0,...(byCase.get(id)||[]).map(modificationGroupTime));
       caseIds.sort((a,b)=>activityTime(b)-activityTime(a)||b.localeCompare(a,'zh-Hant',{numeric:true}));
       return `<div class="mod-board">${caseIds.map((id,index)=>{
         const items=(byCase.get(id)||[]).slice().sort((left,right)=>(Number(left['修改次數'])||0)-(Number(right['修改次數'])||0));
-        const supRow=supplementByCase.get(id)||null;
         const pendingCount=items.filter(row=>!row['確認修正日']).length;
         return `<details class="mod-case" ${index<8?'open':''}>
           <summary>
             <span class="mod-case-id">案件 ${esc(id)}</span>
             ${caseInfoLineHtml(caseInfoByCase.get(id))}
-            <span class="mod-case-meta">${items.length?`<b>${items.length}</b> 輪修改`:'尚無修改紀錄'}${supRow?'　·　已提供補充資料':''}</span>
+            <span class="mod-case-meta">${items.length?`<b>${items.length}</b> 輪修改`:'尚無修改紀錄'}</span>
             ${pendingCount?`<span class="mod-case-status pending">${pendingCount} 輪待確認</span>`:(items.length?'<span class="mod-case-status confirmed">全部已確認</span>':'')}
           </summary>
           <div class="mod-case-body">
-            ${supplementLinksHtml(id,supRow)}
             ${items.length?`<div class="mod-timeline">${items.map(modificationRoundHtml).join('')}</div>`:'<div class="mod-empty-history">這個案件目前沒有修改紀錄</div>'}
           </div>
         </details>`;
@@ -1012,15 +961,11 @@
         const primary=headers.filter(header=>SETTINGS_PRIMARY.includes(header)),secondary=headers.filter(header=>!SETTINGS_PRIMARY.includes(header));
         return primary.map(header=>fieldHtml(header,current[header]??'')).join('')+(secondary.length?`<details class="field-adv"><summary>進階／介面暫存欄位（${secondary.length}）</summary><div class="fields-inner">${secondary.map(header=>fieldHtml(header,current[header]??'')).join('')}</div></details>`:'');
       }
-      if(table==='補充資料連結'){
-        return headers.map(header=>fieldHtml(header,current[header]??'',['A','B','C','D'].includes(header))).join('');
-      }
       return headers.map(header=>fieldHtml(header,current[header]??'')).join('');
     }
-    // forcedTable 讓「帳號設定」裡的 REELS 小卡、「修改統計表」裡的補充資料連結
-    // 可以直接編輯對應的表，不必先切到別的頁籤。prefill 只在新增（row=null）時
-    // 用來預先帶入欄位值（例如從案件群組點「+ 新增補充資料」時預填案件編號），
-    // 不影響 editing／insert 判斷——true 的新增仍然是 editing=null。
+    // forcedTable 讓「帳號設定」裡的 REELS 小卡可以直接編輯對應的表，不必先切到別的
+    // 頁籤。prefill 只在新增（row=null）時用來預先帶入欄位值，不影響 editing／insert
+    // 判斷——true 的新增仍然是 editing=null。
     function openEditor(row=null,forcedTable='',prefill=null){
       editingTableName=forcedTable||tableName;editing=row?{...row}:null;
       const headers=metadata[editingTableName].headers||[];
@@ -1048,7 +993,7 @@
       if(roleTemplateSelected===role){renderTable({table:'角色權限範本',total:roleTemplateRowsCache.length,offset:0,limit:10,rows:roleTemplateRowsCache});return}
       const model=roleTemplateRowsCache.find(row=>row['角色範本']===role),button=$('view').querySelector(`[data-role-template="${CSS.escape(role)}"]`),badge=button?.querySelector('.permission-state');if(!model||!badge)return;const pending=roleTemplateWritesPending.has(role);badge.className=`permission-state ${pending?'explicit':''}`;badge.textContent=pending?'寫入中':`${model['頁面權限'].length} 頁 / ${model['功能權限'].length} 項`
     }
-    function refreshCachedTableView(){if(!APPS_SCRIPT_MODE||!directDatabase)return;appliedRevision=databaseRevision(directDatabase)||appliedRevision;discardStagedRefreshIfCurrent();metadata=metadataFromDatabase(directDatabase);renderTabs();if(tableName==='修改統計表'){supplementLinkRowsCache=(directDatabase?.tables?.['補充資料連結']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));caseInfoRowsCache=directDatabase?.tables?.database?.rows||[]}renderTable(databaseFileRows());$('revision').textContent=String(directDatabase.revision??'—')}
+    function refreshCachedTableView(){if(!APPS_SCRIPT_MODE||!directDatabase)return;appliedRevision=databaseRevision(directDatabase)||appliedRevision;discardStagedRefreshIfCurrent();metadata=metadataFromDatabase(directDatabase);renderTabs();if(tableName==='修改統計表'){caseInfoRowsCache=directDatabase?.tables?.database?.rows||[]}renderTable(databaseFileRows());$('revision').textContent=String(directDatabase.revision??'—')}
     function scheduleWeightRuleRefresh(){[8000,20000,40000].forEach(delay=>setTimeout(()=>{if(document.hidden)return;refreshFromBackend({tables:['database','加權計分標準']})},delay))}
     function permissionEditorElement(){return $('view').querySelector('[data-permission-editor]')}
     function applyPermissionTemplate(role){const editor=permissionEditorElement(),template=MachiAccess.templates[role];if(!editor||!template)return;editor.querySelectorAll('[data-permission-page]').forEach(input=>{input.checked=template.pages.includes(input.dataset.permissionPage)});editor.querySelectorAll('[data-permission-capability]').forEach(input=>{input.checked=template.capabilities.includes(input.dataset.permissionCapability)})}
@@ -1210,12 +1155,6 @@
       if(reelEdit){const row=accountReelsRows.find(item=>String(item._rowNumber)===reelEdit.dataset.accountReelEdit);if(row)openEditor(row,'reels');else note('找不到這筆 REELS，請重新讀取','error');return}
       const reelDelete=event.target.closest('[data-account-reel-delete]');
       if(reelDelete){const row=accountReelsRows.find(item=>String(item._rowNumber)===reelDelete.dataset.accountReelDelete);if(row)deleteRow(row,'reels');else note('找不到這筆 REELS，請重新讀取','error');return}
-      const supplementEdit=event.target.closest('[data-supplement-edit]');
-      if(supplementEdit){const row=supplementLinkRowsCache.find(item=>String(item._rowNumber)===supplementEdit.dataset.supplementEdit);if(row)openEditor(row,'補充資料連結');else note('找不到這筆補充資料連結，請重新讀取','error');return}
-      const supplementDelete=event.target.closest('[data-supplement-delete]');
-      if(supplementDelete){const row=supplementLinkRowsCache.find(item=>String(item._rowNumber)===supplementDelete.dataset.supplementDelete);if(row)deleteRow(row,'補充資料連結');else note('找不到這筆補充資料連結，請重新讀取','error');return}
-      const supplementAdd=event.target.closest('[data-supplement-add]');
-      if(supplementAdd){openEditor(null,'補充資料連結',{'案件編號':supplementAdd.dataset.supplementAdd});return}
       const permissionAccount=event.target.closest('[data-permission-account]');
       if(permissionAccount){selectPermissionAccount(permissionAccount.dataset.permissionAccount);return}
       if(event.target.closest('[data-account-cancel]')){cancelAccountCreate();return}
