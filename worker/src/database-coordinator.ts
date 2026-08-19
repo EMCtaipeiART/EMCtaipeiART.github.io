@@ -919,17 +919,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
   }
 
-  /** 讀取案件已寄出的 Gmail 信件串（限寄件帳號本人）。只回傳 text/plain 內容，不回傳原始 HTML。 */
+  /** 讀取案件已寄出的 Gmail 信件串——只要對這筆案件有 request.mail 權限（角色權限，或客戶別專案負責人疊加授權，
+   * 見 requireRowAccess／model.ts 的 hasRowCapability）都能查看，不再限定「必須是當初寄出這封信的那個帳號」。
+   * Gmail 信件串實際上只存在寄件當下那個帳號自己的信箱裡，所以不論是誰在查看，實際呼叫 Gmail API 一律用
+   * getValidGmailAccessToken(owner) 拿「當初寄件帳號」存的 token，而不是目前登入者自己的 token——這是讓「整串
+   * 信件內容相關的人都能查看」在技術上可行的關鍵：伺服器端本來就保存著寄件帳號的 refresh token，能代表它去讀信，
+   * 只是這次把「誰能觸發這個動作」的權限判斷，從嚴格比對帳號身分改成比對系統權限。只回傳 text/plain 內容，不回傳原始 HTML。 */
   private async getCaseMailThread(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
-    const current = this.requireAccess(database, session, 'request.mail');
     const caseId = text(payload.caseId || payload.id);
-    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    this.requireRowAccess(database, session, 'request.mail', existingRow);
+    const row = existingRow;
     if (!row) return { ok: false, action: 'getCaseMailThread', error: '找不到案件資料' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
-    if (owner !== canonicalAccount(current.account)) return { ok: false, action: 'getCaseMailThread', error: `此信件串由 ${owner} 寄出，只有該帳號能查看`, reason: 'GMAIL_THREAD_OWNER_MISMATCH' };
-    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const accessToken = await this.getValidGmailAccessToken(owner);
     const knownSignatureText = htmlToPlainText(text(payload.signatureHtml));
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -948,11 +953,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'getCaseMailThread', threadId, messages };
   }
 
-  /** 在既有信件串裡回覆一封信（限寄件帳號本人）；先抓最後一封信的標頭組出正確的 In-Reply-To/References。 */
+  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一個放寬：只要對這筆案件有 request.mail 權限就能回覆，
+   * 不再限定「必須是當初寄出這封信的那個帳號」。但實際送出時一律用 getValidGmailAccessToken(owner)（當初寄件
+   * 帳號存的 token）呼叫 Gmail API，讓回覆確實接在同一條 Gmail 信件串裡（Gmail 信件串本來就只存在寄件帳號自己
+   * 的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆
+   * 正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件帳號，不是實際按下「送出回覆」的那個系統帳號，
+   * 這是這個設計必然的結果，等同多人共用同一個對外信箱的概念。先抓最後一封信的標頭組出正確的 In-Reply-To/References。 */
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const caseId = text(payload.caseId || payload.id);
     const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
-    const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
+    this.requireRowAccess(database, session, 'request.mail', existingRow);
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
@@ -962,8 +972,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
-    if (owner !== canonicalAccount(current.account)) return { ok: false, action: 'replyCaseMail', error: `此信件串由 ${owner} 寄出，只有該帳號能回覆`, reason: 'GMAIL_THREAD_OWNER_MISMATCH' };
-    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const accessToken = await this.getValidGmailAccessToken(owner);
     const threadResponse = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=metadata&metadataHeaders=Message-Id&metadataHeaders=References&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=To`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -977,7 +986,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const lastReferences = gmailHeaderValue(headers, 'References');
     const lastSubject = gmailHeaderValue(headers, 'Subject');
     if (!lastMessageId) return { ok: false, action: 'replyCaseMail', error: '無法取得原始信件標頭，無法回覆' };
-    const stored = this.getGmailTokens(current.account);
+    const stored = this.getGmailTokens(owner);
     const selfAddress = text(stored?.gmail_address).toLowerCase();
     const fromHeader = gmailHeaderValue(headers, 'From');
     const toHeader = gmailHeaderValue(headers, 'To');

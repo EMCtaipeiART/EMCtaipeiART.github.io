@@ -8994,11 +8994,13 @@ async function openGmailThreadModal(id){
   closeFieldPopover();
   modal.dataset.caseId=String(row.id);
   const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=row.gmailThreadOwnerAccount?`寄件人：${row.gmailThreadOwnerAccount}`:'';
-  const isOwner=Boolean(row.gmailThreadOwnerAccount)&&canonicalAccountClient(currentEditorAccount)===canonicalAccountClient(row.gmailThreadOwnerAccount);
+  // 回信不再限定「必須跟當初寄出這封信的帳號一致」——整串信件內容相關的人（任何有 request.mail 權限、
+  // 通過後端 requireRowAccess 檢查的帳號）都能回信，Worker 端會統一用當初寄件帳號存的 Gmail token 實際送出，
+  // 確保回覆還是進到同一條 Gmail 信件串。這裡固定顯示回覆編輯區與送出按鈕，權限交給後端 API 把關。
   const composeSection=$('#gmailThreadComposeSection'), sendBtn=$('#gmailThreadReplySend'), cancelBtn=$('#gmailThreadReplyCancel');
-  if(composeSection)composeSection.hidden=!isOwner;
-  if(sendBtn)sendBtn.hidden=!isOwner;
-  if(cancelBtn)cancelBtn.textContent=isOwner?'取消':'關閉';
+  if(composeSection)composeSection.hidden=false;
+  if(sendBtn)sendBtn.hidden=false;
+  if(cancelBtn)cancelBtn.textContent='取消';
   if(replyEditor){replyEditor.innerHTML='';clearGmailInlineImages(replyEditor.id)}
   list.innerHTML='<div class="revision-modal-empty">載入中...</div>';
   modal.hidden=false;
