@@ -318,12 +318,28 @@ test('designer music uses one timeline, JSON-only settings, and seeks Spotify af
 
 test('designer reply templates persist by item detail and multi-select uses the first detail', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const appsScript = await readFile(new URL('../../GS/google_apps_script.gs', import.meta.url), 'utf8');
   const detailsFunction = html.match(/function detailsToArray\(value\)\{[^\n]*\}/)?.[0] || '';
   const profileFunction = html.match(/function designerProfile\(name\)\{[^\n]*\}/)?.[0] || '';
   const templateFunction = html.match(/function designerReplyTemplateForCase\(row=\{\}\)\{[^\n]*\}/)?.[0] || '';
+  const optionsFunction = html.match(/function designerReplyDetailOptions\(profile=\{\}\)\{[^\n]*\}/)?.[0] || '';
   assert.match(html, /5\. 回信範本設定/);
   assert.match(html, /多選時以第一個選項為準/);
-  assert.ok(detailsFunction && profileFunction && templateFunction);
+  assert.match(html, /請選擇設計種類／階段／項目細節/);
+  assert.ok(detailsFunction && profileFunction && templateFunction && optionsFunction);
+  const selectOptions = new Function('normalizeDesignGroup', 'designLists', `${optionsFunction};return designerReplyDetailOptions;`);
+  const options = selectOptions(value => value, {
+    details: { '平面': { '提案': ['社群貼文', '急件'], '後製': ['社群貼文', '急件'] } }
+  })({ designType: '平面', replyTemplates: { '舊範本': '保留' } });
+  assert.deepEqual(options.find(option => option.detail === '社群貼文'), {
+    detail: '社群貼文',
+    label: '平面／提案、後製／社群貼文'
+  });
+  assert.deepEqual(options.find(option => option.detail === '舊範本'), {
+    detail: '舊範本',
+    label: '平面／未分類／舊範本'
+  });
+  assert.doesNotMatch(appsScript, /normalizeDesignerReplyTemplates_|回信範本設定/);
   const selectTemplate = new Function('designers', 'defaultDesigners', `
     function unique(values){ return [...new Set(values.filter(Boolean))] }
     ${detailsFunction}
