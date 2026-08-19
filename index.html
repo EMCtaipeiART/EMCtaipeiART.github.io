@@ -6421,6 +6421,14 @@
     html[data-theme="dark"] .gmail-recipient-option:hover{background:#292d30!important}
     html[data-theme="dark"] .gmail-recipient-actions button{background:#4f9f78!important;color:#07140e!important;border-color:#66b88f!important}
   </style>
+  <style>
+    .gmail-thread-msg>summary{list-style:none;cursor:pointer}
+    .gmail-thread-msg>summary::-webkit-details-marker{display:none}
+    .gmail-thread-msg-toggle{margin-left:auto}
+    .gmail-thread-msg-toggle::after{content:'展開'}
+    .gmail-thread-msg[open] .gmail-thread-msg-toggle::after{content:'收合'}
+    .gmail-thread-msg-content{display:grid;gap:5px;margin-top:5px}
+  </style>
   <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body>
@@ -9009,8 +9017,8 @@ function gmailThreadMessageImagesHtml(images){
   if(!Array.isArray(images)||!images.length)return '';
   return `<div class="gmail-thread-msg-images">${images.map(img=>`<img src="${esc(img.dataUrl)}" loading="lazy" alt="信件內嵌圖片">`).join('')}</div>`;
 }
-function gmailThreadMessageHtml(message){const visibleBody=message.bodyText??message.snippet??'';return `<div class="gmail-thread-msg"><div class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span></div><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody)}</div>${gmailThreadMessageImagesHtml(message.images)}</div>`}
-function renderGmailThreadMessages(list,messages){list.innerHTML=(messages&&messages.length)?messages.map(gmailThreadMessageHtml).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
+function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=message.bodyText??message.snippet??'';return `<details class="gmail-thread-msg" name="gmail-thread-message"${isLatest?' open':''}><summary class="gmail-thread-msg-meta"><span>寄件人：${esc(message.from||'-')}</span><span>收件人：${esc(message.to||'-')}</span><span>副件人：${esc(message.cc||'-')}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body">${linkifyPlainText(visibleBody)}</div>${gmailThreadMessageImagesHtml(message.images)}</div></details>`}
+function renderGmailThreadMessages(list,messages){const items=Array.isArray(messages)?messages:[];list.innerHTML=items.length?items.map((message,index)=>gmailThreadMessageHtml(message,index===items.length-1)).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 async function openGmailThreadModal(id){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
   if(!row.gmailThreadId){setSync('此案件尚未透過 Gmail 寄出過信件',true);return}
