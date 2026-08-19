@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1776,
+  "revision": 1777,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T06:13:36.118Z",
+  "updatedAt": "2026-08-19T06:14:26.213Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -19029,6 +19029,33 @@
           "繳交時間": "",
           "Gmail信件串ID": "1a0185e775e234dd",
           "Gmail寄件帳號": "machi.chen@emctaipei.com"
+        },
+        {
+          "客戶別": "丹士特",
+          "專案名稱": "32r34234",
+          "專案負責人": "Anna",
+          "設計種類": "平面",
+          "階段": "後製",
+          "數量": "1",
+          "開始日期": "2026/08/19",
+          "結束日期": "2026/08/19",
+          "設計負責人": "Anna",
+          "使用平台": "",
+          "填單時間": "2026/08/19 14:14",
+          "設計簡報說明": "",
+          "設計簡報連結": "",
+          "客戶素材說明": "",
+          "客戶素材連結": "",
+          "參考範例說明": "",
+          "參考範例連結": "",
+          "其他說明": "",
+          "其他連結": "",
+          "狀態": "未開始",
+          "加權": "",
+          "月份": "8月",
+          "案件編號": "26080098",
+          "修改次數": "0",
+          "繳交時間": ""
         }
       ]
     },
@@ -28531,6 +28558,43 @@
           "gmailThreadOwnerAccount": "",
           "_sheetRow": 654,
           "sheetRow": 654
+        }
+      },
+      "94abced1-f0d8-4501-8bc8-9a334abdad02": {
+        "ok": true,
+        "action": "append",
+        "rowNumber": 655,
+        "row": {
+          "id": "26080098",
+          "month": "8月",
+          "client": "丹士特",
+          "project": "32r34234",
+          "owner": "Anna",
+          "type": "平面",
+          "stage": "後製",
+          "qty": 1,
+          "start": "2026/08/19",
+          "end": "2026/08/19",
+          "designer": "Anna",
+          "platforms": "",
+          "submittedAt": "2026/08/19 14:14",
+          "briefNote": "",
+          "briefUrl": "",
+          "assetNote": "",
+          "assetUrl": "",
+          "referenceNote": "",
+          "referenceUrl": "",
+          "otherNote": "",
+          "otherUrl": "",
+          "status": "未開始",
+          "details": "",
+          "weight": "",
+          "designImageFolderUrl": "",
+          "designImageFolderKeyword": "",
+          "gmailThreadId": "",
+          "gmailThreadOwnerAccount": "",
+          "_sheetRow": 655,
+          "sheetRow": 655
         }
       }
     }
