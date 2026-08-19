@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 1681,
+  "revision": 1682,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-19T02:35:03.556Z",
+  "updatedAt": "2026-08-19T02:35:17.367Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -25412,9 +25412,9 @@
         {
           "角色範本": "一般使用者",
           "頁面權限": "[\"request\",\"avatar_upload\",\"short_link\"]",
-          "功能權限": "[\"request.create\",\"request.edit\",\"request.mail\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
-          "更新時間": "2026-08-12 00:11",
-          "更新者": "管理員"
+          "功能權限": "[\"request.create\",\"request.edit\",\"request.delete\",\"request.mail\",\"modification.create\",\"project.create\",\"profile.edit\",\"reel.interact\",\"issue.report\",\"short_link.create\"]",
+          "更新時間": "2026-08-19 10:35",
+          "更新者": "Machi"
         },
         {
           "角色範本": "唯讀",
