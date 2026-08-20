@@ -189,7 +189,18 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-19 18:50 Asia/Taipei（最新）— NAS 監控程式重複上傳成因排查與修正：鎖檔案 race condition＋延後存檔遺失狀態；停用重複排程；清理案件 26080079／26080045 既有重複圖片
+### 2026-08-20 Asia/Taipei（最新）— 修正「設計師設定」彈窗功能五（回信範本設定）：改成 設計類型／階段／項目細節 三段式下拉選單，修好選項空白與無法存檔
+
+- 修改目的：使用者回報前台「設計師設定」彈窗的「功能五、回信範本設定」有兩個問題——①選項填完無法送出存檔；②選項清單裡看不到「設計類型」與「階段」。
+- 追查過程：這個區塊原本只有**一個**合併式下拉選單，`<option>` 的文字把設計類型／階段／項目細節硬擠成一串（例如「平面／提案、後製／社群貼文」），選項清單由 `designerReplyDetailOptions(profile)` 依 `normalizeDesignGroup(profile.designType)` 算出的單一 type 從 `designLists.details[type]` 取出。用真實 `backend/data/db.json` 資料在瀏覽器隔離測試重現：只要 `normalizeDesignGroup(profile.designType)` 算不出「平面」或「影音」（例如組別欄位是空字串、或填了「設計組」這類無法辨識的文字），`type` 會落到 `'未分類'`，`designLists.details['未分類']` 不存在，整個下拉選單除了「請選擇...」這個提示文字外**完全沒有其他選項**——這正好對應使用者說的「選項不出現設計類型與階段」；而使用者仍然能在旁邊的文字框打內容，送出時 `validateDesignerReplyTemplateInputs()` 發現「有內容但沒有選項目細節」會擋下送出（`select.setCustomValidity('請先選擇項目細節')`），對應「無法發送存檔」。已用真實 DOM 操作完整重現這個情境（模擬一位組別是「設計組」的設計師：下拉選單只有 1 個選項、送出被擋、`validationMessage` 正確顯示「請先選擇項目細節」），確認不是臆測。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：把 `designerReplyDetailOptions()` 這個合併式函式拆成 `designerReplyTypeOptions()`／`designerReplyStageOptions(type)`／`designerReplyDetailChoices(type,stage)`／`resolveDesignerReplyTemplateLocation(profile,detail)` 四個小函式；`designerReplyTemplateRowHtml()` 改成渲染**三個獨立的下拉選單**（設計類型→階段→項目細節，`data-reply-template-type`／`-stage`／`-detail`），選一個類型會連動重新產生階段選單，選階段會連動重新產生項目細節選單（新增 `updateDesignerReplyStageOptions()`／`updateDesignerReplyDetailOptions()`，掛在 `bindDesignerReplySettings()` 新增的 `change` 事件委派）。`resolveDesignerReplyTemplateLocation()` 在算不出設計師本人的類型時，**不再讓整個清單留空**——直接退回清單裡第一個可用的設計類型（目前固定是「平面」），確保項目細節下拉選單一定有東西可以選；已經存過的回信範本（含類型／階段規則已經變動、對不到目前分類的舊資料）一樣會被找到正確位置，或安全地退回顯示、保留原文字不遺失。已儲存的資料格式完全不變（`replyTemplates` 依然是 `{項目細節: 內容}` 的純文字對照，沒有動到 schema 或後端），純粹是前端這個小區塊的呈現與選單生成邏輯改寫。CSS 同步把原本 3 欄（單一下拉＋文字框＋刪除鈕）的版面改成「三個下拉選單一排＋文字框在下方」，寬螢幕維持三欄並排，窄螢幕（≤760px）改單欄堆疊。
+- 風險區塊：這次的退回邏輯（type 算不出來時退回清單第一個類型）只影響「這個下拉選單要不要顯示選項」，不會反過來去修正這位設計師本人的組別／設計類型欄位，也不會影響其他任何依賴 `designType` 的功能（前台頭像清單、輪值、案件列表等）——這些原本就完全不受這次改動影響，範圍精準限定在「回信範本設定」這個區塊本身。
+- 已檢查／驗證方式：`index.html` 主要 `<script>` 區塊語法檢查通過；`node --test backend/test/*.test.mjs` 33/33 全過（更新了鎖住舊版合併選單字串的既有測試，改成鎖住新的三段式函式與 markup，並新增一支專門驗證「type 算不出來時，回信範本清單不會變空」的回歸測試）。用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（沒有真的打任何網路請求）：①**先重現了修正前的真實 bug**（組別算不出來的假設計師，下拉選單只有 1 個選項、送出被擋、錯誤訊息「請先選擇項目細節」）；②套用修正後同樣情境的設計類型／階段下拉選單正確顯示「平面」「提案」，項目細節選單正確有 9 個真實選項可選，選一個之後驗證通過、`saveDesignerSettings` 正確送出 `replyTemplates` 資料；③用真實設計師（Machi）測試三層下拉選單的連動——切換設計類型會正確重新產生階段與項目細節選單、切換階段會正確重新產生項目細節選單；④用 1280×800 的 iframe 確認桌面寬度下三個下拉選單正確並排在同一排（每個約 246px 寬、同一個 y 座標）；⑤「+新增項目範本」「刪除」兩個既有按鈕功能維持正常，刪光所有列後會自動補一個空白列（不會變成完全沒有任何列可以填）。**未做的驗證**：沒有用真實登入帳號在正式站實際找到一位組別欄位有問題的真實設計師帳號重現與確認修好（這次的真實案例是用程式碼模擬構造出來的，模擬條件與真實 bug 的觸發條件完全一致，但沒有機會在正式資料庫裡找到剛好符合條件的真實帳號）；也沒有肉眼截圖確認排版（改用 `getComputedStyle`／`getBoundingClientRect()` 逐項數值驗證取代）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-19 18:50 Asia/Taipei — NAS 監控程式重複上傳成因排查與修正：鎖檔案 race condition＋延後存檔遺失狀態；停用重複排程；清理案件 26080079／26080045 既有重複圖片
 
 - 修改目的：使用者回報案件 `26080079` 的設計圖「會自動上傳兩次」，要求查明原因並修正。
 - 追查過程：直接讀正式資料庫「修改統計表」裡這筆紀錄，發現「圖片連結」有 6 筆，但只有 2 個不重複檔名（`260819_OM360II_對比.png`／`260819_OM360II_競品便當圖.png`），每個檔名各出現 3 次、指到 3 個不同的 Google Drive 網址——不是顯示重複，是真的被上傳了 3 次。用 `git log -S`／逐一比對每次 `addCaseDesignImages via Cloudflare Worker` commit 的完整 diff，還原出精確時間序列，並發現同一天另一個案件 `26080045`（跟 26080079 共用同一個 NAS 來源資料夾 `DJI/廣告素材/2026/8月`，靠不同的「設計圖檔名關鍵字」區分）也有一次同樣的重複。追出兩個獨立、疊加的成因：

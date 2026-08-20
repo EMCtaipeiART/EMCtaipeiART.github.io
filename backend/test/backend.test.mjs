@@ -342,23 +342,62 @@ test('designer reply templates persist by item detail and multi-select uses the 
   const detailsFunction = html.match(/function detailsToArray\(value\)\{[^\n]*\}/)?.[0] || '';
   const profileFunction = html.match(/function designerProfile\(name\)\{[^\n]*\}/)?.[0] || '';
   const templateFunction = html.match(/function designerReplyTemplateForCase\(row=\{\}\)\{[^\n]*\}/)?.[0] || '';
-  const optionsFunction = html.match(/function designerReplyDetailOptions\(profile=\{\}\)\{[^\n]*\}/)?.[0] || '';
+  const typeOptionsFunction = html.match(/function designerReplyTypeOptions\(\)\{[^\n]*\}/)?.[0] || '';
+  const stageOptionsFunction = html.match(/function designerReplyStageOptions\(type\)\{[^\n]*\}/)?.[0] || '';
+  const detailChoicesFunction = html.match(/function designerReplyDetailChoices\(type,stage\)\{[^\n]*\}/)?.[0] || '';
+  const locationFunction = html.match(/function resolveDesignerReplyTemplateLocation\(profile,detail\)\{[^\n]*\}/)?.[0] || '';
+  const selectsHtmlFunction = html.match(/function designerReplyTemplateSelectsHtml\(profile,detail=''\)\{[^\n]*\}/)?.[0] || '';
   assert.match(html, /5\. 回信範本設定/);
   assert.match(html, /多選時以第一個選項為準/);
-  assert.match(html, /請選擇設計種類／階段／項目細節/);
-  assert.ok(detailsFunction && profileFunction && templateFunction && optionsFunction);
-  const selectOptions = new Function('normalizeDesignGroup', 'designLists', `${optionsFunction};return designerReplyDetailOptions;`);
-  const options = selectOptions(value => value, {
-    details: { '平面': { '提案': ['社群貼文', '急件'], '後製': ['社群貼文', '急件'] } }
-  })({ designType: '平面', replyTemplates: { '舊範本': '保留' } });
-  assert.deepEqual(options.find(option => option.detail === '社群貼文'), {
-    detail: '社群貼文',
-    label: '平面／提案、後製／社群貼文'
-  });
-  assert.deepEqual(options.find(option => option.detail === '舊範本'), {
-    detail: '舊範本',
-    label: '平面／未分類／舊範本'
-  });
+  assert.match(html, /data-reply-template-type/);
+  assert.match(html, /data-reply-template-stage/);
+  assert.match(html, /請選擇項目細節/);
+  // section 5 used to be a single combined dropdown with no dedicated 設計類型／階段 fields, and
+  // fell back to an empty option list whenever a designer's own type couldn't be resolved — which
+  // also silently blocked saving (content typed but no detail selectable). Lock in the redesign.
+  assert.doesNotMatch(html, /請選擇設計種類／階段／項目細節/);
+  assert.ok(detailsFunction && profileFunction && templateFunction && typeOptionsFunction && stageOptionsFunction && detailChoicesFunction && locationFunction && selectsHtmlFunction);
+  const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const designLists = {
+    types: ['平面', '影音'],
+    stages: { '平面': ['提案', '後製'], '影音': ['提案'] },
+    details: {
+      '平面': { '提案': ['社群貼文', '急件'], '後製': ['社群貼文', '急件'] },
+      '影音': { '提案': ['腳本大綱'] }
+    }
+  };
+  const scope = new Function('normalizeDesignGroup', 'designLists', 'esc', `
+    ${typeOptionsFunction}
+    ${stageOptionsFunction}
+    ${detailChoicesFunction}
+    ${locationFunction}
+    ${selectsHtmlFunction}
+    return { resolveDesignerReplyTemplateLocation, designerReplyDetailChoices, designerReplyTemplateSelectsHtml };
+  `)(value => value, designLists, escapeHtml);
+
+  // Normal case: a real detail resolves to the stage it actually lives under.
+  assert.deepEqual(scope.resolveDesignerReplyTemplateLocation({ designType: '平面' }, '社群貼文'), { type: '平面', stage: '提案' });
+
+  // Legacy/orphaned saved detail (e.g. removed from 加權計分標準 since it was saved) must not crash,
+  // and must still fall back to a sensible location and stay selectable in the rendered options.
+  const legacyLocation = scope.resolveDesignerReplyTemplateLocation({ designType: '平面' }, '舊範本');
+  assert.deepEqual(legacyLocation, { type: '平面', stage: '提案' });
+  assert.match(scope.designerReplyTemplateSelectsHtml({ designType: '平面' }, '舊範本'), /<option value="舊範本" selected>舊範本<\/option>/);
+
+  // Regression test for the reported bug: a designer whose 組別／設計類型 field can't be normalized
+  // (blank, or some other group name) must never end up with an empty 項目細節 dropdown that blocks
+  // filling in and saving a brand-new template row.
+  const unresolvedLocation = scope.resolveDesignerReplyTemplateLocation({ designType: '設計組' }, '');
+  assert.equal(unresolvedLocation.type, '平面');
+  assert.equal(unresolvedLocation.stage, '提案');
+  const unresolvedChoices = scope.designerReplyDetailChoices(unresolvedLocation.type, unresolvedLocation.stage);
+  assert.ok(unresolvedChoices.length > 0);
+  const unresolvedSelectsHtml = scope.designerReplyTemplateSelectsHtml({ designType: '設計組' }, '');
+  assert.match(unresolvedSelectsHtml, /data-reply-template-type/);
+  assert.match(unresolvedSelectsHtml, /data-reply-template-stage/);
+  const detailOptionCount = (unresolvedSelectsHtml.match(/<option value="/g) || []).length;
+  assert.ok(detailOptionCount > 3, `expected more than the bare placeholders, got ${detailOptionCount}`);
+
   assert.doesNotMatch(appsScript, /normalizeDesignerReplyTemplates_|回信範本設定/);
   const selectTemplate = new Function('designers', 'defaultDesigners', `
     function unique(values){ return [...new Set(values.filter(Boolean))] }
