@@ -7311,7 +7311,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260820-gmail-reply-sender-116';
+const appBuildVersion = '20260820-scheduled-mail-cleanup-117';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -8621,7 +8621,7 @@ function navigatePostSubmitQueue(delta){
 async function hasPendingScheduledMail(caseId){
   try{
     const data=await sheetApi('listScheduledMail',{caseId,editorToken:currentEditorToken});
-    return (Array.isArray(data.items)?data.items:[]).some(item=>item.status==='pending');
+    return (Array.isArray(data.items)?data.items:[]).some(item=>item.status==='pending'||item.status==='sending');
   }catch{
     return false;
   }
@@ -8872,12 +8872,17 @@ function renderScheduledMailList(containerId,items,kind,caseId){
 async function refreshScheduledMailList(caseId,kind){
   const containerId=kind==='compose'?'#gmailComposeScheduledList':'#gmailThreadScheduledList';
   const container=$(containerId); if(!container)return;
+  const modal=kind==='compose'?$('#gmailComposeModal'):$('#gmailThreadModal');
+  container.dataset.caseId=String(caseId);
+  const stillCurrent=()=>String(container.dataset.caseId||'')===String(caseId)&&String(modal?.dataset.caseId||'')===String(caseId)&&!modal?.hidden;
   try{
     const data=await sheetApi('listScheduledMail',{caseId,editorToken:currentEditorToken});
+    // 使用者可能在 API 回傳前已切換到另一個案件；舊案件的結果不可寫進目前彈窗。
+    if(!stillCurrent())return;
     const items=(Array.isArray(data.items)?data.items:[]).filter(item=>item.status==='pending'||item.status==='failed');
     renderScheduledMailList(containerId,items,kind,caseId);
   }catch{
-    container.hidden=true; container.innerHTML='';
+    if(stillCurrent()){container.hidden=true; container.innerHTML=''}
   }
 }
 async function cancelScheduledMailItem(id,kind,caseId){

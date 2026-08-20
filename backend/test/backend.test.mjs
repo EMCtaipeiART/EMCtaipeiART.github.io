@@ -207,6 +207,17 @@ test('Gmail reply composer displays the current account as sender instead of the
   assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
 });
 
+test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function refreshScheduledMailList(caseId,kind)');
+  const end = html.indexOf('async function cancelScheduledMailItem(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  assert.match(source, /container\.dataset\.caseId=String\(caseId\)/);
+  assert.match(source, /modal\?\.dataset\.caseId\|\|''\)===String\(caseId\)/);
+  assert.match(source, /if\(!stillCurrent\(\)\)return/);
+});
+
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('function safeHttpPreviewUrl(');

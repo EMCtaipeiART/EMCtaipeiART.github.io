@@ -1431,6 +1431,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const scheduledAt = parseScheduledAt(payload.scheduledAt);
     if (!scheduledAt) return { ok: false, action: 'scheduleCaseMail', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
     await this.getValidGmailAccessToken(current.account);
+    // 同一案件的「首次寄信」只能有一筆待送排程。檢查放在最後一個 await 之後，與下面的 INSERT 之間
+    // 沒有交出 Durable Object 執行權，兩個同時點下的請求也不會同時通過檢查而重複建立。
+    const existingSchedules = this.ctx.storage.sql.exec<{ id: string; scheduled_at: number }>(
+      `SELECT id, scheduled_at FROM scheduled_mail
+       WHERE case_id = ? AND kind = 'send' AND status IN ('pending', 'sending')
+       ORDER BY created_at ASC LIMIT 1`, caseId
+    ).toArray();
+    if (existingSchedules.length) {
+      return {
+        ok: false, action: 'scheduleCaseMail', reason: 'SCHEDULE_EXISTS',
+        error: '此案件已有一封待寄出的排程信件，不會重複建立',
+        scheduledId: existingSchedules[0].id, scheduledAt: existingSchedules[0].scheduled_at
+      };
+    }
     const scheduledId = this.insertScheduledMail({
       caseId, kind: 'send', ownerAccount: current.account, requestedBy: current.account,
       to, cc, subject, bodyHtml, signatureHtml, inlineImages, scheduledAt
@@ -1487,6 +1501,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!hasRowCapability(database, current, 'request.mail', row || {})) {
       return { ok: false, action: 'listScheduledMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
     }
+    // 舊版在同一案件有多筆首次寄信排程時，第一筆成功後會把後續重複項目記成 failed。案件既然已經
+    // 有 Gmail 信件串，這類項目實際上是「已成功寄出，重複排程未再寄」，在清單讀取時一次性改成 canceled，
+    // 避免繼續以紅色「寄送失敗」誤導使用者；其他真正的 Gmail 失敗仍保留 failed 供查看。
+    if (text(row?.['Gmail信件串ID'])) {
+      this.ctx.storage.sql.exec(
+        `UPDATE scheduled_mail SET status = 'canceled', error_message = NULL, updated_at = ?
+         WHERE case_id = ? AND kind = 'send' AND status = 'failed'
+           AND error_message LIKE '此案件已經有 Gmail 信件串%'`,
+        new Date().toISOString(), caseId
+      );
+    }
     const items = this.ctx.storage.sql.exec<ScheduledMailRow>(
       `SELECT id, kind, to_address, cc_address, subject, scheduled_at, status, error_message, requested_by, created_at
        FROM scheduled_mail WHERE case_id = ? ORDER BY scheduled_at DESC LIMIT 30`, caseId
@@ -1525,14 +1550,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 避免重複建立第二條信件串；成功後跟 sendCaseMail 一樣把 Gmail信件串ID／Gmail寄件帳號寫回 database 表。
    * kind='reply' 一律在寄出前重新讀一次信件串現況（fetchGmailThreadMessages/buildGmailReplyRaw），不是沿用
    * 排程建立當下的舊標頭，確保接在正確的最新一封信後面。失敗直接讓例外往外拋，由呼叫端統一記錄失敗原因。 */
-  private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<void> {
+  private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<'sent' | 'canceled'> {
     const inlineImages = JSON.parse(item.inline_images || '[]') as GmailInlineImage[];
     const accessToken = await this.getValidGmailAccessToken(item.owner_account);
     if (item.kind === 'send') {
       const stored = await this.snapshot();
       const row = stored.database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
       if (!row) throw new Error('找不到案件資料，排程未寄出');
-      if (text(row['Gmail信件串ID'])) throw new Error('此案件已經有 Gmail 信件串（可能已用其他方式寄出），排程未重複寄送');
+      // 排程等待期間若已用其他方式建立信件串，代表「不需要再寄」，不是 Gmail 寄送失敗。
+      if (text(row['Gmail信件串ID'])) return 'canceled';
       const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
       const result = await postGmailMessage(accessToken, raw);
       await this.mutate('scheduleCaseMail', { user: item.requested_by, account: item.requested_by, provider: 'password', expiresAt: Date.now() }, draft => {
@@ -1542,7 +1568,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         target['Gmail寄件帳號'] = item.owner_account;
         return { result: { ok: true }, changedTables: ['database'] };
       });
-      return;
+      // 清掉舊版可能已建立的其他同案件首次寄信排程。包含 sending，因為同一輪 Cron 可能一次 claim 到多筆舊資料。
+      this.ctx.storage.sql.exec(
+        `UPDATE scheduled_mail SET status = 'canceled', error_message = NULL, updated_at = ?
+         WHERE case_id = ? AND kind = 'send' AND id <> ? AND status IN ('pending', 'sending')`,
+        new Date().toISOString(), item.case_id, item.id
+      );
+      return 'sent';
     }
     const stored = await this.snapshot();
     const row = stored.database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
@@ -1556,6 +1588,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const threadMessages = await fetchGmailThreadMessages(threadAccessToken, threadId);
     const raw = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
     await postGmailMessage(accessToken, raw, threadOwner === canonicalAccount(item.owner_account) ? threadId : undefined);
+    return 'sent';
   }
 
   /** Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）觸發的入口——找出所有「到期的待寄送排程」
@@ -1590,10 +1623,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     let sent = 0, failed = 0;
     for (const item of due) {
+      // 前一筆成功寄出後可能已把同一批 claim 到的舊重複排程改成 canceled；不可繼續用 due 的舊快照寄出。
+      const live = this.ctx.storage.sql.exec<{ status: string }>('SELECT status FROM scheduled_mail WHERE id = ?', item.id).toArray()[0];
+      if (live?.status !== 'sending') continue;
       try {
-        await this.dispatchScheduledMailItem(item);
-        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, updated_at = ? WHERE id = ?', 'sent', new Date().toISOString(), item.id);
-        sent += 1;
+        const outcome = await this.dispatchScheduledMailItem(item);
+        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = NULL, updated_at = ? WHERE id = ?', outcome, new Date().toISOString(), item.id);
+        if (outcome === 'sent') sent += 1;
       } catch (error) {
         const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
         this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = ?, updated_at = ? WHERE id = ?', 'failed', message, new Date().toISOString(), item.id);

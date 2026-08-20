@@ -1551,6 +1551,17 @@ describe('Machi Design API Worker', () => {
       }, token);
       expect(tooSoon).toMatchObject({ ok: false, error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' });
 
+      const firstSchedule = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      expect(firstSchedule.ok).toBe(true);
+      const duplicateSchedule = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 6 * 60 * 1000).toISOString()
+      }, token);
+      expect(duplicateSchedule).toMatchObject({ ok: false, reason: 'SCHEDULE_EXISTS', scheduledId: firstSchedule.scheduledId });
+
       const stub = await schedulerStub();
       await runInDurableObject(stub, async (_instance, state) => {
         const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
@@ -1617,6 +1628,51 @@ describe('Machi Design API Worker', () => {
       const caseRow = (list.rows as Array<Record<string, unknown>>).find(item => item.id === '26080001');
       expect(caseRow?.gmailThreadId).toBe('scheduled-thread-1');
       expect(caseRow?.gmailThreadOwnerAccount).toBe('test.user@emctaipei.com');
+    });
+
+    it('dispatches only one legacy duplicate first-send schedule and cancels the other item claimed in the same cron batch', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '舊重複排程', bodyText: '只能寄一封',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      const firstId = String(scheduled.scheduledId);
+      const duplicateId = `legacy-duplicate-${crypto.randomUUID()}`;
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec(
+          `INSERT INTO scheduled_mail(
+             id, case_id, kind, owner_account, requested_by, to_address, cc_address, subject,
+             body_html, signature_html, inline_images, scheduled_at, status, error_message, created_at, updated_at
+           )
+           SELECT ?, case_id, kind, owner_account, requested_by, to_address, cc_address, subject,
+             body_html, signature_html, inline_images, ?, 'pending', NULL, created_at, updated_at
+           FROM scheduled_mail WHERE id = ?`,
+          duplicateId, Date.now() - 1000, firstId
+        );
+        state.storage.sql.exec('UPDATE scheduled_mail SET scheduled_at = ? WHERE id = ?', Date.now() - 2000, firstId);
+      });
+
+      let sendCalls = 0;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+          sendCalls += 1;
+          return Response.json({ id: 'single-message', threadId: 'single-thread' });
+        }
+        if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+          expect(init?.method).toBe('PUT');
+          return Response.json({ content: { sha: 'single-file-sha' }, commit: { sha: 'single-commit-sha' } });
+        }
+        throw new Error(`unexpected fetch during legacy duplicate dispatch: ${url}`);
+      });
+      const result = await stub.runScheduledDispatch();
+      expect(result).toEqual({ processed: 2, sent: 1, failed: 0 });
+      expect(sendCalls).toBe(1);
+      expect((await scheduledMailRow(firstId))?.status).toBe('sent');
+      expect((await scheduledMailRow(duplicateId))?.status).toBe('canceled');
     });
 
     it('schedules a reply, and re-fetches the thread at dispatch time so a message that arrived after scheduling is still the one replied to', async () => {
@@ -1791,7 +1847,7 @@ describe('Machi Design API Worker', () => {
       expect(dispatch).toEqual({ processed: 0, sent: 0, failed: 0 });
     });
 
-    it('marks a due send-schedule as failed (without creating a duplicate thread) when the case was already sent through another path before dispatch time', async () => {
+    it('cancels a due first-send schedule instead of showing a false failure when the case was already sent through another path', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
       const token = await seedSession('test.user@emctaipei.com', '測試使用者');
@@ -1816,10 +1872,19 @@ describe('Machi Design API Worker', () => {
         throw new Error(`不該呼叫 Gmail 送信——案件已經有信件串了: ${String(input)}`);
       });
       const result = await (await schedulerStub()).runScheduledDispatch();
-      expect(result).toEqual({ processed: 1, sent: 0, failed: 1 });
-      const row = await scheduledMailRow(scheduledId);
-      expect(row?.status).toBe('failed');
-      expect(String(row?.error_message)).toContain('已經有 Gmail 信件串');
+      expect(result).toEqual({ processed: 1, sent: 0, failed: 0 });
+      expect(await scheduledMailRow(scheduledId)).toMatchObject({ status: 'canceled', error_message: null });
+
+      // 舊版已經留下的同類 failed 紀錄，下次讀取清單時也要自動轉成 canceled，才不會繼續顯示紅色誤報。
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec(
+          'UPDATE scheduled_mail SET status = ?, error_message = ? WHERE id = ?',
+          'failed', '此案件已經有 Gmail 信件串（可能已用其他方式寄出），排程未重複寄送', scheduledId
+        );
+      });
+      const listed = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
+      expect((listed.items as Array<{ id: string; status: string }>).find(item => item.id === scheduledId)?.status).toBe('canceled');
+      expect(await scheduledMailRow(scheduledId)).toMatchObject({ status: 'canceled', error_message: null });
     });
 
     it('never dispatches an item that is already "sending" (the claim step this relies on is the same guarantee that prevents the class of duplicate-send bug fixed for the NAS uploader)', async () => {
