@@ -172,6 +172,11 @@ afterEach(() => {
 });
 
 describe('Machi Design API Worker', () => {
+  it('accepts Gmail editor payloads larger than the old 2 MiB ceiling', async () => {
+    const result = await api({ action: 'ping', padding: 'x'.repeat(2 * 1024 * 1024 + 1024) });
+    expect(result).toMatchObject({ ok: true, action: 'ping' });
+  });
+
   it('returns the latest enabled system announcement without requiring login', async () => {
     const result = await api({ action: 'getSystemAnnouncement' });
     expect(result.ok).toBe(true);

@@ -207,6 +207,25 @@ test('Gmail reply composer displays the current account as sender instead of the
   assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
 });
 
+test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /const gmailInlineImageTasksByEditor=new Map\(\)/);
+  assert.match(html, /function queueGmailInlineImages\(editorId,fileList\)/);
+  assert.match(html, /async function waitForGmailInlineImages\(editorId\)/);
+  assert.match(html, /event\.clipboardData\?\.items\|\|\[\]/);
+  assert.match(html, /filter\(item=>item\.kind==='file'\)\.map\(item=>item\.getAsFile\(\)\)\.filter\(file=>file&&file\.type\.startsWith\('image\/'\)\)/);
+  for (const functionName of ['sendGmailComposeModal', 'scheduleComposeMail', 'scheduleThreadReply', 'sendGmailThreadReply']) {
+    const start = html.indexOf(`async function ${functionName}(`);
+    const nextFunction = html.indexOf('\nfunction ', start + 1);
+    const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
+    const ends = [nextFunction, nextAsyncFunction].filter(index => index > start);
+    const end = ends.length ? Math.min(...ends) : html.length;
+    const source = html.slice(start, end);
+    assert.ok(start > 0, `${functionName} should exist`);
+    assert.match(source, /await waitForGmailInlineImages\(editor\.id\)/, `${functionName} should await pasted images`);
+  }
+});
+
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function refreshScheduledMailList(caseId,kind)');

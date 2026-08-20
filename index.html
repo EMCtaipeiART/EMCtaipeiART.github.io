@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-20 Asia/Taipei | build: 20260820-scheduled-thread-refresh-118 -->
+<!-- LAST_MODIFIED: 2026-08-20 Asia/Taipei | build: 20260820-gmail-paste-image-119 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260820-scheduled-thread-refresh-118" />
+  <meta name="app-version" content="20260820-gmail-paste-image-119" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7311,7 +7311,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260820-scheduled-thread-refresh-118';
+const appBuildVersion = '20260820-gmail-paste-image-119';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -8151,6 +8151,8 @@ function closeGmailColorPalette(){
   gmailColorTargetButton=null;
 }
 const gmailInlineImagesByEditor=new Map();
+const gmailInlineImageTasksByEditor=new Map();
+const gmailInlineImageGenerationsByEditor=new Map();
 const gmailInlineImageTypes=new Set(['image/jpeg','image/png','image/webp','image/gif']);
 const gmailInlineImageMaxCount=10,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
 function gmailInlineImageStore(editorId){
@@ -8158,6 +8160,8 @@ function gmailInlineImageStore(editorId){
   return gmailInlineImagesByEditor.get(editorId);
 }
 function clearGmailInlineImages(editorId){
+  gmailInlineImageGenerationsByEditor.set(editorId,(gmailInlineImageGenerationsByEditor.get(editorId)||0)+1);
+  gmailInlineImageTasksByEditor.delete(editorId);
   gmailInlineImageStore(editorId).clear();
   const input=document.querySelector(`[data-rich-image-input-for="${editorId}"]`);
   if(input)input.value='';
@@ -8246,12 +8250,13 @@ function insertGmailInlineImage(editor,item){
   const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
   savedRichSelectionRange=range.cloneRange();
 }
-async function addGmailInlineImages(editorId,fileList){
+async function addGmailInlineImages(editorId,fileList,expectedGeneration=gmailInlineImageGenerationsByEditor.get(editorId)||0){
   // 新增案件送出後的批次確認寄信流程（見 startPostSubmitMailFlow）只有一個編輯區 DOM，
   // 但要輪流承載多筆草稿的內容；內嵌照片是另外用一個以編輯區 id 為 key 的 Map 追蹤，
   // 在草稿之間切換會讓照片資料跟目前顯示的草稿對不起來，這裡先直接擋掉，不支援插入照片。
   if(postSubmitQueue){setSync('批次確認寄信流程暫不支援插入照片，請改用案件列表的「回信」單獨補寄含照片的信件',true);return}
   const editor=document.getElementById(editorId);if(!editor)return;
+  if((gmailInlineImageGenerationsByEditor.get(editorId)||0)!==expectedGeneration)return;
   const files=[...fileList].filter(file=>file&&file.type.startsWith('image/'));
   if(!files.length){setSync('請選擇 JPG、PNG、WebP 或 GIF 照片',true);return}
   const store=pruneGmailInlineImages(editor);
@@ -8262,11 +8267,34 @@ async function addGmailInlineImages(editorId,fileList){
     if(file.size>gmailInlineImageMaxBytes){setSync(`${file.name} 超過 8 MB，請先壓縮後再上傳`,true);continue}
     if(totalBytes+file.size>gmailInlineImageMaxTotalBytes){setSync('信件內嵌照片總量不可超過 18 MB',true);break}
     const dataUrl=await gmailFileDataUrl(file);
+    // 讀檔期間使用者可能已關閉並打開另一個案件的編輯器；舊貼圖不可落入新信件。
+    if((gmailInlineImageGenerationsByEditor.get(editorId)||0)!==expectedGeneration)return;
     const item={contentId:gmailInlineContentId(),fileName:file.name||'照片',mimeType:file.type,size:file.size,dataUrl,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
     store.set(item.contentId,item);totalBytes+=file.size;insertGmailInlineImage(editor,item);added++;
   }
   editor.focus();
   if(added)setSync(`已加入 ${added} 張照片`,false,1800);
+}
+/**
+ * 剪貼簿與 FileReader 都是非同步；同一個編輯器的多次貼上／拖放要依序處理，
+ * 寄送前也必須等這條佇列完成，否則在圖片剛貼上時點「寄出」會漏圖或誤判內容為空。
+ */
+function queueGmailInlineImages(editorId,fileList){
+  const files=[...fileList];
+  const generation=gmailInlineImageGenerationsByEditor.get(editorId)||0;
+  const previous=gmailInlineImageTasksByEditor.get(editorId)||Promise.resolve();
+  const task=previous.catch(()=>{}).then(()=>addGmailInlineImages(editorId,files,generation));
+  gmailInlineImageTasksByEditor.set(editorId,task);
+  task.catch(err=>setSync(`圖片處理失敗：${err.message||err}`,true)).finally(()=>{
+    if(gmailInlineImageTasksByEditor.get(editorId)===task)gmailInlineImageTasksByEditor.delete(editorId);
+  });
+  return task;
+}
+async function waitForGmailInlineImages(editorId){
+  const task=gmailInlineImageTasksByEditor.get(editorId);
+  if(!task)return;
+  setSync('正在處理貼上的圖片...');
+  await task;
 }
 function gmailEditorMailPayload(editor){
   const clone=editor.cloneNode(true),store=pruneGmailInlineImages(editor),inlineImages=[];
@@ -8292,11 +8320,17 @@ function bindGmailInlineImageEditor(editor){
   editor.addEventListener('drop',event=>{
     editor.classList.remove('is-image-dragover');
     const files=[...event.dataTransfer.files].filter(file=>file.type.startsWith('image/'));if(!files.length)return;
-    event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);addGmailInlineImages(editor.id,files);
+    event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);queueGmailInlineImages(editor.id,files);
   });
   editor.addEventListener('paste',event=>{
-    const files=[...event.clipboardData.items].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
-    if(!files.length)return;event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();addGmailInlineImages(editor.id,files);
+    // 某些剪貼簿來源的 DataTransferItem.type 會是空字串，但 getAsFile() 後的 File.type 才有 image/png；
+    // 先取出 File 再判斷，才不會讓這類貼圖落回瀏覽器原生 data: URL，造成無法轉成 Gmail CID 附件。
+    const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter(file=>file&&file.type.startsWith('image/'));
+    if(!files.length)return;
+    event.preventDefault();
+    savedRichSelectionRange=captureCurrentRichSelection();
+    setSync('正在處理貼上的圖片...');
+    queueGmailInlineImages(editor.id,files);
   });
 }
 const gmailRecipientState=new Map();
@@ -8726,6 +8760,7 @@ async function sendGmailComposeModal(){
   if(button)button.disabled=true;
   setSync('透過 Gmail 寄出中...');
   try{
+    await waitForGmailInlineImages(editor.id);
     const [{bodyHtml,inlineImages},signatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     const data=await sheetApi('sendCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,editorToken:currentEditorToken});
     const gmailThreadChanges={gmailThreadId:data.threadId||'',gmailThreadOwnerAccount:currentEditorAccount};
@@ -8876,6 +8911,7 @@ async function scheduleComposeMail(scheduledAt){
   if(button)button.disabled=true;
   setSync('排程建立中...');
   try{
+    await waitForGmailInlineImages(editor.id);
     const [{bodyHtml,inlineImages},signatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     await sheetApi('scheduleCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,scheduledAt,editorToken:currentEditorToken});
     watchScheduledCaseThread(id,scheduledAt);
@@ -8896,14 +8932,15 @@ async function scheduleComposeMail(scheduledAt){
 async function scheduleThreadReply(scheduledAt){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadSchedule');
   if(!id||!editor)return;
-  const editorPayload=gmailEditorMailPayload(editor);
-  if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
-  const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
-  if(to===null||cc===null)return;
-  if(!to){setSync('請填寫收件人',true);return}
   if(button)button.disabled=true;
-  setSync('排程建立中...');
   try{
+    await waitForGmailInlineImages(editor.id);
+    const editorPayload=gmailEditorMailPayload(editor);
+    if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
+    const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
+    if(to===null||cc===null)return;
+    if(!to){setSync('請填寫收件人',true);return}
+    setSync('排程建立中...');
     const signatureHtml=await ensureGmailSignatureLoaded();
     await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
     setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出`,false,3400);
@@ -10089,16 +10126,17 @@ async function sendGmailThreadReply(){
   const row=rows.find(r=>String(r.id)===String(id));
   const replyMode=modal?.dataset.replyMode||'general';
   if(replyMode==='designer'&&modal?.dataset.designerReplyPending==='1'){setSync('圖片上傳中，請稍候再送出',true);return}
-  const editorPayload=gmailEditorMailPayload(editor);
-  if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
-  const modificationContent=replyMode==='modification'?stripGreetingPrefix(editor.innerText||editor.textContent||''):'';
-  if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
-  const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
-  if(to===null||cc===null)return; // 欄位裡有沒送出去的無效 Email，gmailRecipientHeaderValue 內部已經跳出錯誤提示
-  if(!to){setSync('請填寫收件人',true);return}
   if(button)button.disabled=true;
-  setSync('回覆寄送中...');
   try{
+    await waitForGmailInlineImages(editor.id);
+    const editorPayload=gmailEditorMailPayload(editor);
+    if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
+    const modificationContent=replyMode==='modification'?stripGreetingPrefix(editor.innerText||editor.textContent||''):'';
+    if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
+    const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
+    if(to===null||cc===null)return; // 欄位裡有沒送出去的無效 Email，gmailRecipientHeaderValue 內部已經跳出錯誤提示
+    if(!to){setSync('請填寫收件人',true);return}
+    setSync('回覆寄送中...');
     const signatureHtml=await ensureGmailSignatureLoaded();
     await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,editorToken:currentEditorToken});
     editor.innerHTML='';
@@ -12497,7 +12535,7 @@ document.querySelectorAll('.gmail-rich-image-btn').forEach(button=>{
   button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
   button.addEventListener('click',()=>document.querySelector(`[data-rich-image-input-for="${button.dataset.richImageFor}"]`)?.click());
 });
-document.querySelectorAll('.gmail-rich-image-input').forEach(input=>input.addEventListener('change',()=>{addGmailInlineImages(input.dataset.richImageInputFor,input.files);input.value=''}));
+document.querySelectorAll('.gmail-rich-image-input').forEach(input=>input.addEventListener('change',()=>{queueGmailInlineImages(input.dataset.richImageInputFor,input.files);input.value=''}));
 document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
 ['gmailComposeTo','gmailComposeCc','gmailThreadTo','gmailThreadCc'].forEach(bindGmailRecipientControl);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));

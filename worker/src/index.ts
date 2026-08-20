@@ -4,7 +4,10 @@ import { text } from './model';
 
 export { DatabaseCoordinator };
 
-const MAX_REQUEST_BYTES = 2 * 1024 * 1024;
+// 前端 Gmail 編輯器允許最多 18 MiB 原始圖片；轉成 Base64 放進 JSON 後會膨脹到約 24 MiB。
+// 舊的 2 MiB 上限會讓一張普通的貼上截圖還沒進入 sendCaseMail 就被拒絕。
+// 28 MiB 可容納既有 18 MiB 圖片上限的 Base64，並預留主旨、內文、簽名檔與 JSON 開銷。
+const MAX_REQUEST_BYTES = 28 * 1024 * 1024;
 
 function allowedOrigins(env: Env): Set<string> {
   return new Set(env.ALLOWED_ORIGINS.split(',').map(value => value.trim()).filter(Boolean));

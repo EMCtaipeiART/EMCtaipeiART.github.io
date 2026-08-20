@@ -1124,3 +1124,10 @@
 - 本地寫入合併改為永遠接受後台已建立的非空 Gmail thread ID，不允許新案件的舊空值覆蓋。
 - `listScheduledMail` 直接帶回 Durable Object 當下的 Gmail thread ID；前端會追蹤本瀏覽器建立的排程首信，接近排程時間後每次背景刷新直接向 Worker 確認。Cron 寄出後最慢約一個 6 秒刷新週期就會將按鈕轉為「回信」，不再等靜態 db.json 部署。
 - 前端版本：`20260820-scheduled-thread-refresh-118`；Worker 版本：`cloudflare-worker-scheduled-thread-refresh-2026-08-20-7`。
+## 2026-08-20｜Gmail 編輯器貼上圖片後無法寄送修正
+
+- 根因一：前端原本允許內嵌圖片單張 8 MiB、總量 18 MiB，但 Worker 的整個 HTTP request 上限只有 2 MiB。圖片轉 Base64 還會增加約三分之一，因此普通貼上截圖就可能在進入 `sendCaseMail` 前被拒絕。
+- 根因二：貼上圖片使用非同步 FileReader，寄出、回信、排程首信與排程回信原本都不會等待圖片處理完成；剛貼上就點送出時可能漏圖或誤判為空內容。
+- Worker request 上限調整為 28 MiB，可容納既有 18 MiB 圖片總量的 Base64 與信件 JSON 開銷，不放寬 Gmail 圖片原始檔案上限。
+- 同一編輯器的貼上／拖放／選檔改為依序佇列；四種寄送入口都會先等待圖片讀取完成再產生 CID payload。剪貼簿檢查也改為先 `getAsFile()` 再以 `File.type` 判斷，相容 `DataTransferItem.type` 為空的貼圖來源。
+- 前端版本：`20260820-gmail-paste-image-119`；Worker 版本：`cloudflare-worker-gmail-paste-image-2026-08-20-8`。
