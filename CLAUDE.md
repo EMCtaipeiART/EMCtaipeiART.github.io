@@ -189,7 +189,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-20 Asia/Taipei（最新）— 「回信」按鈕改成三選項選單：填寫修改需求信／設計師回覆信／一般回信
+### 2026-08-20 Asia/Taipei（最新）— 修正「Hi 招呼語」英文姓氏、「設計師回覆信」改成即時展開＋圖片非同步補上（上傳完成前擋送出）
+
+- 修改目的：接續上一則「回信」三選項選單的工作，使用者提出兩項修正：①編輯回信時「Hi xxx,」如果對象是英文名字，不該連姓氏一起抓進來（例如 Machi、Allen、David 這種只稱呼名字，不是「Allen Wu」）；②「設計師回覆信」裡「補上NAS自動抓取的圖片」這一段原本只是純文字描述，應該要是真的把圖片附上去；同時要求按下 NAS 資料夾選擇器的「選擇這個資料夾並備份」當下就先展開信件編輯器（不用等備份真正跑完），圖片等備份完成後再非同步補進編輯區，畫面上要有「上傳中」的提示，而且上傳沒完成前不能按下送出。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. **新增 `greetingName(raw)`**：只有整段名字是空白分隔的純英文字詞（例如「Allen Wu」「David Lin」）時才取第一個字當招呼對象（「Allen」「David」）；單一英文字（「Machi」「Allen」）、中文姓名（「陳柏政」，沒有空白分隔）都維持原樣不處理。`openModificationRequestReplyModal()`（填寫修改需求信）與 `openDesignerReplyMailModal()`（設計師回覆信，抓信件串最後一封寄件人姓名的那一段）都改用這支函式包住原本的姓名來源，其餘判斷邏輯（`gmailAddressPeople` 解析、`ownerDisplay`／`row.designer` 的 fallback 順序）完全沒有變動。
+  2. **NAS 資料夾備份改成「一按下就展開信件編輯器」**：`handleUploadFrameMessage()` 的 `machi-nas-folder-backup-started` 分支（使用者在 NAS 資料夾選擇器點下「選擇這個資料夾並備份」，背景真正的掃描／壓縮／上傳這時候都還沒跑完，只是**剛開始**）新增：`nasFolderPickerAfterReply` 為真時，立刻呼叫 `openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folderPath})`（`folderPath` 來自這則訊息本來就有帶的 `data.path`，不用等最終結果）——信件編輯器因此在備份「剛開始」的當下就打開，不用等到整個備份流程結束。`openDesignerReplyMailModal()` 內部固定會先塞入一段帶 `id="gmailDesignerReplyImages"` 的容器，裡面先放一個「圖片上傳中...」的灰字提示（新增 CSS class `.gmail-designer-reply-uploading`），並把送出按鈕（`#gmailThreadReplySend`）設成停用狀態、文字改成「圖片上傳中...」；同時把這次「等待中」的狀態記在 `modal.dataset.designerReplyPending='1'` 與 `modal.dataset.designerReplyCaseId`，供後續辨識。
+  3. **新增 `applyDesignerReplyImages(id,images)`／`resolveDesignerReplyImages(id,{folderPath})`**：等 NAS 備份真正完成（`machi-nas-folder-selected` 訊息抵達）或電腦檔案上傳完成（`machi-case-design-images-updated` 訊息抵達）時，才知道這一輪實際歸類到哪些圖片——這兩個訊息本身都不會直接帶圖片網址，所以 `resolveDesignerReplyImages()` 會重新呼叫既有的 `fetchModificationCounts()` 抓最新的「修改統計表」，取這個案件目前最新一輪的 `images` 陣列，交給 `applyDesignerReplyImages()` 局部替換掉 `#gmailDesignerReplyImages` 容器裡的「圖片上傳中...」文字，換成真正的 `<img>`（直接指向 Drive 圖片網址，不做 CID 附件轉換，跟案件詳情、修改紀錄彈窗顯示縮圖是同一種做法）；沒有抓到任何圖片時（例如備份失敗但路徑仍登記）就把整個容器直接拿掉，不留空白。這一步**只局部更新圖片容器本身**，不會重建整個編輯區內容——使用者如果在等待期間已經在編輯區其他地方打了字，不會被這次更新洗掉。完成後解除 `designerReplyPending`、把送出按鈕恢復成可點擊、文字改回「送出回覆」。`sendGmailThreadReply()` 新增在 `designer` 模式下的防呆檢查：`modal.dataset.designerReplyPending==='1'` 時直接擋下送出並提示「圖片上傳中，請稍候再送出」，不是只依賴按鈕本身停用（雙重保護，跟這個檔案其餘表單驗證的既有風格一致）。`openGmailThreadModal()` 每次開啟固定重置 `designerReplyPending`／`designerReplyCaseId` 與送出按鈕文字/狀態，避免上一次「設計師回覆信」留下的暫存狀態污染下一次任何模式的開啟。
+  4. **NAS 選擇器視窗被意外關閉時，也要解除等待狀態**：`watchNasFolderPickerWindow()` 偵測到視窗在**備份進行中**被關閉（`wasBackingUp` 為真，既有邏輯本來就有這個判斷）時，新增呼叫 `applyDesignerReplyImages(pendingCaseId,[])`——把已經展開、卡在「圖片上傳中」的信件編輯器解除停用狀態（沒有任何圖片可以補，容器直接移除），不會讓使用者卡在一個永遠按不了送出的畫面。
+  5. **電腦檔案上傳路徑同步改成塞入真實圖片**：`machi-case-design-images-updated` 分支裡，`fetchModificationCounts()` 完成後（這一步本來就會拿到最新的修改紀錄，包含剛上傳的圖片）直接取這個案件目前最新一輪的 `images`，呼叫 `openDesignerReplyMailModal(id,{})`（沒有 NAS 路徑，這條路徑本來就沒有資料夾概念，「NAS路徑」那段文字不會出現）之後立刻 `applyDesignerReplyImages(id,images)`——因為這個路徑等訊息送達時，圖片其實已經上傳完成，不需要像 NAS 那樣真的等待，所以不會有明顯的「上傳中」停留時間，但仍然走同一套局部替換邏輯，維持兩條路徑程式碼一致、行為一致。
+- 風險區塊：
+  - `greetingName()` 是簡單的空白分隔判斷（`^[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*)+$`），只精確處理「純英文、空白分隔多個字詞」這一種情況——中英混合（例如「Allen 王」）、逗號分隔（「Wu, Allen」）這類非典型格式會維持原樣不裁切，這是刻意保守的行為（抓不到清楚規則寧可不動，不會裁到不該裁的字）。
+  - 插入的 `<img>` 直接引用 Drive 圖片網址（跟 `revisionImagesHtml()`、案件詳情彈窗顯示縮圖同一種做法），不是透過既有「上傳照片」那套 `cid:` 內嵌附件機制——寄出的信件裡這些圖片是「外部連結圖片」，收件人的郵件用戶端需要能連到 `lh3.googleusercontent.com` 才看得到（這些檔案在上傳當下就已經設成公開分享連結，跟系統其他地方顯示這批圖片縮圖的方式完全一致，不是這次新增的風險）。
+  - `resolveDesignerReplyImages()` 在「信件編輯器沒有因為某種原因先被 `machi-nas-folder-backup-started` 打開」（理論上不該發生，例如更舊版本的資料夾選擇器沒有送出這則訊息）時，會自己補開一次編輯器再抓圖片——這種情況下使用者看不到明顯的「上傳中」等待過程，但仍然會拿到正確的最終結果，不影響資料正確性，只影響體驗流暢度。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過；`node --test backend/test/*.test.mjs` 33/33 全過。
+  - 用本機 Node 靜態伺服器＋ Browser pane 做隔離測試（stub `sheetApi`／`requireAccess`，沒有真的打任何網路請求）：①`greetingName()` 對「Machi」「Allen」「David」「Allen Wu」「David Lin」「Amber Tian」「陳柏政」「許芷芸」「O'Brien Smith」「Anna-Marie Lee」十種輸入逐一驗證，只有多字詞英文姓名被正確裁成第一個字，其餘全部維持原樣；②`openDesignerReplyMailModal()` 開啟當下正確顯示「圖片上傳中...」佔位文字、送出按鈕正確停用且文字變成「圖片上傳中...」、`Hi Allen,`（不是 `Hi Allen Wu,`）正確帶入；③這個狀態下呼叫 `sendGmailThreadReply()` 正確被擋下（不會呼叫任何 API，顯示「圖片上傳中，請稍候再送出」）；④`resolveDesignerReplyImages()` 抓到 2 張真實圖片後，正確把佔位文字換成 2 個 `<img>`、送出按鈕正確恢復可點擊與原文字「送出回覆」；⑤在圖片還沒補上前，先模擬使用者在編輯區手動多打一句話，確認 `resolveDesignerReplyImages()` 完成後這句話仍然完整保留（局部更新不會洗掉使用者已經打的內容）；⑥完全沒有抓到任何圖片時，正確把整個圖片容器移除（不留空白），送出按鈕仍正確恢復可點擊；⑦完整模擬 `handleUploadFrameMessage` 依序收到 `machi-nas-folder-backup-started`→（使用者這時候打字）→`machi-nas-folder-selected` 兩則真實訊息序列，確認編輯器在「備份剛開始」那一刻就已經展開（`modalHidden:false`、`pending:'1'`、`sendDisabled:true`）、使用者這段期間打的字在圖片補上後依然存在、`updateCaseRow` 仍正確收到資料夾連結與關鍵字（沒有被這次改動影響）；⑧模擬使用者在備份進行中把 NAS 資料夾選擇器視窗關掉（`win.closed=true`），確認送出按鈕正確恢復可點擊、圖片容器正確移除、正確顯示「NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認」（不是誤判成「尚未選擇資料夾」那則提示，這點在測試時發現第一版測試因為呼叫順序寫錯而先看到誤判的訊息，改成跟正式流程一致的呼叫順序——先啟動 `watchNasFolderPickerWindow` 再觸發 `backup-started`——重測後確認正確，證實不是程式碼本身的問題，是測試腳本一開始的呼叫順序寫反了）；⑨電腦檔案上傳路徑（`machi-case-design-images-updated`）確認正確直接帶入真實圖片、不出現「NAS路徑」那段文字（因為沒有資料夾路徑）、`caseDesignUploadAfterReply` 正確重置為 `false`；⑩沒有 `afterReply` 旗標的既有「過稿中」流程，確認完整走過 backup-started／selected 兩則訊息後 `openDesignerReplyMailModal` 完全沒有被呼叫，`updateCaseRow` 行為與改動前一致，沒有回歸。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「按下選擇 NAS 資料夾並備份→立刻看到信件編輯器展開、上傳中提示→等真正備份完成→圖片自動補上、送出按鈕恢復可按」的完整端對端流程；插入的 `<img>` 標籤指向的 Drive 網址在真實 Gmail 收件匣裡的實際顯示效果（是否會被收件人的郵件用戶端預設封鎖外部圖片、需要手動允許顯示）也沒有機會實測，這屬於一般 HTML 信件外部圖片本來就有的既有限制，不是這次新增的風險。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-20 Asia/Taipei — 「回信」按鈕改成三選項選單：填寫修改需求信／設計師回覆信／一般回信
 
 - 修改目的：使用者要求前台案件列表的「回信」按鈕點擊後不要直接跳進信件編輯器，改成先彈出三個選項：①「填寫修改需求信」——專案負責人專用，寫這次的修改需求，內容同步記錄進「修改紀錄」並讓修改輪次自動跳到一修／二修…；②「設計師回覆信」——設計師專用，比照既有「過稿中」的 NAS 資料夾／電腦檔案上傳流程，完成後自動轉入信件編輯器，並帶入固定格式的回覆範本；③「一般回信」——維持原本行為，直接開啟信件編輯器讓使用者手動填寫。三種情境都沿用既有的「個人簽名檔內建、編輯視窗裡完全不顯示，寄出時才由後端附加」機制（`ensureGmailSignatureLoaded`／`signatureHtml`），這次沒有改動這一段。
 - 影響檔案：`index.html`。
