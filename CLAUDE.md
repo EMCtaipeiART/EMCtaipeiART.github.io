@@ -189,7 +189,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-20 Asia/Taipei（最新）— 「回信」彈窗尺寸對齊「寄信」；寄信/回信新增「指定排程時間」，可依台灣時間自動排程寄出
+### 2026-08-20 Asia/Taipei（最新）— 回信「副本」改顯示聯絡人姓名；「指定排程時間」改成年/月/日＋時間分開填寫；收件人/副本清單過長自動收合
+
+- 修改目的：使用者接續前一則「指定排程時間」的工作，一次提出三項：①回信編輯器的「副本」欄位目前顯示的是完整 email，要求改成顯示聯絡人姓名（跟「收件人」欄位一致）；②「指定排程時間」彈窗目前是單一個 `datetime-local` 輸入框，要求改成「年／月／日」三個下拉選單＋一個獨立的「時間」欄位分開填寫，確認後要能看到目前指定的時間；③（同一輪追加）寄件人／收件人／副本欄位的聯絡人數量過多時，要把清單收合，不要讓一長排晶片佔滿畫面。
+- 追查過程：①的根因出在 Worker 端，不是前端顯示問題——`computeReplySuggestion()`（[[2026-08-20 Asia/Taipei（最新）— 「回信」彈窗尺寸對齊「寄信」...|上一則新增，把「回覆全部」的收件人／副本計算邏輯抽成共用函式]]）組出 `suggestedCc` 時，重用了 `extractEmailAddressesFromHeader()`——這支函式的正則表達式只擷取 email 本身、會把顯示名整個丟掉，本來是設計給 `gmailThreadParticipantEmails()`（判斷「這個帳號的 email 有沒有出現在信件裡」）這種**只需要比對 email、不需要顯示給使用者看**的情境用；`computeReplySuggestion()` 誤用同一支函式來組「要直接顯示給使用者看」的副本字串，才會讓回信編輯器的副本晶片只能顯示一長串信箱、沒有名字可以顯示——「收件人」欄位沒有這個問題，是因為 `to` 這個值本身是直接取用整個 From／To 標頭原始字串（`gmailHeaderValue()` 讀到的原始值），從來沒有經過任何裁切顯示名的處理，兩個欄位的資料流其實是不同路徑，這次修正前只有「副本」這條路徑真的踩到問題。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`。
+- 影響功能：
+  1. **Worker 新增 `extractAddressEntriesFromHeader(value)`**：跟既有 `extractEmailAddressesFromHeader()` 一樣逐一解析逗號分隔的「顯示名 <email>」或純 email，但回傳 `{email,full}`——`email` 給比對用（跟原本一樣一律轉小寫），`full` 是要顯示給使用者看的完整字串（有顯示名就是「顯示名 <email>」，沒有就是純 email）。`computeReplySuggestion()` 組 `cc` 的那段改用這支新函式取代 `extractEmailAddressesFromHeader()`——**判斷「哪些人要被排除」（自己、寄件帳號本人、這次回覆對象）維持用只看 email 的既有邏輯不變**（`excludedFromCc` 這個 Set 存的仍然是純 email，不受這次改動影響），只有「最後真正要組進字串、顯示給使用者看」的那一段換成保留顯示名的版本。`suggestedTo` 完全沒有動——它本來就沒有這個問題，這次沒有引入任何新邏輯。
+  2. **前端信件編輯器完全不用改**：收件人／副本聯絡人晶片（`renderGmailRecipientChips()`）本來就是用 `entry.name||entry.email` 顯示標籤——過去只是因為 Worker 傳回的 `suggestedCc` 裡本來就沒有名字可以用，所以才顯示成一長串 email；這次 Worker 端補上名字之後，前端不需要任何改動就會自動正確顯示姓名。
+  3. **「指定排程時間」改成年／月／日＋時間分開填寫**：新增 `taipeiPartsFromDate(date)`（用 `Intl.DateTimeFormat` 依 `Asia/Taipei` 時區把一個 `Date` 物件拆成 `{year,month,day,time}` 四個欄位，延續這個檔案一貫「明確指定時區、不依賴瀏覽器系統時區」的既有慣例）取代原本的 `taipeiDateTimeLocalValue()`；新增 `daysInMonthCount(year,month)`（正確處理平年/閏年，含世紀年份的 400 年規則）、`scheduleDateSelectValue()`（把三個下拉選單＋時間欄位組回 `YYYY-MM-DDTHH:mm:00+08:00` 這種不含時區歧義的 ISO 字串）、`rebuildScheduleDayOptions()`（切換年份或月份時，「日」下拉選單的選項數量會依當月實際天數重新計算，原本選的日期超過新月份的天數上限時自動夾到當月最大值，不會殘留一個不存在的日期）、`updateSchedulePreview()`（即時在彈窗裡顯示一行「將於 YYYY/MM/DD HH:mm 寄出」的預覽文字，確認前就能看到目前選的完整時間）。`openScheduleTimePicker()`／`confirmScheduleMail()` 改成呼叫這組新函式；年份下拉選單的範圍維持跟之前一樣（現在到一年後），驗證邏輯（至少一分鐘後、最多一年內）完全沒有改變，只是輸入介面從單一原生日期選擇器換成三個下拉選單＋時間欄位。
+  4. **收件人／副本清單過長自動收合**：新增 `GMAIL_RECIPIENT_CHIP_VISIBLE_COUNT=3` 與 `gmailRecipientExpandedFields`（一個 `Set`，記錄目前哪些欄位處於「已展開」狀態）。`renderGmailRecipientChips(fieldId)` 改成：這個欄位的聯絡人數量超過 4 人（`>3+1`）才會觸發收合，只先顯示前 3 位＋一顆「+N 位」按鈕；點擊後展開顯示全部，並換成一顆「收合」按鈕可以再縮回去。`bindGmailRecipientControl()` 的點擊事件委派新增判斷 `[data-recipient-expand]`／`[data-recipient-collapse]` 這兩個屬性，分別把欄位加進／移出 `gmailRecipientExpandedFields`後重新渲染。`openGmailComposeModal()`／`openGmailThreadModal()`（每次真正開啟一個新的寄信／回信情境）都新增 `gmailRecipientExpandedFields.clear()`，避免上一個案件手動展開過的狀態意外沿用到下一個案件；同一個彈窗內，收件人與副本兩個欄位的展開狀態各自獨立、互不影響。**這次的收合只套用在「收件人」與「副本」兩個真正可能有多筆的欄位**——「寄件人」（回信彈窗裡的 `#gmailThreadFromValue`）本來就是唯讀的單一固定值（案件記錄的寄件帳號本人，一律只有一個），架構上不存在「人數過多」這種情況，這次沒有、也不需要對它做任何改動。
+- 風險區塊：
+  - `extractAddressEntriesFromHeader()` 的正則解析方式（先用逗號切開，逐段比對「顯示名 <email>」或純 email 的樣式）跟既有 `extractEmailAddressesFromHeader()` 是同一種簡單、非嚴謹 RFC 5322 剖析的做法，只是多保留一段顯示名文字——遇到極少見的複雜信箱格式（例如顯示名本身帶逗號但沒有正確用引號包起來）解析結果可能不夠精確，但這跟既有 `extractEmailAddressesFromHeader()` 面對同類輸入時本來就有的既有限制程度相同，不是這次新增的風險。
+  - 年份下拉選單的範圍（目前到一年後）維持跟上一則新增「指定排程時間」時的既有限制一樣，這次沒有調整；如果之後真的需要排更久以後的時間，需要另外討論。
+  - 收合功能的門檻（超過 4 人才收合）是憑經驗抓的合理值，跟撰寫視窗版面寬度（`gmail-compose-modal-card`，已在上一則調整到跟回信視窗對齊）搭配起來看起來協調；如果之後版面又有調整，可能需要重新評估這個數字。
+- 已檢查／驗證方式：
+  - Worker：`cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **39/39 全過**（新增一支測試，先重現了 bug 才確認修好——暫時把 `computeReplySuggestion()` 的 cc 組字串邏輯改回舊版（只用 `extractEmailAddressesFromHeader()`），重新跑這支新測試，確認真的會失敗（`Cc` 只剩 `sikai.fu@emctaipei.com`，沒有「傅思凱」這個名字），證明測試真的有捕捉到這個問題，不是巧合通過；還原修正後重新確認整個套件 39/39 全過）；`npx wrangler deploy --dry-run` 打包成功。
+  - `node --test backend/test/*.test.mjs` 35/35 全過（這次沒有動 `backend/`，跑這個純粹確認沒有意外牽動共用邏輯）。
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過。用本機 Node 靜態伺服器＋ Browser pane（透過 1280×900 的 iframe，避免這個沙箱環境本身量不到真實視窗尺寸的既有限制）對 `index.html` 做隔離測試（沒有真的打任何網路請求）：①`taipeiPartsFromDate()` 對兩個跨時區/跨日期的 UTC 時間點都正確換算成台北時間；②實際開啟「指定排程時間」彈窗，確認年／月／日／時間四個欄位預設值正確（現在＋5 分鐘）、即時預覽文字正確；③切換月份到 2 月、日期原本選 31 日，確認正確自動重建成只有 28 個選項並把日期夾到 28（`daysInMonthCount()` 對平年/閏年/世紀年的計算也逐一驗證正確）；④送出驗證：選現在的時間（未滿一分鐘）正確被擋下且不會呼叫任何 API，選一個合法的未來時間正確呼叫排程函式、`scheduledAt` 正確帶 `+08:00` 尾碼且彈窗正確關閉；⑤收合功能：4 位聯絡人不收合、5 位正確收合成 3 位＋「+2 位」按鈕，點擊展開後正確顯示全部 5 位＋「收合」按鈕，再點收合正確縮回 3 位；收合狀態下移除其中一位聯絡人（總數降到 4）正確不再顯示收合按鈕；確認收件人與副本兩個欄位的展開狀態互相獨立、不會互相影響；確認手動清空 `gmailRecipientExpandedFields` 後重新渲染會正確收合回去（模擬重新開啟一個新案件的效果）；⑥確認帶顯示名的聯絡人晶片正確顯示姓名（例如「Client Name」），沒有顯示名的正確顯示 email 本身——驗證前端這一段渲染邏輯本來就是正確的，只是先前 Worker 沒有給它名字可以顯示。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「開啟回信視窗→確認副本欄位顯示的是聯絡人姓名而不是 email→用年/月/日/時間選單指定一個排程時間→送出→確認排程清單顯示正確→等到指定時間確認真的收到信」的完整端對端流程；也沒有肉眼確認收合按鈕在淺色／深色模式下的實際視覺效果（這次的驗證是透過 `getComputedStyle`／DOM 結構逐項比對，不是截圖比對）。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，回信編輯器的副本欄位仍然只會顯示 email、不會顯示聯絡人姓名，不影響「寄出」／「送出回覆」這兩個既有的立即寄送功能；「指定排程時間」與收件人清單收合都是純前端邏輯，push 後即生效，不受 Worker 部署進度影響。
+- commit：`4fe250a`
+
+### 2026-08-20 Asia/Taipei — 「回信」彈窗尺寸對齊「寄信」；寄信/回信新增「指定排程時間」，可依台灣時間自動排程寄出
 
 - 修改目的：使用者要求兩件事：①「回信」彈窗（`#gmailThreadModal`）跟「寄信」彈窗（`#gmailComposeModal`）視覺上要統一，改成同樣寬高；②在寄信／回信的信件編輯器下方新增「指定排程時間」按鈕，讓使用者可以指定一個台灣時間，系統自動在那個時間點寄出，不需要使用者當下真的按下寄出。
 - 尺寸對齊：追查發現「寄信」彈窗的卡片有額外的 `gmail-compose-modal-card` class（決定 `width:min(880px,...)`，蓋過共用的 `.revision-modal-card{width:min(520px,...)}`），「回信」彈窗的卡片沒有這個 class；兩者的 `max-height` 本來就已經共用同一條 `.gmail-modal-card` 規則、原本就一致，唯一差異只有寬度。直接把 `gmail-compose-modal-card` 這個 class 也加到 `#gmailThreadModal` 的卡片元素上，兩個彈窗就會用同一條寬度規則，不需要新增或修改任何 CSS 數值。
