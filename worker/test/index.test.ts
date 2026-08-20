@@ -163,7 +163,9 @@ describe('Machi Design API Worker', () => {
     expect(result.ok).toBe(true);
     expect(result.action).toBe('getSystemAnnouncement');
     expect(result.announcement).toMatchObject({ version: 'v4.7' });
-    expect(String((result.announcement as Record<string, unknown>)?.content || '')).toContain('Gmail');
+    const content = String((result.announcement as Record<string, unknown>)?.content || '');
+    expect(content).toContain('Gmail');
+    expect(content).not.toMatch(/[📢🎉✉📝💬🖼👥⚙🔔🚀]/u);
   });
 
   it('resolves customer edit permissions from current department and group membership', () => {
