@@ -1518,6 +1518,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     ).toArray();
     return {
       ok: true, action: 'listScheduledMail',
+      // 前端排程寄信後不該再等 GitHub Pages 的靜態 db.json 部署。
+      // 直接帶回 Durable Object 目前已經寫入的信件串狀態，讓前端能在 Cron 寄出後立即把「發信」切成「回信」。
+      gmailThreadId: text(row?.['Gmail信件串ID']),
+      gmailThreadOwnerAccount: canonicalAccount(row?.['Gmail寄件帳號']),
       items: items.map(item => ({
         id: item.id, kind: item.kind, to: item.to_address, cc: item.cc_address, subject: item.subject,
         scheduledAt: item.scheduled_at, status: item.status, errorMessage: item.error_message || '',

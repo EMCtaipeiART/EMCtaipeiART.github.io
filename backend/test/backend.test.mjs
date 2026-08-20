@@ -296,6 +296,10 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /confirmedAt:0/);
   assert.match(html, /previous\?\.changes.*\.\.\.changes/);
   assert.match(html, /now-entry\.confirmedAt>=localWriteConfirmedGraceMs/);
+  assert.match(html, /key==='gmailThreadId'\|\|key==='gmailThreadOwnerAccount'/);
+  assert.match(html, /if\(row\.gmailThreadId\)\{\s*merged\.gmailThreadId=row\.gmailThreadId/);
+  assert.match(html, /function refreshWatchedScheduledThreads\(\)/);
+  assert.match(html, /watchScheduledCaseThread\(id,scheduledAt\)/);
   assert.match(html, /authoritativeCaseIds/);
   assert.match(html, /function reconcileCurrentDatabaseRows\(/);
   assert.match(html, /cachedRows\.filter\(row=>!isCaseId_\(row\.id\)\|\|authoritativeIds\.has\(String\(row\.id\)\)\)/);

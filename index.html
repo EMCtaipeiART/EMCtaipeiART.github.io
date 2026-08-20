@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-19 Asia/Taipei | build: 20260819-gmail-thread-names-112 -->
+<!-- LAST_MODIFIED: 2026-08-20 Asia/Taipei | build: 20260820-scheduled-thread-refresh-118 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260819-gmail-thread-names-112" />
+  <meta name="app-version" content="20260820-scheduled-thread-refresh-118" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7311,7 +7311,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260820-scheduled-mail-cleanup-117';
+const appBuildVersion = '20260820-scheduled-thread-refresh-118';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -7741,6 +7741,15 @@ function readRecentLocalWrites(){
 let recentLocalWrites = readRecentLocalWrites();
 const localWriteTtlMs = 10*60*1000;
 const localWriteConfirmedGraceMs = 2*60*1000;
+const scheduledThreadWatchKey = 'designRequestScheduledThreadWatchesV1';
+function readScheduledThreadWatches(){
+  try{
+    const entries=JSON.parse(localStorage.getItem(scheduledThreadWatchKey)||'[]');
+    return new Map((Array.isArray(entries)?entries:[]).filter(entry=>Array.isArray(entry)&&entry.length===2&&entry[1]?.expiresAt>Date.now()));
+  }catch(err){return new Map()}
+}
+let scheduledThreadWatches = readScheduledThreadWatches();
+let scheduledThreadRefreshPromise = null;
 const backgroundRefreshMs = 6000;
 const backgroundFullRefreshMs = 30000;
 let lastFullBackgroundRefreshAt = 0;
@@ -8809,6 +8818,54 @@ async function confirmScheduleMail(kind){
   if(kind==='compose')await scheduleComposeMail(scheduledAt);
   else await scheduleThreadReply(scheduledAt);
 }
+function persistScheduledThreadWatches(){
+  try{localStorage.setItem(scheduledThreadWatchKey,JSON.stringify([...scheduledThreadWatches]))}
+  catch(err){console.warn('無法儲存排程信件串追蹤狀態',err)}
+}
+function watchScheduledCaseThread(caseId,scheduledAt){
+  const id=String(caseId||'').trim(), sendAt=Date.parse(scheduledAt);
+  if(!id||!Number.isFinite(sendAt))return;
+  scheduledThreadWatches.set(id,{scheduledAt:sendAt,expiresAt:Math.max(sendAt+24*60*60*1000,Date.now()+24*60*60*1000)});
+  persistScheduledThreadWatches();
+}
+/**
+ * 排程首信由 Worker Cron 在背景寄出，瀏覽器不會收到原本的 sendCaseMail 回傳。
+ * 只追蹤這個瀏覽器實際建立過的排程，並在接近寄送時間後透過 Worker 查詢；
+ * 一旦 Durable Object 已有 thread ID 就立即更新畫面，不等 GitHub Pages 的 db.json 重新部署。
+ */
+function refreshWatchedScheduledThreads(){
+  if(scheduledThreadRefreshPromise||!currentEditorToken||!scheduledThreadWatches.size)return scheduledThreadRefreshPromise||Promise.resolve();
+  const now=Date.now(), due=[];
+  let watchesChanged=false;
+  scheduledThreadWatches.forEach((watch,id)=>{
+    if(!watch||watch.expiresAt<=now){scheduledThreadWatches.delete(id);watchesChanged=true;return}
+    if(now>=Number(watch.scheduledAt||0)-65000)due.push([id,watch]);
+  });
+  if(watchesChanged)persistScheduledThreadWatches();
+  if(!due.length)return Promise.resolve();
+  scheduledThreadRefreshPromise=Promise.allSettled(due.map(async([id,watch])=>{
+    const data=await sheetApi('listScheduledMail',{caseId:id,editorToken:currentEditorToken});
+    const threadId=String(data.gmailThreadId||'').trim();
+    if(threadId){
+      const changes={gmailThreadId:threadId,gmailThreadOwnerAccount:String(data.gmailThreadOwnerAccount||'').trim()};
+      rows=rows.map(row=>String(row.id)===id?normalizeRow({...row,...changes}):row);
+      rememberLocalWrite(id,changes);
+      scheduledThreadWatches.delete(id);
+      return true;
+    }
+    const items=Array.isArray(data.items)?data.items:[];
+    const stillRunning=items.some(item=>item.kind==='send'&&(item.status==='pending'||item.status==='sending'));
+    if(!stillRunning&&now>=Number(watch.scheduledAt||0))scheduledThreadWatches.delete(id);
+    return false;
+  })).then(results=>{
+    persistScheduledThreadWatches();
+    if(results.some(result=>result.status==='fulfilled'&&result.value)){
+      save();
+      render();
+    }
+  }).finally(()=>{scheduledThreadRefreshPromise=null});
+  return scheduledThreadRefreshPromise;
+}
 async function scheduleComposeMail(scheduledAt){
   const modal=$('#gmailComposeModal'), id=modal?.dataset.caseId, button=$('#gmailComposeSchedule');
   if(!id)return;
@@ -8821,6 +8878,7 @@ async function scheduleComposeMail(scheduledAt){
   try{
     const [{bodyHtml,inlineImages},signatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     await sheetApi('scheduleCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,scheduledAt,editorToken:currentEditorToken});
+    watchScheduledCaseThread(id,scheduledAt);
     setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出`,false,3400);
     refreshScheduledMailList(id,'compose');
   }catch(err){
@@ -8938,6 +8996,9 @@ function rememberLocalWrite(id,changes,ttl=localWriteTtlMs){const key=String(id)
 function forgetLocalWrite(id){if(recentLocalWrites.delete(String(id)))persistRecentLocalWrites()}
 function localWriteValueMatches(row,key,value){
   const actual=row?.[key]??'';
+  // Gmail 信件串只會從「尚未寄出」變成「已有信件串」，不會由前端清空。新建案件的本地快照若還是空值，
+  // 而後台已經有值，代表這個欄位已被後續寄信正常更新，不能把它當成寫入尚未同步。
+  if((key==='gmailThreadId'||key==='gmailThreadOwnerAccount')&&!String(value??'').trim()&&String(actual??'').trim())return true;
   if(key==='start'||key==='end')return slashDate(actual)===slashDate(value);
   if(key==='qty')return String(Number(actual)||0)===String(Number(value)||0);
   return String(actual??'')===String(value??'');
@@ -8962,7 +9023,13 @@ function applyRecentLocalWrites(list){
       else if(now-entry.confirmedAt>=localWriteConfirmedGraceMs){recentLocalWrites.delete(String(row.id));changed=true}
       return [row];
     }
-    return [normalizeRow({...row,...entry.changes})];
+    const merged=normalizeRow({...row,...entry.changes});
+    // 即使新建案件的其他欄位因後台正規化而尚未完全相等，也不允許舊的空 Gmail 狀態蓋掉後台已建立的信件串。
+    if(row.gmailThreadId){
+      merged.gmailThreadId=row.gmailThreadId;
+      merged.gmailThreadOwnerAccount=row.gmailThreadOwnerAccount||merged.gmailThreadOwnerAccount;
+    }
+    return [merged];
   });
   recentLocalWrites.forEach((entry,id)=>{
     if(presentIds.has(id))return;
@@ -11273,7 +11340,7 @@ function refreshLatestInBackground(){
   loadSheet({full,quick:!full,background:true,forceFresh:true}).catch(err=>{
     if(full)lastFullBackgroundRefreshAt=0;
     console.warn(full?'定時完整同步失敗':'定時刷新最新資料失敗',err);
-  });
+  }).finally(()=>{void refreshWatchedScheduledThreads()});
 }
 /**
  * 分頁切到背景再切回來時，Gmail 撰寫／回信視窗的 contenteditable 編輯區有時會悄悄失去焦點與選取範圍——
@@ -11309,7 +11376,7 @@ function refreshWhenPageReturns(){
     lastFullBackgroundRefreshAt=now;
     setSync('回到頁面，正在同步最新案件...');
     returnRefreshPromise=loadSheet({full:true,background:true,forceFresh:true})
-      .then(()=>{setSync('已同步最新案件'); restoreOpenGmailEditorFocus(); return Promise.allSettled([loadDesignerRoster({background:true}),loadIssueReports({background:true})])})
+      .then(()=>{setSync('已同步最新案件'); restoreOpenGmailEditorFocus(); return Promise.allSettled([loadDesignerRoster({background:true}),loadIssueReports({background:true}),refreshWatchedScheduledThreads()])})
       .catch(err=>{lastReturnRefreshAt=0;setSync(`回到頁面後同步失敗：${err.message}`,true)})
       .finally(()=>{returnRefreshPromise=null});
   },80);

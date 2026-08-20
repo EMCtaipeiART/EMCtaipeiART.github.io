@@ -1628,6 +1628,15 @@ describe('Machi Design API Worker', () => {
       const caseRow = (list.rows as Array<Record<string, unknown>>).find(item => item.id === '26080001');
       expect(caseRow?.gmailThreadId).toBe('scheduled-thread-1');
       expect(caseRow?.gmailThreadOwnerAccount).toBe('test.user@emctaipei.com');
+
+      // 前端用這個輕量查詢追蹤排程首信；必須直接從 Durable Object 帶回信件串狀態，
+      // 不用等 GitHub Pages 將靜態 db.json 重新部署後才把按鈕從「發信」切成「回信」。
+      const scheduledList = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
+      expect(scheduledList).toMatchObject({
+        ok: true,
+        gmailThreadId: 'scheduled-thread-1',
+        gmailThreadOwnerAccount: 'test.user@emctaipei.com'
+      });
     });
 
     it('dispatches only one legacy duplicate first-send schedule and cancels the other item claimed in the same cron batch', async () => {

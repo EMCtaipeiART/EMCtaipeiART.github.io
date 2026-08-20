@@ -1118,3 +1118,9 @@
 - 正式環境：補齊 `CORS_ORIGINS`、`MEDIA_ROOT`、ERP OAuth 環境設定與持久磁碟部署說明；GitHub Pages 僅發布靜態前端，可寫入 API 必須運行於 Node 主機。
 - 驗證：後端 7 組整合測試涵蓋七表 CRUD／搜尋／排序、ERP PKCE 及媒體完整生命週期；三個 HTML 的內嵌 JavaScript 均通過語法檢查；前台原 Google Sheets 執行端點掃描為零。
 - 版本：前端 `20260807-json-production-84`、七表管理頁 `20260807-json-admin-2`、圖片管理頁 `20260807-json-upload-2`、後端 `json-backend-2026-08-07-2`。
+## 2026-08-20｜新增案件排程發信後按鈕立即轉為回信
+
+- 根因：新增案件的前端本地寫入保護會保留 10 分鐘，其中包含建立當下尚為空值的 Gmail 信件串欄位。排程信由 Worker Cron 寄出並寫入 thread ID 後，前端又被這份舊快照蓋回空值，所以「發信」要等保護過期才變成「回信」。
+- 本地寫入合併改為永遠接受後台已建立的非空 Gmail thread ID，不允許新案件的舊空值覆蓋。
+- `listScheduledMail` 直接帶回 Durable Object 當下的 Gmail thread ID；前端會追蹤本瀏覽器建立的排程首信，接近排程時間後每次背景刷新直接向 Worker 確認。Cron 寄出後最慢約一個 6 秒刷新週期就會將按鈕轉為「回信」，不再等靜態 db.json 部署。
+- 前端版本：`20260820-scheduled-thread-refresh-118`；Worker 版本：`cloudflare-worker-scheduled-thread-refresh-2026-08-20-7`。
