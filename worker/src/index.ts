@@ -140,5 +140,17 @@ export default {
       console.error(JSON.stringify({ event: 'request-error', message: error instanceof Error ? error.message : String(error) }));
       return jsonResponse(request, env, { ok: false, error: error instanceof Error ? error.message : String(error) }, 200);
     }
+  },
+  // Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）——寄信/回信「指定排程時間」功能的實際
+  // 寄出入口，不經過一般的 fetch()/handleApi() 那條路（背景排程沒有使用者 session、也不是一次 HTTP 請求），
+  // 直接呼叫 DatabaseCoordinator 這個具名 Durable Object 上公開的 runScheduledDispatch()。
+  async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
+    try {
+      const result = await stub.runScheduledDispatch();
+      console.log(JSON.stringify({ event: 'scheduled-mail-dispatch', ...result }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
+    }
   }
 } satisfies ExportedHandler<Env>;

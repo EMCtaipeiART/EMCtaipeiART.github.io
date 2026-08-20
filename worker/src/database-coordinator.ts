@@ -25,6 +25,12 @@ const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', 
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null };
+type ScheduledMailRow = {
+  id: string; case_id: string; kind: 'send' | 'reply'; owner_account: string; requested_by: string;
+  to_address: string; cc_address: string; subject: string; body_html: string; signature_html: string;
+  inline_images: string; scheduled_at: number; status: 'pending' | 'sending' | 'sent' | 'failed' | 'canceled';
+  error_message: string | null; created_at: string; updated_at: string;
+};
 
 function cloneDatabase(database: DatabaseSnapshot): DatabaseSnapshot {
   return structuredClone(database);
@@ -1362,6 +1368,213 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'replyCaseMail', gmailMessageId: text(sendData.id) };
   }
 
+  private insertScheduledMail(options: {
+    caseId: string; kind: 'send' | 'reply'; ownerAccount: string; requestedBy: string;
+    to: string; cc: string; subject: string; bodyHtml: string; signatureHtml: string;
+    inlineImages: GmailInlineImage[]; scheduledAt: number;
+  }): string {
+    const id = randomToken();
+    const now = new Date().toISOString();
+    this.ctx.storage.sql.exec(
+      `INSERT INTO scheduled_mail(id, case_id, kind, owner_account, requested_by, to_address, cc_address, subject, body_html, signature_html, inline_images, scheduled_at, status, error_message, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?)`,
+      id, options.caseId, options.kind, canonicalAccount(options.ownerAccount), canonicalAccount(options.requestedBy),
+      options.to, options.cc, options.subject, options.bodyHtml, options.signatureHtml, JSON.stringify(options.inlineImages),
+      options.scheduledAt, now, now
+    );
+    return id;
+  }
+
+  /** 「指定排程時間」寄信（第一次建立信件串）——驗證跟 sendCaseMail 一致，多一道 scheduledAt 檢查；
+   * 排程建立當下就先驗證一次 Gmail token 有效（getValidGmailAccessToken 會嘗試 refresh），避免排到很久
+   * 以後才發現帳號根本沒連 Gmail、使用者卻毫無所知——真正寄出時仍然會再驗一次，refresh token 有可能
+   * 在排程等待期間才失效。這裡只登記排程，不做任何實際寄送，真正寄出交給 runScheduledDispatch()。 */
+  private async scheduleCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const caseId = text(payload.caseId || payload.id);
+    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
+    const to = text(payload.to);
+    const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
+    const subject = text(payload.subject);
+    const bodyHtml = resolveBodyHtml(payload);
+    const signatureHtml = text(payload.signatureHtml);
+    const inlineImages = resolveGmailInlineImages(payload);
+    if (!caseId) return { ok: false, action: 'scheduleCaseMail', error: '缺少案件編號' };
+    if (!to || !subject) return { ok: false, action: 'scheduleCaseMail', error: '缺少收件人或主旨' };
+    if (!existingRow) return { ok: false, action: 'scheduleCaseMail', error: '找不到案件資料' };
+    if (text(existingRow['Gmail信件串ID'])) {
+      return { ok: false, action: 'scheduleCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
+    }
+    const scheduledAt = parseScheduledAt(payload.scheduledAt);
+    if (!scheduledAt) return { ok: false, action: 'scheduleCaseMail', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
+    await this.getValidGmailAccessToken(current.account);
+    const scheduledId = this.insertScheduledMail({
+      caseId, kind: 'send', ownerAccount: current.account, requestedBy: current.account,
+      to, cc, subject, bodyHtml, signatureHtml, inlineImages, scheduledAt
+    });
+    return { ok: true, action: 'scheduleCaseMail', scheduledId, scheduledAt };
+  }
+
+  /** 「指定排程時間」回信——驗證跟 replyCaseMail 一致（含討論串相關人檢查），多一道 scheduledAt 檢查。
+   * 收件人／副本邏輯跟 replyCaseMail 完全一致：前端有帶就用前端的，沒帶才 fallback 用 computeReplySuggestion
+   * 算出的「回覆全部」預設值。這裡只登記排程，In-Reply-To/References 標頭要等真正寄出那一刻
+   * （dispatchScheduledMailItem）才重新讀一次信件串現況去組，不是排程當下就算好固定死——如果排程等待期間
+   * 這條討論串又有新信件加入，寄出時仍然會正確接在「當時最新的那一封」後面，行為跟立即回信一致。 */
+  private async scheduleCaseReply(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const caseId = text(payload.caseId || payload.id);
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!row) return { ok: false, action: 'scheduleCaseReply', error: '找不到案件資料' };
+    if (!hasRowCapability(database, current, 'request.mail', row)) {
+      return { ok: false, action: 'scheduleCaseReply', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
+    const bodyHtml = resolveBodyHtml(payload);
+    const signatureHtml = text(payload.signatureHtml);
+    const inlineImages = resolveGmailInlineImages(payload);
+    if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'scheduleCaseReply', error: '回覆內容不可為空' };
+    const threadId = text(row['Gmail信件串ID']);
+    const owner = canonicalAccount(row['Gmail寄件帳號']);
+    if (!threadId) return { ok: false, action: 'scheduleCaseReply', error: '此案件尚未透過 Gmail 寄出過信件' };
+    const accessToken = await this.getValidGmailAccessToken(owner);
+    const threadMessages = await fetchGmailThreadMessages(accessToken, threadId);
+    if (!accountIsGmailThreadParticipant(current.account, threadMessages)) {
+      return { ok: false, action: 'scheduleCaseReply', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
+    }
+    const suggestion = this.computeReplySuggestion(threadMessages, owner);
+    const to = text(payload.to) || suggestion.to;
+    if (!to) return { ok: false, action: 'scheduleCaseReply', error: '無法判斷回覆對象' };
+    const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
+    const scheduledAt = parseScheduledAt(payload.scheduledAt);
+    if (!scheduledAt) return { ok: false, action: 'scheduleCaseReply', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
+    const scheduledId = this.insertScheduledMail({
+      caseId, kind: 'reply', ownerAccount: owner, requestedBy: current.account,
+      to, cc, subject: '', bodyHtml, signatureHtml, inlineImages, scheduledAt
+    });
+    return { ok: true, action: 'scheduleCaseReply', scheduledId, scheduledAt };
+  }
+
+  /** 給信件編輯器顯示「已排程」清單用——只有跟 sendCaseMail/replyCaseMail 同一套 request.mail 權限的帳號
+   * 才看得到，沒有另外限定「只能看自己排的」，因為這本來就是同一個案件、同一批人共用的信件操作範圍。 */
+  private listScheduledMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const caseId = text(payload.caseId || payload.id);
+    if (!caseId) return { ok: false, action: 'listScheduledMail', error: '缺少案件編號' };
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    if (!hasRowCapability(database, current, 'request.mail', row || {})) {
+      return { ok: false, action: 'listScheduledMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
+    const items = this.ctx.storage.sql.exec<ScheduledMailRow>(
+      `SELECT id, kind, to_address, cc_address, subject, scheduled_at, status, error_message, requested_by, created_at
+       FROM scheduled_mail WHERE case_id = ? ORDER BY scheduled_at DESC LIMIT 30`, caseId
+    ).toArray();
+    return {
+      ok: true, action: 'listScheduledMail',
+      items: items.map(item => ({
+        id: item.id, kind: item.kind, to: item.to_address, cc: item.cc_address, subject: item.subject,
+        scheduledAt: item.scheduled_at, status: item.status, errorMessage: item.error_message || '',
+        requestedBy: item.requested_by, createdAt: item.created_at
+      }))
+    };
+  }
+
+  /** 取消一筆還沒寄出的排程——只有還是 pending 狀態的才能取消（已經在寄送中／已寄出／已失敗／已取消都不能
+   * 再改動），權限判斷比照該筆排程所屬案件的 request.mail（跟建立排程時同一套邏輯，不是只看「是不是本人排
+   * 的」，因為信件操作本來就是同一批有權限的人共用，不是個人專屬）。 */
+  private cancelScheduledMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const id = text(payload.id || payload.scheduledId);
+    if (!id) return { ok: false, action: 'cancelScheduledMail', error: '缺少排程編號' };
+    const rows = this.ctx.storage.sql.exec<ScheduledMailRow>('SELECT * FROM scheduled_mail WHERE id = ?', id).toArray();
+    const item = rows[0];
+    if (!item) return { ok: false, action: 'cancelScheduledMail', error: '找不到這筆排程' };
+    if (item.status !== 'pending') return { ok: false, action: 'cancelScheduledMail', error: '這筆排程已經處理過，無法取消' };
+    const row = database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
+    if (!hasRowCapability(database, current, 'request.mail', row || {})) {
+      return { ok: false, action: 'cancelScheduledMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
+    this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, updated_at = ? WHERE id = ? AND status = ?', 'canceled', new Date().toISOString(), id, 'pending');
+    return { ok: true, action: 'cancelScheduledMail', id };
+  }
+
+  /** 實際把一筆排定的信寄出去——由 runScheduledDispatch() 對每一筆到期的排程各自呼叫。kind='send' 在真正
+   * 寄出前重新檢查一次案件是否「已經有」Gmail 信件串（排程等待期間，案件有可能被用其他方式先寄出過），
+   * 避免重複建立第二條信件串；成功後跟 sendCaseMail 一樣把 Gmail信件串ID／Gmail寄件帳號寫回 database 表。
+   * kind='reply' 一律在寄出前重新讀一次信件串現況（fetchGmailThreadMessages/buildGmailReplyRaw），不是沿用
+   * 排程建立當下的舊標頭，確保接在正確的最新一封信後面。失敗直接讓例外往外拋，由呼叫端統一記錄失敗原因。 */
+  private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<void> {
+    const inlineImages = JSON.parse(item.inline_images || '[]') as GmailInlineImage[];
+    const accessToken = await this.getValidGmailAccessToken(item.owner_account);
+    if (item.kind === 'send') {
+      const stored = await this.snapshot();
+      const row = stored.database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
+      if (!row) throw new Error('找不到案件資料，排程未寄出');
+      if (text(row['Gmail信件串ID'])) throw new Error('此案件已經有 Gmail 信件串（可能已用其他方式寄出），排程未重複寄送');
+      const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
+      const result = await postGmailMessage(accessToken, raw);
+      await this.mutate('scheduleCaseMail', { user: item.requested_by, account: item.requested_by, provider: 'password', expiresAt: Date.now() }, draft => {
+        const target = draft.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
+        if (!target) throw new Error('找不到案件資料');
+        target['Gmail信件串ID'] = result.threadId;
+        target['Gmail寄件帳號'] = item.owner_account;
+        return { result: { ok: true }, changedTables: ['database'] };
+      });
+      return;
+    }
+    const stored = await this.snapshot();
+    const row = stored.database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
+    if (!row) throw new Error('找不到案件資料，排程未寄出');
+    const threadId = text(row['Gmail信件串ID']);
+    if (!threadId) throw new Error('此案件已經沒有 Gmail 信件串，排程未寄出');
+    const threadMessages = await fetchGmailThreadMessages(accessToken, threadId);
+    const raw = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
+    await postGmailMessage(accessToken, raw, threadId);
+  }
+
+  /** Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）觸發的入口——找出所有「到期的待寄送排程」
+   * 逐一寄出。這是公開方法（不是 private），供 index.ts 的 scheduled() 直接用 stub.runScheduledDispatch()
+   * 呼叫，不走一般帶 session 的 handle() action 路由（這是背景排程，沒有使用者 session 可言）。
+   *
+   * claim 這一步（SELECT 到期項目→同步呼叫 UPDATE 標成 'sending'）刻意寫成兩個 sql.exec 之間完全沒有
+   * await，確保這兩行在 Durable Object 裡是同一個不可中斷的同步區塊執行完——Cloudflare 允許同一個 DO
+   * 實例同時處理多個並行呼叫（在 await 的地方才會真的交錯執行），如果兩次 Cron 觸發剛好重疊（例如上一輪
+   * 因為要寄的信很多、還沒寄完，下一分鐘又觸發一次），沒有這道 claim 會讓兩輪都读到同一批 'pending'
+   * 項目、各自呼叫 Gmail API 寄出兩次——這正是這個系統最近才真正踩過、也修過的同一類重複寄送問題
+   * （NAS 自動上傳的鎖只保護自己、不保護另一支同時讀寫同一份狀態的程式），這裡從一開始就把兩個入口
+   * （claim 與 dispatch）分開、claim 用同步區塊完成，避免重演同一種錯誤。
+   *
+   * 'sending' 狀態如果卡住超過 10 分鐘沒有變成 'sent'/'failed'（例如那次 Worker 執行被平台中途中止），
+   * 视為異常中斷，下一輪執行一開始會先把它們收回 'pending' 重新排隊，不會永遠卡住不寄。 */
+  async runScheduledDispatch(): Promise<{ processed: number; sent: number; failed: number }> {
+    const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    this.ctx.storage.sql.exec(
+      `UPDATE scheduled_mail SET status = 'pending' WHERE status = 'sending' AND updated_at < ?`, staleBefore
+    );
+    const due = this.ctx.storage.sql.exec<ScheduledMailRow>(
+      `SELECT * FROM scheduled_mail WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 20`, Date.now()
+    ).toArray();
+    if (due.length) {
+      const claimedAt = new Date().toISOString();
+      const placeholders = due.map(() => '?').join(',');
+      this.ctx.storage.sql.exec(
+        `UPDATE scheduled_mail SET status = 'sending', updated_at = ? WHERE id IN (${placeholders})`,
+        claimedAt, ...due.map(item => item.id)
+      );
+    }
+    let sent = 0, failed = 0;
+    for (const item of due) {
+      try {
+        await this.dispatchScheduledMailItem(item);
+        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, updated_at = ? WHERE id = ?', 'sent', new Date().toISOString(), item.id);
+        sent += 1;
+      } catch (error) {
+        const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
+        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = ?, updated_at = ? WHERE id = ?', 'failed', message, new Date().toISOString(), item.id);
+        failed += 1;
+      }
+    }
+    return { processed: due.length, sent, failed };
+  }
+
   /**
    * 前台「填寫設計需求」表單「客戶別」下拉選單的「新增客戶別」——只需要 request.create（跟新增案件同一個
    * 廣泛授權），任何登入角色都能建立一筆只有名稱、專案負責人／設計負責人／部門組別皆空白的客戶別。
@@ -1416,6 +1629,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);
       if (action === 'getCaseMailThread') return await this.getCaseMailThread(payload, database, session);
       if (action === 'replyCaseMail') return await this.replyCaseMail(payload, database, session);
+      if (action === 'scheduleCaseMail') return await this.scheduleCaseMail(payload, database, session);
+      if (action === 'scheduleCaseReply') return await this.scheduleCaseReply(payload, database, session);
+      if (action === 'listScheduledMail') return this.listScheduledMail(payload, database, session);
+      if (action === 'cancelScheduledMail') return this.cancelScheduledMail(payload, database, session);
       if (action === 'addCustomer') return await this.addCustomer(payload, database, session);
 
       if (action === 'list' || action === 'recent') {

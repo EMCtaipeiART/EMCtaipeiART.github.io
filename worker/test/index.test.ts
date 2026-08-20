@@ -123,6 +123,20 @@ async function seedSession(account: string, user = account): Promise<string> {
   return token;
 }
 
+/** 直接在 DO 的 gmail_tokens 表插入一筆已連接的 Gmail 帳號，讓 getValidGmailAccessToken() 不用重跑一次
+ * 完整的 OAuth connect 流程就能拿到可用的 access token——排程寄信/回信的測試大多要模擬「這個帳號已經連過
+ * Gmail」這個前提，用這個 helper 一次到位，跟既有測試（見 gmail_tokens 直接 INSERT 的既有案例）同一套做法。 */
+async function seedGmailTokens(account: string, accessToken: string, gmailAddress = `${account.split('@')[0]}@gmail.example`): Promise<void> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    state.storage.sql.exec(
+      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, connected_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      account, `refresh-${account}`, accessToken, Date.now() + 3600 * 1000, gmailAddress, new Date().toISOString(), new Date().toISOString()
+    );
+  });
+}
+
 async function api(payload: Record<string, unknown>, token = ''): Promise<Record<string, unknown>> {
   const response = await SELF.fetch('https://worker.test/api', {
     method: 'POST',
@@ -229,7 +243,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -1438,5 +1452,315 @@ describe('Machi Design API Worker', () => {
     expect(managerMail.error).not.toBe('此帳號沒有「request.mail」權限');
     const managerDelete = await api({ action: 'delete', id: '26080001' }, token);
     expect(managerDelete).toMatchObject({ ok: true, id: '26080001' });
+  });
+
+  describe('scheduled mail (指定排程時間)', () => {
+    async function schedulerStub(): Promise<DurableObjectStub<DatabaseCoordinator>> {
+      return env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    }
+    /** 直接把某筆排程的 scheduled_at 往前改，模擬「已經到了排定寄送的時間」——測試不用真的等待。 */
+    async function forceScheduledAtDue(id: string, offsetMs = -1000): Promise<void> {
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET scheduled_at = ? WHERE id = ?', Date.now() + offsetMs, id);
+      });
+    }
+    async function scheduledMailRow(id: string): Promise<{ status: string; error_message: string | null } | undefined> {
+      const stub = await schedulerStub();
+      return runInDurableObject(stub, async (_instance, state) =>
+        state.storage.sql.exec<{ status: string; error_message: string | null }>('SELECT status, error_message FROM scheduled_mail WHERE id = ?', id).toArray()[0]
+      );
+    }
+
+    it('rejects an invalid scheduledAt (too soon / missing) and rejects when the case already has a thread', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const missing = await api({ action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x' }, token);
+      expect(missing).toMatchObject({ ok: false, error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' });
+
+      const tooSoon = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5000).toISOString()
+      }, token);
+      expect(tooSoon).toMatchObject({ ok: false, error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' });
+
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['Gmail信件串ID'] = 'already-sent-thread';
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+      const threadExists = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      expect(threadExists).toMatchObject({ ok: false, reason: 'THREAD_EXISTS' });
+    });
+
+    it('schedules a first-send mail, and runScheduledDispatch actually sends it once it is due, writing the thread id back to the case row', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '排程寄信測試', bodyText: '排程內容',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      expect(scheduled.ok).toBe(true);
+      const scheduledId = String(scheduled.scheduledId);
+      expect(scheduledId).toBeTruthy();
+
+      // 還沒到排定時間——這次呼叫不應該寄出任何東西。
+      const notYet = await (await schedulerStub()).runScheduledDispatch();
+      expect(notYet).toEqual({ processed: 0, sent: 0, failed: 0 });
+
+      await forceScheduledAtDue(scheduledId);
+      let sendCalls = 0;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+          sendCalls += 1;
+          const body = JSON.parse(String(init?.body));
+          expect(body.threadId).toBeUndefined();
+          // 內文是巢狀 base64 編碼在 MIME part 裡，不會直接出現在外層 raw 解碼結果，這裡只驗證最外層一定
+          // 看得到的收件人標頭；內文/簽名檔的組信正確性已經有 sendCaseMail 既有測試涵蓋，這裡的重點是
+          // 「排程真的會在到期時觸發寄送」，不重複驗證 MIME 組裝細節。
+          const decoded = decodeBase64UrlText(String(body.raw));
+          expect(decoded).toContain('To: client@example.com');
+          return Response.json({ id: 'scheduled-msg-1', threadId: 'scheduled-thread-1' });
+        }
+        // 送出成功後，dispatchScheduledMailItem 會跟立即寄信（sendCaseMail）一樣呼叫 mutate() 把
+        // Gmail信件串ID／Gmail寄件帳號寫回 database 表，這一步會真的呼叫 GitHub Contents API 提交。
+        if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+          expect(init?.method).toBe('PUT');
+          return Response.json({ content: { sha: `scheduled-file-${crypto.randomUUID()}` }, commit: { sha: 'scheduled-commit-sha' } });
+        }
+        throw new Error(`unexpected fetch during scheduled send dispatch: ${url}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      expect(sendCalls).toBe(1);
+
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('sent');
+
+      // 案件本身要跟立即寄信一樣，正確寫回 Gmail信件串ID／Gmail寄件帳號。
+      const list = await api({ action: 'list' }, token);
+      const caseRow = (list.rows as Array<Record<string, unknown>>).find(item => item.id === '26080001');
+      expect(caseRow?.gmailThreadId).toBe('scheduled-thread-1');
+      expect(caseRow?.gmailThreadOwnerAccount).toBe('test.user@emctaipei.com');
+    });
+
+    it('schedules a reply, and re-fetches the thread at dispatch time so a message that arrived after scheduling is still the one replied to', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        const row = database.tables.database.rows.find(item => item['案件編號'] === '26080001')!;
+        row['Gmail信件串ID'] = 'reply-thread-1';
+        row['Gmail寄件帳號'] = 'test.user@emctaipei.com';
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const messagesAtScheduleTime = [{
+        id: 'thread-msg-1', snippet: '', payload: {
+          mimeType: 'text/plain', body: { data: toBase64Url('第一封') },
+          headers: [
+            { name: 'From', value: 'client@example.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+            { name: 'Message-Id', value: '<msg1@mail.gmail.com>' }, { name: 'Subject', value: '測試主旨' }
+          ]
+        }
+      }];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/reply-thread-1?format=full') {
+          return Response.json({ id: 'reply-thread-1', messages: messagesAtScheduleTime });
+        }
+        throw new Error(`unexpected fetch while scheduling reply: ${url}`);
+      });
+      const scheduled = await api({
+        action: 'scheduleCaseReply', caseId: '26080001', bodyText: '排程回覆內容',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      expect(scheduled.ok).toBe(true);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      // 排程等待期間，這條討論串多了一封新信（client 又追加寄了一封）——真正寄出時應該接在這封「當時最新」的
+      // 信件後面，不是沿用排程建立當下（第一封信）算出的舊 In-Reply-To/References。
+      const messagesAtDispatchTime = [
+        ...messagesAtScheduleTime,
+        {
+          id: 'thread-msg-2', snippet: '', payload: {
+            mimeType: 'text/plain', body: { data: toBase64Url('第二封，排程等待期間才寄到') },
+            headers: [
+              { name: 'From', value: 'client@example.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+              { name: 'Message-Id', value: '<msg2@mail.gmail.com>' }, { name: 'References', value: '<msg1@mail.gmail.com>' },
+              { name: 'Subject', value: 'Re: 測試主旨' }
+            ]
+          }
+        }
+      ];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/reply-thread-1?format=full') {
+          return Response.json({ id: 'reply-thread-1', messages: messagesAtDispatchTime });
+        }
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+          const body = JSON.parse(String(init?.body));
+          expect(body.threadId).toBe('reply-thread-1');
+          // 這裡的重點是「真正寄出時有沒有正確接在排程等待期間才出現的最新一封信後面」，內文本身是巢狀
+          // base64 編碼、不會直接出現在外層解碼結果，組信正確性已經有既有測試涵蓋，這裡不重複驗證。
+          const decoded = decodeBase64UrlText(String(body.raw));
+          expect(decoded).toContain('In-Reply-To: <msg2@mail.gmail.com>');
+          expect(decoded).toContain('References: <msg1@mail.gmail.com> <msg2@mail.gmail.com>');
+          return Response.json({ id: 'scheduled-reply-msg-1', threadId: 'reply-thread-1' });
+        }
+        throw new Error(`unexpected fetch during scheduled reply dispatch: ${url}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('sent');
+    });
+
+    it('lists pending scheduled mail for a case and lets a pending item be canceled (but not twice, and not once already dispatched)', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      const scheduledId = String(scheduled.scheduledId);
+
+      const listed = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
+      expect(listed.ok).toBe(true);
+      expect(listed.items).toMatchObject([{ id: scheduledId, kind: 'send', to: 'client@example.com', status: 'pending' }]);
+
+      const canceled = await api({ action: 'cancelScheduledMail', id: scheduledId }, token);
+      expect(canceled).toMatchObject({ ok: true, id: scheduledId });
+      const listedAfterCancel = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
+      // 已取消的排程不會出現在「待寄送」清單裡（前端只顯示 pending/failed，這裡直接驗證後端回傳的原始狀態）。
+      expect((listedAfterCancel.items as Array<{ status: string }>)[0].status).toBe('canceled');
+
+      const cancelAgain = await api({ action: 'cancelScheduledMail', id: scheduledId }, token);
+      expect(cancelAgain).toMatchObject({ ok: false, error: '這筆排程已經處理過，無法取消' });
+
+      // 已取消的排程即使到了排定時間，也不應該被 runScheduledDispatch 寄出。
+      await forceScheduledAtDue(scheduledId);
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        throw new Error(`不該有任何 Gmail 呼叫，已取消的排程不該被寄出: ${String(input)}`);
+      });
+      const dispatch = await (await schedulerStub()).runScheduledDispatch();
+      expect(dispatch).toEqual({ processed: 0, sent: 0, failed: 0 });
+    });
+
+    it('marks a due send-schedule as failed (without creating a duplicate thread) when the case was already sent through another path before dispatch time', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      // 模擬「排程等待期間，這個案件已經被用其他方式（例如使用者直接按了『寄出』）建立過信件串」。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['Gmail信件串ID'] = 'already-sent-by-someone-else';
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        throw new Error(`不該呼叫 Gmail 送信——案件已經有信件串了: ${String(input)}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 0, failed: 1 });
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('failed');
+      expect(String(row?.error_message)).toContain('已經有 Gmail 信件串');
+    });
+
+    it('never dispatches an item that is already "sending" (the claim step this relies on is the same guarantee that prevents the class of duplicate-send bug fixed for the NAS uploader)', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      // runScheduledDispatch() 只挑 status='pending' 的到期項目（見該方法裡 claim 的 SQL：先 SELECT
+      // WHERE status='pending'，再同步 UPDATE 成 'sending'，中間完全沒有 await）——這裡直接把這筆排程
+      // 標成「已經在 sending 中」，模擬「另一輪 Cron 呼叫剛好已經搶到並開始處理這筆」的狀態，驗證這一輪
+      // 呼叫會正確跳過它、不會重複呼叫 Gmail 送出第二次。比起真的併發呼叫兩次 runScheduledDispatch()
+      // （在這個測試環境會讓 Workers 執行環境本身崩潰，不是穩定可重現的驗證方式），這樣直接驗證 claim
+      // 機制實際依賴的 SQL 條件（WHERE status='pending'）本身是正確的，是更直接、更穩定的驗證方式；
+      // 「sending 狀態卡住超過 10 分鐘會被收回 pending 重新排隊」則由下一個測試涵蓋，兩者合起來完整涵蓋
+      // claim 機制「不重複寄送」與「不會永遠卡住」這兩個保證。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET status = ?, updated_at = ? WHERE id = ?', 'sending', new Date().toISOString(), scheduledId);
+      });
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+        throw new Error(`不該呼叫 Gmail 送信——這筆排程已經被標成 sending，不該被重複挑到: ${String(input)}`);
+      });
+      const result = await stub.runScheduledDispatch();
+      expect(result).toEqual({ processed: 0, sent: 0, failed: 0 });
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('sending');
+    });
+
+    it('reclaims a schedule stuck in "sending" for more than 10 minutes and retries it on the next dispatch pass', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'x', bodyText: 'x',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, token);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      // 模擬「上一輪執行到一半，Worker 被平台中止」留下的卡住狀態：status='sending'、但 updated_at 已經是
+      // 11 分鐘前，超過 10 分鐘的異常判定門檻。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const staleUpdatedAt = new Date(Date.now() - 11 * 60 * 1000).toISOString();
+        state.storage.sql.exec('UPDATE scheduled_mail SET status = ?, updated_at = ? WHERE id = ?', 'sending', staleUpdatedAt, scheduledId);
+      });
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'recovered-msg-1', threadId: 'recovered-thread-1' });
+        if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+          expect(init?.method).toBe('PUT');
+          return Response.json({ content: { sha: `recovered-file-${crypto.randomUUID()}` }, commit: { sha: 'recovered-commit-sha' } });
+        }
+        throw new Error(`unexpected fetch: ${url}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('sent');
+    });
   });
 });
