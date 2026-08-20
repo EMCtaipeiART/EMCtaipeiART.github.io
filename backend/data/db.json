@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2146,
+  "revision": 2147,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-20T10:13:19.518Z",
+  "updatedAt": "2026-08-20T10:14:01.735Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1460,7 +1460,7 @@
         {"客戶別":"丹士特","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"livia.chu@emctaipei.com\"]","設計負責人":"[\"Anna\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 18:02","更新者":"Machi","排序":"9"},
         {"客戶別":"王品","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Mickey組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Mickey組\"]","更新時間":"2026-08-19 18:02","更新者":"Machi","排序":"10"},
         {"客戶別":"欣格家居","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Odin組\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\",\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-19 18:02","更新者":"Machi","排序":"11"},
-        {"客戶別":"金士頓","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Mickey組\",\"group:Cherry組\",\"lorraine.luo@emctaipei.com\"]","設計負責人":"[\"Amber\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Mickey組\",\"Cherry組\"]","更新時間":"2026-08-19 18:01","更新者":"Machi","排序":"8"},
+        {"客戶別":"金士頓","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Mickey組\",\"group:Cherry組\",\"lorraine.luo@emctaipei.com\"]","設計負責人":"[\"Amber\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"Mickey組\",\"Cherry組\",\"lorraine.luo@emctaipei.com\"]","更新時間":"2026-08-20 18:14","更新者":"Machi","排序":"8"},
         {"客戶別":"保誠人壽","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Odin組\",\"saurman.wu@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-19 18:03","更新者":"Machi","排序":"12"},
         {"客戶別":"保麗淨","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Emily組\"]","設計負責人":"[]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Emily組\"]","更新時間":"2026-08-19 18:04","更新者":"Machi","排序":"13"},
         {"客戶別":"席伊麗","專案負責人":"[\"department:測試員\",\"department:設計部\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\"]","更新時間":"2026-08-19 18:04","更新者":"Machi","排序":"14"},
