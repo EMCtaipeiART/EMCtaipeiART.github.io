@@ -208,8 +208,32 @@ export const DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS = Object.freeze([Object.freeze({
   '是否啟用': '啟用',
   '發布時間': '2026-08-20',
   '更新時間': '2026-08-20',
-  '更新者': '系統預設'
+  '更新者': '系統預設',
+  '已讀紀錄': '[]'
 })]);
+
+export function systemAnnouncementReadRecords(rowOrValue) {
+  let source = rowOrValue && typeof rowOrValue === 'object' && !Array.isArray(rowOrValue)
+    ? rowOrValue['已讀紀錄']
+    : rowOrValue;
+  if (typeof source === 'string') {
+    try { source = JSON.parse(source); } catch { source = []; }
+  }
+  if (!Array.isArray(source)) return [];
+  const records = [], seen = new Set();
+  for (const item of source) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const account = String(item.account ?? item['帳號'] ?? '').trim().toLowerCase();
+    if (!account || seen.has(account)) continue;
+    seen.add(account);
+    records.push({
+      account,
+      name: String(item.name ?? item['名稱'] ?? item['姓名'] ?? '').trim(),
+      readAt: String(item.readAt ?? item['已讀時間'] ?? '').trim()
+    });
+  }
+  return records;
+}
 
 export function latestSystemAnnouncement(database) {
   const rows = database?.tables?.['系統公告欄']?.rows || [];
@@ -272,7 +296,7 @@ export const TABLE_SCHEMAS = {
   },
   '系統公告欄': {
     primaryKey: '公告版本',
-    headers: ['公告版本', '公告標題', '公告內容', '是否啟用', '發布時間', '更新時間', '更新者']
+    headers: ['公告版本', '公告標題', '公告內容', '是否啟用', '發布時間', '更新時間', '更新者', '已讀紀錄']
   },
   '修改統計表': {
     primaryKey: null,
@@ -380,9 +404,10 @@ export function normalizeDatabaseShape(input) {
       else table.rows = table.rows.map(row => (
         String(row['公告版本'] ?? '').trim() === 'v4.7'
         && String(row['更新者'] ?? '').trim() === '系統預設'
-          ? { ...row, ...DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS[0] }
+          ? { ...row, ...DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS[0], '已讀紀錄': row['已讀紀錄'] || '[]' }
           : row
       ));
+      table.rows.forEach(row => { row['已讀紀錄'] = JSON.stringify(systemAnnouncementReadRecords(row)); });
     }
     if (name === '角色權限範本') {
       const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));

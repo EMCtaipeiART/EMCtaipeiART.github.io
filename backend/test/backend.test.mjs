@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { JsonDatabase } from '../json_database.mjs';
-import { emptyDatabase, normalizeDatabaseShape, publicSystemAnnouncement, stringifyDatabaseForStorage } from '../schema.mjs';
+import { emptyDatabase, normalizeDatabaseShape, publicSystemAnnouncement, stringifyDatabaseForStorage, systemAnnouncementReadRecords } from '../schema.mjs';
 import { calculateWeight } from '../weighting.mjs';
 import { createApp } from '../app.mjs';
 import { parseCsv } from '../import_google_sheets.mjs';
@@ -136,6 +136,7 @@ test('database modification stats are derived from the modification table', () =
 
 test('system announcement defaults to v4.7 and only exposes the latest enabled version', () => {
   const database = emptyDatabase();
+  assert.ok(database.tables['系統公告欄'].headers.includes('已讀紀錄'));
   assert.equal(publicSystemAnnouncement(database).version, 'v4.7');
   assert.match(publicSystemAnnouncement(database).content, /Gmail/);
   assert.doesNotMatch(publicSystemAnnouncement(database).content, /[📢🎉✉📝💬🖼👥⚙🔔🚀]/u);
@@ -146,6 +147,9 @@ test('system announcement defaults to v4.7 and only exposes the latest enabled v
   assert.equal(publicSystemAnnouncement(database).version, 'v4.7');
   database.tables['系統公告欄'].rows.at(-1)['是否啟用'] = '啟用';
   assert.equal(publicSystemAnnouncement(database).version, 'v4.8');
+  database.tables['系統公告欄'].rows[0]['已讀紀錄'] = JSON.stringify([{ account: 'USER@EMCTAIPEI.COM', name: '使用者', readAt: '2026/08/20 10:00:00' }]);
+  normalizeDatabaseShape(database);
+  assert.deepEqual(systemAnnouncementReadRecords(database.tables['系統公告欄'].rows[0]), [{ account: 'user@emctaipei.com', name: '使用者', readAt: '2026/08/20 10:00:00' }]);
 });
 
 test('system announcement keeps only the header megaphone and centers its circular close button', async () => {
@@ -578,8 +582,12 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
   assert.match(html, /const TABLE_ORDER=\['database','系統公告欄','設計列表','加權計分標準','短連結','修改統計表'/);
   assert.match(html, /function systemAnnouncementAdminHtml\(rows\)/);
+  assert.match(html, /data-announcement-toggle/);
+  assert.match(html, /function systemAnnouncementReadHtml\(row\)/);
+  assert.match(html, /查看已讀帳號/);
   assert.match(front, /id="systemAnnouncementDismiss">\u4e0d再出現/);
   assert.match(front, /machiSystemAnnouncementDismissedVersionV1/);
+  assert.match(front, /markSystemAnnouncementRead/);
   assert.match(html, /function shortLinkTableHtml\(data\)/);
   // 補充資料連結不再有獨立頁籤，也不再併入「修改列表」的案件群組顯示。
   assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'補充資料連結'/);
@@ -880,6 +888,12 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '系統公告欄', '修改統計表', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
   const announcement = await api(app.baseUrl, 'getSystemAnnouncement');
   assert.equal(announcement.announcement.version, 'v4.7');
+  const userLogin = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
+  const firstRead = await api(app.baseUrl, 'markSystemAnnouncementRead', { editorToken: userLogin.token, version: 'v4.7', account: 'spoofed@emctaipei.com' });
+  const repeatedRead = await api(app.baseUrl, 'markSystemAnnouncementRead', { editorToken: userLogin.token, version: 'v4.7' });
+  assert.equal(firstRead.readCount, 1);
+  assert.equal(repeatedRead.readCount, 1);
+  assert.deepEqual(systemAnnouncementReadRecords(app.database.table('系統公告欄').rows[0]).map(record => record.account), ['machi.chen@emctaipei.com']);
 
   const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');
