@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2036,
+  "revision": 2037,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-20T02:05:28.507Z",
+  "updatedAt": "2026-08-20T02:07:03.393Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -973,7 +973,7 @@
         {"案件編號":"26080079","修改次數":"0","建立日期":"2026/08/19 12:04:01","修改日期":"2026/08/19 12:04:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/19 12:04:01","圖片連結":"[{\"fileName\": \"260819_OM360II_對比.png\", \"url\": \"https://lh3.googleusercontent.com/d/1d5cOyPgar6Y95dhpwaSbwhGuT84uLgRC=w1600\"}, {\"fileName\": \"260819_OM360II_競品便當圖.png\", \"url\": \"https://lh3.googleusercontent.com/d/1UmI1hIEt8emS1Ss3P8mLvA4jWPlgN5or=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/19 12:08:13","待修改圖片":""},
         {"案件編號":"26080100","修改次數":"0","建立日期":"2026/08/19 18:45:55","修改日期":"2026/08/19 18:45:55","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/19 18:45:55","圖片連結":"[{\"fileName\":\"260819_Liberty 5 Pro Max_產品多圖貼文_IG尺寸_首頁 2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1sV5uOQ3dbi7MENoVJ0_Xhb4veYwy75rg=w1600\"},{\"fileName\":\"260819_Liberty 5 Pro Max_產品多圖貼文_IG尺寸_首頁 3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14GtGIG4QyO-wtU3V4dRDgXgCWMMUODAH=w1600\"},{\"fileName\":\"260819_Liberty 5 Pro Max_產品多圖貼文_IG尺寸_首頁 4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eYMQBHqBvSdpLntat4vjZZJK82hkDU3U=w1600\"},{\"fileName\":\"260819_Liberty 5 Pro Max_產品多圖貼文_IG尺寸_首頁 5.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SJbzW_SSlU095YvvKhPGmCNXJEe8vbX_=w1600\"},{\"fileName\":\"260819_Liberty 5 Pro Max_產品多圖貼文_IG尺寸_首頁.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1DBBnpm_ctGw26b4lCKj3KCr2s7cPqq82=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/19 18:45:55"},
         {"案件編號":"26080109","修改次數":"0","建立日期":"2026/08/20 09:44:36","修改日期":"2026/08/20 09:44:36","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/20 09:44:36","圖片連結":"[{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_新手裝修痛點_v01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eXW2zcLC-aBmB434mVcxvjSAaBy1cVpb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/20 09:44:36"},
-        {"案件編號":"26080109","修改次數":"1","建立日期":"2026/08/20 09:53:39","修改日期":"2026-08-20","修改內容":"隨信附上修改需求，\n請將xxxx改成 xxxxx\n簡報連結 p3-p6","修改人":"Machi","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26080109","修改次數":"1","建立日期":"2026/08/20 09:53:39","修改日期":"2026-08-20","修改內容":"隨信附上修改需求，\n請將xxxx改成 xxxxx\n簡報連結 p3-p6","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_新手裝修痛點_v01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1AamC1FEN_bhvgQ80HyYEGD5Z9WMpd1Z9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/20 10:07:03"}
       ]
     },
     "補充資料連結": {
