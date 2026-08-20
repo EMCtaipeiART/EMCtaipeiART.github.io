@@ -978,6 +978,7 @@ describe('Machi Design API Worker', () => {
     await seedCustomerOwner('測試客戶', 'designer@emctaipei.com');
     await seedCustomerOwner('測試客戶', 'test.user@emctaipei.com');
     const designerToken = await seedSession('designer@emctaipei.com');
+    await seedGmailTokens('designer@emctaipei.com', 'gmail-access-designer', 'designer@emctaipei.com');
 
     const plainTextBody = 'Hi，這是設計師的回覆內容';
     const originalMessageBody = 'A. 設計簡報：P26~P30';
@@ -1045,9 +1046,10 @@ describe('Machi Design API Worker', () => {
     expect(thread.ok).toBe(true);
     // 2026-08-20：getCaseMailThread 現在也會算出「回覆全部」風格的建議收件人／副本一併回傳，給前端信件編輯器
     // 預先帶入、使用者可以再修改——跟下面 replyCaseMail 沒有帶 to/cc 時會用的 fallback 是同一套計算方式
-    // （computeReplySuggestion），這裡先確認回傳值本身正確：回給最後一封信（msg2）的寄件人 designer@emctaipei.com，
-    // 副本留住 msg2 的收件人 test.user@emctaipei.com 與副本 client@example.com，扣掉自己與回覆對象後只剩 client@example.com。
-    expect(thread.suggestedTo).toBe('designer@emctaipei.com');
+    // （computeReplySuggestion），這裡先確認回傳值本身正確：目前回信者是 designer，最後一封信也是 designer
+    // 寄給 test.user，因此應回給 test.user；副本扣掉自己與回覆對象後只剩 client@example.com。
+    expect(thread.replyFrom).toBe('designer@emctaipei.com');
+    expect(thread.suggestedTo).toBe('test.user@emctaipei.com');
     expect(thread.suggestedCc).toBe('client@example.com');
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
@@ -1063,8 +1065,8 @@ describe('Machi Design API Worker', () => {
     expect(secondMessageImages).toHaveLength(1);
     expect(secondMessageImages[0].dataUrl.startsWith('data:image/png;base64,')).toBe(true);
 
-    // 回覆：admin（不是相關人）應該被擋下；designer（相關人）應該成功——先抓最後一封信的標頭組出
-    // In-Reply-To/References 再送出，threadId 要跟著帶上，「回覆對象」判斷要用寄件帳號自己的 Gmail 地址比對。
+    // 回覆：admin（不是相關人）應該被擋下；designer（相關人）應該成功——歷史用原寄件者 token 讀取，
+    // 但送出必須使用 designer 自己的 token。原 threadId 屬於 test.user 的信箱，不能傳給 designer 的 Gmail API。
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') {
@@ -1072,13 +1074,12 @@ describe('Machi Design API Worker', () => {
         return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
       }
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
-        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
         const body = JSON.parse(String(init?.body));
-        expect(body.threadId).toBe('gmail-thread-1');
-        // 最後一封信是「designer@emctaipei.com」寄給「test.user@emctaipei.com」（也就是寄件帳號自己收到的），
-        // 所以應該回覆給 designer@emctaipei.com，不是誤判成回覆給觸發者自己或其他人。
+        expect(body.threadId).toBeUndefined();
+        // 最後一封信是 designer 自己寄給 test.user，所以新回覆要給 test.user，不可變成設計師寄給自己。
         const decodedRaw = decodeBase64UrlText(String(body.raw));
-        expect(decodedRaw).toContain('To: designer@emctaipei.com');
+        expect(decodedRaw).toContain('To: test.user@emctaipei.com');
         // 副本比照「回覆全部」：上一封信（msg2）的收件人 test.user@emctaipei.com 與副本 client@example.com
         // 都要留住，扣掉這次的回覆對象（designer@emctaipei.com）本身與寄件帳號自己（test.user@emctaipei.com）——
         // 精確只比對標頭段落的 Cc 那一行，不是整段 raw text，避免跟引用內文裡出現的同一組 email 混在一起判斷。
@@ -1125,7 +1126,9 @@ describe('Machi Design API Worker', () => {
         return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
       }
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
         const body = JSON.parse(String(init?.body));
+        expect(body.threadId).toBeUndefined();
         const decodedRaw = decodeBase64UrlText(String(body.raw));
         const headerSection = decodedRaw.slice(0, decodedRaw.indexOf('\r\n\r\n'));
         expect(headerSection.split(/\r\n(?!\s)/).find(line => line.startsWith('To:'))).toBe('To: custom-recipient@example.com');
@@ -1690,6 +1693,69 @@ describe('Machi Design API Worker', () => {
       expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
       const row = await scheduledMailRow(scheduledId);
       expect(row?.status).toBe('sent');
+    });
+
+    it('sends a scheduled reply from the account that scheduled it, not from the account that created the original thread', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedAccountPermission('designer@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-owner', 'test.user@emctaipei.com');
+      await seedGmailTokens('designer@emctaipei.com', 'gmail-access-designer', 'designer@emctaipei.com');
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        const row = database.tables.database.rows.find(item => item['案件編號'] === '26080001')!;
+        row['Gmail信件串ID'] = 'cross-account-reply-thread';
+        row['Gmail寄件帳號'] = 'test.user@emctaipei.com';
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+      const designerToken = await seedSession('designer@emctaipei.com', '設計師');
+      const threadMessages = [{
+        id: 'original-message', snippet: '', payload: {
+          mimeType: 'text/plain', body: { data: toBase64Url('原始案件信') },
+          headers: [
+            { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
+            { name: 'Message-Id', value: '<original@mail.gmail.com>' }, { name: 'Subject', value: '案件主旨' }
+          ]
+        }
+      }];
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/cross-account-reply-thread?format=full') {
+          expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-owner');
+          return Response.json({ id: 'cross-account-reply-thread', messages: threadMessages });
+        }
+        throw new Error(`unexpected fetch while scheduling cross-account reply: ${url}`);
+      });
+      const scheduled = await api({
+        action: 'scheduleCaseReply', caseId: '26080001', bodyText: '設計師排程回覆',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, designerToken);
+      expect(scheduled.ok).toBe(true);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/cross-account-reply-thread?format=full') {
+          expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-owner');
+          return Response.json({ id: 'cross-account-reply-thread', messages: threadMessages });
+        }
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+          expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
+          const body = JSON.parse(String(init?.body));
+          expect(body.threadId).toBeUndefined();
+          const decoded = decodeBase64UrlText(String(body.raw));
+          expect(decoded).toContain('To: test.user@emctaipei.com');
+          expect(decoded).toContain('In-Reply-To: <original@mail.gmail.com>');
+          return Response.json({ id: 'designer-scheduled-reply', threadId: 'designer-mailbox-thread' });
+        }
+        throw new Error(`unexpected fetch during cross-account reply dispatch: ${url}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      expect((await scheduledMailRow(scheduledId))?.status).toBe('sent');
     });
 
     it('lists pending scheduled mail for a case and lets a pending item be canceled (but not twice, and not once already dispatched)', async () => {

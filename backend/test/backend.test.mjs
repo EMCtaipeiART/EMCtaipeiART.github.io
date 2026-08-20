@@ -196,6 +196,17 @@ test('Gmail thread displays names only and keeps email addresses in name tooltip
   assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.cc\)/);
 });
 
+test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function openGmailThreadModal(id)');
+  const end = html.indexOf('function closeGmailThreadModal()', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  assert.match(source, /initialReplyFrom=gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
+  assert.match(source, /replyFrom=String\(data\.replyFrom\|\|gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
+  assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
+});
+
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('function safeHttpPreviewUrl(');

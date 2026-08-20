@@ -7311,7 +7311,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260820-announcement-read-receipts-115';
+const appBuildVersion = '20260820-gmail-reply-sender-116';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -9774,8 +9774,9 @@ async function openGmailThreadModal(id){
   modal.dataset.caseId=String(row.id);
   modal.dataset.replyMode='general';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
-  const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=row.gmailThreadOwnerAccount?`寄件人：${row.gmailThreadOwnerAccount}`:'';
-  const fromValue=$('#gmailThreadFromValue'); if(fromValue)fromValue.textContent=row.gmailThreadOwnerAccount||'—';
+  const initialReplyFrom=gmailConnectionState.gmailAddress||currentEditorAccount;
+  const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=initialReplyFrom?`寄件人：${initialReplyFrom}`:'';
+  const fromValue=$('#gmailThreadFromValue'); if(fromValue)fromValue.textContent=initialReplyFrom||'—';
   // 誰能看到內容、誰能回信，權限依據是「這個帳號的 email 有沒有出現在信件本身的收件人/寄件人/副本裡」
   // （見 Worker 的 accountIsGmailThreadParticipant），不是系統層級的發信權限——但前端在真的呼叫
   // getCaseMailThread 之前沒辦法預先知道答案（信件實際內容只有 Gmail 自己知道），所以預設先顯示回覆區，
@@ -9802,6 +9803,9 @@ async function openGmailThreadModal(id){
   try{
     const signatureHtml=await ensureGmailSignatureLoaded();
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
+    const replyFrom=String(data.replyFrom||gmailConnectionState.gmailAddress||currentEditorAccount||'').trim();
+    if(fromLabel)fromLabel.textContent=replyFrom?`寄件人：${replyFrom}`:'';
+    if(fromValue)fromValue.textContent=replyFrom||'—';
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     renderGmailThreadMessages(list,gmailThreadMessagesCache);
     // suggestedTo 可能是多個收件人（回覆全部時，上一封信原本就寄給好幾個人），跟 suggestedCc 一樣

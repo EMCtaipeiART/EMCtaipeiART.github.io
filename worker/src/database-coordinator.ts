@@ -1187,26 +1187,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'gmailDisconnect' };
   }
 
-  /** 回覆全部風格的建議收件人／副本——依信件串最後一封信的標頭＋寄件帳號自己的實際 Gmail 地址算出來，
+  /** 回覆全部風格的建議收件人／副本——依信件串最後一封信的標頭＋這次實際回信帳號的 Gmail 地址算出來，
    * getCaseMailThread（唯讀，讓前端可以先攤開顯示、讓使用者能編輯）與 replyCaseMail（送出時的最終
    * fallback，前端沒有帶 to/cc 時才會用到）共用同一套邏輯，確保兩邊算出來的預設值一致。 */
-  private computeReplySuggestion(threadMessages: unknown[], owner: string): { to: string; cc: string } {
+  private computeReplySuggestion(threadMessages: unknown[], senderAccount: string): { to: string; cc: string } {
     const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
     const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
-    const stored = this.getGmailTokens(owner);
-    const selfAddress = text(stored?.gmail_address).toLowerCase();
+    const stored = this.getGmailTokens(senderAccount);
+    const selfAddresses = new Set([canonicalAccount(senderAccount), text(stored?.gmail_address).toLowerCase()].filter(Boolean));
     const fromHeader = gmailHeaderValue(headers, 'From');
     const toHeader = gmailHeaderValue(headers, 'To');
     const ccHeader = gmailHeaderValue(headers, 'Cc');
-    const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
+    const fromSelf = extractEmailAddressesFromHeader(fromHeader).some(email => selfAddresses.has(email));
+    const to = fromSelf
+      ? extractAddressEntriesFromHeader(toHeader).filter(entry => !selfAddresses.has(entry.email)).map(entry => entry.full).join(', ')
+      : fromHeader;
     // 副本比照一般信箱的「回覆全部」：把上一封信的收件人＋副本都留住（扣掉自己與這次要回覆的對象本身），
-    // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外。「自己」同時要排除 selfAddress
-    // （實際連接的 Gmail 信箱，例如 designer.mailbox@gmail.com）與 owner（案件記錄的寄件帳號別名，例如
+    // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外。「自己」同時要排除實際
+    // 連接的 Gmail 信箱（例如 designer.mailbox@gmail.com）與系統帳號別名（例如
     // test.user@emctaipei.com）——這兩者在 Google Workspace 別名寄送的情境下常常是不同的兩個地址。
     // 這裡刻意用 extractAddressEntriesFromHeader（保留顯示名）而不是 extractEmailAddressesFromHeader
     // （只剩 email）組出最終要回傳的 cc 字串——後者只適合拿來做 email 是否存在的比對，如果拿它的結果直接
     // 組字串，前端信件編輯器的副本聯絡人晶片就只能顯示一長串信箱，不會顯示姓名。
-    const excludedFromCc = new Set([selfAddress, owner, ...extractEmailAddressesFromHeader(to)].filter(Boolean));
+    const excludedFromCc = new Set([...selfAddresses, ...extractEmailAddressesFromHeader(to)]);
     const seenCc = new Set<string>();
     const cc = [...extractAddressEntriesFromHeader(toHeader), ...extractAddressEntriesFromHeader(ccHeader)]
       .filter(entry => {
@@ -1324,17 +1327,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     // 給前端「回覆」編輯器預先帶入、可再修改的收件人／副本建議值——跟 replyCaseMail 送出時如果前端
     // 沒帶 to/cc 會用的 fallback 是同一套計算方式（computeReplySuggestion），確保兩邊看到的預設值一致。
-    const suggestion = rawMessages.length ? this.computeReplySuggestion(rawMessages, owner) : { to: '', cc: '' };
-    return { ok: true, action: 'getCaseMailThread', threadId, messages, suggestedTo: suggestion.to, suggestedCc: suggestion.cc };
+    const suggestion = rawMessages.length ? this.computeReplySuggestion(rawMessages, current.account) : { to: '', cc: '' };
+    const replyFrom = text(this.getGmailTokens(current.account)?.gmail_address) || current.account;
+    return { ok: true, action: 'getCaseMailThread', threadId, messages, replyFrom, suggestedTo: suggestion.to, suggestedCc: suggestion.cc };
   }
 
-  /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一套雙層依據（2026-08-19 起）：①客戶別「權限
-   * 設定」白名單（hasRowCapability，跟發信/編輯/刪除共用），②目前登入帳號的 email 必須出現在這條信件
-   * 串的收件人/寄件人/副本裡（accountIsGmailThreadParticipant）——兩者都通過才能回覆。但實際送出時一律
-   * 用 getValidGmailAccessToken(owner)（當初寄件帳號存的 token）呼叫 Gmail API，讓回覆確實接在同一條 Gmail 信
-   * 件串裡（Gmail 信件串本來就只存在寄件帳號自己的信箱，用別的帳號的 token 呼叫同一個 threadId 會直接被 Gmail
-   * 拒絕，所以「代表寄件帳號送出」是唯一能讓回覆正確歸進同一串的做法）——收件人看到的寄件人仍然會是當初的寄件
-   * 帳號，不是實際按下「送出回覆」的那個系統帳號，這是這個設計必然的結果，等同多人共用同一個對外信箱的概念。
+  /** 在既有信件串裡回覆一封信——讀取歷史仍使用當初寄件帳號的 token，但實際送出必須使用目前登入
+   * 帳號自己連接的 Gmail token，收件人才會看到真正的回信者。當前帳號不是原寄件帳號時，原 threadId 屬於別的
+   * Gmail 信箱，不可送給 messages.send；改由 In-Reply-To／References／同主旨維持郵件用戶端的回覆關聯。
    * 先抓整條信件串每一封信的標頭（含 Cc，用來判斷誰是「相關人」）組出正確的 In-Reply-To/References，並把
    * 上一封信的內容放進標準引用區，讓收件端保有前文脈絡。 */
   private async replyCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
@@ -1352,10 +1352,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
-    const accessToken = await this.getValidGmailAccessToken(owner);
+    const threadAccessToken = await this.getValidGmailAccessToken(owner);
     const threadResponse = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: `Bearer ${threadAccessToken}` } }
     );
     const threadData = await threadResponse.json().catch(() => ({})) as Row;
     const threadMessages = Array.isArray(threadData.messages) ? threadData.messages : [];
@@ -1372,7 +1372,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 收件人／副本優先信任前端這次送來的值（信件編輯器裡使用者可以看到、也可以修改的欄位，2026-08-20
     // 起前端一律會帶）；沒帶（例如部署過渡期間還沒更新的舊分頁）才 fallback 用 computeReplySuggestion
     // 算出的「回覆全部」預設值，維持舊行為不中斷。
-    const suggestion = this.computeReplySuggestion(threadMessages, owner);
+    const suggestion = this.computeReplySuggestion(threadMessages, current.account);
     const to = text(payload.to) || suggestion.to;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
     const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
@@ -1381,8 +1381,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
+    const senderAccessToken = await this.getValidGmailAccessToken(current.account);
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw, threadId })
+      method: 'POST', headers: { Authorization: `Bearer ${senderAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(owner === canonicalAccount(current.account) ? { raw, threadId } : { raw })
     });
     const sendData = await sendResponse.json().catch(() => ({})) as Row;
     if (!sendResponse.ok) return { ok: false, action: 'replyCaseMail', error: text((sendData.error as Row)?.message) || `Gmail 回覆失敗：${sendResponse.status}` };
@@ -1461,14 +1463,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!accountIsGmailThreadParticipant(current.account, threadMessages)) {
       return { ok: false, action: 'scheduleCaseReply', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
-    const suggestion = this.computeReplySuggestion(threadMessages, owner);
+    const suggestion = this.computeReplySuggestion(threadMessages, current.account);
     const to = text(payload.to) || suggestion.to;
     if (!to) return { ok: false, action: 'scheduleCaseReply', error: '無法判斷回覆對象' };
     const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
     const scheduledAt = parseScheduledAt(payload.scheduledAt);
     if (!scheduledAt) return { ok: false, action: 'scheduleCaseReply', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
+    await this.getValidGmailAccessToken(current.account);
     const scheduledId = this.insertScheduledMail({
-      caseId, kind: 'reply', ownerAccount: owner, requestedBy: current.account,
+      caseId, kind: 'reply', ownerAccount: current.account, requestedBy: current.account,
       to, cc, subject: '', bodyHtml, signatureHtml, inlineImages, scheduledAt
     });
     return { ok: true, action: 'scheduleCaseReply', scheduledId, scheduledAt };
@@ -1546,9 +1549,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!row) throw new Error('找不到案件資料，排程未寄出');
     const threadId = text(row['Gmail信件串ID']);
     if (!threadId) throw new Error('此案件已經沒有 Gmail 信件串，排程未寄出');
-    const threadMessages = await fetchGmailThreadMessages(accessToken, threadId);
+    const threadOwner = canonicalAccount(row['Gmail寄件帳號']);
+    const threadAccessToken = threadOwner === canonicalAccount(item.owner_account)
+      ? accessToken
+      : await this.getValidGmailAccessToken(threadOwner);
+    const threadMessages = await fetchGmailThreadMessages(threadAccessToken, threadId);
     const raw = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
-    await postGmailMessage(accessToken, raw, threadId);
+    await postGmailMessage(accessToken, raw, threadOwner === canonicalAccount(item.owner_account) ? threadId : undefined);
   }
 
   /** Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）觸發的入口——找出所有「到期的待寄送排程」
