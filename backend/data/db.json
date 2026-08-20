@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2138,
+  "revision": 2139,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-20T10:10:45.765Z",
+  "updatedAt": "2026-08-20T10:11:03.150Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1482,7 +1482,7 @@
         {"客戶別":"EMC","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"department:專案部\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"專案部\"]","更新時間":"2026-08-20 18:10","更新者":"Machi","排序":"5"},
         {"客戶別":"Epson","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Emily組\",\"group:Joyce組\",\"livia.chu@emctaipei.com\",\"allen.li@emctaipei.com\"]","設計負責人":"[\"Leona\",\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"Emily組\",\"Joyce組\",\"livia.chu@emctaipei.com\",\"allen.li@emctaipei.com\"]","更新時間":"2026-08-20 18:10","更新者":"Machi","排序":"4"},
         {"客戶別":"eufy","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 18:00","更新者":"Machi","排序":"7"},
-        {"客戶別":"soundcore","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-19 17:59","更新者":"Machi","排序":"6"},
+        {"客戶別":"soundcore","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"Celine組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","更新時間":"2026-08-20 18:11","更新者":"Machi","排序":"6"},
         {"客戶別":"測試","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\"]","設計負責人":"[]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\"]","更新時間":"2026-08-20 16:56","更新者":"Machi","排序":"29"}
       ]
     },
