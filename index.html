@@ -6900,7 +6900,7 @@
       <div class="gmail-modal-head-title">
         <span class="gmail-modal-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4.5 6.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"/><path d="m4 7 8 6.2L20 7"/></svg></span>
         <div>
-          <h3>Gmail 信件串</h3>
+          <h3 id="gmailThreadModalTitle">Gmail 信件串</h3>
           <p class="gmail-modal-from" id="gmailThreadModalFrom"></p>
         </div>
       </div>
@@ -7820,7 +7820,7 @@ async function openMailComposerMenu(event,id){
   if(!status.connected){
     gmailOption='<button type="button" class="gmail-mail-menu-option" onclick="startGmailConnectPopup()">連接 Gmail 帳號</button>';
   }else if(row.gmailThreadId){
-    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openGmailThreadModal('${jsArg(id)}')">查看信件串／回信（${esc(status.gmailAddress)}）</button><button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
+    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openReplyMethodChooser(event,'${jsArg(id)}')">查看信件串／回信（${esc(status.gmailAddress)}）</button><button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
   }else{
     gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openGmailComposeModal('${jsArg(id)}')">透過 Gmail 撰寫並寄出（${esc(status.gmailAddress)}）</button><button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
   }
@@ -8661,8 +8661,11 @@ let activeUserAvatarUploadNonce='';
 let activeDesignerUploadName='';
 let activeCaseImageUploadNonce='';
 let caseDesignUploadInFlight=false;
+/** 這次「選擇電腦檔案上傳」是不是從「回信」→「設計師回覆信」開啟的——是的話上傳完成後要自動轉入
+ * 信件編輯器（見 handleUploadFrameMessage 的 machi-case-design-images-updated 分支）。 */
+let caseDesignUploadAfterReply=false;
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalActive=true; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
-function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
+function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; caseDesignUploadAfterReply=false; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
 function backgroundizeCaseDesignUpload(){const modal=$('#uploadModal'); if(!modal||!uploadModalActive)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); showCaseDesignUploadBadge()}
 function restoreCaseDesignUploadModal(){const modal=$('#uploadModal'); if(!modal||!uploadModalActive)return; modal.hidden=false; document.body.classList.add('upload-modal-open'); hideCaseDesignUploadBadge()}
 function showCaseDesignUploadBadge(){const badge=$('#caseDesignUploadBadge'); if(badge)badge.hidden=false}
@@ -8692,11 +8695,12 @@ function handleUploadFrameMessage(event){
   if(data.type==='machi-case-design-images-updated'){
     if(!activeCaseImageUploadNonce||data.closeNonce!==activeCaseImageUploadNonce)return;
     const id=String(data.caseId||''), count=Number(data.count)||0, failedCount=Number(data.failedCount)||0;
+    const afterReply=caseDesignUploadAfterReply;
     caseDesignUploadInFlight=false;
     closeUploadModal({refreshUserAvatar:false});
     setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，同步中...`:(count?`已上傳 ${count} 張設計圖，同步中...`:'圖片上傳完成，同步中...'));
     fetchModificationCounts()
-      .then(()=>{render();const revisionModalEl=$('#revisionModal');if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}refreshOpenCaseDetail(id);setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200)})
+      .then(()=>{render();const revisionModalEl=$('#revisionModal');if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}refreshOpenCaseDetail(id);setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200);if(afterReply&&id)openDesignerReplyMailModal(id,{})})
       .catch(err=>setSync(`圖片已上傳，但畫面同步失敗，請重新整理：${err.message}`,true));
     return;
   }
@@ -8708,10 +8712,10 @@ function handleUploadFrameMessage(event){
   }
   if(data.type==='machi-nas-folder-selected'){
     if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
-    const purpose=nasFolderPickerPurpose, id=activeNasFolderPickerCaseId, editorId=nasFolderPickerInsertEditorId, insertRange=nasFolderPickerInsertRange;
+    const purpose=nasFolderPickerPurpose, id=activeNasFolderPickerCaseId, editorId=nasFolderPickerInsertEditorId, insertRange=nasFolderPickerInsertRange, afterReply=nasFolderPickerAfterReply;
     const folderPath=String(data.path||'').trim(), keyword=String(data.keyword||'').trim(), summary=String(data.summary||'').trim();
     activeNasFolderPickerNonce=''; clearNasFolderPickerWatch(); hideNasFolderBackupBadge();
-    nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null;
+    nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=false;
     if(!folderPath){setSync('未選擇任何資料夾',true,3000);return}
     if(purpose==='insert'){
       insertNasPathIntoEditor(editorId,folderPath,insertRange);
@@ -8719,6 +8723,7 @@ function handleUploadFrameMessage(event){
       return;
     }
     updateCaseRow(id,{designImageFolderUrl:folderPath,designImageFolderKeyword:keyword},summary||'已設定 NAS 來源資料夾');
+    if(afterReply&&id)openDesignerReplyMailModal(id,{folderPath,keyword});
     return;
   }
   const designerMediaMessage=data.type==='machi-designer-media-updated';
@@ -9187,6 +9192,9 @@ function gmailThreadMessageHtml(message,isLatest=false){const visibleBody=messag
 function renderGmailThreadMessages(list,messages){const items=Array.isArray(messages)?messages:[];list.innerHTML=items.length?items.map((message,index)=>gmailThreadMessageHtml(message,index===items.length-1)).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
 function designerReplyTemplateForCase(row={}){const firstDetail=detailsToArray(row.details)[0]||'',profile=designerProfile(String(row.designer||'').trim());return firstDetail?String(profile.replyTemplates?.[firstDetail]||''):''}
 function setGmailEditorPlainText(editor,value=''){const text=String(value);editor.replaceChildren();if(!text)return;text.split(/\r?\n/).forEach((line,index)=>{if(index)editor.append(document.createElement('br'));editor.append(document.createTextNode(line))})}
+/** 「回信」目前開著的信件串上一次成功讀到的訊息清單，供「填寫修改需求信」／「設計師回覆信」取用
+ * （例如抓上一封寄件者姓名），避免再另外多打一次 getCaseMailThread。 */
+let gmailThreadMessagesCache=[];
 async function openGmailThreadModal(id){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
   if(!row.gmailThreadId){setSync('此案件尚未透過 Gmail 寄出過信件',true);return}
@@ -9194,6 +9202,8 @@ async function openGmailThreadModal(id){
   if(!modal||!list)return;
   closeFieldPopover();
   modal.dataset.caseId=String(row.id);
+  modal.dataset.replyMode='general';
+  const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
   const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=row.gmailThreadOwnerAccount?`寄件人：${row.gmailThreadOwnerAccount}`:'';
   // 誰能看到內容、誰能回信，權限依據是「這個帳號的 email 有沒有出現在信件本身的收件人/寄件人/副本裡」
   // （見 Worker 的 accountIsGmailThreadParticipant），不是系統層級的發信權限——但前端在真的呼叫
@@ -9209,8 +9219,10 @@ async function openGmailThreadModal(id){
   try{
     const signatureHtml=await ensureGmailSignatureLoaded();
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
-    renderGmailThreadMessages(list,data.messages||[]);
+    gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
+    renderGmailThreadMessages(list,gmailThreadMessagesCache);
   }catch(err){
+    gmailThreadMessagesCache=[];
     list.innerHTML=`<div class="gmail-thread-owner-note">${esc(err.message||'讀取信件串失敗')}</div>`;
     // REQUEST_MAIL_DENIED：不在客戶別「權限設定」白名單裡；GMAIL_THREAD_NOT_PARTICIPANT：不是這條
     // Gmail 討論串本身的實際收件人/副本/寄件人——兩種原因都代表這個帳號無法回信，一律隱藏回覆區塊。
@@ -9222,21 +9234,137 @@ async function openGmailThreadModal(id){
   }
 }
 function closeGmailThreadModal(){const modal=$('#gmailThreadModal'); if(modal)modal.hidden=true}
+/** 點擊「回信」時先跳出的選擇：填寫修改需求信（給專案，內容同步記錄進「修改紀錄」並帶動輪次一修／二修…）／
+ * 設計師回覆信（給設計師，先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器）／
+ * 一般回信（原本的行為，直接開啟信件編輯器讓大家手動填寫）。 */
+function openReplyMethodChooser(event,id){
+  event.stopPropagation();
+  if(!requireAccess('request.mail','此帳號沒有回信權限'))return;
+  const row=rows.find(r=>String(r.id)===String(id));
+  if(!row)return;
+  if(!row.gmailThreadId){openMailComposerMenu(event,id);return}
+  const anchorEl=event.currentTarget;
+  closeFieldPopover();
+  fieldPopover.innerHTML=`<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="modification"><span>填寫修改需求信</span><small>撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…</small></button><button type="button" class="option" data-reply-method="designer"><span>設計師回覆信</span><small>先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器</small></button><button type="button" class="option" data-reply-method="general"><span>一般回信</span><small>直接開啟信件編輯器，內容手動填寫</small></button></div>`;
+  fieldPopover.hidden=false;
+  positionFieldPopover(anchorEl,{center:true});
+  fieldPopover.querySelector('[data-reply-method="modification"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openModificationRequestReplyModal(id)});
+  fieldPopover.querySelector('[data-reply-method="designer"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageSourceChooser(id,currentModificationRound(id),anchorEl,{afterReply:true})});
+  fieldPopover.querySelector('[data-reply-method="general"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openGmailThreadModal(id)});
+}
+/** 「填寫修改需求信」：沿用 openGmailThreadModal 既有的權限判斷／信件串載入，只是把回覆內容換成
+ * 「Hi 設計師姓名,」開頭、游標停在第三行，讓使用者接著打這次的修改需求——送出時（見
+ * sendGmailThreadReply 的 modification 分支）會把第三行以後的內容另外記一筆進「修改紀錄」，
+ * 修改輪次（一修／二修…）因此自動往下跳一輪，不需要再另外開一次「新增修改紀錄」表單。 */
+async function openModificationRequestReplyModal(id){
+  const row=rows.find(r=>String(r.id)===String(id));
+  if(!row)return;
+  await openGmailThreadModal(id);
+  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection');
+  if(!modal||modal.hidden||composeSection?.hidden)return;
+  modal.dataset.replyMode='modification';
+  const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='填寫修改需求信';
+  const editor=$('#gmailThreadReplyEditor');
+  if(!editor)return;
+  setGmailEditorPlainText(editor,`Hi ${String(row.designer||'設計負責人').trim()},\n\n`);
+  clearGmailInlineImages(editor.id);
+  restoreOpenGmailEditorFocus();
+}
+/** 「設計師回覆信」：openReplyMethodChooser 選了這個選項後，會先跑完 NAS 資料夾／電腦檔案上傳流程
+ * （見 openCaseDesignImageSourceChooser 的 afterReply 旗標），完成後才呼叫這裡——沿用
+ * openGmailThreadModal，把回覆內容換成通知客戶「附上社群貼文內容」的固定範本，並把這次選定的
+ * NAS 路徑用粗體帶入內文；送出時（見 sendGmailThreadReply 的 designer 分支）如果目前最新一輪
+ * 修改紀錄還沒確認，會一併標記成已確認（比照「修改紀錄」彈窗裡設計師手動按確認的既有動作）。 */
+async function openDesignerReplyMailModal(id,{folderPath='',keyword=''}={}){
+  const row=rows.find(r=>String(r.id)===String(id));
+  if(!row)return;
+  await openGmailThreadModal(id);
+  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection');
+  if(!modal||modal.hidden||composeSection?.hidden)return;
+  modal.dataset.replyMode='designer';
+  const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='設計師回覆信';
+  const editor=$('#gmailThreadReplyEditor');
+  if(!editor)return;
+  const lastMessage=gmailThreadMessagesCache[gmailThreadMessagesCache.length-1];
+  const senderName=gmailAddressPeople(lastMessage?.from||'')[0]?.name||ownerDisplay(row.owner||'')||String(row.designer||'').trim();
+  const lines=[`Hi ${senderName},`,'',' 附上社群貼文內容，','再煩請查收，謝謝。'];
+  if(folderPath)lines.push('','  補上NAS自動抓取的圖片 NAS路徑');
+  setGmailEditorPlainText(editor,lines.join('\n'));
+  if(folderPath){
+    editor.appendChild(document.createElement('br'));
+    const bold=document.createElement('b');
+    bold.textContent=folderPath;
+    editor.appendChild(bold);
+  }
+  clearGmailInlineImages(editor.id);
+  restoreOpenGmailEditorFocus();
+}
+/** 從「填寫修改需求信」的信件內容裡拿掉開頭「Hi X,」這一行與緊接著的空行，剩下的（第三行以後）
+ * 才是真正要記進「修改紀錄」的修改內容——只精確比對這個固定格式的開頭，使用者如果自己改動或
+ * 刪掉了這行招呼語，就直接把整段內容當成修改內容，不會憑空漏字或報錯。 */
+function stripGreetingPrefix(text){return String(text||'').replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim()}
+/** 「填寫修改需求信」送出後，把信件內容第三行以後的文字另外記一筆進「修改紀錄」——跟既有「新增修改
+ * 紀錄」表單（openModificationEditor／submitModificationRecord）走的是同一個 addModificationRecord
+ * action，只是這裡不用再另外彈一次表單，直接沿用剛剛寄出的信件內容當作這次的修改內容。 */
+async function recordModificationFromReply(id,row,content){
+  const text=String(content||'').trim();
+  if(!text)return;
+  const modifier=currentLoginOwnerName()||ownerDisplay(row?.owner||'');
+  const record={caseId:id,modifyDate:todayInputValue(),content:text,modifier,targetImages:[],editorToken:currentEditorToken};
+  try{
+    const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true});
+    const finalCount=Number(data.count)||(modificationCount(id)+1), finalModifier=data.record?.['修改人']||data.record?.modifier||modifier;
+    modificationCounts.set(String(id),finalCount);
+    modificationRecords.set(String(id),[...modificationRecordsFor(id),{caseId:String(id),count:finalCount,date:record.modifyDate,content:text,modifier:finalModifier,confirmedDate:''}]);
+    render();
+    refreshOpenRevisionModal(id);
+    refreshOpenCaseDetail(id);
+  }catch(err){
+    setSync(`修改需求信已寄出，但修改紀錄寫入失敗：${err.message}`,true,4200);
+  }
+}
+/** 「設計師回覆信」送出後，如果目前最新一輪修改紀錄還沒確認過，比照「修改紀錄」彈窗裡設計師手動
+ * 按下確認鈕的既有動作（confirmModificationRecord）把它標記成已確認——初稿（第 0 輪）不在這裡處理，
+ * 那是 NAS／上傳流程在伺服器端建立這筆紀錄時就已經直接標記確認完成，不需要前端另外動作。 */
+async function confirmLatestModificationRound(id,row){
+  const records=modificationRecordsFor(id);
+  const latest=records.reduce((max,item)=>(Number(item.count)||0)>(Number(max?.count)||-1)?item:max,null);
+  if(!latest||(Number(latest.count)||0)<=0||latest.confirmedDate)return;
+  try{
+    const confirmedDate=slashDate(todayInputValue());
+    const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count:latest.count,confirmedDate},editorToken:currentEditorToken});
+    latest.confirmedDate=data.record?.['確認修正日']||data.record?.confirmedDate||confirmedDate;
+    render();
+    refreshOpenRevisionModal(id);
+    refreshOpenCaseDetail(id);
+  }catch(err){
+    setSync(`回覆已寄出，但設計師確認紀錄寫入失敗：${err.message}`,true,4200);
+  }
+}
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
   if(!id||!editor)return;
+  const row=rows.find(r=>String(r.id)===String(id));
+  const replyMode=modal?.dataset.replyMode||'general';
   const editorPayload=gmailEditorMailPayload(editor);
   if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
+  const modificationContent=replyMode==='modification'?stripGreetingPrefix(editor.innerText||editor.textContent||''):'';
+  if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
   if(button)button.disabled=true;
   setSync('回覆寄送中...');
   try{
     const signatureHtml=await ensureGmailSignatureLoaded();
     await sheetApi('replyCaseMail',{caseId:id,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,editorToken:currentEditorToken});
     editor.innerHTML='';
-    setSync('回覆已寄出',false,2200);
     const list=$('#gmailThreadModalList');
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
-    if(list)renderGmailThreadMessages(list,data.messages||[]);
+    gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
+    if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
+    if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent);
+    else if(replyMode==='designer'&&row)await confirmLatestModificationRound(id,row);
+    if(modal)modal.dataset.replyMode='general';
+    const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
+    setSync(replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出',false,2600);
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
   }finally{
@@ -9754,7 +9882,7 @@ function canSendMailRow(row){if(isCustomerEditRestrictedCase(row))return isCusto
 function mailAction(row,{icon=false}={}){
   if(!isEditableRow(row))return historyLock();
   if(row.gmailThreadId){
-    if(canSendMailRow(row))return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" onclick="openGmailThreadModal('${jsArg(row.id)}')">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
+    if(canSendMailRow(row))return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" onclick="openReplyMethodChooser(event,'${jsArg(row.id)}')">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
     return `<button type="button" class="secondary mail-compose-btn gmail-reply-btn" disabled aria-disabled="true" title="沒有回信權限">${icon?gmailReplyIcon():''}<span>回信</span></button>`;
   }
   if(canSendMailRow(row))return `<button type="button" class="secondary mail-compose-btn" onclick="openMailComposerMenu(event,'${jsArg(row.id)}')">${icon?mailIcon():''}<span>發信</span></button>`;
@@ -10613,18 +10741,25 @@ function updateCaseRow(id,changes,message){if(!isDesignerLogin()){setSync('此�
 function openStatusEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const anchorEl=event.currentTarget; fieldPopover.innerHTML=`<h3>修改狀態</h3><div class="option-list status-option-list">${statusOptions.map(status=>`<button type="button" class="option status-option ${esc(status)} ${row.status===status?'active':''}" data-status="${esc(status)}"><span>${esc(statusLabel(status))}</span>${row.status===status?'<b>✓</b>':''}</button>`).join('')}</div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl); fieldPopover.querySelectorAll('[data-status]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const status=button.dataset.status, becamePastDue=status==='過稿中'&&row.status!=='過稿中'; updateCaseRow(id,{status},`已更新狀態為 ${statusLabel(status)}`); if(becamePastDue)openCaseDesignImageSourceChooser(id,currentModificationRound(id),anchorEl)}))}
 function currentModificationRound(id){const list=modificationRecordsFor(id); return list.length?Math.max(0,...list.map(r=>Number(r.count)||0)):0}
 function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPageUrl); activeCaseImageUploadNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; const start=parseDate(row.start); url.searchParams.set('mode','case-design'); url.searchParams.set('caseId',row.id); url.searchParams.set('round',String(round)); url.searchParams.set('designer',row.designer||''); url.searchParams.set('client',row.client||''); url.searchParams.set('year',start?String(start.getFullYear()):''); url.searchParams.set('month',start?String(start.getMonth()+1).padStart(2,'0'):''); url.searchParams.set('closeNonce',activeCaseImageUploadNonce); url.hash=new URLSearchParams({token:currentEditorToken}).toString(); return url}
-function openCaseDesignImageUploadModal(id,round){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
-function openCaseDesignImageSourceChooser(id,round,anchorEl){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round)}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round)})}
+/** afterReply：從「回信」→「設計師回覆信」開啟時傳 true，上傳完成後（見 handleUploadFrameMessage 的
+ * machi-case-design-images-updated 分支）會自動轉入 openDesignerReplyMailModal；平常從「過稿中」
+ * 狀態變更觸發時維持預設 false，上傳完只更新畫面，不會意外跳出信件編輯器。 */
+function openCaseDesignImageUploadModal(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
+function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply})})}
 const nasFolderPickerBaseUrl='http://iMac.local:8877/picker';
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
 let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerWatchTimer=0, nasFolderPickerBackupInProgress=false;
 let nasFolderPickerPurpose='case', nasFolderPickerInsertEditorId='', nasFolderPickerInsertRange=null;
+/** 這次「選擇 NAS 資料夾」是不是從「回信」→「設計師回覆信」開啟的——是的話選好資料夾（含輸入
+ * 關鍵字）並完成備份登記後，要自動轉入信件編輯器（見 handleUploadFrameMessage 的
+ * machi-nas-folder-selected 分支）。 */
+let nasFolderPickerAfterReply=false;
 function nasFolderPickerConfigured(){return Boolean(nasFolderPickerBaseUrl&&nasFolderPickerToken)}
 function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0} nasFolderPickerBackupInProgress=false}
-function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; hideNasFolderBackupBadge(); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
+function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; nasFolderPickerAfterReply=false; hideNasFolderBackupBadge(); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
 function nasFolderPickerPopupUrl({caseId,nonce,mode}){const url=new URL(nasFolderPickerBaseUrl); if(caseId)url.searchParams.set('caseId',caseId); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',nonce); url.searchParams.set('origin',location.origin); if(mode)url.searchParams.set('mode',mode); return url}
 function openNasFolderPickerPopupWindow(url){const pickerWidth=520,pickerHeight=640,pickerLeft=Math.max(0,Math.round((screen.width-pickerWidth)/2)),pickerTop=Math.max(0,Math.round((screen.height-pickerHeight)/2)); return window.open(url.toString(),'machiNasFolderPicker',`width=${pickerWidth},height=${pickerHeight},left=${pickerLeft},top=${pickerTop}`)}
-function openNasFolderPicker(id,round){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
+function openNasFolderPicker(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=afterReply; const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';nasFolderPickerAfterReply=false;return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 /** 供 Gmail 撰寫／回信編輯區「插入 NAS 路徑」使用：跟「過稿中」同一套資料夾選擇器視窗，
  * 但用 mode=insert 讓選擇器頁面只回傳選到的路徑、不問關鍵字也不觸發任何備份／上傳，
  * 選好後直接把路徑插進編輯區目前的游標位置（沿用開啟視窗前記住的選取範圍）。 */
