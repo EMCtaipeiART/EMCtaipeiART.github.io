@@ -182,6 +182,22 @@ describe('Machi Design API Worker', () => {
     expect(content).not.toMatch(/[📢🎉✉📝💬🖼👥⚙🔔🚀]/u);
   });
 
+  it('records one read receipt per signed-in account for each announcement', async () => {
+    const token = await login();
+    const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'announcement-read-file-sha' }, commit: { sha: 'announcement-read-commit-sha' } });
+    });
+    const first = await api({ action: 'markSystemAnnouncementRead', version: 'v4.7', account: 'spoofed@emctaipei.com' }, token);
+    const repeated = await api({ action: 'markSystemAnnouncementRead', version: 'v4.7' }, token);
+    expect(first).toMatchObject({ ok: true, action: 'markSystemAnnouncementRead', version: 'v4.7', readCount: 1 });
+    expect(repeated).toMatchObject({ ok: true, readCount: 1, unchanged: true });
+    const rows = await api({ action: 'adminTableRows', table: '系統公告欄' }, token);
+    const records = JSON.parse(String((rows.rows as Array<Record<string, unknown>>)[0]['已讀紀錄'])) as Array<Record<string, unknown>>;
+    expect(records).toEqual([expect.objectContaining({ account: 'machi.chen@emctaipei.com', name: 'Machi' })]);
+    expect(githubPut).toHaveBeenCalledTimes(1);
+  });
+
   it('resolves customer edit permissions from current department and group membership', () => {
     const database = testDatabase();
     const customer = { '客戶別': '動態權限客戶', '專案負責人': JSON.stringify(['department:測試組']), '設計負責人': '[]', '部門組別': '[]' };
@@ -1166,6 +1182,52 @@ describe('Machi Design API Worker', () => {
     expect(disconnected).toMatchObject({ ok: true });
     const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
+  });
+
+  it('2026-08-20: computeReplySuggestion 組出的建議副本要保留聯絡人顯示名，不能被裁成只剩一長串信箱——回信編輯器的「副本」聯絡人晶片才有名字可以顯示', async () => {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.push({
+        '案件編號': '26080005', '客戶別': '測試客戶', '專案名稱': '副本顯示名測試案件', '狀態': '過稿中',
+        'Gmail信件串ID': 'gmail-thread-named-cc', 'Gmail寄件帳號': 'test.user@emctaipei.com'
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-named-cc');
+    const token = await seedSession('test.user@emctaipei.com');
+
+    // 最後一封信是客戶寄來的（不是寄件帳號自己寄出的），所以建議收件人應該直接是這封信的寄件人（含顯示名，
+    // 因為 to 這個欄位本身沒有經過任何裁切顯示名的處理）；副本裡「傅思凱」有顯示名、「another@example.com」
+    // 沒有顯示名——修正前的舊邏輯（extractEmailAddressesFromHeader）會把兩者都裁成只剩信箱，這裡要驗證
+    // 「傅思凱」這個名字有被保留下來，不是巧合通過。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-named-cc?format=full') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-named-cc');
+        return Response.json({
+          id: 'gmail-thread-named-cc',
+          messages: [{
+            id: 'gmail-msg-named-cc', snippet: '',
+            payload: {
+              mimeType: 'text/plain', body: { data: toBase64Url('麻煩再確認一下這次的修改內容') },
+              headers: [
+                { name: 'From', value: '"客戶窗口" <client@example.com>' },
+                { name: 'To', value: 'test.user@emctaipei.com' },
+                { name: 'Cc', value: '"傅思凱" <sikai.fu@emctaipei.com>, another@example.com' }
+              ]
+            }
+          }]
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const thread = await api({ action: 'getCaseMailThread', caseId: '26080005' }, token);
+    expect(thread.ok).toBe(true);
+    expect(thread.suggestedTo).toBe('"客戶窗口" <client@example.com>');
+    expect(thread.suggestedCc).toBe('傅思凱 <sikai.fu@emctaipei.com>, another@example.com');
   });
 
   it('2026-08-19: getCaseMailThread／replyCaseMail 也納入客戶別「權限設定」白名單——即使是討論串本身的實際收件人，不在白名單裡一樣被擋；加進白名單後才會走到既有的討論串相關人檢查並成功', async () => {

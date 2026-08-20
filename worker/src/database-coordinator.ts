@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { publicSystemAnnouncement, TABLE_SCHEMAS } from '../../backend/schema.mjs';
+import { publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
@@ -413,6 +413,18 @@ function gmailAttachmentDataUrl(mimeType: string, base64UrlData: string): string
 /** 從單一標頭值（可能是逗號分隔的多個「顯示名 <email>」或純 email）擷取出所有 email，一律轉小寫方便比對。 */
 function extractEmailAddressesFromHeader(value: string): string[] {
   return (value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(email => email.toLowerCase());
+}
+
+/** 跟 extractEmailAddressesFromHeader 類似，但保留每個地址原本的顯示名（沒有顯示名才只剩 email）——
+ * 給需要把建議收件人／副本顯示給使用者看（而不是只拿來做 email 比對）的地方用，例如
+ * computeReplySuggestion 組出的副本清單，這樣信件編輯器的聯絡人晶片才能顯示姓名而不是一長串信箱。 */
+function extractAddressEntriesFromHeader(value: string): { email: string; full: string }[] {
+  return value.split(',').map(part => part.trim()).filter(Boolean).map(part => {
+    const match = part.match(/^"?([^"<]*?)"?\s*<([^<>]+)>$/);
+    const email = (match ? match[2] : part).trim().toLowerCase();
+    const name = match ? match[1].trim() : '';
+    return { email, full: name ? `${name} <${email}>` : email };
+  }).filter(entry => /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(entry.email));
 }
 
 /** 彙整整條信件串裡（不分哪一封信）出現過的所有收件人／寄件人／副本 email，用來判斷「這個系統帳號算不算
@@ -1191,9 +1203,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外。「自己」同時要排除 selfAddress
     // （實際連接的 Gmail 信箱，例如 designer.mailbox@gmail.com）與 owner（案件記錄的寄件帳號別名，例如
     // test.user@emctaipei.com）——這兩者在 Google Workspace 別名寄送的情境下常常是不同的兩個地址。
+    // 這裡刻意用 extractAddressEntriesFromHeader（保留顯示名）而不是 extractEmailAddressesFromHeader
+    // （只剩 email）組出最終要回傳的 cc 字串——後者只適合拿來做 email 是否存在的比對，如果拿它的結果直接
+    // 組字串，前端信件編輯器的副本聯絡人晶片就只能顯示一長串信箱，不會顯示姓名。
     const excludedFromCc = new Set([selfAddress, owner, ...extractEmailAddressesFromHeader(to)].filter(Boolean));
-    const cc = [...new Set([...extractEmailAddressesFromHeader(toHeader), ...extractEmailAddressesFromHeader(ccHeader)])]
-      .filter(email => !excludedFromCc.has(email))
+    const seenCc = new Set<string>();
+    const cc = [...extractAddressEntriesFromHeader(toHeader), ...extractAddressEntriesFromHeader(ccHeader)]
+      .filter(entry => {
+        if (excludedFromCc.has(entry.email) || seenCc.has(entry.email)) return false;
+        seenCc.add(entry.email);
+        return true;
+      })
+      .map(entry => entry.full)
       .join(', ');
     return { to, cc };
   }
@@ -1610,6 +1631,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };
       if (action === 'getSystemAnnouncement') return { ok: true, action, announcement: publicSystemAnnouncement(database), revision: database.revision };
+      if (action === 'markSystemAnnouncementRead') {
+        const current = this.requireSession(session);
+        const version = text(payload.version || payload['公告版本']);
+        if (!version) throw new Error('缺少公告版本');
+        return this.mutate(action, current, draft => {
+          const row = draft.tables['系統公告欄'].rows.find(item => text(item['公告版本']) === version);
+          if (!row) throw new Error('找不到這個系統公告');
+          const account = canonicalAccount(current.account || current.user);
+          const records = systemAnnouncementReadRecords(row);
+          const result = { ok: true, action, version, account, readCount: records.length, readRecords: records };
+          if (records.some(record => record.account === account)) return { result, changed: false };
+          const profile = settingsRow(draft, account || current.user);
+          records.push({
+            account,
+            name: text(profile?.['顯示名'] || profile?.['名字'] || current.user || account),
+            readAt: nowTaipei()
+          });
+          row['已讀紀錄'] = JSON.stringify(records);
+          return {
+            result: { ...result, readCount: records.length, readRecords: records },
+            changedTables: ['系統公告欄']
+          };
+        });
+      }
       if (action === 'diagnose') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, tables: Object.fromEntries(tableNames().map(name => [name, database.tables[name].rows.length])) };
       if (action === 'urlFetchAuthCheck') return { ok: true, action, status: 200, message: 'Cloudflare Worker fetch 可執行', version: VERSION };
       if (action === 'writeAccessCheck') return { ok: true, action, checkedAt: new Date().toISOString(), nonMutating: true, permissions: { createRequest: true, updateRequest: true, updateStatusDetails: Boolean(session), reason: 'Cloudflare Worker 已連線；狀態與細節依登入權限判斷' }, checks: { databaseWritable: Boolean(this.env.GITHUB_TOKEN) } };
