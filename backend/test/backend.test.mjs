@@ -139,6 +139,9 @@ test('system announcement defaults to v4.7 and only exposes the latest enabled v
   assert.equal(publicSystemAnnouncement(database).version, 'v4.7');
   assert.match(publicSystemAnnouncement(database).content, /Gmail/);
   assert.doesNotMatch(publicSystemAnnouncement(database).content, /[📢🎉✉📝💬🖼👥⚙🔔🚀]/u);
+  database.tables['系統公告欄'].rows[0]['公告內容'] = '# 📢 舊版系統預設公告';
+  normalizeDatabaseShape(database);
+  assert.doesNotMatch(publicSystemAnnouncement(database).content, /[📢🎉✉📝💬🖼👥⚙🔔🚀]/u);
   database.tables['系統公告欄'].rows.push({ '公告版本': 'v4.8', '公告標題': '下一版', '公告內容': '新公告', '是否啟用': '停用' });
   assert.equal(publicSystemAnnouncement(database).version, 'v4.7');
   database.tables['系統公告欄'].rows.at(-1)['是否啟用'] = '啟用';

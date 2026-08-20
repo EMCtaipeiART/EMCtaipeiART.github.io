@@ -375,7 +375,15 @@ export function normalizeDatabaseShape(input) {
     table.rows = Array.isArray(table.rows) ? table.rows.filter(row => row && typeof row === 'object' && !Array.isArray(row)) : [];
     if (name === '帳號權限') table.rows.forEach(row => { delete row['密碼雜湊']; });
     if (name === '加權計分標準' && !table.rows.length) table.rows = DEFAULT_WEIGHT_RULE_ROWS.map(row => ({ ...row }));
-    if (name === '系統公告欄' && !table.rows.length) table.rows = DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS.map(row => ({ ...row }));
+    if (name === '系統公告欄') {
+      if (!table.rows.length) table.rows = DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS.map(row => ({ ...row }));
+      else table.rows = table.rows.map(row => (
+        String(row['公告版本'] ?? '').trim() === 'v4.7'
+        && String(row['更新者'] ?? '').trim() === '系統預設'
+          ? { ...row, ...DEFAULT_SYSTEM_ANNOUNCEMENT_ROWS[0] }
+          : row
+      ));
+    }
     if (name === '角色權限範本') {
       const rowsByRole = new Map(table.rows.map(row => [String(row['角色範本'] || '').trim(), row]));
       table.rows = DEFAULT_ROLE_TEMPLATE_ROWS.map(defaultRow => ({ ...defaultRow, ...(rowsByRole.get(defaultRow['角色範本']) || {}) }));
