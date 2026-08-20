@@ -7525,6 +7525,7 @@ function canViewCustomerCases(name){
   if(isAdministrator())return true;
   if(!isLoggedIn())return true;
   const visible=customerVisibleDepartments(name);
+  const account=canonicalAccountClient(currentEditorAccount||currentEditor);
   const dept=String(currentEditorDepartment||'').trim();
   // 2026-08-19：這裡一定要用 currentEditorRawGroup（帳號「組別」欄位原始值），不能用
   // currentEditorGroup——後者是給「設計組別」（平面/影音/管理者）用的正規化值，任何其他組別名稱
@@ -7532,7 +7533,8 @@ function canViewCustomerCases(name){
   // 會讓客戶別「部門／組別」裡任何非部門層級的勾選（也就是「各組」底下的所有子分組）永遠比對不到。
   const group=String(currentEditorRawGroup||'').trim();
   const designDepartmentMatch=visible.includes('設計部')&&(dept==='設計部'||['平面','影音'].includes(normalizeDesignGroup(group)));
-  return designDepartmentMatch||(Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
+  const individualMatch=Boolean(account)&&visible.some(value=>canonicalAccountClient(value)===account);
+  return designDepartmentMatch||individualMatch||(Boolean(dept)&&visible.includes(dept))||(Boolean(group)&&visible.includes(group));
 }
 /** 權限設定可混用個別 Email 與 department:/group: 動態規則；動態規則依登入者目前設定即時計算。 */
 function customerEditRules(name){
@@ -8515,7 +8517,7 @@ function resetGmailComposeQueueUi(){
   const pending=$('#gmailComposeQueuePending'); if(pending){pending.hidden=true; pending.classList.remove('is-failed')}
   const prev=$('#gmailComposeQueuePrev'); if(prev)prev.hidden=true;
   const next=$('#gmailComposeQueueNext'); if(next)next.hidden=true;
-  const schedule=$('#gmailComposeSchedule'); if(schedule)schedule.hidden=false;
+  const schedule=$('#gmailComposeSchedule'); if(schedule){schedule.hidden=false; schedule.disabled=false}
   const cancel=$('#gmailComposeCancel'); if(cancel)cancel.textContent='取消';
   const sendBtn=$('#gmailComposeSend'); if(sendBtn){sendBtn.hidden=false; sendBtn.disabled=false; sendBtn.textContent='寄出'}
   const subjectField=$('#gmailComposeSubject'); if(subjectField){subjectField.disabled=false; subjectField.placeholder='主旨'}
@@ -8550,7 +8552,18 @@ function renderPostSubmitGmailDraft(){
   const isLast=index===total-1;
   $('#gmailComposeQueuePrev').hidden=index===0;
   $('#gmailComposeQueueNext').hidden=isLast;
-  $('#gmailComposeSchedule').hidden=true; // 批次確認流程先不支援排程，維持既有排程功能只在單筆既有入口使用
+  // 「指定排程時間」在佇列模式下每一封都能用（不限最後一封）——排程是這封信自己的替代寄送方式，
+  // 跟「上一封／下一封」的瀏覽進度是兩件事。既有的 scheduleComposeMail() 完全是靠讀取
+  // modal.dataset.caseId／畫面上目前的欄位內容組請求，這裡只要把 dataset.caseId 換成「目前顯示的
+  // 這封草稿」的真正案件編號，就能原封不動沿用，不需要另外寫一份佇列專用的排程邏輯。
+  const scheduleBtn=$('#gmailComposeSchedule');
+  if(scheduleBtn)scheduleBtn.disabled=!ready;
+  if(ready){modal.dataset.caseId=draft.id; refreshScheduledMailList(draft.id,'compose')}
+  else{
+    delete modal.dataset.caseId;
+    const scheduledList=$('#gmailComposeScheduledList');
+    if(scheduledList){scheduledList.hidden=true; scheduledList.innerHTML=''}
+  }
   const imageBtn=document.querySelector('.gmail-rich-image-btn[data-rich-image-for="gmailComposeEditor"]'); if(imageBtn)imageBtn.hidden=true;
   $('#gmailComposeCancel').textContent='稍後再寄';
   const sendBtn=$('#gmailComposeSend');
@@ -8601,20 +8614,34 @@ function navigatePostSubmitQueue(delta){
   queue.index=Math.max(0,Math.min(queue.drafts.length-1,queue.index+delta));
   renderPostSubmitQueue();
 }
+/** 這封信如果已經被使用者用「指定排程時間」排程過（見 renderPostSubmitGmailDraft），「全部寄出」
+ * 不該再立即多送一次——不然同一筆案件會被寄兩次（一次現在立即送、一次等排程時間到背景自動觸發）。
+ * 這裡用即時查詢、不是自己快取一個布林值，確保使用者中途在排程清單裡按過「取消排程」的話，
+ * 這裡永遠反映最新狀態（取消後應該照常被「全部寄出」納入）。 */
+async function hasPendingScheduledMail(caseId){
+  try{
+    const data=await sheetApi('listScheduledMail',{caseId,editorToken:currentEditorToken});
+    return (Array.isArray(data.items)?data.items:[]).some(item=>item.status==='pending');
+  }catch{
+    return false;
+  }
+}
 /** 佇列裡最後一封才會顯示、也才能按下的「寄出」／「全部寄出」——確認完每一封的內容後，
  * 依畫面上原本的順序依序（不是同時平行）呼叫既有的 sendCaseMail action，任何一封失敗都不影響
- * 其餘幾封繼續寄出，最後彙總成功／失敗筆數；跟既有「修改紀錄多選刪除」用的是同一種依序處理模式。 */
+ * 其餘幾封繼續寄出，最後彙總成功／失敗筆數；跟既有「修改紀錄多選刪除」用的是同一種依序處理模式。
+ * 已經被排程過的那幾封會被跳過，不會在這裡又立即送一次。 */
 async function handlePostSubmitGmailSend(){
   const queue=postSubmitQueue; if(!queue)return;
   saveCurrentPostSubmitDraftEdits();
   if(!queue.drafts.every(d=>d.id||d.idFailed)){setSync('案件編號生產中，請稍候再寄出',true);return}
   const sendBtn=$('#gmailComposeSend'); if(sendBtn)sendBtn.disabled=true;
   const total=queue.drafts.length;
-  let okCount=0,failCount=0;
+  let okCount=0,failCount=0,scheduledCount=0;
   const signatureHtml=await ensureGmailSignatureLoaded();
   for(let i=0;i<total;i++){
     const draft=queue.drafts[i];
     if(!draft.id){failCount++;continue}
+    if(await hasPendingScheduledMail(draft.id)){scheduledCount++;continue}
     const defaults=mailDraft(draft.row);
     const edited=draft.edited;
     const to=edited?edited.toEntries.join(', '):defaults.to;
@@ -8636,7 +8663,10 @@ async function handlePostSubmitGmailSend(){
   save();
   render();
   closeGmailComposeModal();
-  setSync(failCount?`已寄出 ${okCount} 封，${failCount} 封失敗，請至案件列表個別補寄`:`已寄出 ${okCount} 封`,Boolean(failCount),3200);
+  const summary=[`已寄出 ${okCount} 封`];
+  if(scheduledCount)summary.push(`${scheduledCount} 封已排程，稍後自動寄出`);
+  if(failCount)summary.push(`${failCount} 封失敗，請至案件列表個別補寄`);
+  setSync(summary.join('，'),Boolean(failCount),3200);
 }
 function closePostSubmitCopyModal(){
   const modal=$('#mailCopyModal'); if(modal)modal.hidden=true;
@@ -9397,7 +9427,7 @@ function designerReplyTemplateRowHtml(profile,detail='',content=''){return `<div
 function designerReplyTemplatesHtml(profile){const entries=Object.entries(profile.replyTemplates||{}),rows=(entries.length?entries:[['','']]).map(([detail,content])=>designerReplyTemplateRowHtml(profile,detail,content)).join('');return `<section class="designer-setting-block designer-setting-replies"><div class="designer-setting-block-title"><b>5. 回信範本設定</b><span>依案件的設計種類、階段與項目細節自動帶入回信內容；多選時以第一個選項為準</span></div><div class="designer-reply-template-list" data-reply-template-list>${rows}</div><button type="button" class="designer-reply-template-add" data-add-reply-template>+新增項目範本</button></section>`}
 function updateDesignerReplyStageOptions(item){const stageSelect=item.querySelector('[data-reply-template-stage]');if(!stageSelect)return;const type=item.querySelector('[data-reply-template-type]')?.value||'',stages=designerReplyStageOptions(type),prevStage=stageSelect.value;stageSelect.innerHTML=stages.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');stageSelect.value=stages.includes(prevStage)?prevStage:(stages[0]||'');updateDesignerReplyDetailOptions(item)}
 function updateDesignerReplyDetailOptions(item){const detailSelect=item.querySelector('[data-reply-template-detail]');if(!detailSelect)return;const type=item.querySelector('[data-reply-template-type]')?.value||'',stage=item.querySelector('[data-reply-template-stage]')?.value||'',details=designerReplyDetailChoices(type,stage);detailSelect.innerHTML='<option value="">請選擇項目細節</option>'+details.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('')}
-function bindDesignerReplySettings(){designerSettingsList?.querySelectorAll('.designer-setting-row').forEach(row=>{const profile=designerProfile(row.dataset.designer);row.querySelector('[data-add-reply-template]')?.addEventListener('click',()=>{row.querySelector('[data-reply-template-list]')?.insertAdjacentHTML('beforeend',designerReplyTemplateRowHtml(profile))});row.addEventListener('click',event=>{const button=event.target.closest('[data-remove-reply-template]');if(!button)return;const item=button.closest('[data-reply-template-row]'),list=item?.parentElement;if(!item||!list)return;item.remove();if(!list.querySelector('[data-reply-template-row]'))list.insertAdjacentHTML('beforeend',designerReplyTemplateRowHtml(profile))});row.addEventListener('change',event=>{const item=event.target.closest('[data-reply-template-row]');if(!item)return;if(event.target.matches('[data-reply-template-type]'))updateDesignerReplyStageOptions(item);else if(event.target.matches('[data-reply-template-stage]'))updateDesignerReplyDetailOptions(item)})})}
+function bindDesignerReplySettings(){designerSettingsList?.querySelectorAll('.designer-setting-row').forEach(row=>{const profile=designerProfile(row.dataset.designer);row.querySelector('[data-add-reply-template]')?.addEventListener('click',()=>{row.querySelector('[data-reply-template-list]')?.insertAdjacentHTML('beforeend',designerReplyTemplateRowHtml(profile))});row.addEventListener('click',event=>{const button=event.target.closest('[data-remove-reply-template]');if(!button)return;const item=button.closest('[data-reply-template-row]'),list=item?.parentElement;if(!item||!list)return;const detail=item.querySelector('[data-reply-template-detail]')?.value||'';if(!confirm(detail?`確定刪除「${detail}」回信範本？`:'確定刪除這個回信範本？'))return;item.remove();if(!list.querySelector('[data-reply-template-row]'))list.insertAdjacentHTML('beforeend',designerReplyTemplateRowHtml(profile))});row.addEventListener('change',event=>{const item=event.target.closest('[data-reply-template-row]');if(!item)return;if(event.target.matches('[data-reply-template-type]'))updateDesignerReplyStageOptions(item);else if(event.target.matches('[data-reply-template-stage]'))updateDesignerReplyDetailOptions(item)})})}
 function collectDesignerReplyTemplates(row){return Object.fromEntries([...row?.querySelectorAll('[data-reply-template-row]')||[]].map(item=>[item.querySelector('[data-reply-template-detail]')?.value.trim()||'',item.querySelector('[data-reply-template-content]')?.value.trim()||'']).filter(([detail,content])=>detail&&content))}
 function validateDesignerReplyTemplateInputs(){for(const row of designerSettingsList?.querySelectorAll('.designer-setting-row')||[]){const seen=new Set;for(const item of row.querySelectorAll('[data-reply-template-row]')){const select=item.querySelector('[data-reply-template-detail]'),textarea=item.querySelector('[data-reply-template-content]'),detail=select?.value.trim()||'',content=textarea?.value.trim()||'';select?.setCustomValidity('');textarea?.setCustomValidity('');if(content&&!detail){select.setCustomValidity('請先選擇項目細節');select.reportValidity();return false}if(detail&&content&&seen.has(detail)){select.setCustomValidity('同一個項目細節只能設定一個回信範本');select.reportValidity();return false}if(detail&&content)seen.add(detail)}}return true}
 function visibleDesignerSettingsOptions(){return isAdministrator()?designerOptions:designerOptions.filter(name=>name===currentEditor)}

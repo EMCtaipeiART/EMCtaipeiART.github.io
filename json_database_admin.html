@@ -724,15 +724,17 @@
       if(department==='負責人')return {group:'負責人',subgroup:''};
       return {group:'各組',subgroup:group||department||'其他'};
     }
+    function customerIndividualEntries(){
+      return permissionModelsCache.filter(row=>row['帳號']&&row['狀態']!=='停用').map(row=>{
+        const account=MachiAccess.canonicalAccount(row['帳號']),name=String(row['顯示名']||row['名字']||account).trim()||account,department=String(row['部門']||'').trim(),group=String(row['組別']||'').trim(),info=customerPersonGroupInfo(department,group);
+        return {value:account,label:name,secondary:account,search:`${name} ${account} ${department} ${group}`.toLowerCase(),group:'個別人員',subgroup:info.group==='各組'?(info.subgroup||'其他'):info.group,department};
+      }).sort((a,b)=>a.label.localeCompare(b.label,'zh-Hant'));
+    }
     function customerOwnerEntries(){
       const seenDepartments=new Set(),seenGroups=new Set(),rules=[];
       organizationOptions('部門').forEach(name=>{if(!name||seenDepartments.has(name))return;seenDepartments.add(name);rules.push({value:`department:${name}`,label:name,secondary:'部門',search:`${name} 部門`.toLowerCase(),group:'部門',subgroup:''})});
       organizationOptions('組別').forEach(name=>{if(!name||seenGroups.has(name))return;seenGroups.add(name);rules.push({value:`group:${name}`,label:name,secondary:'組別',search:`${name} 組別`.toLowerCase(),group:'組別',subgroup:''})});
-      const people=permissionModelsCache.filter(row=>row['帳號']&&row['狀態']!=='停用').map(row=>{
-        const account=MachiAccess.canonicalAccount(row['帳號']),name=String(row['顯示名']||row['名字']||account).trim()||account,department=String(row['部門']||'').trim(),group=String(row['組別']||'').trim(),info=customerPersonGroupInfo(department,group);
-        return {value:account,label:name,secondary:account,search:`${name} ${account} ${department} ${group}`.toLowerCase(),group:'個別人員',subgroup:info.group==='各組'?(info.subgroup||'其他'):info.group,department};
-      }).sort((a,b)=>a.label.localeCompare(b.label,'zh-Hant'));
-      return [...rules,...people];
+      return [...rules,...customerIndividualEntries()];
     }
     /** 設計負責人的值必須是前台 designerOptions 認得的純姓名（見 index.html 的 applyCustomerDesignerAutoFill），
      * 所以候選人來源限定在「組別為平面／影音」的帳號＋既有的 ACCOUNT_DESIGNER_OPTIONS 名單，不是全體員工。 */
@@ -740,8 +742,9 @@
       const known=new Map();
       permissionModelsCache.filter(row=>row['帳號']&&row['狀態']!=='停用'&&/^(?:平面|影音)$/.test(String(row['組別']||'').trim())).forEach(row=>{
         const name=String(row['名字']||'').trim();if(!name||known.has(name))return;
-        const department=String(row['部門']||'').trim()||'設計部',group=String(row['組別']||'').trim(),info=customerPersonGroupInfo(department,group);
-        known.set(name,{value:name,label:name,secondary:group,search:`${name} ${department} ${group}`.toLowerCase(),group:info.group,subgroup:info.subgroup});
+        const department=String(row['部門']||'').trim()||'設計部',group=String(row['組別']||'').trim();
+        // 喜愛設定只挑選設計負責人，統一放在「設計部」，不再顯示「各組」分類。
+        known.set(name,{value:name,label:name,secondary:group,search:`${name} ${department} ${group}`.toLowerCase(),group:'設計部',subgroup:''});
       });
       ACCOUNT_DESIGNER_OPTIONS.forEach(name=>{if(!known.has(name))known.set(name,{value:name,label:name,secondary:'設計部',search:`${name} 設計部`.toLowerCase(),group:'設計部',subgroup:''})});
       return [...known.values()].sort((a,b)=>a.label.localeCompare(b.label,'zh-Hant'));
@@ -750,14 +753,15 @@
      * 可以看到這個客戶別的案件（避免改版當下讓尚未設定過的客戶別對現有使用者變成完全看不到）；
      * 一旦客戶別已經勾選過任何值，就完全依實際勾選內容決定，不再套用這個預設。 */
     const CUSTOMER_DEFAULT_VISIBLE_DEPARTMENTS=['企劃部','設計部'];
-    /** 「部門／組別」的候選清單，2026-08-19 起呈現方式改成跟「權限設定」／「喜愛設定」一樣的收合式
-     * 名單（搜尋＋分組收合＋已選膠囊），不再是純粹的核取方塊清單——分兩組：「部門」與「組別」，來源分別
+    /** 「部門／組別」的候選清單，呈現方式跟「權限設定」一樣是搜尋＋分組收合＋已選膠囊。
+     * 除了「部門」與「組別」，也可直接指定「個別人員」的帳號。部門與組別的來源分別
      * 是 organizationOptions('部門')／organizationOptions('組別')；同一個名稱如果部門與組別剛好重複，
      * 只留在先出現的那一組，避免同一個值在畫面上出現兩次、卻各自獨立勾選狀態的混淆。 */
     function customerDepartmentEntries(){
       const seen=new Set(),entries=[];
       organizationOptions('部門').forEach(name=>{if(seen.has(name))return;seen.add(name);entries.push({value:name,label:name,secondary:'',search:name.toLowerCase(),group:'部門',subgroup:''})});
       organizationOptions('組別').forEach(name=>{if(seen.has(name))return;seen.add(name);entries.push({value:name,label:name,secondary:'',search:name.toLowerCase(),group:'組別',subgroup:''})});
+      customerIndividualEntries().forEach(entry=>{if(seen.has(entry.value))return;seen.add(entry.value);entries.push(entry)});
       return entries;
     }
     /** 尚未設定權限時預選兩條動態部門規則；未來新增成員會依帳號目前的部門／組別自動取得權限。 */
@@ -843,10 +847,10 @@
         <header class="permission-editor-head"><div><h3>${esc(model['客戶別'])}</h3><p>「部門／組別」決定哪些人員能在前台看到案件；選擇「設計部」時也會包含目前組別為平面／影音的人員。「權限設定」可直接保存部門或組別規則，新增成員會自動繼承，也可另外指定個別人員。「喜愛設定」只用來給前台自動帶入預設的設計負責人。</p></div><div class="permission-editor-actions"><button class="btn" type="button" data-customer-delete="${esc(model['客戶別'])}">刪除客戶別</button><button class="btn primary" type="button" data-customer-save ${pending?'disabled':''}>${pending?'背景寫入中…':'儲存客戶別'}</button></div></header>
         ${pending?'<div class="notice ok">已先套用；遠端 JSON 正在背景寫入，可先切換設定其他客戶別。</div>':''}
         ${departmentsUsingDefault?'<div class="notice ok">尚未設定顯示範圍，目前預設「企劃部」與「設計部」的人員可以在前台看到這個客戶別的案件，可自行增減後再儲存。</div>':''}
-        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，其目前成員都能在前台看到這個客戶別的案件；「設計部」同時涵蓋組別為平面／影音的人員。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p>${departmentPickerHtml}</section>
+        <section class="permission-section"><h4>部門／組別</h4><p class="account-help">有勾選的部門／組別，其目前成員都能在前台看到這個客戶別的案件，也可另外指定個別人員；「設計部」同時涵蓋組別為平面／影音的人員。沒有勾選任何值時，預設「企劃部」與「設計部」可見。</p>${departmentPickerHtml}</section>
         <section class="permission-section"><h4>權限設定</h4><p class="account-help">可直接勾選「部門」或「組別」規則，該單位日後新增的人員會自動取得發信／編輯／刪除權限，不必逐一回來補選；也可在下方另外指定個別人員。全部取消並儲存空白名單時，會退回帳號原本的角色權限。</p>${ownersUsingDefault?'<div class="notice ok">尚未指派過權限，已預設套用「企劃部」與「設計部」兩條動態規則。</div>':''}${customerPeoplePickerHtml('owner',ownerEntries,ownerSelected)}</section>
         <section class="permission-section"><h4>喜愛設定</h4><p class="account-help">此客戶別的設計負責人，前台填單時會自動帶入清單第一位。</p>${customerPeoplePickerHtml('designer',customerDesignerEntries(),designerSelected)}</section>
-        <div class="permission-summary"><span>${departmentSelected.size} 個顯示部門／組別</span><span>${ownerSelected.size} 項操作權限規則</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
+        <div class="permission-summary"><span>${departmentSelected.size} 項顯示範圍</span><span>${ownerSelected.size} 項操作權限規則</span><span>${designerSelected.size} 位設計負責人</span>${model['更新時間']?`<span>更新 ${esc(model['更新時間'])}</span>`:''}</div>
       </section>`;
     }
     function customerListItemHtml(row,index){

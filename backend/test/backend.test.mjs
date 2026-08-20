@@ -220,6 +220,22 @@ test('customer admin keeps scroll position, front end follows saved order, and o
   assert.match(adminHtml, /value:`department:\$\{name\}`/);
   assert.match(adminHtml, /value:`group:\$\{name\}`/);
 
+  const customerEntriesStart = adminHtml.indexOf('function customerPersonGroupInfo(');
+  const customerEntriesEnd = adminHtml.indexOf('/** 尚未設定權限時預選', customerEntriesStart);
+  const customerEntriesSource = adminHtml.slice(customerEntriesStart, customerEntriesEnd);
+  const customerEntries = new Function('permissionModelsCache', 'MachiAccess', 'organizationOptions', 'ACCOUNT_DESIGNER_OPTIONS', `${customerEntriesSource};return {customerDepartmentEntries,customerDesignerEntries};`)(
+    [{ '帳號': 'person@example.com', '狀態': '啟用', '顯示名': '個別測試員', '名字': '個別測試員', '部門': '專案部', '組別': '平面' }],
+    { canonicalAccount: value => String(value || '').trim().toLowerCase() },
+    kind => kind === '部門' ? ['專案部'] : ['平面'],
+    []
+  );
+  const departmentEntries = customerEntries.customerDepartmentEntries();
+  assert.deepEqual(departmentEntries.find(entry => entry.value === 'person@example.com'), {
+    value: 'person@example.com', label: '個別測試員', secondary: 'person@example.com',
+    search: '個別測試員 person@example.com 專案部 平面', group: '個別人員', subgroup: '平面', department: '專案部'
+  });
+  assert.deepEqual([...new Set(customerEntries.customerDesignerEntries().map(entry => entry.group))], ['設計部']);
+
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const sortStart = html.indexOf('const CUSTOMER_DIRECTORY_COLLATOR=');
   const sortEnd = html.indexOf('function syncCustomerDirectoryFromDatabase(', sortStart);
@@ -240,6 +256,15 @@ test('customer admin keeps scroll position, front end follows saved order, and o
   assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '平面'), true);
   assert.equal(matches('group:設計測試組', 'tester@example.com', '測試員', '設計測試組'), true);
   assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '非設計組'), false);
+
+  const visibilityStart = html.indexOf('function canViewCustomerCases(');
+  const visibilityEnd = html.indexOf('/** 權限設定可混用個別 Email', visibilityStart);
+  const visibilitySource = html.slice(visibilityStart, visibilityEnd);
+  const canViewAsIndividual = new Function('isAdministrator', 'isLoggedIn', 'customerVisibleDepartments', 'canonicalAccountClient', 'currentEditorAccount', 'currentEditor', 'currentEditorDepartment', 'currentEditorRawGroup', 'normalizeDesignGroup', `${visibilitySource};return canViewCustomerCases;`)(
+    () => false, () => true, () => ['PERSON@example.com'], canonical,
+    'person@example.com', '', '未指定部門', '未指定組別', normalizeGroup
+  );
+  assert.equal(canViewAsIndividual('個別顯示客戶'), true);
 });
 
 test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
@@ -435,6 +460,21 @@ test('designer reply templates persist by item detail and multi-select uses the 
     name: 'Machi',
     replyTemplates: { '社群貼文': '應帶入第一個範本', '廣告素材': '不應帶入第二個範本' }
   }], []), '應帶入第一個範本');
+});
+
+test('front-end destructive actions require confirmation before deletion', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const functionSource = (start, end) => {
+    const from = html.indexOf(start);
+    const to = html.indexOf(end, from);
+    assert.ok(from >= 0 && to > from, `missing source range: ${start}`);
+    return html.slice(from, to);
+  };
+  assert.match(functionSource('function bindDesignerReplySettings(', 'function renderDesignerSettingsForm('), /if\(!confirm\(detail\?/);
+  assert.match(functionSource('async function cancelScheduledMailItem(', 'function monthFromDate('), /if\(!confirm\(/);
+  assert.match(functionSource('async function removeSelectedCaseDesignImages(', 'function refreshOpenRevisionModal('), /if\(!confirm\(/);
+  assert.match(functionSource('async function removeCaseDesignImage(', 'function detailOptionsForRow('), /if\(!confirm\(/);
+  assert.match(functionSource('function deleteRow(', 'function cancelRow('), /if\(!confirm\(/);
 });
 
 test('archive snapshot and dashboard use JSON database sources only', async () => {
