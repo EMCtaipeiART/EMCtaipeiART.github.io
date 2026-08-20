@@ -189,7 +189,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-20 Asia/Taipei（最新）— 修正「Hi 招呼語」英文姓氏、「設計師回覆信」改成即時展開＋圖片非同步補上（上傳完成前擋送出）
+### 2026-08-20 Asia/Taipei（最新）— 修正「回信」副本每次都遺失；設計師第一次回信完成上傳後自動把案件狀態改成「過稿中」
+
+- 修改目的：接續前兩則「回信」相關的工作，使用者這次提出兩項：①不管是「填寫修改需求信」「設計師回覆信」還是「一般回信」，副本（Cc）都沒有一起帶入，要求每一封信都要確保收件人、寄件人、副本三者都正確填好；②設計師透過「設計師回覆信」第一次完成上傳圖片這個動作後，案件狀態要自動改成「過稿中」，不用再手動切換一次。
+- 追查過程：先確認①的根因——`replyCaseMail`（Worker 端，三種回信模式最終都是呼叫這個 action）從這個功能一開始上線就**完全沒有處理過 Cc**：`buildGmailRawMessage()` 本身雖然早就支援 `cc` 參數（`sendCaseMail`，也就是「發信」第一次寄出時就已經在用），但 `replyCaseMail` 呼叫時從來沒有傳這個欄位，導致不管是哪一種回信情境，寄出的信件標頭裡永遠沒有 `Cc:`，原本在討論串裡的副本收件人（例如系統固定副本「傅思凱」、或客戶方的其他窗口）會在每一次回信之後被悄悄排除在外，收不到後續往來的信件。這不是這次新增的 UI（三選項選單、設計師回覆信）造成的，是 `replyCaseMail` 這個 action 從最一開始（2026-08-17／2026-08-18 那幾次 Gmail 整合的紀錄）就有的既有缺口，這次三個回信情境全部走同一個 action，缺口第一次真正被使用者感受到。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`。
+- 影響功能：
+  1. **`replyCaseMail` 補上「回覆全部」風格的副本邏輯**：新增 `ccHeader`（讀上一封信的 `Cc` 標頭），把上一封信的收件人（`toHeader`）＋副本（`ccHeader`）取聯集，扣掉「自己」（同時排除 `selfAddress`——實際連接的 Gmail 信箱位址，例如 `xxx@gmail.com`，與 `owner`——案件記錄的寄件帳號別名，例如 `xxx@emctaipei.com`，這兩者在 Google Workspace 別名寄送情境下常常是不同的兩個地址，只排除其中一個會漏網）與「這次要回覆的對象本身」（`to`），組成這次要帶的 `cc`，傳進既有的 `buildGmailRawMessage({to,cc,...})`——這支函式本來就支援 `cc`，這次只是把 `replyCaseMail` 補齊成跟 `sendCaseMail` 一樣有正確帶入副本。沒有任何副本可留（例如原本就是一對一的兩人對話）時 `cc` 會是空字串，`buildGmailRawMessage` 既有邏輯本來就會在這種情況下完全不輸出 `Cc:` 標頭，不會產生一個空白的副本欄位。
+  2. **新增 `applyFirstDesignerReplyStatus(id,row)`**（`index.html`）：`sendGmailThreadReply()` 的 `designer` 分支（設計師回覆信送出成功後）除了原本就有的 `confirmLatestModificationRound(id,row)`，這次新增呼叫這支函式——判斷依據是「這個案件目前的修改紀錄裡，有沒有第 0 輪（初稿）、但完全沒有任何大於 0 的後續輪次」，符合的話代表這次送出是這個案件「第一次」透過設計師回覆信完成上傳＋回覆，呼叫既有的 `updateCaseRow(id,{status:'過稿中'},'已更新狀態為過稿中')` 把狀態改過去；案件狀態本來就已經是「過稿中」則直接跳過（避免無意義的重複寫入）。這支函式跟 `confirmLatestModificationRound()` 是互斥的兩種情境（一個處理「還有後續輪次」、一個處理「還在第一輪」），各自獨立判斷條件、不需要互相協調，兩者在 `designer` 分支裡依序呼叫即可。這是既有「先手動把狀態標記過稿中，才會跳出上傳選單」流程的反向版本——現在「設計師回覆信」讓因果關係倒過來：先完成上傳＋送出回覆，狀態才跟著自動變成過稿中，設計師不用自己再手動切換一次。
+- 風險區塊：
+  - 副本邏輯是單純的「上一封信的收件人＋副本聯集，扣掉自己與這次回覆對象」——如果客戶端在某一輪回信時自己動手把某人從副本移除（有意排除），下一次系統回信時會**沿用移除後的那個狀態**繼續往下傳（因為每次都是讀「上一封信」的標頭，不是讀最原始那一封信的標頭），這是標準信箱「回覆全部」本來就有的行為，不是這次新增的例外狀況。
+  - `applyFirstDesignerReplyStatus()` 的判斷完全依賴前端當下快取的 `modificationRecordsFor(id)`——這份快取在 `resolveDesignerReplyImages()`（NAS 路徑）或 `applyDesignerReplyImages()`（電腦上傳路徑）已經在送出之前先呼叫過 `fetchModificationCounts()` 刷新過一次，理論上送出當下應該是最新的；但如果同一個案件在極短時間內被另一個帳號同時操作（例如另一位使用者剛好也在同一時間新增了一輪修改紀錄），仍然有極小的競態視窗可能讓這裡判斷用的是稍微過期的快取——這個風險等級跟這個檔案裡其他依賴 `modificationRecordsFor()` 快取做判斷的既有邏輯（例如 `confirmLatestModificationRound()`）完全一致，不是這次新增的風險類型。
+- 已檢查／驗證方式：
+  - Worker：`cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **29/29 全過**——**先重現了 bug 才確認修好**：套用修正後第一次跑測試時，既有那支涵蓋完整回信流程的測試（模擬上一封信 `From: designer@emctaipei.com｜To: test.user@emctaipei.com｜Cc: client@example.com`）新增的副本斷言一開始真的失敗，錯誤訊息顯示副本裡誤含了寄件帳號別名（`test.user@emctaipei.com`）本身，追查後發現是排除清單只排除了 `selfAddress`（實際 Gmail 信箱 `designer.mailbox@gmail.com`）沒有排除 `owner`（案件記錄的別名 `test.user@emctaipei.com`）——這正是「Google Workspace 別名寄送」這個既有測試情境（`gmailOauthConnect` 回傳的 `gmailAddress` 本來就跟案件記錄的帳號別名是兩個不同字串，這是這份測試檔案原本就設計好、專門模擬這種真實情境的既有資料）第一次真正踩到的地方，補上排除 `owner` 之後重新測試，精確斷言（只比對標頭段落裡的 `Cc:` 那一行，不是整段 raw text，避免跟引用內文裡出現的同一組 email 搞混）全部通過，`Cc: client@example.com` 正確保留、`test.user@emctaipei.com`／`designer@emctaipei.com`（自己與這次的回覆對象）正確被排除。`npx wrangler deploy --dry-run` 打包成功。
+  - `node --test backend/test/*.test.mjs` 33/33 全過（這次沒有改動 `backend/`，純粹確認沒有意外牽動共用邏輯）。
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過。用本機 Node 靜態伺服器＋ Browser pane 對 `applyFirstDesignerReplyStatus()` 做隔離測試（stub `sheetApi`／`updateCaseRow`，沒有真的打任何網路請求）：①只有第 0 輪、狀態是「執行中」→ 正確呼叫 `updateCaseRow` 改成「過稿中」；②同時有第 0 輪與第 1 輪（代表已經不是第一次回信）→ 正確不呼叫；③案件本來就已經是「過稿中」→ 正確不重複呼叫；④完全沒有任何修改紀錄（防呆情境）→ 正確不呼叫。另外完整模擬 `sendGmailThreadReply()` 的 `designer` 分支端對端流程：只有第 0 輪的案件送出設計師回覆信後，正確且唯一呼叫了 `updateCaseRow(id,{status:'過稿中'})`；有第 1 輪待確認的案件送出後，正確改呼叫 `updateModificationConfirm` 確認該輪、**不會**呼叫 `updateCaseRow`，證明兩種情境正確互斥、沒有同時觸發或漏掉。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「PM 發信→設計師第一次用『設計師回覆信』上傳並送出→確認客戶端收到的信件副本正確、案件狀態自動變成過稿中」的完整端對端流程；副本邏輯也沒有用超過兩層（例如三個人以上的討論串、且中途曾經手動增減過副本名單）的真實情境驗證過，這次的驗證完全依賴在真實 Cloudflare Workers 執行環境（`vitest-pool-workers`）裡 mock Gmail API 回應跑過的完整流程。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，「回信」寄出的信件仍然不會帶副本，跟這次要修正的問題一致。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-20 Asia/Taipei — 修正「Hi 招呼語」英文姓氏、「設計師回覆信」改成即時展開＋圖片非同步補上（上傳完成前擋送出）
 
 - 修改目的：接續上一則「回信」三選項選單的工作，使用者提出兩項修正：①編輯回信時「Hi xxx,」如果對象是英文名字，不該連姓氏一起抓進來（例如 Machi、Allen、David 這種只稱呼名字，不是「Allen Wu」）；②「設計師回覆信」裡「補上NAS自動抓取的圖片」這一段原本只是純文字描述，應該要是真的把圖片附上去；同時要求按下 NAS 資料夾選擇器的「選擇這個資料夾並備份」當下就先展開信件編輯器（不用等備份真正跑完），圖片等備份完成後再非同步補進編輯區，畫面上要有「上傳中」的提示，而且上傳沒完成前不能按下送出。
 - 影響檔案：`index.html`。

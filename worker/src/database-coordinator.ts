@@ -1224,11 +1224,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const selfAddress = text(stored?.gmail_address).toLowerCase();
     const fromHeader = gmailHeaderValue(headers, 'From');
     const toHeader = gmailHeaderValue(headers, 'To');
+    const ccHeader = gmailHeaderValue(headers, 'Cc');
     const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
+    // 副本比照一般信箱的「回覆全部」：把上一封信的收件人＋副本都留住（扣掉自己與這次要回覆的對象本身），
+    // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外——原本這裡完全沒有處理副本，
+    // 每一次回覆都會把上一封信的副本名單整個弄丟。「自己」同時要排除 selfAddress（實際連接的 Gmail 信箱，
+    // 例如 designer.mailbox@gmail.com）與 owner（案件記錄的寄件帳號別名，例如 test.user@emctaipei.com）——
+    // 這兩者在 Google Workspace 別名寄送的情境下常常是不同的兩個地址，信件標頭裡出現的是別名本身。
+    const excludedFromCc = new Set([selfAddress, owner, ...extractEmailAddressesFromHeader(to)].filter(Boolean));
+    const cc = [...new Set([...extractEmailAddressesFromHeader(toHeader), ...extractEmailAddressesFromHeader(ccHeader)])]
+      .filter(email => !excludedFromCc.has(email))
+      .join(', ');
     const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml), signatureHtml);
     const raw = buildGmailRawMessage({
-      to, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
+      to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

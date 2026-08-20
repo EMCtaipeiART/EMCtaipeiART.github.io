@@ -1033,6 +1033,12 @@ describe('Machi Design API Worker', () => {
         // 所以應該回覆給 designer@emctaipei.com，不是誤判成回覆給觸發者自己或其他人。
         const decodedRaw = decodeBase64UrlText(String(body.raw));
         expect(decodedRaw).toContain('To: designer@emctaipei.com');
+        // 副本比照「回覆全部」：上一封信（msg2）的收件人 test.user@emctaipei.com 與副本 client@example.com
+        // 都要留住，扣掉這次的回覆對象（designer@emctaipei.com）本身與寄件帳號自己（test.user@emctaipei.com）——
+        // 精確只比對標頭段落的 Cc 那一行，不是整段 raw text，避免跟引用內文裡出現的同一組 email 混在一起判斷。
+        const headerSection = decodedRaw.slice(0, decodedRaw.indexOf('\r\n\r\n'));
+        const ccHeaderLine = headerSection.split(/\r\n(?!\s)/).find(line => line.startsWith('Cc:'));
+        expect(ccHeaderLine).toBe('Cc: client@example.com');
         expect(decodedRaw).toContain('In-Reply-To: <msg2@mail.gmail.com>');
         expect(decodedRaw).toContain('References: <msg1@mail.gmail.com> <msg2@mail.gmail.com>');
         const extractReplyPart = (contentType: string) => {

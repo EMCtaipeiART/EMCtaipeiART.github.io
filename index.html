@@ -9409,6 +9409,18 @@ async function confirmLatestModificationRound(id,row){
     setSync(`回覆已寄出，但設計師確認紀錄寫入失敗：${err.message}`,true,4200);
   }
 }
+/** 設計師「第一次回信」（送出當下，這個案件除了第 0 輪／初稿以外還沒有任何後續修改輪次）完成後，
+ * 案件狀態自動改成「過稿中」——這是既有「先手動標記過稿中才會跳出上傳選單」的反向流程：現在改成從
+ * 「設計師回覆信」完成上傳並送出時，反過來自動把狀態帶到過稿中，不用設計師自己再手動切換一次。跟
+ * confirmLatestModificationRound() 互斥（一個處理「還有後續輪次」的情境、一個處理「還在第一輪」的
+ * 情境），兩者都掛在 designer 分支各自判斷條件即可，不用互相協調。 */
+async function applyFirstDesignerReplyStatus(id,row){
+  if(!row||String(row.status||'')==='過稿中')return;
+  const records=modificationRecordsFor(id);
+  const hasDraftRound=records.some(item=>(Number(item.count)||0)<=0);
+  const hasLaterRound=records.some(item=>(Number(item.count)||0)>0);
+  if(hasDraftRound&&!hasLaterRound)updateCaseRow(id,{status:'過稿中'},'已更新狀態為過稿中');
+}
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
   if(!id||!editor)return;
@@ -9430,7 +9442,7 @@ async function sendGmailThreadReply(){
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
     if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent);
-    else if(replyMode==='designer'&&row)await confirmLatestModificationRound(id,row);
+    else if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyFirstDesignerReplyStatus(id,row)}
     if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''}
     const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
     setSync(replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出',false,2600);
