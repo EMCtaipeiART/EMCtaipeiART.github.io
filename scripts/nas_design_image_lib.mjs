@@ -32,6 +32,115 @@ export const DEFAULT_IGNORE_FOLDER_NAMES = ['Links'];
 // 整個案件永遠卡住（每次排程都重新嘗試同一批、每次都整批失敗，見 uploadPendingRound()）。
 export const MAX_IMAGES_PER_UPLOAD_REQUEST = 20;
 
+// 鎖檔案內容讀不到有效 PID（見下方 acquireLock 說明）時，用「檔案是幾時建立
+// 的」判斷要不要視為過期──這個數字要遠大於單次掃描實際會花的時間（NAS／
+// Drive 上傳都可能拖到幾分鐘），避免正常還在跑的執行被誤判成過期而被蓋過去。
+export const STALE_LOCK_MS = 15 * 60 * 1000;
+
+/**
+ * 這把鎖保護的是「同一份 sync-state.json 同時只能有一個行程在讀取／判斷／
+ * 寫回」，不是只保護 nas_design_image_watcher.mjs 自己的排程重疊執行。
+ * 2026-08-19 第一次修這個問題時，鎖只加在 nas_design_image_watcher.mjs 的
+ * main() 裡，只防得住「crontab／launchd 同時各自啟動一份這支排程程式」；
+ * 但 nas_folder_picker_server.mjs（設計師在網頁上選好資料夾、按「選擇這個
+ * 資料夾並備份」當下立即執行一次的 backupSelectedFolder()）完全是另一個獨
+ * 立行程、常駐在背景（launchd 服務），會讀寫同一份 sync-state.json 卻完全
+ * 沒有跟排程程式互相協調——如果設計師點擊「立即備份」的時間點，剛好落在
+ * 每分鐘一次的排程正在掃描同一個案件的過程中，兩邊各自讀到「這批檔案還沒
+ * 歸類到任何一輪」的舊狀態、各自呼叫 Apps Script 上傳，就會把同一批圖片
+ * 傳兩次（各自產生一份獨立的 Drive 檔案，內容相同但網址不同）。案件
+ * 26080103 在 2026-08-20 實際重現過這個現象（兩次 addCaseDesignImages 相
+ * 隔約 72 秒，時間點正好對得上排程每分鐘一次的間隔），這是排程與選擇器
+ * 「共用同一份狀態，卻各自上鎖」這個設計缺口第一次被真正踩到，不是
+ * 2026-08-19 那次已經修過的同一個問題重演。修法是把鎖搬到這裡，讓兩支程式
+ * 呼叫同一個 acquireLock(lockFile)，`lockFile` 只要是同一個 stateFile 算出
+ * 來的路徑，兩邊天然就會搶同一把鎖，不需要另外設計跨行程通訊。
+ *
+ * 鎖的建立本身用 fs.writeFile(lockFile,pid,{flag:'wx'})（O_EXCL 獨佔建立，
+ * 檔案已存在就直接丟 EEXIST）而不是「先讀檔案確認沒有鎖、再寫入」——這一步
+ * 本身是原子的，兩個行程不會同時建立成功。但這裡曾經踩到一個更隱蔽的第二層
+ * race：即使「建立鎖檔案」這個動作本身是原子的，「建立檔案」跟「把 PID 內容
+ * 寫進檔案」終究還是兩個分開的系統呼叫，中間有一段極短暫的空檔——如果另一
+ * 個行程剛好在這個空檔讀到「鎖檔案存在、但內容還是空字串」，若只靠「能不能
+ * 從內容解析出一個活著的 PID」判斷是否過期，空字串會被 `Number('')` 解析成
+ * `0`，`0>0` 為假，被誤判成「沒有有效 PID、是過期的鎖」而直接蓋過去執行——
+ * 兩個行程因此一起衝過鎖，各自把同一批圖片上傳一次。這正是 2026-08-19 追查
+ * 案件 26080079／26080045 重複上傳、在這台機器上實際用兩個並行行程重現到的
+ * 根本原因（用真的兩個 `node` 行程搶同一把鎖測試，在套用下面的修正前，
+ * 五次裡有四次都真的兩邊都跑完並各自上傳成功）。
+ *
+ * 修正方式：讀不到有效 PID 時，不再直接當成「過期、可以蓋過去」，而是改看
+ * 鎖檔案的建立時間距離現在多久（`STALE_LOCK_MS`）——剛建立的極短時間內讀不
+ * 到內容，保守判定成「別人正在建立中，鎖仍然有效」，這次跳過；真的超過合理
+ * 時間都沒能讀到有效內容，才視為異常過期，清掉重建。讀得到有效 PID 時，維持
+ * 原本用 `process.kill(pid,0)` 立即判斷活著與否的快速路徑，不用等到過期時間。
+ */
+export async function acquireLock(lockFile) {
+  await fs.mkdir(path.dirname(lockFile), { recursive: true });
+  try {
+    await fs.writeFile(lockFile, String(process.pid), { flag: 'wx' });
+    return true;
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  }
+  // 鎖檔案已經存在——先記下它的建立時間，供讀不到有效 PID 時的過期判斷使用。
+  let stat;
+  try {
+    stat = await fs.stat(lockFile);
+  } catch (error) {
+    if (error.code === 'ENOENT') return acquireLock(lockFile); // 剛好被上一個行程釋放，重試一次。
+    throw error;
+  }
+  let raw = '';
+  try {
+    raw = await fs.readFile(lockFile, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error; // ENOENT 就維持 raw='' 走下面的空內容分支。
+  }
+  const pid = Number(raw.trim());
+  if (Number.isInteger(pid) && pid > 0) {
+    try {
+      process.kill(pid, 0);
+      return false; // 那個 PID 還活著，代表上一次還在跑，這次跳過。
+    } catch {
+      // PID 已經不存在，是過期的鎖（上次意外中斷留下的），可以蓋掉繼續。
+    }
+  } else if (Date.now() - stat.mtimeMs < STALE_LOCK_MS) {
+    return false; // 讀不到有效 PID，但鎖檔案是最近才建立的，保守視為仍在使用中。
+  }
+  try {
+    await fs.unlink(lockFile);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  return acquireLock(lockFile); // 用同一套 O_EXCL 邏輯重新嘗試一次，不直接假設自己一定搶得到。
+}
+
+export async function releaseLock(lockFile) {
+  try {
+    await fs.unlink(lockFile);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
+/**
+ * 給「使用者正在等待結果」的互動式路徑用（nas_folder_picker_server.mjs 的
+ * 立即備份）——跟排程程式那種「搶不到就直接跳過這次」不同，這裡值得稍微
+ * 等一下，因為排程每分鐘只會佔用鎖幾秒到數十秒（單一案件的掃描＋上傳），
+ * 使用者體感等待幾秒到幾十秒仍然合理，好過整次備份無聲失敗、要等下一輪
+ * 排程才會補上。逾時仍然搶不到鎖時回傳 false，呼叫端要能優雅降級（沿用
+ * 既有「備份失敗不擋路徑登記」的設計，不是拋例外中斷整個流程）。
+ */
+export async function acquireLockWithWait(lockFile, { timeoutMs = 45000, pollIntervalMs = 1500 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    if (await acquireLock(lockFile)) return true;
+    if (Date.now() >= deadline) return false;
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 export async function loadJsonFile(filePath, fallback = null) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');

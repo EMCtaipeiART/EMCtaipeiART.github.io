@@ -44,93 +44,17 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promises as fs } from 'node:fs';
 import * as lib from './nas_design_image_lib.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 鎖檔案內容讀不到有效 PID（見下方 acquireLock 說明）時，用「檔案是幾時建立
-// 的」判斷要不要視為過期──這個數字要遠大於單次掃描實際會花的時間（NAS／
-// Drive 上傳都可能拖到幾分鐘），避免正常還在跑的執行被誤判成過期而被蓋過去。
-const STALE_LOCK_MS = 15 * 60 * 1000;
-
-/**
- * 排程（crontab 每分鐘一次）沒有內建的「上一次還沒跑完，這次先跳過」防護——
- * 如果 NAS／網路變慢，單次掃描超過一分鐘很正常（掃描多個案件的資料夾＋壓縮
- * 圖片＋上傳到 Apps Script，每一步都可能卡在網路 I/O），沒有這道鎖的話，
- * crontab 會每分鐘疊加一個新的執行個體，多個行程同時讀寫同一份
- * sync-state.json、同時搶同一段內網頻寬，愈疊愈多、愈跑愈慢，最後看起來就
- * 像「整支程式停住不動了」。這裡用一個簡單的 PID 鎖檔案擋掉重疊執行：
- * 檔案存在且裡面的 PID 還活著就直接跳過這次；PID 已經不存在（上次意外中斷
- * 留下的舊鎖）就視為過期、正常接手執行。
- *
- * 鎖的建立本身用 fs.writeFile(lockFile,pid,{flag:'wx'})（O_EXCL 獨佔建立，
- * 檔案已存在就直接丟 EEXIST）而不是「先讀檔案確認沒有鎖、再寫入」——這一步
- * 本身是原子的，兩個行程不會同時建立成功。但這裡曾經踩到一個更隱蔽的第二層
- * race：即使「建立鎖檔案」這個動作本身是原子的，「建立檔案」跟「把 PID 內容
- * 寫進檔案」終究還是兩個分開的系統呼叫，中間有一段極短暫的空檔——如果另一
- * 個行程剛好在這個空檔讀到「鎖檔案存在、但內容還是空字串」，若只靠「能不能
- * 從內容解析出一個活著的 PID」判斷是否過期，空字串會被 `Number('')` 解析成
- * `0`，`0>0` 為假，被誤判成「沒有有效 PID、是過期的鎖」而直接蓋過去執行——
- * 兩個行程因此一起衝過鎖，各自把同一批圖片上傳一次。這正是這次追查案件
- * 26080079／26080045 重複上傳、在這台機器上實際用兩個並行行程重現到的
- * 根本原因（用真的兩個 `node` 行程搶同一把鎖測試，在套用下面的修正前，
- * 五次裡有四次都真的兩邊都跑完並各自上傳成功）。
- *
- * 修正方式：讀不到有效 PID 時，不再直接當成「過期、可以蓋過去」，而是改看
- * 鎖檔案的建立時間距離現在多久（`STALE_LOCK_MS`）——剛建立的極短時間內讀不
- * 到內容，保守判定成「別人正在建立中，鎖仍然有效」，這次跳過；真的超過合理
- * 時間都沒能讀到有效內容，才視為異常過期，清掉重建。讀得到有效 PID 時，維持
- * 原本用 `process.kill(pid,0)` 立即判斷活著與否的快速路徑，不用等到過期時間。
- */
-async function acquireLock(lockFile) {
-  await fs.mkdir(path.dirname(lockFile), { recursive: true });
-  try {
-    await fs.writeFile(lockFile, String(process.pid), { flag: 'wx' });
-    return true;
-  } catch (error) {
-    if (error.code !== 'EEXIST') throw error;
-  }
-  // 鎖檔案已經存在——先記下它的建立時間，供讀不到有效 PID 時的過期判斷使用。
-  let stat;
-  try {
-    stat = await fs.stat(lockFile);
-  } catch (error) {
-    if (error.code === 'ENOENT') return acquireLock(lockFile); // 剛好被上一個行程釋放，重試一次。
-    throw error;
-  }
-  let raw = '';
-  try {
-    raw = await fs.readFile(lockFile, 'utf8');
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error; // ENOENT 就維持 raw='' 走下面的空內容分支。
-  }
-  const pid = Number(raw.trim());
-  if (Number.isInteger(pid) && pid > 0) {
-    try {
-      process.kill(pid, 0);
-      return false; // 那個 PID 還活著，代表上一次還在跑，這次跳過。
-    } catch {
-      // PID 已經不存在，是過期的鎖（上次意外中斷留下的），可以蓋掉繼續。
-    }
-  } else if (Date.now() - stat.mtimeMs < STALE_LOCK_MS) {
-    return false; // 讀不到有效 PID，但鎖檔案是最近才建立的，保守視為仍在使用中。
-  }
-  try {
-    await fs.unlink(lockFile);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-  return acquireLock(lockFile); // 用同一套 O_EXCL 邏輯重新嘗試一次，不直接假設自己一定搶得到。
-}
-
-async function releaseLock(lockFile) {
-  try {
-    await fs.unlink(lockFile);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-}
+// acquireLock()/releaseLock() 這把鎖搬到 nas_design_image_lib.mjs 了（見該檔案
+// 開頭註解）——2026-08-20 發現案件 26080103 重複上傳的根因，是這把鎖原本只
+// 存在於這支排程程式自己的 main() 裡，防不住 nas_folder_picker_server.mjs
+// （常駐的資料夾選擇器伺服器，設計師按「立即備份」時）獨立讀寫同一份
+// sync-state.json，兩邊各自判斷成「還沒歸類」而各自上傳了一次。改成兩支
+// 程式都呼叫 lib.acquireLock(lockFile)（同一個 stateFile 算出來的同一個
+// lockFile 路徑），才能真的互相排隊，不只是防同一支程式自己疊加執行。
 
 function parseArgs(argv) {
   const args = {
@@ -151,15 +75,15 @@ async function main() {
   const configDir = path.dirname(args.config);
   const stateFile = lib.resolvePath(configDir, config.stateFile);
   const lockFile = `${stateFile}.lock`;
-  if (!(await acquireLock(lockFile))) {
+  if (!(await lib.acquireLock(lockFile))) {
     console.log('=== NAS 設計圖檔監控 ===');
-    console.log('上一次執行還沒結束（NAS／網路可能比較慢），這次先跳過，避免同時疊加多個執行個體。');
+    console.log('上一次執行還沒結束，或資料夾選擇器正在幫某個案件立即備份，這次先跳過，避免同時疊加多個執行個體。');
     return;
   }
   try {
     await runScan(args, config, configDir, stateFile);
   } finally {
-    await releaseLock(lockFile);
+    await lib.releaseLock(lockFile);
   }
 }
 

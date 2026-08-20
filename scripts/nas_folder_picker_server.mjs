@@ -13,7 +13,9 @@
  * 影片直接上傳一次，不用等背景監控程式下一輪輪詢（5-10 分鐘）才處理。
  * 之後案件維持過稿中期間，同一個資料夾如果又有新圖，就交給背景監控程式
  * 接手追蹤——兩支程式讀寫同一份狀態快取（sync-state.json），判斷「這個
- * 檔案處理過了沒」的邏輯完全一致，不會重複上傳同一批圖片。
+ * 檔案處理過了沒」的邏輯完全一致，且都會搶同一把鎖（見
+ * nas_design_image_lib.mjs 的 acquireLock），確保「使用者按下立即備份」
+ * 跟「排程剛好也在跑同一個案件」不會同時各自上傳一次同樣的圖片。
  *
  * 另外還會依案件的「客戶別」猜一個預設瀏覽路徑（見 config.defaultBrowseRoot
  * ／resolveDefaultBrowsePath），開啟選擇器時直接跳到「執行中/<客戶別>」
@@ -206,6 +208,17 @@ function readJsonBody(req) {
  * 或上傳失敗，也不丟例外中斷——路徑本身是否有效已經在呼叫端驗證過，「登
  * 記路徑」跟「這次順便備份成不成功」是兩件事，備份失敗不該讓路徑登記跟著
  * 失敗（背景監控程式下一輪還會再試）。
+ *
+ * 讀寫 sync-state.json 這一段（loadState→scanProject→saveState→
+ * uploadPendingRound→saveState）跟 nas_design_image_watcher.mjs 的排程
+ * 掃描搶的是同一份狀態、同一把鎖（lib.acquireLockWithWait，鎖檔案路徑由
+ * 同一個 stateFile 算出來）——2026-08-20 案件 26080103 曾經在使用者按下
+ * 「立即備份」的同時，剛好排程也在跑同一個案件，兩邊各自讀到「還沒歸類」
+ * 的舊狀態、各自上傳了一次同樣的圖片（見 nas_design_image_lib.mjs 開頭
+ * acquireLock 的說明）。這裡用「等待幾秒重試」而不是像排程那樣「搶不到就
+ * 直接跳過」，因為排程每分鐘只會佔用鎖幾秒到數十秒，使用者體感等一下比
+ * 起無聲失敗、要等下一輪排程才補上更好；真的等到逾時仍搶不到鎖，就跟其
+ * 他「這次沒有真的備份成功」的情況一樣優雅降級（不擋路徑登記本身）。
  */
 async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword }) {
   const dbData = await lib.fetchDatabase(config.dbJsonUrl);
@@ -217,43 +230,57 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
   const stateFile = lib.resolvePath(configDir, config.stateFile);
   const previewDir = lib.resolvePath(configDir, config.previewDir);
   const secrets = await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile));
-  const state = await lib.loadState(stateFile);
+  const lockFile = `${stateFile}.lock`;
   const warnings = [];
-  // keyword 優先用這次請求帶來的值（使用者在選擇器畫面當下填的，這時候通常還沒寫回資料
-  // 庫——前端要等這支立即備份完成、拿到路徑＋關鍵字之後才會一起 updateCaseRow()），沒帶
-  // 才退回讀資料庫既有值（例如重新設定既有資料夾，關鍵字欄位留白代表沿用原本設定）。
-  const effectiveKeyword = keyword != null ? String(keyword).trim() : meta.keyword;
-  const project = { caseId, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
 
-  const scanResult = await lib.scanProject(project, config, state, previewDir, warnings);
-  if (scanResult.error) {
-    return { attempted: true, uploadedCount: 0, message: scanResult.error, warnings };
-  }
-  if (scanResult.skippedByKeywordCount) {
-    warnings.push(`已依關鍵字「${effectiveKeyword}」略過 ${scanResult.skippedByKeywordCount} 個檔名不符的檔案（可能是其他案件或參考素材）`);
-  }
-  state[caseId] = scanResult.nextState;
-  await lib.saveState(stateFile, state); // 掃描結果（有沒有變動、預覽圖）先落地，就算後面上傳失敗也不會遺失這次掃描
-
-  if (!lib.uploadEnabled(config, secrets)) {
-    return { attempted: true, uploadedCount: 0, message: '尚未設定自動上傳（appsScriptUploadUrl／serviceKey），僅登記路徑並產生本機預覽圖', warnings };
+  if (!(await lib.acquireLockWithWait(lockFile))) {
+    return {
+      attempted: false,
+      uploadedCount: 0,
+      message: '背景監控程式目前正在同步資料，這次先跳過立即備份（不影響路徑登記），下一輪排程會自動補上'
+    };
   }
 
   try {
-    const upload = await lib.uploadPendingRound({
-      config, secrets, dbData, caseId,
-      designer: project.designer, client: project.client, start: project.start,
-      pendingPreviews: scanResult.pendingPreviews,
-      stateFiles: state[caseId].files
-    });
-    await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
-    if (!upload.uploadedCount) {
-      return { attempted: true, uploadedCount: 0, message: '沒有偵測到可上傳的圖片/影片', warnings };
+    const state = await lib.loadState(stateFile);
+    // keyword 優先用這次請求帶來的值（使用者在選擇器畫面當下填的，這時候通常還沒寫回資料
+    // 庫——前端要等這支立即備份完成、拿到路徑＋關鍵字之後才會一起 updateCaseRow()），沒帶
+    // 才退回讀資料庫既有值（例如重新設定既有資料夾，關鍵字欄位留白代表沿用原本設定）。
+    const effectiveKeyword = keyword != null ? String(keyword).trim() : meta.keyword;
+    const project = { caseId, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
+
+    const scanResult = await lib.scanProject(project, config, state, previewDir, warnings);
+    if (scanResult.error) {
+      return { attempted: true, uploadedCount: 0, message: scanResult.error, warnings };
     }
-    return { attempted: true, uploadedCount: upload.uploadedCount, round: upload.round, warnings };
-  } catch (error) {
-    warnings.push(`立即備份失敗：${error.message}`);
-    return { attempted: true, uploadedCount: 0, message: `立即備份失敗：${error.message}`, warnings };
+    if (scanResult.skippedByKeywordCount) {
+      warnings.push(`已依關鍵字「${effectiveKeyword}」略過 ${scanResult.skippedByKeywordCount} 個檔名不符的檔案（可能是其他案件或參考素材）`);
+    }
+    state[caseId] = scanResult.nextState;
+    await lib.saveState(stateFile, state); // 掃描結果（有沒有變動、預覽圖）先落地，就算後面上傳失敗也不會遺失這次掃描
+
+    if (!lib.uploadEnabled(config, secrets)) {
+      return { attempted: true, uploadedCount: 0, message: '尚未設定自動上傳（appsScriptUploadUrl／serviceKey），僅登記路徑並產生本機預覽圖', warnings };
+    }
+
+    try {
+      const upload = await lib.uploadPendingRound({
+        config, secrets, dbData, caseId,
+        designer: project.designer, client: project.client, start: project.start,
+        pendingPreviews: scanResult.pendingPreviews,
+        stateFiles: state[caseId].files
+      });
+      await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
+      if (!upload.uploadedCount) {
+        return { attempted: true, uploadedCount: 0, message: '沒有偵測到可上傳的圖片/影片', warnings };
+      }
+      return { attempted: true, uploadedCount: upload.uploadedCount, round: upload.round, warnings };
+    } catch (error) {
+      warnings.push(`立即備份失敗：${error.message}`);
+      return { attempted: true, uploadedCount: 0, message: `立即備份失敗：${error.message}`, warnings };
+    }
+  } finally {
+    await lib.releaseLock(lockFile);
   }
 }
 

@@ -189,7 +189,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-20 Asia/Taipei（最新）— 修正「回信」副本每次都遺失；設計師第一次回信完成上傳後自動把案件狀態改成「過稿中」
+### 2026-08-20 Asia/Taipei（最新）— 修正 NAS 監控程式與資料夾選擇器搶同一份狀態時的鎖只保護自己、不保護對方，導致案件 26080103 重複上傳
+
+- 修改目的：使用者回報案件 `26080103` 在爬蟲自動抓取 NAS 圖片時上傳了兩次，要求查明原因並修正。
+- 追查過程：本機 `backend/data/db.json` 快照該案件是「未開始」、沒有任何修改紀錄（快照落後於正式站，見本文件第 8 節既有說明），改直接抓正式站即時 JSON 與 `git fetch origin main` 之後的完整 commit 歷史查證。確認正式站這筆案件目前只有 2 張圖片、沒有重複，但 8/20 11:12-11:14 這段時間的 commit 序列顯示：`addCaseDesignImages via Cloudflare Worker (anonymous)`（11:12:59）→ `addCaseDesignImages via Cloudflare Worker (anonymous)`（11:14:11，相隔約 72 秒）→ `removeCaseDesignImage via Cloudflare Worker (Machi)` ×2（11:14:28、11:14:35）——兩次 `addCaseDesignImages` 都是服務金鑰呼叫（來源是 NAS 相關的本機工具，不是使用者手動操作），緊接著由 Machi 手動刪除多出來的重複紀錄清乾淨，證實真的重複上傳過、且是事後人工清理，不是自動修復。
+  追查根因發現：`scripts/nas_design_image_watcher.mjs`（crontab 每分鐘一次的排程）在 2026-08-19 那次修正已經有 PID 鎖檔案（`acquireLock`/`releaseLock`，見同一份文件 2026-08-19 18:50 那則紀錄），但那把鎖**只存在於這支排程程式自己的 `main()` 裡**，防的是「crontab／launchd 同時各自啟動兩份同一支程式」；`scripts/nas_folder_picker_server.mjs`（常駐的 NAS 資料夾選擇器伺服器，launchd 服務 `com.emctaipei.nas-folder-picker`，設計師在網頁上按「選擇這個資料夾並備份」時觸發的 `backupSelectedFolder()`）是**完全獨立的另一個行程**，同樣會讀寫同一份 `sync-state.json`，但這個函式從頭到尾沒有呼叫任何鎖——`grep` 整份檔案確認完全沒有 `acquireLock` 字樣。兩支程式默認的設定檔（`nas_design_image_watcher.config.json`）路徑完全相同，`stateFile` 會解析到同一個絕對路徑，理論上只要設計師點擊「立即備份」的時間點剛好落在每分鐘一次的排程正在處理同一個案件的過程中，兩邊就會各自讀到「這批檔案還沒歸類到任何一輪」的舊狀態、各自呼叫 Apps Script 上傳一次（各自產生一份獨立的 Drive 檔案，內容相同但網址不同）——這正好對應案件 26080103 兩次 `addCaseDesignImages` 相隔 72 秒（跟排程 60 秒一次的間隔吻合）的時間序列，是 2026-08-19 那次「鎖只防自己重疊執行」的設計缺口第一次被真正踩到，跟當時修的 26080079／26080045（同一支程式自己疊加執行）是不同的觸發路徑，不是同一個 bug 復發。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`scripts/nas_folder_picker_server.mjs`。
+- 影響功能：
+  1. **把鎖搬進共用模組，讓兩支程式共用同一把鎖**：`acquireLock()`／`releaseLock()`／`STALE_LOCK_MS`（2026-08-19 那次寫在 `nas_design_image_watcher.mjs` 裡的完整邏輯，含 O_EXCL 原子建立、讀不到有效 PID 時改看鎖檔案建立時間判斷過期）整段原封不動搬到 `nas_design_image_lib.mjs` 並加上 `export`；`nas_design_image_watcher.mjs` 改成呼叫 `lib.acquireLock`/`lib.releaseLock`，行為完全不變。這樣兩支程式只要用同一個 `stateFile` 算出來的同一個 `lockFile` 路徑（本來就是如此，共用同一份設定檔），天然就會搶同一把鎖，不需要另外設計跨行程通訊機制。
+  2. **新增 `acquireLockWithWait(lockFile,{timeoutMs,pollIntervalMs})`**：給「使用者正在等待結果」的互動式路徑用——排程程式搶不到鎖時的既有行為是直接跳過這次（下一分鐘再試），但互動式的「立即備份」如果也直接失敗，使用者體驗會變差；改成用短間隔（1.5 秒）重試、最多等 45 秒（排程單一案件的掃描＋上傳通常只需要幾秒到數十秒，45 秒是留有餘裕的合理上限）。逾時仍搶不到鎖時回傳 `false`，不拋例外。
+  3. **`nas_folder_picker_server.mjs` 的 `backupSelectedFolder()` 補上鎖**：在 `loadState` 之前呼叫 `lib.acquireLockWithWait(lockFile)`，整段讀狀態／掃描／上傳／存狀態都包在 `try/finally` 裡，`finally` 呼叫 `lib.releaseLock`；搶不到鎖（逾時）時比照既有「備份失敗不擋路徑登記」的設計慣例，回傳 `attempted:false` 與清楚的提示訊息「背景監控程式目前正在同步資料，這次先跳過立即備份（不影響路徑登記），下一輪排程會自動補上」，不會讓整個「選擇資料夾」流程失敗或卡住。
+- 風險區塊：
+  - `acquireLockWithWait` 的 45 秒逾時是憑經驗抓的合理值（比排程單次處理一個案件實際會花的時間留有餘裕），如果之後 NAS／網路明顯變慢、單一案件的掃描＋上傳經常超過 45 秒，互動式「立即備份」會比較容易因為搶不到鎖而優雅降級成「僅登記路徑，下一輪排程補上」——這不是資料遺失或功能失效，只是使用者少了「立即看到結果」的體驗，之後如果常發生可以考慮調高這個數字。
+  - 這次沒有回頭清理案件 26080103 的既有資料——查證時發現 Machi 已經在事發當下（8/20 11:14）手動用 `removeCaseDesignImage` 把兩次重複上傳的多餘紀錄清乾淨，正式站目前的資料本身已經是正確的（2 張圖片、無重複），這次不需要、也沒有再動任何資料。跟 2026-08-19 那次不同，Drive 上是否留有重複檔案這次沒有進一步查證（同樣的既有限制：只清得掉系統紀錄裡的重複項，不會、也沒有權限清除 Drive 上實際多出來的重複檔案）。
+- 已檢查／驗證方式：
+  - `node --check` 對三個檔案語法檢查皆通過；`node --test backend/test/*.test.mjs` 33/33 全過（這次改動只在 `scripts/`，跑這個純粹確認沒有意外牽動任何既有測試字串或共用邏輯）。
+  - **這次同樣是先用兩個真正的 `node` 行程重現 bug、再驗證修好，不是只改程式碼就結案**：搭配假的 `sips`（複製檔案模擬壓縮成功）、假的 `dbJsonUrl`／Apps Script 上傳端點（帶 800ms 人工延遲拉長競爭窗口，並記錄實際被呼叫的次數），同時起兩個行程搶同一個案件——①**修正前的組合**（一個模擬排程、有 2026-08-19 那把「只防自己」的鎖；另一個模擬修正前的資料夾選擇器、完全沒有鎖）跑 5 次，**5/5 次都真的各自呼叫了一次上傳（總計 2 次）**，成功重現案件 26080103 的真實現象；②**修正後的組合**（兩邊都改用共用的 `acquireLock`／`acquireLockWithWait`，共用同一個鎖檔案路徑）重新跑 5 次，**5/5 次總上傳呼叫次數都精確等於 1**——不管是排程先搶到鎖（互動式那邊等到鎖釋放後發現該輪已經被歸類過、正確判斷沒有新東西要上傳而不重複呼叫），還是排程直接搶不到鎖安全跳過，兩種情況都正確只有一次真正的上傳。
+  - 用 `launchctl kickstart -k` 直接在使用者本機重啟 `com.emctaipei.nas-folder-picker` 服務套用修正，`ps aux` 確認拿到全新的 PID；`curl` 確認服務正常回應（token 驗證邏輯正常運作，代表新版程式碼已載入且沒有啟動階段的語法/邏輯錯誤）。
+  - **未做的驗證**：沒有連上真實的公司內網 NAS、真的觸發一次「設計師手動點擊立即備份、同時排程也在跑」的端對端情境（這個對話環境連不到公司內網），這次的重現與驗證完全透過假指令＋假 HTTP 伺服器模擬完成，理論上已經精準對應到真實案件的根因與時間序列，但沒有機會在真實環境裡再次確認。
+- 部署狀態：`scripts/nas_design_image_lib.mjs`／`scripts/nas_design_image_watcher.mjs` 是純本機工具，透過 `crontab` 每分鐘重新執行整支程式（不是常駐行程），不需要重啟任何服務就會套用新版程式碼；`scripts/nas_folder_picker_server.mjs`（常駐 launchd 服務）已經在使用者本機直接重啟套用修正，不需要使用者自己動手。程式碼異動仍照專案慣例一併 commit／push 到 repo 留存紀錄。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-20 Asia/Taipei — 修正「回信」副本每次都遺失；設計師第一次回信完成上傳後自動把案件狀態改成「過稿中」
 
 - 修改目的：接續前兩則「回信」相關的工作，使用者這次提出兩項：①不管是「填寫修改需求信」「設計師回覆信」還是「一般回信」，副本（Cc）都沒有一起帶入，要求每一封信都要確保收件人、寄件人、副本三者都正確填好；②設計師透過「設計師回覆信」第一次完成上傳圖片這個動作後，案件狀態要自動改成「過稿中」，不用再手動切換一次。
 - 追查過程：先確認①的根因——`replyCaseMail`（Worker 端，三種回信模式最終都是呼叫這個 action）從這個功能一開始上線就**完全沒有處理過 Cc**：`buildGmailRawMessage()` 本身雖然早就支援 `cc` 參數（`sendCaseMail`，也就是「發信」第一次寄出時就已經在用），但 `replyCaseMail` 呼叫時從來沒有傳這個欄位，導致不管是哪一種回信情境，寄出的信件標頭裡永遠沒有 `Cc:`，原本在討論串裡的副本收件人（例如系統固定副本「傅思凱」、或客戶方的其他窗口）會在每一次回信之後被悄悄排除在外，收不到後續往來的信件。這不是這次新增的 UI（三選項選單、設計師回覆信）造成的，是 `replyCaseMail` 這個 action 從最一開始（2026-08-17／2026-08-18 那幾次 Gmail 整合的紀錄）就有的既有缺口，這次三個回信情境全部走同一個 action，缺口第一次真正被使用者感受到。
