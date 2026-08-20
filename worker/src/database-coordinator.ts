@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { TABLE_SCHEMAS } from '../../backend/schema.mjs';
+import { publicSystemAnnouncement, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
@@ -21,7 +21,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
-const ADMIN_TABLE_ORDER = ['database', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
+const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null };
@@ -537,6 +537,69 @@ function gmailHeaderValue(headers: Array<{ name?: string; value?: string }> | un
   return text(match?.value);
 }
 
+/** 讀取整條 Gmail 信件串（format=full）——排程寄送在真正寄出的那一刻（而不是排程建立當下）重新讀一次，
+ * 拿到最新的標頭組正確的 In-Reply-To/References，跟使用者立即回信時的行為完全一致。找不到/讀取失敗直接
+ * 丟例外，讓呼叫端統一處理（排程寄送失敗、立即查看信件串等情境各自需要不同的錯誤呈現方式）。 */
+async function fetchGmailThreadMessages(accessToken: string, threadId: string): Promise<Row[]> {
+  const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const data = await response.json().catch(() => ({})) as Row;
+  const messages = Array.isArray(data.messages) ? data.messages : [];
+  if (!response.ok || !messages.length) throw new Error(text((data.error as Row)?.message) || '找不到原始信件串，無法回覆');
+  return messages;
+}
+
+/** 依整條信件串最後一封信的標頭，組出回覆用的 raw MIME 訊息（In-Reply-To/References/Re: 主旨＋標準引用區）——
+ * 排程寄送（dispatchScheduledMailItem）跟立即回信（replyCaseMail）共用同一套組信邏輯，確保排程真正寄出時的
+ * 信件格式跟使用者當下按「送出回覆」完全一致。 */
+function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[] }): string {
+  const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
+  const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+  const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
+  const lastReferences = gmailHeaderValue(headers, 'References');
+  const lastSubject = gmailHeaderValue(headers, 'Subject');
+  if (!lastMessageId) throw new Error('無法取得原始信件標頭，無法回覆');
+  const quote = gmailThreadQuote(threadMessages, htmlToPlainText(options.signatureHtml), options.signatureHtml);
+  return buildGmailRawMessage({
+    to: options.to, cc: options.cc, subject: lastSubject, bodyHtml: options.bodyHtml, signatureHtml: options.signatureHtml,
+    quotedHtml: quote.html, quotedText: quote.plainText, inlineImages: options.inlineImages,
+    threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
+  });
+}
+
+/** 呼叫 Gmail API 實際送出一封已經組好的 raw MIME 訊息；threadId 有帶就會接進同一條既有信件串，沒帶就是
+ * 建立一條新的。回傳的 threadId 在「新建」情境下一定要有值（沒有代表 Gmail 端沒有正確建立信件串）。 */
+async function postGmailMessage(accessToken: string, raw: string, threadId?: string): Promise<{ threadId: string; messageId: string }> {
+  const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(threadId ? { raw, threadId } : { raw })
+  });
+  const sendData = await sendResponse.json().catch(() => ({})) as Row;
+  if (!sendResponse.ok || (!threadId && !text(sendData.threadId))) {
+    throw new Error(text((sendData.error as Row)?.message) || `Gmail 寄送失敗：${sendResponse.status}`);
+  }
+  return { threadId: text(sendData.threadId) || threadId || '', messageId: text(sendData.id) };
+}
+
+// 排程時間至少要在 60 秒之後（給每分鐘一次的 Cron Trigger 留緩衝，太接近「現在」的排程使用者體感上就等於
+// 立即寄出，不如直接用「寄出」/「送出回覆」），最遠不能超過一年後（避免打字打錯年份，例如少打一位數字，
+// 意外把信排到幾十年後才寄出；原生 <input type="datetime-local"> 本身沒有這層防呆，靠後端這裡把關）。
+const SCHEDULED_MAIL_MIN_LEAD_MS = 60_000;
+const SCHEDULED_MAIL_MAX_LEAD_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** 把前端送來的 scheduledAt（預期是帶明確時區偏移的 ISO 字串，例如 "2026-08-21T09:00:00+08:00"）換算成
+ * epoch 毫秒；格式不合法、或不在合理的時間範圍內都回傳 null，交由呼叫端擋下。 */
+function parseScheduledAt(value: unknown): number | null {
+  const raw = text(value);
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms)) return null;
+  if (ms < Date.now() + SCHEDULED_MAIL_MIN_LEAD_MS) return null;
+  if (ms > Date.now() + SCHEDULED_MAIL_MAX_LEAD_MS) return null;
+  return ms;
+}
+
 /** Gmail 訊息標頭裡的 Date 是 RFC 2822 格式，時區依寄件當下的伺服器/用戶端設定而定（常常是 UTC 或跟台灣
  * 差 8 小時的其他時區）——直接把原始字串顯示給使用者看，會被誤判成台灣當地時間，實際上差了好幾小時。
  * 這裡一律轉成台北時區重新格式化，不管原始標頭是哪個時區都能正確顯示。解析失敗（格式異常）就原樣顯示，
@@ -640,6 +703,39 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           this.ctx.storage.sql.exec(
             'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
             3, new Date().toISOString()
+          );
+        });
+      }
+      if (!applied.has(4)) {
+        this.ctx.storage.transactionSync(() => {
+          // 「指定排程時間」寄信/回信——刻意不進 database.tables（不會被 mutate() 提交進公開的 GitHub JSON），
+          // 理由跟 gmail_tokens 一樣：這裡可能存著整封信的內文、簽名檔、最多 18MB 的內嵌照片 base64，
+          // 完全不該進公開 repo 的 db.json，只留在這個 Durable Object 自己的 SQLite 儲存裡即可。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS scheduled_mail (
+              id TEXT PRIMARY KEY,
+              case_id TEXT NOT NULL,
+              kind TEXT NOT NULL,
+              owner_account TEXT NOT NULL,
+              requested_by TEXT NOT NULL,
+              to_address TEXT NOT NULL,
+              cc_address TEXT NOT NULL,
+              subject TEXT NOT NULL,
+              body_html TEXT NOT NULL,
+              signature_html TEXT NOT NULL,
+              inline_images TEXT NOT NULL,
+              scheduled_at INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              error_message TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS scheduled_mail_dispatch_idx ON scheduled_mail(status, scheduled_at);
+            CREATE INDEX IF NOT EXISTS scheduled_mail_case_idx ON scheduled_mail(case_id);
+          `);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            4, new Date().toISOString()
           );
         });
       }
@@ -1300,6 +1396,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const baseUrl = text(payload.supplementBaseUrl) || context.baseUrl;
 
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };
+      if (action === 'getSystemAnnouncement') return { ok: true, action, announcement: publicSystemAnnouncement(database), revision: database.revision };
       if (action === 'diagnose') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, tables: Object.fromEntries(tableNames().map(name => [name, database.tables[name].rows.length])) };
       if (action === 'urlFetchAuthCheck') return { ok: true, action, status: 200, message: 'Cloudflare Worker fetch 可執行', version: VERSION };
       if (action === 'writeAccessCheck') return { ok: true, action, checkedAt: new Date().toISOString(), nonMutating: true, permissions: { createRequest: true, updateRequest: true, updateStatusDetails: Boolean(session), reason: 'Cloudflare Worker 已連線；狀態與細節依登入權限判斷' }, checks: { databaseWritable: Boolean(this.env.GITHUB_TOKEN) } };

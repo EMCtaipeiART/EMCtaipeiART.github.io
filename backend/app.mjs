@@ -5,13 +5,13 @@ import path from 'node:path';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { JsonDatabase } from './json_database.mjs';
-import { TABLE_NAMES, TABLE_SCHEMAS } from './schema.mjs';
+import { publicSystemAnnouncement, TABLE_NAMES, TABLE_SCHEMAS } from './schema.mjs';
 import { applyWeightToRow } from './weighting.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-designer-reply-templates-2026-08-19-1';
+const VERSION = 'json-backend-system-announcements-2026-08-20-1';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -519,6 +519,7 @@ export function createActionHandler(database, options = {}) {
     const snapshot = database.snapshot();
 
     if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'json', revision: snapshot.revision, message: 'connected' };
+    if (action === 'getSystemAnnouncement') return { ok: true, action, announcement: publicSystemAnnouncement(snapshot), revision: snapshot.revision };
     if (action === 'refreshDatabase') { requireCapability(snapshot, payload, 'database.manage'); return { ok: true, action, revision: snapshot.revision, refreshed: true }; }
     if (action === 'diagnose') return { ok: true, action, version: VERSION, storage: 'json', revision: snapshot.revision, tables: Object.fromEntries(TABLE_NAMES.map(name => [name, snapshot.tables[name].rows.length])) };
     if (action === 'urlFetchAuthCheck') return { ok: true, action, status: 200, message: 'Node.js fetch 可執行', version: VERSION };

@@ -158,6 +158,14 @@ afterEach(() => {
 });
 
 describe('Machi Design API Worker', () => {
+  it('returns the latest enabled system announcement without requiring login', async () => {
+    const result = await api({ action: 'getSystemAnnouncement' });
+    expect(result.ok).toBe(true);
+    expect(result.action).toBe('getSystemAnnouncement');
+    expect(result.announcement).toMatchObject({ version: 'v4.7' });
+    expect(String((result.announcement as Record<string, unknown>)?.content || '')).toContain('Gmail');
+  });
+
   it('resolves customer edit permissions from current department and group membership', () => {
     const database = testDatabase();
     const customer = { '客戶別': '動態權限客戶', '專案負責人': JSON.stringify(['department:測試組']), '設計負責人': '[]', '部門組別': '[]' };
