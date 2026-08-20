@@ -1003,6 +1003,12 @@ describe('Machi Design API Worker', () => {
     });
     const thread = await api({ action: 'getCaseMailThread', caseId: '26080001', signatureHtml: '<b>設計師簽名檔</b>' }, designerToken);
     expect(thread.ok).toBe(true);
+    // 2026-08-20：getCaseMailThread 現在也會算出「回覆全部」風格的建議收件人／副本一併回傳，給前端信件編輯器
+    // 預先帶入、使用者可以再修改——跟下面 replyCaseMail 沒有帶 to/cc 時會用的 fallback 是同一套計算方式
+    // （computeReplySuggestion），這裡先確認回傳值本身正確：回給最後一封信（msg2）的寄件人 designer@emctaipei.com，
+    // 副本留住 msg2 的收件人 test.user@emctaipei.com 與副本 client@example.com，扣掉自己與回覆對象後只剩 client@example.com。
+    expect(thread.suggestedTo).toBe('designer@emctaipei.com');
+    expect(thread.suggestedCc).toBe('client@example.com');
     const messages = thread.messages as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
     expect(messages[0]).toMatchObject({
@@ -1068,6 +1074,32 @@ describe('Machi Design API Worker', () => {
       action: 'replyCaseMail', caseId: '26080001', bodyText: '收到，謝謝回報', signatureHtml: '<b>設計師簽名檔</b>'
     }, designerToken);
     expect(replied).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-3' });
+
+    // 2026-08-20：信件編輯器新增可編輯的收件人／副本欄位——前端這次如果帶了 to/cc，要直接採用，不能被
+    // computeReplySuggestion 算出的「回覆全部」預設值蓋掉；cc 傳空字串代表使用者在編輯器裡手動清空副本，
+    // 同樣要真的生效（不是被當成「沒帶」而 fallback 回自動算出的 client@example.com）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        const body = JSON.parse(String(init?.body));
+        const decodedRaw = decodeBase64UrlText(String(body.raw));
+        const headerSection = decodedRaw.slice(0, decodedRaw.indexOf('\r\n\r\n'));
+        expect(headerSection.split(/\r\n(?!\s)/).find(line => line.startsWith('To:'))).toBe('To: custom-recipient@example.com');
+        // 沒有任何 Cc 標頭——不是自動算出來的 client@example.com，也不是空字串的 Cc 標頭，而是整行都不存在。
+        expect(headerSection.split(/\r\n(?!\s)/).some(line => line.startsWith('Cc:'))).toBe(false);
+        return Response.json({ id: 'gmail-msg-4', threadId: 'gmail-thread-1' });
+      }
+      throw new Error(`unexpected fetch during reply with manual to/cc: ${url}`);
+    });
+    const repliedWithOverride = await api({
+      action: 'replyCaseMail', caseId: '26080001', bodyText: '手動改過收件人的回覆',
+      to: 'custom-recipient@example.com', cc: ''
+    }, designerToken);
+    expect(repliedWithOverride).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-4' });
 
     // 手動把 access token 改成已過期，驗證下一次呼叫會先用 refresh_token 換一組新的再讀信。
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;

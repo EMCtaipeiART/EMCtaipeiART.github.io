@@ -6379,6 +6379,7 @@
     .gmail-inline-image-wrap img.gmail-inline-image{display:block;width:100%;height:100%;object-fit:contain;margin:0;border-radius:7px;-webkit-user-drag:none;user-select:none}
     .gmail-inline-image-resize-handle{position:absolute!important;right:3px!important;bottom:3px!important;width:15px!important;height:15px!important;border-radius:4px!important;background:rgba(23,33,29,.6)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;cursor:nwse-resize;opacity:0;transition:opacity .12s ease;z-index:2}
     .gmail-inline-image-wrap:hover .gmail-inline-image-resize-handle,.gmail-inline-image-resize-handle.is-active{opacity:1}
+    .gmail-thread-from-value{min-height:36px;box-sizing:border-box;display:flex;align-items:center;border-radius:10px;border:1px solid var(--line);padding:0 11px;font-size:13px;font-weight:750;color:var(--muted);background:#f6f9f7}
     .gmail-recipient-row{align-items:flex-start}
     .gmail-recipient-control{display:flex;align-items:center;align-content:center;flex:1 1 auto;min-width:0;min-height:36px;box-sizing:border-box;gap:5px;flex-wrap:wrap;padding:4px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:text}
     .gmail-recipient-control:focus-within{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}
@@ -6416,6 +6417,7 @@
     html[data-theme="dark"] .gmail-compose-fields .gmail-field-block{color:#bdc1c6!important}
     html[data-theme="dark"] .gmail-compose-fields input[type=text],
     html[data-theme="dark"] .gmail-recipient-search{background:#1b1d20!important;color:#f1f3f4!important;border-color:#454a4f!important;box-shadow:none!important}
+    html[data-theme="dark"] .gmail-thread-from-value{background:#1b1d20!important;color:#9aa0a6!important;border-color:#454a4f!important}
     html[data-theme="dark"] .gmail-recipient-control{background:#1b1d20!important;border-color:#454a4f!important}
     html[data-theme="dark"] .gmail-recipient-control:focus-within{outline-color:rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
     html[data-theme="dark"] .gmail-compose-fields .gmail-recipient-control input[type=text]{background:transparent!important;color:#f1f3f4!important}
@@ -6909,6 +6911,15 @@
     <div class="gmail-modal-body">
       <div class="revision-modal-list" id="gmailThreadModalList"><div class="revision-modal-empty">載入中...</div></div>
       <div class="gmail-modal-compose" id="gmailThreadComposeSection">
+        <div class="gmail-compose-fields">
+          <div class="gmail-field-block">寄件人<div class="gmail-thread-from-value" id="gmailThreadFromValue">—</div></div>
+          <div class="gmail-field-block">收件人
+            <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailThreadTo"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailThreadTo"></span><input type="text" id="gmailThreadTo" placeholder="輸入信箱後按 Enter" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailThreadTo">選擇聯絡人</button></div>
+          </div>
+          <div class="gmail-field-block">副本
+            <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailThreadCc"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailThreadCc"></span><input type="text" id="gmailThreadCc" placeholder="可手動輸入信箱" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailThreadCc">選擇聯絡人</button></div>
+          </div>
+        </div>
         <div class="gmail-modal-section-label">回覆</div>
         <div class="gmail-rich-toolbar">
           <button type="button" data-rich-cmd="bold" title="粗體"><b>B</b></button>
@@ -9208,6 +9219,7 @@ async function openGmailThreadModal(id){
   modal.dataset.replyMode='general';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
   const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=row.gmailThreadOwnerAccount?`寄件人：${row.gmailThreadOwnerAccount}`:'';
+  const fromValue=$('#gmailThreadFromValue'); if(fromValue)fromValue.textContent=row.gmailThreadOwnerAccount||'—';
   // 誰能看到內容、誰能回信，權限依據是「這個帳號的 email 有沒有出現在信件本身的收件人/寄件人/副本裡」
   // （見 Worker 的 accountIsGmailThreadParticipant），不是系統層級的發信權限——但前端在真的呼叫
   // getCaseMailThread 之前沒辦法預先知道答案（信件實際內容只有 Gmail 自己知道），所以預設先顯示回覆區，
@@ -9219,6 +9231,11 @@ async function openGmailThreadModal(id){
   modal.dataset.designerReplyPending='';
   modal.dataset.designerReplyCaseId='';
   if(replyEditor){setGmailEditorPlainText(replyEditor,designerReplyTemplateForCase(row));clearGmailInlineImages(replyEditor.id)}
+  // 收件人／副本先清空，等下面讀信成功拿到 Worker 算好的建議值（suggestedTo/suggestedCc，跟 replyCaseMail
+  // 實際送出時如果使用者沒改過欄位會用的預設值同一套邏輯，只是這裡先攤開來讓使用者看得到、也能修改）才填入；
+  // 讀信失敗（含權限被擋）時維持空白，反正 composeSection 這種情況會被隱藏，不會露出空欄位。
+  setGmailRecipientEntries('gmailThreadTo',[]);
+  setGmailRecipientEntries('gmailThreadCc',[]);
   list.innerHTML='<div class="revision-modal-empty">載入中...</div>';
   modal.hidden=false;
   try{
@@ -9226,6 +9243,10 @@ async function openGmailThreadModal(id){
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     renderGmailThreadMessages(list,gmailThreadMessagesCache);
+    // suggestedTo 可能是多個收件人（回覆全部時，上一封信原本就寄給好幾個人），跟 suggestedCc 一樣
+    // 用 splitMailAddresses() 拆開成多個聯絡人晶片，不能整段當成單一個地址塞進去。
+    setGmailRecipientEntries('gmailThreadTo',splitMailAddresses(data.suggestedTo||''));
+    setGmailRecipientEntries('gmailThreadCc',splitMailAddresses(data.suggestedCc||''));
   }catch(err){
     gmailThreadMessagesCache=[];
     list.innerHTML=`<div class="gmail-thread-owner-note">${esc(err.message||'讀取信件串失敗')}</div>`;
@@ -9431,11 +9452,14 @@ async function sendGmailThreadReply(){
   if(!editor.textContent.trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
   const modificationContent=replyMode==='modification'?stripGreetingPrefix(editor.innerText||editor.textContent||''):'';
   if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
+  const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
+  if(to===null||cc===null)return; // 欄位裡有沒送出去的無效 Email，gmailRecipientHeaderValue 內部已經跳出錯誤提示
+  if(!to){setSync('請填寫收件人',true);return}
   if(button)button.disabled=true;
   setSync('回覆寄送中...');
   try{
     const signatureHtml=await ensureGmailSignatureLoaded();
-    await sheetApi('replyCaseMail',{caseId:id,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,editorToken:currentEditorToken});
+    await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,editorToken:currentEditorToken});
     editor.innerHTML='';
     const list=$('#gmailThreadModalList');
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureHtml,editorToken:currentEditorToken});
@@ -11796,7 +11820,7 @@ document.querySelectorAll('.gmail-rich-image-btn').forEach(button=>{
 });
 document.querySelectorAll('.gmail-rich-image-input').forEach(input=>input.addEventListener('change',()=>{addGmailInlineImages(input.dataset.richImageInputFor,input.files);input.value=''}));
 document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
-['gmailComposeTo','gmailComposeCc'].forEach(bindGmailRecipientControl);
+['gmailComposeTo','gmailComposeCc','gmailThreadTo','gmailThreadCc'].forEach(bindGmailRecipientControl);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover();if(gmailColorPaletteEl&&!gmailColorPaletteEl.hidden&&!gmailColorPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-color-btn'))closeGmailColorPalette()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});

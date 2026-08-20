@@ -189,7 +189,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-20 Asia/Taipei（最新）— 修正 NAS 監控程式與資料夾選擇器搶同一份狀態時的鎖只保護自己、不保護對方，導致案件 26080103 重複上傳
+### 2026-08-20 Asia/Taipei（最新）— 回信信件編輯器新增可編輯的收件人／副本欄位；寄件人改為清楚顯示的唯讀欄位
+
+- 修改目的：使用者要求「回信」的信件編輯器也要能編輯寄件人、收件人、副本——原本「發信」（`sendCaseMail`，建立第一封信）的撰寫視窗已經有可編輯的收件人／副本欄位（聯絡人選擇器＋膠囊，2026-08-18 那次做的），但「回信」（`replyCaseMail`）完全沒有：收件人與副本是 Worker 端依「回覆全部」規則自動算好直接送出，前端只顯示一行唯讀的「寄件人：xxx」小字，使用者沒有任何欄位可以看、也不能改。
+- 事先確認的技術限制：Gmail 回信一定要用「建立這條信件串的那個帳號」的存取權杖才能正確接續同一個 `threadId`（用別的帳號的權杖打同一個 `threadId` 會直接被 Gmail API 拒絕，見既有的 `getValidGmailAccessToken(owner)` 設計），所以「寄件人」在技術上無法真的換成別的帳號寄出。用 `AskUserQuestion` 跟使用者確認範圍後，使用者選擇「寄件人維持清楚顯示的唯讀資訊即可」，收件人／副本才做成真正可編輯。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`。
+- 影響功能：
+  1. **Worker 新增 `computeReplySuggestion(threadMessages,owner)`**：把原本寫死在 `replyCaseMail` 裡、依信件串最後一封信標頭算「回覆全部」收件人／副本的邏輯（含排除自己與 Google Workspace 別名寄送情境）抽成共用私有方法。
+  2. **`getCaseMailThread` 新增回傳 `suggestedTo`／`suggestedCc`**：讀信件串成功時，順便呼叫 `computeReplySuggestion()` 算出目前這條討論串「如果要回覆全部」的建議收件人／副本，回傳給前端——前端信件編輯器用這組值預先帶入收件人／副本欄位，使用者可以直接看到、也可以修改。
+  3. **`replyCaseMail` 改成優先信任前端送來的 `to`／`cc`**：`payload.to` 有值就直接採用，沒有（例如部署過渡期間還沒更新的舊分頁）才 fallback 用 `computeReplySuggestion()` 算出的預設值；`payload.cc` 只要有出現這個欄位（即使是空字串，代表使用者手動清空副本）就直接採用，同樣沒有出現才 fallback，確保「使用者手動清空副本」這個動作真的會生效，不會被自動算出的建議值蓋回去。
+  4. **前端 `#gmailThreadComposeSection`（回信信件編輯器）新增三個欄位**：沿用「發信」撰寫視窗已經有的 `.gmail-compose-fields`／`.gmail-recipient-row`／聯絡人選擇器整套元件（`bindGmailRecipientControl`／`setGmailRecipientEntries`／`gmailRecipientHeaderValue`／`openRecipientPicker`），不重新設計一套——①「寄件人」：新增唯讀樣式的 `.gmail-thread-from-value`（灰底、跟其他欄位視覺區隔開，一眼就能分辨這格不能改），顯示 `row.gmailThreadOwnerAccount`；②「收件人」（`gmailThreadTo`）／③「副本」（`gmailThreadCc`）：跟撰寫視窗一模一樣的膠囊＋「選擇聯絡人」按鈕，`openGmailThreadModal()` 讀信成功後用 Worker 回傳的 `suggestedTo`／`suggestedCc` 預先帶入（多個地址用既有的 `splitMailAddresses()` 拆成多個膠囊，不是整段當成一個地址塞進去）；讀信失敗（含權限被擋）時維持清空，反正 `composeSection` 這種情況本來就會被隱藏。`sendGmailThreadReply()` 送出前用 `gmailRecipientHeaderValue()` 收集這兩個欄位、比照「發信」新增「請填寫收件人」的防呆檢查，送出時把 `to`／`cc` 一併帶進 `replyCaseMail` 的 payload。「填寫修改需求信」「設計師回覆信」兩種特化模式都是先呼叫 `openGmailThreadModal()` 才覆寫標題／內文，收件人／副本欄位跟「一般回信」共用同一套、不用另外處理。
+- 風險區塊：
+  - `computeReplySuggestion()` 純粹是把既有邏輯搬出來重新命名，沒有改變任何計算方式本身，`replyCaseMail` 原本的既有測試（回覆全部、副本排除自己、時區轉換等）維持不變且全部通過，確認搬移沒有意外改變行為。
+  - 「寄件人」欄位刻意做成唯讀——如果之後有人想要「換成別的帳號寄出」，需要先接上 Gmail 的 `sendAs`（別名寄件地址）清單並在後端驗證選擇的別名確實屬於這個帳號，這次沒有做這一步（使用者已確認的範圍之外）。
+  - 收件人／副本欄位改成使用者可自由編輯後，理論上使用者可以把回信的對象改成任何 Email（不再侷限於「回覆全部」演算出來的既定名單）——這是這次功能本身要達成的目的（讓使用者可以調整），不是意外的權限放寬；`replyCaseMail` 本身既有的兩層授權檢查（客戶別「權限設定」白名單、討論串相關人判斷）完全沒有變動，使用者能不能回信、能不能看到內容，跟這次改動無關。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **29/29 全過**（在既有的完整 Gmail 端對端測試裡新增：①驗證 `getCaseMailThread` 回傳的 `suggestedTo`／`suggestedCc` 精確等於「回覆全部」演算法算出的值；②新增一個場景：`replyCaseMail` 帶明確的 `to:'custom-recipient@example.com'`／`cc:''`，驗證實際送給 Gmail API 的信件標頭確實用了手動指定的收件人、且完全沒有 `Cc:` 標頭——不是被自動算出的 `client@example.com` 蓋掉、也不是變成一個空字串的 `Cc:` 標頭）；`npx wrangler deploy --dry-run` 打包成功。
+  - `node --test backend/test/*.test.mjs` 33/33 全過（這次沒有動 `backend/`，跑這個純粹確認沒有意外牽動共用邏輯）。
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過。用本機 Node 靜態伺服器＋ Browser pane 對 `index.html` 做隔離測試（stub `sheetApi`／`ensureGmailSignatureLoaded`，沒有真的打任何網路請求）：①開啟回信視窗，確認「寄件人」正確顯示唯讀文字、收件人／副本膠囊正確依 Worker 回傳的 `suggestedTo`／`suggestedCc` 預先帶入（含多個副本地址正確拆成多個膠囊）；②直接送出（不修改欄位），確認送給 `replyCaseMail` 的 `to`／`cc` 正確等於預先帶入的值；③手動移除既有收件人膠囊、新增一個新地址，移除其中一個副本膠囊，確認送出的 payload 正確反映編輯後的結果（不是原本的建議值）；④把收件人欄位清空後嘗試送出，確認正確被擋下顯示「請填寫收件人」、且完全不會呼叫 `replyCaseMail`；⑤點擊「選擇聯絡人」按鈕，確認回信視窗的收件人欄位也能正常開啟聯絡人選擇彈窗（沿用既有元件，不需要額外綁定）；⑥模擬 `GMAIL_THREAD_NOT_PARTICIPANT` 這種既有的權限被擋情境，確認回覆區塊正確隱藏、收件人／副本膠囊正確維持清空（不會殘留上一個案件的資料）；⑦`getComputedStyle` 確認「寄件人」唯讀欄位在淺色／深色模式下都有正確的視覺樣式（背景色、文字色跟其他可編輯欄位有明顯區隔）；⑧回歸測試「發信」撰寫視窗（`openGmailComposeModal`），確認完全不受這次改動影響，收件人／副本膠囊照常正確預先帶入。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「開啟回信視窗→看到預先帶入的建議收件人/副本→手動修改→送出→確認客戶端收到的信件標頭正確反映修改後的收件人/副本」的完整端對端流程，這次的驗證完全依賴在真實 Cloudflare Workers 執行環境（`vitest-pool-workers`）裡 mock Gmail API 回應跑過的完整流程，加上前端隔離測試。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，`getCaseMailThread` 不會回傳 `suggestedTo`／`suggestedCc`（前端收件人／副本欄位會維持空白，需要使用者自己手動輸入），`replyCaseMail` 仍會忽略前端送來的 `to`／`cc`、繼續用舊版的自動計算結果，不會有功能性錯誤，只是新欄位暫時看不到效果。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-20 Asia/Taipei — 修正 NAS 監控程式與資料夾選擇器搶同一份狀態時的鎖只保護自己、不保護對方，導致案件 26080103 重複上傳
 
 - 修改目的：使用者回報案件 `26080103` 在爬蟲自動抓取 NAS 圖片時上傳了兩次，要求查明原因並修正。
 - 追查過程：本機 `backend/data/db.json` 快照該案件是「未開始」、沒有任何修改紀錄（快照落後於正式站，見本文件第 8 節既有說明），改直接抓正式站即時 JSON 與 `git fetch origin main` 之後的完整 commit 歷史查證。確認正式站這筆案件目前只有 2 張圖片、沒有重複，但 8/20 11:12-11:14 這段時間的 commit 序列顯示：`addCaseDesignImages via Cloudflare Worker (anonymous)`（11:12:59）→ `addCaseDesignImages via Cloudflare Worker (anonymous)`（11:14:11，相隔約 72 秒）→ `removeCaseDesignImage via Cloudflare Worker (Machi)` ×2（11:14:28、11:14:35）——兩次 `addCaseDesignImages` 都是服務金鑰呼叫（來源是 NAS 相關的本機工具，不是使用者手動操作），緊接著由 Machi 手動刪除多出來的重複紀錄清乾淨，證實真的重複上傳過、且是事後人工清理，不是自動修復。

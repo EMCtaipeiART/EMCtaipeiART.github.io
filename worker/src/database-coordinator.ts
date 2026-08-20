@@ -1073,6 +1073,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'gmailDisconnect' };
   }
 
+  /** 回覆全部風格的建議收件人／副本——依信件串最後一封信的標頭＋寄件帳號自己的實際 Gmail 地址算出來，
+   * getCaseMailThread（唯讀，讓前端可以先攤開顯示、讓使用者能編輯）與 replyCaseMail（送出時的最終
+   * fallback，前端沒有帶 to/cc 時才會用到）共用同一套邏輯，確保兩邊算出來的預設值一致。 */
+  private computeReplySuggestion(threadMessages: unknown[], owner: string): { to: string; cc: string } {
+    const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
+    const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+    const stored = this.getGmailTokens(owner);
+    const selfAddress = text(stored?.gmail_address).toLowerCase();
+    const fromHeader = gmailHeaderValue(headers, 'From');
+    const toHeader = gmailHeaderValue(headers, 'To');
+    const ccHeader = gmailHeaderValue(headers, 'Cc');
+    const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
+    // 副本比照一般信箱的「回覆全部」：把上一封信的收件人＋副本都留住（扣掉自己與這次要回覆的對象本身），
+    // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外。「自己」同時要排除 selfAddress
+    // （實際連接的 Gmail 信箱，例如 designer.mailbox@gmail.com）與 owner（案件記錄的寄件帳號別名，例如
+    // test.user@emctaipei.com）——這兩者在 Google Workspace 別名寄送的情境下常常是不同的兩個地址。
+    const excludedFromCc = new Set([selfAddress, owner, ...extractEmailAddressesFromHeader(to)].filter(Boolean));
+    const cc = [...new Set([...extractEmailAddressesFromHeader(toHeader), ...extractEmailAddressesFromHeader(ccHeader)])]
+      .filter(email => !excludedFromCc.has(email))
+      .join(', ');
+    return { to, cc };
+  }
+
   /** 透過 Gmail API 寄出案件信件（限第一次，該案件已經有信件串就拒絕，請改用回信）。 */
   private async sendCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const caseId = text(payload.caseId || payload.id);
@@ -1176,7 +1199,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         snippet: text(messageRow.snippet), bodyText, links, images
       });
     }
-    return { ok: true, action: 'getCaseMailThread', threadId, messages };
+    // 給前端「回覆」編輯器預先帶入、可再修改的收件人／副本建議值——跟 replyCaseMail 送出時如果前端
+    // 沒帶 to/cc 會用的 fallback 是同一套計算方式（computeReplySuggestion），確保兩邊看到的預設值一致。
+    const suggestion = rawMessages.length ? this.computeReplySuggestion(rawMessages, owner) : { to: '', cc: '' };
+    return { ok: true, action: 'getCaseMailThread', threadId, messages, suggestedTo: suggestion.to, suggestedCc: suggestion.cc };
   }
 
   /** 在既有信件串裡回覆一封信——跟 getCaseMailThread 同一套雙層依據（2026-08-19 起）：①客戶別「權限
@@ -1220,22 +1246,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const lastReferences = gmailHeaderValue(headers, 'References');
     const lastSubject = gmailHeaderValue(headers, 'Subject');
     if (!lastMessageId) return { ok: false, action: 'replyCaseMail', error: '無法取得原始信件標頭，無法回覆' };
-    const stored = this.getGmailTokens(owner);
-    const selfAddress = text(stored?.gmail_address).toLowerCase();
-    const fromHeader = gmailHeaderValue(headers, 'From');
-    const toHeader = gmailHeaderValue(headers, 'To');
-    const ccHeader = gmailHeaderValue(headers, 'Cc');
-    const to = (selfAddress && fromHeader.toLowerCase().includes(selfAddress)) ? toHeader : fromHeader;
+    // 收件人／副本優先信任前端這次送來的值（信件編輯器裡使用者可以看到、也可以修改的欄位，2026-08-20
+    // 起前端一律會帶）；沒帶（例如部署過渡期間還沒更新的舊分頁）才 fallback 用 computeReplySuggestion
+    // 算出的「回覆全部」預設值，維持舊行為不中斷。
+    const suggestion = this.computeReplySuggestion(threadMessages, owner);
+    const to = text(payload.to) || suggestion.to;
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
-    // 副本比照一般信箱的「回覆全部」：把上一封信的收件人＋副本都留住（扣掉自己與這次要回覆的對象本身），
-    // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外——原本這裡完全沒有處理副本，
-    // 每一次回覆都會把上一封信的副本名單整個弄丟。「自己」同時要排除 selfAddress（實際連接的 Gmail 信箱，
-    // 例如 designer.mailbox@gmail.com）與 owner（案件記錄的寄件帳號別名，例如 test.user@emctaipei.com）——
-    // 這兩者在 Google Workspace 別名寄送的情境下常常是不同的兩個地址，信件標頭裡出現的是別名本身。
-    const excludedFromCc = new Set([selfAddress, owner, ...extractEmailAddressesFromHeader(to)].filter(Boolean));
-    const cc = [...new Set([...extractEmailAddressesFromHeader(toHeader), ...extractEmailAddressesFromHeader(ccHeader)])]
-      .filter(email => !excludedFromCc.has(email))
-      .join(', ');
+    const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
     const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml), signatureHtml);
     const raw = buildGmailRawMessage({
       to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
