@@ -585,6 +585,11 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /技能與表單預設/);
   assert.match(html, /基本與輪值設定/);
   assert.match(html, /前台媒體設定/);
+  assert.match(html, /<h3>回信範本設定<\/h3>/);
+  assert.match(html, /designer-admin-management-grid/);
+  assert.match(html, /data-designer-reply-detail/);
+  assert.match(html, /data-designer-reply-content/);
+  assert.match(html, /replyTemplates\[detail\]=content/);
   assert.match(html, /designer-skill-columns/);
   assert.match(html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   // 技能列改成單排（名稱｜設計種類｜預設階段｜小型刪除鈕），新增技能按鈕搬到區塊標題列右側。
@@ -918,7 +923,8 @@ test('admin account save atomically creates personal settings and access', async
     profile: {
       group: '影音', rotation: 99, avatar: 'https://example.com/new-avatar.jpg', poster: 'https://example.com/new-poster.jpg',
       musicUrl: 'https://example.com/music', musicStartAt: 8, quote: '新的動態設計師',
-      skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }, { name: '動態貼文', type: '平面', stage: '後製' }]
+      skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }, { name: '動態貼文', type: '平面', stage: '後製' }],
+      replyTemplates: { '影音剪輯': '已完成影音剪輯，再請確認。', '字幕字卡': '字幕字卡版本如附件。' }
     }
   });
   assert.equal(designerSaved.settingsRow['設計師顯示'], 'v');
@@ -927,11 +933,19 @@ test('admin account save atomically creates personal settings and access', async
     { name: '短影音', type: '影音', stage: '後製' },
     { name: '動態貼文', type: '平面', stage: '後製' }
   ]);
+  assert.deepEqual(JSON.parse(designerSaved.settingsRow['回信範本設定']), {
+    '影音剪輯': '已完成影音剪輯，再請確認。',
+    '字幕字卡': '字幕字卡版本如附件。'
+  });
   const activeProfiles = await api(app.baseUrl, 'listDesignerProfiles');
   assert.deepEqual(activeProfiles.profiles.find(profile => profile.account === account)?.skillMappings, [
     { name: '短影音', type: '影音', stage: '後製' },
     { name: '動態貼文', type: '平面', stage: '後製' }
   ]);
+  assert.deepEqual(activeProfiles.profiles.find(profile => profile.account === account)?.replyTemplates, {
+    '影音剪輯': '已完成影音剪輯，再請確認。',
+    '字幕字卡': '字幕字卡版本如附件。'
+  });
   const designerRemoved = await api(app.baseUrl, 'adminDesignerRemove', {
     editorToken: login.token, account, expectedSettingsRow: designerSaved.settingsRow
   });

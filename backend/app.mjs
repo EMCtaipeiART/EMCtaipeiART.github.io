@@ -747,6 +747,7 @@ export function createActionHandler(database, options = {}) {
           '技能': mappings.map(item => item.name).join(' , '), '技能表單設定': JSON.stringify(mappings), '對話框': text(profile.quote),
           '新專案輪值': String(Math.max(1, Math.floor(Number(profile.rotation) || 99)))
         });
+        if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
         designerRowsForGroup(draft, group).forEach((item, index) => { item['新專案輪值'] = String(index + 1); });
         return { ok: true, action, account, settingsRow: { ...row }, changedTables: ['設定'] };
       }, 'admin designer save');

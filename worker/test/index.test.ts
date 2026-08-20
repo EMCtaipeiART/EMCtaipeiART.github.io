@@ -377,16 +377,18 @@ describe('Machi Design API Worker', () => {
       profile: {
         group: '影音', rotation: 9, avatar: 'https://example.com/avatar.png', poster: 'https://example.com/poster.png',
         musicUrl: 'https://example.com/music', musicStartAt: 5, quote: '影音設計 QA',
-        skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }]
+        skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }],
+        replyTemplates: { '影音剪輯': '影音剪輯回信內容' }
       }
     }, token);
     expect(designerSaved).toMatchObject({
       ok: true, action: 'adminDesignerSave', changedTables: ['設定'],
-      settingsRow: { '帳號': account, '設計師顯示': 'v', '技能': '短影音' }
+      settingsRow: { '帳號': account, '設計師顯示': 'v', '技能': '短影音', '回信範本設定': JSON.stringify({ '影音剪輯': '影音剪輯回信內容' }) }
     });
     const activeProfiles = await api({ action: 'listDesignerProfiles' });
     expect((activeProfiles.profiles as Array<Record<string, unknown>>).find(profile => profile.account === account)).toMatchObject({
-      name: 'Designer QA', designType: '影音', skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }]
+      name: 'Designer QA', designType: '影音', skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }],
+      replyTemplates: { '影音剪輯': '影音剪輯回信內容' }
     });
     expect(githubPut).toHaveBeenCalledTimes(2);
 
