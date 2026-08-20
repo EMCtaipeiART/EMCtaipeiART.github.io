@@ -9,6 +9,7 @@
 - 首頁會透過公開 `getSystemAnnouncement` API 取得最新啟用版本並顯示彈窗；勾選「不再出現」後以公告版本寫入瀏覽器，後續新版本仍會再次顯示。
 - 前台顯示版本更新為 `v4.7`，前端 build 版本為 `20260820-system-announcements-113`。
 - 驗收：Node 34/34、Worker 型別檢查、前後台內嵌程式語法與本機瀏覽器彈窗／不再顯示流程通過。Worker 完整測試另被既有排程寄信 migration 4 的舊預期值擋住，與本次公告功能無關。
+- 正式部署：Cloudflare Worker Version ID `277063d6-ab31-49d4-8baf-dc53bb3ab541`；正式 API 已回傳 v4.7 公告，並以正式首頁瀏覽器確認公告彈窗顯示。
 
 ## 2026-08-20｜後台顯示設計師回信範本
 
