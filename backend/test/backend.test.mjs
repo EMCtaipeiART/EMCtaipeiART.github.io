@@ -277,7 +277,8 @@ test('Gmail editors show the connected account signature by default without appe
   assert.match(html, /editor\.append\(document\.createElement\('br'\),document\.createElement\('br'\),signature\)/);
   assert.match(html, /function gmailPreparedBodySignature\(bodyHtml,automaticSignatureHtml=''\)/);
   assert.match(html, /signatureHtml:signatureInserted\?'':automaticSignatureHtml/);
-  assert.match(html, /return \{bodyHtml:prepared\.bodyHtml,inlineImages,signatureInserted:prepared\.signatureInserted\}/);
+  assert.match(html, /scheduledBodyHtml:prepared\.scheduledBodyHtml/);
+  assert.match(html, /insertedSignatureHtml:prepared\.insertedSignatureHtml/);
   assert.match(html, /\.gmail-inserted-signature\{all:revert;display:block;max-width:100%;overflow-x:auto;overflow-y:hidden\}/);
   assert.match(html, /\.gmail-inserted-signature \*\{all:revert\}/);
   assert.match(html, /\.gmail-inserted-signature td::before,\.gmail-inserted-signature th::before\{content:none!important;display:none!important\}/);
@@ -298,7 +299,7 @@ test('Gmail editors show the connected account signature by default without appe
     assert.ok(start > 0, `${functionName} should exist`);
     assert.match(source, /appendDefaultGmailSignature\(editor|appendDefaultGmailSignature\(replyEditor/, `${functionName} should show the signature in the editor`);
   }
-  for (const functionName of ['sendGmailComposeModal', 'scheduleComposeMail', 'scheduleThreadReply', 'sendGmailThreadReply']) {
+  for (const functionName of ['sendGmailComposeModal', 'sendGmailThreadReply']) {
     const start = html.indexOf(`async function ${functionName}(`);
     const nextFunction = html.indexOf('\nfunction ', start + 1);
     const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
@@ -306,6 +307,16 @@ test('Gmail editors show the connected account signature by default without appe
     const end = ends.length ? Math.min(...ends) : html.length;
     const source = html.slice(start, end);
     assert.match(source, /editorPayload\.signatureInserted\?'':automaticSignatureHtml/, `${functionName} should suppress automatic signature when the default signature is already in the body`);
+  }
+  for (const functionName of ['scheduleComposeMail', 'scheduleThreadReply']) {
+    const start = html.indexOf(`async function ${functionName}(`);
+    const nextFunction = html.indexOf('\nfunction ', start + 1);
+    const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
+    const ends = [nextFunction, nextAsyncFunction].filter(index => index > start);
+    const end = ends.length ? Math.min(...ends) : html.length;
+    const source = html.slice(start, end);
+    assert.match(source, /editorPayload\.signatureInserted\?editorPayload\.insertedSignatureHtml:automaticSignatureHtml/, `${functionName} should store the signature separately from the scheduled body`);
+    assert.match(source, /bodyHtml:editorPayload\.scheduledBodyHtml|bodyHtml=editorPayload\.scheduledBodyHtml/, `${functionName} should send the signature-free scheduled body`);
   }
   const batchStart = html.indexOf('async function handlePostSubmitGmailSend()');
   const batchEnd = html.indexOf('\nfunction closePostSubmitCopyModal()', batchStart);
@@ -334,7 +345,8 @@ test('pending scheduled mail can be loaded back into the editor and updates the 
   const editSource = html.slice(editStart, editEnd);
   assert.match(editSource, /sheetApi\('getScheduledMail'/);
   assert.match(editSource, /restoreScheduledGmailInlineImages\(ui\.editor,item\.inlineImages\|\|\[\]\)/);
-  assert.match(editSource, /appendGmailSignatureHtml\(ui\.editor,item\.signatureHtml\)/);
+  assert.match(editSource, /gmailLegacyScheduledDraftParts\(bodyHtml,knownSignatureHtml\)/);
+  assert.match(editSource, /appendGmailSignatureHtml\(ui\.editor,signatureHtml\)/);
   assert.match(editSource, /ui\.scheduleButton\.textContent='儲存排程修改'/);
   assert.match(editSource, /ui\.sendButton\.disabled=true/);
 
@@ -344,7 +356,8 @@ test('pending scheduled mail can be loaded back into the editor and updates the 
   const updateSource = html.slice(updateStart, updateEnd);
   assert.match(updateSource, /sheetApi\('updateScheduledMail'/);
   assert.match(updateSource, /id:state\.id/);
-  assert.match(updateSource, /signatureHtml:''/);
+  assert.match(updateSource, /signatureHtml=editorPayload\.signatureInserted\?editorPayload\.insertedSignatureHtml:''/);
+  assert.match(updateSource, /bodyHtml:editorPayload\.scheduledBodyHtml/);
   assert.doesNotMatch(updateSource, /scheduleCaseMail|scheduleCaseReply/);
   assert.match(html, /if\(scheduledMailEditState\?\.kind===kind\)await updateScheduledMailFromEditor\(kind,scheduledAt\)/);
 });

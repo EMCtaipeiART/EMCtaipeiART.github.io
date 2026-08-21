@@ -2038,6 +2038,7 @@ describe('Machi Design API Worker', () => {
       const scheduled = await api({
         action: 'scheduleCaseMail', caseId: '26080001', to: 'old@example.com', cc: 'copy@example.com',
         subject: '修改前主旨', bodyHtml: '修改前內容<img src="cid:edit-image@test">',
+        signatureHtml: '<table><tbody><tr><td>修改前簽名</td></tr></tbody></table>',
         inlineImages: [{ contentId: 'edit-image@test', mimeType: 'image/png', base64: 'aGVsbG8=' }],
         scheduledAt: firstTime
       }, token);
@@ -2050,6 +2051,7 @@ describe('Machi Design API Worker', () => {
           id: scheduledId, caseId: '26080001', kind: 'send', ownerAccount: 'test.user@emctaipei.com',
           to: 'old@example.com', cc: 'copy@example.com', subject: '修改前主旨',
           bodyHtml: '修改前內容<img src="cid:edit-image@test">',
+          signatureHtml: '<table><tbody><tr><td>修改前簽名</td></tr></tbody></table>',
           inlineImages: [{ contentId: 'edit-image@test', mimeType: 'image/png', base64: 'aGVsbG8=' }]
         }
       });
@@ -2057,7 +2059,7 @@ describe('Machi Design API Worker', () => {
       const nextTime = new Date(Date.now() + 12 * 60 * 1000).toISOString();
       const updated = await api({
         action: 'updateScheduledMail', id: scheduledId, to: 'new@example.com', cc: '', subject: '修改後主旨',
-        bodyHtml: '修改後內容', inlineImages: [], signatureHtml: '', scheduledAt: nextTime
+        bodyHtml: '修改後內容', inlineImages: [], signatureHtml: '<table><tbody><tr><td>修改後簽名</td></tr></tbody></table>', scheduledAt: nextTime
       }, token);
       expect(updated).toMatchObject({ ok: true, id: scheduledId });
       const listed = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
@@ -2065,7 +2067,14 @@ describe('Machi Design API Worker', () => {
         { id: scheduledId, to: 'new@example.com', cc: '', subject: '修改後主旨' }
       ]);
       const editedDraft = await api({ action: 'getScheduledMail', id: scheduledId }, token);
-      expect(editedDraft).toMatchObject({ item: { id: scheduledId, bodyHtml: '修改後內容', inlineImages: [] } });
+      expect(editedDraft).toMatchObject({
+        item: {
+          id: scheduledId,
+          bodyHtml: '修改後內容',
+          signatureHtml: '<table><tbody><tr><td>修改後簽名</td></tr></tbody></table>',
+          inlineImages: []
+        }
+      });
 
       const stub = await schedulerStub();
       await runInDurableObject(stub, async (_instance, state) => {

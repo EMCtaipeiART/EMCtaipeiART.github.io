@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-edit-scheduled-mail-128 -->
+<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-scheduled-signature-layout-129 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260821-edit-scheduled-mail-128" />
+  <meta name="app-version" content="20260821-scheduled-signature-layout-129" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7358,7 +7358,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260821-edit-scheduled-mail-128';
+const appBuildVersion = '20260821-scheduled-signature-layout-129';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -8146,13 +8146,47 @@ async function appendDefaultGmailSignature(editor){
   return true;
 }
 /** 編輯器內預設顯示的簽名已經屬於正文；寄送前移除前端辨識標記，並停用後端自動附加，避免重複兩份。 */
+function removeGmailSignatureNodeAndSpacing(signature){
+  let previous=signature?.previousSibling||null;
+  signature?.remove();
+  let removedBreaks=0;
+  while(previous){
+    const before=previous.previousSibling;
+    if(previous.nodeType===Node.TEXT_NODE&&!previous.textContent.trim()){previous.remove();previous=before;continue}
+    if(previous.nodeName==='BR'&&removedBreaks<2){previous.remove();removedBreaks++;previous=before;continue}
+    break;
+  }
+}
 function gmailPreparedBodySignature(bodyHtml,automaticSignatureHtml=''){
-  const template=document.createElement('template');template.innerHTML=String(bodyHtml||'');
-  let signatureInserted=false;
-  template.content.querySelectorAll('[data-gmail-inserted-signature]').forEach(signature=>{
-    signatureInserted=true;signature.removeAttribute('data-gmail-inserted-signature');signature.classList.remove('gmail-inserted-signature');if(!signature.className)signature.removeAttribute('class');
+  const deliveryTemplate=document.createElement('template');deliveryTemplate.innerHTML=String(bodyHtml||'');
+  const scheduledTemplate=document.createElement('template');scheduledTemplate.innerHTML=String(bodyHtml||'');
+  let signatureInserted=false,insertedSignatureHtml='';
+  deliveryTemplate.content.querySelectorAll('[data-gmail-inserted-signature]').forEach(signature=>{
+    signatureInserted=true;if(!insertedSignatureHtml)insertedSignatureHtml=signature.innerHTML;
+    signature.removeAttribute('data-gmail-inserted-signature');signature.classList.remove('gmail-inserted-signature');if(!signature.className)signature.removeAttribute('class');
   });
-  return {bodyHtml:template.innerHTML,signatureHtml:signatureInserted?'':automaticSignatureHtml,signatureInserted};
+  scheduledTemplate.content.querySelectorAll('[data-gmail-inserted-signature]').forEach(removeGmailSignatureNodeAndSpacing);
+  return {
+    bodyHtml:deliveryTemplate.innerHTML,
+    scheduledBodyHtml:scheduledTemplate.innerHTML,
+    signatureHtml:signatureInserted?'':automaticSignatureHtml,
+    insertedSignatureHtml,
+    signatureInserted
+  };
+}
+/** 版本 128 以前的排程會把簽名包成正文末端的匿名 div。若末段仍帶 Gmail 簽名標記，或與目前
+ * 同一寄件帳號的 Gmail 簽名完全相符，就在載回編輯時拆回獨立簽名欄位；無法確定時不猜測，避免誤刪正文。 */
+function gmailLegacyScheduledDraftParts(bodyHtml,knownSignatureHtml=''){
+  const template=document.createElement('template');template.innerHTML=String(bodyHtml||'');
+  const candidate=template.content.lastElementChild;
+  if(!candidate)return {bodyHtml:String(bodyHtml||''),signatureHtml:'',separated:false};
+  const knownHolder=document.createElement('div');knownHolder.appendChild(gmailSignatureFragment(knownSignatureHtml));
+  const knownHtml=knownHolder.innerHTML;
+  const hasGmailMarker=candidate.matches?.('.gmail_signature,[data-smartmail="gmail_signature"]')||candidate.querySelector?.('.gmail_signature,[data-smartmail="gmail_signature"]');
+  if(!hasGmailMarker&&(!knownHtml||candidate.innerHTML!==knownHtml))return {bodyHtml:String(bodyHtml||''),signatureHtml:'',separated:false};
+  const signatureHtml=candidate.innerHTML;
+  removeGmailSignatureNodeAndSpacing(candidate);
+  return {bodyHtml:template.innerHTML,signatureHtml,separated:true};
 }
 function gmailEditorTextWithoutInsertedSignature(editor){
   const clone=editor.cloneNode(true);clone.querySelectorAll('[data-gmail-inserted-signature]').forEach(signature=>signature.remove());clone.querySelectorAll('br').forEach(br=>br.replaceWith(document.createTextNode('\n')));clone.querySelectorAll('div,p,li,blockquote,pre,tr').forEach(block=>block.appendChild(document.createTextNode('\n')));return clone.textContent||'';
@@ -8506,7 +8540,13 @@ function gmailEditorMailPayload(editor){
     inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
   });
   const prepared=gmailPreparedBodySignature(clone.innerHTML);
-  return {bodyHtml:prepared.bodyHtml,inlineImages,signatureInserted:prepared.signatureInserted};
+  return {
+    bodyHtml:prepared.bodyHtml,
+    scheduledBodyHtml:prepared.scheduledBodyHtml,
+    insertedSignatureHtml:prepared.insertedSignatureHtml,
+    inlineImages,
+    signatureInserted:prepared.signatureInserted
+  };
 }
 function bindGmailInlineImageEditor(editor){
   if(!editor)return;
@@ -9146,7 +9186,8 @@ async function updateScheduledMailFromEditor(kind,scheduledAt){
     const editorPayload=gmailEditorMailPayload(ui.editor);
     if(kind==='thread'&&!gmailEditorTextWithoutInsertedSignature(ui.editor).trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
     setSync('正在儲存排程修改...');
-    const data=await sheetApi('updateScheduledMail',{id:state.id,to,cc,subject,bodyHtml:editorPayload.bodyHtml,signatureHtml:'',inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
+    const signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:'';
+    const data=await sheetApi('updateScheduledMail',{id:state.id,to,cc,subject,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
     if(kind==='compose')watchScheduledCaseThread(state.caseId,scheduledAt);
     const label=scheduleDisplayLabel(data.scheduledAt||scheduledAt);
     if(kind==='compose')closeGmailComposeModal();else closeGmailThreadModal();
@@ -9170,7 +9211,8 @@ async function scheduleComposeMail(scheduledAt){
   try{
     await waitForGmailInlineImages(editor.id);
     const [editorPayload,automaticSignatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
-    const {bodyHtml,inlineImages}=editorPayload,signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
+    const bodyHtml=editorPayload.scheduledBodyHtml,inlineImages=editorPayload.inlineImages;
+    const signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
     await sheetApi('scheduleCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,scheduledAt,editorToken:currentEditorToken});
     watchScheduledCaseThread(id,scheduledAt);
     setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出`,false,3400);
@@ -9203,8 +9245,8 @@ async function scheduleThreadReply(scheduledAt){
     if(to===null||cc===null)return;
     if(!to){setSync('請填寫收件人',true);return}
     setSync('排程建立中...');
-    const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
-    await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
+    const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
+    await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
     if(replyMode==='designer'){
       const row=rows.find(r=>String(r.id)===String(id));
       if(row){await confirmLatestModificationRound(id,row); await applyFirstDesignerReplyStatus(id,row)}
@@ -9238,9 +9280,16 @@ async function editScheduledMailItem(id,kind,caseId){
     setGmailRecipientEntries(kind==='compose'?'gmailComposeTo':'gmailThreadTo',splitMailAddresses(item.to||''));
     setGmailRecipientEntries(kind==='compose'?'gmailComposeCc':'gmailThreadCc',splitMailAddresses(item.cc||''));
     if(kind==='compose')$('#gmailComposeSubject').value=String(item.subject||'');
-    ui.editor.replaceChildren(gmailSignatureFragment(item.bodyHtml||''));
+    let bodyHtml=String(item.bodyHtml||''),signatureHtml=String(item.signatureHtml||'');
+    if(!signatureHtml){
+      const sameOwner=canonicalAccountClient(item.ownerAccount)===canonicalAccountClient(currentEditorAccount);
+      const knownSignatureHtml=sameOwner?await ensureGmailSignatureLoaded():'';
+      const legacy=gmailLegacyScheduledDraftParts(bodyHtml,knownSignatureHtml);
+      if(legacy.separated){bodyHtml=legacy.bodyHtml;signatureHtml=legacy.signatureHtml}
+    }
+    ui.editor.replaceChildren(gmailSignatureFragment(bodyHtml));
     restoreScheduledGmailInlineImages(ui.editor,item.inlineImages||[]);
-    if(String(item.signatureHtml||'').trim())appendGmailSignatureHtml(ui.editor,item.signatureHtml);
+    if(signatureHtml.trim())appendGmailSignatureHtml(ui.editor,signatureHtml);
     if(ui.banner){
       const owner=String(item.ownerAccount||'').trim();
       ui.banner.textContent=`正在編輯 ${scheduleDisplayLabel(item.scheduledAt)} 的排程${owner?`（寄件人：${owner}）`:''}。按「儲存排程修改」前，原排程不會改變。`;
