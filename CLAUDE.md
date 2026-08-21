@@ -206,7 +206,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - **先重現問題、再驗證修好，不是只驗證修好**：用本機 Node 靜態伺服器＋ Browser pane 對真實頁面做隔離測試，模擬一個客戶別「部門／組別」只設定 `["Celine組"]`（刻意不含企劃部／設計部，確保只有組別比對這一條路徑會生效）、登入帳號的 `currentEditorRawGroup` 已經正確是「Celine組」——①**先用 `git stash` 暫時還原成修正前的舊版程式碼**，呼叫 `applyCurrentUserProfile()`（`verifyStoredEditorToken()` 例外分支實際會執行的那一行），確認 `currentEditorRawGroup` 真的從「Celine組」被清空成空字串、`canViewCustomerCases()` 真的從 `true` 變成 `false`——證實這是真的會發生的 bug，不是憑空推測；②`git stash pop` 還原修正、重新整理頁面後重跑同一個測試，確認 `currentEditorRawGroup` 與 `canView` 都維持正確不受影響；③額外完整模擬 `verifyStoredEditorToken()` 真正會執行的完整路徑（不是只測試抽出來的 `applyCurrentUserProfile()`）：把 `pendingEditorSession.rawGroup` 設成「Celine組」（模擬瀏覽器本機已經存好上次登入的值）、`sheetApi` 換成一個固定拋出「Failed to fetch」例外的假函式（模擬網路一時不穩），呼叫真正的 `verifyStoredEditorToken()`，確認函式正確判定為「非過期、保留登入狀態」（回傳 `true`，不會把使用者登出）、且 `currentEditorRawGroup`／`canViewCustomerCases()` 全程維持正確——這條路徑精準對應使用者回報的真實症狀（帳號設定沒變、但偶爾就是看不到）。
   - **未做的驗證**：沒有用真實的 Celine 組測試帳號在正式站實際觸發一次網路不穩定（例如切換網路、模擬 Worker 冷啟動延遲）來重現時好時壞的現象並確認修好，這次的驗證完全依賴本機隔離環境對真實頁面注入假資料、模擬網路例外跑過的完整流程；也沒有反向確認「後台把組別清空後，已登入分頁確實需要重新整理才會生效」這個既有限制的實際使用者體感。
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案。
-- commit：（見下方 push 紀錄）
+- commit：`5bdf207c`
 
 ### 2026-08-21 Asia/Taipei（次新）— 「案件已建立，複製信件內容寄出」面板補上「連接 Gmail 帳號」引導，連接成功直接接續同一輪寄信流程
 
