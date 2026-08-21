@@ -189,7 +189,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-21 Asia/Taipei（最新）— 「案件已建立，複製信件內容寄出」面板補上「連接 Gmail 帳號」引導，連接成功直接接續同一輪寄信流程
+### 2026-08-21 Asia/Taipei（最新）— 修正客戶別「部門／組別」可見性有時候會被悄悄清空：帳號設定背景重新套用時漏了一道防呆，跟其餘三個姊妹欄位不一致
+
+- 修改目的：使用者回報「Celine組」測試人員雖然在資料庫後台的帳號設定裡已經正確歸類到「Celine組」，但前台實際能看到的內容通常只有預設的公開專案列表（企劃部／設計部可見的那些客戶別），只有「有時候」才會看到 Celine 組自己專屬的客戶別案件——同一個帳號、同一份後台設定，行為卻不穩定。
+- 追查過程：
+  1. 先確認資料流：`canViewCustomerCases(name)`（[index.html:7543](index.html:7543)）判斷某個客戶別看不看得到，依據是登入帳號的 `currentEditorRawGroup`（帳號「組別」欄位的**原始值**，例如「Celine組」）有沒有出現在該客戶別「部門／組別」的可見清單裡——這個判斷邏輯本身在 2026-08-19 那次「找到並修正『客戶別部門／組別勾了「各組」底下的分組，前台卻完全看不到案件』」已經修過、也驗證過是對的，這次不是同一個問題重演。
+  2. 追到真正的破口在 `applyAccountSettingsIfNeeded(remoteSettings)`（[index.html:7861](index.html:7861)）——這支函式負責把「帳號在遠端設定裡的最新值」套用回目前的登入狀態，對顯示名／設計組別／部門三個欄位都有清楚的寫法：**只有遠端值非空**才覆寫（例如 `if(remoteGroup&&remoteGroup!==currentEditorGroup){...}`）；唯獨 `currentEditorRawGroup` 這一項漏了這道「非空才覆寫」的防呆，寫成 `if(remoteRawGroupValue!==currentEditorRawGroup){currentEditorRawGroup=remoteRawGroupValue;...}`——只要呼叫這支函式時沒有帶完整的 `remoteSettings`（或帶的物件裡沒有組別欄位），算出來的 `remoteRawGroupValue` 就會是空字串，而這一行**沒有排除空字串**，會直接把原本正確的「Celine組」覆寫成空的，`canViewCustomerCases()` 因此立刻退回只看企劃部／設計部的預設可見範圍。
+  3. 找到這支函式最常在什麼情況下被「空手」呼叫：`applyCurrentUserProfile()`（[index.html:9195](index.html:9195)）呼叫 `applyAccountSettingsIfNeeded()` 時**完全沒有帶參數**；而這支函式又被 `verifyStoredEditorToken()`（[index.html:11727](index.html:11727)）的 `catch` 分支呼叫——這個分支專門處理「呼叫後端 `verifyToken` 時發生任何非『登入已過期』的例外」（最常見就是網路一時不穩、Worker 冷啟動、逾時），分支一開始都會正確地從 `pendingEditorSession.rawGroup`（存在瀏覽器本機、上次登入成功時留下的值）把 `currentEditorRawGroup` 復原成「Celine組」，但緊接著下一行就呼叫了 `applyCurrentUserProfile()`，把剛復原好的值又立刻清空——而且這個分支清空之後**沒有任何後續步驟把它救回來**（不像 `loginEditor()` 本身的呼叫順序，雖然也會先清空一次，但緊接著就用完整的 `settings` 物件重新套用一次，結果通常是對的）。`verifyStoredEditorToken()` 是每次網頁載入、只要瀏覽器裡還留著登入狀態就一定會執行一次的函式，只要當下那次跟後端的驗證請求剛好碰到任何網路波動，這個帳號的可見範圍就會整節被打回預設值，直到下一次重新整理剛好順利驗證成功、或使用者重新登入才會恢復——完全對應「同一個帳號、同一份設定，卻時好時壞」這個症狀。
+- 影響檔案：`index.html`。
+- 影響功能：`applyAccountSettingsIfNeeded()` 判斷 `currentEditorRawGroup` 要不要被覆寫的那一行，補上跟另外三個姊妹欄位（顯示名、設計組別、部門）完全一致的「遠端值非空才覆寫」防呆——`if(remoteRawGroupValue!==currentEditorRawGroup)` 改成 `if(remoteRawGroupValue&&remoteRawGroupValue!==currentEditorRawGroup)`。這樣一來，任何時候這支函式被呼叫、但拿到的 `remoteSettings` 裡沒有帶組別欄位（不管是完全沒帶參數，還是帶了一個只包含部分欄位的物件），都不會再把原本正確、已經記在瀏覽器裡的值洗掉，只有真的拿到一個非空的新組別值時才會覆寫——這正是另外三個欄位本來就在做的事，這次只是把 `currentEditorRawGroup` 補齊到同一套規則，沒有改變任何判斷客戶別可見性的邏輯本身。
+- 風險區塊：
+  - 這個防呆補上之後，理論上會少一種極端情況：如果管理者在後台把某個帳號的「組別」欄位**清空**（從「Celine組」改成空白），這個變動不會立刻透過背景的部分設定更新反映到目前已經登入的分頁上（跟顯示名／部門／設計組別三個欄位原本就有的既有限制一致）——需要使用者重新整理頁面、觸發一次完整的 `verifyToken`／`loginEditor()` 流程才會真正生效。這不是新引入的限制，是這次補齊之後讓 `currentEditorRawGroup` 的行為終於跟其餘三個欄位一致，之前反而是「這一個欄位特別容易被意外清空」這個不一致的狀態。
+  - 這次沒有動 `canViewCustomerCases()`／`customerVisibleDepartments()` 本身的判斷邏輯，也沒有動 Worker 或後端任何程式碼——確認過根因完全是前端狀態管理的一個防呆遺漏，跟 2026-08-19 那次的根因（誤用了錯的變數）是不同的問題，這次不需要動到伺服器端。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 區塊抽出後用 `node --check` 語法檢查通過；`node --test backend/test/*.test.mjs` 39/39 全過（這次改動沒有觸及 `backend/`）。
+  - **先重現問題、再驗證修好，不是只驗證修好**：用本機 Node 靜態伺服器＋ Browser pane 對真實頁面做隔離測試，模擬一個客戶別「部門／組別」只設定 `["Celine組"]`（刻意不含企劃部／設計部，確保只有組別比對這一條路徑會生效）、登入帳號的 `currentEditorRawGroup` 已經正確是「Celine組」——①**先用 `git stash` 暫時還原成修正前的舊版程式碼**，呼叫 `applyCurrentUserProfile()`（`verifyStoredEditorToken()` 例外分支實際會執行的那一行），確認 `currentEditorRawGroup` 真的從「Celine組」被清空成空字串、`canViewCustomerCases()` 真的從 `true` 變成 `false`——證實這是真的會發生的 bug，不是憑空推測；②`git stash pop` 還原修正、重新整理頁面後重跑同一個測試，確認 `currentEditorRawGroup` 與 `canView` 都維持正確不受影響；③額外完整模擬 `verifyStoredEditorToken()` 真正會執行的完整路徑（不是只測試抽出來的 `applyCurrentUserProfile()`）：把 `pendingEditorSession.rawGroup` 設成「Celine組」（模擬瀏覽器本機已經存好上次登入的值）、`sheetApi` 換成一個固定拋出「Failed to fetch」例外的假函式（模擬網路一時不穩），呼叫真正的 `verifyStoredEditorToken()`，確認函式正確判定為「非過期、保留登入狀態」（回傳 `true`，不會把使用者登出）、且 `currentEditorRawGroup`／`canViewCustomerCases()` 全程維持正確——這條路徑精準對應使用者回報的真實症狀（帳號設定沒變、但偶爾就是看不到）。
+  - **未做的驗證**：沒有用真實的 Celine 組測試帳號在正式站實際觸發一次網路不穩定（例如切換網路、模擬 Worker 冷啟動延遲）來重現時好時壞的現象並確認修好，這次的驗證完全依賴本機隔離環境對真實頁面注入假資料、模擬網路例外跑過的完整流程；也沒有反向確認「後台把組別清空後，已登入分頁確實需要重新整理才會生效」這個既有限制的實際使用者體感。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-21 Asia/Taipei（次新）— 「案件已建立，複製信件內容寄出」面板補上「連接 Gmail 帳號」引導，連接成功直接接續同一輪寄信流程
 
 - 修改目的：使用者回報「新增專案時跳出信件編輯，這邊需要加入 gmail 綁定的按鈕，這邊沒有引導大家不知道可以使用 gmail」——附圖是新增案件送出後、Gmail 尚未連接時跳出的「案件已建立，複製信件內容寄出」複製面板（`#mailCopyModal`），畫面上只有一行說明文字「尚未連接 Gmail 帳號，請自行複製以下內容寄出」，完全沒有任何按鈕可以直接去連接，使用者只能自己想到要去帳號選單找連接入口，體驗上像是死路一條。
 - 追查過程：先確認同一套「連接 Gmail 帳號」缺口是不是也存在於其他入口——`openMailComposerMenu()`（案件列表「發信」按鈕）與 `openReplyMethodChooser()`（「回信」按鈕，見上一則修改）在 Gmail 未連接時，選單裡本來就已經有清楚的「連接 Gmail 帳號」選項，這兩處沒有問題；唯獨這次使用者附圖的「新增案件送出後」這個入口（`startPostSubmitMailFlow()`→`openPostSubmitQueueModal()`，Gmail 未連接時會走複製面板 `#mailCopyModal`）從一開始就只有純文字說明、沒有任何可操作的按鈕，是這次真正要補的缺口。
