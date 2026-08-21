@@ -323,6 +323,32 @@ test('scheduled-mail results cannot leak from a previously opened case into the 
   assert.match(source, /if\(!stillCurrent\(\)\)return/);
 });
 
+test('pending scheduled mail can be loaded back into the editor and updates the original schedule', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /class="gmail-scheduled-item-edit"[^>]*>編輯<\/button>/);
+  assert.match(html, /id="gmailComposeScheduledEditBanner"/);
+  assert.match(html, /id="gmailThreadScheduledEditBanner"/);
+  const editStart = html.indexOf('async function editScheduledMailItem(');
+  const editEnd = html.indexOf('function renderScheduledMailList(', editStart);
+  assert.ok(editStart > 0 && editEnd > editStart);
+  const editSource = html.slice(editStart, editEnd);
+  assert.match(editSource, /sheetApi\('getScheduledMail'/);
+  assert.match(editSource, /restoreScheduledGmailInlineImages\(ui\.editor,item\.inlineImages\|\|\[\]\)/);
+  assert.match(editSource, /appendGmailSignatureHtml\(ui\.editor,item\.signatureHtml\)/);
+  assert.match(editSource, /ui\.scheduleButton\.textContent='儲存排程修改'/);
+  assert.match(editSource, /ui\.sendButton\.disabled=true/);
+
+  const updateStart = html.indexOf('async function updateScheduledMailFromEditor(');
+  const updateEnd = html.indexOf('async function scheduleComposeMail(', updateStart);
+  assert.ok(updateStart > 0 && updateEnd > updateStart);
+  const updateSource = html.slice(updateStart, updateEnd);
+  assert.match(updateSource, /sheetApi\('updateScheduledMail'/);
+  assert.match(updateSource, /id:state\.id/);
+  assert.match(updateSource, /signatureHtml:''/);
+  assert.doesNotMatch(updateSource, /scheduleCaseMail|scheduleCaseReply/);
+  assert.match(html, /if\(scheduledMailEditState\?\.kind===kind\)await updateScheduledMailFromEditor\(kind,scheduledAt\)/);
+});
+
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('function safeHttpPreviewUrl(');

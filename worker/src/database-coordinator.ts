@@ -1549,6 +1549,74 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'scheduleCaseReply', scheduledId, scheduledAt };
   }
 
+  /** 讀回一筆仍待寄送的完整排程草稿。正文、簽名與 inline image base64 只存在 Durable Object SQLite，
+   * 不進公開 GitHub JSON；同時沿用案件 request.mail 權限，避免只知道排程 id 就能讀到信件內容。 */
+  private getScheduledMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const id = text(payload.id || payload.scheduledId);
+    if (!id) return { ok: false, action: 'getScheduledMail', error: '缺少排程編號' };
+    const item = this.ctx.storage.sql.exec<ScheduledMailRow>('SELECT * FROM scheduled_mail WHERE id = ?', id).toArray()[0];
+    if (!item) return { ok: false, action: 'getScheduledMail', error: '找不到這筆排程' };
+    if (item.status !== 'pending') return { ok: false, action: 'getScheduledMail', error: '這筆排程已經開始處理，無法再編輯', reason: 'SCHEDULE_NOT_PENDING' };
+    const row = database.tables.database.rows.find(record => text(record['案件編號']) === item.case_id);
+    if (!hasRowCapability(database, current, 'request.mail', row || {})) {
+      return { ok: false, action: 'getScheduledMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
+    let inlineImages: GmailInlineImage[] = [];
+    try { inlineImages = resolveGmailInlineImages({ inlineImages: JSON.parse(item.inline_images || '[]') }); }
+    catch { return { ok: false, action: 'getScheduledMail', error: '排程中的內嵌圖片資料已損壞，無法安全編輯' }; }
+    return {
+      ok: true, action: 'getScheduledMail', item: {
+        id: item.id, caseId: item.case_id, kind: item.kind, ownerAccount: item.owner_account,
+        to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html,
+        signatureHtml: item.signature_html, inlineImages, scheduledAt: item.scheduled_at,
+        requestedBy: item.requested_by, createdAt: item.created_at, updatedAt: item.updated_at
+      }
+    };
+  }
+
+  /** 更新原本的 pending 排程，不先取消、也不另外建立第二筆。最後一個 UPDATE 帶 status='pending' 條件，
+   * 就算 Cron 剛好在讀取草稿後搶先 claim 成 sending，也不會覆蓋正在寄送的內容或產生第二封信。 */
+  private updateScheduledMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const id = text(payload.id || payload.scheduledId);
+    if (!id) return { ok: false, action: 'updateScheduledMail', error: '缺少排程編號' };
+    const item = this.ctx.storage.sql.exec<ScheduledMailRow>('SELECT * FROM scheduled_mail WHERE id = ?', id).toArray()[0];
+    if (!item) return { ok: false, action: 'updateScheduledMail', error: '找不到這筆排程' };
+    if (item.status !== 'pending') return { ok: false, action: 'updateScheduledMail', error: '這筆排程已經開始處理，無法再修改', reason: 'SCHEDULE_NOT_PENDING' };
+    const row = database.tables.database.rows.find(record => text(record['案件編號']) === item.case_id);
+    if (!hasRowCapability(database, current, 'request.mail', row || {})) {
+      return { ok: false, action: 'updateScheduledMail', error: '此帳號沒有「request.mail」權限', reason: 'REQUEST_MAIL_DENIED' };
+    }
+    const to = text(payload.to);
+    const cc = text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc);
+    const subject = item.kind === 'send' ? text(payload.subject) : '';
+    const bodyHtml = resolveBodyHtml(payload);
+    const signatureHtml = text(payload.signatureHtml);
+    const inlineImages = resolveGmailInlineImages(payload);
+    const scheduledAt = parseScheduledAt(payload.scheduledAt);
+    if (!to || (item.kind === 'send' && !subject)) return { ok: false, action: 'updateScheduledMail', error: '缺少收件人或主旨' };
+    if (item.kind === 'reply' && !htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'updateScheduledMail', error: '回覆內容不可為空' };
+    if (!scheduledAt) return { ok: false, action: 'updateScheduledMail', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
+    if (!row) return { ok: false, action: 'updateScheduledMail', error: '找不到案件資料' };
+    if (item.kind === 'send' && text(row['Gmail信件串ID'])) {
+      return { ok: false, action: 'updateScheduledMail', error: '此案件已經有 Gmail 信件串，原排程不會再寄出', reason: 'THREAD_EXISTS' };
+    }
+    if (item.kind === 'reply' && !text(row['Gmail信件串ID'])) {
+      return { ok: false, action: 'updateScheduledMail', error: '此案件已沒有可回覆的 Gmail 信件串' };
+    }
+    const updatedAt = new Date().toISOString();
+    const updated = this.ctx.storage.sql.exec<{ id: string }>(
+      `UPDATE scheduled_mail
+       SET to_address = ?, cc_address = ?, subject = ?, body_html = ?, signature_html = ?, inline_images = ?, scheduled_at = ?, error_message = NULL, updated_at = ?
+       WHERE id = ? AND status = 'pending'
+       RETURNING id`,
+      to, cc, subject, bodyHtml, signatureHtml, JSON.stringify(inlineImages), scheduledAt, updatedAt, id
+    ).toArray();
+    if (updated.length !== 1) return { ok: false, action: 'updateScheduledMail', error: '這筆排程已經開始處理，無法再修改', reason: 'SCHEDULE_NOT_PENDING' };
+    return { ok: true, action: 'updateScheduledMail', id, scheduledAt, updatedAt };
+  }
+
   /** 給信件編輯器顯示「已排程」清單用——只有跟 sendCaseMail/replyCaseMail 同一套 request.mail 權限的帳號
    * 才看得到，沒有另外限定「只能看自己排的」，因為這本來就是同一個案件、同一批人共用的信件操作範圍。 */
   private listScheduledMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
@@ -1787,6 +1855,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'scheduleCaseMail') return await this.scheduleCaseMail(payload, database, session);
       if (action === 'scheduleCaseReply') return await this.scheduleCaseReply(payload, database, session);
       if (action === 'listScheduledMail') return this.listScheduledMail(payload, database, session);
+      if (action === 'getScheduledMail') return this.getScheduledMail(payload, database, session);
+      if (action === 'updateScheduledMail') return this.updateScheduledMail(payload, database, session);
       if (action === 'cancelScheduledMail') return this.cancelScheduledMail(payload, database, session);
       if (action === 'addCustomer') return await this.addCustomer(payload, database, session);
 

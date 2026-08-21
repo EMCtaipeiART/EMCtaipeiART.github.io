@@ -2030,6 +2030,55 @@ describe('Machi Design API Worker', () => {
       expect(dispatch).toEqual({ processed: 0, sent: 0, failed: 0 });
     });
 
+    it('reads and updates the original pending schedule without creating a second item, then blocks edits after dispatch claims it', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+      const firstTime = new Date(Date.now() + 6 * 60 * 1000).toISOString();
+      const scheduled = await api({
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'old@example.com', cc: 'copy@example.com',
+        subject: '修改前主旨', bodyHtml: '修改前內容<img src="cid:edit-image@test">',
+        inlineImages: [{ contentId: 'edit-image@test', mimeType: 'image/png', base64: 'aGVsbG8=' }],
+        scheduledAt: firstTime
+      }, token);
+      const scheduledId = String(scheduled.scheduledId);
+
+      const draft = await api({ action: 'getScheduledMail', id: scheduledId }, token);
+      expect(draft).toMatchObject({
+        ok: true,
+        item: {
+          id: scheduledId, caseId: '26080001', kind: 'send', ownerAccount: 'test.user@emctaipei.com',
+          to: 'old@example.com', cc: 'copy@example.com', subject: '修改前主旨',
+          bodyHtml: '修改前內容<img src="cid:edit-image@test">',
+          inlineImages: [{ contentId: 'edit-image@test', mimeType: 'image/png', base64: 'aGVsbG8=' }]
+        }
+      });
+
+      const nextTime = new Date(Date.now() + 12 * 60 * 1000).toISOString();
+      const updated = await api({
+        action: 'updateScheduledMail', id: scheduledId, to: 'new@example.com', cc: '', subject: '修改後主旨',
+        bodyHtml: '修改後內容', inlineImages: [], signatureHtml: '', scheduledAt: nextTime
+      }, token);
+      expect(updated).toMatchObject({ ok: true, id: scheduledId });
+      const listed = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
+      expect((listed.items as Array<Record<string, unknown>>).filter(item => item.status === 'pending')).toMatchObject([
+        { id: scheduledId, to: 'new@example.com', cc: '', subject: '修改後主旨' }
+      ]);
+      const editedDraft = await api({ action: 'getScheduledMail', id: scheduledId }, token);
+      expect(editedDraft).toMatchObject({ item: { id: scheduledId, bodyHtml: '修改後內容', inlineImages: [] } });
+
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET status = ? WHERE id = ?', 'sending', scheduledId);
+      });
+      const tooLate = await api({
+        action: 'updateScheduledMail', id: scheduledId, to: 'late@example.com', subject: '來不及修改',
+        bodyHtml: '不應寫入', scheduledAt: new Date(Date.now() + 20 * 60 * 1000).toISOString()
+      }, token);
+      expect(tooLate).toMatchObject({ ok: false, reason: 'SCHEDULE_NOT_PENDING' });
+      expect(await api({ action: 'getScheduledMail', id: scheduledId }, token)).toMatchObject({ ok: false, reason: 'SCHEDULE_NOT_PENDING' });
+    });
+
     it('cancels a due first-send schedule instead of showing a false failure when the case was already sent through another path', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
