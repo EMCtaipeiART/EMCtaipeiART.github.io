@@ -215,8 +215,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
     - 順手更新另外兩支既有測試（一般立即回信的跨帳號情境），改成明確 mock `rfc822msgid:` 搜尋端點回傳「查無結果」，讓「threadId 應該是 undefined」這個既有斷言是**真正**驗證到「查無結果安全退回」的路徑，而不是像原本那樣意外靠 mock 對未知 URL 拋例外、被 `findOwnMailboxThreadId()` 的 try/catch 靜默吞掉才巧合通過。
   - `node --test backend/test/*.test.mjs` **39/39 全過**（這次改動沒有觸及 `backend/`）。
   - **未做的驗證**：沒有用真實登入帳號在正式站接上真正的 Cloudflare Worker、真實 Gmail 帳號，實際測試一次跨帳號回信、再登入設計師自己的 Gmail 帳號肉眼確認這封回信真的正確出現在原本的討論串裡（不是獨立的孤立信件）——這次的驗證完全依賴在真實 Cloudflare Workers 執行環境（`vitest-pool-workers`）裡 mock Gmail API 回應跑過的完整流程，理論上已經精準對應到使用者實際回報、並透過「顯示原始郵件」逐步確認過的真實現象與根因，但沒有機會走一次真正端到端、看到 Gmail 網頁版實際分組結果的流程。
-- 部署狀態：**`worker/` 需要手動部署才會生效**——沒部署前，跨帳號回信（例如「設計師回覆信」）仍會維持舊行為：信件正確寄出、收件人正確收到，但寄件人自己那一側可能繼續看到分組不準的孤立「Re:」信。
-- commit：（見下方 push 紀錄）
+- 部署狀態：**`worker/` 已於同日執行 `cd worker && npx wrangler deploy` 完成部署**（Version ID `bf2b47a0-d790-412e-b333-82ec5e323da4`），部署後用 `curl` 打 `ping` action 確認正式站 Worker 正常回應（`revision` 正確遞增）。
+- commit：`0654f571`
 
 ### 2026-08-21 Asia/Taipei（次新）— 找到並修正「回信無法寄出」的真正原因：錯誤訊息其實有正確顯示，只是被彈窗蓋住、使用者完全看不到
 
