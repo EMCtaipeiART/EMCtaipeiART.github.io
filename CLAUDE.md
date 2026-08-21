@@ -209,8 +209,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - **scripts/nas_folder_picker_server.mjs**：`node --check` 語法檢查通過；**真的啟動這支伺服器＋一組假的 `sips`（模擬圖片壓縮成功）＋一個假的 `dbJsonUrl` HTTP 伺服器（第一次回應只有初稿，第二次以後的回應改成初稿＋一修，模擬「PM 在掃描過程中新增了修改需求」）＋一個假的上傳端點，真的呼叫 `/api/confirm` 完整重現使用者回報的現象**：**先暫時還原成修正前的邏輯**，確認真的重現 bug——最終記錄的輪次是 `round:0`（初稿），即使當下最新資料其實已經有一修；**還原修正後重新跑同一組情境**，確認正確變成 `round:1`（一修），證實修正精準對應到真正的根因，不是巧合通過。測試用的暫存目錄與行程在驗證完後已全部清除，沒有殘留任何檔案或行程。
   - `node --test backend/test/*.test.mjs` **39/39 全過**（這次改動沒有觸及 `backend/`，確認沒有意外牽動共用邏輯或既有測試字串）。
   - **未做的驗證**：沒有用真實登入帳號在正式站接上真正的 Cloudflare Worker、真實 NAS，走一次「排程送出→確認徽章顯示→設計師回覆信排程→回覆送出後彈窗自動收回→真實 NAS 資料夾立即備份確認圖片正確歸到新一輪」的完整端對端流程；理論上已經涵蓋這次四個問題的根因與修正，但沒有機會在正式環境重新確認。
-- 部署狀態：`index.html` 純前端，git push 後自動生效。`scripts/nas_folder_picker_server.mjs` 是純本機工具，需要重新啟動（或依既有機制重啟）對應的服務才會套用新版本。**`worker/` 需要手動部署才會生效**（`cd worker && pnpm deploy`）——沒部署前，「設計師回覆信」的收件人未帶入問題仍會發生，其餘三項（排程確認徽章、排程按鈕、送出後自動收回、NAS 輪次修正）都是純前端／本機工具，不受 Worker 部署進度影響。
-- commit：（見下方 push 紀錄）
+- 部署狀態：`index.html` 純前端，git push 後自動生效。`scripts/nas_folder_picker_server.mjs` 是純本機工具，需要重新啟動（或依既有機制重啟）對應的服務才會套用新版本。**`worker/` 已於同日執行 `cd worker && npx wrangler deploy` 完成部署**（Version ID `43ede0ef-c881-48a0-ad5c-c521302ed7a6`），部署後用 `curl` 打 `ping` action 確認正式站 Worker 正常回應（`revision` 正確遞增，非部署失敗的舊快照）。
+- commit：`e79db19e`
 
 ### 2026-08-20 Asia/Taipei（最新）— 上一則「送出後接續彈出寄信」漏掉「指定排程時間」，這次補上（單筆與批次都可用；已排程的那封「全部寄出」不會重複寄）
 
