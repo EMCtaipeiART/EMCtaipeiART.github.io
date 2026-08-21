@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-numbered-mail-templates-121 -->
+<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-general-reply-greeting-122 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260821-numbered-mail-templates-121" />
+  <meta name="app-version" content="20260821-general-reply-greeting-122" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -7345,7 +7345,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260821-numbered-mail-templates-121';
+const appBuildVersion = '20260821-general-reply-greeting-122';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
@@ -10050,7 +10050,11 @@ async function openGmailThreadModal(id){
   modal.dataset.designerReplyPending='';
   modal.dataset.designerReplyCaseId='';
   modal.dataset.designerReplyRound='';
-  if(replyEditor){setGmailEditorPlainText(replyEditor,defaultReplyTemplateContent());clearGmailInlineImages(replyEditor.id)}
+  const generalReplyTemplate=defaultReplyTemplateContent();
+  if(replyEditor){setGmailEditorPlainText(replyEditor,generalReplyTemplate);clearGmailInlineImages(replyEditor.id)}
+  // getCaseMailThread 回來前使用者已經可以在編輯器輸入；保存初始 HTML，載入收件人後只在內容仍未被修改時
+  // 補上「Hi xxx,」，避免網路較慢時把使用者剛輸入的文字覆蓋掉。
+  const initialGeneralReplyHtml=replyEditor?.innerHTML||'';
   // 收件人／副本先清空，等下面讀信成功拿到 Worker 算好的建議值（suggestedTo/suggestedCc，跟 replyCaseMail
   // 實際送出時如果使用者沒改過欄位會用的預設值同一套邏輯，只是這裡先攤開來讓使用者看得到、也能修改）才填入；
   // 讀信失敗（含權限被擋）時維持空白，反正 composeSection 這種情況會被隱藏，不會露出空欄位。
@@ -10072,6 +10076,10 @@ async function openGmailThreadModal(id){
     // 用 splitMailAddresses() 拆開成多個聯絡人晶片，不能整段當成單一個地址塞進去。
     setGmailRecipientEntries('gmailThreadTo',splitMailAddresses(data.suggestedTo||''));
     setGmailRecipientEntries('gmailThreadCc',splitMailAddresses(data.suggestedCc||''));
+    if(replyEditor&&replyEditor.innerHTML===initialGeneralReplyHtml){
+      const recipientName=gmailRecipientGreetingName('gmailThreadTo')||'收件人';
+      setGmailEditorPlainText(replyEditor,`Hi ${recipientName},\n\n${generalReplyTemplate}`);
+    }
     refreshScheduledMailList(id,'thread');
   }catch(err){
     gmailThreadMessagesCache=[];

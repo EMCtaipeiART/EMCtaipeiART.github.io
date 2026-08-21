@@ -212,6 +212,9 @@ test('Gmail reply composer displays the current account as sender instead of the
   const source = html.slice(start, end);
   assert.match(source, /initialReplyFrom=gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
   assert.match(source, /replyFrom=String\(data\.replyFrom\|\|gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
+  assert.match(source, /recipientName=gmailRecipientGreetingName\('gmailThreadTo'\)\|\|'收件人'/);
+  assert.match(source, /setGmailEditorPlainText\(replyEditor,`Hi \$\{recipientName\},\\n\\n\$\{generalReplyTemplate\}`\)/);
+  assert.match(source, /replyEditor\.innerHTML===initialGeneralReplyHtml/);
   assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
 });
 
