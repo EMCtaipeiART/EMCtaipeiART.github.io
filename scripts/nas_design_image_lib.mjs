@@ -431,7 +431,12 @@ export async function scanProject(project, config, state, previewDir, warnings) 
 
   const pendingPreviews = Object.entries(nextFiles)
     .filter(([, entry]) => entry.assignedRound === null && entry.previewPath)
-    .map(([relPath, entry]) => ({ relPath, previewPath: entry.previewPath }));
+    .map(([relPath, entry]) => ({
+      relPath,
+      previewPath: entry.previewPath,
+      mtimeMs: entry.mtimeMs,
+      size: entry.size
+    }));
 
   return {
     caseId: project.caseId,
@@ -527,14 +532,47 @@ export function computeYearMonth(startDateText) {
   };
 }
 
+/**
+ * 為單一案件、輪次與來源檔案版本產生穩定的防重鍵。
+ *
+ * 這個值不含預覽圖的暫存路徑，因為暫存資料夾可能搬家；以案件、輪次、NAS
+ * 相對路徑、mtime 與檔案大小識別同一個來源版本。相同檔案因網路逾時重送時
+ * 會得到完全相同的 key；同名檔案內容更新（mtime／size 至少一者改變）或進入
+ * 下一修改輪次時則會得到新 key，仍可正常建立新版圖片。
+ */
+export function createCaseDesignUploadDedupeKey({ caseId, round, relPath, mtimeMs, size, fallbackDigest = '' }) {
+  const normalizedMtime = Number.isFinite(Number(mtimeMs)) ? String(Number(mtimeMs)) : '';
+  const normalizedSize = Number.isFinite(Number(size)) ? String(Number(size)) : '';
+  return crypto.createHash('sha256').update([
+    String(caseId || ''),
+    String(Number(round) || 0),
+    String(relPath || ''),
+    normalizedMtime,
+    normalizedSize,
+    String(fallbackDigest || '')
+  ].join('\0')).digest('hex');
+}
+
 export async function uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews }) {
   const images = [];
   for (const item of pendingPreviews) {
     const buffer = await fs.readFile(item.previewPath);
+    // 舊 state 或外部呼叫端可能還沒有 mtimeMs／size；這時以實際預覽內容雜湊
+    // 作為 fallback，仍保證同一份待重送檔案會得到穩定 key。
+    const hasSourceVersion = Number.isFinite(Number(item.mtimeMs)) && Number.isFinite(Number(item.size));
+    const fallbackDigest = hasSourceVersion ? '' : crypto.createHash('sha256').update(buffer).digest('hex');
     images.push({
       fileName: path.basename(item.relPath),
       mimeType: 'image/jpeg',
-      base64: buffer.toString('base64')
+      base64: buffer.toString('base64'),
+      dedupeKey: createCaseDesignUploadDedupeKey({
+        caseId,
+        round,
+        relPath: item.relPath,
+        mtimeMs: item.mtimeMs,
+        size: item.size,
+        fallbackDigest
+      })
     });
   }
   const response = await fetch(config.appsScriptUploadUrl, {

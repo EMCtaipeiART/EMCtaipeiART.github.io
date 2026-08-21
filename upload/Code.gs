@@ -384,7 +384,9 @@ function uploadImage(payload) {
  *   year        必填，年度（用於目的地資料夾路徑）
  *   month       必填，月份（用於目的地資料夾路徑）
  *   source      選填，預設 'nas-watcher'
- *   images      必填，[{fileName, mimeType, base64}, ...]
+ *   images      必填，[{fileName, mimeType, base64, dedupeKey}, ...]；NAS 呼叫端
+ *               的 dedupeKey 是同案件／輪次／來源檔案版本的穩定 SHA-256，
+ *               網路逾時重送時用來沿用既有 Drive 檔案
  */
 function uploadCaseDesignImages(payload) {
   try {
@@ -581,39 +583,78 @@ function verifyDatabaseBackupServiceKey_(serviceKey) {
  * （瀏覽器選檔案上傳）共用這段邏輯，差異只在呼叫端的身分驗證方式。
  */
 function uploadImagesToFolder_(images, folder, maxBytes) {
-  return images.map(function (image) {
-    image = image || {};
-    const mimeType = String(image.mimeType || '').trim();
-    if (!mimeType.startsWith('image/')) {
-      throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
-    }
-
-    const originalFileName = String(image.fileName || '').trim();
-    const extension = getExtension_(image.fileName, mimeType);
-    const finalFileName = createFileName_(image.fileName || 'case-image', extension);
-    const base64Content = removeDataUrlPrefix_(image.base64 || '');
-    const bytes = Utilities.base64Decode(base64Content);
-
-    if (bytes.length > maxBytes) {
-      throw new Error(`圖片超過 ${MAX_FILE_SIZE_MB}MB：` + (image.fileName || '（未命名）'));
-    }
-
-    const blob = Utilities.newBlob(bytes, mimeType, finalFileName);
-    const file = folder.createFile(blob);
-
-    try {
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (sharingError) {
-      // 檔案已建立成功，只是網域政策可能不允許「知道連結的人皆可查看」，
-      // 不應該讓整次上傳失敗，記個警告即可。
-      console.warn('案件設計圖分享設定失敗', sharingError);
-    }
-
-    // fileName 保留呼叫端傳入的原始檔名（不是 finalFileName 這個時間戳記+
-    // 亂碼尾綴過的 Drive 內部檔名），讓主系統能依原始檔名對照「這輪要抓
-    // 哪些指定圖片」，Drive 上實際存的檔名跟這個身份用途無關。
-    return { fileName: originalFileName, url: createUploadedImageUrl_(file.getId()) };
+  images = Array.isArray(images) ? images : [];
+  const hasDedupeKeys = images.some(function (image) {
+    return normalizeCaseDesignDedupeKey_(image && image.dedupeKey);
   });
+  // Apps Script 可能同時收到「第一次仍在完成、呼叫端因逾時已重送」的兩個
+  // request。具防重鍵的案件圖在查找／建立 Drive 檔案期間共用 ScriptLock，
+  // 避免兩個 request 都在查找尚未建立時各自 createFile()。
+  const lock = hasDedupeKeys ? LockService.getScriptLock() : null;
+  if (lock) lock.waitLock(30000);
+
+  try {
+    return images.map(function (image) {
+      image = image || {};
+      const mimeType = String(image.mimeType || '').trim();
+      if (!mimeType.startsWith('image/')) {
+        throw new Error('只允許上傳圖片檔案：' + (image.fileName || '（未命名）'));
+      }
+
+      const originalFileName = String(image.fileName || '').trim();
+      const extension = getExtension_(image.fileName, mimeType);
+      const dedupeKey = normalizeCaseDesignDedupeKey_(image.dedupeKey);
+      const finalFileName = dedupeKey
+        ? createCaseDesignDedupeFileName_(image.fileName || 'case-image', extension, dedupeKey)
+        : createFileName_(image.fileName || 'case-image', extension);
+      const base64Content = removeDataUrlPrefix_(image.base64 || '');
+      const bytes = Utilities.base64Decode(base64Content);
+
+      if (bytes.length > maxBytes) {
+        throw new Error(`圖片超過 ${MAX_FILE_SIZE_MB}MB：` + (image.fileName || '（未命名）'));
+      }
+
+      let file = null;
+      if (dedupeKey) {
+        const existingFiles = folder.getFilesByName(finalFileName);
+        if (existingFiles.hasNext()) file = existingFiles.next();
+      }
+      if (!file) {
+        const blob = Utilities.newBlob(bytes, mimeType, finalFileName);
+        file = folder.createFile(blob);
+      }
+
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (sharingError) {
+        // 檔案已建立成功，只是網域政策可能不允許「知道連結的人皆可查看」，
+        // 不應該讓整次上傳失敗，記個警告即可。
+        console.warn('案件設計圖分享設定失敗', sharingError);
+      }
+
+      // fileName 保留呼叫端傳入的原始檔名（不是 Drive 內部檔名），讓主系統
+      // 能依原始檔名對照「這輪要抓哪些指定圖片」。重送時 dedupeKey 會找到
+      // 同一個 Drive 檔案、回傳同一 URL，主資料庫既有的 URL 去重即可生效。
+      return { fileName: originalFileName, url: createUploadedImageUrl_(file.getId()) };
+    });
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+function normalizeCaseDesignDedupeKey_(value) {
+  const key = String(value || '').trim().toLowerCase();
+  return /^[a-f0-9]{64}$/.test(key) ? key : '';
+}
+
+function createCaseDesignDedupeFileName_(originalName, extension, dedupeKey) {
+  const originalBase = String(originalName || '')
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[\\/:*?"<>|\s]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 40) || 'image';
+  return `nas-${dedupeKey}-${originalBase}.${extension}`;
 }
 
 /**
