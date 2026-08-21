@@ -189,7 +189,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-21 Asia/Taipei（最新）— 找到並修正「設計師收不到自己那封回信」的真正原因：跨帳號回信沒有正確歸進寄件人自己視角下的討論串
+### 2026-08-21 Asia/Taipei（最新）— 確認三種回信模式都已共用同一套討論串分組修正；「回信」按鈕補上事先檢查 Gmail 連接狀態，避免整封信寫完才在最後一步失敗
+
+- 修改目的：延續上一則「設計師收不到自己那封回信」的修正，使用者接續問兩件事：①「修改回覆、設計師回覆、一般回覆」是不是都已經正確歸進同一個討論串、不會再變成獨立的「Re:」信；②要求一併修正「新增案件或回信因為沒有串接 Gmail 導致無法寄信」的問題。
+- 追查過程：
+  1. **確認第一項不需要新修改**：`index.html` 的「填寫修改需求信」「設計師回覆信」「一般回信」三種模式，最終送出時都是同一個 `sendGmailThreadReply()`／`scheduleThreadReply()`，呼叫的是 Worker 端**同一個** `replyCaseMail`／`scheduleCaseReply` action（差別只在前端預先帶入的內文範本與送出後的副作用，例如是否要記一筆修改紀錄）；`dispatchScheduledMailItem` 的排程真正寄出流程也是同一套。上一則修好的 `findOwnMailboxThreadId`／`postGmailMessageWithThreadFallback` 是加在這個共用的底層動作上，代表三種模式**已經**共用同一套討論串分組修正，不需要再另外改動——這部分回報給使用者確認即可。
+  2. **追查第二個問題的根因**：先分別檢查三個「送信前應該要確認 Gmail 已連接」的入口——①`startPostSubmitMailFlow()`（新增案件送出後接續彈出寄信流程）：一開始就呼叫 `ensureGmailStatusLoaded()`，未連接時會自動改開複製面板（`#mailCopyModal`），不會讓使用者卡在寫到一半才失敗；②`openMailComposerMenu()`（案件列表「發信」按鈕，案件還沒有 `gmailThreadId` 時）：同樣一開始就檢查，未連接時選單只會顯示「連接 Gmail 帳號」；③`openReplyMethodChooser()`（案件列表「回信」按鈕，案件**已經有** `gmailThreadId` 時）——這個函式完全沒有做這一步檢查，直接跳出「填寫修改需求信／設計師回覆信／一般回信」三選項選單，使用者選了模式、把整封信的收件人/主旨/內容都填好，甚至（設計師回覆信情境）先跑完 NAS 資料夾選擇/圖片上傳流程之後，才會在最後一步呼叫 `replyCaseMail`／`scheduleCaseReply` 時因為 Gmail 沒連接而失敗——這正是使用者這次特別點名「回信」會踩到的情境，跟「新增案件」不同：新增案件本來就已經有事先檢查，不需要修正；「回信」是這次真正找到的缺口。
+- 影響檔案：`index.html`。
+- 影響功能：`openReplyMethodChooser()` 改成 `async`，在跳出三選項選單之前先呼叫既有的 `ensureGmailStatusLoaded()`（跟另外兩個入口共用同一支查詢函式與快取，不用新增任何 Worker 呼叫）：
+  1. 先用 `fieldPopover` 顯示一個「檢查 Gmail 連接狀態中...」的暫時停用按鈕（沿用既有的彈出選單元件與 `positionFieldPopover(anchorEl,{center:true})` 定位方式，不是重新設計一套 UI），避免查詢期間畫面完全沒有回饋；查詢完成前如果使用者已經關閉選單或改點了別的案件（用 `fieldPopover.dataset.replyMethodId` 比對），安靜放棄、不覆蓋畫面。
+  2. **未連接**：改顯示「目前登入的帳號尚未連接 Gmail，需要先連接才能回信（收件人／副本才會正確接續同一條討論串）」與一顆「連接 Gmail 帳號」按鈕，點擊呼叫既有的 `startGmailConnectPopup()`——使用者在填寫任何內容之前就會被清楚告知，不會發生「寫到一半才失敗」的體驗。
+  3. **已連接**：跟修正前完全相同，顯示原本的「填寫修改需求信／設計師回覆信／一般回信」三選項選單，三個選項的點擊行為（分別呼叫 `openModificationRequestReplyModal`／`openCaseDesignImageSourceChooser(...,{afterReply:true})`／`openGmailThreadModal`）沒有任何改動。
+- 風險區塊：
+  - 這次新增的檢查只保證「選單彈出當下」Gmail 是連接的——如果使用者選完模式、填寫內容的過程中，連接的 Gmail 授權剛好在這段期間失效或被撤銷（例如使用者跑去 Google 帳號設定頁面撤銷了這個應用程式的存取權），最後送出時仍然可能失敗；這是既有架構的既定限制（`ensureGmailStatusLoaded()` 本身只是簡單檢查「有沒有存過 token」，不會主動驗證 token 是否仍然有效，跟「發信」「新增案件」兩個既有入口的檢查深度完全一致），這次沒有、也不需要改變這個既有的檢查深度，只是把「回信」補齊到跟另外兩個入口同樣的檢查時機。
+  - `ensureGmailStatusLoaded()` 有既有的同一次登入 session 內快取（`gmailConnectionChecked`），這次呼叫不會增加額外的重複查詢成本——使用者如果已經在同一個 session 內開過一次「發信」選單，「回信」這次呼叫會直接命中快取、幾乎沒有延遲。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 區塊抽出後用 `node --check` 語法檢查通過；`node --test backend/test/*.test.mjs` 39/39 全過（這次改動沒有觸及 `backend/`）。
+  - 用本機 Node 靜態伺服器＋ Browser pane，對真實頁面（不是抽離測試）做隔離測試（stub `sheetApi`／`requireAccess`，沒有真的打任何網路請求）：①**未連接情境**——模擬 `gmailStatus` 回傳 `connected:false`，呼叫 `openReplyMethodChooser()` 後確認只呼叫了一次 `gmailStatus`（沒有多餘查詢）、彈出選單正確顯示「尚未連接 Gmail」提示與「連接 Gmail 帳號」按鈕，**沒有**顯示原本的三選項選單（代表使用者不會誤以為可以繼續填寫）；②**已連接情境**——模擬 `gmailStatus` 回傳 `connected:true`，確認彈出選單內容與修正前完全一致（`<h3>回信方式</h3>` 加三個選項按鈕，文字逐字比對相同）；接著真的點擊「一般回信」，確認正確依序呼叫 `getGmailSignature`／`getCaseMailThread`／`listScheduledMail`，且信件串彈窗正確開啟（`#gmailThreadModal` 的 `hidden` 變成 `false`）——證明修正沒有破壞「已連接」這條原本就在正常運作的路徑。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際測試一次「Gmail 未連接時點擊回信→看到連接提示→連接後重新點擊回信→正常進入三選項選單」的完整端對端流程，這次的驗證完全依賴本機隔離環境對真實頁面 stub 網路請求跑過的完整流程。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案，上一則已部署的討論串分組修正（Version ID `bf2b47a0-d790-412e-b333-82ec5e323da4`）繼續適用於全部三種回信模式。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-21 Asia/Taipei（次新）— 找到並修正「設計師收不到自己那封回信」的真正原因：跨帳號回信沒有正確歸進寄件人自己視角下的討論串
 
 - 修改目的：延續上一則「回信無法寄出」的追查，使用者後續回報：信件其實有正確寄出、收件人與副本都收到了，但**寄件人自己**（設計師本人）在自己的 Gmail 裡找不到那封信。經過幾輪來回確認（見下方追查過程），最後確認真正的現象是：那封信確實有寄出、也確實留有副本，但**變成一封孤立的「Re:」信，沒有正確跟原本那條討論串分在同一個對話串裡**，所以設計師在 Gmail 裡開啟原本的討論串時看不到自己那封回信，體感上像是「沒收到」。
 - 追查過程：

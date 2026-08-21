@@ -9997,7 +9997,13 @@ function closeGmailThreadModal(){const modal=$('#gmailThreadModal'); if(modal)mo
 /** 點擊「回信」時先跳出的選擇：填寫修改需求信（給專案，內容同步記錄進「修改紀錄」並帶動輪次一修／二修…）／
  * 設計師回覆信（給設計師，先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器）／
  * 一般回信（原本的行為，直接開啟信件編輯器讓大家手動填寫）。 */
-function openReplyMethodChooser(event,id){
+/** 「回信」按鈕（案件已有 Gmail信件串時）直接呼叫這裡，不像「發信」一定會先經過 openMailComposerMenu——
+ * 過去沒有在這裡檢查「目前登入帳號自己有沒有連接 Gmail」，導致沒連接的帳號會一路點完整個回信流程（選回信
+ * 方式→填內容→點送出），才在最後一步被 replyCaseMail 擋下顯示「尚未連接 Gmail」，訊息裡還寫著「請先在
+ * 『發信』選單裡連接」——但使用者根本是從「回信」點進來的，從沒看過發信選單，會完全不知道要去哪裡連接。
+ * 這裡先跟 openMailComposerMenu 一樣呼叫 ensureGmailStatusLoaded()（有快取，同一次登入 session 只會真的
+ * 打一次 API），沒連接就直接在這個選單顯示「連接 Gmail 帳號」，不讓使用者白填一輪內容才發現寄不出去。 */
+async function openReplyMethodChooser(event,id){
   event.stopPropagation();
   if(!requireAccess('request.mail','此帳號沒有回信權限'))return;
   const row=rows.find(r=>String(r.id)===String(id));
@@ -10005,8 +10011,19 @@ function openReplyMethodChooser(event,id){
   if(!row.gmailThreadId){openMailComposerMenu(event,id);return}
   const anchorEl=event.currentTarget;
   closeFieldPopover();
-  fieldPopover.innerHTML=`<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="modification"><span>填寫修改需求信</span><small>撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…</small></button><button type="button" class="option" data-reply-method="designer"><span>設計師回覆信</span><small>先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器</small></button><button type="button" class="option" data-reply-method="general"><span>一般回信</span><small>直接開啟信件編輯器，內容手動填寫</small></button></div>`;
+  fieldPopover.innerHTML='<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" disabled><span>檢查 Gmail 連接狀態中...</span></button></div>';
+  fieldPopover.dataset.replyMethodId=String(id);
   fieldPopover.hidden=false;
+  positionFieldPopover(anchorEl,{center:true});
+  const status=await ensureGmailStatusLoaded();
+  if(fieldPopover.hidden||fieldPopover.dataset.replyMethodId!==String(id))return; // 使用者已經關閉或改點別的案件
+  if(!status.connected){
+    fieldPopover.innerHTML='<h3>回信方式</h3><p class="schedule-picker-hint">目前登入的帳號尚未連接 Gmail，需要先連接才能回信（收件人／副本才會正確接續同一條討論串）。</p><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="connect"><span>連接 Gmail 帳號</span></button></div>';
+    positionFieldPopover(anchorEl,{center:true});
+    fieldPopover.querySelector('[data-reply-method="connect"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); startGmailConnectPopup()});
+    return;
+  }
+  fieldPopover.innerHTML=`<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="modification"><span>填寫修改需求信</span><small>撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…</small></button><button type="button" class="option" data-reply-method="designer"><span>設計師回覆信</span><small>先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器</small></button><button type="button" class="option" data-reply-method="general"><span>一般回信</span><small>直接開啟信件編輯器，內容手動填寫</small></button></div>`;
   positionFieldPopover(anchorEl,{center:true});
   fieldPopover.querySelector('[data-reply-method="modification"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openModificationRequestReplyModal(id)});
   fieldPopover.querySelector('[data-reply-method="designer"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageSourceChooser(id,currentModificationRound(id),anchorEl,{afterReply:true})});
