@@ -189,7 +189,36 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-21 Asia/Taipei（最新）— 找到並修正「回信無法寄出」的真正原因：錯誤訊息其實有正確顯示，只是被彈窗蓋住、使用者完全看不到
+### 2026-08-21 Asia/Taipei（最新）— 找到並修正「設計師收不到自己那封回信」的真正原因：跨帳號回信沒有正確歸進寄件人自己視角下的討論串
+
+- 修改目的：延續上一則「回信無法寄出」的追查，使用者後續回報：信件其實有正確寄出、收件人與副本都收到了，但**寄件人自己**（設計師本人）在自己的 Gmail 裡找不到那封信。經過幾輪來回確認（見下方追查過程），最後確認真正的現象是：那封信確實有寄出、也確實留有副本，但**變成一封孤立的「Re:」信，沒有正確跟原本那條討論串分在同一個對話串裡**，所以設計師在 Gmail 裡開啟原本的討論串時看不到自己那封回信，體感上像是「沒收到」。
+- 追查過程：
+  1. 用管理者帳號（`GMAIL_THREAD_NOT_PARTICIPANT`）確認自己不是相關人、讀不到信件串內容，只能查案件本身的資料列（`owner`／`gmailThreadOwnerAccount` 等），無法直接看到問題信件。
+  2. 請使用者／設計師在 Gmail 裡對「實際收到的那封信」點「顯示原始郵件」，比對兩個真實案件（26080117、26080120）的標頭：確認 `From`／`Message-Id` 都正確、`SPF`／`DKIM`／`DMARC` 全數 `PASS`（`emctaipei-com.20251104.gappssmtp.com`，Google Workspace 自動簽署的網域），`Message-Id` 格式也是 Gmail 自己產生信件時的標準格式——這些技術證據合起來證明信件確實是透過設計師自己連接的 Gmail 帳號、正確通過 Google 驗證、真正寄出去的，不是寄到別的帳號、也不是寄失敗，排除了「沒連接 Gmail」「連錯帳號」「收件人算錯」這幾種可能性。
+  3. 使用者最後精準點出關鍵：「寄件備份有收到，但是變成不是同一封信件的信件串，變成 re 的方式單獨一封信」——這句話才真正定位到問題：不是信件遺失，是**討論串分組（threading）沒有正確歸類**。
+  4. 回頭檢查 `replyCaseMail`／`dispatchScheduledMailItem`（排程回覆）的既有邏輯：`Gmail信件串ID`（`threadId`）是 Google 官方文件明確規定「只在同一個信箱內有效」的 ID——當回信帳號（`current.account`，例如設計師 Machi）跟建立這條討論串的帳號（`owner`，例如 PM Allen）**不是同一個人**時，既有程式碼刻意完全不傳 `threadId` 給 Gmail API（因為 `owner` 那個帳號視角下的 `threadId` 直接傳給 `current.account` 的 API 呼叫會被拒絕），改成只靠 `In-Reply-To`／`References`／`Subject` 標頭讓 Gmail **自己**做隱含分組。這在「收件人那一側」很準確（Gmail 收信當下即時比對），但在「寄件人自己那一側」（把剛寄出的這封信事後補進自己信箱裡已經存在的討論串）並不可靠——這正是「跨帳號回信」（例如「設計師回覆信」，設計師≠案件最初建立討論串的那個帳號）這個功能的核心情境，也正好解釋了「為什麼昨天沒事，今天才出現」：昨天的回信測試多半是同一帳號身兼兩職（`owner===current.account`，會正常傳入 `threadId`，Gmail 保證分組正確），今天才第一次大量測試「不同帳號跨帳號回信」這個原本就存在、但很少被真正用到底的路徑。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`。
+- 影響功能：
+  1. **新增 `findOwnMailboxThreadId(accessToken, referenceMessageId)`**：因為回信的帳號本來就是這條討論串的收件人/副本之一（否則走不到能回信的權限檢查），它自己的信箱裡一定也有一份「正在回覆的那封信」的副本——用回信帳號自己的 token，呼叫 Gmail 的 `messages.list` 搭配 `rfc822msgid:` 搜尋運算子（Gmail 支援用全球唯一的 Message-Id 直接查詢，不用整個信箱慢慢找），找到那封信在**它自己信箱裡**對應的 `threadId`（每個帳號各自的信箱對同一封信會分配到不同的 threadId，這是 Gmail 的既定行為）。查不到（理論上不該發生，多半是防呆）安全地回傳空字串，不會拋出例外擋住整個流程。
+  2. **`replyCaseMail`（立即回信）與 `dispatchScheduledMailItem`（排程回覆真正寄出時）都改用這個查到的「寄件帳號自己視角」threadId**，取代原本「不同帳號就乾脆完全不帶 threadId」的做法；同帳號的情況（`owner===current.account`）完全不受影響，繼續直接沿用已知的 `threadId`。
+  3. **新增 `postGmailMessageWithThreadFallback()`，包一層安全退回機制**：Gmail 對「帶了 threadId、但這封信的 Subject/References 對不上那個討論串」會直接回錯、不會靜默忽略改成新建一封——這代表 `findOwnMailboxThreadId()` 查到的 threadId 只要有一絲不準（例如極少見的 Gmail 搜尋索引延遲、或訊息剛好還沒被索引到），照理說整封回信可能直接寄送失敗，比舊行為（不帶 threadId，必定寄得出去，只是分組不準）還要更糟。這個包裝函式會在「帶 threadId 送出失敗」時自動退回「不帶 threadId 重試一次」，確保「查到的 threadId 不準」這種邊界情況，最差也只是退回舊行為（分組可能不準但一定寄得出去），不會讓這次新增的查詢反過來擋住整個回信動作。
+  4. **`buildGmailReplyRaw()` 回傳值從單純的 `raw` 字串改成 `{raw, lastMessageId}`**，讓 `dispatchScheduledMailItem` 不用重新解析一次標頭就能拿到 `lastMessageId` 供 `findOwnMailboxThreadId()` 使用；唯一的既有呼叫點已同步更新，沒有其他呼叫點。
+- 風險區塊：
+  - **這次新增的 `rfc822msgid:` 搜尋是額外多一次 Gmail API 呼叫**（只發生在跨帳號回信這個情境，同帳號完全不受影響）——正常情況下這個查詢應該很快（Gmail 對自己信箱內的訊息搜尋效能很好），但仍然是回信流程裡多了一個可能失敗的環節；已經用 `postGmailMessageWithThreadFallback()` 確保即使這個查詢失敗或查到不準的結果，都不會讓回信本身寄不出去，只是退回舊行為（分組可能不準，但内容跟收件人一定正確送達）。
+  - **`rfc822msgid:` 搜尋依賴 Gmail 對這個帳號信箱的索引已經建立好**——如果寄件帳號剛好在極短時間內（例如同一秒）收到原始信件又要立刻回覆，理論上有極小機率索引還沒跟上，導致這次查詢查不到、退回舊行為（不帶 threadId）——這不是這次新引入的風險，是舊行為本來就有的既有限制，這次的改動只是在「索引已經跟上」的絕大多數情況下修正分組問題，沒有讓「索引還沒跟上」這個邊緣情況變得更糟。
+  - **這次沒有回頭修正案件 26080117／26080120 已經寄出、分組不正確的既有信件**——Gmail 沒有提供 API 讓第三方事後把已經寄出的信件「重新分組」進另一個討論串，這類舊信件只能請設計師自己在 Gmail 裡手動用「移至相同的對話串」之類的功能整理（如果 Gmail 介面有支援的話），或是接受它們維持獨立顯示——這次的修正只確保**之後**的跨帳號回信會正確分組，不影響已經寄出的歷史信件。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **44/44 全過**（新增 1 支測試＋更新既有 1 支既有的跨帳號排程回覆測試）：
+    - **「先重現、再驗證修好」**：暫時把 `replyCaseMail`／`dispatchScheduledMailItem` 還原成修正前的舊邏輯，重新跑這次新增／更新的兩支測試，確認**真的會失敗**（`sent:0, failed:1`，因為 mock 的送出請求期待收到查到的 threadId，舊邏輯卻完全沒帶），證實測試真的有捕捉到這個問題、不是巧合通過；還原修正後重新確認整套 44/44 全過。
+    - 更新既有的「sends a scheduled reply from the account that scheduled it, not from the account that created the original thread」測試：新增 mock `rfc822msgid:` 搜尋端點（驗證確實用**寄件帳號自己的 token**查詢、查詢字串正確帶原始信件的 Message-Id），並驗證真正送出時 `threadId` 正確改用查到的「寄件帳號自己視角」值，不再是 `undefined`。
+    - 新增一支測試「falls back to sending without a threadId if the looked-up own-mailbox thread turns out to be stale/mismatched and Gmail rejects the send」：模擬查到一個**不準**的 threadId，第一次送出被 Gmail 拒絕（模擬 400 錯誤），驗證程式碼會自動用不帶 threadId 重試一次並成功，確認退回機制真的有效、不會讓查詢失準拖累整個回信寄送。
+    - 順手更新另外兩支既有測試（一般立即回信的跨帳號情境），改成明確 mock `rfc822msgid:` 搜尋端點回傳「查無結果」，讓「threadId 應該是 undefined」這個既有斷言是**真正**驗證到「查無結果安全退回」的路徑，而不是像原本那樣意外靠 mock 對未知 URL 拋例外、被 `findOwnMailboxThreadId()` 的 try/catch 靜默吞掉才巧合通過。
+  - `node --test backend/test/*.test.mjs` **39/39 全過**（這次改動沒有觸及 `backend/`）。
+  - **未做的驗證**：沒有用真實登入帳號在正式站接上真正的 Cloudflare Worker、真實 Gmail 帳號，實際測試一次跨帳號回信、再登入設計師自己的 Gmail 帳號肉眼確認這封回信真的正確出現在原本的討論串裡（不是獨立的孤立信件）——這次的驗證完全依賴在真實 Cloudflare Workers 執行環境（`vitest-pool-workers`）裡 mock Gmail API 回應跑過的完整流程，理論上已經精準對應到使用者實際回報、並透過「顯示原始郵件」逐步確認過的真實現象與根因，但沒有機會走一次真正端到端、看到 Gmail 網頁版實際分組結果的流程。
+- 部署狀態：**`worker/` 需要手動部署才會生效**——沒部署前，跨帳號回信（例如「設計師回覆信」）仍會維持舊行為：信件正確寄出、收件人正確收到，但寄件人自己那一側可能繼續看到分組不準的孤立「Re:」信。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-21 Asia/Taipei（次新）— 找到並修正「回信無法寄出」的真正原因：錯誤訊息其實有正確顯示，只是被彈窗蓋住、使用者完全看不到
 
 - 修改目的：使用者回報「設計師回覆信」點下「送出回覆」後，看得到信件串內容，但信件實際沒有寄出、彈窗也不會關閉，畫面上完全沒看到任何提示文字；追問確認登入回信的帳號之前確實用同一個帳號成功寄過信（排除「從未連接 Gmail」這個最單純的可能性）。
 - 追查過程：先完整重現整條「開啟設計師回覆信→送出」流程（用假的 `sheetApi` 模擬 `replyCaseMail` 真的失敗），確認 `sendGmailThreadReply()` 的錯誤處理邏輯本身完全正確——`catch(err){setSync('回覆寄送失敗：'+err.message,true)}` 有被呼叫、`syncStatus.textContent` 也確實被正確寫入了完整的錯誤訊息。問題出在 `setSync()` 寫入的 `#syncStatus` 元素，實際位置在整個頁面（不是彈窗）往下約 1900px 的地方（案件列表工具列附近，不是固定在畫面最上方），而 Gmail 撰寫／回信彈窗是蓋滿整個視窗的 `position:fixed` 遮罩——這代表只要彈窗還開著，`#syncStatus` 不管當下捲到哪裡，一定被彈窗完全擋住看不見。也就是說，「送出回覆」其實每次都有正確嘗試寄信、也正確顯示了具體的失敗原因，只是這行文字從彈窗開著的那一刻起就已經被蓋住、使用者從頭到尾都看不到，才會誤以為「完全沒有反應」。這是**這個彈窗架構從一開始就存在的既有缺陷**，不是這次新引入的問題——只是這次新增/調整了「設計師回覆信」的排程與收件人邏輯後，這個案件剛好真的踩到了某個會失敗的路徑，才第一次被使用者實際感受到。

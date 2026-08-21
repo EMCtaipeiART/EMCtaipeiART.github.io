@@ -1078,6 +1078,14 @@ describe('Machi Design API Worker', () => {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
       }
+      // 跨帳號回信（designer≠owner）現在會先用寄件帳號自己的 token 查一次 rfc822msgid，找不到對應的
+      // threadId（這裡刻意模擬設計師自己的信箱裡沒有這封信的副本）就照舊不帶 threadId 建立新訊息，
+      // 驗證這條「查不到就安全退回舊行為」的路徑不會擋住整封回信送出。
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
+        expect(url).toContain(encodeURIComponent('rfc822msgid:msg2@mail.gmail.com'));
+        return Response.json({ messages: [] });
+      }
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
         const body = JSON.parse(String(init?.body));
@@ -1129,6 +1137,9 @@ describe('Machi Design API Worker', () => {
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         return Response.json({ id: 'gmail-thread-1', messages: mockThreadMessages });
+      }
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+        return Response.json({ messages: [] });
       }
       if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
@@ -1854,25 +1865,102 @@ describe('Machi Design API Worker', () => {
       const scheduledId = String(scheduled.scheduledId);
       await forceScheduledAtDue(scheduledId);
 
+      // 2026-08-21：跨帳號（threadOwner≠寄件帳號）寄送前，現在會先用寄件帳號自己的 token 查一次
+      // rfc822msgid，找到的話要改用「寄件帳號自己視角」下的 threadId（不是 owner 那個），確保寄件人自己
+      // 在 Gmail 裡也看得到正確歸進同一條討論串的回覆，而不是一封孤立、跟原討論串脫節的「Re:」信。
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/cross-account-reply-thread?format=full') {
           expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-owner');
           return Response.json({ id: 'cross-account-reply-thread', messages: threadMessages });
         }
+        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+          expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
+          expect(url).toContain(encodeURIComponent('rfc822msgid:original@mail.gmail.com'));
+          return Response.json({ messages: [{ id: 'designer-copy-of-original', threadId: 'designer-own-mailbox-thread' }] });
+        }
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
           expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-designer');
           const body = JSON.parse(String(init?.body));
-          expect(body.threadId).toBeUndefined();
+          expect(body.threadId).toBe('designer-own-mailbox-thread');
           const decoded = decodeBase64UrlText(String(body.raw));
           expect(decoded).toContain('To: test.user@emctaipei.com');
           expect(decoded).toContain('In-Reply-To: <original@mail.gmail.com>');
-          return Response.json({ id: 'designer-scheduled-reply', threadId: 'designer-mailbox-thread' });
+          return Response.json({ id: 'designer-scheduled-reply', threadId: 'designer-own-mailbox-thread' });
         }
         throw new Error(`unexpected fetch during cross-account reply dispatch: ${url}`);
       });
       const result = await (await schedulerStub()).runScheduledDispatch();
       expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      expect((await scheduledMailRow(scheduledId))?.status).toBe('sent');
+    });
+
+    it('falls back to sending without a threadId if the looked-up own-mailbox thread turns out to be stale/mismatched and Gmail rejects the send', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedAccountPermission('designer@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-owner-2', 'test.user@emctaipei.com');
+      await seedGmailTokens('designer@emctaipei.com', 'gmail-access-designer-2', 'designer@emctaipei.com');
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        const row = database.tables.database.rows.find(item => item['案件編號'] === '26080001')!;
+        row['Gmail信件串ID'] = 'fallback-reply-thread';
+        row['Gmail寄件帳號'] = 'test.user@emctaipei.com';
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+      const designerToken = await seedSession('designer@emctaipei.com', '設計師');
+      const threadMessages = [{
+        id: 'original-message-2', snippet: '', payload: {
+          mimeType: 'text/plain', body: { data: toBase64Url('原始案件信') },
+          headers: [
+            { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'designer@emctaipei.com' },
+            { name: 'Message-Id', value: '<original2@mail.gmail.com>' }, { name: 'Subject', value: '案件主旨' }
+          ]
+        }
+      }];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/fallback-reply-thread?format=full') {
+          return Response.json({ id: 'fallback-reply-thread', messages: threadMessages });
+        }
+        throw new Error(`unexpected fetch while scheduling fallback reply: ${url}`);
+      });
+      const scheduled = await api({
+        action: 'scheduleCaseReply', caseId: '26080001', bodyText: '設計師排程回覆（測試 threadId 不準的退回路徑）',
+        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      }, designerToken);
+      expect(scheduled.ok).toBe(true);
+      const scheduledId = String(scheduled.scheduledId);
+      await forceScheduledAtDue(scheduledId);
+
+      let sendAttempts = 0;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/fallback-reply-thread?format=full') {
+          return Response.json({ id: 'fallback-reply-thread', messages: threadMessages });
+        }
+        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+          // 查到一個 threadId，但這個 threadId 其實已經不準了（例如剛好過期/被搬移）——驗證重點是
+          // 「即使查到東西，只要真正送出時被 Gmail 拒絕，也要能自動退回不帶 threadId 重試，而不是讓
+          // 整封回信寄送失敗」。
+          return Response.json({ messages: [{ id: 'stale-copy', threadId: 'stale-mismatched-thread' }] });
+        }
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+          sendAttempts += 1;
+          const body = JSON.parse(String(init?.body));
+          if (sendAttempts === 1) {
+            expect(body.threadId).toBe('stale-mismatched-thread');
+            return new Response(JSON.stringify({ error: { message: 'Precondition check failed.' } }), { status: 400 });
+          }
+          expect(body.threadId).toBeUndefined();
+          return Response.json({ id: 'designer-scheduled-reply-fallback', threadId: 'brand-new-thread' });
+        }
+        throw new Error(`unexpected fetch during fallback reply dispatch: ${url}`);
+      });
+      const result = await (await schedulerStub()).runScheduledDispatch();
+      expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
+      expect(sendAttempts).toBe(2);
       expect((await scheduledMailRow(scheduledId))?.status).toBe('sent');
     });
 
