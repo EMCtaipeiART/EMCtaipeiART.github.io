@@ -53,6 +53,7 @@
     .mail-copy-gmail-prompt span{flex:1 1 auto;line-height:1.5}
     .mail-copy-gmail-prompt button{flex:0 0 auto!important;min-height:30px!important;border-radius:999px!important;padding:0 14px!important;background:var(--green)!important;color:#fff!important;border:none!important;font-size:12px!important;font-weight:900!important;cursor:pointer!important;box-shadow:none!important;white-space:nowrap}
     .mail-copy-gmail-prompt button:hover{filter:brightness(1.05)}
+    .gmail-btn-primary.gmail-btn-danger{background:var(--red)!important;box-shadow:0 6px 14px rgba(220,38,38,.2)!important}
     .mail-copy-fields{display:grid;gap:12px}
     .mail-copy-field{display:grid;gap:6px}
     .mail-copy-field-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:850;color:#66736d}
@@ -6493,6 +6494,7 @@
     html[data-theme="dark"] .gmail-btn-primary{background:#4f9f78!important;color:#07140e!important;border:1px solid #66b88f!important;box-shadow:none!important}
     html[data-theme="dark"] .gmail-btn-primary:hover{background:#65b68d!important;color:#04100b!important;border-color:#7dcca3!important;filter:none!important}
     html[data-theme="dark"] .gmail-btn-primary[disabled]{background:#3b5147!important;color:#929c97!important;border-color:#4d6459!important}
+    html[data-theme="dark"] .gmail-btn-primary.gmail-btn-danger{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
     html[data-theme="dark"] .gmail-color-palette{background:#202326!important;border-color:#50555a!important;box-shadow:0 18px 44px rgba(0,0,0,.62)!important;color-scheme:dark}
     html[data-theme="dark"] .gmail-color-option:hover,
     html[data-theme="dark"] .gmail-color-option:focus-visible{border-color:#f1f3f4!important;outline-color:rgba(139,218,178,.42)!important}
@@ -8656,7 +8658,9 @@ function renderPostSubmitCopyDraft(){
   const subjectBtn=$('#mailCopySubjectBtn'); if(subjectBtn)subjectBtn.disabled=!ready;
   const mailtoBtn=$('#mailCopyMailto'); if(mailtoBtn)mailtoBtn.disabled=!ready;
   $('#mailCopyPrev').hidden=index===0;
-  $('#mailCopyNext').textContent=index===total-1?'完成':'下一封';
+  const nextBtn=$('#mailCopyNext'), isLast=index===total-1;
+  nextBtn.textContent=isLast?'gmail帳號連結':'下一封';
+  nextBtn.classList.toggle('gmail-btn-danger',isLast);
 }
 /** 離開目前這封草稿（按上一封／下一封／寄出）之前，把使用者實際看到、可能已經編輯過的內容
  * 存回這封草稿——只有 Gmail 撰寫模式需要，複製面板的欄位是唯讀的，沒有可保存的編輯內容。 */
@@ -12613,7 +12617,7 @@ bindModalOverlayDismiss($('#mailCopyModal'),closePostSubmitCopyModal);
 $('#mailCopyPrev')?.addEventListener('click',()=>navigatePostSubmitQueue(-1));
 $('#mailCopyNext')?.addEventListener('click',()=>{
   const queue=postSubmitQueue; if(!queue)return;
-  if(queue.index>=queue.drafts.length-1){closePostSubmitCopyModal();return}
+  if(queue.index>=queue.drafts.length-1){startGmailConnectPopup();return}
   navigatePostSubmitQueue(1);
 });
 $('#mailCopyMailto')?.addEventListener('click',()=>{

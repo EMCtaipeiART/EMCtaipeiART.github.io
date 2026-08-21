@@ -167,6 +167,14 @@ test('front end initializes weight rules before normalizing cached database rows
   );
 });
 
+test('new-case copy modal replaces the final action with a red Gmail account link', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /nextBtn\.textContent=isLast\?'gmail帳號連結':'下一封'/);
+  assert.match(html, /nextBtn\.classList\.toggle\('gmail-btn-danger',isLast\)/);
+  assert.match(html, /\.gmail-btn-primary\.gmail-btn-danger\{background:var\(--red\)!important/);
+  assert.match(html, /if\(queue\.index>=queue\.drafts\.length-1\)\{startGmailConnectPopup\(\);return\}/);
+});
+
 test('Gmail thread collapses older messages and expands only the latest message by default', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /function gmailThreadMessageHtml\(message,isLatest=false\)/);
