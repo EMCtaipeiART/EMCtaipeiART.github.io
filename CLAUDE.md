@@ -208,7 +208,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 用本機 Node 靜態伺服器＋ Browser pane，對真實頁面（不是抽離測試）做隔離測試（stub `sheetApi`／`requireAccess`，沒有真的打任何網路請求）：①**未連接情境**——模擬 `gmailStatus` 回傳 `connected:false`，呼叫 `openReplyMethodChooser()` 後確認只呼叫了一次 `gmailStatus`（沒有多餘查詢）、彈出選單正確顯示「尚未連接 Gmail」提示與「連接 Gmail 帳號」按鈕，**沒有**顯示原本的三選項選單（代表使用者不會誤以為可以繼續填寫）；②**已連接情境**——模擬 `gmailStatus` 回傳 `connected:true`，確認彈出選單內容與修正前完全一致（`<h3>回信方式</h3>` 加三個選項按鈕，文字逐字比對相同）；接著真的點擊「一般回信」，確認正確依序呼叫 `getGmailSignature`／`getCaseMailThread`／`listScheduledMail`，且信件串彈窗正確開啟（`#gmailThreadModal` 的 `hidden` 變成 `false`）——證明修正沒有破壞「已連接」這條原本就在正常運作的路徑。
   - **未做的驗證**：沒有用真實登入帳號在正式站實際測試一次「Gmail 未連接時點擊回信→看到連接提示→連接後重新點擊回信→正常進入三選項選單」的完整端對端流程，這次的驗證完全依賴本機隔離環境對真實頁面 stub 網路請求跑過的完整流程。
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案，上一則已部署的討論串分組修正（Version ID `bf2b47a0-d790-412e-b333-82ec5e323da4`）繼續適用於全部三種回信模式。
-- commit：（見下方 push 紀錄）
+- commit：`2182199e`
 
 ### 2026-08-21 Asia/Taipei（次新）— 找到並修正「設計師收不到自己那封回信」的真正原因：跨帳號回信沒有正確歸進寄件人自己視角下的討論串
 
