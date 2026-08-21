@@ -262,6 +262,31 @@ test('Gmail editors wait for pasted images before immediate or scheduled send', 
   }
 });
 
+test('Gmail editors can insert the connected account signature without appending it twice', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /data-rich-signature-for="gmailThreadReplyEditor"[^>]*aria-label="插入 Gmail 簽名檔"/);
+  assert.match(html, /data-rich-signature-for="gmailComposeEditor"[^>]*aria-label="插入 Gmail 簽名檔"/);
+  assert.match(html, /async function insertGmailSignature\(editorId,button=null\)/);
+  assert.match(html, /editor\.querySelector\('\[data-gmail-inserted-signature\]'\)/);
+  assert.match(html, /function gmailPreparedBodySignature\(bodyHtml,automaticSignatureHtml=''\)/);
+  assert.match(html, /signatureHtml:signatureInserted\?'':automaticSignatureHtml/);
+  assert.match(html, /return \{bodyHtml:prepared\.bodyHtml,inlineImages,signatureInserted:prepared\.signatureInserted\}/);
+  assert.match(html, /function gmailEditorTextWithoutInsertedSignature\(editor\)/);
+  assert.match(html, /stripGreetingPrefix\(gmailEditorTextWithoutInsertedSignature\(editor\)\)/);
+  for (const functionName of ['sendGmailComposeModal', 'scheduleComposeMail', 'scheduleThreadReply', 'sendGmailThreadReply']) {
+    const start = html.indexOf(`async function ${functionName}(`);
+    const nextFunction = html.indexOf('\nfunction ', start + 1);
+    const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
+    const ends = [nextFunction, nextAsyncFunction].filter(index => index > start);
+    const end = ends.length ? Math.min(...ends) : html.length;
+    const source = html.slice(start, end);
+    assert.match(source, /editorPayload\.signatureInserted\?'':automaticSignatureHtml/, `${functionName} should suppress automatic signature after manual insertion`);
+  }
+  const batchStart = html.indexOf('async function handlePostSubmitGmailSend()');
+  const batchEnd = html.indexOf('\nfunction closePostSubmitCopyModal()', batchStart);
+  assert.match(html.slice(batchStart, batchEnd), /gmailPreparedBodySignature\(bodyHtml,signatureHtml\)/);
+});
+
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function refreshScheduledMailList(caseId,kind)');
