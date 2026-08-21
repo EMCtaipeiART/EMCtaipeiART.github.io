@@ -9,6 +9,8 @@
 - 排程已被 Cron 取走成 sending 後，讀取與更新都會拒絕；最後 SQL 更新另帶 `status = 'pending'` 條件，避免修改動作與背景寄送競態。
 - 編輯模式會停用立即寄出按鈕，直到儲存或放棄修改，避免回信排程與立即寄出同時成立。
 - 前端版本：`20260821-edit-scheduled-mail-128`；Worker 版本：`cloudflare-worker-edit-scheduled-mail-2026-08-21-10`。
+- 驗收：Node 48/48、Worker 46/46、Worker 型別檢查、部署預演、前端內嵌程式語法與 `git diff --check` 通過。
+- 正式部署：Cloudflare Worker Version ID `61095330-503f-402d-b218-94d967640088`；正式網站已讀到 build `128`。
 
 ## 2026-08-21｜每封編輯信預設顯示個人 Gmail 簽名
 
