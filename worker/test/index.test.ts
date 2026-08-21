@@ -1238,6 +1238,54 @@ describe('Machi Design API Worker', () => {
     expect(thread.suggestedCc).toBe('傅思凱 <sikai.fu@emctaipei.com>, another@example.com');
   });
 
+  it('2026-08-21: computeReplySuggestion 排除自己後如果收件人變成空字串，要退回上一封的寄件人，不能讓建議收件人整個空白——最常見於同一個帳號兼任 PM 與設計師（例如「設計師回覆信」）：第一封信是自己填單寄給自己（設計負責人），回信時排除自己後完全沒有剩下任何人', async () => {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.push({
+        '案件編號': '26080006', '客戶別': '測試客戶', '專案名稱': '自己回自己測試案件', '狀態': '過稿中',
+        'Gmail信件串ID': 'gmail-thread-self-reply', 'Gmail寄件帳號': 'machi@emctaipei.com'
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    await seedAccountPermission('machi@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('machi@emctaipei.com', 'gmail-access-machi', 'machi.real@gmail.example');
+    const token = await seedSession('machi@emctaipei.com');
+
+    // 唯一一封信：Machi 用自己的帳號填單寄出第一封信，收件人是這個案件的「設計負責人」——但設計負責人
+    // 剛好也是 Machi 自己（同一個人兼兩個角色），所以 To 欄位就是 Machi 自己的信箱，From 則是他實際連接
+    // 的 Gmail 地址（跟系統帳號別名是兩個不同字串，比照既有 Google Workspace 別名情境的測試慣例）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-self-reply?format=full') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-machi');
+        return Response.json({
+          id: 'gmail-thread-self-reply',
+          messages: [{
+            id: 'gmail-msg-self-reply', snippet: '',
+            payload: {
+              mimeType: 'text/plain', body: { data: toBase64Url('請協助這次的設計需求') },
+              headers: [
+                { name: 'From', value: 'machi.real@gmail.example' },
+                { name: 'To', value: 'machi@emctaipei.com' },
+                { name: 'Cc', value: '"傅思凱" <eric.fu@emctaipei.com>' }
+              ]
+            }
+          }]
+        });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    const thread = await api({ action: 'getCaseMailThread', caseId: '26080006' }, token);
+    expect(thread.ok).toBe(true);
+    // 排除自己（machi@emctaipei.com／machi.real@gmail.example）後，To 欄位完全沒有剩下任何人——正確退回
+    // 用上一封信的寄件人（就是 Machi 自己）當建議收件人，不能讓欄位整個留空。
+    expect(thread.suggestedTo).toBe('machi.real@gmail.example');
+    // 副本不受這個退回機制影響，仍然正確排除自己、保留其他真正的第三方（傅思凱）。
+    expect(thread.suggestedCc).toBe('傅思凱 <eric.fu@emctaipei.com>');
+  });
+
   it('2026-08-19: getCaseMailThread／replyCaseMail 也納入客戶別「權限設定」白名單——即使是討論串本身的實際收件人，不在白名單裡一樣被擋；加進白名單後才會走到既有的討論串相關人檢查並成功', async () => {
     await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
     // 白名單只有別人，不含 test.user——即使他之後確實是討論串的收件人也一樣被擋。

@@ -1199,9 +1199,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const toHeader = gmailHeaderValue(headers, 'To');
     const ccHeader = gmailHeaderValue(headers, 'Cc');
     const fromSelf = extractEmailAddressesFromHeader(fromHeader).some(email => selfAddresses.has(email));
-    const to = fromSelf
-      ? extractAddressEntriesFromHeader(toHeader).filter(entry => !selfAddresses.has(entry.email)).map(entry => entry.full).join(', ')
-      : fromHeader;
+    // fromSelf 分支原本「排除自己後」可能整段變成空字串——最常見於同一個帳號身兼兩職（例如 PM 用自己的
+    // 帳號填單寄出第一封信給「設計負責人」，之後又用同一個帳號登入回信）：上一封信的收件人本來就只有自己，
+    // 排除自己後完全沒有剩下任何人，導致收件人欄位整個空白、使用者以為系統沒有帶入建議值。這種情況退回
+    // 用 fromHeader（上一封信的寄件人，本來就是使用者這次要接續的對象）當收件人，至少不會是空的。
+    const toAfterExcludingSelf = extractAddressEntriesFromHeader(toHeader).filter(entry => !selfAddresses.has(entry.email)).map(entry => entry.full).join(', ');
+    const to = fromSelf ? (toAfterExcludingSelf || fromHeader) : fromHeader;
     // 副本比照一般信箱的「回覆全部」：把上一封信的收件人＋副本都留住（扣掉自己與這次要回覆的對象本身），
     // 確保討論串裡原本在場的人不會因為只是點了「回信」而被悄悄排除在外。「自己」同時要排除實際
     // 連接的 Gmail 信箱（例如 designer.mailbox@gmail.com）與系統帳號別名（例如

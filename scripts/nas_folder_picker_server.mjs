@@ -264,8 +264,15 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
     }
 
     try {
+      // 這一輪要歸到哪個修改次數，必須用「即將上傳的當下」最新的資料庫狀態判斷，不能沿用
+      // 函式一開始（等鎖、掃描資料夾、壓縮圖片之前）就抓的那份 dbData——這段等待＋掃描過程
+      // 可能耗時數秒到數十秒，如果 PM 剛好在這段期間新增了修改需求，沿用舊快照會讓這次抓到
+      // 的圖片被錯誤歸到舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪；這正是
+      // nas_design_image_watcher.mjs 的排程掃描迴圈已經修過的同一種輪次判斷競態
+      // （見 uploadPendingRound 呼叫端的既有註解），這裡（立即備份）之前漏掉了同一步。
+      const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
       const upload = await lib.uploadPendingRound({
-        config, secrets, dbData, caseId,
+        config, secrets, dbData: latestDbData, caseId,
         designer: project.designer, client: project.client, start: project.start,
         pendingPreviews: scanResult.pendingPreviews,
         stateFiles: state[caseId].files
