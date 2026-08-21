@@ -480,6 +480,9 @@ test('mail templates are numbered, support a default, appear in personal setting
   assert.match(html, /data-reply-template-default/);
   assert.match(html, /data-rich-template-for="gmailThreadReplyEditor"/);
   assert.match(html, /data-rich-template-for="gmailComposeEditor"/);
+  assert.match(html, /data-rich-template-for="gmailThreadReplyEditor"[^>]*aria-label="插入信件範本"/);
+  assert.match(html, /data-rich-template-for="gmailComposeEditor"[^>]*aria-label="插入信件範本"/);
+  assert.doesNotMatch(html, /class="gmail-rich-template-btn"[^>]*>[\s\S]*?<span>範本<\/span>/);
   assert.match(html, /function openReplyTemplatePicker\(/);
   assert.doesNotMatch(html, /data-reply-template-type|data-reply-template-stage|data-reply-template-detail/);
   assert.ok(normalizeFunction);
