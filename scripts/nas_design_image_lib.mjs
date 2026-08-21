@@ -31,6 +31,9 @@ export const DEFAULT_IGNORE_FOLDER_NAMES = ['Links'];
 // 先依這個上限切成多個請求，避免案件資料夾一次有超過上限的待上傳檔案時，
 // 整個案件永遠卡住（每次排程都重新嘗試同一批、每次都整批失敗，見 uploadPendingRound()）。
 export const MAX_IMAGES_PER_UPLOAD_REQUEST = 20;
+// POST 已送出後若回應逾時，遠端可能其實已完成 Drive／資料庫寫入。下一輪先
+// 等靜態資料庫發布並核對，不要一分鐘後立刻重送；超過這段時間仍查不到才重試。
+export const AMBIGUOUS_UPLOAD_RETRY_GRACE_MS = 5 * 60 * 1000;
 
 // 鎖檔案內容讀不到有效 PID（見下方 acquireLock 說明）時，用「檔案是幾時建立
 // 的」判斷要不要視為過期──這個數字要遠大於單次掃描實際會花的時間（NAS／
@@ -405,7 +408,8 @@ export async function scanProject(project, config, state, previewDir, warnings) 
       mtimeMs: fileStat.mtimeMs,
       size: fileStat.size,
       assignedRound: previous ? previous.assignedRound : null,
-      previewPath: previous ? previous.previewPath : null
+      previewPath: previous ? previous.previewPath : null,
+      uploadAttempt: previous ? previous.uploadAttempt : null
     };
 
     let changed = !previous || previous.mtimeMs !== entry.mtimeMs || previous.size !== entry.size;
@@ -420,6 +424,7 @@ export async function scanProject(project, config, state, previewDir, warnings) 
       const previewPath = await buildPreview(media, caseProjectPreviewDir, config.mountRoot, config, warnings);
       entry.previewPath = previewPath;
       entry.assignedRound = null; // 內容變了，重新排進「待歸類」清單
+      entry.uploadAttempt = null;
       if (!previous) newItems.push({ relPath, ...entry });
       else changedItems.push({ relPath, ...entry });
     } else {
@@ -435,7 +440,8 @@ export async function scanProject(project, config, state, previewDir, warnings) 
       relPath,
       previewPath: entry.previewPath,
       mtimeMs: entry.mtimeMs,
-      size: entry.size
+      size: entry.size,
+      uploadAttempt: entry.uploadAttempt
     }));
 
   return {
@@ -520,6 +526,21 @@ export function computeTargetImages(dbData, caseId, round) {
     return Array.isArray(parsed) && parsed.length ? parsed.map(String) : null;
   } catch {
     return null;
+  }
+}
+
+export function countRecordedCaseDesignImages(dbData, caseId, round, fileName) {
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const row = rows.find(item => String(item['案件編號'] || '') === String(caseId)
+    && (Number(item['修改次數']) || 0) === Number(round));
+  if (!row) return 0;
+  try {
+    const images = JSON.parse(String(row['圖片連結'] || '[]'));
+    return Array.isArray(images)
+      ? images.filter(item => item && String(item.fileName || '') === String(fileName || '')).length
+      : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -612,19 +633,52 @@ export function uploadEnabled(config, secrets) {
  * 標記為已歸類到這一輪。回傳結果供呼叫端（watcher 的批次迴圈／picker
  * server 的立即備份）各自決定怎麼呈現。
  */
-export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles }) {
+export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, persistState }) {
   const round = computeRound(dbData, caseId);
   const targetImages = computeTargetImages(dbData, caseId, round);
-  let targetedPreviews = pendingPreviews;
+  let reconciledCount = 0;
+  let deferredCount = 0;
+  const nowMs = Date.now();
+  const eligiblePreviews = [];
+  for (const item of pendingPreviews) {
+    const entry = stateFiles[item.relPath];
+    const attempt = entry && entry.uploadAttempt;
+    if (!attempt || !Number.isFinite(Number(attempt.round)) || !Number.isFinite(Number(attempt.atMs))) {
+      eligiblePreviews.push(item);
+      continue;
+    }
+    const attemptedRound = Number(attempt.round);
+    const currentCount = countRecordedCaseDesignImages(
+      dbData,
+      caseId,
+      attemptedRound,
+      path.basename(item.relPath)
+    );
+    const baselineCount = Math.max(0, Number(attempt.baselineCount) || 0);
+    if (currentCount > baselineCount) {
+      entry.assignedRound = attemptedRound;
+      entry.uploadAttempt = null;
+      reconciledCount += 1;
+      continue;
+    }
+    if (nowMs - Number(attempt.atMs) < AMBIGUOUS_UPLOAD_RETRY_GRACE_MS) {
+      deferredCount += 1;
+      continue;
+    }
+    entry.uploadAttempt = null;
+    eligiblePreviews.push(item);
+  }
+
+  let targetedPreviews = eligiblePreviews;
   let skippedByTarget = 0;
   let targetFallback = false;
   if (targetImages) {
     const targetSet = new Set(targetImages);
-    const matched = pendingPreviews.filter(item => targetSet.has(path.basename(item.relPath)));
+    const matched = eligiblePreviews.filter(item => targetSet.has(path.basename(item.relPath)));
     if (matched.length) {
       targetedPreviews = matched;
-      skippedByTarget = pendingPreviews.length - matched.length;
-    } else if (pendingPreviews.length) {
+      skippedByTarget = eligiblePreviews.length - matched.length;
+    } else if (eligiblePreviews.length) {
       // PM 指定的「待修改圖片」檔名，這次資料夾裡的新增/變動檔案一個都對不
       // 上——最常見的原因是設計師把修好的檔案存成新檔名（例如補上新的日期／
       // 版本號，跟原始檔名不同），不是真的沒有東西可以上傳。與其讓這一輪永
@@ -638,7 +692,13 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     }
   }
   if (!targetedPreviews.length) {
-    return { round, uploadedCount: 0, skippedByTarget, message: '沒有偵測到可上傳的圖片/影片' };
+    if (reconciledCount && persistState) await persistState();
+    const message = reconciledCount
+      ? `已確認先前上傳成功 ${reconciledCount} 張，不再重送`
+      : deferredCount
+        ? `前次上傳結果仍在確認中，暫緩重送 ${deferredCount} 張`
+        : '沒有偵測到可上傳的圖片/影片';
+    return { round, uploadedCount: 0, reconciledCount, deferredCount, skippedByTarget, message };
   }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
@@ -650,12 +710,28 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   let jsonRevision;
   for (let offset = 0; offset < targetedPreviews.length; offset += MAX_IMAGES_PER_UPLOAD_REQUEST) {
     const chunk = targetedPreviews.slice(offset, offset + MAX_IMAGES_PER_UPLOAD_REQUEST);
+    const attemptAtMs = Date.now();
+    for (const item of chunk) {
+      const entry = stateFiles[item.relPath];
+      if (!entry) continue;
+      entry.uploadAttempt = {
+        round,
+        atMs: attemptAtMs,
+        baselineCount: countRecordedCaseDesignImages(dbData, caseId, round, path.basename(item.relPath))
+      };
+    }
+    // 必須在 POST 前先落地：即使 Node 行程在等待回應時被中止，下一輪也知道
+    // 這批可能已在遠端生效，會先核對資料庫而不是立刻重送。
+    if (persistState) await persistState();
     const uploadResult = await uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews: chunk });
     for (const item of chunk) {
-      if (stateFiles[item.relPath]) stateFiles[item.relPath].assignedRound = round;
+      if (stateFiles[item.relPath]) {
+        stateFiles[item.relPath].assignedRound = round;
+        stateFiles[item.relPath].uploadAttempt = null;
+      }
     }
     uploadedCount += uploadResult.count;
     jsonRevision = uploadResult.jsonRevision;
   }
-  return { round, uploadedCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, reconciledCount, deferredCount, skippedByTarget, targetFallback, jsonRevision };
 }

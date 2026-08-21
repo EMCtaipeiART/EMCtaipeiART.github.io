@@ -275,11 +275,12 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
         config, secrets, dbData: latestDbData, caseId,
         designer: project.designer, client: project.client, start: project.start,
         pendingPreviews: scanResult.pendingPreviews,
-        stateFiles: state[caseId].files
+        stateFiles: state[caseId].files,
+        persistState: () => lib.saveState(stateFile, state)
       });
       await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
       if (!upload.uploadedCount) {
-        return { attempted: true, uploadedCount: 0, message: '沒有偵測到可上傳的圖片/影片', warnings };
+        return { attempted: true, uploadedCount: 0, message: upload.message || '沒有偵測到可上傳的圖片/影片', warnings };
       }
       return { attempted: true, uploadedCount: upload.uploadedCount, round: upload.round, warnings };
     } catch (error) {

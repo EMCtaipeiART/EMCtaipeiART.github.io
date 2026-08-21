@@ -193,11 +193,11 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 - 修改目的：修正案件 `26080119` 在 12:38 立即備份已寫入兩張初稿、12:40 背景排程又把同檔名兩張上傳一次，導致修改紀錄出現兩組相同圖片。
 - 根因：既有行程鎖只防止立即備份與背景排程同時執行；第一次遠端 Drive／資料庫寫入已完成、但呼叫端未收到可確認的成功結果時，本機檔案仍是待歸類狀態，下一分鐘會循序重試。Worker 原本只依 URL 去重，而重送會建立不同 Drive ID／URL，因此無法辨識同一來源檔案。
-- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.README.md`、`upload/Code.gs`、`backend/test/nas-upload-idempotency.test.mjs`。
-- 影響功能：NAS 立即備份與背景監控的每張圖片依案件、輪次、來源路徑、mtime、size 產生穩定 SHA-256 防重鍵；Apps Script 用確定性 Drive 檔名查找／沿用既有檔案，並以 ScriptLock 原子化同鍵的查找與建立。相同重試會回傳同一 URL，既有 Worker URL 去重即可擋下第二組；檔案更新或進入新輪次仍會產生新鍵與新圖片。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`scripts/nas_folder_picker_server.mjs`、`scripts/nas_design_image_watcher.README.md`、`upload/Code.gs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：NAS 端在 POST 前保存待確認狀態，五分鐘寬限期內下一輪只核對正式資料庫、不會立刻重送；若資料庫的同輪次／同檔名數量已增加便直接標記完成。每張圖片另依案件、輪次、來源路徑、mtime、size 產生穩定 SHA-256 防重鍵；Apps Script 用確定性 Drive 檔名查找／沿用既有檔案，並以 ScriptLock 原子化同鍵的查找與建立。相同重試會回傳同一 URL，既有 Worker URL 去重即可擋下第二組；檔案更新或進入新輪次仍會產生新鍵與新圖片。
 - 風險區塊：`upload/Code.gs` 需要重新部署上傳用 Apps Script 才會啟用 Drive 端防重；尚未部署的舊版會忽略新增的 `dedupeKey` 欄位並維持舊行為。
-- 已檢查／驗證方式：Node 測試新增穩定鍵變化、NAS request payload 與 Apps Script 同鍵重送三層驗證；完整 `npm test` 43/43 通過，Apps Script 全檔亦由 VM 載入執行。
-- 部署狀態：NAS 腳本在本機使用新檔案；上傳 Apps Script 需要以本次 `upload/Code.gs` 建立新部署版本。
+- 已檢查／驗證方式：Node 測試新增穩定鍵變化、NAS request payload、結果不明時的資料庫核對／延遲重試，以及 Apps Script 同鍵重送驗證；完整 `npm test` 45/45 通過，Apps Script 全檔亦由 VM 載入執行。
+- 部署狀態：NAS 端的等待／核對保護在本機服務重啟後直接生效；上傳 Apps Script 需要以本次 `upload/Code.gs` 建立新部署版本，才會再啟用 Drive 檔案層的第二道防線。
 - commit：本次修正提交。
 
 ### 2026-08-21 Asia/Taipei（次新）— 修正客戶別「部門／組別」可見性有時候會被悄悄清空：帳號設定背景重新套用時漏了一道防呆，跟其餘三個姊妹欄位不一致

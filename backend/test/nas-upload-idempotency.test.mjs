@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
   createCaseDesignUploadDedupeKey,
+  uploadPendingRound,
   uploadRound
 } from '../../scripts/nas_design_image_lib.mjs';
 
@@ -59,6 +60,66 @@ test('NAS upload request forwards the stable dedupe key to Apps Script', async (
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('ambiguous NAS upload is reconciled from the published database before retrying', async () => {
+  const relPath = '260821_八月CPAS廣告素材_lito_PChome.png';
+  const stateFiles = {
+    [relPath]: {
+      assignedRound: null,
+      uploadAttempt: { round: 0, atMs: Date.now() - 60_000, baselineCount: 0 }
+    }
+  };
+  const dbData = {
+    tables: {
+      '修改統計表': {
+        rows: [{
+          '案件編號': '26080119',
+          '修改次數': '0',
+          '圖片連結': JSON.stringify([{ fileName: relPath, url: 'https://example.test/first-upload' }])
+        }]
+      }
+    }
+  };
+  let persistCount = 0;
+  const result = await uploadPendingRound({
+    config: {},
+    secrets: {},
+    dbData,
+    caseId: '26080119',
+    designer: 'Machi',
+    client: 'DJI',
+    start: '2026/08/21',
+    pendingPreviews: [{ relPath, previewPath: '/unused' }],
+    stateFiles,
+    persistState: async () => { persistCount += 1; }
+  });
+  assert.equal(result.uploadedCount, 0);
+  assert.equal(result.reconciledCount, 1);
+  assert.equal(stateFiles[relPath].assignedRound, 0);
+  assert.equal(stateFiles[relPath].uploadAttempt, null);
+  assert.equal(persistCount, 1);
+});
+
+test('ambiguous NAS upload waits for publication instead of retrying one minute later', async () => {
+  const relPath = '260821_八月CPAS廣告素材_lito_PChome.png';
+  const attempt = { round: 0, atMs: Date.now() - 60_000, baselineCount: 0 };
+  const stateFiles = { [relPath]: { assignedRound: null, uploadAttempt: attempt } };
+  const result = await uploadPendingRound({
+    config: {},
+    secrets: {},
+    dbData: { tables: { '修改統計表': { rows: [] } } },
+    caseId: '26080119',
+    designer: 'Machi',
+    client: 'DJI',
+    start: '2026/08/21',
+    pendingPreviews: [{ relPath, previewPath: '/unused' }],
+    stateFiles
+  });
+  assert.equal(result.uploadedCount, 0);
+  assert.equal(result.deferredCount, 1);
+  assert.equal(stateFiles[relPath].assignedRound, null);
+  assert.deepEqual(stateFiles[relPath].uploadAttempt, attempt);
 });
 
 test('Apps Script reuses the same Drive file for a retried dedupe key', async () => {

@@ -188,8 +188,15 @@ async function runScan(args, config, configDir, stateFile) {
           config, secrets, dbData: latestDbData, caseId: result.caseId,
           designer: project.designer, client: project.client, start: project.start,
           pendingPreviews: result.pendingPreviews,
-          stateFiles: state[result.caseId].files
+          stateFiles: state[result.caseId].files,
+          persistState: () => lib.saveState(stateFile, state)
         });
+        if (upload.reconciledCount > 0) {
+          console.log(`  [防重確認] 已在正式資料庫找到前次上傳的 ${upload.reconciledCount} 張圖片，本次不再重送`);
+        }
+        if (upload.deferredCount > 0) {
+          console.log(`  [防重等待] 前次上傳結果尚未發布完成，暫緩重送 ${upload.deferredCount} 張`);
+        }
         if (upload.skippedByTarget > 0) {
           console.log(`  [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);
         }
@@ -197,7 +204,7 @@ async function runScan(args, config, configDir, stateFile) {
           console.log('  [輪次判斷] PM 指定的待修改圖片檔名這次一個都對不上（可能是設計師存成新檔名），改成把這輪所有待歸類的新檔案都當回覆上傳');
         }
         if (!upload.uploadedCount) {
-          console.log(`  [輪次判斷] 案件已進入第 ${upload.round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`);
+          console.log(`  [輪次判斷] ${upload.message || `案件已進入第 ${upload.round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`}`);
         } else {
           console.log(`  [上傳完成] 第 ${upload.round} 輪，已寫入 ${upload.uploadedCount} 張圖片，案件修訂版 ${upload.jsonRevision}`);
         }
