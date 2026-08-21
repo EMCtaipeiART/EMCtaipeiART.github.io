@@ -11,7 +11,7 @@ import { applyWeightToRow } from './weighting.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const DEFAULT_DB_PATH = path.join(HERE, 'data', 'db.json');
-const VERSION = 'json-backend-announcement-read-receipts-2026-08-20-4';
+const VERSION = 'json-backend-numbered-mail-templates-2026-08-21-5';
 const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
@@ -56,6 +56,11 @@ function normalizedReplyTemplates(value) {
     ? source.map(item => [text(item?.detail || item?.['項目細節']), text(item?.content || item?.text || item?.['回信內容'])])
     : (source && typeof source === 'object' ? Object.entries(source).map(([detail, content]) => [text(detail), text(content)]) : []);
   return Object.fromEntries(entries.filter(([detail, content]) => detail && content && detail.length <= 80 && content.length <= 10000).slice(0, 80));
+}
+function normalizedReplyTemplateDefault(value, templates) {
+  const requested = text(value);
+  const keys = Object.keys(templates || {});
+  return keys.includes(requested) ? requested : (keys[0] || '');
 }
 const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
 const ACCESS_CAPABILITIES = [
@@ -263,7 +268,8 @@ function settingsResponse(row = {}) {
     ...row,
     name: text(row['名字']), displayName: text(row['顯示名'] || row['名字']), department: text(row['部門']), group,
     designType: /影音|影像|影片/i.test(group) ? '影音' : (/平面/.test(group) ? '平面' : ''),
-    avatar: text(row['頭像連結']), visibleColumns: ordered,
+    avatar: text(row['頭像連結']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']),
+    replyTemplateDefault: normalizedReplyTemplateDefault(row['預設回信範本'], normalizedReplyTemplates(row['回信範本設定'])), visibleColumns: ordered,
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
@@ -372,6 +378,14 @@ function findReelIndex(rows, payload) {
 }
 function updateSettingsRow(row, settings = {}) {
   if ('avatar' in settings || '頭像連結' in settings) row['頭像連結'] = text(settings.avatar ?? settings['頭像連結']);
+  if ('replyTemplates' in settings || '回信範本設定' in settings) {
+    const templates = normalizedReplyTemplates(settings.replyTemplates ?? settings['回信範本設定']);
+    row['回信範本設定'] = JSON.stringify(templates);
+    row['預設回信範本'] = normalizedReplyTemplateDefault(settings.replyTemplateDefault ?? settings['預設回信範本'] ?? row['預設回信範本'], templates);
+  } else if ('replyTemplateDefault' in settings || '預設回信範本' in settings) {
+    const templates = normalizedReplyTemplates(row['回信範本設定']);
+    row['預設回信範本'] = normalizedReplyTemplateDefault(settings.replyTemplateDefault ?? settings['預設回信範本'], templates);
+  }
   if ('displayName' in settings || '顯示名' in settings) {
     const value = text(settings.displayName || settings['顯示名']);
     if (!value || value.length > 40) throw new Error('顯示名必須為 1–40 個字');
@@ -680,7 +694,7 @@ export function createActionHandler(database, options = {}) {
         name: text(row['名字']), account: canonicalAccount(row['帳號']), avatar: text(row['頭像連結']),
         poster: text(row['頭像大圖連結'] || row['頭像連結']), musicUrl: text(row['分享音樂']),
         musicStartAt: Math.max(0, Number(row['音樂起始秒數']) || 0), skills: splitNames(row['技能']),
-        quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), rotation: Number(row['新專案輪值']) || 99, skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
+        quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), replyTemplateDefault: normalizedReplyTemplateDefault(row['預設回信範本'], normalizedReplyTemplates(row['回信範本設定'])), rotation: Number(row['新專案輪值']) || 99, skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
         designType: /影音|影像|影片/i.test(text(row['組別'])) ? '影音' : (/平面/.test(text(row['組別'])) ? '平面' : '')
       }));
       return { ok: true, action, profiles };
@@ -769,7 +783,11 @@ export function createActionHandler(database, options = {}) {
           '技能': mappings.map(item => item.name).join(' , '), '技能表單設定': JSON.stringify(mappings), '對話框': text(profile.quote),
           '新專案輪值': String(Math.max(1, Math.floor(Number(profile.rotation) || 99)))
         });
-        if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
+        if ('replyTemplates' in profile) {
+          const templates = normalizedReplyTemplates(profile.replyTemplates);
+          row['回信範本設定'] = JSON.stringify(templates);
+          row['預設回信範本'] = normalizedReplyTemplateDefault(profile.replyTemplateDefault, templates);
+        }
         designerRowsForGroup(draft, group).forEach((item, index) => { item['新專案輪值'] = String(index + 1); });
         return { ok: true, action, account, settingsRow: { ...row }, changedTables: ['設定'] };
       }, 'admin designer save');
@@ -802,11 +820,15 @@ export function createActionHandler(database, options = {}) {
           if ('musicStartAt' in profile) row['音樂起始秒數'] = String(Math.max(0, Number(profile.musicStartAt) || 0));
           if ('skills' in profile) row['技能'] = (Array.isArray(profile.skills) ? profile.skills : splitNames(profile.skills)).join(' , ');
           if ('quote' in profile) row['對話框'] = text(profile.quote);
-          if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
+          if ('replyTemplates' in profile) {
+            const templates = normalizedReplyTemplates(profile.replyTemplates);
+            row['回信範本設定'] = JSON.stringify(templates);
+            row['預設回信範本'] = normalizedReplyTemplateDefault(profile.replyTemplateDefault, templates);
+          }
         }
         const profiles = draft.tables['設定'].rows.filter(isDesignerSettingsRow).map(row => ({
           name: row['名字'], account: row['帳號'], avatar: row['頭像連結'], poster: row['頭像大圖連結'], musicUrl: row['分享音樂'],
-          musicStartAt: Number(row['音樂起始秒數']) || 0, skills: splitNames(row['技能']), skillMappings: normalizedSkillMappings(row['技能表單設定']), quote: row['對話框'], replyTemplates: normalizedReplyTemplates(row['回信範本設定']), rotation: Number(row['新專案輪值']) || 99, designType: row['組別'], enabled: true
+          musicStartAt: Number(row['音樂起始秒數']) || 0, skills: splitNames(row['技能']), skillMappings: normalizedSkillMappings(row['技能表單設定']), quote: row['對話框'], replyTemplates: normalizedReplyTemplates(row['回信範本設定']), replyTemplateDefault: normalizedReplyTemplateDefault(row['預設回信範本'], normalizedReplyTemplates(row['回信範本設定'])), rotation: Number(row['新專案輪值']) || 99, designType: row['組別'], enabled: true
         }));
         return { ok: true, action, profiles };
       }, 'save designer profiles');

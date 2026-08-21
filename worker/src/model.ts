@@ -2,7 +2,7 @@ import { TABLE_SCHEMAS, TABLE_NAMES, normalizeDatabaseShape, recalculateDatabase
 import { applyWeightToRow } from '../../backend/weighting.mjs';
 import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 
-export const VERSION = 'cloudflare-worker-gmail-paste-image-2026-08-20-8';
+export const VERSION = 'cloudflare-worker-numbered-mail-templates-2026-08-21-9';
 export const LOGIN_DOMAIN = '@emctaipei.com';
 export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
 export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
@@ -180,7 +180,8 @@ export function settingsResponse(row: Row = {}): Row {
     ...row,
     name: text(row['名字']), displayName: text(row['顯示名'] || row['名字']), department: text(row['部門']), group,
     designType: /影音|影像|影片/i.test(group) ? '影音' : (/平面/.test(group) ? '平面' : ''),
-    avatar: text(row['頭像連結']), visibleColumns: ordered,
+    avatar: text(row['頭像連結']), replyTemplates: normalizeReplyTemplatesValue(row['回信範本設定']),
+    replyTemplateDefault: normalizeReplyTemplateDefaultValue(row['預設回信範本'], normalizeReplyTemplatesValue(row['回信範本設定'])), visibleColumns: ordered,
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
@@ -189,6 +190,23 @@ export function settingsResponse(row: Row = {}): Row {
     },
     theme: /深色|dark/i.test(rawTheme) ? 'dark' : (/淺色|light/i.test(rawTheme) ? 'light' : '')
   };
+}
+export function normalizeReplyTemplatesValue(value: unknown): Record<string, string> {
+  let source: unknown = value;
+  if (typeof source === 'string') { try { source = JSON.parse(source); } catch { source = {}; } }
+  const entries: Array<[string, string]> = Array.isArray(source)
+    ? source.map(item => {
+      const row = item && typeof item === 'object' && !Array.isArray(item) ? item as Row : {};
+      return [text(row.detail || row['項目細節']), text(row.content || row.text || row['回信內容'])];
+    })
+    : (source && typeof source === 'object'
+      ? Object.entries(source as Record<string, unknown>).map(([name, content]) => [text(name), text(content)])
+      : []);
+  return Object.fromEntries(entries.filter(([name, content]) => name && content && name.length <= 80 && content.length <= 10000).slice(0, 80));
+}
+export function normalizeReplyTemplateDefaultValue(value: unknown, templates: Record<string, string>): string {
+  const requested = text(value), keys = Object.keys(templates || {});
+  return keys.includes(requested) ? requested : (keys[0] || '');
 }
 export function accessList(value: unknown): string[] {
   if (Array.isArray(value)) return unique(value.map(text));
@@ -344,6 +362,14 @@ export function syncSupplementLinks(draft: DatabaseSnapshot, sheetRow: Row, _bas
 }
 export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
   if ('avatar' in settings || '頭像連結' in settings) row['頭像連結'] = text(settings.avatar ?? settings['頭像連結']);
+  if ('replyTemplates' in settings || '回信範本設定' in settings) {
+    const templates = normalizeReplyTemplatesValue(settings.replyTemplates ?? settings['回信範本設定']);
+    row['回信範本設定'] = JSON.stringify(templates);
+    row['預設回信範本'] = normalizeReplyTemplateDefaultValue(settings.replyTemplateDefault ?? settings['預設回信範本'] ?? row['預設回信範本'], templates);
+  } else if ('replyTemplateDefault' in settings || '預設回信範本' in settings) {
+    const templates = normalizeReplyTemplatesValue(row['回信範本設定']);
+    row['預設回信範本'] = normalizeReplyTemplateDefaultValue(settings.replyTemplateDefault ?? settings['預設回信範本'], templates);
+  }
   if ('displayName' in settings || '顯示名' in settings) {
     const value = text(settings.displayName || settings['顯示名']);
     if (!value || value.length > 40) throw new Error('顯示名必須為 1–40 個字');

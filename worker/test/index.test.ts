@@ -370,6 +370,38 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['短連結'].rows).toHaveLength(0);
   });
 
+  it('saves numbered mail templates and their default through personal settings', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'personal-settings-file-sha' }, commit: { sha: 'personal-settings-commit-sha' } });
+    });
+    const saved = await api({
+      action: 'saveUserSettings',
+      settings: {
+        displayName: 'Machi Template QA',
+        replyTemplates: { '範本 1': '第一筆內容', '範本 2': '第二筆內容' },
+        replyTemplateDefault: '範本 2'
+      }
+    }, token);
+    expect(saved).toMatchObject({
+      ok: true,
+      action: 'saveUserSettings',
+      account: 'machi.chen@emctaipei.com',
+      settings: {
+        displayName: 'Machi Template QA',
+        replyTemplates: { '範本 1': '第一筆內容', '範本 2': '第二筆內容' },
+        replyTemplateDefault: '範本 2'
+      }
+    });
+
+    const current = await api({ action: 'getUserSettings' }, token);
+    expect(current.settings).toMatchObject({
+      replyTemplates: { '範本 1': '第一筆內容', '範本 2': '第二筆內容' },
+      replyTemplateDefault: '範本 2'
+    });
+  });
+
   it('saves account settings and permissions in one GitHub commit', async () => {
     const token = await login();
     const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
@@ -423,17 +455,17 @@ describe('Machi Design API Worker', () => {
         group: '影音', rotation: 9, avatar: 'https://example.com/avatar.png', poster: 'https://example.com/poster.png',
         musicUrl: 'https://example.com/music', musicStartAt: 5, quote: '影音設計 QA',
         skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }],
-        replyTemplates: { '影音剪輯': '影音剪輯回信內容' }
+        replyTemplates: { '範本 1': '影音剪輯回信內容' }, replyTemplateDefault: '範本 1'
       }
     }, token);
     expect(designerSaved).toMatchObject({
       ok: true, action: 'adminDesignerSave', changedTables: ['設定'],
-      settingsRow: { '帳號': account, '設計師顯示': 'v', '技能': '短影音', '回信範本設定': JSON.stringify({ '影音剪輯': '影音剪輯回信內容' }) }
+      settingsRow: { '帳號': account, '設計師顯示': 'v', '技能': '短影音', '回信範本設定': JSON.stringify({ '範本 1': '影音剪輯回信內容' }), '預設回信範本': '範本 1' }
     });
     const activeProfiles = await api({ action: 'listDesignerProfiles' });
     expect((activeProfiles.profiles as Array<Record<string, unknown>>).find(profile => profile.account === account)).toMatchObject({
       name: 'Designer QA', designType: '影音', skillMappings: [{ name: '短影音', type: '影音', stage: '後製' }],
-      replyTemplates: { '影音剪輯': '影音剪輯回信內容' }
+      replyTemplates: { '範本 1': '影音剪輯回信內容' }, replyTemplateDefault: '範本 1'
     });
     expect(githubPut).toHaveBeenCalledTimes(2);
 
@@ -681,7 +713,7 @@ describe('Machi Design API Worker', () => {
       profiles: [{
         name: 'Machi',
         poster: 'https://example.com/new-poster.jpg',
-        replyTemplates: { '影音剪輯': '影音剪輯回信內容', '字幕字卡': '字幕字卡回信內容' }
+        replyTemplates: { '範本 1': '影音剪輯回信內容', '範本 2': '字幕字卡回信內容' }, replyTemplateDefault: '範本 2'
       }]
     }, token);
     expect(saved).toMatchObject({ ok: true, action: 'saveDesignerProfiles' });
@@ -694,7 +726,8 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({
       '名字': 'Machi',
       '頭像大圖連結': 'https://example.com/new-poster.jpg',
-      '回信範本設定': JSON.stringify({ '影音剪輯': '影音剪輯回信內容', '字幕字卡': '字幕字卡回信內容' })
+      '回信範本設定': JSON.stringify({ '範本 1': '影音剪輯回信內容', '範本 2': '字幕字卡回信內容' }),
+      '預設回信範本': '範本 2'
     }));
   });
 

@@ -464,80 +464,27 @@ test('designer music uses one timeline, JSON-only settings, and seeks Spotify af
   assert.doesNotMatch(settingsSave, /backup/);
 });
 
-test('designer reply templates persist by item detail and multi-select uses the first detail', async () => {
+test('mail templates are numbered, support a default, appear in personal settings, and can be inserted in editors', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const appsScript = await readFile(new URL('../../GS/google_apps_script.gs', import.meta.url), 'utf8');
-  const detailsFunction = html.match(/function detailsToArray\(value\)\{[^\n]*\}/)?.[0] || '';
-  const profileFunction = html.match(/function designerProfile\(name\)\{[^\n]*\}/)?.[0] || '';
-  const templateFunction = html.match(/function designerReplyTemplateForCase\(row=\{\}\)\{[^\n]*\}/)?.[0] || '';
-  const typeOptionsFunction = html.match(/function designerReplyTypeOptions\(\)\{[^\n]*\}/)?.[0] || '';
-  const stageOptionsFunction = html.match(/function designerReplyStageOptions\(type\)\{[^\n]*\}/)?.[0] || '';
-  const detailChoicesFunction = html.match(/function designerReplyDetailChoices\(type,stage\)\{[^\n]*\}/)?.[0] || '';
-  const locationFunction = html.match(/function resolveDesignerReplyTemplateLocation\(profile,detail\)\{[^\n]*\}/)?.[0] || '';
-  const selectsHtmlFunction = html.match(/function designerReplyTemplateSelectsHtml\(profile,detail=''\)\{[^\n]*\}/)?.[0] || '';
+  const normalizeStart = html.indexOf('function normalizeReplyTemplateSettings(');
+  const normalizeEnd = html.indexOf('\nfunction normalizeDesignerReplyTemplates', normalizeStart);
+  const normalizeFunction = html.slice(normalizeStart, normalizeEnd);
   assert.match(html, /5\. 回信範本設定/);
-  assert.match(html, /多選時以第一個選項為準/);
-  assert.match(html, /data-reply-template-type/);
-  assert.match(html, /data-reply-template-stage/);
-  assert.match(html, /請選擇項目細節/);
-  // section 5 used to be a single combined dropdown with no dedicated 設計類型／階段 fields, and
-  // fell back to an empty option list whenever a designer's own type couldn't be resolved — which
-  // also silently blocked saving (content typed but no detail selectable). Lock in the redesign.
-  assert.doesNotMatch(html, /請選擇設計種類／階段／項目細節/);
-  assert.ok(detailsFunction && profileFunction && templateFunction && typeOptionsFunction && stageOptionsFunction && detailChoicesFunction && locationFunction && selectsHtmlFunction);
-  const escapeHtml = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  const designLists = {
-    types: ['平面', '影音'],
-    stages: { '平面': ['提案', '後製'], '影音': ['提案'] },
-    details: {
-      '平面': { '提案': ['社群貼文', '急件'], '後製': ['社群貼文', '急件'] },
-      '影音': { '提案': ['腳本大綱'] }
-    }
-  };
-  const scope = new Function('normalizeDesignGroup', 'designLists', 'esc', `
-    ${typeOptionsFunction}
-    ${stageOptionsFunction}
-    ${detailChoicesFunction}
-    ${locationFunction}
-    ${selectsHtmlFunction}
-    return { resolveDesignerReplyTemplateLocation, designerReplyDetailChoices, designerReplyTemplateSelectsHtml };
-  `)(value => value, designLists, escapeHtml);
-
-  // Normal case: a real detail resolves to the stage it actually lives under.
-  assert.deepEqual(scope.resolveDesignerReplyTemplateLocation({ designType: '平面' }, '社群貼文'), { type: '平面', stage: '提案' });
-
-  // Legacy/orphaned saved detail (e.g. removed from 加權計分標準 since it was saved) must not crash,
-  // and must still fall back to a sensible location and stay selectable in the rendered options.
-  const legacyLocation = scope.resolveDesignerReplyTemplateLocation({ designType: '平面' }, '舊範本');
-  assert.deepEqual(legacyLocation, { type: '平面', stage: '提案' });
-  assert.match(scope.designerReplyTemplateSelectsHtml({ designType: '平面' }, '舊範本'), /<option value="舊範本" selected>舊範本<\/option>/);
-
-  // Regression test for the reported bug: a designer whose 組別／設計類型 field can't be normalized
-  // (blank, or some other group name) must never end up with an empty 項目細節 dropdown that blocks
-  // filling in and saving a brand-new template row.
-  const unresolvedLocation = scope.resolveDesignerReplyTemplateLocation({ designType: '設計組' }, '');
-  assert.equal(unresolvedLocation.type, '平面');
-  assert.equal(unresolvedLocation.stage, '提案');
-  const unresolvedChoices = scope.designerReplyDetailChoices(unresolvedLocation.type, unresolvedLocation.stage);
-  assert.ok(unresolvedChoices.length > 0);
-  const unresolvedSelectsHtml = scope.designerReplyTemplateSelectsHtml({ designType: '設計組' }, '');
-  assert.match(unresolvedSelectsHtml, /data-reply-template-type/);
-  assert.match(unresolvedSelectsHtml, /data-reply-template-stage/);
-  const detailOptionCount = (unresolvedSelectsHtml.match(/<option value="/g) || []).length;
-  assert.ok(detailOptionCount > 3, `expected more than the bare placeholders, got ${detailOptionCount}`);
-
+  assert.match(html, /使用範本 1、範本 2…管理常用內容/);
+  assert.match(html, /id="personalMailTemplateList"/);
+  assert.match(html, /id="personalSettingsAvatarPreview"/);
+  assert.match(html, /data-reply-template-default/);
+  assert.match(html, /data-rich-template-for="gmailThreadReplyEditor"/);
+  assert.match(html, /data-rich-template-for="gmailComposeEditor"/);
+  assert.match(html, /function openReplyTemplatePicker\(/);
+  assert.doesNotMatch(html, /data-reply-template-type|data-reply-template-stage|data-reply-template-detail/);
+  assert.ok(normalizeFunction);
   assert.doesNotMatch(appsScript, /normalizeDesignerReplyTemplates_|回信範本設定/);
-  const selectTemplate = new Function('designers', 'defaultDesigners', `
-    function unique(values){ return [...new Set(values.filter(Boolean))] }
-    ${detailsFunction}
-    ${profileFunction}
-    ${templateFunction}
-    return designerReplyTemplateForCase({ designer:'Machi', details:'社群貼文, 廣告素材' });
-  `);
-  assert.equal(selectTemplate([{
-    name: 'Machi',
-    replyTemplates: { '社群貼文': '應帶入第一個範本', '廣告素材': '不應帶入第二個範本' }
-  }], []), '應帶入第一個範本');
+  const normalize = new Function(`${normalizeFunction};return normalizeReplyTemplateSettings;`)();
+  assert.deepEqual(normalize({ '社群貼文': '舊內容一', '廣告素材': '舊內容二' }, '廣告素材'), {
+    templates: { '範本 1': '舊內容一', '範本 2': '舊內容二' }, defaultName: '範本 2'
+  });
 });
 
 test('front-end destructive actions require confirmation before deletion', async () => {
@@ -548,7 +495,7 @@ test('front-end destructive actions require confirmation before deletion', async
     assert.ok(from >= 0 && to > from, `missing source range: ${start}`);
     return html.slice(from, to);
   };
-  assert.match(functionSource('function bindDesignerReplySettings(', 'function renderDesignerSettingsForm('), /if\(!confirm\(detail\?/);
+  assert.match(functionSource('function bindMailTemplateEditor(', 'function collectMailTemplateEditor('), /if\(!row\|\|!confirm\(/);
   assert.match(functionSource('async function cancelScheduledMailItem(', 'function monthFromDate('), /if\(!confirm\(/);
   assert.match(functionSource('async function removeSelectedCaseDesignImages(', 'function refreshOpenRevisionModal('), /if\(!confirm\(/);
   assert.match(functionSource('async function removeCaseDesignImage(', 'function detailOptionsForRow('), /if\(!confirm\(/);
@@ -737,9 +684,10 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /前台媒體設定/);
   assert.match(html, /<h3>回信範本設定<\/h3>/);
   assert.match(html, /designer-admin-management-grid/);
-  assert.match(html, /data-designer-reply-detail/);
+  assert.match(html, /data-designer-reply-label/);
+  assert.match(html, /data-designer-reply-default/);
   assert.match(html, /data-designer-reply-content/);
-  assert.match(html, /replyTemplates\[detail\]=content/);
+  assert.match(html, /replyTemplates\[name\]=content/);
   assert.match(html, /designer-skill-columns/);
   assert.match(html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   // 技能列改成單排（名稱｜設計種類｜預設階段｜小型刪除鈕），新增技能按鈕搬到區塊標題列右側。
@@ -867,11 +815,16 @@ test('password session protects settings, reels and manager-only issue status wr
 
   const saved = await api(app.baseUrl, 'saveUserSettings', {
     editorToken: login.token,
-    settings: { displayName: 'Machi JSON', avatar: 'https://example.com/new-avatar.jpg', theme: 'dark', collapseSettings: { recent: true } }
+    settings: {
+      displayName: 'Machi JSON', avatar: 'https://example.com/new-avatar.jpg', theme: 'dark', collapseSettings: { recent: true },
+      replyTemplates: { '範本 1': '第一筆內容', '範本 2': '第二筆內容' }, replyTemplateDefault: '範本 2'
+    }
   });
   assert.equal(saved.settings.displayName, 'Machi JSON');
   assert.equal(saved.settings.avatar, 'https://example.com/new-avatar.jpg');
   assert.equal(saved.settings.theme, 'dark');
+  assert.deepEqual(saved.settings.replyTemplates, { '範本 1': '第一筆內容', '範本 2': '第二筆內容' });
+  assert.equal(saved.settings.replyTemplateDefault, '範本 2');
 
   const reaction = await api(app.baseUrl, 'toggleReelReaction', {
     editorToken: login.token, reelId: 'reel-file', reaction: 'like'

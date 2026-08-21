@@ -89,6 +89,10 @@ function normalizedReplyTemplates(value: unknown): Record<string, string> {
       : []);
   return Object.fromEntries(entries.filter(([detail, content]) => detail && content && detail.length <= 80 && content.length <= 10000).slice(0, 80));
 }
+function normalizedReplyTemplateDefault(value: unknown, templates: Record<string, string>): string {
+  const requested = text(value), keys = Object.keys(templates || {});
+  return keys.includes(requested) ? requested : (keys[0] || '');
+}
 
 function sessionToken(payload: ApiPayload): string {
   return text(payload.editorToken || payload.token);
@@ -1824,7 +1828,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           name: text(row['名字']), account: canonicalAccount(row['帳號']), avatar: text(row['頭像連結']),
           poster: text(row['頭像大圖連結'] || row['頭像連結']), musicUrl: text(row['分享音樂']),
           musicStartAt: Math.max(0, Number(row['音樂起始秒數']) || 0), skills: splitNames(row['技能']),
-          quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), rotation: Number(row['新專案輪值']) || 99,
+          quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), replyTemplateDefault: normalizedReplyTemplateDefault(row['預設回信範本'], normalizedReplyTemplates(row['回信範本設定'])), rotation: Number(row['新專案輪值']) || 99,
           skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
           designType: /影音|影像|影片/i.test(text(row['組別'])) ? '影音' : (/平面/.test(text(row['組別'])) ? '平面' : '')
         }));
@@ -1959,7 +1963,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if ('musicStartAt' in profile) row['音樂起始秒數'] = String(Math.max(0, Number(profile.musicStartAt) || 0));
           if ('skills' in profile) row['技能'] = (Array.isArray(profile.skills) ? profile.skills.map(text) : splitNames(profile.skills)).join(' , ');
           if ('quote' in profile) row['對話框'] = text(profile.quote);
-          if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
+          if ('replyTemplates' in profile) {
+            const templates = normalizedReplyTemplates(profile.replyTemplates);
+            row['回信範本設定'] = JSON.stringify(templates);
+            row['預設回信範本'] = normalizedReplyTemplateDefault(profile.replyTemplateDefault, templates);
+          }
         }
         return { result: { ok: true, action }, changedTables: ['設定'] };
       });
@@ -2513,7 +2521,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       row['技能'] = mappings.map(item => item.name).join(' , ');
       row['技能表單設定'] = JSON.stringify(mappings);
       row['對話框'] = text(profile.quote);
-      if ('replyTemplates' in profile) row['回信範本設定'] = JSON.stringify(normalizedReplyTemplates(profile.replyTemplates));
+      if ('replyTemplates' in profile) {
+        const templates = normalizedReplyTemplates(profile.replyTemplates);
+        row['回信範本設定'] = JSON.stringify(templates);
+        row['預設回信範本'] = normalizedReplyTemplateDefault(profile.replyTemplateDefault, templates);
+      }
       row['新專案輪值'] = String(Math.max(1, Math.floor(Number(profile.rotation) || 99)));
       designerRowsForGroup(draft, group).forEach((item, index) => { item['新專案輪值'] = String(index + 1); });
       return {
