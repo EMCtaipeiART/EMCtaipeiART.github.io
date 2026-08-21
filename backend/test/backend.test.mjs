@@ -262,12 +262,19 @@ test('Gmail editors wait for pasted images before immediate or scheduled send', 
   }
 });
 
-test('Gmail editors can insert the connected account signature without appending it twice', async () => {
+test('Gmail editors show the connected account signature by default without appending it twice', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /data-rich-signature-for="gmailThreadReplyEditor"[^>]*aria-label="插入 Gmail 簽名檔"/);
-  assert.match(html, /data-rich-signature-for="gmailComposeEditor"[^>]*aria-label="插入 Gmail 簽名檔"/);
-  assert.match(html, /async function insertGmailSignature\(editorId,button=null\)/);
+  assert.doesNotMatch(html, /data-rich-signature-for=/);
+  assert.doesNotMatch(html, /插入 Gmail 簽名檔/);
+  assert.match(html, /gmailSignatureLoadPromise/);
+  assert.match(html, /function resetGmailSignatureCache\(\)/);
+  assert.match(html, /if\(gmailSignatureLoadPromise\)return gmailSignatureLoadPromise/);
+  assert.match(html, /if\(generation!==gmailSignatureLoadGeneration\)return appendDefaultGmailSignature\(editor\)/);
+  assert.match(html, /async function appendDefaultGmailSignature\(editor\)/);
+  assert.match(html, /無法顯示個人簽名檔/);
+  assert.match(html, /目前連接的 Gmail 帳號沒有設定個人簽名檔/);
   assert.match(html, /editor\.querySelector\('\[data-gmail-inserted-signature\]'\)/);
+  assert.match(html, /editor\.append\(document\.createElement\('br'\),document\.createElement\('br'\),signature\)/);
   assert.match(html, /function gmailPreparedBodySignature\(bodyHtml,automaticSignatureHtml=''\)/);
   assert.match(html, /signatureHtml:signatureInserted\?'':automaticSignatureHtml/);
   assert.match(html, /return \{bodyHtml:prepared\.bodyHtml,inlineImages,signatureInserted:prepared\.signatureInserted\}/);
@@ -276,6 +283,21 @@ test('Gmail editors can insert the connected account signature without appending
   assert.match(html, /\.gmail-inserted-signature td::before,\.gmail-inserted-signature th::before\{content:none!important;display:none!important\}/);
   assert.match(html, /function gmailEditorTextWithoutInsertedSignature\(editor\)/);
   assert.match(html, /stripGreetingPrefix\(gmailEditorTextWithoutInsertedSignature\(editor\)\)/);
+  assert.equal((html.match(/if\(!gmailEditorTextWithoutInsertedSignature\(editor\)\.trim\(\)&&!editorPayload\.inlineImages\.length\)/g) || []).length, 2);
+  assert.match(html, /const signature=editor\.querySelector\('\[data-gmail-inserted-signature\]'\)/);
+  assert.match(html, /if\(signature\)\{range\.setStartBefore\(signature\);range\.collapse\(true\)\}/);
+  assert.match(html, /\.gmail-rich-editor\{min-height:260px;max-height:520px\}/);
+  assert.match(html, /#gmailThreadReplyEditor\.gmail-rich-editor\{min-height:180px;max-height:380px\}/);
+  for (const functionName of ['renderPostSubmitGmailDraft', 'openGmailComposeModal', 'openGmailThreadModal', 'openModificationRequestReplyModal', 'openDesignerReplyMailModal']) {
+    const start = html.indexOf(`${functionName === 'renderPostSubmitGmailDraft' ? '' : 'async '}function ${functionName}(`);
+    const nextFunction = html.indexOf('\nfunction ', start + 1);
+    const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
+    const ends = [nextFunction, nextAsyncFunction].filter(index => index > start);
+    const end = ends.length ? Math.min(...ends) : html.length;
+    const source = html.slice(start, end);
+    assert.ok(start > 0, `${functionName} should exist`);
+    assert.match(source, /appendDefaultGmailSignature\(editor|appendDefaultGmailSignature\(replyEditor/, `${functionName} should show the signature in the editor`);
+  }
   for (const functionName of ['sendGmailComposeModal', 'scheduleComposeMail', 'scheduleThreadReply', 'sendGmailThreadReply']) {
     const start = html.indexOf(`async function ${functionName}(`);
     const nextFunction = html.indexOf('\nfunction ', start + 1);
@@ -283,7 +305,7 @@ test('Gmail editors can insert the connected account signature without appending
     const ends = [nextFunction, nextAsyncFunction].filter(index => index > start);
     const end = ends.length ? Math.min(...ends) : html.length;
     const source = html.slice(start, end);
-    assert.match(source, /editorPayload\.signatureInserted\?'':automaticSignatureHtml/, `${functionName} should suppress automatic signature after manual insertion`);
+    assert.match(source, /editorPayload\.signatureInserted\?'':automaticSignatureHtml/, `${functionName} should suppress automatic signature when the default signature is already in the body`);
   }
   const batchStart = html.indexOf('async function handlePostSubmitGmailSend()');
   const batchEnd = html.indexOf('\nfunction closePostSubmitCopyModal()', batchStart);
