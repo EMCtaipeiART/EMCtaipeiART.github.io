@@ -205,7 +205,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 用本機 Node 靜態伺服器＋ Browser pane 對真實頁面做隔離測試（stub `sheetApi`／`startGmailConnectPopup`，沒有真的打任何網路請求）：①確認 `#mailCopyGmailPrompt`／`#mailCopyConnectGmail` 兩個元素正確存在於 DOM、文案正確、預設不隱藏；②點擊按鈕正確呼叫 `startGmailConnectPopup()`；③直接呼叫 `resumePostSubmitFlowAfterGmailConnect()` 驗證四種情境——完全沒有佇列時安全不做任何事、佇列存在但 `mode` 不是 `'copy'` 時安全不做任何事並維持原本模式、複製面板已經是隱藏狀態時安全不做任何事（不會意外彈出撰寫視窗）、以及真正的情境（佇列在 copy 模式且複製面板可見）正確把複製面板收起來、把 Gmail 撰寫視窗打開、`queue.mode` 正確變成 `'gmail'`、視窗內容正確依草稿資料渲染（主旨欄位正確顯示「主旨」而不是「案件編號生產中...」、寄出按鈕正確可見）；④完整模擬真實的 OAuth 回呼路徑（呼叫 `applyGmailOauthPopupResult()` 帶正確的 code／state，`sheetApi` 的 `gmailOauthConnect` 回傳成功），確認連接狀態正確更新、複製面板正確收起、Gmail 撰寫視窗正確開啟、佇列模式正確切換——不是只測試抽出來的輔助函式本身，也測過真正會被呼叫到的完整路徑；⑤淺色／深色模式下用 `getComputedStyle` 確認引導區塊與按鈕的背景／邊框／文字顏色都正確套用、兩種模式視覺上清楚可辨識。
   - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「新增案件→Gmail 未連接跳出複製面板→點擊連接→完成 Google 授權→自動接續進入可編輯撰寫視窗→寄出」的完整端對端流程，這次的驗證完全依賴本機隔離環境對真實頁面 stub 網路請求跑過的完整流程。
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案。
-- commit：（見下方 push 紀錄）
+- commit：`9fce496b`
 
 ### 2026-08-21 Asia/Taipei（次新）— 確認三種回信模式都已共用同一套討論串分組修正；「回信」按鈕補上事先檢查 Gmail 連接狀態，避免整封信寫完才在最後一步失敗
 
