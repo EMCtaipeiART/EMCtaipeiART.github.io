@@ -189,7 +189,15 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-21 Asia/Taipei（最新）— NAS 初稿上傳加入跨逾時重試的 Drive 防重鍵
+### 2026-08-21 Asia/Taipei（最新）— 設計師修改回覆可沿用 NAS 路徑、只附指定輪次圖片並以收件人稱呼
+
+- 修改目的：設計師在第一次修改回覆時，不應再次逐層指定已登記的 NAS 資料夾；信件也不應再帶初稿圖片，開頭稱呼要使用實際收件人而不是目前寄件者自己。
+- 影響檔案：`index.html`、`scripts/nas_folder_picker_server.mjs`、`scripts/nas_design_image_watcher.README.md`、`backend/test/backend.test.mjs`、`CODEX.md`。
+- 影響功能：案件已有 `designImageFolderUrl` 時，「設計師回覆信」來源選單新增「同上次路徑」，透過本機頁面 `mode=reuse` 沿用路徑與 `designImageFolderKeyword` 並自動呼叫既有 `/api/confirm`；主頁在 NAS 與電腦上傳兩條流程都保存開始時的修改輪次，完成後用 `designerReplyImagesForRound()` 精確選取該輪圖片。招呼語改讀 `gmailThreadTo` 第一位實際收件人。
+- 風險區塊：正式站為 HTTPS、本機 NAS 服務為 HTTP，不能改成直接 fetch；「同上次路徑」仍需開啟一個由使用者點擊觸發的本機視窗，該頁才可在同源呼叫 `/api/confirm`。若瀏覽器封鎖彈窗，會顯示原有的允許彈出視窗提示。
+- 前端版本：`20260821-designer-reply-reuse-nas-120`。
+
+### 2026-08-21 Asia/Taipei（次新）— NAS 初稿上傳加入跨逾時重試的 Drive 防重鍵
 
 - 修改目的：修正案件 `26080119` 在 12:38 立即備份已寫入兩張初稿、12:40 背景排程又把同檔名兩張上傳一次，導致修改紀錄出現兩組相同圖片。
 - 根因：既有行程鎖只防止立即備份與背景排程同時執行；第一次遠端 Drive／資料庫寫入已完成、但呼叫端未收到可確認的成功結果時，本機檔案仍是待歸類狀態，下一分鐘會循序重試。Worker 原本只依 URL 去重，而重送會建立不同 Drive ID／URL，因此無法辨識同一來源檔案。

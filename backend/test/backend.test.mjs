@@ -215,6 +215,31 @@ test('Gmail reply composer displays the current account as sender instead of the
   assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
 });
 
+test('designer reply can reuse the saved NAS path and only attaches the selected modification round', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  assert.match(html, /data-source="same-nas"><span>同上次路徑<\/span>/);
+  assert.match(html, /function reuseLastNasFolder\(id,round,\{afterReply=false\}=\{\}\)/);
+  assert.match(html, /mode:'reuse',path:row\.designImageFolderUrl,keyword:row\.designImageFolderKeyword\|\|''/);
+  assert.match(pickerServer, /requestedMode === 'reuse'/);
+  assert.match(pickerServer, /if\(mode === 'reuse'\)\{/);
+  assert.match(pickerServer, /await doConfirm\(\)/);
+
+  const imageSelectorSource = html.match(/function designerReplyImagesForRound\(id,round\)\{[\s\S]*?\n\}/)?.[0] || '';
+  const selectImages = new Function('modificationRecordsFor', `${imageSelectorSource};return designerReplyImagesForRound;`)(() => [
+    { count: 0, images: [{ fileName: 'draft.jpg', url: 'https://example.test/draft' }] },
+    { count: 1, images: [{ fileName: 'revision.jpg', url: 'https://example.test/revision' }] }
+  ]);
+  assert.deepEqual(selectImages('26080119', 1), [{ fileName: 'revision.jpg', url: 'https://example.test/revision' }]);
+  assert.equal(selectImages('26080119', 1).some(image => image.fileName === 'draft.jpg'), false);
+
+  const designerReplyStart = html.indexOf("async function openDesignerReplyMailModal(id");
+  const designerReplyEnd = html.indexOf('function applyDesignerReplyImages(', designerReplyStart);
+  const designerReplySource = html.slice(designerReplyStart, designerReplyEnd);
+  assert.match(designerReplySource, /gmailRecipientGreetingName\('gmailThreadTo'\)/);
+  assert.doesNotMatch(designerReplySource, /lastMessage\?\.from|senderName/);
+});
+
 test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const gmailInlineImageTasksByEditor=new Map\(\)/);

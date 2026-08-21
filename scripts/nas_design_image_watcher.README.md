@@ -236,6 +236,12 @@ launchctl load ~/Library/LaunchAgents/com.emctaipei.nas-watcher.plist
 徑寫回的是同一個欄位、同一套權限檢查），這支伺服器完全不需要知道任何登
 入 token 或資料庫寫入邏輯。
 
+案件已經登記過 NAS 來源路徑後，「回信 → 設計師回覆信」會多一個「同上次
+路徑」選項。它仍以 `window.open()` 開啟本機頁面，但使用 `mode=reuse` 帶入
+案件既有的路徑與檔名關鍵字；頁面載入後會自動呼叫同一套 `/api/confirm`
+立即備份流程，不再要求設計師逐層重新選資料夾。主頁會保存這次指定的修改輪
+次，因此備份完成後只把該輪（例如一修）的圖片補進回覆信，不會帶入初稿。
+
 **點「選擇這個資料夾並備份」時會立即備份一次**：這支伺服器不只列出資料
 夾名稱，選定資料夾的當下還會用 `nas_design_image_lib.mjs`（跟
 `nas_design_image_watcher.mjs` 共用同一份核心邏輯）立刻掃描這個資料夾、

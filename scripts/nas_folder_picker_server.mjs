@@ -376,8 +376,10 @@ const PICKER_PAGE = `<!doctype html>
   const origin = params.get('origin') || '';
   // mode=insert：只是要挑一個資料夾路徑插進信件內容裡（例如 Gmail 撰寫/回信），
   // 不需要關鍵字、也不會觸發任何備份／上傳，選好資料夾直接把路徑丟回去、關閉視窗；
+  // mode=reuse：由主頁傳入案件既有路徑與關鍵字，頁面載入後直接執行備份，不再要求使用者重選；
   // 預設（mode 不帶或 'case'）維持既有的「設定案件 NAS 來源資料夾＋立即備份」行為不變。
-  const mode = params.get('mode') === 'insert' ? 'insert' : 'case';
+  const requestedMode = params.get('mode');
+  const mode = requestedMode === 'insert' ? 'insert' : (requestedMode === 'reuse' ? 'reuse' : 'case');
   document.getElementById('caseLabel').textContent = caseId ? ('案件編號：' + caseId) : '';
   if(mode === 'insert'){
     const keywordField = document.querySelector('.keyword-field');
@@ -501,7 +503,7 @@ const PICKER_PAGE = `<!doctype html>
     const keywordInput = document.getElementById('keywordInput');
     const keyword = keywordInput ? (keywordInput.value || '').trim() : lastKeywordValue;
     lastKeywordValue = keyword;
-    if(!keyword){
+    if(!keyword && mode !== 'reuse'){
       // 留白代表「這個資料夾底下所有圖片都算這個案件」，如果資料夾其實是跟其他案件
       // 共用的（例如同一個月份資料夾），這樣會誤抓其他案件的圖，所以留白時額外跳一次
       // 確認，不是直接擋掉——有些案件真的有專屬資料夾、不需要關鍵字也沒問題。
@@ -547,6 +549,20 @@ const PICKER_PAGE = `<!doctype html>
   document.getElementById('confirmBtn').addEventListener('click', doConfirm);
 
   (async function init(){
+    if(mode === 'reuse'){
+      relPath = params.get('path') || '';
+      lastKeywordValue = params.get('keyword') || '';
+      const keywordInput = document.getElementById('keywordInput');
+      if(keywordInput) keywordInput.value = lastKeywordValue;
+      document.querySelector('header h1').textContent = '沿用上次 NAS 路徑';
+      document.getElementById('currentPath').textContent = relPath || '（未設定）';
+      if(!relPath){
+        setStatus('找不到可沿用的 NAS 路徑，請關閉視窗後重新選擇資料夾');
+        return;
+      }
+      await doConfirm();
+      return;
+    }
     let initialPath = '';
     try{
       const res = await fetch('/api/default-path?caseId=' + encodeURIComponent(caseId) + '&token=' + encodeURIComponent(token));
