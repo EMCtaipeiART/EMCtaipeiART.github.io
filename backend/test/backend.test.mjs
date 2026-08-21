@@ -271,6 +271,9 @@ test('Gmail editors can insert the connected account signature without appending
   assert.match(html, /function gmailPreparedBodySignature\(bodyHtml,automaticSignatureHtml=''\)/);
   assert.match(html, /signatureHtml:signatureInserted\?'':automaticSignatureHtml/);
   assert.match(html, /return \{bodyHtml:prepared\.bodyHtml,inlineImages,signatureInserted:prepared\.signatureInserted\}/);
+  assert.match(html, /\.gmail-inserted-signature\{all:revert;display:block;max-width:100%;overflow-x:auto;overflow-y:hidden\}/);
+  assert.match(html, /\.gmail-inserted-signature \*\{all:revert\}/);
+  assert.match(html, /\.gmail-inserted-signature td::before,\.gmail-inserted-signature th::before\{content:none!important;display:none!important\}/);
   assert.match(html, /function gmailEditorTextWithoutInsertedSignature\(editor\)/);
   assert.match(html, /stripGreetingPrefix\(gmailEditorTextWithoutInsertedSignature\(editor\)\)/);
   for (const functionName of ['sendGmailComposeModal', 'scheduleComposeMail', 'scheduleThreadReply', 'sendGmailThreadReply']) {

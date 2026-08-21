@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-insert-gmail-signature-124 -->
+<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-gmail-signature-layout-125 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260821-insert-gmail-signature-124" />
+  <meta name="app-version" content="20260821-gmail-signature-layout-125" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -6399,6 +6399,13 @@
     .gmail-color-option:hover,.gmail-color-option:focus-visible{border-color:#111!important;outline:2px solid rgba(15,143,97,.24)!important;outline-offset:1px}
     .gmail-color-option.is-selected::after{content:'\2713';font-size:13px;font-weight:950;line-height:1;color:var(--check-color,#fff);text-shadow:0 1px 2px rgba(0,0,0,.45)}
     .gmail-rich-image-input{display:none!important}
+    /* Gmail 簽名通常用巢狀 table 排版；系統全域的 table/td 與手機卡片規則會把它誤套成滿版資料表。
+       在簽名範圍內回復瀏覽器原生樣式，Gmail HTML 自己的 inline style 仍保有最高優先權。 */
+    .gmail-inserted-signature{all:revert;display:block;max-width:100%;overflow-x:auto;overflow-y:hidden}
+    .gmail-inserted-signature *{all:revert}
+    .gmail-inserted-signature table{max-width:100%}
+    .gmail-inserted-signature img{max-width:100%}
+    .gmail-inserted-signature td::before,.gmail-inserted-signature th::before{content:none!important;display:none!important}
     .gmail-rich-editor.is-image-dragover{border-color:#16a34a!important;background:#effbf4!important;box-shadow:inset 0 0 0 2px rgba(22,163,74,.18)}
     .gmail-inline-image-wrap{display:inline-block;position:relative;resize:none;overflow:hidden;max-width:100%;min-width:60px;margin:8px 0;border-radius:8px;vertical-align:top;border:1px solid transparent}
     .gmail-inline-image-wrap:hover,.gmail-inline-image-wrap:focus-within{border-color:#9bd4b4}
@@ -7347,7 +7354,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260821-insert-gmail-signature-124';
+const appBuildVersion = '20260821-gmail-signature-layout-125';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();
