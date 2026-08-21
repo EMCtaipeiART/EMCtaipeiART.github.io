@@ -189,7 +189,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-21 Asia/Taipei（最新）— 確認三種回信模式都已共用同一套討論串分組修正；「回信」按鈕補上事先檢查 Gmail 連接狀態，避免整封信寫完才在最後一步失敗
+### 2026-08-21 Asia/Taipei（最新）— 「案件已建立，複製信件內容寄出」面板補上「連接 Gmail 帳號」引導，連接成功直接接續同一輪寄信流程
+
+- 修改目的：使用者回報「新增專案時跳出信件編輯，這邊需要加入 gmail 綁定的按鈕，這邊沒有引導大家不知道可以使用 gmail」——附圖是新增案件送出後、Gmail 尚未連接時跳出的「案件已建立，複製信件內容寄出」複製面板（`#mailCopyModal`），畫面上只有一行說明文字「尚未連接 Gmail 帳號，請自行複製以下內容寄出」，完全沒有任何按鈕可以直接去連接，使用者只能自己想到要去帳號選單找連接入口，體驗上像是死路一條。
+- 追查過程：先確認同一套「連接 Gmail 帳號」缺口是不是也存在於其他入口——`openMailComposerMenu()`（案件列表「發信」按鈕）與 `openReplyMethodChooser()`（「回信」按鈕，見上一則修改）在 Gmail 未連接時，選單裡本來就已經有清楚的「連接 Gmail 帳號」選項，這兩處沒有問題；唯獨這次使用者附圖的「新增案件送出後」這個入口（`startPostSubmitMailFlow()`→`openPostSubmitQueueModal()`，Gmail 未連接時會走複製面板 `#mailCopyModal`）從一開始就只有純文字說明、沒有任何可操作的按鈕，是這次真正要補的缺口。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. **`#mailCopyModal` 新增「連接 Gmail 帳號」引導區塊**（`#mailCopyGmailPrompt`，綠色資訊列＋一顆主要按鈕，樣式沿用整個 Gmail 功能既有的綠色語彙，跟警示用的琥珀色「案件編號生產中」提示區塊視覺上區分開），文案說明連接後「之後新增案件或回信可以直接在系統內編輯並一鍵寄出，不用手動複製貼上」，讓使用者知道這不是唯一的路，只是這次因為還沒連接才走複製流程。按鈕點擊呼叫既有的 `startGmailConnectPopup()`，跟其他入口共用同一套 PKCE 彈出視窗連接流程，沒有另外發明新的連接方式。
+  2. **連接成功後直接接續同一輪寄信流程，不用使用者自己想接下來要幹嘛**：新增 `resumePostSubmitFlowAfterGmailConnect()`，掛在 `applyGmailOauthPopupResult()` 連接成功的分支裡——只要當下 `postSubmitQueue` 還存在、`mode==='copy'`（代表確實是走複製面板這條路）、且 `#mailCopyModal` 目前真的是顯示狀態（不是使用者已經關掉、只是佇列還沒被清空的殘留狀態），就把複製面板收起來、把 `queue.mode` 切成 `'gmail'`、呼叫既有的 `openPostSubmitQueueModal()`——這個函式本來就會依 `queue.mode` 決定要開哪一個彈窗，這次沒有新增任何渲染邏輯，只是讓佇列「中途換一條路」。案件與草稿內容（收件人、副本、主旨、內文）在複製面板顯示的當下就已經備妥，直接接上可編輯的 Gmail 撰寫視窗（`renderPostSubmitGmailDraft()`）即可繼續同一輪流程，不需要使用者重新操作一次「新增案件」。**這跟「發信」「回信」選單裡的「連接 Gmail 帳號」選項刻意不同**——那兩處使用者連接完還是要自己再點一次「發信」／「回信」，因為選單本身在連接當下就已經收起來、沒有殘留的草稿可以接續；這裡因為案件已經建立、佇列資料還在，直接接續體驗更好，也更貼合使用者「不知道可以用 Gmail」這個問題背後真正想要的結果（用得到 Gmail，不是只看得到一顆按鈕）。
+- 風險區塊：
+  - `resumePostSubmitFlowAfterGmailConnect()` 用 `copyModal.hidden` 當作「使用者當下真的還在看這個複製面板」的判斷依據——目前所有會關閉複製面板的路徑（`closePostSubmitCopyModal()`：關閉鈕／稍後再寄／點擊背景遮罩／完成最後一封）都會同時把 `postSubmitQueue` 設回 `null`，所以理論上不會出現「面板已關閉、但 `postSubmitQueue.mode` 還是 `'copy'`」這種殘留狀態；這個 `hidden` 檢查是額外的一層保守防呆，即使之後有新路徑忘記清空佇列，也不會在使用者已經離開這個畫面、去做別的事情時，被連接 Gmail 這個動作意外彈出一個他沒有預期的撰寫視窗蓋過去。
+  - 這次沒有觸碰 `openMailComposerMenu()`／`openReplyMethodChooser()` 這兩個既有入口的「連接 Gmail 帳號」選項——那兩處本來就已經有清楚的引導文字與按鈕，範圍精準只針對這次使用者附圖點名、真正缺少引導的複製面板。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 區塊抽出後用 `node --check` 語法檢查通過；`node --test backend/test/*.test.mjs` 39/39 全過（這次改動沒有觸及 `backend/`）。
+  - 用本機 Node 靜態伺服器＋ Browser pane 對真實頁面做隔離測試（stub `sheetApi`／`startGmailConnectPopup`，沒有真的打任何網路請求）：①確認 `#mailCopyGmailPrompt`／`#mailCopyConnectGmail` 兩個元素正確存在於 DOM、文案正確、預設不隱藏；②點擊按鈕正確呼叫 `startGmailConnectPopup()`；③直接呼叫 `resumePostSubmitFlowAfterGmailConnect()` 驗證四種情境——完全沒有佇列時安全不做任何事、佇列存在但 `mode` 不是 `'copy'` 時安全不做任何事並維持原本模式、複製面板已經是隱藏狀態時安全不做任何事（不會意外彈出撰寫視窗）、以及真正的情境（佇列在 copy 模式且複製面板可見）正確把複製面板收起來、把 Gmail 撰寫視窗打開、`queue.mode` 正確變成 `'gmail'`、視窗內容正確依草稿資料渲染（主旨欄位正確顯示「主旨」而不是「案件編號生產中...」、寄出按鈕正確可見）；④完整模擬真實的 OAuth 回呼路徑（呼叫 `applyGmailOauthPopupResult()` 帶正確的 code／state，`sheetApi` 的 `gmailOauthConnect` 回傳成功），確認連接狀態正確更新、複製面板正確收起、Gmail 撰寫視窗正確開啟、佇列模式正確切換——不是只測試抽出來的輔助函式本身，也測過真正會被呼叫到的完整路徑；⑤淺色／深色模式下用 `getComputedStyle` 確認引導區塊與按鈕的背景／邊框／文字顏色都正確套用、兩種模式視覺上清楚可辨識。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際跑一次「新增案件→Gmail 未連接跳出複製面板→點擊連接→完成 Google 授權→自動接續進入可編輯撰寫視窗→寄出」的完整端對端流程，這次的驗證完全依賴本機隔離環境對真實頁面 stub 網路請求跑過的完整流程。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次沒有修改 `worker/` 任何檔案。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-21 Asia/Taipei（次新）— 確認三種回信模式都已共用同一套討論串分組修正；「回信」按鈕補上事先檢查 Gmail 連接狀態，避免整封信寫完才在最後一步失敗
 
 - 修改目的：延續上一則「設計師收不到自己那封回信」的修正，使用者接續問兩件事：①「修改回覆、設計師回覆、一般回覆」是不是都已經正確歸進同一個討論串、不會再變成獨立的「Re:」信；②要求一併修正「新增案件或回信因為沒有串接 Gmail 導致無法寄信」的問題。
 - 追查過程：

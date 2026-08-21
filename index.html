@@ -48,6 +48,11 @@
     .gmail-modal-pending-banner{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:11px;background:#fff7e6;border:1px solid #f5deac;color:#8a6d1f;font-size:12px;font-weight:850;flex:0 0 auto}
     .gmail-modal-pending-banner[hidden]{display:none!important}
     .gmail-modal-pending-banner.is-failed{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+    .mail-copy-gmail-prompt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:#eef8f2;border:1px solid #bbf7d0;color:#0f5138;font-size:12px;font-weight:750;flex:0 0 auto}
+    .mail-copy-gmail-prompt[hidden]{display:none!important}
+    .mail-copy-gmail-prompt span{flex:1 1 auto;line-height:1.5}
+    .mail-copy-gmail-prompt button{flex:0 0 auto!important;min-height:30px!important;border-radius:999px!important;padding:0 14px!important;background:var(--green)!important;color:#fff!important;border:none!important;font-size:12px!important;font-weight:900!important;cursor:pointer!important;box-shadow:none!important;white-space:nowrap}
+    .mail-copy-gmail-prompt button:hover{filter:brightness(1.05)}
     .mail-copy-fields{display:grid;gap:12px}
     .mail-copy-field{display:grid;gap:6px}
     .mail-copy-field-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:850;color:#66736d}
@@ -6501,6 +6506,8 @@
     html[data-theme="dark"] .gmail-modal-queue-progress{color:#9ce0bd!important}
     html[data-theme="dark"] .gmail-modal-pending-banner{background:#3a2f14!important;border-color:#8a6d1f!important;color:#f2cf7a!important}
     html[data-theme="dark"] .gmail-modal-pending-banner.is-failed{background:#2a1c1c!important;border-color:#5a3535!important;color:#ffaaa5!important}
+    html[data-theme="dark"] .mail-copy-gmail-prompt{background:#1c2e26!important;border-color:#3d6252!important;color:#9ce0bd!important}
+    html[data-theme="dark"] .mail-copy-gmail-prompt button{background:#4f9f78!important;color:#07140e!important}
     html[data-theme="dark"] .mail-copy-field-head{color:#bdc1c6!important}
     html[data-theme="dark"] .mail-copy-fields textarea{background:#1b1d20!important;color:#f1f3f4!important;border-color:#454a4f!important}
     html[data-theme="dark"] .mail-copy-fields textarea:focus{outline-color:rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
@@ -7067,6 +7074,10 @@
       <button type="button" class="secondary revision-modal-close ui-close-button" id="mailCopyModalClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
     </div>
     <div class="gmail-modal-body">
+      <div class="mail-copy-gmail-prompt" id="mailCopyGmailPrompt">
+        <span>連接 Gmail 帳號後，之後新增案件或回信可以直接在系統內編輯並一鍵寄出，不用手動複製貼上。</span>
+        <button type="button" id="mailCopyConnectGmail">連接 Gmail 帳號</button>
+      </div>
       <div class="gmail-modal-pending-banner" id="mailCopyQueuePending" hidden></div>
       <div class="mail-copy-fields">
         <div class="mail-copy-field">
@@ -11800,9 +11811,22 @@ async function applyGmailOauthPopupResult(result={}){
     gmailConnectionState={connected:true,gmailAddress:data.gmailAddress||''};
     gmailConnectionChecked=true;
     setSync(`已連接 Gmail：${data.gmailAddress||''}`,false,3000);
+    resumePostSubmitFlowAfterGmailConnect();
   }catch(err){
     setSync(`Gmail 連接失敗：${err.message}`,true);
   }
+}
+/** Gmail 連接成功那一刻，如果使用者當下正卡在「案件已建立，複製信件內容寄出」這個複製面板
+ * （因為送出當下 Gmail 還沒連接，才走到這個備援畫面），直接切換成可編輯的 Gmail 撰寫視窗接續
+ * 同一輪寄信流程——案件與草稿內容都已經備好，直接接續比「連接完、使用者自己想接下來要幹嘛」
+ * 體驗更好。跟「發信」／「回信」選單裡的「連接 Gmail 帳號」選項刻意不同：那兩處使用者連接完
+ * 還是要自己再點一次「發信」／「回信」，因為選單本身在連接完就已經收起來、沒有殘留的草稿可以接續。 */
+function resumePostSubmitFlowAfterGmailConnect(){
+  const queue=postSubmitQueue; if(!queue||queue.mode!=='copy')return;
+  const copyModal=$('#mailCopyModal'); if(!copyModal||copyModal.hidden)return;
+  copyModal.hidden=true;
+  queue.mode='gmail';
+  openPostSubmitQueueModal();
 }
 async function startGmailConnectPopup(){
   if(!requireAccess('request.mail','此帳號沒有發送信件權限'))return;
@@ -12598,6 +12622,7 @@ $('#mailCopyMailto')?.addEventListener('click',()=>{
   window.location.href=mailComposeUrl({...draft.row,id:draft.id});
   setSync('已開啟預設郵件 App 撰寫視窗');
 });
+$('#mailCopyConnectGmail')?.addEventListener('click',()=>startGmailConnectPopup());
 document.querySelectorAll('#mailCopyModal .mail-copy-btn[data-copy-target]').forEach(button=>{
   button.addEventListener('click',()=>{
     const field=$(`#${button.dataset.copyTarget}`);
