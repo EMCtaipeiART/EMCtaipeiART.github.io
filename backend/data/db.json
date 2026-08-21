@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2255,
+  "revision": 2256,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-21T03:50:16.550Z",
+  "updatedAt": "2026-08-21T03:50:24.310Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -986,8 +986,7 @@
         {"案件編號":"26080080","修改次數":"1","建立日期":"2026/08/20 18:41:31","修改日期":"2026-08-20","修改內容":"微調文字內容及大小","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260819_ANKER_全館促銷_流量_1.png\",\"260819_ANKER_全館促銷_流量_2.png\",\"260819_ANKER_全館促銷_流量_3.png\"]"},
         {"案件編號":"26080117","修改次數":"0","建立日期":"2026/08/21 10:19:52","修改日期":"2026/08/21 10:19:52","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 10:19:52","圖片連結":"[{\"fileName\":\"260821_DJI_七月體驗會花絮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1icXRziLIcVWJXhQneHHsW1v2WrKMxQA_=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 10:19:52"},
         {"案件編號":"26080088","修改次數":"0","建立日期":"2026/08/21 10:44:26","修改日期":"2026/08/21 10:44:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 10:44:26","圖片連結":"[{\"fileName\":\"260824_Epson_社群貼文_中秋連假出國_A01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nWJMkJ7vxeOOJaWaRyttUfG8EaPJYazy=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_中秋連假出國_A02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1OuHQN1jm4oco5DYzJPAkO4WGrC7Brf64=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_中秋連假出國_A03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TWZsKQOwWgUDPHXzZ_uKBC14SoRj2we9=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_中秋連假出國_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eNrys3aDbi2ayPBj9VsFHwMS8Bx8Y1Fb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 10:44:26"},
-        {"案件編號":"26080085","修改次數":"0","建立日期":"2026/08/21 10:50:09","修改日期":"2026/08/21 10:50:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 10:50:09","圖片連結":"[{\"fileName\":\"260824_Epson_社群貼文_開學季_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jcZfhUlpJSxLkP5ADvsDlgfv9-Vc6S71=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sN8uU85MSWKmtqSDxfrMcenzb3SrSlDX=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Mr4rlFlBukF-PPGrPl1fk1lR1Cz52PML=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LC8_OVpc0-BzbwmOfwrm3WSIAlGutNr7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 10:51:10"},
-        {"案件編號":"26080120","修改次數":"0","建立日期":"2026/08/21 11:26:09","修改日期":"2026/08/21 11:26:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 11:26:09","圖片連結":"[{\"fileName\":\"260821_DJI_七月體驗會花絮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VwgI8SN6rc_Hxv5m9yDA4sRHOHjZKr-l=w1600\"},{\"fileName\":\"260821_DJI_七月體驗會花絮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G88m4XvcEzWT9codObao1WCZMfknbpf9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 11:28:09"}
+        {"案件編號":"26080085","修改次數":"0","建立日期":"2026/08/21 10:50:09","修改日期":"2026/08/21 10:50:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 10:50:09","圖片連結":"[{\"fileName\":\"260824_Epson_社群貼文_開學季_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jcZfhUlpJSxLkP5ADvsDlgfv9-Vc6S71=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sN8uU85MSWKmtqSDxfrMcenzb3SrSlDX=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Mr4rlFlBukF-PPGrPl1fk1lR1Cz52PML=w1600\"},{\"fileName\":\"260824_Epson_社群貼文_開學季_B.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LC8_OVpc0-BzbwmOfwrm3WSIAlGutNr7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 10:51:10"}
       ]
     },
     "補充資料連結": {
