@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2414,
+  "revision": 2415,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-21T10:58:39.772Z",
+  "updatedAt": "2026-08-21T10:59:05.910Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1003,7 +1003,7 @@
         {"案件編號":"26080084","修改次數":"1","建立日期":"2026/08/21 18:17:40","修改日期":"2026-08-21","修改內容":"針對視覺、標題提出修改，需緊扣「iPhone換機潮」、色系扣合i18「酒紅色、紫色」調整","修改人":"羅珮云","確認修正日":"","待修改圖片":""},
         {"案件編號":"26080122","修改次數":"0","建立日期":"2026/08/21 18:36:54","修改日期":"2026/08/21 18:36:54","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/21 18:36:54","圖片連結":"[{\"fileName\":\"260814_金士頓_8月IPC_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1t1qRPw1ka2W_ip-ZHSmdZTodTjwqNEWm=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1h_fUOXY5E5RCw6k_7ZWzpJn3lyR1f4Wx=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_EN.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TPcXJ5FHHtINnnKTMcKXZVrr35m-smXl=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ys-UUYW9MrWNCV0rwZSoALKm0KnfGaFN=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_cW7sCwUZUgAkz6TIt2fsmyoARTjdEcZ=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_EN.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1aOTZJOjpI1lCCItNmqMa1YHka953q48R=w1600\"},{\"fileName\":\"260814_金士頓_8月IPC_JP.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1C0OesQncM1sNbcNct2xEO_EU4EcrKXW-=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/21 18:39:41"},
         {"案件編號":"26080077","修改次數":"1","建立日期":"2026/08/21 18:44:50","修改日期":"2026-08-21","修改內容":"修改大標題，與與Apple換新相關","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260817_ANKER_A1695_動態素材_pchome.jpg\"]"},
-        {"案件編號":"26080123","修改次數":"0","建立日期":"2026/08/21 18:56:16","修改日期":"2026/08/21 18:56:16","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/21 18:56:16","圖片連結":"[{\"fileName\":\"260818_金士頓_企業儲存方案_JP.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xN2itsqWS084qQ1GCErD1OemnG1k8Ezf=w1600\"},{\"fileName\":\"260818_金士頓_企業儲存方案_JP.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ceqABwaFOzSvegxo7hgBV0hPJSAcLug9=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/21 18:57:14"}
+        {"案件編號":"26080123","修改次數":"0","建立日期":"2026/08/21 18:56:16","修改日期":"2026/08/21 18:56:16","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/21 18:56:16","圖片連結":"[{\"fileName\":\"260818_金士頓_企業儲存方案_JP.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xN2itsqWS084qQ1GCErD1OemnG1k8Ezf=w1600\"},{\"fileName\":\"260818_金士頓_企業儲存方案_JP.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ceqABwaFOzSvegxo7hgBV0hPJSAcLug9=w1600\"},{\"fileName\":\"260818_金士頓_企業儲存方案_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pxf8znaEttzIioyfVMuSHCnlz7IaMqU8=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/21 18:59:05"}
       ]
     },
     "補充資料連結": {
