@@ -685,6 +685,7 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /\.quarter-performance-item \.quarter-performance-value\{color:#101828\}/);
   assert.doesNotMatch(dashboard, /客戶工作量 TOP10|TOP10 客戶/);
   assert.doesNotMatch(dashboard, /filter\(\(\[name\]\)=>name!=='未分類'\)\.slice\(0,10\)/);
+  assert.doesNotMatch(dashboard, /case-section-kicker|ITEM DETAIL|MONTHLY PROJECTS|MONTHLY CHANGE|YEARLY WEIGHT|CLIENT SHARE/);
   assert.match(dashboard, /function caseSvgDonutSegment\(/);
   assert.match(dashboard, /segment=caseSvgDonutSegment\(cx,cy,outerRadius,innerRadius,startAngle,endAngle,row\.color\)/);
   assert.match(dashboard, /percentLabels\+=`<text[^`]+fill="#fff">\$\{\(ratio\*100\)\.toFixed\(1\)\}%<\/text>`/);

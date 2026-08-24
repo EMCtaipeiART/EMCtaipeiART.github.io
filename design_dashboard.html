@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-08-24T16:20:00+08:00" />
-<meta name="app-version" content="20260824-quarter-current-month-22" />
+<meta name="last-modified" content="2026-08-24T16:35:00+08:00" />
+<meta name="app-version" content="20260824-case-kickers-removed-23" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -268,7 +268,6 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 /* Case center: unified project operations and analytics workspace. */
 .enterprise .case-center-page{--case-line:#e7ece9;--case-soft:#f5f8f6;--case-ink:#17211c;--case-green:#0b8f55;padding-bottom:8px}
 .enterprise .case-center-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px;padding:2px 2px 0}
-.enterprise .case-eyebrow,.enterprise .case-section-kicker{display:block;color:#0b8f55;font-size:9px;font-weight:900;letter-spacing:.16em;line-height:1.2}
 .enterprise .case-center-heading h1{margin:5px 0 0;color:#15231b;font-size:27px;font-weight:900;letter-spacing:-.035em;line-height:1.15}
 .enterprise .case-center-heading p{margin:6px 0 0;color:#667085;font-size:12px;font-weight:650}
 .enterprise .case-heading-meta{min-height:38px;padding:0 12px;border:1px solid #dbe5df;border-radius:8px;background:rgba(255,255,255,.82);display:flex;align-items:center;gap:8px;color:#667085;font-size:11px;font-weight:750;white-space:nowrap}
@@ -317,7 +316,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 .enterprise .case-share-legend{display:grid;gap:11px;align-content:center;min-width:0}.enterprise .case-share-item{position:relative;min-width:0}.enterprise .case-share-item::after{content:'';position:absolute;top:15px;width:11px;height:1px;background:#cbd5cf}.enterprise .case-share-legend.left .case-share-item{text-align:right}.enterprise .case-share-legend.left .case-share-item::after{right:-12px}.enterprise .case-share-legend.right .case-share-item::after{left:-12px}.enterprise .case-share-item b,.enterprise .case-share-item span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.enterprise .case-share-item b{color:#344054;font-size:9.5px;font-weight:900}.enterprise .case-share-item span{margin-top:3px;color:#667085;font-size:9px;font-weight:800}.enterprise .case-share-item i{width:7px;height:7px;margin-inline:3px;border-radius:999px;display:inline-block}
 
 /* Case center legibility and icon refinement. */
-.enterprise .case-eyebrow,.enterprise .case-section-kicker{font-size:10px}.enterprise .case-center-heading p{font-size:13px}.enterprise .case-heading-meta{font-size:12px}.enterprise .case-panel-head h2{font-size:19px}.enterprise .case-panel-head.compact h2{font-size:18px}.enterprise .case-panel-head p{font-size:12px}.enterprise .case-detail-total span,.enterprise .case-year-metric span{font-size:10px}.enterprise .case-group-top{grid-template-columns:38px minmax(0,1fr) auto}.enterprise .case-group-icon{width:38px;height:38px}.enterprise .case-group-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.enterprise .case-group-icon svg .solid{fill:currentColor;stroke:none}.enterprise .case-group-title b{font-size:14px}.enterprise .case-group-title span{font-size:11px}.enterprise .case-group-total b{font-size:24px}.enterprise .case-group-total span{font-size:10px}.enterprise .case-detail-row{min-height:34px;font-size:12px}.enterprise .case-detail-row b{font-size:11.5px}.enterprise .case-detail-empty{font-size:12px}.enterprise .case-table{font-size:12px}.enterprise .case-table th{height:42px;font-size:11px}.enterprise .case-table td{height:57px}.enterprise .case-status{height:25px;font-size:10.5px}.enterprise .case-table-key{font-size:10.5px}.enterprise .case-change-total{font-size:11px}.enterprise .case-change-head{height:30px;font-size:9.5px}.enterprise .case-change-row{min-height:35px;font-size:10.5px}.enterprise .case-year-metric b{font-size:21px}
+.enterprise .case-center-heading p{font-size:13px}.enterprise .case-heading-meta{font-size:12px}.enterprise .case-panel-head h2{font-size:19px}.enterprise .case-panel-head.compact h2{font-size:18px}.enterprise .case-panel-head p{font-size:12px}.enterprise .case-detail-total span,.enterprise .case-year-metric span{font-size:10px}.enterprise .case-group-top{grid-template-columns:38px minmax(0,1fr) auto}.enterprise .case-group-icon{width:38px;height:38px}.enterprise .case-group-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.enterprise .case-group-icon svg .solid{fill:currentColor;stroke:none}.enterprise .case-group-title b{font-size:14px}.enterprise .case-group-title span{font-size:11px}.enterprise .case-group-total b{font-size:24px}.enterprise .case-group-total span{font-size:10px}.enterprise .case-detail-row{min-height:34px;font-size:12px}.enterprise .case-detail-row b{font-size:11.5px}.enterprise .case-detail-empty{font-size:12px}.enterprise .case-table{font-size:12px}.enterprise .case-table th{height:42px;font-size:11px}.enterprise .case-table td{height:57px}.enterprise .case-status{height:25px;font-size:10.5px}.enterprise .case-table-key{font-size:10.5px}.enterprise .case-change-total{font-size:11px}.enterprise .case-change-head{height:30px;font-size:9.5px}.enterprise .case-change-row{min-height:35px;font-size:10.5px}.enterprise .case-year-metric b{font-size:21px}
 
 /* Case center v14: aligned cards, compact metrics, and chart-level share labels. */
 .enterprise .case-panel-head p{font-size:14px}.enterprise .case-heading-meta{font-size:14px}.enterprise .case-detail-total b{font-size:29px}.enterprise .case-group-title b{font-size:16px}.enterprise .case-group-title span{font-size:13px}.enterprise .case-group-total b{font-size:27px}.enterprise .case-group-total span{font-size:12px}.enterprise .case-detail-row{min-height:38px;font-size:14px}.enterprise .case-detail-row b{font-size:13.5px}.enterprise .case-detail-empty{font-size:14px}.enterprise .case-table{font-size:14px}.enterprise .case-table th{height:46px;font-size:13px}.enterprise .case-table td{height:61px}.enterprise .case-table-key{font-size:12.5px}.enterprise .case-status{height:28px;font-size:12.5px}.enterprise .case-table th:nth-child(1){width:13%}.enterprise .case-table th:nth-child(2){width:11%}.enterprise .case-table th:nth-child(3){width:27%}.enterprise .case-table th:nth-child(4){width:19%}.enterprise .case-table th:nth-child(5){width:6%}.enterprise .case-table th:nth-child(6){width:12%}.enterprise .case-table th:nth-child(7){width:12%}.enterprise .case-table th:nth-child(5),.enterprise .case-table td:nth-child(5),.enterprise .case-table th:nth-child(6),.enterprise .case-table td:nth-child(6){padding-left:7px;padding-right:4px;text-align:left}.enterprise .case-table td:nth-child(5){color:#344054;font-weight:900}.enterprise .case-score{min-width:48px;padding:5px 8px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;background:#f1efff;color:#6941c6;font-size:13px;font-weight:900}
@@ -397,11 +396,11 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
       <div class="case-center-layout">
         <div class="case-center-left">
           <section class="card case-detail-panel">
-            <header class="case-panel-head"><div><span class="case-section-kicker">ITEM DETAIL</span><h2>項目細節</h2><p>依平面、影音與採購統計本月數量</p></div><div class="case-detail-total"><span>細項總量</span><b id="caseDetailGrandTotal">0</b></div></header>
+            <header class="case-panel-head"><div><h2>項目細節</h2><p>依平面、影音與採購統計本月數量</p></div><div class="case-detail-total"><span>細項總量</span><b id="caseDetailGrandTotal">0</b></div></header>
             <div class="case-detail-groups" id="caseDetailGroups"></div>
           </section>
           <section class="card case-list-panel">
-            <header class="case-panel-head case-list-head"><div><span class="case-section-kicker">MONTHLY PROJECTS</span><h2>案件列表</h2><p id="caseListSummary">共 0 件案件</p></div><div class="case-table-key"><span><i class="dot-running"></i>執行中</span><span><i class="dot-review"></i>過稿中</span><span><i class="dot-done"></i>已完成</span></div></header>
+            <header class="case-panel-head case-list-head"><div><h2>案件列表</h2><p id="caseListSummary">共 0 件案件</p></div><div class="case-table-key"><span><i class="dot-running"></i>執行中</span><span><i class="dot-review"></i>過稿中</span><span><i class="dot-done"></i>已完成</span></div></header>
             <div class="case-table-wrap">
               <table class="case-table">
                 <thead><tr><th>案件編號</th><th>客戶別</th><th>專案名稱</th><th>項目細節</th><th class="num">數量</th><th class="num">加權分數</th><th>狀態</th></tr></thead>
@@ -412,17 +411,17 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
         </div>
         <aside class="case-center-right" aria-label="案件分析">
           <section class="card case-insight-panel case-change-panel">
-            <header class="case-panel-head compact"><div><span class="case-section-kicker">MONTHLY CHANGE</span><h2>近況增減</h2><p id="caseChangeSubtitle">客戶別加權分數比較</p></div><button class="case-export-btn" id="downloadCaseChangeSvg" type="button" aria-label="下載近況增減 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
+            <header class="case-panel-head compact"><div><h2>近況增減</h2><p id="caseChangeSubtitle">客戶別加權分數比較</p></div><button class="case-export-btn" id="downloadCaseChangeSvg" type="button" aria-label="下載近況增減 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
             <div class="case-change-head"><span>客戶別</span><span id="casePrevMonthLabel">上月</span><span id="caseCurrentMonthLabel">本月</span><span>增減</span></div>
             <div class="case-change-list" id="caseChangeList"></div>
             <div class="case-change-summary"><b>加總</b><span id="caseChangePrevTotal">0</span><span id="caseChangeCurrentTotal">0</span><span id="caseChangeDifference">0</span></div>
           </section>
           <section class="card case-insight-panel case-year-panel">
-            <header class="case-panel-head compact"><div><span class="case-section-kicker">YEARLY WEIGHT</span><h2>年度統計</h2><p id="caseYearRange">近 13 個月加權數量</p></div><button class="case-export-btn" id="downloadCaseYearSvg" type="button" aria-label="下載年度統計 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
+            <header class="case-panel-head compact"><div><h2>年度統計</h2><p id="caseYearRange">近 13 個月加權數量</p></div><button class="case-export-btn" id="downloadCaseYearSvg" type="button" aria-label="下載年度統計 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
             <div class="case-year-chart" aria-label="去年同月至今年同月加權數量樹狀圖"><canvas id="caseYearChart"></canvas></div>
           </section>
           <section class="card case-insight-panel case-share-panel">
-            <header class="case-panel-head compact"><div><span class="case-section-kicker">CLIENT SHARE</span><h2>專案佔比</h2><p>本月客戶別工作量百分比</p></div><button class="case-export-btn" id="downloadCaseShareSvg" type="button" aria-label="下載專案佔比 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
+            <header class="case-panel-head compact"><div><h2>專案佔比</h2><p>本月客戶別工作量百分比</p></div><button class="case-export-btn" id="downloadCaseShareSvg" type="button" aria-label="下載專案佔比 SVG 圖檔"><svg class="icon"><use href="#i-download"/></svg>下載圖檔</button></header>
             <div class="case-share-layout"><div class="case-share-chart"><canvas id="caseShareChart"></canvas><div class="case-share-center"><b id="caseShareClients">0</b><span>客戶</span></div></div><div class="case-share-legend" id="caseShareLegend"></div></div>
           </section>
         </aside>
