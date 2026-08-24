@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2522,
+  "revision": 2523,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-24T10:56:27.753Z",
+  "updatedAt": "2026-08-24T10:56:32.718Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1025,7 +1025,7 @@
         {"案件編號":"26080134","修改次數":"0","建立日期":"2026/08/24 18:26:13","修改日期":"2026/08/24 18:26:13","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:26:13","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LQdASdG5lgz6jvJz2moRQtipy4jWLfcu=w1600\"},{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1N2DZd0eGuqPCk480VpMWcxCIHi_OVUJv=w1600\"},{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Dq31AJ-esNeV8_EPsIp70XA3mIpGMJgs=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:40:11"},
         {"案件編號":"26080135","修改次數":"0","建立日期":"2026/08/24 18:27:43","修改日期":"2026/08/24 18:27:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:27:43","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YSPEg1s7DDGbhPI8nczGud6_dGv4WozU=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:27:43"},
         {"案件編號":"26080136","修改次數":"0","建立日期":"2026/08/24 18:30:47","修改日期":"2026/08/24 18:30:47","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:30:47","圖片連結":"[{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BlKK7ijF9VGbUXTbvVdCBJMSuISUZ2rB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:30:47"},
-        {"案件編號":"26080087","修改次數":"0","建立日期":"2026/08/24 18:56:24","修改日期":"2026/08/24 18:56:24","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/24 18:56:24","圖片連結":"[{\"fileName\":\"260824_ANKER_全館促銷_轉換_蝦皮_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1h4DDIdmw2a2S64w7F3ZBrS2JHIqwE3Rx=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 18:56:24"}
+        {"案件編號":"26080087","修改次數":"0","建立日期":"2026/08/24 18:56:24","修改日期":"2026/08/24 18:56:24","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/24 18:56:24","圖片連結":"[{\"fileName\":\"260824_ANKER_全館促銷_轉換_蝦皮_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1h4DDIdmw2a2S64w7F3ZBrS2JHIqwE3Rx=w1600\"},{\"fileName\":\"260824_ANKER_全館促銷_轉換_momo_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ZrDUomhmj9eAC9200MVdzI4blifqmrJM=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 18:56:32"}
       ]
     },
     "補充資料連結": {
