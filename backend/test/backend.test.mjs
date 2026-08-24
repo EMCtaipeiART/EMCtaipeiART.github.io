@@ -650,6 +650,22 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(dashboard, /歷史 JSON 資料庫，已與目前 database 對齊/);
 });
 
+test('dashboard follows the active designer directory and exposes quarterly performance', async () => {
+  const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
+  assert.match(dashboard, /function configureDesignerDirectory\(rows=\[\]\)/);
+  assert.match(dashboard, /row\['設計師顯示'\]/);
+  assert.match(dashboard, /configureDesignerDirectory\(currentSettings\)/);
+  assert.match(dashboard, /designerDirectory\.map\(row=>`<option value=/);
+  assert.match(dashboard, /data-page="quarterly"/);
+  assert.match(dashboard, /id="page-quarterly"/);
+  assert.match(dashboard, /id="analysisGraphicQuarterChart"/);
+  assert.match(dashboard, /id="analysisVideoQuarterChart"/);
+  assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'平面'/);
+  assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'影音'/);
+  assert.doesNotMatch(dashboard, /客戶工作量 TOP10|TOP10 客戶/);
+  assert.doesNotMatch(dashboard, /filter\(\(\[name\]\)=>name!=='未分類'\)\.slice\(0,10\)/);
+});
+
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
   const app = await fixture();
   t.after(() => app.close());

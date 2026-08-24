@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="last-modified" content="2026-08-24T23:30:00+08:00" />
-<meta name="app-version" content="20260825-case-svg-compat-16" />
+<meta name="last-modified" content="2026-08-24T14:45:00+08:00" />
+<meta name="app-version" content="20260824-designer-directory-quarterly-17" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -127,6 +127,16 @@
   .type-panel .legend{width:100%;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .type-panel .detail-pill{height:27px;padding:0 9px;font-size:10px}
 }
+.analysis-rank-list{max-height:362px;padding-right:8px;overflow-y:auto;scrollbar-gutter:stable;scrollbar-width:thin}
+.analysis-bar-row{min-height:25px}
+.quarterly-page .analysis-quarter-hover{height:238px;min-height:238px;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.quarter-performance-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(180px,.65fr);gap:18px;align-items:center}
+.quarter-performance-chart{position:relative;height:248px}
+.quarter-performance-legend{display:grid;align-content:center;gap:8px;max-height:248px;overflow-y:auto;scrollbar-gutter:stable}
+.quarter-performance-item{display:grid;grid-template-columns:9px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:34px;padding:6px 0;border-bottom:1px solid #edf1ef}
+.quarter-performance-item:last-child{border-bottom:0}.quarter-performance-item i{width:8px;height:8px;border-radius:999px}
+.quarter-performance-person{min-width:0}.quarter-performance-person b,.quarter-performance-person small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.quarter-performance-person b{color:#344054;font-size:12px}.quarter-performance-person small{margin-top:2px;color:#98a2b3;font-size:10px;font-weight:750}.quarter-performance-value{text-align:right;color:#101828;font-size:12px;font-weight:900;white-space:nowrap}.quarter-performance-empty{min-height:120px;display:grid;place-items:center;color:#98a2b3;font-size:12px;font-weight:750;text-align:center}
+@media(max-width:620px){.quarter-performance-layout{grid-template-columns:1fr}.quarterly-page .analysis-quarter-hover{height:220px;min-height:220px}.quarter-performance-chart{height:230px}.quarter-performance-legend{max-height:none}}
 </style>
 <style>
 :root{--side:224px;--top:68px;--card-radius:8px}
@@ -339,7 +349,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
       <div class="notification-popover" id="dashboardNotificationPopover" hidden role="menu" aria-label="設計師提醒"><div class="notification-head"><b>提醒</b><span id="dashboardNotificationSummary">目前沒有提醒</span></div><div class="notification-list" id="dashboardNotificationList"></div></div>
     </div>
   </header>
-  <aside class="nav-side" aria-label="側邊選單"><div class="side-nav"><nav class="topnav" aria-label="主選單"><a class="active" href="#" data-page="dashboard"><svg class="icon"><use href="#i-dashboard"/></svg>設計總覽</a><a href="#" data-page="analysis"><svg class="icon"><use href="#i-chart"/></svg>分析中心</a><a href="#" data-page="cases"><svg class="icon"><use href="#i-folder"/></svg>案件中心</a></nav><a class="side-settings" href="#"><svg class="icon"><use href="#i-settings"/></svg>系統設定</a></div></aside>
+  <aside class="nav-side" aria-label="側邊選單"><div class="side-nav"><nav class="topnav" aria-label="主選單"><a class="active" href="#" data-page="dashboard"><svg class="icon"><use href="#i-dashboard"/></svg>設計總覽</a><a href="#" data-page="analysis"><svg class="icon"><use href="#i-chart"/></svg>分析中心</a><a href="#" data-page="quarterly"><svg class="icon"><use href="#i-calendar"/></svg>季度分析</a><a href="#" data-page="cases"><svg class="icon"><use href="#i-folder"/></svg>案件中心</a></nav><a class="side-settings" href="#"><svg class="icon"><use href="#i-settings"/></svg>系統設定</a></div></aside>
   <div class="hidden-controls" aria-hidden="true"><select id="yearFilter"></select><select id="monthFilter"></select><div id="sourceNote">資料來源：歷史 JSON 資料庫</div></div>
   <main class="main">
     <section class="page active" id="page-dashboard">
@@ -361,16 +371,21 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <footer class="dashboard-footer">© 2026 EMC Design Team. All rights reserved.</footer>
     </section>
     <section class="page analysis-page" id="page-analysis">
-      <div class="analysis-heading"><div><h1>分析中心</h1><p>客戶、年度、季度分析</p></div><div class="analysis-period"><svg class="icon icon-sm"><use href="#i-calendar"/></svg><span id="analysisPeriod">讀取中</span></div></div>
+      <div class="analysis-heading"><div><h1>分析中心</h1><p>客戶與年度工作量分析</p></div><div class="analysis-period"><svg class="icon icon-sm"><use href="#i-calendar"/></svg><span id="analysisPeriod">讀取中</span></div></div>
       <section class="analysis-kpis" aria-label="本月分析摘要">
         <article class="card analysis-kpi" style="--accent:var(--analysis-blue)"><div class="analysis-kpi-main"><div class="analysis-kpi-icon"><svg class="icon"><use href="#i-users"/></svg></div><div><div class="analysis-kpi-label">客戶數量</div><div class="analysis-kpi-value"><span id="analysisClientCount">0</span><small>個</small></div></div></div><p class="analysis-kpi-delta">較上月 <b id="analysisClientDelta" class="flat">—</b></p></article>
         <article class="card analysis-kpi" style="--accent:var(--analysis-orange)"><div class="analysis-kpi-main"><div class="analysis-kpi-icon"><svg class="icon"><use href="#i-folder-solid"/></svg></div><div><div class="analysis-kpi-label">累件總數</div><div class="analysis-kpi-value"><span id="analysisQtyTotal">0</span><small>件</small></div></div></div><p class="analysis-kpi-delta">較上月 <b id="analysisQtyDelta" class="flat">—</b></p></article>
         <article class="card analysis-kpi" style="--accent:var(--analysis-purple)"><div class="analysis-kpi-main"><div class="analysis-kpi-icon"><svg class="icon"><use href="#i-star"/></svg></div><div><div class="analysis-kpi-label">總加權分數</div><div class="analysis-kpi-value"><span id="analysisScoreTotal">0</span><small>分</small></div></div></div><p class="analysis-kpi-delta">較上月 <b id="analysisScoreDelta" class="flat">—</b></p></article>
         <article class="card analysis-kpi" style="--accent:var(--analysis-green)"><div class="analysis-kpi-main"><div class="analysis-kpi-icon"><svg class="icon"><use href="#i-refresh"/></svg></div><div><div class="analysis-kpi-label">整體修改率</div><div class="analysis-kpi-value"><span id="analysisRevisionTotal">0</span><small>次</small></div></div></div><p class="analysis-kpi-delta">較上月 <b id="analysisRevisionDelta" class="flat">—</b></p></article>
       </section>
-      <section class="analysis-block"><header class="analysis-section-head"><h2>客戶分析</h2><p>依客戶別檢視數量與品牌工作量</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>客戶工作量 TOP10</h3><small>點選長條可連動右側品牌占比</small></div></div><div class="analysis-rank-list" id="analysisClientRank"></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>品牌工作量占比</h3><small>TOP10 客戶的項目細節占比</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisBrandChart"></canvas></div><div class="analysis-data-column"><div class="analysis-center-control"><div class="analysis-switch-wrap"><div class="analysis-switch"><button id="analysisBrandPrev" type="button" aria-label="上一個客戶">‹</button><button class="analysis-switch-label" id="analysisBrandName" type="button" aria-haspopup="listbox" aria-expanded="false">TOP 1・—</button><button id="analysisBrandNext" type="button" aria-label="下一個客戶">›</button></div><div class="analysis-option-menu" id="analysisBrandMenu" role="listbox" hidden></div></div></div><div class="analysis-legend" id="analysisBrandLegend"></div></div></div></article></div></section>
+      <section class="analysis-block"><header class="analysis-section-head"><h2>客戶分析</h2><p>依客戶別檢視數量與品牌工作量</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>客戶工作量</h3><small>前 10 名直接顯示，第 11 名起可向下捲動查看</small></div></div><div class="analysis-rank-list" id="analysisClientRank"></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>品牌工作量占比</h3><small>所選客戶的項目細節占比</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisBrandChart"></canvas></div><div class="analysis-data-column"><div class="analysis-center-control"><div class="analysis-switch-wrap"><div class="analysis-switch"><button id="analysisBrandPrev" type="button" aria-label="上一個客戶">‹</button><button class="analysis-switch-label" id="analysisBrandName" type="button" aria-haspopup="listbox" aria-expanded="false">—</button><button id="analysisBrandNext" type="button" aria-label="下一個客戶">›</button></div><div class="analysis-option-menu" id="analysisBrandMenu" role="listbox" hidden></div></div></div><div class="analysis-legend" id="analysisBrandLegend"></div></div></div></article></div></section>
       <section class="analysis-block"><header class="analysis-section-head"><h2>年度分析</h2><p>彙整年度案件趨勢與項目細節</p></header><div class="analysis-split annual"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>案件數趨勢</h3><small>本年度累積案件數與前一年度比較</small></div></div><div class="analysis-chart"><canvas id="analysisAnnualChart"></canvas></div><div class="analysis-summary-grid"><div class="analysis-summary"><span>年度案件總數</span><b id="analysisYearTotal">0<small>件</small></b></div><div class="analysis-summary"><span id="analysisYearAverageLabel">平均該月案件數</span><b id="analysisYearAverage">0<small>件</small></b></div><div class="analysis-summary"><span>去年度案件總數</span><b id="analysisPrevYearTotal">0<small>件</small></b></div><div class="analysis-summary"><span id="analysisPrevYearAverageLabel">平均去年該月案件數</span><b id="analysisPrevYearAverage">0<small>件</small></b></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>年度項目占比</h3><small>占比 3% 以下的項目合併為「其他」</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisYearDetailChart"></canvas></div><div class="analysis-data-column"><div class="analysis-legend analysis-expand-legend" id="analysisYearDetailLegend"></div></div></div></article></div></section>
-      <section class="analysis-block"><header class="analysis-section-head"><h2>季度分析</h2><p>以季度觀察客戶別與工作量占比</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度工作量</h3><small>柱狀圖各季 5% 以下的品牌合併為「其他」</small></div></div><div class="quarter-workload-layout"><div class="analysis-chart compact"><canvas id="analysisQuarterChart"></canvas></div><div class="analysis-quarter-hover" id="analysisQuarterHover" role="region" aria-live="polite" aria-label="季度品牌完整明細"></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度項目占比</h3><small id="analysisQuarterSubtitle">所選季度、品牌的項目細節</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisQuarterDetailChart"></canvas></div><div class="analysis-data-column"><div class="quarter-controls" id="analysisQuarterControls"><button type="button" data-quarter="1">Q1</button><button type="button" data-quarter="2">Q2</button><button type="button" data-quarter="3">Q3</button><button type="button" data-quarter="4">Q4</button></div><div class="analysis-center-control"><div class="analysis-switch-wrap"><div class="analysis-switch"><button id="analysisQuarterBrandPrev" type="button" aria-label="上一個品牌">‹</button><button class="analysis-switch-label" id="analysisQuarterBrandName" type="button" aria-haspopup="listbox" aria-expanded="false">全部品牌</button><button id="analysisQuarterBrandNext" type="button" aria-label="下一個品牌">›</button></div><div class="analysis-option-menu" id="analysisQuarterBrandMenu" role="listbox" hidden></div></div></div><div class="analysis-legend" id="analysisQuarterDetailLegend"></div></div></div></article></div></section>
+      <footer class="analysis-footer">© 2026 EMC Design Team. All rights reserved.</footer>
+    </section>
+    <section class="page analysis-page quarterly-page" id="page-quarterly">
+      <div class="analysis-heading"><div><h1>季度分析</h1><p>從客戶工作量、項目細節與設計師分數占比掌握季度表現</p></div><div class="analysis-period"><svg class="icon icon-sm"><use href="#i-calendar"/></svg><span id="quarterlyPeriod">讀取中</span></div></div>
+      <section class="analysis-block"><header class="analysis-section-head"><h2>季度工作分布</h2><p>依季度比較客戶別與項目細節</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度工作量</h3><small>柱狀圖各季 5% 以下的品牌合併為「其他」</small></div></div><div class="quarter-workload-layout"><div class="analysis-chart compact"><canvas id="analysisQuarterChart"></canvas></div><div class="analysis-quarter-hover" id="analysisQuarterHover" role="region" aria-live="polite" aria-label="季度品牌完整明細"></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度項目占比</h3><small id="analysisQuarterSubtitle">所選季度、品牌的項目細節</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisQuarterDetailChart"></canvas></div><div class="analysis-data-column"><div class="quarter-controls" id="analysisQuarterControls"><button type="button" data-quarter="1">Q1</button><button type="button" data-quarter="2">Q2</button><button type="button" data-quarter="3">Q3</button><button type="button" data-quarter="4">Q4</button></div><div class="analysis-center-control"><div class="analysis-switch-wrap"><div class="analysis-switch"><button id="analysisQuarterBrandPrev" type="button" aria-label="上一個品牌">‹</button><button class="analysis-switch-label" id="analysisQuarterBrandName" type="button" aria-haspopup="listbox" aria-expanded="false">全部品牌</button><button id="analysisQuarterBrandNext" type="button" aria-label="下一個品牌">›</button></div><div class="analysis-option-menu" id="analysisQuarterBrandMenu" role="listbox" hidden></div></div></div><div class="analysis-legend" id="analysisQuarterDetailLegend"></div></div></div></article></div></section>
+      <section class="analysis-block"><header class="analysis-section-head"><h2>設計師季度表現</h2><p>各季以加權分數計算組內占比，快速比較人力貢獻</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>平面季度表現</h3><small>平面設計師各季加權分數占比</small></div></div><div class="quarter-performance-layout"><div class="quarter-performance-chart"><canvas id="analysisGraphicQuarterChart"></canvas></div><div class="quarter-performance-legend" id="analysisGraphicQuarterLegend"></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>影音季度表現</h3><small>影音設計師各季加權分數占比</small></div></div><div class="quarter-performance-layout"><div class="quarter-performance-chart"><canvas id="analysisVideoQuarterChart"></canvas></div><div class="quarter-performance-legend" id="analysisVideoQuarterLegend"></div></div></article></div></section>
       <footer class="analysis-footer">© 2026 EMC Design Team. All rights reserved.</footer>
     </section>
     <section class="page case-center-page" id="page-cases">
@@ -460,10 +475,25 @@ const CLOUDFLARE_WORKER_API='https://machi-design-api.machi-chen.workers.dev/api
 let raw=[],filtered=[],typeChart,trendChart,statusChart,caseShareChart,caseYearChart,userSettings={},typeTooltipData={},dashboardModificationRecords=new Map(),archiveSnapshotMeta=null;
 let archiveDashboardData={settings:[],modifications:[]};
 let caseExportState={change:null,year:null,share:null};
-let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='';
+let analysisBrandChart,analysisAnnualChart,analysisYearDetailChart,analysisQuarterChart,analysisQuarterDetailChart,analysisGraphicQuarterChart,analysisVideoQuarterChart,analysisBrandIndex=0,analysisQuarter=null,analysisQuarterBrand='全部品牌',analysisLastPeriod='',quarterLastPeriod='';
 const $=id=>document.getElementById(id);
-const DESIGNERS=['Machi','Anna','Karl','Noise','Amber','Leona'];
-const DESIGNER_GROUPS=[['平面組',['Machi','Anna','Amber','Leona']],['影音組',['Karl','Noise']]];
+const DEFAULT_DESIGNER_DIRECTORY=[
+  {name:'Machi',displayName:'Machi',group:'平面',rotation:4},{name:'Anna',displayName:'Anna',group:'平面',rotation:2},{name:'Amber',displayName:'Amber',group:'平面',rotation:3},{name:'Leona',displayName:'Leona',group:'平面',rotation:1},
+  {name:'Karl',displayName:'Karl',group:'影音',rotation:2},{name:'Noise',displayName:'Noise',group:'影音',rotation:1}
+];
+let designerDirectory=DEFAULT_DESIGNER_DIRECTORY.map(row=>({...row})),DESIGNERS=designerDirectory.map(row=>row.name),DESIGNER_GROUPS=[];
+function rebuildDesignerGroups(){
+  DESIGNER_GROUPS=['平面','影音'].map(group=>[`${group}組`,designerDirectory.filter(row=>row.group===group).map(row=>row.name)])
+}
+function configureDesignerDirectory(rows=[]){
+  const fallbackNames=new Set(DEFAULT_DESIGNER_DIRECTORY.map(row=>row.name)),active=rows.filter(row=>{
+    const group=String(row['組別']||'').trim(),visible=String(row['設計師顯示']||'').trim().toLowerCase(),name=String(row['原始名字']||row['名字']||'').trim();
+    if(!/^(?:平面|影音)$/.test(group)||!name)return false;
+    return visible?!/^(?:x|false|0|停用|否)$/.test(visible):fallbackNames.has(name)
+  }).map(row=>({name:String(row['原始名字']||row['名字']).trim(),displayName:String(row['顯示名']||row['原始名字']||row['名字']).trim(),group:String(row['組別']).trim(),rotation:Number(row['新專案輪值'])||99,avatar:String(row['頭像連結']||''),account:String(row['帳號']||'')})).sort((left,right)=>['平面','影音'].indexOf(left.group)-['平面','影音'].indexOf(right.group)||left.rotation-right.rotation||left.name.localeCompare(right.name,'zh-Hant'));
+  designerDirectory=active.length?active:DEFAULT_DESIGNER_DIRECTORY.map(row=>({...row}));DESIGNERS=designerDirectory.map(row=>row.name);rebuildDesignerGroups()
+}
+rebuildDesignerGroups();
 function defaultDesignerType(name){
   const group=DESIGNER_GROUPS.find(([,names])=>names.includes(name));
   return group?group[0].replace('組',''):'設計師'
@@ -488,6 +518,14 @@ function dashboardIdentity(){
   return {designer:name,account:savedDesigner===name?String(saved.account||'').trim():'',group:savedDesigner===name?String(saved.group||'').trim():'',authToken:savedDesigner===name?String(saved.authToken||'').trim():'',returnUrl:returnUrl||new URL('index.html',location.href).href}
 }
 const ACCOUNT_IDENTITY=dashboardIdentity();
+function syncDashboardIdentityWithDirectory(){
+  if(ACCOUNT_IDENTITY.designer==='管理者')return;
+  let saved={};try{saved=JSON.parse(localStorage.getItem('designDashboardIdentityV1')||'{}')||{}}catch(error){}
+  const requested=normalizeDesigner(requestedDesigner()),savedDesigner=normalizeDesigner(saved.designer||''),candidate=DESIGNERS.includes(requested)?requested:(DESIGNERS.includes(savedDesigner)?savedDesigner:(DESIGNERS.includes(ACCOUNT_IDENTITY.designer)?ACCOUNT_IDENTITY.designer:DESIGNERS[0]||'凱曜')),directoryRow=designerDirectory.find(row=>row.name===candidate);
+  ACCOUNT_IDENTITY.designer=candidate;ACCOUNT_IDENTITY.account=savedDesigner===candidate?String(saved.account||directoryRow?.account||'').trim():String(directoryRow?.account||'').trim();ACCOUNT_IDENTITY.group=savedDesigner===candidate?String(saved.group||directoryRow?.group||'').trim():String(directoryRow?.group||'').trim();ACCOUNT_IDENTITY.authToken=savedDesigner===candidate?String(saved.authToken||ACCOUNT_IDENTITY.authToken||'').trim():'';
+  if(savedDesigner===candidate&&saved.returnUrl)try{const returnUrl=new URL(saved.returnUrl,location.href);if(location.protocol==='file:'||returnUrl.origin===location.origin)ACCOUNT_IDENTITY.returnUrl=returnUrl.href}catch(error){}
+  if($('returnRequestLink'))$('returnRequestLink').href=ACCOUNT_IDENTITY.returnUrl
+}
 let dashboardAdminAccess=false;
 const REPORT_TODAY=new Date();
 const MIN_YEAR=2022;
@@ -569,8 +607,10 @@ function normalizeRows(rows){
 function normalizeSettings(rows){
   userSettings=Object.fromEntries(rows.map(r=>{const name=normalizeDesigner(r['設計師名字']||r['名字']||r.name);return [name,{
     name,
+    displayName:r['顯示名']||name,
     avatar:r['頭像連結']||r.avatar||'',
-    designType:r['設計類型']||r.designType||'',
+    designType:r['設計類型']||r.designType||r['組別']||'',
+    group:r['組別']||'',
     account:r['帳號']||'',
     password:r['密碼']||''
   }]}).filter(([name])=>DESIGNERS.includes(name)))
@@ -630,7 +670,7 @@ function populateFilters(){
   const defaultMonth=months.includes(DEFAULT_MONTH)?DEFAULT_MONTH:months[0]||DEFAULT_MONTH;
   $('yearFilter').innerHTML=years.map(y=>`<option value="${y}" ${y===defaultYear?'selected':''}>${y}</option>`).join('');
   $('monthFilter').innerHTML=Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===defaultMonth?'selected':''}>${String(m).padStart(2,'0')}月</option>`).join('');
-  const designers=['所有設計師',...DESIGNERS];$('designerFilter').innerHTML=designers.map(d=>`<option>${d}</option>`).join('');
+  $('designerFilter').innerHTML=`<option value="所有設計師">所有設計師</option>`+designerDirectory.map(row=>`<option value="${escapeHtml(row.name)}">${escapeHtml(row.displayName||row.name)}</option>`).join('');
   $('designerFilter').value='所有設計師';
   $('periodFilter').innerHTML=years.flatMap(year=>Array.from({length:12},(_,index)=>12-index).map(month=>`<option value="${year}-${month}">${year} / ${String(month).padStart(2,'0')}</option>`)).join('');
   $('periodFilter').value=`${defaultYear}-${defaultMonth}`;
@@ -640,6 +680,7 @@ function applyFilter(){
   filtered=raw.filter(r=>yearOf(r)===y&&monthOf(r)===m&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli)&&matchesDashboardSearch(r));
   $('periodFilter').value=`${y}-${m}`;updateFilterSteppers();updateProfile();
   if($('page-analysis')?.classList.contains('active'))renderAnalysis(y,m,des);
+  else if($('page-quarterly')?.classList.contains('active'))renderQuarterPage(y,m,des);
   else if($('page-cases')?.classList.contains('active'))renderCaseCenter(y,m,des);
   else render(y,m,des,cli)
 }
@@ -653,10 +694,10 @@ function updateProfile(){
     $('dashboardAdminLoginText').textContent='管理者登出';
     return
   }
-  const name=ACCOUNT_IDENTITY.designer,settings=userSettings[name]||{};
-  $('currentDesignerName').textContent=name;
+  const name=ACCOUNT_IDENTITY.designer,settings=userSettings[name]||{},displayName=settings.displayName||designerDirectory.find(row=>row.name===name)?.displayName||name;
+  $('currentDesignerName').textContent=displayName;
   $('currentDesignerType').textContent=profileTypeLabel(settings.designType,name);
-  $('profileAvatar').textContent=settings.avatar?'':name.slice(0,1);
+  $('profileAvatar').textContent=settings.avatar?'':displayName.slice(0,1);
   $('profileAvatar').style.backgroundImage=settings.avatar?`url("${settings.avatar}")`:'';
   $('profileAvatar').dataset.account=settings.account||'';
   $('profileAvatar').dataset.password=settings.password||'';
@@ -1061,9 +1102,9 @@ function renderAnalysisKpis(y,m,designer){
   setAnalysisDelta('analysisClientDelta',clients,previousClients);setAnalysisDelta('analysisQtyDelta',quantity,previousQuantity);setAnalysisDelta('analysisScoreDelta',weighted,previousWeighted);setAnalysisDelta('analysisRevisionDelta',revisions,previousRevisions)
 }
 function renderAnalysisClients(y,m,designer){
-  const rows=analysisRows(y,m,designer),ranked=group(rows,r=>r['客戶別'],qty).filter(([name])=>name!=='未分類').slice(0,10),max=Math.max(...ranked.map(row=>row[1]),1);
+  const rows=analysisRows(y,m,designer),ranked=group(rows,r=>r['客戶別'],qty).filter(([name])=>name!=='未分類'),max=Math.max(...ranked.map(row=>row[1]),1);
   analysisBrandIndex=Math.max(0,Math.min(analysisBrandIndex,Math.max(0,ranked.length-1)));$('analysisClientRank').innerHTML=ranked.length?ranked.map(([name,value],index)=>`<button type="button" class="analysis-bar-row ${index===analysisBrandIndex?'is-active':''}" data-brand-index="${index}" aria-label="查看 ${escapeHtml(name)} 品牌工作量占比"><span class="rank-no">${index+1}</span><span class="brand" title="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="analysis-bar-track"><span class="analysis-bar-fill" style="width:${value/max*100}%;--rank-color:${BRAND_COLORS[index%BRAND_COLORS.length]};animation-delay:${index*45}ms"></span></span><span class="value">${analysisNumber(value,Number.isInteger(value)?0:1)}</span></button>`).join(''):'<div class="analysis-empty">本月沒有客戶資料</div>';
-  const selected=ranked[analysisBrandIndex];$('analysisBrandName').textContent=selected?`TOP ${analysisBrandIndex+1}・${selected[0]}`:'目前無資料';$('analysisBrandPrev').disabled=analysisBrandIndex<=0;$('analysisBrandNext').disabled=analysisBrandIndex>=ranked.length-1;$('analysisBrandMenu').innerHTML=ranked.map(([name],index)=>`<button type="button" class="${index===analysisBrandIndex?'active':''}" data-brand-index="${index}" role="option" aria-selected="${index===analysisBrandIndex}">TOP ${index+1}・${escapeHtml(name)}</button>`).join('');$('analysisBrandMenu').hidden=true;$('analysisBrandName').setAttribute('aria-expanded','false');
+  const selected=ranked[analysisBrandIndex];$('analysisBrandName').textContent=selected?selected[0]:'目前無資料';$('analysisBrandPrev').disabled=analysisBrandIndex<=0;$('analysisBrandNext').disabled=analysisBrandIndex>=ranked.length-1;$('analysisBrandMenu').innerHTML=ranked.map(([name],index)=>`<button type="button" class="${index===analysisBrandIndex?'active':''}" data-brand-index="${index}" role="option" aria-selected="${index===analysisBrandIndex}">${index+1}・${escapeHtml(name)}</button>`).join('');$('analysisBrandMenu').hidden=true;$('analysisBrandName').setAttribute('aria-expanded','false');
   const detailRows=selected?cappedDetailRows(rows.filter(row=>row['客戶別']===selected[0])):[];
   analysisBrandChart=createAnalysisDonut('analysisBrandChart','analysisBrandLegend',detailRows,'品牌工作量',selected?analysisNumber(selected[1],Number.isInteger(selected[1])?0:1):'0',analysisBrandChart)
 }
@@ -1102,8 +1143,8 @@ function renderAnalysisAnnual(y,m,designer){
 function quarterOf(row){const month=monthOf(row);return month?Math.ceil(month/3):null}
 function quarterRows(y,designer,quarter){return analysisRows(y,null,designer).filter(row=>quarterOf(row)===quarter)}
 function renderAnalysisQuarterDetail(y,designer){
-  const rows=quarterRows(y,designer,analysisQuarter),brands=group(rows,row=>row['客戶別'],qty).filter(([name])=>name!=='未分類'),brandNames=['全部品牌',...brands.map(row=>row[0])],available=new Set(brandNames);if(!available.has(analysisQuarterBrand))analysisQuarterBrand='全部品牌';const brandIndex=brandNames.indexOf(analysisQuarterBrand);$('analysisQuarterBrandName').textContent=analysisQuarterBrand==='全部品牌'?'全部品牌':`TOP ${brandIndex}・${analysisQuarterBrand}`;$('analysisQuarterBrandPrev').disabled=brandIndex<=0;$('analysisQuarterBrandNext').disabled=brandIndex>=brandNames.length-1;document.querySelectorAll('#analysisQuarterControls button').forEach(button=>button.classList.toggle('active',Number(button.dataset.quarter)===analysisQuarter));
-  $('analysisQuarterBrandMenu').innerHTML=brandNames.map((name,index)=>`<button type="button" class="${name===analysisQuarterBrand?'active':''}" data-brand-name="${escapeHtml(name)}" role="option" aria-selected="${name===analysisQuarterBrand}">${index?`TOP ${index}・`:''}${escapeHtml(name)}</button>`).join('');$('analysisQuarterBrandMenu').hidden=true;$('analysisQuarterBrandName').setAttribute('aria-expanded','false');
+  const rows=quarterRows(y,designer,analysisQuarter),brands=group(rows,row=>row['客戶別'],qty).filter(([name])=>name!=='未分類'),brandNames=['全部品牌',...brands.map(row=>row[0])],available=new Set(brandNames);if(!available.has(analysisQuarterBrand))analysisQuarterBrand='全部品牌';const brandIndex=brandNames.indexOf(analysisQuarterBrand);$('quarterlyPeriod').textContent=`${y} 年・Q${analysisQuarter}`;$('analysisQuarterBrandName').textContent=analysisQuarterBrand==='全部品牌'?'全部品牌':`${brandIndex}・${analysisQuarterBrand}`;$('analysisQuarterBrandPrev').disabled=brandIndex<=0;$('analysisQuarterBrandNext').disabled=brandIndex>=brandNames.length-1;document.querySelectorAll('#analysisQuarterControls button').forEach(button=>button.classList.toggle('active',Number(button.dataset.quarter)===analysisQuarter));
+  $('analysisQuarterBrandMenu').innerHTML=brandNames.map((name,index)=>`<button type="button" class="${name===analysisQuarterBrand?'active':''}" data-brand-name="${escapeHtml(name)}" role="option" aria-selected="${name===analysisQuarterBrand}">${index?`${index}・`:''}${escapeHtml(name)}</button>`).join('');$('analysisQuarterBrandMenu').hidden=true;$('analysisQuarterBrandName').setAttribute('aria-expanded','false');
   const selected=analysisQuarterBrand==='全部品牌'?rows:rows.filter(row=>row['客戶別']===analysisQuarterBrand),details=cappedDetailRows(selected);$('analysisQuarterSubtitle').textContent=`Q${analysisQuarter}・${analysisQuarterBrand}的項目細節`;
   analysisQuarterDetailChart=createAnalysisDonut('analysisQuarterDetailChart','analysisQuarterDetailLegend',details,`Q${analysisQuarter} 工作量`,analysisNumber(details.reduce((sum,row)=>sum+row[1],0),0),analysisQuarterDetailChart)
 }
@@ -1126,9 +1167,23 @@ function renderAnalysisQuarter(y,designer){
   }});
   renderAnalysisQuarterDetail(y,designer)
 }
+function renderDesignerQuarterPerformance(y,designer,groupName,canvasId,legendId,existingChart){
+  const groupNames=designerDirectory.filter(row=>row.group===groupName).map(row=>row.name),visibleNames=(designer==='所有設計師'||designer==='全部')?groupNames:groupNames.filter(name=>name===designer),rows=analysisRows(y,null,designer).filter(row=>visibleNames.includes(row['設計負責人'])),quarterScores=visibleNames.map(name=>[1,2,3,4].map(quarter=>rows.filter(row=>row['設計負責人']===name&&quarterOf(row)===quarter).reduce((sum,row)=>sum+score(row),0))),quarterTotals=[0,1,2,3].map(index=>quarterScores.reduce((sum,values)=>sum+values[index],0)),annualScores=quarterScores.map(values=>values.reduce((sum,value)=>sum+value,0)),annualTotal=annualScores.reduce((sum,value)=>sum+value,0),canvas=$(canvasId),legend=$(legendId);
+  if(existingChart)existingChart.destroy();
+  if(!visibleNames.length||!annualTotal){canvas.hidden=true;legend.innerHTML=`<div class="quarter-performance-empty">${visibleNames.length?'目前篩選條件沒有加權分數':'此篩選設計師不屬於'+groupName+'組'}</div>`;return null}
+  canvas.hidden=false;
+  const colors=visibleNames.map(name=>ANALYSIS_COLORS[Math.max(0,DESIGNERS.indexOf(name))%ANALYSIS_COLORS.length]),datasets=visibleNames.map((name,index)=>({label:userSettings[name]?.displayName||name,data:quarterScores[index].map((value,quarterIndex)=>quarterTotals[quarterIndex]?value/quarterTotals[quarterIndex]*100:0),scoreValues:quarterScores[index],backgroundColor:colors[index],borderWidth:0,borderRadius:2,barPercentage:.7,categoryPercentage:.72}));
+  legend.innerHTML=visibleNames.map((name,index)=>`<div class="quarter-performance-item"><i style="background:${colors[index]}"></i><span class="quarter-performance-person"><b>${escapeHtml(userSettings[name]?.displayName||name)}</b><small>年度組內占比 ${annualTotal?(annualScores[index]/annualTotal*100).toFixed(1):'0.0'}%</small></span><span class="quarter-performance-value">${analysisNumber(annualScores[index],Number.isInteger(annualScores[index])?0:1)} 分</span></div>`).join('');
+  const shareLabels={id:`quarter-share-${canvasId}`,afterDatasetsDraw(chart){const {ctx}=chart;ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.font='900 10px Geist, "Noto Sans TC"';chart.data.datasets.forEach((dataset,datasetIndex)=>chart.getDatasetMeta(datasetIndex).data.forEach((bar,index)=>{const share=Number(dataset.data[index]||0),props=bar.getProps(['x','y','base','width','height'],true),height=Math.abs(props.base-props.y);if(share<8||height<18)return;ctx.fillText(`${Math.round(share)}%`,props.x,props.y+height/2)}));ctx.restore()}};
+  return new Chart(canvas,{type:'bar',data:{labels:['Q1','Q2','Q3','Q4'],datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:true},plugins:{legend:{display:false},tooltip:{callbacks:{label:context=>{const value=context.dataset.scoreValues[context.dataIndex]||0;return `${context.dataset.label}：${analysisNumber(value,Number.isInteger(value)?0:1)} 分（${context.raw.toFixed(1)}%）`}}}},scales:{x:{stacked:true,grid:{display:false},border:{display:false},ticks:{color:'#475467',font:{size:12,weight:'800'}}},y:{stacked:true,beginAtZero:true,max:100,ticks:{stepSize:25,color:'#98a2b3',font:{size:11},callback:value=>`${value}%`},grid:{color:'#eef2f6'},border:{display:false}}}},plugins:[shareLabels]})
+}
+function renderQuarterPage(y,m,designer){
+  if(!$('page-quarterly'))return;const period=`${y}-${m}-${designer}-${dashboardSearchQuery()}`;if(period!==quarterLastPeriod){analysisQuarter=Math.ceil(m/3);analysisQuarterBrand='全部品牌';quarterLastPeriod=period}
+  $('quarterlyPeriod').textContent=`${y} 年・Q${analysisQuarter}`;renderAnalysisQuarter(y,designer);analysisGraphicQuarterChart=renderDesignerQuarterPerformance(y,designer,'平面','analysisGraphicQuarterChart','analysisGraphicQuarterLegend',analysisGraphicQuarterChart);analysisVideoQuarterChart=renderDesignerQuarterPerformance(y,designer,'影音','analysisVideoQuarterChart','analysisVideoQuarterLegend',analysisVideoQuarterChart)
+}
 function renderAnalysis(y,m,designer){
-  if(!$('page-analysis'))return;const period=`${y}-${m}-${designer}-${dashboardSearchQuery()}`;if(period!==analysisLastPeriod){analysisBrandIndex=0;analysisQuarter=Math.ceil(m/3);analysisQuarterBrand='全部品牌';analysisLastPeriod=period}
-  renderAnalysisKpis(y,m,designer);renderAnalysisClients(y,m,designer);renderAnalysisAnnual(y,m,designer);renderAnalysisQuarter(y,designer)
+  if(!$('page-analysis'))return;const period=`${y}-${m}-${designer}-${dashboardSearchQuery()}`;if(period!==analysisLastPeriod){analysisBrandIndex=0;analysisLastPeriod=period}
+  renderAnalysisKpis(y,m,designer);renderAnalysisClients(y,m,designer);renderAnalysisAnnual(y,m,designer)
 }
 function closeAnalysisMenus(){['analysisBrandMenu','analysisQuarterBrandMenu'].forEach(id=>{const menu=$(id);if(menu)menu.hidden=true});['analysisBrandName','analysisQuarterBrandName'].forEach(id=>$(id)?.setAttribute('aria-expanded','false'))}
 function normalizeModificationRecord(record){return {caseId:String(record['案件編號']||record.caseId||record.id||'').trim(),count:Number(record['修改次數']||record.count||0)||0,created:String(record['建立日期']||record.created||'').trim(),date:String(record['修改日期']||record.modifyDate||'').trim(),content:String(record['修改內容']||record.content||'').trim(),confirmedDate:String(record['確認修正日']||record.confirmedDate||'').trim()}}
@@ -1166,9 +1221,10 @@ async function fetchArchiveSnapshot(){
   if(!historyRows.length)throw new Error('歷史 JSON 資料庫沒有可用資料');
   if(!Array.isArray(currentRows))throw new Error('目前 database 缺少 database 資料表');
   const rows=[...historyRows.map(row=>({...row}))],occurrences=new Map(),indexes=new Map();rows.forEach((row,index)=>{const id=String(row['案件編號']||'').trim();if(!id)return;const occurrence=(occurrences.get(id)||0)+1;occurrences.set(id,occurrence);indexes.set(`${id}#${occurrence}`,index)});const currentOccurrences=new Map();currentRows.forEach(source=>{const id=String(source['案件編號']||'').trim(),occurrence=(currentOccurrences.get(id)||0)+1;currentOccurrences.set(id,occurrence);const index=indexes.get(`${id}#${occurrence}`);if(index===undefined)rows.push({...source});else rows[index]={...rows[index],...source}});
+  const currentSettings=Array.isArray(primary?.tables?.['設定']?.rows)?primary.tables['設定'].rows:[];configureDesignerDirectory(currentSettings);
   archiveSnapshotMeta={rowCount:rows.length,generatedAt:primary.updatedAt||database.generatedAt,revision:primary.revision};
   archiveDashboardData={
-    settings:Array.isArray(database?.dashboardData?.settings)?database.dashboardData.settings:[],
+    settings:currentSettings.length?currentSettings:(Array.isArray(database?.dashboardData?.settings)?database.dashboardData.settings:[]),
     modifications:Array.isArray(database?.dashboardData?.modifications)?database.dashboardData.modifications:[]
   };
   return normalizeRows(rows)
@@ -1179,7 +1235,7 @@ async function fetchCSV(){
 }
 async function load(){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
-  try{raw=await fetchCSV();normalizeSettings(archiveDashboardData.settings);const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：歷史 JSON 資料庫，已與目前 database 對齊（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
+  try{raw=await fetchCSV();normalizeSettings(archiveDashboardData.settings);syncDashboardIdentityWithDirectory();const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：歷史 JSON 資料庫，已與目前 database 對齊，並同步設計列表（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
   catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法讀取 JSON 資料庫，已先顯示示範資料。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
   finally{populateFilters();applyFilter();loadDashboardModifications();loading.classList.remove('show')}
 }
@@ -1208,6 +1264,7 @@ function showPage(name){
   if(raw.length)requestAnimationFrame(()=>{
     const y=+$('yearFilter').value,m=+$('monthFilter').value,designer=$('designerFilter').value;
     if(name==='analysis')renderAnalysis(y,m,designer);
+    else if(name==='quarterly')renderQuarterPage(y,m,designer);
     else if(name==='cases')renderCaseCenter(y,m,designer);
     else if(name==='dashboard')render(y,m,designer,'全部')
   })
