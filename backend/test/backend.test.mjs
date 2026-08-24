@@ -675,11 +675,14 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /<span class="quarter-performance-value">\$\{item\.score\} 分<\/span>/);
   assert.match(dashboard, /quarterIndex===hoverIndex\?colors\[designerIndex\]:greyColors/);
   assert.match(dashboard, /onHover\(event,elements,instance\)/);
-  assert.match(dashboard, /const targetMonth=\(elements\[0\]\.index\+1\)\*3/);
+  assert.match(dashboard, /function quarterClickMonth\(year,quarter\)/);
+  assert.match(dashboard, /Math\.min\(quarterEndMonth,REPORT_TODAY\.getMonth\(\)\+1\)/);
+  assert.match(dashboard, /const targetMonth=quarterClickMonth\(y,elements\[0\]\.index\+1\)/);
   assert.match(dashboard, /\$\('monthFilter'\)\.value=String\(targetMonth\)/);
   assert.match(dashboard, /quarter-performance-item rank-\$\{index\+1\}/);
   assert.match(dashboard, /\.quarter-performance-item\.rank-1/);
   assert.match(dashboard, /\.quarter-performance-item\.rank-4/);
+  assert.match(dashboard, /\.quarter-performance-item \.quarter-performance-value\{color:#101828\}/);
   assert.doesNotMatch(dashboard, /客戶工作量 TOP10|TOP10 客戶/);
   assert.doesNotMatch(dashboard, /filter\(\(\[name\]\)=>name!=='未分類'\)\.slice\(0,10\)/);
   assert.match(dashboard, /function caseSvgDonutSegment\(/);
