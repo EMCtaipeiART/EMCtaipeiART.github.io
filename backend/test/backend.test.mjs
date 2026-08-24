@@ -655,7 +655,9 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /function configureDesignerDirectory\(rows=\[\]\)/);
   assert.match(dashboard, /row\['設計師顯示'\]/);
   assert.match(dashboard, /configureDesignerDirectory\(currentSettings\)/);
-  assert.match(dashboard, /designerDirectory\.map\(row=>`<option value=/);
+  assert.match(dashboard, /const designerOptions=\[\.\.\.designerDirectory\]\.sort/);
+  assert.match(dashboard, /localeCompare\(String\(right\.displayName\|\|right\.name\),'en'/);
+  assert.match(dashboard, /designerOptions\.map\(row=>`<option value=/);
   assert.match(dashboard, /data-page="quarterly"/);
   assert.match(dashboard, /id="page-quarterly"/);
   assert.match(dashboard, /id="analysisGraphicQuarterChart"/);
@@ -664,6 +666,10 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'影音'/);
   assert.doesNotMatch(dashboard, /客戶工作量 TOP10|TOP10 客戶/);
   assert.doesNotMatch(dashboard, /filter\(\(\[name\]\)=>name!=='未分類'\)\.slice\(0,10\)/);
+  assert.match(dashboard, /function caseSvgDonutSegment\(/);
+  assert.match(dashboard, /segment=caseSvgDonutSegment\(cx,cy,outerRadius,innerRadius,startAngle,endAngle,row\.color\)/);
+  assert.match(dashboard, /percentLabels\+=`<text[^`]+fill="#fff">\$\{\(ratio\*100\)\.toFixed\(1\)\}%<\/text>`/);
+  assert.doesNotMatch(dashboard, /percentLabels\+=`<text[^`]+stroke="#000"/);
 });
 
 test('front-end action API reads and atomically writes all requested JSON tables', async t => {
