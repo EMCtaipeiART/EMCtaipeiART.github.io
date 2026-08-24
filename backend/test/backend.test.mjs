@@ -664,6 +664,16 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /id="analysisVideoQuarterChart"/);
   assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'平面'/);
   assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'影音'/);
+  assert.match(dashboard, /const selectedQuarter=Math\.ceil\(m\/3\)/);
+  assert.match(dashboard, /function renderDesignerQuarterPerformancePanels\(/);
+  assert.match(dashboard, /renderDesignerQuarterPerformancePanels\(year,designer,analysisQuarter\)/);
+  assert.match(dashboard, /quarter=>Math\.round\(rows\.filter/);
+  assert.match(dashboard, /quarter===selectedQuarter\?colors\[index\]:greyColors/);
+  assert.match(dashboard, /if\(index!==selectedIndex\)return/);
+  assert.match(dashboard, /\.sort\(\(left,right\)=>right\.score-left\.score/);
+  assert.match(dashboard, /\.slice\(0,4\)/);
+  assert.match(dashboard, />No\.\$\{index\+1\}<\/span>/);
+  assert.match(dashboard, /<span class="quarter-performance-value">\$\{item\.score\} 分<\/span>/);
   assert.doesNotMatch(dashboard, /客戶工作量 TOP10|TOP10 客戶/);
   assert.doesNotMatch(dashboard, /filter\(\(\[name\]\)=>name!=='未分類'\)\.slice\(0,10\)/);
   assert.match(dashboard, /function caseSvgDonutSegment\(/);
