@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2509,
+  "revision": 2510,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-24T10:38:46.119Z",
+  "updatedAt": "2026-08-24T10:40:11.485Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1022,7 +1022,7 @@
         {"案件編號":"26080058","修改次數":"1","建立日期":"2026/08/24 15:46:41","修改日期":"2026-08-24","修改內容":"客戶大調兩張圖，因此額外填單\n詳細如附件P31~P36\nhttps://docs.google.com/presentation/d/1GMUQBhx5PgZMSx4P6see4t4kbhXUQ4k8IgI6K9ny8-E/edit?slide=id.g3fad0e0552c_0_0#slide=id.g3fad0e0552c_0_0","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26080099","修改次數":"0","建立日期":"2026/08/24 17:08:26","修改日期":"2026/08/24 17:08:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 17:08:26","圖片連結":"[{\"fileName\":\"260824_Momo 99狂購節_CPAS_Liberty 5 Pro Max_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LNJ6YTCPuRWF4UxRbf0E6XvfvadvcPML=w1600\"},{\"fileName\":\"260824_Momo 99狂購節_CPAS_Liberty 5 Pro Max_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_lCOkiLtPvyqydEnzG286nUW6tRyds1s=w1600\"},{\"fileName\":\"260824_Momo 99狂購節_CPAS_Liberty 5 Pro_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dMjR9bg0Qq282flvEWWYz1dUU8SOAbLs=w1600\"},{\"fileName\":\"260824_Momo 99狂購節_CPAS_Liberty 5 Pro_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-kb9DTzClC5i2mJBqRgzlgPQXNYMvBhX=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 17:08:26"},
         {"案件編號":"26080071","修改次數":"1","建立日期":"2026/08/24 17:54:55","修改日期":"2026-08-24","修改內容":"兩支影片的醫師站畫面比例有點滿，想請問是否可以將鏡位再稍微拉遠一些，增加畫面空間感（先前客戶其他支影片有提過）\n\n訪談型影片 0:55–0:56，醫師這段有些卡詞，想請問後續是否可以透過剪輯方式處理\n\n生活型影片封面再麻煩協助先放上文字，並提供修圖後的檔案，我們會在 Acopy 時一併提供給客戶確認","修改人":"Noise","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26080134","修改次數":"0","建立日期":"2026/08/24 18:26:13","修改日期":"2026/08/24 18:26:13","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:26:13","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LQdASdG5lgz6jvJz2moRQtipy4jWLfcu=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:26:13"},
+        {"案件編號":"26080134","修改次數":"0","建立日期":"2026/08/24 18:26:13","修改日期":"2026/08/24 18:26:13","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:26:13","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LQdASdG5lgz6jvJz2moRQtipy4jWLfcu=w1600\"},{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1N2DZd0eGuqPCk480VpMWcxCIHi_OVUJv=w1600\"},{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Dq31AJ-esNeV8_EPsIp70XA3mIpGMJgs=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:40:11"},
         {"案件編號":"26080135","修改次數":"0","建立日期":"2026/08/24 18:27:43","修改日期":"2026/08/24 18:27:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:27:43","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YSPEg1s7DDGbhPI8nczGud6_dGv4WozU=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:27:43"},
         {"案件編號":"26080136","修改次數":"0","建立日期":"2026/08/24 18:30:47","修改日期":"2026/08/24 18:30:47","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:30:47","圖片連結":"[{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BlKK7ijF9VGbUXTbvVdCBJMSuISUZ2rB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:30:47"}
       ]
