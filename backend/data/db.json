@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2532,
+  "revision": 2533,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-24T11:03:02.919Z",
+  "updatedAt": "2026-08-24T11:03:11.979Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1027,7 +1027,7 @@
         {"案件編號":"26080136","修改次數":"0","建立日期":"2026/08/24 18:30:47","修改日期":"2026/08/24 18:30:47","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/24 18:30:47","圖片連結":"[{\"fileName\":\"260824_Nutribullet_中秋月光香芒果汁_食譜影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BlKK7ijF9VGbUXTbvVdCBJMSuISUZ2rB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/24 18:30:47"},
         {"案件編號":"26080087","修改次數":"0","建立日期":"2026/08/24 18:56:24","修改日期":"2026/08/24 18:56:24","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/24 18:56:24","圖片連結":"[{\"fileName\":\"260824_ANKER_全館促銷_轉換_蝦皮_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1h4DDIdmw2a2S64w7F3ZBrS2JHIqwE3Rx=w1600\"},{\"fileName\":\"260824_ANKER_全館促銷_轉換_momo_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ZrDUomhmj9eAC9200MVdzI4blifqmrJM=w1600\"},{\"fileName\":\"260824_ANKER_全館促銷_轉換_pchome_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1DXj6vEbeN_0xPcXeFXk7-8le8VS7xTKE=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 18:56:44"},
         {"案件編號":"26080075","修改次數":"0","建立日期":"2026/08/24 18:57:11","修改日期":"2026/08/24 18:57:11","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/24 18:57:11","圖片連結":"[{\"fileName\":\"260821_金士頓_當Kingston融入你的日常-5.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wzqZSjFVXcGXNrGvEeFxbeaih-CVcBu1=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常-4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1YtcCE0HvYC1uJjzjfzg2d8nOkQ8oMOU6=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常-3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FM8tEQUH38mmj1-dfPinYEXP6V2kcqCN=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常-2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1AdevSsqlAv2fvsW5a7G38mN0Q5SDWK7i=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常-1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FGtZAjXZCXFaooqvopHdgNElbkKqDemW=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 18:57:43"},
-        {"案件編號":"26080107","修改次數":"0","建立日期":"2026/08/24 19:03:02","修改日期":"2026/08/24 19:03:02","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/08/24 19:03:02","圖片連結":"[{\"fileName\":\"260824_8月PMax_Liberty 5 Pro_情境A款.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1_pcF_6jCbLC6NJN5LMF_DiUvxIrKdbyI=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 19:03:02"}
+        {"案件編號":"26080107","修改次數":"0","建立日期":"2026/08/24 19:03:02","修改日期":"2026/08/24 19:03:02","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/08/24 19:03:02","圖片連結":"[{\"fileName\":\"260824_8月PMax_Liberty 5 Pro_情境A款.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1_pcF_6jCbLC6NJN5LMF_DiUvxIrKdbyI=w1600\"},{\"fileName\":\"260824_8月PMax_Liberty 5 Pro_情境B款.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1q_QMRWpIYSMx3pX9kZEa405D7nNZ9Z1q=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/24 19:03:11"}
       ]
     },
     "補充資料連結": {
