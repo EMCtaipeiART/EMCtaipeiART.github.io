@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2661,
+  "revision": 2662,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-25T10:27:16.238Z",
+  "updatedAt": "2026-08-25T10:27:59.354Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1048,7 +1048,7 @@
         {"案件編號":"26080146","修改次數":"0","建立日期":"2026/08/25 16:42:58","修改日期":"2026/08/25 16:42:58","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/25 16:42:58","圖片連結":"[{\"fileName\":\"260825_林口A7讚商場_名單型廣告_情境版_熟食生鮮TA.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PBcX4qc_8ACcKQVx4EX8YwfP4MAsxsKj=w1600\"},{\"fileName\":\"260825_林口A7讚商場_名單型廣告_情境版_熟食生鮮TA_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iiy9_EDVyIKleAcZBqNkwt5OtOCn3iKi=w1600\"},{\"fileName\":\"260825_林口A7讚商場_名單型廣告_數據版_兒童遊戲TA.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Vx_fB1zuhg-lbq5aZonCWvK0wII5kT3o=w1600\"},{\"fileName\":\"260825_林口A7讚商場_名單型廣告_新創追夢版_美業TA.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NImwrj_2ibmu-RMrrL8lbTKS2NPLnbTy=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/25 16:42:58"},
         {"案件編號":"26080138","修改次數":"2","建立日期":"2026/08/25 17:23:59","修改日期":"2026-08-25","修改內容":"請把桌上的抹布(?移除","修改人":"廖秦葦","確認修正日":"2026/08/25 17:37:20","待修改圖片":"[\"260825_Nutribullet_獨門秘製水果烤肉醬_食譜.png\"]","圖片連結":"[{\"fileName\":\"260825_Nutribullet_獨門秘製水果烤肉醬_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RsUg2waxd4Z9UwAmKINq-H6dZ9N1B2E_=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/25 17:36:36"},
         {"案件編號":"26080135","修改次數":"1","建立日期":"2026/08/25 17:24:28","修改日期":"2026-08-25","修改內容":"請加回示意圖上有的隨行杯","修改人":"廖秦葦","確認修正日":"2026/08/25 17:52:37","待修改圖片":"[\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\"]","圖片連結":"[{\"fileName\":\"260824_Nutribullet_柚香翡翠冰沙_食譜.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yjS_FsRh28zNkmI9W74DVVK_RZ732Mk7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/25 17:52:02"},
-        {"案件編號":"26080103","修改次數":"2","建立日期":"2026/08/25 17:59:47","修改日期":"2026-08-25","修改內容":"修改項目請見雲端檔案：\nhttps://docs.google.com/presentation/d/1Ie8VuXNNToxGid_ZY9i5Hn20p2GDNFXuJzyORtLL4M8/edit?usp=sharing","修改人":"陳雅筠","確認修正日":"","待修改圖片":"[\"260820_櫻花整體廚房_名單型廣告_改造有感_v01.png\"]","圖片連結":"[{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_新手裝修痛點_v02psd.png\",\"url\":\"https://lh3.googleusercontent.com/d/1MW3Cw67FS8R236yjtyTXC6NdTj4YBQno=w1600\"},{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_改造有感_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12FB7_cVaUn2rjL0O1Pv_cwb4EXF1Gf0j=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/25 18:27:09"}
+        {"案件編號":"26080103","修改次數":"2","建立日期":"2026/08/25 17:59:47","修改日期":"2026-08-25","修改內容":"修改項目請見雲端檔案：\nhttps://docs.google.com/presentation/d/1Ie8VuXNNToxGid_ZY9i5Hn20p2GDNFXuJzyORtLL4M8/edit?usp=sharing","修改人":"陳雅筠","確認修正日":"2026/08/25 18:27:59","待修改圖片":"[\"260820_櫻花整體廚房_名單型廣告_改造有感_v01.png\"]","圖片連結":"[{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_新手裝修痛點_v02psd.png\",\"url\":\"https://lh3.googleusercontent.com/d/1MW3Cw67FS8R236yjtyTXC6NdTj4YBQno=w1600\"},{\"fileName\":\"260820_櫻花整體廚房_名單型廣告_改造有感_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12FB7_cVaUn2rjL0O1Pv_cwb4EXF1Gf0j=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/25 18:27:09"}
       ]
     },
     "補充資料連結": {
