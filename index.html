@@ -6415,6 +6415,16 @@
     .gmail-inline-image-wrap img.gmail-inline-image{display:block;width:100%;height:100%;object-fit:contain;margin:0;border-radius:7px;-webkit-user-drag:none;user-select:none}
     .gmail-inline-image-resize-handle{position:absolute!important;right:3px!important;bottom:3px!important;width:15px!important;height:15px!important;border-radius:4px!important;background:rgba(23,33,29,.6)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;cursor:nwse-resize;opacity:0;transition:opacity .12s ease;z-index:2}
     .gmail-inline-image-wrap:hover .gmail-inline-image-resize-handle,.gmail-inline-image-resize-handle.is-active{opacity:1}
+    /* 插入圖片本身也要能單獨刪除——原生 contenteditable=false 節點雖然理論上可以用 Backspace/Delete
+       鍵盤刪除，但不是所有情況下都能可靠觸發（例如游標沒有剛好停在圖片旁邊），這裡額外補一顆明確的
+       刪除鈕，不用依賴鍵盤刪除也能拿掉插入的圖片。 */
+    .gmail-inline-image-remove{position:absolute!important;left:3px!important;top:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:pointer;opacity:0;transition:opacity .12s ease;z-index:3}
+    .gmail-inline-image-remove svg{width:9px;height:9px;stroke:currentColor;stroke-width:2.6;fill:none;pointer-events:none}
+    .gmail-inline-image-wrap:hover .gmail-inline-image-remove,.gmail-inline-image-remove:focus-visible{opacity:1}
+    /* 內容還在準備（案件編號生產中、信件串/簽名檔還在讀取）時把編輯器鎖成唯讀＋淡化，避免使用者
+       搶在載入完成前開始打字，之後被剛載入完成的資料整個蓋掉；見 setGmailEditorLoading()。 */
+    .gmail-rich-editor.is-generating{opacity:.6;cursor:progress}
+    .gmail-rich-toolbar button:disabled{opacity:.4!important;cursor:default!important;pointer-events:none}
     .gmail-thread-from-value{min-height:36px;box-sizing:border-box;display:flex;align-items:center;border-radius:10px;border:1px solid var(--line);padding:0 11px;font-size:13px;font-weight:750;color:var(--muted);background:#f6f9f7}
     .gmail-recipient-row{align-items:flex-start}
     .gmail-recipient-control{display:flex;align-items:center;align-content:center;flex:1 1 auto;min-width:0;min-height:36px;box-sizing:border-box;gap:5px;flex-wrap:wrap;padding:4px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:text}
@@ -7020,6 +7030,7 @@
           <button type="button" class="gmail-rich-image-btn" data-rich-image-for="gmailThreadReplyEditor" title="上傳照片" aria-label="上傳照片"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM7 15l3.1-3.3 2.6 2.5 2.2-2.1 3.1 3.2M15.8 9h.1"/></svg></button>
           <input type="file" class="gmail-rich-image-input" data-rich-image-input-for="gmailThreadReplyEditor" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
         </div>
+        <div class="gmail-modal-pending-banner" id="gmailThreadReplyEditorLoading" hidden>內容準備中，請稍候...</div>
         <div id="gmailThreadReplyEditor" class="gmail-rich-editor" contenteditable="true" data-placeholder="輸入回覆內容..."></div>
       </div>
       <div class="gmail-scheduled-list" id="gmailThreadScheduledList" hidden></div>
@@ -7072,6 +7083,7 @@
             <button type="button" class="gmail-rich-image-btn" data-rich-image-for="gmailComposeEditor" title="上傳照片" aria-label="上傳照片"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM7 15l3.1-3.3 2.6 2.5 2.2-2.1 3.1 3.2M15.8 9h.1"/></svg></button>
             <input type="file" class="gmail-rich-image-input" data-rich-image-input-for="gmailComposeEditor" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
           </div>
+          <div class="gmail-modal-pending-banner" id="gmailComposeEditorLoading" hidden>內容準備中，請稍候...</div>
           <div id="gmailComposeEditor" class="gmail-rich-editor" contenteditable="true" data-placeholder="信件內容"></div>
         </div>
       </div>
@@ -8374,12 +8386,18 @@ function placeRichRangeAtPoint(editor,x,y){
   if(!rangeInsideEditor(range,editor)){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
   savedRichSelectionRange=range.cloneRange();
 }
-/** 圖片外層容器的縮放把手：改用自訂拖曳（而不是原生 CSS resize:both）鎖定原始比例縮放——
- * 原生 resize:both 允許寬高各自獨立拖曳，一旦拖出跟圖片原始比例不同的容器尺寸，
- * 因為 img 本身是 object-fit:contain，容器裡就會出現一塊空白（圖片沒有真的填滿容器、
- * 看起來像沒有跟著縮放），這正是「插入圖片無法編輯大小」的根因；改成永遠依拖曳的寬度
- * 換算等比例高度，容器多大、圖片就正好多大，不會再出現空白。 */
-function bindGmailInlineImageResizeHandle(wrap,image){
+/** 圖片外層容器的縮放把手＋刪除鈕。
+ * 縮放把手改用自訂拖曳（而不是原生 CSS resize:both）鎖定原始比例縮放——原生 resize:both
+ * 允許寬高各自獨立拖曳，一旦拖出跟圖片原始比例不同的容器尺寸，因為 img 本身是
+ * object-fit:contain，容器裡就會出現一塊空白（圖片沒有真的填滿容器、看起來像沒有跟著縮放），
+ * 這正是「插入圖片無法編輯大小」的根因；改成永遠依拖曳的寬度換算等比例高度，容器多大、
+ * 圖片就正好多大，不會再出現空白。
+ * 刪除鈕：圖片本身跟外層 wrap 一樣是 contenteditable="false" 的 atomic 節點，理論上可以用
+ * Backspace/Delete 鍵盤刪除，但實際要「游標剛好停在圖片正前/正後方」才會觸發，滑鼠點在圖片
+ * 上只會把游標移到最近的可編輯位置、不會自動選取整個圖片節點，導致使用者常常按了鍵盤卻刪不掉
+ * 剛插入的圖片；這裡額外補一顆明確的「×」按鈕（跟修改紀錄縮圖的 .revision-image-remove 是
+ * 同一種既有模式），點一下就能移除，不用依賴鍵盤刪除的時機。 */
+function bindGmailInlineImageControls(wrap,image){
   const handle=document.createElement('span');
   handle.className='gmail-inline-image-resize-handle';
   handle.setAttribute('contenteditable','false');
@@ -8407,6 +8425,22 @@ function bindGmailInlineImageResizeHandle(wrap,image){
     document.addEventListener('mousemove',onMove);
     document.addEventListener('mouseup',onUp);
   });
+  const remove=document.createElement('button');
+  remove.type='button';
+  remove.className='gmail-inline-image-remove';
+  remove.title='移除這張圖片';
+  remove.setAttribute('aria-label','移除這張圖片');
+  remove.setAttribute('contenteditable','false');
+  remove.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke-linecap="round"/></svg>';
+  wrap.appendChild(remove);
+  remove.addEventListener('mousedown',event=>{event.preventDefault();event.stopPropagation()});
+  remove.addEventListener('click',event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    const editor=wrap.closest('.gmail-rich-editor');
+    wrap.remove();
+    if(editor)editor.focus();
+  });
 }
 function insertGmailInlineImage(editor,item){
   const wrap=document.createElement('span');
@@ -8431,7 +8465,7 @@ function insertGmailInlineImage(editor,item){
     wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
   },{once:true});
   wrap.appendChild(image);
-  bindGmailInlineImageResizeHandle(wrap,image);
+  bindGmailInlineImageControls(wrap,image);
   const spacer=document.createElement('br');
   let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange:document.createRange();
   if(!rangeInsideEditor(range,editor)){range.selectNodeContents(editor);range.collapse(false)}
@@ -8475,7 +8509,7 @@ function restoreScheduledGmailInlineImages(editor,items){
     image.src=dataUrl;
     image.replaceWith(wrap);
     wrap.appendChild(image);
-    bindGmailInlineImageResizeHandle(wrap,image);
+    bindGmailInlineImageControls(wrap,image);
   });
 }
 async function addGmailInlineImages(editorId,fileList,expectedGeneration=gmailInlineImageGenerationsByEditor.get(editorId)||0){
@@ -8792,6 +8826,7 @@ function renderPostSubmitQueue(){
 function resetGmailComposeQueueUi(){
   clearScheduledMailEditState();
   const modal=$('#gmailComposeModal'); if(modal)delete modal.dataset.postSubmitQueue;
+  setGmailEditorLoading($('#gmailComposeEditor'),false);
   const progress=$('#gmailComposeQueueProgress'); if(progress){progress.hidden=true; progress.textContent=''}
   const pending=$('#gmailComposeQueuePending'); if(pending){pending.hidden=true; pending.classList.remove('is-failed')}
   const prev=$('#gmailComposeQueuePrev'); if(prev)prev.hidden=true;
@@ -8822,6 +8857,10 @@ function renderPostSubmitGmailDraft(){
   editor.innerHTML=draft.edited?draft.edited.bodyHtml:defaults.bodyHtml;
   clearGmailInlineImages(editor.id);
   appendDefaultGmailSignature(editor);
+  // 案件編號還在背景生產（!ready）的這段期間鎖住編輯器，不讓使用者打的字被「編號解出來後
+  // 重新用 defaults.bodyHtml 覆寫」這一步蓋掉；已經有 #gmailComposeQueuePending 這條 banner
+  // 說明「案件編號生產中」，這裡不用再疊一條重複的「內容準備中」訊息（banner:false）。
+  setGmailEditorLoading(editor,!ready,{banner:false});
   const pending=$('#gmailComposeQueuePending');
   if(pending){
     pending.hidden=ready;
@@ -8955,6 +8994,27 @@ function closePostSubmitCopyModal(){
   const modal=$('#mailCopyModal'); if(modal)modal.hidden=true;
   postSubmitQueue=null;
 }
+/** 「產生中」鎖：撰寫／回信視窗剛開啟、內容還在準備（案件編號還在背景生產、信件串/簽名檔還在讀取）
+ * 的這段期間，把編輯器鎖成唯讀（contenteditable=false）＋淡化＋停用同一個編輯區的格式工具列，並顯示
+ * 「內容準備中」提示（見 #gmailComposeEditorLoading／#gmailThreadReplyEditorLoading 兩個 banner），
+ * 避免使用者搶在載入完成前開始打字——這幾個流程（openGmailThreadModal／openModificationRequestReplyModal／
+ * openDesignerReplyMailModal／renderPostSubmitGmailDraft）載入完成後都會用剛拿到的資料重寫編輯器內容，
+ * 沒有這道鎖的話，使用者這段時間打的字會被整個蓋掉、畫面上看起來像是「編輯完又跳回原本的狀態」。
+ * 只鎖「初始內容還沒準備好」這一段——之後才觸發的非同步流程（例如設計師回覆信抓 NAS 圖片）本來就
+ * 設計成只局部更新指定容器、不會動到使用者已經打好的文字（見 applyDesignerReplyImages 的說明），
+ * 不需要、也不應該套用這把鎖，避免使用者等圖片上傳等到不耐煩、卻連文字都不能先打。 */
+function setGmailEditorLoading(editor,isLoading,{banner=true}={}){
+  if(!editor)return;
+  editor.contentEditable=isLoading?'false':'true';
+  editor.classList.toggle('is-generating',Boolean(isLoading));
+  editor.setAttribute('aria-busy',isLoading?'true':'false');
+  const toolbar=editor.parentElement?.querySelector(':scope > .gmail-rich-toolbar');
+  if(toolbar)toolbar.querySelectorAll('button').forEach(button=>{button.disabled=Boolean(isLoading)});
+  if(banner){
+    const bannerEl=document.getElementById(`${editor.id}Loading`);
+    if(bannerEl)bannerEl.hidden=!isLoading;
+  }
+}
 async function openGmailComposeModal(id){
   if(!requireAccess('request.mail','此帳號沒有發送信件權限'))return;
   const row=rows.find(r=>String(r.id)===String(id));
@@ -8977,8 +9037,10 @@ async function openGmailComposeModal(id){
   const editor=$('#gmailComposeEditor');
   editor.innerHTML=draft.bodyHtml;
   clearGmailInlineImages(editor.id);
+  setGmailEditorLoading(editor,true);
   modal.hidden=false;
   await appendDefaultGmailSignature(editor);
+  setGmailEditorLoading(editor,false);
   refreshScheduledMailList(id,'compose');
 }
 /** 點擊遮罩層外部才收合彈窗——只認「mousedown 跟 click 兩次都真的落在遮罩本身」的情況，而不是單看 click 那一下的 event.target。這是為了修正在編輯區／收件人欄位裡拖曳選取文字時，滑鼠放開的座標剛好超出卡片範圍，瀏覽器會把那次 click 事件的 target 判定成遮罩本身（因為 mousedown 與 mouseup 落在不同元素時，click 會冒泡到兩者最近的共同祖先），導致彈窗被誤判成「點擊外部」而意外關閉。 */
@@ -8991,6 +9053,7 @@ function bindModalOverlayDismiss(modalEl,onClose){
 function closeGmailComposeModal(){
   const modal=$('#gmailComposeModal'); if(modal)modal.hidden=true;
   clearScheduledMailEditState('compose');
+  setGmailEditorLoading($('#gmailComposeEditor'),false);
   if(postSubmitQueue){postSubmitQueue=null; resetGmailComposeQueueUi()}
 }
 async function sendGmailComposeModal(){
@@ -10286,7 +10349,12 @@ function setGmailEditorPlainText(editor,value=''){const text=String(value);edito
 /** 「回信」目前開著的信件串上一次成功讀到的訊息清單，供「填寫修改需求信」／「設計師回覆信」取用
  * （例如抓上一封寄件者姓名），避免再另外多打一次 getCaseMailThread。 */
 let gmailThreadMessagesCache=[];
-async function openGmailThreadModal(id){
+/** lockUntilCaller：「填寫修改需求信」／「設計師回覆信」會在這支函式跑完之後，接著自己再改寫一次
+ * 編輯器內容（見 openModificationRequestReplyModal／openDesignerReplyMailModal）——如果這支函式自己
+ * 在跑完的當下就先解鎖，中間那段極短的同步空檔理論上仍有機會被使用者搶到，且解鎖後又立刻重新鎖一次
+ * 畫面會閃爍；改成由呼叫端傳 true，這支函式只負責上鎖與載入，鎖什麼時候真正解除交給呼叫端自己決定
+ * （呼叫端寫完自己那段內容後才解鎖，見對應函式）。 */
+async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
   if(!row.gmailThreadId){setSync('此案件尚未透過 Gmail 寄出過信件',true);return}
   const modal=$('#gmailThreadModal'), list=$('#gmailThreadModalList'), replyEditor=$('#gmailThreadReplyEditor');
@@ -10330,6 +10398,8 @@ async function openGmailThreadModal(id){
   const scheduledList=$('#gmailThreadScheduledList'); if(scheduledList){scheduledList.hidden=true; scheduledList.innerHTML=''}
   updateGmailScheduleStatusBadge('thread',[]);
   list.innerHTML='<div class="revision-modal-empty">載入中...</div>';
+  // 一開始就把編輯器鎖成唯讀，避免使用者搶在信件串/簽名檔載入完成前開始打字——見 setGmailEditorLoading。
+  if(replyEditor)setGmailEditorLoading(replyEditor,true);
   modal.hidden=false;
   try{
     const signatureHtml=await ensureGmailSignatureLoaded();
@@ -10361,8 +10431,11 @@ async function openGmailThreadModal(id){
     }
   }
   if(replyEditor&&!composeSection?.hidden)await appendDefaultGmailSignature(replyEditor);
+  // 一般回信（沒有呼叫端要接續改寫內容）在這裡就解鎖；「填寫修改需求信」／「設計師回覆信」傳了
+  // lockUntilCaller，交給它們自己寫完各自的內容後再解鎖，見上方函式開頭的說明。
+  if(replyEditor&&!lockUntilCaller)setGmailEditorLoading(replyEditor,false);
 }
-function closeGmailThreadModal(){const modal=$('#gmailThreadModal'); if(modal)modal.hidden=true; clearScheduledMailEditState('thread')}
+function closeGmailThreadModal(){const modal=$('#gmailThreadModal'); if(modal)modal.hidden=true; clearScheduledMailEditState('thread'); setGmailEditorLoading($('#gmailThreadReplyEditor'),false)}
 /** 點擊「回信」時先跳出的選擇：填寫修改需求信（給專案，內容同步記錄進「修改紀錄」並帶動輪次一修／二修…）／
  * 設計師回覆信（給設計師，先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器）／
  * 一般回信（原本的行為，直接開啟信件編輯器讓大家手動填寫）。 */
@@ -10420,17 +10493,17 @@ function gmailRecipientGreetingName(fieldId){
 async function openModificationRequestReplyModal(id){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
-  await openGmailThreadModal(id);
-  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection');
-  if(!modal||modal.hidden||composeSection?.hidden)return;
+  await openGmailThreadModal(id,{lockUntilCaller:true});
+  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection'), editor=$('#gmailThreadReplyEditor');
+  if(!modal||modal.hidden||composeSection?.hidden){setGmailEditorLoading(editor,false);return}
   modal.dataset.replyMode='modification';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='填寫修改需求信';
   const scheduleBtn=$('#gmailThreadSchedule'); if(scheduleBtn)scheduleBtn.hidden=true;
-  const editor=$('#gmailThreadReplyEditor');
   if(!editor)return;
   setGmailEditorPlainText(editor,`Hi ${greetingName(row.designer||'設計負責人')},\n\n`);
   clearGmailInlineImages(editor.id);
   await appendDefaultGmailSignature(editor);
+  setGmailEditorLoading(editor,false);
   restoreOpenGmailEditorFocus();
 }
 /** 「設計師回覆信」：openReplyMethodChooser 選了這個選項後，一按下 NAS 資料夾選擇器的「選擇這個
@@ -10443,9 +10516,9 @@ async function openModificationRequestReplyModal(id){
 async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
-  await openGmailThreadModal(id);
-  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection');
-  if(!modal||modal.hidden||composeSection?.hidden)return;
+  await openGmailThreadModal(id,{lockUntilCaller:true});
+  const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection'), editor=$('#gmailThreadReplyEditor');
+  if(!modal||modal.hidden||composeSection?.hidden){setGmailEditorLoading(editor,false);return}
   modal.dataset.replyMode='designer';
   modal.dataset.designerReplyCaseId=String(id);
   const targetRound=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
@@ -10457,7 +10530,6 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   // scheduleThreadReply() 會擋下排程，避免把「圖片上傳中...」這個佔位文字排進要寄出的內容裡。
   const sendBtn=$('#gmailThreadReplySend'); if(sendBtn){sendBtn.disabled=true; sendBtn.textContent='圖片上傳中...'}
   const scheduleBtn=$('#gmailThreadSchedule'); if(scheduleBtn)scheduleBtn.disabled=true;
-  const editor=$('#gmailThreadReplyEditor');
   if(!editor)return;
   const recipientName=gmailRecipientGreetingName('gmailThreadTo')||'收件人';
   const configuredTemplate=designerReplyTemplateForCase(row)||'附上社群貼文內容，\n再煩請查收，謝謝。';
@@ -10482,6 +10554,10 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   }
   clearGmailInlineImages(editor.id);
   await appendDefaultGmailSignature(editor);
+  // 解鎖之後才由 resolveDesignerReplyImages()／applyDesignerReplyImages() 接手處理圖片上傳結果，
+  // 那段邏輯本來就設計成只局部更新 #gmailDesignerReplyImages 這個容器，不會動到這裡已經寫好的文字，
+  // 使用者不用等圖片抓完就可以先開始打字。
+  setGmailEditorLoading(editor,false);
   restoreOpenGmailEditorFocus();
 }
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，

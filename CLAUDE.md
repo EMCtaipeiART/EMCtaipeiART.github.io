@@ -189,6 +189,18 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-25 09:25 Asia/Taipei — 修正 Gmail 編輯器插入圖片無法刪除、載入中編輯內容被覆寫
+
+- 修改目的：使用者回報兩個 Gmail 撰寫／回信編輯器的問題：①插入圖片後無法刪除；②剛開啟編輯器、資料（案件編號生產中、信件串/簽名檔）還在載入時如果先開始編輯，等載入完成後編輯的內容會被覆寫、跳回原本的狀態。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **插入圖片無法刪除**：插入的圖片包在 `contenteditable="false"` 的容器裡，理論上可以用 Backspace/Delete 鍵盤刪除，但實務上要「游標剛好停在圖片正前/正後方」才會觸發，滑鼠點在圖片上通常刪不掉。`bindGmailInlineImageResizeHandle()` 改名為 `bindGmailInlineImageControls()`，除了原本的縮放把手，新增一顆懸停才顯示的「×」刪除按鈕（跟修改紀錄縮圖既有的 `.revision-image-remove` 同一種模式），點一下就能移除，不用依賴鍵盤刪除的時機。
+  2. **載入中編輯內容被覆寫**：追查發現多個進入點（`renderPostSubmitGmailDraft`「案件編號生產中」重繪、`openGmailThreadModal` 讀信件串/簽名檔、`openModificationRequestReplyModal`／`openDesignerReplyMailModal` 在 `openGmailThreadModal` 之後接續改寫內容）都會在非同步資料載入完成後，直接用剛拿到的資料重寫編輯器內容，中間如果使用者已經打了字會被整個蓋掉。新增 `setGmailEditorLoading(editor,isLoading,{banner})`，在內容還沒準備好的這段期間把編輯器鎖成唯讀（`contenteditable=false`）＋淡化＋停用格式工具列，並顯示「內容準備中，請稍候...」提示（新增 `#gmailComposeEditorLoading`／`#gmailThreadReplyEditorLoading` 兩個 banner，樣式沿用既有的 `.gmail-modal-pending-banner`），等內容真正準備好才解鎖。`openGmailThreadModal` 新增 `lockUntilCaller` 選項，讓 `openModificationRequestReplyModal`／`openDesignerReplyMailModal` 可以在它跑完之後、自己接續改寫內容完成前，維持鎖住不中斷。`renderPostSubmitGmailDraft` 依 `ready`（案件編號是否已生產出來）鎖／解鎖，因為已經有 `#gmailComposeQueuePending` 顯示「案件編號生產中」，這裡不重複顯示第二條 banner（`{banner:false}`）。只鎖「初始內容還沒準備好」這一段，之後才觸發的非同步流程（例如設計師回覆信抓 NAS 圖片）維持不受影響，本來就設計成只局部更新指定容器、不會動到使用者已經打好的文字。
+- 風險區塊：沒有新增風險，純粹是把既有「內容尚未就緒」這段既有窗口，從「使用者看不出來、可以編輯」改成「明確鎖住、看得出來」，不影響鎖定期間結束後的既有行為。
+- 已檢查／驗證方式：`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 48/49（唯一失敗是既有、跟這次改動無關的資料快照過期問題，已用 `git stash` 確認同一個失敗在改動前也存在）。用本機靜態伺服器＋ Browser pane 對真實頁面做隔離測試：①真的用滑鼠點擊插入圖片右上角的「×」按鈕，確認圖片正確從編輯器移除、其餘內容不受影響；②直接呼叫 `setGmailEditorLoading()` 確認鎖定/解鎖時 `contentEditable`、`is-generating` 樣式、banner 顯示、工具列按鈕停用狀態都正確切換，且鎖定期間真的用鍵盤輸入完全無效、解鎖後恢復正常；③完整重現 `renderPostSubmitGmailDraft` 的「案件編號生產中」情境——鎖定期間打字無效，之後模擬案件編號解出、觸發重新渲染，確認畫面正確顯示乾淨的預設內容（沒有殘留使用者在鎖定期間試圖打的字）、編輯器正確解鎖；④完整重現 `openDesignerReplyMailModal` 的情境——在 `await openGmailThreadModal(...)` 還在等待網路回應期間打字，確認完全無效，載入完成後正確顯示「設計師回覆信」範本內容，沒有夾雜使用者打的字。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-24 14:45 Asia/Taipei — 儀表板設計師名單連動設計列表並新增獨立季度分析
 
 - 修改目的：讓儀表板設計師篩選與資料庫後台「設計列表」保持一致，並把季度資訊從分析中心拆成獨立頁面，補上平面／影音設計師季度分數占比。

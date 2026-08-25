@@ -206,7 +206,7 @@ test('Gmail thread displays names only and keeps email addresses in name tooltip
 
 test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  const start = html.indexOf('async function openGmailThreadModal(id)');
+  const start = html.indexOf('async function openGmailThreadModal(id');
   const end = html.indexOf('function closeGmailThreadModal()', start);
   assert.ok(start > 0 && end > start);
   const source = html.slice(start, end);
