@@ -8523,16 +8523,25 @@ async function addGmailInlineImages(editorId,fileList,expectedGeneration=gmailIn
   if(!files.length){setSync('請選擇 JPG、PNG、WebP 或 GIF 照片',true);return}
   const store=pruneGmailInlineImages(editor);
   let totalBytes=[...store.values()].reduce((sum,item)=>sum+item.size,0),added=0;
-  for(const file of files){
-    if(store.size>=gmailInlineImageMaxCount){setSync(`每封信最多可放 ${gmailInlineImageMaxCount} 張照片`,true);break}
-    if(!gmailInlineImageTypes.has(file.type)){setSync(`${file.name} 的圖片格式不支援`,true);continue}
-    if(file.size>gmailInlineImageMaxBytes){setSync(`${file.name} 超過 8 MB，請先壓縮後再上傳`,true);continue}
-    if(totalBytes+file.size>gmailInlineImageMaxTotalBytes){setSync('信件內嵌照片總量不可超過 18 MB',true);break}
-    const dataUrl=await gmailFileDataUrl(file);
-    // 讀檔期間使用者可能已關閉並打開另一個案件的編輯器；舊貼圖不可落入新信件。
-    if((gmailInlineImageGenerationsByEditor.get(editorId)||0)!==expectedGeneration)return;
-    const item={contentId:gmailInlineContentId(),fileName:file.name||'照片',mimeType:file.type,size:file.size,dataUrl,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
-    store.set(item.contentId,item);totalBytes+=file.size;insertGmailInlineImage(editor,item);added++;
+  // 讀取/轉成 base64（gmailFileDataUrl）是非同步的，這段期間鎖住編輯器——插入位置是靠稍早
+  // mousedown 當下記錄的 savedRichSelectionRange，使用者如果趁著還在處理照片時繼續打字/移動游標，
+  // 選取範圍會失準，圖片可能插到不對的位置、或跟剛打的字互相打架；用 try/finally 確保不管中途
+  // break/continue/return（例如讀檔途中案件切換）都一定會解鎖，不會卡在唯讀狀態出不來。
+  setGmailEditorLoading(editor,true);
+  try{
+    for(const file of files){
+      if(store.size>=gmailInlineImageMaxCount){setSync(`每封信最多可放 ${gmailInlineImageMaxCount} 張照片`,true);break}
+      if(!gmailInlineImageTypes.has(file.type)){setSync(`${file.name} 的圖片格式不支援`,true);continue}
+      if(file.size>gmailInlineImageMaxBytes){setSync(`${file.name} 超過 8 MB，請先壓縮後再上傳`,true);continue}
+      if(totalBytes+file.size>gmailInlineImageMaxTotalBytes){setSync('信件內嵌照片總量不可超過 18 MB',true);break}
+      const dataUrl=await gmailFileDataUrl(file);
+      // 讀檔期間使用者可能已關閉並打開另一個案件的編輯器；舊貼圖不可落入新信件。
+      if((gmailInlineImageGenerationsByEditor.get(editorId)||0)!==expectedGeneration)return;
+      const item={contentId:gmailInlineContentId(),fileName:file.name||'照片',mimeType:file.type,size:file.size,dataUrl,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
+      store.set(item.contentId,item);totalBytes+=file.size;insertGmailInlineImage(editor,item);added++;
+    }
+  }finally{
+    setGmailEditorLoading(editor,false);
   }
   editor.focus();
   if(added)setSync(`已加入 ${added} 張照片`,false,1800);
@@ -10560,6 +10569,33 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   setGmailEditorLoading(editor,false);
   restoreOpenGmailEditorFocus();
 }
+/** 「設計師回覆信」自動帶入的設計圖縮圖：跟使用者自己貼上/上傳的內嵌圖片一樣包一層
+ * .gmail-inline-image-wrap，重用同一顆 bindGmailInlineImageControls() 縮放把手＋刪除鈕——這些圖片
+ * 直接引用 Drive 網址（不是 gmailInlineImageStore 追蹤的 CID 附件），刪除只是單純把這個 DOM 節點
+ * 移除，不需要、也不會影響 gmailEditorMailPayload() 的 CID 轉換邏輯（那段只認有
+ * data-gmail-inline-image-id 屬性的圖片，這裡的圖片沒有這個屬性，維持原樣以 <img src="https://...">
+ * 送出）。初始尺寸沿用既有「180px 上限、依原始比例縮放」的視覺設計，不像使用者自己插入的圖片是
+ * 320px 上限——這是自動帶入的參考縮圖，維持比手動插入的圖片小一號的既有大小觀感。 */
+function appendDesignerReplyImageThumb(container,img){
+  const wrap=document.createElement('span');
+  wrap.className='gmail-inline-image-wrap';
+  wrap.setAttribute('contenteditable','false');
+  const image=document.createElement('img');
+  image.src=img.url;
+  image.alt=img.fileName||'設計圖';
+  image.className='gmail-inline-image';
+  image.draggable=false;
+  image.addEventListener('load',()=>{
+    if(wrap.style.width)return;
+    const naturalWidth=image.naturalWidth||180,naturalHeight=image.naturalHeight||180;
+    const width=Math.min(180,naturalWidth);
+    wrap.style.width=`${width}px`;
+    wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
+  },{once:true});
+  wrap.appendChild(image);
+  bindGmailInlineImageControls(wrap,image);
+  container.appendChild(wrap);
+}
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，
  * 取代原本的「圖片上傳中...」文字，並解除送出按鈕的停用狀態——只動這個佔位容器本身，不會動到
  * 使用者可能已經在其他地方打好的文字。編輯區已經不是這個案件的「設計師回覆信」（例如使用者中途
@@ -10572,14 +10608,7 @@ function applyDesignerReplyImages(id,images,{round=null}={}){
   if(container){
     container.textContent='';
     if(Array.isArray(images)&&images.length){
-      images.forEach(img=>{
-        const el=document.createElement('img');
-        el.src=img.url;
-        el.alt=img.fileName||'設計圖';
-        el.setAttribute('contenteditable','false');
-        el.style.cssText='max-width:180px;max-height:180px;border-radius:8px;margin:0 6px 6px 0;vertical-align:middle;display:inline-block';
-        container.appendChild(el);
-      });
+      images.forEach(img=>appendDesignerReplyImageThumb(container,img));
     }else{
       container.remove();
     }

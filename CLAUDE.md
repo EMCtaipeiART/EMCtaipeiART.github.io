@@ -189,6 +189,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-25 17:07 Asia/Taipei — 補齊三種回信模式的刪除圖片功能、上傳照片期間也鎖住編輯器
+
+- 修改目的：接續上一則「插入圖片可刪除、載入中鎖住編輯」的修改，使用者要求確認「填寫修改需求信」「設計師回覆信」「一般回信」三種回信模式是否都能刪除圖片，並且上傳照片檔案的處理期間也要鎖住編輯器（跟載入中同一種「產生中」狀態）。
+- 追查過程：三種模式共用同一個 `#gmailThreadReplyEditor`，使用者自己手動插入（貼上/拖放/點「上傳照片」）的圖片走 `insertGmailInlineImage()`→`bindGmailInlineImageControls()`，上一則已經補過刪除鈕，三種模式都吃得到，不需要額外處理。但「設計師回覆信」模式還有另一條**完全獨立**的圖片來源——`applyDesignerReplyImages()` 把 NAS 資料夾/電腦上傳自動抓到的設計圖，用純 `<img>`（沒有包 `.gmail-inline-image-wrap`）直接塞進 `#gmailDesignerReplyImages` 佔位容器，這條路徑完全沒有刪除機制，是這次真正要補的缺口。另外 `addGmailInlineImages()`（處理使用者選檔/貼上/拖放的圖片，逐張 `await gmailFileDataUrl(file)` 轉 base64）先前沒有鎖編輯器，讀檔期間使用者如果繼續打字/移動游標，插入圖片用的 `savedRichSelectionRange` 會失準，插入位置可能跟剛打的字互相打架。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. 新增 `appendDesignerReplyImageThumb(container,img)`，把「設計師回覆信」自動帶入的設計圖也包成 `.gmail-inline-image-wrap` 並呼叫既有的 `bindGmailInlineImageControls()`，重用同一套縮放把手＋刪除鈕；這些圖片是直接引用 Drive 網址（沒有 `data-gmail-inline-image-id`），刪除只是移除 DOM 節點，不影響 `gmailEditorMailPayload()` 既有的 CID 轉換邏輯（那段只認有這個屬性的圖片）。`applyDesignerReplyImages()` 改呼叫這個新函式取代原本直接建立 `<img>` 的寫法。
+  2. `addGmailInlineImages()` 在逐張讀檔轉換的迴圈外包上 `setGmailEditorLoading(editor,true)`／`try...finally{setGmailEditorLoading(editor,false)}`，讀檔期間（含多檔案依序處理）鎖住編輯器＋顯示「內容準備中」banner，跟上一則「載入信件串/簽名檔」用的是同一套鎖定機制；`finally` 確保不管中途 `break`/`continue`/`return`（例如讀檔途中案件切換）都一定會解鎖，不會卡在唯讀狀態。這條路徑同時服務「上傳照片」按鈕、貼上、拖放三種觸發方式，一次修改全部涵蓋。
+  3. 刻意**沒有**改動「設計師回覆信」NAS/電腦上傳這條背景抓圖流程本身（`resolveDesignerReplyImages`／`applyDesignerReplyImages` 的呼叫時機）——這是先前就明確決定、且已經寫進程式碼註解的設計：那段背景抓取時間可能較長，鎖住整個編輯器會讓使用者連文字都不能先打，體驗更差；現在解決的是「抓到的圖片能不能刪除」，不是「抓圖過程要不要鎖編輯器」，兩者是不同的問題。
+- 風險區塊：無新增風險。`appendDesignerReplyImageThumb()` 沿用既有已測試過的 `bindGmailInlineImageControls()`，行為完全一致；`addGmailInlineImages()` 的鎖定範圍精準只包住非同步讀檔迴圈本身，前後既有的驗證/錯誤訊息邏輯不受影響。
+- 已檢查／驗證方式：`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 49/49。用本機靜態伺服器＋ Browser pane 對真實頁面做隔離測試：①「填寫修改需求信」「一般回信」「設計師回覆信」三種模式各自插入一張測試圖片，確認刪除鈕都存在、用真實/模擬點擊都能正確移除圖片、其餘文字內容不受影響；②「設計師回覆信」自動帶入的兩張設計圖縮圖確認都有刪除鈕，用真實滑鼠點擊刪除其中一張，確認正確只移除該張、另一張與其餘畫面不受影響；③上傳照片鎖定機制：先用同步檢查（fire 而不 await）確認呼叫 `addGmailInlineImages()` 的瞬間編輯器立即鎖定；接著在同一支 script 內用 `execCommand('insertText',...)` 模擬鎖定期間嘗試輸入，確認完全無效、300ms 後仍維持鎖定與原內容，`await` 整個非同步流程結束後確認正確解鎖、圖片正確插入、文字內容全程未受污染（過程中另外用真實滑鼠點擊+輸入的測試因為工具本身跨多次呼叫的網路延遲，兩次測試時間點沒有準確對齊鎖定視窗，改用單一次 script 內的精確計時測試取得無歧義的結果）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-25 09:25 Asia/Taipei — 修正 Gmail 編輯器插入圖片無法刪除、載入中編輯內容被覆寫
 
 - 修改目的：使用者回報兩個 Gmail 撰寫／回信編輯器的問題：①插入圖片後無法刪除；②剛開啟編輯器、資料（案件編號生產中、信件串/簽名檔）還在載入時如果先開始編輯，等載入完成後編輯的內容會被覆寫、跳回原本的狀態。
