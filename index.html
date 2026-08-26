@@ -400,7 +400,7 @@
     .issue-report-card label{display:grid;gap:8px;margin-bottom:14px;font-size:15px;color:#35423c;font-weight:850}
     .issue-report-optional{color:#7b8580;font-size:12px;font-weight:700}
     .issue-report-field{position:relative}
-    .issue-report-card textarea{min-height:106px;border-radius:12px;resize:vertical;padding:12px 14px 28px!important}
+    .issue-report-card textarea{min-height:106px;border-radius:10px!important;resize:vertical;padding:12px 14px 28px!important}
     .issue-report-count{position:absolute;right:13px;bottom:9px;color:#7b8580;font-size:12px;font-weight:650;pointer-events:none}
     .issue-report-divider{height:1px;background:var(--line);margin:22px 0 18px}
     .issue-report-list-head{display:flex;align-items:center;gap:9px;margin-bottom:12px;color:#27342e}
@@ -2017,7 +2017,8 @@
       z-index:0!important;
     }
     #modifyRecent .modify-fixed{
-      height:100%!important;
+      min-height:100%!important;
+      align-self:start!important;
       overflow:hidden!important;
       border-right:1px solid var(--line)!important;
       background:#fff!important;
@@ -2025,7 +2026,8 @@
       z-index:1!important;
     }
     #modifyRecent .modify-scroll{
-      height:100%!important;
+      min-height:100%!important;
+      align-self:start!important;
       min-width:0!important;
       overflow-x:auto!important;
       overflow-y:hidden!important;
@@ -7160,11 +7162,11 @@
 <div class="login-modal" id="issueReportModal" hidden>
   <form class="issue-report-card" id="issueReportForm">
     <div class="issue-report-head"><h3>問題回報</h3><button type="button" class="issue-report-close ui-close-button" id="issueReportClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button></div>
-    <label><span>內容</span><div class="issue-report-field"><textarea name="content" maxlength="300" placeholder="請描述遇到的問題" required></textarea><span class="issue-report-count" data-count-for="content">0/300</span></div></label>
-    <label><span>修改建議 <span class="issue-report-optional">（選填）</span></span><div class="issue-report-field"><textarea name="suggestion" maxlength="300" placeholder="希望怎麼調整或改善"></textarea><span class="issue-report-count" data-count-for="suggestion">0/300</span></div></label>
-    <div class="issue-report-divider"></div>
     <div class="issue-report-list-head"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg><h4>回報列表 <span id="issueReportTotal"></span></h4></div>
     <div class="issue-report-list" id="issueReportList"><div class="issue-report-empty">載入中...</div></div>
+    <div class="issue-report-divider"></div>
+    <label><span>內容</span><div class="issue-report-field"><textarea name="content" maxlength="300" placeholder="請描述遇到的問題" required></textarea><span class="issue-report-count" data-count-for="content">0/300</span></div></label>
+    <label><span>修改建議 <span class="issue-report-optional">（選填）</span></span><div class="issue-report-field"><textarea name="suggestion" maxlength="300" placeholder="希望怎麼調整或改善"></textarea><span class="issue-report-count" data-count-for="suggestion">0/300</span></div></label>
     <div class="issue-report-actions">
       <button type="button" class="secondary" id="issueReportCancel">取消</button>
       <button type="submit" id="issueReportSubmit">送出</button>

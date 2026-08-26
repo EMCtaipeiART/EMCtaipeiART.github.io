@@ -1540,3 +1540,55 @@ test('upload page forwards editorToken when replacing a designer poster from rec
   assert.match(code, /verifyMediaManager_\(payload\.editorToken\);[\s\S]*callMainAppJsonAction_\('deleteDesignerMediaFiles'/);
   assert.match(code, /callMainAppJsonAction_\('saveDesignerProfiles',[\s\S]*profiles:\s*\[profile\]/);
 });
+
+test('the recent case list\'s two split tables can grow past their nominal even-fill height so a taller wrapped row does not hide the last row with no way to scroll to it', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // #modifyRecent 是 display:grid，兩個直欄（.modify-fixed／.modify-scroll）本身有 overflow:hidden／auto，
+  // 這會讓它們對 grid 列高度的「最小內容尺寸」貢獻歸零（CSS Grid／Flexbox 規格對 overflow 非 visible 的
+  // 項目的既定行為），如果同時維持預設的 align-items:stretch，兩欄就會被鎖死在 grid 列本身算出來的高度，
+  // 內容（每一列列高由 JS 依文字換行等實際內容強制設定）真正需要的空間超過這個高度時就會被無聲裁掉、
+  // 而且外層 #modifyRecent 的 scrollHeight 永遠等於 clientHeight（因為量測依據的正是這兩個被鎖死的直欄），
+  // 完全沒有捲軸可以捲到看不到的最後一列。修法：改成 min-height:100%（只當下限，不當上限）＋
+  // align-self:start（跳出預設的 stretch，讓兩欄改成純粹依內容高度決定自己的高度），兩者缺一不可——
+  // 只改 min-height 不夠（已用瀏覽器測試驗證過，見這次修改紀錄），一定要兩個屬性一起才會生效。
+  const fixedStart = html.indexOf('#modifyRecent .modify-fixed{');
+  const fixedEnd = html.indexOf('}', fixedStart);
+  const fixedRule = html.slice(fixedStart, fixedEnd + 1);
+  assert.match(fixedRule, /min-height:100%!important/);
+  assert.match(fixedRule, /align-self:start!important/);
+  assert.doesNotMatch(fixedRule, /(?<!min-)height:100%!important/, '.modify-fixed 不能再用 height:100% 當硬性上限，否則內容過高時仍會被裁掉');
+  const scrollStart = html.indexOf('#modifyRecent .modify-scroll{');
+  const scrollEnd = html.indexOf('}', scrollStart);
+  const scrollRule = html.slice(scrollStart, scrollEnd + 1);
+  assert.match(scrollRule, /min-height:100%!important/);
+  assert.match(scrollRule, /align-self:start!important/);
+  assert.doesNotMatch(scrollRule, /(?<!min-)height:100%!important/, '.modify-scroll 不能再用 height:100% 當硬性上限，否則內容過高時仍會被裁掉');
+});
+
+test('the issue report modal lists reports before the content/suggestion fields, and its textareas render at 10px corners instead of the global 24px textarea rule', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const formStart = html.indexOf('<form class="issue-report-card" id="issueReportForm">');
+  const formEnd = html.indexOf('</form>', formStart);
+  assert.ok(formStart > 0 && formEnd > formStart);
+  const formSource = html.slice(formStart, formEnd);
+  // 列表要排在最前面（緊接標題列之後），內容／修改建議欄位往下排到分隔線之後，跟原本「先填欄位、
+  // 列表在最下面」的順序相反——用四個標記字串在原始碼裡出現的先後順序驗證真正的排列，而不是只看
+  // 個別字串存不存在。
+  const listHeadIndex = formSource.indexOf('issue-report-list-head');
+  const listIndex = formSource.indexOf('id="issueReportList"');
+  const dividerIndex = formSource.indexOf('issue-report-divider');
+  const contentFieldIndex = formSource.indexOf('name="content"');
+  const suggestionFieldIndex = formSource.indexOf('name="suggestion"');
+  assert.ok([listHeadIndex, listIndex, dividerIndex, contentFieldIndex, suggestionFieldIndex].every(i => i > 0));
+  assert.ok(listHeadIndex < listIndex, '回報列表標題要在列表本身之前');
+  assert.ok(listIndex < dividerIndex, '列表要排在分隔線之前，也就是排在內容／修改建議欄位之前');
+  assert.ok(dividerIndex < contentFieldIndex, '分隔線要在內容欄位之前，內容欄位才會排在列表下方');
+  assert.ok(contentFieldIndex < suggestionFieldIndex, '內容欄位要在修改建議欄位之前，維持原本兩者之間的相對順序');
+
+  // 全站有一條把所有 <textarea> 統一成 24px 大圓角的規則（.gmail-rich-editor／.mail-template-row textarea／
+  // 這次同一份工作也修過的 .signature-preset-content 都踩過同一個坑），問題回報的內容／修改建議欄位
+  // 原本雖然局部宣告了 12px，但因為那條全站規則有 !important、局部宣告沒有，實際渲染出來是 24px、
+  // 不是看起來寫的 12px——這次改成 10px 且補上 !important，確保真的贏過全站規則、渲染出來確實是 10px。
+  assert.match(html, /\.issue-report-card textarea\{min-height:106px;border-radius:10px!important;/);
+  assert.doesNotMatch(html, /\.issue-report-card textarea\{min-height:106px;border-radius:12px/);
+});
