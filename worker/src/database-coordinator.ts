@@ -450,13 +450,17 @@ function accountIsGmailThreadParticipant(account: unknown, messages: unknown[]):
   return gmailThreadParticipantEmails(messages).has(email);
 }
 
-/** 信件串只顯示來回內容：移除標準簽名分隔線以及常見行動裝置簽名。 */
-function stripSignatureFromPlainText(value: string, knownSignatureText = ''): string {
+/** 信件串只顯示來回內容：移除標準簽名分隔線以及常見行動裝置簽名。knownSignatureTextList 是「這個帳號目前
+ * 存的所有簽名檔」（Gmail 帳號本身的簽名＋所有自訂命名簽名檔，見 getCaseMailThread），逐一嘗試比對移除——
+ * 不能只認「目前設成預設的那一組」，因為歷史信件當初寄出時用的可能是後來已經被切換掉的另一組簽名檔。 */
+function stripSignatureFromPlainText(value: string, knownSignatureTextList: string[] = []): string {
   let body = value.replace(/\r\n?/g, '\n');
   const separator = body.search(/(?:^|\n)--[ \t]*(?:\n|$)/);
   if (separator >= 0) body = body.slice(0, separator);
-  const known = knownSignatureText.replace(/\r\n?/g, '\n').trim();
-  if (known && body.trimEnd().endsWith(known)) body = body.trimEnd().slice(0, -known.length);
+  for (const candidate of knownSignatureTextList) {
+    const known = candidate.replace(/\r\n?/g, '\n').trim();
+    if (known && body.trimEnd().endsWith(known)) { body = body.trimEnd().slice(0, -known.length); break; }
+  }
   body = body.replace(/\n*(?:Sent from my (?:iPhone|iPad|Android)|Get Outlook for (?:iOS|Android)|從我的 iPhone 傳送|由我的 iPhone 送出)[\s\S]*$/i, '');
   return body.trim();
 }
@@ -490,32 +494,40 @@ function stripQuotedHistoryFromPlainText(value: string): string {
   return (quoteStart >= 0 ? lines.slice(0, quoteStart) : lines).join('\n').trim();
 }
 
-/** 原始 HTML 也只保留該封新增內容，簽名與引用串後方的標記一律截掉。 */
-function gmailMessageVisibleHtml(message: Row, knownSignatureHtml = ''): string {
+/** 原始 HTML 也只保留該封新增內容，簽名與引用串後方的標記一律截掉。knownSignatureHtmlList 同樣是「這個
+ * 帳號目前存的所有簽名檔」全部拿來比對（見 stripSignatureFromPlainText 的說明），取其中最早出現的一個
+ * 匹配位置當作截斷點——即使歷史信件用的是後來已經改掉的舊簽名檔，仍然能正確辨識並截掉。 */
+function gmailMessageVisibleHtml(message: Row, knownSignatureHtmlList: string[] = []): string {
   const payload = message.payload as GmailMessagePart | undefined;
   const html = extractHtmlFromGmailPayload(payload);
   if (!html) return '';
   let visibleEnd = html.length;
   const hiddenMarker = html.match(/<(?:div|blockquote)\b[^>]*class\s*=\s*["'][^"']*\bgmail_(?:signature|quote)\b[^"']*["'][^>]*>|<blockquote\b[^>]*type\s*=\s*["']?cite["']?[^>]*>/i);
   if (hiddenMarker?.index !== undefined) visibleEnd = Math.min(visibleEnd, hiddenMarker.index);
-  const knownSignature = knownSignatureHtml.trim();
-  const knownSignatureIndex = knownSignature ? html.lastIndexOf(knownSignature) : -1;
-  if (knownSignatureIndex >= 0) visibleEnd = Math.min(visibleEnd, knownSignatureIndex);
+  for (const candidate of knownSignatureHtmlList) {
+    const known = candidate.trim();
+    if (!known) continue;
+    const knownSignatureIndex = html.lastIndexOf(known);
+    if (knownSignatureIndex >= 0) visibleEnd = Math.min(visibleEnd, knownSignatureIndex);
+  }
   return html.slice(0, visibleEnd);
 }
 
-function gmailMessagePlainBody(message: Row, knownSignatureText = '', knownSignatureHtml = ''): string {
+function gmailMessagePlainBody(message: Row, knownSignatureTextList: string[] = [], knownSignatureHtmlList: string[] = []): string {
   const payload = message.payload as GmailMessagePart | undefined;
-  const visibleHtml = gmailMessageVisibleHtml(message, knownSignatureHtml);
+  const visibleHtml = gmailMessageVisibleHtml(message, knownSignatureHtmlList);
   const rawBody = extractPlainTextFromGmailPayload(payload) || htmlToPlainText(visibleHtml) || extractHtmlAsPlainTextFromGmailPayload(payload) || text(message.snippet);
-  return stripSignatureFromPlainText(stripQuotedHistoryFromPlainText(rawBody), knownSignatureText);
+  return stripSignatureFromPlainText(stripQuotedHistoryFromPlainText(rawBody), knownSignatureTextList);
 }
 
 type GmailMessageLink = { text: string; url: string };
 
-/** 從已移除簽名與引用串的 HTML 擷取安全的 http(s) 連結，前端只收到文字＋網址，不收到原始 HTML。 */
-function gmailMessageLinks(message: Row, knownSignatureHtml = ''): GmailMessageLink[] {
-  const html = gmailMessageVisibleHtml(message, knownSignatureHtml);
+/** 從已移除簽名與引用串的 HTML 擷取安全的 http(s) 連結，前端只收到文字＋網址，不收到原始 HTML。
+ * 這支函式現在只給「HTML 抽取失敗、只能退回純文字顯示」這條備援路徑用——getCaseMailThread 正常情況下
+ * 會直接把（一樣先截掉簽名/引用串的）原始 HTML 交給前端，由前端自己的 DOMParser 白名單過濾器安全渲染，
+ * 連結會是渲染結果的一部分，不需要再另外抽取一份。 */
+function gmailMessageLinks(message: Row, knownSignatureHtmlList: string[] = []): GmailMessageLink[] {
+  const html = gmailMessageVisibleHtml(message, knownSignatureHtmlList);
   const links: GmailMessageLink[] = [];
   const anchorPattern = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
@@ -532,13 +544,15 @@ function gmailMessageLinks(message: Row, knownSignatureHtml = ''): GmailMessageL
   return links;
 }
 
-/** 逐封重建完整 Gmail thread，無條件附上先前每一封的新增內容，同時避免已嵌套引用造成重複。 */
+/** 逐封重建完整 Gmail thread，無條件附上先前每一封的新增內容，同時避免已嵌套引用造成重複。這裡只服務「正要
+ * 寄出這封回覆」的單一已知簽名檔，跟 getCaseMailThread 瀏覽信件串時要比對「帳號存的所有簽名檔」是不同情境，
+ * 所以維持單一字串參數，內部包成一個元素的陣列去呼叫共用的 gmailMessagePlainBody。 */
 function gmailThreadQuote(messages: unknown[], knownSignatureText = '', knownSignatureHtml = ''): { html: string; plainText: string } {
   const items = messages.map(asRow).map(message => {
     const payload = message.payload as GmailMessagePart | undefined;
     const from = gmailHeaderValue(payload?.headers, 'From');
     const date = formatGmailDateForDisplay(gmailHeaderValue(payload?.headers, 'Date'));
-    const body = gmailMessagePlainBody(message, knownSignatureText, knownSignatureHtml);
+    const body = gmailMessagePlainBody(message, [knownSignatureText], [knownSignatureHtml]);
     if (!body) return null;
     const heading = [date, from].filter(Boolean).join('，');
     const intro = heading ? `${heading} 寫道：` : '先前信件：';
@@ -1341,8 +1355,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'getCaseMailThread', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
-    const knownSignatureHtml = text(payload.signatureHtml);
-    const knownSignatureText = htmlToPlainText(knownSignatureHtml);
+    // 帳號可能存了不只一組簽名檔（Gmail 帳號本身的 sendAs 簽名＋所有自訂命名簽名檔，見個人設定「簽名檔
+    // 設定」），歷史信件當初寄出時用的可能是「現在」已經不是預設、甚至已經被切換掉的其中一組——只拿
+    // 「現在的預設簽名檔」單一比對，遇到帳號後來換過預設簽名檔的情況就會比對失敗，那封信的簽名檔會被誤判
+    // 成一般內容，整段連格式一起顯示出來（貼近使用者回報的「簽名檔變成一段跑版純文字」）。這裡改成前端把
+    // 「這個帳號目前存的所有簽名檔」都送過來，全部拿去比對，只要比對到任何一組就視為簽名檔一併截掉。
+    const knownSignatureHtmlList = (Array.isArray(payload.signatureCandidates) ? payload.signatureCandidates.map(text) : [text(payload.signatureHtml)]).filter(Boolean);
+    const knownSignatureTextList = knownSignatureHtmlList.map(htmlToPlainText);
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=full`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
@@ -1357,9 +1376,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     for (const message of rawMessages) {
       const messageRow = asRow(message);
       const payloadPart = messageRow.payload as GmailMessagePart | undefined;
-      const bodyText = gmailMessagePlainBody(messageRow, knownSignatureText, knownSignatureHtml);
-      const links = gmailMessageLinks(messageRow, knownSignatureHtml);
-      const images: Array<{ dataUrl: string }> = [];
+      const bodyText = gmailMessagePlainBody(messageRow, knownSignatureTextList, knownSignatureHtmlList);
+      const links = gmailMessageLinks(messageRow, knownSignatureHtmlList);
+      // 除了純文字版本（HTML 抽取失敗時的備援），也把（已經先截掉簽名/引用串的）原始 HTML 一併給前端——
+      // Worker 端不做任何淨化，前端一律要先經過自己的 DOMParser 白名單過濾器才能顯示，這裡刻意不做任何
+      // 「看起來安全」的處理，把安全邊界完全收斂在前端唯一一處，避免兩邊各自處理一半、互相假設對方已經
+      // 處理過而其實都沒有處理的風險。
+      const bodyHtml = gmailMessageVisibleHtml(messageRow, knownSignatureHtmlList);
+      const images: Array<{ dataUrl: string; contentId: string }> = [];
       if (remainingImageBudget > 0) {
         const imageParts = collectGmailImageParts(payloadPart).slice(0, Math.min(GMAIL_THREAD_IMAGE_LIMIT_PER_MESSAGE, remainingImageBudget));
         for (const part of imageParts) {
@@ -1374,7 +1398,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             const attData = await attResponse.json().catch(() => ({})) as Row;
             const rawData = text(attData.data);
             if (!rawData) continue;
-            images.push({ dataUrl: gmailAttachmentDataUrl(text(part.mimeType), rawData) });
+            // Content-ID 標頭原始格式帶尖括號（例如 <abc123@mail.gmail.com>），HTML 內文裡對應的
+            // <img src="cid:abc123@mail.gmail.com"> 參照不帶尖括號——去掉頭尾尖括號才能讓前端正確比對，
+            // 把這張圖片安插回本文裡原本引用它的位置，而不是變成跟本文脫節、只能另外看的縮圖清單。
+            const contentId = gmailHeaderValue(part.headers, 'Content-ID').replace(/^<|>$/g, '').trim();
+            images.push({ dataUrl: gmailAttachmentDataUrl(text(part.mimeType), rawData), contentId });
             remainingImageBudget -= 1;
           } catch { /* 單張圖片抓取失敗不擋整封信的顯示，略過這一張即可 */ }
         }
@@ -1382,7 +1410,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       messages.push({
         id: text(messageRow.id), from: gmailHeaderValue(payloadPart?.headers, 'From'), to: gmailHeaderValue(payloadPart?.headers, 'To'),
         cc: gmailHeaderValue(payloadPart?.headers, 'Cc'), date: formatGmailDateForDisplay(gmailHeaderValue(payloadPart?.headers, 'Date')),
-        snippet: text(messageRow.snippet), bodyText, links, images
+        snippet: text(messageRow.snippet), bodyText, bodyHtml, links, images
       });
     }
     // 給前端「回覆」編輯器預先帶入、可再修改的收件人／副本建議值——跟 replyCaseMail 送出時如果前端

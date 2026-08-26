@@ -175,11 +175,14 @@ test('new-case copy modal replaces the final action with a red Gmail account lin
   assert.match(html, /if\(queue\.index>=queue\.drafts\.length-1\)\{startGmailConnectPopup\(\);return\}/);
 });
 
-test('Gmail thread collapses older messages and expands only the latest message by default', async () => {
+test('Gmail thread messages all collapse by default (no auto-expanded message) and only expand on click', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /function gmailThreadMessageHtml\(message,isLatest=false\)/);
-  assert.match(html, /<details class="gmail-thread-msg" name="gmail-thread-message"\$\{isLatest\?' open':''\}>/);
-  assert.match(html, /items\.map\(\(message,index\)=>gmailThreadMessageHtml\(message,index===items\.length-1\)\)/);
+  // 這次改成「不管是不是最新一封，開啟信件串一律先收合」——見 CLAUDE.md 2026-08-26 這則紀錄；
+  // 舊版的 isLatest 參數（只自動展開最新一封）整個拿掉，這裡明確驗證整個檔案完全沒有殘留。
+  assert.doesNotMatch(html, /isLatest/);
+  assert.match(html, /function gmailThreadMessageHtml\(message\)\{/);
+  assert.match(html, /<details class="gmail-thread-msg" name="gmail-thread-message">/);
+  assert.match(html, /function renderGmailThreadMessages\(list,messages\)\{const items=Array\.isArray\(messages\)\?messages:\[\];list\.innerHTML=items\.length\?items\.map\(message=>gmailThreadMessageHtml\(message\)\)\.join\(''\)/);
   assert.match(html, /gmail-thread-msg-toggle::after\{content:'展開'\}/);
   assert.match(html, /gmail-thread-msg\[open\] \.gmail-thread-msg-toggle::after\{content:'收合'\}/);
 });
@@ -198,10 +201,64 @@ test('Gmail thread displays names only and keeps email addresses in name tooltip
   assert.match(rendered, /aria-label="David Chen，Email：david@example\.com"/);
   assert.doesNotMatch(rendered.replace(/<[^>]+>/g, ''), /@example\.com/);
   assert.equal(renderNames('david.lee@example.com').replace(/<[^>]+>/g, ''), 'David Lee');
-  const messageRenderer = html.match(/function gmailThreadMessageHtml\(message,isLatest=false\)\{[^\n]*\}/)?.[0] || '';
+  const rendererStart = html.indexOf('function gmailThreadMessageHtml(message){');
+  const rendererEnd = html.indexOf('function renderGmailThreadMessages(', rendererStart);
+  assert.ok(rendererStart > 0 && rendererEnd > rendererStart);
+  const messageRenderer = html.slice(rendererStart, rendererEnd);
   assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.from\)/);
   assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.to\)/);
   assert.match(messageRenderer, /gmailAddressNamesHtml\(message\.cc\)/);
+});
+
+test('Gmail thread messages render sanitized rich HTML (real formatting, not flattened plain text) with a strict tag/attribute allowlist', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 危險標籤整段（含子節點）捨棄——script/iframe/svg/form 等常見注入向量都要在清單裡。
+  assert.match(html, /GMAIL_THREAD_HTML_DROP_TAGS=new Set\(\[[^\]]*'script'[^\]]*'iframe'[^\]]*'svg'[^\]]*'form'[^\]]*\]\)/);
+  // 保留清單只留下真正需要呈現格式的標籤（表格、連結、圖片、粗斜體等），且圖片/連結另外有各自的屬性白名單處理。
+  assert.match(html, /GMAIL_THREAD_HTML_KEEP_TAGS=new Set\(\[[^\]]*'a'[^\]]*'table'[^\]]*'img'[^\]]*\]\)/);
+  // 圖片一律只認 cid: 參照、比對 Worker 已經安全抓回來的 data: URI，不接受任意外部 src（防止已讀追蹤像素）。
+  assert.match(html, /const cidMatch=src\.match\(\/\^cid:\(\.\+\)\$\/i\)/);
+  assert.match(html, /if\(!resolved\)return;/);
+  // 連結只允許 http(s)/mailto，且強制在新分頁開啟、不外洩 referrer。
+  assert.match(html, /return \/\^\(https\?:\|mailto:\)\/i\.test\(url\)\?url:'';/);
+  assert.match(html, /targetEl\.setAttribute\('target','_blank'\);targetEl\.setAttribute\('rel','noopener noreferrer'\)/);
+  // style 屬性同時要通過屬性名稱白名單與危險樣式黑名單（javascript:／url\(／position:fixed 等 clickjacking 手法）。
+  assert.match(html, /GMAIL_THREAD_HTML_STYLE_DANGEROUS=\/url\\\(\|expression\\\(\|javascript:\|@import\\b\|-moz-binding\|behavior\\s\*:\|position\\s\*:\\s\*\(fixed\|absolute\|sticky\)\/i/);
+  // 解析用 DOMParser 產生獨立、還沒接上真實文件的樹（解析本身不會執行任何內容），絕不對原始字串呼叫 innerHTML。
+  assert.match(html, /doc=new DOMParser\(\)\.parseFromString\(html,'text\/html'\)/);
+  assert.doesNotMatch(html, /container\.innerHTML=rawHtml/);
+  assert.doesNotMatch(html, /\.innerHTML=message\.bodyHtml/);
+  // 內文優先用淨化過的 HTML（is-rich），解析失敗或沒有 HTML 版本才退回既有的純文字＋連結轉換。
+  assert.match(html, /const rawHtml=String\(message\.bodyHtml\|\|''\)\.trim\(\)/);
+  assert.match(html, /bodyContentHtml=sanitized\.html;isRich=true/);
+  assert.match(html, /class="gmail-thread-msg-body\$\{isRich\?' is-rich':''\}"/);
+  // 已經被淨化結果引用、內嵌進本文的圖片，要從縮圖清單濾掉，不會同一張圖在內文與縮圖各出現一次。
+  assert.match(html, /const remainingImages=images\.filter\(img=>\{const cid=String\(img\?\.contentId\|\|''\)\.trim\(\)\.toLowerCase\(\); return !cid\|\|!usedContentIds\.has\(cid\)\}\)/);
+  // is-rich 內容改用真正的 HTML 排版（保留表格/顏色/字級），不再是 white-space:pre-wrap 硬摺成純文字樣子；
+  // 沿用既有 .gmail-inserted-signature 的 all:revert 清除做法，但保留容器本身的基礎文字色/字級，只重置子節點。
+  assert.match(html, /\.gmail-thread-msg-body\.is-rich\{white-space:normal;overflow-x:auto\}/);
+  assert.match(html, /\.gmail-thread-msg-body\.is-rich \*\{all:revert\}/);
+  assert.match(html, /\.gmail-thread-msg-body\.is-rich table\{max-width:100%\}/);
+  assert.match(html, /\.gmail-thread-msg-body\.is-rich img\{max-width:100%\}/);
+  // 全站通用的 table/th/td{...!important} 規則一樣要排除信件內文，否則簽名檔/一般表格格式的信件內容會被壓平。
+  assert.match(html, /table:not\(\.gmail-rich-editor table\):not\(\.signature-preset-content table\):not\(\.gmail-thread-msg-body table\)\{/);
+  assert.match(html, /th:not\(\.gmail-rich-editor th\):not\(\.signature-preset-content th\):not\(\.gmail-thread-msg-body th\)\{/);
+  assert.match(html, /td:not\(\.gmail-rich-editor td\):not\(\.signature-preset-content td\):not\(\.gmail-thread-msg-body td\)\{/);
+});
+
+test('Gmail thread signature stripping checks every saved signature (Gmail account signature plus all custom presets), not only the current default', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function allKnownGmailSignatureHtmlList()');
+  const end = html.indexOf('\n}', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  assert.match(source, /const gmailSignature=await ensureGmailSignatureLoaded\(\)/);
+  assert.match(source, /const presetHtmlList=Object\.values\(currentAccountSignaturePresets\|\|\{\}\)\.map\(resolveSignaturePresetHtml\)/);
+  assert.match(source, /return \[gmailSignature,\.\.\.presetHtmlList\]/);
+  // 開啟信件串（讀信）與送出回覆後重新整理信件串，兩處都要把完整候選清單送給 Worker，
+  // 不能只送「現在的預設簽名檔」單一一組——否則歷史信件用過的舊/其他命名簽名檔會比對失敗，格式跑版。
+  const openCalls = [...html.matchAll(/const signatureCandidates=await allKnownGmailSignatureHtmlList\(\);\s*\n\s*const data=await sheetApi\('getCaseMailThread',\{caseId:id,signatureCandidates,editorToken:currentEditorToken\}\)/g)];
+  assert.equal(openCalls.length, 2, 'expected exactly two getCaseMailThread call sites to send signatureCandidates');
 });
 
 test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {

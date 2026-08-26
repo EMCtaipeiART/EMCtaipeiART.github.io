@@ -1285,6 +1285,94 @@ describe('Machi Design API Worker', () => {
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
   });
 
+  it('2026-08-26: getCaseMailThread 用「所有已知簽名檔」逐一比對，不是只認目前的預設一組——一封用非預設命名簽名檔寄出的歷史信件，只有把該簽名檔一起放進 signatureCandidates 才會被正確截掉；同時回傳結構化的 bodyHtml（保留原始格式，不是壓平的純文字）與 images[].contentId（供前端把內嵌圖片安插回本文原本的位置）', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      const row = database.tables.database.rows.find(item => item['案件編號'] === '26080001')!;
+      row['Gmail信件串ID'] = 'multi-signature-thread';
+      row['Gmail寄件帳號'] = 'test.user@emctaipei.com';
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+
+    // 這封信寄出當下用的是「休假」這組命名簽名檔（不是目前的預設「正常」），比照這個系統自己寄信時的既有
+    // 寫法（見 sendCaseMail 測試：signatureHtml 原封不動包成 <div>...</div> 接在本文最後、沒有 gmail_signature
+    // class 標記），所以只能靠「跟已知簽名檔的原始字串完全相符」這個路徑辨識，不會被 class 標記那條路徑攔到。
+    const bodyOpeningHtml = '<p>休假期間自動回覆：<b>目前無法即時處理</b>，請見諒。</p>';
+    const vacationSignatureHtml = '<div style="color:#999">休假中，緊急事項請洽 <a href="mailto:anna@emctaipei.com">Anna</a></div>';
+    const inlineImageHtml = '<img src="cid:vacation-note@inline">';
+    const messageHtml = `${bodyOpeningHtml}${inlineImageHtml}<div>${vacationSignatureHtml}</div>`;
+    const mockMessage = {
+      id: 'multi-sig-msg-1', snippet: '休假期間自動回覆',
+      payload: {
+        mimeType: 'multipart/related',
+        headers: [
+          { name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'client@example.com' },
+          { name: 'Date', value: 'Tue, 25 Aug 2026 09:00:00 +0800' }
+        ],
+        parts: [
+          { mimeType: 'text/html', body: { data: toBase64Url(messageHtml) } },
+          {
+            mimeType: 'image/png', body: { attachmentId: 'vacation-att-1', size: 8 },
+            headers: [{ name: 'Content-ID', value: '<vacation-note@inline>' }]
+          }
+        ]
+      }
+    };
+    const currentDefaultSignatureHtml = '<b>正常簽名檔（目前預設，跟這封信實際用的不是同一組）</b>';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/multi-signature-thread?format=full') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
+        return Response.json({ id: 'multi-signature-thread', messages: [mockMessage] });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/multi-sig-msg-1/attachments/vacation-att-1') {
+        return Response.json({ attachmentId: 'vacation-att-1', size: 8, data: toBase64Url('fake-vacation-note-bytes') });
+      }
+      throw new Error(`unexpected fetch during multi-signature thread read: ${url}`);
+    });
+
+    // 先只送「目前的預設簽名檔」——重現使用者回報的問題：對不上這封信實際用的那組，簽名檔完全沒被截掉，
+    // 整段（含格式）原封不動出現在 bodyHtml／bodyText 裡。
+    const withOnlyDefaultCandidate = await api({
+      action: 'getCaseMailThread', caseId: '26080001', signatureCandidates: [currentDefaultSignatureHtml]
+    }, token);
+    expect(withOnlyDefaultCandidate.ok).toBe(true);
+    const messageWithOnlyDefault = (withOnlyDefaultCandidate.messages as Array<Record<string, unknown>>)[0];
+    expect(String(messageWithOnlyDefault.bodyHtml)).toContain('休假中，緊急事項請洽');
+    expect(String(messageWithOnlyDefault.bodyText)).toContain('休假中，緊急事項請洽');
+
+    // 把這封信實際用的那組（休假簽名檔）也加進候選清單——現在應該正確截掉，不管它在陣列裡排第幾個。
+    const withBothCandidates = await api({
+      action: 'getCaseMailThread', caseId: '26080001',
+      signatureCandidates: [currentDefaultSignatureHtml, vacationSignatureHtml]
+    }, token);
+    expect(withBothCandidates.ok).toBe(true);
+    const message = (withBothCandidates.messages as Array<Record<string, unknown>>)[0];
+    expect(String(message.bodyHtml)).not.toContain('休假中，緊急事項請洽');
+    expect(String(message.bodyText)).not.toContain('休假中，緊急事項請洽');
+
+    // bodyHtml 保留原始格式標籤（不是被壓平成純文字）——前端會用自己的 DOMParser 白名單過濾器渲染，
+    // Worker 端這裡完全不做淨化，原始標籤要原封不動保留才能讓前端正確重建格式。截斷點是用
+    // html.lastIndexOf(已知簽名檔字串) 找到的，簽名檔外層包的 <div> 標籤本身不算在「已知簽名檔」字串裡，
+    // 所以截斷後會留下一個沒有內容、緊接著被前端 DOMParser 自動補完關閉的空 <div>——這是既有的既定行為
+    // （不是這次改動引入的），不影響顯示結果（前端渲染出來就是一個沒有任何內容的空標籤）。
+    expect(String(message.bodyHtml)).toContain(`${bodyOpeningHtml}${inlineImageHtml}`);
+    expect(String(message.bodyHtml)).toContain('<b>目前無法即時處理</b>');
+    expect(String(message.bodyHtml).length).toBeLessThan(messageHtml.length);
+
+    // 內嵌圖片要帶回對應的 contentId（已經去掉標頭原始格式的頭尾尖括號），前端才能把它安插回本文裡
+    // <img src="cid:vacation-note@inline"> 原本引用的位置，而不是變成跟本文脫節、只能另外看的縮圖。
+    const images = message.images as Array<{ dataUrl: string; contentId: string }>;
+    expect(images).toHaveLength(1);
+    expect(images[0].contentId).toBe('vacation-note@inline');
+    expect(images[0].dataUrl.startsWith('data:image/png;base64,')).toBe(true);
+  });
+
   it('2026-08-20: computeReplySuggestion 組出的建議副本要保留聯絡人顯示名，不能被裁成只剩一長串信箱——回信編輯器的「副本」聯絡人晶片才有名字可以顯示', async () => {
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
     await runInDurableObject(stub, async (_instance, state) => {
