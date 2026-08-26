@@ -206,7 +206,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - **用本機 Python 靜態伺服器＋ Browser pane 對真實頁面做完整的視覺與互動驗證，不是只看程式碼比對字串**：①先用真實 400×300 測試圖片（canvas 產生）呼叫真正的 `insertGmailInlineImage()`，用真實滑鼠 `hover` 移到圖片上後截圖確認：修正前畫面上同時看得到左上角刪除鈕（圓形＋X）與右下角縮放把手（無圖示深色小方塊）兩個控制項；修正後截圖確認**只剩左上角刪除鈕，右下角的縮放把手完全消失**，跟使用者這次要求的畫面完全一致。②`getComputedStyle`／DOM 查詢確認插入圖片當下 `wrap.style.width`／`height` 依然正確算出 320×240（4:3 比例，符合「320px 上限、依原始比例縮放」的既有邏輯，證明拿掉縮放把手沒有連帶影響預設尺寸計算）。③用真實 `MouseEvent('mousedown')`＋`MouseEvent('click')`（不是直接呼叫內部函式）觸發刪除鈕，確認圖片正確從編輯區移除，證明刪除功能完全沒有被這次改動波及。④重新驗證上一則（17:35）修好的「設計師回覆信自動帶入圖片寄出尺寸」邏輯：用真正的 `appendDesignerReplyImageThumb()` 產生的 DOM 結構（拿掉 `image` 參數後的新版簽章）餵給 `gmailEditorMailPayload()`，確認輸出的 `<img>` 仍然正確帶有完整的 `style="display:block;width:180px;height:135px;margin:8px 0;border-radius:8px"`，證明這次的參數簽章簡化沒有意外破壞上一輪剛修好的寄出尺寸邏輯。
   - **未做的驗證**：沒有用真實登入帳號在正式站，實際在「發信」「回信」「設計師回覆信」三種情境下都各自插入一次圖片肉眼確認——這次的驗證集中在「透過 Gmail 寄出」這個撰寫視窗（三種模式共用同一套 `bindGmailInlineImageControls()`／CSS，理論上行為一致，但沒有逐一在三種入口分別截圖確認）。
 - 部署狀態：純前端／測試檔案，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次完全沒有修改 `worker/` 或 `upload/Code.gs`。
-- commit：（見下方 push 紀錄）
+- commit：`a5eaf032`
 
 ### 2026-08-26 17:35 Asia/Taipei（次新）— 修正「設計師回信＞選擇電腦上傳」第一次上傳完常常沒自動跳到編輯器（需要重試、圖片因此重複）；修正自己上傳的設計圖寄出後超級巨大；修正信件串預覽看不到這類圖片
 
