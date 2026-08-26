@@ -360,13 +360,43 @@ test('a manual "insert signature" button lets users pick between the Gmail accou
 
 test('custom named signature presets (e.g. "休假" vs "正常") sit in personal settings, merge into the picker alongside the Gmail account signature, and win as the auto-inserted default', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  // 個人設定要有獨立的「簽名檔設定」區塊：命名輸入框、設為預設的單選鈕、內容 textarea、刪除鈕、新增按鈕。
+  // 個人設定要有獨立的「簽名檔設定」區塊：命名輸入框、設為預設的單選鈕、內容 contenteditable 富文字區塊、
+  // 刪除鈕、新增按鈕。內容欄位不再是 textarea（純文字），改成支援貼上/編輯格式的 contenteditable div。
   assert.match(html, /id="personalSignaturePresetList"/);
   assert.match(html, /id="personalSignaturePresetAdd"/);
   assert.match(html, /data-signature-preset-name/);
   assert.match(html, /data-signature-preset-default/);
-  assert.match(html, /data-signature-preset-content/);
+  assert.match(html, /class="signature-preset-content" data-signature-preset-content contenteditable="true"/);
+  assert.doesNotMatch(html, /<textarea data-signature-preset-content/, '簽名檔內容欄位不該再是純文字 textarea，否則貼上格式化內容會被壓成純文字');
   assert.match(html, /data-remove-signature-preset/);
+  // 每一列的內容欄位上方要有工具列：粗體／對齊／文字大小／文字顏色，讓使用者不用依賴外部工具先排好版
+  // 再貼過來，這裡本身就能調整格式——直接對應「沒有可以編輯文字大小顏色功能」這個回報。
+  const rowHtmlStart = html.indexOf("function signaturePresetRowHtml(name='',content='',index=0,{defaultKey=''}={}){");
+  const rowHtmlEnd = html.indexOf('\nfunction syncSignaturePresetRows', rowHtmlStart);
+  assert.ok(rowHtmlStart > 0 && rowHtmlEnd > rowHtmlStart);
+  const rowHtmlSource = html.slice(rowHtmlStart, rowHtmlEnd);
+  assert.match(rowHtmlSource, /class="gmail-rich-toolbar signature-preset-toolbar"/);
+  assert.match(rowHtmlSource, /data-rich-cmd="bold"/);
+  assert.match(rowHtmlSource, /data-rich-cmd="justifyLeft"/);
+  assert.match(rowHtmlSource, /data-rich-cmd="justifyCenter"/);
+  assert.match(rowHtmlSource, /data-rich-cmd="justifyRight"/);
+  assert.match(rowHtmlSource, /class="gmail-rich-size-btn" data-rich-size title="文字大小"/);
+  assert.match(rowHtmlSource, /class="gmail-rich-color-btn" title="文字顏色"/);
+  assert.match(rowHtmlSource, /\$\{resolveSignaturePresetHtml\(content\)\}/, '初始內容要用 resolveSignaturePresetHtml 轉換，不能直接把 content 塞進 innerHTML（未逃脫過的舊版純文字資料會被當成標籤解析）');
+
+  // bindSignaturePresetEditor 要用事件委派掛在 list 容器上（不是頁面載入當下的一次性 querySelectorAll），
+  // 因為簽名檔列是動態新增/刪除的；粗體/對齊靠 document.execCommand()，文字大小/顏色是彈出選單、要在
+  // mousedown 階段先存下選取範圍供稍後還原，兩者都跟既有 Gmail 撰寫/回信編輯器工具列共用同一套機制。
+  const bindStart = html.indexOf('function bindSignaturePresetEditor(list){');
+  const bindEnd = html.indexOf('\n/** 送出前驗證', bindStart);
+  assert.ok(bindStart > 0 && bindEnd > bindStart);
+  const bindSource = html.slice(bindStart, bindEnd);
+  assert.match(bindSource, /list\.addEventListener\('mousedown'/);
+  assert.match(bindSource, /list\.addEventListener\('click'/);
+  assert.match(bindSource, /document\.execCommand\(cmdButton\.dataset\.richCmd\)/);
+  assert.match(bindSource, /openGmailSizePalette\(sizeButton\)/);
+  assert.match(bindSource, /openGmailColorPalette\(colorButton\)/);
+  assert.match(bindSource, /savedRichSelectionRange=captureCurrentRichSelection\(\)/);
 
   // normalizeSignaturePresetSettings 是純函式：去除空白名稱/內容、限制筆數與長度、預設值一定要落在既有名稱內。
   const normalizeStart = html.indexOf('function normalizeSignaturePresetSettings(value,defaultValue');
@@ -378,15 +408,26 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   });
   assert.equal(normalize({ 'A': '內容' }, '不存在的名稱').defaultName, 'A');
 
-  // signaturePlainTextToHtml 要把換行轉成 <br>，且對特殊字元逃脫（沿用既有的 esc()），這樣自訂簽名檔
-  // 才能跟 Gmail 帳號本身的 HTML 簽名檔用同一套 appendGmailSignatureHtml() 插入，不會被壓成一行。
+  // resolveSignaturePresetHtml 要能分辨兩種年代的資料：①舊版（純文字年代）存的內容完全沒有標籤，只有
+  // 字面上的換行字元，要先轉成 <br> 分行的安全 HTML（沿用既有的 signaturePlainTextToHtml，逃脫特殊字元）；
+  // ②新版（contenteditable 年代）存的內容本身就是真正的 HTML（例如貼上排版好的簽名檔會帶顏色/字級的
+  // inline style），必須原封不動使用，絕對不能再逃脫一次，否則格式化內容會變成一整串看得到標籤符號的
+  // 純文字——這正是這次要修正的「貼過來變成純文字檔案，格式都跑版」的根因與驗證重點。
   const escStart = html.indexOf('function esc(s){');
   const escEnd = html.indexOf('\n', escStart);
   const plainTextStart = html.indexOf('function signaturePlainTextToHtml(text){');
   const plainTextEnd = html.indexOf('\n', plainTextStart);
-  assert.ok(escStart > 0 && plainTextStart > 0);
-  const toHtml = new Function(`${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};return signaturePlainTextToHtml;`)();
-  assert.equal(toHtml('第一行 & <b>粗體</b>\n第二行'), '第一行 &amp; &lt;b&gt;粗體&lt;/b&gt;<br>第二行');
+  const looksLikeStart = html.indexOf('function looksLikeSignatureHtml(value){');
+  const looksLikeEnd = html.indexOf('\n', looksLikeStart);
+  const resolveStart = html.indexOf('function resolveSignaturePresetHtml(content){');
+  const resolveEnd = html.indexOf('\n', resolveStart);
+  assert.ok(escStart > 0 && plainTextStart > 0 && looksLikeStart > 0 && resolveStart > 0);
+  const resolveHtml = new Function(
+    `${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};${html.slice(looksLikeStart, looksLikeEnd)};${html.slice(resolveStart, resolveEnd)};return resolveSignaturePresetHtml;`
+  )();
+  assert.equal(resolveHtml('第一行 & 特殊符號\n第二行'), '第一行 &amp; 特殊符號<br>第二行', 'plain text without real tags must go through the legacy plain-text-to-HTML upgrade path');
+  const formattedSignature = '<div style="text-align:center"><b style="font-size:20px;color:#cc0000">Machi Chen</b><br><span style="color:#666">EMC 設計組</span></div>';
+  assert.equal(resolveHtml(formattedSignature), formattedSignature, 'already-HTML content from the rich editor must pass through untouched, not be re-escaped into visible tag text');
 
   // combinedSignatureOptions() 要同時列出自訂簽名檔與 Gmail 帳號簽名檔，不能只顯示其中一種——
   // 這正是使用者要求「休假會設定不同簽名檔，可以將 Gmail 設定好的簽名檔也加入進來」的核心行為。
@@ -395,14 +436,14 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   assert.ok(combinedStart > 0 && combinedEnd > combinedStart);
   const combinedHarness = new Function(
     'currentAccountSignaturePresets', 'currentAccountSignaturePresetDefault', 'gmailSignatureOptions',
-    `${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};function currentUserSignaturePresetSettings(){return {presets:currentAccountSignaturePresets||{},defaultName:currentAccountSignaturePresetDefault||''}};${html.slice(combinedStart, combinedEnd)};return combinedSignatureOptions();`
+    `${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};${html.slice(looksLikeStart, looksLikeEnd)};${html.slice(resolveStart, resolveEnd)};function currentUserSignaturePresetSettings(){return {presets:currentAccountSignaturePresets||{},defaultName:currentAccountSignaturePresetDefault||''}};${html.slice(combinedStart, combinedEnd)};return combinedSignatureOptions();`
   );
   const combined = combinedHarness(
-    { '正常': 'Machi Chen', '休假': '目前休假中' }, '休假',
+    { '正常': 'Machi Chen', '休假': formattedSignature }, '休假',
     [{ email: 'machi@emctaipei.com', displayName: 'Machi Chen (Gmail)', isPrimary: true, signature: 'Gmail 內建簽名' }]
   );
   assert.equal(combined.custom.length, 2);
-  assert.deepEqual(combined.custom.find(item => item.label === '休假'), { source: 'custom', label: '休假', sublabel: '', isDefault: true, html: '目前休假中' });
+  assert.deepEqual(combined.custom.find(item => item.label === '休假'), { source: 'custom', label: '休假', sublabel: '', isDefault: true, html: formattedSignature });
   assert.equal(combined.gmail.length, 1);
   assert.equal(combined.gmail[0].label, 'Machi Chen (Gmail)');
   assert.equal(combined.gmail[0].html, 'Gmail 內建簽名');
@@ -418,6 +459,16 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   assert.match(appendSource, /const presetHtml=defaultSignaturePresetHtml\(\);/);
   assert.match(appendSource, /if\(presetHtml\)\{/);
   assert.match(appendSource, /await ensureGmailSignatureLoaded\(\)/, 'must still fall back to the Gmail-account signature when no custom preset is configured');
+
+  // collectSignaturePresetEditor 的空白/超長驗證要有可視化回饋——內容欄位是 contenteditable，沒有
+  // setCustomValidity()/reportValidity() 這兩個表單專屬 API，必須改用紅框 class + 提示訊息取代。
+  const collectStart = html.indexOf('function collectSignaturePresetEditor(list){');
+  const collectEnd = html.indexOf('\n}\n', collectStart);
+  assert.ok(collectStart > 0 && collectEnd > collectStart);
+  const collectSource = html.slice(collectStart, collectEnd);
+  assert.match(collectSource, /markSignaturePresetContentInvalid\(contentEl,true\)/);
+  assert.match(collectSource, /content\.length>SIGNATURE_PRESET_CONTENT_MAX_LENGTH/);
+  assert.match(collectSource, /setSync\(`「\$\{name\}」內容過長/);
 });
 
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {

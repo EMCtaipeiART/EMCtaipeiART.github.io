@@ -213,14 +213,18 @@ export function normalizeReplyTemplateDefaultValue(value: unknown, templates: Re
 /** 使用者自建的命名簽名檔（例如「休假」「正常」各存一份，切換哪一份當預設）——跟 Gmail 帳號本身
  * sendAs 設定的簽名檔是兩份獨立的資料來源，前端會把兩者合併顯示在「插入簽名檔」選單裡。存法完全比照
  * 回信範本設定（單一 JSON 欄位存 {名稱:內容}），只是欄位/命名不同，故意不共用同一支函式——這兩份資料
- * 語意不同（一個是回信內容草稿、一個是簽名檔），沒有理由耦合在一起，之後各自要調整格式互不影響。 */
+ * 語意不同（一個是回信內容草稿、一個是簽名檔），沒有理由耦合在一起，之後各自要調整格式互不影響。
+ * 內容長度上限比回信範本（10000）寬鬆一倍——編輯器改成 contenteditable 富文字後，存的是使用者貼上或
+ * 排版好的 HTML（含顏色/字級等 inline style），同樣的視覺內容比純文字佔用更多字元，上限太窄容易讓
+ * 一份精心排版的簽名檔整筆被下面這行悄悄濾掉；前端 collectSignaturePresetEditor() 用同一個數字
+ * （SIGNATURE_PRESET_CONTENT_MAX_LENGTH）在送出前先擋下並提示使用者，這裡是最後一道防線。 */
 export function normalizeSignaturePresetsValue(value: unknown): Record<string, string> {
   let source: unknown = value;
   if (typeof source === 'string') { try { source = JSON.parse(source); } catch { source = {}; } }
   const entries = (source && typeof source === 'object' && !Array.isArray(source))
     ? Object.entries(source as Record<string, unknown>).map(([name, content]): [string, string] => [text(name), text(content)])
     : [];
-  return Object.fromEntries(entries.filter(([name, content]) => name && content && name.length <= 80 && content.length <= 10000).slice(0, 40));
+  return Object.fromEntries(entries.filter(([name, content]) => name && content && name.length <= 80 && content.length <= 20000).slice(0, 40));
 }
 export function normalizeSignaturePresetDefaultValue(value: unknown, presets: Record<string, string>): string {
   const requested = text(value), keys = Object.keys(presets || {});

@@ -434,6 +434,23 @@ describe('Machi Design API Worker', () => {
     expect((invalidDefault.settings as Record<string, unknown>).signaturePresetDefault).toBe('正常');
   });
 
+  it('accepts formatted signature content up to 20000 characters (raised from the reply-template limit to fit HTML markup), and silently drops entries beyond it', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'signature-length-file-sha' }, commit: { sha: 'signature-length-commit-sha' } });
+    });
+    const withinLimit = 'x'.repeat(20000);
+    const overLimit = 'y'.repeat(20001);
+    const saved = await api({
+      action: 'saveUserSettings',
+      settings: { signaturePresets: { '正常': withinLimit, '太長': overLimit }, signaturePresetDefault: '正常' }
+    }, token);
+    const savedPresets = (saved.settings as Record<string, unknown>).signaturePresets as Record<string, string>;
+    expect(savedPresets['正常']).toBe(withinLimit);
+    expect(savedPresets['太長']).toBeUndefined();
+  });
+
   it('saves account settings and permissions in one GitHub commit', async () => {
     const token = await login();
     const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
