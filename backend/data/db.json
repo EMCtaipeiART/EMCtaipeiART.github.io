@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2686,
+  "revision": 2687,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-26T02:16:34.479Z",
+  "updatedAt": "2026-08-26T02:16:41.501Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1284,7 +1284,7 @@
       ],
       "primaryKey": null,
       "rows": [
-        {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/1LSzAxomWo57cQ-48hZX8d_IygbFnQqPv=w1600","按讚":"李明庭","倒讚":"Machi","留言":"[{\"id\":\"8a392f37-472f-40a1-b610-2f45ca5f5429\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"💩💩💩💩💩\",\"createdAt\":\"2026-07-17T09:03:55.263Z\"}]"}
+        {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/1LSzAxomWo57cQ-48hZX8d_IygbFnQqPv=w1600","按讚":"李明庭","倒讚":"Machi","留言":"[{\"id\":\"8a392f37-472f-40a1-b610-2f45ca5f5429\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"💩💩💩💩💩\",\"createdAt\":\"2026-07-17T09:03:55.263Z\"},{\"id\":\"c856b479-9c8a-42ec-b736-a67fd670d60f\",\"name\":\"李明庭\",\"account\":\"allen.li@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1GvW3I193tv4O0aT4UHaV-Szj-LEEcWfp&sz=w1000\",\"text\":\"吃大便安納\",\"createdAt\":\"2026-08-26T02:16:41.501Z\"}]"}
       ]
     },
     "bug_report": {
