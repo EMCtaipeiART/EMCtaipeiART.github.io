@@ -181,7 +181,9 @@ export function settingsResponse(row: Row = {}): Row {
     name: text(row['名字']), displayName: text(row['顯示名'] || row['名字']), department: text(row['部門']), group,
     designType: /影音|影像|影片/i.test(group) ? '影音' : (/平面/.test(group) ? '平面' : ''),
     avatar: text(row['頭像連結']), replyTemplates: normalizeReplyTemplatesValue(row['回信範本設定']),
-    replyTemplateDefault: normalizeReplyTemplateDefaultValue(row['預設回信範本'], normalizeReplyTemplatesValue(row['回信範本設定'])), visibleColumns: ordered,
+    replyTemplateDefault: normalizeReplyTemplateDefaultValue(row['預設回信範本'], normalizeReplyTemplatesValue(row['回信範本設定'])),
+    signaturePresets: normalizeSignaturePresetsValue(row['簽名檔清單']),
+    signaturePresetDefault: normalizeSignaturePresetDefaultValue(row['預設簽名檔'], normalizeSignaturePresetsValue(row['簽名檔清單'])), visibleColumns: ordered,
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
@@ -206,6 +208,22 @@ export function normalizeReplyTemplatesValue(value: unknown): Record<string, str
 }
 export function normalizeReplyTemplateDefaultValue(value: unknown, templates: Record<string, string>): string {
   const requested = text(value), keys = Object.keys(templates || {});
+  return keys.includes(requested) ? requested : (keys[0] || '');
+}
+/** 使用者自建的命名簽名檔（例如「休假」「正常」各存一份，切換哪一份當預設）——跟 Gmail 帳號本身
+ * sendAs 設定的簽名檔是兩份獨立的資料來源，前端會把兩者合併顯示在「插入簽名檔」選單裡。存法完全比照
+ * 回信範本設定（單一 JSON 欄位存 {名稱:內容}），只是欄位/命名不同，故意不共用同一支函式——這兩份資料
+ * 語意不同（一個是回信內容草稿、一個是簽名檔），沒有理由耦合在一起，之後各自要調整格式互不影響。 */
+export function normalizeSignaturePresetsValue(value: unknown): Record<string, string> {
+  let source: unknown = value;
+  if (typeof source === 'string') { try { source = JSON.parse(source); } catch { source = {}; } }
+  const entries = (source && typeof source === 'object' && !Array.isArray(source))
+    ? Object.entries(source as Record<string, unknown>).map(([name, content]): [string, string] => [text(name), text(content)])
+    : [];
+  return Object.fromEntries(entries.filter(([name, content]) => name && content && name.length <= 80 && content.length <= 10000).slice(0, 40));
+}
+export function normalizeSignaturePresetDefaultValue(value: unknown, presets: Record<string, string>): string {
+  const requested = text(value), keys = Object.keys(presets || {});
   return keys.includes(requested) ? requested : (keys[0] || '');
 }
 export function accessList(value: unknown): string[] {
@@ -369,6 +387,14 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
   } else if ('replyTemplateDefault' in settings || '預設回信範本' in settings) {
     const templates = normalizeReplyTemplatesValue(row['回信範本設定']);
     row['預設回信範本'] = normalizeReplyTemplateDefaultValue(settings.replyTemplateDefault ?? settings['預設回信範本'], templates);
+  }
+  if ('signaturePresets' in settings || '簽名檔清單' in settings) {
+    const presets = normalizeSignaturePresetsValue(settings.signaturePresets ?? settings['簽名檔清單']);
+    row['簽名檔清單'] = JSON.stringify(presets);
+    row['預設簽名檔'] = normalizeSignaturePresetDefaultValue(settings.signaturePresetDefault ?? settings['預設簽名檔'] ?? row['預設簽名檔'], presets);
+  } else if ('signaturePresetDefault' in settings || '預設簽名檔' in settings) {
+    const presets = normalizeSignaturePresetsValue(row['簽名檔清單']);
+    row['預設簽名檔'] = normalizeSignaturePresetDefaultValue(settings.signaturePresetDefault ?? settings['預設簽名檔'], presets);
   }
   if ('displayName' in settings || '顯示名' in settings) {
     const value = text(settings.displayName || settings['顯示名']);

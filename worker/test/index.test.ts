@@ -402,6 +402,38 @@ describe('Machi Design API Worker', () => {
     });
   });
 
+  it('saves named signature presets and their default through personal settings, independently of reply templates', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'signature-settings-file-sha' }, commit: { sha: 'signature-settings-commit-sha' } });
+    });
+    const saved = await api({
+      action: 'saveUserSettings',
+      settings: {
+        signaturePresets: { '正常': 'Machi Chen<br>EMC 設計組', '休假': '目前休假中，緊急事項請洽 02-1234-5678' },
+        signaturePresetDefault: '休假'
+      }
+    }, token);
+    expect(saved).toMatchObject({
+      ok: true,
+      action: 'saveUserSettings',
+      settings: {
+        signaturePresets: { '正常': 'Machi Chen<br>EMC 設計組', '休假': '目前休假中，緊急事項請洽 02-1234-5678' },
+        signaturePresetDefault: '休假'
+      }
+    });
+
+    const current = await api({ action: 'getUserSettings' }, token);
+    expect(current.settings).toMatchObject({
+      signaturePresets: { '正常': 'Machi Chen<br>EMC 設計組', '休假': '目前休假中，緊急事項請洽 02-1234-5678' },
+      signaturePresetDefault: '休假'
+    });
+    // 指定一個不存在於清單裡的預設值要被忽略、退回清單第一筆，跟既有回信範本同一套防呆規則。
+    const invalidDefault = await api({ action: 'saveUserSettings', settings: { signaturePresetDefault: '不存在的名稱' } }, token);
+    expect((invalidDefault.settings as Record<string, unknown>).signaturePresetDefault).toBe('正常');
+  });
+
   it('saves account settings and permissions in one GitHub commit', async () => {
     const token = await login();
     const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

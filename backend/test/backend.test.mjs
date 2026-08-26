@@ -342,7 +342,12 @@ test('a manual "insert signature" button lets users pick between the Gmail accou
   assert.ok(pickerStart > 0);
   const pickerSource = html.slice(pickerStart, pickerEnd);
   assert.match(pickerSource, /await ensureGmailSignatureLoaded\(\)/);
-  assert.match(pickerSource, /insertChosenGmailSignature\(editor,option\.signature\)/);
+  assert.match(pickerSource, /insertChosenGmailSignature\(editor,option\.html\)/);
+  // 選單要合併兩種來源：使用者在個人設定自建的命名簽名檔（例如「休假」）與 Gmail 帳號本身的簽名檔，
+  // 不能只顯示其中一種——這正是回應「休假會設定不同簽名檔，可以將 Gmail 設定好的簽名檔也加入進來」。
+  assert.match(pickerSource, /combinedSignatureOptions\(\)/);
+  assert.match(pickerSource, /groupHtml\('自訂簽名檔',custom,0\)/);
+  assert.match(pickerSource, /groupHtml\('Gmail 帳號簽名檔',gmail,custom\.length\)/);
   // 選一個新的簽名檔要能取代掉編輯器裡原本那份（不管是自動帶入還是先前手動選過的），不是插入變成兩份。
   const insertStart = html.indexOf('function insertChosenGmailSignature(editor,signatureHtml)');
   const insertEnd = html.indexOf('\nfunction ', insertStart + 1);
@@ -351,6 +356,68 @@ test('a manual "insert signature" button lets users pick between the Gmail accou
   assert.match(insertSource, /editor\.querySelector\('\[data-gmail-inserted-signature\]'\)/);
   assert.match(insertSource, /removeGmailSignatureNodeAndSpacing\(existing\)/);
   assert.match(insertSource, /appendGmailSignatureHtml\(editor,signatureHtml\)/);
+});
+
+test('custom named signature presets (e.g. "休假" vs "正常") sit in personal settings, merge into the picker alongside the Gmail account signature, and win as the auto-inserted default', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 個人設定要有獨立的「簽名檔設定」區塊：命名輸入框、設為預設的單選鈕、內容 textarea、刪除鈕、新增按鈕。
+  assert.match(html, /id="personalSignaturePresetList"/);
+  assert.match(html, /id="personalSignaturePresetAdd"/);
+  assert.match(html, /data-signature-preset-name/);
+  assert.match(html, /data-signature-preset-default/);
+  assert.match(html, /data-signature-preset-content/);
+  assert.match(html, /data-remove-signature-preset/);
+
+  // normalizeSignaturePresetSettings 是純函式：去除空白名稱/內容、限制筆數與長度、預設值一定要落在既有名稱內。
+  const normalizeStart = html.indexOf('function normalizeSignaturePresetSettings(value,defaultValue');
+  const normalizeEnd = html.indexOf('\nfunction ', normalizeStart + 1);
+  assert.ok(normalizeStart > 0);
+  const normalize = new Function(`${html.slice(normalizeStart, normalizeEnd)};return normalizeSignaturePresetSettings;`)();
+  assert.deepEqual(normalize({ '正常': 'Machi Chen<br>EMC 設計組', '休假': '目前休假中', '': '空名稱應該被濾掉' }, '休假'), {
+    presets: { '正常': 'Machi Chen<br>EMC 設計組', '休假': '目前休假中' }, defaultName: '休假'
+  });
+  assert.equal(normalize({ 'A': '內容' }, '不存在的名稱').defaultName, 'A');
+
+  // signaturePlainTextToHtml 要把換行轉成 <br>，且對特殊字元逃脫（沿用既有的 esc()），這樣自訂簽名檔
+  // 才能跟 Gmail 帳號本身的 HTML 簽名檔用同一套 appendGmailSignatureHtml() 插入，不會被壓成一行。
+  const escStart = html.indexOf('function esc(s){');
+  const escEnd = html.indexOf('\n', escStart);
+  const plainTextStart = html.indexOf('function signaturePlainTextToHtml(text){');
+  const plainTextEnd = html.indexOf('\n', plainTextStart);
+  assert.ok(escStart > 0 && plainTextStart > 0);
+  const toHtml = new Function(`${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};return signaturePlainTextToHtml;`)();
+  assert.equal(toHtml('第一行 & <b>粗體</b>\n第二行'), '第一行 &amp; &lt;b&gt;粗體&lt;/b&gt;<br>第二行');
+
+  // combinedSignatureOptions() 要同時列出自訂簽名檔與 Gmail 帳號簽名檔，不能只顯示其中一種——
+  // 這正是使用者要求「休假會設定不同簽名檔，可以將 Gmail 設定好的簽名檔也加入進來」的核心行為。
+  const combinedStart = html.indexOf('function combinedSignatureOptions(){');
+  const combinedEnd = html.indexOf('\nasync function appendDefaultGmailSignature', combinedStart);
+  assert.ok(combinedStart > 0 && combinedEnd > combinedStart);
+  const combinedHarness = new Function(
+    'currentAccountSignaturePresets', 'currentAccountSignaturePresetDefault', 'gmailSignatureOptions',
+    `${html.slice(escStart, escEnd)};${html.slice(plainTextStart, plainTextEnd)};function currentUserSignaturePresetSettings(){return {presets:currentAccountSignaturePresets||{},defaultName:currentAccountSignaturePresetDefault||''}};${html.slice(combinedStart, combinedEnd)};return combinedSignatureOptions();`
+  );
+  const combined = combinedHarness(
+    { '正常': 'Machi Chen', '休假': '目前休假中' }, '休假',
+    [{ email: 'machi@emctaipei.com', displayName: 'Machi Chen (Gmail)', isPrimary: true, signature: 'Gmail 內建簽名' }]
+  );
+  assert.equal(combined.custom.length, 2);
+  assert.deepEqual(combined.custom.find(item => item.label === '休假'), { source: 'custom', label: '休假', sublabel: '', isDefault: true, html: '目前休假中' });
+  assert.equal(combined.gmail.length, 1);
+  assert.equal(combined.gmail[0].label, 'Machi Chen (Gmail)');
+  assert.equal(combined.gmail[0].html, 'Gmail 內建簽名');
+  // 有自訂簽名檔時，Gmail 帳號本身的「預設」標記不該搶著顯示，避免使用者誤以為 Gmail 那份才是真正會自動帶入的。
+  assert.equal(combined.gmail[0].isDefault, false);
+
+  // appendDefaultGmailSignature 要優先使用自訂的預設簽名檔（不必等待 Gmail API），
+  // 只有完全沒有設定過任何自訂簽名檔時才 fallback 用 Gmail 帳號本身的簽名檔（既有行為）。
+  const appendStart = html.indexOf('async function appendDefaultGmailSignature(editor){');
+  const appendEnd = html.indexOf('\nfunction insertChosenGmailSignature', appendStart);
+  assert.ok(appendStart > 0 && appendEnd > appendStart);
+  const appendSource = html.slice(appendStart, appendEnd);
+  assert.match(appendSource, /const presetHtml=defaultSignaturePresetHtml\(\);/);
+  assert.match(appendSource, /if\(presetHtml\)\{/);
+  assert.match(appendSource, /await ensureGmailSignatureLoaded\(\)/, 'must still fall back to the Gmail-account signature when no custom preset is configured');
 });
 
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {

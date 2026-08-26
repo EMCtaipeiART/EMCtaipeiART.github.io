@@ -347,7 +347,7 @@
     .personal-settings-profile{display:grid;grid-template-columns:112px minmax(0,1fr);gap:16px;align-items:center}
     .personal-settings-avatar{display:grid;justify-items:center;gap:8px}.personal-settings-avatar-preview{display:grid;place-items:center;width:88px;height:88px;overflow:hidden;border:1px solid var(--line);border-radius:50%;background:#eef8f2;color:#0f6a49;font-size:28px;font-weight:950}.personal-settings-avatar-preview img{width:100%;height:100%;object-fit:cover}.personal-settings-avatar button{min-height:32px!important;padding:0 12px!important;border-radius:999px!important;background:#fff!important;color:#0f6a49!important;border:1px solid #b9ddca!important;font-size:11.5px!important;font-weight:900!important}
     .personal-settings-fields{display:grid;gap:10px}.personal-mail-templates{display:grid;gap:9px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}.personal-mail-templates-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.personal-mail-templates-head b{font-size:13px}.personal-mail-templates-head span{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:700}.personal-mail-template-list{display:grid;gap:9px}
-    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}
+    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}.mail-template-head input[type=text]{flex:1 1 auto!important;min-width:0!important;min-height:30px!important;padding:4px 8px!important;font-size:12.5px!important;font-weight:800!important}
     html[data-theme="dark"] .personal-settings-avatar-preview,html[data-theme="dark"] .mail-template-row{background:#242629!important;border-color:#414449!important}html[data-theme="dark"] .personal-settings-avatar button,html[data-theme="dark"] .mail-template-remove{background:#242629!important}html[data-theme="dark"] .mail-template-default{color:#c7ccca!important}
     @media(max-width:600px){.personal-settings-profile{grid-template-columns:1fr}.personal-settings-fields{width:100%}.personal-settings-avatar{grid-template-columns:auto auto;justify-content:start;align-items:center}.personal-settings-avatar-preview{width:68px;height:68px}.mail-template-head{align-items:flex-start;flex-direction:column;gap:5px}}
     .case-id-btn{border:0;background:transparent;color:#5f7f73;font-weight:900;padding:0;min-height:0;text-decoration:none}
@@ -6884,6 +6884,7 @@
       <div class="personal-settings-fields"><label>顯示名<input type="text" name="displayName" maxlength="40" autocomplete="nickname" required></label><small>此名稱會顯示在帳號選單、案件與信件聯絡人中。</small></div>
     </div>
     <section class="personal-mail-templates"><div class="personal-mail-templates-head"><div><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></div></div><div class="personal-mail-template-list" id="personalMailTemplateList"></div><button type="button" class="mail-template-add" id="personalMailTemplateAdd">＋ 新增範本</button></section>
+    <section class="personal-mail-templates"><div class="personal-mail-templates-head"><div><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以隨時用「插入簽名檔」按鈕改選其他組。</span></div></div><div class="personal-mail-template-list" id="personalSignaturePresetList"></div><button type="button" class="mail-template-add" id="personalSignaturePresetAdd">＋ 新增簽名檔</button></section>
     <p class="login-note personal-settings-status" id="personalSettingsStatus" role="status" aria-live="polite"></p>
     <div class="login-actions"><button type="button" class="secondary" id="personalSettingsCancel">取消</button><button type="submit">儲存</button></div>
   </form>
@@ -7762,6 +7763,8 @@ let currentUserProfile = null;
 let currentAccountAvatar = '';
 let currentAccountReplyTemplates = {};
 let currentAccountReplyTemplateDefault = '';
+let currentAccountSignaturePresets = {};
+let currentAccountSignaturePresetDefault = '';
 let lastAccountAvatarRefreshAt = 0;
 function defaultVisibleColumns(){return columns.filter(c=>!defaultHiddenColumns.includes(c.key)).map(c=>c.key)}
 function accountStorageId(){return currentEditorToken?(currentEditorAccount||currentEditor||'user'):'guest'}
@@ -7877,6 +7880,8 @@ function hasRemoteAccountAvatar(settings){return Boolean(settings)&&(['avatar','
 function remoteAccountAvatar(settings){return imageUrl(settings?.avatar??settings?.['頭像連結']??'')}
 function hasRemoteReplyTemplateSettings(settings){return Boolean(settings)&&(['replyTemplates','回信範本設定','replyTemplateDefault','預設回信範本'].some(key=>Object.prototype.hasOwnProperty.call(settings,key)))}
 function remoteReplyTemplateSettings(settings){return normalizeReplyTemplateSettings(settings?.replyTemplates??settings?.['回信範本設定'],settings?.replyTemplateDefault??settings?.['預設回信範本'])}
+function hasRemoteSignaturePresetSettings(settings){return Boolean(settings)&&(['signaturePresets','簽名檔清單','signaturePresetDefault','預設簽名檔'].some(key=>Object.prototype.hasOwnProperty.call(settings,key)))}
+function remoteSignaturePresetSettings(settings){return normalizeSignaturePresetSettings(settings?.signaturePresets??settings?.['簽名檔清單'],settings?.signaturePresetDefault??settings?.['預設簽名檔'])}
 function remoteSettingsPayload(){const theme=currentTheme(); return {visibleColumns:validVisibleColumns(visibleColumns,{fallback:false}),...displaySettings,selectEnabled:displaySettings.editEnabled,theme,'深淺模式':theme==='dark'?'深色':'淺色',collapseSettings:{...collapseSettings},filters:{year:[...(accountFilterSettings.year||[])],month:[...(accountFilterSettings.month||[])],status:[...(accountFilterSettings.status||[])],designer:[...(accountFilterSettings.designer||[])]}}}
 function saveRemoteSettingsForAccount(message='個人設定已儲存'){
   if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalPreviewToken())return;
@@ -7907,8 +7912,8 @@ function normalizeRemoteFilterList(settings,headers,normalizer=value=>value){ret
 function remoteFilterSettings(settings){if(!settings)return null; const headers=['篩選年份','篩選月份','篩選狀態','篩選姓名']; const hasHeaders=headers.some(header=>Object.prototype.hasOwnProperty.call(settings,header)); if(!hasHeaders)return null; return {year:normalizeRemoteFilterList(settings,['篩選年份'],normalizeFilterYear),month:normalizeRemoteFilterList(settings,['篩選月份'],canonicalMonth),status:normalizeRemoteFilterList(settings,['篩選狀態'],normalizeStatus),designer:normalizeRemoteFilterList(settings,['篩選姓名'],normalizeFilterDesigner)}}
 function applyAccountSettingsIfNeeded(remoteSettings=null){
   const key=accountStorageId(),accountChanged=activeSettingsAccount!==key;
-  if(accountChanged){activeSettingsAccount=key;currentAccountAvatar='';currentAccountReplyTemplates={};currentAccountReplyTemplateDefault='';visibleColumns=readVisibleColumnsForAccount();caseColumnWidths=readCache(accountStorageKey(caseColumnWidthsKey),{})||{};displaySettings=readDisplaySettingsForAccount();collapseSettings=readCollapseSettingsForAccount();accountFilterSettings=readFilterSettingsForAccount()}
-  const remoteColumns=remoteVisibleColumns(remoteSettings),remoteDisplay=remoteDisplaySettings(remoteSettings),remoteThemeSetting=remoteTheme(remoteSettings),remoteCollapse=remoteCollapseSettings(remoteSettings),remoteFilters=remoteFilterSettings(remoteSettings),remoteGroup=remoteDesignGroup(remoteSettings),remoteDepartmentValue=remoteDepartment(remoteSettings),remoteRawGroupValue=remoteRawGroup(remoteSettings),remoteName=remoteDisplayName(remoteSettings),remoteAvatarPresent=hasRemoteAccountAvatar(remoteSettings),remoteTemplatesPresent=hasRemoteReplyTemplateSettings(remoteSettings);
+  if(accountChanged){activeSettingsAccount=key;currentAccountAvatar='';currentAccountReplyTemplates={};currentAccountReplyTemplateDefault='';currentAccountSignaturePresets={};currentAccountSignaturePresetDefault='';visibleColumns=readVisibleColumnsForAccount();caseColumnWidths=readCache(accountStorageKey(caseColumnWidthsKey),{})||{};displaySettings=readDisplaySettingsForAccount();collapseSettings=readCollapseSettingsForAccount();accountFilterSettings=readFilterSettingsForAccount()}
+  const remoteColumns=remoteVisibleColumns(remoteSettings),remoteDisplay=remoteDisplaySettings(remoteSettings),remoteThemeSetting=remoteTheme(remoteSettings),remoteCollapse=remoteCollapseSettings(remoteSettings),remoteFilters=remoteFilterSettings(remoteSettings),remoteGroup=remoteDesignGroup(remoteSettings),remoteDepartmentValue=remoteDepartment(remoteSettings),remoteRawGroupValue=remoteRawGroup(remoteSettings),remoteName=remoteDisplayName(remoteSettings),remoteAvatarPresent=hasRemoteAccountAvatar(remoteSettings),remoteTemplatesPresent=hasRemoteReplyTemplateSettings(remoteSettings),remoteSignaturePresetsPresent=hasRemoteSignaturePresetSettings(remoteSettings);
   let sessionChanged=false;
   if(remoteName&&remoteName!==currentEditorDisplayName){currentEditorDisplayName=remoteName;sessionChanged=true}
   if(remoteGroup&&remoteGroup!==currentEditorGroup){currentEditorGroup=remoteGroup;sessionChanged=true}
@@ -7917,6 +7922,7 @@ function applyAccountSettingsIfNeeded(remoteSettings=null){
   if(sessionChanged)persistEditorSession();
   if(remoteAvatarPresent)currentAccountAvatar=remoteAccountAvatar(remoteSettings);
   if(remoteTemplatesPresent){const templateSettings=remoteReplyTemplateSettings(remoteSettings);currentAccountReplyTemplates=templateSettings.templates;currentAccountReplyTemplateDefault=templateSettings.defaultName}
+  if(remoteSignaturePresetsPresent){const presetSettings=remoteSignaturePresetSettings(remoteSettings);currentAccountSignaturePresets=presetSettings.presets;currentAccountSignaturePresetDefault=presetSettings.defaultName}
   if(remoteColumns){visibleColumns=remoteColumns;writeCache(accountStorageKey(visibleColumnsKey),visibleColumns)}
   if(remoteDisplay){displaySettings=remoteDisplay;writeCache(accountStorageKey(displaySettingsKey),displaySettings)}
   if(remoteThemeSetting)applyTheme(remoteThemeSetting);
@@ -8149,12 +8155,36 @@ function appendGmailSignatureHtml(editor,signatureHtml){
   editor.append(document.createElement('br'),document.createElement('br'),signature);
   return true;
 }
-/** 每一封 Gmail 編輯信開啟時，先自動在正文最下方帶入目前帳號的預設個人簽名（Gmail 帳號本身連接的
- * 那個傳送郵件地址對應的簽名檔）；工具列的「插入簽名檔」按鈕（見 openGmailSignaturePicker）讓使用者
- * 之後還能改選同一個 Gmail 帳號設定的其他傳送郵件地址簽名檔替換掉這個預設值。
+/** 使用者自建的命名簽名檔（見個人設定「簽名檔設定」）目前設為預設的那一組——存的是純文字，插入信件前
+ * 要先轉成安全的 HTML（換行轉 <br>，其餘字元逃脫），避免多行內容在正文裡被瀏覽器摺成一行。 */
+function currentUserSignaturePresetSettings(){return {presets:currentAccountSignaturePresets||{},defaultName:currentAccountSignaturePresetDefault||''}}
+function signaturePlainTextToHtml(text){return String(text||'').split(/\r?\n/).map(line=>esc(line)).join('<br>')}
+function defaultSignaturePresetHtml(){const {presets,defaultName}=currentUserSignaturePresetSettings();const content=presets[defaultName];return content?signaturePlainTextToHtml(content):''}
+/** 「插入簽名檔」選單要同時列出兩種來源：使用者自己在個人設定管理的命名簽名檔（例如「正常」「休假」），
+ * 以及目前連接的 Gmail 帳號本身設定的簽名檔（見 ensureGmailSignatureLoaded／gmailSignatureOptions）——
+ * 兩者是完全獨立的資料來源，合併成同一份清單單純是方便使用者一次看到所有能插入的選項，不代表兩者有任何
+ * 資料層面的關聯。自訂簽名檔不需要等任何網路請求（已經在登入/個人設定儲存時載入），Gmail 簽名檔才需要
+ * 呼叫端自行先 await ensureGmailSignatureLoaded() 確保 gmailSignatureOptions 是最新的。 */
+function combinedSignatureOptions(){
+  const {presets,defaultName}=currentUserSignaturePresetSettings();
+  const custom=Object.entries(presets).map(([name,content])=>({source:'custom',label:name,sublabel:'',isDefault:name===defaultName,html:signaturePlainTextToHtml(content)}));
+  const gmail=(gmailSignatureOptions||[]).map(opt=>({source:'gmail',label:opt.displayName||opt.email,sublabel:opt.displayName?opt.email:'',isDefault:Boolean(opt.isPrimary)&&!custom.length,html:opt.signature}));
+  return {custom,gmail};
+}
+/** 每一封 Gmail 編輯信開啟時，先自動在正文最下方帶入預設簽名——優先用使用者自己在個人設定指定的
+ * 預設命名簽名檔（不需要等任何網路請求，例如休假時把「休假」設成預設，之後開任何一封信都會自動帶入這份，
+ * 不用每次手動點選）；使用者完全沒有設定過任何自訂簽名檔時，才 fallback 用 Gmail 帳號本身連接的那個
+ * 傳送郵件地址對應的簽名檔（既有行為，沒有變動）。工具列的「插入簽名檔」按鈕（見 openGmailSignaturePicker）
+ * 讓使用者之後還能隨時改選清單裡的其他任何一組替換掉這個預設值。
  * 非同步載入完成前使用者若已經開始輸入，簽名只會接在現有內容後方，不會覆蓋編輯內容。 */
 async function appendDefaultGmailSignature(editor){
   if(!editor||editor.querySelector('[data-gmail-inserted-signature]'))return false;
+  const presetHtml=defaultSignaturePresetHtml();
+  if(presetHtml){
+    if(!editor.isConnected||editor.querySelector('[data-gmail-inserted-signature]'))return false;
+    if(!appendGmailSignatureHtml(editor,presetHtml)){notifyGmailSignatureUnavailable('目前預設簽名檔沒有可顯示的內容');return false}
+    return true;
+  }
   const generation=gmailSignatureLoadGeneration;
   const signatureHtml=await ensureGmailSignatureLoaded();
   if(generation!==gmailSignatureLoadGeneration)return appendDefaultGmailSignature(editor);
@@ -8178,8 +8208,9 @@ function insertChosenGmailSignature(editor,signatureHtml){
   editor.focus();
   setSync('已插入簽名檔',false,1800);
 }
-/** 「插入簽名檔」按鈕：列出目前連接的 Gmail 帳號設定的所有傳送郵件地址各自的簽名檔，讓使用者選一個
- * 插入（取代掉現有那份）——沿用既有的 fieldPopover 共用彈出元件與「插入信件範本」同一種選單樣式。 */
+/** 「插入簽名檔」按鈕：列出使用者自己管理的命名簽名檔＋目前連接的 Gmail 帳號設定的所有傳送郵件地址
+ * 各自的簽名檔，讓使用者選一個插入（取代掉現有那份）——沿用既有的 fieldPopover 共用彈出元件與
+ * 「插入信件範本」同一種選單樣式，兩種來源用小標題分組顯示。 */
 async function openGmailSignaturePicker(event,editorId){
   event.preventDefault();event.stopPropagation();
   const button=event.currentTarget,editor=document.getElementById(editorId);
@@ -8191,21 +8222,22 @@ async function openGmailSignaturePicker(event,editorId){
   positionFieldPopover(button);
   await ensureGmailSignatureLoaded();
   if(fieldPopover.hidden||fieldPopover.dataset.signaturePickerFor!==editorId)return; // 使用者已經關閉或切到別的編輯器
-  const options=gmailSignatureOptions;
-  if(!options.length){
-    fieldPopover.innerHTML=`<h3>插入簽名檔</h3><p class="schedule-picker-hint">${esc(gmailSignatureLoadError?`讀取簽名檔失敗：${gmailSignatureLoadError}`:'目前連接的 Gmail 帳號沒有設定任何簽名檔，可以到 Gmail 設定的「帳號與匯入」→「以此名稱寄送」新增。')}</p>`;
+  const {custom,gmail}=combinedSignatureOptions(),combined=[...custom,...gmail];
+  if(!combined.length){
+    fieldPopover.innerHTML=`<h3>插入簽名檔</h3><p class="schedule-picker-hint">${esc(gmailSignatureLoadError?`讀取簽名檔失敗：${gmailSignatureLoadError}`:'目前沒有任何可插入的簽名檔——可以到「個人設定」自建命名簽名檔，或到 Gmail 設定的「帳號與匯入」→「以此名稱寄送」新增。')}</p>`;
     positionFieldPopover(button);
     return;
   }
-  fieldPopover.innerHTML=`<h3>插入簽名檔</h3><div class="option-list source-option-list">${options.map((opt,index)=>`<button type="button" class="option" data-signature-index="${index}"><span>${esc(opt.displayName||opt.email)}</span>${opt.displayName?`<small>${esc(opt.email)}</small>`:''}${opt.isPrimary?'<em class="gmail-template-default-badge">預設</em>':''}</button>`).join('')}</div>`;
+  const groupHtml=(title,entries,offset)=>entries.length?`<div class="gmail-recipient-group-label">${esc(title)}</div><div class="option-list source-option-list">${entries.map((opt,index)=>`<button type="button" class="option" data-signature-index="${offset+index}"><span>${esc(opt.label)}</span>${opt.sublabel?`<small>${esc(opt.sublabel)}</small>`:''}${opt.isDefault?'<em class="gmail-template-default-badge">預設</em>':''}</button>`).join('')}</div>`:'';
+  fieldPopover.innerHTML=`<h3>插入簽名檔</h3>${groupHtml('自訂簽名檔',custom,0)}${groupHtml('Gmail 帳號簽名檔',gmail,custom.length)}`;
   positionFieldPopover(button);
   fieldPopover.querySelectorAll('[data-signature-index]').forEach(optionBtn=>{
     optionBtn.addEventListener('click',clickEvent=>{
       clickEvent.stopPropagation();
-      const option=options[Number(optionBtn.dataset.signatureIndex)];
+      const option=combined[Number(optionBtn.dataset.signatureIndex)];
       if(!option)return;
       closeFieldPopover();
-      insertChosenGmailSignature(editor,option.signature);
+      insertChosenGmailSignature(editor,option.html);
     });
   });
 }
@@ -9669,6 +9701,16 @@ function normalizeReplyTemplateSettings(value,defaultValue=''){
   return {templates,defaultName:names.length?(names[Math.min(defaultIndex,names.length-1)]||names[0]):''};
 }
 function normalizeDesignerReplyTemplates(value){return normalizeReplyTemplateSettings(value).templates}
+/** 跟 normalizeReplyTemplateSettings 不同：簽名檔的名稱是使用者自己打的（例如「休假」），要原樣保留，
+ * 不能像信件範本那樣重新編號成「範本 N」——編號會讓使用者完全看不出哪一組是哪個場合用的。 */
+function normalizeSignaturePresetSettings(value,defaultValue=''){
+  let source=value;
+  if(typeof source==='string'){try{source=JSON.parse(source||'{}')}catch(err){source={}}}
+  const entries=(source&&typeof source==='object'&&!Array.isArray(source))?Object.entries(source).map(([name,content])=>[String(name).trim(),String(content??'').trim()]):[];
+  const presets=Object.fromEntries(entries.filter(([name,content])=>name&&content).slice(0,40));
+  const names=Object.keys(presets),requested=String(defaultValue||'').trim();
+  return {presets,defaultName:names.includes(requested)?requested:(names[0]||'')};
+}
 function normalizeDesignerRow(row={}){
   const avatar=String(row['頭像連結']||row.avatar||'').trim(),skills=splitSkills(row['技能']||row.skills||''),visible=String(row['設計師顯示']??row.enabled??'').trim().toLowerCase(),name=String(row['名字']||row['設計師名字']||row.name||'').trim(),designType=String(row['組別']||row['設計類型']||row.designType||'').trim(),defaultActive=defaultDesigners.some(profile=>profile.name===name),replySettings=normalizeReplyTemplateSettings(row['回信範本設定']??row.replyTemplates,row['預設回信範本']??row.replyTemplateDefault);
   return {designType,name,account:loginAccountFull(row['帳號']||row.account||row.email||''),avatar,poster:String(row['頭像大圖連結']||row.poster||avatar).trim(),musicUrl:String(row['分享音樂']||row.musicUrl||row.appleMusicUrl||'').trim(),musicStartAt:Math.max(0,Number(row['音樂起始秒數']??row.musicStartAt??row.startAt??0)||0),imageFolder:String(row['圖片資料夾']||row.imageFolder||row.folderId||'').trim(),status:String(row['狀態']||row.status||'普通').trim()||'普通',skills,skillTargets:normalizeDesignerSkillMappings(row['技能表單設定']??row.skillMappings??row.skillTargets,skills),quote:String(row['對話框']||row.quote||'').trim(),replyTemplates:replySettings.templates,replyTemplateDefault:replySettings.defaultName,rotation:Number(row['新專案輪值']??row.rotation??99)||99,enabled:visible?!/^(?:x|false|0|停用|否)$/.test(visible):defaultActive};
@@ -9830,8 +9872,22 @@ function renderMailTemplateEditor(list,settings={},scope='mail'){if(!list)return
 function addMailTemplateRow(list,content=''){if(!list)return;const index=list.querySelectorAll('[data-reply-template-row]').length,scope=list.dataset.mailTemplateScope||'mail';list.insertAdjacentHTML('beforeend',mailTemplateRowHtml(content,index,{defaultName:index?'':`範本 1`,scope}));syncMailTemplateRows(list);list.querySelector('[data-reply-template-row]:last-child textarea')?.focus()}
 function bindMailTemplateEditor(list){if(!list||list.dataset.mailTemplateBound==='1')return;list.dataset.mailTemplateBound='1';list.addEventListener('click',event=>{const button=event.target.closest('[data-remove-reply-template]');if(!button)return;const row=button.closest('[data-reply-template-row]');if(!row||!confirm(`確定刪除「${row.querySelector('[data-reply-template-label]')?.textContent||'這個範本'}」？`))return;row.remove();syncMailTemplateRows(list)})}
 function collectMailTemplateEditor(list,{requireContent=true}={}){const rows=[...list?.querySelectorAll('[data-reply-template-row]')||[]],templates={};let defaultName='';for(const [index,row] of rows.entries()){const name=`範本 ${index+1}`,textarea=row.querySelector('[data-reply-template-content]'),content=String(textarea?.value||'').trim();textarea?.setCustomValidity('');if(requireContent&&!content){textarea.setCustomValidity('請輸入範本內容，或刪除這筆空白範本');textarea.reportValidity();return null}if(!content)continue;templates[name]=content;if(row.querySelector('[data-reply-template-default]')?.checked)defaultName=name}defaultName=Object.hasOwn(templates,defaultName)?defaultName:(Object.keys(templates)[0]||'');return {templates,defaultName}}
+/** 簽名檔設定：跟上面的信件範本編輯器同一種版面（重用 .mail-template-row 系列樣式），差別是簽名檔要讓
+ * 使用者自己命名（例如「正常」「休假」），不是像範本那樣直接編號成「範本 1／2／3」——名稱本身就是用來
+ * 記得「這組是什麼場合用的」，編號沒有意義；因此刻意寫成獨立的一組函式，不直接重用
+ * mailTemplateRowHtml／collectMailTemplateEditor，避免硬把「有沒有名稱欄位」這種語意差異塞進同一支
+ * 共用函式裡增加分支判斷。 */
+function signaturePresetRowHtml(name='',content='',index=0,{defaultKey=''}={}){const radioName='signature-preset-default';return `<div class="mail-template-row" data-signature-preset-row><div class="mail-template-fields"><div class="mail-template-head"><input type="text" data-signature-preset-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(name)}" aria-label="簽名檔名稱"><label class="mail-template-default"><input type="radio" name="${radioName}" data-signature-preset-default ${name&&name===defaultKey?'checked':''}>設為預設</label></div><textarea data-signature-preset-content maxlength="10000" placeholder="輸入簽名檔內容（純文字，換行會自動保留）">${esc(content)}</textarea></div><button type="button" class="mail-template-remove" data-remove-signature-preset aria-label="刪除這個簽名檔">×</button></div>`}
+function syncSignaturePresetRows(list){if(!list)return;const rows=[...list.querySelectorAll('[data-signature-preset-row]')];if(rows.length&&!rows.some(row=>row.querySelector('[data-signature-preset-default]')?.checked))rows[0].querySelector('[data-signature-preset-default]').checked=true}
+function renderSignaturePresetEditor(list,settings={}){if(!list)return;const normalized=normalizeSignaturePresetSettings(settings.presets??settings,settings.defaultName??settings.signaturePresetDefault);list.innerHTML=Object.entries(normalized.presets).map(([name,content],index)=>signaturePresetRowHtml(name,content,index,{defaultKey:normalized.defaultName})).join('');syncSignaturePresetRows(list);bindSignaturePresetEditor(list)}
+function addSignaturePresetRow(list){if(!list)return;const index=list.querySelectorAll('[data-signature-preset-row]').length;list.insertAdjacentHTML('beforeend',signaturePresetRowHtml('','',index,{defaultKey:''}));syncSignaturePresetRows(list);list.querySelector('[data-signature-preset-row]:last-child [data-signature-preset-name]')?.focus()}
+function bindSignaturePresetEditor(list){if(!list||list.dataset.signaturePresetBound==='1')return;list.dataset.signaturePresetBound='1';list.addEventListener('click',event=>{const button=event.target.closest('[data-remove-signature-preset]');if(!button)return;const row=button.closest('[data-signature-preset-row]'),name=row?.querySelector('[data-signature-preset-name]')?.value.trim()||'這個簽名檔';if(!row||!confirm(`確定刪除「${name}」？`))return;row.remove();syncSignaturePresetRows(list)})}
+/** 送出前驗證：名稱／內容都不能留空白（整列空白直接略過，不擋儲存），且名稱不能重複——名稱是使用者
+ * 自己打的自由文字，跟信件範本的固定編號「範本 N」不同，重複的話後面的會在存成 {名稱:內容} 物件時悄悄
+ * 蓋掉前面的，使用者不會有任何提示，所以這裡要主動擋下來。 */
+function collectSignaturePresetEditor(list){const rows=[...list?.querySelectorAll('[data-signature-preset-row]')||[]],presets={},seen=new Set();let defaultName='';for(const row of rows){const nameInput=row.querySelector('[data-signature-preset-name]'),contentArea=row.querySelector('[data-signature-preset-content]'),name=String(nameInput?.value||'').trim(),content=String(contentArea?.value||'').trim();nameInput?.setCustomValidity('');contentArea?.setCustomValidity('');if(!name&&!content)continue;if(!name){nameInput.setCustomValidity('請輸入簽名檔名稱，或刪除這筆空白簽名檔');nameInput.reportValidity();return null}if(!content){contentArea.setCustomValidity('請輸入簽名檔內容，或刪除這筆空白簽名檔');contentArea.reportValidity();return null}if(seen.has(name)){nameInput.setCustomValidity('簽名檔名稱不能重複');nameInput.reportValidity();return null}seen.add(name);presets[name]=content;if(row.querySelector('[data-signature-preset-default]')?.checked)defaultName=name}defaultName=Object.hasOwn(presets,defaultName)?defaultName:(Object.keys(presets)[0]||'');return {presets,defaultName}}
 function renderPersonalSettingsAvatar(){const preview=$('#personalSettingsAvatarPreview');if(!preview)return;const url=currentAccountAvatarUrl(),name=currentUserDisplayName();preview.innerHTML=url?`<img src="${esc(url)}" alt="${esc(name)} 頭像" onerror="this.remove();this.parentNode.textContent='${esc(accountInitial(name))}'">`:esc(accountInitial(name))}
-function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return}if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return;if(isLocalPreviewToken()){setSync('本機檢視帳號無法儲存個人設定',true);return}closeAccountMenu();const modal=$('#personalSettingsModal'),form=$('#personalSettingsForm'),list=$('#personalMailTemplateList');if(!modal||!form||!list)return;form.elements.displayName.value=currentUserDisplayName();renderPersonalSettingsAvatar();renderMailTemplateEditor(list,{templates:currentAccountReplyTemplates,defaultName:currentAccountReplyTemplateDefault},'personal');setPersonalSettingsStatus();modal.hidden=false;setTimeout(()=>form.elements.displayName?.focus?.(),40)}
+function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return}if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return;if(isLocalPreviewToken()){setSync('本機檢視帳號無法儲存個人設定',true);return}closeAccountMenu();const modal=$('#personalSettingsModal'),form=$('#personalSettingsForm'),list=$('#personalMailTemplateList'),signatureList=$('#personalSignaturePresetList');if(!modal||!form||!list)return;form.elements.displayName.value=currentUserDisplayName();renderPersonalSettingsAvatar();renderMailTemplateEditor(list,{templates:currentAccountReplyTemplates,defaultName:currentAccountReplyTemplateDefault},'personal');renderSignaturePresetEditor(signatureList,{presets:currentAccountSignaturePresets,defaultName:currentAccountSignaturePresetDefault});setPersonalSettingsStatus();modal.hidden=false;setTimeout(()=>form.elements.displayName?.focus?.(),40)}
 function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(modal)modal.hidden=true}
 async function savePersonalSettings(event){
   event.preventDefault();
@@ -9839,6 +9895,8 @@ async function savePersonalSettings(event){
   const form=event.target, input=form.elements.displayName, displayName=input.value.trim(), submit=form.querySelector('button[type="submit"]'), submitLabel=submit.textContent;
   const templateSettings=collectMailTemplateEditor($('#personalMailTemplateList'));
   if(!templateSettings)return;
+  const signaturePresetSettings=collectSignaturePresetEditor($('#personalSignaturePresetList'));
+  if(!signaturePresetSettings)return;
   if(!displayName){input.setCustomValidity('請輸入顯示名');input.reportValidity();return}
   input.setCustomValidity('');
   submit.disabled=true;
@@ -9846,13 +9904,15 @@ async function savePersonalSettings(event){
   setPersonalSettingsStatus('正在寫入...');
   setSync('個人設定儲存中...');
   try{
-    const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName,replyTemplates:templateSettings.templates,replyTemplateDefault:templateSettings.defaultName}});
+    const data=await sheetApi('saveUserSettings',{account:currentEditorAccount,editorToken:currentEditorToken,settings:{displayName,replyTemplates:templateSettings.templates,replyTemplateDefault:templateSettings.defaultName,signaturePresets:signaturePresetSettings.presets,signaturePresetDefault:signaturePresetSettings.defaultName}});
     const savedSettings=data.settings||{}, savedName=remoteDisplayName(savedSettings);
     if(!savedName||savedName!==displayName)throw new Error('後端未回傳已儲存的顯示名');
     accountSettingsRevision++;
     applyAccountSettingsIfNeeded(savedSettings);
     currentAccountReplyTemplates={...templateSettings.templates};
     currentAccountReplyTemplateDefault=templateSettings.defaultName;
+    currentAccountSignaturePresets={...signaturePresetSettings.presets};
+    currentAccountSignaturePresetDefault=signaturePresetSettings.defaultName;
     currentEditorDisplayName=savedName;
     const designerIndex=designers.findIndex(profile=>loginAccountFull(profile.account)===loginAccountFull(currentEditorAccount));
     if(designerIndex>=0){designers[designerIndex]={...designers[designerIndex],replyTemplates:{...templateSettings.templates},replyTemplateDefault:templateSettings.defaultName};cacheDesignerProfiles(designers)}
@@ -13092,6 +13152,7 @@ document.addEventListener('click',event=>{
 	$('#personalSettingsForm')?.addEventListener('submit',savePersonalSettings);
 	$('#personalSettingsAvatarChange')?.addEventListener('click',openUserAvatarUploadPage);
 	$('#personalMailTemplateAdd')?.addEventListener('click',()=>addMailTemplateRow($('#personalMailTemplateList')));
+	$('#personalSignaturePresetAdd')?.addEventListener('click',()=>addSignaturePresetRow($('#personalSignaturePresetList')));
 	document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#personalSettingsModal')?.hidden){event.preventDefault();hidePersonalSettings()}});
 	$('#accountDesignerSettings')?.addEventListener('click',()=>{closeAccountMenu();showDesignerSettings()});
 	$('#accountAvatarSettings')?.addEventListener('click',showPersonalSettings);
