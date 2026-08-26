@@ -471,6 +471,32 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   assert.match(collectSource, /setSync\(`「\$\{name\}」內容過長/);
 });
 
+test('signature preset content is excluded from the global table/th/td styling, and visually aligns with the mail-template box above it', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 全站有一條把 table/th/td 強制統一成單一字級/顏色/字重的規則（原本是給一般資料表格用的），這條規則
+  // 2026-08-18 那次已經因為同一種理由排除過 .gmail-rich-editor（見信件內容編輯區的簽名檔顯示）——這次
+  // 簽名檔設定的內容欄位（.signature-preset-content）也要比照排除，貼上的簽名檔如果本身是 <table> 排版
+  // （常見的名片式雙欄簽名檔），格子裡各自設計的字級/顏色/粗細才不會被這條規則整批壓成同一種樣式。
+  assert.match(html, /table:not\(\.gmail-rich-editor table\):not\(\.signature-preset-content table\)/);
+  assert.match(html, /th:not\(\.gmail-rich-editor th\):not\(\.signature-preset-content th\)/);
+  assert.match(html, /td:not\(\.gmail-rich-editor td\):not\(\.signature-preset-content td\)/);
+
+  // 全站的 <textarea> 另外有一條獨立規則把圓角統一成 24px（比一般表單元件的 10px 更圓潤），信件範本
+  // 區塊的內容欄位就是 <textarea>，會吃到這條規則；簽名檔內容欄位改成 contenteditable 的 <div> 之後
+  // 不會自動繼承這條規則（只認 textarea 這個標籤），需要明確補上同樣的圓角＋內距，兩個堆疊在一起的方塊
+  // 視覺上才會對齊，不會一個是大圓角、一個是小圓角。
+  const textareaRuleStart = html.indexOf('    textarea,\n');
+  const textareaRuleEnd = html.indexOf('\n    }', textareaRuleStart);
+  assert.ok(textareaRuleStart > 0 && textareaRuleEnd > textareaRuleStart, 'expected the shared 24px textarea/panel border-radius rule to still exist');
+  assert.match(html.slice(textareaRuleStart, textareaRuleEnd + 6), /border-radius:24px!important;/);
+  const contentRuleStart = html.indexOf('.signature-preset-content{');
+  const contentRuleEnd = html.indexOf('}', contentRuleStart);
+  assert.ok(contentRuleStart > 0);
+  const contentRule = html.slice(contentRuleStart, contentRuleEnd + 1);
+  assert.match(contentRule, /border-radius:24px!important/);
+  assert.match(contentRule, /padding:7px 10px/, '內距要跟全站 input/select/textarea 的基礎內距一致，才能跟上方的信件範本 textarea 真正對齊');
+});
+
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function refreshScheduledMailList(caseId,kind)');
