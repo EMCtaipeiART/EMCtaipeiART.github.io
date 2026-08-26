@@ -8733,6 +8733,20 @@ function gmailEditorMailPayload(editor){
     if(wrap)wrap.replaceWith(image);
     inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
   });
+  // 「設計師回覆信」自動帶入的 Drive 連結縮圖（appendDesignerReplyImageThumb）沒有 data-gmail-inline-image-id，
+  // 上面那段完全不會處理到它們，殘留的 .gmail-inline-image-wrap（含縮放把手／刪除鈕，寄出時都要丟棄）
+  // 一樣要在這裡拆開：wrap 的寬高（appendDesignerReplyImageThumb 依原始比例算好、寫在 wrap.style 上）只存在
+  // 編輯區自己的 CSS class（.gmail-inline-image-wrap{display:inline-block}、img{width:100%;height:100%}），
+  // 收件端的郵件用戶端完全讀不到這份樣式表——沒有把寬高轉成 <img> 本身的 inline style 就直接送出的話，
+  // <span> 的 width/height 對預設 inline 排版的元素沒有作用，<img> 會退回用原始像素尺寸顯示，跑版變得超級巨大。
+  clone.querySelectorAll('.gmail-inline-image-wrap').forEach(wrap=>{
+    const image=wrap.querySelector('img.gmail-inline-image');
+    if(!image)return;
+    const customWidth=wrap.style.width||'', customHeight=wrap.style.height||'';
+    image.removeAttribute('class');image.removeAttribute('contenteditable');
+    image.setAttribute('style',`display:block;${customWidth?`width:${customWidth};`:'max-width:100%;'}${customHeight?`height:${customHeight};`:'height:auto;'}margin:8px 0;border-radius:8px`);
+    wrap.replaceWith(image);
+  });
   const prepared=gmailPreparedBodySignature(clone.innerHTML);
   return {
     bodyHtml:prepared.bodyHtml,
@@ -10111,7 +10125,24 @@ function handleUploadFrameMessage(event){
     closeUploadModal({refreshUserAvatar:false});
     setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，同步中...`:(count?`已上傳 ${count} 張設計圖，同步中...`:'圖片上傳完成，同步中...'));
     fetchModificationCounts()
-      .then(()=>{render();const revisionModalEl=$('#revisionModal');if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}refreshOpenCaseDetail(id);setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200);if(afterReply&&id){openDesignerReplyMailModal(id,{round:replyRound}).then(()=>applyDesignerReplyImages(id,designerReplyImagesForRound(id,replyRound),{round:replyRound}))}})
+      .then(()=>{
+        render();
+        const revisionModalEl=$('#revisionModal');
+        if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}
+        refreshOpenCaseDetail(id);
+        setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200);
+        if(afterReply&&id){
+          // 這一段（開啟回信編輯器＋套用剛上傳的圖片）過去沒有接 .catch()——任何一步出錯都會變成完全
+          // 靜默的 unhandled rejection：使用者只看到上傳視窗收合，卻等不到編輯器跳出來，也看不到任何
+          // 錯誤訊息，只能自己猜測是不是卡住了，往往因此重新整理一遍整個流程，導致同一批圖片被重複上傳
+          // （伺服器端確實有寫入成功，只是這裡沒有真的把使用者帶到看得到結果的畫面）。這裡補上明確的
+          // 失敗提示＋補救方式：圖片本身已經確定上傳成功（前面 setSync 已經回報過），只是自動轉入編輯器
+          // 這一步沒有完成，改請使用者直接點擊「回信」手動開啟即可看到剛上傳的圖片，不需要重新上傳一次。
+          openDesignerReplyMailModal(id,{round:replyRound})
+            .then(()=>applyDesignerReplyImages(id,designerReplyImagesForRound(id,replyRound),{round:replyRound}))
+            .catch(err=>setSync(`圖片已上傳成功，但自動開啟回信編輯器失敗，請改點「回信」查看：${err.message}`,true));
+        }
+      })
       .catch(err=>setSync(`圖片已上傳，但畫面同步失敗，請重新整理：${err.message}`,true));
     return;
   }
@@ -10586,6 +10617,23 @@ function sanitizeGmailThreadHref(value){
   const url=String(value||'').trim();
   return /^(https?:|mailto:)/i.test(url)?url:'';
 }
+/** 圖片來源除了 cid: 附件，額外只信任這個系統自己控制、全站唯一用來存放上傳圖片（頭像／海報／
+ * REELS／設計圖）的 Google 網域——見 imageUrl()，所有透過本系統上傳的圖片一律正規化成
+ * https://lh3.googleusercontent.com/d/{id}=wN 這個格式。放行理由：「設計師回覆信」自動帶入的設計圖
+ * （見 appendDesignerReplyImageThumb）目前是以外部連結圖片、不是 Gmail 附件的形式寄出，瀏覽信件串時
+ * 需要能顯示這些圖片，否則「自己人上傳的圖」永遠只能看純文字。這不是開放任意外部圖片（一般寄件人
+ * HTML 裡的 <img src="https://任意網域/..."> 仍然一律被下面的邏輯捨棄，避免已讀追蹤像素），只針對這一個
+ * 網域放行——殘餘風險是：任何人技術上都能把檔案分享到自己的 Google Drive、產生同樣網域格式的圖片網址
+ * 當作追蹤像素；這個風險範圍遠比「放行任意外部網域」窄很多（需要對方主動用 Google 帳號操作，且拿到的
+ * 只是粗略的「有沒有載入過」訊號，不是完整的追蹤能力），權衡後判斷可以接受，之後如果真的需要更嚴謹，
+ * 可以考慮改成請 Worker 也把這類圖片抓成 data: URI 再回傳（如同 cid: 附件），徹底避免對外連線。 */
+const GMAIL_THREAD_TRUSTED_IMAGE_HOSTS=new Set(['lh3.googleusercontent.com']);
+function gmailThreadTrustedImageSrc(value){
+  try{
+    const url=new URL(String(value||'').trim());
+    return url.protocol==='https:'&&GMAIL_THREAD_TRUSTED_IMAGE_HOSTS.has(url.hostname);
+  }catch(err){return false}
+}
 function sanitizeGmailThreadAttributes(sourceEl,targetEl,tag){
   const style=sourceEl.getAttribute('style');
   if(style){const safeStyle=sanitizeGmailThreadStyleValue(style); if(safeStyle)targetEl.setAttribute('style',safeStyle)}
@@ -10607,14 +10655,17 @@ function sanitizeGmailThreadNode(sourceNode,targetParent,cidMap,usedContentIds){
   const tag=sourceNode.tagName.toLowerCase();
   if(GMAIL_THREAD_HTML_DROP_TAGS.has(tag))return; // 危險標籤整段（含子節點）捨棄，不繼續往下走訪
   if(tag==='img'){
-    // 圖片一律只認「這封信真的有附上、Worker 已經用附件 API 安全抓回來的 data: URI」（用 cid: 參照比對），
-    // 絕對不接受寄件者原始 HTML 裡指向任意外部網址的 <img src="https://...">——那種寫法常被用來當成
-    // 「已讀追蹤像素」，收件人一開啟就會不知不覺對外發一次請求洩漏「你正在看這封信」，這裡直接整張圖捨棄。
+    // 圖片只認兩種來源：①這封信真的有附上、Worker 已經用附件 API 安全抓回來的 data: URI（用 cid: 參照比對）；
+    // ②這個系統自己控制的圖片託管網域（見 gmailThreadTrustedImageSrc 的說明，給「設計師回覆信」自動帶入的
+    // 外部連結設計圖用）。絕對不接受寄件者原始 HTML 裡指向其他任意外部網址的 <img src="https://...">——那種
+    // 寫法常被用來當成「已讀追蹤像素」，收件人一開啟就會不知不覺對外發一次請求洩漏「你正在看這封信」，
+    // 不符合這兩種來源的圖片一律直接整張捨棄。
     const src=(sourceNode.getAttribute('src')||'').trim();
     const cidMatch=src.match(/^cid:(.+)$/i);
-    const resolved=cidMatch?cidMap.get(cidMatch[1].trim().toLowerCase()):null;
+    let resolved=cidMatch?cidMap.get(cidMatch[1].trim().toLowerCase()):null;
+    if(resolved){usedContentIds.add(cidMatch[1].trim().toLowerCase())}
+    else if(!cidMatch&&gmailThreadTrustedImageSrc(src)){resolved=src}
     if(!resolved)return;
-    usedContentIds.add(cidMatch[1].trim().toLowerCase());
     const img=document.createElement('img');
     img.src=resolved;
     img.loading='lazy';
@@ -10874,12 +10925,19 @@ async function openModificationRequestReplyModal(id){
 async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
+  const targetRoundBeforeOpen=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
+  // 這個案件／輪次的「設計師回覆信」範本已經初始化過、彈窗還開著時，不要重新整個重建（會把使用者已經
+  // 打好的文字整段洗掉，也會在編輯區裡多插入一個重複的 #gmailDesignerReplyImages 容器，讓
+  // document.getElementById() 抓到哪一個變成不確定、圖片顯示因此忽有忽無）——只有第一次呼叫時才會
+  // 重建整個範本，第二次以後交給呼叫端接著呼叫的 applyDesignerReplyImages() 用局部 DOM 更新處理即可。
+  const already=$('#gmailThreadModal');
+  if(already&&!already.hidden&&already.dataset.replyMode==='designer'&&String(already.dataset.designerReplyCaseId||'')===String(id)&&String(already.dataset.designerReplyRound||'')===String(targetRoundBeforeOpen))return;
   await openGmailThreadModal(id,{lockUntilCaller:true});
   const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection'), editor=$('#gmailThreadReplyEditor');
   if(!modal||modal.hidden||composeSection?.hidden){setGmailEditorLoading(editor,false);return}
   modal.dataset.replyMode='designer';
   modal.dataset.designerReplyCaseId=String(id);
-  const targetRound=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
+  const targetRound=targetRoundBeforeOpen;
   modal.dataset.designerReplyRound=String(targetRound);
   modal.dataset.designerReplyPending='1';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='設計師回覆信';
@@ -10921,10 +10979,12 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
 /** 「設計師回覆信」自動帶入的設計圖縮圖：跟使用者自己貼上/上傳的內嵌圖片一樣包一層
  * .gmail-inline-image-wrap，重用同一顆 bindGmailInlineImageControls() 縮放把手＋刪除鈕——這些圖片
  * 直接引用 Drive 網址（不是 gmailInlineImageStore 追蹤的 CID 附件），刪除只是單純把這個 DOM 節點
- * 移除，不需要、也不會影響 gmailEditorMailPayload() 的 CID 轉換邏輯（那段只認有
- * data-gmail-inline-image-id 屬性的圖片，這裡的圖片沒有這個屬性，維持原樣以 <img src="https://...">
- * 送出）。初始尺寸沿用既有「180px 上限、依原始比例縮放」的視覺設計，不像使用者自己插入的圖片是
- * 320px 上限——這是自動帶入的參考縮圖，維持比手動插入的圖片小一號的既有大小觀感。 */
+ * 移除，不會影響 gmailEditorMailPayload() 的 CID 轉換邏輯（那段只認有 data-gmail-inline-image-id
+ * 屬性的圖片，這裡的圖片沒有這個屬性，走的是同一支函式裡另外新增、專門處理「沒有 CID 屬性的
+ * .gmail-inline-image-wrap」的第二段：一樣會把這裡算好的 wrap 寬高轉成 <img> 本身的 inline style
+ * 才送出，維持原樣以 <img src="https://..."> 呈現，但尺寸不會跑掉）。初始尺寸沿用既有「180px 上限、
+ * 依原始比例縮放」的視覺設計，不像使用者自己插入的圖片是 320px 上限——這是自動帶入的參考縮圖，維持
+ * 比手動插入的圖片小一號的既有大小觀感。 */
 function appendDesignerReplyImageThumb(container,img){
   const wrap=document.createElement('span');
   wrap.className='gmail-inline-image-wrap';

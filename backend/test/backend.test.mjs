@@ -261,6 +261,75 @@ test('Gmail thread signature stripping checks every saved signature (Gmail accou
   assert.equal(openCalls.length, 2, 'expected exactly two getCaseMailThread call sites to send signatureCandidates');
 });
 
+test('gmailThreadTrustedImageSrc() only allows https lh3.googleusercontent.com (the app\'s own image host), rejecting other domains, domain-confusion tricks, and non-https', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('const GMAIL_THREAD_TRUSTED_IMAGE_HOSTS=');
+  const end = html.indexOf('function sanitizeGmailThreadAttributes(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  const check = new Function(`${source};return gmailThreadTrustedImageSrc;`)();
+  assert.equal(check('https://lh3.googleusercontent.com/d/fakeid=w1600'), true);
+  assert.equal(check('https://evil.example/pixel.gif'), false);
+  // 網域混淆：URL 的 hostname 必須完全等於 lh3.googleusercontent.com，不能是它的子字串或前綴。
+  assert.equal(check('https://lh3.googleusercontent.com.evil.example/x.png'), false);
+  assert.equal(check('https://evil.example/?host=lh3.googleusercontent.com'), false);
+  assert.equal(check('http://lh3.googleusercontent.com/d/x=w100'), false, 'must require https, not http');
+  assert.equal(check(''), false);
+  assert.equal(check('not a url'), false);
+});
+
+test('Gmail thread sanitizer allows images from the app\'s own trusted Drive host (for designer-reply auto-attached design images) in addition to cid: attachments, while every other external <img src> is still dropped', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 圖片來源判斷要先試 cid:，查不到再退回信任網域，不能反過來（否則寄件人可以用 cid: 開頭但內容其實
+  // 指向信任網域外的字串繞過 cidMap 檢查）；也要求 !cidMatch 才走信任網域這條路，避免「看起來像 cid: 但
+  // 其實 cidMap 沒有對應資料」時又被誤判成信任網域網址（cid: 開頭的字串本來就不會通過 URL 的網域檢查，
+  // 這裡主要是確保程式邏輯本身沒有寫反）。
+  assert.match(html, /let resolved=cidMatch\?cidMap\.get\(cidMatch\[1\]\.trim\(\)\.toLowerCase\(\)\):null;/);
+  assert.match(html, /if\(resolved\)\{usedContentIds\.add\(cidMatch\[1\]\.trim\(\)\.toLowerCase\(\)\)\}/);
+  assert.match(html, /else if\(!cidMatch&&gmailThreadTrustedImageSrc\(src\)\)\{resolved=src\}/);
+});
+
+test('gmailEditorMailPayload() also unwraps designer-reply Drive-image thumbnails (no data-gmail-inline-image-id) and burns the resize wrap\'s width/height into the final <img> style, so sent emails do not show oversized images', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('function gmailEditorMailPayload(editor){');
+  const end = html.indexOf('function bindGmailInlineImageEditor(', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  // 第二段要處理「沒有 data-gmail-inline-image-id」的 .gmail-inline-image-wrap（設計師回覆信自動帶入的
+  // Drive 連結縮圖），把 wrap 的寬高轉成 <img> 本身的 inline style 才 replaceWith，跟既有 CID 那段用
+  // 同一套「wrap 寬高 → img style」轉換邏輯，確保寄出信件裡的圖片尺寸不會依賴只存在系統自己樣式表裡的
+  // .gmail-inline-image-wrap class（收件端郵件用戶端讀不到那份樣式表，圖片會退回原始像素尺寸顯示、
+  // 變得超級巨大）。
+  assert.match(source, /clone\.querySelectorAll\('\.gmail-inline-image-wrap'\)\.forEach\(wrap=>\{/);
+  assert.match(source, /const image=wrap\.querySelector\('img\.gmail-inline-image'\);/);
+  assert.match(source, /const customWidth=wrap\.style\.width\|\|'', customHeight=wrap\.style\.height\|\|'';/);
+  assert.match(source, /wrap\.replaceWith\(image\);/);
+});
+
+test('openDesignerReplyMailModal() restores the idempotency guard its own doc-comment describes but the code previously lacked: calling it again for the same already-open case+round is a no-op (does not wipe user-typed content or create a duplicate #gmailDesignerReplyImages), while a genuine round change still rebuilds', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf('async function openDesignerReplyMailModal(id');
+  const end = html.indexOf('/** 「設計師回覆信」自動帶入的設計圖縮圖', start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  assert.match(source, /const already=\$\('#gmailThreadModal'\);/);
+  assert.match(source, /if\(already&&!already\.hidden&&already\.dataset\.replyMode==='designer'&&String\(already\.dataset\.designerReplyCaseId\|\|''\)===String\(id\)&&String\(already\.dataset\.designerReplyRound\|\|''\)===String\(targetRoundBeforeOpen\)\)return;/);
+  // 這個提前 return 一定要在 await openGmailThreadModal(...)（會重新整個重讀信件串、重置一堆狀態）
+  // 之前，跳過的意義才成立——不能等到跑完一輪網路請求才發現不需要重建。
+  const guardIndex = source.indexOf('if(already&&!already.hidden');
+  const awaitOpenThreadIndex = source.indexOf('await openGmailThreadModal(id,{lockUntilCaller:true});');
+  assert.ok(guardIndex > 0 && awaitOpenThreadIndex > guardIndex, 'idempotency guard must run before re-opening the thread modal');
+});
+
+test('the "images-updated" handler no longer leaves the case-design-reply hand-off as a silent unhandled promise rejection: opening the reply editor and applying the just-uploaded images now has its own .catch() with an actionable message', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const start = html.indexOf("if(data.type==='machi-case-design-images-updated'){");
+  const end = html.indexOf("if(data.type==='machi-nas-folder-backup-started'){", start);
+  assert.ok(start > 0 && end > start);
+  const source = html.slice(start, end);
+  assert.match(source, /openDesignerReplyMailModal\(id,\{round:replyRound\}\)\s*\n\s*\.then\(\(\)=>applyDesignerReplyImages\(id,designerReplyImagesForRound\(id,replyRound\),\{round:replyRound\}\)\)\s*\n\s*\.catch\(err=>setSync\(`圖片已上傳成功，但自動開啟回信編輯器失敗，請改點「回信」查看：\$\{err\.message\}`,true\)\);/);
+});
+
 test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function openGmailThreadModal(id');
