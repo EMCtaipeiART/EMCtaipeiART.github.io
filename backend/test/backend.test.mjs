@@ -264,8 +264,6 @@ test('Gmail editors wait for pasted images before immediate or scheduled send', 
 
 test('Gmail editors show the connected account signature by default without appending it twice', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.doesNotMatch(html, /data-rich-signature-for=/);
-  assert.doesNotMatch(html, /插入 Gmail 簽名檔/);
   assert.match(html, /gmailSignatureLoadPromise/);
   assert.match(html, /function resetGmailSignatureCache\(\)/);
   assert.match(html, /if\(gmailSignatureLoadPromise\)return gmailSignatureLoadPromise/);
@@ -321,6 +319,38 @@ test('Gmail editors show the connected account signature by default without appe
   const batchStart = html.indexOf('async function handlePostSubmitGmailSend()');
   const batchEnd = html.indexOf('\nfunction closePostSubmitCopyModal()', batchStart);
   assert.match(html.slice(batchStart, batchEnd), /gmailPreparedBodySignature\(bodyHtml,signatureHtml\)/);
+});
+
+test('a manual "insert signature" button lets users pick between the Gmail account\'s multiple send-as signatures, in both the compose and reply/thread editors', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 按鈕本身要在發信（gmailComposeEditor）與回信（gmailThreadReplyEditor，涵蓋一般回信／填寫修改需求信／
+  // 設計師回覆信三種模式，三者共用同一個編輯器）兩個工具列都要有。
+  assert.match(html, /class="gmail-rich-signature-btn" data-rich-signature-for="gmailThreadReplyEditor" title="插入簽名檔"/);
+  assert.match(html, /class="gmail-rich-signature-btn" data-rich-signature-for="gmailComposeEditor" title="插入簽名檔"/);
+  assert.match(html, /document\.querySelectorAll\('\[data-rich-signature-for\]'\)\.forEach\(button=>button\.addEventListener\('click',event=>openGmailSignaturePicker\(event,button\.dataset\.richSignatureFor\)\)\)/);
+  // 選單資料來源：ensureGmailSignatureLoaded() 現在除了既有的單一 signature（自動帶入用），
+  // 也要把 Worker 回傳的 signatures 陣列（Gmail 帳號設定的所有傳送郵件地址各自的簽名檔）存起來，
+  // 供選單使用，而且要是同一次 API 呼叫，不能另外多打一次。
+  assert.match(html, /gmailSignatureOptions=options/);
+  assert.match(html, /options=Array\.isArray\(data\.signatures\)\?data\.signatures:\[\]/);
+  const requestStart = html.indexOf('const request=(async()=>{');
+  const requestEnd = html.indexOf('return signatureHtml', requestStart);
+  assert.ok(requestStart > 0 && requestEnd > requestStart);
+  assert.equal((html.slice(requestStart, requestEnd).match(/sheetApi\('getGmailSignature'/g) || []).length, 1, 'loading the signature list must reuse the same getGmailSignature request as the automatic default, not a second call');
+  const pickerStart = html.indexOf('async function openGmailSignaturePicker(event,editorId)');
+  const pickerEnd = html.indexOf('\nfunction ', pickerStart + 1);
+  assert.ok(pickerStart > 0);
+  const pickerSource = html.slice(pickerStart, pickerEnd);
+  assert.match(pickerSource, /await ensureGmailSignatureLoaded\(\)/);
+  assert.match(pickerSource, /insertChosenGmailSignature\(editor,option\.signature\)/);
+  // 選一個新的簽名檔要能取代掉編輯器裡原本那份（不管是自動帶入還是先前手動選過的），不是插入變成兩份。
+  const insertStart = html.indexOf('function insertChosenGmailSignature(editor,signatureHtml)');
+  const insertEnd = html.indexOf('\nfunction ', insertStart + 1);
+  assert.ok(insertStart > 0);
+  const insertSource = html.slice(insertStart, insertEnd);
+  assert.match(insertSource, /editor\.querySelector\('\[data-gmail-inserted-signature\]'\)/);
+  assert.match(insertSource, /removeGmailSignatureNodeAndSpacing\(existing\)/);
+  assert.match(insertSource, /appendGmailSignatureHtml\(editor,signatureHtml\)/);
 });
 
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {

@@ -1406,8 +1406,9 @@ describe('Machi Design API Worker', () => {
         expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-1');
         return Response.json({
           sendAs: [
-            { sendAsEmail: 'someone.else@gmail.com', isPrimary: false, signature: '不該被選到的簽名' },
-            { sendAsEmail: 'designer.mailbox@gmail.com', isPrimary: true, signature: '<b>Machi</b><br>EMC 設計組' }
+            { sendAsEmail: 'someone.else@gmail.com', displayName: '其他別名', isPrimary: false, signature: '不該被選到的簽名' },
+            { sendAsEmail: 'designer.mailbox@gmail.com', displayName: 'Machi', isPrimary: true, signature: '<b>Machi</b><br>EMC 設計組' },
+            { sendAsEmail: 'no-signature@gmail.com', isPrimary: false, signature: '' }
           ]
         });
       }
@@ -1415,6 +1416,13 @@ describe('Machi Design API Worker', () => {
     });
     const signature = await api({ action: 'getGmailSignature' }, token);
     expect(signature).toMatchObject({ ok: true, signature: '<b>Machi</b><br>EMC 設計組' });
+    // signatures 應該把有實際內容的傳送郵件地址各自攤開回傳（供前端「選擇不同預設簽名檔」的選單使用），
+    // 不是只回傳自動帶入那一筆——這是這次新增、跟舊行為疊加、不取代舊欄位的部分；完全沒有填簽名檔內容
+    // 的別名（no-signature@gmail.com）正確被濾掉，不會出現一個選了也沒有東西可插入的空選項。
+    expect(signature.signatures).toEqual([
+      { email: 'someone.else@gmail.com', displayName: '其他別名', isPrimary: false, signature: '不該被選到的簽名' },
+      { email: 'designer.mailbox@gmail.com', displayName: 'Machi', isPrimary: true, signature: '<b>Machi</b><br>EMC 設計組' }
+    ]);
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);

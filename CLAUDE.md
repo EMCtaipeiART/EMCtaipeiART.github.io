@@ -189,6 +189,23 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-08-26 09:05 Asia/Taipei — Gmail 編輯器加回手動插入簽名檔按鈕，並可選擇不同預設簽名檔
+
+- 修改目的：使用者要求把先前拿掉的「手動插入簽名檔」按鈕加回發信／回信（含一般回信、填寫修改需求信、設計師回覆信三種模式，皆共用同一個回信編輯器）三種編輯器，並且能選擇不同的預設簽名檔。動手前先用 `AskUserQuestion` 確認「不同預設簽名檔」的來源：選項是①讀取 Gmail 帳號本身設定的多個「傳送郵件地址」（sendAs）各自的簽名檔（不用新增任何資料庫欄位或後台管理介面）、②在系統內自建多組「命名簽名檔」讓使用者自行管理（比照既有「回信範本設定」的做法，需要新增資料表欄位與後台 CRUD 介面）。使用者選擇①。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **Worker `getGmailSignature` action**：原本呼叫 Gmail API 的 `users.settings.sendAs.list` 之後，只挑出「目前連接位址那一筆（或 fallback 用 isPrimary）」當作唯一的自動帶入簽名檔，其餘資料整批丟棄。這次新增回傳 `signatures` 陣列——把整份 sendAs 清單裡「真的有填簽名檔內容」的項目都攤開（`{email,displayName,isPrimary,signature}`），供前端做「選擇不同預設簽名檔」的選單；沒有填簽名檔的別名會被濾掉，不會出現一個選了也沒東西可插入的空選項。既有的 `signature`（單一值，給自動帶入用）完全不受影響，兩者共用同一次 API 呼叫，不會多打請求。
+  2. **前端自動帶入邏輯不變**：`appendDefaultGmailSignature()`（開啟編輯器時自動在正文最下方帶入預設簽名檔）完全沒有修改行為，只是它依賴的 `ensureGmailSignatureLoaded()` 現在額外把 `data.signatures` 快取進新的模組層級變數 `gmailSignatureOptions`（跟既有的 `gmailSignatureHtml` 用同一份快取/世代失效機制，`resetGmailSignatureCache()` 一併清空）。
+  3. **新增「插入簽名檔」按鈕**：`gmailComposeEditor`（發信）與 `gmailThreadReplyEditor`（回信，涵蓋一般回信／填寫修改需求信／設計師回覆信）兩個工具列都加上（`.gmail-rich-signature-btn`，位置在「插入信件範本」跟「插入 NAS 路徑」之間），點擊呼叫新函式 `openGmailSignaturePicker(event,editorId)`——沿用既有 `fieldPopover` 共用彈出元件與「插入信件範本」同一種選單樣式，列出 `gmailSignatureOptions` 讓使用者選一個（顯示名稱＋Email，目前連接位址那筆標示「預設」）。
+  4. **新增「取代」邏輯**：`insertChosenGmailSignature(editor,signatureHtml)`——選一個新簽名檔時，先用既有的 `removeGmailSignatureNodeAndSpacing()` 把編輯器裡原本那份簽名檔（不管是自動帶入的還是先前手動選過的，連同它前面補的兩個換行）清掉，再呼叫既有的 `appendGmailSignatureHtml()` 插入新選的這份——確保永遠只有一份簽名檔、不會疊加變成兩份，且完全重用既有的「寄出時識別／移除簽名檔標記」機制（`data-gmail-inserted-signature`），不影響 `gmailPreparedBodySignature()`／排程草稿等既有邏輯。
+  5. **測試更新**：`backend/test/backend.test.mjs` 移除兩條鎖住「不存在手動簽名按鈕」的既有 `doesNotMatch` 斷言（這次是刻意的功能反轉，不是回歸），新增一支測試涵蓋按鈕存在於兩個編輯器、選單資料來源共用同一次 API 呼叫、取代（不是疊加）邏輯。`worker/test/index.test.ts` 的既有 Gmail 簽名檔測試新增第三個「沒有填簽名檔內容」的 sendAs 項目，驗證正確被濾掉；`signatures` 陣列的完整內容也一併斷言。
+- 風險區塊：
+  - 這個功能完全依賴使用者的 Gmail 帳號本身**已經**在 Gmail 設定裡設定了多個「傳送郵件地址」（sendAs 別名）——如果帳號只有一個別名（多數使用者的常見情況），選單就只會有一個選項可選，跟原本自動帶入的結果一樣，這是刻意接受的限制（使用者已在確認來源時知情選擇這個方案）。
+  - 沒有新增任何資料庫欄位或後台管理介面，純粹重用 Worker 既有已經抓到、但先前被丟棄的資料，風險與既有的 `getGmailSignature` action 完全相同。
+- 已檢查／驗證方式：`cd worker && npx tsc --noEmit` 無錯、`npx vitest run` 46/46（含更新過的簽名檔測試，先確認 mock 的第三個「無簽名內容」sendAs 項目正確被濾掉，不會混進 `signatures` 陣列）、`npx wrangler deploy --dry-run` 打包成功。`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 50/50。用本機靜態伺服器＋ Browser pane 對真實頁面做隔離測試（stub `sheetApi` 回傳兩組假簽名檔）：①發信視窗「插入簽名檔」按鈕點擊後正確顯示兩個選項（含「預設」標記）；②選第二個簽名檔，確認正確插入且草稿內容不受影響；③再選第一個簽名檔，確認 `data-gmail-inserted-signature` 節點數量維持 1（正確取代，不是疊加）；④回信視窗（`gmailThreadReplyEditor`）同樣看得到按鈕，模擬「帳號沒有任何簽名檔」情境，點擊後正確顯示引導文字「目前連接的 Gmail 帳號沒有設定任何簽名檔，可以到 Gmail 設定的『帳號與匯入』→『以此名稱寄送』新增」；⑤確認「產生中」鎖定狀態（`setGmailEditorLoading`）生效時這顆新按鈕也會跟著停用、解鎖後恢復，跟其餘工具列按鈕行為一致。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，前端點擊「插入簽名檔」選單會因為 Worker 還沒回傳 `signatures` 欄位而顯示「目前連接的 Gmail 帳號沒有設定任何簽名檔」，不影響既有的自動帶入功能（`signature` 單一欄位維持不變，照舊正常運作）。
+- commit：（見下方 push 紀錄）
+
 ### 2026-08-25 17:07 Asia/Taipei — 補齊三種回信模式的刪除圖片功能、上傳照片期間也鎖住編輯器
 
 - 修改目的：接續上一則「插入圖片可刪除、載入中鎖住編輯」的修改，使用者要求確認「填寫修改需求信」「設計師回覆信」「一般回信」三種回信模式是否都能刪除圖片，並且上傳照片檔案的處理期間也要鎖住編輯器（跟載入中同一種「產生中」狀態）。

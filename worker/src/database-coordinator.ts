@@ -1206,7 +1206,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address) };
   }
 
-  /** 讀取目前連接的 Gmail 帳號設定的簽名檔（需要 gmail.settings.basic 範圍；沒有這個範圍的舊連線會收到 403，回傳明確的 reason 讓前端可以提示重新連接而不是整個擋住）。 */
+  /** 讀取目前連接的 Gmail 帳號設定的簽名檔（需要 gmail.settings.basic 範圍；沒有這個範圍的舊連線會收到 403，回傳明確的 reason 讓前端可以提示重新連接而不是整個擋住）。
+   * Gmail 的 sendAs.list 本來就會回傳這個帳號設定的「所有」傳送郵件地址，每一個都可能各自帶不同的簽名檔——
+   * 過去這裡只挑出「目前連接位址那一筆」（或 fallback 用 isPrimary）當作唯一的自動帶入簽名檔，其餘完全被丟棄；
+   * 這次額外把整份清單（只保留真的有填簽名檔內容的項目）一併回傳，讓前端可以做「選擇不同預設簽名檔」的選單，
+   * 不需要另外新增任何資料表或後台管理介面，單純多攤開既有已經抓到的資料。`signature` 這個既有欄位維持不變，
+   * 繼續給「開啟編輯器自動帶入」這條既有路徑使用，不影響既有行為。 */
   private async getGmailSignature(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireAccess(database, session, 'request.mail');
     const stored = this.getGmailTokens(current.account);
@@ -1221,7 +1226,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const sendAsList = Array.isArray(data.sendAs) ? data.sendAs.map(asRow) : [];
     const match = sendAsList.find(item => text(item.sendAsEmail).toLowerCase() === text(stored.gmail_address).toLowerCase())
       || sendAsList.find(item => item.isPrimary);
-    return { ok: true, action: 'getGmailSignature', signature: text(match?.signature) };
+    const signatures = sendAsList
+      .map(item => ({ email: text(item.sendAsEmail), displayName: text(item.displayName), isPrimary: Boolean(item.isPrimary), signature: text(item.signature) }))
+      .filter(item => item.signature.trim());
+    return { ok: true, action: 'getGmailSignature', signature: text(match?.signature), signatures };
   }
 
   private async gmailDisconnect(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
