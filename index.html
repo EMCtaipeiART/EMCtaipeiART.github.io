@@ -6419,8 +6419,6 @@
     .gmail-inline-image-wrap{display:inline-block;position:relative;resize:none;overflow:hidden;max-width:100%;min-width:60px;margin:8px 0;border-radius:8px;vertical-align:top;border:1px solid transparent}
     .gmail-inline-image-wrap:hover,.gmail-inline-image-wrap:focus-within{border-color:#9bd4b4}
     .gmail-inline-image-wrap img.gmail-inline-image{display:block;width:100%;height:100%;object-fit:contain;margin:0;border-radius:7px;-webkit-user-drag:none;user-select:none}
-    .gmail-inline-image-resize-handle{position:absolute!important;right:3px!important;bottom:3px!important;width:15px!important;height:15px!important;border-radius:4px!important;background:rgba(23,33,29,.6)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;cursor:nwse-resize;opacity:0;transition:opacity .12s ease;z-index:2}
-    .gmail-inline-image-wrap:hover .gmail-inline-image-resize-handle,.gmail-inline-image-resize-handle.is-active{opacity:1}
     /* 插入圖片本身也要能單獨刪除——原生 contenteditable=false 節點雖然理論上可以用 Backspace/Delete
        鍵盤刪除，但不是所有情況下都能可靠觸發（例如游標沒有剛好停在圖片旁邊），這裡額外補一顆明確的
        刪除鈕，不用依賴鍵盤刪除也能拿掉插入的圖片。 */
@@ -6494,7 +6492,6 @@
     html[data-theme="dark"] .gmail-rich-editor a{color:#8ab4f8!important}
     html[data-theme="dark"] .gmail-inline-image-wrap{background:#25282b}
     html[data-theme="dark"] .gmail-inline-image-wrap:hover,html[data-theme="dark"] .gmail-inline-image-wrap:focus-within{border-color:#5f9f80}
-    html[data-theme="dark"] .gmail-inline-image-resize-handle{background:rgba(237,240,242,.7)!important;border-color:#181a1d!important}
     html[data-theme="dark"] .gmail-rich-editor.is-image-dragover{background:#173126!important;border-color:#4cc38a!important;box-shadow:inset 0 0 0 2px rgba(76,195,138,.22)!important}
     html[data-theme="dark"] .gmail-thread-msg{background:#1a1d1f!important;border-color:#3f4448!important}
     html[data-theme="dark"] .gmail-thread-msg-meta{color:#aeb4b9!important}
@@ -8537,45 +8534,16 @@ function placeRichRangeAtPoint(editor,x,y){
   if(!rangeInsideEditor(range,editor)){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
   savedRichSelectionRange=range.cloneRange();
 }
-/** 圖片外層容器的縮放把手＋刪除鈕。
- * 縮放把手改用自訂拖曳（而不是原生 CSS resize:both）鎖定原始比例縮放——原生 resize:both
- * 允許寬高各自獨立拖曳，一旦拖出跟圖片原始比例不同的容器尺寸，因為 img 本身是
- * object-fit:contain，容器裡就會出現一塊空白（圖片沒有真的填滿容器、看起來像沒有跟著縮放），
- * 這正是「插入圖片無法編輯大小」的根因；改成永遠依拖曳的寬度換算等比例高度，容器多大、
- * 圖片就正好多大，不會再出現空白。
- * 刪除鈕：圖片本身跟外層 wrap 一樣是 contenteditable="false" 的 atomic 節點，理論上可以用
+/** 圖片外層容器的刪除鈕。
+ * 圖片本身跟外層 wrap 一樣是 contenteditable="false" 的 atomic 節點，理論上可以用
  * Backspace/Delete 鍵盤刪除，但實際要「游標剛好停在圖片正前/正後方」才會觸發，滑鼠點在圖片
  * 上只會把游標移到最近的可編輯位置、不會自動選取整個圖片節點，導致使用者常常按了鍵盤卻刪不掉
  * 剛插入的圖片；這裡額外補一顆明確的「×」按鈕（跟修改紀錄縮圖的 .revision-image-remove 是
- * 同一種既有模式），點一下就能移除，不用依賴鍵盤刪除的時機。 */
-function bindGmailInlineImageControls(wrap,image){
-  const handle=document.createElement('span');
-  handle.className='gmail-inline-image-resize-handle';
-  handle.setAttribute('contenteditable','false');
-  handle.setAttribute('aria-hidden','true');
-  wrap.appendChild(handle);
-  handle.addEventListener('mousedown',event=>{
-    event.preventDefault();
-    event.stopPropagation();
-    const startX=event.clientX, startWidth=wrap.getBoundingClientRect().width;
-    const naturalWidth=image.naturalWidth||420, naturalHeight=image.naturalHeight||315;
-    const ratio=naturalWidth?naturalHeight/naturalWidth:0.75;
-    const editorEl=wrap.closest('.gmail-rich-editor');
-    const maxWidth=editorEl?Math.max(120,editorEl.clientWidth-24):2000;
-    handle.classList.add('is-active');
-    function onMove(moveEvent){
-      const nextWidth=Math.max(60,Math.min(maxWidth,startWidth+(moveEvent.clientX-startX)));
-      wrap.style.width=`${Math.round(nextWidth)}px`;
-      wrap.style.height=`${Math.round(nextWidth*ratio)}px`;
-    }
-    function onUp(){
-      handle.classList.remove('is-active');
-      document.removeEventListener('mousemove',onMove);
-      document.removeEventListener('mouseup',onUp);
-    }
-    document.addEventListener('mousemove',onMove);
-    document.addEventListener('mouseup',onUp);
-  });
+ * 同一種既有模式），點一下就能移除，不用依賴鍵盤刪除的時機。
+ * （這裡原本還有一顆圖片右下角的縮放把手，讓使用者能拖曳調整圖片大小；使用者回報看不懂這顆沒有
+ * 圖示、單純一個小方塊的把手是做什麼用的，確認後已經移除——插入圖片時本來就會依原始比例自動給一個
+ * 合理的預設寬度（見 insertGmailInlineImage 的 320px 上限），不需要縮放把手也不會顯示過大。） */
+function bindGmailInlineImageControls(wrap){
   const remove=document.createElement('button');
   remove.type='button';
   remove.className='gmail-inline-image-remove';
@@ -8603,11 +8571,12 @@ function insertGmailInlineImage(editor,item){
   image.className='gmail-inline-image';
   image.draggable=false;
   image.dataset.gmailInlineImageId=item.contentId;
-  // <img> 預設是瀏覽器原生可拖曳元素，在 contenteditable 區域裡誤拖到圖片本身（不是縮放把手）
-  // 會被瀏覽器當成「把這段內容拖到另一個位置」，在同一個編輯區放開就會複製出一份重複的圖片；
-  // 加上 draggable=false 關掉這個原生行為，圖片只能透過下面的縮放把手拖曳調整大小。
-  // 圖片載入後依原始比例給一個合理的初始顯示尺寸（不要一插入就佔滿整個編輯區），
-  // 使用者自己拖曳調整過後 wrap.style.width 就會有值，不再被這裡覆蓋。
+  // <img> 預設是瀏覽器原生可拖曳元素，在 contenteditable 區域裡誤拖到圖片本身會被瀏覽器當成
+  // 「把這段內容拖到另一個位置」，在同一個編輯區放開就會複製出一份重複的圖片；加上
+  // draggable=false 關掉這個原生行為。
+  // 圖片載入後依原始比例給一個合理的初始顯示尺寸（不要一插入就佔滿整個編輯區）——這是目前唯一
+  // 決定顯示大小的地方（沒有縮放把手可以事後手動調整，使用者回報看不懂那顆把手是做什麼用的，
+  // 已經移除，見 bindGmailInlineImageControls 的說明）。
   image.addEventListener('load',()=>{
     if(wrap.style.width)return;
     const naturalWidth=image.naturalWidth||420,naturalHeight=image.naturalHeight||315;
@@ -8616,7 +8585,7 @@ function insertGmailInlineImage(editor,item){
     wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
   },{once:true});
   wrap.appendChild(image);
-  bindGmailInlineImageControls(wrap,image);
+  bindGmailInlineImageControls(wrap);
   const spacer=document.createElement('br');
   let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange:document.createRange();
   if(!rangeInsideEditor(range,editor)){range.selectNodeContents(editor);range.collapse(false)}
@@ -8660,7 +8629,7 @@ function restoreScheduledGmailInlineImages(editor,items){
     image.src=dataUrl;
     image.replaceWith(wrap);
     wrap.appendChild(image);
-    bindGmailInlineImageControls(wrap,image);
+    bindGmailInlineImageControls(wrap);
   });
 }
 async function addGmailInlineImages(editorId,fileList,expectedGeneration=gmailInlineImageGenerationsByEditor.get(editorId)||0){
@@ -8734,7 +8703,7 @@ function gmailEditorMailPayload(editor){
     inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
   });
   // 「設計師回覆信」自動帶入的 Drive 連結縮圖（appendDesignerReplyImageThumb）沒有 data-gmail-inline-image-id，
-  // 上面那段完全不會處理到它們，殘留的 .gmail-inline-image-wrap（含縮放把手／刪除鈕，寄出時都要丟棄）
+  // 上面那段完全不會處理到它們，殘留的 .gmail-inline-image-wrap（含刪除鈕，寄出時要丟棄）
   // 一樣要在這裡拆開：wrap 的寬高（appendDesignerReplyImageThumb 依原始比例算好、寫在 wrap.style 上）只存在
   // 編輯區自己的 CSS class（.gmail-inline-image-wrap{display:inline-block}、img{width:100%;height:100%}），
   // 收件端的郵件用戶端完全讀不到這份樣式表——沒有把寬高轉成 <img> 本身的 inline style 就直接送出的話，
@@ -10977,7 +10946,7 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   restoreOpenGmailEditorFocus();
 }
 /** 「設計師回覆信」自動帶入的設計圖縮圖：跟使用者自己貼上/上傳的內嵌圖片一樣包一層
- * .gmail-inline-image-wrap，重用同一顆 bindGmailInlineImageControls() 縮放把手＋刪除鈕——這些圖片
+ * .gmail-inline-image-wrap，重用同一顆 bindGmailInlineImageControls() 的刪除鈕——這些圖片
  * 直接引用 Drive 網址（不是 gmailInlineImageStore 追蹤的 CID 附件），刪除只是單純把這個 DOM 節點
  * 移除，不會影響 gmailEditorMailPayload() 的 CID 轉換邏輯（那段只認有 data-gmail-inline-image-id
  * 屬性的圖片，這裡的圖片沒有這個屬性，走的是同一支函式裡另外新增、專門處理「沒有 CID 屬性的
@@ -11002,7 +10971,7 @@ function appendDesignerReplyImageThumb(container,img){
     wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
   },{once:true});
   wrap.appendChild(image);
-  bindGmailInlineImageControls(wrap,image);
+  bindGmailInlineImageControls(wrap);
   container.appendChild(wrap);
 }
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，

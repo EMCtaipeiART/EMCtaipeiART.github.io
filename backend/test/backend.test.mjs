@@ -369,6 +369,20 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
   assert.doesNotMatch(designerReplySource, /lastMessage\?\.from|senderName/);
 });
 
+test('inline image resize handle has been removed (unlabeled square users mistook for a "selection box"), while the delete button on inline images still works and images still get a sane default display size on insert', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /gmail-inline-image-resize-handle/);
+  // bindGmailInlineImageControls 現在只剩刪除鈕，簽章不再需要 image 參數；三個呼叫點都要同步只傳 wrap。
+  assert.match(html, /function bindGmailInlineImageControls\(wrap\)\{/);
+  const callSites = [...html.matchAll(/bindGmailInlineImageControls\((\w+)\)/g)];
+  assert.equal(callSites.length, 4, 'expected 1 definition + 3 call sites, all with a single argument'); // 定義本身也會被這個 regex 命中一次
+  assert.doesNotMatch(html, /bindGmailInlineImageControls\(\w+,\w*image\w*\)/);
+  assert.match(html, /remove\.className='gmail-inline-image-remove'/);
+  // 拿掉縮放把手後，插入圖片時原本就有的「依原始比例、上限 320px」預設尺寸邏輯要維持不變，
+  // 不會因為少了手動調整的管道就讓圖片顯示過大。
+  assert.match(html, /const width=Math\.min\(320,naturalWidth\);\s*\n\s*wrap\.style\.width=`\$\{width\}px`;/);
+});
+
 test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const gmailInlineImageTasksByEditor=new Map\(\)/);

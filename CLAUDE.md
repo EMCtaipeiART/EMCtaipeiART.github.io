@@ -189,7 +189,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-26 17:35 Asia/Taipei（最新）— 修正「設計師回信＞選擇電腦上傳」第一次上傳完常常沒自動跳到編輯器（需要重試、圖片因此重複）；修正自己上傳的設計圖寄出後超級巨大；修正信件串預覽看不到這類圖片
+### 2026-08-26 18:05 Asia/Taipei（最新）— 移除信件編輯器裡插入圖片右下角沒有圖示的縮放把手（使用者誤以為是「選取框」）
+
+- 修改目的：使用者回報「信件編輯器在編輯圖片時會出現選取框？這個不知道功能是什麼，如果沒有請移除，同時他會出現在信件的圖旁邊一個小小的選框，請將她移除」。先用 `AskUserQuestion` 附上實際插入測試圖片後點選/移到圖片上的畫面說明，確認使用者指的是圖片右下角那顆沒有圖示、單純一個深色小方塊的縮放把手（拖曳可以調整圖片大小），不是左上角那顆有 X 符號、功能一望即知的「移除圖片」按鈕——確認後才動手，避免猜錯移除到還在用的刪除功能。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **整顆移除縮放把手**：`bindGmailInlineImageControls(wrap,image)` 拿掉建立 `.gmail-inline-image-resize-handle`＋其 `mousedown`／`mousemove`／`mouseup` 拖曳縮放邏輯的整段，只保留刪除鈕；因為函式裡已經沒有任何地方用到 `image` 這個參數，一併把簽章簡化成 `bindGmailInlineImageControls(wrap)`，同步更新三個呼叫點（`insertGmailInlineImage`／`restoreScheduledGmailInlineImages`／`appendDesignerReplyImageThumb`）。對應的 CSS（`.gmail-inline-image-resize-handle` 本體樣式、hover 顯示規則、深色模式覆蓋）一併整段刪除，不留死樣式。
+  2. **確認拿掉縮放把手不會讓圖片變大**：`insertGmailInlineImage()`／`restoreScheduledGmailInlineImages()`／`appendDesignerReplyImageThumb()` 三處本來就各自在圖片 `load` 事件裡依原始比例算一個合理的預設寬度（手動插入/貼上圖片上限 320px、設計師回覆信自動帶入的縮圖上限 180px）並寫進 `wrap.style.width`／`height`，這段邏輯完全獨立於縮放把手、這次沒有改動——拿掉縮放把手只是拿掉「使用者事後手動再調整」這個附加能力，不影響插入當下的預設呈現大小，也不會讓上一則（17:35）剛修好的「寄出信件圖片尺寸」問題復發（那則修正的是 `wrap` 算好的寬高有沒有正確轉成最終 `<img>` 的 inline style，跟這次拿掉的手動拖曳調整入口是兩件事）。
+  3. **更新相關文件註解**：`insertGmailInlineImage()`／`gmailEditorMailPayload()`／`appendDesignerReplyImageThumb()` 上方原本提到「透過下面的縮放把手拖曳調整大小」「重用同一顆 bindGmailInlineImageControls() 縮放把手＋刪除鈕」的文字，一併改成如實反映「只剩刪除鈕」，並在 `bindGmailInlineImageControls()` 上方補一句說明這顆把手為什麼被移除，讓之後的人不會誤以為程式碼漏寫、又加回去。
+- 風險區塊：
+  - 這是使用者明確要求移除的功能，不是判斷失誤——已先用 `AskUserQuestion` 確認過使用者要移除的正是這顆會被誤認成「選取框」的縮放把手，不是移除鈕；移除鈕（點擊可刪除這張圖片）完全沒有被動到，仍然正常運作。
+  - 移除縮放把手後，使用者在信件編輯器裡貼上/插入圖片之後，**沒有任何手動調整大小的管道**了——只能依賴插入當下自動算好的預設尺寸（320px 或 180px 上限，依原始比例縮放）。如果之後有人需要「這張圖片我想放更大/更小」這種細部調整需求，目前唯一的辦法是重新處理來源圖片（先自己裁切/縮放好再插入），這次沒有提供替代的調整介面，是這次移除的直接、預期後果，不是意外的副作用。
+  - `bindGmailInlineImageControls()` 的簽章從 `(wrap,image)` 改成 `(wrap)`——已經用 `grep` 確認全檔案只有 3 個呼叫點，且都在這次一併更新，不會遺漏任何一處還在傳兩個參數而導致函式內部存取到不存在的參數（雖然 JS 對多餘的呼叫參數本來就是靜默忽略、不會報錯，這次改動即使漏改某一處呼叫點也不會造成執行期錯誤，只是留下語意不一致的死參數，這次已確認三處都同步改完）。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` **62/62 全過**（新增一支測試：明確斷言整個檔案完全沒有殘留 `gmail-inline-image-resize-handle` 字樣、`bindGmailInlineImageControls` 的定義與全部呼叫點都只剩單一參數、刪除鈕的 class 仍然存在、插入圖片的預設尺寸邏輯字串仍然存在不變）。
+  - **用本機 Python 靜態伺服器＋ Browser pane 對真實頁面做完整的視覺與互動驗證，不是只看程式碼比對字串**：①先用真實 400×300 測試圖片（canvas 產生）呼叫真正的 `insertGmailInlineImage()`，用真實滑鼠 `hover` 移到圖片上後截圖確認：修正前畫面上同時看得到左上角刪除鈕（圓形＋X）與右下角縮放把手（無圖示深色小方塊）兩個控制項；修正後截圖確認**只剩左上角刪除鈕，右下角的縮放把手完全消失**，跟使用者這次要求的畫面完全一致。②`getComputedStyle`／DOM 查詢確認插入圖片當下 `wrap.style.width`／`height` 依然正確算出 320×240（4:3 比例，符合「320px 上限、依原始比例縮放」的既有邏輯，證明拿掉縮放把手沒有連帶影響預設尺寸計算）。③用真實 `MouseEvent('mousedown')`＋`MouseEvent('click')`（不是直接呼叫內部函式）觸發刪除鈕，確認圖片正確從編輯區移除，證明刪除功能完全沒有被這次改動波及。④重新驗證上一則（17:35）修好的「設計師回覆信自動帶入圖片寄出尺寸」邏輯：用真正的 `appendDesignerReplyImageThumb()` 產生的 DOM 結構（拿掉 `image` 參數後的新版簽章）餵給 `gmailEditorMailPayload()`，確認輸出的 `<img>` 仍然正確帶有完整的 `style="display:block;width:180px;height:135px;margin:8px 0;border-radius:8px"`，證明這次的參數簽章簡化沒有意外破壞上一輪剛修好的寄出尺寸邏輯。
+  - **未做的驗證**：沒有用真實登入帳號在正式站，實際在「發信」「回信」「設計師回覆信」三種情境下都各自插入一次圖片肉眼確認——這次的驗證集中在「透過 Gmail 寄出」這個撰寫視窗（三種模式共用同一套 `bindGmailInlineImageControls()`／CSS，理論上行為一致，但沒有逐一在三種入口分別截圖確認）。
+- 部署狀態：純前端／測試檔案，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次完全沒有修改 `worker/` 或 `upload/Code.gs`。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-26 17:35 Asia/Taipei（次新）— 修正「設計師回信＞選擇電腦上傳」第一次上傳完常常沒自動跳到編輯器（需要重試、圖片因此重複）；修正自己上傳的設計圖寄出後超級巨大；修正信件串預覽看不到這類圖片
 
 - 修改目的：使用者一次回報三件事：①「設計師回信＞選擇電腦上傳」第一次按下「上傳全部」，視窗會照設計正常收合成小提示卡，但常常沒有自動跳到信件編輯器，要再點一次才會跳過去，跳過去後編輯器裡卻變成兩張圖片（連同上一次的也在）；②自己上傳的設計圖在編輯器裡預覽大小正常，但寄出後收件端看到的圖片超級巨大；③瀏覽信件串時完全看不到這類圖片的呈現。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
@@ -215,7 +234,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端／測試檔案，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次完全沒有修改 `worker/` 或 `upload/Code.gs`。
 - commit：`be77606e`
 
-### 2026-08-26 16:40 Asia/Taipei（次新）— 信件串瀏覽改成真正的淨化 HTML 渲染：簽名檔不再跑版、內嵌圖片回到原本位置、所有信件預設收合
+### 2026-08-26 16:40 Asia/Taipei — 信件串瀏覽改成真正的淨化 HTML 渲染：簽名檔不再跑版、內嵌圖片回到原本位置、所有信件預設收合
 
 - 修改目的：使用者對「發信/回信/修改信/設計師回信/一般回信」共用的信件編輯器，一次提出三項：①信件串瀏覽的內容要加入支援語法——目前簽名檔會整段變成一段跑版的純文字；②開啟信件串時全部信件都要先收合，需要才點開來看；③內嵌在信件裡的圖片呈現要修正——目前只記錄成純文字，圖片跟本文脫節。
 - 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
