@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 2724,
+  "revision": 2725,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-26T04:08:57.444Z",
+  "updatedAt": "2026-08-26T04:09:05.573Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1597,7 +1597,7 @@
         {"客戶別":"soundcore","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\",\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"Celine組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","更新時間":"2026-08-20 18:11","更新者":"Machi","排序":"6"},
         {"客戶別":"測試","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\"]","更新時間":"2026-08-21 09:24","更新者":"Machi","排序":"27"},
         {"客戶別":"林口A7讚商場","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Celine組\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-26 11:14","更新者":"allen.li@emctaipei.com","排序":"29"},
-        {"客戶別":"工研院","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Odin組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-26 12:08","更新者":"Machi","排序":"28"}
+        {"客戶別":"工研院","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Odin組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-26 12:08","更新者":"david.liao@emctaipei.com","排序":"27"}
       ]
     },
     "系統公告欄": {
