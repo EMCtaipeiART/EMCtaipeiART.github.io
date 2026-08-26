@@ -203,8 +203,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 這個功能完全依賴使用者的 Gmail 帳號本身**已經**在 Gmail 設定裡設定了多個「傳送郵件地址」（sendAs 別名）——如果帳號只有一個別名（多數使用者的常見情況），選單就只會有一個選項可選，跟原本自動帶入的結果一樣，這是刻意接受的限制（使用者已在確認來源時知情選擇這個方案）。
   - 沒有新增任何資料庫欄位或後台管理介面，純粹重用 Worker 既有已經抓到、但先前被丟棄的資料，風險與既有的 `getGmailSignature` action 完全相同。
 - 已檢查／驗證方式：`cd worker && npx tsc --noEmit` 無錯、`npx vitest run` 46/46（含更新過的簽名檔測試，先確認 mock 的第三個「無簽名內容」sendAs 項目正確被濾掉，不會混進 `signatures` 陣列）、`npx wrangler deploy --dry-run` 打包成功。`index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 50/50。用本機靜態伺服器＋ Browser pane 對真實頁面做隔離測試（stub `sheetApi` 回傳兩組假簽名檔）：①發信視窗「插入簽名檔」按鈕點擊後正確顯示兩個選項（含「預設」標記）；②選第二個簽名檔，確認正確插入且草稿內容不受影響；③再選第一個簽名檔，確認 `data-gmail-inserted-signature` 節點數量維持 1（正確取代，不是疊加）；④回信視窗（`gmailThreadReplyEditor`）同樣看得到按鈕，模擬「帳號沒有任何簽名檔」情境，點擊後正確顯示引導文字「目前連接的 Gmail 帳號沒有設定任何簽名檔，可以到 Gmail 設定的『帳號與匯入』→『以此名稱寄送』新增」；⑤確認「產生中」鎖定狀態（`setGmailEditorLoading`）生效時這顆新按鈕也會跟著停用、解鎖後恢復，跟其餘工具列按鈕行為一致。
-- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，前端點擊「插入簽名檔」選單會因為 Worker 還沒回傳 `signatures` 欄位而顯示「目前連接的 Gmail 帳號沒有設定任何簽名檔」，不影響既有的自動帶入功能（`signature` 單一欄位維持不變，照舊正常運作）。
-- commit：（見下方 push 紀錄）
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 已於同日執行 `cd worker && npx wrangler deploy` 完成部署**（Version ID `85820c60-f27b-482f-9ba7-1dfd253ed4c3`），部署後用 `curl` 打 `ping` action 確認正式站 Worker 正常回應。
+- commit：`7e97da3b`
 
 ### 2026-08-25 17:07 Asia/Taipei — 補齊三種回信模式的刪除圖片功能、上傳照片期間也鎖住編輯器
 
