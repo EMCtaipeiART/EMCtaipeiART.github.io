@@ -189,7 +189,27 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-27 10:15 Asia/Taipei（最新）— 真正修好簽名檔跑版：抓到兩條完全沒有排除簽名檔/Gmail 編輯器的全站表格樣式（含手機版會把表格整個拆成堆疊卡片的規則）
+### 2026-08-27 10:22 Asia/Taipei（最新）— 修正案件/專案列表文字在深色模式沒有換色、變成看不清楚（既有的 td/th 深色覆寫規則特異度輸給另一條寫死顏色的全站規則）
+
+- 修改目的：使用者回報「前台 index.html 在下方專案列表中，列表文字中在深色模式未換色，倒置文字無法閱讀」。
+- 追查過程：延續同一次工作階段稍早修簽名檔跑版時已經驗證有效的方法（不用肉眼猜 CSS，直接用瀏覽器把 `html[data-theme="dark"]` 打開、對一個模擬案件列表的 `<td>`量測 `getComputedStyle().color`）——**先重現問題**：確認即使 `html[data-theme="dark"]` 已經設定，一般 `<td>` 文字顏色仍然是 `rgb(32,42,37)`（`#202a25`，深灰色，明顯是淺色模式的顏色，不是深色模式該有的淺色文字）。追出根因是 CSS 特異度（specificity）問題：
+  - 全站有一條 `td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){color:#202a25!important;...}`（[index.html:485](index.html:485)，這條規則本身在 2026-08-18／2026-08-26 那幾次已經因為簽名檔/Gmail 編輯器的理由加過 `:not()` 排除，不是這次新增的問題）——三個 `:not()`子句各自帶一個 class，讓這條規則的特異度變成「3 個 class + 1 個標籤」，比原本設計要蓋過它的深色模式規則 `html[data-theme="dark"] td{color:#e8f1ed!important}`（只有 1 個屬性選擇器 + 1 個標籤）**還要高**——即使兩條都有 `!important`、深色規則在檔案裡排序也更後面，CSS 判斷 `!important` 衝突時**先比特異度、特異度相同才看後面覆蓋前面**，特異度較低的深色規則因此永遠打不贏，這個 bug 從 2026-08-26 那次幫 `td` 規則加上第三個 `:not()` 排除（把特異度從兩個 class 推高到三個）就已經存在，只是這次才真正被使用者感受到。
+  - 同一種問題也出現在「設計師專長與案件分配」彈窗（`#ownerProjectsModal`，標題文字是「專案負責人」，點設計師卡片會跳出來的專案清單）：`html[data-theme="dark"] .owner-projects-table th{...}`（[index.html:5623](index.html:5623)）只用了一個 class 當選擇器，特異度同樣打不過那條三個 `:not()` 的全站 `th` 規則，導致表頭文字在深色模式下也一樣是錯的顏色。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. 把深色模式的 `td` 規則從 `html[data-theme="dark"] td{...}` 改成 `html[data-theme="dark"] td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){...}`——加上跟全站規則完全相同的三個 `:not()` 排除子句，把特異度墊高到能贏過去（這三個子句本來就是刻意排除簽名檔/Gmail 編輯器內容不要套用這條通用配色，語意上跟全站規則保持一致，不是隨便湊數）。
+  2. 把 `.owner-projects-table` 的深色 `th` 規則改成 `html[data-theme="dark"] #ownerProjectsModal .owner-projects-table th{...}`——多加上這個彈窗本來就有的 `#ownerProjectsModal` ID，ID 選擇器的特異度天生就贏過任何數量的 class，比照這個檔案裡 `#casesSection`／`#modifyRecent` 已經在用的同一種做法（這兩處因為原本就是 ID 開頭的規則，沒有踩到同樣的坑）。
+- 風險區塊：
+  - **這不是這次修改新引入的 bug，是 2026-08-26 那次替 `td`／`th` 全站規則加上第三個 `:not()` 排除時，沒注意到會連帶推高特異度、蓋過既有的深色模式覆寫**——之後如果要再替這類全站 `td`／`th`／`table` 規則新增 `:not()` 排除，需要記得檢查對應的深色模式規則有沒有同步跟上特異度，不能只看淺色模式有沒有正確排除。
+  - 修正後 `.gmail-rich-editor`／`.signature-preset-content`／`.gmail-thread-msg-body` 這三個容器的 `<td>` 一樣不套用這條通用深色配色（跟淺色模式的既有排除範圍一致）——已確認這三個容器各自都有自己專屬的深色模式文字顏色（`.gmail-rich-editor{color:#edf0f2!important}`／`.signature-preset-content{color:#edf0f2!important}` 等），裡面的 `<td>` 會正確透過 CSS 繼承拿到這個顏色，不會因為被排除在這條通用規則之外而變成沒有顏色可用。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` **62/62 全過**；`git diff --check` 無空白字元問題；`git diff` 確認只動了兩行。
+  - 用本機 Python 靜態伺服器＋ Browser pane 對真實頁面做隔離測試（沒有真的打任何網路請求）：①先重現問題——切到 `html[data-theme="dark"]` 後，模擬一個 `#casesSection`／`.case-table-wrap` 結構下的 `<td>`，量到的文字顏色確實還是淺色模式的 `#202a25`；②套用修正後同一個測試，正確變成 `#e8f1ed`（淺色、可讀），且**淺色模式重新測一次確認沒有回歸**（`<td>` 文字仍正確維持 `#202a25`，不會因為改了深色規則就連帶動到淺色模式）；③額外驗證 `#casesSection`（主案件列表）／`#modifyRecent`（最新案件列表）兩處既有的 ID 層級深色覆寫本來就沒受影響，正確顯示淺色文字；④模擬 `#ownerProjectsModal` 底下的 `.owner-projects-table`，確認表頭 `th`（`#c4cbc7`）與內容 `td`（`#e8f1ed`）在深色模式下都正確顯示淺色、可讀的文字，表頭背景也正確是深色（`#202326`）。
+  - **未做的驗證**：沒有用真實登入帳號在正式站，實際切換深色模式肉眼確認「下方專案列表」（不確定使用者具體指的是主案件列表、最新案件列表、還是設計師專案分配彈窗，這次的修正是找到並修好「一般 `<td>` 文字顏色」這個影響全站所有表格的根本問題，理論上不管使用者講的是哪一個列表都會一併修好，但沒有機會請使用者確認畫面確實變正常）。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-27 10:15 Asia/Taipei（次新）— 真正修好簽名檔跑版：抓到兩條完全沒有排除簽名檔/Gmail 編輯器的全站表格樣式（含手機版會把表格整個拆成堆疊卡片的規則）
 
 - 修改目的：使用者回報上一則（09:09）的修正「還是大跑版」，並附上截圖——`.signature-preset-content` 編輯器裡的簽名檔內容明顯跑版（過大的留白、儲存格之間出現不該有的分隔線）。
 - 追查過程：
@@ -211,7 +231,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
 - commit：（見下方 push 紀錄）
 
-### 2026-08-27 09:09 Asia/Taipei（次新）— 修正簽名檔插入 Gmail 撰寫/回信編輯器時 class 樣式全部消失（跑版）；「稍後再寄」按鈕改成如實標示「取消發信」
+### 2026-08-27 09:09 Asia/Taipei — 修正簽名檔插入 Gmail 撰寫/回信編輯器時 class 樣式全部消失（跑版）；「稍後再寄」按鈕改成如實標示「取消發信」
 
 - 修改目的：使用者附上「個人設定」裡簽名檔編輯器的截圖（一份雙欄名片式簽名檔，顏色/粗體/字級都正確顯示），指出「簽名檔設定，在貼入編輯器時，還是沒有跟上語法會有跑版問題」；同時要求把 Gmail 撰寫/回信編輯器裡「稍後再寄」按鈕改成能真正存入 Gmail 草稿匣，做不到的話改成「取消發信」。
 - 追查過程：
