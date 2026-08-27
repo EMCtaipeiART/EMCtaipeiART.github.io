@@ -189,7 +189,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-27 09:09 Asia/Taipei（最新）— 修正簽名檔插入 Gmail 撰寫/回信編輯器時 class 樣式全部消失（跑版）；「稍後再寄」按鈕改成如實標示「取消發信」
+### 2026-08-27 10:15 Asia/Taipei（最新）— 真正修好簽名檔跑版：抓到兩條完全沒有排除簽名檔/Gmail 編輯器的全站表格樣式（含手機版會把表格整個拆成堆疊卡片的規則）
+
+- 修改目的：使用者回報上一則（09:09）的修正「還是大跑版」，並附上截圖——`.signature-preset-content` 編輯器裡的簽名檔內容明顯跑版（過大的留白、儲存格之間出現不該有的分隔線）。
+- 追查過程：
+  1. 上一則只修了 `gmailSignatureFragment()`（簽名檔**插入 Gmail 撰寫/回信編輯器那一刻**才會執行的清理函式），但這次使用者的截圖明確顯示問題發生在**設定面板本身**（`.signature-preset-content`），根本還沒走到那個函式，代表這是另一個獨立、還沒抓到的根因。
+  2. 沒有繼續憑截圖用肉眼猜測，改用瀏覽器直接跑 `document.styleSheets`＋`element.matches(rule.selectorText)` 列出**真正命中**測試用 `<table>` 的所有 CSS 規則（比人工逐條 grep 全站 CSS 精準且不會漏掉），一次抓出兩條完全沒有排除 `.signature-preset-content`／`.gmail-rich-editor`／`.gmail-thread-msg-body` 的全站規則：
+     - **[index.html:31](index.html:31)**：`table{width:100%;border:1px solid var(--line);border-radius:16px;overflow:hidden;...}` 與 `th,td{padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;white-space:nowrap}`——這是給案件列表/後台資料表格用的**基礎**樣式（2026-08-18／2026-08-26 那幾次只排除過**後面另一條、帶 `!important` 的第二組**同名規則，這條更早、沒有 `!important` 的基礎規則從一開始就沒被排除過），會讓簽名檔的表格被硬套上不該有的外框、圓角裁切、儲存格留白、置中對齊、每列底下多一條分隔線、文字不能換行。
+     - **[index.html:33](index.html:33) 附近 `@media(max-width:640px)` 內**：`table,thead,tbody,tr,td{display:block;width:100%}`（原本是手機版把案件列表表格拆成堆疊卡片用的既有設計），同樣完全沒有限定範圍——只要瀏覽器視窗窄於 640px，`<table>`/`<tr>`/`<td>` 會整個變成區塊化元素，表格版面（左右兩欄＋分隔線）會直接被拆散。這也是這次測試時一路在自動化瀏覽器環境裡重現到「`display` 變成 `block`」的根本原因——這個測試環境回報的 `window.innerWidth` 恆為 `0`，永遠滿足 `max-width:640px`，等於一路都在最容易踩到這個 bug 的條件下測試。
+  3. 兩條都用同一支瀏覽器程式重現：先確認修正前這兩條規則真的會命中一個放在 `.signature-preset-content` 底下的測試表格（`table` 的 `display` 被強制成 `block`、`width` 被強制撐滿容器且會隨容器變寬等比放大——一個乾淨的 `<td>Hi</td>` 單格表格在 400px 容器裡被撐成 378px、900px 容器裡被撐成 878px，證實真的是規則在作祟，不是表格本身內容需要那麼寬）。
+- 影響檔案：`index.html`。
+- 影響功能：比照本文件 2026-08-18／2026-08-26 已經在用的既有排除寫法，把這兩處全部改成 `:not(.gmail-rich-editor ...):not(.signature-preset-content ...):not(.gmail-thread-msg-body ...)`——[index.html:31](index.html:31) 的 `table`／`th`／`td` 三個選擇器；`@media(max-width:640px)` 內的 `table`／`thead`／`tbody`／`tr`／`td`／`td::before` 六個選擇器（`.col-project`／`.project-text` 這兩個本來就是靠 class 限定範圍，跟簽名檔／Gmail 編輯器無關，沒有變動）。案件列表、後台資料表格、手機版案件列表堆疊卡片這些**原本就該套用**這些規則的地方完全不受影響，因為 `:not()` 只是從原本套用範圍裡精準挖掉這三個容器。
+- 風險區塊：
+  - **這是同一個 bug 第二次修，只修對了一半**——第一次（09:09）只處理了「插入 Gmail 編輯器那一刻」這個時間點的清理函式，卻沒發現「設定面板本身」在使用者貼上內容的當下就已經被另外兩條全站規則污染。之後如果簽名檔還有類似的跑版回報，第一步應該先用 `document.styleSheets`＋`element.matches()` 這套方法直接列出真正命中的規則，而不是憑印象猜測是哪一條 CSS，這次的教訓是**同一組選擇器（`table`／`th`／`td`）在檔案裡分散宣告了不只一次**（一次在最前面當基礎樣式、一次在後面疊加 `!important` 微調），排除的時候很容易只排到其中一組。
+  - `@media(max-width:640px)` 這條排除完成後，理論上簽名檔／Gmail 編輯器裡的表格在任何視窗寬度下都不會再被拆成堆疊卡片——這是刻意且正確的行為（簽名檔/信件內容本來就不該套用「案件列表在手機上拆卡片」這種特化邏輯），但也代表如果之後真的有人想讓「簽名檔在手機瀏覽器上也自動改成單欄顯示」，需要另外設計，不能沿用這套機制（這次沒有這個需求，只是提醒這個排除是雙面刃）。
+  - 這次沒有再度更動 `gmailSignatureFragment()`／`inlineSignatureStyleRules()`（上一則新增的函式）本身，那兩個函式已經確認邏輯正確，這次純粹是補上兩條被漏掉的 CSS 排除，範圍精準、風險低。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` **62/62 全過**；`git diff --check` 無空白字元問題；`git diff` 確認只動了兩行（都是巨大的單行 CSS，實際變動的是行內插入 `:not()` 排除清單，不是整段重寫）。
+  - 用本機 Python 靜態伺服器＋ Browser pane 對真實頁面做隔離測試（沒有真的打任何網路請求）：①`document.styleSheets` 掃描（含遞迴走訪 `@media` 內的規則，不是只看最外層 `cssRules`，第一次沒遞迴進 `@media` 因而完全沒抓到手機版那條，改成遞迴後才抓到）先重現修正前的命中結果（`table,thead,tbody,tr,td{display:block;width:100%}` 確實命中）；②套用修正後同一個測試表格重新掃描，確認 `display` 正確變回 `"table"`、`width` 正確變回內容決定的自然寬度（`18.7px`），且容器從 400px 加寬到 900px 後表格寬度**不會**跟著等比放大（修正前會、修正後不會）；③用一份完整還原截圖情境的雙欄名片式測試簽名檔（含 `rowspan` 分隔線欄、多列聯絡資訊、`<style>` class 選擇器控制格式）重新驗證：`table` 的 `display`／`border`／`border-radius`／`overflow` 全部正確、`td` 的 `border-bottom`／`padding`／`white-space`／`text-align` 全部正確、分隔線 `border-right` 正確保留、分隔線高度正確等於整個表格高度（`rowspan` 正確生效，不是被拆散）；④額外對真正的 `signaturePresetContentValue()`／`appendGmailSignatureHtml()` 完整跑一次「設定面板→存檔→插入 Gmail 編輯器」端對端流程，確認兩邊的 `border`／`padding`／`text-align`／`table display` 都一致且正確，`<style>` 標籤仍正確被移除（上一則的修正沒有被這次改動影響）。
+  - **未做的驗證**：沒有用真實登入帳號在正式站，實際把使用者截圖裡那份真正的簽名檔重新貼一次進行比對確認完全復原——這次的驗證完全依賴「用 CSSOM 精準列出真正命中的規則」與「還原截圖情境的測試資料」，理論上已經精準對應這次回報的現象與根因，且用了比第一次更嚴謹（規則命中列表而非肉眼猜測）的方法，但沒有機會用使用者真正的原始簽名檔內容重新截圖比對。也沒有在真實的手機瀏覽器（視窗寬度真的窄於 640px）上確認 Gmail 編輯器與簽名檔設定面板不會被拆成堆疊卡片，這次是透過這個測試環境「`window.innerWidth` 恆為 0」的既有限制間接觸發同一個條件驗證的，邏輯上等價，但沒有用真正窄螢幕裝置實測過。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-27 09:09 Asia/Taipei（次新）— 修正簽名檔插入 Gmail 撰寫/回信編輯器時 class 樣式全部消失（跑版）；「稍後再寄」按鈕改成如實標示「取消發信」
 
 - 修改目的：使用者附上「個人設定」裡簽名檔編輯器的截圖（一份雙欄名片式簽名檔，顏色/粗體/字級都正確顯示），指出「簽名檔設定，在貼入編輯器時，還是沒有跟上語法會有跑版問題」；同時要求把 Gmail 撰寫/回信編輯器裡「稍後再寄」按鈕改成能真正存入 Gmail 草稿匣，做不到的話改成「取消發信」。
 - 追查過程：
