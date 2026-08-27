@@ -7726,7 +7726,7 @@ const modifyFixedColumnsAll = [
   {label:'內容',width:76,className:'recent-actions',visible:()=>canEditCasesNow(),render:r=>r.pendingCreate?'<span class="status updating-cell">等待編號</span>':editAction(r,{icon:true})}
 ];
 const modifyRecentColumns = [
-  {label:'案件編號',width:96,render:r=>r.pendingCreate?`<span class="status updating-cell">${esc(r.id)}</span>`:`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
+  {label:'案件編號',width:108,render:r=>r.pendingCreate?`<span class="status updating-cell">${esc(r.id)}</span>`:`<button type="button" class="case-id-btn" onclick="openCaseDetail('${jsArg(r.id)}')">${esc(r.id)}</button>`},
   {label:'客戶別',width:112,render:r=>esc(r.client)},
   {label:'專案名稱',width:190,className:'col-project',render:r=>`<span class="project-text" title="${esc(r.project)}">${esc(r.project)}</span>`},
   {label:'專案負責人',width:96,render:r=>`<button type="button" class="pill-name owner-project-pill" title="查看 ${esc(ownerDisplay(r.owner))} 填寫的專案" onclick="openOwnerProjects(event,'${jsArg(ownerDisplay(r.owner))}')">${esc(ownerDisplay(r.owner))}</button>`},

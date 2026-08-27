@@ -189,7 +189,24 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-27 14:45 Asia/Taipei（最新）— 「最新案件列表」每頁改列 5 筆（原本 7 筆），避免看起來像是全部案件
+### 2026-08-27 16:13 Asia/Taipei（最新）— 修正「最新案件列表」深色模式下案件編號徽章後方出現「..」省略號
+
+- 修改目的：使用者回報「深色模式在最新案件列表中案件編號後面會出現『...』請移除」。
+- 追查過程：先用瀏覽器 `elementFromPoint()`／逐一比對頁面上每個元素的 `getBoundingClientRect()` 想找出這個「..」對應的實際 DOM 元素，一開始完全找不到獨立的元素——案件編號那個 `<td>` 底下只有一個 `<button class="case-id-btn">`，沒有任何多餘的文字節點或偽元素（`::before`／`::after` 的 `content` 都是 `none`）。截圖放大後改用精確量測按鈕與儲存格的實際尺寸才抓到根因：
+  - 深色模式的 `.case-id-btn`（[index.html:4477](index.html:4477) 附近）跟淺色模式不同，是刻意設計成一顆有底色、邊框、圓角的「徽章」樣式（`padding:4px 8px!important;border:1px solid #2c6b51!important;border-radius:7px!important`），不是淺色模式那種完全無邊距的純文字連結（`padding:0;border:0`）——這個設計差異本身沒有問題，這次也沒有改動它。
+  - 但「最新案件列表」的「案件編號」欄位寬度是寫死的 `width:96`（[index.html:7729](index.level.html:7729)），扣掉 `<td>` 本身固定的 `padding:12px`（左右各 12px，共 24px）之後，實際可用內容寬度只剩 72px；而深色模式徽章實測寬度是 76px——**徽章比可用空間多出整整 4px**，讓 `<td>` 上既有的 `overflow:hidden;text-overflow:ellipsis;white-space:nowrap`（`.modify-list td` 既有規則）觸發，瀏覽器在儲存格邊界畫出省略號——這正是使用者看到的「..」。淺色模式的按鈕沒有任何 padding/border，寬度只有 74px，完全在 72px 可用空間之外多出的誤差範圍內意外沒有觸發（差距極小、但沒有超標），所以只有深色模式會出現這個問題。
+  - 已用真實瀏覽器精確量測驗證：修正前 `按鈕寬度 76px - 可用內容寬度 72px = 超出 4px`；案件編號固定是 8 碼數字格式（見本文件既有說明），不會有更長或更短的例外格式需要另外考慮。
+- 影響檔案：`index.html`。
+- 影響功能：`modifyRecentColumns` 的「案件編號」欄位寬度從 `width:96` 調整為 `width:108`——多出的 12px 讓深色模式徽章有餘裕（可用內容寬度變成 84px，對 76px 的徽章有 8px 安全邊界），不會再觸發省略號；這個常數同時驅動固定表頭寬度與 `renderModifyRecent()` 計算整個捲動表格總寬度用的 `baseWidth`，兩者都是既有邏輯直接讀這個欄位設定算出來，不需要另外調整任何其他程式碼。
+- 風險區塊：純粹調整一個欄位的顯示寬度常數，不影響資料、排序或任何寫入邏輯；「案件編號」欄位變寬 12px 會讓整個捲動表格的總寬度也跟著增加 12px，這在原本設計裡本來就是已經支援的情況（`.modify-scroll` 本來就會依總寬度決定要不要出現水平捲軸），不會造成版面錯誤，只是可能讓右側其他欄位需要多捲動一點點點才看得到。
+- 已檢查／驗證方式：
+  - `index.html` 兩段 `<script>` 語法檢查通過；`node --test backend/test/*.test.mjs` 62/62 全過；`git diff` 確認只改了一行（欄位寬度數字）。
+  - 用本機 Python 靜態伺服器＋ Browser pane 對真實頁面做隔離測試（沒有真的打任何網路請求）：①先重現問題——精確量測修正前深色模式徽章寬度（76px）與可用內容寬度（72px），確認真的超出 4px，並用放大截圖直接肉眼確認畫面上真的看得到「26080004 ..」這種案件編號後面帶著兩個小點的畫面（跟使用者描述的「...」一致，是瀏覽器省略號渲染，不是額外插入的文字）；②套用修正後重新量測，可用內容寬度變成 84px、徽章 76px，`overflowsBy` 從 4px 變成 -16px（有餘裕），重新截圖確認「26080004」「26080003」完整顯示、後面沒有任何多餘符號；③額外確認淺色模式在修正前後都沒有這個問題（沒有回歸）。
+  - **未做的驗證**：沒有用真實登入帳號在正式站，實際切換深色模式肉眼確認畫面（這次驗證完全依賴本機隔離環境注入假資料跑過的完整流程與精確像素量測，理論上已經精準對應這次回報的現象與根因，但沒有機會在真實帳號、真實資料下重新確認）；也沒有驗證「信件」／「內容」固定欄位（`.modify-fixed`）在這次改動後是否仍然正確跟主表格對齊——這次的測試環境因為沒有登入態、`canSendMailNow()`／`canEditCasesNow()` 恆為 `false`，固定表格整個是隱藏狀態，沒有實際資料可以比對；但欄位寬度調整只影響單一欄位本身的顯示寬度，不涉及固定表格與捲動表格之間既有的列高同步機制（`syncModifyRecentRowHeights()` 是依「列的實際高度」同步，不是依欄位寬度），理論上不會受這次改動影響。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-27 14:45 Asia/Taipei（次新）— 「最新案件列表」每頁改列 5 筆（原本 7 筆），避免看起來像是全部案件
 
 - 修改目的：使用者說明因為列高加寬（見同一天 10:22 那則修正前後，欄位高度已比舊版明顯高），原本一頁列 7 筆會讓畫面塞得比較滿，容易讓人以為畫面上顯示的就是全部案件，沒注意到還能翻頁看更多。
 - 影響檔案：`index.html`。
@@ -199,7 +216,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
 - commit：（見下方 push 紀錄）
 
-### 2026-08-27 10:22 Asia/Taipei（次新）— 修正案件/專案列表文字在深色模式沒有換色、變成看不清楚（既有的 td/th 深色覆寫規則特異度輸給另一條寫死顏色的全站規則）
+### 2026-08-27 10:22 Asia/Taipei — 修正案件/專案列表文字在深色模式沒有換色、變成看不清楚（既有的 td/th 深色覆寫規則特異度輸給另一條寫死顏色的全站規則）
 
 - 修改目的：使用者回報「前台 index.html 在下方專案列表中，列表文字中在深色模式未換色，倒置文字無法閱讀」。
 - 追查過程：延續同一次工作階段稍早修簽名檔跑版時已經驗證有效的方法（不用肉眼猜 CSS，直接用瀏覽器把 `html[data-theme="dark"]` 打開、對一個模擬案件列表的 `<td>`量測 `getComputedStyle().color`）——**先重現問題**：確認即使 `html[data-theme="dark"]` 已經設定，一般 `<td>` 文字顏色仍然是 `rgb(32,42,37)`（`#202a25`，深灰色，明顯是淺色模式的顏色，不是深色模式該有的淺色文字）。追出根因是 CSS 特異度（specificity）問題：
@@ -266,7 +283,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次完全沒有修改 `worker/` 或任何 `.gs` 檔案。
 - commit：（見下方 push 紀錄）
 
-### 2026-08-27 08:45 Asia/Taipei（次新）— 修正 CI「Test JSON backend」因缺少 concurrency 設定被連續 commit 灌爆導致 runner 分配失敗
+### 2026-08-27 08:45 Asia/Taipei — 修正 CI「Test JSON backend」因缺少 concurrency 設定被連續 commit 灌爆導致 runner 分配失敗
 
 - 修改目的：使用者回報「Test JSON backend」workflow 出現「The job was not acquired by Runner of type hosted even after multiple attempts」與「Internal server error」兩則錯誤，要求修正並直接 commit/push，不用先問。
 - 追查過程：`gh run list` 發現在 2026-08-26 23:39 前後一小時內，正式站有 69 筆 `data: adminTableUpdate via Cloudflare Worker (Machi)` commit（每筆間隔約 3 秒，時間戳精確對齊，是後台資料庫管理員連續操作 `adminTableUpdate` 造成的正常寫入行為，不是異常或攻擊），每一筆都會修改 `backend/data/db.json`；而 `.github/workflows/test-json-backend.yml` 的 `paths` 觸發條件本來就包含 `backend/**`，代表這 69 筆 commit 各自觸發了一個獨立的 workflow run。跟另一個同樣會被這批 commit 觸發的 `update-database-archive.yml`（「Sync history database with current database」）不同——那個檔案早就設定了 `concurrency:{group:history-database-sync,cancel-in-progress:true}`——`test-json-backend.yml` 從一開始就完全沒有 `concurrency` 區塊，導致這 69 次推送各自排隊等一個獨立的 hosted runner，把 GitHub Actions 的 runner 佇列瞬間灌爆，才出現「job was not acquired by Runner」「Internal server error」這類 runner 分配失敗訊息，且有多筆 run 卡在 `queued` 狀態長達 9 小時以上。用 `gh api` 直接查詢確認這些卡住的 run 狀態是 `queued`，但呼叫取消 API 會收到互相矛盾的錯誤（一次說「已完成無法取消」、一次說「尚未進入排隊無法取消」）——判斷是 GitHub Actions 服務端本身當下處於不一致狀態（平台端暫時性 runner 分配異常），不是這個 repo 設定能強制清除的部分。
