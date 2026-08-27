@@ -8137,12 +8137,59 @@ function safeGmailSignatureUrl(value){
   const url=String(value||'').trim();
   return !url||/^(?:https?:|mailto:|tel:|cid:|\/|data:image\/(?:png|jpeg|gif|webp);base64,)/i.test(url);
 }
+/** 簽名檔（自訂命名簽名檔或 Gmail 帳號本身設定的簽名檔）常見不是每個元素都寫死 inline style，
+ * 而是連著一段 <style> 區塊、靠 class 選擇器控制格式——這是 Word／Outlook／各種簽名檔產生器
+ * 貼上來的 HTML 幾乎都會有的寫法。<style> 元素一旦真的插進 Gmail 撰寫/回信編輯器，會變成整份
+ * 文件都生效的全域樣式表，不只影響簽名檔自己這一小塊（見 gmailSignatureFragment() 為什麼要拿掉
+ * 它），所以一定要移除；但單純移除會讓這類簽名檔在真的插入編輯器那一刻格式全部消失、變成跑版
+ * （設定面板裡的 .signature-preset-content 因為本身就是一份真的連進文件的 contenteditable，
+ * <style> 還在，才會看起來完全正常——問題只發生在插入編輯器這一步）。
+ * 這裡改成：完全不讓內容連進真實文件（不會觸發任何 <img>/<iframe> 載入，也不會讓 <style> 對整頁
+ * 生效——用 Constructable Stylesheets 的 CSSStyleSheet().replaceSync() 純粹「解析」CSS 文字，
+ * 不會執行/套用到任何真實畫面，同一份 API 也不支援 @import、不會因此另外發出請求），把 <style>
+ * 區塊的規則解析出來，用 element.matches(selector)（在完全 inert、從未連接文件的節點上一樣可用）
+ * 找出符合的元素，把規則宣告的值直接寫進該元素自己的 inline style，效果視覺上等同「先套用過這份
+ * 樣式表」，然後才移除 <style> 本身——拿掉 <style> 之後格式依然完整保留。多筆規則影響同一個元素時
+ * 依原始程式碼順序疊加（後面的規則覆蓋前面的，對應同特異度規則的 cascade 順序）；元素原本就自己
+ * 寫在身上的 inline style（作者親自指定、優先權最高）固定排在最後，蓋過所有從 <style> 算出來的值。
+ * 這支函式一定要在 gmailSignatureFragment() 已經把 <script>/<iframe> 等危險元素與 on 開頭事件屬性、
+ * javascript: 連結這類危險屬性都清乾淨「之後」才呼叫——順序反過來的話，等於在危險內容都還在的情況下就去解析裡面
+ * 的 <style>，雖然解析本身不會執行任何東西，但沒有意義提早暴露風險面，維持先清乾淨、才處理格式
+ * 的順序比較穩妥。*/
+const SIGNATURE_INLINE_STYLE_PROPS=['color','background-color','font-weight','font-style','font-size','font-family','text-decoration','text-decoration-line','text-decoration-color','text-align','line-height','letter-spacing','vertical-align','white-space','border-top','border-right','border-bottom','border-left','border-radius','padding','padding-top','padding-right','padding-bottom','padding-left','margin','margin-top','margin-right','margin-bottom','margin-left'];
+function inlineSignatureStyleRules(root){
+  const styleNodes=[...root.querySelectorAll('style')];
+  if(!styleNodes.length)return;
+  // 不支援 Constructable Stylesheets 的瀏覽器（極舊版本）安全退回成單純移除 <style>——
+  // 這正是這支函式存在之前的既有行為，不會比修正前更糟，只是格式跑版問題在那類瀏覽器上不會被修好。
+  if(typeof CSSStyleSheet==='undefined'||typeof CSSStyleSheet.prototype.replaceSync!=='function'){styleNodes.forEach(node=>node.remove());return}
+  const elements=[...root.querySelectorAll('*')].filter(el=>el.tagName!=='STYLE');
+  const derived=new Map(), originalInline=new Map(elements.map(el=>[el,el.getAttribute('style')||'']));
+  styleNodes.forEach(styleNode=>{
+    let sheet;
+    try{sheet=new CSSStyleSheet();sheet.replaceSync(styleNode.textContent||'')}catch{return} // 語法有問題的 <style> 內容安全跳過，不影響其他規則
+    [...sheet.cssRules].forEach(rule=>{
+      if(!(rule instanceof CSSStyleRule))return; // @media/@keyframes 等這裡不處理，維持原樣（拿掉，不強行套用）
+      let matched;
+      try{matched=elements.filter(el=>el.matches(rule.selectorText))}catch{return} // 選擇器過於複雜（例如虛擬元素）時安全跳過
+      if(!matched.length)return;
+      const declared=SIGNATURE_INLINE_STYLE_PROPS.map(prop=>{const value=rule.style.getPropertyValue(prop);return value?`${prop}:${value}`:''}).filter(Boolean);
+      if(!declared.length)return;
+      matched.forEach(el=>{if(!derived.has(el))derived.set(el,[]);derived.get(el).push(...declared)});
+    });
+  });
+  derived.forEach((declarations,el)=>{
+    const original=originalInline.get(el)||'';
+    el.setAttribute('style',original?`${declarations.join(';')};${original}`:declarations.join(';'));
+  });
+  styleNodes.forEach(node=>node.remove());
+}
 /** Gmail 設定回傳的是富文字 HTML。插入目前頁面前仍移除可執行／互動元素與事件屬性，
  * 保留簽名常用的文字格式、連結、表格與圖片，避免簽名內容影響系統其他介面。 */
 function gmailSignatureFragment(signatureHtml){
   const template=document.createElement('template');
   template.innerHTML=String(signatureHtml||'');
-  template.content.querySelectorAll('script,style,iframe,object,embed,form,input,button,textarea,select,option,meta,link,base,svg,math,video,audio,source,track').forEach(node=>node.remove());
+  template.content.querySelectorAll('script,iframe,object,embed,form,input,button,textarea,select,option,meta,link,base,svg,math,video,audio,source,track').forEach(node=>node.remove());
   template.content.querySelectorAll('*').forEach(node=>{
     [...node.attributes].forEach(attribute=>{
       const name=attribute.name.toLowerCase();
@@ -8150,6 +8197,7 @@ function gmailSignatureFragment(signatureHtml){
     });
     if(node.tagName==='A'&&node.hasAttribute('href'))node.setAttribute('rel','noopener noreferrer');
   });
+  inlineSignatureStyleRules(template.content);
   return template.content;
 }
 function appendGmailSignatureHtml(editor,signatureHtml){
@@ -9027,7 +9075,12 @@ function renderPostSubmitGmailDraft(){
     updateGmailScheduleStatusBadge('compose',[]);
   }
   const imageBtn=document.querySelector('.gmail-rich-image-btn[data-rich-image-for="gmailComposeEditor"]'); if(imageBtn)imageBtn.hidden=true;
-  $('#gmailComposeCancel').textContent='稍後再寄';
+  // 這顆按鈕點下去會呼叫 closeGmailComposeModal()，一律把整個 postSubmitQueue 清空（不只是跳過
+  // 目前這一封，剩下還沒處理的草稿也會一起放棄）——之前叫「稍後再寄」名不符實：案件本身確實已經
+  // 建立，但這裡編輯過的收件人/主旨/內容不會被保留在任何地方（不是存進 Gmail 草稿匣，也不是存在
+  // 這個系統自己的暫存），使用者之後要寄，只能回案件列表點「發信」重新來一次，等於整封信被真正
+  // 取消，不是「延後」。改成如實描述「取消發信」，不要讓使用者誤以為之後回來還找得到這封信。
+  $('#gmailComposeCancel').textContent='取消發信';
   const sendBtn=$('#gmailComposeSend');
   sendBtn.hidden=!isLast;
   const allSettled=queue.drafts.every(d=>d.id||d.idFailed);
