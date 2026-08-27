@@ -7838,7 +7838,7 @@ let accountSettingsJustApplied = false;
 let accountSettingsRevision = 0;
 let modifyPage = 1;
 let modifySearchQuery = '';
-const modifyPageSize = 7;
+const modifyPageSize = 5;
 function activeRowsOnly(list=rows){return list.map(normalizeRow).filter(r=>!r.archived)}
 function save(){try{localStorage.setItem(localRowsKey,JSON.stringify(activeRowsOnly()))}catch(err){console.warn('本機快取已滿，略過儲存',err)}}
 function readCache(key,fallback=null){try{return JSON.parse(localStorage.getItem(key)||'null')||fallback}catch(err){return fallback}}
