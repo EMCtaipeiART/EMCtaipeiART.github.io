@@ -189,7 +189,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-26 18:05 Asia/Taipei（最新）— 移除信件編輯器裡插入圖片右下角沒有圖示的縮放把手（使用者誤以為是「選取框」）
+### 2026-08-27 08:45 Asia/Taipei（最新）— 修正 CI「Test JSON backend」因缺少 concurrency 設定被連續 commit 灌爆導致 runner 分配失敗
+
+- 修改目的：使用者回報「Test JSON backend」workflow 出現「The job was not acquired by Runner of type hosted even after multiple attempts」與「Internal server error」兩則錯誤，要求修正並直接 commit/push，不用先問。
+- 追查過程：`gh run list` 發現在 2026-08-26 23:39 前後一小時內，正式站有 69 筆 `data: adminTableUpdate via Cloudflare Worker (Machi)` commit（每筆間隔約 3 秒，時間戳精確對齊，是後台資料庫管理員連續操作 `adminTableUpdate` 造成的正常寫入行為，不是異常或攻擊），每一筆都會修改 `backend/data/db.json`；而 `.github/workflows/test-json-backend.yml` 的 `paths` 觸發條件本來就包含 `backend/**`，代表這 69 筆 commit 各自觸發了一個獨立的 workflow run。跟另一個同樣會被這批 commit 觸發的 `update-database-archive.yml`（「Sync history database with current database」）不同——那個檔案早就設定了 `concurrency:{group:history-database-sync,cancel-in-progress:true}`——`test-json-backend.yml` 從一開始就完全沒有 `concurrency` 區塊，導致這 69 次推送各自排隊等一個獨立的 hosted runner，把 GitHub Actions 的 runner 佇列瞬間灌爆，才出現「job was not acquired by Runner」「Internal server error」這類 runner 分配失敗訊息，且有多筆 run 卡在 `queued` 狀態長達 9 小時以上。用 `gh api` 直接查詢確認這些卡住的 run 狀態是 `queued`，但呼叫取消 API 會收到互相矛盾的錯誤（一次說「已完成無法取消」、一次說「尚未進入排隊無法取消」）——判斷是 GitHub Actions 服務端本身當下處於不一致狀態（平台端暫時性 runner 分配異常），不是這個 repo 設定能強制清除的部分。
+- 影響檔案：`.github/workflows/test-json-backend.yml`。
+- 影響功能：新增 `concurrency:{group:test-json-backend,cancel-in-progress:true}`（緊接在既有的 `permissions` 區塊之後、`jobs` 之前），比照 `update-database-archive.yml` 已經在用的同一種寫法——之後同一批短時間內的連續推送，只有最新一次會真正執行，先前還在排隊或執行中、對應同一個 `test-json-backend` group 的舊 run 會被自動取消，不會再讓佇列被同一批連續 commit（例如後台管理員連續儲存多筆資料、或任何自動化寫入）灌爆。
+- 風險區塊：
+  - `cancel-in-progress:true` 代表如果同一批連續推送裡，某次 push 剛好在測試跑到一半時被更新的 push 取消，那次測試結果不會完整跑完——但因為這個 workflow 本來就只是驗證「目前這個時間點的 `backend/data/db.json` 內容是否合法、後端測試是否通過」，只要最終（最新一次）的推送有跑完並通過，就代表目前 main 分支的狀態是健康的，中途被取消的舊 run 驗證的已經是過期的中間狀態，取消它是合理且不會遺漏問題的行為——這跟 `update-database-archive.yml` 早就採用同一套邏輯完全一致。
+  - 卡在 `queued` 超過 9 小時、且用 API 也無法強制取消的那批舊 run，這次沒有能力清除（GitHub 平台端的暫時性狀態，不是我這邊能控制的），但它們不影響新推送的 workflow 正常執行——已經用實際推送這次的修正 commit 驗證過，新的 run 在 10 秒內乾淨完成（`completed/success`），代表 runner 佇列本身已經恢復正常，不需要等那些卡住的舊 run 自然清除才能繼續使用 CI。
+  - 這次沒有修改 `update-database-archive.yml`（它本來就有正確的 concurrency 設定，不受這次問題影響）、沒有修改任何應用程式邏輯或資料——本機重新跑過一次 workflow 實際執行的三個步驟（JSON 驗證、`recalculate_database_weights.mjs`、`generate_database_archive_snapshot.mjs`）與完整測試套件，確認程式碼本身完全沒有問題，這次的錯誤純粹是 CI 設定缺口造成的 runner 佇列壅塞，不是程式碼退化。
+- 已檢查／驗證方式：本機執行 `node -e "JSON.parse(...)"` 確認 `backend/data/db.json` 合法；`node scripts/recalculate_database_weights.mjs`（`changed:0,written:false`，代表加權分數本來就已經是最新，無需重算）；`node scripts/generate_database_archive_snapshot.mjs`（`database_archive JSON unchanged`）；`npm test` **62/62 全過**——這三步跟 workflow 裡實際執行的步驟完全一致，確認程式碼本身沒有問題。推送修正 commit 後，用 `gh run list` 確認這次觸發的新 run 正確以 `completed/success`、耗時 10 秒完成，證明 runner 佇列已經恢復正常、`concurrency` 設定正確生效。
+- 部署狀態：純 CI 設定檔（`.github/workflows/test-json-backend.yml`），git push 後立即對後續所有推送生效，不需要部署 Worker 或任何 Apps Script。
+- commit：`5189c02a`
+
+### 2026-08-26 18:05 Asia/Taipei（次新）— 移除信件編輯器裡插入圖片右下角沒有圖示的縮放把手（使用者誤以為是「選取框」）
 
 - 修改目的：使用者回報「信件編輯器在編輯圖片時會出現選取框？這個不知道功能是什麼，如果沒有請移除，同時他會出現在信件的圖旁邊一個小小的選框，請將她移除」。先用 `AskUserQuestion` 附上實際插入測試圖片後點選/移到圖片上的畫面說明，確認使用者指的是圖片右下角那顆沒有圖示、單純一個深色小方塊的縮放把手（拖曳可以調整圖片大小），不是左上角那顆有 X 符號、功能一望即知的「移除圖片」按鈕——確認後才動手，避免猜錯移除到還在用的刪除功能。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
@@ -208,7 +222,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：純前端／測試檔案，git push 後自動生效，不需要部署 Worker 或任何 Apps Script——這次完全沒有修改 `worker/` 或 `upload/Code.gs`。
 - commit：`a5eaf032`
 
-### 2026-08-26 17:35 Asia/Taipei（次新）— 修正「設計師回信＞選擇電腦上傳」第一次上傳完常常沒自動跳到編輯器（需要重試、圖片因此重複）；修正自己上傳的設計圖寄出後超級巨大；修正信件串預覽看不到這類圖片
+### 2026-08-26 17:35 Asia/Taipei — 修正「設計師回信＞選擇電腦上傳」第一次上傳完常常沒自動跳到編輯器（需要重試、圖片因此重複）；修正自己上傳的設計圖寄出後超級巨大；修正信件串預覽看不到這類圖片
 
 - 修改目的：使用者一次回報三件事：①「設計師回信＞選擇電腦上傳」第一次按下「上傳全部」，視窗會照設計正常收合成小提示卡，但常常沒有自動跳到信件編輯器，要再點一次才會跳過去，跳過去後編輯器裡卻變成兩張圖片（連同上一次的也在）；②自己上傳的設計圖在編輯器裡預覽大小正常，但寄出後收件端看到的圖片超級巨大；③瀏覽信件串時完全看不到這類圖片的呈現。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
