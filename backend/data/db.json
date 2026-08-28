@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3140,
+  "revision": 3141,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-28T11:05:36.828Z",
+  "updatedAt": "2026-08-28T11:05:47.897Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1117,7 +1117,7 @@
         {"案件編號":"26080172","修改次數":"0","建立日期":"2026/08/28 11:30:41","修改日期":"2026/08/28 11:30:41","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/28 11:30:41","圖片連結":"[{\"fileName\":\"260828_富美家_9月社群貼文ˍ表面處理｜ 霧月面（PH）影音封面需求.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_ioFg-2hPBb1Faj8gsA2QciqlAm_98OI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/28 11:30:41"},
         {"案件編號":"26080173","修改次數":"0","建立日期":"2026/08/28 11:33:01","修改日期":"2026/08/28 11:33:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/28 11:33:01","圖片連結":"[{\"fileName\":\"260828_富美家_9月社群貼文ˍ表面處理｜ 鑿刻紋（CA）影音封面需求.png\",\"url\":\"https://lh3.googleusercontent.com/d/1W_mHy6reGe84vV7y20gpZKvCIl8t-q1a=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/28 11:33:01"},
         {"案件編號":"26080167","修改次數":"0","建立日期":"2026/08/28 17:47:47","修改日期":"2026/08/28 17:47:47","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/28 17:47:47","圖片連結":"[{\"fileName\":\"260831_ANKER_A1695_pchome_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1cssW5cAqex3nDSSQDNRYlLCPPgETAdiy=w1600\"},{\"fileName\":\"260831_ANKER_A1665_pchome_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1KuxebP0oQ_L01LBGhkw0F4zonT64msAx=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/28 17:47:57"},
-        {"案件編號":"26080168","修改次數":"0","建立日期":"2026/08/28 19:05:36","修改日期":"2026/08/28 19:05:36","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/28 19:05:36","圖片連結":"[{\"fileName\":\"260901_ANKER_A1665_蝦皮_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1soqFoVw4zVk_R-sg9vgXelEHCBBnf0Nl=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/28 19:05:36"}
+        {"案件編號":"26080168","修改次數":"0","建立日期":"2026/08/28 19:05:36","修改日期":"2026/08/28 19:05:36","修改內容":"初稿完成","修改人":"Amber","確認修正日":"2026/08/28 19:05:36","圖片連結":"[{\"fileName\":\"260901_ANKER_A1665_蝦皮_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1soqFoVw4zVk_R-sg9vgXelEHCBBnf0Nl=w1600\"},{\"fileName\":\"260901_ANKER_A1638_蝦皮_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1HDYKrQP9qdi_jIeQRY_FYqZIi1TEANzk=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/08/28 19:05:47"}
       ]
     },
     "補充資料連結": {
