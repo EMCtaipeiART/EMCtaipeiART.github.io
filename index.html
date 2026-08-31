@@ -2074,6 +2074,11 @@
       white-space:nowrap!important;
       overflow:hidden!important;
       text-overflow:ellipsis!important;
+      /* 全站通用的 th/td 規則是上下各 12px（見檔案最前面 th:not(...),td:not(...){padding:12px}），
+         這裡縮成上下各 8px，讓「最新案件列表」單列自然高度變窄，這樣一般情況下 6 筆案件
+         就能剛好塞進跟「設計師專長與案件分配」面板等高的空間，不用觸發列高不夠時的自動長高。 */
+      padding-top:8px!important;
+      padding-bottom:8px!important;
     }
     #modifyRecent th.recent-subject,
     #modifyRecent th.recent-actions{
