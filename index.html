@@ -2032,7 +2032,9 @@
       overflow-x:auto!important;
       overflow-y:hidden!important;
       -webkit-overflow-scrolling:touch!important;
+      scrollbar-width:none!important;
     }
+    #modifyRecent .modify-scroll::-webkit-scrollbar{display:none!important}
     #modifyRecent table{
       display:table!important;
       border:0!important;
@@ -7838,7 +7840,8 @@ let accountSettingsJustApplied = false;
 let accountSettingsRevision = 0;
 let modifyPage = 1;
 let modifySearchQuery = '';
-const modifyPageSize = 5;
+const modifyPageSize = 6;
+const modifyScrollBarReserve = 16;
 function activeRowsOnly(list=rows){return list.map(normalizeRow).filter(r=>!r.archived)}
 function save(){try{localStorage.setItem(localRowsKey,JSON.stringify(activeRowsOnly()))}catch(err){console.warn('本機快取已滿，略過儲存',err)}}
 function readCache(key,fallback=null){try{return JSON.parse(localStorage.getItem(key)||'null')||fallback}catch(err){return fallback}}
@@ -12156,7 +12159,7 @@ function syncModifyRecentRowHeights(){
   }
   const count=Math.min(fixedRows.length,scrollRows.length);
   const headHeight=Math.max(fixedHeadRow?.getBoundingClientRect().height||0,scrollHeadRow?.getBoundingClientRect().height||0);
-  const availableBodyHeight=wrap&&!window.matchMedia('(max-width:640px)').matches?Math.max(0,wrap.clientHeight-headHeight):0;
+  const availableBodyHeight=wrap&&!window.matchMedia('(max-width:640px)').matches?Math.max(0,wrap.clientHeight-headHeight-modifyScrollBarReserve):0;
   const evenRowHeight=count?Math.floor(availableBodyHeight/count):0;
   for(let i=0;i<count;i++){
     const fixedRow=fixedRows[i], scrollRow=scrollRows[i];

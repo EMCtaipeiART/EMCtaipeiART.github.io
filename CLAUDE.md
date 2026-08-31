@@ -189,7 +189,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-08-27 16:13 Asia/Taipei（最新）— 修正「最新案件列表」深色模式下案件編號徽章後方出現「..」省略號
+### 2026-08-31 08:50 Asia/Taipei（最新）— 「最新案件列表」每頁改顯示 6 筆，並確保橫向捲軸不會擋住最後一列文字
+
+- 修改目的：使用者要求把前台「最新案件列表」的呈現筆數從 5 筆改成 6 筆，並特別提醒改動時要注意底部的資料文字不能被（橫向）滑桿擋住。
+- 追查過程：這個列表用兩張並排的 `<table>`（`.modify-fixed` 固定欄＋`.modify-scroll` 可橫向捲動欄）拼成，`syncModifyRecentRowHeights()` 會把 `#recentPanel`（跟左側「設計師專長與案件分配」面板同步高度，見 `syncTopPanelHeights()`）目前可用的高度平均分給每一列，且 `renderModifyRecent()` 本來就會刻意讓 `.modify-scroll` 的表格寬度比可視寬度多 120px（`targetWidth` 計算式），確保橫向捲軸一定會出現。用本機靜態伺服器＋ Browser pane 載入正式站真實資料量測後發現：因為每一列本身有 `min-height:30px` 這類按鈕/圓標撐出的自然最小高度（實測約 60px），在「設計師專長與案件分配」面板只有 2 排卡片（不論 5 位或 6 位設計師，3 欄式排版下都是 2 排，高度相同）這種常見情況下，6 列的自然高度總和幾乎剛好等於（甚至極些微超出）面板可用高度——也就是說目前的版面本來就幾乎沒有任何餘裕，只是這個測試環境剛好用的是完全不佔版面空間的「覆蓋式」捲軸（macOS／Chromium 常見行為），才沒有讓使用者感覺到問題；只要換成 Windows 常見的「經典式」捲軸（會實際佔用容器內的一條高度），就會讓最後一列的文字被這條捲軸吃掉一截。
+- 影響檔案：`index.html`。
+- 影響功能：
+  1. `modifyPageSize` 從 `5` 改成 `6`——「最新案件列表」現在每頁顯示 6 筆案件，分頁邏輯（`renderModifyPagination()`）沿用既有機制、不需要另外調整。
+  2. 新增 `#modifyRecent .modify-scroll` 的 `scrollbar-width:none!important`，並新增 `#modifyRecent .modify-scroll::-webkit-scrollbar{display:none!important}`——完全比照這個檔案裡「限時動態留言列表」（`.story-comments`）與「限動按讚清單」（`.story-reaction-popover`）既有、已經在用的同一套「隱藏捲軸樣式、但底層 `overflow-x:auto` 捲動功能完全不受影響」做法，不是自創新技巧。這條規則讓橫向捲軸在瀏覽器裡完全不佔用任何版面高度（不論作業系統／瀏覽器原本的捲軸樣式是覆蓋式還是經典式），從根源上讓「捲軸擋住底部文字」這件事不可能發生，而不是去猜測、預留一個可能對也可能不夠的捲軸高度。
+  3. 另外新增 `modifyScrollBarReserve = 16`（16px），在 `syncModifyRecentRowHeights()` 計算「每列平均可分配高度」時先扣掉這個值再平均分配——這是額外的一層保守防呆：只有在面板高度「有多餘空間」（例如寬螢幕、設計師面板剛好比較高）時才會生效、讓每列多留一點餘裕；面板高度本來就吃緊、列高已經被自然最小高度撐滿的情況下，這個值不會造成任何影響（`Math.max(自然高度,平均高度)` 一定會選到自然高度），也不會讓案件擠壓到看不清楚。
+- 風險區塊：`scrollbar-width`／`::-webkit-scrollbar` 這兩個屬性分別是 Firefox／WebKit（Chrome、Safari、Edge）的既有標準寫法，這個系統的既有文件已多次確認團隊主要使用 Chrome／Safari，涵蓋範圍足夠；如果之後真的有人用不支援這兩種寫法的瀏覽器，捲軸只會退回原本「看得到、可能占用一點高度」的樣子，不會整個功能失效或報錯。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` 62/62 全過（其中一支既有測試專門鎖住 `.modify-scroll{}` 規則本身不能用 `height:100%` 當硬性上限，這次新增的 `scrollbar-width` 屬性是加在同一個規則區塊內、沒有動到既有結構，重新確認測試仍然通過）。
+  - `index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過。
+  - 用本機 Python 靜態伺服器＋ Browser pane 對著真實正式站資料（725 筆可編輯案件）做隔離測試：①修正前用 `getBoundingClientRect()` 精確量測「最後一列的底部座標」與「捲動容器可視範圍的底部座標」，確認兩者幾乎完全貼齊（不到 3px 的餘裕），證實這個版面原本就處於「幾乎沒有安全邊界」的狀態；②改成 6 筆＋隱藏捲軸後重新量測，確認 `getComputedStyle(...).scrollbarWidth` 正確變成 `'none'`、且 `.modify-scroll` 的 `offsetHeight` 與 `clientHeight` 完全相等（代表捲軸真的沒有佔用任何版面空間）；③直接操作 `scrollLeft`（0→50→0）確認橫向捲動功能完全正常，捲軸只是看不見，不是被停用；④切到分頁第 2 頁，確認同樣正確顯示 6 筆、分頁器頁碼與筆數換算（725 筆／6＝121 頁）正確；⑤切到手機版寬度（375px）重新呼叫 `renderModifyRecent()`／`syncModifyRecentRowHeights()`，確認沒有任何錯誤、案件筆數依然正確顯示 6 筆。
+  - **未做的驗證**：沒有機會在真正會出現「經典式」（佔用版面空間）捲軸的 Windows 瀏覽器上實際測試修正前後的視覺差異——這次的驗證完全依賴「隱藏捲軸樣式在該瀏覽器下已確認生效、且底層捲動功能不受影響」這個技術事實，加上既有『不佔用任何空間』的量測結果，理論上已經涵蓋這次要修正的風險，但沒有機會在真正會受影響的作業系統／瀏覽器組合上重新確認一次。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-08-27 16:13 Asia/Taipei — 修正「最新案件列表」深色模式下案件編號徽章後方出現「..」省略號
 
 - 修改目的：使用者回報「深色模式在最新案件列表中案件編號後面會出現『...』請移除」。
 - 追查過程：先用瀏覽器 `elementFromPoint()`／逐一比對頁面上每個元素的 `getBoundingClientRect()` 想找出這個「..」對應的實際 DOM 元素，一開始完全找不到獨立的元素——案件編號那個 `<td>` 底下只有一個 `<button class="case-id-btn">`，沒有任何多餘的文字節點或偽元素（`::before`／`::after` 的 `content` 都是 `none`）。截圖放大後改用精確量測按鈕與儲存格的實際尺寸才抓到根因：
