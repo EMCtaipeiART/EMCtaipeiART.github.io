@@ -1332,6 +1332,107 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
   }
 
+  /** 設計師「串接」既有信件串的第一步——搜尋。填寫案件的通常是 PM／專案負責人，不是設計師，PM 常常直接
+   * 用 Outlook 或自己的 Gmail 聯絡設計師，案件本身從沒經過這個系統寄過信，導致完全沒有 Gmail信件串ID，
+   * 依賴這個欄位的既有機制（回信按鈕、NAS 輪次確認、設計師回覆信範本）都無法啟動。設計師自己的 Gmail
+   * 信箱裡通常已經有跟 PM 往來討論這個案件的信件——這裡直接用登入設計師自己的 token 呼叫 Gmail 搜尋 API
+   * 找信（預設用案件編號當關鍵字），不需要對方去 Gmail「顯示原始內容」找任何標頭資訊。只回傳輕量的
+   * metadata（寄件人/主旨/摘要/時間/封數），不像 getCaseMailThread 會抓完整內文＋簽名檔比對——這裡的目的
+   * 只是讓使用者從搜尋結果裡「認出」正確的那條討論串，不需要看完整內容。Gmail 的 messages.list 是依訊息
+   * 逐封列出、不是依討論串分組，同一條討論串裡有好幾封信符合搜尋條件時會重複出現，這裡依 threadId 分組、
+   * 只取每組裡最新一封的寄件人/主旨/摘要當代表，並計入這條討論串裡有幾封符合搜尋條件的信。 */
+  private async searchGmailThreads(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const caseId = text(payload.caseId || payload.id);
+    const row = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const current = this.requireRowAccess(database, session, 'request.mail', row);
+    const query = text(payload.query) || caseId;
+    if (!query) return { ok: false, action: 'searchGmailThreads', error: '缺少搜尋關鍵字' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    const listResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const listData = await listResponse.json().catch(() => ({})) as Row;
+    if (!listResponse.ok) throw new Error(text((listData.error as Row)?.message) || `Gmail 搜尋失敗：${listResponse.status}`);
+    const candidates = Array.isArray(listData.messages) ? listData.messages as Array<{ id?: string }> : [];
+    if (!candidates.length) return { ok: true, action: 'searchGmailThreads', threads: [] };
+    const details = await Promise.all(candidates.map(async item => {
+      const id = text(item.id);
+      if (!id) return null;
+      try {
+        const response = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (!response.ok) return null;
+        const data = await response.json().catch(() => ({})) as Row;
+        const headers = (asRow(data.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+        const threadId = text(data.threadId);
+        if (!threadId) return null;
+        return {
+          threadId, from: gmailHeaderValue(headers, 'From'), subject: gmailHeaderValue(headers, 'Subject'),
+          snippet: text(data.snippet), internalDate: Number(data.internalDate) || 0
+        };
+      } catch { return null; }
+    }));
+    const grouped = new Map<string, { threadId: string; from: string; subject: string; snippet: string; internalDate: number; messageCount: number }>();
+    for (const item of details) {
+      if (!item) continue;
+      const existing = grouped.get(item.threadId);
+      if (!existing) { grouped.set(item.threadId, { ...item, messageCount: 1 }); continue; }
+      existing.messageCount += 1;
+      if (item.internalDate > existing.internalDate) {
+        existing.from = item.from; existing.subject = item.subject; existing.snippet = item.snippet; existing.internalDate = item.internalDate;
+      }
+    }
+    const threads = [...grouped.values()].sort((a, b) => b.internalDate - a.internalDate).slice(0, 15).map(item => ({
+      threadId: item.threadId, from: item.from, subject: item.subject, snippet: item.snippet,
+      date: item.internalDate ? formatGmailDateForDisplay(new Date(item.internalDate).toISOString()) : '',
+      messageCount: item.messageCount
+    }));
+    return { ok: true, action: 'searchGmailThreads', threads };
+  }
+
+  /** 「串接」流程的第二步——把使用者選定的既有信件串（或手動輸入路徑貼上的 Message-ID，這種情況改呼叫
+   * 既有的 findOwnMailboxThreadId() 反查出目前帳號信箱裡對應的 threadId）寫回案件的 Gmail信件串ID／
+   * Gmail寄件帳號，寫法比照 sendCaseMail 寄出成功後的既有寫回邏輯。這條信件串是從目前登入帳號自己的
+   * Gmail 信箱搜尋/驗證出來的，之後這個案件的回信／讀信一律會用這個帳號的 token（見
+   * getValidGmailAccessToken(owner)），所以這裡把 Gmail寄件帳號記成目前登入帳號，才會跟
+   * sendCaseMail／replyCaseMail 既有的假設一致。案件已經有信件串時直接擋下，跟 sendCaseMail 的
+   * THREAD_EXISTS 是同一種既有防呆，避免誤把既有信件串蓋掉。 */
+  private async bindExistingThread(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const caseId = text(payload.caseId || payload.id);
+    const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+    const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
+    if (!caseId) return { ok: false, action: 'bindExistingThread', error: '缺少案件編號' };
+    if (!existingRow) return { ok: false, action: 'bindExistingThread', error: '找不到案件資料' };
+    if (text(existingRow['Gmail信件串ID'])) return { ok: false, action: 'bindExistingThread', error: '此案件已經有 Gmail 信件串', reason: 'THREAD_EXISTS' };
+    const accessToken = await this.getValidGmailAccessToken(current.account);
+    let threadId = text(payload.threadId);
+    if (!threadId) {
+      const messageId = text(payload.messageId);
+      if (!messageId) return { ok: false, action: 'bindExistingThread', error: '請選擇信件串或輸入 Message-ID' };
+      threadId = await findOwnMailboxThreadId(accessToken, messageId);
+      if (!threadId) return { ok: false, action: 'bindExistingThread', error: '在你的 Gmail 信箱裡找不到符合這個 Message-ID 的信件，請確認貼上的內容是否正確' };
+    }
+    // 驗證這個 threadId 真的存在於目前帳號的信箱裡——Gmail API 本來就只會回傳目前 token 所屬信箱內的
+    // 資料，就算前端被竄改送來別人的 threadId，這裡也只會得到「找不到」而不是誤綁到別人的信件串。
+    const verifyResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${encodeURIComponent(threadId)}?format=minimal`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!verifyResponse.ok) return { ok: false, action: 'bindExistingThread', error: '找不到這條 Gmail 信件串，請重新搜尋或確認 Message-ID' };
+    await this.mutate('bindExistingThread', current, draft => {
+      const target = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+      if (!target) throw new Error('找不到案件資料');
+      if (text(target['Gmail信件串ID'])) throw new Error('此案件已經有 Gmail 信件串');
+      target['Gmail信件串ID'] = threadId;
+      target['Gmail寄件帳號'] = current.account;
+      return { result: { ok: true, action: 'bindExistingThread' }, changedTables: ['database'] };
+    });
+    return { ok: true, action: 'bindExistingThread', threadId };
+  }
+
   /** 讀取案件已寄出的 Gmail 信件串——2026-08-19 起需要同時通過兩層檢查才能查看/回覆：①客戶別「權限
    * 設定」白名單（跟 sendCaseMail／request.edit／request.delete 共用同一套 hasRowCapability，見
    * model.ts），客戶別沒設定過名單時退回一般角色權限判斷；②這個帳號的 email 是否出現在信件串本身的
@@ -1886,6 +1987,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'gmailOauthConnect') return await this.gmailOauthConnect(payload, database, session);
       if (action === 'gmailDisconnect') return await this.gmailDisconnect(database, session);
       if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);
+      if (action === 'searchGmailThreads') return await this.searchGmailThreads(payload, database, session);
+      if (action === 'bindExistingThread') return await this.bindExistingThread(payload, database, session);
       if (action === 'getCaseMailThread') return await this.getCaseMailThread(payload, database, session);
       if (action === 'replyCaseMail') return await this.replyCaseMail(payload, database, session);
       if (action === 'scheduleCaseMail') return await this.scheduleCaseMail(payload, database, session);

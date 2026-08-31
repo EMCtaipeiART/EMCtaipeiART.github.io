@@ -1732,3 +1732,89 @@ test('the issue report modal lists reports before the content/suggestion fields,
   assert.match(html, /\.issue-report-card textarea\{min-height:106px;border-radius:10px!important;/);
   assert.doesNotMatch(html, /\.issue-report-card textarea\{min-height:106px;border-radius:12px/);
 });
+
+test('mailAction() branches into 串接／回信／發信 depending on gmailThreadId and whether the login is a designer, each respecting canSendMailRow permission', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 用配對括號/大括號深度計數精確擷取每個函式本體（不是用「找下一個 \n}」這種粗略字串比對——
+  // jsArg 這類單行函式沒有獨立成行的 \n}，用字串比對會一路吃到後面幾十個函式之後才找到的 \n}，
+  // mailAction 這種函式簽章裡帶解構預設值 {icon=false} 的情況，第一個 { 也不是真正的函式本體開頭，
+  // 兩者都會讓擷取範圍算錯，這裡改成先跳過完整的參數列（配對括號），再從函式本體真正的 { 開始配對）。
+  function extractFunction(name) {
+    const marker = `function ${name}(`;
+    const start = html.indexOf(marker);
+    assert.ok(start > 0, `找不到函式 ${name}`);
+    let i = start + marker.length - 1;
+    let parenDepth = 0;
+    for (; i < html.length; i++) {
+      if (html[i] === '(') parenDepth++;
+      else if (html[i] === ')') { parenDepth--; if (parenDepth === 0) { i++; break } }
+    }
+    while (html[i] !== '{') i++;
+    let depth = 0;
+    for (; i < html.length; i++) {
+      if (html[i] === '{') depth++;
+      else if (html[i] === '}') { depth--; if (depth === 0) { i++; break } }
+    }
+    return html.slice(start, i);
+  }
+  // 只挑出 mailAction 真正需要的函式本體，刻意不整段區間擷取——因為 accessAllowed／hasDesignerAccountRole／
+  // rowYear 這三個在 index.html 裡剛好也定義在 jsArg 到 mailAction 這段區間內，如果整段擷取，函式宣告會
+  // 直接蓋掉同名的 mock 參數（function 宣告優先權高於同名參數），導致這幾個 mock 完全沒有作用。
+  const source = ['jsArg', 'historyLock', 'mailIcon', 'gmailReplyIcon', 'linkThreadIcon', 'isEditableRow', 'canSendMailRow', 'isDesignerLogin', 'mailAction']
+    .map(extractFunction).join('\n');
+  const run = new Function(
+    'accessAllowed', 'isCustomerEditRestrictedCase', 'isCustomerEditPermitted', 'hasDesignerAccountRole', 'currentYear', 'rowYear',
+    `${source};return mailAction;`
+  );
+  const editableRow = { id: '26080099', pendingCreate: false };
+  const currentYearFn = () => 2026;
+  const rowYearFn = () => 2026;
+  // accessAllowed(key,fallback) 的真實語意是「有讀到伺服器權限設定就用設定值，沒有就用呼叫端傳入的
+  // fallback」——這裡用一個依 key 覆寫、其餘一律照抄呼叫端 fallback 的假函式模擬，不能簡化成回傳固定
+  // 布林值，否則 isDesignerLogin() 呼叫 accessAllowed('request.status',hasDesignerAccountRole()) 跟
+  // canSendMailRow() 呼叫 accessAllowed('request.mail',true) 這兩個不同 key 就會被同一個固定值污染。
+  const mockAccess = overrides => (key, fallback = true) => (key in overrides ? overrides[key] : fallback);
+
+  // 沒有 gmailThreadId、登入是設計師、有發信權限 → 「串接」，onclick 呼叫 openBindExistingThreadModal。
+  const designerCanSend = run(mockAccess({ 'request.mail': true }), () => false, () => false, () => true, currentYearFn, rowYearFn);
+  const linkButton = designerCanSend(editableRow);
+  assert.match(linkButton, /gmail-link-btn/);
+  assert.match(linkButton, /openBindExistingThreadModal\(event,'26080099'\)/);
+  assert.match(linkButton, /<span>串接<\/span>/);
+  assert.doesNotMatch(linkButton, /disabled/);
+
+  // 沒有 gmailThreadId、登入是設計師、沒有發信權限 → 灰階「串接」，不帶 onclick 的可執行呼叫（disabled）。
+  const designerCannotSend = run(mockAccess({ 'request.mail': false }), () => false, () => false, () => true, currentYearFn, rowYearFn);
+  const disabledLinkButton = designerCannotSend(editableRow);
+  assert.match(disabledLinkButton, /gmail-link-btn/);
+  assert.match(disabledLinkButton, /disabled aria-disabled="true" title="沒有發信權限"/);
+  assert.match(disabledLinkButton, /<span>串接<\/span>/);
+
+  // 沒有 gmailThreadId、非設計師、有發信權限 → 維持既有的「發信」，onclick 呼叫 openMailComposerMenu。
+  const nonDesignerCanSend = run(mockAccess({ 'request.mail': true }), () => false, () => false, () => false, currentYearFn, rowYearFn);
+  const mailButton = nonDesignerCanSend(editableRow);
+  assert.match(mailButton, /openMailComposerMenu\(event,'26080099'\)/);
+  assert.match(mailButton, /<span>發信<\/span>/);
+  assert.doesNotMatch(mailButton, /gmail-link-btn|gmail-reply-btn/);
+
+  // 有 gmailThreadId → 一律「回信」，不管是不是設計師，走 openReplyMethodChooser，不會變成「串接」。
+  const boundRow = { ...editableRow, gmailThreadId: 'thread-123' };
+  const designerReply = run(mockAccess({ 'request.mail': true }), () => false, () => false, () => true, currentYearFn, rowYearFn);
+  const replyButton = designerReply(boundRow);
+  assert.match(replyButton, /gmail-reply-btn/);
+  assert.match(replyButton, /openReplyMethodChooser\(event,'26080099'\)/);
+  assert.match(replyButton, /<span>回信<\/span>/);
+  assert.doesNotMatch(replyButton, /串接/);
+
+  // 有 gmailThreadId 但沒有回信權限 → 灰階「回信」。
+  const noReplyPermission = run(mockAccess({ 'request.mail': false }), () => false, () => false, () => true, currentYearFn, rowYearFn);
+  const disabledReplyButton = noReplyPermission(boundRow);
+  assert.match(disabledReplyButton, /disabled aria-disabled="true" title="沒有回信權限"/);
+
+  // 案件不可編輯（歷史資料）時，不管身份或權限一律顯示歷史資料鎖，不會出現任何一種寄信按鈕。
+  const historyRow = { id: '26080099', pendingCreate: false };
+  const historicalYear = () => 2020;
+  const historyResult = run(mockAccess({ 'request.mail': true }), () => false, () => false, () => true, currentYearFn, historicalYear)(historyRow);
+  assert.match(historyResult, /history-lock/);
+  assert.doesNotMatch(historyResult, /串接|發信|回信/);
+});

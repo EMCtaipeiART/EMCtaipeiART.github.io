@@ -100,6 +100,21 @@ async function seedCustomerOwner(customerName: string, account: string): Promise
   });
 }
 
+/** 補一筆新的案件到測試資料庫——testDatabase() 預設只有 26080001 一筆，bindExistingThread 需要「一個
+ * 存在、但還沒有 Gmail信件串ID」的案件才能測試手動貼 Message-ID 這條路徑（26080001 在同一支測試裡
+ * 前面已經被綁定過，不能重複使用）。 */
+async function seedCase(caseId: string, extra: Record<string, unknown> = {}): Promise<void> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+    const database = JSON.parse(stored.json) as DatabaseSnapshot;
+    if (!database.tables.database.rows.some(row => row['案件編號'] === caseId)) {
+      database.tables.database.rows.push({ '案件編號': caseId, '月份': '8月', '客戶別': '測試客戶', '專案名稱': `測試案件 ${caseId}`, '狀態': '未開始', ...extra });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    }
+  });
+}
+
 async function sha256Base64UrlForTest(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   const bytes = new Uint8Array(digest);
@@ -1283,6 +1298,122 @@ describe('Machi Design API Worker', () => {
     expect(disconnected).toMatchObject({ ok: true });
     const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
+  });
+
+  it('searchGmailThreads requires request.mail, dedupes by threadId keeping the newest message as the representative, and reports zero results as an empty (not failed) list', async () => {
+    const denied = await api({ action: 'login', password: 'test' });
+    const deniedToken = String(denied.token);
+    const blocked = await api({ action: 'searchGmailThreads', caseId: '26080001' }, deniedToken);
+    expect(blocked).toMatchObject({ ok: false, error: '此帳號沒有「request.mail」權限' });
+
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-search');
+
+    let listQuery = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-search');
+        listQuery = url;
+        return Response.json({ messages: [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }] });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/m1?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date') {
+        return Response.json({
+          threadId: 'thread-a', snippet: '第一封（同一條討論串較舊的一封）', internalDate: '1000',
+          payload: { headers: [{ name: 'From', value: 'PM <pm@example.com>' }, { name: 'Subject', value: '案件 26080001 討論' }] }
+        });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/m2?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date') {
+        return Response.json({
+          threadId: 'thread-a', snippet: '第二封（同一條討論串較新的一封，應該當作代表）', internalDate: '2000',
+          payload: { headers: [{ name: 'From', value: 'Designer <designer@example.com>' }, { name: 'Subject', value: 'Re: 案件 26080001 討論' }] }
+        });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/m3?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date') {
+        return Response.json({
+          threadId: 'thread-b', snippet: '另一條完全不相干的討論串', internalDate: '1500',
+          payload: { headers: [{ name: 'From', value: 'Other <other@example.com>' }, { name: 'Subject', value: '別的案件' }] }
+        });
+      }
+      throw new Error(`unexpected fetch during search: ${url}`);
+    });
+    const found = await api({ action: 'searchGmailThreads', caseId: '26080001' }, deniedToken);
+    expect(found.ok).toBe(true);
+    expect(listQuery).toContain(encodeURIComponent('26080001'));
+    const threads = found.threads as Array<Record<string, unknown>>;
+    // thread-a 出現了兩封符合搜尋的信，應該被合併成一張卡片，且採用時間較新（m2）的寄件人/主旨/摘要當代表；
+    // thread-b 是獨立的一張卡片；結果依最新時間排序，thread-a（internalDate 2000）排在 thread-b（1500）前面。
+    expect(threads).toHaveLength(2);
+    expect(threads[0]).toMatchObject({
+      threadId: 'thread-a', from: 'Designer <designer@example.com>', subject: 'Re: 案件 26080001 討論',
+      snippet: '第二封（同一條討論串較新的一封，應該當作代表）', messageCount: 2
+    });
+    expect(threads[1]).toMatchObject({ threadId: 'thread-b', messageCount: 1 });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input);
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) return Response.json({ messages: [] });
+      throw new Error(`unexpected fetch for empty search: ${url}`);
+    });
+    const empty = await api({ action: 'searchGmailThreads', caseId: '26080001', query: '完全找不到的關鍵字' }, deniedToken);
+    expect(empty).toMatchObject({ ok: true, threads: [] });
+  });
+
+  it('bindExistingThread writes Gmail信件串ID／Gmail寄件帳號 from a chosen threadId, rejects when the case already has a thread, and resolves a manually pasted Message-ID via findOwnMailboxThreadId when no threadId is supplied', async () => {
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-bind');
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/thread-a?format=minimal') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-bind');
+        return Response.json({ id: 'thread-a' });
+      }
+      if (url.startsWith('https://api.github.com/')) return Response.json({ content: { sha: `bind-file-${crypto.randomUUID()}` }, commit: { sha: 'bind-commit-sha' } });
+      throw new Error(`unexpected fetch during bind: ${url}`);
+    });
+    const bound = await api({ action: 'bindExistingThread', caseId: '26080001', threadId: 'thread-a' }, token);
+    expect(bound).toMatchObject({ ok: true, threadId: 'thread-a' });
+    const listed = await api({ action: 'list' }, token);
+    const caseRow = (listed.rows as Array<Record<string, unknown>>).find(row => row.id === '26080001');
+    expect(caseRow).toMatchObject({ gmailThreadId: 'thread-a', gmailThreadOwnerAccount: 'test.user@emctaipei.com' });
+
+    const alreadyBound = await api({ action: 'bindExistingThread', caseId: '26080001', threadId: 'thread-b' }, token);
+    expect(alreadyBound).toMatchObject({ ok: false, reason: 'THREAD_EXISTS' });
+
+    // 另一個案件（26080001 已經被上面綁定過，不能重複測）、沒有選卡片改成手動貼 Message-ID——反查失敗
+    // （信箱裡真的找不到）跟反查成功（找到、驗證通過）兩種情境都要驗證，且反查與驗證都要用「目前登入
+    // 帳號自己」的 token，不是隨便一個帳號。
+    await seedCase('26080002');
+    const missingLookup = await api({
+      action: 'bindExistingThread', caseId: '26080002', messageId: '<not-found@mail.gmail.com>'
+    }, token);
+    expect(missingLookup).toMatchObject({ ok: false });
+    expect(String(missingLookup.error)).toContain('找不到');
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-bind');
+        expect(url).toContain(encodeURIComponent('rfc822msgid:manual@mail.gmail.com'));
+        return Response.json({ messages: [{ threadId: 'thread-manual' }] });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/thread-manual?format=minimal') {
+        expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer gmail-access-bind');
+        return Response.json({ id: 'thread-manual' });
+      }
+      if (url.startsWith('https://api.github.com/')) return Response.json({ content: { sha: `bind-manual-file-${crypto.randomUUID()}` }, commit: { sha: 'bind-manual-commit-sha' } });
+      throw new Error(`unexpected fetch during manual bind: ${url}`);
+    });
+    const manuallyBound = await api({
+      action: 'bindExistingThread', caseId: '26080002', messageId: '<manual@mail.gmail.com>'
+    }, token);
+    expect(manuallyBound).toMatchObject({ ok: true, threadId: 'thread-manual' });
+
+    const deniedWithoutSession = await api({ action: 'bindExistingThread', caseId: '26080001', threadId: 'thread-c' });
+    expect(deniedWithoutSession).toMatchObject({ ok: false, error: '請先登入後再執行此操作' });
   });
 
   it('2026-08-26: getCaseMailThread 用「所有已知簽名檔」逐一比對，不是只認目前的預設一組——一封用非預設命名簽名檔寄出的歷史信件，只有把該簽名檔一起放進 signatureCandidates 才會被正確截掉；同時回傳結構化的 bodyHtml（保留原始格式，不是壓平的純文字）與 images[].contentId（供前端把內嵌圖片安插回本文原本的位置）', async () => {
