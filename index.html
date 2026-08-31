@@ -9897,7 +9897,7 @@ function renderDesigners(){
   hydrateSharedMusic();
   prepareAppleMusicPlayers();
   prepareDesignerMusicControllers();
-  requestAnimationFrame(syncTopPanelHeights);
+  requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
 }
 let activeDesignerStoryPlayback=null;
@@ -11894,7 +11894,17 @@ function syncTopPanelHeights(){
   recent.style.removeProperty('height');
   recent.style.removeProperty('max-height');
   if(designer.hidden||recent.hidden||window.matchMedia('(max-width:900px)').matches)return;
-  const height=Math.round(designer.getBoundingClientRect().height);
+  // 量測「最新案件列表」自己需要多高之前，先清空每一列先前被 syncModifyRecentRowHeights()
+  // 強制設定的列高，讓表格暫時退回依內容自然決定高度——這樣量到的才是「顯示 modifyPageSize
+  // 筆案件、完全不裁切也不需要捲動」最少需要的高度，而不是沿用上一次（可能是依不同高度預算
+  // 算出來）的舊列高。
+  document.querySelectorAll('#modifyFixedTbody tr,#modifyTbody tr,#modifyFixedThead tr,#modifyThead tr').forEach(tr=>{tr.style.height=''});
+  const designerHeight=Math.round(designer.getBoundingClientRect().height);
+  const naturalRecentHeight=Math.ceil(recent.getBoundingClientRect().height);
+  // 兩者取較高者：設計師面板比較高時，「最新案件列表」跟著長高、維持左右等高的既有視覺設計；
+  // 設計師面板比較矮、矮到連 modifyPageSize 筆案件的自然高度都塞不下時，改成保留自己需要的高度，
+  // 寧可讓兩個面板暫時不等高，也不要讓使用者得捲動才看得到全部案件。
+  const height=Math.max(designerHeight,naturalRecentHeight);
   if(height>0){
     recent.style.setProperty('height',`${height}px`,'important');
     recent.style.setProperty('max-height',`${height}px`,'important');
@@ -12144,7 +12154,7 @@ function latestEditableRows(limit=modifyPageSize){return editableRowsSorted().sl
 function modifyPageItems(totalPages){const start=Math.floor((modifyPage-1)/4)*4+1, end=Math.min(totalPages,start+3); return Array.from({length:end-start+1},(_,i)=>start+i)}
 function setModifyPage(page){modifyPage=Number(page)||1; renderModifyRecent()}
 function renderModifyPagination(totalPages){const pager=$('#modifyPager'); if(!pager)return; if(totalPages<=1){pager.innerHTML='';return} const prev=Math.max(1,modifyPage-1), next=Math.min(totalPages,modifyPage+1), pages=modifyPageItems(totalPages).map(page=>`<button type="button" class="${page===modifyPage?'active':''}" onclick="setModifyPage(${page})">${page}</button>`).join(''); pager.innerHTML=`<button type="button" ${modifyPage===1?'disabled':''} onclick="setModifyPage(${prev})">上一頁</button>`+pages+'<span>頁</span>'+`<button type="button" ${modifyPage===totalPages?'disabled':''} onclick="setModifyPage(${next})">下一頁</button>`}
-function syncModifyRecentRowHeights(){
+function applyModifyRecentRowHeights(){
   const fixedRows=[...document.querySelectorAll('#modifyFixedTbody tr')];
   const scrollRows=[...document.querySelectorAll('#modifyTbody tr')];
   const fixedHeadRow=document.querySelector('#modifyFixedThead tr');
@@ -12168,6 +12178,27 @@ function syncModifyRecentRowHeights(){
     const h=Math.max(fixedRow.getBoundingClientRect().height,scrollRow.getBoundingClientRect().height,evenRowHeight);
     fixedRow.style.setProperty('height',`${h}px`,'important');
     scrollRow.style.setProperty('height',`${h}px`,'important');
+  }
+  return wrap;
+}
+function syncModifyRecentRowHeights(){
+  const wrap=applyModifyRecentRowHeights();
+  // syncTopPanelHeights() 已經先確保「最新案件列表」面板至少會長到自然高度（不用捲動就能
+  // 塞下 modifyPageSize 筆案件），但兩個函式各自量測的時機不同，量測本身仍可能有幾像素的
+  // 捨入誤差，導致實際套用完列高之後，內容還是比容器高一點點、觸發外層的捲動——這裡量測
+  // 真正套用完的結果，如果還是不夠高，直接把面板拉高「差多少」，重算一次列高即可收斂，
+  // 不需要猜一個固定的保留值（不同瀏覽器／字級/DPI 造成的捨入誤差大小不會完全一樣）。
+  if(!wrap||window.matchMedia('(max-width:640px)').matches)return;
+  const shortfall=wrap.scrollHeight-wrap.clientHeight;
+  if(shortfall>0.5){
+    const recentPanel=$('#recentPanel');
+    if(recentPanel&&!recentPanel.hidden){
+      const base=recentPanel.getBoundingClientRect().height;
+      const grown=Math.ceil(base+shortfall);
+      recentPanel.style.setProperty('height',`${grown}px`,'important');
+      recentPanel.style.setProperty('max-height',`${grown}px`,'important');
+      applyModifyRecentRowHeights();
+    }
   }
 }
 function renderModifyRecent(){
@@ -12206,7 +12237,7 @@ function renderModifyRecent(){
     table.style.tableLayout='fixed';
   }
   if(wrap)wrap.scrollLeft=0;
-  requestAnimationFrame(()=>{syncModifyRecentRowHeights();syncTopPanelHeights()});
+  requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderModifyPagination(totalPages)
 }
 function renderOverviewOnly(){rows=rows.map(normalizeRow); renderOverviewControls(); renderStats(); renderDesigners()}
@@ -13587,7 +13618,7 @@ $('#restoreAllPanels')?.addEventListener('click',restoreAllPanels);
 document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
 document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
-window.addEventListener('resize',()=>{closeFieldPopover();closeGmailColorPalette(); scheduleCaseSplitSync(); syncModifyRecentRowHeights(); syncTopPanelHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
+window.addEventListener('resize',()=>{closeFieldPopover();closeGmailColorPalette(); scheduleCaseSplitSync(); syncTopPanelHeights(); syncModifyRecentRowHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
 document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));
   card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault(); applyStatusFilter(card.dataset.status)}})
