@@ -9490,24 +9490,24 @@ async function scheduleComposeMail(scheduledAt){
     if(button)button.disabled=false;
   }
 }
-/** 「填寫修改需求信」送出成功後有既有的連動副作用（記錄修改紀錄，見 sendGmailThreadReply），是假設
- * 「回覆已經真的寄出」才觸發——但排程只是登記一筆稍後才會真正寄出的請求，此刻信件內容根本還沒送到
- * Gmail，這個副作用要等真正寄出那一刻才該發生，不是排程建立當下；而排程真正寄出是在 Worker 背景排程
- * （Cron Trigger）裡執行，沒有機會回頭觸發這個純前端的既有邏輯，所以「指定排程時間」這顆按鈕只在這個
- * 模式維持隱藏，見 openModificationRequestReplyModal 裡對 #gmailThreadSchedule 的顯示控制。
- * 「設計師回覆信」的副作用（確認輪次／自動改過稿中）則不受這個限制——兩者判斷的都是「這一輪工作是否
- * 已經完成、可以往下推進」，不需要真的等到 Gmail 送出那一刻，所以改成在排程「建立」的當下就直接觸發
- * （下方 replyMode==='designer' 分支），讓設計師排程跟立即寄出的後續效果一致。 */
+/** 排程建立成功後的連動副作用，跟立即送出（sendGmailThreadReply）共用同一套判斷依據：這幾個副作用
+ * 代表的都是「這一步工作內容已經確定、可以往下推進」，不是「信件有沒有真的送達收件人」，所以不需要
+ * 等到 Worker 背景排程（Cron Trigger）真正把信寄出那一刻才觸發（那時候也沒有機會回頭執行這段純前端
+ * 邏輯）——「設計師回覆信」是確認輪次／自動改過稿中；「填寫修改需求信」則是把這次的修改需求文字記一筆
+ * 進「修改紀錄」（PM 按下排程的當下，這段文字本身就已經寫定了，只是選擇信件晚一點才寄出）。 */
 async function scheduleThreadReply(scheduledAt){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadSchedule');
   if(!id||!editor)return;
   const replyMode=modal?.dataset.replyMode||'general';
   if(replyMode==='designer'&&modal?.dataset.designerReplyPending==='1'){setSync('圖片上傳中，請稍候再排程',true);return}
+  const row=rows.find(r=>String(r.id)===String(id));
   if(button)button.disabled=true;
   try{
     await waitForGmailInlineImages(editor.id);
     const editorPayload=gmailEditorMailPayload(editor);
     if(!gmailEditorTextWithoutInsertedSignature(editor).trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
+    const modificationContent=replyMode==='modification'?stripGreetingPrefix(gmailEditorTextWithoutInsertedSignature(editor)):'';
+    if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
     const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
     if(to===null||cc===null)return;
     if(!to){setSync('請填寫收件人',true);return}
@@ -9515,10 +9515,11 @@ async function scheduleThreadReply(scheduledAt){
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
     await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
     if(replyMode==='designer'){
-      const row=rows.find(r=>String(r.id)===String(id));
       if(row){await confirmLatestModificationRound(id,row); await applyFirstDesignerReplyStatus(id,row)}
+    }else if(replyMode==='modification'&&row){
+      await recordModificationFromReply(id,row,modificationContent);
     }
-    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出`,false,3400);
+    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}`,false,3400);
     refreshScheduledMailList(id,'thread');
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
@@ -10928,7 +10929,11 @@ function gmailRecipientGreetingName(fieldId){
 /** 「填寫修改需求信」：沿用 openGmailThreadModal 既有的權限判斷／信件串載入，只是把回覆內容換成
  * 「Hi 設計師姓名,」開頭、游標停在第三行，讓使用者接著打這次的修改需求——送出時（見
  * sendGmailThreadReply 的 modification 分支）會把第三行以後的內容另外記一筆進「修改紀錄」，
- * 修改輪次（一修／二修…）因此自動往下跳一輪，不需要再另外開一次「新增修改紀錄」表單。 */
+ * 修改輪次（一修／二修…）因此自動往下跳一輪，不需要再另外開一次「新增修改紀錄」表單。
+ * 「指定排程時間」維持顯示（openGmailThreadModal 預設就是顯示的，這裡不用再另外隱藏）——排程跟立即
+ * 送出共用同一套「這次修改需求的文字內容已經確定」判斷：PM 按下排程的當下，修改需求的文字本身就已經
+ * 寫定了，只是選擇信件晚一點才寄出，所以記錄修改紀錄這個副作用可以直接在排程建立當下觸發，不需要等到
+ * Worker 背景排程真正寄出那一刻，見 scheduleThreadReply() 的 modification 分支。 */
 async function openModificationRequestReplyModal(id){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
@@ -10937,7 +10942,6 @@ async function openModificationRequestReplyModal(id){
   if(!modal||modal.hidden||composeSection?.hidden){setGmailEditorLoading(editor,false);return}
   modal.dataset.replyMode='modification';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='填寫修改需求信';
-  const scheduleBtn=$('#gmailThreadSchedule'); if(scheduleBtn)scheduleBtn.hidden=true;
   if(!editor)return;
   setGmailEditorPlainText(editor,`Hi ${greetingName(row.designer||'設計負責人')},\n\n`);
   clearGmailInlineImages(editor.id);
