@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3219,
+  "revision": 3220,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-08-31T06:15:51.950Z",
+  "updatedAt": "2026-08-31T06:15:59.842Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1128,7 +1128,7 @@
         {"案件編號":"26080183","修改次數":"0","建立日期":"2026/08/31 12:39:37","修改日期":"2026/08/31 12:39:37","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/08/31 12:39:37","圖片連結":"[{\"fileName\":\"260831_DJI_九月上半優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_AxFCG9Hw5csW6MFiKF6bceztKAk0zRg=w1600\"},{\"fileName\":\"260831_DJI_九月上半優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/15CPvPlugaU3WpupngDPOTJLboymwsPJD=w1600\"},{\"fileName\":\"260831_DJI_九月上半優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Z6KRnJcjj8w49_6XQw7nKP5rILUIV3sp=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/31 12:39:37"},
         {"案件編號":"26080085","修改次數":"1","建立日期":"2026/08/31 13:13:21","修改日期":"2026-08-31","修改內容":"客戶僅想微調一處情境，再麻煩您：\nhttps://docs.google.com/presentation/d/1MNlrDPUUrwOuoLQSIS2PnnRsgVAzROjCXClDsShDFA4/edit?usp=sharing","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26080183","修改次數":"1","建立日期":"2026/08/31 13:17:00","修改日期":"2026-08-31","修改內容":"感謝大神支援！兩處小錯字，再麻煩哥：\n\nhttps://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing","修改人":"李明庭","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26080146","修改次數":"1","建立日期":"2026/08/31 13:27:05","修改日期":"2026-08-31","修改內容":"感謝大神支援！此篇幾乎都速通過，\n僅其中一張微調文字，再麻煩您：\n\n\nhttps://docs.google.com/presentation/d/1QzJXVS47oROcigxGnASQKVABySErYMxJKiya59Rqkgg/edit?slide=id.g3fad1acac16_0_58#slide=id.g3fad1acac16_0_58","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260825_林口A7讚商場_名單型廣告_新創追夢版_美業TA.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Wax3qO61z6mp5GH9G75_JEkpL51C2B46=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/31 14:15:48"}
+        {"案件編號":"26080146","修改次數":"1","建立日期":"2026/08/31 13:27:05","修改日期":"2026-08-31","修改內容":"感謝大神支援！此篇幾乎都速通過，\n僅其中一張微調文字，再麻煩您：\n\n\nhttps://docs.google.com/presentation/d/1QzJXVS47oROcigxGnASQKVABySErYMxJKiya59Rqkgg/edit?slide=id.g3fad1acac16_0_58#slide=id.g3fad1acac16_0_58","修改人":"李明庭","確認修正日":"2026/08/31 14:15:59","待修改圖片":"","圖片連結":"[{\"fileName\":\"260825_林口A7讚商場_名單型廣告_新創追夢版_美業TA.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Wax3qO61z6mp5GH9G75_JEkpL51C2B46=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/08/31 14:15:48"}
       ]
     },
     "補充資料連結": {
