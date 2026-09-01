@@ -218,7 +218,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - `node --test backend/test/*.test.mjs`：**63/63 全過**。`cd worker && npx tsc --noEmit` 無錯、`npx vitest run` **51/51 全過**、`pnpm run check`（`wrangler types --check && tsc --noEmit`）通過、`pnpm run deploy:dry` 打包成功（253.49 KiB）。
   - **未做的驗證**：沒有用真實登入帳號在正式站，實際走一次「回信→確認案件真的自動改成過稿中→看到項目細節提醒」的端對端流程（這部分完全依賴本機隔離環境的 mock 測試，理論上已經涵蓋所有分支，但沒有機會接上真實 Worker／Gmail 重新確認一次）；NAS 部分的所有測試都刻意避開你電腦上正在跑的真實資料夾選擇器伺服器（8877）與真實 NAS 掛載，全部改用暫時性連接埠與假掛載目錄完成，沒有用你真實的 NAS 資料、真實瀏覽器點擊「加入這個資料夾」多次跑過一次完整的多選流程；也沒有測試過「重新開啟選擇器修改既有多資料夾案件」這個上面風險區塊明確記錄下來、目前刻意不處理的情境。
 - 部署狀態：`backend/schema.mjs`、`index.html`、`CLAUDE.md` 純前端／共用檔案，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && pnpm run deploy`，`pnpm test`／`pnpm check`／`pnpm run deploy:dry` 都已在這次工作中確認通過）——沒部署前，`designImageFolders` 欄位的權限放寬（`media.manage` 即可寫入）不會生效，會被要求完整的 `request.edit`。**`scripts/nas_folder_picker_server.mjs`／`scripts/nas_design_image_watcher.mjs` 需要你自己重新啟動對應的本機服務／等下一次排程觸發才會套用**（見上方風險區塊最後一項），git push 本身不會讓這兩支正在跑的本機程式自動更新。
-- commit：（見下方 push 紀錄）
+- commit：`af274a55`
 
 ### 2026-09-01 09:41 Asia/Taipei — 「填寫設計需求」表單：設計師登入不再鎖定「專案負責人」欄位
 
