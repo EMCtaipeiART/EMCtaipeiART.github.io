@@ -466,22 +466,67 @@ export async function fetchDatabase(dbJsonUrl) {
 }
 
 /**
- * 依即時資料動態算出這次要處理的案件清單：狀態＝過稿中，且設計師在網頁
- * 上填過「設計圖資料夾連結」（存的是 NAS 路徑，不是 Drive 連結）。
+ * 一個案件可以對應多個 NAS 來源資料夾（同一個月份/客戶共用資料夾常常混著
+ * 好幾個案件，各自要用不同關鍵字篩選）——「設計圖資料夾清單」欄位存 JSON
+ * 陣列 [{path,keyword},...]。解析失敗、不是陣列、或是空陣列時，fallback
+ * 成用單一「設計圖資料夾連結」／「設計圖檔名關鍵字」組一筆陣列（這兩個舊
+ * 欄位繼續當作「目前使用中的第一組」保留字串型別）——這是向下相容既有
+ * 單一資料夾案件的關鍵：任何要讀「這個案件有哪些來源資料夾」的地方都要
+ * 透過這支函式，不要各自重新實作一次解析＋fallback 邏輯，否則容易漏掉
+ * 相容判斷、讓舊案件的既有設定在某個呼叫點突然失效。
+ */
+export function resolveCaseFolders(row) {
+  const raw = String(row?.['設計圖資料夾清單'] || '').trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed
+          .map(item => ({ path: String(item?.path || '').trim(), keyword: String(item?.keyword || '').trim() }))
+          .filter(item => item.path);
+        if (cleaned.length) return cleaned;
+      }
+    } catch {
+      // JSON 壞掉就往下 fallback 到單一欄位，不讓整個案件因為這個欄位壞掉而完全抓不到資料夾。
+    }
+  }
+  const legacyPath = String(row?.['設計圖資料夾連結'] || '').trim();
+  if (!legacyPath) return [];
+  return [{ path: legacyPath, keyword: String(row?.['設計圖檔名關鍵字'] || '').trim() }];
+}
+
+/**
+ * 同一案件的多個資料夾各自的掃描狀態要彼此獨立，不能共用同一份
+ * state[caseId].files，否則兩個不同資料夾剛好有同名檔案時會互相覆蓋彼此
+ * 的追蹤狀態（見 scanProject／uploadPendingRound 的呼叫端）。第一個資料夾
+ * （index 0）刻意沿用既有、單純的 state[caseId] 這個 key 不變——這是確保
+ * 既有只有一個資料夾的案件（不論是新版「設計圖資料夾清單」只填一筆，還是
+ * 舊資料完全沒有這個欄位、走 designImageFolderUrl／Keyword fallback）狀態
+ * 快取的 key 跟改動前完全一致，不需要任何資料遷移，也不會讓既有追蹤中的
+ * 檔案在下一次掃描時被誤判成「全新」而重新上傳一次的關鍵設計。只有第二個
+ * 以後的資料夾才會用 `${caseId}::${index}` 這種複合 key，佔用全新、之前
+ * 不可能存在的 key，不會跟任何既有資料衝突。
+ */
+export function folderStateKey(caseId, index) {
+  return index === 0 ? String(caseId) : `${caseId}::${index}`;
+}
+
+/**
+ * 依即時資料動態算出這次要處理的案件清單：狀態＝過稿中，且至少解析得出
+ * 一個來源資料夾（見 resolveCaseFolders）。
  */
 export function discoverProjects(dbData) {
   const rows = dbData?.tables?.database?.rows || [];
   return rows
-    .filter(row => String(row['狀態'] || '') === '過稿中' && String(row['設計圖資料夾連結'] || '').trim())
+    .filter(row => String(row['狀態'] || '') === '過稿中')
     .map(row => ({
       caseId: String(row['案件編號'] || ''),
-      rawFolderPath: String(row['設計圖資料夾連結'] || '').trim(),
-      keyword: String(row['設計圖檔名關鍵字'] || '').trim(),
+      folders: resolveCaseFolders(row),
       designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
       client: String(row['客戶別'] || '').trim() || '未分類客戶',
       start: String(row['開始日期'] || '').trim()
     }))
-    .filter(project => project.caseId);
+    .filter(project => project.caseId && project.folders.length);
 }
 
 /**
@@ -494,13 +539,18 @@ export function findCaseMeta(dbData, caseId) {
   const rows = dbData?.tables?.database?.rows || [];
   const row = rows.find(item => String(item['案件編號'] || '') === String(caseId));
   if (!row) return null;
+  const folders = resolveCaseFolders(row);
   return {
     caseId: String(caseId),
     designer: String(row['設計負責人'] || '').trim() || '未指定設計師',
     client: String(row['客戶別'] || '').trim(),
     start: String(row['開始日期'] || '').trim(),
     status: String(row['狀態'] || '').trim(),
-    keyword: String(row['設計圖檔名關鍵字'] || '').trim()
+    folders,
+    // 沿用既有欄位名稱給只需要「代表性關鍵字」的呼叫端用（例如選擇器畫面替目前正在瀏覽
+    // 的第一個資料夾預先帶出提示值）——不代表這是這個案件唯一的一組關鍵字，完整清單要讀
+    // folders。
+    keyword: folders[0]?.keyword || ''
   };
 }
 

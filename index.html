@@ -9706,11 +9706,14 @@ async function scheduleThreadReply(scheduledAt){
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
     await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,scheduledAt,editorToken:currentEditorToken});
     if(replyMode==='designer'){
-      if(row){await confirmLatestModificationRound(id,row); await applyFirstDesignerReplyStatus(id,row)}
+      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row)}
     }else if(replyMode==='modification'&&row){
       await recordModificationFromReply(id,row,modificationContent);
+    }else if(replyMode==='general'&&row){
+      await applyReplyStatusUpdate(id,row);
     }
-    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}`,false,3400);
+    const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
+    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}${detailsNotice}`,Boolean(detailsNotice),detailsNotice?5200:3400);
     refreshScheduledMailList(id,'thread');
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
@@ -10380,17 +10383,37 @@ function handleUploadFrameMessage(event){
   if(data.type==='machi-nas-folder-selected'){
     if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
     const purpose=nasFolderPickerPurpose, id=activeNasFolderPickerCaseId, editorId=nasFolderPickerInsertEditorId, insertRange=nasFolderPickerInsertRange, afterReply=nasFolderPickerAfterReply, replyRound=activeNasFolderPickerRound;
-    const folderPath=String(data.path||'').trim(), keyword=String(data.keyword||'').trim(), summary=String(data.summary||'').trim();
     activeNasFolderPickerNonce=''; clearNasFolderPickerWatch(); hideNasFolderBackupBadge();
     nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=false; activeNasFolderPickerRound=0;
-    if(!folderPath){setSync('未選擇任何資料夾',true,3000);return}
     if(purpose==='insert'){
+      // mode=insert（工具列「插入 NAS 路徑」）維持單選，只送單一 path，跟「設定案件 NAS
+      // 來源資料夾」的複選流程完全分開，這裡不用管 data.folders。
+      const folderPath=String(data.path||'').trim();
+      if(!folderPath){setSync('未選擇任何資料夾',true,3000);return}
       insertNasPathIntoEditor(editorId,folderPath,insertRange);
       setSync('已插入 NAS 路徑',false,2000);
       return;
     }
-    updateCaseRow(id,{designImageFolderUrl:folderPath,designImageFolderKeyword:keyword},summary||'已設定 NAS 來源資料夾');
-    if(afterReply&&id)resolveDesignerReplyImages(id,{folderPath,round:replyRound});
+    // 選擇器伺服器一律送 folders 陣列（就算只選 1 個資料夾也包成陣列），每筆
+    // {path,keyword,ok,backup?,error?}；data.path/data.keyword 這組舊版單筆訊息格式只當
+    // 防呆備援（理論上不會出現，前後端這次一起改），確保萬一某個分頁還停留在舊版選擇器頁面
+    // 時不會整個壞掉。
+    const folders=Array.isArray(data.folders)?data.folders:(data.path?[{path:data.path,keyword:data.keyword||''}]:[]);
+    if(!folders.length){setSync('未選擇任何資料夾',true,3000);return}
+    const successFolders=folders.filter(item=>item.ok!==false);
+    const failedCount=folders.length-successFolders.length;
+    if(!successFolders.length){setSync(`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true,4200);return}
+    const summary=String(data.summary||'').trim()||(failedCount?`已設定 ${successFolders.length} 個 NAS 來源資料夾（${failedCount} 個備份失敗，已略過）`:'已設定 NAS 來源資料夾');
+    // designImageFolderUrl／designImageFolderKeyword 兩個舊欄位繼續當作「目前使用中的第
+    // 一組」保留字串型別，給既有只認單一資料夾的讀取點（案件詳情顯示、插入 NAS 路徑的
+    // prompt 預設值等）相容使用；designImageFolders 存完整清單，只記錄成功的那幾筆——
+    // 備份失敗的資料夾不會被寫進案件資料，避免案件記著一個其實沒有真的追蹤成功的來源。
+    updateCaseRow(id,{
+      designImageFolderUrl:successFolders[0].path||'',
+      designImageFolderKeyword:successFolders[0].keyword||'',
+      designImageFolders:JSON.stringify(successFolders.map(item=>({path:item.path,keyword:item.keyword||''})))
+    },summary);
+    if(afterReply&&id)resolveDesignerReplyImages(id,{folderPath:successFolders[0].path||'',round:replyRound});
     return;
   }
   const designerMediaMessage=data.type==='machi-designer-media-updated';
@@ -11423,17 +11446,26 @@ async function confirmLatestModificationRound(id,row){
     setSync(`回覆已寄出，但設計師確認紀錄寫入失敗：${err.message}`,true,4200);
   }
 }
-/** 設計師「第一次回信」（送出當下，這個案件除了第 0 輪／初稿以外還沒有任何後續修改輪次）完成後，
- * 案件狀態自動改成「過稿中」——這是既有「先手動標記過稿中才會跳出上傳選單」的反向流程：現在改成從
- * 「設計師回覆信」完成上傳並送出時，反過來自動把狀態帶到過稿中，不用設計師自己再手動切換一次。跟
- * confirmLatestModificationRound() 互斥（一個處理「還有後續輪次」的情境、一個處理「還在第一輪」的
- * 情境），兩者都掛在 designer 分支各自判斷條件即可，不用互相協調。 */
-async function applyFirstDesignerReplyStatus(id,row){
+/** 「設計師回覆信」／「一般回信」送出（或排程建立）成功後，一律把案件狀態改成「過稿中」——
+ * 已經是過稿中就跳過，避免無意義的重複寫入。
+ * 這是刻意的行為擴大：舊版 applyFirstDesignerReplyStatus() 只在「這是這個案件透過設計師回覆信
+ * 完成的第一次回覆」才觸發（第 0 輪、沒有任何後續輪次時），後續輪次只會呼叫
+ * confirmLatestModificationRound() 確認輪次、不動狀態；「一般回信」完全不碰狀態。這次改成不分
+ * 輪次、不分「設計師回覆信」或「一般回信」，只要這兩種模式送出（或排程建立）成功就更新狀態，
+ * 之後案件在還沒真的完成、只是先隨口回一句話的一般回信情境下也會被標記過稿中——這是使用者這次
+ * 明確要求的方向，不是意外的副作用。跟 confirmLatestModificationRound() 各自獨立、互不影響：
+ * designer 分支兩支函式都要呼叫，一支處理輪次確認、一支處理狀態。 */
+async function applyReplyStatusUpdate(id,row){
   if(!row||String(row.status||'')==='過稿中')return;
-  const records=modificationRecordsFor(id);
-  const hasDraftRound=records.some(item=>(Number(item.count)||0)<=0);
-  const hasLaterRound=records.some(item=>(Number(item.count)||0)>0);
-  if(hasDraftRound&&!hasLaterRound)updateCaseRow(id,{status:'過稿中'},'已更新狀態為過稿中');
+  updateCaseRow(id,{status:'過稿中'},'已更新狀態為過稿中');
+}
+/** 送出/排程成功後，如果這個案件目前「項目細節」是空的，組出要附加在成功訊息後面的提醒文字；
+ * 沒有缺漏就回傳空字串。刻意不單獨呼叫 setSync，因為 setSync 是整站共用的單一狀態列，連續呼叫
+ * 會互相蓋掉（第二次呼叫會蓋掉第一次的訊息），這裡改成讓呼叫端把這段文字接在原本的成功訊息
+ * 後面一起顯示，一次 setSync 呼叫講完整句話。只用在「設計師回覆信」／「一般回信」，「填寫修改
+ * 需求信」沒有被要求加這個提示，維持原樣。 */
+function missingDetailsNotice(row){
+  return row&&!String(row.details||'').trim()?'；此案件「項目細節」尚未填寫，請盡快補上（影響加權計分）':'';
 }
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
@@ -11461,13 +11493,15 @@ async function sendGmailThreadReply(){
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
     if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent);
-    else if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyFirstDesignerReplyStatus(id,row)}
+    else if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row)}
+    else if(replyMode==='general'&&row)await applyReplyStatusUpdate(id,row);
     if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''; modal.dataset.designerReplyRound=''}
     const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
     // 「設計師回覆信」是一次性任務（附上設計圖、回覆完就結束），不像「一般回信」使用者可能還想留在原地
     // 繼續看討論串來回內容，寄出成功後直接把彈窗收回，不需要使用者自己再手動關閉。
     if(replyMode==='designer')closeGmailThreadModal();
-    setSync(replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出',false,2600);
+    const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
+    setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${detailsNotice}`,Boolean(detailsNotice),detailsNotice?5200:2600);
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
   }finally{
@@ -11831,9 +11865,15 @@ function postToSheetByFrame(payload){
 }
 function normalizeStatus(value){const s=String(value||'').trim(); if(s==='結案')return '已完成'; if(s==='未執行')return '未開始'; return s||'未開始'}
 function normalizeDate(value){const date=parseDate(value); if(!date)return ''; return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
+/** 沿用既有 parseRecordImages() 同一種寬鬆解析慣例：已經是陣列就直接用，字串就試著
+ * JSON.parse，解析失敗、不是陣列、或欄位是空字串都安全回傳 []，不會讓整頁掛掉。 */
+function safeJsonParseArray(value){if(Array.isArray(value))return value;if(!value)return[];try{const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:[]}catch{return[]}}
+/** 案件目前設定的所有 NAS 來源資料夾（新版「設計圖資料夾清單」，可能有多筆）；每筆
+ * 逐一清理成 {path,keyword} 並濾掉沒有路徑的髒資料，不假設後端一定會給乾淨的形狀。 */
+function normalizeDesignImageFolders(value){return safeJsonParseArray(value).map(item=>({path:String(item?.path||'').trim(),keyword:String(item?.keyword||'').trim()})).filter(item=>item.path)}
 function normalizeRow(r={}){
   const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??'';
-  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',designImageFolderUrl:r.designImageFolderUrl||r['設計圖資料夾連結']||'',designImageFolderKeyword:r.designImageFolderKeyword||r['設計圖檔名關鍵字']||'',gmailThreadId:r.gmailThreadId||r['Gmail信件串ID']||'',gmailThreadOwnerAccount:r.gmailThreadOwnerAccount||r['Gmail寄件帳號']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived']),pendingCreate:Boolean(r.pendingCreate),pendingCreateKey:String(r.pendingCreateKey||'')};
+  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',designImageFolderUrl:r.designImageFolderUrl||r['設計圖資料夾連結']||'',designImageFolderKeyword:r.designImageFolderKeyword||r['設計圖檔名關鍵字']||'',designImageFolders:normalizeDesignImageFolders(r.designImageFolders||r['設計圖資料夾清單']),gmailThreadId:r.gmailThreadId||r['Gmail信件串ID']||'',gmailThreadOwnerAccount:r.gmailThreadOwnerAccount||r['Gmail寄件帳號']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived']),pendingCreate:Boolean(r.pendingCreate),pendingCreateKey:String(r.pendingCreateKey||'')};
   if(normalized.details)normalized.weight=calculateRowWeight(normalized);
   return normalized;
 }

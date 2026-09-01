@@ -219,8 +219,15 @@ function readJsonBody(req) {
  * 直接跳過」，因為排程每分鐘只會佔用鎖幾秒到數十秒，使用者體感等一下比
  * 起無聲失敗、要等下一輪排程才補上更好；真的等到逾時仍搶不到鎖，就跟其
  * 他「這次沒有真的備份成功」的情況一樣優雅降級（不擋路徑登記本身）。
+ *
+ * 一個案件現在可以對應多個 NAS 資料夾（見 /api/confirm 的迴圈呼叫端）——
+ * 這支函式本身仍然只處理「一個」資料夾，folderIndex 是這個資料夾在案件
+ * 的資料夾清單裡排第幾個（從 0 開始），用來算出這個資料夾自己專屬、不會
+ * 跟同一案件其他資料夾互相覆蓋的狀態快取 key（見 lib.folderStateKey）；
+ * 呼叫端一次只處理一個資料夾就呼叫一次這支函式，不會合併成一次呼叫塞多
+ * 個路徑，個別資料夾失敗也只會影響它自己這一筆結果。
  */
-async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword }) {
+async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0 }) {
   const dbData = await lib.fetchDatabase(config.dbJsonUrl);
   const meta = lib.findCaseMeta(dbData, caseId);
   if (!meta) {
@@ -243,11 +250,13 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
 
   try {
     const state = await lib.loadState(stateFile);
+    const stateKey = lib.folderStateKey(caseId, folderIndex);
     // keyword 優先用這次請求帶來的值（使用者在選擇器畫面當下填的，這時候通常還沒寫回資料
     // 庫——前端要等這支立即備份完成、拿到路徑＋關鍵字之後才會一起 updateCaseRow()），沒帶
-    // 才退回讀資料庫既有值（例如重新設定既有資料夾，關鍵字欄位留白代表沿用原本設定）。
-    const effectiveKeyword = keyword != null ? String(keyword).trim() : meta.keyword;
-    const project = { caseId, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
+    // 才退回讀資料庫既有值（例如重新設定既有資料夾，關鍵字欄位留白代表沿用原本設定）；
+    // 既有值取這個資料夾在資料庫既有清單裡對應位置的那一組關鍵字，不是固定用第一組。
+    const effectiveKeyword = keyword != null ? String(keyword).trim() : (meta.folders[folderIndex]?.keyword || '');
+    const project = { caseId: stateKey, rawFolderPath: relPath, keyword: effectiveKeyword, designer: meta.designer, client: meta.client || '未分類客戶', start: meta.start };
 
     const scanResult = await lib.scanProject(project, config, state, previewDir, warnings);
     if (scanResult.error) {
@@ -256,7 +265,7 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
     if (scanResult.skippedByKeywordCount) {
       warnings.push(`已依關鍵字「${effectiveKeyword}」略過 ${scanResult.skippedByKeywordCount} 個檔名不符的檔案（可能是其他案件或參考素材）`);
     }
-    state[caseId] = scanResult.nextState;
+    state[stateKey] = scanResult.nextState;
     await lib.saveState(stateFile, state); // 掃描結果（有沒有變動、預覽圖）先落地，就算後面上傳失敗也不會遺失這次掃描
 
     if (!lib.uploadEnabled(config, secrets)) {
@@ -272,10 +281,10 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
       // （見 uploadPendingRound 呼叫端的既有註解），這裡（立即備份）之前漏掉了同一步。
       const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
       const upload = await lib.uploadPendingRound({
-        config, secrets, dbData: latestDbData, caseId,
+        config, secrets, dbData: latestDbData, caseId, // 這裡一律用真正的案件編號，不是 stateKey——寫回資料庫、比對修改統計表都要用真實案件編號，只有本機狀態快取才需要用 stateKey 隔開不同資料夾
         designer: project.designer, client: project.client, start: project.start,
         pendingPreviews: scanResult.pendingPreviews,
-        stateFiles: state[caseId].files,
+        stateFiles: state[stateKey].files,
         persistState: () => lib.saveState(stateFile, state)
       });
       await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
@@ -318,8 +327,10 @@ const PICKER_PAGE = `<!doctype html>
   .folder-list button{width:100%;text-align:left;border:0;background:none;padding:12px 14px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;color:#17251d}
   .folder-list button:hover{background:#f0f9f4}
   .folder-list .empty{padding:16px;color:#8a948e;font-size:13px}
-  .actions{display:flex;gap:10px;margin-top:16px}
+  .actions{display:flex;gap:8px;margin-top:16px}
   .actions button{flex:1;min-height:44px;border-radius:10px;border:1px solid #dbe4de;font-size:14px;font-weight:700;cursor:pointer}
+  .btn-add{background:#fff;color:#0f6b3c;border-color:#0f6b3c}
+  .btn-add[disabled]{opacity:.6;cursor:default}
   .btn-confirm{background:#0f6b3c;color:#fff;border-color:#0f6b3c}
   .btn-confirm[disabled]{opacity:.6;cursor:default}
   .btn-cancel{background:#fff;color:#43524b}
@@ -344,6 +355,14 @@ const PICKER_PAGE = `<!doctype html>
   .keyword-field input:focus{outline:2px solid #0f6b3c;outline-offset:1px}
   .keyword-field .note{margin:6px 0 0;font-size:11.5px;color:#6b756f;line-height:1.5}
   .keyword-field .note.warn{color:#b45309}
+  .selected-folders{margin:0 0 14px;padding:10px 12px;border:1px solid #bcdfcb;border-radius:10px;background:#f2faf5}
+  .selected-folders-title{margin:0 0 8px;font-size:12.5px;font-weight:700;color:#0f6b3c}
+  .selected-folder-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .selected-folder-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #dbe4de;border-radius:8px;background:#fff}
+  .selected-folder-path{flex:1 1 auto;min-width:0;font-size:12.5px;color:#17251d;word-break:break-all}
+  .selected-folder-keyword{flex:0 0 150px;box-sizing:border-box;border:1px solid #cfd9d2;border-radius:6px;padding:6px 8px;font-size:12.5px;font-family:inherit}
+  .selected-folder-keyword:focus{outline:2px solid #0f6b3c;outline-offset:1px}
+  .selected-folder-remove{flex:0 0 auto;border:1px solid #f3c2c2;background:#fdf1f1;color:#b91c1c;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
@@ -353,16 +372,21 @@ const PICKER_PAGE = `<!doctype html>
 </header>
 <main>
   <p class="hint" id="defaultHint" hidden></p>
+  <div class="selected-folders" id="selectedFolders" hidden>
+    <p class="selected-folders-title">已選資料夾（<span id="selectedFolderCount">0</span> 個，各自可填不同關鍵字）</p>
+    <ul class="selected-folder-list" id="selectedFolderList"></ul>
+  </div>
   <div class="keyword-field">
     <label for="keywordInput">設計圖檔名關鍵字（強烈建議填寫）</label>
     <input type="text" id="keywordInput" placeholder="例如產品代號 DJI_360II，或專案名稱片段">
-    <p class="note" id="keywordNote">掃描只認這個資料夾本身的檔案，不會進去任何子資料夾（例如 Links 等參考素材）；如果這個資料夾同時放了其他案件的檔案（例如同一個月份共用資料夾），只有檔名包含這個關鍵字的圖片/影片會被視為本案件的設計圖，其餘一律不會被抓取；一修、二修也會沿用同一個關鍵字判斷。</p>
+    <p class="note" id="keywordNote">掃描只認這個資料夾本身的檔案，不會進去任何子資料夾（例如 Links 等參考素材）；如果這個資料夾同時放了其他案件的檔案（例如同一個月份共用資料夾），只有檔名包含這個關鍵字的圖片/影片會被視為本案件的設計圖，其餘一律不會被抓取；一修、二修也會沿用同一個關鍵字判斷。如果這個案件的圖片分散在好幾個不同資料夾，可以先按「加入這個資料夾」把目前這個路徑（連同上面填的關鍵字）先收進清單，再繼續瀏覽下一個路徑；只選一個資料夾的話，不用按加入，直接按「選擇這個資料夾並備份」即可。</p>
   </div>
   <p class="current">目前瀏覽：<b id="currentPath">（根目錄）</b></p>
   <div class="breadcrumb" id="breadcrumb"></div>
   <ul class="folder-list" id="folderList"></ul>
   <div class="actions">
     <button type="button" class="btn-cancel" id="cancelBtn">取消</button>
+    <button type="button" class="btn-add" id="addFolderBtn">加入這個資料夾</button>
     <button type="button" class="btn-confirm" id="confirmBtn">選擇這個資料夾並備份</button>
   </div>
   <p class="status" id="status"></p>
@@ -387,11 +411,20 @@ const PICKER_PAGE = `<!doctype html>
     const confirmBtn0 = document.getElementById('confirmBtn');
     if(confirmBtn0) confirmBtn0.textContent = '選擇這個資料夾';
   }
+  // 複選多個資料夾（各自關鍵字）只在預設的 'case' 模式才有意義：'insert' 純粹選一個路徑
+  // 插進信件內容，'reuse' 是沿用主頁面傳入的既有單一路徑直接自動送出，都不需要這個 UI。
+  if(mode !== 'case'){
+    const addBtn0 = document.getElementById('addFolderBtn');
+    if(addBtn0) addBtn0.hidden = true;
+  }
   let relPath = '';
   // showErrorPrompt() 會把 document.body 整個換成錯誤畫面，keywordInput 這個元素會
   // 跟著消失；「重試」按鈕重新呼叫 doConfirm() 時讀不到 DOM 裡的值，改用這個變數記住
   // 使用者最後一次輸入/確認過的關鍵字，讓重試不會遺失剛剛填的內容。
   let lastKeywordValue = '';
+  // 使用者用「加入這個資料夾」陸續收集的多筆 {path,keyword}——只在 'case' 模式使用；
+  // 是空陣列時代表使用者還沒用過這個流程，維持既有「只選一個資料夾」的單選用法不變。
+  let selectedFolders = [];
 
   function escapeHtml(text){
     return String(text).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -401,6 +434,41 @@ const PICKER_PAGE = `<!doctype html>
     const status = document.getElementById('status');
     status.textContent = text || '';
     status.classList.toggle('ok', Boolean(ok));
+  }
+
+  function updateConfirmButtonLabel(){
+    const btn = document.getElementById('confirmBtn');
+    if(!btn) return;
+    btn.textContent = selectedFolders.length ? ('確認送出（共 ' + selectedFolders.length + ' 個資料夾）') : '選擇這個資料夾並備份';
+  }
+
+  function renderSelectedFolders(){
+    const container = document.getElementById('selectedFolders');
+    const list = document.getElementById('selectedFolderList');
+    const count = document.getElementById('selectedFolderCount');
+    if(!container || !list || !count) return;
+    container.hidden = selectedFolders.length === 0;
+    count.textContent = String(selectedFolders.length);
+    list.innerHTML = selectedFolders.map((item, index) => (
+      '<li class="selected-folder-item">'
+      + '<div class="selected-folder-path">' + escapeHtml(item.path || '（根目錄）') + '</div>'
+      + '<input type="text" class="selected-folder-keyword" data-index="' + index + '" placeholder="這個資料夾的關鍵字（可留白）" value="' + escapeHtml(item.keyword || '') + '">'
+      + '<button type="button" class="selected-folder-remove" data-index="' + index + '">移除</button>'
+      + '</li>'
+    )).join('');
+    list.querySelectorAll('.selected-folder-keyword').forEach(input => {
+      input.addEventListener('input', () => {
+        const item = selectedFolders[Number(input.dataset.index)];
+        if(item) item.keyword = input.value;
+      });
+    });
+    list.querySelectorAll('.selected-folder-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedFolders.splice(Number(btn.dataset.index), 1);
+        renderSelectedFolders();
+      });
+    });
+    updateConfirmButtonLabel();
   }
 
   async function loadDir(nextRelPath){
@@ -501,22 +569,38 @@ const PICKER_PAGE = `<!doctype html>
       return;
     }
     const keywordInput = document.getElementById('keywordInput');
-    const keyword = keywordInput ? (keywordInput.value || '').trim() : lastKeywordValue;
-    lastKeywordValue = keyword;
-    if(!keyword && mode !== 'reuse'){
-      // 留白代表「這個資料夾底下所有圖片都算這個案件」，如果資料夾其實是跟其他案件
-      // 共用的（例如同一個月份資料夾），這樣會誤抓其他案件的圖，所以留白時額外跳一次
-      // 確認，不是直接擋掉——有些案件真的有專屬資料夾、不需要關鍵字也沒問題。
-      const proceed = confirm('尚未填寫「設計圖檔名關鍵字」。如果這個資料夾同時放了其他案件的檔案，之後可能會誤抓進不相關的圖片。\\n\\n確定要不填關鍵字、直接選擇這個資料夾嗎？');
-      if(!proceed) return;
+    const currentKeyword = keywordInput ? (keywordInput.value || '').trim() : lastKeywordValue;
+    lastKeywordValue = currentKeyword;
+
+    // 組出這次真正要送出的資料夾清單：已經用「加入這個資料夾」收進清單的優先；清單是空的
+    // 話，把目前瀏覽到的這個資料夾當成唯一一筆——維持「只選一個資料夾」的既有單選用法完全
+    // 不變，不強迫使用者一定要先按「加入這個資料夾」。目前瀏覽器裡正在看、但還沒按過「加入
+    // 這個資料夾」的路徑，不會在清單非空時被自動一併含入。
+    const foldersToSubmit = selectedFolders.length
+      ? selectedFolders.map(item => ({ path: item.path, keyword: (item.keyword || '').trim() }))
+      : [{ path: relPath, keyword: currentKeyword }];
+
+    if(mode !== 'reuse'){
+      // 針對清單裡「留白關鍵字」的項目個別警告，不是整批擋下——例如 3 筆有 1 筆留白，只
+      // 提醒那 1 筆，其餘已經填好關鍵字的照樣送出；有些案件真的有專屬資料夾、不需要關鍵字
+      // 也沒問題，留白只是額外確認，不是直接擋掉。
+      const blankOnes = foldersToSubmit.filter(item => !item.keyword);
+      if(blankOnes.length){
+        const list = blankOnes.map(item => '「' + (item.path || '（根目錄）') + '」').join('、');
+        const proceed = confirm('以下資料夾尚未填寫「設計圖檔名關鍵字」：\\n' + list + '\\n\\n如果這些資料夾同時放了其他案件的檔案，之後可能會誤抓進不相關的圖片。\\n\\n確定要繼續送出嗎？');
+        if(!proceed) return;
+      }
     }
+
     // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁
     // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。
     if(window.opener){
-      window.opener.postMessage({ type: 'machi-nas-folder-backup-started', caseId, nonce, path: relPath }, origin || '*');
+      window.opener.postMessage({ type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit[0].path }, origin || '*');
     }
     document.getElementById('confirmBtn').disabled = true;
     document.getElementById('cancelBtn').disabled = true;
+    const addBtn = document.getElementById('addFolderBtn');
+    if(addBtn) addBtn.disabled = true;
     setStatus('背景備份中，可以忽略這個視窗...', true);
     hideBehindOpener();
     let result = null;
@@ -524,7 +608,7 @@ const PICKER_PAGE = `<!doctype html>
       const res = await fetch('/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caseId, token, path: relPath, keyword })
+        body: JSON.stringify({ caseId, token, folders: foldersToSubmit })
       });
       const data = await res.json();
       if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
@@ -535,18 +619,43 @@ const PICKER_PAGE = `<!doctype html>
       return;
     }
 
-    const backup = result.backup || {};
-    const summary = backup.uploadedCount
-      ? ('已立即備份 ' + backup.uploadedCount + ' 張圖片（第 ' + backup.round + ' 輪）')
-      : ('資料夾已登記' + (backup.message ? '，' + backup.message : ''));
+    const results = Array.isArray(result.results) ? result.results : [];
+    const successResults = results.filter(item => item.ok !== false);
+    const failedResults = results.filter(item => item.ok === false);
+    const totalUploaded = successResults.reduce((sum, item) => sum + ((item.backup && item.backup.uploadedCount) || 0), 0);
+    let summary;
+    if(results.length <= 1){
+      const backup = (successResults[0] && successResults[0].backup) || {};
+      summary = backup.uploadedCount
+        ? ('已立即備份 ' + backup.uploadedCount + ' 張圖片（第 ' + backup.round + ' 輪）')
+        : ('資料夾已登記' + (backup.message ? '，' + backup.message : ''));
+    }else{
+      summary = '已設定 ' + successResults.length + ' 個 NAS 來源資料夾'
+        + (totalUploaded ? '，立即備份共 ' + totalUploaded + ' 張圖片' : '')
+        + (failedResults.length ? '（' + failedResults.length + ' 個備份失敗，已略過）' : '');
+    }
     if(window.opener){
-      window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, path: relPath, keyword, summary }, origin || '*');
+      window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, folders: results, summary }, origin || '*');
     }
     window.close();
   }
 
   document.getElementById('cancelBtn').addEventListener('click', () => window.close());
   document.getElementById('confirmBtn').addEventListener('click', doConfirm);
+  const addFolderBtnEl = document.getElementById('addFolderBtn');
+  if(addFolderBtnEl){
+    addFolderBtnEl.addEventListener('click', () => {
+      // 加入清單後畫面維持在原地可以繼續瀏覽（不清空麵包屑／不關閉視窗），使用者才能連續
+      // 選好幾個不同路徑的資料夾；關鍵字輸入框清空，避免下一個資料夾不小心沿用到上一個
+      // 資料夾的關鍵字。
+      const keywordInput = document.getElementById('keywordInput');
+      const keyword = keywordInput ? (keywordInput.value || '').trim() : '';
+      selectedFolders.push({ path: relPath, keyword });
+      if(keywordInput) keywordInput.value = '';
+      renderSelectedFolders();
+      setStatus('已加入「' + (relPath || '（根目錄）') + '」，可以繼續瀏覽其他資料夾', true);
+    });
+  }
 
   (async function init(){
     if(mode === 'reuse'){
@@ -898,26 +1007,43 @@ async function main() {
         sendJson(res, 400, { success: false, message: '缺少案件編號' });
         return;
       }
-      let safe;
-      try {
-        safe = resolveSafeDir(mountRoot, String(body.path || ''));
-      } catch (error) {
-        sendJson(res, 400, { success: false, message: error.message });
+      // 前端一律送 folders 陣列（就算只有 1 筆也包成陣列）——不再接受舊版的單一
+      // path/keyword 頂層欄位，這是前後端同一次改動、一起部署，不需要過渡期相容。
+      const rawFolders = Array.isArray(body.folders) ? body.folders : [];
+      if (!rawFolders.length) {
+        sendJson(res, 400, { success: false, message: '缺少資料夾清單' });
         return;
       }
-      if (!(await dirExists(safe.absPath))) {
-        sendJson(res, 400, { success: false, message: '選擇的資料夾不存在，請重新整理後再選一次' });
-        return;
+      // 每個資料夾各自獨立驗證路徑、獨立呼叫 backupSelectedFolder()——不合併成一次呼叫塞
+      // 多個 path，單一資料夾驗證失敗或備份失敗都只會標記這一筆，不會讓整批請求跟著失敗，
+      // 其餘資料夾仍會照常繼續處理。
+      const results = [];
+      for (let index = 0; index < rawFolders.length; index += 1) {
+        const folder = rawFolders[index] || {};
+        const rawPath = String(folder.path || '');
+        const keyword = typeof folder.keyword === 'string' ? folder.keyword : undefined;
+        let safe;
+        try {
+          safe = resolveSafeDir(mountRoot, rawPath);
+        } catch (error) {
+          results.push({ path: rawPath, keyword: keyword || '', ok: false, error: error.message });
+          continue;
+        }
+        if (!(await dirExists(safe.absPath))) {
+          results.push({ path: safe.relPath, keyword: keyword || '', ok: false, error: '選擇的資料夾不存在，請重新整理後再選一次' });
+          continue;
+        }
+        try {
+          const backup = await backupSelectedFolder({ config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword, folderIndex: index });
+          results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup });
+        } catch (error) {
+          // 就算立即備份這段整個爆炸（例如讀資料庫失敗），路徑本身已經驗證過存在，
+          // 這一筆仍然標記 ok:true 讓路徑正常登記，只是 backup 標記為沒有嘗試成功；
+          // 不影響其他資料夾各自的結果。
+          results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup: { attempted: false, uploadedCount: 0, message: `立即備份時發生未預期錯誤：${error.message}` } });
+        }
       }
-      const keyword = typeof body.keyword === 'string' ? body.keyword : undefined;
-      try {
-        const backup = await backupSelectedFolder({ config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword });
-        sendJson(res, 200, { success: true, path: safe.relPath, backup });
-      } catch (error) {
-        // 就算立即備份這段整個爆炸（例如讀資料庫失敗），路徑本身已經驗證過存在，
-        // 前端仍然會拿到 success:true 讓路徑正常登記，只是 backup 標記為沒有嘗試成功。
-        sendJson(res, 200, { success: true, path: safe.relPath, backup: { attempted: false, uploadedCount: 0, message: `立即備份時發生未預期錯誤：${error.message}` } });
-      }
+      sendJson(res, 200, { success: true, results });
       return;
     }
 

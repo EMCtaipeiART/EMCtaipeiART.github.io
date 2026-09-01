@@ -692,6 +692,25 @@ describe('Machi Design API Worker', () => {
     }, token);
     expect(keywordOnlyUpdate).toMatchObject({ ok: true, id: '26080001' });
 
+    // 多資料夾複選（2026-09 新增的「設計圖資料夾清單」JSON 陣列）跟舊的兩個單一欄位一起
+    // 送出——同樣的操作（NAS 資料夾選擇器一次性寫回），一樣只需要 media.manage。
+    const foldersJson = JSON.stringify([
+      { path: '專案企劃部/執行中/客戶/案件資料夾A', keyword: 'DJI_360II' },
+      { path: '專案企劃部/執行中/客戶/案件資料夾B', keyword: '' }
+    ]);
+    const multiFolderUpdate = await api({
+      action: 'update',
+      id: '26080001',
+      row: {
+        id: '26080001',
+        designImageFolderUrl: '專案企劃部/執行中/客戶/案件資料夾A',
+        designImageFolderKeyword: 'DJI_360II',
+        designImageFolders: foldersJson
+      }
+    }, token);
+    expect(multiFolderUpdate).toMatchObject({ ok: true, id: '26080001' });
+    expect((multiFolderUpdate.row as Record<string, unknown>).designImageFolders).toBe(foldersJson);
+
     const editAttempt = await api({
       action: 'update',
       id: '26080001',
@@ -707,6 +726,14 @@ describe('Machi Design API Worker', () => {
       row: { id: '26080001', designImageFolderUrl: '專案企劃部/執行中/客戶/案件資料夾', client: '不應該被放行' }
     }, token);
     expect(mixedAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
+
+    // 混著改一般欄位時，即使同一次也帶了「設計圖資料夾清單」，同樣不能靠它繞過一般欄位編輯的限制。
+    const mixedFoldersAttempt = await api({
+      action: 'update',
+      id: '26080001',
+      row: { id: '26080001', designImageFolders: foldersJson, client: '不應該被放行' }
+    }, token);
+    expect(mixedFoldersAttempt).toMatchObject({ ok: false, error: '此帳號沒有「request.edit」權限' });
   });
 
   it('lets a media.manage account add and remove case design images from the modification log, blocking accounts without the capability', async () => {

@@ -124,102 +124,113 @@ async function runScan(args, config, configDir, stateFile) {
   const warnings = [];
 
   for (const project of projects) {
-    // scanProject() 內部大部分已知的失敗情況（資料夾不存在、路徑不是資料夾）
-    // 都是用回傳 { error } 處理，不會丟例外；但仍有少數情況（例如資料夾存在、
-    // 一開始的 fs.stat 通過，但實際列出資料夾內容時 NAS 剛好斷線）會真的
-    // 丟出例外。這裡額外包一層 try/catch，確保「這個案件掃描失敗」只會跳過
-    // 這一個案件，不會讓整個迴圈中斷、連累後面還沒處理到、或前面已經處理
-    // 成功的其他案件（前面成功的案件此時已經各自存檔過，不受影響）。
-    let result;
-    try {
-      result = await lib.scanProject(project, config, state, previewDir, warnings);
-    } catch (error) {
-      console.log(`--- ${project.caseId} ---`);
-      console.log(`  [錯誤] 掃描失敗：${error.message}`);
-      warnings.push(`案件 ${project.caseId} 掃描失敗：${error.message}`);
-      hadError = true;
-      console.log('');
-      continue;
-    }
-    console.log(`--- ${result.caseId} ---`);
-    console.log(`  資料夾：${result.folderPath}`);
+    console.log(`--- ${project.caseId} ---`);
+    // 一個案件現在可能對應多個 NAS 資料夾（見 nas_design_image_lib.mjs 的
+    // resolveCaseFolders／folderStateKey）——單一資料夾（既有、最常見的情況）
+    // 維持跟改動前完全一樣的輸出格式，不多印「資料夾 N/M」這種對這種情況沒有
+    // 意義的標籤；只有真的有 2 個以上資料夾時才加上編號，方便分辨是哪一個。
+    const multiFolder = project.folders.length > 1;
 
-    if (result.error) {
-      console.log(`  [錯誤] ${result.error}`);
-      hadError = true;
-      console.log('');
-      continue;
-    }
+    for (let folderIndex = 0; folderIndex < project.folders.length; folderIndex += 1) {
+      const folder = project.folders[folderIndex];
+      const label = multiFolder ? `[資料夾 ${folderIndex + 1}/${project.folders.length}] ` : '';
+      const stateKey = lib.folderStateKey(project.caseId, folderIndex);
+      const scanInput = { caseId: stateKey, rawFolderPath: folder.path, keyword: folder.keyword, designer: project.designer, client: project.client, start: project.start };
 
-    console.log(`  共 ${result.totalFiles} 個檔案，未變動 ${result.unchangedCount} 個${result.skippedByKeywordCount?`（另有 ${result.skippedByKeywordCount} 個檔名不含關鍵字，已略過不列入本案件）`:''}`);
-    if (result.newItems.length) {
-      console.log(`  新增 ${result.newItems.length} 個：`);
-      for (const item of result.newItems) {
-        console.log(`    + [${item.kind}] ${item.relPath}（${lib.formatBytes(item.size)}）${item.previewPath ? '→ 已產生預覽圖' : '→ 預覽圖產生失敗'}`);
-      }
-    }
-    if (result.changedItems.length) {
-      console.log(`  更新 ${result.changedItems.length} 個：`);
-      for (const item of result.changedItems) {
-        console.log(`    * [${item.kind}] ${item.relPath}（${lib.formatBytes(item.size)}）${item.previewPath ? '→ 已產生預覽圖' : '→ 預覽圖產生失敗'}`);
-      }
-    }
-    if (!result.newItems.length && !result.changedItems.length) {
-      console.log('  沒有新增或變動的檔案');
-    }
-
-    totalNew += result.newItems.length;
-    totalChanged += result.changedItems.length;
-    state[result.caseId] = result.nextState;
-    // 先把這次掃描結果（含新產生的預覽圖路徑、mtimeMs/size 基準值）存檔一次
-    // ——就算接下來的上傳失敗，或後面其他案件掃描出錯，這次掃描本身的結果
-    // 也不會遺失，下次執行不會把同樣沒有變動的檔案又重新判斷成「新增」。
-    await lib.saveState(stateFile, state);
-
-    if (canUpload) {
+      // scanProject() 內部大部分已知的失敗情況（資料夾不存在、路徑不是資料夾）
+      // 都是用回傳 { error } 處理，不會丟例外；但仍有少數情況（例如資料夾存在、
+      // 一開始的 fs.stat 通過，但實際列出資料夾內容時 NAS 剛好斷線）會真的
+      // 丟出例外。這裡額外包一層 try/catch，確保「這個資料夾掃描失敗」只會跳
+      // 過這一個資料夾，不會讓整個迴圈中斷、連累同一案件其他資料夾、或後面還
+      // 沒處理到、前面已經處理成功的其他案件（前面成功的都已經各自存檔過，
+      // 不受影響）。
+      let result;
       try {
-        console.log('  [輪次判斷] 檢查這輪是否有待上傳的圖片...');
-        // 這一輪要歸到哪個修改次數，必須用「即將上傳的當下」最新的資料庫狀態
-        // 判斷，不能沿用整個掃描開始時抓的那份 dbData——如果 PM 在掃描這批案
-        // 件的過程中新增了修改需求，沿用舊快照會讓這次抓到的圖片被錯誤歸到
-        // 舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪。
-        const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
-        const upload = await lib.uploadPendingRound({
-          config, secrets, dbData: latestDbData, caseId: result.caseId,
-          designer: project.designer, client: project.client, start: project.start,
-          pendingPreviews: result.pendingPreviews,
-          stateFiles: state[result.caseId].files,
-          persistState: () => lib.saveState(stateFile, state)
-        });
-        if (upload.reconciledCount > 0) {
-          console.log(`  [防重確認] 已在正式資料庫找到前次上傳的 ${upload.reconciledCount} 張圖片，本次不再重送`);
-        }
-        if (upload.deferredCount > 0) {
-          console.log(`  [防重等待] 前次上傳結果尚未發布完成，暫緩重送 ${upload.deferredCount} 張`);
-        }
-        if (upload.skippedByTarget > 0) {
-          console.log(`  [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);
-        }
-        if (upload.targetFallback) {
-          console.log('  [輪次判斷] PM 指定的待修改圖片檔名這次一個都對不上（可能是設計師存成新檔名），改成把這輪所有待歸類的新檔案都當回覆上傳');
-        }
-        if (!upload.uploadedCount) {
-          console.log(`  [輪次判斷] ${upload.message || `案件已進入第 ${upload.round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`}`);
-        } else {
-          console.log(`  [上傳完成] 第 ${upload.round} 輪，已寫入 ${upload.uploadedCount} 張圖片，案件修訂版 ${upload.jsonRevision}`);
-        }
+        result = await lib.scanProject(scanInput, config, state, previewDir, warnings);
       } catch (error) {
-        warnings.push(`案件 ${result.caseId} 輪次判斷/上傳失敗：${error.message}`);
-        console.log(`  [錯誤] 輪次判斷/上傳失敗：${error.message}`);
+        console.log(`  ${label}[錯誤] 掃描失敗：${error.message}`);
+        warnings.push(`案件 ${project.caseId} 資料夾「${folder.path}」掃描失敗：${error.message}`);
         hadError = true;
-      } finally {
-        // uploadPendingRound() 每上傳成功一批（見 nas_design_image_lib.mjs 的
-        // MAX_IMAGES_PER_UPLOAD_REQUEST 分批邏輯）就會直接在 state[caseId].files
-        // 上原地標記 assignedRound；不論這次上傳最後是完全成功、部分成功後
-        // 才失敗、還是整批都失敗，只要有任何檔案被標記過，都要存檔——這是
-        // 避免「明明已經真的上傳過、Drive 上真的多了一份檔案，本機狀態卻沒
-        // 記到」這種不一致的關鍵一步。
-        await lib.saveState(stateFile, state);
+        continue;
+      }
+      console.log(`  ${label}資料夾：${result.folderPath}`);
+
+      if (result.error) {
+        console.log(`    [錯誤] ${result.error}`);
+        hadError = true;
+        continue;
+      }
+
+      console.log(`    共 ${result.totalFiles} 個檔案，未變動 ${result.unchangedCount} 個${result.skippedByKeywordCount?`（另有 ${result.skippedByKeywordCount} 個檔名不含關鍵字，已略過不列入本案件）`:''}`);
+      if (result.newItems.length) {
+        console.log(`    新增 ${result.newItems.length} 個：`);
+        for (const item of result.newItems) {
+          console.log(`      + [${item.kind}] ${item.relPath}（${lib.formatBytes(item.size)}）${item.previewPath ? '→ 已產生預覽圖' : '→ 預覽圖產生失敗'}`);
+        }
+      }
+      if (result.changedItems.length) {
+        console.log(`    更新 ${result.changedItems.length} 個：`);
+        for (const item of result.changedItems) {
+          console.log(`      * [${item.kind}] ${item.relPath}（${lib.formatBytes(item.size)}）${item.previewPath ? '→ 已產生預覽圖' : '→ 預覽圖產生失敗'}`);
+        }
+      }
+      if (!result.newItems.length && !result.changedItems.length) {
+        console.log('    沒有新增或變動的檔案');
+      }
+
+      totalNew += result.newItems.length;
+      totalChanged += result.changedItems.length;
+      state[stateKey] = result.nextState;
+      // 先把這次掃描結果（含新產生的預覽圖路徑、mtimeMs/size 基準值）存檔一次
+      // ——就算接下來的上傳失敗，或後面其他資料夾/案件掃描出錯，這次掃描本身
+      // 的結果也不會遺失，下次執行不會把同樣沒有變動的檔案又重新判斷成「新增」。
+      await lib.saveState(stateFile, state);
+
+      if (canUpload) {
+        try {
+          console.log(`    [輪次判斷] 檢查這輪是否有待上傳的圖片...`);
+          // 這一輪要歸到哪個修改次數，必須用「即將上傳的當下」最新的資料庫狀態
+          // 判斷，不能沿用整個掃描開始時抓的那份 dbData——如果 PM 在掃描這批案
+          // 件的過程中新增了修改需求，沿用舊快照會讓這次抓到的圖片被錯誤歸到
+          // 舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪。
+          const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
+          const upload = await lib.uploadPendingRound({
+            config, secrets, dbData: latestDbData, caseId: project.caseId, // 一律用真正的案件編號，不是 stateKey——寫回資料庫、比對修改統計表都要用真實案件編號
+            designer: project.designer, client: project.client, start: project.start,
+            pendingPreviews: result.pendingPreviews,
+            stateFiles: state[stateKey].files,
+            persistState: () => lib.saveState(stateFile, state)
+          });
+          if (upload.reconciledCount > 0) {
+            console.log(`    [防重確認] 已在正式資料庫找到前次上傳的 ${upload.reconciledCount} 張圖片，本次不再重送`);
+          }
+          if (upload.deferredCount > 0) {
+            console.log(`    [防重等待] 前次上傳結果尚未發布完成，暫緩重送 ${upload.deferredCount} 張`);
+          }
+          if (upload.skippedByTarget > 0) {
+            console.log(`    [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);
+          }
+          if (upload.targetFallback) {
+            console.log('    [輪次判斷] PM 指定的待修改圖片檔名這次一個都對不上（可能是設計師存成新檔名），改成把這輪所有待歸類的新檔案都當回覆上傳');
+          }
+          if (!upload.uploadedCount) {
+            console.log(`    [輪次判斷] ${upload.message || `案件已進入第 ${upload.round} 輪過稿中，但資料夾裡沒有偵測到任何符合條件的圖片/影片可上傳`}`);
+          } else {
+            console.log(`    [上傳完成] 第 ${upload.round} 輪，已寫入 ${upload.uploadedCount} 張圖片，案件修訂版 ${upload.jsonRevision}`);
+          }
+        } catch (error) {
+          warnings.push(`案件 ${project.caseId} 資料夾「${folder.path}」輪次判斷/上傳失敗：${error.message}`);
+          console.log(`    [錯誤] 輪次判斷/上傳失敗：${error.message}`);
+          hadError = true;
+        } finally {
+          // uploadPendingRound() 每上傳成功一批（見 nas_design_image_lib.mjs 的
+          // MAX_IMAGES_PER_UPLOAD_REQUEST 分批邏輯）就會直接在 state[stateKey].files
+          // 上原地標記 assignedRound；不論這次上傳最後是完全成功、部分成功後
+          // 才失敗、還是整批都失敗，只要有任何檔案被標記過，都要存檔——這是
+          // 避免「明明已經真的上傳過、Drive 上真的多了一份檔案，本機狀態卻沒
+          // 記到」這種不一致的關鍵一步。
+          await lib.saveState(stateFile, state);
+        }
       }
     }
 

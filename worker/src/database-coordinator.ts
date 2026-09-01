@@ -2480,10 +2480,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const changedKeys = Object.keys(changes).filter(key => key !== 'id');
     // 「設計圖資料夾連結」與「設計圖檔名關鍵字」是同一組操作（設計師在 NAS 資料夾選擇器
     // 裡一起填），一起寫入時一樣只需要 media.manage、不需要完整的 request.edit——理由跟
-    // 只改資料夾連結時一致：這兩個欄位不影響案件的其他業務欄位，只是控制自動追蹤設計圖
-    // 的來源與篩選條件。只要這次送出的欄位/表頭完全落在這兩者範圍內，就套用這個放寬。
-    const DESIGN_IMAGE_FOLDER_KEYS = ['designImageFolderUrl', 'designImageFolderKeyword'];
-    const DESIGN_IMAGE_FOLDER_HEADERS = ['設計圖資料夾連結', '設計圖檔名關鍵字'];
+    // 只改資料夾連結時一致：這幾個欄位不影響案件的其他業務欄位，只是控制自動追蹤設計圖
+    // 的來源與篩選條件。只要這次送出的欄位/表頭完全落在這幾者範圍內，就套用這個放寬。
+    // 「設計圖資料夾清單」是 2026-09 新增的多資料夾支援（一個案件可以對應多個 NAS 來源
+    // 資料夾，各自有獨立關鍵字，JSON 陣列存放）；designImageFolderUrl／Keyword 兩個舊欄位
+    // 繼續當作「目前使用中的第一組」保留字串型別相容既有讀取點，三個欄位一起送出時比照
+    // 舊行為，一樣只需要 media.manage。
+    const DESIGN_IMAGE_FOLDER_KEYS = ['designImageFolderUrl', 'designImageFolderKeyword', 'designImageFolders'];
+    const DESIGN_IMAGE_FOLDER_HEADERS = ['設計圖資料夾連結', '設計圖檔名關鍵字', '設計圖資料夾清單'];
     const onlyDesignImageFolderLink = !touchesProtected && changedKeys.length > 0 && changedKeys.every(key => DESIGN_IMAGE_FOLDER_KEYS.includes(key))
       && writeHeaders.every(header => DESIGN_IMAGE_FOLDER_HEADERS.includes(header));
     if (session) {
