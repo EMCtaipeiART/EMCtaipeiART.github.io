@@ -7665,21 +7665,24 @@ function applyCustomerDesignerAutoFill(force=false){
   const candidates=row?parseNameListValue(row['設計負責人']).filter(name=>designerOptions.includes(name)):[];
   designerEl.value=candidates.length?candidates[0]:'';
 }
-/** 登入後「專案負責人」一律鎖定顯示登入帳號本人姓名（取消編輯、取消下拉建議清單），
- * 不再只限「客戶別專案負責人」帳號；未登入時維持原本可自由輸入＋既有案件姓名建議清單。 */
+/** 登入後「專案負責人」鎖定顯示登入帳號本人姓名（取消編輯、取消下拉建議清單），
+ * 不再只限「客戶別專案負責人」帳號；但設計師帳號登入（isDesignerLogin，涵蓋設計師角色與
+ * 平面/影音組別，管理者一併不鎖）不套用這個鎖定——設計師本來就不是專案負責人，填單時常常是
+ * 代其他負責人建立/補登案件，需要自己選擇實際的專案負責人，鎖死成設計師本人姓名反而填錯資料。
+ * 未登入、或設計師登入時，都維持原本可自由輸入＋既有案件姓名建議清單。 */
 function applyCustomerOwnerLock(){
   const ownerEl=formEl?.elements?.owner;
   if(!ownerEl||editingId)return;
-  if(isLoggedIn()){
+  if(isLoggedIn()&&!isDesignerLogin()){
     ownerEl.readOnly=true;
     ownerEl.removeAttribute('list');
     ownerEl.value=String(currentEditorDisplayName||currentEditor||'').trim();
     ownerAutoFillDone=true;
-    if(isCustomerOwnerAccount())applyCustomerDesignerAutoFill();
   }else{
     ownerEl.readOnly=false;
     ownerEl.setAttribute('list','ownerList');
   }
+  if(isCustomerOwnerAccount())applyCustomerDesignerAutoFill();
 }
 async function handleClientSelectChange(el){
   if(el.value!=='__new__'){applyCustomerDesignerAutoFill(true);return}

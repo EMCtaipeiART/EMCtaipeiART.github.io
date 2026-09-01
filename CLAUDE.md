@@ -189,6 +189,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-01 09:41 Asia/Taipei — 「填寫設計需求」表單：設計師登入不再鎖定「專案負責人」欄位
+
+- 修改目的：使用者要求前台「填寫設計需求」表單的「專案負責人」欄位，對目前 5 位設計師不要鎖定，讓設計師可以自己選擇/填寫實際的專案負責人是誰。追查發現 2026-08-18 那次「登入後專案負責人自動帶入且鎖定唯讀」的改動，把鎖定條件從「只有客戶別專案負責人帳號」放寬成「只要有登入就鎖定」——這對 PM／業務帳號合理（他們本來就是專案負責人），但連帶把設計師登入也鎖死成設計師自己的姓名，而設計師本來就不是專案負責人（常常是代真正的負責人建立/補登案件），鎖死成自己的名字反而會填錯資料。
+- 影響檔案：`index.html`（純前端，沒有動 Worker 或任何 Apps Script）。
+- 影響功能：`applyCustomerOwnerLock()` 的鎖定條件從 `isLoggedIn()` 改成 `isLoggedIn()&&!isDesignerLogin()`——`isDesignerLogin()` 是這個系統既有、專門判斷「這個帳號算不算設計師」的函式（涵蓋設計師角色與平面/影音組別；管理者角色範本也包含同樣的權限，一併不鎖，這是刻意接受的延伸，不是誤判——管理者一樣不該被鎖死成自己的名字）。設計師（與管理者）登入後，「專案負責人」欄位維持原本可自由輸入＋既有案件姓名建議清單（`list="ownerList"`）；PM／一般使用者登入維持原本鎖定唯讀＋自動帶入本人姓名的既有行為，完全不受影響。原本掛在鎖定分支裡的「客戶別專案負責人帳號連動帶入設計負責人」（`isCustomerOwnerAccount()`→`applyCustomerDesignerAutoFill()`）改成搬到函式最後、不論走哪個分支都會判斷——這只是把「這一步該不該執行」的判斷條件單獨列出來，不再依附在鎖定與否的 if/else 裡，PM 帳號的既有行為不受影響，理論上也讓「客戶別專案負責人剛好同時是設計師」這種極少見的組合能一併正確觸發。
+- 風險區塊：這次連帶讓「管理者」角色也不會被鎖定（因為 `isDesignerLogin()` 底層的 `hasDesignerAccountRole()` 把管理者跟設計師歸在同一組）——使用者這次只提到設計師，但管理者本來就不該被鎖死成自己的名字，這個延伸範圍評估合理、不會造成資料被填錯（管理者原本就有能力繞過任何前端限制直接改資料）。
+- 已檢查／驗證方式：`index.html` 兩段 `<script>` 用 `new Function()` 語法檢查通過；`node --test backend/test/*.test.mjs` 63/63 全過（動手前已 grep 過 `backend/test/backend.test.mjs`，確認沒有任何測試鎖住 `applyCustomerOwnerLock` 的原始碼字串）。用本機 Python 靜態伺服器＋ Browser pane 對著真實載入的頁面做隔離測試：**沒有用假的變數矇混過去，是透過這個系統真正在跑的 `MachiAccess` 權限模組（`assets/access-control.js`）本身既有的 `local-admin:`/`local-tester:` 本機測試 token 前綴機制**（`MachiAccess.refresh({token:'local-admin:...',group,department,...})`，這是這個系統既有、合法的本機權限預覽路徑，不是繞過或竄改）驅動出五種真實情境的權限狀態，逐一確認欄位鎖定/解鎖結果：①PM（一般使用者角色，組別「企劃部」）→ 維持鎖定、`readOnly:true`、值正確帶入本人姓名；②平面設計師（Machi，組別「平面」）→ 正確解鎖、`readOnly:false`、`list="ownerList"` 屬性正確恢復；③影音設計師（Anna，組別「影音」）→ 同樣正確解鎖；④管理者（組別「管理者」）→ 也正確解鎖（符合上述刻意接受的延伸範圍）；⑤登出/訪客 → 維持原本就解鎖的既有行為不受影響。過程中第一輪測試只用假的 `currentEditorGroup` 變數矇混，結果因為這個測試環境的 `window.MachiAccess` 早就已經用真實（訪客）身分載入過一次、且它的 `state` 是唯讀 getter（回傳全新複製物件，直接賦值完全無效），導致 `isDesignerLogin()` 一直讀到訪客權限、測試結果全部誤判成「還是鎖定」——後來追出 `MachiAccess` 有暴露 `refresh()` 這個公開方法可以接受 `overrides` 參數，改用這個正規入口重新測試才拿到正確、可信的結果。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或任何 Apps Script。
+- commit：（見下方 push 紀錄）
+
 ### 2026-09-01 08:51 Asia/Taipei — Gmail 撰寫/回信編輯器內嵌圖片新增拖曳排序與換行切換
 
 - 修改目的：使用者拿到一份針對「信件編輯器圖片排版功能」的通用需求文件（拖曳排序＋斷行），要求依此實作。文件本身是依照另一個對話產出的泛用範本寫的（假設圖片存在一個帶 `order`/`lineBreakAfter` 欄位的 JSON 陣列裡、寄信 HTML 要用 `<table>` 逐行組），動手前先用一個 Explore agent 完整調查了這個系統實際的圖片機制，確認文件描述的「案件補充資料 A/B/C/D」其實只是純文字連結（不是圖片），真正對應得上的功能是 Gmail 撰寫／回信編輯器裡使用者貼上/拖放/選檔插入的內嵌圖片（`.gmail-inline-image-wrap`，位在 `#gmailComposeEditor`／`#gmailThreadReplyEditor` 這兩個 contenteditable 區域裡）。也確認了這個系統裡「圖片順序」從來就不是存在獨立欄位裡，而是直接等於 DOM 裡的節點順序（`gmailEditorMailPayload()` 寄信前用 `querySelectorAll` 依文件順序走訪），且插入圖片時本來就會固定在後面補一個 `<br>`（每張圖片預設各自一行）——這代表不需要照抄範本文件建議的「新增 order/lineBreakAfter 欄位＋改寫成 `<table>` 逐行組信」，改成「移動 DOM 節點本身＝排序」「切換這個 `<br>` 存不存在＝要不要換行」，用這個系統既有的資料模型就能達成同樣的效果，範圍更小、風險更低。
