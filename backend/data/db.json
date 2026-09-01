@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3468,
+  "revision": 3469,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-01T08:30:49.577Z",
+  "updatedAt": "2026-09-01T08:30:57.258Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1160,7 +1160,7 @@
         {"案件編號":"26090003","修改次數":"0","建立日期":"2026/09/01 12:37:43","修改日期":"2026/09/01 12:37:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/01 12:37:43","圖片連結":"[{\"fileName\":\"260817_ANKER_A1695_動態素材_pchome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HIOzBzpGby9wLFtFQsnpA-xZkfN00Lwm=w1600\"},{\"fileName\":\"260817_ANKER_A1695_動態素材_pchome_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EQEE38zbvms-T_a-Z0V-XGO9uvVWxZSZ=w1600\"},{\"fileName\":\"260901_ANKER_A1695_9月CPAS_pchome_v1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1PI6BQ6KTQ3_3zQnwvgmpxYSR5bfxDmq3=w1600\"},{\"fileName\":\"260817_ANKER_A1695_動態素材_pchome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Z_eVUsBrBCgs6xM_kigJzhXgpgklirH6=w1600\"},{\"fileName\":\"260817_ANKER_A1695_動態素材_pchome_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1OKx01uK9Kt2-WsPL1JZb3ARquzldd-Nh=w1600\"},{\"fileName\":\"260901_ANKER_A1695_9月CPAS_pchome_v1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1iQ3uF0DNS1zhg9mQSxZDg0bKveR49QTn=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/01 13:33:02"},
         {"案件編號":"26080174","修改次數":"1","建立日期":"2026/09/01 15:54:51","修改日期":"2026-09-01","修改內容":"CPAS 素材有幾張客戶調整，再麻煩您，感恩感恩！\n\nhttps://docs.google.com/presentation/d/1BnwOKjCULEdo1TiXFk8-8Vd6QZDnWl9O94CP-U8dt4Y/edit?slide=id.g3fad89882d2_0_3#slide=id.g3fad89882d2_0_3","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26080094","修改次數":"1","建立日期":"2026/09/01 16:28:47","修改日期":"2026-09-01","修改內容":"來信提供標題調整，詳細如附件P43、P43，可同步reSize IG尺寸，已填單。\n\n因客戶稍早調整排成，希望在9/3(原定發布此篇)新增台灣官方影片素材，因此此篇需提早於9/2(三)上線，希望可於明日上午提供以利排程，感恩","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26080195","修改次數":"1","建立日期":"2026/09/01 16:29:40","修改日期":"2026-09-01","修改內容":"三張全產品圖調整，再麻煩哥：\nhttps://docs.google.com/presentation/d/1BnwOKjCULEdo1TiXFk8-8Vd6QZDnWl9O94CP-U8dt4Y/edit?slide=id.g3fb09d9577e_0_25#slide=id.g3fb09d9577e_0_25","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1628D6QPHobWbYLBLqGyVnVXMBGCLjGyE=w1600\"},{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-b7FsDUupnAoAfewW_HYxlTfoYxqQxLx=w1600\"},{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hTzNox1INjecmgLPHkaQ3pgeZSQQ8Tcm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/01 16:30:45"}
+        {"案件編號":"26080195","修改次數":"1","建立日期":"2026/09/01 16:29:40","修改日期":"2026-09-01","修改內容":"三張全產品圖調整，再麻煩哥：\nhttps://docs.google.com/presentation/d/1BnwOKjCULEdo1TiXFk8-8Vd6QZDnWl9O94CP-U8dt4Y/edit?slide=id.g3fb09d9577e_0_25#slide=id.g3fb09d9577e_0_25","修改人":"李明庭","確認修正日":"2026/09/01 16:30:57","待修改圖片":"","圖片連結":"[{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1628D6QPHobWbYLBLqGyVnVXMBGCLjGyE=w1600\"},{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-b7FsDUupnAoAfewW_HYxlTfoYxqQxLx=w1600\"},{\"fileName\":\"260831_九月CPAS廣告素材_全產品線_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hTzNox1INjecmgLPHkaQ3pgeZSQQ8Tcm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/01 16:30:45"}
       ]
     },
     "補充資料連結": {
