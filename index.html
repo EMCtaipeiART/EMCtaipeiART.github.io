@@ -6423,7 +6423,7 @@
     .gmail-rich-editor{min-height:260px;max-height:520px}
     #gmailThreadReplyEditor.gmail-rich-editor{min-height:180px;max-height:380px}
     .gmail-rich-editor.is-image-dragover{border-color:#16a34a!important;background:#effbf4!important;box-shadow:inset 0 0 0 2px rgba(22,163,74,.18)}
-    .gmail-inline-image-wrap{display:inline-block;position:relative;resize:none;overflow:hidden;max-width:100%;min-width:60px;margin:8px 0;border-radius:8px;vertical-align:top;border:1px solid transparent}
+    .gmail-inline-image-wrap{display:inline-block;position:relative;resize:none;overflow:hidden;max-width:100%;min-width:60px;margin:8px 6px 8px 0;border-radius:8px;vertical-align:top;border:1px solid transparent}
     .gmail-inline-image-wrap:hover,.gmail-inline-image-wrap:focus-within{border-color:#9bd4b4}
     .gmail-inline-image-wrap img.gmail-inline-image{display:block;width:100%;height:100%;object-fit:contain;margin:0;border-radius:7px;-webkit-user-drag:none;user-select:none}
     /* 插入圖片本身也要能單獨刪除——原生 contenteditable=false 節點雖然理論上可以用 Backspace/Delete
@@ -6432,6 +6432,26 @@
     .gmail-inline-image-remove{position:absolute!important;left:3px!important;top:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:pointer;opacity:0;transition:opacity .12s ease;z-index:3}
     .gmail-inline-image-remove svg{width:9px;height:9px;stroke:currentColor;stroke-width:2.6;fill:none;pointer-events:none}
     .gmail-inline-image-wrap:hover .gmail-inline-image-remove,.gmail-inline-image-remove:focus-visible{opacity:1}
+    /* 拖曳排序把手（右上角，跟左上角的刪除鈕分開）：原生 HTML5 拖曳只在這顆按鈕本身觸發，不會影響
+       <img> 本身的 draggable=false（避免重演「誤拖圖片本身在 contenteditable 裡被複製」的舊 bug）；
+       聚焦後也可以用左右方向鍵移動，不用滑鼠拖曳一樣能調整順序。 */
+    .gmail-inline-image-handle{position:absolute!important;right:3px!important;top:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:grab;opacity:0;transition:opacity .12s ease;z-index:3}
+    .gmail-inline-image-handle:active{cursor:grabbing}
+    .gmail-inline-image-handle svg{width:11px;height:11px;pointer-events:none}
+    .gmail-inline-image-wrap:hover .gmail-inline-image-handle,.gmail-inline-image-handle:focus-visible{opacity:1}
+    /* 換行切換鈕（右下角）：開啟＝這張圖片後面強制換行（預設狀態，跟過去每張圖片都自動換行的既有
+       行為一致）；關閉＝拿掉換行，讓下一張圖片緊接在同一行併排顯示。開啟狀態刻意維持一點點常駐透明度
+       （不需要 hover 也看得出「這裡有換行」），關閉狀態則跟刪除鈕/拖曳把手一樣預設完全隱藏、hover 才顯示。 */
+    .gmail-inline-image-linebreak{position:absolute!important;right:3px!important;bottom:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:pointer;opacity:0;transition:opacity .12s ease,background .12s ease;z-index:3}
+    .gmail-inline-image-linebreak svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;pointer-events:none}
+    .gmail-inline-image-linebreak.is-active{background:rgba(15,143,97,.85)!important;opacity:.45}
+    .gmail-inline-image-wrap:hover .gmail-inline-image-linebreak,.gmail-inline-image-linebreak:focus-visible{opacity:1}
+    /* 拖曳排序中的視覺回饋：跟 json_database_admin.html 既有的 is-dragging/drag-over 拖曳排序慣例一致，
+       這裡用 inset box-shadow（不是 border，避免跟 hover 的 border-color 衝突）在目標圖片左/右緣畫一條
+       插入指示線，滑鼠停在哪一半就插進哪一邊。 */
+    .gmail-inline-image-wrap.is-dragging{opacity:.35}
+    .gmail-inline-image-wrap.is-drop-before{box-shadow:inset 3px 0 0 0 #16a34a}
+    .gmail-inline-image-wrap.is-drop-after{box-shadow:inset -3px 0 0 0 #16a34a}
     /* 內容還在準備（案件編號生產中、信件串/簽名檔還在讀取）時把編輯器鎖成唯讀＋淡化，避免使用者
        搶在載入完成前開始打字，之後被剛載入完成的資料整個蓋掉；見 setGmailEditorLoading()。 */
     .gmail-rich-editor.is-generating{opacity:.6;cursor:progress}
@@ -8564,6 +8584,7 @@ const gmailInlineImageTasksByEditor=new Map();
 const gmailInlineImageGenerationsByEditor=new Map();
 const gmailInlineImageTypes=new Set(['image/jpeg','image/png','image/webp','image/gif']);
 const gmailInlineImageMaxCount=10,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
+let gmailInlineImageDragged=null; // {wrap,editor}——目前正在用拖曳把手搬移的內嵌圖片，drop/dragend 後清空
 function gmailInlineImageStore(editorId){
   if(!gmailInlineImagesByEditor.has(editorId))gmailInlineImagesByEditor.set(editorId,new Map());
   return gmailInlineImagesByEditor.get(editorId);
@@ -8590,6 +8611,92 @@ function placeRichRangeAtPoint(editor,x,y){
   if(!rangeInsideEditor(range,editor)){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
   savedRichSelectionRange=range.cloneRange();
 }
+/** 找出跟這張圖片綁在一起的「換行」——插入時／使用者手動切換時都是往這個 wrap 的
+ * nextSibling 塞一個 <br>；純粹用「下一個節點是不是 <br>」判斷現況，不用另外存一個
+ * order/lineBreakAfter 欄位——DOM 本身的順序與相鄰關係就是唯一事實來源，拖曳搬動這個 wrap
+ * 時只要把這個 <br>（如果有的話）一起搬過去，順序與斷行狀態就自動跟著正確、不需要額外同步。 */
+function gmailInlineImageTrailingBreak(wrap){
+  const next=wrap.nextSibling;
+  return next&&next.nodeType===Node.ELEMENT_NODE&&next.tagName==='BR'?next:null;
+}
+function refreshGmailInlineImageLineBreakButton(wrap){
+  const button=wrap.querySelector(':scope>.gmail-inline-image-linebreak');
+  if(!button)return;
+  const hasBreak=Boolean(gmailInlineImageTrailingBreak(wrap));
+  button.classList.toggle('is-active',hasBreak);
+  const label=hasBreak?'目前另起一行顯示，點擊改成與下一張圖片併排':'目前與下一張圖片併排，點擊改成另起一行顯示';
+  button.title=label;
+  button.setAttribute('aria-label',label);
+  button.setAttribute('aria-pressed',hasBreak?'true':'false');
+}
+function toggleGmailInlineImageLineBreak(wrap){
+  const editor=wrap.closest('.gmail-rich-editor');
+  if(!editor||editor.classList.contains('is-generating'))return;
+  const parent=wrap.parentElement;
+  if(!parent)return;
+  const existing=gmailInlineImageTrailingBreak(wrap);
+  if(existing)existing.remove();
+  else parent.insertBefore(document.createElement('br'),wrap.nextSibling);
+  refreshGmailInlineImageLineBreakButton(wrap);
+  editor.focus();
+}
+function bindGmailInlineImageLineBreakToggle(wrap){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='gmail-inline-image-linebreak';
+  button.setAttribute('contenteditable','false');
+  button.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4h7v5H5M5 9l2.3-2.2M5 9l2.3 2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  button.addEventListener('mousedown',event=>{event.preventDefault();event.stopPropagation()});
+  button.addEventListener('click',event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    toggleGmailInlineImageLineBreak(wrap);
+  });
+  wrap.appendChild(button);
+  // 呼叫這支函式的三個地方（insertGmailInlineImage／restoreScheduledGmailInlineImages／
+  // appendDesignerReplyImageThumb）都已經先把 wrap 插入編輯區、才呼叫 bindGmailInlineImageControls，
+  // 這裡才讀得到正確的 wrap.nextSibling 判斷初始狀態（插入前一律是 null，會誤判成「沒有換行」）。
+  refreshGmailInlineImageLineBreakButton(wrap);
+}
+/** 拖曳排序把手：原生 HTML5 拖曳只從這顆按鈕本身觸發（draggable=true 設在把手上，不是整個
+ * wrap 或 <img> 本身），避免重演「使用者誤拖到圖片本身、被 contenteditable 當成搬移內容而
+ * 複製出一份重複圖片」的舊 bug（見 insertGmailInlineImage 為什麼把 image.draggable 設成
+ * false 的說明）。聚焦這顆把手後按左右方向鍵，也能不透過滑鼠拖曳直接調整順序，是唯一的非拖曳
+ * 容錯管道（沒有額外的上一個/下一個按鈕——縮圖本身已經有刪除鈕/拖曳把手/換行鈕三顆小按鈕，
+ * 再加會太擁擠，且重演過去「縮放把手」被使用者誤認的教訓：這裡選擇用清楚的圖示＋title/aria-label
+ * 取代再多一顆按鈕）。 */
+function bindGmailInlineImageHandle(wrap){
+  const handle=document.createElement('button');
+  handle.type='button';
+  handle.className='gmail-inline-image-handle';
+  handle.title='拖曳調整圖片順序，或聚焦後按左右方向鍵移動';
+  handle.setAttribute('aria-label','拖曳調整圖片順序，或聚焦後按左右方向鍵移動');
+  handle.setAttribute('contenteditable','false');
+  handle.draggable=true;
+  handle.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="5" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>';
+  handle.addEventListener('mousedown',event=>event.stopPropagation());
+  handle.addEventListener('dragstart',event=>{
+    const editor=wrap.closest('.gmail-rich-editor');
+    if(!editor||editor.classList.contains('is-generating')){event.preventDefault();return}
+    gmailInlineImageDragged={wrap,editor};
+    event.dataTransfer.effectAllowed='move';
+    event.dataTransfer.setData('text/plain','');
+    // 拖曳開始當下先不要立刻改外觀——部分瀏覽器擷取「拖曳中縮圖」的時間點就是 dragstart 這一刻，
+    // 同一輪事件循環內改樣式可能連拖曳縮圖本身都被套用，改用下一個 frame 才淡化原本的元素。
+    requestAnimationFrame(()=>wrap.classList.add('is-dragging'));
+  });
+  handle.addEventListener('dragend',()=>{
+    wrap.classList.remove('is-dragging');
+    clearGmailInlineImageDropIndicators(wrap.closest('.gmail-rich-editor'));
+    gmailInlineImageDragged=null;
+  });
+  handle.addEventListener('keydown',event=>{
+    if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+    event.preventDefault();
+    moveGmailInlineImageByStep(wrap,event.key==='ArrowLeft'?-1:1);
+  });
+  wrap.appendChild(handle);
+}
 /** 圖片外層容器的刪除鈕。
  * 圖片本身跟外層 wrap 一樣是 contenteditable="false" 的 atomic 節點，理論上可以用
  * Backspace/Delete 鍵盤刪除，但實際要「游標剛好停在圖片正前/正後方」才會觸發，滑鼠點在圖片
@@ -8598,8 +8705,12 @@ function placeRichRangeAtPoint(editor,x,y){
  * 同一種既有模式），點一下就能移除，不用依賴鍵盤刪除的時機。
  * （這裡原本還有一顆圖片右下角的縮放把手，讓使用者能拖曳調整圖片大小；使用者回報看不懂這顆沒有
  * 圖示、單純一個小方塊的把手是做什麼用的，確認後已經移除——插入圖片時本來就會依原始比例自動給一個
- * 合理的預設寬度（見 insertGmailInlineImage 的 320px 上限），不需要縮放把手也不會顯示過大。） */
+ * 合理的預設寬度（見 insertGmailInlineImage 的 320px 上限），不需要縮放把手也不會顯示過大。）
+ * 這次新增的拖曳排序把手／換行切換鈕（見上方兩個函式）都吸取同一個教訓，一律搭配清楚的
+ * SVG 圖示＋title/aria-label，不會是一顆看不出用途的空白方塊。 */
 function bindGmailInlineImageControls(wrap){
+  bindGmailInlineImageHandle(wrap);
+  bindGmailInlineImageLineBreakToggle(wrap);
   const remove=document.createElement('button');
   remove.type='button';
   remove.className='gmail-inline-image-remove';
@@ -8641,13 +8752,17 @@ function insertGmailInlineImage(editor,item){
     wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
   },{once:true});
   wrap.appendChild(image);
-  bindGmailInlineImageControls(wrap);
   const spacer=document.createElement('br');
   let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange:document.createRange();
   if(!rangeInsideEditor(range,editor)){range.selectNodeContents(editor);range.collapse(false)}
   range.deleteContents();
   range.insertNode(spacer);
   range.insertNode(wrap);
+  // bindGmailInlineImageControls 要在 wrap 真正插入 DOM 之後才呼叫——換行切換鈕的初始狀態是讀
+  // wrap.nextSibling 判斷，插入前這個值一律是 null，會誤判成「沒有換行」（這裡插入的 spacer 就是
+  // wrap 的下一個節點，所以剛插入的圖片預設會正確顯示成「已經換行」，跟原本每張圖片都自動換行的
+  // 既有行為一致）。
+  bindGmailInlineImageControls(wrap);
   range.setStartAfter(spacer);
   range.collapse(true);
   const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
@@ -8783,12 +8898,37 @@ function gmailEditorMailPayload(editor){
 }
 function bindGmailInlineImageEditor(editor){
   if(!editor)return;
-  editor.addEventListener('dragover',event=>{if([...event.dataTransfer.types].includes('Files')){event.preventDefault();editor.classList.add('is-image-dragover')}});
-  editor.addEventListener('dragleave',event=>{if(!editor.contains(event.relatedTarget))editor.classList.remove('is-image-dragover')});
+  editor.addEventListener('dragover',event=>{
+    if([...event.dataTransfer.types].includes('Files')){event.preventDefault();editor.classList.add('is-image-dragover');return}
+    // 內部拖曳排序（拖曳把手發起，見 bindGmailInlineImageHandle）跟上面「從外部拖檔案進來」共用
+    // 同一個 dragover/drop，用 dataTransfer.types 不含 Files 排除掉，改看 gmailInlineImageDragged
+    // 這個模組層級狀態判斷是不是這個編輯器自己發起的排序拖曳。
+    if(!gmailInlineImageDragged||gmailInlineImageDragged.editor!==editor)return;
+    const targetWrap=event.target.closest?.('.gmail-inline-image-wrap');
+    if(!targetWrap||targetWrap===gmailInlineImageDragged.wrap){clearGmailInlineImageDropIndicators(editor);return}
+    event.preventDefault();
+    const side=gmailInlineImageDropSide(targetWrap,event.clientX);
+    clearGmailInlineImageDropIndicators(editor);
+    targetWrap.classList.add(side==='after'?'is-drop-after':'is-drop-before');
+  });
+  editor.addEventListener('dragleave',event=>{if(!editor.contains(event.relatedTarget)){editor.classList.remove('is-image-dragover');clearGmailInlineImageDropIndicators(editor)}});
   editor.addEventListener('drop',event=>{
-    editor.classList.remove('is-image-dragover');
-    const files=[...event.dataTransfer.files].filter(file=>file.type.startsWith('image/'));if(!files.length)return;
-    event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);queueGmailInlineImages(editor.id,files);
+    if([...event.dataTransfer.types].includes('Files')){
+      editor.classList.remove('is-image-dragover');
+      const files=[...event.dataTransfer.files].filter(file=>file.type.startsWith('image/'));if(!files.length)return;
+      event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);queueGmailInlineImages(editor.id,files);
+      return;
+    }
+    if(!gmailInlineImageDragged||gmailInlineImageDragged.editor!==editor)return;
+    const targetWrap=event.target.closest?.('.gmail-inline-image-wrap');
+    clearGmailInlineImageDropIndicators(editor);
+    if(targetWrap&&targetWrap!==gmailInlineImageDragged.wrap){
+      event.preventDefault();
+      const side=gmailInlineImageDropSide(targetWrap,event.clientX);
+      moveGmailInlineImageUnit(gmailInlineImageDragged.wrap,targetWrap,side==='after');
+      syncGmailInlineImageLineBreakButtons(editor);
+      editor.focus();
+    }
   });
   editor.addEventListener('paste',event=>{
     // 某些剪貼簿來源的 DataTransferItem.type 會是空字串，但 getAsFile() 後的 File.type 才有 image/png；
@@ -8800,6 +8940,54 @@ function bindGmailInlineImageEditor(editor){
     setSync('正在處理貼上的圖片...');
     queueGmailInlineImages(editor.id,files);
   });
+}
+/** 決定拖曳的圖片該插在目標圖片的哪一側——圖片是 inline-block、可能併排也可能各自一行，
+ * 用滑鼠水平位置相對目標圖片中線來判斷（左半＝插到前面、右半＝插到後面），這個方式不論目標
+ * 圖片目前是跟別人併排還是自己獨佔一行都能正確判斷，不需要另外處理垂直方向的情況。 */
+function gmailInlineImageDropSide(candidateWrap,clientX){
+  const rect=candidateWrap.getBoundingClientRect();
+  return clientX>rect.left+rect.width/2?'after':'before';
+}
+function clearGmailInlineImageDropIndicators(editor){
+  if(!editor)return;
+  editor.querySelectorAll('.gmail-inline-image-wrap.is-drop-before,.gmail-inline-image-wrap.is-drop-after').forEach(el=>{el.classList.remove('is-drop-before','is-drop-after')});
+}
+/** 把 draggedWrap 移到 targetWrap 前面或後面，並把 draggedWrap 自己的換行（如果有的話）一起
+ * 搬過去——換行是跟著圖片走的屬性，不是跟著「這個位置」，所以要在搬動 draggedWrap 之前，先把
+ * 它目前的 nextSibling 是不是 <br> 記下來，等 draggedWrap 移到新位置後再把這個 <br> 接回它
+ * 後面；只允許在同一個父層容器內移動（例如「設計師回覆信」自動帶入的縮圖群跟使用者自己插入的
+ * 圖片是分開的兩個容器，各自排序、不會混在一起）。 */
+function moveGmailInlineImageUnit(draggedWrap,targetWrap,insertAfter){
+  if(!draggedWrap||!targetWrap||draggedWrap===targetWrap)return false;
+  const parent=targetWrap.parentElement;
+  if(!parent||draggedWrap.parentElement!==parent)return false;
+  const trailingBreak=gmailInlineImageTrailingBreak(draggedWrap);
+  const anchor=insertAfter?targetWrap.nextSibling:targetWrap;
+  parent.insertBefore(draggedWrap,anchor);
+  if(trailingBreak)parent.insertBefore(trailingBreak,draggedWrap.nextSibling);
+  return true;
+}
+/** 跟 draggedWrap 同一個父層容器、且同樣是圖片 wrap 的所有相鄰項目，依目前 DOM 順序排列——
+ * 拖曳排序與左右方向鍵微調都只在「同一群」圖片內移動，不會跨到別的容器。 */
+function siblingGmailInlineImageWraps(wrap){
+  const parent=wrap.parentElement;
+  if(!parent)return[];
+  return [...parent.children].filter(child=>child.classList&&child.classList.contains('gmail-inline-image-wrap'));
+}
+function moveGmailInlineImageByStep(wrap,direction){
+  const editor=wrap.closest('.gmail-rich-editor');
+  if(!editor||editor.classList.contains('is-generating'))return;
+  const siblings=siblingGmailInlineImageWraps(wrap);
+  const index=siblings.indexOf(wrap);
+  const targetIndex=index+direction;
+  if(index<0||targetIndex<0||targetIndex>=siblings.length)return;
+  moveGmailInlineImageUnit(wrap,siblings[targetIndex],direction>0);
+  syncGmailInlineImageLineBreakButtons(editor);
+  wrap.querySelector(':scope>.gmail-inline-image-handle')?.focus();
+}
+function syncGmailInlineImageLineBreakButtons(editor){
+  if(!editor)return;
+  editor.querySelectorAll('.gmail-inline-image-wrap').forEach(refreshGmailInlineImageLineBreakButton);
 }
 const gmailRecipientState=new Map();
 function mailAddressEntry(value){
@@ -11146,8 +11334,8 @@ function appendDesignerReplyImageThumb(container,img){
     wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
   },{once:true});
   wrap.appendChild(image);
+  container.appendChild(wrap); // 先插入 DOM 再綁定控制項，換行切換鈕才能讀到正確的 wrap.nextSibling（見 insertGmailInlineImage 同一個理由）
   bindGmailInlineImageControls(wrap);
-  container.appendChild(wrap);
 }
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，
  * 取代原本的「圖片上傳中...」文字，並解除送出按鈕的停用狀態——只動這個佔位容器本身，不會動到
