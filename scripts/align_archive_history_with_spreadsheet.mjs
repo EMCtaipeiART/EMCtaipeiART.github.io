@@ -7,9 +7,13 @@ import { parseCsv } from '../backend/import_google_sheets.mjs';
 // 一次性資料校正腳本：把 data/database_archive.json 裡 2024-2025 年缺漏的
 // 「案件編號」，依雲端試算表「database_archive」分頁（gid=646199020，公司內部
 // 一直保留的舊案件流水帳，跟現在即時系統在用的「database」分頁 gid=1244538986
-// 是兩個不同分頁）補齊，並把 2025 年以前的「加權」補上等於「數量」的值——
-// 這是 2025 年以前這個系統唯一使用過的加權計算方式，2025 年（含）以後留給
-// 之後另外處理，這次刻意不動。
+// 是兩個不同分頁）補齊；「加權」則整段歷史列（2022~2025，即案件編號還不是
+// 26 開頭的那一段）都直接採用試算表當時記錄的真實值——這段時間試算表裡
+// 「加權」幾乎全部等於「數量」（3716+2953 筆完全相等，只有 1 筆 2025 年的
+// 例外，試算表本身記的不是單純的數量，可能是急件加乘或人工調整過），直接
+// 複製試算表的值比「一律設成等於數量」更準確，兩者在絕大多數列上結果相同。
+// 2026 年（含）以後（案件編號 26 開頭）的即時同步紀錄完全不在這次校正範圍
+// 內，不會被這支腳本觸碰。
 //
 // 對齊依據：比對過 data/database_archive.json 開頭那一段（非 26 開頭案件編號
 // 的歷史列）跟這個試算表分頁，兩邊在案件數量、順序完全一致（同一批 12 個欄位
@@ -17,24 +21,18 @@ import { parseCsv } from '../backend/import_google_sheets.mjs';
 // 有值」這種良性缺漏，沒有任何一筆是兩邊都有值但內容衝突），確認可以用「同一
 // 個位置＝同一筆歷史紀錄」直接對齊；已經有案件編號的 2436 筆也逐一驗證過跟
 // 試算表同一位置的案件編號完全相同，這次只是把原本沒對到的欄位補齊，不會覆蓋
-// 掉任何已經正確的既有資料。2026 年之後（案件編號 26 開頭）的即時同步紀錄
-// 完全不在這次校正範圍內，不會被這支腳本觸碰。
+// 掉任何已經正確的既有資料。
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ARCHIVE_PATH = resolve(SCRIPT_DIR, '../data/database_archive.json');
 const SPREADSHEET_ID = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const HISTORY_SHEET_GID = '646199020';
 const HISTORY_SHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${HISTORY_SHEET_GID}`;
-const WEIGHT_CUTOFF_YEAR = 2025;
 const KEY_FIELDS = ['客戶別', '專案名稱', '設計種類', '開始日期', '結束日期', '設計負責人'];
 
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const text = value => String(value ?? '').trim();
 const normalize = value => text(value).normalize('NFKC');
-const startYear = row => {
-  const match = /^(\d{4})\//.exec(text(row['開始日期']));
-  return match ? Number(match[1]) : null;
-};
 
 async function fetchHistorySheetRows() {
   const response = await fetch(HISTORY_SHEET_URL, { redirect: 'follow', headers: { 'User-Agent': 'Machi-Archive-Alignment/1.0' } });
@@ -95,13 +93,10 @@ for (let index = 0; index < archiveHistoryCount; index += 1) {
     archiveRow['案件編號'] = sourceCaseId;
     filledCaseIds += 1;
   }
-  const year = startYear(archiveRow);
-  if (year !== null && year < WEIGHT_CUTOFF_YEAR) {
-    const quantity = text(archiveRow['數量']);
-    if (text(archiveRow['加權']) !== quantity) {
-      archiveRow['加權'] = quantity;
-      filledWeights += 1;
-    }
+  const sourceWeight = normalize(sourceRow['加權']);
+  if (normalize(archiveRow['加權']) !== sourceWeight) {
+    archiveRow['加權'] = sourceWeight;
+    filledWeights += 1;
   }
 }
 
