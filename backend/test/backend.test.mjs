@@ -958,6 +958,11 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(archiveAdmin, /Promise\.all\(\[fetch\(`\$\{SNAPSHOT_URL\}/);
   assert.match(archiveAdmin, /fetch\(`\$\{PRIMARY_DATABASE_URL\}/);
   assert.match(archiveAdmin, /machi-database-refresh-v1/);
+  assert.match(archiveAdmin, /<th data-sort="修改次數"><button class="sort-button" type="button">修改<\/button><\/th>/);
+  assert.match(archiveAdmin, /<td>\$\{esc\(row\['加權'\]\)\}<\/td><td>\$\{esc\(row\['修改次數'\]\)\}<\/td><td>\$\{esc\(row\['開始日期'\]\)\}<\/td>/);
+  assert.match(archiveAdmin, /colspan="13">沒有符合條件的資料/);
+  assert.match(archiveAdmin, /\['案件編號','加權','修改次數','開始日期','結束日期'\]\.includes\(key\)/);
+  assert.match(archiveAdmin, /if\(key==='加權'\|\|key==='修改次數'\)\{const value=String\(row\[key\]\?\?''\)\.trim\(\);return value===''\?'':Number\(value\.replace\(\/,\/g,''\)\)\}/);
   assert.match(indexHtml, /const HISTORY_DATABASE_JSON_URL='data\/database_archive\.json'/);
   assert.match(indexHtml, /mergeRowsById\(archiveRows,rows\)/);
   assert.doesNotMatch(indexHtml, /function fetchArchiveDatabaseObjects\([^)]*\)\{return gvizToObjects/);
