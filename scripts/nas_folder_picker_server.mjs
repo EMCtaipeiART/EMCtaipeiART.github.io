@@ -285,6 +285,7 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
         designer: project.designer, client: project.client, start: project.start,
         pendingPreviews: scanResult.pendingPreviews,
         stateFiles: state[stateKey].files,
+        roundState: state[stateKey],
         persistState: () => lib.saveState(stateFile, state)
       });
       await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批

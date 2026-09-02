@@ -35,6 +35,28 @@ export const MAX_IMAGES_PER_UPLOAD_REQUEST = 20;
 // 等靜態資料庫發布並核對，不要一分鐘後立刻重送；超過這段時間仍查不到才重試。
 export const AMBIGUOUS_UPLOAD_RETRY_GRACE_MS = 5 * 60 * 1000;
 
+function trackedRound(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const round = Number(value);
+  return Number.isFinite(round) && round >= 0 ? round : null;
+}
+
+export function changedFileRoundState(previous) {
+  const assignedRound = trackedRound(previous?.assignedRound);
+  const pendingAfterRound = trackedRound(previous?.pendingAfterRound);
+  const attemptedRound = trackedRound(previous?.uploadAttempt?.round);
+  const completedRounds = [assignedRound, pendingAfterRound, attemptedRound]
+    .filter(round => round !== null);
+  if (!completedRounds.length) {
+    return { assignedRound: null, pendingAfterRound: null, uploadAttempt: null };
+  }
+  return {
+    assignedRound,
+    pendingAfterRound: Math.max(...completedRounds),
+    uploadAttempt: previous?.uploadAttempt || null
+  };
+}
+
 // 鎖檔案內容讀不到有效 PID（見下方 acquireLock 說明）時，用「檔案是幾時建立
 // 的」判斷要不要視為過期──這個數字要遠大於單次掃描實際會花的時間（NAS／
 // Drive 上傳都可能拖到幾分鐘），避免正常還在跑的執行被誤判成過期而被蓋過去。
@@ -392,6 +414,7 @@ export async function scanProject(project, config, state, previewDir, warnings) 
   const skippedByKeywordCount = allMediaFiles.length - mediaFiles.length;
   const previousState = state[project.caseId] || { files: {} };
   const previousFiles = previousState.files || {};
+  const previousSealedRound = trackedRound(previousState.sealedRound);
   const nextFiles = {};
   const newItems = [];
   const changedItems = [];
@@ -408,6 +431,7 @@ export async function scanProject(project, config, state, previewDir, warnings) 
       mtimeMs: fileStat.mtimeMs,
       size: fileStat.size,
       assignedRound: previous ? previous.assignedRound : null,
+      pendingAfterRound: previous ? trackedRound(previous.pendingAfterRound) : null,
       previewPath: previous ? previous.previewPath : null,
       uploadAttempt: previous ? previous.uploadAttempt : null
     };
@@ -423,8 +447,12 @@ export async function scanProject(project, config, state, previewDir, warnings) 
     if (changed) {
       const previewPath = await buildPreview(media, caseProjectPreviewDir, config.mountRoot, config, warnings);
       entry.previewPath = previewPath;
-      entry.assignedRound = null; // 內容變了，重新排進「待歸類」清單
-      entry.uploadAttempt = null;
+      // 已經傳過的輪次是歷史快照，不可因設計師再次儲存同一來源檔就被追加新版。
+      // 保留 assignedRound，另以 pendingAfterRound 記住「這個新版要等下一輪」；
+      // 同一輪內再存幾次都只更新本機預覽，等一修／二修建立後才傳最新版本。
+      // uploadAttempt.round 也納入封存基準：POST 回應逾時時遠端可能其實已成功，
+      // 不能因來源檔剛好又變動就立刻把另一個版本重送到相同輪次。
+      Object.assign(entry, changedFileRoundState(previous));
       if (!previous) newItems.push({ relPath, ...entry });
       else changedItems.push({ relPath, ...entry });
     } else {
@@ -435,12 +463,13 @@ export async function scanProject(project, config, state, previewDir, warnings) 
   }
 
   const pendingPreviews = Object.entries(nextFiles)
-    .filter(([, entry]) => entry.assignedRound === null && entry.previewPath)
+    .filter(([, entry]) => (entry.assignedRound === null || trackedRound(entry.pendingAfterRound) !== null) && entry.previewPath)
     .map(([relPath, entry]) => ({
       relPath,
       previewPath: entry.previewPath,
       mtimeMs: entry.mtimeMs,
       size: entry.size,
+      pendingAfterRound: entry.pendingAfterRound,
       uploadAttempt: entry.uploadAttempt
     }));
 
@@ -453,7 +482,10 @@ export async function scanProject(project, config, state, previewDir, warnings) 
     changedItems,
     unchangedCount,
     pendingPreviews,
-    nextState: { files: nextFiles }
+    nextState: {
+      files: nextFiles,
+      ...(previousSealedRound === null ? {} : { sealedRound: previousSealedRound })
+    }
   };
 }
 
@@ -683,39 +715,64 @@ export function uploadEnabled(config, secrets) {
  * 標記為已歸類到這一輪。回傳結果供呼叫端（watcher 的批次迴圈／picker
  * server 的立即備份）各自決定怎麼呈現。
  */
-export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, persistState }) {
+export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, roundState, persistState }) {
   const round = computeRound(dbData, caseId);
   const targetImages = computeTargetImages(dbData, caseId, round);
   let reconciledCount = 0;
   let deferredCount = 0;
+  let waitingForNextRoundCount = 0;
   const nowMs = Date.now();
   const eligiblePreviews = [];
+  // sealedRound 是資料夾層級的封存標記。舊版 state 還沒有這個欄位時，從任一
+  // 檔案的 assignedRound 反推，免資料遷移也能立刻套用封存規則。
+  const inferredSealedRound = Object.values(stateFiles || {}).reduce((max, entry) => {
+    const assigned = trackedRound(entry?.assignedRound);
+    return assigned === null ? max : Math.max(max, assigned);
+  }, -1);
+  const storedSealedRound = trackedRound(roundState?.sealedRound);
+  const sealedRound = storedSealedRound !== null
+    ? Math.max(storedSealedRound, inferredSealedRound)
+    : inferredSealedRound;
   for (const item of pendingPreviews) {
     const entry = stateFiles[item.relPath];
     const attempt = entry && entry.uploadAttempt;
-    if (!attempt || !Number.isFinite(Number(attempt.round)) || !Number.isFinite(Number(attempt.atMs))) {
-      eligiblePreviews.push(item);
+    if (attempt && Number.isFinite(Number(attempt.round)) && Number.isFinite(Number(attempt.atMs))) {
+      const attemptedRound = Number(attempt.round);
+      const currentCount = countRecordedCaseDesignImages(
+        dbData,
+        caseId,
+        attemptedRound,
+        path.basename(item.relPath)
+      );
+      const baselineCount = Math.max(0, Number(attempt.baselineCount) || 0);
+      if (currentCount > baselineCount) {
+        entry.assignedRound = attemptedRound;
+        entry.uploadAttempt = null;
+        reconciledCount += 1;
+        // 來源檔在不確定的 POST 之後又變動時，pendingAfterRound 仍保留，
+        // 新內容會等下一輪；沒有新版待處理時才算整筆完成。
+        if (trackedRound(entry.pendingAfterRound) === null) continue;
+      } else if (nowMs - Number(attempt.atMs) < AMBIGUOUS_UPLOAD_RETRY_GRACE_MS) {
+        deferredCount += 1;
+        continue;
+      } else {
+        entry.uploadAttempt = null;
+      }
+    }
+
+    const pendingAfterRound = trackedRound(entry?.pendingAfterRound);
+    if (pendingAfterRound !== null && round <= pendingAfterRound) {
+      waitingForNextRoundCount += 1;
       continue;
     }
-    const attemptedRound = Number(attempt.round);
-    const currentCount = countRecordedCaseDesignImages(
-      dbData,
-      caseId,
-      attemptedRound,
-      path.basename(item.relPath)
-    );
-    const baselineCount = Math.max(0, Number(attempt.baselineCount) || 0);
-    if (currentCount > baselineCount) {
-      entry.assignedRound = attemptedRound;
-      entry.uploadAttempt = null;
-      reconciledCount += 1;
+    // 這輪已經成功上傳過一批後才出現的全新檔案，也不能回頭追加到已封存
+    // 的初稿／一修；把它標成等待下一輪。一次掃描同時找到的多張新圖會在
+    // 封存前一起進入 eligiblePreviews，所以正常的多圖初稿不受影響。
+    if (pendingAfterRound === null && entry?.assignedRound === null && sealedRound >= round) {
+      entry.pendingAfterRound = round;
+      waitingForNextRoundCount += 1;
       continue;
     }
-    if (nowMs - Number(attempt.atMs) < AMBIGUOUS_UPLOAD_RETRY_GRACE_MS) {
-      deferredCount += 1;
-      continue;
-    }
-    entry.uploadAttempt = null;
     eligiblePreviews.push(item);
   }
 
@@ -742,13 +799,15 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     }
   }
   if (!targetedPreviews.length) {
-    if (reconciledCount && persistState) await persistState();
+    if ((reconciledCount || waitingForNextRoundCount) && persistState) await persistState();
     const message = reconciledCount
       ? `已確認先前上傳成功 ${reconciledCount} 張，不再重送`
       : deferredCount
         ? `前次上傳結果仍在確認中，暫緩重送 ${deferredCount} 張`
+        : waitingForNextRoundCount
+          ? `本輪圖片已封存，${waitingForNextRoundCount} 張新版會等下一個修改輪次再上傳`
         : '沒有偵測到可上傳的圖片/影片';
-    return { round, uploadedCount: 0, reconciledCount, deferredCount, skippedByTarget, message };
+    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, message };
   }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
@@ -777,11 +836,16 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     for (const item of chunk) {
       if (stateFiles[item.relPath]) {
         stateFiles[item.relPath].assignedRound = round;
+        stateFiles[item.relPath].pendingAfterRound = null;
         stateFiles[item.relPath].uploadAttempt = null;
       }
     }
+    if (roundState) roundState.sealedRound = Math.max(Number(roundState.sealedRound) || 0, round);
     uploadedCount += uploadResult.count;
     jsonRevision = uploadResult.jsonRevision;
+    // 每一批成功後立即保存 assignedRound／sealedRound；後續批次若失敗，已成功
+    // 的歷史快照仍然封存，不會在下一次排程被重送或被同輪新版覆蓋。
+    if (persistState) await persistState();
   }
-  return { round, uploadedCount, reconciledCount, deferredCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, targetFallback, jsonRevision };
 }

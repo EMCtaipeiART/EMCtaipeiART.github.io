@@ -199,6 +199,7 @@ async function runScan(args, config, configDir, stateFile) {
             designer: project.designer, client: project.client, start: project.start,
             pendingPreviews: result.pendingPreviews,
             stateFiles: state[stateKey].files,
+            roundState: state[stateKey],
             persistState: () => lib.saveState(stateFile, state)
           });
           if (upload.reconciledCount > 0) {
@@ -206,6 +207,9 @@ async function runScan(args, config, configDir, stateFile) {
           }
           if (upload.deferredCount > 0) {
             console.log(`    [防重等待] 前次上傳結果尚未發布完成，暫緩重送 ${upload.deferredCount} 張`);
+          }
+          if (upload.waitingForNextRoundCount > 0) {
+            console.log(`    [輪次封存] 本輪已完成，${upload.waitingForNextRoundCount} 張新版保留到下一個修改輪次`);
           }
           if (upload.skippedByTarget > 0) {
             console.log(`    [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);

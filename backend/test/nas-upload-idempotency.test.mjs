@@ -4,10 +4,29 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
+  changedFileRoundState,
   createCaseDesignUploadDedupeKey,
   uploadPendingRound,
   uploadRound
 } from '../../scripts/nas_design_image_lib.mjs';
+
+test('a changed source file keeps its completed round and waits for the next revision', () => {
+  assert.deepEqual(changedFileRoundState({ assignedRound: 0, uploadAttempt: null }), {
+    assignedRound: 0,
+    pendingAfterRound: 0,
+    uploadAttempt: null
+  });
+  assert.deepEqual(changedFileRoundState({ assignedRound: 2, pendingAfterRound: 2 }), {
+    assignedRound: 2,
+    pendingAfterRound: 2,
+    uploadAttempt: null
+  });
+  assert.deepEqual(changedFileRoundState(null), {
+    assignedRound: null,
+    pendingAfterRound: null,
+    uploadAttempt: null
+  });
+});
 
 test('NAS upload dedupe key stays stable for the same source version', () => {
   const source = {
@@ -120,6 +139,111 @@ test('ambiguous NAS upload waits for publication instead of retrying one minute 
   assert.equal(result.deferredCount, 1);
   assert.equal(stateFiles[relPath].assignedRound, null);
   assert.deepEqual(stateFiles[relPath].uploadAttempt, attempt);
+});
+
+test('a completed draft stays sealed and uploads its latest changed version only after the next revision exists', async () => {
+  const originalFetch = globalThis.fetch;
+  const relPath = 'draft.png';
+  const stateFiles = {
+    [relPath]: {
+      assignedRound: 0,
+      pendingAfterRound: 0,
+      uploadAttempt: null
+    }
+  };
+  const roundState = { sealedRound: 0, files: stateFiles };
+  const draftDb = {
+    tables: {
+      '修改統計表': {
+        rows: [{
+          '案件編號': '26090001',
+          '修改次數': '0',
+          '圖片連結': JSON.stringify([{ fileName: relPath, url: 'https://example.test/draft-v1' }])
+        }]
+      }
+    }
+  };
+  const pendingPreviews = [{
+    relPath,
+    previewPath: fileURLToPath(import.meta.url),
+    mtimeMs: 2,
+    size: 2,
+    pendingAfterRound: 0
+  }];
+  let requestPayload = null;
+  globalThis.fetch = async (_url, options) => {
+    requestPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ success: true, count: 1, jsonRevision: 101 }));
+  };
+  try {
+    const sealed = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData: draftDb,
+      caseId: '26090001',
+      designer: 'Machi',
+      client: '測試客戶',
+      start: '2026/09/01',
+      pendingPreviews,
+      stateFiles,
+      roundState
+    });
+    assert.equal(sealed.uploadedCount, 0);
+    assert.equal(sealed.waitingForNextRoundCount, 1);
+    assert.equal(requestPayload, null);
+    assert.equal(stateFiles[relPath].assignedRound, 0);
+    assert.equal(stateFiles[relPath].pendingAfterRound, 0);
+
+    const revisionDb = structuredClone(draftDb);
+    revisionDb.tables['修改統計表'].rows.push({
+      '案件編號': '26090001',
+      '修改次數': '1',
+      '圖片連結': '[]'
+    });
+    const revision = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData: revisionDb,
+      caseId: '26090001',
+      designer: 'Machi',
+      client: '測試客戶',
+      start: '2026/09/01',
+      pendingPreviews,
+      stateFiles,
+      roundState
+    });
+    assert.equal(revision.uploadedCount, 1);
+    assert.equal(requestPayload.round, 1);
+    assert.equal(stateFiles[relPath].assignedRound, 1);
+    assert.equal(stateFiles[relPath].pendingAfterRound, null);
+    assert.equal(roundState.sealedRound, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a new file discovered after a round was sealed also waits for the next revision', async () => {
+  const relPath = 'late-addition.png';
+  const stateFiles = {
+    'draft.png': { assignedRound: 0, pendingAfterRound: null },
+    [relPath]: { assignedRound: null, pendingAfterRound: null, uploadAttempt: null }
+  };
+  const roundState = { sealedRound: 0, files: stateFiles };
+  const result = await uploadPendingRound({
+    config: {},
+    secrets: {},
+    dbData: { tables: { '修改統計表': { rows: [{ '案件編號': '26090001', '修改次數': '0' }] } } },
+    caseId: '26090001',
+    designer: 'Machi',
+    client: '測試客戶',
+    start: '2026/09/01',
+    pendingPreviews: [{ relPath, previewPath: '/unused' }],
+    stateFiles,
+    roundState
+  });
+  assert.equal(result.uploadedCount, 0);
+  assert.equal(result.waitingForNextRoundCount, 1);
+  assert.equal(stateFiles[relPath].pendingAfterRound, 0);
 });
 
 test('Apps Script reuses the same Drive file for a retried dedupe key', async () => {

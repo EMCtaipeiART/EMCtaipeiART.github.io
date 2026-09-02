@@ -2385,17 +2385,41 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         const existing = parseCaseDesignImages_(row);
         const seenUrls = new Set<string>();
+        const seenNasFileNames = new Set(existing.map(item => text(item.fileName).toLocaleLowerCase()).filter(Boolean));
         const merged: { fileName: string; url: string }[] = [];
-        for (const item of [...existing, ...images]) {
+        for (const item of existing) {
           if (seenUrls.has(item.url)) continue;
           seenUrls.add(item.url);
           merged.push(item);
         }
+        let ignoredImages = 0;
+        let addedImages = 0;
+        const lockNasFileNames = serviceAuthorized && source === 'nas-watcher';
+        for (const item of images) {
+          if (seenUrls.has(item.url)) {
+            ignoredImages += 1;
+            continue;
+          }
+          const fileNameKey = text(item.fileName).toLocaleLowerCase();
+          // NAS 自動同步只允許同一檔名在同一輪寫入一次。來源檔後續儲存出的
+          // 新版本要由 watcher 留到下一修，不能在初稿／一修已完成後追加第二張。
+          // 手動上傳維持原行為，讓有權限的使用者仍可明確補圖或更正。
+          if (lockNasFileNames && fileNameKey && seenNasFileNames.has(fileNameKey)) {
+            ignoredImages += 1;
+            continue;
+          }
+          seenUrls.add(item.url);
+          if (fileNameKey) seenNasFileNames.add(fileNameKey);
+          merged.push(item);
+          addedImages += 1;
+        }
         row['圖片連結'] = JSON.stringify(merged);
-        row['圖片來源'] = source;
-        row['圖片更新時間'] = now;
+        if (addedImages > 0 || createdRound) {
+          row['圖片來源'] = source;
+          row['圖片更新時間'] = now;
+        }
         if (createdRound) recalculateDatabaseModificationCounts(draft);
-        return { result: { ok: true, action, caseId, round: roundNumber, images: merged, record: row }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
+        return { result: { ok: true, action, caseId, round: roundNumber, images: merged, ignoredImages, record: row }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
       });
     }
     if (action === 'removeCaseDesignImage') {

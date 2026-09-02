@@ -369,6 +369,21 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
   assert.doesNotMatch(designerReplySource, /lastMessage\?\.from|senderName/);
 });
 
+test('front end keeps the earliest image for duplicate file names within the same revision round', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const source = html.match(/function normalizeRecordImageEntry\(item\)\{[^\n]+\}\nfunction parseRecordImages\(value\)\{[^\n]+\}/)?.[0] || '';
+  assert.ok(source, 'could not locate modification image parser');
+  const parse = new Function(`${source};return parseRecordImages;`)();
+  assert.deepEqual(parse([
+    { fileName: 'draft.png', url: 'https://example.test/original' },
+    { fileName: 'DRAFT.PNG', url: 'https://example.test/duplicate-newer' },
+    { fileName: 'other.png', url: 'https://example.test/other' }
+  ]), [
+    { fileName: 'draft.png', url: 'https://example.test/original' },
+    { fileName: 'other.png', url: 'https://example.test/other' }
+  ]);
+});
+
 test('selecting multiple NAS folders for a designer reply attaches every folder\'s images and every folder\'s path, not just the first one', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');

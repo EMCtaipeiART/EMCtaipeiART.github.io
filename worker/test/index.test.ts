@@ -789,6 +789,45 @@ describe('Machi Design API Worker', () => {
     expect(removeAgain).toMatchObject({ ok: false, error: '找不到該張圖片' });
   });
 
+  it('keeps a NAS file name immutable inside one revision while allowing the same file in the next revision', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'nas-image-file-sha' }, commit: { sha: 'nas-image-commit-sha' } });
+    });
+
+    const draft = await api({
+      action: 'addCaseDesignImages',
+      serviceKey: 'test-nas-watcher-key',
+      source: 'nas-watcher',
+      caseId: '26080001',
+      round: 0,
+      images: [{ fileName: 'draft.png', url: 'https://example.com/draft-v1.jpg' }]
+    });
+    expect(draft.images).toEqual([{ fileName: 'draft.png', url: 'https://example.com/draft-v1.jpg' }]);
+
+    const repeatedDraft = await api({
+      action: 'addCaseDesignImages',
+      serviceKey: 'test-nas-watcher-key',
+      source: 'nas-watcher',
+      caseId: '26080001',
+      round: 0,
+      images: [{ fileName: 'DRAFT.PNG', url: 'https://example.com/draft-v2.jpg' }]
+    });
+    expect(repeatedDraft.images).toEqual([{ fileName: 'draft.png', url: 'https://example.com/draft-v1.jpg' }]);
+    expect(repeatedDraft.ignoredImages).toBe(1);
+
+    const firstRevision = await api({
+      action: 'addCaseDesignImages',
+      serviceKey: 'test-nas-watcher-key',
+      source: 'nas-watcher',
+      caseId: '26080001',
+      round: 1,
+      images: [{ fileName: 'draft.png', url: 'https://example.com/revision-v1.jpg' }]
+    });
+    expect(firstRevision.images).toEqual([{ fileName: 'draft.png', url: 'https://example.com/revision-v1.jpg' }]);
+    expect(firstRevision.ignoredImages).toBe(0);
+  });
+
   it('lets a media.manage-only account save designer profiles for poster management', async () => {
     await seedAccountPermission('test.user@emctaipei.com', '自訂', ['media.manage']);
     const tester = await api({ action: 'login', password: 'test' });
