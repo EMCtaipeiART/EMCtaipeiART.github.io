@@ -28,7 +28,7 @@ type GmailTokenRow = { account: string; refresh_token: string; access_token: str
 type ScheduledMailRow = {
   id: string; case_id: string; kind: 'send' | 'reply'; owner_account: string; requested_by: string;
   to_address: string; cc_address: string; subject: string; body_html: string; signature_html: string;
-  inline_images: string; scheduled_at: number; status: 'pending' | 'sending' | 'sent' | 'failed' | 'canceled';
+  inline_images: string; attachments: string; scheduled_at: number; status: 'pending' | 'sending' | 'sent' | 'failed' | 'canceled';
   error_message: string | null; created_at: string; updated_at: string;
 };
 
@@ -298,6 +298,54 @@ function resolveGmailInlineImages(payload: ApiPayload): GmailInlineImage[] {
   });
 }
 
+/** 附加檔案（跟內嵌圖片是兩件不同的事——內嵌圖片一定是 jpg/png/webp/gif、透過 cid: 參照顯示在信件
+ * 本文裡；附加檔案可以是任意檔案類型，不會出現在本文中，收件端看到的是獨立的附件清單，比照一般
+ * 郵件用戶端「附加檔案」的既有體驗）。**15 MB 這兩個上限（單檔／整封信合計）刻意訂得比 Gmail 本身
+ * 25 MB 的建議上限更保守**——因為這裡收到的是先經過 base64 編碼、包在同一個 JSON 請求裡的內容，
+ * base64 本身會讓資料膨脹成原始大小的約 4/3 倍，而整個請求（見 index.ts 的 MAX_REQUEST_BYTES=28MB）
+ * 本身就有上限；15 MB 解碼後的附件約需要 20 MB 的 base64 文字，加上內文/標頭等其餘 JSON 欄位仍留有
+ * 餘裕、不會頂到 28MB 的天花板。跟內嵌圖片各自 8 MB／18 MB 的既有上限是獨立分開計算，不會疊加成一個
+ * 更嚴格的合計，這是刻意的簡化（兩種檔案的使用情境不同，沒有強制要求兩者合計也要落在某個更小的範圍
+ * 內；如果使用者同時塞爆內嵌圖片與附件兩種上限，最終還是會被 MAX_REQUEST_BYTES 這道更前面的關卡擋下，
+ * 只是錯誤訊息會是籠統的「請求內容過大」而不是這裡精確的檔名/大小提示）。 */
+type GmailAttachment = { fileName: string; mimeType: string; base64: string; bytes: number };
+const GMAIL_ATTACHMENT_MAX_COUNT = 10;
+const GMAIL_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+const GMAIL_ATTACHMENT_MAX_TOTAL_BYTES = 15 * 1024 * 1024;
+
+function resolveGmailAttachments(payload: ApiPayload): GmailAttachment[] {
+  const values = Array.isArray(payload.attachments) ? payload.attachments : [];
+  if (values.length > GMAIL_ATTACHMENT_MAX_COUNT) throw new Error(`每封信最多可附加 ${GMAIL_ATTACHMENT_MAX_COUNT} 個檔案`);
+  let totalBytes = 0;
+  return values.map(value => {
+    const row = asRow(value);
+    const fileName = text(row.fileName).slice(0, 200) || '附件';
+    const mimeType = text(row.mimeType).toLowerCase() || 'application/octet-stream';
+    const rawBase64 = text(row.base64).replace(/^data:[^;,]+;base64,/i, '').replace(/\s+/g, '');
+    if (!rawBase64 || !/^[A-Za-z0-9+/]*={0,2}$/.test(rawBase64)) throw new Error(`${fileName} 附件內容格式錯誤`);
+    const padding = rawBase64.endsWith('==') ? 2 : rawBase64.endsWith('=') ? 1 : 0;
+    const bytes = Math.max(0, Math.floor(rawBase64.length * 3 / 4) - padding);
+    if (bytes > GMAIL_ATTACHMENT_MAX_BYTES) throw new Error(`${fileName} 超過 15 MB，請改用雲端連結分享`);
+    totalBytes += bytes;
+    if (totalBytes > GMAIL_ATTACHMENT_MAX_TOTAL_BYTES) throw new Error('信件附加檔案總量不可超過 15 MB');
+    return { fileName, mimeType, base64: rawBase64, bytes };
+  });
+}
+
+/** 附件檔名是使用者電腦上檔案原本的名字，屬於不受信任輸入（跟既有內嵌圖片固定用伺服器產生的檔名
+ * inline-N.ext 不同），要安全地寫進 MIME 標頭參數值：先去掉 CR/LF／雙引號（防止標頭注入、或提早跳出
+ * quoted-string 讓後面的文字被誤判成額外的標頭參數），純 ASCII 檔名直接當 filename="..." 使用；含中文
+ * 等非 ASCII 字元時（這個系統的實際使用情境很常見），改用 RFC 2231 star 參數（filename*=UTF-8''
+ * <percent-encoded>，現代郵件用戶端含 Gmail 本身都支援），並保留一份把非 ASCII 字元替換成底線的 ASCII
+ * 版本當 filename="..." 保底，不支援 RFC 2231 的極少數舊用戶端至少還看得到一個檔名可用，不會完全沒有。 */
+function mimeAttachmentFilenameParams(fileName: string): string {
+  const cleaned = (fileName || '').replace(/[\r\n"]/g, '').trim() || 'attachment';
+  if (/^[\x20-\x7e]*$/.test(cleaned)) return `filename="${cleaned}"`;
+  const asciiFallback = cleaned.replace(/[^\x20-\x7e]/g, '_') || 'attachment';
+  const encoded = encodeURIComponent(cleaned).replace(/[!'()*]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
+
 function gmailBodyWithSignature(bodyHtml: string, signatureHtml = ''): string {
   if (!signatureHtml.trim()) return bodyHtml;
   return `${bodyHtml}<br><br><div>${signatureHtml}</div>`;
@@ -309,8 +357,12 @@ function gmailPlainBodyWithSignature(bodyHtml: string, signatureHtml = ''): stri
   return signatureText ? `${bodyText}\n\n${signatureText}`.trim() : bodyText;
 }
 
-/** 組出寄送用的 RFC822 MIME 信件：一般信件為 multipart/alternative，含照片時改用 multipart/related 包住內嵌 CID 圖片。 */
-function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; signatureHtml?: string; quotedHtml?: string; quotedText?: string; inlineImages?: GmailInlineImage[]; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
+/** 組出寄送用的 RFC822 MIME 信件：一般信件為 multipart/alternative，含照片時改用 multipart/related 包住
+ * 內嵌 CID 圖片；含附加檔案時（不論有沒有內嵌圖片），最外層再包一層 multipart/mixed——這是真正的信件用
+ * 戶端（Gmail／Outlook 等）處理附件的標準巢狀方式：「內文本身」（不管是純 alternative 還是 related）整個
+ * 當成 mixed 底下的第一個 part，後面接著逐一附件 part。沒有附件時完全維持原本的結構與位元組輸出，不會
+ * 因為這次擴充而多包一層不必要的 mixed。 */
+function buildGmailRawMessage(options: { to: string; cc?: string; subject: string; bodyHtml: string; signatureHtml?: string; quotedHtml?: string; quotedText?: string; inlineImages?: GmailInlineImage[]; attachments?: GmailAttachment[]; threadHeaders?: { inReplyTo: string; references: string; subject: string } }): string {
   const headers: string[] = [];
   headers.push(`To: ${mimeAddressList(options.to)}`);
   if (options.cc && mimeAddressList(options.cc)) headers.push(`Cc: ${mimeAddressList(options.cc)}`);
@@ -323,8 +375,9 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
   headers.push('MIME-Version: 1.0');
   const boundary = `machi_alt_${crypto.randomUUID().replace(/-/g, '')}`;
   const relatedBoundary = `machi_related_${crypto.randomUUID().replace(/-/g, '')}`;
+  const mixedBoundary = `machi_mixed_${crypto.randomUUID().replace(/-/g, '')}`;
   const images = options.inlineImages || [];
-  headers.push(`Content-Type: ${images.length ? 'multipart/related' : 'multipart/alternative'}; boundary="${images.length ? relatedBoundary : boundary}"`);
+  const attachments = options.attachments || [];
   const fullHtml = `${gmailBodyWithSignature(options.bodyHtml, options.signatureHtml)}${options.quotedHtml ? `<br><br>${options.quotedHtml}` : ''}`;
   const fullPlainText = `${gmailPlainBodyWithSignature(options.bodyHtml, options.signatureHtml)}${options.quotedText ? `\n\n${options.quotedText}` : ''}`;
   const plainPart = [
@@ -351,9 +404,24 @@ function buildGmailRawMessage(options: { to: string; cc?: string; subject: strin
     '',
     wrapMimeBase64(image.base64)
   ].join('\r\n')).join('\r\n');
-  const body = images.length
+  // 「內文本體」：沒有附件時，這就是整封信最外層的內容，直接用它自己的 Content-Type 當頂層標頭；
+  // 有附件時，這整段會變成外層 multipart/mixed 底下的第一個 part（見下方 body 組裝）。
+  const contentType = images.length ? `multipart/related; boundary="${relatedBoundary}"` : `multipart/alternative; boundary="${boundary}"`;
+  const contentBody = images.length
     ? `--${relatedBoundary}\r\nContent-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n${alternativeBody}\r\n${relatedParts}\r\n--${relatedBoundary}--`
     : alternativeBody;
+  const attachmentParts = attachments.map(attachment => [
+    `--${mixedBoundary}`,
+    `Content-Type: ${attachment.mimeType}; ${mimeAttachmentFilenameParams(attachment.fileName)}`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; ${mimeAttachmentFilenameParams(attachment.fileName)}`,
+    '',
+    wrapMimeBase64(attachment.base64)
+  ].join('\r\n')).join('\r\n');
+  headers.push(`Content-Type: ${attachments.length ? `multipart/mixed; boundary="${mixedBoundary}"` : contentType}`);
+  const body = attachments.length
+    ? `--${mixedBoundary}\r\nContent-Type: ${contentType}\r\n\r\n${contentBody}\r\n${attachmentParts}\r\n--${mixedBoundary}--`
+    : contentBody;
   const mime = `${headers.join('\r\n')}\r\n\r\n${body}`;
   return utf8ToBase64Url(mime);
 }
@@ -590,7 +658,7 @@ async function fetchGmailThreadMessages(accessToken: string, threadId: string): 
  * 排程寄送（dispatchScheduledMailItem）跟立即回信（replyCaseMail）共用同一套組信邏輯，確保排程真正寄出時的
  * 信件格式跟使用者當下按「送出回覆」完全一致。一併回傳 lastMessageId，供呼叫端查詢寄件帳號自己信箱裡對應
  * 的 threadId（見 findOwnMailboxThreadId），不用另外重新解析一次標頭。 */
-function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[] }): { raw: string; lastMessageId: string } {
+function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[]; attachments?: GmailAttachment[] }): { raw: string; lastMessageId: string } {
   const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
   const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
   const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
@@ -600,7 +668,7 @@ function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc
   const quote = gmailThreadQuote(threadMessages, htmlToPlainText(options.signatureHtml), options.signatureHtml);
   const raw = buildGmailRawMessage({
     to: options.to, cc: options.cc, subject: lastSubject, bodyHtml: options.bodyHtml, signatureHtml: options.signatureHtml,
-    quotedHtml: quote.html, quotedText: quote.plainText, inlineImages: options.inlineImages,
+    quotedHtml: quote.html, quotedText: quote.plainText, inlineImages: options.inlineImages, attachments: options.attachments,
     threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
   });
   return { raw, lastMessageId };
@@ -817,6 +885,19 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           this.ctx.storage.sql.exec(
             'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
             4, new Date().toISOString()
+          );
+        });
+      }
+      if (!applied.has(5)) {
+        this.ctx.storage.transactionSync(() => {
+          // 「附加檔案」功能新增——跟 inline_images 同一種理由，附件內容（可能是任意檔案，最多 25MB）
+          // 一樣只留在這個 Durable Object 自己的 SQLite 儲存裡，不會被 mutate() 提交進公開的 GitHub JSON。
+          // NOT NULL DEFAULT '[]' 是 SQLite 允許的常數預設值，既有排程列補上這欄後直接是空陣列，讀取端
+          // 不用另外判斷這個欄位可能是 NULL。
+          this.ctx.storage.sql.exec(`ALTER TABLE scheduled_mail ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]';`);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            5, new Date().toISOString()
           );
         });
       }
@@ -1307,13 +1388,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
+    const attachments = resolveGmailAttachments(payload);
     if (!caseId) return { ok: false, action: 'sendCaseMail', error: '缺少案件編號' };
     if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
     const row = existingRow;
     if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
     if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
-    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages });
+    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw })
     });
@@ -1537,7 +1619,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
-    if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
+    const attachments = resolveGmailAttachments(payload);
+    if (!htmlToPlainText(bodyHtml) && !inlineImages.length && !attachments.length) return { ok: false, action: 'replyCaseMail', error: '回覆內容不可為空' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'replyCaseMail', error: '此案件尚未透過 Gmail 寄出過信件' };
@@ -1567,7 +1650,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
     const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml), signatureHtml);
     const raw = buildGmailRawMessage({
-      to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages,
+      to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages, attachments,
       threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
     });
     const senderAccessToken = await this.getValidGmailAccessToken(current.account);
@@ -1589,16 +1672,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private insertScheduledMail(options: {
     caseId: string; kind: 'send' | 'reply'; ownerAccount: string; requestedBy: string;
     to: string; cc: string; subject: string; bodyHtml: string; signatureHtml: string;
-    inlineImages: GmailInlineImage[]; scheduledAt: number;
+    inlineImages: GmailInlineImage[]; attachments: GmailAttachment[]; scheduledAt: number;
   }): string {
     const id = randomToken();
     const now = new Date().toISOString();
     this.ctx.storage.sql.exec(
-      `INSERT INTO scheduled_mail(id, case_id, kind, owner_account, requested_by, to_address, cc_address, subject, body_html, signature_html, inline_images, scheduled_at, status, error_message, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?)`,
+      `INSERT INTO scheduled_mail(id, case_id, kind, owner_account, requested_by, to_address, cc_address, subject, body_html, signature_html, inline_images, attachments, scheduled_at, status, error_message, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?)`,
       id, options.caseId, options.kind, canonicalAccount(options.ownerAccount), canonicalAccount(options.requestedBy),
       options.to, options.cc, options.subject, options.bodyHtml, options.signatureHtml, JSON.stringify(options.inlineImages),
-      options.scheduledAt, now, now
+      JSON.stringify(options.attachments), options.scheduledAt, now, now
     );
     return id;
   }
@@ -1617,6 +1700,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
+    const attachments = resolveGmailAttachments(payload);
     if (!caseId) return { ok: false, action: 'scheduleCaseMail', error: '缺少案件編號' };
     if (!to || !subject) return { ok: false, action: 'scheduleCaseMail', error: '缺少收件人或主旨' };
     if (!existingRow) return { ok: false, action: 'scheduleCaseMail', error: '找不到案件資料' };
@@ -1642,7 +1726,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const scheduledId = this.insertScheduledMail({
       caseId, kind: 'send', ownerAccount: current.account, requestedBy: current.account,
-      to, cc, subject, bodyHtml, signatureHtml, inlineImages, scheduledAt
+      to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments, scheduledAt
     });
     return { ok: true, action: 'scheduleCaseMail', scheduledId, scheduledAt };
   }
@@ -1663,7 +1747,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
-    if (!htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'scheduleCaseReply', error: '回覆內容不可為空' };
+    const attachments = resolveGmailAttachments(payload);
+    if (!htmlToPlainText(bodyHtml) && !inlineImages.length && !attachments.length) return { ok: false, action: 'scheduleCaseReply', error: '回覆內容不可為空' };
     const threadId = text(row['Gmail信件串ID']);
     const owner = canonicalAccount(row['Gmail寄件帳號']);
     if (!threadId) return { ok: false, action: 'scheduleCaseReply', error: '此案件尚未透過 Gmail 寄出過信件' };
@@ -1681,7 +1766,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     await this.getValidGmailAccessToken(current.account);
     const scheduledId = this.insertScheduledMail({
       caseId, kind: 'reply', ownerAccount: current.account, requestedBy: current.account,
-      to, cc, subject: '', bodyHtml, signatureHtml, inlineImages, scheduledAt
+      to, cc, subject: '', bodyHtml, signatureHtml, inlineImages, attachments, scheduledAt
     });
     return { ok: true, action: 'scheduleCaseReply', scheduledId, scheduledAt };
   }
@@ -1702,11 +1787,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     let inlineImages: GmailInlineImage[] = [];
     try { inlineImages = resolveGmailInlineImages({ inlineImages: JSON.parse(item.inline_images || '[]') }); }
     catch { return { ok: false, action: 'getScheduledMail', error: '排程中的內嵌圖片資料已損壞，無法安全編輯' }; }
+    let attachments: GmailAttachment[] = [];
+    try { attachments = resolveGmailAttachments({ attachments: JSON.parse(item.attachments || '[]') }); }
+    catch { return { ok: false, action: 'getScheduledMail', error: '排程中的附加檔案資料已損壞，無法安全編輯' }; }
     return {
       ok: true, action: 'getScheduledMail', item: {
         id: item.id, caseId: item.case_id, kind: item.kind, ownerAccount: item.owner_account,
         to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html,
-        signatureHtml: item.signature_html, inlineImages, scheduledAt: item.scheduled_at,
+        signatureHtml: item.signature_html, inlineImages, attachments, scheduledAt: item.scheduled_at,
         requestedBy: item.requested_by, createdAt: item.created_at, updatedAt: item.updated_at
       }
     };
@@ -1731,9 +1819,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const bodyHtml = resolveBodyHtml(payload);
     const signatureHtml = text(payload.signatureHtml);
     const inlineImages = resolveGmailInlineImages(payload);
+    const attachments = resolveGmailAttachments(payload);
     const scheduledAt = parseScheduledAt(payload.scheduledAt);
     if (!to || (item.kind === 'send' && !subject)) return { ok: false, action: 'updateScheduledMail', error: '缺少收件人或主旨' };
-    if (item.kind === 'reply' && !htmlToPlainText(bodyHtml) && !inlineImages.length) return { ok: false, action: 'updateScheduledMail', error: '回覆內容不可為空' };
+    if (item.kind === 'reply' && !htmlToPlainText(bodyHtml) && !inlineImages.length && !attachments.length) return { ok: false, action: 'updateScheduledMail', error: '回覆內容不可為空' };
     if (!scheduledAt) return { ok: false, action: 'updateScheduledMail', error: '請指定合法的排程寄送時間（1 分鐘後到 1 年內）' };
     if (!row) return { ok: false, action: 'updateScheduledMail', error: '找不到案件資料' };
     if (item.kind === 'send' && text(row['Gmail信件串ID'])) {
@@ -1745,10 +1834,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const updatedAt = new Date().toISOString();
     const updated = this.ctx.storage.sql.exec<{ id: string }>(
       `UPDATE scheduled_mail
-       SET to_address = ?, cc_address = ?, subject = ?, body_html = ?, signature_html = ?, inline_images = ?, scheduled_at = ?, error_message = NULL, updated_at = ?
+       SET to_address = ?, cc_address = ?, subject = ?, body_html = ?, signature_html = ?, inline_images = ?, attachments = ?, scheduled_at = ?, error_message = NULL, updated_at = ?
        WHERE id = ? AND status = 'pending'
        RETURNING id`,
-      to, cc, subject, bodyHtml, signatureHtml, JSON.stringify(inlineImages), scheduledAt, updatedAt, id
+      to, cc, subject, bodyHtml, signatureHtml, JSON.stringify(inlineImages), JSON.stringify(attachments), scheduledAt, updatedAt, id
     ).toArray();
     if (updated.length !== 1) return { ok: false, action: 'updateScheduledMail', error: '這筆排程已經開始處理，無法再修改', reason: 'SCHEDULE_NOT_PENDING' };
     return { ok: true, action: 'updateScheduledMail', id, scheduledAt, updatedAt };
@@ -1819,6 +1908,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 排程建立當下的舊標頭，確保接在正確的最新一封信後面。失敗直接讓例外往外拋，由呼叫端統一記錄失敗原因。 */
   private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<'sent' | 'canceled'> {
     const inlineImages = JSON.parse(item.inline_images || '[]') as GmailInlineImage[];
+    const attachments = JSON.parse(item.attachments || '[]') as GmailAttachment[];
     const accessToken = await this.getValidGmailAccessToken(item.owner_account);
     if (item.kind === 'send') {
       const stored = await this.snapshot();
@@ -1826,7 +1916,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!row) throw new Error('找不到案件資料，排程未寄出');
       // 排程等待期間若已用其他方式建立信件串，代表「不需要再寄」，不是 Gmail 寄送失敗。
       if (text(row['Gmail信件串ID'])) return 'canceled';
-      const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
+      const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
       const result = await postGmailMessage(accessToken, raw);
       await this.mutate('scheduleCaseMail', { user: item.requested_by, account: item.requested_by, provider: 'password', expiresAt: Date.now() }, draft => {
         const target = draft.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
@@ -1853,7 +1943,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       ? accessToken
       : await this.getValidGmailAccessToken(threadOwner);
     const threadMessages = await fetchGmailThreadMessages(threadAccessToken, threadId);
-    const { raw, lastMessageId } = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages });
+    const { raw, lastMessageId } = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
     // 跟 replyCaseMail 同一套邏輯：同一帳號直接沿用既有 threadId；不同帳號則查寄件帳號自己信箱裡對應的
     // threadId，確保排程寄出的回覆一樣能正確歸進寄件人自己視角下的討論串（見 findOwnMailboxThreadId 說明）。
     const ownThreadId = threadOwner === canonicalAccount(item.owner_account)

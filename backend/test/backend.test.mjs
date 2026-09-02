@@ -442,18 +442,71 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   assert.equal(empty.children.length, 0);
 });
 
-test('inline image resize handle has been removed (unlabeled square users mistook for a "selection box"), while the delete button on inline images still works and images still get a sane default display size on insert', async () => {
+test('inline image resize handle is back (2026-09) with a distinct icon+title (2026-08-26 removal was because the old handle was an unlabeled square users mistook for a "selection box" — the new one is gml-inline-image-resize, not the old -resize-handle name, and pairs a diagonal-arrow SVG with title/aria-label), locked to the original aspect ratio via mouse-drag or ArrowUp/ArrowDown, and bindGmailInlineImageControls still wires it up alongside the delete button with the same single-argument signature', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 2026-08-26 移除的舊版名稱徹底不再出現，不是只換掉 class 名稱字面上恰好對不上而已。
   assert.doesNotMatch(html, /gmail-inline-image-resize-handle/);
-  // bindGmailInlineImageControls 現在只剩刪除鈕，簽章不再需要 image 參數；三個呼叫點都要同步只傳 wrap。
+  assert.match(html, /function bindGmailInlineImageResize\(wrap\)\{/);
+  assert.match(html, /handle\.className='gmail-inline-image-resize';/);
+  assert.match(html, /handle\.title='拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調';/);
+  assert.match(html, /handle\.setAttribute\('aria-label','拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調'\);/);
+  // 對角縮放箭頭圖示，不是一顆看不出用途的空白方塊。
+  assert.match(html, /<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 3 3 11M11 3v4M11 3H7M3 11v-4M3 11h4" stroke-linecap="round" stroke-linejoin="round"\/><\/svg>/);
+  // 鎖定原始比例：naturalHeight/naturalWidth 算出的比例套用在拖曳與方向鍵兩種操作。
+  assert.match(html, /naturalWidth&&naturalHeight\?naturalHeight\/naturalWidth:/);
+  assert.match(html, /if\(event\.key!=='ArrowUp'&&event\.key!=='ArrowDown'\)return;/);
+  assert.match(html, /applyWidth\(editor,currentWidth\+\(event\.key==='ArrowUp'\?20:-20\),imageAspectRatio\(\)\);/);
+  // 下限 60px 的 clamp，避免拖到看不見；用 document 監聽 mousemove/mouseup，滑鼠移出這顆 18px 小按鈕範圍
+  // 仍要能繼續追蹤拖曳。
+  assert.match(html, /const minWidth=60,maxWidth=Math\.max\(minWidth,editor\.clientWidth\|\|9999\);/);
+  assert.match(html, /document\.addEventListener\('mousemove',onMouseMove\);\s*\n\s*document\.addEventListener\('mouseup',onMouseUp\);/);
+  // bindGmailInlineImageControls 現在同時掛拖曳排序把手／換行切換鈕／縮放把手／刪除鈕，簽章仍然只吃
+  // wrap 一個參數，三個呼叫點都要同步只傳 wrap（拿掉縮放把手前的既有慣例，這次沒有改變）。
   assert.match(html, /function bindGmailInlineImageControls\(wrap\)\{/);
   const callSites = [...html.matchAll(/bindGmailInlineImageControls\((\w+)\)/g)];
   assert.equal(callSites.length, 4, 'expected 1 definition + 3 call sites, all with a single argument'); // 定義本身也會被這個 regex 命中一次
   assert.doesNotMatch(html, /bindGmailInlineImageControls\(\w+,\w*image\w*\)/);
+  assert.match(html, /bindGmailInlineImageResize\(wrap\);/);
   assert.match(html, /remove\.className='gmail-inline-image-remove'/);
-  // 拿掉縮放把手後，插入圖片時原本就有的「依原始比例、上限 320px」預設尺寸邏輯要維持不變，
-  // 不會因為少了手動調整的管道就讓圖片顯示過大。
+  // 插入圖片時原本就有的「依原始比例、上限 320px」預設尺寸邏輯維持不變，縮放把手只是額外多一種
+  // 事後手動調整的管道，不影響插入當下的預設呈現大小。
   assert.match(html, /const width=Math\.min\(320,naturalWidth\);\s*\n\s*wrap\.style\.width=`\$\{width\}px`;/);
+});
+
+test('inline images can now be dragged to any text position in the editor (Gmail-like), not just reordered relative to another image — dropping on plain content splits the text and inserts the image there via Range.insertNode(), dropping on another image still uses the existing before/after reorder path, and a visible insertion-point caret line shows during the drag', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /function gmailInlineImageDropRangeAtPoint\(editor,x,y\)\{/);
+  assert.match(html, /function showGmailInlineImageDropCaret\(range\)\{/);
+  assert.match(html, /function hideGmailInlineImageDropCaret\(\)\{/);
+  assert.match(html, /function moveGmailInlineImageToPoint\(draggedWrap,editor,clientX,clientY\)\{/);
+  // 自由拖放的核心：找出滑鼠放開位置的插入點，落在自己（或自己的子節點）身上就當作沒有移動，
+  // 否則用 Range.insertNode()（DOM 規格保證會先把節點從原本的父層移除再插到新位置，不用手動先 remove()）。
+  const moveFnStart = html.indexOf('function moveGmailInlineImageToPoint(draggedWrap,editor,clientX,clientY){');
+  const moveFnEnd = html.indexOf('\n}', moveFnStart);
+  const moveFnSource = html.slice(moveFnStart, moveFnEnd);
+  assert.match(moveFnSource, /if\(!range\|\|draggedWrap\.contains\(range\.startContainer\)\)return false;/);
+  assert.match(moveFnSource, /range\.insertNode\(draggedWrap\);/);
+  assert.match(moveFnSource, /if\(trailingBreak\)draggedWrap\.after\(trailingBreak\);/); // 換行跟著圖片一起搬到新位置
+
+  // dragover/drop 這次改成三分支：拖到另一張圖片（既有的排序路徑，優先）／拖到一般內容（新的自由
+  // 定位路徑）／既有的外部拖檔案路徑（完全不受影響）。
+  const editorFnStart = html.indexOf('function bindGmailInlineImageEditor(editor){');
+  const editorFnEnd = html.indexOf('\n}', html.indexOf("editor.addEventListener('paste'", editorFnStart));
+  const editorFnSource = html.slice(editorFnStart, editorFnEnd);
+  assert.match(editorFnSource, /if\(\[\.\.\.event\.dataTransfer\.types\]\.includes\('Files'\)\)\{event\.preventDefault\(\);editor\.classList\.add\('is-image-dragover'\);return\}/); // 外部拖檔案路徑維持在最前面，優先判斷
+  assert.match(editorFnSource, /if\(targetWrap&&targetWrap!==gmailInlineImageDragged\.wrap\)\{[\s\S]*?hideGmailInlineImageDropCaret\(\);[\s\S]*?return;\s*\}/); // 拖到另一張圖片：既有排序邏輯 + 清掉自由定位的插入線
+  assert.match(editorFnSource, /const range=gmailInlineImageDropRangeAtPoint\(editor,event\.clientX,event\.clientY\);/);
+  assert.match(editorFnSource, /if\(!range\|\|gmailInlineImageDragged\.wrap\.contains\(range\.startContainer\)\)\{hideGmailInlineImageDropCaret\(\);return\}/);
+  assert.match(editorFnSource, /showGmailInlineImageDropCaret\(range\);/);
+  assert.match(editorFnSource, /if\(moveGmailInlineImageToPoint\(gmailInlineImageDragged\.wrap,editor,event\.clientX,event\.clientY\)\)\{[\s\S]*?syncGmailInlineImageLineBreakButtons\(editor\);[\s\S]*?editor\.focus\(\);[\s\S]*?\}/);
+  // dragend／dragleave 都要記得把插入線一起收掉，不然拖曳中斷後會留下一條孤兒指示線。
+  assert.match(html, /handle\.addEventListener\('dragend',\(\)=>\{[\s\S]*?hideGmailInlineImageDropCaret\(\);[\s\S]*?gmailInlineImageDragged=null;\s*\}\);/);
+  assert.match(html, /clearGmailInlineImageDropIndicators\(editor\);hideGmailInlineImageDropCaret\(\)\}\}\);/); // dragleave
+
+  // 插入線本身是重用同一個固定元素（不是每次 dragover 都新建/移除節點），CSS 補上跟這個檔案其餘
+  // [hidden] 元件同一套慣例的顯式覆寫，避免作者樣式（position:fixed 等）蓋掉瀏覽器內建的 [hidden]{display:none}。
+  assert.match(html, /\.gmail-inline-image-drop-caret\{position:fixed;width:2px;background:#16a34a;pointer-events:none;z-index:9999;border-radius:1px\}/);
+  assert.match(html, /\.gmail-inline-image-drop-caret\[hidden\]\{display:none!important\}/);
 });
 
 test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
@@ -473,6 +526,91 @@ test('Gmail editors wait for pasted images before immediate or scheduled send', 
     assert.ok(start > 0, `${functionName} should exist`);
     assert.match(source, /await waitForGmailInlineImages\(editor\.id\)/, `${functionName} should await pasted images`);
   }
+});
+
+test('Gmail compose/reply editors support attaching arbitrary non-inline files (not just images): a paperclip toolbar button + unrestricted-type hidden file input exist in both editors, added files render as removable chips outside the contenteditable body, gmailEditorMailPayload() exposes them as {fileName,mimeType,base64} (matching what the Worker\'s resolveGmailAttachments() expects), every outgoing send/schedule/update action forwards attachments, client-side limits mirror the Worker\'s 15MB/15MB/10-file limits, every editor-reset call site also clears stale attachments (so a previous case\'s attachments cannot leak into the next one), a reloaded scheduled draft restores its saved attachments, sending waits for in-flight attachment reads to finish before serializing the payload, and the batch post-submit queue (which cannot attribute attachments to the right draft) blocks the feature the same way it already blocks inline images', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 兩個編輯區（撰寫、回信）的工具列都要有附加檔案按鈕＋不限型別的隱藏 file input＋附件小卡片容器。
+  for (const editorId of ['gmailComposeEditor', 'gmailThreadReplyEditor']) {
+    assert.match(html, new RegExp(`class="gmail-rich-attachment-btn" data-rich-attachment-for="${editorId}" title="附加檔案" aria-label="附加檔案"`));
+    const inputPattern = new RegExp(`<input type="file" class="gmail-rich-attachment-input" data-rich-attachment-input-for="${editorId}" multiple hidden>`);
+    assert.match(html, inputPattern);
+    assert.doesNotMatch(html, new RegExp(`data-rich-attachment-input-for="${editorId}"[^>]*accept=`), `${editorId}'s attachment input must not restrict file type the way the image input does`);
+    assert.match(html, new RegExp(`class="gmail-attachment-list" data-attachment-list-for="${editorId}" hidden`));
+  }
+  // 隱藏 input 額外補上跟既有 .gmail-rich-image-input 同一種防禦性 CSS 覆寫（這個檔案已經反覆記錄過
+  // 「只靠 hidden 屬性不夠保險」的教訓），不是只靠 hidden 屬性。
+  assert.match(html, /\.gmail-rich-attachment-input\{display:none!important\}/);
+
+  // 核心 store／render／add／remove／restore／queue 函式都存在，且限制數字跟 Worker 端
+  // GMAIL_ATTACHMENT_MAX_BYTES／GMAIL_ATTACHMENT_MAX_TOTAL_BYTES／GMAIL_ATTACHMENT_MAX_COUNT 完全一致
+  // （15 MB／15 MB／10 個）——前端這層只是體驗優化，真正的邊界仍然在 Worker，但數字不一致會讓使用者
+  // 選了「前端覺得OK」卻被 Worker 拒絕的檔案，白白多一次往返。
+  assert.match(html, /const gmailAttachmentMaxCount=10,gmailAttachmentMaxBytes=15\*1024\*1024,gmailAttachmentMaxTotalBytes=15\*1024\*1024;/);
+  assert.match(html, /function gmailAttachmentStore\(editorId\)\{/);
+  assert.match(html, /function clearGmailAttachments\(editorId\)\{/);
+  assert.match(html, /function renderGmailAttachmentChips\(editorId\)\{/);
+  assert.match(html, /function removeGmailAttachment\(editorId,attachmentId\)\{/);
+  assert.match(html, /async function addGmailAttachments\(editorId,fileList\)\{/);
+  assert.match(html, /function restoreScheduledGmailAttachments\(editorId,items\)\{/);
+  assert.match(html, /function queueGmailAttachments\(editorId,fileList\)\{/);
+  assert.match(html, /async function waitForGmailAttachments\(editorId\)\{/);
+
+  const addFnStart = html.indexOf('async function addGmailAttachments(editorId,fileList){');
+  const addFnEnd = html.indexOf('\n}', addFnStart);
+  const addFnSource = html.slice(addFnStart, addFnEnd);
+  assert.match(addFnSource, /if\(postSubmitQueue\)\{setSync\('批次確認寄信流程暫不支援附加檔案/, 'batch post-submit queue must block attachments the same way it blocks inline images, since attachments are keyed by editor id and cannot be attributed to a specific draft');
+  assert.match(addFnSource, /if\(store\.size>=gmailAttachmentMaxCount\)/);
+  assert.match(addFnSource, /if\(file\.size>gmailAttachmentMaxBytes\)/);
+  assert.match(addFnSource, /if\(totalBytes\+file\.size>gmailAttachmentMaxTotalBytes\)/);
+
+  // gmailEditorMailPayload() 只送出 Worker resolveGmailAttachments() 實際需要的三個欄位，不會把內部
+  // 用來畫小卡片的 id/bytes 也送出去。
+  assert.match(html, /const attachments=\[\.\.\.gmailAttachmentStore\(editor\.id\)\.values\(\)\]\.map\(item=>\(\{fileName:item\.fileName,mimeType:item\.mimeType,base64:item\.base64\}\)\);/);
+  assert.match(html, /return \{\s*bodyHtml:prepared\.bodyHtml,\s*scheduledBodyHtml:prepared\.scheduledBodyHtml,\s*insertedSignatureHtml:prepared\.insertedSignatureHtml,\s*inlineImages,\s*attachments,\s*signatureInserted:prepared\.signatureInserted\s*\};/);
+
+  // 六個寄信/排程/更新排程的 action 呼叫都要帶上附件（含批次確認寄信流程刻意固定傳空陣列，跟
+  // inlineImages:[] 同一個理由——那個模式完全不支援插入照片或附加檔案）。
+  assert.match(html, /sheetApi\('sendCaseMail',\{caseId:draft\.id,to,cc,subject:subjectText,bodyHtml:prepared\.bodyHtml,signatureHtml:prepared\.signatureHtml,inlineImages:\[\],attachments:\[\],editorToken:currentEditorToken\}\)/);
+  assert.match(html, /sheetApi\('sendCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,editorToken:currentEditorToken\}\)/);
+  assert.match(html, /sheetApi\('updateScheduledMail',\{id:state\.id,to,cc,subject,bodyHtml:editorPayload\.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
+  assert.match(html, /sheetApi\('scheduleCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
+  assert.match(html, /sheetApi\('scheduleCaseReply',\{caseId:id,to,cc,bodyHtml:editorPayload\.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
+  assert.match(html, /sheetApi\('replyCaseMail',\{caseId:id,to,cc,bodyHtml:editorPayload\.bodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,editorToken:currentEditorToken\}\)/);
+
+  // clearGmailInlineImages(...) 與 clearGmailAttachments(...) 各自都應該剛好出現 7 次：1 個函式宣告
+  // （`function clearGmailInlineImages(editorId){` 本身的參數列表也會被下面這個「函式呼叫」正規表達式
+  // 命中，兩邊都一樣）＋各自的「還原時內部自清」那一次（restoreScheduledGmailInlineImages／
+  // restoreScheduledGmailAttachments 開頭都會先清空自己）＋5 個「重置編輯區」呼叫點。這裡改用「兩者
+  // 出現次數是否相等」驗證同步增減，而不是鎖住每一處呼叫的確切上下文字串（容易因為周圍程式碼調整
+  // 而誤判失敗）。
+  const clearInlineCallSites = [...html.matchAll(/clearGmailInlineImages\((\w+(?:\.id)?)\)/g)];
+  const clearAttachmentCallSites = [...html.matchAll(/clearGmailAttachments\((\w+(?:\.id)?)\)/g)];
+  assert.equal(clearInlineCallSites.length, 7, 'expected 1 declaration + 1 internal restore-clear + 5 editor-reset call sites for clearGmailInlineImages');
+  assert.equal(clearAttachmentCallSites.length, 7, 'expected 1 declaration + 1 internal restore-clear + 5 editor-reset call sites for clearGmailAttachments');
+
+  // 排程草稿載入回編輯器時，附件要跟著內嵌圖片一起還原。
+  assert.match(html, /restoreScheduledGmailInlineImages\(ui\.editor,item\.inlineImages\|\|\[\]\);\s*\n\s*restoreScheduledGmailAttachments\(ui\.editor\.id,item\.attachments\|\|\[\]\);/);
+
+  // 五個會真正送出信件/建立排程的地方，等待內嵌圖片處理完成之後，緊接著也要等待附件處理完成——
+  // 用「兩者呼叫次數相等」而非逐一鎖定上下文，理由同上。
+  const waitInlineCallSites = [...html.matchAll(/await waitForGmailInlineImages\(([\w.]+)\);/g)];
+  const waitAttachmentCallSites = [...html.matchAll(/await waitForGmailAttachments\(([\w.]+)\);/g)];
+  assert.equal(waitInlineCallSites.length, 5);
+  assert.equal(waitAttachmentCallSites.length, 5);
+  assert.deepEqual(waitInlineCallSites.map(m => m[1]), waitAttachmentCallSites.map(m => m[1]), 'each waitForGmailInlineImages call site must be immediately paired with the matching waitForGmailAttachments call using the same editor reference');
+
+  // 附加檔案按鈕跟插入照片按鈕一樣，在批次確認寄信流程中要被隱藏／恢復顯示。
+  assert.match(html, /const imageBtn=document\.querySelector\('\.gmail-rich-image-btn\[data-rich-image-for="gmailComposeEditor"\]'\); if\(imageBtn\)imageBtn\.hidden=false;\s*\n\s*const attachmentBtn=document\.querySelector\('\.gmail-rich-attachment-btn\[data-rich-attachment-for="gmailComposeEditor"\]'\); if\(attachmentBtn\)attachmentBtn\.hidden=false;/);
+  assert.match(html, /const imageBtn=document\.querySelector\('\.gmail-rich-image-btn\[data-rich-image-for="gmailComposeEditor"\]'\); if\(imageBtn\)imageBtn\.hidden=true;\s*\n\s*const attachmentBtn=document\.querySelector\('\.gmail-rich-attachment-btn\[data-rich-attachment-for="gmailComposeEditor"\]'\); if\(attachmentBtn\)attachmentBtn\.hidden=true;/);
+
+  // 事件委派：工具列按鈕點擊觸發隱藏 input、input change 觸發佇列處理、小卡片上的移除按鈕用事件
+  // 委派處理（不是每個小卡片各自綁一次，附件清單會隨新增/移除整段重繪 innerHTML，逐一綁定的監聽器
+  // 會在下一次重繪時全部失效）。
+  assert.match(html, /document\.querySelectorAll\('\.gmail-rich-attachment-btn'\)\.forEach\(button=>button\.addEventListener\('click',\(\)=>document\.querySelector\(`\[data-rich-attachment-input-for="\$\{button\.dataset\.richAttachmentFor\}"\]`\)\?\.click\(\)\)\);/);
+  assert.match(html, /document\.querySelectorAll\('\.gmail-rich-attachment-input'\)\.forEach\(input=>input\.addEventListener\('change',\(\)=>\{queueGmailAttachments\(input\.dataset\.richAttachmentInputFor,input\.files\);input\.value=''\}\)\);/);
+  assert.match(html, /document\.querySelectorAll\('\.gmail-attachment-list'\)\.forEach\(list=>list\.addEventListener\('click',event=>\{/);
 });
 
 test('Gmail editors show the connected account signature by default without appending it twice', async () => {

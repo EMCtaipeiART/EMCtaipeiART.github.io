@@ -279,7 +279,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -1364,6 +1364,77 @@ describe('Machi Design API Worker', () => {
     expect(disconnected).toMatchObject({ ok: true });
     const statusAfterDisconnect = await api({ action: 'gmailStatus' }, token);
     expect(statusAfterDisconnect).toMatchObject({ ok: true, connected: false });
+  });
+
+  it('sendCaseMail can attach arbitrary non-image files (not just inline images) via multipart/mixed, safely encodes a non-ASCII filename with RFC 2231 star-encoding plus an ASCII fallback, strips CR/LF/quote header-injection attempts from the filename, keeps the existing multipart/related+alternative body nested as the first mixed part when both an inline image and an attachment are present, and rejects an over-limit attachment', async () => {
+    const token = await login();
+    await seedGmailTokens('machi.chen@emctaipei.com', 'gmail-access-admin');
+
+    let capturedRaw = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        const body = JSON.parse(String(init?.body));
+        capturedRaw = body.raw;
+        return Response.json({ id: 'gmail-msg-attach-1', threadId: 'gmail-thread-attach-1' });
+      }
+      if (url.startsWith('https://api.github.com/')) {
+        return Response.json({ content: { sha: 'sha-attach' }, commit: { sha: 'commit-attach' } });
+      }
+      throw new Error(`unexpected fetch during attachment send: ${url}`);
+    });
+
+    // 先驗證超過單檔上限（15 MB）會被擋下、完全不會呼叫 Gmail API——用一段解碼後約 16 MB 的 base64
+    // 內容（base64 膨脹約 4/3 倍，約 21.3 MB 文字，仍遠低於 index.ts 的 28 MB 整體請求上限，確保這裡
+    // 真正測到的是 resolveGmailAttachments 自己的檔案大小檢查，不是被更前面那道籠統的請求過大擋下）。
+    const oversizedBase64 = 'A'.repeat(Math.ceil((16 * 1024 * 1024 * 4) / 3));
+    const oversizedAttempt = await api({
+      action: 'sendCaseMail', caseId: '26080001', to: 'designer@emctaipei.com', subject: '附件太大',
+      bodyText: 'x', attachments: [{ fileName: 'huge.zip', mimeType: 'application/zip', base64: oversizedBase64 }]
+    }, token);
+    expect(oversizedAttempt).toMatchObject({ ok: false, error: expect.stringContaining('超過 15 MB') });
+
+    // 正式送出：同時帶一張內嵌圖片（cid 參照）與兩個附件——其中一個是含中文字元的檔名，另一個檔名
+    // 刻意夾帶 CR/LF 與雙引號，模擬惡意或不小心壞掉的檔名，驗證標頭注入防護。
+    const sent = await api({
+      action: 'sendCaseMail', caseId: '26080001', to: 'designer@emctaipei.com', subject: '含附件的測試信',
+      bodyHtml: '本文內容 <img src="cid:machi-inline@test">',
+      inlineImages: [{ contentId: 'machi-inline@test', fileName: 'inline.png', mimeType: 'image/png', base64: 'aGVsbG8=' }],
+      attachments: [
+        { fileName: '報價單_第二版.pdf', mimeType: 'application/pdf', base64: 'JVBERi0xLjQK' },
+        { fileName: 'evil"\r\nX-Injected: yes\r\n.txt', mimeType: 'text/plain', base64: 'aGVsbG8gd29ybGQ=' }
+      ]
+    }, token);
+    expect(sent).toMatchObject({ ok: true, threadId: 'gmail-thread-attach-1', gmailMessageId: 'gmail-msg-attach-1' });
+
+    const decodedMime = decodeBase64UrlText(capturedRaw);
+    const headerSection = decodedMime.slice(0, decodedMime.indexOf('\r\n\r\n'));
+    // 最外層一定是 multipart/mixed（因為有附件），且整個標頭段落只能是 ASCII。
+    expect(headerSection).toContain('Content-Type: multipart/mixed');
+    expect(/^[\x00-\x7f]*$/.test(headerSection)).toBe(true);
+    // 有附件也有內嵌圖片時，multipart/related（連同裡面的 multipart/alternative）要完整保留、成為
+    // mixed 底下的第一個 part——不是被附件流程取代掉。
+    expect(decodedMime).toContain('Content-Type: multipart/related');
+    expect(decodedMime).toContain('Content-Type: multipart/alternative');
+    expect(decodedMime).toContain('Content-ID: <machi-inline@test>');
+    expect(decodedMime).toContain('Content-Disposition: inline; filename="inline-1.png"');
+    // 附件本身用 Content-Disposition: attachment（不是 inline），且不帶 Content-ID（不需要被本文的
+    // cid: 參照）。
+    const attachmentSection = decodedMime.slice(decodedMime.indexOf('application/pdf') - 200);
+    expect(attachmentSection).toContain('Content-Disposition: attachment');
+    expect(decodedMime).not.toMatch(/Content-ID:[^\r\n]*報價單/);
+    // 中文檔名：純 ASCII 保底版本（非 ASCII 字元逐一替換成底線，保留檔案原本的長度/副檔名輪廓，
+    // 不是隨便換成一個通用的「attachment」字面字串）+ RFC 2231 star 參數版本都要同時存在。
+    expect(decodedMime).toContain('filename="_______.pdf"; filename*=UTF-8\'\'');
+    expect(decodedMime).toContain(encodeURIComponent('報價單_第二版.pdf'));
+    // 標頭注入防護：惡意檔名裡的 CR/LF 與雙引號必須被拿掉，不會在 MIME 內容裡出現一行真正獨立的
+    // `X-Injected: yes` 標頭（如果防護失敗，這行會被誤判成一個新的、獨立的標頭欄位）。
+    expect(decodedMime).not.toMatch(/\r\nX-Injected: yes\r\n/);
+    expect(decodedMime).not.toContain('"\r\nX-Injected');
+
+    const listed = await api({ action: 'list' }, token);
+    const caseRow = (listed.rows as Array<Record<string, unknown>>).find(row => row.id === '26080001');
+    expect(caseRow).toMatchObject({ gmailThreadId: 'gmail-thread-attach-1' });
   });
 
   it('searchGmailThreads requires request.mail, dedupes by threadId keeping the newest message as the representative, and reports zero results as an empty (not failed) list', async () => {
