@@ -593,9 +593,14 @@ const PICKER_PAGE = `<!doctype html>
     }
 
     // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁
-    // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。
+    // 面分頁，讓這個視窗自然被蓋到後面，不在這個視窗裡顯示大轉圈畫面。path
+    // 維持只放第一筆（給還在讀舊格式的呼叫端相容用），paths 是完整清單——
+    // 「設計師回覆信」在這一刻（備份還沒真的完成）就會先把信件編輯器打開、
+    // 把 NAS 路徑文字寫進去，如果這裡只送第一筆，之後備份完成的
+    // machi-nas-folder-selected 訊息因為編輯器已經開著而不會重建範本，第二筆
+    // 以後的路徑就永遠不會出現在信裡，所以這裡一定要送完整清單，不能只挑一筆。
     if(window.opener){
-      window.opener.postMessage({ type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit[0].path }, origin || '*');
+      window.opener.postMessage({ type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit[0].path, paths: foldersToSubmit.map(item => item.path) }, origin || '*');
     }
     document.getElementById('confirmBtn').disabled = true;
     document.getElementById('cancelBtn').disabled = true;

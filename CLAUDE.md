@@ -189,7 +189,31 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-01 16:29 Asia/Taipei（最新）— 「歷史資料庫管理」表格新增「修改」欄位顯示
+### 2026-09-02 08:46 Asia/Taipei（最新）— 修正「設計師回覆信」多選 NAS 資料夾時，信件內容只附上第一個資料夾的圖片與路徑
+
+- 修改目的：使用者回報「信件編輯器，在多選 NAS 資料夾時，只會提供一個資料夾的圖片以及一個 NAS 路徑，多選是希望能提供多個不同資料夾的圖片與不同路徑」——2026-09-01 13:43 那次已經把「一個案件可以設定多個 NAS 來源資料夾」這件事做進了資料庫／立即備份／背景監控程式，但「設計師回覆信」這個會自動帶入 NAS 圖片與路徑文字的信件編輯器流程，接住多選結果時漏了只取第一筆的地方。
+- 追查過程：
+  - 圖片跟路徑其實是兩條完全獨立的資料流，各自查證：
+    1. **圖片**：實際搭真實的 `nas_folder_picker_server.mjs`＋假的 dbJsonUrl／上傳端點跑過一次「同一個案件、兩個不同資料夾、各自一張圖片」的完整 `/api/confirm` 請求（模擬真實 Worker 的 `addCaseDesignImages` 合併邏輯——依網址去重、非覆寫），確認**伺服器端本來就會把兩個資料夾的圖片正確合併進同一輪修改紀錄**，`fetchModificationCounts()`／`designerReplyImagesForRound()` 讀到的本來就是完整清單，這條資料流沒有問題。
+    2. **NAS 路徑文字**：`index.html` 收到 `machi-nas-folder-selected`（備份全部完成後）的處理常式裡，`resolveDesignerReplyImages(id,{folderPath:successFolders[0].path||'',round:replyRound})` 只取了 `successFolders` 陣列的第一筆；更關鍵的是，`openDesignerReplyMailModal()` 本身有防止重複建置範本的既有保護（同一案件同一輪次、彈窗已經開著時直接 return，不會重寫使用者可能已經打好的文字）——而這個彈窗**通常在備份「剛開始」（`machi-nas-folder-backup-started` 訊息）那一刻就已經被搶先打開**，那個更早的訊息本身送出的也只有 `path: foldersToSubmit[0].path`（單一路徑）。也就是說，就算後面 `machi-nas-folder-selected` 傳了完整清單，因為彈窗早就已經開著、範本不會重建，第二筆以後的路徑實際上永遠不會出現在信件內容裡——真正決定信件文字的是「備份剛開始」那個更早的呼叫，不是後面「備份完成」那個。
+- 影響檔案：`index.html`、`scripts/nas_folder_picker_server.mjs`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - `nas_folder_picker_server.mjs` 的 `machi-nas-folder-backup-started` 訊息新增 `paths`（完整資料夾路徑陣列），`path`（單筆，第一個）維持不變供舊格式相容。
+  - `index.html`：`openDesignerReplyMailModal()`／`resolveDesignerReplyImages()` 的參數都從單一字串 `folderPath` 改成陣列 `folders`；「machi-nas-folder-backup-started」與「machi-nas-folder-selected」兩個訊息處理常式都改成把完整清單（分別來自 `data.paths`、`successFolders.map(item=>item.path)`）傳下去，不再只挑第一筆。
+  - 信件內容裡的「NAS路徑」區塊改成依資料夾數量動態呈現：只有 1 個資料夾時維持原樣（「 NAS路徑」＋一行粗體路徑，跟改動前完全一致）；2 個以上會變成「 NAS路徑（共 N 個資料夾）」＋每個資料夾各自一行粗體路徑。
+- 風險區塊：
+  - 這次的修正範圍精準限定在「設計師回覆信」自動帶入 NAS 路徑文字這一段；「選擇這個資料夾並備份」寫回案件資料庫的 `designImageFolders` 完整清單（供之後每一輪修改沿用）本來就是正確的，這次沒有改動。
+  - `mode=insert`（工具列「插入 NAS 路徑」按鈕，單純把一段路徑文字插入編輯區、不涉及備份）刻意維持單選，完全不受這次改動影響——這是既有設計，不是這次遺漏。
+  - 「同上次路徑」（`reuseLastNasFolder`）目前仍然只沿用案件已存的第一組資料夾（`row.designImageFolderUrl`），不會一次沿用全部已設定的多個資料夾——這是既有、範圍更小的限制，使用者這次的回報是「多選當下」漏資料夾，不是「沿用」這個功能，這次沒有一併擴大處理，如果之後需要「同上次路徑」也支援多資料夾，需要另外討論。
+- 已檢查／驗證方式：
+  - **先用真實的 `nas_folder_picker_server.mjs`＋假的 dbJsonUrl／上傳端點（模擬真實 Worker 的合併寫入邏輯）完整跑過一次多資料夾 `/api/confirm` 請求**，確認伺服器端圖片合併本來就正確（不是這次修正的範圍，只是確認過沒有問題）。
+  - 用本機 Python 靜態伺服器＋ Browser pane 對著真實載入的 `index.html`（不是抽離的孤立測試節點）做端對端測試，stub `sheetApi`／`updateCaseRow`，沒有真的打任何網路請求：①直接呼叫 `openDesignerReplyMailModal('TESTCASE1',{folders:['A資料夾','B資料夾'],round:1})`，確認信件內容正確出現「NAS路徑（共 2 個資料夾）」與兩行各自的粗體路徑；②接著呼叫 `resolveDesignerReplyImages()`（模擬備份完成後的第二次呼叫），確認因為彈窗已經開著、路徑文字不會重複也不會被清掉，同時圖片正確套用兩張（來自兩個不同資料夾）；③完整模擬真實的兩階段 `postMessage`（`machi-nas-folder-backup-started` 接著 `machi-nas-folder-selected`）序列，確認端對端結果一致：兩個路徑、兩張圖片、`updateCaseRow` 正確收到完整的 `designImageFolders` 清單；④只選 1 個資料夾的情境重新測一次，確認文字維持原樣「 NAS路徑」（不會多出「共 1 個資料夾」這種贅字），沒有回歸。
+  - **先重現了修正前的真的會失敗，才確認修正生效**：`node --test backend/test/*.test.mjs` 新增的迴歸測試，用 `git stash` 暫時只還原 `index.html`／`nas_folder_picker_server.mjs` 到修正前的版本重新執行，確認測試真的紅燈失敗（比對不到新的函式簽章），證明這條測試真的有鎖住這次的修正，不是巧合通過；`git stash pop` 還原後重新執行，`node --test backend/test/*.test.mjs` 64/64 全過。
+  - `git diff --check` 無空白字元問題。
+- 部署狀態：`index.html`／`backend/test/backend.test.mjs` 純前端／測試檔案，git push 後由 GitHub Pages 自動生效；`scripts/nas_folder_picker_server.mjs` 是純本機工具，需要重新啟動（或用既有的 `launchctl kickstart -k` 機制重啟）對應的 launchd 服務才會套用新版本——這次沒有機會確認使用者本機的服務是否已經重啟，需要提醒使用者。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-01 16:29 Asia/Taipei — 「歷史資料庫管理」表格新增「修改」欄位顯示
 
 - 修改目的：接續上一則把「修改次數」的值補進歷史資料庫 JSON 之後，使用者要求 `database_archive_admin.html`（歷史資料庫管理）的表格畫面上也要真的顯示出這個「修改」欄位——上一則只補了資料，這次要補的是畫面。
 - 影響檔案：`database_archive_admin.html`、`backend/test/backend.test.mjs`。

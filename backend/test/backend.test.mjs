@@ -369,6 +369,64 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
   assert.doesNotMatch(designerReplySource, /lastMessage\?\.from|senderName/);
 });
 
+test('selecting multiple NAS folders for a designer reply attaches every folder\'s images and every folder\'s path, not just the first one', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  // openDesignerReplyMailModal / resolveDesignerReplyImages both take a `folders` array now, not a
+  // single `folderPath` string -- the old signature silently dropped every folder past the first.
+  assert.match(html, /async function openDesignerReplyMailModal\(id,\{folders=\[\],round=null\}=\{\}\)\{/);
+  assert.match(html, /async function resolveDesignerReplyImages\(id,\{folders=\[\],round=null\}=\{\}\)\{/);
+  assert.doesNotMatch(html, /folderPath=''/);
+  // The "machi-nas-folder-selected" handler must pass every successfully-confirmed folder's path
+  // through, not just successFolders[0].
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),round:replyRound\}\)/);
+  // The EARLY "machi-nas-folder-backup-started" hand-off is what actually determines the rendered
+  // text in the normal flow: openDesignerReplyMailModal's own idempotency guard means the later
+  // "machi-nas-folder-selected" message will NOT rebuild the template if the modal is already open
+  // for the same case+round, so if this early message only carried the first folder, every folder
+  // past the first would never appear in the sent email regardless of what the later message says.
+  assert.match(html, /const startedFolderPaths=\(Array\.isArray\(data\.paths\)&&data\.paths\.length\?data\.paths:\[data\.path\]\)\.map\(p=>String\(p\|\|''\)\.trim\(\)\)\.filter\(Boolean\);/);
+  assert.match(html, /openDesignerReplyMailModal\(activeNasFolderPickerCaseId,\{folders:startedFolderPaths,round:activeNasFolderPickerRound\}\)/);
+  // The picker server's backup-started message has to actually carry every requested folder's path
+  // (not just foldersToSubmit[0]) for the above to have anything to read.
+  assert.match(pickerServer, /type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit\[0\]\.path, paths: foldersToSubmit\.map\(item => item\.path\)/);
+
+  // Exercise the actual multi-line rendering logic (extracted verbatim from openDesignerReplyMailModal)
+  // against a fake editor, the same way the browser-based verification for this fix did.
+  const renderSource = html.match(/const folderPaths=\(Array\.isArray\(folders\)[\s\S]*?\n {2}\}\n {2}clearGmailInlineImages/)?.[0];
+  assert.ok(renderSource, 'could not locate the NAS-path rendering block');
+  const renderFolderPaths = new Function('folders', 'editor', 'document', `
+    ${renderSource.slice(0, renderSource.indexOf('clearGmailInlineImages'))}
+    return editor;
+  `);
+  const makeFakeEditor = () => {
+    const children = [];
+    const fakeDocument = {
+      createElement: tag => ({ tag, textContent: '' }),
+      createTextNode: text => ({ tag: '#text', textContent: text })
+    };
+    return { editor: { appendChild: node => children.push(node) }, document: fakeDocument, children };
+  };
+
+  const multi = makeFakeEditor();
+  renderFolderPaths(['NAS/資料夾A', 'NAS/資料夾B'], multi.editor, multi.document);
+  const multiBold = multi.children.filter(node => node.tag === 'b').map(node => node.textContent);
+  const multiLabel = multi.children.find(node => node.tag === '#text');
+  assert.deepEqual(multiBold, ['NAS/資料夾A', 'NAS/資料夾B']);
+  assert.equal(multiLabel.textContent, ' NAS路徑（共 2 個資料夾）');
+
+  const single = makeFakeEditor();
+  renderFolderPaths(['NAS/單一資料夾'], single.editor, single.document);
+  const singleBold = single.children.filter(node => node.tag === 'b').map(node => node.textContent);
+  const singleLabel = single.children.find(node => node.tag === '#text');
+  assert.deepEqual(singleBold, ['NAS/單一資料夾']);
+  assert.equal(singleLabel.textContent, ' NAS路徑'); // unchanged wording for the (still by far most common) single-folder case
+
+  const empty = makeFakeEditor();
+  renderFolderPaths([], empty.editor, empty.document);
+  assert.equal(empty.children.length, 0);
+});
+
 test('inline image resize handle has been removed (unlabeled square users mistook for a "selection box"), while the delete button on inline images still works and images still get a sane default display size on insert', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.doesNotMatch(html, /gmail-inline-image-resize-handle/);

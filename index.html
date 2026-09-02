@@ -10377,7 +10377,13 @@ function handleUploadFrameMessage(event){
     showNasFolderBackupBadge('NAS 資料夾備份中，可以繼續操作頁面其他地方...');
     // 「設計師回覆信」不等備份完成，備份一開始（送出關鍵字的當下）就先把信件編輯器打開，讓使用者
     // 可以先打字，圖片等 machi-nas-folder-selected 真正完成時才由 resolveDesignerReplyImages() 補上。
-    if(nasFolderPickerAfterReply&&activeNasFolderPickerCaseId)openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folderPath:String(data.path||'').trim(),round:activeNasFolderPickerRound});
+    // data.paths 是這次送出的完整資料夾清單（選擇器伺服器多選時會有好幾筆）；openDesignerReplyMailModal()
+    // 對「同一案件同一輪次」有防重複建置的保護（見該函式註解），一旦這裡先把範本建好，之後
+    // machi-nas-folder-selected 真正完成時就不會再重建一次——所以這裡一定要把完整清單塞進去，
+    // 不能只挑第一筆，不然第二筆以後的路徑永遠不會出現在信件內容裡。data.path（單筆）只在
+    // data.paths 缺漏時當備援。
+    const startedFolderPaths=(Array.isArray(data.paths)&&data.paths.length?data.paths:[data.path]).map(p=>String(p||'').trim()).filter(Boolean);
+    if(nasFolderPickerAfterReply&&activeNasFolderPickerCaseId)openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folders:startedFolderPaths,round:activeNasFolderPickerRound});
     return;
   }
   if(data.type==='machi-nas-folder-selected'){
@@ -10413,7 +10419,7 @@ function handleUploadFrameMessage(event){
       designImageFolderKeyword:successFolders[0].keyword||'',
       designImageFolders:JSON.stringify(successFolders.map(item=>({path:item.path,keyword:item.keyword||''})))
     },summary);
-    if(afterReply&&id)resolveDesignerReplyImages(id,{folderPath:successFolders[0].path||'',round:replyRound});
+    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),round:replyRound});
     return;
   }
   const designerMediaMessage=data.type==='machi-designer-media-updated';
@@ -11280,7 +11286,7 @@ async function openModificationRequestReplyModal(id){
  * 呼叫這裡兩次（例如同一輪意外重複觸發）而把使用者已經打好的內容整個重寫，只有第一次呼叫時才會
  * 重建整個範本，第二次以後（見 modal.dataset.designerReplyCaseId 判斷）交給
  * resolveDesignerReplyImages() 用局部 DOM 更新處理。 */
-async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
+async function openDesignerReplyMailModal(id,{folders=[],round=null}={}){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
   const targetRoundBeforeOpen=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
@@ -11318,13 +11324,19 @@ async function openDesignerReplyMailModal(id,{folderPath='',round=null}={}){
   placeholder.textContent='　圖片上傳中...';
   imagesRow.appendChild(placeholder);
   editor.appendChild(imagesRow);
-  if(folderPath){
+  // folders 可能是多選（同一案件對應好幾個 NAS 來源資料夾）——每個資料夾各自獨立一行粗體路徑，
+  // 標籤文字依數量單複數調整；只有 1 個資料夾時維持原本的樣子（不加「共 N 個」字樣），跟改動前
+  // 單選情境的畫面完全一致，不會讓既有的單資料夾案件多出多餘文字。
+  const folderPaths=(Array.isArray(folders)?folders:[folders]).map(item=>String(item||'').trim()).filter(Boolean);
+  if(folderPaths.length){
     editor.appendChild(document.createElement('br'));
-    editor.appendChild(document.createTextNode(' NAS路徑'));
-    editor.appendChild(document.createElement('br'));
-    const bold=document.createElement('b');
-    bold.textContent=folderPath;
-    editor.appendChild(bold);
+    editor.appendChild(document.createTextNode(folderPaths.length>1?` NAS路徑（共 ${folderPaths.length} 個資料夾）`:' NAS路徑'));
+    folderPaths.forEach(folderPath=>{
+      editor.appendChild(document.createElement('br'));
+      const bold=document.createElement('b');
+      bold.textContent=folderPath;
+      editor.appendChild(bold);
+    });
   }
   clearGmailInlineImages(editor.id);
   await appendDefaultGmailSignature(editor);
@@ -11396,11 +11408,11 @@ function designerReplyImagesForRound(id,round){
  * （沿用既有的 fetchModificationCounts），取這個案件目前最新一輪的圖片清單套用進編輯區。萬一
  * openDesignerReplyMailModal 這次沒有機會先開過（例如舊版資料夾選擇器沒有送出
  * machi-nas-folder-backup-started 這則訊息），這裡會先補開一次，確保還是看得到信件編輯器。 */
-async function resolveDesignerReplyImages(id,{folderPath='',round=null}={}){
+async function resolveDesignerReplyImages(id,{folders=[],round=null}={}){
   const modal=$('#gmailThreadModal');
   const alreadyOpen=modal&&!modal.hidden&&modal.dataset.replyMode==='designer'&&String(modal.dataset.designerReplyCaseId||'')===String(id);
   const targetRound=round===null||round===''?(alreadyOpen?Math.max(0,Number(modal.dataset.designerReplyRound)||0):currentModificationRound(id)):Math.max(0,Number(round)||0);
-  if(!alreadyOpen)await openDesignerReplyMailModal(id,{folderPath,round:targetRound});
+  if(!alreadyOpen)await openDesignerReplyMailModal(id,{folders,round:targetRound});
   try{await fetchModificationCounts()}catch(err){}
   applyDesignerReplyImages(id,designerReplyImagesForRound(id,targetRound),{round:targetRound});
 }
