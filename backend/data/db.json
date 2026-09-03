@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3744,
+  "revision": 3745,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-03T08:36:52.355Z",
+  "updatedAt": "2026-09-03T08:36:55.779Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1483,7 +1483,7 @@
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/15n-NqRT8UCgbLk5QvQCJHSM6aAezrEYf=w1600","保留期限":"24小時","到期時間":"2026-09-04T06:53:46.335Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架"},
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1jo2c0gBSiXlebvcyek4xjKiHmnUkLXq7=w1600","保留期限":"24小時","到期時間":"2026-09-04T07:27:42.301Z","按讚":"","倒讚":"","留言":"[{\"id\":\"965a197c-3a54-4877-b409-15ed5f535534\",\"name\":\"Machi\",\"account\":\"machi.chen@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1L7QcV_EGLTLdNA8xMgSUFL_WCqZyi2Yi&sz=w1000\",\"text\":\"\\\"D\\\"esign + E.M.C\",\"createdAt\":\"2026-09-03T07:40:59.245Z\"}]","狀態":"","已讀":"Machi , Odin組測試人員"},
         {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/11wdxkiFOICe1OpPE6UdrM9iGSUlBv_Dd=w1600","保留期限":"永久","到期時間":"","按讚":"","倒讚":"","留言":"[]","狀態":"下架"},
-        {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/1K1ODn3lVOwNf-zJzW1KcscnfmTTfMAhf=w1600","保留期限":"24小時","到期時間":"2026-09-04T08:03:27.228Z","按讚":"","倒讚":"","留言":"[]","狀態":"","已讀":"Machi , Anna"}
+        {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/1K1ODn3lVOwNf-zJzW1KcscnfmTTfMAhf=w1600","保留期限":"24小時","到期時間":"2026-09-04T08:03:27.228Z","按讚":"","倒讚":"","留言":"[]","狀態":"","已讀":"Machi , Anna , Odin組測試人員"}
       ]
     },
     "bug_report": {
