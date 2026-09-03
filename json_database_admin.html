@@ -199,7 +199,7 @@
 .account-link-preview.is-empty{color:var(--line)}
 .account-reel-actions{display:flex;gap:6px;padding:0 8px 8px}
     .account-reel-actions button{flex:1;min-height:30px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);box-shadow:none;appearance:none;font-size:10.5px;font-weight:600}.account-reel-actions button:hover{background:var(--soft)}
-    .account-reels-block{margin-top:14px}.account-reels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.account-reels-head p{margin:0;color:var(--muted);font-size:11.5px;font-weight:700}.account-reels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.account-reel-card{overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.account-reel-card.is-hidden{opacity:.6}.account-reel-card img{width:100%;height:145px;display:block;object-fit:cover;background:#111}.account-reel-meta{display:grid;gap:4px;padding:8px}.account-reel-meta b{font-size:11.5px}.account-reel-meta span{color:var(--muted);font-size:10.5px}.account-reel-viewers{cursor:help;border-bottom:1px dotted var(--muted)}.account-reel-hidden-badge{justify-self:start;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:2px 8px;font-size:9.5px;font-weight:800}.account-reels-empty{padding:12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center;font-size:11.5px}.account-help{margin:5px 0 0;color:var(--muted);font-size:11px}.account-new-marker{margin-bottom:10px;border:1px dashed #99cdb7;border-radius:8px;background:var(--green2);color:#0b6b4c;padding:9px 11px;font-weight:600}.permission-section.account-designer[hidden]{display:none!important}
+    .account-reels-block{margin-top:14px}.account-reels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.account-reels-head p{margin:0;color:var(--muted);font-size:11.5px;font-weight:700}.account-reels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.account-reel-card{overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.account-reel-card.is-hidden{opacity:.6}.database-table tr.is-disabled{opacity:.55}.account-reel-card img{width:100%;height:145px;display:block;object-fit:cover;background:#111}.account-reel-meta{display:grid;gap:4px;padding:8px}.account-reel-meta b{font-size:11.5px}.account-reel-meta span{color:var(--muted);font-size:10.5px}.account-reel-viewers{cursor:help;border-bottom:1px dotted var(--muted)}.account-reel-hidden-badge{justify-self:start;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:2px 8px;font-size:9.5px;font-weight:800}.account-reels-empty{padding:12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center;font-size:11.5px}.account-help{margin:5px 0 0;color:var(--muted);font-size:11px}.account-new-marker{margin-bottom:10px;border:1px dashed #99cdb7;border-radius:8px;background:var(--green2);color:#0b6b4c;padding:9px 11px;font-weight:600}.permission-section.account-designer[hidden]{display:none!important}
     /* Designer administration */
     .designer-admin-add{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(420px,1.3fr);gap:24px;align-items:center;margin-bottom:18px;padding:20px 22px;border:1px solid #d9e4de;border-radius:12px;background:linear-gradient(135deg,#fff 0%,#f4faf7 100%);box-shadow:0 6px 18px rgba(18,38,28,.045)}
     .designer-admin-add-copy h3{margin:3px 0 4px;font-size:15px;letter-spacing:-.01em}.designer-admin-add-copy p{margin:0;max-width:460px;color:var(--muted);font-size:11.5px}.designer-admin-eyebrow{color:var(--green);font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
@@ -250,6 +250,8 @@
             <input id="search" type="search" placeholder="搜尋目前資料表" aria-label="搜尋目前資料表">
             <span id="pageSizeWrap"><select id="pageSize" aria-label="每頁筆數"><option>25</option><option selected>50</option><option>100</option><option>200</option></select></span>
             <button class="btn" id="backupToSheet" type="button" hidden>備份至雲端試算表</button>
+            <button class="btn" id="importAccounts" type="button" hidden>匯入 Excel 名冊</button>
+            <input type="file" id="importAccountsFile" accept=".xlsx" hidden>
             <button class="btn primary" id="add" type="button">+ 新增資料</button>
             <span class="count" id="count">0 筆</span>
           </div>
@@ -269,6 +271,7 @@
     </div>
   </div>
   <div class="modal" id="editor" hidden><form class="modal-card" id="editorForm"><header class="modal-head"><h2 id="editorTitle">編輯資料</h2><button class="icon-btn" id="closeEditor" type="button">×</button></header><div class="fields" id="fields"></div><footer class="modal-actions"><button class="btn" id="cancelEditor" type="button">取消</button><button class="btn primary" id="saveEditor" type="submit">儲存變更</button></footer></form></div>
+  <div class="modal" id="importAccountsModal" hidden><div class="modal-card"><header class="modal-head"><h2>匯入員工名冊</h2><button class="icon-btn" id="closeImportAccounts" type="button">×</button></header><div class="fields" id="importAccountsBody"></div><footer class="modal-actions"><span class="small" id="importAccountsSummary" style="margin-right:auto"></span><button class="btn" id="cancelImportAccounts" type="button">取消</button><button class="btn primary" id="confirmImportAccounts" type="button">確認匯入</button></footer></div></div>
   <script>
     // 設計師公開資料與 REELS 統一由「設計列表」管理；帳號設定只保留身分、偏好與權限。
     // 左側選單分四組排列：①案件資料（每天最常查看）②人員與權限（誰能看／改什麼）
@@ -346,7 +349,7 @@
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
     async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
-    function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='系統公告欄'?'+ 新增公告':(tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料'))));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database'}
+    function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='系統公告欄'?'+ 新增公告':(tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料'))));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database';$('importAccounts').hidden=tableName!=='帳號權限'}
     function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
     function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
     function resetDatabaseFilters(){databaseFilters={};DATABASE_FILTER_FIELDS.forEach(([id])=>{$(id).value=''});updateFilterClearButton()}
@@ -1122,6 +1125,139 @@
     }
     function beginAccountCreate(){accountCreating=true;permissionSelectedAccount='';$('search').value='';rebuildPermissionModels();renderTable({table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache});setTimeout(()=>permissionEditorElement()?.querySelector('[data-account-field="帳號"]')?.focus(),20)}
     function cancelAccountCreate(){accountCreating=false;if(!permissionModelsCache.some(row=>row['帳號']===permissionSelectedAccount))permissionSelectedAccount=permissionModelsCache[0]?.['帳號']||'';renderTable({table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache})}
+
+    // ---- 帳號設定：從 Excel 名冊批次匯入新人員 ----
+    // 純瀏覽器端解析 .xlsx（本質是一個 ZIP，內含 sharedStrings.xml／worksheets/sheet1.xml 兩份 XML），
+    // 用瀏覽器原生的 DecompressionStream('deflate-raw') 解壓縮 ZIP 內容，不額外載入任何第三方函式庫。
+    async function readXlsxZipEntries(file){
+      const buffer=new Uint8Array(await file.arrayBuffer()),view=new DataView(buffer.buffer);
+      let eocd=-1;
+      for(let i=buffer.length-22;i>=Math.max(0,buffer.length-22-65535);i--){if(view.getUint32(i,true)===0x06054b50){eocd=i;break}}
+      if(eocd<0)throw new Error('無法解析這個檔案，請確認是有效的 .xlsx 檔案');
+      const entryCount=view.getUint16(eocd+10,true);let cdOffset=view.getUint32(eocd+16,true);
+      const entries={};
+      for(let i=0;i<entryCount;i++){
+        if(view.getUint32(cdOffset,true)!==0x02014b50)break;
+        const compressionMethod=view.getUint16(cdOffset+10,true),compressedSize=view.getUint32(cdOffset+20,true),
+          nameLen=view.getUint16(cdOffset+28,true),extraLen=view.getUint16(cdOffset+30,true),commentLen=view.getUint16(cdOffset+32,true),
+          localHeaderOffset=view.getUint32(cdOffset+42,true),
+          name=new TextDecoder().decode(buffer.subarray(cdOffset+46,cdOffset+46+nameLen));
+        entries[name]={compressionMethod,compressedSize,localHeaderOffset};
+        cdOffset+=46+nameLen+extraLen+commentLen;
+      }
+      return async name=>{
+        const entry=entries[name];if(!entry)return null;
+        const lh=entry.localHeaderOffset;
+        if(view.getUint32(lh,true)!==0x04034b50)throw new Error('這個 .xlsx 檔案格式不正確');
+        const lNameLen=view.getUint16(lh+26,true),lExtraLen=view.getUint16(lh+28,true),dataStart=lh+30+lNameLen+lExtraLen;
+        const compressed=buffer.subarray(dataStart,dataStart+entry.compressedSize);
+        if(entry.compressionMethod===0)return compressed;
+        const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        return new Uint8Array(await new Response(stream).arrayBuffer());
+      };
+    }
+    function xlsxSharedStrings(bytes){
+      if(!bytes)return [];
+      const doc=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'application/xml');
+      return [...doc.getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent||'').join(''));
+    }
+    function xlsxColumnIndex(cellRef){let letters=String(cellRef||'').match(/^[A-Z]+/)?.[0]||'A',index=0;for(const ch of letters)index=index*26+(ch.charCodeAt(0)-64);return index-1}
+    function xlsxWorksheetRows(bytes,sharedStrings){
+      const doc=new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bytes),'application/xml'),rows=[];
+      for(const rowNode of doc.getElementsByTagName('row')){
+        const cells=[];
+        for(const cellNode of rowNode.getElementsByTagName('c')){
+          const index=xlsxColumnIndex(cellNode.getAttribute('r')),type=cellNode.getAttribute('t')||'';
+          let value='';
+          if(type==='inlineStr')value=cellNode.getElementsByTagName('t')[0]?.textContent||'';
+          else{const raw=cellNode.getElementsByTagName('v')[0]?.textContent||'';value=type==='s'?(sharedStrings[Number(raw)]||''):raw}
+          cells[index]=value;
+        }
+        rows.push(cells);
+      }
+      return rows;
+    }
+    async function parseXlsxRosterFile(file){
+      const readEntry=await readXlsxZipEntries(file);
+      const sharedStrings=xlsxSharedStrings(await readEntry('xl/sharedStrings.xml'));
+      const sheetBytes=await readEntry('xl/worksheets/sheet1.xml');
+      if(!sheetBytes)throw new Error('找不到工作表內容，請確認是有效的 .xlsx 檔案，且只有一個工作表');
+      return xlsxWorksheetRows(sheetBytes,sharedStrings).map(row=>row.map(cell=>String(cell??'').trim())).filter(row=>row.some(Boolean));
+    }
+    const ROSTER_HEADER_ALIASES={name:['員工姓名','姓名','名字'],department:['部門'],group:['科室組別','組別','小組'],account:['email','e-mail','信箱','帳號'],title:['員工職稱','職稱']};
+    function normalizeRosterRows(rows){
+      if(!rows.length)return [];
+      const header=rows[0];
+      const findColumn=aliases=>header.findIndex(cell=>aliases.some(alias=>cell.toLowerCase()===alias.toLowerCase()));
+      const columns=Object.fromEntries(Object.entries(ROSTER_HEADER_ALIASES).map(([key,aliases])=>[key,findColumn(aliases)]));
+      if(columns.account<0||columns.name<0)throw new Error('Excel 檔案缺少「員工姓名」或 Email 欄位，請確認欄位名稱是否正確');
+      return rows.slice(1).map(row=>({
+        name:String(row[columns.name]||'').trim(),
+        department:columns.department>=0?String(row[columns.department]||'').trim():'',
+        group:columns.group>=0?String(row[columns.group]||'').trim():'',
+        account:String(row[columns.account]||'').trim().toLowerCase(),
+        title:columns.title>=0?String(row[columns.title]||'').trim():''
+      })).filter(item=>item.name||item.account);
+    }
+    let importAccountsRows=[],importAccountsSelected=new Set();
+    function importAccountStatuses(rows){
+      const seen=new Set();
+      return rows.map(row=>{
+        let status;
+        if(!row.account||!/^[a-z0-9._%+-]+@emctaipei\.com$/i.test(row.account))status={ok:false,reason:'帳號必須是 @emctaipei.com 公司信箱'};
+        else if(!row.name)status={ok:false,reason:'缺少姓名'};
+        else if(row.name.length>60)status={ok:false,reason:'姓名不得超過 60 個字'};
+        else if(seen.has(row.account))status={ok:false,reason:'名單中重複帳號，僅保留第一筆'};
+        else if(permissionModelsCache.some(model=>MachiAccess.canonicalAccount(model['帳號'])===row.account))status={ok:false,reason:'帳號已存在，略過'};
+        else status={ok:true,reason:'可匯入'};
+        if(status.ok)seen.add(row.account);
+        return status;
+      });
+    }
+    function renderImportAccountsModal(){
+      const statuses=importAccountStatuses(importAccountsRows);
+      const validCount=statuses.filter(status=>status.ok).length;
+      const selectedCount=statuses.filter((status,index)=>status.ok&&importAccountsSelected.has(index)).length;
+      const roles=Object.keys(MachiAccess.templates||{}).filter(role=>role!=='自訂');
+      const rowsHtml=importAccountsRows.map((row,index)=>{
+        const status=statuses[index],checked=status.ok&&importAccountsSelected.has(index);
+        return `<tr class="${status.ok?'':'is-disabled'}"><td><input type="checkbox" data-import-row="${index}" ${checked?'checked':''} ${status.ok?'':'disabled'}></td><td class="clip">${esc(row.name)}</td><td class="clip">${esc(row.department)}</td><td class="clip">${esc(row.group)}</td><td class="clip">${esc(row.account)}</td><td class="clip">${esc(row.title)}</td><td>${status.ok?'<span class="badge">可匯入</span>':`<span class="small">${esc(status.reason)}</span>`}</td></tr>`;
+      }).join('');
+      $('importAccountsBody').innerHTML=`<label class="field" style="grid-column:1/-1;max-width:320px">套用角色範本（整批一致，之後可在帳號設定裡個別調整）<select id="importAccountsRole">${roles.map(role=>`<option value="${esc(role)}" ${role==='一般使用者'?'selected':''}>${esc(role)}</option>`).join('')}</select></label><div class="table-wrap" style="grid-column:1/-1"><table class="database-table"><thead><tr><th></th><th>姓名</th><th>部門</th><th>組別</th><th>帳號（Email）</th><th>職稱</th><th>狀態</th></tr></thead><tbody>${rowsHtml||'<tr><td colspan="7">沒有解析到任何資料列</td></tr>'}</tbody></table></div>`;
+      $('importAccountsSummary').textContent=`共 ${importAccountsRows.length} 筆，可匯入 ${validCount} 筆，已勾選 ${selectedCount} 筆`;
+      $('confirmImportAccounts').disabled=selectedCount===0;
+    }
+    function openImportAccountsModal(rows){
+      importAccountsRows=rows;
+      importAccountsSelected=new Set(importAccountStatuses(rows).map((status,index)=>status.ok?index:-1).filter(index=>index>=0));
+      renderImportAccountsModal();
+      $('importAccountsModal').hidden=false;
+    }
+    function closeImportAccountsModal(){$('importAccountsModal').hidden=true;importAccountsRows=[];importAccountsSelected=new Set()}
+    async function handleImportAccountsFile(file){
+      if(!file)return;
+      try{
+        const rows=normalizeRosterRows(await parseXlsxRosterFile(file));
+        if(!rows.length)throw new Error('這個檔案裡沒有可匯入的名單');
+        openImportAccountsModal(rows);
+      }catch(error){note(`Excel 名冊讀取失敗：${error.message}`,'error')}
+    }
+    async function confirmImportAccounts(){
+      const statuses=importAccountStatuses(importAccountsRows);
+      const employees=importAccountsRows.filter((row,index)=>statuses[index].ok&&importAccountsSelected.has(index))
+        .map(row=>({name:row.name,department:row.department,group:row.group,account:row.account}));
+      if(!employees.length)return;
+      const role=$('importAccountsRole')?.value||'一般使用者',button=$('confirmImportAccounts');
+      button.disabled=true;
+      try{
+        const result=await request('',{method:'POST',body:JSON.stringify({action:'adminAccountBulkImport',role,employees})});
+        publishDatabaseRefresh('adminAccountBulkImport',result);
+        closeImportAccountsModal();
+        await loadMetadata();
+        const skippedCount=Array.isArray(result.skipped)?result.skipped.length:0;
+        note(`已匯入 ${result.created.length} 位新帳號${skippedCount?`，略過 ${skippedCount} 筆（已存在或格式不正確）`:''}。`,'ok');
+      }catch(error){note(`匯入失敗：${error.message}`,'error');button.disabled=false}
+    }
     async function resetPermission(){
       const editor=permissionEditorElement(),account=editor?.dataset.permissionEditor,model=permissionModelsCache.find(row=>row['帳號']===account);if(!model?._explicit||permissionWritesPending.has(account)||!confirm(`確定讓 ${account} 改回角色預設權限？`))return;
       if(!APPS_SCRIPT_MODE){try{await request(`/table/${encodeURIComponent('帳號權限')}/${encodeURIComponent(account)}`,{method:'DELETE',body:'{}'});await loadMetadata();note(`${account} 已改回角色預設權限。`,'ok')}catch(error){note(`還原預設值失敗：${error.message}`,'error')}return}
@@ -1262,7 +1398,7 @@
     $('view').addEventListener('dragover',event=>{if(accountColumnDragged){const target=event.target.closest('[data-account-column-item]');if(!target||target===accountColumnDragged)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountColumnDragged,before?target:target.nextElementSibling);refreshAccountColumnOrder();return}if(accountRotationDragged){const target=event.target.closest('[data-account-rotation-item]');if(!target||target===accountRotationDragged||target.parentElement!==accountRotationDragged.parentElement)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(accountRotationDragged,before?target:target.nextElementSibling);refreshAccountRotationOrder(target.parentElement);return}if(customerItemDragged){const target=event.target.closest('[data-customer-item]');if(!target||target===customerItemDragged||target.parentElement!==customerItemDragged.parentElement)return;event.preventDefault();const rect=target.getBoundingClientRect(),before=event.clientY<rect.top+rect.height/2;target.parentElement.insertBefore(customerItemDragged,before?target:target.nextElementSibling);refreshCustomerListOrder(target.parentElement)}});
     $('view').addEventListener('drop',event=>{if(accountColumnDragged){event.preventDefault();accountColumnDragged.classList.remove('dragging');accountColumnDragged=null;refreshAccountColumnOrder();return}if(accountRotationDragged){event.preventDefault();const list=accountRotationDragged.parentElement;accountRotationDragged.classList.remove('dragging');accountRotationDragged=null;refreshAccountRotationOrder(list);return}if(customerItemDragged){event.preventDefault();customerItemDragged.classList.remove('dragging');customerItemDragged=null}});
     $('view').addEventListener('dragend',()=>{accountColumnDragged?.classList.remove('dragging');accountColumnDragged=null;accountRotationDragged?.classList.remove('dragging');accountRotationDragged=null;customerItemDragged?.classList.remove('dragging');customerItemDragged=null});
-    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='設計列表'){$('view').querySelector('[data-designer-add-account]')?.focus();return}if(tableName==='帳號權限')beginAccountCreate();else if(tableName==='系統公告欄'){const parts=taipeiDateParts(),date=`${parts.year}-${parts.month}-${parts.day}`;openEditor(null,'',{'是否啟用':'啟用','發布時間':date,'更新時間':date,'更新者':stored(FRONT_USER_KEY)||'管理者'})}else openEditor()});$('backupToSheet').addEventListener('click',backupDatabaseToSheet);DATABASE_FILTER_FIELDS.forEach(([id,header])=>{$(id).addEventListener('change',()=>{databaseFilters[header]=$(id).value;page=1;updateFilterClearButton();loadRows()})});$('filterClear').addEventListener('click',()=>{resetDatabaseFilters();page=1;loadRows()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});
+    $('search').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{page=1;loadRows()},240)});$('pageSize').addEventListener('change',()=>{page=1;loadRows()});$('add').addEventListener('click',()=>{if(tableName==='設計列表'){$('view').querySelector('[data-designer-add-account]')?.focus();return}if(tableName==='帳號權限')beginAccountCreate();else if(tableName==='系統公告欄'){const parts=taipeiDateParts(),date=`${parts.year}-${parts.month}-${parts.day}`;openEditor(null,'',{'是否啟用':'啟用','發布時間':date,'更新時間':date,'更新者':stored(FRONT_USER_KEY)||'管理者'})}else openEditor()});$('backupToSheet').addEventListener('click',backupDatabaseToSheet);DATABASE_FILTER_FIELDS.forEach(([id,header])=>{$(id).addEventListener('change',()=>{databaseFilters[header]=$(id).value;page=1;updateFilterClearButton();loadRows()})});$('filterClear').addEventListener('click',()=>{resetDatabaseFilters();page=1;loadRows()});$('reload').addEventListener('click',manualReload);$('back').addEventListener('click',()=>location.href='index.html');$('logout').addEventListener('click',()=>location.href='index.html');$('closeEditor').addEventListener('click',closeEditor);$('cancelEditor').addEventListener('click',closeEditor);$('editorForm').addEventListener('submit',saveEditor);$('editor').addEventListener('click',event=>{if(event.target===$('editor'))closeEditor()});$('importAccounts').addEventListener('click',()=>$('importAccountsFile').click());$('importAccountsFile').addEventListener('change',async event=>{const file=event.target.files?.[0];event.target.value='';await handleImportAccountsFile(file)});$('closeImportAccounts').addEventListener('click',closeImportAccountsModal);$('cancelImportAccounts').addEventListener('click',closeImportAccountsModal);$('confirmImportAccounts').addEventListener('click',confirmImportAccounts);$('importAccountsModal').addEventListener('click',event=>{if(event.target===$('importAccountsModal'))closeImportAccountsModal()});$('importAccountsModal').addEventListener('change',event=>{const checkbox=event.target.closest('[data-import-row]');if(!checkbox)return;const index=Number(checkbox.dataset.importRow);if(checkbox.checked)importAccountsSelected.add(index);else importAccountsSelected.delete(index);const role=$('importAccountsRole')?.value;renderImportAccountsModal();if(role)$('importAccountsRole').value=role});
     $('first').addEventListener('click',()=>{page=1;loadRows()});$('prev').addEventListener('click',()=>{page=Math.max(1,page-1);loadRows()});$('next').addEventListener('click',()=>{page++;loadRows()});$('last').addEventListener('click',()=>{page=Math.max(1,Math.ceil(Number($('totalRows').textContent.replace(/,/g,''))/effectivePageSize()));loadRows()});
     async function start(){populateDatabaseFilters();token=stored(FRONT_TOKEN_KEY)||token;if(!token){showLogin('管理者登入狀態不存在，請回前台重新登入。');return}await window.MachiAccess?.refresh({token,account:stored('designRequestEditorAccount'),user:stored(FRONT_USER_KEY),group:stored(FRONT_GROUP_KEY)});if(!validFrontAdmin()){showLogin('Cloudflare Worker 驗證失敗，或此帳號沒有資料庫管理權限。');return}sessionStorage.setItem(TOKEN_KEY,token);showApp();try{await refreshWorkerDatabase();await loadMetadata()}catch(error){if(/401|權限|TOKEN_EXPIRED|登入/.test(error.message)){showLogin('管理者登入狀態已失效，請回前台重新登入。');return}note(`後台讀取失敗：${error.message}`,'error')}}
     start();

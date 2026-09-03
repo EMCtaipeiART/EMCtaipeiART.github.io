@@ -1764,6 +1764,65 @@ test('admin account save atomically creates personal settings and access', async
   assert.equal(app.database.table('帳號權限').rows.some(row => row['帳號'] === 'broken.account@emctaipei.com'), false);
 });
 
+test('admin account bulk import creates accounts from a parsed roster and skips bad or duplicate rows', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+
+  const imported = await api(app.baseUrl, 'adminAccountBulkImport', {
+    editorToken: login.token,
+    role: '一般使用者',
+    employees: [
+      { name: '蔡啓泓', department: '凱曜專案部', group: 'Poppy組', account: 'eric.tsai@emctaipei.com' },
+      { name: '徐千涵', department: '凱曜管理部', group: '人資行政組', account: 'tina.hsu@emctaipei.com' },
+      { name: '外部廠商', department: '', group: '', account: 'vendor@gmail.com' },
+      { name: '', department: '凱曜專案部', group: 'Odin組', account: 'noname@emctaipei.com' },
+      { name: '蔡啓泓重複', department: '凱曜專案部', group: 'Poppy組', account: 'Eric.Tsai@emctaipei.com' }
+    ]
+  });
+  assert.deepEqual(imported.created, ['eric.tsai@emctaipei.com', 'tina.hsu@emctaipei.com']);
+  assert.equal(imported.skipped.length, 3);
+  assert.match(imported.skipped.find(item => item.account === 'vendor@gmail.com').reason, /@emctaipei\.com/);
+  assert.equal(imported.skipped.find(item => item.account === 'noname@emctaipei.com').reason, '缺少姓名');
+  assert.equal(imported.skipped.find(item => item.account === 'eric.tsai@emctaipei.com').reason, '帳號已存在，略過');
+
+  const ericSettings = app.database.table('設定').rows.find(row => row['帳號'] === 'eric.tsai@emctaipei.com');
+  assert.equal(ericSettings['名字'], '蔡啓泓');
+  assert.equal(ericSettings['顯示名'], '蔡啓泓');
+  assert.equal(ericSettings['部門'], '凱曜專案部');
+  assert.equal(ericSettings['組別'], 'Poppy組');
+  const ericPermission = app.database.table('帳號權限').rows.find(row => row['帳號'] === 'eric.tsai@emctaipei.com');
+  assert.equal(ericPermission['角色範本'], '一般使用者');
+  assert.equal(ericPermission['狀態'], '啟用');
+  assert.equal(ericPermission['登入方式'], '公司信箱');
+  assert.deepEqual(JSON.parse(ericPermission['頁面權限']).sort(), ['avatar_upload', 'request', 'short_link'].sort());
+
+  // 同一批名單再匯入一次：全部視為已存在略過，不會建立重複帳號。
+  const reimported = await api(app.baseUrl, 'adminAccountBulkImport', {
+    editorToken: login.token,
+    employees: [{ name: '蔡啓泓', department: '凱曜專案部', group: 'Poppy組', account: 'eric.tsai@emctaipei.com' }]
+  });
+  assert.deepEqual(reimported.created, []);
+  assert.equal(app.database.table('設定').rows.filter(row => row['帳號'] === 'eric.tsai@emctaipei.com').length, 1);
+
+  const designerImport = await api(app.baseUrl, 'adminAccountBulkImport', {
+    editorToken: login.token,
+    role: '設計師',
+    employees: [{ name: '新設計師', department: '設計部', group: '平面', account: 'new.hire@emctaipei.com' }]
+  });
+  assert.deepEqual(designerImport.created, ['new.hire@emctaipei.com']);
+  const designerPermission = app.database.table('帳號權限').rows.find(row => row['帳號'] === 'new.hire@emctaipei.com');
+  assert.equal(designerPermission['角色範本'], '設計師');
+  assert.ok(JSON.parse(designerPermission['功能權限']).includes('designer.settings'));
+
+  const badRole = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'adminAccountBulkImport', editorToken: login.token, role: '不存在',
+    employees: [{ name: '測試', account: 'bad.role@emctaipei.com' }]
+  } });
+  assert.equal(badRole.response.status, 400);
+  assert.equal(app.database.table('設定').rows.some(row => row['帳號'] === 'bad.role@emctaipei.com'), false);
+});
+
 test('ERP OAuth exchanges PKCE code, reads identity and creates a JSON session', async t => {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {

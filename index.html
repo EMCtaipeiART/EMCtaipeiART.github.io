@@ -9,7 +9,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>設計需求系統 v4.7</title>
+  <title>設計需求系統 v4.71</title>
   <link rel="preload" as="image" href="assets/designers/Machi-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Anna-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Karl-avatar.jpg" fetchpriority="high" />
@@ -6639,7 +6639,7 @@
 </head>
 <body>
 <header>
-  <div class="title-row"><h1>設計需求系統 v4.7</h1><button type="button" class="issue-report-btn" id="issueReportOpen">問題回報</button></div>
+  <div class="title-row"><h1>設計需求系統 v4.71</h1><button type="button" class="issue-report-btn" id="issueReportOpen">問題回報</button></div>
   <p class="subtitle">設計系統使用方法 Step1.填寫資料 → Step2.新增案件 → Step3.點擊發信 → Step4.寄送需求信件</p>
   <div class="account-menu" id="accountMenu">
     <div class="panel-restore-dock" id="closedPanelsDock" role="group" aria-label="重新開啟已關閉視窗" hidden>
@@ -7387,6 +7387,11 @@ async function githubJsonTableRows(name,{fresh=false}={}){
   if(!Array.isArray(rows))throw new Error(`GitHub JSON 缺少資料表：${name}`);
   return rows;
 }
+function applySystemAnnouncementVersion(version){
+  const value=String(version||'').trim();if(!value)return;
+  const label=`設計需求系統 ${value}`;document.title=label;
+  const heading=document.querySelector('header .title-row h1');if(heading)heading.textContent=label;
+}
 function normalizeSystemAnnouncement(row={}){
   return {
     version:String(row.version??row['公告版本']??'').trim(),
@@ -7438,7 +7443,7 @@ function showSystemAnnouncement(announcement){
 async function loadSystemAnnouncement(){
   let announcement=null;
   try{const data=await sheetApi('getSystemAnnouncement');announcement=data?.announcement?normalizeSystemAnnouncement(data.announcement):null}catch(error){console.warn('系統公告 API 讀取失敗，改用 GitHub JSON 備援',error);try{announcement=systemAnnouncementFromDatabase(await fetchGithubJsonDatabase({}))}catch(fallbackError){console.warn('系統公告備援讀取失敗',fallbackError)}}
-  if(announcement)showSystemAnnouncement(announcement);
+  if(announcement){applySystemAnnouncementVersion(announcement.version);showSystemAnnouncement(announcement)}
 }
 const targetSpreadsheetId = '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const targetSheetName = 'database';

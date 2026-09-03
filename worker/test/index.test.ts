@@ -542,6 +542,52 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({ '帳號': account, '角色範本': '設計師' }));
   });
 
+  it('bulk imports accounts from a parsed roster, skips invalid/duplicate rows, and commits once', async () => {
+    const token = await login();
+    const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'bulk-import-file-sha' }, commit: { sha: 'bulk-import-commit-sha' } });
+    });
+    const imported = await api({
+      action: 'adminAccountBulkImport',
+      role: '一般使用者',
+      employees: [
+        { name: '蔡啓泓', department: '凱曜專案部', group: 'Poppy組', account: 'eric.tsai@emctaipei.com' },
+        { name: '徐千涵', department: '凱曜管理部', group: '人資行政組', account: 'tina.hsu@emctaipei.com' },
+        { name: '外部廠商', account: 'vendor@gmail.com' },
+        { name: '', account: 'noname@emctaipei.com' },
+        { name: '重複', account: 'Eric.Tsai@emctaipei.com' }
+      ]
+    }, token);
+    expect(imported).toMatchObject({
+      ok: true,
+      created: ['eric.tsai@emctaipei.com', 'tina.hsu@emctaipei.com'],
+      changedTables: ['設定', '帳號權限']
+    });
+    expect(imported.skipped as Array<Record<string, unknown>>).toHaveLength(3);
+    expect(githubPut).toHaveBeenCalledTimes(1);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({
+      '帳號': 'eric.tsai@emctaipei.com', '名字': '蔡啓泓', '顯示名': '蔡啓泓', '部門': '凱曜專案部', '組別': 'Poppy組'
+    }));
+    expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({
+      '帳號': 'eric.tsai@emctaipei.com', '角色範本': '一般使用者', '狀態': '啟用', '登入方式': '公司信箱'
+    }));
+
+    // 重新匯入同一個帳號：視為已存在，略過，不會產生新的 GitHub commit。
+    const reimported = await api({
+      action: 'adminAccountBulkImport',
+      employees: [{ name: '蔡啓泓', account: 'eric.tsai@emctaipei.com' }]
+    }, token);
+    expect(reimported).toMatchObject({ ok: true, created: [] });
+    expect(githubPut).toHaveBeenCalledTimes(1);
+  });
+
   it('creates a password-only account without email and logs in with its assigned role', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

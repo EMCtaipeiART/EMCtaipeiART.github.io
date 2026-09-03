@@ -192,7 +192,41 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-03 17:10 Asia/Taipei（最新）— 合併代理人維護文件為 AGENT.md
+### 2026-09-03 18:09 Asia/Taipei（最新）— 帳號設定新增「匯入 Excel 名冊」批次建立帳號
+
+- 修改目的：使用者提供公司人資匯出的員工通訊錄 .xlsx 檔案，要求資料庫後台「帳號設定」能直接上傳讀取、自動建立新進人員的帳號，不用再一筆一筆手動輸入。
+- 影響檔案：`worker/src/database-coordinator.ts`（新增 `adminAccountBulkImport` action）、`backend/app.mjs`（同步的本機測試後端平行實作）、`json_database_admin.html`（上傳按鈕、純瀏覽器端 .xlsx 解析、匯入預覽視窗）、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **後端**：新 action `adminAccountBulkImport`，一次帶入一批 `{name,department,group,account}`，套用整批統一的角色範本（頁面權限／功能權限直接沿用 `ACCESS_ROLE_TEMPLATES` 裡對應角色的預設值，不用逐筆指定），單一次 mutate/transaction 只送出一次 GitHub commit。帳號 email 網域必須是 `@emctaipei.com`、姓名不得空白或超過 60 字、名單內部重複或跟既有帳號重複的一律略過（不覆蓋既有帳號已經個人化過的設定），略過的每一筆都回傳原因（`skipped:[{account,name,reason}]`），前端可以完整呈現。整批全部略過時（例如重複上傳同一份名單）用既有的 `changed:false` 短路機制跳過寫入，不會產生空的 commit。
+  2. **前端解析**：`json_database_admin.html` 純瀏覽器端解析 .xlsx——本質上是一個 ZIP 檔，裡面是 `sharedStrings.xml`／`worksheets/sheet1.xml` 兩份 XML，用瀏覽器原生的 `DecompressionStream('deflate-raw')` 解壓縮 ZIP 內的 deflate 資料流，自己寫最小的 ZIP central directory／local header 解析（`readXlsxZipEntries`）跟 XML 解析（`DOMParser`），刻意不引入任何第三方函式庫（這個後台頁面目前完全沒有載入任何外部 CDN script，維持這個風格）。欄位名稱用別名比對（`ROSTER_HEADER_ALIASES`），容忍「員工姓名」/「姓名」/「名字」、「科室組別」/「組別」等常見寫法差異。
+  3. **匯入流程**：「帳號設定」分頁的工具列新增「匯入 Excel 名冊」按鈕（`updateAddButton()` 只在 `帳號權限` 表顯示），選檔後立刻在瀏覽器端解析並跳出預覽視窗——逐筆列出姓名／部門／組別／帳號／職稱，自動判斷每一筆「可匯入」或略過原因（帳號網域不對、缺姓名、名單內重複、帳號已存在），可匯入的預設打勾、可以逐筆取消勾選，整批套用同一個角色範本（下拉選單，預設「一般使用者」）。確認後才真的呼叫 `adminAccountBulkImport`，成功後刷新帳號列表並用既有的 `publishDatabaseRefresh` 廣播給其他分頁。
+  4. **刻意不做的部分**：xlsx 裡的「員工職稱」欄位只在預覽表格顯示、方便管理者核對是不是正確的人，但**不會寫進資料庫**——因為「設定」表目前完全沒有職稱欄位，整個系統其他地方也都沒有這個概念，屬於臨時起意加欄位的範疇，這次沒有跟使用者確認過要不要新增，所以先不動；之後真的需要的話，加一個新的表頭欄位即可，不影響這次的匯入邏輯本身。
+- 風險區塊：
+  - `DecompressionStream('deflate-raw')` 是相對新的瀏覽器 API（Chrome/Edge 80+、Safari 16.4+），這個後台頁面本來就只給內部管理者用現代瀏覽器操作，風險可接受；如果之後真的遇到舊瀏覽器打不開，會直接在「Excel 名冊讀取失敗」的錯誤訊息裡看到，不會是靜默失敗。
+  - 只解析檔案裡的第一個工作表（`xl/worksheets/sheet1.xml`），如果人資匯出的檔案有多個分頁、名單不在第一頁，會抓不到資料、直接跳出「找不到工作表內容」的錯誤——這次拿到的實際檔案（`員工通訊錄.xlsx`）只有一個工作表，符合這個假設；已在錯誤訊息裡明確講清楚是格式問題，不是靜默失敗。
+  - 角色範本的驗證跟既有 `adminAccountSave` 完全一樣，只認 `ACCESS_ROLE_TEMPLATES` 裡固定的四個角色名稱（管理者／設計師／一般使用者／唯讀），不支援「自訂」逐筆權限（批次匯入本來就不適合逐筆自訂）；如果之後「角色權限範本」表被加入額外自訂名稱的範本列，批次匯入的角色下拉選單（沿用 `MachiAccess.templates`，來源同一份表）可能會出現一個送出後端會被拒絕的選項——這是既有 `adminAccountSave` 單筆新增流程本來就有的同一種邊界情況，不是這次新增的問題。
+  - Worker 與 Node 後端是兩份完全獨立維護的平行實作（這個系統已知的既有風險模式，過去至少兩次因為忘記同步而出過需要靠測試才抓到的問題），這次兩邊同步實作、同步寫測試，`git stash` 驗證兩邊都真的被測試鎖住。
+- 已檢查／驗證方式：
+  - **Worker**：`cd worker && npx tsc --noEmit` 無錯；`npx vitest run` 57/57 全過（56 既有＋1 新增：整批匯入正確建立可匯入的帳號、略過網域錯誤／缺姓名／名單內重複／已存在的四種情況、只觸發一次 GitHub commit `expect(githubPut).toHaveBeenCalledTimes(1)`；重新匯入同一個帳號正確全部略過、且不會再多觸發一次 commit）。
+  - **Node 後端**：`node --test backend/test/*.test.mjs` 65/65 全過（新增測試涵蓋跟 Worker 對稱的情境，額外驗證錯誤角色範本會被 400 拒絕、且不會留下任何殘留資料列）。
+  - 兩邊都先用 `git stash` 只還原程式碼、保留測試，確認新測試在舊程式碼上真的會失敗（Worker：`ok:false`；Node：帳號清單跟預期不符），`git stash pop` 還原後重新確認全數通過，不是巧合通過。
+  - 用本機 Python 靜態伺服器＋ Browser pane，把使用者提供的**真實** `員工通訊錄.xlsx`（6 位真實員工）複製進專案目錄暫時提供 fetch，直接呼叫 `parseXlsxRosterFile()`／`normalizeRosterRows()`，確認解析出的姓名／部門／組別／帳號／職稱**逐字完全正確**（用手動以 `unzip`＋Node 直接讀取同一份檔案的 XML 內容比對過，兩邊結果一致）；接著呼叫 `openImportAccountsModal()` 讓預覽視窗真的在畫面上渲染，截圖確認版面（角色下拉、六筆資料、狀態欄「可匯入」徽章）正常顯示；模擬「其中一筆帳號已存在」「缺姓名」「非公司信箱」三種情況，確認狀態欄正確顯示對應原因、對應的核取方塊正確被停用；手動取消其中一筆勾選，確認畫面上「已勾選 N 筆」的統計數字跟著正確更新、送出時的 payload 正確排除被取消勾選的那一筆。驗證完後已刪除暫時複製進專案目錄的測試檔案，不會被提交。
+  - `git diff --check` 對全部改動的檔案皆無空白字元問題。
+  - **未做的驗證**：沒有用真實登入的管理者帳號在正式站實際完成一次端對端的匯入（受限於這個環境無法完成真實 Google/Cloudflare 登入流程）；也沒有測試超過 200 筆的名單會被拒絕（程式碼裡有這個上限檢查，但沒有實際構造 201 筆的測試資料去驗證邊界值本身）。
+- 部署狀態：`json_database_admin.html`、`backend/app.mjs`、`backend/test/backend.test.mjs` 純前端／共用檔案，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，後台呼叫 `adminAccountBulkImport` 會收到「Unknown action」錯誤，匯入按鈕看得到但點了會失敗，不影響任何其他既有功能。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-03 17:55 Asia/Taipei — 前台版本號改為跟後台「系統公告欄」已發布版本自動同步
+
+- 修改目的：使用者要求把系統版本改成 v4.71，並希望之後版本號能直接跟著後台發布的最新公告版本連動，不用每次手動改前台程式碼裡的版本字串。
+- 影響檔案：`index.html`。
+- 影響功能：新增 `applySystemAnnouncementVersion(version)`，在既有 `loadSystemAnnouncement()`（頁面載入 700ms 後背景執行，跟是否登入無關）成功取得後台目前啟用中的公告版本後，同步更新 `document.title` 跟頁首 `<h1>` 文字，格式維持「設計需求系統 v{版本號}」；如果目前沒有任何一筆「系統公告欄」是啟用狀態、或讀取失敗，維持 HTML 裡原本寫死的版本字串當備援，不會顯示空白或壞掉的文案。原本寫死在 `<title>`／`<h1>` 的「v4.7」先手動改成「v4.71」（對應目前後台實際已經是啟用狀態的 v4.71 公告，這份公告在這次改動之前就已經透過後台直接發布，不是這次改動的一部分），之後只要在後台「系統公告欄」發布新版本公告（既有流程，不需要碰任何程式碼），前台頁籤與頁首標題就會在下次讀取時自動跟著更新。
+- 風險區塊：這個機制完全依賴「系統公告欄」的啟用狀態（`latestSystemAnnouncement()` 既有邏輯：套用中的公告版本號取數字最大的那筆），如果之後管理者停用所有公告（例如本次改動之前的狀態），前台版本號就會退回 HTML 裡寫死的備援字串，不會自動變成空白，但也不會再自動更新——這是刻意的設計（沒有公告可以參考時，寧可顯示一個過期但有意義的版本號，也不要顯示空白或連動邏輯本身的錯誤訊息），不是漏洞。
+- 已檢查／驗證方式：用本機 Python 靜態伺服器＋ Browser pane 直接呼叫 `applySystemAnnouncementVersion('v4.71')`，確認 `document.title`／`<h1>` 文字正確從一個刻意設成別的字串的測試值變回「設計需求系統 v4.71」；另外直接對正式 Worker API（`getSystemAnnouncement`）發送真實請求，確認目前正式站資料庫裡確實已經有一筆啟用中的 v4.71 公告（`revision:3802`），證實這次改動接的是真實資料，不是憑空假設。這個沙盒瀏覽器環境本身會擋跨網域 POST 請求（回應 501），所以沒辦法在這個環境裡完整重現「頁面載入→背景 fetch→自動更新標題」整個流程的最後一段網路請求，但拆開驗證了兩端（真實 API 回傳正確資料；拿到資料後的 DOM 更新邏輯正確）已經足以確認這個功能會如預期運作，且沒有引入新的網路依賴（沿用既有的 `sheetApi('getSystemAnnouncement')`，這個 API 呼叫本來就已經在跑）。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-03 17:10 Asia/Taipei — 合併代理人維護文件為 AGENT.md
 
 - 修改目的：將原本分散在 `CLAUDE.md` 與 `CODEX.md` 的架構說明、維護規則與修改紀錄整併成單一 `AGENT.md`，避免後續更新分散或遺漏。
 - 影響檔案：新增 `AGENT.md`；移除 `CLAUDE.md`、`CODEX.md`；同步更新 `index.html`、`backend/test/backend.test.mjs`、`scripts/nas_design_image_watcher.README.md` 內的舊檔名引用。

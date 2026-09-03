@@ -23,7 +23,7 @@ const WRITE_ACTIONS = new Set([
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
-  'adminAccountSave', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead'
+  'adminAccountSave', 'adminAccountBulkImport', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead'
 ]);
 const PROJECT_GROUPS = {
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
@@ -766,6 +766,43 @@ export function createActionHandler(database, options = {}) {
         else permissionTable.rows[permissionIndex] = permission;
         return { ok: true, action, account, settingsRow: { _rowNumber: settingsIndex + 2, ...settings }, permissionRow: { _rowNumber: permissionIndex + 2, ...permission }, changedTables: ['設定', '帳號權限'] };
       }, 'admin account save');
+    }
+    if (action === 'adminAccountBulkImport') {
+      // 跟 Worker 端 database-coordinator.ts 的 adminAccountBulkImport 同一套邏輯：整批只用同一個
+      // 角色範本，帳號／姓名格式不對或已存在的那幾筆直接略過，不覆蓋既有帳號的個人化設定。
+      const session = requireCapability(snapshot, payload, 'database.manage');
+      const employees = Array.isArray(payload.employees) ? payload.employees.filter(item => item && typeof item === 'object') : [];
+      if (!employees.length) throw new Error('沒有可匯入的名單');
+      if (employees.length > 200) throw new Error('單次匯入最多 200 筆');
+      const role = text(payload.role) || '一般使用者';
+      const template = ACCESS_ROLE_TEMPLATES[role];
+      if (!template) throw new Error('角色範本格式不正確');
+      return database.transaction(draft => {
+        const settingsTable = draft.tables['設定'], permissionTable = draft.tables['帳號權限'];
+        const existing = new Set([...settingsTable.rows, ...permissionTable.rows].map(row => canonicalAccount(row['帳號'])).filter(Boolean));
+        const created = [], skipped = [];
+        for (const item of employees) {
+          const name = text(item['名字'] ?? item.name);
+          const rawAccount = text(item['帳號'] ?? item.account ?? item.email);
+          const account = canonicalAccount(rawAccount);
+          if (!account || !account.endsWith(LOGIN_DOMAIN)) { skipped.push({ account: rawAccount, name, reason: `帳號必須使用 ${LOGIN_DOMAIN} 公司信箱` }); continue; }
+          if (!name) { skipped.push({ account, name, reason: '缺少姓名' }); continue; }
+          if (name.length > 60) { skipped.push({ account, name, reason: '姓名不得超過 60 個字' }); continue; }
+          if (existing.has(account)) { skipped.push({ account, name, reason: '帳號已存在，略過' }); continue; }
+          existing.add(account);
+          const settings = normalizedTableRow(settingsTable.headers, {});
+          settings['帳號'] = account; settings['名字'] = name; settings['顯示名'] = name;
+          settings['部門'] = text(item['部門'] ?? item.department); settings['組別'] = text(item['組別'] ?? item.group);
+          settingsTable.rows.push(settings);
+          const permission = normalizedTableRow(permissionTable.headers, {});
+          permission['帳號'] = account; permission['登入方式'] = '公司信箱'; permission['角色範本'] = role; permission['狀態'] = '啟用';
+          permission['頁面權限'] = JSON.stringify(template.pages); permission['功能權限'] = JSON.stringify(template.capabilities);
+          permission['更新時間'] = nowTaipei(); permission['更新者'] = session.user || session.account;
+          permissionTable.rows.push(permission);
+          created.push(account);
+        }
+        return { ok: true, action, created, skipped, changedTables: created.length ? ['設定', '帳號權限'] : [] };
+      }, 'admin account bulk import');
     }
     if (action === 'adminDesignerSave') {
       requireCapability(snapshot, payload, 'database.manage');

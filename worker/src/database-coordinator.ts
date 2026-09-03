@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import {
-  VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
+  VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessProfile, activeReel, canonicalAccount, findReelIndex,
   hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
@@ -2576,6 +2576,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if (action === 'adminAccountSave') return this.adminAccountSave(payload, database, session);
     if (action === 'adminAccountDelete') return this.adminAccountDelete(payload, database, session);
+    if (action === 'adminAccountBulkImport') return this.adminAccountBulkImport(payload, database, session);
     if (action === 'adminDesignerSave') return this.adminDesignerSave(payload, database, session);
     if (action === 'adminDesignerRemove') return this.adminDesignerRemove(payload, database, session);
     if (action === 'adminOrganizationOptionSave') return this.adminOrganizationOptionSave(payload, database, session);
@@ -2843,6 +2844,64 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
     this.deleteAccountPrivateState(account);
     return result;
+  }
+
+  // 從 Excel 名冊批次建立帳號：整批只用同一個角色範本，帳號／姓名格式不對或已存在的
+  // 那幾筆直接略過（不覆蓋既有帳號的個人化設定），整批成功的部分只送出一次 commit。
+  private async adminAccountBulkImport(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireAccess(database, session, 'database.manage');
+    const employees = asRows(payload.employees);
+    if (!employees.length) throw new Error('沒有可匯入的名單');
+    if (employees.length > 200) throw new Error('單次匯入最多 200 筆');
+    const role = text(payload.role) || '一般使用者';
+    const template = ACCESS_ROLE_TEMPLATES[role];
+    if (!template) throw new Error('角色範本格式不正確');
+
+    return this.mutate('adminAccountBulkImport', current, draft => {
+      const settingsTable = draft.tables['設定'];
+      const permissionTable = draft.tables['帳號權限'];
+      const existing = new Set(
+        [...settingsTable.rows, ...permissionTable.rows].map(row => canonicalAccount(row['帳號'])).filter(Boolean)
+      );
+      const created: string[] = [];
+      const skipped: { account: string; name: string; reason: string }[] = [];
+
+      for (const item of employees) {
+        const name = text(item['名字'] ?? item.name);
+        const rawAccount = text(item['帳號'] ?? item.account ?? item.email);
+        const account = canonicalAccount(rawAccount);
+        if (!account || !account.endsWith('@emctaipei.com')) { skipped.push({ account: rawAccount, name, reason: '帳號必須使用 @emctaipei.com 公司信箱' }); continue; }
+        if (!name) { skipped.push({ account, name, reason: '缺少姓名' }); continue; }
+        if (name.length > 60) { skipped.push({ account, name, reason: '姓名不得超過 60 個字' }); continue; }
+        if (existing.has(account)) { skipped.push({ account, name, reason: '帳號已存在，略過' }); continue; }
+        existing.add(account);
+
+        const settings = normalizedTableRow(settingsTable.headers, {});
+        settings['帳號'] = account;
+        settings['名字'] = name;
+        settings['顯示名'] = name;
+        settings['部門'] = text(item['部門'] ?? item.department);
+        settings['組別'] = text(item['組別'] ?? item.group);
+        settingsTable.rows.push(settings);
+
+        const permission = normalizedTableRow(permissionTable.headers, {});
+        permission['帳號'] = account;
+        permission['登入方式'] = '公司信箱';
+        permission['角色範本'] = role;
+        permission['狀態'] = '啟用';
+        permission['頁面權限'] = JSON.stringify(template.pages);
+        permission['功能權限'] = JSON.stringify(template.capabilities);
+        permission['更新時間'] = nowTaipei();
+        permission['更新者'] = current.user || current.account;
+        permissionTable.rows.push(permission);
+
+        created.push(account);
+      }
+
+      const result = { ok: true, action: 'adminAccountBulkImport', created, skipped };
+      if (!created.length) return { result, changed: false };
+      return { result, changedTables: ['設定', '帳號權限'] };
+    });
   }
 
   private async adminDesignerSave(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
