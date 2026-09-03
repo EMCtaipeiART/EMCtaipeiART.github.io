@@ -1288,9 +1288,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報','修改統計表':'修改列表'\};/);
   assert.match(html, /function tableLabel\(name\)\{return TABLE_LABELS\[name\]\|\|name\}/);
-  // reels 不另列側邊頁；設計師公開資料與 REELS 統一由「設計列表」管理。
-  assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'reels'/);
-  assert.match(html, /const TABLE_ORDER=\['database','系統公告欄','設計列表'/);
+  // 左側選單改成分四組（案件資料／人員與權限／系統設定／問題回報）排列，TABLE_ORDER 由 TABLE_GROUPS 展開；
+  // reels 不另列側邊頁，設計師公開資料與 REELS 統一由「設計列表」管理，不在任何一組裡。
+  assert.doesNotMatch(html.match(/const TABLE_GROUPS=\[[\s\S]*?\];\s*const TABLE_ORDER=/)?.[0] || '', /'reels'/);
+  assert.match(html, /const TABLE_GROUPS=\[\s*\{label:'案件資料',tables:\['database','修改統計表'\]\},\s*\{label:'人員與權限',tables:\['設計列表','帳號權限','角色權限範本','客戶別'\]\},\s*\{label:'系統設定',tables:\['加權計分標準','系統公告欄','短連結'\]\},\s*\{label:'問題回報',tables:\['bug_report'\]\}\s*\];/);
+  assert.match(html, /const TABLE_ORDER=TABLE_GROUPS\.flatMap\(group=>group\.tables\);/);
+  assert.match(html, /function renderTabs\(\)\{\$\('tabs'\)\.innerHTML=TABLE_GROUPS\.map\(group=>\{/);
+  assert.match(html, /class="side-group-label"/);
   assert.match(html, /data-account-reel-edit=/);
   // 「刪除」改成「下架／重新上架」的雙態切換，資料列本身（含留言／按讚紀錄）不再被整列刪除。
   assert.doesNotMatch(html, /data-account-reel-delete=/);
@@ -1318,7 +1322,6 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /skipSpreadsheetBackup:!backupToSpreadsheet/);
   assert.match(html, /已先更新畫面，JSON 背景寫入中/);
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
-  assert.match(html, /const TABLE_ORDER=\['database','系統公告欄','設計列表','加權計分標準','短連結','修改統計表'/);
   assert.match(html, /function systemAnnouncementAdminHtml\(rows\)/);
   assert.match(html, /data-announcement-toggle/);
   assert.match(html, /function systemAnnouncementReadHtml\(row\)/);
@@ -1328,7 +1331,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(front, /markSystemAnnouncementRead/);
   assert.match(html, /function shortLinkTableHtml\(data\)/);
   // 補充資料連結不再有獨立頁籤，也不再併入「修改列表」的案件群組顯示。
-  assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'補充資料連結'/);
+  assert.doesNotMatch(html.match(/const TABLE_GROUPS=\[[\s\S]*?\];\s*const TABLE_ORDER=/)?.[0] || '', /'補充資料連結'/);
   assert.doesNotMatch(html, /function supplementCardsHtml\(rows\)/);
   assert.match(html, /function modificationHistoryHtml\(rows\)/);
   assert.doesNotMatch(html, /function supplementLinksHtml\(caseId,row\)/);
@@ -1397,7 +1400,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /function accountReelsCardsHtml\(model\)/);
   assert.match(html, /REELS 小卡/);
   assert.match(html, /一次儲存個人設定與帳號權限/);
-  assert.doesNotMatch(html.match(/const TABLE_ORDER=\[[^;]+/)?.[0] || '', /'設定'/);
+  assert.doesNotMatch(html.match(/const TABLE_GROUPS=\[[\s\S]*?\];/)?.[0] || '', /'設定'/);
   assert.match(html, /function roleTemplateAdminHtml\(rows\)/);
   assert.match(html, /data-template-save/);
   assert.match(html, /同角色且未使用自訂權限的帳號會同步套用/);

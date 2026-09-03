@@ -21,6 +21,8 @@
     .side-brand h1{margin:0;font-size:14px;font-weight:700;line-height:1.3;letter-spacing:-.01em}
     .side-brand span{display:block;color:var(--muted);font-size:10.5px;font-weight:500;margin-top:2px;word-break:break-all}
     .side-nav{flex:1;overflow:auto;padding:8px;display:grid;gap:2px;align-content:start}
+    .side-group-label{padding:14px 10px 4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+    .side-group-label:first-child{padding-top:4px}
     .side-tab{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:38px;border:0;border-radius:7px;background:transparent;color:var(--ink);padding:8px 10px;font-weight:500;font-size:12.5px;text-align:left}
     .side-tab:hover{background:var(--soft)}
     .side-tab.active{background:var(--green2);color:var(--green);font-weight:600}
@@ -42,6 +44,7 @@
       .side-brand{border-bottom:0;border-right:1px solid var(--line);padding:10px 12px;flex:0 0 auto}
       .side-brand span{display:none}
       .side-nav{display:flex;flex-direction:row;gap:6px;padding:8px;overflow:auto}
+      .side-group-label{display:none}
       .side-tab{width:auto;white-space:nowrap}
       .side-foot{border-top:0;border-left:1px solid var(--line);flex-direction:row;flex:0 0 auto}
       .content{padding:12px}
@@ -268,7 +271,16 @@
   <div class="modal" id="editor" hidden><form class="modal-card" id="editorForm"><header class="modal-head"><h2 id="editorTitle">編輯資料</h2><button class="icon-btn" id="closeEditor" type="button">×</button></header><div class="fields" id="fields"></div><footer class="modal-actions"><button class="btn" id="cancelEditor" type="button">取消</button><button class="btn primary" id="saveEditor" type="submit">儲存變更</button></footer></form></div>
   <script>
     // 設計師公開資料與 REELS 統一由「設計列表」管理；帳號設定只保留身分、偏好與權限。
-    const TABLE_ORDER=['database','系統公告欄','設計列表','加權計分標準','短連結','修改統計表','角色權限範本','客戶別','帳號權限','bug_report'];
+    // 左側選單分四組排列：①案件資料（每天最常查看）②人員與權限（誰能看／改什麼）
+    // ③系統設定（影響全站的規則與內容）④問題回報。TABLE_ORDER 由此展開，
+    // renderTabs() 會依這個分組在選單裡插入小標題，讓排列規則直接顯示給使用者看。
+    const TABLE_GROUPS=[
+      {label:'案件資料',tables:['database','修改統計表']},
+      {label:'人員與權限',tables:['設計列表','帳號權限','角色權限範本','客戶別']},
+      {label:'系統設定',tables:['加權計分標準','系統公告欄','短連結']},
+      {label:'問題回報',tables:['bug_report']}
+    ];
+    const TABLE_ORDER=TABLE_GROUPS.flatMap(group=>group.tables);
     const TABLE_INFO={
       database:{desc:'所有設計需求案件的完整清單'},
       '系統公告欄':{desc:'管理首頁彈出公告的開關、內容與已讀帳號；新版本會重新通知使用者'},
@@ -341,7 +353,8 @@
     async function backupDatabaseToSheet(){const button=$('backupToSheet');if(!confirm('確定要把目前「資料庫」的最新資料同步到雲端試算表嗎？只有欄位名稱相符的欄位會被覆寫，其餘欄位不受影響。'))return;button.disabled=true;const originalText=button.textContent;button.textContent='備份中...';try{const data=await appsScriptRequest('backupDatabaseToSheet');const when=data.updatedAt?new Date(data.updatedAt).toLocaleString('zh-TW'):'完成';note(`已同步 ${Number(data.matchedColumns||0)} 個相符欄位：更新 ${Number(data.updated||0).toLocaleString('zh-TW')} 筆、新增 ${Number(data.appended||0).toLocaleString('zh-TW')} 筆（${when}）。`,'ok')}catch(error){note(`備份至雲端試算表失敗：${error.message}`,'error')}finally{button.disabled=false;button.textContent=originalText}}
     function updateContentHead(){const info=TABLE_INFO[tableName]||{};$('tableTitle').textContent=tableLabel(tableName);$('tableSubtitle').textContent=info.desc||''}
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
-    function renderTabs(){$('tabs').innerHTML=TABLE_ORDER.filter(name=>metadata[name]).map(name=>`<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`).join('');updateAddButton();updateContentHead()}
+    function tableTabButtonHtml(name){return `<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`}
+    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}`:''}).join('');updateAddButton();updateContentHead()}
     function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}

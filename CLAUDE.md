@@ -189,7 +189,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-03 15:27 Asia/Taipei（最新）— 全站加上 EMC 設計部 favicon
+### 2026-09-03 15:40 Asia/Taipei（最新）— 資料庫後台左側選單改成分四組排列
+
+- 修改目的：使用者回報資料庫後台左側選單目前的順序「凌亂」，要求整理成一套有規則的系統排列。追查發現既有的 `TABLE_ORDER` 是這幾個月陸續加功能時隨手插入新項目累積出來的（`系統公告欄`／`客戶別`等都是後來才插進中間），沒有任何分類邏輯，只是一份扁平清單。
+- 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。
+- 影響功能：新增 `TABLE_GROUPS`（取代原本寫死的扁平 `TABLE_ORDER` 陣列，`TABLE_ORDER` 改成用 `TABLE_GROUPS.flatMap(...)` 展開，維持既有程式碼其他地方讀到的還是同一份扁平順序，不用動其他邏輯），分成四組：①「案件資料」（資料庫、修改列表，每天最常查看）②「人員與權限」（設計列表、帳號設定、權限設定、客戶別，誰能看／改什麼）③「系統設定」（加權設定、系統公告欄、短連結，影響全站的規則與內容）④「問題回報」（問題回報看板）。`renderTabs()` 改成依這個分組渲染，每組前面插入一個小標題（`.side-group-label`，灰字、小寫字級、大寫字母樣式，跟其他區塊小標題風格一致），讓排列規則直接顯示在畫面上，不是只有內部順序變了但看不出來為什麼；手機窄螢幕（≤860px）維持既有的水平捲動分頁列，這時候把小標題隱藏（`.side-group-label{display:none}`），避免橫向捲動時夾雜文字標籤顯得雜亂，按鈕本身仍然依新的分組順序排列。
+- 風險區塊：`TABLE_ORDER` 在整份檔案裡原本只有宣告本身與 `renderTabs()` 兩處用到（已用 `grep` 全檔案確認），改成衍生值不影響任何其他邏輯；`TABLE_INFO`／`TABLE_LABELS`／`BOARD_VIEWS` 都是用表名當 key 或獨立陣列，不依賴 `TABLE_ORDER` 的順序，這次沒有需要一併調整。分組方式（哪張表歸在哪一組、組內順序）是我依照「案件本身」「人員與權限」「系統規則」「問題回報」這個由核心到周邊的邏輯自行設計的，沒有跟使用者逐項確認過每張表該歸在哪組，如果使用者實際使用後覺得某張表該換組，屬於再調整 `TABLE_GROUPS` 陣列即可、不需要改動其他任何程式碼的小改動。
+- 已檢查／驗證方式：`new Function()` 語法檢查通過；`node --test backend/test/*.test.mjs` 70/70 全過——更新了既有鎖住舊版扁平 `TABLE_ORDER` 字串的三處斷言（改成鎖住新的 `TABLE_GROUPS` 四組宣告與由此展開的 `TABLE_ORDER`），並用 `git stash` 只還原 `json_database_admin.html`、確認這條新斷言在舊版程式碼上真的會失敗（`AssertionError`，訊息precisely指出新版的分組字串在舊檔案裡找不到），證明測試真的有鎖住這次的改動、不是巧合通過；`git stash pop` 還原後重新確認 70/70。用本機 Python 靜態伺服器＋ Browser pane 對著真實載入的頁面（不經過登入，直接灌入假的 `metadata` 呼叫真正的 `renderTabs()`）驗證：桌面寬度下四個群組標題與各自底下的按鈕都正確依新順序渲染、切換 `tableName` 後 active 狀態正確跟著移動；手機寬度（375px）下 `#tabs` 正確變成水平捲動列、群組標題正確 `display:none`、按鈕本身仍維持新的分組順序。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-03 15:27 Asia/Taipei — 全站加上 EMC 設計部 favicon
 
 - 修改目的：使用者要求把 `assets/EMC_design_logo.ico` 設成系統的瀏覽器分頁縮圖（favicon）。
 - 影響檔案：`index.html`、`json_database_admin.html`、`404.html`、`design_dashboard.html`、`database_archive_admin.html`、`upload/upload.html`；新增 `assets/EMC_design_logo.ico`。
