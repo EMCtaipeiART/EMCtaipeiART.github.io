@@ -177,7 +177,7 @@ test('new-case copy modal replaces the final action with a red Gmail account lin
 
 test('Gmail thread messages all collapse by default (no auto-expanded message) and only expand on click', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  // 這次改成「不管是不是最新一封，開啟信件串一律先收合」——見 CLAUDE.md 2026-08-26 這則紀錄；
+  // 這次改成「不管是不是最新一封，開啟信件串一律先收合」——見 AGENT.md 2026-08-26 這則紀錄；
   // 舊版的 isLatest 參數（只自動展開最新一封）整個拿掉，這裡明確驗證整個檔案完全沒有殘留。
   assert.doesNotMatch(html, /isLatest/);
   assert.match(html, /function gmailThreadMessageHtml\(message\)\{/);

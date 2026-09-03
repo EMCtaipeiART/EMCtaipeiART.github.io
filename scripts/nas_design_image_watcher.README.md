@@ -498,5 +498,5 @@ NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 開新分頁�
   已經人工比對過既有寫法確認型別正確，並在 `worker/test/index.test.ts`
   補了新的測試案例，但**這次沒有機會真的在這個環境跑過 `pnpm test`／
   `pnpm check`／`pnpm deploy:dry`**，需要你在自己的 Mac 上執行一次確
-  認，部署前務必照 [CLAUDE.md](CLAUDE.md) 慣例跑 `cd worker && pnpm test
+  認，部署前務必照 [AGENT.md](AGENT.md) 慣例跑 `cd worker && pnpm test
   && pnpm check && pnpm deploy:dry`，過關後才 `pnpm deploy`。

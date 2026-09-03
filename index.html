@@ -11260,7 +11260,7 @@ function gmailAddressNamesHtml(value){
 /** 內文優先顯示淨化過的原始格式（保留簽名檔的表格排版、顏色、字級與內嵌圖片的原始位置），
  * 只有 Worker 抽不到 HTML（極少數 HTML-only 信件解析失敗、或純文字信件本來就沒有 HTML 版本）
  * 才退回既有的「純文字＋把已知連結轉成可點擊」呈現方式，兩條路徑都不會把原始 HTML 直接塞進 innerHTML。
- * 每一封信固定收合（見 gmail-thread-msg-summary 的 CLAUDE.md 說明）——不管是不是最新一封都不自動展開，
+ * 每一封信固定收合（見 gmail-thread-msg-summary 的 AGENT.md 說明）——不管是不是最新一封都不自動展開，
  * 有需要才點開來看，避免一次全部展開，長討論串反而更難找到重點。 */
 function gmailThreadMessageHtml(message){
   const images=Array.isArray(message.images)?message.images:[];
@@ -11468,7 +11468,7 @@ function renderGmailThreadSearchResults(id,anchorEl,query,threads){
 /** 點下搜尋結果卡片後直接呼叫 Worker 的 bindExistingThread action 完成串接；成功後套用跟
  * sendGmailComposeModal() 同一套樂觀更新＋rememberLocalWrite() 保護，避免背景輪詢用還沒部署完成的
  * 舊版 backend/data/db.json 把剛寫入的 gmailThreadId 蓋掉（這個系統之前就在 sendGmailComposeModal()
- * 踩過這個坑，見 CLAUDE.md 對應那則修改紀錄）。 */
+ * 踩過這個坑，見 AGENT.md 對應那則修改紀錄）。 */
 async function bindGmailExistingThread(id,threadId,anchorEl){
   if(!threadId)return;
   fieldPopover.querySelectorAll('[data-thread-id]').forEach(button=>{button.disabled=true});
