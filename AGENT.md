@@ -213,7 +213,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
   - 用本機 Python 靜態伺服器＋ Browser pane，把使用者提供的**真實** `員工通訊錄.xlsx`（6 位真實員工）複製進專案目錄暫時提供 fetch，直接呼叫 `parseXlsxRosterFile()`／`normalizeRosterRows()`，確認解析出的姓名／部門／組別／帳號／職稱**逐字完全正確**（用手動以 `unzip`＋Node 直接讀取同一份檔案的 XML 內容比對過，兩邊結果一致）；接著呼叫 `openImportAccountsModal()` 讓預覽視窗真的在畫面上渲染，截圖確認版面（角色下拉、六筆資料、狀態欄「可匯入」徽章）正常顯示；模擬「其中一筆帳號已存在」「缺姓名」「非公司信箱」三種情況，確認狀態欄正確顯示對應原因、對應的核取方塊正確被停用；手動取消其中一筆勾選，確認畫面上「已勾選 N 筆」的統計數字跟著正確更新、送出時的 payload 正確排除被取消勾選的那一筆。驗證完後已刪除暫時複製進專案目錄的測試檔案，不會被提交。
   - `git diff --check` 對全部改動的檔案皆無空白字元問題。
   - **未做的驗證**：沒有用真實登入的管理者帳號在正式站實際完成一次端對端的匯入（受限於這個環境無法完成真實 Google/Cloudflare 登入流程）；也沒有測試超過 200 筆的名單會被拒絕（程式碼裡有這個上限檢查，但沒有實際構造 201 筆的測試資料去驗證邊界值本身）。
-- 部署狀態：`json_database_admin.html`、`backend/app.mjs`、`backend/test/backend.test.mjs` 純前端／共用檔案，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，後台呼叫 `adminAccountBulkImport` 會收到「Unknown action」錯誤，匯入按鈕看得到但點了會失敗，不影響任何其他既有功能。
+- 部署狀態：`json_database_admin.html`、`backend/app.mjs`、`backend/test/backend.test.mjs` 純前端／共用檔案，git push 後自動生效。**`worker/` 已手動執行 `cd worker && npx wrangler deploy` 部署完成**——部署後直接對正式 Worker 打了一次未登入的 `adminAccountBulkImport` 請求，確認回應是「請先登入後再執行此操作」（代表 action 已存在、只是被權限擋下），不是先前預期沒部署時會出現的「Unknown action」，證實正式環境已經生效。
 - commit：（見下方 push 紀錄）
 
 ### 2026-09-03 17:55 Asia/Taipei — 前台版本號改為跟後台「系統公告欄」已發布版本自動同步
