@@ -453,6 +453,7 @@ export function activeReel(row: Row, now = Date.now()): boolean {
 export function publicReel(row: Row, index: number): Row {
   const likes = splitNames(row['按讚']);
   const dislikes = splitNames(row['倒讚']);
+  const viewers = splitNames(row['已讀']);
   const comments = parseComments(row['留言']).map(({ id, name, avatar, text: commentText, createdAt }) => ({ id, name, avatar, text: commentText, createdAt }));
   const expiresAt = reelExpirationMs(row);
   return {
@@ -462,6 +463,7 @@ export function publicReel(row: Row, index: number): Row {
     retention: text(row['保留期限']) || (expiresAt ? '24小時' : '永久'),
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : '', likes, dislikes,
     likeCount: likes.length, dislikeCount: dislikes.length, comments,
+    viewers, viewerCount: viewers.length,
     hidden: reelHidden(row), active: activeReel(row)
   };
 }

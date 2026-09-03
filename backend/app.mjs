@@ -19,7 +19,7 @@ const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已
 const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
-  'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment',
+  'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment', 'markReelViewed',
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
@@ -237,6 +237,7 @@ function toApiRow(row, index = -1) {
 function publicReel(row, index) {
   const likes = splitNames(row['按讚']);
   const dislikes = splitNames(row['倒讚']);
+  const viewers = splitNames(row['已讀']);
   const comments = parseComments(row['留言']).map(({ id, name, avatar, text: commentText, createdAt }) => ({ id, name, avatar, text: commentText, createdAt }));
   const expiresAt = reelExpirationMs(row);
   return {
@@ -246,6 +247,7 @@ function publicReel(row, index) {
     retention: text(row['保留期限']) || (expiresAt ? '24小時' : '永久'),
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : '', likes, dislikes,
     likeCount: likes.length, dislikeCount: dislikes.length, comments,
+    viewers, viewerCount: viewers.length,
     hidden: reelHidden(row), active: activeReel(row)
   };
 }
@@ -991,6 +993,19 @@ export function createActionHandler(database, options = {}) {
           row['留言'] = JSON.stringify(comments.slice(-50));
         }
         return { ok: true, action, reel: publicReel(row, index) };
+      }, action);
+    }
+    if (action === 'markReelViewed') {
+      // 跟 Worker 端 database-coordinator.ts 的 markReelViewed 同一套邏輯：被動記錄，
+      // 同一個人重複瀏覽只會出現一次，不是每次都累加的次數。
+      const session = requireCapability(snapshot, payload, 'reel.interact');
+      return database.transaction(draft => {
+        const rows = draft.tables.reels.rows, index = findReelIndex(rows, payload);
+        if (index < 0) throw new Error('找不到這則限時動態');
+        const row = rows[index], userName = text(session.user || session.account?.split('@')[0]);
+        const viewers = splitNames(row['已讀']);
+        if (!viewers.includes(userName)) { viewers.push(userName); row['已讀'] = unique(viewers).join(' , '); }
+        return { ok: true, action, story: publicReel(row, index) };
       }, action);
     }
 

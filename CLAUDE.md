@@ -189,7 +189,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-03 15:40 Asia/Taipei（最新）— 資料庫後台左側選單改成分四組排列
+### 2026-09-03 16:03 Asia/Taipei（最新）— REELS 新增「已讀」數字與名字紀錄
+
+- 修改目的：使用者要求後台 REELS 資料要能看到「已讀」數字，如果能記錄實際名字更好。
+- 影響檔案：`backend/schema.mjs`、`backend/app.mjs`、`backend/test/backend.test.mjs`、`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`json_database_admin.html`。
+- 影響功能：
+  1. **新資料欄位**：`reels` 表新增「已讀」欄，跟既有「按讚」「倒讚」同一種格式——逗號分隔的名字清單，同一個人只會出現一次（第一次記錄到就好，之後重複瀏覽不會重複計算），不是每次瀏覽都累加的次數。
+  2. **新 Worker action `markReelViewed`**（`worker/src/database-coordinator.ts`，緊接在既有 `toggleReelReaction`／`addReelComment` 之後，同樣要求 `reel.interact` 權限）：把目前登入帳號的名字加進「已讀」清單，找不到限動就報錯；**同一個人重複呼叫時直接短路回傳（`changed:false`），不會真的觸發一次 GitHub commit**——這點特別重要，因為記錄「已讀」的時機是每次限動實際播放給使用者看的那一刻（見下），使用者可能重複打開同一則限動好幾次，如果每次都真的寫回 GitHub，會產生大量沒有意義的 commit。`worker/src/model.ts` 的 `publicReel()` 同步新增回傳 `viewers`（名字陣列）／`viewerCount`（數字）兩個欄位；`backend/app.mjs`（本機測試後端，完全獨立維護的一份平行實作）同步套用完全相同的邏輯，確保本機測試環境跟正式 Worker 行為一致。
+  3. **前台記錄時機**：`index.html` 新增 `markDesignerReelViewedOnServer(reel)`，掛在既有 `showDesignerStorySlide()` 裡跟本機「有沒有看過」快取（`markDesignerStorySeen()`，只影響前台頭像上要不要顯示未讀圓點，純本機端，不會回報伺服器）同一個時機呼叫——也就是限動**真的**顯示到畫面上給使用者看的那一刻，不是選單資料剛載入就算已讀。**沒有登入、或帳號沒有 `reel.interact` 權限時安靜跳過**（用既有的 `accessAllowed('reel.interact',true)` 靜默檢查，不是會跳錯誤訊息的 `requireAccess()`），失敗（例如網路問題）也只在 console 留一行警告，完全不會用任何錯誤提示或彈窗打斷使用者瀏覽限動的體驗——這是刻意的設計，因為這是被動記錄，不是使用者主動觸發的操作，不該有失敗回饋。`normalizeDesignerReel()` 同步解析新的 `viewers`／`viewerCount` 欄位，維持跟 `likes`／`dislikes` 一致的資料形狀，避免這兩個欄位在每次重新正規化時被悄悄丟掉。
+  4. **後台顯示**：`json_database_admin.html` 的 REELS 管理卡片（`accountReelCardHtml()`），原本「讚 X・倒讚 Y・留言 Z」這行摘要文字，新增「・已讀 N」；N 這個數字本身用一個帶虛線底線、`cursor:help` 的小 `<span>` 包住，滑鼠移上去會用瀏覽器原生 `title` 提示顯示完整名單（用頓號分隔，例如「陳柏政、許芷芸、Anna」），沒有任何已讀紀錄時提示文字是「尚無已讀紀錄」——這樣卡片本身不會因為顯示一長串名字而變擁擠，需要看名字的時候才把滑鼠移過去看。新增共用函式 `accountReactionNames(value)`（回傳去除空白後的名字陣列），`accountReactionCount(value)` 改成基於它算長度，避免「按讚」「倒讚」「已讀」三處各自重複寫一次同樣的字串切割邏輯。
+- 風險區塊：
+  - **這次的實作過程中，先犯了一個真的會導致功能壞掉的錯誤，後來靠實際跑測試才抓到**：一開始只更新了 `worker/src/model.ts`（正式 Worker 用）的 `publicReel()` 加上 `viewers`／`viewerCount`，卻忘記在 `backend/app.mjs`（本機測試後端，完全獨立維護的平行實作，不是從同一份 TypeScript 檔案共用）也做同樣的修改——這代表如果沒有真的寫測試並執行，`markReelViewed` 這個 action 在本機測試環境會回傳一個完全沒有 `viewers`／`viewerCount` 欄位的物件，後台卡片永遠只會顯示「已讀 undefined」或直接因為讀取 `undefined.length` 而報錯。已經用一支真正呼叫這個 action、直接斷言回傳物件裡有這兩個欄位的測試抓到這個問題（測試一開始真的失敗，`actual: undefined`），修正後才轉綠燈——這個教訓再次印證這個系統「Worker／Node 兩套平行實作容易漏改其中一邊」的既有已知風險（本文件之前的 reels 下架功能也記錄過同一種模式），之後任何涉及 `reels` 表結構或欄位的修改，都要記得兩邊各自的 `publicReel`／`activeReel`／`reelHidden` 等函式要一起改。
+  - **意外發現一個範圍更大、跟這次功能無關的既有問題，這次刻意沒有動它、只用 `spawn_task` 標記出來**：正式 Worker 的 `toggleReelReaction`／`addReelComment` 這兩個既有 action 回傳的更新後限動資料是放在 `story` 這個 key（跟這次新增的 `markReelViewed` 用同一個 key 名稱，是刻意保持一致），但 `index.html` 既有的 `toggleDesignerReelReaction()`／`submitDesignerReelComment()` 呼叫端讀的卻是 `data.reel`（沒有 `story` 這個 key）——`backend/app.mjs` 那份本機測試用的平行實作剛好用的是 `reel` 這個 key，跟前端期待的一致，這很可能就是這個落差長期沒被發現的原因（本機測試永遠是綠燈，因為本機測試後端剛好用對了 key，但正式 Worker 用的是不同的 key）。這代表**正式站上使用者點讚／倒讚／留言後，畫面上可能不會立即反映最新的讚數/留言，要等下一次整批重新讀取限動列表才會更新**——這是我在查證這次「已讀」功能要用哪個 key 名稱時意外發現的，不在這次要處理的範圍內（範圍是新增已讀功能，不是稽核既有的讚／留言功能），已經用 `spawn_task` 開一張獨立的追蹤卡片，交給之後的工作階段查證實際影響並修正，避免這次的修改範圍無限擴大。這次新增的 `markReelViewed` 本身**不受這個既有問題影響**——因為這個功能設計上就是純粹背景被動記錄，前端本來就不需要、也沒有嘗試用回傳值去更新任何看得到的畫面（`mergeDesignerReel(data.story)` 只是把本機快取悄悄同步一下，不影響任何 UI 顯示），所以就算回傳值的 key 名稱之後要調整，這次新增的功能都不會受影響、也不需要跟著改。
+  - **「已讀」計算完全依賴前台限動有沒有真的被顯示過**——如果使用者是透過非正常路徑看到圖片內容（例如直接開啟 Drive 圖片網址，繞過整個限動播放介面），不會被記錄成「已讀」；這是預期中的行為（這個功能本來就是量測「透過系統限動介面看過」，不是量測「圖片本身有沒有被任何方式看過」），不是漏洞。
+- 已檢查／驗證方式：
+  - `upload/Code.gs` 這次沒有修改（限動的建立/取消/刪除本來就已經是純 JSON 寫入，這次新增的「已讀」欄位只在 Worker／Node 後端與後台前端之間流動，不需要 Apps Script 端配合）。
+  - **Worker**：`cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **56/56 全過**（55 個既有＋1 個新增，涵蓋：第一次瀏覽正確記錄名字且真的觸發一次 GitHub commit；同一個人重複瀏覽正確回傳 `unchanged:true` 且**不會**多觸發一次 commit（用 `expect(githubPut).toHaveBeenCalledTimes(1)` 驗證，這是這次測試最重要的一個斷言，直接對應「不要每次重複瀏覽都寫回 GitHub」這個設計目標）；另一個人第一次瀏覽正確把名字累加進清單、且觸發第二次 commit；`listReels` 回傳的物件正確含 `viewerCount`／`viewers`；沒有登入時正確被擋下）。過程中**先用 `git stash` 暫時還原 `worker/src/database-coordinator.ts`／`worker/src/model.ts`／`backend/schema.mjs`，重新執行這支新測試，確認真的會失敗**（`markReelViewed` action 不存在，回傳 `ok:false`），證實測試真的有鎖住這次的新增，不是巧合通過；`git stash pop` 還原後重新確認整套 56/56。`npx wrangler deploy --dry-run` 打包成功。
+  - **Node 後端**：`node --test backend/test/*.test.mjs` **70/70 全過**——新增測試直接呼叫真實伺服器的 `markReelViewed` action，驗證第一次瀏覽正確記錄、重複瀏覽不會重複記錄名字；也新增了對 `json_database_admin.html` 原始碼字串的比對（`已讀` span、`accountReactionNames` 函式）。**這裡也是先重現、再確認修好**：先用真的 `node -e` 直接啟動一個測試用的 HTTP 伺服器、真的呼叫 `markReelViewed` action，親眼確認第一版程式碼回傳的 `story` 物件裡完全沒有 `viewers`／`viewerCount`（正是上面風險區塊提到的、忘記同步修改 `backend/app.mjs` 的那個問題），修正 `backend/app.mjs` 的 `publicReel()` 之後重新確認正確回傳；接著用 `git stash` 只還原 `backend/app.mjs`／`backend/schema.mjs`，確認這次新增的測試真的會失敗（`TypeError: Cannot read properties of undefined (reading 'viewers')`），還原修正後重新確認 70/70 全過。
+  - **用本機 Python 靜態伺服器＋ Browser pane 對著真實載入的頁面做完整驗證**：①`accountReelCardHtml()` 對「完全沒有已讀紀錄」與「已讀 3 人」兩種假資料，確認卡片摘要文字正確顯示「已讀 0」／「已讀 3」、`title` 屬性正確顯示「尚無已讀紀錄」／「陳柏政、許芷芸、Anna」；②`getComputedStyle` 確認 `.account-reel-viewers` 正確套用 `cursor:help` 與虛線底線；③**完整重跑一次既有的下架／重新上架流程**（透過真實 `MouseEvent('click')`，掛在真實 `#view` 容器內、由頁面既有的委派式事件監聽器接住），確認這次新增「已讀」欄位後，整個下架流程完全沒有受影響——送出的 payload 正確完整保留 `已讀` 欄位（因為是 `{...row}` 展開，不會漏掉沒有明確處理到的欄位）、卡片重新渲染後「已讀 2」的數字依然正確顯示，證明新舊功能互不干擾。
+  - `git diff --check` 對全部改動的檔案皆無空白字元問題。
+  - **未做的驗證**：沒有用真實登入帳號在正式站實際點開一位設計師的限時動態、確認自己的名字真的出現在後台「已讀」名單裡（這個環境連不到 Google/Cloudflare 的真實登入流程）；也沒有機會確認「同一個人在很短時間內連續重複打開同一則限動好幾次」在真實網路延遲下，會不會因為兩個請求幾乎同時抵達 Worker、都讀到「還沒被記錄」的舊狀態而各自寫入、變成一次性的重複 commit（`mutate()` 本身有樂觀並行重試機制，理論上第二個請求會在衝突後重新讀取最新狀態、判定為「已經記錄過」而短路，但沒有機會用真正的網路延遲重現這個極端情況）。
+- 部署狀態：`backend/schema.mjs`、`backend/app.mjs`、`index.html`、`json_database_admin.html`、`CLAUDE.md` 純前端／共用檔案，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）——沒部署前，前台呼叫 `markReelViewed` 會因為 Worker 還沒有這個 action 而收到「Unknown action」之類的錯誤，但因為前端這次的呼叫是靜默失敗（見上方設計說明），使用者完全不會看到任何錯誤提示，只是「已讀」暫時不會被記錄，不影響任何其他既有功能。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-03 15:40 Asia/Taipei — 資料庫後台左側選單改成分四組排列
 
 - 修改目的：使用者回報資料庫後台左側選單目前的順序「凌亂」，要求整理成一套有規則的系統排列。追查發現既有的 `TABLE_ORDER` 是這幾個月陸續加功能時隨手插入新項目累積出來的（`系統公告欄`／`客戶別`等都是後來才插進中間），沒有任何分類邏輯，只是一份扁平清單。
 - 影響檔案：`json_database_admin.html`、`backend/test/backend.test.mjs`。

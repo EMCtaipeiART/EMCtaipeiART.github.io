@@ -1303,6 +1303,11 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /appsScriptRequest\('adminTableUpdate',\{table:'reels'/);
   assert.match(html, /function accountReelActive\(row\)\{/);
   assert.match(html, /account-reel-hidden-badge/);
+  // REELS 卡片新增「已讀」數字，滑鼠移過去看得到實際名字（title 提示），不佔用卡片空間。
+  assert.match(html, /已讀 <span class="account-reel-viewers" title="\$\{esc\(viewerTitle\)\}">\$\{viewerNames\.length\}<\/span>/);
+  assert.match(html, /viewerNames=accountReactionNames\(row\['已讀'\]\)/);
+  assert.match(html, /viewerTitle=viewerNames\.length\?viewerNames\.join\('、'\):'尚無已讀紀錄'/);
+  assert.match(html, /function accountReactionNames\(value\)\{/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /async function refreshWorkerDatabase\(\).*action:'refreshDatabase'/);
   assert.match(html, /async function start\(\).*await refreshWorkerDatabase\(\);await loadMetadata\(\)/);
@@ -1510,6 +1515,14 @@ test('password session protects settings, reels and manager-only issue status wr
     editorToken: login.token, reelId: 'reel-file', comment: 'JSON 留言成功'
   });
   assert.equal(comment.reel.comments.at(-1).text, 'JSON 留言成功');
+
+  const firstView = await api(app.baseUrl, 'markReelViewed', { editorToken: login.token, reelId: 'reel-file' });
+  assert.deepEqual(firstView.story.viewers, ['Machi']);
+  assert.equal(firstView.story.viewerCount, 1);
+  // 同一個人重複瀏覽同一則限動：名字不會重複出現。
+  const repeatView = await api(app.baseUrl, 'markReelViewed', { editorToken: login.token, reelId: 'reel-file' });
+  assert.deepEqual(repeatView.story.viewers, ['Machi']);
+  assert.equal(app.database.table('reels').rows.find(row => row['限時動態連結'].includes('reel-file'))['已讀'], 'Machi');
 
   const issue = await api(app.baseUrl, 'reportIssue', { report: { content: '狀態測試' } });
   const updated = await api(app.baseUrl, 'updateIssueReportStatus', {

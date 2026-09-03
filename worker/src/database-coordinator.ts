@@ -2303,6 +2303,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { result: { ok: true, action, story: publicReel(row, index) }, changedTables: ['reels'] };
       });
     }
+    if (action === 'markReelViewed') {
+      // 被動記錄「已讀」，前台在限動實際顯示給使用者看的那一刻呼叫，不是選單載入就算——
+      // 失敗不該打斷瀏覽體驗，前端會靜默吞掉錯誤，這裡也不用額外做特殊處理。
+      const current = this.requireAccess(database, session, 'reel.interact');
+      return this.mutate(action, current, draft => {
+        const index = findReelIndex(draft.tables.reels.rows, payload);
+        if (index < 0) throw new Error('找不到限時動態');
+        const row = draft.tables.reels.rows[index];
+        const userName = text(current.user || current.account.split('@')[0]);
+        const viewers = splitNames(row['已讀']);
+        // 同一個人重複瀏覽不重複計算，也不需要真的寫入 GitHub——直接短路回傳，
+        // 避免每次重新打開同一則限動都產生一次沒有意義的 commit。
+        if (viewers.includes(userName)) return { result: { ok: true, action, story: publicReel(row, index) }, changed: false };
+        viewers.push(userName);
+        row['已讀'] = unique(viewers).join(' , ');
+        return { result: { ok: true, action, story: publicReel(row, index) }, changedTables: ['reels'] };
+      });
+    }
     if (action === 'upsertDesignerStories') {
       const current = this.requireAccess(database, session, 'media.manage');
       const name = text(payload.name || payload.designer);

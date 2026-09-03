@@ -1034,6 +1034,62 @@ describe('Machi Design API Worker', () => {
     expect((await api({ action: 'listReels' }, token)).reels).toContainEqual(expect.objectContaining({ id: storyId }));
   });
 
+  it('records unique viewer names for markReelViewed, is idempotent per person, and skips a GitHub commit on repeat views', async () => {
+    const storyId = 'drive-view-tracking-story';
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.reels.rows.push({
+        '名字': 'Machi',
+        '限時動態連結': `https://lh3.googleusercontent.com/d/${storyId}=w1600`,
+        '保留期限': '永久', '按讚': '', '倒讚': '', '留言': '[]', '狀態': ''
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    const githubPut = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'view-file-sha' }, commit: { sha: 'view-commit-sha' } });
+    });
+    await seedAccountPermission('viewer1@emctaipei.com', '自訂', ['reel.interact']);
+    await seedAccountPermission('viewer2@emctaipei.com', '自訂', ['reel.interact']);
+    const viewer1Token = await seedSession('viewer1@emctaipei.com', '陳柏政');
+    const viewer2Token = await seedSession('viewer2@emctaipei.com', '許芷芸');
+
+    const firstView = await api({ action: 'markReelViewed', reelId: storyId }, viewer1Token);
+    expect(firstView).toMatchObject({ ok: true, action: 'markReelViewed' });
+    expect((firstView.story as { viewers: string[] }).viewers).toEqual(['陳柏政']);
+    expect((firstView.story as { viewerCount: number }).viewerCount).toBe(1);
+    expect(githubPut).toHaveBeenCalledTimes(1);
+
+    // 同一個人重複瀏覽同一則限動：不應該再多寫一次 GitHub commit（unchanged 短路）。
+    const repeatView = await api({ action: 'markReelViewed', reelId: storyId }, viewer1Token);
+    expect(repeatView).toMatchObject({ ok: true, unchanged: true });
+    expect((repeatView.story as { viewers: string[] }).viewers).toEqual(['陳柏政']);
+    expect(githubPut).toHaveBeenCalledTimes(1);
+
+    // 另一個人第一次瀏覽：名字會累加，且真的觸發一次新的 commit。
+    const secondViewer = await api({ action: 'markReelViewed', reelId: storyId }, viewer2Token);
+    expect((secondViewer.story as { viewers: string[] }).viewers).toEqual(['陳柏政', '許芷芸']);
+    expect((secondViewer.story as { viewerCount: number }).viewerCount).toBe(2);
+    expect(githubPut).toHaveBeenCalledTimes(2);
+
+    const listed = (await api({ action: 'listReels' }, viewer1Token)).reels as Array<{ id: string; viewerCount: number; viewers: string[] }>;
+    const story = listed.find(item => item.id === storyId)!;
+    expect(story.viewerCount).toBe(2);
+    expect(story.viewers).toEqual(['陳柏政', '許芷芸']);
+
+    const database = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const row = database.tables.reels.rows.find(item => String(item['限時動態連結']).includes(storyId))!;
+    expect(row['已讀']).toBe('陳柏政 , 許芷芸');
+
+    const denied = await api({ action: 'markReelViewed', reelId: storyId });
+    expect(denied.ok).toBe(false);
+  });
+
   it('derives 繳交時間 from the initial-draft record and never from status changes', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
