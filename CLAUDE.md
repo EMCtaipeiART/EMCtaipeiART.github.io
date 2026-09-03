@@ -189,7 +189,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-03 12:53 Asia/Taipei（最新）— 修正限時動態「找不到 reels 工作表」；刪除 reels 改成下架／重新上架（保留紀錄與留言按讚）
+### 2026-09-03 15:27 Asia/Taipei（最新）— 全站加上 EMC 設計部 favicon
+
+- 修改目的：使用者要求把 `assets/EMC_design_logo.ico` 設成系統的瀏覽器分頁縮圖（favicon）。
+- 影響檔案：`index.html`、`json_database_admin.html`、`404.html`、`design_dashboard.html`、`database_archive_admin.html`、`upload/upload.html`；新增 `assets/EMC_design_logo.ico`。
+- 影響功能：六個對外頁面的 `<head>` 都新增 `<link rel="icon" type="image/png" href="...">`。用 `file` 指令確認這個檔案雖然副檔名是 `.ico`，實際位元組是一張 2500×2500 的 PNG，所以 `type` 屬性如實標成 `image/png`（不是常見的 `image/x-icon`），避免宣告的 MIME 類型跟實際內容不符。`index.html`／`json_database_admin.html`／`404.html`／`design_dashboard.html`／`database_archive_admin.html` 五個檔案都是從 GitHub Pages 根目錄直接服務，用相對路徑 `assets/EMC_design_logo.ico` 即可；**`upload/upload.html` 例外**——這個頁面是部署在 Apps Script Web App（`script.google.com`），不是 GitHub Pages，用相對路徑會指向錯的網域（Apps Script 那邊根本沒有 `assets/` 這個路徑），改用絕對網址 `https://emctaipeiart.github.io/assets/EMC_design_logo.ico`，瀏覽器會直接跨網域抓取正式站上的圖示檔案，不受頁面本身是從哪個網域載入的影響。
+- 風險區塊：無新增風險，純粹是新增 `<head>` 內的 `<link>` 標籤，沒有動到任何既有邏輯或樣式；`upload/upload.html` 這次也一併被 git 追蹤到修改，但跟這個檔案所有其他修改一樣，git 裡的內容不會自動同步到 Apps Script 專案，需要之後有其他非純圖示的改動一起手動重新部署時才會生效——單純為了這顆 favicon 不需要特地跑一次部署（沒部署前，`upload/upload.html` 的分頁圖示只是維持沒有 favicon 的狀態，不影響任何功能）。
+- 已檢查／驗證方式：`node --check`／`new Function()` 語法檢查六個檔案的內嵌 `<script>` 全數通過；用本機靜態伺服器＋ Browser pane 實際載入 `index.html`，確認 `<link rel="icon">` 的 `href` 正確解析、`type` 正確是 `image/png`，並用 `new Image()` 實際載入這個網址確認圖片真的可以正常讀取（2500×2500）；另外載入 `upload/upload.html` 確認它的 `<link>` 標籤 `href` 屬性確實是完整的絕對網址（不會被瀏覽器誤解析成相對路徑）。`node --test backend/test/*.test.mjs` 70/70 全過。
+- 部署狀態：`index.html`、`json_database_admin.html`、`404.html`、`design_dashboard.html`、`database_archive_admin.html` 純前端，git push 後自動生效。`upload/upload.html` 需要手動重新部署 Apps Script（部署 → 管理部署 → 編輯 → 新版本）才會讓這顆 favicon 出現在上傳彈窗頁面本身，這次沒有立即部署（見上方風險區塊說明，這個改動本身不影響任何功能，不急）。
+- commit：`ad8505e7`
+
+### 2026-09-03 12:53 Asia/Taipei — 修正限時動態「找不到 reels 工作表」；刪除 reels 改成下架／重新上架（保留紀錄與留言按讚）
 
 - 修改目的：使用者附上截圖回報「設計師設定」裡使用「限時動態」時，跳出「找不到reels工作表」錯誤（畫面上原本應該顯示可選取說明文字的地方，變成一個錯誤訊息框）；並要求把目前「直接刪除 reels」的行為改成「下架／隱藏」功能，保留所有貼過的紀錄與對話按讚內容在後台，同時前台／後台可以將舊資料重新上架。
 - 追查過程：
