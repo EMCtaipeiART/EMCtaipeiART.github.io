@@ -910,7 +910,128 @@ describe('Machi Design API Worker', () => {
     const profile = database.tables['設定'].rows.find(row => row['名字'] === 'Machi')!;
     expect(profile['頭像連結']).toBe('');
     expect(profile['頭像大圖連結']).toBe('');
-    expect(database.tables.reels.rows.some(row => String(row['限時動態連結']).includes(storyId))).toBe(false);
+    // 圖片刪除後，reels 資料列改成下架（保留留言／按讚紀錄），不是整列消失。
+    const storyRow = database.tables.reels.rows.find(row => String(row['限時動態連結']).includes(storyId));
+    expect(storyRow).toBeTruthy();
+    expect(storyRow?.['狀態']).toBe('下架');
+    const listed = await api({ action: 'listReels' }, token);
+    expect((listed.reels as Array<{ id: string }>).some(reel => reel.id === storyId)).toBe(false);
+  });
+
+  it('hides (not deletes) reel rows when a story is unset, preserving comments/likes, and republishing clears the hidden status', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['media.manage', 'reel.interact']);
+    const tester = await api({ action: 'login', password: 'test' });
+    const token = String(tester.token);
+    const storyId = 'drive-hide-story-file';
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      // upsertDesignerStories 要求「設定」表裡存在一筆平面／影音組別的同名設計師。
+      database.tables['設定'].rows.find(row => row['名字'] === 'Machi')!['組別'] = '平面';
+      database.tables.reels.rows.push({
+        '名字': 'Machi',
+        '限時動態連結': `https://lh3.googleusercontent.com/d/${storyId}=w1600`,
+        '保留期限': '永久',
+        '按讚': '陳柏政',
+        '倒讚': '',
+        '留言': JSON.stringify([{ id: 'c1', name: '陳柏政', text: '好看', createdAt: new Date().toISOString() }])
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'hide-file-sha' }, commit: { sha: 'hide-commit-sha' } });
+    });
+
+    // 上架時可見。
+    expect((await api({ action: 'listReels' }, token)).reels).toContainEqual(expect.objectContaining({ id: storyId }));
+
+    // 取消限時動態設定＝下架，不是刪除。
+    const unset = await api({ action: 'deleteDesignerStories', designer: 'Machi', fileIds: [storyId] }, token);
+    expect(unset).toMatchObject({ ok: true, action: 'deleteDesignerStories', deleted: 1 });
+    const afterHide = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const hiddenRow = afterHide.tables.reels.rows.find(row => String(row['限時動態連結']).includes(storyId))!;
+    expect(hiddenRow['狀態']).toBe('下架');
+    expect(hiddenRow['按讚']).toBe('陳柏政');
+    expect(JSON.parse(String(hiddenRow['留言']))).toHaveLength(1);
+    expect((await api({ action: 'listReels' }, token)).reels).not.toContainEqual(expect.objectContaining({ id: storyId }));
+
+    // 重新設定成限時動態＝重新上架，留言／按讚紀錄依然保留。
+    const republished = await api({
+      action: 'upsertDesignerStories',
+      designer: 'Machi',
+      fileIds: [storyId],
+      imageUrls: [`https://lh3.googleusercontent.com/d/${storyId}=w1600`],
+      expiresAt: 0
+    }, token);
+    expect(republished).toMatchObject({ ok: true, action: 'upsertDesignerStories' });
+    const afterRestore = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const restoredRow = afterRestore.tables.reels.rows.find(row => String(row['限時動態連結']).includes(storyId))!;
+    expect(restoredRow['狀態']).toBe('');
+    expect(restoredRow['按讚']).toBe('陳柏政');
+    expect(JSON.parse(String(restoredRow['留言']))).toHaveLength(1);
+    expect((await api({ action: 'listReels' }, token)).reels).toContainEqual(expect.objectContaining({ id: storyId }));
+  });
+
+  it('lets an admin toggle a reel row hidden/visible via adminTableUpdate, preserving comments/likes', async () => {
+    const token = await login();
+    const storyId = 'drive-admin-toggle-story';
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.reels.rows.push({
+        '名字': 'Machi',
+        '限時動態連結': `https://lh3.googleusercontent.com/d/${storyId}=w1600`,
+        '保留期限': '永久',
+        '按讚': '陳柏政',
+        '倒讚': '',
+        '留言': JSON.stringify([{ id: 'c1', name: '陳柏政', text: '好看', createdAt: new Date().toISOString() }]),
+        '狀態': ''
+      });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'admin-toggle-sha' }, commit: { sha: 'admin-toggle-commit-sha' } });
+    });
+
+    const rows = (await api({ action: 'adminTableRows', table: 'reels', limit: 1000 }, token)).rows as Array<Record<string, unknown>>;
+    const row = rows.find(item => String(item['限時動態連結']).includes(storyId))!;
+    expect(row).toBeTruthy();
+
+    const hidden = await api({
+      action: 'adminTableUpdate',
+      table: 'reels',
+      rowNumber: row._rowNumber,
+      expectedRow: row,
+      row: { ...row, '狀態': '下架' }
+    }, token);
+    expect(hidden).toMatchObject({ ok: true, action: 'adminTableUpdate', table: 'reels' });
+    expect((await api({ action: 'listReels' }, token)).reels).not.toContainEqual(expect.objectContaining({ id: storyId }));
+
+    const rowsAfterHide = (await api({ action: 'adminTableRows', table: 'reels', limit: 1000 }, token)).rows as Array<Record<string, unknown>>;
+    const hiddenRow = rowsAfterHide.find(item => String(item['限時動態連結']).includes(storyId))!;
+    expect(hiddenRow['狀態']).toBe('下架');
+    expect(hiddenRow['按讚']).toBe('陳柏政');
+    expect(JSON.parse(String(hiddenRow['留言']))).toHaveLength(1);
+
+    const restored = await api({
+      action: 'adminTableUpdate',
+      table: 'reels',
+      rowNumber: hiddenRow._rowNumber,
+      expectedRow: hiddenRow,
+      row: { ...hiddenRow, '狀態': '', '到期時間': '' }
+    }, token);
+    expect(restored).toMatchObject({ ok: true, action: 'adminTableUpdate', table: 'reels' });
+    expect((await api({ action: 'listReels' }, token)).reels).toContainEqual(expect.objectContaining({ id: storyId }));
   });
 
   it('derives 繳交時間 from the initial-draft record and never from status changes', async () => {

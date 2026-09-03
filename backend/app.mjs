@@ -177,7 +177,9 @@ function reelExpirationMs(row = {}) {
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+function reelHidden(row) { return text(row['狀態']) === '下架'; }
 function activeReel(row, now = Date.now()) {
+  if (reelHidden(row)) return false;
   const expiresAt = reelExpirationMs(row);
   return !expiresAt || expiresAt > now;
 }
@@ -243,7 +245,8 @@ function publicReel(row, index) {
     name: text(row['名字']), imageUrl: text(row['限時動態連結']),
     retention: text(row['保留期限']) || (expiresAt ? '24小時' : '永久'),
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : '', likes, dislikes,
-    likeCount: likes.length, dislikeCount: dislikes.length, comments
+    likeCount: likes.length, dislikeCount: dislikes.length, comments,
+    hidden: reelHidden(row), active: activeReel(row)
   };
 }
 function issueRow(row, index) {
@@ -895,7 +898,9 @@ export function createActionHandler(database, options = {}) {
           || (requestedId && publicReel(row, rowIndex).id === requestedId)
         ));
         if (index < 0) throw new Error('找不到限時動態');
-        const [row] = rows.splice(index, 1);
+        // 下架而非整列刪除，保留留言與按讚／倒讚紀錄；圖片本身仍會在下方刪除。
+        const row = rows[index];
+        row['狀態'] = '下架';
         return { ok: true, action, name, kind: 'story', url: text(row['限時動態連結']) };
       }, 'delete designer media');
       result.fileDeleted = await removeUploadedFile(result.url).catch(() => false);
@@ -916,7 +921,7 @@ export function createActionHandler(database, options = {}) {
           const fileId = fileIds[index] || reelFileId(url);
           let row = rows.find(item => (fileId && reelFileId(item['限時動態連結']) === fileId) || text(item['限時動態連結']) === url);
           if (!row) { row = {}; rows.push(row); }
-          Object.assign(row, { '名字': name, '限時動態連結': url, '保留期限': expiresAtMs ? '24小時' : '永久', '到期時間': expiresAtMs ? new Date(expiresAtMs).toISOString() : '', '按讚': row['按讚'] || '', '倒讚': row['倒讚'] || '', '留言': row['留言'] || '[]' });
+          Object.assign(row, { '名字': name, '限時動態連結': url, '保留期限': expiresAtMs ? '24小時' : '永久', '到期時間': expiresAtMs ? new Date(expiresAtMs).toISOString() : '', '按讚': row['按讚'] || '', '倒讚': row['倒讚'] || '', '留言': row['留言'] || '[]', '狀態': '' });
           return publicReel(row, rows.indexOf(row));
         });
         return { ok: true, action, designer: name, count: synced.length, reels: synced };
@@ -926,9 +931,11 @@ export function createActionHandler(database, options = {}) {
       requireCapability(snapshot, payload, 'media.manage');
       const name = text(payload.name || payload.designer), ids = new Set((payload.fileIds || []).map(text).filter(Boolean));
       return database.transaction(draft => {
-        const before = draft.tables.reels.rows.length;
-        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))));
-        return { ok: true, action, designer: name, deleted: before - draft.tables.reels.rows.length };
+        let hidden = 0;
+        draft.tables.reels.rows.forEach(row => {
+          if (text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))) { row['狀態'] = '下架'; hidden += 1; }
+        });
+        return { ok: true, action, designer: name, deleted: hidden };
       }, 'delete designer stories');
     }
     if (action === 'deleteDesignerMediaFiles') {
@@ -947,17 +954,17 @@ export function createActionHandler(database, options = {}) {
             cleared.push(kind);
           }
         }
-        const before = draft.tables.reels.rows.length;
-        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(
-          text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))
-        ));
+        let deletedStories = 0;
+        draft.tables.reels.rows.forEach(row => {
+          if (text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))) { row['狀態'] = '下架'; deletedStories += 1; }
+        });
         return {
           ok: true,
           action,
           designer: name,
           fileIds: [...ids],
           cleared,
-          deletedStories: before - draft.tables.reels.rows.length
+          deletedStories
         };
       }, 'delete designer media files');
     }

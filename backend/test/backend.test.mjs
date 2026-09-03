@@ -1292,7 +1292,13 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.doesNotMatch(html, /const TABLE_ORDER=\[[^\]]*'reels'/);
   assert.match(html, /const TABLE_ORDER=\['database','系統公告欄','設計列表'/);
   assert.match(html, /data-account-reel-edit=/);
-  assert.match(html, /data-account-reel-delete=/);
+  // 「刪除」改成「下架／重新上架」的雙態切換，資料列本身（含留言／按讚紀錄）不再被整列刪除。
+  assert.doesNotMatch(html, /data-account-reel-delete=/);
+  assert.match(html, /data-account-reel-toggle=/);
+  assert.match(html, /async function toggleAccountReelVisibility\(row,button\)\{/);
+  assert.match(html, /appsScriptRequest\('adminTableUpdate',\{table:'reels'/);
+  assert.match(html, /function accountReelActive\(row\)\{/);
+  assert.match(html, /account-reel-hidden-badge/);
   assert.match(html, /function databaseTableHtml\(table,data\)\{/);
   assert.match(html, /async function refreshWorkerDatabase\(\).*action:'refreshDatabase'/);
   assert.match(html, /async function start\(\).*await refreshWorkerDatabase\(\);await loadMetadata\(\)/);
@@ -1363,7 +1369,6 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /designer-skill-row\{display:flex;flex-wrap:wrap/);
   assert.match(html, /designer-skill-row button\{flex:0 0 34px;width:34px;height:34px/);
   assert.doesNotMatch(html, /designer-skill-row button\{grid-column:1\/-1;width:100%/);
-  assert.match(html, /class="btn danger delete"/);
   assert.match(html, /function designerRotationBoardHtml\(rows\)/);
   assert.match(html, /新專案輪值順序/);
   assert.match(html, /data-account-rotation-item=.*draggable="true"|draggable="true" data-account-rotation-item=/);
@@ -1805,7 +1810,12 @@ test('JSON media upload updates settings and reels and serves stored images', as
 
   const removed = await api(app.baseUrl, 'deleteDesignerMedia', { editorToken: login.token, designer: 'Machi', kind: 'story', url: story.url });
   assert.equal(removed.ok, true);
-  assert.equal(app.database.table('reels').rows.some(row => row['限時動態連結'] === story.url), false);
+  // 改成下架而非整列刪除：資料列與留言／按讚紀錄仍保留在後台，只是不再出現在前台限動清單。
+  const hiddenStoryRow = app.database.table('reels').rows.find(row => row['限時動態連結'] === story.url);
+  assert.ok(hiddenStoryRow, 'hidden reel row should still exist');
+  assert.equal(hiddenStoryRow['狀態'], '下架');
+  const reelsAfterHide = await api(app.baseUrl, 'listReels', { editorToken: login.token });
+  assert.equal(reelsAfterHide.reels.some(reel => reel.imageUrl === story.url), false);
 
   const userAvatar = await api(app.baseUrl, 'uploadUserAvatar', { editorToken: login.token, account: 'machi.chen@emctaipei.com', mimeType: 'image/png', dataUrl: pngDataUrl });
   assert.equal(userAvatar.settings.avatar, userAvatar.url);
@@ -1870,7 +1880,12 @@ test('designer media buttons persist replacements and deleted references in JSON
   const profile = app.database.table('設定').rows.find(row => row['名字'] === 'Machi');
   assert.equal(profile['頭像連結'], '');
   assert.equal(profile['頭像大圖連結'], '');
-  assert.equal(app.database.table('reels').rows.some(row => String(row['限時動態連結']).includes(storyId)), false);
+  // 改成下架而非整列刪除：資料列本身仍保留，只是不會出現在前台限動清單。
+  const hiddenStoryRow = app.database.table('reels').rows.find(row => String(row['限時動態連結']).includes(storyId));
+  assert.ok(hiddenStoryRow, 'hidden reel row should still exist');
+  assert.equal(hiddenStoryRow['狀態'], '下架');
+  const reelsAfterDelete = await api(app.baseUrl, 'listReels', { editorToken: login.token });
+  assert.equal(reelsAfterDelete.reels.some(reel => reel.imageUrl.includes(storyId)), false);
 });
 
 test('member avatar upload keeps the returned JSON avatar without an immediate stale refresh', async () => {

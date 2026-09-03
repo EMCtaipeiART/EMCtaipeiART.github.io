@@ -444,7 +444,12 @@ export function reelExpirationMs(row: Row = {}): number {
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : 0;
 }
-export function activeReel(row: Row, now = Date.now()): boolean { const expiresAt = reelExpirationMs(row); return !expiresAt || expiresAt > now; }
+export function reelHidden(row: Row): boolean { return text(row['狀態']) === '下架'; }
+export function activeReel(row: Row, now = Date.now()): boolean {
+  if (reelHidden(row)) return false;
+  const expiresAt = reelExpirationMs(row);
+  return !expiresAt || expiresAt > now;
+}
 export function publicReel(row: Row, index: number): Row {
   const likes = splitNames(row['按讚']);
   const dislikes = splitNames(row['倒讚']);
@@ -456,7 +461,8 @@ export function publicReel(row: Row, index: number): Row {
     name: text(row['名字']), imageUrl: text(row['限時動態連結']),
     retention: text(row['保留期限']) || (expiresAt ? '24小時' : '永久'),
     expiresAt: expiresAt ? new Date(expiresAt).toISOString() : '', likes, dislikes,
-    likeCount: likes.length, dislikeCount: dislikes.length, comments
+    likeCount: likes.length, dislikeCount: dislikes.length, comments,
+    hidden: reelHidden(row), active: activeReel(row)
   };
 }
 export function issueRow(row: Row, index: number): Row {

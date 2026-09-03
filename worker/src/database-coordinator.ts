@@ -2324,7 +2324,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             '到期時間': expiresAtMs ? new Date(expiresAtMs).toISOString() : '',
             '按讚': row['按讚'] || '',
             '倒讚': row['倒讚'] || '',
-            '留言': row['留言'] || '[]'
+            '留言': row['留言'] || '[]',
+            // 重新設定成限時動態，等同重新上架——即使這張圖之前被下架／已過期。
+            '狀態': ''
           });
           return publicReel(row, rows.indexOf(row));
         });
@@ -2337,9 +2339,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const ids = new Set((Array.isArray(payload.fileIds) ? payload.fileIds : []).map(text).filter(Boolean));
       if (!name || !ids.size) throw new Error('缺少設計師或限時動態檔案');
       return this.mutate(action, current, draft => {
-        const before = draft.tables.reels.rows.length;
-        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))));
-        return { result: { ok: true, action, designer: name, deleted: before - draft.tables.reels.rows.length }, changedTables: ['reels'] };
+        // 「取消限時動態設定」改成下架（保留資料列、留言與按讚／倒讚紀錄，
+        // 可透過重新設定限時動態或後台重新上架），不再整列刪除。
+        let hidden = 0;
+        draft.tables.reels.rows.forEach(row => {
+          if (text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))) { row['狀態'] = '下架'; hidden += 1; }
+        });
+        return { result: { ok: true, action, designer: name, deleted: hidden }, changedTables: ['reels'] };
       });
     }
     if (action === 'deleteDesignerMediaFiles') {
@@ -2362,11 +2368,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             cleared.push(kind);
           }
         }
-        const before = draft.tables.reels.rows.length;
-        draft.tables.reels.rows = draft.tables.reels.rows.filter(row => !(
-          text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))
-        ));
-        const deletedStories = before - draft.tables.reels.rows.length;
+        // 刪除圖片本身（連同 Drive 檔案一併丟到垃圾桶，Code.gs 已經處理）時，
+        // 對應的限時動態資料列一樣改成下架，不整列刪除——留言與按讚／倒讚
+        // 紀錄仍會保留在後台，只是圖片本身已經不在、無法重新上架。
+        let deletedStories = 0;
+        draft.tables.reels.rows.forEach(row => {
+          if (text(row['名字']) === name && ids.has(reelFileId(row['限時動態連結']))) { row['狀態'] = '下架'; deletedStories += 1; }
+        });
         const changedTables = [
           ...(cleared.length ? ['設定'] : []),
           ...(deletedStories ? ['reels'] : [])

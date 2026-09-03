@@ -334,7 +334,8 @@ export const TABLE_SCHEMAS = {
   },
   reels: {
     primaryKey: null,
-    headers: ['名字', '限時動態連結', '保留期限', '到期時間', '按讚', '倒讚', '留言']
+    // 「狀態」空字串＝正常上架，'下架'＝管理者／設計師手動隱藏（保留紀錄，可重新上架）。
+    headers: ['名字', '限時動態連結', '保留期限', '到期時間', '按讚', '倒讚', '留言', '狀態']
   },
   bug_report: {
     primaryKey: null,

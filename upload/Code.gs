@@ -43,24 +43,21 @@ const MAIN_APP_API_URL =
 const DESIGNER_SPREADSHEET_ID =
   '1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY';
 const DESIGNER_SHEET_ID = 988186149;
-const REELS_SHEET_ID = 1503122183;
-const REELS_HEADERS = [
-  '名字',
-  '限時動態連結',
-  '保留期限',
-  '到期時間',
-  '按讚',
-  '倒讚',
-  '留言'
-];
+// 限時動態（reels）的資料與到期清理，已經全部改成只讀寫主系統 JSON
+// 資料庫（worker/src/database-coordinator.ts 的 upsertDesignerStories／
+// deleteDesignerStories），不再依賴這個試算表裡獨立的 reels 分頁與
+// PropertiesService 到期排程——那個分頁後來被移除，導致舊版
+// getReelsSheetContext_() 一律拋出「找不到 reels 工作表」，讓整個
+// 限時動態功能完全失效（連累到本來應該正常執行的 JSON 寫入）。
+// 過期／下架現在統一由 JSON 端的「到期時間」「狀態」兩個欄位判斷，
+// 資料列本身、留言、按讚／倒讚與圖片都會保留，不會被自動清除，
+// 也因此可以在後台重新上架。
 const UPLOAD_APP_SCOPES = [
   'https://www.googleapis.com/auth/drive',
   'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/script.external_request',
   'https://www.googleapis.com/auth/script.scriptapp'
 ];
-const STORY_EXPIRATIONS_PROPERTY = 'DESIGNER_STORY_EXPIRATIONS_V1';
-const STORY_EXPIRATION_HANDLER = 'expireDesignerStories_';
 
 // 單張圖片大小限制，單位 MB
 const MAX_FILE_SIZE_MB = 10;
@@ -146,18 +143,12 @@ function authorizeUploadAppOnce() {
   const sheet = spreadsheet.getSheets().find(function (candidate) {
     return candidate.getSheetId() === DESIGNER_SHEET_ID;
   });
-  const reelsSheet = spreadsheet.getSheets().find(function (candidate) {
-    return candidate.getSheetId() === REELS_SHEET_ID;
-  });
   const folder = DriveApp.getFolderById(
     UPLOAD_TARGETS.Machi.folderId
   );
 
   if (!sheet) {
     throw new Error('已取得試算表權限，但找不到設計師設定工作表');
-  }
-  if (!reelsSheet) {
-    throw new Error('已取得試算表權限，但找不到 reels 工作表');
   }
 
   const mainAppResponse = UrlFetchApp.fetch(
@@ -183,7 +174,6 @@ function authorizeUploadAppOnce() {
     success: true,
     spreadsheetName: spreadsheet.getName(),
     sheetName: sheet.getName(),
-    reelsSheetName: reelsSheet.getName(),
     driveFolderName: folder.getName(),
     mainAppVersion: mainAppResult.version || '',
     message: 'Google Drive、試算表與主系統連線權限已完成授權'
@@ -1028,41 +1018,12 @@ function setDesignerStories(payload) {
     lock.waitLock(30000);
 
     try {
-      const reelsContext = getReelsSheetContext_();
       const imageUrls = files.map(function (file) {
         return createUploadedImageUrl_(file.getId());
       });
       const expiresAt = durationMinutes > 0
         ? Date.now() + durationMinutes * 60 * 1000
         : 0;
-
-      files.forEach(function (file, index) {
-        upsertDesignerReel_(
-          reelsContext,
-          target.key,
-          file.getId(),
-          imageUrls[index],
-          expiresAt
-        );
-      });
-
-      let records = readStoryExpirations_().filter(function (record) {
-        return !fileIds.includes(record.fileId);
-      });
-
-      if (expiresAt) {
-        fileIds.forEach(function (fileId) {
-          records.push({
-            designer: target.key,
-            fileId: fileId,
-            expiresAt: expiresAt
-          });
-        });
-      }
-
-      writeStoryExpirations_(records);
-      scheduleNextStoryExpiration_(records);
-      SpreadsheetApp.flush();
 
       const databaseSync = callMainAppJsonAction_(
         'upsertDesignerStories',
@@ -1137,14 +1098,6 @@ function unsetDesignerStories(payload) {
     const lock = LockService.getScriptLock();
     lock.waitLock(30000);
     try {
-      const removedCount = removeDesignerReelsByFileIds_(fileIds, target.key);
-      const records = readStoryExpirations_().filter(function (record) {
-        return !fileIds.includes(record.fileId);
-      });
-      writeStoryExpirations_(records);
-      scheduleNextStoryExpiration_(records);
-      SpreadsheetApp.flush();
-
       const databaseSync = callMainAppJsonAction_(
         'deleteDesignerStories',
         {
@@ -1159,10 +1112,7 @@ function unsetDesignerStories(payload) {
         designer: target.key,
         kind: 'story-cancel',
         count: fileIds.length,
-        removedCount: Math.max(
-          removedCount,
-          Number(databaseSync.deleted) || 0
-        ),
+        removedCount: Number(databaseSync.deleted) || 0,
         fileIds: fileIds,
         jsonRevision: databaseSync.jsonRevision || 0,
         githubCommitSha: databaseSync.githubCommitSha || ''
@@ -1237,13 +1187,6 @@ function deleteDesignerImages(payload) {
         }
       });
 
-      removeDesignerReelsByFileIds_(fileIds);
-
-      const records = readStoryExpirations_().filter(function (record) {
-        return !fileIds.includes(record.fileId);
-      });
-      writeStoryExpirations_(records);
-      scheduleNextStoryExpiration_(records);
       files.forEach(function (file) {
         file.setTrashed(true);
       });
@@ -1277,72 +1220,6 @@ function deleteDesignerImages(payload) {
       success: false,
       message: error.message || '圖片刪除失敗'
     };
-  }
-}
-
-/**
- * 時間觸發器入口：清除到期限時動態並刪除照片。
- */
-function expireDesignerStories_() {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-
-  try {
-    const now = Date.now();
-    const records = readStoryExpirations_();
-    const future = records.filter(function (record) {
-      return Number(record.expiresAt) > now;
-    });
-    const retry = [];
-
-    records
-      .filter(function (record) {
-        return Number(record.expiresAt) <= now;
-      })
-      .forEach(function (record) {
-        try {
-          expireDesignerStory_(record);
-        } catch (error) {
-          // 保留失敗紀錄並稍後重試，避免暫時性的 Drive 或試算表錯誤
-          // 讓限時動態永遠不會再被清理。
-          retry.push({
-            designer: record.designer,
-            fileId: record.fileId,
-            expiresAt: now + 5 * 60 * 1000
-          });
-          console.error('限時動態到期處理失敗，將於 5 分鐘後重試', record, error);
-        }
-      });
-
-    SpreadsheetApp.flush();
-    const remaining = future.concat(retry);
-    writeStoryExpirations_(remaining);
-    scheduleNextStoryExpiration_(remaining);
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function expireDesignerStory_(record) {
-  const target = getUploadTarget_(record.designer);
-  const context = getDesignerSheetContext_(target);
-  const avatarColumn = findHeaderColumn_(context.headers, ['頭像連結']);
-  const posterColumn = findHeaderColumn_(context.headers, ['頭像大圖連結']);
-
-  // 到期只停止在前台顯示（限時動態連結欄的「到期時間」已經是過去時間），
-  // 不再刪除 reels 資料列，保留歷史紀錄供後台查詢。
-
-  const usedAsAvatar = avatarColumn && String(
-    context.sheet.getRange(context.rowNumber, avatarColumn).getDisplayValue() || ''
-  ).includes(record.fileId);
-  const usedAsPoster = posterColumn && String(
-    context.sheet.getRange(context.rowNumber, posterColumn).getDisplayValue() || ''
-  ).includes(record.fileId);
-
-  // 若同一張圖後來被設定成頭像或海報，只清除限時動態，不刪檔。
-  if (!usedAsAvatar && !usedAsPoster) {
-    const file = getAuthorizedUploadedFile_(record.fileId, target.folderId);
-    file.setTrashed(true);
   }
 }
 
@@ -1392,92 +1269,6 @@ function getDesignerSheetContext_(target) {
     headers: headers,
     rowNumber: rowIndex + 2
   };
-}
-
-function getReelsSheetContext_() {
-  const spreadsheet = SpreadsheetApp.openById(DESIGNER_SPREADSHEET_ID);
-  const sheet = spreadsheet.getSheets().find(function (candidate) {
-    return candidate.getSheetId() === REELS_SHEET_ID;
-  });
-  if (!sheet) throw new Error('找不到 reels 工作表');
-
-  const lastColumn = Math.max(sheet.getLastColumn(), REELS_HEADERS.length);
-  const headers = sheet
-    .getRange(1, 1, 1, lastColumn)
-    .getDisplayValues()[0]
-    .map(function (value) {
-      return String(value || '').trim();
-    });
-  const headerMap = {};
-  REELS_HEADERS.forEach(function (header) {
-    headerMap[header] = ensureHeaderColumn_(sheet, headers, header);
-  });
-
-  return {
-    spreadsheet: spreadsheet,
-    sheet: sheet,
-    headers: headers,
-    headerMap: headerMap
-  };
-}
-
-function upsertDesignerReel_(context, designer, fileId, imageUrl, expiresAt) {
-  const sheet = context.sheet;
-  const linkColumn = context.headerMap['限時動態連結'];
-  const lastRow = sheet.getLastRow();
-  let rowNumber = 0;
-
-  if (lastRow >= 2) {
-    const links = sheet
-      .getRange(2, linkColumn, lastRow - 1, 1)
-      .getDisplayValues()
-      .flat();
-    const index = links.findIndex(function (value) {
-      return String(value || '').includes(fileId);
-    });
-    if (index >= 0) rowNumber = index + 2;
-  }
-
-  if (!rowNumber) rowNumber = Math.max(sheet.getLastRow() + 1, 2);
-  sheet.getRange(rowNumber, context.headerMap['名字']).setValue(designer);
-  sheet.getRange(rowNumber, linkColumn).setValue(imageUrl);
-  sheet.getRange(rowNumber, context.headerMap['保留期限']).setValue(expiresAt ? '24小時' : '永久');
-  sheet.getRange(rowNumber, context.headerMap['到期時間']).setValue(expiresAt ? new Date(expiresAt).toISOString() : '');
-  return rowNumber;
-}
-
-function removeDesignerReelsByFileIds_(fileIds, designer) {
-  const ids = Array.from(new Set((fileIds || []).map(String).filter(Boolean)));
-  if (!ids.length) return 0;
-  const context = getReelsSheetContext_();
-  const sheet = context.sheet;
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return 0;
-
-  const links = sheet
-    .getRange(2, context.headerMap['限時動態連結'], lastRow - 1, 1)
-    .getDisplayValues()
-    .flat();
-  const names = sheet
-    .getRange(2, context.headerMap['名字'], lastRow - 1, 1)
-    .getDisplayValues()
-    .flat();
-  const requestedDesigner = String(designer || '').trim().toLowerCase();
-  const rowsToDelete = [];
-  links.forEach(function (value, index) {
-    if (requestedDesigner && String(names[index] || '').trim().toLowerCase() !== requestedDesigner) {
-      return;
-    }
-    if (ids.some(function (fileId) {
-      return String(value || '').includes(fileId);
-    })) {
-      rowsToDelete.push(index + 2);
-    }
-  });
-  rowsToDelete.reverse().forEach(function (rowNumber) {
-    sheet.deleteRow(rowNumber);
-  });
-  return rowsToDelete.length;
 }
 
 function getUserSheetContext_(user, account) {
@@ -1630,59 +1421,6 @@ function normalizeStoryDuration_(value) {
     throw new Error('限時動態時間格式錯誤');
   }
   return Math.round(minutes);
-}
-
-function removeStoryExpirationsForFile_(fileId) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-
-  try {
-    const records = readStoryExpirations_().filter(function (record) {
-      return record.fileId !== fileId;
-    });
-    writeStoryExpirations_(records);
-    scheduleNextStoryExpiration_(records);
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function readStoryExpirations_() {
-  const raw = PropertiesService.getScriptProperties().getProperty(
-    STORY_EXPIRATIONS_PROPERTY
-  );
-  if (!raw) return [];
-  try {
-    const records = JSON.parse(raw);
-    return Array.isArray(records) ? records : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function writeStoryExpirations_(records) {
-  PropertiesService.getScriptProperties().setProperty(
-    STORY_EXPIRATIONS_PROPERTY,
-    JSON.stringify(records || [])
-  );
-}
-
-function scheduleNextStoryExpiration_(records) {
-  ScriptApp.getProjectTriggers().forEach(function (trigger) {
-    if (trigger.getHandlerFunction() === STORY_EXPIRATION_HANDLER) {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  });
-
-  if (!records || !records.length) return;
-  const nextTime = Math.min.apply(null, records.map(function (record) {
-    return Number(record.expiresAt);
-  }));
-  ScriptApp
-    .newTrigger(STORY_EXPIRATION_HANDLER)
-    .timeBased()
-    .at(new Date(Math.max(nextTime, Date.now() + 5000)))
-    .create();
 }
 
 function getAuthorizedUploadedFile_(fileId, folderId) {
