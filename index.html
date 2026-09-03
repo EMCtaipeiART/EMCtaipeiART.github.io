@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-09-03 16:42 Asia/Taipei | build: 20260903-design-image-preview-consistency-132 -->
+<!-- LAST_MODIFIED: 2026-09-03 16:54 Asia/Taipei | build: 20260903-design-image-preview-layer-133 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260903-design-image-preview-consistency-132" />
+  <meta name="app-version" content="20260903-design-image-preview-layer-133" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -3106,7 +3106,7 @@
     .design-image-expand-icon svg{display:block;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
     .design-image-preview-link:hover .design-image-expand-icon,.design-image-preview-link:focus-visible .design-image-expand-icon{opacity:1;transform:translate(-50%,-50%) scale(1)}
     .design-image-preview-link:focus-visible{outline:2px solid #16a34a;outline-offset:-2px}
-    .design-image-hover-preview{position:fixed;z-index:2400;width:min(440px,calc(100vw - 24px));padding:8px;border:1px solid rgba(15,143,97,.24);border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 24px 64px rgba(16,24,40,.28),0 6px 18px rgba(16,24,40,.12);pointer-events:none;opacity:0;transform:translateY(4px) scale(.985);transform-origin:center;transition:opacity .12s ease,transform .12s ease;backdrop-filter:blur(10px)}
+    .design-image-hover-preview{position:fixed;z-index:10000!important;width:min(440px,calc(100vw - 24px));padding:8px;border:1px solid rgba(15,143,97,.24);border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 24px 64px rgba(16,24,40,.28),0 6px 18px rgba(16,24,40,.12);pointer-events:none;opacity:0;transform:translateY(4px) scale(.985);transform-origin:center;transition:opacity .12s ease,transform .12s ease;backdrop-filter:blur(10px)}
     .design-image-hover-preview[hidden]{display:none!important}
     .design-image-hover-preview.is-visible{opacity:1;transform:none}
     .design-image-hover-preview-media{display:grid;place-items:center;width:100%;height:min(56vh,420px);overflow:hidden;border-radius:10px;background:#edf3f0}
@@ -7447,7 +7447,7 @@ const archiveSheetId = 646199020;
 const loginDomain = '@emctaipei.com';
 const googleOAuthClientId = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const gmailOAuthClientId = '910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com';
-const appBuildVersion = '20260903-design-image-preview-consistency-132';
+const appBuildVersion = '20260903-design-image-preview-layer-133';
 const systemAnnouncementDismissedKey = 'machiSystemAnnouncementDismissedVersionV1';
 let currentSystemAnnouncement = null;
 const systemAnnouncementShownVersions = new Set();

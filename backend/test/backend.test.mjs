@@ -1880,6 +1880,7 @@ test('project detail and modification-history thumbnails support reliable viewpo
   assert.match(html, /function isDesignImageHoverPointer\(event\)/);
   assert.match(html, /pointerType\|\|'mouse'/);
   assert.doesNotMatch(html, /matchMedia\?\.\('\(hover:hover\) and \(pointer:fine\)'\)/);
+  assert.match(html, /\.design-image-hover-preview\{position:fixed;z-index:10000!important/);
   assert.match(html, /Math\.min\(left,window\.innerWidth-width-margin\)/);
   assert.match(html, /Math\.min\(top,window\.innerHeight-height-margin\)/);
   assert.match(html, /document\.addEventListener\('pointerover'/);
