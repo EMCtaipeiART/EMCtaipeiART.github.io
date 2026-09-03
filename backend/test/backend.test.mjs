@@ -1863,14 +1863,23 @@ test('designer reel reactions and comments consume the shared story response con
   assert.doesNotMatch(commentHandler, /applyUpdatedActiveReel\(data\.reel\)/);
 });
 
-test('project detail design-image thumbnails support viewport-bounded hover previews without replacing click-through', async () => {
+test('project detail and modification-history thumbnails support reliable viewport-bounded hover previews', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const thumbnailMarkup = html.match(/function caseDetailDesignImagesHtml\(row\)\{[^\n]+\}/)?.[0] || '';
+  const revisionThumbnailMarkup = html.match(/function revisionImagesHtml\(row,record\)\{[^\n]+\}/)?.[0] || '';
 
   assert.match(thumbnailMarkup, /data-design-image-hover-preview/);
+  assert.match(thumbnailMarkup, /design-image-expand-icon/);
   assert.match(thumbnailMarkup, /target="_blank" rel="noopener"/);
+  assert.match(revisionThumbnailMarkup, /data-design-image-hover-preview/);
+  assert.match(revisionThumbnailMarkup, /data-preview-label/);
+  assert.match(revisionThumbnailMarkup, /design-image-expand-icon/);
+  assert.match(revisionThumbnailMarkup, /target="_blank" rel="noopener"/);
   assert.match(html, /function showDesignImageHoverPreview\(anchor,x,y\)/);
   assert.match(html, /function hideDesignImageHoverPreview\(anchor=null\)/);
+  assert.match(html, /function isDesignImageHoverPointer\(event\)/);
+  assert.match(html, /pointerType\|\|'mouse'/);
+  assert.doesNotMatch(html, /matchMedia\?\.\('\(hover:hover\) and \(pointer:fine\)'\)/);
   assert.match(html, /Math\.min\(left,window\.innerWidth-width-margin\)/);
   assert.match(html, /Math\.min\(top,window\.innerHeight-height-margin\)/);
   assert.match(html, /document\.addEventListener\('pointerover'/);
