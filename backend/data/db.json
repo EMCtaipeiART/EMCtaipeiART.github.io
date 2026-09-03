@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3793,
+  "revision": 3794,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-03T09:30:44.681Z",
+  "updatedAt": "2026-09-03T09:30:59.793Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1211,7 +1211,7 @@
         {"案件編號":"26090011","修改次數":"0","建立日期":"2026/09/03 14:41:10","修改日期":"2026/09/03 14:41:10","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 14:41:10","圖片連結":"[{\"fileName\":\"260903_添可_清潔人格分析_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FSJ_bQhlX2smfMuXbmDzeOtmIlmMhtd2=w1600\"},{\"fileName\":\"260903_添可_清潔人格分析_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ADRVx7A3gAs3KWY5B_p-WGO_d1uJxnLE=w1600\"},{\"fileName\":\"260903_添可_清潔人格分析_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Po5FK1UQ2Q8L5YxyTGfYaf7SMF6UjR_e=w1600\"},{\"fileName\":\"260903_添可_清潔人格分析_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1MTyOCcrj1tfC6PQbrdTIWQYTny0gT9jk=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 14:41:10"},
         {"案件編號":"26080155","修改次數":"0","建立日期":"2026/09/03 14:52:17","修改日期":"2026/09/03 14:52:17","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 14:52:17","圖片連結":"[{\"fileName\":\"260903_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FzA8Q-zn1saZiNOSv6yGfzeDAdYlUCoS=w1600\"},{\"fileName\":\"260903_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1KJH9OeBcuYkKapU7cOjdOsmQDCQrxZKA=w1600\"},{\"fileName\":\"260903_shopee_9月轉換流量_sc館_Liberty 5 Pro_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xD0QDi2Ne8cmDU-WqV6wnuRISrRGTF4h=w1600\"},{\"fileName\":\"260903_shopee_9月轉換流量_sc館_Liberty 5 Pro_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ha28TPdU77BZiEjtxv6pPO6IJH1VyhHU=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 14:52:17"},
         {"案件編號":"26080144","修改次數":"0","建立日期":"2026/09/03 17:14:33","修改日期":"2026/09/03 17:14:33","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 17:14:33","圖片連結":"[{\"fileName\":\"260903_迪朗奇_9月FB貼文_第二篇_冷萃輕享冰咖啡.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1w7h28RGWeG-0bmlL_ooE04WdFzr3Xbh_=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 17:14:33"},
-        {"案件編號":"26090016","修改次數":"1","建立日期":"2026/09/03 17:29:53","修改日期":"2026-09-03","修改內容":"修改配色與第二版本","修改人":"Machi","確認修正日":"","待修改圖片":"[\"260902_保誠人壽_中秋啟動圖.png\"]","圖片連結":"[{\"fileName\":\"260902_保誠人壽_中秋啟動圖_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KI7_jLV720Ll6ewGYJIPgXrWSzdpTWY8=w1600\"},{\"fileName\":\"260902_保誠人壽_中秋啟動圖_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Aoz-FklCcQl0D7WBrmOolwsuzLbarim9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 17:30:40"}
+        {"案件編號":"26090016","修改次數":"1","建立日期":"2026/09/03 17:29:53","修改日期":"2026-09-03","修改內容":"修改配色與第二版本","修改人":"Machi","確認修正日":"2026/09/03 17:30:59","待修改圖片":"[\"260902_保誠人壽_中秋啟動圖.png\"]","圖片連結":"[{\"fileName\":\"260902_保誠人壽_中秋啟動圖_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KI7_jLV720Ll6ewGYJIPgXrWSzdpTWY8=w1600\"},{\"fileName\":\"260902_保誠人壽_中秋啟動圖_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Aoz-FklCcQl0D7WBrmOolwsuzLbarim9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 17:30:40"}
       ]
     },
     "補充資料連結": {
