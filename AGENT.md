@@ -192,7 +192,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-03 18:09 Asia/Taipei（最新）— 帳號設定新增「匯入 Excel 名冊」批次建立帳號
+### 2026-09-03 18:37 Asia/Taipei（最新）— 帳號設定列表色塊改成只在角色不是「一般使用者」時才顯示
+
+- 修改目的：使用者用這次新增的「匯入 Excel 名冊」功能手動補完帳號後，發現「帳號設定」左側帳號列表裡每個帳號名字旁邊的角色色塊，只要帳號有一筆明確的「帳號權限」資料就會變色（藍底），跟角色本身是不是預設值無關；使用者要求改成只有角色不是系統預設的「一般使用者」時才要有顏色，一般使用者維持跟「沒有帳號權限列」的帳號一樣不特別上色，這樣掃視列表時能更快看出誰是特殊角色（管理者／設計師／唯讀／自訂）。
+- 影響檔案：`json_database_admin.html`。
+- 影響功能：帳號列表（`permissionAdminHtml()` 內建立每個帳號按鈕那段）跟寫入中途即時更新色塊的 `refreshPermissionPendingUi()` 兩處，色塊判斷條件都從「這個帳號有沒有自己的『帳號權限』列（`row._explicit`／`model._explicit`）」改成「這個帳號目前顯示的角色範本是不是『一般使用者』」——`停用`（紅色）、`寫入中`（沿用原本的藍色樣式）這兩種狀態的判斷邏輯不變，只調整第三種「有沒有特別上色」的條件。CSS 類別名稱（`.explicit`／`.off`）本身沒有改，只是改變套用的判斷條件，不需要新增或調整任何樣式規則。
+- 風險區塊：`角色範本` 這個欄位在 `permissionModels()` 裡本來就一定有值（沒有明確「帳號權限」列的帳號，會透過 `permissionRoleForSettings(settings)` 算出一個 fallback 角色，不會是空字串），所以這次改動不會因為欄位缺值而出現色塊判斷錯誤或例外；沒有動到任何資料寫入邏輯，純粹是列表顯示樣式的調整。
+- 已檢查／驗證方式：用本機 Python 靜態伺服器＋ Browser pane，灌入三種假帳號直接呼叫真正的 `rebuildPermissionModels()`／`renderTable()`：①有明確帳號權限列、角色是「一般使用者」→ 確認色塊 class 不含 `explicit`（不上色）；②有明確帳號權限列、角色是「管理者」→ 確認色塊 class 含 `explicit`（上色）；③完全沒有帳號權限列（fallback 成一般使用者）→ 確認色塊 class 不含 `explicit`；三種情況色塊文字也都正確顯示對應角色名稱。`node --test backend/test/*.test.mjs` 73/73 全過，`git diff --check` 通過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-03 18:09 Asia/Taipei — 帳號設定新增「匯入 Excel 名冊」批次建立帳號
 
 - 修改目的：使用者提供公司人資匯出的員工通訊錄 .xlsx 檔案，要求資料庫後台「帳號設定」能直接上傳讀取、自動建立新進人員的帳號，不用再一筆一筆手動輸入。
 - 影響檔案：`worker/src/database-coordinator.ts`（新增 `adminAccountBulkImport` action）、`backend/app.mjs`（同步的本機測試後端平行實作）、`json_database_admin.html`（上傳按鈕、純瀏覽器端 .xlsx 解析、匯入預覽視窗）、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
