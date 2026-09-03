@@ -992,7 +992,7 @@ export function createActionHandler(database, options = {}) {
           comments.push({ id: randomUUID(), name: userName, account: session.account, avatar: text(userRow?.['頭像連結']), text: commentText, createdAt: new Date().toISOString() });
           row['留言'] = JSON.stringify(comments.slice(-50));
         }
-        return { ok: true, action, reel: publicReel(row, index) };
+        return { ok: true, action, story: publicReel(row, index) };
       }, action);
     }
     if (action === 'markReelViewed') {

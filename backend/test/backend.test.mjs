@@ -1509,12 +1509,12 @@ test('password session protects settings, reels and manager-only issue status wr
   const reaction = await api(app.baseUrl, 'toggleReelReaction', {
     editorToken: login.token, reelId: 'reel-file', reaction: 'like'
   });
-  assert.deepEqual(reaction.reel.likes, ['Machi']);
+  assert.deepEqual(reaction.story.likes, ['Machi']);
 
   const comment = await api(app.baseUrl, 'addReelComment', {
     editorToken: login.token, reelId: 'reel-file', comment: 'JSON 留言成功'
   });
-  assert.equal(comment.reel.comments.at(-1).text, 'JSON 留言成功');
+  assert.equal(comment.story.comments.at(-1).text, 'JSON 留言成功');
 
   const firstView = await api(app.baseUrl, 'markReelViewed', { editorToken: login.token, reelId: 'reel-file' });
   assert.deepEqual(firstView.story.viewers, ['Machi']);
@@ -1850,6 +1850,17 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
   assert.equal(listed.reels.find(reel => reel.id === 'story-forever').retention, '永久');
   const deleted = await api(app.baseUrl, 'deleteDesignerStories', { editorToken: login.token, designer: 'Machi', fileIds: ['story-forever'] });
   assert.equal(deleted.deleted, 1);
+});
+
+test('designer reel reactions and comments consume the shared story response contract', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const reactionHandler = html.match(/async function toggleDesignerReelReaction\(button\)\{[\s\S]*?\nasync function submitDesignerReelComment/)?.[0] || '';
+  const commentHandler = html.match(/async function submitDesignerReelComment\(form\)\{[\s\S]*?\nlet spotifyIframeApi/)?.[0] || '';
+
+  assert.match(reactionHandler, /applyUpdatedActiveReel\(data\.story\)/);
+  assert.doesNotMatch(reactionHandler, /applyUpdatedActiveReel\(data\.reel\)/);
+  assert.match(commentHandler, /applyUpdatedActiveReel\(data\.story\)/);
+  assert.doesNotMatch(commentHandler, /applyUpdatedActiveReel\(data\.reel\)/);
 });
 
 test('designer media buttons persist replacements and deleted references in JSON', async t => {

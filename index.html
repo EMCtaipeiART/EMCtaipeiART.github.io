@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-21 Asia/Taipei | build: 20260821-scheduled-signature-layout-129 -->
+<!-- LAST_MODIFIED: 2026-09-03 Asia/Taipei | build: 20260903-reels-response-contract-130 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260821-scheduled-signature-layout-129" />
+  <meta name="app-version" content="20260903-reels-response-contract-130" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -10379,8 +10379,8 @@ function advanceDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==she
 function previousDesignerStory(shell){if(activeDesignerStoryPlayback?.shell!==shell||activeDesignerStoryPlayback.index<=0)return; showDesignerStorySlide(shell,activeDesignerStoryPlayback.index-1)}
 function stopDesignerStoryPlayback(){clearDesignerStoryCommentRotation();if(activeDesignerStoryPlayback?.timer)clearTimeout(activeDesignerStoryPlayback.timer); const shell=activeDesignerStoryPlayback?.shell; if(shell?.isConnected)showDesignerFinalPoster(shell); activeDesignerStoryPlayback=null}
 function applyUpdatedActiveReel(updated){const reel=mergeDesignerReel(updated); if(activeDesignerStoryPlayback?.story?.id===reel.id){activeDesignerStoryPlayback.story=reel; activeDesignerStoryPlayback.stories[activeDesignerStoryPlayback.index]=reel; renderStoryInteractions(activeDesignerStoryPlayback.shell,reel)} return reel}
-async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.reel); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
-async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.reel); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
+async function toggleDesignerReelReaction(button){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再回應限時動態',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, reaction=button?.dataset.reelReaction; if(!reel||!reaction)return; pauseDesignerStoryTimer(); button.disabled=true; try{const data=await sheetApi('toggleReelReaction',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,reaction}); applyUpdatedActiveReel(data.story); setSync(reaction==='like'?'已更新讚':'已更新倒讚',false,1800)}catch(err){button.disabled=false;setSync(`限動回應失敗：${err.message}`,true)}}
+async function submitDesignerReelComment(form){if(!isLoggedIn()){showLoginModal();setSync('請先登入後再留言',true,2600);return} if(!requireAccess('reel.interact','此帳號沒有 Reels 互動權限'))return; const reel=activeDesignerStoryPlayback?.story, input=form?.elements?.comment, comment=input?.value.trim()||'', submit=form?.querySelector('button[type="submit"]'); if(!reel||!comment)return; pauseDesignerStoryTimer(); if(submit)submit.disabled=true; try{const data=await sheetApi('addReelComment',{editorToken:currentEditorToken,reelId:reel.id,imageUrl:reel.rawImageUrl,comment}); applyUpdatedActiveReel(data.story); setSync('留言已送出',false,1800)}catch(err){if(submit)submit.disabled=false;setSync(`留言失敗：${err.message}`,true)}}
 let spotifyIframeApi=null;
 const spotifyEmbedControllers=new WeakMap();
 const spotifyEmbedPending=new WeakSet();
