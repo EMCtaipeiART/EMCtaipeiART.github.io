@@ -1863,6 +1863,23 @@ test('designer reel reactions and comments consume the shared story response con
   assert.doesNotMatch(commentHandler, /applyUpdatedActiveReel\(data\.reel\)/);
 });
 
+test('project detail design-image thumbnails support viewport-bounded hover previews without replacing click-through', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const thumbnailMarkup = html.match(/function caseDetailDesignImagesHtml\(row\)\{[^\n]+\}/)?.[0] || '';
+
+  assert.match(thumbnailMarkup, /data-design-image-hover-preview/);
+  assert.match(thumbnailMarkup, /target="_blank" rel="noopener"/);
+  assert.match(html, /function showDesignImageHoverPreview\(anchor,x,y\)/);
+  assert.match(html, /function hideDesignImageHoverPreview\(anchor=null\)/);
+  assert.match(html, /Math\.min\(left,window\.innerWidth-width-margin\)/);
+  assert.match(html, /Math\.min\(top,window\.innerHeight-height-margin\)/);
+  assert.match(html, /document\.addEventListener\('pointerover'/);
+  assert.match(html, /document\.addEventListener\('pointermove'/);
+  assert.match(html, /document\.addEventListener\('pointerout'/);
+  assert.match(html, /document\.addEventListener\('focusin'/);
+  assert.match(html, /document\.addEventListener\('scroll',\(\)=>hideDesignImageHoverPreview\(\),true\)/);
+});
+
 test('designer media buttons persist replacements and deleted references in JSON', async t => {
   const app = await fixture();
   t.after(() => app.close());
