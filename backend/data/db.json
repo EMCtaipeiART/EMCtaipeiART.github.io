@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3878,
+  "revision": 3879,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-04T04:11:12.241Z",
+  "updatedAt": "2026-09-04T04:11:28.200Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1226,7 +1226,7 @@
         {"案件編號":"26090034","修改次數":"0","建立日期":"2026/09/03 18:10:38","修改日期":"2026/09/03 18:10:38","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 18:10:38","圖片連結":"[{\"fileName\":\"260903_Avata360_KOL包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1zqw8jwI-TXoLrZJPNOm1meDqO-AUj0x4=w1600\"},{\"fileName\":\"260903_LitoX1_包框影片_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UT-_PNZpC8Rw2de26cmmNVZj6TVe0UUO=w1600\"},{\"fileName\":\"260903_LitoX1_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1ygSxeaXbhvHzte568Y3qTgOsunKAAyVd=w1600\"},{\"fileName\":\"260903_Neo2_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1TlsPq4SxCU-l-Bqnk-vrGHZjcPcgPy-t=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 18:10:38"},
         {"案件編號":"26090034","修改次數":"1","建立日期":"2026/09/03 18:23:00","修改日期":"2026-09-03","修改內容":"感謝大神神速支援！Avata 360 這支，兩處小調整：\n\n\n1. 價格沒改到（$20,190起）\n2. 影片換成這支\n\nhttps://docs.google.com/presentation/d/18W2PcIKgw5RnhmgjRAMy47WVXG5hfwLEMJeeWJIXLx0/edit?slide=id.p#slide=id.p\n\n\n感恩感恩！","修改人":"李明庭","確認修正日":"2026/09/03 18:25:37","待修改圖片":"","圖片連結":"[{\"fileName\":\"260903_Avata360_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1wZxQvbTvYEmujlR-CQ2EZm6VaOw65OU8=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 18:25:12"},
         {"案件編號":"26090024","修改次數":"0","建立日期":"2026/09/03 18:36:15","修改日期":"2026/09/03 18:36:15","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 18:36:15","圖片連結":"[{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CR1UM7IimYj0OwwbUyCr19qu3q6Anugf=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DKvi_bODpFu4AoTbcX66C6AMkwaJlNh5=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1e_xDDMXs3Cjwo8RhjQFRx5XqiNLDyEGq=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XNmZU1WsYazuGDHr42g4W2UgEXCKLz3-=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-5.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CzYJ7-bz5PXYWywBESLYlWAdwUPBYf9Y=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 18:36:15"},
-        {"案件編號":"26090042","修改次數":"0","建立日期":"2026/09/04 12:11:12","修改日期":"2026/09/04 12:11:12","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/04 12:11:12","圖片連結":"[{\"fileName\":\"260904_Liberty-5-Pro_Line圖文選單.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FPmsS2SRkDV1ngvcZIrd-xO1n76D2tgS=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/04 12:11:12"}
+        {"案件編號":"26090042","修改次數":"0","建立日期":"2026/09/04 12:11:12","修改日期":"2026/09/04 12:11:12","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/04 12:11:12","圖片連結":"[{\"fileName\":\"260904_Liberty-5-Pro_Line圖文選單.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FPmsS2SRkDV1ngvcZIrd-xO1n76D2tgS=w1600\"},{\"fileName\":\"260904_Liberty-5-Pro_Line圖文選單.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eM7c5EHrN5Xyun_k1y-P9SYGx8PtXdG_=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/04 12:11:28"}
       ]
     },
     "補充資料連結": {
