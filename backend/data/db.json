@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 3905,
+  "revision": 3906,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-04T08:40:48.785Z",
+  "updatedAt": "2026-09-04T08:40:56.739Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1232,7 +1232,7 @@
         {"案件編號":"26090024","修改次數":"0","建立日期":"2026/09/03 18:36:15","修改日期":"2026/09/03 18:36:15","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/03 18:36:15","圖片連結":"[{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CR1UM7IimYj0OwwbUyCr19qu3q6Anugf=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DKvi_bODpFu4AoTbcX66C6AMkwaJlNh5=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1e_xDDMXs3Cjwo8RhjQFRx5XqiNLDyEGq=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XNmZU1WsYazuGDHr42g4W2UgEXCKLz3-=w1600\"},{\"fileName\":\"260821_金士頓_當Kingston融入你的日常_JP-5.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CzYJ7-bz5PXYWywBESLYlWAdwUPBYf9Y=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/03 18:36:15"},
         {"案件編號":"26090042","修改次數":"0","建立日期":"2026/09/04 12:11:12","修改日期":"2026/09/04 12:11:12","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/04 12:11:12","圖片連結":"[{\"fileName\":\"260904_Liberty-5-Pro_Line圖文選單.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1FPmsS2SRkDV1ngvcZIrd-xO1n76D2tgS=w1600\"},{\"fileName\":\"260904_Liberty-5-Pro_Line圖文選單.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eM7c5EHrN5Xyun_k1y-P9SYGx8PtXdG_=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/04 12:11:28"},
         {"案件編號":"26080155","修改次數":"1","建立日期":"2026/09/04 16:16:02","修改日期":"2026-09-04","修改內容":"來信提供修改需求，詳細如附件P64~P68，再請協助，感恩","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26080154","修改次數":"0","建立日期":"2026/09/04 16:40:18","修改日期":"2026/09/04 16:40:18","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/04 16:40:18","圖片連結":"[{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lACus5cIVVBvKryyrmUUuyyjmnmRbJMf=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wohb8kkSQVA1eLB5ZO5rLPLnj7TCRJVU=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16iJZRH-KAd9p7Ps3lDxt0o6mHfQhZvb1=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1nBrtDYa4Rp1CRViaGPeKlD8YMJxBuSDn=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/04 16:40:48"}
+        {"案件編號":"26080154","修改次數":"0","建立日期":"2026/09/04 16:40:18","修改日期":"2026/09/04 16:40:18","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/04 16:40:18","圖片連結":"[{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lACus5cIVVBvKryyrmUUuyyjmnmRbJMf=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wohb8kkSQVA1eLB5ZO5rLPLnj7TCRJVU=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16iJZRH-KAd9p7Ps3lDxt0o6mHfQhZvb1=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1nBrtDYa4Rp1CRViaGPeKlD8YMJxBuSDn=w1600\"},{\"fileName\":\"260904_Emfusion_9月FB貼文_常見 QA_4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/137yhuxPVNIcQDOiPE4h2brjOqjEyF2Fl=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/04 16:40:56"}
       ]
     },
     "補充資料連結": {
