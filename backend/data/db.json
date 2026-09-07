@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4065,
+  "revision": 4066,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-07T11:40:26.371Z",
+  "updatedAt": "2026-09-07T11:40:36.491Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1265,7 +1265,7 @@
         {"案件編號":"26080151","修改次數":"0","建立日期":"2026/09/07 18:06:10","修改日期":"2026/09/07 18:06:10","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/07 18:06:10","圖片連結":"[{\"fileName\":\"260907_工研院_社群貼文_3D列印食物.png\",\"url\":\"https://lh3.googleusercontent.com/d/1aV3ef7KxuiobOtmRhSs4nuRDXsCVkZt_=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zg-xy7wZdWqjk58a3psSru3lkgW7K8g3=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/11wM4-MRKKD8ot9aWH4Q5lYWk665fuHGB=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/16wg0amRX0VVqhPtFcWqUm9xUVsT0mIGp=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lPNBFDc_w-RPGvlkLBMtPrEfHxVItzPo=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/07 18:06:10"},
         {"案件編號":"26090054","修改次數":"0","建立日期":"2026/09/07 18:20:55","修改日期":"2026/09/07 18:20:55","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/07 18:20:55","圖片連結":"[{\"fileName\":\"260902_金士頓_J人生活標配 VS 工作標配.png\",\"url\":\"https://lh3.googleusercontent.com/d/19_eBkfpxgnY6_VSprRkrmPYQT64qEPv7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/07 18:20:55"},
         {"案件編號":"26090055","修改次數":"0","建立日期":"2026/09/07 18:52:46","修改日期":"2026/09/07 18:52:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/07 18:52:46","圖片連結":"[{\"fileName\":\"260902_金士頓_J人生活標配 VS 工作標配_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_0BzGjfZgIgz93y0STQYb_XumqVrx4LJ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/07 18:52:46"},
-        {"案件編號":"26090030","修改次數":"0","建立日期":"2026/09/07 19:39:42","修改日期":"2026/09/07 19:39:42","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/07 19:39:42","圖片連結":"[{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1IikVYC4EfBOJJ1vrTPKuTvOyJV1qWL0u=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-kU2K4GC0EI9Mz1EDvwfNMFvfigs51fS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xUN9cyI4_IFGAZF0i-ctIAaB6jJMNxIS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1GriIZ15iJp0WtgWfRFMBhOQojB2QxvE6=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/07 19:40:26"}
+        {"案件編號":"26090030","修改次數":"0","建立日期":"2026/09/07 19:39:42","修改日期":"2026/09/07 19:39:42","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/07 19:39:42","圖片連結":"[{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1IikVYC4EfBOJJ1vrTPKuTvOyJV1qWL0u=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-kU2K4GC0EI9Mz1EDvwfNMFvfigs51fS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xUN9cyI4_IFGAZF0i-ctIAaB6jJMNxIS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1GriIZ15iJp0WtgWfRFMBhOQojB2QxvE6=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1w2k9L9il8I-iiFcrGhU-4Y8BZAUqRU2v=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/07 19:40:36"}
       ]
     },
     "補充資料連結": {
