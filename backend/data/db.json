@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4068,
+  "revision": 4069,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-08T01:39:05.943Z",
+  "updatedAt": "2026-09-08T01:41:46.385Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1266,7 +1266,7 @@
         {"案件編號":"26090054","修改次數":"0","建立日期":"2026/09/07 18:20:55","修改日期":"2026/09/07 18:20:55","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/07 18:20:55","圖片連結":"[{\"fileName\":\"260902_金士頓_J人生活標配 VS 工作標配.png\",\"url\":\"https://lh3.googleusercontent.com/d/19_eBkfpxgnY6_VSprRkrmPYQT64qEPv7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/07 18:20:55"},
         {"案件編號":"26090055","修改次數":"0","建立日期":"2026/09/07 18:52:46","修改日期":"2026/09/07 18:52:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/07 18:52:46","圖片連結":"[{\"fileName\":\"260902_金士頓_J人生活標配 VS 工作標配_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_0BzGjfZgIgz93y0STQYb_XumqVrx4LJ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/07 18:52:46"},
         {"案件編號":"26090030","修改次數":"0","建立日期":"2026/09/07 19:39:42","修改日期":"2026/09/07 19:39:42","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/07 19:39:42","圖片連結":"[{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1IikVYC4EfBOJJ1vrTPKuTvOyJV1qWL0u=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-kU2K4GC0EI9Mz1EDvwfNMFvfigs51fS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1xUN9cyI4_IFGAZF0i-ctIAaB6jJMNxIS=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1GriIZ15iJp0WtgWfRFMBhOQojB2QxvE6=w1600\"},{\"fileName\":\"260907_Boom Go 3i_中秋烤肉多圖貼文_4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1w2k9L9il8I-iiFcrGhU-4Y8BZAUqRU2v=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/07 19:40:36"},
-        {"案件編號":"26080166","修改次數":"2","建立日期":"2026/09/08 09:39:05","修改日期":"2026-09-08","修改內容":"一場次日期有變動，再麻煩哥：\n\n\nhttps://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?usp=sharing&ouid=104384014278345702670&rtpof=true&sd=true","修改人":"李明庭","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26080166","修改次數":"2","建立日期":"2026/09/08 09:39:05","修改日期":"2026-09-08","修改內容":"一場次日期有變動，再麻煩哥：\n\n\nhttps://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?usp=sharing&ouid=104384014278345702670&rtpof=true&sd=true","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260827_產品體驗會_九月.png\",\"url\":\"https://lh3.googleusercontent.com/d/1y3jF2N0IDIr-AASriJ3-cFDoZMJPucAm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 09:41:46"}
       ]
     },
     "補充資料連結": {
