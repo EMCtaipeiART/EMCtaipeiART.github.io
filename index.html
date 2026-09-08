@@ -11620,6 +11620,15 @@ async function openDesignerReplyMailModal(id,{folders=[],round=null}={}){
   }
   clearGmailInlineImages(editor.id);
   clearGmailAttachments(editor.id);
+  // 影片路徑：這時候還不知道這一輪實際備份了哪些檔案（圖片還在上傳中），先放一個空佔位容器，
+  // 等 applyDesignerReplyImages() 局部更新時才知道要不要填內容——只有單一資料夾（folderPaths.length===1）
+  // 才記錄資料夾路徑，讓稍後真的抓到影片檔名時可以組出完整路徑；多資料夾時沒辦法單靠檔名判斷
+  // 這支影片實際來自哪一個資料夾，寧可不附加也不要附上錯誤的路徑，維持空白容器（會被清掉）。
+  const videoPathsContainer=document.createElement('div');
+  videoPathsContainer.id='gmailDesignerReplyVideoPaths';
+  videoPathsContainer.contentEditable='false';
+  if(folderPaths.length===1)videoPathsContainer.dataset.nasFolderPath=folderPaths[0];
+  editor.appendChild(videoPathsContainer);
   await appendDefaultGmailSignature(editor);
   // 解鎖之後才由 resolveDesignerReplyImages()／applyDesignerReplyImages() 接手處理圖片上傳結果，
   // 那段邏輯本來就設計成只局部更新 #gmailDesignerReplyImages 這個容器，不會動到這裡已經寫好的文字，
@@ -11656,6 +11665,33 @@ function appendDesignerReplyImageThumb(container,img){
   container.appendChild(wrap); // 先插入 DOM 再綁定控制項，換行切換鈕才能讀到正確的 wrap.nextSibling（見 insertGmailInlineImage 同一個理由）
   bindGmailInlineImageControls(wrap);
 }
+// NAS 監控程式（scripts/nas_design_image_lib.mjs 的 DEFAULT_VIDEO_EXTENSIONS）認定的影片副檔名——
+// 影片備份時實際上傳、內嵌在信件裡的是自動截的一張靜態截圖（qlmanage 截圖轉 JPEG），但 fileName
+// 欄位全程保留原始影片檔名與副檔名（見 upload/Code.gs 的 uploadImagesToFolder_ 註解：「fileName 保留
+// 呼叫端傳入的原始檔名，不是 Drive 內部檔名」），所以能單純用副檔名判斷這筆紀錄原本是不是一支影片。
+const DESIGNER_REPLY_VIDEO_EXTENSIONS=['.mp4','.mov','.m4v'];
+function isDesignerReplyVideoFileName(fileName){const ext=String(fileName||'').toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';return DESIGNER_REPLY_VIDEO_EXTENSIONS.includes(ext)}
+/** 影片沒辦法像圖片一樣直接內嵌播放，畫面上看到的只是自動截的一張靜態截圖，收件人真的要看
+ * 影片內容還是得回 NAS 找原始檔案，所以額外把每支影片的完整路徑（資料夾＋檔名＋副檔名）列出來，
+ * 跟截圖一一對應；備份多張截圖（=多支影片各截一張）時就列出對應數量的影片路徑。只在
+ * openDesignerReplyMailModal 當初判斷「這個案件只選了單一來源資料夾」時才會有 data-nas-folder-path
+ * （見該處註解），多資料夾時沒辦法單靠檔名判斷影片來自哪一個資料夾，維持不附加、不猜錯路徑。 */
+function applyDesignerReplyVideoPaths(images){
+  const container=document.getElementById('gmailDesignerReplyVideoPaths');
+  if(!container)return;
+  container.textContent='';
+  const folderPath=container.dataset.nasFolderPath||'';
+  const videoFileNames=(Array.isArray(images)?images:[]).map(img=>String(img?.fileName||'').trim()).filter(isDesignerReplyVideoFileName);
+  if(!folderPath||!videoFileNames.length){container.remove();return}
+  container.appendChild(document.createElement('br'));
+  container.appendChild(document.createTextNode(videoFileNames.length>1?` 影片路徑（共 ${videoFileNames.length} 支）`:' 影片路徑'));
+  videoFileNames.forEach(fileName=>{
+    container.appendChild(document.createElement('br'));
+    const bold=document.createElement('b');
+    bold.textContent=`${folderPath}/${fileName}`;
+    container.appendChild(bold);
+  });
+}
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，
  * 取代原本的「圖片上傳中...」文字，並解除送出按鈕的停用狀態——只動這個佔位容器本身，不會動到
  * 使用者可能已經在其他地方打好的文字。編輯區已經不是這個案件的「設計師回覆信」（例如使用者中途
@@ -11673,6 +11709,7 @@ function applyDesignerReplyImages(id,images,{round=null}={}){
       container.remove();
     }
   }
+  applyDesignerReplyVideoPaths(images);
   modal.dataset.designerReplyPending='';
   const sendBtn=$('#gmailThreadReplySend');
   if(sendBtn&&modal.dataset.replyMode==='designer'){sendBtn.disabled=false; sendBtn.textContent='送出回覆'}

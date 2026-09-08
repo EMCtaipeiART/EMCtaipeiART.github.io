@@ -442,6 +442,62 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   assert.equal(empty.children.length, 0);
 });
 
+test('designer reply "NAS路徑" block also lists each video\'s full NAS path (folder + filename + extension), one line per backed-up video, when the source folder is unambiguous', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // openDesignerReplyMailModal must create an (initially empty) per-video-path placeholder right after
+  // the folder-path block, recording the single source folder only when it is unambiguous (exactly one
+  // folder was selected) -- multi-folder cases can't tell which folder a given filename came from.
+  assert.match(html, /const videoPathsContainer=document\.createElement\('div'\);/);
+  assert.match(html, /videoPathsContainer\.id='gmailDesignerReplyVideoPaths';/);
+  assert.match(html, /if\(folderPaths\.length===1\)videoPathsContainer\.dataset\.nasFolderPath=folderPaths\[0\];/);
+  assert.match(html, /applyDesignerReplyVideoPaths\(images\);/);
+
+  const extSource = html.match(/const DESIGNER_REPLY_VIDEO_EXTENSIONS=\[[^\]]*\];\nfunction isDesignerReplyVideoFileName\(fileName\)\{[^\n]*\}\n/)?.[0];
+  assert.ok(extSource, 'could not locate isDesignerReplyVideoFileName');
+  const funcSource = html.match(/function applyDesignerReplyVideoPaths\(images\)\{[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(funcSource, 'could not locate applyDesignerReplyVideoPaths');
+
+  const run = (images, folderPath) => {
+    const container = { children: [], dataset: folderPath === undefined ? {} : { nasFolderPath: folderPath }, removed: false };
+    container.appendChild = child => container.children.push(child);
+    container.remove = () => { container.removed = true; };
+    const fakeDocument = {
+      getElementById: id => id === 'gmailDesignerReplyVideoPaths' ? container : null,
+      createElement: tag => ({ tag, textContent: '' }),
+      createTextNode: text => ({ tag: '#text', textContent: text })
+    };
+    const fn = new Function('document', `${extSource}\n${funcSource}\nreturn applyDesignerReplyVideoPaths;`)(fakeDocument);
+    fn(images);
+    return container;
+  };
+
+  // Multiple videos in one folder ("備份多張截圖" == one screenshot preview per video) -> one bold
+  // full-path line per video, plural label; a plain image among them is not listed as a "video path".
+  const multi = run([
+    { fileName: '260908_360II_包框影片_02.mp4' },
+    { fileName: '260908_360II_包框影片_05.MOV' },
+    { fileName: 'photo.jpg' }
+  ], '專案企劃部/執行中/DJI/廣告素材/2026/9月');
+  assert.equal(multi.removed, false);
+  assert.deepEqual(multi.children.filter(node => node.tag === 'b').map(node => node.textContent), [
+    '專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_360II_包框影片_02.mp4',
+    '專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_360II_包框影片_05.MOV'
+  ]);
+  assert.equal(multi.children.find(node => node.tag === '#text').textContent, ' 影片路徑（共 2 支）');
+
+  // A single video keeps the unadorned label, matching the existing single-folder "NAS路徑" wording style.
+  const single = run([{ fileName: 'clip.mp4' }], 'A/B');
+  assert.equal(single.children.find(node => node.tag === '#text').textContent, ' 影片路徑');
+
+  // No videos in this round's images -> placeholder removed, no empty block left in the email.
+  assert.equal(run([{ fileName: 'photo.jpg' }], 'A/B').removed, true);
+
+  // Multiple source folders were selected (no single recorded folder) -> can't attribute the video to
+  // a folder, so deliberately don't guess; placeholder removed rather than showing a wrong path.
+  assert.equal(run([{ fileName: 'clip.mp4' }], undefined).removed, true);
+});
+
 test('inline image resize handle is back (2026-09) with a distinct icon+title (2026-08-26 removal was because the old handle was an unlabeled square users mistook for a "selection box" — the new one is gml-inline-image-resize, not the old -resize-handle name, and pairs a diagonal-arrow SVG with title/aria-label), locked to the original aspect ratio via mouse-drag or ArrowUp/ArrowDown, and bindGmailInlineImageControls still wires it up alongside the delete button with the same single-argument signature', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 2026-08-26 移除的舊版名稱徹底不再出現，不是只換掉 class 名稱字面上恰好對不上而已。
