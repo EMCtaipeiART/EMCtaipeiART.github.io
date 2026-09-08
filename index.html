@@ -10698,7 +10698,11 @@ function handleUploadFrameMessage(event){
       designImageFolderKeyword:successFolders[0].keyword||'',
       designImageFolders:JSON.stringify(successFolders.map(item=>({path:item.path,keyword:item.keyword||''})))
     },summary);
-    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),round:replyRound});
+    // 沒有 .catch() 的話，這條 Promise 一旦出錯就是完全靜默的 unhandled rejection：使用者只會看到
+    // 「圖片上傳中...」永遠不會變成圖片、送出按鈕永遠停用，卻沒有任何錯誤訊息可以判斷發生什麼事
+    // （備份其實已經成功寫進資料庫，只是畫面沒接上）。這裡補上跟「電腦檔案上傳」那條路徑一致的提示與補救方式。
+    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),round:replyRound})
+      .catch(err=>setSync(`NAS 備份已完成，但自動帶入回信編輯器失敗，請改點「回信」查看：${err.message}`,true,7000));
     return;
   }
   const designerMediaMessage=data.type==='machi-designer-media-updated';
@@ -11566,10 +11570,28 @@ async function openModificationRequestReplyModal(id){
  * 呼叫這裡兩次（例如同一輪意外重複觸發）而把使用者已經打好的內容整個重寫，只有第一次呼叫時才會
  * 重建整個範本，第二次以後（見 modal.dataset.designerReplyCaseId 判斷）交給
  * resolveDesignerReplyImages() 用局部 DOM 更新處理。 */
+/** 同一個案件＋輪次同時只會有一次真正的初始化在跑。舊版只靠「modal.dataset.replyMode 已經是
+ * designer」判斷重複呼叫，但那個標記要等下面 openGmailThreadModal()（要打 API 讀整條 Gmail 信件串）
+ * 這段 await 回來才會被設定——NAS 備份的「開始」與「完成」是兩則獨立訊息，只要備份本身比讀信件串快
+ * （檔案少、或信件串很長讀很久），第二則訊息就會在標記還沒設好的空窗期穿過防護、再跑一次完整初始化：
+ * 兩次初始化各自插入一個 #gmailDesignerReplyImages 容器與「圖片上傳中...」佔位字樣，而且較晚結束的
+ * 那一次會把送出按鈕重新鎖回停用、把佔位字樣重新寫回去——就算中間 applyDesignerReplyImages() 已經
+ * 正確把圖片放進去了，畫面最後還是會停在「圖片上傳中...」而且永遠不能送出（使用者回報的正是這個現象）。
+ * 這裡改成在任何 await 之前就同步登記「這個案件＋輪次正在初始化」，第二個呼叫直接拿到同一個 Promise，
+ * 不會再重跑一次初始化。 */
+let designerReplyModalOpening=null;
 async function openDesignerReplyMailModal(id,{folders=[],round=null}={}){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
   const targetRoundBeforeOpen=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
+  const openingKey=`${id}::${targetRoundBeforeOpen}`;
+  if(designerReplyModalOpening&&designerReplyModalOpening.key===openingKey)return designerReplyModalOpening.promise;
+  const opening=buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen);
+  designerReplyModalOpening={key:openingKey,promise:opening};
+  try{return await opening}
+  finally{if(designerReplyModalOpening&&designerReplyModalOpening.key===openingKey)designerReplyModalOpening=null}
+}
+async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen){
   // 這個案件／輪次的「設計師回覆信」範本已經初始化過、彈窗還開著時，不要重新整個重建（會把使用者已經
   // 打好的文字整段洗掉，也會在編輯區裡多插入一個重複的 #gmailDesignerReplyImages 容器，讓
   // document.getElementById() 抓到哪一個變成不確定、圖片顯示因此忽有忽無）——只有第一次呼叫時才會
@@ -11727,6 +11749,11 @@ function designerReplyImagesForRound(id,round){
  * openDesignerReplyMailModal 這次沒有機會先開過（例如舊版資料夾選擇器沒有送出
  * machi-nas-folder-backup-started 這則訊息），這裡會先補開一次，確保還是看得到信件編輯器。 */
 async function resolveDesignerReplyImages(id,{folders=[],round=null}={}){
+  // 「備份開始」那則訊息觸發的初始化可能還在跑（在等 openGmailThreadModal 讀信件串），這時候彈窗雖然
+  // 已經顯示出來、但 replyMode／designerReplyCaseId 這些標記都還沒寫上去，下面的 alreadyOpen 會誤判成
+  // 「還沒開過」而重跑一次初始化——先等它跑完再判斷，才不會兩次初始化互相覆蓋（見
+  // openDesignerReplyMailModal 的說明）。初始化本身失敗不影響這裡：底下仍會照常補開一次。
+  if(designerReplyModalOpening)await designerReplyModalOpening.promise.catch(()=>{});
   const modal=$('#gmailThreadModal');
   const alreadyOpen=modal&&!modal.hidden&&modal.dataset.replyMode==='designer'&&String(modal.dataset.designerReplyCaseId||'')===String(id);
   const targetRound=round===null||round===''?(alreadyOpen?Math.max(0,Number(modal.dataset.designerReplyRound)||0):currentModificationRound(id)):Math.max(0,Number(round)||0);

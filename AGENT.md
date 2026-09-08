@@ -192,7 +192,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-08 14:25 Asia/Taipei（最新）— 「設計師回覆信」影片備份改成附上完整 NAS 路徑（含檔名＋副檔名）
+### 2026-09-08 17:33 Asia/Taipei（最新）— 修正「設計師回覆信」NAS 備份完成後圖片沒有出現、送出按鈕永遠停用
+
+- 修改目的：使用者回報「設計師回覆上傳完 NAS 備份圖片，沒有顯示在信件編輯器中」，實際現象是**看得到「圖片上傳中...」但一直沒變成圖片，送出按鈕也一直是停用狀態**。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **根本原因（既有的競態，不是這次新功能造成的）**：`openDesignerReplyMailModal()` 原本的防重複判斷是「`modal.dataset.replyMode` 已經是 `designer`」，但這個標記要等函式中間 `await openGmailThreadModal()`（要打 API 讀整條 Gmail 信件串）回來之後才會被設定。NAS 備份會送出兩則獨立訊息：`machi-nas-folder-backup-started`（備份一開始就先開信件編輯器）與 `machi-nas-folder-selected`（備份完成，補上圖片）。只要**備份本身比讀信件串快**（檔案少、或這條信件串很長讀很久），第二則訊息就會落在「標記還沒設好」的空窗期、穿過防護再跑一次完整初始化。兩次初始化各自插入一個 `#gmailDesignerReplyImages` 容器與「圖片上傳中...」佔位；如果**較晚結束的是那個先發動、但網路較慢的第一次初始化**（真實網路延遲本來就會變動），它會在 `applyDesignerReplyImages()` 已經正確把圖片放進去之後，又把整個範本重建一次——把圖片洗掉、佔位字樣寫回去、送出按鈕重新鎖回停用，而且不會再有任何人來解鎖。這正是使用者看到的畫面。
+  2. **修法**：改成在**任何 await 之前**就同步登記「這個案件＋輪次正在初始化」（`designerReplyModalOpening={key,promise}`），同一個案件＋輪次的第二個呼叫直接拿到同一個 Promise，不會再跑第二次初始化；原本的函式主體抽成 `buildDesignerReplyMailModal()`，`openDesignerReplyMailModal()` 保留原本的函式簽章當作去重入口。初始化結束（成功或失敗都算）會把登記清掉，不會卡住之後的呼叫。`resolveDesignerReplyImages()` 也改成**先等待進行中的初始化跑完**再判斷「彈窗是不是已經開好了」，避免它自己也誤判成「還沒開過」而多開一次。順帶的好處：同一次流程不會再重複打一次 `getCaseMailThread`（測試中實測從 2 次降到 1 次）。
+  3. **補上原本完全沒有的錯誤處理**：`machi-nas-folder-selected` 分支呼叫 `resolveDesignerReplyImages()` 時沒有接 `.catch()`，任何錯誤都是完全靜默的 unhandled rejection——使用者只會看到「圖片上傳中...」永遠不動、送出鈕永遠停用，卻沒有任何訊息可以判斷發生什麼事。現在補上跟「電腦檔案上傳」那條路徑一致的提示：「NAS 備份已完成，但自動帶入回信編輯器失敗，請改點『回信』查看：⋯」，並明確告知備份其實已經成功、不需要重新上傳。
+- 風險區塊：
+  - `openDesignerReplyMailModal()` 的對外簽章與行為（含既有的「同一案件同一輪次不重建範本」保護）都沒有變，只是把主體搬到 `buildDesignerReplyMailModal()` 並在前面加一層去重；其他呼叫端（`machi-nas-folder-backup-started`、電腦檔案上傳完成、`resolveDesignerReplyImages` 補開）都不用改。
+  - 去重的鍵是「案件編號＋輪次」，不同輪次仍會各自初始化（已用測試鎖住），不會因為去重而讓「一修回覆」誤用「初稿」那次的初始化結果。
+  - 這次沒有動 `applyDesignerReplyImages()`／`applyDesignerReplyVideoPaths()`／NAS 監控程式／Worker 任何一行——確認過前一版新增的影片路徑功能不是這個問題的原因（見下方驗證）。
+- 已檢查／驗證方式：
+  - **先在真實瀏覽器裡重現，再證明修好**：用本機靜態伺服器載入真實 `index.html`，灌入假案件與假修改紀錄，並把 `getCaseMailThread` стub 成「第一次呼叫 3000ms、之後 300ms」來模擬真實會變動的網路延遲，照真實順序觸發「備份開始 → 150ms 後備份完成」。**舊版程式碼確實重現使用者回報的現象**：`applyDesignerReplyImages()` 跑完的當下畫面是對的（2 張圖片、按鈕可用），但等那個較慢的第一次初始化在 3000ms 落地之後，最終狀態變成 `imagesRendered:0`、`placeholdersLeft:1`（「圖片上傳中...」）、`sendBtnDisabled:true`——跟使用者描述完全一致。套用修正後跑**完全相同**的情境：`imagesRendered:2`、`placeholdersLeft:0`、`sendBtnDisabled:false`、送出鈕文字回到「送出回覆」、影片路徑區塊也正確，且 `getCaseMailThread` 只被呼叫 1 次。
+  - 也先確認過前一版剛加的影片路徑功能**不是**元凶：用各種邊界輸入（`null`／`undefined` 項目、缺 `fileName`、`fileName` 不是字串、非陣列、50 筆大量資料）實測 `applyDesignerReplyVideoPaths()` 全部不會拋錯，且單獨走一次完整流程時圖片與影片路徑都正常顯示。
+  - `node --test backend/test/*.test.mjs` 75/75 全過（74 既有＋1 新增）。新增測試直接從 `index.html` 擷取去重包裝函式的真實原始碼、用 `new Function()` 注入假的 `rows`／`currentModificationRound`／`buildDesignerReplyMailModal` 實際執行，涵蓋：①同案件同輪次的兩個併發呼叫只會初始化一次；②初始化結束後登記會清掉，之後的呼叫仍能正常初始化；③不同輪次各自初始化、不會被去重吃掉；④初始化失敗（Promise reject）不會把登記卡死，下一次仍會重試；另外用字串比對確認 `resolveDesignerReplyImages()` 有等待進行中的初始化、以及呼叫端確實補上了 `.catch()`。
+  - 先用 `git stash` 只還原 `index.html`，確認新測試在舊版程式碼上真的會失敗（`could not locate the openDesignerReplyMailModal de-duplication wrapper`），`git stash pop` 後重新確認 75/75 全過。
+  - 過程中也發現並修好既有測試 `Gmail editors show the connected account signature...` 的連帶影響：它用「函式原始碼切片」檢查簽名檔有沒有被附加，主體搬家後要改看 `buildDesignerReplyMailModal`（意圖不變，仍然是在檢查設計師回覆信會附上簽名檔），已一併更新並加註說明。
+  - `git diff --check` 通過。
+  - **未做的驗證**：沒有用真實 NAS 資料夾、真實登入帳號在正式站實際跑一次完整備份流程（這個環境連不到公司內網 NAS，也沒有正式站登入權限）；重現與驗證都是用真實前端程式碼＋模擬的網路延遲完成的。
+- 部署狀態：純前端，git push 後自動生效，不需要部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-08 14:25 Asia/Taipei — 「設計師回覆信」影片備份改成附上完整 NAS 路徑（含檔名＋副檔名）
 
 - 修改目的：使用者要求「設計師回覆信」在選擇 NAS 資料夾時，如果該案件是備份「影片」，信件裡的「NAS路徑」要完整提供包含檔名＋副檔名的路徑（例如：`專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_360II_包框影片_02.mp4`），而且備份多張截圖（=多支影片各自截一張靜態畫面）時，也要對應提供多支影片各自的路徑，不能只顯示到資料夾層級。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

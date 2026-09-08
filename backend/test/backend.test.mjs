@@ -442,6 +442,66 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   assert.equal(empty.children.length, 0);
 });
 
+test('concurrent designer-reply opens for the same case+round are de-duplicated before any await, so a slow first initialization cannot land after the images and re-stick the editor on "圖片上傳中..."', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // The bug: the old re-entrancy guard relied on modal.dataset.replyMode==='designer', which is only
+  // set AFTER `await openGmailThreadModal(...)` (a network read of the whole Gmail thread). The NAS
+  // "backup started" and "backup finished" messages are independent, so whenever the backup finished
+  // faster than the thread read, the second message slipped through the guard and ran a second full
+  // initialization. Whichever initialization finished last re-inserted the "圖片上傳中..." placeholder
+  // and re-disabled the send button -- after applyDesignerReplyImages() had already placed the images.
+  // The registration must therefore happen synchronously, before any await.
+  const wrapper = html.match(/let designerReplyModalOpening=null;\nasync function openDesignerReplyMailModal\(id,\{folders=\[\],round=null\}=\{\}\)\{[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(wrapper, 'could not locate the openDesignerReplyMailModal de-duplication wrapper');
+
+  const makeOpener = (builder, currentRound = 0) => new Function('rows', 'currentModificationRound', 'buildDesignerReplyMailModal', `
+    ${wrapper}
+    return openDesignerReplyMailModal;
+  `)([{ id: 'C1' }, { id: 'C2' }], () => currentRound, builder);
+
+  // Two concurrent opens for the same case+round must share one initialization.
+  let builds = 0;
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  let opener = makeOpener(() => { builds += 1; return gate; });
+  const first = opener('C1', { folders: ['A/B'], round: 0 });
+  const second = opener('C1', { folders: ['A/B'], round: 0 });
+  assert.equal(builds, 1, 'the second concurrent open must reuse the in-flight initialization');
+  release();
+  await Promise.all([first, second]);
+
+  // Once settled the registry is cleared, so a genuinely new open still initializes.
+  await opener('C1', { folders: ['A/B'], round: 0 });
+  assert.equal(builds, 2, 'a later open (after the first settled) must initialize again');
+
+  // A different round is a different target and must not be swallowed by the de-duplication.
+  builds = 0;
+  let release2;
+  const gate2 = new Promise(resolve => { release2 = resolve; });
+  opener = makeOpener(() => { builds += 1; return gate2; });
+  const roundZero = opener('C1', { folders: ['A/B'], round: 0 });
+  const roundOne = opener('C1', { folders: ['A/B'], round: 1 });
+  assert.equal(builds, 2, 'a different round must run its own initialization');
+  release2();
+  await Promise.all([roundZero, roundOne]);
+
+  // A failed initialization must not leave the registry poisoned for later attempts.
+  builds = 0;
+  opener = makeOpener(() => { builds += 1; return Promise.reject(new Error('boom')); });
+  await assert.rejects(opener('C1', { folders: ['A/B'], round: 0 }), /boom/);
+  await assert.rejects(opener('C1', { folders: ['A/B'], round: 0 }), /boom/);
+  assert.equal(builds, 2, 'a rejected initialization must clear the in-flight registry');
+
+  // resolveDesignerReplyImages must wait for an in-flight initialization before deciding whether the
+  // modal is "already open" -- otherwise it re-opens and races the initialization it should have joined.
+  assert.match(html, /if\(designerReplyModalOpening\)await designerReplyModalOpening\.promise\.catch\(\(\)=>\{\}\);/);
+
+  // The machi-nas-folder-selected call site had no .catch(): any rejection there was an entirely silent
+  // unhandled rejection, leaving the editor stuck with no message explaining why.
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),round:replyRound\}\)\s*\n\s*\.catch\(err=>setSync\(/);
+});
+
 test('designer reply "NAS路徑" block also lists each video\'s full NAS path (folder + filename + extension), one line per backed-up video, when the source folder is unambiguous', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
 
@@ -694,7 +754,10 @@ test('Gmail editors show the connected account signature by default without appe
   assert.match(html, /if\(signature\)\{range\.setStartBefore\(signature\);range\.collapse\(true\)\}/);
   assert.match(html, /\.gmail-rich-editor\{min-height:260px;max-height:520px\}/);
   assert.match(html, /#gmailThreadReplyEditor\.gmail-rich-editor\{min-height:180px;max-height:380px\}/);
-  for (const functionName of ['renderPostSubmitGmailDraft', 'openGmailComposeModal', 'openGmailThreadModal', 'openModificationRequestReplyModal', 'openDesignerReplyMailModal']) {
+  // openDesignerReplyMailModal is only the de-duplicating entry point now (see the concurrency test
+  // above); buildDesignerReplyMailModal is where that flow's editor content -- including the
+  // signature -- is actually assembled.
+  for (const functionName of ['renderPostSubmitGmailDraft', 'openGmailComposeModal', 'openGmailThreadModal', 'openModificationRequestReplyModal', 'buildDesignerReplyMailModal']) {
     const start = html.indexOf(`${functionName === 'renderPostSubmitGmailDraft' ? '' : 'async '}function ${functionName}(`);
     const nextFunction = html.indexOf('\nfunction ', start + 1);
     const nextAsyncFunction = html.indexOf('\nasync function ', start + 1);
