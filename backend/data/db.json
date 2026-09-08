@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4096,
+  "revision": 4097,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-08T03:07:11.102Z",
+  "updatedAt": "2026-09-08T03:07:53.042Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1272,7 +1272,7 @@
         {"案件編號":"26090036","修改次數":"0","建立日期":"2026/09/08 09:49:54","修改日期":"2026/09/08 09:49:54","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/08 09:49:54","圖片連結":"[{\"fileName\":\"260907_添可_九月_CPAS_全產品.png\",\"url\":\"https://lh3.googleusercontent.com/d/188JstWE_ssLScysZFa9Fim13JPTls_SH=w1600\"},{\"fileName\":\"260907_添可_九月_CPAS_比較.png\",\"url\":\"https://lh3.googleusercontent.com/d/1aRqZQet-CEGqm3ocdypTL1ZBW-ITiKT5=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 09:50:02"},
         {"案件編號":"26090035","修改次數":"0","建立日期":"2026/09/08 09:51:02","修改日期":"2026/09/08 09:51:02","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/08 09:51:02","圖片連結":"[{\"fileName\":\"260907_添可_九月_CPAS_i7Fold_電商動圖_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1YtfvTOeAAChIuLtuCY3rTWhCaszBqVnG=w1600\"},{\"fileName\":\"260907_添可_九月_CPAS_i7Fold_電商動圖_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/10fTe8C1M7xzdu6k2FCcz3-7zpP1ESW5t=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 09:51:12"},
         {"案件編號":"26080148","修改次數":"2","建立日期":"2026/09/08 10:40:02","修改日期":"2026-09-08","修改內容":"9/3 蝦皮_AeroClip_電商_超品日_B 這篇的價格請改為 $2,490\n\n\n以上，謝謝\n\n\nBest regards,\nDavid","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26090056","修改次數":"1","建立日期":"2026/09/08 11:07:11","修改日期":"2026-09-08","修改內容":"感恩大仔，再麻煩協助，這次五張都在角落補個保護性文字：※示意圖僅供參考","修改人":"李明庭","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090056","修改次數":"1","建立日期":"2026/09/08 11:07:11","修改日期":"2026-09-08","修改內容":"感恩大仔，再麻煩協助，這次五張都在角落補個保護性文字：※示意圖僅供參考","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260907_林口A7讚商場_名單型廣告_熟食生鮮v1_商場外觀版.png\",\"url\":\"https://lh3.googleusercontent.com/d/1elpxoQhNdQcsCbLgeoz1kQ2J4lPPIuak=w1600\"},{\"fileName\":\"260907_林口A7讚商場_名單型廣告_熟食生鮮v2_生鮮食物版.png\",\"url\":\"https://lh3.googleusercontent.com/d/1y11_57gjVxhT0sN0bVHXRzl1RE0z5qQL=w1600\"},{\"fileName\":\"260907_林口A7讚商場_名單型廣告_熟食生鮮v3_室內攤位版.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lvOeOsE4phpyWsNvdKDyrDINPO8Tl0qZ=w1600\"},{\"fileName\":\"260907_林口A7讚商場_名單型廣告_第二版_兒童遊戲版.png\",\"url\":\"https://lh3.googleusercontent.com/d/19Zy71pqk9RBZRHBLXSF9a10RgMCv6a3D=w1600\"},{\"fileName\":\"260907_林口A7讚商場_名單型廣告_第二版_通用版.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bv63Dr9HOh1y99Pndi8aViMGcQ4Mp70P=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 11:07:53"}
       ]
     },
     "補充資料連結": {
