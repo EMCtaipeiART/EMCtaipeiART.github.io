@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4247,
+  "revision": 4248,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-09T04:05:44.583Z",
+  "updatedAt": "2026-09-09T04:05:53.930Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1291,7 +1291,7 @@
         {"案件編號":"26080110","修改次數":"1","建立日期":"2026/09/08 19:18:32","修改日期":"2026-09-08","修改內容":"2人Heygen新增B-roll、換真人醫師","修改人":"Noise","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090021","修改次數":"1","建立日期":"2026/09/09 10:22:52","修改日期":"2026-09-09","修改內容":"根據客戶簡報P1 - P4 修正\nEPSON 印表機使用 WF-2930 繪製\n它牌印表機使用 HP 繪製","修改人":"Noise","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090038","修改次數":"1","建立日期":"2026/09/09 10:49:08","修改日期":"2026-09-14","修改內容":"根據客戶回饋修正（動畫+文字）","修改人":"Noise","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26090070","修改次數":"0","建立日期":"2026/09/09 12:05:44","修改日期":"2026/09/09 12:05:44","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 12:05:44","圖片連結":"[{\"fileName\":\"260908_九月CPAS廣告素材_360系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1U5g_tTf7YIKAD8tT9bcTkHRruaZZ3U-4=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_neo系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ljJlwmf4SXysufL34afCN457E86MSsjR=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_全產品線_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/12_zubBVg_dMalMMS94B7b8SbilNXvlCL=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_手持系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dynyZ_uJVKQsiEY2R2VnC9FGMnwe8XvB=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_空拍系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1k_Hac-ZSYFsXlhNljDwTdzPwspmHFsC0=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 12:05:44"}
+        {"案件編號":"26090070","修改次數":"0","建立日期":"2026/09/09 12:05:44","修改日期":"2026/09/09 12:05:44","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 12:05:44","圖片連結":"[{\"fileName\":\"260908_九月CPAS廣告素材_360系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1U5g_tTf7YIKAD8tT9bcTkHRruaZZ3U-4=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_neo系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ljJlwmf4SXysufL34afCN457E86MSsjR=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_全產品線_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/12_zubBVg_dMalMMS94B7b8SbilNXvlCL=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_手持系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dynyZ_uJVKQsiEY2R2VnC9FGMnwe8XvB=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_空拍系列_Shopee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1k_Hac-ZSYFsXlhNljDwTdzPwspmHFsC0=w1600\"},{\"fileName\":\"260908_九月CPAS廣告素材_ROMOP_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PElQoo5ncbRY9fIM6kV9VMXbeXNszhNx=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 12:05:53"}
       ]
     },
     "補充資料連結": {
