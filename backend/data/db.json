@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4284,
+  "revision": 4285,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-09T07:36:03.585Z",
+  "updatedAt": "2026-09-09T07:36:06.815Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1296,7 +1296,7 @@
         {"案件編號":"26080168","修改次數":"1","建立日期":"2026/09/09 13:37:36","修改日期":"2026-09-09","修改內容":"調整標題","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260901_ANKER_A1638_蝦皮_1.jpg\"]"},
         {"案件編號":"26080158","修改次數":"1","建立日期":"2026/09/09 13:38:33","修改日期":"2026-09-09","修改內容":"調整標題","修改人":"羅珮云","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090005","修改次數":"0","建立日期":"2026/09/09 15:22:12","修改日期":"2026/09/09 15:22:12","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 15:22:12","圖片連結":"[{\"fileName\":\"260908_迪朗奇_9月FB貼文_第四篇_EVO 系列_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1pzEutdcIIpwjcDh8OwJyMCywVl9cc7e2=w1600\"},{\"fileName\":\"260908_迪朗奇_9月FB貼文_第四篇_EVO 系列_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1d0Yhn5UfTvL480DHwBiyjhcZKspcznDv=w1600\"},{\"fileName\":\"260908_迪朗奇_9月FB貼文_第四篇_EVO 系列_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Q2BR3H4R_uvB8J9vAQ0odUBMRlv1UDw2=w1600\"},{\"fileName\":\"260908_迪朗奇_9月FB貼文_第四篇_EVO 系列_4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lCIXgk3OouiEMYxxAoIan2hjkOMzsLp8=w1600\"},{\"fileName\":\"260908_迪朗奇_9月FB貼文_第四篇_EVO 系列_5.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16aOf7jH6PpuGeWGezKl1yNVfrdtEQu8t=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 15:22:12"},
-        {"案件編號":"26080162","修改次數":"1","建立日期":"2026/09/09 15:34:44","修改日期":"2026-09-09","修改內容":"根據客戶簡報P1 - P4 修正 EPSON 印表機使用 WF-2930 繪製 它牌印表機使用 HP 繪製","修改人":"Noise","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26080162","修改次數":"1","建立日期":"2026/09/09 15:34:44","修改日期":"2026-09-09","修改內容":"根據客戶簡報P1 - P4 修正 EPSON 印表機使用 WF-2930 繪製 它牌印表機使用 HP 繪製","修改人":"Noise","確認修正日":"2026/09/09 15:36:06","待修改圖片":""}
       ]
     },
     "補充資料連結": {
