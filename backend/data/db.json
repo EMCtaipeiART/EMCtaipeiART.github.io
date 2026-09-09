@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4229,
+  "revision": 4230,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-09T01:03:07.221Z",
+  "updatedAt": "2026-09-09T01:03:16.835Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1288,8 +1288,7 @@
         {"案件編號":"26090028","修改次數":"0","建立日期":"2026/09/08 18:36:24","修改日期":"2026/09/08 18:36:24","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/08 18:36:24","圖片連結":"[{\"fileName\":\"1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1J0vq2k-visZhuSN2j41KTH4sb123SAk_=w1600\"},{\"fileName\":\"2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1goS2oTpodQsN9xtirBTYA119lMovRYgL=w1600\"},{\"fileName\":\"3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sbedvW2t7lQs1ti_94PeEnZ5GJEVdSmx=w1600\"},{\"fileName\":\"4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cLUGv65x-uZMHf0yc4bYKJ8wybApioK-=w1600\"},{\"fileName\":\"5.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CHV2z-YkSeGPPfoemQ_d_ICI9xp2kZUh=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 18:36:24"},
         {"案件編號":"26080184","修改次數":"0","建立日期":"2026/09/08 18:55:40","修改日期":"2026/09/08 18:55:40","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/08 18:55:40","圖片連結":"[{\"fileName\":\"260908_Shopee_CPAS_Liberty 5 Pro Max_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nwWzHWwRBFAXovaVPcY199zVIHxl5Dbz=w1600\"},{\"fileName\":\"260908_Shopee_CPAS_Liberty 5 Pro Max_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Ow4GBJq5mFpNz4UYUn2XaCX-PSODZnET=w1600\"},{\"fileName\":\"260908_Shopee_CPAS_Liberty 5 Pro_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1i7LkPuZdX2GBl7yMgw7DxxTgiJrh1Mbt=w1600\"},{\"fileName\":\"260908_Shopee_CPAS_Liberty 5 Pro_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jj3OU10oLV7SjOQ9ow2LRLgwt2rQVXI-=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 18:55:40"},
         {"案件編號":"26090040","修改次數":"0","建立日期":"2026/09/08 19:17:00","修改日期":"2026/09/08 19:17:00","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/08 19:17:00","圖片連結":"[{\"fileName\":\"Epson_社群貼文_布魯斯新圖素Resize.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1hdwvb5_SeGZmo2eSu4Wv5-sZIH-bAAMt=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/08 19:17:00"},
-        {"案件編號":"26080110","修改次數":"1","建立日期":"2026/09/08 19:18:32","修改日期":"2026-09-08","修改內容":"2人Heygen新增B-roll、換真人醫師","修改人":"Noise","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26090074","修改次數":"0","建立日期":"2026/09/09 08:44:59","修改日期":"2026/09/09 08:44:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 08:44:59","圖片連結":"[{\"fileName\":\"260908_Epson_EF-73新機上市宣傳_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bG9cJpA1Sjjd3MlfuEy1qcYibgwY-hlI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 08:44:59"}
+        {"案件編號":"26080110","修改次數":"1","建立日期":"2026/09/08 19:18:32","修改日期":"2026-09-08","修改內容":"2人Heygen新增B-roll、換真人醫師","修改人":"Noise","確認修正日":"","待修改圖片":""}
       ]
     },
     "補充資料連結": {
