@@ -721,7 +721,8 @@ test('Gmail compose/reply editors support attaching arbitrary non-inline files (
   assert.match(html, /sheetApi\('sendCaseMail',\{caseId:ids\[0\],caseIds:ids,to,cc,subject:subjectText,bodyHtml:prepared\.bodyHtml,signatureHtml:prepared\.signatureHtml,inlineImages:\[\],attachments:\[\],editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('sendCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('updateScheduledMail',\{id:state\.id,to,cc,subject,bodyHtml:editorPayload\.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
-  assert.match(html, /sheetApi\('scheduleCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
+  // 排程首信跟 sendCaseMail 一樣改帶整批 caseIds，合併信件才能排程（單筆案件時陣列裡就只有一個編號）。
+  assert.match(html, /sheetApi\('scheduleCaseMail',\{caseId:ids\[0\]\|\|id,caseIds:ids,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('scheduleCaseReply',\{caseId:id,to,cc,bodyHtml:editorPayload\.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('replyCaseMail',\{caseId:id,to,cc,bodyHtml:editorPayload\.bodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,editorToken:currentEditorToken\}\)/);
 
@@ -1117,7 +1118,8 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
   assert.match(html, /key==='gmailThreadId'\|\|key==='gmailThreadOwnerAccount'/);
   assert.match(html, /if\(row\.gmailThreadId\)\{\s*merged\.gmailThreadId=row\.gmailThreadId/);
   assert.match(html, /function refreshWatchedScheduledThreads\(\)/);
-  assert.match(html, /watchScheduledCaseThread\(id,scheduledAt\)/);
+  // 排程建立後要把案件加進信件串輪詢；合併信件一次涵蓋多筆案件，所以是逐一註冊。
+  assert.match(html, /ids\.forEach\(caseId=>watchScheduledCaseThread\(caseId,scheduledAt\)\)/);
   assert.match(html, /authoritativeCaseIds/);
   assert.match(html, /function reconcileCurrentDatabaseRows\(/);
   assert.match(html, /cachedRows\.filter\(row=>!isCaseId_\(row\.id\)\|\|authoritativeIds\.has\(String\(row\.id\)\)\)/);
@@ -1986,11 +1988,12 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.match(worker, /for \(const item of targetRows\) this\.requireRowAccess\(database, session, 'request\.mail', item\.row\);/);
   assert.match(worker, /for \(const id of caseIds\) \{/);
 
-  // Merging is only offered in the batch post-submit flow, and scheduling is disabled for a merged
-  // mail because the scheduler keys off a single case id.
+  // Merging is only offered in the batch post-submit flow.
   assert.match(html, /id="gmailComposeMergePanel"/);
   assert.match(html, /function postSubmitQueueItems\(queue\)\{/);
-  assert.match(html, /scheduleBtn\.disabled=!ready\|\|item\.merged/);
+  // Scheduling used to be disabled for a merged mail because the scheduler keyed off a single case id.
+  // The scheduler now takes the same caseIds list as sendCaseMail, so every queued mail can be scheduled.
+  assert.doesNotMatch(html, /scheduleBtn\.disabled=!ready\|\|item\.merged/);
 
   // Execute the real merge logic against the same helpers the page uses.
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
@@ -2029,6 +2032,121 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.equal(lines.filter(line => line === ' ・ 需求描述：九月新品社群貼文').length, 1);
   assert.equal(lines.filter(line => line === '　　　6. 交件日期：2026/09/20').length, 1);
   assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
+});
+
+test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and batch/merged mails can be scheduled the same way a single case can', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // Gmail's drafts.* endpoints are not covered by gmail.send, so the connect flow has to ask for
+  // gmail.compose as well. Without this the draft can never be created for anyone.
+  const authUrl = html.match(/function gmailOauthAuthorizationUrl\([^)]*\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(authUrl, 'could not locate gmailOauthAuthorizationUrl');
+  assert.match(authUrl, /https:\/\/www\.googleapis\.com\/auth\/gmail\.compose/);
+
+  // Schedule time: create the draft. Dispatch time: send that draft, so anything the user edited in
+  // Gmail while waiting is what actually goes out.
+  assert.match(worker, /async function createGmailDraft\(accessToken: string, raw: string\): Promise<string>/);
+  assert.match(worker, /async function sendGmailDraft\(accessToken: string, draftId: string\)/);
+  assert.match(worker, /result = await sendGmailDraft\(accessToken, draftId\);/);
+  // A missing or broken draft must never stop the mail from going out at the appointed time.
+  assert.match(worker, /catch \{ result = await postGmailMessage\(accessToken, raw\); \}/);
+  // Editing the schedule updates the draft; canceling it removes the draft from the mailbox.
+  assert.match(worker, /draftError = \(await this\.syncScheduledMailDraft\(id, item\.owner_account, text\(item\.draft_id\), raw\)\)\.draftError;/);
+  assert.match(worker, /await this\.discardScheduledMailDraft\(item\);/);
+  // The schedule itself must survive a failed draft (older Gmail grants have no gmail.compose scope).
+  const scheduleFn = worker.match(/private async scheduleCaseMail\([\s\S]*?\n  \}/)?.[0];
+  assert.ok(scheduleFn, 'could not locate scheduleCaseMail');
+  assert.match(scheduleFn, /draftId: draft\.draftId, draftError: draft\.draftError/);
+
+  // Scheduling a merged mail: the Worker takes the whole id list, and one schedule blocks a second
+  // one on any of the cases it covers.
+  assert.match(scheduleFn, /const caseIds = \[\.\.\.new Set\(\(Array\.isArray\(payload\.caseIds\) \? payload\.caseIds : \[payload\.caseId \|\| payload\.id\]\)/);
+  assert.match(scheduleFn, /const clash = pendingSends\.find\(item => scheduledMailCaseIds\(item\)\.some\(id => caseIds\.includes\(id\)\)\);/);
+  // A merged schedule is one row, so every case it covers has to find it through case_ids too.
+  assert.match(worker, /FROM scheduled_mail WHERE case_id = \? OR case_ids LIKE \? ORDER BY scheduled_at DESC LIMIT 30/);
+
+  // Front end: the queued mail hands the scheduler the same id list the send path uses.
+  const render = html.match(/function renderPostSubmitGmailDraft\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(render, 'could not locate renderPostSubmitGmailDraft');
+  assert.match(render, /if\(scheduleBtn\)scheduleBtn\.disabled=!ready;/);
+  assert.match(render, /modal\.dataset\.caseIds=JSON\.stringify\(ids\);/);
+  const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(schedule, 'could not locate scheduleComposeMail');
+  assert.match(schedule, /caseId:ids\[0\]\|\|id,caseIds:ids/);
+  assert.match(schedule, /ids\.forEach\(caseId=>watchScheduledCaseThread\(caseId,scheduledAt\)\)/);
+
+  // Run the real id resolver: merged mails carry the whole list, single cases carry exactly one, and
+  // a leftover caseIds from a previous merged mail must not leak into the next single-case mail.
+  const resolver = html.match(/function gmailComposeCaseIds\(modal\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(resolver, 'could not locate gmailComposeCaseIds');
+  const gmailComposeCaseIds = new Function(`${resolver}; return gmailComposeCaseIds;`)();
+  assert.deepEqual(gmailComposeCaseIds({ dataset: { caseId: '26090079', caseIds: '["26090079","26090080"]' } }), ['26090079', '26090080']);
+  assert.deepEqual(gmailComposeCaseIds({ dataset: { caseId: '26090081' } }), ['26090081']);
+  assert.deepEqual(gmailComposeCaseIds({ dataset: { caseId: '26090081', caseIds: 'not json' } }), ['26090081']);
+  assert.deepEqual(gmailComposeCaseIds({ dataset: {} }), []);
+  // Opening a single case explicitly clears the merged list left over from the queue flow.
+  const openCompose = html.match(/async function openGmailComposeModal\([\s\S]*?\n\}/)?.[0];
+  assert.ok(openCompose, 'could not locate openGmailComposeModal');
+  assert.match(openCompose, /delete modal\.dataset\.caseIds;/);
+
+  // Run the real renderer against a fake DOM: the merged mail in the queue must leave the schedule
+  // button enabled (it used to be disabled) and hand the whole id list to the scheduler.
+  const render2 = html.match(/function renderPostSubmitGmailDraft\(\)\{[\s\S]*?\n\}/)[0];
+  const queueItems = html.match(/function postSubmitQueueItems\(queue\)\{[\s\S]*?\n\}/)[0];
+  const itemDrafts = html.match(/function postSubmitItemDrafts\(queue,item\)\{[^\n]*\n/)[0];
+  const itemDefaults = html.match(/function postSubmitItemDefaults\(queue,item\)\{[\s\S]*?\n\}/)[0];
+  function fakeElement(id) {
+    return {
+      id, hidden: false, disabled: false, value: '', textContent: '', innerHTML: '', placeholder: '',
+      dataset: {}, classList: { toggle() {}, contains: () => false },
+      setAttribute() {}, querySelector: () => null
+    };
+  }
+  const scheduledFor = [];
+  const elements = new Map();
+  const harness = new Function('postSubmitQueue', 'elements', 'fakeElement', 'scheduledFor', `
+    const $ = selector => {
+      const id = selector.replace('#', '');
+      if (!elements.has(id)) elements.set(id, fakeElement(id));
+      return elements.get(id);
+    };
+    const modal = $('gmailComposeModal');
+    const document = { querySelector: () => null };
+    const gmailConnectionState = { gmailAddress: 'machi@emctaipei.com' };
+    const gmailRecipientExpandedFields = new Set();
+    const setGmailRecipientEntries = () => {};
+    const clearGmailInlineImages = () => {};
+    const clearGmailAttachments = () => {};
+    const appendDefaultGmailSignature = () => {};
+    const setGmailEditorLoading = () => {};
+    const renderPostSubmitMergePanel = () => {};
+    const updateGmailScheduleStatusBadge = () => {};
+    const refreshScheduledMailList = caseId => scheduledFor.push(caseId);
+    const mailDraft = row => ({ to: 'client@example.com', cc: [], subject: '單筆：' + row.id, bodyHtml: '' });
+    const mergedMailDraft = entries => ({ to: 'client@example.com', cc: [], subject: '【' + entries.map(e => e.id).join('、') + '】合併', bodyHtml: '' });
+    ${itemDrafts}
+    ${itemDefaults}
+    ${queueItems}
+    ${render2}
+    renderPostSubmitGmailDraft();
+    return { modal };
+  `);
+  const mergedQueue = {
+    mode: 'gmail', index: 0, merged: [0, 1],
+    drafts: [{ id: '26090079', row: {} }, { id: '26090080', row: {} }, { id: '26090081', row: {} }]
+  };
+  const { modal } = harness(mergedQueue, elements, fakeElement, scheduledFor);
+  assert.equal(elements.get('gmailComposeSchedule').disabled, false, '合併信件必須也能按下「指定排程時間」');
+  assert.equal(modal.dataset.caseId, '26090079');
+  assert.deepEqual(JSON.parse(modal.dataset.caseIds), ['26090079', '26090080']);
+  assert.deepEqual(scheduledFor, ['26090079']);
+
+  // A case whose id is still being generated cannot be scheduled, and must not leave a stale id list behind.
+  const pendingQueue = { mode: 'gmail', index: 0, merged: [], drafts: [{ id: '', row: {} }] };
+  const { modal: pendingModal } = harness(pendingQueue, elements, fakeElement, []);
+  assert.equal(elements.get('gmailComposeSchedule').disabled, true);
+  assert.equal(pendingModal.dataset.caseIds, undefined);
 });
 
 test('designer skill defaults take their 設計種類/階段 options from the live weighting table, hiding 下架 stages and keeping a removed value visible instead of silently switching it', async () => {

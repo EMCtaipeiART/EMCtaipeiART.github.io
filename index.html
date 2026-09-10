@@ -9651,7 +9651,7 @@ function renderPostSubmitGmailDraft(){
   const fromLabel=$('#gmailComposeModalFrom'); if(fromLabel)fromLabel.textContent=gmailConnectionState.gmailAddress?`寄件人：${gmailConnectionState.gmailAddress}`:'';
   const progress=$('#gmailComposeQueueProgress'); if(progress){const show=total>1||item.merged; progress.hidden=!show; progress.textContent=item.merged?`第 ${index+1} / ${total} 封（已合併 ${item.indexes.length} 筆案件）`:(total>1?`第 ${index+1} / ${total} 封`:'')}
   renderPostSubmitMergePanel();
-  const {defaults,ready,failed}=postSubmitItemDefaults(queue,item);
+  const {defaults,ids,ready,failed}=postSubmitItemDefaults(queue,item);
   gmailRecipientExpandedFields.clear();
   setGmailRecipientEntries('gmailComposeTo',draft.edited?draft.edited.toEntries:[defaults.to]);
   setGmailRecipientEntries('gmailComposeCc',draft.edited?draft.edited.ccEntries:defaults.cc);
@@ -9683,10 +9683,18 @@ function renderPostSubmitGmailDraft(){
   // modal.dataset.caseId／畫面上目前的欄位內容組請求，這裡只要把 dataset.caseId 換成「目前顯示的
   // 這封草稿」的真正案件編號，就能原封不動沿用，不需要另外寫一份佇列專用的排程邏輯。
   const scheduleBtn=$('#gmailComposeSchedule');
-  if(scheduleBtn)scheduleBtn.disabled=!ready||item.merged;   // 合併信件涵蓋多筆案件，既有排程機制只認單一案件編號
-  if(ready&&!item.merged){modal.dataset.caseId=draft.id; refreshScheduledMailList(draft.id,'compose')}
+  // 合併信件一樣可以排程：後端的 scheduleCaseMail 跟 sendCaseMail 一樣接受 caseIds（整批案件編號），
+  // 寄出後同一條 Gmail 信件串會綁到每一筆案件上，所以這裡只要把整批編號放進 dataset 交給
+  // scheduleComposeMail() 就好，不需要另外寫一份合併專用的排程邏輯。
+  if(scheduleBtn)scheduleBtn.disabled=!ready;
+  if(ready&&ids.length){
+    modal.dataset.caseId=ids[0];
+    modal.dataset.caseIds=JSON.stringify(ids);
+    refreshScheduledMailList(ids[0],'compose');
+  }
   else{
     delete modal.dataset.caseId;
+    delete modal.dataset.caseIds;
     const scheduledList=$('#gmailComposeScheduledList');
     if(scheduledList){scheduledList.hidden=true; scheduledList.innerHTML=''}
     updateGmailScheduleStatusBadge('compose',[]);
@@ -9850,6 +9858,7 @@ async function openGmailComposeModal(id){
   if(!modal)return;
   resetGmailModalInlineStatus(modal);
   modal.dataset.caseId=String(id);
+  delete modal.dataset.caseIds;   // 這是單筆案件的信，不要沿用上一次合併信件留下的整批編號
   const fromLabel=$('#gmailComposeModalFrom'); if(fromLabel)fromLabel.textContent=gmailConnectionState.gmailAddress?`寄件人：${gmailConnectionState.gmailAddress}`:'';
   setGmailRecipientEntries('gmailComposeTo',[draft.to]);
   setGmailRecipientEntries('gmailComposeCc',draft.cc);
@@ -10077,13 +10086,26 @@ async function updateScheduledMailFromEditor(kind,scheduledAt){
     if(kind==='compose')watchScheduledCaseThread(state.caseId,scheduledAt);
     const label=scheduleDisplayLabel(data.scheduledAt||scheduledAt);
     if(kind==='compose')closeGmailComposeModal();else closeGmailThreadModal();
-    setSync(`排程內容已更新，將於 ${label} 寄出`,false,3600);
+    // 首次寄信的排程在 Gmail 草稿匣裡有一份對應草稿，內容改了那份草稿也會一起更新（後端 syncScheduledMailDraft）。
+    const draftError=String(data?.draftError||'');
+    setSync(draftError?`排程內容已更新，將於 ${label} 寄出，但${draftError}`:`排程內容已更新，將於 ${label} 寄出`,Boolean(draftError),draftError?6000:3600);
   }catch(err){
     setSync(`排程修改失敗：${err.message}`,true);
     refreshScheduledMailList(state.caseId,kind);
   }finally{
     if(ui.scheduleButton)ui.scheduleButton.disabled=false;
   }
+}
+/** 這封信實際涵蓋的案件編號。一般情況就是 dataset.caseId 一筆；批次新增後按過「合併勾選的案件」的
+ * 那一封，dataset.caseIds 會是整批編號（見 renderPostSubmitGmailDraft）。 */
+function gmailComposeCaseIds(modal){
+  const single=String(modal?.dataset.caseId||'').trim();
+  try{
+    const parsed=JSON.parse(modal?.dataset.caseIds||'[]');
+    const ids=Array.isArray(parsed)?parsed.map(value=>String(value).trim()).filter(Boolean):[];
+    if(ids.length)return [...new Set(ids)];
+  }catch{}
+  return single?[single]:[];
 }
 async function scheduleComposeMail(scheduledAt){
   const modal=$('#gmailComposeModal'), id=modal?.dataset.caseId, button=$('#gmailComposeSchedule');
@@ -10100,10 +10122,18 @@ async function scheduleComposeMail(scheduledAt){
     const [editorPayload,automaticSignatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     const bodyHtml=editorPayload.scheduledBodyHtml,inlineImages=editorPayload.inlineImages,attachments=editorPayload.attachments;
     const signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
-    await sheetApi('scheduleCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken});
-    watchScheduledCaseThread(id,scheduledAt);
-    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出`,false,3400);
-    refreshScheduledMailList(id,'compose');
+    const ids=gmailComposeCaseIds(modal);
+    const data=await sheetApi('scheduleCaseMail',{caseId:ids[0]||id,caseIds:ids,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken});
+    ids.forEach(caseId=>watchScheduledCaseThread(caseId,scheduledAt));
+    // 排程同時會在使用者的 Gmail 信箱建立一份草稿，讓內容可以直接在 Gmail 改，時間到寄出的就是改過的
+    // 版本。草稿建不起來（多半是既有授權沒有 gmail.compose，需要重新連接 Gmail）不影響排程本身，
+    // 所以這裡只是把後端回報的原因一起顯示出來，不當成排程失敗。
+    const draftError=String(data?.draftError||'');
+    setSync(draftError
+      ? `已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出，但${draftError}`
+      : `已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出，並已存入 Gmail 草稿匣，可直接在 Gmail 修改內容`,
+      Boolean(draftError),draftError?6000:4200);
+    refreshScheduledMailList(ids[0]||id,'compose');
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
   }finally{
@@ -13733,7 +13763,7 @@ function startGoogleRedirectLogin(){startGooglePopupLogin()}
 const gmailOauthChannelName='machi-gmail-oauth-v1';
 let gmailOauthChannel=null,gmailConnectPopup=null;
 let gmailConnectionState={connected:false,gmailAddress:''},gmailConnectionChecked=false;
-function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
+function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
 function ensureGmailOauthChannel(){if(gmailOauthChannel||!('BroadcastChannel' in window))return gmailOauthChannel;gmailOauthChannel=new BroadcastChannel(gmailOauthChannelName);gmailOauthChannel.onmessage=event=>applyGmailOauthPopupResult(event.data).catch(error=>setSync(`Gmail 連接失敗：${error.message}`,true));return gmailOauthChannel}
 async function applyGmailOauthPopupResult(result={}){
   if(result.type!=='machi-gmail-oauth-result')return;

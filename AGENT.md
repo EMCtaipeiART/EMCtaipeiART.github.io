@@ -192,7 +192,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-10 16:53 Asia/Taipei（最新）— 批次新增後的寄信流程新增「合併信件」
+### 2026-09-10 17:34 Asia/Taipei（最新）— 排程信件同步進 Gmail 草稿匣，批次與合併信件也能排程
+
+- 修改目的：使用者說「新增案件完成之後跳至信件編輯器中，『信件排程』指定完時間後，希望可以將排程信件加入在 gmail 信箱的草稿裡，方便如果有什麼需要修改的內容可以即時更改，並且指定時間到後自動寄出。另外批次案件與合併信件時無法使用排程信」。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **排程 = 一封真的 Gmail 草稿**：按下「指定排程時間」後，Worker 會用 `drafts.create` 在寄件人自己的 Gmail 信箱建立一份草稿，並把草稿編號存進排程列。時間到時改用 `drafts.send` 寄出——**寄的是草稿當下的內容**，所以使用者在等待期間直接進 Gmail 改的任何東西都會生效。修改排程會同步更新那份草稿（`drafts.update`），取消排程會把草稿刪掉，不留下永遠不會寄出的殘留草稿。
+  2. **批次案件與合併信件都能排程**：`scheduleCaseMail` 比照 `sendCaseMail` 改成接受 `caseIds`（整批案件編號）。寄出後同一條 Gmail 討論串會綁到每一筆案件上；任何一筆案件已經有排程，整批就不再重複建立。前端把原本「合併信件停用排程按鈕」那行拿掉，改成把整批編號放進 `dataset.caseIds` 交給既有的排程流程。
+  3. **合併排程在每一筆案件底下都看得到**：合併信件只有一列排程資料，`listScheduledMail` 改成 `case_id = ? OR case_ids LIKE ?`，讓這封信涵蓋的每一筆案件都查得到它——「全部寄出」也是靠這個查詢判斷「這封已排程、不要再立即寄一次」。
+  4. **Gmail 授權範圍加上 `gmail.compose`**：`drafts.*` 不在 `gmail.send` 的授權範圍內。連接 Gmail 的授權網址已加上這個 scope。
+- 風險區塊：
+  - **既有已連接 Gmail 的帳號必須重新連接一次**，舊的 refresh token 沒有 `gmail.compose`，`drafts.create` 會被 Google 回 403。這種情況**排程本身仍然成立、時間到照樣會寄出**（退回用排程當下存下來的內容直接寄），只是不能在 Gmail 端改內容；前端會顯示「Gmail 授權沒有『建立草稿』權限，請到右上角重新連接 Gmail 帳號後再排程一次」。
+  - 草稿只做在 `kind='send'`（首次寄信）。**排程「回信」刻意不建草稿**：回信的 In-Reply-To／References 標頭必須等真正寄出那一刻才依討論串現況重算（見既有設計說明），先寫死成草稿會接錯討論串。
+  - 使用者如果自己在 Gmail 把草稿刪掉，到期時 `drafts.send` 會回 404 —— 這時退回用排程當下存下來的內容直接寄出，信一定寄得出去，只是使用者在 Gmail 端的修改就跟著草稿一起沒了。
+  - Durable Object 新增 migration 6（`scheduled_mail` 加 `case_ids`、`draft_id` 兩欄）。舊資料的 `case_ids` 是 `'[]'`，讀取端自動退回只用 `case_id`，行為與這次改動前完全相同。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **64/64 全過**（60 既有＋4 新增）。新增測試涵蓋：沒有 `gmail.compose` 時排程照樣成立且退回直接寄出、使用者刪掉草稿後到期仍寄得出去、修改排程會同步草稿而取消排程會刪掉草稿、合併信件一次涵蓋多筆案件（重疊的第二筆排程被擋下、到期時一條討論串綁到每一筆案件）。
+  - `node --test backend/test/*.test.mjs` **78/78 全過**（77 既有＋1 新增）。新增測試把真正的 `renderPostSubmitGmailDraft`／`postSubmitQueueItems`／`postSubmitItemDefaults` 與 `gmailComposeCaseIds` 抽出來對假 DOM 實際執行，驗證合併信件的排程按鈕確實是**可按的**、`dataset.caseIds` 帶著兩筆編號、案件編號還在生產時排程按鈕停用且不留下殘餘編號清單。
+  - 先用 `git stash` 只還原 `worker/src/database-coordinator.ts`，確認 4 支新測試在舊程式碼上真的失敗（8 failed）；`git stash pop` 後 64/64 全過。前端同樣以 `git stash` 只還原 `index.html` 驗證新測試會失敗。
+  - **未做的驗證**：沒有真的對正式 Gmail 帳號建立／寄出一份草稿（這個環境沒有正式站登入與 Gmail 授權），Gmail API 的行為是以官方的 drafts 端點契約為準，用測試 mock 驗證呼叫與退路。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。**`worker/` 需要手動部署才會生效**（`cd worker && npx wrangler deploy`）。部署後**每個要用草稿功能的人都要重新連接一次 Gmail**（右上角 Gmail 連接），否則只會拿到「沒有建立草稿權限」的提示。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-10 16:53 Asia/Taipei — 批次新增後的寄信流程新增「合併信件」
 
 - 修改目的：使用者說同一個專案常因為計分方式不同被拆成 2～3 筆案件，寄信時希望能把指定的幾筆打包成一封寄出，主旨像「【26090079、26090080】…」，內文也要合併、相同的文字不要重複。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`backend/test/backend.test.mjs`。
