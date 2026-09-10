@@ -716,7 +716,9 @@ test('Gmail compose/reply editors support attaching arbitrary non-inline files (
 
   // 六個寄信/排程/更新排程的 action 呼叫都要帶上附件（含批次確認寄信流程刻意固定傳空陣列，跟
   // inlineImages:[] 同一個理由——那個模式完全不支援插入照片或附加檔案）。
-  assert.match(html, /sheetApi\('sendCaseMail',\{caseId:draft\.id,to,cc,subject:subjectText,bodyHtml:prepared\.bodyHtml,signatureHtml:prepared\.signatureHtml,inlineImages:\[\],attachments:\[\],editorToken:currentEditorToken\}\)/);
+  // The batch queue still sends no inline images and no attachments; it now also carries caseIds so a
+  // merged mail can bind its thread to every case it covers.
+  assert.match(html, /sheetApi\('sendCaseMail',\{caseId:ids\[0\],caseIds:ids,to,cc,subject:subjectText,bodyHtml:prepared\.bodyHtml,signatureHtml:prepared\.signatureHtml,inlineImages:\[\],attachments:\[\],editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('sendCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('updateScheduledMail',\{id:state\.id,to,cc,subject,bodyHtml:editorPayload\.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload\.inlineImages,attachments:editorPayload\.attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
   assert.match(html, /sheetApi\('scheduleCaseMail',\{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken\}\)/);
@@ -1967,6 +1969,66 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
 
   // A write action has to be registered for the refresh broadcast, or other tabs keep stale rounds.
   assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
+});
+
+test('batch-created cases can be merged into one mail: ids joined in the subject, shared text printed once, quantities summed, and the thread bound to every case', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // Single and merged mails must share one body template, or the two will drift apart.
+  assert.match(html, /function mailBodyFields\(row\)\{/);
+  assert.match(html, /function mailBodyLines\(fields,\{html=false\}=\{\}\)\{/);
+  assert.match(html, /function mergedMailDraft\(entries\)\{/);
+
+  // One send covers several cases, so the Worker binds the resulting thread to all of them and
+  // refuses the whole batch if any case is missing, unauthorised, or already has a thread.
+  assert.match(worker, /const caseIds = \[\.\.\.new Set\(\(Array\.isArray\(payload\.caseIds\) \? payload\.caseIds : \[payload\.caseId \|\| payload\.id\]\)/);
+  assert.match(worker, /for \(const item of targetRows\) this\.requireRowAccess\(database, session, 'request\.mail', item\.row\);/);
+  assert.match(worker, /for \(const id of caseIds\) \{/);
+
+  // Merging is only offered in the batch post-submit flow, and scheduling is disabled for a merged
+  // mail because the scheduler keys off a single case id.
+  assert.match(html, /id="gmailComposeMergePanel"/);
+  assert.match(html, /function postSubmitQueueItems\(queue\)\{/);
+  assert.match(html, /scheduleBtn\.disabled=!ready\|\|item\.merged/);
+
+  // Execute the real merge logic against the same helpers the page uses.
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const sources = ['mailBodyFields', 'mailBodyLines', 'mergedMailSubject', 'mergedMailDraft'].map(pick);
+  assert.ok(sources.every(Boolean), 'could not locate the mail body helpers');
+  const build = new Function(`
+    const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const supplementLongUrl = (row, key) => row[key] || '';
+    const mailSupplementText = (note, url) => [note, url].filter(Boolean).join(' | ');
+    const mailSupplementHtml = (note, url) => [note, url].filter(Boolean).join(' | ');
+    const mailDimensionSpecs = () => '';
+    const platformText = value => value || '';
+    const slashDate = value => String(value || '').replace(/-/g, '/');
+    const designerRecipient = () => 'machi@emctaipei.com';
+    const designerCcRecipients = () => [];
+    const requiredMailCcRecipients = [];
+    const uniqueMailRecipients = list => [...new Set(list)];
+    ${sources.join('\n')}
+    return { mergedMailDraft };
+  `)();
+
+  const base = { client: 'DJI', project: '九月新品社群貼文', designer: 'Machi', platforms: 'FB', end: '2026-09-20', briefNote: '簡報說明' };
+  const merged = build.mergedMailDraft([
+    { id: '26090079', row: { ...base, qty: '10' } },
+    { id: '26090080', row: { ...base, qty: '5', platforms: 'LINE' } }
+  ]);
+  assert.equal(merged.subject, '【26090079、26090080】DJI_九月新品社群貼文');
+  const lines = merged.bodyText.split('\n');
+  // Quantities are summed into one number rather than listed per case.
+  assert.ok(lines.includes('　　　2. 數量：15'), merged.bodyText);
+  // A field that differs is attributed to its case instead of being duplicated wholesale.
+  assert.ok(lines.includes('　　　5. 使用平台：'));
+  assert.ok(lines.includes('　　　　・26090079：FB'));
+  assert.ok(lines.includes('　　　　・26090080：LINE'));
+  // Shared text appears exactly once -- that is the whole point of merging.
+  assert.equal(lines.filter(line => line === ' ・ 需求描述：九月新品社群貼文').length, 1);
+  assert.equal(lines.filter(line => line === '　　　6. 交件日期：2026/09/20').length, 1);
+  assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
 });
 
 test('designer skill defaults take their 設計種類/階段 options from the live weighting table, hiding 下架 stages and keeping a removed value visible instead of silently switching it', async () => {

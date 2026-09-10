@@ -1450,7 +1450,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 透過 Gmail API 寄出案件信件（限第一次，該案件已經有信件串就拒絕，請改用回信）。 */
   private async sendCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
-    const caseId = text(payload.caseId || payload.id);
+    // 「合併信件」會把批次新增拆出來的好幾筆案件打包成一封寄出，所以這裡接受 caseIds 陣列；
+    // 只有一筆時跟原本完全一樣。寄出後同一條 Gmail 討論串會綁到每一筆案件上，之後不論從哪一筆
+    // 按「回信」，開的都是同一條討論串（本來就是同一件事的往來）。
+    const caseIds = [...new Set((Array.isArray(payload.caseIds) ? payload.caseIds : [payload.caseId || payload.id])
+      .map(text).filter(Boolean))];
+    const caseId = caseIds[0] || '';
     const existingRow = database.tables.database.rows.find(item => text(item['案件編號']) === caseId);
     const current = this.requireRowAccess(database, session, 'request.mail', existingRow);
     const to = text(payload.to);
@@ -1464,7 +1469,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!to || !subject) return { ok: false, action: 'sendCaseMail', error: '缺少收件人或主旨' };
     const row = existingRow;
     if (!row) return { ok: false, action: 'sendCaseMail', error: '找不到案件資料' };
-    if (text(row['Gmail信件串ID'])) return { ok: false, action: 'sendCaseMail', error: '此案件已經有 Gmail 信件串，請改用「回信」', reason: 'THREAD_EXISTS' };
+    // 合併寄出時，每一筆都要各自通過權限檢查、也都必須還沒有信件串——只要有一筆不符合就整批不寄，
+    // 避免寄出去之後只綁到其中幾筆、其餘案件卻按不了「回信」。
+    const targetRows = caseIds.map(id => ({ id, row: database.tables.database.rows.find(item => text(item['案件編號']) === id) }));
+    const missingRow = targetRows.find(item => !item.row);
+    if (missingRow) return { ok: false, action: 'sendCaseMail', error: `找不到案件資料：${missingRow.id}` };
+    for (const item of targetRows) this.requireRowAccess(database, session, 'request.mail', item.row);
+    const boundRow = targetRows.find(item => text(item.row!['Gmail信件串ID']));
+    if (boundRow) return { ok: false, action: 'sendCaseMail', error: `${boundRow.id} 已經有 Gmail 信件串，請改用「回信」`, reason: 'THREAD_EXISTS' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
     const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments });
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -1476,13 +1488,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const threadId = text(sendData.threadId);
     await this.mutate('sendCaseMail', current, draft => {
-      const target = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
-      if (!target) throw new Error('找不到案件資料');
-      target['Gmail信件串ID'] = threadId;
-      target['Gmail寄件帳號'] = current.account;
+      for (const id of caseIds) {
+        const target = draft.tables.database.rows.find(item => text(item['案件編號']) === id);
+        if (!target) throw new Error(`找不到案件資料：${id}`);
+        target['Gmail信件串ID'] = threadId;
+        target['Gmail寄件帳號'] = current.account;
+      }
       return { result: { ok: true, action: 'sendCaseMail' }, changedTables: ['database'] };
     });
-    return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id) };
+    return { ok: true, action: 'sendCaseMail', threadId, gmailMessageId: text(sendData.id), caseIds };
   }
 
   /** 設計師「串接」既有信件串的第一步——搜尋。填寫案件的通常是 PM／專案負責人，不是設計師，PM 常常直接
