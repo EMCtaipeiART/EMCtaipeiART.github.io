@@ -1801,9 +1801,9 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(repeatedRead.readCount, 1);
   assert.deepEqual(systemAnnouncementReadRecords(app.database.table('系統公告欄').rows[0]).map(record => record.account), ['machi.chen@emctaipei.com']);
 
-  const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '9' } } });
+  const weightRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '0.5' } } });
   assert.equal(weightRule.data.row['項目細節'], '社群貼文');
-  assert.equal(weightRule.data.row['權重'], '9');
+  assert.equal(weightRule.data.row['權重'], '0.5');
 
   const fixtures = {
     database: { '案件編號': '26990001', '專案名稱': 'JSON 管理驗收', '設計種類': '平面', '階段': '提案', '數量': '2', '項目細節': '社群貼文' },
@@ -1818,7 +1818,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
     const created = await request(app.baseUrl, `/api/table/${encodeURIComponent(table)}`, { method: 'POST', token: login.token, body: { row } });
     assert.equal(created.response.status, 200, table);
     assert.equal(created.data.ok, true, table);
-    if (table === 'database') assert.equal(created.data.row['加權'], '18');
+    if (table === 'database') assert.equal(created.data.row['加權'], '1');
   }
   const revisedRule = await request(app.baseUrl, `/api/table/${encodeURIComponent('加權計分標準')}/2`, { method: 'PATCH', token: login.token, body: { row: { '權重': '4' } } });
   assert.equal(revisedRule.data.recalculatedRows, 1);
@@ -1964,6 +1964,10 @@ test('database admin writes are optimistic and queued: the inline weight save wo
   assert.match(inlineWeight, /enqueueAdminWrite\(/);
   // A failed write has to put the old score back rather than leaving a value that was never saved.
   assert.match(inlineWeight, /row\['權重'\]=previousWeight;/);
+  // Common fractional/zero scores are first-class choices instead of being hidden behind the vague
+  // "其他" path; the custom field remains available for other decimal values.
+  assert.match(admin, /presets=\['0','0\.5',\.\.\.Array\.from\(\{length:10\}/);
+  assert.match(admin, /data-weight-other inputmode="decimal"/);
 
   // The shared queue keeps writes in order without blocking the UI between them.
   assert.match(admin, /function enqueueAdminWrite\(task\)\{/);
