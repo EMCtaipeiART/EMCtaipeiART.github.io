@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4359,
+  "revision": 4360,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-10T03:09:14.204Z",
+  "updatedAt": "2026-09-10T03:09:26.744Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1310,7 +1310,7 @@
         {"案件編號":"26080110","修改次數":"2","建立日期":"2026/09/09 17:42:33","修改日期":"2026-09-18","修改內容":"將YT畫面中的主持人去除，合成AI角色進畫面","修改人":"Noise","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090073","修改次數":"0","建立日期":"2026/09/09 18:12:34","修改日期":"2026/09/09 18:12:34","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 18:12:34","圖片連結":"[{\"fileName\":\"260909_Epson_科教館教師研習_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KFaW78-Km9Fdsq1jz9ltyaQRxKJ2QjR8=w1600\"},{\"fileName\":\"260909_Epson_科教館教師研習_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oK26L19ubH8nqyST0OMoc-u8biVBQKCT=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 18:12:34"},
         {"案件編號":"26090023","修改次數":"0","建立日期":"2026/09/09 19:54:48","修改日期":"2026/09/09 19:54:48","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/09 19:54:48","圖片連結":"[{\"fileName\":\"260909_Shopee 會員日_CPAS_Liberty 5 Pro Max_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rqlZXUECWnkddwhKR48NSUkm4B5e-QJF=w1600\"},{\"fileName\":\"260909_Shopee 會員日_CPAS_Liberty 5 Pro_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/17QyhD7GCnc-1bZKhzb7jTemroJNJ0rCf=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/09 19:54:48"},
-        {"案件編號":"26090075","修改次數":"0","建立日期":"2026/09/10 11:09:14","修改日期":"2026/09/10 11:09:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/10 11:09:14","圖片連結":"[{\"fileName\":\"260910_添可_九月_CPAS_StationS9Artist_無價格_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1ozEUUKqUa1nhDk55EfXswfWd8vxVA69x=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/10 11:09:14"}
+        {"案件編號":"26090075","修改次數":"0","建立日期":"2026/09/10 11:09:14","修改日期":"2026/09/10 11:09:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/10 11:09:14","圖片連結":"[{\"fileName\":\"260910_添可_九月_CPAS_StationS9Artist_無價格_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1ozEUUKqUa1nhDk55EfXswfWd8vxVA69x=w1600\"},{\"fileName\":\"260910_添可_九月_CPAS_StationS9Artist_無價格_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/10B331pfZeht5oCTzlZoOdOfa4D16mGoc=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/10 11:09:26"}
       ]
     },
     "補充資料連結": {
