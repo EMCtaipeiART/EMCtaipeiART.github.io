@@ -1947,6 +1947,50 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
   assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
 });
 
+test('database admin writes are optimistic and queued: the inline weight save works in Worker mode at all, and no edit waits on a full table reload', async () => {
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+
+  // saveInlineWeight used to resolve the row through directDatabase/directRowIndex, which only exist in
+  // Apps Script mode. Production runs against the Cloudflare Worker, where directDatabase stays null, so
+  // directRowIndex always returned -1 and the "套用" button bailed out with 找不到加權規則 without ever
+  // issuing a request -- the score simply could not be changed.
+  const inlineWeight = admin.match(/async function saveInlineWeight\(row,container\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(inlineWeight, 'could not locate saveInlineWeight');
+  // Compare against the code only -- the comment above the function deliberately names the old bug.
+  const inlineWeightCode = inlineWeight.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+  assert.doesNotMatch(inlineWeightCode, /directRowIndex\(|directDatabase/);
+  assert.match(inlineWeight, /action:'adminTableUpdate'/);
+  // The screen updates first and the request is queued, so the next row can be edited immediately.
+  assert.match(inlineWeight, /enqueueAdminWrite\(/);
+  // A failed write has to put the old score back rather than leaving a value that was never saved.
+  assert.match(inlineWeight, /row\['權重'\]=previousWeight;/);
+
+  // The shared queue keeps writes in order without blocking the UI between them.
+  assert.match(admin, /function enqueueAdminWrite\(task\)\{/);
+  assert.match(admin, /adminWriteTail=queued\.catch\(\(\)=>\{\}\);/);
+
+  // Every write used to be followed by `await loadMetadata()`, which refetches /tables AND reloads the
+  // whole current table -- three round trips per edit. Those blocking chains must be gone.
+  assert.doesNotMatch(admin, /closeEditor\(\);await loadMetadata\(\)/);
+  assert.doesNotMatch(admin, /\{method:'DELETE',body:'\{\}'\}\);await loadMetadata\(\)/);
+
+  // The weight scope actions must not refetch the entire database table before the user can continue;
+  // the case counts they need are refreshed in the background instead.
+  const scopeRunner = admin.match(/async function runWeightScopeAction\(action,payload,successMessage\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(scopeRunner, 'could not locate runWeightScopeAction');
+  assert.doesNotMatch(scopeRunner, /await ensureCaseInfoRows\(\)/);
+  assert.doesNotMatch(scopeRunner, /await loadMetadata\(\)/);
+  assert.match(scopeRunner, /void ensureCaseInfoRows\(\)\.catch/);
+
+  // A visible hint that something is still being written, since saves no longer block the screen.
+  assert.match(admin, /id="writeBusy"/);
+  assert.match(admin, /function updateWriteBusyHint\(\)\{/);
+
+  // Local repaint replaces the refetch, so it needs the last rendered payload.
+  assert.match(admin, /function repaintCurrentTable\(\)\{if\(lastRenderedTableData\)renderTable\(lastRenderedTableData\)\}/);
+  assert.match(admin, /function renderTable\(data\)\{\n      lastRenderedTableData=data;/);
+});
+
 test('weight settings can rename a stage or detail without disturbing any score, hide one without disturbing any score, and only lose points on an actual delete', async t => {
   const app = await fixture();
   t.after(() => app.close());
