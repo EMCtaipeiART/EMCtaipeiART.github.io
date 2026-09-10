@@ -1171,6 +1171,62 @@ describe('Machi Design API Worker', () => {
     expect(await submittedAtFor()).toBe(draftCreatedAt);
   });
 
+  it('creates a missing 初稿 (round 0) on demand and deletes a whole modification round without renumbering the rest', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'draft-file-sha' }, commit: { sha: 'draft-commit-sha' } });
+    });
+
+    // Unchanged default: the first record is 一修, so a case that never went through NAS auto-backup
+    // (which is what normally creates 初稿) could not get a 初稿 at all before this.
+    const firstModification = await api({
+      action: 'addModificationRecord',
+      record: { caseId: '26080001', modifyDate: '2026-09-10', content: '一修內容' }
+    }, token);
+    expect(firstModification).toMatchObject({ ok: true, count: 1 });
+
+    // draft:true creates round 0 and marks it confirmed immediately -- a 初稿 is complete by
+    // definition and must not be counted as an outstanding modification request.
+    const draftRecord = await api({
+      action: 'addModificationRecord',
+      record: { caseId: '26080001', modifyDate: '2026-09-08', content: '初稿完成', draft: true }
+    }, token);
+    expect(draftRecord).toMatchObject({ ok: true, count: 0, changedTables: ['修改統計表', 'database'] });
+    expect((draftRecord.record as Record<string, unknown>)['修改次數']).toBe('0');
+    expect((draftRecord.record as Record<string, unknown>)['確認修正日']).toBeTruthy();
+
+    const duplicate = await api({
+      action: 'addModificationRecord',
+      record: { caseId: '26080001', modifyDate: '2026-09-08', content: '又一個初稿', draft: true }
+    }, token);
+    expect(duplicate).toMatchObject({ ok: false });
+    expect(String(duplicate.error)).toMatch(/已經有初稿/);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const roundsOf = async () => {
+      const database = await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        return JSON.parse(stored.json) as DatabaseSnapshot;
+      });
+      return database.tables['修改統計表'].rows
+        .filter(row => String(row['案件編號']) === '26080001')
+        .map(row => Number(row['修改次數']) || 0)
+        .sort((a, b) => a - b);
+    };
+    expect(await roundsOf()).toEqual([0, 1]);
+
+    const deleted = await api({ action: 'deleteModificationRecord', caseId: '26080001', count: 1 }, token);
+    expect(deleted).toMatchObject({ ok: true, count: 1, changedTables: ['修改統計表', 'database'] });
+    // Round 0 keeps its own number: renumbering would rewrite the other records' identities and
+    // desync the NAS watcher's per-file assignedRound bookkeeping.
+    expect(await roundsOf()).toEqual([0]);
+
+    const missing = await api({ action: 'deleteModificationRecord', caseId: '26080001', count: 9 }, token);
+    expect(missing).toMatchObject({ ok: false });
+    expect(String(missing.error)).toMatch(/找不到指定的修改紀錄/);
+  });
+
   it('recalculates the database row 修改次數 whenever a modification round is added, but only reduces it on an explicit admin delete', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

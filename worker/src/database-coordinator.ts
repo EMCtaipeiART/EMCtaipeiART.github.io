@@ -2437,13 +2437,49 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const modifier = text(session?.user || record.modifier || record.owner || record['修改人'] || record['專案負責人']);
       const targetImages = unique((Array.isArray(record.targetImages) ? record.targetImages : []).map(text).filter(Boolean));
       if (!caseId || !modifyDate || !content || !modifier) throw new Error('案件編號、修改日期、修改內容與修改人皆為必填');
+      // draft:true＝建立「初稿」（第 0 輪）而不是下一輪修改。初稿平常是 NAS 自動備份第一批設計圖時
+      // 順便建立的（見 addCaseDesignImages），但沒有走 NAS 的案件（例如設計師直接用電腦檔案上傳、或
+      // 圖片還沒進來就想先補紀錄）原本永遠補不回來——既有流程一律是「目前最大輪次＋1」，第一次新增
+      // 就會直接變成一修，案件因此永遠缺一筆初稿。這個旗標必須由呼叫端明確帶 true，不會被既有呼叫端誤觸。
+      const wantsDraft = record.draft === true || payload.draft === true;
       return this.mutate(action, session, draft => {
         const rows = draft.tables['修改統計表'].rows;
+        if (wantsDraft) {
+          if (rows.some(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === 0)) throw new Error('這個案件已經有初稿紀錄');
+          // 第 0 輪本身就代表「已完成」，不是一筆待處理的修改需求，跟 addCaseDesignImages 自動建立
+          // 初稿時同一個做法：直接寫入確認修正日，避免被既有「待確認修改」的通知邏輯誤判。
+          const draftRow = { '案件編號': caseId, '修改次數': '0', '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': nowTaipei(), '待修改圖片': '' };
+          rows.push(draftRow);
+          recalculateDatabaseModificationCounts(draft);
+          return { result: { ok: true, action, rowNumber: rows.length + 1, record: draftRow, count: 0 }, changedTables: ['修改統計表', 'database'] };
+        }
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);
         return { result: { ok: true, action, rowNumber: rows.length + 1, record: row, count }, changedTables: ['修改統計表', 'database'] };
+      });
+    }
+    if (action === 'deleteModificationRecord') {
+      // 刪掉整筆修改紀錄（含這一輪的圖片關聯）。權限沿用 media.manage——設計師在預設與正式站的角色
+      // 範本裡都有這個權限，而且這已經是隔壁「從紀錄移除單張設計圖」(removeCaseDesignImage) 用的同一個
+      // 權限，兩個破壞性操作用同一個門檻比較一致，也不需要為了新權限去改角色範本資料。
+      const current = this.requireAccess(database, session, 'media.manage');
+      const record = asRow(payload.record || payload);
+      const caseId = text(record.caseId || record.id || record['案件編號']);
+      const count = Math.trunc(Number(record.count ?? record.round ?? record['修改次數']));
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Number.isFinite(count) || count < 0) throw new Error('缺少要刪除的修改輪次');
+      return this.mutate(action, current, draft => {
+        const rows = draft.tables['修改統計表'].rows;
+        const index = rows.findIndex(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === count);
+        if (index < 0) throw new Error('找不到指定的修改紀錄');
+        const [removed] = rows.splice(index, 1);
+        // 刻意不把後面的輪次往前重編號：重編號會改寫其他紀錄的身分（一修變初稿…），也會跟 NAS 監控
+        // 程式記在本機的 assignedRound 對不上、造成同一批圖片被重新歸類或重傳。中間被刪掉時就讓輪次
+        // 留空號，維持每一筆紀錄自己的編號不變。
+        recalculateDatabaseModificationCounts(draft);
+        return { result: { ok: true, action, caseId, count, record: removed }, changedTables: ['修改統計表', 'database'] };
       });
     }
     if (action === 'updateModificationConfirm') {

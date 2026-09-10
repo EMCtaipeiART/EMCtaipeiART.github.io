@@ -20,7 +20,7 @@ const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvw
 const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
   'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment', 'markReelViewed',
-  'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
+  'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'deleteModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
   'adminAccountSave', 'adminAccountBulkImport', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead'
@@ -1084,12 +1084,37 @@ export function createActionHandler(database, options = {}) {
       const session = sessionFor(snapshot, payload.editorToken || record.editorToken), modifier = text(session?.user || record.modifier || record.owner || record['修改人'] || record['專案負責人']);
       if (session) requireCapability(snapshot, payload, 'modification.create');
       if (!caseId || !modifyDate || !content || !modifier) throw new Error('案件編號、修改日期、修改內容與修改人皆為必填');
+      // 跟 Worker 端 database-coordinator.ts 的 addModificationRecord 同一套邏輯：draft:true 代表建立
+      // 「初稿」（第 0 輪），必須由呼叫端明確指定，其餘情況維持既有的「目前最大輪次＋1」。
+      const wantsDraft = record.draft === true || payload.draft === true;
       return database.transaction(draft => {
         const rows = draft.tables['修改統計表'].rows;
+        if (wantsDraft) {
+          if (rows.some(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === 0)) throw new Error('這個案件已經有初稿紀錄');
+          const draftRow = { '案件編號': caseId, '修改次數': '0', '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': nowTaipei(), '待修改圖片': '' };
+          rows.push(draftRow);
+          return { ok: true, action, rowNumber: rows.length + 1, record: draftRow, count: 0 };
+        }
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '' };
         rows.push(row); return { ok: true, action, rowNumber: rows.length + 1, record: row, count };
       }, 'add modification');
+    }
+    if (action === 'deleteModificationRecord') {
+      // 跟 Worker 端同一套邏輯與同一個權限門檻（media.manage）：刪掉整筆修改紀錄，不重編號其他輪次。
+      requireCapability(snapshot, payload, 'media.manage');
+      const record = payload.record || payload;
+      const caseId = text(record.caseId || record.id || record['案件編號']);
+      const count = Math.trunc(Number(record.count ?? record.round ?? record['修改次數']));
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Number.isFinite(count) || count < 0) throw new Error('缺少要刪除的修改輪次');
+      return database.transaction(draft => {
+        const rows = draft.tables['修改統計表'].rows;
+        const index = rows.findIndex(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === count);
+        if (index < 0) throw new Error('找不到指定的修改紀錄');
+        const [removed] = rows.splice(index, 1);
+        return { ok: true, action, caseId, count, record: removed };
+      }, 'delete modification');
     }
     if (action === 'updateModificationConfirm') {
       requireCapability(snapshot, payload, 'modification.confirm');

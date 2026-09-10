@@ -1911,6 +1911,108 @@ test('admin account save atomically creates personal settings and access', async
   assert.equal(app.database.table('帳號權限').rows.some(row => row['帳號'] === 'broken.account@emctaipei.com'), false);
 });
 
+test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, offers a per-round delete, and its header buttons can actually be hidden', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // Both header buttons carry the .revision-modal-add class, whose display:inline-flex!important beat
+  // the browser's [hidden]{display:none} -- so `add.hidden = ...` silently did nothing and the button
+  // stayed on screen. That affected the pre-existing 新增 button too, not just the new one.
+  assert.match(html, /\.revision-modal-add\[hidden\]\{display:none!important\}/);
+  assert.match(html, /id="revisionModalAddDraft"[^>]*hidden/);
+  assert.match(html, /\$\('#revisionModalAddDraft'\)\?\.addEventListener\('click',event=>\{const id=\$\('#revisionModal'\)\?\.dataset\.caseId; if\(id\)openModificationEditor\(event,id,\{draft:true\}\)\}\);/);
+
+  // 新增初稿 is only offered when the case has no round-0 record yet; deleting a round is gated on
+  // media.manage, the same capability that already guards removing individual design images.
+  assert.match(html, /if\(addDraft\)addDraft\.hidden=!canCaseEditRow\(row\)\|\|records\.some\(record=>\(Number\(record\.count\)\|\|0\)===0\);/);
+  assert.match(html, /const deleteButton=accessAllowed\('media\.manage',hasDesignerAccountRole\(\)\)\?/);
+  assert.match(html, /onclick="deleteModificationRecord\(event,'\$\{jsArg\(row\.id\)\}',\$\{Number\(record\.count\)\|\|0\}\)"/);
+
+  // The draft form must not ask for 待修改圖片 (there is no previous round to pick from) and must send
+  // draft:true, otherwise the backend would just create the next modification round instead.
+  const draftBranch = html.match(/if\(draft\)\{[\s\S]*?\n    return;\n  \}/)?.[0];
+  assert.ok(draftBranch, 'could not locate the draft branch of openModificationEditor');
+  assert.match(draftBranch, /新增初稿/);
+  assert.doesNotMatch(draftBranch, /targetImages/);
+  assert.match(html, /await sheetApi\('addModificationRecord',\{record,draft:true,editorToken:currentEditorToken,_requireResponse:true\}\);/);
+
+  // Deleting a round is destructive and irreversible, so it must confirm first and say what happens.
+  const deleteFn = html.match(/async function deleteModificationRecord\(event,id,count\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(deleteFn, 'could not locate deleteModificationRecord');
+  assert.match(deleteFn, /requireAccess\('media\.manage'/);
+  assert.match(deleteFn, /if\(!confirm\(/);
+  assert.match(deleteFn, /其他輪次的編號不會跟著往前遞補/);
+  assert.match(deleteFn, /sheetApi\('deleteModificationRecord'/);
+
+  // A write action has to be registered for the refresh broadcast, or other tabs keep stale rounds.
+  assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
+});
+
+test('designers can add a missing 初稿 (round 0) record and delete a whole modification round from the 修改紀錄 modal', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  const created = await api(app.baseUrl, 'create', {
+    row: { client: '測試客戶', project: '初稿測試', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 1 },
+    editorToken: login.token
+  });
+  const caseId = created.row.id;
+
+  // Without an explicit draft flag the existing behaviour is unchanged: the first record is 一修,
+  // never 初稿 -- which is exactly why a case that never went through NAS auto-backup could not get one.
+  const firstModification = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/10', content: '一修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  assert.equal(firstModification.count, 1);
+
+  // draft:true creates round 0 instead, and marks it confirmed straight away (a 初稿 is complete by
+  // definition, so it must not show up as an outstanding modification request).
+  const draftRecord = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/08', content: '初稿完成', modifier: 'Machi', draft: true }, editorToken: login.token
+  });
+  assert.equal(draftRecord.count, 0);
+  assert.equal(draftRecord.record['修改次數'], '0');
+  assert.ok(draftRecord.record['確認修正日']);
+
+  // Only one 初稿 per case.
+  const duplicate = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'addModificationRecord',
+    record: { caseId, modifyDate: '2026/09/08', content: '又一個初稿', modifier: 'Machi', draft: true },
+    editorToken: login.token
+  } });
+  assert.equal(duplicate.response.status, 400);
+  assert.match(duplicate.data.error, /已經有初稿/);
+
+  // Adding a normal modification after the draft still continues from the highest round.
+  const secondModification = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/10', content: '二修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  assert.equal(secondModification.count, 2);
+
+  const roundsOf = () => app.database.table('修改統計表').rows
+    .filter(row => String(row['案件編號']) === String(caseId))
+    .map(row => Number(row['修改次數']) || 0).sort((a, b) => a - b);
+  assert.deepEqual(roundsOf(), [0, 1, 2]);
+
+  // Deleting a whole round removes exactly that record...
+  const deleted = await api(app.baseUrl, 'deleteModificationRecord', { caseId, count: 1, editorToken: login.token });
+  assert.equal(deleted.ok, true);
+  assert.equal(deleted.count, 1);
+  // ...and deliberately does NOT renumber the remaining rounds: renumbering would rewrite other
+  // records' identities and desync the NAS watcher's per-file assignedRound state.
+  assert.deepEqual(roundsOf(), [0, 2]);
+
+  // Deleting something that is not there is an error rather than a silent no-op.
+  const missing = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'deleteModificationRecord', caseId, count: 7, editorToken: login.token
+  } });
+  assert.equal(missing.response.status, 400);
+  assert.match(missing.data.error, /找不到指定的修改紀錄/);
+
+  // The 初稿 itself can be deleted too (it is just round 0).
+  await api(app.baseUrl, 'deleteModificationRecord', { caseId, count: 0, editorToken: login.token });
+  assert.deepEqual(roundsOf(), [2]);
+});
+
 test('admin account bulk import creates accounts from a parsed roster and skips bad or duplicate rows', async t => {
   const app = await fixture();
   t.after(() => app.close());
