@@ -1209,6 +1209,8 @@ test('designer roster uses JSON group and rotation for priority new-project butt
   assert.match(html, /profile\.skillTargets\?\.\[skill\]/);
   assert.match(html, /stage=stages\.includes\(configuredStage\)\?configuredStage:preferredDesignStage\(type,stages\)/);
   assert.match(html, /stage=String\(item\?\.stage\|\|item\?\.\['階段'\]\|\|''\)\.trim\(\)\|\|defaultDesignStage\(type\)/);
+  assert.match(html, /\.pill-stage-再製\{background:#f1e8ff!important;color:#6b21a8!important;border-color:#d8b4fe!important\}/);
+  assert.match(html, /html\[data-theme="dark"\] \.pill-stage-再製\{[\s\S]*?background:#3b2156!important;[\s\S]*?color:#e9d5ff!important;[\s\S]*?border-color:#7e4fa8!important/);
   assert.match(html, /button\.disabled=!allowed\|\|missingDesigner/);
   assert.doesNotMatch(html, /button\.disabled=button\.disabled\|\|!allowed/);
 });

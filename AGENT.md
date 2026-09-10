@@ -192,7 +192,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-10 15:59 Asia/Taipei（最新）— 前台與儀表板同步「後製」改名為「新製」，歷史加權維持原值
+### 2026-09-10 16:08 Asia/Taipei（最新）— 案件列表「再製／新製」階段膠囊改為明顯不同配色
+
+- 修改目的：使用者回報前台 `index.html` 案件列表的「再製」與「新製」階段膠囊顏色太相近，需要更容易辨識。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：「新製」維持既有綠色；「再製」新增獨立紫色配色，並分別提供淺色與深色模式的背景、文字與邊框色。
+- 風險區塊：純 CSS 視覺調整，不變更階段名稱、案件資料、篩選、表單選項或加權分數。
+- 已檢查／驗證方式：前端內嵌 JavaScript 語法、Node 完整回歸測試、淺色與深色模式瀏覽器 computed style／視覺檢查。
+- 部署狀態：純前端、測試與文件調整，git push 後由 GitHub Pages 自動生效，不需部署 Worker 或 Apps Script。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-10 15:59 Asia/Taipei — 前台與儀表板同步「後製」改名為「新製」，歷史加權維持原值
 
 - 修改目的：使用者回報資料庫後台已把平面階段「後製」改為「新製」，但前台仍顯示舊名稱；同時要求更名不能改動先前案件的加權分數。
 - 影響檔案：`index.html`、`design_dashboard.html`、`backend/test/backend.test.mjs`。
