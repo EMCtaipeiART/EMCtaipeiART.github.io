@@ -1969,6 +1969,61 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
   assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
 });
 
+test('designer skill defaults take their 設計種類/階段 options from the live weighting table, hiding 下架 stages and keeping a removed value visible instead of silently switching it', async () => {
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+
+  // The two dropdowns used to read hardcoded lists that drifted out of sync with 加權設定: a newly added
+  // stage never appeared, and stages that had been renamed, 下架 or deleted were still offered.
+  const skillRow = admin.match(/function designerSkillRowHtml\(mapping=\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(skillRow, 'could not locate designerSkillRowHtml');
+  assert.doesNotMatch(skillRow, /DESIGN_STAGE_OPTIONS|DATABASE_TYPE_OPTIONS/);
+  assert.match(skillRow, /designerSkillOptionSource\(\)/);
+  assert.match(skillRow, /designerSkillStageOptions\(type\)/);
+
+  // Options come from 加權計分標準, and 下架 rules are excluded (they stay valid for scoring, they just
+  // must not be offered as a new choice).
+  const source = admin.match(/function designerSkillOptionSource\(\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(source, 'could not locate designerSkillOptionSource');
+  assert.match(source, /if\(String\(row\['狀態'\]\|\|''\)\.trim\(\)==='下架'\)continue;/);
+  assert.match(source, /weightRuleRowsCache/);
+  assert.match(admin, /async function ensureWeightRuleRows\(\)\{/);
+  assert.match(admin, /if\(requestedTable==='設計列表'\)await ensureWeightRuleRows\(\);/);
+
+  // A saved value that no longer exists must stay selected and be labelled, otherwise opening the card
+  // and pressing save would quietly move that designer onto a different stage.
+  const optionTags = admin.match(/function designerSkillOptionTags\(values,current\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(optionTags, 'could not locate designerSkillOptionTags');
+  assert.match(optionTags, /（已移除）/);
+  assert.match(optionTags, /item===value\?'selected':''/);
+
+  // Each design type has its own stage list, so changing the type must repopulate the stage select.
+  assert.match(admin, /const skillType=event\.target\.closest\('\[data-designer-skill-type\]'\);/);
+  assert.match(admin, /stageSelect\.innerHTML=designerSkillOptionTags\(options,keep\);/);
+
+  // Execute the real option builder against a weighting table shaped like production.
+  const sourceFn = new Function('weightRuleRowsCache', 'DATABASE_TYPE_OPTIONS', 'DESIGN_STAGE_OPTIONS', `
+    ${source}
+    ${admin.match(/function designerSkillStageOptions\(type\)\{[\s\S]*?\n    \}/)[0]}
+    return { designerSkillOptionSource, designerSkillStageOptions };
+  `);
+  const rules = [
+    { '設計種類': '平面', '階段': '提案', '項目細節': '社群貼文', '狀態': '' },
+    { '設計種類': '平面', '階段': '新製', '項目細節': '廣告素材', '狀態': '' },
+    { '設計種類': '平面', '階段': '新製', '項目細節': '修圖', '狀態': '下架' },
+    { '設計種類': '平面', '階段': '拍攝', '項目細節': '監製', '狀態': '下架' },
+    { '設計種類': '影音', '階段': '後製', '項目細節': '影音剪輯', '狀態': '' }
+  ];
+  const built = sourceFn(rules, ['平面', '影音', '採購'], ['提案', '前製', '拍攝', '後製']);
+  assert.deepEqual(built.designerSkillOptionSource().types, ['平面', '影音']); // 採購 has no rules left
+  assert.deepEqual(built.designerSkillStageOptions('平面'), ['提案', '新製']); // 拍攝 fully 下架 -> gone
+  assert.deepEqual(built.designerSkillStageOptions('影音'), ['後製']);
+
+  // With no rules loaded yet the old constants are the fallback, so the dropdowns are never empty.
+  const empty = sourceFn([], ['平面', '影音'], ['提案', '後製']);
+  assert.deepEqual(empty.designerSkillOptionSource().types, ['平面', '影音']);
+  assert.deepEqual(empty.designerSkillStageOptions('平面'), ['提案', '後製']);
+});
+
 test('database admin writes are optimistic and queued: the inline weight save works in Worker mode at all, and no edit waits on a full table reload', async () => {
   const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
 
