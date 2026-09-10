@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4384,
+  "revision": 4385,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-10T03:57:18.863Z",
+  "updatedAt": "2026-09-10T03:57:35.539Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1317,7 +1317,7 @@
         {"案件編號":"26090030","修改次數":"1","建立日期":"2026/09/10 11:24:25","修改日期":"2026-09-10","修改內容":"本次圖片一次過！在請協助reSize，已填單號【26090083】\n在請協助於週五下班前提供，感恩","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090070","修改次數":"2","建立日期":"2026/09/10 11:38:26","修改日期":"2026-09-10","修改內容":"感謝大神支援，因 Romo 掃地機 momo 超品日優惠資訊有變動，要再麻煩您調整文字了！\n\n\nhttps://docs.google.com/presentation/d/1eEOYjXBnSAgysJy43UY8vjMa1ZKm5JZB1adADHK1miM/edit?slide=id.g409c31002ce_1_68#slide=id.g409c31002ce_1_68","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090046","修改次數":"0","建立日期":"2026/09/10 11:56:13","修改日期":"2026/09/10 11:56:13","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/10 11:56:13","圖片連結":"[{\"fileName\":\"260910_Epson_社群貼文_2025永續報告書.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1DWB2PBnPqi--SOlChkAT4ldDA0SD6eY9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/10 11:56:13"},
-        {"案件編號":"26090082","修改次數":"0","建立日期":"2026/09/10 11:57:18","修改日期":"2026/09/10 11:57:18","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/10 11:57:18","圖片連結":"[{\"fileName\":\"260827_金士頓_Swipe to add color_EN-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UVLbbzDAqm20_2y8E62LxFDNOn9Tu0zr=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_EN-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sjdfcLlmZhu431szcyDxVaLLTL2hBGLM=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/10 11:57:18"}
+        {"案件編號":"26090082","修改次數":"0","建立日期":"2026/09/10 11:57:18","修改日期":"2026/09/10 11:57:18","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/10 11:57:18","圖片連結":"[{\"fileName\":\"260827_金士頓_Swipe to add color_EN-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1UVLbbzDAqm20_2y8E62LxFDNOn9Tu0zr=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_EN-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sjdfcLlmZhu431szcyDxVaLLTL2hBGLM=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_JP-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1K86p11FjJj_zEfDDXe0_NhcGiGhbEUN1=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_JP-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1_FadCnJA-ONjAi4e3O5r0zIkE8vq-Jog=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_JP-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1JcEwEiAW20I7NwL5TAb6gMuHQTXm5dUR=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color_JP-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1wUTNO3gkK8ipjBdzlk80hM9gaU5ZkBVN=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/10 11:57:35"}
       ]
     },
     "補充資料連結": {
