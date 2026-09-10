@@ -44,6 +44,27 @@ function asRows(value: unknown): Row[] {
   return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item)) as Row[] : [];
 }
 
+/**
+ * 刪除案件時，一併清掉「只屬於這個案件」的附屬資料列。
+ *
+ * 案件編號是每個月從現有 database 資料列的最大號碼＋1 算出來的（見 nextCaseId），所以刪掉當月
+ * 最新的案件之後，下一筆新案件會拿到**完全相同的案件編號**。附屬資料如果留著，新案件一開就會
+ * 直接繼承舊案件的修改紀錄與設計圖，補充資料連結也會被 syncSupplementLinks() 回填成舊案件的網址
+ * ——這正是使用者回報的「刪掉案件後修改內容還在，下次新增專案讀取錯亂」。
+ */
+function removeCaseDependentRows(draft: DatabaseSnapshot, caseId: string): { modificationRows: number; supplementRows: number } {
+  const modifications = draft.tables['修改統計表'];
+  const beforeModifications = modifications.rows.length;
+  modifications.rows = modifications.rows.filter(row => text(row['案件編號']) !== caseId);
+  const supplements = draft.tables['補充資料連結'];
+  const beforeSupplements = supplements.rows.length;
+  supplements.rows = supplements.rows.filter(row => text(row['案件編號']) !== caseId);
+  return {
+    modificationRows: beforeModifications - modifications.rows.length,
+    supplementRows: beforeSupplements - supplements.rows.length
+  };
+}
+
 function normalizedTableRow(headers: string[], value: unknown): Row {
   const source = asRow(value);
   return Object.fromEntries(headers.map(header => [header, text(source[header])])) as Row;
@@ -2607,7 +2628,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
         if (index < 0) throw new Error('找不到案件');
         const [row] = draft.tables.database.rows.splice(index, 1);
-        return { result: { ok: true, action, id, row: toApiRow(row) }, changedTables: ['database'] };
+        const removed = removeCaseDependentRows(draft, id);
+        return {
+          result: { ok: true, action, id, row: toApiRow(row), removedModificationRows: removed.modificationRows, removedSupplementRows: removed.supplementRows },
+          changedTables: ['database', ...(removed.modificationRows ? ['修改統計表'] : []), ...(removed.supplementRows ? ['補充資料連結'] : [])]
+        };
       });
     }
     if (action === 'adminAccountSave') return this.adminAccountSave(payload, database, session);
@@ -3086,8 +3111,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const [deleted] = target.rows.splice(index, 1);
         if (tableName === '加權計分標準') recalculateDatabaseWeights(draft);
         if (tableName === '修改統計表') recalculateDatabaseModificationCounts(draft);
+        // 後台直接刪掉 database 的案件列時，附屬資料也要一起清掉，理由跟前台刪除案件完全相同
+        // （見 removeCaseDependentRows 的說明），否則同樣會留下孤兒資料等著被下一個同編號的新案件撿走。
+        const removedForCase = tableName === 'database'
+          ? removeCaseDependentRows(draft, text(deleted['案件編號']))
+          : { modificationRows: 0, supplementRows: 0 };
         const syncsDatabase = tableName === '加權計分標準' || tableName === '修改統計表';
-        return { result: { ok: true, action, table: tableName, rowNumber: index + 2, deleted: { _rowNumber: index + 2, ...deleted } }, changedTables: syncsDatabase ? [tableName, 'database'] : [tableName] };
+        const changedTables = syncsDatabase
+          ? [tableName, 'database']
+          : [tableName, ...(removedForCase.modificationRows ? ['修改統計表'] : []), ...(removedForCase.supplementRows ? ['補充資料連結'] : [])];
+        return { result: { ok: true, action, table: tableName, rowNumber: index + 2, deleted: { _rowNumber: index + 2, ...deleted }, removedModificationRows: removedForCase.modificationRows, removedSupplementRows: removedForCase.supplementRows }, changedTables };
       }
       const normalized = Object.fromEntries(target.headers.map(header => [header, text(incoming[header])])) as Row;
       if (primaryKey && !text(normalized[primaryKey])) throw new Error(`「${primaryKey}」不得空白`);

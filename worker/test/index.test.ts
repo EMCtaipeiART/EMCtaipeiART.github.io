@@ -1171,6 +1171,41 @@ describe('Machi Design API Worker', () => {
     expect(await submittedAtFor()).toBe(draftCreatedAt);
   });
 
+  it('deleting a case clears its modification records and supplement links so a reused case id starts clean', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'cascade-file-sha' }, commit: { sha: 'cascade-commit-sha' } });
+    });
+
+    await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-10', content: '一修內容' } }, token);
+    await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-10', content: '二修內容' } }, token);
+    await api({ action: 'update', id: '26080001', row: { briefUrl: 'https://example.com/brief-old' }, writeHeaders: ['設計簡報連結'] }, token);
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const snapshot = async () => runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    const countFor = (database: DatabaseSnapshot, table: string) =>
+      database.tables[table].rows.filter(row => String(row['案件編號']) === '26080001').length;
+
+    const before = await snapshot();
+    expect(countFor(before, '修改統計表')).toBe(2);
+    expect(countFor(before, '補充資料連結')).toBe(1);
+
+    const deleted = await api({ action: 'delete', id: '26080001' }, token);
+    expect(deleted).toMatchObject({ ok: true, id: '26080001', removedModificationRows: 2, removedSupplementRows: 1 });
+    expect(deleted.changedTables).toEqual(['database', '修改統計表', '補充資料連結']);
+
+    // Case ids are "highest number this month + 1", so the next case reuses the deleted id -- leaving
+    // these rows behind is what made a brand new case open with the previous case's rounds and images.
+    const after = await snapshot();
+    expect(countFor(after, '修改統計表')).toBe(0);
+    expect(countFor(after, '補充資料連結')).toBe(0);
+    expect(after.tables.database.rows.some(row => String(row['案件編號']) === '26080001')).toBe(false);
+  });
+
   it('creates a missing 初稿 (round 0) on demand and deletes a whole modification round without renumbering the rest', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

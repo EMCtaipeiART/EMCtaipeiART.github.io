@@ -1947,6 +1947,70 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
   assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
 });
 
+test('deleting a case also removes its modification records and supplement links, so the next case that reuses the id does not inherit them', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  const created = await api(app.baseUrl, 'create', {
+    row: { client: '測試客戶', project: '刪除連動測試', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 1 },
+    editorToken: login.token
+  });
+  const caseId = created.row.id;
+
+  await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/10', content: '一修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/10', content: '二修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  await api(app.baseUrl, 'update', {
+    id: caseId, row: { briefUrl: 'https://example.com/brief-old' }, writeHeaders: ['設計簡報連結'], editorToken: login.token
+  });
+
+  const rowsFor = table => app.database.table(table).rows.filter(row => String(row['案件編號']) === String(caseId));
+  assert.equal(rowsFor('修改統計表').length, 2);
+  assert.equal(rowsFor('補充資料連結').length, 1);
+
+  const deleted = await api(app.baseUrl, 'delete', { id: caseId, editorToken: login.token });
+  assert.equal(deleted.ok, true);
+  assert.equal(deleted.removedModificationRows, 2);
+  assert.equal(deleted.removedSupplementRows, 1);
+  assert.equal(rowsFor('修改統計表').length, 0);
+  assert.equal(rowsFor('補充資料連結').length, 0);
+
+  // 案件編號是「當月現有資料列最大號碼 + 1」，所以刪掉當月最新案件之後，下一筆新案件會拿到
+  // 完全相同的編號 -- 這正是舊行為底下孤兒資料會被新案件直接繼承的原因。
+  const recreated = await api(app.baseUrl, 'create', {
+    row: { client: '另一個客戶', project: '重用編號的新案件', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 1 },
+    editorToken: login.token
+  });
+  assert.equal(recreated.row.id, caseId, 'the next case is expected to reuse the deleted id');
+  const inherited = await api(app.baseUrl, 'listModificationRecords', { ids: [recreated.row.id] });
+  assert.equal(inherited.rows.length, 0);
+
+  // Deleting a case that has no dependent rows still works and reports zero.
+  const second = await api(app.baseUrl, 'create', {
+    row: { client: 'C', project: '沒有附屬資料', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 1 },
+    editorToken: login.token
+  });
+  const plain = await api(app.baseUrl, 'delete', { id: second.row.id, editorToken: login.token });
+  assert.equal(plain.ok, true);
+  assert.equal(plain.removedModificationRows, 0);
+  assert.equal(plain.removedSupplementRows, 0);
+});
+
+test('the front end warns that deleting a case takes its modification records with it, and drops the local caches for that id', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const deleteFn = html.match(/function deleteRow\(id\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(deleteFn, 'could not locate deleteRow');
+  // Deleting now destroys the modification history too, so the confirm has to say so.
+  assert.match(deleteFn, /這個案件的 \$\{recordCount\} 筆修改紀錄/);
+  assert.match(deleteFn, /此動作無法復原/);
+  // Without clearing these, a re-created case reusing the same id would show the old rounds from cache
+  // until the next full refresh.
+  assert.match(deleteFn, /modificationRecords\.delete\(String\(id\)\); modificationCounts\.delete\(String\(id\)\);/);
+});
+
 test('designers can add a missing 初稿 (round 0) record and delete a whole modification round from the 修改紀錄 modal', async t => {
   const app = await fixture();
   t.after(() => app.close());

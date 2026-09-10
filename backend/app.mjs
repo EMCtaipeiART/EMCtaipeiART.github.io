@@ -417,6 +417,24 @@ function updateSettingsRow(row, settings = {}) {
   }
 }
 
+/**
+ * 跟 Worker 端 database-coordinator.ts 的 removeCaseDependentRows 同一套邏輯：刪除案件時一併清掉
+ * 只屬於這個案件的附屬資料列。案件編號是每個月從現有資料列最大號碼＋1 算出來的，刪掉當月最新案件後
+ * 下一筆新案件會拿到相同編號，附屬資料留著就會被新案件直接繼承（修改紀錄、設計圖、補充資料連結）。
+ */
+function removeCaseDependentRows(draft, caseId) {
+  const modifications = draft.tables['修改統計表'];
+  const beforeModifications = modifications.rows.length;
+  modifications.rows = modifications.rows.filter(row => text(row['案件編號']) !== caseId);
+  const supplements = draft.tables['補充資料連結'];
+  const beforeSupplements = supplements.rows.length;
+  supplements.rows = supplements.rows.filter(row => text(row['案件編號']) !== caseId);
+  return {
+    modificationRows: beforeModifications - modifications.rows.length,
+    supplementRows: beforeSupplements - supplements.rows.length
+  };
+}
+
 function normalizedTableRow(headers, value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return Object.fromEntries(headers.map(header => [header, text(source[header])]));
@@ -1236,7 +1254,9 @@ export function createActionHandler(database, options = {}) {
       const id = text(payload.id || payload.caseId);
       return database.transaction(draft => {
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id); if (index < 0) throw new Error('找不到案件');
-        const [row] = draft.tables.database.rows.splice(index, 1); return { ok: true, action, id, row: toApiRow(row) };
+        const [row] = draft.tables.database.rows.splice(index, 1);
+        const removed = removeCaseDependentRows(draft, id);
+        return { ok: true, action, id, row: toApiRow(row), removedModificationRows: removed.modificationRows, removedSupplementRows: removed.supplementRows };
       }, 'delete request');
     }
     if (action === 'detailOptions' || action === 'options') return { ok: true, action, types: [], stages: [], details: {} };
