@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-09-03 16:54 Asia/Taipei | build: 20260903-design-image-preview-layer-133 -->
+<!-- LAST_MODIFIED: 2026-09-10 16:05 Asia/Taipei | build: 20260910-weight-stage-sync-134 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8" />
   <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="app-version" content="20260903-design-image-preview-layer-133" />
+  <meta name="app-version" content="20260910-weight-stage-sync-134" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -703,7 +703,7 @@
     .pill-stage-提案{background:#eef7ff!important;color:#27617f!important;border-color:#d5eafa!important}
     .pill-stage-前製{background:#f4f0ff!important;color:#694aa5!important;border-color:#e4dafb!important}
     .pill-stage-拍攝{background:#fff0f5!important;color:#a74469!important;border-color:#f8d6e3!important}
-    .pill-stage-後製{background:#eef8f3!important;color:#21724d!important;border-color:#d5eadf!important}
+    .pill-stage-後製,.pill-stage-新製{background:#eef8f3!important;color:#21724d!important;border-color:#d5eadf!important}
     .pill-stage-印刷{background:#fff7e6!important;color:#8b6508!important;border-color:#f2dfb4!important}
     .pill-stage-結案{background:#f1f5f4!important;color:#596963!important;border-color:#dde7e3!important}
     .field-popover .status-option{border-radius:999px!important;justify-content:center!important;gap:8px!important;font-weight:900!important}
@@ -4361,7 +4361,8 @@
       color:#ffb6cf!important;
       border-color:#77475e!important;
     }
-    html[data-theme="dark"] .pill-stage-後製{
+    html[data-theme="dark"] .pill-stage-後製,
+    html[data-theme="dark"] .pill-stage-新製{
       background:#1d3b2c!important;
       color:#9fe8bd!important;
       border-color:#3d6d52!important;
@@ -7570,9 +7571,9 @@ const nationalHolidays = new Set([
 ]);
 const baseDesignLists = {
   types:['平面','影音','採購'],
-  stages:{'平面':['提案','前製','拍攝','後製','印刷'],'影音':['提案','前製','拍攝','後製','結案'],'採購':['平面','動態','音樂','模板']},
+  stages:{'平面':['提案','再製','新製','印刷'],'影音':['提案','前製','拍攝','後製','結案'],'採購':['平面','動態','音樂','模板']},
   details:{
-    '平面':{'提案':['社群貼文','視覺設計','字體設計','色號設計','素材參考','預算參考','急件'],'前製':['場地勘景','分鏡腳本','演員選角','服裝道具','通告順場','製作統籌','急件'],'拍攝':['監製','導演組','製片組','攝影組','燈光組','收音組','美術組','三妝組','場務組','急件'],'後製':['社群貼文','廣告素材','美術設計','影音包框','修圖','網站網頁','素材重置','2D 動畫','AI 影片','急件'],'印刷':['前置設計','輸出完稿','急件']},
+    '平面':{'提案':['社群貼文','視覺設計','字體設計','色號設計','素材參考','預算參考','急件'],'再製':['社群貼文','廣告素材','美術設計','影音包框','急件'],'新製':['社群貼文','廣告素材','美術設計','影音包框','修圖','網站網頁','2D 動畫','AI 影片','急件'],'印刷':['前置設計','輸出完稿','急件']},
     '影音':{'提案':['腳本大綱','服裝參考','音樂參考','環境參考','影片參考','預算參考','時程參考','急件'],'前製':['場地勘景','分鏡腳本','演員選角','服裝道具','通告順場','製作統籌','急件'],'拍攝':['監製','導演組','製片組','攝影組','燈光組','收音組','美術組','三妝組','場務組','急件'],'後製':['影音剪輯','調光調色','人聲配樂','視覺特效','字幕字卡','2D 動畫','急件'],'結案':['預算結帳','素材備份']},
     '採購':{'平面':['Shutterstock','Envato','Freepik'],'動態':['Shutterstock','Envato','Freepik'],'音樂':['Shutterstock','Envato','Freepik'],'模板':['Shutterstock','Envato','Freepik']}
   }
@@ -7593,9 +7594,9 @@ function defaultDetailWeight(type,stage,detail){
   if(detail==='急件')return 3;
   if(type==='平面'&&stage==='提案'&&['視覺設計','字體設計'].includes(detail))return 2;
   if(type==='平面'&&stage==='提案'&&['色號設計','素材參考'].includes(detail))return 0;
-  if(type==='平面'&&stage==='後製'&&['影音包框','2D 動畫'].includes(detail))return 2;
-  if(type==='平面'&&stage==='後製'&&['修圖','素材重置'].includes(detail))return .5;
-  if(type==='平面'&&stage==='後製'&&detail==='AI 影片')return 5;
+  if(type==='平面'&&stage==='新製'&&['影音包框','2D 動畫'].includes(detail))return 2;
+  if(type==='平面'&&stage==='新製'&&['修圖','素材重置'].includes(detail))return .5;
+  if(type==='平面'&&stage==='新製'&&detail==='AI 影片')return 5;
   return 1;
 }
 function syncWeightRulesFromDatabase(database){const rows=database?.tables?.['加權計分標準']?.rows;if(Array.isArray(rows)&&rows.length)activeWeightRules=rows.map(row=>({type:normalizeWeightType(row['設計種類']),stage:String(row['階段']||'').trim(),detail:String(row['項目細節']||'').trim(),weight:Number(row['權重'])})).filter(rule=>rule.type&&rule.stage&&rule.detail&&Number.isFinite(rule.weight))}
@@ -10273,7 +10274,7 @@ function normalizeDesignerReel(row={},index=0){const rawUrl=String(row['限時�
 function storiesForDesigner(name){return designerReels.filter(reel=>reel.name===name&&reel.imageUrl)}
 function designerReelsStateKey(name=''){return JSON.stringify((name?storiesForDesigner(name):designerReels).map(reel=>[reel.id,reel.imageUrl,reel.likes,reel.dislikes,reel.comments]))}
 function mergeDesignerReel(updated){const reel=normalizeDesignerReel(updated), index=designerReels.findIndex(item=>item.id===reel.id||item.rawImageUrl===reel.rawImageUrl); if(index>=0)designerReels.splice(index,1,reel); else designerReels.push(reel); return reel}
-function normalizeDesignerSkillMappings(value,skills=[]){let rows=value;if(rows&&typeof rows==='object'&&!Array.isArray(rows))rows=Object.entries(rows).map(([name,target])=>({name,...(target||{})}));if(!Array.isArray(rows)){try{rows=JSON.parse(String(value||'[]'))}catch(err){rows=[]}}const byName=new Map((Array.isArray(rows)?rows:[]).map(item=>[String(item?.name||item?.['技能']||'').trim(),{type:String(item?.type||item?.['設計種類']||'平面').trim()||'平面',stage:String(item?.stage||item?.['階段']||'後製').trim()||'後製'}]).filter(([name])=>name));return Object.fromEntries((skills||[]).map(name=>[name,byName.get(name)||{type:'平面',stage:'後製'}]))}
+function normalizeDesignerSkillMappings(value,skills=[]){let rows=value;if(rows&&typeof rows==='object'&&!Array.isArray(rows))rows=Object.entries(rows).map(([name,target])=>({name,...(target||{})}));if(!Array.isArray(rows)){try{rows=JSON.parse(String(value||'[]'))}catch(err){rows=[]}}const byName=new Map((Array.isArray(rows)?rows:[]).map(item=>{const type=String(item?.type||item?.['設計種類']||'平面').trim()||'平面',stage=String(item?.stage||item?.['階段']||'').trim()||defaultDesignStage(type);return [String(item?.name||item?.['技能']||'').trim(),{type,stage}]}).filter(([name])=>name));return Object.fromEntries((skills||[]).map(name=>[name,byName.get(name)||{type:'平面',stage:defaultDesignStage('平面')}]))}
 function normalizeReplyTemplateSettings(value,defaultValue=''){
   let source=value;
   if(typeof source==='string'){try{source=JSON.parse(source||'{}')}catch(err){source={}}}
@@ -10858,9 +10859,11 @@ async function saveDesignerSettings(event){event.preventDefault(); if(!isLoggedI
 function selectedDetails(){return detailsToArray(formEl.elements.details?.value||'')}
 function setDetailsValue(value){const selected=detailsToArray(value), box=$('#detailsOptions'); if(!box){if(formEl.elements.details)formEl.elements.details.value=formatDetails(selected); return} box.querySelectorAll('input').forEach(input=>{input.checked=selected.includes(input.value)}); formEl.elements.details.value=formatDetails(selected)}
 function populateDetailsOptions(value=''){const box=$('#detailsOptions'); if(box){box.hidden=true; box.className=''; box.innerHTML=''} if(formEl.elements.details)formEl.elements.details.value=formatDetails(value)}
-function populateDesignSelects(typeValue,stageValue,detailsValue){const form=formEl, typeEl=form.elements.type, stageEl=form.elements.stage; populateSelect(typeEl,designLists.types,typeValue); const stages=designLists.stages[typeEl.value]||unique(Object.values(designLists.stages).flat()); populateSelect(stageEl,stages,stageValue||'後製'); if(stages.includes('後製')&&!stageValue)stageEl.value='後製'; populateDetailsOptions(detailsValue)}
+function defaultDesignStage(type){const normalizedType=normalizeWeightType(type);return normalizedType==='平面'?'新製':normalizedType==='影音'?'後製':''}
+function preferredDesignStage(type,stages=designLists.stages[normalizeWeightType(type)]||[]){const preferred=defaultDesignStage(type);return stages.includes(preferred)?preferred:(stages[0]||'')}
+function populateDesignSelects(typeValue,stageValue,detailsValue){const form=formEl, typeEl=form.elements.type, stageEl=form.elements.stage; populateSelect(typeEl,designLists.types,typeValue); const stages=designLists.stages[typeEl.value]||unique(Object.values(designLists.stages).flat()),selectedStage=stageValue||preferredDesignStage(typeEl.value,stages); populateSelect(stageEl,stages,selectedStage); populateDetailsOptions(detailsValue)}
 function designerProfile(name){return designers.find(d=>d.name===name)||defaultDesigners.find(d=>d.name===name)||{}}
-function designerSkillTarget(designer,skill){const profile=designerProfile(designer),configured=profile.skillTargets?.[skill];return {type:String(configured?.type||'平面'),stage:String(configured?.stage||'後製')}}
+function designerSkillTarget(designer,skill){const profile=designerProfile(designer),configured=profile.skillTargets?.[skill],type=String(configured?.type||'平面'),stages=designLists.stages[normalizeWeightType(type)]||[],configuredStage=String(configured?.stage||'').trim(),stage=stages.includes(configuredStage)?configuredStage:preferredDesignStage(type,stages);return {type,stage}}
 function flashMsg(text,ms=3200){if(!msg)return; msg.textContent=text; clearTimeout(flashMsg.timer); flashMsg.timer=setTimeout(()=>{if(msg.textContent===text)msg.textContent=''},ms)}
 function applyDesignerSkill(designer,skill){const target=designerSkillTarget(designer,skill); expandSectionForAction('request'); setRequestKind('new'); populateDesignSelects(target.type,target.stage,''); if(designerOptions.includes(designer))formEl.elements.designer.value=designer; updateRequestMode(); flashMsg(`已帶入：${designer}｜${skill} → ${target.type} > ${target.stage}`); requestAnimationFrame(()=>document.querySelector('.request-card')?.scrollIntoView({behavior:'smooth',block:'start'}))}
 function todayInputValue(){const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}

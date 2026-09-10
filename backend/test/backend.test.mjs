@@ -1207,7 +1207,8 @@ test('designer roster uses JSON group and rotation for priority new-project butt
   assert.match(html, /let designerOptions = \['Machi','Anna','Karl','Noise','Amber','Leona'\]/);
   assert.match(html, /function syncDesignerOptionLists\(list=designers\)/);
   assert.match(html, /profile\.skillTargets\?\.\[skill\]/);
-  assert.match(html, /type:String\(configured\?\.type\|\|'平面'\),stage:String\(configured\?\.stage\|\|'後製'\)/);
+  assert.match(html, /stage=stages\.includes\(configuredStage\)\?configuredStage:preferredDesignStage\(type,stages\)/);
+  assert.match(html, /stage=String\(item\?\.stage\|\|item\?\.\['階段'\]\|\|''\)\.trim\(\)\|\|defaultDesignStage\(type\)/);
   assert.match(html, /button\.disabled=!allowed\|\|missingDesigner/);
   assert.doesNotMatch(html, /button\.disabled=button\.disabled\|\|!allowed/);
 });
@@ -1306,6 +1307,8 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
   assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
   assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
+  assert.match(dashboard, /syncDetailScoreRules\(primary\)/);
+  assert.match(dashboard, /const persisted=storedWeight\(r\);if\(persisted!==null\)return persisted/);
   assert.match(dashboard, /urgentMultiplier=details\.includes\('急件'\)/);
   assert.match(dashboard, /qty\(r\)\*regularScore\*urgentMultiplier/);
   assert.doesNotMatch(dashboard, /qty\(r\)\*regularScore\+urgentScore/);
@@ -1323,8 +1326,25 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   assert.match(archiveAdmin, /if\(key==='加權'\|\|key==='修改次數'\)\{const value=String\(row\[key\]\?\?''\)\.trim\(\);return value===''\?'':Number\(value\.replace\(\/,\/g,''\)\)\}/);
   assert.match(indexHtml, /const HISTORY_DATABASE_JSON_URL='data\/database_archive\.json'/);
   assert.match(indexHtml, /mergeRowsById\(archiveRows,rows\)/);
+  assert.match(indexHtml, /stages:\{'平面':\['提案','再製','新製','印刷'\]/);
+  assert.match(indexHtml, /normalizedType==='平面'\?'新製':normalizedType==='影音'\?'後製'/);
+  assert.match(indexHtml, /stage=String\(item\?\.stage\|\|item\?\.\['階段'\]\|\|''\)\.trim\(\)\|\|defaultDesignStage\(type\)/);
   assert.doesNotMatch(indexHtml, /function fetchArchiveDatabaseObjects\([^)]*\)\{return gvizToObjects/);
   assert.match(dashboard, /歷史 JSON 資料庫，已與目前 database 對齊/);
+
+  const rulesStart = dashboard.indexOf('const FALLBACK_DETAIL_SCORE_ROWS=');
+  const rulesEnd = dashboard.indexOf('const FALLBACK=[', rulesStart);
+  const scoreStart = dashboard.indexOf('function scoredDetails(');
+  const scoreEnd = dashboard.indexOf('function dailyScore(', scoreStart);
+  assert.ok(rulesStart >= 0 && rulesEnd > rulesStart && scoreStart >= 0 && scoreEnd > scoreStart);
+  const scoring = new Function(`${dashboard.slice(rulesStart, rulesEnd)}\n${dashboard.slice(scoreStart, scoreEnd)}\nreturn {syncDetailScoreRules,score};`)();
+  assert.equal(scoring.syncDetailScoreRules({ tables: { '加權計分標準': { rows: [
+    { '設計種類': '平面', '階段': '新製', '項目細節': '修圖', '權重': '0.5' },
+    { '設計種類': '平面', '階段': '新製', '項目細節': '急件', '權重': '3', '狀態': '下架' }
+  ] } } }), true);
+  assert.equal(scoring.score({ '設計種類': '平面', '階段': '新製', '項目細節': '修圖', '數量': '2', '加權': '' }), 1);
+  assert.equal(scoring.score({ '設計種類': '平面', '階段': '後製', '項目細節': '修圖', '數量': '99', '加權': '17.5' }), 17.5);
+  assert.equal(scoring.score({ '設計種類': '平面', '階段': '後製', '項目細節': '修圖', '數量': '99', '加權': '0' }), 0);
 });
 
 test('dashboard follows the active designer directory and exposes quarterly performance', async () => {
