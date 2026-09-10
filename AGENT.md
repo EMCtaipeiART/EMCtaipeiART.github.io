@@ -192,7 +192,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-10 17:34 Asia/Taipei（最新）— 排程信件同步進 Gmail 草稿匣，批次與合併信件也能排程
+### 2026-09-10 17:52 Asia/Taipei（最新）— 已連接 Gmail 的帳號也能重新授權（修正「無法再串接一次」）
+
+- 修改目的：使用者回報「之前串接 gmail 成功的用戶無法再串接一次」。上一筆改動要求所有人重新連接 Gmail 才能取得 `gmail.compose`（排程信同步草稿用），但畫面上根本沒有這個入口。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`backend/test/backend.test.mjs`。
+- 問題原因：案件的「信件」選單在**已連接**狀態下只提供「透過 Gmail 撰寫並寄出／查看信件串回信」與「取消連接 Gmail」兩個選項，沒有任何重新授權的入口。Google 的同意畫面只有重新跑一次授權流程才會出現，所以已連接的人等於被逼要先「取消連接」才能重新授權——沒人會想到要這樣做。後端 `setGmailTokens` 本來就是 upsert，重複連接不會失敗，純粹是前端沒開這道門。
+- 影響功能：
+  1. 「信件」選單在已連接的兩種狀態（有信件串／沒信件串）都加上「**重新連接 Gmail（更新授權）**」，點下去跑的是既有的 `startGmailConnectPopup()`，授權完成後 refresh token 會被覆寫成含新 scope 的版本。
+  2. 未連接的帳號畫面不變，仍然只有單純的「連接 Gmail 帳號」，不多一個會讓人困惑的選項。
+  3. 重新授權成功的提示改成「已更新 Gmail 授權：…」，不再顯示成第一次連接。
+  4. 排程信少了草稿權限時的錯誤訊息改成指向真正的位置（案件的「信件」選單），原本寫「右上角」是錯的，那裡沒有這個功能。
+- 風險區塊：重新連接會覆寫該帳號原本的 refresh token。如果使用者在 Google 同意畫面挑到**另一個** Gmail 帳號，這個系統之後就會用新帳號寄信；既有討論串仍然綁在原本的寄件帳號上（`Gmail寄件帳號` 欄位），回信流程本來就有跨帳號處理（`findOwnMailboxThreadId`），行為與這次改動前一致。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **79/79 全過**（78 既有＋1 新增）。新增測試把真正的 `openMailComposerMenu` 抽出來對假 DOM 實際執行三種狀態，驗證已連接（有／沒有信件串）都拿得到重新連接入口、未連接時畫面不變。
+  - 先用 `git stash` 只還原 `index.html`，確認新測試在舊程式碼上真的失敗，`git stash pop` 後 79/79 全過。
+  - `cd worker && npx tsc --noEmit` 無錯。
+- 部署狀態：`index.html` 純前端，git push 後自動生效。`worker/` 這次只改了一句錯誤訊息文字，需要部署才會更新，但不影響功能。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-10 17:34 Asia/Taipei — 排程信件同步進 Gmail 草稿匣，批次與合併信件也能排程
 
 - 修改目的：使用者說「新增案件完成之後跳至信件編輯器中，『信件排程』指定完時間後，希望可以將排程信件加入在 gmail 信箱的草稿裡，方便如果有什麼需要修改的內容可以即時更改，並且指定時間到後自動寄出。另外批次案件與合併信件時無法使用排程信」。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。

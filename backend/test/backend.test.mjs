@@ -2034,6 +2034,56 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
 });
 
+test('an account that already connected Gmail can run the authorisation flow again, which is the only way to grant a scope added after it first connected', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // The 信件 menu used to offer 連接 only while disconnected: once connected the sole account action was
+  // 取消連接. That left an already-connected user with no way to re-run Google's consent screen, so a
+  // scope added later (gmail.compose, for the scheduled-mail draft) could never be granted without
+  // first disconnecting. Every connected branch now offers a reconnect entry as well.
+  const menu = html.match(/async function openMailComposerMenu\(event,id\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(menu, 'could not locate openMailComposerMenu');
+  assert.equal((menu.match(/startGmailConnectPopup\(\)/g) || []).length, 2, '連接與重新連接各一個入口');
+
+  // Run the real menu builder for all three states and check what the user is actually offered.
+  const harness = new Function('status', 'row', `
+    const fieldPopover = { innerHTML: '', dataset: {}, hidden: true };
+    const rows = [row];
+    const requireAccess = () => true;
+    const isEditableRow = () => true;
+    const positionFieldPopover = () => {};
+    const setSync = () => {};
+    const jsArg = value => String(value);
+    const esc = value => String(value);
+    const mailComposerMenuHtml = (id, gmailOption) => gmailOption;
+    const ensureGmailStatusLoaded = async () => status;
+    const event = { preventDefault() {}, stopPropagation() {}, currentTarget: {} };
+    ${html.match(/async function openMailComposerMenu\(event,id\)\{[\s\S]*?\n\}/)[0]}
+    return openMailComposerMenu(event, row.id).then(() => fieldPopover.innerHTML);
+  `);
+
+  const composeMenu = await harness({ connected: true, gmailAddress: 'machi@emctaipei.com' }, { id: '26090001', gmailThreadId: '' });
+  assert.match(composeMenu, /透過 Gmail 撰寫並寄出/);
+  assert.match(composeMenu, /重新連接 Gmail（更新授權）/);
+  assert.match(composeMenu, /取消連接 Gmail/);
+
+  const threadMenu = await harness({ connected: true, gmailAddress: 'machi@emctaipei.com' }, { id: '26090001', gmailThreadId: 'thread-1' });
+  assert.match(threadMenu, /查看信件串／回信/);
+  assert.match(threadMenu, /重新連接 Gmail（更新授權）/);
+
+  // Nothing changes for an account that has never connected: one plain 連接 button, no reconnect noise.
+  const freshMenu = await harness({ connected: false, gmailAddress: '' }, { id: '26090001', gmailThreadId: '' });
+  assert.match(freshMenu, /連接 Gmail 帳號/);
+  assert.doesNotMatch(freshMenu, /重新連接/);
+  assert.doesNotMatch(freshMenu, /取消連接/);
+
+  // Re-authorising an already-connected account must not report itself as a first-time connection.
+  const applyResult = html.match(/async function applyGmailOauthPopupResult\(result=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(applyResult, 'could not locate applyGmailOauthPopupResult');
+  assert.match(applyResult, /const wasConnected=gmailConnectionState\.connected;/);
+  assert.match(applyResult, /wasConnected\?'已更新 Gmail 授權':'已連接 Gmail'/);
+});
+
 test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and batch/merged mails can be scheduled the same way a single case can', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');

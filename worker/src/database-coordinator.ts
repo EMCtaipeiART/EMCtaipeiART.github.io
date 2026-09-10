@@ -1878,7 +1878,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return {
         draftId: existingDraftId,
         draftError: isGmailScopeError(message)
-          ? 'Gmail 授權沒有「建立草稿」權限，請到右上角重新連接 Gmail 帳號後再排程一次'
+          ? 'Gmail 授權沒有「建立草稿」權限，請在案件的「信件」選單按「重新連接 Gmail（更新授權）」後再排程一次'
           : `Gmail 草稿同步失敗：${message}`
       };
     }

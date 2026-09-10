@@ -8242,12 +8242,17 @@ async function openMailComposerMenu(event,id){
   const status=await ensureGmailStatusLoaded();
   if(fieldPopover.hidden||fieldPopover.dataset.mailComposerId!==String(id))return;
   let gmailOption;
+  // 已經連接的帳號也必須看得到「重新連接」：授權範圍會隨功能增加而變動（例如排程信要同步進 Gmail
+  // 草稿匣，需要 gmail.compose，舊的授權沒有），而 Google 的同意畫面只有重新跑一次授權流程才會出現。
+  // 之前這個選單在已連接時只有「取消連接」，等於逼使用者先斷線才能重新授權——使用者回報的
+  //「之前串接 Gmail 成功的用戶無法再串接一次」就是這個原因。
+  const reconnectOption='<button type="button" class="gmail-mail-menu-option" onclick="startGmailConnectPopup()">重新連接 Gmail（更新授權）</button>';
   if(!status.connected){
     gmailOption='<button type="button" class="gmail-mail-menu-option" onclick="startGmailConnectPopup()">連接 Gmail 帳號</button>';
   }else if(row.gmailThreadId){
-    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openReplyMethodChooser(event,'${jsArg(id)}')">查看信件串／回信（${esc(status.gmailAddress)}）</button><button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
+    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openReplyMethodChooser(event,'${jsArg(id)}')">查看信件串／回信（${esc(status.gmailAddress)}）</button>${reconnectOption}<button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
   }else{
-    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openGmailComposeModal('${jsArg(id)}')">透過 Gmail 撰寫並寄出（${esc(status.gmailAddress)}）</button><button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
+    gmailOption=`<button type="button" class="gmail-mail-menu-option" onclick="openGmailComposeModal('${jsArg(id)}')">透過 Gmail 撰寫並寄出（${esc(status.gmailAddress)}）</button>${reconnectOption}<button type="button" class="gmail-mail-menu-option" onclick="disconnectGmail()">取消連接 Gmail</button>`;
   }
   fieldPopover.innerHTML=mailComposerMenuHtml(id,gmailOption);
   positionFieldPopover(anchor);
@@ -13777,11 +13782,12 @@ async function applyGmailOauthPopupResult(result={}){
   if(!result.code){setSync('Gmail 連接失敗：沒有取得授權碼',true);return}
   setSync('Gmail 連接中...');
   try{
+    const wasConnected=gmailConnectionState.connected;
     const data=await sheetApi('gmailOauthConnect',{code:result.code,codeVerifier:verifier,redirectUri:googleAuthorizedOrigin,editorToken:currentEditorToken});
     gmailConnectionState={connected:true,gmailAddress:data.gmailAddress||''};
     gmailConnectionChecked=true;
     resetGmailSignatureCache();
-    setSync(`已連接 Gmail：${data.gmailAddress||''}`,false,3000);
+    setSync(`${wasConnected?'已更新 Gmail 授權':'已連接 Gmail'}：${data.gmailAddress||''}`,false,3000);
     resumePostSubmitFlowAfterGmailConnect();
   }catch(err){
     setSync(`Gmail 連接失敗：${err.message}`,true);
