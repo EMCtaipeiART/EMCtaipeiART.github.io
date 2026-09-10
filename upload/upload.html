@@ -1054,6 +1054,9 @@
     const MAX_CASE_DESIGN_FILES_CLIENT = 40;
     const MAX_VIDEO_SOURCE_SIZE_MB = 500;
     const CASE_DESIGN_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+    // file.type 為空時的副檔名備援（見 isCaseDesignVideoFile／isCaseDesignImageFile）。
+    const CASE_DESIGN_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm'];
+    const CASE_DESIGN_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
 
     let selectedImage = null;
     let selectedPreviewUrl = null;
@@ -1233,14 +1236,30 @@
       return labels[n] || `第 ${n} 修`;
     }
 
+    /**
+     * 判斷檔案類型時不能只看 file.type：瀏覽器是從副檔名推斷 MIME 的，遇到
+     * 網路磁碟／NAS 掛載磁碟、或系統沒有登記的副檔名時，file.type 常常是空字串，
+     * 這時候原本的判斷會把明明可以上傳的圖片／影片當成「格式不支援」整批略過，
+     * 使用者按完「選擇檔案」就只看到空白清單、沒有下一步可做。NAS 監控程式那邊
+     * （scripts/nas_design_image_lib.mjs）本來就是用副檔名判斷的，這裡補上同一套
+     * 副檔名備援，兩邊對同一個檔案的判斷才會一致。
+     */
+    function caseDesignFileExtension(file) {
+      const match = String(file && file.name || '').toLowerCase().match(/\.[a-z0-9]+$/);
+      return match ? match[0] : '';
+    }
+
     function isCaseDesignVideoFile(file) {
       const type = String(file.type || '').toLowerCase();
       if (CASE_DESIGN_VIDEO_TYPES.includes(type)) return true;
-      return type.startsWith('video/');
+      if (type.startsWith('video/')) return true;
+      return !type && CASE_DESIGN_VIDEO_EXTENSIONS.includes(caseDesignFileExtension(file));
     }
 
     function isCaseDesignImageFile(file) {
-      return String(file.type || '').toLowerCase().startsWith('image/');
+      const type = String(file.type || '').toLowerCase();
+      if (type.startsWith('image/')) return true;
+      return !type && CASE_DESIGN_IMAGE_EXTENSIONS.includes(caseDesignFileExtension(file));
     }
 
     /**
@@ -1285,6 +1304,15 @@
       }
       if (rejected.length) {
         showCaseDesignStatus(`已略過 ${rejected.length} 項：${rejected.join('、')}`, 'error');
+      } else if (files.length && !caseDesignFiles.length) {
+        // 一個檔案都沒被加進來、又沒有任何略過訊息時，畫面會停在空白的選取區，看起來就像
+        // 「選完檔案後什麼事都沒發生」。這種情況一定要講清楚原因，不能安靜地什麼都不顯示。
+        showCaseDesignStatus(
+          strict
+            ? '選取的檔案都不是可上傳的圖片或影片（支援 JPG、PNG、WebP、GIF 與 MP4、MOV、M4V、WebM）'
+            : '這個資料夾裡沒有找到可上傳的圖片或影片（只會讀取資料夾本層，不會進入子資料夾）',
+          'error'
+        );
       }
 
       renderCaseDesignPreview();
@@ -1385,11 +1413,19 @@
         const video = document.createElement('video');
         video.muted = true;
         video.playsInline = true;
-        video.preload = 'metadata';
+        // metadata 只保證讀得到長度，不保證解得出畫面；要截圖就得讓瀏覽器真的把影格載進來。
+        video.preload = 'auto';
         const url = URL.createObjectURL(file);
         let settled = false;
+        let timeoutTimer = 0;
+        let seekTimer = 0;
 
+        const clearTimers = function () {
+          if (timeoutTimer) { clearTimeout(timeoutTimer); timeoutTimer = 0; }
+          if (seekTimer) { clearTimeout(seekTimer); seekTimer = 0; }
+        };
         const cleanup = function () {
+          clearTimers();
           URL.revokeObjectURL(url);
           video.removeAttribute('src');
           video.load();
@@ -1400,33 +1436,61 @@
           cleanup();
           reject(new Error(message));
         };
+        const capture = function () {
+          if (settled) return;
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(function (blob) {
+              if (settled) return;
+              if (!blob) { fail('無法擷取影片畫面：' + file.name); return; }
+              settled = true;
+              cleanup();
+              resolve(blob);
+            }, 'image/jpeg', 0.85);
+          } catch (error) {
+            fail('無法擷取影片畫面：' + file.name + '（' + ((error && error.message) || '未知錯誤') + '）');
+          }
+        };
 
         video.addEventListener('loadeddata', function () {
-          const seekTime = Math.min(1, (video.duration || 1) * 0.1);
+          if (settled) return;
+          const duration = Number(video.duration);
+          // duration 可能是 0、NaN 或 Infinity（串流式／未寫入長度的 MP4），這些情況一律不 seek，
+          // 直接截現在這一格。
+          const seekTime = Number.isFinite(duration) && duration > 0 ? Math.min(1, duration * 0.1) : 0;
+          // 目標時間跟目前位置幾乎一樣時，瀏覽器不會送出 seeked 事件——舊版在這裡設定完
+          // currentTime 就只是乾等那個永遠不會來的事件，整個上傳因此永遠停在「上傳中 0/N」。
+          if (!(seekTime > 0.01) || Math.abs(Number(video.currentTime) - seekTime) < 0.01) {
+            capture();
+            return;
+          }
+          // seek 沒有回應時（某些編碼／容器不支援精確跳轉）仍然把已經載到的這一格截下來，
+          // 寧可用第一格，也不要讓整批上傳卡死。
+          seekTimer = setTimeout(capture, 4000);
           try {
             video.currentTime = seekTime;
           } catch (error) {
-            fail('無法讀取影片畫面：' + file.name);
+            capture();
           }
         });
 
         video.addEventListener('seeked', function () {
-          if (settled) return;
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth || 1280;
-          canvas.height = video.videoHeight || 720;
-          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob(function (blob) {
-            settled = true;
-            cleanup();
-            if (!blob) { reject(new Error('無法擷取影片畫面：' + file.name)); return; }
-            resolve(blob);
-          }, 'image/jpeg', 0.85);
+          if (seekTimer) { clearTimeout(seekTimer); seekTimer = 0; }
+          capture();
         });
 
         video.addEventListener('error', function () {
-          fail('無法讀取影片檔案：' + file.name);
+          fail('無法讀取影片檔案：' + file.name + '（瀏覽器可能不支援這個影片編碼）');
         });
+
+        // 最後一道防線：不論卡在哪一步（連 loadeddata 都沒來、解碼中途停住…），到時間就放棄這個
+        // 檔案並讓外層迴圈把它列為失敗，繼續處理下一個檔案，不會整批上傳永遠停在原地。
+        timeoutTimer = setTimeout(function () {
+          fail('讀取影片畫面逾時：' + file.name + '，請改用較小的影片或改上傳截圖');
+        }, 20000);
 
         video.src = url;
       });

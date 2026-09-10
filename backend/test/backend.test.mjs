@@ -2263,6 +2263,43 @@ test('designer settings are reachable from media management accounts as well as 
   assert.match(html, /show\('#accountDesignerSettings',loggedIn&&canAccessDesignerSettings\(\)\)/);
 });
 
+test('case design uploader accepts files whose MIME type the browser could not infer, always explains an empty selection, and can never hang forever on a video frame grab', async () => {
+  const html = await readFile(new URL('../../upload/upload.html', import.meta.url), 'utf8');
+
+  // 1) Selecting files did nothing when the browser reported an empty file.type (common for files on
+  // mounted network/NAS volumes): both media checks read only .type, so every file was silently
+  // dropped as "unsupported" and the user was left staring at an empty picker. Fall back to the
+  // extension, the same way the NAS watcher already decides what is an image or a video.
+  assert.match(html, /const CASE_DESIGN_VIDEO_EXTENSIONS = \['\.mp4', '\.mov', '\.m4v', '\.webm'\];/);
+  assert.match(html, /const CASE_DESIGN_IMAGE_EXTENSIONS = \['\.jpg', '\.jpeg', '\.png', '\.webp', '\.gif'\];/);
+  assert.match(html, /function caseDesignFileExtension\(file\) \{/);
+  assert.match(html, /return !type && CASE_DESIGN_VIDEO_EXTENSIONS\.includes\(caseDesignFileExtension\(file\)\);/);
+  assert.match(html, /return !type && CASE_DESIGN_IMAGE_EXTENSIONS\.includes\(caseDesignFileExtension\(file\)\);/);
+
+  // 2) A selection that adds nothing must say why instead of leaving a blank panel with no next step.
+  assert.match(html, /\} else if \(files\.length && !caseDesignFiles\.length\) \{/);
+  assert.match(html, /選取的檔案都不是可上傳的圖片或影片/);
+  assert.match(html, /這個資料夾裡沒有找到可上傳的圖片或影片/);
+
+  // 3) extractVideoFrame waited on events that may never arrive, so one video could wedge the whole
+  // batch at "上傳中 0/N" with no way out. Every stall path now has to terminate.
+  const frameFn = html.match(/function extractVideoFrame\(file\) \{[\s\S]*?\n    \}\n/)?.[0];
+  assert.ok(frameFn, 'could not locate extractVideoFrame');
+  // A hard watchdog so the loop always moves on to the next file.
+  assert.match(frameFn, /timeoutTimer = setTimeout\(function \(\) \{/);
+  assert.match(frameFn, /讀取影片畫面逾時/);
+  // Seeking to where the video already is emits no 'seeked' event -- capture straight away instead.
+  assert.match(frameFn, /if \(!\(seekTime > 0\.01\) \|\| Math\.abs\(Number\(video\.currentTime\) - seekTime\) < 0\.01\) \{/);
+  // Unseekable containers never emit 'seeked' either: fall back to the frame already decoded.
+  assert.match(frameFn, /seekTimer = setTimeout\(capture, 4000\);/);
+  // duration can be 0 / NaN / Infinity on stream-ish MP4s; those must not produce a NaN seek target.
+  assert.match(frameFn, /Number\.isFinite\(duration\) && duration > 0 \? Math\.min\(1, duration \* 0\.1\) : 0/);
+  // Frames only decode once real data is loaded, not just metadata.
+  assert.match(frameFn, /video\.preload = 'auto';/);
+  // Timers must be cleared on every exit path or a settled promise still leaves work pending.
+  assert.match(frameFn, /const clearTimers = function \(\) \{/);
+});
+
 test('upload page forwards editorToken when replacing a designer poster from recent uploads', async () => {
   const html = await readFile(new URL('../../upload/upload.html', import.meta.url), 'utf8');
   const code = await readFile(new URL('../../upload/Code.gs', import.meta.url), 'utf8');
