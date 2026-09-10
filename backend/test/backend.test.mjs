@@ -390,11 +390,11 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   // openDesignerReplyMailModal / resolveDesignerReplyImages both take a `folders` array now, not a
   // single `folderPath` string -- the old signature silently dropped every folder past the first.
   assert.match(html, /async function openDesignerReplyMailModal\(id,\{folders=\[\],round=null\}=\{\}\)\{/);
-  assert.match(html, /async function resolveDesignerReplyImages\(id,\{folders=\[\],round=null\}=\{\}\)\{/);
+  assert.match(html, /async function resolveDesignerReplyImages\(id,\{folders=\[\],fileFolders=null,round=null\}=\{\}\)\{/);
   assert.doesNotMatch(html, /folderPath=''/);
   // The "machi-nas-folder-selected" handler must pass every successfully-confirmed folder's path
   // through, not just successFolders[0].
-  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),round:replyRound\}\)/);
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound\}\)/);
   // The EARLY "machi-nas-folder-backup-started" hand-off is what actually determines the rendered
   // text in the normal flow: openDesignerReplyMailModal's own idempotency guard means the later
   // "machi-nas-folder-selected" message will NOT rebuild the template if the modal is already open
@@ -406,40 +406,51 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   // (not just foldersToSubmit[0]) for the above to have anything to read.
   assert.match(pickerServer, /type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit\[0\]\.path, paths: foldersToSubmit\.map\(item => item\.path\)/);
 
-  // Exercise the actual multi-line rendering logic (extracted verbatim from openDesignerReplyMailModal)
-  // against a fake editor, the same way the browser-based verification for this fix did.
-  const renderSource = html.match(/const folderPaths=\(Array\.isArray\(folders\)[\s\S]*?\n {2}\}\n {2}clearGmailInlineImages/)?.[0];
-  assert.ok(renderSource, 'could not locate the NAS-path rendering block');
-  const renderFolderPaths = new Function('folders', 'editor', 'document', `
-    ${renderSource.slice(0, renderSource.indexOf('clearGmailInlineImages'))}
-    return editor;
-  `);
-  const makeFakeEditor = () => {
+  // The NAS-path block lives in its own container so it can be redrawn once the backup reports which
+  // folders were actually confirmed -- the modal is opened when the backup STARTS (before the server
+  // has validated anything), and an already-open modal for the same case+round is deliberately not
+  // rebuilt, so without a redraw the editor could keep showing a stale, shorter folder list.
+  assert.match(html, /nasPathsContainer\.id='gmailDesignerReplyNasPaths';/);
+  assert.match(html, /if\(designerReplyFolderList\(folders\)\.length\)renderDesignerReplyNasPaths\(folders\);/);
+
+  // Exercise the real rendering function (extracted verbatim from index.html) against a fake DOM.
+  const listSource = html.match(/function designerReplyFolderList\(folders\)\{[\s\S]*?\n\}\n/)?.[0];
+  const renderSource = html.match(/function renderDesignerReplyNasPaths\(folders\)\{[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(listSource && renderSource, 'could not locate the NAS-path rendering block');
+
+  const renderFolderPaths = folders => {
     const children = [];
+    const container = { children, dataset: {}, textContent: '', appendChild: node => children.push(node) };
     const fakeDocument = {
+      getElementById: id => (id === 'gmailDesignerReplyNasPaths' ? container : null),
       createElement: tag => ({ tag, textContent: '' }),
       createTextNode: text => ({ tag: '#text', textContent: text })
     };
-    return { editor: { appendChild: node => children.push(node) }, document: fakeDocument, children };
+    const fn = new Function('document', `${listSource}\n${renderSource}\nreturn renderDesignerReplyNasPaths;`)(fakeDocument);
+    fn(folders);
+    return { children, container };
   };
 
-  const multi = makeFakeEditor();
-  renderFolderPaths(['NAS/資料夾A', 'NAS/資料夾B'], multi.editor, multi.document);
-  const multiBold = multi.children.filter(node => node.tag === 'b').map(node => node.textContent);
-  const multiLabel = multi.children.find(node => node.tag === '#text');
-  assert.deepEqual(multiBold, ['NAS/資料夾A', 'NAS/資料夾B']);
-  assert.equal(multiLabel.textContent, ' NAS路徑（共 2 個資料夾）');
+  const multi = renderFolderPaths(['NAS/資料夾A', 'NAS/資料夾B']);
+  assert.deepEqual(multi.children.filter(node => node.tag === 'b').map(node => node.textContent), ['NAS/資料夾A', 'NAS/資料夾B']);
+  assert.equal(multi.children.find(node => node.tag === '#text').textContent, ' NAS路徑（共 2 個資料夾）');
+  // The folder list is recorded on the container so the video-path block can tell whether the source
+  // folder is unambiguous without re-deriving it.
+  assert.deepEqual(JSON.parse(multi.container.dataset.nasFolders), ['NAS/資料夾A', 'NAS/資料夾B']);
 
-  const single = makeFakeEditor();
-  renderFolderPaths(['NAS/單一資料夾'], single.editor, single.document);
-  const singleBold = single.children.filter(node => node.tag === 'b').map(node => node.textContent);
-  const singleLabel = single.children.find(node => node.tag === '#text');
-  assert.deepEqual(singleBold, ['NAS/單一資料夾']);
-  assert.equal(singleLabel.textContent, ' NAS路徑'); // unchanged wording for the (still by far most common) single-folder case
+  const single = renderFolderPaths(['NAS/單一資料夾']);
+  assert.deepEqual(single.children.filter(node => node.tag === 'b').map(node => node.textContent), ['NAS/單一資料夾']);
+  assert.equal(single.children.find(node => node.tag === '#text').textContent, ' NAS路徑'); // unchanged wording for the single-folder case
 
-  const empty = makeFakeEditor();
-  renderFolderPaths([], empty.editor, empty.document);
-  assert.equal(empty.children.length, 0);
+  // The same folder picked twice is one folder, not two identical "sources" in the email.
+  const duplicated = renderFolderPaths(['NAS/資料夾A', 'NAS/資料夾A']);
+  assert.deepEqual(duplicated.children.filter(node => node.tag === 'b').map(node => node.textContent), ['NAS/資料夾A']);
+  assert.equal(duplicated.children.find(node => node.tag === '#text').textContent, ' NAS路徑');
+
+  assert.equal(renderFolderPaths([]).children.length, 0);
+
+  // The picker page must not add the same path to the multi-select list twice either.
+  assert.match(pickerServer, /const existing = selectedFolders\.find\(item => item\.path === relPath\);/);
 });
 
 test('concurrent designer-reply opens for the same case+round are de-duplicated before any await, so a slow first initialization cannot land after the images and re-stick the editor on "圖片上傳中..."', async () => {
@@ -499,31 +510,39 @@ test('concurrent designer-reply opens for the same case+round are de-duplicated 
 
   // The machi-nas-folder-selected call site had no .catch(): any rejection there was an entirely silent
   // unhandled rejection, leaving the editor stuck with no message explaining why.
-  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),round:replyRound\}\)\s*\n\s*\.catch\(err=>setSync\(/);
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound\}\)\s*\n\s*\.catch\(err=>setSync\(/);
 });
 
-test('designer reply "NAS路徑" block also lists each video\'s full NAS path (folder + filename + extension), one line per backed-up video, when the source folder is unambiguous', async () => {
+test('designer reply lists every backed-up video\'s full NAS path (folder + filename + extension), attributing each video to the folder it actually came from even when several folders were picked', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
+  const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
 
-  // openDesignerReplyMailModal must create an (initially empty) per-video-path placeholder right after
-  // the folder-path block, recording the single source folder only when it is unambiguous (exactly one
-  // folder was selected) -- multi-folder cases can't tell which folder a given filename came from.
-  assert.match(html, /const videoPathsContainer=document\.createElement\('div'\);/);
-  assert.match(html, /videoPathsContainer\.id='gmailDesignerReplyVideoPaths';/);
-  assert.match(html, /if\(folderPaths\.length===1\)videoPathsContainer\.dataset\.nasFolderPath=folderPaths\[0\];/);
-  assert.match(html, /applyDesignerReplyVideoPaths\(images\);/);
+  // A video is delivered to the email as a single auto-captured screenshot, so the recipient needs the
+  // real file path to actually watch it. With several source folders the filename alone cannot say which
+  // folder it came from, so the picker reports, per folder, exactly which files it uploaded.
+  assert.match(lib, /const uploadedFiles = \[\];/);
+  assert.match(lib, /for \(const item of chunk\) uploadedFiles\.push\(path\.basename\(item\.relPath\)\);/);
+  assert.match(lib, /return \{ round, uploadedCount, uploadedFiles,/);
+  assert.match(pickerServer, /uploadedFiles: upload\.uploadedFiles \|\| \[\]/);
+  assert.match(html, /for\(const fileName of \(Array\.isArray\(folder\.backup\?\.uploadedFiles\)\?folder\.backup\.uploadedFiles:\[\]\)\)\{/);
 
   const extSource = html.match(/const DESIGNER_REPLY_VIDEO_EXTENSIONS=\[[^\]]*\];\nfunction isDesignerReplyVideoFileName\(fileName\)\{[^\n]*\}\n/)?.[0];
-  assert.ok(extSource, 'could not locate isDesignerReplyVideoFileName');
   const funcSource = html.match(/function applyDesignerReplyVideoPaths\(images\)\{[\s\S]*?\n\}\n/)?.[0];
-  assert.ok(funcSource, 'could not locate applyDesignerReplyVideoPaths');
+  assert.ok(extSource && funcSource, 'could not locate applyDesignerReplyVideoPaths');
 
-  const run = (images, folderPath) => {
-    const container = { children: [], dataset: folderPath === undefined ? {} : { nasFolderPath: folderPath }, removed: false };
-    container.appendChild = child => container.children.push(child);
-    container.remove = () => { container.removed = true; };
+  const run = (images, folderPaths, fileFolders) => {
+    const children = [];
+    const container = {
+      children, textContent: '', removed: false,
+      dataset: fileFolders === undefined ? {} : { nasFileFolders: JSON.stringify(fileFolders) },
+      appendChild: node => children.push(node),
+      remove: () => { container.removed = true; }
+    };
+    const nasContainer = { dataset: folderPaths === undefined ? {} : { nasFolders: JSON.stringify(folderPaths) } };
     const fakeDocument = {
-      getElementById: id => id === 'gmailDesignerReplyVideoPaths' ? container : null,
+      getElementById: id => (id === 'gmailDesignerReplyVideoPaths' ? container
+        : id === 'gmailDesignerReplyNasPaths' ? nasContainer : null),
       createElement: tag => ({ tag, textContent: '' }),
       createTextNode: text => ({ tag: '#text', textContent: text })
     };
@@ -531,33 +550,42 @@ test('designer reply "NAS路徑" block also lists each video\'s full NAS path (f
     fn(images);
     return container;
   };
+  const boldOf = container => container.children.filter(node => node.tag === 'b').map(node => node.textContent);
+  const labelOf = container => container.children.find(node => node.tag === '#text')?.textContent;
 
-  // Multiple videos in one folder ("備份多張截圖" == one screenshot preview per video) -> one bold
-  // full-path line per video, plural label; a plain image among them is not listed as a "video path".
-  const multi = run([
-    { fileName: '260908_360II_包框影片_02.mp4' },
-    { fileName: '260908_360II_包框影片_05.MOV' },
-    { fileName: 'photo.jpg' }
-  ], '專案企劃部/執行中/DJI/廣告素材/2026/9月');
+  // The reported bug: several folders picked, so each video must be paired with ITS OWN folder.
+  const multi = run(
+    [{ fileName: '260908_A_包框影片_02.mp4' }, { fileName: '260908_B_包框影片_05.MOV' }, { fileName: 'photo.jpg' }],
+    ['專案企劃部/執行中/DJI/廣告素材/2026/9月', '專案企劃部/執行中/添可/廣告素材/2026/9月/第二波'],
+    { '260908_A_包框影片_02.mp4': '專案企劃部/執行中/DJI/廣告素材/2026/9月',
+      '260908_B_包框影片_05.MOV': '專案企劃部/執行中/添可/廣告素材/2026/9月/第二波' }
+  );
   assert.equal(multi.removed, false);
-  assert.deepEqual(multi.children.filter(node => node.tag === 'b').map(node => node.textContent), [
-    '專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_360II_包框影片_02.mp4',
-    '專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_360II_包框影片_05.MOV'
+  assert.deepEqual(boldOf(multi), [
+    '專案企劃部/執行中/DJI/廣告素材/2026/9月/260908_A_包框影片_02.mp4',
+    '專案企劃部/執行中/添可/廣告素材/2026/9月/第二波/260908_B_包框影片_05.MOV'
   ]);
-  assert.equal(multi.children.find(node => node.tag === '#text').textContent, ' 影片路徑（共 2 支）');
+  assert.equal(labelOf(multi), ' 影片路徑（共 2 支）');
 
-  // A single video keeps the unadorned label, matching the existing single-folder "NAS路徑" wording style.
-  const single = run([{ fileName: 'clip.mp4' }], 'A/B');
-  assert.equal(single.children.find(node => node.tag === '#text').textContent, ' 影片路徑');
+  // One folder and no attribution map (e.g. reused path / computer upload): the sole folder is used.
+  const single = run([{ fileName: 'clip.mp4' }], ['A/B']);
+  assert.deepEqual(boldOf(single), ['A/B/clip.mp4']);
+  assert.equal(labelOf(single), ' 影片路徑'); // no "共 N 支" wording for a single video
 
-  // No videos in this round's images -> placeholder removed, no empty block left in the email.
-  assert.equal(run([{ fileName: 'photo.jpg' }], 'A/B').removed, true);
+  // Several folders but this video is not in the map -> cannot attribute it, so skip rather than guess.
+  const unattributable = run([{ fileName: 'mystery.mp4' }], ['A/B', 'C/D'], { 'other.mp4': 'A/B' });
+  assert.equal(unattributable.removed, true);
 
-  // Multiple source folders were selected (no single recorded folder) -> can't attribute the video to
-  // a folder, so deliberately don't guess; placeholder removed rather than showing a wrong path.
-  assert.equal(run([{ fileName: 'clip.mp4' }], undefined).removed, true);
+  // A partially attributable batch still lists the ones it can place.
+  const partial = run([{ fileName: 'known.mp4' }, { fileName: 'mystery.mp4' }], ['A/B', 'C/D'], { 'known.mp4': 'C/D' });
+  assert.deepEqual(boldOf(partial), ['C/D/known.mp4']);
+  assert.equal(labelOf(partial), ' 影片路徑');
+
+  // No videos in this round -> placeholder removed, no empty block left in the email.
+  assert.equal(run([{ fileName: 'photo.jpg' }], ['A/B']).removed, true);
+  // No folder recorded at all -> nothing to build a path from.
+  assert.equal(run([{ fileName: 'clip.mp4' }], []).removed, true);
 });
-
 test('inline image resize handle is back (2026-09) with a distinct icon+title (2026-08-26 removal was because the old handle was an unlabeled square users mistook for a "selection box" — the new one is gml-inline-image-resize, not the old -resize-handle name, and pairs a diagonal-arrow SVG with title/aria-label), locked to the original aspect ratio via mouse-drag or ArrowUp/ArrowDown, and bindGmailInlineImageControls still wires it up alongside the delete button with the same single-argument signature', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 2026-08-26 移除的舊版名稱徹底不再出現，不是只換掉 class 名稱字面上恰好對不上而已。

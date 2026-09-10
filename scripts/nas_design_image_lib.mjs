@@ -817,6 +817,10 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   // 的部分會在下次排程時當作「還沒歸類」重新嘗試（届時待處理數量已經變少）。
   let uploadedCount = 0;
   let jsonRevision;
+  // 這次實際送上去的檔名（basename）。呼叫端（picker server 的立即備份）會把它一路回傳到
+  // 瀏覽器，讓「設計師回覆信」知道每一個檔案究竟來自哪一個 NAS 資料夾——多選資料夾時光靠
+  // 檔名沒辦法反推來源資料夾，影片要附完整路徑（資料夾＋檔名＋副檔名）就一定要有這份對照。
+  const uploadedFiles = [];
   for (let offset = 0; offset < targetedPreviews.length; offset += MAX_IMAGES_PER_UPLOAD_REQUEST) {
     const chunk = targetedPreviews.slice(offset, offset + MAX_IMAGES_PER_UPLOAD_REQUEST);
     const attemptAtMs = Date.now();
@@ -841,11 +845,12 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
       }
     }
     if (roundState) roundState.sealedRound = Math.max(Number(roundState.sealedRound) || 0, round);
+    for (const item of chunk) uploadedFiles.push(path.basename(item.relPath));
     uploadedCount += uploadResult.count;
     jsonRevision = uploadResult.jsonRevision;
     // 每一批成功後立即保存 assignedRound／sealedRound；後續批次若失敗，已成功
     // 的歷史快照仍然封存，不會在下一次排程被重送或被同輪新版覆蓋。
     if (persistState) await persistState();
   }
-  return { round, uploadedCount, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, targetFallback, jsonRevision };
 }

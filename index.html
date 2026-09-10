@@ -10701,7 +10701,18 @@ function handleUploadFrameMessage(event){
     // 沒有 .catch() 的話，這條 Promise 一旦出錯就是完全靜默的 unhandled rejection：使用者只會看到
     // 「圖片上傳中...」永遠不會變成圖片、送出按鈕永遠停用，卻沒有任何錯誤訊息可以判斷發生什麼事
     // （備份其實已經成功寫進資料庫，只是畫面沒接上）。這裡補上跟「電腦檔案上傳」那條路徑一致的提示與補救方式。
-    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),round:replyRound})
+    // 每個資料夾各自回報這次實際上傳了哪些檔名（picker server 的 backup.uploadedFiles），組成
+    // 「檔名→來源資料夾」對照表——多選資料夾時，影片要附上完整路徑就只能靠這份對照分辨來源。
+    const nasFileFolders={};
+    for(const folder of successFolders){
+      const folderPath=String(folder.path||'').trim();
+      if(!folderPath)continue;
+      for(const fileName of (Array.isArray(folder.backup?.uploadedFiles)?folder.backup.uploadedFiles:[])){
+        const name=String(fileName||'').trim();
+        if(name&&!nasFileFolders[name])nasFileFolders[name]=folderPath;
+      }
+    }
+    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),fileFolders:nasFileFolders,round:replyRound})
       .catch(err=>setSync(`NAS 備份已完成，但自動帶入回信編輯器失敗，請改點「回信」查看：${err.message}`,true,7000));
     return;
   }
@@ -11626,30 +11637,23 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen)
   placeholder.textContent='　圖片上傳中...';
   imagesRow.appendChild(placeholder);
   editor.appendChild(imagesRow);
-  // folders 可能是多選（同一案件對應好幾個 NAS 來源資料夾）——每個資料夾各自獨立一行粗體路徑，
-  // 標籤文字依數量單複數調整；只有 1 個資料夾時維持原本的樣子（不加「共 N 個」字樣），跟改動前
-  // 單選情境的畫面完全一致，不會讓既有的單資料夾案件多出多餘文字。
-  const folderPaths=(Array.isArray(folders)?folders:[folders]).map(item=>String(item||'').trim()).filter(Boolean);
-  if(folderPaths.length){
-    editor.appendChild(document.createElement('br'));
-    editor.appendChild(document.createTextNode(folderPaths.length>1?` NAS路徑（共 ${folderPaths.length} 個資料夾）`:' NAS路徑'));
-    folderPaths.forEach(folderPath=>{
-      editor.appendChild(document.createElement('br'));
-      const bold=document.createElement('b');
-      bold.textContent=folderPath;
-      editor.appendChild(bold);
-    });
-  }
+  // folders 可能是多選（同一案件對應好幾個 NAS 來源資料夾）——每個資料夾各自獨立一行粗體路徑。
+  // 這個區塊包在自己的容器裡（不是直接散在編輯區），備份完成後拿到「真正確認成功的資料夾清單」時
+  // 才能整段重畫：彈窗是備份「開始」時就先開好的，那時候如果有資料夾稍後驗證失敗、或這個彈窗其實是
+  // 更早之前用別的資料夾開的（同案件同輪次會沿用不重建），沒有重畫機制就會停在舊的、比較少的清單上，
+  // 也就是使用者回報的「多選了資料夾，信件裡卻只顯示一個」。
+  const nasPathsContainer=document.createElement('div');
+  nasPathsContainer.id='gmailDesignerReplyNasPaths';
+  nasPathsContainer.contentEditable='false';
+  editor.appendChild(nasPathsContainer);
+  renderDesignerReplyNasPaths(folders);
   clearGmailInlineImages(editor.id);
   clearGmailAttachments(editor.id);
   // 影片路徑：這時候還不知道這一輪實際備份了哪些檔案（圖片還在上傳中），先放一個空佔位容器，
-  // 等 applyDesignerReplyImages() 局部更新時才知道要不要填內容——只有單一資料夾（folderPaths.length===1）
-  // 才記錄資料夾路徑，讓稍後真的抓到影片檔名時可以組出完整路徑；多資料夾時沒辦法單靠檔名判斷
-  // 這支影片實際來自哪一個資料夾，寧可不附加也不要附上錯誤的路徑，維持空白容器（會被清掉）。
+  // 等 applyDesignerReplyImages() 局部更新時才填內容（見 applyDesignerReplyVideoPaths）。
   const videoPathsContainer=document.createElement('div');
   videoPathsContainer.id='gmailDesignerReplyVideoPaths';
   videoPathsContainer.contentEditable='false';
-  if(folderPaths.length===1)videoPathsContainer.dataset.nasFolderPath=folderPaths[0];
   editor.appendChild(videoPathsContainer);
   await appendDefaultGmailSignature(editor);
   // 解鎖之後才由 resolveDesignerReplyImages()／applyDesignerReplyImages() 接手處理圖片上傳結果，
@@ -11693,24 +11697,68 @@ function appendDesignerReplyImageThumb(container,img){
 // 呼叫端傳入的原始檔名，不是 Drive 內部檔名」），所以能單純用副檔名判斷這筆紀錄原本是不是一支影片。
 const DESIGNER_REPLY_VIDEO_EXTENSIONS=['.mp4','.mov','.m4v'];
 function isDesignerReplyVideoFileName(fileName){const ext=String(fileName||'').toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';return DESIGNER_REPLY_VIDEO_EXTENSIONS.includes(ext)}
+/** 「設計師回覆信」的 NAS 路徑區塊。每個來源資料夾各自一行粗體路徑；只有 1 個資料夾時維持原本
+ * 的樣子（不加「共 N 個」字樣），跟多資料夾支援之前的畫面完全一致。備份完成後會用「真正確認成功的
+ * 資料夾清單」再呼叫一次重畫，確保多選的資料夾不會因為彈窗是更早之前開好的而少顯示。 */
+function designerReplyFolderList(folders){
+  // 同一個路徑重複出現時只留一筆：重複的路徑指向同一個資料夾，列兩次只會讓收件人以為有兩個不同來源。
+  return [...new Set((Array.isArray(folders)?folders:[folders]).map(item=>String(item||'').trim()).filter(Boolean))];
+}
+function renderDesignerReplyNasPaths(folders){
+  const container=document.getElementById('gmailDesignerReplyNasPaths');
+  if(!container)return [];
+  const folderPaths=designerReplyFolderList(folders);
+  container.textContent='';
+  container.dataset.nasFolders=JSON.stringify(folderPaths);
+  if(!folderPaths.length)return folderPaths;
+  container.appendChild(document.createElement('br'));
+  container.appendChild(document.createTextNode(folderPaths.length>1?` NAS路徑（共 ${folderPaths.length} 個資料夾）`:' NAS路徑'));
+  folderPaths.forEach(folderPath=>{
+    container.appendChild(document.createElement('br'));
+    const bold=document.createElement('b');
+    bold.textContent=folderPath;
+    container.appendChild(bold);
+  });
+  return folderPaths;
+}
+/** 記錄「這次備份每個檔名各自來自哪一個資料夾」。多選資料夾時光看檔名沒辦法反推來源資料夾，這份
+ * 對照表由 NAS 資料夾選擇器在備份完成的訊息裡一起帶回來（見 picker server 的 uploadedFiles），
+ * 是影片能在多資料夾情境下附上正確完整路徑的唯一依據。 */
+function setDesignerReplyNasFileFolders(fileFolders){
+  const container=document.getElementById('gmailDesignerReplyVideoPaths');
+  if(!container)return;
+  const map=fileFolders&&typeof fileFolders==='object'&&!Array.isArray(fileFolders)?fileFolders:{};
+  container.dataset.nasFileFolders=JSON.stringify(map);
+}
 /** 影片沒辦法像圖片一樣直接內嵌播放，畫面上看到的只是自動截的一張靜態截圖，收件人真的要看
  * 影片內容還是得回 NAS 找原始檔案，所以額外把每支影片的完整路徑（資料夾＋檔名＋副檔名）列出來，
- * 跟截圖一一對應；備份多張截圖（=多支影片各截一張）時就列出對應數量的影片路徑。只在
- * openDesignerReplyMailModal 當初判斷「這個案件只選了單一來源資料夾」時才會有 data-nas-folder-path
- * （見該處註解），多資料夾時沒辦法單靠檔名判斷影片來自哪一個資料夾，維持不附加、不猜錯路徑。 */
+ * 跟截圖一一對應；備份多張截圖（=多支影片各截一張）時就列出對應數量的影片路徑。
+ * 來源資料夾的判斷順序：①這次備份回報的「檔名→資料夾」對照表（多選資料夾時唯一可靠的依據）；
+ * ②整個案件只有一個來源資料夾時就是那一個（涵蓋沒有對照表的情境，例如電腦檔案上傳、或沿用舊路徑）。
+ * 兩者都對不上時（多資料夾、又沒有這個檔名的對照）就略過那一支，寧可少列也不要附上錯誤的路徑。 */
 function applyDesignerReplyVideoPaths(images){
   const container=document.getElementById('gmailDesignerReplyVideoPaths');
   if(!container)return;
   container.textContent='';
-  const folderPath=container.dataset.nasFolderPath||'';
-  const videoFileNames=(Array.isArray(images)?images:[]).map(img=>String(img?.fileName||'').trim()).filter(isDesignerReplyVideoFileName);
-  if(!folderPath||!videoFileNames.length){container.remove();return}
+  let folderPaths=[],fileFolders={};
+  try{folderPaths=JSON.parse(document.getElementById('gmailDesignerReplyNasPaths')?.dataset.nasFolders||'[]')}catch(error){folderPaths=[]}
+  try{fileFolders=JSON.parse(container.dataset.nasFileFolders||'{}')}catch(error){fileFolders={}}
+  const soleFolder=folderPaths.length===1?folderPaths[0]:'';
+  const videoPaths=(Array.isArray(images)?images:[])
+    .map(img=>String(img?.fileName||'').trim())
+    .filter(isDesignerReplyVideoFileName)
+    .map(fileName=>{
+      const folderPath=String(fileFolders[fileName]||'').trim()||soleFolder;
+      return folderPath?`${folderPath}/${fileName}`:'';
+    })
+    .filter(Boolean);
+  if(!videoPaths.length){container.remove();return}
   container.appendChild(document.createElement('br'));
-  container.appendChild(document.createTextNode(videoFileNames.length>1?` 影片路徑（共 ${videoFileNames.length} 支）`:' 影片路徑'));
-  videoFileNames.forEach(fileName=>{
+  container.appendChild(document.createTextNode(videoPaths.length>1?` 影片路徑（共 ${videoPaths.length} 支）`:' 影片路徑'));
+  videoPaths.forEach(videoPath=>{
     container.appendChild(document.createElement('br'));
     const bold=document.createElement('b');
-    bold.textContent=`${folderPath}/${fileName}`;
+    bold.textContent=videoPath;
     container.appendChild(bold);
   });
 }
@@ -11748,7 +11796,7 @@ function designerReplyImagesForRound(id,round){
  * （沿用既有的 fetchModificationCounts），取這個案件目前最新一輪的圖片清單套用進編輯區。萬一
  * openDesignerReplyMailModal 這次沒有機會先開過（例如舊版資料夾選擇器沒有送出
  * machi-nas-folder-backup-started 這則訊息），這裡會先補開一次，確保還是看得到信件編輯器。 */
-async function resolveDesignerReplyImages(id,{folders=[],round=null}={}){
+async function resolveDesignerReplyImages(id,{folders=[],fileFolders=null,round=null}={}){
   // 「備份開始」那則訊息觸發的初始化可能還在跑（在等 openGmailThreadModal 讀信件串），這時候彈窗雖然
   // 已經顯示出來、但 replyMode／designerReplyCaseId 這些標記都還沒寫上去，下面的 alreadyOpen 會誤判成
   // 「還沒開過」而重跑一次初始化——先等它跑完再判斷，才不會兩次初始化互相覆蓋（見
@@ -11758,6 +11806,11 @@ async function resolveDesignerReplyImages(id,{folders=[],round=null}={}){
   const alreadyOpen=modal&&!modal.hidden&&modal.dataset.replyMode==='designer'&&String(modal.dataset.designerReplyCaseId||'')===String(id);
   const targetRound=round===null||round===''?(alreadyOpen?Math.max(0,Number(modal.dataset.designerReplyRound)||0):currentModificationRound(id)):Math.max(0,Number(round)||0);
   if(!alreadyOpen)await openDesignerReplyMailModal(id,{folders,round:targetRound});
+  // 備份完成後才拿得到「真正確認成功的資料夾清單」與「檔名→資料夾」對照：彈窗可能是備份一開始就先
+  // 開好的（那時候的清單還沒經過伺服器驗證），也可能是更早之前用別的資料夾開的（同案件同輪次會沿用
+  // 不重建），所以這裡一律用最新的清單把 NAS 路徑區塊重畫一次，多選的資料夾才不會少顯示。
+  if(designerReplyFolderList(folders).length)renderDesignerReplyNasPaths(folders);
+  if(fileFolders)setDesignerReplyNasFileFolders(fileFolders);
   try{await fetchModificationCounts()}catch(err){}
   applyDesignerReplyImages(id,designerReplyImagesForRound(id,targetRound),{round:targetRound});
 }
