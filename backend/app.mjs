@@ -6,7 +6,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { JsonDatabase } from './json_database.mjs';
 import { publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_NAMES, TABLE_SCHEMAS } from './schema.mjs';
-import { applyWeightToRow } from './weighting.mjs';
+import { applyWeightToRow, normalizeDesignType, splitDetailValues } from './weighting.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -23,7 +23,8 @@ const WRITE_ACTIONS = new Set([
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'deleteModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
-  'adminAccountSave', 'adminAccountBulkImport', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead'
+  'adminAccountSave', 'adminAccountBulkImport', 'adminDesignerSave', 'adminDesignerRemove', 'markSystemAnnouncementRead',
+  'adminWeightScopeSave', 'adminWeightScopeDelete'
 ]);
 const PROJECT_GROUPS = {
   '平面': { designers: ['Machi', 'Anna', 'Amber', 'Leona'], type: '平面' },
@@ -422,6 +423,47 @@ function updateSettingsRow(row, settings = {}) {
  * 只屬於這個案件的附屬資料列。案件編號是每個月從現有資料列最大號碼＋1 算出來的，刪掉當月最新案件後
  * 下一筆新案件會拿到相同編號，附屬資料留著就會被新案件直接繼承（修改紀錄、設計圖、補充資料連結）。
  */
+/**
+ * 跟 Worker 端 database-coordinator.ts 同一套「加權設定」階段／項目細節維護邏輯。計分是三個欄位字串
+ * 完全比對，改規則名稱而不改既有案件資料，舊案件就會對不上規則、分數歸零，所以改名時要一併換掉案件裡的
+ * 舊名稱（renameCases）。
+ */
+function weightScopeRuleRows(draft, type, stage, detail) {
+  return draft.tables['加權計分標準'].rows.filter(row => text(row['設計種類']) === type
+    && text(row['階段']) === stage
+    && (!detail || text(row['項目細節']) === detail));
+}
+
+function caseRowMatchesType(row, type) {
+  const rowType = text(row['設計種類'] ?? row['設計類型'] ?? row['設計總類']);
+  return rowType === type || normalizeDesignType(rowType) === normalizeDesignType(type);
+}
+
+function renameWeightScopeInCases(draft, type, stage, detail, newStage, newDetail) {
+  let changed = 0;
+  for (const row of draft.tables.database.rows) {
+    if (!caseRowMatchesType(row, type) || text(row['階段']) !== stage) continue;
+    let touched = false;
+    if (detail) {
+      const values = splitDetailValues(row['項目細節']);
+      if (!values.includes(detail)) continue;
+      if (newDetail && newDetail !== detail) {
+        row['項目細節'] = values.map(item => (item === detail ? newDetail : item)).join(', ');
+        touched = true;
+      }
+    }
+    if (newStage && newStage !== stage) { row['階段'] = newStage; touched = true; }
+    if (touched) changed += 1;
+  }
+  return changed;
+}
+
+function countCasesUsingWeightScope(database, type, stage, detail) {
+  return database.tables.database.rows.filter(row => caseRowMatchesType(row, type)
+    && text(row['階段']) === stage
+    && (!detail || splitDetailValues(row['項目細節']).includes(detail))).length;
+}
+
 function removeCaseDependentRows(draft, caseId) {
   const modifications = draft.tables['修改統計表'];
   const beforeModifications = modifications.rows.length;
@@ -1117,6 +1159,45 @@ export function createActionHandler(database, options = {}) {
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '' };
         rows.push(row); return { ok: true, action, rowNumber: rows.length + 1, record: row, count };
       }, 'add modification');
+    }
+    if (action === 'adminWeightScopeSave' || action === 'adminWeightScopeDelete') {
+      requireCapability(snapshot, payload, 'database.manage');
+      const type = text(payload.type || payload['設計種類']);
+      const stage = text(payload.stage || payload['階段']);
+      const detail = text(payload.detail || payload['項目細節']);
+      if (!type || !stage) throw new Error('缺少設計種類或階段');
+      if (action === 'adminWeightScopeDelete') {
+        return database.transaction(draft => {
+          const table = draft.tables['加權計分標準'];
+          const removing = new Set(weightScopeRuleRows(draft, type, stage, detail));
+          if (!removing.size) throw new Error('找不到要刪除的加權設定');
+          const affectedCases = countCasesUsingWeightScope(draft, type, stage, detail);
+          table.rows = table.rows.filter(row => !removing.has(row));
+          recalculateDatabaseWeights(draft);
+          return { ok: true, action, type, stage, detail, removedRules: removing.size, affectedCases, changedTables: ['加權計分標準', 'database'] };
+        }, 'delete weight scope');
+      }
+      const newStage = text(payload.newStage);
+      const newDetail = text(payload.newDetail);
+      const hasStatus = payload.status !== undefined;
+      const status = text(payload.status);
+      if (hasStatus && status && status !== '下架') throw new Error('狀態只能是空白（啟用）或「下架」');
+      if (!newStage && !newDetail && !hasStatus) throw new Error('沒有要更新的內容');
+      if (newDetail && !detail) throw new Error('要改項目細節名稱時必須指定原本的項目細節');
+      return database.transaction(draft => {
+        const targets = weightScopeRuleRows(draft, type, stage, detail);
+        if (!targets.length) throw new Error('找不到要修改的加權設定');
+        if (newStage && newStage !== stage && weightScopeRuleRows(draft, type, newStage, '').length) throw new Error(`「${type}」底下已經有「${newStage}」這個階段了`);
+        if (newDetail && newDetail !== detail && weightScopeRuleRows(draft, type, newStage || stage, newDetail).length) throw new Error(`「${newStage || stage}」底下已經有「${newDetail}」這個項目細節了`);
+        const renamedCases = payload.renameCases === false ? 0 : renameWeightScopeInCases(draft, type, stage, detail, newStage, newDetail);
+        for (const row of targets) {
+          if (newStage) row['階段'] = newStage;
+          if (newDetail) row['項目細節'] = newDetail;
+          if (hasStatus) row['狀態'] = status;
+        }
+        recalculateDatabaseWeights(draft);
+        return { ok: true, action, type, stage, detail, newStage, newDetail, status, updatedRules: targets.length, renamedCases, changedTables: ['加權計分標準', 'database'] };
+      }, 'save weight scope');
     }
     if (action === 'deleteModificationRecord') {
       // 跟 Worker 端同一套邏輯與同一個權限門檻（media.manage）：刪掉整筆修改紀錄，不重編號其他輪次。

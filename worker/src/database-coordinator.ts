@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
+import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
@@ -52,6 +53,55 @@ function asRows(value: unknown): Row[] {
  * 直接繼承舊案件的修改紀錄與設計圖，補充資料連結也會被 syncSupplementLinks() 回填成舊案件的網址
  * ——這正是使用者回報的「刪掉案件後修改內容還在，下次新增專案讀取錯亂」。
  */
+/**
+ * 「加權設定」的階段／項目細節維護。
+ *
+ * 計分是用「設計種類＋階段＋項目細節」三個欄位的字串完全比對（見 backend/weighting.mjs 的
+ * calculateWeight），而且只要動到「加權計分標準」任何一列，recalculateDatabaseWeights() 就會把整張
+ * database 表的加權重算一次。所以單純把規則改名，舊案件裡存的仍然是舊名稱、對不上規則，分數會直接
+ * 歸零（歷史資料庫的快照也會跟著被重算覆蓋）。renameCases 就是為了這件事：改名時把既有案件資料裡的
+ * 舊名稱一起換成新名稱，分數才會原封不動。
+ */
+function weightScopeRuleRows(draft: DatabaseSnapshot, type: string, stage: string, detail: string): Row[] {
+  return draft.tables['加權計分標準'].rows.filter(row => text(row['設計種類']) === type
+    && text(row['階段']) === stage
+    && (!detail || text(row['項目細節']) === detail));
+}
+
+function caseRowMatchesType(row: Row, type: string): boolean {
+  const rowType = text(row['設計種類'] ?? row['設計類型'] ?? row['設計總類']);
+  return rowType === type || normalizeDesignType(rowType) === normalizeDesignType(type);
+}
+
+/** 把既有案件資料裡的階段／項目細節名稱換成新名稱，回傳實際改動的案件筆數。 */
+function renameWeightScopeInCases(draft: DatabaseSnapshot, type: string, stage: string, detail: string, newStage: string, newDetail: string): number {
+  let changed = 0;
+  for (const row of draft.tables.database.rows) {
+    if (!caseRowMatchesType(row, type) || text(row['階段']) !== stage) continue;
+    let touched = false;
+    if (detail) {
+      // 項目細節是可複選的多值欄位（實際資料一律用 ", " 分隔），只換掉相符的那一個項目，
+      // 其餘項目與順序都保持原樣。
+      const values = splitDetailValues(row['項目細節']);
+      if (!values.includes(detail)) continue;
+      if (newDetail && newDetail !== detail) {
+        row['項目細節'] = values.map(item => (item === detail ? newDetail : item)).join(', ');
+        touched = true;
+      }
+    }
+    if (newStage && newStage !== stage) { row['階段'] = newStage; touched = true; }
+    if (touched) changed += 1;
+  }
+  return changed;
+}
+
+/** 這個階段／項目細節目前有幾筆案件正在使用——刪除前要據實告訴使用者影響範圍。 */
+function countCasesUsingWeightScope(database: DatabaseSnapshot, type: string, stage: string, detail: string): number {
+  return database.tables.database.rows.filter(row => caseRowMatchesType(row, type)
+    && text(row['階段']) === stage
+    && (!detail || splitDetailValues(row['項目細節']).includes(detail))).length;
+}
+
 function removeCaseDependentRows(draft: DatabaseSnapshot, caseId: string): { modificationRows: number; supplementRows: number } {
   const modifications = draft.tables['修改統計表'];
   const beforeModifications = modifications.rows.length;
@@ -2642,6 +2692,58 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (action === 'adminDesignerRemove') return this.adminDesignerRemove(payload, database, session);
     if (action === 'adminOrganizationOptionSave') return this.adminOrganizationOptionSave(payload, database, session);
     if (action === 'adminOrganizationOptionDelete') return this.adminOrganizationOptionDelete(payload, database, session);
+    if (action === 'adminWeightScopeSave' || action === 'adminWeightScopeDelete') {
+      const current = this.requireAccess(database, session, 'database.manage');
+      const type = text(payload.type || payload['設計種類']);
+      const stage = text(payload.stage || payload['階段']);
+      const detail = text(payload.detail || payload['項目細節']);
+      if (!type || !stage) throw new Error('缺少設計種類或階段');
+      if (action === 'adminWeightScopeDelete') {
+        return this.mutate(action, current, draft => {
+          const table = draft.tables['加權計分標準'];
+          const removing = new Set(weightScopeRuleRows(draft, type, stage, detail));
+          if (!removing.size) throw new Error('找不到要刪除的加權設定');
+          const affectedCases = countCasesUsingWeightScope(draft, type, stage, detail);
+          table.rows = table.rows.filter(row => !removing.has(row));
+          // 規則沒了，用到它的舊案件就會算不到分數（歸零）——這是刪除本來就會有的後果，
+          // 前台已經在確認框把影響筆數講清楚，這裡照實重算即可。
+          recalculateDatabaseWeights(draft);
+          return {
+            result: { ok: true, action, type, stage, detail, removedRules: removing.size, affectedCases },
+            changedTables: ['加權計分標準', 'database']
+          };
+        });
+      }
+      const newStage = text(payload.newStage);
+      const newDetail = text(payload.newDetail);
+      const hasStatus = payload.status !== undefined;
+      const status = text(payload.status);
+      if (hasStatus && status && status !== '下架') throw new Error('狀態只能是空白（啟用）或「下架」');
+      if (!newStage && !newDetail && !hasStatus) throw new Error('沒有要更新的內容');
+      if (newDetail && !detail) throw new Error('要改項目細節名稱時必須指定原本的項目細節');
+      return this.mutate(action, current, draft => {
+        const targets = weightScopeRuleRows(draft, type, stage, detail);
+        if (!targets.length) throw new Error('找不到要修改的加權設定');
+        if (newStage && newStage !== stage && weightScopeRuleRows(draft, type, newStage, '').length) {
+          throw new Error(`「${type}」底下已經有「${newStage}」這個階段了`);
+        }
+        if (newDetail && newDetail !== detail && weightScopeRuleRows(draft, type, newStage || stage, newDetail).length) {
+          throw new Error(`「${newStage || stage}」底下已經有「${newDetail}」這個項目細節了`);
+        }
+        // 先換案件資料再換規則：換規則之後就找不到舊名稱的案件了。
+        const renamedCases = payload.renameCases === false ? 0 : renameWeightScopeInCases(draft, type, stage, detail, newStage, newDetail);
+        for (const row of targets) {
+          if (newStage) row['階段'] = newStage;
+          if (newDetail) row['項目細節'] = newDetail;
+          if (hasStatus) row['狀態'] = status;
+        }
+        recalculateDatabaseWeights(draft);
+        return {
+          result: { ok: true, action, type, stage, detail, newStage, newDetail, status, updatedRules: targets.length, renamedCases },
+          changedTables: ['加權計分標準', 'database']
+        };
+      });
+    }
     if (['adminTableUpdate', 'adminTableDelete', 'adminTableInsert'].includes(action)) return this.adminMutation(action, payload, database, session);
     if (action === 'detailOptions' || action === 'options') return { ok: true, action, types: [], stages: [], details: {} };
     if (['uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'listDesignerMedia'].includes(action)) return { ok: false, action, error: '圖片檔案仍由獨立上傳服務處理，請從系統圖片視窗操作' };

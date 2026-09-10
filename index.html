@@ -7606,6 +7606,9 @@ function designListsFromWeightTable(database){
   const next={types,stages:Object.fromEntries(types.map(type=>[type,[]])),details:Object.fromEntries(types.map(type=>[type,{}]))};
   rows.forEach(row=>{
     const type=normalizeWeightType(row['設計種類']),stage=String(row['階段']||'').trim(),detail=String(row['項目細節']||'').trim();
+    // 已下架的規則不再出現在表單選單裡，但計分時仍然算數（見 syncWeightRulesFromDatabase／weighting.mjs），
+    // 所以舊案件用到的舊選項不會因為下架就變成 0 分。
+    if(String(row['狀態']||'').trim()==='下架')return;
     if(!type||!stage||!detail||!next.stages[type])return;
     if(!next.stages[type].includes(stage))next.stages[type].push(stage);
     if(!next.details[type][stage])next.details[type][stage]=[];

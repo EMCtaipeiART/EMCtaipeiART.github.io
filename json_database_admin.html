@@ -199,7 +199,7 @@
 .account-link-preview.is-empty{color:var(--line)}
 .account-reel-actions{display:flex;gap:6px;padding:0 8px 8px}
     .account-reel-actions button{flex:1;min-height:30px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);box-shadow:none;appearance:none;font-size:10.5px;font-weight:600}.account-reel-actions button:hover{background:var(--soft)}
-    .account-reels-block{margin-top:14px}.account-reels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.account-reels-head p{margin:0;color:var(--muted);font-size:11.5px;font-weight:700}.account-reels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.account-reel-card{overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.account-reel-card.is-hidden{opacity:.6}.database-table tr.is-disabled{opacity:.55}.account-reel-card img{width:100%;height:145px;display:block;object-fit:cover;background:#111}.account-reel-meta{display:grid;gap:4px;padding:8px}.account-reel-meta b{font-size:11.5px}.account-reel-meta span{color:var(--muted);font-size:10.5px}.account-reel-viewers{cursor:help;border-bottom:1px dotted var(--muted)}.account-reel-hidden-badge{justify-self:start;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:2px 8px;font-size:9.5px;font-weight:800}.account-reels-empty{padding:12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center;font-size:11.5px}.account-help{margin:5px 0 0;color:var(--muted);font-size:11px}.account-new-marker{margin-bottom:10px;border:1px dashed #99cdb7;border-radius:8px;background:var(--green2);color:#0b6b4c;padding:9px 11px;font-weight:600}.permission-section.account-designer[hidden]{display:none!important}
+    .account-reels-block{margin-top:14px}.account-reels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.account-reels-head p{margin:0;color:var(--muted);font-size:11.5px;font-weight:700}.account-reels-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.account-reel-card{overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.account-reel-card.is-hidden{opacity:.6}.database-table tr.is-disabled{opacity:.55}.weight-scope-actions{display:inline-flex;align-items:center;gap:5px;margin-left:auto;flex:0 0 auto}.weight-scope-actions button{min-height:24px!important;border-radius:999px!important;padding:2px 9px!important;background:#fff!important;color:#43524b!important;border:1px solid var(--line)!important;font-size:11px!important;font-weight:800!important;box-shadow:none!important;cursor:pointer!important}.weight-scope-actions button:hover{border-color:#9bd4b4!important;color:#16a34a!important}.weight-scope-actions button.delete:hover{border-color:#fecaca!important;color:#b91c1c!important;background:#fef2f2!important}.weight-row.is-hidden{opacity:.55}.group.nested.is-hidden>summary{opacity:.6}.weight-hidden-badge{border-radius:999px;background:#f1f5f4;border:1px solid var(--line);color:#66736d;padding:1px 7px;font-size:10px;font-weight:800}.account-reel-card img{width:100%;height:145px;display:block;object-fit:cover;background:#111}.account-reel-meta{display:grid;gap:4px;padding:8px}.account-reel-meta b{font-size:11.5px}.account-reel-meta span{color:var(--muted);font-size:10.5px}.account-reel-viewers{cursor:help;border-bottom:1px dotted var(--muted)}.account-reel-hidden-badge{justify-self:start;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:2px 8px;font-size:9.5px;font-weight:800}.account-reels-empty{padding:12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);text-align:center;font-size:11.5px}.account-help{margin:5px 0 0;color:var(--muted);font-size:11px}.account-new-marker{margin-bottom:10px;border:1px dashed #99cdb7;border-radius:8px;background:var(--green2);color:#0b6b4c;padding:9px 11px;font-weight:600}.permission-section.account-designer[hidden]{display:none!important}
     /* Designer administration */
     .designer-admin-add{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(420px,1.3fr);gap:24px;align-items:center;margin-bottom:18px;padding:20px 22px;border:1px solid #d9e4de;border-radius:12px;background:linear-gradient(135deg,#fff 0%,#f4faf7 100%);box-shadow:0 6px 18px rgba(18,38,28,.045)}
     .designer-admin-add-copy h3{margin:3px 0 4px;font-size:15px;letter-spacing:-.01em}.designer-admin-add-copy p{margin:0;max-width:460px;color:var(--muted);font-size:11.5px}.designer-admin-eyebrow{color:var(--green);font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
@@ -349,7 +349,7 @@
     async function loadMetadata({fresh=false,commitSha=''}={}){const data=APPS_SCRIPT_MODE?await loadDatabaseFile({fresh,commitSha}):await request('/tables');return applyMetadataSnapshot(data)}
     function stageDatabaseSnapshot(data,message={}){const currentRevision=currentDatabaseRevision(),candidateRevision=databaseRevision(data),stagedRevision=databaseRevision(stagedDatabase);if(candidateRevision<=currentRevision||candidateRevision<=stagedRevision)return false;stagedDatabase=data;stagedRefreshMessage=message;updateRefreshButton();const tables=Array.isArray(message.tables)?message.tables.filter(Boolean):[];note(`偵測到新資料${tables.length?`：${tables.join('、')}`:''}。目前畫面與閱讀位置已保留；完成操作後請按「套用新資料」。`,'ok');return true}
     async function manualReload(){const button=$('reload');button.disabled=true;try{if(stagedDatabase){const data=stagedDatabase;await applyMetadataSnapshot(data);note(`已套用 JSON 修訂版 ${data.revision??'—'}，目前頁籤與篩選條件保持不變。`,'ok')}else{await refreshWorkerDatabase();await loadMetadata({fresh:true});note(`已重新讀取 JSON 修訂版 ${appliedRevision||'—'}。`,'ok')}}catch(error){note(`重新讀取失敗：${error.message}`,'error')}finally{button.disabled=false;updateRefreshButton()}}
-    function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='系統公告欄'?'+ 新增公告':(tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料'))));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database';$('importAccounts').hidden=tableName!=='帳號權限'}
+    function updateAddButton(){const hidden=tableName==='角色權限範本'||tableName==='客戶別'||tableName==='加權計分標準'||NO_INSERT_TABLES.includes(tableName);$('add').hidden=hidden;$('add').textContent=tableName==='系統公告欄'?'+ 新增公告':(tableName==='設計列表'?'+ 新增設計師':(tableName==='帳號權限'?'+ 新增帳號':(tableName==='加權計分標準'?'+ 新增項目':(tableName==='修改統計表'?'+ 新增修改紀錄':'+ 新增資料'))));$('backupToSheet').hidden=tableName!=='database';$('databaseFilters').hidden=tableName!=='database';$('importAccounts').hidden=tableName!=='帳號權限'}
     function populateDatabaseFilters(){DATABASE_FILTER_FIELDS.forEach(([id,,options,placeholder])=>{const select=$(id);select.innerHTML=`<option value="">${placeholder}</option>`+options.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')})}
     function updateFilterClearButton(){$('filterClear').hidden=!Object.values(databaseFilters).some(Boolean)}
     function resetDatabaseFilters(){databaseFilters={};DATABASE_FILTER_FIELDS.forEach(([id])=>{$(id).value=''});updateFilterClearButton()}
@@ -393,7 +393,7 @@
       const data=await request(`/table/database?offset=0&limit=100000`);
       caseInfoRowsCache=data.rows||[];
     }
-    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'){await ensureCaseInfoRows()}if(requestedTable==='客戶別')await permissionRowsData();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
+    async function loadRows(){const requestedTable=tableName,sequence=++rowLoadSequence,path=queryPath(),label=tableLabel(requestedTable);note(`正在讀取 ${label} JSON...`);try{if(APPS_SCRIPT_MODE&&!directDatabase)await loadDatabaseFile();let data;if(['帳號權限','設計列表'].includes(requestedTable)){data=await permissionRowsData();if(requestedTable==='設計列表'){const active=data.rows.filter(designerAdminIsActive);metadata['設計列表'].rowCount=active.length;data={...data,table:'設計列表',total:active.length,rows:active};renderTabs()}}else data=APPS_SCRIPT_MODE?databaseFileRows():await request(path);if(requestedTable==='修改統計表'||requestedTable==='加權計分標準'){await ensureCaseInfoRows()}if(requestedTable==='客戶別')await permissionRowsData();if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(requestedTable==='角色權限範本'){roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}})}renderTable(data);note(requestedTable==='帳號權限'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 個帳號；角色範本會自動繼承全域預設，只有「自訂」會覆寫。`:(requestedTable==='設計列表'?`已載入 ${Number(data.total).toLocaleString('zh-TW')} 位前台設計師；人員、頭像、技能與輪值由此頁統一管理。`:(requestedTable==='角色權限範本'?'四種角色的預設權限已載入；儲存後會套用至使用該角色的所有帳號。':`${label} 已從 JSON 載入 ${Number(data.total).toLocaleString('zh-TW')} 筆。`)),'ok')}catch(error){if(sequence!==rowLoadSequence||requestedTable!==tableName)return;if(/401|權限|TOKEN_EXPIRED/.test(error.message))showLogin('管理者登入狀態已失效，請回前台重新登入。');note(`讀取失敗：${error.message}`,'error')}}
     function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
     function rowKeyFor(row){const table=metadata[tableName];return table?.primaryKey?String(row[table.primaryKey]??''):String(row._rowNumber)}
     function actionCell(){return '<td class="action-col"><div class="row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></td>'}
@@ -456,9 +456,17 @@
         const total=[...byStage.values()].reduce((n,list)=>n+list.length,0);
         let inner='';
         for(const [stage,items] of byStage){
-          inner+=`<details class="group nested" open><summary>${esc(stage)}<span class="group-count">${items.length} 項</span></summary><div class="group-body">${items.map(row=>`<div class="weight-row" data-key="${esc(rowKeyFor(row))}"><div class="weight-row-info"><b>${esc(row['項目細節'])}</b>${row['備註']?`<span>${esc(row['備註'])}</span>`:''}</div><div class="weight-row-score">${weightEditorHtml(row)}</div><div class="weight-row-actions"><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></div>`).join('')}</div></details>`;
+          // 一個「階段」在資料上其實是好幾列共用同一個階段名稱，所以階段層級的改名／下架／刪除都是
+          // 一次動到這一整組（由後端的 adminWeightScopeSave／Delete 在同一次寫入裡完成）。
+          const stageHidden=items.length>0&&items.every(row=>String(row['狀態']||'').trim()==='下架');
+          const stageAttrs=`data-weight-type="${esc(type)}" data-weight-stage="${esc(stage)}"`;
+          const rowsHtml=items.map(row=>{
+            const hidden=String(row['狀態']||'').trim()==='下架';
+            return `<div class="weight-row${hidden?' is-hidden':''}" data-key="${esc(rowKeyFor(row))}" ${stageAttrs} data-weight-detail="${esc(row['項目細節'])}"><div class="weight-row-info"><b>${esc(row['項目細節'])}</b>${hidden?'<span class="weight-hidden-badge">已下架</span>':''}${row['備註']?`<span>${esc(row['備註'])}</span>`:''}</div><div class="weight-row-score">${weightEditorHtml(row)}</div><div class="weight-row-actions"><button type="button" data-weight-detail-rename>改名</button><button type="button" data-weight-detail-toggle>${hidden?'重新啟用':'下架'}</button><button type="button" data-edit>編輯</button><button class="delete" type="button" data-delete>刪除</button></div></div>`;
+          }).join('');
+          inner+=`<details class="group nested${stageHidden?' is-hidden':''}" open ${stageAttrs}><summary>${esc(stage)}${stageHidden?'<span class="weight-hidden-badge">已下架</span>':''}<span class="group-count">${items.length} 項</span><span class="weight-scope-actions"><button type="button" data-weight-detail-add>＋ 項目細節</button><button type="button" data-weight-stage-rename>改名</button><button type="button" data-weight-stage-toggle>${stageHidden?'重新啟用':'下架'}</button><button class="delete" type="button" data-weight-stage-delete>刪除</button></span></summary><div class="group-body">${rowsHtml}</div></details>`;
         }
-        html+=`<details class="group" open><summary><b>${esc(type)}</b><span class="group-count">${total} 項</span></summary><div class="group-body">${inner}</div></details>`;
+        html+=`<details class="group" open data-weight-type="${esc(type)}"><summary><b>${esc(type)}</b><span class="group-count">${total} 項</span><span class="weight-scope-actions"><button type="button" data-weight-stage-add>＋ 新增階段</button></span></summary><div class="group-body">${inner}</div></details>`;
       }
       return html;
     }
@@ -1302,6 +1310,100 @@
         note(`儲存失敗：${error.message}`,'error');
       }finally{button.disabled=false;button.textContent=buttonText}
     }
+    // ---- 加權設定：階段／項目細節維護 ----
+    // 計分是「設計種類＋階段＋項目細節」字串完全比對，而且動到任何一筆規則都會把整張 database 的加權
+    // 重算一次，所以改名一定要連既有案件一起改（後端 renameCases 負責），刪除則會讓用到的案件分數歸零。
+    // 這裡的確認訊息一律先算出「有幾筆案件正在用」再問，讓使用者知道影響範圍。
+    function weightScopeFrom(target){
+      const stageEl=target.closest('[data-weight-stage]'),typeEl=target.closest('[data-weight-type]');
+      return {
+        type:String(typeEl?.dataset.weightType||stageEl?.dataset.weightType||'').trim(),
+        stage:String(stageEl?.dataset.weightStage||'').trim(),
+        detail:String(target.closest('[data-weight-detail]')?.dataset.weightDetail||'').trim()
+      };
+    }
+    function weightScopeCaseCount(type,stage,detail){
+      const normalize=value=>{const text=String(value||'').trim();return ['影片','影像','影音'].includes(text)?'影音':text};
+      return (caseInfoRowsCache||[]).filter(row=>{
+        const rowType=String(row['設計種類']||row['設計類型']||row['設計總類']||'').trim();
+        if(normalize(rowType)!==normalize(type))return false;
+        if(String(row['階段']||'').trim()!==stage)return false;
+        if(!detail)return true;
+        return String(row['項目細節']||'').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).includes(detail);
+      }).length;
+    }
+    async function runWeightScopeAction(action,payload,successMessage){
+      note('加權設定寫入中…');
+      try{
+        const data=await request('',{method:'POST',body:JSON.stringify({action,...payload})});
+        publishDatabaseRefresh(action,data);
+        await ensureCaseInfoRows();
+        await loadMetadata();
+        await loadRows();
+        note(successMessage(data),'ok');
+      }catch(error){note(`加權設定更新失敗：${error.message}`,'error')}
+    }
+    async function renameWeightStage(target){
+      const {type,stage}=weightScopeFrom(target);
+      if(!type||!stage)return;
+      const next=String(prompt(`把「${type}」的階段「${stage}」改成什麼名稱？`,stage)||'').trim();
+      if(!next||next===stage)return;
+      const cases=weightScopeCaseCount(type,stage,'');
+      if(!confirm(`確定把階段「${stage}」改名為「${next}」？\n\n${cases?`目前有 ${cases} 筆案件使用這個階段，系統會一併把這些案件的階段改成新名稱，加權分數維持不變。`:'目前沒有案件使用這個階段。'}`))return;
+      await runWeightScopeAction('adminWeightScopeSave',{type,stage,newStage:next},data=>`階段已改名為「${next}」（規則 ${data.updatedRules} 筆、案件 ${data.renamedCases} 筆同步更新）。`);
+    }
+    async function renameWeightDetail(target){
+      const {type,stage,detail}=weightScopeFrom(target);
+      if(!type||!stage||!detail)return;
+      const next=String(prompt(`把「${stage}」的項目細節「${detail}」改成什麼名稱？`,detail)||'').trim();
+      if(!next||next===detail)return;
+      const cases=weightScopeCaseCount(type,stage,detail);
+      if(!confirm(`確定把項目細節「${detail}」改名為「${next}」？\n\n${cases?`目前有 ${cases} 筆案件使用這個項目，系統會一併把這些案件的項目細節改成新名稱，加權分數維持不變。`:'目前沒有案件使用這個項目。'}`))return;
+      await runWeightScopeAction('adminWeightScopeSave',{type,stage,detail,newDetail:next},data=>`項目細節已改名為「${next}」（案件 ${data.renamedCases} 筆同步更新）。`);
+    }
+    async function toggleWeightScope(target,scope){
+      const {type,stage,detail}=weightScopeFrom(target);
+      if(!type||!stage||(scope==='detail'&&!detail))return;
+      const label=scope==='detail'?`項目細節「${detail}」`:`階段「${stage}」`;
+      const turningOff=String(target.textContent||'').includes('下架');
+      const status=turningOff?'下架':'';
+      if(turningOff&&!confirm(`確定下架${label}？\n\n下架後前台的設計需求表單不會再出現這個選項，但計分規則會保留，既有案件的加權分數完全不受影響。`))return;
+      await runWeightScopeAction('adminWeightScopeSave',{type,stage,detail:scope==='detail'?detail:'',status},()=>`${label}已${turningOff?'下架':'重新啟用'}。`);
+    }
+    async function deleteWeightStage(target){
+      const {type,stage}=weightScopeFrom(target);
+      if(!type||!stage)return;
+      const cases=weightScopeCaseCount(type,stage,'');
+      if(!confirm(`確定刪除「${type}」底下的整個階段「${stage}」？\n\n${cases?`⚠️ 目前有 ${cases} 筆案件使用這個階段，刪除後這些案件的加權分數會變成 0，歷史資料庫的分數也會跟著被重算覆蓋。\n\n如果只是不想讓它再被選到，建議改用「下架」——下架不會影響任何分數。\n\n`:''}此動作無法復原。`))return;
+      await runWeightScopeAction('adminWeightScopeDelete',{type,stage},data=>`階段「${stage}」已刪除（規則 ${data.removedRules} 筆，影響 ${data.affectedCases} 筆案件）。`);
+    }
+    async function deleteWeightDetail(target){
+      const {type,stage,detail}=weightScopeFrom(target);
+      if(!type||!stage||!detail)return;
+      const cases=weightScopeCaseCount(type,stage,detail);
+      if(!confirm(`確定刪除項目細節「${detail}」？\n\n${cases?`⚠️ 目前有 ${cases} 筆案件使用這個項目，刪除後這些案件會少算這個項目的分數，歷史資料庫也會跟著被重算覆蓋。\n\n如果只是不想讓它再被選到，建議改用「下架」——下架不會影響任何分數。\n\n`:''}此動作無法復原。`))return;
+      await runWeightScopeAction('adminWeightScopeDelete',{type,stage,detail},data=>`項目細節「${detail}」已刪除（影響 ${data.affectedCases} 筆案件）。`);
+    }
+    async function addWeightStage(target){
+      const {type}=weightScopeFrom(target);
+      if(!type)return;
+      const stage=String(prompt(`要在「${type}」新增什麼階段？`,'')||'').trim();
+      if(!stage)return;
+      const detail=String(prompt(`階段「${stage}」的第一個項目細節名稱？（階段至少要有一個項目才會出現在前台選單）`,'')||'').trim();
+      if(!detail)return;
+      const weight=String(prompt(`「${detail}」的權重是幾分？`,'1')||'').trim();
+      if(!weight||!Number.isFinite(Number(weight))){note('權重必須是數字。','error');return}
+      await runWeightScopeAction('adminTableInsert',{table:'加權計分標準',row:{'設計種類':type,'階段':stage,'項目細節':detail,'權重':weight,'備註':'','狀態':''}},()=>`已新增階段「${stage}」，並建立第一個項目細節「${detail}」。`);
+    }
+    async function addWeightDetail(target){
+      const {type,stage}=weightScopeFrom(target);
+      if(!type||!stage)return;
+      const detail=String(prompt(`要在「${stage}」新增什麼項目細節？`,'')||'').trim();
+      if(!detail)return;
+      const weight=String(prompt(`「${detail}」的權重是幾分？`,'1')||'').trim();
+      if(!weight||!Number.isFinite(Number(weight))){note('權重必須是數字。','error');return}
+      await runWeightScopeAction('adminTableInsert',{table:'加權計分標準',row:{'設計種類':type,'階段':stage,'項目細節':detail,'權重':weight,'備註':'','狀態':''}},()=>`已在「${stage}」新增項目細節「${detail}」。`);
+    }
     async function saveInlineWeight(row,container){
       const select=container.querySelector('[data-weight-select]'),custom=container.querySelector('[data-weight-other]'),button=container.querySelector('[data-weight-save]'),value=select.value==='other'?custom.value.trim():select.value,table=metadata['加權計分標準'],index=directRowIndex(table,row,'加權計分標準');
       if(!value){custom.hidden=false;custom.focus();note('請輸入自訂權重。','error');return}
@@ -1384,12 +1486,26 @@
       if(event.target.closest('[data-permission-readonly]')){setPermissionEditorMode('readonly');return}
       const sortBtn=event.target.closest('[data-sort]');
       if(sortBtn){if(sortKey===sortBtn.dataset.sort)sortOrder=sortOrder==='asc'?'desc':'asc';else{sortKey=sortBtn.dataset.sort;sortOrder='asc'}page=1;loadRows();return}
+      // 加權設定的階段／設計種類層級按鈕不在 [data-key] 容器裡（它們掛在 <summary> 上），所以要在下面
+      // 那道 [data-key] 守衛之前處理；而且按在 <summary> 裡的按鈕預設會把 <details> 收合起來，要擋掉。
+      const weightScopeButton=event.target.closest('[data-weight-stage-add],[data-weight-detail-add],[data-weight-stage-rename],[data-weight-stage-toggle],[data-weight-stage-delete],[data-weight-detail-rename],[data-weight-detail-toggle]');
+      if(weightScopeButton){
+        event.preventDefault();
+        if(weightScopeButton.matches('[data-weight-stage-add]'))addWeightStage(weightScopeButton);
+        else if(weightScopeButton.matches('[data-weight-detail-add]'))addWeightDetail(weightScopeButton);
+        else if(weightScopeButton.matches('[data-weight-stage-rename]'))renameWeightStage(weightScopeButton);
+        else if(weightScopeButton.matches('[data-weight-stage-toggle]'))toggleWeightScope(weightScopeButton,'stage');
+        else if(weightScopeButton.matches('[data-weight-stage-delete]'))deleteWeightStage(weightScopeButton);
+        else if(weightScopeButton.matches('[data-weight-detail-rename]'))renameWeightDetail(weightScopeButton);
+        else if(weightScopeButton.matches('[data-weight-detail-toggle]'))toggleWeightScope(weightScopeButton,'detail');
+        return;
+      }
       const container=event.target.closest('[data-key]');if(!container)return;
       const row=rowsByKey.get(container.dataset.key);if(!row)return;
       const announcementToggle=event.target.closest('[data-announcement-toggle]');if(announcementToggle){toggleSystemAnnouncement(row,announcementToggle);return}
       if(event.target.closest('[data-weight-save]')){saveInlineWeight(row,container);return}
       if(event.target.closest('[data-edit]'))openEditor(row);
-      if(event.target.closest('[data-delete]'))deleteRow(row);
+      if(event.target.closest('[data-delete]')){if(tableName==='加權計分標準')deleteWeightDetail(event.target.closest('[data-delete]'));else deleteRow(row);return}
     });
     $('view').addEventListener('change',event=>{if(event.target.matches('[data-customer-owner],[data-customer-designer],[data-customer-department]')){syncCustomerPeopleChips(event.target.closest('[data-customer-people]'));return}const role=event.target.closest('[data-permission-role]');if(role){syncAccountEditorState({applyRole:true});return}if(event.target.matches('[data-account-login-method]')){syncAccountEditorState();return}if(event.target.matches('[data-account-column]')){refreshAccountColumnOrder();return}if(event.target.matches('[data-account-field="組別"]')){syncAccountEditorState();return}if(event.target.matches('[data-permission-page],[data-permission-capability]')){const select=permissionEditorElement()?.querySelector('[data-permission-role]');if(select&&!select.disabled)select.value='自訂';syncAccountEditorState()}});
     $('view').addEventListener('input',event=>{if(event.target.matches('.customer-people-search')){filterCustomerPeopleList(event.target);return}if(event.target.matches('[data-account-field="顯示名"],[data-account-field="名字"],[data-account-field="頭像連結"]'))syncAccountEditorState();if(event.target.matches('[data-designer-field="avatar"]')){const preview=event.target.closest('[data-designer-card]')?.querySelector('[data-designer-avatar-preview]');if(preview)preview.src=event.target.value||initialsAvatar(event.target.closest('[data-designer-card]')?.dataset.designerCard||'?')}});

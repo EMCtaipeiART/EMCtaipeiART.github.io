@@ -1171,6 +1171,55 @@ describe('Machi Design API Worker', () => {
     expect(await submittedAtFor()).toBe(draftCreatedAt);
   });
 
+  it('renaming a weight stage carries existing cases along so scores survive, while 下架 keeps scoring and delete does not', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'weight-file-sha' }, commit: { sha: 'weight-commit-sha' } });
+    });
+
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const snapshot = async () => runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return JSON.parse(stored.json) as DatabaseSnapshot;
+    });
+    // Give the seeded case a scoreable 平面/後製 combination.
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      const row = database.tables.database.rows.find(item => String(item['案件編號']) === '26080001')!;
+      row['設計種類'] = '平面'; row['階段'] = '後製'; row['數量'] = '10'; row['項目細節'] = '影音包框, 修圖';
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    const caseRow = async () => (await snapshot()).tables.database.rows.find(row => String(row['案件編號']) === '26080001')!;
+    const ruleRow = async (stage: string, detail: string) => (await snapshot()).tables['加權計分標準'].rows
+      .find(row => row['設計種類'] === '平面' && row['階段'] === stage && row['項目細節'] === detail);
+
+    const renamed = await api({ action: 'adminWeightScopeSave', type: '平面', stage: '後製', newStage: '後期' }, token);
+    expect(renamed).toMatchObject({ ok: true, renamedCases: 1, changedTables: ['加權計分標準', 'database'] });
+    expect((await caseRow())['階段']).toBe('後期');
+    expect((await caseRow())['加權']).toBe('25');
+
+    const detailRenamed = await api({ action: 'adminWeightScopeSave', type: '平面', stage: '後期', detail: '影音包框', newDetail: '包框影片' }, token);
+    expect(detailRenamed).toMatchObject({ ok: true, renamedCases: 1 });
+    // Only the matching entry of the multi-value field changes; the rest keep their order and separator.
+    expect((await caseRow())['項目細節']).toBe('包框影片, 修圖');
+    expect((await caseRow())['加權']).toBe('25');
+
+    const hidden = await api({ action: 'adminWeightScopeSave', type: '平面', stage: '後期', detail: '包框影片', status: '下架' }, token);
+    expect(hidden).toMatchObject({ ok: true });
+    expect((await ruleRow('後期', '包框影片'))?.['狀態']).toBe('下架');
+    expect((await caseRow())['加權']).toBe('25');
+
+    const removed = await api({ action: 'adminWeightScopeDelete', type: '平面', stage: '後期', detail: '包框影片' }, token);
+    expect(removed).toMatchObject({ ok: true, removedRules: 1, affectedCases: 1 });
+    expect((await caseRow())['加權']).toBe('5');
+
+    const badStatus = await api({ action: 'adminWeightScopeSave', type: '平面', stage: '後期', status: '停用' }, token);
+    expect(badStatus).toMatchObject({ ok: false });
+  });
+
   it('deleting a case clears its modification records and supplement links so a reused case id starts clean', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

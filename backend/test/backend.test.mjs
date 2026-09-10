@@ -1947,6 +1947,111 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
   assert.match(html, /deleteModificationRecord:\['修改統計表'\]/);
 });
 
+test('weight settings can rename a stage or detail without disturbing any score, hide one without disturbing any score, and only lose points on an actual delete', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  const makeCase = async details => (await api(app.baseUrl, 'create', {
+    row: { client: 'C', project: 'P', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 10, details },
+    editorToken: login.token
+  })).row.id;
+  const caseRow = id => app.database.table('database').rows.find(row => row['案件編號'] === id);
+  const rule = (stage, detail) => app.database.table('加權計分標準').rows
+    .find(row => row['設計種類'] === '平面' && row['階段'] === stage && row['項目細節'] === detail);
+
+  const single = await makeCase('社群貼文');          // 1 分 × 10
+  const multi = await makeCase('影音包框, 修圖');       // (2 + 0.5) × 10
+  assert.equal(caseRow(single)['加權'], '10');
+  assert.equal(caseRow(multi)['加權'], '25');
+
+  // Renaming a stage must carry the existing cases with it, otherwise every one of them stops matching
+  // the rule (scores are an exact 設計種類+階段+項目細節 string match) and silently drops to 0.
+  const stageRename = await api(app.baseUrl, 'adminWeightScopeSave', {
+    type: '平面', stage: '後製', newStage: '後期', editorToken: login.token
+  });
+  assert.equal(stageRename.renamedCases, 2);
+  assert.equal(caseRow(single)['階段'], '後期');
+  assert.equal(caseRow(single)['加權'], '10');
+  assert.equal(caseRow(multi)['加權'], '25');
+
+  // Same for a detail rename -- and only the matching entry of the multi-value field may change.
+  const detailRename = await api(app.baseUrl, 'adminWeightScopeSave', {
+    type: '平面', stage: '後期', detail: '影音包框', newDetail: '包框影片', editorToken: login.token
+  });
+  assert.equal(detailRename.renamedCases, 1);
+  assert.equal(caseRow(multi)['項目細節'], '包框影片, 修圖');
+  assert.equal(caseRow(multi)['加權'], '25');
+
+  // 下架 is the safe retirement: the rule stays in place for scoring, only the picker stops offering it.
+  const hidden = await api(app.baseUrl, 'adminWeightScopeSave', {
+    type: '平面', stage: '後期', detail: '包框影片', status: '下架', editorToken: login.token
+  });
+  assert.equal(hidden.ok, true);
+  assert.equal(rule('後期', '包框影片')['狀態'], '下架');
+  assert.equal(caseRow(multi)['加權'], '25');
+
+  // Deleting really does cost the points, and the response reports how many cases were affected.
+  const removed = await api(app.baseUrl, 'adminWeightScopeDelete', {
+    type: '平面', stage: '後期', detail: '包框影片', editorToken: login.token
+  });
+  assert.equal(removed.removedRules, 1);
+  assert.equal(removed.affectedCases, 1);
+  assert.equal(caseRow(multi)['加權'], '5');   // 修圖 0.5 × 10 remains
+  assert.equal(caseRow(single)['加權'], '10'); // untouched
+
+  // Guard rails.
+  const clash = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'adminWeightScopeSave', type: '平面', stage: '後期', newStage: '印刷', editorToken: login.token
+  } });
+  assert.equal(clash.response.status, 400);
+  assert.match(clash.data.error, /已經有「印刷」這個階段/);
+
+  const badStatus = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'adminWeightScopeSave', type: '平面', stage: '後期', status: '停用', editorToken: login.token
+  } });
+  assert.equal(badStatus.response.status, 400);
+
+  const missing = await request(app.baseUrl, '/api', { method: 'POST', body: {
+    action: 'adminWeightScopeDelete', type: '平面', stage: '不存在的階段', editorToken: login.token
+  } });
+  assert.equal(missing.response.status, 400);
+});
+
+test('weight settings admin exposes stage/detail maintenance inline and drops the vague top-right add button, and a 下架 option never reaches the request form', async () => {
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  const index = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const schema = await readFile(new URL('../../backend/schema.mjs', import.meta.url), 'utf8');
+
+  // 狀態 column backs the 下架 concept.
+  assert.match(schema, /headers: \['設計種類', '階段', '項目細節', '權重', '備註', '狀態'\]/);
+
+  // The picker must skip retired options, while scoring keeps them -- that is the whole point of 下架.
+  assert.match(index, /if\(String\(row\['狀態'\]\|\|''\)\.trim\(\)==='下架'\)return;/);
+  const syncFn = index.match(/function syncWeightRulesFromDatabase\(database\)\{[\s\S]*?\n/)?.[0];
+  assert.ok(syncFn, 'could not locate syncWeightRulesFromDatabase');
+  assert.doesNotMatch(syncFn, /下架/, 'scoring rules must not filter out 下架 rows');
+
+  // Inline maintenance buttons at every level the user asked for.
+  for (const hook of ['data-weight-stage-add', 'data-weight-detail-add', 'data-weight-stage-rename',
+    'data-weight-stage-toggle', 'data-weight-stage-delete', 'data-weight-detail-rename', 'data-weight-detail-toggle']) {
+    assert.ok(admin.includes(hook), `${hook} should exist in the weight settings markup`);
+  }
+  // The vague "+ 新增項目" header button is gone for this table.
+  assert.match(admin, /function updateAddButton\(\)\{const hidden=tableName==='角色權限範本'\|\|tableName==='客戶別'\|\|tableName==='加權計分標準'\|\|/);
+
+  // Buttons live inside <summary>, which would otherwise collapse the group on every click.
+  assert.match(admin, /if\(weightScopeButton\)\{\n\s*event\.preventDefault\(\);/);
+
+  // Destructive paths have to state the blast radius and point at 下架 instead.
+  const deleteStage = admin.match(/async function deleteWeightStage\(target\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(deleteStage, 'could not locate deleteWeightStage');
+  assert.match(deleteStage, /weightScopeCaseCount/);
+  assert.match(deleteStage, /建議改用「下架」/);
+  // Renaming has to promise the score stays put, because that is what renameCases actually guarantees.
+  const renameStage = admin.match(/async function renameWeightStage\(target\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.match(renameStage, /加權分數維持不變/);
+});
+
 test('deleting a case also removes its modification records and supplement links, so the next case that reuses the id does not inherit them', async t => {
   const app = await fixture();
   t.after(() => app.close());
