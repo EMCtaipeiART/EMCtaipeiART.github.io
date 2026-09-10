@@ -25,7 +25,19 @@ const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
 const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
-type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null };
+type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null; scopes: string | null };
+
+/** Google 在換取／更新 token 時會回傳這次授權實際拿到的 scope 清單。存下來的用途只有一個：在使用者按下
+ * 「指定排程時間」之前就先知道這個帳號能不能建立 Gmail 草稿（drafts.* 需要 gmail.compose，比早期只要的
+ * gmail.send 更廣），才能主動提示「請重新連接 Gmail 更新授權」，而不是等排程完才發現草稿沒建起來。
+ * 舊資料的 scopes 是 NULL（欄位是後來才加的）——那些帳號本來就是在加上 gmail.compose 之前授權的，
+ * 一律當成「沒有草稿權限」處理，剛好是正確答案。 */
+function gmailScopesAllowDraft(scopes: unknown): boolean {
+  const list = text(scopes).split(/\s+/).filter(Boolean);
+  return list.some(scope => scope === 'https://mail.google.com/'
+    || scope === 'https://www.googleapis.com/auth/gmail.compose'
+    || scope === 'https://www.googleapis.com/auth/gmail.modify');
+}
 type ScheduledMailRow = {
   id: string; case_id: string; case_ids: string | null; kind: 'send' | 'reply'; owner_account: string; requested_by: string;
   to_address: string; cc_address: string; subject: string; body_html: string; signature_html: string;
@@ -1063,6 +1075,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(7)) {
+        this.ctx.storage.transactionSync(() => {
+          // 這次授權實際拿到的 scope 清單，用來事先判斷能不能建立 Gmail 草稿（見 gmailScopesAllowDraft）。
+          // 既有資料是 NULL＝當成沒有草稿權限，那些帳號本來就是在加上 gmail.compose 之前授權的。
+          this.ctx.storage.sql.exec(`ALTER TABLE gmail_tokens ADD COLUMN scopes TEXT;`);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            7, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1164,23 +1187,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private getGmailTokens(accountValue: unknown): GmailTokenRow | null {
     const account = canonicalAccount(accountValue);
     const rows = this.ctx.storage.sql.exec<GmailTokenRow>(
-      'SELECT account, refresh_token, access_token, access_token_expires_at, gmail_address FROM gmail_tokens WHERE account = ?', account
+      'SELECT account, refresh_token, access_token, access_token_expires_at, gmail_address, scopes FROM gmail_tokens WHERE account = ?', account
     ).toArray();
     return rows.length ? rows[0] : null;
   }
 
-  private setGmailTokens(accountValue: unknown, tokens: { refreshToken?: string; accessToken?: string; accessTokenExpiresAt?: number; gmailAddress?: string }): void {
+  private setGmailTokens(accountValue: unknown, tokens: { refreshToken?: string; accessToken?: string; accessTokenExpiresAt?: number; gmailAddress?: string; scopes?: string }): void {
     const account = canonicalAccount(accountValue);
     const existing = this.getGmailTokens(account);
     const refreshToken = text(tokens.refreshToken) || text(existing?.refresh_token);
     if (!refreshToken) throw new Error('缺少 Gmail refresh token，無法儲存連線');
+    const scopes = tokens.scopes === undefined ? text(existing?.scopes) : text(tokens.scopes);
     this.ctx.storage.sql.exec(
-      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, connected_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(account) DO UPDATE SET refresh_token=excluded.refresh_token, access_token=excluded.access_token,
+      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, scopes, connected_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(account) DO UPDATE SET refresh_token=excluded.refresh_token, access_token=excluded.access_token, scopes=excluded.scopes,
          access_token_expires_at=excluded.access_token_expires_at, gmail_address=excluded.gmail_address, updated_at=excluded.updated_at`,
       account, refreshToken, text(tokens.accessToken), Number(tokens.accessTokenExpiresAt) || null,
-      text(tokens.gmailAddress) || text(existing?.gmail_address), new Date().toISOString(), new Date().toISOString()
+      text(tokens.gmailAddress) || text(existing?.gmail_address), scopes, new Date().toISOString(), new Date().toISOString()
     );
   }
 
@@ -1210,7 +1234,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const accessToken = text(data.access_token);
     const expiresIn = Number(data.expires_in) || 3600;
-    this.setGmailTokens(account, { accessToken, accessTokenExpiresAt: Date.now() + expiresIn * 1000 });
+    this.setGmailTokens(account, {
+      accessToken, accessTokenExpiresAt: Date.now() + expiresIn * 1000,
+      ...(text(data.scope) ? { scopes: text(data.scope) } : {})
+    });
     return accessToken;
   }
 
@@ -1452,15 +1479,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const gmailAddress = text(profile.email);
     this.setGmailTokens(current.account, {
       refreshToken: text(tokenData.refresh_token), accessToken: text(tokenData.access_token),
-      accessTokenExpiresAt: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000, gmailAddress
+      accessTokenExpiresAt: Date.now() + (Number(tokenData.expires_in) || 3600) * 1000, gmailAddress,
+      scopes: text(tokenData.scope)
     });
-    return { ok: true, action: 'gmailOauthConnect', gmailAddress };
+    // canCreateDraft 讓前端在使用者按下「指定排程時間」之前就能提示授權不足，不必等排程完才發現沒草稿。
+    return { ok: true, action: 'gmailOauthConnect', gmailAddress, canCreateDraft: gmailScopesAllowDraft(tokenData.scope) };
   }
 
   private gmailStatus(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
     const current = this.requireAccess(database, session, 'request.mail');
     const stored = this.getGmailTokens(current.account);
-    return { ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address) };
+    return {
+      ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address),
+      canCreateDraft: Boolean(stored) && gmailScopesAllowDraft(stored?.scopes)
+    };
   }
 
   /** 讀取目前連接的 Gmail 帳號設定的簽名檔（需要 gmail.settings.basic 範圍；沒有這個範圍的舊連線會收到 403，回傳明確的 reason 讓前端可以提示重新連接而不是整個擋住）。

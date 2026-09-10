@@ -141,13 +141,13 @@ async function seedSession(account: string, user = account): Promise<string> {
 /** 直接在 DO 的 gmail_tokens 表插入一筆已連接的 Gmail 帳號，讓 getValidGmailAccessToken() 不用重跑一次
  * 完整的 OAuth connect 流程就能拿到可用的 access token——排程寄信/回信的測試大多要模擬「這個帳號已經連過
  * Gmail」這個前提，用這個 helper 一次到位，跟既有測試（見 gmail_tokens 直接 INSERT 的既有案例）同一套做法。 */
-async function seedGmailTokens(account: string, accessToken: string, gmailAddress = `${account.split('@')[0]}@gmail.example`): Promise<void> {
+async function seedGmailTokens(account: string, accessToken: string, gmailAddress = `${account.split('@')[0]}@gmail.example`, scopes = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose'): Promise<void> {
   const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
   await runInDurableObject(stub, async (_instance, state) => {
     state.storage.sql.exec(
-      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, connected_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      account, `refresh-${account}`, accessToken, Date.now() + 3600 * 1000, gmailAddress, new Date().toISOString(), new Date().toISOString()
+      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, scopes, connected_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      account, `refresh-${account}`, accessToken, Date.now() + 3600 * 1000, gmailAddress, scopes, new Date().toISOString(), new Date().toISOString()
     );
   });
 }
@@ -279,7 +279,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -3150,6 +3150,31 @@ describe('Machi Design API Worker', () => {
       for (const caseId of ['26080001', '26080002']) {
         expect(rows.find(item => item.id === caseId)?.gmailThreadId).toBe('merged-thread');
       }
+    });
+
+    it('tells the front end up front whether the connected Gmail grant can create drafts, so the missing scope is visible before anything is scheduled', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      // 舊帳號：只有 gmail.send，沒有 gmail.compose——正是「排程了卻沒有草稿」的原因。
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1', 'test.user@gmail.example', 'https://www.googleapis.com/auth/gmail.send');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+      expect(await api({ action: 'gmailStatus' }, token)).toMatchObject({ ok: true, connected: true, canCreateDraft: false });
+
+      // 重新授權拿到 gmail.compose 之後，同一個帳號就會回報成可以建立草稿。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec(
+          'UPDATE gmail_tokens SET scopes = ? WHERE account = ?',
+          'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose', 'test.user@emctaipei.com'
+        );
+      });
+      expect(await api({ action: 'gmailStatus' }, token)).toMatchObject({ connected: true, canCreateDraft: true });
+
+      // 這個欄位是後來才加的，既有資料是 NULL；那些帳號本來就是在加上 gmail.compose 之前授權的，
+      // 必須算成「不能建立草稿」，否則前端不會提示他們重新連接。
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE gmail_tokens SET scopes = NULL WHERE account = ?', 'test.user@emctaipei.com');
+      });
+      expect(await api({ action: 'gmailStatus' }, token)).toMatchObject({ connected: true, canCreateDraft: false });
     });
 
     it('reclaims a schedule stuck in "sending" for more than 10 minutes and retries it on the next dispatch pass', async () => {

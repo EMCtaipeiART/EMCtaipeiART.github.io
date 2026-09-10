@@ -2034,6 +2034,73 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
 });
 
+test('scheduling a mail ends the compose flow and can never be followed by an immediate second send, and a grant without the draft scope says so before anything is scheduled', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // 「排程完信件卻直接寄出」有兩個成因，兩個都要堵住。
+  // 1. 單筆案件的「寄出」完全沒有檢查這封信是不是已經排程過（批次佇列的「全部寄出」一直都有）。
+  const send = html.match(/async function sendGmailComposeModal\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(send, 'could not locate sendGmailComposeModal');
+  assert.match(send, /if\(await hasPendingScheduledMail\(id\)\)\{/);
+  // 檢查必須在真正呼叫 sendCaseMail 之前。
+  assert.ok(send.indexOf('hasPendingScheduledMail') < send.indexOf("sheetApi('sendCaseMail'"), '排程檢查必須在寄出之前');
+
+  // 2. 排程成功後畫面仍停在一顆亮著的「寄出」按鈕上，使用者按下去就是立刻再寄一封。
+  const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(schedule, 'could not locate scheduleComposeMail');
+  assert.match(schedule, /finishComposeAfterSchedule\(/);
+
+  // Run the real post-schedule handler: a queue jumps to the next unscheduled mail, and closes once
+  // every mail in it has been dealt with.
+  const finish = html.match(/function finishComposeAfterSchedule\(ids\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(finish, 'could not locate finishComposeAfterSchedule');
+  const runFinish = (queue, ids) => {
+    const calls = { closed: 0, rendered: 0 };
+    new Function('postSubmitQueue', 'ids', 'calls', `
+      const closeGmailComposeModal = () => { calls.closed += 1; };
+      const renderPostSubmitQueue = () => { calls.rendered += 1; };
+      ${html.match(/function postSubmitQueueItems\(queue\)\{[\s\S]*?\n\}/)[0]}
+      ${html.match(/function postSubmitItemDrafts\(queue,item\)\{[^\n]*\n/)[0]}
+      ${finish}
+      finishComposeAfterSchedule(ids);
+    `)(queue, ids, calls);
+    return calls;
+  };
+  const queue = { mode: 'gmail', index: 0, merged: [0, 1], drafts: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] };
+  const afterFirst = runFinish(queue, ['a', 'b']);
+  assert.deepEqual(afterFirst, { closed: 0, rendered: 1 });
+  assert.equal(queue.index, 1, '合併的那封排程完，應該跳到剩下那封未排程的信');
+  const afterLast = runFinish(queue, ['c']);
+  assert.deepEqual(afterLast, { closed: 1, rendered: 0 }, '全部都排程完就關閉視窗，不留下亮著的「寄出」');
+  // A single case outside the batch flow just closes.
+  assert.deepEqual(runFinish(null, ['a']), { closed: 1, rendered: 0 });
+
+  // The missing draft scope is now reported by gmailStatus and shown as a standing notice with a
+  // reconnect button, instead of only surfacing as a toast after the user has already scheduled.
+  assert.match(worker, /function gmailScopesAllowDraft\(scopes: unknown\): boolean/);
+  assert.match(worker, /canCreateDraft: Boolean\(stored\) && gmailScopesAllowDraft\(stored\?\.scopes\)/);
+  assert.match(html, /id="gmailComposeDraftScopeNotice"/);
+  assert.match(html, /id="gmailComposeDraftScopeReconnect"/);
+  assert.match(html, /\$\('#gmailComposeDraftScopeReconnect'\)\?\.addEventListener\('click',\(\)=>startGmailConnectPopup\(\)\);/);
+  const notice = html.match(/function renderGmailDraftScopeNotice\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(notice, 'could not locate renderGmailDraftScopeNotice');
+  const runNotice = state => {
+    const element = { hidden: null };
+    new Function('gmailConnectionState', 'element', `
+      const $ = () => element;
+      ${notice}
+      renderGmailDraftScopeNotice();
+    `)(state, element);
+    return element.hidden;
+  };
+  assert.equal(runNotice({ connected: true, canCreateDraft: false }), false, '授權缺草稿權限時必須顯示提示');
+  assert.equal(runNotice({ connected: true, canCreateDraft: true }), true);
+  assert.equal(runNotice({ connected: false, canCreateDraft: false }), true, '還沒連接 Gmail 不該用草稿提示打擾');
+  // Both entry points into the compose window paint the notice.
+  assert.equal((html.match(/renderGmailDraftScopeNotice\(\);/g) || []).length, 3);
+});
+
 test('an account that already connected Gmail can run the authorisation flow again, which is the only way to grant a scope added after it first connected', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
 
@@ -2171,6 +2238,7 @@ test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and 
     const appendDefaultGmailSignature = () => {};
     const setGmailEditorLoading = () => {};
     const renderPostSubmitMergePanel = () => {};
+    const renderGmailDraftScopeNotice = () => {};
     const updateGmailScheduleStatusBadge = () => {};
     const refreshScheduledMailList = caseId => scheduledFor.push(caseId);
     const mailDraft = row => ({ to: 'client@example.com', cc: [], subject: '單筆：' + row.id, bodyHtml: '' });

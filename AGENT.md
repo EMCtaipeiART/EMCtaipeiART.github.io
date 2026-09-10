@@ -192,7 +192,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-10 17:52 Asia/Taipei（最新）— 已連接 Gmail 的帳號也能重新授權（修正「無法再串接一次」）
+### 2026-09-10 18:15 Asia/Taipei（最新）— 修正「排程完信件卻直接寄出、也沒進草稿匣」
+
+- 修改目的：使用者回報「目前排程完時間點發信後，信件直接寄出，也沒有排進草稿裡面」。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 問題原因（兩個各自獨立的成因）：
+  1. **「直接寄出」**：排程成功之後，撰寫視窗**沒有收尾**，畫面仍然停在一顆亮著的「寄出」按鈕上，使用者很自然會再按一次當作確認——按下去就是立刻再寄一封。而且**單筆案件的 `sendGmailComposeModal()` 完全沒有檢查這封信是不是已經排程過**（批次佇列的「全部寄出」一直都有這道檢查，單筆這條路徑漏了）。
+  2. **「沒進草稿匣」**：`drafts.create` 需要 `gmail.compose`，早期連接過的帳號授權裡沒有。原本只有排程完才用一則會自己消失的紅色提示告知，使用者很容易錯過，也不知道該去哪裡處理。
+- 影響功能：
+  1. **排程成立＝這封信處理完了**：批次佇列會自動跳到下一封還沒排程的信，全部處理完就關閉視窗；單筆案件直接關閉視窗，跟按下「寄出」之後的收尾一致。
+  2. **單筆「寄出」補上排程檢查**：已經有待寄出排程的信按「寄出」會被擋下，並提示要先在「已排程」清單按「取消排程」。
+  3. **草稿權限改成事前提示**：`gmailStatus`／`gmailOauthConnect` 新增 `canCreateDraft`（依 Google 回傳並存下來的 scope 判斷）。撰寫視窗一開就常駐顯示紅色提示列「目前的 Gmail 授權沒有『建立草稿』權限，排程信不會出現在 Gmail 草稿匣（時間到仍會自動寄出）」，旁邊直接就是「重新連接 Gmail 更新授權」按鈕。
+- 風險區塊：
+  - Durable Object 新增 migration 7（`gmail_tokens` 加 `scopes` 欄）。既有資料是 NULL，一律當成「不能建立草稿」——那些帳號本來就是在加上 `gmail.compose` 之前授權的，這是正確答案，也正好讓他們看到重新連接的提示。
+  - 排程後自動關閉／跳下一封，代表使用者不會再看到剛排好的那封信的編輯畫面。要改內容有兩條路：直接進 Gmail 草稿匣改（有授權時），或回案件的「信件」選單從「已排程」清單按「編輯」。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **65/65 全過**（64 既有＋1 新增）。新增測試驗證 `gmailStatus` 對「只有 gmail.send」「有 gmail.compose」「scopes 是 NULL 的舊資料」三種情況各自回報的 `canCreateDraft`。
+  - `node --test backend/test/*.test.mjs` **80 支中 79 過**。新增測試把真正的 `finishComposeAfterSchedule` 與 `renderGmailDraftScopeNotice` 抽出來實際執行：合併那封排程完會跳到剩下未排程的信、全部排完會關閉視窗、單筆案件直接關閉；提示列只在「已連接但沒有草稿權限」時顯示。另外鎖住單筆寄出的排程檢查**發生在呼叫 `sendCaseMail` 之前**。
+  - 先用 `git stash` 只還原程式檔，確認新測試在舊程式碼上真的失敗（前端 1 支、Worker 24 支），`git stash pop` 後全部恢復。
+  - **唯一失敗的那支是 `archive snapshot and dashboard use JSON database sources only`**：已用未修改的 `origin/main` 跑過，同樣失敗，屬於既有的歷史資料快照漂移，與這次改動無關。
+- 部署狀態：`index.html` git push 後自動生效；**`worker/` 需要 `cd worker && npx wrangler deploy`**（`canCreateDraft` 與 migration 7 都在 Worker 端）。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-10 17:52 Asia/Taipei — 已連接 Gmail 的帳號也能重新授權（修正「無法再串接一次」）
 
 - 修改目的：使用者回報「之前串接 gmail 成功的用戶無法再串接一次」。上一筆改動要求所有人重新連接 Gmail 才能取得 `gmail.compose`（排程信同步草稿用），但畫面上根本沒有這個入口。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`backend/test/backend.test.mjs`。
