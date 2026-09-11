@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4697,
+  "revision": 4698,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-11T10:53:52.397Z",
+  "updatedAt": "2026-09-11T10:54:28.783Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1354,7 +1354,7 @@
         {"案件編號":"26080150","修改次數":"2","建立日期":"2026/09/11 17:02:04","修改日期":"2026-09-11","修改內容":"機器狗這篇須加上客戶logo，素材請見\n\n\"\\\\192.168.0.33\\專案部\\執行中\\工研院\\解密科技寶藏\\00.客戶提供\\DOIT_橫式直式方形.ai\"\n\n\n以下為範例，大部分置於左上，但右上也ok\n\n再請協助調整，謝謝！","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090078","修改次數":"1","建立日期":"2026/09/11 17:50:35","修改日期":"2026-09-11","修改內容":"感謝大神支援！！這邊有幾張，客戶希望調整一下資訊，\n再麻煩您：\n\n\nhttps://docs.google.com/presentation/d/1eEOYjXBnSAgysJy43UY8vjMa1ZKm5JZB1adADHK1miM/edit?slide=id.g3fa6d495c36_6_0#slide=id.g3fa6d495c36_6_0","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090031","修改次數":"0","建立日期":"2026/09/11 18:49:14","修改日期":"2026/09/11 18:49:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/11 18:49:14","圖片連結":"[{\"fileName\":\"260911_Space-2_中秋出遊貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/10hrubeNjYqMzVl1BHJbvn-dI2XVNa7hI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/11 18:49:14"},
-        {"案件編號":"26080101","修改次數":"0","建立日期":"2026/09/11 18:53:52","修改日期":"2026/09/11 18:53:52","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/11 18:53:52","圖片連結":"[{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sn9a_Xmzf0OVxK8CYVK_ytnSU1TWMJ9y=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qj2JTmI5hJDCrz09G629IRKgRTJ2CF3q=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B03.png\",\"url\":\"https://lh3.googleusercontent.com/d/15U9iCJ6ilN2p6ePfTdLXIcYuh-0MjM2o=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FZ3J8n7KN4GIZ8lJxxAv3C6avt1Gd8O6=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/11 18:53:52"}
+        {"案件編號":"26080101","修改次數":"0","建立日期":"2026/09/11 18:53:52","修改日期":"2026/09/11 18:53:52","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/11 18:53:52","圖片連結":"[{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1sn9a_Xmzf0OVxK8CYVK_ytnSU1TWMJ9y=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qj2JTmI5hJDCrz09G629IRKgRTJ2CF3q=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B03.png\",\"url\":\"https://lh3.googleusercontent.com/d/15U9iCJ6ilN2p6ePfTdLXIcYuh-0MjM2o=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_B04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FZ3J8n7KN4GIZ8lJxxAv3C6avt1Gd8O6=w1600\"},{\"fileName\":\"260911_Epson_社群貼文_中秋節祝賀_A.png\",\"url\":\"https://lh3.googleusercontent.com/d/11JKvTls4w63ZRwzOEP4SWQ947QLEiKtm=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/11 18:54:28"}
       ]
     },
     "補充資料連結": {
