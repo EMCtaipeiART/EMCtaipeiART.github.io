@@ -2392,6 +2392,134 @@ describe('Machi Design API Worker', () => {
     expect(managerDelete).toMatchObject({ ok: true, id: '26080001' });
   });
 
+  describe('new 客戶別 defaults', () => {
+    /** 在「設定」表補一位人員，讓 newCustomerDefaults() 讀得到他的部門／組別。 */
+    async function seedStaff(account: string, department: string, group: string, name = account): Promise<void> {
+      const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        // 同一個帳號在「設定」表只會有一列（settingsRow 取第一筆），既有的要覆寫而不是再 push 一列。
+        const existing = database.tables['設定'].rows.find(row => String(row['帳號'] || '').toLowerCase() === account.toLowerCase());
+        if (existing) Object.assign(existing, { '部門': department, '組別': group, '名字': name, '顯示名': name });
+        else database.tables['設定'].rows.push({ '部門': department, '組別': group, '名字': name, '顯示名': name, '帳號': account });
+        state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      });
+    }
+    async function customerRow(name: string): Promise<Record<string, unknown> | undefined> {
+      const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      return runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        const database = JSON.parse(stored.json) as DatabaseSnapshot;
+        return database.tables['客戶別'].rows.find(row => row['客戶別'] === name);
+      });
+    }
+    function mockGitHubCommit(): void {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        if (String(input) === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+          expect(init?.method).toBe('PUT');
+          return Response.json({ content: { sha: `customer-file-${crypto.randomUUID()}` }, commit: { sha: 'customer-commit-sha' } });
+        }
+        throw new Error(`unexpected fetch: ${String(input)}`);
+      });
+    }
+
+    it('gives a customer created from the request form the three standing departments plus the creator\'s own project group', async () => {
+      await seedAccountPermission('pm@emctaipei.com', '自訂', ['request.create']);
+      await seedStaff('pm@emctaipei.com', '專案部', 'Celine組', '專案同仁');
+      const token = await seedSession('pm@emctaipei.com', '專案同仁');
+      mockGitHubCommit();
+
+      const created = await api({ action: 'addCustomer', name: '新客戶A' }, token);
+      expect(created.ok).toBe(true);
+      const row = await customerRow('新客戶A');
+      // 「部門／組別」＝前台看得到這個客戶別案件的範圍；「專案負責人」＝編輯／刪除／發信白名單。
+      expect(JSON.parse(String(row?.['部門組別']))).toEqual(['測試員', '設計部', '企劃部', 'Celine組']);
+      expect(JSON.parse(String(row?.['專案負責人']))).toEqual([
+        'department:測試員', 'department:設計部', 'department:企劃部', 'group:Celine組'
+      ]);
+      // 「喜愛設定」是每個客戶別各自不同的偏好，沒有共通預設，維持空白。
+      expect(row?.['設計負責人']).toBe('[]');
+    });
+
+    it('adds no group for a creator outside a project department, and keeps the creator reachable when none of the standing departments covers them', async () => {
+      await seedAccountPermission('design@emctaipei.com', '自訂', ['request.create']);
+      await seedStaff('design@emctaipei.com', '設計部', '平面', '設計同仁');
+      const designerToken = await seedSession('design@emctaipei.com', '設計同仁');
+      mockGitHubCommit();
+      await api({ action: 'addCustomer', name: '設計建立的客戶' }, designerToken);
+      const designerRow = await customerRow('設計建立的客戶');
+      // 設計部本來就在預設三個部門裡，不需要再多加這個人的帳號。
+      expect(JSON.parse(String(designerRow?.['部門組別']))).toEqual(['測試員', '設計部', '企劃部']);
+      expect(JSON.parse(String(designerRow?.['專案負責人']))).toEqual(['department:測試員', 'department:設計部', 'department:企劃部']);
+
+      await seedAccountPermission('hr@emctaipei.com', '自訂', ['request.create']);
+      await seedStaff('hr@emctaipei.com', '管理部', '人資行政組', '管理同仁');
+      const hrToken = await seedSession('hr@emctaipei.com', '管理同仁');
+      await api({ action: 'addCustomer', name: '管理部建立的客戶' }, hrToken);
+      const hrRow = await customerRow('管理部建立的客戶');
+      // 管理部不在預設名單裡，也不是專案部（沒有「整組」可加）。如果就這樣送出，建立者會在建立的當下
+      // 就失去自己剛建立的客戶別的編輯與發信權限，所以把他本人加進去。
+      expect(JSON.parse(String(hrRow?.['部門組別']))).toEqual(['測試員', '設計部', '企劃部', 'hr@emctaipei.com']);
+      expect(JSON.parse(String(hrRow?.['專案負責人']))).toEqual([
+        'department:測試員', 'department:設計部', 'department:企劃部', 'hr@emctaipei.com'
+      ]);
+    });
+
+    it('applies the same defaults to the admin "+ 新增客戶別" insert, but never overwrites lists the admin filled in', async () => {
+      // 刻意不用管理者帳號：管理者對每一筆案件本來就一律放行，用一般的 database.manage 帳號才看得出
+      // 「建立者所屬專案組」這條規則有沒有真的被套用。
+      await seedAccountPermission('admin.pm@emctaipei.com', '自訂', ['database.manage']);
+      await seedStaff('admin.pm@emctaipei.com', '專案部', 'Odin組', '後台專案同仁');
+      const token = await seedSession('admin.pm@emctaipei.com', '後台專案同仁');
+      mockGitHubCommit();
+
+      await api({
+        action: 'adminTableInsert', table: '客戶別',
+        row: { '客戶別': '後台新客戶', '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '管理者' }
+      }, token);
+      const row = await customerRow('後台新客戶');
+      expect(JSON.parse(String(row?.['部門組別']))).toEqual(['測試員', '設計部', '企劃部', 'Odin組']);
+      expect(JSON.parse(String(row?.['專案負責人']))).toEqual([
+        'department:測試員', 'department:設計部', 'department:企劃部', 'group:Odin組'
+      ]);
+
+      // 新增時就明確指定名單的話，一律以指定的為準，不可被預設值蓋掉。
+      await api({
+        action: 'adminTableInsert', table: '客戶別',
+        row: { '客戶別': '指定名單的客戶', '排序': '', '專案負責人': JSON.stringify(['department:監測部']), '設計負責人': '[]', '部門組別': JSON.stringify(['監測部']), '更新時間': '', '更新者': '管理者' }
+      }, token);
+      const explicit = await customerRow('指定名單的客戶');
+      expect(JSON.parse(String(explicit?.['部門組別']))).toEqual(['監測部']);
+      expect(JSON.parse(String(explicit?.['專案負責人']))).toEqual(['department:監測部']);
+    });
+
+    it('actually grants the creating project group edit/mail rights on that customer\'s cases, and keeps an unrelated group out', async () => {
+      await seedAccountPermission('pm@emctaipei.com', '自訂', ['request.create', 'request.edit', 'request.mail']);
+      await seedStaff('pm@emctaipei.com', '專案部', 'Celine組', '專案同仁');
+      await seedAccountPermission('other@emctaipei.com', '自訂', ['request.edit', 'request.mail']);
+      await seedStaff('other@emctaipei.com', '專案部', 'Joyce組', '別組同仁');
+      const token = await seedSession('pm@emctaipei.com', '專案同仁');
+      mockGitHubCommit();
+      await api({ action: 'addCustomer', name: '權限驗證客戶' }, token);
+
+      const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      const { database, sameGroup, otherGroup } = await runInDurableObject(stub, async (_instance, state) => {
+        const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+        return {
+          database: JSON.parse(stored.json) as DatabaseSnapshot,
+          sameGroup: { user: '專案同仁', account: 'pm@emctaipei.com', provider: 'password', expiresAt: Date.now() + 1000 } as SessionRecord,
+          otherGroup: { user: '別組同仁', account: 'other@emctaipei.com', provider: 'password', expiresAt: Date.now() + 1000 } as SessionRecord
+        };
+      });
+      const caseRow = { '案件編號': '26090100', '客戶別': '權限驗證客戶' };
+      expect(hasRowCapability(database, sameGroup, 'request.mail', caseRow)).toBe(true);
+      expect(hasRowCapability(database, sameGroup, 'request.edit', caseRow)).toBe(true);
+      // 白名單一旦有值就取代一般角色權限（見 hasRowCapability），別組即使角色有 request.edit 也進不來。
+      expect(hasRowCapability(database, otherGroup, 'request.edit', caseRow)).toBe(false);
+    });
+  });
+
   describe('scheduled mail (指定排程時間)', () => {
     async function schedulerStub(): Promise<DurableObjectStub<DatabaseCoordinator>> {
       return env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;

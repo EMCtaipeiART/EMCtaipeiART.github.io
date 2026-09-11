@@ -4,7 +4,7 @@ import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
-  accessProfile, activeReel, canonicalAccount, findReelIndex,
+  accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
   hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow,
@@ -2316,8 +2316,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /**
    * 前台「填寫設計需求」表單「客戶別」下拉選單的「新增客戶別」——只需要 request.create（跟新增案件同一個
-   * 廣泛授權），任何登入角色都能建立一筆只有名稱、專案負責人／設計負責人／部門組別皆空白的客戶別。
-   * 後台管理者要指派名單，改走通用的 adminTableUpdate（database.manage 權限）。
+   * 廣泛授權），任何登入角色都能建立。「部門／組別」與「權限設定」不再留空白等人回後台補，建立當下就
+   * 直接寫入預設名單（見 newCustomerDefaults）；「喜愛設定」（設計負責人）維持空白，那是每個客戶別各自
+   * 不同的偏好，沒有合理的共通預設。後台管理者要調整名單，改走通用的 adminTableUpdate（database.manage）。
    */
   private async addCustomer(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     // 比照 addRequests（填單新增案件）：有 session 才檢查 request.create，未登入沿用「填單本來就不強制登入」的既有慣例。
@@ -2325,10 +2326,15 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const name = text(payload.name || payload['客戶別']);
     if (!name) throw new Error('請輸入客戶別名稱');
     if (name.length > 40) throw new Error('客戶別名稱不得超過 40 個字');
+    const defaults = newCustomerDefaults(database, session);
     return this.mutate('addCustomer', session, draft => {
       const table = draft.tables['客戶別'];
       if (table.rows.some(row => text(row['客戶別']) === name)) throw new Error('這個客戶別已經存在');
-      const row: Row = { '客戶別': name, '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單' };
+      const row: Row = {
+        '客戶別': name, '排序': '',
+        '專案負責人': JSON.stringify(defaults.ownerRules), '設計負責人': '[]', '部門組別': JSON.stringify(defaults.visibleUnits),
+        '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單'
+      };
       table.rows.push(row);
       return { result: { ok: true, action: 'addCustomer', customer: row }, changedTables: ['客戶別'] };
     });
@@ -3473,6 +3479,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (duplicate >= 0) throw new Error(`「${primaryKey}」不可重複`);
       }
       if (action === 'adminTableInsert') {
+        // 後台「+ 新增客戶別」走的是這條通用插入路徑，不是 addCustomer。預設名單只在欄位留空時補上，
+        // 使用者如果在新增時就明確指定了名單，一律以他指定的為準（空字串代表「沒填」，不是「刻意清空」
+        // ——真的要清空是在編輯器裡取消勾選後儲存，那走的是 adminTableUpdate）。
+        if (tableName === '客戶別') {
+          const defaults = newCustomerDefaults(draft, current);
+          if (!accessList(normalized['部門組別']).length) normalized['部門組別'] = JSON.stringify(defaults.visibleUnits);
+          if (!accessList(normalized['專案負責人']).length) normalized['專案負責人'] = JSON.stringify(defaults.ownerRules);
+        }
         target.rows.push(normalized);
         index = target.rows.length - 1;
       } else {

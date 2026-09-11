@@ -339,6 +339,59 @@ export function matchesCustomerEditRule(database: DatabaseSnapshot, session: Ses
   return group === target || Boolean(targetDesignGroup) && normalizedDesignGroup(group) === targetDesignGroup;
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * 新增客戶別的預設「部門／組別」（前台可見範圍）與「權限設定」（編輯／刪除／發信白名單）。
+ *
+ * 在這之前，新建立的客戶別兩份名單都是空的：可見範圍會退回畫面上寫死的「企劃部／設計部」提示，
+ * 權限設定則因為名單是空的而完全不鎖（見 hasRowCapability），等於每建立一個客戶別都要有人記得回
+ * 後台補設定。依使用者指定，改成建立當下就直接寫入實際值。
+ * ------------------------------------------------------------------------------------------- */
+
+/** 每一個新客戶別都會拿到的三個部門（使用者指定）。 */
+export const NEW_CUSTOMER_DEFAULT_DEPARTMENTS = ['測試員', '設計部', '企劃部'];
+
+/** 建立者是不是「專案同仁」——專案部與凱曜專案部都算，他們的權限是以「組」為單位運作的。 */
+function isProjectDepartment(department: string): boolean {
+  return /專案部/.test(department);
+}
+
+/**
+ * 依建立者算出這筆新客戶別的預設名單。
+ * - visibleUnits：寫進「部門組別」，決定誰在前台看得到這個客戶別的案件。
+ * - ownerRules：寫進「專案負責人」，決定誰能編輯／刪除／發信（department:／group: 動態規則，
+ *   該單位日後新增的人員會自動繼承，不必回頭補選）。
+ *
+ * 專案同仁建立時，額外把他自己那一整組加進來（使用者指定）。建立者如果不屬於上述任何一個單位
+ * （例如管理部、監測部、運釀企劃部），就把他本人的帳號加進去——否則他會在建立的當下就失去自己剛
+ * 建立的客戶別的編輯與發信權限，這顯然不是任何人要的結果。
+ */
+export function newCustomerDefaults(database: DatabaseSnapshot, session: SessionRecord | null): { visibleUnits: string[]; ownerRules: string[] } {
+  const departments = [...NEW_CUSTOMER_DEFAULT_DEPARTMENTS];
+  const groups: string[] = [];
+  const accounts: string[] = [];
+  const account = canonicalAccount(session?.account || session?.user);
+  if (account) {
+    const profile = settingsRow(database, session?.account || session?.user) || {};
+    const department = text(profile['部門'] || session?.department);
+    const group = text(profile['組別']);
+    if (isProjectDepartment(department) && group) groups.push(group);
+    // 管理者對每一筆案件本來就一律放行（見 hasRowCapability），把他的帳號寫進白名單只是多一筆看不懂的
+    // 個別人員，不會讓他多拿到任何權限。
+    const coveredByDefaults = isManager(database, session)
+      || departments.some(name => matchesCustomerEditRule(database, session, `department:${name}`))
+      || groups.some(name => matchesCustomerEditRule(database, session, `group:${name}`));
+    if (!coveredByDefaults) accounts.push(account);
+  }
+  return {
+    visibleUnits: unique([...departments, ...groups, ...accounts]),
+    ownerRules: unique([
+      ...departments.map(name => `department:${name}`),
+      ...groups.map(name => `group:${name}`),
+      ...accounts
+    ])
+  };
+}
+
 /**
  * 資料列層級授權。管理者一律放行。request.edit／request.delete／request.mail 這三個能力，2026-08-19 起
  * 統一改成客戶別「權限設定」白名單制——只要這個案件的客戶別已經設定過名單（非空），就只有名單內的帳號

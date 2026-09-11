@@ -2034,6 +2034,52 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
 });
 
+test('a new 客戶別 is created with its 部門／組別 and 權限設定 already filled in, from one shared rule both creation paths go through', async () => {
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const model = await readFile(new URL('../../worker/src/model.ts', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // 前台下拉的「+ 新增客戶別」與後台的「+ 新增客戶別」走的是兩條不同的 action，預設值只能有一份定義，
+  // 否則兩邊遲早會長出不一樣的名單。
+  assert.match(model, /export const NEW_CUSTOMER_DEFAULT_DEPARTMENTS = \['測試員', '設計部', '企劃部'\];/);
+  const defaults = model.match(/export function newCustomerDefaults\([\s\S]*?\n\}/)?.[0];
+  assert.ok(defaults, 'could not locate newCustomerDefaults');
+  // 專案同仁：整組加進來。部門判斷要涵蓋「凱曜專案部」，不能寫死等於「專案部」。
+  assert.match(model, /function isProjectDepartment\(department: string\): boolean \{\s*\n\s*return \/專案部\/\.test\(department\);/);
+  assert.match(defaults, /if \(isProjectDepartment\(department\) && group\) groups\.push\(group\);/);
+  // 建立者不屬於任何預設單位時要把他自己加進去，否則他會在建立當下就失去自己這個客戶別的編輯／發信權限。
+  assert.match(defaults, /if \(!coveredByDefaults\) accounts\.push\(account\);/);
+  assert.match(defaults, /const coveredByDefaults = isManager\(database, session\)/);
+  // 「部門組別」存純名稱、「專案負責人」存 department:／group: 動態規則，兩者格式不同不可混用。
+  assert.match(defaults, /visibleUnits: unique\(\[\.\.\.departments, \.\.\.groups, \.\.\.accounts\]\)/);
+  assert.match(defaults, /\.\.\.departments\.map\(name => `department:\$\{name\}`\)/);
+  assert.match(defaults, /\.\.\.groups\.map\(name => `group:\$\{name\}`\)/);
+
+  // 兩條建立路徑都要套用同一份預設。
+  const addCustomer = worker.match(/private async addCustomer\([\s\S]*?\n  \}/)?.[0];
+  assert.ok(addCustomer, 'could not locate addCustomer');
+  assert.match(addCustomer, /const defaults = newCustomerDefaults\(database, session\);/);
+  assert.match(addCustomer, /'專案負責人': JSON\.stringify\(defaults\.ownerRules\)/);
+  assert.match(addCustomer, /'部門組別': JSON\.stringify\(defaults\.visibleUnits\)/);
+  // 「喜愛設定」是每個客戶別各自不同的偏好，沒有共通預設。
+  assert.match(addCustomer, /'設計負責人': '\[\]'/);
+  assert.match(worker, /if \(tableName === '客戶別'\) \{\s*\n\s*const defaults = newCustomerDefaults\(draft, current\);/);
+  // 後台新增時如果已經指定名單，不可被預設值蓋掉。
+  assert.match(worker, /if \(!accessList\(normalized\['部門組別'\]\)\.length\) normalized\['部門組別'\]/);
+  assert.match(worker, /if \(!accessList\(normalized\['專案負責人'\]\)\.length\) normalized\['專案負責人'\]/);
+
+  // 後台送出的是空名單，預設交給後端補——不可以在後台這份 HTML 裡另外寫一份，那就是第二個真相來源。
+  const adminAdd = admin.match(/async function addCustomerFromAdmin\(\)\{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(adminAdd, 'could not locate addCustomerFromAdmin');
+  assert.match(adminAdd, /'專案負責人':'\[\]','設計負責人':'\[\]','部門組別':'\[\]'/);
+  assert.doesNotMatch(adminAdd, /測試員/);
+
+  // 舊客戶別（名單本來就空白）的顯示範圍退路維持原樣，這次只改「新增當下」寫入什麼，不動既有資料。
+  assert.match(admin, /const CUSTOMER_DEFAULT_VISIBLE_DEPARTMENTS=\['企劃部','設計部'\];/);
+  assert.match(html, /return list\.length\?list:\['企劃部','設計部'\];/);
+});
+
 test('deleting the Gmail draft cancels that schedule instead of sending the stored copy, and the case still shows why the mail never went out', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
