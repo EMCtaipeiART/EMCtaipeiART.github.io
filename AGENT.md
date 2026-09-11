@@ -192,7 +192,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-10 18:15 Asia/Taipei（最新）— 修正「排程完信件卻直接寄出、也沒進草稿匣」
+### 2026-09-11 08:45 Asia/Taipei（最新）— 刪掉 Gmail 草稿就等於取消那封排程
+
+- 修改目的：使用者問「在草稿修改或是刪除信件，時間到了也是會寄出嗎？」，得知刪草稿仍會用系統存的舊內容寄出之後，明確指定「**刪掉草稿就等於取消這封排程**」。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **草稿不存在＝取消**：`drafts.send` 回 404（或帶 notFound 的錯誤）時不再退回用排程當下存下來的內容硬寄，而是把這筆排程標成 `canceled`。**在草稿裡改內容的行為不變**——時間到寄出的一直都是草稿當下的版本。
+  2. **暫時性錯誤仍然要寄得出去**：其他 Gmail 錯誤（連線異常、5xx）不是使用者的意思表示，維持原本「退回用存下來的內容直接寄出」的行為，一次偶發失敗不該讓該寄的信沒寄出去。這兩件事靠新的 `GmailDraftMissingError` 分開，不是靠籠統的 `catch`。
+  3. **不會默默消失**：取消原因寫進那筆排程（`error_message`），前端「已排程」清單新增顯示這類「未寄出」項目（灰底、不提供編輯／取消，因為對它已經沒有意義），按鈕旁的徽章也會提醒「N 筆排程未寄出，請見下方清單」。使用者自己按「取消排程」的那幾筆照舊不佔位置。
+  4. 排程成功的提示補上這條規則：「可直接在 Gmail 修改內容，刪掉草稿就等於取消這封排程」。
+- 風險區塊：
+  - **誤刪草稿就真的不會寄**，而且系統不會事先確認——這是使用者明確指定的規則。補償措施是上面第 3 點：案件的「信件」選單裡看得到「未寄出」與原因。
+  - 「案件已經有 Gmail 信件串所以不重複寄」那條既有路徑現在也會記下原因，一併顯示在同一個清單裡（原本是 `error_message = NULL`、畫面上完全沒有痕跡）。
+  - `dispatchScheduledMailItem()` 的回傳型別從 `'sent' | 'canceled'` 改成 `{ outcome, note? }`，只有 `runScheduledDispatch()` 用得到。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **66/66 全過**。原本那支「草稿被刪掉仍會寄出」的測試改寫成「刪掉草稿＝取消、且不得再呼叫任何寄送 API」，另外新增一支「drafts.send 回 500 這種暫時性錯誤仍然要寄得出去」，確保兩條路徑不會被混為一談。
+  - `node --test backend/test/*.test.mjs` **81/81 全過**。新增測試把真正的 `scheduledMailItemHtml` 與 `scheduleStatusSummary` 抽出來實際執行，驗證「未寄出」項目會顯示原因、不提供編輯／取消，以及徽章在有待寄排程時仍優先顯示下一封的時間。
+  - 先用 `git stash` 只還原程式檔，確認新／改過的測試在舊程式碼上真的失敗（前端 1 支、Worker 2 支），`git stash pop` 後全部恢復。
+  - **未做的驗證**：沒有真的在正式 Gmail 信箱刪一份草稿再等排程觸發（這個環境沒有正式站登入與 Gmail 授權），404 的判定是依 Gmail API 契約以測試 mock 驗證。
+- 部署狀態：`index.html` git push 後自動生效；**`worker/` 需要 `cd worker && npx wrangler deploy`**。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-10 18:15 Asia/Taipei — 修正「排程完信件卻直接寄出、也沒進草稿匣」
 
 - 修改目的：使用者回報「目前排程完時間點發信後，信件直接寄出，也沒有排進草稿裡面」。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。

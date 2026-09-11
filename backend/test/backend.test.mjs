@@ -2034,6 +2034,73 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   assert.equal(lines.filter(line => line.startsWith('Hi ')).length, 1);
 });
 
+test('deleting the Gmail draft cancels that schedule instead of sending the stored copy, and the case still shows why the mail never went out', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // 使用者指定的規則：刪掉草稿＝取消這封排程。所以「草稿不存在」必須跟「Gmail 暫時出錯」分開處理，
+  // 前者取消、後者仍然要退回用排程當下存下來的內容寄出去（一次偶發失敗不該讓該寄的信沒寄出）。
+  assert.match(worker, /class GmailDraftMissingError extends Error \{\}/);
+  const sendDraft = worker.match(/async function sendGmailDraft\([\s\S]*?\n\}/)?.[0];
+  assert.ok(sendDraft, 'could not locate sendGmailDraft');
+  assert.match(sendDraft, /response\.status === 404/);
+  assert.match(sendDraft, /throw new GmailDraftMissingError\(message\);/);
+  const dispatch = worker.match(/private async dispatchScheduledMailItem\([\s\S]*?\n  \}/)?.[0];
+  assert.ok(dispatch, 'could not locate dispatchScheduledMailItem');
+  assert.match(dispatch, /if \(error instanceof GmailDraftMissingError\) \{\s*\n\s*return \{ outcome: 'canceled', note: '草稿已在 Gmail 中被刪除/);
+  assert.match(dispatch, /result = await postGmailMessage\(accessToken, raw\);/);
+  // 取消的原因要寫進那筆排程，資料本身才說得清楚為什麼沒寄。
+  assert.match(worker, /UPDATE scheduled_mail SET status = \?, error_message = \?, updated_at = \? WHERE id = \?', outcome, note \|\| null/);
+
+  // 前端：使用者自己按「取消排程」的那幾筆照舊不佔位置，但「系統判定不寄」的要看得見，否則信沒寄出
+  // 而畫面上什麼都沒有，等於默默消失。
+  const refresh = html.match(/async function refreshScheduledMailList\(caseId,kind\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(refresh, 'could not locate refreshScheduledMailList');
+  assert.match(refresh, /\(item\.status==='canceled'&&item\.errorMessage\)/);
+
+  // Run the real row renderer and badge summariser.
+  const rowHtml = html.match(/function scheduledMailItemHtml\(item,kind,caseId\)\{[\s\S]*?\n\}/)?.[0];
+  const summary = html.match(/function scheduleStatusSummary\(items\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(rowHtml && summary, 'could not locate the scheduled list helpers');
+  const helpers = new Function(`
+    const esc = value => String(value ?? '');
+    const jsArg = value => String(value ?? '');
+    const scheduleDisplayLabel = value => String(value);
+    ${rowHtml}
+    ${summary}
+    return { scheduledMailItemHtml, scheduleStatusSummary };
+  `)();
+
+  const canceledRow = helpers.scheduledMailItemHtml(
+    { id: 's1', status: 'canceled', scheduledAt: '2026/09/12 09:00', to: 'client@example.com', errorMessage: '草稿已在 Gmail 中被刪除，這封排程視同取消，未寄出' },
+    'compose', '26090001'
+  );
+  assert.match(canceledRow, /is-canceled/);
+  assert.match(canceledRow, /未寄出：草稿已在 Gmail 中被刪除/);
+  // 已取消的那筆不該再提供「編輯」或「取消排程」，那兩個動作對它已經沒有意義。
+  assert.doesNotMatch(canceledRow, /editScheduledMailItem|cancelScheduledMailItem/);
+
+  const pendingRow = helpers.scheduledMailItemHtml({ id: 's2', status: 'pending', scheduledAt: '2026/09/12 09:00', to: 'client@example.com' }, 'compose', '26090001');
+  assert.match(pendingRow, /cancelScheduledMailItem/);
+  assert.doesNotMatch(pendingRow, /is-canceled/);
+
+  // 按鈕旁的徽章也要提醒，使用者才不用自己去捲下方清單才發現信沒寄。
+  assert.deepEqual(
+    helpers.scheduleStatusSummary([{ status: 'canceled', errorMessage: '草稿已在 Gmail 中被刪除' }]),
+    { text: '1 筆排程未寄出，請見下方清單', isError: true }
+  );
+  // 還有待寄出的排程時，優先顯示那個（使用者最想確認的是「下一封什麼時候寄」）。
+  assert.deepEqual(
+    helpers.scheduleStatusSummary([{ status: 'pending', scheduledAt: '2026/09/12 09:00' }, { status: 'canceled', errorMessage: 'x' }]),
+    { text: '已排程於 2026/09/12 09:00 寄出', isError: false }
+  );
+  assert.equal(helpers.scheduleStatusSummary([]), null);
+
+  // 排程成功的提示要把這條規則講清楚，使用者才不會以為刪草稿只是「不想在 Gmail 看到它」。
+  const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)[0];
+  assert.match(schedule, /刪掉草稿就等於取消這封排程/);
+});
+
 test('scheduling a mail ends the compose flow and can never be followed by an immediate second send, and a grant without the draft scope says so before anything is scheduled', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
@@ -2166,8 +2233,9 @@ test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and 
   assert.match(worker, /async function createGmailDraft\(accessToken: string, raw: string\): Promise<string>/);
   assert.match(worker, /async function sendGmailDraft\(accessToken: string, draftId: string\)/);
   assert.match(worker, /result = await sendGmailDraft\(accessToken, draftId\);/);
-  // A missing or broken draft must never stop the mail from going out at the appointed time.
-  assert.match(worker, /catch \{ result = await postGmailMessage\(accessToken, raw\); \}/);
+  // A Gmail hiccup must never stop the mail from going out at the appointed time. (A draft the user
+  // deleted is a separate, deliberate case -- see the deleted-draft test.)
+  assert.match(worker, /result = await postGmailMessage\(accessToken, raw\);/);
   // Editing the schedule updates the draft; canceling it removes the draft from the mailbox.
   assert.match(worker, /draftError = \(await this\.syncScheduledMailDraft\(id, item\.owner_account, text\(item\.draft_id\), raw\)\)\.draftError;/);
   assert.match(worker, /await this\.discardScheduledMailDraft\(item\);/);

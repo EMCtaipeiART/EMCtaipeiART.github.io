@@ -880,6 +880,11 @@ async function deleteGmailDraft(accessToken: string, draftId: string): Promise<v
   } catch { /* 草稿刪不掉不算失敗 */ }
 }
 
+/** 草稿在 Gmail 端已經不存在了——使用者自己把它刪掉。這跟「Gmail 暫時出錯」是完全不同的兩件事，
+ * 必須分開處理：刪草稿是使用者明確表達「這封不要寄了」（見 dispatchScheduledMailItem），其他錯誤則
+ * 還是要想辦法把信寄出去。 */
+class GmailDraftMissingError extends Error {}
+
 /** 把草稿寄出去——寄的是 Gmail 端「現在」的草稿內容，所以使用者在等待期間做的任何修改都會生效，
  * 這正是這個功能存在的理由。 */
 async function sendGmailDraft(accessToken: string, draftId: string): Promise<{ threadId: string; messageId: string }> {
@@ -888,7 +893,12 @@ async function sendGmailDraft(accessToken: string, draftId: string): Promise<{ t
     body: JSON.stringify({ id: draftId })
   });
   const data = await response.json().catch(() => ({})) as Row;
-  if (!response.ok || !text(data.threadId)) throw new Error(gmailApiErrorMessage(response.status, data, 'Gmail 草稿寄送失敗'));
+  const message = gmailApiErrorMessage(response.status, data, 'Gmail 草稿寄送失敗');
+  // Gmail 對「這個草稿編號不存在」回 404；少數情況會用 400 搭配 notFound 訊息表達同一件事。
+  if (response.status === 404 || (!response.ok && /not\s*found|notFound/i.test(message))) {
+    throw new GmailDraftMissingError(message);
+  }
+  if (!response.ok || !text(data.threadId)) throw new Error(message);
   return { threadId: text(data.threadId), messageId: text(data.id) };
 }
 
@@ -2180,7 +2190,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 避免重複建立第二條信件串；成功後跟 sendCaseMail 一樣把 Gmail信件串ID／Gmail寄件帳號寫回 database 表。
    * kind='reply' 一律在寄出前重新讀一次信件串現況（fetchGmailThreadMessages/buildGmailReplyRaw），不是沿用
    * 排程建立當下的舊標頭，確保接在正確的最新一封信後面。失敗直接讓例外往外拋，由呼叫端統一記錄失敗原因。 */
-  private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<'sent' | 'canceled'> {
+  private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<{ outcome: 'sent' | 'canceled'; note?: string }> {
     const inlineImages = JSON.parse(item.inline_images || '[]') as GmailInlineImage[];
     const attachments = JSON.parse(item.attachments || '[]') as GmailAttachment[];
     const accessToken = await this.getValidGmailAccessToken(item.owner_account);
@@ -2192,17 +2202,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 排程等待期間若已用其他方式建立信件串，代表「不需要再寄」，不是 Gmail 寄送失敗。
       if (rows.some(row => text(row!['Gmail信件串ID']))) {
         await this.discardScheduledMailDraft(item);
-        return 'canceled';
+        return { outcome: 'canceled', note: '案件已經有 Gmail 信件串（可能已用其他方式寄出），排程未重複寄送' };
       }
       // 有草稿就寄草稿（drafts.send 寄的是使用者在 Gmail 端修改後的「現在」內容，這正是排程同步草稿的
-      // 目的）；草稿被刪掉或寄送失敗時，退回用排程當下存下來的內容直接寄出，不讓一份附屬的草稿把整封
-      // 排程信卡住寄不出去。
+      // 目的）。草稿如果已經不在了，代表使用者在 Gmail 裡把它刪掉了——依使用者指定的規則，**刪掉草稿
+      // 就等於取消這封排程**，不再退回用排程當下存下來的內容硬寄出去。其他 Gmail 錯誤（連線異常、
+      // 暫時性 5xx）不是使用者的意思表示，仍然退回用存下來的內容直接寄，避免一次偶發失敗就讓該寄的
+      // 信沒寄出去。
       const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
       const draftId = text(item.draft_id);
       let result: { threadId: string; messageId: string };
       if (draftId) {
-        try { result = await sendGmailDraft(accessToken, draftId); }
-        catch { result = await postGmailMessage(accessToken, raw); }
+        try {
+          result = await sendGmailDraft(accessToken, draftId);
+        } catch (error) {
+          if (error instanceof GmailDraftMissingError) {
+            return { outcome: 'canceled', note: '草稿已在 Gmail 中被刪除，這封排程視同取消，未寄出' };
+          }
+          result = await postGmailMessage(accessToken, raw);
+        }
       } else {
         result = await postGmailMessage(accessToken, raw);
       }
@@ -2224,7 +2242,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           new Date().toISOString(), item.id, caseId, `%"${caseId}"%`
         );
       }
-      return 'sent';
+      return { outcome: 'sent' };
     }
     const stored = await this.snapshot();
     const row = stored.database.tables.database.rows.find(r => text(r['案件編號']) === item.case_id);
@@ -2243,7 +2261,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       ? threadId
       : await findOwnMailboxThreadId(accessToken, lastMessageId);
     await postGmailMessageWithThreadFallback(accessToken, raw, ownThreadId || undefined);
-    return 'sent';
+    return { outcome: 'sent' };
   }
 
   /** Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）觸發的入口——找出所有「到期的待寄送排程」
@@ -2282,8 +2300,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const live = this.ctx.storage.sql.exec<{ status: string }>('SELECT status FROM scheduled_mail WHERE id = ?', item.id).toArray()[0];
       if (live?.status !== 'sending') continue;
       try {
-        const outcome = await this.dispatchScheduledMailItem(item);
-        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = NULL, updated_at = ? WHERE id = ?', outcome, new Date().toISOString(), item.id);
+        const { outcome, note } = await this.dispatchScheduledMailItem(item);
+        // note 只在 canceled 時有值，記的是「為什麼沒寄」（草稿被刪掉／案件已經有信件串），
+        // 讓這筆資料本身說得清楚，不需要回頭看程式碼才知道發生什麼事。
+        this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = ?, updated_at = ? WHERE id = ?', outcome, note || null, new Date().toISOString(), item.id);
         if (outcome === 'sent') sent += 1;
       } catch (error) {
         const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
