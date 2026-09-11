@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4674,
+  "revision": 4675,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-11T08:48:30.400Z",
+  "updatedAt": "2026-09-11T08:48:35.164Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1349,7 +1349,7 @@
         {"案件編號":"26090095","修改次數":"0","建立日期":"2026/09/11 15:58:11","修改日期":"2026/09/11 15:58:11","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/11 15:58:11","圖片連結":"[{\"fileName\":\"260827_金士頓_Swipe to add color-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1YtTEolVfQydOf_rwbHqjx_mACTXTl5Ey=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KGVE_XWdyj3dH6I1IDhBVkViwV9yACGu=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Jtnh0lldfgBcVlWecPElq0mi_R3GQacd=w1600\"},{\"fileName\":\"260827_金士頓_Swipe to add color-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1c6toBgJGBUsJiC1jYBah5-_SPXSr-nvi=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/11 15:58:11"},
         {"案件編號":"26090020","修改次數":"3","建立日期":"2026/09/11 16:30:23","修改日期":"2026-09-11","修改內容":"如討論，短影音00:03-00:07的畫面需要調整需求如下：\n■ 不要在客廳，可以是書房 (如簡報中的參考情境圖)\n■ 人物調整，請以男士為主就好，不要情侶 ( TA：25-45歲都會品味族群\n關注居家風格與生活品質; 咖啡、威士忌、唱片、設計家具愛好者 )\n★提醒：投影機需要插電線，生成需注意！\n\n\n\n詳細請看：附件。\n再麻煩協助修改了，感謝！\n--\n​Best regards,\nLivia\n--\n\nLivia Chu \nContent Planner\nT  +886(2)2717-1277#6221\nM  +886(0)987-661-360\nA  台北市復興北路231巷19號5樓\nemctaipei.com\n|","修改人":"朱祖翎","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090096","修改次數":"0","建立日期":"2026/09/11 16:46:47","修改日期":"2026/09/11 16:46:47","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/11 16:46:47","圖片連結":"[{\"fileName\":\"260911_Liberty-5-Pro_曬單抽獎貼文_Line貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mTVVknGJ0dmbmCaqMkt2pyw4sbzgk--V=w1600\"},{\"fileName\":\"260911_Liberty-5-Pro_曬單抽獎貼文_Line貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1_ZkItfVfDzpykQ5Chy_vOia6f38HqIKF=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/11 16:47:03"},
-        {"案件編號":"26090059","修改次數":"0","建立日期":"2026/09/11 16:48:09","修改日期":"2026/09/11 16:48:09","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/11 16:48:09","圖片連結":"[{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14FIIhwwf5P60I9ohFbmb3GZop1fshSA3=w1600\"},{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1E9AIArYzvJ2s4Loyafuf8Rcy_ypgavhS=w1600\"},{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1KyQXhfvlC_Gj0LjVkNuW3N-BUYdjRcJB=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/11 16:48:30"}
+        {"案件編號":"26090059","修改次數":"0","建立日期":"2026/09/11 16:48:09","修改日期":"2026/09/11 16:48:09","修改內容":"初稿完成","修改人":"Anna","確認修正日":"2026/09/11 16:48:09","圖片連結":"[{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/14FIIhwwf5P60I9ohFbmb3GZop1fshSA3=w1600\"},{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1E9AIArYzvJ2s4Loyafuf8Rcy_ypgavhS=w1600\"},{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1KyQXhfvlC_Gj0LjVkNuW3N-BUYdjRcJB=w1600\"},{\"fileName\":\"260911_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_情境.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1iOPmb5pzLqfPHuEHm5lfKj4iVzcKq1dZ=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/11 16:48:35"}
       ]
     },
     "補充資料連結": {
