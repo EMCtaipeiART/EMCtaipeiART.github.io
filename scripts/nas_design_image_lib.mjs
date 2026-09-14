@@ -611,6 +611,33 @@ export function computeTargetImages(dbData, caseId, round) {
   }
 }
 
+/**
+ * 某一輪是不是「真的已經交付過」——封存標記（sealedRound／pendingAfterRound）只有在這件事成立時才算數。
+ *
+ * 本機同步紀錄是用案件編號當 key，但案件編號會被重複使用：刪掉當月最新的案件後，下一筆新案件會拿到
+ * 同一個號碼（見 worker 的 nextCaseId）。刪除案件只會清資料庫，清不到這台 Mac 上的同步紀錄，於是新案件
+ * 會繼承舊案件的「初稿已封存」，第一批設計圖全部被當成「封存後才出現的新版」延到下一輪——26090074 就是
+ * 這樣整個初稿不見的。改關鍵字或資料夾讓已上傳的檔案離開同步紀錄時，也會留下同樣「有封存、沒檔案」的狀態。
+ *
+ * 判斷依據有兩個，任一成立就算交付過：
+ * 1. 本機同步紀錄裡還有檔案被歸到這一輪（assignedRound）。這是剛上傳完、GitHub Pages 上的 db.json 還沒
+ *    重新部署（通常落後 1-3 分鐘）那段期間唯一可靠的證據，少了它封存保護在那個空窗期會失效。
+ * 2. 資料庫的「修改統計表」這個案件這一輪確實記錄了圖片。這涵蓋同步紀錄裡的檔案已經不在了的情況。
+ */
+function roundDelivered({ dbData, caseId, round, stateFiles }) {
+  if (Object.values(stateFiles || {}).some(entry => trackedRound(entry?.assignedRound) === round)) return true;
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const row = rows.find(item => String(item['案件編號'] || '') === String(caseId)
+    && (Number(item['修改次數']) || 0) === Number(round));
+  if (!row) return false;
+  try {
+    const images = JSON.parse(String(row['圖片連結'] || '[]'));
+    return Array.isArray(images) && images.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function countRecordedCaseDesignImages(dbData, caseId, round, fileName) {
   const rows = dbData?.tables?.['修改統計表']?.rows || [];
   const row = rows.find(item => String(item['案件編號'] || '') === String(caseId)
@@ -733,6 +760,9 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   const sealedRound = storedSealedRound !== null
     ? Math.max(storedSealedRound, inferredSealedRound)
     : inferredSealedRound;
+  // 封存標記本身不夠，這一輪要真的交付過才擋（見 roundDelivered 的說明）。
+  const currentRoundDelivered = roundDelivered({ dbData, caseId, round, stateFiles });
+  let staleSealClearedCount = 0;
   for (const item of pendingPreviews) {
     const entry = stateFiles[item.relPath];
     const attempt = entry && entry.uploadAttempt;
@@ -760,7 +790,15 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
       }
     }
 
-    const pendingAfterRound = trackedRound(entry?.pendingAfterRound);
+    let pendingAfterRound = trackedRound(entry?.pendingAfterRound);
+    // 「等下一輪」只有在被等的那一輪真的交付過時才成立。沒交付過代表這是殘留標記（重複使用的案件
+    // 編號、或檔案離開同步紀錄後留下的封存），清掉讓這個檔案照一般流程上傳，不然會永遠卡在下一輪。
+    if (pendingAfterRound !== null && round <= pendingAfterRound
+      && !roundDelivered({ dbData, caseId, round: pendingAfterRound, stateFiles })) {
+      if (entry) entry.pendingAfterRound = null;
+      pendingAfterRound = null;
+      staleSealClearedCount += 1;
+    }
     if (pendingAfterRound !== null && round <= pendingAfterRound) {
       waitingForNextRoundCount += 1;
       continue;
@@ -768,7 +806,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     // 這輪已經成功上傳過一批後才出現的全新檔案，也不能回頭追加到已封存
     // 的初稿／一修；把它標成等待下一輪。一次掃描同時找到的多張新圖會在
     // 封存前一起進入 eligiblePreviews，所以正常的多圖初稿不受影響。
-    if (pendingAfterRound === null && entry?.assignedRound === null && sealedRound >= round) {
+    if (pendingAfterRound === null && entry?.assignedRound === null && sealedRound >= round && currentRoundDelivered) {
       entry.pendingAfterRound = round;
       waitingForNextRoundCount += 1;
       continue;
@@ -799,7 +837,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     }
   }
   if (!targetedPreviews.length) {
-    if ((reconciledCount || waitingForNextRoundCount) && persistState) await persistState();
+    if ((reconciledCount || waitingForNextRoundCount || staleSealClearedCount) && persistState) await persistState();
     const message = reconciledCount
       ? `已確認先前上傳成功 ${reconciledCount} 張，不再重送`
       : deferredCount
@@ -807,7 +845,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
         : waitingForNextRoundCount
           ? `本輪圖片已封存，${waitingForNextRoundCount} 張新版會等下一個修改輪次再上傳`
         : '沒有偵測到可上傳的圖片/影片';
-    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, message };
+    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedByTarget, message };
   }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
@@ -852,5 +890,5 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     // 的歷史快照仍然封存，不會在下一次排程被重送或被同輪新版覆蓋。
     if (persistState) await persistState();
   }
-  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedByTarget, targetFallback, jsonRevision };
 }

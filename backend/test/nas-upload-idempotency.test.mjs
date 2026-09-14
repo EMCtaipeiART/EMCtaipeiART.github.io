@@ -322,3 +322,73 @@ test('Apps Script reuses the same Drive file for a retried dedupe key', async ()
   assert.equal(createCount, 2);
   assert.notEqual(changed[0].url, first[0].url);
 });
+
+test('a reused case id does not inherit the previous case\'s sealed draft, so the real first draft still uploads', async () => {
+  // 26090074：同一個編號先被一筆測試案件用過、上傳過初稿後刪除，本機同步紀錄留下「初稿已封存」。
+  // 新案件的 4 張初稿因此全被標成「等下一輪」，資料庫裡這個案件卻一張圖都沒有。
+  const originalFetch = globalThis.fetch;
+  const names = ['a_1000x300.png', 'a_1200x1200.png', 'a_A4.jpg', 'b_BN.png'];
+  const stateFiles = Object.fromEntries(names.map(name => [name, { assignedRound: null, pendingAfterRound: 0, uploadAttempt: null }]));
+  const roundState = { sealedRound: 0, files: stateFiles };
+  let requestPayload = null;
+  globalThis.fetch = async (_url, options) => {
+    requestPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ success: true, count: requestPayload.images.length, jsonRevision: 7 }));
+  };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData: { tables: { '修改統計表': { rows: [] } } },
+      caseId: '26090074',
+      designer: 'Machi',
+      client: 'DJI',
+      start: '2026/09/09',
+      pendingPreviews: names.map(relPath => ({ relPath, previewPath: fileURLToPath(import.meta.url), mtimeMs: 1, size: 1, pendingAfterRound: 0 })),
+      stateFiles,
+      roundState
+    });
+    assert.equal(result.uploadedCount, names.length);
+    assert.equal(result.waitingForNextRoundCount, 0);
+    assert.equal(result.staleSealClearedCount, names.length);
+    assert.equal(requestPayload.round, 0, '沒有任何修改紀錄的案件，第一批圖一定是初稿');
+    for (const name of names) {
+      assert.equal(stateFiles[name].assignedRound, 0);
+      assert.equal(stateFiles[name].pendingAfterRound, null);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a round whose images reached the database stays sealed even after its uploaded files left the local state', async () => {
+  // 改了關鍵字或資料夾之後，已上傳過的檔案會從同步紀錄裡消失，只剩封存標記。資料庫有這一輪的圖，
+  // 封存就必須照樣成立，否則新檔案會被追加進已經交付的初稿。
+  const originalFetch = globalThis.fetch;
+  const relPath = 'renamed-later.png';
+  const stateFiles = { [relPath]: { assignedRound: null, pendingAfterRound: null, uploadAttempt: null } };
+  const roundState = { sealedRound: 0, files: stateFiles };
+  globalThis.fetch = async () => { throw new Error('已封存的一輪不該再上傳任何東西'); };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData: { tables: { '修改統計表': { rows: [{
+        '案件編號': '26090001', '修改次數': '0',
+        '圖片連結': JSON.stringify([{ fileName: 'original.png', url: 'https://example.test/original' }])
+      }] } } },
+      caseId: '26090001',
+      designer: 'Machi',
+      client: '測試客戶',
+      start: '2026/09/01',
+      pendingPreviews: [{ relPath, previewPath: '/unused' }],
+      stateFiles,
+      roundState
+    });
+    assert.equal(result.uploadedCount, 0);
+    assert.equal(result.waitingForNextRoundCount, 1);
+    assert.equal(stateFiles[relPath].pendingAfterRound, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
