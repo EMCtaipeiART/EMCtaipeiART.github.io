@@ -3154,3 +3154,37 @@ test('mailAction() branches into 串接／回信／發信 depending on gmailThre
   assert.match(historyResult, /history-lock/);
   assert.doesNotMatch(historyResult, /串接|發信|回信/);
 });
+
+test('links written into a 修改紀錄 entry are clickable in the modal, while everything else stays escaped text', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 修改需求常直接貼 Google 簡報或雲端連結，原本整段用 esc() 當純文字輸出，網址點不開。
+  const render = html.match(/function renderRevisionModal\(id\)\{[^\n]*/)?.[0];
+  assert.ok(render, 'could not locate renderRevisionModal');
+  assert.match(render, /<div class="revision-modal-content">\$\{linkifyPlainText\(record\.content\|\|/);
+  assert.doesNotMatch(render, /<div class="revision-modal-content">\$\{esc\(/);
+  assert.match(html, /\.revision-modal-content a\{color:var\(--green\);text-decoration:underline/);
+  assert.match(html, /html\[data-theme="dark"\] \.revision-modal-content a\{color:#8ab4f8!important\}/);
+
+  // Run the real linkifier on the exact text from the reported case.
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[^\\n]*`))?.[0];
+  const linkify = new Function(`
+    const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    ${pick('safeHttpPreviewUrl')}
+    ${pick('linkifyPlainText')}
+    return linkifyPlainText;
+  `)();
+  const url = 'https://docs.google.com/presentation/d/1eEOYjXBnSAgysJy43UY8vjMa1ZKm5JZB1adADHK1miM/edit?slide=id.g3fa6d495c36_6_0#slide=id.g3fa6d495c36_6_0';
+  const out = linkify(`感謝大神支援！！這邊有幾張，客戶希望調整一下資訊， 再麻煩您：\n${url}`);
+  assert.match(out, /^感謝大神支援！！這邊有幾張，客戶希望調整一下資訊， 再麻煩您：\n<a href="/);
+  assert.ok(out.includes(`target="_blank" rel="noopener noreferrer">${url}</a>`), out);
+  // 句尾標點不能被吃進網址裡——中文的全形標點常常直接黏在網址後面、中間沒有空白。
+  assert.ok(linkify('請看 https://example.com/a。').includes('href="https://example.com/a" target="_blank" rel="noopener noreferrer">https://example.com/a</a>。'));
+  assert.ok(linkify('連結https://example.com/b，謝謝').includes('>https://example.com/b</a>，謝謝'));
+  assert.ok(linkify('（https://example.com/c）').includes('>https://example.com/c</a>）'));
+  assert.ok(linkify('See https://example.com/d.').includes('>https://example.com/d</a>.'));
+  // 只擋標點不擋一般中文字：路徑本身含中文的網址要完整保留。
+  assert.ok(linkify('https://example.com/設計圖/初稿 完成').includes('>https://example.com/設計圖/初稿</a> 完成'));
+  // 不是 http(s) 的東西不會變成連結，HTML 也照樣被逃脫。
+  assert.equal(linkify('javascript:alert(1) <b>x</b>'), 'javascript:alert(1) &lt;b&gt;x&lt;/b&gt;');
+  assert.equal(linkify('初稿完成'), '初稿完成');
+});
