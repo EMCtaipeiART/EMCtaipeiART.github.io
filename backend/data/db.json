@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4752,
+  "revision": 4753,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-14T03:59:25.954Z",
+  "updatedAt": "2026-09-14T03:59:38.233Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1366,7 +1366,7 @@
         {"案件編號":"26090074","修改次數":"0","建立日期":"2026/09/14 11:09:19","修改日期":"2026/09/14 11:09:19","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/14 11:09:19","圖片連結":"[{\"fileName\":\"260914_DJI_九月上半優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/17IkKjQhMCDqVlDD3cnxn8dBjYOpKFf5q=w1600\"},{\"fileName\":\"260914_DJI_九月上半優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1V9BlkAkihsLhfU5F2UTJv82JHSKsRYwi=w1600\"},{\"fileName\":\"260914_DJI_九月上半優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Tj7AtIAKG18ACQJa2QB9AmVs253MFE57=w1600\"},{\"fileName\":\"260914_DJI_蝦皮超品日_BN.png\",\"url\":\"https://lh3.googleusercontent.com/d/15k5NUwqc-C5vTnXZBcUpBwbP3Mv97rou=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/14 11:09:19"},
         {"案件編號":"26090081","修改次數":"0","建立日期":"2026/09/14 11:21:01","修改日期":"2026/09/14 11:21:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/14 11:21:01","圖片連結":"[{\"fileName\":\"260914_DJI_新店裕隆城授權體驗店.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XVSeRuBmtSBXAQlT6f2JPgRVeFHi5ww2=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/14 11:21:01"},
         {"案件編號":"26090037","修改次數":"1","建立日期":"2026/09/14 11:36:50","修改日期":"2026-09-14","修改內容":"錯別字修正","修改人":"Noise","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26090101","修改次數":"0","建立日期":"2026/09/14 11:59:25","修改日期":"2026/09/14 11:59:25","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/09/14 11:59:25","圖片連結":"[{\"fileName\":\"徐海莉Ｘ新光人壽App_貼文後台數據-4 - 郭怡靖（吃飽就睡工作室 企劃）_fix.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-SBcvOamBTJZO46cb_1iSuqC_bUpjvop=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/14 11:59:25"}
+        {"案件編號":"26090101","修改次數":"0","建立日期":"2026/09/14 11:59:25","修改日期":"2026/09/14 11:59:25","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/09/14 11:59:25","圖片連結":"[{\"fileName\":\"徐海莉Ｘ新光人壽App_貼文後台數據-4 - 郭怡靖（吃飽就睡工作室 企劃）_fix.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-SBcvOamBTJZO46cb_1iSuqC_bUpjvop=w1600\"},{\"fileName\":\"徐海莉Ｘ新光人壽App_貼文後台數據-4 - 郭怡靖（吃飽就睡工作室 企劃）_fix.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1jXgpQ7o5RKeXXeHZGCjlhBZee9FYW5iU=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/09/14 11:59:38"}
       ]
     },
     "補充資料連結": {
