@@ -3188,3 +3188,54 @@ test('links written into a 修改紀錄 entry are clickable in the modal, while 
   assert.equal(linkify('javascript:alert(1) <b>x</b>'), 'javascript:alert(1) &lt;b&gt;x&lt;/b&gt;');
   assert.equal(linkify('初稿完成'), '初稿完成');
 });
+
+test('a computer upload started from the designer reply flow opens the mail editor right away and shows live upload progress where the images will go', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 以前按下「上傳全部」後上傳視窗只會縮到背景，角落剩一個小徽章，設計師以為沒上傳成功又重來一次。
+  const handler = html.match(/if\(data\.type==='machi-case-design-upload-progress'\)\{[\s\S]*?\n    return;\n  \}/)?.[0];
+  assert.ok(handler, 'could not locate the upload progress handler');
+  assert.match(handler, /if\(!wasInFlight\)\{\s*\n\s*backgroundizeCaseDesignUpload\(\);/);
+  assert.match(handler, /if\(caseDesignUploadAfterReply&&caseDesignUploadCaseId\)\{[\s\S]*?openDesignerReplyMailModal\(id,\{round\}\)/);
+  // 編輯器開好之後要補上最新進度，因為進度訊息可能比編輯器建立完成更早抵達。
+  assert.match(handler, /\.then\(\(\)=>\{const latest=caseDesignUploadLatestProgress; if\(latest\)updateDesignerReplyUploadProgress\(id,round,latest\.done,latest\.total\)\}\)/);
+  assert.match(handler, /else if\(caseDesignUploadAfterReply&&caseDesignUploadCaseId\)\{\s*\n\s*updateDesignerReplyUploadProgress\(/);
+  // 上傳仍在 iframe 裡跑，進度處理絕對不能關掉上傳視窗。
+  assert.doesNotMatch(handler, /closeUploadModal\(/);
+
+  // 進度訊息沒有案件編號，開啟上傳視窗時要先記住，關閉時清掉。
+  assert.match(html, /caseDesignUploadCaseId=String\(row\.id\); caseDesignUploadLatestProgress=null; openUploadModal\(/);
+  assert.match(html, /caseDesignUploadRound=0; caseDesignUploadCaseId=''; caseDesignUploadLatestProgress=null;/);
+
+  // Run the real placeholder updater against a fake DOM.
+  const source = html.match(/function updateDesignerReplyUploadProgress\(id,round,done,total\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source, 'could not locate updateDesignerReplyUploadProgress');
+  const run = ({ modal, placeholder }, args) => new Function('modal', 'placeholder', 'args', `
+    const $ = selector => selector === '#gmailThreadModal' ? modal : null;
+    const document = { querySelector: selector => selector === '#gmailDesignerReplyImages .gmail-designer-reply-uploading' ? placeholder : null };
+    ${source}
+    return updateDesignerReplyUploadProgress(...args);
+  `)(modal, placeholder, args);
+  const designerModal = () => ({ hidden: false, dataset: { replyMode: 'designer', designerReplyCaseId: '26090074', designerReplyRound: '0' } });
+
+  const placeholder = { textContent: '　圖片上傳中...' };
+  assert.equal(run({ modal: designerModal(), placeholder }, ['26090074', 0, 2, 5]), true);
+  assert.equal(placeholder.textContent, '　圖片上傳中 2/5，完成後會自動放進信件...');
+  // 不是這筆案件、不是這一輪、不是設計師回覆信、或編輯器已關閉，都不能動別人的信件內容。
+  for (const modal of [
+    { ...designerModal(), dataset: { ...designerModal().dataset, designerReplyCaseId: '26090075' } },
+    { ...designerModal(), dataset: { ...designerModal().dataset, designerReplyRound: '1' } },
+    { ...designerModal(), dataset: { ...designerModal().dataset, replyMode: 'general' } },
+    { ...designerModal(), hidden: true }
+  ]) {
+    const untouched = { textContent: '原本的內容' };
+    assert.equal(run({ modal, placeholder: untouched }, ['26090074', 0, 1, 3]), false);
+    assert.equal(untouched.textContent, '原本的內容');
+  }
+  // 圖片已經套用完、佔位區塊不在了，就不再寫任何東西。
+  assert.equal(run({ modal: designerModal(), placeholder: null }, ['26090074', 0, 5, 5]), false);
+  // 超出總數的已完成數不會顯示成「6/5」。
+  const clamp = { textContent: '' };
+  run({ modal: designerModal(), placeholder: clamp }, ['26090074', 0, 6, 5]);
+  assert.equal(clamp.textContent, '　圖片上傳中 5/5，完成後會自動放進信件...');
+});

@@ -10824,9 +10824,25 @@ let caseDesignUploadInFlight=false;
 /** 這次「選擇電腦檔案上傳」是不是從「回信」→「設計師回覆信」開啟的——是的話上傳完成後要自動轉入
  * 信件編輯器（見 handleUploadFrameMessage 的 machi-case-design-images-updated 分支）。 */
 let caseDesignUploadAfterReply=false;
+// 這次電腦上傳屬於哪一筆案件。上傳頁面送回來的進度訊息只帶已完成／總數，沒有案件編號，
+// 回信流程要在上傳一開始就打開那筆案件的設計師回覆信，所以在開啟上傳視窗時先記住。
+let caseDesignUploadCaseId='';
+let caseDesignUploadLatestProgress=null;
 let caseDesignUploadRound=0;
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalActive=true; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
-function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; caseDesignUploadAfterReply=false; caseDesignUploadRound=0; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
+function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; caseDesignUploadAfterReply=false; caseDesignUploadRound=0; caseDesignUploadCaseId=''; caseDesignUploadLatestProgress=null; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
+/** 設計師回覆信編輯器裡「圖片上傳中」的佔位文字改成實際進度。編輯器不是這筆案件、這一輪的設計師回覆信，
+ * 或圖片已經套用完（佔位區塊已被換掉）時就什麼都不做。 */
+function updateDesignerReplyUploadProgress(id,round,done,total){
+  const modal=$('#gmailThreadModal');
+  if(!modal||modal.hidden||modal.dataset.replyMode!=='designer'||String(modal.dataset.designerReplyCaseId||'')!==String(id))return false;
+  if(String(modal.dataset.designerReplyRound||'')!==String(Math.max(0,Number(round)||0)))return false;
+  const placeholder=document.querySelector('#gmailDesignerReplyImages .gmail-designer-reply-uploading');
+  if(!placeholder)return false;
+  const safeTotal=Math.max(0,Number(total)||0), safeDone=Math.min(Math.max(0,Number(done)||0),safeTotal||Infinity);
+  placeholder.textContent=safeTotal?`　圖片上傳中 ${safeDone}/${safeTotal}，完成後會自動放進信件...`:'　圖片上傳中...';
+  return true;
+}
 function backgroundizeCaseDesignUpload(){const modal=$('#uploadModal'); if(!modal||!uploadModalActive)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); showCaseDesignUploadBadge()}
 function restoreCaseDesignUploadModal(){const modal=$('#uploadModal'); if(!modal||!uploadModalActive)return; modal.hidden=false; document.body.classList.add('upload-modal-open'); hideCaseDesignUploadBadge()}
 function showCaseDesignUploadBadge(){const badge=$('#caseDesignUploadBadge'); if(badge)badge.hidden=false}
@@ -10849,8 +10865,25 @@ function handleUploadFrameMessage(event){
     if(!activeCaseImageUploadNonce||data.closeNonce!==activeCaseImageUploadNonce)return;
     const wasInFlight=caseDesignUploadInFlight;
     caseDesignUploadInFlight=true;
-    if(!wasInFlight)backgroundizeCaseDesignUpload();
-    updateCaseDesignUploadBadge(Number(data.done)||0,Number(data.total)||0,String(data.currentFileName||''));
+    const done=Number(data.done)||0, total=Number(data.total)||0;
+    caseDesignUploadLatestProgress={done,total};
+    if(!wasInFlight){
+      backgroundizeCaseDesignUpload();
+      // 從「回信 → 設計師回覆信」進來的上傳：以前按下「上傳全部」後，上傳視窗會縮到背景、只剩角落一個
+      // 小徽章，看起來像完全沒反應，設計師以為沒上傳成功又重來一次。改成上傳一開始就直接打開設計師
+      // 回覆信編輯器（跟 NAS 資料夾備份開始時的做法一致），圖片位置先顯示上傳進度，傳完由下面
+      // machi-case-design-images-updated 那段沿用同一個編輯器把圖片換進去。上傳本身仍在背景的
+      // iframe 裡繼續跑，所以這裡只能把上傳視窗藏起來，絕對不能關掉。
+      if(caseDesignUploadAfterReply&&caseDesignUploadCaseId){
+        const id=caseDesignUploadCaseId, round=caseDesignUploadRound;
+        openDesignerReplyMailModal(id,{round})
+          .then(()=>{const latest=caseDesignUploadLatestProgress; if(latest)updateDesignerReplyUploadProgress(id,round,latest.done,latest.total)})
+          .catch(err=>setSync(`圖片仍在背景上傳，但無法先開啟回信編輯器：${err.message}`,true,5200));
+      }
+    }else if(caseDesignUploadAfterReply&&caseDesignUploadCaseId){
+      updateDesignerReplyUploadProgress(caseDesignUploadCaseId,caseDesignUploadRound,done,total);
+    }
+    updateCaseDesignUploadBadge(done,total,String(data.currentFileName||''));
     return;
   }
   if(data.type==='machi-case-design-images-updated'){
@@ -13584,7 +13617,7 @@ function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPag
 /** afterReply：從「回信」→「設計師回覆信」開啟時傳 true，上傳完成後（見 handleUploadFrameMessage 的
  * machi-case-design-images-updated 分支）會自動轉入 openDesignerReplyMailModal；平常從「過稿中」
  * 狀態變更觸發時維持預設 false，上傳完只更新畫面，不會意外跳出信件編輯器。 */
-function openCaseDesignImageUploadModal(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadRound=Math.max(0,Number(round)||0); openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
+function openCaseDesignImageUploadModal(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadRound=Math.max(0,Number(round)||0); caseDesignUploadCaseId=String(row.id); caseDesignUploadLatestProgress=null; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
 function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const samePathButton=afterReply&&row.designImageFolderUrl?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${esc(row.designImageFolderUrl)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply})})}
 const nasFolderPickerBaseUrl='http://iMac.local:8877/picker';
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
