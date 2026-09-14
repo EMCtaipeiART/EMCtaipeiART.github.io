@@ -3239,3 +3239,24 @@ test('a computer upload started from the designer reply flow opens the mail edit
   run({ modal: designerModal(), placeholder: clamp }, ['26090074', 0, 6, 5]);
   assert.equal(clamp.textContent, '　圖片上傳中 5/5，完成後會自動放進信件...');
 });
+
+test('adding a 客戶別 with an expired login sends the user back to log in instead of silently creating it without their project group', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+
+  // 後端：有帶憑證卻查不到登入就擋下，不再默默當成匿名建立。
+  const addCustomer = worker.match(/private async addCustomer\([\s\S]*?\n  \}/)?.[0];
+  assert.ok(addCustomer, 'could not locate addCustomer');
+  assert.match(addCustomer, /if \(!session && sessionToken\(payload\)\) \{\s*\n\s*return \{ ok: false, action: 'addCustomer', error: '登入狀態已失效，請重新登入後再新增客戶別', reason: 'TOKEN_EXPIRED' \};/);
+  // 擋下必須發生在建立資料之前。
+  assert.ok(addCustomer.indexOf("reason: 'TOKEN_EXPIRED'") < addCustomer.indexOf("this.mutate('addCustomer'"));
+
+  // 前台：錯誤訊息要被既有的「登入已失效」判斷認得，並清掉失效登入、打開登入視窗。
+  const isExpired = new Function(`${html.match(/function isExpiredEditorSessionError\(error\)\{[^\n]*/)[0]}; return isExpiredEditorSessionError;`)();
+  assert.equal(isExpired(new Error('登入狀態已失效，請重新登入後再新增客戶別')), true);
+  const handler = html.match(/async function handleClientSelectChange\(el\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(handler, 'could not locate handleClientSelectChange');
+  assert.match(handler, /if\(isExpiredEditorSessionError\(err\)\)\{\s*\n\s*clearLoginAuthState\(\);applyAccountSettingsIfNeeded\(\);updateLoginUi\(\);render\(\);\s*\n\s*showLoginModal\('登入狀態已失效，請重新登入後再新增客戶別'\);/);
+  // 其他錯誤照舊顯示原本的失敗訊息，不會把人登出。
+  assert.match(handler, /setSync\(`新增客戶別失敗：\$\{err\.message\}`,true\);/);
+});

@@ -2322,6 +2322,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    */
   private async addCustomer(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     // 比照 addRequests（填單新增案件）：有 session 才檢查 request.create，未登入沿用「填單本來就不強制登入」的既有慣例。
+    // 但「有帶登入憑證、後端卻查不到這個登入」不是未登入，而是登入已經失效（過期、登出、帳號被重建）。
+    // 以前這種情況會默默當成匿名建立：客戶別只拿到三個預設部門，建立者自己那一組完全沒被加進權限，
+    // 他在畫面上仍然看起來是登入狀態，填完單才發現不能寄信（專案部 Ann 組的 Jerry 就是這樣）。
+    // 改成明確擋下，讓前台請使用者重新登入後再建立，才能正確帶入他所屬的專案組。
+    if (!session && sessionToken(payload)) {
+      return { ok: false, action: 'addCustomer', error: '登入狀態已失效，請重新登入後再新增客戶別', reason: 'TOKEN_EXPIRED' };
+    }
     if (session) this.requireAccess(database, session, 'request.create');
     const name = text(payload.name || payload['客戶別']);
     if (!name) throw new Error('請輸入客戶別名稱');

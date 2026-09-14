@@ -7770,6 +7770,15 @@ async function handleClientSelectChange(el){
   }catch(err){
     el.disabled=false;
     el.value='';
+    // 登入憑證已經失效時，後端不會再默默當成匿名建立（那樣建立者所屬的專案組拿不到權限，填完單才發現不能寄信），
+    // 而是回「登入狀態已失效」。這裡清掉失效的登入並直接打開登入視窗，重新登入後再新增一次，
+    // 後端才認得出建立者屬於哪一組，自動把那一組加進這個客戶別的權限。
+    if(isExpiredEditorSessionError(err)){
+      clearLoginAuthState();applyAccountSettingsIfNeeded();updateLoginUi();render();
+      showLoginModal('登入狀態已失效，請重新登入後再新增客戶別');
+      setSync('登入狀態已失效，請重新登入後再新增客戶別',true,6000);
+      return;
+    }
     setSync(`新增客戶別失敗：${err.message}`,true);
   }
 }

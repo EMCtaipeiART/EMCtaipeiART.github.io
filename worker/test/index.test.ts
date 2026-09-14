@@ -2520,6 +2520,32 @@ describe('Machi Design API Worker', () => {
     });
   });
 
+  it('refuses to create a 客戶別 as anonymous when the request carries a login token the Worker no longer recognises, but still allows a genuinely anonymous request', async () => {
+    // 專案部 Ann 組的 Jerry：畫面上是登入狀態，手上的登入憑證卻已經失效。以前後端默默當成匿名建立，
+    // 客戶別只拿到三個預設部門，他自己那一組沒有權限，填完單才發現不能寄信。
+    const expired = await api({ action: 'addCustomer', name: '失效憑證建立的客戶' }, 'token-that-is-no-longer-valid');
+    expect(expired).toMatchObject({ ok: false, reason: 'TOKEN_EXPIRED' });
+    expect(String(expired.error)).toContain('登入狀態已失效');
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const created = await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return (JSON.parse(stored.json) as DatabaseSnapshot).tables['客戶別'].rows.some(row => row['客戶別'] === '失效憑證建立的客戶');
+    });
+    expect(created).toBe(false);
+
+    // 完全沒帶憑證的匿名填單維持原本「填單不強制登入」的慣例，照樣可以新增。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input) === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+        expect(init?.method).toBe('PUT');
+        return Response.json({ content: { sha: `anonymous-customer-${crypto.randomUUID()}` }, commit: { sha: 'anonymous-customer-commit' } });
+      }
+      throw new Error(`unexpected fetch: ${String(input)}`);
+    });
+    const anonymous = await api({ action: 'addCustomer', name: '匿名填單建立的客戶' });
+    expect(anonymous).toMatchObject({ ok: true, action: 'addCustomer' });
+    expect((anonymous.customer as Record<string, unknown>)['更新者']).toBe('匿名填單');
+  });
+
   describe('scheduled mail (指定排程時間)', () => {
     async function schedulerStub(): Promise<DurableObjectStub<DatabaseCoordinator>> {
       return env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
