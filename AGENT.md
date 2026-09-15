@@ -192,7 +192,27 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 14:50 Asia/Taipei（最新）— 前台讀取加速：合併重複的資料庫下載、壓縮設計師照片、減少不必要的資料庫提交
+### 2026-09-15 15:20 Asia/Taipei（最新）— 設計師頭像紅綠燈改算「未開始＋執行中＋修改中」，五筆以上顯示忙碌
+
+- 修改目的：使用者指定「設計師專長與案件分配」頭像右下角紅綠燈，判斷標準從未開始＋執行中改為「未開始＋執行中＋修改中」案件加總，超過五筆以上顯示忙碌。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. 新增常數 `DESIGNER_ACTIVE_STATUSES=['未開始','執行中','修改中']`、`DESIGNER_BUSY_THRESHOLD=5`；`designerActiveCount` 改用這組狀態計數。
+  2. `computedDesignerStatus` 從 `count>5` 改為 `count>=5`：使用者寫「五筆以上」，以包含五筆解讀，合計 5 筆即顯示忙碌（紅燈）。
+  3. 頭像燈號滑過提示改為「目前未開始＋執行中＋修改中共 N 筆（5 筆以上為忙碌）」。
+  4. 設計師卡片重繪判斷 `designerRosterStateKey` 本來就帶入計數與狀態，修改中案件增減時會自動重繪燈號。
+- 風險區塊：
+  - 門檻由 6 筆降為 5 筆，現有剛好 5 筆的設計師會由綠燈變紅燈；若要維持 6 筆才忙碌，只需改 `DESIGNER_BUSY_THRESHOLD` 或比較式。
+  - 過稿中、暫停中、已完成、已取消仍不計入。
+  - 上一筆紀錄提到「設計師進行中案件數不含修改中」，此次已改為包含。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **101/101 全過**（100 既有＋1 新增：抽出真正的計數與判斷函式，驗證修改中計入、過稿中／已完成／已取消／暫停中不計入、4 筆普通、5 筆忙碌、無案件普通，並鎖住提示文字）。
+  - `git stash` 只還原 `index.html`，新測試在舊程式碼上失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際看燈號（這個環境沒有正式站登入）。
+- 部署狀態：只改 `index.html`，git push 後自動生效，Worker 不需要部署。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 14:50 Asia/Taipei— 前台讀取加速：合併重複的資料庫下載、壓縮設計師照片、減少不必要的資料庫提交
 
 - 修改目的：使用者反映前台讀取變慢，診斷後指定「合併重複的資料庫請求、壓縮那張大圖，並減少不必要的資料庫提交」。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`scripts/generate_database_archive_snapshot.mjs`、`scripts/generate_short_link_index.mjs`、`images/Anna.jpg`、`images/Leona.jpg`、`images/Amber.jpg`、`images/Noise.jpg`、`images/Machi.jpg`、`images/Karl.jpg`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
