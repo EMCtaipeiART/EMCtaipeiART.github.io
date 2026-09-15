@@ -3340,3 +3340,64 @@ test('the designer reply can back up NAS or uploaded images without putting them
   `)(placeholder);
   assert.equal(placeholder.textContent, '　圖片備份中 3/12，這次不會放進信件...');
 });
+
+test('修改中 is a first-class case status: its own colour in every theme, a KPI box that filters the list, and offered wherever a status can be chosen', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  const style = html.slice(0, html.lastIndexOf('</style>'));
+  const count = (text, needle) => text.split(needle).length - 1;
+
+  // 每一條過稿中的樣式（矩形框、列表標籤、狀態選單、時間軸、淺色／深色／各層主題覆寫）都要有修改中的對應規則，
+  // 否則某個主題下修改中會掉回預設樣式。
+  assert.equal(count(style, 'status-修改中'), count(style, 'status-過稿中'));
+  assert.equal(count(style, '.修改中'), count(style, '.過稿中'));
+  assert.ok(count(style, 'status-修改中') > 10);
+
+  // 單獨屬於修改中的規則，顏色一個都不能沿用過稿中的天藍色，才分得出兩個狀態。
+  const rulesFor = status => [...style.matchAll(/([^{}]*)\{([^{}]*)\}/g)]
+    .filter(([, selector]) => { const parts = selector.slice(selector.lastIndexOf('*/') + 1).split(','); return parts.every(part => part.includes(status)); })
+    .flatMap(([, , declaration]) => declaration.toLowerCase().match(/#[0-9a-f]{6}\b|#[0-9a-f]{3}\b/g) || []);
+  // 白、灰、黑這類沒有色相的中性色（例如白底、淺灰邊框）兩個狀態共用是正常的，只比對真正帶有色彩的顏色。
+  const isNeutral = colour => {
+    const hex = colour.slice(1).length === 3 ? colour.slice(1).split('').map(c => c + c).join('') : colour.slice(1);
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+    return Math.max(r, g, b) - Math.min(r, g, b) <= 12;
+  };
+  const reviewColours = new Set(rulesFor('過稿中').filter(colour => !isNeutral(colour)));
+  const revisingColours = rulesFor('修改中').filter(colour => !isNeutral(colour));
+  assert.ok(reviewColours.size > 10 && revisingColours.length > 10);
+  assert.deepEqual(revisingColours.filter(colour => reviewColours.has(colour)), []);
+
+  // 狀態清單、排序、時間軸配色判斷、批次修改下拉、資料庫後台篩選都要認得修改中。
+  assert.match(html, /const statusOptions = \['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'\];/);
+  assert.match(html, /const statusOrder = \{'未開始':0,'執行中':1,'過稿中':2,'修改中':3,'已完成':4,'已取消':5,'暫停中':6\};/);
+  assert.match(html, /function statusClass\(s\)\{return \['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'\]\.includes\(s\)\?s:'未開始'\}/);
+  assert.match(html, /<option>過稿中<\/option><option>修改中<\/option><option>已完成<\/option>/);
+  assert.match(admin, /const ACCOUNT_STATUS_OPTIONS=\['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'\];/);
+
+  // 上方矩形框：六格，修改中排在過稿中之後，點選走通用的 data-status 篩選。
+  assert.match(html, /<b id="review">0<\/b><span>過稿中<\/span><\/div><div class="kpi status-修改中" data-status="修改中" role="button" tabindex="0"><b id="revising">0<\/b><span>修改中<\/span><\/div>/);
+  assert.match(html, /\.kpis\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\);gap:10px\}/);
+  // 案件列表上方的矩形框另外有一條帶 !important 的欄數規則，實際生效的是它，不能還停在 5 欄。
+  assert.match(html, /#casesSection \.case-kpis\{\s*\n\s*display:grid!important;\s*\n\s*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important;/);
+  assert.match(html, /@media\(max-width:640px\)\{\s*\n\s*#casesSection \.case-kpis\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important\}/);
+  assert.doesNotMatch(html, /case-kpis\{[^}]*repeat\(5,/);
+  assert.match(html, /document\.querySelectorAll\('\.kpi\[data-status\]'\)\.forEach\(card=>\{\s*\n\s*card\.addEventListener\('click',\(\)=>applyStatusFilter\(card\.dataset\.status\)\);/);
+
+  // Run the real renderStats against a fake list.
+  const renderStats = html.match(/function renderStats\(\)\{[^\n]*\}/)?.[0];
+  assert.ok(renderStats, 'could not locate renderStats');
+  const cells = {};
+  new Function('cells', `
+    const dataReady = true;
+    const filtered = () => [
+      { status: '未開始' }, { status: '過稿中' }, { status: '修改中' }, { status: '修改中' }, { status: '已完成' }, { status: '已取消' }
+    ];
+    const $ = selector => (cells[selector] ||= { textContent: '' });
+    ${renderStats}
+    renderStats();
+  `)(cells);
+  assert.equal(cells['#revising'].textContent, 2);
+  assert.equal(cells['#review'].textContent, 1);
+  assert.equal(cells['#total'].textContent, 5, '總案件照舊不含已取消');
+});

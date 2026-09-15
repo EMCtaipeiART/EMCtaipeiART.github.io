@@ -27,9 +27,9 @@
     }
     *{box-sizing:border-box} body{min-height:100vh;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;background:linear-gradient(180deg,#eef8f2,var(--bg));color:var(--ink)}
     header,.wrap{width:min(100%,1180px);margin-inline:auto}header{padding:36px 24px 20px;text-align:center}h1{margin:0;font-size:clamp(28px,4vw,44px);letter-spacing:0}p{line-height:1.6}.subtitle{max-width:760px;color:var(--muted);margin:10px auto 0}.wrap{display:grid;gap:18px;margin-bottom:60px;padding:0 24px}.grid{display:grid;gap:18px}.top{grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr)}
-    section,.card{min-width:0}.card{width:100%;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;text-align:left}.card h2{margin:0 0 14px;font-size:20px}.help{background:var(--yellow);border-color:#f4df9c}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fff;font-size:13px}.overview-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpis{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.kpi{min-width:0;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.kpi[data-status]{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.kpi[data-status]:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(18,38,28,.08)}.kpi b{display:block;font-size:28px}.kpi span{color:var(--muted);font-size:13px}.kpi.status-未開始{background:#fff1f2;border-color:#fecdd3}.kpi.status-執行中{background:#fef9c3;border-color:#fde68a}.kpi.status-過稿中{background:#f0f9ff;border-color:#bae6fd}.kpi.status-已完成{background:#ecfdf5;border-color:#bbf7d0}.kpi.status-未開始 b,.kpi.status-未開始 span{color:#be123c}.kpi.status-執行中 b,.kpi.status-執行中 span{color:#a16207}.kpi.status-過稿中 b,.kpi.status-過稿中 span{color:#0284c7}.kpi.status-已完成 b,.kpi.status-已完成 span{color:#15803d}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.modify-toolbar{justify-content:flex-start;margin:10px 0 0}.modify-refresh{background:var(--soft-warm-solid);color:#3f2d00;border:1px solid var(--soft-warm-border);min-height:40px;padding:9px 18px;box-shadow:0 8px 18px rgba(246,178,61,.18)}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;min-width:0;min-height:36px}select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:linear-gradient(45deg,transparent 50%,#66736d 50%),linear-gradient(135deg,#66736d 50%,transparent 50%);background-position:calc(100% - 16px) 15px,calc(100% - 11px) 15px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{appearance:textfield;-moz-appearance:textfield}textarea{min-height:74px;resize:vertical}.form{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.form label,.overview-filters label,.form .date-field-block{display:grid;gap:5px;font-size:13px;color:#43524b;font-weight:700}.date-select-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.form .wide{grid-column:span 2}.form .full{grid-column:1/-1}.form .modify-only{display:none}.form.is-modify .modify-only{display:grid}.form.is-modify #submitBtn{background:var(--soft-warm-solid);color:#3f2d00}.form.is-modify #copySubject{display:none}.form[hidden],#modifyRecent[hidden]{display:none!important}.detail-field{gap:7px;font-size:13px;color:#43524b;font-weight:700}.detail-options{display:flex;flex-wrap:wrap;gap:8px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px;min-height:42px}.detail-options label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#f8fbf9;padding:7px 10px;color:var(--ink);font-weight:700}.detail-options input{width:auto;min-height:auto;margin:0;accent-color:var(--soft-warm-solid)}.detail-empty{color:var(--muted);font-weight:700;padding:4px 0}.tab-btn{border:1px solid var(--line);background:#eef3f0;color:var(--ink);min-height:46px}.tab-btn[data-kind="modify"]{background:#f3f4f6;color:#6b7280}.tab-btn[data-kind="new"].active{background:var(--green);border-color:var(--green);color:#fff}.tab-btn[data-kind="modify"].active{background:var(--soft-warm);border-color:var(--soft-warm-border);color:var(--soft-warm-ink)}.tab-btn[data-view="list"].active{background:var(--green);border-color:var(--green);color:#fff}.tab-btn[data-view="timeline"].active{background:var(--soft-warm);border-color:var(--soft-warm-border);color:var(--soft-warm-ink)}.list-view[hidden]{display:none}.submit-overlay{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(23,33,29,.34);backdrop-filter:blur(2px)}.submit-overlay.show{display:grid}.submit-card{min-width:220px;border-radius:16px;background:#fff;padding:26px 30px;text-align:center;box-shadow:var(--shadow);font-weight:900;color:var(--green)}.submit-card::before{content:"";display:block;width:34px;height:34px;margin:0 auto 12px;border:4px solid #cfe8dc;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}.submit-overlay.done .submit-card::before{content:"✓";display:grid;place-items:center;border:0;background:var(--green);color:#fff;font-size:22px;animation:none}@keyframes spin{to{transform:rotate(360deg)}}
+    section,.card{min-width:0}.card{width:100%;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;text-align:left}.card h2{margin:0 0 14px;font-size:20px}.help{background:var(--yellow);border-color:#f4df9c}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fff;font-size:13px}.overview-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}.kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.kpi{min-width:0;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.kpi[data-status]{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.kpi[data-status]:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(18,38,28,.08)}.kpi b{display:block;font-size:28px}.kpi span{color:var(--muted);font-size:13px}.kpi.status-未開始{background:#fff1f2;border-color:#fecdd3}.kpi.status-執行中{background:#fef9c3;border-color:#fde68a}.kpi.status-過稿中{background:#f0f9ff;border-color:#bae6fd}.kpi.status-修改中{background:#fff6f0;border-color:#fdd6ba}.kpi.status-已完成{background:#ecfdf5;border-color:#bbf7d0}.kpi.status-未開始 b,.kpi.status-未開始 span{color:#be123c}.kpi.status-執行中 b,.kpi.status-執行中 span{color:#a16207}.kpi.status-過稿中 b,.kpi.status-過稿中 span{color:#0284c7}.kpi.status-修改中 b,.kpi.status-修改中 span{color:#c75402}.kpi.status-已完成 b,.kpi.status-已完成 span{color:#15803d}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.modify-toolbar{justify-content:flex-start;margin:10px 0 0}.modify-refresh{background:var(--soft-warm-solid);color:#3f2d00;border:1px solid var(--soft-warm-border);min-height:40px;padding:9px 18px;box-shadow:0 8px 18px rgba(246,178,61,.18)}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;min-width:0;min-height:36px}select{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:linear-gradient(45deg,transparent 50%,#66736d 50%),linear-gradient(135deg,#66736d 50%,transparent 50%);background-position:calc(100% - 16px) 15px,calc(100% - 11px) 15px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{appearance:textfield;-moz-appearance:textfield}textarea{min-height:74px;resize:vertical}.form{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}.form label,.overview-filters label,.form .date-field-block{display:grid;gap:5px;font-size:13px;color:#43524b;font-weight:700}.date-select-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.form .wide{grid-column:span 2}.form .full{grid-column:1/-1}.form .modify-only{display:none}.form.is-modify .modify-only{display:grid}.form.is-modify #submitBtn{background:var(--soft-warm-solid);color:#3f2d00}.form.is-modify #copySubject{display:none}.form[hidden],#modifyRecent[hidden]{display:none!important}.detail-field{gap:7px;font-size:13px;color:#43524b;font-weight:700}.detail-options{display:flex;flex-wrap:wrap;gap:8px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px;min-height:42px}.detail-options label{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;background:#f8fbf9;padding:7px 10px;color:var(--ink);font-weight:700}.detail-options input{width:auto;min-height:auto;margin:0;accent-color:var(--soft-warm-solid)}.detail-empty{color:var(--muted);font-weight:700;padding:4px 0}.tab-btn{border:1px solid var(--line);background:#eef3f0;color:var(--ink);min-height:46px}.tab-btn[data-kind="modify"]{background:#f3f4f6;color:#6b7280}.tab-btn[data-kind="new"].active{background:var(--green);border-color:var(--green);color:#fff}.tab-btn[data-kind="modify"].active{background:var(--soft-warm);border-color:var(--soft-warm-border);color:var(--soft-warm-ink)}.tab-btn[data-view="list"].active{background:var(--green);border-color:var(--green);color:#fff}.tab-btn[data-view="timeline"].active{background:var(--soft-warm);border-color:var(--soft-warm-border);color:var(--soft-warm-ink)}.list-view[hidden]{display:none}.submit-overlay{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(23,33,29,.34);backdrop-filter:blur(2px)}.submit-overlay.show{display:grid}.submit-card{min-width:220px;border-radius:16px;background:#fff;padding:26px 30px;text-align:center;box-shadow:var(--shadow);font-weight:900;color:var(--green)}.submit-card::before{content:"";display:block;width:34px;height:34px;margin:0 auto 12px;border:4px solid #cfe8dc;border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}.submit-overlay.done .submit-card::before{content:"✓";display:grid;place-items:center;border:0;background:var(--green);color:#fff;font-size:22px;animation:none}@keyframes spin{to{transform:rotate(360deg)}}
     button{border:0;border-radius:10px;padding:8px 12px;background:var(--green);color:#fff;cursor:pointer;font-weight:700;min-height:36px}button.secondary{background:#eef3f0;color:var(--ink)}button.warn{background:#111827}button.danger{background:var(--red)}button:disabled{opacity:.55;cursor:not-allowed}.msg{min-height:24px;color:var(--green);font-weight:700}.syncbar{grid-template-columns:repeat(3,max-content) minmax(220px,1fr);align-items:center}.syncstatus{color:var(--muted);font-size:13px;align-self:center}.filters{grid-template-columns:minmax(220px,1.4fr) repeat(5,minmax(120px,1fr));gap:10px;align-items:start;margin-bottom:14px}.filters button{position:relative;z-index:1}.multi-filter{position:relative;min-width:0}.multi-filter summary{list-style:none;border:1px solid var(--line);border-radius:10px;padding:8px 32px 8px 10px;background:#fff;min-height:36px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.multi-filter summary::-webkit-details-marker{display:none}.multi-filter summary::after{content:"▾";position:absolute;right:12px;top:9px;color:var(--muted);font-size:12px}.multi-filter[open]{z-index:70}.multi-filter[open] summary{border-color:#9bd4b4;box-shadow:0 0 0 3px rgba(15,143,97,.12)}.multi-panel{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 6px);display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:5px 6px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:8px;background:#fff;box-shadow:var(--shadow)}.multi-panel label{grid-column:1;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;font-size:13px}.multi-panel label:hover{background:#f0f6f3}.multi-panel input{width:auto;min-height:auto;margin:0;accent-color:var(--green)}.multi-panel .multi-apply{grid-column:2;align-self:center;justify-self:end;width:34px;height:34px;min-height:34px;border-radius:999px;padding:0;font-size:0;box-shadow:0 8px 18px rgba(15,143,97,.24)}.multi-apply::before{content:"✓";font-size:19px;line-height:1}.list-tools{margin-bottom:14px}.column-panel{border:1px solid var(--line);border-radius:12px;background:#fff}.column-panel summary{cursor:pointer;padding:11px 14px;font-weight:800;color:#43524b;list-style:none}.column-panel summary::-webkit-details-marker{display:none}.column-panel summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--muted)}.column-panel[open] summary::before{content:"▾"}.column-controls{display:flex;gap:8px;flex-wrap:wrap;padding:0 12px 12px}.column-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fff;font-size:13px;color:var(--ink);white-space:nowrap}.column-toggle input{width:auto;margin:0;accent-color:var(--green)}
-    .table-wrap{max-width:100%;overflow:auto;border-radius:16px}table:not(.gmail-rich-editor table):not(.signature-preset-content table):not(.gmail-thread-msg-body table){width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px}th:not(.gmail-rich-editor th):not(.signature-preset-content th):not(.gmail-thread-msg-body th),td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;white-space:nowrap}th:not(.gmail-rich-editor th):not(.signature-preset-content th):not(.gmail-thread-msg-body th){background:#f0f6f3;color:#43524b;font-size:13px;position:sticky;top:0}.sort-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:0;background:transparent;color:inherit;padding:0;min-height:0;font-weight:800;cursor:pointer}.sort-btn .sort-mark{color:var(--muted);font-size:11px}.col-project{text-align:left;width:240px;max-width:240px}.col-project th,.col-project td{text-align:left}.project-text{display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.select-col{width:48px;min-width:48px;text-align:center}.select-col input{width:auto;min-height:auto;margin:0;accent-color:var(--green)}tr:last-child td{border-bottom:0}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.history-lock{display:inline-flex;border-radius:999px;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:800;padding:6px 9px}.status{font-weight:700;border-radius:999px;padding:5px 9px;display:inline-block}.未開始{background:#fee2e2;color:#991b1b}.執行中{background:#fef9c3;color:#854d0e}.過稿中{background:#e0f2fe;color:#0369a1}.已完成{background:#dcfce7;color:#166534}.已取消{background:#f3f4f6;color:#4b5563}.batch-panel{margin-bottom:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.batch-panel summary{cursor:pointer;padding:10px 14px;font-weight:800;color:#43524b;list-style:none}.batch-panel summary::-webkit-details-marker{display:none}.batch-panel summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--muted)}.batch-panel[open] summary::before{content:"▾"}.batch-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 12px 12px}.batch-tools select{width:auto;min-width:140px}.batch-count{font-weight:800;color:var(--muted)}.timeline{display:block;max-width:100%;overflow-x:auto;padding-bottom:4px}.timeline-inner{display:grid;gap:10px;min-width:max-content}.timeline-scale,.barrow{display:grid;grid-template-columns:150px var(--timeline-width);gap:10px;align-items:center}.timeline-side{position:sticky;left:0;z-index:8;background:rgba(255,255,255,.96);padding-right:8px}.timeline-link{cursor:pointer;border:0;background:transparent;color:inherit;text-align:left;padding:0;min-height:0}.timeline-link:hover{text-decoration:underline}.timeline-scale .timeline-side{z-index:10}.scale-track{position:relative;width:var(--timeline-width);height:52px;border-bottom:1px solid var(--line);overflow:hidden}.scale-tick{position:absolute;bottom:0;width:1px;height:12px;background:#aab7b0}.scale-label{position:absolute;bottom:15px;transform:translateX(-50%);font-size:11px;line-height:1.15;color:var(--muted);font-weight:700;white-space:pre;text-align:center;z-index:6}.today-band{position:absolute;top:0;bottom:0;background:rgba(14,165,233,.16);z-index:5}.holiday-band{position:absolute;top:0;bottom:0;background:rgba(107,114,128,.16);z-index:3}.scale-label.today-label{color:#0f766e;background:transparent;padding:0}.timeline-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.legend-dot{width:10px;height:10px;border-radius:999px;display:inline-block}.legend-dot.status-未開始{background:#dc2626}.legend-dot.status-執行中{background:#facc15}.legend-dot.status-過稿中{background:#38bdf8}.legend-dot.status-已完成{background:#16a34a}.barbox{width:var(--timeline-width);height:28px;border-radius:999px;background:repeating-linear-gradient(90deg,#eef3f0 0,#eef3f0 calc(var(--day-width,44px) - 1px),#dfe7e2 calc(var(--day-width,44px) - 1px),#dfe7e2 var(--day-width,44px));position:relative;overflow:hidden;cursor:pointer}.barbox .today-band{z-index:4}.barbox .holiday-band{z-index:3}.bar{height:100%;border-radius:999px;position:absolute;z-index:2}.bar.status-未開始{background:linear-gradient(90deg,#fecaca,#dc2626)}.bar.status-執行中{background:linear-gradient(90deg,#fef08a,#facc15)}.bar.status-過稿中{background:linear-gradient(90deg,#e0f2fe,#7dd3fc)}.bar.status-已完成{background:linear-gradient(90deg,#bbf7d0,#16a34a)}.bar.status-已取消{background:linear-gradient(90deg,#e5e7eb,#9ca3af)}.barlabel{font-size:13px;position:absolute;right:10px;top:5px;color:#103b28;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:6}.small{font-size:13px;color:var(--muted)}
+    .table-wrap{max-width:100%;overflow:auto;border-radius:16px}table:not(.gmail-rich-editor table):not(.signature-preset-content table):not(.gmail-thread-msg-body table){width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px}th:not(.gmail-rich-editor th):not(.signature-preset-content th):not(.gmail-thread-msg-body th),td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){padding:12px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle;white-space:nowrap}th:not(.gmail-rich-editor th):not(.signature-preset-content th):not(.gmail-thread-msg-body th){background:#f0f6f3;color:#43524b;font-size:13px;position:sticky;top:0}.sort-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:0;background:transparent;color:inherit;padding:0;min-height:0;font-weight:800;cursor:pointer}.sort-btn .sort-mark{color:var(--muted);font-size:11px}.col-project{text-align:left;width:240px;max-width:240px}.col-project th,.col-project td{text-align:left}.project-text{display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.select-col{width:48px;min-width:48px;text-align:center}.select-col input{width:auto;min-height:auto;margin:0;accent-color:var(--green)}tr:last-child td{border-bottom:0}.row-actions{display:flex;gap:8px;flex-wrap:wrap}.history-lock{display:inline-flex;border-radius:999px;background:#f3f4f6;color:#6b7280;font-size:12px;font-weight:800;padding:6px 9px}.status{font-weight:700;border-radius:999px;padding:5px 9px;display:inline-block}.未開始{background:#fee2e2;color:#991b1b}.執行中{background:#fef9c3;color:#854d0e}.過稿中{background:#e0f2fe;color:#0369a1}.修改中{background:#feece0;color:#a14503}.已完成{background:#dcfce7;color:#166534}.已取消{background:#f3f4f6;color:#4b5563}.batch-panel{margin-bottom:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.batch-panel summary{cursor:pointer;padding:10px 14px;font-weight:800;color:#43524b;list-style:none}.batch-panel summary::-webkit-details-marker{display:none}.batch-panel summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--muted)}.batch-panel[open] summary::before{content:"▾"}.batch-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 12px 12px}.batch-tools select{width:auto;min-width:140px}.batch-count{font-weight:800;color:var(--muted)}.timeline{display:block;max-width:100%;overflow-x:auto;padding-bottom:4px}.timeline-inner{display:grid;gap:10px;min-width:max-content}.timeline-scale,.barrow{display:grid;grid-template-columns:150px var(--timeline-width);gap:10px;align-items:center}.timeline-side{position:sticky;left:0;z-index:8;background:rgba(255,255,255,.96);padding-right:8px}.timeline-link{cursor:pointer;border:0;background:transparent;color:inherit;text-align:left;padding:0;min-height:0}.timeline-link:hover{text-decoration:underline}.timeline-scale .timeline-side{z-index:10}.scale-track{position:relative;width:var(--timeline-width);height:52px;border-bottom:1px solid var(--line);overflow:hidden}.scale-tick{position:absolute;bottom:0;width:1px;height:12px;background:#aab7b0}.scale-label{position:absolute;bottom:15px;transform:translateX(-50%);font-size:11px;line-height:1.15;color:var(--muted);font-weight:700;white-space:pre;text-align:center;z-index:6}.today-band{position:absolute;top:0;bottom:0;background:rgba(14,165,233,.16);z-index:5}.holiday-band{position:absolute;top:0;bottom:0;background:rgba(107,114,128,.16);z-index:3}.scale-label.today-label{color:#0f766e;background:transparent;padding:0}.timeline-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:700}.legend-dot{width:10px;height:10px;border-radius:999px;display:inline-block}.legend-dot.status-未開始{background:#dc2626}.legend-dot.status-執行中{background:#facc15}.legend-dot.status-過稿中{background:#38bdf8}.legend-dot.status-修改中{background:#f88838}.legend-dot.status-已完成{background:#16a34a}.barbox{width:var(--timeline-width);height:28px;border-radius:999px;background:repeating-linear-gradient(90deg,#eef3f0 0,#eef3f0 calc(var(--day-width,44px) - 1px),#dfe7e2 calc(var(--day-width,44px) - 1px),#dfe7e2 var(--day-width,44px));position:relative;overflow:hidden;cursor:pointer}.barbox .today-band{z-index:4}.barbox .holiday-band{z-index:3}.bar{height:100%;border-radius:999px;position:absolute;z-index:2}.bar.status-未開始{background:linear-gradient(90deg,#fecaca,#dc2626)}.bar.status-執行中{background:linear-gradient(90deg,#fef08a,#facc15)}.bar.status-過稿中{background:linear-gradient(90deg,#e0f2fe,#7dd3fc)}.bar.status-修改中{background:linear-gradient(90deg,#feece0,#fcb27d)}.bar.status-已完成{background:linear-gradient(90deg,#bbf7d0,#16a34a)}.bar.status-已取消{background:linear-gradient(90deg,#e5e7eb,#9ca3af)}.barlabel{font-size:13px;position:absolute;right:10px;top:5px;color:#103b28;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:6}.small{font-size:13px;color:var(--muted)}
     @media(max-width:900px){header{padding:28px 18px 16px}.wrap{padding:0 18px 42px}.top,.form,.filters,.syncbar,.overview-filters{grid-template-columns:1fr}.form .wide{grid-column:auto}.toolbar button,.syncbar button{width:100%}.syncstatus{text-align:center}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.list-tools{display:grid}.column-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.column-toggle{border-radius:12px}}
     @media(max-width:640px){:root{--radius:14px}header{text-align:left}.subtitle{margin-left:0;margin-right:0}.wrap{gap:14px;padding-inline:14px}.card{padding:16px}.card h2{font-size:18px}.chips{gap:6px}.chip{border-radius:10px;width:100%}.kpis{gap:10px}.kpi b{font-size:24px}.table-wrap{overflow:visible}table:not(.gmail-rich-editor table):not(.signature-preset-content table):not(.gmail-thread-msg-body table),thead:not(.gmail-rich-editor thead):not(.signature-preset-content thead):not(.gmail-thread-msg-body thead),tbody:not(.gmail-rich-editor tbody):not(.signature-preset-content tbody):not(.gmail-thread-msg-body tbody),tr:not(.gmail-rich-editor tr):not(.signature-preset-content tr):not(.gmail-thread-msg-body tr),td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){display:block;width:100%}table:not(.gmail-rich-editor table):not(.signature-preset-content table):not(.gmail-thread-msg-body table){border:0;background:transparent;border-radius:0}thead:not(.gmail-rich-editor thead):not(.signature-preset-content thead):not(.gmail-thread-msg-body thead){display:none}tbody:not(.gmail-rich-editor tbody):not(.signature-preset-content tbody):not(.gmail-thread-msg-body tbody){display:grid;gap:12px}tr:not(.gmail-rich-editor tr):not(.signature-preset-content tr):not(.gmail-thread-msg-body tr){background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 24px rgba(18,38,28,.08);overflow:hidden}td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td){display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start;padding:10px 12px;white-space:normal;word-break:break-word}.col-project{width:100%;max-width:100%}.project-text{max-width:100%;white-space:normal}td:not(.gmail-rich-editor td):not(.signature-preset-content td):not(.gmail-thread-msg-body td)::before{content:attr(data-label);color:var(--muted);font-size:12px;font-weight:700}.row-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.row-actions button{width:100%;padding-inline:10px}.timeline-scale,.barrow{grid-template-columns:96px minmax(0,1fr);gap:8px}.scale-label{font-size:11px}.barbox{height:34px}.barlabel{top:8px}}
     .editable-status{cursor:pointer;border:0}.editable-field{display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 9px;min-height:0;text-align:left}.field-popover{position:fixed;z-index:240;width:min(320px,calc(100vw - 24px));max-height:min(360px,calc(100vh - 24px));overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow);padding:10px}.field-popover[hidden]{display:none!important}.field-popover h3{margin:0 0 8px;font-size:14px}.field-popover .option-list{display:grid;gap:6px}.field-popover button.option{width:100%;display:flex;justify-content:space-between;align-items:center;background:#f8fbf9;color:var(--ink);border:1px solid var(--line);text-align:left}.field-popover button.option.active{border-color:#9bd4b4;background:#e7f6ef;color:#0f5138}.field-popover label.option{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#f8fbf9;font-weight:700}.field-popover input{width:auto;min-height:auto;margin:0;accent-color:var(--green)}.field-popover .popover-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}.field-popover .empty{color:var(--muted);font-size:13px;font-weight:700}.field-popover .source-option-list button.option{display:block;padding:10px 12px}.field-popover .source-option-list button.option span{display:block;font-weight:800}.field-popover .source-option-list button.option small{display:block;margin-top:3px;color:var(--muted);font-weight:600;font-size:11.5px;white-space:normal}
@@ -217,6 +217,7 @@
     .bar.status-未開始{background:#f59e9e}
     .bar.status-執行中{background:#f3d34a}
     .bar.status-過稿中{background:#7fcdf0}
+    .bar.status-修改中{background:#f0ae7f}
     .bar.status-已完成{background:#4fbf79}
     .bar.status-已取消{background:#b8bec7}
     .timeline-project{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);z-index:4;color:#103b28;font-size:12px;font-weight:900;line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;text-align:left}
@@ -496,13 +497,14 @@
     .未開始{background:#fff1c7!important;color:#8a5a00!important}
     .執行中{background:#dff6ff!important;color:#087197!important}
     .過稿中{background:#dff0ff!important;color:#1769aa!important}
+    .修改中{background:#ffecdf!important;color:#aa5417!important}
     .已完成{background:#dcfce7!important;color:#166534!important}
     .已取消{background:#f1f3f2!important;color:#6b7280!important}
     .kpis{gap:10px!important}
     .kpi{border-color:#e5ebe8!important;background:#fff!important;border-radius:14px!important;padding:14px!important;box-shadow:none!important}
     .kpi b{font-size:24px!important;line-height:1.1!important;color:#202a25!important}
     .kpi span{font-size:12px!important;color:#6b7570!important;font-weight:800!important}
-    .kpi.status-未開始,.kpi.status-執行中,.kpi.status-過稿中,.kpi.status-已完成{background:#fff!important}
+    .kpi.status-未開始,.kpi.status-執行中,.kpi.status-過稿中,.kpi.status-已完成,.kpi.status-修改中{background:#fff!important}
     .designer-roster{gap:8px 10px!important}
     .designer-card{border-radius:12px!important;background:#fff!important}
     .avatar-frame{width:104px!important;height:104px!important}
@@ -523,6 +525,7 @@
     .bar.status-未開始{background:#f3c465!important}
     .bar.status-執行中{background:#68c7e8!important}
     .bar.status-過稿中{background:#7bb7ec!important}
+    .bar.status-修改中{background:#ecaa7b!important}
     .bar.status-已完成{background:#48bf7b!important}
     .bar.status-已取消{background:#b8bec7!important}
     .syncbar{padding-top:2px}
@@ -563,14 +566,17 @@
     .未開始{background:#fff1f2!important;color:#be123c!important}
     .執行中{background:#fff7cc!important;color:#9a6500!important}
     .過稿中{background:#e0f2fe!important;color:#0369a1!important}
+    .修改中{background:#feece0!important;color:#a14503!important}
     .已完成{background:#dcfce7!important;color:#166534!important}
     .kpi.status-未開始{background:#fff1f2!important;border-color:#fecdd3!important}
     .kpi.status-執行中{background:#fff7cc!important;border-color:#fde68a!important}
     .kpi.status-過稿中{background:#e0f2fe!important;border-color:#bae6fd!important}
+    .kpi.status-修改中{background:#feece0!important;border-color:#fdd6ba!important}
     .kpi.status-已完成{background:#dcfce7!important;border-color:#bbf7d0!important}
     .kpi.status-未開始 b,.kpi.status-未開始 span{color:#be123c!important}
     .kpi.status-執行中 b,.kpi.status-執行中 span{color:#9a6500!important}
     .kpi.status-過稿中 b,.kpi.status-過稿中 span{color:#0369a1!important}
+    .kpi.status-修改中 b,.kpi.status-修改中 span{color:#a14503!important}
     .kpi.status-已完成 b,.kpi.status-已完成 span{color:#166534!important}
     .multi-panel{grid-template-columns:minmax(0,1fr) 30px!important;gap:3px 5px!important;padding:6px!important}
     .multi-panel label{min-height:26px!important;padding:4px 6px!important;gap:6px!important;font-size:12px!important;line-height:1.2!important}
@@ -587,6 +593,7 @@
     .bar.status-未開始{background:#f9a8b5!important}
     .bar.status-執行中{background:#f6cf63!important}
     .bar.status-過稿中{background:#8bd3f7!important}
+    .bar.status-修改中{background:#f7b88b!important}
     .bar.status-已完成{background:#48bf7b!important}
     .bar.status-已取消{background:#b8bec7!important}
     .case-split.compact-cases{max-height:none!important;overflow-y:visible!important}
@@ -624,6 +631,7 @@
     .editable-status.未開始:hover{background:#fff1f2!important;color:#be123c!important}
     .editable-status.執行中:hover{background:#fff7cc!important;color:#9a6500!important}
     .editable-status.過稿中:hover{background:#e0f2fe!important;color:#0369a1!important}
+    .editable-status.修改中:hover{background:#feece0!important;color:#a14503!important}
     .editable-status.已完成:hover{background:#dcfce7!important;color:#166534!important}
     .editable-status.已取消:hover{background:#f1f3f2!important;color:#6b7280!important}
     .designer-skill-checks{gap:4px!important}
@@ -714,6 +722,7 @@
     .field-popover .status-option.未開始{background:#fff1f2!important;color:#be123c!important;border-color:#fecdd3!important}
     .field-popover .status-option.執行中{background:#fff7cc!important;color:#9a6500!important;border-color:#fde68a!important}
     .field-popover .status-option.過稿中{background:#e0f2fe!important;color:#0369a1!important;border-color:#bae6fd!important}
+    .field-popover .status-option.修改中{background:#feece0!important;color:#a14503!important;border-color:#fdd6ba!important}
     .field-popover .status-option.已完成{background:#dcfce7!important;color:#166534!important;border-color:#bbf7d0!important}
     .field-popover .status-option.已取消{background:#f1f3f2!important;color:#6b7280!important;border-color:#e5e7eb!important}
     .field-popover .status-option.暫停中{background:#e2e8f0!important;color:#1f2937!important;border-color:#94a3b8!important}
@@ -1850,9 +1859,13 @@
     }
     #casesSection .case-kpis{
       display:grid!important;
-      grid-template-columns:repeat(5,minmax(0,1fr))!important;
+      grid-template-columns:repeat(6,minmax(0,1fr))!important;
       gap:8px!important;
       margin-bottom:14px!important;
+    }
+    /* 新增「修改中」後共六格；窄螢幕排成兩列、每列三格，不再六格硬擠在同一列。 */
+    @media(max-width:640px){
+      #casesSection .case-kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important}
     }
     #casesSection .case-kpis .kpi{
       min-width:0!important;
@@ -1988,6 +2001,11 @@
     .editable-status.過稿中:hover,
     #casesSection .status.過稿中,
     #casesSection .editable-status.過稿中{background:#e0f2fe!important;color:#0369a1!important;border-color:#bae6fd!important}
+    .status.修改中,
+    .editable-status.修改中,
+    .editable-status.修改中:hover,
+    #casesSection .status.修改中,
+    #casesSection .editable-status.修改中{background:#feece0!important;color:#a14503!important;border-color:#fdd6ba!important}
     .status.已完成,
     .editable-status.已完成,
     .editable-status.已完成:hover,
@@ -4316,6 +4334,12 @@
       background:#17364a!important;
       color:#9bdcff!important;
     }
+    html[data-theme="dark"] .修改中,
+    html[data-theme="dark"] .editable-status.修改中,
+    html[data-theme="dark"] .editable-status.修改中:hover{
+      background:#4a2c17!important;
+      color:#ffc59b!important;
+    }
     html[data-theme="dark"] .已完成,
     html[data-theme="dark"] .editable-status.已完成,
     html[data-theme="dark"] .editable-status.已完成:hover{
@@ -4331,6 +4355,7 @@
     html[data-theme="dark"] .kpi.status-未開始{background:#37242b!important;border-color:#6b3947!important}
     html[data-theme="dark"] .kpi.status-執行中{background:#362d1b!important;border-color:#765f2d!important}
     html[data-theme="dark"] .kpi.status-過稿中{background:#1a3040!important;border-color:#315d78!important}
+    html[data-theme="dark"] .kpi.status-修改中{background:#402a1a!important;border-color:#784f31!important}
     html[data-theme="dark"] .kpi.status-已完成{background:#1a3529!important;border-color:#376e52!important}
     html[data-theme="dark"] .kpi.status-未開始 b,
     html[data-theme="dark"] .kpi.status-未開始 span{color:#ffb6c3!important}
@@ -4338,6 +4363,8 @@
     html[data-theme="dark"] .kpi.status-執行中 span{color:#ffd36b!important}
     html[data-theme="dark"] .kpi.status-過稿中 b,
     html[data-theme="dark"] .kpi.status-過稿中 span{color:#9bdcff!important}
+    html[data-theme="dark"] .kpi.status-修改中 b,
+    html[data-theme="dark"] .kpi.status-修改中 span{color:#ffc59b!important}
     html[data-theme="dark"] .kpi.status-已完成 b,
     html[data-theme="dark"] .kpi.status-已完成 span{color:#8ee8b6!important}
     html[data-theme="dark"] .pill-type,
@@ -4959,6 +4986,16 @@
     html[data-theme="dark"] .field-popover .status-option.過稿中{
       background:#202c35!important;color:#94b7cc!important;border-color:#3b5566!important;
     }
+    html[data-theme="dark"] .修改中,
+    html[data-theme="dark"] .editable-status.修改中,
+    html[data-theme="dark"] .status.修改中,
+    html[data-theme="dark"] .editable-status.修改中,
+    html[data-theme="dark"] .editable-status.修改中:hover,
+    html[data-theme="dark"] #casesSection .status.修改中,
+    html[data-theme="dark"] #casesSection .editable-status.修改中,
+    html[data-theme="dark"] .field-popover .status-option.修改中{
+      background:#352920!important;color:#ccab94!important;border-color:#664d3b!important;
+    }
     html[data-theme="dark"] .已完成,
     html[data-theme="dark"] .editable-status.已完成,
     html[data-theme="dark"] .status.已完成,
@@ -4992,6 +5029,7 @@
     html[data-theme="dark"] .kpi.status-未開始{background:#2a1d20!important;border-color:#593940!important}
     html[data-theme="dark"] .kpi.status-執行中{background:#2b261c!important;border-color:#55472f!important}
     html[data-theme="dark"] .kpi.status-過稿中{background:#1b252c!important;border-color:#344b5a!important}
+    html[data-theme="dark"] .kpi.status-修改中{background:#2c221b!important;border-color:#5a4434!important}
     html[data-theme="dark"] .kpi.status-已完成{background:#1b2822!important;border-color:#395347!important}
     html[data-theme="dark"] .kpi.status-未開始 b,
     html[data-theme="dark"] .kpi.status-未開始 span{color:#d39aa4!important}
@@ -4999,6 +5037,8 @@
     html[data-theme="dark"] .kpi.status-執行中 span{color:#cbb37d!important}
     html[data-theme="dark"] .kpi.status-過稿中 b,
     html[data-theme="dark"] .kpi.status-過稿中 span{color:#8fadc0!important}
+    html[data-theme="dark"] .kpi.status-修改中 b,
+    html[data-theme="dark"] .kpi.status-修改中 span{color:#c0a38f!important}
     html[data-theme="dark"] .kpi.status-已完成 b,
     html[data-theme="dark"] .kpi.status-已完成 span{color:#8daf9f!important}
     html[data-theme="dark"] #caseDetailModal .case-detail-card{
@@ -5040,6 +5080,10 @@
     html[data-theme="dark"] #casesSection .bar.status-過稿中{
       background:#304958!important;
       border:1px solid #45677a!important;
+    }
+    html[data-theme="dark"] #casesSection .bar.status-修改中{
+      background:#584130!important;
+      border:1px solid #7a5b45!important;
     }
     html[data-theme="dark"] #casesSection .bar.status-已完成{
       background:#30493d!important;
@@ -5093,6 +5137,11 @@
     html[data-theme="dark"] #casesSection .editable-status.過稿中,
     html[data-theme="dark"] #casesSection .editable-status.過稿中:hover{
       background:#202c35!important;color:#94b7cc!important;border-color:#3b5566!important;
+    }
+    html[data-theme="dark"] #casesSection .status.修改中,
+    html[data-theme="dark"] #casesSection .editable-status.修改中,
+    html[data-theme="dark"] #casesSection .editable-status.修改中:hover{
+      background:#352920!important;color:#ccab94!important;border-color:#664d3b!important;
     }
     html[data-theme="dark"] #casesSection .status.已完成,
     html[data-theme="dark"] #casesSection .editable-status.已完成,
@@ -5247,6 +5296,12 @@
     .field-popover .status-option.過稿中{
       background:#dff3ff!important;color:#075b89!important;border-color:#7ccbf2!important;
     }
+    #casesSection .status.修改中,
+    #casesSection .editable-status.修改中,
+    #casesSection .editable-status.修改中:hover,
+    .field-popover .status-option.修改中{
+      background:#ffecdf!important;color:#893d07!important;border-color:#f2ad7c!important;
+    }
     #casesSection .status.已完成,
     #casesSection .editable-status.已完成,
     #casesSection .editable-status.已完成:hover,
@@ -5268,20 +5323,24 @@
     .kpi.status-未開始{background:#ffe4e8!important;border-color:#ff9aac!important}
     .kpi.status-執行中{background:#fff0b3!important;border-color:#f5c542!important}
     .kpi.status-過稿中{background:#dff3ff!important;border-color:#7ccbf2!important}
+    .kpi.status-修改中{background:#ffecdf!important;border-color:#f2ad7c!important}
     .kpi.status-已完成{background:#dcf8e7!important;border-color:#76d39b!important}
     .kpi.status-未開始 b,.kpi.status-未開始 span{color:#a91f39!important}
     .kpi.status-執行中 b,.kpi.status-執行中 span{color:#735000!important}
     .kpi.status-過稿中 b,.kpi.status-過稿中 span{color:#075b89!important}
+    .kpi.status-修改中 b,.kpi.status-修改中 span{color:#893d07!important}
     .kpi.status-已完成 b,.kpi.status-已完成 span{color:#0d6335!important}
     #casesSection .legend-dot.status-未開始{background:#f26f83!important}
     #casesSection .legend-dot.status-執行中{background:#f2c23e!important}
     #casesSection .legend-dot.status-過稿中{background:#55b9e9!important}
+    #casesSection .legend-dot.status-修改中{background:#e99355!important}
     #casesSection .legend-dot.status-已完成{background:#4ec47a!important}
     #casesSection .legend-dot.status-已取消{background:#aeb5c0!important}
     #casesSection .legend-dot.status-暫停中{background:#8b78c7!important}
     #casesSection .bar.status-未開始{background:#f26f83!important;border:1px solid #fa9aaa!important}
     #casesSection .bar.status-執行中{background:#f2c23e!important;border:1px solid #ffdc73!important}
     #casesSection .bar.status-過稿中{background:#55b9e9!important;border:1px solid #8ed7f8!important}
+    #casesSection .bar.status-修改中{background:#e99355!important;border:1px solid #f8ba8e!important}
     #casesSection .bar.status-已完成{background:#4ec47a!important;border:1px solid #80dea3!important}
     #casesSection .bar.status-已取消{background:#aeb5c0!important;border:1px solid #cdd2d9!important}
     #casesSection .bar.status-暫停中{background:#8b78c7!important;border:1px solid #b7a8e2!important}
@@ -5313,6 +5372,12 @@
     html[data-theme="dark"] .field-popover .status-option.過稿中{
       background:#203f54!important;color:#c5ebff!important;border-color:#5ca8d5!important;
     }
+    html[data-theme="dark"] #casesSection .status.修改中,
+    html[data-theme="dark"] #casesSection .editable-status.修改中,
+    html[data-theme="dark"] #casesSection .editable-status.修改中:hover,
+    html[data-theme="dark"] .field-popover .status-option.修改中{
+      background:#543620!important;color:#ffddc5!important;border-color:#d58e5c!important;
+    }
     html[data-theme="dark"] #casesSection .status.已完成,
     html[data-theme="dark"] #casesSection .editable-status.已完成,
     html[data-theme="dark"] #casesSection .editable-status.已完成:hover,
@@ -5334,10 +5399,12 @@
     html[data-theme="dark"] .kpi.status-未開始{background:#4a2830!important;border-color:#a55b6a!important}
     html[data-theme="dark"] .kpi.status-執行中{background:#4b3d19!important;border-color:#a98228!important}
     html[data-theme="dark"] .kpi.status-過稿中{background:#1c394c!important;border-color:#4d8db5!important}
+    html[data-theme="dark"] .kpi.status-修改中{background:#4c301c!important;border-color:#b5784d!important}
     html[data-theme="dark"] .kpi.status-已完成{background:#1c412f!important;border-color:#4c956b!important}
     html[data-theme="dark"] .kpi.status-未開始 b,html[data-theme="dark"] .kpi.status-未開始 span{color:#ffd1d8!important}
     html[data-theme="dark"] .kpi.status-執行中 b,html[data-theme="dark"] .kpi.status-執行中 span{color:#ffe39a!important}
     html[data-theme="dark"] .kpi.status-過稿中 b,html[data-theme="dark"] .kpi.status-過稿中 span{color:#c5ebff!important}
+    html[data-theme="dark"] .kpi.status-修改中 b,html[data-theme="dark"] .kpi.status-修改中 span{color:#ffddc5!important}
     html[data-theme="dark"] .kpi.status-已完成 b,html[data-theme="dark"] .kpi.status-已完成 span{color:#b9f3d0!important}
     html[data-theme="dark"] #casesSection .legend-dot.status-未開始,
     html[data-theme="dark"] #casesSection .bar.status-未開始{background:#d96378!important;border-color:#ef8798!important}
@@ -5345,6 +5412,8 @@
     html[data-theme="dark"] #casesSection .bar.status-執行中{background:#e0ad32!important;border-color:#f4ce67!important}
     html[data-theme="dark"] #casesSection .legend-dot.status-過稿中,
     html[data-theme="dark"] #casesSection .bar.status-過稿中{background:#4c9fd0!important;border-color:#79c4ee!important}
+    html[data-theme="dark"] #casesSection .legend-dot.status-修改中,
+    html[data-theme="dark"] #casesSection .bar.status-修改中{background:#d0834c!important;border-color:#eeaa79!important}
     html[data-theme="dark"] #casesSection .legend-dot.status-已完成,
     html[data-theme="dark"] #casesSection .bar.status-已完成{background:#4caf74!important;border-color:#78d19b!important}
     html[data-theme="dark"] #casesSection .legend-dot.status-已取消,
@@ -6842,7 +6911,7 @@
   <section class="card" id="casesSection">
     <div class="case-heading"><h2>案件列表</h2></div>
     <div class="grid kpis case-kpis">
-      <div class="kpi" data-status="" role="button" tabindex="0"><b id="total">0</b><span>總案件</span></div><div class="kpi status-未開始" data-status="未開始" role="button" tabindex="0"><b id="notStarted">0</b><span>未執行</span></div><div class="kpi status-執行中" data-status="執行中" role="button" tabindex="0"><b id="doing">0</b><span>執行中</span></div><div class="kpi status-過稿中" data-status="過稿中" role="button" tabindex="0"><b id="review">0</b><span>過稿中</span></div><div class="kpi status-已完成" data-status="已完成" role="button" tabindex="0"><b id="done">0</b><span>已完成</span></div>
+      <div class="kpi" data-status="" role="button" tabindex="0"><b id="total">0</b><span>總案件</span></div><div class="kpi status-未開始" data-status="未開始" role="button" tabindex="0"><b id="notStarted">0</b><span>未執行</span></div><div class="kpi status-執行中" data-status="執行中" role="button" tabindex="0"><b id="doing">0</b><span>執行中</span></div><div class="kpi status-過稿中" data-status="過稿中" role="button" tabindex="0"><b id="review">0</b><span>過稿中</span></div><div class="kpi status-修改中" data-status="修改中" role="button" tabindex="0"><b id="revising">0</b><span>修改中</span></div><div class="kpi status-已完成" data-status="已完成" role="button" tabindex="0"><b id="done">0</b><span>已完成</span></div>
     </div>
     <div class="grid filters">
       <input class="search" id="q" placeholder="搜尋客戶、專案、負責人、細節…">
@@ -6859,7 +6928,7 @@
         <button type="button" class="secondary" id="batchClear">清除選取</button>
       </div>
       <div class="batch-tools" id="batchTools" hidden>
-        <select id="batchStatus"><option value="">狀態不變</option><option>未開始</option><option>執行中</option><option>過稿中</option><option>已完成</option><option>已取消</option><option>暫停中</option></select>
+        <select id="batchStatus"><option value="">狀態不變</option><option>未開始</option><option>執行中</option><option>過稿中</option><option>修改中</option><option>已完成</option><option>已取消</option><option>暫停中</option></select>
         <select id="batchDetails"><option value="">項目細節不變</option></select>
         <button type="button" id="batchApply">套用批次修改</button>
       </div>
@@ -7535,8 +7604,8 @@ const submitQuotes = [
 let submitQuoteTimer = null;
 const ownerContactMap = new Map();
 const weekNames = ['日','一','二','三','四','五','六'];
-const statusOptions = ['未開始','執行中','過稿中','已完成','已取消','暫停中'];
-const statusOrder = {'未開始':0,'執行中':1,'過稿中':2,'已完成':3,'已取消':4,'暫停中':5};
+const statusOptions = ['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'];
+const statusOrder = {'未開始':0,'執行中':1,'過稿中':2,'修改中':3,'已完成':4,'已取消':5,'暫停中':6};
 const issueReportStatuses = ['回報中','評估中','處理中','已完成','已否決'];
 const editorAccounts = ['Machi','Anna','Karl','Noise','Amber','Leona'];
 let designerOptions = ['Machi','Anna','Karl','Noise','Amber','Leona'];
@@ -13011,7 +13080,7 @@ function setOverviewLoading(){['#overviewYear','#overviewMonth','#overviewDesign
 function fillOverviewSelect(id,values,current){const el=$(id); if(!el)return; const old=overviewInitialized?el.value:current; el.innerHTML=values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); if(values.includes(old))el.value=old}
 function renderOverviewControls(){if(!$('overviewYear')||!$('overviewMonth')||!$('overviewDesigner'))return; if(!dataReady){setOverviewLoading();return} const years=unique([...fullYearOptions(),...rows.map(rowYear)]).filter(Boolean).sort((a,b)=>Number(b)-Number(a)), months=unique([...fullMonthOptions(),...rows.map(r=>canonicalMonth(r.month)||monthFromDate(r.start))]).sort((a,b)=>monthNumber(a)-monthNumber(b)), designers=['全部設計負責人',...designerOptions]; fillOverviewSelect('#overviewYear',years,currentYear()); fillOverviewSelect('#overviewMonth',months,currentMonth()); fillOverviewSelect('#overviewDesigner',designers,'全部設計負責人'); overviewInitialized=true}
 function overviewList(){const y=$('#overviewYear')?.value, m=monthNumber($('#overviewMonth')?.value), d=$('#overviewDesigner')?.value; return rows.filter(r=>(!y||y==='讀取中...'||rowYear(r)===y)&&(!m||m===99||monthNumber(r.month)===m)&&(!d||d==='全部設計負責人'||d==='讀取中...'||r.designer===d))}
-function renderStats(){const list=dataReady?filtered({includeStatus:false}):[]; $('#total').textContent=list.filter(r=>r.status!=='已取消').length; $('#notStarted').textContent=list.filter(r=>r.status==='未開始').length; $('#doing').textContent=list.filter(r=>r.status==='執行中').length; $('#review').textContent=list.filter(r=>r.status==='過稿中').length; $('#done').textContent=list.filter(r=>r.status==='已完成').length}
+function renderStats(){const list=dataReady?filtered({includeStatus:false}):[]; $('#total').textContent=list.filter(r=>r.status!=='已取消').length; $('#notStarted').textContent=list.filter(r=>r.status==='未開始').length; $('#doing').textContent=list.filter(r=>r.status==='執行中').length; $('#review').textContent=list.filter(r=>r.status==='過稿中').length; $('#revising').textContent=list.filter(r=>r.status==='修改中').length; $('#done').textContent=list.filter(r=>r.status==='已完成').length}
 function syncOverviewFilter(filterId,value,allValue,allLabel){setMultiFilterSelection(filterId,value&&value!==allValue&&value!=='讀取中...'?value:[],allLabel); saveFilterSettingsForAccount(true); render()}
 function applyStatusFilter(status){
   const selected=status? [status] : [];
@@ -13333,7 +13402,7 @@ async function refreshModifyList(){const btn=$('#refreshModify'); if(!btn||btn.d
 function dayStart(d){const date=new Date(d); date.setHours(0,0,0,0); return date}
 function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function isHoliday(d){return d.getDay()===0||d.getDay()===6||nationalHolidays.has(dateKey(d))}
-function statusClass(s){return ['未開始','執行中','過稿中','已完成','已取消','暫停中'].includes(s)?s:'未開始'}
+function statusClass(s){return ['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'].includes(s)?s:'未開始'}
 function timelineProjectIcon(row,today=dayStart(new Date())){if(!['未開始','未執行','執行中'].includes(String(row.status||'').trim()))return ''; const day=86400000, start=row.startDate instanceof Date?row.startDate:dayStart(row.start), end=row.endDate instanceof Date?row.endDate:dayStart(row.end); if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime()))return ''; const durationDays=Math.max(1,Math.round((end-start)/day)+1), daysUntilEnd=Math.round((end-today)/day); if(durationDays<=3)return '🔥'; if(daysUntilEnd===1)return '⚠️'; return ''}
 function positionCaseTimelineNearToday({minDate,today,day,dayWidth,timelineWidth}){
   const timeline=document.querySelector('.case-timeline-panel .timeline');
