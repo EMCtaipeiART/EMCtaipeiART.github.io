@@ -1272,9 +1272,10 @@ test('front-end destructive actions require confirmation before deletion', async
   };
   assert.match(functionSource('function bindMailTemplateEditor(', 'function collectMailTemplateEditor('), /if\(!row\|\|!confirm\(/);
   assert.match(functionSource('async function cancelScheduledMailItem(', 'function monthFromDate('), /if\(!confirm\(/);
-  assert.match(functionSource('async function removeSelectedCaseDesignImages(', 'function refreshOpenRevisionModal('), /if\(!confirm\(/);
-  assert.match(functionSource('async function removeCaseDesignImage(', 'function detailOptionsForRow('), /if\(!confirm\(/);
-  assert.match(functionSource('function deleteRow(', 'function cancelRow('), /if\(!confirm\(/);
+  // 案件刪除與修改紀錄的垃圾桶改用站內警示視窗（showAppConfirm），刪除前一樣必須先確認。
+  assert.match(functionSource('async function removeSelectedCaseDesignImages(', 'function refreshOpenRevisionModal('), /if\(!\(await showAppConfirm\(/);
+  assert.match(functionSource('async function removeCaseDesignImage(', 'function detailOptionsForRow('), /if\(!\(await showAppConfirm\(/);
+  assert.match(functionSource('async function deleteRow(', 'function cancelRow('), /if\(!\(await showAppConfirm\(/);
 });
 
 test('archive snapshot and dashboard use JSON database sources only', async () => {
@@ -1966,7 +1967,7 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
   const deleteFn = html.match(/async function deleteModificationRecord\(event,id,count\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(deleteFn, 'could not locate deleteModificationRecord');
   assert.match(deleteFn, /requireAccess\('media\.manage'/);
-  assert.match(deleteFn, /if\(!confirm\(/);
+  assert.match(deleteFn, /if\(!\(await showAppConfirm\(/);
   assert.match(deleteFn, /其他輪次的編號不會跟著往前遞補/);
   assert.match(deleteFn, /sheetApi\('deleteModificationRecord'/);
 
@@ -3768,4 +3769,64 @@ test('designer reply backs up photos added with the editor upload button into th
   assert.match(schedule, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
   // 一般回信、修改需求信不備份。
   assert.equal((send.match(/backupDesignerReplyInlineImages/g) || []).length, 1);
+});
+
+test('case delete and 修改紀錄 trash buttons ask through the in-page warning dialog before deleting', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 視窗標記與樣式存在，疊在其他彈窗之上。
+  assert.match(html, /<div class="app-confirm-backdrop" id="appConfirmDialog" hidden>/);
+  assert.match(html, /<button type="button" class="app-confirm-cancel" id="appConfirmCancel">取消<\/button><button type="button" class="app-confirm-ok" id="appConfirmOk">確定刪除<\/button>/);
+  assert.match(html, /\.app-confirm-backdrop\{position:fixed;inset:0;z-index:3000;/);
+  // 深色主題的全站 button 規則權重較高，刪除鍵必須用同等權重維持紅色（實際發生過被蓋成綠色）。
+  assert.match(html, /html\[data-theme="dark"\] \.app-confirm-ok\{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important\}/);
+
+  // 四個刪除入口都要先等站內警示視窗，且不再使用瀏覽器內建 confirm()。
+  const pick = pattern => html.match(pattern)?.[0];
+  const deleteRowFn = pick(/async function deleteRow\(id\)\{[^\n]*/);
+  const deleteRecordFn = pick(/async function deleteModificationRecord\(event,id,count\)\{[\s\S]*?\n\}/);
+  const removeImageFn = pick(/async function removeCaseDesignImage\(event,id,count,url\)\{[^\n]*/);
+  const removeSelectedFn = pick(/async function removeSelectedCaseDesignImages\(event\)\{[^\n]*/);
+  for (const [name, fn] of Object.entries({ deleteRowFn, deleteRecordFn, removeImageFn, removeSelectedFn })) {
+    assert.ok(fn, `could not locate ${name}`);
+    assert.match(fn, /if\(!\(await showAppConfirm\(\{/, `${name} 刪除前要先跳出站內警示視窗`);
+    assert.doesNotMatch(fn, /(^|[^.\w])confirm\(/, `${name} 不可再使用瀏覽器內建 confirm()`);
+  }
+  // await 之後 event.currentTarget 會變成 null，按鈕必須在等待前先取得。
+  assert.ok(removeImageFn.indexOf('const button=event.currentTarget;') < removeImageFn.indexOf('await showAppConfirm('));
+
+  // 實際執行警示視窗：確定 → true、取消 → false，關閉後視窗隱藏、焦點還原；同時開兩個時舊的視為取消。
+  const showFn = pick(/let appConfirmResolve=null;\nfunction showAppConfirm\([\s\S]*?\n\}\nfunction settleAppConfirm\(value\)\{[^\n]*/);
+  assert.ok(showFn, 'could not locate showAppConfirm');
+  const makeEl = () => ({ hidden: true, textContent: '', focused: 0, focus() { this.focused += 1; } });
+  const nodes = { '#appConfirmDialog': makeEl(), '#appConfirmTitle': makeEl(), '#appConfirmMessage': makeEl(), '#appConfirmOk': makeEl(), '#appConfirmCancel': makeEl() };
+  const opener = makeEl();
+  const api = new Function('nodes', 'opener', `
+    const $ = selector => nodes[selector];
+    const document = { activeElement: opener };
+    const window = { confirm: () => { throw new Error('native confirm must not be used'); } };
+    ${showFn}
+    return { showAppConfirm, settleAppConfirm };
+  `)(nodes, opener);
+
+  const first = api.showAppConfirm({ title: '刪除案件 26090107', message: '確定刪除案件 26090107？\n\n此動作無法復原。' });
+  assert.equal(nodes['#appConfirmDialog'].hidden, false, '視窗要顯示出來');
+  assert.equal(nodes['#appConfirmTitle'].textContent, '刪除案件 26090107');
+  assert.equal(nodes['#appConfirmOk'].textContent, '確定刪除');
+  assert.equal(nodes['#appConfirmCancel'].focused, 1, '預設焦點在取消，誤按 Enter 不會刪除');
+  api.settleAppConfirm(true);
+  assert.equal(await first, true);
+  assert.equal(nodes['#appConfirmDialog'].hidden, true);
+  assert.equal(opener.focused, 1, '關閉後焦點回到原本的按鈕');
+
+  const cancelled = api.showAppConfirm({ title: '移除設計圖', confirmText: '確定移除' });
+  assert.equal(nodes['#appConfirmOk'].textContent, '確定移除');
+  api.settleAppConfirm(false);
+  assert.equal(await cancelled, false);
+
+  const stale = api.showAppConfirm({ title: 'A' });
+  const fresh = api.showAppConfirm({ title: 'B' });
+  assert.equal(await stale, false, '開新視窗時舊的視為取消，不會被誤判成確定');
+  api.settleAppConfirm(true);
+  assert.equal(await fresh, true);
 });

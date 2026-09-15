@@ -5878,6 +5878,28 @@
     html[data-theme="dark"] #caseDetailModal .case-inline-edit:hover,
     html[data-theme="dark"] #caseDetailModal .case-inline-edit:focus-visible{color:#8ce5bb!important}
     html[data-theme="dark"] #caseDetailModal .case-detail-actions{background:rgba(15,16,18,.96)!important;border-color:#383b3e!important}
+    /* 刪除類動作的站內警示視窗：疊在案件資料、修改紀錄等彈窗之上。 */
+    .app-confirm-backdrop{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:16px;background:rgba(15,23,20,.48);backdrop-filter:blur(2px)}
+    .app-confirm-backdrop[hidden]{display:none!important}
+    .app-confirm-card{width:min(400px,100%);box-sizing:border-box;border-radius:18px;background:#fff;border:1px solid #f3d0d0;box-shadow:0 24px 60px rgba(15,23,20,.28);padding:22px 22px 18px;text-align:center}
+    .app-confirm-icon{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 12px;border-radius:999px;background:#fee2e2;color:#b91c1c}
+    .app-confirm-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .app-confirm-card h3{margin:0 0 8px;font-size:17px;font-weight:900;color:#17211d}
+    .app-confirm-card p{margin:0;font-size:13.5px;font-weight:700;line-height:1.6;color:#43524b;white-space:pre-line;word-break:break-word}
+    .app-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+    .app-confirm-actions button{min-height:42px!important;border-radius:11px!important;padding:0 14px!important;font-size:14px!important;font-weight:900!important;cursor:pointer;box-shadow:none!important}
+    .app-confirm-cancel{background:#f3f4f6!important;color:#374151!important;border:1px solid #d1d5db!important}
+    .app-confirm-cancel:hover{background:#e5e7eb!important}
+    .app-confirm-ok{background:#dc2626!important;color:#fff!important;border:1px solid #dc2626!important}
+    .app-confirm-ok:hover{background:#b91c1c!important;border-color:#b91c1c!important}
+    html[data-theme="dark"] .app-confirm-card{background:#151618;border-color:#5b2a2a}
+    html[data-theme="dark"] .app-confirm-card h3{color:#f2f5f4}
+    html[data-theme="dark"] .app-confirm-card p{color:#c9d1cd}
+    html[data-theme="dark"] .app-confirm-icon{background:rgba(220,38,38,.18);color:#fca5a5}
+    html[data-theme="dark"] .app-confirm-cancel{background:#26292c!important;color:#e5e7eb!important;border-color:#3b3e42!important}
+    /* 深色主題的全站按鈕規則（html[data-theme="dark"] button）權重比 .app-confirm-ok 高，會把刪除鍵蓋成綠色，這裡用同等權重蓋回紅色。 */
+    html[data-theme="dark"] .app-confirm-ok{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important}
+    html[data-theme="dark"] .app-confirm-ok:hover{background:#b91c1c!important;border-color:#b91c1c!important}
     @media(max-width:760px){
       #caseDetailModal .case-detail-head{padding:24px 22px 18px!important}
       #caseDetailModal .case-detail-head h3{font-size:25px!important}
@@ -7147,6 +7169,14 @@
       </div>
     </div>
     <div class="revision-modal-list" id="revisionModalList"></div>
+  </div>
+</div>
+<div class="app-confirm-backdrop" id="appConfirmDialog" hidden>
+  <div class="app-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
+    <div class="app-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.2M12 17h.01"/></svg></div>
+    <h3 id="appConfirmTitle">確認刪除</h3>
+    <p id="appConfirmMessage"></p>
+    <div class="app-confirm-actions"><button type="button" class="app-confirm-cancel" id="appConfirmCancel">取消</button><button type="button" class="app-confirm-ok" id="appConfirmOk">確定刪除</button></div>
   </div>
 </div>
 <div class="login-modal" id="gmailThreadModal" hidden>
@@ -11493,7 +11523,7 @@ function revisionSelectionToolbarHtml(){const count=revisionImageSelection.size;
 function updateRevisionSelectionBar(){const count=revisionImageSelection.size, bar=$('#revisionSelectionBar'), countEl=$('#revisionSelectionCount'), delBtn=$('#revisionSelectionDelete'), allBox=$('#revisionSelectAll'); if(bar)bar.hidden=!count; if(countEl)countEl.textContent=count?`已選取 ${count} 張`:''; if(delBtn)delBtn.disabled=!count; if(allBox){const total=document.querySelectorAll('#revisionModalList .revision-image-select').length; allBox.checked=total>0&&count===total; allBox.indeterminate=count>0&&count<total}}
 function toggleRevisionImageSelection(count,url,checked){const key=revisionImageKey(count,url); if(checked)revisionImageSelection.add(key); else revisionImageSelection.delete(key); updateRevisionSelectionBar()}
 function toggleAllRevisionImageSelection(checked){document.querySelectorAll('#revisionModalList .revision-image-select').forEach(box=>{box.checked=checked; const key=box.dataset.selectionKey; if(checked)revisionImageSelection.add(key); else revisionImageSelection.delete(key)}); updateRevisionSelectionBar()}
-async function removeSelectedCaseDesignImages(event){event?.stopPropagation?.(); const modal=$('#revisionModal'), id=modal?.dataset.caseId; if(!id||!revisionImageSelection.size)return; const items=[...revisionImageSelection].map(key=>{const idx=key.indexOf('::'); return {round:Number(key.slice(0,idx))||0,url:key.slice(idx+2)}}); if(!confirm(`確定要從系統紀錄移除這 ${items.length} 張設計圖嗎？（Google Drive 原始檔案不會被刪除）`))return; const delBtn=$('#revisionSelectionDelete'); if(delBtn)delBtn.disabled=true; let done=0,failed=0; for(const item of items){setSync(`刪除圖片中...${done+failed}/${items.length}`); try{await sheetApi('removeCaseDesignImage',{caseId:id,round:item.round,url:item.url,editorToken:currentEditorToken}); done+=1}catch{failed+=1}} revisionImageSelection.clear(); try{await fetchModificationCounts()}catch{} render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id); setSync(failed?`已刪除 ${done} 張，${failed} 張失敗，請重新整理後再試一次`:`已刪除 ${done} 張圖片`,Boolean(failed),failed?4200:2200)}
+async function removeSelectedCaseDesignImages(event){event?.stopPropagation?.(); const modal=$('#revisionModal'), id=modal?.dataset.caseId; if(!id||!revisionImageSelection.size)return; const items=[...revisionImageSelection].map(key=>{const idx=key.indexOf('::'); return {round:Number(key.slice(0,idx))||0,url:key.slice(idx+2)}}); if(!(await showAppConfirm({title:`移除 ${items.length} 張設計圖`,message:`確定要從系統紀錄移除這 ${items.length} 張設計圖嗎？\n（Google Drive 原始檔案不會被刪除）`,confirmText:'確定移除'})))return; const delBtn=$('#revisionSelectionDelete'); if(delBtn)delBtn.disabled=true; let done=0,failed=0; for(const item of items){setSync(`刪除圖片中...${done+failed}/${items.length}`); try{await sheetApi('removeCaseDesignImage',{caseId:id,round:item.round,url:item.url,editorToken:currentEditorToken}); done+=1}catch{failed+=1}} revisionImageSelection.clear(); try{await fetchModificationCounts()}catch{} render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id); setSync(failed?`已刪除 ${done} 張，${failed} 張失敗，請重新整理後再試一次`:`已刪除 ${done} 張圖片`,Boolean(failed),failed?4200:2200)}
 function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id)), modal=$('#revisionModal'), list=$('#revisionModalList'), add=$('#revisionModalAdd'), addDraft=$('#revisionModalAddDraft'); if(!row||!modal||!list)return; modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); revisionImageSelection.clear(); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; if(addDraft)addDraft.hidden=!canCaseEditRow(row)||records.some(record=>(Number(record.count)||0)===0); list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${linkifyPlainText(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'))}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>')}
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){hideDesignImageHoverPreview();const modal=$('#revisionModal'); if(modal)modal.hidden=true; revisionImageSelection.clear()}
@@ -13898,12 +13928,52 @@ async function submitDraftModificationRecord(event){
 }
 /** 刪除整筆修改紀錄（含這一輪的圖片關聯）。後端刻意不重編號其他輪次，所以刪掉中間某一輪之後
  * 會留下空號——確認訊息裡會講清楚，避免使用者以為系統壞掉。 */
+/** 刪除類動作的站內警示視窗，取代瀏覽器內建的 confirm()：內建對話框在手機上很小、容易直接點掉，瀏覽器也可能因為
+ * 使用者曾勾選「不要再讓這個網頁顯示對話框」而完全不再出現；站內視窗樣式與系統一致、紅色刪除鍵與取消鍵分開，
+ * 點背景或按 Esc 都視為取消。回傳 Promise<boolean>，同一時間只會有一個視窗，開新的會先把舊的當成取消。 */
+let appConfirmResolve=null;
+function showAppConfirm({title='確認刪除',message='',confirmText='確定刪除',cancelText='取消'}={}){
+  const dialog=$('#appConfirmDialog'), titleEl=$('#appConfirmTitle'), messageEl=$('#appConfirmMessage'), okBtn=$('#appConfirmOk'), cancelBtn=$('#appConfirmCancel');
+  if(!dialog||!titleEl||!messageEl||!okBtn||!cancelBtn)return Promise.resolve(window.confirm([title,message].filter(Boolean).join('\n\n')));
+  if(appConfirmResolve)appConfirmResolve(false);
+  titleEl.textContent=title;
+  messageEl.textContent=message;
+  okBtn.textContent=confirmText;
+  cancelBtn.textContent=cancelText;
+  const previousFocus=document.activeElement;
+  dialog.hidden=false;
+  // 預設焦點放在「取消」：誤按 Enter 不會直接刪除。
+  try{cancelBtn.focus({preventScroll:true})}catch(err){}
+  return new Promise(resolve=>{
+    appConfirmResolve=value=>{
+      appConfirmResolve=null;
+      dialog.hidden=true;
+      try{previousFocus?.focus?.({preventScroll:true})}catch(err){}
+      resolve(Boolean(value));
+    };
+  });
+}
+function settleAppConfirm(value){if(appConfirmResolve)appConfirmResolve(value)}
+// 用捕獲階段攔下視窗內的點擊與 Esc，避免同時觸發「點彈窗外面就關閉案件資料／修改紀錄」這類既有的全域處理。
+document.addEventListener('click',event=>{
+  const dialog=document.getElementById('appConfirmDialog');
+  if(!dialog||dialog.hidden)return;
+  const target=event.target instanceof Element?event.target:null;
+  if(target?.closest('#appConfirmOk')){event.preventDefault();event.stopPropagation();settleAppConfirm(true);return}
+  if(target?.closest('#appConfirmCancel')||target===dialog){event.preventDefault();event.stopPropagation();settleAppConfirm(false);return}
+  if(target?.closest('.app-confirm-card'))event.stopPropagation();
+},true);
+document.addEventListener('keydown',event=>{
+  const dialog=document.getElementById('appConfirmDialog');
+  if(!dialog||dialog.hidden||event.key!=='Escape')return;
+  event.preventDefault();event.stopPropagation();settleAppConfirm(false);
+},true);
 async function deleteModificationRecord(event,id,count){
   event?.stopPropagation?.();
   if(!requireAccess('media.manage','此帳號沒有刪除修改紀錄的權限'))return;
   const round=Number(count)||0, label=modificationLabel(round), record=modificationRecordsFor(id).find(item=>(Number(item.count)||0)===round);
   const imageCount=(record?.images||[]).length;
-  if(!confirm(`確定要刪除 ${id} 的整筆「${label}」紀錄嗎？\n\n${imageCount?`這一輪的 ${imageCount} 張設計圖也會一起從系統紀錄移除（Google Drive 原始檔案不會被刪除）。\n`:''}其他輪次的編號不會跟著往前遞補。此動作無法復原。`))return;
+  if(!(await showAppConfirm({title:`刪除${label}紀錄`,message:`確定要刪除 ${id} 的整筆「${label}」紀錄嗎？\n\n${imageCount?`這一輪的 ${imageCount} 張設計圖也會一起從系統紀錄移除（Google Drive 原始檔案不會被刪除）。\n`:''}其他輪次的編號不會跟著往前遞補。此動作無法復原。`})))return;
   setSync(`刪除 ${label} 紀錄中...`);
   try{
     await sheetApi('deleteModificationRecord',{caseId:id,count:round,editorToken:currentEditorToken,_requireResponse:true});
@@ -13919,7 +13989,7 @@ async function deleteModificationRecord(event,id,count){
 function applyModificationStatusChange(id,data){const status=String(data?.status||'').trim(); if(!data?.statusChanged||!status)return false; rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...r,status}):r); rememberLocalWrite(id,{status}); save(); return true}
 async function submitModificationRecord(event){event.preventDefault(); event.stopPropagation(); const form=event.target, id=String(form.dataset.caseId||'').trim(), row=rows.find(r=>String(r.id)===id); if(!row)return; const submit=form.querySelector('button[type="submit"]'), checkedImages=[...form.querySelectorAll('input[name="targetImages"]:checked')].map(box=>box.value), targetImages=checkedImages.length?checkedImages:(()=>{try{return JSON.parse(form.dataset.autoTarget||'[]')}catch{return []}})(), record={caseId:id,modifyDate:form.elements.modifyDate.value,content:form.elements.content.value.trim(),modifier:currentLoginOwnerName()||ownerDisplay(row.owner),targetImages,editorToken:currentEditorToken}; if(!record.modifyDate||!record.content){setSync('請填寫修改日期與修改內容',true);return} submit.disabled=true; const optimisticCount=modificationCount(id)+1, optimisticRecord={caseId:id,count:optimisticCount,date:record.modifyDate,content:record.content,modifier:record.modifier,confirmedDate:''}; modificationCounts.set(String(id),optimisticCount); modificationRecords.set(String(id),[...modificationRecordsFor(id),optimisticRecord]); closeFieldPopover(); closeRevisionModal(); render(); refreshOpenCaseDetail(id); setSync('修改紀錄寫入中...'); try{const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true}); const finalCount=Number(data.count)||optimisticCount, finalModifier=data.record?.['修改人']||data.record?.modifier||record.modifier; modificationCounts.set(String(id),finalCount); modificationRecords.set(String(id),modificationRecordsFor(id).map(item=>item===optimisticRecord?{...optimisticRecord,count:finalCount,modifier:finalModifier}:item)); applyModificationStatusChange(id,data); render(); refreshOpenCaseDetail(id); setSync(`已新增 ${id} ${modificationLabel(modificationCount(id))} 紀錄`)}catch(err){render(); refreshOpenCaseDetail(id); setSync(`修改紀錄已送出，若畫面未同步請稍後重新整理：${err.message}`,true)}}
 async function confirmModificationRecord(event,id,count){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const records=modificationRecordsFor(id), record=records.find(item=>(Number(item.count)||0)===(Number(count)||0)); if(!record)return; const button=event.currentTarget; if(button)button.disabled=true; const cancel=Boolean(record.confirmedDate), confirmedDate=cancel?'':slashDate(todayInputValue()), oldDate=record.confirmedDate; closeRevisionModal(); setSync(cancel?'取消確認修正日中...':'確認修正日寫入中...'); try{const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count,confirmedDate},editorToken:currentEditorToken}); const finalDate=data.record?.['確認修正日']||data.record?.confirmedDate||''; record.confirmedDate=finalDate; render(); refreshOpenCaseDetail(id); setSync(cancel?`已取消 ${id} ${modificationLabel(count)} 修正確認`:`已確認 ${id} ${modificationLabel(count)} 修正完成，已寫入 ${finalDate}`); setTimeout(()=>fetchModificationCounts().catch(()=>{}),0)}catch(err){record.confirmedDate=oldDate; render(); refreshOpenCaseDetail(id); setSync(`${cancel?'取消確認':'確認修正日寫入'}失敗：${err.message}`,true)}}
-async function removeCaseDesignImage(event,id,count,url){event.stopPropagation(); if(!confirm('確定要從系統紀錄移除這張設計圖嗎？（Google Drive 原始檔案不會被刪除）'))return; const button=event.currentTarget; if(button)button.disabled=true; setSync('刪除圖片中...'); try{await sheetApi('removeCaseDesignImage',{caseId:id,round:count,url,editorToken:currentEditorToken}); await fetchModificationCounts(); render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id); setSync('已從紀錄移除圖片',false,2200)}catch(err){if(button)button.disabled=false; setSync(`刪除圖片失敗：${err.message}`,true)}}
+async function removeCaseDesignImage(event,id,count,url){event.stopPropagation(); const button=event.currentTarget; if(!(await showAppConfirm({title:'移除設計圖',message:'確定要從系統紀錄移除這張設計圖嗎？\n（Google Drive 原始檔案不會被刪除）',confirmText:'確定移除'})))return; if(button)button.disabled=true; setSync('刪除圖片中...'); try{await sheetApi('removeCaseDesignImage',{caseId:id,round:count,url,editorToken:currentEditorToken}); await fetchModificationCounts(); render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id); setSync('已從紀錄移除圖片',false,2200)}catch(err){if(button)button.disabled=false; setSync(`刪除圖片失敗：${err.message}`,true)}}
 function detailOptionsForRow(row){return designLists.details?.[row.type]?.[row.stage]||detailsToArray(row.details)}
 function openDetailsEditor(event,id){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; const selected=detailsToArray(row.details), options=unique([...detailOptionsForRow(row),...selected]); fieldPopover.innerHTML=`<h3>修改項目細節</h3><div class="option-list detail-option-list">${options.length?options.map(option=>`<label class="option"><input type="checkbox" value="${esc(option)}" ${selected.includes(option)?'checked':''}>${esc(option)}</label>`).join(''):'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><div class="popover-actions"><button type="button" class="secondary" data-close>關閉</button><button type="button" data-apply>套用</button></div>`; fieldPopover.hidden=false; positionFieldPopover(event.currentTarget); fieldPopover.querySelector('[data-close]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover()}); fieldPopover.querySelector('[data-apply]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); saveDetailsEditor(id)})}
 function saveDetailsEditor(id){const row=rows.find(r=>String(r.id)===String(id)), values=[...fieldPopover.querySelectorAll('input:checked')].map(input=>input.value), changes={details:formatDetails(values)}; if(row&&row.status==='未開始'&&changes.details)changes.status='執行中'; updateCaseRow(id,changes,changes.status?'已更新項目細節，狀態已改為執行中':'已更新項目細節')}
@@ -14545,7 +14615,7 @@ function initCaseTableDragScroll(){
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); resetDateSelectGroupsToToday(); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
 function editRow(id){const r=rows.find(row=>String(row.id)===String(id)); if(!r)return; if(!canCaseEditRow(r)){setSync('此案件目前不可編輯',true);return} closeCaseDetail(); expandSectionForAction('request'); const form=$('#requestForm'); requestBatchMode=false; form.hidden=false; populateDesignSelects(r.type,r.stage,r.details); Object.entries(r).forEach(([key,value])=>{if(form.elements[key]&&key!=='details'&&key!=='platforms') form.elements[key].value=key==='owner'?ownerDisplay(value):value}); syncDateSelectGroupsFromHidden(); setRequestPlatformValues(r.platforms); const supplement=form.querySelector('.request-supplement'); if(supplement)supplement.open=requestSupplementHasData(r); if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName(); setDetailsValue(r.details); setEditMode(id); requestAnimationFrame(()=>{(document.querySelector('.request-card')||form).scrollIntoView({behavior:'smooth',block:'start'})})}
-function deleteRow(id){const target=rows.find(row=>String(row.id)===String(id)); if(!canDeleteCaseRow(target||{})){setSync('此帳號沒有刪除此案件的權限',true);return} const recordCount=modificationRecordsFor(id).length, imageCount=modificationRecordsFor(id).reduce((sum,record)=>sum+((record.images||[]).length),0); if(!confirm(`確定刪除案件 ${id}？\n\n${recordCount?`這個案件的 ${recordCount} 筆修改紀錄${imageCount?`（含 ${imageCount} 張設計圖）`:''}也會一起刪除。\n`:''}此動作無法復原。`))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); modificationRecords.delete(String(id)); modificationCounts.delete(String(id)); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
+async function deleteRow(id){const target=rows.find(row=>String(row.id)===String(id)); if(!canDeleteCaseRow(target||{})){setSync('此帳號沒有刪除此案件的權限',true);return} const recordCount=modificationRecordsFor(id).length, imageCount=modificationRecordsFor(id).reduce((sum,record)=>sum+((record.images||[]).length),0); if(!(await showAppConfirm({title:`刪除案件 ${id}`,message:`確定刪除案件 ${id}？\n\n${recordCount?`這個案件的 ${recordCount} 筆修改紀錄${imageCount?`（含 ${imageCount} 張設計圖）`:''}也會一起刪除。\n`:''}此動作無法復原。`})))return; const index=rows.findIndex(row=>String(row.id)===String(id)), original=index>=0?rows[index]:null; if(!original)return; rows.splice(index,1); modificationRecords.delete(String(id)); modificationCounts.delete(String(id)); rememberLocalWrite(id,{__deleted:true}); save(); render(); setSync(`案件 ${id} 已從畫面移除，背景刪除 JSON 資料中...`); if(!apiUrl){setSync('已從本機刪除');return} void enqueueInlineWrite(()=>sheetApi('delete',{id,editorToken:currentEditorToken})).then(data=>{setSync(data?.backup?.ok?`案件 ${id} 已從 JSON 刪除，試算表備份完成`:`案件 ${id} 已從 JSON 刪除，試算表備份等待重試`);refreshAfterFormWrite('案件已刪除')}).catch(err=>{forgetLocalWrite(id);if(!rows.some(row=>String(row.id)===String(id)))rows.splice(Math.min(index,rows.length),0,original);save();render();setSync(`刪除失敗，已還原畫面：${err.message}`,true)})}
 function cancelRow(id){const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; if(!canListEditRow(row)){setSync('此功能僅開放設計組使用',true);return} if(row.status==='已取消'){setSync(`案件 ${id} 已經是已取消`); return} if(!confirm(`確定將案件 ${id} 狀態改為已取消？`))return; updateCaseRow(id,{status:'已取消'},'已更新為已取消')}
 
 /* Central permission guards keep every entry point consistent, including inline table actions. */

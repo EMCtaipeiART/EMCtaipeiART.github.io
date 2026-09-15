@@ -192,7 +192,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 17:20 Asia/Taipei（最新）— 設計師回覆信用編輯器「上傳照片」加入的照片，寄出／排程時備份至修改紀錄
+### 2026-09-15 17:50 Asia/Taipei（最新）— 案件「刪除」與修改紀錄垃圾桶改用站內警示視窗，避免誤刪
+
+- 修改目的：使用者要求前台案件內容的「刪除」與修改紀錄的「垃圾桶」執行刪除前跳出警示視窗，避免誤刪。
+- 現況調查：`deleteRow`（案件刪除，06/23 起）、`removeCaseDesignImage`（單張圖片，08/13 起）、`deleteModificationRecord`（整筆輪次，09/10 起）、`removeSelectedCaseDesignImages`（勾選多張）原本都有瀏覽器內建 `confirm()`；但內建對話框在手機上小、容易直接點掉，瀏覽器也可能因曾勾選「不要再顯示對話框」而不再出現，所以改成站內視窗。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. 新增 `#appConfirmDialog` 站內警示視窗與 `showAppConfirm({title,message,confirmText,cancelText})`（回傳 Promise<boolean>）、`settleAppConfirm()`。紅色三角警示圖示、標題、說明（保留換行）、灰色「取消」與紅色「確定刪除／確定移除」；預設焦點在取消（誤按 Enter 不會刪除）；點背景或按 Esc 視為取消；同時開兩個時舊的視為取消。click／keydown 以捕獲階段攔截並停止傳遞，不會連帶觸發「點外面就關閉案件資料／修改紀錄」的既有處理。z-index 3000 疊在所有彈窗之上。找不到視窗元素時才退回內建 confirm。
+  2. 四個刪除入口改為 `if(!(await showAppConfirm({...})))return;`，說明文字沿用原本內容。`deleteRow` 改為 async（外層 `request.delete` 權限包裝直接回傳其 Promise，不受影響）；`removeCaseDesignImage` 在等待前先取 `event.currentTarget`（await 後會變成 null）。
+  3. 深色主題：全站 `html[data-theme="dark"] button` 規則權重高於 `.app-confirm-ok`，刪除鍵會被蓋成綠色，另加同等權重的 `html[data-theme="dark"] .app-confirm-ok` 維持紅色。
+- 風險區塊：
+  - 信件範本刪除（`bindMailTemplateEditor`）、取消排程寄信等其他確認仍使用內建 confirm，這次沒有改。
+  - 視窗是非同步的，刪除會在按下確定之後才開始；權限檢查仍在跳出視窗之前。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **105/105 全過**（104 既有＋1 新增）。新增測試：視窗標記、z-index、深色主題刪除鍵樣式存在；四個刪除函式都先 `await showAppConfirm(` 且不再呼叫內建 `confirm(`；單張圖片刪除在等待前取得按鈕；以假 DOM 實際執行 `showAppConfirm`，確定回傳 true、取消回傳 false、關閉後隱藏並還原焦點、預設焦點在取消、開新視窗時舊的回傳 false。既有兩支測試（刪除前需確認、修改紀錄彈窗整筆刪除）原本鎖住內建 `confirm(`，改為鎖住 `await showAppConfirm(`，意圖不變。
+  - 抽出 index.html 內嵌腳本 `node --check` 語法無誤。
+  - 本機 http server＋瀏覽器實測：桌機視窗顯示正確、焦點在取消；點「確定刪除」回傳 true 並關閉；按 Esc、點背景都回傳 false 並關閉；390px 手機寬度左右各留 16px；深色主題刪除鍵實測為 rgb(220,38,38)。
+  - `git stash` 只還原 `index.html`，新測試與兩支更新後的既有測試都失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際刪除案件或修改紀錄（避免刪到真實資料，且這個環境沒有正式站登入）。
+- 部署狀態：只改 `index.html`，git push 後自動生效，Worker 不需要部署。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 17:20 Asia/Taipei— 設計師回覆信用編輯器「上傳照片」加入的照片，寄出／排程時備份至修改紀錄
 
 - 修改目的：使用者回報設計師回信時，NAS 路徑出問題就改用編輯器工具列的「上傳照片」按鈕，但這些照片只變成信件內嵌圖片，沒有記錄在修改紀錄的圖片備份裡；要求把上傳的圖片也備份進修改紀錄。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
