@@ -192,7 +192,15 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 15:35 Asia/Taipei（最新）— 設計師頭像紅綠燈門檻改回 6 筆才算忙碌
+### 2026-09-15 15:45 Asia/Taipei（最新）— 設計師頭像燈號提示移除門檻說明
+
+- 修改目的：使用者指定滑鼠提示不需要說明「6 筆以上為忙碌」。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：燈號 `title` 改為「忙碌／普通：目前未開始＋執行中＋修改中共 N 筆」，判斷門檻不變（6 筆以上忙碌）。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 全過，測試鎖住新的提示文字。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+
+### 2026-09-15 15:35 Asia/Taipei — 設計師頭像紅綠燈門檻改回 6 筆才算忙碌
 
 - 修改目的：使用者確認「6 筆才算忙碌」，修正上一筆以「五筆以上」解讀成 5 筆忙碌的結果。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

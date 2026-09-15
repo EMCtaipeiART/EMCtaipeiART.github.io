@@ -3617,5 +3617,5 @@ test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases 
   assert.equal(computedDesignerStatus('Noise'), '忙碌', '合計六筆才顯示忙碌');
   assert.equal(designerActiveCount('Amber'), 1);
   assert.equal(computedDesignerStatus('Karl'), '普通');
-  assert.match(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆（\$\{DESIGNER_BUSY_THRESHOLD\} 筆以上為忙碌）"/);
+  assert.match(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆"/);
 });
