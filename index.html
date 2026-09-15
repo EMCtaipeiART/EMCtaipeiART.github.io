@@ -6111,13 +6111,15 @@
       #caseDetailModal .case-detail-time-range{gap:5px!important;flex-wrap:wrap!important}
       #caseDetailModal .case-detail-time-range i{font-size:11px!important}
       #caseDetailModal .case-detail-actions{margin:4px -18px 0!important;padding:10px 18px!important;gap:7px!important;flex-wrap:nowrap!important}
-      #caseDetailModal .case-detail-actions .row-actions{display:flex!important;flex:1 1 0!important;min-width:0!important}
+      /* 「編輯／刪除」的包裝層不參與排版，回信、編輯、刪除、關閉四顆按鈕才會各自等分同一列（包裝層若自己佔一格，
+         編輯與刪除會擠在同一格裡平分，只剩其他按鈕的一半寬）。 */
+      #caseDetailModal .case-detail-actions .row-actions{display:contents!important}
       #caseDetailModal .case-detail-actions .mail-compose-btn,
       #caseDetailModal .case-detail-actions .row-actions button,
       #caseDetailModal .case-detail-actions .case-detail-close-action{
         min-width:0!important;min-height:36px!important;padding:6px!important;font-size:13px!important;flex:1 1 0!important;
       }
-      #caseDetailModal .case-detail-actions .row-actions button{width:100%!important}
+      #caseDetailModal .case-detail-actions .row-actions button{width:auto!important}
     }
     #caseDetailModal button.case-inline-edit,
     #caseDetailModal button.editable-field.detail-edit{

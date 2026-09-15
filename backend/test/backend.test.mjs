@@ -3703,4 +3703,13 @@ test('mobile case detail actions distribute every visible button at equal width'
     /#caseDetailModal \.case-detail-actions \.row-actions button\{width:auto!important\}/,
     '內層按鈕不可保留 100% 寬度來干擾等分'
   );
+  // 只看字串出現過還不夠：後面若又有規則把包裝層設回 flex 或按鈕設回 100%，會蓋掉前面的設定
+  // （實際發生過：390px 寬時四顆按鈕量出來是 114／45／45／114px）。依出現順序取最後一條才是實際生效的。
+  // 只比對真的有設定 display／width 的規則（例如單純調整 gap 的規則不影響等分）。
+  const wrapperDisplayRules = [...html.matchAll(/#caseDetailModal \.case-detail-actions \.row-actions\{([^}]*)\}/g)].map(match => match[1]).filter(body => /(^|;)\s*display\s*:/.test(body));
+  assert.ok(wrapperDisplayRules.length, 'could not locate the case detail row-actions display rules');
+  assert.equal(wrapperDisplayRules.at(-1), 'display:contents!important', '最後生效的包裝層 display 必須是 contents');
+  const buttonWidthRules = [...html.matchAll(/#caseDetailModal \.case-detail-actions \.row-actions button\{([^}]*)\}/g)].map(match => match[1]).filter(body => /(^|;)\s*width\s*:/.test(body));
+  assert.equal(buttonWidthRules.at(-1), 'width:auto!important', '最後生效的內層按鈕寬度必須是 auto');
+  assert.doesNotMatch(html, /#caseDetailModal \.case-detail-actions \.row-actions\{display:flex/);
 });

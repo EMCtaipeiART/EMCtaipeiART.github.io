@@ -192,7 +192,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 16:20 Asia/Taipei（最新）— 手機版案件資料彈窗底部四顆按鈕等寬分佈
+### 2026-09-15 16:40 Asia/Taipei（最新）— 修正手機版案件資料按鈕等寬沒有生效（被後段 760px 規則覆蓋）
+
+- 修改目的：使用者回報手機瀏覽「案件資料」彈窗，底部回信／編輯／刪除／關閉四顆按鈕寬度不平均，要求平均分佈。上一筆（16:20）已加入 `.row-actions{display:contents}`，但實際在瀏覽器量測沒有生效。
+- 原因：同一個 `max-width:760px` 條件下，檔案更後面還有一段手機版規則把 `#caseDetailModal .case-detail-actions .row-actions` 設為 `display:flex; flex:1 1 0`，內層按鈕設為 `width:100%`。後出現的規則優先，包裝層重新佔一格，編輯與刪除擠在同一格平分。390px 寬實測四顆為 114／45／45／114px。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：把後段規則改為 `.row-actions{display:contents}`、內層按鈕 `width:auto`，四顆按鈕各自 `flex:1 1 0` 等分同一列。按鈕數量因權限變少（例如沒有刪除鍵）時，剩下的按鈕一樣平均分配。
+- 風險區塊：只動案件資料彈窗手機版按鈕列；列表中的 `.row-actions`（桌機、案件表格）不受影響。
+- 已檢查／驗證方式：
+  - 本機 http server＋瀏覽器注入與實際相同的按鈕列量測：390px 為 80／80／80／80px，700px 為 99.3×4，桌機為 88×4，四顆都在同一列。
+  - 加強既有測試：不只檢查字串存在，而是依出現順序取最後一條有設定 display／width 的規則，必須是 `display:contents`／`width:auto`，且不可再出現 `.row-actions{display:flex`。
+  - `node --test backend/test/*.test.mjs` **103/103 全過**；`git stash` 只還原 `index.html` 時該測試失敗，`git stash pop` 後恢復。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 16:20 Asia/Taipei— 手機版案件資料彈窗底部四顆按鈕等寬分佈
 
 - 修改目的：依使用者截圖，修正手機瀏覽前台「案件資料」彈窗下方回信、編輯、刪除、關閉寬度不一的問題。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
