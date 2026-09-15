@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 4907,
+  "revision": 4908,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-15T02:25:32.862Z",
+  "updatedAt": "2026-09-15T02:25:38.709Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1391,7 +1391,7 @@
         {"案件編號":"26090103","修改次數":"0","建立日期":"2026/09/15 09:11:06","修改日期":"2026/09/15 09:11:06","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/15 09:11:06","圖片連結":"[{\"fileName\":\"260915_DJI_九月下半優惠_PChome_1192x720.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1pv3OfEBTkjkEEC0V5zUuW3ZdxgeMtH78=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_PChome_1644x604.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1wN_C9r2OAr_8k6aCluhb3IkLlHVfUoc4=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_PChome_1900x510.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1G4nyXzs-R_AUpnzn5YVti7WcleSUOHo8=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_PChome_768x400.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1n2axjwyj224ptH07w_Q7adwcC4KG-Od-=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_Yahoo_1030x412.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1yf-BFid-50Yiq9sk2RlVpkt9KoQHPJ41=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_Yahoo_1080x345.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/12490iUhYuRe_p0CjI_1xWGZoTau97hmV=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_Yahoo_1200x600.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/107tnRsDiKQuIDooHWwCRkCtYvoJZuH3o=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_Yahoo_950x464.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/19rE5CxNslQs0nH4FveEssnwunSul4amv=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_Yahoo_960x450.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Rc9dpRz934iCKowOsSoA9ZZQGEZGOBfn=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_momo_1000x300.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Nh8hfZRevIlQL1T_N5K9S7jRTNrRjiFk=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_momo_2000x480.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kN0jHUHMBNq4jVRRraZyPdk7wmjlouyo=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_momo_818x370.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1VQaiK5-D4Dnz8OB28lXOcEUpPyXbI_V8=w1600\"},{\"fileName\":\"260915_DJI_九月下半優惠_momo_852x354.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1-lrkkeU4zBXCJO7GoPFtWUfwnHTNZsIL=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/15 09:11:06"},
         {"案件編號":"26090002","修改次數":"3","建立日期":"2026/09/15 09:45:27","修改日期":"2026-09-15","修改內容":"錯字訂正、動畫icon替換","修改人":"Noise","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090104","修改次數":"0","建立日期":"2026/09/15 09:49:55","修改日期":"2026/09/15 09:49:55","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/15 09:49:55","圖片連結":"[{\"fileName\":\"260915_保誠人壽_圖文選單_已綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1RNhTvdnMgi5J4bOop-eiE6jYVlKxZhmX=w1600\"},{\"fileName\":\"260915_保誠人壽_圖文選單_未綁定.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1tvQygChE2bucTgegYamxOgCDmlyq48ZN=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/15 09:49:55"},
-        {"案件編號":"26090103","修改次數":"1","建立日期":"2026/09/15 10:21:47","修改日期":"2026-09-15","修改內容":"感謝大神超神速支援！！不過少了一個尺寸，再麻煩您：\n\n\nmomo｜852x426｜<150KB","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260915_DJI_九月下半優惠_momo_852x426.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1V-2byUrfW53BAXv72qq5z-1puKHq2_wR=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/15 10:25:25"}
+        {"案件編號":"26090103","修改次數":"1","建立日期":"2026/09/15 10:21:47","修改日期":"2026-09-15","修改內容":"感謝大神超神速支援！！不過少了一個尺寸，再麻煩您：\n\n\nmomo｜852x426｜<150KB","修改人":"李明庭","確認修正日":"2026/09/15 10:25:38","待修改圖片":"","圖片連結":"[{\"fileName\":\"260915_DJI_九月下半優惠_momo_852x426.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1V-2byUrfW53BAXv72qq5z-1puKHq2_wR=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/15 10:25:25"}
       ]
     },
     "補充資料連結": {
