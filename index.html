@@ -3916,6 +3916,10 @@
     .field-popover.is-modal-popover{
       z-index:7000!important;
     }
+    .designer-reply-skip-images{display:flex!important;align-items:flex-start;gap:9px;margin:0 0 10px;padding:9px 11px;border:1px dashed #cfd8d3;border-radius:10px;background:#f8fbf9;cursor:pointer;font-size:13px;color:#263238;line-height:1.45}
+    .designer-reply-skip-images input{width:auto!important;min-height:auto!important;margin:3px 0 0!important;flex:0 0 auto;accent-color:var(--green)}
+    .designer-reply-skip-images small{display:block;margin-top:2px;color:var(--muted);font-weight:650;font-size:11.5px}
+    html[data-theme="dark"] .designer-reply-skip-images{background:#1f2225!important;border-color:#3c4043!important;color:#e0e1e3!important}
     .theme-toggle{
       display:inline-grid!important;
       place-items:center!important;
@@ -10833,13 +10837,14 @@ let caseDesignUploadInFlight=false;
 /** 這次「選擇電腦檔案上傳」是不是從「回信」→「設計師回覆信」開啟的——是的話上傳完成後要自動轉入
  * 信件編輯器（見 handleUploadFrameMessage 的 machi-case-design-images-updated 分支）。 */
 let caseDesignUploadAfterReply=false;
+let caseDesignUploadSkipReplyImages=false;
 // 這次電腦上傳屬於哪一筆案件。上傳頁面送回來的進度訊息只帶已完成／總數，沒有案件編號，
 // 回信流程要在上傳一開始就打開那筆案件的設計師回覆信，所以在開啟上傳視窗時先記住。
 let caseDesignUploadCaseId='';
 let caseDesignUploadLatestProgress=null;
 let caseDesignUploadRound=0;
 function openUploadModal(url,title='圖片上傳'){const modal=$('#uploadModal'), frame=$('#uploadFrame'), loading=$('#uploadModalLoading'), titleElement=$('#uploadModalTitle'); if(!modal||!frame)return; uploadModalActive=true; uploadModalReturnFocus=document.activeElement; if(titleElement)titleElement.textContent=title; if(loading)loading.hidden=false; frame.credentialless=true; frame.referrerPolicy='no-referrer'; frame.src=String(url); modal.hidden=false; document.body.classList.add('upload-modal-open'); setTimeout(()=>$('#uploadModalClose')?.focus(),30)}
-function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; caseDesignUploadAfterReply=false; caseDesignUploadRound=0; caseDesignUploadCaseId=''; caseDesignUploadLatestProgress=null; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
+function closeUploadModal({refreshUserAvatar=true}={}){const modal=$('#uploadModal'), frame=$('#uploadFrame'); if(!modal||!uploadModalActive)return; const shouldRefreshUserAvatar=refreshUserAvatar&&Boolean(activeUserAvatarUploadNonce), refreshDesigner=activeDesignerUploadName; uploadModalActive=false; caseDesignUploadInFlight=false; caseDesignUploadAfterReply=false; caseDesignUploadSkipReplyImages=false; caseDesignUploadRound=0; caseDesignUploadCaseId=''; caseDesignUploadLatestProgress=null; hideCaseDesignUploadBadge(); modal.hidden=true; document.body.classList.remove('upload-modal-open'); if(frame)frame.src='about:blank'; activeUserAvatarUploadNonce=''; activeDesignerUploadName=''; activeCaseImageUploadNonce=''; const returnFocus=uploadModalReturnFocus; uploadModalReturnFocus=null; returnFocus?.focus?.(); if(shouldRefreshUserAvatar)refreshCurrentAccountAvatar({force:true}); if(refreshDesigner)loadDesignerRoster().then(()=>render()).catch(err=>console.warn('設計師圖片與 Reels 更新失敗',err))}
 /** 設計師回覆信編輯器裡「圖片上傳中」的佔位文字改成實際進度。編輯器不是這筆案件、這一輪的設計師回覆信，
  * 或圖片已經套用完（佔位區塊已被換掉）時就什麼都不做。 */
 function updateDesignerReplyUploadProgress(id,round,done,total){
@@ -10849,7 +10854,10 @@ function updateDesignerReplyUploadProgress(id,round,done,total){
   const placeholder=document.querySelector('#gmailDesignerReplyImages .gmail-designer-reply-uploading');
   if(!placeholder)return false;
   const safeTotal=Math.max(0,Number(total)||0), safeDone=Math.min(Math.max(0,Number(done)||0),safeTotal||Infinity);
-  placeholder.textContent=safeTotal?`　圖片上傳中 ${safeDone}/${safeTotal}，完成後會自動放進信件...`:'　圖片上傳中...';
+  const skipImages=modal.dataset.designerReplySkipImages==='1';
+  placeholder.textContent=skipImages
+    ?(safeTotal?`　圖片備份中 ${safeDone}/${safeTotal}，這次不會放進信件...`:'　圖片備份中，這次不會放進信件...')
+    :(safeTotal?`　圖片上傳中 ${safeDone}/${safeTotal}，完成後會自動放進信件...`:'　圖片上傳中...');
   return true;
 }
 function backgroundizeCaseDesignUpload(){const modal=$('#uploadModal'); if(!modal||!uploadModalActive)return; modal.hidden=true; document.body.classList.remove('upload-modal-open'); showCaseDesignUploadBadge()}
@@ -10885,7 +10893,7 @@ function handleUploadFrameMessage(event){
       // iframe 裡繼續跑，所以這裡只能把上傳視窗藏起來，絕對不能關掉。
       if(caseDesignUploadAfterReply&&caseDesignUploadCaseId){
         const id=caseDesignUploadCaseId, round=caseDesignUploadRound;
-        openDesignerReplyMailModal(id,{round})
+        openDesignerReplyMailModal(id,{round,skipImages:caseDesignUploadSkipReplyImages})
           .then(()=>{const latest=caseDesignUploadLatestProgress; if(latest)updateDesignerReplyUploadProgress(id,round,latest.done,latest.total)})
           .catch(err=>setSync(`圖片仍在背景上傳，但無法先開啟回信編輯器：${err.message}`,true,5200));
       }
@@ -10898,7 +10906,7 @@ function handleUploadFrameMessage(event){
   if(data.type==='machi-case-design-images-updated'){
     if(!activeCaseImageUploadNonce||data.closeNonce!==activeCaseImageUploadNonce)return;
     const id=String(data.caseId||''), count=Number(data.count)||0, failedCount=Number(data.failedCount)||0;
-    const afterReply=caseDesignUploadAfterReply, replyRound=caseDesignUploadRound;
+    const afterReply=caseDesignUploadAfterReply, skipReplyImages=caseDesignUploadSkipReplyImages, replyRound=caseDesignUploadRound;
     caseDesignUploadInFlight=false;
     closeUploadModal({refreshUserAvatar:false});
     setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，同步中...`:(count?`已上傳 ${count} 張設計圖，同步中...`:'圖片上傳完成，同步中...'));
@@ -10916,7 +10924,7 @@ function handleUploadFrameMessage(event){
           // （伺服器端確實有寫入成功，只是這裡沒有真的把使用者帶到看得到結果的畫面）。這裡補上明確的
           // 失敗提示＋補救方式：圖片本身已經確定上傳成功（前面 setSync 已經回報過），只是自動轉入編輯器
           // 這一步沒有完成，改請使用者直接點擊「回信」手動開啟即可看到剛上傳的圖片，不需要重新上傳一次。
-          openDesignerReplyMailModal(id,{round:replyRound})
+          openDesignerReplyMailModal(id,{round:replyRound,skipImages:skipReplyImages})
             .then(()=>applyDesignerReplyImages(id,designerReplyImagesForRound(id,replyRound),{round:replyRound}))
             .catch(err=>setSync(`圖片已上傳成功，但自動開啟回信編輯器失敗，請改點「回信」查看：${err.message}`,true));
         }
@@ -10936,14 +10944,14 @@ function handleUploadFrameMessage(event){
     // 不能只挑第一筆，不然第二筆以後的路徑永遠不會出現在信件內容裡。data.path（單筆）只在
     // data.paths 缺漏時當備援。
     const startedFolderPaths=(Array.isArray(data.paths)&&data.paths.length?data.paths:[data.path]).map(p=>String(p||'').trim()).filter(Boolean);
-    if(nasFolderPickerAfterReply&&activeNasFolderPickerCaseId)openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folders:startedFolderPaths,round:activeNasFolderPickerRound});
+    if(nasFolderPickerAfterReply&&activeNasFolderPickerCaseId)openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folders:startedFolderPaths,round:activeNasFolderPickerRound,skipImages:nasFolderPickerSkipReplyImages});
     return;
   }
   if(data.type==='machi-nas-folder-selected'){
     if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
-    const purpose=nasFolderPickerPurpose, id=activeNasFolderPickerCaseId, editorId=nasFolderPickerInsertEditorId, insertRange=nasFolderPickerInsertRange, afterReply=nasFolderPickerAfterReply, replyRound=activeNasFolderPickerRound;
+    const purpose=nasFolderPickerPurpose, id=activeNasFolderPickerCaseId, editorId=nasFolderPickerInsertEditorId, insertRange=nasFolderPickerInsertRange, afterReply=nasFolderPickerAfterReply, skipReplyImages=nasFolderPickerSkipReplyImages, replyRound=activeNasFolderPickerRound;
     activeNasFolderPickerNonce=''; clearNasFolderPickerWatch(); hideNasFolderBackupBadge();
-    nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=false; activeNasFolderPickerRound=0;
+    nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false; activeNasFolderPickerRound=0;
     if(purpose==='insert'){
       // mode=insert（工具列「插入 NAS 路徑」）維持單選，只送單一 path，跟「設定案件 NAS
       // 來源資料夾」的複選流程完全分開，這裡不用管 data.folders。
@@ -10986,7 +10994,7 @@ function handleUploadFrameMessage(event){
         if(name&&!nasFileFolders[name])nasFileFolders[name]=folderPath;
       }
     }
-    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),fileFolders:nasFileFolders,round:replyRound})
+    if(afterReply&&id)resolveDesignerReplyImages(id,{folders:successFolders.map(item=>item.path||'').filter(Boolean),fileFolders:nasFileFolders,round:replyRound,skipImages:skipReplyImages})
       .catch(err=>setSync(`NAS 備份已完成，但自動帶入回信編輯器失敗，請改點「回信」查看：${err.message}`,true,7000));
     return;
   }
@@ -11870,24 +11878,32 @@ async function openModificationRequestReplyModal(id){
  * 這裡改成在任何 await 之前就同步登記「這個案件＋輪次正在初始化」，第二個呼叫直接拿到同一個 Promise，
  * 不會再重跑一次初始化。 */
 let designerReplyModalOpening=null;
-async function openDesignerReplyMailModal(id,{folders=[],round=null}={}){
+async function openDesignerReplyMailModal(id,{folders=[],round=null,skipImages=null}={}){
   const row=rows.find(r=>String(r.id)===String(id));
   if(!row)return;
   const targetRoundBeforeOpen=round===null||round===''?currentModificationRound(id):Math.max(0,Number(round)||0);
   const openingKey=`${id}::${targetRoundBeforeOpen}`;
   if(designerReplyModalOpening&&designerReplyModalOpening.key===openingKey)return designerReplyModalOpening.promise;
-  const opening=buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen);
+  const opening=buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,skipImages);
   designerReplyModalOpening={key:openingKey,promise:opening};
   try{return await opening}
   finally{if(designerReplyModalOpening&&designerReplyModalOpening.key===openingKey)designerReplyModalOpening=null}
 }
-async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen){
+/** 記下這封設計師回覆信要不要把圖片放進編輯器。skipImages 為 null 代表呼叫端不知道使用者的選擇（例如上傳完成
+ * 後補開編輯器），這時候維持原本的設定，不可以把使用者勾選的「不同步圖片」蓋回去。 */
+function setDesignerReplySkipImages(modal,skipImages){
+  if(!modal||skipImages===null||skipImages===undefined)return;
+  modal.dataset.designerReplySkipImages=skipImages?'1':'';
+  const placeholder=document.querySelector('#gmailDesignerReplyImages .gmail-designer-reply-uploading');
+  if(placeholder&&skipImages)placeholder.textContent='　圖片備份中，這次不會放進信件...';
+}
+async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,skipImages=null){
   // 這個案件／輪次的「設計師回覆信」範本已經初始化過、彈窗還開著時，不要重新整個重建（會把使用者已經
   // 打好的文字整段洗掉，也會在編輯區裡多插入一個重複的 #gmailDesignerReplyImages 容器，讓
   // document.getElementById() 抓到哪一個變成不確定、圖片顯示因此忽有忽無）——只有第一次呼叫時才會
   // 重建整個範本，第二次以後交給呼叫端接著呼叫的 applyDesignerReplyImages() 用局部 DOM 更新處理即可。
   const already=$('#gmailThreadModal');
-  if(already&&!already.hidden&&already.dataset.replyMode==='designer'&&String(already.dataset.designerReplyCaseId||'')===String(id)&&String(already.dataset.designerReplyRound||'')===String(targetRoundBeforeOpen))return;
+  if(already&&!already.hidden&&already.dataset.replyMode==='designer'&&String(already.dataset.designerReplyCaseId||'')===String(id)&&String(already.dataset.designerReplyRound||'')===String(targetRoundBeforeOpen)){setDesignerReplySkipImages(already,skipImages);return}
   await openGmailThreadModal(id,{lockUntilCaller:true});
   const modal=$('#gmailThreadModal'), composeSection=$('#gmailThreadComposeSection'), editor=$('#gmailThreadReplyEditor');
   if(!modal||modal.hidden||composeSection?.hidden){setGmailEditorLoading(editor,false);return}
@@ -11896,6 +11912,8 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen)
   const targetRound=targetRoundBeforeOpen;
   modal.dataset.designerReplyRound=String(targetRound);
   modal.dataset.designerReplyPending='1';
+  // 新開的一封信先清掉上一封留下的設定，再套用這次的選擇。
+  modal.dataset.designerReplySkipImages=skipImages?'1':'';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='設計師回覆信';
   // 「設計師回覆信」跟「一般回信」一樣可以排程——排程時一併觸發既有的「確認輪次／自動改過稿中」副作用
   // （見 scheduleThreadReply），不用等真正寄出那一刻；圖片還在上傳中（designerReplyPending==='1'）時
@@ -11913,7 +11931,7 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen)
   imagesRow.contentEditable='false';
   const placeholder=document.createElement('span');
   placeholder.className='gmail-designer-reply-uploading';
-  placeholder.textContent='　圖片上傳中...';
+  placeholder.textContent=modal.dataset.designerReplySkipImages==='1'?'　圖片備份中，這次不會放進信件...':'　圖片上傳中...';
   imagesRow.appendChild(placeholder);
   editor.appendChild(imagesRow);
   // folders 可能是多選（同一案件對應好幾個 NAS 來源資料夾）——每個資料夾各自獨立一行粗體路徑。
@@ -12050,9 +12068,12 @@ function applyDesignerReplyImages(id,images,{round=null}={}){
   if(!modal||modal.dataset.replyMode!=='designer'||String(modal.dataset.designerReplyCaseId||'')!==String(id))return;
   if(round!==null&&String(modal.dataset.designerReplyRound||'')!==String(Math.max(0,Number(round)||0)))return;
   const container=document.getElementById('gmailDesignerReplyImages');
+  // 使用者勾選「信件編輯不同步圖片」：圖片已經照常備份進修改紀錄，這裡只是不把縮圖放進信件；
+  // 影片的完整 NAS 路徑屬於「路徑資訊」，照樣放進信件。
+  const skipImages=modal.dataset.designerReplySkipImages==='1';
   if(container){
     container.textContent='';
-    if(Array.isArray(images)&&images.length){
+    if(!skipImages&&Array.isArray(images)&&images.length){
       images.forEach(img=>appendDesignerReplyImageThumb(container,img));
     }else{
       container.remove();
@@ -12075,7 +12096,7 @@ function designerReplyImagesForRound(id,round){
  * （沿用既有的 fetchModificationCounts），取這個案件目前最新一輪的圖片清單套用進編輯區。萬一
  * openDesignerReplyMailModal 這次沒有機會先開過（例如舊版資料夾選擇器沒有送出
  * machi-nas-folder-backup-started 這則訊息），這裡會先補開一次，確保還是看得到信件編輯器。 */
-async function resolveDesignerReplyImages(id,{folders=[],fileFolders=null,round=null}={}){
+async function resolveDesignerReplyImages(id,{folders=[],fileFolders=null,round=null,skipImages=null}={}){
   // 「備份開始」那則訊息觸發的初始化可能還在跑（在等 openGmailThreadModal 讀信件串），這時候彈窗雖然
   // 已經顯示出來、但 replyMode／designerReplyCaseId 這些標記都還沒寫上去，下面的 alreadyOpen 會誤判成
   // 「還沒開過」而重跑一次初始化——先等它跑完再判斷，才不會兩次初始化互相覆蓋（見
@@ -12084,7 +12105,8 @@ async function resolveDesignerReplyImages(id,{folders=[],fileFolders=null,round=
   const modal=$('#gmailThreadModal');
   const alreadyOpen=modal&&!modal.hidden&&modal.dataset.replyMode==='designer'&&String(modal.dataset.designerReplyCaseId||'')===String(id);
   const targetRound=round===null||round===''?(alreadyOpen?Math.max(0,Number(modal.dataset.designerReplyRound)||0):currentModificationRound(id)):Math.max(0,Number(round)||0);
-  if(!alreadyOpen)await openDesignerReplyMailModal(id,{folders,round:targetRound});
+  if(!alreadyOpen)await openDesignerReplyMailModal(id,{folders,round:targetRound,skipImages});
+  else setDesignerReplySkipImages(modal,skipImages);
   // 備份完成後才拿得到「真正確認成功的資料夾清單」與「檔名→資料夾」對照：彈窗可能是備份一開始就先
   // 開好的（那時候的清單還沒經過伺服器驗證），也可能是更早之前用別的資料夾開的（同案件同輪次會沿用
   // 不重建），所以這裡一律用最新的清單把 NAS 路徑區塊重畫一次，多選的資料夾才不會少顯示。
@@ -13626,8 +13648,8 @@ function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPag
 /** afterReply：從「回信」→「設計師回覆信」開啟時傳 true，上傳完成後（見 handleUploadFrameMessage 的
  * machi-case-design-images-updated 分支）會自動轉入 openDesignerReplyMailModal；平常從「過稿中」
  * 狀態變更觸發時維持預設 false，上傳完只更新畫面，不會意外跳出信件編輯器。 */
-function openCaseDesignImageUploadModal(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadRound=Math.max(0,Number(round)||0); caseDesignUploadCaseId=String(row.id); caseDesignUploadLatestProgress=null; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
-function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const samePathButton=afterReply&&row.designImageFolderUrl?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${esc(row.designImageFolderUrl)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3><div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply})})}
+function openCaseDesignImageUploadModal(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadSkipReplyImages=Boolean(afterReply&&skipReplyImages); caseDesignUploadRound=Math.max(0,Number(round)||0); caseDesignUploadCaseId=String(row.id); caseDesignUploadLatestProgress=null; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
+function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const samePathButton=afterReply&&row.designImageFolderUrl?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${esc(row.designImageFolderUrl)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';const skipImagesOption=afterReply?`<label class="designer-reply-skip-images"><input type="checkbox" data-skip-reply-images><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3>${skipImagesOption}<div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); const skipReplyImagesChecked=()=>afterReply&&Boolean(fieldPopover.querySelector('[data-skip-reply-images]')?.checked);fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply,skipReplyImages})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply,skipReplyImages})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply,skipReplyImages})})}
 const nasFolderPickerBaseUrl='http://iMac.local:8877/picker';
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
 let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerRound=0, activeNasFolderPickerWatchTimer=0, nasFolderPickerBackupInProgress=false;
@@ -13636,15 +13658,17 @@ let nasFolderPickerPurpose='case', nasFolderPickerInsertEditorId='', nasFolderPi
  * 關鍵字）並完成備份登記後，要自動轉入信件編輯器（見 handleUploadFrameMessage 的
  * machi-nas-folder-selected 分支）。 */
 let nasFolderPickerAfterReply=false;
+// 設計師回覆信勾選「信件編輯不同步圖片」：圖片照常備份，只是不放進信件編輯器（見 applyDesignerReplyImages）。
+let nasFolderPickerSkipReplyImages=false;
 function nasFolderPickerConfigured(){return Boolean(nasFolderPickerBaseUrl&&nasFolderPickerToken)}
 function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0} nasFolderPickerBackupInProgress=false}
-function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress, pendingCaseId=activeNasFolderPickerCaseId, pendingRound=activeNasFolderPickerRound; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; activeNasFolderPickerRound=0; nasFolderPickerAfterReply=false; hideNasFolderBackupBadge(); if(wasBackingUp&&pendingCaseId)applyDesignerReplyImages(pendingCaseId,[],{round:pendingRound}); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
+function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress, pendingCaseId=activeNasFolderPickerCaseId, pendingRound=activeNasFolderPickerRound; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; activeNasFolderPickerRound=0; nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false; hideNasFolderBackupBadge(); if(wasBackingUp&&pendingCaseId)applyDesignerReplyImages(pendingCaseId,[],{round:pendingRound}); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
 function nasFolderPickerPopupUrl({caseId,nonce,mode,path='',keyword=''}){const url=new URL(nasFolderPickerBaseUrl); if(caseId)url.searchParams.set('caseId',caseId); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',nonce); url.searchParams.set('origin',location.origin); if(mode)url.searchParams.set('mode',mode); if(path)url.searchParams.set('path',path); if(keyword)url.searchParams.set('keyword',keyword); return url}
 function openNasFolderPickerPopupWindow(url){const pickerWidth=520,pickerHeight=640,pickerLeft=Math.max(0,Math.round((screen.width-pickerWidth)/2)),pickerTop=Math.max(0,Math.round((screen.height-pickerHeight)/2)); return window.open(url.toString(),'machiNasFolderPicker',`width=${pickerWidth},height=${pickerHeight},left=${pickerLeft},top=${pickerTop}`)}
-function openNasFolderPicker(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); activeNasFolderPickerRound=Math.max(0,Number(round)||0); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=afterReply; const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
+function openNasFolderPicker(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); activeNasFolderPickerRound=Math.max(0,Number(round)||0); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=afterReply; nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages); const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 /** 沿用案件既有 NAS 路徑與關鍵字，不再要求設計師於每一輪修改回覆重新瀏覽資料夾。因正式站為 HTTPS、
  * 本機服務為 HTTP，仍需以彈出視窗導覽至同源頁面，再由該頁自動執行備份並用 postMessage 回傳結果。 */
-function reuseLastNasFolder(id,round,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return;if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳',true,5000);return}const row=rows.find(r=>String(r.id)===String(id));if(!row?.designImageFolderUrl){setSync('此案件沒有可沿用的 NAS 路徑，請重新選擇資料夾',true,4200);return}clearNasFolderPickerWatch();activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;activeNasFolderPickerCaseId=String(id);activeNasFolderPickerRound=Math.max(0,Number(round)||0);nasFolderPickerPurpose='case';nasFolderPickerInsertEditorId='';nasFolderPickerInsertRange=null;nasFolderPickerAfterReply=afterReply;const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce,mode:'reuse',path:row.designImageFolderUrl,keyword:row.designImageFolderKeyword||''});const win=openNasFolderPickerPopupWindow(url);if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;return}setSync(`正在沿用 NAS 路徑並抓取 ${modificationLabel(round)}最新圖片...`,false,5000);watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
+function reuseLastNasFolder(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return;if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳',true,5000);return}const row=rows.find(r=>String(r.id)===String(id));if(!row?.designImageFolderUrl){setSync('此案件沒有可沿用的 NAS 路徑，請重新選擇資料夾',true,4200);return}clearNasFolderPickerWatch();activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;activeNasFolderPickerCaseId=String(id);activeNasFolderPickerRound=Math.max(0,Number(round)||0);nasFolderPickerPurpose='case';nasFolderPickerInsertEditorId='';nasFolderPickerInsertRange=null;nasFolderPickerAfterReply=afterReply;nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages);const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce,mode:'reuse',path:row.designImageFolderUrl,keyword:row.designImageFolderKeyword||''});const win=openNasFolderPickerPopupWindow(url);if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return}setSync(`正在沿用 NAS 路徑並抓取 ${modificationLabel(round)}最新圖片...`,false,5000);watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 /** 供 Gmail 撰寫／回信編輯區「插入 NAS 路徑」使用：跟「過稿中」同一套資料夾選擇器視窗，
  * 但用 mode=insert 讓選擇器頁面只回傳選到的路徑、不問關鍵字也不觸發任何備份／上傳，
  * 選好後直接把路徑插進編輯區目前的游標位置（沿用開啟視窗前記住的選取範圍）。 */

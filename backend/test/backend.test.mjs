@@ -313,7 +313,8 @@ test('openDesignerReplyMailModal() restores the idempotency guard its own doc-co
   assert.ok(start > 0 && end > start);
   const source = html.slice(start, end);
   assert.match(source, /const already=\$\('#gmailThreadModal'\);/);
-  assert.match(source, /if\(already&&!already\.hidden&&already\.dataset\.replyMode==='designer'&&String\(already\.dataset\.designerReplyCaseId\|\|''\)===String\(id\)&&String\(already\.dataset\.designerReplyRound\|\|''\)===String\(targetRoundBeforeOpen\)\)return;/);
+  // 已開啟時提早返回；「信件編輯不同步圖片」上線後，返回前會先套用這次的勾選設定，但仍然不重建編輯器。
+  assert.match(source, /if\(already&&!already\.hidden&&already\.dataset\.replyMode==='designer'&&String\(already\.dataset\.designerReplyCaseId\|\|''\)===String\(id\)&&String\(already\.dataset\.designerReplyRound\|\|''\)===String\(targetRoundBeforeOpen\)\)\{setDesignerReplySkipImages\(already,skipImages\);return\}/);
   // 這個提前 return 一定要在 await openGmailThreadModal(...)（會重新整個重讀信件串、重置一堆狀態）
   // 之前，跳過的意義才成立——不能等到跑完一輪網路請求才發現不需要重建。
   const guardIndex = source.indexOf('if(already&&!already.hidden');
@@ -327,7 +328,7 @@ test('the "images-updated" handler no longer leaves the case-design-reply hand-o
   const end = html.indexOf("if(data.type==='machi-nas-folder-backup-started'){", start);
   assert.ok(start > 0 && end > start);
   const source = html.slice(start, end);
-  assert.match(source, /openDesignerReplyMailModal\(id,\{round:replyRound\}\)\s*\n\s*\.then\(\(\)=>applyDesignerReplyImages\(id,designerReplyImagesForRound\(id,replyRound\),\{round:replyRound\}\)\)\s*\n\s*\.catch\(err=>setSync\(`圖片已上傳成功，但自動開啟回信編輯器失敗，請改點「回信」查看：\$\{err\.message\}`,true\)\);/);
+  assert.match(source, /openDesignerReplyMailModal\(id,\{round:replyRound,skipImages:skipReplyImages\}\)\s*\n\s*\.then\(\(\)=>applyDesignerReplyImages\(id,designerReplyImagesForRound\(id,replyRound\),\{round:replyRound\}\)\)\s*\n\s*\.catch\(err=>setSync\(`圖片已上傳成功，但自動開啟回信編輯器失敗，請改點「回信」查看：\$\{err\.message\}`,true\)\);/);
 });
 
 test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {
@@ -348,7 +349,7 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(html, /data-source="same-nas"><span>同上次路徑<\/span>/);
-  assert.match(html, /function reuseLastNasFolder\(id,round,\{afterReply=false\}=\{\}\)/);
+  assert.match(html, /function reuseLastNasFolder\(id,round,\{afterReply=false,skipReplyImages=false\}=\{\}\)/);
   assert.match(html, /mode:'reuse',path:row\.designImageFolderUrl,keyword:row\.designImageFolderKeyword\|\|''/);
   assert.match(pickerServer, /requestedMode === 'reuse'/);
   assert.match(pickerServer, /if\(mode === 'reuse'\)\{/);
@@ -389,19 +390,19 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   // openDesignerReplyMailModal / resolveDesignerReplyImages both take a `folders` array now, not a
   // single `folderPath` string -- the old signature silently dropped every folder past the first.
-  assert.match(html, /async function openDesignerReplyMailModal\(id,\{folders=\[\],round=null\}=\{\}\)\{/);
-  assert.match(html, /async function resolveDesignerReplyImages\(id,\{folders=\[\],fileFolders=null,round=null\}=\{\}\)\{/);
+  assert.match(html, /async function openDesignerReplyMailModal\(id,\{folders=\[\],round=null,skipImages=null\}=\{\}\)\{/);
+  assert.match(html, /async function resolveDesignerReplyImages\(id,\{folders=\[\],fileFolders=null,round=null,skipImages=null\}=\{\}\)\{/);
   assert.doesNotMatch(html, /folderPath=''/);
   // The "machi-nas-folder-selected" handler must pass every successfully-confirmed folder's path
   // through, not just successFolders[0].
-  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound\}\)/);
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound,skipImages:skipReplyImages\}\)/);
   // The EARLY "machi-nas-folder-backup-started" hand-off is what actually determines the rendered
   // text in the normal flow: openDesignerReplyMailModal's own idempotency guard means the later
   // "machi-nas-folder-selected" message will NOT rebuild the template if the modal is already open
   // for the same case+round, so if this early message only carried the first folder, every folder
   // past the first would never appear in the sent email regardless of what the later message says.
   assert.match(html, /const startedFolderPaths=\(Array\.isArray\(data\.paths\)&&data\.paths\.length\?data\.paths:\[data\.path\]\)\.map\(p=>String\(p\|\|''\)\.trim\(\)\)\.filter\(Boolean\);/);
-  assert.match(html, /openDesignerReplyMailModal\(activeNasFolderPickerCaseId,\{folders:startedFolderPaths,round:activeNasFolderPickerRound\}\)/);
+  assert.match(html, /openDesignerReplyMailModal\(activeNasFolderPickerCaseId,\{folders:startedFolderPaths,round:activeNasFolderPickerRound,skipImages:nasFolderPickerSkipReplyImages\}\)/);
   // The picker server's backup-started message has to actually carry every requested folder's path
   // (not just foldersToSubmit[0]) for the above to have anything to read.
   assert.match(pickerServer, /type: 'machi-nas-folder-backup-started', caseId, nonce, path: foldersToSubmit\[0\]\.path, paths: foldersToSubmit\.map\(item => item\.path\)/);
@@ -463,7 +464,7 @@ test('concurrent designer-reply opens for the same case+round are de-duplicated 
   // initialization. Whichever initialization finished last re-inserted the "圖片上傳中..." placeholder
   // and re-disabled the send button -- after applyDesignerReplyImages() had already placed the images.
   // The registration must therefore happen synchronously, before any await.
-  const wrapper = html.match(/let designerReplyModalOpening=null;\nasync function openDesignerReplyMailModal\(id,\{folders=\[\],round=null\}=\{\}\)\{[\s\S]*?\n\}\n/)?.[0];
+  const wrapper = html.match(/let designerReplyModalOpening=null;\nasync function openDesignerReplyMailModal\(id,\{folders=\[\],round=null,skipImages=null\}=\{\}\)\{[\s\S]*?\n\}\n/)?.[0];
   assert.ok(wrapper, 'could not locate the openDesignerReplyMailModal de-duplication wrapper');
 
   const makeOpener = (builder, currentRound = 0) => new Function('rows', 'currentModificationRound', 'buildDesignerReplyMailModal', `
@@ -510,7 +511,7 @@ test('concurrent designer-reply opens for the same case+round are de-duplicated 
 
   // The machi-nas-folder-selected call site had no .catch(): any rejection there was an entirely silent
   // unhandled rejection, leaving the editor stuck with no message explaining why.
-  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound\}\)\s*\n\s*\.catch\(err=>setSync\(/);
+  assert.match(html, /resolveDesignerReplyImages\(id,\{folders:successFolders\.map\(item=>item\.path\|\|''\)\.filter\(Boolean\),fileFolders:nasFileFolders,round:replyRound,skipImages:skipReplyImages\}\)\s*\n\s*\.catch\(err=>setSync\(/);
 });
 
 test('designer reply lists every backed-up video\'s full NAS path (folder + filename + extension), attributing each video to the folder it actually came from even when several folders were picked', async () => {
@@ -3196,7 +3197,7 @@ test('a computer upload started from the designer reply flow opens the mail edit
   const handler = html.match(/if\(data\.type==='machi-case-design-upload-progress'\)\{[\s\S]*?\n    return;\n  \}/)?.[0];
   assert.ok(handler, 'could not locate the upload progress handler');
   assert.match(handler, /if\(!wasInFlight\)\{\s*\n\s*backgroundizeCaseDesignUpload\(\);/);
-  assert.match(handler, /if\(caseDesignUploadAfterReply&&caseDesignUploadCaseId\)\{[\s\S]*?openDesignerReplyMailModal\(id,\{round\}\)/);
+  assert.match(handler, /if\(caseDesignUploadAfterReply&&caseDesignUploadCaseId\)\{[\s\S]*?openDesignerReplyMailModal\(id,\{round,skipImages:caseDesignUploadSkipReplyImages\}\)/);
   // 編輯器開好之後要補上最新進度，因為進度訊息可能比編輯器建立完成更早抵達。
   assert.match(handler, /\.then\(\(\)=>\{const latest=caseDesignUploadLatestProgress; if\(latest\)updateDesignerReplyUploadProgress\(id,round,latest\.done,latest\.total\)\}\)/);
   assert.match(handler, /else if\(caseDesignUploadAfterReply&&caseDesignUploadCaseId\)\{\s*\n\s*updateDesignerReplyUploadProgress\(/);
@@ -3259,4 +3260,83 @@ test('adding a 客戶別 with an expired login sends the user back to log in ins
   assert.match(handler, /if\(isExpiredEditorSessionError\(err\)\)\{\s*\n\s*clearLoginAuthState\(\);applyAccountSettingsIfNeeded\(\);updateLoginUi\(\);render\(\);\s*\n\s*showLoginModal\('登入狀態已失效，請重新登入後再新增客戶別'\);/);
   // 其他錯誤照舊顯示原本的失敗訊息，不會把人登出。
   assert.match(handler, /setSync\(`新增客戶別失敗：\$\{err\.message\}`,true\);/);
+});
+
+test('the designer reply can back up NAS or uploaded images without putting them into the mail, while still keeping the paths and unlocking send', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 選單：只有設計師回覆信流程才出現勾選框，三個上傳選項都讀取它的狀態。
+  const chooser = html.match(/function openCaseDesignImageSourceChooser\(id,round,anchorEl,\{afterReply=false\}=\{\}\)\{[^\n]*/)?.[0];
+  assert.ok(chooser, 'could not locate openCaseDesignImageSourceChooser');
+  assert.match(chooser, /const skipImagesOption=afterReply\?`<label class="designer-reply-skip-images"><input type="checkbox" data-skip-reply-images><span><b>信件編輯不同步圖片<\/b>/);
+  assert.equal((chooser.match(/const skipReplyImages=skipReplyImagesChecked\(\); closeFieldPopover\(\);/g) || []).length, 3, '三個選項都要在關閉選單前讀取勾選狀態');
+  assert.match(chooser, /reuseLastNasFolder\(id,round,\{afterReply,skipReplyImages\}\)/);
+  assert.match(chooser, /openNasFolderPicker\(id,round,\{afterReply,skipReplyImages\}\)/);
+  assert.match(chooser, /openCaseDesignImageUploadModal\(id,round,\{afterReply,skipReplyImages\}\)/);
+
+  // 設定要一路帶到編輯器：NAS 備份開始／完成、電腦上傳開始／完成。
+  assert.match(html, /openDesignerReplyMailModal\(activeNasFolderPickerCaseId,\{folders:startedFolderPaths,round:activeNasFolderPickerRound,skipImages:nasFolderPickerSkipReplyImages\}\)/);
+  assert.match(html, /fileFolders:nasFileFolders,round:replyRound,skipImages:skipReplyImages\}\)/);
+  assert.match(html, /openDesignerReplyMailModal\(id,\{round,skipImages:caseDesignUploadSkipReplyImages\}\)/);
+  assert.match(html, /openDesignerReplyMailModal\(id,\{round:replyRound,skipImages:skipReplyImages\}\)/);
+  // 關閉上傳視窗、NAS 選擇器結束時都要清掉，才不會影響下一次。
+  assert.match(html, /caseDesignUploadAfterReply=false; caseDesignUploadSkipReplyImages=false;/);
+  assert.ok(!/nasFolderPickerAfterReply=false;(?!nasFolderPickerSkipReplyImages=false;)/.test(html.replace('let nasFolderPickerAfterReply=false;', '')), '每個重設 afterReply 的地方都要一併重設不同步圖片');
+
+  // 補開編輯器（skipImages 為 null）不可以把使用者勾選的設定蓋回去。
+  const setter = html.match(/function setDesignerReplySkipImages\(modal,skipImages\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(setter, 'could not locate setDesignerReplySkipImages');
+  const runSetter = (modal, value) => new Function('modal', 'value', `
+    const document = { querySelector: () => null };
+    ${setter}
+    setDesignerReplySkipImages(modal, value);
+  `)(modal, value);
+  const kept = { dataset: { designerReplySkipImages: '1' } };
+  runSetter(kept, null);
+  assert.equal(kept.dataset.designerReplySkipImages, '1');
+  runSetter(kept, false);
+  assert.equal(kept.dataset.designerReplySkipImages, '');
+
+  // Run the real applyDesignerReplyImages: with skip on, no thumbnails go in, but video paths and send unlock still happen.
+  const apply = html.match(/function applyDesignerReplyImages\(id,images,\{round=null\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(apply, 'could not locate applyDesignerReplyImages');
+  const runApply = skip => {
+    const calls = { thumbs: 0, videoPaths: null, removed: false };
+    const container = { textContent: 'x', remove() { calls.removed = true; } };
+    const modal = { dataset: { replyMode: 'designer', designerReplyCaseId: '26090074', designerReplyRound: '0', designerReplySkipImages: skip ? '1' : '', designerReplyPending: '1' } };
+    const send = { disabled: true, textContent: '圖片上傳中...' };
+    const schedule = { disabled: true };
+    new Function('modal', 'container', 'send', 'schedule', 'calls', `
+      const $ = selector => ({ '#gmailThreadModal': modal, '#gmailThreadReplySend': send, '#gmailThreadSchedule': schedule })[selector] || null;
+      const document = { getElementById: id => id === 'gmailDesignerReplyImages' ? container : null };
+      const appendDesignerReplyImageThumb = () => { calls.thumbs += 1; };
+      const applyDesignerReplyVideoPaths = images => { calls.videoPaths = images; };
+      ${apply}
+      applyDesignerReplyImages('26090074', [{ fileName: 'a.png' }, { fileName: 'b.mp4' }], { round: 0 });
+    `)(modal, container, send, schedule, calls);
+    return { calls, modal, send, schedule };
+  };
+  const synced = runApply(false);
+  assert.equal(synced.calls.thumbs, 2);
+  assert.equal(synced.calls.removed, false);
+  const skipped = runApply(true);
+  assert.equal(skipped.calls.thumbs, 0, '勾選不同步時不可以放任何縮圖進信件');
+  assert.equal(skipped.calls.removed, true, '圖片區塊整個拿掉，信件裡不留空白佔位');
+  assert.equal(skipped.calls.videoPaths.length, 2, '影片完整路徑是路徑資訊，照樣放進信件');
+  assert.equal(skipped.send.disabled, false);
+  assert.equal(skipped.send.textContent, '送出回覆');
+  assert.equal(skipped.schedule.disabled, false);
+  assert.equal(skipped.modal.dataset.designerReplyPending, '');
+
+  // 電腦上傳的進度文字要說清楚這次不會放進信件。
+  const progress = html.match(/function updateDesignerReplyUploadProgress\(id,round,done,total\)\{[\s\S]*?\n\}/)[0];
+  const placeholder = { textContent: '' };
+  new Function('placeholder', `
+    const modal = { hidden: false, dataset: { replyMode: 'designer', designerReplyCaseId: '26090074', designerReplyRound: '0', designerReplySkipImages: '1' } };
+    const $ = () => modal;
+    const document = { querySelector: () => placeholder };
+    ${progress}
+    updateDesignerReplyUploadProgress('26090074', 0, 3, 12);
+  `)(placeholder);
+  assert.equal(placeholder.textContent, '　圖片備份中 3/12，這次不會放進信件...');
 });
