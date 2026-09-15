@@ -5895,8 +5895,9 @@
       #caseDetailModal .case-detail-actions .mail-compose-btn,
       #caseDetailModal .case-detail-actions .row-actions button,
       #caseDetailModal .case-detail-actions .case-detail-close-action{min-width:0!important;flex:1 1 0!important;padding:9px 12px!important;font-size:14px!important}
-      #caseDetailModal .case-detail-actions .row-actions{display:flex!important;flex:1 1 0!important;min-width:0!important}
-      #caseDetailModal .case-detail-actions .row-actions button{width:100%!important}
+      /* 手機版讓「編輯／刪除」的包裝層不參與排版，四顆實際按鈕才能各自等分同一列。 */
+      #caseDetailModal .case-detail-actions .row-actions{display:contents!important}
+      #caseDetailModal .case-detail-actions .row-actions button{width:auto!important}
     }
     @media(max-width:520px){
       #caseDetailModal{padding:10px!important}

@@ -3690,3 +3690,17 @@ test('reply method chooser offers 直接讀信, which opens the thread read-only
   assert.equal(reply.calls.signature, 1);
   assert.equal(reply.calls.scheduled, 1);
 });
+
+test('mobile case detail actions distribute every visible button at equal width', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(
+    html,
+    /#caseDetailModal \.case-detail-actions \.row-actions\{display:contents!important\}/,
+    '手機版需展開編輯／刪除包裝層，讓四顆按鈕各自成為等寬 flex item'
+  );
+  assert.match(
+    html,
+    /#caseDetailModal \.case-detail-actions \.row-actions button\{width:auto!important\}/,
+    '內層按鈕不可保留 100% 寬度來干擾等分'
+  );
+});
