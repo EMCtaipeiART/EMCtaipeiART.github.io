@@ -192,7 +192,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 15:45 Asia/Taipei（最新）— 設計師頭像燈號提示移除門檻說明
+### 2026-09-15 16:10 Asia/Taipei（最新）— 回信方式選單新增「直接讀信」，唯讀開啟信件串並預設展開首封信
+
+- 修改目的：使用者指定前台回信按鈕的彈窗最下方增加「直接讀信」，直接閱讀該信件串，預設為首封信。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. `openReplyMethodChooser` 在「一般回信」下方新增「直接讀信」（說明：只閱讀這條信件串，預設展開首封信）。未連接 Gmail 的選單（只有「連接 Gmail 帳號」）也加上這個選項：Worker `getCaseMailThread` 用的是案件當初寄信帳號的 Gmail 授權，讀信者自己不必連接。
+  2. `openGmailThreadModal` 新增 `readOnly` 參數：`dataset.replyMode='read'`，隱藏回覆編輯區、送出、指定排程時間，取消鍵改為「關閉」；讀信成功後展開第一封信（Gmail threads API 依時間由舊到新排列，第一封即首封），清單捲回頂端；不填收件人建議、不插入簽名檔、不讀排程清單，最後照常解除編輯器載入鎖定。
+  3. 一般回信、填寫修改需求信、設計師回覆信行為不變（每次開啟都會重設回覆區顯示狀態，讀信模式不會殘留）。
+- 風險區塊：
+  - 讀信權限規則不變：沒有 request.mail 權限、或不是該信件串收件人／副本／寄件人的帳號，一樣顯示 Worker 回傳的無法查看訊息。
+  - 其他信件維持收合；信件串的 `<details name>` 為互斥展開，點開另一封時首封會自動收起（既有行為）。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **102/102 全過**（101 既有＋1 新增：兩種選單都有「直接讀信」且位於一般回信下方、點擊呼叫唯讀模式；以假 DOM 實際執行 `openGmailThreadModal`，唯讀模式隱藏回覆區與送出／排程、只展開第一封、不插簽名檔、仍解除鎖定；一般回信模式維持全部收合與原本流程）。
+  - 抽出 index.html 內嵌腳本執行 `node --check` 語法無誤。
+  - `git stash` 只還原 `index.html`，新測試在舊程式碼上失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際點開信件串（這個環境沒有正式站登入與 Gmail 授權）。
+- 部署狀態：只改 `index.html`，git push 後自動生效，Worker 不需要部署。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 15:45 Asia/Taipei— 設計師頭像燈號提示移除門檻說明
 
 - 修改目的：使用者指定滑鼠提示不需要說明「6 筆以上為忙碌」。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

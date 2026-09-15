@@ -3619,3 +3619,74 @@ test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases 
   assert.equal(computedDesignerStatus('Karl'), '普通');
   assert.match(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆"/);
 });
+
+test('reply method chooser offers 直接讀信, which opens the thread read-only with the first message expanded', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const chooser = html.match(/async function openReplyMethodChooser\(event,id\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(chooser, 'could not locate openReplyMethodChooser');
+  // 已連接與未連接 Gmail 兩種選單最下方都有「直接讀信」，點了用唯讀模式開信件串。
+  assert.equal((chooser.match(/data-reply-method="read"><span>直接讀信<\/span><small>只閱讀這條信件串，預設展開首封信<\/small><\/button><\/div>/g) || []).length, 2);
+  assert.match(chooser, /data-reply-method="general"><span>一般回信<\/span>[\s\S]*?<\/button><button type="button" class="option" data-reply-method="read">/);
+  assert.equal((chooser.match(/\[data-reply-method="read"\]'\)\?\.addEventListener\('click',clickEvent=>\{clickEvent\.stopPropagation\(\); closeFieldPopover\(\); openGmailThreadModal\(id,\{readOnly:true\}\)\}\);/g) || []).length, 2);
+
+  const opener = html.match(/async function openGmailThreadModal\(id,\{lockUntilCaller=false,readOnly=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(opener, 'could not locate openGmailThreadModal');
+
+  // 用假的 DOM 實際跑一次唯讀模式與一般回信模式。
+  const run = async readOnly => {
+    const el = (extra = {}) => ({ hidden: false, disabled: false, textContent: '', innerHTML: '', dataset: {}, ...extra });
+    const details = [{ open: false }, { open: false }, { open: false }];
+    const list = el({ scrollTop: 120, querySelector: selector => selector === '.gmail-thread-msg' ? details[0] : null });
+    const nodes = {
+      '#gmailThreadModal': el(), '#gmailThreadModalList': list, '#gmailThreadReplyEditor': el({ id: 'gmailThreadReplyEditor' }),
+      '#gmailThreadModalTitle': el(), '#gmailThreadModalFrom': el(), '#gmailThreadFromValue': el(),
+      '#gmailThreadComposeSection': el(), '#gmailThreadReplySend': el(), '#gmailThreadReplyCancel': el(), '#gmailThreadSchedule': el(),
+      '#gmailThreadScheduledList': el()
+    };
+    const calls = { signature: 0, scheduled: 0, recipients: 0, unlock: 0 };
+    const fn = new Function('ctx', `
+      const { nodes, calls, details } = ctx;
+      const $ = selector => nodes[selector];
+      const rows = [{ id: '26090001', gmailThreadId: 'thread-1' }];
+      const setSync = () => {}, closeFieldPopover = () => {}, clearScheduledMailEditState = () => {}, resetGmailModalInlineStatus = () => {};
+      const gmailRecipientExpandedFields = new Set();
+      const gmailConnectionState = { gmailAddress: 'pm@emctaipei.com' }, currentEditorAccount = 'pm@emctaipei.com', currentEditorToken = 't';
+      const defaultReplyTemplateContent = () => '', setGmailEditorPlainText = (editor, text) => { editor.innerHTML = text; };
+      const clearGmailInlineImages = () => {}, clearGmailAttachments = () => {};
+      const setGmailRecipientEntries = () => { calls.recipients += 1; }, splitMailAddresses = value => [value];
+      const updateGmailScheduleStatusBadge = () => {}, gmailRecipientGreetingName = () => 'Anna';
+      const setGmailEditorLoading = (editor, loading) => { if (!loading) calls.unlock += 1; };
+      const allKnownGmailSignatureHtmlList = async () => [];
+      const sheetApi = async () => ({ messages: [{ date: '1' }, { date: '2' }, { date: '3' }], suggestedTo: 'anna@emctaipei.com' });
+      let gmailThreadMessagesCache = [];
+      const renderGmailThreadMessages = () => {};
+      const refreshScheduledMailList = () => { calls.scheduled += 1; };
+      const appendDefaultGmailSignature = async () => { calls.signature += 1; };
+      ${opener}
+      return openGmailThreadModal('26090001', { readOnly: ${readOnly} });
+    `);
+    await fn({ nodes, calls, details });
+    return { nodes, calls, details, list };
+  };
+
+  const read = await run(true);
+  assert.equal(read.nodes['#gmailThreadModal'].dataset.replyMode, 'read');
+  assert.equal(read.nodes['#gmailThreadModal'].hidden, false);
+  assert.equal(read.nodes['#gmailThreadComposeSection'].hidden, true, '唯讀模式不顯示回覆編輯區');
+  assert.equal(read.nodes['#gmailThreadReplySend'].hidden, true);
+  assert.equal(read.nodes['#gmailThreadSchedule'].hidden, true);
+  assert.equal(read.nodes['#gmailThreadReplyCancel'].textContent, '關閉');
+  assert.deepEqual(read.details.map(item => item.open), [true, false, false], '預設只展開首封信');
+  assert.equal(read.list.scrollTop, 0);
+  assert.equal(read.calls.signature, 0, '唯讀模式不插入簽名檔');
+  assert.equal(read.calls.scheduled, 0);
+  assert.equal(read.calls.unlock, 1, '唯讀模式跑完仍會解除載入鎖定');
+
+  const reply = await run(false);
+  assert.equal(reply.nodes['#gmailThreadModal'].dataset.replyMode, 'general');
+  assert.equal(reply.nodes['#gmailThreadComposeSection'].hidden, false, '一般回信照舊顯示回覆區');
+  assert.equal(reply.nodes['#gmailThreadReplySend'].hidden, false);
+  assert.deepEqual(reply.details.map(item => item.open), [false, false, false], '一般回信維持全部收合');
+  assert.equal(reply.calls.signature, 1);
+  assert.equal(reply.calls.scheduled, 1);
+});

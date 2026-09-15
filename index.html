@@ -11693,7 +11693,9 @@ let gmailThreadMessagesCache=[];
  * 在跑完的當下就先解鎖，中間那段極短的同步空檔理論上仍有機會被使用者搶到，且解鎖後又立刻重新鎖一次
  * 畫面會閃爍；改成由呼叫端傳 true，這支函式只負責上鎖與載入，鎖什麼時候真正解除交給呼叫端自己決定
  * （呼叫端寫完自己那段內容後才解鎖，見對應函式）。 */
-async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
+/** readOnly：回信選單的「直接讀信」——只看這條信件串，不開回覆編輯區、不顯示送出／排程，
+ * 並預設展開第一封（首封）信，方便從頭讀起；其他信件一樣收合，點開才看。 */
+async function openGmailThreadModal(id,{lockUntilCaller=false,readOnly=false}={}){
   const row=rows.find(r=>String(r.id)===String(id)); if(!row)return;
   if(!row.gmailThreadId){setSync('此案件尚未透過 Gmail 寄出過信件',true);return}
   const modal=$('#gmailThreadModal'), list=$('#gmailThreadModalList'), replyEditor=$('#gmailThreadReplyEditor');
@@ -11703,7 +11705,7 @@ async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
   resetGmailModalInlineStatus(modal);
   gmailRecipientExpandedFields.clear();
   modal.dataset.caseId=String(row.id);
-  modal.dataset.replyMode='general';
+  modal.dataset.replyMode=readOnly?'read':'general';
   const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
   const initialReplyFrom=gmailConnectionState.gmailAddress||currentEditorAccount;
   const fromLabel=$('#gmailThreadModalFrom'); if(fromLabel)fromLabel.textContent=initialReplyFrom?`寄件人：${initialReplyFrom}`:'';
@@ -11721,6 +11723,12 @@ async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
   // 自動改過稿中）可以直接在排程建立當下就先執行，見 scheduleThreadReply() 的說明。
   if(scheduleBtn){scheduleBtn.hidden=false; scheduleBtn.disabled=false; scheduleBtn.textContent='指定排程時間'}
   if(cancelBtn)cancelBtn.textContent='取消';
+  if(readOnly){
+    if(composeSection)composeSection.hidden=true;
+    if(sendBtn)sendBtn.hidden=true;
+    if(scheduleBtn)scheduleBtn.hidden=true;
+    if(cancelBtn)cancelBtn.textContent='關閉';
+  }
   modal.dataset.designerReplyPending='';
   modal.dataset.designerReplyCaseId='';
   modal.dataset.designerReplyRound='';
@@ -11748,6 +11756,10 @@ async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
     if(fromValue)fromValue.textContent=replyFrom||'—';
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     renderGmailThreadMessages(list,gmailThreadMessagesCache);
+    if(readOnly){
+      const firstMessage=list.querySelector('.gmail-thread-msg');
+      if(firstMessage){firstMessage.open=true; list.scrollTop=0}
+    }else{
     // suggestedTo 可能是多個收件人（回覆全部時，上一封信原本就寄給好幾個人），跟 suggestedCc 一樣
     // 用 splitMailAddresses() 拆開成多個聯絡人晶片，不能整段當成單一個地址塞進去。
     setGmailRecipientEntries('gmailThreadTo',splitMailAddresses(data.suggestedTo||''));
@@ -11757,6 +11769,7 @@ async function openGmailThreadModal(id,{lockUntilCaller=false}={}){
       setGmailEditorPlainText(replyEditor,`Hi ${recipientName},\n\n${generalReplyTemplate}`);
     }
     refreshScheduledMailList(id,'thread');
+    }
   }catch(err){
     gmailThreadMessagesCache=[];
     list.innerHTML=`<div class="gmail-thread-owner-note">${esc(err.message||'讀取信件串失敗')}</div>`;
@@ -11799,16 +11812,19 @@ async function openReplyMethodChooser(event,id){
   const status=await ensureGmailStatusLoaded();
   if(fieldPopover.hidden||fieldPopover.dataset.replyMethodId!==String(id))return; // 使用者已經關閉或改點別的案件
   if(!status.connected){
-    fieldPopover.innerHTML='<h3>回信方式</h3><p class="schedule-picker-hint">目前登入的帳號尚未連接 Gmail，需要先連接才能回信（收件人／副本才會正確接續同一條討論串）。</p><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="connect"><span>連接 Gmail 帳號</span></button></div>';
+    fieldPopover.innerHTML='<h3>回信方式</h3><p class="schedule-picker-hint">目前登入的帳號尚未連接 Gmail，需要先連接才能回信（收件人／副本才會正確接續同一條討論串）。</p><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="connect"><span>連接 Gmail 帳號</span></button><button type="button" class="option" data-reply-method="read"><span>直接讀信</span><small>只閱讀這條信件串，預設展開首封信</small></button></div>';
     positionFieldPopover(anchorEl,{center:true});
     fieldPopover.querySelector('[data-reply-method="connect"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); startGmailConnectPopup()});
+    // 讀信用的是當初寄信帳號的 Gmail 授權（見 Worker getCaseMailThread），自己沒連接 Gmail 也能讀。
+    fieldPopover.querySelector('[data-reply-method="read"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openGmailThreadModal(id,{readOnly:true})});
     return;
   }
-  fieldPopover.innerHTML=`<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="modification"><span>填寫修改需求信</span><small>撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…</small></button><button type="button" class="option" data-reply-method="designer"><span>設計師回覆信</span><small>先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器</small></button><button type="button" class="option" data-reply-method="general"><span>一般回信</span><small>直接開啟信件編輯器，內容手動填寫</small></button></div>`;
+  fieldPopover.innerHTML=`<h3>回信方式</h3><div class="option-list source-option-list"><button type="button" class="option" data-reply-method="modification"><span>填寫修改需求信</span><small>撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…</small></button><button type="button" class="option" data-reply-method="designer"><span>設計師回覆信</span><small>先設定 NAS 來源資料夾或上傳這一輪設計圖，完成後自動轉入信件編輯器</small></button><button type="button" class="option" data-reply-method="general"><span>一般回信</span><small>直接開啟信件編輯器，內容手動填寫</small></button><button type="button" class="option" data-reply-method="read"><span>直接讀信</span><small>只閱讀這條信件串，預設展開首封信</small></button></div>`;
   positionFieldPopover(anchorEl,{center:true});
   fieldPopover.querySelector('[data-reply-method="modification"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openModificationRequestReplyModal(id)});
   fieldPopover.querySelector('[data-reply-method="designer"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openCaseDesignImageSourceChooser(id,currentModificationRound(id),anchorEl,{afterReply:true})});
   fieldPopover.querySelector('[data-reply-method="general"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openGmailThreadModal(id)});
+  fieldPopover.querySelector('[data-reply-method="read"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); closeFieldPopover(); openGmailThreadModal(id,{readOnly:true})});
 }
 /** 「串接」——填寫案件的通常是 PM／專案負責人，不是設計師本人，PM 常常直接用 Outlook 或自己的 Gmail
  * 聯絡設計師，案件從沒經過這個系統寄過信，導致完全沒有 Gmail信件串ID，依賴這個欄位的既有機制（回信
