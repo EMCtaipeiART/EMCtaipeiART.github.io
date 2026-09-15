@@ -192,7 +192,31 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 13:40 Asia/Taipei（最新）— 有新的修改需求時，案件狀態自動改為「修改中」
+### 2026-09-15 14:50 Asia/Taipei（最新）— 前台讀取加速：合併重複的資料庫下載、壓縮設計師照片、減少不必要的資料庫提交
+
+- 修改目的：使用者反映前台讀取變慢，診斷後指定「合併重複的資料庫請求、壓縮那張大圖，並減少不必要的資料庫提交」。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`scripts/generate_database_archive_snapshot.mjs`、`scripts/generate_short_link_index.mjs`、`images/Anna.jpg`、`images/Leona.jpg`、`images/Amber.jpg`、`images/Noise.jpg`、`images/Machi.jpg`、`images/Karl.jpg`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **合併資料庫下載**：開頁時選單資料、設計師設定、案件列表三個地方幾乎同時呼叫 `fetchGithubJsonDatabase`，以前同一份 db.json 下載三次。新增 `githubJsonDatabaseInflight`，正在下載時其他呼叫直接共用；實際下載拆到 `downloadGithubJsonDatabase()`，一律跳過快取抓最新版，所以共用的呼叫端即使要求強制更新也拿到最新資料。10 秒內的一般讀取仍沿用快取。
+  2. **壓縮設計師照片**：六張 1023x1700、約 1.6–1.8MB 的照片，以 `sips` 縮成寬 800、JPEG 品質 72，每張約 0.30–0.36MB（合計約 10MB → 2MB）。畫面上顯示寬度約 300px，800px 在高解析度螢幕仍清楚，已目視確認。
+  3. **畫面偏好同步減量**：篩選、深淺色、欄位顯示等偏好以前改一次就寫一次資料庫（一次 GitHub 提交＋網站重新部署；9/14 有 29 筆）。`saveRemoteSettingsForAccount` 改成停止操作 15 秒（`REMOTE_SETTINGS_IDLE_MS`）才合併送出一次；內容與上次成功送出的相同就不送；切走分頁或關閉頁面（`visibilitychange` hidden、`pagehide`）時立刻補送。本機快取仍即時生效，畫面不受延遲影響。
+  4. **Worker 不提交沒變的設定**：`saveUserSettings` 比對設定列寫入前後，完全一樣時回傳 `changed:false`，`mutate()` 不提交 GitHub，回應帶 `unchanged:true`。
+  5. **歷史資料庫對齊流程不再每次都提交**：9/14 有 107 筆「align history database」提交，原因是兩支產生程式把每次都會變的版本號與時間寫進檔案。`generate_database_archive_snapshot.mjs` 的 `sourceChanged` 只比對案件資料雜湊（`rowsSha256`），不再比對主資料庫版本號；`generate_short_link_index.mjs` 在短網址與補充連結內容都沒變時保留原檔不寫。
+- 風險區塊：
+  - 偏好改完 15 秒內若瀏覽器直接當掉（不是正常關閉），那次變更只存在本機快取，下次操作時才會送出；正常關分頁、切走都會補送。
+  - 短網址索引裡的 `databaseRevision`／`generatedAt` 只在內容有變時更新，不再代表最新主資料庫版本；前台沒有讀這兩欄。
+  - 歷史資料庫快照裡的 `linkedDatabaseRevision` 同理，只在案件資料變動時更新。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **73/73 全過**（72 既有＋1 新增：第一次改深色會提交、送一模一樣的設定不提交且回 `unchanged:true`、改回淺色再提交）。
+  - `node --test backend/test/*.test.mjs` **100/100 全過**（99 既有＋1 新增：抽出真正的 `fetchGithubJsonDatabase` 驗證三個同時呼叫只下載一次、完成後強制更新會重下、10 秒內沿用快取；抽出真正的偏好儲存函式驗證連點四次只送一次且是最後一次內容、相同內容不送、隱藏頁面立即補送；在暫存資料夾實際執行短網址產生程式，只改版本號時檔案不變、短網址真的改了才更新）。
+  - 用 `git stash` 只還原四個程式檔，確認兩支新測試在舊程式碼上失敗，`git stash pop` 後恢復。
+  - 在實際專案資料上執行兩支產生程式，再把 db.json 版本號加一重跑，兩支都回報 unchanged、`data/` 無差異，驗證後還原 db.json。
+  - 本機 http server 開前台，網路紀錄顯示開頁只下載一次 db.json。
+  - **未做的驗證**：沒有在正式站登入實測偏好同步（這個環境沒有正式站登入）。
+- 部署狀態：`index.html`、圖片、產生程式 git push 後自動生效；Worker 已 `npx wrangler deploy`。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 13:40 Asia/Taipei— 有新的修改需求時，案件狀態自動改為「修改中」
 
 - 修改目的：使用者指定「現在有修改的新需求時，請將該專案狀態自動更改為『修改中』」。
 - 影響檔案：`worker/src/database-coordinator.ts`、`backend/app.mjs`、`index.html`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。

@@ -7455,9 +7455,19 @@ const supplementLinkFields = Object.freeze({briefUrl:{slot:'a',column:'A'},asset
 const githubJsonDatabaseUrl = 'backend/data/db.json';
 let githubJsonDatabaseCache = null;
 let githubJsonDatabaseLoadedAt = 0;
+let githubJsonDatabaseInflight=null;
+/** 開頁時選單資料、設計師設定、案件列表幾乎同時要資料庫，以前各自下載，同一份檔案一次抓三遍。
+ * 現在同一時間只下載一次：正在下載中的那一次直接共用。反正都要重新下載，這次下載一律跳過快取抓最新版，
+ * 所以共用它的呼叫端不論有沒有要求強制更新，拿到的都是最新資料。 */
 async function fetchGithubJsonDatabase({fresh=false}={}){
   if(!fresh&&githubJsonDatabaseCache&&Date.now()-githubJsonDatabaseLoadedAt<10000)return githubJsonDatabaseCache;
-  const response=await fetch(`${githubJsonDatabaseUrl}?v=${fresh?Date.now():appBuildVersion}`,{cache:fresh?'no-store':'default'});
+  if(githubJsonDatabaseInflight)return githubJsonDatabaseInflight;
+  const download=downloadGithubJsonDatabase();
+  githubJsonDatabaseInflight=download;
+  try{return await download}finally{if(githubJsonDatabaseInflight===download)githubJsonDatabaseInflight=null}
+}
+async function downloadGithubJsonDatabase(){
+  const response=await fetch(`${githubJsonDatabaseUrl}?v=${Date.now()}`,{cache:'no-store'});
   if(!response.ok)throw new Error(`GitHub JSON 讀取失敗：HTTP ${response.status}`);
   const database=await response.json();
   if(!database?.tables?.database?.rows)throw new Error('GitHub JSON 資料庫格式錯誤');
@@ -7982,6 +7992,12 @@ let lastReturnRefreshAt = 0;
 let remoteSettingsSaveTimer = null;
 let remoteSettingsSaveSequence = 0;
 let remoteSettingsSaveQueue = Promise.resolve();
+// 畫面偏好（篩選條件、深淺色、欄位顯示、收合狀態）每改一次就寫回資料庫，會變成一次 GitHub 提交＋網站重新
+// 部署——例如連點四位設計師卡片就是四次提交。改成停止操作一段時間才合併送出一次，內容跟上次成功送出的
+// 一樣就不送；切走或關閉頁面時立刻補送，不會漏存。這些設定本機本來就有即時快取，畫面不受延遲影響。
+const REMOTE_SETTINGS_IDLE_MS = 15000;
+const remoteSettingsLastSynced = new Map();
+let remoteSettingsPendingRun = null;
 let lastEditorSessionKeepAliveAt = 0;
 let lastBackgroundRefreshInputAt = 0;
 const recentLocalWritesKey = 'designRequestRecentJsonWritesV1';
@@ -8074,19 +8090,28 @@ function remoteSettingsPayload(){const theme=currentTheme(); return {visibleColu
 function saveRemoteSettingsForAccount(message='個人設定已儲存'){
   if(!isLoggedIn()||!currentEditorToken||!apiUrl||isLocalPreviewToken())return;
   const account=currentEditorAccount, editor=currentEditor, token=currentEditorToken, settings=remoteSettingsPayload(), sequence=++remoteSettingsSaveSequence;
-  clearTimeout(remoteSettingsSaveTimer);
-  remoteSettingsSaveTimer=setTimeout(()=>{
+  const run=()=>{
+    if(remoteSettingsPendingRun===run)remoteSettingsPendingRun=null;
+    const serialized=JSON.stringify(settings);
+    if(remoteSettingsLastSynced.get(account)===serialized)return;
     remoteSettingsSaveQueue=remoteSettingsSaveQueue.catch(()=>{}).then(async()=>{
       try{
         const data=await sheetApi('saveUserSettings',{account,editorToken:token,settings});
         if(data.action!=='saveUserSettings')throw new Error('Cloudflare Worker 尚未回傳個人設定寫入結果');
+        remoteSettingsLastSynced.set(account,serialized);
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`${editor} 的${message}`);
       }catch(err){
         if(sequence===remoteSettingsSaveSequence&&account===currentEditorAccount)setSync(`設定已套用，但寫回表單失敗：${err.message}`,true);
       }
     });
-  },450);
+  };
+  clearTimeout(remoteSettingsSaveTimer);
+  remoteSettingsPendingRun=run;
+  remoteSettingsSaveTimer=setTimeout(run,REMOTE_SETTINGS_IDLE_MS);
 }
+function flushRemoteSettingsSave(){const run=remoteSettingsPendingRun; if(!run)return; clearTimeout(remoteSettingsSaveTimer); run()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushRemoteSettingsSave()});
+window.addEventListener('pagehide',flushRemoteSettingsSave);
 function saveVisibleColumnsForAccount(message='個人設定已儲存'){visibleColumns=validVisibleColumns(visibleColumns,{fallback:false}); writeCache(accountStorageKey(visibleColumnsKey),visibleColumns); saveRemoteSettingsForAccount(message)}
 function saveDisplaySettingsForAccount(){writeCache(accountStorageKey(displaySettingsKey),displaySettings); saveRemoteSettingsForAccount()}
 function saveCollapseSettingsForAccount(){writeCache(accountStorageKey('designRequestCollapseSettingsV1'),collapseSettings); saveRemoteSettingsForAccount('視窗設定已儲存')}

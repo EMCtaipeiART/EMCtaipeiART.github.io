@@ -2572,8 +2572,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return this.mutate(action, current, draft => {
         const row = settingsRow(draft, account || current.user);
         if (!row) throw new Error('找不到個人設定資料');
+        const before = JSON.stringify(row);
         updateSettingsRow(row, asRow(payload.settings));
-        return { result: { ok: true, action, account, settings: settingsResponse(row) }, changedTables: ['設定'] };
+        const result = { ok: true, action, account, settings: settingsResponse(row) };
+        // 設定內容完全沒變（例如重新整理時送出一樣的篩選條件）就不提交到 GitHub——每一次提交都會觸發網站
+        // 重新部署與歷史資料庫對齊流程，沒有實際變動的提交只會拖慢大家讀取前台。
+        if (JSON.stringify(row) === before) return { result, changed: false };
+        return { result, changedTables: ['設定'] };
       });
     }
     if (action === 'saveDesignerProfiles') {

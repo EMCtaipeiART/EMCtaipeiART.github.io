@@ -126,7 +126,9 @@ for (const [sourceIndex, sourceRow] of databaseTable.rows.entries()) {
 const removedCaseIds = deletionSync.removedCaseIds;
 const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
 const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
-const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.revision !== database.revision || previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
+// 只看案件資料本身有沒有變。主資料庫的版本號每寫一次就加一（個人設定、修改紀錄、客戶別都會加），以前把
+// 版本號不同也算成「有變」，於是每一筆寫入都重新產生一次歷史資料庫、多一次提交與網站重新部署。
+const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !== sourceRowsSha256;
 const rowsChanged = previousSnapshot?.rowsSha256 !== rowsSha256;
 const columnsChanged = JSON.stringify(previousSnapshot?.columns || []) !== JSON.stringify(columns);
 const dashboardDataChanged = previousSnapshot?.dashboardDataSha256 !== dashboardDataSha256;

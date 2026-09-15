@@ -3471,3 +3471,125 @@ test('a new modification request automatically moves the case to 修改中, and 
   assert.deepEqual(untouched.rows.map(row => row.status), ['過稿中', '過稿中']);
   assert.equal(untouched.written.length, 0);
 });
+
+test('page load downloads the database once, UI preference saves are batched and skipped when unchanged, and the history workflow no longer commits on every revision bump', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 1) 同時要資料庫的呼叫端共用同一次下載。
+  const fetchDb = html.match(/let githubJsonDatabaseInflight=null;[\s\S]*?async function fetchGithubJsonDatabase\(\{fresh=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  const downloadDb = html.match(/async function downloadGithubJsonDatabase\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(fetchDb && downloadDb, 'could not locate the database loader');
+  const loader = new Function(`
+    let calls = 0;
+    const githubJsonDatabaseUrl = 'backend/data/db.json';
+    const appBuildVersion = 'test';
+    let githubJsonDatabaseCache = null;
+    let githubJsonDatabaseLoadedAt = 0;
+    const syncWeightRulesFromDatabase = () => {};
+    const syncDesignListsFromDatabase = () => {};
+    const syncCustomerDirectoryFromDatabase = () => {};
+    const fetch = async () => { calls += 1; await new Promise(resolve => setTimeout(resolve, 5)); return { ok: true, json: async () => ({ revision: calls, tables: { database: { rows: [] } } }) }; };
+    ${fetchDb}
+    ${downloadDb}
+    return { fetchGithubJsonDatabase, calls: () => calls };
+  `)();
+  const [menu, profiles, cases] = await Promise.all([
+    loader.fetchGithubJsonDatabase({}),
+    loader.fetchGithubJsonDatabase({ fresh: true }),
+    loader.fetchGithubJsonDatabase({ fresh: true })
+  ]);
+  assert.equal(loader.calls(), 1, '開頁時三個呼叫端只下載一次');
+  assert.equal(menu, profiles);
+  assert.equal(profiles, cases);
+  await loader.fetchGithubJsonDatabase({ fresh: true });
+  assert.equal(loader.calls(), 2, '下載完成後再要求強制更新，照樣會重新下載');
+  await loader.fetchGithubJsonDatabase({});
+  assert.equal(loader.calls(), 2, '十秒內一般讀取沿用剛下載的資料');
+
+  // 2) 畫面偏好：停止操作一段時間才送一次、內容沒變不送、頁面隱藏時補送。
+  const saveFn = html.match(/function saveRemoteSettingsForAccount\(message='個人設定已儲存'\)\{[\s\S]*?\n\}/)?.[0];
+  const flushFn = html.match(/function flushRemoteSettingsSave\(\)\{[^\n]*/)?.[0];
+  assert.ok(saveFn && flushFn, 'could not locate the settings save helpers');
+  assert.match(html, /const REMOTE_SETTINGS_IDLE_MS = 15000;/);
+  assert.match(html, /document\.addEventListener\('visibilitychange',\(\)=>\{if\(document\.visibilityState==='hidden'\)flushRemoteSettingsSave\(\)\}\);/);
+  assert.match(html, /window\.addEventListener\('pagehide',flushRemoteSettingsSave\);/);
+  const settings = new Function(`
+    const timers = [];
+    const sent = [];
+    let payload = { theme: 'dark', filters: { designer: ['Anna'] } };
+    const isLoggedIn = () => true, isLocalPreviewToken = () => false;
+    const currentEditorToken = 'token', apiUrl = 'https://worker.test', currentEditorAccount = 'anna@emctaipei.com', currentEditor = 'Anna';
+    const remoteSettingsPayload = () => JSON.parse(JSON.stringify(payload));
+    const sheetApi = async (action, body) => { sent.push(body.settings); return { action }; };
+    const setSync = () => {};
+    const setTimeout = (fn, ms) => { timers.push({ fn, ms, cleared: false }); return timers.length - 1; };
+    const clearTimeout = id => { if (timers[id]) timers[id].cleared = true; };
+    let remoteSettingsSaveTimer = null, remoteSettingsSaveSequence = 0, remoteSettingsSaveQueue = Promise.resolve();
+    const REMOTE_SETTINGS_IDLE_MS = 15000;
+    const remoteSettingsLastSynced = new Map();
+    let remoteSettingsPendingRun = null;
+    ${saveFn}
+    ${flushFn}
+    return {
+      save: () => saveRemoteSettingsForAccount(),
+      flush: () => flushRemoteSettingsSave(),
+      fireLatestTimer: () => { const live = timers.filter(timer => !timer.cleared); live.at(-1)?.fn(); },
+      setPayload: next => { payload = next; },
+      settle: () => remoteSettingsSaveQueue,
+      timers, sent
+    };
+  `)();
+  // 連點四位設計師：每次都會重新排程，只有最後一次的計時器還活著，而且等 15 秒。
+  for (const designer of ['Anna', 'Leona', 'Amber', 'Machi']) { settings.setPayload({ theme: 'dark', filters: { designer: [designer] } }); settings.save(); }
+  assert.equal(settings.timers.filter(timer => !timer.cleared).length, 1);
+  assert.equal(settings.timers.at(-1).ms, 15000);
+  settings.fireLatestTimer();
+  await settings.settle();
+  assert.equal(settings.sent.length, 1, '四次點擊只送出一次');
+  assert.deepEqual(settings.sent[0].filters.designer, ['Machi']);
+  // 內容跟上次成功送出的一樣：不送。
+  settings.save(); settings.fireLatestTimer(); await settings.settle();
+  assert.equal(settings.sent.length, 1);
+  // 真的改了、還沒等到 15 秒就切走頁面：立刻補送。
+  settings.setPayload({ theme: 'light', filters: { designer: ['Machi'] } });
+  settings.save(); settings.flush(); await settings.settle();
+  assert.equal(settings.sent.length, 2);
+  assert.equal(settings.sent[1].theme, 'light');
+
+  // 3) 歷史資料庫只在案件資料真的變了才重寫，不再因為主資料庫版本號加一就重寫。
+  const archiveGenerator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
+  assert.match(archiveGenerator, /const sourceChanged = previousSnapshot\?\.sources\?\.primaryDatabase\?\.rowsSha256 !== sourceRowsSha256;/);
+  assert.doesNotMatch(archiveGenerator, /primaryDatabase\?\.revision !== database\.revision/);
+
+  // Run the real short link index generator in a scratch copy of the repo layout.
+  const { mkdtemp, mkdir, writeFile, copyFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { execFile } = await import('node:child_process');
+  const run = (script) => new Promise((resolve, reject) => execFile(process.execPath, [script], (error, stdout, stderr) => error ? reject(new Error(stderr || error.message)) : resolve(stdout)));
+  const workdir = await mkdtemp(path.join(tmpdir(), 'short-link-index-'));
+  try {
+    await mkdir(path.join(workdir, 'scripts'), { recursive: true });
+    await mkdir(path.join(workdir, 'backend', 'data'), { recursive: true });
+    await mkdir(path.join(workdir, 'data'), { recursive: true });
+    const script = path.join(workdir, 'scripts', 'generate_short_link_index.mjs');
+    await copyFile(new URL('../../scripts/generate_short_link_index.mjs', import.meta.url), script);
+    const writeDb = (revision, url) => writeFile(path.join(workdir, 'backend', 'data', 'db.json'), JSON.stringify({
+      revision, updatedAt: `2026-09-15T00:00:0${revision}.000Z`,
+      tables: { '短連結': { rows: [{ '短碼': 'abc123', '原始網址': url }] }, '補充資料連結': { rows: [] } }
+    }));
+    const indexPath = path.join(workdir, 'data', 'short_link_index.json');
+    await writeDb(1, 'https://example.com/a');
+    await run(script);
+    const firstIndex = await readFile(indexPath, 'utf8');
+    await writeDb(2, 'https://example.com/a');
+    await run(script);
+    assert.equal(await readFile(indexPath, 'utf8'), firstIndex, '只有主資料庫版本號改變時，短網址索引要保持原檔不動');
+    await writeDb(3, 'https://example.com/b');
+    await run(script);
+    const updated = JSON.parse(await readFile(indexPath, 'utf8'));
+    assert.equal(updated.shortLinks.abc123, 'https://example.com/b', '短網址真的改變時照常更新');
+    assert.equal(updated.databaseRevision, 3);
+  } finally {
+    await rm(workdir, { recursive: true, force: true });
+  }
+});

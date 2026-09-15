@@ -2432,6 +2432,33 @@ describe('Machi Design API Worker', () => {
     expect(managerDelete).toMatchObject({ ok: true, id: '26080001' });
   });
 
+  it('does not commit to GitHub when saveUserSettings would leave the settings row exactly as it was', async () => {
+    const token = await login();
+    let commits = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input) === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
+        expect(init?.method).toBe('PUT');
+        commits += 1;
+        return Response.json({ content: { sha: `settings-file-${crypto.randomUUID()}` }, commit: { sha: 'settings-commit-sha' } });
+      }
+      throw new Error(`unexpected fetch: ${String(input)}`);
+    });
+
+    // 第一次是真的改了深淺模式，要提交。
+    const first = await api({ action: 'saveUserSettings', settings: { theme: 'dark', '深淺模式': '深色' } }, token);
+    expect(first).toMatchObject({ ok: true, action: 'saveUserSettings' });
+    expect(commits).toBe(1);
+
+    // 第二次送出一模一樣的設定：畫面照常拿到成功結果，但不可以再提交一次（每次提交都會觸發網站重新部署）。
+    const second = await api({ action: 'saveUserSettings', settings: { theme: 'dark', '深淺模式': '深色' } }, token);
+    expect(second).toMatchObject({ ok: true, action: 'saveUserSettings', unchanged: true });
+    expect(commits).toBe(1);
+
+    // 再改回淺色又是真的變動，照常提交。
+    await api({ action: 'saveUserSettings', settings: { theme: 'light', '深淺模式': '淺色' } }, token);
+    expect(commits).toBe(2);
+  });
+
   describe('new 客戶別 defaults', () => {
     /** 在「設定」表補一位人員，讓 newCustomerDefaults() 讀得到他的部門／組別。 */
     async function seedStaff(account: string, department: string, group: string, name = account): Promise<void> {
