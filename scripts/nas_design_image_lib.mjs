@@ -544,13 +544,14 @@ export function folderStateKey(caseId, index) {
 }
 
 /**
- * 依即時資料動態算出這次要處理的案件清單：狀態＝過稿中，且至少解析得出
- * 一個來源資料夾（見 resolveCaseFolders）。
+ * 依即時資料動態算出這次要處理的案件清單：狀態＝過稿中或修改中，且至少解析得出
+ * 一個來源資料夾（見 resolveCaseFolders）。修改中是有新修改需求時自動改成的狀態，
+ * 設計師這段期間放進 NAS 的修改圖一樣要自動追蹤，歸到新的那一輪。
  */
 export function discoverProjects(dbData) {
   const rows = dbData?.tables?.database?.rows || [];
   return rows
-    .filter(row => String(row['狀態'] || '') === '過稿中')
+    .filter(row => ['過稿中', '修改中'].includes(String(row['狀態'] || '')))
     .map(row => ({
       caseId: String(row['案件編號'] || ''),
       folders: resolveCaseFolders(row),

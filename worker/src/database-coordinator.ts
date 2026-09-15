@@ -2783,7 +2783,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);
-        return { result: { ok: true, action, rowNumber: rows.length + 1, record: row, count }, changedTables: ['修改統計表', 'database'] };
+        // 有新的修改需求（一修、二修…）時，案件狀態自動改成「修改中」，設計師回覆信寄出後會再改回過稿中。
+        // 初稿（上面的 draft 分支）不是修改需求，不會走到這裡。已經是修改中就不重複改；已取消的案件
+        // 不因為一筆修改紀錄就被救回來，維持原狀。
+        const caseRow = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+        const previousStatus = text(caseRow?.['狀態']);
+        const statusChanged = Boolean(caseRow) && !['修改中', '已取消'].includes(previousStatus);
+        if (caseRow && statusChanged) caseRow['狀態'] = '修改中';
+        return {
+          result: { ok: true, action, rowNumber: rows.length + 1, record: row, count, status: text(caseRow?.['狀態']), previousStatus, statusChanged },
+          changedTables: ['修改統計表', 'database']
+        };
       });
     }
     if (action === 'deleteModificationRecord') {

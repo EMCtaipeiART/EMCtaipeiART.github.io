@@ -7,7 +7,7 @@
  * 擷取一張畫面當紀錄圖），統一壓縮成小尺寸 JPEG 預覽圖。
  *
  * 案件清單完全動態產生：每次執行會先讀一次正式站的案件資料庫（dbJsonUrl），
- * 篩出「狀態＝過稿中」且「設計圖資料夾連結」欄位有值的案件，不需要在這支
+ * 篩出「狀態＝過稿中或修改中」且「設計圖資料夾連結」欄位有值的案件，不需要在這支
  * 程式的設定檔手動維護一份案件對照表。這個欄位的值來自設計師在網頁上用
  * nas_folder_picker_server.mjs（資料夾選擇器伺服器，另一支獨立的程式，見
  * README「用滑鼠選 NAS 資料夾」一節）選的路徑，或資料庫後台手動填入。
@@ -113,7 +113,7 @@ async function runScan(args, config, configDir, stateFile) {
   const projects = lib.discoverProjects(dbData);
 
   if (!projects.length) {
-    console.log('目前沒有任何案件符合條件（狀態＝過稿中，且已透過網頁彈出視窗填寫來源資料夾路徑），本次沒有要掃描的案件。');
+    console.log('目前沒有任何案件符合條件（狀態＝過稿中或修改中，且已透過網頁彈出視窗填寫來源資料夾路徑），本次沒有要掃描的案件。');
     return;
   }
 

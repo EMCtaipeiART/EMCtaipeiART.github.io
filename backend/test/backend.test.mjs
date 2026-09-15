@@ -3401,3 +3401,73 @@ test('修改中 is a first-class case status: its own colour in every theme, a K
   assert.equal(cells['#review'].textContent, 1);
   assert.equal(cells['#total'].textContent, 5, '總案件照舊不含已取消');
 });
+
+test('a new modification request automatically moves the case to 修改中, and the page updates the status straight away', async t => {
+  const app = await fixture();
+  t.after(() => app.close());
+  const login = await api(app.baseUrl, 'adminLogin', { password: 'secret' });
+  const created = await api(app.baseUrl, 'create', {
+    row: { client: '測試客戶', project: '修改中測試', owner: 'PM', designer: 'Machi', type: '平面', stage: '後製', qty: 1 },
+    editorToken: login.token
+  });
+  const caseId = created.row.id;
+  const statusOf = () => app.database.table('database').rows.find(row => String(row['案件編號']) === String(caseId))?.['狀態'];
+  const before = statusOf();
+
+  // 初稿不是修改需求，狀態不動。
+  const draftRecord = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/15', content: '初稿完成', modifier: 'Machi', draft: true }, editorToken: login.token
+  });
+  assert.equal(draftRecord.count, 0);
+  assert.equal(statusOf(), before);
+
+  // 一修進來就改成修改中，並回傳前台同步用的欄位。
+  const first = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/15', content: '一修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  assert.equal(first.status, '修改中');
+  assert.equal(first.statusChanged, true);
+  assert.equal(statusOf(), '修改中');
+
+  const second = await api(app.baseUrl, 'addModificationRecord', {
+    record: { caseId, modifyDate: '2026/09/15', content: '二修內容', modifier: 'Machi' }, editorToken: login.token
+  });
+  assert.equal(second.statusChanged, false, '已經是修改中就不重複改');
+
+  // 前台：兩個新增修改需求的入口寫入成功後都要同步狀態。
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const submit = html.match(/async function submitModificationRecord\(event\)\{[^\n]*/)?.[0];
+  assert.ok(submit, 'could not locate submitModificationRecord');
+  assert.match(submit, /modifier:finalModifier\}:item\)\); applyModificationStatusChange\(id,data\);/);
+  const fromReply = html.match(/async function recordModificationFromReply\([\s\S]*?\n\}/)?.[0];
+  assert.ok(fromReply, 'could not locate recordModificationFromReply');
+  assert.match(fromReply, /applyModificationStatusChange\(id,data\);\s*\n\s*render\(\);/);
+  // 初稿入口不需要同步狀態。
+  const draftCall = html.match(/await sheetApi\('addModificationRecord',\{record,draft:true[^\n]*\n[^\n]*/)?.[0];
+  assert.ok(draftCall && !draftCall.includes('applyModificationStatusChange'));
+
+  // Run the real applyModificationStatusChange against a fake case list.
+  const helper = html.match(/function applyModificationStatusChange\(id,data\)\{[^\n]*/)?.[0];
+  assert.ok(helper, 'could not locate applyModificationStatusChange');
+  const run = (list, data) => new Function('list', 'data', `
+    let rows = list;
+    const written = [];
+    let saved = 0;
+    const normalizeRow = row => ({ ...row });
+    const rememberLocalWrite = (id, changes) => written.push([id, changes]);
+    const save = () => { saved += 1; };
+    ${helper}
+    const changed = applyModificationStatusChange('26090101', data);
+    return { changed, rows, written, saved };
+  `)(list, data);
+  const list = [{ id: '26090101', status: '過稿中' }, { id: '26090102', status: '過稿中' }];
+  const applied = run(list, { statusChanged: true, status: '修改中' });
+  assert.equal(applied.changed, true);
+  assert.deepEqual(applied.rows.map(row => row.status), ['修改中', '過稿中'], '只改這一筆案件');
+  assert.deepEqual(applied.written, [['26090101', { status: '修改中' }]]);
+  assert.equal(applied.saved, 1);
+  const untouched = run(list, { statusChanged: false, status: '修改中' });
+  assert.equal(untouched.changed, false);
+  assert.deepEqual(untouched.rows.map(row => row.status), ['過稿中', '過稿中']);
+  assert.equal(untouched.written.length, 0);
+});

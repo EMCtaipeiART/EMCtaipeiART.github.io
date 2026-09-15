@@ -1311,6 +1311,46 @@ describe('Machi Design API Worker', () => {
     expect(String(missing.error)).toMatch(/找不到指定的修改紀錄/);
   });
 
+  it('moves a case to 修改中 when a new modification request comes in, but not for a 初稿 and never revives a cancelled case', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: `status-file-${crypto.randomUUID()}` }, commit: { sha: 'status-commit-sha' } });
+    });
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const statusOf = () => runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return (JSON.parse(stored.json) as DatabaseSnapshot).tables.database.rows.find(row => row['案件編號'] === '26080001')?.['狀態'];
+    });
+    const setStatus = (status: string) => runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.find(row => row['案件編號'] === '26080001')!['狀態'] = status;
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    // 初稿不是修改需求，狀態不動。
+    await setStatus('過稿中');
+    const draftRecord = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '初稿完成', draft: true } }, token);
+    expect(draftRecord).toMatchObject({ ok: true, count: 0 });
+    expect(await statusOf()).toBe('過稿中');
+
+    // 一修進來：過稿中 → 修改中，並回傳給前台同步畫面用的欄位。
+    const first = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '一修內容' } }, token);
+    expect(first).toMatchObject({ ok: true, count: 1, status: '修改中', previousStatus: '過稿中', statusChanged: true });
+    expect(await statusOf()).toBe('修改中');
+
+    // 已經是修改中：不重複改，statusChanged 為 false。
+    const second = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '二修內容' } }, token);
+    expect(second).toMatchObject({ ok: true, count: 2, status: '修改中', statusChanged: false });
+
+    // 已取消的案件不會因為一筆修改紀錄被救回來。
+    await setStatus('已取消');
+    const cancelled = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '三修內容' } }, token);
+    expect(cancelled).toMatchObject({ ok: true, count: 3, status: '已取消', statusChanged: false });
+    expect(await statusOf()).toBe('已取消');
+  });
+
   it('recalculates the database row 修改次數 whenever a modification round is added, but only reduces it on an explicit admin delete', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

@@ -192,7 +192,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 12:10 Asia/Taipei（最新）— 案件列表新增「修改中」狀態：專屬橘色系配色＋上方第六個狀態矩形框
+### 2026-09-15 13:40 Asia/Taipei（最新）— 有新的修改需求時，案件狀態自動改為「修改中」
+
+- 修改目的：使用者指定「現在有修改的新需求時，請將該專案狀態自動更改為『修改中』」。
+- 影響檔案：`worker/src/database-coordinator.ts`、`backend/app.mjs`、`index.html`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：
+  1. **後端自動改狀態**：`addModificationRecord` 建立新的一輪修改紀錄（一修、二修…）時，在同一次寫入裡把案件的「狀態」改成「修改中」，並回傳 `status`、`previousStatus`、`statusChanged`。Worker 與測試用後端 `backend/app.mjs` 同一套規則。
+  2. **不改的情況**：建立初稿（`draft:true`）不是修改需求，狀態不動；案件已經是修改中時不重複改；**已取消的案件不會因為一筆修改紀錄被救回來**，維持已取消。
+  3. **前台立即同步**：新增 `applyModificationStatusChange()`。「新增修改紀錄」表單（`submitModificationRecord`）與「填寫修改需求信」（`recordModificationFromReply`，含排程寄出的修改需求信）寫入成功後，依回傳的 `statusChanged` 更新本機案件資料並 `rememberLocalWrite`，狀態欄與上方「修改中」矩形框馬上更新，不會被背景同步的舊資料蓋回去。
+  4. **狀態循環**：過稿中 →（新修改需求）修改中 →（設計師回覆信寄出，既有邏輯）過稿中。
+  5. **NAS 自動備份一起調整**：`discoverProjects` 原本只挑「過稿中」的案件。狀態自動改成修改中之後，設計師在修改期間放進 NAS 的新圖會完全不被追蹤，所以改成過稿中或修改中都追蹤；新圖照既有規則歸到新的那一輪。監控程式的提示文字同步更新。
+- 風險區塊：
+  - 只有「新增修改紀錄」這個動作會自動改狀態；後台直接改資料表、NAS 自動建立的初稿都不會。
+  - 時間戳記欄位（狀態更改時間、以狀態命名的欄位）只存在於問題回報表，案件表沒有，所以只改「狀態」一欄。
+  - NAS 程式在辦公室 Mac 本機執行，監控程式由 crontab 每分鐘重新啟動，會自動讀到新版；資料夾選擇器不使用 `discoverProjects`，不需要重啟。
+  - 設計師進行中案件數（`designerActiveCount`）與設計儀表板仍然不含修改中，這次沒有動。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **72/72 全過**（71 既有＋1 新增）。新增測試：過稿中的案件建立初稿後狀態不變；一修進來改成修改中並回傳 `previousStatus: 過稿中`、`statusChanged: true`；二修時已是修改中不重複改；已取消的案件新增修改紀錄後仍是已取消。
+  - `node --test backend/test/*.test.mjs` **99/99 全過**（97 既有＋2 新增）。新增測試：測試用後端一樣會改成修改中、初稿不改、不重複改；鎖住前台兩個入口都會呼叫同步函式、初稿入口不會；實際執行 `applyModificationStatusChange` 驗證只改該筆案件、會寫入本機防覆蓋紀錄、`statusChanged` 為 false 時完全不動；NAS 挑選案件時過稿中與修改中都會被選到，執行中、已完成、未開始不會。
+  - 先用 `git stash` 只還原四個程式檔，確認新測試在舊程式碼上真的失敗，`git stash pop` 後全部恢復。
+  - **未做的驗證**：沒有在瀏覽器實際操作新增修改需求（前台改動只有寫入成功後呼叫同步函式，已由測試實際執行該函式）；沒有在正式站操作（這個環境沒有正式站登入）。
+- 部署狀態：`index.html` git push 後自動生效；**`worker/` 需要 `cd worker && npx wrangler deploy`**；NAS 程式在辦公室 Mac 上直接生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 12:10 Asia/Taipei — 案件列表新增「修改中」狀態：專屬橘色系配色＋上方第六個狀態矩形框
 
 - 修改目的：使用者指定「案件列表新增狀態『修改中』，請加入一組配色符合其他狀態的色調一致性，並在案件列表上方的五個狀態欄位多增加一個『修改中』的矩形框，一樣點選可以快速篩選該狀態」。
 - 影響檔案：`index.html`、`json_database_admin.html`、`backend/test/backend.test.mjs`。

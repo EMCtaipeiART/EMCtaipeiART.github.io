@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
   changedFileRoundState,
+  discoverProjects,
   createCaseDesignUploadDedupeKey,
   uploadPendingRound,
   uploadRound
@@ -391,4 +392,17 @@ test('a round whose images reached the database stays sealed even after its uplo
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('the NAS watcher keeps tracking a case while it is 修改中, not only while it is 過稿中', () => {
+  // 有新修改需求時案件會自動改成修改中；設計師在這段期間放進 NAS 的修改圖一樣要被自動追蹤。
+  const row = (id, status) => ({ '案件編號': id, '狀態': status, '設計圖資料夾連結': `專案企劃部/執行中/${id}`, '設計負責人': 'Machi', '客戶別': 'DJI', '開始日期': '2026/09/15' });
+  const dbData = { tables: { database: { rows: [
+    row('26090001', '過稿中'),
+    row('26090002', '修改中'),
+    row('26090003', '執行中'),
+    row('26090004', '已完成'),
+    row('26090005', '未開始')
+  ] } } };
+  assert.deepEqual(discoverProjects(dbData).map(project => project.caseId), ['26090001', '26090002']);
 });

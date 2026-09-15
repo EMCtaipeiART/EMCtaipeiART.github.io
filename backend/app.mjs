@@ -1157,7 +1157,13 @@ export function createActionHandler(database, options = {}) {
         }
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '' };
-        rows.push(row); return { ok: true, action, rowNumber: rows.length + 1, record: row, count };
+        rows.push(row);
+        // 跟 Worker 同一套規則：新的修改需求把案件狀態改成「修改中」；已經是修改中或已取消的案件不動。
+        const caseRow = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+        const previousStatus = text(caseRow?.['狀態']);
+        const statusChanged = Boolean(caseRow) && !['修改中', '已取消'].includes(previousStatus);
+        if (caseRow && statusChanged) caseRow['狀態'] = '修改中';
+        return { ok: true, action, rowNumber: rows.length + 1, record: row, count, status: text(caseRow?.['狀態']), previousStatus, statusChanged };
       }, 'add modification');
     }
     if (action === 'adminWeightScopeSave' || action === 'adminWeightScopeDelete') {
