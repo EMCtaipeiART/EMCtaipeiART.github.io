@@ -192,7 +192,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 15:20 Asia/Taipei（最新）— 設計師頭像紅綠燈改算「未開始＋執行中＋修改中」，五筆以上顯示忙碌
+### 2026-09-15 15:35 Asia/Taipei（最新）— 設計師頭像紅綠燈門檻改回 6 筆才算忙碌
+
+- 修改目的：使用者確認「6 筆才算忙碌」，修正上一筆以「五筆以上」解讀成 5 筆忙碌的結果。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：`DESIGNER_BUSY_THRESHOLD` 由 5 改為 6（判斷式維持 `count>=DESIGNER_BUSY_THRESHOLD`），未開始＋執行中＋修改中合計 6 筆以上為忙碌、5 筆以下為普通；燈號提示自動顯示「6 筆以上為忙碌」。計入的狀態不變。
+- 風險區塊：無新增；門檻與修改中計入前的原始行為（`count>5`）一致。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 全過；測試改為驗證 4 筆、5 筆普通，6 筆忙碌；`git stash` 只還原 `index.html` 時新斷言失敗。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 15:20 Asia/Taipei — 設計師頭像紅綠燈改算「未開始＋執行中＋修改中」，五筆以上顯示忙碌
 
 - 修改目的：使用者指定「設計師專長與案件分配」頭像右下角紅綠燈，判斷標準從未開始＋執行中改為「未開始＋執行中＋修改中」案件加總，超過五筆以上顯示忙碌。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

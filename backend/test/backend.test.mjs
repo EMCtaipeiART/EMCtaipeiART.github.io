@@ -3594,7 +3594,7 @@ test('page load downloads the database once, UI preference saves are batched and
   }
 });
 
-test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases and turns busy at five', async () => {
+test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases and turns busy at six', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const block = html.match(/const DESIGNER_ACTIVE_STATUSES=[\s\S]*?function computedDesignerStatus\([^\n]*/)?.[0];
   assert.ok(block, 'could not locate the designer busy helpers');
@@ -3605,13 +3605,16 @@ test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases 
     ...caseRows('Anna', ['未開始', '執行中', '修改中', '修改中']),
     ...caseRows('Anna', ['過稿中', '已完成', '已取消', '暫停中']),
     ...caseRows('Leona', ['未開始', '執行中', '執行中', '修改中', '修改中']),
+    ...caseRows('Noise', ['未開始', '未開始', '執行中', '執行中', '修改中', '修改中']),
     ...caseRows('Amber', ['修改中'])
   ];
   const { designerActiveCount, computedDesignerStatus } = make(rows);
   assert.equal(designerActiveCount('Anna'), 4, '修改中要算進去，過稿中、已完成、已取消、暫停中不算');
-  assert.equal(computedDesignerStatus('Anna'), '普通', '四筆還不算忙碌');
+  assert.equal(computedDesignerStatus('Anna'), '普通', '四筆不算忙碌');
   assert.equal(designerActiveCount('Leona'), 5);
-  assert.equal(computedDesignerStatus('Leona'), '忙碌', '合計五筆就顯示忙碌');
+  assert.equal(computedDesignerStatus('Leona'), '普通', '五筆還不算忙碌');
+  assert.equal(designerActiveCount('Noise'), 6);
+  assert.equal(computedDesignerStatus('Noise'), '忙碌', '合計六筆才顯示忙碌');
   assert.equal(designerActiveCount('Amber'), 1);
   assert.equal(computedDesignerStatus('Karl'), '普通');
   assert.match(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆（\$\{DESIGNER_BUSY_THRESHOLD\} 筆以上為忙碌）"/);
