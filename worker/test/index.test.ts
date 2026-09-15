@@ -1415,6 +1415,67 @@ describe('Machi Design API Worker', () => {
     expect(unfiltered.total).toBe(2);
   });
 
+  it('backs up photos uploaded inside a designer reply into the reply round of 修改紀錄 via the Apps Script case design uploader', async () => {
+    const token = await login();
+    const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    let sent: Record<string, unknown> | null = null;
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      expect(String(input)).toBe('https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec');
+      sent = JSON.parse(String(init?.body));
+      return Response.json({ success: true, count: 2, imageUrls: ['https://lh3.googleusercontent.com/d/a', 'https://lh3.googleusercontent.com/d/b'], jsonRevision: 9 });
+    });
+
+    const result = await api({
+      action: 'backupReplyInlineImages',
+      caseId: '26080001',
+      round: 1,
+      images: [
+        { fileName: 'fix-1.png', mimeType: 'image/png', base64: `data:image/png;base64,${tinyPng}` },
+        { fileName: 'fix-2.png', mimeType: 'image/png', base64: tinyPng },
+        { fileName: 'notes.pdf', mimeType: 'application/pdf', base64: 'JVBERi0x' }
+      ]
+    }, token);
+
+    expect(result).toMatchObject({ ok: true, action: 'backupReplyInlineImages', caseId: '26080001', round: 1, count: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = sent as unknown as Record<string, unknown>;
+    // 走 Apps Script 既有的 NAS 上傳入口與服務金鑰，來源標成信件照片備份（不套用 NAS 檔名鎖）。
+    expect(body).toMatchObject({ action: 'uploadCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 1, source: 'mail-inline-upload' });
+    const images = body.images as Record<string, string>[];
+    // 非圖片的附件不備份；data URL 前綴會被拿掉。
+    expect(images.map(image => image.fileName)).toEqual(['fix-1.png', 'fix-2.png']);
+    expect(images.every(image => image.base64 === tinyPng)).toBe(true);
+    // 同內容的照片得到同一把防重鍵，Apps Script 會找到同一個 Drive 檔案、修改紀錄不會重複。
+    expect(images[0].dedupeKey).toMatch(/^[a-f0-9]{64}$/);
+    expect(images[1].dedupeKey).toBe(images[0].dedupeKey);
+
+    // 沒有圖片就不呼叫 Apps Script。
+    const empty = await api({ action: 'backupReplyInlineImages', caseId: '26080001', round: 1, images: [] }, token);
+    expect(empty).toMatchObject({ ok: true, count: 0 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // 沒登入不能備份。
+    const denied = await api({ action: 'backupReplyInlineImages', caseId: '26080001', round: 1, images: [{ fileName: 'a.png', mimeType: 'image/png', base64: tinyPng }] });
+    expect(denied).toMatchObject({ ok: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('labels a round created by a mail photo backup as such instead of as a NAS auto-sync', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'mail-photo-file-sha' }, commit: { sha: 'mail-photo-commit-sha' } }));
+    const result = await api({
+      action: 'addCaseDesignImages',
+      serviceKey: 'test-nas-watcher-key',
+      caseId: '26080001',
+      round: 0,
+      images: [{ fileName: 'fix.jpg', url: 'https://lh3.googleusercontent.com/d/mail-photo' }],
+      source: 'mail-inline-upload'
+    });
+    expect(result).toMatchObject({ ok: true, round: 0 });
+    expect((result.record as Record<string, unknown>)['修改內容']).toBe('初稿完成（信件照片備份）');
+    expect((result.record as Record<string, unknown>)['修改人']).toBe('信件照片備份');
+    expect((result.record as Record<string, unknown>)['圖片來源']).toBe('mail-inline-upload');
+  });
+
   it('backs up the database table to the spreadsheet by matching column names only, and rejects when the secret is missing', async () => {
     const token = await login();
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {

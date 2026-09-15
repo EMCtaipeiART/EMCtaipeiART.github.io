@@ -2485,6 +2485,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         this.requireAccess(database, session, 'database.manage');
         return await this.backupDatabaseToSheet(database);
       }
+      if (action === 'backupReplyInlineImages') {
+        this.requireAccess(database, session, 'media.manage');
+        // 刻意不包在 mutate() 裡：Apps Script 存完 Drive 之後會回頭呼叫本 Worker 的 addCaseDesignImages 寫入
+        // 修改紀錄，那一步才需要序列化鎖；這裡如果先拿著鎖等 Apps Script，回呼會永遠排不到而卡死。
+        return await this.backupReplyInlineImages(payload, database);
+      }
 
       return await this.handleWriteAction(action, payload, context, database, session, baseUrl);
     } catch (error) {
@@ -2552,6 +2558,71 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       sheetName: result.sheetName || 'database', updatedAt: result.updatedAt || new Date().toISOString(),
       revision: database.revision
     };
+  }
+
+  /** 設計師回覆信裡用編輯器「上傳照片」加入的照片（NAS 路徑出問題時的替代做法）備份進修改紀錄。
+   * 前端送來 base64，這裡轉給 Apps Script 既有的 uploadCaseDesignImages（跟 NAS 監控程式同一個入口、同一組
+   * NAS_WATCHER_API_KEY），存進跟電腦上傳相同的 Drive 資料夾（設計師／客戶別／年度／月份／案件編號），再由
+   * Apps Script 呼叫 addCaseDesignImages 寫入指定輪次。每張照片附上內容的 SHA-256 當防重鍵：同一張照片
+   * 重送（例如排程後又直接寄出）會找到同一個 Drive 檔案、同一個網址，修改紀錄不會出現重複圖片。 */
+  private async backupReplyInlineImages(payload: ApiPayload, database: DatabaseSnapshot): Promise<ApiResult> {
+    const action = 'backupReplyInlineImages';
+    const caseId = text(payload.caseId || payload.id);
+    const round = Math.trunc(Number(payload.round));
+    if (!caseId) throw new Error('缺少案件編號');
+    if (!Number.isFinite(round) || round < 0) throw new Error('缺少修改輪次（0=初稿）');
+    const caseRow = database.tables.database.rows.find(row => text(row['案件編號']) === caseId);
+    if (!caseRow) throw new Error('找不到案件');
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    const images = (Array.isArray(payload.images) ? payload.images : [])
+      .map(item => asRow(item))
+      .map(item => ({
+        fileName: text(item.fileName) || '照片',
+        mimeType: text(item.mimeType).toLowerCase(),
+        base64: text(item.base64).replace(/^data:[^,]*,/, '').replace(/\s+/g, '')
+      }))
+      .filter(item => allowedTypes.has(item.mimeType) && item.base64);
+    if (!images.length) return { ok: true, action, caseId, round, count: 0, imageUrls: [] };
+    if (images.length > 20) throw new Error('一次最多備份 20 張照片');
+    const scriptUrl = text(this.env.UPLOAD_APPS_SCRIPT_URL);
+    const serviceKey = text(this.env.NAS_WATCHER_API_KEY);
+    if (!scriptUrl || !serviceKey) throw new Error('尚未設定設計圖備份服務（UPLOAD_APPS_SCRIPT_URL／NAS_WATCHER_API_KEY）');
+    const withDedupeKeys = await Promise.all(images.map(async image => {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(image.base64));
+      const dedupeKey = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+      return { ...image, dedupeKey };
+    }));
+    const startMatch = text(caseRow['開始日期']).match(/(\d{4})\D+(\d{1,2})/);
+    let response: Response;
+    try {
+      response = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'uploadCaseDesignImages',
+          serviceKey,
+          caseId,
+          round,
+          designer: text(caseRow['設計負責人']),
+          client: text(caseRow['客戶別']),
+          year: startMatch ? startMatch[1] : '',
+          month: startMatch ? startMatch[2].padStart(2, '0') : '',
+          images: withDedupeKeys,
+          source: 'mail-inline-upload'
+        })
+      });
+    } catch (error) {
+      throw new Error('無法連線設計圖備份服務：' + String((error as { message?: string })?.message || error));
+    }
+    let result: { success?: boolean; message?: string; count?: number; imageUrls?: string[]; jsonRevision?: number };
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error('設計圖備份服務回應格式錯誤');
+    }
+    if (!response.ok || !result.success) throw new Error(result.message || `設計圖備份失敗（HTTP ${response.status}）`);
+    const imageUrls = Array.isArray(result.imageUrls) ? result.imageUrls : [];
+    return { ok: true, action, caseId, round, count: Number(result.count) || imageUrls.length, imageUrls, jsonRevision: Number(result.jsonRevision) || 0 };
   }
 
   private async handleWriteAction(
@@ -2865,8 +2936,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             '修改次數': String(roundNumber),
             '建立日期': now,
             '修改日期': roundNumber === 0 ? now : '',
-            '修改內容': roundNumber === 0 ? (serviceAuthorized ? '初稿完成（NAS 自動建立）' : '初稿完成') : '',
-            '修改人': serviceAuthorized ? 'NAS 自動同步' : text(session?.user || '系統'),
+            '修改內容': roundNumber === 0 ? (source === 'nas-watcher' ? '初稿完成（NAS 自動建立）' : (source === 'mail-inline-upload' ? '初稿完成（信件照片備份）' : '初稿完成')) : '',
+            '修改人': source === 'nas-watcher' ? 'NAS 自動同步' : (source === 'mail-inline-upload' ? '信件照片備份' : text(session?.user || '系統')),
             // 第 0 輪（初稿）本身就代表「已完成」，不是一筆待處理的修改請求，
             // 直接標記確認修正日，避免被現有的「待確認修改」通知邏輯誤判成
             // 一筆還沒處理的修改需求。真正的修改請求（第 1 輪以後）維持空白，

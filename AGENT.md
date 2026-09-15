@@ -192,7 +192,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 16:40 Asia/Taipei（最新）— 修正手機版案件資料按鈕等寬沒有生效（被後段 760px 規則覆蓋）
+### 2026-09-15 17:20 Asia/Taipei（最新）— 設計師回覆信用編輯器「上傳照片」加入的照片，寄出／排程時備份至修改紀錄
+
+- 修改目的：使用者回報設計師回信時，NAS 路徑出問題就改用編輯器工具列的「上傳照片」按鈕，但這些照片只變成信件內嵌圖片，沒有記錄在修改紀錄的圖片備份裡；要求把上傳的圖片也備份進修改紀錄。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **前台** 新增 `backupDesignerReplyInlineImages(id,round,inlineImages)`：只取工具列上傳（`gmailInlineImageStore` 追蹤、有 base64）的圖片，呼叫 Worker `backupReplyInlineImages`，成功後重讀修改紀錄並刷新列表／修改紀錄彈窗／案件詳情，回傳接在成功訊息後的文字（「信件中的 N 張照片已備份至一修修改紀錄」）。備份失敗只在訊息中提醒，不影響已寄出的信。
+  2. `sendGmailThreadReply`：寄出前先記下 `designerReplyRound`（寄出後彈窗會清空），設計師回覆信分支在確認輪次、改過稿中之後呼叫備份。`scheduleThreadReply`：設計師回覆信建立排程成功時同樣立即備份（照片內容在排程當下已確定，與確認輪次一致）。一般回信、填寫修改需求信不備份。
+  3. **Worker** 新增 `backupReplyInlineImages`（需 media.manage）：過濾 jpeg/png/webp/gif、去掉 data URL 前綴，最多 20 張；每張以 base64 內容的 SHA-256 當 `dedupeKey`；以 `NAS_WATCHER_API_KEY` 呼叫 Apps Script 既有 `uploadCaseDesignImages`，資料夾與電腦上傳相同（設計負責人／客戶別／開始日期的年度與月份／案件編號），`source:'mail-inline-upload'`。Apps Script 存 Drive 後回呼 `addCaseDesignImages` 寫入指定輪次。刻意不包在 `mutate()` 內，避免持有序列化鎖時等待 Apps Script 回呼造成卡死。
+  4. `addCaseDesignImages` 新建輪次時的標示改依來源：只有 `nas-watcher` 寫「初稿完成（NAS 自動建立）／NAS 自動同步」，信件照片備份寫「初稿完成（信件照片備份）／信件照片備份」。
+- 風險區塊：
+  - 同一張照片重送（例如排程後又直接寄出）靠 dedupeKey 找到同一個 Drive 檔案、同一網址，修改紀錄以網址去重，不會重複。
+  - Apps Script 不需要重新部署（沿用既有 doPost `uploadCaseDesignImages` 與服務金鑰）；單張上限仍是 Apps Script 的 10 MB，前台內嵌照片上限 8 MB／合計 18 MB。
+  - 設計師回覆信自動帶入的 NAS／電腦上傳縮圖是 Drive 網址、不在內嵌圖片清單，不會被重複備份。
+  - 使用者勾選「信件編輯不同步圖片」後又手動用上傳照片加圖，那些照片一樣會備份。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯；`npx vitest run` **75/75 全過**（73 既有＋2 新增：模擬 Apps Script 驗證送出的動作、NAS 服務金鑰、來源、非圖片被略過、data URL 前綴移除、同內容同防重鍵、無圖片不呼叫、未登入被擋；以服務金鑰＋mail-inline-upload 建立初稿輪次時的標示）。
+  - `node --test backend/test/*.test.mjs` **104/104 全過**（103 既有＋1 新增：實際執行備份函式驗證送出欄位、輪次、空內容略過、無圖片或無輪次不呼叫、成功訊息、失敗只回傳提醒；鎖住寄出與排程兩條路徑的設計師分支都呼叫、一般回信不呼叫、寄出前先記下輪次）。
+  - 抽出 index.html 內嵌腳本 `node --check` 語法無誤。
+  - `git stash` 只還原 `index.html` 與 `worker/src/database-coordinator.ts`，前台新測試與兩支 Worker 新測試都失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際寄出含上傳照片的設計師回覆信（這個環境沒有正式站登入與 Gmail 授權），Apps Script → Drive → 回呼寫入這段只以模擬驗證。
+- 部署狀態：`index.html` git push 後生效；Worker 已 `npx wrangler deploy`；Apps Script 不需重新部署。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 16:40 Asia/Taipei— 修正手機版案件資料按鈕等寬沒有生效（被後段 760px 規則覆蓋）
 
 - 修改目的：使用者回報手機瀏覽「案件資料」彈窗，底部回信／編輯／刪除／關閉四顆按鈕寬度不平均，要求平均分佈。上一筆（16:20）已加入 `.row-actions{display:contents}`，但實際在瀏覽器量測沒有生效。
 - 原因：同一個 `max-width:760px` 條件下，檔案更後面還有一段手機版規則把 `#caseDetailModal .case-detail-actions .row-actions` 設為 `display:flex; flex:1 1 0`，內層按鈕設為 `width:100%`。後出現的規則優先，包裝層重新佔一格，編輯與刪除擠在同一格平分。390px 寬實測四顆為 114／45／45／114px。

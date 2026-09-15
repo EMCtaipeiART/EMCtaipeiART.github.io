@@ -10315,15 +10315,18 @@ async function scheduleThreadReply(scheduledAt){
     setSync('排程建立中...');
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
     await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,scheduledAt,editorToken:currentEditorToken});
+    let inlineImageBackupNotice='';
     if(replyMode==='designer'){
-      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row)}
+      // 照片內容在建立排程當下就已經確定，跟確認輪次一樣現在就備份，不用等排程真正寄出。
+      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,modal?.dataset.designerReplyRound,editorPayload.inlineImages)}
     }else if(replyMode==='modification'&&row){
       await recordModificationFromReply(id,row,modificationContent);
     }else if(replyMode==='general'&&row){
       await applyReplyStatusUpdate(id,row);
     }
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
-    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}${detailsNotice}`,Boolean(detailsNotice),detailsNotice?5200:3400);
+    const backupFailed=inlineImageBackupNotice.includes('失敗');
+    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}${inlineImageBackupNotice}${detailsNotice}`,Boolean(detailsNotice)||backupFailed,detailsNotice||backupFailed?5200:3400);
     refreshScheduledMailList(id,'thread');
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
@@ -12296,6 +12299,27 @@ async function applyReplyStatusUpdate(id,row){
 function missingDetailsNotice(row){
   return row&&!String(row.details||'').trim()?'；此案件「項目細節」尚未填寫，請盡快補上（影響加權計分）':'';
 }
+/** 設計師回覆信裡，用編輯器工具列「上傳照片」加入的照片（NAS 路徑出問題時的替代做法）原本只會變成信件內嵌圖片，
+ * 不會進修改紀錄。寄出（或建立排程）成功後把這些照片交給 Worker，由它轉給 Apps Script 存進案件的 Drive 資料夾，
+ * 寫入這封信所屬的那一輪修改紀錄——跟 NAS 備份、電腦上傳的設計圖放在同一個位置。同一張照片重送時以內容雜湊
+ * 去重，不會重複備份。回傳要接在成功訊息後面的提醒文字：備份失敗只提醒，不影響已經寄出的信件。 */
+async function backupDesignerReplyInlineImages(id,round,inlineImages){
+  const images=(Array.isArray(inlineImages)?inlineImages:[])
+    .filter(item=>item&&item.base64&&/^image\//.test(String(item.mimeType||'')))
+    .map(item=>({fileName:item.fileName||'照片',mimeType:item.mimeType,base64:item.base64}));
+  if(!images.length||round===null||round===undefined||round==='')return '';
+  try{
+    const data=await sheetApi('backupReplyInlineImages',{caseId:id,round:Math.max(0,Number(round)||0),images,editorToken:currentEditorToken,_requireResponse:true});
+    try{await fetchModificationCounts()}catch(err){}
+    render();
+    refreshOpenRevisionModal(id);
+    refreshOpenCaseDetail(id);
+    const count=Number(data?.count)||images.length;
+    return `；信件中的 ${count} 張照片已備份至${modificationLabel(Math.max(0,Number(round)||0))}修改紀錄`;
+  }catch(err){
+    return `；但信件照片備份至修改紀錄失敗：${err.message}`;
+  }
+}
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
   if(!id||!editor)return;
@@ -12315,6 +12339,8 @@ async function sendGmailThreadReply(){
     if(!to){setSync('請填寫收件人',true);return}
     setSync('回覆寄送中...');
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
+    // 輪次要在寄出前先記下：寄出後下面會把彈窗的 designerReplyRound 清空。
+    const designerReplyRound=replyMode==='designer'?modal?.dataset.designerReplyRound:'';
     await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,editorToken:currentEditorToken});
     editor.innerHTML='';
     const list=$('#gmailThreadModalList');
@@ -12323,7 +12349,8 @@ async function sendGmailThreadReply(){
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
     if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent);
-    else if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row)}
+    let inlineImageBackupNotice='';
+    if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,designerReplyRound,editorPayload.inlineImages)}
     else if(replyMode==='general'&&row)await applyReplyStatusUpdate(id,row);
     if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''; modal.dataset.designerReplyRound=''}
     const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
@@ -12331,7 +12358,8 @@ async function sendGmailThreadReply(){
     // 繼續看討論串來回內容，寄出成功後直接把彈窗收回，不需要使用者自己再手動關閉。
     if(replyMode==='designer')closeGmailThreadModal();
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
-    setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${detailsNotice}`,Boolean(detailsNotice),detailsNotice?5200:2600);
+    const backupFailed=inlineImageBackupNotice.includes('失敗');
+    setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${inlineImageBackupNotice}${detailsNotice}`,Boolean(detailsNotice)||backupFailed,detailsNotice||backupFailed?5200:(inlineImageBackupNotice?3600:2600));
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
   }finally{

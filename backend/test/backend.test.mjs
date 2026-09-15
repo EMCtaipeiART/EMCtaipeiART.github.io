@@ -3713,3 +3713,59 @@ test('mobile case detail actions distribute every visible button at equal width'
   assert.equal(buttonWidthRules.at(-1), 'width:auto!important', '最後生效的內層按鈕寬度必須是 auto');
   assert.doesNotMatch(html, /#caseDetailModal \.case-detail-actions \.row-actions\{display:flex/);
 });
+
+test('designer reply backs up photos added with the editor upload button into the reply round of 修改紀錄 on send and on schedule', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const backupFn = html.match(/async function backupDesignerReplyInlineImages\(id,round,inlineImages\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(backupFn, 'could not locate backupDesignerReplyInlineImages');
+
+  const make = (sheetApi) => {
+    const calls = { refresh: 0 };
+    const fn = new Function('ctx', `
+      const { sheetApi, calls } = ctx;
+      const currentEditorToken = 'token';
+      const fetchModificationCounts = async () => { calls.refresh += 1; };
+      const render = () => {}, refreshOpenRevisionModal = () => {}, refreshOpenCaseDetail = () => {};
+      const modificationLabel = round => (round === 0 ? '初稿' : ['','一修','二修','三修'][round] || round + '修');
+      ${backupFn}
+      return backupDesignerReplyInlineImages;
+    `)({ sheetApi, calls });
+    return { fn, calls };
+  };
+
+  const requests = [];
+  const ok = make(async (action, payload) => { requests.push({ action, payload }); return { ok: true, count: 2 }; });
+  const notice = await ok.fn('26090107', '1', [
+    { contentId: 'a', fileName: 'fix-1.jpg', mimeType: 'image/jpeg', base64: 'AAAA' },
+    { contentId: 'b', fileName: 'fix-2.png', mimeType: 'image/png', base64: 'BBBB' },
+    { contentId: 'c', fileName: 'broken', mimeType: 'image/png', base64: '' }
+  ]);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].action, 'backupReplyInlineImages');
+  assert.deepEqual(requests[0].payload.images, [
+    { fileName: 'fix-1.jpg', mimeType: 'image/jpeg', base64: 'AAAA' },
+    { fileName: 'fix-2.png', mimeType: 'image/png', base64: 'BBBB' }
+  ], '只送圖片本身需要的欄位，空內容略過');
+  assert.equal(requests[0].payload.caseId, '26090107');
+  assert.equal(requests[0].payload.round, 1);
+  assert.equal(ok.calls.refresh, 1, '備份後重新讀取修改紀錄');
+  assert.equal(notice, '；信件中的 2 張照片已備份至一修修改紀錄');
+
+  assert.equal(await ok.fn('26090107', '1', []), '', '沒有用上傳照片就不呼叫');
+  assert.equal(await ok.fn('26090107', '', [{ fileName: 'x.jpg', mimeType: 'image/jpeg', base64: 'AAAA' }]), '', '不知道輪次時不猜');
+  assert.equal(requests.length, 1);
+
+  const failing = make(async () => { throw new Error('服務金鑰不正確'); });
+  assert.equal(await failing.fn('26090107', 0, [{ fileName: 'x.jpg', mimeType: 'image/jpeg', base64: 'AAAA' }]), '；但信件照片備份至修改紀錄失敗：服務金鑰不正確', '備份失敗只提醒，不丟出錯誤影響已寄出的信');
+
+  // 寄出與排程兩條路徑的「設計師回覆信」分支都要呼叫，並把結果接在成功訊息後面。
+  const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
+  assert.match(send, /if\(replyMode==='designer'&&row\)\{await confirmLatestModificationRound\(id,row\); await applyReplyStatusUpdate\(id,row\); inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,designerReplyRound,editorPayload\.inlineImages\)\}/);
+  assert.match(send, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
+  const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
+  assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,editorPayload\.inlineImages\)/);
+  assert.match(schedule, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
+  // 一般回信、修改需求信不備份。
+  assert.equal((send.match(/backupDesignerReplyInlineImages/g) || []).length, 1);
+});
