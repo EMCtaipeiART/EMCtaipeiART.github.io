@@ -14,7 +14,7 @@
 import { promises as fs, default as fsSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 export const DEFAULT_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 export const DEFAULT_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.m4v'];
@@ -223,6 +223,59 @@ export async function loadConfig(configPath) {
 export async function loadSecrets(secretsFile) {
   const secrets = await loadJsonFile(secretsFile, {});
   return { serviceKey: '', ...secrets };
+}
+
+/**
+ * 找出「現在真的可以讀取」的 NAS 掛載根目錄。
+ *
+ * 設定檔裡的 mountRoot 是安裝當下偵測到的路徑，但之後可能失效：NAS 沒連線、開機後還沒掛載、
+ * 或 macOS 重複掛載時把磁碟掛成「設計部-1」。直接拿失效的路徑去讀，只會得到 ENOENT 這種
+ * 看不懂的錯誤（2026-09-16 設計師電腦實際遇到）。這裡依序找：設定值 →「/Volumes/期望名稱」
+ * → 有 -1、-2 後綴的同名磁碟；都找不到就回空字串，由呼叫端顯示「請先連上 NAS」。
+ */
+export async function resolveMountRoot(config) {
+  const candidates = [];
+  const configured = String(config?.mountRoot || '').trim();
+  if (configured) candidates.push(configured);
+  const expected = String(config?.expectedVolumeName || '').trim();
+  if (expected) candidates.push(path.join('/Volumes', expected));
+  for (const candidate of candidates) {
+    if (await directoryExists_(candidate)) return candidate;
+  }
+  if (!expected) return '';
+  let volumes = [];
+  try {
+    volumes = await fs.readdir('/Volumes');
+  } catch {
+    volumes = [];
+  }
+  for (const name of volumes.filter(item => item.startsWith(`${expected}-`)).sort()) {
+    const candidate = path.join('/Volumes', name);
+    if (await directoryExists_(candidate)) return candidate;
+  }
+  return '';
+}
+
+async function directoryExists_(target) {
+  try {
+    return (await fs.stat(target)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** 沒掛載時請 Finder 開啟連線（密碼存過 Keychain 就會自動連上）。最多每分鐘觸發一次，避免洗版。 */
+let lastMountAttemptAt = 0;
+export function requestMount(config, { now = Date.now(), minIntervalMs = 60000, run = null } = {}) {
+  const smbUrl = String(config?.smbUrl || '').trim();
+  if (!smbUrl || now - lastMountAttemptAt < minIntervalMs) return false;
+  lastMountAttemptAt = now;
+  try {
+    (run || ((command, args) => spawnSync(command, args)))('open', [smbUrl]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function resolvePath(base, value) {

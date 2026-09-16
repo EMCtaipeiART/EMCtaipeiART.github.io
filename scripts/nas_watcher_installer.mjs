@@ -55,14 +55,25 @@ export function normalizeSecrets(raw) {
  * 這台電腦專用的設定：沿用倉庫設定檔的共用欄位（資料庫網址、上傳網址、壓縮參數…），
  * 只換掉跟這台機器有關的幾項。狀態與預覽圖放在安裝資料夾底下，重灌或移除時一起帶走。
  */
-export function buildWatcherConfig(template, { mountRoot }) {
+export function buildWatcherConfig(template, { mountRoot, installDir }) {
+  // 一律寫絕對路徑：設定檔放在 <安裝資料夾>/scripts 底下，相對路徑會以那一層為基準，
+  // 很容易跟安裝程式實際寫檔的位置對不起來——2026-09-16 設計師電腦就是這樣讀不到金鑰，
+  // 選擇器因此自己另外產生一把 token（前台對不上）、監控程式也因為沒有 serviceKey 而完全不上傳。
   return {
     ...template,
     mountRoot,
-    stateFile: './state/sync-state.json',
-    previewDir: './state/previews',
-    secretsFile: './secrets.json'
+    stateFile: path.join(installDir, 'state', 'sync-state.json'),
+    previewDir: path.join(installDir, 'state', 'previews'),
+    secretsFile: path.join(installDir, 'secrets.json')
   };
+}
+
+/** 先前版本把金鑰寫錯位置，選擇器會在 scripts 底下自動產生一個只有 pickerToken 的檔案；留著會混淆，清掉。 */
+export function staleSecretsPaths(installDir) {
+  return [
+    path.join(installDir, 'scripts', 'secrets.json'),
+    path.join(installDir, 'scripts', 'nas_design_image_watcher.secrets.json')
+  ];
 }
 
 export function buildLaunchdPlist({ label, nodePath, scriptPath, workingDirectory, logPath, startIntervalSeconds = 0, keepAlive = false }) {
@@ -202,10 +213,16 @@ async function main() {
   await fs.mkdir(path.join(installDir, 'state'), { recursive: true });
   await fs.mkdir(logDir, { recursive: true });
   const configPath = path.join(scriptsDir, 'nas_design_image_watcher.config.json');
-  await fs.writeFile(configPath, `${JSON.stringify(buildWatcherConfig(template, { mountRoot }), null, 2)}\n`, 'utf8');
-  const secretsPath = path.join(scriptsDir, 'nas_design_image_watcher.secrets.json');
+  await fs.writeFile(configPath, `${JSON.stringify(buildWatcherConfig(template, { mountRoot, installDir }), null, 2)}\n`, 'utf8');
+  const secretsPath = path.join(installDir, 'secrets.json');
   await fs.writeFile(secretsPath, `${JSON.stringify(secrets, null, 2)}\n`, 'utf8');
   await fs.chmod(secretsPath, 0o600);
+  for (const stale of staleSecretsPaths(installDir)) {
+    try {
+      const existing = JSON.parse(await fs.readFile(stale, 'utf8'));
+      if (!existing?.serviceKey) await fs.rm(stale, { force: true });
+    } catch { /* 沒有這個檔案就不用清 */ }
+  }
   log('設定檔與金鑰已寫入這台電腦（金鑰檔只有你自己讀得到）');
 
   const crontab = spawnSync('crontab', ['-l'], { encoding: 'utf8' }).stdout || '';

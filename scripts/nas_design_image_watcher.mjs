@@ -99,9 +99,20 @@ async function main() {
   }
 }
 
-async function runScan(args, config, configDir, stateFile) {
+async function runScan(args, configInput, configDir, stateFile) {
+  let config = configInput;
   const previewDir = lib.resolvePath(configDir, config.previewDir);
   const secrets = await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile));
+  // NAS 沒掛載時（關機後還沒連、或被掛成「設計部-1」）沒必要整輪掃描，每個案件都會各自失敗一次。
+  // 先確認一次可用的掛載路徑，順便請 Finder 連線，這一輪就跳過，下一分鐘再試。
+  const mountRoot = await lib.resolveMountRoot(config);
+  if (!mountRoot) {
+    lib.requestMount(config);
+    console.log('=== NAS 設計圖檔監控 ===');
+    console.log(`找不到已掛載的「${config.expectedVolumeName || '設計部'}」，已嘗試請 Finder 連線，這一輪先跳過。`);
+    return;
+  }
+  config = { ...config, mountRoot };
   // 這個物件在整個迴圈過程中會被直接修改、並且每處理完一個案件就立刻存檔一次
   // （見迴圈內的 lib.saveState 呼叫）——不像先前的寫法只在整批案件都跑完後
   // 才統一存檔一次。原因：如果案件清單裡排在後面的某個案件，掃描或上傳過程

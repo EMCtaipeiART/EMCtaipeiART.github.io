@@ -192,7 +192,31 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 10:00 Asia/Taipei（最新）— 前台首次載入變慢：壓縮 6 張預載設計師頭像（1089 KB → 158 KB）
+### 2026-09-16 10:30 Asia/Taipei（最新）— 修正設計師電腦安裝後的兩個錯誤：金鑰路徑寫錯、NAS 未掛載只吐 ENOENT
+
+- 修改目的：使用者關掉自己電腦的 NAS 連線、改用另一台設計師電腦測試，選擇器出現「讀取資料夾失敗：無法讀取資料夾：ENOENT」與「讀取資料夾失敗：缺少或錯誤的 token」。
+- 成因（都是安裝包的 bug）：
+  1. **金鑰路徑對不起來**：安裝程式把金鑰寫到 `<安裝資料夾>/scripts/nas_design_image_watcher.secrets.json`，但產生的設定檔寫的是相對路徑 `./secrets.json`，而設定檔本身在 `scripts/` 底下，於是解析成 `<安裝資料夾>/scripts/secrets.json`——讀不到。選擇器因此自己隨機產生一把 pickerToken（跟前台寫死的對不上），**監控程式也因為讀不到 serviceKey 而完全不會上傳**（這台等於只掃描不備份）。
+  2. **NAS 沒掛載時錯誤訊息無法理解**：設定檔的 mountRoot 是安裝當下的路徑，之後 NAS 沒連線（或被 macOS 掛成「設計部-1」）就直接 ENOENT。
+- 影響檔案：`scripts/nas_watcher_installer.mjs`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_folder_picker_server.mjs`、`scripts/nas_design_image_watcher.mjs`、`backend/test/nas-installer.test.mjs`。
+- 影響功能：
+  1. `buildWatcherConfig` 改寫**絕對路徑**（`<安裝資料夾>/secrets.json`、`state/sync-state.json`、`state/previews`），安裝程式寫檔位置與設定檔指向一致；並清除舊版留下、只有 pickerToken 的 `scripts/secrets.json`（`staleSecretsPaths`）。
+  2. lib 新增 `resolveMountRoot(config)`（設定值 →「/Volumes/期望名稱」→ 有 -1／-2 後綴的同名磁碟）與 `requestMount(config)`（請 Finder 連線，最多每分鐘一次）。
+  3. 選擇器每次請求前重新確認掛載（瀏覽資料夾、預設路徑、確認備份三個入口），沒掛載時回「NAS 尚未掛載（找不到「設計部」）。已嘗試自動連線，請等幾秒後重新整理…」並自動觸發連線；`/api/status` 的掛載狀態同步改用它。
+  4. token 錯誤訊息改成可自行排除：「…請重跑 NAS 上『安裝NAS自動備份.command』更新金鑰後再試一次。」
+  5. 監控程式在開頭就確認掛載，沒掛載就請 Finder 連線並跳過這一輪（不再每個案件各失敗一次）。
+- 風險區塊：
+  - **已經裝過的設計師電腦必須重跑一次安裝檔**才會修好（金鑰路徑與 token）。在那之前那台的選擇器與自動上傳都不會正常。
+  - 自動觸發 Finder 連線在沒存過密碼的電腦上會跳出帳號密碼視窗。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **122/122 全過**（120 既有＋2 新增：金鑰與狀態路徑必須是絕對路徑且與設定檔解析結果一致、舊的錯誤金鑰檔會被清除；`resolveMountRoot` 三種情況、`requestMount` 的節流與無 smbUrl 行為、選擇器三個入口都有掛載檢查與新訊息、監控程式的跳過邏輯）。既有一支測試原本鎖相對路徑，已更新為絕對路徑。
+  - 實機：以暫存目錄跑安裝試跑，確認金鑰寫進 `<安裝資料夾>/secrets.json`（含 serviceKey 與 pickerToken、權限 600）、設定檔指向同一個位置、預先放的錯誤金鑰檔被清除。
+  - 實機：重啟本機選擇器後，`/api/status` 正常回報掛載，錯誤 token 會回傳新的排除說明。
+  - **未做的驗證**：沒有在設計師電腦上重跑安裝並實測（需要對方機器）；沒有實測 NAS 中途斷線時的自動重連。
+- 部署狀態：git push 後，NAS 上的安裝檔會下載到修正版；**要請已安裝的設計師重跑一次安裝檔**。管理者這台的選擇器已重啟套用。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 10:00 Asia/Taipei— 前台首次載入變慢：壓縮 6 張預載設計師頭像（1089 KB → 158 KB）
 
 - 修改目的：使用者回報首次進入前台要載入很久。
 - 量測結果（正式站）：首頁一開啟就下載 index.html（原始 1.1 MB、壓縮後 287 KB）與 `<head>` 裡以 `fetchpriority="high"` 預載的 6 張設計師頭像（合計 1089 KB，每張 512×512、最大 268 KB），瀏覽器實測這幾張各花 8–17 秒（互相搶頻寬）。db.json 壓縮後 190 KB（登入後才下載）。GitHub Pages 單一請求本身波動大：同一個檔案連續三次量到 1.83s／1.19s／0.35s。index.html 從 7/1 的 363 KB 長到 9/16 的 1168 KB，db.json 1393 KB。

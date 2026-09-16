@@ -75,6 +75,10 @@ function parseArgs(argv) {
   return args;
 }
 
+// 設計師自己電腦上的選擇器如果不是用 NAS 上的金鑰檔安裝（或裝到舊版），會自己產生一把 token，
+// 跟前台寫死的那把對不起來。訊息直接告訴他們怎麼修，不用回頭問管理者。
+const TOKEN_ERROR_MESSAGE = '缺少或錯誤的 token。如果這是你自己電腦上的選擇器，請重跑 NAS 上「設計管理／NAS自動備份安裝／安裝NAS自動備份.command」更新金鑰後再試一次。';
+
 async function loadOrCreatePickerToken(secretsPath) {
   const secrets = (await lib.loadJsonFile(secretsPath, {})) || {};
   if (secrets.pickerToken) return secrets.pickerToken;
@@ -918,7 +922,19 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const config = await lib.loadConfig(args.config);
   const configDir = path.dirname(args.config);
-  const mountRoot = config.mountRoot;
+  // 掛載路徑不能只相信設定檔：NAS 可能還沒連線、開機後尚未掛載，或被 macOS 掛成「設計部-1」。
+  // 每次請求前重新確認一次；真的沒掛載就請 Finder 連線並回傳看得懂的訊息，而不是丟出 ENOENT。
+  let mountRoot = config.mountRoot;
+  const ensureMountRoot = async () => {
+    const resolved = await lib.resolveMountRoot(config);
+    if (resolved) {
+      mountRoot = resolved;
+      return resolved;
+    }
+    lib.requestMount(config);
+    return '';
+  };
+  const mountMissingMessage = `NAS 尚未掛載（找不到「${config.expectedVolumeName || '設計部'}」）。已嘗試自動連線，請等幾秒後重新整理這個視窗；若跳出帳號密碼視窗，輸入一次並勾選「記住這個密碼」即可。`;
   const secretsPath = lib.resolvePath(configDir, config.secretsFile);
   const pickerToken = await loadOrCreatePickerToken(secretsPath);
   const port = Number(config.pickerPort) || DEFAULT_PICKER_PORT;
@@ -941,10 +957,10 @@ async function main() {
 
     if (url.pathname === '/api/status') {
       if (requestToken(url) !== pickerToken) {
-        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
         return;
       }
-      const mountRootExists = await dirExists(mountRoot);
+      const mountRootExists = Boolean(await ensureMountRoot());
       sendJson(res, 200, {
         success: true,
         pid: process.pid,
@@ -967,7 +983,7 @@ async function main() {
         return;
       }
       if (String(body.token || '') !== pickerToken) {
-        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
         return;
       }
       sendJson(res, 200, { success: true, message: '重啟指令已送出' });
@@ -981,7 +997,11 @@ async function main() {
 
     if (url.pathname === '/api/list') {
       if (requestToken(url) !== pickerToken) {
-        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
+        return;
+      }
+      if (!(await ensureMountRoot())) {
+        sendJson(res, 400, { success: false, message: mountMissingMessage });
         return;
       }
       try {
@@ -996,7 +1016,11 @@ async function main() {
 
     if (url.pathname === '/api/default-path') {
       if (requestToken(url) !== pickerToken) {
-        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
+        return;
+      }
+      if (!(await ensureMountRoot())) {
+        sendJson(res, 400, { success: false, message: mountMissingMessage });
         return;
       }
       try {
@@ -1022,6 +1046,10 @@ async function main() {
     }
 
     if (url.pathname === '/api/confirm' && req.method === 'POST') {
+      if (!(await ensureMountRoot())) {
+        sendJson(res, 400, { success: false, message: mountMissingMessage });
+        return;
+      }
       let body;
       try {
         body = await readJsonBody(req);
@@ -1030,7 +1058,7 @@ async function main() {
         return;
       }
       if (String(body.token || '') !== pickerToken) {
-        sendJson(res, 401, { success: false, message: '缺少或錯誤的 token' });
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
         return;
       }
       const caseId = String(body.caseId || '').trim();

@@ -44,11 +44,13 @@ test('each machine keeps its own mount path, state and previews, and shares ever
     previewDir: './nas_design_image_watcher.state/previews',
     secretsFile: './nas_design_image_watcher.secrets.json'
   };
-  const config = buildWatcherConfig(template, { mountRoot: '/Volumes/設計部-1' });
+  const installDir = '/Users/designer/Library/Application Support/MachiNasWatcher';
+  const config = buildWatcherConfig(template, { mountRoot: '/Volumes/設計部-1', installDir });
   assert.equal(config.mountRoot, '/Volumes/設計部-1', '重複掛載產生的 -1 路徑要照實寫入');
-  assert.equal(config.stateFile, './state/sync-state.json');
-  assert.equal(config.previewDir, './state/previews');
-  assert.equal(config.secretsFile, './secrets.json');
+  // 一律絕對路徑：設定檔在 scripts/ 底下，相對路徑很容易跟實際寫檔位置對不起來。
+  assert.equal(config.stateFile, `${installDir}/state/sync-state.json`);
+  assert.equal(config.previewDir, `${installDir}/state/previews`);
+  assert.equal(config.secretsFile, `${installDir}/secrets.json`);
   assert.equal(config.dbJsonUrl, template.dbJsonUrl, '共用欄位沿用倉庫設定');
   assert.equal(config.appsScriptUploadUrl, template.appsScriptUploadUrl);
   assert.equal(config.maxDimension, 1600);
@@ -101,4 +103,67 @@ test('the double-clickable installer downloads what it needs, guides Node instal
     assert.ok(uninstall.includes(label), `移除程式要停用 ${label}`);
   }
   assert.match(uninstall, /不會刪掉 NAS 或雲端上任何圖片/);
+});
+
+test('the installer writes the key where the generated config actually looks for it', async () => {
+  const path = (await import('node:path')).default;
+  const { buildWatcherConfig, staleSecretsPaths } = await import('../../scripts/nas_watcher_installer.mjs');
+  const { resolvePath } = await import('../../scripts/nas_design_image_lib.mjs');
+  const installDir = '/Users/designer/Library/Application Support/MachiNasWatcher';
+  const scriptsDir = path.join(installDir, 'scripts');
+  const config = buildWatcherConfig({ mountRoot: '/Volumes/設計部', expectedVolumeName: '設計部' }, { mountRoot: '/Volumes/設計部', installDir });
+
+  // 設定檔放在 scripts/ 底下，相對路徑會以那一層為基準；2026-09-16 設計師電腦就是因此讀不到金鑰，
+  // 選擇器自己另外產生一把 token（前台對不上）、監控程式也因為沒有 serviceKey 完全不上傳。
+  assert.equal(resolvePath(scriptsDir, config.secretsFile), path.join(installDir, 'secrets.json'));
+  assert.equal(resolvePath(scriptsDir, config.stateFile), path.join(installDir, 'state', 'sync-state.json'));
+  assert.equal(resolvePath(scriptsDir, config.previewDir), path.join(installDir, 'state', 'previews'));
+  for (const value of [config.secretsFile, config.stateFile, config.previewDir]) {
+    assert.ok(path.isAbsolute(value), `${value} 應該是絕對路徑，避免相對基準不一致`);
+  }
+
+  const installer = await readFile(new URL('../../scripts/nas_watcher_installer.mjs', import.meta.url), 'utf8');
+  assert.match(installer, /const secretsPath = path\.join\(installDir, 'secrets\.json'\);/, '金鑰要寫在設定檔指向的位置');
+  assert.deepEqual(staleSecretsPaths(installDir), [
+    path.join(installDir, 'scripts', 'secrets.json'),
+    path.join(installDir, 'scripts', 'nas_design_image_watcher.secrets.json')
+  ]);
+  assert.match(installer, /if \(!existing\?\.serviceKey\) await fs\.rm\(stale, \{ force: true \}\);/, '舊版留下、只有 pickerToken 的檔案要清掉');
+});
+
+test('a missing NAS mount is reported in plain language and retried, instead of surfacing ENOENT', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { resolveMountRoot, requestMount } = await import('../../scripts/nas_design_image_lib.mjs');
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-mount-'));
+  try {
+    assert.equal(await resolveMountRoot({ mountRoot: dir, expectedVolumeName: '設計部' }), dir, '設定的路徑存在就直接用');
+    assert.equal(await resolveMountRoot({ mountRoot: path.join(dir, 'gone'), expectedVolumeName: '不存在的磁碟名稱' }), '', '都找不到時回空字串，讓呼叫端顯示提示');
+    assert.equal(await resolveMountRoot({}), '');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+
+  // 沒掛載時請 Finder 連線，但不可以每次請求都觸發。
+  const calls = [];
+  const run = (command, args) => calls.push({ command, args });
+  const now = Date.now() + 10 * 60 * 1000;
+  assert.equal(requestMount({ smbUrl: 'smb://EMCNAS_Prod.local/設計部' }, { now, run }), true);
+  assert.deepEqual(calls[0], { command: 'open', args: ['smb://EMCNAS_Prod.local/設計部'] });
+  assert.equal(requestMount({ smbUrl: 'smb://EMCNAS_Prod.local/設計部' }, { now: now + 1000, run }), false, '一分鐘內不重複觸發');
+  assert.equal(requestMount({ smbUrl: 'smb://EMCNAS_Prod.local/設計部' }, { now: now + 61000, run }), true);
+  assert.equal(requestMount({}, { now: now + 200000, run }), false, '沒有 smbUrl 就不做事');
+
+  const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  assert.match(picker, /const mountMissingMessage = `NAS 尚未掛載/);
+  assert.equal((picker.match(/if \(!\(await ensureMountRoot\(\)\)\) \{/g) || []).length, 3, '瀏覽資料夾、預設路徑、確認備份三個入口都要先確認掛載');
+  assert.match(picker, /const mountRootExists = Boolean\(await ensureMountRoot\(\)\);/);
+  assert.match(picker, /TOKEN_ERROR_MESSAGE = '缺少或錯誤的 token。如果這是你自己電腦上的選擇器，請重跑/);
+  assert.doesNotMatch(picker, /message: '缺少或錯誤的 token' \}/, 'token 錯誤一律用含排除方式的訊息');
+
+  const watcher = await readFile(new URL('../../scripts/nas_design_image_watcher.mjs', import.meta.url), 'utf8');
+  assert.match(watcher, /const mountRoot = await lib\.resolveMountRoot\(config\);/);
+  assert.match(watcher, /lib\.requestMount\(config\);/);
+  assert.match(watcher, /這一輪先跳過/);
 });
