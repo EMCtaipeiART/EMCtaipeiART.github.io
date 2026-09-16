@@ -211,6 +211,9 @@ async function runScan(args, config, configDir, stateFile) {
           if (upload.waitingForNextRoundCount > 0) {
             console.log(`    [輪次封存] 本輪已完成，${upload.waitingForNextRoundCount} 張新版保留到下一個修改輪次`);
           }
+          if (upload.skippedAlreadyRecordedCount > 0) {
+            console.log(`    [避免重複] 這一輪資料庫已經有同名圖片（多半是先用電腦上傳補過），略過 ${upload.skippedAlreadyRecordedCount} 張不再備份`);
+          }
           if (upload.skippedByTarget > 0) {
             console.log(`    [輪次判斷] 這輪只鎖定指定圖片，資料夾內其餘 ${upload.skippedByTarget} 個變動已略過`);
           }

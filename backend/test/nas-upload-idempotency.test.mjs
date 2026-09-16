@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import {
   changedFileRoundState,
+  designImageBaseName,
   discoverProjects,
   createCaseDesignUploadDedupeKey,
+  recordedRoundImageBaseNames,
   uploadPendingRound,
   uploadRound
 } from '../../scripts/nas_design_image_lib.mjs';
@@ -405,4 +407,108 @@ test('the NAS watcher keeps tracking a case while it is 修改中, not only whil
     row('26090005', '未開始')
   ] } } };
   assert.deepEqual(discoverProjects(dbData).map(project => project.caseId), ['26090001', '26090002']);
+});
+
+test('a design already uploaded by hand is not backed up again by the NAS watcher, even when the extension differs', async () => {
+  const originalFetch = globalThis.fetch;
+  // 2026-09-15 的實際狀況：設計師等不到 NAS 自動備份，先用「電腦上傳圖片」補了 .jpg（上傳頁一律轉檔），
+  // 監控程式稍後掃到同一批來源檔的 .png 原檔，又上傳一次，同一張圖在修改紀錄裡出現兩份。
+  const manualName = '260915_Epson_台北紡織展_01.jpg';
+  const sourceRelPath = '260915_Epson_台北紡織展_01.png';
+  const newRelPath = '260915_Epson_台北紡織展_02_01.png';
+  const dbData = {
+    tables: {
+      '修改統計表': {
+        rows: [{
+          '案件編號': '26090107',
+          '修改次數': '0',
+          '圖片來源': 'manual-upload',
+          '圖片連結': JSON.stringify([{ fileName: manualName, url: 'https://example.test/manual-jpg' }])
+        }]
+      }
+    }
+  };
+  assert.deepEqual([...recordedRoundImageBaseNames(dbData, '26090107', 0)], ['260915_epson_台北紡織展_01']);
+  assert.equal(designImageBaseName('A.MP4'), 'a');
+
+  const stateFiles = {
+    [sourceRelPath]: { assignedRound: null, pendingAfterRound: null, uploadAttempt: null },
+    [newRelPath]: { assignedRound: null, pendingAfterRound: null, uploadAttempt: null }
+  };
+  const roundState = { sealedRound: null, files: stateFiles };
+  const pendingPreviews = [sourceRelPath, newRelPath].map(relPath => ({
+    relPath,
+    previewPath: fileURLToPath(import.meta.url),
+    mtimeMs: 5,
+    size: 5
+  }));
+  let requestPayload = null;
+  globalThis.fetch = async (_url, options) => {
+    requestPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ success: true, count: requestPayload.images.length, jsonRevision: 7 }));
+  };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData,
+      caseId: '26090107',
+      designer: 'Machi',
+      client: 'Epson',
+      start: '2026/09/15',
+      pendingPreviews,
+      stateFiles,
+      roundState
+    });
+    // 已經手動上傳過的那一張不再送出，另一張沒重複的照常上傳。
+    assert.equal(result.skippedAlreadyRecordedCount, 1);
+    assert.equal(result.uploadedCount, 1);
+    assert.deepEqual(requestPayload.images.map(image => image.fileName), [newRelPath]);
+    // 跳過的檔案要標記成已歸這一輪，下次掃描不會再被當成待上傳、每分鐘重試一次。
+    assert.equal(stateFiles[sourceRelPath].assignedRound, 0);
+    assert.equal(stateFiles[sourceRelPath].pendingAfterRound, null);
+    assert.equal(stateFiles[newRelPath].assignedRound, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('when every pending file was already uploaded by hand, the watcher reports it instead of uploading', async () => {
+  const originalFetch = globalThis.fetch;
+  const relPath = '260914_DJI_新店裕隆城授權體驗店.png';
+  const dbData = {
+    tables: {
+      '修改統計表': {
+        rows: [{
+          '案件編號': '26090081',
+          '修改次數': '2',
+          '圖片連結': JSON.stringify([{ fileName: '260914_DJI_新店裕隆城授權體驗店.jpg', url: 'https://example.test/manual' }])
+        }]
+      }
+    }
+  };
+  const stateFiles = { [relPath]: { assignedRound: null, pendingAfterRound: null, uploadAttempt: null } };
+  const roundState = { sealedRound: null, files: stateFiles };
+  let called = false;
+  globalThis.fetch = async () => { called = true; return new Response(JSON.stringify({ success: true, count: 1 })); };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData,
+      caseId: '26090081',
+      designer: 'Machi',
+      client: 'DJI',
+      start: '2026/09/14',
+      pendingPreviews: [{ relPath, previewPath: fileURLToPath(import.meta.url), mtimeMs: 1, size: 1 }],
+      stateFiles,
+      roundState
+    });
+    assert.equal(called, false, '完全不會呼叫上傳');
+    assert.equal(result.uploadedCount, 0);
+    assert.equal(result.skippedAlreadyRecordedCount, 1);
+    assert.match(result.message, /這一輪已經有同名圖片/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

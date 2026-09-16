@@ -654,6 +654,35 @@ export function countRecordedCaseDesignImages(dbData, caseId, round, fileName) {
   }
 }
 
+/**
+ * 這一輪在資料庫裡已經記錄過的圖片檔名（去掉副檔名、轉小寫）。
+ *
+ * 用途是擋掉「同一張設計稿被備份兩次」：設計師等不到 NAS 自動備份（GitHub Pages 有部署延遲，
+ * 畫面上要過一兩分鐘才看得到圖），就先用「電腦上傳圖片」手動補一次；稍後監控程式照常掃到同一批
+ * 來源檔，又上傳一次。兩邊檔名的副檔名往往不同（手動上傳一律轉成 .jpg，監控程式保留原始副檔名
+ * 例如 .png／.mp4），所以只比對完整檔名的既有去重會漏掉——2026-09-15 案件 26090107 與 26090081
+ * 就是這樣各自留下 .jpg 與 .png 兩份同一張圖。比對去副檔名的檔名才擋得住。
+ */
+export function recordedRoundImageBaseNames(dbData, caseId, round) {
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const row = rows.find(item => String(item['案件編號'] || '') === String(caseId)
+    && (Number(item['修改次數']) || 0) === Number(round));
+  if (!row) return new Set();
+  try {
+    const images = JSON.parse(String(row['圖片連結'] || '[]'));
+    if (!Array.isArray(images)) return new Set();
+    return new Set(images
+      .map(item => designImageBaseName(item?.fileName))
+      .filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
+export function designImageBaseName(fileName) {
+  return String(fileName || '').trim().replace(/\.[^./\\]+$/, '').toLocaleLowerCase();
+}
+
 export function computeYearMonth(startDateText) {
   const match = /^(\d{4})[-/](\d{1,2})/.exec(startDateText || '');
   const now = new Date();
@@ -815,16 +844,36 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     eligiblePreviews.push(item);
   }
 
-  let targetedPreviews = eligiblePreviews;
+  // 這一輪資料庫已經有同一張圖（通常是設計師等不及、先用「電腦上傳圖片」手動補過）就不再上傳：
+  // 直接把本機狀態標記成已歸這一輪，下次掃描不會再被當成待上傳，也不會每分鐘重試一次。
+  const recordedBaseNames = recordedRoundImageBaseNames(dbData, caseId, round);
+  let skippedAlreadyRecordedCount = 0;
+  const notRecordedPreviews = recordedBaseNames.size
+    ? eligiblePreviews.filter(item => {
+        const baseName = designImageBaseName(path.basename(item.relPath));
+        if (!baseName || !recordedBaseNames.has(baseName)) return true;
+        const entry = stateFiles[item.relPath];
+        if (entry) {
+          entry.assignedRound = round;
+          entry.pendingAfterRound = null;
+          entry.uploadAttempt = null;
+        }
+        if (roundState) roundState.sealedRound = Math.max(Number(roundState.sealedRound) || 0, round);
+        skippedAlreadyRecordedCount += 1;
+        return false;
+      })
+    : eligiblePreviews;
+
+  let targetedPreviews = notRecordedPreviews;
   let skippedByTarget = 0;
   let targetFallback = false;
   if (targetImages) {
     const targetSet = new Set(targetImages);
-    const matched = eligiblePreviews.filter(item => targetSet.has(path.basename(item.relPath)));
+    const matched = notRecordedPreviews.filter(item => targetSet.has(path.basename(item.relPath)));
     if (matched.length) {
       targetedPreviews = matched;
-      skippedByTarget = eligiblePreviews.length - matched.length;
-    } else if (eligiblePreviews.length) {
+      skippedByTarget = notRecordedPreviews.length - matched.length;
+    } else if (notRecordedPreviews.length) {
       // PM 指定的「待修改圖片」檔名，這次資料夾裡的新增/變動檔案一個都對不
       // 上——最常見的原因是設計師把修好的檔案存成新檔名（例如補上新的日期／
       // 版本號，跟原始檔名不同），不是真的沒有東西可以上傳。與其讓這一輪永
@@ -838,15 +887,17 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     }
   }
   if (!targetedPreviews.length) {
-    if ((reconciledCount || waitingForNextRoundCount || staleSealClearedCount) && persistState) await persistState();
-    const message = reconciledCount
+    if ((reconciledCount || waitingForNextRoundCount || staleSealClearedCount || skippedAlreadyRecordedCount) && persistState) await persistState();
+    const message = skippedAlreadyRecordedCount
+      ? `這一輪已經有同名圖片（手動上傳過），略過 ${skippedAlreadyRecordedCount} 張，不重複備份`
+      : reconciledCount
       ? `已確認先前上傳成功 ${reconciledCount} 張，不再重送`
       : deferredCount
         ? `前次上傳結果仍在確認中，暫緩重送 ${deferredCount} 張`
         : waitingForNextRoundCount
           ? `本輪圖片已封存，${waitingForNextRoundCount} 張新版會等下一個修改輪次再上傳`
         : '沒有偵測到可上傳的圖片/影片';
-    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedByTarget, message };
+    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, skippedByTarget, message };
   }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
@@ -891,5 +942,5 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     // 的歷史快照仍然封存，不會在下一次排程被重送或被同輪新版覆蓋。
     if (persistState) await persistState();
   }
-  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, skippedByTarget, targetFallback, jsonRevision };
 }

@@ -192,7 +192,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-15 17:50 Asia/Taipei（最新）— 案件「刪除」與修改紀錄垃圾桶改用站內警示視窗，避免誤刪
+### 2026-09-16 08:50 Asia/Taipei（最新）— NAS 監控程式不再重複備份「已經手動上傳過」的同一張設計圖
+
+- 修改目的：使用者回報 2026-09-15 GitHub 更新很慢，案件 26090107 與 26090081 改用手動上傳圖片後，同一張圖被備份兩次。
+- 成因：手動上傳（upload.html「電腦上傳圖片」）一律把檔案轉成 .jpg 送 Drive；NAS 監控程式稍後照常掃到同一批來源檔，上傳的是保留原始副檔名的 .png。兩邊檔名主體相同、副檔名不同，Worker `addCaseDesignImages` 既有的去重只比對「網址」與「完整檔名」（且檔名鎖只套用在 `nas-watcher` 來源），比不出這是同一張，於是同一輪出現 .jpg 與 .png 兩份。實際紀錄：26090107 第 0 輪 10 張（5 張設計圖各兩份）、26090081 第 2 輪 2 張；18:48–18:51 是 Machi 手動上傳、18:53 之後是監控程式（anonymous 服務金鑰）。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：
+  1. 新增 `recordedRoundImageBaseNames(dbData,caseId,round)` 與 `designImageBaseName(fileName)`：讀出這一輪修改紀錄已經登記的圖片檔名，去掉副檔名、轉小寫。
+  2. `uploadPendingRound` 在挑出可上傳檔案之後、指定圖片過濾之前，擋掉「去副檔名檔名已經在這一輪出現過」的檔案：不送 Apps Script，並把本機狀態標成 `assignedRound=這一輪`、清掉 `pendingAfterRound`、更新 `sealedRound`，所以不會每分鐘重試，也不會被誤判成待上傳。新增回傳欄位 `skippedAlreadyRecordedCount`；整批都被擋下時訊息為「這一輪已經有同名圖片（手動上傳過），略過 N 張，不重複備份」。
+  3. 監控程式輸出新增一行「[避免重複] …」；資料夾選擇器的「立即備份」沿用同一個 message，不需另外改。
+- 風險區塊：
+  - 只擋「同一案件、同一輪」的同名圖。不同輪次照舊各自備份，換輪次的行為完全不變。
+  - 刻意在封存／等待下一輪的判斷之後才比對，不影響既有的輪次封存邏輯。
+  - 真的想在同一輪同時保留同名的 .jpg 與 .png 時會被擋下（監控程式端），可在修改紀錄彈窗手動補圖。
+  - 反方向（監控程式先傳、使用者又手動上傳一次）目前不擋，仍會留下兩份；手動上傳是使用者明確動作，維持可「補圖或更正」的既有行為。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **107/107 全過**（105 既有＋2 新增：資料庫這一輪已有手動上傳的 .jpg 時，同名 .png 不再送出、且標成已歸這一輪，同批不同名的檔案照常上傳；整批都重複時完全不呼叫上傳並回報訊息）。
+  - `node --check` 兩支 NAS 程式語法無誤。
+  - `git stash` 只還原兩支 NAS 程式，新測試失敗，`git stash pop` 後恢復。
+  - 以實際資料確認成因：線上 db.json 的 26090107 第 0 輪與 26090081 第 0/1/2 輪圖片清單、GitHub 提交時間序。
+  - **未做的驗證**：沒有在辦公室 Mac 上實跑一次完整監控排程（需要掛載 NAS 與真實案件）。既有的重複圖片沒有自動清除，需要時在修改紀錄彈窗手動刪除。
+- 部署狀態：NAS 程式在辦公室 Mac 上由 crontab 每分鐘重新啟動，git pull 後自動生效；前台與 Worker 不受影響。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-15 17:50 Asia/Taipei— 案件「刪除」與修改紀錄垃圾桶改用站內警示視窗，避免誤刪
 
 - 修改目的：使用者要求前台案件內容的「刪除」與修改紀錄的「垃圾桶」執行刪除前跳出警示視窗，避免誤刪。
 - 現況調查：`deleteRow`（案件刪除，06/23 起）、`removeCaseDesignImage`（單張圖片，08/13 起）、`deleteModificationRecord`（整筆輪次，09/10 起）、`removeSelectedCaseDesignImages`（勾選多張）原本都有瀏覽器內建 `confirm()`；但內建對話框在手機上小、容易直接點掉，瀏覽器也可能因曾勾選「不要再顯示對話框」而不再出現，所以改成站內視窗。
