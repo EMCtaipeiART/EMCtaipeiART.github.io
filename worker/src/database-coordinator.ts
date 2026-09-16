@@ -9,7 +9,8 @@ import {
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
-  text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules
+  text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
+  normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue,
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase } from './github-store';
 import type {
@@ -2454,6 +2455,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           poster: text(row['頭像大圖連結'] || row['頭像連結']), musicUrl: text(row['分享音樂']),
           musicStartAt: Math.max(0, Number(row['音樂起始秒數']) || 0), skills: splitNames(row['技能']),
           quote: text(row['對話框']), replyTemplates: normalizedReplyTemplates(row['回信範本設定']), replyTemplateDefault: normalizedReplyTemplateDefault(row['預設回信範本'], normalizedReplyTemplates(row['回信範本設定'])), rotation: Number(row['新專案輪值']) || 99,
+          // 設計師設定裡也能編輯簽名檔（跟個人設定同一組欄位），所以這裡要一起帶出來給表單預先填入。
+          signaturePresets: normalizeSignaturePresetsValue(row['簽名檔清單']),
+          signaturePresetDefault: normalizeSignaturePresetDefaultValue(row['預設簽名檔'], normalizeSignaturePresetsValue(row['簽名檔清單'])),
           skillMappings: normalizedSkillMappings(row['技能表單設定']), enabled: true,
           designType: /影音|影像|影片/i.test(text(row['組別'])) ? '影音' : (/平面/.test(text(row['組別'])) ? '平面' : '')
         }));
@@ -2668,6 +2672,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             const templates = normalizedReplyTemplates(profile.replyTemplates);
             row['回信範本設定'] = JSON.stringify(templates);
             row['預設回信範本'] = normalizedReplyTemplateDefault(profile.replyTemplateDefault, templates);
+          }
+          // 簽名檔跟個人設定共用同一組欄位（簽名檔清單／預設簽名檔），走同一套正規化，長度與筆數上限一致。
+          if ('signaturePresets' in profile) {
+            const presets = normalizeSignaturePresetsValue(profile.signaturePresets);
+            row['簽名檔清單'] = JSON.stringify(presets);
+            row['預設簽名檔'] = normalizeSignaturePresetDefaultValue(profile.signaturePresetDefault, presets);
           }
         }
         return { result: { ok: true, action }, changedTables: ['設定'] };

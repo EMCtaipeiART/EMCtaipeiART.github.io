@@ -878,7 +878,8 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   assert.match(html, /data-remove-signature-preset/);
   // 每一列的內容欄位上方要有工具列：粗體／對齊／文字大小／文字顏色，讓使用者不用依賴外部工具先排好版
   // 再貼過來，這裡本身就能調整格式——直接對應「沒有可以編輯文字大小顏色功能」這個回報。
-  const rowHtmlStart = html.indexOf("function signaturePresetRowHtml(name='',content='',index=0,{defaultKey=''}={}){");
+  // 函式簽名多了 scope（設計師設定一次列多位設計師，radio 名稱要分開）。
+  const rowHtmlStart = html.indexOf("function signaturePresetRowHtml(name='',content='',index=0,{defaultKey='',scope='personal'}={}){");
   const rowHtmlEnd = html.indexOf('\nfunction syncSignaturePresetRows', rowHtmlStart);
   assert.ok(rowHtmlStart > 0 && rowHtmlEnd > rowHtmlStart);
   const rowHtmlSource = html.slice(rowHtmlStart, rowHtmlEnd);
@@ -4226,4 +4227,46 @@ test('modals people type into never close from a stray click on the backdrop', a
   // 其他彈窗維持原本的「點外面關閉」（例如案件資料、修改紀錄、複製信件內容）。
   assert.match(html, /bindModalOverlayDismiss\(\$\('#mailCopyModal'\),closePostSubmitCopyModal\);/);
   assert.match(html, /\$\('#caseDetailModal'\)\?\.addEventListener\('click',event=>\{if\(event\.target\.id==='caseDetailModal'\)closeCaseDetail\(\)\}\);/);
+});
+
+test('designer settings gain their own signature presets, past story thumbnails with tooltips, and replace the personal settings entry for designers', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // ① 每位設計師各有一組簽名檔設定，沿用個人設定那套編輯器。
+  const block = html.match(/function designerSignaturePresetsHtml\(profile\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(block, 'could not locate designerSignaturePresetsHtml');
+  assert.match(block, /6\. 簽名檔設定/);
+  assert.match(block, /data-signature-preset-list data-signature-scope="\$\{esc\(scope\)\}"/);
+  assert.match(block, /signaturePresetRowHtml\(name,content,index,\{defaultKey:normalized\.defaultName,scope\}\)/);
+  assert.match(html, /\$\{designerReplyTemplatesHtml\(d\)\}\$\{designerSignaturePresetsHtml\(d\)\}/, '簽名檔區塊要排在回信範本之後');
+  assert.match(html, /bindDesignerReplySettings\(\);bindDesignerSignatureSettings\(\)\}/);
+  assert.match(html, /function validateDesignerSignatureInputs\(\)/);
+  assert.match(html, /!validateDesignerReplyTemplateInputs\(\)\|\|!validateDesignerSignatureInputs\(\)\)return;/, '儲存前要驗證簽名檔');
+  assert.match(html, /signaturePresets,signaturePresetDefault,/, '送出的設定要帶簽名檔');
+
+  // 多位設計師同時顯示時，「設為預設」不能互相干擾——radio 名稱要帶作用域。
+  const rowHtml = html.match(/function signaturePresetRowHtml\(name='',content='',index=0,\{defaultKey='',scope='personal'\}=\{\}\)\{[\s\S]*?\n/)?.[0];
+  assert.ok(rowHtml, 'signaturePresetRowHtml 需要 scope 參數');
+  assert.match(html, /const radioName=`signature-preset-default-\$\{String\(scope\)\.replace\(/);
+
+  // ② 設計師看得到設計師設定，就不再顯示個人設定入口（其他角色不受影響）。
+  assert.match(html, /show\('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken\(\)&&accessAllowed\('profile\.edit',true\)&&!canAccessDesignerSettings\(\)\);/);
+
+  // ③ 管理照片欄位列出過往貼過的縮圖，滑鼠停留顯示互動狀況與最新留言。
+  assert.match(html, /data-manage-designer-photo="\$\{esc\(name\)\}">管理圖片與 Reels<\/button>\$\{designerReelThumbsHtml\(name\)\}/);
+  const thumbs = html.match(/function designerReelThumbsHtml\(name\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(thumbs, 'could not locate designerReelThumbsHtml');
+  assert.match(thumbs, /storiesForDesigner\(name\)/);
+  assert.match(thumbs, /目前還沒有貼過的內容/);
+  assert.match(thumbs, /data-design-image-hover-preview/, '沿用既有的放大預覽');
+
+  // 提示文字實際跑一次。
+  const tooltip = html.match(/function designerReelTooltip\(reel\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(tooltip, 'could not locate designerReelTooltip');
+  const makeTooltip = new Function(`${tooltip};return designerReelTooltip;`)();
+  assert.equal(
+    makeTooltip({ likeCount: 2, dislikeCount: 1, viewerCount: 5, comments: [{ name: '李明庭', text: '這版可以  出' }] }),
+    '按讚 2・倒讚 1・已讀 5・留言 1\n最新留言｜李明庭：這版可以 出'
+  );
+  assert.equal(makeTooltip({}), '按讚 0・倒讚 0・已讀 0・留言 0', '沒有互動時只顯示統計');
 });

@@ -192,7 +192,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 14:50 Asia/Taipei（最新）— 個人設定／設計師設定也鎖背景捲動，且編輯類彈窗不再因為誤點框外而關閉
+### 2026-09-16 15:40 Asia/Taipei（最新）— 設計師設定新增「簽名檔設定」、管理照片顯示過往貼文縮圖，設計師不再顯示「個人設定」
+
+- 修改目的：使用者要求①「設計師設定」加入「簽名檔設定」；②設計師頭像選單移除「個人設定」（設計師設定已有相同功能，只差改名）；③「3. 管理照片」顯示過往貼過的內容小圖，滑鼠停留出現相關提示文字。
+- 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **設計師簽名檔**：設計師列新增「6. 簽名檔設定」，沿用個人設定那套編輯器（命名、設為預設、完整格式工具列）。`signaturePresetRowHtml()` 新增 `scope` 參數——設計師設定一次列出多位設計師，radio 名稱必須分開，否則幫 A 指定預設會清掉 B 的選擇。收集、驗證、變更比對（`designerProfileEditableKey`）與本機套用（`normalizeDesignerRow`）都一併帶上簽名檔。
+  2. **Worker**：`listDesignerProfiles` 回傳 `signaturePresets`／`signaturePresetDefault`；`saveDesignerProfiles` 在 profile 帶這兩個欄位時寫入 `簽名檔清單`／`預設簽名檔`（與個人設定同一組欄位、同一套正規化）。沒帶欄位的更新不會清掉既有簽名檔。
+  3. **帳號選單**：`#accountPersonalSettings` 的顯示條件加上 `!canAccessDesignerSettings()`——看得到設計師設定的人（設計師／管理者）不再顯示個人設定；其他角色（例如專案同仁）照舊看得到，不受影響。**代價是設計師目前無法改自己的顯示名（個人設定才有），這是使用者明確接受的取捨。**
+  4. **管理照片縮圖**：`designerReelThumbsHtml()` 列出該設計師的限時動態縮圖，`title` 顯示「按讚／倒讚／已讀／留言」統計與最新一則留言（換行呈現），並沿用既有的 `data-design-image-hover-preview` 放大預覽；沒有貼過的人顯示「目前還沒有貼過的內容」。
+- 風險區塊：
+  - 設計師失去改顯示名的入口；若之後需要，要在設計師設定補一個顯示名欄位。
+  - 縮圖資料來自已載入的 `designerReels`，設定視窗開啟時若限時動態還沒載入完，縮圖會在下次重繪才出現。
+  - 設計師設定與個人設定寫的是同一列同一組欄位，兩邊不會各存一份。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **130/130 全過**（129 既有＋1 新增）；`cd worker && npx tsc --noEmit` 無錯、`npx vitest run` **77/77 全過**（76 既有＋1 新增：設計師簽名檔存取往返、預設值指向不存在名稱時退回第一組、未帶欄位的更新不會清掉既有簽名檔）。
+  - 既有兩支測試分別鎖著簽名檔列的舊函式簽名，以及我先前誤用 `toEqual(值, 訊息)`（vitest 只吃一個參數，型別檢查抓到），都已修正。
+  - **瀏覽器實測**：以兩位設計師實際渲染，radio 名稱分別為 `signature-preset-default-designer-Machi`／`-Anna`，點 Anna 的預設不會清掉 Machi 的；縮圖 2 張、提示文字為「按讚 1・倒讚 0・已讀 2・留言 1／最新留言｜李明庭：這版可以」；沒有貼文的設計師顯示空狀態；每位設計師的簽名檔工具列按鈕齊全。
+  - `git stash` 只還原 `index.html` 與 Worker 原始碼，兩支新測試都失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站以設計師身分實際儲存簽名檔（需要登入）。
+- 部署狀態：`index.html` git push 後生效；**Worker 需要 `cd worker && npx wrangler deploy`**。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 14:50 Asia/Taipei— 個人設定／設計師設定也鎖背景捲動，且編輯類彈窗不再因為誤點框外而關閉
 
 - 修改目的：使用者回報「個人設定」與「設計師設定」沒有鎖住背景捲動；並要求「個人設定」「設計師設定」「信件編輯」取消「點框外就關閉」，因為信寫到一半常被誤關。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

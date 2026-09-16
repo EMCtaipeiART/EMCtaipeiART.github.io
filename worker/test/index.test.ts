@@ -1415,6 +1415,47 @@ describe('Machi Design API Worker', () => {
     expect(unfiltered.total).toBe(2);
   });
 
+  it('keeps each designer\'s signature presets with their profile, so 設計師設定 can edit them too', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'designer-sig-sha' }, commit: { sha: 'designer-sig-commit' } }));
+    // 測試資料裡的 Machi 組別是「管理者」，不算設計師列；先設成平面，listDesignerProfiles 才會列出來。
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables['設定'].rows.find(row => row['名字'] === 'Machi')!['組別'] = '平面';
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+
+    const saved = await api({
+      action: 'saveDesignerProfiles',
+      profiles: [{
+        name: 'Machi',
+        signaturePresets: { '正常': 'Machi Chen<br>EMC', '休假': '休假中，請聯絡 Anna', '': '空名稱要被濾掉' },
+        signaturePresetDefault: '休假'
+      }]
+    }, token);
+    expect(saved).toMatchObject({ ok: true, action: 'saveDesignerProfiles' });
+
+    const profiles = await api({ action: 'listDesignerProfiles' }, token);
+    const machi = (profiles.profiles as Record<string, unknown>[]).find(profile => profile.name === 'Machi');
+    expect(machi?.signaturePresets).toEqual({ '正常': 'Machi Chen<br>EMC', '休假': '休假中，請聯絡 Anna' });
+    expect(machi?.signaturePresetDefault).toBe('休假');
+
+    // 預設值指到不存在的名稱時，會退回第一組，不會留下壞掉的預設。
+    await api({ action: 'saveDesignerProfiles', profiles: [{ name: 'Machi', signaturePresets: { '正常': 'Machi Chen' }, signaturePresetDefault: '休假' }] }, token);
+    const after = await api({ action: 'listDesignerProfiles' }, token);
+    const updated = (after.profiles as Record<string, unknown>[]).find(profile => profile.name === 'Machi');
+    expect(updated?.signaturePresets).toEqual({ '正常': 'Machi Chen' });
+    expect(updated?.signaturePresetDefault).toBe('正常');
+
+    // 沒有帶 signaturePresets 的更新不可以把既有簽名檔洗掉。
+    await api({ action: 'saveDesignerProfiles', profiles: [{ name: 'Machi', quote: '今天也把需求整理得清清楚楚' }] }, token);
+    const untouched = await api({ action: 'listDesignerProfiles' }, token);
+    const kept = (untouched.profiles as Record<string, unknown>[]).find(profile => profile.name === 'Machi');
+    expect(kept?.signaturePresets).toEqual({ '正常': 'Machi Chen' });
+  });
+
   it('moves selected design images from one modification round to another without touching Drive', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'move-file-sha' }, commit: { sha: 'move-commit-sha' } }));
@@ -1443,8 +1484,8 @@ describe('Machi Design API Worker', () => {
     const records = await api({ action: 'listModificationRecords', ids: ['26080001'] }, token);
     const rows = records.rows as Record<string, unknown>[];
     const imagesOf = (round: number) => JSON.parse(String(rows.find(row => Number(row['修改次數']) === round)?.['圖片連結'] || '[]')) as { fileName: string; url: string }[];
-    expect(imagesOf(0).map(image => image.fileName)).toEqual(['a.jpg'], '搬走的圖要從初稿移除');
-    expect(imagesOf(1).map(image => image.fileName)).toEqual(['d.jpg', 'b.jpg', 'c.jpg'], '檔名與網址原樣搬到一修');
+    expect(imagesOf(0).map(image => image.fileName)).toEqual(['a.jpg']); // 搬走的圖要從初稿移除
+    expect(imagesOf(1).map(image => image.fileName)).toEqual(['d.jpg', 'b.jpg', 'c.jpg']); // 檔名與網址原樣搬到一修
     expect(String(rows.find(row => Number(row['修改次數']) === 1)?.['圖片來源'])).toBe('manual-move');
 
     // 目標輪次不存在時要明確擋下來，不可以自動生出一輪。
