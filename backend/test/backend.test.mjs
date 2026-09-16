@@ -3778,7 +3778,8 @@ test('case delete and 修改紀錄 trash buttons ask through the in-page warning
   // 視窗標記與樣式存在，疊在其他彈窗之上。
   assert.match(html, /<div class="app-confirm-backdrop" id="appConfirmDialog" hidden>/);
   assert.match(html, /<button type="button" class="app-confirm-cancel" id="appConfirmCancel">取消<\/button><button type="button" class="app-confirm-ok" id="appConfirmOk">確定刪除<\/button>/);
-  assert.match(html, /\.app-confirm-backdrop\{position:fixed;inset:0;z-index:3000;/);
+  // z-index 由另一支測試（警示視窗必須疊在所有彈窗之上）負責鎖定實際數值，這裡只確認樣式存在。
+  assert.match(html, /\.app-confirm-backdrop\{position:fixed;inset:0;z-index:\d+!important;/);
   // 深色主題的全站 button 規則權重較高，刪除鍵必須用同等權重維持紅色（實際發生過被蓋成綠色）。
   assert.match(html, /html\[data-theme="dark"\] \.app-confirm-ok\{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important\}/);
 
@@ -3996,4 +3997,54 @@ test('revision modal keeps image selection across background re-renders and can 
   assert.match(failed.calls.at(-1).message, /移動圖片失敗：沒有權限/);
   assert.equal(failed.calls.at(-1).isError, true);
   assert.equal(failed.nodes['#revisionSelectionMove'].disabled, false, '失敗後按鈕要恢復可按');
+});
+
+test('the delete warning sits above every modal, and open modals stop the page behind them from scrolling', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // ① 警示視窗要蓋過所有彈窗：.login-modal 5000、#revisionModal 6500、圖片放大預覽 10000。
+  const dialogZ = Number(html.match(/\.app-confirm-backdrop\{position:fixed;inset:0;z-index:(\d+)!important;/)?.[1]);
+  assert.ok(Number.isFinite(dialogZ), 'could not read the warning dialog z-index');
+  const stacked = [...html.matchAll(/z-index:(\d+)!important/g)].map(match => Number(match[1]));
+  const highestOther = Math.max(...stacked.filter(value => value !== dialogZ));
+  assert.ok(dialogZ > highestOther, `警示視窗 z-index ${dialogZ} 必須高於其他所有彈窗（目前最高 ${highestOther}）`);
+
+  // ② 案件資料／修改紀錄／信件編輯彈窗開著時鎖住背景捲動。
+  // 只鎖 body 沒用：本站的 html 有 overflow-x:hidden，body 的 overflow 不會傳遞到視窗（實測背景照樣捲動）。
+  assert.match(html, /html\.modal-scroll-locked,body\.modal-scroll-locked\{overflow:hidden!important\}/);
+  assert.match(html, /\.case-detail-card,\.revision-modal-card,\.gmail-modal-card\{overscroll-behavior:contain\}/, '彈窗捲到底時不可以把捲動傳給背景');
+  const block = html.match(/const SCROLL_LOCK_MODAL_IDS=[\s\S]*?syncModalScrollLock\(\);/)?.[0];
+  assert.ok(block, 'could not locate the scroll lock helpers');
+  assert.match(block, /attributeFilter:\['hidden'\]/, '彈窗是用 hidden 屬性開關，要監看它才不會漏掉任何開關方式');
+  assert.match(block, /document\.documentElement\.classList\.toggle\('modal-scroll-locked',anyOpen\);/, 'html 也要一起加上鎖定 class');
+
+  // 用假 DOM 實際執行：任何一個彈窗開著就鎖，全部關掉才解鎖。
+  const modals = { caseDetailModal: { hidden: true }, revisionModal: { hidden: true }, gmailThreadModal: { hidden: true }, gmailComposeModal: { hidden: true }, uploadModal: { hidden: true } };
+  const classes = new Set();
+  const api = new Function('ctx', `
+    const { modals, classes } = ctx;
+    const document = {
+      getElementById: id => modals[id] || null,
+      documentElement: { classList: { toggle: (name, on) => { if (on) classes.add('html:' + name); else classes.delete('html:' + name); } } },
+      body: { classList: { toggle: (name, on) => { if (on) classes.add(name); else classes.delete(name); } } }
+    };
+    class MutationObserver { constructor(fn) { this.fn = fn; } observe() {} }
+    ${block}
+    return { syncModalScrollLock, ids: SCROLL_LOCK_MODAL_IDS };
+  `)({ modals, classes });
+
+  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal']);
+  assert.equal(classes.has('modal-scroll-locked'), false, '一開始沒有彈窗就不鎖');
+  modals.revisionModal.hidden = false;
+  api.syncModalScrollLock();
+  assert.equal(classes.has('modal-scroll-locked'), true);
+  assert.equal(classes.has('html:modal-scroll-locked'), true, 'html 也要一起鎖，否則鎖不住');
+  modals.caseDetailModal.hidden = false;
+  modals.revisionModal.hidden = true;
+  api.syncModalScrollLock();
+  assert.equal(classes.has('modal-scroll-locked'), true, '還有另一個彈窗開著就維持鎖定');
+  modals.caseDetailModal.hidden = true;
+  api.syncModalScrollLock();
+  assert.equal(classes.has('modal-scroll-locked'), false, '全部關掉才解鎖');
+  assert.equal(classes.has('html:modal-scroll-locked'), false);
 });

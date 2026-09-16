@@ -192,7 +192,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 11:10 Asia/Taipei（最新）— 修改紀錄多選：修正「刪除已選取」沒反應，並新增「移動到其他輪次」
+### 2026-09-16 11:40 Asia/Taipei（最新）— 警示視窗改疊到最上層，並在案件資料／修改紀錄／信件編輯彈窗開著時鎖住背景捲動
+
+- 修改目的：使用者回報在修改紀錄彈窗按刪除時，警示視窗跑到彈窗後面看不到；並希望彈窗開著時，滾輪不要連帶捲動背景。
+- 成因：
+  1. 警示視窗 `z-index:3000`，但 `.login-modal` 是 `5000!important`、`#revisionModal` 是 `6500!important`（圖片放大預覽甚至 10000），所以被蓋住。
+  2. 原本沒有背景鎖；既有的 `body.upload-modal-open{overflow:hidden}` 其實也一直沒效果——本站有 `html,body{max-width:100%;overflow-x:hidden}`，html 的 overflow 不是 visible，body 的 overflow 就不會傳遞到視窗。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. `.app-confirm-backdrop` 改為 `z-index:12000!important`，高於全站所有彈窗與圖片放大預覽。
+  2. 新增 `html.modal-scroll-locked,body.modal-scroll-locked{overflow:hidden!important}`（**必須同時套在 html 上**），並替 `.case-detail-card`／`.revision-modal-card`／`.gmail-modal-card` 加上 `overscroll-behavior:contain`，彈窗內部捲到底時不會把捲動傳給背景。
+  3. 新增 `syncModalScrollLock()`：以 `MutationObserver` 監看 `caseDetailModal`／`revisionModal`／`gmailThreadModal`／`gmailComposeModal`／`uploadModal` 的 `hidden` 屬性，任何一個開著就鎖、全部關掉才解鎖。用監看而不是在每個開關點各加一行，是因為這些彈窗在很多地方被開關（含背景流程自動收合），逐點修改容易遺漏。
+- 風險區塊：
+  - 鎖定期間是「使用者捲動」被擋下（`overflow:hidden` 的行為），程式呼叫 `scrollTo/scrollBy` 仍可捲動——站內的自動捲動（例如跳到某一列）不受影響。
+  - 上傳視窗也納入鎖定範圍，行為與先前預期一致（原本的 body-only 規則本來就沒生效）。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **124/124 全過**（123 既有＋1 新增：警示視窗 z-index 必須大於檔案內其他所有 `!important` 的 z-index；鎖定樣式必須同時包含 html；`overscroll-behavior:contain` 存在；以假 DOM 執行 `syncModalScrollLock`，驗證任一彈窗開著就鎖、html 與 body 都加 class、全部關掉才解鎖）。兩支既有測試原本鎖死舊的 z-index 3000 與單行 render 寫法，已更新。
+  - 瀏覽器實測：警示視窗 z-index 12000 對比修改紀錄 6500，且 `elementFromPoint` 落在警示視窗內（確認真的在最上層）；彈窗開啟時實際送出滑鼠滾輪事件，背景 scrollY 維持 400 不動；關閉後同樣的滾輪操作可正常捲動（400 → 900）。
+  - 過程中一度誤用 `window.scrollBy` 當驗證方式，那是程式捲動、不受 `overflow:hidden` 限制，改用真實滾輪事件才是正確測法。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 11:10 Asia/Taipei— 修改紀錄多選：修正「刪除已選取」沒反應，並新增「移動到其他輪次」
 
 - 修改目的：使用者回報修改紀錄彈窗多選圖片後，「刪除已選取」點了沒反應；並希望能把初稿備份好的某幾張圖搬到一修／二修。
 - 成因：背景同步每次載入資料都會呼叫 `refreshOpenModificationViews()` 重繪這個彈窗，而 `renderRevisionModal()` 開頭無條件 `revisionImageSelection.clear()`。使用者勾好圖片、還沒按下按鈕就被清空，重繪出來的「刪除已選取」是停用狀態，按下去自然沒反應（刪除邏輯本身正常，已用假 DOM 實際跑過整段流程確認）。

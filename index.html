@@ -5879,7 +5879,9 @@
     html[data-theme="dark"] #caseDetailModal .case-inline-edit:focus-visible{color:#8ce5bb!important}
     html[data-theme="dark"] #caseDetailModal .case-detail-actions{background:rgba(15,16,18,.96)!important;border-color:#383b3e!important}
     /* 刪除類動作的站內警示視窗：疊在案件資料、修改紀錄等彈窗之上。 */
-    .app-confirm-backdrop{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:16px;background:rgba(15,23,20,.48);backdrop-filter:blur(2px)}
+    /* 12000：要蓋過所有彈窗（.login-modal 5000、#revisionModal 6500）與圖片放大預覽（10000），
+       否則在修改紀錄裡按刪除時，警示視窗會躲在彈窗後面看不到。 */
+    .app-confirm-backdrop{position:fixed;inset:0;z-index:12000!important;display:grid;place-items:center;padding:16px;background:rgba(15,23,20,.48);backdrop-filter:blur(2px)}
     .app-confirm-backdrop[hidden]{display:none!important}
     .app-confirm-card{width:min(400px,100%);box-sizing:border-box;border-radius:18px;background:#fff;border:1px solid #f3d0d0;box-shadow:0 24px 60px rgba(15,23,20,.28);padding:22px 22px 18px;text-align:center}
     .app-confirm-icon{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 12px;border-radius:999px;background:#fee2e2;color:#b91c1c}
@@ -6258,6 +6260,12 @@
       display:none!important;
     }
     body.upload-modal-open{overflow:hidden!important}
+    /* 案件資料／修改紀錄／信件編輯這幾個彈窗開著時，背景不要跟著滾輪一起捲動。
+       彈窗自己內部照常可以捲；overscroll-behavior 讓它捲到底時不會把捲動傳遞給背景。 */
+    /* 必須同時套在 html 上：本站有 `html,body{overflow-x:hidden}`，html 的 overflow 不是 visible，
+       body 的 overflow 就不會傳遞到視窗，只加在 body 上其實鎖不住（實測背景照樣捲動）。 */
+    html.modal-scroll-locked,body.modal-scroll-locked{overflow:hidden!important}
+    .case-detail-card,.revision-modal-card,.gmail-modal-card{overscroll-behavior:contain}
     #uploadModal{z-index:6600!important;padding:14px!important}
     .case-design-upload-badge{position:fixed;right:16px;bottom:16px;z-index:1260;display:flex;align-items:center;gap:8px;padding:9px 10px 9px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;max-width:min(320px,calc(100vw - 32px))}
     .case-design-upload-badge[hidden]{display:none!important}
@@ -15017,6 +15025,18 @@ window.addEventListener('blur',()=>hideDesignImageHoverPreview());
 window.addEventListener('resize',()=>{if(designImageHoverPreviewAnchor)positionDesignImageHoverPreview(designImageHoverPreviewPoint.x,designImageHoverPreviewPoint.y)});
 $('#revisionModalClose')?.addEventListener('click',()=>{closeFieldPopover();closeRevisionModal()});
 $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revisionModal'){closeFieldPopover();closeRevisionModal()}});
+/** 這幾個彈窗開著時鎖住背景捲動。它們分散在很多地方用 hidden 屬性開關（開啟、關閉、切換案件、
+ * 背景流程自動收合…），與其在每一個進出點各加一行，不如直接監看 hidden 屬性變化，任何一種開關
+ * 方式都涵蓋得到，也不會有人日後新增流程時忘記解鎖。 */
+const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal'];
+function syncModalScrollLock(){
+  const anyOpen=SCROLL_LOCK_MODAL_IDS.some(id=>{const el=document.getElementById(id); return Boolean(el)&&!el.hidden});
+  document.documentElement.classList.toggle('modal-scroll-locked',anyOpen);
+  document.body.classList.toggle('modal-scroll-locked',anyOpen);
+}
+const modalScrollLockObserver=new MutationObserver(syncModalScrollLock);
+SCROLL_LOCK_MODAL_IDS.forEach(id=>{const el=document.getElementById(id); if(el)modalScrollLockObserver.observe(el,{attributes:true,attributeFilter:['hidden']})});
+syncModalScrollLock();
 $('#revisionModalAdd')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id)});
 $('#revisionModalAddDraft')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id,{draft:true})});
 $('#gmailThreadModalClose')?.addEventListener('click',()=>{closeFieldPopover();closeGmailThreadModal()});
