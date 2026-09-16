@@ -261,7 +261,7 @@ test('Gmail thread signature stripping checks every saved signature (Gmail accou
   assert.equal(openCalls.length, 2, 'expected exactly two getCaseMailThread call sites to send signatureCandidates');
 });
 
-test('gmailThreadTrustedImageSrc() only allows https lh3.googleusercontent.com (the app\'s own image host), rejecting other domains, domain-confusion tricks, and non-https', async () => {
+test('gmailThreadTrustedImageSrc() allows https googleusercontent.com images (the app\'s own host plus Gmail\'s signature image proxy), rejecting other domains, domain-confusion tricks, and non-https', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('const GMAIL_THREAD_TRUSTED_IMAGE_HOSTS=');
   const end = html.indexOf('function sanitizeGmailThreadAttributes(', start);
@@ -269,9 +269,14 @@ test('gmailThreadTrustedImageSrc() only allows https lh3.googleusercontent.com (
   const source = html.slice(start, end);
   const check = new Function(`${source};return gmailThreadTrustedImageSrc;`)();
   assert.equal(check('https://lh3.googleusercontent.com/d/fakeid=w1600'), true);
+  // 公司簽名檔的 logo 與社群 icon 都放在 Gmail 的圖片代理（ci3…），不放行的話簽名檔左半邊會整個空掉。
+  assert.equal(check('https://ci3.googleusercontent.com/mail-sig/AIorK4yzEmyEe1QBXYQ'), true);
+  assert.equal(check('https://ci5.googleusercontent.com/proxy/abc'), true);
   assert.equal(check('https://evil.example/pixel.gif'), false);
-  // 網域混淆：URL 的 hostname 必須完全等於 lh3.googleusercontent.com，不能是它的子字串或前綴。
+  // 網域混淆：只接受 googleusercontent.com 本身的子網域，字尾像但不同網域的一律擋掉。
   assert.equal(check('https://lh3.googleusercontent.com.evil.example/x.png'), false);
+  assert.equal(check('https://evilgoogleusercontent.com/x.png'), false);
+  assert.equal(check('https://googleusercontent.com.attacker.net/x.png'), false);
   assert.equal(check('https://evil.example/?host=lh3.googleusercontent.com'), false);
   assert.equal(check('http://lh3.googleusercontent.com/d/x=w100'), false, 'must require https, not http');
   assert.equal(check(''), false);

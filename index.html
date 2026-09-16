@@ -11645,7 +11645,7 @@ function gmailThreadMessageImagesHtml(images){
  * 標籤本身、底下文字繼續保留；保留清單裡的標籤只留白名單屬性，且一律逃脫／驗證過才收下。 */
 const GMAIL_THREAD_HTML_DROP_TAGS=new Set(['script','style','iframe','object','embed','svg','math','form','input','button','textarea','select','option','optgroup','link','meta','base','title','head','audio','video','source','track','canvas','applet','frame','frameset','noscript','template','slot']);
 const GMAIL_THREAD_HTML_KEEP_TAGS=new Set(['div','p','br','span','b','strong','i','em','u','s','strike','a','table','thead','tbody','tfoot','tr','td','th','ul','ol','li','img','font','center','h1','h2','h3','h4','h5','h6','blockquote','hr','sub','sup','small','big','pre','code']);
-const GMAIL_THREAD_HTML_STYLE_PROPS=new Set(['color','background-color','font-size','font-weight','font-style','font-family','text-align','text-decoration','line-height','vertical-align','white-space','padding','padding-top','padding-right','padding-bottom','padding-left','margin','margin-top','margin-right','margin-bottom','margin-left','border','border-top','border-right','border-bottom','border-left','border-color','border-width','border-style','border-radius','width','height']);
+const GMAIL_THREAD_HTML_STYLE_PROPS=new Set(['color','background-color','font-size','font-weight','font-style','font-family','text-align','text-decoration','line-height','vertical-align','white-space','padding','padding-top','padding-right','padding-bottom','padding-left','margin','margin-top','margin-right','margin-bottom','margin-left','border','border-top','border-right','border-bottom','border-left','border-color','border-width','border-style','border-radius','width','height','max-width','display']);
 const GMAIL_THREAD_HTML_STYLE_DANGEROUS=/url\(|expression\(|javascript:|@import\b|-moz-binding|behavior\s*:|position\s*:\s*(fixed|absolute|sticky)/i;
 function sanitizeGmailThreadStyleValue(value){
   return String(value||'').split(';').map(rule=>rule.trim()).filter(Boolean).map(rule=>{
@@ -11670,11 +11670,21 @@ function sanitizeGmailThreadHref(value){
  * 當作追蹤像素；這個風險範圍遠比「放行任意外部網域」窄很多（需要對方主動用 Google 帳號操作，且拿到的
  * 只是粗略的「有沒有載入過」訊號，不是完整的追蹤能力），權衡後判斷可以接受，之後如果真的需要更嚴謹，
  * 可以考慮改成請 Worker 也把這類圖片抓成 data: URI 再回傳（如同 cid: 附件），徹底避免對外連線。 */
+/** 可以直接顯示的外部圖片來源。
+ * ①`lh3.googleusercontent.com`：這個系統自己託管設計圖的網域。
+ * ②任何 `*.googleusercontent.com`（ci3、ci4…）：Gmail 自己的圖片代理。公司簽名檔的 logo 與社群 icon
+ *   都放在這裡，不放行的話簽名檔左半邊（logo 那一格）會整個空掉，只剩一條綠色分隔線——2026-09-16
+ *   使用者回報「簽名檔只出現右半邊」就是這個原因。
+ * 這些網址是 Google 代理並快取的副本，載入時不會回連原寄件者的伺服器，沒有「已讀追蹤像素」的疑慮，
+ * 所以放行它們不會破壞原本擋掉任意外部圖片的用意。 */
 const GMAIL_THREAD_TRUSTED_IMAGE_HOSTS=new Set(['lh3.googleusercontent.com']);
+const GMAIL_THREAD_TRUSTED_IMAGE_HOST_SUFFIX='.googleusercontent.com';
 function gmailThreadTrustedImageSrc(value){
   try{
     const url=new URL(String(value||'').trim());
-    return url.protocol==='https:'&&GMAIL_THREAD_TRUSTED_IMAGE_HOSTS.has(url.hostname);
+    if(url.protocol!=='https:')return false;
+    // endsWith 前面帶點，擋掉 evilgoogleusercontent.com 這種只是字尾相同的網域。
+    return GMAIL_THREAD_TRUSTED_IMAGE_HOSTS.has(url.hostname)||url.hostname.endsWith(GMAIL_THREAD_TRUSTED_IMAGE_HOST_SUFFIX);
   }catch(err){return false}
 }
 function sanitizeGmailThreadAttributes(sourceEl,targetEl,tag){

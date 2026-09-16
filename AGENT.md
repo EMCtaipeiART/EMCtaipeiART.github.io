@@ -192,7 +192,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 13:10 Asia/Taipei（最新）— 信件編輯器工具列補齊：復原／重做、字體大小、斜體、底線、背景顏色、⌘K 加連結
+### 2026-09-16 13:40 Asia/Taipei（最新）— 信件串裡的公司簽名檔只剩右半邊：放行 Gmail 圖片代理網域
+
+- 修改目的：使用者回報在信件串檢視裡，公司簽名檔只出現右半邊（個人資訊），左邊的 logo 整格是空的、只剩一條綠色分隔線。
+- 成因：信件串檢視的 HTML 淨化器只允許兩種圖片——信件本身的 `cid:` 附件，以及白名單網域 `lh3.googleusercontent.com`（系統自己託管設計圖的網域）。公司簽名檔的 logo 與社群 icon 都放在 **Gmail 自己的圖片代理** `ci3.googleusercontent.com`，不在白名單內，整個 `<img>` 被丟棄，所以左側儲存格變成空的（那條綠線是儲存格的 `border-right`，所以還看得到）。以使用者提供的簽名檔原始碼在瀏覽器實測：淨化前 2 張圖、淨化後 0 張。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. `gmailThreadTrustedImageSrc()` 除了原本的完全比對白名單，額外放行任何 `*.googleusercontent.com` 子網域（ci3、ci4…）。仍然只接受 https，且字尾比對帶點（`.googleusercontent.com`），擋掉 `evilgoogleusercontent.com`、`googleusercontent.com.attacker.net` 這類混淆網域。
+  2. 樣式白名單補上 `max-width` 與 `display`，簽名檔表格的 `max-width:560px` 與 logo 的 `display:block` 不再被拿掉。
+- 風險區塊：
+  - 放行的是 Google 代理並快取的副本，載入時不會回連原寄件者的伺服器，因此不影響原本「擋掉任意外部圖片以避免已讀追蹤像素」的用意；任意第三方網域的圖片仍然一律丟棄。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **127/127 全過**。既有的白名單測試原本明確鎖「只允許 lh3」，已更新為涵蓋 Gmail 圖片代理，並補上三種網域混淆的反例。
+  - **瀏覽器實測**：用使用者提供的簽名檔原始碼跑 `sanitizeGmailThreadHtml()`——修正前 2 張圖全被移除、左側儲存格空白；修正後 2 張圖都保留，樣式保留 `display:block;width:140px`、表格保留 `max-width:560px`。實際載入時社群 icon 正常顯示（64×64），logo 那個代理網址本身已失效（回傳 0×0），屬於該連結的問題，不是淨化器擋的。
+  - `git stash` 只還原 `index.html`，白名單測試失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站開啟真實信件串確認簽名檔完整呈現（需要登入與 Gmail 授權）。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 13:10 Asia/Taipei— 信件編輯器工具列補齊：復原／重做、字體大小、斜體、底線、背景顏色、⌘K 加連結
 
 - 修改目的：使用者希望信件編輯器比照 Gmail，補上字體大小、文字顏色與背景顏色、選取文字後用 ⌘K／Ctrl+K 快速加連結，以及復原、重做、斜體、底線。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
