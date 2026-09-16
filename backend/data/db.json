@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5218,
+  "revision": 5219,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-16T08:30:18.510Z",
+  "updatedAt": "2026-09-16T08:30:35.714Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1423,7 +1423,7 @@
         {"案件編號":"26090102","修改次數":"0","建立日期":"2026/09/16 15:36:05","修改日期":"2026/09/16 15:36:05","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 15:36:05","圖片連結":"[{\"fileName\":\"260921_金士頓_google搜尋紀錄.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qatqxRoVCRn9h9-gPou4o2Zp43VyAksk=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 15:36:05"},
         {"案件編號":"26080151","修改次數":"1","建立日期":"2026/09/16 15:47:52","修改日期":"2026-09-16","修改內容":"3D列印這篇也需要在\"每張\"左上或右上加客戶的logo，再請協助調整，謝謝!","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260907_工研院_社群貼文_3D列印食物.png\",\"url\":\"https://lh3.googleusercontent.com/d/1olieCXRpkjvvR_xF4ure6phLdTg-i_m0=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yRs0yutg-cNg1q32jCVoE0MNS4YcqnTD=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1g-XfJXIKn4qCksMybsajOg7rDsfaBXnb=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mtm_HIj50eFaJ8MKLdjhtOoxYqC5Obej=w1600\"},{\"fileName\":\"260907_工研院_社群貼文_3D列印食物_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/19MX9PzluDgY97HVEoUiB_QaN1yChlPAW=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 15:49:19"},
         {"案件編號":"26090063","修改次數":"0","建立日期":"2026/09/16 16:22:39","修改日期":"2026/09/16 16:22:39","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 16:22:39","圖片連結":"[{\"fileName\":\"260915_shopee_蝦皮商城日_sc館_Liberty 5 Pro Max.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1QvpauBgqtc1hyJ55xQ9En4VZFyeB1fmN=w1600\"},{\"fileName\":\"260915_shopee_蝦皮商城日_sc館_Liberty 5 Pro.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1uq_PWQGtY_d9DQi8bhJu-nuPG7oliZkn=w1600\"},{\"fileName\":\"260916_shopee_蝦皮商城日_sc館_Liberty-5-Pro-Max.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/15IvtdR6-dIKvFqdUvo22Nc2u8YhNf5lS=w1600\"},{\"fileName\":\"260916_shopee_蝦皮商城日_sc館_Liberty-5-Pro.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1L5eadmHKRnOTPVP73WRstxjZeTdYKHvw=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 16:22:39"},
-        {"案件編號":"26090089","修改次數":"0","建立日期":"2026/09/16 16:30:18","修改日期":"2026/09/16 16:30:18","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 16:30:18","圖片連結":"[{\"fileName\":\"260916_eufy_E25_國民熱銷王.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1lj95ozlHnRbZAKh0vmLzk9i_2HnuleRN=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 16:30:18"}
+        {"案件編號":"26090089","修改次數":"0","建立日期":"2026/09/16 16:30:18","修改日期":"2026/09/16 16:30:18","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 16:30:18","圖片連結":"[{\"fileName\":\"260916_eufy_E25_國民熱銷王.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1lj95ozlHnRbZAKh0vmLzk9i_2HnuleRN=w1600\"},{\"fileName\":\"260916_eufy_E28_轉換_只要一機.png\",\"url\":\"https://lh3.googleusercontent.com/d/1mg0ue8zhufuVqxDxgqtq5QYUXsfdXI8m=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 16:30:35"}
       ]
     },
     "補充資料連結": {
