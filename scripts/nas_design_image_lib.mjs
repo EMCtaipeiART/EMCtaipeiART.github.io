@@ -11,7 +11,7 @@
  * 不是各自維護一份。
  */
 
-import { promises as fs } from 'node:fs';
+import { promises as fs, default as fsSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -163,6 +163,29 @@ export async function acquireLockWithWait(lockFile, { timeoutMs = 45000, pollInt
     if (await acquireLock(lockFile)) return true;
     if (Date.now() >= deadline) return false;
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
+/**
+ * 監控程式每分鐘執行一次、輸出全部附加在同一個記錄檔裡，跑了幾個月會長到幾百 MB
+ * （2026-09-16 實際看到 331 MB、616 萬行）。超過上限就就地清空：用 ftruncate 而不是
+ * 換檔名，這樣 crontab 的 `>>` 與 launchd 的 StandardOutPath 都會接著從頭寫，不會
+ * 繼續寫進一個已經被改名、看不到的舊檔案。
+ */
+export const MAX_LOG_BYTES = 20 * 1024 * 1024;
+
+export function shouldTruncateLog(sizeBytes, maxBytes = MAX_LOG_BYTES) {
+  return Number.isFinite(Number(sizeBytes)) && Number(sizeBytes) > Number(maxBytes);
+}
+
+export function truncateHugeLog({ fd = 1, maxBytes = MAX_LOG_BYTES } = {}) {
+  try {
+    const stat = fsSync.fstatSync(fd);
+    if (!stat.isFile() || !shouldTruncateLog(stat.size, maxBytes)) return false;
+    fsSync.ftruncateSync(fd, 0);
+    return true;
+  } catch {
+    return false; // 記錄檔整理失敗不該影響備份本身
   }
 }
 

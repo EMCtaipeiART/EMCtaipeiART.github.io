@@ -240,7 +240,9 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
   const lockFile = `${stateFile}.lock`;
   const warnings = [];
 
-  if (!(await lib.acquireLockWithWait(lockFile))) {
+  // 等到 90 秒才放棄：監控程式改成「每個資料夾用完就放開狀態鎖」之後，實測平均只要等約 1 秒，
+  // 最久的一次是 38 秒（剛好卡在某個正在上傳大批圖片的資料夾），留一點餘裕就幾乎不會再失敗。
+  if (!(await lib.acquireLockWithWait(lockFile, { timeoutMs: 90000 }))) {
     return {
       attempted: false,
       uploadedCount: 0,

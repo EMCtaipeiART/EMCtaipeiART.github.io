@@ -69,21 +69,33 @@ function parseArgs(argv) {
   return args;
 }
 
+// 每個資料夾最多等這麼久才放棄搶狀態鎖（通常只會等到前一個資料夾處理完，幾秒內）。
+const STATE_LOCK_WAIT_MS = 20000;
+// 上傳前重抓資料庫的快取時間。
+const DB_CACHE_MS = 20000;
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const config = await lib.loadConfig(args.config);
   const configDir = path.dirname(args.config);
   const stateFile = lib.resolvePath(configDir, config.stateFile);
-  const lockFile = `${stateFile}.lock`;
-  if (!(await lib.acquireLock(lockFile))) {
+  // 記錄檔過大時先就地清空（見 lib.truncateHugeLog）。
+  if (lib.truncateHugeLog()) console.log('（記錄檔已超過上限，先清空重新開始記錄）');
+  // 兩把鎖分開：
+  //   執行鎖（.run.lock）只防「上一輪還沒跑完就又被排程叫起來」，資料夾選擇器完全不碰它。
+  //   狀態鎖（.lock）保護 sync-state.json，改成每個資料夾要用時才拿、用完立刻放——舊寫法是
+  //   整輪掃描（57 個案件、約兩分鐘）從頭到尾佔著它，設計師在網頁上按「選擇資料夾並備份」
+  //   等滿 45 秒也搶不到，只會看到「背景監控程式正在同步資料，這次先跳過立即備份」。
+  const runLockFile = `${stateFile}.run.lock`;
+  if (!(await lib.acquireLock(runLockFile))) {
     console.log('=== NAS 設計圖檔監控 ===');
-    console.log('上一次執行還沒結束，或資料夾選擇器正在幫某個案件立即備份，這次先跳過，避免同時疊加多個執行個體。');
+    console.log('上一次執行還沒結束，這次先跳過，避免同時疊加多個執行個體。');
     return;
   }
   try {
     await runScan(args, config, configDir, stateFile);
   } finally {
-    await lib.releaseLock(lockFile);
+    await lib.releaseLock(runLockFile);
   }
 }
 
@@ -101,7 +113,7 @@ async function runScan(args, config, configDir, stateFile) {
   // 判斷成待上傳、再上傳一次——這正是案件 26080079（與同一天另一個案件
   // 26080045）在正式環境實際重現過的重複上傳成因之一。改成每個案件處理完
   // 就立刻落地存檔，即使後面的案件出錯，前面已經成功的案件也不會被拖累。
-  const state = await lib.loadState(stateFile);
+  const stateLockFile = `${stateFile}.lock`;
   const canUpload = lib.uploadEnabled(config, secrets);
 
   console.log('=== NAS 設計圖檔監控 ===');
@@ -111,6 +123,16 @@ async function runScan(args, config, configDir, stateFile) {
 
   const dbData = await lib.fetchDatabase(config.dbJsonUrl);
   const projects = lib.discoverProjects(dbData);
+  // 上傳前要用「當下最新」的資料庫判斷輪次（掃描途中 PM 可能剛新增修改需求），但每個資料夾都
+  // 重抓一次 db.json（57 個案件就是 57 次下載）是整輪變慢的主因之一。改成快取 20 秒：一輪只會
+  // 下載幾次，仍然反映得到掃描期間新增的輪次。
+  let cachedDb = dbData, cachedDbAt = Date.now();
+  const latestDatabase = async () => {
+    if (Date.now() - cachedDbAt < DB_CACHE_MS) return cachedDb;
+    cachedDb = await lib.fetchDatabase(config.dbJsonUrl);
+    cachedDbAt = Date.now();
+    return cachedDb;
+  };
 
   if (!projects.length) {
     console.log('目前沒有任何案件符合條件（狀態＝過稿中或修改中，且已透過網頁彈出視窗填寫來源資料夾路徑），本次沒有要掃描的案件。');
@@ -144,6 +166,17 @@ async function runScan(args, config, configDir, stateFile) {
       // 過這一個資料夾，不會讓整個迴圈中斷、連累同一案件其他資料夾、或後面還
       // 沒處理到、前面已經處理成功的其他案件（前面成功的都已經各自存檔過，
       // 不受影響）。
+      // 只在真正要讀寫同步狀態的這段期間持有狀態鎖，處理完這個資料夾就立刻放開，讓網頁上的
+      // 「立即備份」有機會插隊。搶不到就跳過這個資料夾，下一輪排程會再處理。
+      if (!(await lib.acquireLockWithWait(stateLockFile, { timeoutMs: STATE_LOCK_WAIT_MS, pollIntervalMs: 1000 }))) {
+        console.log(`  ${label}[略過] 同步狀態正被「立即備份」使用，這個資料夾這次先跳過，下一輪排程會再處理`);
+        warnings.push(`案件 ${project.caseId} 資料夾「${folder.path}」因同步狀態被佔用而跳過`);
+        continue;
+      }
+      // 每次重新拿到鎖都重讀一次狀態：剛才放開鎖的期間，立即備份可能已經寫入新的歸類結果，
+      // 沿用記憶體裡的舊狀態存檔會把它蓋掉。
+      const state = await lib.loadState(stateFile);
+      try {
       let result;
       try {
         result = await lib.scanProject(scanInput, config, state, previewDir, warnings);
@@ -193,7 +226,7 @@ async function runScan(args, config, configDir, stateFile) {
           // 判斷，不能沿用整個掃描開始時抓的那份 dbData——如果 PM 在掃描這批案
           // 件的過程中新增了修改需求，沿用舊快照會讓這次抓到的圖片被錯誤歸到
           // 舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪。
-          const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
+          const latestDbData = await latestDatabase();
           const upload = await lib.uploadPendingRound({
             config, secrets, dbData: latestDbData, caseId: project.caseId, // 一律用真正的案件編號，不是 stateKey——寫回資料庫、比對修改統計表都要用真實案件編號
             designer: project.designer, client: project.client, start: project.start,
@@ -238,6 +271,9 @@ async function runScan(args, config, configDir, stateFile) {
           // 記到」這種不一致的關鍵一步。
           await lib.saveState(stateFile, state);
         }
+      }
+      } finally {
+        await lib.releaseLock(stateLockFile);
       }
     }
 

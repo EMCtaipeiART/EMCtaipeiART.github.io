@@ -612,3 +612,80 @@ test('a file that this machine already tracks is not silently adopted from the d
     globalThis.fetch = originalFetch;
   }
 });
+
+test('the run lock and the state lock are separate, so an immediate backup can slip in while a scan is running', async () => {
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { acquireLock, acquireLockWithWait, releaseLock } = await import('../../scripts/nas_design_image_lib.mjs');
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-locks-'));
+  try {
+    const stateFile = path.join(dir, 'sync-state.json');
+    const runLock = `${stateFile}.run.lock`;
+    const stateLock = `${stateFile}.lock`;
+    // 排程拿著「執行鎖」跑整輪，這時候「立即備份」照樣拿得到狀態鎖。
+    assert.equal(await acquireLock(runLock), true);
+    assert.equal(await acquireLockWithWait(stateLock, { timeoutMs: 1000, pollIntervalMs: 50 }), true);
+    // 狀態鎖同一時間只能有一個人拿著。
+    assert.equal(await acquireLockWithWait(stateLock, { timeoutMs: 300, pollIntervalMs: 50 }), false);
+    await releaseLock(stateLock);
+    assert.equal(await acquireLockWithWait(stateLock, { timeoutMs: 300, pollIntervalMs: 50 }), true);
+    // 另一個排程執行個體仍然會被執行鎖擋下來，不會疊加。
+    assert.equal(await acquireLock(runLock), false);
+    await releaseLock(runLock);
+    await releaseLock(stateLock);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('an oversized log file is emptied in place instead of growing forever', async () => {
+  const { mkdtemp, rm, writeFile, stat, open } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { shouldTruncateLog, truncateHugeLog, MAX_LOG_BYTES } = await import('../../scripts/nas_design_image_lib.mjs');
+  assert.equal(MAX_LOG_BYTES, 20 * 1024 * 1024);
+  assert.equal(shouldTruncateLog(MAX_LOG_BYTES + 1), true);
+  assert.equal(shouldTruncateLog(MAX_LOG_BYTES), false);
+  assert.equal(shouldTruncateLog('not a number'), false);
+
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-log-'));
+  try {
+    const logPath = path.join(dir, 'watcher.log');
+    await writeFile(logPath, 'x'.repeat(2048));
+    const handle = await open(logPath, 'r+');
+    try {
+      assert.equal(truncateHugeLog({ fd: handle.fd, maxBytes: 5000 }), false, '沒超過上限就不動它');
+      assert.equal((await stat(logPath)).size, 2048);
+      assert.equal(truncateHugeLog({ fd: handle.fd, maxBytes: 1000 }), true);
+      assert.equal((await stat(logPath)).size, 0, '超過上限就就地清空');
+    } finally {
+      await handle.close();
+    }
+    // 記錄檔整理失敗（例如輸出是終端機、不是檔案）不可以影響備份。
+    assert.equal(truncateHugeLog({ fd: 999999, maxBytes: 1 }), false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('the watcher holds the state lock per folder, re-reads state each time, and caches the database between folders', async () => {
+  const source = await readFile(new URL('../../scripts/nas_design_image_watcher.mjs', import.meta.url), 'utf8');
+  // 執行鎖與狀態鎖必須是不同檔案，否則「立即備份」又會被整輪掃描擋住。
+  assert.match(source, /const runLockFile = `\$\{stateFile\}\.run\.lock`;/);
+  assert.match(source, /if \(!\(await lib\.acquireLock\(runLockFile\)\)\)/);
+  assert.match(source, /const stateLockFile = `\$\{stateFile\}\.lock`;/);
+  // 狀態鎖在資料夾迴圈內取得與釋放，而不是整輪持有。
+  const folderLoopStart = source.indexOf('for (let folderIndex = 0;');
+  const acquireAt = source.indexOf('lib.acquireLockWithWait(stateLockFile', folderLoopStart);
+  const reloadAt = source.indexOf('const state = await lib.loadState(stateFile);', folderLoopStart);
+  const releaseAt = source.indexOf('await lib.releaseLock(stateLockFile);', folderLoopStart);
+  assert.ok(folderLoopStart > 0 && acquireAt > folderLoopStart, '狀態鎖要在資料夾迴圈裡才取得');
+  assert.ok(reloadAt > acquireAt, '拿到鎖之後要重讀狀態，才不會蓋掉立即備份剛寫入的結果');
+  assert.ok(releaseAt > reloadAt, '同一個資料夾處理完就要釋放狀態鎖');
+  assert.doesNotMatch(source.slice(0, folderLoopStart), /await lib\.loadState\(stateFile\)/, '整輪共用的狀態讀取要移除');
+  // 上傳前的資料庫查詢改用短期快取，不再每個資料夾各下載一次。
+  assert.match(source, /const latestDbData = await latestDatabase\(\);/);
+  assert.match(source, /Date\.now\(\) - cachedDbAt < DB_CACHE_MS/);
+  assert.match(source, /lib\.truncateHugeLog\(\)/);
+});

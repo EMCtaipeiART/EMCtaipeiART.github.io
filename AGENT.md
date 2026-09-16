@@ -192,7 +192,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 09:10 Asia/Taipei（最新）— 一鍵安裝包：讓其他設計師的 Mac 自己變成會爬 NAS 的電腦
+### 2026-09-16 09:25 Asia/Taipei（最新）— 修正「立即備份」被整輪掃描卡住：鎖粒度改小、資料庫快取、記錄檔自動清理
+
+- 修改目的：使用者回報 NAS 傳完檔後按「選擇資料夾並備份」要等非常久，最後顯示「背景監控程式目前正在同步資料，這次先跳過立即備份」，圖片當下也沒有備份。
+- 成因：監控程式在 `main()` 一開始就取得 `sync-state.json.lock`，整輪掃描（實測 57 個案件、約 2 分鐘）從頭到尾持有；資料夾選擇器的立即備份最多只等 45 秒，必定搶不到而降級成「只登記路徑」。另外每個資料夾在上傳前都各自重抓一次 db.json（57 次下載），也是整輪變慢的原因之一。記錄檔 `~/Library/Logs/nas-watcher.log` 已長到 331 MB／616 萬行，從不整理。（案件 26090118 後來在 09:07:53 由排程自動補備份成功，功能本身沒壞。）
+- 影響檔案：`scripts/nas_design_image_watcher.mjs`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_folder_picker_server.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：
+  1. **兩把鎖分開**：新增執行鎖 `sync-state.json.run.lock`，只防排程自己重疊執行，選擇器完全不碰；狀態鎖 `sync-state.json.lock` 改成在資料夾迴圈內取得、處理完立刻釋放（最多等 20 秒，搶不到就跳過該資料夾並記警告，下一輪再處理）。每次重新取得鎖都重讀 `sync-state.json`，避免蓋掉立即備份剛寫入的歸類結果。
+  2. **資料庫快取 20 秒**（`latestDatabase()`）：一輪從 57 次下載降到幾次，仍能反映掃描期間 PM 新增的輪次。
+  3. **記錄檔自動清理**：`lib.truncateHugeLog()` 在每次執行開頭檢查 stdout，超過 20 MB 就以 `ftruncate` 就地清空（不改檔名，crontab 的 `>>` 與 launchd 的 StandardOutPath 都能接著寫）。
+  4. **立即備份等待上限 45 → 90 秒**。
+- 風險區塊：
+  - 狀態鎖改小粒度後，同一輪掃描期間的狀態不再是單一快照；每個資料夾都重讀，寫入仍在鎖內，不會互相覆蓋。
+  - 搶不到狀態鎖的資料夾這一輪會被跳過（會列在警告裡），下一輪補上。
+  - 記錄檔清空是就地截斷，超過上限時舊內容會直接消失（不保留備份檔）。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **118/118 全過**（115 既有＋3 新增：執行鎖與狀態鎖互不阻擋、狀態鎖互斥與釋放後可再取得；記錄檔超過上限就地清空、未超過不動、fd 無效時安全回 false；watcher 結構鎖定——狀態鎖在資料夾迴圈內取得／重讀狀態／釋放，整輪共用的狀態讀取已移除，資料庫改用快取）。
+  - **實機驗證**：在這台 iMac 一邊跑監控程式、一邊用腳本模擬「立即備份」連續搶鎖 100 秒，39 次全部成功，平均等待 1.08 秒、最長 38 秒（舊版是等滿 45 秒直接失敗）。
+  - `node --check` 三支程式語法無誤。
+  - **未做的驗證**：沒有在正式站實際操作一次「選擇資料夾並備份」（需要瀏覽器登入與 NAS 同時就緒）。
+- 部署狀態：NAS 程式由 crontab 每分鐘重新啟動，git pull 後自動生效；設計師電腦上的安裝包會在下次重跑安裝程式時更新（或由 launchd 直接使用已下載的版本，需重跑安裝檔才會更新）。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 09:10 Asia/Taipei— 一鍵安裝包：讓其他設計師的 Mac 自己變成會爬 NAS 的電腦
 
 - 修改目的：使用者要求「寫一包懶人程式，在其他設計師電腦裡自動安裝爬 NAS 的程式，一鍵完成、不用管理者手動設定」。使用者選擇：金鑰放 NAS 上自動讀取、每台電腦都掃全部案件。
 - 影響檔案：`scripts/install_nas_watcher.command`（新）、`scripts/uninstall_nas_watcher.command`（新）、`scripts/nas_watcher_installer.mjs`（新）、`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.README.md`、`backend/test/nas-installer.test.mjs`（新）、`backend/test/nas-upload-idempotency.test.mjs`。另外在 NAS 放了 `設計部/設計管理/NAS自動備份安裝/`（安裝／移除 .command、secrets.json、使用說明.txt），這部分不在倉庫內。
