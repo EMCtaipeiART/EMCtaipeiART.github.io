@@ -192,7 +192,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 17:35 Asia/Taipei（最新）— 修正信件範本帶入時出現看得到的 `<br>`
+### 2026-09-16 18:00 Asia/Taipei（最新）— 回信的引用區塊改用 Gmail 標準標記，減少簽名檔被折進「⋯」
+
+- 修改目的：使用者回報在信件編輯器回覆後，簽名檔常被 Gmail 判定成重複內容、折疊進「⋯」看不到。
+- 成因：Gmail 會把「跟前一封重複的內容」折疊起來，折疊的起點靠它自己判斷。我們送出的回信結構是「本文 → 簽名檔 → 自行附上的引用內容」，而引用區塊雖然外層有 `gmail_quote`，內部卻是自訂寫法（標題列沒有 `gmail_attr`、`blockquote` 沒有 `gmail_quote` class、樣式寫法也不同），Gmail 認不出明確邊界時會往前多吃一段，簽名檔就一起被收起來。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`。
+- 影響功能：`gmailThreadQuote()` 產生的每封引用改成 Gmail 自己回信時的標記——`<div dir="ltr" class="gmail_attr">…寫道：<br></div>` 加上 `<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">`，外層仍是 `div.gmail_quote`。純文字版本不變。
+- 風險區塊：
+  - 這是讓 Gmail「剛好從引用區塊開始折疊」的作法，但折疊規則由 Gmail 決定，**無法保證 100% 不再發生**——例如簽名檔與前一封完全相同時，Gmail 仍可能收起來（這是所有 Gmail 使用者都會遇到的原生行為）。
+  - 簽名檔刻意**不加** `gmail_signature` class（既有設計，見既有測試註解）：加了反而會被 Gmail 當成簽名收合，而且信件串閱讀時的簽名檔比對是靠原始字串完全相符。
+  - 若仍常發生，下一步可以做「回信不附上引用內容」的選項（Gmail 本來就會顯示整條信件串，引用區塊主要是給 Outlook 這類用戶端看的）。
+- 已檢查／驗證方式：
+  - `cd worker && npx tsc --noEmit` 無錯、`npx vitest run` **77/77 全過**；既有回信測試原本鎖死舊的 blockquote 寫法，已更新為新的標記並加驗 `gmail_attr`。
+  - `node --test backend/test/*.test.mjs` **133/133 全過**（前台未更動）。
+  - `git stash` 只還原 Worker 原始碼，該測試失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有實際寄一封回信到 Gmail 收件匣確認折疊行為（需要正式站登入與 Gmail 授權），這點只能由使用者實測。
+- 部署狀態：**Worker 已 `npx wrangler deploy`**；前台無異動。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 17:35 Asia/Taipei— 修正信件範本帶入時出現看得到的 `<br>`
 
 - 修改目的：使用者回報信件編輯器的預設內容變成「附上社群貼文，`<br>`再煩請查收，謝謝。」，換行語法變成畫面上的文字。
 - 成因：13:10 把個人設定與設計師設定的信件範本改成格式化編輯器之後，**範本存的是 HTML**；但帶進信件編輯器時仍走 `setGmailEditorPlainText()`，整段被當成純文字逐字輸出，`<br>` 因此顯示出來。屬於「產生端已改、消費端沒改」的疏漏。

@@ -719,7 +719,10 @@ function gmailThreadQuote(messages: unknown[], knownSignatureText = '', knownSig
     const heading = [date, from].filter(Boolean).join('，');
     const intro = heading ? `${heading} 寫道：` : '先前信件：';
     return {
-      html: `<div style="margin-bottom:12px"><div>${escapeHtml(intro)}</div><blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote></div>`,
+      // 用 Gmail 自己產生回信時的標記（gmail_attr 標題列＋ blockquote.gmail_quote）。Gmail 會把「跟前一封
+      // 重複的內容」收合成「⋯」，看不到明確的引用邊界時它會用猜的，往前多吃一段——使用者回報的「簽名檔
+      // 被收進⋯裡」就是這樣來的。標記跟 Gmail 一致時，它才會剛好從引用區塊開始收合。
+      html: `<div dir="ltr" class="gmail_attr">${escapeHtml(intro)}<br></div><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote>`,
       plainText: `${intro}\n${body.split('\n').map(line => `> ${line}`).join('\n')}`
     };
   }).filter((item): item is { html: string; plainText: string } => Boolean(item));

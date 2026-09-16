@@ -1829,7 +1829,9 @@ describe('Machi Design API Worker', () => {
         expect(replyHtml).toContain('收到，謝謝回報');
         expect(replyHtml).toContain('class="gmail_quote"');
         expect(replyHtml).toContain(originalMessageBody);
-        expect(replyHtml).toContain(`<blockquote style="margin:0 0 0 .8ex;border-left:1px solid #ccc;padding-left:1ex">${plainTextBody}`);
+        // 引用區塊沿用 Gmail 自己的標記，Gmail 才會剛好從這裡開始收合，不會把簽名檔一起吃進去。
+        expect(replyHtml).toContain('class="gmail_attr"');
+        expect(replyHtml).toContain(`<blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex">${plainTextBody}`);
         return Response.json({ id: 'gmail-msg-3', threadId: 'gmail-thread-1' });
       }
       throw new Error(`unexpected fetch during reply: ${url}`);
