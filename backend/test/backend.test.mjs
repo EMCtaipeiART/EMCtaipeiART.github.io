@@ -3902,3 +3902,28 @@ test('the NAS folder picker opens on the designer own machine first and falls ba
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(picker, /type: 'machi-nas-folder-picker-ready', caseId, nonce, host: location\.origin/);
 });
+
+test('first paint assets stay small: preloaded designer avatars must not balloon again', async () => {
+  const { readdir, stat } = await import('node:fs/promises');
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const preloaded = [...html.matchAll(/<link rel="preload" as="image" href="(assets\/designers\/[^"]+)"/g)].map(match => match[1]);
+  assert.ok(preloaded.length >= 6, '設計師頭像仍以 preload 高優先度載入，數量不應變少');
+
+  // 這些圖在首頁一開啟就會下載、跟 HTML 搶頻寬，畫面上只顯示 112px。
+  // 2026-09-16 曾經每張 512px、合計 1089 KB，首次載入因此非常慢，壓成 256px 後合計 158 KB。
+  let totalBytes = 0;
+  for (const relPath of preloaded) {
+    const { size } = await stat(new URL(`../../${relPath}`, import.meta.url));
+    totalBytes += size;
+    assert.ok(size <= 60 * 1024, `${relPath} 為 ${Math.round(size / 1024)} KB，超過 60 KB 上限`);
+  }
+  assert.ok(totalBytes <= 300 * 1024, `預載頭像合計 ${Math.round(totalBytes / 1024)} KB，超過 300 KB 上限`);
+
+  // 設計師大圖（點開海報才載入，不在首次載入路徑上）也維持壓縮後的大小。
+  const posterDir = new URL('../../images/', import.meta.url);
+  for (const name of await readdir(posterDir)) {
+    if (!/\.(jpe?g|png)$/i.test(name)) continue;
+    const { size } = await stat(new URL(name, posterDir));
+    assert.ok(size <= 600 * 1024, `images/${name} 為 ${Math.round(size / 1024)} KB，超過 600 KB 上限`);
+  }
+});
