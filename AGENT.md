@@ -192,6 +192,13 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-16 — 修復 Test JSON backend 的兩項過期測試
+
+- 原因：Actions #5555 的 133 項測試中，NAS 渲染測試抽取函式時漏載新增的 WeakMap；色票測試仍在面板函式中尋找已移至共用處理器的指令。與觸發提交的 saveUserSettings 資料內容無關。
+- 影響檔案：`backend/test/backend.test.mjs`。不修改正式功能或 Worker。
+- 修正：測試載入真實狀態宣告，補足模擬 DOM 的 HTML／清空行為，新增備份完成後保留編輯及刪除內容的斷言；色票檢查改追蹤面板至共用套色處理器，保留 foreColor／hiliteColor／backColor 驗證。
+- 驗證：本機 npm test 共 133 項全部通過；推送後確認 GitHub Actions 執行結果。
+
 ### 2026-09-16 — 設計師回覆的 NAS 路徑開放編輯與刪除
 
 - 修改目的：使用者確認真正困擾是自動帶入的 NAS 路徑整段被設為唯讀，無法修改、刪除或上色。

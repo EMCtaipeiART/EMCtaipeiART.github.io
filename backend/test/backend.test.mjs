@@ -423,19 +423,26 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   // Exercise the real rendering function (extracted verbatim from index.html) against a fake DOM.
   const listSource = html.match(/function designerReplyFolderList\(folders\)\{[\s\S]*?\n\}\n/)?.[0];
   const renderSource = html.match(/function renderDesignerReplyNasPaths\(folders\)\{[\s\S]*?\n\}\n/)?.[0];
-  assert.ok(listSource && renderSource, 'could not locate the NAS-path rendering block');
+  const stateSource = html.match(/const designerReplyNasRenderedHtml=new WeakMap\(\);/)?.[0];
+  assert.ok(listSource && renderSource && stateSource, 'could not locate the NAS-path rendering block and state');
+  assert.doesNotMatch(html, /nasPathsContainer\.contentEditable='false'/);
 
   const renderFolderPaths = folders => {
     const children = [];
-    const container = { children, dataset: {}, textContent: '', appendChild: node => children.push(node) };
+    const container = {
+      children, dataset: {},
+      get innerHTML() { return children.map(node => node.tag === '#text' ? node.textContent : `<${node.tag}>${node.textContent}</${node.tag}>`).join(''); },
+      set textContent(value) { children.length = 0; if(value)children.push({tag:'#text',textContent:value}); },
+      appendChild: node => children.push(node)
+    };
     const fakeDocument = {
       getElementById: id => (id === 'gmailDesignerReplyNasPaths' ? container : null),
       createElement: tag => ({ tag, textContent: '' }),
       createTextNode: text => ({ tag: '#text', textContent: text })
     };
-    const fn = new Function('document', `${listSource}\n${renderSource}\nreturn renderDesignerReplyNasPaths;`)(fakeDocument);
+    const fn = new Function('document', `${stateSource}\n${listSource}\n${renderSource}\nreturn renderDesignerReplyNasPaths;`)(fakeDocument);
     fn(folders);
-    return { children, container };
+    return { children, container, render: fn };
   };
 
   const multi = renderFolderPaths(['NAS/資料夾A', 'NAS/資料夾B']);
@@ -455,6 +462,16 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
   assert.equal(duplicated.children.find(node => node.tag === '#text').textContent, ' NAS路徑');
 
   assert.equal(renderFolderPaths([]).children.length, 0);
+  const refreshed = renderFolderPaths(['NAS/原始']);
+  refreshed.render(['NAS/確認A', 'NAS/確認B']);
+  assert.deepEqual(refreshed.children.filter(node => node.tag === 'b').map(node => node.textContent), ['NAS/確認A', 'NAS/確認B']);
+  for(const editedText of ['NAS/使用者修改', '']){
+    const edited = renderFolderPaths(['NAS/原始']);
+    edited.container.textContent = editedText;
+    edited.render(['NAS/備份完成']);
+    assert.equal(edited.container.innerHTML, editedText, 'backup completion must preserve edited or deleted text');
+    assert.deepEqual(JSON.parse(edited.container.dataset.nasFolders), ['NAS/備份完成']);
+  }
 
   // The picker page must not add the same path to the multi-select list twice either.
   assert.match(pickerServer, /const existing = selectedFolders\.find\(item => item\.path === relPath\);/);
@@ -4157,8 +4174,11 @@ test('mail editor toolbar offers undo/redo, font size, italic, underline, backgr
   assert.match(palette, /<p class="gmail-color-group-title">背景顏色<\/p>/);
   assert.match(palette, /<p class="gmail-color-group-title">文字顏色<\/p>/);
   assert.match(palette, /data-gmail-color-kind="\$\{kind\}"/);
-  assert.match(palette, /if\(!document\.execCommand\('hiliteColor',false,color\)\)document\.execCommand\('backColor',false,color\)/);
-  assert.match(palette, /else document\.execCommand\('foreColor',false,color\);/);
+  assert.match(palette, /applyGmailSelectionColor\(kind,color\);/);
+  const applyColor = html.match(/function applyGmailSelectionColor\(kind,color\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(applyColor, 'could not locate the shared color command handler');
+  assert.match(applyColor, /if\(!document\.execCommand\('hiliteColor',false,color\)\)document\.execCommand\('backColor',false,color\)/);
+  assert.match(applyColor, /else document\.execCommand\('foreColor',false,color\);/);
   // 只有文字色會更新按鈕上的色塊，背景色不該改掉它。
   assert.match(palette, /if\(kind==='text'\)\{[\s\S]*?gmailColorTargetButton\.dataset\.selectedColor=color;/);
 
