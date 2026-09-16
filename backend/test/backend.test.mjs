@@ -3930,7 +3930,9 @@ test('first paint assets stay small: preloaded designer avatars must not balloon
   const { readdir, stat } = await import('node:fs/promises');
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const preloaded = [...html.matchAll(/<link rel="preload" as="image" href="(assets\/designers\/[^"]+)"/g)].map(match => match[1]);
-  assert.ok(preloaded.length >= 6, '設計師頭像仍以 preload 高優先度載入，數量不應變少');
+  // 2026-09-16：Karl 離職，頭像預載移除，剩下五位在職設計師。
+  assert.ok(preloaded.length >= 5, '設計師頭像仍以 preload 高優先度載入');
+  assert.equal(preloaded.some(path => path.includes('Karl')), false, '離職成員不需要再預先載入頭像');
 
   // 這些圖在首頁一開啟就會下載、跟 HTML 搶頻寬，畫面上只顯示 112px。
   // 2026-09-16 曾經每張 512px、合計 1089 KB，首次載入因此非常慢，壓成 256px 後合計 158 KB。
