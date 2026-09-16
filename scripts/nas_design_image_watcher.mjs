@@ -291,6 +291,25 @@ async function runScan(args, configInput, configDir, stateFile) {
     console.log('');
   }
 
+  // 結案的案件留下的同步狀態與預覽圖不會自己消失（實測累積到 325 MB），每輪掃描完順手清一次。
+  if (await lib.acquireLockWithWait(stateLockFile, { timeoutMs: STATE_LOCK_WAIT_MS, pollIntervalMs: 1000 })) {
+    try {
+      const state = await lib.loadState(stateFile);
+      const pruned = await lib.pruneFinishedCaseState({
+        state,
+        dbData: await latestDatabase(),
+        previewDir,
+        keepDays: Number(config.pruneKeepDays) || 14
+      });
+      if (pruned.prunedKeys.length) {
+        await lib.saveState(stateFile, state);
+        console.log(`[定期清理] 已清掉 ${pruned.prunedKeys.length} 個結案案件的同步狀態與 ${pruned.removedPreviews} 張預覽圖，釋放 ${lib.formatBytes(pruned.freedBytes)}`);
+      }
+    } finally {
+      await lib.releaseLock(stateLockFile);
+    }
+  }
+
   console.log(`=== 掃描完成：新增 ${totalNew} 個、更新 ${totalChanged} 個 ===`);
   if (!canUpload) {
     console.log('尚未設定 appsScriptUploadUrl／serviceKey，只產生本機預覽圖，不會上傳。');

@@ -689,3 +689,63 @@ test('the watcher holds the state lock per folder, re-reads state each time, and
   assert.match(source, /Date\.now\(\) - cachedDbAt < DB_CACHE_MS/);
   assert.match(source, /lib\.truncateHugeLog\(\)/);
 });
+
+test('finished cases stop taking up local disk: their sync state and preview images are pruned', async () => {
+  const { mkdtemp, mkdir, writeFile, rm, readdir } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const { prunableStateKeys, pruneFinishedCaseState } = await import('../../scripts/nas_design_image_lib.mjs');
+
+  const now = Date.UTC(2026, 8, 16);
+  const days = n => now - n * 24 * 60 * 60 * 1000;
+  const dbData = { tables: { database: { rows: [
+    { '案件編號': '26070172', '狀態': '已完成' },
+    { '案件編號': '26080055', '狀態': '已取消' },
+    { '案件編號': '26090107', '狀態': '過稿中' },
+    { '案件編號': '26090108', '狀態': '已完成' },
+    { '案件編號': '26090109', '狀態': '未開始' }
+  ] } } };
+  const state = {
+    '26070172': { files: { 'a.png': { mtimeMs: days(50), assignedRound: 0 } } },
+    '26080055': { files: { 'b.png': { mtimeMs: days(30) } } },
+    '26080055::1': { files: { 'c.png': { mtimeMs: days(30) } } },
+    '26090107': { files: { 'd.png': { mtimeMs: days(1) } } },
+    '26090108': { files: { 'e.png': { mtimeMs: days(2) } } },
+    '26090109': { files: { 'f.png': { mtimeMs: days(60) } } },
+    '26090999': { files: { 'g.png': { mtimeMs: days(40) } } }
+  };
+
+  const keys = prunableStateKeys(state, dbData, { now, keepDays: 14 });
+  assert.deepEqual(keys.sort(), ['26070172', '26080055', '26080055::1', '26090999'].sort());
+  // 過稿中的案件不能清（還在追蹤）；剛結案但最近還有變動的先留著；未開始不是結案狀態也留著；
+  // 案件已經從資料庫刪掉的（26090999）視同結案，可以清。
+  assert.equal(keys.includes('26090107'), false, '還在追蹤的案件不可以清');
+  assert.equal(keys.includes('26090108'), false, '兩天前才有變動，先留著');
+  assert.equal(keys.includes('26090109'), false, '未開始不是結案狀態');
+
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-prune-'));
+  try {
+    const previewDir = path.join(dir, 'previews');
+    for (const key of ['26070172', '26080055', '26080055::1', '26090107', '26090999']) {
+      await mkdir(path.join(previewDir, key), { recursive: true });
+      await writeFile(path.join(previewDir, key, 'preview.jpg'), 'x'.repeat(1024));
+    }
+    const result = await pruneFinishedCaseState({ state, dbData, previewDir, now, keepDays: 14 });
+    assert.equal(result.prunedKeys.length, 4);
+    assert.equal(result.removedPreviews, 4);
+    assert.equal(result.freedBytes, 4096);
+    assert.deepEqual(Object.keys(state).sort(), ['26090107', '26090108', '26090109'].sort(), '清掉的案件要從同步狀態移除');
+    assert.deepEqual((await readdir(previewDir)).sort(), ['26090107'], '只留下還在追蹤的案件預覽圖');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+
+  // 每輪掃描結束時會執行清理，而且是在拿到狀態鎖之後。
+  const watcher = await readFile(new URL('../../scripts/nas_design_image_watcher.mjs', import.meta.url), 'utf8');
+  assert.match(watcher, /lib\.pruneFinishedCaseState\(\{/);
+  assert.match(watcher, /keepDays: Number\(config\.pruneKeepDays\) \|\| 14/);
+  const pruneAt = watcher.indexOf('lib.pruneFinishedCaseState');
+  const lockAt = watcher.lastIndexOf('lib.acquireLockWithWait(stateLockFile', pruneAt);
+  assert.ok(lockAt > 0 && lockAt < pruneAt, '清理也要在狀態鎖保護下進行');
+  assert.match(watcher, /\[定期清理\]/);
+});

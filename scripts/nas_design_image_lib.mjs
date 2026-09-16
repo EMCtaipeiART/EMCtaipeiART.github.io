@@ -615,6 +615,55 @@ export function resolveCaseFolders(row) {
  * 以後的資料夾才會用 `${caseId}::${index}` 這種複合 key，佔用全新、之前
  * 不可能存在的 key，不會跟任何既有資料衝突。
  */
+/**
+ * 挑出「可以清掉」的本機同步狀態：案件已完成／已取消（或案件本身已經從資料庫刪掉），而且最近
+ * keepDays 天內沒有任何檔案變動。
+ *
+ * 案件結案後，這些狀態與預覽圖留著只是佔空間——2026-09-16 實際看到 sync-state.json 352 KB、
+ * 184 個案件鍵（含七月的案件），預覽圖 949 張共 325 MB，而且從來沒有被清理過。清掉之後如果那個
+ * 案件又回到修改中，掃描會重新建立狀態，並依資料庫已有的圖片沿用原本的輪次（見
+ * recordedRoundsByBaseName），不會把舊圖重新上傳一次。
+ */
+export function prunableStateKeys(state, dbData, { now = Date.now(), keepDays = 14 } = {}) {
+  const rows = dbData?.tables?.database?.rows || [];
+  const statusById = new Map(rows.map(row => [String(row['案件編號'] || ''), String(row['狀態'] || '')]));
+  const cutoff = now - Math.max(0, Number(keepDays) || 0) * 24 * 60 * 60 * 1000;
+  const keys = [];
+  for (const [key, entry] of Object.entries(state || {})) {
+    const caseId = String(key).split('::')[0];
+    const status = statusById.get(caseId);
+    const finished = status === undefined || ['已完成', '已取消'].includes(status);
+    if (!finished) continue;
+    const files = Object.values(entry?.files || {});
+    const newestMtime = files.reduce((max, file) => Math.max(max, Number(file?.mtimeMs) || 0), 0);
+    if (newestMtime && newestMtime > cutoff) continue; // 最近還有動靜，先留著
+    keys.push(key);
+  }
+  return keys;
+}
+
+/** 實際清除：刪掉那些案件的預覽圖資料夾（目錄名稱就是狀態鍵，見 scanProject）與同步狀態。 */
+export async function pruneFinishedCaseState({ state, dbData, previewDir, now = Date.now(), keepDays = 14 }) {
+  const prunedKeys = prunableStateKeys(state, dbData, { now, keepDays });
+  let removedPreviews = 0;
+  let freedBytes = 0;
+  for (const key of prunedKeys) {
+    const dir = path.join(previewDir, key);
+    try {
+      for (const name of await fs.readdir(dir)) {
+        const stat = await fs.stat(path.join(dir, name)).catch(() => null);
+        if (stat?.isFile()) {
+          removedPreviews += 1;
+          freedBytes += stat.size;
+        }
+      }
+      await fs.rm(dir, { recursive: true, force: true });
+    } catch { /* 沒有預覽資料夾就只清同步狀態 */ }
+    delete state[key];
+  }
+  return { prunedKeys, removedPreviews, freedBytes };
+}
+
 export function folderStateKey(caseId, index) {
   return index === 0 ? String(caseId) : `${caseId}::${index}`;
 }
