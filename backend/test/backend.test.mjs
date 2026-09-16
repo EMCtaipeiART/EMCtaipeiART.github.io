@@ -345,7 +345,8 @@ test('Gmail reply composer displays the current account as sender instead of the
   assert.match(source, /initialReplyFrom=gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
   assert.match(source, /replyFrom=String\(data\.replyFrom\|\|gmailConnectionState\.gmailAddress\|\|currentEditorAccount/);
   assert.match(source, /recipientName=gmailRecipientGreetingName\('gmailThreadTo'\)\|\|'收件人'/);
-  assert.match(source, /setGmailEditorPlainText\(replyEditor,`Hi \$\{recipientName\},\\n\\n\$\{generalReplyTemplate\}`\)/);
+  // 範本可能是格式化內容，改由 setGmailEditorTemplateContent 判斷要當 HTML 還是純文字帶入。
+  assert.match(source, /setGmailEditorTemplateContent\(replyEditor,`Hi \$\{recipientName\},\\n\\n`,generalReplyTemplate\)/);
   assert.match(source, /replyEditor\.innerHTML===initialGeneralReplyHtml/);
   assert.doesNotMatch(source, /fromValue\.textContent=row\.gmailThreadOwnerAccount/);
 });
@@ -3675,6 +3676,7 @@ test('reply method chooser offers 直接讀信, which opens the thread read-only
       const gmailRecipientExpandedFields = new Set();
       const gmailConnectionState = { gmailAddress: 'pm@emctaipei.com' }, currentEditorAccount = 'pm@emctaipei.com', currentEditorToken = 't';
       const defaultReplyTemplateContent = () => '', setGmailEditorPlainText = (editor, text) => { editor.innerHTML = text; };
+      const setGmailEditorTemplateContent = (editor, greeting, template) => { editor.innerHTML = String(greeting || '') + String(template || ''); };
       const clearGmailInlineImages = () => {}, clearGmailAttachments = () => {};
       const setGmailRecipientEntries = () => { calls.recipients += 1; }, splitMailAddresses = value => [value];
       const updateGmailScheduleStatusBadge = () => {}, gmailRecipientGreetingName = () => 'Anna';
@@ -4389,4 +4391,43 @@ test('the header version no longer flips: nothing hardcoded in the HTML, last se
   bumped.api.applySystemAnnouncementVersion('v4.80');
   assert.equal(bumped.state.title, '設計需求系統 v4.80');
   assert.equal(bumped.state.store.machiSystemAnnouncementVersion, 'v4.80');
+});
+
+test('reply templates saved as formatted text are inserted as formatting, not as literal <br> characters', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const block = html.match(/function setGmailEditorTemplateContent\(editor,greeting,template\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(block, 'could not locate setGmailEditorTemplateContent');
+
+  const run = (greeting, template) => {
+    const calls = [];
+    const editor = { innerHTML: '', replaceChildren() { this.innerHTML = ''; } };
+    new Function('editor', 'calls', `
+      const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const looksLikeSignatureHtml = value => /<[a-z][\\s\\S]*>/i.test(String(value || ''));
+      const setGmailEditorPlainText = (target, value) => { calls.push({ plain: value }); target.innerHTML = 'PLAIN:' + value; };
+      ${block}
+      setGmailEditorTemplateContent(editor, ${JSON.stringify(greeting)}, ${JSON.stringify(template)});
+    `)(editor, calls);
+    return { editor, calls };
+  };
+
+  // 格式化範本：直接當 HTML 寫入，換行就是換行，不會出現看得到的 <br>。
+  const rich = run('Hi 吳冠賢,\n\n', '附上社群貼文，<br>再煩請查收，謝謝。');
+  assert.equal(rich.editor.innerHTML, 'Hi 吳冠賢,<br><br>附上社群貼文，<br>再煩請查收，謝謝。');
+  assert.equal(rich.calls.length, 0, '格式化範本不可以走純文字路徑');
+  assert.doesNotMatch(rich.editor.innerHTML, /&lt;br&gt;/);
+
+  // 招呼語本身要逃脫，避免收件人名稱裡的角括號被當成標籤。
+  const escaped = run('Hi <b>壞人</b>,\n\n', '<p>內容</p>');
+  assert.match(escaped.editor.innerHTML, /^Hi &lt;b&gt;壞人&lt;\/b&gt;,<br><br><p>內容<\/p>$/);
+
+  // 舊的純文字範本維持原本的逐行插入。
+  const plain = run('Hi 吳冠賢,\n\n', '附上社群貼文，\n再煩請查收，謝謝。');
+  assert.equal(plain.calls.length, 1);
+  assert.equal(plain.calls[0].plain, 'Hi 吳冠賢,\n\n附上社群貼文，\n再煩請查收，謝謝。');
+
+  // 三個帶入點都要改用這支，不能再直接塞純文字。
+  assert.match(html, /setGmailEditorTemplateContent\(replyEditor,'',generalReplyTemplate\)/);
+  assert.match(html, /setGmailEditorTemplateContent\(replyEditor,`Hi \$\{recipientName\},\\n\\n`,generalReplyTemplate\)/);
+  assert.match(html, /setGmailEditorTemplateContent\(editor,`Hi \$\{recipientName\},\\n\\n`,configuredTemplate\)/);
 });

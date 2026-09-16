@@ -11970,6 +11970,17 @@ function gmailThreadMessageHtml(message){
   return `<details class="gmail-thread-msg" name="gmail-thread-message"><summary class="gmail-thread-msg-meta"><span>寄件人：${gmailAddressNamesHtml(message.from)}</span><span>收件人：${gmailAddressNamesHtml(message.to)}</span><span>副件人：${gmailAddressNamesHtml(message.cc)}</span><span>${esc(message.date||'')}</span><span class="gmail-thread-msg-toggle" aria-hidden="true"></span></summary><div class="gmail-thread-msg-content"><div class="gmail-thread-msg-body${isRich?' is-rich':''}">${bodyContentHtml}</div>${gmailThreadMessageImagesHtml(remainingImages)}</div></details>`;
 }
 function renderGmailThreadMessages(list,messages){const items=Array.isArray(messages)?messages:[];list.innerHTML=items.length?items.map(message=>gmailThreadMessageHtml(message)).join(''):'<div class="revision-modal-empty">目前沒有任何信件</div>'}
+/** 把「招呼語＋信件範本」帶進編輯器。範本自 2026-09-16 起可能是格式化內容（個人設定／設計師設定的
+ * 編輯器存 HTML），也可能是舊的純文字；一律當純文字塞進去的話，HTML 的換行會變成畫面上看得到的
+ * 「<br>」字樣（使用者實際回報過）。這裡依內容型態選擇正確的寫入方式。 */
+function setGmailEditorTemplateContent(editor,greeting,template){
+  if(!editor)return;
+  const body=String(template||'');
+  if(!looksLikeSignatureHtml(body)){setGmailEditorPlainText(editor,`${greeting||''}${body}`);return}
+  const greetingHtml=String(greeting||'').split(/\r?\n/).map(line=>esc(line)).join('<br>');
+  editor.replaceChildren();
+  editor.innerHTML=`${greetingHtml}${body}`;
+}
 function designerReplyTemplateForCase(row={}){const profile=designerProfile(String(row.designer||'').trim()),settings=normalizeReplyTemplateSettings(profile.replyTemplates||{},profile.replyTemplateDefault||'');return defaultReplyTemplateContent(settings)}
 function setGmailEditorPlainText(editor,value=''){const text=String(value);editor.replaceChildren();if(!text)return;text.split(/\r?\n/).forEach((line,index)=>{if(index)editor.append(document.createElement('br'));editor.append(document.createTextNode(line))})}
 /** 「回信」目前開著的信件串上一次成功讀到的訊息清單，供「填寫修改需求信」／「設計師回覆信」取用
@@ -12020,7 +12031,7 @@ async function openGmailThreadModal(id,{lockUntilCaller=false,readOnly=false}={}
   modal.dataset.designerReplyCaseId='';
   modal.dataset.designerReplyRound='';
   const generalReplyTemplate=defaultReplyTemplateContent();
-  if(replyEditor){setGmailEditorPlainText(replyEditor,generalReplyTemplate);clearGmailInlineImages(replyEditor.id);clearGmailAttachments(replyEditor.id)}
+  if(replyEditor){setGmailEditorTemplateContent(replyEditor,'',generalReplyTemplate);clearGmailInlineImages(replyEditor.id);clearGmailAttachments(replyEditor.id)}
   // getCaseMailThread 回來前使用者已經可以在編輯器輸入；保存初始 HTML，載入收件人後只在內容仍未被修改時
   // 補上「Hi xxx,」，避免網路較慢時把使用者剛輸入的文字覆蓋掉。
   const initialGeneralReplyHtml=replyEditor?.innerHTML||'';
@@ -12053,7 +12064,7 @@ async function openGmailThreadModal(id,{lockUntilCaller=false,readOnly=false}={}
     setGmailRecipientEntries('gmailThreadCc',splitMailAddresses(data.suggestedCc||''));
     if(replyEditor&&replyEditor.innerHTML===initialGeneralReplyHtml){
       const recipientName=gmailRecipientGreetingName('gmailThreadTo')||'收件人';
-      setGmailEditorPlainText(replyEditor,`Hi ${recipientName},\n\n${generalReplyTemplate}`);
+      setGmailEditorTemplateContent(replyEditor,`Hi ${recipientName},\n\n`,generalReplyTemplate);
     }
     refreshScheduledMailList(id,'thread');
     }
@@ -12324,7 +12335,7 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,
   if(!editor)return;
   const recipientName=gmailRecipientGreetingName('gmailThreadTo')||'收件人';
   const configuredTemplate=designerReplyTemplateForCase(row)||'附上社群貼文內容，\n再煩請查收，謝謝。';
-  setGmailEditorPlainText(editor,`Hi ${recipientName},\n\n${configuredTemplate}`);
+  setGmailEditorTemplateContent(editor,`Hi ${recipientName},\n\n`,configuredTemplate);
   editor.appendChild(document.createElement('br'));
   editor.appendChild(document.createElement('br'));
   const imagesRow=document.createElement('div');
