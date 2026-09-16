@@ -192,7 +192,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 08:50 Asia/Taipei（最新）— NAS 監控程式不再重複備份「已經手動上傳過」的同一張設計圖
+### 2026-09-16 09:10 Asia/Taipei（最新）— 一鍵安裝包：讓其他設計師的 Mac 自己變成會爬 NAS 的電腦
+
+- 修改目的：使用者要求「寫一包懶人程式，在其他設計師電腦裡自動安裝爬 NAS 的程式，一鍵完成、不用管理者手動設定」。使用者選擇：金鑰放 NAS 上自動讀取、每台電腦都掃全部案件。
+- 影響檔案：`scripts/install_nas_watcher.command`（新）、`scripts/uninstall_nas_watcher.command`（新）、`scripts/nas_watcher_installer.mjs`（新）、`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.README.md`、`backend/test/nas-installer.test.mjs`（新）、`backend/test/nas-upload-idempotency.test.mjs`。另外在 NAS 放了 `設計部/設計管理/NAS自動備份安裝/`（安裝／移除 .command、secrets.json、使用說明.txt），這部分不在倉庫內。
+- 影響功能：
+  1. **點兩下安裝**：bash 啟動檔只做最少的事——找 Node（`/usr/local/bin`、`/opt/homebrew/bin`、PATH，沒有就開官方下載頁並中止）、從公開倉庫 raw 下載 5 個檔案到 `~/Library/Application Support/MachiNasWatcher`，再交給 Node 版安裝程式。重跑＝更新。視窗結束會停住等按鍵，設計師看得到結果。
+  2. **Node 版安裝程式** `nas_watcher_installer.mjs`：確認 NAS 掛載（未掛載時 `open smb://` 並等最多兩分鐘）→ 從 NAS `設計管理/NAS自動備份安裝/secrets.json` 讀金鑰、寫成本機 secrets（chmod 600）→ 產生這台專用設定（只換 `mountRoot`，狀態與預覽改放 `state/`）→ 安裝兩個 launchd（監控每 60 秒、選擇器 KeepAlive、RunAtLoad）→ 立刻跑一次掃描當自我檢測。偵測到舊 crontab 排程會提醒手動移除。`--dry-run` 供管理者安全驗證。
+  3. **多台電腦的重複備份保護**（`uploadPendingRound`）：新增「這台電腦第一次掃到的檔案，若資料庫任何一輪已有同名圖片，就沿用那一輪、不上傳」，回傳 `adoptedFromDatabaseCount`；搭配前一筆的「同一輪同名不重傳」與既有的上傳防重鍵（同檔案版本跨機器算出同一把鍵、Apps Script 回同一個 Drive 網址）共三層。
+- 風險區塊：
+  - 上傳金鑰放在 NAS 分享上，能存取 NAS 的人都拿得到（使用者明確選擇）。金鑰本身仍未進 git（`.gitignore` 已排除，raw 位址回 404 已確認）。
+  - 前台的 NAS 選擇器網址仍固定指向管理者的 iMac（`nasFolderPickerBaseUrl`），設計師機器上的選擇器目前不會被前台使用。
+  - 第一台 iMac 仍用 crontab 跑監控，沒有自動移轉。
+  - launchd 每 60 秒啟動一次掃描，與原本 cron 的頻率相同。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **115/115 全過**（107 既有＋6 安裝程式＋2 多機重複保護）。安裝程式測試涵蓋：Node 路徑挑選、NAS 金鑰搜尋路徑與格式驗證（缺 serviceKey 要擋）、每台專用設定欄位、兩個 launchd plist 的差異（StartInterval vs KeepAlive、RunAtLoad）、舊 crontab 偵測、啟動檔內容（下載清單、Node 引導、視窗停住）。
+  - `node --check` 三支新程式、`bash -n` 兩支 .command 皆通過。
+  - 在這台 iMac 以暫存目錄與暫存 HOME 實跑 `--dry-run`：正確偵測掛載、從 NAS 讀到金鑰、產生設定與 600 權限金鑰檔、提醒既有 crontab，全程未動到現有排程。
+  - **未做的驗證**：沒有在另一台設計師 Mac 上真的跑完整安裝（需要對方機器）；沒有實測「沒有 Node 的電腦」引導流程。
+- 部署狀態：程式碼 git push 後，NAS 上的安裝檔會下載到最新版；NAS 安裝資料夾已就緒。第一台 iMac 維持原本 crontab，不受影響。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 08:50 Asia/Taipei— NAS 監控程式不再重複備份「已經手動上傳過」的同一張設計圖
 
 - 修改目的：使用者回報 2026-09-15 GitHub 更新很慢，案件 26090107 與 26090081 改用手動上傳圖片後，同一張圖被備份兩次。
 - 成因：手動上傳（upload.html「電腦上傳圖片」）一律把檔案轉成 .jpg 送 Drive；NAS 監控程式稍後照常掃到同一批來源檔，上傳的是保留原始副檔名的 .png。兩邊檔名主體相同、副檔名不同，Worker `addCaseDesignImages` 既有的去重只比對「網址」與「完整檔名」（且檔名鎖只套用在 `nas-watcher` 來源），比不出這是同一張，於是同一輪出現 .jpg 與 .png 兩份。實際紀錄：26090107 第 0 輪 10 張（5 張設計圖各兩份）、26090081 第 2 輪 2 張；18:48–18:51 是 Machi 手動上傳、18:53 之後是監控程式（anonymous 服務金鑰）。

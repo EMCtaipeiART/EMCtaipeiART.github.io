@@ -679,6 +679,42 @@ export function recordedRoundImageBaseNames(dbData, caseId, round) {
   }
 }
 
+/**
+ * 這個案件「每一個去副檔名檔名」最後出現在哪一輪（不限這一輪）。
+ *
+ * 給「這台電腦第一次掃描」用：多台設計師電腦各自跑監控程式時，本機同步紀錄是空的，資料夾裡早就備份過的
+ * 舊檔案會全部被當成新檔，一口氣上傳到「目前這一輪」——初稿的圖於是又出現在三修裡。有了這份對照表就能
+ * 認出「這張在別台電腦已經備份過、屬於第 N 輪」，直接沿用那一輪、不再上傳。
+ */
+export function recordedRoundsByBaseName(dbData, caseId) {
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const map = new Map();
+  for (const row of rows) {
+    if (String(row['案件編號'] || '') !== String(caseId)) continue;
+    const round = Number(row['修改次數']) || 0;
+    let images = [];
+    try {
+      const parsed = JSON.parse(String(row['圖片連結'] || '[]'));
+      if (Array.isArray(parsed)) images = parsed;
+    } catch {
+      images = [];
+    }
+    for (const image of images) {
+      const baseName = designImageBaseName(image?.fileName);
+      if (!baseName) continue;
+      map.set(baseName, Math.max(map.get(baseName) ?? -1, round));
+    }
+  }
+  return map;
+}
+
+/** 這個檔案在這台電腦完全沒有上傳歷史（第一次掃到）。 */
+export function fileHasNoLocalHistory(entry) {
+  return trackedRound(entry?.assignedRound) === null
+    && trackedRound(entry?.pendingAfterRound) === null
+    && !entry?.uploadAttempt;
+}
+
 export function designImageBaseName(fileName) {
   return String(fileName || '').trim().replace(/\.[^./\\]+$/, '').toLocaleLowerCase();
 }
@@ -847,19 +883,31 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   // 這一輪資料庫已經有同一張圖（通常是設計師等不及、先用「電腦上傳圖片」手動補過）就不再上傳：
   // 直接把本機狀態標記成已歸這一輪，下次掃描不會再被當成待上傳，也不會每分鐘重試一次。
   const recordedBaseNames = recordedRoundImageBaseNames(dbData, caseId, round);
+  // 另一台電腦（或更早的自己）已經備份過的圖，在這台電腦第一次掃描時不可以重新上傳到現在這一輪。
+  const recordedRounds = recordedRoundsByBaseName(dbData, caseId);
   let skippedAlreadyRecordedCount = 0;
-  const notRecordedPreviews = recordedBaseNames.size
+  let adoptedFromDatabaseCount = 0;
+  const notRecordedPreviews = (recordedBaseNames.size || recordedRounds.size)
     ? eligiblePreviews.filter(item => {
         const baseName = designImageBaseName(path.basename(item.relPath));
-        if (!baseName || !recordedBaseNames.has(baseName)) return true;
+        if (!baseName) return true;
         const entry = stateFiles[item.relPath];
+        const recordedRound = recordedRounds.get(baseName);
+        const alreadyThisRound = recordedBaseNames.has(baseName);
+        // ①這一輪已經有同名圖（多半是先用電腦上傳補過）；②這台電腦第一次掃到、但資料庫別的輪次已經有
+        // 這張（多半是別台電腦備份過的舊圖）。兩種都不上傳，只把本機狀態補成「已歸在那一輪」。
+        const adoptRound = alreadyThisRound
+          ? round
+          : (recordedRound !== undefined && fileHasNoLocalHistory(entry) ? recordedRound : null);
+        if (adoptRound === null) return true;
         if (entry) {
-          entry.assignedRound = round;
+          entry.assignedRound = adoptRound;
           entry.pendingAfterRound = null;
           entry.uploadAttempt = null;
         }
-        if (roundState) roundState.sealedRound = Math.max(Number(roundState.sealedRound) || 0, round);
-        skippedAlreadyRecordedCount += 1;
+        if (roundState) roundState.sealedRound = Math.max(Number(roundState.sealedRound) || 0, adoptRound);
+        if (alreadyThisRound) skippedAlreadyRecordedCount += 1;
+        else adoptedFromDatabaseCount += 1;
         return false;
       })
     : eligiblePreviews;
@@ -887,9 +935,11 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     }
   }
   if (!targetedPreviews.length) {
-    if ((reconciledCount || waitingForNextRoundCount || staleSealClearedCount || skippedAlreadyRecordedCount) && persistState) await persistState();
+    if ((reconciledCount || waitingForNextRoundCount || staleSealClearedCount || skippedAlreadyRecordedCount || adoptedFromDatabaseCount) && persistState) await persistState();
     const message = skippedAlreadyRecordedCount
       ? `這一輪已經有同名圖片（手動上傳過），略過 ${skippedAlreadyRecordedCount} 張，不重複備份`
+      : adoptedFromDatabaseCount
+      ? `這 ${adoptedFromDatabaseCount} 張在資料庫已經有備份紀錄（其他電腦或先前已備份過），沿用原本的輪次，不重複上傳`
       : reconciledCount
       ? `已確認先前上傳成功 ${reconciledCount} 張，不再重送`
       : deferredCount
@@ -897,7 +947,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
         : waitingForNextRoundCount
           ? `本輪圖片已封存，${waitingForNextRoundCount} 張新版會等下一個修改輪次再上傳`
         : '沒有偵測到可上傳的圖片/影片';
-    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, skippedByTarget, message };
+    return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, adoptedFromDatabaseCount, skippedByTarget, message };
   }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
@@ -942,5 +992,5 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     // 的歷史快照仍然封存，不會在下一次排程被重送或被同輪新版覆蓋。
     if (persistState) await persistState();
   }
-  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, skippedByTarget, targetFallback, jsonRevision };
+  return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, adoptedFromDatabaseCount, skippedByTarget, targetFallback, jsonRevision };
 }

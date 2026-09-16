@@ -500,3 +500,50 @@ NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 開新分頁�
   `pnpm check`／`pnpm deploy:dry`**，需要你在自己的 Mac 上執行一次確
   認，部署前務必照 [AGENT.md](AGENT.md) 慣例跑 `cd worker && pnpm test
   && pnpm check && pnpm deploy:dry`，過關後才 `pnpm deploy`。
+
+## 懶人安裝：讓其他設計師的電腦也自動備份（`install_nas_watcher.command`）
+
+目標是設計師不用任何設定，點兩下就讓自己的 Mac 變成會自動爬 NAS 備份設計圖的機器。
+
+### 給設計師的操作
+
+1. 打開 NAS：`設計部/設計管理/NAS自動備份安裝`
+2. 點兩下「安裝NAS自動備份.command」
+3. 第一次開啟時 macOS 可能問「確定要打開嗎」，選「打開」
+4. 跳出 NAS 帳號密碼視窗時輸入一次，勾選「記住這個密碼」
+5. 看到「安裝完成」就好了
+
+要停用就點兩下同一個資料夾裡的「移除NAS自動備份.command」。
+
+### 安裝程式實際做的事
+
+| 步驟 | 內容 |
+| --- | --- |
+| 找 Node | 依序找 `/usr/local/bin/node`、`/opt/homebrew/bin/node`、PATH；沒有就開啟官方下載頁並中止 |
+| 下載程式 | 從公開倉庫 raw 下載 5 個檔案到 `~/Library/Application Support/MachiNasWatcher/scripts`，重跑等於更新 |
+| 掛載 NAS | 沒掛載時呼叫 Finder 開啟 `smb://`，最多等兩分鐘 |
+| 取得金鑰 | 讀 `設計管理/NAS自動備份安裝/secrets.json`，寫成本機 `secrets.json`（權限 600） |
+| 產生設定 | 沿用倉庫設定檔的共用欄位，只改 `mountRoot`，狀態與預覽圖改放安裝資料夾底下的 `state/` |
+| 背景工作 | 安裝兩個 launchd：監控程式每 60 秒一次、資料夾選擇器常駐（`KeepAlive`），開機自動啟動 |
+| 自我檢測 | 立刻跑一次掃描，印出結果與記錄檔位置 |
+
+記錄檔：`~/Library/Logs/machi-nas-watcher.log`、`~/Library/Logs/machi-nas-folder-picker.log`。
+
+管理者可以加 `--dry-run` 在自己機器上驗證流程（產生設定但不載入背景工作、不跑掃描）：
+
+```bash
+node scripts/nas_watcher_installer.mjs --install-dir /tmp/test-install --dry-run
+```
+
+### 多台電腦同時跑的重複備份保護
+
+每台電腦都會掃所有「過稿中／修改中」的案件，本機同步狀態各自獨立，所以有三層保護：
+
+1. **同一輪同名圖不重傳**：資料庫這一輪已經有同名圖片（去掉副檔名比對）就跳過，擋掉「手動上傳 .jpg ＋ 監控程式 .png」的重複。
+2. **新電腦沿用既有輪次**：這台電腦第一次掃到的檔案，如果資料庫任何一輪已經有同名圖片，就認定是別台電腦備份過的，直接沿用那一輪、不上傳，避免初稿的圖被塞進現在這一輪。
+3. **相同檔案版本共用 Drive 檔**：上傳防重鍵由案件、輪次、相對路徑、mtime、size 算出，不同電腦對同一個檔案版本會算出同一把鍵，Apps Script 會回同一個 Drive 檔案、同一個網址，資料庫端再以網址去重。
+
+### 這個安裝包沒有處理的事
+
+- 前台「選 NAS 資料夾」的彈出視窗網址仍固定指向管理者那台 iMac（`index.html` 的 `nasFolderPickerBaseUrl`）。安裝包雖然也會在每台電腦裝好選擇器伺服器，但要讓設計師用自己那台，還需要另外調整前台。
+- 舊的 crontab 排程（第一台 iMac 的裝法）不會自動移除，安裝程式只會提醒。

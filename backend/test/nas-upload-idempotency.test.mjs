@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import {
   changedFileRoundState,
   designImageBaseName,
+  recordedRoundsByBaseName,
   discoverProjects,
   createCaseDesignUploadDedupeKey,
   recordedRoundImageBaseNames,
@@ -508,6 +509,105 @@ test('when every pending file was already uploaded by hand, the watcher reports 
     assert.equal(result.uploadedCount, 0);
     assert.equal(result.skippedAlreadyRecordedCount, 1);
     assert.match(result.message, /這一輪已經有同名圖片/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a newly installed machine adopts rounds already backed up elsewhere instead of re-uploading them into the current round', async () => {
+  const originalFetch = globalThis.fetch;
+  // 多台設計師電腦都會掃同一批案件。新安裝的那台本機同步紀錄是空的，資料夾裡的舊圖不可以被當成新檔
+  // 重新上傳到「目前這一輪」——初稿的圖會因此又出現在三修裡。
+  const draftRel = 'design_01.png';   // 別台電腦在初稿就備份過
+  const reviseRel = 'design_02.png';  // 別台電腦在一修備份過
+  const freshRel = 'design_03.png';   // 真的還沒有人備份過
+  const dbData = {
+    tables: {
+      '修改統計表': {
+        rows: [
+          { '案件編號': '26090200', '修改次數': '0', '圖片連結': JSON.stringify([{ fileName: 'design_01.jpg', url: 'https://x/a' }]) },
+          { '案件編號': '26090200', '修改次數': '1', '圖片連結': JSON.stringify([{ fileName: 'design_02.png', url: 'https://x/b' }]) },
+          { '案件編號': '26090200', '修改次數': '2', '圖片連結': '[]' }
+        ]
+      }
+    }
+  };
+  assert.deepEqual([...recordedRoundsByBaseName(dbData, '26090200').entries()], [['design_01', 0], ['design_02', 1]]);
+
+  const stateFiles = Object.fromEntries([draftRel, reviseRel, freshRel]
+    .map(relPath => [relPath, { assignedRound: null, pendingAfterRound: null, uploadAttempt: null }]));
+  const roundState = { sealedRound: null, files: stateFiles };
+  let requestPayload = null;
+  globalThis.fetch = async (_url, options) => {
+    requestPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ success: true, count: requestPayload.images.length }));
+  };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData,
+      caseId: '26090200',
+      designer: 'Machi',
+      client: '測試客戶',
+      start: '2026/09/16',
+      pendingPreviews: [draftRel, reviseRel, freshRel].map(relPath => ({
+        relPath, previewPath: fileURLToPath(import.meta.url), mtimeMs: 9, size: 9
+      })),
+      stateFiles,
+      roundState
+    });
+    assert.equal(result.adoptedFromDatabaseCount, 2, '兩張別台已備份過的圖不再上傳');
+    assert.equal(result.uploadedCount, 1);
+    assert.deepEqual(requestPayload.images.map(image => image.fileName), [freshRel], '只有真的沒備份過的那張會上傳');
+    assert.equal(requestPayload.round, 2);
+    // 沿用資料庫既有的輪次，不是現在這一輪，之後那個檔案再改動才會正確地等下一輪。
+    assert.equal(stateFiles[draftRel].assignedRound, 0);
+    assert.equal(stateFiles[reviseRel].assignedRound, 1);
+    assert.equal(stateFiles[freshRel].assignedRound, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('a file that this machine already tracks is not silently adopted from the database', async () => {
+  const originalFetch = globalThis.fetch;
+  const relPath = 'design_01.png';
+  const dbData = {
+    tables: {
+      '修改統計表': {
+        rows: [
+          { '案件編號': '26090201', '修改次數': '0', '圖片連結': JSON.stringify([{ fileName: 'design_01.png', url: 'https://x/a' }]) },
+          { '案件編號': '26090201', '修改次數': '1', '圖片連結': '[]' }
+        ]
+      }
+    }
+  };
+  // 這台電腦自己傳過初稿，設計師改了檔案，狀態是「等下一輪」——這是既有流程，必須照常在一修上傳新版。
+  const stateFiles = { [relPath]: { assignedRound: 0, pendingAfterRound: 0, uploadAttempt: null } };
+  const roundState = { sealedRound: 0, files: stateFiles };
+  let requestPayload = null;
+  globalThis.fetch = async (_url, options) => {
+    requestPayload = JSON.parse(options.body);
+    return new Response(JSON.stringify({ success: true, count: 1 }));
+  };
+  try {
+    const result = await uploadPendingRound({
+      config: { appsScriptUploadUrl: 'https://example.test/upload' },
+      secrets: { serviceKey: 'test-key' },
+      dbData,
+      caseId: '26090201',
+      designer: 'Machi',
+      client: '測試客戶',
+      start: '2026/09/16',
+      pendingPreviews: [{ relPath, previewPath: fileURLToPath(import.meta.url), mtimeMs: 3, size: 3 }],
+      stateFiles,
+      roundState
+    });
+    assert.equal(result.adoptedFromDatabaseCount, 0);
+    assert.equal(result.uploadedCount, 1);
+    assert.equal(requestPayload.round, 1, '新版要上傳到一修');
+    assert.equal(stateFiles[relPath].assignedRound, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }
