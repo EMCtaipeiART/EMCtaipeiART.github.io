@@ -4336,3 +4336,57 @@ test('each customer carries its own default CC list for the mail composer, falli
   // 名單裡有查不到的信箱（離職或還沒建帳號）也要補成選項，否則儲存時會被靜默丟掉。
   assert.match(admin, /mailSelected\.forEach\(value=>\{if\(!mailEntries\.some\(entry=>entry\.value===value\)\)mailEntries\.push\(/);
 });
+
+test('the header version no longer flips: nothing hardcoded in the HTML, last seen version applied immediately', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 寫死的版本號一定會過期，載入公告後就會當著使用者的面跳掉，所以標題與標頭都不帶版本。
+  assert.match(html, /<title>設計需求系統<\/title>/);
+  assert.match(html, /<div class="title-row"><h1>設計需求系統<\/h1>/);
+  assert.doesNotMatch(html, /<title>設計需求系統 v/);
+  assert.doesNotMatch(html, /<h1>設計需求系統 v/);
+
+  const block = html.match(/const systemVersionCacheKey='machiSystemAnnouncementVersion';[\s\S]*?\napplyCachedSystemVersion\(\);/)?.[0];
+  assert.ok(block, 'could not locate the version helpers');
+
+  const run = (stored = null) => {
+    const state = { title: '設計需求系統', heading: { textContent: '設計需求系統' }, store: stored === null ? {} : { machiSystemAnnouncementVersion: stored } };
+    const api = new Function('state', `
+      const document = {
+        set title(value) { state.title = value; },
+        get title() { return state.title; },
+        querySelector: selector => (selector === 'header .title-row h1' ? state.heading : null)
+      };
+      const localStorage = {
+        getItem: key => (key in state.store ? state.store[key] : null),
+        setItem: (key, value) => { state.store[key] = value; }
+      };
+      ${block}
+      return { applySystemAnnouncementVersion };
+    `)(state);
+    return { state, api };
+  };
+
+  // 第一次造訪：沒有快取，開頁只顯示「設計需求系統」，不會先秀一個錯的版本。
+  const first = run();
+  assert.equal(first.state.title, '設計需求系統');
+  assert.equal(first.state.heading.textContent, '設計需求系統');
+  first.api.applySystemAnnouncementVersion('v4.72');
+  assert.equal(first.state.title, '設計需求系統 v4.72');
+  assert.equal(first.state.heading.textContent, '設計需求系統 v4.72');
+  assert.equal(first.state.store.machiSystemAnnouncementVersion, 'v4.72', '看到的版本要記起來');
+
+  // 第二次造訪：開頁立刻套用上次看到的版本，公告回來時值一樣，畫面不會跳動。
+  const second = run('v4.72');
+  assert.equal(second.state.title, '設計需求系統 v4.72');
+  second.api.applySystemAnnouncementVersion('v4.72');
+  assert.equal(second.state.title, '設計需求系統 v4.72');
+
+  // 公告真的改版時才會更新，空值不覆蓋。
+  const bumped = run('v4.72');
+  bumped.api.applySystemAnnouncementVersion('');
+  assert.equal(bumped.state.title, '設計需求系統 v4.72');
+  bumped.api.applySystemAnnouncementVersion('v4.80');
+  assert.equal(bumped.state.title, '設計需求系統 v4.80');
+  assert.equal(bumped.state.store.machiSystemAnnouncementVersion, 'v4.80');
+});
