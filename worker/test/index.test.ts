@@ -2440,6 +2440,10 @@ describe('Machi Design API Worker', () => {
     });
     const created = await api({ action: 'addCustomer', name: '新測試客戶' }, token);
     expect(created).toMatchObject({ ok: true, action: 'addCustomer', customer: { '客戶別': '新測試客戶' } });
+    // 新客戶別要自帶「預設信箱」：填完案件跳出的信件編輯器會用它當副本名單（設計部平面四位＋負責人）。
+    expect(JSON.parse(String((created.customer as Record<string, unknown>)['預設信箱']))).toEqual([
+      'machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com'
+    ]);
 
     const duplicate = await api({ action: 'addCustomer', name: '新測試客戶' }, token);
     expect(duplicate).toMatchObject({ ok: false, error: '這個客戶別已經存在' });

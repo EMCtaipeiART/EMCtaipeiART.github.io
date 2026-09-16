@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
+import { DEFAULT_CUSTOMER_CC_EMAILS, publicSystemAnnouncement, systemAnnouncementReadRecords, TABLE_SCHEMAS } from '../../backend/schema.mjs';
 import { normalizeDesignType, splitDetailValues } from '../../backend/weighting.mjs';
 import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
@@ -2341,6 +2341,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const row: Row = {
         '客戶別': name, '排序': '',
         '專案負責人': JSON.stringify(defaults.ownerRules), '設計負責人': '[]', '部門組別': JSON.stringify(defaults.visibleUnits),
+        // 填完案件跳出的信件編輯器要用的預設副本名單（設計部平面四位＋負責人）。
+        '預設信箱': JSON.stringify(DEFAULT_CUSTOMER_CC_EMAILS),
         '更新時間': nowTaipei(), '更新者': session?.account ? text(session.account) : '匿名填單'
       };
       table.rows.push(row);
@@ -3633,6 +3635,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const defaults = newCustomerDefaults(draft, current);
           if (!accessList(normalized['部門組別']).length) normalized['部門組別'] = JSON.stringify(defaults.visibleUnits);
           if (!accessList(normalized['專案負責人']).length) normalized['專案負責人'] = JSON.stringify(defaults.ownerRules);
+          if (!accessList(normalized['預設信箱']).length) normalized['預設信箱'] = JSON.stringify(DEFAULT_CUSTOMER_CC_EMAILS);
         }
         target.rows.push(normalized);
         index = target.rows.length - 1;

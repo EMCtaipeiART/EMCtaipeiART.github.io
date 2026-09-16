@@ -8312,11 +8312,31 @@ function mailBodyLines(fields,{html=false}={}){
     ...fields.supplements.flatMap(item=>line(`　　　${item.key}. ${item.label}：`,html?item.html:item.text,{raw:true}))
   ];
 }
+/** 客戶別的「預設信箱」：填完案件跳出信件編輯器時要帶入的副本名單，由資料庫後台逐一客戶設定。
+ * 沒有設定（舊客戶或刻意留空）時退回原本的規則：同組其他設計師＋負責人，所以不必先補資料也能照常運作。
+ * 欄位允許填信箱、「名字 <信箱>」或設計師名字，統一在這裡轉成寄信用的收件人字串。 */
+function customerDefaultCcRecipients(client){
+  const row=customerDirectoryRowFor(client);
+  const entries=parseNameListValue(row?.['預設信箱']);
+  if(!entries.length)return null;
+  return entries.map(entry=>{
+    const value=String(entry||'').trim();
+    if(!value)return '';
+    return extractEmail(value)?value:(designerRecipientByName(value)||'');
+  }).filter(Boolean);
+}
+/** 這封信實際要用的副本：客戶設定優先，並且一律排除收件人本人（設計負責人常常也在名單裡）。 */
+function mailCcRecipients(row){
+  const configured=customerDefaultCcRecipients(row?.client);
+  const base=configured??[...designerCcRecipients(row),...requiredMailCcRecipients];
+  const toEmail=extractEmail(designerRecipient(row)).toLowerCase();
+  return uniqueMailRecipients(base.filter(recipient=>extractEmail(recipient).toLowerCase()!==toEmail));
+}
 function mailDraft(row){
   const fields=mailBodyFields(row);
   return {
     to:designerRecipient(row),
-    cc:uniqueMailRecipients([...designerCcRecipients(row),...requiredMailCcRecipients]),
+    cc:mailCcRecipients(row),
     subject:subject(row),
     bodyText:mailBodyLines(fields).join('\n'),
     bodyHtml:mailBodyLines(fields,{html:true}).join('<br>')
@@ -8369,7 +8389,8 @@ function mergedMailDraft(entries){
   const first=rows[0]||{};
   return {
     to:designerRecipient(first),
-    cc:uniqueMailRecipients([...rows.flatMap(designerCcRecipients),...requiredMailCcRecipients]),
+    // 合併信件只有一位收件人（第一筆的設計負責人），所以各筆的副本併起來之後要再把他排除一次。
+    cc:(()=>{const toEmail=extractEmail(designerRecipient(first)).toLowerCase();return uniqueMailRecipients(rows.flatMap(mailCcRecipients).filter(recipient=>extractEmail(recipient).toLowerCase()!==toEmail))})(),
     subject:mergedMailSubject(entries),
     bodyText:mailBodyLines(fields).join('\n'),
     bodyHtml:mailBodyLines(fields,{html:true}).join('<br>')

@@ -192,7 +192,30 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 15:40 Asia/Taipei（最新）— 設計師設定新增「簽名檔設定」、管理照片顯示過往貼文縮圖，設計師不再顯示「個人設定」
+### 2026-09-16 16:30 Asia/Taipei（最新）— 客戶別新增「預設信箱」，決定填完案件後信件編輯器的副本名單
+
+- 修改目的：使用者要求在資料庫後台「客戶別」為每個客戶新增「預設信箱」，作為填完案件跳出的信件編輯器要寄送的副本名單；預設帶入設計部平面四位（Machi／Anna／Amber／Leona）與負責人 Eric，若某人正好是收件人則略過。
+- 現況調查：前台原本的副本是寫死規則——`designerCcRecipients()`（同組其他設計師，已排除收件人）＋ `requiredMailCcRecipients`（固定 `傅思凱 <eric.fu@emctaipei.com>`）。也就是說預設行為本來就等於使用者要的名單，這次的價值在於「可依客戶調整」。
+- 影響檔案：`backend/schema.mjs`、`worker/src/database-coordinator.ts`、`index.html`、`json_database_admin.html`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **資料表**：「客戶別」新增欄位 `預設信箱`，並匯出 `DEFAULT_CUSTOMER_CC_EMAILS`（平面四位＋eric.fu）。既有 32 筆客戶會由 `normalizeDatabaseShape()` 補上空欄位。
+  2. **Worker**：`addCustomer` 與後台的 `adminTableInsert`（客戶別）在欄位留空時寫入預設名單。
+  3. **前台**：新增 `customerDefaultCcRecipients()` 讀該客戶的名單（允許填信箱、「名字 <信箱>」或設計師名字），以及 `mailCcRecipients()` 統一計算副本——有設定就用客戶的，沒設定退回原本規則，**兩種情況都一律排除收件人本人**。單封（`mailDraft`）與合併信件（`mergedMailDraft`）都改用它；合併信件併完各筆名單後會再排除一次那位收件人。
+  4. **後台**：客戶別編輯器新增「預設信箱」區塊，沿用既有的人員多選（只列個別人員）。還沒設定過的客戶會先勾選預設五位並顯示說明，按儲存才寫入；名單裡若有查不到的信箱（離職或還沒建帳號）也會補成選項，避免儲存時被靜默丟掉。
+- 風險區塊：
+  - 欄位留空＝沿用原本規則，不是「不寄副本」。真的要清空目前無法表達，需要的話要再加一個明確的「不寄副本」選項。
+  - 既有客戶沒有做資料回填，仍是空值走 fallback；在後台各自按一次儲存就會寫入實際名單。
+  - 名單存的是信箱字串，人員異動後不會自動跟著調整。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **131/131 全過**（130 既有＋1 新增）；`cd worker && npx tsc --noEmit` 無錯、`npx vitest run` **77/77 全過**（既有測試加上新客戶別要帶預設名單的斷言）。
+  - 新增測試以真正的函式驗證：有設定就用客戶名單且排除收件人、沒設定退回同組設計師＋負責人、可填名字並自動去重；另鎖住後台的預設勾選、儲存欄位與補選項處理。既有合併信件測試的沙箱補上新依賴，並加上「副本不含收件人」的斷言。
+  - **瀏覽器實測**（本機開後台頁面）：未設定過的客戶顯示 5 個選項且全部勾選、說明文字正確；已設定的客戶顯示自己的 2 筆（含不在候選清單的信箱）。
+  - `git stash` 只還原程式碼，新測試失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際存一次客戶別再開信件編輯器確認副本（需要登入與 Gmail 授權）。
+- 部署狀態：`index.html`／`json_database_admin.html`／`backend/schema.mjs` git push 後生效；**Worker 需要 `npx wrangler deploy`**。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 15:40 Asia/Taipei— 設計師設定新增「簽名檔設定」、管理照片顯示過往貼文縮圖，設計師不再顯示「個人設定」
 
 - 修改目的：使用者要求①「設計師設定」加入「簽名檔設定」；②設計師頭像選單移除「個人設定」（設計師設定已有相同功能，只差改名）；③「3. 管理照片」顯示過往貼過的內容小圖，滑鼠停留出現相關提示文字。
 - 影響檔案：`index.html`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。

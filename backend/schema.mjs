@@ -1,5 +1,18 @@
 import { DEFAULT_WEIGHT_RULE_ROWS } from './weighting.mjs';
 
+/**
+ * 新客戶別的「預設信箱」：填完案件跳出信件編輯器時要自動帶入的副本名單。
+ * 設計部平面四位（Machi／Anna／Amber／Leona）＋負責人 Eric；其中如果某人正好是這封信的收件人
+ * （案件的設計負責人），前台會自動略過，不會重複出現在副本。
+ */
+export const DEFAULT_CUSTOMER_CC_EMAILS = [
+  'machi.chen@emctaipei.com',
+  'anna.hsu@emctaipei.com',
+  'amber.tian@emctaipei.com',
+  'leona.chen@emctaipei.com',
+  'eric.fu@emctaipei.com'
+];
+
 // 目前營運中的客戶別，作為「客戶別」表的預設種子資料；normalizeDatabaseShape() 會在既有
 // 資料缺少這些名稱時自動補上（保留既有已指派的專案負責人／設計負責人／部門組別不被覆蓋），
 // 之後透過前台「新增客戶別」或後台新增的客戶不受這份清單限制，會另外附加在後面。
@@ -9,7 +22,8 @@ export const DEFAULT_CUSTOMER_NAMES = Object.freeze([
   '蘇菲', '櫻花', 'ANKER', 'BAT', 'BAT英美菸草', 'DJI', 'EMC', 'Epson', 'eufy', 'soundcore'
 ]);
 export const DEFAULT_CUSTOMER_ROWS = Object.freeze(DEFAULT_CUSTOMER_NAMES.map(name => Object.freeze({
-  '客戶別': name, '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]', '更新時間': '', '更新者': '系統預設'
+  '客戶別': name, '排序': '', '專案負責人': '[]', '設計負責人': '[]', '部門組別': '[]',
+  '預設信箱': JSON.stringify(DEFAULT_CUSTOMER_CC_EMAILS), '更新時間': '', '更新者': '系統預設'
 })));
 
 export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
@@ -329,7 +343,7 @@ export const TABLE_SCHEMAS = {
   },
   '客戶別': {
     primaryKey: '客戶別',
-    headers: ['客戶別', '排序', '專案負責人', '設計負責人', '部門組別', '更新時間', '更新者']
+    headers: ['客戶別', '排序', '專案負責人', '設計負責人', '部門組別', '預設信箱', '更新時間', '更新者']
   },
   '角色權限範本': {
     primaryKey: '角色範本',
