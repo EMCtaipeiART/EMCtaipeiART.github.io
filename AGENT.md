@@ -192,7 +192,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 14:20 Asia/Taipei（最新）— ⌘B 粗體快捷鍵，簽名檔與信件範本改用與信件編輯器相同的工具列
+### 2026-09-16 14:50 Asia/Taipei（最新）— 個人設定／設計師設定也鎖背景捲動，且編輯類彈窗不再因為誤點框外而關閉
+
+- 修改目的：使用者回報「個人設定」與「設計師設定」沒有鎖住背景捲動；並要求「個人設定」「設計師設定」「信件編輯」取消「點框外就關閉」，因為信寫到一半常被誤關。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. `SCROLL_LOCK_MODAL_IDS` 加入 `personalSettingsModal`、`designerSettingsModal`，這兩個視窗開著時背景不再跟著滾輪捲動（沿用既有的 MutationObserver 機制，不必在各自的開關點加程式）。
+  2. 移除「點遮罩關閉」：信件回信（`gmailThreadModal`）與撰寫（`gmailComposeModal`）不再呼叫 `bindModalOverlayDismiss()`；個人設定與設計師設定各自的 `event.target.id===...` 判斷也移除。
+  3. 關閉的正常途徑全部保留：右上角關閉鈕、下方取消鈕，個人設定另有 Esc。其他彈窗（案件資料、修改紀錄、複製信件內容）維持原本點外面可關閉的行為。
+- 風險區塊：
+  - 這四個視窗現在只能用按鈕（或個人設定的 Esc）關閉，習慣點外面關掉的人要改用關閉鈕。
+  - `bindModalOverlayDismiss()` 目前只剩「複製信件內容」在用，函式保留。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **129/129 全過**（128 既有＋1 新增：四個視窗都不可再有點遮罩關閉的綁定、關閉鈕／取消鈕／Esc 仍在、鎖定清單包含兩個設定視窗、其他彈窗維持原行為）。既有的捲動鎖定測試原本鎖死五個視窗的清單，已更新為七個。
+  - **瀏覽器實測**：個人設定開啟時實際送出滑鼠滾輪，背景 scrollY 維持 400 不動；實際點擊框外，視窗仍開著。撰寫視窗、設計師設定各測一次，結果相同；三個視窗全部關閉後鎖定解除。
+  - `git stash` 只還原 `index.html`，新測試失敗，`git stash pop` 後恢復。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 14:20 Asia/Taipei— ⌘B 粗體快捷鍵，簽名檔與信件範本改用與信件編輯器相同的工具列
 
 - 修改目的：使用者要求信件編輯器加入 ⌘B／Ctrl+B 粗體快捷鍵，並讓「個人設定」的「簽名檔設定」與「信件範本」也具備編輯器的所有功能。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

@@ -4030,7 +4030,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
   assert.match(block, /document\.documentElement\.classList\.toggle\('modal-scroll-locked',anyOpen\);/, 'html 也要一起加上鎖定 class');
 
   // 用假 DOM 實際執行：任何一個彈窗開著就鎖，全部關掉才解鎖。
-  const modals = { caseDetailModal: { hidden: true }, revisionModal: { hidden: true }, gmailThreadModal: { hidden: true }, gmailComposeModal: { hidden: true }, uploadModal: { hidden: true } };
+  const modals = { caseDetailModal: { hidden: true }, revisionModal: { hidden: true }, gmailThreadModal: { hidden: true }, gmailComposeModal: { hidden: true }, uploadModal: { hidden: true }, personalSettingsModal: { hidden: true }, designerSettingsModal: { hidden: true } };
   const classes = new Set();
   const api = new Function('ctx', `
     const { modals, classes } = ctx;
@@ -4044,7 +4044,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
     return { syncModalScrollLock, ids: SCROLL_LOCK_MODAL_IDS };
   `)({ modals, classes });
 
-  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal']);
+  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal', 'personalSettingsModal', 'designerSettingsModal']);
   assert.equal(classes.has('modal-scroll-locked'), false, '一開始沒有彈窗就不鎖');
   modals.revisionModal.hidden = false;
   api.syncModalScrollLock();
@@ -4199,4 +4199,31 @@ test('signature and mail template editors in personal settings get the same rich
   assert.match(insert, /holder\.innerHTML=value;/);
   assert.match(html, /closeFieldPopover\(\);insertTemplateIntoRichEditor\(editorId,entry\[1\]\);/);
   assert.match(html, /esc\(richContentPlainText\(content\)\.replace\(\/\\s\+\/g,' '\)\.slice\(0,70\)\)/, '預覽摘要不可以直接秀 HTML 標籤');
+});
+
+test('modals people type into never close from a stray click on the backdrop', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 信件撰寫／回信：不可以再綁「點遮罩關閉」，信寫到一半誤點框外就整封消失。
+  assert.doesNotMatch(html, /bindModalOverlayDismiss\(\$\('#gmailThreadModal'\)/);
+  assert.doesNotMatch(html, /bindModalOverlayDismiss\(\$\('#gmailComposeModal'\)/);
+  // 個人設定、設計師設定同理（原本是自己的 click 判斷，不是走 bindModalOverlayDismiss）。
+  assert.doesNotMatch(html, /event\.target\.id==='personalSettingsModal'\)hidePersonalSettings\(\)/);
+  assert.doesNotMatch(html, /event\.target\.id==='designerSettingsModal'\)hideDesignerSettings\(\)/);
+
+  // 但關閉的正常途徑要留著：關閉鈕、取消鈕，個人設定還有 Esc。
+  assert.match(html, /\$\('#personalSettingsClose'\)\?\.addEventListener\('click',hidePersonalSettings\);/);
+  assert.match(html, /\$\('#personalSettingsCancel'\)\?\.addEventListener\('click',hidePersonalSettings\);/);
+  assert.match(html, /\$\('#designerSettingsCancel'\)\?\.addEventListener\('click',hideDesignerSettings\);/);
+  assert.match(html, /\$\('#designerSettingsClose'\)\?\.addEventListener\('click',hideDesignerSettings\);/);
+  assert.match(html, /\$\('#gmailThreadReplyCancel'\)\?\.addEventListener\('click',\(\)=>\{closeFieldPopover\(\);closeGmailThreadModal\(\)\}\);/);
+  assert.match(html, /\$\('#gmailComposeCancel'\)\?\.addEventListener\('click',\(\)=>\{closeFieldPopover\(\);closeGmailComposeModal\(\)\}\);/);
+  assert.match(html, /if\(event\.key==='Escape'&&!\$\('#personalSettingsModal'\)\?\.hidden\)/);
+
+  // 兩個設定視窗開著時也要鎖住背景捲動。
+  assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'personalSettingsModal','designerSettingsModal'\]/);
+
+  // 其他彈窗維持原本的「點外面關閉」（例如案件資料、修改紀錄、複製信件內容）。
+  assert.match(html, /bindModalOverlayDismiss\(\$\('#mailCopyModal'\),closePostSubmitCopyModal\);/);
+  assert.match(html, /\$\('#caseDetailModal'\)\?\.addEventListener\('click',event=>\{if\(event\.target\.id==='caseDetailModal'\)closeCaseDetail\(\)\}\);/);
 });

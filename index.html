@@ -15111,7 +15111,8 @@ document.addEventListener('click',event=>{
 	$('#accountPersonalSettings')?.addEventListener('click',showPersonalSettings);
 	$('#personalSettingsClose')?.addEventListener('click',hidePersonalSettings);
 	$('#personalSettingsCancel')?.addEventListener('click',hidePersonalSettings);
-	$('#personalSettingsModal')?.addEventListener('click',event=>{if(event.target.id==='personalSettingsModal')hidePersonalSettings()});
+	// 刻意不做「點遮罩就關閉」：簽名檔／信件範本常常編輯到一半，手滑點到框外整份就沒了。要關閉請用右上角的
+	// 關閉鈕、下方的取消鈕或 Esc。信件撰寫／回信、設計師設定同理（見下方 bindModalOverlayDismiss 的說明）。
 	$('#personalSettingsForm')?.addEventListener('submit',savePersonalSettings);
 	$('#personalSettingsAvatarChange')?.addEventListener('click',openUserAvatarUploadPage);
 	$('#personalMailTemplateAdd')?.addEventListener('click',()=>addMailTemplateRow($('#personalMailTemplateList')));
@@ -15145,7 +15146,7 @@ document.addEventListener('click',event=>{
 	$('#issueReportList')?.addEventListener('change',changeIssueReportStatus);
 	$('#designerSettingsCancel')?.addEventListener('click',hideDesignerSettings);
 $('#designerSettingsClose')?.addEventListener('click',hideDesignerSettings);
-$('#designerSettingsModal')?.addEventListener('click',event=>{if(event.target.id==='designerSettingsModal')hideDesignerSettings()});
+// 同上：設計師設定也不做點遮罩關閉，避免編輯到一半誤關。
 $('#designerSettingsForm')?.addEventListener('submit',saveDesignerSettings);
 $('#flatProjectCancel')?.addEventListener('click',closeFlatProjectModal);
 $('#flatProjectModal')?.addEventListener('click',event=>{if(event.target.id==='flatProjectModal')closeFlatProjectModal()});
@@ -15170,7 +15171,7 @@ $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revi
 /** 這幾個彈窗開著時鎖住背景捲動。它們分散在很多地方用 hidden 屬性開關（開啟、關閉、切換案件、
  * 背景流程自動收合…），與其在每一個進出點各加一行，不如直接監看 hidden 屬性變化，任何一種開關
  * 方式都涵蓋得到，也不會有人日後新增流程時忘記解鎖。 */
-const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal'];
+const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal','personalSettingsModal','designerSettingsModal'];
 function syncModalScrollLock(){
   const anyOpen=SCROLL_LOCK_MODAL_IDS.some(id=>{const el=document.getElementById(id); return Boolean(el)&&!el.hidden});
   document.documentElement.classList.toggle('modal-scroll-locked',anyOpen);
@@ -15182,12 +15183,13 @@ syncModalScrollLock();
 $('#revisionModalAdd')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id)});
 $('#revisionModalAddDraft')?.addEventListener('click',event=>{const id=$('#revisionModal')?.dataset.caseId; if(id)openModificationEditor(event,id,{draft:true})});
 $('#gmailThreadModalClose')?.addEventListener('click',()=>{closeFieldPopover();closeGmailThreadModal()});
-bindModalOverlayDismiss($('#gmailThreadModal'),()=>{closeFieldPopover();closeGmailThreadModal()});
+// 信件回信視窗不綁「點遮罩關閉」：使用者回報信寫到一半常因為誤點框外而整封消失。關閉請用右上角關閉鈕
+// 或下方的取消鈕（草稿與排程的既有行為不變）。
 $('#gmailThreadReplyCancel')?.addEventListener('click',()=>{closeFieldPopover();closeGmailThreadModal()});
 $('#gmailThreadReplySend')?.addEventListener('click',sendGmailThreadReply);
 $('#gmailThreadSchedule')?.addEventListener('click',event=>openScheduleTimePicker(event,'thread'));
 $('#gmailComposeModalClose')?.addEventListener('click',()=>{closeFieldPopover();closeGmailComposeModal()});
-bindModalOverlayDismiss($('#gmailComposeModal'),()=>{closeFieldPopover();closeGmailComposeModal()});
+// 撰寫視窗同理，不綁「點遮罩關閉」。
 $('#gmailComposeCancel')?.addEventListener('click',()=>{closeFieldPopover();closeGmailComposeModal()});
 $('#gmailComposeSend')?.addEventListener('click',()=>{postSubmitQueue?handlePostSubmitGmailSend():sendGmailComposeModal()});
 $('#gmailComposeSchedule')?.addEventListener('click',event=>openScheduleTimePicker(event,'compose'));
