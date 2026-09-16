@@ -1415,6 +1415,50 @@ describe('Machi Design API Worker', () => {
     expect(unfiltered.total).toBe(2);
   });
 
+  it('moves selected design images from one modification round to another without touching Drive', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'move-file-sha' }, commit: { sha: 'move-commit-sha' } }));
+    const draft = [
+      { fileName: 'a.jpg', url: 'https://lh3.googleusercontent.com/d/a' },
+      { fileName: 'b.jpg', url: 'https://lh3.googleusercontent.com/d/b' },
+      { fileName: 'c.jpg', url: 'https://lh3.googleusercontent.com/d/c' }
+    ];
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 0, images: draft });
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 1, images: [{ fileName: 'd.jpg', url: 'https://lh3.googleusercontent.com/d/d' }] });
+
+    const moved = await api({
+      action: 'moveCaseDesignImages',
+      caseId: '26080001',
+      toRound: 1,
+      images: [
+        { round: 0, url: 'https://lh3.googleusercontent.com/d/b' },
+        { round: 0, url: 'https://lh3.googleusercontent.com/d/c' },
+        { round: 1, url: 'https://lh3.googleusercontent.com/d/d' },
+        { round: 0, url: 'https://lh3.googleusercontent.com/d/missing' }
+      ]
+    }, token);
+    // 已經在目標輪次的、以及找不到的，都只是略過，不影響其他張。
+    expect(moved).toMatchObject({ ok: true, action: 'moveCaseDesignImages', caseId: '26080001', toRound: 1, moved: 2, skipped: 2 });
+
+    const records = await api({ action: 'listModificationRecords', ids: ['26080001'] }, token);
+    const rows = records.rows as Record<string, unknown>[];
+    const imagesOf = (round: number) => JSON.parse(String(rows.find(row => Number(row['修改次數']) === round)?.['圖片連結'] || '[]')) as { fileName: string; url: string }[];
+    expect(imagesOf(0).map(image => image.fileName)).toEqual(['a.jpg'], '搬走的圖要從初稿移除');
+    expect(imagesOf(1).map(image => image.fileName)).toEqual(['d.jpg', 'b.jpg', 'c.jpg'], '檔名與網址原樣搬到一修');
+    expect(String(rows.find(row => Number(row['修改次數']) === 1)?.['圖片來源'])).toBe('manual-move');
+
+    // 目標輪次不存在時要明確擋下來，不可以自動生出一輪。
+    const missingRound = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toRound: 5, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/a' }] }, token);
+    expect(missingRound).toMatchObject({ ok: false });
+    expect(String(missingRound.error)).toContain('請先建立那一輪');
+
+    // 沒有 media.manage 權限不能搬。
+    const tester = await api({ action: 'login', password: 'test' });
+    const denied = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toRound: 1, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/a' }] }, String(tester.token));
+    expect(denied).toMatchObject({ ok: false });
+    expect(String(denied.error)).toContain('media.manage');
+  });
+
   it('backs up photos uploaded inside a designer reply into the reply round of 修改紀錄 via the Apps Script case design uploader', async () => {
     const token = await login();
     const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

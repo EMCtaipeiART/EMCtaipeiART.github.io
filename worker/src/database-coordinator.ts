@@ -2986,6 +2986,50 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { result: { ok: true, action, caseId, round: roundNumber, images: merged, ignoredImages, record: row }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
       });
     }
+    if (action === 'moveCaseDesignImages') {
+      // 把已經備份好的設計圖改歸到別的修改輪次：初稿備份完才發現其中幾張其實屬於一修／二修時用。
+      // 只動「修改統計表」的圖片清單（同一個 Drive 網址從來源那一輪搬到目標那一輪），Drive 上的檔案不動。
+      const current = this.requireAccess(database, session, 'media.manage');
+      const caseId = text(payload.caseId || payload.id);
+      const toRound = Math.trunc(Number(payload.toRound ?? payload.round));
+      const items = (Array.isArray(payload.images) ? payload.images : [])
+        .map(item => asRow(item))
+        .map(item => ({ round: Math.trunc(Number(item.round)), url: text(item.url) }))
+        .filter(item => Number.isFinite(item.round) && item.round >= 0 && isHttpUrl(item.url));
+      if (!caseId) throw new Error('缺少案件編號');
+      if (!Number.isFinite(toRound) || toRound < 0) throw new Error('缺少目標修改輪次');
+      if (!items.length) throw new Error('沒有指定要搬移的圖片');
+      return this.mutate(action, current, draft => {
+        const rows = draft.tables['修改統計表'].rows;
+        const targetRow = rows.find(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === toRound);
+        // 目標輪次必須已經存在：自動補一筆空的修改紀錄會讓輪次編號憑空多出來，跟 NAS 同步的輪次判斷對不上。
+        if (!targetRow) throw new Error(`找不到${toRound === 0 ? '初稿' : `第 ${toRound} 輪`}的修改紀錄，請先建立那一輪再搬移`);
+        const targetImages = parseCaseDesignImages_(targetRow);
+        const seenUrls = new Set(targetImages.map(item => item.url));
+        let moved = 0;
+        let skipped = 0;
+        for (const item of items) {
+          const sourceRow = item.round === toRound
+            ? null
+            : rows.find(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === item.round);
+          if (!sourceRow) { skipped += 1; continue; }
+          const sourceImages = parseCaseDesignImages_(sourceRow);
+          const index = sourceImages.findIndex(image => image.url === item.url);
+          if (index < 0) { skipped += 1; continue; }
+          const [image] = sourceImages.splice(index, 1);
+          sourceRow['圖片連結'] = JSON.stringify(sourceImages);
+          if (seenUrls.has(image.url)) { skipped += 1; continue; }
+          seenUrls.add(image.url);
+          targetImages.push(image);
+          moved += 1;
+        }
+        if (!moved) throw new Error('沒有任何圖片被搬移（可能已經在目標輪次，或來源紀錄剛好被更新過）');
+        targetRow['圖片連結'] = JSON.stringify(targetImages);
+        targetRow['圖片來源'] = 'manual-move';
+        targetRow['圖片更新時間'] = nowTaipei();
+        return { result: { ok: true, action, caseId, toRound, moved, skipped, images: targetImages }, changedTables: ['修改統計表'] };
+      });
+    }
     if (action === 'removeCaseDesignImage') {
       const current = this.requireAccess(database, session, 'media.manage');
       const caseId = text(payload.caseId || payload.id || payload['案件編號']);

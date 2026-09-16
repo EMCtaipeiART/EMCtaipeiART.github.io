@@ -3160,7 +3160,8 @@ test('mailAction() branches into 串接／回信／發信 depending on gmailThre
 test('links written into a 修改紀錄 entry are clickable in the modal, while everything else stays escaped text', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 修改需求常直接貼 Google 簡報或雲端連結，原本整段用 esc() 當純文字輸出，網址點不開。
-  const render = html.match(/function renderRevisionModal\(id\)\{[^\n]*/)?.[0];
+  // renderRevisionModal 已經不是單行（加入了保留選取的處理），整支函式一起抓。
+  const render = html.match(/function renderRevisionModal\(id\)\{[\s\S]*?updateRevisionSelectionBar\(\);\}/)?.[0];
   assert.ok(render, 'could not locate renderRevisionModal');
   assert.match(render, /<div class="revision-modal-content">\$\{linkifyPlainText\(record\.content\|\|/);
   assert.doesNotMatch(render, /<div class="revision-modal-content">\$\{esc\(/);
@@ -3926,4 +3927,73 @@ test('first paint assets stay small: preloaded designer avatars must not balloon
     const { size } = await stat(new URL(name, posterDir));
     assert.ok(size <= 600 * 1024, `images/${name} 為 ${Math.round(size / 1024)} KB，超過 600 KB 上限`);
   }
+});
+
+test('revision modal keeps image selection across background re-renders and can move selected images to another round', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // ① 背景同步每次載入資料都會重繪這個彈窗；舊寫法無條件清空選取，使用者勾好圖片後按「刪除已選取」完全沒反應。
+  const render = html.match(/function renderRevisionModal\(id\)\{[\s\S]*?updateRevisionSelectionBar\(\);\}/)?.[0];
+  assert.ok(render, 'could not locate renderRevisionModal');
+  assert.match(render, /if\(String\(modal\.dataset\.caseId\|\|''\)!==String\(row\.id\)\)revisionImageSelection\.clear\(\);/, '只有換案件才清空選取');
+  assert.doesNotMatch(render, /if\(add\)add\.hidden=!canCaseEditRow\(row\); revisionImageSelection\.clear\(\);/, '不可再無條件清空');
+  assert.match(render, /\[\.\.\.revisionImageSelection\]\.forEach\(key=>\{if\(!availableKeys\.has\(key\)\)revisionImageSelection\.delete\(key\)\}\);/, '已經不存在的圖片要從選取裡剔除');
+  assert.ok(render.trimEnd().endsWith('updateRevisionSelectionBar();}'), '重繪後要還原工具列狀態（按鈕不能停在停用）');
+  // 重繪出來的勾選框要把已選取的打勾回去。
+  assert.match(html, /data-selection-key="\$\{esc\(revisionImageKey\(record\.count,img\.url\)\)\}"\$\{revisionImageSelection\.has\(revisionImageKey\(record\.count,img\.url\)\)\?' checked':''\}/);
+  // 工具列多一顆「移動到…」，跟刪除鍵一樣依選取數啟用。
+  assert.match(html, /id="revisionSelectionMove" \$\{count\?'':'disabled'\} onclick="openRevisionMoveTargetPicker\(event\)"/);
+  assert.match(html, /if\(moveBtn\)moveBtn\.disabled=!count;/);
+
+  // ② 實際執行搬移流程：送出的內容、略過已在目標輪次的圖片、成功後清空選取並重新整理畫面。
+  const block = html.match(/function revisionSelectionItems\(\)\{[\s\S]*?\nasync function moveSelectedCaseDesignImages\(id,toRound\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(block, 'could not locate the move helpers');
+  const run = async ({ confirm = true, fail = false } = {}) => {
+    const calls = [];
+    const nodes = { '#revisionSelectionMove': { disabled: false } };
+    const api = new Function('ctx', `
+      const { calls, nodes } = ctx;
+      const $ = selector => nodes[selector];
+      let revisionImageSelection = new Set(['0::https://x/a', '0::https://x/b', '1::https://x/c']);
+      const modificationLabel = round => (round === 0 ? '初稿' : ['', '一修', '二修'][round] || round + '修');
+      const showAppConfirm = async opts => { calls.push({ step: 'confirm', title: opts.title }); return ${confirm}; };
+      const sheetApi = async (action, payload) => {
+        calls.push({ step: 'api', action, toRound: payload.toRound, images: payload.images });
+        if (${fail}) throw new Error('沒有權限');
+        return { ok: true, moved: payload.images.length, skipped: 0 };
+      };
+      const setSync = (message, isError) => calls.push({ step: 'sync', message, isError });
+      const fetchModificationCounts = async () => {};
+      const render = () => {}, refreshOpenRevisionModal = () => {}, refreshOpenCaseDetail = () => {};
+      const currentEditorToken = 'tok';
+      ${block}
+      return { moveSelectedCaseDesignImages, selectionSize: () => revisionImageSelection.size, items: revisionSelectionItems };
+    `)({ calls, nodes });
+    return { api, calls, nodes };
+  };
+
+  const ok = await run();
+  assert.deepEqual(ok.api.items(), [
+    { round: 0, url: 'https://x/a' },
+    { round: 0, url: 'https://x/b' },
+    { round: 1, url: 'https://x/c' }
+  ], '選取的 key 要正確拆回輪次與網址');
+  await ok.api.moveSelectedCaseDesignImages('26090107', 1);
+  const request = ok.calls.find(call => call.step === 'api');
+  assert.equal(request.action, 'moveCaseDesignImages');
+  assert.equal(request.toRound, 1);
+  assert.deepEqual(request.images, [{ round: 0, url: 'https://x/a' }, { round: 0, url: 'https://x/b' }], '已經在目標輪次的那張不送出');
+  assert.equal(ok.api.selectionSize(), 0, '成功後清空選取');
+  assert.match(ok.calls.at(-1).message, /已把 2 張設計圖移到一修/);
+
+  const cancelled = await run({ confirm: false });
+  await cancelled.api.moveSelectedCaseDesignImages('26090107', 1);
+  assert.equal(cancelled.calls.some(call => call.step === 'api'), false, '按取消就不送出');
+  assert.equal(cancelled.api.selectionSize(), 3, '取消後選取保留');
+
+  const failed = await run({ fail: true });
+  await failed.api.moveSelectedCaseDesignImages('26090107', 1);
+  assert.match(failed.calls.at(-1).message, /移動圖片失敗：沒有權限/);
+  assert.equal(failed.calls.at(-1).isError, true);
+  assert.equal(failed.nodes['#revisionSelectionMove'].disabled, false, '失敗後按鈕要恢復可按');
 });
