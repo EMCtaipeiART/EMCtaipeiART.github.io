@@ -3830,3 +3830,75 @@ test('case delete and 修改紀錄 trash buttons ask through the in-page warning
   api.settleAppConfirm(true);
   assert.equal(await fresh, true);
 });
+
+test('the NAS folder picker opens on the designer own machine first and falls back to the manager Mac when it does not answer', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const block = html.match(/const NAS_PICKER_MANAGER_HOST=[\s\S]*?\nfunction openNasFolderPickerPopupWindow\(url\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(block, 'could not locate the picker host helpers');
+
+  const build = (storedHost = null, storedAt = Date.now()) => {
+    const state = { opened: [], sync: [], timers: [], store: storedHost ? { machiNasFolderPickerHost: JSON.stringify({ host: storedHost, at: storedAt }) } : {} };
+    const api = new Function('state', `
+      const screen = { width: 1600, height: 1000 };
+      const localStorage = {
+        getItem: key => (key in state.store ? state.store[key] : null),
+        setItem: (key, value) => { state.store[key] = value; }
+      };
+      const setSync = (message, isError) => { state.sync.push({ message, isError }); };
+      const setTimeout = (fn, ms) => { state.timers.push({ fn, ms, cleared: false }); return state.timers.length; };
+      const clearTimeout = id => { if (state.timers[id - 1]) state.timers[id - 1].cleared = true; };
+      const window = { open: (url, name) => { state.opened.push({ url, name }); return state.win; } };
+      ${block}
+      return { openNasFolderPickerPopupWindow, markNasFolderPickerReady, nasFolderPickerHostOrder, nasFolderPickerUrlForHost, hosts: nasFolderPickerHosts };
+    `)(state);
+    state.win = { closed: false };
+    return { state, api };
+  };
+  const fireLatest = state => { const live = state.timers.filter(timer => !timer.cleared); live.at(-1)?.fn(); };
+
+  // 只換位址，案件編號與 token 等查詢字串照原樣帶過去。
+  const { api: urlApi } = build();
+  const swapped = urlApi.nasFolderPickerUrlForHost(new URL('http://localhost:8877/picker?caseId=26090107&token=abc'), 'http://iMac.local:8877');
+  assert.equal(swapped.toString(), 'http://imac.local:8877/picker?caseId=26090107&token=abc');
+
+  // ① 自己這台有跑選擇器：回報就緒後不會再換機，位址被記住。
+  const first = build();
+  const url = new URL('http://localhost:8877/picker?caseId=26090107&token=abc');
+  first.api.openNasFolderPickerPopupWindow(url);
+  assert.equal(first.state.opened.length, 1);
+  assert.match(first.state.opened[0].url, /^http:\/\/localhost:8877\/picker\?/, '先開自己這台');
+  assert.equal(first.state.opened[0].name, 'machiNasFolderPicker');
+  first.api.markNasFolderPickerReady('http://localhost:8877');
+  fireLatest(first.state);
+  assert.equal(first.state.opened.length, 1, '有回報就不再換機');
+  assert.equal(JSON.parse(first.state.store.machiNasFolderPickerHost).host, 'http://localhost:8877');
+
+  // ② 自己這台沒裝（沒有回報）：逾時後自動改開管理者那台，沿用同一個視窗名稱＝同一個彈出視窗。
+  const second = build();
+  second.api.openNasFolderPickerPopupWindow(url);
+  fireLatest(second.state);
+  assert.equal(second.state.opened.length, 2);
+  assert.match(second.state.opened[1].url, /^http:\/\/imac\.local:8877\/picker\?/, '改開管理者那台');
+  assert.equal(second.state.opened[1].name, 'machiNasFolderPicker', '同一個視窗名稱才不會多開一個視窗');
+  assert.deepEqual(second.state.sync, [], '還在嘗試時不要先報錯');
+  // ③ 兩台都沒回應：提示改用電腦檔案上傳。
+  fireLatest(second.state);
+  assert.equal(second.state.opened.length, 2);
+  assert.equal(second.state.sync.length, 1);
+  assert.match(second.state.sync[0].message, /連不到 NAS 資料夾選擇器/);
+  assert.equal(second.state.sync[0].isError, true);
+
+  // ④ 記住的位址優先；超過一天就重新從自己這台探測（後來才安裝的人會自動改用自己的電腦）。
+  const remembered = build('http://iMac.local:8877');
+  assert.deepEqual(remembered.api.nasFolderPickerHostOrder(), ['http://iMac.local:8877', 'http://localhost:8877']);
+  remembered.api.openNasFolderPickerPopupWindow(url);
+  assert.match(remembered.state.opened[0].url, /^http:\/\/imac\.local:8877\//);
+  const expired = build('http://iMac.local:8877', Date.now() - 25 * 60 * 60 * 1000);
+  assert.deepEqual(expired.api.nasFolderPickerHostOrder(), ['http://localhost:8877', 'http://iMac.local:8877']);
+
+  // 前台收到就緒訊息時要呼叫 markNasFolderPickerReady。
+  assert.match(html, /if\(data\.type==='machi-nas-folder-picker-ready'\)\{markNasFolderPickerReady\(data\.host\|\|event\.origin\);return\}/);
+  // 選擇器頁面一開啟就要回報。
+  const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  assert.match(picker, /type: 'machi-nas-folder-picker-ready', caseId, nonce, host: location\.origin/);
+});

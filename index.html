@@ -11004,6 +11004,8 @@ function showNasFolderBackupBadge(text){const badge=$('#nasFolderBackupBadge'), 
 function hideNasFolderBackupBadge(){const badge=$('#nasFolderBackupBadge'); if(badge)badge.hidden=true}
 function handleUploadFrameMessage(event){
   const modal=$('#uploadModal'),data=event.data||{};
+  // 選擇器開起來時會先回報一聲，前台才知道這台連得到、不用換去備援位址。
+  if(data.type==='machi-nas-folder-picker-ready'){markNasFolderPickerReady(data.host||event.origin);return}
   if(data.type==='machi-user-avatar-updated'){
     if(!modal||modal.hidden||!activeUserAvatarUploadNonce||data.closeNonce!==activeUserAvatarUploadNonce)return;
     const uploadedAvatar=imageUrl(data.imageUrl||data.url||'');
@@ -13826,7 +13828,18 @@ function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPag
  * 狀態變更觸發時維持預設 false，上傳完只更新畫面，不會意外跳出信件編輯器。 */
 function openCaseDesignImageUploadModal(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadSkipReplyImages=Boolean(afterReply&&skipReplyImages); caseDesignUploadRound=Math.max(0,Number(round)||0); caseDesignUploadCaseId=String(row.id); caseDesignUploadLatestProgress=null; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
 function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const samePathButton=afterReply&&row.designImageFolderUrl?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${esc(row.designImageFolderUrl)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';const skipImagesOption=afterReply?`<label class="designer-reply-skip-images"><input type="checkbox" data-skip-reply-images><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3>${skipImagesOption}<div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); const skipReplyImagesChecked=()=>afterReply&&Boolean(fieldPopover.querySelector('[data-skip-reply-images]')?.checked);fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply,skipReplyImages})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply,skipReplyImages})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply,skipReplyImages})})}
-const nasFolderPickerBaseUrl='http://iMac.local:8877/picker';
+/** 選擇器伺服器可能在兩個地方：①設計師自己這台（跑過 NAS 自動備份安裝包就會有）；②管理者那台 iMac。
+ * 先開自己這台——這樣管理者電腦關機時，有裝的人照樣選得到資料夾，也不必再透過別人的電腦掛載 NAS；
+ * 2.5 秒內沒收到選擇器回報「我準備好了」就自動改開管理者那台（沒裝的人就是走這條）。
+ * 成功的位址記在這台瀏覽器裡一天，之後直接從對的那台開，不用每次都等一次逾時；一天後重新探測一次，
+ * 這樣「後來才安裝」的人會自動改用自己的電腦。 */
+const NAS_PICKER_MANAGER_HOST='http://iMac.local:8877';
+const nasFolderPickerHosts=['http://localhost:8877',NAS_PICKER_MANAGER_HOST];
+const nasFolderPickerBaseUrl=`${NAS_PICKER_MANAGER_HOST}/picker`;
+const NAS_PICKER_HOST_MEMORY_KEY='machiNasFolderPickerHost';
+const NAS_PICKER_HOST_MEMORY_MS=24*60*60*1000;
+const NAS_PICKER_READY_TIMEOUT_MS=2500;
+let nasFolderPickerReadyHost='', nasFolderPickerReadyTimer=0;
 const nasFolderPickerToken='120236a2365606d65af445934e413e02033df8ba15912fa7';
 let activeNasFolderPickerNonce='', activeNasFolderPickerCaseId='', activeNasFolderPickerRound=0, activeNasFolderPickerWatchTimer=0, nasFolderPickerBackupInProgress=false;
 let nasFolderPickerPurpose='case', nasFolderPickerInsertEditorId='', nasFolderPickerInsertRange=null;
@@ -13840,7 +13853,43 @@ function nasFolderPickerConfigured(){return Boolean(nasFolderPickerBaseUrl&&nasF
 function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0} nasFolderPickerBackupInProgress=false}
 function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress, pendingCaseId=activeNasFolderPickerCaseId, pendingRound=activeNasFolderPickerRound; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; activeNasFolderPickerRound=0; nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false; hideNasFolderBackupBadge(); if(wasBackingUp&&pendingCaseId)applyDesignerReplyImages(pendingCaseId,[],{round:pendingRound}); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
 function nasFolderPickerPopupUrl({caseId,nonce,mode,path='',keyword=''}){const url=new URL(nasFolderPickerBaseUrl); if(caseId)url.searchParams.set('caseId',caseId); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',nonce); url.searchParams.set('origin',location.origin); if(mode)url.searchParams.set('mode',mode); if(path)url.searchParams.set('path',path); if(keyword)url.searchParams.set('keyword',keyword); return url}
-function openNasFolderPickerPopupWindow(url){const pickerWidth=520,pickerHeight=640,pickerLeft=Math.max(0,Math.round((screen.width-pickerWidth)/2)),pickerTop=Math.max(0,Math.round((screen.height-pickerHeight)/2)); return window.open(url.toString(),'machiNasFolderPicker',`width=${pickerWidth},height=${pickerHeight},left=${pickerLeft},top=${pickerTop}`)}
+function nasFolderPickerHostOrder(){
+  let remembered='';
+  try{
+    const saved=JSON.parse(localStorage.getItem(NAS_PICKER_HOST_MEMORY_KEY)||'null');
+    if(saved&&Date.now()-Number(saved.at||0)<NAS_PICKER_HOST_MEMORY_MS)remembered=String(saved.host||'');
+  }catch(err){}
+  return remembered&&nasFolderPickerHosts.includes(remembered)
+    ? [remembered,...nasFolderPickerHosts.filter(host=>host!==remembered)]
+    : [...nasFolderPickerHosts];
+}
+function rememberNasFolderPickerHost(host){try{localStorage.setItem(NAS_PICKER_HOST_MEMORY_KEY,JSON.stringify({host,at:Date.now()}))}catch(err){}}
+/** 保留原本的路徑與查詢字串，只把位址換成另一台選擇器。 */
+function nasFolderPickerUrlForHost(url,host){const next=new URL(host); next.pathname=url.pathname; next.search=url.search; return next}
+/** 選擇器回報自己已經開起來了：停掉換機計時器，並記住這台位址。 */
+function markNasFolderPickerReady(host){clearTimeout(nasFolderPickerReadyTimer); nasFolderPickerReadyHost=String(host||''); if(nasFolderPickerReadyHost)rememberNasFolderPickerHost(nasFolderPickerReadyHost)}
+function openNasFolderPickerPopupWindow(url){
+  const hosts=nasFolderPickerHostOrder();
+  clearTimeout(nasFolderPickerReadyTimer);
+  nasFolderPickerReadyHost='';
+  const pickerWidth=520,pickerHeight=640,pickerLeft=Math.max(0,Math.round((screen.width-pickerWidth)/2)),pickerTop=Math.max(0,Math.round((screen.height-pickerHeight)/2));
+  const win=window.open(nasFolderPickerUrlForHost(url,hosts[0]).toString(),'machiNasFolderPicker',`width=${pickerWidth},height=${pickerHeight},left=${pickerLeft},top=${pickerTop}`);
+  if(!win)return win;
+  // 用同一個視窗名稱重新開啟＝把同一個彈出視窗導到備援位址，呼叫端拿到的視窗參照仍然有效
+  // （watchNasFolderPickerWindow 靠它判斷使用者有沒有關掉視窗）。
+  const tryHost=index=>{
+    clearTimeout(nasFolderPickerReadyTimer);
+    nasFolderPickerReadyTimer=setTimeout(()=>{
+      if(nasFolderPickerReadyHost||win.closed)return;
+      const next=index+1;
+      if(next>=hosts.length){setSync('連不到 NAS 資料夾選擇器（你的電腦與管理者電腦都沒有回應），請改用電腦檔案上傳',true,5200);return}
+      window.open(nasFolderPickerUrlForHost(url,hosts[next]).toString(),'machiNasFolderPicker');
+      tryHost(next);
+    },NAS_PICKER_READY_TIMEOUT_MS);
+  };
+  tryHost(0);
+  return win;
+}
 function openNasFolderPicker(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); activeNasFolderPickerRound=Math.max(0,Number(round)||0); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=afterReply; nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages); const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 /** 沿用案件既有 NAS 路徑與關鍵字，不再要求設計師於每一輪修改回覆重新瀏覽資料夾。因正式站為 HTTPS、
  * 本機服務為 HTTP，仍需以彈出視窗導覽至同源頁面，再由該頁自動執行備份並用 postMessage 回傳結果。 */

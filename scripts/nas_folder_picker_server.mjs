@@ -403,6 +403,16 @@ const PICKER_PAGE = `<!doctype html>
   const token = params.get('token') || '';
   const nonce = params.get('nonce') || '';
   const origin = params.get('origin') || '';
+  // 一開啟就先回報「我準備好了」。主頁會先嘗試開設計師自己這台的選擇器，沒有在 2.5 秒內收到這則
+  // 訊息就自動改開管理者那台（見 index.html 的 openNasFolderPickerPopupWindow）；沒有這一聲，
+  // 主頁沒辦法分辨「這台沒有跑選擇器」和「這台正在載入」。
+  try {
+    if (window.opener) {
+      window.opener.postMessage({ type: 'machi-nas-folder-picker-ready', caseId, nonce, host: location.origin }, origin || '*');
+    }
+  } catch (error) {
+    console.warn('無法回報選擇器已就緒', error);
+  }
   // mode=insert：只是要挑一個資料夾路徑插進信件內容裡（例如 Gmail 撰寫/回信），
   // 不需要關鍵字、也不會觸發任何備份／上傳，選好資料夾直接把路徑丟回去、關閉視窗；
   // mode=reuse：由主頁傳入案件既有路徑與關鍵字，頁面載入後直接執行備份，不再要求使用者重選；
