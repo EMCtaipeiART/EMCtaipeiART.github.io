@@ -1951,7 +1951,8 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
 
   // 新增初稿 is only offered when the case has no round-0 record yet; deleting a round is gated on
   // media.manage, the same capability that already guards removing individual design images.
-  assert.match(html, /if\(addDraft\)addDraft\.hidden=!canCaseEditRow\(row\)\|\|records\.some\(record=>\(Number\(record\.count\)\|\|0\)===0\);/);
+  // 2026-09-16 起「新增初稿」只開放設計師看到，避免專案同仁誤建空的初稿紀錄。
+  assert.match(html, /if\(addDraft\)addDraft\.hidden=!canCaseEditRow\(row\)\|\|!isDesignerLogin\(\)\|\|records\.some\(record=>\(Number\(record\.count\)\|\|0\)===0\);/);
   assert.match(html, /const deleteButton=accessAllowed\('media\.manage',hasDesignerAccountRole\(\)\)\?/);
   assert.match(html, /onclick="deleteModificationRecord\(event,'\$\{jsArg\(row\.id\)\}',\$\{Number\(record\.count\)\|\|0\}\)"/);
 
@@ -4047,4 +4048,62 @@ test('the delete warning sits above every modal, and open modals stop the page b
   api.syncModalScrollLock();
   assert.equal(classes.has('modal-scroll-locked'), false, '全部關掉才解鎖');
   assert.equal(classes.has('html:modal-scroll-locked'), false);
+});
+
+test('modification request mail closes the editor, a manual backup upload confirms that round, and 新增初稿 leads straight into picking an image source', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // ① 填寫修改需求信跟設計師回覆信一樣是一次性任務，寄出後要自動收合編輯器。
+  assert.match(html, /if\(replyMode==='designer'\|\|replyMode==='modification'\)closeGmailThreadModal\(\);/);
+
+  // ② 手動上傳補備份完成後，自動把那一輪標記成設計完成確認。
+  assert.match(html, /if\(count\)void autoConfirmModificationRound\(id,replyRound\);/, '上傳完成的處理要呼叫自動確認');
+  const block = html.match(/async function autoConfirmModificationRound\(id,round\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(block, 'could not locate autoConfirmModificationRound');
+  const run = async ({ round = 1, records = [{ count: 1, confirmedDate: '' }], allowed = true, fail = false } = {}) => {
+    const calls = [];
+    const api = new Function('ctx', `
+      const { calls, records } = ctx;
+      const accessAllowed = () => ${allowed};
+      const modificationRecordsFor = () => records;
+      const slashDate = value => value;
+      const todayInputValue = () => '2026/09/16';
+      const modificationLabel = value => (value === 0 ? '初稿' : ['', '一修', '二修'][value] || value + '修');
+      const sheetApi = async (action, payload) => {
+        calls.push({ action, count: payload.record.count, confirmedDate: payload.record.confirmedDate });
+        if (${fail}) throw new Error('沒有確認權限');
+        return { record: { '確認修正日': '2026/09/16' } };
+      };
+      const setSync = (message, isError) => calls.push({ sync: message, isError });
+      const render = () => {}, refreshOpenRevisionModal = () => {}, refreshOpenCaseDetail = () => {};
+      const currentEditorToken = 'tok';
+      ${block}
+      return autoConfirmModificationRound;
+    `)({ calls, records });
+    const result = await api('26090107', round);
+    return { result, calls, records };
+  };
+
+  const confirmed = await run();
+  assert.equal(confirmed.result, true);
+  assert.deepEqual(confirmed.calls[0], { action: 'updateModificationConfirm', count: 1, confirmedDate: '2026/09/16' });
+  assert.equal(confirmed.records[0].confirmedDate, '2026/09/16', '本機資料同步更新，畫面立刻看得到確認日');
+
+  assert.equal((await run({ round: 0 })).result, false, '初稿在後端建立時就已經確認過，不重複寫入');
+  assert.equal((await run({ records: [{ count: 1, confirmedDate: '2026/09/15' }] })).result, false, '已經確認過就不再寫入');
+  assert.equal((await run({ allowed: false })).result, false, '沒有確認權限就安靜略過');
+  assert.equal((await run({ records: [] })).result, false, '找不到那一輪就不動作');
+  const failed = await run({ fail: true });
+  assert.equal(failed.result, false);
+  assert.match(failed.calls.at(-1).sync, /自動標記一修設計完成確認失敗：沒有確認權限/, '失敗只提醒，不影響上傳結果');
+
+  // ③ 新增初稿成功後直接接上「設計圖上傳方式」，不用自己再去找加號。
+  const draftSubmit = html.match(/async function submitDraftModificationRecord\(event\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(draftSubmit, 'could not locate submitDraftModificationRecord');
+  assert.match(draftSubmit, /setSync\(`已新增 \$\{id\} 初稿紀錄`\);\n    \/\/[^\n]*\n[^\n]*\n    openCaseDesignImageSourceChooser\(id,0,\$\('#revisionModalAdd'\)\);/);
+  assert.ok(draftSubmit.indexOf('openCaseDesignImageSourceChooser') > draftSubmit.indexOf("sheetApi('addModificationRecord'"), '要等紀錄寫入成功後才跳出來源選擇');
+  // 函式裡還有一個 try/catch（重讀修改紀錄），取最後一段才是寫入失敗的分支。
+  const catchBranch = draftSubmit.slice(draftSubmit.lastIndexOf('}catch(err){'));
+  assert.doesNotMatch(catchBranch, /openCaseDesignImageSourceChooser/, '寫入失敗時不跳出來源選擇');
+  assert.match(catchBranch, /初稿紀錄新增失敗/);
 });

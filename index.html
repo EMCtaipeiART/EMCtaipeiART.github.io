@@ -11061,6 +11061,7 @@ function handleUploadFrameMessage(event){
         if(revisionModalEl&&!revisionModalEl.hidden&&String(revisionModalEl.dataset.caseId||'')===id){closeRevisionModal()}else{refreshOpenRevisionModal(id)}
         refreshOpenCaseDetail(id);
         setSync(failedCount?`已上傳 ${count} 張，${failedCount} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failedCount),failedCount?4200:2200);
+        if(count)void autoConfirmModificationRound(id,replyRound);
         if(afterReply&&id){
           // 這一段（開啟回信編輯器＋套用剛上傳的圖片）過去沒有接 .catch()——任何一步出錯都會變成完全
           // 靜默的 unhandled rejection：使用者只看到上傳視窗收合，卻等不到編輯器跳出來，也看不到任何
@@ -11585,7 +11586,8 @@ function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id
   // 使用者勾好圖片、還沒按下按鈕就被清掉，畫面上的「刪除已選取」變回停用狀態，按下去完全沒反應。
   // 只有切換到別的案件才清空；同一個案件重繪時保留選取，並在下面把已經不存在的圖片（例如剛被刪掉的）剔除。
   if(String(modal.dataset.caseId||'')!==String(row.id))revisionImageSelection.clear();
-  modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; if(addDraft)addDraft.hidden=!canCaseEditRow(row)||records.some(record=>(Number(record.count)||0)===0); const availableKeys=new Set(records.flatMap(record=>(record.images||[]).map(img=>revisionImageKey(record.count,img.url))));
+  modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; // 「新增初稿」是設計師補登自己這一輪成果的入口，專案同仁看不到也用不到（避免誤建空的初稿紀錄）。
+  if(addDraft)addDraft.hidden=!canCaseEditRow(row)||!isDesignerLogin()||records.some(record=>(Number(record.count)||0)===0); const availableKeys=new Set(records.flatMap(record=>(record.images||[]).map(img=>revisionImageKey(record.count,img.url))));
   [...revisionImageSelection].forEach(key=>{if(!availableKeys.has(key))revisionImageSelection.delete(key)});
   list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${linkifyPlainText(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'))}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>');
   updateRevisionSelectionBar();}
@@ -12448,9 +12450,10 @@ async function sendGmailThreadReply(){
     else if(replyMode==='general'&&row)await applyReplyStatusUpdate(id,row);
     if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''; modal.dataset.designerReplyRound=''}
     const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
-    // 「設計師回覆信」是一次性任務（附上設計圖、回覆完就結束），不像「一般回信」使用者可能還想留在原地
-    // 繼續看討論串來回內容，寄出成功後直接把彈窗收回，不需要使用者自己再手動關閉。
-    if(replyMode==='designer')closeGmailThreadModal();
+    // 「設計師回覆信」與「填寫修改需求信」都是一次性任務（附上設計圖／寫完這次的修改需求就結束），
+    // 不像「一般回信」使用者可能還想留在原地繼續看討論串來回內容，寄出成功後直接把彈窗收回，
+    // 不需要使用者自己再手動關閉。
+    if(replyMode==='designer'||replyMode==='modification')closeGmailThreadModal();
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
     const backupFailed=inlineImageBackupNotice.includes('失敗');
     setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${inlineImageBackupNotice}${detailsNotice}`,Boolean(detailsNotice)||backupFailed,detailsNotice||backupFailed?5200:(inlineImageBackupNotice?3600:2600));
@@ -14032,6 +14035,9 @@ async function submitDraftModificationRecord(event){
     try{await fetchModificationCounts()}catch(err){}
     render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id);
     setSync(`已新增 ${id} 初稿紀錄`);
+    // 初稿紀錄只是個空殼，真正要的是把設計圖補進去——直接接上「選 NAS 資料夾／電腦上傳圖片」，
+    // 不用使用者自己再去找那顆加號。
+    openCaseDesignImageSourceChooser(id,0,$('#revisionModalAdd'));
   }catch(err){
     if(submit)submit.disabled=false;
     setSync(`初稿紀錄新增失敗：${err.message}`,true,4200);
@@ -14099,6 +14105,27 @@ async function deleteModificationRecord(event,id,count){
  * 狀態欄與上方「修改中」矩形框馬上更新，不用等背景同步；rememberLocalWrite 防止被較舊的資料蓋回去。 */
 function applyModificationStatusChange(id,data){const status=String(data?.status||'').trim(); if(!data?.statusChanged||!status)return false; rows=rows.map(r=>String(r.id)===String(id)?normalizeRow({...r,status}):r); rememberLocalWrite(id,{status}); save(); return true}
 async function submitModificationRecord(event){event.preventDefault(); event.stopPropagation(); const form=event.target, id=String(form.dataset.caseId||'').trim(), row=rows.find(r=>String(r.id)===id); if(!row)return; const submit=form.querySelector('button[type="submit"]'), checkedImages=[...form.querySelectorAll('input[name="targetImages"]:checked')].map(box=>box.value), targetImages=checkedImages.length?checkedImages:(()=>{try{return JSON.parse(form.dataset.autoTarget||'[]')}catch{return []}})(), record={caseId:id,modifyDate:form.elements.modifyDate.value,content:form.elements.content.value.trim(),modifier:currentLoginOwnerName()||ownerDisplay(row.owner),targetImages,editorToken:currentEditorToken}; if(!record.modifyDate||!record.content){setSync('請填寫修改日期與修改內容',true);return} submit.disabled=true; const optimisticCount=modificationCount(id)+1, optimisticRecord={caseId:id,count:optimisticCount,date:record.modifyDate,content:record.content,modifier:record.modifier,confirmedDate:''}; modificationCounts.set(String(id),optimisticCount); modificationRecords.set(String(id),[...modificationRecordsFor(id),optimisticRecord]); closeFieldPopover(); closeRevisionModal(); render(); refreshOpenCaseDetail(id); setSync('修改紀錄寫入中...'); try{const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true}); const finalCount=Number(data.count)||optimisticCount, finalModifier=data.record?.['修改人']||data.record?.modifier||record.modifier; modificationCounts.set(String(id),finalCount); modificationRecords.set(String(id),modificationRecordsFor(id).map(item=>item===optimisticRecord?{...optimisticRecord,count:finalCount,modifier:finalModifier}:item)); applyModificationStatusChange(id,data); render(); refreshOpenCaseDetail(id); setSync(`已新增 ${id} ${modificationLabel(modificationCount(id))} 紀錄`)}catch(err){render(); refreshOpenCaseDetail(id); setSync(`修改紀錄已送出，若畫面未同步請稍後重新整理：${err.message}`,true)}}
+/** 手動上傳補備份（NAS 沒抓到、改用「電腦上傳圖片」補這一輪的圖）完成後，順手把那一輪標記成
+ * 「設計完成確認」——圖都補上去了就代表這一輪做完了，不用再回到修改紀錄多按一次確認鈕。
+ * 初稿（第 0 輪）不處理：後端建立那一筆時就已經寫入確認修正日。沒有確認權限、或這一輪已經確認過
+ * 就安靜略過，不干擾上傳本身的結果訊息。 */
+async function autoConfirmModificationRound(id,round){
+  const target=Math.max(0,Number(round)||0);
+  if(!id||target<=0)return false;
+  if(!accessAllowed('modification.confirm',false))return false;
+  const record=modificationRecordsFor(id).find(item=>(Number(item.count)||0)===target);
+  if(!record||record.confirmedDate)return false;
+  try{
+    const confirmedDate=slashDate(todayInputValue());
+    const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count:target,confirmedDate},editorToken:currentEditorToken});
+    record.confirmedDate=data.record?.['確認修正日']||data.record?.confirmedDate||confirmedDate;
+    render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id);
+    return true;
+  }catch(err){
+    setSync(`圖片已上傳，但自動標記${modificationLabel(target)}設計完成確認失敗：${err.message}`,true,4200);
+    return false;
+  }
+}
 async function confirmModificationRecord(event,id,count){event.stopPropagation(); if(!isDesignerLogin()){setSync('此功能僅開放設計組使用',true,3200);return} const records=modificationRecordsFor(id), record=records.find(item=>(Number(item.count)||0)===(Number(count)||0)); if(!record)return; const button=event.currentTarget; if(button)button.disabled=true; const cancel=Boolean(record.confirmedDate), confirmedDate=cancel?'':slashDate(todayInputValue()), oldDate=record.confirmedDate; closeRevisionModal(); setSync(cancel?'取消確認修正日中...':'確認修正日寫入中...'); try{const data=await sheetApi('updateModificationConfirm',{record:{caseId:id,count,confirmedDate},editorToken:currentEditorToken}); const finalDate=data.record?.['確認修正日']||data.record?.confirmedDate||''; record.confirmedDate=finalDate; render(); refreshOpenCaseDetail(id); setSync(cancel?`已取消 ${id} ${modificationLabel(count)} 修正確認`:`已確認 ${id} ${modificationLabel(count)} 修正完成，已寫入 ${finalDate}`); setTimeout(()=>fetchModificationCounts().catch(()=>{}),0)}catch(err){record.confirmedDate=oldDate; render(); refreshOpenCaseDetail(id); setSync(`${cancel?'取消確認':'確認修正日寫入'}失敗：${err.message}`,true)}}
 async function removeCaseDesignImage(event,id,count,url){event.stopPropagation(); const button=event.currentTarget; if(!(await showAppConfirm({title:'移除設計圖',message:'確定要從系統紀錄移除這張設計圖嗎？\n（Google Drive 原始檔案不會被刪除）',confirmText:'確定移除'})))return; if(button)button.disabled=true; setSync('刪除圖片中...'); try{await sheetApi('removeCaseDesignImage',{caseId:id,round:count,url,editorToken:currentEditorToken}); await fetchModificationCounts(); render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id); setSync('已從紀錄移除圖片',false,2200)}catch(err){if(button)button.disabled=false; setSync(`刪除圖片失敗：${err.message}`,true)}}
 function detailOptionsForRow(row){return designLists.details?.[row.type]?.[row.stage]||detailsToArray(row.details)}
