@@ -192,7 +192,28 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 12:40 Asia/Taipei（最新）— 系統瘦身：結案案件的同步狀態與預覽圖自動清理（首次執行釋放 137 MB）
+### 2026-09-16 13:10 Asia/Taipei（最新）— 信件編輯器工具列補齊：復原／重做、字體大小、斜體、底線、背景顏色、⌘K 加連結
+
+- 修改目的：使用者希望信件編輯器比照 Gmail，補上字體大小、文字顏色與背景顏色、選取文字後用 ⌘K／Ctrl+K 快速加連結，以及復原、重做、斜體、底線。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能（回信與撰寫兩個編輯器的工具列都一樣）：
+  1. 新增 `undo`／`redo`／`italic`／`underline` 四顆按鈕，沿用既有的 `data-rich-cmd` 機制（mousedown 先 preventDefault，選取範圍不會因為點按鈕而消失）。
+  2. 新增字體大小按鈕，**直接沿用前台原本就有、只有簽名檔編輯器在用的共用面板**（`gmailSizePaletteEl`／`openGmailSizePalette`，小／正常／大／特大 對應 `execCommand('fontSize')` 2／3／5／7）。過程中一度另外寫了一份新的選單，發現變數重複宣告才察覺已有實作，已把重複那份移除。
+  3. 顏色面板改成比照 Gmail 的兩欄：左「背景顏色」、右「文字顏色」，共用同一組 64 色。背景色用 `hiliteColor`，少數舊瀏覽器退回 `backColor`；只有選文字色時才更新按鈕上的色塊。
+  4. 在所有 `.gmail-rich-editor` 綁 keydown：⌘K／Ctrl+K 先記住選取範圍再開啟既有的 `insertRichLink()`。
+- 風險區塊：
+  - 這些格式都靠 `document.execCommand`（瀏覽器內建、已標記為 deprecated 但各家仍支援），與既有的粗體、對齊同一套機制。
+  - 站內信件串檢視的白名單本來就保留 `i`／`u`／`span` 與 `color`／`background-color`／`font-size`，格式在站內閱讀不會被淨化掉。
+  - `insertRichLink()` 仍使用瀏覽器的 `prompt()` 輸入網址（既有行為，這次沒改）。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **127/127 全過**（126 既有＋1 新增：兩個編輯器的工具列都要有 undo／redo／bold／italic／underline 與字體大小按鈕；字體大小必須沿用既有面板、不可再做第二套；顏色面板要有兩組標題與 `data-gmail-color-kind`，背景色走 hiliteColor→backColor、文字色走 foreColor，且只有文字色更新色塊；⌘K 綁定要先存選取範圍再呼叫 insertRichLink）。
+  - **瀏覽器實測**：工具列指令依序為 undo／redo／bold／italic／underline／justifyLeft／Center／Right，字體大小按鈕存在；選取文字套用斜體＋底線後 DOM 變成 `<i><u>…</u></i>`；字體大小面板開得出來（小／正常／大／特大）；顏色面板顯示「背景顏色」「文字顏色」兩組共 128 個色塊；點背景色黃色後 DOM 變成 `<span style="background-color: rgb(255, 255, 0);">`；攔截 `prompt` 後送出 ⌘K，選取文字被包成 `<a href="https://example.com/test">`。
+  - 抽出 index.html 內嵌腳本 `node --check` 語法無誤。
+  - **未做的驗證**：沒有實際寄一封含這些格式的信到 Gmail 收件匣確認呈現（需要正式站登入與 Gmail 授權）。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 12:40 Asia/Taipei— 系統瘦身：結案案件的同步狀態與預覽圖自動清理（首次執行釋放 137 MB）
 
 - 修改目的：使用者詢問如何定期瘦身，並提到「爬蟲還在爬七八月的資料」。
 - 實際量測（先確認再動手）：

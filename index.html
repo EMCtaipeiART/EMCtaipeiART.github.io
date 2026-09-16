@@ -6534,7 +6534,9 @@
     html[data-theme="dark"] .request-platform-select > summary.is-placeholder,
     html[data-theme="dark"] .batch-platform-select > summary.is-placeholder{color:#98a39e!important}
     .gmail-rich-color-swatch{display:block;width:17px;height:17px;border-radius:999px;background:var(--swatch-color);border:1px solid rgba(0,0,0,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-    .gmail-color-palette{position:fixed;z-index:7100;display:grid;grid-template-columns:repeat(8,22px);gap:6px;width:max-content;padding:10px;border:1px solid #cfd6d2;border-radius:13px;background:#fff;box-shadow:0 14px 34px rgba(16,24,40,.2)}
+    .gmail-color-palette{position:fixed;z-index:7100;display:flex;align-items:flex-start;gap:18px;width:max-content;padding:12px;border:1px solid #cfd6d2;border-radius:13px;background:#fff;box-shadow:0 14px 34px rgba(16,24,40,.2)}
+    .gmail-color-group-title{margin:0 0 7px;font-size:11.5px;font-weight:900;color:var(--muted)}
+    .gmail-color-grid{display:grid;grid-template-columns:repeat(8,22px);gap:6px}
     .gmail-color-palette[hidden]{display:none!important}
     .gmail-color-option{display:grid!important;place-items:center!important;width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(0,0,0,.13)!important;background:var(--option-color)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.26)!important}
     .gmail-color-option:hover,.gmail-color-option:focus-visible{border-color:#111!important;outline:2px solid rgba(15,143,97,.24)!important;outline-offset:1px}
@@ -6705,6 +6707,7 @@
     html[data-theme="dark"] .gmail-btn-primary:hover{background:#65b68d!important;color:#04100b!important;border-color:#7dcca3!important;filter:none!important}
     html[data-theme="dark"] .gmail-btn-primary[disabled]{background:#3b5147!important;color:#929c97!important;border-color:#4d6459!important}
     html[data-theme="dark"] .gmail-btn-primary.gmail-btn-danger{background:var(--red)!important;color:#fff!important;border-color:var(--red)!important}
+    html[data-theme="dark"] .gmail-color-group-title{color:#9aa0a6!important}
     html[data-theme="dark"] .gmail-color-palette{background:#202326!important;border-color:#50555a!important;box-shadow:0 18px 44px rgba(0,0,0,.62)!important;color-scheme:dark}
     html[data-theme="dark"] .gmail-color-option:hover,
     html[data-theme="dark"] .gmail-color-option:focus-visible{border-color:#f1f3f4!important;outline-color:rgba(139,218,178,.42)!important}
@@ -7214,7 +7217,7 @@
         </div>
         <div class="gmail-modal-section-label">回覆</div>
         <div class="gmail-rich-toolbar">
-          <button type="button" data-rich-cmd="bold" title="粗體"><b>B</b></button>
+          <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailThreadReplyEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
           <span class="gmail-rich-toolbar-divider"></span>
           <button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
           <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
@@ -7277,7 +7280,7 @@
         <label>主旨<input type="text" id="gmailComposeSubject" placeholder="主旨"></label>
         <div class="gmail-field-block gmail-compose-body-field">內容
           <div class="gmail-rich-toolbar">
-            <button type="button" data-rich-cmd="bold" title="粗體"><b>B</b></button>
+            <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailComposeEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
             <span class="gmail-rich-toolbar-divider"></span>
             <button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
             <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
@@ -8781,18 +8784,26 @@ function ensureGmailColorPalette(){
   palette.className='gmail-color-palette';
   palette.id='gmailColorPalette';
   palette.setAttribute('role','menu');
-  palette.setAttribute('aria-label','Gmail 文字顏色');
+  palette.setAttribute('aria-label','Gmail 文字與背景顏色');
   palette.hidden=true;
-  palette.innerHTML=gmailTextColors.map(color=>`<button type="button" class="gmail-color-option" data-gmail-color="${color}" title="${color}" aria-label="${color}" style="--option-color:${color};--check-color:${gmailColorCheckColor(color)}"></button>`).join('');
+  // 比照 Gmail：左邊背景顏色（螢光筆）、右邊文字顏色，兩邊用同一組色票。
+  const swatches=kind=>gmailTextColors.map(color=>`<button type="button" class="gmail-color-option" data-gmail-color="${color}" data-gmail-color-kind="${kind}" title="${color}" aria-label="${kind==='background'?'背景':'文字'} ${color}" style="--option-color:${color};--check-color:${gmailColorCheckColor(color)}"></button>`).join('');
+  palette.innerHTML=`<div class="gmail-color-group"><p class="gmail-color-group-title">背景顏色</p><div class="gmail-color-grid">${swatches('background')}</div></div><div class="gmail-color-group"><p class="gmail-color-group-title">文字顏色</p><div class="gmail-color-grid">${swatches('text')}</div></div>`;
   palette.addEventListener('mousedown',event=>event.preventDefault());
   palette.addEventListener('click',event=>{
     const option=event.target.closest('[data-gmail-color]');
     if(!option||!gmailColorTargetButton)return;
-    const color=option.dataset.gmailColor;
-    if(restoreRichSelection())document.execCommand('foreColor',false,color);
-    const swatch=gmailColorTargetButton.querySelector('.gmail-rich-color-swatch');
-    if(swatch)swatch.style.setProperty('--swatch-color',color);
-    gmailColorTargetButton.dataset.selectedColor=color;
+    const color=option.dataset.gmailColor, kind=option.dataset.gmailColorKind==='background'?'background':'text';
+    if(restoreRichSelection()){
+      // hiliteColor 是螢光筆（背景），少數舊瀏覽器只認 backColor，兩個都試一次。
+      if(kind==='background'){if(!document.execCommand('hiliteColor',false,color))document.execCommand('backColor',false,color)}
+      else document.execCommand('foreColor',false,color);
+    }
+    if(kind==='text'){
+      const swatch=gmailColorTargetButton.querySelector('.gmail-rich-color-swatch');
+      if(swatch)swatch.style.setProperty('--swatch-color',color);
+      gmailColorTargetButton.dataset.selectedColor=color;
+    }
     closeGmailColorPalette();
   });
   document.body.appendChild(palette);
@@ -8802,7 +8813,7 @@ function ensureGmailColorPalette(){
 function openGmailColorPalette(button){
   const palette=ensureGmailColorPalette();
   const color=button.dataset.selectedColor||'#17211d';
-  palette.querySelectorAll('[data-gmail-color]').forEach(option=>option.classList.toggle('is-selected',option.dataset.gmailColor===color));
+  palette.querySelectorAll('[data-gmail-color]').forEach(option=>option.classList.toggle('is-selected',option.dataset.gmailColorKind==='text'&&option.dataset.gmailColor===color));
   gmailColorTargetButton=button;
   document.querySelectorAll('.gmail-rich-color-btn').forEach(item=>item.setAttribute('aria-expanded',String(item===button)));
   palette.hidden=false;
@@ -15114,6 +15125,20 @@ document.querySelectorAll('[data-rich-cmd]').forEach(button=>{
   button.addEventListener('mousedown',event=>event.preventDefault());
   button.addEventListener('click',()=>document.execCommand(button.dataset.richCmd));
 });
+// 字體大小沿用既有的共用面板（gmailSizePaletteEl，原本只有簽名檔編輯器在用）。
+document.querySelectorAll('.gmail-rich-toolbar .gmail-rich-size-btn').forEach(button=>{
+  button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
+  button.addEventListener('click',event=>{event.stopPropagation();if(gmailSizeTargetButton===button&&!ensureGmailSizePalette().hidden)closeGmailSizePalette();else openGmailSizePalette(button)});
+});
+// 點別處就收起字體大小面板（顏色面板已有自己的處理）。
+document.addEventListener('click',event=>{if(gmailSizePaletteEl&&!gmailSizePaletteEl.hidden&&!gmailSizePaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-size-btn'))closeGmailSizePalette()});
+// ⌘K／Ctrl+K：選取文字後快速加超連結，跟 Gmail 一樣。
+document.querySelectorAll('.gmail-rich-editor').forEach(editor=>editor.addEventListener('keydown',event=>{
+  if(!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='k')return;
+  event.preventDefault();
+  savedRichSelectionRange=captureCurrentRichSelection();
+  insertRichLink(editor.id);
+}));
 document.querySelectorAll('.gmail-rich-color-btn').forEach(button=>{
   button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
   button.addEventListener('click',event=>{event.stopPropagation();if(gmailColorTargetButton===button&&!ensureGmailColorPalette().hidden)closeGmailColorPalette();else openGmailColorPalette(button)});

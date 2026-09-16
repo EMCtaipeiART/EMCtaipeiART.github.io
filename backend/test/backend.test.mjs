@@ -4107,3 +4107,43 @@ test('modification request mail closes the editor, a manual backup upload confir
   assert.doesNotMatch(catchBranch, /openCaseDesignImageSourceChooser/, '寫入失敗時不跳出來源選擇');
   assert.match(catchBranch, /初稿紀錄新增失敗/);
 });
+
+test('mail editor toolbar offers undo/redo, font size, italic, underline, background colour and ⌘K linking', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 兩個編輯器（回信、撰寫）的工具列都要有同一組按鈕。
+  for (const editorId of ['gmailThreadReplyEditor', 'gmailComposeEditor']) {
+    const colourAt = html.indexOf(`data-rich-color-for="${editorId}"`);
+    assert.ok(colourAt > 0, `could not locate the toolbar for ${editorId}`);
+    const toolbar = html.slice(html.lastIndexOf('<div class="gmail-rich-toolbar">', colourAt), colourAt);
+    for (const [cmd, label] of [['undo', '復原'], ['redo', '重做'], ['bold', '粗體'], ['italic', '斜體'], ['underline', '底線']]) {
+      assert.match(toolbar, new RegExp(`data-rich-cmd="${cmd}"`), `${editorId} 的工具列缺少${label}`);
+    }
+    assert.match(toolbar, new RegExp(`class="gmail-rich-size-btn" data-rich-size-for="${editorId}"`), `${editorId} 的工具列缺少字體大小`);
+  }
+
+  // 字體大小沿用既有的共用面板，不可以再多做一份實作。
+  assert.match(html, /document\.querySelectorAll\('\.gmail-rich-toolbar \.gmail-rich-size-btn'\)\.forEach\(button=>\{/);
+  assert.match(html, /openGmailSizePalette\(button\)/);
+  assert.doesNotMatch(html, /ensureGmailSizeMenu/, '不要另外做第二套字體大小選單');
+
+  // 顏色面板分成背景顏色與文字顏色兩組，背景色用 hiliteColor（舊瀏覽器退回 backColor）。
+  const palette = html.match(/function ensureGmailColorPalette\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(palette, 'could not locate ensureGmailColorPalette');
+  assert.match(palette, /<p class="gmail-color-group-title">背景顏色<\/p>/);
+  assert.match(palette, /<p class="gmail-color-group-title">文字顏色<\/p>/);
+  assert.match(palette, /data-gmail-color-kind="\$\{kind\}"/);
+  assert.match(palette, /if\(!document\.execCommand\('hiliteColor',false,color\)\)document\.execCommand\('backColor',false,color\)/);
+  assert.match(palette, /else document\.execCommand\('foreColor',false,color\);/);
+  // 只有文字色會更新按鈕上的色塊，背景色不該改掉它。
+  assert.match(palette, /if\(kind==='text'\)\{[\s\S]*?gmailColorTargetButton\.dataset\.selectedColor=color;/);
+
+  // ⌘K／Ctrl+K 在編輯器裡選取文字後可以直接加連結。
+  const shortcut = html.match(/document\.querySelectorAll\('\.gmail-rich-editor'\)\.forEach\(editor=>editor\.addEventListener\('keydown',event=>\{[\s\S]*?\}\)\);/)?.[0];
+  assert.ok(shortcut, 'could not locate the ⌘K shortcut binding');
+  assert.match(shortcut, /event\.metaKey\|\|event\.ctrlKey/);
+  assert.match(shortcut, /event\.key\.toLowerCase\(\)!=='k'\)return;/);
+  assert.match(shortcut, /event\.preventDefault\(\);/);
+  assert.match(shortcut, /savedRichSelectionRange=captureCurrentRichSelection\(\);/, '要先記住選取範圍，否則連結會插到錯的位置');
+  assert.match(shortcut, /insertRichLink\(editor\.id\);/);
+});
