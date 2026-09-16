@@ -8671,8 +8671,13 @@ function gmailEditorTextWithoutInsertedSignature(editor){
 /** 用 execCommand 做最陽春的「選取文字→插入超連結」，這個 API 雖然已標記為過時，但 Chrome／Safari（本專案主要支援的瀏覽器）都還完整支援，換一套完整富文字編輯器的成本跟這裡的需求不成比例。 */
 function insertRichLink(editorId){
   const editor=document.getElementById(editorId);
+  if(editor)insertRichLinkIntoEditor(editor);
+}
+/** 個人設定裡的簽名檔／信件範本編輯器沒有固定 id（是動態插入的），所以真正的邏輯改成吃元素本身。 */
+function insertRichLinkIntoEditor(editor){
   if(!editor)return;
   editor.focus();
+  restoreRichSelection();
   const selection=window.getSelection();
   const hasSelection=Boolean(selection&&selection.rangeCount>0&&!selection.isCollapsed&&editor.contains(selection.anchorNode));
   const url=prompt('請輸入連結網址（需以 http:// 或 https:// 開頭）：','https://');
@@ -8709,11 +8714,43 @@ function insertPlainTextIntoRichEditor(editorId,content){
   const fragment=document.createDocumentFragment();text.split(/\r?\n/).forEach((line,index)=>{if(index)fragment.appendChild(document.createElement('br'));fragment.appendChild(document.createTextNode(line))});
   const marker=document.createTextNode('');fragment.appendChild(marker);range.deleteContents();range.insertNode(fragment);range.setStartAfter(marker);range.collapse(true);selection.removeAllRanges();selection.addRange(range);savedRichSelectionRange=range.cloneRange();marker.remove();editor.focus();
 }
+/** 範本現在可能是 HTML（新版）或純文字（舊版存進去的），預覽用的摘要一律轉成純文字。 */
+function richContentPlainText(content){
+  const value=String(content||'');
+  if(!looksLikeSignatureHtml(value))return value;
+  const box=document.createElement('div');
+  box.innerHTML=value;
+  return String(box.textContent||'');
+}
+/** 插入信件範本：舊的純文字範本沿用既有的逐行插入；新的 HTML 範本要保留格式插進游標位置。 */
+function insertTemplateIntoRichEditor(editorId,content){
+  const value=String(content||'');
+  if(!looksLikeSignatureHtml(value)){insertPlainTextIntoRichEditor(editorId,value);return}
+  const editor=document.getElementById(editorId);
+  if(!editor||!value)return;
+  editor.focus();
+  const selection=window.getSelection();
+  let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange.cloneRange():null;
+  if(!range){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
+  const holder=document.createElement('div');
+  holder.innerHTML=value;
+  const fragment=document.createDocumentFragment();
+  while(holder.firstChild)fragment.appendChild(holder.firstChild);
+  const marker=document.createTextNode('');
+  fragment.appendChild(marker);
+  range.deleteContents();
+  range.insertNode(fragment);
+  range.setStartAfter(marker);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  savedRichSelectionRange=range.cloneRange();
+}
 function openReplyTemplatePicker(event,editorId){
   event.preventDefault();event.stopPropagation();const button=event.currentTarget,settings=currentUserReplyTemplateSettings(),entries=Object.entries(settings.templates||{});
   if(!entries.length){setSync('尚未建立信件範本；請先到「個人設定」新增',true,3200);return}
-  fieldPopover.innerHTML=`<h3>插入信件範本</h3><div class="mail-option-list gmail-template-popover-list">${entries.map(([name,content],index)=>`<button type="button" class="gmail-template-popover-option" data-template-index="${index}"><b>${esc(name)}</b><span>${esc(content.replace(/\s+/g,' ').slice(0,70))}</span>${name===settings.defaultName?'<em class="gmail-template-default-badge">預設</em>':''}</button>`).join('')}</div>`;
-  fieldPopover.hidden=false;positionFieldPopover(button);fieldPopover.querySelectorAll('[data-template-index]').forEach(option=>option.addEventListener('click',clickEvent=>{clickEvent.stopPropagation();const entry=entries[Number(option.dataset.templateIndex)];if(!entry)return;closeFieldPopover();insertPlainTextIntoRichEditor(editorId,entry[1]);setSync(`已插入${entry[0]}`,false,1800)}));
+  fieldPopover.innerHTML=`<h3>插入信件範本</h3><div class="mail-option-list gmail-template-popover-list">${entries.map(([name,content],index)=>`<button type="button" class="gmail-template-popover-option" data-template-index="${index}"><b>${esc(name)}</b><span>${esc(richContentPlainText(content).replace(/\s+/g,' ').slice(0,70))}</span>${name===settings.defaultName?'<em class="gmail-template-default-badge">預設</em>':''}</button>`).join('')}</div>`;
+  fieldPopover.hidden=false;positionFieldPopover(button);fieldPopover.querySelectorAll('[data-template-index]').forEach(option=>option.addEventListener('click',clickEvent=>{clickEvent.stopPropagation();const entry=entries[Number(option.dataset.templateIndex)];if(!entry)return;closeFieldPopover();insertTemplateIntoRichEditor(editorId,entry[1]);setSync(`已插入${entry[0]}`,false,1800)}));
 }
 /** 依編輯區所屬的彈窗（撰寫或回信）找出目前這個案件，供插入 NAS 路徑時預先帶出該案件已存的設計圖資料夾連結。 */
 function currentGmailEditorCaseRow(editorId){
@@ -10849,12 +10886,28 @@ async function loadDesignerRoster({background=false}={}){
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!canAccessDesignerSettings()){setSync('此帳號沒有設計師設定或圖片管理權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
-function mailTemplateRowHtml(content='',index=0,{defaultName='',scope='mail'}={}){const name=`範本 ${index+1}`,radioName=`mail-template-default-${String(scope).replace(/[^a-z0-9_-]/gi,'-')}`;return `<div class="mail-template-row" data-reply-template-row><div class="mail-template-fields"><div class="mail-template-head"><b data-reply-template-label>${esc(name)}</b><label class="mail-template-default"><input type="radio" name="${esc(radioName)}" data-reply-template-default ${name===defaultName?'checked':''}>設為預設</label></div><textarea data-reply-template-content maxlength="10000" placeholder="輸入信件範本內容">${esc(content)}</textarea></div><button type="button" class="mail-template-remove" data-remove-reply-template aria-label="刪除這個信件範本">×</button></div>`}
+function mailTemplateRowHtml(content='',index=0,{defaultName='',scope='mail'}={}){const name=`範本 ${index+1}`,radioName=`mail-template-default-${String(scope).replace(/[^a-z0-9_-]/gi,'-')}`;return `<div class="mail-template-row" data-reply-template-row><div class="mail-template-fields"><div class="mail-template-head"><b data-reply-template-label>${esc(name)}</b><label class="mail-template-default"><input type="radio" name="${esc(radioName)}" data-reply-template-default ${name===defaultName?'checked':''}>設為預設</label></div>${richSettingsToolbarHtml('signature-preset-toolbar')}<div class="signature-preset-content" data-reply-template-content contenteditable="true" data-placeholder="輸入信件範本內容——支援粗體／斜體／底線／對齊／文字大小／顏色／超連結">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-reply-template aria-label="刪除這個信件範本">×</button></div>`}
 function syncMailTemplateRows(list){if(!list)return;const rows=[...list.querySelectorAll('[data-reply-template-row]')];rows.forEach((row,index)=>{const label=row.querySelector('[data-reply-template-label]');if(label)label.textContent=`範本 ${index+1}`});if(rows.length&&!rows.some(row=>row.querySelector('[data-reply-template-default]')?.checked))rows[0].querySelector('[data-reply-template-default]').checked=true}
 function renderMailTemplateEditor(list,settings={},scope='mail'){if(!list)return;const normalized=normalizeReplyTemplateSettings(settings.templates??settings,settings.defaultName??settings.replyTemplateDefault);list.dataset.mailTemplateScope=scope;list.innerHTML=Object.entries(normalized.templates).map(([name,content],index)=>mailTemplateRowHtml(content,index,{defaultName:normalized.defaultName,scope})).join('');syncMailTemplateRows(list);bindMailTemplateEditor(list)}
 function addMailTemplateRow(list,content=''){if(!list)return;const index=list.querySelectorAll('[data-reply-template-row]').length,scope=list.dataset.mailTemplateScope||'mail';list.insertAdjacentHTML('beforeend',mailTemplateRowHtml(content,index,{defaultName:index?'':`範本 1`,scope}));syncMailTemplateRows(list);list.querySelector('[data-reply-template-row]:last-child textarea')?.focus()}
-function bindMailTemplateEditor(list){if(!list||list.dataset.mailTemplateBound==='1')return;list.dataset.mailTemplateBound='1';list.addEventListener('click',event=>{const button=event.target.closest('[data-remove-reply-template]');if(!button)return;const row=button.closest('[data-reply-template-row]');if(!row||!confirm(`確定刪除「${row.querySelector('[data-reply-template-label]')?.textContent||'這個範本'}」？`))return;row.remove();syncMailTemplateRows(list)})}
-function collectMailTemplateEditor(list,{requireContent=true}={}){const rows=[...list?.querySelectorAll('[data-reply-template-row]')||[]],templates={};let defaultName='';for(const [index,row] of rows.entries()){const name=`範本 ${index+1}`,textarea=row.querySelector('[data-reply-template-content]'),content=String(textarea?.value||'').trim();textarea?.setCustomValidity('');if(requireContent&&!content){textarea.setCustomValidity('請輸入範本內容，或刪除這筆空白範本');textarea.reportValidity();return null}if(!content)continue;templates[name]=content;if(row.querySelector('[data-reply-template-default]')?.checked)defaultName=name}defaultName=Object.hasOwn(templates,defaultName)?defaultName:(Object.keys(templates)[0]||'');return {templates,defaultName}}
+function bindMailTemplateEditor(list){if(!list||list.dataset.mailTemplateBound==='1')return;list.dataset.mailTemplateBound='1';bindRichSettingsEditor(list,'[data-reply-template-content]');list.addEventListener('input',event=>{const editor=event.target.closest('[data-reply-template-content]'); if(editor)markSignaturePresetContentInvalid(editor,false)});list.addEventListener('click',event=>{const button=event.target.closest('[data-remove-reply-template]');if(!button)return;const row=button.closest('[data-reply-template-row]');if(!row||!confirm(`確定刪除「${row.querySelector('[data-reply-template-label]')?.textContent||'這個範本'}」？`))return;row.remove();syncMailTemplateRows(list)})}
+/** 信件範本內容從純文字 textarea 改成跟簽名檔一樣的格式化編輯區，所以這裡存的是 HTML；
+ * 空白判斷看實際可見文字（contenteditable 清空後常留 <br>），錯誤提示也比照簽名檔用紅框＋狀態列。 */
+function collectMailTemplateEditor(list,{requireContent=true}={}){
+  const rows=[...list?.querySelectorAll('[data-reply-template-row]')||[]],templates={};
+  let defaultName='';
+  for(const [index,row] of rows.entries()){
+    const name=`範本 ${index+1}`,editor=row.querySelector('[data-reply-template-content]');
+    markSignaturePresetContentInvalid(editor,false);
+    const empty=signaturePresetContentEmpty(editor);
+    if(requireContent&&empty){markSignaturePresetContentInvalid(editor,true);setSync('請輸入範本內容，或刪除這筆空白範本',true,3200);editor?.focus();return null}
+    if(empty)continue;
+    templates[name]=String(editor?.innerHTML||'').trim();
+    if(row.querySelector('[data-reply-template-default]')?.checked)defaultName=name;
+  }
+  defaultName=Object.hasOwn(templates,defaultName)?defaultName:(Object.keys(templates)[0]||'');
+  return {templates,defaultName};
+}
 /** 簽名檔設定：跟上面的信件範本編輯器同一種外層版面（重用 .mail-template-row 系列樣式），差別有二：
  * ①簽名檔要讓使用者自己命名（例如「正常」「休假」），不是像範本那樣直接編號成「範本 1／2／3」——名稱本身
  * 就是用來記得「這組是什麼場合用的」，編號沒有意義；②內容欄位是 contenteditable 富文字區塊（不是純文字
@@ -10863,9 +10916,29 @@ function collectMailTemplateEditor(list,{requireContent=true}={}){const rows=[..
  * 也能直接在這裡調整字級與顏色，不需要依賴外部工具先做好再貼上來。因此刻意寫成獨立的一組函式，不直接重用
  * mailTemplateRowHtml／collectMailTemplateEditor，避免硬把「有沒有名稱欄位／要不要支援格式」這兩種語意
  * 差異塞進同一支共用函式裡增加分支判斷。 */
+/** 個人設定裡「簽名檔設定」與「信件範本」共用的工具列——跟信件編輯器同一組功能（復原／重做、文字大小、
+ * 粗體／斜體／底線、對齊、文字與背景顏色、超連結）。這兩處的 DOM 是動態插入的，所以按鈕不帶
+ * data-rich-*-for（沒有固定的編輯器 id），改由 bindRichSettingsEditor() 依按鈕所在的那一列找對應的編輯區。 */
+function richSettingsToolbarHtml(extraClass=''){
+  return `<div class="gmail-rich-toolbar ${extraClass}">`
+    +'<button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button>'
+    +'<button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button>'
+    +'<span class="gmail-rich-toolbar-divider"></span>'
+    +'<button type="button" class="gmail-rich-size-btn" data-rich-size title="文字大小" aria-label="文字大小" aria-expanded="false"><span class="gmail-rich-size-label">tT</span></button>'
+    +'<span class="gmail-rich-toolbar-divider"></span>'
+    +'<button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button>'
+    +'<button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button>'
+    +'<button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>'
+    +'<span class="gmail-rich-toolbar-divider"></span>'
+    +'<button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button><button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button><button type="button" data-rich-cmd="justifyRight" title="靠右對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button>'
+    +'<span class="gmail-rich-toolbar-divider"></span>'
+    +'<button type="button" class="gmail-rich-color-btn" title="文字與背景顏色" aria-label="文字與背景顏色" aria-expanded="false"><span class="gmail-rich-color-swatch" style="--swatch-color:#17211d"></span></button>'
+    +'<button type="button" class="gmail-rich-link-btn" data-rich-link title="插入超連結（⌘K）" aria-label="插入超連結"><svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg></button>'
+    +'</div>';
+}
 function signaturePresetRowHtml(name='',content='',index=0,{defaultKey=''}={}){
   const radioName='signature-preset-default';
-  return `<div class="mail-template-row" data-signature-preset-row><div class="mail-template-fields"><div class="mail-template-head"><input type="text" data-signature-preset-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(name)}" aria-label="簽名檔名稱"><label class="mail-template-default"><input type="radio" name="${radioName}" data-signature-preset-default ${name&&name===defaultKey?'checked':''}>設為預設</label></div><div class="gmail-rich-toolbar signature-preset-toolbar"><button type="button" data-rich-cmd="bold" title="粗體"><b>B</b></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button><button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button><button type="button" data-rich-cmd="justifyRight" title="靠右對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size title="文字大小" aria-label="文字大小" aria-expanded="false"><span class="gmail-rich-size-label">A</span></button><button type="button" class="gmail-rich-color-btn" title="文字顏色" aria-label="文字顏色" aria-expanded="false"><span class="gmail-rich-color-swatch" style="--swatch-color:#17211d"></span></button></div><div class="signature-preset-content" data-signature-preset-content contenteditable="true" data-placeholder="輸入或貼上簽名檔內容——支援粗體／對齊／文字大小／顏色，貼上已排版好的內容會保留原始格式">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-signature-preset aria-label="刪除這個簽名檔">×</button></div>`;
+  return `<div class="mail-template-row" data-signature-preset-row><div class="mail-template-fields"><div class="mail-template-head"><input type="text" data-signature-preset-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(name)}" aria-label="簽名檔名稱"><label class="mail-template-default"><input type="radio" name="${radioName}" data-signature-preset-default ${name&&name===defaultKey?'checked':''}>設為預設</label></div>${richSettingsToolbarHtml('signature-preset-toolbar')}<div class="signature-preset-content" data-signature-preset-content contenteditable="true" data-placeholder="輸入或貼上簽名檔內容——支援粗體／對齊／文字大小／顏色，貼上已排版好的內容會保留原始格式">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-signature-preset aria-label="刪除這個簽名檔">×</button></div>`;
 }
 function syncSignaturePresetRows(list){if(!list)return;const rows=[...list.querySelectorAll('[data-signature-preset-row]')];if(rows.length&&!rows.some(row=>row.querySelector('[data-signature-preset-default]')?.checked))rows[0].querySelector('[data-signature-preset-default]').checked=true}
 function renderSignaturePresetEditor(list,settings={}){if(!list)return;const normalized=normalizeSignaturePresetSettings(settings.presets??settings,settings.defaultName??settings.signaturePresetDefault);list.innerHTML=Object.entries(normalized.presets).map(([name,content],index)=>signaturePresetRowHtml(name,content,index,{defaultKey:normalized.defaultName})).join('');syncSignaturePresetRows(list);bindSignaturePresetEditor(list)}
@@ -10883,13 +10956,40 @@ function markSignaturePresetContentInvalid(el,invalid){if(el)el.classList.toggle
  * 範圍被清空）；文字大小/顏色是彈出選單，選單本身在點選項時才真的套用格式，所以要在 mousedown 階段先把
  * 選取範圍存起來（captureCurrentRichSelection），供稍後在選單裡點選時還原（跟既有 .gmail-rich-color-btn
  * 完全共用同一套 savedRichSelectionRange／restoreRichSelection 機制，不用另外寫一份）。 */
+/** 簽名檔設定與信件範本共用的工具列互動。兩處的 DOM 都是動態插入（新增／刪除時整份重繪），所以用事件
+ * 委派掛在外層容器上；按鈕不帶編輯器 id，改由按鈕所在的那一列找到對應的內容欄位。
+ * 文字大小／顏色／超連結是彈出式操作，要在 mousedown 階段先存下選取範圍（點按鈕會讓 contenteditable
+ * 失焦、選取被清空），跟信件編輯器共用同一套 savedRichSelectionRange／restoreRichSelection。 */
+function bindRichSettingsEditor(list,contentSelector){
+  if(!list||list.dataset.richSettingsBound==='1')return;
+  list.dataset.richSettingsBound='1';
+  const editorOf=el=>el?.closest('.mail-template-row')?.querySelector(contentSelector)||null;
+  list.addEventListener('mousedown',event=>{
+    if(event.target.closest('[data-rich-cmd]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();return}
+    if(event.target.closest('[data-rich-size]')||event.target.closest('.gmail-rich-color-btn')||event.target.closest('[data-rich-link]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
+  });
+  list.addEventListener('click',event=>{
+    const cmdButton=event.target.closest('[data-rich-cmd]');
+    if(cmdButton){editorOf(cmdButton)?.focus();restoreRichSelection();document.execCommand(cmdButton.dataset.richCmd);return}
+    const sizeButton=event.target.closest('[data-rich-size]');
+    if(sizeButton){event.stopPropagation();if(gmailSizeTargetButton===sizeButton&&!ensureGmailSizePalette().hidden)closeGmailSizePalette();else openGmailSizePalette(sizeButton);return}
+    const colorButton=event.target.closest('.gmail-rich-color-btn');
+    if(colorButton){event.stopPropagation();if(gmailColorTargetButton===colorButton&&!ensureGmailColorPalette().hidden)closeGmailColorPalette();else openGmailColorPalette(colorButton);return}
+    const linkButton=event.target.closest('[data-rich-link]');
+    if(linkButton){event.stopPropagation();insertRichLinkIntoEditor(editorOf(linkButton))}
+  });
+  list.addEventListener('keydown',event=>{
+    const editor=event.target.closest(contentSelector);
+    if(!editor||!(event.metaKey||event.ctrlKey)||event.altKey)return;
+    const key=event.key.toLowerCase();
+    if(key==='k'){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();insertRichLinkIntoEditor(editor);return}
+    if(['b','i','u'].includes(key)){event.preventDefault();document.execCommand({b:'bold',i:'italic',u:'underline'}[key])}
+  });
+}
 function bindSignaturePresetEditor(list){
   if(!list||list.dataset.signaturePresetBound==='1')return;
   list.dataset.signaturePresetBound='1';
-  list.addEventListener('mousedown',event=>{
-    if(event.target.closest('[data-rich-cmd]')){event.preventDefault();return}
-    if(event.target.closest('[data-rich-size]')||event.target.closest('.gmail-rich-color-btn')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
-  });
+  bindRichSettingsEditor(list,'[data-signature-preset-content]');
   list.addEventListener('input',event=>{if(event.target.closest('[data-signature-preset-content]'))markSignaturePresetContentInvalid(event.target.closest('[data-signature-preset-content]'),false)});
   list.addEventListener('click',event=>{
     const removeButton=event.target.closest('[data-remove-signature-preset]');
@@ -10899,12 +10999,6 @@ function bindSignaturePresetEditor(list){
       row.remove();syncSignaturePresetRows(list);
       return;
     }
-    const cmdButton=event.target.closest('[data-rich-cmd]');
-    if(cmdButton){document.execCommand(cmdButton.dataset.richCmd);return}
-    const sizeButton=event.target.closest('[data-rich-size]');
-    if(sizeButton){event.stopPropagation();if(gmailSizeTargetButton===sizeButton&&!ensureGmailSizePalette().hidden)closeGmailSizePalette();else openGmailSizePalette(sizeButton);return}
-    const colorButton=event.target.closest('.gmail-rich-color-btn');
-    if(colorButton){event.stopPropagation();if(gmailColorTargetButton===colorButton&&!ensureGmailColorPalette().hidden)closeGmailColorPalette();else openGmailColorPalette(colorButton)}
   });
 }
 /** 送出前驗證：名稱／內容都不能留空白（整列空白直接略過，不擋儲存）、內容不能超過長度上限（避免存進去
@@ -15144,10 +15238,16 @@ document.querySelectorAll('.gmail-rich-toolbar .gmail-rich-size-btn').forEach(bu
 document.addEventListener('click',event=>{if(gmailSizePaletteEl&&!gmailSizePaletteEl.hidden&&!gmailSizePaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-size-btn'))closeGmailSizePalette()});
 // ⌘K／Ctrl+K：選取文字後快速加超連結，跟 Gmail 一樣。
 document.querySelectorAll('.gmail-rich-editor').forEach(editor=>editor.addEventListener('keydown',event=>{
-  if(!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='k')return;
-  event.preventDefault();
-  savedRichSelectionRange=captureCurrentRichSelection();
-  insertRichLink(editor.id);
+  if(!(event.metaKey||event.ctrlKey)||event.altKey)return;
+  const key=event.key.toLowerCase();
+  if(key==='k'){
+    event.preventDefault();
+    savedRichSelectionRange=captureCurrentRichSelection();
+    insertRichLink(editor.id);
+    return;
+  }
+  // 粗體／斜體／底線：contenteditable 多數瀏覽器原生就支援，但不是每個環境都一致，明確處理一次比較保險。
+  if(['b','i','u'].includes(key)){event.preventDefault();document.execCommand({b:'bold',i:'italic',u:'underline'}[key])}
 }));
 document.querySelectorAll('.gmail-rich-color-btn').forEach(button=>{
   button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});

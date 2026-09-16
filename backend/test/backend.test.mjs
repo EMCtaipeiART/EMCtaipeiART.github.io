@@ -882,13 +882,15 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   const rowHtmlEnd = html.indexOf('\nfunction syncSignaturePresetRows', rowHtmlStart);
   assert.ok(rowHtmlStart > 0 && rowHtmlEnd > rowHtmlStart);
   const rowHtmlSource = html.slice(rowHtmlStart, rowHtmlEnd);
-  assert.match(rowHtmlSource, /class="gmail-rich-toolbar signature-preset-toolbar"/);
-  assert.match(rowHtmlSource, /data-rich-cmd="bold"/);
-  assert.match(rowHtmlSource, /data-rich-cmd="justifyLeft"/);
-  assert.match(rowHtmlSource, /data-rich-cmd="justifyCenter"/);
-  assert.match(rowHtmlSource, /data-rich-cmd="justifyRight"/);
-  assert.match(rowHtmlSource, /class="gmail-rich-size-btn" data-rich-size title="文字大小"/);
-  assert.match(rowHtmlSource, /class="gmail-rich-color-btn" title="文字顏色"/);
+  // 工具列改由與信件範本共用的 richSettingsToolbarHtml() 產生，按鈕本身改在那支函式裡驗證
+  //（見「signature and mail template editors in personal settings get the same rich toolbar」）。
+  assert.match(rowHtmlSource, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/);
+  const sharedToolbar = html.match(/function richSettingsToolbarHtml\(extraClass=''\)\{[\s\S]*?\n\}/)?.[0] || '';
+  for (const cmd of ['bold', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
+    assert.ok(sharedToolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
+  }
+  assert.match(sharedToolbar, /class="gmail-rich-size-btn" data-rich-size title="文字大小"/);
+  assert.match(sharedToolbar, /class="gmail-rich-color-btn" title="文字與背景顏色"/);
   assert.match(rowHtmlSource, /\$\{resolveSignaturePresetHtml\(content\)\}/, '初始內容要用 resolveSignaturePresetHtml 轉換，不能直接把 content 塞進 innerHTML（未逃脫過的舊版純文字資料會被當成標籤解析）');
 
   // bindSignaturePresetEditor 要用事件委派掛在 list 容器上（不是頁面載入當下的一次性 querySelectorAll），
@@ -898,12 +900,15 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   const bindEnd = html.indexOf('\n/** 送出前驗證', bindStart);
   assert.ok(bindStart > 0 && bindEnd > bindStart);
   const bindSource = html.slice(bindStart, bindEnd);
-  assert.match(bindSource, /list\.addEventListener\('mousedown'/);
+  // 工具列互動改成與信件範本共用 bindRichSettingsEditor()；簽名檔這支只保留自己的列操作。
+  assert.match(bindSource, /bindRichSettingsEditor\(list,'\[data-signature-preset-content\]'\);/);
   assert.match(bindSource, /list\.addEventListener\('click'/);
-  assert.match(bindSource, /document\.execCommand\(cmdButton\.dataset\.richCmd\)/);
-  assert.match(bindSource, /openGmailSizePalette\(sizeButton\)/);
-  assert.match(bindSource, /openGmailColorPalette\(colorButton\)/);
-  assert.match(bindSource, /savedRichSelectionRange=captureCurrentRichSelection\(\)/);
+  const sharedBind = html.match(/function bindRichSettingsEditor\(list,contentSelector\)\{[\s\S]*?\n\}/)?.[0] || '';
+  assert.match(sharedBind, /list\.addEventListener\('mousedown'/);
+  assert.match(sharedBind, /document\.execCommand\(cmdButton\.dataset\.richCmd\)/);
+  assert.match(sharedBind, /openGmailSizePalette\(sizeButton\)/);
+  assert.match(sharedBind, /openGmailColorPalette\(colorButton\)/);
+  assert.match(sharedBind, /savedRichSelectionRange=captureCurrentRichSelection\(\)/);
 
   // normalizeSignaturePresetSettings 是純函式：去除空白名稱/內容、限制筆數與長度、預設值一定要落在既有名稱內。
   const normalizeStart = html.indexOf('function normalizeSignaturePresetSettings(value,defaultValue');
@@ -4147,8 +4152,51 @@ test('mail editor toolbar offers undo/redo, font size, italic, underline, backgr
   const shortcut = html.match(/document\.querySelectorAll\('\.gmail-rich-editor'\)\.forEach\(editor=>editor\.addEventListener\('keydown',event=>\{[\s\S]*?\}\)\);/)?.[0];
   assert.ok(shortcut, 'could not locate the ⌘K shortcut binding');
   assert.match(shortcut, /event\.metaKey\|\|event\.ctrlKey/);
-  assert.match(shortcut, /event\.key\.toLowerCase\(\)!=='k'\)return;/);
+  assert.match(shortcut, /if\(key==='k'\)\{/);
+  // 粗體／斜體／底線也明確處理，不只依賴瀏覽器原生行為。
+  assert.match(shortcut, /if\(\['b','i','u'\]\.includes\(key\)\)\{event\.preventDefault\(\);document\.execCommand\(\{b:'bold',i:'italic',u:'underline'\}\[key\]\)\}/);
   assert.match(shortcut, /event\.preventDefault\(\);/);
   assert.match(shortcut, /savedRichSelectionRange=captureCurrentRichSelection\(\);/, '要先記住選取範圍，否則連結會插到錯的位置');
   assert.match(shortcut, /insertRichLink\(editor\.id\);/);
+});
+
+test('signature and mail template editors in personal settings get the same rich toolbar as the mail editor', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass=''\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(toolbar, 'could not locate richSettingsToolbarHtml');
+  for (const cmd of ['undo', 'redo', 'bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
+    assert.ok(toolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
+  }
+  assert.match(toolbar, /class="gmail-rich-size-btn" data-rich-size/, '缺少文字大小');
+  assert.match(toolbar, /class="gmail-rich-color-btn"/, '缺少文字與背景顏色');
+  assert.match(toolbar, /class="gmail-rich-link-btn" data-rich-link/, '缺少超連結');
+
+  // 兩處都用同一個產生器，功能才不會各走各的。
+  assert.equal((html.match(/\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/g) || []).length, 2, '簽名檔與信件範本都要套用');
+
+  // 信件範本從純文字 textarea 改成格式化編輯區，存的是 HTML。
+  assert.doesNotMatch(html, /<textarea data-reply-template-content/, '信件範本不該再是純文字欄位');
+  assert.match(html, /<div class="signature-preset-content" data-reply-template-content contenteditable="true"/);
+  const collect = html.match(/function collectMailTemplateEditor\(list,\{requireContent=true\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(collect, 'could not locate collectMailTemplateEditor');
+  assert.match(collect, /templates\[name\]=String\(editor\?\.innerHTML\|\|''\)\.trim\(\);/);
+  assert.match(collect, /signaturePresetContentEmpty\(editor\)/, '空白判斷要看實際文字，contenteditable 清空後會留下 <br>');
+
+  // 共用的互動：工具列按鈕、彈出選單、超連結與 ⌘K／⌘B／⌘I／⌘U。
+  const bind = html.match(/function bindRichSettingsEditor\(list,contentSelector\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(bind, 'could not locate bindRichSettingsEditor');
+  assert.match(bind, /savedRichSelectionRange=captureCurrentRichSelection\(\)/, '按工具列會讓編輯區失焦，要先存下選取範圍');
+  assert.match(bind, /insertRichLinkIntoEditor\(editorOf\(linkButton\)\)/);
+  assert.match(bind, /if\(key==='k'\)\{event\.preventDefault\(\);savedRichSelectionRange=captureCurrentRichSelection\(\);insertRichLinkIntoEditor\(editor\);return\}/);
+  assert.match(bind, /if\(\['b','i','u'\]\.includes\(key\)\)\{event\.preventDefault\(\);document\.execCommand\(\{b:'bold',i:'italic',u:'underline'\}\[key\]\)\}/);
+  assert.match(html, /function bindSignaturePresetEditor\(list\)\{[\s\S]*?bindRichSettingsEditor\(list,'\[data-signature-preset-content\]'\);/);
+  assert.match(html, /bindRichSettingsEditor\(list,'\[data-reply-template-content\]'\);/);
+
+  // 插入範本要保留格式；舊的純文字範本仍照原本逐行插入，預覽摘要一律轉純文字。
+  const insert = html.match(/function insertTemplateIntoRichEditor\(editorId,content\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(insert, 'could not locate insertTemplateIntoRichEditor');
+  assert.match(insert, /if\(!looksLikeSignatureHtml\(value\)\)\{insertPlainTextIntoRichEditor\(editorId,value\);return\}/, '舊的純文字範本要維持原本行為');
+  assert.match(insert, /holder\.innerHTML=value;/);
+  assert.match(html, /closeFieldPopover\(\);insertTemplateIntoRichEditor\(editorId,entry\[1\]\);/);
+  assert.match(html, /esc\(richContentPlainText\(content\)\.replace\(\/\\s\+\/g,' '\)\.slice\(0,70\)\)/, '預覽摘要不可以直接秀 HTML 標籤');
 });

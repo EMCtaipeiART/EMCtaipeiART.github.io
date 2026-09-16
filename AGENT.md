@@ -192,7 +192,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
-### 2026-09-16 13:40 Asia/Taipei（最新）— 信件串裡的公司簽名檔只剩右半邊：放行 Gmail 圖片代理網域
+### 2026-09-16 14:20 Asia/Taipei（最新）— ⌘B 粗體快捷鍵，簽名檔與信件範本改用與信件編輯器相同的工具列
+
+- 修改目的：使用者要求信件編輯器加入 ⌘B／Ctrl+B 粗體快捷鍵，並讓「個人設定」的「簽名檔設定」與「信件範本」也具備編輯器的所有功能。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  1. **快捷鍵**：信件編輯器的 keydown 除了原本的 ⌘K，明確處理 ⌘B／⌘I／⌘U（contenteditable 多數瀏覽器原生支援，但不是每個環境都一致，明確處理才穩定）。
+  2. **共用工具列** `richSettingsToolbarHtml(extraClass)`：復原／重做、文字大小、粗體／斜體／底線、三種對齊、文字與背景顏色、超連結。簽名檔與信件範本兩處共用同一份，功能不會各走各的。
+  3. **共用互動** `bindRichSettingsEditor(list,contentSelector)`：事件委派掛在外層容器（兩處的列都是動態新增／刪除），按鈕不帶編輯器 id，改由按鈕所在的那一列找內容欄位；mousedown 先存選取範圍；支援 ⌘K／⌘B／⌘I／⌘U。簽名檔原本自己那份重複的工具列處理已移除，改呼叫這支。
+  4. **信件範本改成格式化編輯器**：從純文字 `<textarea>` 換成與簽名檔相同的 contenteditable，存的是 HTML。舊的純文字範本用既有的 `resolveSignaturePresetHtml()` 轉換後顯示；插入時 `insertTemplateIntoRichEditor()` 判斷內容是不是 HTML——是就保留格式插入，不是就走原本的逐行純文字插入；範本選單的預覽摘要用 `richContentPlainText()` 轉純文字，不會秀出標籤。
+  5. `insertRichLink(editorId)` 拆出 `insertRichLinkIntoEditor(editor)`，給沒有固定 id 的設定頁編輯器使用。
+- 風險區塊：
+  - 範本內容格式改變（純文字 → HTML），但讀取端相容舊資料；後端只當字串存，沒有長度上限會默默丟棄（僅有 80 筆上限）。
+  - 範本存成 HTML 後體積比純文字大一些，會反映在 db.json。
+  - 範本空白驗證改用紅框＋狀態列提示（contenteditable 沒有 `setCustomValidity`／`reportValidity`）。
+- 已檢查／驗證方式：
+  - `node --test backend/test/*.test.mjs` **128/128 全過**（127 既有＋1 新增）。新增測試涵蓋共用工具列的按鈕齊全、兩處都套用同一個產生器、範本不再是 textarea 且存 innerHTML、空白判斷用可見文字、共用互動的選取保存與 ⌘K／⌘B／⌘I／⌘U、插入時舊純文字走原路徑、預覽摘要轉純文字。既有兩支測試原本鎖死簽名檔自己的工具列標記與 ⌘K 的舊寫法，已改為驗證共用函式，意圖不變。
+  - **瀏覽器實測**：信件編輯器 ⌘B →`<b>粗體快捷鍵</b>`；信件範本工具列粗體 →`<b>`、⌘I／⌘U →`<b><i><u>…</u></i></b>`，`collectMailTemplateEditor` 收到的正是這段 HTML；簽名檔工具列粗體與 ⌘U 同樣正常。過程中一度在視窗仍隱藏的狀態下測試，`execCommand` 回傳 false，開啟視窗後即正常——隱藏元素無法編輯，是測法問題不是程式問題。
+  - `git stash` 只還原 `index.html`，新測試失敗，`git stash pop` 後恢復。
+  - **未做的驗證**：沒有在正式站實際儲存一個含格式的範本再插入到信件（需要登入）。
+- 部署狀態：只改 `index.html`，git push 後自動生效。
+- commit：（見下方 push 紀錄）
+
+### 2026-09-16 13:40 Asia/Taipei— 信件串裡的公司簽名檔只剩右半邊：放行 Gmail 圖片代理網域
 
 - 修改目的：使用者回報在信件串檢視裡，公司簽名檔只出現右半邊（個人資訊），左邊的 logo 整格是空的、只剩一條綠色分隔線。
 - 成因：信件串檢視的 HTML 淨化器只允許兩種圖片——信件本身的 `cid:` 附件，以及白名單網域 `lh3.googleusercontent.com`（系統自己託管設計圖的網域）。公司簽名檔的 logo 與社群 icon 都放在 **Gmail 自己的圖片代理** `ci3.googleusercontent.com`，不在白名單內，整個 `<img>` 被丟棄，所以左側儲存格變成空的（那條綠線是儲存格的 `border-right`，所以還看得到）。以使用者提供的簽名檔原始碼在瀏覽器實測：淨化前 2 張圖、淨化後 0 張。
