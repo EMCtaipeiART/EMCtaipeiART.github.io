@@ -8850,6 +8850,42 @@ const gmailTextColors=[
   '#660000','#783f04','#7f6000','#274e13','#0c343d','#073763','#20124d','#4c1130'
 ];
 let gmailColorPaletteEl=null,gmailColorTargetButton=null;
+// Chromium 對跨越 contenteditable=false（設計圖／NAS 路徑）的選取範圍會回報
+// 套色成功卻不修改內容。依唯讀區塊切開範圍，僅對可編輯的部分執行原生指令。
+function applyGmailSelectionColor(kind,color){
+  if(!restoreRichSelection())return;
+  const selection=window.getSelection(),original=selection.getRangeAt(0).cloneRange();
+  const startElement=original.startContainer.nodeType===1?original.startContainer:original.startContainer.parentElement;
+  const editor=startElement?.closest('[contenteditable="true"]');
+  if(!editor||!editor.contains(original.endContainer))return;
+  const ranges=[],remaining=original.cloneRange();
+  const locked=[...editor.querySelectorAll('[contenteditable="false"]')].filter(node=>!node.parentElement.closest('[contenteditable="false"]'));
+  for(const node of locked){
+    if(!remaining.intersectsNode(node))continue;
+    const before=remaining.cloneRange();
+    before.setEndBefore(node);
+    if(!before.collapsed)ranges.push(before);
+    if(node.contains(remaining.endContainer)){remaining.collapse(false);break}
+    remaining.setStartAfter(node);
+  }
+  if(!remaining.collapsed||original.collapsed)ranges.push(remaining);
+  // 從後往前套用，避免前面的格式變更影響尚未處理的 DOM 邊界。
+  const applied=[];
+  for(const range of ranges.reverse()){
+    selection.removeAllRanges();selection.addRange(range);
+    if(kind==='background'){if(!document.execCommand('hiliteColor',false,color))document.execCommand('backColor',false,color)}
+    else document.execCommand('foreColor',false,color);
+    if(selection.rangeCount)applied.unshift(selection.getRangeAt(0).cloneRange());
+  }
+  if(applied.length){
+    // 單一範圍保留 execCommand 的原生選取／游標狀態，否則重設游標會清掉待輸入文字的顏色。
+    if(applied.length===1){savedRichSelectionRange=captureCurrentRichSelection();return}
+    const result=applied[0].cloneRange(),last=applied[applied.length-1];
+    result.setEnd(last.endContainer,last.endOffset);
+    selection.removeAllRanges();selection.addRange(result);
+    savedRichSelectionRange=result.cloneRange();
+  }
+}
 function gmailColorCheckColor(hex){
   const value=parseInt(hex.slice(1),16),r=(value>>16)&255,g=(value>>8)&255,b=value&255;
   return (.299*r+.587*g+.114*b)>175?'#111':'#fff';
@@ -8870,11 +8906,7 @@ function ensureGmailColorPalette(){
     const option=event.target.closest('[data-gmail-color]');
     if(!option||!gmailColorTargetButton)return;
     const color=option.dataset.gmailColor, kind=option.dataset.gmailColorKind==='background'?'background':'text';
-    if(restoreRichSelection()){
-      // hiliteColor 是螢光筆（背景），少數舊瀏覽器只認 backColor，兩個都試一次。
-      if(kind==='background'){if(!document.execCommand('hiliteColor',false,color))document.execCommand('backColor',false,color)}
-      else document.execCommand('foreColor',false,color);
-    }
+    applyGmailSelectionColor(kind,color);
     if(kind==='text'){
       const swatch=gmailColorTargetButton.querySelector('.gmail-rich-color-swatch');
       if(swatch)swatch.style.setProperty('--swatch-color',color);
@@ -12353,7 +12385,7 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,
   // 也就是使用者回報的「多選了資料夾，信件裡卻只顯示一個」。
   const nasPathsContainer=document.createElement('div');
   nasPathsContainer.id='gmailDesignerReplyNasPaths';
-  nasPathsContainer.contentEditable='false';
+  // 繼承正文的可編輯狀態，NAS 路徑可修改、刪除與套用格式。
   editor.appendChild(nasPathsContainer);
   renderDesignerReplyNasPaths(folders);
   clearGmailInlineImages(editor.id);
@@ -12413,12 +12445,17 @@ function designerReplyFolderList(folders){
   // 同一個路徑重複出現時只留一筆：重複的路徑指向同一個資料夾，列兩次只會讓收件人以為有兩個不同來源。
   return [...new Set((Array.isArray(folders)?folders:[folders]).map(item=>String(item||'').trim()).filter(Boolean))];
 }
+const designerReplyNasRenderedHtml=new WeakMap();
 function renderDesignerReplyNasPaths(folders){
   const container=document.getElementById('gmailDesignerReplyNasPaths');
   if(!container)return [];
   const folderPaths=designerReplyFolderList(folders);
-  container.textContent='';
   container.dataset.nasFolders=JSON.stringify(folderPaths);
+  // 備份完成仍更新來源 metadata，但不可覆蓋使用者已編輯／刪除／上色的正文。
+  const previousHtml=designerReplyNasRenderedHtml.get(container);
+  if(previousHtml!==undefined&&container.innerHTML!==previousHtml)return folderPaths;
+  container.textContent='';
+  designerReplyNasRenderedHtml.set(container,'');
   if(!folderPaths.length)return folderPaths;
   container.appendChild(document.createElement('br'));
   container.appendChild(document.createTextNode(folderPaths.length>1?` NAS路徑（共 ${folderPaths.length} 個資料夾）`:' NAS路徑'));
@@ -12428,6 +12465,7 @@ function renderDesignerReplyNasPaths(folders){
     bold.textContent=folderPath;
     container.appendChild(bold);
   });
+  designerReplyNasRenderedHtml.set(container,container.innerHTML);
   return folderPaths;
 }
 /** 記錄「這次備份每個檔名各自來自哪一個資料夾」。多選資料夾時光看檔名沒辦法反推來源資料夾，這份
