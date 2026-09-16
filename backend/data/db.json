@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5144,
+  "revision": 5145,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-16T06:05:59.309Z",
+  "updatedAt": "2026-09-16T06:06:35.190Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1416,7 +1416,7 @@
         {"案件編號":"26090038","修改次數":"2","建立日期":"2026/09/16 12:07:01","修改日期":"2026-09-16","修改內容":"更改動畫cut的角色動作及畫面","修改人":"Noise","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090044","修改次數":"1","建立日期":"2026/09/16 12:20:17","修改日期":"2026-09-16","修改內容":"二修","修改人":"Anna","確認修正日":"2026/09/16 12:38:06","待修改圖片":"[\"260915_官網_科技新聲代CPAS_Liberty 5 Pro Max_情境_vo2.jpg\",\"260915_官網_科技新聲代CPAS_Liberty 5 Pro Max_電商_vo2.jpg\",\"260915_官網_科技新聲代CPAS_Liberty 5 Pro_情境_vo2.jpg\",\"260915_官網_科技新聲代CPAS_Liberty 5 Pro_電商_vo2.jpg\",\"260915_官網_科技新聲代CPAS_Liberty 5_情境_vo2.jpg\",\"260915_官網_科技新聲代_AeroClip_vo2.jpg\",\"260915_官網_科技新聲代_AeroClip包框vo2.mp4\",\"260915_官網_科技新聲代_Liberty-5_vo2.jpg\"]","圖片連結":"[{\"fileName\":\"260915_官網_科技新聲代_AeroClip_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1Ld4wuN8cpcaot_xd7-jUl518ePjKEyGn=w1600\"},{\"fileName\":\"260915_官網_科技新聲代_Liberty-5_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1tC4Ooz6KdMAp55qfFfjgWz94qSFKzkRL=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty 5 Pro Max_情境_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1WlQRLG9s8_BKr4tjsPe1dUfVwe5tgsL6=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty 5 Pro Max_電商_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1v5Znvn7GgzSw1qbGUZY4LwEBtNuhS3J-=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty 5 Pro_情境_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lN6su7jshqCl3lshOlty8obddDy6cttT=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty 5 Pro_電商_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/12KnrZwi5XrjXYhsUGh-fi52M13tOVX_b=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty 5_情境_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1mPUYTyTTTgAm1n0-n9tznZdOQ3IdtlgJ=w1600\"},{\"fileName\":\"260915_官網_科技新聲代CPAS_Liberty-5_情境_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1TqG1pKOk_jVQ1AvWGLc-8K7Gg_IRDpPb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 12:54:07"},
         {"案件編號":"26090118","修改次數":"0","建立日期":"2026/09/16 12:30:27","修改日期":"2026/09/16 12:30:27","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 12:30:27","圖片連結":"[{\"fileName\":\"DX9600Pro_AI_architecture_V2.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1YK_dezLC21HCSeu8y7qDT4vCQcELQ8Yu=w1600\"},{\"fileName\":\"DX9600Pro_Infographic.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1gvOcJhi_2metlRTr7DP6mnfqBf0sGB6V=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 12:30:27"},
-        {"案件編號":"26090016","修改次數":"3","建立日期":"2026/09/16 14:05:59","修改日期":"2026-09-16","修改內容":"調整重點：\n\n如昨日溝通，客戶最後選擇深藍色底版本(夜空)\n月亮從原改為有紋路的月亮，下方四選像換色\n\n在請設計協助評估是否需要重新製作或以此圖直接做推播圖\n\nicon、文字都不用改","修改人":"Machi","確認修正日":"","待修改圖片":"[\"260915_保誠人壽_中秋啟動圖_v02.jpg\"]"}
+        {"案件編號":"26090016","修改次數":"3","建立日期":"2026/09/16 14:05:59","修改日期":"2026-09-16","修改內容":"調整重點：\n\n如昨日溝通，客戶最後選擇深藍色底版本(夜空)\n月亮從原改為有紋路的月亮，下方四選像換色\n\n在請設計協助評估是否需要重新製作或以此圖直接做推播圖\n\nicon、文字都不用改","修改人":"吳冠賢","確認修正日":"","圖片連結":"","圖片來源":"","圖片更新時間":"","待修改圖片":"[\"260915_保誠人壽_中秋啟動圖_v02.jpg\"]"}
       ]
     },
     "補充資料連結": {
