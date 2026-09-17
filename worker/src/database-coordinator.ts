@@ -10,7 +10,7 @@ import {
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
-  normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue,
+  normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments,
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase } from './github-store';
 import type {
@@ -1327,6 +1327,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (outcome.changed === false) return { ...outcome.result, jsonRevision: draft.revision, revision: draft.revision, unchanged: true };
         // 這兩欄是修改統計表的派生值，任何寫入在送往 GitHub 前都再校正一次。
         recalculateDatabaseModificationCounts(draft);
+        normalizeSettingsDepartments(draft);
         draft.revision = Math.max(0, Number(draft.revision) || 0) + 1;
         draft.updatedAt = new Date().toISOString();
         draft.internal.sessions = {};
@@ -1464,7 +1465,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         newRow['帳號'] = account;
         newRow['名字'] = text(profile.name || profile.name_en) || account.split('@')[0];
         newRow['顯示名'] = newRow['名字'];
-        newRow['部門'] = text(profile.department);
+        newRow['部門'] = normalizeDepartmentName(profile.department);
         draft.tables['設定'].rows.push(newRow);
         return { result: { ok: true, action: 'erp-login-register' }, changedTables: ['設定'] };
       });
@@ -1474,14 +1475,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const user = text(row['名字'] || profile.name || profile.name_en || account.split('@')[0]);
     const issued = await this.createSession({
-      user, account, provider: 'erp', department: text(profile.department), role: text(profile.role), erpEmployeeId: text(profile.employee_id)
+      user, account, provider: 'erp', department: normalizeDepartmentName(profile.department), role: text(profile.role), erpEmployeeId: text(profile.employee_id)
     });
     return {
       ok: true, action: 'erpLogin', provider: 'erp', user, account, email: account,
       token: issued.token, expiresIn: issued.expiresIn, settings: settingsResponse(row), access: accessProfile(stored.database, issued.session),
       erpProfile: {
         employee_id: text(profile.employee_id), name: text(profile.name), name_en: text(profile.name_en), email: account,
-        role: text(profile.role), department: text(profile.department), rank: text(profile.rank), title: text(profile.title),
+        role: text(profile.role), department: normalizeDepartmentName(profile.department), rank: text(profile.rank), title: text(profile.title),
         is_active: profile.is_active !== false, is_pm: Boolean(profile.is_pm)
       }
     };
@@ -2409,7 +2410,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
     const requestedOwners = (Array.isArray(payload.owners) ? payload.owners : []).map(canonicalAccount).filter(account => account && knownAccounts.has(account));
     const knownUnits = new Set([
-      ...settingsRows.flatMap(item => [text(item['部門']), text(item['組別'])]),
+      ...settingsRows.flatMap(item => [normalizeDepartmentName(item['部門']), text(item['組別'])]),
       ...(database.tables['組織選項']?.rows || []).map(item => text(item['名稱'])),
       ...existingRules.filter(isCustomerUnitRule).map(customerRuleTarget)
     ].filter(Boolean));
@@ -3548,7 +3549,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         settings['帳號'] = account;
         settings['名字'] = name;
         settings['顯示名'] = name;
-        settings['部門'] = text(item['部門'] ?? item.department);
+        settings['部門'] = normalizeDepartmentName(item['部門'] ?? item.department);
         settings['組別'] = text(item['組別'] ?? item.group);
         settingsTable.rows.push(settings);
 

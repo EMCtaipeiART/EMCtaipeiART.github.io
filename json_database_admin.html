@@ -376,6 +376,9 @@
       }
       return {table:tableName,total:rows.length,offset,limit:size,rows:rows.slice(offset,offset+size)};
     }
+    /** 「凱曜」是公司名稱：凱曜專案部＝專案部（同 worker 的 normalizeDepartmentName），名單與選項一律用去掉前綴的部門。 */
+    // 就地修正、回傳同一個陣列：權限編輯會直接替換這個陣列裡的列，必須跟 directDatabase 保持同一份參照。
+    function normalizedDirectoryRows(rows){rows.forEach(row=>{const department=String(row['部門']||'').trim().replace(/^凱曜(?=.)/,'').trim();if(row['部門']!==undefined&&row['部門']!==department)row['部門']=department});return rows}
     function permissionRoleForSettings(row={}){const group=String(row['組別']||'').trim(),department=String(row['部門']||'').trim();return group==='管理者'||department==='管理者'?'管理者':(/^(?:平面|影音)$/.test(group)?'設計師':'一般使用者')}
     function permissionModels(settingsRows,permissionRows){
       const settingsByAccount=new Map(settingsRows.map(row=>[MachiAccess.canonicalAccount(row['帳號']),row]).filter(([account])=>account)),permissionByAccount=new Map(permissionRows.map(row=>[MachiAccess.canonicalAccount(row['帳號']),row]).filter(([account])=>account)),accounts=[...new Set([...settingsByAccount.keys(),...permissionByAccount.keys()])],query=$('search').value.trim().toLocaleLowerCase();
@@ -385,6 +388,7 @@
       let settingsRows=[],permissionRows=[],organizationRows=[],reelsRows=[];
       if(APPS_SCRIPT_MODE){settingsRows=directDatabase?.tables?.['設定']?.rows||[];permissionRows=(directDatabase?.tables?.['帳號權限']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));organizationRows=(directDatabase?.tables?.['組織選項']?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}));reelsRows=(directDatabase?.tables?.reels?.rows||[]).map((row,index)=>({...row,_rowNumber:index+2}))}
       else{const [settingsData,permissionData,organizationData,reelsData]=await Promise.all([request('/table/%E8%A8%AD%E5%AE%9A?offset=0&limit=1000'),request('/table/%E5%B8%B3%E8%99%9F%E6%AC%8A%E9%99%90?offset=0&limit=1000'),request('/table/%E7%B5%84%E7%B9%94%E9%81%B8%E9%A0%85?offset=0&limit=1000'),request('/table/reels?offset=0&limit=1000')]);settingsRows=settingsData.rows||[];permissionRows=permissionData.rows||[];organizationRows=organizationData.rows||[];reelsRows=reelsData.rows||[]}
+      settingsRows=normalizedDirectoryRows(settingsRows);
       permissionDirectoryRows=settingsRows;permissionAccessRows=permissionRows;organizationOptionRows=organizationRows;accountReelsRows=reelsRows;permissionModelsCache=permissionModels(settingsRows,permissionRows);if(!accountCreating&&!permissionModelsCache.some(row=>row['帳號']===permissionSelectedAccount))permissionSelectedAccount=permissionModelsCache[0]?.['帳號']||'';return {table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache};
     }
     // 「修改列表」案件群組標題要顯示客戶別／專案名稱／專案負責人／設計負責人，這些欄位
@@ -1163,7 +1167,7 @@
     function replaceAccountRaw(rows,account,row){const index=rows.findIndex(item=>MachiAccess.canonicalAccount(item['帳號'])===account);if(row){if(index>=0)rows[index]={...row};else rows.push({...row})}else if(index>=0)rows.splice(index,1)}
     function refreshPermissionPendingUi(account){
       if(tableName!=='帳號權限')return;
-      if(directDatabase){permissionDirectoryRows=directDatabase?.tables?.['設定']?.rows||permissionDirectoryRows;permissionAccessRows=(directDatabase?.tables?.['帳號權限']?.rows||permissionAccessRows).map((row,index)=>({...row,_rowNumber:index+2}))}rebuildPermissionModels();
+      if(directDatabase){permissionDirectoryRows=normalizedDirectoryRows(directDatabase?.tables?.['設定']?.rows||permissionDirectoryRows);permissionAccessRows=(directDatabase?.tables?.['帳號權限']?.rows||permissionAccessRows).map((row,index)=>({...row,_rowNumber:index+2}))}rebuildPermissionModels();
       if(permissionSelectedAccount===account){renderTable({table:'帳號權限',total:permissionModelsCache.length,offset:0,limit:1000,rows:permissionModelsCache});return}
       const model=permissionModelsCache.find(row=>row['帳號']===account),button=$('view').querySelector(`[data-permission-account="${CSS.escape(account)}"]`),badge=button?.querySelector('.permission-state');if(!model||!badge)return;const pending=permissionWritesPending.has(account);badge.className=`permission-state ${pending?'explicit':(model['狀態']==='停用'?'off':(model['角色範本']!=='一般使用者'?'explicit':''))}`;badge.textContent=pending?'寫入中':(model['狀態']==='停用'?'停用':model['角色範本'])
     }

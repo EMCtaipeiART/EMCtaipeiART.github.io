@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-17 14:40 Asia/Taipei — 部門名稱去掉「凱曜」：凱曜專案部＝專案部、凱曜管理部＝管理部
+
+- 修改目的：個人設定 › 客戶設定的權限樹同時出現「專案部」與「凱曜專案部」、「管理部」與「凱曜管理部」，同名組別（Odin組、財務出納組）重複兩次。使用者確認「凱曜」是公司名稱，可以省略。
+- 影響檔案：`worker/src/model.ts`、`worker/src/database-coordinator.ts`、`index.html`、`json_database_admin.html`、`worker/test/index.test.ts`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - Worker 新增 `normalizeDepartmentName()`（去掉開頭的「凱曜」），用在 ERP 登入建立帳號、ERP session 的 department、名單批次匯入、`matchesCustomerEditRule`／`newCustomerDefaults` 的部門比對、`saveCustomerSettings` 的已知單位清單。`isProjectDepartment` 改為正規化後等於「專案部」。
+  - `mutate()` 每次寫入前呼叫 `normalizeSettingsDepartments()`，把「設定」表既有的「凱曜○○部」改成「○○部」；現有兩筆（楊詠涵、湯雅婷）會在下一次任何寫入時自動修正。
+  - 前台 `normalizeDepartmentName()` 套用在 `remoteDepartment`、登入 session 部門、`customerEditRuleMatches`、客戶設定權限樹、信件聯絡人分組與排除名單（凱曜管理部因此跟管理部一樣不列入聯絡人）。
+  - 後台 `normalizedDirectoryRows()` 在帳號權限／客戶別名單載入時就地去掉前綴（就地修改以保持與 `directDatabase` 同一份參照）。
+- 風險區塊：權限變更——`department:專案部`／`department:管理部` 現在也涵蓋原本的凱曜專案部／凱曜管理部同仁。本機 Node 後台（`backend/app.mjs`）未改，仍保留原始部門字串。
+- 已檢查／驗證方式：`worker` vitest 82 項全過（新增凱曜前綴測試、更新批次匯入斷言）；`npm test` 144 項全過（更新 4 項抽取前台函式的測試：權限樹合併後 Odin組 只出現一次、凱曜管理部排除於聯絡人）；`tsc --noEmit` 通過；兩個 HTML 的 inline script `node --check` 通過。未做實機登入截圖。
+- 部署狀態：Worker 需 `cd worker && wrangler deploy`（本次已部署）；前台 git push 後自動生效。
+- commit：本次 commit
+
 ### 2026-09-16 — 修復 Test JSON backend 的兩項過期測試
 
 - 原因：Actions #5555 的 133 項測試中，NAS 渲染測試抽取函式時漏載新增的 WeakMap；色票測試仍在面板函式中尋找已移至共用處理器的指令。與觸發提交的 saveUserSettings 資料內容無關。

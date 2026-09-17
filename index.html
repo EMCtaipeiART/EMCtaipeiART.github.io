@@ -7868,7 +7868,7 @@ function customerEditRules(name){
 function customerEditRuleMatches(rule,account,department,group){
   const value=String(rule||'').trim(),match=value.match(/^(department|group):(.+)$/i);
   if(!match)return canonicalAccountClient(value)===canonicalAccountClient(account);
-  const kind=match[1].toLowerCase(),target=match[2].trim(),dept=String(department||'').trim(),rawGroup=String(group||'').trim();
+  const kind=match[1].toLowerCase(),target=match[2].trim(),dept=normalizeDepartmentName(department),rawGroup=String(group||'').trim();
   if(kind==='department')return target==='設計部'?(dept==='設計部'||['平面','影音'].includes(normalizeDesignGroup(rawGroup))):dept===target;
   return rawGroup===target||normalizeDesignGroup(rawGroup)===normalizeDesignGroup(target)&&Boolean(normalizeDesignGroup(target));
 }
@@ -8152,7 +8152,9 @@ function remoteCollapseSettings(settings){
 }
 function normalizeDesignGroup(value){const text=String(value||'').trim(); if(/管理者|admin/i.test(text))return '管理者'; if(/平面/.test(text))return '平面'; if(/影音|影像|影片|video/i.test(text))return '影音'; return ''}
 function remoteDesignGroup(settings){return normalizeDesignGroup(settings?.designType||settings?.['設計類型']||settings?.designGroup||settings?.group||settings?.['組別'])}
-function remoteDepartment(settings){return String(settings?.department||settings?.['部門']||'').trim()}
+/** 「凱曜」是公司名稱：凱曜專案部＝專案部、凱曜管理部＝管理部（同 worker 的 normalizeDepartmentName）。 */
+function normalizeDepartmentName(value){return String(value||'').trim().replace(/^凱曜(?=.)/,'').trim()}
+function remoteDepartment(settings){return normalizeDepartmentName(settings?.department||settings?.['部門'])}
 /** 帳號「組別」欄位的原始值（不像 remoteDesignGroup 會被 normalizeDesignGroup 收斂成只剩平面/影音/
  * 管理者三種），專供客戶別「部門／組別」可見性判斷使用。 */
 function remoteRawGroup(settings){return String(settings?.group||settings?.['組別']||'').trim()}
@@ -9790,7 +9792,7 @@ const gmailExcludedContactDepartments=Object.freeze(['測試員','監測部','�
 function blockedMailContactEmails(){
   const settings=githubJsonDatabaseCache?.tables?.['設定']?.rows||[],permissions=githubJsonDatabaseCache?.tables?.['帳號權限']?.rows||[];
   const blocked=new Set(permissions.filter(row=>String(row?.['狀態']||'').trim()==='停用').map(row=>extractEmail(row?.['帳號']).toLowerCase()).filter(Boolean));
-  settings.filter(row=>gmailExcludedContactDepartments.includes(String(row?.['部門']||'').trim())).forEach(row=>{const email=extractEmail(row?.['帳號']).toLowerCase();if(email)blocked.add(email)});
+  settings.filter(row=>gmailExcludedContactDepartments.includes(normalizeDepartmentName(row?.['部門']))).forEach(row=>{const email=extractEmail(row?.['帳號']).toLowerCase();if(email)blocked.add(email)});
   return blocked;
 }
 function accountSettingsMailContacts(){
@@ -9800,7 +9802,7 @@ function accountSettingsMailContacts(){
     const account=String(row?.['帳號']||'').trim(),email=extractEmail(account).toLowerCase();
     if(!email||blocked.has(email))return null;
     const name=String(row?.['顯示名']||row?.['名字']||'').trim()||email;
-    const department=String(row?.['部門']||'').trim(),group=String(row?.['組別']||'').trim();
+    const department=normalizeDepartmentName(row?.['部門']),group=String(row?.['組別']||'').trim();
     // 運釀企劃部改成獨立放進「各組」底下的「運釀企劃組」子群組，不再併入扁平的「企劃部」。
     if(department==='運釀企劃部')return {name,full:`${name} <${email}>`,group:'各組',subgroup:'運釀企劃組'};
     if(department.includes('企劃部'))return {name,full:`${name} <${email}>`,group:'企劃部',subgroup:''};
@@ -11284,7 +11286,7 @@ function personalCustomerOwnerTree(rules){
   settings.forEach(row=>{
     const account=canonicalAccountClient(row?.['帳號']);
     if(!account||!account.includes('@')||disabled.has(account))return;
-    let department=String(row?.['部門']||'').trim();const group=String(row?.['組別']||'').trim();
+    let department=normalizeDepartmentName(row?.['部門']);const group=String(row?.['組別']||'').trim();
     if(PERSONAL_CUSTOMER_HIDDEN_UNIT.test(department)||PERSONAL_CUSTOMER_HIDDEN_UNIT.test(group))return;
     if(['平面','影音'].includes(normalizeDesignGroup(group)))department='設計部';
     if(!department)department='其他';
@@ -11368,7 +11370,7 @@ function handlePersonalCustomerChange(event){
   const input=event.target;
   const ownerBlock=input.closest('[data-personal-customer-block="owner"]');
   if(input.matches('[data-personal-customer-rule]')){
-    // 同一個組別名稱可能出現在兩個部門底下（例如專案部與凱曜專案部都有 Odin組），規則是同一條，要一起切換。
+    // 組別規則只看組名，萬一同一個組名出現在兩個部門底下，規則是同一條，要一起切換。
     ownerBlock.querySelectorAll('[data-personal-customer-rule]').forEach(other=>{if(other.dataset.personalCustomerRule===input.dataset.personalCustomerRule)other.dataset.own=input.checked?'1':'0'});
     refreshPersonalCustomerOwners(ownerBlock);return;
   }
@@ -14803,7 +14805,7 @@ async function verifyStoredEditorToken(){
     currentEditorAccount=pendingEditorSession.account||data.account||data.email||'';
     currentEditorToken=token;
     currentEditorGroup=pendingEditorSession.group||'';
-    currentEditorDepartment=pendingEditorSession.department||'';
+    currentEditorDepartment=normalizeDepartmentName(pendingEditorSession.department);
     currentEditorRawGroup=pendingEditorSession.rawGroup||'';
     loginEditor(data.user,token,data.settings,data.account||data.email||currentEditorAccount);
     return true;
@@ -14817,7 +14819,7 @@ async function verifyStoredEditorToken(){
     currentEditorAccount=pendingEditorSession.account||currentEditorAccount;
     currentEditorToken=token;
     currentEditorGroup=pendingEditorSession.group||currentEditorGroup;
-    currentEditorDepartment=pendingEditorSession.department||currentEditorDepartment;
+    currentEditorDepartment=normalizeDepartmentName(pendingEditorSession.department)||currentEditorDepartment;
     currentEditorRawGroup=pendingEditorSession.rawGroup||currentEditorRawGroup;
     persistEditorSession();applyCurrentUserProfile();updateLoginUi();render();
     setSync('登入驗證暫時沒有回應，已保留登入狀態並稍後重試',true,5000);

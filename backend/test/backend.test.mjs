@@ -1123,8 +1123,12 @@ test('customer admin keeps scroll position, front end follows saved order, and o
   const ruleSource = html.slice(ruleStart, ruleEnd);
   const canonical = value => String(value || '').trim().toLowerCase();
   const normalizeGroup = value => /平面/.test(String(value || '')) ? '平面' : (/影音|影像|影片|video/i.test(String(value || '')) ? '影音' : '');
-  const matches = new Function('canonicalAccountClient', 'normalizeDesignGroup', `${ruleSource};return customerEditRuleMatches;`)(canonical, normalizeGroup);
+  const departmentSource = html.split('\n').find(row => row.startsWith('function normalizeDepartmentName('));
+  assert.ok(departmentSource, 'could not locate normalizeDepartmentName');
+  const matches = new Function('canonicalAccountClient', 'normalizeDesignGroup', `${departmentSource}\n${ruleSource};return customerEditRuleMatches;`)(canonical, normalizeGroup);
   assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '平面'), true);
+  // 「凱曜」是公司名稱：凱曜專案部＝專案部。
+  assert.equal(matches('department:專案部', 'pm@example.com', '凱曜專案部', 'Odin組'), true);
   assert.equal(matches('group:設計測試組', 'tester@example.com', '測試員', '設計測試組'), true);
   assert.equal(matches('department:設計部', 'tester@example.com', '測試員', '非設計組'), false);
 
@@ -1192,7 +1196,9 @@ test('mail contact picker merges designers, orders groups and excludes internal 
   const start = html.indexOf("const gmailExcludedContactDepartments=");
   const end = html.indexOf('function openRecipientPicker(', start);
   assert.ok(start > 0 && end > start);
-  const source = html.slice(start, end);
+  const departmentSource = html.split('\n').find(row => row.startsWith('function normalizeDepartmentName('));
+  assert.ok(departmentSource, 'could not locate normalizeDepartmentName');
+  const source = `${departmentSource}\n${html.slice(start, end)}`;
   const settings = [
     { '部門': '企劃部', '組別': '', '顯示名': 'Planner', '帳號': 'planner@example.com' },
     { '部門': '設計部', '組別': '平面', '顯示名': 'Flat', '帳號': 'flat@example.com' },
@@ -1201,7 +1207,8 @@ test('mail contact picker merges designers, orders groups and excludes internal 
     { '部門': '專案部', '組別': 'Celine組', '顯示名': 'Member', '帳號': 'member@example.com' },
     { '部門': '測試員', '組別': '', '顯示名': 'Tester', '帳號': 'tester@example.com' },
     { '部門': '監測部', '組別': '', '顯示名': 'Monitor', '帳號': 'monitor@example.com' },
-    { '部門': '管理部', '組別': '人資行政組', '顯示名': 'Admin', '帳號': 'admin@example.com' }
+    { '部門': '管理部', '組別': '人資行政組', '顯示名': 'Admin', '帳號': 'admin@example.com' },
+    { '部門': '凱曜管理部', '組別': '財務出納組', '顯示名': 'Finance', '帳號': 'finance@example.com' }
   ];
   const extractEmail = value => String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || '';
   const run = new Function('githubJsonDatabaseCache', 'extractEmail', 'designerOptions', 'designerRecipientNames', 'designerRecipientByName', 'requiredMailCcRecipients', 'ownerContactMap', 'esc', `${source};const contacts=knownMailContacts(),groups=[];contacts.forEach(contact=>{let group=groups.find(item=>item.name===contact.group);if(!group){group={name:contact.group,items:[]};groups.push(group)}group.items.push(contact)});return {contacts,groups,markup:groups.map(group=>gmailRecipientGroupHtml(group,new Set())).join('')};`);
@@ -1212,7 +1219,7 @@ test('mail contact picker merges designers, orders groups and excludes internal 
   );
   assert.deepEqual(result.groups.map(group => group.name), ['企劃部','設計部','負責人','各組']);
   assert.deepEqual(result.contacts.filter(contact => contact.group === '設計部').map(contact => contact.name), ['Flat','Video']);
-  assert.equal(result.contacts.some(contact => ['Tester','Monitor','Admin'].includes(contact.name)), false);
+  assert.equal(result.contacts.some(contact => ['Tester','Monitor','Admin','Finance'].includes(contact.name)), false);
   assert.match(result.markup, /<details class="gmail-recipient-group" data-recipient-group="企劃部">/);
   assert.match(result.markup, /<details class="gmail-recipient-subgroup"><summary class="gmail-recipient-subgroup-label"><span>Celine組<\/span>/);
   assert.doesNotMatch(result.markup, /<details[^>]+\sopen(?:\s|>)/);
@@ -2086,8 +2093,9 @@ test('a new 客戶別 is created with its 部門／組別 and 權限設定 alrea
   assert.match(model, /export const NEW_CUSTOMER_DEFAULT_DEPARTMENTS = \['測試員', '設計部', '企劃部'\];/);
   const defaults = model.match(/export function newCustomerDefaults\([\s\S]*?\n\}/)?.[0];
   assert.ok(defaults, 'could not locate newCustomerDefaults');
-  // 專案同仁：整組加進來。部門判斷要涵蓋「凱曜專案部」，不能寫死等於「專案部」。
-  assert.match(model, /function isProjectDepartment\(department: string\): boolean \{\s*\n\s*return \/專案部\/\.test\(department\);/);
+  // 專案同仁：整組加進來。「凱曜」是公司名稱，凱曜專案部先去掉前綴再比對。
+  assert.match(model, /function isProjectDepartment\(department: string\): boolean \{\s*\n\s*return normalizeDepartmentName\(department\) === '專案部';/);
+  assert.match(model, /return text\(value\)\.replace\(\/\^凱曜\(\?=\.\)\/, ''\)\.trim\(\);/);
   assert.match(defaults, /if \(isProjectDepartment\(department\) && group\) groups\.push\(group\);/);
   // 建立者不屬於任何預設單位時要把他自己加進去，否則他會在建立當下就失去自己這個客戶別的編輯／發信權限。
   assert.match(defaults, /if \(!coveredByDefaults\) accounts\.push\(account\);/);
@@ -4537,6 +4545,7 @@ test('personal 客戶設定 permission tree mirrors the admin department:/group:
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
   const line = prefix => html.split('\n').find(row => row.startsWith(prefix));
   const sources = [
+    line('function normalizeDepartmentName('),
     line('const PERSONAL_CUSTOMER_HIDDEN_UNIT='), line('const isHiddenCustomerRule='), line('const PERSONAL_CUSTOMER_FLAT_DEPARTMENTS='),
     pick('normalizeDesignGroup'), pick('personalCustomerOwnerTree')
   ];
@@ -4566,8 +4575,8 @@ test('personal 客戶設定 permission tree mirrors the admin department:/group:
     { label: '設計部', rule: 'department:設計部', members: ['machi.chen@emctaipei.com', 'video@emctaipei.com'], children: [] },
     // 名單裡有、但目前沒有成員的規則也要列出，否則存檔會被拿掉；測試員不顯示。
     { label: 'Ann組', rule: 'group:Ann組', members: [], children: [] },
-    { label: '凱曜專案部', rule: 'department:凱曜專案部', members: [], children: [{ label: 'Odin組', rule: 'group:Odin組', members: ['pm2@emctaipei.com'], children: [] }] },
-    { label: '專案部', rule: 'department:專案部', members: [], children: [{ label: 'Odin組', rule: 'group:Odin組', members: ['pm1@emctaipei.com'], children: [] }] }
+    // 「凱曜」是公司名稱：凱曜專案部併入專案部，同一個 Odin組 只出現一次。
+    { label: '專案部', rule: 'department:專案部', members: [], children: [{ label: 'Odin組', rule: 'group:Odin組', members: ['pm1@emctaipei.com', 'pm2@emctaipei.com'], children: [] }] }
   ].sort(byLabel));
 
   // 「全選」對應規則、切換時同名規則一起同步、隱藏的測試規則存檔時保留，以及「各組」字樣不再出現。

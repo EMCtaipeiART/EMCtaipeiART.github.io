@@ -178,7 +178,7 @@ export function settingsResponse(row: Row = {}): Row {
   const rawTheme = text(row['深淺模式']);
   return {
     ...row,
-    name: text(row['名字']), displayName: text(row['顯示名'] || row['名字']), department: text(row['部門']), group,
+    name: text(row['名字']), displayName: text(row['顯示名'] || row['名字']), department: normalizeDepartmentName(row['部門']), group,
     designType: /影音|影像|影片/i.test(group) ? '影音' : (/平面/.test(group) ? '平面' : ''),
     avatar: text(row['頭像連結']), replyTemplates: normalizeReplyTemplatesValue(row['回信範本設定']),
     replyTemplateDefault: normalizeReplyTemplateDefaultValue(row['預設回信範本'], normalizeReplyTemplatesValue(row['回信範本設定'])),
@@ -312,6 +312,21 @@ export function customerEditCapableAccounts(database: DatabaseSnapshot, customer
     .map(canonicalAccount);
 }
 
+/** 「凱曜」是公司名稱：凱曜專案部＝專案部、凱曜管理部＝管理部。ERP 帶進來的部門一律去掉前綴再使用。 */
+export function normalizeDepartmentName(value: unknown): string {
+  return text(value).replace(/^凱曜(?=.)/, '').trim();
+}
+
+/** 寫入前把「設定」表的部門名稱統一去掉「凱曜」，舊資料會在下一次寫入時自動修正。回傳是否有改動。 */
+export function normalizeSettingsDepartments(database: DatabaseSnapshot): boolean {
+  let changed = false;
+  for (const row of database.tables['設定']?.rows || []) {
+    const normalized = normalizeDepartmentName(row['部門']);
+    if (text(row['部門']) !== normalized) { row['部門'] = normalized; changed = true; }
+  }
+  return changed;
+}
+
 function normalizedDesignGroup(value: unknown): string {
   const group = text(value);
   if (/平面/.test(group)) return '平面';
@@ -329,7 +344,7 @@ export function matchesCustomerEditRule(database: DatabaseSnapshot, session: Ses
   const profile = settingsRow(database, session.account || session.user) || {};
   const kind = match[1].toLowerCase();
   const target = text(match[2]);
-  const department = text(profile['部門'] || session.department);
+  const department = normalizeDepartmentName(profile['部門'] || session.department);
   const group = text(profile['組別']);
   if (kind === 'department') {
     if (target === '設計部') return department === '設計部' || ['平面', '影音'].includes(normalizedDesignGroup(group));
@@ -350,9 +365,9 @@ export function matchesCustomerEditRule(database: DatabaseSnapshot, session: Ses
 /** 每一個新客戶別都會拿到的三個部門（使用者指定）。 */
 export const NEW_CUSTOMER_DEFAULT_DEPARTMENTS = ['測試員', '設計部', '企劃部'];
 
-/** 建立者是不是「專案同仁」——專案部與凱曜專案部都算，他們的權限是以「組」為單位運作的。 */
+/** 建立者是不是「專案同仁」——凱曜專案部就是專案部（見 normalizeDepartmentName），他們的權限是以「組」為單位運作的。 */
 function isProjectDepartment(department: string): boolean {
-  return /專案部/.test(department);
+  return normalizeDepartmentName(department) === '專案部';
 }
 
 /**
@@ -372,7 +387,7 @@ export function newCustomerDefaults(database: DatabaseSnapshot, session: Session
   const account = canonicalAccount(session?.account || session?.user);
   if (account) {
     const profile = settingsRow(database, session?.account || session?.user) || {};
-    const department = text(profile['部門'] || session?.department);
+    const department = normalizeDepartmentName(profile['部門'] || session?.department);
     const group = text(profile['組別']);
     if (isProjectDepartment(department) && group) groups.push(group);
     // 管理者對每一筆案件本來就一律放行（見 hasRowCapability），把他的帳號寫進白名單只是多一筆看不懂的

@@ -3,7 +3,7 @@ import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
-import { hasRowCapability } from '../src/model';
+import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
 import type { DatabaseSnapshot, SessionRecord } from '../src/types';
 
 const ORIGIN = 'https://emctaipeiart.github.io';
@@ -573,8 +573,10 @@ describe('Machi Design API Worker', () => {
       return JSON.parse(stored.json) as DatabaseSnapshot;
     });
     expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({
-      '帳號': 'eric.tsai@emctaipei.com', '名字': '蔡啓泓', '顯示名': '蔡啓泓', '部門': '凱曜專案部', '組別': 'Poppy組'
+      '帳號': 'eric.tsai@emctaipei.com', '名字': '蔡啓泓', '顯示名': '蔡啓泓', '部門': '專案部', '組別': 'Poppy組'
     }));
+    // 「凱曜」是公司名稱，匯入時去掉前綴：凱曜管理部＝管理部。
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': 'tina.hsu@emctaipei.com', '部門': '管理部' }));
     expect(database.tables['帳號權限'].rows).toContainEqual(expect.objectContaining({
       '帳號': 'eric.tsai@emctaipei.com', '角色範本': '一般使用者', '狀態': '啟用', '登入方式': '公司信箱'
     }));
@@ -3727,5 +3729,25 @@ describe('Machi Design API Worker', () => {
       const row = await scheduledMailRow(scheduledId);
       expect(row?.status).toBe('sent');
     });
+  });
+});
+
+describe('凱曜 department prefix', () => {
+  it('treats 凱曜專案部 as 專案部 for names, customer rules and stored settings', () => {
+    expect(normalizeDepartmentName('凱曜專案部')).toBe('專案部');
+    expect(normalizeDepartmentName(' 凱曜管理部 ')).toBe('管理部');
+    expect(normalizeDepartmentName('凱曜')).toBe('凱曜');
+    expect(normalizeDepartmentName('設計部')).toBe('設計部');
+
+    const database = testDatabase();
+    database.tables['設定'].rows.push({ '部門': '凱曜專案部', '組別': 'Odin組', '名字': '楊詠涵', '顯示名': '楊詠涵', '帳號': 'sally.yang@emctaipei.com' });
+    const session = { user: '楊詠涵', account: 'sally.yang@emctaipei.com' } as SessionRecord;
+    expect(matchesCustomerEditRule(database, session, 'department:專案部')).toBe(true);
+    expect(matchesCustomerEditRule(database, session, 'group:Odin組')).toBe(true);
+    expect(matchesCustomerEditRule(database, session, 'department:管理部')).toBe(false);
+
+    expect(normalizeSettingsDepartments(database)).toBe(true);
+    expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': 'sally.yang@emctaipei.com', '部門': '專案部' }));
+    expect(normalizeSettingsDepartments(database)).toBe(false);
   });
 });
