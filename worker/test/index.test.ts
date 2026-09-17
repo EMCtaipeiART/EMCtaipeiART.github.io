@@ -2781,6 +2781,33 @@ describe('Machi Design API Worker', () => {
         expect(JSON.parse(String(after?.['預設信箱']))).toEqual(['Amber <amber.tian@emctaipei.com>', 'eric.fu@emctaipei.com']);
       });
 
+      it('lets the owner toggle department/group rules (前台「全選」) while keeping hidden test rules and existing visibility', async () => {
+        const token = await seedPlanners();
+        await seedCustomerOwner('丹士特', 'department:測試員');
+        await seedStaff('pm@emctaipei.com', '專案部', 'Ann組', '專案同仁');
+        mockGitHubCommit();
+        const before = await customerRow('丹士特');
+        const unitsBefore = JSON.parse(String(before?.['部門組別'] || '[]')) as string[];
+        const saved = await api({
+          action: 'saveCustomerSettings', customer: '丹士特',
+          // 取消 group:Celine組、加上 department:企劃部 與 group:Ann組；前台沒送出隱藏的 department:測試員。
+          rules: ['department:設計部', 'department:企劃部', 'group:Ann組']
+        }, token);
+        expect(saved).toMatchObject({ ok: true });
+        const row = await customerRow('丹士特');
+        expect(JSON.parse(String(row?.['專案負責人']))).toEqual([
+          'department:測試員', 'department:設計部', 'department:企劃部', 'group:Ann組', 'livia.chu@emctaipei.com'
+        ]);
+        // 新加入的規則補進可見範圍；取消的規則不動可見範圍。
+        const units = JSON.parse(String(row?.['部門組別'])) as string[];
+        expect(units).toEqual(expect.arrayContaining([...unitsBefore.filter(unit => !unit.includes('@')), '企劃部', 'Ann組', 'livia.chu@emctaipei.com']));
+
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', rules: ['group:不存在組'] }, token))
+          .toMatchObject({ ok: false, error: '權限規則「group:不存在組」不是有效的部門或組別' });
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', rules: ['everyone'] }, token))
+          .toMatchObject({ ok: false });
+      });
+
       it('rejects accounts without customer rights, unknown designers and malformed emails', async () => {
         const token = await seedPlanners();
         mockGitHubCommit();

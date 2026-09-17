@@ -4522,3 +4522,48 @@ test('personal settings 客戶設定 lists only customers the account can manage
   }]);
   assert.equal(ui.drafts.size, 0, '儲存後清掉暫存');
 });
+
+test('personal 客戶設定 permission tree mirrors the admin department:/group: rules and hides test units', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const line = prefix => html.split('\n').find(row => row.startsWith(prefix));
+  const sources = [
+    line('const PERSONAL_CUSTOMER_HIDDEN_UNIT='), line('const isHiddenCustomerRule='), line('const PERSONAL_CUSTOMER_FLAT_DEPARTMENTS='),
+    pick('normalizeDesignGroup'), pick('personalCustomerOwnerTree')
+  ];
+  assert.ok(sources.every(Boolean), 'could not locate the permission tree helpers');
+  const settings = [
+    { '帳號': 'livia.chu@emctaipei.com', '部門': '企劃部', '組別': '', '顯示名': '朱祖翎' },
+    { '帳號': 'machi.chen@emctaipei.com', '部門': '設計部', '組別': '管理者', '顯示名': 'Machi' },
+    { '帳號': 'video@emctaipei.com', '部門': '其他部', '組別': '影音', '顯示名': 'Video' },
+    { '帳號': 'pm1@emctaipei.com', '部門': '專案部', '組別': 'Odin組', '顯示名': 'PM1' },
+    { '帳號': 'pm2@emctaipei.com', '部門': '凱曜專案部', '組別': 'Odin組', '顯示名': 'PM2' },
+    { '帳號': 'tester@emctaipei.com', '部門': '測試員', '組別': '影音', '顯示名': 'Tester' },
+    { '帳號': 'gone@emctaipei.com', '部門': '企劃部', '組別': '', '顯示名': '離職' }
+  ];
+  const tree = new Function('settings', `
+    const githubJsonDatabaseCache = { tables: { '設定': { rows: settings }, '帳號權限': { rows: [{ '帳號': 'gone@emctaipei.com', '狀態': '停用' }] } } };
+    const canonicalAccountClient = value => String(value || '').trim().toLowerCase();
+    ${sources.join('\n')}
+    return personalCustomerOwnerTree;
+  `)(settings)(['department:測試員', 'department:企劃部', 'group:Ann組']);
+  const shape = node => ({ label: node.label, rule: node.rule, members: node.members.map(m => m.account), children: node.children.map(shape) });
+  // 企劃部、設計部固定排最前面；其餘依中文排序（各環境的排序結果不同，這裡不比順序）。
+  assert.deepEqual(tree.slice(0, 2).map(node => node.label), ['企劃部', '設計部']);
+  const byLabel = (a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
+  assert.deepEqual(tree.map(shape).sort(byLabel), [
+    { label: '企劃部', rule: 'department:企劃部', members: ['livia.chu@emctaipei.com'], children: [] },
+    // 平面／影音組別的人一律算設計部（同後端 matchesCustomerEditRule）。
+    { label: '設計部', rule: 'department:設計部', members: ['machi.chen@emctaipei.com', 'video@emctaipei.com'], children: [] },
+    // 名單裡有、但目前沒有成員的規則也要列出，否則存檔會被拿掉；測試員不顯示。
+    { label: 'Ann組', rule: 'group:Ann組', members: [], children: [] },
+    { label: '凱曜專案部', rule: 'department:凱曜專案部', members: [], children: [{ label: 'Odin組', rule: 'group:Odin組', members: ['pm2@emctaipei.com'], children: [] }] },
+    { label: '專案部', rule: 'department:專案部', members: [], children: [{ label: 'Odin組', rule: 'group:Odin組', members: ['pm1@emctaipei.com'], children: [] }] }
+  ].sort(byLabel));
+
+  // 「全選」對應規則、切換時同名規則一起同步、隱藏的測試規則存檔時保留，以及「各組」字樣不再出現。
+  assert.match(html, /ownerBlock\.querySelectorAll\('\[data-personal-customer-rule\]'\)\.forEach\(other=>\{if\(other\.dataset\.personalCustomerRule===input\.dataset\.personalCustomerRule\)/);
+  assert.match(html, /\.\.\.stored\.rules\.filter\(isHiddenCustomerRule\),/);
+  assert.match(html, /if\(!sameCustomerSet\(draft\.rules,stored\.rules\)\)payload\.rules=draft\.rules;/);
+  assert.match(html, /const label=contact\.subgroup\|\|contact\.group\|\|'其他';/);
+});

@@ -576,6 +576,9 @@ function gmailAttachmentDataUrl(mimeType: string, base64UrlData: string): string
   return `data:${mimeType || 'image/png'};base64,${padded}`;
 }
 
+const isCustomerUnitRule = (rule: string): boolean => /^(?:department|group):.+$/i.test(rule);
+const customerRuleTarget = (rule: string): string => text(rule.slice(rule.indexOf(':') + 1));
+
 /** 從單一標頭值（可能是逗號分隔的多個「顯示名 <email>」或純 email）擷取出所有 email，一律轉小寫方便比對。 */
 function extractEmailAddressesFromHeader(value: string): string[] {
   return (value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []).map(email => email.toLowerCase());
@@ -2362,9 +2365,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * - 喜愛設定：前台填單選到這個客戶別時自動帶入的設計負責人
    *
    * 授權刻意跟案件層級同一套規則（matchesCustomerEditRule）：目前就對這個客戶別有權限的人才能改。
-   * 兩個保護：後台設定的 department:／group: 動態規則原封不動保留（這個畫面只處理個別人員，不讓人
-   * 從前台把整個部門的權限砍掉），以及一定會把自己留在名單裡——否則有人手滑取消自己之後，連這個
-   * 設定畫面都再也打不開，只能回頭找管理者。
+   * 權限名單分兩部分：`rules`（department:／group: 動態規則，前台部門／組別的「全選」）與 `owners`
+   * （個別帳號），各自沒帶就維持原狀。測試用單位（測試員／測試組）前台不顯示，既有規則一律保留。
+   * 權限有任何變動時一定會把自己留在名單裡——否則有人手滑取消自己之後，連這個設定畫面都再也打不開。
    * ---------------------------------------------------------------------------------------- */
   private async saveCustomerSettings(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
@@ -2385,10 +2388,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const designerNames = new Set(settingsRows.filter(item => isDesignerSettingsRow(item)).map(item => text(item['名字'])));
     const self = canonicalAccount(current.account || current.user);
 
-    const owners = unique([
-      ...(Array.isArray(payload.owners) ? payload.owners : []).map(canonicalAccount).filter(account => account && knownAccounts.has(account)),
-      self
+    const requestedOwners = (Array.isArray(payload.owners) ? payload.owners : []).map(canonicalAccount).filter(account => account && knownAccounts.has(account));
+    const knownUnits = new Set([
+      ...settingsRows.flatMap(item => [text(item['部門']), text(item['組別'])]),
+      ...(database.tables['組織選項']?.rows || []).map(item => text(item['名稱'])),
+      ...existingRules.filter(isCustomerUnitRule).map(customerRuleTarget)
     ].filter(Boolean));
+    const requestedRules = unique((Array.isArray(payload.rules) ? payload.rules : []).map(text).filter(Boolean));
+    for (const rule of requestedRules) {
+      if (!isCustomerUnitRule(rule) || !knownUnits.has(customerRuleTarget(rule))) throw new Error(`權限規則「${rule}」不是有效的部門或組別`);
+    }
     const mails = (Array.isArray(payload.mails) ? payload.mails : []).map(text).filter(Boolean);
     for (const entry of mails) {
       if (extractEmailAddressesFromHeader(entry).length !== 1) throw new Error(`預設信箱「${entry}」不是有效的 Email`);
@@ -2403,13 +2412,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!row) throw new Error(`找不到客戶別「${name}」`);
       let changed = false;
       const apply = (header: string, value: string): void => { if (text(row[header]) !== value) { row[header] = value; changed = true; } };
-      if ('owners' in payload) {
-        const keptRules = accessList(row['專案負責人']).filter(rule => /^(?:department|group):/i.test(rule));
-        apply('專案負責人', JSON.stringify(unique([...keptRules, ...owners])));
-        // 「部門組別」是前台可見範圍：個別人員要跟著權限名單一起走，否則剛被授權的人在列表上根本
-        // 看不到這個客戶別的案件，拿到權限也沒有意義。部門／組別層級的勾選同樣原封不動保留。
-        const keptUnits = accessList(row['部門組別']).filter(unit => !unit.includes('@'));
-        apply('部門組別', JSON.stringify(unique([...keptUnits, ...owners])));
+      if ('owners' in payload || 'rules' in payload) {
+        const currentList = accessList(row['專案負責人']);
+        const currentRules = currentList.filter(isCustomerUnitRule);
+        const rules = 'rules' in payload
+          ? unique([...currentRules.filter(rule => /測試/.test(customerRuleTarget(rule))), ...requestedRules])
+          : currentRules;
+        const owners = unique([...('owners' in payload ? requestedOwners : currentList.filter(rule => !isCustomerUnitRule(rule)).map(canonicalAccount)), self].filter(Boolean));
+        apply('專案負責人', JSON.stringify([...rules, ...owners]));
+        // 「部門組別」是前台可見範圍：個別人員要跟著權限名單一起走，否則剛被授權的人在列表上根本看不到
+        // 這個客戶別的案件。新加入的部門／組別規則也補進可見範圍；取消規則時不動可見範圍——例如設計部
+        // 即使沒有編輯權限，仍然需要看得到案件，可見範圍請到資料庫後台調整。
+        const currentUnits = accessList(row['部門組別']);
+        const keptUnits = currentUnits.filter(unit => !unit.includes('@'));
+        const addedUnits = rules.filter(rule => !currentRules.includes(rule)).map(customerRuleTarget);
+        apply('部門組別', JSON.stringify(unique([...keptUnits, ...addedUnits, ...owners])));
       }
       if ('mails' in payload) apply('預設信箱', JSON.stringify(mails));
       if ('designers' in payload) apply('設計負責人', JSON.stringify(designers));
