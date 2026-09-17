@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5403,
+  "revision": 5404,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-17T08:20:54.522Z",
+  "updatedAt": "2026-09-17T08:20:59.401Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1459,7 +1459,7 @@
         {"案件編號":"26090138","修改次數":"0","建立日期":"2026/09/17 15:02:49","修改日期":"2026/09/17 15:02:49","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 15:02:49","圖片連結":"[{\"fileName\":\"260916_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商_vo2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1vO3-igeLO_1saDl6t1wUpol_OkTDWBAV=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 15:03:25"},
         {"案件編號":"26090139","修改次數":"0","建立日期":"2026/09/17 15:11:00","修改日期":"2026/09/17 15:11:00","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 15:11:00","圖片連結":"[{\"fileName\":\"260916_Liberty 5 Pro_抽獎貼文.png\",\"url\":\"https://lh3.googleusercontent.com/d/13-RVu22wwIaHxjk5pcCHJW_Tpn6rGMDi=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 15:11:00"},
         {"案件編號":"26090137","修改次數":"0","建立日期":"2026/09/17 15:24:01","修改日期":"2026/09/17 15:24:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 15:24:01","圖片連結":"[{\"fileName\":\"260917_九月CPAS廣告素材_ROMOP_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1E_qOQllDXF20CFhv5W_pFG8HVOHna_3V=w1600\"},{\"fileName\":\"260917_新素材_ROMO_便當影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1dXmcc9akROeFGC32--kCHV2DrHMYA4UQ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 15:24:01"},
-        {"案件編號":"26090118","修改次數":"1","建立日期":"2026/09/17 16:01:07","修改日期":"2026-09-17","修改內容":"不好意思這兩支各有一些地方需調整，第一支是小改文字，\n第二支是要調整右邊晶片圖，客戶希望調整為中文版，並維持原本分區亮起效果\n\nhttps://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\n\n\n再麻煩您了！","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"DX9600Pro_AI_architecture_V2.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1oWUKEDwpNXRDVBedVd5C30ypCsPU4BO6=w1600\"},{\"fileName\":\"DX9600Pro_Infographic.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1IdRFHHqHY904V3VHQ72ja_n26FrAKpN4=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 16:20:45"}
+        {"案件編號":"26090118","修改次數":"1","建立日期":"2026/09/17 16:01:07","修改日期":"2026-09-17","修改內容":"不好意思這兩支各有一些地方需調整，第一支是小改文字，\n第二支是要調整右邊晶片圖，客戶希望調整為中文版，並維持原本分區亮起效果\n\nhttps://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\n\n\n再麻煩您了！","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/1yXqL9K14BrtcWwwkbGLRLjtXe_zwgM0xn-SHv9HmJpA/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"2026/09/17 16:20:59","待修改圖片":"","圖片連結":"[{\"fileName\":\"DX9600Pro_AI_architecture_V2.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1oWUKEDwpNXRDVBedVd5C30ypCsPU4BO6=w1600\"},{\"fileName\":\"DX9600Pro_Infographic.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1IdRFHHqHY904V3VHQ72ja_n26FrAKpN4=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 16:20:45"}
       ]
     },
     "補充資料連結": {
