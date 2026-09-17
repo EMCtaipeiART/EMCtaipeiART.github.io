@@ -7573,9 +7573,13 @@ function normalizeSystemAnnouncement(row={}){
     updatedAt:String(row.updatedAt??row['更新時間']??'').trim()
   };
 }
+function announcementDateKey(value){const match=String(value??'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})(?:\D+(\d{1,2}):(\d{2}))?/);if(!match)return '';const [,year,month,day,hour='0',minute='0']=match;return [year,month.padStart(2,'0'),day.padStart(2,'0'),hour.padStart(2,'0'),minute].join('')}
+function compareAnnouncementVersions(left,right){const parse=value=>{const match=String(value??'').match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);return match?[Number(match[1]),match[2]?Number(`0.${match[2]}`):0,Number(match[3]||0)]:[0,0,0]};const a=parse(left),b=parse(right);for(let index=0;index<a.length;index+=1){if(a[index]!==b[index])return a[index]-b[index]}return 0}
+/** 公告新舊：先比發布時間，再把版本號小數點後當小數比（v4.8 比 v4.72 新）；與 backend/schema.mjs 同一套規則。 */
+function compareSystemAnnouncements(left,right){const a=announcementDateKey(left?.['發布時間']),b=announcementDateKey(right?.['發布時間']);return (a&&b?a.localeCompare(b):0)||compareAnnouncementVersions(left?.['公告版本'],right?.['公告版本'])||a.localeCompare(b)}
 function systemAnnouncementFromDatabase(database){
   const rows=(database?.tables?.['系統公告欄']?.rows||[]).filter(row=>/^(?:啟用|發布|公開|v|true|1|yes)$/i.test(String(row?.['是否啟用']||'').trim())&&String(row?.['公告內容']||'').trim());
-  rows.sort((left,right)=>String(left['公告版本']||'').localeCompare(String(right['公告版本']||''),'zh-Hant',{numeric:true})||String(left['發布時間']||'').localeCompare(String(right['發布時間']||''),'zh-Hant'));
+  rows.sort(compareSystemAnnouncements);
   return rows.length?normalizeSystemAnnouncement(rows.at(-1)):null;
 }
 function systemAnnouncementInlineMarkdown(value){

@@ -217,7 +217,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 12:20 Asia/Taipei（最新）— 修正進站卡頓
+### 2026-09-17 12:50 Asia/Taipei（最新）— 系統公告排序：最新的在最上面（v4.8 比 v4.72 新）
+
+- 修改目的：使用者發現資料庫後台「系統公告欄」中 9/17 的 v4.8 公告排在第三。
+- 成因：後台用 `localeCompare(...,{numeric:true})` 比版本號，小數點後被當整數比（72 > 8），排序變成 v4.72、v4.71、v4.8、v4.7。前台 `systemAnnouncementFromDatabase()` 與後端共用的 `latestSystemAnnouncement()` 也是同一種比法（目前只有 v4.8 啟用，所以尚未造成顯示錯誤）。
+- 影響檔案：`backend/schema.mjs`、`index.html`、`json_database_admin.html`、`backend/test/backend.test.mjs`。
+- 影響功能：新增 `announcementDateKey`／`compareAnnouncementVersions`／`compareSystemAnnouncements`（三處同一套規則）：兩筆都有發布時間時先比日期（容忍斜線、未補零、含時間），再比版本號（小數點後當小數，v4.8 > v4.72；v4.7 = v4.70）。後台列表改為新到舊；前台與 Worker 取「最新啟用公告」也用同一規則。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 142/142（新增排序測試，並直接抽出前台與後台的函式驗證）；Worker `npx tsc --noEmit`、`npx vitest run` 80/80；兩個 HTML 內嵌腳本語法檢查通過。
+- 部署狀態：推送 main；Worker `npx wrangler deploy`。
+
+### 2026-09-17 12:20 Asia/Taipei — 修正進站卡頓
 
 - 修改目的：使用者反映進站有點卡。
 - 成因（依影響排序）：

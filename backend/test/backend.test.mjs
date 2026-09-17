@@ -4616,3 +4616,34 @@ test('進站只抓頭像縮圖、海報點開才下載', async () => {
   assert.match(html, /poster-image" data-poster-url="\$\{esc\(poster\)\}" alt=/, '海報 img 不帶 src');
   assert.match(html, /if\(posterImage&&!posterImage\.getAttribute\('src'\)\)posterImage\.src=posterImage\.dataset\.posterUrl\|\|'';/);
 });
+
+test('系統公告：最新的在最上面，v4.8 比 v4.72 新（版本號小數點後當小數比）', async () => {
+  const { latestSystemAnnouncement, compareSystemAnnouncements, compareAnnouncementVersions } = await import('../../backend/schema.mjs');
+  assert.ok(compareAnnouncementVersions('v4.8', 'v4.72') > 0);
+  assert.ok(compareAnnouncementVersions('v4.72', 'v4.71') > 0);
+  assert.ok(compareAnnouncementVersions('v5.0', 'v4.9') > 0);
+  assert.equal(compareAnnouncementVersions('v4.7', 'v4.70'), 0);
+  const rows = [
+    { '公告版本': 'v4.7', '發布時間': '2026-08-20', '是否啟用': '啟用', '公告內容': 'a' },
+    { '公告版本': 'v4.71', '發布時間': '2026-09-03', '是否啟用': '啟用', '公告內容': 'b' },
+    { '公告版本': 'v4.72', '發布時間': '2026-09-10', '是否啟用': '啟用', '公告內容': 'c' },
+    { '公告版本': 'v4.8', '發布時間': '2026-09-17', '是否啟用': '啟用', '公告內容': 'd' }
+  ];
+  assert.deepEqual([...rows].sort((a, b) => compareSystemAnnouncements(b, a)).map(row => row['公告版本']), ['v4.8', 'v4.72', 'v4.71', 'v4.7']);
+  assert.equal(latestSystemAnnouncement({ tables: { '系統公告欄': { rows } } })['公告版本'], 'v4.8');
+  // 日期格式不一致（斜線、未補零、含時間）也要能正確比較。
+  assert.ok(compareSystemAnnouncements({ '發布時間': '2026/9/17 08:00' }, { '發布時間': '2026-09-10' }) > 0);
+
+  // 前台與資料庫後台使用同一套規則。
+  const index = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  assert.match(index, /rows\.sort\(compareSystemAnnouncements\);/);
+  assert.match(admin, /const sorted=\[\.\.\.rows\]\.sort\(\(left,right\)=>compareSystemAnnouncements\(right,left\)\);/);
+  for (const html of [index, admin]) {
+    const helpers = ['announcementDateKey', 'compareAnnouncementVersions', 'compareSystemAnnouncements']
+      .map(name => html.split('\n').map(line => line.trim()).find(line => line.startsWith(`function ${name}(`)));
+    assert.ok(helpers.every(Boolean));
+    const compare = new Function(`${helpers.join('\n')}\nreturn compareSystemAnnouncements;`)();
+    assert.deepEqual([...rows].sort((a, b) => compare(b, a)).map(row => row['公告版本']), ['v4.8', 'v4.72', 'v4.71', 'v4.7']);
+  }
+});

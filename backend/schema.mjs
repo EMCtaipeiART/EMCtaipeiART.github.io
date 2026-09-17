@@ -249,6 +249,36 @@ export function systemAnnouncementReadRecords(rowOrValue) {
   return records;
 }
 
+/**
+ * 公告的新舊順序：先比「發布時間」，同一天再比「公告版本」。版本號的小數點後面要當小數比
+ * （v4.8 比 v4.72 新）——以前逐段當整數比，72 大於 8，v4.72 被當成比 v4.8 新，後台列表也把
+ * 9/17 發布的 v4.8 排到第三。回傳負數表示 left 比較舊。
+ */
+export function announcementDateKey(value) {
+  const match = String(value ?? '').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})(?:\D+(\d{1,2}):(\d{2}))?/);
+  if (!match) return '';
+  const [, year, month, day, hour = '0', minute = '0'] = match;
+  return [year, month.padStart(2, '0'), day.padStart(2, '0'), hour.padStart(2, '0'), minute].join('');
+}
+export function compareAnnouncementVersions(left, right) {
+  const parse = value => {
+    const match = String(value ?? '').match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+    return match ? [Number(match[1]), match[2] ? Number(`0.${match[2]}`) : 0, Number(match[3] || 0)] : [0, 0, 0];
+  };
+  const a = parse(left), b = parse(right);
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  return 0;
+}
+export function compareSystemAnnouncements(left, right) {
+  // 兩筆都有發布時間才先比日期；有一筆沒填就直接看版本號。
+  const a = announcementDateKey(left?.['發布時間']), b = announcementDateKey(right?.['發布時間']);
+  return (a && b ? a.localeCompare(b) : 0)
+    || compareAnnouncementVersions(left?.['公告版本'], right?.['公告版本'])
+    || a.localeCompare(b);
+}
+
 export function latestSystemAnnouncement(database) {
   const rows = database?.tables?.['系統公告欄']?.rows || [];
   const enabled = rows.map((row, index) => ({ row, index })).filter(({ row }) => {
@@ -257,15 +287,7 @@ export function latestSystemAnnouncement(database) {
       && String(row?.['公告版本'] ?? '').trim()
       && String(row?.['公告內容'] ?? '').trim();
   });
-  const versionParts = value => String(value ?? '').match(/\d+/g)?.map(Number) || [];
-  enabled.sort((left, right) => {
-    const a = versionParts(left.row['公告版本']), b = versionParts(right.row['公告版本']);
-    for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-      const difference = (a[index] || 0) - (b[index] || 0);
-      if (difference) return difference;
-    }
-    return String(left.row['發布時間'] || '').localeCompare(String(right.row['發布時間'] || ''), 'zh-Hant') || left.index - right.index;
-  });
+  enabled.sort((left, right) => compareSystemAnnouncements(left.row, right.row) || left.index - right.index);
   return enabled.at(-1)?.row || null;
 }
 
