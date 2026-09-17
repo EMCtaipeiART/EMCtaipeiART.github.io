@@ -10,3 +10,6 @@ worker/dist/
 .DS_Store
 scripts/nas_design_image_watcher.state/
 scripts/nas_design_image_watcher.secrets.json
+
+# 獨立 repo：EMCtaipeiART/emc-ai-stage-classifier
+EMC_AI_階段判定器_落地包/
