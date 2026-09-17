@@ -837,3 +837,23 @@ test('Google 錯誤頁但 Worker 已記錄圖片時直接視為成功，不再�
   assert.deepEqual([...counts], [['a.png', 1], ['b.png', 1]]);
   assert.equal(await lib.workerRoundImageCounts({}, '26090136', 0, { fetchImpl: async () => { throw new Error('offline'); } }), null);
 });
+
+test('Apps Script 回 302 時先向 Worker 確認，確認到就不去等結果頁', async () => {
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+  const requests = [];
+  const redirect = new Response(null, { status: 302, headers: { location: 'https://echo.example/result' } });
+  const fetchImpl = async (url, init = {}) => {
+    requests.push({ url, redirect: init.redirect });
+    if (url === 'https://x') return redirect.clone();
+    return Response.json({ success: false, message: '服務金鑰不正確，拒絕上傳' });
+  };
+  const confirmed = await lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl, confirm: async () => ({ success: true, confirmedByWorker: true }) });
+  assert.deepEqual(confirmed, { success: true, confirmedByWorker: true });
+  assert.deepEqual(requests, [{ url: 'https://x', redirect: 'manual' }], '確認成功就不去取結果頁');
+
+  // 確認不到：照舊去取結果頁，拿到程式回的錯誤訊息。
+  requests.length = 0;
+  const denied = await lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl, confirm: async () => null });
+  assert.deepEqual(denied, { success: false, message: '服務金鑰不正確，拒絕上傳' });
+  assert.deepEqual(requests.map(item => item.url), ['https://x', 'https://echo.example/result']);
+});

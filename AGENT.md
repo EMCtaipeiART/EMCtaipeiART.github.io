@@ -217,7 +217,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 10:30 Asia/Taipei（最新）— 設計師回覆信沒有帶入 NAS 備份圖（案件 26090136）
+### 2026-09-17 11:00 Asia/Taipei（最新）— 加快 NAS 備份上傳（不再等 Google 結果頁）
+
+- 修改目的：使用者反映設計師回覆的備份圖片上傳偏慢。
+- 量測：Pages db.json 約 0.9 秒、Worker 修改紀錄約 0.6 秒；Apps Script 往返每次約 8～33 秒且多半拿到錯誤頁。拆開量測後，POST 約 1 秒就回 302（doPost 已執行完），慢的是去 Google 取回結果頁。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：`postAppsScriptJsonWithRetry()` 改用 `redirect: 'manual'`，收到 302 立即以 Worker 修改紀錄確認每個檔名已寫入，確認到就直接回傳成功；確認不到才去取結果頁（例如金鑰錯誤仍能拿到錯誤訊息）。`fetchDatabaseWithCase()` 的 Pages 與 Worker 讀取改為並行。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 139/139（新增「302 先確認、確認到不取結果頁／確認不到照舊取」測試）；正式 Apps Script 實測收到 302 約 0.95～1.3 秒（原本 8～33 秒）。未用真實圖片做完整上傳（會寫入正式資料），請使用者實際回覆一次驗收。
+- 部署狀態：推送 main；本機選擇器已重啟；其他設計師電腦需重跑安裝檔。
+
+### 2026-09-17 10:30 Asia/Taipei — 設計師回覆信沒有帶入 NAS 備份圖（案件 26090136）
 
 - 修改目的：使用者回報案件 26090136 的設計師回覆信沒有帶入指定資料夾的備份圖，選擇器顯示「資料庫查不到這個案件編號，僅登記路徑，未嘗試備份」。
 - 成因（兩個）：

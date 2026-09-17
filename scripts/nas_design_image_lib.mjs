@@ -585,11 +585,14 @@ export const DEFAULT_WORKER_API_URL = 'https://machi-design-api.machi-chen.worke
  * 讀不到就維持原本結果（呼叫端會照舊回報查不到案件），不讓備援本身變成新的失敗點。
  */
 export async function fetchDatabaseWithCase(config, caseId, { fetchImpl = fetch } = {}) {
-  const pagesData = await fetchDatabase(config.dbJsonUrl, { fetchImpl });
   const id = String(caseId || '').trim();
-  if (!/^\d{8}$/.test(id)) return pagesData;
+  if (!/^\d{8}$/.test(id)) return fetchDatabase(config.dbJsonUrl, { fetchImpl });
   // 這個案件的修改紀錄也用 Worker 的即時版本：輪次判斷與「圖片是否已經寫入」都靠它，Pages 落後會判斷錯。
-  const records = await fetchWorkerModificationRecords(config, id, { fetchImpl });
+  // 兩邊同時抓，不必排隊等。
+  const [pagesData, records] = await Promise.all([
+    fetchDatabase(config.dbJsonUrl, { fetchImpl }),
+    fetchWorkerModificationRecords(config, id, { fetchImpl })
+  ]);
   const dbData = records ? {
     ...pagesData,
     tables: {
@@ -1029,7 +1032,18 @@ export async function postAppsScriptJsonWithRetry(url, body, { fetchImpl = fetch
     if (attempt) await wait(delaysMs[attempt - 1]);
     let response;
     try {
-      response = await fetchImpl(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      // 不自動跟隨轉址：Apps Script 要等 doPost 執行完才會回 302，這時圖片早就寫進資料庫了；
+      // 真正慢的是去 Google 取回結果頁（實測常要 30 秒，還常常失敗）。先用 confirm() 向 Worker
+      // 確認，確認到了就不必等結果頁，確認不到才照舊去取結果（例如金鑰錯誤要拿到錯誤訊息）。
+      response = await fetchImpl(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, redirect: 'manual' });
+      const location = response.headers?.get?.('location');
+      if (response.status >= 300 && response.status < 400 && location) {
+        if (confirm) {
+          const confirmed = await confirm().catch(() => null);
+          if (confirmed) return confirmed;
+        }
+        response = await fetchImpl(location);
+      }
     } catch (error) {
       lastError = new Error(`上傳連線失敗：${error.message}`);
       continue;
