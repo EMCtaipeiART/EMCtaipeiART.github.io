@@ -7,7 +7,7 @@ import {
   accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
   hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
-  designerRowsForGroup, isDesignerSettingsRow,
+  designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
   normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue,
@@ -2353,6 +2353,73 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
   }
 
+  /* ------------------------------------------------------------------------------------------
+   * 客戶設定（前台「個人設定 › 客戶設定」）
+   *
+   * 讓實際負責這個客戶的人自己維護三份名單，不必每次都找管理者進資料庫後台改「客戶別」：
+   * - 權限人員：誰能編輯／刪除／發信這個客戶別的案件
+   * - 預設信箱：填完案件跳出的信件編輯器要帶入的副本名單
+   * - 喜愛設定：前台填單選到這個客戶別時自動帶入的設計負責人
+   *
+   * 授權刻意跟案件層級同一套規則（matchesCustomerEditRule）：目前就對這個客戶別有權限的人才能改。
+   * 兩個保護：後台設定的 department:／group: 動態規則原封不動保留（這個畫面只處理個別人員，不讓人
+   * 從前台把整個部門的權限砍掉），以及一定會把自己留在名單裡——否則有人手滑取消自己之後，連這個
+   * 設定畫面都再也打不開，只能回頭找管理者。
+   * ---------------------------------------------------------------------------------------- */
+  private async saveCustomerSettings(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const name = text(payload.customer || payload['客戶別']);
+    if (!name) throw new Error('請選擇客戶別');
+    const existing = database.tables['客戶別']?.rows.find(item => text(item['客戶別']) === name);
+    if (!existing) throw new Error(`找不到客戶別「${name}」`);
+    const existingRules = accessList(existing['專案負責人']);
+    // 還沒設定過名單的客戶別本來就不鎖（見 hasRowCapability），這裡沿用同一個判斷：有編輯權限就能設定。
+    const permitted = isManager(database, current)
+      || (existingRules.length
+        ? existingRules.some(rule => matchesCustomerEditRule(database, current, rule))
+        : hasCapability(database, current, 'request.edit'));
+    if (!permitted) throw new Error(`你沒有客戶別「${name}」的權限，無法調整設定`);
+
+    const settingsRows = database.tables['設定'].rows;
+    const knownAccounts = new Set(settingsRows.map(item => canonicalAccount(item['帳號'])).filter(Boolean));
+    const designerNames = new Set(settingsRows.filter(item => isDesignerSettingsRow(item)).map(item => text(item['名字'])));
+    const self = canonicalAccount(current.account || current.user);
+
+    const owners = unique([
+      ...(Array.isArray(payload.owners) ? payload.owners : []).map(canonicalAccount).filter(account => account && knownAccounts.has(account)),
+      self
+    ].filter(Boolean));
+    const mails = (Array.isArray(payload.mails) ? payload.mails : []).map(text).filter(Boolean);
+    for (const entry of mails) {
+      if (extractEmailAddressesFromHeader(entry).length !== 1) throw new Error(`預設信箱「${entry}」不是有效的 Email`);
+    }
+    const designers = unique((Array.isArray(payload.designers) ? payload.designers : []).map(text).filter(Boolean));
+    for (const designer of designers) {
+      if (!designerNames.has(designer)) throw new Error(`「${designer}」不是啟用中的設計師，無法設定成喜愛設定`);
+    }
+
+    return this.mutate('saveCustomerSettings', current, draft => {
+      const row = draft.tables['客戶別'].rows.find(item => text(item['客戶別']) === name);
+      if (!row) throw new Error(`找不到客戶別「${name}」`);
+      let changed = false;
+      const apply = (header: string, value: string): void => { if (text(row[header]) !== value) { row[header] = value; changed = true; } };
+      if ('owners' in payload) {
+        const keptRules = accessList(row['專案負責人']).filter(rule => /^(?:department|group):/i.test(rule));
+        apply('專案負責人', JSON.stringify(unique([...keptRules, ...owners])));
+        // 「部門組別」是前台可見範圍：個別人員要跟著權限名單一起走，否則剛被授權的人在列表上根本
+        // 看不到這個客戶別的案件，拿到權限也沒有意義。部門／組別層級的勾選同樣原封不動保留。
+        const keptUnits = accessList(row['部門組別']).filter(unit => !unit.includes('@'));
+        apply('部門組別', JSON.stringify(unique([...keptUnits, ...owners])));
+      }
+      if ('mails' in payload) apply('預設信箱', JSON.stringify(mails));
+      if ('designers' in payload) apply('設計負責人', JSON.stringify(designers));
+      if (!changed) return { result: { ok: true, action: 'saveCustomerSettings', customer: row, unchanged: true }, changed: false };
+      row['更新時間'] = nowTaipei();
+      row['更新者'] = text(current.user || current.account);
+      return { result: { ok: true, action: 'saveCustomerSettings', customer: row }, changedTables: ['客戶別'] };
+    });
+  }
+
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
@@ -2420,6 +2487,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'updateScheduledMail') return await this.updateScheduledMail(payload, database, session);
       if (action === 'cancelScheduledMail') return await this.cancelScheduledMail(payload, database, session);
       if (action === 'addCustomer') return await this.addCustomer(payload, database, session);
+      if (action === 'saveCustomerSettings') return await this.saveCustomerSettings(payload, database, session);
 
       if (action === 'list' || action === 'recent') {
         const year = text(payload.year);

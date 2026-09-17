@@ -2737,6 +2737,65 @@ describe('Machi Design API Worker', () => {
       // 白名單一旦有值就取代一般角色權限（見 hasRowCapability），別組即使角色有 request.edit 也進不來。
       expect(hasRowCapability(database, otherGroup, 'request.edit', caseRow)).toBe(false);
     });
+
+    describe('saveCustomerSettings（個人設定 › 客戶設定）', () => {
+      async function seedPlanners(): Promise<string> {
+        await seedStaff('livia.chu@emctaipei.com', '企劃部', '', '朱祖翎');
+        await seedStaff('allen.li@emctaipei.com', '企劃部', '', '李明庭');
+        await seedStaff('anna.hsu@emctaipei.com', '設計部', '平面', 'Anna');
+        await seedStaff('amber.tian@emctaipei.com', '設計部', '平面', 'Amber');
+        await seedAccountPermission('livia.chu@emctaipei.com', '自訂', ['request.create']);
+        await seedCustomerOwner('丹士特', 'department:設計部');
+        await seedCustomerOwner('丹士特', 'group:Celine組');
+        await seedCustomerOwner('丹士特', 'livia.chu@emctaipei.com');
+        return seedSession('livia.chu@emctaipei.com', '朱祖翎');
+      }
+
+      it('lets a customer owner grant another planner, set default CC and favourite designers, while keeping department:/group: rules and the caller', async () => {
+        const token = await seedPlanners();
+        mockGitHubCommit();
+        const saved = await api({
+          action: 'saveCustomerSettings', customer: '丹士特',
+          // 故意沒勾自己：後端仍要把自己留在名單，不然設定完就再也打不開這個畫面。
+          owners: ['allen.li@emctaipei.com', 'nobody@emctaipei.com'],
+          mails: ['Amber <amber.tian@emctaipei.com>', 'eric.fu@emctaipei.com'],
+          designers: ['Amber', 'Anna']
+        }, token);
+        expect(saved).toMatchObject({ ok: true, action: 'saveCustomerSettings' });
+        const row = await customerRow('丹士特');
+        expect(JSON.parse(String(row?.['專案負責人']))).toEqual([
+          'department:設計部', 'group:Celine組', 'allen.li@emctaipei.com', 'livia.chu@emctaipei.com'
+        ]);
+        // 被授權的人也要看得到這個客戶別的案件；不存在的帳號不會被寫進去。
+        expect(JSON.parse(String(row?.['部門組別']))).toEqual(['allen.li@emctaipei.com', 'livia.chu@emctaipei.com']);
+        expect(JSON.parse(String(row?.['預設信箱']))).toEqual(['Amber <amber.tian@emctaipei.com>', 'eric.fu@emctaipei.com']);
+        expect(JSON.parse(String(row?.['設計負責人']))).toEqual(['Amber', 'Anna']);
+        expect(row?.['更新者']).toBe('朱祖翎');
+
+        const allenToken = await seedSession('allen.li@emctaipei.com', '李明庭');
+        const byAllen = await api({ action: 'saveCustomerSettings', customer: '丹士特', designers: ['Anna'] }, allenToken);
+        expect(byAllen).toMatchObject({ ok: true });
+        // 只帶 designers 時，其他名單原封不動。
+        const after = await customerRow('丹士特');
+        expect(JSON.parse(String(after?.['設計負責人']))).toEqual(['Anna']);
+        expect(JSON.parse(String(after?.['預設信箱']))).toEqual(['Amber <amber.tian@emctaipei.com>', 'eric.fu@emctaipei.com']);
+      });
+
+      it('rejects accounts without customer rights, unknown designers and malformed emails', async () => {
+        const token = await seedPlanners();
+        mockGitHubCommit();
+        await seedStaff('outsider@emctaipei.com', '管理部', '人資行政組', '外人');
+        const outsider = await seedSession('outsider@emctaipei.com', '外人');
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', designers: ['Anna'] }, outsider))
+          .toMatchObject({ ok: false, error: '你沒有客戶別「丹士特」的權限，無法調整設定' });
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', designers: ['Karl2'] }, token))
+          .toMatchObject({ ok: false });
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', mails: ['不是信箱'] }, token))
+          .toMatchObject({ ok: false });
+        expect(await api({ action: 'saveCustomerSettings', customer: '丹士特', designers: ['Anna'] }))
+          .toMatchObject({ ok: false });
+      });
+    });
   });
 
   it('refuses to create a 客戶別 as anonymous when the request carries a login token the Worker no longer recognises, but still allows a genuinely anonymous request', async () => {

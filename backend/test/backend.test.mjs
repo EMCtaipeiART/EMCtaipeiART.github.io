@@ -4451,3 +4451,74 @@ test('reply templates saved as formatted text are inserted as formatting, not as
   assert.match(html, /setGmailEditorTemplateContent\(replyEditor,`Hi \$\{recipientName\},\\n\\n`,generalReplyTemplate\)/);
   assert.match(html, /setGmailEditorTemplateContent\(editor,`Hi \$\{recipientName\},\\n\\n`,configuredTemplate\)/);
 });
+
+test('personal settings 客戶設定 lists only customers the account can manage and saves just the customers that changed', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 區塊放在個人設定裡，開啟時渲染、儲存時一併送出、切換客戶別會先暫存勾選。
+  assert.match(html, /<section class="personal-mail-templates personal-customer-settings" id="personalCustomerSettings" hidden>/);
+  assert.match(html, /renderPersonalCustomerSettings\(\);setPersonalSettingsStatus\(\);modal\.hidden=false;/);
+  assert.match(html, /const savedCustomers=await savePersonalCustomerSettings\(\);/);
+  assert.match(html, /\$\('#personalCustomerSelect'\)\?\.addEventListener\('change',event=>switchPersonalCustomer\(event\.target\.value\)\);/);
+
+  const pick = name => html.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const line = prefix => html.split('\n').find(row => row.startsWith(prefix));
+  const sources = [
+    line('const isCustomerGroupRule='), line('const sameCustomerSet='),
+    ...['personalCustomerNames', 'customerMailEntryEmail', 'personalCustomerStoredValues', 'personalCustomerValues', 'savePersonalCustomerSettings'].map(pick)
+  ];
+  assert.ok(sources.every(Boolean), 'could not locate the customer settings helpers');
+  const build = (rows, { admin = false } = {}) => new Function('rows', 'admin', `
+    const calls = [];
+    let customerDirectoryRows = rows;
+    const currentEditorAccount = 'livia.chu@emctaipei.com', currentEditor = '', currentEditorDepartment = '企劃部', currentEditorRawGroup = '', currentEditorToken = 'tok';
+    const designerOptions = ['Machi', 'Anna', 'Amber', 'Leona'];
+    const PERSONAL_CUSTOMER_DEFAULT_CC_EMAILS = ['machi.chen@emctaipei.com', 'eric.fu@emctaipei.com'];
+    const personalCustomerDrafts = new Map();
+    const isAdministrator = () => admin;
+    const personalCustomerSelf = () => 'livia.chu@emctaipei.com';
+    const capturePersonalCustomerDraft = () => {};
+    const extractEmail = value => String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i)?.[0] || '';
+    const designerRecipientByName = name => name === 'Leona' ? 'Leona <leona.chen@emctaipei.com>' : '';
+    const canonicalAccountClient = value => String(value || '').trim().toLowerCase();
+    const parseNameListValue = value => { try { const parsed = JSON.parse(value || '[]'); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
+    const customerDirectoryRowFor = name => customerDirectoryRows.find(row => row['客戶別'] === name) || null;
+    const sortedCustomerDirectoryRows = list => list;
+    const customerEditRuleMatches = (rule, account, department) => rule === 'department:' + department || rule === account;
+    const sheetApi = async (action, payload) => { calls.push({ action, payload }); return { ok: true, customer: { ...customerDirectoryRowFor(payload.customer), '設計負責人': JSON.stringify(payload.designers || []) } }; };
+    ${sources.join('\n')}
+    return { calls, drafts: personalCustomerDrafts, personalCustomerNames, personalCustomerStoredValues, savePersonalCustomerSettings };
+  `)(rows, admin);
+
+  const rows = [
+    { '客戶別': '丹士特', '專案負責人': JSON.stringify(['department:設計部', 'group:Celine組', 'livia.chu@emctaipei.com']), '設計負責人': JSON.stringify(['Karl', 'Anna']), '預設信箱': '' },
+    { '客戶別': 'Epson', '專案負責人': JSON.stringify(['allen.li@emctaipei.com']), '設計負責人': '[]', '預設信箱': JSON.stringify(['Leona', 'eric.fu@emctaipei.com']) },
+    { '客戶別': 'EMC', '專案負責人': JSON.stringify(['department:企劃部']), '設計負責人': '[]', '預設信箱': '[]' }
+  ];
+  const ui = build(rows);
+  // 只列出權限名單涵蓋自己的客戶別（個別帳號或所屬部門），管理者看得到全部。
+  assert.deepEqual(ui.personalCustomerNames(), ['丹士特', 'EMC']);
+  assert.deepEqual(build(rows, { admin: true }).personalCustomerNames(), ['丹士特', 'Epson', 'EMC']);
+
+  // 部門／組別規則與個別帳號分開；預設信箱沒設定過時比照後台帶預設名單；離職設計師（Karl）不列入。
+  assert.deepEqual(ui.personalCustomerStoredValues('丹士特'), {
+    rules: ['department:設計部', 'group:Celine組'],
+    owners: ['livia.chu@emctaipei.com'],
+    mails: ['machi.chen@emctaipei.com', 'eric.fu@emctaipei.com'],
+    designers: ['Anna']
+  });
+
+  // 沒有變動的客戶別不送出；有變動的只送變動的欄位。
+  ui.drafts.set('EMC', { ...ui.personalCustomerStoredValues('EMC'), owners: ['livia.chu@emctaipei.com'], mails: ['Machi <machi.chen@emctaipei.com>', 'eric.fu@emctaipei.com'] });
+  ui.drafts.set('丹士特', {
+    ...ui.personalCustomerStoredValues('丹士特'),
+    owners: ['livia.chu@emctaipei.com', 'allen.li@emctaipei.com'],
+    mails: ['Machi <machi.chen@emctaipei.com>', 'eric.fu@emctaipei.com'],
+    designers: ['Anna', 'Amber']
+  });
+  assert.equal(await ui.savePersonalCustomerSettings(), 1);
+  assert.deepEqual(ui.calls, [{
+    action: 'saveCustomerSettings',
+    payload: { customer: '丹士特', editorToken: 'tok', owners: ['livia.chu@emctaipei.com', 'allen.li@emctaipei.com'], designers: ['Anna', 'Amber'] }
+  }]);
+  assert.equal(ui.drafts.size, 0, '儲存後清掉暫存');
+});
