@@ -6742,6 +6742,22 @@
     html[data-theme="dark"] .mail-copy-field-head{color:#bdc1c6!important}
     html[data-theme="dark"] .mail-copy-fields textarea{background:#1b1d20!important;color:#f1f3f4!important;border-color:#454a4f!important}
     html[data-theme="dark"] .mail-copy-fields textarea:focus{outline-color:rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
+    .ai-beta-badge{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #b9a8ee;border-radius:6px;background:#f1edfc;color:#5b3fb8;font-size:10px;font-weight:800;line-height:16px;letter-spacing:.04em;vertical-align:middle}
+    html[data-theme="dark"] .ai-beta-badge{background:#2b2542;border-color:#5e4ea3;color:#c9bbff}
+    /* 階段選單改用可自訂下拉（Chrome／Edge），選項才能顯示 beta 圓角標籤；其他瀏覽器維持原生選單，顯示「Ai判斷 beta」文字。 */
+    @supports (appearance: base-select){
+      html body .request-card .form select[name="stage"],html body .request-card .form select[name="stage"]::picker(select){appearance:base-select!important}
+      html body .request-card .form select[name="stage"]::picker-icon{display:none}
+      html body .request-card .form select[name="stage"]::picker(select){border:1px solid #dfe5e1;border-radius:12px;background:#fff;box-shadow:0 14px 34px rgba(16,24,40,.14);padding:4px;margin-top:4px}
+      html body .request-card .form select[name="stage"] option{padding:7px 10px;border-radius:8px;font-size:13px;font-weight:650}
+      html body .request-card .form select[name="stage"] option:hover{background:#f3f6f4}
+      html body .request-card .form select[name="stage"] option:checked{background:#e7f6ef;color:#0b6e4a;font-weight:800}
+      html body .request-card .form select[name="stage"] option::checkmark{display:none}
+      html[data-theme="dark"] body .request-card .form select[name="stage"]::picker(select){background:#1b1c1f;border-color:#3a3d42}
+      html[data-theme="dark"] body .request-card .form select[name="stage"] option{color:#e9eaeb}
+      html[data-theme="dark"] body .request-card .form select[name="stage"] option:hover{background:#26282b}
+      html[data-theme="dark"] body .request-card .form select[name="stage"] option:checked{background:#173327;color:#7fe0b5}
+    }
   </style>
   <style>
     .gmail-thread-msg>summary{list-style:none;cursor:pointer}
@@ -7091,6 +7107,60 @@
     <p class="login-note personal-settings-status" id="personalSettingsStatus" role="status" aria-live="polite"></p>
     <div class="login-actions"><button type="button" class="secondary" id="personalSettingsCancel">取消</button><button type="submit">儲存</button></div>
   </form>
+</div>
+<div class="login-modal ai-stage-modal" id="aiStageModal" hidden>
+  <style>
+    #aiStageModal .ai-stage-card{width:min(620px,calc(100vw - 28px))!important;max-height:min(840px,calc(100dvh - 28px));overflow:auto;text-align:left}
+    #aiStageModal h3{display:flex;align-items:center;gap:8px;margin:0 0 4px}
+    #aiStageModal .ai-stage-sub{margin:0 0 14px;color:#66736d;font-size:13px;line-height:1.5}
+    #aiStageModal .ai-stage-drop{display:flex;align-items:center;gap:12px;border:1.5px dashed #9cc9b3;border-radius:14px;background:#f5fbf8;padding:16px;cursor:pointer;color:var(--green)}
+    #aiStageModal .ai-stage-drop.is-over{background:#e7f6ef;border-color:var(--green)}
+    #aiStageModal .ai-stage-drop b{display:block;color:#253530;font-size:14px}
+    #aiStageModal .ai-stage-drop small{display:block;color:#66736d;font-size:12px;margin-top:2px}
+    #aiStageModal .ai-stage-drop svg{width:26px;height:26px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8}
+    #aiStageModal .ai-stage-previews{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    #aiStageModal .ai-stage-previews div{position:relative}
+    #aiStageModal .ai-stage-previews img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}
+    #aiStageModal .ai-stage-previews button{position:absolute!important;right:-6px!important;top:-6px!important;width:22px!important;height:22px!important;min-width:0!important;min-height:0!important;padding:0!important;border-radius:50%!important;border:0!important;background:#1d2522!important;color:#fff!important;font-size:13px!important;line-height:22px!important;box-shadow:none!important}
+    #aiStageModal label.ai-stage-field{display:grid;gap:5px;margin-top:12px;font-size:13px;font-weight:800;color:#44534d}
+    #aiStageModal label.ai-stage-field input{min-height:38px;border-radius:10px;border:1px solid var(--line);padding:0 11px;font:inherit;font-size:13px}
+    #aiStageModal .ai-stage-error{margin:12px 0 0;border-radius:10px;background:#fff0f0;border:1px solid #f0c9c9;color:#a42929;padding:9px 11px;font-size:13px}
+    #aiStageModal .ai-stage-error[hidden]{display:none}
+    #aiStageModal .ai-stage-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+    #aiStageModal .ai-stage-actions button{min-height:38px;border-radius:10px;padding:0 16px;font-weight:800}
+    #aiStageModal .ai-stage-verdict{border-radius:14px;padding:14px 16px;margin-top:4px}
+    #aiStageModal .ai-stage-verdict.is-new{background:#e7f6ef;border:1px solid #b9e0cc;color:#0b6e4a}
+    #aiStageModal .ai-stage-verdict.is-rework{background:#f1edfc;border:1px solid #d8cff5;color:#5b3fb8}
+    #aiStageModal .ai-stage-verdict.is-unknown{background:#fff6e5;border:1px solid #efd9ac;color:#8a5a00}
+    #aiStageModal .ai-stage-verdict-head{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:19px;font-weight:900}
+    #aiStageModal .ai-stage-verdict-head small{font-size:12px;font-weight:800;background:rgba(255,255,255,.75);border-radius:999px;padding:3px 9px}
+    #aiStageModal .ai-stage-verdict p{margin:8px 0 0;color:#34413c;font-size:13px;line-height:1.6;white-space:pre-line}
+    #aiStageModal .ai-stage-detail{border-top:1px solid var(--line);margin-top:12px;padding-top:10px;font-size:13px;color:#4f5d57}
+    #aiStageModal .ai-stage-detail b{display:block;color:#253530;margin-bottom:5px}
+    #aiStageModal .ai-stage-tags{display:flex;flex-wrap:wrap;gap:6px}
+    #aiStageModal .ai-stage-tags span{border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fafbfa}
+    #aiStageModal .ai-stage-loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:34px 0;color:#4f5d57;font-weight:800}
+    #aiStageModal .ai-stage-spinner{width:20px;height:20px;border-radius:50%;border:3px solid #cfe4d8;border-top-color:var(--green);animation:aiStageSpin 1s linear infinite}
+    @keyframes aiStageSpin{to{transform:rotate(360deg)}}
+    #aiStageModal .ai-stage-fill{background:#fff!important;color:#253530!important;border:1px solid #cfd7d1!important;box-shadow:none!important}
+    #aiStageModal .ai-stage-fill.is-suggested{background:var(--green)!important;color:#fff!important;border-color:var(--green)!important}
+    #aiStageModal .ai-stage-link{background:none!important;border:0!important;box-shadow:none!important;color:#66736d!important;font-weight:700;padding:0 4px!important;margin-right:auto}
+    #aiStageModal .ai-stage-link:hover{color:var(--green)!important;text-decoration:underline}
+    html[data-theme="dark"] #aiStageModal .ai-stage-sub,html[data-theme="dark"] #aiStageModal .ai-stage-detail,html[data-theme="dark"] #aiStageModal .ai-stage-drop small{color:#b4b8bb}
+    html[data-theme="dark"] #aiStageModal .ai-stage-drop{background:#1b2420;border-color:#3d5c4d}
+    html[data-theme="dark"] #aiStageModal .ai-stage-drop b,html[data-theme="dark"] #aiStageModal .ai-stage-detail b,html[data-theme="dark"] #aiStageModal label.ai-stage-field{color:#e9eaeb}
+    html[data-theme="dark"] #aiStageModal label.ai-stage-field input{background:#242629;border-color:#494d51;color:#e9eaeb}
+    html[data-theme="dark"] #aiStageModal .ai-stage-tags span{background:#242629;border-color:#494d51}
+    html[data-theme="dark"] #aiStageModal .ai-stage-verdict p{color:#1f2a26}
+    html[data-theme="dark"] #aiStageModal .ai-stage-fill:not(.is-suggested){background:#242629!important;color:#e9eaeb!important;border-color:#494d51!important}
+    html[data-theme="dark"] #aiStageModal .ai-stage-link{color:#b4b8bb!important}
+  </style>
+  <div class="login-card ai-stage-card" role="dialog" aria-modal="true" aria-labelledby="aiStageTitle">
+    <button type="button" class="login-close ui-close-button" data-ai-stage-close aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
+    <h3 id="aiStageTitle">Ai 判斷階段<span class="ai-beta-badge">beta</span></h3>
+    <p class="ai-stage-sub">上傳需求單截圖（最準確），或貼上公開的 Google Slides，由 AI 判斷這個案件是「新製」還是「再製」。</p>
+    <div id="aiStageBody"></div>
+  </div>
 </div>
 <div class="login-modal designer-settings-modal" id="designerSettingsModal" hidden>
   <style>
@@ -11847,7 +11917,171 @@ function setDetailsValue(value){const selected=detailsToArray(value), box=$('#de
 function populateDetailsOptions(value=''){const box=$('#detailsOptions'); if(box){box.hidden=true; box.className=''; box.innerHTML=''} if(formEl.elements.details)formEl.elements.details.value=formatDetails(value)}
 function defaultDesignStage(type){const normalizedType=normalizeWeightType(type);return normalizedType==='平面'?'新製':normalizedType==='影音'?'後製':''}
 function preferredDesignStage(type,stages=designLists.stages[normalizeWeightType(type)]||[]){const preferred=defaultDesignStage(type);return stages.includes(preferred)?preferred:(stages[0]||'')}
-function populateDesignSelects(typeValue,stageValue,detailsValue){const form=formEl, typeEl=form.elements.type, stageEl=form.elements.stage; populateSelect(typeEl,designLists.types,typeValue); const stages=designLists.stages[typeEl.value]||unique(Object.values(designLists.stages).flat()),selectedStage=stageValue||preferredDesignStage(typeEl.value,stages); populateSelect(stageEl,stages,selectedStage); populateDetailsOptions(detailsValue)}
+/* 填寫設計需求 › 階段 › 「Ai判斷（beta）」：串接 EMC AI 階段判定器（獨立 Cloudflare Worker，
+ * 原始碼在 EMCtaipeiART/emc-ai-stage-classifier）。已登入帳號帶 X-EMC-Editor-Token，判定器向本系統 Worker
+ * 驗證後放行；未登入者先輸入團隊密碼換取 token（存在 sessionStorage）。判定完按「填入」寫回階段欄並關閉視窗。
+ * 選單裡的 Ai判斷 只是觸發器，選到後立即還原成原本的階段，不會被當成階段值送出。 */
+// 本機開發時可用 localStorage.emcAiStageApiOverride 改連本機判定器；正式網站一律用線上網址。
+const AI_STAGE_API=(()=>{const online='https://emc-ai-stage-classifier.machi-chen.workers.dev';if(!/^(localhost|127\.0\.0\.1)$/.test(location.hostname))return online;try{return localStorage.getItem('emcAiStageApiOverride')||online}catch{return online}})();
+const AI_STAGE_OPTION='__ai_stage__';
+const AI_STAGE_ACCESS_KEY='emcAiStageAccessToken';
+const AI_STAGE_MAX_FILES=3,AI_STAGE_MAX_BYTES=10*1024*1024;
+const aiStageState={files:[],slidesUrl:'',result:null,view:'input',error:'',busy:false};
+function aiStageAccessToken(){try{return sessionStorage.getItem(AI_STAGE_ACCESS_KEY)||''}catch{return ''}}
+function setAiStageAccessToken(value){try{value?sessionStorage.setItem(AI_STAGE_ACCESS_KEY,value):sessionStorage.removeItem(AI_STAGE_ACCESS_KEY)}catch{}}
+function aiStageEditorToken(){return isLoggedIn()&&!isLocalPreviewToken()?currentEditorToken:''}
+function addAiStageOption(stageEl,stages){
+  if(!stageEl||!stages.includes('新製')||!stages.includes('再製'))return;
+  const option=document.createElement('option');
+  option.value=AI_STAGE_OPTION;
+  option.innerHTML='<span class="ai-stage-option">Ai判斷 <span class="ai-beta-badge">beta</span></span>';
+  stageEl.append(option);
+}
+function rememberStageValue(){const stageEl=formEl?.elements?.stage;if(stageEl&&stageEl.value!==AI_STAGE_OPTION)stageEl.dataset.lastStage=stageEl.value}
+/** 階段選單 change 時呼叫；選到 Ai判斷 就還原並開視窗，回傳 true 表示已處理。 */
+function handleAiStageSelect(){
+  const stageEl=formEl.elements.stage;
+  if(stageEl.value!==AI_STAGE_OPTION){rememberStageValue();return false}
+  const previous=stageEl.dataset.lastStage||'';
+  stageEl.value=[...stageEl.options].some(option=>option.value===previous)?previous:(stageEl.options[0]?.value||'');
+  openAiStageModal();
+  return true;
+}
+async function aiStageFetch(path,init={}){
+  const headers=new Headers(init.headers||{});
+  const editorToken=aiStageEditorToken(),accessToken=aiStageAccessToken();
+  if(editorToken)headers.set('X-EMC-Editor-Token',editorToken);
+  if(accessToken)headers.set('X-EMC-Access',accessToken);
+  const response=await fetch(`${AI_STAGE_API}${path}`,{...init,headers});
+  const raw=await response.text();
+  let payload={};
+  try{payload=raw?JSON.parse(raw):{}}catch{throw new Error(response.status===413?'附件太大，請壓縮截圖後再試。':`AI 判定服務回應異常（${response.status}）`)}
+  if(response.status===401){
+    setAiStageAccessToken('');
+    const error=new Error(payload.error||'需要輸入團隊密碼');error.authRequired=true;throw error;
+  }
+  if(!response.ok)throw new Error(payload.error||`AI 判定服務回應失敗（${response.status}）`);
+  return payload;
+}
+function openAiStageModal(){
+  const modal=$('#aiStageModal');if(!modal)return;
+  Object.assign(aiStageState,{files:[],slidesUrl:'',result:null,error:'',busy:false,view:aiStageEditorToken()||aiStageAccessToken()?'input':'auth'});
+  renderAiStageModal();
+  modal.hidden=false;
+  modal.querySelector(aiStageState.view==='auth'?'input[name="aiStagePassword"]':'[data-ai-stage-drop]')?.focus();
+}
+function closeAiStageModal(){const modal=$('#aiStageModal');if(modal)modal.hidden=true;aiStageState.files=[];aiStageState.result=null}
+function aiStagePreviewUrls(){
+  aiStageState.previewUrls?.forEach(url=>URL.revokeObjectURL(url));
+  aiStageState.previewUrls=aiStageState.files.map(file=>URL.createObjectURL(file));
+  return aiStageState.previewUrls;
+}
+function aiStageErrorHtml(){return `<p class="ai-stage-error" role="alert"${aiStageState.error?'':' hidden'}>${esc(aiStageState.error)}</p>`}
+function renderAiStageModal(){
+  const body=$('#aiStageBody');if(!body)return;
+  const state=aiStageState;
+  if(state.view==='auth'){
+    body.innerHTML=`<form data-ai-stage-auth><p class="ai-stage-sub">尚未登入設計需求系統，請輸入團隊密碼後使用（登入帳號即可免輸入）。</p><label class="ai-stage-field">團隊密碼<input type="password" name="aiStagePassword" autocomplete="current-password" required></label>${aiStageErrorHtml()}<div class="ai-stage-actions"><button type="button" class="secondary" data-ai-stage-close>取消</button><button type="submit"${state.busy?' disabled':''}>${state.busy?'驗證中…':'確認'}</button></div></form>`;
+    return;
+  }
+  if(state.view==='loading'){
+    body.innerHTML='<div class="ai-stage-loading"><span class="ai-stage-spinner" aria-hidden="true"></span>AI 分析中，約需 20–60 秒…</div>';
+    return;
+  }
+  if(state.view==='result'&&state.result){
+    const r=state.result,tone=r.stage==='新製'?'is-new':r.stage==='再製'?'is-rework':'is-unknown';
+    const tasks=(r.tasks||[]).map(task=>`<span>${esc(task)}</span>`).join('');
+    const missing=(r.missing||[]).map(item=>`<li>${esc(item)}</li>`).join('');
+    const cost=Number(r.usage?.costUsd||0),tokens=Number(r.usage?.total||0);
+    const fill=stage=>`<button type="button" class="ai-stage-fill${r.stage===stage?' is-suggested':''}" data-ai-stage-fill="${esc(stage)}">填入「${esc(stage)}」${r.stage===stage?'（AI 建議）':''}</button>`;
+    body.innerHTML=`<div class="ai-stage-verdict ${tone}"><div class="ai-stage-verdict-head"><span>AI 判定：${esc(r.stage)}</span><small>信心度 ${Number(r.confidence)||0}%</small></div><p>${esc(r.reason)}</p></div>
+      ${tasks?`<div class="ai-stage-detail"><b>辨識到的工作內容</b><div class="ai-stage-tags">${tasks}</div></div>`:''}
+      ${r.basis?`<div class="ai-stage-detail"><b>判斷依據</b>${esc(r.basis)}</div>`:''}
+      ${missing?`<div class="ai-stage-detail"><b>建議補充</b><ul style="margin:0;padding-left:20px">${missing}</ul></div>`:''}
+      ${r.slidesWarning?`<div class="ai-stage-detail">${esc(r.slidesWarning)}；本次已改以截圖完成分析。</div>`:''}
+      <div class="ai-stage-detail">本次用量 ${tokens.toLocaleString()} tokens · 約 US$${cost<0.01?cost.toFixed(4):cost.toFixed(3)}</div>
+      <div class="ai-stage-actions"><button type="button" class="ai-stage-link" data-ai-stage-restart>重新判斷</button>${fill('再製')}${fill('新製')}</div>`;
+    return;
+  }
+  const urls=aiStagePreviewUrls();
+  body.innerHTML=`<div class="ai-stage-drop" data-ai-stage-drop tabindex="0" role="button" aria-label="上傳需求單截圖"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>上傳截圖（首選）</b><small>點擊選擇、拖曳或直接貼上（⌘V）；最多 ${AI_STAGE_MAX_FILES} 張，每張 10MB 內</small></span><input type="file" hidden multiple accept="image/png,image/jpeg,image/webp" data-ai-stage-file></div>
+    ${urls.length?`<div class="ai-stage-previews">${urls.map((url,index)=>`<div><img src="${esc(url)}" alt="截圖 ${index+1}"><button type="button" data-ai-stage-remove="${index}" aria-label="移除截圖 ${index+1}">×</button></div>`).join('')}</div>`:''}
+    <label class="ai-stage-field">公開 Google Slides（沒有截圖時使用）<input type="url" name="aiStageSlides" value="${esc(state.slidesUrl)}" placeholder="貼上 docs.google.com/presentation 連結"></label>
+    ${aiStageErrorHtml()}
+    <div class="ai-stage-actions"><button type="button" class="secondary" data-ai-stage-close>取消</button><button type="button" data-ai-stage-run>開始 AI 分析</button></div>`;
+}
+function addAiStageFiles(list){
+  const incoming=[...list].filter(file=>/^image\/(png|jpeg|webp)$/.test(file.type));
+  const tooLarge=incoming.filter(file=>file.size>AI_STAGE_MAX_BYTES);
+  aiStageState.files=[...aiStageState.files,...incoming.filter(file=>file.size<=AI_STAGE_MAX_BYTES)].slice(0,AI_STAGE_MAX_FILES);
+  aiStageState.error=tooLarge.length?'有截圖超過 10MB，已略過。':(!incoming.length&&list.length?'只支援 PNG、JPG、WebP 圖片。':'');
+  renderAiStageModal();
+}
+async function runAiStageAnalysis(){
+  const state=aiStageState;
+  state.slidesUrl=String($('#aiStageModal input[name="aiStageSlides"]')?.value||'').trim();
+  if(!state.files.length&&!state.slidesUrl){state.error='請上傳截圖，或貼上公開的 Google Slides 連結。';renderAiStageModal();return}
+  state.view='loading';state.error='';renderAiStageModal();
+  try{
+    const form=new FormData();
+    form.set('slidesUrl',state.slidesUrl);
+    state.files.forEach(file=>form.append('images',file));
+    state.result=await aiStageFetch('/api/analyze',{method:'POST',body:form});
+    state.view='result';
+  }catch(error){
+    state.error=error.message||'分析失敗，請稍後再試。';
+    state.view=error.authRequired?'auth':'input';
+  }
+  renderAiStageModal();
+}
+async function submitAiStagePassword(form){
+  const password=form.elements.aiStagePassword.value;
+  aiStageState.busy=true;aiStageState.error='';renderAiStageModal();
+  try{
+    const payload=await aiStageFetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});
+    setAiStageAccessToken(payload.token||'');
+    Object.assign(aiStageState,{busy:false,view:'input'});
+  }catch(error){
+    Object.assign(aiStageState,{busy:false,error:error.message||'密碼驗證失敗'});
+  }
+  renderAiStageModal();
+  $('#aiStageModal input[name="aiStagePassword"]')?.focus();
+}
+function applyAiStage(stage){
+  const stageEl=formEl.elements.stage;
+  if(![...stageEl.options].some(option=>option.value===stage)){setSync(`目前的設計種類沒有「${stage}」階段`,true);return}
+  stageEl.value=stage;
+  rememberStageValue();
+  populateDetailsOptions('');
+  closeAiStageModal();
+  flashMsg(`已依 AI 判斷填入階段：${stage}`);
+}
+function bindAiStageModal(){
+  const modal=$('#aiStageModal');if(!modal)return;
+  modal.addEventListener('click',event=>{
+    const target=event.target;
+    if(target===modal||target.closest('[data-ai-stage-close]')){closeAiStageModal();return}
+    if(target.closest('[data-ai-stage-run]')){runAiStageAnalysis();return}
+    if(target.closest('[data-ai-stage-restart]')){Object.assign(aiStageState,{view:'input',result:null,error:''});renderAiStageModal();return}
+    const fill=target.closest('[data-ai-stage-fill]');if(fill){applyAiStage(fill.dataset.aiStageFill);return}
+    const remove=target.closest('[data-ai-stage-remove]');if(remove){aiStageState.files.splice(Number(remove.dataset.aiStageRemove),1);renderAiStageModal();return}
+    if(target.closest('[data-ai-stage-drop]'))modal.querySelector('[data-ai-stage-file]')?.click();
+  });
+  modal.addEventListener('change',event=>{if(event.target.matches('[data-ai-stage-file]')){addAiStageFiles(event.target.files);event.target.value=''}});
+  modal.addEventListener('input',event=>{if(event.target.name==='aiStageSlides')aiStageState.slidesUrl=event.target.value});
+  modal.addEventListener('submit',event=>{if(event.target.matches('[data-ai-stage-auth]')){event.preventDefault();submitAiStagePassword(event.target)}});
+  modal.addEventListener('keydown',event=>{if(event.target.matches('[data-ai-stage-drop]')&&(event.key==='Enter'||event.key===' ')){event.preventDefault();modal.querySelector('[data-ai-stage-file]')?.click()}});
+  modal.addEventListener('dragover',event=>{const drop=event.target.closest('[data-ai-stage-drop]');if(drop){event.preventDefault();drop.classList.add('is-over')}});
+  modal.addEventListener('dragleave',event=>event.target.closest('[data-ai-stage-drop]')?.classList.remove('is-over'));
+  modal.addEventListener('drop',event=>{if(event.target.closest('[data-ai-stage-drop]')){event.preventDefault();addAiStageFiles(event.dataTransfer.files)}});
+  document.addEventListener('paste',event=>{
+    if(modal.hidden||aiStageState.view!=='input')return;
+    const files=[...(event.clipboardData?.files||[])];
+    if(files.length){event.preventDefault();addAiStageFiles(files)}
+  });
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!modal.hidden)closeAiStageModal()});
+}
+function populateDesignSelects(typeValue,stageValue,detailsValue){const form=formEl, typeEl=form.elements.type, stageEl=form.elements.stage; populateSelect(typeEl,designLists.types,typeValue); const stages=designLists.stages[typeEl.value]||unique(Object.values(designLists.stages).flat()),selectedStage=stageValue||preferredDesignStage(typeEl.value,stages); populateSelect(stageEl,stages,selectedStage); addAiStageOption(stageEl,stages); rememberStageValue(); populateDetailsOptions(detailsValue)}
 function designerProfile(name){return designers.find(d=>d.name===name)||defaultDesigners.find(d=>d.name===name)||{}}
 function designerSkillTarget(designer,skill){const profile=designerProfile(designer),configured=profile.skillTargets?.[skill],type=String(configured?.type||'平面'),stages=designLists.stages[normalizeWeightType(type)]||[],configuredStage=String(configured?.stage||'').trim(),stage=stages.includes(configuredStage)?configuredStage:preferredDesignStage(type,stages);return {type,stage}}
 function flashMsg(text,ms=3200){if(!msg)return; msg.textContent=text; clearTimeout(flashMsg.timer); flashMsg.timer=setTimeout(()=>{if(msg.textContent===text)msg.textContent=''},ms)}
@@ -15609,7 +15843,8 @@ $('#requestPlatformSelect')?.addEventListener('keydown',event=>{if(event.key==='
 document.addEventListener('pointerdown',event=>{const select=$('#requestPlatformSelect');if(select?.open&&!select.contains(event.target))closeRequestPlatformSelect()});
 $('#flatProjectForm')?.elements?.qty?.addEventListener('input',event=>{event.target.value=event.target.value.replace(/[^0-9]/g,'')});
 formEl.elements.type.addEventListener('change',()=>populateDesignSelects(formEl.elements.type.value,null,''));
-formEl.elements.stage.addEventListener('change',()=>populateDetailsOptions(''));
+formEl.elements.stage.addEventListener('change',()=>{if(handleAiStageSelect())return; populateDetailsOptions('')});
+bindAiStageModal();
 	designerRoster?.addEventListener('click',event=>{
 	  const musicToggle=event.target.closest('.poster-music-toggle');
 	  if(musicToggle&&designerRoster.contains(musicToggle)){

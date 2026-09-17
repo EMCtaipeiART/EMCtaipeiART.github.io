@@ -4698,3 +4698,42 @@ test('修改需求信寫入修改紀錄時保留文字超連結，並排除「--
   assert.match(html, /links:parseModificationLinks\(record\['修改內容連結'\]\?\?record\.links\)/);
   assert.match(html, /\$\{linkifyPlainText\(record\.content\|\|\(record\.count<=0\?'初稿完成':'未填寫修改內容'\),record\.links\)\}/);
 });
+
+test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還原原本階段並開啟視窗', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const oneLine = prefix => html.split('\n').find(row => row.startsWith(prefix));
+  const sources = [oneLine('const AI_STAGE_OPTION='), pick('addAiStageOption'), oneLine('function rememberStageValue('), pick('handleAiStageSelect')];
+  assert.ok(sources.every(Boolean), 'could not locate the Ai判斷 helpers');
+  const makeSelect = values => {
+    const select = { dataset: {}, options: values.map(value => ({ value })), value: values[0] };
+    select.append = option => select.options.push(option);
+    return select;
+  };
+  const opened = [];
+  const run = select => new Function('formEl', 'document', 'openAiStageModal', `${sources.join('\n')}\nreturn {addAiStageOption, rememberStageValue, handleAiStageSelect, AI_STAGE_OPTION};`)(
+    { elements: { stage: select } }, { createElement: () => ({ value: '', innerHTML: '' }) }, () => opened.push(true)
+  );
+
+  const video = makeSelect(['提案', '拍攝', '後製']);
+  run(video).addAiStageOption(video, ['提案', '拍攝', '後製']);
+  assert.equal(video.options.some(option => option.value === '__ai_stage__'), false);
+
+  const flat = makeSelect(['提案', '再製', '新製', '印刷']);
+  const api = run(flat);
+  api.addAiStageOption(flat, ['提案', '再製', '新製', '印刷']);
+  assert.equal(flat.options.at(-1).value, api.AI_STAGE_OPTION);
+  assert.match(flat.options.at(-1).innerHTML, /ai-beta-badge">beta</);
+
+  flat.value = '再製';
+  assert.equal(api.handleAiStageSelect(), false, '一般階段照常處理');
+  flat.value = api.AI_STAGE_OPTION;
+  assert.equal(api.handleAiStageSelect(), true);
+  assert.equal(flat.value, '再製', '選到 Ai判斷 後還原成原本的階段，不會送出觸發用的值');
+  assert.equal(opened.length, 1);
+
+  // 前台只帶 token 標頭，不送 cookie；未登入者用團隊密碼換 token。
+  assert.match(html, /headers\.set\('X-EMC-Editor-Token',editorToken\)/);
+  assert.match(html, /headers\.set\('X-EMC-Access',accessToken\)/);
+  assert.match(html, /formEl\.elements\.stage\.addEventListener\('change',\(\)=>\{if\(handleAiStageSelect\(\)\)return; populateDetailsOptions\(''\)\}\);/);
+});

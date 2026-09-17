@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-17 15:40 Asia/Taipei — 填寫設計需求 › 階段新增「Ai判斷（beta）」，串接 AI 階段判定器
+
+- 修改目的：專案／企劃填單時，可以直接用 AI 判斷案件是「新製」或「再製」，判斷完一鍵填回階段欄。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`；判定器本身在獨立 repo `EMCtaipeiART/emc-ai-stage-classifier`（Worker `emc-ai-stage-classifier`）。
+- 影響功能：
+  - `populateDesignSelects()` 在階段選項同時有「新製」「再製」時（目前只有平面）加上 `__ai_stage__` 選項（`addAiStageOption`），選項內含 `.ai-beta-badge` 圓角標籤。Chrome／Edge 以 `appearance: base-select`（`@supports` 包起來）顯示標籤，其他瀏覽器維持原生選單、顯示「Ai判斷 beta」文字。
+  - 階段 change 先經過 `handleAiStageSelect()`：選到 Ai判斷 立即還原成 `dataset.lastStage` 再開 `#aiStageModal`，觸發值不會被送出。
+  - `#aiStageModal`：已登入（非本機預覽帳號）帶 `X-EMC-Editor-Token`，判定器經 Service Binding 呼叫本系統 Worker `verifyToken` 驗證；未登入先輸入團隊密碼，呼叫判定器 `/api/login` 換 token（sessionStorage `emcAiStageAccessToken`，401 時清除重問）。支援點擊／拖曳／⌘V 貼上截圖（最多 3 張、每張 10MB）或 Google Slides 連結。結果顯示判定、信心度、理由、工作內容、依據、建議補充與用量金額；「填入『再製』／填入『新製』」（AI 建議者為綠色）寫回階段欄、`populateDetailsOptions('')`、關閉視窗。
+  - `AI_STAGE_API` 固定為線上網址；只有在 localhost／127.0.0.1 才讀 `localStorage.emcAiStageApiOverride`（本機測試用）。
+- 風險區塊：階段選單改用 base-select 後外觀由自訂 CSS 控制（已隱藏重複的 `::picker-icon`）；批次填單的階段選單未加入 Ai判斷。已登入流程需要實際登入帳號才能驗證。
+- 已檢查／驗證方式：本機靜態伺服器（port 8787）＋本機判定器：選單顯示 beta 標籤、選到後階段還原並開窗、錯誤密碼提示、正確密碼進入上傳、貼上截圖、分析添可案例得到「新製 90%」、按「填入『再製』」後階段＝再製且視窗關閉並顯示提示；影音無此選項；取消時階段不變、FormData 的 stage 不是觸發值。線上判定器以 github.io Origin 驗證 CORS 預檢、401、錯誤密碼。`npm test` 145 項全過（新增 Ai判斷 選項測試），inline script `node --check` 通過。未做：已登入帳號的實機流程、Safari／Firefox 外觀。
+- 部署狀態：判定器已部署（`npm run deploy:cloudflare`）；前台 git push 後自動生效。
+- commit：本次 commit
+
 ### 2026-09-17 14:40 Asia/Taipei — 部門名稱去掉「凱曜」：凱曜專案部＝專案部、凱曜管理部＝管理部
 
 - 修改目的：個人設定 › 客戶設定的權限樹同時出現「專案部」與「凱曜專案部」、「管理部」與「凱曜管理部」，同名組別（Odin組、財務出納組）重複兩次。使用者確認「凱曜」是公司名稱，可以省略。
