@@ -4664,3 +4664,28 @@ test('手機案件列表一次只沿一個方向捲動，按住拖曳只給滑�
   assert.equal(decide(10, 10), 'y', '剛好斜 45 度交給瀏覽器上下捲動');
   assert.equal(decide(0, 0), '');
 });
+
+test('修改需求信寫入修改紀錄時保留文字超連結，並排除「--」之後的簽名檔（案件 26090053）', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const { TABLE_SCHEMAS } = await import('../../backend/schema.mjs');
+  assert.ok(TABLE_SCHEMAS['修改統計表'].headers.includes('修改內容連結'));
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const api = new Function(`
+    const safeHttpPreviewUrl = value => /^https?:\\/\\//i.test(String(value || '')) ? String(value) : '';
+    ${pick('stripMailSignatureBlock')}
+    ${pick('parseModificationLinks')}
+    return { stripMailSignatureBlock, parseModificationLinks };
+  `)();
+  const recorded = '客戶選擇教師節B款影片，詳細請看：調整需求。再麻煩協助調整了，謝謝！\n\n--\n​Best regards,\nLivia\n--\n\nLivia Chu';
+  assert.equal(api.stripMailSignatureBlock(recorded), '客戶選擇教師節B款影片，詳細請看：調整需求。再麻煩協助調整了，謝謝！');
+  assert.equal(api.stripMailSignatureBlock('只有內容'), '只有內容');
+  assert.equal(api.stripMailSignatureBlock('--\n整封都是簽名'), '--\n整封都是簽名', '前面沒有內容就不截斷');
+  assert.equal(api.stripMailSignatureBlock('A--B 不是分隔線'), 'A--B 不是分隔線');
+  assert.deepEqual(api.parseModificationLinks('[{"text":"調整需求","url":"https://docs.google.com/x"},{"text":"x","url":"javascript:1"}]'), [{ text: '調整需求', url: 'https://docs.google.com/x' }]);
+  assert.deepEqual(api.parseModificationLinks('壞掉的 JSON'), []);
+
+  assert.match(html, /const modification=replyMode==='modification'\?modificationContentFromEditor\(editor\):\{content:'',links:\[\]\},modificationContent=modification\.content;/);
+  assert.equal(html.match(/recordModificationFromReply\(id,row,modificationContent,modification\.links\)/g)?.length, 2, '立即寄出與排程寄出都要帶連結');
+  assert.match(html, /links:parseModificationLinks\(record\['修改內容連結'\]\?\?record\.links\)/);
+  assert.match(html, /\$\{linkifyPlainText\(record\.content\|\|\(record\.count<=0\?'初稿完成':'未填寫修改內容'\),record\.links\)\}/);
+});

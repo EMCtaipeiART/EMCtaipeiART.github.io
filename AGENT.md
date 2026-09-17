@@ -217,7 +217,19 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 13:50 Asia/Taipei（最新）— 修正上一版造成手機案件列表無法左右滑
+### 2026-09-17 14:30 Asia/Taipei（最新）— 修改紀錄保留信件裡的文字超連結、排除簽名檔
+
+- 修改目的：使用者回報案件 26090053 的一修紀錄沒有顯示信件裡的文字超連結（「調整需求」）。
+- 成因：「填寫修改需求信」寄出後，只把編輯器的純文字（`gmailEditorTextWithoutInsertedSignature`）存進「修改內容」，文字背後的網址沒有保存；修改紀錄畫面雖然 `linkifyPlainText()` 支援結構化連結，也沒有傳入。另外寄件人自己打在內文的簽名（「--」之後）也一起被存成修改內容。
+- 影響檔案：`backend/schema.mjs`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 「修改統計表」新增欄位「修改內容連結」（JSON `[{text,url}]`）。Worker `addModificationRecord` 接受 `record.links`，以 `modificationContentLinks()` 過濾（http(s)、文字需出現在修改內容、去重、最多 30 筆）。
+  - 前台 `modificationContentFromEditor()`：擷取修改內容（去招呼語、以 `stripMailSignatureBlock()` 截掉「--」分隔線之後的簽名）與內文超連結；立即寄出與排程寄出都會帶入。`normalizeModificationRecord()` 讀取連結，修改紀錄彈窗以 `linkifyPlainText(content, links)` 顯示。
+- 資料處理：26090053 既有的一修紀錄當時沒有存網址，無法自動補回；內容裡的簽名檔也維持原樣（未改動正式資料）。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 144/144；Worker `npx tsc --noEmit`、`npx vitest run` 81/81（新增連結過濾測試）；本機瀏覽器以真實 DOM 驗證擷取：只保留「調整需求」連結，簽名檔與其中連結被排除，顯示為可點擊連結。
+- 部署狀態：推送 main；Worker `npx wrangler deploy`。
+
+### 2026-09-17 13:50 Asia/Taipei — 修正上一版造成手機案件列表無法左右滑
 
 - 修改目的：使用者回報 13:30 的修正後，手機案件列表變成完全無法左右滑。
 - 成因：登入後顯示時間軸時，實際負責左右捲動的是外層 `.case-split`（表格與時間軸一起捲），表格本身沒有橫向溢出。`initCaseTableTouchAxisLock()` 只處理表格那一層，判斷「不能左右捲」就不接手，但表格上的 `touch-action:pan-y` 仍擋掉整條祖先鏈的瀏覽器橫向捲動，結果兩邊都不動。本機模擬時未登入、沒有時間軸，所以沒有測到這個版面。

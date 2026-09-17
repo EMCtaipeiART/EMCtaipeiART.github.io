@@ -576,6 +576,25 @@ function gmailAttachmentDataUrl(mimeType: string, base64UrlData: string): string
   return `data:${mimeType || 'image/png'};base64,${padded}`;
 }
 
+/**
+ * 修改內容裡的文字超連結（[{text,url}]，存成 JSON 字串）。只收 http(s) 網址、而且文字真的出現在修改內容裡，
+ * 最多 30 筆；沒有就存空字串。前台顯示修改紀錄時用它把「調整需求」這類文字還原成連結。
+ */
+function modificationContentLinks(value: unknown, content: string): string {
+  const seen = new Set<string>();
+  const links = (Array.isArray(value) ? value : []).map(item => {
+    const entry = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
+    return { text: text(entry.text).slice(0, 200), url: text(entry.url).slice(0, 2000) };
+  }).filter(link => {
+    if (!link.text || !isHttpUrl(link.url) || !content.includes(link.text)) return false;
+    const key = `${link.text}\n${link.url}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 30);
+  return links.length ? JSON.stringify(links) : '';
+}
+
 const isCustomerUnitRule = (rule: string): boolean => /^(?:department|group):.+$/i.test(rule);
 const customerRuleTarget = (rule: string): string => text(rule.slice(rule.indexOf(':') + 1));
 
@@ -2938,6 +2957,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const content = text(record.content || record['修改內容']);
       const modifier = text(session?.user || record.modifier || record.owner || record['修改人'] || record['專案負責人']);
       const targetImages = unique((Array.isArray(record.targetImages) ? record.targetImages : []).map(text).filter(Boolean));
+      const contentLinks = modificationContentLinks(record.links, content);
       if (!caseId || !modifyDate || !content || !modifier) throw new Error('案件編號、修改日期、修改內容與修改人皆為必填');
       // draft:true＝建立「初稿」（第 0 輪）而不是下一輪修改。初稿平常是 NAS 自動備份第一批設計圖時
       // 順便建立的（見 addCaseDesignImages），但沒有走 NAS 的案件（例如設計師直接用電腦檔案上傳、或
@@ -2950,13 +2970,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (rows.some(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === 0)) throw new Error('這個案件已經有初稿紀錄');
           // 第 0 輪本身就代表「已完成」，不是一筆待處理的修改需求，跟 addCaseDesignImages 自動建立
           // 初稿時同一個做法：直接寫入確認修正日，避免被既有「待確認修改」的通知邏輯誤判。
-          const draftRow = { '案件編號': caseId, '修改次數': '0', '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': nowTaipei(), '待修改圖片': '' };
+          const draftRow = { '案件編號': caseId, '修改次數': '0', '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改內容連結': contentLinks, '修改人': modifier, '確認修正日': nowTaipei(), '待修改圖片': '' };
           rows.push(draftRow);
           recalculateDatabaseModificationCounts(draft);
           return { result: { ok: true, action, rowNumber: rows.length + 1, record: draftRow, count: 0 }, changedTables: ['修改統計表', 'database'] };
         }
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
-        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
+        const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改內容連結': contentLinks, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);
         // 有新的修改需求（一修、二修…）時，案件狀態自動改成「修改中」，設計師回覆信寄出後會再改回過稿中。

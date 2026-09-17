@@ -1255,6 +1255,32 @@ describe('Machi Design API Worker', () => {
     expect(after.tables.database.rows.some(row => String(row['案件編號']) === '26080001')).toBe(false);
   });
 
+  it('keeps text hyperlinks of a modification request (修改內容連結), dropping unsafe or unrelated links', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      return Response.json({ content: { sha: 'links-file-sha' }, commit: { sha: 'links-commit-sha' } });
+    });
+    const saved = await api({
+      action: 'addModificationRecord',
+      record: {
+        caseId: '26080001', modifyDate: '2026-09-17', content: '需要調整封面，詳細請看：調整需求。',
+        links: [
+          { text: '調整需求', url: 'https://docs.google.com/document/d/abc' },
+          { text: '調整需求', url: 'https://docs.google.com/document/d/abc' },
+          { text: '惡意', url: 'javascript:alert(1)' },
+          { text: '不在內文', url: 'https://example.com/other' }
+        ]
+      }
+    }, token);
+    expect(saved).toMatchObject({ ok: true, count: 1 });
+    expect(JSON.parse(String((saved.record as Record<string, unknown>)['修改內容連結']))).toEqual([
+      { text: '調整需求', url: 'https://docs.google.com/document/d/abc' }
+    ]);
+    const plain = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-17', content: '沒有連結' } }, token);
+    expect((plain.record as Record<string, unknown>)['修改內容連結']).toBe('');
+  });
+
   it('creates a missing 初稿 (round 0) on demand and deletes a whole modification round without renumbering the rest', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

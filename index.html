@@ -10579,7 +10579,7 @@ async function scheduleThreadReply(scheduledAt){
     await waitForGmailAttachments(editor.id);
     const editorPayload=gmailEditorMailPayload(editor);
     if(!gmailEditorTextWithoutInsertedSignature(editor).trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
-    const modificationContent=replyMode==='modification'?stripGreetingPrefix(gmailEditorTextWithoutInsertedSignature(editor)):'';
+    const modification=replyMode==='modification'?modificationContentFromEditor(editor):{content:'',links:[]},modificationContent=modification.content;
     if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
     const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
     if(to===null||cc===null)return;
@@ -10592,7 +10592,7 @@ async function scheduleThreadReply(scheduledAt){
       // 照片內容在建立排程當下就已經確定，跟確認輪次一樣現在就備份，不用等排程真正寄出。
       if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,modal?.dataset.designerReplyRound,editorPayload.inlineImages)}
     }else if(replyMode==='modification'&&row){
-      await recordModificationFromReply(id,row,modificationContent);
+      await recordModificationFromReply(id,row,modificationContent,modification.links);
     }else if(replyMode==='general'&&row){
       await applyReplyStatusUpdate(id,row);
     }
@@ -12082,7 +12082,7 @@ function hasPendingModification(id){return modificationRecordsFor(id).some(recor
 function revisionStyle(count){const n=Number(count)||0; if(n<=0)return '--revision-bg:#fff;--revision-color:#43524b;--revision-border:#dfe7e2'; const level=Math.min(100,Math.max(10,n*10+10)), shade=Math.round(255*(100-level)/100), bg=`rgb(${shade},${shade},${shade})`, color=level>=55?'#fff':'#17211d'; return `--revision-bg:${bg};--revision-color:${color};--revision-border:transparent`}
 function normalizeRecordImageEntry(item){if(item&&typeof item==='object')return {fileName:String(item.fileName||''),url:String(item.url||'')}; return {fileName:'',url:String(item||'')}}
 function parseRecordImages(value){const raw=Array.isArray(value)?value:(value?(()=>{try{const parsed=JSON.parse(value); return Array.isArray(parsed)?parsed:[]}catch{return []}})():[]),seen=new Set(); return raw.filter(Boolean).map(normalizeRecordImageEntry).filter(item=>{if(!item.url)return false;const fileName=String(item.fileName||'').trim().toLocaleLowerCase(),key=fileName?`file:${fileName}`:`url:${item.url}`;if(seen.has(key))return false;seen.add(key);return true})}
-function normalizeModificationRecord(record){return {caseId:String(record['案件編號']||record.caseId||record.id||'').trim(),count:Number(record['修改次數']||record.count||0)||0,created:String(record['建立日期']||record.created||'').trim(),date:String(record['修改日期']||record.modifyDate||'').trim(),content:String(record['修改內容']||record.content||'').trim(),modifier:String(record['修改人']||record.modifier||'').trim(),confirmedDate:String(record['確認修正日']||record.confirmedDate||'').trim(),images:parseRecordImages(record['圖片連結']??record.images)}}
+function normalizeModificationRecord(record){return {caseId:String(record['案件編號']||record.caseId||record.id||'').trim(),count:Number(record['修改次數']||record.count||0)||0,created:String(record['建立日期']||record.created||'').trim(),date:String(record['修改日期']||record.modifyDate||'').trim(),content:String(record['修改內容']||record.content||'').trim(),modifier:String(record['修改人']||record.modifier||'').trim(),confirmedDate:String(record['確認修正日']||record.confirmedDate||'').trim(),images:parseRecordImages(record['圖片連結']??record.images),links:parseModificationLinks(record['修改內容連結']??record.links)}}
 function revisionAddIcon(){return '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>'}
 function revisionControl(row){const records=modificationRecordsFor(row.id), count=modificationCount(row.id), editable=canCaseEditRow(row), pending=hasPendingModification(row.id); if(!records.length)return editable?`<button type="button" class="revision-pill revision-add" title="查看修改紀錄" aria-label="查看修改紀錄" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${revisionAddIcon()}</button>`:'<span class="revision-empty">-</span>'; return `<span class="revision-wrap"><button type="button" class="revision-pill ${count<=0?'is-draft':''} ${pending?'revision-pending':''}" style="${esc(revisionStyle(count))}" title="${pending?'有尚未確認的修改需求':'查看修改紀錄／設計圖'}" aria-label="${pending?'有尚未確認的修改需求，查看修改紀錄':'查看修改紀錄與設計圖'}" onclick="openRevisionModal(event,'${jsArg(row.id)}')">${esc(modificationLabel(count))}</button></span>`}
 function revisionConfirmIcon(done=false){return done?'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9" stroke-linecap="round"/></svg>'}
@@ -12151,7 +12151,7 @@ function renderRevisionModal(id){const row=rows.find(r=>String(r.id)===String(id
   modal.dataset.caseId=String(row.id); if(add)add.hidden=!canCaseEditRow(row); const records=modificationRecordsFor(id).slice().sort((a,b)=>(Number(a.count)||0)-(Number(b.count)||0)); const canEdit=accessAllowed('media.manage',hasDesignerAccountRole()), totalImages=records.reduce((sum,r)=>sum+(r.images||[]).length,0); const toolbar=(canEdit&&totalImages>1)?revisionSelectionToolbarHtml():''; // 「新增初稿」是設計師補登自己這一輪成果的入口，專案同仁看不到也用不到（避免誤建空的初稿紀錄）。
   if(addDraft)addDraft.hidden=!canCaseEditRow(row)||!isDesignerLogin()||records.some(record=>(Number(record.count)||0)===0); const availableKeys=new Set(records.flatMap(record=>(record.images||[]).map(img=>revisionImageKey(record.count,img.url))));
   [...revisionImageSelection].forEach(key=>{if(!availableKeys.has(key))revisionImageSelection.delete(key)});
-  list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${linkifyPlainText(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'))}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>');
+  list.innerHTML=toolbar+(records.length?records.map(record=>`<div class="revision-modal-item"><div class="revision-modal-meta">${revisionRecordMeta(row,record)}</div><div class="revision-modal-content">${linkifyPlainText(record.content||(record.count<=0?'初稿完成':'未填寫修改內容'),record.links)}</div>${revisionImagesHtml(row,record)}</div>`).join(''):'<div class="revision-modal-empty">目前沒有修改紀錄</div>');
   updateRevisionSelectionBar();}
 function openRevisionModal(event,id){event?.stopPropagation?.(); closeFilters(); const modal=$('#revisionModal'); if(!modal)return; renderRevisionModal(id); modal.hidden=false}
 function closeRevisionModal(){hideDesignImageHoverPreview();const modal=$('#revisionModal'); if(modal)modal.hidden=true; revisionImageSelection.clear()}
@@ -12923,20 +12923,50 @@ async function resolveDesignerReplyImages(id,{folders=[],fileFolders=null,round=
 /** 從「填寫修改需求信」的信件內容裡拿掉開頭「Hi X,」這一行與緊接著的空行，剩下的（第三行以後）
  * 才是真正要記進「修改紀錄」的修改內容——只精確比對這個固定格式的開頭，使用者如果自己改動或
  * 刪掉了這行招呼語，就直接把整段內容當成修改內容，不會憑空漏字或報錯。 */
+/** 信件裡「--」這一行之後是簽名檔（Gmail 慣例），不屬於修改內容。只在前面還有內容時才截斷。 */
+function stripMailSignatureBlock(text){
+  const value=String(text||'');
+  const match=value.match(/(^|\n)[\s\u200b]*--[\s\u200b]*(\n|$)/);
+  if(!match)return value.trim();
+  const before=value.slice(0,match.index).trim();
+  return before||value.trim();
+}
+/** 修改需求信的內文 → 修改紀錄：純文字內容，加上內文裡的超連結（文字＋網址）。
+ * 以前只存純文字，信裡「調整需求」這類文字超連結寫進修改紀錄後就沒有網址了（案件 26090053）。 */
+function modificationContentFromEditor(editor){
+  const content=stripMailSignatureBlock(stripGreetingPrefix(gmailEditorTextWithoutInsertedSignature(editor)));
+  const clone=editor.cloneNode(true);
+  clone.querySelectorAll('[data-gmail-inserted-signature]').forEach(signature=>signature.remove());
+  const seen=new Set(),links=[];
+  clone.querySelectorAll('a[href]').forEach(anchor=>{
+    const text=String(anchor.textContent||'').replace(/\s+/g,' ').trim(),url=safeHttpPreviewUrl(anchor.getAttribute('href'));
+    if(!text||!url||!content.includes(text))return;
+    const key=`${text}\n${url}`;
+    if(seen.has(key))return;
+    seen.add(key);
+    links.push({text,url});
+  });
+  return {content,links:links.slice(0,30)};
+}
+function parseModificationLinks(value){
+  let list=value;
+  if(typeof value==='string'){try{list=JSON.parse(value||'[]')}catch(err){list=[]}}
+  return (Array.isArray(list)?list:[]).map(link=>({text:String(link?.text||'').trim(),url:String(link?.url||'').trim()})).filter(link=>link.text&&safeHttpPreviewUrl(link.url));
+}
 function stripGreetingPrefix(text){return String(text||'').replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim()}
 /** 「填寫修改需求信」送出後，把信件內容第三行以後的文字另外記一筆進「修改紀錄」——跟既有「新增修改
  * 紀錄」表單（openModificationEditor／submitModificationRecord）走的是同一個 addModificationRecord
  * action，只是這裡不用再另外彈一次表單，直接沿用剛剛寄出的信件內容當作這次的修改內容。 */
-async function recordModificationFromReply(id,row,content){
+async function recordModificationFromReply(id,row,content,links=[]){
   const text=String(content||'').trim();
   if(!text)return;
   const modifier=currentLoginOwnerName()||ownerDisplay(row?.owner||'');
-  const record={caseId:id,modifyDate:todayInputValue(),content:text,modifier,targetImages:[],editorToken:currentEditorToken};
+  const record={caseId:id,modifyDate:todayInputValue(),content:text,links:parseModificationLinks(links),modifier,targetImages:[],editorToken:currentEditorToken};
   try{
     const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true});
     const finalCount=Number(data.count)||(modificationCount(id)+1), finalModifier=data.record?.['修改人']||data.record?.modifier||modifier;
     modificationCounts.set(String(id),finalCount);
-    modificationRecords.set(String(id),[...modificationRecordsFor(id),{caseId:String(id),count:finalCount,date:record.modifyDate,content:text,modifier:finalModifier,confirmedDate:''}]);
+    modificationRecords.set(String(id),[...modificationRecordsFor(id),{caseId:String(id),count:finalCount,date:record.modifyDate,content:text,links:record.links,modifier:finalModifier,confirmedDate:''}]);
     applyModificationStatusChange(id,data);
     render();
     refreshOpenRevisionModal(id);
@@ -13017,7 +13047,7 @@ async function sendGmailThreadReply(){
     await waitForGmailAttachments(editor.id);
     const editorPayload=gmailEditorMailPayload(editor);
     if(!gmailEditorTextWithoutInsertedSignature(editor).trim()&&!editorPayload.inlineImages.length){setSync('請先輸入回覆內容',true);return}
-    const modificationContent=replyMode==='modification'?stripGreetingPrefix(gmailEditorTextWithoutInsertedSignature(editor)):'';
+    const modification=replyMode==='modification'?modificationContentFromEditor(editor):{content:'',links:[]},modificationContent=modification.content;
     if(replyMode==='modification'&&!modificationContent){setSync('請填寫這次的修改內容',true);return}
     const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
     if(to===null||cc===null)return; // 欄位裡有沒送出去的無效 Email，gmailRecipientHeaderValue 內部已經跳出錯誤提示
@@ -13033,7 +13063,7 @@ async function sendGmailThreadReply(){
     const data=await sheetApi('getCaseMailThread',{caseId:id,signatureCandidates,editorToken:currentEditorToken});
     gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
     if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
-    if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent);
+    if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent,modification.links);
     let inlineImageBackupNotice='';
     if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,designerReplyRound,editorPayload.inlineImages)}
     else if(replyMode==='general'&&row)await applyReplyStatusUpdate(id,row);
