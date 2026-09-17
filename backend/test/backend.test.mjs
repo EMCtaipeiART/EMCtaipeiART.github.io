@@ -4077,7 +4077,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
   assert.match(block, /document\.documentElement\.classList\.toggle\('modal-scroll-locked',anyOpen\);/, 'html 也要一起加上鎖定 class');
 
   // 用假 DOM 實際執行：任何一個彈窗開著就鎖，全部關掉才解鎖。
-  const modals = { caseDetailModal: { hidden: true }, revisionModal: { hidden: true }, gmailThreadModal: { hidden: true }, gmailComposeModal: { hidden: true }, uploadModal: { hidden: true }, personalSettingsModal: { hidden: true }, designerSettingsModal: { hidden: true } };
+  const modals = { caseDetailModal: { hidden: true }, revisionModal: { hidden: true }, gmailThreadModal: { hidden: true }, gmailComposeModal: { hidden: true }, uploadModal: { hidden: true }, personalSettingsModal: { hidden: true }, designerSettingsModal: { hidden: true }, aiStageModal: { hidden: true } };
   const classes = new Set();
   const api = new Function('ctx', `
     const { modals, classes } = ctx;
@@ -4092,7 +4092,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
     return { syncModalScrollLock, ids: SCROLL_LOCK_MODAL_IDS };
   `)({ modals, classes });
 
-  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal', 'personalSettingsModal', 'designerSettingsModal']);
+  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal', 'personalSettingsModal', 'designerSettingsModal', 'aiStageModal']);
   assert.equal(classes.has('modal-scroll-locked'), false, '一開始沒有彈窗就不鎖');
   modals.revisionModal.hidden = false;
   api.syncModalScrollLock();
@@ -4272,7 +4272,7 @@ test('modals people type into never close from a stray click on the backdrop', a
   assert.match(html, /if\(event\.key==='Escape'&&!\$\('#personalSettingsModal'\)\?\.hidden\)/);
 
   // 兩個設定視窗開著時也要鎖住背景捲動。
-  assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'personalSettingsModal','designerSettingsModal'\]/);
+  assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'personalSettingsModal','designerSettingsModal'[,\]]/);
 
   // 其他彈窗維持原本的「點外面關閉」（例如案件資料、修改紀錄、複製信件內容）。
   assert.match(html, /bindModalOverlayDismiss\(\$\('#mailCopyModal'\),closePostSubmitCopyModal\);/);
@@ -4712,7 +4712,7 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
   };
   const opened = [];
   const run = select => new Function('formEl', 'document', 'openAiStageModal', `${sources.join('\n')}\nreturn {addAiStageOption, rememberStageValue, handleAiStageSelect, AI_STAGE_OPTION};`)(
-    { elements: { stage: select } }, { createElement: () => ({ value: '', innerHTML: '' }) }, () => opened.push(true)
+    { elements: { stage: select } }, { createElement: () => ({ value: '', textContent: '' }) }, () => opened.push(true)
   );
 
   const video = makeSelect(['提案', '拍攝', '後製']);
@@ -4723,7 +4723,7 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
   const api = run(flat);
   api.addAiStageOption(flat, ['提案', '再製', '新製', '印刷']);
   assert.equal(flat.options.at(-1).value, api.AI_STAGE_OPTION);
-  assert.match(flat.options.at(-1).innerHTML, /ai-beta-badge">beta</);
+  assert.equal(flat.options.at(-1).textContent, 'AI判斷(beta)');
 
   flat.value = '再製';
   assert.equal(api.handleAiStageSelect(), false, '一般階段照常處理');
@@ -4735,5 +4735,8 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
   // 前台只帶 token 標頭，不送 cookie；未登入者用團隊密碼換 token。
   assert.match(html, /headers\.set\('X-EMC-Editor-Token',editorToken\)/);
   assert.match(html, /headers\.set\('X-EMC-Access',accessToken\)/);
+  // 開窗時鎖背景捲動、不綁點框外關閉。
+  assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'aiStageModal'\]/);
+  assert.doesNotMatch(html, /target===modal\|\|target\.closest\('\[data-ai-stage-close\]'\)/);
   assert.match(html, /formEl\.elements\.stage\.addEventListener\('change',\(\)=>\{if\(handleAiStageSelect\(\)\)return; populateDetailsOptions\(''\)\}\);/);
 });

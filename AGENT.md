@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-17 16:10 Asia/Taipei — AI判斷：選項改純文字、開窗鎖背景捲動、取消點框外關閉
+
+- 修改目的：使用者要求下拉選項顯示「AI判斷(beta)」純文字；彈窗開啟時背景不可捲動，點框外不自動關閉。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：`addAiStageOption` 改用 `textContent='AI判斷(beta)'`，並移除階段選單的 `appearance: base-select` 樣式（恢復原生選單）；`aiStageModal` 加入 `SCROLL_LOCK_MODAL_IDS`，卡片加 `overscroll-behavior:contain`；移除 `target===modal` 的點遮罩關閉，只保留右上角關閉、取消與 Esc；標題改為「AI 判斷階段」。
+- 風險區塊：無後端變更。
+- 已檢查／驗證方式：本機瀏覽器確認選項文字、開窗時 html／body 有 `modal-scroll-locked` 且滾輪不會捲動背景、點遮罩不關閉、按取消後關閉並解鎖；`npm test` 145 項全過（更新捲動鎖定名單與 AI判斷 測試）；inline script `node --check` 通過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：本次 commit
+
 ### 2026-09-17 15:40 Asia/Taipei — 填寫設計需求 › 階段新增「Ai判斷（beta）」，串接 AI 階段判定器
 
 - 修改目的：專案／企劃填單時，可以直接用 AI 判斷案件是「新製」或「再製」，判斷完一鍵填回階段欄。
