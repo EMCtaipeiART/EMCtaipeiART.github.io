@@ -232,7 +232,7 @@ function readJsonBody(req) {
  * 個路徑，個別資料夾失敗也只會影響它自己這一筆結果。
  */
 async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0 }) {
-  const dbData = await lib.fetchDatabase(config.dbJsonUrl);
+  const dbData = await lib.fetchDatabaseWithCase(config, caseId);
   const meta = lib.findCaseMeta(dbData, caseId);
   if (!meta) {
     return { attempted: false, uploadedCount: 0, message: '資料庫查不到這個案件編號，僅登記路徑，未嘗試備份' };
@@ -285,7 +285,7 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
       // 的圖片被錯誤歸到舊的（甚至已確認過的）那一輪，而不是剛建立的新一輪；這正是
       // nas_design_image_watcher.mjs 的排程掃描迴圈已經修過的同一種輪次判斷競態
       // （見 uploadPendingRound 呼叫端的既有註解），這裡（立即備份）之前漏掉了同一步。
-      const latestDbData = await lib.fetchDatabase(config.dbJsonUrl);
+      const latestDbData = await lib.fetchDatabaseWithCase(config, caseId);
       const upload = await lib.uploadPendingRound({
         config, secrets, dbData: latestDbData, caseId, // 這裡一律用真正的案件編號，不是 stateKey——寫回資料庫、比對修改統計表都要用真實案件編號，只有本機狀態快取才需要用 stateKey 隔開不同資料夾
         designer: project.designer, client: project.client, start: project.start,
@@ -1029,7 +1029,7 @@ async function main() {
         let existingKeyword = '';
         if (caseId) {
           try {
-            const dbData = await lib.fetchDatabase(config.dbJsonUrl);
+            const dbData = await lib.fetchDatabaseWithCase(config, caseId);
             const meta = lib.findCaseMeta(dbData, caseId);
             client = meta?.client || '';
             existingKeyword = meta?.keyword || ''; // 重新開啟選擇器（換資料夾/補填關鍵字）時，先帶出這個案件目前已經存的關鍵字，讓輸入框不是空的

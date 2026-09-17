@@ -217,7 +217,22 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 09:30 Asia/Taipei（最新）— 客戶設定的權限設定對齊後台規則、加入「全選」、隱藏測試單位
+### 2026-09-17 10:30 Asia/Taipei（最新）— 設計師回覆信沒有帶入 NAS 備份圖（案件 26090136）
+
+- 修改目的：使用者回報案件 26090136 的設計師回覆信沒有帶入指定資料夾的備份圖，選擇器顯示「資料庫查不到這個案件編號，僅登記路徑，未嘗試備份」。
+- 成因（兩個）：
+  1. 案件 08:40 建立、08:41 就選資料夾，選擇器讀的是 GitHub Pages 的 db.json，Pages 還沒部署完成，查不到案件就直接跳過備份。排程只掃「過稿中／修改中」，案件當時是「執行中」，所以也沒有補上。
+  2. 追查時發現 Google Apps Script「取回執行結果」這一步目前大量失敗（實測 8 次有 7 次拿到「雲端硬碟 找不到網頁」，每次約 30 秒），但程式其實有執行完成——08:47 補做備份時回應是錯誤頁，圖片卻已寫入初稿。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_folder_picker_server.mjs`、`backend/test/nas-upload-idempotency.test.mjs`。
+- 影響功能：
+  - 新增 `fetchDatabaseWithCase()`：Pages 查不到案件時改向 Worker（`bundle`）取即時案件列；該案件的修改紀錄一律改用 Worker `listModificationRecords` 的即時版本（輪次判斷不受 Pages 落後影響）。選擇器的預設路徑、立即備份與上傳前的輪次判斷都改用它。設定檔沒有 `workerApiUrl` 時用 `DEFAULT_WORKER_API_URL`。
+  - 上傳改走 `postAppsScriptJsonWithRetry()`：回應不是 JSON 時，先用 `workerRoundImageCounts()` 比對送出前後該輪次每個檔名的筆數，已寫入就直接視為成功；否則等 3 秒、8 秒各重送一次。重送安全：dedupeKey 讓 Apps Script 沿用既有 Drive 檔、Worker 略過已記錄圖片。
+- 資料處理：26090136 已於 08:47 補進初稿（1 張圖，來源 nas-watcher）；使用者之後已建立第 1 輪修改需求。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 138/138；`git stash` 還原程式時新測試失敗。實際呼叫正式 Worker 取回 26090136 案件列與第 0 輪圖片計數；本機選擇器已 `launchctl kickstart` 重啟並回應正常。
+- 未解決／風險：Google 端取回結果失敗的原因不在我們程式內，無法根治；目前靠「Worker 確認＋重送」繞過，但每次仍可能多等約 30 秒。Worker 端呼叫 Apps Script（回信圖片備份、備份至試算表）也可能遇到同樣問題，未處理。
+- 部署狀態：推送 main；本機選擇器已重啟，排程（cron）下次執行自動使用新程式；其他設計師電腦需重跑 NAS 上的安裝檔才會更新。
+
+### 2026-09-17 09:30 Asia/Taipei — 客戶設定的權限設定對齊後台規則、加入「全選」、隱藏測試單位
 
 - 修改目的：使用者回報前台「權限設定」跟後台綁定對不起來（例如新光人壽已設定 `department:企劃部`，前台企劃部卻顯示已選 0）；希望各部門／組別可以全選、不要出現「各組」字樣、不顯示測試員／測試組。
 - 成因：上一版只把個別帳號畫成勾選框，部門／組別規則只用唯讀標籤呈現，勾選框沒有反映規則涵蓋的人。

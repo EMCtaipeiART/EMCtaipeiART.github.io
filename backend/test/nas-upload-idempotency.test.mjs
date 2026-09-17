@@ -749,3 +749,91 @@ test('finished cases stop taking up local disk: their sync state and preview ima
   assert.ok(lockAt > 0 && lockAt < pruneAt, '清理也要在狀態鎖保護下進行');
   assert.match(watcher, /\[定期清理\]/);
 });
+
+test('立即備份：GitHub Pages 還沒更新時，改向 Worker 取剛建立的案件（26090136）', async () => {
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+  const pages = { revision: 1, tables: { database: { rows: [{ '案件編號': '26090135', '狀態': '執行中' }] }, '修改統計表': { rows: [] } } };
+  const fresh = { '案件編號': '26090136', '設計負責人': 'Machi', '客戶別': '測試', '開始日期': '2026/09/17', '狀態': '執行中', '設計圖資料夾連結': '專案企劃部/執行中/Epson', '設計圖資料夾清單': '[]' };
+  const calls = [];
+  const records = [{ rowNumber: 9, '案件編號': '26090136', '修改次數': '1', '修改內容': '剛新增的修改需求' }];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push(String(url));
+    if (String(url).startsWith('https://pages.example/db.json')) return Response.json(pages);
+    if (init.method === 'POST') {
+      const request = JSON.parse(init.body);
+      assert.equal(request.action, 'listModificationRecords');
+      return Response.json({ ok: true, rows: records.filter(row => request.ids.includes(row['案件編號'])) });
+    }
+    const parsed = new URL(url);
+    assert.equal(parsed.searchParams.get('action'), 'bundle');
+    return Response.json({ ok: true, databaseRows: parsed.searchParams.get('year') === '2026' ? [fresh] : [] });
+  };
+  const config = { dbJsonUrl: 'https://pages.example/db.json', workerApiUrl: 'https://worker.example/' };
+
+  const merged = await lib.fetchDatabaseWithCase(config, '26090136', { fetchImpl });
+  const meta = lib.findCaseMeta(merged, '26090136');
+  assert.equal(meta?.designer, 'Machi');
+  assert.equal(meta?.folders[0]?.path, '專案企劃部/執行中/Epson');
+  // 這個案件的修改紀錄改用 Worker 即時版本（Pages 還沒有第 1 輪），輪次才會算對。
+  assert.deepEqual(merged.tables['修改統計表'].rows, [{ '案件編號': '26090136', '修改次數': '1', '修改內容': '剛新增的修改需求' }]);
+  assert.equal(lib.computeRound(merged, '26090136'), 1);
+  assert.deepEqual(merged.tables.database.rows.map(row => row['案件編號']), ['26090135', '26090136']);
+
+  // Pages 已經有這個案件：只補修改紀錄，不再抓整份案件列。
+  calls.length = 0;
+  await lib.fetchDatabaseWithCase(config, '26090135', { fetchImpl });
+  assert.equal(calls.filter(url => url.includes('action=bundle')).length, 0);
+
+  // Worker 出錯或也查不到：回傳原本資料，由呼叫端照舊回報查不到案件。
+  const broken = await lib.fetchDatabaseWithCase(config, '26099999', { fetchImpl: async url => (String(url).startsWith('https://pages.example') ? Response.json(pages) : Response.json({}, { status: 500 })) });
+  assert.equal(lib.findCaseMeta(broken, '26099999'), null);
+  assert.equal(lib.DEFAULT_WORKER_API_URL, 'https://machi-design-api.machi-chen.workers.dev/');
+});
+
+test('Apps Script 回傳 Google 錯誤頁（非 JSON）時自動重送，程式自己的錯誤不重送', async () => {
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+  const waits = [];
+  const wait = async ms => { waits.push(ms); };
+  let calls = 0;
+  const flaky = async () => { calls += 1; return calls < 3 ? new Response('<!doctype html><html>Google 錯誤頁</html>', { status: 404 }) : Response.json({ success: true, count: 1 }); };
+  assert.deepEqual(await lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl: flaky, wait }), { success: true, count: 1 });
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [3000, 8000]);
+
+  calls = 0;
+  const denied = async () => { calls += 1; return Response.json({ success: false, message: '服務金鑰不正確，拒絕上傳' }); };
+  assert.deepEqual(await lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl: denied, wait }), { success: false, message: '服務金鑰不正確，拒絕上傳' });
+  assert.equal(calls, 1);
+
+  const alwaysHtml = async () => new Response('<html>nope</html>', { status: 404 });
+  await assert.rejects(lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl: alwaysHtml, wait }), /HTTP 404，已重試 2 次/);
+});
+
+test('Google 錯誤頁但 Worker 已記錄圖片時直接視為成功，不再重送', async () => {
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+  let posts = 0;
+  const fetchImpl = async () => { posts += 1; return new Response('<html>找不到網頁</html>', { status: 404 }); };
+  const waits = [];
+  const data = await lib.postAppsScriptJsonWithRetry('https://x', '{}', {
+    fetchImpl, wait: async ms => { waits.push(ms); },
+    confirm: async () => ({ success: true, count: 1, confirmedByWorker: true })
+  });
+  assert.deepEqual(data, { success: true, count: 1, confirmedByWorker: true });
+  assert.equal(posts, 1);
+  assert.deepEqual(waits, []);
+
+  // Worker 查不到新圖片：照常重送。
+  posts = 0;
+  await assert.rejects(lib.postAppsScriptJsonWithRetry('https://x', '{}', { fetchImpl, wait: async () => {}, confirm: async () => null }), /已重試 2 次/);
+  assert.equal(posts, 3);
+
+  // 依輪次、檔名統計 Worker 上已記錄的圖片。
+  const counts = await lib.workerRoundImageCounts({ workerApiUrl: 'https://worker.example/' }, '26090136', 0, {
+    fetchImpl: async () => Response.json({ ok: true, rows: [
+      { '案件編號': '26090136', '修改次數': '0', '圖片連結': JSON.stringify([{ fileName: 'a.png' }, { fileName: 'b.png' }]) },
+      { '案件編號': '26090136', '修改次數': '1', '圖片連結': JSON.stringify([{ fileName: 'a.png' }]) }
+    ] })
+  });
+  assert.deepEqual([...counts], [['a.png', 1], ['b.png', 1]]);
+  assert.equal(await lib.workerRoundImageCounts({}, '26090136', 0, { fetchImpl: async () => { throw new Error('offline'); } }), null);
+});

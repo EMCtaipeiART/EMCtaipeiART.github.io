@@ -565,12 +565,103 @@ export async function scanProject(project, config, state, previewDir, warnings) 
   };
 }
 
-export async function fetchDatabase(dbJsonUrl) {
-  const response = await fetch(`${dbJsonUrl}${dbJsonUrl.includes('?') ? '&' : '?'}ts=${Date.now()}`, {
+export async function fetchDatabase(dbJsonUrl, { fetchImpl = fetch } = {}) {
+  const response = await fetchImpl(`${dbJsonUrl}${dbJsonUrl.includes('?') ? '&' : '?'}ts=${Date.now()}`, {
     headers: { 'Cache-Control': 'no-store' }
   });
   if (!response.ok) throw new Error(`讀取案件資料庫失敗：HTTP ${response.status}`);
   return response.json();
+}
+
+/** 正式站 Worker；設定檔沒寫 workerApiUrl 時用這個（其他設計師電腦的舊設定檔也適用）。 */
+export const DEFAULT_WORKER_API_URL = 'https://machi-design-api.machi-chen.workers.dev/';
+
+/**
+ * 讀案件資料庫，並確保指定的案件在裡面。
+ *
+ * GitHub Pages 上的 db.json 要等 Pages 部署完（通常 1～3 分鐘）才看得到剛建立的案件。2026-09-17
+ * 案件 26090136 在建立後一分鐘內就從「設計師回覆信」選了 NAS 資料夾，選擇器讀 Pages 查不到案件，
+ * 只登記路徑、沒有備份，回覆信也就沒有圖片。查不到時改向 Worker 取即時的案件列補進去；Worker
+ * 讀不到就維持原本結果（呼叫端會照舊回報查不到案件），不讓備援本身變成新的失敗點。
+ */
+export async function fetchDatabaseWithCase(config, caseId, { fetchImpl = fetch } = {}) {
+  const pagesData = await fetchDatabase(config.dbJsonUrl, { fetchImpl });
+  const id = String(caseId || '').trim();
+  if (!/^\d{8}$/.test(id)) return pagesData;
+  // 這個案件的修改紀錄也用 Worker 的即時版本：輪次判斷與「圖片是否已經寫入」都靠它，Pages 落後會判斷錯。
+  const records = await fetchWorkerModificationRecords(config, id, { fetchImpl });
+  const dbData = records ? {
+    ...pagesData,
+    tables: {
+      ...(pagesData?.tables || {}),
+      '修改統計表': {
+        ...(pagesData?.tables?.['修改統計表'] || {}),
+        rows: [...(pagesData?.tables?.['修改統計表']?.rows || []).filter(row => String(row?.['案件編號'] || '') !== id), ...records]
+      }
+    }
+  } : pagesData;
+  if (findCaseMeta(dbData, id)) return dbData;
+  const base = String(config.workerApiUrl || DEFAULT_WORKER_API_URL);
+  // bundle 依「開始日期」的年份篩選；先用案件編號的年份，找不到再抓全部。
+  for (const year of [`20${id.slice(0, 2)}`, '']) {
+    try {
+      const url = new URL(base);
+      url.searchParams.set('action', 'bundle');
+      if (year) url.searchParams.set('year', year);
+      url.searchParams.set('ts', String(Date.now()));
+      const response = await fetchImpl(url.toString(), { headers: { 'Cache-Control': 'no-store' } });
+      if (!response.ok) continue;
+      const data = await response.json();
+      const row = (Array.isArray(data?.databaseRows) ? data.databaseRows : []).find(item => String(item?.['案件編號'] || '') === id);
+      if (!row) continue;
+      const tables = dbData?.tables || {};
+      const rows = tables.database?.rows || [];
+      return { ...dbData, tables: { ...tables, database: { ...(tables.database || {}), rows: [...rows, row] } } };
+    } catch {
+      // 網路或 Worker 暫時有問題：試下一個條件，全部失敗就回傳原本的資料。
+    }
+  }
+  return dbData;
+}
+
+function workerApiUrl(config) {
+  return String(config?.workerApiUrl || DEFAULT_WORKER_API_URL);
+}
+
+/** 向 Worker 取某案件目前的修改紀錄（含圖片連結）；讀不到回傳 null，由呼叫端退回 Pages 版本。 */
+export async function fetchWorkerModificationRecords(config, caseId, { fetchImpl = fetch } = {}) {
+  try {
+    const response = await fetchImpl(workerApiUrl(config), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ action: 'listModificationRecords', ids: [String(caseId)] })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data?.ok || !Array.isArray(data.rows)) return null;
+    return data.rows
+      .filter(row => String(row?.['案件編號'] || '') === String(caseId))
+      .map(({ rowNumber, ...row }) => row);
+  } catch {
+    return null;
+  }
+}
+
+/** 某案件某輪次裡，每個原始檔名已經記錄了幾張圖（用來確認 Google 回錯誤頁時上傳是否其實已完成）。 */
+export async function workerRoundImageCounts(config, caseId, round, options = {}) {
+  const records = await fetchWorkerModificationRecords(config, caseId, options);
+  if (!records) return null;
+  const counts = new Map();
+  for (const row of records) {
+    if (Number(row['修改次數']) !== Number(round)) continue;
+    let images = [];
+    try { images = JSON.parse(row['圖片連結'] || '[]'); } catch { images = []; }
+    for (const image of Array.isArray(images) ? images : []) {
+      const name = String(image?.fileName || '');
+      if (name) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+  }
+  return counts;
 }
 
 /**
@@ -896,31 +987,66 @@ export async function uploadRound({ config, secrets, caseId, round, designer, cl
       })
     });
   }
-  const response = await fetch(config.appsScriptUploadUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'uploadCaseDesignImages',
-      serviceKey: secrets.serviceKey,
-      caseId,
-      round,
-      designer,
-      client,
-      year,
-      month,
-      source: 'nas-watcher',
-      images
-    })
+  const body = JSON.stringify({
+    action: 'uploadCaseDesignImages',
+    serviceKey: secrets.serviceKey,
+    caseId,
+    round,
+    designer,
+    client,
+    year,
+    month,
+    source: 'nas-watcher',
+    images
   });
-  const text = await response.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`上傳回應不是合法 JSON（HTTP ${response.status}）：${text.slice(0, 200)}`);
-  }
-  if (!data.success) throw new Error(data.message || `上傳失敗（HTTP ${response.status}）`);
+  const fileNames = images.map(image => image.fileName);
+  const baseline = await workerRoundImageCounts(config, caseId, round);
+  const confirm = baseline ? async () => {
+    const after = await workerRoundImageCounts(config, caseId, round);
+    if (!after) return null;
+    // 每個檔名的筆數都比送出前多，才算這次真的寫進去了。
+    if (!fileNames.every(name => (after.get(name) || 0) > (baseline.get(name) || 0))) return null;
+    return { success: true, caseId, round, count: fileNames.length, confirmedByWorker: true };
+  } : null;
+  const data = await postAppsScriptJsonWithRetry(config.appsScriptUploadUrl, body, { confirm });
+  if (!data.success) throw new Error(data.message || '上傳失敗');
   return data;
+}
+
+export const APPS_SCRIPT_RETRY_DELAYS_MS = Object.freeze([3000, 8000]);
+
+/**
+ * Google 偶爾會對 Apps Script Web App 回傳自己的 HTML 錯誤頁（HTTP 404 或 200，不是我們程式的 JSON），
+ * 同一個請求重送通常就會成功——2026-09-17 實測同樣內容連送數次，成功與錯誤頁交錯出現，案件
+ * 26090136 的立即備份就是被這種錯誤頁擋下。每次拿到錯誤頁先用 confirm() 向 Worker 確認圖片是否其實已寫入，
+ * 沒有才重試；只在「回應不是 JSON」時處理；我們程式自己回的錯誤
+ * （例如金鑰不正確）不重試。重送是安全的：每張圖都帶穩定的 dedupeKey，Apps Script 會沿用已經
+ * 存在的 Drive 檔案，Worker 也會略過已記錄過的圖片，不會重複備份。
+ */
+export async function postAppsScriptJsonWithRetry(url, body, { fetchImpl = fetch, delaysMs = APPS_SCRIPT_RETRY_DELAYS_MS, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), confirm = null } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= delaysMs.length; attempt += 1) {
+    if (attempt) await wait(delaysMs[attempt - 1]);
+    let response;
+    try {
+      response = await fetchImpl(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    } catch (error) {
+      lastError = new Error(`上傳連線失敗：${error.message}`);
+      continue;
+    }
+    const text = await response.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      lastError = new Error(`上傳回應不是合法 JSON（HTTP ${response.status}，已重試 ${attempt} 次）：${text.slice(0, 200)}`);
+    }
+    // Google 常常是「程式已經跑完、只是取回結果那一步失敗」；先確認資料是否已寫入，寫入了就不用再送。
+    if (confirm) {
+      const confirmed = await confirm().catch(() => null);
+      if (confirmed) return confirmed;
+    }
+  }
+  throw lastError;
 }
 
 export function uploadEnabled(config, secrets) {
