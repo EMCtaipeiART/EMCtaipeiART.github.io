@@ -3543,7 +3543,15 @@ test('page load downloads the database once, UI preference saves are batched and
   assert.equal(menu, profiles);
   assert.equal(profiles, cases);
   await loader.fetchGithubJsonDatabase({ fresh: true });
-  assert.equal(loader.calls(), 2, '下載完成後再要求強制更新，照樣會重新下載');
+  assert.equal(loader.calls(), 1, '剛下載完（3 秒內）要求強制更新，直接沿用，不再重抓 1.4MB');
+  const realNow = Date.now;
+  try {
+    Date.now = () => realNow() + 4000;
+    await loader.fetchGithubJsonDatabase({ fresh: true });
+  } finally {
+    Date.now = realNow;
+  }
+  assert.equal(loader.calls(), 2, '超過 3 秒再要求強制更新，照樣會重新下載');
   await loader.fetchGithubJsonDatabase({});
   assert.equal(loader.calls(), 2, '十秒內一般讀取沿用剛下載的資料');
 
@@ -4071,6 +4079,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
       body: { classList: { toggle: (name, on) => { if (on) classes.add(name); else classes.delete(name); } } }
     };
     class MutationObserver { constructor(fn) { this.fn = fn; } observe() {} }
+    const ensureOpenFontsUsedIn = () => {};
     ${block}
     return { syncModalScrollLock, ids: SCROLL_LOCK_MODAL_IDS };
   `)({ modals, classes });
@@ -4575,15 +4584,35 @@ test('信件編輯器、簽名檔與信件範本的工具列都有開源字型�
   }
   assert.match(html, /\+'<button type="button" class="gmail-rich-font-btn" data-rich-font title="字型"/, '設定頁共用工具列');
   assert.match(html, /const fontButton=event\.target\.closest\('\[data-rich-font\]'\);/);
-  assert.match(html, /<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Noto\+Sans\+TC/);
+  // 字型樣式表約 1.3MB，不可放在 <head> 擋住進站；改成用到才載入。
+  assert.doesNotMatch(html.slice(0, html.indexOf('</head>')), /fonts\.googleapis\.com/);
+  assert.match(html, /function openGmailFontPalette\(button\)\{\n  ensureAllOpenFonts\(\);/);
+  assert.match(html, /if\(anyOpen\)scheduleOpenFontScan\(\);/);
 
   const source = html.match(/const gmailOpenFonts=Object\.freeze\(\[[\s\S]*?\]\);/)?.[0];
   assert.ok(source, 'gmailOpenFonts 清單');
   const fonts = new Function(`const GMAIL_DEFAULT_FONT_MARKER='machi-default-font';${source};return gmailOpenFonts;`)();
+  for (const font of fonts.slice(1)) assert.ok(font.family && font.css, `${font.label} 要有 family／css 才能按需載入`);
   assert.equal(fonts[0].label, '預設');
   assert.deepEqual(fonts.map(font => font.label), ['預設', '思源黑體', '思源宋體', '霞鶩文楷', '芫荽', '粉圓', '昭源黑體', 'Open Sans', 'Source Code Pro']);
   // 收件人沒裝開源字型時要能退回系統字型，最後一定是通用字族。
   for (const font of fonts.slice(1)) assert.match(font.value, /,(sans-serif|serif|monospace)$/, font.label);
   // 「預設」只清掉字型，不動其他格式。
   assert.match(html, /font\.removeAttribute\('face'\);\n    if\(!font\.attributes\.length\)font\.replaceWith\(\.\.\.font\.childNodes\);/);
+});
+
+test('進站只抓頭像縮圖、海報點開才下載', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.split('\n').find(line => line.startsWith(`function ${name}(`));
+  const api = new Function(`${pick('imageUrl')}\n${pick('avatarImageUrl')}\nreturn { avatarImageUrl };`)();
+  assert.equal(api.avatarImageUrl('https://lh3.googleusercontent.com/d/abc123=w1000'), 'https://lh3.googleusercontent.com/d/abc123=w256-rw');
+  assert.equal(api.avatarImageUrl('https://drive.google.com/file/d/abc123/view'), 'https://lh3.googleusercontent.com/d/abc123=w256-rw');
+  assert.equal(api.avatarImageUrl('https://ci3.googleusercontent.com/mail-sig/AIorK4zH'), 'https://ci3.googleusercontent.com/mail-sig/AIorK4zH=w256-rw');
+  assert.equal(api.avatarImageUrl('https://ci3.googleusercontent.com/mail-sig/AIorK4zH=s512'), 'https://ci3.googleusercontent.com/mail-sig/AIorK4zH=w256-rw');
+  assert.equal(api.avatarImageUrl('assets/designers/Anna-avatar.jpg'), 'assets/designers/Anna-avatar.jpg');
+  assert.equal(api.avatarImageUrl(''), '');
+
+  assert.match(html, /const avatar=avatarImageUrl\(d\.avatar\)\|\|fallback;/);
+  assert.match(html, /poster-image" data-poster-url="\$\{esc\(poster\)\}" alt=/, '海報 img 不帶 src');
+  assert.match(html, /if\(posterImage&&!posterImage\.getAttribute\('src'\)\)posterImage\.src=posterImage\.dataset\.posterUrl\|\|'';/);
 });

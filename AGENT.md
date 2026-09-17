@@ -217,7 +217,25 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 11:40 Asia/Taipei（最新）— 信件編輯器新增開源字型選單
+### 2026-09-17 12:20 Asia/Taipei（最新）— 修正進站卡頓
+
+- 修改目的：使用者反映進站有點卡。
+- 成因（依影響排序）：
+  1. **11:40 字型選單的回歸**：`<head>` 放了 Google Fonts 樣式表，解壓後 1.3MB、1153 條 @font-face，且會擋住渲染（renderBlockingStatus=blocking），每次進站都要下載並解析完才畫得出畫面。
+  2. 設計師頭像抓 `=w1000` 原圖，畫面只顯示 40～104px；其中一張 PNG 2.2MB、簽名檔頭像 248KB／212KB。
+  3. 設計師海報（隱藏中，要點頭像才看得到）進站就下載，其中一張動圖 GIF 2.6MB。
+  4. db.json（1.4MB）進站 1 秒內下載兩次：設計師名單在第一次下載完成後緊接著要求 `fresh`。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 字型樣式表改成按需載入：`ensureOpenFontFamilies()`；打開字型選單載入全部、打開信件／設定彈窗（`syncModalScrollLock` → `scheduleOpenFontScan`，1.5 秒後再掃一次）只載入內容裡用到的字型。工具列「字」改用系統襯線字。
+  - 新增 `avatarImageUrl()`：Google 圖片（lh3／ci3）改抓 `=w256-rw`（WebP 256px），用於設計師卡片與帳號頭像，只影響顯示、不改資料庫網址。
+  - 海報 `<img>` 不再帶 `src`，`openDesignerPoster()` 點開時才從 `data-poster-url` 載入。
+  - `fetchGithubJsonDatabase({fresh:true})` 會沿用 3 秒內剛下載完的資料（`GITHUB_JSON_FRESH_REUSE_MS`）。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 141/141（更新「資料庫只下載一次」測試為 3 秒內沿用、超過才重抓；鎖捲動測試補上字型掃描 stub；新增頭像縮圖／海報延後載入測試）。本機 Browser pane 進站量測：db.json 1 次、字型 0 次、5 張 Google 頭像皆為 `=w256-rw`、海報 src 皆未設定；點開 Amber 頭像後海報正常顯示；開新信彈窗只載入內容用到的霞鶩文楷、開字型選單才載入其餘字型。
+- 預估節省（首次進站）：擋渲染的 1.3MB 樣式表、頭像約 2.3MB、海報動圖 2.6MB、重複的 db.json 1.4MB。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-17 11:40 Asia/Taipei — 信件編輯器新增開源字型選單
 
 - 修改目的：使用者希望信件編輯器可以依開源字型調整字型。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

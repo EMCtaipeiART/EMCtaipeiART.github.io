@@ -10,10 +10,6 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>設計需求系統</title>
-  <!-- 信件編輯器「字型」選單用的開源字型（SIL OFL）；只有畫面實際用到的字才會下載。 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&amp;family=Noto+Serif+TC:wght@400;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;family=Iansui&amp;family=Huninn&amp;family=Chiron+Hei+HK:wght@400;700&amp;family=Open+Sans:wght@400;700&amp;family=Source+Code+Pro:wght@400;700&amp;display=swap" />
   <link rel="preload" as="image" href="assets/designers/Machi-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Anna-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Noise-avatar.jpg" fetchpriority="high" />
@@ -357,7 +353,7 @@
     .personal-settings-fields{display:grid;gap:10px}.personal-mail-templates{display:grid;gap:9px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}.personal-mail-templates-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.personal-mail-templates-head b{font-size:13px}.personal-mail-templates-head span{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:700}.personal-mail-template-list{display:grid;gap:9px}
     .personal-customer-pick{display:grid;gap:5px;font-size:12px;font-weight:850;color:#66736d}.personal-customer-pick select{min-height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font:inherit;font-size:13px;color:var(--ink);background:#fff}.personal-customer-body{display:grid;gap:10px}.personal-customer-block{display:grid;gap:6px;border:1px solid #edf0ef;border-radius:12px;padding:10px;background:#fbfffd}.personal-customer-block>b{font-size:12.5px}.personal-customer-block>small{color:var(--muted);font-size:11px;font-weight:700;line-height:1.5}.personal-customer-rules{display:flex;flex-wrap:wrap;gap:5px}.personal-customer-rule{padding:3px 9px;border-radius:999px;background:#eef2f0;color:#43524b;font-size:11px;font-weight:850}.personal-customer-group{border-top:1px solid #edf0ef;padding-top:5px}.personal-customer-group>summary{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;font-weight:900;color:#43524b;padding:2px 0;list-style:none}.personal-customer-group-count{color:var(--muted);font-weight:800}.personal-customer-group.is-nested{margin-left:14px}.personal-customer-all{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:4px!important;margin:0 0 0 auto!important;padding:2px 8px;border-radius:999px;border:1px solid #dfe6e2;background:#fff;font-size:11px;font-weight:850;color:#43524b;cursor:pointer}.personal-customer-all input{width:13px!important;height:13px!important;min-width:13px!important;min-height:0!important;margin:0!important;padding:0!important;box-shadow:none!important;accent-color:var(--green)}.personal-customer-all:has(input:checked){border-color:#9bd4b4;background:#eef8f2;color:#0f5138}html[data-theme="dark"] .personal-customer-all{background:#242629;border-color:#494d51;color:#e9eaeb}.personal-customer-group>summary::-webkit-details-marker{display:none}.personal-customer-group>summary::before{content:'▸ ';color:var(--muted)}.personal-customer-group[open]>summary::before{content:'▾ '}.personal-customer-checks{display:flex;flex-wrap:wrap;gap:5px;padding:4px 0 2px}.personal-customer-check{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:5px!important;margin:0!important;padding:4px 9px;border:1px solid #dfe6e2;border-radius:999px;background:#fff;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}.personal-customer-check input{width:14px!important;height:14px!important;min-width:14px!important;min-height:0!important;margin:0!important;padding:0!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--green)}.personal-customer-check:has(input:checked){border-color:#9bd4b4;background:#eef8f2;color:#0f5138}.personal-customer-check.is-locked{cursor:default;opacity:.8}.personal-customer-empty{color:var(--muted);font-size:12px;font-weight:750}
     html[data-theme="dark"] .personal-customer-block{background:#1b1c1f;border-color:#3a3d42}html[data-theme="dark"] .personal-customer-check{background:#242629;border-color:#494d51;color:#e9eaeb}html[data-theme="dark"] .personal-customer-check:has(input:checked){background:#12382a;border-color:#2f7d5b;color:#d9f5e7}html[data-theme="dark"] .personal-customer-rule{background:#2a2c30;color:#cfd3d6}html[data-theme="dark"] .personal-customer-pick select{background:#242629;border-color:#494d51;color:#e9eaeb}
-    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}.mail-template-head input[type=text]{flex:1 1 auto!important;min-width:0!important;min-height:30px!important;padding:4px 8px!important;font-size:12.5px!important;font-weight:800!important}.signature-preset-toolbar{margin-top:1px}.signature-preset-content{min-height:74px;max-height:240px;overflow:auto;border-radius:24px!important;border:1px solid var(--line);padding:7px 10px;font:inherit;font-weight:400;color:var(--ink);background:#fff;word-break:break-word;line-height:1.55}.signature-preset-content:focus{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}.signature-preset-content:empty::before{content:attr(data-placeholder);color:var(--muted);font-weight:650;font-size:12.5px}.signature-preset-content.is-invalid{border-color:#f1c0bb!important;background:#fff7f6!important}.gmail-rich-size-label{font-weight:900!important;font-size:13px!important}.gmail-rich-font-label{font-family:'Noto Serif TC',serif;font-weight:700!important;font-size:14px!important}.gmail-font-palette{max-height:min(420px,70vh);overflow:auto}.gmail-font-option{font-weight:400!important;font-size:15px!important;min-width:180px!important}.gmail-font-option small{display:block;margin-top:1px;color:var(--muted);font-family:system-ui,sans-serif;font-size:10.5px;font-weight:700}
+    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}.mail-template-head input[type=text]{flex:1 1 auto!important;min-width:0!important;min-height:30px!important;padding:4px 8px!important;font-size:12.5px!important;font-weight:800!important}.signature-preset-toolbar{margin-top:1px}.signature-preset-content{min-height:74px;max-height:240px;overflow:auto;border-radius:24px!important;border:1px solid var(--line);padding:7px 10px;font:inherit;font-weight:400;color:var(--ink);background:#fff;word-break:break-word;line-height:1.55}.signature-preset-content:focus{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}.signature-preset-content:empty::before{content:attr(data-placeholder);color:var(--muted);font-weight:650;font-size:12.5px}.signature-preset-content.is-invalid{border-color:#f1c0bb!important;background:#fff7f6!important}.gmail-rich-size-label{font-weight:900!important;font-size:13px!important}.gmail-rich-font-label{font-family:serif;font-weight:700!important;font-size:14px!important}.gmail-font-palette{max-height:min(420px,70vh);overflow:auto}.gmail-font-option{font-weight:400!important;font-size:15px!important;min-width:180px!important}.gmail-font-option small{display:block;margin-top:1px;color:var(--muted);font-family:system-ui,sans-serif;font-size:10.5px;font-weight:700}
     html[data-theme="dark"] .personal-settings-avatar-preview,html[data-theme="dark"] .mail-template-row{background:#242629!important;border-color:#414449!important}html[data-theme="dark"] .personal-settings-avatar button,html[data-theme="dark"] .mail-template-remove{background:#242629!important}html[data-theme="dark"] .mail-template-default{color:#c7ccca!important}html[data-theme="dark"] .signature-preset-content{background:#181a1d!important;color:#edf0f2!important;border-color:#454a4f!important}html[data-theme="dark"] .signature-preset-content:empty::before{color:#858b90!important}html[data-theme="dark"] .signature-preset-content.is-invalid{border-color:#5a3535!important;background:#2a1c1c!important}
     @media(max-width:600px){.personal-settings-profile{grid-template-columns:1fr}.personal-settings-fields{width:100%}.personal-settings-avatar{grid-template-columns:auto auto;justify-content:start;align-items:center}.personal-settings-avatar-preview{width:68px;height:68px}.mail-template-head{align-items:flex-start;flex-direction:column;gap:5px}}
     .case-id-btn{border:0;background:transparent;color:#5f7f73;font-weight:900;padding:0;min-height:0;text-decoration:none}
@@ -7513,11 +7509,15 @@ const githubJsonDatabaseUrl = 'backend/data/db.json';
 let githubJsonDatabaseCache = null;
 let githubJsonDatabaseLoadedAt = 0;
 let githubJsonDatabaseInflight=null;
+const GITHUB_JSON_FRESH_REUSE_MS=3000;
 /** 開頁時選單資料、設計師設定、案件列表幾乎同時要資料庫，以前各自下載，同一份檔案一次抓三遍。
  * 現在同一時間只下載一次：正在下載中的那一次直接共用。反正都要重新下載，這次下載一律跳過快取抓最新版，
  * 所以共用它的呼叫端不論有沒有要求強制更新，拿到的都是最新資料。 */
 async function fetchGithubJsonDatabase({fresh=false}={}){
-  if(!fresh&&githubJsonDatabaseCache&&Date.now()-githubJsonDatabaseLoadedAt<10000)return githubJsonDatabaseCache;
+  // fresh 也接受「3 秒內剛下載完」的資料：Pages 本來就要幾分鐘才會更新，進站時設計師名單緊接著
+  // 要求 fresh，會把剛下載完的 1.4MB 資料庫再抓一次（2026-09-17 量到進站 1 秒內下載兩次）。
+  const cacheAge=Date.now()-githubJsonDatabaseLoadedAt;
+  if(githubJsonDatabaseCache&&cacheAge<(fresh?GITHUB_JSON_FRESH_REUSE_MS:10000))return githubJsonDatabaseCache;
   if(githubJsonDatabaseInflight)return githubJsonDatabaseInflight;
   const download=downloadGithubJsonDatabase();
   githubJsonDatabaseInflight=download;
@@ -8991,16 +8991,41 @@ function closeGmailSizePalette(){
  * 「預設」是先套一個標記字型，再把標記拿掉，只清掉字型、不影響粗體／顏色等其他格式。 */
 const GMAIL_DEFAULT_FONT_MARKER='machi-default-font';
 const gmailOpenFonts=Object.freeze([
-  {label:'預設',note:'跟著信箱的預設字型',value:GMAIL_DEFAULT_FONT_MARKER},
-  {label:'思源黑體',note:'Noto Sans TC',value:"'Noto Sans TC','思源黑體','Source Han Sans TC','PingFang TC','Microsoft JhengHei',sans-serif"},
-  {label:'思源宋體',note:'Noto Serif TC',value:"'Noto Serif TC','思源宋體','Source Han Serif TC','PMingLiU',serif"},
-  {label:'霞鶩文楷',note:'LXGW WenKai TC',value:"'LXGW WenKai TC','霞鶩文楷 TC','Kaiti TC','DFKai-SB',serif"},
-  {label:'芫荽',note:'Iansui',value:"'Iansui','芫荽','PingFang TC','Microsoft JhengHei',sans-serif"},
-  {label:'粉圓',note:'Huninn',value:"'Huninn','jf open 粉圓','PingFang TC','Microsoft JhengHei',sans-serif"},
-  {label:'昭源黑體',note:'Chiron Hei HK',value:"'Chiron Hei HK','昭源黑體','PingFang TC','Microsoft JhengHei',sans-serif"},
-  {label:'Open Sans',note:'英文無襯線',value:"'Open Sans',Arial,Helvetica,sans-serif"},
-  {label:'Source Code Pro',note:'英文等寬',value:"'Source Code Pro',Menlo,Consolas,monospace"}
+  {label:'預設',note:'跟著信箱的預設字型',value:GMAIL_DEFAULT_FONT_MARKER,family:'',css:''},
+  {label:'思源黑體',note:'Noto Sans TC',family:'Noto Sans TC',css:'Noto+Sans+TC:wght@400;700',value:"'Noto Sans TC','思源黑體','Source Han Sans TC','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'思源宋體',note:'Noto Serif TC',family:'Noto Serif TC',css:'Noto+Serif+TC:wght@400;700',value:"'Noto Serif TC','思源宋體','Source Han Serif TC','PMingLiU',serif"},
+  {label:'霞鶩文楷',note:'LXGW WenKai TC',family:'LXGW WenKai TC',css:'LXGW+WenKai+TC:wght@400;700',value:"'LXGW WenKai TC','霞鶩文楷 TC','Kaiti TC','DFKai-SB',serif"},
+  {label:'芫荽',note:'Iansui',family:'Iansui',css:'Iansui',value:"'Iansui','芫荽','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'粉圓',note:'Huninn',family:'Huninn',css:'Huninn',value:"'Huninn','jf open 粉圓','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'昭源黑體',note:'Chiron Hei HK',family:'Chiron Hei HK',css:'Chiron+Hei+HK:wght@400;700',value:"'Chiron Hei HK','昭源黑體','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'Open Sans',note:'英文無襯線',family:'Open Sans',css:'Open+Sans:wght@400;700',value:"'Open Sans',Arial,Helvetica,sans-serif"},
+  {label:'Source Code Pro',note:'英文等寬',family:'Source Code Pro',css:'Source+Code+Pro:wght@400;700',value:"'Source Code Pro',Menlo,Consolas,monospace"}
 ]);
+/** 開源字型的樣式表很大（全部中文字型加起來約 1.3MB、上千條規則），2026-09-17 一度放在 <head> 裡，
+ * 每次進站都要先下載、解析完才畫得出畫面，造成進站卡頓。改成用到才載入：打開字型選單時載入全部
+ * （選單要預覽），打開信件／設定彈窗時只載入內容裡實際用到的字型。 */
+const loadedOpenFontFamilies=new Set();
+function ensureOpenFontFamilies(families){
+  const missing=gmailOpenFonts.filter(font=>font.css&&families.includes(font.family)&&!loadedOpenFontFamilies.has(font.family));
+  if(!missing.length)return;
+  missing.forEach(font=>loadedOpenFontFamilies.add(font.family));
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href=`https://fonts.googleapis.com/css2?${missing.map(font=>`family=${font.css}`).join('&')}&display=swap`;
+  link.dataset.openFonts=missing.map(font=>font.family).join(',');
+  document.head.appendChild(link);
+}
+function ensureAllOpenFonts(){ensureOpenFontFamilies(gmailOpenFonts.map(font=>font.family))}
+/** 掃描內容裡的 <font face> 與 font-family，只載入有用到的開源字型。 */
+function ensureOpenFontsUsedIn(root){
+  if(!root?.querySelectorAll)return;
+  const used=new Set();
+  root.querySelectorAll('font[face],[style*="font-family"]').forEach(el=>{
+    const value=el.getAttribute('face')||el.style?.fontFamily||'';
+    value.split(',').map(name=>name.trim().replace(/^['"]|['"]$/g,'')).forEach(name=>used.add(name));
+  });
+  if(used.size)ensureOpenFontFamilies([...used]);
+}
 let gmailFontPaletteEl=null,gmailFontTargetButton=null;
 function clearDefaultFontMarkers(root){
   root?.querySelectorAll?.(`font[face="${GMAIL_DEFAULT_FONT_MARKER}"]`).forEach(font=>{
@@ -9042,6 +9067,7 @@ function ensureGmailFontPalette(){
   return palette;
 }
 function openGmailFontPalette(button){
+  ensureAllOpenFonts();
   const palette=ensureGmailFontPalette();
   closeGmailSizePalette();
   gmailFontTargetButton=button;
@@ -10696,6 +10722,17 @@ function nextId(){const max=Math.max(...rows.map(r=>+r.id||0),25120000);return S
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function jsArg(s){return String(s??'').replaceAll('\\','\\\\').replaceAll("'","\\'")}
 function imageUrl(value){const url=String(value||'').trim(), id=url.match(/drive\.google\.com\/file\/d\/([^/]+)/)?.[1]||url.match(/lh3\.googleusercontent\.com\/d\/([^=/?]+)/)?.[1]||url.match(/[?&]id=([^&]+)/)?.[1]; return id?`https://lh3.googleusercontent.com/d/${id}=w1000`:url}
+/** 頭像只顯示 40～104px，不需要抓 1000px 原圖：Google 圖片服務可以直接給 256px 的 WebP。
+ * 2026-09-17 量到一張設計師頭像原圖 2.2MB（縮圖後約 150KB）、簽名檔頭像 248KB（縮圖後 18KB），
+ * 每次進站都要下載，是進站卡頓的原因之一。只用在畫面顯示，不改資料庫存的網址。 */
+function avatarImageUrl(value,size=256){
+  const url=imageUrl(value);
+  const lh3=url.match(/^https:\/\/lh3\.googleusercontent\.com\/d\/([^=/?]+)/);
+  if(lh3)return `https://lh3.googleusercontent.com/d/${lh3[1]}=w${size}-rw`;
+  const other=url.match(/^(https:\/\/(?:lh\d|ci\d)\.googleusercontent\.com\/[^?#]+?)(?:=[^/?#]*)?$/);
+  if(other&&!/\/d\/[^/]+$/.test(other[1]))return `${other[1]}=w${size}-rw`;
+  return url;
+}
 function designerLocalAvatar(name){return designerOptions.includes(String(name||''))?`assets/designers/${String(name)}-avatar.jpg`:''}
 function designerFallbackImage(name){
   const label=encodeURIComponent(String(name||'?').slice(0,2));
@@ -10945,7 +10982,7 @@ function renderDesigners(){
     const quote=d.quote||`${d.name} 目前可協助設計需求。`;
     const localAvatar=designerLocalAvatar(d.name);
     const fallback=localAvatar||designerFallbackImage(d.name);
-    const avatar=imageUrl(d.avatar)||fallback;
+    const avatar=avatarImageUrl(d.avatar)||fallback;
     const poster=imageUrl(d.poster||d.avatar)||fallback;
     const music=sharedMusicInfo(d.musicUrl), musicFallback=music?`${music.providerLabel} 單曲`:'', musicStartAt=Math.max(0,Number(d.musicStartAt)||0);
     const musicPlayerMarkup=music?.provider==='spotify'?`<div class="poster-music-player" aria-hidden="true"><div data-spotify-controller data-spotify-id="${esc(music.id)}" data-music-start="${musicStartAt}"></div></div>`:(music?.provider==='apple'?`<audio class="poster-apple-player" data-music-url="${esc(music.url)}" data-music-start="${musicStartAt}" preload="metadata"></audio>`:'');
@@ -10954,7 +10991,7 @@ function renderDesigners(){
     const storyCount=storiesForDesigner(d.name).length;
     const hasUnreadStory=designerHasUnreadStory(d);
     const priorityBadge=isPriorityNewCaseDesigner(d)?`<button type="button" class="new-case-priority-badge" data-new-project-designer="${esc(d.name)}" title="${esc(d.name)} 是${esc(designerGroupLabel(d))}組目前第 1 輪值，點擊建立新專案">新專案找我</button>`:'';
-    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame${storyCount?' has-story':''}${hasUnreadStory?' has-unread-story':''}" role="button" tabindex="0" aria-expanded="false" data-story-count="${storyCount}" aria-label="${storyCount?`開啟 ${esc(d.name)} 的 ${storyCount} 則限時動態與大海報`:`開啟 ${esc(d.name)} 大海報`}"><span class="avatar-placeholder" aria-hidden="true" style="${localAvatar?`background-image:url('${esc(localAvatar)}')`:''}">${esc(d.name.slice(0,2).toUpperCase())}</span><img class="designer-avatar-image" src="${esc(avatar)}" alt="${esc(d.name)} 頭像" loading="eager" decoding="async" fetchpriority="high" onload="this.classList.add('is-loaded')" onerror="this.onerror=null;this.src='${esc(fallback)}'">${avatarMusicMarkup}<span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始＋執行中＋修改中共 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster${music?' has-music':''}" data-story-viewer>${musicMarkup}<div class="designer-story-progress" data-story-progress hidden aria-hidden="true"></div><img class="poster-image" data-poster-url="${esc(poster)}" src="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="handleDesignerPosterImageError(this)">${storyInteractionShell()}<div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
+    return `<div class="designer-card" data-designer="${esc(d.name)}"><div class="avatar-shell"><div class="avatar-frame${storyCount?' has-story':''}${hasUnreadStory?' has-unread-story':''}" role="button" tabindex="0" aria-expanded="false" data-story-count="${storyCount}" aria-label="${storyCount?`開啟 ${esc(d.name)} 的 ${storyCount} 則限時動態與大海報`:`開啟 ${esc(d.name)} 大海報`}"><span class="avatar-placeholder" aria-hidden="true" style="${localAvatar?`background-image:url('${esc(localAvatar)}')`:''}">${esc(d.name.slice(0,2).toUpperCase())}</span><img class="designer-avatar-image" src="${esc(avatar)}" alt="${esc(d.name)} 頭像" loading="eager" decoding="async" fetchpriority="high" onload="this.classList.add('is-loaded')" onerror="this.onerror=null;this.src='${esc(fallback)}'">${avatarMusicMarkup}<span class="load-dot ${busy?'busy':'normal'}" title="${esc(status)}：目前未開始＋執行中＋修改中共 ${count} 筆"></span>${priorityBadge}</div><div class="designer-poster${music?' has-music':''}" data-story-viewer>${musicMarkup}<div class="designer-story-progress" data-story-progress hidden aria-hidden="true"></div><img class="poster-image" data-poster-url="${esc(poster)}" alt="${esc(d.name)} 海報" onerror="handleDesignerPosterImageError(this)">${storyInteractionShell()}<div class="poster-speech"><img class="poster-speech-avatar" src="${esc(avatar)}" alt="${esc(d.name)} 小頭像" onerror="this.onerror=null;this.src='${esc(fallback)}'"><div class="poster-speech-bubble"><span class="poster-bubble-left" aria-hidden="true"></span><span class="poster-bubble-text" data-text="${esc(quote)}"></span><span class="poster-bubble-right" aria-hidden="true"></span></div></div></div></div><div class="designer-name">${esc(d.name)}</div><div class="designer-tags">${skills}</div></div>`;
   }).join('');
   designerRosterRenderKey=renderKey;
   hydrateSharedMusic();
@@ -11009,7 +11046,7 @@ function startDesignerMusic(shell){ensureDesignerMusicController(shell)}
 async function toggleDesignerMusic(shell){if(!shell)return; const audio=shell.querySelector('.poster-apple-player'); if(audio){if(audio.paused){if(!audio.getAttribute('src')){const metadata=await sharedMusicMetadata(sharedMusicInfo(audio.dataset.musicUrl||'')); if(metadata.previewUrl)audio.src=metadata.previewUrl} if(audio.getAttribute('src')){if(audio.readyState>=1&&audio.currentTime===0)applyAppleMusicStart(audio); audio.play().catch(()=>setSync('Apple Music 預覽播放失敗，請點擊歌名前往 Apple Music',true,3200))}else setSync('此 Apple Music 單曲沒有可用的預覽版本',true,3200)}else audio.pause(); return} const controller=spotifyEmbedControllers.get(shell); if(controller){if(spotifyPlayingStates.get(shell)===true)controller.pause();else playSpotifyFromConfiguredStart(shell,controller);return} spotifyPlayPending.add(shell); ensureDesignerMusicController(shell)}
 function stopDesignerMusic(shell){if(!shell)return; const audio=shell.querySelector('.poster-apple-player'); if(audio&&!audio.paused)audio.pause(); const controller=spotifyEmbedControllers.get(shell); spotifyPlayPending.delete(shell); if(controller)controller.pause(); updateDesignerMusicButton(shell,false)}
 function closeDesignerPoster(shell,{rerender=true}={}){if(!shell)return; if(activeDesignerStoryPlayback?.shell===shell)stopDesignerStoryPlayback(); stopDesignerMusic(shell); shell.classList.remove('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','false'); if(rerender)renderDesigners()}
-function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item,{rerender:false})}); shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerMusic(shell); startDesignerStoryPlayback(shell)}
+function openDesignerPoster(shell){designerRoster?.querySelectorAll('.avatar-shell.poster-open').forEach(item=>{if(item!==shell)closeDesignerPoster(item,{rerender:false})}); const posterImage=shell.querySelector('.poster-image'); if(posterImage&&!posterImage.getAttribute('src'))posterImage.src=posterImage.dataset.posterUrl||''; /* 海報要點開才看得到，進站時不先下載（動圖海報可能好幾 MB） */ shell.classList.add('poster-open'); shell.querySelector('.avatar-frame')?.setAttribute('aria-expanded','true'); startDesignerMusic(shell); startDesignerStoryPlayback(shell)}
 function handleDesignerPosterImageError(image){const shell=image?.closest('.avatar-shell'); if(image?.closest('.designer-poster')?.classList.contains('story-playing')&&activeDesignerStoryPlayback?.shell===shell){advanceDesignerStory(shell);return} const name=shell?.closest('.designer-card')?.dataset.designer||''; image.onerror=null; image.src=designerFallbackImage(name)}
 async function fetchDesignerReels(){if(!apiUrl)throw new Error('尚未設定 Cloudflare Worker API 網址'); const data=await sheetApi('listReels'); return (data.reels||[]).map(normalizeDesignerReel).filter(reel=>reel.imageUrl)}
 async function fetchDesignerProfiles(){try{const rows=await githubJsonTableRows('設定',{fresh:true}); if(Array.isArray(rows)&&rows.length)return rows}catch(err){console.warn('設計師設定 GitHub JSON 讀取失敗，改用 JSON API',err)} if(apiUrl){try{const data=await sheetApi('listDesignerProfiles'); return Array.isArray(data.profiles)?data.profiles:[]}catch(err){console.warn('設計師設定 JSON API 讀取失敗，保留目前快取資料',err)}} return designers.length?designers:[]}
@@ -13741,7 +13778,7 @@ function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); con
 function openStoryNotification(id){closeNotifications();closeAccountMenu(); const reel=designerReels.find(item=>String(item.id)===String(id)); if(!reel)return; const card=[...(designerRoster?.querySelectorAll('.designer-card')||[])].find(item=>item.dataset.designer===reel.name), shell=card?.querySelector('.avatar-shell'), stories=storiesForDesigner(reel.name), index=stories.findIndex(item=>String(item.id)===String(id)); if(!shell||index<0)return; openDesignerPoster(shell); showDesignerStorySlide(shell,index); card.scrollIntoView({behavior:'smooth',block:'center',inline:'center'})}
 function openNotificationItem(kind,id){if(kind==='issue'){closeNotifications();closeAccountMenu();openIssueReportModal();return} if(kind==='story'){openStoryNotification(id);return} focusNotificationCase(id)}
 function accountInitial(name){const text=String(name||'').trim(); return (text.match(/[A-Za-z0-9]/)?.[0]||text[0]||'登').toUpperCase()}
-function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return currentAccountAvatar||imageUrl(profile.avatar||profile['頭像連結']||'')}
+function currentAccountAvatarUrl(){const profile=designerProfile(currentEditor); return avatarImageUrl(currentAccountAvatar||profile.avatar||profile['頭像連結']||'')}
 function renderAccountAvatar(){const avatarEl=$('#accountAvatar'); if(!avatarEl)return; const url=isLoggedIn()?currentAccountAvatarUrl():'', displayName=currentUserDisplayName(); if(url){const fallback=accountInitial(displayName); avatarEl.innerHTML=`<img src="${esc(url)}" alt="${esc(displayName)} 頭像" onerror="this.onerror=null;this.remove();this.parentNode.textContent='${esc(fallback)}'">`}else{avatarEl.textContent=isLoggedIn()?accountInitial(displayName):'登'}}
 function canOpenDesignDashboard(){return hasDesignerAccountRole()||isLocalAdminToken()}
 function updateLoginUi(){const loggedIn=isLoggedIn(),admin=isAdministrator(),designLogin=isDesignerLogin(),dashboardLogin=canOpenDesignDashboard(),displayName=currentUserDisplayName(),btn=$('#loginBtn'),split=document.querySelector('.case-split'),casesSection=$('#casesSection'),nameEl=$('#accountName'),roleEl=$('#accountRole'),personalSettingsBtn=$('#accountPersonalSettings'),avatarSettingsBtn=$('#accountAvatarSettings'),settingsBtn=$('#accountDesignerSettings'),dashboardBtn=$('#accountDesignDashboard'),archiveBtn=$('#accountArchiveManager'),jsonAdminBtn=$('#accountJsonDatabaseAdmin'),logoutBtn=$('#accountLogout'),csvBtn=$('#downloadCsv');const department=currentEditorDepartment||'',accountSubtitle=department||'未設定部門';if(btn){btn.title=loggedIn?`${displayName}｜${accountSubtitle}`:'登入';btn.classList.toggle('signed-in',loggedIn)}if(casesSection)casesSection.classList.toggle('is-designer-login',designLogin);if(nameEl)nameEl.textContent=loggedIn?displayName:'登入';if(roleEl)roleEl.textContent=loggedIn?accountSubtitle:'@emctaipei.com';renderAccountAvatar();if(personalSettingsBtn)personalSettingsBtn.hidden=!loggedIn||isLocalPreviewToken();if(avatarSettingsBtn)avatarSettingsBtn.hidden=true;if(settingsBtn)settingsBtn.hidden=!designLogin;if(dashboardBtn)dashboardBtn.hidden=!dashboardLogin;if(archiveBtn)archiveBtn.hidden=!admin;if(jsonAdminBtn)jsonAdminBtn.hidden=!admin;if(logoutBtn)logoutBtn.hidden=!loggedIn;if(csvBtn)csvBtn.hidden=!designLogin;if(!loggedIn){closeAccountMenu();closeNotifications()}renderNotifications();if(split){split.classList.toggle('timeline-enabled',designLogin&&displaySettings.timelineEnabled);updateCaseSplitPanelWidths({force:true});syncCaseListTableWidth()}syncTimelineHeights();adjustCaseSplitHeight()}
@@ -15606,8 +15643,17 @@ $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revi
  * 背景流程自動收合…），與其在每一個進出點各加一行，不如直接監看 hidden 屬性變化，任何一種開關
  * 方式都涵蓋得到，也不會有人日後新增流程時忘記解鎖。 */
 const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal','personalSettingsModal','designerSettingsModal'];
+/** 彈窗打開後內容常常是非同步補進來的（信件草稿、範本、簽名檔），隔一下再掃一次。 */
+let openFontScanTimer=0;
+function scheduleOpenFontScan(){
+  const scan=()=>SCROLL_LOCK_MODAL_IDS.forEach(id=>{const el=document.getElementById(id);if(el&&!el.hidden)ensureOpenFontsUsedIn(el)});
+  scan();
+  clearTimeout(openFontScanTimer);
+  openFontScanTimer=setTimeout(scan,1500);
+}
 function syncModalScrollLock(){
   const anyOpen=SCROLL_LOCK_MODAL_IDS.some(id=>{const el=document.getElementById(id); return Boolean(el)&&!el.hidden});
+  if(anyOpen)scheduleOpenFontScan();
   document.documentElement.classList.toggle('modal-scroll-locked',anyOpen);
   document.body.classList.toggle('modal-scroll-locked',anyOpen);
 }
