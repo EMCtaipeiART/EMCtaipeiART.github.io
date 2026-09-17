@@ -4567,3 +4567,23 @@ test('personal 客戶設定 permission tree mirrors the admin department:/group:
   assert.match(html, /if\(!sameCustomerSet\(draft\.rules,stored\.rules\)\)payload\.rules=draft\.rules;/);
   assert.match(html, /const label=contact\.subgroup\|\|contact\.group\|\|'其他';/);
 });
+
+test('信件編輯器、簽名檔與信件範本的工具列都有開源字型選單，且每個字型都帶備用字型', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  for (const editor of ['gmailThreadReplyEditor', 'gmailComposeEditor']) {
+    assert.match(html, new RegExp(`<button type="button" class="gmail-rich-font-btn" data-rich-font-for="${editor}" title="字型"`));
+  }
+  assert.match(html, /\+'<button type="button" class="gmail-rich-font-btn" data-rich-font title="字型"/, '設定頁共用工具列');
+  assert.match(html, /const fontButton=event\.target\.closest\('\[data-rich-font\]'\);/);
+  assert.match(html, /<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Noto\+Sans\+TC/);
+
+  const source = html.match(/const gmailOpenFonts=Object\.freeze\(\[[\s\S]*?\]\);/)?.[0];
+  assert.ok(source, 'gmailOpenFonts 清單');
+  const fonts = new Function(`const GMAIL_DEFAULT_FONT_MARKER='machi-default-font';${source};return gmailOpenFonts;`)();
+  assert.equal(fonts[0].label, '預設');
+  assert.deepEqual(fonts.map(font => font.label), ['預設', '思源黑體', '思源宋體', '霞鶩文楷', '芫荽', '粉圓', '昭源黑體', 'Open Sans', 'Source Code Pro']);
+  // 收件人沒裝開源字型時要能退回系統字型，最後一定是通用字族。
+  for (const font of fonts.slice(1)) assert.match(font.value, /,(sans-serif|serif|monospace)$/, font.label);
+  // 「預設」只清掉字型，不動其他格式。
+  assert.match(html, /font\.removeAttribute\('face'\);\n    if\(!font\.attributes\.length\)font\.replaceWith\(\.\.\.font\.childNodes\);/);
+});

@@ -10,6 +10,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>設計需求系統</title>
+  <!-- 信件編輯器「字型」選單用的開源字型（SIL OFL）；只有畫面實際用到的字才會下載。 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&amp;family=Noto+Serif+TC:wght@400;700&amp;family=LXGW+WenKai+TC:wght@400;700&amp;family=Iansui&amp;family=Huninn&amp;family=Chiron+Hei+HK:wght@400;700&amp;family=Open+Sans:wght@400;700&amp;family=Source+Code+Pro:wght@400;700&amp;display=swap" />
   <link rel="preload" as="image" href="assets/designers/Machi-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Anna-avatar.jpg" fetchpriority="high" />
   <link rel="preload" as="image" href="assets/designers/Noise-avatar.jpg" fetchpriority="high" />
@@ -353,7 +357,7 @@
     .personal-settings-fields{display:grid;gap:10px}.personal-mail-templates{display:grid;gap:9px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line)}.personal-mail-templates-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.personal-mail-templates-head b{font-size:13px}.personal-mail-templates-head span{display:block;margin-top:2px;color:var(--muted);font-size:11px;font-weight:700}.personal-mail-template-list{display:grid;gap:9px}
     .personal-customer-pick{display:grid;gap:5px;font-size:12px;font-weight:850;color:#66736d}.personal-customer-pick select{min-height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font:inherit;font-size:13px;color:var(--ink);background:#fff}.personal-customer-body{display:grid;gap:10px}.personal-customer-block{display:grid;gap:6px;border:1px solid #edf0ef;border-radius:12px;padding:10px;background:#fbfffd}.personal-customer-block>b{font-size:12.5px}.personal-customer-block>small{color:var(--muted);font-size:11px;font-weight:700;line-height:1.5}.personal-customer-rules{display:flex;flex-wrap:wrap;gap:5px}.personal-customer-rule{padding:3px 9px;border-radius:999px;background:#eef2f0;color:#43524b;font-size:11px;font-weight:850}.personal-customer-group{border-top:1px solid #edf0ef;padding-top:5px}.personal-customer-group>summary{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;font-weight:900;color:#43524b;padding:2px 0;list-style:none}.personal-customer-group-count{color:var(--muted);font-weight:800}.personal-customer-group.is-nested{margin-left:14px}.personal-customer-all{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:4px!important;margin:0 0 0 auto!important;padding:2px 8px;border-radius:999px;border:1px solid #dfe6e2;background:#fff;font-size:11px;font-weight:850;color:#43524b;cursor:pointer}.personal-customer-all input{width:13px!important;height:13px!important;min-width:13px!important;min-height:0!important;margin:0!important;padding:0!important;box-shadow:none!important;accent-color:var(--green)}.personal-customer-all:has(input:checked){border-color:#9bd4b4;background:#eef8f2;color:#0f5138}html[data-theme="dark"] .personal-customer-all{background:#242629;border-color:#494d51;color:#e9eaeb}.personal-customer-group>summary::-webkit-details-marker{display:none}.personal-customer-group>summary::before{content:'▸ ';color:var(--muted)}.personal-customer-group[open]>summary::before{content:'▾ '}.personal-customer-checks{display:flex;flex-wrap:wrap;gap:5px;padding:4px 0 2px}.personal-customer-check{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:5px!important;margin:0!important;padding:4px 9px;border:1px solid #dfe6e2;border-radius:999px;background:#fff;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}.personal-customer-check input{width:14px!important;height:14px!important;min-width:14px!important;min-height:0!important;margin:0!important;padding:0!important;border-radius:3px!important;box-shadow:none!important;accent-color:var(--green)}.personal-customer-check:has(input:checked){border-color:#9bd4b4;background:#eef8f2;color:#0f5138}.personal-customer-check.is-locked{cursor:default;opacity:.8}.personal-customer-empty{color:var(--muted);font-size:12px;font-weight:750}
     html[data-theme="dark"] .personal-customer-block{background:#1b1c1f;border-color:#3a3d42}html[data-theme="dark"] .personal-customer-check{background:#242629;border-color:#494d51;color:#e9eaeb}html[data-theme="dark"] .personal-customer-check:has(input:checked){background:#12382a;border-color:#2f7d5b;color:#d9f5e7}html[data-theme="dark"] .personal-customer-rule{background:#2a2c30;color:#cfd3d6}html[data-theme="dark"] .personal-customer-pick select{background:#242629;border-color:#494d51;color:#e9eaeb}
-    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}.mail-template-head input[type=text]{flex:1 1 auto!important;min-width:0!important;min-height:30px!important;padding:4px 8px!important;font-size:12.5px!important;font-weight:800!important}.signature-preset-toolbar{margin-top:1px}.signature-preset-content{min-height:74px;max-height:240px;overflow:auto;border-radius:24px!important;border:1px solid var(--line);padding:7px 10px;font:inherit;font-weight:400;color:var(--ink);background:#fff;word-break:break-word;line-height:1.55}.signature-preset-content:focus{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}.signature-preset-content:empty::before{content:attr(data-placeholder);color:var(--muted);font-weight:650;font-size:12.5px}.signature-preset-content.is-invalid{border-color:#f1c0bb!important;background:#fff7f6!important}.gmail-rich-size-label{font-weight:900!important;font-size:13px!important}
+    .mail-template-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc}.mail-template-fields{display:grid;gap:7px;min-width:0}.mail-template-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.mail-template-head b{font-size:12.5px}.mail-template-default{display:inline-flex!important;align-items:center!important;gap:6px!important;margin:0!important;color:#526059!important;font-size:11.5px!important;font-weight:850!important}.mail-template-default input{width:15px!important;height:15px!important;min-height:15px!important;margin:0!important;accent-color:var(--green)}.mail-template-row textarea{width:100%;min-height:86px!important;resize:vertical}.mail-template-remove{width:36px!important;height:36px!important;min-height:36px!important;padding:0!important;background:#fff!important;color:#b42318!important;border:1px solid #f1c0bb!important}.mail-template-add{justify-self:start;min-height:34px!important;background:#eef8f2!important;color:#0f6a49!important;border:1px solid #c9e7d6!important}.gmail-rich-template-btn svg{width:14px!important}.gmail-template-popover-list{display:grid;gap:5px}.gmail-template-popover-option{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:8px!important;align-items:start!important;text-align:left!important}.gmail-template-popover-option b{white-space:nowrap}.gmail-template-popover-option span{overflow:hidden;color:var(--muted);font-size:11px;line-height:1.35;text-overflow:ellipsis;white-space:nowrap}.gmail-template-default-badge{color:#0f8f61!important;font-size:10px!important;font-weight:900!important}.mail-template-head input[type=text]{flex:1 1 auto!important;min-width:0!important;min-height:30px!important;padding:4px 8px!important;font-size:12.5px!important;font-weight:800!important}.signature-preset-toolbar{margin-top:1px}.signature-preset-content{min-height:74px;max-height:240px;overflow:auto;border-radius:24px!important;border:1px solid var(--line);padding:7px 10px;font:inherit;font-weight:400;color:var(--ink);background:#fff;word-break:break-word;line-height:1.55}.signature-preset-content:focus{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}.signature-preset-content:empty::before{content:attr(data-placeholder);color:var(--muted);font-weight:650;font-size:12.5px}.signature-preset-content.is-invalid{border-color:#f1c0bb!important;background:#fff7f6!important}.gmail-rich-size-label{font-weight:900!important;font-size:13px!important}.gmail-rich-font-label{font-family:'Noto Serif TC',serif;font-weight:700!important;font-size:14px!important}.gmail-font-palette{max-height:min(420px,70vh);overflow:auto}.gmail-font-option{font-weight:400!important;font-size:15px!important;min-width:180px!important}.gmail-font-option small{display:block;margin-top:1px;color:var(--muted);font-family:system-ui,sans-serif;font-size:10.5px;font-weight:700}
     html[data-theme="dark"] .personal-settings-avatar-preview,html[data-theme="dark"] .mail-template-row{background:#242629!important;border-color:#414449!important}html[data-theme="dark"] .personal-settings-avatar button,html[data-theme="dark"] .mail-template-remove{background:#242629!important}html[data-theme="dark"] .mail-template-default{color:#c7ccca!important}html[data-theme="dark"] .signature-preset-content{background:#181a1d!important;color:#edf0f2!important;border-color:#454a4f!important}html[data-theme="dark"] .signature-preset-content:empty::before{color:#858b90!important}html[data-theme="dark"] .signature-preset-content.is-invalid{border-color:#5a3535!important;background:#2a1c1c!important}
     @media(max-width:600px){.personal-settings-profile{grid-template-columns:1fr}.personal-settings-fields{width:100%}.personal-settings-avatar{grid-template-columns:auto auto;justify-content:start;align-items:center}.personal-settings-avatar-preview{width:68px;height:68px}.mail-template-head{align-items:flex-start;flex-direction:column;gap:5px}}
     .case-id-btn{border:0;background:transparent;color:#5f7f73;font-weight:900;padding:0;min-height:0;text-decoration:none}
@@ -7226,7 +7230,7 @@
         </div>
         <div class="gmail-modal-section-label">回覆</div>
         <div class="gmail-rich-toolbar">
-          <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailThreadReplyEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
+          <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailThreadReplyEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><button type="button" class="gmail-rich-font-btn" data-rich-font-for="gmailThreadReplyEditor" title="字型" aria-label="字型" aria-expanded="false"><span class="gmail-rich-font-label" aria-hidden="true">字</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
           <span class="gmail-rich-toolbar-divider"></span>
           <button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
           <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
@@ -7289,7 +7293,7 @@
         <label>主旨<input type="text" id="gmailComposeSubject" placeholder="主旨"></label>
         <div class="gmail-field-block gmail-compose-body-field">內容
           <div class="gmail-rich-toolbar">
-            <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailComposeEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
+            <button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button><button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button><span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-size-btn" data-rich-size-for="gmailComposeEditor" title="字體大小" aria-label="字體大小" aria-expanded="false"><span class="gmail-rich-size-label" aria-hidden="true">tT</span></button><button type="button" class="gmail-rich-font-btn" data-rich-font-for="gmailComposeEditor" title="字型" aria-label="字型" aria-expanded="false"><span class="gmail-rich-font-label" aria-hidden="true">字</span></button><span class="gmail-rich-toolbar-divider"></span><button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button><button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button><button type="button" data-rich-cmd="underline" title="底線（⌘U）"><u>U</u></button>
             <span class="gmail-rich-toolbar-divider"></span>
             <button type="button" data-rich-cmd="justifyLeft" title="靠左對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
             <button type="button" data-rich-cmd="justifyCenter" title="置中對齊"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg></button>
@@ -8981,6 +8985,80 @@ function closeGmailSizePalette(){
   document.querySelectorAll('.gmail-rich-size-btn').forEach(item=>item.setAttribute('aria-expanded','false'));
   gmailSizeTargetButton=null;
 }
+/** 字型選單：只列開源字型（SIL Open Font License），網頁從 Google Fonts 載入預覽。
+ * 注意 Gmail 等信箱不會替收件人下載網頁字型——收件人電腦有裝這套字才會看到同樣字型，沒裝就依序退回
+ * 後面的系統字型，所以每個選項都帶完整的備用字型清單，不會變成亂碼或怪字。
+ * 「預設」是先套一個標記字型，再把標記拿掉，只清掉字型、不影響粗體／顏色等其他格式。 */
+const GMAIL_DEFAULT_FONT_MARKER='machi-default-font';
+const gmailOpenFonts=Object.freeze([
+  {label:'預設',note:'跟著信箱的預設字型',value:GMAIL_DEFAULT_FONT_MARKER},
+  {label:'思源黑體',note:'Noto Sans TC',value:"'Noto Sans TC','思源黑體','Source Han Sans TC','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'思源宋體',note:'Noto Serif TC',value:"'Noto Serif TC','思源宋體','Source Han Serif TC','PMingLiU',serif"},
+  {label:'霞鶩文楷',note:'LXGW WenKai TC',value:"'LXGW WenKai TC','霞鶩文楷 TC','Kaiti TC','DFKai-SB',serif"},
+  {label:'芫荽',note:'Iansui',value:"'Iansui','芫荽','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'粉圓',note:'Huninn',value:"'Huninn','jf open 粉圓','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'昭源黑體',note:'Chiron Hei HK',value:"'Chiron Hei HK','昭源黑體','PingFang TC','Microsoft JhengHei',sans-serif"},
+  {label:'Open Sans',note:'英文無襯線',value:"'Open Sans',Arial,Helvetica,sans-serif"},
+  {label:'Source Code Pro',note:'英文等寬',value:"'Source Code Pro',Menlo,Consolas,monospace"}
+]);
+let gmailFontPaletteEl=null,gmailFontTargetButton=null;
+function clearDefaultFontMarkers(root){
+  root?.querySelectorAll?.(`font[face="${GMAIL_DEFAULT_FONT_MARKER}"]`).forEach(font=>{
+    font.removeAttribute('face');
+    if(!font.attributes.length)font.replaceWith(...font.childNodes);
+  });
+  root?.querySelectorAll?.('[style=""]').forEach(el=>el.removeAttribute('style'));
+}
+function applyGmailFontFamily(value){
+  if(!restoreRichSelection())return;
+  document.execCommand('styleWithCSS',false,false);
+  document.execCommand('fontName',false,value);
+  if(value===GMAIL_DEFAULT_FONT_MARKER){
+    const selection=window.getSelection();
+    const node=selection?.rangeCount?selection.getRangeAt(0).commonAncestorContainer:null;
+    const editor=(node?.nodeType===Node.ELEMENT_NODE?node:node?.parentElement)?.closest?.('[contenteditable="true"]');
+    clearDefaultFontMarkers(editor||document.body);
+  }
+}
+function ensureGmailFontPalette(){
+  if(gmailFontPaletteEl)return gmailFontPaletteEl;
+  const palette=document.createElement('div');
+  palette.className='gmail-size-palette gmail-font-palette';
+  palette.id='gmailFontPalette';
+  palette.setAttribute('role','menu');
+  palette.setAttribute('aria-label','字型');
+  palette.hidden=true;
+  palette.innerHTML=gmailOpenFonts.map((font,index)=>`<button type="button" class="gmail-size-option gmail-font-option" data-gmail-font="${index}" style="font-family:${esc(font.value===GMAIL_DEFAULT_FONT_MARKER?'inherit':font.value)}">${esc(font.label)}<small>${esc(font.note)}</small></button>`).join('');
+  palette.addEventListener('mousedown',event=>event.preventDefault());
+  palette.addEventListener('click',event=>{
+    const option=event.target.closest('[data-gmail-font]');
+    if(!option||!gmailFontTargetButton)return;
+    const font=gmailOpenFonts[Number(option.dataset.gmailFont)];
+    if(font)applyGmailFontFamily(font.value);
+    closeGmailFontPalette();
+  });
+  document.body.appendChild(palette);
+  gmailFontPaletteEl=palette;
+  return palette;
+}
+function openGmailFontPalette(button){
+  const palette=ensureGmailFontPalette();
+  closeGmailSizePalette();
+  gmailFontTargetButton=button;
+  document.querySelectorAll('.gmail-rich-font-btn').forEach(item=>item.setAttribute('aria-expanded',String(item===button)));
+  palette.hidden=false;
+  const rect=button.getBoundingClientRect(),margin=8,paletteWidth=palette.offsetWidth,paletteHeight=palette.offsetHeight;
+  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-paletteWidth-margin));
+  const below=rect.bottom+6,top=below+paletteHeight<=window.innerHeight-margin?below:Math.max(margin,rect.top-paletteHeight-6);
+  palette.style.left=`${left}px`;
+  palette.style.top=`${top}px`;
+}
+function closeGmailFontPalette(){
+  if(gmailFontPaletteEl)gmailFontPaletteEl.hidden=true;
+  document.querySelectorAll('.gmail-rich-font-btn').forEach(item=>item.setAttribute('aria-expanded','false'));
+  gmailFontTargetButton=null;
+}
+function toggleGmailFontPalette(button){if(gmailFontTargetButton===button&&!ensureGmailFontPalette().hidden)closeGmailFontPalette();else openGmailFontPalette(button)}
 const gmailInlineImagesByEditor=new Map();
 const gmailInlineImageTasksByEditor=new Map();
 const gmailInlineImageGenerationsByEditor=new Map();
@@ -10999,6 +11077,7 @@ function richSettingsToolbarHtml(extraClass=''){
     +'<button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button>'
     +'<span class="gmail-rich-toolbar-divider"></span>'
     +'<button type="button" class="gmail-rich-size-btn" data-rich-size title="文字大小" aria-label="文字大小" aria-expanded="false"><span class="gmail-rich-size-label">tT</span></button>'
+    +'<button type="button" class="gmail-rich-font-btn" data-rich-font title="字型" aria-label="字型" aria-expanded="false"><span class="gmail-rich-font-label">字</span></button>'
     +'<span class="gmail-rich-toolbar-divider"></span>'
     +'<button type="button" data-rich-cmd="bold" title="粗體（⌘B）"><b>B</b></button>'
     +'<button type="button" data-rich-cmd="italic" title="斜體（⌘I）"><i>I</i></button>'
@@ -11042,11 +11121,13 @@ function bindRichSettingsEditor(list,contentSelector){
   const editorOf=el=>el?.closest('.mail-template-row')?.querySelector(contentSelector)||null;
   list.addEventListener('mousedown',event=>{
     if(event.target.closest('[data-rich-cmd]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();return}
-    if(event.target.closest('[data-rich-size]')||event.target.closest('.gmail-rich-color-btn')||event.target.closest('[data-rich-link]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
+    if(event.target.closest('[data-rich-size]')||event.target.closest('[data-rich-font]')||event.target.closest('.gmail-rich-color-btn')||event.target.closest('[data-rich-link]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
   });
   list.addEventListener('click',event=>{
     const cmdButton=event.target.closest('[data-rich-cmd]');
     if(cmdButton){editorOf(cmdButton)?.focus();restoreRichSelection();document.execCommand(cmdButton.dataset.richCmd);return}
+    const fontButton=event.target.closest('[data-rich-font]');
+    if(fontButton){event.stopPropagation();toggleGmailFontPalette(fontButton);return}
     const sizeButton=event.target.closest('[data-rich-size]');
     if(sizeButton){event.stopPropagation();if(gmailSizeTargetButton===sizeButton&&!ensureGmailSizePalette().hidden)closeGmailSizePalette();else openGmailSizePalette(sizeButton);return}
     const colorButton=event.target.closest('.gmail-rich-color-btn');
@@ -15591,6 +15672,11 @@ document.querySelectorAll('.gmail-rich-toolbar .gmail-rich-size-btn').forEach(bu
 });
 // 點別處就收起字體大小面板（顏色面板已有自己的處理）。
 document.addEventListener('click',event=>{if(gmailSizePaletteEl&&!gmailSizePaletteEl.hidden&&!gmailSizePaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-size-btn'))closeGmailSizePalette()});
+document.querySelectorAll('.gmail-rich-toolbar .gmail-rich-font-btn').forEach(button=>{
+  button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
+  button.addEventListener('click',event=>{event.stopPropagation();toggleGmailFontPalette(button)});
+});
+document.addEventListener('click',event=>{if(gmailFontPaletteEl&&!gmailFontPaletteEl.hidden&&!gmailFontPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-font-btn'))closeGmailFontPalette()});
 // ⌘K／Ctrl+K：選取文字後快速加超連結，跟 Gmail 一樣。
 document.querySelectorAll('.gmail-rich-editor').forEach(editor=>editor.addEventListener('keydown',event=>{
   if(!(event.metaKey||event.ctrlKey)||event.altKey)return;

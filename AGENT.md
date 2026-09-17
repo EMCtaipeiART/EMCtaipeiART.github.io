@@ -217,7 +217,18 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 11:00 Asia/Taipei（最新）— 加快 NAS 備份上傳（不再等 Google 結果頁）
+### 2026-09-17 11:40 Asia/Taipei（最新）— 信件編輯器新增開源字型選單
+
+- 修改目的：使用者希望信件編輯器可以依開源字型調整字型。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 回信、新信與設定頁（簽名檔、信件範本）工具列在「tT」旁新增「字」按鈕，彈出 `gmailOpenFonts` 選單：預設、思源黑體（Noto Sans TC）、思源宋體（Noto Serif TC）、霞鶩文楷（LXGW WenKai TC）、芫荽（Iansui）、粉圓（Huninn）、昭源黑體（Chiron Hei HK）、Open Sans、Source Code Pro，皆為 SIL OFL 開源字型，由 `<head>` 的 Google Fonts 樣式表載入預覽（只下載畫面實際用到的字）。
+  - 套用方式沿用字體大小的 `restoreRichSelection()`＋`execCommand('fontName')`，產生 Gmail 同款 `<font face>`；每個字型都帶系統備用字型，最後是通用字族。「預設」先套標記字型再移除（`clearDefaultFontMarkers`），只清字型不動其他格式，並清掉殘留的空 `style`。
+- 風險區塊：**Gmail 等信箱不會替收件人下載網頁字型**，收件人電腦有安裝該字型才會看到相同字型，否則依備用清單顯示系統字型（例如蘋方、微軟正黑體）。編輯器內看到的是完整預覽。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 140/140；本機 Browser pane 驗證新信編輯器套用思源宋體／霞鶩文楷再改回預設（粗體保留）、八套字型皆載入並正確顯示、簽名檔設定的字型按鈕可套用。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-17 11:00 Asia/Taipei — 加快 NAS 備份上傳（不再等 Google 結果頁）
 
 - 修改目的：使用者反映設計師回覆的備份圖片上傳偏慢。
 - 量測：Pages db.json 約 0.9 秒、Worker 修改紀錄約 0.6 秒；Apps Script 往返每次約 8～33 秒且多半拿到錯誤頁。拆開量測後，POST 約 1 秒就回 302（doPost 已執行完），慢的是去 Google 取回結果頁。
