@@ -4654,6 +4654,10 @@ test('手機案件列表一次只沿一個方向捲動，按住拖曳只給滑�
   assert.match(html, /@media \(hover:none\) and \(pointer:coarse\)\{\n      #casesSection \.case-table-wrap\{touch-action:pan-y\}/);
   assert.match(html, /initCaseTableDragScroll\(\); initCaseTableTouchAxisLock\(\);/);
   assert.match(html, /if\(axis!=='x'\)return;\n    if\(event\.cancelable\)event\.preventDefault\(\);/, '橫向時擋掉瀏覽器捲動，直向完全交給瀏覽器');
+  // 登入後顯示時間軸時，左右捲動的是外層 .case-split；每次觸碰都要找出實際能左右捲的那一層。
+  assert.match(html, /const horizontalScroller=\(\)=>\[wrap,wrap\.closest\('\.case-split'\)\]\.find\(el=>el&&el\.scrollWidth>el\.clientWidth\+1\)\|\|null;/);
+  assert.match(html, /scroller\.scrollLeft=startLeft-dx;/);
+  assert.doesNotMatch(html.match(/function initCaseTableTouchAxisLock\(\)\{[\s\S]*?\n\}/)[0], /wrap\.scrollLeft/);
   const decide = new Function(`${html.match(/function caseTableAxisLockDecision\(dx,dy\)\{[\s\S]*?\n\}/)[0]}\nreturn caseTableAxisLockDecision;`)();
   assert.equal(decide(-30, 4), 'x');
   assert.equal(decide(5, -30), 'y');

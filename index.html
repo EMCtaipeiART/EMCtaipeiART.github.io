@@ -15356,14 +15356,19 @@ function initCaseTableTouchAxisLock(){
   const wrap=document.querySelector('#casesSection .case-table-wrap');
   if(!wrap||wrap.dataset.touchAxisLock==='1')return;
   wrap.dataset.touchAxisLock='1';
-  let startX=0,startY=0,startLeft=0,axis='',tracking=false,samples=[],momentumFrame=0;
+  // 真正負責左右捲動的那一層不固定：只有案件表時是表格本身，登入後顯示時間軸時是外層 .case-split
+  // （表格和時間軸一起左右捲）。touch-action 擋掉的是整條祖先鏈的瀏覽器橫向捲動，所以每次觸碰都要
+  // 找出目前實際能左右捲的那一層由這裡接手，否則會變成完全無法左右滑（2026-09-17 回報）。
+  const horizontalScroller=()=>[wrap,wrap.closest('.case-split')].find(el=>el&&el.scrollWidth>el.clientWidth+1)||null;
+  let startX=0,startY=0,startLeft=0,axis='',tracking=false,samples=[],momentumFrame=0,scroller=null;
   const stopMomentum=()=>{if(momentumFrame){cancelAnimationFrame(momentumFrame);momentumFrame=0}};
   wrap.addEventListener('touchstart',event=>{
     stopMomentum();
     if(event.touches.length!==1){tracking=false;return}
     const touch=event.touches[0];
-    tracking=wrap.scrollWidth>wrap.clientWidth+1&&!event.target.closest?.('input,select,textarea,[contenteditable="true"]');
-    startX=touch.clientX;startY=touch.clientY;startLeft=wrap.scrollLeft;axis='';
+    scroller=horizontalScroller();
+    tracking=Boolean(scroller)&&!event.target.closest?.('input,select,textarea,[contenteditable="true"]');
+    startX=touch.clientX;startY=touch.clientY;startLeft=scroller?.scrollLeft||0;axis='';
     samples=[{x:touch.clientX,t:event.timeStamp}];
   },{passive:true});
   wrap.addEventListener('touchmove',event=>{
@@ -15372,7 +15377,7 @@ function initCaseTableTouchAxisLock(){
     if(!axis)axis=caseTableAxisLockDecision(dx,dy);
     if(axis!=='x')return;
     if(event.cancelable)event.preventDefault();
-    wrap.scrollLeft=startLeft-dx;
+    scroller.scrollLeft=startLeft-dx;
     samples.push({x:touch.clientX,t:event.timeStamp});
     samples=samples.filter(sample=>event.timeStamp-sample.t<=100);
     syncCaseHeaderScroll();
@@ -15387,10 +15392,10 @@ function initCaseTableTouchAxisLock(){
     const step=()=>{
       velocity*=0.94;
       if(Math.abs(velocity)<0.5){momentumFrame=0;return}
-      const before=wrap.scrollLeft;
-      wrap.scrollLeft=before+velocity;
+      const before=scroller.scrollLeft;
+      scroller.scrollLeft=before+velocity;
       syncCaseHeaderScroll();
-      if(wrap.scrollLeft===before){momentumFrame=0;return}
+      if(scroller.scrollLeft===before){momentumFrame=0;return}
       momentumFrame=requestAnimationFrame(step);
     };
     momentumFrame=requestAnimationFrame(step);
