@@ -5632,6 +5632,10 @@
       cursor:grab;
       overscroll-behavior-x:contain;
     }
+    /* 觸控裝置：表格只讓瀏覽器上下捲動，左右由 initCaseTableTouchAxisLock() 接手，避免斜向亂跳。 */
+    @media (hover:none) and (pointer:coarse){
+      #casesSection .case-table-wrap{touch-action:pan-y}
+    }
     #casesSection .case-table-wrap.drag-scroll-ready.is-dragging,
     #casesSection .case-table-wrap.drag-scroll-ready.is-dragging *{
       cursor:grabbing!important;
@@ -15300,7 +15304,9 @@ function initCaseTableDragScroll(){
     }
   };
   wrap.addEventListener('pointerdown',event=>{
-    if(event.button!==0||event.isPrimary===false||blockedTarget(event.target))return;
+    // 按住拖曳只給滑鼠用。手指觸控時瀏覽器本來就會捲動，這裡再手動改捲動位置會跟原生捲動互相拉扯，
+    // 手機上滑動列表就會亂跳（2026-09-17 回報）；觸控改由 initCaseTableTouchAxisLock() 處理。
+    if(event.pointerType!=='mouse'||event.button!==0||event.isPrimary===false||blockedTarget(event.target))return;
     const canScrollX=wrap.scrollWidth>wrap.clientWidth+1;
     const canScrollY=split.scrollHeight>split.clientHeight+1;
     if(!canScrollX&&!canScrollY)return;
@@ -15334,6 +15340,63 @@ function initCaseTableDragScroll(){
     event.stopPropagation();
     suppressClick=false;
   },true);
+}
+/**
+ * 手機觸控：一次只沿一個方向捲動。手機瀏覽器預設允許斜向同時捲動，手指稍微斜一點，表格就會一邊
+ * 橫移一邊上下跑。表格在觸控裝置上設成 touch-action:pan-y（瀏覽器只負責上下捲動），手指第一次移動
+ * 時判斷方向：偏上下就完全交給瀏覽器（不會再橫移）；偏左右就擋掉瀏覽器捲動，由這裡橫移表格，
+ * 放開後照手指速度繼續滑一小段再停下來。
+ */
+function caseTableAxisLockDecision(dx,dy){
+  const ax=Math.abs(dx),ay=Math.abs(dy);
+  if(!ax&&!ay)return '';
+  return ax>ay?'x':'y';
+}
+function initCaseTableTouchAxisLock(){
+  const wrap=document.querySelector('#casesSection .case-table-wrap');
+  if(!wrap||wrap.dataset.touchAxisLock==='1')return;
+  wrap.dataset.touchAxisLock='1';
+  let startX=0,startY=0,startLeft=0,axis='',tracking=false,samples=[],momentumFrame=0;
+  const stopMomentum=()=>{if(momentumFrame){cancelAnimationFrame(momentumFrame);momentumFrame=0}};
+  wrap.addEventListener('touchstart',event=>{
+    stopMomentum();
+    if(event.touches.length!==1){tracking=false;return}
+    const touch=event.touches[0];
+    tracking=wrap.scrollWidth>wrap.clientWidth+1&&!event.target.closest?.('input,select,textarea,[contenteditable="true"]');
+    startX=touch.clientX;startY=touch.clientY;startLeft=wrap.scrollLeft;axis='';
+    samples=[{x:touch.clientX,t:event.timeStamp}];
+  },{passive:true});
+  wrap.addEventListener('touchmove',event=>{
+    if(!tracking||event.touches.length!==1)return;
+    const touch=event.touches[0],dx=touch.clientX-startX,dy=touch.clientY-startY;
+    if(!axis)axis=caseTableAxisLockDecision(dx,dy);
+    if(axis!=='x')return;
+    if(event.cancelable)event.preventDefault();
+    wrap.scrollLeft=startLeft-dx;
+    samples.push({x:touch.clientX,t:event.timeStamp});
+    samples=samples.filter(sample=>event.timeStamp-sample.t<=100);
+    syncCaseHeaderScroll();
+  },{passive:false});
+  const end=event=>{
+    if(!tracking)return;
+    tracking=false;
+    if(axis!=='x'||samples.length<2)return;
+    const first=samples[0],last=samples[samples.length-1],elapsed=Math.max(1,last.t-first.t);
+    let velocity=(first.x-last.x)/elapsed*16; // 每一格畫面要移動的像素，方向與 scrollLeft 相同
+    if(event.timeStamp-last.t>80||Math.abs(velocity)<1)return;
+    const step=()=>{
+      velocity*=0.94;
+      if(Math.abs(velocity)<0.5){momentumFrame=0;return}
+      const before=wrap.scrollLeft;
+      wrap.scrollLeft=before+velocity;
+      syncCaseHeaderScroll();
+      if(wrap.scrollLeft===before){momentumFrame=0;return}
+      momentumFrame=requestAnimationFrame(step);
+    };
+    momentumFrame=requestAnimationFrame(step);
+  };
+  wrap.addEventListener('touchend',end,{passive:true});
+  wrap.addEventListener('touchcancel',()=>{tracking=false},{passive:true});
 }
 function setEditMode(id=null){editingId=id; requestKind=editingId?'設計修改需求':'設計新增需求'; formEl.elements.requestKind.value=requestKind; formEl.classList.toggle('is-modify',Boolean(editingId)); updateRequestMode()}
 function openRequestKind(kind){editingId=null; ownerTouchedByUser=false; if(kind==='modify')modifyPage=1; $('#requestForm').reset(); resetRequestExtras(); populateDesignSelects(); setRequestKind(kind); resetDateSelectGroupsToToday(); setEditMode(null); applyCurrentUserProfile(currentUserProfile)}
@@ -15825,7 +15888,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus();refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus();refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>

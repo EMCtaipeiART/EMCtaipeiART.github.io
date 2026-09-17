@@ -4647,3 +4647,16 @@ test('系統公告：最新的在最上面，v4.8 比 v4.72 新（版本號小�
     assert.deepEqual([...rows].sort((a, b) => compare(b, a)).map(row => row['公告版本']), ['v4.8', 'v4.72', 'v4.71', 'v4.7']);
   }
 });
+
+test('手機案件列表一次只沿一個方向捲動，按住拖曳只給滑鼠用', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /if\(event\.pointerType!=='mouse'\|\|event\.button!==0\|\|event\.isPrimary===false/, '觸控不觸發拖曳捲動');
+  assert.match(html, /@media \(hover:none\) and \(pointer:coarse\)\{\n      #casesSection \.case-table-wrap\{touch-action:pan-y\}/);
+  assert.match(html, /initCaseTableDragScroll\(\); initCaseTableTouchAxisLock\(\);/);
+  assert.match(html, /if\(axis!=='x'\)return;\n    if\(event\.cancelable\)event\.preventDefault\(\);/, '橫向時擋掉瀏覽器捲動，直向完全交給瀏覽器');
+  const decide = new Function(`${html.match(/function caseTableAxisLockDecision\(dx,dy\)\{[\s\S]*?\n\}/)[0]}\nreturn caseTableAxisLockDecision;`)();
+  assert.equal(decide(-30, 4), 'x');
+  assert.equal(decide(5, -30), 'y');
+  assert.equal(decide(10, 10), 'y', '剛好斜 45 度交給瀏覽器上下捲動');
+  assert.equal(decide(0, 0), '');
+});

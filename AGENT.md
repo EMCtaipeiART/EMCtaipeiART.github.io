@@ -217,7 +217,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 12:50 Asia/Taipei（最新）— 系統公告排序：最新的在最上面（v4.8 比 v4.72 新）
+### 2026-09-17 13:30 Asia/Taipei（最新）— 手機案件列表滑動時亂跳
+
+- 修改目的：使用者回報手機瀏覽案件列表時，滑動會「很活潑地亂跳」，希望只橫移或只上下移動。
+- 成因：
+  1. `initCaseTableDragScroll()`（桌機按住拖曳捲動）沒有排除觸控，手指滑動時 pointer 事件也會觸發，程式手動改 `scrollLeft`／`scrollTop`，和瀏覽器原生捲動互相拉扯。
+  2. 手機瀏覽器預設允許斜向同時捲動，表格可以橫捲、頁面可以直捲，手指稍微斜一點兩個方向就一起動。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 拖曳捲動只接受 `pointerType==='mouse'`。
+  - 新增 `initCaseTableTouchAxisLock()`：觸控裝置（`hover:none`＋`pointer:coarse`）上表格設 `touch-action:pan-y`；手指第一次移動時用 `caseTableAxisLockDecision()` 判斷方向，偏上下完全交給瀏覽器（此時不會橫移），偏左右則 `preventDefault` 並由程式橫移，放開後依最後 100ms 的速度做慣性滑動（每格衰減 0.94），再次觸碰會立即停止；同步更新固定表頭的橫向位置。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 143/143；本機 Browser pane 以 375×812 手機模擬、合成觸控事件驗證：橫滑時每個 touchmove 都被攔下、表格橫移、頁面不上下動；直滑不攔截且表格不橫移；觸控的 pointer 事件不再觸發拖曳；慣性滑動與觸碰停止正常（面板隱藏時 rAF 不執行，以計時器暫代驗證）。**未在實體 iPhone 上測試**，請使用者實測。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-17 12:50 Asia/Taipei — 系統公告排序：最新的在最上面（v4.8 比 v4.72 新）
 
 - 修改目的：使用者發現資料庫後台「系統公告欄」中 9/17 的 v4.8 公告排在第三。
 - 成因：後台用 `localeCompare(...,{numeric:true})` 比版本號，小數點後被當整數比（72 > 8），排序變成 v4.72、v4.71、v4.8、v4.7。前台 `systemAnnouncementFromDatabase()` 與後端共用的 `latestSystemAnnouncement()` 也是同一種比法（目前只有 v4.8 啟用，所以尚未造成顯示錯誤）。
