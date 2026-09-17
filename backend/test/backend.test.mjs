@@ -4282,8 +4282,8 @@ test('designer settings gain their own signature presets, past story thumbnails 
   assert.ok(rowHtml, 'signaturePresetRowHtml 需要 scope 參數');
   assert.match(html, /const radioName=`signature-preset-default-\$\{String\(scope\)\.replace\(/);
 
-  // ② 設計師看得到設計師設定，就不再顯示個人設定入口（其他角色不受影響）。
-  assert.match(html, /show\('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken\(\)&&accessAllowed\('profile\.edit',true\)&&!canAccessDesignerSettings\(\)\);/);
+  // ② 設計師看得到設計師設定，就不再顯示個人設定入口（其他角色不受影響）；管理者例外，要用個人設定裡的客戶設定。
+  assert.match(html, /show\('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken\(\)&&accessAllowed\('profile\.edit',true\)&&\(isAdministrator\(\)\|\|!canAccessDesignerSettings\(\)\)\);/);
 
   // ③ 管理照片欄位列出過往貼過的縮圖，滑鼠停留顯示互動狀況與最新留言。
   assert.match(html, /data-manage-designer-photo="\$\{esc\(name\)\}">管理圖片與 Reels<\/button>\$\{designerReelThumbsHtml\(name\)\}/);

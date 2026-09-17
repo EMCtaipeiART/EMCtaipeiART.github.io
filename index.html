@@ -15140,7 +15140,8 @@ updateLoginUi=function(...args){
   const show=(selector,allowed)=>{const element=$(selector);if(element)element.hidden=!allowed};
   // 設計師設定已經涵蓋簽名檔、信件範本、頭像與照片管理，只差改名；看得到設計師設定的人就不再顯示
   // 「個人設定」，避免兩個入口做同一件事。其他角色（例如專案同仁）照常看得到。
-  show('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true)&&!canAccessDesignerSettings());
+  // 管理者（含 Machi）例外：個人設定裡的「客戶設定」只有這裡有，管理者要能調整每個客戶的權限人員。
+  show('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken()&&accessAllowed('profile.edit',true)&&(isAdministrator()||!canAccessDesignerSettings()));
   show('#accountAvatarSettings',false);
   show('#accountDesignerSettings',loggedIn&&canAccessDesignerSettings());
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
