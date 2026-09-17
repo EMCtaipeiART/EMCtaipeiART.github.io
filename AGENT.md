@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-17 16:30 Asia/Taipei — AI判斷等待畫面加上設計幹話語錄輪播
+
+- 修改目的：AI 分析要等 20–60 秒，使用者希望等待時有東西看。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：`#aiStageModal` 的 loading 畫面在「AI 分析中」下方顯示 `submitQuotes`（與送出遮罩同一份語錄），每 3.6 秒淡出換句（避免連續同一句）；`renderAiStageModal()` 與 `closeAiStageModal()` 會先停止輪播計時器。
+- 風險區塊：無後端變更。
+- 已檢查／驗證方式：本機瀏覽器確認語錄顯示在等待文字下方、4 秒後換句、關窗後計時器歸零；`npm test` 全過；inline script `node --check` 通過。
+- 部署狀態：純前端，git push 後自動生效。
+- commit：本次 commit
+
 ### 2026-09-17 16:10 Asia/Taipei — AI判斷：選項改純文字、開窗鎖背景捲動、取消點框外關閉
 
 - 修改目的：使用者要求下拉選項顯示「AI判斷(beta)」純文字；彈窗開啟時背景不可捲動，點框外不自動關閉。

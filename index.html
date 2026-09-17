@@ -7125,7 +7125,11 @@
     #aiStageModal .ai-stage-detail b{display:block;color:#253530;margin-bottom:5px}
     #aiStageModal .ai-stage-tags{display:flex;flex-wrap:wrap;gap:6px}
     #aiStageModal .ai-stage-tags span{border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fafbfa}
-    #aiStageModal .ai-stage-loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:34px 0;color:#4f5d57;font-weight:800}
+    #aiStageModal .ai-stage-loading{display:grid;justify-items:center;gap:14px;padding:30px 8px 26px;text-align:center}
+    #aiStageModal .ai-stage-loading-line{display:flex;align-items:center;justify-content:center;gap:10px;color:#4f5d57;font-weight:800}
+    #aiStageModal .ai-stage-quote{min-height:44px;max-width:440px;color:#43524b;font-size:14px;line-height:1.55;font-weight:800;transition:opacity .25s ease}
+    #aiStageModal .ai-stage-quote.is-fading{opacity:0}
+    html[data-theme="dark"] #aiStageModal .ai-stage-loading-line,html[data-theme="dark"] #aiStageModal .ai-stage-quote{color:#c7cbcd}
     #aiStageModal .ai-stage-spinner{width:20px;height:20px;border-radius:50%;border:3px solid #cfe4d8;border-top-color:var(--green);animation:aiStageSpin 1s linear infinite}
     @keyframes aiStageSpin{to{transform:rotate(360deg)}}
     #aiStageModal .ai-stage-fill{background:#fff!important;color:#253530!important;border:1px solid #cfd7d1!important;box-shadow:none!important}
@@ -11956,22 +11960,36 @@ function openAiStageModal(){
   modal.hidden=false;
   modal.querySelector(aiStageState.view==='auth'?'input[name="aiStagePassword"]':'[data-ai-stage-drop]')?.focus();
 }
-function closeAiStageModal(){const modal=$('#aiStageModal');if(modal)modal.hidden=true;aiStageState.files=[];aiStageState.result=null}
+function closeAiStageModal(){stopAiStageQuoteRotation();const modal=$('#aiStageModal');if(modal)modal.hidden=true;aiStageState.files=[];aiStageState.result=null}
 function aiStagePreviewUrls(){
   aiStageState.previewUrls?.forEach(url=>URL.revokeObjectURL(url));
   aiStageState.previewUrls=aiStageState.files.map(file=>URL.createObjectURL(file));
   return aiStageState.previewUrls;
 }
 function aiStageErrorHtml(){return `<p class="ai-stage-error" role="alert"${aiStageState.error?'':' hidden'}>${esc(aiStageState.error)}</p>`}
+/** 等待 AI 結果時輪播設計幹話語錄（沿用送出遮罩的 submitQuotes），離開等待畫面就停止。 */
+let aiStageQuoteTimer=0;
+function stopAiStageQuoteRotation(){clearInterval(aiStageQuoteTimer);aiStageQuoteTimer=0}
+function startAiStageQuoteRotation(){
+  stopAiStageQuoteRotation();
+  aiStageQuoteTimer=setInterval(()=>{
+    const el=$('#aiStageModal [data-ai-stage-quote]');
+    if(!el||aiStageState.view!=='loading'||$('#aiStageModal')?.hidden){stopAiStageQuoteRotation();return}
+    el.classList.add('is-fading');
+    setTimeout(()=>{let next=randomSubmitQuote();for(let i=0;i<3&&next===el.textContent;i++)next=randomSubmitQuote();el.textContent=next;el.classList.remove('is-fading')},250);
+  },3600);
+}
 function renderAiStageModal(){
   const body=$('#aiStageBody');if(!body)return;
+  stopAiStageQuoteRotation();
   const state=aiStageState;
   if(state.view==='auth'){
     body.innerHTML=`<form data-ai-stage-auth><p class="ai-stage-sub">尚未登入設計需求系統，請輸入團隊密碼後使用（登入帳號即可免輸入）。</p><label class="ai-stage-field">團隊密碼<input type="password" name="aiStagePassword" autocomplete="current-password" required></label>${aiStageErrorHtml()}<div class="ai-stage-actions"><button type="button" class="secondary" data-ai-stage-close>取消</button><button type="submit"${state.busy?' disabled':''}>${state.busy?'驗證中…':'確認'}</button></div></form>`;
     return;
   }
   if(state.view==='loading'){
-    body.innerHTML='<div class="ai-stage-loading"><span class="ai-stage-spinner" aria-hidden="true"></span>AI 分析中，約需 20–60 秒…</div>';
+    body.innerHTML=`<div class="ai-stage-loading"><div class="ai-stage-loading-line"><span class="ai-stage-spinner" aria-hidden="true"></span>AI 分析中，約需 20–60 秒…</div><div class="ai-stage-quote" data-ai-stage-quote aria-live="polite">${esc(randomSubmitQuote())}</div></div>`;
+    startAiStageQuoteRotation();
     return;
   }
   if(state.view==='result'&&state.result){

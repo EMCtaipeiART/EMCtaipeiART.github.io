@@ -4735,6 +4735,9 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
   // 前台只帶 token 標頭，不送 cookie；未登入者用團隊密碼換 token。
   assert.match(html, /headers\.set\('X-EMC-Editor-Token',editorToken\)/);
   assert.match(html, /headers\.set\('X-EMC-Access',accessToken\)/);
+  // 等待結果時輪播 submitQuotes 語錄，關窗或離開等待畫面就停止。
+  assert.match(html, /AI 分析中，約需 20–60 秒…<\/div><div class="ai-stage-quote" data-ai-stage-quote aria-live="polite">\$\{esc\(randomSubmitQuote\(\)\)\}<\/div>/);
+  assert.match(html, /function closeAiStageModal\(\)\{stopAiStageQuoteRotation\(\);/);
   // 開窗時鎖背景捲動、不綁點框外關閉。
   assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'aiStageModal'\]/);
   assert.doesNotMatch(html, /target===modal\|\|target\.closest\('\[data-ai-stage-close\]'\)/);
