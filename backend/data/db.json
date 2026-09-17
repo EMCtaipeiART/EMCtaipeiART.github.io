@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5380,
+  "revision": 5381,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-17T07:03:08.973Z",
+  "updatedAt": "2026-09-17T07:03:25.751Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1454,7 +1454,7 @@
         {"案件編號":"26090027","修改次數":"1","建立日期":"2026/09/17 11:33:32","修改日期":"2026-09-17","修改內容":"不好意思，客戶想微調大標文字，變成【印越多差越多】\n再麻煩您了！感恩感恩。","修改人":"李明庭","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090100","修改次數":"1","建立日期":"2026/09/17 12:41:02","修改日期":"2026-09-17","修改內容":"1.移除ANKER logo\n2.協助確認文字使用是否符合guideline規範\n3.主副標字體需區隔主次感，主標再放大，副標再縮小。","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260916_ANKER_FB封面.png\"]"},
         {"案件編號":"26090081","修改次數":"4","建立日期":"2026/09/17 12:54:21","修改日期":"2026-09-17","修改內容":"拍寫，不要打我，客戶又要改==\n\n\n再麻煩您了：\n\n\nhttps://docs.google.com/presentation/d/1BquY2woSNOxR8QkyKRRwej7J8D1ocK8jOulcRrB2GO0/edit?usp=sharing","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1BquY2woSNOxR8QkyKRRwej7J8D1ocK8jOulcRrB2GO0/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/1BquY2woSNOxR8QkyKRRwej7J8D1ocK8jOulcRrB2GO0/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"2026/09/17 14:55:54","待修改圖片":"","圖片連結":"[{\"fileName\":\"260914_DJI_新店裕隆城授權體驗店.png\",\"url\":\"https://lh3.googleusercontent.com/d/1h9SG8-mkAapXUEDLIUwhanQjCDGL_oFI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 14:55:34"},
-        {"案件編號":"26090138","修改次數":"0","建立日期":"2026/09/17 15:02:49","修改日期":"2026/09/17 15:02:49","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 15:02:49","圖片連結":"[{\"fileName\":\"260916_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1CO0M672Y-6slw3z_oSpBOCaDG3b6lejB=w1600\"},{\"fileName\":\"260916_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商_vo2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1vO3-igeLO_1saDl6t1wUpol_OkTDWBAV=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 15:02:49"}
+        {"案件編號":"26090138","修改次數":"0","建立日期":"2026/09/17 15:02:49","修改日期":"2026/09/17 15:02:49","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 15:02:49","圖片連結":"[{\"fileName\":\"260916_shopee_9月轉換流量_sc館_Liberty 5 Pro Max_電商_vo2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1vO3-igeLO_1saDl6t1wUpol_OkTDWBAV=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 15:03:25"}
       ]
     },
     "補充資料連結": {
