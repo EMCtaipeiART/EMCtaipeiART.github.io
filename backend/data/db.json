@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5316,
+  "revision": 5317,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-17T01:09:16.216Z",
+  "updatedAt": "2026-09-17T01:09:25.140Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1446,7 +1446,7 @@
         {"案件編號":"26090032","修改次數":"0","建立日期":"2026/09/16 21:12:35","修改日期":"2026/09/16 21:12:35","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 21:12:35","圖片連結":"[{\"fileName\":\"260916_迪朗奇_9月FB貼文_3個咖啡入門問題_1.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1bOZx8DCNYh3y15BiPLuzUzoT5fD9T9dl=w1600\"},{\"fileName\":\"260916_迪朗奇_9月FB貼文_3個咖啡入門問題_2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1lBPWOnJ4KvAvQ-pLDNc305yigtZUFECi=w1600\"},{\"fileName\":\"260916_迪朗奇_9月FB貼文_3個咖啡入門問題_3.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eurCTeeniuXvwog86x1r0-N7A7iNsarH=w1600\"},{\"fileName\":\"260916_迪朗奇_9月FB貼文_3個咖啡入門問題_4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1J4VXcErnLA4wFFlqiosQvrujtE_NzyK6=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 21:12:35"},
         {"案件編號":"26090123","修改次數":"0","建立日期":"2026/09/16 21:44:42","修改日期":"2026/09/16 21:44:42","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/16 21:44:42","圖片連結":"[{\"fileName\":\"260916_Liberty-5-Pro_抽獎貼文.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ztnL45PPMsHMtDeMF8AmGBY40ume3vkY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/16 21:44:42"},
         {"案件編號":"26090136","修改次數":"0","建立日期":"2026/09/17 08:47:31","修改日期":"2026/09/17 08:47:31","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/17 08:47:31","圖片連結":"[{\"fileName\":\"截圖 2026-09-17 上午8.29.10.png\",\"url\":\"https://lh3.googleusercontent.com/d/1oLljUudlgLaoImDWZ13IrjF6dawDZl4f=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 08:47:31"},
-        {"案件編號":"26090136","修改次數":"1","建立日期":"2026/09/17 08:53:12","修改日期":"2026-09-17","修改內容":"依照版本請進行修改。","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"截圖 2026-09-17 上午8.29.10.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lOY0w-9jovuV69ghrmrgZ3Y7HxIHiVL5=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 09:08:40"}
+        {"案件編號":"26090136","修改次數":"1","建立日期":"2026/09/17 08:53:12","修改日期":"2026-09-17","修改內容":"依照版本請進行修改。","修改人":"Machi","確認修正日":"2026/09/17 09:09:25","待修改圖片":"","圖片連結":"[{\"fileName\":\"截圖 2026-09-17 上午8.29.10.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lOY0w-9jovuV69ghrmrgZ3Y7HxIHiVL5=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/17 09:08:40"}
       ]
     },
     "補充資料連結": {
