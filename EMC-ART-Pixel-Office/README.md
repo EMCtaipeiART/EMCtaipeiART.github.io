@@ -38,7 +38,7 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 - `dist/app.js`：角色移動、碰撞、圖層、像素心情、離席狀態、對話、照片、本機存檔。
 - `dist/assets/`：全部網站圖片素材，包括角色、透明精靈圖、拆分家具與舊版場景參考。
 - `dist/assets/sprites-noise.png`：遊戲目前使用的人物圖集；Noise 為藍帽、短袖 T-shirt、短褲、白襪與灰色布鞋三視圖。
-- `dist/assets/icons-refined.png`：與人物風格一致的 3×3 精緻像素圖示，包含四種心情與五種出勤狀態。
+- `dist/assets/icons-v3.png`：目前使用的 3×3 圖示（正方形格子），包含四種心情與五種出勤狀態；`icons-refined.png` 為舊版。
 - `references/`：原始辦公室與人物三視圖參考圖。
 - `server.cjs`：僅監聽本機的零依賴開發伺服器。
 - `source-history.bundle`：原網站完整 Git 提交歷史（第 1 至第 4 版）。

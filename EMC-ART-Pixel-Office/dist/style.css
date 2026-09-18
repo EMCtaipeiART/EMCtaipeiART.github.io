@@ -28,7 +28,7 @@ aside{background:#172d4c;color:#fff;border-radius:20px;padding:24px;align-self:s
 .panel-top{display:flex;align-items:center;justify-content:space-between}
 .panel-top .eyebrow{color:#93a8c5;font-size:10px}
 #selectedTag{font-size:12px;color:#ffda80}
-.identity{display:flex;align-items:center;gap:10px;padding:8px 0 16px}
+.identity{display:flex;align-items:center;gap:8px;padding:8px 0 16px}
 .identity canvas{width:82px;height:108px;image-rendering:pixelated}
 h2{font-size:28px;margin:6px 0}
 #personDesc{font-size:13px;color:#a5b5ce;margin:0 0 12px}
@@ -59,9 +59,12 @@ textarea::placeholder{color:#8ba0bd}
 .photo-preview span{position:absolute;bottom:8px;right:8px;background:#10243ee6;color:white;padding:5px 8px;border-radius:6px;font-size:12px}
 .photo-actions{display:flex;justify-content:space-between;align-items:center;font-size:13px}
 .photo-actions label{cursor:pointer}
-.dpad{text-align:center}
-.dpad button{width:40px;height:33px;margin:2px;border:1px solid #405673;border-radius:6px;background:#253d5d;color:#fff;touch-action:none}
-.dpad div{display:flex;justify-content:center}
+/* 方向鍵放在人物名稱右側（手機版原本放在最下方，捲動到底才按得到） */
+.identity-text{min-width:0;flex:1}
+.dpad{flex:0 0 auto;display:grid;justify-items:center;gap:3px;margin-left:auto}
+.dpad button{width:34px;height:32px;margin:0;border:1px solid #405673;border-radius:8px;background:#253d5d;color:#fff;font-size:15px;touch-action:none;user-select:none;-webkit-user-select:none}
+.dpad button:active{background:#ffda80;color:#223047;border-color:#ffda80}
+.dpad div{display:flex;justify-content:center;gap:3px}
 dialog{border:0;border-radius:16px;background:#fff;padding:16px;max-width:90vw;max-height:90vh;color:#1b2c47}
 dialog::backdrop{background:#07162cce;backdrop-filter:blur(5px)}
 dialog img{display:block;max-width:80vw;max-height:72vh;object-fit:contain}
@@ -76,7 +79,6 @@ dialog p{margin:12px 0 0;font-size:14px}
 aside{display:grid;grid-template-columns:1fr 1fr;gap:0 25px}
 .panel-top,.privacy{grid-column:1/-1}
 .identity{grid-column:1/-1}
-.dpad{align-self:center}
 .scene-foot{flex-wrap:wrap}
 }
 @media(max-width:600px){header{height:78px;padding:0 16px}
@@ -92,7 +94,9 @@ h1{font-size:19px}
 .roster-button canvas{width:27px;height:36px}
 aside{padding:20px;display:block}
 .identity{padding:5px 0}
-.dpad button{width:49px;height:40px}
+.dpad button{width:42px;height:40px}
+.identity canvas{width:64px;height:84px}
+h2{font-size:24px}
 .statuses{grid-template-columns:repeat(5,1fr)}
 .statuses button{font-size:10px}
 }
