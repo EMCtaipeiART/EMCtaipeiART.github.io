@@ -294,23 +294,6 @@ test('Gmail thread sanitizer allows images from the app\'s own trusted Drive hos
   assert.match(html, /else if\(!cidMatch&&gmailThreadTrustedImageSrc\(src\)\)\{resolved=src\}/);
 });
 
-test('gmailEditorMailPayload() also unwraps designer-reply Drive-image thumbnails (no data-gmail-inline-image-id) and burns the resize wrap\'s width/height into the final <img> style, so sent emails do not show oversized images', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  const start = html.indexOf('function gmailEditorMailPayload(editor){');
-  const end = html.indexOf('function bindGmailInlineImageEditor(', start);
-  assert.ok(start > 0 && end > start);
-  const source = html.slice(start, end);
-  // 第二段要處理「沒有 data-gmail-inline-image-id」的 .gmail-inline-image-wrap（設計師回覆信自動帶入的
-  // Drive 連結縮圖），把 wrap 的寬高轉成 <img> 本身的 inline style 才 replaceWith，跟既有 CID 那段用
-  // 同一套「wrap 寬高 → img style」轉換邏輯，確保寄出信件裡的圖片尺寸不會依賴只存在系統自己樣式表裡的
-  // .gmail-inline-image-wrap class（收件端郵件用戶端讀不到那份樣式表，圖片會退回原始像素尺寸顯示、
-  // 變得超級巨大）。
-  assert.match(source, /clone\.querySelectorAll\('\.gmail-inline-image-wrap'\)\.forEach\(wrap=>\{/);
-  assert.match(source, /const image=wrap\.querySelector\('img\.gmail-inline-image'\);/);
-  assert.match(source, /const customWidth=wrap\.style\.width\|\|'', customHeight=wrap\.style\.height\|\|'';/);
-  assert.match(source, /wrap\.replaceWith\(image\);/);
-});
-
 test('openDesignerReplyMailModal() restores the idempotency guard its own doc-comment describes but the code previously lacked: calling it again for the same already-open case+round is a no-op (does not wipe user-typed content or create a duplicate #gmailDesignerReplyImages), while a genuine round change still rebuilds', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function openDesignerReplyMailModal(id');
@@ -610,73 +593,6 @@ test('designer reply lists every backed-up video\'s full NAS path (folder + file
   // No folder recorded at all -> nothing to build a path from.
   assert.equal(run([{ fileName: 'clip.mp4' }], []).removed, true);
 });
-test('inline image resize handle is back (2026-09) with a distinct icon+title (2026-08-26 removal was because the old handle was an unlabeled square users mistook for a "selection box" — the new one is gml-inline-image-resize, not the old -resize-handle name, and pairs a diagonal-arrow SVG with title/aria-label), locked to the original aspect ratio via mouse-drag or ArrowUp/ArrowDown, and bindGmailInlineImageControls still wires it up alongside the delete button with the same single-argument signature', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  // 2026-08-26 移除的舊版名稱徹底不再出現，不是只換掉 class 名稱字面上恰好對不上而已。
-  assert.doesNotMatch(html, /gmail-inline-image-resize-handle/);
-  assert.match(html, /function bindGmailInlineImageResize\(wrap\)\{/);
-  assert.match(html, /handle\.className='gmail-inline-image-resize';/);
-  assert.match(html, /handle\.title='拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調';/);
-  assert.match(html, /handle\.setAttribute\('aria-label','拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調'\);/);
-  // 對角縮放箭頭圖示，不是一顆看不出用途的空白方塊。
-  assert.match(html, /<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 3 3 11M11 3v4M11 3H7M3 11v-4M3 11h4" stroke-linecap="round" stroke-linejoin="round"\/><\/svg>/);
-  // 鎖定原始比例：naturalHeight/naturalWidth 算出的比例套用在拖曳與方向鍵兩種操作。
-  assert.match(html, /naturalWidth&&naturalHeight\?naturalHeight\/naturalWidth:/);
-  assert.match(html, /if\(event\.key!=='ArrowUp'&&event\.key!=='ArrowDown'\)return;/);
-  assert.match(html, /applyWidth\(editor,currentWidth\+\(event\.key==='ArrowUp'\?20:-20\),imageAspectRatio\(\)\);/);
-  // 下限 60px 的 clamp，避免拖到看不見；用 document 監聽 mousemove/mouseup，滑鼠移出這顆 18px 小按鈕範圍
-  // 仍要能繼續追蹤拖曳。
-  assert.match(html, /const minWidth=60,maxWidth=Math\.max\(minWidth,editor\.clientWidth\|\|9999\);/);
-  assert.match(html, /document\.addEventListener\('mousemove',onMouseMove\);\s*\n\s*document\.addEventListener\('mouseup',onMouseUp\);/);
-  // bindGmailInlineImageControls 現在同時掛拖曳排序把手／換行切換鈕／縮放把手／刪除鈕，簽章仍然只吃
-  // wrap 一個參數，三個呼叫點都要同步只傳 wrap（拿掉縮放把手前的既有慣例，這次沒有改變）。
-  assert.match(html, /function bindGmailInlineImageControls\(wrap\)\{/);
-  const callSites = [...html.matchAll(/bindGmailInlineImageControls\((\w+)\)/g)];
-  assert.equal(callSites.length, 4, 'expected 1 definition + 3 call sites, all with a single argument'); // 定義本身也會被這個 regex 命中一次
-  assert.doesNotMatch(html, /bindGmailInlineImageControls\(\w+,\w*image\w*\)/);
-  assert.match(html, /bindGmailInlineImageResize\(wrap\);/);
-  assert.match(html, /remove\.className='gmail-inline-image-remove'/);
-  // 插入圖片時原本就有的「依原始比例、上限 320px」預設尺寸邏輯維持不變，縮放把手只是額外多一種
-  // 事後手動調整的管道，不影響插入當下的預設呈現大小。
-  assert.match(html, /const width=Math\.min\(320,naturalWidth\);\s*\n\s*wrap\.style\.width=`\$\{width\}px`;/);
-});
-
-test('inline images can now be dragged to any text position in the editor (Gmail-like), not just reordered relative to another image — dropping on plain content splits the text and inserts the image there via Range.insertNode(), dropping on another image still uses the existing before/after reorder path, and a visible insertion-point caret line shows during the drag', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  assert.match(html, /function gmailInlineImageDropRangeAtPoint\(editor,x,y\)\{/);
-  assert.match(html, /function showGmailInlineImageDropCaret\(range\)\{/);
-  assert.match(html, /function hideGmailInlineImageDropCaret\(\)\{/);
-  assert.match(html, /function moveGmailInlineImageToPoint\(draggedWrap,editor,clientX,clientY\)\{/);
-  // 自由拖放的核心：找出滑鼠放開位置的插入點，落在自己（或自己的子節點）身上就當作沒有移動，
-  // 否則用 Range.insertNode()（DOM 規格保證會先把節點從原本的父層移除再插到新位置，不用手動先 remove()）。
-  const moveFnStart = html.indexOf('function moveGmailInlineImageToPoint(draggedWrap,editor,clientX,clientY){');
-  const moveFnEnd = html.indexOf('\n}', moveFnStart);
-  const moveFnSource = html.slice(moveFnStart, moveFnEnd);
-  assert.match(moveFnSource, /if\(!range\|\|draggedWrap\.contains\(range\.startContainer\)\)return false;/);
-  assert.match(moveFnSource, /range\.insertNode\(draggedWrap\);/);
-  assert.match(moveFnSource, /if\(trailingBreak\)draggedWrap\.after\(trailingBreak\);/); // 換行跟著圖片一起搬到新位置
-
-  // dragover/drop 這次改成三分支：拖到另一張圖片（既有的排序路徑，優先）／拖到一般內容（新的自由
-  // 定位路徑）／既有的外部拖檔案路徑（完全不受影響）。
-  const editorFnStart = html.indexOf('function bindGmailInlineImageEditor(editor){');
-  const editorFnEnd = html.indexOf('\n}', html.indexOf("editor.addEventListener('paste'", editorFnStart));
-  const editorFnSource = html.slice(editorFnStart, editorFnEnd);
-  assert.match(editorFnSource, /if\(\[\.\.\.event\.dataTransfer\.types\]\.includes\('Files'\)\)\{event\.preventDefault\(\);editor\.classList\.add\('is-image-dragover'\);return\}/); // 外部拖檔案路徑維持在最前面，優先判斷
-  assert.match(editorFnSource, /if\(targetWrap&&targetWrap!==gmailInlineImageDragged\.wrap\)\{[\s\S]*?hideGmailInlineImageDropCaret\(\);[\s\S]*?return;\s*\}/); // 拖到另一張圖片：既有排序邏輯 + 清掉自由定位的插入線
-  assert.match(editorFnSource, /const range=gmailInlineImageDropRangeAtPoint\(editor,event\.clientX,event\.clientY\);/);
-  assert.match(editorFnSource, /if\(!range\|\|gmailInlineImageDragged\.wrap\.contains\(range\.startContainer\)\)\{hideGmailInlineImageDropCaret\(\);return\}/);
-  assert.match(editorFnSource, /showGmailInlineImageDropCaret\(range\);/);
-  assert.match(editorFnSource, /if\(moveGmailInlineImageToPoint\(gmailInlineImageDragged\.wrap,editor,event\.clientX,event\.clientY\)\)\{[\s\S]*?syncGmailInlineImageLineBreakButtons\(editor\);[\s\S]*?editor\.focus\(\);[\s\S]*?\}/);
-  // dragend／dragleave 都要記得把插入線一起收掉，不然拖曳中斷後會留下一條孤兒指示線。
-  assert.match(html, /handle\.addEventListener\('dragend',\(\)=>\{[\s\S]*?hideGmailInlineImageDropCaret\(\);[\s\S]*?gmailInlineImageDragged=null;\s*\}\);/);
-  assert.match(html, /clearGmailInlineImageDropIndicators\(editor\);hideGmailInlineImageDropCaret\(\)\}\}\);/); // dragleave
-
-  // 插入線本身是重用同一個固定元素（不是每次 dragover 都新建/移除節點），CSS 補上跟這個檔案其餘
-  // [hidden] 元件同一套慣例的顯式覆寫，避免作者樣式（position:fixed 等）蓋掉瀏覽器內建的 [hidden]{display:none}。
-  assert.match(html, /\.gmail-inline-image-drop-caret\{position:fixed;width:2px;background:#16a34a;pointer-events:none;z-index:9999;border-radius:1px\}/);
-  assert.match(html, /\.gmail-inline-image-drop-caret\[hidden\]\{display:none!important\}/);
-});
-
 test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /const gmailInlineImageTasksByEditor=new Map\(\)/);
@@ -4817,4 +4733,43 @@ test('收件人／副本的膠囊可以拖曳互換，副本可一鍵設為客�
   assert.match(html, /const mails=\[\.\.\.cc,\.\.\.keptRecipients\];/);
   assert.match(html, /這封合併信件包含多個客戶別/);
   assert.match(html, /confirmText:'設為預設',cancelText:'取消',tone:'positive'/);
+});
+
+test('信件內文圖片比照 Gmail：一般 <img>、倒退鍵可刪、可拖曳到任意位置、點圖片調整大小，寄出大小與編輯器一致', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  // 圖片上的小圖示（刪除鈕、拖曳把手、換行鈕、縮放把手）與不可編輯的外框全部移除。
+  for (const legacy of ['gmail-inline-image-wrap', 'bindGmailInlineImageControls', 'gmail-inline-image-handle', 'gmail-inline-image-resize', 'gmail-inline-image-linebreak', 'gmail-inline-image-remove']) {
+    assert.ok(!html.includes(legacy), `${legacy} 應該已移除`);
+  }
+  // 設計師回覆信的圖片區塊也要可編輯，倒退鍵才刪得掉。
+  assert.doesNotMatch(html, /imagesRow\.id='gmailDesignerReplyImages';\n  imagesRow\.contentEditable='false';/);
+
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+  const sizes = html.match(/const GMAIL_IMAGE_SIZES=Object\.freeze\(\[[\s\S]*?\]\);/)?.[0];
+  const api = new Function(`${sizes}\n${pick('setGmailEditorImageWidth')}\n${pick('gmailImageCurrentSizeKey')}\nreturn { setGmailEditorImageWidth, gmailImageCurrentSizeKey, GMAIL_IMAGE_SIZES };`)();
+  const fakeImage = naturalWidth => {
+    const attrs = {};
+    return { naturalWidth, style: {}, dataset: {}, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: k => { delete attrs[k]; }, attrs };
+  };
+  assert.deepEqual(api.GMAIL_IMAGE_SIZES.map(size => size.label), ['小', '中', '大', '最適大小', '原始大小']);
+  const image = fakeImage(1200);
+  api.setGmailEditorImageWidth(image, 320);
+  assert.deepEqual(image.style, { width: '320px', maxWidth: '100%', height: 'auto' }, '尺寸直接寫在 <img>，寄出時原樣送出');
+  assert.equal(image.attrs.width, '320');
+  assert.equal(api.gmailImageCurrentSizeKey(image), 'medium');
+  api.setGmailEditorImageWidth(image, 'fit');
+  assert.equal(image.style.width, '100%');
+  assert.equal(image.attrs.width, undefined);
+  assert.equal(api.gmailImageCurrentSizeKey(image), 'fit');
+  api.setGmailEditorImageWidth(image, 'original');
+  assert.equal(image.style.width, '1200px');
+  assert.equal(api.gmailImageCurrentSizeKey(image), 'original');
+
+  // 寄出：只換 cid: 與清掉編輯器專用屬性，不再有外框尺寸轉換。
+  const payload = pick('gmailEditorMailPayload');
+  assert.match(payload, /image\.src=`cid:\$\{item\.contentId\}`;/);
+  assert.match(payload, /if\(image\.style\.width\)\{image\.style\.maxWidth='100%';image\.style\.height='auto'\}/);
+  // 點圖片會選取整張（倒退鍵可刪）並顯示尺寸選單；拖曳自己搬，不讓瀏覽器複製出第二張。
+  assert.match(html, /const range=document\.createRange\(\);range\.selectNode\(image\);/);
+  assert.match(pick('bindGmailInlineImageEditor'), /event\.preventDefault\(\);\n    hideGmailInlineImageDropCaret\(\);\n    const image=gmailInlineImageDragged\.image;/);
 });

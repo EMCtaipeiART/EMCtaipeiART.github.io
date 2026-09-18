@@ -6572,46 +6572,20 @@
     .gmail-rich-editor{min-height:260px;max-height:520px}
     #gmailThreadReplyEditor.gmail-rich-editor{min-height:180px;max-height:380px}
     .gmail-rich-editor.is-image-dragover{border-color:#16a34a!important;background:#effbf4!important;box-shadow:inset 0 0 0 2px rgba(22,163,74,.18)}
-    .gmail-inline-image-wrap{display:inline-block;position:relative;resize:none;overflow:hidden;max-width:100%;min-width:60px;margin:8px 6px 8px 0;border-radius:8px;vertical-align:top;border:1px solid transparent}
-    .gmail-inline-image-wrap:hover,.gmail-inline-image-wrap:focus-within{border-color:#9bd4b4}
-    .gmail-inline-image-wrap img.gmail-inline-image{display:block;width:100%;height:100%;object-fit:contain;margin:0;border-radius:7px;-webkit-user-drag:none;user-select:none}
-    /* 插入圖片本身也要能單獨刪除——原生 contenteditable=false 節點雖然理論上可以用 Backspace/Delete
-       鍵盤刪除，但不是所有情況下都能可靠觸發（例如游標沒有剛好停在圖片旁邊），這裡額外補一顆明確的
-       刪除鈕，不用依賴鍵盤刪除也能拿掉插入的圖片。 */
-    .gmail-inline-image-remove{position:absolute!important;left:3px!important;top:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:pointer;opacity:0;transition:opacity .12s ease;z-index:3}
-    .gmail-inline-image-remove svg{width:9px;height:9px;stroke:currentColor;stroke-width:2.6;fill:none;pointer-events:none}
-    .gmail-inline-image-wrap:hover .gmail-inline-image-remove,.gmail-inline-image-remove:focus-visible{opacity:1}
-    /* 拖曳排序把手（右上角，跟左上角的刪除鈕分開）：原生 HTML5 拖曳只在這顆按鈕本身觸發，不會影響
-       <img> 本身的 draggable=false（避免重演「誤拖圖片本身在 contenteditable 裡被複製」的舊 bug）；
-       聚焦後也可以用左右方向鍵移動，不用滑鼠拖曳一樣能調整順序。 */
-    .gmail-inline-image-handle{position:absolute!important;right:3px!important;top:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:grab;opacity:0;transition:opacity .12s ease;z-index:3}
-    .gmail-inline-image-handle:active{cursor:grabbing}
-    .gmail-inline-image-handle svg{width:11px;height:11px;pointer-events:none}
-    .gmail-inline-image-wrap:hover .gmail-inline-image-handle,.gmail-inline-image-handle:focus-visible{opacity:1}
-    /* 換行切換鈕（左下角，2026-09 挪到這裡讓出右下角給縮放把手）：開啟＝這張圖片後面強制換行（預設
-       狀態，跟過去每張圖片都自動換行的既有行為一致）；關閉＝拿掉換行，讓下一張圖片緊接在同一行併排
-       顯示。開啟狀態刻意維持一點點常駐透明度（不需要 hover 也看得出「這裡有換行」），關閉狀態則跟
-       刪除鈕/拖曳把手一樣預設完全隱藏、hover 才顯示。 */
-    .gmail-inline-image-linebreak{position:absolute!important;left:3px!important;bottom:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:pointer;opacity:0;transition:opacity .12s ease,background .12s ease;z-index:3}
-    .gmail-inline-image-linebreak svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.2;fill:none;pointer-events:none}
-    .gmail-inline-image-linebreak.is-active{background:rgba(15,143,97,.85)!important;opacity:.45}
-    .gmail-inline-image-wrap:hover .gmail-inline-image-linebreak,.gmail-inline-image-linebreak:focus-visible{opacity:1}
-    /* 縮放把手（右下角，2026-09 新增）：拖曳調整圖片大小，鎖定原始比例。2026-08-26 曾經移除過一顆
-       長得一樣、但完全沒有圖示的深色小方塊縮放把手，因為使用者誤以為那是「選取框」；這次記取教訓，
-       改用清楚可辨識的對角縮放箭頭圖示（跟作業系統視窗右下角縮放游標同一種語意），並搭配
-       title/aria-label，不會是一顆看不出用途的空白方塊。 */
-    .gmail-inline-image-resize{position:absolute!important;right:3px!important;bottom:3px!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border-radius:999px!important;background:rgba(23,33,29,.68)!important;border:1.5px solid #fff!important;box-shadow:0 1px 3px rgba(0,0,0,.25)!important;display:grid!important;place-items:center!important;color:#fff!important;cursor:nwse-resize;opacity:0;transition:opacity .12s ease;z-index:3}
-    .gmail-inline-image-resize svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;fill:none;pointer-events:none}
-    .gmail-inline-image-wrap:hover .gmail-inline-image-resize,.gmail-inline-image-resize:focus-visible{opacity:1}
-    .gmail-inline-image-wrap.is-resizing{outline:2px solid #16a34a;outline-offset:1px}
-    /* 拖曳排序中的視覺回饋：跟 json_database_admin.html 既有的 is-dragging/drag-over 拖曳排序慣例一致，
-       這裡用 inset box-shadow（不是 border，避免跟 hover 的 border-color 衝突）在目標圖片左/右緣畫一條
-       插入指示線，滑鼠停在哪一半就插進哪一邊；.is-drop-caret 是 2026-09 新增，拖曳放到「不是另一張
-       圖片」的文字內容中間時，用一條細直線標示會插入的確切文字位置，比照大多數文書編輯器拖曳文字/
-       圖片時常見的插入點指示做法。 */
-    .gmail-inline-image-wrap.is-dragging{opacity:.35}
-    .gmail-inline-image-wrap.is-drop-before{box-shadow:inset 3px 0 0 0 #16a34a}
-    .gmail-inline-image-wrap.is-drop-after{box-shadow:inset -3px 0 0 0 #16a34a}
+    /* 信件內文圖片比照 Gmail：就是一般的 <img>，倒退鍵可刪除、可拖到任何文字位置；點一下圖片出現尺寸選單。
+       尺寸直接寫在 <img> 的 style（width＋height:auto），編輯器看到的就是寄出去的大小。 */
+    .gmail-rich-editor img{max-width:100%;height:auto;vertical-align:bottom;cursor:default}
+    .gmail-rich-editor img.is-image-selected{outline:2px solid #1a73e8;outline-offset:1px}
+    .gmail-image-size-menu{position:fixed;z-index:12500;display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px;border:1px solid #d6dcd9;border-radius:10px;background:#fff;box-shadow:0 10px 28px rgba(16,24,40,.18)}
+    .gmail-image-size-menu[hidden]{display:none!important}
+    .gmail-image-size-menu button{min-height:28px!important;padding:0 10px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#1a73e8!important;font-size:12.5px!important;font-weight:800!important;box-shadow:none!important;cursor:pointer}
+    .gmail-image-size-menu button:hover,.gmail-image-size-menu button.is-active{background:#e8f0fe!important}
+    .gmail-image-size-menu button[data-image-size="remove"]{color:#b91c1c!important}
+    .gmail-image-size-menu button[data-image-size="remove"]:hover{background:#fef2f2!important}
+    .gmail-image-size-menu .gmail-image-size-divider{width:1px;align-self:stretch;margin:3px 2px;background:#e3e8e5}
+    html[data-theme="dark"] .gmail-image-size-menu{background:#202326;border-color:#50555a}
+    html[data-theme="dark"] .gmail-image-size-menu button{color:#8ab4f8!important}
+    html[data-theme="dark"] .gmail-image-size-menu button:hover,html[data-theme="dark"] .gmail-image-size-menu button.is-active{background:#2b3440!important}
     .gmail-inline-image-drop-caret{position:fixed;width:2px;background:#16a34a;pointer-events:none;z-index:9999;border-radius:1px}
     .gmail-inline-image-drop-caret[hidden]{display:none!important}
     /* 內容還在準備（案件編號生產中、信件串/簽名檔還在讀取）時把編輯器鎖成唯讀＋淡化，避免使用者
@@ -6683,8 +6657,6 @@
     html[data-theme="dark"] .gmail-rich-editor:focus{outline:2px solid rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
     html[data-theme="dark"] .gmail-rich-editor:empty::before{color:#858b90!important}
     html[data-theme="dark"] .gmail-rich-editor a{color:#8ab4f8!important}
-    html[data-theme="dark"] .gmail-inline-image-wrap{background:#25282b}
-    html[data-theme="dark"] .gmail-inline-image-wrap:hover,html[data-theme="dark"] .gmail-inline-image-wrap:focus-within{border-color:#5f9f80}
     html[data-theme="dark"] .gmail-rich-editor.is-image-dragover{background:#173126!important;border-color:#4cc38a!important;box-shadow:inset 0 0 0 2px rgba(76,195,138,.22)!important}
     html[data-theme="dark"] .gmail-thread-msg{background:#1a1d1f!important;border-color:#3f4448!important}
     html[data-theme="dark"] .gmail-thread-msg-meta{color:#aeb4b9!important}
@@ -9172,7 +9144,7 @@ const gmailInlineImageTasksByEditor=new Map();
 const gmailInlineImageGenerationsByEditor=new Map();
 const gmailInlineImageTypes=new Set(['image/jpeg','image/png','image/webp','image/gif']);
 const gmailInlineImageMaxCount=10,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
-let gmailInlineImageDragged=null; // {wrap,editor}——目前正在用拖曳把手搬移的內嵌圖片，drop/dragend 後清空
+let gmailInlineImageDragged=null; // {image,editor}——目前正在編輯區裡拖曳搬移的圖片，drop/dragend 後清空
 let gmailInlineImageDropCaretEl=null; // 拖曳圖片經過一般文字內容時，標示插入點的細直線，drop/dragend 後隱藏（不移除節點，重用同一個）
 function gmailInlineImageStore(editorId){
   if(!gmailInlineImagesByEditor.has(editorId))gmailInlineImagesByEditor.set(editorId,new Map());
@@ -9276,215 +9248,64 @@ function placeRichRangeAtPoint(editor,x,y){
   if(!rangeInsideEditor(range,editor)){range=document.createRange();range.selectNodeContents(editor);range.collapse(false)}
   savedRichSelectionRange=range.cloneRange();
 }
-/** 找出跟這張圖片綁在一起的「換行」——插入時／使用者手動切換時都是往這個 wrap 的
- * nextSibling 塞一個 <br>；純粹用「下一個節點是不是 <br>」判斷現況，不用另外存一個
- * order/lineBreakAfter 欄位——DOM 本身的順序與相鄰關係就是唯一事實來源，拖曳搬動這個 wrap
- * 時只要把這個 <br>（如果有的話）一起搬過去，順序與斷行狀態就自動跟著正確、不需要額外同步。 */
-function gmailInlineImageTrailingBreak(wrap){
-  const next=wrap.nextSibling;
-  return next&&next.nodeType===Node.ELEMENT_NODE&&next.tagName==='BR'?next:null;
+/* ---------------------------------------------------------------------------------------------
+ * 信件內文圖片（2026-09-18 改版）：比照 Gmail，圖片就是內文裡的一般 <img>——
+ * - 倒退鍵／Delete 可以直接刪除（以前包在 contenteditable=false 的外框裡，鍵盤刪不掉）
+ * - 可以拖到任何文字位置（dragstart 記住圖片，drop 時移到滑鼠位置，不會複製出第二張）
+ * - 點一下圖片，下方出現尺寸選單：小／中／大／最適大小／原始大小／移除
+ * - 尺寸直接寫在 <img> 的 style（width＋max-width:100%＋height:auto），寄出時原樣送出，
+ *   編輯器裡看到的大小就是收件人看到的大小（以前外框尺寸要在寄出時轉換，常常不一致）
+ * 移除了圖片上的刪除鈕、拖曳把手、換行鈕與縮放把手。
+ * ------------------------------------------------------------------------------------------- */
+const GMAIL_IMAGE_SIZES=Object.freeze([
+  {key:'small',label:'小',width:160},
+  {key:'medium',label:'中',width:320},
+  {key:'large',label:'大',width:480},
+  {key:'fit',label:'最適大小'},
+  {key:'original',label:'原始大小'}
+]);
+function setGmailEditorImageWidth(image,size){
+  if(!image)return;
+  let width='';
+  if(size==='fit')width='100%';
+  else if(size==='original')width=image.naturalWidth?`${image.naturalWidth}px`:'';
+  else if(Number(size)>0)width=`${Math.round(Number(size))}px`;
+  if(!width)return;
+  image.style.width=width;
+  image.style.maxWidth='100%';
+  image.style.height='auto';
+  if(/px$/.test(width))image.setAttribute('width',String(parseInt(width,10)));else image.removeAttribute('width');
+  image.dataset.gmailImageSized='1';
 }
-function refreshGmailInlineImageLineBreakButton(wrap){
-  const button=wrap.querySelector(':scope>.gmail-inline-image-linebreak');
-  if(!button)return;
-  const hasBreak=Boolean(gmailInlineImageTrailingBreak(wrap));
-  button.classList.toggle('is-active',hasBreak);
-  const label=hasBreak?'目前另起一行顯示，點擊改成與下一張圖片併排':'目前與下一張圖片併排，點擊改成另起一行顯示';
-  button.title=label;
-  button.setAttribute('aria-label',label);
-  button.setAttribute('aria-pressed',hasBreak?'true':'false');
-}
-function toggleGmailInlineImageLineBreak(wrap){
-  const editor=wrap.closest('.gmail-rich-editor');
-  if(!editor||editor.classList.contains('is-generating'))return;
-  const parent=wrap.parentElement;
-  if(!parent)return;
-  const existing=gmailInlineImageTrailingBreak(wrap);
-  if(existing)existing.remove();
-  else parent.insertBefore(document.createElement('br'),wrap.nextSibling);
-  refreshGmailInlineImageLineBreakButton(wrap);
-  editor.focus();
-}
-function bindGmailInlineImageLineBreakToggle(wrap){
-  const button=document.createElement('button');
-  button.type='button';
-  button.className='gmail-inline-image-linebreak';
-  button.setAttribute('contenteditable','false');
-  button.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4h7v5H5M5 9l2.3-2.2M5 9l2.3 2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  button.addEventListener('mousedown',event=>{event.preventDefault();event.stopPropagation()});
-  button.addEventListener('click',event=>{
-    event.preventDefault();
-    event.stopPropagation();
-    toggleGmailInlineImageLineBreak(wrap);
-  });
-  wrap.appendChild(button);
-  // 呼叫這支函式的三個地方（insertGmailInlineImage／restoreScheduledGmailInlineImages／
-  // appendDesignerReplyImageThumb）都已經先把 wrap 插入編輯區、才呼叫 bindGmailInlineImageControls，
-  // 這裡才讀得到正確的 wrap.nextSibling 判斷初始狀態（插入前一律是 null，會誤判成「沒有換行」）。
-  refreshGmailInlineImageLineBreakButton(wrap);
-}
-/** 拖曳排序把手：原生 HTML5 拖曳只從這顆按鈕本身觸發（draggable=true 設在把手上，不是整個
- * wrap 或 <img> 本身），避免重演「使用者誤拖到圖片本身、被 contenteditable 當成搬移內容而
- * 複製出一份重複圖片」的舊 bug（見 insertGmailInlineImage 為什麼把 image.draggable 設成
- * false 的說明）。聚焦這顆把手後按左右方向鍵，也能不透過滑鼠拖曳直接調整順序，是唯一的非拖曳
- * 容錯管道（沒有額外的上一個/下一個按鈕——縮圖本身已經有刪除鈕/拖曳把手/換行鈕三顆小按鈕，
- * 再加會太擁擠，且重演過去「縮放把手」被使用者誤認的教訓：這裡選擇用清楚的圖示＋title/aria-label
- * 取代再多一顆按鈕）。 */
-function bindGmailInlineImageHandle(wrap){
-  const handle=document.createElement('button');
-  handle.type='button';
-  handle.className='gmail-inline-image-handle';
-  handle.title='拖曳調整圖片順序，或聚焦後按左右方向鍵移動';
-  handle.setAttribute('aria-label','拖曳調整圖片順序，或聚焦後按左右方向鍵移動');
-  handle.setAttribute('contenteditable','false');
-  handle.draggable=true;
-  handle.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="5" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="5" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="4" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="8" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="12" r="1.1" fill="currentColor" stroke="none"/></svg>';
-  handle.addEventListener('mousedown',event=>event.stopPropagation());
-  handle.addEventListener('dragstart',event=>{
-    const editor=wrap.closest('.gmail-rich-editor');
-    if(!editor||editor.classList.contains('is-generating')){event.preventDefault();return}
-    gmailInlineImageDragged={wrap,editor};
-    event.dataTransfer.effectAllowed='move';
-    event.dataTransfer.setData('text/plain','');
-    // 拖曳開始當下先不要立刻改外觀——部分瀏覽器擷取「拖曳中縮圖」的時間點就是 dragstart 這一刻，
-    // 同一輪事件循環內改樣式可能連拖曳縮圖本身都被套用，改用下一個 frame 才淡化原本的元素。
-    requestAnimationFrame(()=>wrap.classList.add('is-dragging'));
-  });
-  handle.addEventListener('dragend',()=>{
-    wrap.classList.remove('is-dragging');
-    clearGmailInlineImageDropIndicators(wrap.closest('.gmail-rich-editor'));
-    hideGmailInlineImageDropCaret();
-    gmailInlineImageDragged=null;
-  });
-  handle.addEventListener('keydown',event=>{
-    if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
-    event.preventDefault();
-    moveGmailInlineImageByStep(wrap,event.key==='ArrowLeft'?-1:1);
-  });
-  wrap.appendChild(handle);
-}
-/** 縮放把手（右下角）：拖曳調整圖片顯示大小，永遠鎖定原始比例（依水平位移量算新寬度，高度用
- * 「新寬度 × naturalHeight/naturalWidth」算出，不會拖出跟原圖比例不合、被 object-fit:contain
- * 留白的結果）。用 mousemove/mouseup 綁在 document 上而不是把手本身，滑鼠移出這顆 18px 小按鈕
- * 範圍之外（正常拖曳時幾乎一定會）也能繼續追蹤；聚焦把手後可以用上下方向鍵以 20px 為單位微調
- * （跟拖曳排序把手的左右方向鍵是同一種鍵盤可及性設計，不用滑鼠也能操作）。 */
-function bindGmailInlineImageResize(wrap){
-  const handle=document.createElement('button');
-  handle.type='button';
-  handle.className='gmail-inline-image-resize';
-  handle.title='拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調';
-  handle.setAttribute('aria-label','拖曳這個角落調整圖片大小（鎖定比例），或聚焦後按上下方向鍵微調');
-  handle.setAttribute('contenteditable','false');
-  handle.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 3 3 11M11 3v4M11 3H7M3 11v-4M3 11h4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const imageAspectRatio=()=>{
-    const image=wrap.querySelector('img.gmail-inline-image');
-    const naturalWidth=image?.naturalWidth||0,naturalHeight=image?.naturalHeight||0;
-    return naturalWidth&&naturalHeight?naturalHeight/naturalWidth:(wrap.getBoundingClientRect().height/(wrap.getBoundingClientRect().width||1)||1);
-  };
-  const applyWidth=(editor,nextWidth,ratio)=>{
-    const minWidth=60,maxWidth=Math.max(minWidth,editor.clientWidth||9999);
-    const clampedWidth=Math.min(maxWidth,Math.max(minWidth,Math.round(nextWidth)));
-    wrap.style.width=`${clampedWidth}px`;
-    wrap.style.height=`${Math.round(clampedWidth*ratio)}px`;
-  };
-  handle.addEventListener('mousedown',event=>{
-    event.preventDefault();
-    event.stopPropagation();
-    const editor=wrap.closest('.gmail-rich-editor');
-    if(!editor||editor.classList.contains('is-generating'))return;
-    const startX=event.clientX,startWidth=wrap.getBoundingClientRect().width,ratio=imageAspectRatio();
-    wrap.classList.add('is-resizing');
-    const onMouseMove=moveEvent=>applyWidth(editor,startWidth+(moveEvent.clientX-startX),ratio);
-    const onMouseUp=()=>{
-      wrap.classList.remove('is-resizing');
-      document.removeEventListener('mousemove',onMouseMove);
-      document.removeEventListener('mouseup',onMouseUp);
-      editor.focus();
-    };
-    document.addEventListener('mousemove',onMouseMove);
-    document.addEventListener('mouseup',onMouseUp);
-  });
-  handle.addEventListener('keydown',event=>{
-    if(event.key!=='ArrowUp'&&event.key!=='ArrowDown')return;
-    event.preventDefault();
-    const editor=wrap.closest('.gmail-rich-editor');
-    if(!editor||editor.classList.contains('is-generating'))return;
-    const currentWidth=wrap.getBoundingClientRect().width;
-    applyWidth(editor,currentWidth+(event.key==='ArrowUp'?20:-20),imageAspectRatio());
-  });
-  wrap.appendChild(handle);
-}
-/** 圖片外層容器的刪除鈕。
- * 圖片本身跟外層 wrap 一樣是 contenteditable="false" 的 atomic 節點，理論上可以用
- * Backspace/Delete 鍵盤刪除，但實際要「游標剛好停在圖片正前/正後方」才會觸發，滑鼠點在圖片
- * 上只會把游標移到最近的可編輯位置、不會自動選取整個圖片節點，導致使用者常常按了鍵盤卻刪不掉
- * 剛插入的圖片；這裡額外補一顆明確的「×」按鈕（跟修改紀錄縮圖的 .revision-image-remove 是
- * 同一種既有模式），點一下就能移除，不用依賴鍵盤刪除的時機。
- * （2026-08-26 曾經有一顆圖片右下角的縮放把手，因為完全沒有圖示、單純一個小深色方塊，使用者誤以為
- * 是「選取框」而移除掉。2026-09 這次使用者明確要求「放大縮小」，重新加回 bindGmailInlineImageResize()
- * ——這次搭配清楚可辨識的對角縮放箭頭 SVG 圖示＋title/aria-label，不會再是一顆看不出用途的空白方塊，
- * 拖曳排序把手／換行切換鈕（見上方兩個函式）從一開始就是照同一個標準做的。） */
-function bindGmailInlineImageControls(wrap){
-  bindGmailInlineImageHandle(wrap);
-  bindGmailInlineImageLineBreakToggle(wrap);
-  bindGmailInlineImageResize(wrap);
-  const remove=document.createElement('button');
-  remove.type='button';
-  remove.className='gmail-inline-image-remove';
-  remove.title='移除這張圖片';
-  remove.setAttribute('aria-label','移除這張圖片');
-  remove.setAttribute('contenteditable','false');
-  remove.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke-linecap="round"/></svg>';
-  wrap.appendChild(remove);
-  remove.addEventListener('mousedown',event=>{event.preventDefault();event.stopPropagation()});
-  remove.addEventListener('click',event=>{
-    event.preventDefault();
-    event.stopPropagation();
-    const editor=wrap.closest('.gmail-rich-editor');
-    wrap.remove();
-    if(editor)editor.focus();
-  });
+/** 建立內文圖片：一建立就先套用預設寬度（圖片還沒載入完就寄出，也不會變成原圖大小），
+ * 載入後如果原圖比預設寬度還小，就改成原圖大小；使用者自己選過尺寸後就不再自動調整。 */
+function createGmailEditorImage({src,alt='圖片',contentId='',defaultWidth=320}){
+  const image=document.createElement('img');
+  image.alt=alt||'圖片';
+  if(contentId)image.dataset.gmailInlineImageId=contentId;
+  setGmailEditorImageWidth(image,defaultWidth);
+  image.dataset.gmailImageAuto='1';
+  image.addEventListener('load',()=>{
+    if(image.dataset.gmailImageAuto!=='1')return;
+    if(image.naturalWidth&&image.naturalWidth<defaultWidth)setGmailEditorImageWidth(image,image.naturalWidth);
+  },{once:true});
+  image.src=src;
+  return image;
 }
 function insertGmailInlineImage(editor,item){
-  const wrap=document.createElement('span');
-  wrap.className='gmail-inline-image-wrap';
-  wrap.setAttribute('contenteditable','false');
-  const image=document.createElement('img');
-  image.src=item.dataUrl;
-  image.alt=item.fileName;
-  image.className='gmail-inline-image';
-  image.draggable=false;
-  image.dataset.gmailInlineImageId=item.contentId;
-  // <img> 預設是瀏覽器原生可拖曳元素，在 contenteditable 區域裡誤拖到圖片本身會被瀏覽器當成
-  // 「把這段內容拖到另一個位置」，在同一個編輯區放開就會複製出一份重複的圖片；加上
-  // draggable=false 關掉這個原生行為。
-  // 圖片載入後依原始比例給一個合理的初始顯示尺寸（不要一插入就佔滿整個編輯區）——這是目前唯一
-  // 決定顯示大小的地方（沒有縮放把手可以事後手動調整，使用者回報看不懂那顆把手是做什麼用的，
-  // 已經移除，見 bindGmailInlineImageControls 的說明）。
-  image.addEventListener('load',()=>{
-    if(wrap.style.width)return;
-    const naturalWidth=image.naturalWidth||420,naturalHeight=image.naturalHeight||315;
-    const width=Math.min(320,naturalWidth);
-    wrap.style.width=`${width}px`;
-    wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
-  },{once:true});
-  wrap.appendChild(image);
+  const image=createGmailEditorImage({src:item.dataUrl,alt:item.fileName,contentId:item.contentId,defaultWidth:320});
   const spacer=document.createElement('br');
   let range=rangeInsideEditor(savedRichSelectionRange,editor)?savedRichSelectionRange:document.createRange();
   if(!rangeInsideEditor(range,editor)){range.selectNodeContents(editor);range.collapse(false)}
   range.deleteContents();
   range.insertNode(spacer);
-  range.insertNode(wrap);
-  // bindGmailInlineImageControls 要在 wrap 真正插入 DOM 之後才呼叫——換行切換鈕的初始狀態是讀
-  // wrap.nextSibling 判斷，插入前這個值一律是 null，會誤判成「沒有換行」（這裡插入的 spacer 就是
-  // wrap 的下一個節點，所以剛插入的圖片預設會正確顯示成「已經換行」，跟原本每張圖片都自動換行的
-  // 既有行為一致）。
-  bindGmailInlineImageControls(wrap);
+  range.insertNode(image);
   range.setStartAfter(spacer);
   range.collapse(true);
   const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
   savedRichSelectionRange=range.cloneRange();
 }
+/** 排程草稿載回編輯器：信件內文裡的 cid: 圖片換回可預覽的 data URL，尺寸沿用當初存下的 style。 */
 function restoreScheduledGmailInlineImages(editor,items){
   clearGmailInlineImages(editor.id);
   const store=gmailInlineImageStore(editor.id);
@@ -9493,32 +9314,85 @@ function restoreScheduledGmailInlineImages(editor,items){
     if(!contentId||!gmailInlineImageTypes.has(mimeType)||!base64)return;
     const image=[...editor.querySelectorAll('img')].find(candidate=>candidate.getAttribute('src')===`cid:${contentId}`);
     if(!image)return;
-    const savedWidth=/^\d+(?:\.\d+)?px$/.test(image.style.width)?image.style.width:'';
-    const savedHeight=/^\d+(?:\.\d+)?px$/.test(image.style.height)?image.style.height:'';
     const dataUrl=`data:${mimeType};base64,${base64}`;
     const restored={contentId,fileName:String(item.fileName||'照片'),mimeType,base64,size:Number(item.bytes)||Math.max(0,Math.floor(base64.length*3/4)),dataUrl};
     store.set(contentId,restored);
-    const wrap=document.createElement('span');
-    wrap.className='gmail-inline-image-wrap';
-    wrap.setAttribute('contenteditable','false');
-    if(savedWidth)wrap.style.width=savedWidth;
-    if(savedHeight)wrap.style.height=savedHeight;
-    image.removeAttribute('style');
     image.alt=restored.fileName;
-    image.className='gmail-inline-image';
-    image.draggable=false;
     image.dataset.gmailInlineImageId=contentId;
-    image.addEventListener('load',()=>{
-      if(wrap.style.width)return;
-      const naturalWidth=image.naturalWidth||420,naturalHeight=image.naturalHeight||315,width=Math.min(320,naturalWidth);
-      wrap.style.width=`${width}px`;
-      wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
-    },{once:true});
+    if(image.style.width)image.dataset.gmailImageSized='1';
+    else setGmailEditorImageWidth(image,320);
     image.src=dataUrl;
-    image.replaceWith(wrap);
-    wrap.appendChild(image);
-    bindGmailInlineImageControls(wrap);
   });
+}
+/* ---- 點圖片出現的尺寸選單 ---- */
+let gmailImageSizeMenuEl=null,gmailImageSizeTarget=null;
+function ensureGmailImageSizeMenu(){
+  if(gmailImageSizeMenuEl)return gmailImageSizeMenuEl;
+  const menu=document.createElement('div');
+  menu.className='gmail-image-size-menu';
+  menu.setAttribute('role','toolbar');
+  menu.setAttribute('aria-label','圖片大小');
+  menu.hidden=true;
+  menu.innerHTML=GMAIL_IMAGE_SIZES.map(size=>`<button type="button" data-image-size="${size.key}">${size.label}</button>`).join('')+'<span class="gmail-image-size-divider" aria-hidden="true"></span><button type="button" data-image-size="remove">移除</button>';
+  menu.addEventListener('mousedown',event=>event.preventDefault());
+  menu.addEventListener('click',event=>{
+    const button=event.target.closest('[data-image-size]');
+    const image=gmailImageSizeTarget;
+    if(!button||!image||!image.isConnected){closeGmailImageSizeMenu();return}
+    const key=button.dataset.imageSize;
+    if(key==='remove'){
+      const editor=image.closest('[contenteditable="true"]');
+      closeGmailImageSizeMenu();
+      image.remove();
+      editor?.focus();
+      return;
+    }
+    const size=GMAIL_IMAGE_SIZES.find(item=>item.key===key);
+    delete image.dataset.gmailImageAuto;
+    setGmailEditorImageWidth(image,size?.width||key);
+    positionGmailImageSizeMenu(image);
+    markGmailImageSizeMenuActive(image);
+  });
+  document.body.appendChild(menu);
+  gmailImageSizeMenuEl=menu;
+  return menu;
+}
+function gmailImageCurrentSizeKey(image){
+  const width=String(image?.style?.width||'');
+  if(width==='100%')return 'fit';
+  const px=parseInt(width,10);
+  const preset=GMAIL_IMAGE_SIZES.find(size=>size.width===px)?.key;
+  if(preset)return preset;
+  return px&&px===image.naturalWidth?'original':'';
+}
+function markGmailImageSizeMenuActive(image){
+  const key=gmailImageCurrentSizeKey(image);
+  gmailImageSizeMenuEl?.querySelectorAll('[data-image-size]').forEach(button=>button.classList.toggle('is-active',button.dataset.imageSize===key));
+}
+function positionGmailImageSizeMenu(image){
+  const menu=ensureGmailImageSizeMenu();
+  const rect=image.getBoundingClientRect(),margin=8;
+  menu.hidden=false;
+  const width=menu.offsetWidth,height=menu.offsetHeight;
+  const left=Math.max(margin,Math.min(rect.left,window.innerWidth-width-margin));
+  const below=rect.bottom+6,top=below+height<=window.innerHeight-margin?below:Math.max(margin,rect.top-height-6);
+  menu.style.left=`${Math.round(left)}px`;
+  menu.style.top=`${Math.round(top)}px`;
+}
+function openGmailImageSizeMenu(image){
+  document.querySelectorAll('.gmail-rich-editor img.is-image-selected').forEach(item=>{if(item!==image)item.classList.remove('is-image-selected')});
+  gmailImageSizeTarget=image;
+  image.classList.add('is-image-selected');
+  // 選取整張圖片，按倒退鍵／Delete 就會刪掉它（跟 Gmail 一樣）。
+  const range=document.createRange();range.selectNode(image);
+  const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+  positionGmailImageSizeMenu(image);
+  markGmailImageSizeMenuActive(image);
+}
+function closeGmailImageSizeMenu(){
+  if(gmailImageSizeMenuEl)gmailImageSizeMenuEl.hidden=true;
+  gmailImageSizeTarget?.classList.remove('is-image-selected');
+  gmailImageSizeTarget=null;
 }
 async function addGmailInlineImages(editorId,fileList,expectedGeneration=gmailInlineImageGenerationsByEditor.get(editorId)||0){
   // 新增案件送出後的批次確認寄信流程（見 startPostSubmitMailFlow）只有一個編輯區 DOM，
@@ -9596,32 +9470,19 @@ async function waitForGmailAttachments(editorId){
 }
 function gmailEditorMailPayload(editor){
   const clone=editor.cloneNode(true),store=pruneGmailInlineImages(editor),inlineImages=[];
-  clone.querySelectorAll('img[data-gmail-inline-image-id]').forEach(image=>{
-    const item=store.get(image.dataset.gmailInlineImageId);
-    const wrap=image.closest('.gmail-inline-image-wrap');
-    if(!item){(wrap||image).remove();return}
-    // 使用者在編輯區拖曳調整過大小的話，外層 wrap 會有明確的 px 寬高，寄出時直接沿用；
-    // 沒調整過就照舊維持自適應寬度，收件端的郵件用戶端不需要（也用不到）resize 容器，直接展開成單一 <img>。
-    const customWidth=wrap&&wrap.style.width?wrap.style.width:'', customHeight=wrap&&wrap.style.height?wrap.style.height:'';
-    image.src=`cid:${item.contentId}`;
-    image.removeAttribute('class');image.removeAttribute('data-gmail-inline-image-id');image.removeAttribute('contenteditable');
-    image.setAttribute('style',`display:block;${customWidth?`width:${customWidth};`:'max-width:100%;'}${customHeight?`height:${customHeight};`:'height:auto;'}margin:8px 0;border-radius:8px`);
-    if(wrap)wrap.replaceWith(image);
-    inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
-  });
-  // 「設計師回覆信」自動帶入的 Drive 連結縮圖（appendDesignerReplyImageThumb）沒有 data-gmail-inline-image-id，
-  // 上面那段完全不會處理到它們，殘留的 .gmail-inline-image-wrap（含刪除鈕，寄出時要丟棄）
-  // 一樣要在這裡拆開：wrap 的寬高（appendDesignerReplyImageThumb 依原始比例算好、寫在 wrap.style 上）只存在
-  // 編輯區自己的 CSS class（.gmail-inline-image-wrap{display:inline-block}、img{width:100%;height:100%}），
-  // 收件端的郵件用戶端完全讀不到這份樣式表——沒有把寬高轉成 <img> 本身的 inline style 就直接送出的話，
-  // <span> 的 width/height 對預設 inline 排版的元素沒有作用，<img> 會退回用原始像素尺寸顯示，跑版變得超級巨大。
-  clone.querySelectorAll('.gmail-inline-image-wrap').forEach(wrap=>{
-    const image=wrap.querySelector('img.gmail-inline-image');
-    if(!image)return;
-    const customWidth=wrap.style.width||'', customHeight=wrap.style.height||'';
-    image.removeAttribute('class');image.removeAttribute('contenteditable');
-    image.setAttribute('style',`display:block;${customWidth?`width:${customWidth};`:'max-width:100%;'}${customHeight?`height:${customHeight};`:'height:auto;'}margin:8px 0;border-radius:8px`);
-    wrap.replaceWith(image);
+  // 圖片的尺寸已經直接寫在 <img> 的 style 上（跟編輯器裡看到的一樣），這裡只把本機預覽用的 data URL
+  // 換成 cid:、拿掉編輯器專用的屬性，並補上 max-width／height:auto，讓收件人看到的大小跟編輯器一致。
+  clone.querySelectorAll('img').forEach(image=>{
+    const contentId=image.dataset.gmailInlineImageId;
+    if(contentId){
+      const item=store.get(contentId);
+      if(!item){image.remove();return}
+      image.src=`cid:${item.contentId}`;
+      inlineImages.push({contentId:item.contentId,fileName:item.fileName,mimeType:item.mimeType,base64:item.base64});
+    }
+    image.removeAttribute('data-gmail-inline-image-id');image.removeAttribute('data-gmail-image-sized');image.removeAttribute('data-gmail-image-auto');
+    image.classList.remove('is-image-selected');if(!image.className)image.removeAttribute('class');
+    if(image.style.width){image.style.maxWidth='100%';image.style.height='auto'}
   });
   const prepared=gmailPreparedBodySignature(clone.innerHTML);
   // 附加檔案（跟上面的內嵌圖片是分開的概念，見 gmailAttachmentStore）完全不出現在信件本文 DOM 裡，
@@ -9639,56 +9500,54 @@ function gmailEditorMailPayload(editor){
 }
 function bindGmailInlineImageEditor(editor){
   if(!editor)return;
+  // 點圖片：選取整張圖片並顯示尺寸選單；點其他地方收起來。
+  editor.addEventListener('click',event=>{
+    const image=event.target.closest?.('img');
+    if(image&&editor.contains(image)){openGmailImageSizeMenu(image);return}
+    closeGmailImageSizeMenu();
+  });
+  editor.addEventListener('keydown',event=>{if(gmailImageSizeTarget&&!['Shift','Meta','Control','Alt'].includes(event.key))closeGmailImageSizeMenu()});
+  editor.addEventListener('scroll',()=>{if(gmailImageSizeTarget)positionGmailImageSizeMenu(gmailImageSizeTarget)},{passive:true});
+  editor.addEventListener('dragstart',event=>{
+    const image=event.target.closest?.('img');
+    if(!image||!editor.contains(image))return;
+    closeGmailImageSizeMenu();
+    gmailInlineImageDragged={image,editor};
+    event.dataTransfer.effectAllowed='move';
+  });
+  editor.addEventListener('dragend',()=>{gmailInlineImageDragged=null;hideGmailInlineImageDropCaret()});
+  // 先判斷是不是編輯區裡自己的圖片在拖：Chrome 拖曳頁面上的圖片時，dataTransfer 也會帶著 Files，
+  // 如果先走「從外部拖入檔案」那一段，就會插入一張新的、原本那張還留著（變成兩張）。
+  const draggingOwnImage=()=>Boolean(gmailInlineImageDragged&&gmailInlineImageDragged.editor===editor);
   editor.addEventListener('dragover',event=>{
-    if([...event.dataTransfer.types].includes('Files')){event.preventDefault();editor.classList.add('is-image-dragover');return}
-    // 內部拖曳排序（拖曳把手發起，見 bindGmailInlineImageHandle）跟上面「從外部拖檔案進來」共用
-    // 同一個 dragover/drop，用 dataTransfer.types 不含 Files 排除掉，改看 gmailInlineImageDragged
-    // 這個模組層級狀態判斷是不是這個編輯器自己發起的排序拖曳。
-    if(!gmailInlineImageDragged||gmailInlineImageDragged.editor!==editor)return;
-    const targetWrap=event.target.closest?.('.gmail-inline-image-wrap');
-    if(targetWrap&&targetWrap!==gmailInlineImageDragged.wrap){
-      event.preventDefault();
-      const side=gmailInlineImageDropSide(targetWrap,event.clientX);
-      clearGmailInlineImageDropIndicators(editor);
-      hideGmailInlineImageDropCaret();
-      targetWrap.classList.add(side==='after'?'is-drop-after':'is-drop-before');
+    if(!draggingOwnImage()){
+      if([...event.dataTransfer.types].includes('Files')){event.preventDefault();editor.classList.add('is-image-dragover')}
       return;
     }
-    // 拖到的地方不是另一張圖片（例如一般文字內容中間、或圖片自己原本的位置）——2026-09 新增：
-    // 跟 Gmail 一樣，圖片可以直接拖到任何文字位置插入，不再侷限於「跟別的圖片比前後順序」。
-    // 用跟外部拖檔案插入同一支 placeRichRangeAtPoint() 算出滑鼠位置對應的插入點，只要落在編輯區
-    // 範圍內（且不是拖到圖片自己身上，那樣等於原地放開、不用顯示插入線）就顯示插入指示線並放行。
-    clearGmailInlineImageDropIndicators(editor);
     const range=gmailInlineImageDropRangeAtPoint(editor,event.clientX,event.clientY);
-    if(!range||gmailInlineImageDragged.wrap.contains(range.startContainer)){hideGmailInlineImageDropCaret();return}
+    if(!range){hideGmailInlineImageDropCaret();return}
     event.preventDefault();
+    event.dataTransfer.dropEffect='move';
     showGmailInlineImageDropCaret(range);
   });
-  editor.addEventListener('dragleave',event=>{if(!editor.contains(event.relatedTarget)){editor.classList.remove('is-image-dragover');clearGmailInlineImageDropIndicators(editor);hideGmailInlineImageDropCaret()}});
+  editor.addEventListener('dragleave',event=>{if(!editor.contains(event.relatedTarget)){editor.classList.remove('is-image-dragover');hideGmailInlineImageDropCaret()}});
   editor.addEventListener('drop',event=>{
-    if([...event.dataTransfer.types].includes('Files')){
+    if(!draggingOwnImage()){
+      if(![...event.dataTransfer.types].includes('Files'))return;
       editor.classList.remove('is-image-dragover');
       const files=[...event.dataTransfer.files].filter(file=>file.type.startsWith('image/'));if(!files.length)return;
       event.preventDefault();placeRichRangeAtPoint(editor,event.clientX,event.clientY);queueGmailInlineImages(editor.id,files);
       return;
     }
-    if(!gmailInlineImageDragged||gmailInlineImageDragged.editor!==editor)return;
-    const targetWrap=event.target.closest?.('.gmail-inline-image-wrap');
-    clearGmailInlineImageDropIndicators(editor);
+    // 自己搬：瀏覽器原生的圖片拖放在同一個編輯區裡常常是「複製」一份，原本那張還留著。
+    event.preventDefault();
     hideGmailInlineImageDropCaret();
-    if(targetWrap&&targetWrap!==gmailInlineImageDragged.wrap){
-      event.preventDefault();
-      const side=gmailInlineImageDropSide(targetWrap,event.clientX);
-      moveGmailInlineImageUnit(gmailInlineImageDragged.wrap,targetWrap,side==='after');
-      syncGmailInlineImageLineBreakButtons(editor);
-      editor.focus();
-      return;
-    }
-    if(moveGmailInlineImageToPoint(gmailInlineImageDragged.wrap,editor,event.clientX,event.clientY)){
-      event.preventDefault();
-      syncGmailInlineImageLineBreakButtons(editor);
-      editor.focus();
-    }
+    const image=gmailInlineImageDragged.image;
+    gmailInlineImageDragged=null;
+    const range=gmailInlineImageDropRangeAtPoint(editor,event.clientX,event.clientY);
+    if(!range||range.startContainer===image)return;
+    range.insertNode(image);
+    editor.focus();
   });
   editor.addEventListener('paste',event=>{
     // 某些剪貼簿來源的 DataTransferItem.type 會是空字串，但 getAsFile() 後的 File.type 才有 image/png；
@@ -9700,17 +9559,6 @@ function bindGmailInlineImageEditor(editor){
     setSync('正在處理貼上的圖片...');
     queueGmailInlineImages(editor.id,files);
   });
-}
-/** 決定拖曳的圖片該插在目標圖片的哪一側——圖片是 inline-block、可能併排也可能各自一行，
- * 用滑鼠水平位置相對目標圖片中線來判斷（左半＝插到前面、右半＝插到後面），這個方式不論目標
- * 圖片目前是跟別人併排還是自己獨佔一行都能正確判斷，不需要另外處理垂直方向的情況。 */
-function gmailInlineImageDropSide(candidateWrap,clientX){
-  const rect=candidateWrap.getBoundingClientRect();
-  return clientX>rect.left+rect.width/2?'after':'before';
-}
-function clearGmailInlineImageDropIndicators(editor){
-  if(!editor)return;
-  editor.querySelectorAll('.gmail-inline-image-wrap.is-drop-before,.gmail-inline-image-wrap.is-drop-after').forEach(el=>{el.classList.remove('is-drop-before','is-drop-after')});
 }
 /** 拖曳圖片經過一般文字內容（不是另一張圖片）時，算出滑鼠位置對應的插入點；只在這個位置真的落在
  * 編輯區範圍內才回傳 Range，落在編輯區外面（例如拖到工具列或彈窗外）回傳 null，呼叫端據此決定要不要
@@ -9745,59 +9593,6 @@ function showGmailInlineImageDropCaret(range){
 }
 function hideGmailInlineImageDropCaret(){
   if(gmailInlineImageDropCaretEl)gmailInlineImageDropCaretEl.hidden=true;
-}
-/** 把 draggedWrap 直接搬到滑鼠放開當下對應的文字插入點——跟 Gmail 一樣，圖片可以拖到任何想要的
- * 文字位置，不再侷限於「跟另一張圖片比前後順序」（那條路徑仍然保留，見上面 moveGmailInlineImageUnit，
- * 拖到另一張圖片身上時優先用那一套）。Range.insertNode() 對「插入一個已經在文件裡別處的節點」，
- * 瀏覽器會依規格先把它從原本的父層移除、再插入新位置（標準的 DOM 節點搬移語意，不需要自己手動先
- * remove()），且 Range 是活的（live）物件，DOM 異動時邊界會自動校正，所以不用擔心搬移過程中位置算錯。
- * 如果放開的位置剛好落在 draggedWrap 自己（或它的子節點）身上——例如使用者幾乎沒有移動滑鼠就放開，
- * 等同「拖了等於沒拖」——直接不做任何事，避免對自己呼叫 insertNode() 丟出例外。 */
-function moveGmailInlineImageToPoint(draggedWrap,editor,clientX,clientY){
-  if(!draggedWrap||!editor)return false;
-  const range=gmailInlineImageDropRangeAtPoint(editor,clientX,clientY);
-  if(!range||draggedWrap.contains(range.startContainer))return false;
-  const trailingBreak=gmailInlineImageTrailingBreak(draggedWrap);
-  range.insertNode(draggedWrap);
-  if(trailingBreak)draggedWrap.after(trailingBreak);
-  return true;
-}
-/** 把 draggedWrap 移到 targetWrap 前面或後面，並把 draggedWrap 自己的換行（如果有的話）一起
- * 搬過去——換行是跟著圖片走的屬性，不是跟著「這個位置」，所以要在搬動 draggedWrap 之前，先把
- * 它目前的 nextSibling 是不是 <br> 記下來，等 draggedWrap 移到新位置後再把這個 <br> 接回它
- * 後面；只允許在同一個父層容器內移動（例如「設計師回覆信」自動帶入的縮圖群跟使用者自己插入的
- * 圖片是分開的兩個容器，各自排序、不會混在一起）。 */
-function moveGmailInlineImageUnit(draggedWrap,targetWrap,insertAfter){
-  if(!draggedWrap||!targetWrap||draggedWrap===targetWrap)return false;
-  const parent=targetWrap.parentElement;
-  if(!parent||draggedWrap.parentElement!==parent)return false;
-  const trailingBreak=gmailInlineImageTrailingBreak(draggedWrap);
-  const anchor=insertAfter?targetWrap.nextSibling:targetWrap;
-  parent.insertBefore(draggedWrap,anchor);
-  if(trailingBreak)parent.insertBefore(trailingBreak,draggedWrap.nextSibling);
-  return true;
-}
-/** 跟 draggedWrap 同一個父層容器、且同樣是圖片 wrap 的所有相鄰項目，依目前 DOM 順序排列——
- * 拖曳排序與左右方向鍵微調都只在「同一群」圖片內移動，不會跨到別的容器。 */
-function siblingGmailInlineImageWraps(wrap){
-  const parent=wrap.parentElement;
-  if(!parent)return[];
-  return [...parent.children].filter(child=>child.classList&&child.classList.contains('gmail-inline-image-wrap'));
-}
-function moveGmailInlineImageByStep(wrap,direction){
-  const editor=wrap.closest('.gmail-rich-editor');
-  if(!editor||editor.classList.contains('is-generating'))return;
-  const siblings=siblingGmailInlineImageWraps(wrap);
-  const index=siblings.indexOf(wrap);
-  const targetIndex=index+direction;
-  if(index<0||targetIndex<0||targetIndex>=siblings.length)return;
-  moveGmailInlineImageUnit(wrap,siblings[targetIndex],direction>0);
-  syncGmailInlineImageLineBreakButtons(editor);
-  wrap.querySelector(':scope>.gmail-inline-image-handle')?.focus();
-}
-function syncGmailInlineImageLineBreakButtons(editor){
-  if(!editor)return;
-  editor.querySelectorAll('.gmail-inline-image-wrap').forEach(refreshGmailInlineImageLineBreakButton);
 }
 const gmailRecipientState=new Map();
 function mailAddressEntry(value){
@@ -13115,7 +12910,7 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,
   editor.appendChild(document.createElement('br'));
   const imagesRow=document.createElement('div');
   imagesRow.id='gmailDesignerReplyImages';
-  imagesRow.contentEditable='false';
+  // 圖片區塊跟內文一樣可編輯：設計圖可以用倒退鍵刪除、拖到別的位置（2026-09-18 改成 Gmail 的圖片操作方式）。
   const placeholder=document.createElement('span');
   placeholder.className='gmail-designer-reply-uploading';
   placeholder.textContent=modal.dataset.designerReplySkipImages==='1'?'　圖片備份中，這次不會放進信件...':'　圖片上傳中...';
@@ -13146,34 +12941,11 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,
   setGmailEditorLoading(editor,false);
   restoreOpenGmailEditorFocus();
 }
-/** 「設計師回覆信」自動帶入的設計圖縮圖：跟使用者自己貼上/上傳的內嵌圖片一樣包一層
- * .gmail-inline-image-wrap，重用同一顆 bindGmailInlineImageControls() 的刪除鈕——這些圖片
- * 直接引用 Drive 網址（不是 gmailInlineImageStore 追蹤的 CID 附件），刪除只是單純把這個 DOM 節點
- * 移除，不會影響 gmailEditorMailPayload() 的 CID 轉換邏輯（那段只認有 data-gmail-inline-image-id
- * 屬性的圖片，這裡的圖片沒有這個屬性，走的是同一支函式裡另外新增、專門處理「沒有 CID 屬性的
- * .gmail-inline-image-wrap」的第二段：一樣會把這裡算好的 wrap 寬高轉成 <img> 本身的 inline style
- * 才送出，維持原樣以 <img src="https://..."> 呈現，但尺寸不會跑掉）。初始尺寸沿用既有「180px 上限、
- * 依原始比例縮放」的視覺設計，不像使用者自己插入的圖片是 320px 上限——這是自動帶入的參考縮圖，維持
- * 比手動插入的圖片小一號的既有大小觀感。 */
+/** 「設計師回覆信」自動帶入的設計圖縮圖：跟使用者自己插入的圖片一樣是一般 <img>（直接引用 Drive 網址，
+ * 不是 CID 附件），可以用倒退鍵刪除、拖曳移動、點一下調整大小。預設 180px（比手動插入的 320px 小一號）。 */
 function appendDesignerReplyImageThumb(container,img){
-  const wrap=document.createElement('span');
-  wrap.className='gmail-inline-image-wrap';
-  wrap.setAttribute('contenteditable','false');
-  const image=document.createElement('img');
-  image.src=img.url;
-  image.alt=img.fileName||'設計圖';
-  image.className='gmail-inline-image';
-  image.draggable=false;
-  image.addEventListener('load',()=>{
-    if(wrap.style.width)return;
-    const naturalWidth=image.naturalWidth||180,naturalHeight=image.naturalHeight||180;
-    const width=Math.min(180,naturalWidth);
-    wrap.style.width=`${width}px`;
-    wrap.style.height=`${Math.round(width*(naturalHeight/naturalWidth))}px`;
-  },{once:true});
-  wrap.appendChild(image);
-  container.appendChild(wrap); // 先插入 DOM 再綁定控制項，換行切換鈕才能讀到正確的 wrap.nextSibling（見 insertGmailInlineImage 同一個理由）
-  bindGmailInlineImageControls(wrap);
+  container.appendChild(createGmailEditorImage({src:img.url,alt:img.fileName||'設計圖',defaultWidth:180}));
+  container.appendChild(document.createTextNode(' '));
 }
 // NAS 監控程式（scripts/nas_design_image_lib.mjs 的 DEFAULT_VIDEO_EXTENSIONS）認定的影片副檔名——
 // 影片備份時實際上傳、內嵌在信件裡的是自動截的一張靜態截圖（qlmanage 截圖轉 JPEG），但 fileName
@@ -16252,6 +16024,10 @@ document.querySelectorAll('.gmail-attachment-list').forEach(list=>list.addEventL
 document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
 ['gmailComposeTo','gmailComposeCc','gmailThreadTo','gmailThreadCc'].forEach(bindGmailRecipientControl);
 initGmailRecipientDragAndDrop();
+// 圖片尺寸選單：點選單與圖片以外的地方就收起；彈窗捲動時跟著圖片移動，圖片被刪掉或彈窗關閉也收起。
+document.addEventListener('mousedown',event=>{if(gmailImageSizeTarget&&!event.target.closest?.('.gmail-image-size-menu')&&event.target!==gmailImageSizeTarget)closeGmailImageSizeMenu()},true);
+document.addEventListener('scroll',()=>{if(!gmailImageSizeTarget)return;if(!gmailImageSizeTarget.isConnected||!gmailImageSizeTarget.offsetParent){closeGmailImageSizeMenu();return}positionGmailImageSizeMenu(gmailImageSizeTarget)},true);
+window.addEventListener('resize',()=>{if(gmailImageSizeTarget)positionGmailImageSizeMenu(gmailImageSizeTarget)});
 $('#gmailComposeCcSaveDefault')?.addEventListener('click',saveComposeCcAsCustomerDefault);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover();if(gmailColorPaletteEl&&!gmailColorPaletteEl.hidden&&!gmailColorPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-color-btn'))closeGmailColorPalette();if(gmailSizePaletteEl&&!gmailSizePaletteEl.hidden&&!gmailSizePaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-size-btn'))closeGmailSizePalette()});

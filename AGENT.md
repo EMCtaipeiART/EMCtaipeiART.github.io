@@ -265,7 +265,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-18 11:00 Asia/Taipei（最新）— 收件人／副本膠囊可拖曳互換、副本「設為預設」
+### 2026-09-18 12:00 Asia/Taipei（最新）— 信件編輯器圖片改成 Gmail 的操作方式
+
+- 修改目的：設計師反映回信編輯器的圖片很難操作——倒退鍵刪不掉、不能自由拖曳、調整的大小跟寄出後不一致；要求移除圖片上的小圖示，改成 Gmail 的方式。
+- 成因：圖片包在 `contenteditable=false` 的 `.gmail-inline-image-wrap` 外框裡，外框上有刪除鈕、拖曳把手、換行鈕、縮放把手。鍵盤刪不掉外框；拖曳只能透過把手；尺寸存在外框上，寄出時才轉換成 `<img>` 的 style，兩者常常不一致。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 圖片改為內文中的一般 `<img>`（`createGmailEditorImage()`），尺寸直接寫在 `<img>`（width px 或 100%＋max-width:100%＋height:auto＋width 屬性），寄出時只把 data URL 換成 `cid:`、清掉編輯器專用屬性，大小與編輯器一致。建立時就先套預設寬度（手動插入 320px、設計師回覆信的設計圖 180px），載入後原圖較小則改用原圖寬度。
+  - 倒退鍵／Delete 可直接刪除；點一下圖片會選取整張並在下方顯示尺寸選單（`GMAIL_IMAGE_SIZES`：小 160／中 320／大 480／最適大小 100%／原始大小，另有「移除」），點其他地方、打字、捲動時收起或跟著移動。
+  - 拖曳：編輯區自己處理 dragstart／drop，把圖片搬到滑鼠位置（沿用插入點指示線）；Chrome 拖曳頁面圖片時 dataTransfer 也帶 Files，先判斷是否為編輯區自己的圖片，避免複製出第二張。
+  - 設計師回覆信的 `#gmailDesignerReplyImages` 區塊改為可編輯，設計圖一樣能刪除、拖曳、調整大小。
+  - 移除：`bindGmailInlineImageControls`、把手／換行／縮放相關函式與樣式、依外框排序的拖曳邏輯，以及三支針對舊功能的測試。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 146/146（新增 Gmail 式圖片測試：舊小圖示不存在、尺寸計算、寄出轉換）。本機 Browser pane 實測：插入圖片為一般 `<img>` 320px；真實點擊顯示尺寸選單並切換為「小」→ 寄出 HTML 為同樣 160px；真實拖曳把圖片移到「第三行」後面且只有一張；選取圖片後刪除指令（等同倒退鍵）與游標在圖片後刪除都能移除圖片；設計師回覆信的 Drive 圖片可刪除、未載入完成就寄出也是 180px。測試工具送出的 Backspace 按鍵本身不會觸發瀏覽器刪除指令，改以 `execCommand('delete')` 與選取後輸入文字驗證。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-18 11:00 Asia/Taipei — 收件人／副本膠囊可拖曳互換、副本「設為預設」
 
 - 修改目的：使用者希望新增案件的信件編輯器可以用拖曳把收件人與副本的人名膠囊互換，並在副本旁新增「設為預設」按鈕，直接更新客戶別的預設信箱。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
