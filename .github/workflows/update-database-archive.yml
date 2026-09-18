@@ -14,6 +14,8 @@ on:
       - 'scripts/generate_short_link_index.mjs'
       - '404.html'
       - '.github/workflows/update-database-archive.yml'
+      # Pixel Office 小遊戲也靠這個流程發布到 GitHub Pages，修改後要能自動上線。
+      - 'EMC-ART-Pixel-Office/**'
   repository_dispatch:
     types:
       - database_changed
