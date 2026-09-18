@@ -3857,7 +3857,7 @@ test('case delete and 修改紀錄 trash buttons ask through the in-page warning
   // 實際執行警示視窗：確定 → true、取消 → false，關閉後視窗隱藏、焦點還原；同時開兩個時舊的視為取消。
   const showFn = pick(/let appConfirmResolve=null;\nfunction showAppConfirm\([\s\S]*?\n\}\nfunction settleAppConfirm\(value\)\{[^\n]*/);
   assert.ok(showFn, 'could not locate showAppConfirm');
-  const makeEl = () => ({ hidden: true, textContent: '', focused: 0, focus() { this.focused += 1; } });
+  const makeEl = () => ({ hidden: true, textContent: '', focused: 0, focus() { this.focused += 1; }, classList: { toggle() {} } });
   const nodes = { '#appConfirmDialog': makeEl(), '#appConfirmTitle': makeEl(), '#appConfirmMessage': makeEl(), '#appConfirmOk': makeEl(), '#appConfirmCancel': makeEl() };
   const opener = makeEl();
   const api = new Function('nodes', 'opener', `
@@ -4786,4 +4786,35 @@ test('新增案件信開啟後向 Worker 取即時客戶資料更新副本，但
   assert.deepEqual(run(['b@x.com', 'a@x.com'], ['a@x.com', 'b@x.com'], ['A <a@x.com>', 'c@x.com']), ['A <a@x.com>', 'c@x.com']);
   // 使用者改過 → 保留。
   assert.deepEqual(run(['manual@x.com'], ['a@x.com'], ['c@x.com']), ['manual@x.com']);
+});
+
+test('收件人／副本的膠囊可以拖曳互換，副本可一鍵設為客戶別預設信箱', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /draggable="true" data-recipient-chip="\$\{esc\(entry\.email\)\}" data-recipient-chip-field="\$\{esc\(fieldId\)\}"/);
+  assert.match(html, /initGmailRecipientDragAndDrop\(\);/);
+  const move = html.match(/function moveGmailRecipient\(fromField,toField,email,beforeEmail=''\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(move);
+  const run = (state, from, to, email, before = '') => new Function('state', `
+    const gmailRecipientEntries = id => state[id] || [];
+    const setGmailRecipientEntries = (id, list) => { state[id] = list; };
+    ${move}
+    moveGmailRecipient(${JSON.stringify(from)}, ${JSON.stringify(to)}, ${JSON.stringify(email)}, ${JSON.stringify(before)});
+    return Object.fromEntries(Object.entries(state).map(([key, list]) => [key, list.map(entry => entry.email)]));
+  `)(state);
+  const e = email => ({ email, full: email });
+  // 副本 → 收件人
+  assert.deepEqual(run({ to: [e('a')], cc: [e('b'), e('c')] }, 'cc', 'to', 'c'), { to: ['a', 'c'], cc: ['b'] });
+  // 收件人 → 副本，插在指定的人前面
+  assert.deepEqual(run({ to: [e('a')], cc: [e('b'), e('c')] }, 'to', 'cc', 'a', 'c'), { to: [], cc: ['b', 'a', 'c'] });
+  // 同一欄調整順序
+  assert.deepEqual(run({ cc: [e('b'), e('c'), e('d')] }, 'cc', 'cc', 'd', 'b'), { cc: ['d', 'b', 'c'] });
+  // 對方欄位已經有這個人：只從原欄位拿掉，不重複
+  assert.deepEqual(run({ to: [e('a')], cc: [e('a'), e('b')] }, 'cc', 'to', 'a'), { to: ['a'], cc: ['b'] });
+
+  // 「設為預設」按鈕：寫入客戶設定的預設信箱，收件人若原本就在預設名單裡要保留。
+  assert.match(html, /id="gmailComposeCcSaveDefault"[^>]*>設為預設<\/button>/);
+  assert.match(html, /sheetApi\('saveCustomerSettings',\{customer:client,mails,editorToken:currentEditorToken\}\)/);
+  assert.match(html, /const mails=\[\.\.\.cc,\.\.\.keptRecipients\];/);
+  assert.match(html, /這封合併信件包含多個客戶別/);
+  assert.match(html, /confirmText:'設為預設',cancelText:'取消',tone:'positive'/);
 });

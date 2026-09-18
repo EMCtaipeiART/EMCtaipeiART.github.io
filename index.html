@@ -5897,22 +5897,24 @@
     .app-confirm-backdrop[hidden]{display:none!important}
     .app-confirm-card{width:min(400px,100%);box-sizing:border-box;border-radius:18px;background:#fff;border:1px solid #f3d0d0;box-shadow:0 24px 60px rgba(15,23,20,.28);padding:22px 22px 18px;text-align:center}
     .app-confirm-icon{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 12px;border-radius:999px;background:#fee2e2;color:#b91c1c}
-    .app-confirm-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .app-confirm-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}.app-confirm-icon .app-confirm-icon-positive,.app-confirm-backdrop.is-positive .app-confirm-icon .app-confirm-icon-danger{display:none}.app-confirm-backdrop.is-positive .app-confirm-icon .app-confirm-icon-positive{display:block}.app-confirm-backdrop.is-positive .app-confirm-icon{background:#dcfce7;color:#15803d}
     .app-confirm-card h3{margin:0 0 8px;font-size:17px;font-weight:900;color:#17211d}
     .app-confirm-card p{margin:0;font-size:13.5px;font-weight:700;line-height:1.6;color:#43524b;white-space:pre-line;word-break:break-word}
     .app-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
     .app-confirm-actions button{min-height:42px!important;border-radius:11px!important;padding:0 14px!important;font-size:14px!important;font-weight:900!important;cursor:pointer;box-shadow:none!important}
     .app-confirm-cancel{background:#f3f4f6!important;color:#374151!important;border:1px solid #d1d5db!important}
     .app-confirm-cancel:hover{background:#e5e7eb!important}
-    .app-confirm-ok{background:#dc2626!important;color:#fff!important;border:1px solid #dc2626!important}
+    .app-confirm-ok{background:#dc2626!important;color:#fff!important;border:1px solid #dc2626!important}.app-confirm-ok.is-positive{background:var(--green)!important;border-color:var(--green)!important}
     .app-confirm-ok:hover{background:#b91c1c!important;border-color:#b91c1c!important}
     html[data-theme="dark"] .app-confirm-card{background:#151618;border-color:#5b2a2a}
     html[data-theme="dark"] .app-confirm-card h3{color:#f2f5f4}
     html[data-theme="dark"] .app-confirm-card p{color:#c9d1cd}
     html[data-theme="dark"] .app-confirm-icon{background:rgba(220,38,38,.18);color:#fca5a5}
+    html[data-theme="dark"] .app-confirm-backdrop.is-positive .app-confirm-icon{background:rgba(22,163,74,.2);color:#86efac}
     html[data-theme="dark"] .app-confirm-cancel{background:#26292c!important;color:#e5e7eb!important;border-color:#3b3e42!important}
     /* 深色主題的全站按鈕規則（html[data-theme="dark"] button）權重比 .app-confirm-ok 高，會把刪除鍵蓋成綠色，這裡用同等權重蓋回紅色。 */
     html[data-theme="dark"] .app-confirm-ok{background:#dc2626!important;color:#fff!important;border-color:#dc2626!important}
+    html[data-theme="dark"] .app-confirm-ok.is-positive{background:var(--green)!important;border-color:var(--green)!important;color:#08221a!important}
     html[data-theme="dark"] .app-confirm-ok:hover{background:#b91c1c!important;border-color:#b91c1c!important}
     @media(max-width:760px){
       #caseDetailModal .case-detail-head{padding:24px 22px 18px!important}
@@ -6622,7 +6624,7 @@
     .gmail-recipient-control:focus-within{outline:2px solid rgba(15,143,97,.16);outline-offset:1px;border-color:#9bd4b4}
     .gmail-compose-fields .gmail-recipient-control input[type=text]{flex:1 1 170px;min-width:120px;min-height:26px!important;height:26px!important;padding:0 3px!important;border:0!important;border-radius:5px!important;outline:0!important;background:transparent!important;box-shadow:none!important}
     .gmail-recipient-chips{display:contents}
-    .gmail-recipient-chip{display:inline-flex;align-items:center;max-width:100%;min-height:26px;gap:5px;padding:0 5px 0 9px;border:1px solid #cfe3d8;border-radius:999px;background:#eef8f2;color:#24513d;font-size:12px;font-weight:800;line-height:1}
+    .gmail-recipient-chip{display:inline-flex;align-items:center;max-width:100%;min-height:26px;gap:5px;padding:0 5px 0 9px;border:1px solid #cfe3d8;border-radius:999px;background:#eef8f2;color:#24513d;font-size:12px;font-weight:800;line-height:1;cursor:grab}.gmail-recipient-chip.is-dragging{opacity:.45}.gmail-recipient-control.is-drop-target{outline:2px dashed #16a34a;outline-offset:2px;background:#f0faf4}html[data-theme="dark"] .gmail-recipient-control.is-drop-target{background:#1b2b24}
     .gmail-recipient-chip-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .gmail-recipient-chip-remove{display:grid!important;place-items:center!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;padding:0!important;border:0!important;border-radius:999px!important;background:transparent!important;color:#628071!important;font-size:15px!important;line-height:1!important;box-shadow:none!important}
     .gmail-recipient-chip-remove:hover{background:#d8ecdf!important;color:#16452f!important}
@@ -7257,7 +7259,7 @@
 </div>
 <div class="app-confirm-backdrop" id="appConfirmDialog" hidden>
   <div class="app-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmMessage">
-    <div class="app-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.2M12 17h.01"/></svg></div>
+    <div class="app-confirm-icon" aria-hidden="true"><svg class="app-confirm-icon-danger" viewBox="0 0 24 24"><path d="M12 3.5 2.8 19.5h18.4L12 3.5Z"/><path d="M12 10v4.2M12 17h.01"/></svg><svg class="app-confirm-icon-positive" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
     <h3 id="appConfirmTitle">確認刪除</h3>
     <p id="appConfirmMessage"></p>
     <div class="app-confirm-actions"><button type="button" class="app-confirm-cancel" id="appConfirmCancel">取消</button><button type="button" class="app-confirm-ok" id="appConfirmOk">確定刪除</button></div>
@@ -7348,7 +7350,7 @@
           <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailComposeTo"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailComposeTo"></span><input type="text" id="gmailComposeTo" placeholder="輸入信箱後按 Enter" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeTo">選擇聯絡人</button></div>
         </div>
         <div class="gmail-field-block">副本
-          <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailComposeCc"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailComposeCc"></span><input type="text" id="gmailComposeCc" placeholder="可手動輸入信箱" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeCc">選擇聯絡人</button></div>
+          <div class="gmail-recipient-row"><div class="gmail-recipient-control" data-recipient-control="gmailComposeCc"><span class="gmail-recipient-chips" data-recipient-chips-for="gmailComposeCc"></span><input type="text" id="gmailComposeCc" placeholder="可手動輸入信箱" inputmode="email" autocomplete="off"></div><button type="button" class="gmail-recipient-pick" data-recipient-field="gmailComposeCc">選擇聯絡人</button><button type="button" class="gmail-recipient-pick gmail-cc-save-default" id="gmailComposeCcSaveDefault" title="把目前的副本存成這個客戶別的「預設信箱」，之後新增案件會自動帶入">設為預設</button></div>
         </div>
         <label>主旨<input type="text" id="gmailComposeSubject" placeholder="主旨"></label>
         <div class="gmail-field-block gmail-compose-body-field">內容
@@ -9817,8 +9819,8 @@ function gmailRecipientEntries(fieldId){return gmailRecipientState.get(fieldId)|
 // openGmailThreadModal 開啟新的寄信/回信情境時才會重置，避免上一個案件的展開狀態意外沿用到下一個。
 const GMAIL_RECIPIENT_CHIP_VISIBLE_COUNT=3;
 const gmailRecipientExpandedFields=new Set();
-function gmailRecipientChipHtml(entry){
-  return `<span class="gmail-recipient-chip" title="${esc(entry.full)}"><span class="gmail-recipient-chip-label">${esc(entry.name||entry.email)}</span><button type="button" class="gmail-recipient-chip-remove" data-recipient-remove="${esc(entry.email)}" aria-label="移除 ${esc(entry.name||entry.email)}">×</button></span>`;
+function gmailRecipientChipHtml(entry,fieldId=''){
+  return `<span class="gmail-recipient-chip" title="${esc(entry.full)}（可拖曳到收件人／副本）" draggable="true" data-recipient-chip="${esc(entry.email)}" data-recipient-chip-field="${esc(fieldId)}"><span class="gmail-recipient-chip-label">${esc(entry.name||entry.email)}</span><button type="button" class="gmail-recipient-chip-remove" data-recipient-remove="${esc(entry.email)}" aria-label="移除 ${esc(entry.name||entry.email)}">×</button></span>`;
 }
 function renderGmailRecipientChips(fieldId){
   const host=document.querySelector(`[data-recipient-chips-for="${fieldId}"]`);if(!host)return;
@@ -9830,12 +9832,65 @@ function renderGmailRecipientChips(fieldId){
   const toggleHtml=hiddenCount>0
     ? `<button type="button" class="gmail-recipient-chip-more" data-recipient-expand="${esc(fieldId)}">+${hiddenCount} 位</button>`
     : (needsCollapse&&expanded ? `<button type="button" class="gmail-recipient-chip-more" data-recipient-collapse="${esc(fieldId)}">收合</button>` : '');
-  host.innerHTML=visible.map(gmailRecipientChipHtml).join('')+toggleHtml;
+  host.innerHTML=visible.map(entry=>gmailRecipientChipHtml(entry,fieldId)).join('')+toggleHtml;
 }
 function setGmailRecipientEntries(fieldId,values){
   gmailRecipientState.set(fieldId,uniqueMailAddressEntries(values));
   const field=document.getElementById(fieldId);if(field)field.value='';
   renderGmailRecipientChips(fieldId);
+}
+/** 收件人／副本的膠囊可以互相拖曳：拖到另一個欄位就是搬過去（對方已經有這個人就只從原欄位移除），
+ * 拖到某個膠囊上會插在它前面，也能在同一欄調整順序。 */
+function moveGmailRecipient(fromField,toField,email,beforeEmail=''){
+  const key=String(email||'').toLowerCase();
+  const moving=gmailRecipientEntries(fromField).find(entry=>entry.email===key);
+  if(!moving||!toField)return false;
+  const target=gmailRecipientEntries(toField).filter(entry=>entry.email!==key);
+  const alreadyInTarget=fromField!==toField&&gmailRecipientEntries(toField).some(entry=>entry.email===key);
+  const beforeIndex=beforeEmail?target.findIndex(entry=>entry.email===String(beforeEmail).toLowerCase()):-1;
+  const kept=alreadyInTarget?gmailRecipientEntries(toField).find(entry=>entry.email===key):moving;
+  if(beforeIndex>=0)target.splice(beforeIndex,0,kept);else target.push(kept);
+  if(fromField!==toField)setGmailRecipientEntries(fromField,gmailRecipientEntries(fromField).filter(entry=>entry.email!==key));
+  setGmailRecipientEntries(toField,target);
+  return true;
+}
+let gmailRecipientDrag=null;
+function initGmailRecipientDragAndDrop(){
+  document.addEventListener('dragstart',event=>{
+    const chip=event.target.closest?.('[data-recipient-chip]');
+    if(!chip)return;
+    gmailRecipientDrag={email:chip.dataset.recipientChip,field:chip.dataset.recipientChipField};
+    chip.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed='move';
+    try{event.dataTransfer.setData('text/plain',chip.dataset.recipientChip)}catch(err){}
+  });
+  document.addEventListener('dragend',event=>{
+    event.target.closest?.('[data-recipient-chip]')?.classList.remove('is-dragging');
+    document.querySelectorAll('.gmail-recipient-control.is-drop-target').forEach(el=>el.classList.remove('is-drop-target'));
+    gmailRecipientDrag=null;
+  });
+  document.addEventListener('dragover',event=>{
+    if(!gmailRecipientDrag)return;
+    const control=event.target.closest?.('[data-recipient-control]');
+    document.querySelectorAll('.gmail-recipient-control.is-drop-target').forEach(el=>{if(el!==control)el.classList.remove('is-drop-target')});
+    if(!control)return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect='move';
+    control.classList.add('is-drop-target');
+  });
+  document.addEventListener('drop',event=>{
+    if(!gmailRecipientDrag)return;
+    const control=event.target.closest?.('[data-recipient-control]');
+    if(!control)return;
+    event.preventDefault();
+    const before=event.target.closest?.('[data-recipient-chip]')?.dataset.recipientChip||'';
+    const toField=control.dataset.recipientControl;
+    if(before&&before===gmailRecipientDrag.email&&toField===gmailRecipientDrag.field)return;
+    // 拖進收合中的欄位要展開，才看得到剛放進去的人。
+    gmailRecipientExpandedFields.add(toField);
+    moveGmailRecipient(gmailRecipientDrag.field,toField,gmailRecipientDrag.email,before);
+    control.classList.remove('is-drop-target');
+  });
 }
 function removeGmailRecipient(fieldId,email){setGmailRecipientEntries(fieldId,gmailRecipientEntries(fieldId).filter(entry=>entry.email!==String(email||'').toLowerCase()))}
 function commitGmailRecipientInput(fieldId,{report=true}={}){
@@ -10013,6 +10068,52 @@ function refreshPostSubmitCcFromWorker(queue){
       if(field&&ccEmailKey(field.value.split(','))===ccEmailKey(previousCc))field.value=nextCc.join(', ');
     }
   });
+}
+/** 新信編輯器目前對應的案件列：新增案件後的佇列看目前這一封（合併信件可能有多筆），單筆寄信看彈窗的案件編號。 */
+function gmailComposeCurrentRows(){
+  const queue=postSubmitQueue;
+  if(queue&&queue.mode==='gmail'){
+    const item=postSubmitQueueItems(queue)[queue.index];
+    return item?postSubmitItemDrafts(queue,item).map(draft=>draft.row).filter(Boolean):[];
+  }
+  const id=$('#gmailComposeModal')?.dataset.caseId;
+  const row=id?rows.find(item=>String(item.id)===String(id)):null;
+  return row?[row]:[];
+}
+/** 副本「設為預設」：把目前副本存成客戶別的預設信箱（跟資料庫後台、個人設定「客戶設定」同一個欄位）。
+ * 收件的設計師本人會被自動排除在副本外；如果原本的預設信箱裡有他，這裡要保留，否則換成別的設計師負責時就少了他。 */
+async function saveComposeCcAsCustomerDefault(){
+  const button=$('#gmailComposeCcSaveDefault');
+  if(!commitGmailRecipientInput('gmailComposeCc'))return;
+  const caseRows=gmailComposeCurrentRows();
+  const clients=[...new Set(caseRows.map(row=>String(row.client||'').trim()).filter(Boolean))];
+  if(!clients.length){setSync('找不到這封信對應的客戶別',true);return}
+  if(clients.length>1){setSync(`這封合併信件包含多個客戶別（${clients.join('、')}），請分開設定預設信箱`,true,4200);return}
+  const client=clients[0];
+  const cc=gmailRecipientEntries('gmailComposeCc').map(entry=>entry.full);
+  const toEmails=new Set(gmailRecipientEntries('gmailComposeTo').map(entry=>entry.email));
+  const storedRaw=customerDirectoryRowFor(client)?.['預設信箱'];
+  const storedUnset=storedRaw===undefined||storedRaw===null||String(storedRaw).trim()==='';
+  const stored=storedUnset?[...CUSTOMER_DEFAULT_CC_EMAILS]:parseNameListValue(storedRaw);
+  const keptRecipients=stored.filter(entry=>toEmails.has(customerMailEntryEmail(entry))&&!cc.some(item=>extractEmail(item).toLowerCase()===customerMailEntryEmail(entry)));
+  const mails=[...cc,...keptRecipients];
+  const ok=await showAppConfirm({
+    title:'設為預設信箱',
+    message:`把目前的副本（${cc.length} 位）設為「${client}」的預設信箱？之後新增這個客戶別的案件會自動帶入。${keptRecipients.length?`\n收件人 ${keptRecipients.map(entry=>String(entry).replace(/\s*<.*?>\s*/,'')).join('、')} 原本就在預設名單裡，會一併保留。`:''}`,
+    confirmText:'設為預設',cancelText:'取消',tone:'positive'
+  });
+  if(!ok)return;
+  if(button){button.disabled=true;button.textContent='儲存中…'}
+  try{
+    const data=await sheetApi('saveCustomerSettings',{customer:client,mails,editorToken:currentEditorToken});
+    if(!data?.ok)throw new Error(data?.error||'儲存失敗');
+    if(data.customer)customerDirectoryRows=sortedCustomerDirectoryRows([...(customerDirectoryRows||[]).filter(row=>String(row['客戶別']||'').trim()!==client),data.customer]);
+    setSync(`已把「${client}」的預設信箱更新為目前的副本`);
+  }catch(err){
+    setSync(`設定預設信箱失敗：${err.message}`,true,5000);
+  }finally{
+    if(button){button.disabled=false;button.textContent='設為預設'}
+  }
 }
 async function startPostSubmitMailFlow(draftRows,idsPromise){
   if(!Array.isArray(draftRows)||!draftRows.length)return;
@@ -14955,13 +15056,15 @@ async function submitDraftModificationRecord(event){
  * 使用者曾勾選「不要再讓這個網頁顯示對話框」而完全不再出現；站內視窗樣式與系統一致、紅色刪除鍵與取消鍵分開，
  * 點背景或按 Esc 都視為取消。回傳 Promise<boolean>，同一時間只會有一個視窗，開新的會先把舊的當成取消。 */
 let appConfirmResolve=null;
-function showAppConfirm({title='確認刪除',message='',confirmText='確定刪除',cancelText='取消'}={}){
+function showAppConfirm({title='確認刪除',message='',confirmText='確定刪除',cancelText='取消',tone='danger'}={}){
   const dialog=$('#appConfirmDialog'), titleEl=$('#appConfirmTitle'), messageEl=$('#appConfirmMessage'), okBtn=$('#appConfirmOk'), cancelBtn=$('#appConfirmCancel');
   if(!dialog||!titleEl||!messageEl||!okBtn||!cancelBtn)return Promise.resolve(window.confirm([title,message].filter(Boolean).join('\n\n')));
   if(appConfirmResolve)appConfirmResolve(false);
   titleEl.textContent=title;
   messageEl.textContent=message;
   okBtn.textContent=confirmText;
+  okBtn.classList.toggle('is-positive',tone!=='danger');
+  dialog.classList.toggle('is-positive',tone!=='danger');
   cancelBtn.textContent=cancelText;
   const previousFocus=document.activeElement;
   dialog.hidden=false;
@@ -16148,6 +16251,8 @@ document.querySelectorAll('.gmail-attachment-list').forEach(list=>list.addEventL
 }));
 document.querySelectorAll('.gmail-rich-editor').forEach(bindGmailInlineImageEditor);
 ['gmailComposeTo','gmailComposeCc','gmailThreadTo','gmailThreadCc'].forEach(bindGmailRecipientControl);
+initGmailRecipientDragAndDrop();
+$('#gmailComposeCcSaveDefault')?.addEventListener('click',saveComposeCcAsCustomerDefault);
 document.querySelectorAll('.gmail-recipient-pick').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();openRecipientPicker(button.dataset.recipientField,button)}));
 document.addEventListener('click',event=>{if(!fieldPopover.hidden&&!fieldPopover.contains(event.target))closeFieldPopover();if(gmailColorPaletteEl&&!gmailColorPaletteEl.hidden&&!gmailColorPaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-color-btn'))closeGmailColorPalette();if(gmailSizePaletteEl&&!gmailSizePaletteEl.hidden&&!gmailSizePaletteEl.contains(event.target)&&!event.target.closest('.gmail-rich-size-btn'))closeGmailSizePalette()});
 document.addEventListener('click',event=>{const menu=$('#accountMenu'); if(menu&&!menu.contains(event.target)){closeAccountMenu(); closeNotifications()}});
