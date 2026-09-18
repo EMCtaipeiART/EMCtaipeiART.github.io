@@ -9981,6 +9981,39 @@ let postSubmitQueue=null;
  *   那一筆可以是 falsy 值，該封信會被標記成無法寄出）；也可以整個 reject，代表本次新增
  *   完全失敗，所有草稿都無法寄出。
  */
+/** 向 Worker 取客戶別的即時資料。GitHub Pages 的 db.json 在後台存檔後要 1～3 分鐘才更新，剛設定好的
+ * 「預設信箱」會像是沒生效（2026-09-18 回報 soundcore）；讀不到就沿用手上的資料，不影響寄信。 */
+async function refreshCustomerDirectoryFromWorker({timeoutMs=4000}={}){
+  try{
+    const data=await Promise.race([sheetApi('listCustomers',{}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),timeoutMs))]);
+    if(!Array.isArray(data?.rows)||!data.rows.length)return false;
+    customerDirectoryRows=sortedCustomerDirectoryRows(data.rows);
+    return true;
+  }catch(err){return false}
+}
+const ccEmailKey=list=>(list||[]).map(value=>extractEmail(value).toLowerCase()).filter(Boolean).sort().join(',');
+/** 客戶資料更新後重算副本：只有使用者還沒動過副本欄位（內容仍等於舊的預設值）時才替換，不蓋掉手動修改。 */
+function replaceDefaultCcIfUntouched(fieldId,previousCc,nextCc){
+  if(ccEmailKey(previousCc)===ccEmailKey(nextCc))return;
+  if(ccEmailKey(gmailRecipientEntries(fieldId).map(entry=>entry.full))!==ccEmailKey(previousCc))return;
+  setGmailRecipientEntries(fieldId,nextCc);
+}
+function refreshPostSubmitCcFromWorker(queue){
+  const items=postSubmitQueueItems(queue),item=items[queue.index];
+  const previousCc=item?postSubmitItemDefaults(queue,item).defaults.cc:[];
+  refreshCustomerDirectoryFromWorker().then(updated=>{
+    if(!updated||postSubmitQueue!==queue)return;
+    const current=postSubmitQueueItems(queue)[queue.index];
+    if(!current)return;
+    const nextCc=postSubmitItemDefaults(queue,current).defaults.cc;
+    if(queue.mode==='gmail'){
+      if(!queue.drafts[current.indexes[0]]?.edited)replaceDefaultCcIfUntouched('gmailComposeCc',previousCc,nextCc);
+    }else if(queue.mode==='copy'){
+      const field=$('#mailCopyCc');
+      if(field&&ccEmailKey(field.value.split(','))===ccEmailKey(previousCc))field.value=nextCc.join(', ');
+    }
+  });
+}
 async function startPostSubmitMailFlow(draftRows,idsPromise){
   if(!Array.isArray(draftRows)||!draftRows.length)return;
   if(!accessAllowed('request.mail',true))return; // 沒有發信權限就完全不打擾，維持原本「送出後直接回列表」的流程
@@ -9999,6 +10032,7 @@ async function startPostSubmitMailFlow(draftRows,idsPromise){
   if(postSubmitQueue!==queue)return; // 等待查詢 Gmail 連線狀態的期間，使用者可能已經關閉或又送出新的一輪
   queue.mode=status.connected?'gmail':'copy';
   openPostSubmitQueueModal();
+  refreshPostSubmitCcFromWorker(queue);
 }
 function openPostSubmitQueueModal(){
   const queue=postSubmitQueue; if(!queue)return;
@@ -10329,6 +10363,8 @@ async function openGmailComposeModal(id){
   renderGmailDraftScopeNotice();
   setGmailRecipientEntries('gmailComposeTo',[draft.to]);
   setGmailRecipientEntries('gmailComposeCc',draft.cc);
+  // 副本用客戶別的即時資料再算一次（剛在後台設定的預設信箱，Pages 的 db.json 可能還沒更新）。
+  refreshCustomerDirectoryFromWorker().then(updated=>{if(updated&&!modal.hidden&&modal.dataset.caseId===String(id))replaceDefaultCcIfUntouched('gmailComposeCc',draft.cc,mailDraft(row).cc)});
   $('#gmailComposeSubject').value=draft.subject;
   const editor=$('#gmailComposeEditor');
   editor.innerHTML=draft.bodyHtml;

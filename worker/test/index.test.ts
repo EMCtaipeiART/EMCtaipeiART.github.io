@@ -1257,6 +1257,13 @@ describe('Machi Design API Worker', () => {
     expect(after.tables.database.rows.some(row => String(row['案件編號']) === '26080001')).toBe(false);
   });
 
+  it('listCustomers returns the live 客戶別 rows (so a just-saved 預設信箱 applies before GitHub Pages catches up) without a login', async () => {
+    await seedCustomerOwner('即時客戶', 'pm@emctaipei.com');
+    const listed = await api({ action: 'listCustomers' });
+    expect(listed.ok).toBe(true);
+    expect((listed.rows as Array<Record<string, unknown>>).some(row => row['客戶別'] === '即時客戶')).toBe(true);
+  });
+
   it('keeps text hyperlinks of a modification request (修改內容連結), dropping unsafe or unrelated links', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {

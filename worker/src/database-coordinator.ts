@@ -2610,6 +2610,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { ok: true, action, stories, reels: stories };
       }
       if (action === 'listIssueReports') return { ok: true, action, reports: database.tables.bug_report.rows.map(issueRow).reverse() };
+      // 客戶別的即時資料（預設信箱、喜愛設定等）。前台平常讀 GitHub Pages 的 db.json，存檔後要等 1～3 分鐘
+      // Pages 才會更新；新增案件後的信件編輯器改用這裡即時帶入副本，剛在後台設定好的預設信箱才會立刻生效。
+      // 內容與公開的 db.json 相同，不需要登入。
+      if (action === 'listCustomers') return { ok: true, action, rows: database.tables['客戶別'].rows, revision: database.revision };
       if (action === 'listModificationRecords') {
         const ids = Array.isArray(payload.ids) && payload.ids.length ? new Set(payload.ids.map(text)) : null;
         const rows = database.tables['修改統計表'].rows.map<Row>((row, index) => ({ rowNumber: index + 2, ...row })).filter(row => !ids || ids.has(text(row['案件編號'])));

@@ -265,7 +265,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-18 Asia/Taipei（最新）— 預設副本、編輯器超連結、串信回信三項修正
+### 2026-09-18 10:00 Asia/Taipei（最新）— 預設信箱剛設定好就能帶入新增案件信
+
+- 修改目的：使用者回報 soundcore 的預設信箱已指定專案部同仁，新增案件信的副本卻沒有。
+- 查證：線上資料正確（10 位，含專案部五位，08:24 由後台設定）；正式站以線上資料計算副本也正確。soundcore 最近的案件（26090139～26090143）都是 9/17 建立，早於設定與前一版修正，所以當時的信沒有這份名單。
+- 仍存在的空窗：前台讀 GitHub Pages 的 db.json，後台存檔後要 1～3 分鐘才更新；剛設定完立刻新增案件，副本仍會是舊資料。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：Worker 新增唯讀 `listCustomers`（內容與公開 db.json 相同，免登入）。前台 `refreshCustomerDirectoryFromWorker()`（4 秒逾時）在新增案件信（Gmail 編輯器與複製視窗）與案件單筆寄信開啟後取即時客戶資料；`replaceDefaultCcIfUntouched()` 只有副本仍等於舊預設值時才替換，使用者手動改過就保留。讀不到 Worker 時沿用原資料，不影響寄信。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 147/147；Worker `npx tsc --noEmit`、`npx vitest run` 83/83；本機以舊資料庫（無 soundcore 設定）開啟新增案件信，模擬 Worker 回傳線上資料後約 1 秒副本換成 10 位名單（扣掉收件人 Anna），手動修改過的副本不被覆蓋。
+- 部署狀態：Worker 已 `npx wrangler deploy`；前台推送 main。
+
+### 2026-09-18 Asia/Taipei — 預設副本、編輯器超連結、串信回信三項修正
 
 **1. 客戶別「預設信箱」沒有帶入新增案件信的副本**
 - 成因：32 個客戶別只有「測試」「聯發科技」真的存過預設信箱，其他都是空白。資料庫後台與個人設定在空白時「顯示」預設名單（平面四位＋Eric）被勾選，但前台 `customerDefaultCcRecipients()` 空白時改用舊規則（同組其他設計師＋負責人），兩邊不一致。

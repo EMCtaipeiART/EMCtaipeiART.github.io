@@ -4766,3 +4766,24 @@ test('信件編輯器快捷鍵在注音輸入法下也能用，超連結按鈕�
   assert.match(html, /button\.addEventListener\('mousedown',event=>\{event\.preventDefault\(\);savedRichSelectionRange=captureCurrentRichSelection\(\)\}\);\n  button\.addEventListener\('click',\(\)=>insertRichLink\(button\.dataset\.richLinkFor\)\);/);
   assert.match(html, /if\(hasSelection\)\{restore\(\);document\.execCommand\('createLink',false,url\);return\}/);
 });
+
+test('新增案件信開啟後向 Worker 取即時客戶資料更新副本，但不覆蓋使用者手動改過的副本', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /openPostSubmitQueueModal\(\);\n  refreshPostSubmitCcFromWorker\(queue\);\n\}/);
+  assert.match(html, /sheetApi\('listCustomers',\{\}\)/);
+  assert.match(html, /refreshCustomerDirectoryFromWorker\(\)\.then\(updated=>\{if\(updated&&!modal\.hidden&&modal\.dataset\.caseId===String\(id\)\)replaceDefaultCcIfUntouched\('gmailComposeCc',draft\.cc,mailDraft\(row\)\.cc\)\}\);/);
+  const helper = html.match(/const ccEmailKey=[^\n]*\n/)[0] + html.match(/function replaceDefaultCcIfUntouched\(fieldId,previousCc,nextCc\)\{[\s\S]*?\n\}/)[0];
+  const run = (current, previous, next) => new Function('current', `
+    let field = [...current];
+    const extractEmail = value => String(value || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i)?.[0] || '';
+    const gmailRecipientEntries = () => field.map(full => ({ full }));
+    const setGmailRecipientEntries = (_id, list) => { field = [...list]; };
+    ${helper}
+    replaceDefaultCcIfUntouched('gmailComposeCc', ${JSON.stringify(previous)}, ${JSON.stringify(next)});
+    return field;
+  `)(current);
+  // 使用者沒動過（順序不同也算相同）→ 換成即時名單。
+  assert.deepEqual(run(['b@x.com', 'a@x.com'], ['a@x.com', 'b@x.com'], ['A <a@x.com>', 'c@x.com']), ['A <a@x.com>', 'c@x.com']);
+  // 使用者改過 → 保留。
+  assert.deepEqual(run(['manual@x.com'], ['a@x.com'], ['c@x.com']), ['manual@x.com']);
+});
