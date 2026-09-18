@@ -1,0 +1,1 @@
+{"name":"kaiyao-pixel-office","version":"1.0.0","private":true,"description":"凱曜設計部像素辦公室，本機開發交接包","scripts":{"start":"node server.cjs","check":"node --check dist/app.js && node --check server.cjs"},"engines":{"node":">=18"}}

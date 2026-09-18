@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-18 12:20 Asia/Taipei — 新增像素辦公室遊戲、歷史案件等級與 Noise 新造型
+
+- 修改目的：將 GPT 製作的設計師像素遊戲放到現有 GitHub Pages，串接歷史案件的加權分數／數量，並加入逐級變難的 EXP 與等級畫面。
+- 影響檔案：`EMC-ART-Pixel-Office/**`、`AGENT.md`。
+- 影響功能：遊戲會唯讀取 `/data/database_archive.json`，統計 2023 年起「已完成」案件；側邊欄與角色列表顯示等級、稱號、EXP 與進度。Noise 三視圖改為藍帽、短袖 T-shirt、短褲、白襪與灰色布鞋。
+- 風險區塊：歷史快照若短暫無法讀取，會顯示程式內的最近同步值；後台資料不會被遊戲寫入。
+- 已檢查／驗證方式：`npm run check`通過；CSS 括號平衡檢查通過；Chrome 實機確認歷史快照同步、五人等級、Noise 新造型與側邊進度卡。
+- 部署狀態：純前端，git push 後由 GitHub Pages 自動生效，網址為 `https://emctaipeiart.github.io/EMC-ART-Pixel-Office/`。
+- commit：`本次 commit`
+
 ### 2026-09-17 16:30 Asia/Taipei — AI判斷等待畫面加上設計幹話語錄輪播
 
 - 修改目的：AI 分析要等 20–60 秒，使用者希望等待時有東西看。

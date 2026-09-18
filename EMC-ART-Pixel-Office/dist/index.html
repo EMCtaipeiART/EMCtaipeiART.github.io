@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>凱曜設計部｜Pixel Office</title>
+  <meta name="description" content="走進設計部的像素日常，查看設計師等級、移動人物、表達心情與留下對話。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23182e54'/%3E%3Cpath d='M7 9h18v11H7zM9 20v6m14-6v6' stroke='%23ffd45d' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+  <header>
+    <a class="brand" href="./"><span class="brand-icon">▦</span><div>凱曜設計部<small>PIXEL OFFICE / 日常遊戲室</small></div></a>
+    <div class="local-tag">單人模式 · 等級由歷史完成案件自動更新</div>
+  </header>
+  <main>
+    <section class="play">
+      <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div><button id="home" class="outline">全員回座位 ↺</button></div>
+      <div class="canvas-wrap"><canvas id="game" width="1536" height="1024" tabindex="0" aria-label="設計部遊戲場景。點選人物，以方向鍵移動。"></canvas><p id="loading">正在整理設計部…</p></div>
+      <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 移動選取的人物</span><span>點選人物開啟工具 · 點照片放大</span></div>
+      <nav id="roster" aria-label="選取設計師"></nav>
+    </section>
+    <aside>
+      <div class="panel-top"><span class="eyebrow">CHARACTER TOOLS</span><span id="selectedTag">已選取</span></div>
+      <div class="identity"><canvas id="portrait" width="130" height="155"></canvas><div><h2 id="personName">Leona</h2><p id="personDesc">設計師</p><span class="mood-status" id="moodStatus">自在工作中</span></div></div>
+      <section class="level-card" aria-labelledby="levelHeading">
+        <div class="level-head"><div><span class="level-kicker">DESIGNER LEVEL</span><strong id="levelHeading">Lv.14</strong></div><span id="levelTitle">資深設計師</span></div>
+        <div class="xp-track" role="progressbar" aria-label="本級經驗進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" id="xpTrack"><span id="xpFill"></span></div>
+        <div class="xp-meta"><span id="scoreText">1,907 分 · 19,070 EXP</span><span id="nextText">距 Lv.15 還差 53 分</span></div>
+        <p id="levelSource">正在同步歷史案件…</p>
+      </section>
+      <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button></section>
+      <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
+      <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
+      <div class="dpad" aria-label="人物移動"><button data-key="ArrowUp" aria-label="往上">↑</button><div><button data-key="ArrowLeft" aria-label="往左">←</button><button data-key="ArrowDown" aria-label="往下">↓</button><button data-key="ArrowRight" aria-label="往右">→</button></div></div>
+      <p class="privacy">對話與照片只留在這個瀏覽器，不會同步給其他同事。等級資料只讀取已完成案件，不會寫回後台。</p>
+    </aside>
+  </main>
+  <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js?v=5"></script>
+</body>
+</html>
