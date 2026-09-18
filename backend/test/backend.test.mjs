@@ -4773,3 +4773,12 @@ test('信件內文圖片比照 Gmail：一般 <img>、倒退鍵可刪、可拖�
   assert.match(html, /const range=document\.createRange\(\);range\.selectNode\(image\);/);
   assert.match(pick('bindGmailInlineImageEditor'), /event\.preventDefault\(\);\n    hideGmailInlineImageDropCaret\(\);\n    const image=gmailInlineImageDragged\.image;/);
 });
+
+test('插入 NAS 路徑時，路徑上方多一行一般文字「NAS路徑」', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /fragment\.append\(document\.createTextNode\('NAS路徑'\),document\.createElement\('br'\),bold\);/);
+  assert.match(html, /const \{fragment,bold\}=nasPathInsertFragment\(path\);/);
+  assert.match(html, /if\(nasPathNeedsLeadingBreak\(useRange\)\)fragment\.prepend\(document\.createElement\('br'\)\);/);
+  // 沒有資料夾選擇器時的手動輸入也走同一支。
+  assert.match(html, /insertNasPathIntoEditor\(editorId,path,rangeInEditor\?range:null\);/);
+});

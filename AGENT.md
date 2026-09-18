@@ -265,7 +265,15 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-18 12:00 Asia/Taipei（最新）— 信件編輯器圖片改成 Gmail 的操作方式
+### 2026-09-18 12:30 Asia/Taipei（最新）— 「插入 NAS 路徑」上方加一行「NAS路徑」
+
+- 修改目的：使用者希望點「插入 NAS 路徑」選完資料夾後，路徑上方多一行一般文字「NAS路徑」（不粗體）。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：`insertNasPathIntoEditor()` 改插入 `nasPathInsertFragment()`：「NAS路徑」＋換行＋粗體路徑。插入點前面同一行有文字時先換行（`nasPathNeedsLeadingBreak()`）；路徑後面換行並把游標放到下一行，接著打字不會變成粗體（原本會接進粗體）。沒有資料夾選擇器時的手動輸入（`insertRichNasPathViaPrompt()`）改走同一支。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 147/147；本機瀏覽器驗證行中間、空白行、空編輯器三種插入位置，以及手動輸入路徑。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-18 12:00 Asia/Taipei — 信件編輯器圖片改成 Gmail 的操作方式
 
 - 修改目的：設計師反映回信編輯器的圖片很難操作——倒退鍵刪不掉、不能自由拖曳、調整的大小跟寄出後不一致；要求移除圖片上的小圖示，改成 Gmail 的方式。
 - 成因：圖片包在 `contenteditable=false` 的 `.gmail-inline-image-wrap` 外框裡，外框上有刪除鈕、拖曳把手、換行鈕、縮放把手。鍵盤刪不掉外框；拖曳只能透過把手；尺寸存在外框上，寄出時才轉換成 `<img>` 的 style，兩者常常不一致。

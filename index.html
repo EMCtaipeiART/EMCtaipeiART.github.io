@@ -8875,18 +8875,7 @@ function insertRichNasPathViaPrompt(editorId){
   const defaultPath=currentGmailEditorCaseRow(editorId)?.designImageFolderUrl||'';
   const path=String(prompt('請輸入要插入的 NAS 路徑：',defaultPath)||'').trim();
   if(!path)return;
-  const bold=document.createElement('b');
-  bold.textContent=path;
-  if(rangeInEditor){
-    range.deleteContents();
-    range.insertNode(bold);
-    range.setStartAfter(bold);
-    range.setEndAfter(bold);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }else{
-    editor.appendChild(bold);
-  }
+  insertNasPathIntoEditor(editorId,path,rangeInEditor?range:null);
 }
 let savedRichSelectionRange=null;
 function captureCurrentRichSelection(){
@@ -14759,24 +14748,47 @@ function openNasFolderPickerForInsert(editorId){
   setSync('請在新分頁選擇 NAS 資料夾，選好後會自動插入信件內容...',false,5000);
   watchNasFolderPickerWindow(win,activeNasFolderPickerNonce);
 }
-/** 把選定的 NAS 路徑以粗體插入指定編輯區的游標位置（沒有記住的選取範圍就接在內容最後）。 */
+/** 插入的 NAS 路徑內容：一行一般文字「NAS路徑」，下一行是粗體的路徑（跟設計師回覆信的 NAS 路徑區塊同樣寫法）。 */
+function nasPathInsertFragment(path){
+  const fragment=document.createDocumentFragment();
+  const bold=document.createElement('b');
+  bold.textContent=path;
+  fragment.append(document.createTextNode('NAS路徑'),document.createElement('br'),bold);
+  return {fragment,bold};
+}
+/** 插入點前面同一行還有文字嗎（有的話「NAS路徑」要另起一行）。 */
+function nasPathNeedsLeadingBreak(range){
+  const container=range.startContainer,offset=range.startOffset;
+  if(container.nodeType===Node.TEXT_NODE&&offset>0)return !/\n$/.test(container.textContent.slice(0,offset));
+  let previous=container.nodeType===Node.TEXT_NODE?container.previousSibling:container.childNodes[offset-1];
+  while(previous&&previous.nodeType===Node.TEXT_NODE&&!previous.textContent)previous=previous.previousSibling;
+  if(!previous)return false;
+  if(previous.nodeName==='BR')return false;
+  return !/^(DIV|P|LI|UL|OL|TABLE|BLOCKQUOTE|H[1-6])$/.test(previous.nodeName);
+}
+/** 把選定的 NAS 路徑插入指定編輯區的游標位置（沒有記住的選取範圍就接在內容最後）。
+ * 「NAS路徑」獨立一行、路徑獨立一行，游標放到路徑的下一行——直接接著打字才不會變成粗體。 */
 function insertNasPathIntoEditor(editorId,path,range){
   const editor=document.getElementById(editorId); if(!editor||!path)return;
   editor.focus();
-  const bold=document.createElement('b');
-  bold.textContent=path;
-  const useRange=rangeInsideEditor(range,editor)?range:null;
-  if(useRange){
-    useRange.deleteContents();
-    useRange.insertNode(bold);
-    useRange.setStartAfter(bold);
-    useRange.setEndAfter(bold);
-    const selection=window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(useRange);
-  }else{
-    editor.appendChild(bold);
-  }
+  let useRange=rangeInsideEditor(range,editor)?range:null;
+  if(!useRange){useRange=document.createRange();useRange.selectNodeContents(editor);useRange.collapse(false)}
+  useRange.deleteContents();
+  const {fragment,bold}=nasPathInsertFragment(path);
+  if(nasPathNeedsLeadingBreak(useRange))fragment.prepend(document.createElement('br'));
+  useRange.insertNode(fragment);
+  // 路徑後面原本就是換行時直接沿用，不多出空白行；否則補一個換行。
+  let after=bold.nextSibling;
+  while(after&&after.nodeType===Node.TEXT_NODE&&!after.textContent)after=after.nextSibling;
+  let caretAnchor=after&&after.nodeName==='BR'?after:null;
+  if(!caretAnchor){caretAnchor=document.createElement('br');bold.after(caretAnchor);if(!caretAnchor.nextSibling)caretAnchor.after(document.createElement('br'))}
+  const caret=document.createRange();
+  caret.setStartAfter(caretAnchor);
+  caret.collapse(true);
+  const selection=window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(caret);
+  savedRichSelectionRange=caret.cloneRange();
 }
 function nasFolderPickerAdminUrl(){return nasFolderPickerBaseUrl.replace(/\/picker\/?$/,'/admin')}
 function openNasFolderPickerAdmin(){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const url=new URL(nasFolderPickerAdminUrl()); url.searchParams.set('token',nasFolderPickerToken); const adminWidth=480,adminHeight=560,adminLeft=Math.max(0,Math.round((screen.width-adminWidth)/2)),adminTop=Math.max(0,Math.round((screen.height-adminHeight)/2)); const win=window.open(url.toString(),'machiNasFolderPickerAdmin',`width=${adminWidth},height=${adminHeight},left=${adminLeft},top=${adminTop}`); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200)}}
