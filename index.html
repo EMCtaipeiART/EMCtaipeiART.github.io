@@ -12540,7 +12540,22 @@ function setGmailEditorTemplateContent(editor,greeting,template){
   editor.replaceChildren();
   editor.innerHTML=`${greetingHtml}${body}`;
 }
-function designerReplyTemplateForCase(row={}){const profile=designerProfile(String(row.designer||'').trim()),settings=normalizeReplyTemplateSettings(profile.replyTemplates||{},profile.replyTemplateDefault||'');return defaultReplyTemplateContent(settings)}
+/** 設計師回覆信的預設內文依案件「項目細節」決定（2026-09-18）：
+ * 1. 設計師自己的範本裡有提到這個細節（例如內容含「廣告素材」）→ 用那個範本，保留設計師自己的寫法；
+ * 2. 沒有的話 →「附上{細節}，再煩請查收，謝謝。」（「急件」不算細節，多個細節以「、」串起來）；
+ * 3. 案件沒有填項目細節 → 照舊用設計師的預設範本。 */
+function designerReplyDetailItems(row={}){return splitWeightDetails(row.details??row['項目細節']).filter(item=>item!=='急件')}
+function designerReplyTemplateForCase(row={}){
+  const profile=designerProfile(String(row.designer||'').trim()),settings=normalizeReplyTemplateSettings(profile.replyTemplates||{},profile.replyTemplateDefault||'');
+  const items=designerReplyDetailItems(row);
+  if(!items.length)return defaultReplyTemplateContent(settings);
+  const plain=value=>String(value||'').replace(/<[^>]*>/g,'');
+  const templates=Object.values(settings.templates||{});
+  // 預設範本優先，其次依範本順序。
+  const ordered=[settings.templates?.[settings.defaultName],...templates].filter(Boolean);
+  const matched=ordered.find(template=>items.some(item=>plain(template).includes(item)));
+  return matched||`附上${items.join('、')}，\n再煩請查收，謝謝。`;
+}
 function setGmailEditorPlainText(editor,value=''){const text=String(value);editor.replaceChildren();if(!text)return;text.split(/\r?\n/).forEach((line,index)=>{if(index)editor.append(document.createElement('br'));editor.append(document.createTextNode(line))})}
 /** 「回信」目前開著的信件串上一次成功讀到的訊息清單，供「填寫修改需求信」／「設計師回覆信」取用
  * （例如抓上一封寄件者姓名），避免再另外多打一次 getCaseMailThread。 */

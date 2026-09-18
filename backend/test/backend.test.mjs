@@ -4782,3 +4782,23 @@ test('插入 NAS 路徑時，路徑上方多一行一般文字「NAS路徑」', 
   // 沒有資料夾選擇器時的手動輸入也走同一支。
   assert.match(html, /insertNasPathIntoEditor\(editorId,path,rangeInEditor\?range:null\);/);
 });
+
+test('設計師回覆信的預設內文依項目細節：社群貼文／廣告素材…，優先用設計師自己提到該細節的範本', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.split('\n').find(line => line.startsWith(`function ${name}(`));
+  const sources = ['splitWeightDetails', 'normalizeReplyTemplateSettings', 'defaultReplyTemplateContent', 'designerReplyDetailItems', 'designerReplyTemplateForCase'].map(pick);
+  assert.ok(sources.every(Boolean), 'could not locate the reply template helpers');
+  const build = profiles => new Function('profiles', `
+    const designerProfile = name => profiles[name] || {};
+    ${sources.join('\n')}
+    return designerReplyTemplateForCase;
+  `)(profiles);
+  const machi = { replyTemplates: { '範本 1': '附上廣告素材，<br>再煩請查收，謝謝。', '範本 2': '附上社群貼文，<br>再煩請查收，謝謝。' }, replyTemplateDefault: '範本 2' };
+  const template = build({ Machi: machi, Noise: {} });
+  assert.equal(template({ designer: 'Machi', details: '廣告素材' }), '附上廣告素材，<br>再煩請查收，謝謝。', '廣告素材案件用廣告素材範本，不再固定用預設的社群貼文');
+  assert.equal(template({ designer: 'Machi', details: '社群貼文, 急件' }), '附上社群貼文，<br>再煩請查收，謝謝。');
+  assert.equal(template({ designer: 'Machi', details: '素材重置' }), '附上素材重置，\n再煩請查收，謝謝。', '範本沒提到的細節依此類推產生');
+  assert.equal(template({ designer: 'Noise', details: '字幕字卡, 2D 動畫' }), '附上字幕字卡、2D 動畫，\n再煩請查收，謝謝。');
+  assert.equal(template({ designer: 'Machi', details: '' }), '附上社群貼文，<br>再煩請查收，謝謝。', '沒有細節就用預設範本');
+  assert.equal(template({ designer: 'Machi', details: '急件' }), '附上社群貼文，<br>再煩請查收，謝謝。');
+});

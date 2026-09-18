@@ -265,7 +265,23 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-18 12:30 Asia/Taipei（最新）— 「插入 NAS 路徑」上方加一行「NAS路徑」
+### 2026-09-18 13:30 Asia/Taipei（最新）— 設計師回覆信的插入圖片確實備份進修改紀錄；預設內文依項目細節
+
+**1. 手動插入的圖片沒有進修改紀錄**
+- 查證：功能本來就有（寄出設計師回覆信時 `backupDesignerReplyInlineImages()` → Worker `backupReplyInlineImages` → Apps Script `uploadCaseDesignImages`），但所有修改紀錄中只有 9/16 一筆來源為 mail-inline-upload。
+- 成因：Worker 呼叫 Apps Script 時自動跟隨轉址去取結果頁，而 Google 取回結果這一步目前大量失敗（見 09-17 NAS 備份紀錄）；Worker 拿到錯誤頁就回報「設計圖備份服務回應格式錯誤」，即使 Apps Script 可能已經執行。
+- 修正：`backupReplyInlineImages()` 改用 `redirect: 'manual'`；收到 302 時比對本 Durable Object 自己的「修改統計表」該輪次每個檔名在送出前後的筆數（Apps Script 會回頭呼叫 addCaseDesignImages 寫入），確認寫入就直接回成功（`confirmedByDatabase`）；確認不到才去取結果頁，結果頁仍失敗時再確認一次，最後回報「設計圖備份服務暫時沒有回應，請稍後在修改紀錄確認」。
+- 驗證：Worker 新增測試（Apps Script 已寫入 → 不取結果頁即成功；沒寫入且結果頁錯誤 → 回報可理解的錯誤並有嘗試取結果頁），`npx vitest run` 84/84。
+
+**2. 回覆信預設內文依項目細節**
+- `designerReplyTemplateForCase()`：取案件項目細節（去掉「急件」）。設計師自己的範本（預設範本優先）內容提到該細節時用那個範本；否則產生「附上{細節}，再煩請查收，謝謝。」（多個細節以「、」串起來）；沒有細節時照舊用預設範本。例：Machi 預設範本是「附上社群貼文」，廣告素材案件會改用她的「附上廣告素材」範本；素材重置案件產生「附上素材重置，…」。
+- 注意：範本沒有提到該細節的設計師（例如 Anna 的「貼文如下」不含「社群貼文」字樣），社群貼文案件會改帶自動產生的文字；在範本內容寫上細節名稱即可沿用自己的寫法。
+- 驗證：前台新增測試（六種情境），`node --test backend/test/*.test.mjs` 148/148。
+
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 部署狀態：Worker `npx wrangler deploy`；前台推送 main。
+
+### 2026-09-18 12:30 Asia/Taipei — 「插入 NAS 路徑」上方加一行「NAS路徑」
 
 - 修改目的：使用者希望點「插入 NAS 路徑」選完資料夾後，路徑上方多一行一般文字「NAS路徑」（不粗體）。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。

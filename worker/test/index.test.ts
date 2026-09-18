@@ -1535,6 +1535,46 @@ describe('Machi Design API Worker', () => {
     expect(String(denied.error)).toContain('media.manage');
   });
 
+  it('treats the designer-reply photo backup as done when Apps Script already recorded the images, even if Google fails to return the result page', async () => {
+    const token = await login();
+    const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const state = await runInDurableObject(stub, async (_instance, doState) => doState);
+    // 模擬 Apps Script 執行完成時已經回頭寫入修改紀錄（addCaseDesignImages），然後才回 302。
+    const recordUploaded = (fileName: string) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables['修改統計表'].rows.push({ '案件編號': '26080001', '修改次數': '1', '修改內容': '一修', '圖片連結': JSON.stringify([{ fileName, url: 'https://lh3.googleusercontent.com/d/uploaded' }]), '圖片來源': 'mail-inline-upload' });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    };
+    const requested: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input);
+      requested.push(url);
+      if (url.startsWith('https://script.google.com/')) {
+        recordUploaded('reply-photo.png');
+        return new Response(null, { status: 302, headers: { location: 'https://script.googleusercontent.com/macros/echo?user_content_key=x' } });
+      }
+      return new Response('<html>找不到網頁</html>', { status: 404 });
+    });
+    const result = await api({ action: 'backupReplyInlineImages', caseId: '26080001', round: 1, images: [{ fileName: 'reply-photo.png', mimeType: 'image/png', base64: tinyPng }] }, token);
+    expect(result).toMatchObject({ ok: true, count: 1, confirmedByDatabase: true });
+    expect(requested.some(url => url.includes('googleusercontent.com/macros/echo'))).toBe(false);
+
+    // 沒有寫入、結果頁又是錯誤頁：回報可以理解的錯誤，而不是「回應格式錯誤」。
+    requested.length = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input);
+      requested.push(url);
+      if (url.startsWith('https://script.google.com/')) return new Response(null, { status: 302, headers: { location: 'https://script.googleusercontent.com/macros/echo?user_content_key=y' } });
+      return new Response('<html>找不到網頁</html>', { status: 404 });
+    });
+    const failed = await api({ action: 'backupReplyInlineImages', caseId: '26080001', round: 1, images: [{ fileName: 'never-saved.png', mimeType: 'image/png', base64: tinyPng }] }, token);
+    expect(failed).toMatchObject({ ok: false });
+    expect(String(failed.error)).toContain('暫時沒有回應');
+    expect(requested.some(url => url.includes('user_content_key=y'))).toBe(true);
+  });
+
   it('backs up photos uploaded inside a designer reply into the reply round of 修改紀錄 via the Apps Script case design uploader', async () => {
     const token = await login();
     const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

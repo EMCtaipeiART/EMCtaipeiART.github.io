@@ -2743,11 +2743,37 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return { ...image, dedupeKey };
     }));
     const startMatch = text(caseRow['開始日期']).match(/(\d{4})\D+(\d{1,2})/);
+    // Google 常常是「Apps Script 已經執行完、只是取回結果頁失敗」（2026-09-17 實測多數請求拿到「雲端硬碟
+    // 找不到網頁」）。Apps Script 存完 Drive 後會回頭呼叫本 Worker 的 addCaseDesignImages 寫入修改紀錄，
+    // 所以收到 302 的當下，這個 Durable Object 自己的資料就已經有這些圖片了：先比對送出前後這一輪每個
+    // 檔名的筆數，確認寫入就直接回成功，不必等結果頁；確認不到才照舊去取結果（例如金鑰錯誤的訊息）。
+    const roundFileCounts = (snapshot: DatabaseSnapshot): Map<string, number> => {
+      const counts = new Map<string, number>();
+      for (const row of snapshot.tables['修改統計表'].rows) {
+        if (text(row['案件編號']) !== caseId || (Number(row['修改次數']) || 0) !== round) continue;
+        for (const image of parseCaseDesignImages_(row)) counts.set(image.fileName, (counts.get(image.fileName) || 0) + 1);
+      }
+      return counts;
+    };
+    const baseline = roundFileCounts(database);
+    const confirmRecorded = async (): Promise<ApiResult | null> => {
+      const latest = (await this.snapshot()).database;
+      const after = roundFileCounts(latest);
+      const needed = new Map<string, number>();
+      for (const image of images) needed.set(image.fileName, (needed.get(image.fileName) || 0) + 1);
+      for (const [name, count] of needed) {
+        if ((after.get(name) || 0) - (baseline.get(name) || 0) < count) return null;
+      }
+      const row = latest.tables['修改統計表'].rows.find(item => text(item['案件編號']) === caseId && (Number(item['修改次數']) || 0) === round);
+      const imageUrls = row ? parseCaseDesignImages_(row).map(image => image.url).slice(-images.length) : [];
+      return { ok: true, action, caseId, round, count: images.length, imageUrls, jsonRevision: latest.revision, confirmedByDatabase: true };
+    };
     let response: Response;
     try {
       response = await fetch(scriptUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        redirect: 'manual',
         body: JSON.stringify({
           action: 'uploadCaseDesignImages',
           serviceKey,
@@ -2761,6 +2787,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           source: 'mail-inline-upload'
         })
       });
+      const location = response.headers.get('location');
+      if (response.status >= 300 && response.status < 400 && location) {
+        const confirmed = await confirmRecorded();
+        if (confirmed) return confirmed;
+        response = await fetch(location);
+      }
     } catch (error) {
       throw new Error('無法連線設計圖備份服務：' + String((error as { message?: string })?.message || error));
     }
@@ -2768,7 +2800,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try {
       result = await response.json();
     } catch {
-      throw new Error('設計圖備份服務回應格式錯誤');
+      const confirmed = await confirmRecorded();
+      if (confirmed) return confirmed;
+      throw new Error('設計圖備份服務暫時沒有回應，請稍後在修改紀錄確認圖片是否已備份');
     }
     if (!response.ok || !result.success) throw new Error(result.message || `設計圖備份失敗（HTTP ${response.status}）`);
     const imageUrls = Array.isArray(result.imageUrls) ? result.imageUrls : [];
