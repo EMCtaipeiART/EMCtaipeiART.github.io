@@ -820,7 +820,7 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   // 工具列改由與信件範本共用的 richSettingsToolbarHtml() 產生，按鈕本身改在那支函式裡驗證
   //（見「signature and mail template editors in personal settings get the same rich toolbar」）。
   assert.match(rowHtmlSource, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/);
-  const sharedToolbar = html.match(/function richSettingsToolbarHtml\(extraClass=''\)\{[\s\S]*?\n\}/)?.[0] || '';
+  const sharedToolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0] || '';
   for (const cmd of ['bold', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
     assert.ok(sharedToolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
   }
@@ -4130,7 +4130,7 @@ test('mail editor toolbar offers undo/redo, font size, italic, underline, backgr
 
 test('signature and mail template editors in personal settings get the same rich toolbar as the mail editor', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass=''\)\{[\s\S]*?\n\}/)?.[0];
+  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(toolbar, 'could not locate richSettingsToolbarHtml');
   for (const cmd of ['undo', 'redo', 'bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
     assert.ok(toolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
@@ -4140,7 +4140,8 @@ test('signature and mail template editors in personal settings get the same rich
   assert.match(toolbar, /class="gmail-rich-link-btn" data-rich-link/, '缺少超連結');
 
   // 兩處都用同一個產生器，功能才不會各走各的。
-  assert.equal((html.match(/\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/g) || []).length, 2, '簽名檔與信件範本都要套用');
+  // 信件範本多帶 recipientName（插入收件人名）選項。
+  assert.equal((html.match(/\$\{richSettingsToolbarHtml\('signature-preset-toolbar'(?:,\{recipientName:true\})?\)\}/g) || []).length, 2, '簽名檔與信件範本都要套用');
 
   // 信件範本從純文字 textarea 改成格式化編輯區，存的是 HTML。
   assert.doesNotMatch(html, /<textarea data-reply-template-content/, '信件範本不該再是純文字欄位');
@@ -4365,6 +4366,8 @@ test('reply templates saved as formatted text are inserted as formatting, not as
       const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const looksLikeSignatureHtml = value => /<[a-z][\\s\\S]*>/i.test(String(value || ''));
       const setGmailEditorPlainText = (target, value) => { calls.push({ plain: value }); target.innerHTML = 'PLAIN:' + value; };
+      const REPLY_TEMPLATE_RECIPIENT_TOKEN = '{收件人名}';
+      const applyTemplateRecipientName = value => String(value || '');
       ${block}
       setGmailEditorTemplateContent(editor, ${JSON.stringify(greeting)}, ${JSON.stringify(template)});
     `)(editor, calls);
@@ -4397,7 +4400,9 @@ test('personal settings 客戶設定 lists only customers the account can manage
   // 區塊放在個人設定裡，開啟時渲染、儲存時一併送出、切換客戶別會先暫存勾選。
   assert.match(html, /<section class="personal-mail-templates personal-customer-settings" id="personalCustomerSettings" hidden>/);
   assert.match(html, /renderPersonalCustomerSettings\(\);setPersonalSettingsStatus\(\);modal\.hidden=false;/);
-  assert.match(html, /const savedCustomers=await savePersonalCustomerSettings\(\);/);
+  // 2026-09-18 起每個區塊各自儲存，客戶設定有自己的「儲存」。
+  assert.match(html, /const saved=await savePersonalCustomerSettings\(\);/);
+  assert.match(html, /data-personal-save="customers"/);
   assert.match(html, /\$\('#personalCustomerSelect'\)\?\.addEventListener\('change',event=>switchPersonalCustomer\(event\.target\.value\)\);/);
 
   const pick = name => html.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
@@ -4801,4 +4806,35 @@ test('設計師回覆信的預設內文依項目細節：社群貼文／廣告�
   assert.equal(template({ designer: 'Noise', details: '字幕字卡, 2D 動畫' }), '附上字幕字卡、2D 動畫，\n再煩請查收，謝謝。');
   assert.equal(template({ designer: 'Machi', details: '' }), '附上社群貼文，<br>再煩請查收，謝謝。', '沒有細節就用預設範本');
   assert.equal(template({ designer: 'Machi', details: '急件' }), '附上社群貼文，<br>再煩請查收，謝謝。');
+});
+
+test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名}，套用時換成收件人名字', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  for (const key of ['profile', 'templates', 'signatures', 'customers']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
+  assert.match(html, /id="personalSettingsCancel">關閉<\/button><\/div>/, '底部不再有「一起儲存」');
+  const section = html.match(/async function savePersonalSettingsSection\(section\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(section);
+  assert.match(section, /settings=\{displayName\};/);
+  assert.match(section, /settings=\{replyTemplates:templateSettings\.templates,replyTemplateDefault:templateSettings\.defaultName\};/);
+  assert.match(section, /settings=\{signaturePresets:signaturePresetSettings\.presets,signaturePresetDefault:signaturePresetSettings\.defaultName\};/);
+
+  // 只有信件範本的工具列有「插入收件人名」，簽名檔沒有。
+  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar',\{recipientName:true\}\)\}<div class="signature-preset-content" data-reply-template-content/);
+  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/);
+  const apply = html.match(/function applyTemplateRecipientName\(template,editorId\)\{[\s\S]*?\n\}/)?.[0];
+  const run = (template, name) => new Function(`
+    const REPLY_TEMPLATE_RECIPIENT_TOKEN = '{收件人名}';
+    const templateRecipientFieldId = () => 'to';
+    const gmailRecipientGreetingName = () => ${JSON.stringify(name)};
+    const looksLikeSignatureHtml = value => /<[a-z][\\s\\S]*>/i.test(String(value || ''));
+    const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    ${apply}
+    return applyTemplateRecipientName(${JSON.stringify(template)}, 'gmailThreadReplyEditor');
+  `)();
+  assert.equal(run('Hello {收件人名}，<br>貼文如下', '木少'), 'Hello 木少，<br>貼文如下');
+  assert.equal(run('Hi {收件人名}，附上 {收件人名} 要的檔案', 'Livia'), 'Hi Livia，附上 Livia 要的檔案');
+  assert.equal(run('Hello {收件人名}<br>', '<b>'), 'Hello &lt;b&gt;<br>', 'HTML 範本裡的名字要逃脫');
+  assert.equal(run('沒有代號', 'X'), '沒有代號');
+  // 範本自己放了 {收件人名}，就不再自動加「Hi ○○,」。
+  assert.match(html, /if\(String\(template\|\|''\)\.includes\(REPLY_TEMPLATE_RECIPIENT_TOKEN\)\)greeting='';/);
 });

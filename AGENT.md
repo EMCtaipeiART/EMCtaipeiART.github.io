@@ -265,7 +265,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-18 13:30 Asia/Taipei（最新）— 設計師回覆信的插入圖片確實備份進修改紀錄；預設內文依項目細節
+### 2026-09-18 14:30 Asia/Taipei（最新）— 個人設定分區塊儲存；信件範本「插入收件人名」
+
+- 修改目的：個人設定只有一顆「儲存」，改一個地方也要全部一起存；設計師希望回信範本可以插入收件人名。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 個人設定：顯示名（「儲存顯示名」，Enter 也會觸發）、信件範本、簽名檔設定、客戶設定各有一顆「儲存」（`savePersonalSettingsSection(section)`），只送出該區欄位；後端 `updateSettingsRow()` 本來就只更新有送出的欄位，不影響其他設定。底部改為只有「關閉」。存完按鈕短暫顯示「已儲存」。
+  - 信件範本編輯器（個人設定與設計師設定共用 `mailTemplateRowHtml()`）工具列新增「插入收件人名」，插入 `{收件人名}`（`REPLY_TEMPLATE_RECIPIENT_TOKEN`）；簽名檔工具列不加。套用範本時（`setGmailEditorTemplateContent()`、`insertTemplateIntoRichEditor()`）以 `applyTemplateRecipientName()` 換成目前收件人欄位第一位的名字（HTML 範本會逃脫）；範本含這個代號時不再自動加「Hi ○○,」招呼語。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 149/149（新增分區儲存與收件人名替換測試；更新三支鎖定舊寫法的測試）。本機瀏覽器驗證：各區塊按鈕、儲存信件範本只送出範本欄位、插入收件人名按鈕、套用範本時替換成「朱祖翎」且不重複招呼語、「插入信件範本」也會替換。
+- 部署狀態：推送 main，由 GitHub Pages 發布。
+
+### 2026-09-18 13:30 Asia/Taipei — 設計師回覆信的插入圖片確實備份進修改紀錄；預設內文依項目細節
 
 **1. 手動插入的圖片沒有進修改紀錄**
 - 查證：功能本來就有（寄出設計師回覆信時 `backupDesignerReplyInlineImages()` → Worker `backupReplyInlineImages` → Apps Script `uploadCaseDesignImages`），但所有修改紀錄中只有 9/16 一筆來源為 mail-inline-upload。
