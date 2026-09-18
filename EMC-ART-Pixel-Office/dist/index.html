@@ -6,7 +6,7 @@
   <title>凱曜設計部｜Pixel Office</title>
   <meta name="description" content="走進設計部的像素日常，查看設計師等級、移動人物、表達心情與留下對話。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23182e54'/%3E%3Cpath d='M7 9h18v11H7zM9 20v6m14-6v6' stroke='%23ffd45d' stroke-width='3'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <header>
@@ -30,6 +30,7 @@
         <p id="levelSource">正在同步歷史案件…</p>
       </section>
       <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button></section>
+      <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
       <div class="dpad" aria-label="人物移動"><button data-key="ArrowUp" aria-label="往上">↑</button><div><button data-key="ArrowLeft" aria-label="往左">←</button><button data-key="ArrowDown" aria-label="往下">↓</button><button data-key="ArrowRight" aria-label="往右">→</button></div></div>
@@ -38,6 +39,6 @@
   </main>
   <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

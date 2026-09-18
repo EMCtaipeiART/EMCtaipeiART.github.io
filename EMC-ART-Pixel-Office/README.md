@@ -1,6 +1,6 @@
 # 凱曜設計部・像素辦公室
 
-這是目前已發布第 4 版的完整本機開發交接包。純 HTML、CSS、JavaScript 與 Canvas，無第三方套件、無建置步驟，不需要 API 金鑰。
+這是目前已發布第 5 版的完整本機開發交接包。純 HTML、CSS、JavaScript 與 Canvas，無第三方套件、無建置步驟，不需要 API 金鑰。
 
 GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 
@@ -35,7 +35,7 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 
 - `dist/index.html`：網頁結構。
 - `dist/style.css`：版面、工具面板與行動裝置樣式。
-- `dist/app.js`：角色移動、碰撞、圖層、心情、對話、照片、本機存檔。
+- `dist/app.js`：角色移動、碰撞、圖層、像素心情、離席狀態、對話、照片、本機存檔。
 - `dist/assets/`：全部網站圖片素材，包括角色、透明精靈圖、拆分家具與舊版場景參考。
 - `dist/assets/sprites-noise.png`：遊戲目前使用的人物圖集；Noise 為藍帽、短袖 T-shirt、短褲、白襪與灰色布鞋三視圖。
 - `references/`：原始辦公室與人物三視圖參考圖。
@@ -51,6 +51,6 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 
 封存原始碼提交：0a1bf705f0d8fa6d90bc0c290dc1d5437b0f2b1b。
 
-照片、對話、心情與人物位置保存在各使用者瀏覽器 localStorage，沒有雲端資料庫。下載包不包含你或同事瀏覽器中的個人存檔；線上網址的存檔不會自動搬到 localhost。這是一個單人版本，不提供多人同步。
+照片、對話、心情、離席狀態與人物位置保存在各使用者瀏覽器 localStorage，沒有雲端資料庫。下載包不包含你或同事瀏覽器中的個人存檔；線上網址的存檔不會自動搬到 localhost。這是一個單人版本，不提供多人同步。
 
 本地修改不會自動更新原網站；發布需另外具備原網站或其他主機的部署權限。包內不含登入憑證、部署 Token 或 API 金鑰。原網站的存取權限由託管平台管理，本地版本不使用該登入門檻。
