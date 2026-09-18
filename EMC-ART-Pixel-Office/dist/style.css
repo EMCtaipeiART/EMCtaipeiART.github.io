@@ -129,3 +129,11 @@ h2{font-size:24px}
 /* 多人同步狀態 */
 #syncTag::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;vertical-align:1px}
 #syncTag.offline::before{background:#f59e0b}
+
+/* 搖桿（取代上下左右鍵）：按住拖曳控制方向。touch-action:none 與禁止選取／長按選單，避免手機誤觸捲動、縮放或其他手勢。 */
+.joystick{position:relative;flex:0 0 auto;width:92px;height:92px;margin-left:auto;border-radius:50%;background:radial-gradient(circle at 50% 45%,#2c4a70,#1a3252);border:1px solid #466285;box-shadow:inset 0 2px 10px #0006;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;cursor:grab}
+.joystick-ring{position:absolute;inset:14px;border-radius:50%;border:1px dashed #5d7ba1;pointer-events:none}
+.joystick-knob{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff3c4,#ffd477 55%,#e6ae3f);box-shadow:0 3px 8px #0007;pointer-events:none;transition:transform .12s ease}
+.joystick.active{cursor:grabbing;border-color:#ffda80}
+.joystick.active .joystick-knob{transition:none}
+@media(max-width:600px){.joystick{width:104px;height:104px}.joystick-knob{width:46px;height:46px;margin:-23px 0 0 -23px}}
