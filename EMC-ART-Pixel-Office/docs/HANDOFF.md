@@ -20,7 +20,7 @@
 - 對話泡泡、照片卡改用細邊框＋圓角＋柔和陰影（`softPanel()`，取代粗像素切角框 `pixelPanel()`）；泡泡與尾巴同一個外框、字體改系統無襯線字。
 - 點選人物時頭上顯示等級與稱號（`levelTag()`，例：Lv.33 設計大師），泡泡會自動往上讓位。
 
-離席與搖桿（第 10 版）：下班、廁所、出國、公出時不畫椅子與電腦，桌子改用 `furnitureRects[4]` 的空桌（`assets/desk-empty.png` 由 iMac 桌去掉電腦、鍵盤、滑鼠與陰影做成，已併入 `furniture-packed.webp` 的 (0,987)），以 `grayscale(1) brightness(1.9) contrast(.85)` 呈現中灰色；狀態圖示畫在桌面上，文字以白色小膠囊放在圖示上方。右側面板的上下左右鍵改成搖桿（`#joystick`）：按住拖曳換算 8 個方向寫入 `keys`，中心 28% 為不動區，放開即停；`touch-action:none`、禁止選取與長按選單，避免手機誤觸其他手勢。
+離席與搖桿（第 10 版）：下班、廁所、出國、公出時不畫椅子與電腦，桌子改用 `furnitureRects[4]` 的空桌（`assets/desk-empty.png` 由 iMac 桌去掉電腦、鍵盤、滑鼠與陰影做成，已併入 `furniture-packed.webp` 的 (0,987)），以 `grayscale(1) brightness(1.9) contrast(.85)` 呈現中灰色；狀態圖示畫在原本電腦的位置（中心 y = 座位 y − 24），大小 104、與桌上 iMac 相當，文字以白色小膠囊放在圖示上方。右側面板的上下左右鍵改成搖桿（`#joystick`）：按住拖曳換算 8 個方向寫入 `keys`，中心 28% 為不動區，放開即停；`touch-action:none`、禁止選取與長按選單，避免手機誤觸其他手勢。
 
 多人同步（第 9 版）：心情、對話、離席狀態、位置與照片存在主系統 Cloudflare Worker（`machi-design-api`）的 Durable Object 資料表 `pixel_office_people`，不進案件資料庫、不觸發網站發布。不用登入、任何人都能改（使用者決定）。前端 `pollSync()` 每 3 秒（分頁在背景時 15 秒）呼叫 `pixelOfficeState`（帶 `since` 版本，沒變動只回 unchanged）；修改時 `pushChange()` 呼叫 `pixelOfficeUpdate`；走路位置最多每 350 ms 送一次（`queuePosition()`），自己剛移動的人物 1.5 秒內不被遠端舊位置拉回；照片只有 `photoVersion` 變了才用 `pixelOfficePhoto` 下載。連不上時照舊存在 localStorage，右上角顯示「離線中」。後端允許的來源（`ALLOWED_ORIGINS`）包含 GitHub Pages 與本機 `localhost:8787`。
 
