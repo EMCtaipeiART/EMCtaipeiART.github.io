@@ -1,6 +1,6 @@
 # 凱曜設計部・像素辦公室
 
-這是目前已發布第 5 版的完整本機開發交接包。純 HTML、CSS、JavaScript 與 Canvas，無第三方套件、無建置步驟，不需要 API 金鑰。
+這是目前已發布第 6 版的完整本機開發交接包。純 HTML、CSS、JavaScript 與 Canvas，無第三方套件、無建置步驟，不需要 API 金鑰。
 
 GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 
@@ -38,6 +38,7 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 - `dist/app.js`：角色移動、碰撞、圖層、像素心情、離席狀態、對話、照片、本機存檔。
 - `dist/assets/`：全部網站圖片素材，包括角色、透明精靈圖、拆分家具與舊版場景參考。
 - `dist/assets/sprites-noise.png`：遊戲目前使用的人物圖集；Noise 為藍帽、短袖 T-shirt、短褲、白襪與灰色布鞋三視圖。
+- `dist/assets/icons-refined.png`：與人物風格一致的 3×3 精緻像素圖示，包含四種心情與五種出勤狀態。
 - `references/`：原始辦公室與人物三視圖參考圖。
 - `server.cjs`：僅監聽本機的零依賴開發伺服器。
 - `source-history.bundle`：原網站完整 Git 提交歷史（第 1 至第 4 版）。

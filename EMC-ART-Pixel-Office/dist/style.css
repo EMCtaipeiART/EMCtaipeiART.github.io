@@ -1,5 +1,5 @@
 *{box-sizing:border-box}
-body{margin:0;background:#eef2f7;color:#1b2c47;font-family:Inter,-apple-system,BlinkMacSystemFont,'Noto Sans TC',sans-serif;font-size:16px}
+body{margin:0;background:#fff;color:#1b2c47;font-family:Inter,-apple-system,BlinkMacSystemFont,'Noto Sans TC',sans-serif;font-size:16px}
 button,input,textarea{font:inherit}
 button,a,label.upload,.photo-actions label{touch-action:manipulation}
 button{cursor:pointer}
@@ -37,11 +37,11 @@ h2{font-size:28px;margin:6px 0}
 h3,.tool-section>label:not(.upload){font-size:14px;font-weight:600;margin:0 0 13px;display:block}
 .moods{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .moods button{background:#243c5c;color:#bac9de;border:1px solid #3c526f;border-radius:9px;padding:9px 0;font-size:13px}
-.moods button canvas{display:block;width:34px;height:34px;margin:0 auto 4px;image-rendering:pixelated}
+.moods button canvas{display:block;width:42px;height:42px;margin:0 auto 4px;image-rendering:pixelated}
 .moods button.active{background:#ffda80;color:#223047;border-color:#ffda80}
 .statuses{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
 .statuses button{min-width:0;background:#243c5c;color:#b8c7dc;border:1px solid #3c526f;border-radius:8px;padding:8px 2px 7px;font-size:11px;line-height:1.25}
-.statuses button canvas{display:block;width:27px;height:27px;margin:0 auto 4px;image-rendering:pixelated}
+.statuses button canvas{display:block;width:36px;height:36px;margin:0 auto 4px;image-rendering:pixelated}
 .statuses button.active{background:#dce7f4;color:#18314f;border-color:#f7d16e;font-weight:800;box-shadow:inset 0 0 0 1px #f7d16e}
 .text-button{border:0;background:none;color:#a4b7d2;font-size:12px;padding:8px 0}
 textarea{width:100%;resize:vertical;min-height:78px;background:#10243e;color:white;border:1px solid #3a506b;border-radius:9px;padding:11px;line-height:1.5;font-size:14px}
