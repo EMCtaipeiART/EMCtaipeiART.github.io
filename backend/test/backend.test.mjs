@@ -2055,7 +2055,8 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
       return list.filter(item => { const key = (extractEmail(item) || item).toLowerCase(); if (!item || seen.has(key)) return false; seen.add(key); return true; });
     };
     const parseNameListValue = value => { try { const parsed = JSON.parse(value || '[]'); return Array.isArray(parsed) ? parsed : []; } catch { return []; } };
-    const customerDirectoryRowFor = () => null; // 這支測試不設客戶別預設信箱，走原本的同組設計師＋負責人
+    const customerDirectoryRowFor = () => null; // 這支測試不設客戶別預設信箱，走預設名單（平面四位＋負責人）
+    const CUSTOMER_DEFAULT_CC_EMAILS = ['machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com'];
     const designerRecipientByName = name => (name ? name + ' <' + String(name).toLowerCase() + '@emctaipei.com>' : '');
     ${sources.join('\n')}
     return { mergedMailDraft };
@@ -2068,7 +2069,7 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
   ]);
   assert.equal(merged.subject, '【26090079、26090080】DJI_九月新品社群貼文');
   // 副本沿用原本規則（同組設計師＋負責人），且一定不包含收件人本人。
-  assert.deepEqual(merged.cc, ['Anna <anna.hsu@emctaipei.com>', '傅思凱 <eric.fu@emctaipei.com>']);
+  assert.deepEqual(merged.cc, ['anna.hsu@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com']);
   const lines = merged.bodyText.split('\n');
   // Quantities are summed into one number rather than listed per case.
   assert.ok(lines.includes('　　　2. 數量：15'), merged.bodyText);
@@ -4321,9 +4322,10 @@ test('designer settings gain their own signature presets, past story thumbnails 
   assert.equal(makeTooltip({}), '按讚 0・倒讚 0・已讀 0・留言 0', '沒有互動時只顯示統計');
 });
 
-test('each customer carries its own default CC list for the mail composer, falling back to the designer group when unset', async () => {
+test('each customer carries its own default CC list for the mail composer, falling back to the default list when unset', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const { TABLE_SCHEMAS, DEFAULT_CUSTOMER_CC_EMAILS } = await import('../../backend/schema.mjs');
+  const CUSTOMER_DEFAULTS = DEFAULT_CUSTOMER_CC_EMAILS;
 
   // 欄位要進資料表結構，既有客戶別才會被補上這一欄。
   assert.ok(TABLE_SCHEMAS['客戶別'].headers.includes('預設信箱'));
@@ -4340,7 +4342,7 @@ test('each customer carries its own default CC list for the mail composer, falli
     const customerDirectoryRowFor = name => customerRows[name] || null;
     const designerRecipientByName = name => (name ? name + ' <' + String(name).toLowerCase() + '@emctaipei.com>' : '');
     const designerRecipient = row => 'Machi <machi.chen@emctaipei.com>';
-    const designerCcRecipients = () => ['Anna <anna.hsu@emctaipei.com>', 'Amber <amber.tian@emctaipei.com>'];
+    const CUSTOMER_DEFAULT_CC_EMAILS = ['machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com'];
     const requiredMailCcRecipients = ['傅思凱 <eric.fu@emctaipei.com>'];
     const uniqueMailRecipients = list => {
       const seen = new Set();
@@ -4354,12 +4356,17 @@ test('each customer carries its own default CC list for the mail composer, falli
   const configured = build({ Epson: { '預設信箱': JSON.stringify(['machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'eric.fu@emctaipei.com']) } });
   assert.deepEqual(configured.mailCcRecipients({ client: 'Epson', designer: 'Machi' }), ['anna.hsu@emctaipei.com', 'eric.fu@emctaipei.com']);
 
-  // ② 沒設定就退回原本規則（同組其他設計師＋負責人），舊客戶不用先補資料。
-  const fallback = build({});
-  assert.equal(fallback.customerDefaultCcRecipients('Epson'), null);
+  // ② 從沒設定過（欄位空白或客戶別不存在）就用預設名單，跟資料庫後台顯示的預設勾選一致（2026-09-18）。
+  const fallback = build({ Epson: { '預設信箱': '' } });
   assert.deepEqual(fallback.mailCcRecipients({ client: 'Epson', designer: 'Machi' }), [
-    'Anna <anna.hsu@emctaipei.com>', 'Amber <amber.tian@emctaipei.com>', '傅思凱 <eric.fu@emctaipei.com>'
+    'anna.hsu@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com'
   ]);
+  // 這個測試環境的收件人固定是 Machi，所以預設名單扣掉 Machi。
+  assert.deepEqual(build({}).mailCcRecipients({ client: '沒有這個客戶', designer: 'Machi' }), CUSTOMER_DEFAULTS.filter(email => email !== 'machi.chen@emctaipei.com'));
+  // 明確存成空清單＝這個客戶別不要預設副本。
+  assert.deepEqual(build({ Epson: { '預設信箱': '[]' } }).mailCcRecipients({ client: 'Epson', designer: 'Machi' }), []);
+  assert.match(html, /const CUSTOMER_DEFAULT_CC_EMAILS=Object\.freeze\(\['machi\.chen@emctaipei\.com','anna\.hsu@emctaipei\.com','amber\.tian@emctaipei\.com','leona\.chen@emctaipei\.com','eric\.fu@emctaipei\.com'\]\);/);
+  assert.doesNotMatch(html, /function designerCcRecipients\(/, '舊的同組設計師規則已移除');
 
   // ③ 欄位允許填名字，會轉成寄信用的收件人；重複的只留一筆。
   const byName = build({ Epson: { '預設信箱': JSON.stringify(['Leona', 'leona.chen@emctaipei.com', 'eric.fu@emctaipei.com']) } });
@@ -4509,7 +4516,7 @@ test('personal settings 客戶設定 lists only customers the account can manage
   const rows = [
     { '客戶別': '丹士特', '專案負責人': JSON.stringify(['department:設計部', 'group:Celine組', 'livia.chu@emctaipei.com']), '設計負責人': JSON.stringify(['Karl', 'Anna']), '預設信箱': '' },
     { '客戶別': 'Epson', '專案負責人': JSON.stringify(['allen.li@emctaipei.com']), '設計負責人': '[]', '預設信箱': JSON.stringify(['Leona', 'eric.fu@emctaipei.com']) },
-    { '客戶別': 'EMC', '專案負責人': JSON.stringify(['department:企劃部']), '設計負責人': '[]', '預設信箱': '[]' }
+    { '客戶別': 'EMC', '專案負責人': JSON.stringify(['department:企劃部']), '設計負責人': '[]', '預設信箱': '' }
   ];
   const ui = build(rows);
   // 只列出權限名單涵蓋自己的客戶別（個別帳號或所屬部門），管理者看得到全部。
@@ -4742,4 +4749,20 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
   assert.match(html, /const SCROLL_LOCK_MODAL_IDS=\[[^\]]*'aiStageModal'\]/);
   assert.doesNotMatch(html, /target===modal\|\|target\.closest\('\[data-ai-stage-close\]'\)/);
   assert.match(html, /formEl\.elements\.stage\.addEventListener\('change',\(\)=>\{if\(handleAiStageSelect\(\)\)return; populateDetailsOptions\(''\)\}\);/);
+});
+
+test('信件編輯器快捷鍵在注音輸入法下也能用，超連結按鈕會保留選取範圍', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const source = html.match(/function richShortcutKey\(event\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(source);
+  const key = new Function(`${source}\nreturn richShortcutKey;`)();
+  assert.equal(key({ key: 'ㄎ', code: 'KeyK' }), 'k', '注音開著時 ⌘K 的 key 是「ㄎ」');
+  assert.equal(key({ key: 'ㄖ', code: 'KeyB' }), 'b');
+  assert.equal(key({ key: 'K', code: '' }), 'k');
+  // 信件編輯器與設定頁編輯器都改用 richShortcutKey，不再只看 event.key。
+  assert.equal(html.match(/const key=richShortcutKey\(event\);/g)?.length, 2);
+  assert.doesNotMatch(html, /const key=event\.key\.toLowerCase\(\);/);
+  // 按鈕：mousedown 先記住選取範圍；prompt 之後把原本的範圍放回去再建立連結（Safari 會清掉選取）。
+  assert.match(html, /button\.addEventListener\('mousedown',event=>\{event\.preventDefault\(\);savedRichSelectionRange=captureCurrentRichSelection\(\)\}\);\n  button\.addEventListener\('click',\(\)=>insertRichLink\(button\.dataset\.richLinkFor\)\);/);
+  assert.match(html, /if\(hasSelection\)\{restore\(\);document\.execCommand\('createLink',false,url\);return\}/);
 });

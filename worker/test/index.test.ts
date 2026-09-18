@@ -1902,6 +1902,60 @@ describe('Machi Design API Worker', () => {
     }, designerToken);
     expect(repliedWithOverride).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-4' });
 
+    // 2026-09-18：信件串最後一封是草稿（排程寄信建立的 Gmail 草稿、或使用者自己沒寄出的回覆）時，草稿
+    // 常常沒有 Message-Id，以前回信會直接失敗，或 In-Reply-To 指向沒寄出的信而接不進原信件串。讀信與回信
+    // 都要略過草稿／垃圾桶／垃圾郵件，回覆最後一封真的寄出去的信（msg2）。
+    const draftMessage = {
+      id: 'gmail-draft-1', labelIds: ['DRAFT'], snippet: '還沒寄出的草稿',
+      payload: {
+        mimeType: 'text/plain', body: { data: toBase64Url('還沒寄出的草稿內容') },
+        headers: [{ name: 'From', value: 'test.user@emctaipei.com' }, { name: 'To', value: 'someone-else@example.com' }, { name: 'Subject', value: 'Re: 測試主旨' }]
+      }
+    };
+    const trashedMessage = { ...draftMessage, id: 'gmail-trash-1', labelIds: ['TRASH'] };
+    const threadWithDraft = [...mockThreadMessages, draftMessage, trashedMessage];
+    let draftAwareRaw = '';
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') {
+        return Response.json({ id: 'gmail-thread-1', messages: threadWithDraft });
+      }
+      if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/messages?')) return Response.json({ messages: [] });
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        draftAwareRaw = decodeBase64UrlText(String(JSON.parse(String(init?.body)).raw));
+        return Response.json({ id: 'gmail-msg-5', threadId: 'gmail-thread-1' });
+      }
+      if (url.includes('/attachments/')) return Response.json({ data: toBase64Url('img') });
+      throw new Error(`unexpected fetch with a draft in the thread: ${url}`);
+    });
+    const draftAwareReply = await api({ action: 'replyCaseMail', caseId: '26080001', bodyText: '略過草稿的回覆', to: 'test.user@emctaipei.com' }, designerToken);
+    expect(draftAwareReply).toMatchObject({ ok: true, gmailMessageId: 'gmail-msg-5' });
+    expect(draftAwareRaw).toContain('In-Reply-To: <msg2@mail.gmail.com>');
+    expect(draftAwareRaw).not.toContain('還沒寄出的草稿內容');
+    const draftAwareThread = await api({ action: 'getCaseMailThread', caseId: '26080001' }, designerToken);
+    expect((draftAwareThread.messages as unknown[]).length).toBe(2);
+
+    // 「串信」綁定的信件串就在綁定者自己的信箱裡；本人可能是密件副本或透過群組信箱收到，標頭沒有自己，
+    // 也要能讀、能回。
+    const bccOnlyThread = [{
+      id: 'gmail-msg-bcc', snippet: '', payload: {
+        mimeType: 'text/plain', body: { data: toBase64Url('客戶寄給群組信箱') },
+        headers: [
+          { name: 'From', value: 'client@example.com' }, { name: 'To', value: 'group@emctaipei.com' },
+          { name: 'Message-Id', value: '<bcc@mail.gmail.com>' }, { name: 'Subject', value: '客戶需求' }
+        ]
+      }
+    }];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/gmail-thread-1?format=full') return Response.json({ id: 'gmail-thread-1', messages: bccOnlyThread });
+      throw new Error(`unexpected fetch for the owner-only thread: ${url}`);
+    });
+    const ownerRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, token);
+    expect(ownerRead.ok).toBe(true);
+    const outsiderRead = await api({ action: 'getCaseMailThread', caseId: '26080001' }, designerToken);
+    expect(outsiderRead).toMatchObject({ ok: false, reason: 'GMAIL_THREAD_NOT_PARTICIPANT' });
+
     // 手動把 access token 改成已過期，驗證下一次呼叫會先用 refresh_token 換一組新的再讀信。
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
     await runInDurableObject(stub, async (_instance, state) => {

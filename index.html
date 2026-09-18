@@ -8314,13 +8314,6 @@ function designerGroupForMail(name){
   if(type==='影音')return videoDesignerOptions;
   return [];
 }
-function designerCcRecipients(row){
-  const designer=String(row?.designer||'').trim(), toEmail=designerEmail(row).toLowerCase();
-  return designerGroupForMail(designer)
-    .filter(name=>name!==designer)
-    .map(name=>designerRecipientByName(name))
-    .filter(recipient=>recipient&&extractEmail(recipient).toLowerCase()!==toEmail);
-}
 function uniqueMailRecipients(recipients){
   const seen=new Set();
   return recipients.filter(recipient=>{
@@ -8400,13 +8393,18 @@ function mailBodyLines(fields,{html=false}={}){
     ...fields.supplements.flatMap(item=>line(`　　　${item.key}. ${item.label}：`,html?item.html:item.text,{raw:true}))
   ];
 }
-/** 客戶別的「預設信箱」：填完案件跳出信件編輯器時要帶入的副本名單，由資料庫後台逐一客戶設定。
- * 沒有設定（舊客戶或刻意留空）時退回原本的規則：同組其他設計師＋負責人，所以不必先補資料也能照常運作。
- * 欄位允許填信箱、「名字 <信箱>」或設計師名字，統一在這裡轉成寄信用的收件人字串。 */
+/** 客戶別的「預設信箱」：填完案件跳出信件編輯器時要帶入的副本名單。
+ * 欄位允許填信箱、「名字 <信箱>」或設計師名字，統一在這裡轉成寄信用的收件人字串。
+ * 從來沒設定過（欄位空白）時用預設名單（設計部平面四位＋負責人），跟資料庫後台「客戶別」與個人設定
+ * 「客戶設定」顯示的預設勾選一致。以前空白時改用「同組其他設計師＋負責人」，後台看到的預設名單跟
+ * 實際帶入的副本不一樣（2026-09-18 回報；當時 32 個客戶別只有 2 個真的存過名單）。
+ * 明確存成空清單 [] 代表這個客戶別不要預設副本。 */
+const CUSTOMER_DEFAULT_CC_EMAILS=Object.freeze(['machi.chen@emctaipei.com','anna.hsu@emctaipei.com','amber.tian@emctaipei.com','leona.chen@emctaipei.com','eric.fu@emctaipei.com']);
 function customerDefaultCcRecipients(client){
   const row=customerDirectoryRowFor(client);
-  const entries=parseNameListValue(row?.['預設信箱']);
-  if(!entries.length)return null;
+  const raw=row?.['預設信箱'];
+  const unset=raw===undefined||raw===null||String(raw).trim()==='';
+  const entries=unset?[...CUSTOMER_DEFAULT_CC_EMAILS]:parseNameListValue(raw);
   return entries.map(entry=>{
     const value=String(entry||'').trim();
     if(!value)return '';
@@ -8415,8 +8413,7 @@ function customerDefaultCcRecipients(client){
 }
 /** 這封信實際要用的副本：客戶設定優先，並且一律排除收件人本人（設計負責人常常也在名單裡）。 */
 function mailCcRecipients(row){
-  const configured=customerDefaultCcRecipients(row?.client);
-  const base=configured??[...designerCcRecipients(row),...requiredMailCcRecipients];
+  const base=customerDefaultCcRecipients(row?.client);
   const toEmail=extractEmail(designerRecipient(row)).toLowerCase();
   return uniqueMailRecipients(base.filter(recipient=>extractEmail(recipient).toLowerCase()!==toEmail));
 }
@@ -8795,27 +8792,40 @@ function insertRichLinkIntoEditor(editor){
   editor.focus();
   restoreRichSelection();
   const selection=window.getSelection();
-  const hasSelection=Boolean(selection&&selection.rangeCount>0&&!selection.isCollapsed&&editor.contains(selection.anchorNode));
+  const range=selection&&selection.rangeCount?selection.getRangeAt(0).cloneRange():null;
+  const inEditor=Boolean(range&&editor.contains(range.commonAncestorContainer));
+  const hasSelection=inEditor&&!range.collapsed;
+  // prompt() 會讓編輯器失焦，Safari 會順便清掉選取範圍；問完網址後要把原本的範圍放回去再建立連結。
+  const restore=()=>{editor.focus();if(inEditor){const current=window.getSelection();current.removeAllRanges();current.addRange(range)}};
   const url=prompt('請輸入連結網址（需以 http:// 或 https:// 開頭）：','https://');
   if(!url)return;
   if(!/^https?:\/\//i.test(url)){setSync('連結網址需要以 http:// 或 https:// 開頭',true);return}
-  if(hasSelection){document.execCommand('createLink',false,url);return}
+  if(hasSelection){restore();document.execCommand('createLink',false,url);return}
   const linkText=prompt('請輸入連結顯示文字：',url);
   if(linkText===null)return;
+  restore();
   const link=document.createElement('a');
   link.href=url;
   link.textContent=linkText||url;
-  const range=selection&&selection.rangeCount?selection.getRangeAt(0):null;
-  if(range&&editor.contains(range.commonAncestorContainer)){
-    range.collapse(false);
-    range.insertNode(link);
-    range.setStartAfter(link);
-    range.setEndAfter(link);
-    selection.removeAllRanges();
-    selection.addRange(range);
+  const current=window.getSelection();
+  const target=current&&current.rangeCount?current.getRangeAt(0):null;
+  if(target&&editor.contains(target.commonAncestorContainer)){
+    target.collapse(false);
+    target.insertNode(link);
+    target.setStartAfter(link);
+    target.setEndAfter(link);
+    current.removeAllRanges();
+    current.addRange(target);
   }else{
     editor.appendChild(link);
   }
+}
+/** 快捷鍵字母：用實體按鍵位置（event.code）判斷。注音等中文輸入法開著時，⌘K 的 event.key 會是「ㄎ」，
+ * 只看 event.key 會比對不到，快捷鍵就沒反應（2026-09-18 回報）。 */
+function richShortcutKey(event){
+  const code=String(event?.code||'');
+  if(/^Key[A-Z]$/.test(code))return code.slice(3).toLowerCase();
+  return String(event?.key||'').toLowerCase();
 }
 function currentUserReplyTemplateSettings(){
   if(Object.keys(currentAccountReplyTemplates||{}).length)return {templates:currentAccountReplyTemplates,defaultName:currentAccountReplyTemplateDefault||Object.keys(currentAccountReplyTemplates)[0]||''};
@@ -11245,7 +11255,7 @@ function bindRichSettingsEditor(list,contentSelector){
   list.addEventListener('keydown',event=>{
     const editor=event.target.closest(contentSelector);
     if(!editor||!(event.metaKey||event.ctrlKey)||event.altKey)return;
-    const key=event.key.toLowerCase();
+    const key=richShortcutKey(event);
     if(key==='k'){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();insertRichLinkIntoEditor(editor);return}
     if(['b','i','u'].includes(key)){event.preventDefault();document.execCommand({b:'bold',i:'italic',u:'underline'}[key])}
   });
@@ -11299,7 +11309,7 @@ function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(moda
  * 只列出「權限設定」名單有涵蓋自己的客戶別（管理者看得到全部）；後台設定的部門／組別規則只顯示、不能在這裡改，
  * 自己的帳號固定勾選——後端同樣會強制保留，避免取消自己之後再也打不開這個設定。
  * 切換客戶別時先把畫面上的勾選暫存在 personalCustomerDrafts，按「儲存」才把有變動的客戶別逐一送出。 */
-const PERSONAL_CUSTOMER_DEFAULT_CC_EMAILS=Object.freeze(['machi.chen@emctaipei.com','anna.hsu@emctaipei.com','amber.tian@emctaipei.com','leona.chen@emctaipei.com','eric.fu@emctaipei.com']);
+const PERSONAL_CUSTOMER_DEFAULT_CC_EMAILS=CUSTOMER_DEFAULT_CC_EMAILS;
 const personalCustomerDrafts=new Map();
 let personalCustomerCurrent='';
 const isCustomerGroupRule=rule=>/^(department|group):/i.test(String(rule||'').trim());
@@ -11315,11 +11325,11 @@ function customerMailEntryEmail(entry){const value=String(entry||'').trim();retu
 /** 目前存在資料庫裡的值（預設信箱沒設定過時，比照後台顯示預設名單）。 */
 function personalCustomerStoredValues(name){
   const row=customerDirectoryRowFor(name)||{},rules=parseNameListValue(row['專案負責人']);
-  const mails=parseNameListValue(row['預設信箱']);
+  const rawMails=row['預設信箱'],mailsUnset=rawMails===undefined||rawMails===null||String(rawMails).trim()==='';
   return {
     rules:rules.filter(isCustomerGroupRule),
     owners:rules.filter(rule=>!isCustomerGroupRule(rule)).map(canonicalAccountClient).filter(Boolean),
-    mails:mails.length?mails:[...PERSONAL_CUSTOMER_DEFAULT_CC_EMAILS],
+    mails:mailsUnset?[...PERSONAL_CUSTOMER_DEFAULT_CC_EMAILS]:parseNameListValue(rawMails),
     // 已停用或離職的設計師不會出現在選項裡，也不列入比較，避免沒動到也被當成有變更。
     designers:parseNameListValue(row['設計負責人']).filter(name=>designerOptions.includes(name))
   };
@@ -16044,7 +16054,11 @@ document.querySelectorAll('#mailCopyModal .mail-copy-btn[data-copy-target]').for
     if(field)copyText(field.value);
   });
 });
-document.querySelectorAll('[data-rich-link-for]').forEach(button=>button.addEventListener('click',()=>insertRichLink(button.dataset.richLinkFor)));
+document.querySelectorAll('[data-rich-link-for]').forEach(button=>{
+  // 先記住選取範圍：點按鈕會讓編輯器失焦，選好的文字就不會變成連結，而是另外插入一段新連結。
+  button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
+  button.addEventListener('click',()=>insertRichLink(button.dataset.richLinkFor));
+});
 document.querySelectorAll('[data-rich-template-for]').forEach(button=>{
   button.addEventListener('mousedown',event=>{event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()});
   button.addEventListener('click',event=>openReplyTemplatePicker(event,button.dataset.richTemplateFor));
@@ -16070,7 +16084,7 @@ document.addEventListener('click',event=>{if(gmailFontPaletteEl&&!gmailFontPalet
 // ⌘K／Ctrl+K：選取文字後快速加超連結，跟 Gmail 一樣。
 document.querySelectorAll('.gmail-rich-editor').forEach(editor=>editor.addEventListener('keydown',event=>{
   if(!(event.metaKey||event.ctrlKey)||event.altKey)return;
-  const key=event.key.toLowerCase();
+  const key=richShortcutKey(event);
   if(key==='k'){
     event.preventDefault();
     savedRichSelectionRange=captureCurrentRichSelection();

@@ -634,6 +634,37 @@ function accountIsGmailThreadParticipant(account: unknown, messages: unknown[]):
   return gmailThreadParticipantEmails(messages).has(email);
 }
 
+/** 信件串就在這個帳號自己的信箱裡（綁定／寄出信件串的帳號本人）一律算相關人：用「串信」綁定的信件串，
+ * 本人可能是密件副本或透過群組信箱收到，標頭 To／Cc 裡不會出現自己，以前會被當成「不是相關人」擋下回信。 */
+function canAccessCaseMailThread(account: unknown, owner: unknown, messages: unknown[]): boolean {
+  const email = canonicalAccount(account);
+  return Boolean(email) && email === canonicalAccount(owner) || accountIsGmailThreadParticipant(account, messages);
+}
+
+/**
+ * Gmail 的 threads.get 會把草稿、垃圾桶與垃圾郵件也一起列進信件串。這個系統的「排程寄信」會在信件串裡建立
+ * Gmail 草稿，使用者自己也常留有未寄出的回覆草稿；以前回信固定拿「最後一封」當回覆對象，最後一封剛好是
+ * 草稿時：草稿常常沒有 Message-Id → 回信直接失敗；或 In-Reply-To 指向一封從沒寄出的信 → 回信接不進原本
+ * 的信件串（2026-09-18 回報「串信有時候無法回信、有時候不在該封信件串裡」）。讀信、回信、排程回信一律
+ * 只看真正寄出／收到的信。
+ */
+const GMAIL_UNDELIVERED_LABELS = new Set(['DRAFT', 'TRASH', 'SPAM']);
+function deliveredThreadMessages(messages: unknown[]): Row[] {
+  return (Array.isArray(messages) ? messages : []).map(asRow).filter(message => {
+    const labels = Array.isArray(message.labelIds) ? message.labelIds.map(text) : [];
+    return !labels.some(label => GMAIL_UNDELIVERED_LABELS.has(label));
+  });
+}
+/** 回覆對象：最後一封帶有 Message-Id 的信。 */
+function replyAnchorMessage(messages: unknown[]): Row | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = asRow(messages[index]);
+    const headers = (asRow(message.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
+    if (gmailHeaderValue(headers, 'Message-Id')) return message;
+  }
+  return null;
+}
+
 /** 信件串只顯示來回內容：移除標準簽名分隔線以及常見行動裝置簽名。knownSignatureTextList 是「這個帳號目前
  * 存的所有簽名檔」（Gmail 帳號本身的簽名＋所有自訂命名簽名檔，見 getCaseMailThread），逐一嘗試比對移除——
  * 不能只認「目前設成預設的那一組」，因為歷史信件當初寄出時用的可能是後來已經被切換掉的另一組簽名檔。 */
@@ -768,7 +799,7 @@ async function fetchGmailThreadMessages(accessToken: string, threadId: string): 
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   const data = await response.json().catch(() => ({})) as Row;
-  const messages = Array.isArray(data.messages) ? data.messages : [];
+  const messages = deliveredThreadMessages(Array.isArray(data.messages) ? data.messages : []);
   if (!response.ok || !messages.length) throw new Error(text((data.error as Row)?.message) || '找不到原始信件串，無法回覆');
   return messages;
 }
@@ -778,7 +809,7 @@ async function fetchGmailThreadMessages(accessToken: string, threadId: string): 
  * 信件格式跟使用者當下按「送出回覆」完全一致。一併回傳 lastMessageId，供呼叫端查詢寄件帳號自己信箱裡對應
  * 的 threadId（見 findOwnMailboxThreadId），不用另外重新解析一次標頭。 */
 function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[]; attachments?: GmailAttachment[] }): { raw: string; lastMessageId: string } {
-  const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
+  const lastMessage = replyAnchorMessage(threadMessages) || asRow(threadMessages[threadMessages.length - 1]);
   const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
   const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
   const lastReferences = gmailHeaderValue(headers, 'References');
@@ -1676,7 +1707,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!query) return { ok: false, action: 'searchGmailThreads', error: '缺少搜尋關鍵字' };
     const accessToken = await this.getValidGmailAccessToken(current.account);
     const listResponse = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent(query)}`,
+      // 草稿不能拿來串接（沒寄出過，也常常沒有 Message-Id），搜尋時就排除。
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=20&q=${encodeURIComponent(`${query} -in:drafts`)}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const listData = await listResponse.json().catch(() => ({})) as Row;
@@ -1795,8 +1827,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) return { ok: false, action: 'getCaseMailThread', error: text((data.error as Row)?.message) || `Gmail 讀取失敗：${response.status}` };
-    const rawMessages = Array.isArray(data.messages) ? data.messages : [];
-    if (!accountIsGmailThreadParticipant(current.account, rawMessages)) {
+    const rawMessages = deliveredThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+    if (!canAccessCaseMailThread(current.account, owner, rawMessages)) {
       return { ok: false, action: 'getCaseMailThread', error: '此信件串的收件人/副本裡沒有這個帳號，無法查看內容', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
     let remainingImageBudget = GMAIL_THREAD_IMAGE_LIMIT_TOTAL;
@@ -1875,12 +1907,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       { headers: { Authorization: `Bearer ${threadAccessToken}` } }
     );
     const threadData = await threadResponse.json().catch(() => ({})) as Row;
-    const threadMessages = Array.isArray(threadData.messages) ? threadData.messages : [];
+    const threadMessages = deliveredThreadMessages(Array.isArray(threadData.messages) ? threadData.messages : []);
     if (!threadResponse.ok || !threadMessages.length) return { ok: false, action: 'replyCaseMail', error: '找不到原始信件串，無法回覆' };
-    if (!accountIsGmailThreadParticipant(current.account, threadMessages)) {
+    if (!canAccessCaseMailThread(current.account, owner, threadMessages)) {
       return { ok: false, action: 'replyCaseMail', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
-    const lastMessage = asRow(threadMessages[threadMessages.length - 1]);
+    const lastMessage = replyAnchorMessage(threadMessages) || asRow(threadMessages[threadMessages.length - 1]);
     const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
     const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
     const lastReferences = gmailHeaderValue(headers, 'References');
@@ -2048,7 +2080,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!threadId) return { ok: false, action: 'scheduleCaseReply', error: '此案件尚未透過 Gmail 寄出過信件' };
     const accessToken = await this.getValidGmailAccessToken(owner);
     const threadMessages = await fetchGmailThreadMessages(accessToken, threadId);
-    if (!accountIsGmailThreadParticipant(current.account, threadMessages)) {
+    if (!canAccessCaseMailThread(current.account, owner, threadMessages)) {
       return { ok: false, action: 'scheduleCaseReply', error: '此信件串的收件人/副本裡沒有這個帳號，無法回覆', reason: 'GMAIL_THREAD_NOT_PARTICIPANT' };
     }
     const suggestion = this.computeReplySuggestion(threadMessages, current.account);

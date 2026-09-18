@@ -265,7 +265,29 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已檢查／驗證方式：隔離頁面載入真實 CSS、色票程式與按鈕事件，Chrome 深淺色 × 設計師回覆／唯讀結尾／一般回信／局部選字共八組文字色＋背景色通過，唯讀 DOM 不變；游標新輸入顏色通過。兩段內嵌 JavaScript 語法檢查通過。
 - 部署方式：與 NAS 路徑開放編輯修正一起推送，由 GitHub Pages 發布。
 
-### 2026-09-17 14:30 Asia/Taipei（最新）— 修改紀錄保留信件裡的文字超連結、排除簽名檔
+### 2026-09-18 Asia/Taipei（最新）— 預設副本、編輯器超連結、串信回信三項修正
+
+**1. 客戶別「預設信箱」沒有帶入新增案件信的副本**
+- 成因：32 個客戶別只有「測試」「聯發科技」真的存過預設信箱，其他都是空白。資料庫後台與個人設定在空白時「顯示」預設名單（平面四位＋Eric）被勾選，但前台 `customerDefaultCcRecipients()` 空白時改用舊規則（同組其他設計師＋負責人），兩邊不一致。
+- 修正：前台新增 `CUSTOMER_DEFAULT_CC_EMAILS`，欄位從未設定過（undefined／null／空字串）就用預設名單；明確存成 `[]` 代表不要預設副本。移除舊的 `designerCcRecipients()`。個人設定「客戶設定」同一規則。
+- 驗證：本機以 Epson（未設定）＋Anna → Machi、Amber、Leona、Eric；＋Noise → 平面四位＋Eric；「測試」→ 只有 Machi。
+
+**2. 信件編輯器超連結（快捷鍵）無法使用**
+- 成因 A：注音等中文輸入法開著時，⌘K 的 `event.key` 是「ㄎ」，快捷鍵比對不到；⌘B／⌘I／⌘U 同樣受影響。改用 `richShortcutKey()`（以 `event.code` 判斷實體按鍵），信件編輯器與設定頁編輯器都套用。
+- 成因 B：工具列「插入超連結」按鈕沒有在 mousedown 記住選取範圍，點按鈕後選好的文字沒有變成連結，而是另外插入一段新連結。補上 mousedown 保存選取；`insertRichLinkIntoEditor()` 在 prompt 之後還原原本的範圍再建立連結（Safari 的 prompt 會清掉選取）。
+- 其餘工具列（復原／重做、字體大小、字型、粗斜底線、對齊、顏色、範本、簽名檔、NAS、上傳、附件）逐一實測正常。
+
+**3. 串信有時無法回信、有時回信不在原信件串**
+- 成因 A：Gmail threads.get 會把草稿、垃圾桶、垃圾郵件一起列入信件串。系統的「排程寄信」會在信件串建立 Gmail 草稿，使用者也常留有未寄出的回覆草稿；回信固定拿「最後一封」當回覆對象——草稿常常沒有 Message-Id → 「無法取得原始信件標頭」；或 In-Reply-To 指向沒寄出的信、跨帳號時用 rfc822msgid 找不到對應信件串 → 回信被放到新信件串。
+- 成因 B：串信綁定的信件串在綁定者自己信箱裡，但本人若是密件副本或透過群組信箱收到，標頭 To／Cc 沒有自己，會被判定「不是相關人」擋下讀信與回信。
+- 修正：新增 `deliveredThreadMessages()`（排除 DRAFT／TRASH／SPAM）、`replyAnchorMessage()`（最後一封帶 Message-Id 的信），套用在讀信、立即回信、排程回信與排程寄出（`fetchGmailThreadMessages`／`buildGmailReplyRaw`）；新增 `canAccessCaseMailThread()`：信件串擁有帳號本人一律可讀可回，其他人仍需是信件串相關人。搜尋可串接信件時加上 `-in:drafts`。
+
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 146/146；Worker `npx tsc --noEmit`、`npx vitest run` 82/82（新增：信件串尾端有草稿與垃圾桶信時回覆 msg2、引用不含草稿、讀信只顯示 2 封；擁有帳號本人即使不在標頭也能讀；非相關人仍被擋）。`git stash` 還原程式時新測試失敗。本機瀏覽器實測注音 ⌘K／⌘B、按鈕加連結（含模擬 Safari 清掉選取）、預設副本。
+- 未做的驗證：沒有用真實 Gmail 帳號實際寄一封串信回覆。
+- 部署狀態：推送 main；Worker `npx wrangler deploy`。
+
+### 2026-09-17 14:30 Asia/Taipei — 修改紀錄保留信件裡的文字超連結、排除簽名檔
 
 - 修改目的：使用者回報案件 26090053 的一修紀錄沒有顯示信件裡的文字超連結（「調整需求」）。
 - 成因：「填寫修改需求信」寄出後，只把編輯器的純文字（`gmailEditorTextWithoutInsertedSignature`）存進「修改內容」，文字背後的網址沒有保存；修改紀錄畫面雖然 `linkifyPlainText()` 支援結構化連結，也沒有傳入。另外寄件人自己打在內文的簽名（「--」之後）也一起被存成修改內容。
