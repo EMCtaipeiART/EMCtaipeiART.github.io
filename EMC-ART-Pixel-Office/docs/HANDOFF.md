@@ -20,6 +20,8 @@
 - 對話泡泡、照片卡改用細邊框＋圓角＋柔和陰影（`softPanel()`，取代粗像素切角框 `pixelPanel()`）；泡泡與尾巴同一個外框、字體改系統無襯線字。
 - 點選人物時頭上顯示等級與稱號（`levelTag()`，例：Lv.33 設計大師），泡泡會自動往上讓位。
 
+多人同步（第 9 版）：心情、對話、離席狀態、位置與照片存在主系統 Cloudflare Worker（`machi-design-api`）的 Durable Object 資料表 `pixel_office_people`，不進案件資料庫、不觸發網站發布。不用登入、任何人都能改（使用者決定）。前端 `pollSync()` 每 3 秒（分頁在背景時 15 秒）呼叫 `pixelOfficeState`（帶 `since` 版本，沒變動只回 unchanged）；修改時 `pushChange()` 呼叫 `pixelOfficeUpdate`；走路位置最多每 350 ms 送一次（`queuePosition()`），自己剛移動的人物 1.5 秒內不被遠端舊位置拉回；照片只有 `photoVersion` 變了才用 `pixelOfficePhoto` 下載。連不上時照舊存在 localStorage，右上角顯示「離線中」。後端允許的來源（`ALLOWED_ORIGINS`）包含 GitHub Pages 與本機 `localhost:8787`。
+
 進站加速（第 8 版）：遊戲實際讀取的是三張 WebP——`sprites-packed.webp`（420×946，5 列 × 3 欄、每欄 140 寬，列起點 0、192、381、572、757）、`furniture-packed.webp`（837×987，四種家具重新排列，座標見 `furnitureRects`；桌子分段位置改為相對 `sy` 的偏移）、`icons-v3.webp`（576×576，每格 192）。品質 94 的 WebP，放大比對與原圖幾乎無差異；三張合計約 340 KB（原本 PNG 約 2.5 MB）。進站只等人物與家具，圖示在背景載入（載入前用內建像素圖）；`index.html` 以 `<link rel="preload">` 提早下載。原始 PNG（sprites-noise.png、furniture.png、icons-v3.png）保留作為重新產生 WebP 的來源，網頁不會下載。
 
 最新修正：桌中心 X = 548、768、988；角色腳底 Y = 355、695。桌上保留姓名牌，移除頭頂重複姓名；泡泡使用像素圓角框，心情及狀態讀取 `icons-refined.png` 的高細節透明圖示，照片使用可點擊的像素遊戲卡。下班、廁所、出國、公出會隱藏人物、灰階座位並顯示精緻狀態牌。

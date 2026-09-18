@@ -279,7 +279,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -3850,5 +3850,48 @@ describe('凱曜 department prefix', () => {
     expect(normalizeSettingsDepartments(database)).toBe(true);
     expect(database.tables['設定'].rows).toContainEqual(expect.objectContaining({ '帳號': 'sally.yang@emctaipei.com', '部門': '專案部' }));
     expect(normalizeSettingsDepartments(database)).toBe(false);
+  });
+});
+
+describe('Pixel Office shared state', () => {
+  it('shares mood, message, status, position and photos between visitors without a login, and never commits to GitHub', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const empty = await api({ action: 'pixelOfficeState' });
+    expect(empty).toMatchObject({ ok: true, people: [] });
+
+    const updated = await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { mood: 'happy', message: '大家午安', status: 'present', x: 900.4, y: 700, dir: 'left' } });
+    expect(updated).toMatchObject({ ok: true, person: { name: 'Machi', mood: 'happy', message: '大家午安', x: 900, y: 700, dir: 'left', photoVersion: 0 } });
+
+    const state = await api({ action: 'pixelOfficeState' });
+    expect(state.people).toEqual([expect.objectContaining({ name: 'Machi', mood: 'happy', message: '大家午安' })]);
+    // 沒有變動時只回 unchanged，輪詢幾乎不花流量。
+    const unchanged = await api({ action: 'pixelOfficeState', since: state.version });
+    expect(unchanged).toMatchObject({ ok: true, unchanged: true });
+    expect(unchanged.people).toBeUndefined();
+
+    // 只改一個欄位，其他欄位保留。
+    await api({ action: 'pixelOfficeUpdate', name: 'Machi', patch: { message: '' } });
+    const partial = await api({ action: 'pixelOfficeState', since: state.version });
+    expect(partial.people).toEqual([expect.objectContaining({ name: 'Machi', mood: 'happy', message: '' })]);
+    expect(Number(partial.version)).toBeGreaterThan(Number(state.version));
+
+    // 照片另外取：狀態只帶版本號。
+    const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+    const withPhoto = await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { photo } });
+    expect(Number((withPhoto.person as Record<string, unknown>).photoVersion)).toBeGreaterThan(0);
+    const listed = await api({ action: 'pixelOfficeState' });
+    const anna = (listed.people as Record<string, unknown>[]).find(person => person.name === 'Anna');
+    expect(anna).toMatchObject({ photoVersion: expect.any(Number) });
+    expect(JSON.stringify(listed)).not.toContain('base64');
+    expect(await api({ action: 'pixelOfficePhoto', name: 'Anna' })).toMatchObject({ ok: true, photo });
+    await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { photo: '' } });
+    expect(await api({ action: 'pixelOfficePhoto', name: 'Anna' })).toMatchObject({ photo: '', photoVersion: 0 });
+
+    // 驗證：不存在的人、太長的對話、不合法的心情與照片都擋下。
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Karl', patch: { mood: 'happy' } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { message: 'x'.repeat(61) } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { mood: 'evil' } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { photo: 'javascript:alert(1)' } })).toMatchObject({ ok: false });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

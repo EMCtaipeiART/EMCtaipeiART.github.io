@@ -125,3 +125,7 @@ h2{font-size:24px}
   .roster-level{font-size:8px}
   .xp-meta{font-size:9px}
 }
+
+/* 多人同步狀態 */
+#syncTag::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;vertical-align:1px}
+#syncTag.offline::before{background:#f59e0b}

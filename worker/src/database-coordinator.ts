@@ -18,6 +18,9 @@ import type {
 } from './types';
 
 const STATE_KEY = 'primary';
+const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
+// 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
+const PIXEL_OFFICE_PHOTO_MAX_CHARS = 900_000;
 const MAX_LOGIN_ATTEMPTS = 12;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
@@ -1153,7 +1156,111 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(8)) {
+        this.ctx.storage.transactionSync(() => {
+          // Pixel Office 小遊戲的共用畫面狀態（心情、對話、離席狀態、位置、分享照片）。跟案件資料無關，
+          // 刻意不進 database.tables（不提交 GitHub、不觸發網站重新發布）。照片另外一欄，輪詢時只回傳版本號。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS pixel_office_people (
+              name TEXT PRIMARY KEY,
+              state TEXT NOT NULL,
+              photo TEXT NOT NULL DEFAULT '',
+              photo_version INTEGER NOT NULL DEFAULT 0,
+              updated_at INTEGER NOT NULL
+            );
+          `);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            8, new Date().toISOString()
+          );
+        });
+      }
     });
+  }
+
+  /* ---------------------------------------------------------------------------------------------
+   * Pixel Office 共用畫面（2026-09-18）：不用登入、任何人都能改（使用者決定）。
+   * - pixelOfficeState：回傳五位設計師的心情、對話、狀態、位置與照片版本號；帶 since（上次的 version）
+   *   且沒有變動時只回 unchanged，讓每幾秒一次的輪詢幾乎不花流量。
+   * - pixelOfficeUpdate：更新一位設計師的部分欄位（有帶的才改），逐欄驗證。
+   * - pixelOfficePhoto：取某位設計師目前的照片（data URL），只有版本變了前端才會來拿。
+   * ------------------------------------------------------------------------------------------- */
+  private pixelOfficeVersion(): number {
+    const row = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_people').toArray()[0];
+    return Number(row?.v) || 0;
+  }
+
+  private pixelOfficeState(payload: ApiPayload): ApiResult {
+    const version = this.pixelOfficeVersion();
+    if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true };
+    const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
+      'SELECT name, state, photo_version, updated_at FROM pixel_office_people'
+    ).toArray();
+    const people = rows.map(row => {
+      let state: Row = {};
+      try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
+      return { name: row.name, ...state, photoVersion: Number(row.photo_version) || 0, updatedAt: Number(row.updated_at) || 0 };
+    });
+    return { ok: true, action: 'pixelOfficeState', version, people };
+  }
+
+  private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
+    const name = text(payload.name);
+    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    const patch = asRow(payload.patch);
+    const existing = this.ctx.storage.sql.exec<{ state: string; photo_version: number }>(
+      'SELECT state, photo_version FROM pixel_office_people WHERE name = ?', name
+    ).toArray()[0];
+    let state: Row = {};
+    try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+    if ('message' in patch) {
+      const message = String(patch.message ?? '');
+      if (message.length > 60) throw new Error('對話最多 60 個字');
+      state.message = message;
+    }
+    if ('mood' in patch) {
+      const mood = text(patch.mood);
+      if (!['', 'happy', 'angry', 'sad', 'joy'].includes(mood)) throw new Error('心情不正確');
+      state.mood = mood;
+    }
+    if ('status' in patch) {
+      const status = text(patch.status);
+      if (!['present', 'offwork', 'toilet', 'abroad', 'out'].includes(status)) throw new Error('狀態不正確');
+      state.status = status;
+    }
+    if ('x' in patch || 'y' in patch) {
+      const x = Number(patch.x), y = Number(patch.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('位置不正確');
+      state.x = Math.round(Math.max(0, Math.min(1536, x)));
+      state.y = Math.round(Math.max(0, Math.min(1024, y)));
+    }
+    if ('dir' in patch) {
+      const dir = text(patch.dir);
+      if (!['up', 'down', 'left', 'right'].includes(dir)) throw new Error('方向不正確');
+      state.dir = dir;
+    }
+    const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+    let photo: string | null = null;
+    if ('photo' in patch) {
+      photo = String(patch.photo ?? '');
+      if (photo && !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo)) throw new Error('照片格式不正確');
+      if (photo.length > PIXEL_OFFICE_PHOTO_MAX_CHARS) throw new Error('照片太大，請換一張小一點的照片');
+    }
+    const photoVersion = photo === null ? (Number(existing?.photo_version) || 0) : (photo ? now : 0);
+    if (existing) {
+      if (photo === null) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);
+      else this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, photo = ?, photo_version = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), photo, photoVersion, now, name);
+    } else {
+      this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), photo || '', photoVersion, now);
+    }
+    return { ok: true, action: 'pixelOfficeUpdate', name, version: now, person: { name, ...state, photoVersion, updatedAt: now } };
+  }
+
+  private pixelOfficePhoto(payload: ApiPayload): ApiResult {
+    const name = text(payload.name);
+    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    const row = this.ctx.storage.sql.exec<{ photo: string; photo_version: number }>('SELECT photo, photo_version FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+    return { ok: true, action: 'pixelOfficePhoto', name, photo: row?.photo || '', photoVersion: Number(row?.photo_version) || 0 };
   }
 
   private async serialized<T>(work: () => Promise<T>): Promise<T> {
@@ -2492,6 +2599,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
+      if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
+      if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
+      if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
       if (action === 'googleLogin') return await this.googleLogin(payload, context);
       if (action === 'login') return await this.passwordLogin(payload, context);
       if (action === 'erpLogin') return await this.erpLogin(payload, context);

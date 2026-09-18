@@ -9,12 +9,12 @@
   <link rel="preload" as="image" href="assets/sprites-packed.webp?v=1" fetchpriority="high">
   <link rel="preload" as="image" href="assets/furniture-packed.webp?v=1" fetchpriority="high">
   <link rel="preload" as="image" href="assets/icons-v3.webp?v=1">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
   <header>
     <a class="brand" href="./"><span class="brand-icon">▦</span><div>凱曜設計部<small>PIXEL OFFICE / 日常遊戲室</small></div></a>
-    <div class="local-tag">單人模式 · 等級由歷史完成案件自動更新</div>
+    <div class="local-tag" id="syncTag">正在連線…</div>
   </header>
   <main>
     <section class="play">
@@ -36,11 +36,11 @@
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
-      <p class="privacy">對話與照片只留在這個瀏覽器，不會同步給其他同事。等級資料只讀取已完成案件，不會寫回後台。</p>
+      <p class="privacy">心情、對話、狀態、位置與照片會同步給所有打開這個網頁的人。等級資料只讀取已完成案件，不會寫回後台。</p>
     </aside>
   </main>
   <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
