@@ -198,8 +198,8 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 影響檔案：`EMC_AI_階段判定器_落地包/site-source/app/api/analyze/route.ts`、`app/api/history/route.ts`、`app/page.tsx`、`scripts/deploy-cloudflare.mjs`、落地包 `README.md`、`設定雲端金鑰與密碼.command`、`啟動首頁.command`。
 - 影響功能：主要引擎改為多模態 `gemini-3.6-flash`；保留 `gpt-5-mini` 自動備援；分析結果與歷史紀錄顯示實際引擎、模型與是否曾切換備援；Gemini 免費額度案件的估算費用為 0，累計費用只計 OpenAI 備援。
 - 風險區塊：Gemini API 金鑰與 OpenAI API 金鑰都只保留在伺服器端；Gemini API 異常、空回應或 JSON 格式錯誤時才會使用 OpenAI，因此備援仍可能產生費用。
-- 已檢查／驗證方式：Sites 正式建置成功；本機以真實圖片呼叫分析 API，確認回傳 `provider=gemini`、`fallbackUsed=false`、歷史紀錄寫入成功且費用為 0；啟動腳本通過 shell 語法檢查。
-- 部署狀態：Sites 既有專案更新，發布後自動套用線上 Gemini 與 OpenAI 伺服器端金鑰。
+- 已檢查／驗證方式：Cloudflare Worker 正式建置與部署成功；本機以真實圖片呼叫分析 API，確認回傳 `provider=gemini`、`fallbackUsed=false`、歷史紀錄寫入成功且費用為 0；正式網址登入導向與未登入 API 的 401 權限防護正常；啟動腳本通過 shell 語法檢查。
+- 部署狀態：已部署到既有 Cloudflare Worker `https://emc-ai-stage-classifier.machi-chen.workers.dev`，並設定 Gemini／OpenAI 兩組伺服器端金鑰；GPT Sites 不是本系統的正式部署位置。
 - commit：`5fb0165`
 
 ### 2026-09-18 12:20 Asia/Taipei — 新增像素辦公室遊戲、歷史案件等級與 Noise 新造型
