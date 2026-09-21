@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=25"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=26"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -69,7 +69,8 @@ test('頭像、限時動態、大海報與分享音樂都從前台下架', async
 test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async () => {
   const [html, css, js] = await Promise.all([officeHtml(), officeCss(), officeJs()]);
   assert.match(js, /const embedMode=new URLSearchParams\(location\.search\)\.get\('embed'\)==='1'/);
-  assert.match(js, /if\(embedMode\)\{document\.body\.classList\.add\('embed'\);game\.tabIndex=-1;game\.setAttribute\('aria-label','設計部即時狀態場景'\);\}/);
+  assert.match(js, /if\(embedMode\)\{document\.documentElement\.classList\.add\('embed'\);document\.body\.classList\.add\('embed'\);/,
+    'html 也要加上 embed，height:100% 的鏈才接得起來');
   // 頁首、右側編輯工具、名單與標題列都不顯示，人物資料卡保留。
   for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster']) {
     assert.ok(new RegExp(`body\\.embed[^{]*${selector.replace('.', '\\.').replace('#', '#')}`).test(css)
@@ -87,8 +88,8 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /body\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
-  assert.match(css, /body\.embed #game\{max-width:none;display:block;transform-origin:top left/);
-  assert.match(css, /body\.embed \.canvas-wrap\{height:100%;margin:0;overflow:hidden\}/,
+  assert.match(css, /body\.embed #game\{position:absolute;top:0;left:0;max-width:none;display:block;transform-origin:top left/);
+  assert.match(css, /body\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/,
     '放大後超出外框的場景應裁切在 iframe 內');
   assert.match(css, /body\.embed \.person-card-head,body\.embed \.person-card-title\{overflow-wrap:normal/,
     '名字與職稱不該被 overflow-wrap:anywhere 拆成單字');
@@ -98,21 +99,38 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 32, `app.js 版本號要 ≥ 32，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 33, `app.js 版本號要 ≥ 33，目前是 ${version?.[1]}`);
 });
 
-test('滑鼠移到人物上就展開資料卡，不需要點也沒有關閉鈕', async () => {
+test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
-  // 滑過人物直接展開；觸控裝置沒有 hover，仍走點選。
-  assert.match(js, /if\(!embedMode\|\|e\.pointerType==='touch'\)return;/,
-    '只有嵌入模式的滑鼠操作才 hover 展開');
+  // 滑過人物直接展開；觸控裝置沒有 hover，仍走點選。固定之後滑過不再換人。
+  assert.match(js, /if\(!embedMode\|\|e\.pointerType==='touch'\|\|cardPinned\)return;/,
+    '固定之後滑過不該換人');
   assert.match(js, /if\(hit&&hit\.type!=='status'\)\{if\(hit\.i!==selected\)select\(hit\.i\);\}/);
-  // 卡片會蓋到人物旁邊，滑進卡片不能當成離開，否則會一直閃。
-  assert.match(js, /let cardHovered=false;/);
-  assert.match(js, /\$\('personCard'\)\.addEventListener\('pointerenter'/);
-  assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{if\(embedMode&&!cardHovered\)select\(null\);\}\)/);
+  // 只是預覽時讓滑鼠穿透卡片，否則卡片會擋住右邊的同事，變成只有第一個人展得開。
+  assert.match(css, /body\.embed \.person-card\{pointer-events:none\}/);
+  assert.match(css, /body\.embed \.person-card\.is-pinned\{pointer-events:auto/,
+    '固定後要吃得到滑鼠，才點得到技能膠囊');
+  assert.match(js, /let cardPinned=false;/);
+  assert.match(js, /function setCardPinned\(value\)\{cardPinned=value;\$\('personCard'\)\.classList\.toggle\('is-pinned',value\);\}/);
+  // 點人物＝固定，點空白＝取消固定並收起。
+  assert.match(js, /select\(hit\.i\);if\(embedMode\)setCardPinned\(true\)/);
+  assert.match(js, /\{if\(embedMode\)setCardPinned\(false\);select\(null\);\}/);
+  assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
   assert.match(js, /if\(embedMode\)\$\('personCardClose'\)\.hidden=true;/, '嵌入模式不顯示關閉鈕');
   assert.match(css, /body\.embed \.person-card-close\{display:none\}/);
+});
+
+test('iframe 的高度鏈完整，場景不會把框撐大而被裁掉', async () => {
+  const css = await officeCss();
+  // 少了 html 這一層，body 會反過來被 canvas 撐大，fitEmbedView() 就以為框比 iframe 還高，
+  // 把下排畫到看不見的地方（2026-09-21 使用者回報「整個下排被切掉」）。
+  assert.match(css, /html\.embed,body\.embed\{height:100%;overflow:hidden\}/);
+  assert.match(css, /body\.embed main,body\.embed \.play,body\.embed \.canvas-wrap\{height:100%\}/);
+  // canvas 脫離文件流，大小才不會回頭影響框。
+  assert.match(css, /body\.embed #game\{position:absolute;top:0;left:0/);
+  assert.match(css, /body\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/);
 });
 
 test('人物卡在嵌入的小框裡也夠寬', async () => {

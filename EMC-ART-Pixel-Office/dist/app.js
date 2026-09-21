@@ -44,7 +44,7 @@ function syncViewLayout(){
 // 嵌入模式：設計需求系統用 iframe 把場景放進「設計師專長與案件分配」。
 // 保留點選人物與資料卡，但關閉鍵盤移動與右側編輯工具；狀態仍照常同步。
 const embedMode=new URLSearchParams(location.search).get('embed')==='1';
-if(embedMode){document.body.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
+if(embedMode){document.documentElement.classList.add('embed');document.body.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。後端 database-coordinator.ts 有同一份，兩邊都要更新——
 // 後端負責真的改狀態，這裡只負責「沒裝爬蟲的人」畫面上的加班濾鏡。來源與更新方式見後端那份的註解。
 const TAIWAN_HOLIDAYS={2026:['20260101','20260216','20260217','20260218','20260219','20260220','20260227','20260228','20260403','20260404','20260405','20260406','20260501','20260619','20260925','20260928','20261009','20261010','20261025','20261026','20261225'],2027:['20270101','20270204','20270205','20270206','20270207','20270208','20270209','20270210','20270228','20270301','20270404','20270405','20270406','20270430','20270501','20270609','20270915','20270928','20271010','20271011','20271025','20271224','20271225','20271231']};
@@ -89,7 +89,7 @@ function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0
 function select(i){selected=i;keys.clear();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
-  if(!chosen){$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);return;}
+  if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);return;}
   $('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();
   ensureLevels();
   updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();}
@@ -311,18 +311,18 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='photo')openPhoto(hit.i);else{select(hit.i);if(!embedMode)game.focus({preventScroll:true});}}else select(null);});
-// 卡片會蓋到人物旁邊，滑進卡片時不能當成「離開人物」，否則會一直閃。
-let cardHovered=false;
+game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='photo')openPhoto(hit.i);else{select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});}}else{if(embedMode)setCardPinned(false);select(null);}});
+// 點一下把資料卡固定住：固定之後滑鼠移開不會收起，也才點得到上面的技能膠囊。
+// 沒固定時只是滑過預覽（卡片不吃滑鼠事件，見 CSS），滑到別人身上就換人。
+let cardPinned=false;
+function setCardPinned(value){cardPinned=value;$('personCard').classList.toggle('is-pinned',value);}
 function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const x=(clientX-r.left)*W/r.width,y=(clientY-r.top)*H/r.height;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。
-  if(!embedMode||e.pointerType==='touch')return;
+  if(!embedMode||e.pointerType==='touch'||cardPinned)return;
   if(hit&&hit.type!=='status'){if(hit.i!==selected)select(hit.i);}
-  else if(selected!==null&&!cardHovered)select(null);});
-$('personCard').addEventListener('pointerenter',()=>{cardHovered=true;});
-$('personCard').addEventListener('pointerleave',()=>{cardHovered=false;if(embedMode)select(null);});
-game.addEventListener('pointerleave',()=>{if(embedMode&&!cardHovered)select(null);});
+  else if(selected!==null)select(null);});
+game.addEventListener('pointerleave',()=>{if(embedMode&&!cardPinned)select(null);});
 // 細緻版面板：細邊框、圓角、柔和陰影（取代原本粗像素切角框）。
 function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=14;context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
 function bubble(p,lift=0){if(!p.message)return;ctx.save();ctx.font='600 17px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const lines=[];let line='';for(const ch of p.message){if(ch==='\n'){lines.push(line);line='';continue;}if(ctx.measureText(line+ch).width>220&&line){lines.push(line);line=ch;}else line+=ch;}lines.push(line);const lineHeight=25,w=Math.max(90,...lines.map(text=>ctx.measureText(text).width+34)),h=lines.length*lineHeight+22,x=Math.max(10,Math.min(W-w-10,Math.round(p.x-w/2))),y=Math.max(10,Math.round(p.y-172-lift-h));const tipX=Math.max(x+20,Math.min(x+w-20,p.x));

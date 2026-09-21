@@ -180,17 +180,25 @@ h2{font-size:24px}
    狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
 body.embed{background:transparent}
 body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster{display:none!important}
-body.embed,body.embed main,body.embed .play{height:100%}
+/* height:100% 要一路從 html 接下來才算數。少了 html 這一層，body 的高度會反過來被 canvas 撐大，
+   fitEmbedView() 就會以為框比實際的 iframe 還高，把下排畫到看不見的地方（2026-09-21 的裁切問題）。
+   canvas 另外用 absolute 脫離文件流，確保它的大小永遠不會回頭影響框。 */
+html.embed,body.embed{height:100%;overflow:hidden}
+body.embed main,body.embed .play,body.embed .canvas-wrap{height:100%}
 body.embed main{display:block;max-width:none;padding:0;gap:0}
 body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-body.embed .canvas-wrap{height:100%;margin:0;overflow:hidden}
+body.embed .canvas-wrap{position:relative;margin:0;overflow:hidden}
 /* 位置與大小由 fitEmbedView() 依框的實際尺寸算（框的高度會跟著左右卡片對齊而變），
    這裡只定基本樣式。 */
-body.embed #game{max-width:none;display:block;transform-origin:top left;cursor:default}
+body.embed #game{position:absolute;top:0;left:0;max-width:none;display:block;transform-origin:top left;cursor:default}
 /* 嵌進設計需求系統的框只有 340 px 上下，單純取三分之一會算出 106 px——名字會被拆成「M/ac/hi」。
    給一個讀得下去的下限，超過三分之一也沒關係，另一半還看得到場景。 */
 body.embed .person-card{width:clamp(208px,calc(46% - 16px),286px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:13px;overflow-wrap:anywhere}
 body.embed .person-card-head strong{font-size:19px}
+/* 只是滑過預覽時讓滑鼠穿透卡片——卡片會蓋住右邊的同事，不穿透的話滑過去只會碰到卡片，
+   變成「只有第一個人展得開」。點一下固定之後才接受點擊，這樣才點得到技能膠囊。 */
+body.embed .person-card{pointer-events:none}
+body.embed .person-card.is-pinned{pointer-events:auto;border-color:#5b83bd;box-shadow:0 18px 38px rgba(6,14,28,.5)}
 body.embed .person-card-close{display:none}
 /* 名字與職稱是短字串，讓它們正常斷行就好，anywhere 只留給可能很長的案件名。 */
 body.embed .person-card-head,body.embed .person-card-title{overflow-wrap:normal;word-break:keep-all}
