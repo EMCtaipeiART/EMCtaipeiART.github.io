@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=27"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=28"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -69,14 +69,13 @@ test('頭像、限時動態、大海報與分享音樂都從前台下架', async
 test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async () => {
   const [html, css, js] = await Promise.all([officeHtml(), officeCss(), officeJs()]);
   assert.match(js, /const embedMode=new URLSearchParams\(location\.search\)\.get\('embed'\)==='1'/);
-  assert.match(js, /if\(embedMode\)\{document\.documentElement\.classList\.add\('embed'\);document\.body\.classList\.add\('embed'\);/,
-    'html 也要加上 embed，height:100% 的鏈才接得起來');
+  assert.match(js, /if\(embedMode\)\{document\.documentElement\.classList\.add\('embed'\);/);
   // 頁首、右側編輯工具、名單與標題列都不顯示，人物資料卡保留。
   for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster']) {
     assert.ok(new RegExp(`body\\.embed[^{]*${selector.replace('.', '\\.').replace('#', '#')}`).test(css)
-      || css.includes(`body.embed ${selector}`), `嵌入模式應該隱藏 ${selector}`);
+      || css.includes(`html.embed ${selector}`), `嵌入模式應該隱藏 ${selector}`);
   }
-  assert.doesNotMatch(css, /body\.embed[^\n{]*\.person-card\{display:none!important\}/,
+  assert.doesNotMatch(css, /html\.embed[^\n{]*\.person-card\{display:none!important\}/,
     '嵌入模式不可隱藏人物卡');
   assert.match(js, /game\.addEventListener\('pointerdown',e=>\{if\(!ready\)return;/,
     '嵌入場景要能點選人物');
@@ -87,19 +86,19 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   assert.match(js, /labelY=s\.y\+56/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
-  assert.doesNotMatch(css, /body\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
-  assert.match(css, /body\.embed #game\{position:absolute;top:0;left:0;max-width:none;display:block;transform-origin:top left/);
-  assert.match(css, /body\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/,
+  assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
+  assert.match(css, /html\.embed #game\{position:absolute;top:0;left:0;max-width:none;display:block;transform-origin:top left/);
+  assert.match(css, /html\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/,
     '放大後超出外框的場景應裁切在 iframe 內');
-  assert.match(css, /body\.embed \.person-card-head,body\.embed \.person-card-title\{overflow-wrap:normal/,
+  assert.match(css, /html\.embed \.person-card-head,html\.embed \.person-card-title\{overflow-wrap:normal/,
     '名字與職稱不該被 overflow-wrap:anywhere 拆成單字');
-  assert.doesNotMatch(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
+  assert.doesNotMatch(css, /html\.embed \.person-card\{position:fixed!important;inset:8px!important/,
     '小螢幕人物卡不可再滿版');
   assert.match(js, /window\.addEventListener\('keydown',e=>\{if\(embedMode\|\|/,
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 34, `app.js 版本號要 ≥ 34，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 35, `app.js 版本號要 ≥ 35，目前是 ${version?.[1]}`);
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -109,8 +108,8 @@ test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () =>
     '固定之後滑過不該換人');
   assert.match(js, /if\(hit&&hit\.type!=='status'\)\{if\(hit\.i!==selected\)select\(hit\.i\);\}/);
   // 只是預覽時讓滑鼠穿透卡片，否則卡片會擋住右邊的同事，變成只有第一個人展得開。
-  assert.match(css, /body\.embed \.person-card\{pointer-events:none\}/);
-  assert.match(css, /body\.embed \.person-card\.is-pinned\{pointer-events:auto/,
+  assert.match(css, /html\.embed \.person-card\{pointer-events:none\}/);
+  assert.match(css, /html\.embed \.person-card\.is-pinned\{pointer-events:auto/,
     '固定後要吃得到滑鼠，才點得到技能膠囊');
   assert.match(js, /let cardPinned=false;/);
   assert.match(js, /function setCardPinned\(value\)\{cardPinned=value;\$\('personCard'\)\.classList\.toggle\('is-pinned',value\);\}/);
@@ -120,24 +119,24 @@ test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () =>
   assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
   // 關閉鈕要留著：固定之後卡片才吃得到滑鼠，剛好就是需要它的時候。
   assert.doesNotMatch(js, /\$\('personCardClose'\)\.hidden=true/, '不該再把關閉鈕藏起來');
-  assert.doesNotMatch(css, /body\.embed \.person-card-close\{display:none\}/);
+  assert.doesNotMatch(css, /html\.embed \.person-card-close\{display:none\}/);
 });
 
 test('iframe 的高度鏈完整，場景不會把框撐大而被裁掉', async () => {
   const css = await officeCss();
   // 少了 html 這一層，body 會反過來被 canvas 撐大，fitEmbedView() 就以為框比 iframe 還高，
   // 把下排畫到看不見的地方（2026-09-21 使用者回報「整個下排被切掉」）。
-  assert.match(css, /html\.embed,body\.embed\{height:100%;overflow:hidden\}/);
-  assert.match(css, /body\.embed main,body\.embed \.play,body\.embed \.canvas-wrap\{height:100%\}/);
+  assert.match(css, /html\.embed,html\.embed body\{height:100%;overflow:hidden\}/);
+  assert.match(css, /html\.embed main,html\.embed \.play,html\.embed \.canvas-wrap\{height:100%\}/);
   // canvas 脫離文件流，大小才不會回頭影響框。
-  assert.match(css, /body\.embed #game\{position:absolute;top:0;left:0/);
-  assert.match(css, /body\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/);
+  assert.match(css, /html\.embed #game\{position:absolute;top:0;left:0/);
+  assert.match(css, /html\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/);
 });
 
 test('人物卡在嵌入的小框裡也夠寬', async () => {
   const css = await officeCss();
   // 340 px 的框取 46% 約 140 px，所以下限才是實際生效的那個值。
-  assert.match(css, /body\.embed \.person-card\{width:clamp\(208px,calc\(46% - 16px\),286px\)/);
+  assert.match(css, /html\.embed \.person-card\{width:clamp\(208px,calc\(46% - 16px\),286px\)/);
   assert.match(css, /width:clamp\(200px,calc\(52% - 8px\),286px\)/, '小螢幕同樣要夠寬');
 });
 
@@ -187,5 +186,42 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
   assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;bubble\(p,0\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
-  assert.match(css, /body\.embed[^{]*#loading\{display:none!important\}/);
+  assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
+});
+
+test('嵌入模式在 CSS 套用前就標記好，不會先閃出遊戲的頁首', async () => {
+  const html = await officeHtml();
+  const head = html.slice(0, html.indexOf('</head>'));
+  // 等 app.js 執行才加 class 太晚了，使用者會先看到「凱曜設計部 / 今天，想說點什麼？」閃一下。
+  assert.match(head, /<script>if\(new URLSearchParams\(location\.search\)\.get\('embed'\)==='1'\)document\.documentElement\.classList\.add\('embed'\);<\/script>/,
+    'head 裡要先標記 embed');
+  // 比對 rel="stylesheet" 而不是 stylesheet：上面的註解裡也有這個字。
+  assert.ok(head.indexOf("classList.add('embed')") < head.indexOf('rel="stylesheet"'),
+    '標記要在載入樣式表之前');
+});
+
+test('離席的灰階空桌不靠 ctx.filter（Safari 的 canvas 不支援）', async () => {
+  const js = await officeJs();
+  assert.doesNotMatch(js.replace(/\/\/[^\n]*/g, ''), /ctx\.filter/,
+    '不能再用 canvas 的 filter，Safari 會直接忽略、桌子維持原色');
+  // 改成圖集載入後先做一張灰階版本快取，各家瀏覽器結果一致。
+  assert.match(js, /function ensureFurnitureGray\(\)\{/);
+  assert.match(js, /const furnitureFor=s=>stationAway\(s\)\?\(ensureFurnitureGray\(\)\|\|furniture\):furniture;/);
+  assert.match(js, /const type=stationAway\(s\)\?4:s\.type,art=furnitureFor\(s\)/);
+});
+
+test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
+  const [js, html] = await Promise.all([officeJs(), officeHtml()]);
+  // 不能走動，畫面多數時間完全靜止，沒必要每秒畫 60 次。
+  assert.match(js, /if\(embedMode&&!needsRedraw&&!sceneAnimating\(\)\)\{requestAnimationFrame\(render\);return;\}/);
+  assert.match(js, /function markDirty\(\)\{needsRedraw=true;\}/);
+  // 宣告要在最前面：resizeCanvas() 在腳本載入時就會用到它。
+  assert.ok(js.indexOf('function markDirty') < js.indexOf('function resizeCanvas'),
+    'markDirty 要在 resizeCanvas 之前宣告，否則載入時就 TDZ 錯誤');
+  for (const fn of ['applyRemote', 'resizeCanvas', 'select']) {
+    assert.match(js, new RegExp(`function ${fn}\\([^)]*\\)\\{[^\n]*markDirty\\(\\)`), `${fn} 之後要重畫`);
+  }
+  // 142 KB 的 PNG 濾鏡圖改成 WebP。
+  assert.match(js, /overtimeSheet\.src='assets\/overtime-filter\.webp/);
+  assert.match(html, /preload[^>]*assets\/overtime-filter\.webp/);
 });

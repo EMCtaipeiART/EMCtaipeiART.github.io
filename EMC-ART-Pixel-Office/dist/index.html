@@ -10,8 +10,11 @@
   <link rel="preload" as="image" href="assets/furniture-packed.webp?v=1" fetchpriority="high">
   <link rel="preload" as="image" href="assets/icons-v3.webp?v=3">
   <link rel="preload" as="image" href="assets/icons-status-v4.webp?v=1">
-  <link rel="preload" as="image" href="assets/overtime-filter.png?v=1">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="preload" as="image" href="assets/overtime-filter.webp?v=1">
+  <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
+       放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
+  <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
   <header>
@@ -55,6 +58,6 @@
   </main>
   <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

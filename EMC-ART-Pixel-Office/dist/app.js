@@ -12,6 +12,12 @@ const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作�
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
 const workingStatusIds=['present','overtime'];const isAway=p=>!workingStatusIds.includes(p.status);
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
+// 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
+// 有變化時才畫：遠端同步、選取、框變大小都會標記一次。省下來的 CPU 讓外層系統的進站更順。
+// 宣告放在最前面：resizeCanvas() 在腳本載入時就會被呼叫一次，那時就要用到 markDirty。
+let needsRedraw=true;
+function markDirty(){needsRedraw=true;}
+
 // 嵌入模式的版面：上下兩排之間空了一大段，塞進側欄的小框裡會白白浪費一半高度。把下排往上收，
 // 六張桌子擠在一起之後才有空間放大。上排以上不動、之後線性壓縮，所以人物走到中間時位置是連續的，
 // 不會突然跳一格。只改「畫出來的位置」，同步給大家的座標完全沒動。
@@ -27,6 +33,7 @@ const EMBED_CONTENT={x0:424,x1:1112,y0:206,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EM
 const EMBED_FIT_PADDING=.94;
 function fitEmbedView(){
   if(!embedMode)return;
+  markDirty();
   const wrap=game.parentElement.getBoundingClientRect();
   if(!wrap.width||!wrap.height)return;
   const bw=EMBED_CONTENT.x1-EMBED_CONTENT.x0,bh=EMBED_CONTENT.y1-EMBED_CONTENT.y0;
@@ -44,7 +51,7 @@ function syncViewLayout(){
 // 嵌入模式：設計需求系統用 iframe 把場景放進「設計師專長與案件分配」。
 // 保留點選人物與資料卡，但關閉鍵盤移動與右側編輯工具；狀態仍照常同步。
 const embedMode=new URLSearchParams(location.search).get('embed')==='1';
-if(embedMode){document.documentElement.classList.add('embed');document.body.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
+if(embedMode){document.documentElement.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。後端 database-coordinator.ts 有同一份，兩邊都要更新——
 // 後端負責真的改狀態，這裡只負責「沒裝爬蟲的人」畫面上的加班濾鏡。來源與更新方式見後端那份的註解。
 const TAIWAN_HOLIDAYS={2026:['20260101','20260216','20260217','20260218','20260219','20260220','20260227','20260228','20260403','20260404','20260405','20260406','20260501','20260619','20260925','20260928','20261009','20261010','20261025','20261026','20261225'],2027:['20270101','20270204','20270205','20270206','20270207','20270208','20270209','20270210','20270228','20270301','20270404','20270405','20270406','20270430','20270501','20270609','20270915','20270928','20271010','20271011','20271025','20271224','20271225','20271231']};
@@ -61,8 +68,8 @@ syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-packed.webp?v=2';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.png?v=1';
-function resizeCanvas(){const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
+sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-packed.webp?v=2';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
+function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
 // sprites-packed.webp：5 列（Leona、Amber、Noise、Anna、Machi）× 3 欄（正面、右側面、背面），每欄寬 140，列高沿用原圖。
@@ -71,7 +78,7 @@ function sprite(context,index,dir,x,y,w=98,h=142){const col=dir==='up'?2:dir==='
 // 黑色眼珠的下緣（人物高 142 時距頭頂多少），逐格量出來的：黑眼圈就從這裡往下畫。五張臉的眼珠高度
 // 不一樣——Machi 的眼睛畫得比較高、Noise 戴帽子所以比較低——共用一個值就會有人對不準。
 const EYE_PUPIL_BOTTOM=[47,47,50,47,45];// Leona、Amber、Noise、Anna、Machi
-// overtime-filter.png：正面、側面、背面三格（每格 362）。黑眼圈與鬼火分層繪製。
+// overtime-filter.webp：正面、側面、背面三格（每格 362）。黑眼圈與鬼火分層繪製。
 // 黑眼圈：原圖正面兩團（x116/x200，y122 起高 28）、側面一團（x190，y124 起高 28），各自貼到眼珠正下方。
 // 眼珠中心固定在 ±12（側面 +16），左右用同一組尺寸，所以兩邊一定對稱；寬度取 14（側面 12）比眼珠的
 // 10 略寬一點，外緣才不會壓到頭髮或耳朵。
@@ -86,7 +93,7 @@ function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=fal
     for(const[sx,sy,sw,sh,cx,bagWidth]of bags){const dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
 function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
-function select(i){selected=i;keys.clear();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
+function select(i){selected=i;keys.clear();markDirty();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
   if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);return;}
@@ -279,7 +286,7 @@ function pushChange(i,patch){const name=people[i].name;return syncCall({action:'
 /** 走路時位置很頻繁，最多每 350 ms 送一次；最後停下來的位置一定會送出。 */
 function queuePosition(i){localMoveAt.set(i,Date.now());if(pendingPositions.has(i))return;pendingPositions.set(i,setTimeout(()=>{pendingPositions.delete(i);const p=people[i];pushChange(i,{x:p.x,y:p.y,dir:p.dir});},350));}
 async function loadRemotePhoto(i,version){const name=people[i].name;photoVersions.set(name,version);if(!version){people[i].photo='';photoImages.delete(i);if(i===selected)updatePhoto();return;}try{const data=await syncCall({action:'pixelOfficePhoto',name});if(photoVersions.get(name)!==version)return;people[i].photo=data.photo||'';photoImages.delete(i);if(i===selected)updatePhoto();save(false);}catch{}}
-function applyRemote(list){
+function applyRemote(list){markDirty();
   const seen=new Set();
   for(const entry of list||[]){
     const i=names.indexOf(entry.name);if(i<0)continue;seen.add(i);const p=people[i];
@@ -332,14 +339,38 @@ function bubble(p,lift=0){if(!p.message)return;ctx.save();ctx.font='600 17px -ap
 /** 點選人物時，頭上顯示等級與稱號。 */
 function stationPerson(s){return s.name?people.find(person=>person.name===s.name):null;}
 function stationAway(s){const person=stationPerson(s);return person&&isAway(person);}
-function withStationStyle(s,draw){ctx.save();if(stationAway(s))ctx.filter='grayscale(1) brightness(1.9) contrast(.85)';draw();ctx.restore();}
+// 離席的空桌要畫成灰階。原本用 ctx.filter='grayscale(1) brightness(1.9) contrast(.85)'，但 Safari 的
+// canvas 不支援 filter，桌子就維持原本的藍色（使用者回報「下班或出國桌子沒有灰階」）。改成在圖集載入後
+// 先做一張灰階版本快取起來，離席時換那張畫——每個瀏覽器結果都一樣，而且只算一次。
+let furnitureGray=null;
+function ensureFurnitureGray(){
+  if(furnitureGray||!furniture.complete||!furniture.naturalWidth)return furnitureGray;
+  const canvas=document.createElement('canvas');
+  canvas.width=furniture.naturalWidth;canvas.height=furniture.naturalHeight;
+  const context=canvas.getContext('2d',{willReadFrequently:true});
+  context.drawImage(furniture,0,0);
+  try{
+    const image=context.getImageData(0,0,canvas.width,canvas.height),pixels=image.data;
+    for(let i=0;i<pixels.length;i+=4){
+      const luma=pixels[i]*.299+pixels[i+1]*.587+pixels[i+2]*.114;
+      const bright=Math.min(255,luma*1.9);
+      const value=Math.min(255,Math.max(0,(bright-128)*.85+128));
+      pixels[i]=pixels[i+1]=pixels[i+2]=value;
+    }
+    context.putImageData(image,0,0);
+    furnitureGray=canvas;
+  }catch{furnitureGray=null;}
+  return furnitureGray;
+}
+const furnitureFor=s=>stationAway(s)?(ensureFurnitureGray()||furniture):furniture;
+function withStationStyle(s,draw){draw();}
 function drawOffice(){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
 // furniture-packed.webp：只保留四種家具（兩種桌、Mac Studio 桌、椅子）重新排列。
 // 第 5 個（index 4）是空桌子：由 iMac 桌去掉電腦、鍵盤、滑鼠與陰影做成，離席（下班／廁所／出國／公出）時使用。
 const furnitureRects=[[0,0,532,335],[0,335,553,334],[0,669,553,318],[553,0,284,445],[0,987,532,335]];
-function furnitureObject(type,x,y,w,h){ctx.imageSmoothingEnabled=false;ctx.drawImage(furniture,...furnitureRects[type],x,y,w,h);}
+function furnitureObject(type,x,y,w,h,art=furniture){ctx.imageSmoothingEnabled=false;ctx.drawImage(art,...furnitureRects[type],x,y,w,h);}
 function drawChair(s){if(stationAway(s))return;withStationStyle(s,()=>furnitureObject(3,s.x-51,s.y-135,102,135));}
-function drawDesk(s){withStationStyle(s,()=>{const type=stationAway(s)?4:s.type,[sx,sy,sw,sh]=furnitureRects[type],top=sy+(type===2?28:68),front=sy+(type===2?250:266),upperHeight=type===2?14:37;ctx.imageSmoothingEnabled=false;ctx.drawImage(furniture,sx,sy,sw,top-sy,s.x-125,s.y-40-upperHeight,250,upperHeight);ctx.drawImage(furniture,sx,top,sw,front-top,s.x-125,s.y-40,250,110);ctx.drawImage(furniture,sx,front,sw,sy+sh-front,s.x-125,s.y+70,250,36);if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}});}
+function drawDesk(s){withStationStyle(s,()=>{const type=stationAway(s)?4:s.type,art=furnitureFor(s),[sx,sy,sw,sh]=furnitureRects[type],top=sy+(type===2?28:68),front=sy+(type===2?250:266),upperHeight=type===2?14:37;ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,top-sy,s.x-125,s.y-40-upperHeight,250,upperHeight);ctx.drawImage(art,sx,top,sw,front-top,s.x-125,s.y-40,250,110);ctx.drawImage(art,sx,front,sw,sy+sh-front,s.x-125,s.y+70,250,36);if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}});}
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPhotoCard(i){const p=viewPeople[i];if(!p.photo)return;let image=photoImages.get(i);if(!image){image=new Image();image.src=p.photo;photoImages.set(i,image);}const side=p.x>W-155?-1:1,x=Math.round(side>0?p.x+64:p.x-140),y=Math.round(p.y-151),w=76,h=70;softPanel(ctx,x,y,w,h,{radius:10,fill:'#fff',stroke:'#c9d3e0'});if(image.complete&&image.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(x+5,y+5,w-10,h-24,7);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const boxW=w-10,boxH=h-24,scale=Math.max(boxW/image.naturalWidth,boxH/image.naturalHeight),dw=image.naturalWidth*scale,dh=image.naturalHeight*scale;ctx.drawImage(image,x+5+(boxW-dw)/2,y+5+(boxH-dh)/2,dw,dh);ctx.restore();}ctx.save();ctx.fillStyle='#5b6d87';ctx.font='700 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('點開看看',x+w/2,y+h-9.5);ctx.restore();hits.push({type:'photo',i,x,y,w,h});}
 function drawOverlay(i){const p=viewPeople[i];if(isAway(p))return;bubble(p,0);drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
@@ -350,7 +381,10 @@ const DESK_ICON_SCALE={power:.8,briefcase:.78};
 /** 加班標籤：移除場景中的月亮，只把「加班中」置中畫在桌面中央。 */
 function drawOvertimeBadge(s,p){const status=statuses.find(item=>item.id==='overtime'),x=s.x,h=24;ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.text).width+22),labelY=s.y+24;softPanel(ctx,x-w/2,labelY-h/2,w,h,{radius:12,fill:'#fff6d6',stroke:'#e2b04a',lineWidth:1,shadow:true});ctx.fillStyle='#6a4a10';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.text,x,labelY+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-w/2,y:labelY-h/2,w,h});}
 function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=104*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=iconY-iconSize/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:labelY,w:iconSize,h:iconY+iconSize/2-labelY});}
-function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i));viewStations.forEach(drawStatusMarker);positionPersonCard();}requestAnimationFrame(render);}
+const sceneAnimating=()=>people.some(p=>p.mood&&!isAway(p));
+function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
+  if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i));viewStations.forEach(drawStatusMarker);positionPersonCard();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
