@@ -154,7 +154,8 @@ h2{font-size:24px}
 .person-card-block{margin-top:11px}
 .person-card-block h4{margin:0 0 5px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#7f94b3;text-transform:uppercase}
 .person-card-skills{display:flex;flex-wrap:wrap;gap:4px}
-.person-card-skill{padding:2px 8px;border-radius:999px;background:rgba(105,158,232,.18);border:1px solid #3c5f92;color:#cfe0f7;font-size:11px;font-weight:800}
+.person-card-skill{padding:3px 9px;border-radius:999px;background:rgba(105,158,232,.18);border:1px solid #3c5f92;color:#cfe0f7;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.5}
+.person-card-skill:hover,.person-card-skill:focus-visible{background:#3c78c8;border-color:#7fb0ef;color:#fff;outline:none}
 .person-card-cases{display:grid;gap:6px}
 .person-card-case-group{display:grid;gap:2px}
 .person-card-case-head{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:850;color:#cfe0f7}
@@ -183,14 +184,16 @@ body.embed,body.embed main,body.embed .play{height:100%}
 body.embed main{display:block;max-width:none;padding:0;gap:0}
 body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 body.embed .canvas-wrap{height:100%;margin:0;overflow:hidden}
-body.embed #game{width:137%;max-width:none;height:auto;display:block;transform:translate(-13.5%,-22%);transform-origin:top left;cursor:default}
+/* 位置與大小由 fitEmbedView() 依框的實際尺寸算（框的高度會跟著左右卡片對齊而變），
+   這裡只定基本樣式。 */
+body.embed #game{max-width:none;display:block;transform-origin:top left;cursor:default}
 /* 嵌進設計需求系統的框只有 340 px 上下，單純取三分之一會算出 106 px——名字會被拆成「M/ac/hi」。
    給一個讀得下去的下限，超過三分之一也沒關係，另一半還看得到場景。 */
-body.embed .person-card{width:clamp(172px,calc(33.333% - 16px),270px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:13px;overflow-wrap:anywhere}
+body.embed .person-card{width:clamp(208px,calc(46% - 16px),286px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:13px;overflow-wrap:anywhere}
 body.embed .person-card-head strong{font-size:19px}
+body.embed .person-card-close{display:none}
 /* 名字與職稱是短字串，讓它們正常斷行就好，anywhere 只留給可能很長的案件名。 */
 body.embed .person-card-head,body.embed .person-card-title{overflow-wrap:normal;word-break:keep-all}
 @media(max-width:640px){
-  body.embed #game{width:167%;max-width:none;transform:translate(-20.1%,-24%);transform-origin:top left}
-  body.embed .person-card{position:fixed!important;top:8px!important;right:8px!important;bottom:auto!important;left:auto!important;width:clamp(168px,calc(33.333% - 8px),270px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
+  body.embed .person-card{position:fixed!important;top:8px!important;right:8px!important;bottom:auto!important;left:auto!important;width:clamp(200px,calc(52% - 8px),286px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
 }

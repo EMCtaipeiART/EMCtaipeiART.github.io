@@ -7566,7 +7566,11 @@ async function fetchGithubJsonDatabase({fresh=false}={}){
   try{return await download}finally{if(githubJsonDatabaseInflight===download)githubJsonDatabaseInflight=null}
 }
 async function downloadGithubJsonDatabase(){
-  const response=await fetch(`${githubJsonDatabaseUrl}?v=${Date.now()}`,{cache:'no-store'});
+  // 背景每 6 秒刷新一次，以前每次都加 ?v=時間戳 並用 no-store，等於每 6 秒重新下載整份 1.5 MB
+  //（2026-09-21 量到一次進站就抓了 9 次、共 14 MB，這就是進站很慢的主因）。
+  // 改成固定網址加 no-cache：瀏覽器照樣每次都去問伺服器，但內容沒變時走 304，只有幾百 bytes。
+  // 真的變了才會下載，而且下面本來就有 revision 檢查擋住比較舊的版本，不會因為快取而退版。
+  const response=await fetch(githubJsonDatabaseUrl,{cache:'no-cache'});
   if(!response.ok)throw new Error(`GitHub JSON 讀取失敗：HTTP ${response.status}`);
   const database=await response.json();
   if(!database?.tables?.database?.rows)throw new Error('GitHub JSON 資料庫格式錯誤');
@@ -10975,11 +10979,22 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=22" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=25" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
 }
+// 像素辦公室嵌在上面的框裡，點人物卡上的技能膠囊時會用 postMessage 告訴這裡，
+// 接著跑原本那套 applyDesignerSkill：展開設計需求、切成新增案件、帶入設計種類與階段，
+// 設計負責人也一併填好。只收同源（自己這個站）送來的訊息。
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin)return;
+  const data=event.data;
+  if(!data||data.type!=='pixelOfficeSkill')return;
+  const designer=String(data.designer||''),skill=String(data.skill||'');
+  if(!designer||!skill)return;
+  applyDesignerSkill(designer,skill);
+});
 let activeDesignerStoryPlayback=null;
 function readSeenDesignerStories(){return readCache(accountStorageKey(designerStorySeenStorageKey),{})||{}}
 function designerHasUnreadStory(designer){const stories=storiesForDesigner(designer?.name||''); if(!stories.length)return false; const seen=readSeenDesignerStories(), viewed=new Set(Array.isArray(seen[designer.name])?seen[designer.name]:[]); return stories.some(story=>!viewed.has(story.id))}
