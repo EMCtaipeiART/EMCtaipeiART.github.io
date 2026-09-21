@@ -7099,6 +7099,10 @@
     #aiStageModal .ai-stage-detail b{display:block;color:#253530;margin-bottom:5px}
     #aiStageModal .ai-stage-tags{display:flex;flex-wrap:wrap;gap:6px}
     #aiStageModal .ai-stage-tags span{border:1px solid var(--line);border-radius:8px;padding:3px 8px;background:#fafbfa}
+    #aiStageModal .ai-stage-engine{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+    #aiStageModal .ai-stage-engine.is-free{background:#e7f6ef;color:#0b6e4a;border:1px solid #b9e0cc}
+    #aiStageModal .ai-stage-engine.is-paid{background:#fff6e5;color:#8a5a00;border:1px solid #efd9ac}
+    #aiStageModal .ai-stage-fallback{margin:8px 0 0;font-size:12px;color:#8a5a00;line-height:1.5}
     #aiStageModal .ai-stage-loading{display:grid;justify-items:center;gap:14px;padding:30px 8px 26px;text-align:center}
     #aiStageModal .ai-stage-loading-line{display:flex;align-items:center;justify-content:center;gap:10px;color:#4f5d57;font-weight:800}
     #aiStageModal .ai-stage-quote{min-height:44px;max-width:440px;color:#43524b;font-size:14px;line-height:1.55;font-weight:800;transition:opacity .25s ease}
@@ -11965,13 +11969,18 @@ function renderAiStageModal(){
     const tasks=(r.tasks||[]).map(task=>`<span>${esc(task)}</span>`).join('');
     const missing=(r.missing||[]).map(item=>`<li>${esc(item)}</li>`).join('');
     const cost=Number(r.usage?.costUsd||0),tokens=Number(r.usage?.total||0);
+    // 主要引擎是 Gemini（免費額度），失敗時才退到付費的 OpenAI；備援時把原因一起顯示出來。
+    const provider=r.usage?.provider||r.provider||'',isGemini=provider==='gemini';
+    const engineLabel=provider?`${isGemini?'Gemini（免費額度）':'OpenAI 備援（付費）'}${r.model||r.usage?.model?`・${r.model||r.usage.model}`:''}`:'';
+    const fallbackReason=String(r.usage?.fallbackReason||r.fallbackReason||'').trim();
     const fill=stage=>`<button type="button" class="ai-stage-fill${r.stage===stage?' is-suggested':''}" data-ai-stage-fill="${esc(stage)}">填入「${esc(stage)}」${r.stage===stage?'（AI 建議）':''}</button>`;
     body.innerHTML=`<div class="ai-stage-verdict ${tone}"><div class="ai-stage-verdict-head"><span>AI 判定：${esc(r.stage)}</span><small>信心度 ${Number(r.confidence)||0}%</small></div><p>${esc(r.reason)}</p></div>
       ${tasks?`<div class="ai-stage-detail"><b>辨識到的工作內容</b><div class="ai-stage-tags">${tasks}</div></div>`:''}
       ${r.basis?`<div class="ai-stage-detail"><b>判斷依據</b>${esc(r.basis)}</div>`:''}
       ${missing?`<div class="ai-stage-detail"><b>建議補充</b><ul style="margin:0;padding-left:20px">${missing}</ul></div>`:''}
       ${r.slidesWarning?`<div class="ai-stage-detail">${esc(r.slidesWarning)}；本次已改以截圖完成分析。</div>`:''}
-      <div class="ai-stage-detail">本次用量 ${tokens.toLocaleString()} tokens · 約 US$${cost<0.01?cost.toFixed(4):cost.toFixed(3)}</div>
+      ${engineLabel?`<div class="ai-stage-detail"><b>使用引擎</b><span class="ai-stage-engine${isGemini?' is-free':' is-paid'}">${esc(engineLabel)}</span>${fallbackReason?`<p class="ai-stage-fallback">Gemini 無法使用，已改用 OpenAI：${esc(fallbackReason)}</p>`:''}</div>`:''}
+      <div class="ai-stage-detail">本次用量 ${tokens.toLocaleString()} tokens · ${isGemini&&!cost?'免費額度':`約 US$${cost<0.01?cost.toFixed(4):cost.toFixed(3)}`}</div>
       <div class="ai-stage-actions"><button type="button" class="ai-stage-link" data-ai-stage-restart>重新判斷</button>${fill('再製')}${fill('新製')}</div>`;
     return;
   }

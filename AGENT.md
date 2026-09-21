@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 10:00 Asia/Taipei — AI判斷結果顯示實際引擎（Gemini 為主／OpenAI 備援）與退回原因
+
+- 修改目的：Codex 已把判定器改成 Gemini 免費額度為主、OpenAI 備援，但畫面看不出實際用了哪個，使用者無法確認。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`；判定器 repo `EMCtaipeiART/emc-ai-stage-classifier`（新增 `/api/status`、`fallbackReason`）。
+- 影響功能：`#aiStageModal` 結果區新增「使用引擎」列（Gemini＝綠色免費、OpenAI＝黃色付費，附模型名），用量列在 Gemini 時顯示「免費額度」；若退回 OpenAI 會顯示 Gemini 失敗原因。
+- 風險區塊：無後端變更（判定器為獨立 Worker）。
+- 已檢查／驗證方式：本機前台（port 8788）＋本機判定器實跑分析，結果顯示「Gemini（免費額度）・gemini-3.6-flash」、用量顯示免費額度；判定器 `/api/status` 回 `activeProvider: gemini`；`npm test` 149 項全過。未做：線上正式站實跑（需團隊密碼）。
+- 部署狀態：判定器已部署；前台 git push 後自動生效。
+- commit：本次 commit
+
 ### 2026-09-21 09:30 Asia/Taipei — 修復設計師回覆信：圖片上傳／NAS 備份同時打字，游標被拉到信件最下方
 
 - 修改目的：設計師在「設計師回覆信」（修改回覆信）的編輯器裡打字，同時圖片正在 NAS 備份／上傳時，打到一半游標會突然跳到信件最下方，後面的字全打錯位置。根因是 `restoreOpenGmailEditorFocus()`：它每次被呼叫都會無條件 `focus()` 並把游標搬到編輯區正文尾端（簽名前）。這支函式除了「載入內容後」的主動呼叫之外，還有兩個被動時機——分頁 `visibilitychange` 回到頁面、以及 `refreshWhenPageReturns()` 背景同步（`loadSheet`）完成後。NAS 資料夾選擇器是另開的視窗，備份／上傳期間切回主頁就會觸發「回到分頁→重新同步（要好幾秒）→同步完成後再呼叫一次收焦點」，最後這一次剛好落在使用者打字到一半，游標就被硬拉到信件尾端。
