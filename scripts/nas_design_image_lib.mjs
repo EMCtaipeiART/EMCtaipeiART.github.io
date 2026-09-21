@@ -14,6 +14,7 @@
 import { promises as fs, default as fsSync } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import net from 'node:net';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 export const DEFAULT_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -276,6 +277,110 @@ export function requestMount(config, { now = Date.now(), minIntervalMs = 60000, 
   } catch {
     return false;
   }
+}
+
+/**
+ * 排程（cron）每分鐘都會重新啟動一個全新的 Node 行程，所以上面 requestMount() 記在記憶體變數裡的
+ * 「一分鐘內不重複」對排程完全沒用——每一輪 lastMountAttemptAt 都是 0，開機後 NAS 還沒連上的那段時間，
+ * Finder 就每分鐘跳出一次連線視窗。下面這組改成：
+ *   1. 先探測 NAS 主機的 SMB 埠（445）——連不上代表網路／NAS 還沒就緒，靜默等待、完全不跳視窗；
+ *   2. 連得上才請 Finder 連線，並在同一輪等它掛載成功，成功後才開始爬；
+ *   3. 嘗試紀錄存檔（跨行程有效），失敗次數越多間隔越長（5、10、20、40、上限 60 分鐘），掛載成功就歸零。
+ */
+export function nasHostFromSmbUrl(smbUrl) {
+  const match = String(smbUrl || '').trim().match(/^smb:\/\/(?:[^@/]*@)?([^/:]+)/i);
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/** smb://主機:埠號/分享 的埠號，沒寫就是 SMB 標準的 445。 */
+export function nasPortFromSmbUrl(smbUrl) {
+  const match = String(smbUrl || '').trim().match(/^smb:\/\/(?:[^@/]*@)?[^/:]+:(\d{1,5})(?:\/|$)/i);
+  return match ? Number(match[1]) : 445;
+}
+
+export function probeNasPort(host, { port = 445, timeoutMs = 3000, connect = net.connect } = {}) {
+  return new Promise(resolve => {
+    if (!host) return resolve(false);
+    let settled = false;
+    const finish = ok => {
+      if (settled) return;
+      settled = true;
+      try { socket.destroy(); } catch { /* ignore */ }
+      resolve(ok);
+    };
+    let socket;
+    try {
+      socket = connect({ host, port });
+    } catch {
+      return resolve(false);
+    }
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+  });
+}
+
+/** 已經失敗 failures 次之後，下一次才可以再請 Finder 連線的最短間隔。 */
+export function mountRetryDelayMs(failures) {
+  const count = Math.max(0, Number(failures) || 0);
+  if (!count) return 0;
+  return Math.min(5 * 60000 * 2 ** (count - 1), 60 * 60000);
+}
+
+export async function readMountAttempt(file) {
+  const data = (await loadJsonFile(file, {})) || {};
+  return { lastAttemptAt: Number(data.lastAttemptAt) || 0, failures: Number(data.failures) || 0 };
+}
+
+export async function resetMountAttempts(file) {
+  if (!file) return;
+  await fs.rm(file, { force: true }).catch(() => {});
+}
+
+/**
+ * 回傳 { mountRoot, reason }：mountRoot 有值代表已經掛載可以開始掃描；沒有值時 reason 是
+ * 'no-smb-url'（設定檔沒有連線位址）、'unreachable'（NAS 還連不上，靜默等待）、'backoff'（還在
+ * 上次嘗試後的等待間隔內）、'timeout'（請 Finder 連線了，但等不到掛載，多半是在等輸入密碼）。
+ */
+export async function connectNasAndWait(config, {
+  stateFile,
+  now = Date.now(),
+  probe = (host, port) => probeNasPort(host, { port }),
+  run = (command, args) => spawnSync(command, args),
+  sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
+  waitMs = 60000,
+  pollMs = 2000
+} = {}) {
+  const smbUrl = String(config?.smbUrl || '').trim();
+  if (!smbUrl) return { mountRoot: '', reason: 'no-smb-url' };
+  if (!(await probe(nasHostFromSmbUrl(smbUrl), nasPortFromSmbUrl(smbUrl)))) return { mountRoot: '', reason: 'unreachable' };
+  const previous = await readMountAttempt(stateFile);
+  if (previous.failures && now - previous.lastAttemptAt < mountRetryDelayMs(previous.failures)) {
+    return { mountRoot: '', reason: 'backoff' };
+  }
+  await fs.mkdir(path.dirname(stateFile), { recursive: true });
+  await fs.writeFile(stateFile, JSON.stringify({ lastAttemptAt: now, failures: previous.failures + 1 }), 'utf8');
+  try {
+    run('open', [smbUrl]);
+  } catch {
+    return { mountRoot: '', reason: 'timeout' };
+  }
+  for (let waited = 0; waited <= waitMs; waited += pollMs) {
+    const mountRoot = await resolveMountRoot(config);
+    if (mountRoot) {
+      await resetMountAttempts(stateFile);
+      return { mountRoot, reason: '' };
+    }
+    if (waited + pollMs > waitMs) break;
+    await sleep(pollMs);
+  }
+  return { mountRoot: '', reason: 'timeout' };
 }
 
 export function resolvePath(base, value) {

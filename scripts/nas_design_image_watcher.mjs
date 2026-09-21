@@ -104,15 +104,32 @@ async function runScan(args, configInput, configDir, stateFile) {
   const previewDir = lib.resolvePath(configDir, config.previewDir);
   const secrets = await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile));
   // NAS 沒掛載時（關機後還沒連、或被掛成「設計部-1」）沒必要整輪掃描，每個案件都會各自失敗一次。
-  // 先確認一次可用的掛載路徑，順便請 Finder 連線，這一輪就跳過，下一分鐘再試。
+  // 先確認一次可用的掛載路徑；沒掛載就走 lib.connectNasAndWait：NAS 連不上（網路還沒好）時靜默等待、
+  // 不跳任何視窗，連得上才請 Finder 連線並等它掛載成功，掛載成功這一輪就直接開始爬，否則這一輪先跳過。
+  // 嘗試紀錄存檔並遞增間隔——排程每分鐘都是全新行程，記憶體節流擋不住（見 lib 該段說明）。
+  const mountAttemptFile = `${stateFile}.mount-attempt.json`;
   const mountRoot = await lib.resolveMountRoot(config);
+  let scanMountRoot = mountRoot;
   if (!mountRoot) {
-    lib.requestMount(config);
-    console.log('=== NAS 設計圖檔監控 ===');
-    console.log(`找不到已掛載的「${config.expectedVolumeName || '設計部'}」，已嘗試請 Finder 連線，這一輪先跳過。`);
-    return;
+    const connected = await lib.connectNasAndWait(config, { stateFile: mountAttemptFile });
+    scanMountRoot = connected.mountRoot;
+    if (!scanMountRoot) {
+      const volumeName = config.expectedVolumeName || '設計部';
+      const reasonText = {
+        'no-smb-url': '設定檔沒有 smbUrl，無法自動連線，請手動連上 NAS',
+        unreachable: '連不到 NAS 主機（網路或 NAS 可能還沒就緒），靜默等待，沒有跳出連線視窗',
+        backoff: '前幾次連線都沒成功，還在等待間隔內，這次不重複跳出連線視窗',
+        timeout: '已請 Finder 連線但還沒掛載成功（可能在等輸入密碼），稍後會以較長間隔再試'
+      }[connected.reason] || '尚未掛載';
+      console.log('=== NAS 設計圖檔監控 ===');
+      console.log(`找不到已掛載的「${volumeName}」：${reasonText}。這一輪先跳過。`);
+      return;
+    }
+    console.log(`NAS 已連線成功（${scanMountRoot}），開始掃描。`);
+  } else {
+    await lib.resetMountAttempts(mountAttemptFile);
   }
-  config = { ...config, mountRoot };
+  config = { ...config, mountRoot: scanMountRoot };
   // 這個物件在整個迴圈過程中會被直接修改、並且每處理完一個案件就立刻存檔一次
   // （見迴圈內的 lib.saveState 呼叫）——不像先前的寫法只在整批案件都跑完後
   // 才統一存檔一次。原因：如果案件清單裡排在後面的某個案件，掃描或上傳過程

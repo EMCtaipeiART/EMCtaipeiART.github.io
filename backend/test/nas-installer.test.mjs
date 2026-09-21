@@ -164,6 +164,70 @@ test('a missing NAS mount is reported in plain language and retried, instead of 
 
   const watcher = await readFile(new URL('../../scripts/nas_design_image_watcher.mjs', import.meta.url), 'utf8');
   assert.match(watcher, /const mountRoot = await lib\.resolveMountRoot\(config\);/);
-  assert.match(watcher, /lib\.requestMount\(config\);/);
+  assert.doesNotMatch(watcher, /lib\.requestMount\(config\)/, '排程每分鐘都是新行程，記憶體節流擋不住，不可以再直接呼叫 requestMount');
+  assert.match(watcher, /lib\.connectNasAndWait\(config, \{ stateFile: mountAttemptFile \}\)/);
   assert.match(watcher, /這一輪先跳過/);
+});
+
+test('NAS 沒連上時排程不會每分鐘跳連線視窗：先探測、有間隔紀錄、連上才開始爬', async () => {
+  const { mkdtemp, rm, readFile, access } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+
+  assert.equal(lib.nasHostFromSmbUrl('smb://EMCNAS_Prod.local/設計部'), 'EMCNAS_Prod.local');
+  assert.equal(lib.nasHostFromSmbUrl('smb://machi.chen@10.0.0.5:445/share'), '10.0.0.5');
+  assert.equal(lib.nasHostFromSmbUrl(''), '');
+  assert.equal(lib.nasPortFromSmbUrl('smb://machi.chen@10.0.0.5:4445/share'), 4445);
+  assert.equal(lib.nasPortFromSmbUrl('smb://EMCNAS_Prod.local/設計部'), 445);
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 9].map(lib.mountRetryDelayMs), [0, 5, 10, 20, 40, 60, 60].map(m => m * 60000));
+
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-connect-'));
+  const stateFile = path.join(dir, 'mount-attempt.json');
+  const volume = path.join(dir, 'vol');
+  const { mkdir } = await import('node:fs/promises');
+  const config = { smbUrl: 'smb://EMCNAS_Prod.local/設計部', expectedVolumeName: '不存在的磁碟名稱', mountRoot: volume };
+  const opens = [];
+  const run = (command, args) => opens.push([command, ...args]);
+  const sleep = async () => {};
+  const t0 = 1_800_000_000_000;
+  try {
+    // 1. NAS 連不上（網路還沒好）：完全不開視窗、不留嘗試紀錄
+    let result = await lib.connectNasAndWait(config, { stateFile, now: t0, probe: async () => false, run, sleep });
+    assert.deepEqual(result, { mountRoot: '', reason: 'unreachable' });
+    assert.equal(opens.length, 0);
+    await assert.rejects(access(stateFile), '連不上時不記錄嘗試');
+
+    // 2. 連得上但一直沒掛載：開一次視窗、等到逾時，記一次失敗
+    result = await lib.connectNasAndWait(config, { stateFile, now: t0, probe: async () => true, run, sleep, waitMs: 6000, pollMs: 2000 });
+    assert.deepEqual(result, { mountRoot: '', reason: 'timeout' });
+    assert.deepEqual(opens, [['open', 'smb://EMCNAS_Prod.local/設計部']]);
+    assert.equal(JSON.parse(await readFile(stateFile, 'utf8')).failures, 1);
+
+    // 3. 每分鐘都會有一個「新行程」再來：間隔內（第一次失敗後 5 分鐘）不重複開視窗
+    for (const minutes of [1, 2, 4]) {
+      result = await lib.connectNasAndWait(config, { stateFile, now: t0 + minutes * 60000, probe: async () => true, run, sleep });
+      assert.equal(result.reason, 'backoff', `${minutes} 分鐘後仍在間隔內`);
+    }
+    assert.equal(opens.length, 1, '間隔內只開過一次連線視窗');
+
+    // 4. 間隔過後才再試，且失敗次數遞增、間隔拉長為 10 分鐘
+    result = await lib.connectNasAndWait(config, { stateFile, now: t0 + 5 * 60000, probe: async () => true, run, sleep, waitMs: 0 });
+    assert.equal(result.reason, 'timeout');
+    assert.equal(opens.length, 2);
+    assert.equal(JSON.parse(await readFile(stateFile, 'utf8')).failures, 2);
+    result = await lib.connectNasAndWait(config, { stateFile, now: t0 + 14 * 60000, probe: async () => true, run, sleep });
+    assert.equal(result.reason, 'backoff', '第二次失敗後要等 10 分鐘');
+
+    // 5. 請 Finder 連線後在同一輪掛載成功：回傳掛載路徑（這一輪就能開始爬），並清掉失敗紀錄
+    await mkdir(volume);
+    const mountedLater = { ...config };
+    let polls = 0;
+    const sleepUntilMounted = async () => { polls += 1; };
+    const okResult = await lib.connectNasAndWait(mountedLater, { stateFile, now: t0 + 20 * 60000, probe: async () => true, run, sleep: sleepUntilMounted });
+    assert.deepEqual(okResult, { mountRoot: volume, reason: '' });
+    await assert.rejects(access(stateFile), '成功後嘗試紀錄歸零');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
