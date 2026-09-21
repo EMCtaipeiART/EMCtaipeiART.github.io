@@ -934,7 +934,7 @@ async function main() {
     lib.requestMount(config);
     return '';
   };
-  const mountMissingMessage = `NAS 尚未掛載（找不到「${config.expectedVolumeName || '設計部'}」）。已嘗試自動連線，請等幾秒後重新整理這個視窗；若跳出帳號密碼視窗，輸入一次並勾選「記住這個密碼」即可。`;
+  const mountMissingMessage = `NAS 尚未掛載（找不到「${config.expectedVolumeName || '設計部'}」）。${lib.autoMountEnabled(config) ? '已嘗試自動連線，請等幾秒後重新整理這個視窗；若跳出帳號密碼視窗，輸入一次並勾選「記住這個密碼」即可。' : '這台電腦設定為手動連線，請先在 Finder 連上 NAS 後，再重新整理這個視窗。'}`;
   const secretsPath = lib.resolvePath(configDir, config.secretsFile);
   const pickerToken = await loadOrCreatePickerToken(secretsPath);
   const port = Number(config.pickerPort) || DEFAULT_PICKER_PORT;

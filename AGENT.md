@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 11:10 Asia/Taipei — NAS 監控：設計師電腦改為「手動連上 NAS 才掃描」，不再自動跳出連線／登入視窗（新增 autoMountNas 設定）
+
+- 修改目的：使用者要求其他設計師電腦上的監控腳本，改成使用者自己在 Finder 手動連上 NAS 之後才開始掃描，不要由程式另外跳出連線／登入視窗（承接上一則 10:40 的「連上才開始爬」修正，那則只是降低頻率，這則讓設計師電腦完全不主動開視窗）。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`scripts/nas_folder_picker_server.mjs`、`scripts/nas_watcher_installer.mjs`、`scripts/nas_design_image_watcher.README.md`、`backend/test/nas-installer.test.mjs`（本機工具＋測試，沒有動 `index.html`、Worker、Apps Script）。
+- 影響功能：新增設定旗標 `autoMountNas`：沒寫（例如主機這台的設定）＝維持自動連線；明確寫 `false`＝手動模式。lib 新增 `autoMountEnabled(config)`，`requestMount()` 與 `connectNasAndWait()` 在手動模式下一律直接回傳（不探測、不 `open`、不留嘗試紀錄，`connectNasAndWait` 回 `reason:'manual'`）。watcher 沒掛載時在主控台說明「這台電腦設定為手動連線…連上後下一輪會自動開始掃描」並跳過該輪；使用者手動連上、`/Volumes/設計部` 出現後，下一輪（每分鐘）自動開始掃描。資料夾選擇器的「NAS 尚未掛載」訊息在手動模式改成請使用者先在 Finder 手動連上再重新整理（不再說「已嘗試自動連線」，也不會開視窗）。安裝器 `buildWatcherConfig()` 產生設計師電腦的設定時一律寫入 `autoMountNas:false`；README 的設定表補上這個欄位。
+- 風險區塊：①旗標預設是「自動連線」（沒寫就開），只有安裝器產生的設定才會寫 `false`——**已經裝好的設計師電腦，設定檔裡沒有這個欄位，要重新執行安裝器（會重新產生設定並更新腳本）才會變成手動模式**，光是 git push 不會改到他們的電腦。②安裝器本身第一次安裝時仍會為了讀取 NAS 上的金鑰檔而 `open smb://` 並等候（那是使用者主動雙擊安裝程式的一次性互動，需要登入視窗，沒有改）。③手動模式下如果使用者一直沒連 NAS，watcher 每分鐘會在記錄檔寫一行「先跳過」，記錄檔過大時既有的 `truncateHugeLog` 會處理。④想在某台電腦改回自動連線，把該電腦設定檔的 `autoMountNas` 刪掉或改成 `true` 即可。
+- 已檢查／驗證方式：單元測試新增／擴充——`buildWatcherConfig` 產出 `autoMountNas:false`、`autoMountEnabled` 對有寫 false／沒寫的判斷、`requestMount` 手動模式不呼叫 `open`（即使間隔已過）、`connectNasAndWait` 手動模式連探測函式都不呼叫（探測函式被設成一呼叫就丟錯）也不留紀錄。真實行程端對端：假的 `open` 放進 PATH 計次，NAS 主機埠可連上但設定為手動模式，連跑 3 輪 `open` 呼叫 0 次、沒有嘗試紀錄檔、每輪都印出手動模式說明；建立掛載目錄（模擬使用者手動連上）後下一輪正常印出「掛載根目錄」開始掃描。`node --test backend/test/*.test.mjs` 150/150 通過。未做：沒有在真正的設計師電腦上重新執行安裝器實測。
+- 部署狀態：本機工具，git push 不會自動更新各台電腦。設計師電腦需重新執行安裝器（`install_nas_watcher.command`）才會取得新腳本與 `autoMountNas:false` 設定；這台主機不受影響（設定檔沒有該欄位，維持自動連線，且自 10:40 起已是「先探測、遞增間隔、連上才爬」）。
+- commit：見 git log（`feat: add autoMountNas manual mode for designer machines`）
+
 ### 2026-09-21 10:40 Asia/Taipei — NAS 監控：開機後 NAS 還沒連上時不再每分鐘跳連線視窗，連上之後才開始爬
 
 - 修改目的：使用者回報開機後 NAS 還沒連上時，畫面會很頻繁地一直跳出要求連線的視窗，希望改成「成功連上 NAS 才開始爬」。根因：`lib.requestMount()` 的「最多每分鐘一次」節流是存在**記憶體變數**（`lastMountAttemptAt`）裡，但排程是 crontab 每分鐘**重新啟動一個全新的 Node 行程**，變數每輪都歸零，等於每分鐘都執行一次 `open smb://…`，Finder 就每分鐘跳一次連線視窗；開機後網路／NAS 還沒就緒的那段時間最明顯。

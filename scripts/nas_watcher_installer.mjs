@@ -64,7 +64,9 @@ export function buildWatcherConfig(template, { mountRoot, installDir }) {
     mountRoot,
     stateFile: path.join(installDir, 'state', 'sync-state.json'),
     previewDir: path.join(installDir, 'state', 'previews'),
-    secretsFile: path.join(installDir, 'secrets.json')
+    secretsFile: path.join(installDir, 'secrets.json'),
+    // 設計師電腦不自動跳出連線／登入視窗，使用者自己在 Finder 連上 NAS 後才會開始掃描。
+    autoMountNas: false
   };
 }
 

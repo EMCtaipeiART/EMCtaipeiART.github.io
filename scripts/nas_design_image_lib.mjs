@@ -265,9 +265,16 @@ async function directoryExists_(target) {
   }
 }
 
+/** 設定檔 autoMountNas 明確寫 false 的電腦（安裝器替設計師電腦產生的設定）一律不自動開連線視窗，
+ * 由使用者自己在 Finder 連上 NAS，連上之後才會開始掃描；沒寫（例如主機）維持自動連線。 */
+export function autoMountEnabled(config) {
+  return config?.autoMountNas !== false;
+}
+
 /** 沒掛載時請 Finder 開啟連線（密碼存過 Keychain 就會自動連上）。最多每分鐘觸發一次，避免洗版。 */
 let lastMountAttemptAt = 0;
 export function requestMount(config, { now = Date.now(), minIntervalMs = 60000, run = null } = {}) {
+  if (!autoMountEnabled(config)) return false;
   const smbUrl = String(config?.smbUrl || '').trim();
   if (!smbUrl || now - lastMountAttemptAt < minIntervalMs) return false;
   lastMountAttemptAt = now;
@@ -345,7 +352,7 @@ export async function resetMountAttempts(file) {
 
 /**
  * 回傳 { mountRoot, reason }：mountRoot 有值代表已經掛載可以開始掃描；沒有值時 reason 是
- * 'no-smb-url'（設定檔沒有連線位址）、'unreachable'（NAS 還連不上，靜默等待）、'backoff'（還在
+ * 'manual'（這台電腦設定成手動連線，不會開視窗）、'no-smb-url'（設定檔沒有連線位址）、'unreachable'（NAS 還連不上，靜默等待）、'backoff'（還在
  * 上次嘗試後的等待間隔內）、'timeout'（請 Finder 連線了，但等不到掛載，多半是在等輸入密碼）。
  */
 export async function connectNasAndWait(config, {
@@ -357,6 +364,7 @@ export async function connectNasAndWait(config, {
   waitMs = 60000,
   pollMs = 2000
 } = {}) {
+  if (!autoMountEnabled(config)) return { mountRoot: '', reason: 'manual' };
   const smbUrl = String(config?.smbUrl || '').trim();
   if (!smbUrl) return { mountRoot: '', reason: 'no-smb-url' };
   if (!(await probe(nasHostFromSmbUrl(smbUrl), nasPortFromSmbUrl(smbUrl)))) return { mountRoot: '', reason: 'unreachable' };

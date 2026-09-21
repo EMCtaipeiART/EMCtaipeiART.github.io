@@ -54,6 +54,7 @@ test('each machine keeps its own mount path, state and previews, and shares ever
   assert.equal(config.dbJsonUrl, template.dbJsonUrl, '共用欄位沿用倉庫設定');
   assert.equal(config.appsScriptUploadUrl, template.appsScriptUploadUrl);
   assert.equal(config.maxDimension, 1600);
+  assert.equal(config.autoMountNas, false, '設計師電腦不自動跳出連線／登入視窗，手動連上 NAS 後才掃描');
 });
 
 test('the watcher runs on a timer and the folder picker stays alive', () => {
@@ -135,7 +136,8 @@ test('a missing NAS mount is reported in plain language and retried, instead of 
   const { mkdtemp, rm } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
   const path = (await import('node:path')).default;
-  const { resolveMountRoot, requestMount } = await import('../../scripts/nas_design_image_lib.mjs');
+  const lib0 = await import('../../scripts/nas_design_image_lib.mjs');
+  const { resolveMountRoot, requestMount } = lib0;
   const dir = await mkdtemp(path.join(tmpdir(), 'nas-mount-'));
   try {
     assert.equal(await resolveMountRoot({ mountRoot: dir, expectedVolumeName: '設計部' }), dir, '設定的路徑存在就直接用');
@@ -154,6 +156,14 @@ test('a missing NAS mount is reported in plain language and retried, instead of 
   assert.equal(requestMount({ smbUrl: 'smb://EMCNAS_Prod.local/設計部' }, { now: now + 1000, run }), false, '一分鐘內不重複觸發');
   assert.equal(requestMount({ smbUrl: 'smb://EMCNAS_Prod.local/設計部' }, { now: now + 61000, run }), true);
   assert.equal(requestMount({}, { now: now + 200000, run }), false, '沒有 smbUrl 就不做事');
+
+  // 手動模式（autoMountNas:false）：requestMount 與 connectNasAndWait 都完全不開視窗、不探測、不留紀錄。
+  const manual = { smbUrl: 'smb://EMCNAS_Prod.local/設計部', autoMountNas: false };
+  assert.equal(lib0.autoMountEnabled(manual), false);
+  assert.equal(lib0.autoMountEnabled({ smbUrl: 'x' }), true, '沒寫旗標維持自動連線');
+  const before = calls.length;
+  assert.equal(requestMount(manual, { now: now + 9_999_999, run }), false);
+  assert.equal(calls.length, before, '手動模式不呼叫 open');
 
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(picker, /const mountMissingMessage = `NAS 尚未掛載/);
@@ -192,6 +202,12 @@ test('NAS 沒連上時排程不會每分鐘跳連線視窗：先探測、有間�
   const sleep = async () => {};
   const t0 = 1_800_000_000_000;
   try {
+    // 0. 手動模式：連探測都不做，也不開視窗、不記紀錄
+    const manualResult = await lib.connectNasAndWait({ ...config, autoMountNas: false }, { stateFile, now: t0, probe: async () => { throw new Error('手動模式不該探測'); }, run, sleep });
+    assert.deepEqual(manualResult, { mountRoot: '', reason: 'manual' });
+    assert.equal(opens.length, 0);
+    await assert.rejects(access(stateFile));
+
     // 1. NAS 連不上（網路還沒好）：完全不開視窗、不留嘗試紀錄
     let result = await lib.connectNasAndWait(config, { stateFile, now: t0, probe: async () => false, run, sleep });
     assert.deepEqual(result, { mountRoot: '', reason: 'unreachable' });

@@ -116,6 +116,7 @@ async function runScan(args, configInput, configDir, stateFile) {
     if (!scanMountRoot) {
       const volumeName = config.expectedVolumeName || '設計部';
       const reasonText = {
+        manual: '這台電腦設定為手動連線（autoMountNas=false），不會自動跳出連線視窗；請先在 Finder 連上 NAS，連上後下一輪會自動開始掃描',
         'no-smb-url': '設定檔沒有 smbUrl，無法自動連線，請手動連上 NAS',
         unreachable: '連不到 NAS 主機（網路或 NAS 可能還沒就緒），靜默等待，沒有跳出連線視窗',
         backoff: '前幾次連線都沒成功，還在等待間隔內，這次不重複跳出連線視窗',

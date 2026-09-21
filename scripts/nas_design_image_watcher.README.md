@@ -352,6 +352,7 @@ const nasFolderPickerToken='<剛剛印出來的 pickerToken>';
 |---|---|
 | `mountRoot` | NAS 分享掛載後的本機根目錄 |
 | `smbUrl`／`expectedVolumeName` | 自動掛載用的連線位址與預期分享名稱 |
+| `autoMountNas` | 沒掛載時要不要自動請 Finder 連線。沒寫＝自動連線；寫 `false`＝手動模式，程式**不會**跳出連線／登入視窗，等你自己在 Finder 連上 NAS 後才開始掃描（安裝器替設計師電腦產生的設定預設就是 `false`） |
 | `maxDimension`／`jpegQuality` | 預覽圖最大邊長（預設 1600px）與 JPEG 品質（預設 70） |
 | `dbJsonUrl` | 案件資料庫的公開 JSON 網址，**必填**，案件清單完全靠它動態算出 |
 | `appsScriptUploadUrl` | Apps Script Web App 的 `.../exec` 網址，留空＝只掃描不上傳 |
