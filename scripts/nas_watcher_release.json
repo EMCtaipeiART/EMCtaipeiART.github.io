@@ -1,0 +1,11 @@
+{
+  "version": "20260921-1056",
+  "publishedAt": "2026-09-21T02:56:43.900Z",
+  "files": {
+    "nas_design_image_lib.mjs": "88563b0a7c8289c4d0505855f7cf57a4021fed9f3bb3286768159c4a827eb448",
+    "nas_design_image_watcher.config.json": "45b99b8fb7b4ac21872153df0f3d8da88d88c6c6b6f114e240619deffca37307",
+    "nas_design_image_watcher.mjs": "59b496fce9e7e347131d61b7e5c2016f0278295ee5fb514b448a7efa373384c4",
+    "nas_folder_picker_server.mjs": "1d873750a8bf0ceda8c75666f6fc2404b5c5a5887e17e88f76f39a77b845759f",
+    "nas_watcher_installer.mjs": "0c9b999ec16c56596627da521a4b2e822734a5cf1e18727cb5635a21d8596fcf"
+  }
+}
