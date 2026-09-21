@@ -248,6 +248,26 @@ test('NAS 沒連上時排程不會每分鐘跳連線視窗：先探測、有間�
   }
 });
 
+test('像素辦公室：鍵鼠閒置秒數讀得到就回報，讀不到回 null', async () => {
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+
+  // macOS：ioreg 的 HIDIdleTime 是奈秒。不能加 -d 限制深度，否則這個欄位根本不會印出來。
+  let seenArgs;
+  const ioreg = (cmd, args) => { seenArgs = { cmd, args }; return '    | | |   "HIDIdleTime" = 425000000000\n'; };
+  assert.equal(lib.currentIdleSeconds({ platform: 'darwin', execImpl: ioreg }), 425);
+  assert.equal(seenArgs.cmd, '/usr/sbin/ioreg');
+  assert.ok(!seenArgs.args.includes('-d'), 'ioreg 不能限制輸出深度');
+
+  // Windows：GetLastInputInfo 回毫秒。
+  assert.equal(lib.currentIdleSeconds({ platform: 'win32', execImpl: () => '90500\r\n' }), 90);
+
+  // 欄位不見、指令壞掉、數字不合理、其他作業系統：一律 null（心跳就不帶這個欄位）。
+  assert.equal(lib.currentIdleSeconds({ platform: 'darwin', execImpl: () => 'no such field' }), null);
+  assert.equal(lib.currentIdleSeconds({ platform: 'darwin', execImpl: () => { throw new Error('boom'); } }), null);
+  assert.equal(lib.currentIdleSeconds({ platform: 'win32', execImpl: () => 'not-a-number' }), null);
+  assert.equal(lib.currentIdleSeconds({ platform: 'linux', execImpl: () => '1' }), null);
+});
+
 test('像素辦公室：電腦開著就回報心跳，沒設定姓名或金鑰不送、失敗不影響爬蟲', async () => {
   const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
   const { tmpdir } = await import('node:os');
@@ -262,18 +282,23 @@ test('像素辦公室：電腦開著就回報心跳，沒設定姓名或金鑰�
   // 送出的格式要跟遊戲／Worker 一致：POST text/plain 的 JSON，action=pixelOfficeHeartbeat。
   let seen;
   const okFetch = async (url, init) => { seen = { url, init }; return { json: async () => ({ ok: true, status: 'overtime' }) }; };
-  assert.deepEqual(await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 'secret' }, { fetchImpl: okFetch }), { sent: true, status: 'overtime' });
+  const idle = seconds => () => seconds;
+  assert.deepEqual(await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 'secret' }, { fetchImpl: okFetch, idleImpl: idle(42) }), { sent: true, status: 'overtime' });
   assert.equal(seen.url, lib.DEFAULT_OFFICE_API_URL);
   assert.equal(seen.init.method, 'POST');
   assert.match(seen.init.headers['Content-Type'], /^text\/plain/);
-  assert.deepEqual(JSON.parse(seen.init.body), { action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 'secret' });
-  await lib.sendPresenceHeartbeat({ designerName: 'Noise', officeApiUrl: 'https://example.test/api' }, { serviceKey: 's' }, { fetchImpl: okFetch });
+  assert.deepEqual(JSON.parse(seen.init.body), { action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 'secret', idleSeconds: 42 });
+  await lib.sendPresenceHeartbeat({ designerName: 'Noise', officeApiUrl: 'https://example.test/api' }, { serviceKey: 's' }, { fetchImpl: okFetch, idleImpl: idle(0) });
   assert.equal(seen.url, 'https://example.test/api');
 
+  // 查不到閒置時間（不支援的作業系統、指令壞掉）就整個欄位不帶，後端只會當成「電腦開著」，不會誤判成用餐。
+  await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: okFetch, idleImpl: () => null });
+  assert.deepEqual(JSON.parse(seen.init.body), { action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 's' });
+
   // 後端拒絕、沒網路：只回報原因，不丟例外（爬蟲照常掃描）。
-  const rejected = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => ({ status: 200, json: async () => ({ ok: false, error: '缺少或錯誤的服務金鑰' }) }) });
+  const rejected = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => ({ status: 200, json: async () => ({ ok: false, error: '缺少或錯誤的服務金鑰' }) }), idleImpl: () => null });
   assert.deepEqual(rejected, { sent: false, reason: 'rejected', message: '缺少或錯誤的服務金鑰' });
-  const offline = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => { throw new Error('fetch failed'); } });
+  const offline = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => { throw new Error('fetch failed'); }, idleImpl: () => null });
   assert.equal(offline.sent, false);
   assert.equal(offline.reason, 'network');
 

@@ -3974,4 +3974,81 @@ describe('Pixel Office shared state', () => {
       vi.useRealTimers();
     }
   });
+
+  it('shows 用餐 at lunch time when the computer is idle, and 下班 on weekends and public holidays', async () => {
+    const key = 'test-nas-watcher-key';
+    const at = (iso: string) => vi.setSystemTime(new Date(iso));
+    const heartbeat = (idleSeconds?: number) => api({ action: 'pixelOfficeHeartbeat', name: 'Amber', serviceKey: key, ...(idleSeconds === undefined ? {} : { idleSeconds }) });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      // 2026-09-21 是星期一。台北 = UTC+8。
+      // 中午 12:30 還在打字（閒置 30 秒）：照樣在座。
+      at('2026-09-21T04:30:00Z');
+      expect(await heartbeat(30)).toMatchObject({ status: 'present' });
+
+      // 中午 12:31 已經離開座位五分鐘：用餐。
+      at('2026-09-21T04:31:00Z');
+      expect(await heartbeat(5 * 60)).toMatchObject({ status: 'lunch' });
+
+      // 回到座位：自動回到在座，不用手動點。
+      at('2026-09-21T04:32:00Z');
+      expect(await heartbeat(10)).toMatchObject({ status: 'present' });
+
+      // 兩點之後就算閒置著也不算用餐（午休結束了）。
+      at('2026-09-21T06:05:00Z');
+      expect(await heartbeat(30 * 60)).toMatchObject({ status: 'present' });
+
+      // 爬蟲沒回報閒置秒數（舊版本或查不到）時，中午也只會是在座，不會誤判成用餐。
+      at('2026-09-21T04:40:00Z');
+      expect(await heartbeat()).toMatchObject({ status: 'present' });
+
+      // 午休時間電腦關機（超過門檻沒心跳）就是下班，不是用餐。
+      at('2026-09-21T04:50:00Z');
+      const people = (await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[];
+      expect(people.find(person => person.name === 'Amber')?.status).toBe('offwork');
+
+      // 星期六：電腦開著也是下班。
+      at('2026-09-26T02:00:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+
+      // 國定假日（9/28 教師節，星期一）：電腦開著也是下班。
+      at('2026-09-28T02:00:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+
+      // 假日的晚上也不會變成加班。
+      at('2026-09-28T12:00:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'offwork' });
+
+      // 收假後的星期二早上：自動回到在座。
+      at('2026-09-29T01:00:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'present' });
+
+      // 手動指定只在同一個時段內有效。晚上手動點在座（規則說是加班）：當晚電腦開著都維持在座。
+      at('2026-09-29T11:30:00Z');
+      await heartbeat(5);
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'present' } });
+      at('2026-09-29T11:31:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'present', changed: false });
+
+      // 隔天白天時段換了：手動失效，交還給自動。
+      at('2026-09-30T01:00:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'present' });
+      at('2026-09-30T01:01:00Z');
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'overtime' } });
+      at('2026-09-30T01:02:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'overtime', changed: false });
+      at('2026-09-30T11:30:00Z');
+      for (const minute of ['26', '27', '28', '29']) { at(`2026-09-30T11:${minute}:00Z`); await heartbeat(5); }
+      at('2026-09-30T11:31:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
+
+      // 廁所這類「人離開座位」的手動狀態不受時段影響，維持到電腦關機為止。
+      at('2026-09-30T11:32:00Z');
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'toilet' } });
+      at('2026-09-30T11:33:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'toilet', changed: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -20,18 +20,60 @@ import type {
 const STATE_KEY = 'primary';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
-const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'offwork', 'toilet', 'abroad', 'out'];
+const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'abroad', 'out'];
+// 電腦開著時由時間決定、不需要手動點的狀態。其餘（廁所／出國／公出）一律尊重手動指定。
+const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'offwork'];
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
-// 就當作電腦關機（或睡眠），把「在座／加班／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
+// 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
 const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
 // 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
 const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
 const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
+// 午休：12:00～14:00 電腦開著、但這段時間沒在操作（鍵鼠閒置超過門檻）就顯示用餐。
+const PIXEL_OFFICE_LUNCH_START_HOUR = 12;
+const PIXEL_OFFICE_LUNCH_END_HOUR = 14;
+const PIXEL_OFFICE_LUNCH_IDLE_SECONDS = 5 * 60;
+// 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
+// 每年行政院公布新行事曆之後要補一年上去，來源：
+// https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/<西元年>.json（取 isHoliday 為 true 且 description 不是空字串的日期）。
+// 沒收錄到的年份不會出錯，只是那一年的國定假日要自己點「下班」，週末照樣自動判斷。
+const PIXEL_OFFICE_HOLIDAYS: Record<string, string[]> = {
+  '2026': ['20260101', '20260216', '20260217', '20260218', '20260219', '20260220', '20260227', '20260228',
+    '20260403', '20260404', '20260405', '20260406', '20260501', '20260619', '20260925', '20260928',
+    '20261009', '20261010', '20261025', '20261026', '20261225'],
+  '2027': ['20270101', '20270204', '20270205', '20270206', '20270207', '20270208', '20270209', '20270210',
+    '20270228', '20270301', '20270404', '20270405', '20270406', '20270430', '20270501', '20270609',
+    '20270915', '20270928', '20271010', '20271011', '20271025', '20271224', '20271225', '20271231']
+};
 
-/** 電腦開著時這個時間點應該顯示的狀態：晚上七點之後是加班，其餘是在座。 */
-export function pixelOfficeWorkStatus(nowMs: number): 'present' | 'overtime' {
-  const hour = new Date(nowMs + 8 * 60 * 60 * 1000).getUTCHours();
-  return hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR ? 'overtime' : 'present';
+/** 這個時間點在台北是幾號、星期幾、幾點。 */
+function taipeiClock(nowMs: number): { date: string; weekday: number; hour: number } {
+  const t = new Date(nowMs + 8 * 60 * 60 * 1000);
+  const date = `${t.getUTCFullYear()}${String(t.getUTCMonth() + 1).padStart(2, '0')}${String(t.getUTCDate()).padStart(2, '0')}`;
+  return { date, weekday: t.getUTCDay(), hour: t.getUTCHours() };
+}
+
+/** 台北時間的這一天要不要上班：週六日與國定假日都不用。 */
+export function pixelOfficeIsWorkday(nowMs: number): boolean {
+  const { date, weekday } = taipeiClock(nowMs);
+  if (weekday === 0 || weekday === 6) return false;
+  return !(PIXEL_OFFICE_HOLIDAYS[date.slice(0, 4)] || []).includes(date);
+}
+
+/**
+ * 電腦開著時這個時間點應該顯示的狀態。
+ * 週六日與國定假日一律下班（就算電腦開著）；平日晚上七點之後還開著是加班；中午 12～14 點電腦開著
+ * 但鍵鼠閒置超過門檻（人去吃飯了）是用餐；其餘是在座。idleSeconds 沒帶（爬蟲版本較舊、或作業系統
+ * 查不到閒置時間）就不會判成用餐。
+ */
+export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'present' | 'overtime' | 'lunch' | 'offwork' {
+  if (!pixelOfficeIsWorkday(nowMs)) return 'offwork';
+  const { hour } = taipeiClock(nowMs);
+  if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
+  const idle = Number(idleSeconds);
+  if (hour >= PIXEL_OFFICE_LUNCH_START_HOUR && hour < PIXEL_OFFICE_LUNCH_END_HOUR
+    && Number.isFinite(idle) && idle >= PIXEL_OFFICE_LUNCH_IDLE_SECONDS) return 'lunch';
+  return 'present';
 }
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
 const PIXEL_OFFICE_PHOTO_MAX_CHARS = 900_000;
@@ -1215,7 +1257,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return Number(row?.v) || 0;
   }
 
-  /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人，「在座／加班／廁所」改成下班。
+  /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人，「在座／加班／用餐／廁所」改成下班。
    * 放在每次讀取狀態時檢查（不需要排程）：遊戲每 3 秒輪詢一次，關機後幾分鐘內就會被任何一個打開遊戲的人觸發。
    * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
   private pixelOfficeApplyOffline(nowMs: number): void {
@@ -1228,7 +1270,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       let state: Row = {};
       try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
       const status = text(state.status) || 'present';
-      if (!['present', 'overtime', 'toilet'].includes(status)) continue;
+      if (!['present', 'overtime', 'lunch', 'toilet'].includes(status)) continue;
       if (state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
       state.status = 'offwork';
       state.statusSource = 'auto';
@@ -1240,7 +1282,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 設計師電腦上的 NAS 爬蟲每分鐘回報「這台電腦開著」。用爬蟲既有的服務金鑰驗證（跟上傳設計圖同一把）。
    * - 剛開機／剛醒來（上一次心跳已經超過離線門檻，或從來沒有過）：不管原本是什麼狀態，一律改成「在座」或「加班」。
-   * - 持續開著：只有在「自動」狀態（沒被使用者手動指定）的在座↔加班會隨時間切換；使用者手動指定的狀態維持到電腦下次關機。 */
+   * - 持續開著：沒被手動指定過的在座／加班／用餐／下班會隨時間互相切換；手動指定的狀態維持到電腦下次關機，
+ *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
   private async pixelOfficeHeartbeat(payload: ApiPayload): Promise<ApiResult> {
     const apiKey = text(payload.serviceKey || payload.apiKey);
     const authorized = Boolean(apiKey && this.env.NAS_WATCHER_API_KEY) && await secureEqual(apiKey, this.env.NAS_WATCHER_API_KEY);
@@ -1256,14 +1299,19 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const lastSeen = Number(existing?.last_seen) || 0;
     const wasOnline = lastSeen > 0 && nowMs - lastSeen <= PIXEL_OFFICE_OFFLINE_MS;
     const current = text(state.status) || 'present';
-    const desired = pixelOfficeWorkStatus(nowMs);
+    const idleSeconds = Number(payload.idleSeconds);
+    const desired = pixelOfficeWorkStatus(nowMs, Number.isFinite(idleSeconds) ? idleSeconds : undefined);
     let next = current;
     let source = text(state.statusSource);
+    // 手動指定只在同一個時段內有效：時間規則一換班（白天↔晚上↔假日，不含用餐這種同一時段內的來回）
+    // 就交還給自動。沒有記錄過時段的舊資料一律視為過期，這樣升級之後不會有人卡在舊狀態。
+    const manualExpired = source === 'manual' && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
     if (!wasOnline) {
       next = desired;
       source = 'auto';
-    } else if (['present', 'overtime'].includes(current) && source !== 'manual') {
+    } else if (manualExpired || (PIXEL_OFFICE_AUTO_STATUSES.includes(current) && source !== 'manual')) {
       next = desired;
+      if (manualExpired) source = 'auto';
     }
     const changed = next !== current || source !== text(state.statusSource) || !existing;
     if (changed) {
@@ -1320,8 +1368,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const status = text(patch.status);
       if (!PIXEL_OFFICE_STATUSES.includes(status)) throw new Error('狀態不正確');
       state.status = status;
-      // 使用者在遊戲裡手動指定：電腦持續開著的期間不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
+      // 使用者在遊戲裡手動指定：在同一個時段內不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
+      // 記下指定當下「時間規則算出來的狀態」，跨到下一個時段（例如從白天到晚上、或隔天）就交還給自動，
+      // 免得昨晚手動點的加班隔天中午還掛在那裡。
       state.statusSource = 'manual';
+      state.statusBaseline = pixelOfficeWorkStatus(Date.now());
       state.statusAt = Date.now();
     }
     if ('x' in patch || 'y' in patch) {

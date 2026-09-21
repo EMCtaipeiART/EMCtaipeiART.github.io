@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 15:00 Asia/Taipei — 像素辦公室：黑眼圈改對齊黑色眼珠；出勤狀態加上用餐、週末與國定假日
+
+- 修改目的：使用者回報加班濾鏡的黑眼圈位置不對（Machi 偏差最明顯），要求定位在**黑色眼珠**下方且左右對稱；另外要求出勤狀態改由時間自動判斷：平日超過 19:00 還在用電腦＝加班、18:00 之後電腦關機＝下班、12:00～14:00 電腦開著但沒在操作＝用餐、週六日與國定假日一律下班；並確認這台電腦（Machi）有沒有在回報狀態。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/app.js`、`EMC-ART-Pixel-Office/dist/index.html`、`EMC-ART-Pixel-Office/dist/style.css`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`scripts/nas_design_image_lib.mjs`、`backend/test/nas-installer.test.mjs`、`backend/test/pixel-office-overtime-filter.test.mjs`。
+- 影響功能：
+  1. **黑眼圈定位**：逐張量出五位角色黑色眼珠的位置——中心一律在 ±12（側面 +16），但下緣每張不同（Machi 45、Noise 50、其餘 47），因為 Machi 的眼睛畫得比較高、Noise 戴帽子壓低了臉。新增 `EYE_PUPIL_BOTTOM` 逐角色記錄，`drawOvertimeFilter()` 改收角色 index，黑眼圈從該角色的眼珠下緣往下畫；左右兩團共用同一組尺寸所以必定對稱。原本是把整格濾鏡等比蓋上臉，上緣壓進眼球、寬度約是眼珠兩倍、外緣溢出到頭髮和耳朵。
+  2. **自動出勤狀態**：`pixelOfficeWorkStatus(nowMs, idleSeconds)` 改寫成單一判斷來源——週六日與國定假日（`PIXEL_OFFICE_HOLIDAYS`，內建 2026／2027 兩年）一律下班；平日 19:00～隔天 06:00 加班；平日 12:00～14:00 且鍵鼠閒置滿 5 分鐘是用餐；其餘在座。新增狀態 `lunch`（用餐，`bowlIconCanvas()` 程式繪製的碗＋筷子，算離席所以桌面淨空成灰階空桌）。心跳持續進來時，沒被手動指定過的在座／加班／用餐／下班會隨時間互相切換（之前只有在座↔加班，而且只在剛開機時判斷一次，所以狀態會卡住）。
+  3. **閒置偵測**：爬蟲新增 `currentIdleSeconds()`（macOS 讀 `ioreg` 的 `HIDIdleTime`，Windows 讀 `GetLastInputInfo`），心跳多帶一個 `idleSeconds`。查不到就整個欄位不送，後端不會判成用餐。
+  4. **前端的加班濾鏡**也套用平日判斷（`TAIWAN_HOLIDAYS`）：週末與國定假日就算是「在座」也不會被畫成加班。狀態按鈕變七顆，最後一列只剩一顆時用 CSS 移到中間欄。
+- 風險區塊：①**Worker 必須先部署**，前台才能送出 `lunch`（舊 Worker 會回「狀態不正確」）。②國定假日是內建表，2028 年起要自己補（`PIXEL_OFFICE_HOLIDAYS` 與前端 `TAIWAN_HOLIDAYS` 各一份，來源見 HANDOFF）；沒收錄到的年份只用週末判斷，不會出錯。③「用餐」只認「電腦開著但閒置」；午休把電腦關機或讓它睡著仍然是下班。④19:00 之後只看電腦開不開，不看閒置——忘了關機就會一直顯示加班到關機為止（維持使用者描述的規則）。⑤閒置偵測只支援 macOS 與 Windows，其他系統不帶欄位、永遠不會顯示用餐。⑥黑眼圈的眼珠座標是對著目前這版 `sprites-packed.webp` 量的，之後換人物圖要重新量並更新 `EYE_PUPIL_BOTTOM`（測試會擋住不一致）。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 166/166（黑眼圈 5 項改寫成對齊眼珠、左右對稱、寬度不溢出臉頰、逐角色高度、鬼火來源不含黑眼圈；爬蟲閒置偵測 6 種情境與心跳帶不帶 `idleSeconds`）；`worker` vitest 87/87（新增 1 項：中午打字中＝在座、閒置五分鐘＝用餐、回座＝在座、兩點後閒置也不算用餐、沒帶 `idleSeconds` 不誤判、午休關機＝下班、星期六與 9/28 教師節就算開著也是下班、假日晚上不算加班、收假後回在座）；`tsc --noEmit` 通過。黑眼圈先用同一組公式離線疊合五位角色的正面與側面逐一比對，再在瀏覽器實機確認正面、側面與頭像三種情況；用餐狀態在本機實機確認（桌面淨空、桌上顯示碗、面板顯示「用餐中」）。心跳現況：這台主機的 `local.json` 已設 `designerName: Machi`，cron 每分鐘執行、`sendPresenceHeartbeat` 實測回 `{sent:true}`，本機閒置秒數讀得到。未做：沒有實際等到 12:00～14:00 讓線上自己切成用餐，也沒有真的跨到週末驗證。
+- 部署狀態：Worker 需要部署才生效（`cd worker && pnpm run deploy`）；前台遊戲 git push 後 GitHub Pages 自動生效；爬蟲是本機工具，這台 `git pull` 後下一分鐘 cron 就用新版，設計師電腦由自動更新機制發布。
+- commit：見 git log
+
 ### 2026-09-21 13:10 Asia/Taipei — 像素辦公室：加班黑眼圈對齊、鬼火移到頭像兩側、移除場景月亮
 
 - 修改目的：使用者回報黑眼圈沒有貼齊眼睛下緣、鬼火被桌上螢幕遮住，並要求移除場景月亮、把「加班中」放到桌面中央。

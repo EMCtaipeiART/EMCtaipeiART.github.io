@@ -298,23 +298,53 @@ export function requestMount(config, { now = Date.now(), minIntervalMs = 60000, 
 export const DEFAULT_OFFICE_API_URL = 'https://machi-design-api.machi-chen.workers.dev/api';
 
 /**
- * 回報「這台電腦開著」給像素辦公室遊戲：遊戲會據此把這位設計師顯示成在座（晚上七點後是加班），
+ * 回報「這台電腦開著」＋鍵鼠閒置了幾秒給像素辦公室遊戲：遊戲會據此把這位設計師顯示成在座
+ * （晚上七點後是加班，中午 12～14 點閒置著是用餐），
  * 超過 5 分鐘沒收到就當作關機／睡眠，自動顯示下班。排程每分鐘都會跑一次，所以不論 NAS 有沒有連上、
  * 有沒有案件要掃描都要送（電腦開著本身就是重點），因此放在 watcher 一開始、任何提早結束的判斷之前。
  * 沒設定 designerName（沒有安裝到設計師電腦、或共用電腦）就完全不送；失敗（沒網路、後端暫時掛掉）
  * 靜默略過，不影響掃描——最多就是遊戲晚幾分鐘才更新。
  */
-export async function sendPresenceHeartbeat(config, secrets, { fetchImpl = globalThis.fetch, timeoutMs = 4000 } = {}) {
+/**
+ * 鍵盤滑鼠閒置了幾秒。遊戲用這個判斷午休：12～14 點電腦開著、但人已經離開座位去吃飯。
+ * macOS 讀 IOHIDSystem 的 HIDIdleTime（奈秒），Windows 用 GetLastInputInfo（毫秒）。
+ * 查不到（其他作業系統、指令不在、逾時）就回 null——後端收不到這個欄位就不會判成用餐，
+ * 維持原本的在座，不會誤判。
+ */
+export function currentIdleSeconds({ platform = process.platform, execImpl = execFileSync } = {}) {
+  try {
+    if (platform === 'darwin') {
+      const stdout = String(execImpl('/usr/sbin/ioreg', ['-c', 'IOHIDSystem'], { encoding: 'utf8', timeout: 3000, maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }));
+      // HIDIdleTime 在 IOHIDSystem 底下好幾層，不能用 -d 限制深度，否則整個欄位都不會印出來。
+      const match = stdout.match(/"HIDIdleTime"\s*=\s*(\d+)/);
+      if (!match) return null;
+      return Math.floor(Number(match[1]) / 1e9);
+    }
+    if (platform === 'win32') {
+      const script = '$s=\'[DllImport("user32.dll")]public static extern bool GetLastInputInfo(ref LASTINPUTINFO i);[StructLayout(LayoutKind.Sequential)]public struct LASTINPUTINFO{public uint cbSize;public uint dwTime;}\';'
+        + '$t=Add-Type -MemberDefinition $s -Name W -Namespace I -PassThru;$i=New-Object I.W+LASTINPUTINFO;$i.cbSize=8;[void]$t::GetLastInputInfo([ref]$i);'
+        + '[Environment]::TickCount - $i.dwTime';
+      const stdout = String(execImpl('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] }));
+      const ms = Number(String(stdout).trim());
+      if (!Number.isFinite(ms) || ms < 0) return null;
+      return Math.floor(ms / 1000);
+    }
+  } catch { return null; }
+  return null;
+}
+
+export async function sendPresenceHeartbeat(config, secrets, { fetchImpl = globalThis.fetch, timeoutMs = 4000, idleImpl = currentIdleSeconds } = {}) {
   const name = String(config?.designerName || '').trim();
   if (!name) return { sent: false, reason: 'no-designer-name' };
   const serviceKey = String(secrets?.serviceKey || '').trim();
   if (!serviceKey) return { sent: false, reason: 'no-service-key' };
   const url = String(config?.officeApiUrl || DEFAULT_OFFICE_API_URL).trim();
+  const idleSeconds = idleImpl();
   try {
     const response = await fetchImpl(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({ action: 'pixelOfficeHeartbeat', name, serviceKey }),
+      body: JSON.stringify({ action: 'pixelOfficeHeartbeat', name, serviceKey, ...(idleSeconds === null ? {} : { idleSeconds }) }),
       signal: AbortSignal.timeout(timeoutMs)
     });
     const data = await response.json().catch(() => ({}));

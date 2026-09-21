@@ -8,14 +8,19 @@ let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackS
 let levelUpdatedAt='',levelIsLive=false;
 const stations=[{x:548,y:355,type:0,name:'Leona'},{x:768,y:355,type:0,name:'Amber'},{x:988,y:355,type:1,name:'Noise'},{x:548,y:695,type:2,name:''},{x:768,y:695,type:0,name:'Anna'},{x:988,y:695,type:0,name:'Machi'}];
 const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'angry',symbol:'burst',label:'怒',text:'爆炸氣噗噗'},{id:'sad',symbol:'drop',label:'哀',text:'大水滴低落中'},{id:'joy',symbol:'heart',label:'樂',text:'愛心滿格'}];
-const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
+const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
 const workingStatusIds=['present','overtime'];const isAway=p=>!workingStatusIds.includes(p.status);
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
-let taipeiHour=-1,taipeiHourCheckedAt=0;
-function currentTaipeiHour(){const now=Date.now();if(now-taipeiHourCheckedAt>30000||taipeiHour<0){taipeiHourCheckedAt=now;taipeiHour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));}return taipeiHour;}
+// 台灣的國定假日與補假（台北時間 YYYYMMDD）。後端 database-coordinator.ts 有同一份，兩邊都要更新——
+// 後端負責真的改狀態，這裡只負責「沒裝爬蟲的人」畫面上的加班濾鏡。來源與更新方式見後端那份的註解。
+const TAIWAN_HOLIDAYS={2026:['20260101','20260216','20260217','20260218','20260219','20260220','20260227','20260228','20260403','20260404','20260405','20260406','20260501','20260619','20260925','20260928','20261009','20261010','20261025','20261026','20261225'],2027:['20270101','20270204','20270205','20270206','20270207','20270208','20270209','20270210','20270228','20270301','20270404','20270405','20270406','20270430','20270501','20270609','20270915','20270928','20271010','20271011','20271025','20271224','20271225','20271231']};
+let taipeiClock=null,taipeiClockCheckedAt=0;
+function currentTaipeiClock(){const now=Date.now();if(now-taipeiClockCheckedAt>30000||!taipeiClock){taipeiClockCheckedAt=now;const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',weekday:'short',hourCycle:'h23'}).formatToParts(new Date(now)).map(part=>[part.type,part.value]));const date=`${parts.year}${parts.month}${parts.day}`;taipeiClock={hour:Number(parts.hour),date,workday:!['Sat','Sun'].includes(parts.weekday)&&!(TAIWAN_HOLIDAYS[parts.year]||[]).includes(date)};}return taipeiClock;}
+const currentTaipeiHour=()=>currentTaipeiClock().hour;
 // 加班濾鏡只是畫面的「有效狀態」，不寫回後端；實際出勤狀態仍由電腦心跳與手動指定決定。
-function isOvertime(p){const hour=currentTaipeiHour();return p.status==='overtime'||p.status==='present'&&(overtimePreview||hour>=19||hour<6);}
+// 週末與國定假日不套用（那幾天電腦開著也算下班，不是加班）。
+function isOvertime(p){if(p.status==='overtime')return true;if(p.status!=='present')return false;if(overtimePreview)return true;const clock=currentTaipeiClock();return clock.workday&&(clock.hour>=19||clock.hour<6);}
 const effectiveStatusId=p=>isOvertime(p)?'overtime':p.status;
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=0,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo=typeof s.photo==='string'&&s.photo.startsWith('data:image/')?s.photo:'';if(['4','5'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
@@ -29,21 +34,24 @@ function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.
 // sprites-packed.webp：5 列（Leona、Amber、Noise、Anna、Machi）× 3 欄（正面、右側面、背面），每欄寬 140，列高沿用原圖。
 const rowTops=[0,192,381,572,757], rowHeights=[192,189,191,185,189], colLefts=[0,140,280];
 function sprite(context,index,dir,x,y,w=98,h=142){const col=dir==='up'?2:dir==='left'||dir==='right'?1:0;context.save();context.imageSmoothingEnabled=false;context.translate(x,y);if(dir==='left')context.scale(-1,1);context.drawImage(sheet,colLefts[col],rowTops[index],140,rowHeights[index],-w/2,-h,w,h);context.restore();}
+// 黑色眼珠的下緣（人物高 142 時距頭頂多少），逐格量出來的：黑眼圈就從這裡往下畫。五張臉的眼珠高度
+// 不一樣——Machi 的眼睛畫得比較高、Noise 戴帽子所以比較低——共用一個值就會有人對不準。
+const EYE_PUPIL_BOTTOM=[47,47,50,47,45];// Leona、Amber、Noise、Anna、Machi
 // overtime-filter.png：正面、側面、背面三格（每格 362）。黑眼圈與鬼火分層繪製。
-// 黑眼圈：原圖正面兩團（x116/x200，y122 起高 28）、側面一團（x190，y124 起高 28），各自貼到眼睛正下方。
-// 五位角色的眼睛下緣都落在人物高度的 46~48/142，單眼寬約 10、眼睛中心在 ±11（側面 +11），所以黑眼圈
-// 取寬 14 並從 47/142 處往下畫，才會貼在眼皮底下，不會蓋住眼球，也不會外擴到頭髮或耳朵。
+// 黑眼圈：原圖正面兩團（x116/x200，y122 起高 28）、側面一團（x190，y124 起高 28），各自貼到眼珠正下方。
+// 眼珠中心固定在 ±12（側面 +16），左右用同一組尺寸，所以兩邊一定對稱；寬度取 14（側面 12）比眼珠的
+// 10 略寬一點，外緣才不會壓到頭髮或耳朵。
 // 鬼火：原圖從 y160 才開始，來源要從 156 取（不是 145），否則黑眼圈下緣會被當成鬼火重畫在頭頂兩側。
-function drawOvertimeFilter(context,dir,feetX,feetY,height=142,compact=false){if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
+function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=false){if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
   // 兩團鬼火分開畫，中心約在頭像左右 68 px。
   // 只保留頭像外側的鬼火區域，避免鬼火內側疊到臉上。
   context.save();context.beginPath();context.rect(-outer,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell,flameTop,half,flameHeight,leftX,flameY,flameWidth,flameDrawHeight);context.restore();
   context.save();context.beginPath();context.rect(inner,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell+half,flameTop,half,flameHeight,rightX,flameY,flameWidth,flameDrawHeight);context.restore();
   // 背面原稿沒有黑眼圈；正面兩團、側面一團，分別對齊各自的眼睛中心。
-  if(frame!==2){const bags=frame===1?[[190,124,52,28,11]]:[[116,122,50,28,-11.5],[200,122,51,28,11]],faceScale=(compact?95/98:1)*scale,bagY=feetY-(142-47)*scale;
-    for(const[sx,sy,sw,sh,cx]of bags){const dw=14*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
+  if(frame!==2){const bags=frame===1?[[190,124,52,28,16,12]]:[[116,122,50,28,-12,14],[200,122,51,28,12,14]],faceScale=(compact?95/98:1)*scale,bagY=feetY-(142-EYE_PUPIL_BOTTOM[index])*scale;
+    for(const[sx,sy,sw,sh,cx,bagWidth]of bags){const dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
-function portrait(context,i,showOvertime=true){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,'down',x,y,144,true);}}
+function portrait(context,i,showOvertime=true){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
 function select(i){selected=i;keys.clear();$('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);}
 function numberText(value){return Number(value).toLocaleString('zh-TW',{maximumFractionDigits:1});}
 function levelTitle(level){if(level>=50)return '設計神話';if(level>=40)return '傳奇設計師';if(level>=30)return '設計大師';if(level>=20)return '設計菁英';if(level>=10)return '資深設計師';return '設計新秀';}
@@ -98,7 +106,7 @@ const symbolPalettes={sun:['#e8a528','#ffe070'],burst:['#d94b3d','#ff9b45'],drop
 function drawPixelSymbol(context,symbol,cx,cy,scale=4){const pattern=pixelSymbols[symbol],palette=symbolPalettes[symbol]||['#263d59','#fff'];if(!pattern)return;const width=pattern[0].length,height=pattern.length,startX=Math.round(cx-width*scale/2),startY=Math.round(cy-height*scale/2);context.save();context.imageSmoothingEnabled=false;pattern.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='0')return;context.fillStyle=palette[Number(cell)-1];context.fillRect(startX+x*scale,startY+y*scale,scale,scale);}));context.restore();}
 const symbolCells={sun:0,burst:1,drop:2,heart:3,person:4,power:5,toilet:6,plane:7,briefcase:8};
 // icons-v3.webp：3×3 正方形格子（每格 192×192，原檔 icons-v3.png 每格 256），每個圖示已裁到實際範圍並置中留白，不會被切到或變形。
-function drawSymbol(context,symbol,cx,cy,size=48){if(symbol==='moon'){drawMoonIcon(context,cx,cy,size);return;}const index=symbolCells[symbol];if(iconSheet.complete&&iconSheet.naturalWidth&&index!==undefined){const cell=iconSheet.naturalWidth/3,row=Math.floor(index/3),column=index%3;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(iconSheet,column*cell,row*cell,cell,cell,cx-size/2,cy-size/2,size,size);context.restore();return;}drawPixelSymbol(context,symbol,cx,cy,Math.max(2,Math.floor(size/10)));}
+function drawSymbol(context,symbol,cx,cy,size=48){if(symbol==='moon'){drawMoonIcon(context,cx,cy,size);return;}if(symbol==='bowl'){drawBowlIcon(context,cx,cy,size);return;}const index=symbolCells[symbol];if(iconSheet.complete&&iconSheet.naturalWidth&&index!==undefined){const cell=iconSheet.naturalWidth/3,row=Math.floor(index/3),column=index%3;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(iconSheet,column*cell,row*cell,cell,cell,cx-size/2,cy-size/2,size,size);context.restore();return;}drawPixelSymbol(context,symbol,cx,cy,Math.max(2,Math.floor(size/10)));}
 // 加班圖示（月亮＋星星）：icons-v3 圖集 3×3 已經排滿，這個圖示改用程式繪製。先畫在一張離屏畫布上（月牙靠
 // destination-out 挖出來，不會誤刪目標畫布上已經畫好的桌子），再整張貼上；每種尺寸只畫一次。
 const moonIconCache=new Map();
@@ -112,6 +120,20 @@ function moonIconCanvas(size){const px=Math.max(8,Math.round(size)),key=px;if(mo
   star(px*.78,px*.28,px*.13);star(px*.86,px*.62,px*.08);
   moonIconCache.set(key,c);return c;}
 function drawMoonIcon(context,cx,cy,size){context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(moonIconCanvas(size),cx-size/2,cy-size/2,size,size);context.restore();}
+// 用餐圖示（一碗白飯＋一雙筷子）：跟月亮一樣，圖集已經排滿九格，改用程式繪製並快取每種尺寸。
+const bowlIconCache=new Map();
+function bowlIconCanvas(size){const px=Math.max(8,Math.round(size));if(bowlIconCache.has(px))return bowlIconCache.get(px);const scale=2,c=document.createElement('canvas');c.width=c.height=px*scale;const g=c.getContext('2d');g.scale(scale,scale);g.lineJoin='round';g.lineCap='round';const cx=px*.5,rimY=px*.52,rimW=px*.74,line=Math.max(1.5,px*.05);
+  // 筷子先畫，斜靠在碗後面。
+  g.strokeStyle='#a9722f';g.lineWidth=line*1.3;[0,px*.09].forEach(offset=>{g.beginPath();g.moveTo(cx+px*.06+offset,rimY-px*.04);g.lineTo(cx+px*.3+offset,px*.12);g.stroke();});
+  // 白飯（碗口上方的圓弧）。
+  g.fillStyle='#fdfdfa';g.strokeStyle='#8f9a93';g.lineWidth=line;g.beginPath();g.ellipse(cx,rimY,rimW*.42,px*.15,0,Math.PI,0);g.fill();g.stroke();
+  // 碗身。
+  const bowl=g.createLinearGradient(0,rimY,0,px*.86);bowl.addColorStop(0,'#5d86b8');bowl.addColorStop(1,'#31507d');
+  g.fillStyle=bowl;g.beginPath();g.moveTo(cx-rimW/2,rimY);g.lineTo(cx+rimW/2,rimY);g.quadraticCurveTo(cx+rimW*.38,px*.87,cx,px*.87);g.quadraticCurveTo(cx-rimW*.38,px*.87,cx-rimW/2,rimY);g.closePath();g.fill();
+  g.strokeStyle='#1b2c42';g.lineWidth=line;g.stroke();
+  g.strokeStyle='#eaf1f8';g.lineWidth=line*1.2;g.beginPath();g.moveTo(cx-rimW/2,rimY);g.lineTo(cx+rimW/2,rimY);g.stroke();
+  bowlIconCache.set(px,c);return c;}
+function drawBowlIcon(context,cx,cy,size){context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(bowlIconCanvas(size),cx-size/2,cy-size/2,size,size);context.restore();}
 function iconCanvas(symbol,size=46){const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;canvas.dataset.symbol=symbol;drawSymbol(canvas.getContext('2d'),symbol,size/2,size/2,size);return canvas;}
 function refreshIconCanvases(){document.querySelectorAll('canvas[data-symbol]').forEach(canvas=>{const context=canvas.getContext('2d');context.clearRect(0,0,canvas.width,canvas.height);drawSymbol(context,canvas.dataset.symbol,canvas.width/2,canvas.height/2,canvas.height);});}
 names.forEach((name,i)=>{const b=document.createElement('button');b.className='roster-button';b.setAttribute('aria-label','選取 '+name);const c=document.createElement('canvas'),label=document.createElement('span'),level=document.createElement('span');c.width=110;c.height=150;label.className='roster-name';label.textContent=name;level.className='roster-level';level.textContent='Lv.'+levelStats[name].level;b.append(c,label,level);b.onclick=()=>{select(i);game.focus({preventScroll:true});};$('roster').append(b);});
@@ -184,7 +206,7 @@ const furnitureRects=[[0,0,532,335],[0,335,553,334],[0,669,553,318],[553,0,284,4
 function furnitureObject(type,x,y,w,h){ctx.imageSmoothingEnabled=false;ctx.drawImage(furniture,...furnitureRects[type],x,y,w,h);}
 function drawChair(s){if(stationAway(s))return;withStationStyle(s,()=>furnitureObject(3,s.x-51,s.y-135,102,135));}
 function drawDesk(s){withStationStyle(s,()=>{const type=stationAway(s)?4:s.type,[sx,sy,sw,sh]=furnitureRects[type],top=sy+(type===2?28:68),front=sy+(type===2?250:266),upperHeight=type===2?14:37;ctx.imageSmoothingEnabled=false;ctx.drawImage(furniture,sx,sy,sw,top-sy,s.x-125,s.y-40-upperHeight,250,upperHeight);ctx.drawImage(furniture,sx,top,sw,front-top,s.x-125,s.y-40,250,110);ctx.drawImage(furniture,sx,front,sw,sy+sh-front,s.x-125,s.y+70,250,36);if(s.name){ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(s.x-42,s.y+56,84,23);ctx.strokeRect(s.x-42,s.y+56,84,23);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.font='bold 15px sans-serif';ctx.fillText(s.name,s.x,s.y+73);}});}
-function drawPerson(i,time,walk){const p=people[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p=people[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPhotoCard(i){const p=people[i];if(!p.photo)return;let image=photoImages.get(i);if(!image){image=new Image();image.src=p.photo;photoImages.set(i,image);}const side=p.x>W-155?-1:1,x=Math.round(side>0?p.x+64:p.x-140),y=Math.round(p.y-151),w=76,h=70;softPanel(ctx,x,y,w,h,{radius:10,fill:'#fff',stroke:'#c9d3e0'});if(image.complete&&image.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(x+5,y+5,w-10,h-24,7);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const boxW=w-10,boxH=h-24,scale=Math.max(boxW/image.naturalWidth,boxH/image.naturalHeight),dw=image.naturalWidth*scale,dh=image.naturalHeight*scale;ctx.drawImage(image,x+5+(boxW-dw)/2,y+5+(boxH-dh)/2,dw,dh);ctx.restore();}ctx.save();ctx.fillStyle='#5b6d87';ctx.font='700 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('點開看看',x+w/2,y+h-9.5);ctx.restore();hits.push({type:'photo',i,x,y,w,h});}
 function drawOverlay(i){const p=people[i];if(isAway(p))return;const lift=i===selected?levelTag(i):0;bubble(p,lift);drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
