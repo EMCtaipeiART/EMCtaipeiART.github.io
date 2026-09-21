@@ -85,6 +85,16 @@
 
 「會議」（`meeting`）可以自己點，也可以由 Google 行事曆自動帶上（見下一段）。手動點的會議：閒置五分鐘不會被改成廁所，帶著筆電去會議室（電腦關機）也不會被改成下班，回座開機才重新由電腦決定，散會要自己取消。
 
+## 嵌入設計需求系統（?embed=1）（2026-09-21）
+
+設計需求系統左上角的「設計師專長與案件分配」用 iframe 嵌入 `?embed=1`，設計師頭像、限時動態、大海報與分享音樂一併從前台下架。
+
+- **只留場景**：頁首、右側編輯工具、名單、標題列都隱藏，人物資料卡保留。鍵盤移動關閉。
+- **版面**：下排座位往上收（`EMBED_ROW_SQUEEZE=0.8`，再小兩排就會疊住）。只改 `viewPeople`／`viewStations` 這兩份「畫面用座標」，同步給大家的 `people`／`stations` 完全沒動。六個座位連同姓名牌由 `fitEmbedView()` 依框的實際尺寸等比縮放、水平垂直置中——框的高度會跟著左右卡片對齊而變，所以不能寫死放大倍率。內容範圍記在 `EMBED_CONTENT`，下緣跟著壓縮比例走。
+- **滑過就展開**：滑鼠移到人物上直接展開資料卡，移開收起；滑進卡片不算離開。觸控仍走點選。嵌入模式不顯示關閉鈕。
+- **技能膠囊帶入表單**：點了用 `postMessage({type:'pixelOfficeSkill',designer,skill})` 通知外層（`location.origin`，外層也只收同源），外層跑 `applyDesignerSkill()` 帶入設計種類、階段與設計負責人。
+- **進站不預載那 3.8 MB**：`ensureLevels()` 第一次真的要看人物資料時才載歷史快照，載完自動重畫卡片；快照本身用 `no-cache`，沒變就走 304。
+
 ## 人物資料卡與「預設不選人」（2026-09-21）
 
 進站不再預設選取 Leona：`selected` 起始是 `null`，右側工具面板收起來、改顯示一行提示。點畫面上的人物才會選取，點場景空白處取消。所有讀 `people[selected]` 的函式都要先擋 `selected===null`（`updateMood`／`updateStatus`／`updatePhoto`／`updateLevel`／`updateStateText`／`moving`／`setMood`／`setStatus`）。
