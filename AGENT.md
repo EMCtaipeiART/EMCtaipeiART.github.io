@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 17:16 Asia/Taipei — 放大嵌入座位區並開放人物資料卡
+
+- 修改目的：依使用者要求移除「設計部現在的樣子——狀態會自動更新。」與右下角「完整畫面」，把整個座位區放大到姓名可讀，並讓使用者直接點人物查看人物卡。
+- 影響檔案：`index.html`、`EMC-ART-Pixel-Office/dist/app.js`、`dist/index.html`、`dist/style.css`、`EMC-ART-Pixel-Office/README.md`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：首頁的像素辦公室與最新案件列表改成上下各佔一整列；嵌入 iframe 接受滑鼠／觸控點選並顯示人物卡，但方向鍵移動與狀態編輯仍停用。手機版將中央座位區放大到 170%，姓名牌依實際顯示比例自動加大；人物卡固定在 iframe 內，保留關閉與內容捲動。
+- 風險區塊：嵌入版 Canvas 在手機使用 CSS transform 裁切；若日後改場景尺寸、座位位置或 iframe 比例，要重新檢查 640px 以下的裁切範圍。人物卡必須維持在 Canvas 之後的同一個 `.canvas-wrap`，否則 fixed 定位與 iframe 內捲動行為會改變。
+- 已檢查／驗證方式：根目錄 `npm test -- --runInBand`（172/172 通過）、Pixel Office `npm run check`、`git diff --check`；Chrome 實機檢查桌機與 390×844 手機，確認姓名可讀、人物可點、卡片可關閉且完整顯示。瀏覽器只有本機靜態伺服器既有的 Worker 501 備援警告，沒有這次改動造成的頁面錯誤。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log。
+
 ### 2026-09-21 16:57 Asia/Taipei — 設計師卡區改為只讀像素辦公室場景
 
 - 修改目的：將首頁左上「設計師專長與案件分配」的頭像卡改為像素辦公室即時場景，並從前台下架頭像、限時動態／Reels、大海報與分享音樂，後端及 JSON 設定仍保留供日後回復。

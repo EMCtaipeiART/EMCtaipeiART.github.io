@@ -32,12 +32,17 @@ test('案件資料刷新時不會重新載入 iframe', async () => {
     'iframe 只能在還沒建立時才寫入');
 });
 
-test('嵌入場景不可操作，但可另開完整版像素辦公室', async () => {
+test('嵌入場景放大並可點選人物，不顯示完整畫面按鈕', async () => {
   const html = await indexHtml();
   const source = renderDesignersSource(html);
-  assert.match(source, /class="office-embed"[^>]+tabindex="-1"/);
-  assert.match(source, /class="office-embed-link"[^>]+href="EMC-ART-Pixel-Office\/dist\/"[^>]+target="_blank"/);
-  assert.match(html, /\.office-embed\{[^}]*pointer-events:none/);
+  assert.doesNotMatch(html, /設計部現在的樣子——狀態會自動更新。/);
+  assert.doesNotMatch(source, /office-embed-link|完整畫面/);
+  assert.match(html, /\.top\{grid-template-columns:minmax\(0,1fr\)/,
+    '座位區應獨佔一整列');
+  assert.match(html, /\.office-embed\{pointer-events:auto\}/,
+    'iframe 應接受點選人物的滑鼠事件');
+  assert.match(html, /@media\(max-width:640px\)\{\.office-embed-shell\{aspect-ratio:11\/8\}\}/,
+    '手機版要給放大後的座位區足夠高度');
 });
 
 test('頭像、限時動態、大海報與分享音樂都從前台下架', async () => {
@@ -55,21 +60,28 @@ test('頭像、限時動態、大海報與分享音樂都從前台下架', async
   assert.match(html, /1\. 設計師技能設定/);
 });
 
-test('像素辦公室的嵌入模式只留場景', async () => {
+test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async () => {
   const [html, css, js] = await Promise.all([officeHtml(), officeCss(), officeJs()]);
   assert.match(js, /const embedMode=new URLSearchParams\(location\.search\)\.get\('embed'\)==='1'/);
   assert.match(js, /if\(embedMode\)\{document\.body\.classList\.add\('embed'\);game\.tabIndex=-1;game\.setAttribute\('aria-label','設計部即時狀態場景'\);\}/);
-  // 頁首、右側工具面板、名單、標題列與資料卡都不顯示。
-  for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster', '.person-card']) {
+  // 頁首、右側編輯工具、名單與標題列都不顯示，人物資料卡保留。
+  for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster']) {
     assert.ok(new RegExp(`body\\.embed[^{]*${selector.replace('.', '\\.').replace('#', '#')}`).test(css)
       || css.includes(`body.embed ${selector}`), `嵌入模式應該隱藏 ${selector}`);
   }
-  // 嵌入的是展示用畫面，不接受點選與游標變化。
-  assert.match(js, /game\.addEventListener\('pointerdown',e=>\{if\(!ready\|\|embedMode\)return;/);
-  assert.match(js, /game\.addEventListener\('pointermove',e=>\{if\(embedMode\)return;/);
+  assert.doesNotMatch(css, /body\.embed[^\n{]*\.person-card\{display:none!important\}/,
+    '嵌入模式不可隱藏人物卡');
+  assert.match(js, /game\.addEventListener\('pointerdown',e=>\{if\(!ready\)return;/,
+    '嵌入場景要能點選人物');
+  assert.match(js, /game\.addEventListener\('pointermove',e=>\{const r=/,
+    '人物上方應顯示可點選游標');
+  assert.match(css, /body\.embed #game\{width:170%;max-width:none;transform:translate\(-20\.5%,-13\.5%\)/,
+    '手機版應以中央座位區為主放大場景');
+  assert.match(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
+    '手機版人物卡應覆蓋在 iframe 內並可捲動');
   assert.match(js, /window\.addEventListener\('keydown',e=>\{if\(embedMode\|\|/,
-    '嵌入場景也不接受鍵盤方向鍵');
+    '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 25, `app.js 版本號要 ≥ 25，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 26, `app.js 版本號要 ≥ 26，目前是 ${version?.[1]}`);
 });

@@ -72,7 +72,7 @@
     .card h2{margin:0 0 12px;color:#344641;font-size:19px;font-weight:900;letter-spacing:0}
     .help{background:#fff;border-color:#e3dedf}
     .help-steps{margin:0 0 14px;color:#66736d;font-size:13px;font-weight:750}
-    .top{grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr);align-items:stretch}
+    .top{grid-template-columns:minmax(0,1fr);align-items:stretch}
     .designer-help{padding-bottom:18px}
     .designer-help-trigger{display:inline-block;max-width:calc(100% - 48px)}
     .designer-title-wrap{display:flex;align-items:center;gap:8px;min-width:0}
@@ -6713,6 +6713,10 @@
     html[data-theme="dark"] .mail-copy-fields textarea:focus{outline-color:rgba(104,196,150,.2)!important;border-color:#5f9f80!important}
     .ai-beta-badge{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #b9a8ee;border-radius:6px;background:#f1edfc;color:#5b3fb8;font-size:10px;font-weight:800;line-height:16px;letter-spacing:.04em;vertical-align:middle}
     html[data-theme="dark"] .ai-beta-badge{background:#2b2542;border-color:#5e4ea3;color:#c9bbff}
+    /* 嵌入場景改為可點選人物，並讓座位區獨佔首頁一整列。 */
+    .designer-roster{margin-top:12px}
+    .office-embed{pointer-events:auto}
+    @media(max-width:640px){.office-embed-shell{aspect-ratio:11/8}}
   </style>
   <style>
     .gmail-thread-msg>summary{list-style:none;cursor:pointer}
@@ -6816,14 +6820,12 @@
             <button type="button" class="panel-close-toggle ui-close-button" data-close-panel="designer" title="關閉設計師專長與案件分配" aria-label="關閉設計師專長與案件分配"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
           </div>
         </div>
-        <p class="help-steps">設計部現在的樣子——狀態會自動更新。</p>
       </div>
       <div class="designer-help-popover" aria-hidden="true">
         <b>使用方式：</b>
         <span>• 這裡顯示設計部的即時狀態：在座、加班、用餐、會議、外出或下班。</span>
         <span>• 狀態由每位設計師的電腦與 Google 行事曆自動判斷，也可以在遊戲裡手動指定。</span>
-        <span>• 點畫面右下角可開啟完整的像素辦公室，看每個人的技能與手上的案件。</span>
-        <span>要指派誰，可在像素辦公室點人物看他的技能與案件量。</span>
+        <span>• 直接點畫面中的人物，可查看他的等級、技能、案件量與新專案輪值。</span>
       </div>
       <div class="designer-roster" id="designerRoster" aria-label="設計師功能"></div>
     </div>
@@ -10969,7 +10971,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1" title="設計部即時狀態" loading="lazy" scrolling="no" tabindex="-1"></iframe><a class="office-embed-link" href="EMC-ART-Pixel-Office/dist/" target="_blank" rel="noopener noreferrer" aria-label="在新分頁開啟完整像素辦公室">完整畫面 ↗</a></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();

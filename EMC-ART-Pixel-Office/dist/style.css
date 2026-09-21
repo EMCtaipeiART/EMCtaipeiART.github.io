@@ -171,15 +171,23 @@ h2{font-size:24px}
 /* 手機的場景本來就小，卡片浮在人物旁邊會把整個房間蓋住。改成排在場景下方（position:relative 加上 left/top:auto
    會蓋掉 positionPersonCard() 寫進 style 的座標，關閉鈕也才會以卡片為定位基準），什麼都不遮，內容也不必擠在小框裡捲。 */
 @media (max-width:700px){
-  .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
-  .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  body:not(.embed) .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
+  body:not(.embed) .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 }
 
 /* 嵌入模式（?embed=1）：給設計需求系統的「設計師專長與案件分配」當展示用，只留場景本身。
    狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
 body.embed{background:transparent}
-body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster,body.embed .person-card{display:none!important}
+body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster{display:none!important}
 body.embed main{display:block;max-width:none;padding:0;gap:0}
 body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 body.embed .canvas-wrap{margin:0}
-body.embed #game{width:100%;height:auto;display:block;cursor:default!important}
+body.embed #game{width:100%;height:auto;display:block;cursor:default}
+body.embed .person-card{width:min(270px,calc(100% - 16px));max-height:calc(100% - 16px);font-size:13px}
+body.embed .person-card-head strong{font-size:19px}
+@media(max-width:640px){
+  body.embed,body.embed main,body.embed .play{height:100%}
+  body.embed .canvas-wrap{height:100%;overflow:hidden}
+  body.embed #game{width:170%;max-width:none;transform:translate(-20.5%,-13.5%);transform-origin:top left}
+  body.embed .person-card{position:fixed!important;inset:8px!important;width:auto;max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
+}
