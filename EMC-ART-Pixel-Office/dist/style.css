@@ -179,15 +179,14 @@ h2{font-size:24px}
    狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
 body.embed{background:transparent}
 body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster{display:none!important}
+body.embed,body.embed main,body.embed .play{height:100%}
 body.embed main{display:block;max-width:none;padding:0;gap:0}
 body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-body.embed .canvas-wrap{margin:0}
-body.embed #game{width:100%;height:auto;display:block;cursor:default}
+body.embed .canvas-wrap{height:100%;margin:0;overflow:hidden}
+body.embed #game{width:140%;max-width:none;height:auto;display:block;transform:translate(-14.3%,-14.3%);transform-origin:top left;cursor:default}
 body.embed .person-card{width:min(270px,calc(100% - 16px));max-height:calc(100% - 16px);font-size:13px}
 body.embed .person-card-head strong{font-size:19px}
 @media(max-width:640px){
-  body.embed,body.embed main,body.embed .play{height:100%}
-  body.embed .canvas-wrap{height:100%;overflow:hidden}
   body.embed #game{width:170%;max-width:none;transform:translate(-20.5%,-13.5%);transform-origin:top left}
   body.embed .person-card{position:fixed!important;inset:8px!important;width:auto;max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
 }

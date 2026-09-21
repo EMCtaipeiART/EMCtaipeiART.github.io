@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 17:25 Asia/Taipei — 恢復首頁原比例、只放大像素辦公室內容
+
+- 修改目的：依使用者補充要求，把「設計師專長與案件分配／最新案件列表」恢復成原本左右欄比例與原本 iframe 外框，只放大外框內的像素辦公室內容。
+- 影響檔案：`index.html`、`EMC-ART-Pixel-Office/dist/index.html`、`dist/style.css`、`EMC-ART-Pixel-Office/README.md`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：首頁 `.top` 恢復 `0.8fr / 1.2fr` 左右欄；iframe 維持原本 3:2。嵌入版 Canvas 在外框內放大 140% 並裁切，640px 以下維持 170% 中央裁切；人物點選、人物卡與鍵盤停用規則不變。
+- 風險區塊：Canvas 放大使用 transform，命中座標仍以 `getBoundingClientRect()` 換算；若日後改縮放或位移百分比，要實機確認人物點選位置。
+- 已檢查／驗證方式：見本次 commit 的測試與實機檢查結果。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log。
+
 ### 2026-09-21 17:16 Asia/Taipei — 放大嵌入座位區並開放人物資料卡
 
 - 修改目的：依使用者要求移除「設計部現在的樣子——狀態會自動更新。」與右下角「完整畫面」，把整個座位區放大到姓名可讀，並讓使用者直接點人物查看人物卡。

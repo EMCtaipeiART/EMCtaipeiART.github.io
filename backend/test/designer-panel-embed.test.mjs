@@ -37,12 +37,12 @@ test('嵌入場景放大並可點選人物，不顯示完整畫面按鈕', async
   const source = renderDesignersSource(html);
   assert.doesNotMatch(html, /設計部現在的樣子——狀態會自動更新。/);
   assert.doesNotMatch(source, /office-embed-link|完整畫面/);
-  assert.match(html, /\.top\{grid-template-columns:minmax\(0,1fr\)/,
-    '座位區應獨佔一整列');
+  assert.match(html, /\.top\{grid-template-columns:minmax\(280px,\.8fr\) minmax\(0,1\.2fr\)/,
+    '首頁應恢復原本的左右欄比例');
   assert.match(html, /\.office-embed\{pointer-events:auto\}/,
     'iframe 應接受點選人物的滑鼠事件');
-  assert.match(html, /@media\(max-width:640px\)\{\.office-embed-shell\{aspect-ratio:11\/8\}\}/,
-    '手機版要給放大後的座位區足夠高度');
+  assert.doesNotMatch(html, /office-embed-shell\{aspect-ratio:11\/8\}/,
+    '外框應維持原本比例，不因內容放大而改變');
 });
 
 test('頭像、限時動態、大海報與分享音樂都從前台下架', async () => {
@@ -75,8 +75,12 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景要能點選人物');
   assert.match(js, /game\.addEventListener\('pointermove',e=>\{const r=/,
     '人物上方應顯示可點選游標');
+  assert.match(css, /body\.embed #game\{width:140%;max-width:none;[^}]*transform:translate\(-14\.3%,-14\.3%\)/,
+    '外框內的場景內容應放大，但不可撐大外框');
+  assert.match(css, /body\.embed \.canvas-wrap\{height:100%;margin:0;overflow:hidden\}/,
+    '放大後超出外框的場景應裁切在 iframe 內');
   assert.match(css, /body\.embed #game\{width:170%;max-width:none;transform:translate\(-20\.5%,-13\.5%\)/,
-    '手機版應以中央座位區為主放大場景');
+    '手機版仍應以中央座位區為主放大場景');
   assert.match(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
     '手機版人物卡應覆蓋在 iframe 內並可捲動');
   assert.match(js, /window\.addEventListener\('keydown',e=>\{if\(embedMode\|\|/,
