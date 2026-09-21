@@ -22,17 +22,17 @@ const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（廁所／出國／公出）一律尊重手動指定。
-const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'offwork'];
+const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'offwork'];
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
 // 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
 const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
 // 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
 const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
 const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
-// 午休：12:00～14:00 電腦開著、但這段時間沒在操作（鍵鼠閒置超過門檻）就顯示用餐。
+// 電腦開著但鍵鼠閒置這麼久就當作人離開座位了：午休時段顯示用餐，其他時段顯示廁所。
+const PIXEL_OFFICE_AWAY_IDLE_SECONDS = 5 * 60;
 const PIXEL_OFFICE_LUNCH_START_HOUR = 12;
 const PIXEL_OFFICE_LUNCH_END_HOUR = 14;
-const PIXEL_OFFICE_LUNCH_IDLE_SECONDS = 5 * 60;
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
 // 每年行政院公布新行事曆之後要補一年上去，來源：
 // https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/<西元年>.json（取 isHoliday 為 true 且 description 不是空字串的日期）。
@@ -62,17 +62,19 @@ export function pixelOfficeIsWorkday(nowMs: number): boolean {
 
 /**
  * 電腦開著時這個時間點應該顯示的狀態。
- * 週六日與國定假日一律下班（就算電腦開著）；平日晚上七點之後還開著是加班；中午 12～14 點電腦開著
- * 但鍵鼠閒置超過門檻（人去吃飯了）是用餐；其餘是在座。idleSeconds 沒帶（爬蟲版本較舊、或作業系統
- * 查不到閒置時間）就不會判成用餐。
+ * 週六日與國定假日一律下班（就算電腦開著）。平日只要鍵鼠閒置超過門檻就是人離開座位了——中午
+ * 12～14 點顯示用餐，其他時段顯示廁所（含晚上的加班時段：閒置著就不算還在工作）。人在電腦前的話，
+ * 晚上七點之後是加班，其餘是在座。idleSeconds 沒帶（爬蟲版本較舊、或作業系統查不到閒置時間）就
+ * 永遠當作人在電腦前，不會判成離席。
  */
-export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'present' | 'overtime' | 'lunch' | 'offwork' {
+export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'present' | 'overtime' | 'lunch' | 'toilet' | 'offwork' {
   if (!pixelOfficeIsWorkday(nowMs)) return 'offwork';
   const { hour } = taipeiClock(nowMs);
-  if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
   const idle = Number(idleSeconds);
-  if (hour >= PIXEL_OFFICE_LUNCH_START_HOUR && hour < PIXEL_OFFICE_LUNCH_END_HOUR
-    && Number.isFinite(idle) && idle >= PIXEL_OFFICE_LUNCH_IDLE_SECONDS) return 'lunch';
+  if (Number.isFinite(idle) && idle >= PIXEL_OFFICE_AWAY_IDLE_SECONDS) {
+    return hour >= PIXEL_OFFICE_LUNCH_START_HOUR && hour < PIXEL_OFFICE_LUNCH_END_HOUR ? 'lunch' : 'toilet';
+  }
+  if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
   return 'present';
 }
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
@@ -1303,9 +1305,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const desired = pixelOfficeWorkStatus(nowMs, Number.isFinite(idleSeconds) ? idleSeconds : undefined);
     let next = current;
     let source = text(state.statusSource);
-    // 手動指定只在同一個時段內有效：時間規則一換班（白天↔晚上↔假日，不含用餐這種同一時段內的來回）
-    // 就交還給自動。沒有記錄過時段的舊資料一律視為過期，這樣升級之後不會有人卡在舊狀態。
-    const manualExpired = source === 'manual' && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
+    // 手動指定只在同一個時段內有效：時間規則一換班（白天↔晚上↔假日，不含用餐／廁所這種同一時段內的
+    // 來回）就交還給自動。沒有記錄過時段的舊資料一律視為過期，這樣升級之後不會有人卡在舊狀態。
+    // 只適用於電腦判斷得出來的狀態；出國／公出電腦看不出來，手動指定了就維持到關機為止。
+    const manualExpired = source === 'manual' && PIXEL_OFFICE_AUTO_STATUSES.includes(current)
+      && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
     if (!wasOnline) {
       next = desired;
       source = 'auto';

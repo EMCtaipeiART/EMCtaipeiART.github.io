@@ -3994,9 +3994,25 @@ describe('Pixel Office shared state', () => {
       at('2026-09-21T04:32:00Z');
       expect(await heartbeat(10)).toMatchObject({ status: 'present' });
 
-      // 兩點之後就算閒置著也不算用餐（午休結束了）。
+      // 兩點之後閒置著就不是用餐而是離開座位（廁所）。
       at('2026-09-21T06:05:00Z');
-      expect(await heartbeat(30 * 60)).toMatchObject({ status: 'present' });
+      expect(await heartbeat(30 * 60)).toMatchObject({ status: 'toilet' });
+
+      // 一般上班時間離開座位滿五分鐘：廁所；回來打字就自動回到在座。
+      at('2026-09-21T07:00:00Z');
+      expect(await heartbeat(4 * 60)).toMatchObject({ status: 'present' });
+      at('2026-09-21T07:05:00Z');
+      expect(await heartbeat(5 * 60)).toMatchObject({ status: 'toilet' });
+      at('2026-09-21T07:06:00Z');
+      expect(await heartbeat(3)).toMatchObject({ status: 'present' });
+
+      // 加班時段離開座位也是廁所——閒置著就不算還在工作。
+      at('2026-09-21T11:30:00Z');
+      expect(await heartbeat(3)).toMatchObject({ status: 'overtime' });
+      at('2026-09-21T11:31:00Z');
+      expect(await heartbeat(10 * 60)).toMatchObject({ status: 'toilet' });
+      at('2026-09-21T11:32:00Z');
+      expect(await heartbeat(3)).toMatchObject({ status: 'overtime' });
 
       // 爬蟲沒回報閒置秒數（舊版本或查不到）時，中午也只會是在座，不會誤判成用餐。
       at('2026-09-21T04:40:00Z');
@@ -4042,11 +4058,15 @@ describe('Pixel Office shared state', () => {
       at('2026-09-30T11:31:00Z');
       expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
 
-      // 廁所這類「人離開座位」的手動狀態不受時段影響，維持到電腦關機為止。
-      at('2026-09-30T11:32:00Z');
-      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'toilet' } });
-      at('2026-09-30T11:33:00Z');
-      expect(await heartbeat(5)).toMatchObject({ status: 'toilet', changed: false });
+      // 出國／公出這類「不是靠電腦判斷」的手動狀態不受時段影響：電腦一直開著、跨過凌晨六點
+      //（加班時段結束）也不會被交還給自動。
+      at('2026-09-30T21:55:00Z');
+      await heartbeat(5);
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'abroad' } });
+      at('2026-09-30T21:58:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'abroad', changed: false });
+      at('2026-09-30T22:01:00Z');
+      expect(await heartbeat(5)).toMatchObject({ status: 'abroad', changed: false });
     } finally {
       vi.useRealTimers();
     }
