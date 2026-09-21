@@ -69,7 +69,9 @@ export function buildWatcherConfig(template, { mountRoot, installDir }) {
     previewDir: path.join(installDir, 'state', 'previews'),
     secretsFile: path.join(installDir, 'secrets.json'),
     // 設計師電腦不自動跳出連線／登入視窗，使用者自己在 Finder 連上 NAS 後才會開始掃描。
-    autoMountNas: false
+    autoMountNas: false,
+    // 由啟動器（nas_watcher_launcher.mjs）定期檢查管理者發布的新版並自動更新，不必每台重新執行安裝器。
+    autoUpdate: true
   };
 }
 
@@ -289,7 +291,8 @@ async function main() {
     plist: buildLaunchdPlist({
       label: WATCHER_LABEL,
       nodePath,
-      scriptPath: path.join(scriptsDir, 'nas_design_image_watcher.mjs'),
+      // launchd 執行啟動器而不是直接執行爬蟲：啟動器會先檢查自動更新、新版載入失敗時還原，再載入爬蟲。
+      scriptPath: path.join(scriptsDir, 'nas_watcher_launcher.mjs'),
       workingDirectory: installDir,
       logPath: watcherLog,
       startIntervalSeconds: WATCHER_INTERVAL_SECONDS

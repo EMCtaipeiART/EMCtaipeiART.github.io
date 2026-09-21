@@ -548,3 +548,14 @@ node scripts/nas_watcher_installer.mjs --install-dir /tmp/test-install --dry-run
 
 - 前台「選 NAS 資料夾」的彈出視窗網址仍固定指向管理者那台 iMac（`index.html` 的 `nasFolderPickerBaseUrl`）。安裝包雖然也會在每台電腦裝好選擇器伺服器，但要讓設計師用自己那台，還需要另外調整前台。
 - 舊的 crontab 排程（第一台 iMac 的裝法）不會自動移除，安裝程式只會提醒。
+
+
+## 自動更新與一鍵發布（設計師電腦不必重新執行安裝器）
+
+設計師電腦上，launchd 每分鐘執行的是「啟動器」`nas_watcher_launcher.mjs`：它每 10 分鐘讀一次 GitHub 上的發布清單 `scripts/nas_watcher_release.json`（列出每個檔案的 sha256）。版本有變就下載、比對雜湊、驗證語法，全部通過才備份舊版並替換，選擇器服務有變就自動重啟；新版一載入就壞掉會自動還原上一版，並且不再重試那個壞版本。設定檔範本更新時會合併——各台電腦自己的 `mountRoot`、狀態檔位置、`autoMountNas`、`autoUpdate`、`updateBaseUrl` 保留，其餘用新範本。
+
+**管理者發布（一鍵）**：在你的 Mac 上把要發布的修改 commit 好，雙擊 `scripts/publish_nas_update.command`（或 `node scripts/publish_nas_update.mjs`，可加 `--dry-run` 只看會發布什麼）。它會確認要發布的檔案都已 commit、同步遠端、檢查語法、跑全部測試、寫入發布清單、commit 並 push；沒有任何檔案跟上次發布不同時什麼都不做。**平常的 git push 不會影響設計師電腦，只有發布才會。** 發布後各台電腦最多約 10 分鐘內自動更新，不需要他們做任何事。
+
+自動更新的檔案：`nas_design_image_lib.mjs`、`nas_design_image_watcher.mjs`、`nas_folder_picker_server.mjs`、`nas_watcher_installer.mjs`、`nas_design_image_watcher.config.json`。**更新機制本身**（`nas_watcher_launcher.mjs`、`nas_watcher_update.mjs`）不在自動更新名單裡，改壞了沒辦法靠更新救回來，所以刻意保持精簡、由測試釘住；要改它們必須請各台電腦重新執行一次安裝器。
+
+只有安裝器產生的設定（`autoUpdate: true`）才會自動更新；這台主機（cron 直接執行 git 工作目錄裡的爬蟲）不用啟動器，`git pull` 就是更新。

@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 10:56 Asia/Taipei — NAS 爬蟲自動更新：管理者一鍵發布，設計師電腦自己更新，不必每台重新執行安裝器
+
+- 修改目的：使用者希望從自己這邊一鍵更新，不必每台設計師電腦都重新執行安裝器。
+- 影響檔案：新增 `scripts/nas_watcher_update.mjs`（更新邏輯）、`scripts/nas_watcher_launcher.mjs`（launchd 入口）、`scripts/publish_nas_update.mjs`＋`scripts/publish_nas_update.command`（一鍵發布）、`scripts/nas_watcher_release.json`（發布清單，由發布程式產生）、`backend/test/nas-auto-update.test.mjs`；修改 `scripts/nas_watcher_installer.mjs`、`scripts/install_nas_watcher.command`、`scripts/nas_design_image_watcher.README.md`。
+- 影響功能：
+  1. **一鍵發布**：管理者在自己的 Mac 雙擊 `publish_nas_update.command`（或 `node scripts/publish_nas_update.mjs [--dry-run]`）。流程：確認要發布的檔案都已 commit（沒 commit 就拒絕，避免發布出去的跟測試的不一樣）→ fetch＋`pull --rebase --autostash` → 全部 `.mjs` `node --check`、設定檔 JSON 檢查 → 跑 `node --test backend/test/*.test.mjs`（`--skip-tests` 可略過）→ 對自動更新名單每個檔案算 sha256 寫進 `scripts/nas_watcher_release.json`（版本號＝台北時間 `YYYYMMDD-HHmm`，同分鐘加流水號）→ 只 commit 這個清單檔並 push（push 被拒絕時重新同步再推一次，因為 Worker 會不定時自動 commit 資料）。內容跟上次發布完全一樣就什麼都不做。**平常的 git push 不會影響設計師電腦，只有發布才會。**
+  2. **設計師電腦**：launchd 現在執行啟動器 `nas_watcher_launcher.mjs`（原本直接執行爬蟲）。設定檔 `autoUpdate:true`（安裝器產生的設定預設開啟）時，每 10 分鐘讀一次 GitHub 上的發布清單（帶 cache-buster）：版本不同 → 全部檔案先下載到暫存資料夾、逐一比對雜湊（GitHub 快取還沒更新導致對不上就 2 分鐘後重試）、`.mjs` 驗證語法 → 全通過才備份舊版到 `state/previous-release` 並逐檔原子替換 → 選擇器檔案有變就 `launchctl kickstart -k` 重啟選擇器服務。設定檔範本用**合併**而不是覆蓋，保留這台電腦自己的 `mountRoot`／`stateFile`／`previewDir`／`secretsFile`／`autoMountNas`／`autoUpdate`／`updateBaseUrl`。新版一載入就丟錯（語法／匯入錯誤）→ 立刻還原上一版並把該版本標記為失敗（不再自動重試，直到發布新版本），下一分鐘恢復正常。發布清單只接受名單內的檔名與 64 碼雜湊，擋掉任意檔名（路徑穿越）。
+  3. **安裝器**：`buildWatcherConfig` 寫入 `autoUpdate:true`；launchd 排程改指向啟動器；`install_nas_watcher.command` 額外下載啟動器、更新模組與發布清單。
+  4. **更新機制本身不自動更新**：`nas_watcher_launcher.mjs`、`nas_watcher_update.mjs` 不在自動更新名單（`BOOTSTRAP_FILES`），改壞了沒辦法靠更新救回來，所以刻意保持精簡、由測試釘住。
+- 風險區塊：①**已經裝好的設計師電腦這次仍必須手動重新執行一次安裝器**（他們現在跑的是舊架構、沒有啟動器，沒辦法自己升級到有自動更新的版本）；之後所有改版都不必再跑。②信任模型：能 push 到 main 的人能透過發布清單把程式送到所有設計師電腦；這跟原本的安裝器（從同一個 repo 下載）信任範圍相同，沒有變大，且雜湊比對確保下載到的檔案跟發布時一致。③新版如果「載入成功但執行邏輯出錯」（不是語法／匯入錯誤）不會自動還原，這種情況要再發布修好的版本；選擇器（常駐服務）更新後若啟動即當機，KeepAlive 會不斷重啟且不會自動還原（`node --check` 已擋語法錯誤，但擋不了執行期錯誤）。④更新最多約 10 分鐘生效（檢查間隔＋GitHub raw 快取）；電腦睡眠／關機時不會更新，開機後下一次檢查就會補上。⑤更新啟動器與更新模組本身仍需要重新執行安裝器。⑥沒有網路或 GitHub 連不上時只是這次沒更新，照舊版正常執行。
+- 已檢查／驗證方式：新增 7 項測試（`backend/test/nas-auto-update.test.mjs`）：發布清單驗證（名單外檔名、路徑穿越、壞雜湊被拒）與設定檔合併；更新流程（下載→雜湊→備份→替換→合併設定→版本相同不動→10 分鐘節流→選擇器有變才重啟）；失敗情境（網路失敗 2 分鐘後重試、雜湊對不上完全不動檔案、語法錯誤標記失敗且不再重複下載、發布修好的新版本就恢復）；**真實行程**啟動器對「假 GitHub」：沒開 autoUpdate 完全不連線、開了就先更新再執行新版、新版匯入失敗自動還原上一版且下一輪不再更新壞版本；**真實 git**（臨時 bare 遠端）驗證發布程式：沒 commit 的修改被擋、試跑不寫檔、正式發布清單進 git 並 push 且雜湊正確、沒變動不發布、遠端剛好有別人提交時自動同步後成功推送。`node --test backend/test/*.test.mjs` 159/159 通過。首次真實發布後，另外用真實 GitHub raw 網址跑一次更新流程驗證。未做：沒有在真正的設計師電腦上實際跑安裝器與 launchd。
+- 部署狀態：純本機工具與文件，git push 生效。設計師電腦需要再重新執行**最後一次**安裝器（會安裝啟動器並開啟自動更新）；之後由管理者雙擊 `publish_nas_update.command` 即可更新全部電腦。這台主機不使用啟動器，`git pull` 就是更新。
+- commit：見 git log（`feat: nas watcher auto-update with one-click publish`）
+
 ### 2026-09-21 10:35 Asia/Taipei — 像素辦公室：爬蟲回報電腦開機狀態，自動顯示在座／加班（晚上七點後）／下班（關機）
 
 - 修改目的：使用者要求 NAS 爬蟲能判斷設計師電腦是否關機，關機時遊戲裡該設計師的狀態自動變「下班」，超過晚上七點還開著則變「加班」。

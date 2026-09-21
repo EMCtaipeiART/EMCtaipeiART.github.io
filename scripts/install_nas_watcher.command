@@ -3,12 +3,12 @@
 #
 # 設計師只要在 NAS 的安裝資料夾裡點兩下這個檔案即可。這支腳本只做最少的事：
 # 找到 Node、把最新版程式下載到自己的電腦、然後交給 Node 版安裝程式處理其餘設定。
-# 重跑一次就是更新到最新版。
+# 重跑一次就是更新到最新版。安裝之後的更新會由管理者「一鍵發布」、各台電腦自動套用，不必再重跑。
 set -uo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main"
 INSTALL_DIR="$HOME/Library/Application Support/MachiNasWatcher"
-SCRIPTS=(nas_watcher_installer.mjs nas_design_image_lib.mjs nas_design_image_watcher.mjs nas_folder_picker_server.mjs nas_design_image_watcher.config.json)
+SCRIPTS=(nas_watcher_installer.mjs nas_watcher_launcher.mjs nas_watcher_update.mjs nas_design_image_lib.mjs nas_design_image_watcher.mjs nas_folder_picker_server.mjs nas_design_image_watcher.config.json nas_watcher_release.json)
 
 finish() {
   echo ""
