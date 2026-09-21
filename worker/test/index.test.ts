@@ -70,6 +70,48 @@ async function seedDatabase(): Promise<void> {
   });
 }
 
+async function seedCalendarToken(scopes = 'https://www.googleapis.com/auth/calendar.freebusy'): Promise<void> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  await runInDurableObject(stub, async (_instance, state) => {
+    state.storage.sql.exec(
+      `INSERT INTO gmail_tokens(account, refresh_token, access_token, access_token_expires_at, gmail_address, scopes, connected_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      'machi.chen@emctaipei.com', 'refresh', 'access-token', Date.now() + 3_600_000,
+      'machi.chen@emctaipei.com', scopes, new Date().toISOString(), new Date().toISOString()
+    );
+  });
+}
+
+/** 讓 freeBusy 回傳指定的忙碌時段。keys 是信箱，值是 [開始, 結束] 的毫秒。 */
+function mockFreeBusy(busyByEmail: Record<string, [number, number][] | { errors: unknown[] }>) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('oauth2.googleapis.com/token')) {
+      return new Response(JSON.stringify({ access_token: 'fresh', expires_in: 3600 }), { status: 200 });
+    }
+    if (url.includes('calendar/v3/freeBusy')) {
+      const calendars: Record<string, unknown> = {};
+      for (const [email, value] of Object.entries(busyByEmail)) {
+        calendars[email] = Array.isArray(value)
+          ? { busy: value.map(([start, end]) => ({ start: new Date(start).toISOString(), end: new Date(end).toISOString() })) }
+          : value;
+      }
+      return new Response(JSON.stringify({ calendars }), { status: 200 });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  });
+}
+
+async function runCalendarSync(nowMs: number): Promise<Record<string, unknown>> {
+  const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+  return await runInDurableObject(stub, async instance => await instance.runPixelOfficeCalendarSync(nowMs)) as Record<string, unknown>;
+}
+
+async function statusOfPerson(name: string): Promise<{ status?: unknown; statusSource?: unknown }> {
+  const people = (await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[];
+  return (people.find(person => person.name === name) || {}) as { status?: unknown; statusSource?: unknown };
+}
+
 async function seedAccountPermission(account: string, role: string, capabilities: string[]): Promise<void> {
   const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
   await runInDurableObject(stub, async (_instance, state) => {
@@ -4022,6 +4064,118 @@ describe('Pixel Office shared state', () => {
       expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'overtime' } })).toMatchObject({ ok: true });
       expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'sleeping' } })).toMatchObject({ ok: false });
       expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('turns Google Calendar meetings into 會議 and hands the status back when the meeting ends', async () => {
+    const key = 'test-nas-watcher-key';
+    const at = (iso: string) => vi.setSystemTime(new Date(iso));
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      // 2026-09-21（一）台北 14:00 = UTC 06:00，上班時間。
+      const now = Date.parse('2026-09-21T06:00:00Z');
+      at('2026-09-21T06:00:00Z');
+      await seedCalendarToken();
+      // 先讓五個人都有資料（心跳），狀態是在座。
+      for (const name of ['Machi', 'Anna', 'Amber', 'Leona', 'Noise']) {
+        await api({ action: 'pixelOfficeHeartbeat', name, serviceKey: key, idleSeconds: 3 });
+      }
+
+      // Machi 正在開一小時的會、Anna 整天請假（超過四小時的忙碌不算會議）、Amber 沒事、
+      // Leona 的行事曆看不到（沒有權限）、Noise 的忙碌時段還沒開始。
+      let fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [[now - 20 * 60_000, now + 40 * 60_000]],
+        'anna.hsu@emctaipei.com': [[now - 6 * 60 * 60_000, now + 6 * 60 * 60_000]],
+        'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': { errors: [{ domain: 'global', reason: 'notFound' }] },
+        'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(now)).toMatchObject({ ok: true, meeting: ['Machi'], unreadable: ['Leona'] });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'meeting', statusSource: 'calendar' });
+      expect(await statusOfPerson('Anna')).toMatchObject({ status: 'present' });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'present' });
+      expect(await statusOfPerson('Leona')).toMatchObject({ status: 'present' });
+      fetchSpy.mockRestore();
+
+      // 開會中打開筆電：心跳不會把「會議」改成在座（否則下一分鐘又被改回來，畫面會跳）。
+      at('2026-09-21T06:10:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'meeting', changed: false });
+
+      // 開會中離開座位也不會被改成廁所。
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 30 * 60 }))
+        .toMatchObject({ status: 'meeting' });
+
+      // 散會：交還給電腦自動判斷。（中間電腦一直開著，不然會先被判成關機下班。）
+      for (const minute of ['15', '20', '25', '30', '35', '40', '44']) {
+        at(`2026-09-21T06:${minute}:00Z`);
+        await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 });
+      }
+      const after = Date.parse('2026-09-21T06:45:00Z');
+      at('2026-09-21T06:45:00Z');
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(after)).toMatchObject({ ok: true, released: ['Machi'] });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      fetchSpy.mockRestore();
+
+      // 手動指定的狀態行事曆不覆蓋（使用者的選擇優先）。
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'out' } });
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [],
+        'amber.tian@emctaipei.com': [[after - 10 * 60_000, after + 10 * 60_000]],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(after)).toMatchObject({ meeting: [] });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'out', statusSource: 'manual' });
+      // 手動點的會議，行事曆散會時也不會幫忙收回——要自己取消。
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'meeting' } });
+      fetchSpy.mockRestore();
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(after)).toMatchObject({ released: [] });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'meeting', statusSource: 'manual' });
+      fetchSpy.mockRestore();
+
+      // 假日與上班時段以外完全不查（不浪費 API 配額，也不會在週末把人改成會議）。
+      const neverCalled = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => { throw new Error('不該查行事曆'); });
+      expect(await runCalendarSync(Date.parse('2026-09-26T06:00:00Z'))).toMatchObject({ skipped: 'holiday' });
+      expect(await runCalendarSync(Date.parse('2026-09-21T16:00:00Z'))).toMatchObject({ skipped: 'off-hours' });
+      expect(neverCalled).not.toHaveBeenCalled();
+      neverCalled.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never changes anyone when the calendar cannot be read', async () => {
+    const key = 'test-nas-watcher-key';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const now = Date.parse('2026-09-21T06:00:00Z');
+      vi.setSystemTime(new Date(now));
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 });
+
+      // 還沒重新授權（沒有帶行事曆權限的 token）：這一輪什麼都不做。
+      expect(await runCalendarSync(now)).toMatchObject({ ok: false, reason: 'no-token' });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present' });
+
+      // 授權了但 Google 回錯（例如專案還沒啟用 Calendar API）：一樣什麼都不做。
+      await seedCalendarToken();
+      const failing = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes('oauth2.googleapis.com/token')) return new Response(JSON.stringify({ access_token: 'x', expires_in: 3600 }), { status: 200 });
+        return new Response(JSON.stringify({ error: { message: 'Google Calendar API has not been used in project' } }), { status: 403 });
+      });
+      expect(await runCalendarSync(now)).toMatchObject({ ok: false, reason: 'freebusy-failed', status: 403 });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present' });
+      failing.mockRestore();
     } finally {
       vi.useRealTimers();
     }

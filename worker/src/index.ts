@@ -155,5 +155,12 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 像素辦公室：行事曆上有會議的人自動顯示「會議」。失敗只記 log，不影響寄信排程。
+    try {
+      const calendar = await stub.runPixelOfficeCalendarSync();
+      console.log(JSON.stringify({ event: 'pixel-office-calendar-sync', result: calendar }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'pixel-office-calendar-sync-error', message: error instanceof Error ? error.message : String(error) }));
+    }
   }
 } satisfies ExportedHandler<Env>;

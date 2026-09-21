@@ -206,6 +206,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：Worker 已部署（版本 `93b001a1`）；前台 git push 後 GitHub Pages 自動生效。
 - commit：見 git log（`fix: never both schedule and send one reply; dedupe repeated modification records`）
 
+### 2026-09-21 16:40 Asia/Taipei — 像素辦公室：Google 行事曆上有會議時自動顯示「會議」
+
+- 修改目的：使用者問能不能讀他的 Google 行事曆，並依五位設計師的行事曆自動把狀態改成「會議」。（我這個對話本身沒有行事曆工具，也不該靠對話——狀態要每分鐘更新，必須由 Worker 自己查。）使用者選擇「只有 machi.chen 重新授權、用網域的忙碌／空閒」，以及「行事曆不蓋掉手動指定的狀態」。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/src/index.ts`、`worker/test/index.test.ts`、`index.html`（OAuth scope）、`EMC-ART-Pixel-Office/docs/HANDOFF.md`。
+- 影響功能：
+  1. **`runPixelOfficeCalendarSync()`**：掛在既有的每分鐘 cron（跟排程寄信同一個）。用 `PIXEL_OFFICE_CALENDAR_ACCOUNT`（machi.chen）的 Gmail refresh token 呼叫 Google 的 **freeBusy** API，一次查五個信箱現在這一分鐘忙不忙。忙 → 狀態改「會議」（`statusSource:'calendar'`）；不忙且是行事曆設的 → 交還 `pixelOfficeWorkStatus()`。freeBusy 只回傳忙碌區間，拿不到標題、地點或與會者，所以不會把會議內容帶進系統。
+  2. **防呆**：①超過四小時的忙碌不算會議（freeBusy 分不出整天的特休，否則請假的人整天掛著會議中）。②只在平日 08:00～22:00 查，假日直接跳過。③沒授權、Google 回錯、某個人的行事曆看不到，都只是這一輪不動任何人的狀態（回傳的 `unreadable` 列出看不到的人）。④手動指定的狀態不覆蓋，也只收回自己設的。
+  3. **心跳例外**：`statusSource:'calendar'` 的會議不會被「剛開機」或閒置判斷蓋掉，否則開會中打開筆電會在在座／會議之間每分鐘來回跳。
+  4. **OAuth scope** 加 `calendar.freebusy`（最小權限，只能查忙碌時段）；`gmailStatus` 多回 `canReadCalendar`，前端可據此提示重新連接。
+- 風險區塊：①**machi.chen 必須在系統裡重新連接一次 Gmail**，否則這個功能完全不會動（每分鐘回 `no-token`，不影響其他功能）。②**Google Cloud 專案要啟用 Google Calendar API**，否則 freeBusy 回 403。③freeBusy 看不出「忙碌」是什麼：標成忙碌的專注時段也會顯示會議；四小時的上限是土法煉鋼的擋全天事件。④其他四人能不能被看到，取決於 Workspace 的網域共用設定（預設可以，但管理員可能改過）——看不到的人會出現在 log 的 `unreadable`，要他們把行事曆分享給 machi.chen（「僅顯示忙碌」即可）。⑤每分鐘一次 freeBusy 查詢，平日約 840 次／天，遠低於配額。⑥散會後最多一分鐘才會恢復。
+- 已檢查／驗證方式：`worker` vitest 90/90（新增 2 項：開會中顯示會議、整天請假不算會議、看不到的人完全不動、開會中打開筆電與離開座位都不會被蓋掉、散會交還自動、手動狀態不被覆蓋、手動點的會議不會被自動收回、假日與非上班時段完全不呼叫 API；另一項涵蓋沒有授權與 Google 回 403 時不動任何人）；`tsc --noEmit` 通過；`node --test backend/test/*.test.mjs` 167/167。**尚未做線上驗證**：要等 machi.chen 重新連接 Gmail 並確認 Google Cloud 專案已啟用 Calendar API，之後看排程 log 的 `pixel-office-calendar-sync` 確認 `unreadable` 是空的。
+- 部署狀態：Worker 已部署（版本 708f1209）；`index.html` 的 scope 變更 git push 後生效。
+- commit：見 git log
+
 ### 2026-09-21 16:00 Asia/Taipei — 像素辦公室：換上使用者重做的「會議」與「用餐」圖，並新增會議狀態
 
 - 修改目的：使用者重新畫了「會議」與「用餐」兩個圖示要換上去。用餐原本是程式繪製的碗，會議則是還不存在的狀態。
