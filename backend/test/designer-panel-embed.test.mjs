@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=21"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -43,6 +43,12 @@ test('嵌入場景放大並可點選人物，不顯示完整畫面按鈕', async
     'iframe 應接受點選人物的滑鼠事件');
   assert.doesNotMatch(html, /office-embed-shell\{aspect-ratio:11\/8\}/,
     '外框應維持原本比例，不因內容放大而改變');
+  assert.match(html, /#designerPanel\{display:flex;flex-direction:column\}/,
+    '桌機版左側卡片應以垂直 flex 填滿對齊後的高度');
+  assert.match(html, /#designerPanel \.office-embed-shell\{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto\}/,
+    '像素辦公室視窗應填滿左側剩餘高度，不留空白');
+  assert.match(html, /\[designer,recent\]\.forEach\(panel=>\{[\s\S]*?panel\.style\.setProperty\('height',`\$\{height\}px`,'important'\)/,
+    '左右卡片要同時套用較高的高度，底邊才會切齊');
 });
 
 test('頭像、限時動態、大海報與分享音樂都從前台下架', async () => {
@@ -75,17 +81,21 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景要能點選人物');
   assert.match(js, /game\.addEventListener\('pointermove',e=>\{const r=/,
     '人物上方應顯示可點選游標');
-  assert.match(css, /body\.embed #game\{width:140%;max-width:none;[^}]*transform:translate\(-14\.3%,-14\.3%\)/,
-    '外框內的場景內容應放大，但不可撐大外框');
+  assert.match(js, /labelY=s\.y\+\(embedMode&&s\.y>500\?26:56\)/,
+    '嵌入版下排姓名牌應上移，不可被視窗底邊裁掉');
+  assert.match(css, /body\.embed #game\{width:137%;max-width:none;[^}]*transform:translate\(-13\.5%,-22%\)/,
+    '六個座位應比上一版縮小 3%，並往上調整以保留下排姓名');
   assert.match(css, /body\.embed \.canvas-wrap\{height:100%;margin:0;overflow:hidden\}/,
     '放大後超出外框的場景應裁切在 iframe 內');
-  assert.match(css, /body\.embed #game\{width:170%;max-width:none;transform:translate\(-20\.5%,-13\.5%\)/,
-    '手機版仍應以中央座位區為主放大場景');
-  assert.match(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
-    '手機版人物卡應覆蓋在 iframe 內並可捲動');
+  assert.match(css, /body\.embed #game\{width:167%;max-width:none;transform:translate\(-20\.1%,-24%\)/,
+    '手機版也應縮小 3% 並保留下排姓名');
+  assert.match(css, /body\.embed \.person-card\{width:min\(270px,calc\(33\.333% - 16px\)\);max-width:calc\(33\.333% - 16px\)/,
+    '人物卡寬度不得超過欄位三分之一');
+  assert.doesNotMatch(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
+    '小螢幕人物卡不可再滿版');
   assert.match(js, /window\.addEventListener\('keydown',e=>\{if\(embedMode\|\|/,
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 26, `app.js 版本號要 ≥ 26，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 27, `app.js 版本號要 ≥ 27，目前是 ${version?.[1]}`);
 });

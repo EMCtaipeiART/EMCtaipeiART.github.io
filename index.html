@@ -6716,6 +6716,11 @@
     /* 外框維持原本左右欄比例；放大只在 iframe 內的像素場景處理。 */
     .designer-roster{margin-top:12px}
     .office-embed{pointer-events:auto}
+    @media(min-width:901px){
+      #designerPanel{display:flex;flex-direction:column}
+      #designerPanel .designer-roster{position:relative;flex:1 1 auto;min-height:0}
+      #designerPanel .office-embed-shell{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+    }
   </style>
   <style>
     .gmail-thread-msg>summary{list-style:none;cursor:pointer}
@@ -10970,7 +10975,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=21" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
@@ -14037,8 +14042,10 @@ function consumeDashboardCaseFocus(){const id=localStorage.getItem('designReques
 function syncTopPanelHeights(){
   const designer=$('#designerPanel'), recent=$('#recentPanel');
   if(!designer||!recent)return;
-  recent.style.removeProperty('height');
-  recent.style.removeProperty('max-height');
+  [designer,recent].forEach(panel=>{
+    panel.style.removeProperty('height');
+    panel.style.removeProperty('max-height');
+  });
   if(designer.hidden||recent.hidden||window.matchMedia('(max-width:900px)').matches)return;
   // 量測「最新案件列表」自己需要多高之前，先清空每一列先前被 syncModifyRecentRowHeights()
   // 強制設定的列高，讓表格暫時退回依內容自然決定高度——這樣量到的才是「顯示 modifyPageSize
@@ -14047,13 +14054,13 @@ function syncTopPanelHeights(){
   document.querySelectorAll('#modifyFixedTbody tr,#modifyTbody tr,#modifyFixedThead tr,#modifyThead tr').forEach(tr=>{tr.style.height=''});
   const designerHeight=Math.round(designer.getBoundingClientRect().height);
   const naturalRecentHeight=Math.ceil(recent.getBoundingClientRect().height);
-  // 兩者取較高者：設計師面板比較高時，「最新案件列表」跟著長高、維持左右等高的既有視覺設計；
-  // 設計師面板比較矮、矮到連 modifyPageSize 筆案件的自然高度都塞不下時，改成保留自己需要的高度，
-  // 寧可讓兩個面板暫時不等高，也不要讓使用者得捲動才看得到全部案件。
+  // 兩者取較高者並同時套用：保留最新案件的完整列高，也讓左右卡片底邊精準切齊。
   const height=Math.max(designerHeight,naturalRecentHeight);
   if(height>0){
-    recent.style.setProperty('height',`${height}px`,'important');
-    recent.style.setProperty('max-height',`${height}px`,'important');
+    [designer,recent].forEach(panel=>{
+      panel.style.setProperty('height',`${height}px`,'important');
+      panel.style.setProperty('max-height',`${height}px`,'important');
+    });
   }
 }
 function panelClosedState(key){return key==='designer'?Boolean(collapseSettings.designer||collapseSettings.designerHidden):Boolean(collapseSettings[key])}
@@ -14341,8 +14348,10 @@ function syncModifyRecentRowHeights(){
     if(recentPanel&&!recentPanel.hidden){
       const base=recentPanel.getBoundingClientRect().height;
       const grown=Math.ceil(base+shortfall);
-      recentPanel.style.setProperty('height',`${grown}px`,'important');
-      recentPanel.style.setProperty('max-height',`${grown}px`,'important');
+      [$('#designerPanel'),recentPanel].filter(Boolean).forEach(panel=>{
+        panel.style.setProperty('height',`${grown}px`,'important');
+        panel.style.setProperty('max-height',`${grown}px`,'important');
+      });
       applyModifyRecentRowHeights();
     }
   }

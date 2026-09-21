@@ -40,7 +40,7 @@
 - 檔案照片會縮至最長邊 1200 px，以 JPEG 儲存。大於 8 MB 會拒絕。
 - localStorage 主資料鍵：`kaiyao-office-v1`；配置版本鍵：`kaiyao-office-layout`，目前值 `5`。版本不符只重設位置，仍讀取照片、訊息、心情與離席狀態。
 - 網頁在支援 `document.modelContext` 時註冊 `set_character_status`，不支援時遊戲仍正常運作。
-- `?embed=1` 是主系統用的精簡模式：`body.embed` 隱藏頁首、編輯工具、名單與說明，但保留 Canvas 的人物點選與人物資料卡。`embedMode` 只擋鍵盤移動，主系統 iframe 必須接受 pointer event，才能讓使用者直接點人物。主系統維持原本左右欄與 3:2 iframe 外框；Canvas 在外框內以 CSS 放大 140% 並裁切，手機版放大到 170%，資料卡固定在 iframe 內。若調整 Canvas 比例，要一起檢查命中座標與資料卡定位。
+- `?embed=1` 是主系統用的精簡模式：`body.embed` 隱藏頁首、編輯工具、名單與說明，但保留 Canvas 的人物點選與人物資料卡。`embedMode` 只擋鍵盤移動，主系統 iframe 必須接受 pointer event，才能讓使用者直接點人物。主系統維持原本左右欄與 3:2 iframe 外框，並以較高的那側同步兩張卡片高度；Canvas 在外框內以 CSS 放大 137% 並裁切，手機版放大到 167%，垂直位移特別保留下排姓名。資料卡在各螢幕寬度都不得超過 iframe 欄位的三分之一。若調整 Canvas 比例，要一起檢查命中座標與資料卡定位。
 
 ## 新增人物
 

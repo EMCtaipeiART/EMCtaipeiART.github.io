@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 17:34 Asia/Taipei — 首頁雙欄等高、座位縮小與人物卡限寬
+
+- 修改目的：依使用者截圖修正左側「設計師專長與案件分配」底邊沒有對齊右側「最新案件列表」、下排設計師姓名被裁切，以及點選人物後資料卡過寬的問題。
+- 影響檔案：`index.html`、`EMC-ART-Pixel-Office/dist/index.html`、`dist/style.css`、`EMC-ART-Pixel-Office/README.md`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：桌機版左右卡片同時套用自然高度的較大值，即使最新案件表格因列高捨入額外增高也會同步左側；嵌入 Canvas 桌機版從 140% 縮為 137%、手機版從 170% 縮為 167%，並上移以保留下排姓名；人物卡寬度上限改為 iframe 欄位的三分之一，手機也不再滿版。
+- 風險區塊：人物卡在極窄螢幕上會跟著三分之一限制變窄；Canvas 縮放或位移再調整時需重測姓名裁切與人物點選。
+- 已檢查／驗證方式：`backend/test/designer-panel-embed.test.mjs` 5/5、完整 Node 測試 172/172、Pixel Office `npm run check` 與 `git diff --check` 均通過；Chrome 本機實機確認左右卡片底邊對齊、五位姓名完整顯示且最新案件六列未被壓縮。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log。
+
 ### 2026-09-21 17:25 Asia/Taipei — 恢復首頁原比例、只放大像素辦公室內容
 
 - 修改目的：依使用者補充要求，把「設計師專長與案件分配／最新案件列表」恢復成原本左右欄比例與原本 iframe 外框，只放大外框內的像素辦公室內容。

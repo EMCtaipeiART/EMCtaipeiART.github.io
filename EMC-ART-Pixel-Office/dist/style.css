@@ -183,10 +183,10 @@ body.embed,body.embed main,body.embed .play{height:100%}
 body.embed main{display:block;max-width:none;padding:0;gap:0}
 body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 body.embed .canvas-wrap{height:100%;margin:0;overflow:hidden}
-body.embed #game{width:140%;max-width:none;height:auto;display:block;transform:translate(-14.3%,-14.3%);transform-origin:top left;cursor:default}
-body.embed .person-card{width:min(270px,calc(100% - 16px));max-height:calc(100% - 16px);font-size:13px}
+body.embed #game{width:137%;max-width:none;height:auto;display:block;transform:translate(-13.5%,-22%);transform-origin:top left;cursor:default}
+body.embed .person-card{width:min(270px,calc(33.333% - 16px));max-width:calc(33.333% - 16px);max-height:calc(100% - 16px);font-size:13px;overflow-wrap:anywhere}
 body.embed .person-card-head strong{font-size:19px}
 @media(max-width:640px){
-  body.embed #game{width:170%;max-width:none;transform:translate(-20.5%,-13.5%);transform-origin:top left}
-  body.embed .person-card{position:fixed!important;inset:8px!important;width:auto;max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
+  body.embed #game{width:167%;max-width:none;transform:translate(-20.1%,-24%);transform-origin:top left}
+  body.embed .person-card{position:fixed!important;top:8px!important;right:8px!important;bottom:auto!important;left:auto!important;width:min(270px,calc(33.333% - 8px));max-width:calc(33.333% - 8px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
 }
