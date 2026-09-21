@@ -14579,14 +14579,21 @@ function refreshLatestInBackground(){
  * 畫面上看起來游標還在、內容也還在，但實際上瀏覽器已經不認得這裡是「目前正在編輯的區域」，打字沒有反應。
  * 不論確切成因是瀏覽器本身的行為還是背景重新整理過程間接搶走焦點，統一在「回到分頁」時把焦點與游標
  * 收回目前開著的編輯區正文尾端；有預設簽名時停在簽名前方，避免接著輸入的文字跑到簽名下面。
+ *
+ * onlyIfLost：被動回焦點的呼叫端（回到分頁、背景同步完成）一律傳 true——只有編輯區「真的」失去焦點／選取範圍
+ * 時才收回，游標已經好好待在編輯區裡就完全不動。過去這兩個時機都會無條件把游標搬到信件尾端：設計師回覆信
+ * 一邊 NAS 備份／上傳圖片、一邊打字時，選擇器視窗切回主頁會觸發「回到分頁→重新同步→同步完成後再收一次焦點」，
+ * 這次呼叫落在使用者打字到一半，游標就被硬拉到信件最下方（簽名前），後面的字全打錯位置。載入內容後的主動
+ * 呼叫（開啟編輯器、載入排程草稿）不傳這個參數，維持原本「重設到尾端」的行為。
  */
-function restoreOpenGmailEditorFocus(){
+function restoreOpenGmailEditorFocus({onlyIfLost=false}={}){
   const composeOpen=!$('#gmailComposeModal')?.hidden, threadOpen=!$('#gmailThreadModal')?.hidden;
   if(!composeOpen&&!threadOpen)return;
   const editor=composeOpen?$('#gmailComposeEditor'):$('#gmailThreadReplyEditor');
   if(!editor||!document.body.contains(editor))return;
-  editor.focus();
   const selection=window.getSelection();
+  if(onlyIfLost&&selection&&selection.rangeCount&&editor.contains(selection.anchorNode)&&editor.contains(document.activeElement))return;
+  editor.focus();
   if(!selection)return;
   const range=document.createRange();
   const signature=editor.querySelector('[data-gmail-inserted-signature]');
@@ -14609,7 +14616,7 @@ function refreshWhenPageReturns(){
     lastFullBackgroundRefreshAt=now;
     setSync('回到頁面，正在同步最新案件...');
     returnRefreshPromise=loadSheet({full:true,background:true,forceFresh:true})
-      .then(()=>{setSync('已同步最新案件'); restoreOpenGmailEditorFocus(); return Promise.allSettled([loadDesignerRoster({background:true}),loadIssueReports({background:true}),refreshWatchedScheduledThreads()])})
+      .then(()=>{setSync('已同步最新案件'); restoreOpenGmailEditorFocus({onlyIfLost:true}); return Promise.allSettled([loadDesignerRoster({background:true}),loadIssueReports({background:true}),refreshWatchedScheduledThreads()])})
       .catch(err=>{lastReturnRefreshAt=0;setSync(`回到頁面後同步失敗：${err.message}`,true)})
       .finally(()=>{returnRefreshPromise=null});
   },80);
@@ -16173,7 +16180,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus();refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus({onlyIfLost:true});refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>

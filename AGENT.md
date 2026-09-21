@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 09:30 Asia/Taipei — 修復設計師回覆信：圖片上傳／NAS 備份同時打字，游標被拉到信件最下方
+
+- 修改目的：設計師在「設計師回覆信」（修改回覆信）的編輯器裡打字，同時圖片正在 NAS 備份／上傳時，打到一半游標會突然跳到信件最下方，後面的字全打錯位置。根因是 `restoreOpenGmailEditorFocus()`：它每次被呼叫都會無條件 `focus()` 並把游標搬到編輯區正文尾端（簽名前）。這支函式除了「載入內容後」的主動呼叫之外，還有兩個被動時機——分頁 `visibilitychange` 回到頁面、以及 `refreshWhenPageReturns()` 背景同步（`loadSheet`）完成後。NAS 資料夾選擇器是另開的視窗，備份／上傳期間切回主頁就會觸發「回到分頁→重新同步（要好幾秒）→同步完成後再呼叫一次收焦點」，最後這一次剛好落在使用者打字到一半，游標就被硬拉到信件尾端。
+- 影響檔案：`index.html`（純前端，沒有動 Worker、Apps Script 或本機 scripts）。
+- 影響功能：`restoreOpenGmailEditorFocus()` 新增 `{onlyIfLost}` 選項；兩個被動呼叫端（`visibilitychange`、`refreshWhenPageReturns` 的 `.then`）改傳 `{onlyIfLost:true}`——只有編輯區「真的失焦或選取範圍已不在編輯區裡」才收回到尾端，游標已經在編輯區裡就完全不動。三個「載入內容後」的主動呼叫（開啟填寫修改需求信、開啟設計師回覆信、載入排程草稿）不傳參數，維持原本「重設到尾端／簽名前」的行為。原本要修的「分頁切走再切回來編輯區失去焦點」情境仍然有效（失焦時照常收回）。
+- 風險區塊：`restoreOpenGmailEditorFocus` 沒有任何測試鎖住（已 grep `backend/test/`）；判斷「沒失焦」的條件是選取範圍的 anchor 在編輯區內且 `document.activeElement` 也在編輯區內，兩者缺一就視為失焦而照舊收回，所以不會讓原本要解的失焦問題復發。`applyDesignerReplyImages()` 只局部替換 `#gmailDesignerReplyImages` 容器內容，這次沒有動它；若使用者游標剛好停在這個圖片容器「裡面」時圖片才套入，游標仍會因容器內容被替換而回到容器起點，這是既有行為、範圍很小，沒有處理。
+- 已檢查／驗證方式：本機靜態伺服器＋瀏覽器 iframe，用真實 contenteditable、真實 `Selection`／`execCommand('insertText')`：①游標在第二段中間、被動回焦點 → 游標留在原處；②同情境呼叫舊行為（無參數）→ 游標被搬到簽名前（重現原 bug）；③焦點與選取都移出編輯區 → 被動回焦點正確收回；④選取還在編輯區但焦點在別的輸入框 → 正確收回；⑤真實 `applyDesignerReplyImages()` 套入圖片後接著兩次被動回焦點並持續打字，文字全部落在原位置（`請查收AAABBBCCC設計稿內容`），簽名未被污染、圖片正常套入、送出按鈕解鎖標記正常。`node --test backend/test/*.test.mjs` 149/149 通過；兩個內嵌 `<script>` 語法檢查通過。未做：沒有用真實 NAS 選擇器視窗＋真實帳號在正式站實際重現「備份中打字」的完整流程（切回分頁的時機由測試直接呼叫函式模擬）。
+- 部署狀態：純前端，git push 後 GitHub Pages 自動生效；Worker 與本機 scripts 都沒動，不需要重新部署或重啟任何服務。
+- commit：見 git log（`fix: keep mail editor caret when passive focus restore fires`）
+
 ### 2026-09-21 09:20 Asia/Taipei — AI 階段判定器改為 Gemini 免費額度優先、OpenAI 自動備援
 
 - 修改目的：降低日常 AI 階段判定成本，優先使用 Gemini 免費額度，只有 Gemini 無法使用時才自動切換 OpenAI。
