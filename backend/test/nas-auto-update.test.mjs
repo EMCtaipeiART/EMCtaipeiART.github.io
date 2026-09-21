@@ -293,3 +293,31 @@ test('安裝器與設定：launchd 執行啟動器、產生的設定開啟自動
   assert.match(command, /publish_nas_update\.mjs/);
   assert.match(command, /read -n 1 -s/, '視窗要停住，才看得到發布結果');
 });
+
+test('安裝器自己補齊啟動器與更新模組：NAS 上還是舊版 .command（只下載舊的 5 個檔案）也能裝好', async () => {
+  const installer = await import('../../scripts/nas_watcher_installer.mjs');
+  assert.deepEqual(installer.BOOTSTRAP_DOWNLOADS, [...update.BOOTSTRAP_FILES, update.RELEASE_MANIFEST_NAME], '要補的檔案跟更新機制的名單一致');
+  // 安裝程式不能 import 更新模組：舊版 .command 沒下載它，import 會直接失敗。
+  const source = await readFile(new URL('../../scripts/nas_watcher_installer.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /^\s*import\b[^\n]*from\s+['"]\.\/nas_watcher_update/m, '不可以靜態 import 更新模組');
+  assert.doesNotMatch(source, /\bimport\(\s*['"]\.\/nas_watcher_update/, '也不可以動態 import 更新模組');
+  const raw = await startFakeRaw({ 'nas_watcher_launcher.mjs': 'L', 'nas_watcher_update.mjs': 'U', 'nas_watcher_release.json': '{}' });
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-boot-'));
+  try {
+    await writeFile(path.join(dir, 'nas_watcher_launcher.mjs'), 'already here');
+    assert.deepEqual(await installer.ensureBootstrapFiles(dir, { baseUrl: raw.url }), ['nas_watcher_update.mjs', 'nas_watcher_release.json'], '已經有的不重抓');
+    assert.equal(await readFile(path.join(dir, 'nas_watcher_launcher.mjs'), 'utf8'), 'already here');
+    assert.equal(await readFile(path.join(dir, 'nas_watcher_update.mjs'), 'utf8'), 'U');
+    assert.deepEqual(await installer.ensureBootstrapFiles(dir, { baseUrl: raw.url }), [], '重跑不會重複下載');
+    const empty = await mkdtemp(path.join(tmpdir(), 'nas-boot-'));
+    try {
+      await assert.rejects(installer.ensureBootstrapFiles(empty, { baseUrl: `${raw.url}/nope`, fetchImpl: async () => ({ ok: false, status: 404 }) }), /HTTP 404/);
+      await assert.rejects(installer.ensureBootstrapFiles(empty, { fetchImpl: async () => { throw new Error('offline'); } }), /連得上網際網路/);
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
+  } finally {
+    await raw.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

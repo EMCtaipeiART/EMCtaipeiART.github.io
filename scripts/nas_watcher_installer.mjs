@@ -75,6 +75,32 @@ export function buildWatcherConfig(template, { mountRoot, installDir }) {
   };
 }
 
+// 安裝時一定要在電腦上的檔案（啟動器、更新模組、發布清單）。放在 NAS 上給設計師點的
+// install_nas_watcher.command 如果還是舊版，只會下載舊的那幾個檔案、不包含這些——所以由這支
+// （每次都會被重新下載的）安裝程式自己補齊，不能假設 .command 已經下載好。
+// 刻意不 import nas_watcher_update.mjs：那個檔案在舊版 .command 下就是還沒下載的那一個。
+export const BOOTSTRAP_DOWNLOADS = ['nas_watcher_launcher.mjs', 'nas_watcher_update.mjs', 'nas_watcher_release.json'];
+export async function ensureBootstrapFiles(scriptsDir, { fetchImpl = globalThis.fetch, baseUrl = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main' } = {}) {
+  const downloaded = [];
+  for (const name of BOOTSTRAP_DOWNLOADS) {
+    const target = path.join(scriptsDir, name);
+    try {
+      if ((await fs.stat(target)).size > 0) continue;
+    } catch { /* 沒有這個檔案，下面下載 */ }
+    let response;
+    try {
+      response = await fetchImpl(`${baseUrl}/scripts/${name}?cb=${Date.now()}`, { signal: AbortSignal.timeout(20000) });
+    } catch (error) {
+      throw new Error(`下載 ${name} 失敗（${error.message}），請確認這台電腦連得上網際網路後再執行一次安裝程式`);
+    }
+    if (!response.ok) throw new Error(`下載 ${name} 失敗（HTTP ${response.status}）`);
+    await fs.mkdir(scriptsDir, { recursive: true });
+    await fs.writeFile(target, Buffer.from(await response.arrayBuffer()));
+    downloaded.push(name);
+  }
+  return downloaded;
+}
+
 /** osascript 的 choose from list 回傳選到的名字；按取消回傳 "false"。不在名單裡的值一律當作沒選。 */
 export function parseDesignerChoice(output) {
   const chosen = String(output || '').trim();
@@ -242,6 +268,8 @@ async function main() {
   log(`Node：${nodePath}`);
   log('');
 
+  const fetched = await ensureBootstrapFiles(scriptsDir);
+  if (fetched.length) log(`補下載自動更新需要的檔案：${fetched.join('、')}`);
   const template = JSON.parse(await fs.readFile(path.join(scriptsDir, 'nas_design_image_watcher.config.json'), 'utf8'));
   const mountRoot = await ensureMounted(template);
   log(`NAS 已掛載：${mountRoot}`);
