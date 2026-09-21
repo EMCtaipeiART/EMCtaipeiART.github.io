@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=21"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=22"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -89,13 +89,18 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '放大後超出外框的場景應裁切在 iframe 內');
   assert.match(css, /body\.embed #game\{width:167%;max-width:none;transform:translate\(-20\.1%,-24%\)/,
     '手機版也應縮小 3% 並保留下排姓名');
-  assert.match(css, /body\.embed \.person-card\{width:min\(270px,calc\(33\.333% - 16px\)\);max-width:calc\(33\.333% - 16px\)/,
-    '人物卡寬度不得超過欄位三分之一');
+  // 嵌進去的框只有 340 px 上下，單純取三分之一會算出 106 px，名字會被拆成單字。寬度要有下限。
+  assert.match(css, /body\.embed \.person-card\{width:clamp\(172px,calc\(33\.333% - 16px\),270px\);max-width:calc\(100% - 16px\)/,
+    '人物卡寬度要有讀得下去的下限');
+  assert.match(css, /body\.embed \.person-card-head,body\.embed \.person-card-title\{overflow-wrap:normal/,
+    '名字與職稱不該被 overflow-wrap:anywhere 拆成單字');
   assert.doesNotMatch(css, /body\.embed \.person-card\{position:fixed!important;inset:8px!important/,
     '小螢幕人物卡不可再滿版');
+  assert.match(css, /width:clamp\(168px,calc\(33\.333% - 8px\),270px\)/,
+    '小螢幕的人物卡同樣要有寬度下限');
   assert.match(js, /window\.addEventListener\('keydown',e=>\{if\(embedMode\|\|/,
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 27, `app.js 版本號要 ≥ 27，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 28, `app.js 版本號要 ≥ 28，目前是 ${version?.[1]}`);
 });
