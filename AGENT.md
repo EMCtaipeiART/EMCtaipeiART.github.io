@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 09:20 Asia/Taipei — AI 階段判定器改為 Gemini 免費額度優先、OpenAI 自動備援
+
+- 修改目的：降低日常 AI 階段判定成本，優先使用 Gemini 免費額度，只有 Gemini 無法使用時才自動切換 OpenAI。
+- 影響檔案：`EMC_AI_階段判定器_落地包/site-source/app/api/analyze/route.ts`、`app/api/history/route.ts`、`app/page.tsx`、`scripts/deploy-cloudflare.mjs`、落地包 `README.md`、`設定雲端金鑰與密碼.command`、`啟動首頁.command`。
+- 影響功能：主要引擎改為多模態 `gemini-3.6-flash`；保留 `gpt-5-mini` 自動備援；分析結果與歷史紀錄顯示實際引擎、模型與是否曾切換備援；Gemini 免費額度案件的估算費用為 0，累計費用只計 OpenAI 備援。
+- 風險區塊：Gemini API 金鑰與 OpenAI API 金鑰都只保留在伺服器端；Gemini API 異常、空回應或 JSON 格式錯誤時才會使用 OpenAI，因此備援仍可能產生費用。
+- 已檢查／驗證方式：Sites 正式建置成功；本機以真實圖片呼叫分析 API，確認回傳 `provider=gemini`、`fallbackUsed=false`、歷史紀錄寫入成功且費用為 0；啟動腳本通過 shell 語法檢查。
+- 部署狀態：Sites 既有專案更新，發布後自動套用線上 Gemini 與 OpenAI 伺服器端金鑰。
+- commit：`5fb0165`
+
 ### 2026-09-18 12:20 Asia/Taipei — 新增像素辦公室遊戲、歷史案件等級與 Noise 新造型
 
 - 修改目的：將 GPT 製作的設計師像素遊戲放到現有 GitHub Pages，串接歷史案件的加權分數／數量，並加入逐級變難的 EXP 與等級畫面。
