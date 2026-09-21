@@ -206,6 +206,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：Worker 已部署（版本 `93b001a1`）；前台 git push 後 GitHub Pages 自動生效。
 - commit：見 git log（`fix: never both schedule and send one reply; dedupe repeated modification records`）
 
+### 2026-09-21 17:30 Asia/Taipei — 像素辦公室：人物資料卡、預設不選人、桌上圖示比例
+
+- 修改目的：使用者要求①「下班」與「公出」在桌上比例過大②預設不要選任何角色③點人物時在人物右側展開個人表單，內容包含人名、等級、等級職稱、經驗值、技能、未開始／執行中／修改中的案件（概略），以及目前新專案首選人物。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/app.js`、`dist/index.html`、`dist/style.css`、`docs/HANDOFF.md`、`worker/src/database-coordinator.ts`。
+- 影響功能：
+  1. **桌上圖示比例**：量了每個圖示的不透明面積佔格子的比例——電源鍵 0.67、公事包 0.70，其他中位數 0.43，所以那兩個看起來大一圈。新增 `DESK_ICON_SCALE`（power 0.8、briefcase 0.78）只縮桌上那份；面板按鈕有外框當基準，維持原樣。
+  2. **預設不選人**：`selected` 起始改成 `null`，右側工具面板收起、改顯示提示；點人物才選取，點場景空白處取消。所有讀 `people[selected]` 的函式都補上 `selected===null` 的擋。
+  3. **人物資料卡**：HTML 浮層疊在 canvas 上，`positionPersonCard()` 每一幀更新位置（人物走動時跟著跑，右邊放不下就翻到左邊）。手機（≤700px）改排在場景下方，不遮場景也不用捲。內容：等級／職稱／EXP（既有的 archive）、技能與組別、未開始／執行中／修改中的案件各列前 3 件、新專案找誰。
+  4. **Worker 新增 `pixelOfficeDesigners`**（唯讀）：只回傳五個人的名字、組別、技能、輪值與啟用狀態，外加算好的 `priority`（同組裡輪值最小且啟用的人，跟主系統 `rotationDesignerForGroup()` 同一套規則）。這樣遊戲不必為了技能去下載 1.5 MB 的 `db.json`；案件清單則直接用 `syncLevels()` 本來就會下載的 archive（裡面含未完成的案件）。
+  5. **順手修掉一個已經上線的錯誤**：先前把 `taipeiHour` 改名成 `taipeiClock` 時漏了每分鐘跑一次的 `setInterval`，`taipeiHour is not defined` 每分鐘丟一次，導致跨整點時畫面上的狀態不會自動刷新。
+- 風險區塊：①資料卡的案件來自每小時同步一次的 archive，最多會落後一小時（使用者要的是概略）。②只看未開始／執行中／修改中三種狀態，「過稿中」（線上最多、165 件）沒有列進去——這是照使用者指定的三類做的。③技能與輪值要後台「設定」表有填；沒填會顯示「後台還沒填技能」。④資料卡是浮層，桌機上會蓋住場景的一部分。⑤`selected` 可以是 `null` 了，之後新增讀 `people[selected]` 的程式都要記得擋。
+- 已檢查／驗證方式：本機實機驗證：進站沒有預設選取、右側顯示提示；點人物（用真實 `PointerEvent` 驗證命中測試，瀏覽器面板的合成點擊不會送出 `pointerdown`）會選取並展開卡片，點空白處取消；Amber 的卡片顯示 Lv.18／資深設計師·平面組／29,050 EXP／技能平面·輸出／未開始 1·執行中 1·修改中 1 各含案件名／新專案找 平面 Anna、影音 Noise，與後台資料一致；手機 375px 下卡片排在場景下方、關閉鈕定位正確；放大比對四個離席圖示，電源鍵與公事包已與飛機、馬桶相當。`worker` vitest 90/90、`node --test backend/test/*.test.mjs` 167/167、`tsc --noEmit` 通過。
+- 部署狀態：Worker 已部署（版本 98a8fe1e）；前端 git push 後 GitHub Pages 生效。
+- commit：見 git log
+
 ### 2026-09-21 16:40 Asia/Taipei — 像素辦公室：Google 行事曆上有會議時自動顯示「會議」
 
 - 修改目的：使用者問能不能讀他的 Google 行事曆，並依五位設計師的行事曆自動把狀態改成「會議」。（我這個對話本身沒有行事曆工具，也不該靠對話——狀態要每分鐘更新，必須由 Worker 自己查。）使用者選擇「只有 machi.chen 重新授權、用網域的忙碌／空閒」，以及「行事曆不蓋掉手動指定的狀態」。

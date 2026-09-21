@@ -137,3 +137,40 @@ h2{font-size:24px}
 .joystick.active{cursor:grabbing;border-color:#ffda80}
 .joystick.active .joystick-knob{transition:none}
 @media(max-width:600px){.joystick{width:104px;height:104px}.joystick-knob{width:46px;height:46px;margin:-23px 0 0 -23px}}
+
+/* 點人物之後在他右邊展開的資料卡。位置每一幀跟著人物更新（走路時也跟著跑）。 */
+.person-card{position:absolute;z-index:6;width:232px;max-height:calc(100% - 16px);overflow:auto;padding:13px 14px 12px;border-radius:14px;background:rgba(19,35,58,.97);border:1px solid #33507a;box-shadow:0 16px 34px rgba(6,14,28,.45);color:#e8eef7;font-size:12px;line-height:1.5}
+.person-card[hidden]{display:none}
+.person-card-close{position:absolute!important;top:7px;right:7px;width:22px;height:22px;min-height:22px!important;padding:0!important;display:grid;place-items:center;border-radius:999px!important;background:rgba(255,255,255,.08)!important;border:0!important;color:#9fb2cc!important;font-size:12px!important;cursor:pointer}
+.person-card-close:hover{background:rgba(255,255,255,.16)!important;color:#fff!important}
+.person-card-head{display:flex;align-items:baseline;gap:8px;padding-right:24px}
+.person-card-head strong{font-size:17px;color:#fff;letter-spacing:.01em}
+.person-card-level{margin-left:auto;font-size:12px;font-weight:800;color:#ffdf75}
+.person-card-title{margin-top:1px;font-size:11.5px;color:#9fb2cc;font-weight:700}
+.person-card-xp{display:flex;align-items:center;gap:7px;margin:9px 0 2px}
+.person-card-track{flex:1 1 auto;height:5px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.person-card-track span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f0b429,#ffdf75)}
+#cardXpText{flex:0 0 auto;font-size:10.5px;color:#9fb2cc;font-weight:700}
+.person-card-block{margin-top:11px}
+.person-card-block h4{margin:0 0 5px;font-size:10px;font-weight:900;letter-spacing:.08em;color:#7f94b3;text-transform:uppercase}
+.person-card-skills{display:flex;flex-wrap:wrap;gap:4px}
+.person-card-skill{padding:2px 8px;border-radius:999px;background:rgba(105,158,232,.18);border:1px solid #3c5f92;color:#cfe0f7;font-size:11px;font-weight:800}
+.person-card-cases{display:grid;gap:6px}
+.person-card-case-group{display:grid;gap:2px}
+.person-card-case-head{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:850;color:#cfe0f7}
+.person-card-case-dot{width:7px;height:7px;border-radius:999px;flex:0 0 auto}
+.person-card-case-count{margin-left:auto;color:#9fb2cc;font-weight:700}
+.person-card-case-list{margin:0;padding-left:13px;color:#9fb2cc;font-size:11px;font-weight:650}
+.person-card-case-list li{margin:1px 0}
+.person-card-empty{color:#7f94b3;font-size:11px;font-weight:700}
+.person-card-foot{margin-top:11px;padding-top:9px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:#9fb2cc;font-weight:700}
+.person-card-foot b{color:#ffdf75;font-weight:850}
+.tools-empty{margin:0;padding:22px 4px 6px;color:#8ea3c0;font-size:12.5px;font-weight:750;line-height:1.6;text-align:center}
+.tools-empty[hidden]{display:none}
+@media (max-width:900px){.person-card{width:200px;font-size:11.5px}}
+/* 手機的場景本來就小，卡片浮在人物旁邊會把整個房間蓋住。改成排在場景下方（position:relative 加上 left/top:auto
+   會蓋掉 positionPersonCard() 寫進 style 的座標，關閉鈕也才會以卡片為定位基準），什麼都不遮，內容也不必擠在小框裡捲。 */
+@media (max-width:700px){
+  .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
+  .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+}

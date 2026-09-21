@@ -3018,6 +3018,26 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // Pages 才會更新；新增案件後的信件編輯器改用這裡即時帶入副本，剛在後台設定好的預設信箱才會立刻生效。
       // 內容與公開的 db.json 相同，不需要登入。
       if (action === 'listCustomers') return { ok: true, action, rows: database.tables['客戶別'].rows, revision: database.revision };
+      // 像素辦公室的人物表單要顯示技能與「新專案找誰」。只回傳這幾個欄位，前端就不必下載整份 db.json
+      //（1.5 MB）。輪值的排法跟主系統的 rotationDesignerForGroup() 一樣：同組裡「新專案輪值」最小的是下一位。
+      if (action === 'pixelOfficeDesigners') {
+        const rows = database.tables['設定'].rows
+          .filter(row => text(row['部門']) === '設計部' && PIXEL_OFFICE_NAMES.includes(text(row['名字'])))
+          .map<Row>(row => ({
+            name: text(row['名字']),
+            group: text(row['組別']),
+            skills: text(row['技能']).split(/[,、，]/).map(skill => skill.trim()).filter(Boolean),
+            rotation: Number(text(row['新專案輪值'])) || 0,
+            enabled: text(row['設計師顯示']) !== 'x'
+          }));
+        const priority: Row = {};
+        for (const group of ['平面', '影音']) {
+          const ordered = rows.filter(row => row.group === group && row.enabled && Number(row.rotation) > 0)
+            .sort((a, b) => Number(a.rotation) - Number(b.rotation));
+          if (ordered.length) priority[group] = ordered[0].name;
+        }
+        return { ok: true, action, designers: rows, priority, revision: database.revision };
+      }
       if (action === 'listModificationRecords') {
         const ids = Array.isArray(payload.ids) && payload.ids.length ? new Set(payload.ids.map(text)) : null;
         const rows = database.tables['修改統計表'].rows.map<Row>((row, index) => ({ rowNumber: index + 2, ...row })).filter(row => !ids || ids.has(text(row['案件編號'])));

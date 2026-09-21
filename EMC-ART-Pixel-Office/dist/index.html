@@ -21,12 +21,23 @@
   <main>
     <section class="play">
       <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div><button id="home" class="outline">全員回座位 ↺</button></div>
-      <div class="canvas-wrap"><canvas id="game" width="1536" height="1024" tabindex="0" aria-label="設計部遊戲場景。點選人物，以方向鍵移動。"></canvas><p id="loading">正在整理設計部…</p></div>
-      <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或右側搖桿移動人物</span><span>點選人物開啟工具 · 點照片放大</span></div>
+      <div class="canvas-wrap"><canvas id="game" width="1536" height="1024" tabindex="0" aria-label="設計部遊戲場景。點選人物，以方向鍵移動。"></canvas><p id="loading">正在整理設計部…</p>
+        <div id="personCard" class="person-card" role="dialog" aria-label="設計師資料" hidden>
+          <button type="button" class="person-card-close" id="personCardClose" aria-label="關閉">✕</button>
+          <div class="person-card-head"><strong id="cardName">—</strong><span class="person-card-level" id="cardLevel">Lv.—</span></div>
+          <div class="person-card-title" id="cardTitle">—</div>
+          <div class="person-card-xp"><span class="person-card-track"><span id="cardXpFill"></span></span><span id="cardXpText">—</span></div>
+          <div class="person-card-block"><h4>技能</h4><div class="person-card-skills" id="cardSkills">—</div></div>
+          <div class="person-card-block"><h4>手上的案件</h4><div class="person-card-cases" id="cardCases">—</div></div>
+          <div class="person-card-foot" id="cardPriority">—</div>
+        </div></div>
+      <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或右側搖桿移動人物</span><span>點選人物看資料與工具 · 點照片放大</span></div>
       <nav id="roster" aria-label="選取設計師"></nav>
     </section>
     <aside>
       <div class="panel-top"><span class="eyebrow">CHARACTER TOOLS</span><span id="selectedTag">已選取</span></div>
+      <p class="tools-empty" id="toolsEmpty" hidden>點畫面上的人物，看他的資料與工具。</p>
+      <div id="tools">
       <div class="identity"><canvas id="portrait" width="130" height="155"></canvas><div class="identity-text"><h2 id="personName">Leona</h2><p id="personDesc">設計師</p><span class="mood-status" id="moodStatus">自在工作中</span></div><div class="joystick" id="joystick" role="application" aria-label="移動搖桿：按住拖曳控制人物方向"><span class="joystick-ring"></span><span class="joystick-knob"></span></div></div>
       <section class="level-card" aria-labelledby="levelHeading">
         <div class="level-head"><div><span class="level-kicker">DESIGNER LEVEL</span><strong id="levelHeading">Lv.14</strong></div><span id="levelTitle">資深設計師</span></div>
@@ -38,11 +49,12 @@
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
-      <p class="privacy">心情、對話、狀態、位置與照片會同步給所有打開這個網頁的人。等級資料只讀取已完成案件，不會寫回後台。</p>
+      </div>
+      <p class="privacy">心情、對話、狀態、位置與照片會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
     </aside>
   </main>
   <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=22"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>

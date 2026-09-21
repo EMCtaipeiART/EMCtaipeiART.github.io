@@ -22,7 +22,7 @@ const currentTaipeiHour=()=>currentTaipeiClock().hour;
 // 週末與國定假日不套用（那幾天電腦開著也算下班，不是加班）。
 function isOvertime(p){if(p.status==='overtime')return true;if(p.status!=='present')return false;if(overtimePreview)return true;const clock=currentTaipeiClock();return clock.workday&&(clock.hour>=19||clock.hour<6);}
 const effectiveStatusId=p=>isOvertime(p)?'overtime':p.status;
-let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=0,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
+let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo=typeof s.photo==='string'&&s.photo.startsWith('data:image/')?s.photo:'';if(['4','5'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
@@ -51,8 +51,13 @@ function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=fal
   if(frame!==2){const bags=frame===1?[[190,124,52,28,16,12]]:[[116,122,50,28,-12,14],[200,122,51,28,12,14]],faceScale=(compact?95/98:1)*scale,bagY=feetY-(142-EYE_PUPIL_BOTTOM[index])*scale;
     for(const[sx,sy,sw,sh,cx,bagWidth]of bags){const dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
-function portrait(context,i,showOvertime=true){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
-function select(i){selected=i;keys.clear();$('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);}
+function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
+function select(i){selected=i;keys.clear();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
+  const chosen=i!==null&&i!==undefined;
+  $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
+  if(!chosen){$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);return;}
+  $('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();
+  updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();}
 function numberText(value){return Number(value).toLocaleString('zh-TW',{maximumFractionDigits:1});}
 function levelTitle(level){if(level>=50)return '設計神話';if(level>=40)return '傳奇設計師';if(level>=30)return '設計大師';if(level>=20)return '設計菁英';if(level>=10)return '資深設計師';return '設計新秀';}
 function levelFromScore(score){
@@ -60,6 +65,7 @@ function levelFromScore(score){
   return {score:safe,xp:safe*10,level,title:levelTitle(level),remaining:Math.max(0,next-safe),progress:Math.max(0,Math.min(100,progress))};
 }
 function updateLevel(){
+  if(selected===null)return;
   const stat=levelStats[people[selected].name]||levelFromScore(0);
   $('levelHeading').textContent='Lv.'+stat.level;$('levelTitle').textContent=stat.title;$('xpFill').style.width=stat.progress.toFixed(1)+'%';$('xpTrack').setAttribute('aria-valuenow',stat.progress.toFixed(1));
   $('scoreText').textContent=`${numberText(stat.score)} 分 · ${numberText(stat.xp)} EXP`;$('nextText').textContent=`距 Lv.${stat.level+1} 還差 ${numberText(stat.remaining)} 分`;
@@ -79,17 +85,89 @@ async function syncLevels(){
   const urls=['/data/database_archive.json','https://emctaipeiart.github.io/data/database_archive.json'];let payload=null;
   for(const url of urls){try{const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error(String(response.status));const candidate=await response.json();if(Array.isArray(candidate.rows)){payload=candidate;break;}}catch{}}
   if(!payload)return;
-  const totals=scoreRows(payload.rows);levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name])]));levelIsLive=true;
+  caseRows=payload.rows;const totals=scoreRows(payload.rows);levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name])]));levelIsLive=true;
   const timestamp=new Date(payload.generatedAt||Date.now());levelUpdatedAt=Number.isNaN(timestamp.getTime())?'最新快照':timestamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
-  document.querySelectorAll('.roster-level').forEach((element,i)=>element.textContent='Lv.'+levelStats[names[i]].level);updateLevel();
+  document.querySelectorAll('.roster-level').forEach((element,i)=>element.textContent='Lv.'+levelStats[names[i]].level);updateLevel();renderPersonCard();
 }
+// 人物資料卡：等級與案件用 syncLevels() 已經下載的那份歷史快照（含未完成的案件），技能與「新專案找誰」
+// 另外跟 Worker 要一份很小的清單，這樣就不必在遊戲裡下載 1.5 MB 的 db.json。
+let caseRows=null,designerInfo=null,newProjectPriority=null;
+// 手上的案件只看這三種狀態（使用者指定）。顏色跟主系統的案件標籤一致。
+const CARD_CASE_STATES=[{key:'未開始',color:'#9aa7b8'},{key:'執行中',color:'#5ea9ff'},{key:'修改中',color:'#f0b429'}];
+const CARD_CASE_PREVIEW=3;
+async function syncDesigners(){
+  try{
+    const data=await syncCall({action:'pixelOfficeDesigners'});
+    designerInfo=Object.fromEntries((data.designers||[]).map(item=>[item.name,item]));
+    newProjectPriority=data.priority||null;
+    renderPersonCard();
+  }catch{}
+}
+function personCases(name){
+  const groups=CARD_CASE_STATES.map(state=>({...state,rows:[]}));
+  for(const row of caseRows||[]){
+    if(String(row['設計負責人']||'').trim().toLowerCase()!==name.toLowerCase())continue;
+    const group=groups.find(item=>item.key===String(row['狀態']||'').trim());
+    if(group)group.rows.push(row);
+  }
+  return groups;
+}
+function caseLabel(row){
+  const client=String(row['客戶別']||'').trim(),project=String(row['專案名稱']||'').trim();
+  const label=[client,project].filter(Boolean).join(' · ')||String(row['案件編號']||'未命名案件');
+  return label.length>26?label.slice(0,25)+'…':label;
+}
+function renderPersonCard(){
+  const card=$('personCard');
+  if(selected===null){card.hidden=true;return;}
+  const p=people[selected],stat=levelStats[p.name]||levelFromScore(0),info=designerInfo?.[p.name];
+  $('cardName').textContent=p.name;
+  $('cardLevel').textContent='Lv.'+stat.level;
+  $('cardTitle').textContent=stat.title+(info?.group?` · ${info.group}組`:'');
+  $('cardXpFill').style.width=stat.progress.toFixed(1)+'%';
+  $('cardXpText').textContent=`${numberText(stat.xp)} EXP`;
+  const skills=info?.skills||[];
+  $('cardSkills').innerHTML=skills.length
+    ? skills.map(skill=>`<span class="person-card-skill">${escapeHtml(skill)}</span>`).join('')
+    : '<span class="person-card-empty">'+(designerInfo?'後台還沒填技能':'讀取中…')+'</span>';
+  if(!caseRows)$('cardCases').innerHTML='<span class="person-card-empty">讀取中…</span>';
+  else{
+    const groups=personCases(p.name).filter(group=>group.rows.length);
+    $('cardCases').innerHTML=groups.length?groups.map(group=>`<div class="person-card-case-group">
+      <div class="person-card-case-head"><span class="person-card-case-dot" style="background:${group.color}"></span>${group.key}<span class="person-card-case-count">${group.rows.length}</span></div>
+      <ul class="person-card-case-list">${group.rows.slice(0,CARD_CASE_PREVIEW).map(row=>`<li>${escapeHtml(caseLabel(row))}</li>`).join('')}${group.rows.length>CARD_CASE_PREVIEW?`<li>…還有 ${group.rows.length-CARD_CASE_PREVIEW} 件</li>`:''}</ul></div>`).join('')
+      :'<span class="person-card-empty">目前沒有未開始、執行中或修改中的案件</span>';
+  }
+  const priority=newProjectPriority;
+  $('cardPriority').innerHTML=priority
+    ? '新專案找 '+Object.entries(priority).map(([group,name])=>`${escapeHtml(group)}：<b>${escapeHtml(name)}</b>`).join('　')
+    : '新專案輪值讀取中…';
+  card.hidden=false;
+  positionPersonCard();
+}
+function escapeHtml(value){return String(value).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
+/** 把卡片放在人物右邊；右邊擺不下就改放左邊，上下夾在場景裡面。 */
+function positionPersonCard(){
+  const card=$('personCard');
+  if(card.hidden||selected===null)return;
+  const wrap=game.getBoundingClientRect(),p=people[selected];
+  const scaleX=wrap.width/W,scaleY=wrap.height/H;
+  const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12;
+  let left=p.x*scaleX+52*scaleX+gap;
+  if(left+cardW>wrap.width-8)left=p.x*scaleX-52*scaleX-gap-cardW;
+  left=Math.max(8,Math.min(wrap.width-cardW-8,left));
+  let top=(p.y-150)*scaleY-6;
+  top=Math.max(8,Math.min(wrap.height-cardH-8,top));
+  card.style.left=Math.round(left)+'px';card.style.top=Math.round(top)+'px';
+}
+$('personCardClose').onclick=()=>select(null);
 function updateCount(){$('count').textContent=$('message').value.length+' / 60';}
-function updateStateText(){const p=people[selected],effective=effectiveStatusId(p),status=statuses.find(item=>item.id===effective),mood=moods.find(item=>item.id===p.mood);$('moodStatus').textContent=effective!=='present'?status.text:mood?mood.text:'自在工作中';}
-function updateMood(){updateStateText();document.querySelectorAll('[data-mood]').forEach(b=>{const active=b.dataset.mood===people[selected].mood;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});}
-function setMood(id){people[selected].mood=id;updateMood();save();pushChange(selected,{mood:id});}
-function updateStatus(){updateStateText();const effective=effectiveStatusId(people[selected]);document.querySelectorAll('[data-status]').forEach(b=>{const active=b.dataset.status===effective;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});portrait($('portrait').getContext('2d'),selected);}
-function setStatus(id){const p=people[selected];p.status=id;if(isAway(p))keys.clear();updateStatus();save();pushChange(selected,{status:id});toast(id==='present'?p.name+' 回到座位':p.name+' · '+statuses.find(status=>status.id===id).text);}
-function updatePhoto(){const photo=people[selected].photo;$('uploadLabel').hidden=!!photo;$('photoTools').hidden=!photo;if(photo)$('thumb').src=photo;else $('thumb').removeAttribute('src');}
+function updateStateText(){if(selected===null)return;const p=people[selected],effective=effectiveStatusId(p),status=statuses.find(item=>item.id===effective),mood=moods.find(item=>item.id===p.mood);$('moodStatus').textContent=effective!=='present'?status.text:mood?mood.text:'自在工作中';}
+function updateMood(){if(selected===null)return;updateStateText();document.querySelectorAll('[data-mood]').forEach(b=>{const active=b.dataset.mood===people[selected].mood;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});}
+function setMood(id){if(selected===null)return;people[selected].mood=id;updateMood();save();pushChange(selected,{mood:id});}
+function updateStatus(){if(selected===null)return;updateStateText();const effective=effectiveStatusId(people[selected]);document.querySelectorAll('[data-status]').forEach(b=>{const active=b.dataset.status===effective;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});portrait($('portrait').getContext('2d'),selected);}
+function setStatus(id){if(selected===null)return;const p=people[selected];p.status=id;if(isAway(p))keys.clear();updateStatus();save();pushChange(selected,{status:id});toast(id==='present'?p.name+' 回到座位':p.name+' · '+statuses.find(status=>status.id===id).text);}
+function updatePhoto(){if(selected===null)return;const photo=people[selected].photo;$('uploadLabel').hidden=!!photo;$('photoTools').hidden=!photo;if(photo)$('thumb').src=photo;else $('thumb').removeAttribute('src');}
 function openPhoto(i){if(!people[i].photo)return;keys.clear();$('fullPhoto').src=people[i].photo;$('photoCaption').textContent=people[i].name+' 分享的照片';$('lightbox').showModal();}
 const pixelSymbols={
   sun:['001010100','000111000','101222101','012222210','112222211','012222210','101222101','000111000','001010100'],
@@ -171,7 +249,7 @@ async function pollSync(){try{const data=await syncCall({action:'pixelOfficeStat
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 const walls=stations.map(s=>[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
-function moving(dt){if(!ready||$('lightbox').open||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
+function moving(dt){if(!ready||selected===null||$('lightbox').open||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
 window.addEventListener('keydown',e=>{if(!e.key.startsWith('Arrow')||typing()||$('lightbox').open)return;e.preventDefault();keys.add(e.key);});window.addEventListener('keyup',e=>keys.delete(e.key));window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 // 搖桿：按住拖曳，依拖曳方向換算成 8 個方向（沿用鍵盤的 keys 集合），放開就停。
@@ -179,7 +257,7 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='photo')openPhoto(hit.i);else{select(hit.i);game.focus({preventScroll:true});}}});
+game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='photo')openPhoto(hit.i);else{select(hit.i);game.focus({preventScroll:true});}}else select(null);});
 game.addEventListener('pointermove',e=>{const r=game.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;game.style.cursor=hits.some(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)?'pointer':'default';});
 // 細緻版面板：細邊框、圓角、柔和陰影（取代原本粗像素切角框）。
 function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=14;context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
@@ -204,13 +282,16 @@ function drawPerson(i,time,walk){const p=people[i];if(isAway(p))return;const t=t
 function drawPhotoCard(i){const p=people[i];if(!p.photo)return;let image=photoImages.get(i);if(!image){image=new Image();image.src=p.photo;photoImages.set(i,image);}const side=p.x>W-155?-1:1,x=Math.round(side>0?p.x+64:p.x-140),y=Math.round(p.y-151),w=76,h=70;softPanel(ctx,x,y,w,h,{radius:10,fill:'#fff',stroke:'#c9d3e0'});if(image.complete&&image.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(x+5,y+5,w-10,h-24,7);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const boxW=w-10,boxH=h-24,scale=Math.max(boxW/image.naturalWidth,boxH/image.naturalHeight),dw=image.naturalWidth*scale,dh=image.naturalHeight*scale;ctx.drawImage(image,x+5+(boxW-dw)/2,y+5+(boxH-dh)/2,dw,dh);ctx.restore();}ctx.save();ctx.fillStyle='#5b6d87';ctx.font='700 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('點開看看',x+w/2,y+h-9.5);ctx.restore();hits.push({type:'photo',i,x,y,w,h});}
 function drawOverlay(i){const p=people[i];if(isAway(p))return;const lift=i===selected?levelTag(i):0;bubble(p,lift);drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
+// 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
+// 用同樣的尺寸畫在桌上就會比別的狀態大一圈。面板按鈕有外框當基準、看不出來，所以只縮桌上這邊。
+const DESK_ICON_SCALE={power:.8,briefcase:.78};
 /** 加班標籤：移除場景中的月亮，只把「加班中」置中畫在桌面中央。 */
 function drawOvertimeBadge(s,p){const status=statuses.find(item=>item.id==='overtime'),x=s.x,h=24;ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.text).width+22),labelY=s.y+24;softPanel(ctx,x-w/2,labelY-h/2,w,h,{radius:12,fill:'#fff6d6',stroke:'#e2b04a',lineWidth:1,shadow:true});ctx.fillStyle='#6a4a10';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.text,x,labelY+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-w/2,y:labelY-h/2,w,h});}
-function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=104;drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=iconY-iconSize/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:labelY,w:iconSize,h:iconY+iconSize/2-labelY});}
-function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];stations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});people.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i));stations.forEach(drawStatusMarker);}requestAnimationFrame(render);}
+function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=104*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=iconY-iconSize/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:labelY,w:iconSize,h:iconY+iconSize/2-labelY});}
+function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];stations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});people.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i));stations.forEach(drawStatusMarker);positionPersonCard();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
-Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;$('loading').hidden=true;refreshIconCanvases();select(0);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(0);syncLevels();pollSync();requestAnimationFrame(render);
-setInterval(()=>{const before=taipeiHour;taipeiHourCheckedAt=0;currentTaipeiHour();if(before!==taipeiHour)updateStatus();},60000);
+Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);syncLevels();syncDesigners();pollSync();requestAnimationFrame(render);
+setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}

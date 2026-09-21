@@ -84,6 +84,25 @@
 
 「會議」（`meeting`）可以自己點，也可以由 Google 行事曆自動帶上（見下一段）。手動點的會議：閒置五分鐘不會被改成廁所，帶著筆電去會議室（電腦關機）也不會被改成下班，回座開機才重新由電腦決定，散會要自己取消。
 
+## 人物資料卡與「預設不選人」（2026-09-21）
+
+進站不再預設選取 Leona：`selected` 起始是 `null`，右側工具面板收起來、改顯示一行提示。點畫面上的人物才會選取，點場景空白處取消。所有讀 `people[selected]` 的函式都要先擋 `selected===null`（`updateMood`／`updateStatus`／`updatePhoto`／`updateLevel`／`updateStateText`／`moving`／`setMood`／`setStatus`）。
+
+選取之後在人物**右側**展開資料卡（`#personCard`，HTML 浮層疊在 canvas 上，不是畫進 canvas）。位置由 `positionPersonCard()` 每一幀更新，所以人物走動時卡片會跟著；右邊放不下就自動翻到左邊，上下夾在場景內。手機（≤700px）改成排在場景下方（`position:relative` 加 `left/top:auto` 蓋掉每幀寫進去的座標），什麼都不遮、內容也不必擠在小框裡捲。
+
+卡片內容與資料來源：
+
+| 欄位 | 來源 |
+| --- | --- |
+| 等級、職稱、EXP | `syncLevels()` 已經下載的 `database_archive.json`（原本就要下載，不另外抓） |
+| 技能、組別 | Worker 的 `pixelOfficeDesigners`（設定表的「技能」欄，逗號分隔） |
+| 手上的案件 | 同一份 archive，篩「設計負責人」等於這個人、狀態是未開始／執行中／修改中，每組列前 3 件 |
+| 新專案找誰 | `pixelOfficeDesigners` 的 `priority`：同組裡「新專案輪值」最小且啟用的人，跟主系統的 `rotationDesignerForGroup()` 同一套規則 |
+
+`pixelOfficeDesigners` 只回傳名字、組別、技能、輪值、啟用與否這幾個欄位，所以遊戲不必為了技能去下載 1.5 MB 的 `db.json`。archive 裡本來就含未完成的案件（執行中、過稿中、未開始、修改中），所以案件清單也不必另外抓。
+
+桌上的狀態圖示另外有 `DESK_ICON_SCALE`：電源鍵（下班）與公事包（公出）的圖形幾乎填滿整個格子，不透明面積是其他圖示的 1.6 倍，同尺寸畫在桌上會大一圈，所以這兩個縮到 0.8／0.78。面板按鈕有外框當基準、看不出差異，維持原樣。
+
 ## 行事曆自動顯示「會議」（2026-09-21）
 
 Worker 每分鐘的排程（`runPixelOfficeCalendarSync`，跟排程寄信同一個 cron）會查五位設計師的 Google 行事曆，正在忙就顯示「會議」，散會就交還給電腦自動判斷。
