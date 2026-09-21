@@ -41,6 +41,10 @@
 - localStorage 主資料鍵：`kaiyao-office-v1`；配置版本鍵：`kaiyao-office-layout`，目前值 `5`。版本不符只重設位置，仍讀取照片、訊息、心情與離席狀態。
 - 網頁在支援 `document.modelContext` 時註冊 `set_character_status`，不支援時遊戲仍正常運作。
 
+## 新增人物
+
+人物的尺寸、比例、畫風、服裝與配件規則見 `docs/CHARACTER-SPEC.md`（含生成提示詞與驗收清單）。實際套用用 `dist/tools/character-fitter.html`：拖入三視圖 → 自動去背（邊緣洪水填充）、清掉表格線與文字（小於最大連通區 8% 的碎塊）、切成三格、縮放到指定高度並置中貼底 → 檢查腳底／置中／寬度／眼睛高度 → 下載合併好的 `sprites-packed.webp` 與要修改的程式碼片段（`names`／`descriptions`／`rowTops`／`rowHeights`／`starts`／`stations`／`fallbackScores`，以及 Worker 的 `PIXEL_OFFICE_NAMES`）。
+
 ## 素材座標
 
 `sprites-noise.png` 是目前遊戲讀取的 1536×1024、5×3 人物圖集，列順序 Leona、Amber、Noise、Anna、Machi，欄為正面、右側面、背面。`sprites.png` 保留原始 Noise 造型供回溯。

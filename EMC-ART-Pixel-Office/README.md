@@ -43,6 +43,8 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 - `server.cjs`：僅監聽本機的零依賴開發伺服器。
 - `source-history.bundle`：原網站完整 Git 提交歷史（第 1 至第 4 版）。
 - `docs/HANDOFF.md`：設計規格、素材座標、已知限制與後續修改說明。
+- `docs/CHARACTER-SPEC.md`：新人物的製作規範（尺寸、比例、畫風、服裝與配件規則）與可直接貼給影像模型的生成提示詞。
+- `dist/tools/character-fitter.html`：人物套用工具。啟動本機網站後開 <http://localhost:8787/tools/character-fitter.html>，拖入三視圖就會自動去背、切格、依規範對齊，並輸出新的人物圖集與要改的程式碼。
 
 若需要查看歷史，可執行 `git clone source-history.bundle history-copy`。這會另建歷史副本；目前交接包根目錄另外含有啟動腳本及本說明。
 

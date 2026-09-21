@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>人物套用工具｜凱曜像素辦公室</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f6fa;color:#1b2c47;font:16px/1.6 Inter,-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC',sans-serif}
+header{max-width:1200px;margin:auto;padding:22px 24px 6px}
+h1{font-size:22px;margin:0 0 4px}
+header p{margin:0;color:#5b6d87;font-size:14px}
+main{max-width:1200px;margin:auto;padding:16px 24px 60px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+section,aside{background:#fff;border:1px solid #dce3ed;border-radius:16px;padding:18px}
+h2{font-size:15px;margin:0 0 12px}
+.drop{border:2px dashed #b9c6da;border-radius:14px;padding:26px;text-align:center;color:#5b6d87;cursor:pointer;background:#fbfcfe}
+.drop.over{border-color:#16a34a;background:#f0faf4}
+label.field{display:block;font-size:13px;color:#42557a;margin:12px 0 4px}
+input[type=text],input[type=number],select{width:100%;padding:8px 10px;border:1px solid #d5ddea;border-radius:9px;font:inherit}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button{font:inherit;cursor:pointer;border-radius:9px;border:1px solid #d5ddea;background:#fff;padding:9px 13px}
+button.primary{background:#16a34a;border-color:#16a34a;color:#fff;font-weight:700}
+button:disabled{opacity:.5;cursor:default}
+.preview{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px}
+.cell{background:repeating-conic-gradient(#eef1f6 0 25%,#fff 0 50%) 0 0/16px 16px;border:1px solid #dce3ed;border-radius:10px}
+.cell canvas{display:block;image-rendering:pixelated;width:140px;height:192px}
+.cell figcaption{font-size:12px;color:#5b6d87;text-align:center;padding:4px}
+.checks{margin:14px 0 0;padding:0;list-style:none;font-size:13px}
+.checks li{padding:5px 0;border-top:1px dashed #e4e9f1}
+.ok{color:#15803d}.warn{color:#b45309}.bad{color:#b91c1c}
+pre{background:#0f2036;color:#dbe7f6;padding:12px;border-radius:10px;font-size:12px;overflow:auto;max-height:260px}
+.hint{font-size:12px;color:#6b7c95;margin:8px 0 0}
+#sheet{width:100%;image-rendering:pixelated;border:1px solid #dce3ed;border-radius:10px;margin-top:10px;background:repeating-conic-gradient(#eef1f6 0 25%,#fff 0 50%) 0 0/16px 16px}
+@media(max-width:960px){main{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>人物套用工具</h1>
+  <p>把新人物的三視圖（正面／右側／背面）自動去背、切格、依規範縮放對齊，檢查後直接匯出人物圖集與要貼上的程式碼。規範見 <code>docs/CHARACTER-SPEC.md</code>。</p>
+</header>
+<main>
+  <section>
+    <h2>1. 選擇三視圖</h2>
+    <div class="drop" id="drop">把圖片拖進來，或點一下選擇檔案<br><small>PNG／JPG，左至右為正面、右側、背面；背景白色或透明都可以</small></div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <div class="row">
+      <div><label class="field" for="tol">去背容差（數字越大去得越多）</label><input type="number" id="tol" value="38" min="0" max="120"></div>
+      <div><label class="field" for="order">視圖順序</label><select id="order"><option value="fsb">正面 → 側面 → 背面</option><option value="bsf">背面 → 側面 → 正面</option></select></div>
+    </div>
+    <div class="row">
+      <div><label class="field" for="height">人物高度（格高 192 內，建議 186–190）</label><input type="number" id="height" value="188" min="150" max="192"></div>
+      <div><label class="field" for="name">人物名稱（英文，程式用）</label><input type="text" id="name" placeholder="例如 Cindy"></div>
+    </div>
+    <label class="field" for="desc">一行描述（顯示在人物名稱下方）</label>
+    <input type="text" id="desc" placeholder="例如 短髮・沉穩可靠">
+    <h2 style="margin-top:18px">2. 預覽與檢查</h2>
+    <div class="preview" id="preview"></div>
+    <ul class="checks" id="checks"></ul>
+    <p class="hint">灰白格代表透明。人物腳底要貼齊格子底部、左右置中，眼睛約在整體高度的 25%。</p>
+  </section>
+  <aside>
+    <h2>3. 匯出</h2>
+    <button id="dlCells" disabled>下載這位人物的三格 PNG</button>
+    <p class="hint">420×192，可留存做為原始素材。</p>
+    <button id="dlSheet" class="primary" disabled style="margin-top:10px">下載新的 sprites-packed.webp</button>
+    <p class="hint">會讀取遊戲目前的人物圖集，在最下面加一列後輸出。下載後覆蓋 <code>dist/assets/sprites-packed.webp</code>。</p>
+    <img id="sheet" alt="合併後的人物圖集預覽" hidden>
+    <h2 style="margin-top:18px">4. 要改的程式碼</h2>
+    <pre id="code">先選擇圖片…</pre>
+    <button id="copy" disabled>複製程式碼片段</button>
+    <p class="hint">貼進 <code>dist/app.js</code> 對應的變數，並把名字加進 Worker 的 <code>PIXEL_OFFICE_NAMES</code>（多人同步白名單）。</p>
+  </aside>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const CELL_W=140,CELL_H=192,SHEET_URL='../assets/sprites-packed.webp';
+const VIEWS=['正面','右側面','背面'];
+let cells=[],stats=null;
+function imageData(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);return x.getImageData(0,0,c.width,c.height);}
+/** 從四邊往內做洪水填充去背，只清掉與邊緣同色的連通區域，人物內部相近的顏色不會被挖空。 */
+function removeBackground(data,tolerance){
+  const {width:w,height:h}=data,px=data.data,seen=new Uint8Array(w*h),stack=[];
+  const sample=[[0,0],[w-1,0],[0,h-1],[w-1,h-1]].map(([x,y])=>[px[(y*w+x)*4],px[(y*w+x)*4+1],px[(y*w+x)*4+2],px[(y*w+x)*4+3]]);
+  const near=(i,c)=>Math.abs(px[i]-c[0])<=tolerance&&Math.abs(px[i+1]-c[1])<=tolerance&&Math.abs(px[i+2]-c[2])<=tolerance;
+  for(let x=0;x<w;x++){stack.push(x,x+(h-1)*w);}
+  for(let y=0;y<h;y++){stack.push(y*w,y*w+w-1);}
+  while(stack.length){
+    const p=stack.pop();if(seen[p])continue;seen[p]=1;const i=p*4;
+    if(px[i+3]!==0&&!sample.some(c=>near(i,c)))continue;
+    px[i+3]=0;
+    const x=p%w,y=(p-x)/w;
+    if(x>0)stack.push(p-1);if(x<w-1)stack.push(p+1);if(y>0)stack.push(p-w);if(y<h-1)stack.push(p+w);
+  }
+  return data;
+}
+/** 去掉表格線、文字標籤這類零碎：面積小於最大區塊 8% 的連通區域一律清掉，再切視圖。 */
+function dropSpecks(data){
+  const {width:w,height:h}=data,px=data.data,label=new Int32Array(w*h).fill(-1),areas=[];
+  for(let start=0;start<w*h;start++){
+    if(label[start]>=0||px[(start<<2)+3]<=60)continue;
+    const id=areas.length;let area=0;const stack=[start];label[start]=id;
+    while(stack.length){
+      const p=stack.pop();area++;
+      const x=p%w,y=(p-x)/w;
+      const push=q=>{if(label[q]<0&&px[(q<<2)+3]>60){label[q]=id;stack.push(q);}};
+      if(x>0)push(p-1);if(x<w-1)push(p+1);if(y>0)push(p-w);if(y<h-1)push(p+w);
+    }
+    areas.push(area);
+  }
+  const biggest=Math.max(0,...areas),floor=biggest*0.08;
+  for(let p=0;p<w*h;p++){const id=label[p];if(id>=0&&areas[id]<floor)px[(p<<2)+3]=0;}
+  return data;
+}
+function columnsOf(data){
+  const {width:w,height:h}=data,px=data.data,filled=new Array(w).fill(0);
+  for(let x=0;x<w;x++)for(let y=0;y<h;y++)if(px[((y*w+x)<<2)+3]>60)filled[x]++;
+  const groups=[];let start=-1;
+  for(let x=0;x<w;x++){
+    if(filled[x]>2&&start<0)start=x;
+    if((filled[x]<=2||x===w-1)&&start>=0){if(x-start>w*0.04)groups.push([start,x]);start=-1;}
+  }
+  return groups.sort((a,b)=>(b[1]-b[0])-(a[1]-a[0])).slice(0,3).sort((a,b)=>a[0]-b[0]);
+}
+function trim(data,x0,x1){
+  const {width:w,height:h}=data,px=data.data;let minX=x1,maxX=x0,minY=h,maxY=0;
+  for(let y=0;y<h;y++)for(let x=x0;x<x1;x++){if(px[((y*w+x)<<2)+3]>60){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}}
+  return {x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+function buildCells(img,tolerance,order,targetHeight){
+  const data=dropSpecks(removeBackground(imageData(img),tolerance));
+  const source=document.createElement('canvas');source.width=data.width;source.height=data.height;source.getContext('2d').putImageData(data,0,0);
+  let groups=columnsOf(data);
+  if(order==='bsf')groups=groups.slice().reverse();
+  return groups.map(([x0,x1])=>{
+    const box=trim(data,x0,x1);
+    const canvas=document.createElement('canvas');canvas.width=CELL_W;canvas.height=CELL_H;
+    const ctx=canvas.getContext('2d');ctx.imageSmoothingQuality='high';
+    const scale=targetHeight/box.h,w=Math.round(box.w*scale),h=Math.round(box.h*scale);
+    ctx.drawImage(source,box.x,box.y,box.w,box.h,Math.round((CELL_W-w)/2),CELL_H-h-1,w,h);
+    return canvas;
+  });
+}
+function analyse(canvas){
+  const d=canvas.getContext('2d',{willReadFrequently:true}).getImageData(0,0,CELL_W,CELL_H).data;
+  let minX=CELL_W,maxX=0,minY=CELL_H,maxY=0,eyeTop=-1,eyeBottom=-1;
+  for(let y=0;y<CELL_H;y++){
+    let dark=0;
+    for(let x=0;x<CELL_W;x++){
+      const i=(y*CELL_W+x)<<2;if(d[i+3]<120)continue;
+      if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+      if(.3*d[i]+.59*d[i+1]+.11*d[i+2]<45)dark++;
+    }
+    if(dark>6&&y<CELL_H*.5){if(eyeTop<0)eyeTop=y;eyeBottom=y;}
+  }
+  const height=maxY-minY+1,eye=eyeTop<0?null:((eyeTop+eyeBottom)/2-minY)/height;
+  return {height,width:maxX-minX+1,top:minY,bottom:maxY,centerX:(minX+maxX)/2,eye};
+}
+function renderPreview(){
+  $('preview').innerHTML='';
+  cells.forEach((canvas,i)=>{
+    const figure=document.createElement('figure');figure.className='cell';figure.style.margin='0';
+    figure.append(canvas,Object.assign(document.createElement('figcaption'),{textContent:VIEWS[i]||('視圖 '+(i+1))}));
+    $('preview').append(figure);
+  });
+  const list=$('checks');list.innerHTML='';
+  const add=(state,text)=>{const li=document.createElement('li');li.className=state;li.textContent=(state==='ok'?'✓ ':state==='warn'?'！ ':'✕ ')+text;list.append(li);};
+  if(cells.length!==3){add('bad',`只找到 ${cells.length} 個視圖，需要 3 個（正面、右側、背面）。可調整去背容差再試。`);return;}
+  const info=cells.map(analyse);stats=info;
+  info.forEach((s,i)=>{
+    const view=VIEWS[i];
+    add(Math.abs(s.bottom-(CELL_H-2))<=2?'ok':'bad',`${view}：腳底 y=${s.bottom}（要貼齊格子底部 190±2）`);
+    add(Math.abs(s.centerX-CELL_W/2)<=6?'ok':'warn',`${view}：水平中心 x=${s.centerX.toFixed(0)}（標準 70±6）`);
+    add(s.width<=CELL_W-8?'ok':'bad',`${view}：最大寬度 ${s.width}（含頭髮要 ≤132，左右各留 4px）`);
+    if(s.eye===null)add('warn',`${view}：量不到眼睛位置（背面正常）`);
+    else add(s.eye>=.21&&s.eye<=.29?'ok':'warn',`${view}：眼睛在身高的 ${(s.eye*100).toFixed(0)}%（標準 25%±4）`);
+  });
+  const height=info[0].height;
+  add(height>=182&&height<=190?'ok':'warn',`人物高度 ${height}（建議 186–190，現有人物 182–190）`);
+}
+function updateCode(){
+  const name=($('name').value||'NewName').replace(/[^A-Za-z0-9_]/g,'')||'NewName';
+  const desc=$('desc').value||'一行描述';
+  const h=CELL_H;
+  $('code').textContent=
+`// dist/app.js
+// 1) 名單與描述（順序＝人物圖集由上到下的列）
+names.push('${name}');            // const names=[...,'${name}']
+descriptions.push('${desc}');     // const descriptions=[...,'${desc}']
+// 2) 人物圖集：新的一列接在最後，列高固定 ${h}
+const rowTops=[0,192,381,572,757,946];
+const rowHeights=[192,189,191,185,189,${h}];
+// 3) 座位與起始位置（六個座位已滿時要先安排新位置）
+starts.push([548,695]);           // 左下空位；或改成你要的 x,y
+stations[3]={x:548,y:695,type:2,name:'${name}'};
+// 4) 等級：分數來自案件資料的「設計負責人」，名稱要一致
+fallbackScores.${name}=0;
+
+// worker/src/database-coordinator.ts
+const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi', '${name}'];`;
+  $('copy').disabled=false;
+}
+async function mergeSheet(){
+  const sheet=new Image();sheet.crossOrigin='anonymous';sheet.src=SHEET_URL;
+  await sheet.decode();
+  const canvas=document.createElement('canvas');canvas.width=Math.max(sheet.naturalWidth,CELL_W*3);canvas.height=sheet.naturalHeight+CELL_H;
+  const ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(sheet,0,0);
+  cells.forEach((cell,i)=>ctx.drawImage(cell,i*CELL_W,sheet.naturalHeight));
+  return canvas;
+}
+function download(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+async function handleFile(file){
+  if(!file)return;
+  const img=new Image();img.src=URL.createObjectURL(file);
+  try{await img.decode();}catch{alert('讀不到這張圖片，請換一張。');return;}
+  cells=buildCells(img,Number($('tol').value)||38,$('order').value,Number($('height').value)||188);
+  URL.revokeObjectURL(img.src);
+  renderPreview();updateCode();
+  const ready=cells.length===3;
+  $('dlCells').disabled=!ready;$('dlSheet').disabled=!ready;
+  if(ready){
+    const merged=await mergeSheet();
+    $('sheet').src=merged.toDataURL('image/png');$('sheet').hidden=false;
+    $('sheet').dataset.ready='1';
+  }
+}
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>handleFile(e.target.files[0]);
+['dragenter','dragover'].forEach(type=>$('drop').addEventListener(type,e=>{e.preventDefault();$('drop').classList.add('over');}));
+['dragleave','drop'].forEach(type=>$('drop').addEventListener(type,e=>{e.preventDefault();$('drop').classList.remove('over');}));
+$('drop').addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
+['tol','order','height'].forEach(id=>$(id).addEventListener('change',()=>{if($('file').files[0])handleFile($('file').files[0]);}));
+['name','desc'].forEach(id=>$(id).addEventListener('input',updateCode));
+$('dlCells').onclick=()=>{const canvas=document.createElement('canvas');canvas.width=CELL_W*3;canvas.height=CELL_H;const ctx=canvas.getContext('2d');cells.forEach((cell,i)=>ctx.drawImage(cell,i*CELL_W,0));canvas.toBlob(blob=>download(blob,`${($('name').value||'character')}-cells.png`),'image/png');};
+$('dlSheet').onclick=async()=>{const merged=await mergeSheet();merged.toBlob(blob=>download(blob,'sprites-packed.webp'),'image/webp',.94);};
+$('copy').onclick=()=>navigator.clipboard.writeText($('code').textContent).then(()=>{$('copy').textContent='已複製';setTimeout(()=>$('copy').textContent='複製程式碼片段',1500);});
+</script>
+</body>
+</html>
