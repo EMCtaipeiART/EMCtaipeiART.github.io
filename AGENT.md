@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 10:35 Asia/Taipei — 像素辦公室：爬蟲回報電腦開機狀態，自動顯示在座／加班（晚上七點後）／下班（關機）
+
+- 修改目的：使用者要求 NAS 爬蟲能判斷設計師電腦是否關機，關機時遊戲裡該設計師的狀態自動變「下班」，超過晚上七點還開著則變「加班」。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`scripts/nas_watcher_installer.mjs`、`backend/test/nas-installer.test.mjs`、`EMC-ART-Pixel-Office/dist/app.js`、`EMC-ART-Pixel-Office/dist/style.css`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`.gitignore`。
+- 影響功能：
+  1. **Worker**：`pixel_office_people` 新增 `last_seen` 欄位（migration 9，`ALTER TABLE ADD COLUMN`，不動既有資料）；新增 `pixelOfficeHeartbeat` 動作（用爬蟲既有的 `NAS_WATCHER_API_KEY` 服務金鑰驗證，金鑰錯誤／沒帶／名字不在五位設計師內一律擋下）；狀態新增 `overtime`（加班）；`pixelOfficeState` 讀取時先檢查離線（`pixelOfficeApplyOffline`）——最後心跳超過 5 分鐘的人，「在座／加班／廁所」改成「下班」。規則：剛開機／剛醒來（上次心跳超過 5 分鐘或從來沒有）一律改成在座（台北 19:00～隔天 06:00 是加班）；持續開著時，自動狀態的在座會在 19:00 切成加班；使用者手動點的狀態（`statusSource:'manual'`）維持到電腦下次關機；出國／公出關機時不動；使用者在電腦離線之後才手動指定的狀態尊重不覆蓋；從來沒有心跳的人（沒安裝爬蟲）完全不被自動改。狀態沒變的心跳只更新 `last_seen`、不動 `updated_at`，所以每分鐘的心跳不會驚動所有人遊戲畫面的 `since` 輪詢。
+  2. **爬蟲**：`lib.sendPresenceHeartbeat()`（POST `text/plain` JSON，跟遊戲同格式，最多等 4 秒，失敗靜默）在 watcher 一開始、鎖與 NAS 檢查之前呼叫——電腦開著本身就是重點，跟 NAS 有沒有連上無關。需要每台電腦的 `designerName`：`loadConfig` 新增讀取 `nas_design_image_watcher.local.json`（同資料夾、蓋過共用設定、不進 git、更新腳本不會被覆蓋）。沒設定 `designerName` 或沒有 `serviceKey` 就完全不送。
+  3. **安裝器**：`nas_watcher_installer.mjs` 安裝時用 macOS 原生選單（`osascript choose from list`）讓設計師選「這台電腦是誰」，存進該電腦的 local 檔；重新安裝沿用不再問；按略過則不回報、其餘功能不受影響。這台主機（Machi）已手動建立 local 檔。
+  4. **遊戲**：新增「加班」狀態與月亮圖示（`icons-v3` 圖集已排滿，改用 `moonIconCanvas()` 程式繪製，離屏畫布避免誤刪桌子）。加班的人**仍坐在位子上**（人物、椅子、電腦照畫、可走動），桌邊多月亮＋「加班中」徽章；新增 `isAway(p)` 統一判斷離席（只有在座與加班不算離席），取代原本 6 處 `p.status!=='present'`；狀態按鈕 6 個、每列 3 個。
+- 風險區塊：①Worker 必須先部署，前台才能送出 `overtime`（舊 Worker 會回「狀態不正確」）。②離線判斷靠「爬蟲每分鐘有跑」：Mac 睡眠、關機、爬蟲當掉、網路斷線超過 5 分鐘都會被當成下班；電腦還開著但 Wi-Fi 斷了同樣會顯示下班（只能保證「沒消息就當下班」）。③爬蟲用的 `serviceKey` 就是上傳設計圖的那把，任何持有它的人都能替五位設計師送心跳（風險等同上傳金鑰，沒有新增更大的權限）。④19:00～06:00 都算加班，包含週末與假日只要電腦開著；沒有處理國定假日／請假。⑤設計師電腦是靠重新執行安裝器才會更新腳本與選姓名；還沒更新的電腦不回報，遊戲上維持原本手動狀態，不受影響。⑥安裝器的選單名單（`OFFICE_DESIGNER_NAMES`）寫死五位，若遊戲人物增減要同步改（Worker 的 `PIXEL_OFFICE_NAMES` 也要改）。⑦遊戲狀態按鈕由 5 個變 6 個，排成 3×2，舊版快取的頁面在下次載入前不會有加班選項。
+- 已檢查／驗證方式：Worker vitest 86/86（新增 1 項，用 `vi.useFakeTimers` 模擬時間：金鑰錯誤／沒帶／名字錯誤被擋、白天開機在座、狀態沒變的心跳不改版本號且 `since` 仍是 unchanged、持續開著過 19:00 切加班、關機 5 分鐘內不變／超過變下班、隔天開機回在座、手動下班在電腦開著期間不被蓋掉且關機重開後重新由電腦決定、出國關機不動且開機才回在座、廁所關機變下班、離線後手動指定的狀態尊重、沒有心跳的人不被自動改、手動指定加班可接受且無效狀態被拒、全程沒有呼叫 GitHub；既有 migration 版本清單測試更新為含 v9）；`tsc --noEmit` 通過、`deploy:dry` 打包成功。`node --test backend/test/*.test.mjs` 152/152（新增爬蟲心跳格式與失敗處理、local 設定覆蓋、心跳在鎖與 NAS 檢查之前、安裝器姓名解析／沿用／保留其他欄位）。遊戲用**網路請求換成假的**的測試副本（不碰正式資料）實機驗證：遠端把人改成加班／下班後下一次輪詢正確套用、真實點擊「加班」按鈕會推送 `overtime`、加班中可用方向鍵走動而下班不行、重新整理後從 localStorage 還原不會被洗成在座、放大檢查月亮徽章位置沒有蓋到人物。未做：沒有用真實設計師電腦跑安裝器選姓名；正式環境的完整「關機→下班」要等心跳中斷 5 分鐘才看得到，部署後在這台主機驗證心跳與開機狀態。
+- 部署狀態：Worker 需要部署才生效（`cd worker && pnpm run deploy`）；前台遊戲 git push 後 GitHub Pages 自動生效；爬蟲腳本是本機工具，這台 `git pull` 後下一分鐘 cron 就會用新版，設計師電腦需重新執行安裝器。
+- commit：見 git log（`feat(pixel-office): auto 在座／加班／下班 from crawler heartbeat`）
+
 ### 2026-09-21 11:10 Asia/Taipei — NAS 監控：設計師電腦改為「手動連上 NAS 才掃描」，不再自動跳出連線／登入視窗（新增 autoMountNas 設定）
 
 - 修改目的：使用者要求其他設計師電腦上的監控腳本，改成使用者自己在 Finder 手動連上 NAS 之後才開始掃描，不要由程式另外跳出連線／登入視窗（承接上一則 10:40 的「連上才開始爬」修正，那則只是降低頻率，這則讓設計師電腦完全不主動開視窗）。

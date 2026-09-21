@@ -200,8 +200,16 @@ export async function loadJsonFile(filePath, fallback = null) {
   }
 }
 
+/** 每台電腦自己的補充設定（例如 designerName「這台電腦是哪位設計師的」）放在設定檔旁邊的
+ * nas_design_image_watcher.local.json，蓋過共用設定。不進 git（見 .gitignore），重新安裝／更新腳本也不會被覆蓋。 */
+export function localConfigPath(configPath) {
+  return path.join(path.dirname(configPath), 'nas_design_image_watcher.local.json');
+}
+
 export async function loadConfig(configPath) {
-  const config = await loadJsonFile(configPath);
+  const shared = await loadJsonFile(configPath);
+  const local = shared ? (await loadJsonFile(localConfigPath(configPath), {})) : {};
+  const config = shared ? { ...shared, ...(local && typeof local === 'object' ? local : {}) } : shared;
   if (!config) throw new Error(`讀不到設定檔：${configPath}`);
   if (!config.mountRoot) throw new Error('設定檔缺少 mountRoot');
   if (!config.dbJsonUrl) throw new Error('設定檔缺少 dbJsonUrl——案件清單現在完全依賴它動態產生，不能留空');
@@ -283,6 +291,37 @@ export function requestMount(config, { now = Date.now(), minIntervalMs = 60000, 
     return true;
   } catch {
     return false;
+  }
+}
+
+/** 遊戲後端（Cloudflare Worker）的預設網址；設定檔可用 officeApiUrl 覆蓋。 */
+export const DEFAULT_OFFICE_API_URL = 'https://machi-design-api.machi-chen.workers.dev/api';
+
+/**
+ * 回報「這台電腦開著」給像素辦公室遊戲：遊戲會據此把這位設計師顯示成在座（晚上七點後是加班），
+ * 超過 5 分鐘沒收到就當作關機／睡眠，自動顯示下班。排程每分鐘都會跑一次，所以不論 NAS 有沒有連上、
+ * 有沒有案件要掃描都要送（電腦開著本身就是重點），因此放在 watcher 一開始、任何提早結束的判斷之前。
+ * 沒設定 designerName（沒有安裝到設計師電腦、或共用電腦）就完全不送；失敗（沒網路、後端暫時掛掉）
+ * 靜默略過，不影響掃描——最多就是遊戲晚幾分鐘才更新。
+ */
+export async function sendPresenceHeartbeat(config, secrets, { fetchImpl = globalThis.fetch, timeoutMs = 4000 } = {}) {
+  const name = String(config?.designerName || '').trim();
+  if (!name) return { sent: false, reason: 'no-designer-name' };
+  const serviceKey = String(secrets?.serviceKey || '').trim();
+  if (!serviceKey) return { sent: false, reason: 'no-service-key' };
+  const url = String(config?.officeApiUrl || DEFAULT_OFFICE_API_URL).trim();
+  try {
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ action: 'pixelOfficeHeartbeat', name, serviceKey }),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!data?.ok) return { sent: false, reason: 'rejected', message: String(data?.error || `HTTP ${response.status}`) };
+    return { sent: true, status: data.status };
+  } catch (error) {
+    return { sent: false, reason: 'network', message: error?.message || String(error) };
   }
 }
 

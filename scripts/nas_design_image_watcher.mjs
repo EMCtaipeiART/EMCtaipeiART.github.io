@@ -86,6 +86,10 @@ async function main() {
   //   狀態鎖（.lock）保護 sync-state.json，改成每個資料夾要用時才拿、用完立刻放——舊寫法是
   //   整輪掃描（57 個案件、約兩分鐘）從頭到尾佔著它，設計師在網頁上按「選擇資料夾並備份」
   //   等滿 45 秒也搶不到，只會看到「背景監控程式正在同步資料，這次先跳過立即備份」。
+  // 先回報「這台電腦開著」（像素辦公室遊戲據此顯示在座／加班／下班）。要放在鎖與 NAS 檢查之前：
+  // 電腦開著本身就是重點，跟 NAS 有沒有連上、上一輪有沒有跑完都無關。失敗靜默略過、最多等 4 秒。
+  const presence = await lib.sendPresenceHeartbeat(config, await lib.loadSecrets(lib.resolvePath(configDir, config.secretsFile)));
+  if (!presence.sent && ['rejected', 'network'].includes(presence.reason)) console.log(`（電腦狀態回報失敗，略過：${presence.message}）`);
   const runLockFile = `${stateFile}.run.lock`;
   if (!(await lib.acquireLock(runLockFile))) {
     console.log('=== NAS 設計圖檔監控 ===');

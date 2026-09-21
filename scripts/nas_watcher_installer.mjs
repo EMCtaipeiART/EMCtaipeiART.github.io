@@ -24,6 +24,9 @@ import { fileURLToPath } from 'node:url';
 export const WATCHER_LABEL = 'com.emctaipei.nas-watcher';
 export const PICKER_LABEL = 'com.emctaipei.nas-folder-picker';
 export const WATCHER_INTERVAL_SECONDS = 60;
+// 像素辦公室遊戲裡的五位設計師（要跟 worker 的 PIXEL_OFFICE_NAMES 一致，後端也會再驗證一次）。
+export const OFFICE_DESIGNER_NAMES = ['Machi', 'Anna', 'Amber', 'Leona', 'Noise'];
+export const LOCAL_CONFIG_FILENAME = 'nas_design_image_watcher.local.json';
 // NAS 上放安裝程式與金鑰的資料夾（相對於掛載根目錄）。
 export const NAS_INSTALLER_DIR = ['設計管理', 'NAS自動備份安裝'];
 
@@ -68,6 +71,38 @@ export function buildWatcherConfig(template, { mountRoot, installDir }) {
     // 設計師電腦不自動跳出連線／登入視窗，使用者自己在 Finder 連上 NAS 後才會開始掃描。
     autoMountNas: false
   };
+}
+
+/** osascript 的 choose from list 回傳選到的名字；按取消回傳 "false"。不在名單裡的值一律當作沒選。 */
+export function parseDesignerChoice(output) {
+  const chosen = String(output || '').trim();
+  return OFFICE_DESIGNER_NAMES.includes(chosen) ? chosen : '';
+}
+
+/** 這台電腦已經記下的設計師姓名（重新安裝時沿用，不會再問一次）。 */
+export async function readSavedDesignerName(localConfigPath) {
+  try {
+    const saved = JSON.parse(await fs.readFile(localConfigPath, 'utf8'));
+    return OFFICE_DESIGNER_NAMES.includes(saved?.designerName) ? saved.designerName : '';
+  } catch {
+    return '';
+  }
+}
+
+/** 只改 designerName，local 檔裡其他欄位（例如將來別的個人設定）原樣保留。 */
+export async function saveDesignerName(localConfigPath, designerName) {
+  let current = {};
+  try { current = JSON.parse(await fs.readFile(localConfigPath, 'utf8')) || {}; } catch { current = {}; }
+  await fs.writeFile(localConfigPath, `${JSON.stringify({ ...current, designerName }, null, 2)}\n`, 'utf8');
+}
+
+/** 跳出 macOS 原生選單讓設計師選「我是誰」——像素辦公室遊戲要知道這台電腦開著／關機對應哪個人物。
+ * 取消或選單失敗就不記（遊戲上這位設計師維持手動狀態，不影響爬蟲本身）。 */
+function askDesignerName() {
+  const list = OFFICE_DESIGNER_NAMES.map(name => `"${name}"`).join(', ');
+  const script = `choose from list {${list}} with title "像素辦公室" with prompt "這台電腦是哪一位設計師在用？\n選好之後，電腦開著就會顯示在座、晚上七點後顯示加班、關機顯示下班。" OK button name "確定" cancel button name "略過"`;
+  const result = spawnSync('osascript', ['-e', script], { encoding: 'utf8', timeout: 5 * 60 * 1000 });
+  return result.status === 0 ? parseDesignerChoice(result.stdout) : '';
 }
 
 /** 先前版本把金鑰寫錯位置，選擇器會在 scripts 底下自動產生一個只有 pickerToken 的檔案；留著會混淆，清掉。 */
@@ -226,6 +261,17 @@ async function main() {
     } catch { /* 沒有這個檔案就不用清 */ }
   }
   log('設定檔與金鑰已寫入這台電腦（金鑰檔只有你自己讀得到）');
+
+  // 像素辦公室：記下這台電腦是哪位設計師的（存在這台電腦專屬的 local 檔，重新安裝不會被覆蓋、也不會再問）。
+  const localConfigPath = path.join(scriptsDir, LOCAL_CONFIG_FILENAME);
+  let designerName = await readSavedDesignerName(localConfigPath);
+  if (!designerName && !dryRun) {
+    designerName = askDesignerName();
+    if (designerName) await saveDesignerName(localConfigPath, designerName);
+  }
+  log(designerName
+    ? `像素辦公室：這台電腦是 ${designerName} 的（電腦開著顯示在座／加班、關機顯示下班）`
+    : '像素辦公室：沒有選擇設計師姓名，這台電腦不會回報開機狀態（之後想設定，重新執行安裝程式再選一次即可）');
 
   const crontab = spawnSync('crontab', ['-l'], { encoding: 'utf8' }).stdout || '';
   if (crontabHasWatcher(crontab)) {

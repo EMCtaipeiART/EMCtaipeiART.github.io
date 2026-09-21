@@ -279,7 +279,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -3893,5 +3893,85 @@ describe('Pixel Office shared state', () => {
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { mood: 'evil' } })).toMatchObject({ ok: false });
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { photo: 'javascript:alert(1)' } })).toMatchObject({ ok: false });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const key = 'test-nas-watcher-key';
+    // 2026-09-21 是星期一。Date 用台北時間換算：UTC 03:00 = 台北 11:00；UTC 11:30 = 台北 19:30。
+    const at = (iso: string) => vi.setSystemTime(new Date(iso));
+    const heartbeat = (name: string, serviceKey: string | undefined = key) => api({ action: 'pixelOfficeHeartbeat', name, serviceKey });
+    const statusOf = async (name: string) => ((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[]).find(person => person.name === name)?.status;
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      // 金鑰不對、沒帶、名字不存在都擋下。
+      at('2026-09-21T03:00:00Z');
+      expect(await heartbeat('Noise', 'wrong-key')).toMatchObject({ ok: false });
+      expect(await heartbeat('Noise', '')).toMatchObject({ ok: false });
+      expect(await heartbeat('Karl')).toMatchObject({ ok: false });
+      expect(await statusOf('Noise')).toBeUndefined();
+
+      // 白天開機：在座。
+      expect(await heartbeat('Noise')).toMatchObject({ ok: true, status: 'present', changed: true });
+      expect(await statusOf('Noise')).toBe('present');
+
+      // 狀態沒變的心跳不能驚動其他人的畫面：版本號不變，since 輪詢仍是 unchanged。
+      const before = await api({ action: 'pixelOfficeState' });
+      at('2026-09-21T03:01:00Z');
+      expect(await heartbeat('Noise')).toMatchObject({ ok: true, status: 'present', changed: false });
+      expect(await api({ action: 'pixelOfficeState', since: before.version })).toMatchObject({ ok: true, unchanged: true });
+
+      // 電腦一直開著、過了晚上七點：自動切成加班（台北 19:30）。
+      at('2026-09-21T11:30:00Z');
+      for (let minute = 0; minute < 5; minute += 1) { at(`2026-09-21T11:${String(26 + minute).padStart(2, '0')}:00Z`); await heartbeat('Noise'); }
+      at('2026-09-21T11:30:00Z');
+      expect(await heartbeat('Noise')).toMatchObject({ status: 'overtime' });
+      expect(await statusOf('Noise')).toBe('overtime');
+
+      // 關機：最後一次心跳之後超過 5 分鐘沒消息，讀狀態時自動變下班（4 分鐘內不算）。
+      at('2026-09-21T11:34:00Z');
+      expect(await statusOf('Noise')).toBe('overtime');
+      at('2026-09-21T11:36:00Z');
+      expect(await statusOf('Noise')).toBe('offwork');
+
+      // 隔天早上開機（台北 09:00）：自動回到在座。
+      at('2026-09-22T01:00:00Z');
+      expect(await heartbeat('Noise')).toMatchObject({ status: 'present', changed: true });
+
+      // 使用者手動點「下班」：電腦還開著的期間，心跳不會把它蓋回在座。
+      for (const minute of ['02', '04', '06', '08', '10']) { at(`2026-09-22T01:${minute}:00Z`); await heartbeat('Noise'); }
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'offwork' } });
+      at('2026-09-22T01:11:00Z');
+      expect(await heartbeat('Noise')).toMatchObject({ status: 'offwork', changed: false });
+      // 電腦關機再開機之後就重新由電腦決定。
+      at('2026-09-22T02:00:00Z');
+      expect(await heartbeat('Noise')).toMatchObject({ status: 'present', changed: true });
+
+      // 出國／公出：電腦關機時不會被改成下班；下次開機才回到在座。
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'abroad' } });
+      at('2026-09-22T05:00:00Z');
+      expect(await statusOf('Noise')).toBe('abroad');
+      expect(await heartbeat('Noise')).toMatchObject({ status: 'present' });
+
+      // 廁所：電腦關機超過門檻就是回家了，改成下班；使用者在電腦離線之後才手動指定的狀態則尊重。
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'toilet' } });
+      at('2026-09-22T05:10:00Z');
+      expect(await statusOf('Noise')).toBe('offwork');
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'present' } });
+      at('2026-09-22T05:12:00Z');
+      expect(await statusOf('Noise')).toBe('present');
+
+      // 從來沒有心跳的人（沒安裝爬蟲）完全不會被自動改狀態。
+      await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'present' } });
+      at('2026-09-23T05:00:00Z');
+      expect(await statusOf('Leona')).toBe('present');
+
+      // 加班可以由使用者手動指定，也能被驗證接受。
+      expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'overtime' } })).toMatchObject({ ok: true });
+      expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'sleeping' } })).toMatchObject({ ok: false });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -19,6 +19,20 @@ import type {
 
 const STATE_KEY = 'primary';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
+// 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
+const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'offwork', 'toilet', 'abroad', 'out'];
+// 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
+// 就當作電腦關機（或睡眠），把「在座／加班／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
+const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
+// 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
+const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
+const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
+
+/** 電腦開著時這個時間點應該顯示的狀態：晚上七點之後是加班，其餘是在座。 */
+export function pixelOfficeWorkStatus(nowMs: number): 'present' | 'overtime' {
+  const hour = new Date(nowMs + 8 * 60 * 60 * 1000).getUTCHours();
+  return hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR ? 'overtime' : 'present';
+}
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
 const PIXEL_OFFICE_PHOTO_MAX_CHARS = 900_000;
 const MAX_LOGIN_ATTEMPTS = 12;
@@ -1175,6 +1189,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(9)) {
+        this.ctx.storage.transactionSync(() => {
+          // 設計師電腦最後一次回報「電腦開著」的時間（毫秒）。獨立一欄、不動 updated_at：每分鐘一次的心跳
+          // 不能讓所有人的遊戲畫面每分鐘都重新下載一次狀態，只有狀態真的改變才會更新版本號。
+          this.ctx.storage.sql.exec('ALTER TABLE pixel_office_people ADD COLUMN last_seen INTEGER NOT NULL DEFAULT 0');
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            9, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1190,7 +1215,75 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return Number(row?.v) || 0;
   }
 
+  /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人，「在座／加班／廁所」改成下班。
+   * 放在每次讀取狀態時檢查（不需要排程）：遊戲每 3 秒輪詢一次，關機後幾分鐘內就會被任何一個打開遊戲的人觸發。
+   * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
+  private pixelOfficeApplyOffline(nowMs: number): void {
+    const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>(
+      'SELECT name, state, last_seen FROM pixel_office_people WHERE last_seen > 0'
+    ).toArray();
+    for (const row of rows) {
+      const lastSeen = Number(row.last_seen) || 0;
+      if (nowMs - lastSeen <= PIXEL_OFFICE_OFFLINE_MS) continue;
+      let state: Row = {};
+      try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
+      const status = text(state.status) || 'present';
+      if (!['present', 'overtime', 'toilet'].includes(status)) continue;
+      if (state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
+      state.status = 'offwork';
+      state.statusSource = 'auto';
+      state.statusAt = nowMs;
+      const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+      this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), version, row.name);
+    }
+  }
+
+  /** 設計師電腦上的 NAS 爬蟲每分鐘回報「這台電腦開著」。用爬蟲既有的服務金鑰驗證（跟上傳設計圖同一把）。
+   * - 剛開機／剛醒來（上一次心跳已經超過離線門檻，或從來沒有過）：不管原本是什麼狀態，一律改成「在座」或「加班」。
+   * - 持續開著：只有在「自動」狀態（沒被使用者手動指定）的在座↔加班會隨時間切換；使用者手動指定的狀態維持到電腦下次關機。 */
+  private async pixelOfficeHeartbeat(payload: ApiPayload): Promise<ApiResult> {
+    const apiKey = text(payload.serviceKey || payload.apiKey);
+    const authorized = Boolean(apiKey && this.env.NAS_WATCHER_API_KEY) && await secureEqual(apiKey, this.env.NAS_WATCHER_API_KEY);
+    if (!authorized) throw new Error('缺少或錯誤的服務金鑰');
+    const name = text(payload.name);
+    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    const nowMs = Date.now();
+    const existing = this.ctx.storage.sql.exec<{ state: string; last_seen: number }>(
+      'SELECT state, last_seen FROM pixel_office_people WHERE name = ?', name
+    ).toArray()[0];
+    let state: Row = {};
+    try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+    const lastSeen = Number(existing?.last_seen) || 0;
+    const wasOnline = lastSeen > 0 && nowMs - lastSeen <= PIXEL_OFFICE_OFFLINE_MS;
+    const current = text(state.status) || 'present';
+    const desired = pixelOfficeWorkStatus(nowMs);
+    let next = current;
+    let source = text(state.statusSource);
+    if (!wasOnline) {
+      next = desired;
+      source = 'auto';
+    } else if (['present', 'overtime'].includes(current) && source !== 'manual') {
+      next = desired;
+    }
+    const changed = next !== current || source !== text(state.statusSource) || !existing;
+    if (changed) {
+      state.status = next;
+      state.statusSource = source || 'auto';
+      state.statusAt = nowMs;
+    }
+    if (!changed) {
+      // 狀態沒變：只更新最後心跳時間，不動 updated_at（不驚動其他人的遊戲畫面）。
+      this.ctx.storage.sql.exec('UPDATE pixel_office_people SET last_seen = ? WHERE name = ?', nowMs, name);
+    } else {
+      const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+      if (existing) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, last_seen = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), nowMs, version, name);
+      else this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)', name, JSON.stringify(state), '', 0, version, nowMs);
+    }
+    return { ok: true, action: 'pixelOfficeHeartbeat', name, status: next, changed };
+  }
+
   private pixelOfficeState(payload: ApiPayload): ApiResult {
+    this.pixelOfficeApplyOffline(Date.now());
     const version = this.pixelOfficeVersion();
     if (Number(payload.since) === version && version > 0) return { ok: true, action: 'pixelOfficeState', version, unchanged: true };
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; photo_version: number; updated_at: number }>(
@@ -1225,8 +1318,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if ('status' in patch) {
       const status = text(patch.status);
-      if (!['present', 'offwork', 'toilet', 'abroad', 'out'].includes(status)) throw new Error('狀態不正確');
+      if (!PIXEL_OFFICE_STATUSES.includes(status)) throw new Error('狀態不正確');
       state.status = status;
+      // 使用者在遊戲裡手動指定：電腦持續開著的期間不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
+      state.statusSource = 'manual';
+      state.statusAt = Date.now();
     }
     if ('x' in patch || 'y' in patch) {
       const x = Number(patch.x), y = Number(patch.y);
@@ -2601,6 +2697,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try {
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
+      if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
       if (action === 'googleLogin') return await this.googleLogin(payload, context);
       if (action === 'login') return await this.passwordLogin(payload, context);

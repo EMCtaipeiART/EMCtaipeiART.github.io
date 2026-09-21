@@ -247,3 +247,81 @@ test('NAS 沒連上時排程不會每分鐘跳連線視窗：先探測、有間�
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('像素辦公室：電腦開著就回報心跳，沒設定姓名或金鑰不送、失敗不影響爬蟲', async () => {
+  const { mkdtemp, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const lib = await import('../../scripts/nas_design_image_lib.mjs');
+
+  // 沒設定 designerName（共用電腦、沒安裝到設計師電腦）／沒有金鑰：完全不送。
+  const neverCalled = async () => { throw new Error('不該送出請求'); };
+  assert.deepEqual(await lib.sendPresenceHeartbeat({}, { serviceKey: 'k' }, { fetchImpl: neverCalled }), { sent: false, reason: 'no-designer-name' });
+  assert.deepEqual(await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, {}, { fetchImpl: neverCalled }), { sent: false, reason: 'no-service-key' });
+
+  // 送出的格式要跟遊戲／Worker 一致：POST text/plain 的 JSON，action=pixelOfficeHeartbeat。
+  let seen;
+  const okFetch = async (url, init) => { seen = { url, init }; return { json: async () => ({ ok: true, status: 'overtime' }) }; };
+  assert.deepEqual(await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 'secret' }, { fetchImpl: okFetch }), { sent: true, status: 'overtime' });
+  assert.equal(seen.url, lib.DEFAULT_OFFICE_API_URL);
+  assert.equal(seen.init.method, 'POST');
+  assert.match(seen.init.headers['Content-Type'], /^text\/plain/);
+  assert.deepEqual(JSON.parse(seen.init.body), { action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 'secret' });
+  await lib.sendPresenceHeartbeat({ designerName: 'Noise', officeApiUrl: 'https://example.test/api' }, { serviceKey: 's' }, { fetchImpl: okFetch });
+  assert.equal(seen.url, 'https://example.test/api');
+
+  // 後端拒絕、沒網路：只回報原因，不丟例外（爬蟲照常掃描）。
+  const rejected = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => ({ status: 200, json: async () => ({ ok: false, error: '缺少或錯誤的服務金鑰' }) }) });
+  assert.deepEqual(rejected, { sent: false, reason: 'rejected', message: '缺少或錯誤的服務金鑰' });
+  const offline = await lib.sendPresenceHeartbeat({ designerName: 'Noise' }, { serviceKey: 's' }, { fetchImpl: async () => { throw new Error('fetch failed'); } });
+  assert.equal(offline.sent, false);
+  assert.equal(offline.reason, 'network');
+
+  // 這台電腦專屬的 local 設定檔蓋過共用設定，沒有 local 檔時原樣。
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-local-'));
+  try {
+    const configPath = path.join(dir, 'nas_design_image_watcher.config.json');
+    await writeFile(configPath, JSON.stringify({ mountRoot: '/Volumes/設計部', dbJsonUrl: 'https://x.test/db.json', maxDimension: 1600 }));
+    assert.equal((await lib.loadConfig(configPath)).designerName, undefined);
+    await writeFile(lib.localConfigPath(configPath), JSON.stringify({ designerName: 'Anna', maxDimension: 800 }));
+    const merged = await lib.loadConfig(configPath);
+    assert.equal(merged.designerName, 'Anna');
+    assert.equal(merged.maxDimension, 800, 'local 檔優先於共用設定');
+    assert.equal(merged.dbJsonUrl, 'https://x.test/db.json', '沒被蓋的欄位沿用共用設定');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+
+  // watcher 要在鎖與 NAS 檢查之前就回報（沒連上 NAS、上一輪還沒跑完時電腦一樣是開著的）。
+  const watcher = await readFile(new URL('../../scripts/nas_design_image_watcher.mjs', import.meta.url), 'utf8');
+  const beatAt = watcher.indexOf('lib.sendPresenceHeartbeat(');
+  assert.ok(beatAt > 0 && beatAt < watcher.indexOf('lib.acquireLock(runLockFile)') && beatAt < watcher.indexOf('lib.resolveMountRoot(config)'));
+  const gitignore = await readFile(new URL('../../.gitignore', import.meta.url), 'utf8');
+  assert.match(gitignore, /scripts\/nas_design_image_watcher\.local\.json/, '每台電腦自己的設定不進 git');
+});
+
+test('安裝器記下這台電腦是哪位設計師：只接受名單內的名字、重新安裝沿用、保留 local 檔其他欄位', async () => {
+  const { mkdtemp, rm, writeFile, readFile: read } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const path = (await import('node:path')).default;
+  const installer = await import('../../scripts/nas_watcher_installer.mjs');
+  assert.deepEqual(installer.OFFICE_DESIGNER_NAMES, ['Machi', 'Anna', 'Amber', 'Leona', 'Noise']);
+  assert.equal(installer.parseDesignerChoice('Amber\n'), 'Amber');
+  assert.equal(installer.parseDesignerChoice('false\n'), '', '按「略過」');
+  assert.equal(installer.parseDesignerChoice('Karl'), '');
+  assert.equal(installer.parseDesignerChoice(''), '');
+
+  const dir = await mkdtemp(path.join(tmpdir(), 'nas-designer-'));
+  const file = path.join(dir, installer.LOCAL_CONFIG_FILENAME);
+  try {
+    assert.equal(await installer.readSavedDesignerName(file), '');
+    await writeFile(file, JSON.stringify({ someOtherLocalSetting: 1 }));
+    await installer.saveDesignerName(file, 'Leona');
+    assert.deepEqual(JSON.parse(await read(file, 'utf8')), { someOtherLocalSetting: 1, designerName: 'Leona' });
+    assert.equal(await installer.readSavedDesignerName(file), 'Leona', '重新安裝時直接沿用，不再詢問');
+    await writeFile(file, JSON.stringify({ designerName: 'Karl' }));
+    assert.equal(await installer.readSavedDesignerName(file), '', '名單外的舊值不採用，會重新詢問');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
