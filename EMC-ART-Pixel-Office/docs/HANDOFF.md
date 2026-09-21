@@ -96,6 +96,16 @@ Worker 每分鐘的排程（`runPixelOfficeCalendarSync`，跟排程寄信同一
 - 任何一步失敗（沒授權、專案沒啟用 Calendar API、某個人的行事曆看不到）都只是這一輪不動任何人的狀態，回傳裡的 `unreadable` 會列出看不到的人。
 - 心跳那邊有一個對應的例外：`statusSource:'calendar'` 的會議不會被「剛開機」或閒置判斷蓋掉，否則開會中打開筆電會在「在座」與「會議」之間每分鐘來回跳。
 
+**排錯**：`pixelOfficeCalendarStatus`（帶爬蟲的服務金鑰）會回傳這個帳號連了沒、有沒有行事曆權限、五個人的信箱對應，以及最後一次同步的結果：
+
+```bash
+curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
+  -H 'Content-Type: text/plain;charset=UTF-8' \
+  -d '{"action":"pixelOfficeCalendarStatus","serviceKey":"<NAS_WATCHER_API_KEY>"}'
+```
+
+`last` 的常見值：`{"reason":"no-token"}` 是那個帳號還沒連 Gmail；`{"reason":"freebusy-failed","status":403,"message":"Request had insufficient authentication scopes."}` 是連了但授權還沒帶行事曆權限（重新連接一次即可）；`message` 出現 `has not been used in project` 則是 Google Cloud 專案還沒啟用 Calendar API。`unreadable` 列出看得到名字但讀不到行事曆的人。
+
 每台電腦要在 `scripts/nas_design_image_watcher.local.json`（不進 git）寫 `{"designerName":"Noise"}` 才會回報；設計師電腦由安裝器在安裝時跳出選單記下，主機這台已手動設為 Machi。
 
 ## 驗證與已知限制

@@ -1361,7 +1361,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try {
       accessToken = await this.getValidGmailAccessToken(PIXEL_OFFICE_CALENDAR_ACCOUNT);
     } catch (error) {
-      return { ok: false, reason: 'no-token', message: error instanceof Error ? error.message : String(error) };
+      const result = { ok: false, reason: 'no-token', message: error instanceof Error ? error.message : String(error) };
+      await this.rememberCalendarSync(result, nowMs);
+      return result;
     }
     const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
       method: 'POST',
@@ -1375,7 +1377,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const data = await response.json().catch(() => ({})) as Row;
     if (!response.ok) {
       const error = data.error as Row | undefined;
-      return { ok: false, reason: 'freebusy-failed', status: response.status, message: text(error?.message) };
+      const result = { ok: false, reason: 'freebusy-failed', status: response.status, message: text(error?.message) };
+      await this.rememberCalendarSync(result, nowMs);
+      return result;
     }
     const calendars = (data.calendars || {}) as Record<string, Row>;
     const meeting: string[] = [], released: string[] = [], unreadable: string[] = [];
@@ -1393,7 +1397,31 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (result === 'meeting') meeting.push(name);
       else if (result === 'released') released.push(name);
     }
-    return { ok: true, meeting, released, unreadable };
+    const result = { ok: true, meeting, released, unreadable };
+    await this.rememberCalendarSync(result, nowMs);
+    return result;
+  }
+
+  /** 行事曆同步的最後一次結果。這個功能靠好幾個外部條件（授權、Calendar API 有沒有啟用、網域共用設定），
+   * 出問題時如果只能翻 Worker 的 log 會很難查，所以把結果留下來，用服務金鑰就能查。 */
+  private async rememberCalendarSync(result: Row, nowMs: number): Promise<void> {
+    await this.ctx.storage.put('pixelOfficeCalendarSync', { ...result, at: new Date(nowMs).toISOString() });
+  }
+
+  private async pixelOfficeCalendarStatus(payload: ApiPayload): Promise<ApiResult> {
+    const apiKey = text(payload.serviceKey || payload.apiKey);
+    const authorized = Boolean(apiKey && this.env.NAS_WATCHER_API_KEY) && await secureEqual(apiKey, this.env.NAS_WATCHER_API_KEY);
+    if (!authorized) throw new Error('缺少或錯誤的服務金鑰');
+    const last = await this.ctx.storage.get('pixelOfficeCalendarSync');
+    const stored = this.getGmailTokens(PIXEL_OFFICE_CALENDAR_ACCOUNT);
+    return {
+      ok: true, action: 'pixelOfficeCalendarStatus',
+      account: PIXEL_OFFICE_CALENDAR_ACCOUNT,
+      connected: Boolean(stored),
+      canReadCalendar: Boolean(stored) && gmailScopesAllowCalendar(stored?.scopes),
+      calendars: PIXEL_OFFICE_CALENDARS,
+      last: (last || null) as Row | null
+    };
   }
 
   private async pixelOfficeHeartbeat(payload: ApiPayload): Promise<ApiResult> {
@@ -2866,6 +2894,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
+      if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
       if (action === 'googleLogin') return await this.googleLogin(payload, context);
       if (action === 'login') return await this.passwordLogin(payload, context);
