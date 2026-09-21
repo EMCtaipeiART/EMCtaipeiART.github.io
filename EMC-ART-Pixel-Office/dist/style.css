@@ -179,7 +179,7 @@ h2{font-size:24px}
 /* 嵌入模式（?embed=1）：給設計需求系統的「設計師專長與案件分配」當展示用，只留場景本身。
    狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
 body.embed{background:transparent}
-body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster{display:none!important}
+body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster,body.embed #loading{display:none!important}
 /* height:100% 要一路從 html 接下來才算數。少了 html 這一層，body 的高度會反過來被 canvas 撐大，
    fitEmbedView() 就會以為框比實際的 iframe 還高，把下排畫到看不見的地方（2026-09-21 的裁切問題）。
    canvas 另外用 absolute 脫離文件流，確保它的大小永遠不會回頭影響框。 */
@@ -199,7 +199,6 @@ body.embed .person-card-head strong{font-size:19px}
    變成「只有第一個人展得開」。點一下固定之後才接受點擊，這樣才點得到技能膠囊。 */
 body.embed .person-card{pointer-events:none}
 body.embed .person-card.is-pinned{pointer-events:auto;border-color:#5b83bd;box-shadow:0 18px 38px rgba(6,14,28,.5)}
-body.embed .person-card-close{display:none}
 /* 名字與職稱是短字串，讓它們正常斷行就好，anywhere 只留給可能很長的案件名。 */
 body.embed .person-card-head,body.embed .person-card-title{overflow-wrap:normal;word-break:keep-all}
 @media(max-width:640px){

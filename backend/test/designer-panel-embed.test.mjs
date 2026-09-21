@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=26"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=27"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -99,7 +99,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 33, `app.js 版本號要 ≥ 33，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 34, `app.js 版本號要 ≥ 34，目前是 ${version?.[1]}`);
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -118,8 +118,9 @@ test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () =>
   assert.match(js, /select\(hit\.i\);if\(embedMode\)setCardPinned\(true\)/);
   assert.match(js, /\{if\(embedMode\)setCardPinned\(false\);select\(null\);\}/);
   assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
-  assert.match(js, /if\(embedMode\)\$\('personCardClose'\)\.hidden=true;/, '嵌入模式不顯示關閉鈕');
-  assert.match(css, /body\.embed \.person-card-close\{display:none\}/);
+  // 關閉鈕要留著：固定之後卡片才吃得到滑鼠，剛好就是需要它的時候。
+  assert.doesNotMatch(js, /\$\('personCardClose'\)\.hidden=true/, '不該再把關閉鈕藏起來');
+  assert.doesNotMatch(css, /body\.embed \.person-card-close\{display:none\}/);
 });
 
 test('iframe 的高度鏈完整，場景不會把框撐大而被裁掉', async () => {
@@ -178,4 +179,13 @@ test('進站不再每 6 秒重抓整份 db.json，嵌入版也不預載歷史快
   assert.match(js, /function ensureLevels\(\)\{if\(levelsRequested\)return;levelsRequested=true;syncLevels\(\);\}/);
   assert.match(js, /select\(null\);if\(!embedMode\)ensureLevels\(\);/, '嵌入模式進站不預載');
   assert.match(js, /const response=await fetch\(url,\{cache:'no-cache'\}\);/, '歷史快照也要能走 304');
+});
+
+test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字', async () => {
+  const [js, css] = await Promise.all([officeJs(), officeCss()]);
+  // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
+  assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
+  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;bubble\(p,0\);/);
+  // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
+  assert.match(css, /body\.embed[^{]*#loading\{display:none!important\}/);
 });
