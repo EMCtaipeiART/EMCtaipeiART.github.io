@@ -23,6 +23,10 @@ GitHub Pages 版：<https://emctaipeiart.github.io/EMC-ART-Pixel-Office/>
 
 不需執行 npm install。關閉伺服器請在啟動視窗按 Ctrl+C。固定使用同一個 localhost 網址，才能讀取同一份本機存檔。不要直接雙擊 dist/index.html；請透過本機伺服器開啟。
 
+## 嵌入設計需求系統
+
+設計需求系統會以 `EMC-ART-Pixel-Office/dist/?embed=1` 將場景嵌入「設計師專長與案件分配」區塊。這個模式只顯示 Canvas 場景，隱藏頁首、工具面板、名單、說明與人物資料卡；不接受點選、方向鍵或其他人物操作，但仍每 3 秒讀取同一份多人狀態。完整遊戲仍使用不帶 `embed=1` 的網址。
+
 ## 在本地 Codex 接手
 
 在你的本地 Codex 開啟整個 `Kaiyao-Pixel-Office` 資料夾，請它先閱讀 `README.md` 與 `docs/HANDOFF.md`。可直接貼上：

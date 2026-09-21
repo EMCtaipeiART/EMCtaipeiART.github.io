@@ -40,6 +40,7 @@
 - 檔案照片會縮至最長邊 1200 px，以 JPEG 儲存。大於 8 MB 會拒絕。
 - localStorage 主資料鍵：`kaiyao-office-v1`；配置版本鍵：`kaiyao-office-layout`，目前值 `5`。版本不符只重設位置，仍讀取照片、訊息、心情與離席狀態。
 - 網頁在支援 `document.modelContext` 時註冊 `set_character_status`，不支援時遊戲仍正常運作。
+- `?embed=1` 是主系統用的展示模式：`body.embed` 只留 Canvas，`embedMode` 擋住點選與鍵盤移動。主系統 iframe 本身另有 `pointer-events:none` 與 `tabindex="-1"`，不要移除這三層防護，否則方向鍵可能被嵌入場景吃掉。
 
 ## 新增人物
 

@@ -174,3 +174,12 @@ h2{font-size:24px}
   .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
   .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 }
+
+/* 嵌入模式（?embed=1）：給設計需求系統的「設計師專長與案件分配」當展示用，只留場景本身。
+   狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
+body.embed{background:transparent}
+body.embed header,body.embed aside,body.embed .scene-bar,body.embed .scene-foot,body.embed #roster,body.embed .person-card{display:none!important}
+body.embed main{display:block;max-width:none;padding:0;gap:0}
+body.embed .play{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+body.embed .canvas-wrap{margin:0}
+body.embed #game{width:100%;height:auto;display:block;cursor:default!important}

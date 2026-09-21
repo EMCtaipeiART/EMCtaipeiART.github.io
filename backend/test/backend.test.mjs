@@ -1141,7 +1141,7 @@ test('mail contact picker merges designers, orders groups and excludes internal 
   assert.doesNotMatch(result.markup, /<details[^>]+\sopen(?:\s|>)/);
 });
 
-test('designer roster uses JSON group and rotation for priority new-project buttons', async () => {
+test('designer JSON group and rotation still drive the separate new-project buttons after the roster is replaced', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const designers = [
     { name: 'Leona', group: '平面', rotation: 1 },
@@ -1160,7 +1160,9 @@ test('designer roster uses JSON group and rotation for priority new-project butt
   assert.match(html, /row\['組別'\]\|\|row\['設計類型'\]/);
   assert.match(html, /githubJsonTableRows\('設定',\{fresh:true\}\)/);
   assert.match(html, /groupOrder=\{平面:0,影音:1\}/);
-  assert.match(html, />新專案找我<\/button>/);
+  assert.doesNotMatch(html, />新專案找我<\/button>/, '舊頭像卡上的新專案按鈕已下架');
+  assert.match(html, /data-new-project-group="平面"/);
+  assert.match(html, /data-new-project-group="影音"/);
   assert.match(html, /let designerOptions = \['Machi','Anna','Karl','Noise','Amber','Leona'\]/);
   assert.match(html, /function syncDesignerOptionLists\(list=designers\)/);
   assert.match(html, /profile\.skillTargets\?\.\[skill\]/);
@@ -3568,7 +3570,7 @@ test('page load downloads the database once, UI preference saves are batched and
   }
 });
 
-test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases and turns busy at six', async () => {
+test('designer workload helper still counts 未開始 + 執行中 + 修改中 cases after the avatar light is retired', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const block = html.match(/const DESIGNER_ACTIVE_STATUSES=[\s\S]*?function computedDesignerStatus\([^\n]*/)?.[0];
   assert.ok(block, 'could not locate the designer busy helpers');
@@ -3591,7 +3593,8 @@ test('designer avatar busy light counts 未開始 + 執行中 + 修改中 cases 
   assert.equal(computedDesignerStatus('Noise'), '忙碌', '合計六筆才顯示忙碌');
   assert.equal(designerActiveCount('Amber'), 1);
   assert.equal(computedDesignerStatus('Karl'), '普通');
-  assert.match(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆"/);
+  assert.doesNotMatch(html, /title="\$\{esc\(status\)\}：目前未開始＋執行中＋修改中共 \$\{count\} 筆"/,
+    '頭像忙碌燈已隨頭像卡下架');
 });
 
 test('reply method chooser offers 直接讀信, which opens the thread read-only with the first message expanded', async () => {
@@ -3878,13 +3881,12 @@ test('the NAS folder picker opens on the designer own machine first and falls ba
   assert.match(picker, /type: 'machi-nas-folder-picker-ready', caseId, nonce, host: location\.origin/);
 });
 
-test('first paint assets stay small: preloaded designer avatars must not balloon again', async () => {
+test('first paint no longer preloads retired designer avatars, while reversible poster assets stay compressed', async () => {
   const { readdir, stat } = await import('node:fs/promises');
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const preloaded = [...html.matchAll(/<link rel="preload" as="image" href="(assets\/designers\/[^"]+)"/g)].map(match => match[1]);
-  // 2026-09-16：Karl 離職，頭像預載移除，剩下五位在職設計師。
-  assert.ok(preloaded.length >= 5, '設計師頭像仍以 preload 高優先度載入');
-  assert.equal(preloaded.some(path => path.includes('Karl')), false, '離職成員不需要再預先載入頭像');
+  // 2026-09-21：首頁已改成像素辦公室，舊頭像卡不再畫出，因此不該還在 head 預載這些圖。
+  assert.deepEqual(preloaded, [], '已下架的設計師頭像不應再跟首頁搶頻寬');
 
   // 這些圖在首頁一開啟就會下載、跟 HTML 搶頻寬，畫面上只顯示 112px。
   // 2026-09-16 曾經每張 512px、合計 1089 KB，首次載入因此非常慢，壓成 256px 後合計 158 KB。
@@ -4538,7 +4540,7 @@ test('信件編輯器、簽名檔與信件範本的工具列都有開源字型�
   assert.match(html, /font\.removeAttribute\('face'\);\n    if\(!font\.attributes\.length\)font\.replaceWith\(\.\.\.font\.childNodes\);/);
 });
 
-test('進站只抓頭像縮圖、海報點開才下載', async () => {
+test('頭像與海報工具保留可回復，但進站不再預載或畫出這些前台內容', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.split('\n').find(line => line.startsWith(`function ${name}(`));
   const api = new Function(`${pick('imageUrl')}\n${pick('avatarImageUrl')}\nreturn { avatarImageUrl };`)();
@@ -4549,9 +4551,14 @@ test('進站只抓頭像縮圖、海報點開才下載', async () => {
   assert.equal(api.avatarImageUrl('assets/designers/Anna-avatar.jpg'), 'assets/designers/Anna-avatar.jpg');
   assert.equal(api.avatarImageUrl(''), '');
 
-  assert.match(html, /const avatar=avatarImageUrl\(d\.avatar\)\|\|fallback;/);
-  assert.match(html, /poster-image" data-poster-url="\$\{esc\(poster\)\}" alt=/, '海報 img 不帶 src');
-  assert.match(html, /if\(posterImage&&!posterImage\.getAttribute\('src'\)\)posterImage\.src=posterImage\.dataset\.posterUrl\|\|'';/);
+  const head = html.slice(0, html.indexOf('</head>'));
+  assert.doesNotMatch(head, /assets\/designers\/[^"']+-avatar\.jpg/);
+  const renderStart = html.indexOf('function renderDesigners(){');
+  const renderEnd = html.indexOf('let activeDesignerStoryPlayback=null;', renderStart);
+  const renderSource = html.slice(renderStart, renderEnd);
+  assert.match(renderSource, /class="office-embed"/);
+  assert.doesNotMatch(renderSource, /poster-image|designer-avatar-image|avatar-frame/);
+  assert.match(html, /function openDesignerPoster\(shell\)/, '原工具保留方便日後回復');
 });
 
 test('系統公告：最新的在最上面，v4.8 比 v4.72 新（版本號小數點後當小數比）', async () => {

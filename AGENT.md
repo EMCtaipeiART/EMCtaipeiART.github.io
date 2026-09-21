@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 16:57 Asia/Taipei — 設計師卡區改為只讀像素辦公室場景
+
+- 修改目的：將首頁左上「設計師專長與案件分配」的頭像卡改為像素辦公室即時場景，並從前台下架頭像、限時動態／Reels、大海報與分享音樂，後端及 JSON 設定仍保留供日後回復。
+- 影響檔案：`index.html`、`EMC-ART-Pixel-Office/dist/app.js`、`dist/index.html`、`dist/style.css`、`EMC-ART-Pixel-Office/README.md`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`、`backend/test/backend.test.mjs`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：主系統以同源 `?embed=1` iframe 嵌入場景，iframe 只建立一次；嵌入版隱藏遊戲頁首、工具、名單與資料卡，禁用滑鼠與鍵盤操作，但仍同步即時狀態。右下角「完整畫面」可另開完整遊戲。主頁不再預載舊頭像、不再請求 `listReels`、不再產生限動互動通知；技能、輪值、回信範本與簽名檔設定照常使用。
+- 風險區塊：若日後恢復 Reels，需同時恢復 `loadDesignerRoster()` 的 `listReels`、`notificationItems()` 的 story items、設定頁兩個隱藏區塊與原頭像卡 render；不可只恢復其中一處。
+- 已檢查／驗證方式：根目錄 `npm test -- --runInBand`（172/172 通過）、Pixel Office `npm run check`、`git diff --check`；Chrome 桌機版與 390×844 手機版實際瀏覽，場景比例、按鈕與溢出正常。本機純靜態伺服器只出現既有 API 501 備援警告，無嵌入相關錯誤。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log（`feat: embed read-only pixel office in designer panel`）
+
 ### 2026-09-21 15:53 Asia/Taipei — 修正回信「排程」後又寄出一封、修改紀錄重複寫入（案件 26090052／26090053）
 
 - 修改目的：專案（PM）用「串接」的信件串寫「修改需求信」並指定 15:35 排程寄出，結果當下立即多寄出一封、15:35 又寄一封，「修改紀錄」也出現兩筆內容相同的紀錄。使用者要求把這封信當作一封寄送。資料庫證據：案件 26090053 的修改紀錄第 2、3 輪是 15:15:16 與 15:15:19 三秒內建立、內容完全相同（排程建立當下）。
