@@ -20,8 +20,8 @@ import type {
 const STATE_KEY = 'primary';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
-const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'abroad', 'out'];
-// 電腦開著時由時間決定、不需要手動點的狀態。其餘（廁所／出國／公出）一律尊重手動指定。
+const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'abroad', 'out'];
+// 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
 const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'offwork'];
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
 // 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。

@@ -4110,6 +4110,19 @@ describe('Pixel Office shared state', () => {
       at('2026-09-30T11:31:00Z');
       expect(await heartbeat(5)).toMatchObject({ status: 'overtime' });
 
+      // 會議：電腦看不出來有沒有在開會，所以手動點了就維持——離開座位滿五分鐘也不會被改成廁所。
+      at('2026-09-30T02:00:00Z');
+      await heartbeat(5);
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'meeting' } });
+      at('2026-09-30T02:01:00Z');
+      expect(await heartbeat(30 * 60)).toMatchObject({ status: 'meeting', changed: false });
+      // 帶著筆電去會議室（電腦關機）也不會被改成下班。
+      at('2026-09-30T02:30:00Z');
+      const inMeeting = (await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[];
+      expect(inMeeting.find(person => person.name === 'Amber')?.status).toBe('meeting');
+      // 回到座位開機：重新由電腦決定。
+      expect(await heartbeat(5)).toMatchObject({ status: 'present', changed: true });
+
       // 出國／公出這類「不是靠電腦判斷」的手動狀態不受時段影響：電腦一直開著、跨過凌晨六點
       //（加班時段結束）也不會被交還給自動。
       at('2026-09-30T21:55:00Z');

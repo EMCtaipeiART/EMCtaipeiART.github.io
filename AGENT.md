@@ -206,6 +206,19 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：Worker 已部署（版本 `93b001a1`）；前台 git push 後 GitHub Pages 自動生效。
 - commit：見 git log（`fix: never both schedule and send one reply; dedupe repeated modification records`）
 
+### 2026-09-21 16:00 Asia/Taipei — 像素辦公室：換上使用者重做的「會議」與「用餐」圖，並新增會議狀態
+
+- 修改目的：使用者重新畫了「會議」與「用餐」兩個圖示要換上去。用餐原本是程式繪製的碗，會議則是還不存在的狀態。
+- 影響檔案：新增 `EMC-ART-Pixel-Office/dist/assets/icons-status-v4.png`＋`.webp`；修改 `dist/app.js`、`dist/index.html`、`dist/style.css`、`docs/HANDOFF.md`、`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`。
+- 影響功能：
+  1. **新圖集**：`icons-v3` 的 3×3 已排滿，所以另開 `icons-status-v4`（2 格正方形：會議、用餐），裁切、置中、留白與輸出規則都跟 `icons-v3` 相同（每格 256、PAD 10、WebP q90 縮到 192）。`drawSymbol()` 先查 `extraCells` 再查 `symbolCells`；程式繪製的 `bowlIconCanvas()`／`drawBowlIcon()` 整段移除。
+  2. **新狀態「會議」**（`meeting`）：算離席（桌面淨空成灰階空桌），且是**純手動**狀態——電腦判斷不出來有沒有在開會，所以不列入 `PIXEL_OFFICE_AUTO_STATUSES`，閒置五分鐘不會被改成廁所、關機也不會被改成下班，回座開機才重新由電腦決定。
+  3. 狀態變成八個，按鈕改每列 4 個（兩列剛好排滿），移除七顆時用來置中最後一顆的 CSS。遊戲內建的 `set_character_status` 工具 enum 補上 `lunch` 與 `meeting`（先前漏掉）。
+- 風險區塊：①**Worker 必須先部署**，前台才能送出 `meeting`（舊 Worker 會回「狀態不正確」）。②多一張圖集要下載（19 KB，已加 preload）。③會議是手動狀態，散會後要自己點回來，或等關機再開機。④狀態按鈕從 3 欄變 4 欄，每顆變窄；手機版同樣是 4 欄。
+- 已檢查／驗證方式：`worker` vitest 88/88（新增：手動指定會議後閒置 30 分鐘仍是會議、電腦關機仍是會議、回座開機才回到在座）；`tsc --noEmit` 通過；`node --test backend/test/*.test.mjs` 166/166。本機實機確認：八顆狀態按鈕排成 4×2、會議與用餐圖示正確；把人設成會議／用餐後桌面淨空、桌上圖示與標籤放大檢查無切邊。
+- 部署狀態：Worker 需要部署；前台 git push 後 GitHub Pages 生效。
+- commit：見 git log
+
 ### 2026-09-21 15:20 Asia/Taipei — 像素辦公室：平常離開座位五分鐘自動顯示「廁所」
 
 - 修改目的：接續上一則，使用者要求「平常離開座位五分鐘狀態改為廁所」——原本閒置判斷只用在午休時段（用餐），其他時間離開座位完全看不出來。

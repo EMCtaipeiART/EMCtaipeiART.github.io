@@ -39,12 +39,10 @@ h3,.tool-section>label:not(.upload){font-size:14px;font-weight:600;margin:0 0 13
 .moods button{background:#243c5c;color:#bac9de;border:1px solid #3c526f;border-radius:9px;padding:9px 0;font-size:13px}
 .moods button canvas{display:block;width:42px;height:42px;margin:0 auto 4px;image-rendering:pixelated}
 .moods button.active{background:#ffda80;color:#223047;border-color:#ffda80}
-.statuses{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.statuses{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .statuses button{min-width:0;background:#243c5c;color:#b8c7dc;border:1px solid #3c526f;border-radius:8px;padding:8px 2px 7px;font-size:11px;line-height:1.25}
 .statuses button canvas{display:block;width:36px;height:36px;margin:0 auto 4px;image-rendering:pixelated}
 .statuses button.active{background:#dce7f4;color:#18314f;border-color:#f7d16e;font-weight:800;box-shadow:inset 0 0 0 1px #f7d16e}
-/* 狀態變成七個之後最後一列只剩一顆，讓它落在中間欄，不要孤零零靠左。 */
-.statuses button:last-child:nth-child(3n+1){grid-column:2}
 .text-button{border:0;background:none;color:#a4b7d2;font-size:12px;padding:8px 0}
 textarea{width:100%;resize:vertical;min-height:78px;background:#10243e;color:white;border:1px solid #3a506b;border-radius:9px;padding:11px;line-height:1.5;font-size:14px}
 textarea::placeholder{color:#8ba0bd}
@@ -99,7 +97,7 @@ aside{padding:20px;display:block}
 .dpad button{width:42px;height:40px}
 .identity canvas{width:64px;height:84px}
 h2{font-size:24px}
-.statuses{grid-template-columns:repeat(3,1fr)}
+.statuses{grid-template-columns:repeat(4,1fr)}
 .statuses button{font-size:10px}
 }
 
