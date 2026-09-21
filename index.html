@@ -6819,16 +6819,15 @@
     <div class="card help designer-help panel-managed" id="designerPanel">
       <div class="designer-help-trigger">
         <div class="section-head">
-          <div class="designer-title-wrap"><h2>設計師專長與案件分配</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button></div>
+          <div class="designer-title-wrap"><h2>設計部即時動態</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button></div>
           <div class="section-panel-actions">
-            <button type="button" class="panel-close-toggle ui-close-button" data-close-panel="designer" title="關閉設計師專長與案件分配" aria-label="關閉設計師專長與案件分配"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
+            <button type="button" class="panel-close-toggle ui-close-button" data-close-panel="designer" title="關閉設計部即時動態" aria-label="關閉設計部即時動態"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
           </div>
         </div>
       </div>
       <div class="designer-help-popover" aria-hidden="true">
         <b>使用方式：</b>
-        <span>• 這裡顯示設計部的即時狀態：在座、加班、用餐、會議、外出或下班。</span>
-        <span>• 狀態由每位設計師的電腦與 Google 行事曆自動判斷，也可以在遊戲裡手動指定。</span>
+        <span>• 這裡顯示設計部的即時狀態。</span>
         <span>• 直接點畫面中的人物，可查看他的等級、技能、案件量與新專案輪值。</span>
       </div>
       <div class="designer-roster" id="designerRoster" aria-label="設計師功能"></div>
@@ -10979,7 +10978,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=28" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=29" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();

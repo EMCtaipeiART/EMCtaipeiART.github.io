@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=28"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=29"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -224,4 +224,17 @@ test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
   // 142 KB 的 PNG 濾鏡圖改成 WebP。
   assert.match(js, /overtimeSheet\.src='assets\/overtime-filter\.webp/);
   assert.match(html, /preload[^>]*assets\/overtime-filter\.webp/);
+});
+
+test('面板標題與說明是「設計部即時動態」的版本', async () => {
+  const html = await indexHtml();
+  assert.match(html, /<h2>設計部即時動態<\/h2>/);
+  assert.match(html, /title="關閉設計部即時動態" aria-label="關閉設計部即時動態"/);
+  assert.doesNotMatch(html, /<h2>設計師專長與案件分配<\/h2>/);
+  // 說明裡不再列舉狀態，也不再解釋狀態怎麼判斷。
+  assert.doesNotMatch(html, /在座、加班、用餐、會議、外出或下班/);
+  assert.doesNotMatch(html, /狀態由每位設計師的電腦與 Google 行事曆自動判斷/);
+  assert.match(html, /<span>• 這裡顯示設計部的即時狀態。<\/span>/);
+  // 後台「設定」表的欄位名不能跟著改，不然收合狀態會對不上。
+  assert.match(html, /'收合設計師專長與案件分配'/);
 });
