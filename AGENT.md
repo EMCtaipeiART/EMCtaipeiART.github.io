@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 10:40 Asia/Taipei — NAS 監控：開機後 NAS 還沒連上時不再每分鐘跳連線視窗，連上之後才開始爬
+
+- 修改目的：使用者回報開機後 NAS 還沒連上時，畫面會很頻繁地一直跳出要求連線的視窗，希望改成「成功連上 NAS 才開始爬」。根因：`lib.requestMount()` 的「最多每分鐘一次」節流是存在**記憶體變數**（`lastMountAttemptAt`）裡，但排程是 crontab 每分鐘**重新啟動一個全新的 Node 行程**，變數每輪都歸零，等於每分鐘都執行一次 `open smb://…`，Finder 就每分鐘跳一次連線視窗；開機後網路／NAS 還沒就緒的那段時間最明顯。
+- 影響檔案：`scripts/nas_design_image_lib.mjs`、`scripts/nas_design_image_watcher.mjs`、`backend/test/nas-installer.test.mjs`（本機工具＋測試，沒有動 `index.html`、Worker、Apps Script）。
+- 影響功能：`nas_design_image_lib.mjs` 新增 `connectNasAndWait()`（配合 `nasHostFromSmbUrl`／`nasPortFromSmbUrl`／`probeNasPort`／`mountRetryDelayMs`／`readMountAttempt`／`resetMountAttempts`）。watcher 的 `runScan()` 開頭發現沒掛載時改走它：①先探測 NAS 主機的 SMB 埠（預設 445，`smb://主機:埠/` 有寫埠號就用該埠）——連不上（網路／NAS 還沒就緒）就靜默等待、**完全不跳視窗**、不記嘗試；②連得上才 `open smb://…` 請 Finder 連線，並在**同一輪**輪詢最多 60 秒等掛載成功，掛載成功就直接接著掃描（「連上才開始爬」）；③嘗試紀錄存檔 `sync-state.json.mount-attempt.json`（跨行程有效），失敗次數越多間隔越長（5、10、20、40、上限 60 分鐘），間隔內不重複開視窗；已掛載或掛載成功就刪除紀錄歸零。主控台會說明這一輪跳過的原因（連不到主機／間隔內／等輸入密碼中）。既有的 `requestMount()`（記憶體節流）原樣保留給常駐的資料夾選擇器 `nas_folder_picker_server.mjs` 使用，那支是長時間執行的行程、節流有效，且是使用者操作網頁才觸發，沒有改。
+- 風險區塊：①「連得上但一直沒掛載」（例如 Finder 在等輸入密碼、使用者沒理它）會依 5→10→20→40→60 分鐘的間隔重試，所以最壞情況是開機後前幾次各跳一次視窗、之後每小時最多一次，不再是每分鐘；使用者手動連上 NAS 後下一輪就會偵測到掛載並自動歸零。②首次嘗試那一輪最多佔用執行鎖約 60 秒等掛載，期間下一分鐘的排程會因執行鎖而跳過，屬預期。③探測用 TCP 連線，NAS 主機名稱（`EMCNAS_Prod.local`）解析靠 macOS 的 mDNS；若某台電腦解析不到主機名稱，會一直被當成「連不上」而永遠不主動開視窗（此時仍會在使用者手動連上 NAS 後正常掃描，只是不會自動幫忙連線）。④舊測試用正規表達式釘住 watcher 的 `lib.requestMount(config);` 這行，已改成釘住 `connectNasAndWait` 並明確禁止 watcher 再直接呼叫 `requestMount`（避免有人改回去又復發）。
+- 已檢查／驗證方式：單元測試（`backend/test/nas-installer.test.mjs`）涵蓋主機／埠解析、遞增間隔、連不上不開視窗且不記紀錄、逾時記一次失敗、每分鐘新行程在間隔內不重複開視窗（1／2／4 分鐘）、間隔過後才再試且間隔加長、掛載成功回傳路徑並清紀錄。另外用**真實行程端對端**驗證：假的 `open` 放進 PATH 計次——NAS 連不上連跑 3 輪，`open` 被呼叫 0 次；本機假 SMB 埠可連上但永不掛載，連跑 4 輪 `open` 只被呼叫 1 次（首輪），之後全部顯示「還在等待間隔內」；`open` 之後 3 秒才掛載，同一輪直接印出「NAS 已連線成功」並進入掃描、紀錄檔被清除。`node --test backend/test/*.test.mjs` 150/150 通過。未做：沒有在真的剛開機、NAS 真的還沒連上的電腦上實測一次完整開機流程。
+- 部署狀態：這是本機工具，git push 不會自動更新已經安裝在各台電腦上的副本。watcher 是 crontab 每分鐘啟動新行程，這台電腦 `git pull` 之後**下一分鐘起自動套用**，不需要重啟任何服務；資料夾選擇器這次沒改。其他設計師電腦如果各自有安裝（installer 產生的安裝目錄），需要更新他們那份腳本才會生效。
+- commit：`73ea0ec0`
+
 ### 2026-09-21 10:00 Asia/Taipei — AI判斷結果顯示實際引擎（Gemini 為主／OpenAI 備援）與退回原因
 
 - 修改目的：Codex 已把判定器改成 Gemini 免費額度為主、OpenAI 備援，但畫面看不出實際用了哪個，使用者無法確認。
