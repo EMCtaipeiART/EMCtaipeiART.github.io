@@ -29,14 +29,19 @@ function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.
 // sprites-packed.webp：5 列（Leona、Amber、Noise、Anna、Machi）× 3 欄（正面、右側面、背面），每欄寬 140，列高沿用原圖。
 const rowTops=[0,192,381,572,757], rowHeights=[192,189,191,185,189], colLefts=[0,140,280];
 function sprite(context,index,dir,x,y,w=98,h=142){const col=dir==='up'?2:dir==='left'||dir==='right'?1:0;context.save();context.imageSmoothingEnabled=false;context.translate(x,y);if(dir==='left')context.scale(-1,1);context.drawImage(sheet,colLefts[col],rowTops[index],140,rowHeights[index],-w/2,-h,w,h);context.restore();}
-// overtime-filter.png：正面、側面、背面三格。黑眼圈與鬼火分層繪製：黑眼圈貼齊眼睛下緣，兩團鬼火外擴並上移到頭像左右，不會再被桌上螢幕遮住。
-function drawOvertimeFilter(context,dir,feetX,feetY,height=142,compact=false){if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=145,flameHeight=185,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
+// overtime-filter.png：正面、側面、背面三格（每格 362）。黑眼圈與鬼火分層繪製。
+// 黑眼圈：原圖正面兩團（x116/x200，y122 起高 28）、側面一團（x190，y124 起高 28），各自貼到眼睛正下方。
+// 五位角色的眼睛下緣都落在人物高度的 46~48/142，單眼寬約 10、眼睛中心在 ±11（側面 +11），所以黑眼圈
+// 取寬 14 並從 47/142 處往下畫，才會貼在眼皮底下，不會蓋住眼球，也不會外擴到頭髮或耳朵。
+// 鬼火：原圖從 y160 才開始，來源要從 156 取（不是 145），否則黑眼圈下緣會被當成鬼火重畫在頭頂兩側。
+function drawOvertimeFilter(context,dir,feetX,feetY,height=142,compact=false){if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
   // 兩團鬼火分開畫，中心約在頭像左右 68 px。
-  // 只保留頭像外側的鬼火區域，避免原圖中黑眼圈的下緣被第二次畫到頭頂。
+  // 只保留頭像外側的鬼火區域，避免鬼火內側疊到臉上。
   context.save();context.beginPath();context.rect(-outer,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell,flameTop,half,flameHeight,leftX,flameY,flameWidth,flameDrawHeight);context.restore();
   context.save();context.beginPath();context.rect(inner,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell+half,flameTop,half,flameHeight,rightX,flameY,flameWidth,flameDrawHeight);context.restore();
-  // 背面原稿沒有黑眼圈；正面／側面只取上方黑眼圈區塊並下移。
-  if(frame!==2){const eyeTop=65,eyeHeight=95,eyeY=top+eyeTop/cell*size+9*scale;context.drawImage(overtimeSheet,frame*cell,eyeTop,cell,eyeHeight,-size/2,eyeY,size,eyeHeight/cell*size);}
+  // 背面原稿沒有黑眼圈；正面兩團、側面一團，分別對齊各自的眼睛中心。
+  if(frame!==2){const bags=frame===1?[[190,124,52,28,11]]:[[116,122,50,28,-11.5],[200,122,51,28,11]],faceScale=(compact?95/98:1)*scale,bagY=feetY-(142-47)*scale;
+    for(const[sx,sy,sw,sh,cx]of bags){const dw=14*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
 function portrait(context,i,showOvertime=true){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,'down',x,y,144,true);}}
 function select(i){selected=i;keys.clear();$('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);}
