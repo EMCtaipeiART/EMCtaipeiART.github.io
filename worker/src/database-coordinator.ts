@@ -79,6 +79,14 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
 }
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
 const PIXEL_OFFICE_PHOTO_MAX_CHARS = 900_000;
+// 同一份修改需求（內容完全相同）在這段時間內重複寫入，視為同一封信被送出兩次，不新增一輪。
+const MODIFICATION_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
+/** 修改統計表「建立日期」（台北時間 YYYY/MM/DD HH:mm:ss）→ 毫秒；格式不符回傳 NaN。 */
+export function taipeiStampToMs(value: string): number {
+  const match = /^(\d{4})[/-](\d{2})[/-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/.exec(value.trim());
+  return match ? Date.parse(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}+08:00`) : Number.NaN;
+}
 const MAX_LOGIN_ATTEMPTS = 12;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
@@ -3308,7 +3316,20 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           recalculateDatabaseModificationCounts(draft);
           return { result: { ok: true, action, rowNumber: rows.length + 1, record: draftRow, count: 0 }, changedTables: ['修改統計表', 'database'] };
         }
-        const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
+        // 重複寫入防護：這個案件最新一輪（一修以上）內容跟這次完全相同、還沒被設計師確認、又是剛剛才建立的，
+        // 就是同一封修改需求信被送出兩次（先排程、又立即送出；或按兩下），直接回傳既有那一輪，不新增。
+        // 案件 26090053 就發生過：15:15:16 與 15:15:19 各寫入一筆內容完全相同的紀錄，一修變成二修、三修。
+        const caseRows = rows.filter(row => text(row['案件編號']) === caseId);
+        const latestRow = caseRows.reduce<Row | null>((best, row) => (best === null || (Number(row['修改次數']) || 0) > (Number(best['修改次數']) || 0) ? row : best), null);
+        if (latestRow && (Number(latestRow['修改次數']) || 0) > 0 && !text(latestRow['確認修正日']) && text(latestRow['修改內容']) === content
+          && Date.now() - taipeiStampToMs(text(latestRow['建立日期'])) < MODIFICATION_DUPLICATE_WINDOW_MS) {
+          const existingCase = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
+          return {
+            result: { ok: true, action, rowNumber: rows.indexOf(latestRow) + 2, record: latestRow, count: Number(latestRow['修改次數']) || 0, status: text(existingCase?.['狀態']), previousStatus: text(existingCase?.['狀態']), statusChanged: false, deduplicated: true },
+            changed: false
+          };
+        }
+        const count = caseRows.reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改內容連結': contentLinks, '修改人': modifier, '確認修正日': '', '待修改圖片': targetImages.length ? JSON.stringify(targetImages) : '' };
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);

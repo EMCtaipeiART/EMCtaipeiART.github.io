@@ -4841,3 +4841,70 @@ test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名
   // 範本自己放了 {收件人名}，就不再自動加「Hi ○○,」。
   assert.match(html, /if\(String\(template\|\|''\)\.includes\(REPLY_TEMPLATE_RECIPIENT_TOKEN\)\)greeting='';/);
 });
+
+test('同一封回信不能又排程又立即寄出，修改需求信也不會重複寫入修改紀錄（案件 26090052／26090053）', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // 1) 執行中鎖：真的執行 begin／end 兩個函式。
+  const begin = html.match(/function beginGmailThreadReplyAction\(\)\{[\s\S]*?\n\}/)?.[0];
+  const end = html.match(/function endGmailThreadReplyAction\(\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(begin && end, 'could not locate the reply action lock helpers');
+  const harness = new Function('initial', `
+    const buttons = { '#gmailThreadReplySend': { disabled: initial.send }, '#gmailThreadSchedule': { disabled: initial.schedule } };
+    const $ = selector => buttons[selector] || null;
+    const messages = [];
+    const setSync = (message, isError) => messages.push([message, isError]);
+    let gmailThreadReplyBusy = false, gmailThreadReplyButtonRestore = null;
+    ${begin}
+    ${end}
+    return { buttons, messages, begin: beginGmailThreadReplyAction, end: endGmailThreadReplyAction, busy: () => gmailThreadReplyBusy };
+  `);
+  const lock = harness({ send: false, schedule: false });
+  assert.equal(lock.begin(), true, '第一個動作拿得到鎖');
+  assert.equal(lock.buttons['#gmailThreadReplySend'].disabled, true, '處理中「送出」要停用');
+  assert.equal(lock.buttons['#gmailThreadSchedule'].disabled, true, '處理中「排程」也要停用');
+  assert.equal(lock.begin(), false, '處理中不能再開始另一個寄送／排程');
+  assert.match(lock.messages.at(-1)[0], /避免同一封信重複寄出/);
+  lock.end();
+  assert.equal(lock.busy(), false);
+  assert.deepEqual([lock.buttons['#gmailThreadReplySend'].disabled, lock.buttons['#gmailThreadSchedule'].disabled], [false, false], '結束後還原成原本的狀態');
+  assert.equal(lock.begin(), true, '釋放後可以再開始（例如排程失敗後重試）');
+  // 原本就停用的按鈕（圖片上傳中、排程編輯模式）結束後不能被誤開。
+  const preDisabled = harness({ send: true, schedule: false });
+  preDisabled.begin(); preDisabled.end();
+  assert.deepEqual([preDisabled.buttons['#gmailThreadReplySend'].disabled, preDisabled.buttons['#gmailThreadSchedule'].disabled], [true, false]);
+
+  // 2) 立即送出與排程兩條路徑都要拿鎖、並在 finally 釋放；排程成功後要比照立即送出清空並收回視窗。
+  const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
+  const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
+  for (const [name, source] of Object.entries({ send, schedule })) {
+    assert.ok(source, `could not locate ${name}`);
+    assert.ok(source.indexOf('if(!beginGmailThreadReplyAction())return;') > 0, `${name} 要先拿鎖`);
+    assert.ok(source.indexOf('if(!beginGmailThreadReplyAction())return;') < source.indexOf('try{'), `${name} 拿鎖要在 try 之前`);
+    assert.match(source, /finally\{\n\s+endGmailThreadReplyAction\(\);/, `${name} 要在 finally 釋放鎖`);
+  }
+  const clearAt = schedule.indexOf("editor.innerHTML='';");
+  assert.ok(clearAt > schedule.indexOf("await sheetApi('scheduleCaseReply'"), '排程建立成功之後才清空編輯器');
+  assert.ok(clearAt < schedule.indexOf('setSync(`已排程於'));
+  assert.match(schedule, /if\(replyMode==='designer'\|\|replyMode==='modification'\)closeGmailThreadModal\(\);/, '修改需求信與設計師回覆信排程後直接收回視窗');
+  assert.match(schedule, /modal\.dataset\.replyMode='general'/);
+
+  // 3) Worker 回報 deduplicated（同一份修改需求重複寫入）時，本機不能多加一筆紀錄。
+  const fromReply = html.match(/async function recordModificationFromReply\([\s\S]*?\n\}/)?.[0];
+  assert.ok(fromReply);
+  const run = deduplicated => new Function('deduplicated', `
+    const records = new Map([['26090053', [{ caseId: '26090053', count: 2 }]]]);
+    const counts = new Map([['26090053', 2]]);
+    const modificationRecords = records, modificationCounts = counts;
+    const modificationRecordsFor = id => records.get(String(id)) || [];
+    const modificationCount = id => counts.get(String(id)) || 0;
+    const currentLoginOwnerName = () => 'PM', ownerDisplay = () => 'PM', todayInputValue = () => '2026-09-21', currentEditorToken = 't';
+    const parseModificationLinks = () => [];
+    const sheetApi = async () => ({ ok: true, count: 2, deduplicated, record: { '修改人': 'PM' } });
+    const applyModificationStatusChange = () => {}, render = () => {}, refreshOpenRevisionModal = () => {}, refreshOpenCaseDetail = () => {}, setSync = () => {};
+    ${fromReply}
+    return recordModificationFromReply('26090053', { owner: 'PM' }, '客戶有想要微調').then(() => ({ rounds: records.get('26090053').length, count: counts.get('26090053') }));
+  `)(deduplicated);
+  assert.deepEqual(await run(true), { rounds: 1, count: 2 }, '重複寫入：不新增本機紀錄');
+  assert.deepEqual(await run(undefined), { rounds: 2, count: 2 }, '一般新增照舊加入本機紀錄');
+});

@@ -10570,6 +10570,7 @@ async function scheduleThreadReply(scheduledAt){
   const replyMode=modal?.dataset.replyMode||'general';
   if(replyMode==='designer'&&modal?.dataset.designerReplyPending==='1'){setSync('圖片上傳中，請稍候再排程',true);return}
   const row=rows.find(r=>String(r.id)===String(id));
+  if(!beginGmailThreadReplyAction())return;
   if(button)button.disabled=true;
   try{
     await waitForGmailInlineImages(editor.id);
@@ -10593,6 +10594,13 @@ async function scheduleThreadReply(scheduledAt){
     }else if(replyMode==='general'&&row){
       await applyReplyStatusUpdate(id,row);
     }
+    // 排程建立成功＝這封信已經「寄出」，只是時間晚一點：比照立即送出清空編輯器、重設回信模式，「設計師回覆信」與
+    // 「填寫修改需求信」這種一次性任務直接收回視窗。過去排程成功後視窗、內容與「送出回覆」鍵都還留著，使用者以為
+    // 沒排成功又按一次送出，就會同時多寄一封、修改紀錄也再寫一次（案件 26090052／26090053）。
+    editor.innerHTML='';
+    if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''; modal.dataset.designerReplyRound=''}
+    const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
+    if(replyMode==='designer'||replyMode==='modification')closeGmailThreadModal();
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
     const backupFailed=inlineImageBackupNotice.includes('失敗');
     setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出${replyMode==='modification'?'，已記錄修改需求':''}${inlineImageBackupNotice}${detailsNotice}`,Boolean(detailsNotice)||backupFailed,detailsNotice||backupFailed?5200:3400);
@@ -10600,6 +10608,7 @@ async function scheduleThreadReply(scheduledAt){
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
   }finally{
+    endGmailThreadReplyAction();
     if(button)button.disabled=false;
   }
 }
@@ -13179,6 +13188,27 @@ function stripGreetingPrefix(text){return String(text||'').replace(/^\s*Hi[^\n]*
 /** 「填寫修改需求信」送出後，把信件內容第三行以後的文字另外記一筆進「修改紀錄」——跟既有「新增修改
  * 紀錄」表單（openModificationEditor／submitModificationRecord）走的是同一個 addModificationRecord
  * action，只是這裡不用再另外彈一次表單，直接沿用剛剛寄出的信件內容當作這次的修改內容。 */
+/** 同一個回信視窗的「立即送出」與「排程」共用一把執行中鎖。兩者都要等 Worker 讀 Gmail 信件串、寫入
+ * 修改紀錄，動輒好幾秒；這段時間另一顆按鈕如果還按得下去，就會同一封信既排程又立即寄出（案件 26090053）。
+ * beginGmailThreadReplyAction() 拿不到鎖就直接擋下並提示；拿到鎖時把兩顆按鈕都停用，結束時還原成原本的狀態
+ * （不一律設成可按：設計師回覆信圖片上傳中、排程編輯模式本來就是停用的）。 */
+let gmailThreadReplyBusy=false,gmailThreadReplyButtonRestore=null;
+function beginGmailThreadReplyAction(){
+  if(gmailThreadReplyBusy){setSync('另一個寄送或排程正在處理中，請稍候，避免同一封信重複寄出',true);return false}
+  gmailThreadReplyBusy=true;
+  const send=$('#gmailThreadReplySend'),schedule=$('#gmailThreadSchedule');
+  gmailThreadReplyButtonRestore={send:send?send.disabled:false,schedule:schedule?schedule.disabled:false};
+  if(send)send.disabled=true;
+  if(schedule)schedule.disabled=true;
+  return true;
+}
+function endGmailThreadReplyAction(){
+  const send=$('#gmailThreadReplySend'),schedule=$('#gmailThreadSchedule'),restore=gmailThreadReplyButtonRestore;
+  gmailThreadReplyBusy=false;gmailThreadReplyButtonRestore=null;
+  if(!restore)return;
+  if(send)send.disabled=restore.send;
+  if(schedule)schedule.disabled=restore.schedule;
+}
 async function recordModificationFromReply(id,row,content,links=[]){
   const text=String(content||'').trim();
   if(!text)return;
@@ -13188,7 +13218,9 @@ async function recordModificationFromReply(id,row,content,links=[]){
     const data=await sheetApi('addModificationRecord',{record,editorToken:currentEditorToken,_requireResponse:true});
     const finalCount=Number(data.count)||(modificationCount(id)+1), finalModifier=data.record?.['修改人']||data.record?.modifier||modifier;
     modificationCounts.set(String(id),finalCount);
-    modificationRecords.set(String(id),[...modificationRecordsFor(id),{caseId:String(id),count:finalCount,date:record.modifyDate,content:text,links:record.links,modifier:finalModifier,confirmedDate:''}]);
+    // Worker 回報 deduplicated：這是同一份修改需求的重複寫入（例如同一封信被送出兩次），沒有新增紀錄，
+    // 本機也不能再多加一筆，否則畫面會比資料庫多出一輪。
+    if(!data.deduplicated)modificationRecords.set(String(id),[...modificationRecordsFor(id),{caseId:String(id),count:finalCount,date:record.modifyDate,content:text,links:record.links,modifier:finalModifier,confirmedDate:''}]);
     applyModificationStatusChange(id,data);
     render();
     refreshOpenRevisionModal(id);
@@ -13263,6 +13295,7 @@ async function sendGmailThreadReply(){
   const row=rows.find(r=>String(r.id)===String(id));
   const replyMode=modal?.dataset.replyMode||'general';
   if(replyMode==='designer'&&modal?.dataset.designerReplyPending==='1'){setSync('圖片上傳中，請稍候再送出',true);return}
+  if(!beginGmailThreadReplyAction())return;
   if(button)button.disabled=true;
   try{
     await waitForGmailInlineImages(editor.id);
@@ -13301,6 +13334,7 @@ async function sendGmailThreadReply(){
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
   }finally{
+    endGmailThreadReplyAction();
     if(button)button.disabled=false;
   }
 }

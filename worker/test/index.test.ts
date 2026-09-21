@@ -1386,6 +1386,58 @@ describe('Machi Design API Worker', () => {
     expect(await statusOf()).toBe('已取消');
   });
 
+  it('does not add a second 修改紀錄 round when the same modification request is written twice within minutes (one mail both scheduled and sent now)', async () => {
+    const token = await login();
+    let commits = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      expect(init?.method).toBe('PUT');
+      commits += 1;
+      return Response.json({ content: { sha: `dup-file-${crypto.randomUUID()}` }, commit: { sha: 'dup-commit-sha' } });
+    });
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const roundsOf = () => runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      return (JSON.parse(stored.json) as DatabaseSnapshot).tables['修改統計表'].rows
+        .filter(row => row['案件編號'] === '26080001').map(row => `${row['修改次數']}:${row['修改內容']}`);
+    });
+    const add = (content: string) => api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-21', content } }, token);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      // 15:15:16 排程建立時記錄一次。
+      vi.setSystemTime(new Date('2026-09-21T07:15:16Z'));
+      const first = await add('客戶有想要微調');
+      expect(first).toMatchObject({ ok: true });
+      expect(first.deduplicated).toBeUndefined();
+      const baseCount = Number(first.count);
+      const commitsAfterFirst = commits;
+
+      // 15:15:19（三秒後，案件 26090053 實際發生的情況）又寫一次同樣內容：不新增一輪、不寫入 GitHub、回傳既有那一輪。
+      vi.setSystemTime(new Date('2026-09-21T07:15:19Z'));
+      const duplicate = await add('客戶有想要微調');
+      expect(duplicate).toMatchObject({ ok: true, deduplicated: true, count: baseCount, statusChanged: false });
+      expect(commits).toBe(commitsAfterFirst);
+      expect(await roundsOf()).toEqual([`${baseCount}:客戶有想要微調`]);
+
+      // 內容不同就是新的一輪。
+      vi.setSystemTime(new Date('2026-09-21T07:16:00Z'));
+      expect(await add('另一個修改')).toMatchObject({ ok: true, count: baseCount + 1 });
+      expect(await roundsOf()).toHaveLength(2);
+
+      // 超過 10 分鐘才又送同樣內容，視為使用者刻意再要求一次，新增一輪。
+      vi.setSystemTime(new Date('2026-09-21T07:30:00Z'));
+      expect(await add('另一個修改')).toMatchObject({ ok: true, count: baseCount + 2 });
+
+      // 設計師已經確認過最新一輪之後，同樣內容也是新的一輪（不是重複寫入）。
+      const confirmed = await api({ action: 'updateModificationConfirm', record: { caseId: '26080001', count: baseCount + 2 } }, token);
+      expect(confirmed).toMatchObject({ ok: true });
+      vi.setSystemTime(new Date('2026-09-21T07:31:00Z'));
+      expect(await add('另一個修改')).toMatchObject({ ok: true, count: baseCount + 3 });
+      expect(await roundsOf()).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('recalculates the database row 修改次數 whenever a modification round is added, but only reduces it on an explicit admin delete', async () => {
     const token = await login();
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
