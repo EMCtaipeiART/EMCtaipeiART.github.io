@@ -22,7 +22,7 @@ try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-packed.webp?v=2';iconSheet.src='assets/icons-v3.webp?v=2';overtimeSheet.src='assets/overtime-filter.png?v=1';
+sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-packed.webp?v=2';iconSheet.src='assets/icons-v3.webp?v=3';overtimeSheet.src='assets/overtime-filter.png?v=1';
 function resizeCanvas(){const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(resizeCanvas).observe(game);window.addEventListener('resize',resizeCanvas);resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
