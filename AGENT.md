@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-21 12:56 Asia/Taipei — 像素辦公室：更新下班／公出圖示，加班人物自動套用黑眼圈與鬼火
+
+- 修改目的：使用者提供新的下班與公出圖示，並要求台北時間晚上 19:00 後仍在工作的人物顯示對齊眼睛的黑眼圈與左右鬼火。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/assets/icons-v3.png`、`icons-v3.webp`、新增 `icons-status-updated.png`與 `overtime-filter.png`；修改 `dist/app.js`、`dist/index.html`、`README.md`、`docs/HANDOFF.md`。
+- 影響功能：① `icons-v3` 只替換第 6 格「下班」與第 9 格「公出」，太陽、爆炸、水滴、愛心、在座、廁所、出國七格維持原樣。② `overtime-filter.png` 為正面／側面／背面三格透明濾鏡；側面向左時自動鏡像，並跟著人物位置、走路浮動與心情旋轉。③實際狀態是 `overtime`，或台北時間 19:00～隔天 06:00 仍是 `present`，畫面就顯示濾鏡、加班文字與月亮徽章；這是前端視覺有效狀態，不會把 `present` 另外寫回後端。④本機可以 `?overtime=1` 預覽，人物縮圖列不套濾鏡，右側選中人物預覽會套用。
+- 風險區塊：濾鏡是單一通用比例，五位人物的髮型與臉部寬度不同，細微對位會有少量差異；人物在桌後時鬼火下緣可能被螢幕正確遮住，以維持原有景深關係。「加班視覺」不改寫真實出勤狀態。
+- 已檢查／驗證方式：`npm run check`、`git diff --check` 通過；本機 `?overtime=1` 實機驗證加班有效狀態、右側預覽、新下班／公出圖示與無瀏覽器主控台錯誤；另用獨立 QA 畫布放大比對正面、右側、左側、背面，黑眼圈對齊眼睛、左右鏡像正確、背面只有鬼火。
+- 部署狀態：純前端，推送 GitHub `main` 後由 GitHub Pages 自動生效。
+- commit：見 git log（`feat: refresh away icons and add overtime character filter`）
+
 ### 2026-09-21 10:56 Asia/Taipei — NAS 爬蟲自動更新：管理者一鍵發布，設計師電腦自己更新，不必每台重新執行安裝器
 
 - 修改目的：使用者希望從自己這邊一鍵更新，不必每台設計師電腦都重新執行安裝器。
