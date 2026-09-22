@@ -134,13 +134,21 @@ async function syncLevels(){
   // no-cache 而不是 no-store：這份快照有 3.8 MB，內容沒變時走 304 就好，不必每次重新下載。
   for(const url of urls){try{const response=await fetch(url,{cache:'no-cache'});if(!response.ok)throw Error(String(response.status));const candidate=await response.json();if(Array.isArray(candidate.rows)){payload=candidate;break;}}catch{}}
   if(!payload)return;
-  caseRows=payload.rows;const totals=scoreRows(payload.rows);levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name])]));levelIsLive=true;
+  caseRows=payload.rows;
+  // 歷史快照裡也有早就歸檔的案件，其中有些當初忘了把狀態改成已完成，就會一直被算成「手上的案件」，
+  // 而且那些資料已經不在現行資料庫裡、改不動（2026-09-22 使用者回報 Leona 四、五月的案件還掛著）。
+  // 快照本身有一份「目前還在現行資料庫的案件」清單（格式是「案件編號#序號」），用它過濾就準了。
+  // 舊格式的快照沒有這個欄位，那就維持原樣不過濾，不會比現在更差。
+  currentCaseIds=Array.isArray(payload.currentDatabaseRowKeys)
+    ? new Set(payload.currentDatabaseRowKeys.map(key=>String(key).split('#')[0]))
+    : null;
+  const totals=scoreRows(payload.rows);levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name])]));levelIsLive=true;
   const timestamp=new Date(payload.generatedAt||Date.now());levelUpdatedAt=Number.isNaN(timestamp.getTime())?'最新快照':timestamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
   document.querySelectorAll('.roster-level').forEach((element,i)=>element.textContent='Lv.'+levelStats[names[i]].level);updateLevel();renderPersonCard();
 }
 // 人物資料卡：等級與案件用 syncLevels() 已經下載的那份歷史快照（含未完成的案件），技能與「新專案找誰」
 // 另外跟 Worker 要一份很小的清單，這樣就不必在遊戲裡下載 1.5 MB 的 db.json。
-let caseRows=null,designerInfo=null,newProjectPriority=null;
+let caseRows=null,designerInfo=null,newProjectPriority=null,currentCaseIds=null;
 // 手上的案件只看這三種狀態（使用者指定）。顏色跟主系統的案件標籤一致。
 const CARD_CASE_STATES=[{key:'未開始',color:'#ff5a5a'},{key:'執行中',color:'#5ea9ff'},{key:'修改中',color:'#f0b429'}];
 const CARD_CASE_PREVIEW=3;
@@ -156,6 +164,8 @@ function personCases(name){
   const groups=CARD_CASE_STATES.map(state=>({...state,rows:[]}));
   for(const row of caseRows||[]){
     if(String(row['設計負責人']||'').trim().toLowerCase()!==name.toLowerCase())continue;
+    // 已經歸檔的案件不算在「手上」——它們的狀態已經沒辦法再更新了。
+    if(currentCaseIds&&!currentCaseIds.has(String(row['案件編號'])))continue;
     const group=groups.find(item=>item.key===String(row['狀態']||'').trim());
     if(group)group.rows.push(row);
   }

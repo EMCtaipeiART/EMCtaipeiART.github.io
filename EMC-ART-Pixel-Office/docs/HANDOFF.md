@@ -126,7 +126,7 @@
 | --- | --- |
 | 等級、職稱、EXP | `syncLevels()` 已經下載的 `database_archive.json`（原本就要下載，不另外抓） |
 | 技能、組別 | Worker 的 `pixelOfficeDesigners`（設定表的「技能」欄，逗號分隔） |
-| 手上的案件 | 同一份 archive，篩「設計負責人」等於這個人、狀態是未開始／執行中／修改中，每組列前 3 件 |
+| 手上的案件 | 同一份 archive，篩「設計負責人」等於這個人、狀態是未開始／執行中／修改中，每組列前 3 件。**還要再篩一次「案件還在現行資料庫」**（`currentDatabaseRowKeys`，格式是「案件編號#序號」）——快照裡有早就歸檔、當初忘了改成已完成的舊案件，那些改不動，不濾掉會一直算進案量 |
 | 新專案找誰 | `pixelOfficeDesigners` 的 `priority`：同組裡「新專案輪值」最小且啟用的人，跟主系統的 `rotationDesignerForGroup()` 同一套規則 |
 
 `pixelOfficeDesigners` 只回傳名字、組別、技能、輪值、啟用與否這幾個欄位，所以遊戲不必為了技能去下載 1.5 MB 的 `db.json`。archive 裡本來就含未完成的案件（執行中、過稿中、未開始、修改中），所以案件清單也不必另外抓。
