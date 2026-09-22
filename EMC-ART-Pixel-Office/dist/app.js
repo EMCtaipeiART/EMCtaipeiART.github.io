@@ -6,7 +6,9 @@ const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5
 descriptions[2]='藍帽・夏日休閒';
 let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackScores[name])]));
 let levelUpdatedAt='',levelIsLive=false;
-const stations=[{x:548,y:355,type:0,name:'Leona'},{x:768,y:355,type:0,name:'Amber'},{x:988,y:355,type:1,name:'Noise'},{x:548,y:695,type:2,name:''},{x:768,y:695,type:0,name:'Anna'},{x:988,y:695,type:0,name:'Machi'}];
+// type 是桌子素材、empty 是離席時換上的空桌。素材裡三張桌子的形狀本來就不一樣——最左邊那張有
+// 左斜邊、最右邊有右斜邊、中間是矩形——所以每個座位要用對應自己位置的那一種，接起來才是平整的一條。
+const stations=[{x:548,y:355,type:0,empty:6,name:'Leona'},{x:768,y:355,type:1,empty:7,name:'Amber'},{x:988,y:355,type:3,empty:8,name:'Noise'},{x:548,y:695,type:4,empty:6,name:''},{x:768,y:695,type:1,empty:7,name:'Anna'},{x:988,y:695,type:2,empty:8,name:'Machi'}];
 const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'angry',symbol:'burst',label:'怒',text:'爆炸氣噗噗'},{id:'sad',symbol:'drop',label:'哀',text:'大水滴低落中'},{id:'joy',symbol:'heart',label:'樂',text:'愛心滿格'}];
 const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'meeting',symbol:'meeting',label:'會議',text:'開會中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
@@ -68,7 +70,7 @@ syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v2.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
+sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
@@ -374,23 +376,26 @@ function stationDimmed(s){
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 function drawOffice(){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
-// furniture-v2.webp（2026-09-22 換上使用者重新排版的桌子）：iMac 桌、iMac＋副螢幕、Mac mini 桌、椅子、空桌。
-// 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體在素材裡一律是「桌面 221 + 桌腳 70」，
-// 差別只在螢幕露出多少，所以繪製時桌面固定 110、桌腳固定 35，螢幕再按各自的 upper 等比縮。
-const furnitureRects=[[0,0,526,328,37],[0,328,524,325,34],[0,653,526,316,25],[526,0,237,372,0],[0,969,526,291,0]];
-const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_DRAW_FACE=110,DESK_DRAW_WIDTH=250;
-const DESK_DRAW_SCALE=DESK_DRAW_FACE/DESK_SRC_FACE;
+// furniture-v3.webp：桌子分「左端／中間／右端」三種形狀（素材裡本來就是這樣畫的），
+// 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
+// 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，
+// 差別只在螢幕露出多少，所以繪製時桌面與桌腳的高度固定，螢幕再按各自的 upper 等比縮。
+const furnitureRects=[[0,0,520,328,37],[0,328,517,328,37],[0,656,520,325,34],[0,981,520,325,34],[0,1306,520,316,25],[520,0,237,372,0],[0,1622,520,291,0],[0,1913,517,291,0],[0,2204,520,291,0]];
+const CHAIR_RECT=5;
+const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;
+const DESK_DRAW_SCALE=DESK_SEAT_GAP/DESK_SRC_UNIT;
 function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitureRects[type];ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,sh,x,y,w,h);}
-function drawChair(s){if(stationAway(s))return;furnitureObject(3,s.x-51,s.y-135,102,135,furnitureFor(s));}
+function drawChair(s){if(stationAway(s))return;furnitureObject(CHAIR_RECT,s.x-51,s.y-135,102,135,furnitureFor(s));}
 function drawDesk(s){
-  const type=stationAway(s)?4:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
-  const upperDraw=Math.round(upper*DESK_DRAW_SCALE),footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
-  const faceTop=sy+upper,footTop=faceTop+DESK_SRC_FACE,left=s.x-DESK_DRAW_WIDTH/2;
+  const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
+  const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);
+  const footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE),upperDraw=Math.round(upper*DESK_DRAW_SCALE);
+  const faceTop=sy+upper,footTop=faceTop+DESK_SRC_FACE,left=Math.round(s.x-drawW/2),deskTop=s.y-40;
   ctx.imageSmoothingEnabled=false;
-  // 螢幕、桌面、桌腳分三段畫：桌面與桌腳的位置固定，螢幕才能換一種桌子就換一個高度。
-  if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,s.y-40-upperDraw,DESK_DRAW_WIDTH,upperDraw);
-  ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,s.y-40,DESK_DRAW_WIDTH,DESK_DRAW_FACE);
-  ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,s.y+70,DESK_DRAW_WIDTH,footDraw);
+  // 螢幕、桌面、桌腳分三段畫：桌面與桌腳一路相接，螢幕才能換一種桌子就換一個高度。
+  if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,deskTop-upperDraw,drawW,upperDraw);
+  ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,deskTop,drawW,faceDraw);
+  ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,deskTop+faceDraw,drawW,footDraw);
   if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}
 }
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
