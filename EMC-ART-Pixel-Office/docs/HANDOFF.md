@@ -151,6 +151,8 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
   -d '{"action":"pixelOfficeCalendarStatus","serviceKey":"<NAS_WATCHER_API_KEY>"}'
 ```
 
+`last` 裡的 `detected` 是「行事曆說每個人現在應該是什麼」，`manualHeld` 是「偵測到了但因為手動狀態而沒套用的人」——兩個分開才查得出問題出在偵測還是套用（2026-09-22 查「行事曆有會議但狀態沒更新」就是靠這個，結果是被手動狀態擋住）。
+
 `last` 的常見值：`{"reason":"no-token"}` 是那個帳號還沒連 Gmail；`{"reason":"freebusy-failed","status":403,"message":"Request had insufficient authentication scopes."}` 是連了但授權還沒帶行事曆權限（重新連接一次即可）；`message` 出現 `has not been used in project` 則是 Google Cloud 專案還沒啟用 Calendar API。`unreadable` 列出看得到名字但讀不到行事曆的人。
 
 每台電腦要在 `scripts/nas_design_image_watcher.local.json`（不進 git）寫 `{"designerName":"Noise"}` 才會回報；設計師電腦由安裝器在安裝時跳出選單記下，主機這台已手動設為 Machi。

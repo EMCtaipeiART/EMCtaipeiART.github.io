@@ -304,6 +304,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：Worker 已部署（版本 `93b001a1`）；前台 git push 後 GitHub Pages 自動生效。
 - commit：見 git log（`fix: never both schedule and send one reply; dedupe repeated modification records`）
 
+### 2026-09-22 14:45 Asia/Taipei — 行事曆有會議卻沒更新狀態；休假在線上被擋；午休沒生效
+
+- 修改目的：使用者回報①12:00–14:00 閒置沒有變成「用餐」②前台無法顯示「休假」圖示③行事曆上有會議但狀態沒更新。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`scripts/nas_watcher_release.json`（發布清單）、`EMC-ART-Pixel-Office/docs/HANDOFF.md`。
+- 影響功能：
+  1. **午休沒生效**：程式邏輯本來就對（12–14 點閒置滿五分鐘→用餐）。真正的原因是**爬蟲的發布清單停在 09-21 10:59，而回報閒置秒數的功能是 09-21 14:58 才加進去的**——其他設計師電腦自動更新拿到的是舊版，根本不送 `idleSeconds`，所以午休永遠不會觸發。重新發布（`20260922-1319`）後就好了，不需要改任何程式。
+  2. **休假被擋**：`leave` 的程式碼早就寫好，但 **Worker 一直沒部署**，線上 `PIXEL_OFFICE_STATUSES` 不含 `leave`，前台一點就被回「狀態不正確」。部署時才發現 wrangler 登入的是另一個 Cloudflare 帳號（`34f26bfd…` / pcc1005），Worker 在 `323f1822…`（machi.chen）底下；請使用者換帳號重新登入後才部署成功。
+  3. **行事曆有會議卻沒更新**：診斷發現 `detected:{Machi:'meeting'}` 但 `manualHeld:['Machi']`——偵測正常，是被手動狀態擋住。原本的規則（2026-09-21 由使用者選定）是「手動一律優先」，但手動點過一次「在座」之後行事曆就永遠卡住。改成**只保護電腦看不出來的狀態**：手動的在座／加班／用餐／廁所／下班可被行事曆覆蓋，手動的公出／出國／會議／休假保留。
+  4. **補強診斷**：`pixelOfficeCalendarStatus` 的 `last` 新增 `detected`（行事曆判定的狀態）與 `manualHeld`（偵測到但被手動擋住的人）。原本兩種情況都回報成 unchanged，分不出問題在偵測還是套用。
+- 風險區塊：①手動點的「在座」現在會被行事曆蓋成會議／休假——這是使用者明確選的（選項 B）。②`detected` 會回傳每個人當下的判定結果（只有狀態字串，沒有事件標題）。③爬蟲發布會讓所有設計師電腦在 10 分鐘內自動更新。④wrangler 的登入帳號已換成 machi.chen@emctaipei.com。
+- 已檢查／驗證方式：`worker` vitest 92/92（新增覆蓋：手動「在座」會被行事曆蓋掉並標成 `calendar`、散會後交還 `auto`、手動「公出」不會被蓋且出現在 `manualHeld`）；`tsc --noEmit` 通過。**線上實測**：部署後第一輪同步 Machi 就從 `present/manual` 變成 `meeting/calendar`；`leave` 狀態從「狀態不正確」變成可正常設定（測完已改回原狀）；Amber 出現 `toilet/auto` 證明她那台已更新到會回報閒置的新版爬蟲；`unreadable` 與 `detailUnreadable` 都是空的，五個人的行事曆都讀得到。
+- 部署狀態：Worker 已部署（版本 41c795f4）；爬蟲已發布（20260922-1319）。
+- commit：見 git log
+
 ### 2026-09-22 09:20 Asia/Taipei — 像素辦公室：換上重新排版的桌子素材、左下角空位依時段轉灰階、未開始改紅燈
 
 - 修改目的：使用者重新排版了桌子（提供「桌上有電腦」與「空桌」兩張圖），要求①換掉素材並壓成小檔②保留離席時的灰階③左下角那個沒人的位置加上時段規則：09:00–18:00 正常、18:00 到隔天 08:59 灰階（電腦保留）＋空椅子④人物卡的「未開始」小燈改紅色。

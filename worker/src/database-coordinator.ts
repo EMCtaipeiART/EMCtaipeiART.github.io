@@ -1405,7 +1405,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
  *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' {
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' {
     const row = this.ctx.storage.sql.exec<{ state: string }>(
       'SELECT state FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
@@ -1416,8 +1416,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const source = text(state.statusSource);
     if (desired) {
       if (status === desired && source === 'calendar') return 'unchanged';
-      // 手動指定的狀態（公出、出國、自己點的會議／休假…）優先，行事曆不覆蓋。
-      if (source === 'manual') return 'unchanged';
+      // 手動指定的狀態只有「電腦自己也判斷得出來」的那幾種（在座／加班／用餐／廁所／下班）可以被行事曆蓋掉——
+      // 那些本來就是自動維護的，手動點過之後卻會把行事曆卡住（2026-09-22 使用者回報「行事曆有會議但狀態沒更新」）。
+      // 公出、出國、以及自己點的會議／休假是電腦看不出來的，手動指定就一定保留。
+      // 回報成 'manual' 而不是 'unchanged'，診斷時才分得出「沒偵測到」與「偵測到但被手動擋住」。
+      if (source === 'manual' && !PIXEL_OFFICE_AUTO_STATUSES.includes(status)) return 'manual';
       state.status = desired;
       state.statusSource = 'calendar';
     } else {
@@ -1492,6 +1495,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }));
     }
     const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
+    const detected: Row = {}, manualHeld: string[] = [];
     for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) {
       const entry = calendars[email];
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
@@ -1505,13 +1509,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 有成功讀到事件詳細資料時，以詳細資料為準（可排除專注時間、工作地點，也能辨識休假）；否則
       // 沿用 freeBusy 短忙碌區段＝會議的保守規則。
       const desired = detailStates.has(name) ? detailStates.get(name) || '' : busyMeeting ? 'meeting' : '';
+      // 先記下「行事曆說這個人現在應該是什麼」，再記實際套用的結果——兩者分開才查得出問題出在哪一段。
+      if (desired) detected[name] = desired;
+      else if (busy.length) detected[name] = 'busy-ignored';
       const result = this.pixelOfficeApplyCalendar(name, desired, nowMs);
       if (result === 'meeting') meeting.push(name);
       else if (result === 'leave') leave.push(name);
       else if (result === 'released') released.push(name);
+      else if (result === 'manual') manualHeld.push(name);
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
-    const result = { ok: true, meeting, leave, released, unreadable, detailUnreadable };
+    const result = { ok: true, detected, meeting, leave, released, manualHeld, unreadable, detailUnreadable };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }

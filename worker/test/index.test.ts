@@ -4232,14 +4232,42 @@ describe('Pixel Office shared state', () => {
       expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present', statusSource: 'auto' });
       fetchSpy.mockRestore();
 
-      // 手動指定的狀態行事曆不覆蓋（使用者的選擇優先）。
+      // 手動點的公出、出國是電腦看不出來的，行事曆不覆蓋（使用者的選擇優先）。
       await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'out' } });
       fetchSpy = mockFreeBusy({
         'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [],
         'amber.tian@emctaipei.com': [[after - 10 * 60_000, after + 10 * 60_000]],
         'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
       });
-      expect(await runCalendarSync(after)).toMatchObject({ meeting: [] });
+      expect(await runCalendarSync(after)).toMatchObject({ meeting: [], manualHeld: ['Amber'] });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'out', statusSource: 'manual' });
+      fetchSpy.mockRestore();
+
+      // 但手動點的「在座」這種電腦自己也判斷得出來的狀態，行事曆可以蓋掉——不然手動點過一次之後
+      // 行事曆就永遠卡住（2026-09-22 使用者回報「行事曆有會議但狀態沒更新」）。
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'present' } });
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [],
+        'amber.tian@emctaipei.com': [[after - 10 * 60_000, after + 10 * 60_000]],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(after)).toMatchObject({ detected: { Amber: 'meeting' }, meeting: ['Amber'], manualHeld: [] });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'meeting', statusSource: 'calendar' });
+      fetchSpy.mockRestore();
+      // 散會後照樣交還給電腦判斷。
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(after)).toMatchObject({ released: ['Amber'] });
+      expect(await statusOfPerson('Amber')).toMatchObject({ statusSource: 'auto' });
+      fetchSpy.mockRestore();
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'out' } });
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [],
+        'amber.tian@emctaipei.com': [[after - 10 * 60_000, after + 10 * 60_000]],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
       expect(await statusOfPerson('Amber')).toMatchObject({ status: 'out', statusSource: 'manual' });
       // 手動點的會議，行事曆散會時也不會幫忙收回——要自己取消。
       await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'meeting' } });
