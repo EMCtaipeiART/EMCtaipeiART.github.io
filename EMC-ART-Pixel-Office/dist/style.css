@@ -178,7 +178,9 @@ h2{font-size:24px}
 
 /* 嵌入模式（?embed=1）：給設計需求系統的「設計師專長與案件分配」當展示用，只留場景本身。
    狀態照樣每 3 秒同步，所以嵌進去的畫面跟遊戲裡看到的一樣。 */
-html.embed{background:transparent}
+/* html 與 body 都要透明：body 自己有白底（給獨立開遊戲頁用），只清掉 html 的話
+   嵌進設計需求系統時深色模式仍會卡著一塊白。 */
+html.embed,html.embed body{background:transparent}
 html.embed header,html.embed aside,html.embed .scene-bar,html.embed .scene-foot,html.embed #roster,html.embed #loading{display:none!important}
 /* height:100% 要一路從 html 接下來才算數。少了 html 這一層，body 的高度會反過來被 canvas 撐大，
    fitEmbedView() 就會以為框比實際的 iframe 還高，把下排畫到看不見的地方（2026-09-21 的裁切問題）。

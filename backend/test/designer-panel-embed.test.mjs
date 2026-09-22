@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=36"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=38"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -107,7 +107,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=44/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=45/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -329,4 +329,25 @@ test('深色模式下場景背景跟著主題，不會是一塊白', async () =>
     '嵌入模式不填白底，獨立開遊戲頁時仍是白底');
   assert.match(html, /\.office-embed\{display:block;width:100%;height:100%;border:0;background:transparent/);
   assert.match(html, /\.office-embed-shell\{[^}]*background:var\(--panel,#fff\)/);
+  // body 自己有白底（給獨立開遊戲頁用），只清掉 html 的話嵌進去仍會卡著一塊白。
+  const css = await officeCss();
+  assert.match(css, /html\.embed,html\.embed body\{background:transparent\}/);
+});
+
+test('深色模式下 iframe 的文件底色跟著主題', async () => {
+  const [html, js] = await Promise.all([indexHtml(), officeJs()]);
+  // iframe 的文件底色是瀏覽器依 color-scheme 畫的，html 與 body 都設成 transparent 也蓋不掉——
+  // 這才是深色模式下卡著一塊白的真正原因（2026-09-22）。
+  assert.match(html, /function notifyOfficeTheme\(theme=currentTheme\(\)\)\{/);
+  assert.match(html, /postMessage\(\{type:'pixelOfficeTheme',theme\},location\.origin\)/);
+  assert.match(html, /document\.documentElement\.dataset\.theme=next; notifyOfficeTheme\(next\);/,
+    '切換主題時要通知 iframe');
+  assert.match(html, /if\(data&&data\.type==='pixelOfficeThemeRequest'\)\{notifyOfficeTheme\(\);return;\}/,
+    '要回應 iframe 載好後的詢問');
+  // 遊戲端：收到就套 color-scheme，並在載好後主動問一次（外層可能在它載好前就切換過）。
+  assert.match(js, /if\(!data\|\|data\.type!=='pixelOfficeTheme'\)return;/);
+  assert.match(js, /document\.documentElement\.style\.colorScheme=data\.theme==='dark'\?'dark':'light';/);
+  assert.match(js, /postMessage\(\{type:'pixelOfficeThemeRequest'\},location\.origin\)/);
+  // 兩邊都只收同源訊息。
+  assert.match(js, /if\(event\.origin!==location\.origin\)return;/);
 });

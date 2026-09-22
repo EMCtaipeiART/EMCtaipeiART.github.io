@@ -54,6 +54,18 @@ function syncViewLayout(){
 // 保留點選人物與資料卡，但關閉鍵盤移動與右側編輯工具；狀態仍照常同步。
 const embedMode=new URLSearchParams(location.search).get('embed')==='1';
 if(embedMode){document.documentElement.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
+// 嵌在設計需求系統裡時，iframe 的文件底色是瀏覽器依 color-scheme 畫的——html 與 body 都設成透明
+// 也蓋不掉，深色模式下就會卡著一塊白。外層切換深淺色時會用 postMessage 告訴我們，跟著設就對了。
+if(embedMode){
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin)return;
+    const data=event.data;
+    if(!data||data.type!=='pixelOfficeTheme')return;
+    document.documentElement.style.colorScheme=data.theme==='dark'?'dark':'light';
+  });
+  // 載入完成後主動問一次現在是什麼主題（外層可能在我們載好之前就切換過了）。
+  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeThemeRequest'},location.origin)}catch(error){}
+}
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。後端 database-coordinator.ts 有同一份，兩邊都要更新——
 // 後端負責真的改狀態，這裡只負責「沒裝爬蟲的人」畫面上的加班濾鏡。來源與更新方式見後端那份的註解。
 const TAIWAN_HOLIDAYS={2026:['20260101','20260216','20260217','20260218','20260219','20260220','20260227','20260228','20260403','20260404','20260405','20260406','20260501','20260619','20260925','20260928','20261009','20261010','20261025','20261026','20261225'],2027:['20270101','20270204','20270205','20270206','20270207','20270208','20270209','20270210','20270228','20270301','20270404','20270405','20270406','20270430','20270501','20270609','20270915','20270928','20271010','20271011','20271025','20271224','20271225','20271231']};

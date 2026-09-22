@@ -10983,7 +10983,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=36" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=38" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
@@ -10991,9 +10991,18 @@ function renderDesigners(){
 // 像素辦公室嵌在上面的框裡，點人物卡上的技能膠囊時會用 postMessage 告訴這裡，
 // 接著跑原本那套 applyDesignerSkill：展開設計需求、切成新增案件、帶入設計種類與階段，
 // 設計負責人也一併填好。只收同源（自己這個站）送來的訊息。
+// 像素辦公室的 iframe 底色是瀏覽器依 color-scheme 畫的，html/body 設成透明也蓋不掉——深色模式下
+// 會卡著一塊白。這裡把目前的深淺色告訴它，它自己套 color-scheme 就會跟著變。
+function notifyOfficeTheme(theme=currentTheme()){
+  const frame=document.querySelector('.office-embed');
+  if(!frame?.contentWindow)return;
+  try{frame.contentWindow.postMessage({type:'pixelOfficeTheme',theme},location.origin)}catch(error){}
+}
 window.addEventListener('message',event=>{
   if(event.origin!==location.origin)return;
   const data=event.data;
+  // iframe 載好之後會主動問一次目前是深色還是淺色。
+  if(data&&data.type==='pixelOfficeThemeRequest'){notifyOfficeTheme();return;}
   if(!data||data.type!=='pixelOfficeSkill')return;
   const designer=String(data.designer||''),skill=String(data.skill||'');
   if(!designer||!skill)return;
@@ -13905,7 +13914,7 @@ function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDr
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; closeNotifications(); const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function closeNotifications(){const popover=$('#notificationPopover'), bell=$('#accountBell'); if(popover)popover.hidden=true; if(bell)bell.setAttribute('aria-expanded','false')}
 function currentTheme(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
-function applyTheme(theme,{save=true}={}){const next=theme==='dark'?'dark':'light'; document.documentElement.dataset.theme=next; const toggle=$('#themeToggle'), isDark=next==='dark'; if(toggle){toggle.setAttribute('aria-pressed',isDark?'true':'false'); toggle.setAttribute('aria-label',isDark?'切換淺色模式':'切換深色模式'); toggle.title=isDark?'切換淺色模式':'切換深色模式'} if(save)localStorage.setItem('designRequestThemeV1',next)}
+function applyTheme(theme,{save=true}={}){const next=theme==='dark'?'dark':'light'; document.documentElement.dataset.theme=next; notifyOfficeTheme(next); const toggle=$('#themeToggle'), isDark=next==='dark'; if(toggle){toggle.setAttribute('aria-pressed',isDark?'true':'false'); toggle.setAttribute('aria-label',isDark?'切換淺色模式':'切換深色模式'); toggle.title=isDark?'切換淺色模式':'切換深色模式'} if(save)localStorage.setItem('designRequestThemeV1',next)}
 function toggleTheme(){applyTheme(currentTheme()==='dark'?'light':'dark'); saveRemoteSettingsForAccount('深淺模式已儲存')}
 function notificationReadKey(){return accountStorageKey('designRequestReadNotificationsV1')}
 function readNotificationIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(err){return new Set()}}

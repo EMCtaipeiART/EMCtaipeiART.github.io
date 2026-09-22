@@ -112,6 +112,7 @@
 - **版面**：下排座位往上收（`EMBED_ROW_SQUEEZE=0.8`，再小兩排就會疊住）。只改 `viewPeople`／`viewStations` 這兩份「畫面用座標」，同步給大家的 `people`／`stations` 完全沒動。六個座位連同姓名牌由 `fitEmbedView()` 依框的實際尺寸等比縮放、水平垂直置中——框的高度會跟著左右卡片對齊而變，所以不能寫死放大倍率。內容範圍記在 `EMBED_CONTENT`，下緣跟著壓縮比例走。
 - **滑過就展開**：滑鼠移到人物上直接展開資料卡，移開收起；滑進卡片不算離開。觸控仍走點選。嵌入模式不顯示關閉鈕。
 - **技能膠囊帶入表單**：點了用 `postMessage({type:'pixelOfficeSkill',designer,skill})` 通知外層（`location.origin`，外層也只收同源），外層跑 `applyDesignerSkill()` 帶入設計種類、階段與設計負責人。
+- **深淺色**：iframe 的文件底色是瀏覽器依 `color-scheme` 畫的，`html`／`body` 設成 `transparent` 也蓋不掉。外層切換主題時用 `postMessage({type:'pixelOfficeTheme'})` 通知，嵌入端收到就設 `documentElement.style.colorScheme`；嵌入端載好後也會主動送 `pixelOfficeThemeRequest` 問一次（外層可能在它載好前就切換過）。
 - **進站不預載那 3.8 MB**：`ensureLevels()` 第一次真的要看人物資料時才載歷史快照，載完自動重畫卡片；快照本身用 `no-cache`，沒變就走 304。
 
 ## 人物資料卡與「預設不選人」（2026-09-21）
