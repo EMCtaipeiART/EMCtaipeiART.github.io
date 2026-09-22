@@ -192,6 +192,26 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 18:24 Asia/Taipei — 回信信件編輯器：「同上次路徑」沿用全部 NAS 資料夾（第二組關鍵字終於生效），影片路徑區塊改為可刪除
+
+- 修改目的：使用者回報「信件編輯器在回信中，NAS 路徑無法加入第二組關鍵字，且在匯入錯誤內容時無法刪除自動填入的 NAS 路徑」。
+- 成因（兩個各自獨立的問題）：
+  1. **第二組關鍵字用不到**：回信選單的「同上次路徑」走 `reuseLastNasFolder()`，URL 只帶 `path`／`keyword` 這組**舊的單一欄位**（`designImageFolderUrl`／`designImageFolderKeyword`），完全沒帶新的 `designImageFolders` 清單；選擇器頁面 `mode=reuse` 也只讀單一 `path`／`keyword` 並直接自動送出，而複選用的「加入這個資料夾」按鈕在 `mode !== 'case'` 時是隱藏的。所以案件就算已經設定兩個資料夾，回信沿用時只會備份第一組、第二組的關鍵字根本沒機會套用。**更嚴重的是**：備份完成後 `handleUploadFrameMessage()` 會用這次回傳的清單覆蓋 `designImageFolders`，於是「同上次路徑」一按，案件原本設好的兩個資料夾就被砍成只剩一個（資料遺失）。另外 `nasFolderPickerPopupUrl()` 的參數是固定解構 `{caseId,nonce,mode,path,keyword}`，就算呼叫端多傳 `folders` 也會被默默丟掉。
+  2. **自動填入的路徑刪不掉**：`buildDesignerReplyMailModal()` 把影片路徑區塊設成 `videoPathsContainer.contentEditable='false'`。Chromium 對「選取範圍碰到唯讀區塊」的刪除會整個放棄——瀏覽器實測：有這個區塊時**全選整封信按刪除完全沒反應**（連「Hi 設計師,附上修改後的稿件。」這種純文字正文都刪不掉），倒退鍵也一樣完全不動；把它改成可編輯後，同一個操作立刻整段清空。圖片區塊與 NAS 路徑區塊之前已經因為同樣理由改成可編輯（`backend/test/backend.test.mjs` 對這兩者有 `doesNotMatch` 斷言），只有影片路徑區塊當時漏掉。
+- 影響檔案：`index.html`、`scripts/nas_folder_picker_server.mjs`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 新增 `caseNasFolderList(row)`：回傳案件目前全部來源資料夾（新版 `designImageFolders` 優先，只有舊欄位時包成一筆，都沒有回傳空陣列）。`reuseLastNasFolder()` 改用它，URL 新增 `folders`（完整清單 JSON），`path`／`keyword` 仍帶第一組給還沒更新的舊版選擇器相容；`nasFolderPickerPopupUrl()` 補上 `folders` 參數（原本會被解構丟掉）。「設計圖上傳方式」選單的「同上次路徑」說明文字在多資料夾時改列出全部路徑與數量。
+  - 選擇器頁面 `mode=reuse` 解析 `folders`，兩個以上時放進 `selectedFolders` 並整份送出（`doConfirm()` 既有邏輯會一次 POST 全部資料夾，各自套用自己的關鍵字）；沒帶 `folders`（舊版主頁面）維持原本單一資料夾行為。
+  - 影片路徑區塊移除 `contentEditable='false'`，改為繼承正文可編輯狀態；`applyDesignerReplyVideoPaths()` 新增 `designerReplyVideoRenderedHtml` WeakMap 守門（跟 `renderDesignerReplyNasPaths()` 同一套規則）：只有內容還是「上次自動填入的原樣」或從來沒填過且是空的才重畫，使用者改過或刪掉就完全不動，避免備份完成的自動填入把人工修改蓋掉、或把已經刪掉的內容救回來。
+- 風險區塊：①影片路徑區塊現在可編輯，使用者可以改壞或刪掉裡面的路徑文字——這是刻意的取捨（可刪除是這次的需求），寄出的內容就是編輯器裡的內容，系統不會再自動補回。②`folders` 走 URL query string 傳遞，資料夾很多又路徑很長時 URL 會變長；目前實際案件最多幾個資料夾、長度遠低於瀏覽器上限，沒有另外改成 postMessage 傳遞。③「同上次路徑」現在會一次備份全部資料夾，耗時比以前只跑一個資料夾長（每個資料夾各自掃描＋上傳），視窗停留時間會變久。④舊版選擇器（設計師電腦還沒收到這次發布）看不懂 `folders`，會退回沿用第一組——行為跟修改前一樣，不會壞掉，但要等發布後才享有這次修正。⑤沒有真實 NAS 與真實 Gmail 帳號可測，NAS 部分是用假掛載目錄＋假的資料庫／上傳端點在獨立埠（8978／8968）上跑真實選擇器程式驗證的。
+- 已檢查／驗證方式：
+  - **真實瀏覽器重現與驗證**（修改前）：有 `contenteditable=false` 影片區塊時，全選＋刪除留下的內容完全沒變、倒退鍵 30 次也完全沒變；把該區塊改成可編輯的對照組則「全部刪光」。修改後同一組操作：全選刪除→全部刪光；倒退鍵可逐字刪掉影片路徑；使用者刪掉後再呼叫一次自動填入不會救回來；使用者改成自己的文字後自動填入不覆蓋；沒動過時第二次自動填入照樣更新成「共 2 支」。
+  - **真實選擇器伺服器端對端**（獨立埠 8978，假掛載目錄，未影響正式服務 8877）：用新版 reuse URL（`folders` 帶兩組）載入選擇器頁面，實際 POST 一次 `/api/confirm` 就備份兩個資料夾，各自套用自己的關鍵字（folder1 只抓到 `260922_K1_visual.jpg`，正確排除同資料夾裡的 `260922_ZZZ_other.jpg`；folder2 抓到 `260922_K2_visual.jpg`），`sync-state.json` 以 `CaseR`／`CaseR::1` 分開記錄；沒帶 `folders` 的舊版 URL 照樣正常回應。把該回傳訊息餵進 `handleUploadFrameMessage()`，回寫的 `designImageFolders` 完整保留兩組（修改前會被砍成一組）。
+  - `node --test backend/test/*.test.mjs` 195/195（新增 1 項涵蓋：影片區塊不可為 `contenteditable=false`、自動填入的四種守門情境、`caseNasFolderList` 四種輸入、URL 帶 `folders`、選擇器 reuse 解析與舊版退路；並更新既有兩項測試：reuse URL 參數已改、影片路徑函式現在依賴 WeakMap 狀態）。
+  - 未做：沒有在真實 NAS、真實案件上實際按一次「同上次路徑」跑完整流程。
+- 部署狀態：`index.html` git push 後 GitHub Pages 自動生效。**`scripts/nas_folder_picker_server.mjs` 有改，設計師電腦要等「一鍵發布」才會拿到**（雙擊 `scripts/publish_nas_update.command`），這台主機的選擇器服務也要重啟才會套用新版。發布前，設計師端仍是舊版選擇器＝「同上次路徑」只沿用第一組（不會壞，但這次修正不生效）。
+- commit：見 git log（`fix: reuse every saved NAS folder on reply, and let the video path block be deleted`）
+
 ### 2026-09-22 11:10 Asia/Taipei — 替換像素辦公室的會議與休假圖示
 
 - 修改目的：依使用者提供的透明像素素材，把原本的會議圖示與程式繪製休假圖示替換成簡報會議、椰子樹休假圖示，並讓兩者大小與其他狀態圖示一致。

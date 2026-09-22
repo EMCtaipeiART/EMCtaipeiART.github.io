@@ -694,15 +694,40 @@ const PICKER_PAGE = `<!doctype html>
 
   (async function init(){
     if(mode === 'reuse'){
-      relPath = params.get('path') || '';
-      lastKeywordValue = params.get('keyword') || '';
+      // 主頁面帶 folders（JSON 陣列 [{path,keyword}]）時沿用案件目前「全部」的來源資料夾，每個各自
+      // 帶自己的關鍵字——案件設定了兩個資料夾時，以前只會沿用第一組、第二組的關鍵字完全用不到，而且
+      // 備份完回寫還會把案件的多資料夾設定覆蓋成只剩那一組。沒有帶 folders（舊版主頁面）就退回原本
+      // 的單一 path／keyword 行為。
+      let reuseFolders = [];
+      try{
+        const parsed = JSON.parse(params.get('folders') || '[]');
+        if(Array.isArray(parsed)){
+          reuseFolders = parsed
+            .map(item => ({ path: String(item && item.path || '').trim(), keyword: String(item && item.keyword || '').trim() }))
+            .filter(item => item.path);
+        }
+      }catch{ reuseFolders = []; }
+      if(!reuseFolders.length){
+        const singlePath = (params.get('path') || '').trim();
+        if(singlePath) reuseFolders = [{ path: singlePath, keyword: params.get('keyword') || '' }];
+      }
+      relPath = reuseFolders.length ? reuseFolders[0].path : '';
+      lastKeywordValue = reuseFolders.length ? reuseFolders[0].keyword : '';
       const keywordInput = document.getElementById('keywordInput');
       if(keywordInput) keywordInput.value = lastKeywordValue;
       document.querySelector('header h1').textContent = '沿用上次 NAS 路徑';
-      document.getElementById('currentPath').textContent = relPath || '（未設定）';
-      if(!relPath){
+      document.getElementById('currentPath').textContent = reuseFolders.length
+        ? (reuseFolders.length > 1 ? reuseFolders.map(item => item.path).join('、') : relPath)
+        : '（未設定）';
+      if(!reuseFolders.length){
         setStatus('找不到可沿用的 NAS 路徑，請關閉視窗後重新選擇資料夾');
         return;
+      }
+      // 兩個以上才放進 selectedFolders（doConfirm 會整份送出）；只有一個時維持原本走 relPath 的路徑，
+      // 送出的內容完全一樣，但不動到既有單一資料夾案件的行為。
+      if(reuseFolders.length > 1){
+        selectedFolders = reuseFolders.map(item => ({ path: item.path, keyword: item.keyword }));
+        renderSelectedFolders();
       }
       await doConfirm();
       return;

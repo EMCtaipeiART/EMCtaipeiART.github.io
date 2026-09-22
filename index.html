@@ -12991,7 +12991,11 @@ async function buildDesignerReplyMailModal(id,row,folders,targetRoundBeforeOpen,
   // 等 applyDesignerReplyImages() 局部更新時才填內容（見 applyDesignerReplyVideoPaths）。
   const videoPathsContainer=document.createElement('div');
   videoPathsContainer.id='gmailDesignerReplyVideoPaths';
-  videoPathsContainer.contentEditable='false';
+  // 跟圖片區塊、NAS 路徑區塊一樣繼承正文的可編輯狀態，不可以設成 contenteditable="false"：
+  // Chromium 對「選取範圍碰到唯讀區塊」的刪除會整個放棄——不只刪不掉這個區塊本身，連同一次
+  // 選取範圍裡的正文也一起刪不動（連全選後按刪除都完全沒反應），這正是使用者回報的「匯入錯誤
+  // 內容時無法刪除自動填入的 NAS 路徑」。圖片區塊與 NAS 路徑區塊之前已經因為同樣的理由改成可
+  // 編輯（見 backend 測試裡對這兩者的 doesNotMatch 斷言），只有這個區塊當時漏掉。
   editor.appendChild(videoPathsContainer);
   await appendDefaultGmailSignature(editor);
   // 解鎖之後才由 resolveDesignerReplyImages()／applyDesignerReplyImages() 接手處理圖片上傳結果，
@@ -13057,9 +13061,15 @@ function setDesignerReplyNasFileFolders(fileFolders){
  * 來源資料夾的判斷順序：①這次備份回報的「檔名→資料夾」對照表（多選資料夾時唯一可靠的依據）；
  * ②整個案件只有一個來源資料夾時就是那一個（涵蓋沒有對照表的情境，例如電腦檔案上傳、或沿用舊路徑）。
  * 兩者都對不上時（多資料夾、又沒有這個檔名的對照）就略過那一支，寧可少列也不要附上錯誤的路徑。 */
+const designerReplyVideoRenderedHtml=new WeakMap();
 function applyDesignerReplyVideoPaths(images){
   const container=document.getElementById('gmailDesignerReplyVideoPaths');
   if(!container)return;
+  // 區塊改成可編輯之後，使用者很可能在備份完成（這支函式被呼叫）之前就先改過或清掉這段——
+  // 跟 renderDesignerReplyNasPaths() 同一套規則：只有內容還是「上次自動填入的原樣」（或從來
+  // 沒填過而且是空的）才重畫，否則一律不動，避免自動填入把人工修改蓋掉或把刪掉的內容救回來。
+  const previousHtml=designerReplyVideoRenderedHtml.get(container),currentHtml=String(container.innerHTML||'');
+  if(previousHtml===undefined?currentHtml.trim():currentHtml!==previousHtml)return;
   container.textContent='';
   let folderPaths=[],fileFolders={};
   try{folderPaths=JSON.parse(document.getElementById('gmailDesignerReplyNasPaths')?.dataset.nasFolders||'[]')}catch(error){folderPaths=[]}
@@ -13082,6 +13092,7 @@ function applyDesignerReplyVideoPaths(images){
     bold.textContent=videoPath;
     container.appendChild(bold);
   });
+  designerReplyVideoRenderedHtml.set(container,String(container.innerHTML||''));
 }
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，
  * 取代原本的「圖片上傳中...」文字，並解除送出按鈕的停用狀態——只動這個佔位容器本身，不會動到
@@ -14780,7 +14791,7 @@ function caseDesignImageUploadUrl(row,round){const url=new URL(designerUploadPag
  * machi-case-design-images-updated 分支）會自動轉入 openDesignerReplyMailModal；平常從「過稿中」
  * 狀態變更觸發時維持預設 false，上傳完只更新畫面，不會意外跳出信件編輯器。 */
 function openCaseDesignImageUploadModal(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; caseDesignUploadAfterReply=afterReply; caseDesignUploadSkipReplyImages=Boolean(afterReply&&skipReplyImages); caseDesignUploadRound=Math.max(0,Number(round)||0); caseDesignUploadCaseId=String(row.id); caseDesignUploadLatestProgress=null; openUploadModal(caseDesignImageUploadUrl(row,round),`${row.id}．${modificationLabel(round)}設計圖上傳`)}
-function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const samePathButton=afterReply&&row.designImageFolderUrl?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${esc(row.designImageFolderUrl)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';const skipImagesOption=afterReply?`<label class="designer-reply-skip-images"><input type="checkbox" data-skip-reply-images><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3>${skipImagesOption}<div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); const skipReplyImagesChecked=()=>afterReply&&Boolean(fieldPopover.querySelector('[data-skip-reply-images]')?.checked);fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply,skipReplyImages})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply,skipReplyImages})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply,skipReplyImages})})}
+function openCaseDesignImageSourceChooser(id,round,anchorEl,{afterReply=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; const row=rows.find(r=>String(r.id)===String(id));if(!row)return;const reuseFolders=caseNasFolderList(row);const samePathButton=afterReply&&reuseFolders.length?`<button type="button" class="option" data-source="same-nas"><span>同上次路徑</span><small>沿用 ${reuseFolders.length>1?`這 ${reuseFolders.length} 個資料夾（${esc(reuseFolders.map(item=>item.path).join('、'))}）`:esc(reuseFolders[0].path)} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:'';const skipImagesOption=afterReply?`<label class="designer-reply-skip-images"><input type="checkbox" data-skip-reply-images><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>`:'';fieldPopover.innerHTML=`<h3>設計圖上傳方式</h3>${skipImagesOption}<div class="option-list source-option-list">${samePathButton}<button type="button" class="option" data-source="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字，避免抓到同資料夾裡其他案件或 Links 等參考資料夾的圖片</small></button><button type="button" class="option" data-source="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`; fieldPopover.hidden=false; positionFieldPopover(anchorEl,{center:true}); const skipReplyImagesChecked=()=>afterReply&&Boolean(fieldPopover.querySelector('[data-skip-reply-images]')?.checked);fieldPopover.querySelector('[data-source="same-nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); reuseLastNasFolder(id,round,{afterReply,skipReplyImages})});fieldPopover.querySelector('[data-source="nas"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openNasFolderPicker(id,round,{afterReply,skipReplyImages})}); fieldPopover.querySelector('[data-source="upload"]')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation(); const skipReplyImages=skipReplyImagesChecked(); closeFieldPopover(); openCaseDesignImageUploadModal(id,round,{afterReply,skipReplyImages})})}
 /** 選擇器伺服器可能在兩個地方：①設計師自己這台（跑過 NAS 自動備份安裝包就會有）；②管理者那台 iMac。
  * 先開自己這台——這樣管理者電腦關機時，有裝的人照樣選得到資料夾，也不必再透過別人的電腦掛載 NAS；
  * 2.5 秒內沒收到選擇器回報「我準備好了」就自動改開管理者那台（沒裝的人就是走這條）。
@@ -14805,7 +14816,7 @@ let nasFolderPickerSkipReplyImages=false;
 function nasFolderPickerConfigured(){return Boolean(nasFolderPickerBaseUrl&&nasFolderPickerToken)}
 function clearNasFolderPickerWatch(){if(activeNasFolderPickerWatchTimer){clearInterval(activeNasFolderPickerWatchTimer);activeNasFolderPickerWatchTimer=0} nasFolderPickerBackupInProgress=false}
 function watchNasFolderPickerWindow(win,nonce){clearNasFolderPickerWatch(); let elapsedMs=0; activeNasFolderPickerWatchTimer=setInterval(()=>{elapsedMs+=1000; if(activeNasFolderPickerNonce!==nonce){clearNasFolderPickerWatch();return} if(win.closed){const wasBackingUp=nasFolderPickerBackupInProgress, pendingCaseId=activeNasFolderPickerCaseId, pendingRound=activeNasFolderPickerRound; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=''; activeNasFolderPickerRound=0; nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false; hideNasFolderBackupBadge(); if(wasBackingUp&&pendingCaseId)applyDesignerReplyImages(pendingCaseId,[],{round:pendingRound}); setSync(wasBackingUp?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true,7000); return} if(elapsedMs===20000&&!nasFolderPickerBackupInProgress)setSync('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，代表電腦沒開機或選擇器沒啟動，請關閉分頁改用「選擇電腦檔案上傳」',true,9000)},1000)}
-function nasFolderPickerPopupUrl({caseId,nonce,mode,path='',keyword=''}){const url=new URL(nasFolderPickerBaseUrl); if(caseId)url.searchParams.set('caseId',caseId); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',nonce); url.searchParams.set('origin',location.origin); if(mode)url.searchParams.set('mode',mode); if(path)url.searchParams.set('path',path); if(keyword)url.searchParams.set('keyword',keyword); return url}
+function nasFolderPickerPopupUrl({caseId,nonce,mode,path='',keyword='',folders=''}){const url=new URL(nasFolderPickerBaseUrl); if(caseId)url.searchParams.set('caseId',caseId); url.searchParams.set('token',nasFolderPickerToken); url.searchParams.set('nonce',nonce); url.searchParams.set('origin',location.origin); if(mode)url.searchParams.set('mode',mode); if(path)url.searchParams.set('path',path); if(keyword)url.searchParams.set('keyword',keyword); if(folders)url.searchParams.set('folders',folders); return url}
 function nasFolderPickerHostOrder(){
   let remembered='';
   try{
@@ -14844,9 +14855,22 @@ function openNasFolderPickerPopupWindow(url){
   return win;
 }
 function openNasFolderPicker(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return; if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳，或聯絡管理者設定 nasFolderPickerBaseUrl／nasFolderPickerToken',true,5000);return} const row=rows.find(r=>String(r.id)===String(id)); if(!row)return; clearNasFolderPickerWatch(); activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`; activeNasFolderPickerCaseId=String(id); activeNasFolderPickerRound=Math.max(0,Number(round)||0); nasFolderPickerPurpose='case'; nasFolderPickerInsertEditorId=''; nasFolderPickerInsertRange=null; nasFolderPickerAfterReply=afterReply; nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages); const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce}); const win=openNasFolderPickerPopupWindow(url); if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return} setSync('請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...',false,5000); watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
+/** 案件目前設定的全部 NAS 來源資料夾（新版清單優先，只有舊的單一欄位時包成一筆），給「同上次路徑」
+ * 沿用。以前這裡只帶 designImageFolderUrl／designImageFolderKeyword 這組「第一組」舊欄位，案件設定
+ * 了兩個資料夾時，回信沿用只會備份第一組、第二組的關鍵字根本用不到（使用者回報「NAS 路徑無法加入
+ * 第二組關鍵字」），而且備份完回寫案件時會把 designImageFolders 覆蓋成只剩那一組，等於把案件原本設
+ * 好的多資料夾設定砍掉。 */
+function caseNasFolderList(row){
+  const folders=Array.isArray(row?.designImageFolders)?row.designImageFolders.map(item=>({path:String(item?.path||'').trim(),keyword:String(item?.keyword||'').trim()})).filter(item=>item.path):[];
+  if(folders.length)return folders;
+  const legacyPath=String(row?.designImageFolderUrl||'').trim();
+  return legacyPath?[{path:legacyPath,keyword:String(row?.designImageFolderKeyword||'').trim()}]:[];
+}
 /** 沿用案件既有 NAS 路徑與關鍵字，不再要求設計師於每一輪修改回覆重新瀏覽資料夾。因正式站為 HTTPS、
- * 本機服務為 HTTP，仍需以彈出視窗導覽至同源頁面，再由該頁自動執行備份並用 postMessage 回傳結果。 */
-function reuseLastNasFolder(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return;if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳',true,5000);return}const row=rows.find(r=>String(r.id)===String(id));if(!row?.designImageFolderUrl){setSync('此案件沒有可沿用的 NAS 路徑，請重新選擇資料夾',true,4200);return}clearNasFolderPickerWatch();activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;activeNasFolderPickerCaseId=String(id);activeNasFolderPickerRound=Math.max(0,Number(round)||0);nasFolderPickerPurpose='case';nasFolderPickerInsertEditorId='';nasFolderPickerInsertRange=null;nasFolderPickerAfterReply=afterReply;nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages);const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce,mode:'reuse',path:row.designImageFolderUrl,keyword:row.designImageFolderKeyword||''});const win=openNasFolderPickerPopupWindow(url);if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return}setSync(`正在沿用 NAS 路徑並抓取 ${modificationLabel(round)}最新圖片...`,false,5000);watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
+ * 本機服務為 HTTP，仍需以彈出視窗導覽至同源頁面，再由該頁自動執行備份並用 postMessage 回傳結果。
+ * URL 的 folders 帶案件目前「全部」的資料夾（新版選擇器會整份沿用、各自套用自己的關鍵字）；path／
+ * keyword 仍帶第一組，讓還沒更新的舊版選擇器維持原本「沿用第一組」的行為，不會整個壞掉。 */
+function reuseLastNasFolder(id,round,{afterReply=false,skipReplyImages=false}={}){if(!requireAccess('media.manage','此帳號沒有管理案件設計圖權限'))return;if(!nasFolderPickerConfigured()){setSync('尚未設定 NAS 資料夾選擇器，請改用電腦檔案上傳',true,5000);return}const row=rows.find(r=>String(r.id)===String(id));const reuseFolders=caseNasFolderList(row);if(!reuseFolders.length){setSync('此案件沒有可沿用的 NAS 路徑，請重新選擇資料夾',true,4200);return}clearNasFolderPickerWatch();activeNasFolderPickerNonce=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;activeNasFolderPickerCaseId=String(id);activeNasFolderPickerRound=Math.max(0,Number(round)||0);nasFolderPickerPurpose='case';nasFolderPickerInsertEditorId='';nasFolderPickerInsertRange=null;nasFolderPickerAfterReply=afterReply;nasFolderPickerSkipReplyImages=Boolean(afterReply&&skipReplyImages);const url=nasFolderPickerPopupUrl({caseId:row.id,nonce:activeNasFolderPickerNonce,mode:'reuse',path:reuseFolders[0].path,keyword:reuseFolders[0].keyword||'',folders:JSON.stringify(reuseFolders)});const win=openNasFolderPickerPopupWindow(url);if(!win){setSync('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true,4200);activeNasFolderPickerNonce='';activeNasFolderPickerRound=0;nasFolderPickerAfterReply=false;nasFolderPickerSkipReplyImages=false;return}setSync(`正在沿用${reuseFolders.length>1?` ${reuseFolders.length} 個`:''} NAS 路徑並抓取 ${modificationLabel(round)}最新圖片...`,false,5000);watchNasFolderPickerWindow(win,activeNasFolderPickerNonce)}
 /** 供 Gmail 撰寫／回信編輯區「插入 NAS 路徑」使用：跟「過稿中」同一套資料夾選擇器視窗，
  * 但用 mode=insert 讓選擇器頁面只回傳選到的路徑、不問關鍵字也不觸發任何備份／上傳，
  * 選好後直接把路徑插進編輯區目前的游標位置（沿用開啟視窗前記住的選取範圍）。 */

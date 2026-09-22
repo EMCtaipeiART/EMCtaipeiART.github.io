@@ -339,7 +339,8 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(html, /data-source="same-nas"><span>同上次路徑<\/span>/);
   assert.match(html, /function reuseLastNasFolder\(id,round,\{afterReply=false,skipReplyImages=false\}=\{\}\)/);
-  assert.match(html, /mode:'reuse',path:row\.designImageFolderUrl,keyword:row\.designImageFolderKeyword\|\|''/);
+  // 2026-09-22 起沿用的是案件「全部」的資料夾（folders），第一組仍保留給還沒更新的舊版選擇器相容。
+  assert.match(html, /mode:'reuse',path:reuseFolders\[0\]\.path,keyword:reuseFolders\[0\]\.keyword\|\|'',folders:JSON\.stringify\(reuseFolders\)/);
   assert.match(pickerServer, /requestedMode === 'reuse'/);
   assert.match(pickerServer, /if\(mode === 'reuse'\)\{/);
   assert.match(pickerServer, /await doConfirm\(\)/);
@@ -535,8 +536,9 @@ test('designer reply lists every backed-up video\'s full NAS path (folder + file
   assert.match(html, /for\(const fileName of \(Array\.isArray\(folder\.backup\?\.uploadedFiles\)\?folder\.backup\.uploadedFiles:\[\]\)\)\{/);
 
   const extSource = html.match(/const DESIGNER_REPLY_VIDEO_EXTENSIONS=\[[^\]]*\];\nfunction isDesignerReplyVideoFileName\(fileName\)\{[^\n]*\}\n/)?.[0];
+  const videoStateSource = html.match(/const designerReplyVideoRenderedHtml=new WeakMap\(\);/)?.[0];
   const funcSource = html.match(/function applyDesignerReplyVideoPaths\(images\)\{[\s\S]*?\n\}\n/)?.[0];
-  assert.ok(extSource && funcSource, 'could not locate applyDesignerReplyVideoPaths');
+  assert.ok(extSource && videoStateSource && funcSource, 'could not locate applyDesignerReplyVideoPaths');
 
   const run = (images, folderPaths, fileFolders) => {
     const children = [];
@@ -553,7 +555,7 @@ test('designer reply lists every backed-up video\'s full NAS path (folder + file
       createElement: tag => ({ tag, textContent: '' }),
       createTextNode: text => ({ tag: '#text', textContent: text })
     };
-    const fn = new Function('document', `${extSource}\n${funcSource}\nreturn applyDesignerReplyVideoPaths;`)(fakeDocument);
+    const fn = new Function('document', 'WeakMap', `${extSource}\n${videoStateSource}\n${funcSource}\nreturn applyDesignerReplyVideoPaths;`)(fakeDocument, WeakMap);
     fn(images);
     return container;
   };
@@ -4914,4 +4916,93 @@ test('同一封回信不能又排程又立即寄出，修改需求信也不會�
   `)(deduplicated);
   assert.deepEqual(await run(true), { rounds: 1, count: 2 }, '重複寫入：不新增本機紀錄');
   assert.deepEqual(await run(undefined), { rounds: 2, count: 2 }, '一般新增照舊加入本機紀錄');
+});
+
+test('回信的 NAS 區塊：影片路徑要可編輯（不然整段選取連正文都刪不掉），「同上次路徑」要沿用案件全部資料夾與各自的關鍵字', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+
+  // ── 1. 影片路徑區塊不可以是 contenteditable=false ──
+  // Chromium 對「選取範圍碰到唯讀區塊」的刪除會整個放棄：不只刪不掉那個區塊，連同一次選取裡的正文
+  // 也刪不動（全選後按刪除完全沒反應）。圖片區塊與 NAS 路徑區塊已經因為同樣理由改成可編輯。
+  assert.doesNotMatch(html, /videoPathsContainer\.contentEditable='false'/);
+  assert.match(html, /videoPathsContainer\.id='gmailDesignerReplyVideoPaths';/);
+
+  // 改成可編輯之後，自動填入不可以蓋掉使用者已經改過／刪掉的內容——實際執行這支函式驗證。
+  const extSource = html.match(/const DESIGNER_REPLY_VIDEO_EXTENSIONS=\[[^\]]*\];\nfunction isDesignerReplyVideoFileName\(fileName\)\{[^\n]*\}\n/)?.[0];
+  const stateSource = html.match(/const designerReplyVideoRenderedHtml=new WeakMap\(\);/)?.[0];
+  const funcSource = html.match(/function applyDesignerReplyVideoPaths\(images\)\{[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(extSource && stateSource && funcSource, 'could not locate applyDesignerReplyVideoPaths and its state');
+
+  const makeRunner = () => {
+    // 這個假容器會真的維護 innerHTML，才能驗證「使用者改過就不覆蓋」的判斷。
+    const container = {
+      innerHTML: '', textContent: '', removed: false, dataset: { nasFileFolders: JSON.stringify({ 'a.mp4': 'A/B' }) },
+      appendChild(node) { container.innerHTML += node.tag === '#text' ? node.textContent : `<${node.tag}>${node.textContent || ''}</${node.tag}>`; },
+      remove() { container.removed = true; }
+    };
+    Object.defineProperty(container, 'textContent', {
+      get: () => container.innerHTML.replace(/<[^>]*>/g, ''),
+      set: value => { container.innerHTML = value; }
+    });
+    const nasContainer = { dataset: { nasFolders: JSON.stringify(['A/B']) } };
+    const fakeDocument = {
+      getElementById: id => (id === 'gmailDesignerReplyVideoPaths' ? container : id === 'gmailDesignerReplyNasPaths' ? nasContainer : null),
+      createElement: tag => ({ tag, textContent: '' }),
+      createTextNode: text => ({ tag: '#text', textContent: text })
+    };
+    const fn = new Function('document', 'WeakMap', `${extSource}\n${stateSource}\n${funcSource}\nreturn applyDesignerReplyVideoPaths;`)(fakeDocument, WeakMap);
+    return { container, fn };
+  };
+
+  // 第一次自動填入（空白、沒動過）→ 正常寫入。
+  const first = makeRunner();
+  first.fn([{ fileName: 'a.mp4' }]);
+  assert.match(first.container.innerHTML, /A\/B\/a\.mp4/);
+  // 沒動過 → 第二次自動填入照樣更新（備份完成後拿到更完整的清單）。
+  first.container.dataset.nasFileFolders = JSON.stringify({ 'a.mp4': 'A/B', 'b.mp4': 'A/B' });
+  first.fn([{ fileName: 'a.mp4' }, { fileName: 'b.mp4' }]);
+  assert.match(first.container.innerHTML, /A\/B\/b\.mp4/);
+  // 使用者改過 → 之後的自動填入完全不動它。
+  const edited = makeRunner();
+  edited.fn([{ fileName: 'a.mp4' }]);
+  edited.container.innerHTML = '<b>我自己改過的說明</b>';
+  edited.fn([{ fileName: 'a.mp4' }]);
+  assert.equal(edited.container.innerHTML, '<b>我自己改過的說明</b>', '自動填入不可以蓋掉使用者的修改');
+  // 使用者刪光 → 不可以又把內容救回來。
+  const cleared = makeRunner();
+  cleared.fn([{ fileName: 'a.mp4' }]);
+  cleared.container.innerHTML = '';
+  cleared.fn([{ fileName: 'a.mp4' }]);
+  assert.equal(cleared.container.innerHTML, '', '使用者刪掉之後不可以被自動填入救回來');
+
+  // ── 2.「同上次路徑」沿用案件全部資料夾 ──
+  const listSource = html.match(/function caseNasFolderList\(row\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(listSource, 'could not locate caseNasFolderList');
+  const caseNasFolderList = new Function(`${listSource}\nreturn caseNasFolderList;`)();
+  assert.deepEqual(caseNasFolderList({ designImageFolders: [{ path: 'A/1', keyword: 'K1' }, { path: 'A/2', keyword: 'K2' }] }),
+    [{ path: 'A/1', keyword: 'K1' }, { path: 'A/2', keyword: 'K2' }], '新版清單優先，兩組都要帶');
+  assert.deepEqual(caseNasFolderList({ designImageFolderUrl: 'Old/Path', designImageFolderKeyword: 'OK' }),
+    [{ path: 'Old/Path', keyword: 'OK' }], '只有舊欄位時包成一筆（既有單一資料夾案件不受影響）');
+  assert.deepEqual(caseNasFolderList({}), []);
+  assert.deepEqual(caseNasFolderList({ designImageFolders: [{ path: '', keyword: 'X' }], designImageFolderUrl: 'Fallback' }),
+    [{ path: 'Fallback', keyword: '' }], '清單裡沒有合法路徑時退回舊欄位');
+
+  // URL 要把完整清單帶過去（舊版選擇器看不懂 folders，仍靠 path/keyword 沿用第一組，不會壞掉）。
+  const urlSource = html.match(/function nasFolderPickerPopupUrl\(\{[\s\S]*?\n?return url\}/)?.[0];
+  assert.ok(urlSource, 'could not locate nasFolderPickerPopupUrl');
+  assert.match(urlSource, /folders=''/);
+  assert.match(urlSource, /if\(folders\)url\.searchParams\.set\('folders',folders\)/);
+  const reuseLine = html.split('\n').find(line => line.includes('function reuseLastNasFolder'));
+  assert.ok(reuseLine, 'could not locate reuseLastNasFolder');
+  assert.match(reuseLine, /return url\}|nasFolderPickerPopupUrl\(/, 'reuseLastNasFolder 應維持單行寫法，方便逐行斷言');
+  assert.match(reuseLine, /const reuseFolders=caseNasFolderList\(row\)/);
+  assert.match(reuseLine, /folders:JSON\.stringify\(reuseFolders\)/, '沿用時要把完整清單帶給選擇器');
+  assert.match(reuseLine, /path:reuseFolders\[0\]\.path,keyword:reuseFolders\[0\]\.keyword\|\|''/, '仍保留第一組給舊版選擇器相容');
+  assert.doesNotMatch(reuseLine, /path:row\.designImageFolderUrl/, '不可以再只帶舊的單一欄位');
+
+  // 選擇器頁面 reuse 模式要解析 folders 並整份送出。
+  assert.match(pickerServer, /JSON\.parse\(params\.get\('folders'\) \|\| '\[\]'\)/);
+  assert.match(pickerServer, /if\(reuseFolders\.length > 1\)\{\n\s+selectedFolders = reuseFolders\.map/);
+  assert.match(pickerServer, /const singlePath = \(params\.get\('path'\) \|\| ''\)\.trim\(\);/, '沒帶 folders 的舊版主頁面仍走原本單一路徑');
 });
