@@ -386,7 +386,8 @@ function stationDimmed(s){
   return hour<VACANT_DESK_ON_HOUR||hour>=VACANT_DESK_OFF_HOUR;
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
-function drawOffice(){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+// 嵌入時不填底色，讓外層卡片的顏色透進來（深色模式才不會卡著一塊白）。獨立開遊戲頁時仍是白底。
+function drawOffice(){if(embedMode){ctx.clearRect(0,0,W,H);return;}ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
 // furniture-v3.webp：桌子分「左端／中間／右端」三種形狀（素材裡本來就是這樣畫的），
 // 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
 // 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，

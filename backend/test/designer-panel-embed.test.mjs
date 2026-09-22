@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=35"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=36"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -107,7 +107,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=43/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=44/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -307,4 +307,26 @@ test('「手上的案件」不算已經歸檔的舊案件', async () => {
   assert.match(js, /: null;/);
   // 等級與分數仍然要用完整的歷史資料，不受這個過濾影響。
   assert.match(js, /const totals=scoreRows\(payload\.rows\);/);
+});
+
+test('右欄關掉時場景不會塌掉', async () => {
+  const html = await indexHtml();
+  // 左右對齊時場景是 absolute 撐滿卡片剩餘高度；右欄一關，卡片自己沒有高度可撐，
+  // absolute 的場景會塌成 0，整張卡只剩標題列（2026-09-22 使用者回報「內容會被遮蔽」）。
+  assert.match(html, /const paired=!designer\.hidden&&!recent\.hidden&&!window\.matchMedia\('\(max-width:900px\)'\)\.matches;/);
+  assert.match(html, /designer\.classList\.toggle\('is-solo',!paired\);/);
+  assert.match(html, /if\(!paired\)return;/);
+  // 單欄時退回長寬比模式，自己把高度撐開。
+  assert.match(html, /#designerPanel\.is-solo \.office-embed-shell\{position:relative;inset:auto;height:auto;aspect-ratio:3\/2\}/);
+  assert.match(html, /#designerPanel\.is-solo\{display:block\}/);
+  assert.match(html, /#designerPanel\.is-solo \.designer-roster\{position:static\}/);
+});
+
+test('深色模式下場景背景跟著主題，不會是一塊白', async () => {
+  const [html, js] = await Promise.all([indexHtml(), officeJs()]);
+  // 三層都要處理：canvas 自己別填白、iframe 透明、外框跟著主題變數走。
+  assert.match(js, /function drawOffice\(\)\{if\(embedMode\)\{ctx\.clearRect\(0,0,W,H\);return;\}ctx\.fillStyle='#fff';/,
+    '嵌入模式不填白底，獨立開遊戲頁時仍是白底');
+  assert.match(html, /\.office-embed\{display:block;width:100%;height:100%;border:0;background:transparent/);
+  assert.match(html, /\.office-embed-shell\{[^}]*background:var\(--panel,#fff\)/);
 });
