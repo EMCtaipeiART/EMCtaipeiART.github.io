@@ -24,6 +24,9 @@ test('授權流程仍然要有發信權限，而且範圍含行事曆', async ()
   const html = await indexHtml();
   // 這個入口只是換個地方進去，權限檢查沒有被繞過。
   assert.match(html, /async function startGmailConnectPopup\(\)\{\s*if\(!requireAccess\('request\.mail'/);
-  // 重新授權的重點就是要把行事曆範圍帶上去，否則 freeBusy 會一直回 403。
-  assert.match(html, /scope:'email[^']*https:\/\/www\.googleapis\.com\/auth\/calendar\.freebusy'/);
+  // freeBusy 用來判斷忙碌；events.readonly 只讀事件，才能分辨 Google 原生「不在辦公室」與請假標題。
+  const gmailSource = html.slice(html.indexOf('function gmailOauthAuthorizationUrl'), html.indexOf('function ensureGmailOauthChannel'));
+  const scope = gmailSource.match(/scope:'([^']+)'/)?.[1] || '';
+  assert.match(scope, /https:\/\/www\.googleapis\.com\/auth\/calendar\.freebusy/);
+  assert.match(scope, /https:\/\/www\.googleapis\.com\/auth\/calendar\.events\.readonly/);
 });

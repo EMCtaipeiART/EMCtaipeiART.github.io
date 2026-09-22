@@ -20,7 +20,7 @@ import type {
 const STATE_KEY = 'primary';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
-const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'abroad', 'out'];
+const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
 const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'offwork'];
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
@@ -77,8 +77,8 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
   return 'present';
 }
-// 行事曆自動狀態：只用這一個帳號的 Google 授權去查（其他四位不必重新連接），Workspace 網域內預設
-// 就看得到彼此的忙碌時段。查的是 freeBusy，拿不到標題也拿不到與會者，只知道「這段時間忙」。
+// 行事曆自動狀態：只用這一個帳號的 Google 授權去查（其他四位不必重新連接）。Workspace 網域內通常
+// 看得到彼此的忙碌時段；若同事另有分享事件詳細資料，還能用事件類型／標題分辨「會議」與「休假」。
 const PIXEL_OFFICE_CALENDAR_ACCOUNT = 'machi.chen@emctaipei.com';
 const PIXEL_OFFICE_CALENDARS: Record<string, string> = {
   Machi: 'machi.chen@emctaipei.com',
@@ -90,6 +90,9 @@ const PIXEL_OFFICE_CALENDARS: Record<string, string> = {
 // freeBusy 分不出「會議」與「整天的特休」——兩者都只是一段忙碌。超過這麼長的忙碌一律不當成會議，
 // 免得請假的人整天掛著「會議中」。一般會議不會連續超過四小時。
 const PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS = 4 * 60 * 60 * 1000;
+// Google 原生「不在辦公室」事件最可靠；一般事件則只在標題含這些明確字樣時視為休假。標題只在記憶體
+// 中判斷，不寫入 Durable Object、log 或前端，避免把行事曆內容帶進設計系統。
+const PIXEL_OFFICE_LEAVE_KEYWORDS = /(?:休假|請假|特休|年假|補休|病假|事假|婚假|產假|陪產|喪假|公假|生理假|家庭照顧假|vacation|\bpto\b|annual\s+leave|sick\s+leave|personal\s+leave|day\s+off|out\s+of\s+office|\booo\b)/i;
 // 只在這個時段查行事曆，其餘時間不必浪費 API 配額（台北時間）。
 const PIXEL_OFFICE_CALENDAR_START_HOUR = 8;
 const PIXEL_OFFICE_CALENDAR_END_HOUR = 22;
@@ -99,6 +102,44 @@ function gmailScopesAllowCalendar(scopes: unknown): boolean {
   return list.some(scope => scope === 'https://www.googleapis.com/auth/calendar.freebusy'
     || scope === 'https://www.googleapis.com/auth/calendar.readonly'
     || scope === 'https://www.googleapis.com/auth/calendar');
+}
+
+/** 能讀事件內容才有辦法可靠分辨會議與休假；calendar.freebusy 本身只能看見忙碌區段。 */
+function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
+  const list = text(scopes).split(/\s+/).filter(Boolean);
+  return list.some(scope => scope === 'https://www.googleapis.com/auth/calendar.events.readonly'
+    || scope === 'https://www.googleapis.com/auth/calendar.events'
+    || scope === 'https://www.googleapis.com/auth/calendar.readonly'
+    || scope === 'https://www.googleapis.com/auth/calendar');
+}
+
+type PixelOfficeCalendarState = '' | 'meeting' | 'leave';
+
+/** 單一 Google Calendar event → 最新動態狀態。事件查詢本身已限制在「現在這一分鐘有重疊」。 */
+export function pixelOfficeCalendarEventState(event: Row): PixelOfficeCalendarState {
+  if (text(event.status) === 'cancelled' || text(event.transparency) === 'transparent') return '';
+  const attendees = Array.isArray(event.attendees) ? event.attendees as Row[] : [];
+  if (attendees.some(attendee => attendee.self === true && text(attendee.responseStatus) === 'declined')) return '';
+  const eventType = text(event.eventType) || 'default';
+  if (eventType === 'outOfOffice' || PIXEL_OFFICE_LEAVE_KEYWORDS.test(text(event.summary))) return 'leave';
+  // 專注時間、工作地點、生日等不是會議；一般事件與 Gmail 自動建立的行程才進一步看長度。
+  if (!['default', 'fromGmail'].includes(eventType)) return '';
+  const startRow = event.start && typeof event.start === 'object' ? event.start as Row : {};
+  const endRow = event.end && typeof event.end === 'object' ? event.end as Row : {};
+  const start = Date.parse(text(startRow.dateTime || startRow.date));
+  const end = Date.parse(text(endRow.dateTime || endRow.date));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '';
+  return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS ? 'meeting' : '';
+}
+
+function pixelOfficeCalendarEventsState(events: unknown): PixelOfficeCalendarState {
+  let state: PixelOfficeCalendarState = '';
+  for (const event of Array.isArray(events) ? events as Row[] : []) {
+    const next = pixelOfficeCalendarEventState(event);
+    if (next === 'leave') return 'leave';
+    if (next === 'meeting') state = 'meeting';
+  }
+  return state;
 }
 
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
@@ -1349,9 +1390,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * - 剛開機／剛醒來（上一次心跳已經超過離線門檻，或從來沒有過）：不管原本是什麼狀態，一律改成「在座」或「加班」。
    * - 持續開著：沒被手動指定過的在座／加班／用餐／下班會隨時間互相切換；手動指定的狀態維持到電腦下次關機，
  *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
-  /** 行事曆同步：把某位設計師改成「會議」，或散會之後交還給電腦自動判斷。
+  /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, inMeeting: boolean, nowMs: number): 'meeting' | 'released' | 'unchanged' {
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' {
     const row = this.ctx.storage.sql.exec<{ state: string }>(
       'SELECT state FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
@@ -1360,28 +1401,28 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
     const status = text(state.status) || 'present';
     const source = text(state.statusSource);
-    if (inMeeting) {
-      if (status === 'meeting') return 'unchanged';
-      // 手動指定的狀態（公出、出國、自己點的會議…）優先，行事曆不覆蓋。
+    if (desired) {
+      if (status === desired && source === 'calendar') return 'unchanged';
+      // 手動指定的狀態（公出、出國、自己點的會議／休假…）優先，行事曆不覆蓋。
       if (source === 'manual') return 'unchanged';
-      state.status = 'meeting';
+      state.status = desired;
       state.statusSource = 'calendar';
     } else {
-      // 只收回自己設的；使用者手動點的會議要自己取消。
-      if (status !== 'meeting' || source !== 'calendar') return 'unchanged';
+      // 只收回自己設的；使用者手動點的會議／休假要自己取消。
+      if (!['meeting', 'leave'].includes(status) || source !== 'calendar') return 'unchanged';
       state.status = pixelOfficeWorkStatus(nowMs);
       state.statusSource = 'auto';
     }
     state.statusAt = nowMs;
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
     this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), version, name);
-    return inMeeting ? 'meeting' : 'released';
+    return desired || 'released';
   }
 
   /**
-   * 每分鐘由排程呼叫：查五位設計師現在是不是在開會，是就顯示「會議」，散會就交還給電腦自動判斷。
-   * 只用 PIXEL_OFFICE_CALENDAR_ACCOUNT 一個人的授權（Workspace 網域內預設看得到彼此的忙碌時段），
-   * 而且查的是 freeBusy——拿不到標題、地點與與會者，只知道那段時間忙不忙。
+   * 每分鐘由排程呼叫：先用 freeBusy 查五位設計師是否忙碌；若授權與分享權限允許，再讀取這一分鐘內
+   * 重疊的最小事件欄位，用 Google 原生 outOfOffice 類型與明確請假關鍵字辨識休假。事件標題不留存。
+   * 詳細事件看不到時只針對該人退回 freeBusy 的會議判斷，不會讓其他人的同步一起失敗。
    * 任何一步失敗（沒授權、沒開 API、某個人的行事曆看不到）都只是這一輪不動狀態，不會把人改錯。
    */
   async runPixelOfficeCalendarSync(nowMs = Date.now()): Promise<Row> {
@@ -1396,12 +1437,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       await this.rememberCalendarSync(result, nowMs);
       return result;
     }
+    const stored = this.getGmailTokens(PIXEL_OFFICE_CALENDAR_ACCOUNT);
+    const canReadDetails = gmailScopesAllowCalendarDetails(stored?.scopes);
+    const timeMin = new Date(nowMs).toISOString();
+    const timeMax = new Date(nowMs + 60_000).toISOString();
     const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        timeMin: new Date(nowMs).toISOString(),
-        timeMax: new Date(nowMs + 60_000).toISOString(),
+        timeMin,
+        timeMax,
         items: Object.values(PIXEL_OFFICE_CALENDARS).map(id => ({ id }))
       })
     });
@@ -1413,22 +1458,47 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return result;
     }
     const calendars = (data.calendars || {}) as Record<string, Row>;
-    const meeting: string[] = [], released: string[] = [], unreadable: string[] = [];
+    const detailStates = new Map<string, PixelOfficeCalendarState>();
+    const detailUnreadable: string[] = [];
+    if (canReadDetails) {
+      await Promise.all(Object.entries(PIXEL_OFFICE_CALENDARS).map(async ([name, email]) => {
+        try {
+          const params = new URLSearchParams({
+            timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
+            fields: 'items(status,summary,eventType,start,end,transparency,attendees(self,responseStatus))'
+          });
+          const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
+            headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
+          });
+          const details = await detailsResponse.json().catch(() => ({})) as Row;
+          if (!detailsResponse.ok) { detailUnreadable.push(name); return; }
+          detailStates.set(name, pixelOfficeCalendarEventsState(details.items));
+        } catch {
+          detailUnreadable.push(name);
+        }
+      }));
+    }
+    const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
     for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) {
       const entry = calendars[email];
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
       if (!entry || (Array.isArray(entry.errors) && entry.errors.length)) { unreadable.push(name); continue; }
       const busy = Array.isArray(entry.busy) ? entry.busy as Row[] : [];
-      const inMeeting = busy.some(span => {
+      const busyMeeting = busy.some(span => {
         const start = Date.parse(text(span.start)), end = Date.parse(text(span.end));
         if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
         return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS;
       });
-      const result = this.pixelOfficeApplyCalendar(name, inMeeting, nowMs);
+      // 有成功讀到事件詳細資料時，以詳細資料為準（可排除專注時間、工作地點，也能辨識休假）；否則
+      // 沿用 freeBusy 短忙碌區段＝會議的保守規則。
+      const desired = detailStates.has(name) ? detailStates.get(name) || '' : busyMeeting ? 'meeting' : '';
+      const result = this.pixelOfficeApplyCalendar(name, desired, nowMs);
       if (result === 'meeting') meeting.push(name);
+      else if (result === 'leave') leave.push(name);
       else if (result === 'released') released.push(name);
     }
-    const result = { ok: true, meeting, released, unreadable };
+    detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
+    const result = { ok: true, meeting, leave, released, unreadable, detailUnreadable };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }
@@ -1450,6 +1520,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       account: PIXEL_OFFICE_CALENDAR_ACCOUNT,
       connected: Boolean(stored),
       canReadCalendar: Boolean(stored) && gmailScopesAllowCalendar(stored?.scopes),
+      canReadCalendarDetails: Boolean(stored) && gmailScopesAllowCalendarDetails(stored?.scopes),
       calendars: PIXEL_OFFICE_CALENDARS,
       last: (last || null) as Row | null
     };
@@ -1479,12 +1550,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 只適用於電腦判斷得出來的狀態；出國／公出電腦看不出來，手動指定了就維持到關機為止。
     const manualExpired = source === 'manual' && PIXEL_OFFICE_AUTO_STATUSES.includes(current)
       && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
-    // 開會到一半打開筆電，不要被「剛開機」改成在座——下一分鐘行事曆同步又會改回會議，畫面會來回跳。
-    const inCalendarMeeting = current === 'meeting' && source === 'calendar';
-    if (!wasOnline && !inCalendarMeeting) {
+    // 開會／休假期間電腦有心跳，不要被「剛開機」改成在座——下一分鐘行事曆同步又會改回去，畫面會來回跳。
+    const inCalendarEvent = ['meeting', 'leave'].includes(current) && source === 'calendar';
+    if (!wasOnline && !inCalendarEvent) {
       next = desired;
       source = 'auto';
-    } else if (!inCalendarMeeting && (manualExpired || (PIXEL_OFFICE_AUTO_STATUSES.includes(current) && source !== 'manual'))) {
+    } else if (!inCalendarEvent && (manualExpired || (PIXEL_OFFICE_AUTO_STATUSES.includes(current) && source !== 'manual'))) {
       next = desired;
       if (manualExpired) source = 'auto';
     }
@@ -1980,7 +2051,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       scopes: text(tokenData.scope)
     });
     // canCreateDraft 讓前端在使用者按下「指定排程時間」之前就能提示授權不足，不必等排程完才發現沒草稿。
-    return { ok: true, action: 'gmailOauthConnect', gmailAddress, canCreateDraft: gmailScopesAllowDraft(tokenData.scope) };
+    return {
+      ok: true, action: 'gmailOauthConnect', gmailAddress,
+      canCreateDraft: gmailScopesAllowDraft(tokenData.scope),
+      canReadCalendar: gmailScopesAllowCalendar(tokenData.scope),
+      canReadCalendarDetails: gmailScopesAllowCalendarDetails(tokenData.scope)
+    };
   }
 
   private gmailStatus(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
@@ -1989,7 +2065,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return {
       ok: true, action: 'gmailStatus', connected: Boolean(stored), gmailAddress: text(stored?.gmail_address),
       canCreateDraft: Boolean(stored) && gmailScopesAllowDraft(stored?.scopes),
-      canReadCalendar: Boolean(stored) && gmailScopesAllowCalendar(stored?.scopes)
+      canReadCalendar: Boolean(stored) && gmailScopesAllowCalendar(stored?.scopes),
+      canReadCalendarDetails: Boolean(stored) && gmailScopesAllowCalendarDetails(stored?.scopes)
     };
   }
 

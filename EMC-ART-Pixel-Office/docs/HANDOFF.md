@@ -81,7 +81,7 @@
 
 **國定假日每年要更新一次**：`PIXEL_OFFICE_HOLIDAYS`（`worker/src/database-coordinator.ts`）與 `TAIWAN_HOLIDAYS`（`dist/app.js`）各有一份，兩邊都要改。行政院公布新年度行事曆之後，從 `https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/<西元年>.json` 取 `isHoliday` 為 true 且 `description` 不是空字串的日期即可。沒收錄到的年份不會出錯，只是那一年的國定假日要自己點「下班」，週末照樣自動判斷。
 
-「加班」（`overtime`，狀態按鈕圖示 `moon`）跟其他離席狀態不同：人還坐在位子上工作，所以人物、椅子、電腦照常繪製、也能用方向鍵走動。場景中不畫月亮，只把「加班中」標籤置中放在桌面中央（`drawOvertimeBadge`）；人物上另疊上三方向的黑眼圈與鬼火濾鏡（`drawOvertimeFilter`）。黑眼圈與鬼火分層繪製：黑眼圈貼在**黑色眼珠**正下方（`EYE_PUPIL_BOTTOM` 逐個角色記下眼珠下緣——Machi 的眼睛畫得高、Noise 戴帽子所以低，共用一個值就會有人對不準），左右用同一組尺寸所以一定對稱；兩團鬼火外擴並上移到頭像左右，不會被桌上螢幕遮住。鬼火的來源要從圖集的 y156 取，不能從黑眼圈還沒結束的 y145 取，否則頭頂兩側會多出兩條紫色橫條。濾鏡跟著方向、鏡像、走路浮動與心情旋轉。只要實際狀態是加班，或者台北時間 19:00～隔天 06:00 仍是在座，畫面就自動套用；這個視覺有效狀態不寫回後端。本機可加 `?overtime=1` 強制預覽。判斷是否離席請一律用 `isAway(p)`（只有「在座」與「加班」不算離席），不要再直接比 `p.status!=='present'`。狀態選單中的加班圖示由 `moonIconCanvas()` 用程式繪製；會議與用餐放在後來新增的 `assets/icons-status-v4.webp`（2 格正方形，`extraCells`，裁切與留白規則跟 `icons-v3` 一樣），因為 `icons-v3` 的 3×3 已經排滿。狀態共八個、每列 4 個剛好兩列。「用餐」「會議」跟廁所一樣算離席（`isAway`）：桌面淨空成灰階空桌，桌上顯示圖示。
+「加班」（`overtime`，狀態按鈕圖示 `moon`）跟其他離席狀態不同：人還坐在位子上工作，所以人物、椅子、電腦照常繪製、也能用方向鍵走動。場景中不畫月亮，只把「加班中」標籤置中放在桌面中央（`drawOvertimeBadge`）；人物上另疊上三方向的黑眼圈與鬼火濾鏡（`drawOvertimeFilter`）。黑眼圈與鬼火分層繪製：黑眼圈貼在**黑色眼珠**正下方（`EYE_PUPIL_BOTTOM` 逐個角色記下眼珠下緣——Machi 的眼睛畫得高、Noise 戴帽子所以低，共用一個值就會有人對不準），左右用同一組尺寸所以一定對稱；兩團鬼火外擴並上移到頭像左右，不會被桌上螢幕遮住。鬼火的來源要從圖集的 y156 取，不能從黑眼圈還沒結束的 y145 取，否則頭頂兩側會多出兩條紫色橫條。濾鏡跟著方向、鏡像、走路浮動與心情旋轉。只要實際狀態是加班，或者台北時間 19:00～隔天 06:00 仍是在座，畫面就自動套用；這個視覺有效狀態不寫回後端。本機可加 `?overtime=1` 強制預覽。判斷是否離席請一律用 `isAway(p)`（只有「在座」與「加班」不算離席），不要再直接比 `p.status!=='present'`。狀態選單中的加班圖示由 `moonIconCanvas()` 用程式繪製；會議與用餐放在後來新增的 `assets/icons-status-v4.webp`（2 格正方形，`extraCells`，裁切與留白規則跟 `icons-v3` 一樣），因為 `icons-v3` 的 3×3 已經排滿；休假用內建的 `calendar` 像素圖示。狀態共九個、每列 4 個。「用餐」「會議」「休假」跟廁所一樣算離席（`isAway`）：桌面淨空成灰階空桌，桌上顯示圖示。
 
 「會議」（`meeting`）可以自己點，也可以由 Google 行事曆自動帶上（見下一段）。手動點的會議：閒置五分鐘不會被改成廁所，帶著筆電去會議室（電腦關機）也不會被改成下班，回座開機才重新由電腦決定，散會要自己取消。
 
@@ -130,19 +130,20 @@
 
 桌上的狀態圖示另外有 `DESK_ICON_SCALE`：電源鍵（下班）與公事包（公出）的圖形幾乎填滿整個格子，不透明面積是其他圖示的 1.6 倍，同尺寸畫在桌上會大一圈，所以這兩個縮到 0.8／0.78。面板按鈕有外框當基準、看不出差異，維持原樣。
 
-## 行事曆自動顯示「會議」（2026-09-21）
+## 行事曆自動顯示「會議／休假」（2026-09-22）
 
-Worker 每分鐘的排程（`runPixelOfficeCalendarSync`，跟排程寄信同一個 cron）會查五位設計師的 Google 行事曆，正在忙就顯示「會議」，散會就交還給電腦自動判斷。
+Worker 每分鐘的排程（`runPixelOfficeCalendarSync`，跟排程寄信同一個 cron）會查五位設計師的 Google 行事曆：一般短事件顯示「會議」，Google 原生「不在辦公室」或標題明確寫請假的事件顯示「休假」，事件結束後交還給電腦自動判斷。
 
-- **只用 `machi.chen@emctaipei.com` 一個帳號的授權**（`PIXEL_OFFICE_CALENDAR_ACCOUNT`），其他四位不必連接任何東西——Google Workspace 網域內預設看得到彼此的忙碌時段。那個帳號要在系統裡重新連接一次 Gmail，授權畫面才會帶上 `calendar.freebusy`；`gmailStatus` 的 `canReadCalendar` 會告訴前端有沒有這個權限。
-- 查的是 **freeBusy**，拿不到標題、地點與與會者，只知道「這段時間忙」，所以不會把會議內容帶進系統。
-- **超過四小時的忙碌不算會議**（`PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS`）：freeBusy 分不出會議與整天的特休，不擋的話請假的人會整天掛著「會議中」。
+- **只用 `machi.chen@emctaipei.com` 一個帳號的授權**（`PIXEL_OFFICE_CALENDAR_ACCOUNT`）。授權要同時包含 `calendar.freebusy`（忙碌時段）與唯讀的 `calendar.events.readonly`（事件類型／標題）；`gmailStatus`／`pixelOfficeCalendarStatus` 分別以 `canReadCalendar`、`canReadCalendarDetails` 回報兩層權限。
+- 先查 **freeBusy**，再針對每人呼叫 Events:list，只要求 `status/summary/eventType/start/end/transparency/attendees(self,responseStatus)`。事件標題只在當次 Worker 記憶體內比對，**不寫進 Durable Object、log 或前端**。
+- `eventType:'outOfOffice'` 一律是休假；一般事件的標題包含「休假／請假／特休／年假／補休／病假／事假／婚假／產假／陪產／喪假／公假／生理假／家庭照顧假」或常見英文 PTO／leave／vacation／OOO 才判休假。其他 `default`／`fromGmail` 事件在四小時內判會議；`focusTime`、`workingLocation`、生日、已取消、透明或本人拒絕的事件不算會議。
+- 其他四位若只分享「忙碌／空閒」而沒有分享事件內容，該人會個別退回 freeBusy：四小時內的忙碌顯示會議，超過四小時不猜休假。要自動辨識休假，需把行事曆分享給 machi.chen 並允許查看活動詳細資料，或在 Google Calendar 使用原生「不在辦公室」事件且確保該類型可讀。
 - 只在平日 08:00～22:00 查（`PIXEL_OFFICE_CALENDAR_START_HOUR`／`END_HOUR`），假日直接跳過。
-- **手動指定的狀態優先**：行事曆只接管電腦自動判斷出來的在座／加班／用餐／廁所／下班，不會蓋掉使用者自己點的公出、出國或會議。它也只收回自己設的（`statusSource:'calendar'`）。
-- 任何一步失敗（沒授權、專案沒啟用 Calendar API、某個人的行事曆看不到）都只是這一輪不動任何人的狀態，回傳裡的 `unreadable` 會列出看不到的人。
-- 心跳那邊有一個對應的例外：`statusSource:'calendar'` 的會議不會被「剛開機」或閒置判斷蓋掉，否則開會中打開筆電會在「在座」與「會議」之間每分鐘來回跳。
+- **手動指定的狀態優先**：行事曆不蓋掉使用者自己點的公出、出國、會議或休假，也只收回自己設的（`statusSource:'calendar'`）。
+- 整批 freeBusy 失敗時這輪完全不動；單人的事件詳細資料失敗時只讓該人退回 freeBusy。`unreadable` 是忙碌時段也讀不到，`detailUnreadable` 是只讀不到事件內容。
+- `statusSource:'calendar'` 的會議與休假不會被電腦心跳的「剛開機」或閒置判斷蓋掉，避免畫面每分鐘來回跳。
 
-**排錯**：`pixelOfficeCalendarStatus`（帶爬蟲的服務金鑰）會回傳這個帳號連了沒、有沒有行事曆權限、五個人的信箱對應，以及最後一次同步的結果：
+**排錯**：`pixelOfficeCalendarStatus`（帶爬蟲的服務金鑰）會回傳這個帳號連了沒、有沒有忙碌／詳細事件權限、五個人的信箱對應，以及最後一次同步的結果：
 
 ```bash
 curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \

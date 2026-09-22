@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 10:35 Asia/Taipei — 設計部即時動態串接 Google Calendar，自動辨識會議與休假
+
+- 修改目的：使用者提供 `machi.chen@emctaipei.com` 的 Google Calendar，要求「設計部即時動態」依行事曆自動切換成會議、休假等狀態，並詢問目前是否能讀取。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`EMC-ART-Pixel-Office/dist/app.js`、`dist/index.html`、`docs/HANDOFF.md`、`backend/test/designer-panel-embed.test.mjs`、`backend/test/gmail-connect-entry.test.mjs`。
+- 影響功能：
+  1. 正式環境即時診斷確認 Machi 的 Gmail／Calendar token 已連線、`calendar.freebusy` scope 已取得，五位設計師信箱對應也已存在；但 Google Cloud 專案 `910684492076` 尚未啟用 Calendar API，排程每分鐘收到 403 `has not been used in project or it is disabled`，因此修改前實際上完全讀不到行事曆。
+  2. OAuth 新增唯讀 `calendar.events.readonly`；排程保留一次 freeBusy 查詢，再平行查五人當下一分鐘內重疊事件的最小欄位。Google 原生 `outOfOffice` 或標題含明確中英文請假關鍵字 → `leave`；一般 `default`／`fromGmail` 事件且長度不超過四小時 → `meeting`；專注時間、工作地點、生日、已取消、透明或本人拒絕的事件忽略。事件標題只在當次記憶體比對，不寫入 storage、log 或前端。
+  3. 每位同事各自降級：若 Machi 只能看對方 free/busy、不能看事件詳細內容，該人仍沿用短忙碌＝會議的規則；詳細事件看不到不會拖垮其他人。手動狀態優先，行事曆只收回自己設的會議／休假；行事曆狀態也不被電腦心跳的開機／閒置規則覆蓋。
+  4. Pixel Office 新增 `leave`／「休假中」及獨立的行事曆像素圖示，狀態按鈕、WebMCP enum、Worker 驗證與前端快取版本一併更新。診斷端點／Gmail status 多回 `canReadCalendarDetails`，同步結果多回 `leave`、`detailUnreadable`。
+- 風險區塊：①要由 OAuth 專案管理員啟用 Calendar API；目前瀏覽器登入的 `pcc1005@gmail.com` 沒有專案權限，存取要求已送出，切到 `machi.chen` 又要求重新輸入 Google 密碼，代理人沒有代填。②Machi 必須在正式站「連接 Gmail／更新授權」再授權一次，既有 token 沒有 `calendar.events.readonly`，否則只會維持 freeBusy 會議判斷。③其他四人若要辨識休假，需把活動詳細資料分享給 Machi；只分享忙碌時段時無法知道事件性質，系統不會把全天 busy 武斷當休假。④新增的 Calendar scope 可能需要 Workspace 管理員允許／OAuth consent 設定。⑤每分鐘最多多五次唯讀 Events:list；只查一分鐘窗口、最多 20 筆且 partial fields，配額與資料量可控。
+- 已檢查／驗證方式：Worker vitest 92/92、`pnpm check`、`pnpm deploy:dry`；完整 Node 測試 189/189、`git diff --check`。新增測試涵蓋 outOfOffice、中文「特休」、一般會議、focusTime 排除、單人詳細事件 403 降級 freeBusy、休假中電腦心跳不覆蓋、事件結束交還自動狀態與 OAuth scopes。Codex 本機瀏覽器實機點選 Machi→休假，確認九個按鈕、行事曆圖示、選取樣式與「休假中」文字正常。
+- 部署狀態：前端 git push 後由 GitHub Pages 自動生效；Worker 部署因本機 Cloudflare OAuth 過期而暫未完成，已開啟官方重新登入頁並停在 `machi.chen@emctaipei.com` 的 Google 密碼驗證，不代填帳密。即使 Worker 部署完成，仍要完成「啟用 Calendar API＋正式站重新授權」才會真正讀到事件。
+- commit：見 git log。
+
 ### 2026-09-22 08:40 Asia/Taipei — 設計部動態欄椅背降低至人物頭部中線
 
 - 修改目的：依使用者要求降低前台「設計部即時動態」六個座位的椅子位置，讓椅子上緣切齊人物頭部一半，不再頂到頭頂。

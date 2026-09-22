@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=31"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=32"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -99,6 +99,15 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
   assert.ok(version && Number(version[1]) >= 38, `app.js 版本號要 ≥ 38，目前是 ${version?.[1]}`);
+});
+
+test('像素辦公室提供休假狀態與獨立圖示', async () => {
+  const [html, js] = await Promise.all([officeHtml(), officeJs()]);
+  assert.match(js, /\{id:'leave',symbol:'calendar',label:'休假',text:'休假中'\}/);
+  assert.match(js, /calendar:\['010000010'/, '休假要有自己的行事曆像素圖示');
+  assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
+    '頁面工具也要接受休假狀態');
+  assert.match(html, /app\.js\?v=40/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {

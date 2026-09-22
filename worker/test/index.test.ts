@@ -102,6 +102,38 @@ function mockFreeBusy(busyByEmail: Record<string, [number, number][] | { errors:
   });
 }
 
+/** 同時模擬 freeBusy 與 Events:list。事件詳細資料讀不到時，正式程式應只針對該人退回 freeBusy。 */
+function mockCalendarApi(
+  busyByEmail: Record<string, [number, number][] | { errors: unknown[] }>,
+  eventsByEmail: Record<string, Record<string, unknown>[] | { status: number; message?: string }>
+) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes('oauth2.googleapis.com/token')) {
+      return new Response(JSON.stringify({ access_token: 'fresh', expires_in: 3600 }), { status: 200 });
+    }
+    if (url.includes('calendar/v3/freeBusy')) {
+      const calendars: Record<string, unknown> = {};
+      for (const [email, value] of Object.entries(busyByEmail)) {
+        calendars[email] = Array.isArray(value)
+          ? { busy: value.map(([start, end]) => ({ start: new Date(start).toISOString(), end: new Date(end).toISOString() })) }
+          : value;
+      }
+      return new Response(JSON.stringify({ calendars }), { status: 200 });
+    }
+    const match = /\/calendar\/v3\/calendars\/([^/]+)\/events/.exec(url);
+    if (match) {
+      const email = decodeURIComponent(match[1]);
+      const value = eventsByEmail[email] || [];
+      if (!Array.isArray(value)) {
+        return new Response(JSON.stringify({ error: { message: value.message || 'calendar details unavailable' } }), { status: value.status });
+      }
+      return new Response(JSON.stringify({ items: value }), { status: 200 });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  });
+}
+
 async function runCalendarSync(nowMs: number): Promise<Record<string, unknown>> {
   const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
   return await runInDurableObject(stub, async instance => await instance.runPixelOfficeCalendarSync(nowMs)) as Record<string, unknown>;
@@ -4226,6 +4258,74 @@ describe('Pixel Office shared state', () => {
       expect(await runCalendarSync(Date.parse('2026-09-21T16:00:00Z'))).toMatchObject({ skipped: 'off-hours' });
       expect(neverCalled).not.toHaveBeenCalled();
       neverCalled.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses event details to distinguish 休假 from 會議 and falls back per calendar when details are private', async () => {
+    const key = 'test-nas-watcher-key';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const now = Date.parse('2026-09-21T06:00:00Z');
+      vi.setSystemTime(new Date(now));
+      await seedCalendarToken('https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.readonly');
+      for (const name of ['Machi', 'Anna', 'Amber', 'Leona', 'Noise']) {
+        await api({ action: 'pixelOfficeHeartbeat', name, serviceKey: key, idleSeconds: 3 });
+      }
+      const shortBusy: [number, number][] = [[now - 20 * 60_000, now + 40 * 60_000]];
+      const allDayBusy: [number, number][] = [[Date.parse('2026-09-20T16:00:00Z'), Date.parse('2026-09-21T16:00:00Z')]];
+      const timed = (eventType: string, summary: string) => ({
+        status: 'confirmed', eventType, summary,
+        start: { dateTime: new Date(now - 20 * 60_000).toISOString() },
+        end: { dateTime: new Date(now + 40 * 60_000).toISOString() }
+      });
+      let fetchSpy = mockCalendarApi({
+        'machi.chen@emctaipei.com': shortBusy,
+        'anna.hsu@emctaipei.com': allDayBusy,
+        'amber.tian@emctaipei.com': allDayBusy,
+        'leona.chen@emctaipei.com': shortBusy,
+        'noise.zhong@emctaipei.com': shortBusy
+      }, {
+        'machi.chen@emctaipei.com': [timed('default', '設計週會')],
+        'anna.hsu@emctaipei.com': [{
+          status: 'confirmed', eventType: 'outOfOffice', summary: 'Out of office',
+          start: { date: '2026-09-21' }, end: { date: '2026-09-22' }
+        }],
+        'amber.tian@emctaipei.com': [{
+          status: 'confirmed', eventType: 'default', summary: '特休',
+          start: { date: '2026-09-21' }, end: { date: '2026-09-22' }
+        }],
+        // 事件內容沒分享，但 freeBusy 看得到：仍能保守判成會議。
+        'leona.chen@emctaipei.com': { status: 403 },
+        // 專注時間即使顯示 busy，也不是會議。
+        'noise.zhong@emctaipei.com': [timed('focusTime', '專心工作')]
+      });
+      expect(await runCalendarSync(now)).toMatchObject({
+        ok: true, meeting: ['Machi', 'Leona'], leave: ['Anna', 'Amber'], detailUnreadable: ['Leona']
+      });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'meeting', statusSource: 'calendar' });
+      expect(await statusOfPerson('Anna')).toMatchObject({ status: 'leave', statusSource: 'calendar' });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'leave', statusSource: 'calendar' });
+      expect(await statusOfPerson('Leona')).toMatchObject({ status: 'meeting', statusSource: 'calendar' });
+      expect(await statusOfPerson('Noise')).toMatchObject({ status: 'present' });
+      fetchSpy.mockRestore();
+
+      // 電腦仍有心跳也不覆蓋行事曆休假；所有事件結束後才一起交還自動狀態。
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Anna', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'leave', changed: false });
+      fetchSpy = mockCalendarApi({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      }, {
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': { status: 403 }, 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(now + 60_000)).toMatchObject({
+        released: expect.arrayContaining(['Machi', 'Anna', 'Amber', 'Leona'])
+      });
+      expect(await statusOfPerson('Anna')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      fetchSpy.mockRestore();
     } finally {
       vi.useRealTimers();
     }

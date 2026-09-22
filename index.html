@@ -10979,7 +10979,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=31" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=32" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
@@ -15132,7 +15132,7 @@ function startGoogleRedirectLogin(){startGooglePopupLogin()}
 const gmailOauthChannelName='machi-gmail-oauth-v1';
 let gmailOauthChannel=null,gmailConnectPopup=null;
 let gmailConnectionState={connected:false,gmailAddress:'',canCreateDraft:false},gmailConnectionChecked=false;
-function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/calendar.freebusy',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
+function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.readonly',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
 function ensureGmailOauthChannel(){if(gmailOauthChannel||!('BroadcastChannel' in window))return gmailOauthChannel;gmailOauthChannel=new BroadcastChannel(gmailOauthChannelName);gmailOauthChannel.onmessage=event=>applyGmailOauthPopupResult(event.data).catch(error=>setSync(`Gmail 連接失敗：${error.message}`,true));return gmailOauthChannel}
 async function applyGmailOauthPopupResult(result={}){
   if(result.type!=='machi-gmail-oauth-result')return;
