@@ -119,7 +119,7 @@
 
 進站不再預設選取 Leona：`selected` 起始是 `null`，右側工具面板收起來、改顯示一行提示。點畫面上的人物才會選取，點場景空白處取消。所有讀 `people[selected]` 的函式都要先擋 `selected===null`（`updateMood`／`updateStatus`／`updatePhoto`／`updateLevel`／`updateStateText`／`moving`／`setMood`／`setStatus`）。
 
-選取之後在人物**右側**展開資料卡（`#personCard`，HTML 浮層疊在 canvas 上，不是畫進 canvas）。位置由 `positionPersonCard()` 每一幀更新，所以人物走動時卡片會跟著；右邊放不下就自動翻到左邊，上下夾在場景內。手機（≤700px）改成排在場景下方（`position:relative` 加 `left/top:auto` 蓋掉每幀寫進去的座標），什麼都不遮、內容也不必擠在小框裡捲。
+選取之後在人物**右側**展開資料卡（`#personCard`，HTML 浮層疊在 canvas 上，不是畫進 canvas）。位置由 `positionPersonCard()` 每一幀更新，所以人物走動時卡片會跟著；右邊放不下就自動翻到左邊，上下夾在場景內。邊界基準是**卡片的容器 `.canvas-wrap`**，不是 canvas 自己——嵌入模式下 `fitEmbedView()` 會把 canvas 放大並平移，兩者的矩形不一樣，拿 canvas 當邊界的話右欄一關（場景變寬）右邊的人物就會被切到框外（2026-09-22 修）。手機（≤700px）改成排在場景下方（`position:relative` 加 `left/top:auto` 蓋掉每幀寫進去的座標），什麼都不遮、內容也不必擠在小框裡捲。
 
 卡片內容與資料來源：
 

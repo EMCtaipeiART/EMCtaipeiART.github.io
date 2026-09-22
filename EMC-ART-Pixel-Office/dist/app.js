@@ -221,16 +221,23 @@ function escapeHtml(value){return String(value).replace(/[&<>"]/g,ch=>({'&':'&am
 function positionPersonCard(){
   const card=$('personCard');
   if(card.hidden||selected===null)return;
-  const wrap=game.getBoundingClientRect(),p=viewPeople[selected]||people[selected];
-  const scaleX=wrap.width/W,scaleY=wrap.height/H;
-  const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12;
-  let left=p.x*scaleX+52*scaleX+gap;
-  if(left+cardW>wrap.width-8)left=p.x*scaleX-52*scaleX-gap-cardW;
-  left=Math.max(8,Math.min(wrap.width-cardW-8,left));
-  let top=(p.y-150)*scaleY-6;
-  top=Math.max(8,Math.min(wrap.height-cardH-8,top));
+  // 卡片是相對 .canvas-wrap 定位，但場景在嵌入模式下被放大並平移過，canvas 自己的矩形跟
+  // .canvas-wrap 不一樣。兩者混用的話，右邊的人物算出來的位置會超出框外（卡片被切掉看不到）。
+  // 位置用「canvas 相對 .canvas-wrap 的偏移」換算，邊界一律夾在 .canvas-wrap 之內。
+  const holder=game.parentElement.getBoundingClientRect(),view=game.getBoundingClientRect();
+  if(!holder.width||!view.width)return;
+  const p=viewPeople[selected]||people[selected];
+  const scaleX=view.width/W,scaleY=view.height/H;
+  const personX=view.left-holder.left+p.x*scaleX,personY=view.top-holder.top+p.y*scaleY;
+  const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12,half=52*scaleX;
+  let left=personX+half+gap;
+  if(left+cardW>holder.width-8)left=personX-half-gap-cardW;
+  left=Math.max(8,Math.min(holder.width-cardW-8,left));
+  let top=personY-150*scaleY-6;
+  top=Math.max(8,Math.min(holder.height-cardH-8,top));
   card.style.left=Math.round(left)+'px';card.style.top=Math.round(top)+'px';
 }
+
 // 點技能膠囊：把設計種類、階段與設計負責人帶進設計需求表單。嵌進系統裡時用 postMessage 請
 // 外層處理（父子同源，只收自己這個站的訊息）；單獨開遊戲時沒有表單可填，就只提示一下。
 $('cardSkills').addEventListener('click',event=>{

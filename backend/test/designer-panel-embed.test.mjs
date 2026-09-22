@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=38"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=39"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -107,7 +107,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=45/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=46/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -350,4 +350,22 @@ test('深色模式下 iframe 的文件底色跟著主題', async () => {
   assert.match(js, /postMessage\(\{type:'pixelOfficeThemeRequest'\},location\.origin\)/);
   // 兩邊都只收同源訊息。
   assert.match(js, /if\(event\.origin!==location\.origin\)return;/);
+});
+
+test('個人資料卡一律夾在場景框內，右邊的人物不會被切掉', async () => {
+  const js = await officeJs();
+  const fn = js.slice(js.indexOf('function positionPersonCard()'), js.indexOf('\nfunction ', js.indexOf('function positionPersonCard()') + 1));
+  // 卡片是相對 .canvas-wrap 定位的，但嵌入模式下 canvas 被 fitEmbedView() 放大並平移過，
+  // 兩者的矩形不一樣。之前拿 canvas 的矩形當邊界，右欄一關（場景變寬）右邊的人物就算出框外的
+  // 位置，卡片被切掉看不到（2026-09-22 使用者回報）。
+  assert.match(fn, /const holder=game\.parentElement\.getBoundingClientRect\(\),view=game\.getBoundingClientRect\(\);/,
+    '位置基準要用卡片真正的容器');
+  assert.match(fn, /personX=view\.left-holder\.left\+p\.x\*scaleX,personY=view\.top-holder\.top\+p\.y\*scaleY/,
+    '人物位置要換算成相對容器的座標');
+  assert.match(fn, /if\(left\+cardW>holder\.width-8\)left=personX-half-gap-cardW;/,
+    '右邊放不下要翻到人物左側');
+  assert.match(fn, /left=Math\.max\(8,Math\.min\(holder\.width-cardW-8,left\)\);/, '左右夾在容器內');
+  assert.match(fn, /top=Math\.max\(8,Math\.min\(holder\.height-cardH-8,top\)\);/, '上下夾在容器內');
+  // 高度用當下量到的，卡片內容長短不一，夾邊界才會準。
+  assert.match(fn, /const cardW=card\.offsetWidth\|\|232,cardH=card\.offsetHeight\|\|240/);
 });
