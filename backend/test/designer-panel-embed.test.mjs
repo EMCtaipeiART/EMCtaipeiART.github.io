@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=29"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=30"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -98,7 +98,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景仍不接受鍵盤方向鍵');
   // 版本號要跟著改，否則瀏覽器會吃到沒有嵌入模式的舊快取。
   const version = html.match(/app\.js\?v=(\d+)/);
-  assert.ok(version && Number(version[1]) >= 35, `app.js 版本號要 ≥ 35，目前是 ${version?.[1]}`);
+  assert.ok(version && Number(version[1]) >= 36, `app.js 版本號要 ≥ 36，目前是 ${version?.[1]}`);
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -206,7 +206,7 @@ test('離席的灰階空桌不靠 ctx.filter（Safari 的 canvas 不支援）', 
     '不能再用 canvas 的 filter，Safari 會直接忽略、桌子維持原色');
   // 改成圖集載入後先做一張灰階版本快取，各家瀏覽器結果一致。
   assert.match(js, /function ensureFurnitureGray\(\)\{/);
-  assert.match(js, /const furnitureFor=s=>stationAway\(s\)\?\(ensureFurnitureGray\(\)\|\|furniture\):furniture;/);
+  assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?\(ensureFurnitureGray\(\)\|\|furniture\):furniture;/);
   assert.match(js, /const type=stationAway\(s\)\?4:s\.type,art=furnitureFor\(s\)/);
 });
 
@@ -237,4 +237,37 @@ test('面板標題與說明是「設計部即時動態」的版本', async () =>
   assert.match(html, /<span>• 這裡顯示設計部的即時狀態。<\/span>/);
   // 後台「設定」表的欄位名不能跟著改，不然收合狀態會對不上。
   assert.match(html, /'收合設計師專長與案件分配'/);
+});
+
+test('換上新的桌子素材，三段切法跟著素材的比例走', async () => {
+  const [js, html] = await Promise.all([officeJs(), officeHtml()]);
+  assert.match(js, /furniture\.src='assets\/furniture-v2\.webp/);
+  assert.match(html, /preload[^>]*assets\/furniture-v2\.webp/);
+  // 每筆多一個「螢幕露出桌面的高度」，一般桌 37、副螢幕 34、Mac mini 桌 25，空桌與椅子是 0。
+  assert.match(js, /const furnitureRects=\[\[0,0,526,328,37\],\[0,328,524,325,34\],\[0,653,526,316,25\],\[526,0,237,372,0\],\[0,969,526,291,0\]\];/);
+  // 桌面與桌腳在素材裡是固定高度，所以繪製尺寸也固定，只有螢幕跟著 upper 走。
+  assert.match(js, /const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_DRAW_FACE=110,DESK_DRAW_WIDTH=250;/);
+  assert.match(js, /if\(upper>0\)ctx\.drawImage\(art,sx,sy,sw,upper,left,s\.y-40-upperDraw,DESK_DRAW_WIDTH,upperDraw\);/,
+    'upper 為 0 時不能畫高度 0 的來源矩形');
+  // 舊的寫死偏移（type===2?28:68 之類）要整個消失。
+  assert.doesNotMatch(js, /type===2\?28:68/);
+  assert.doesNotMatch(js, /furniture-packed\.webp/);
+});
+
+test('左下角空位依時段轉灰階，電腦留著', async () => {
+  const js = await officeJs();
+  assert.match(js, /const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;/);
+  assert.match(js, /const stationVacant=s=>!s\.name;/);
+  // 09:00–18:00 正常，其餘時間連椅子一起暗下來。
+  assert.match(js, /return hour<VACANT_DESK_ON_HOUR\|\|hour>=VACANT_DESK_OFF_HOUR;/);
+  // 桌子的種類仍照 s.type 走（type 2 是有電腦的那張），只有配色換成灰階版本，電腦不會消失。
+  assert.match(js, /const type=stationAway\(s\)\?4:s\.type,art=furnitureFor\(s\)/);
+  assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?/);
+  // 椅子也要跟著灰，否則會出現「灰桌配黑椅」。
+  assert.match(js, /function drawChair\(s\)\{if\(stationAway\(s\)\)return;furnitureObject\(3,s\.x-51,s\.y-135,102,135,furnitureFor\(s\)\);\}/);
+});
+
+test('人物卡的「未開始」是紅燈', async () => {
+  const js = await officeJs();
+  assert.match(js, /\{key:'未開始',color:'#ff5a5a'\}/);
 });

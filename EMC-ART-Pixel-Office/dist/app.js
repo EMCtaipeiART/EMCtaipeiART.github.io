@@ -68,7 +68,7 @@ syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-packed.webp?v=2';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
+sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v2.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
@@ -140,7 +140,7 @@ async function syncLevels(){
 // 另外跟 Worker 要一份很小的清單，這樣就不必在遊戲裡下載 1.5 MB 的 db.json。
 let caseRows=null,designerInfo=null,newProjectPriority=null;
 // 手上的案件只看這三種狀態（使用者指定）。顏色跟主系統的案件標籤一致。
-const CARD_CASE_STATES=[{key:'未開始',color:'#9aa7b8'},{key:'執行中',color:'#5ea9ff'},{key:'修改中',color:'#f0b429'}];
+const CARD_CASE_STATES=[{key:'未開始',color:'#ff5a5a'},{key:'執行中',color:'#5ea9ff'},{key:'修改中',color:'#f0b429'}];
 const CARD_CASE_PREVIEW=3;
 async function syncDesigners(){
   try{
@@ -362,15 +362,37 @@ function ensureFurnitureGray(){
   }catch{furnitureGray=null;}
   return furnitureGray;
 }
-const furnitureFor=s=>stationAway(s)?(ensureFurnitureGray()||furniture):furniture;
-function withStationStyle(s,draw){draw();}
+// 左下角那個位置還沒有人坐，但機器一直擺在那裡。上班時間（09:00–18:00）維持原本的顏色與椅子，
+// 18:00 之後到隔天 08:59 連椅子一起轉灰階——電腦留著，只是整組暗下來，看起來就是「今天沒人用了」。
+const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;
+const stationVacant=s=>!s.name;
+function stationDimmed(s){
+  if(stationAway(s))return true;
+  if(!stationVacant(s))return false;
+  const hour=currentTaipeiClock().hour;
+  return hour<VACANT_DESK_ON_HOUR||hour>=VACANT_DESK_OFF_HOUR;
+}
+const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 function drawOffice(){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
-// furniture-packed.webp：只保留四種家具（兩種桌、Mac Studio 桌、椅子）重新排列。
-// 第 5 個（index 4）是空桌子：由 iMac 桌去掉電腦、鍵盤、滑鼠與陰影做成，離席（下班／廁所／出國／公出）時使用。
-const furnitureRects=[[0,0,532,335],[0,335,553,334],[0,669,553,318],[553,0,284,445],[0,987,532,335]];
-function furnitureObject(type,x,y,w,h,art=furniture){ctx.imageSmoothingEnabled=false;ctx.drawImage(art,...furnitureRects[type],x,y,w,h);}
-function drawChair(s){if(stationAway(s))return;withStationStyle(s,()=>furnitureObject(3,s.x-51,s.y-135,102,135));}
-function drawDesk(s){withStationStyle(s,()=>{const type=stationAway(s)?4:s.type,art=furnitureFor(s),[sx,sy,sw,sh]=furnitureRects[type],top=sy+(type===2?28:68),front=sy+(type===2?250:266),upperHeight=type===2?14:37;ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,top-sy,s.x-125,s.y-40-upperHeight,250,upperHeight);ctx.drawImage(art,sx,top,sw,front-top,s.x-125,s.y-40,250,110);ctx.drawImage(art,sx,front,sw,sy+sh-front,s.x-125,s.y+70,250,36);if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}});}
+// furniture-v2.webp（2026-09-22 換上使用者重新排版的桌子）：iMac 桌、iMac＋副螢幕、Mac mini 桌、椅子、空桌。
+// 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體在素材裡一律是「桌面 221 + 桌腳 70」，
+// 差別只在螢幕露出多少，所以繪製時桌面固定 110、桌腳固定 35，螢幕再按各自的 upper 等比縮。
+const furnitureRects=[[0,0,526,328,37],[0,328,524,325,34],[0,653,526,316,25],[526,0,237,372,0],[0,969,526,291,0]];
+const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_DRAW_FACE=110,DESK_DRAW_WIDTH=250;
+const DESK_DRAW_SCALE=DESK_DRAW_FACE/DESK_SRC_FACE;
+function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitureRects[type];ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,sh,x,y,w,h);}
+function drawChair(s){if(stationAway(s))return;furnitureObject(3,s.x-51,s.y-135,102,135,furnitureFor(s));}
+function drawDesk(s){
+  const type=stationAway(s)?4:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
+  const upperDraw=Math.round(upper*DESK_DRAW_SCALE),footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
+  const faceTop=sy+upper,footTop=faceTop+DESK_SRC_FACE,left=s.x-DESK_DRAW_WIDTH/2;
+  ctx.imageSmoothingEnabled=false;
+  // 螢幕、桌面、桌腳分三段畫：桌面與桌腳的位置固定，螢幕才能換一種桌子就換一個高度。
+  if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,s.y-40-upperDraw,DESK_DRAW_WIDTH,upperDraw);
+  ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,s.y-40,DESK_DRAW_WIDTH,DESK_DRAW_FACE);
+  ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,s.y+70,DESK_DRAW_WIDTH,footDraw);
+  if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}
+}
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPhotoCard(i){const p=viewPeople[i];if(!p.photo)return;let image=photoImages.get(i);if(!image){image=new Image();image.src=p.photo;photoImages.set(i,image);}const side=p.x>W-155?-1:1,x=Math.round(side>0?p.x+64:p.x-140),y=Math.round(p.y-151),w=76,h=70;softPanel(ctx,x,y,w,h,{radius:10,fill:'#fff',stroke:'#c9d3e0'});if(image.complete&&image.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(x+5,y+5,w-10,h-24,7);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const boxW=w-10,boxH=h-24,scale=Math.max(boxW/image.naturalWidth,boxH/image.naturalHeight),dw=image.naturalWidth*scale,dh=image.naturalHeight*scale;ctx.drawImage(image,x+5+(boxW-dw)/2,y+5+(boxH-dh)/2,dw,dh);ctx.restore();}ctx.save();ctx.fillStyle='#5b6d87';ctx.font='700 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('點開看看',x+w/2,y+h-9.5);ctx.restore();hits.push({type:'photo',i,x,y,w,h});}
 function drawOverlay(i){const p=viewPeople[i];if(isAway(p))return;bubble(p,0);drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
