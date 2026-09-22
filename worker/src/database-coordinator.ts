@@ -1536,8 +1536,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!authorized) throw new Error('缺少或錯誤的服務金鑰');
     const last = await this.ctx.storage.get('pixelOfficeCalendarSync');
     const stored = this.getGmailTokens(PIXEL_OFFICE_CALENDAR_ACCOUNT);
+    // 誰的電腦還在線：很多「狀態不對」的問題其實是那台沒在送心跳，沒有這個就只能用猜的。
+    const seen = this.ctx.storage.sql.exec<{ name: string; last_seen: number }>(
+      'SELECT name, last_seen FROM pixel_office_people'
+    ).toArray();
+    const heartbeats: Row = {};
+    for (const row of seen) {
+      const at = Number(row.last_seen) || 0;
+      heartbeats[row.name] = at ? { at: new Date(at).toISOString(), online: Date.now() - at <= PIXEL_OFFICE_OFFLINE_MS } : null;
+    }
     return {
-      ok: true, action: 'pixelOfficeCalendarStatus',
+      ok: true, action: 'pixelOfficeCalendarStatus', heartbeats,
       account: PIXEL_OFFICE_CALENDAR_ACCOUNT,
       connected: Boolean(stored),
       canReadCalendar: Boolean(stored) && gmailScopesAllowCalendar(stored?.scopes),
@@ -1633,6 +1642,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if ('status' in patch) {
       const status = text(patch.status);
+      // 'auto' 不是一種狀態，而是「把這個人交還給電腦自動判斷」：清掉手動標記，立刻套用這個時間點
+      // 該有的狀態。沒有這個出口的話，手動點過就只能等跨時段或關機重開才會回到自動。
+      if (status === 'auto') {
+        state.status = pixelOfficeWorkStatus(Date.now());
+        state.statusSource = 'auto';
+        delete state.statusBaseline;
+        state.statusAt = Date.now();
+      } else {
       if (!PIXEL_OFFICE_STATUSES.includes(status)) throw new Error('狀態不正確');
       state.status = status;
       // 使用者在遊戲裡手動指定：在同一個時段內不會被自動狀態蓋掉（見 pixelOfficeHeartbeat）。
@@ -1641,6 +1658,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.statusSource = 'manual';
       state.statusBaseline = pixelOfficeWorkStatus(Date.now());
       state.statusAt = Date.now();
+      }
     }
     if ('x' in patch || 'y' in patch) {
       const x = Number(patch.x), y = Number(patch.y);

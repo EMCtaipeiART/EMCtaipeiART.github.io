@@ -304,6 +304,19 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 部署狀態：Worker 已部署（版本 `93b001a1`）；前台 git push 後 GitHub Pages 自動生效。
 - commit：見 git log（`fix: never both schedule and send one reply; dedupe repeated modification records`）
 
+### 2026-09-22 15:00 Asia/Taipei — Leona 一直顯示下班（測試誤鎖）；補上交還自動的出口與心跳診斷
+
+- 修改目的：使用者問「Leona 為什麼一直顯示下班」。查出是**我在 14:27 測試 `leave` 功能時，把她設成 leave 再改回 offwork**——`pixelOfficeUpdate` 會把狀態標成 `manual`，而手動狀態不會被心跳覆蓋，所以她的電腦一直在線（14:55 還有心跳）畫面卻卡在下班。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`。
+- 影響功能：
+  1. **`pixelOfficeUpdate` 支援 `status:'auto'`**：不是一種狀態，而是「交還給電腦自動判斷」的出口——清掉 `statusSource`／`statusBaseline`，立刻套用 `pixelOfficeWorkStatus()` 算出的狀態。原本手動點過之後只能等跨時段或關機重開才會回到自動，使用者自己沒有解除的方法。Leona 就是用這個救回來的（`present`／`auto`）。
+  2. **`pixelOfficeCalendarStatus` 新增 `heartbeats`**：每個人最後一次心跳的時間與是否在線。這次要是早點有這個，一眼就能看出「電腦在線卻顯示下班」＝被手動鎖住，不必從狀態設定時間去回推。
+- 風險區塊：①`status:'auto'` 跟其他狀態一樣不需要認證（`pixelOfficeUpdate` 本來就是公開的），任何人都能把別人交還給自動——與既有的權限模型一致，沒有放寬。②`heartbeats` 會顯示每台電腦的在線狀態，屬於內部資訊。
+- 已檢查／驗證方式：`worker` vitest 92/92（新增：手動設 offwork 後送 `auto`，狀態回到 `present`／`auto` 且不再帶 `statusBaseline`）。線上實測：Leona 從 `offwork`／`manual` 變成 `present`／`auto`，等一分鐘心跳跑過一輪仍維持。`heartbeats` 查出 Anna 與 Noise 從來沒有心跳（沒裝爬蟲），他們的狀態停在 2026-09-21 17:15 手動設定的值不會自動更新。
+- 教訓：**測試不該拿真人的線上狀態當對象**。當時只想著「改回原本的值」，沒意識到改回去這個動作本身就會把人從自動鎖成手動。
+- 部署狀態：Worker 已部署（版本 765f2ae8）。
+- commit：見 git log
+
 ### 2026-09-22 14:45 Asia/Taipei — 行事曆有會議卻沒更新狀態；休假在線上被擋；午休沒生效
 
 - 修改目的：使用者回報①12:00–14:00 閒置沒有變成「用餐」②前台無法顯示「休假」圖示③行事曆上有會議但狀態沒更新。

@@ -4164,6 +4164,20 @@ describe('Pixel Office shared state', () => {
       at('2026-09-22T05:12:00Z');
       expect(await statusOf('Noise')).toBe('present');
 
+      // 'auto' 不是狀態而是出口：把手動標記清掉、交還給電腦判斷。沒有它的話手動點過就只能等
+      // 跨時段或關機重開（2026-09-22 誤把 Leona 設成手動的下班，就是靠這個救回來的）。
+      at('2026-09-22T03:00:00Z');
+      await heartbeat('Noise');
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'offwork' } });
+      expect(await statusOf('Noise')).toBe('offwork');
+      const held = await api({ action: 'pixelOfficeState' });
+      expect((held.people as Record<string, unknown>[]).find(p => p.name === 'Noise')).toMatchObject({ statusSource: 'manual' });
+      await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'auto' } });
+      const freed = (await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[];
+      // 台北 11:00 的上班時間，交還之後應該回到在座，而且不再帶手動標記。
+      expect(freed.find(p => p.name === 'Noise')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      expect(freed.find(p => p.name === 'Noise')).not.toHaveProperty('statusBaseline');
+
       // 從來沒有心跳的人（沒安裝爬蟲）完全不會被自動改狀態。
       await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'present' } });
       at('2026-09-23T05:00:00Z');
