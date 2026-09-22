@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 11:10 Asia/Taipei — 替換像素辦公室的會議與休假圖示
+
+- 修改目的：依使用者提供的透明像素素材，把原本的會議圖示與程式繪製休假圖示替換成簡報會議、椰子樹休假圖示，並讓兩者大小與其他狀態圖示一致。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/assets/icons-status-v4.webp`、`dist/app.js`、`dist/index.html`、`docs/HANDOFF.md`、`index.html`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：`icons-status-v4.webp` 從 2 格擴為 3 格（會議／用餐／休假，每格 192×192）；會議與休假都從使用者提供的原圖裁切，去除低透明度光暈，等比例縮放到 182×182 內容框後置中。`extraCells.calendar=2` 讓休假改讀新素材；圖集切格由二等分改為三等分。同步更新素材、JS 與 iframe 快取版本。
+- 風險區塊：`extraSheet.naturalWidth/3` 與三格圖集必須同步；日後增減圖示時要一起調整格數與 `extraCells`。
+- 已檢查／驗證方式：Pixel Office `npm run check`、圖示／嵌入測試 20/20、完整 Node 測試 189/189、`git diff --check`；本機瀏覽器實機確認狀態按鈕及桌面狀態牌中的會議／休假圖示大小一致、透明背景乾淨且未裁切。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log。
+
 ### 2026-09-22 10:45 Asia/Taipei — 修正共享透明休假事件的歸屬判斷
 
 - 修改目的：用實際 Google Calendar 資料驗證時發現「Leona休假」被設為透明（空閒）且共享到五位設計師的行事曆；舊邏輯會直接忽略透明事件，而若只調整判斷順序又會讓五個人同時被誤標休假。

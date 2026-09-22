@@ -70,7 +70,7 @@ syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=1';overtimeSheet.src='assets/overtime-filter.webp?v=1';
+sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=2';overtimeSheet.src='assets/overtime-filter.webp?v=1';
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
@@ -246,12 +246,12 @@ const pixelSymbols={
 const symbolPalettes={sun:['#e8a528','#ffe070'],burst:['#d94b3d','#ff9b45'],drop:['#3577be','#7bd2ff'],heart:['#c83366','#ff759d'],person:['#4a718e','#8fd0a8'],power:['#697786','#e8f0f5'],toilet:['#647a92','#e8f3f5'],plane:['#4c6f9d','#eef5ff'],briefcase:['#704d35','#e7a34c'],calendar:['#b44b63','#ffe3a3']};
 function drawPixelSymbol(context,symbol,cx,cy,scale=4){const pattern=pixelSymbols[symbol],palette=symbolPalettes[symbol]||['#263d59','#fff'];if(!pattern)return;const width=pattern[0].length,height=pattern.length,startX=Math.round(cx-width*scale/2),startY=Math.round(cy-height*scale/2);context.save();context.imageSmoothingEnabled=false;pattern.forEach((row,y)=>[...row].forEach((cell,x)=>{if(cell==='0')return;context.fillStyle=palette[Number(cell)-1];context.fillRect(startX+x*scale,startY+y*scale,scale,scale);}));context.restore();}
 const symbolCells={sun:0,burst:1,drop:2,heart:3,person:4,power:5,toilet:6,plane:7,briefcase:8};
-const extraCells={meeting:0,bowl:1};// icons-status-v4.webp：2 格正方形（會議、用餐），規則與 icons-v3 相同。
+const extraCells={meeting:0,bowl:1,calendar:2};// icons-status-v4.webp：3 格正方形（會議、用餐、休假），規則與 icons-v3 相同。
 // icons-v3.webp：3×3 正方形格子（每格 192×192，原檔 icons-v3.png 每格 256），每個圖示已裁到實際範圍並置中留白，不會被切到或變形。
 function drawSymbol(context,symbol,cx,cy,size=48){if(symbol==='moon'){drawMoonIcon(context,cx,cy,size);return;}
-  // 會議與用餐放在後來新增的 icons-status-v4（2 格），icons-v3 的 3×3 已經排滿。
+  // 會議、用餐與休假放在後來新增的 icons-status-v4（3 格），icons-v3 的 3×3 已經排滿。
   const extra=extraCells[symbol];
-  if(extra!==undefined&&extraSheet.complete&&extraSheet.naturalWidth){const cell=extraSheet.naturalWidth/2;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(extraSheet,extra*cell,0,cell,cell,cx-size/2,cy-size/2,size,size);context.restore();return;}
+  if(extra!==undefined&&extraSheet.complete&&extraSheet.naturalWidth){const cell=extraSheet.naturalWidth/3;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(extraSheet,extra*cell,0,cell,cell,cx-size/2,cy-size/2,size,size);context.restore();return;}
   const index=symbolCells[symbol];if(iconSheet.complete&&iconSheet.naturalWidth&&index!==undefined){const cell=iconSheet.naturalWidth/3,row=Math.floor(index/3),column=index%3;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(iconSheet,column*cell,row*cell,cell,cell,cx-size/2,cy-size/2,size,size);context.restore();return;}drawPixelSymbol(context,symbol,cx,cy,Math.max(2,Math.floor(size/10)));}
 // 加班圖示（月亮＋星星）：icons-v3 圖集 3×3 已經排滿，這個圖示改用程式繪製。先畫在一張離屏畫布上（月牙靠
 // destination-out 挖出來，不會誤刪目標畫布上已經畫好的桌子），再整張貼上；每種尺寸只畫一次。
