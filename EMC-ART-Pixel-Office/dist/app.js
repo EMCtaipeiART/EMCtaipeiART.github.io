@@ -389,7 +389,9 @@ const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;
 const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;
 const DESK_DRAW_SCALE=DESK_SEAT_GAP/DESK_SRC_UNIT;
 function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitureRects[type];ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,sh,x,y,w,h);}
-function drawChair(s){if(stationAway(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
+// 椅子只在「有人而且在座」時才畫。離席時本來就不畫；左下角那個空位到了灰階時段（18:00 之後）
+// 也把椅子收掉，只留灰階的桌子與桌上的電腦——stationDimmed() 兩種情況都涵蓋了。
+function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 function drawDesk(s){
   const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);

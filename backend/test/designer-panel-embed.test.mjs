@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=33"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=34"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -107,7 +107,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=41/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=42/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -284,7 +284,8 @@ test('左下角空位依時段轉灰階，電腦留著', async () => {
   assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?/);
   // 椅子也要跟著灰，且六張椅背上緣都要降低到人物頭部中線。
   assert.match(js, /const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;/);
-  assert.match(js, /function drawChair\(s\)\{if\(stationAway\(s\)\)return;furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
+  // 椅子只在「有人而且在座」時才畫：離席不畫，左下角空位到了灰階時段也收掉，只留桌子與桌上電腦。
+  assert.match(js, /function drawChair\(s\)\{if\(stationDimmed\(s\)\)return;furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
 });
 
 test('人物卡的「未開始」是紅燈', async () => {
