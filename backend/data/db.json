@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5877,
+  "revision": 5878,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-22T09:57:16.580Z",
+  "updatedAt": "2026-09-22T09:57:19.817Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1542,7 +1542,7 @@
         {"案件編號":"26090164","修改次數":"0","建立日期":"2026/09/22 17:30:41","修改日期":"2026/09/22 17:30:41","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 17:30:41","圖片連結":"[{\"fileName\":\"260922_PChome百貨週年慶_CPAS_AeroClip.png\",\"url\":\"https://lh3.googleusercontent.com/d/17FEhkpAB2x1FatlLOiTNN7Pg-75tfGny=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_Liberty5Pro.png\",\"url\":\"https://lh3.googleusercontent.com/d/1CUpZYGCManAvVaJZ4II3axBbdAmL4Ipk=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_Liberty5ProMax.png\",\"url\":\"https://lh3.googleusercontent.com/d/1s3qAeviZiAhPBRytdtWDmLuPjARfpolO=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_Liberty5Pro_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/10hEbNRbDkyqWaVIPYAwQlbVw8dWAkZem=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_R60iNC.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dPjeg_dzc3R-Tdiai0jZTodVLPZ-JEVZ=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_R60iNC_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1xB9tXc-bUD0O6SQjukGKg4VDmR5gpf2E=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 17:30:41"},
         {"案件編號":"26090165","修改次數":"0","建立日期":"2026/09/22 17:31:26","修改日期":"2026/09/22 17:31:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 17:31:26","圖片連結":"[{\"fileName\":\"260922_PChome百貨週年慶_CPAS_AeroClip_影音包框.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1jG5KkRdLexBbyc5Rz8Dyd_LnX6yW_wGO=w1600\"},{\"fileName\":\"260922_PChome百貨週年慶_CPAS_Liberty5ProMax_影音包框.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1ZLwW_m6FZebT_TXvSOSuRDoqqxaS5iHf=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 17:31:26"},
         {"案件編號":"26090173","修改次數":"0","建立日期":"2026/09/22 17:50:31","修改日期":"2026/09/22 17:50:31","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 17:50:31","圖片連結":"[{\"fileName\":\"260922_常態素材_360II_靜態.png\",\"url\":\"https://lh3.googleusercontent.com/d/11h3z2VR8NobZ6wZ2hXIvjutd53K2dKrY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 17:50:31"},
-        {"案件編號":"26090172","修改次數":"0","建立日期":"2026/09/22 17:53:40","修改日期":"2026/09/22 17:53:40","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 17:53:40","圖片連結":"[{\"fileName\":\"260908_360II_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1m03frhnXh0CcvWlbmyS7O5lWBK34Ohfh=w1600\"},{\"fileName\":\"260922_常態新素_neo2&litox1_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1e2Q9Oh6Fzx5L7VHRcXZsRzMWfqhlHrj-=w1600\"},{\"fileName\":\"260922_常態新素材_LitoX1_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/12t6VLClSxDZ-ViXJEFBcpRX45lJF7eEU=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 17:57:13"}
+        {"案件編號":"26090172","修改次數":"0","建立日期":"2026/09/22 17:53:40","修改日期":"2026/09/22 17:53:40","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 17:53:40","圖片連結":"[{\"fileName\":\"260922_常態新素_neo2&litox1_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1e2Q9Oh6Fzx5L7VHRcXZsRzMWfqhlHrj-=w1600\"},{\"fileName\":\"260922_常態新素材_LitoX1_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/12t6VLClSxDZ-ViXJEFBcpRX45lJF7eEU=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 17:57:19"}
       ]
     },
     "補充資料連結": {
