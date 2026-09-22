@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 5772,
+  "revision": 5773,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-22T03:06:07.446Z",
+  "updatedAt": "2026-09-22T03:07:14.354Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1518,7 +1518,7 @@
         {"案件編號":"26090128","修改次數":"0","建立日期":"2026/09/21 19:19:26","修改日期":"2026/09/21 19:19:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/21 19:19:26","圖片連結":"[{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1KSDrzflcfJkii5Fi1wabfnNDvDim_BQa=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1tUwYL7nyiRn7Etcja1WPklCkiLsLqCEb=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/12El8s8rQLNVZ9PjzEkL6nWwj12QTUJ4-=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EA-q78QDnwd3cVrG5Kdb8N6EpIVbGOiG=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_P41i_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1O1PSg6dCvZblT00Dgfvt8Jhqzl3WeE_s=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_P41i_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bNEGR38PGOWmMWRslLsxnUHn9j4rAFZw=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/21 19:19:26"},
         {"案件編號":"26090134","修改次數":"1","建立日期":"2026/09/21 21:46:53","修改日期":"2026-09-21","修改內容":"來信提供調整，主訴同一檔的框架、格式統一，詳細如附件P25~P28，再請協助，感恩","修改內容連結":"[{\"text\":\"附件P25~P28\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.g40a0b6c6869_1_17#slide=id.g40a0b6c6869_1_17\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090160","修改次數":"0","建立日期":"2026/09/22 09:59:58","修改日期":"2026/09/22 09:59:58","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/22 09:59:58","圖片連結":"[{\"fileName\":\"260922_DJI_八月體驗會花絮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1W-hHIlzWVDAgDERGWLXoYnvHPQU6-emP=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 09:59:58"},
-        {"案件編號":"26090043","修改次數":"2","建立日期":"2026/09/22 11:06:07","修改日期":"2026-09-22","修改內容":"調整文字內容、封面手機圖、末圖情境","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-1.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-2.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-3.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-4.png\"]"}
+        {"案件編號":"26090043","修改次數":"2","建立日期":"2026/09/22 11:06:07","修改日期":"2026-09-22","修改內容":"調整文字內容、封面手機圖、末圖情境","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-1.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-2.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-3.png\",\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-4.png\"]","圖片連結":"[{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/16Y_J1qkPKwDrbtR6GbIWAWE1CuYZp0o8=w1600\"},{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1q45XTWFFXWsANoCDtrJPMzhmP60bEbx3=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/22 11:07:14"}
       ]
     },
     "補充資料連結": {
