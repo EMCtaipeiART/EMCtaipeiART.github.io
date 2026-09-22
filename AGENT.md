@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 08:40 Asia/Taipei — 設計部動態欄椅背降低至人物頭部中線
+
+- 修改目的：依使用者要求降低前台「設計部即時動態」六個座位的椅子位置，讓椅子上緣切齊人物頭部一半，不再頂到頭頂。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/app.js`、`dist/index.html`、`docs/HANDOFF.md`、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：六張椅子共用 `CHAIR_TOP_FROM_FEET=107`，相較原本腳底往上 135 px 的繪製起點整體下移 28 px；椅子尺寸、桌子、人物及座位座標維持不變。
+- 風險區塊：椅子與人物、桌子的前後圖層；若日後修改人物高度或椅子素材透明邊界，需同步重測椅背上緣位置。
+- 已檢查／驗證方式：Chrome／Codex 本機實機確認椅背上緣落在 Noise、Machi 頭部中線；嵌入區塊測試 19/19、完整 Node 測試 188/188、Pixel Office `npm run check` 與 `git diff --check` 均通過。
+- 部署狀態：git push 後由 GitHub Pages 自動生效。
+- commit：見 git log。
+
 ### 2026-09-22 08:25 Asia/Taipei — 修正「串接」信件串的回覆有時不在原本信件串裡，變成一封孤立的 Re: 新信
 
 - 修改目的：使用者回報用「串接」串進去的既有信件串，回信寄出後沒有接進原本那條 Gmail 討論串，而是變成一封獨立的「Re: xxx」新信。

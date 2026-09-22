@@ -382,10 +382,13 @@ function drawOffice(){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
 // 差別只在螢幕露出多少，所以繪製時桌面與桌腳的高度固定，螢幕再按各自的 upper 等比縮。
 const furnitureRects=[[0,0,520,328,37],[0,328,517,328,37],[0,656,520,325,34],[0,981,520,325,34],[0,1306,520,316,25],[520,0,237,372,0],[0,1622,520,291,0],[0,1913,517,291,0],[0,2204,520,291,0]];
 const CHAIR_RECT=5;
+// 人物高 142 px，頭部約佔最上方 70 px；椅背上緣放在頭部中線（腳底往上 107 px）。
+// 六個座位共用這個定位，避免椅背一路頂到頭頂、搶走人物輪廓。
+const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;
 const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;
 const DESK_DRAW_SCALE=DESK_SEAT_GAP/DESK_SRC_UNIT;
 function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitureRects[type];ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,sh,x,y,w,h);}
-function drawChair(s){if(stationAway(s))return;furnitureObject(CHAIR_RECT,s.x-51,s.y-135,102,135,furnitureFor(s));}
+function drawChair(s){if(stationAway(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 function drawDesk(s){
   const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);

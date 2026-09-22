@@ -273,8 +273,9 @@ test('左下角空位依時段轉灰階，電腦留著', async () => {
   // 桌子的種類仍照 s.type 走（type 2 是有電腦的那張），只有配色換成灰階版本，電腦不會消失。
   assert.match(js, /const type=stationAway\(s\)\?s\.empty:s\.type,art=furnitureFor\(s\)/);
   assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?/);
-  // 椅子也要跟著灰，否則會出現「灰桌配黑椅」。
-  assert.match(js, /function drawChair\(s\)\{if\(stationAway\(s\)\)return;furnitureObject\(CHAIR_RECT,s\.x-51,s\.y-135,102,135,furnitureFor\(s\)\);\}/);
+  // 椅子也要跟著灰，且六張椅背上緣都要降低到人物頭部中線。
+  assert.match(js, /const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;/);
+  assert.match(js, /function drawChair\(s\)\{if\(stationAway\(s\)\)return;furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
 });
 
 test('人物卡的「未開始」是紅燈', async () => {
