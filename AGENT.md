@@ -192,6 +192,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 10:45 Asia/Taipei — 修正共享透明休假事件的歸屬判斷
+
+- 修改目的：用實際 Google Calendar 資料驗證時發現「Leona休假」被設為透明（空閒）且共享到五位設計師的行事曆；舊邏輯會直接忽略透明事件，而若只調整判斷順序又會讓五個人同時被誤標休假。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`EMC-ART-Pixel-Office/docs/HANDOFF.md`。
+- 影響功能：先排除已取消／本人拒絕，再辨識休假，最後才排除透明的一般事件；Events:list 額外讀取 `organizer(email,self)`。標題型休假只有在 organizer 是被查詢的行事曆主人，或標題明確包含該人的英文姓名／信箱 local-part 時才套用；Google 原生 `outOfOffice` 維持直接判休假。共享給整組的透明「Leona休假」因此只會讓 Leona 顯示休假。
+- 風險區塊：沒有 organizer、標題也沒有點名的共享休假不會被歸給受邀者，這是刻意的保守規則；自行建立、標題只有「特休」的事件仍會因 organizer 等於本人而正確辨識。
+- 已檢查／驗證方式：Worker vitest 92/92；更新既有透明特休案例，並新增同一筆透明「Leona休假」出現在五份行事曆時只有 Leona 進入休假狀態的整合驗證。
+- 部署狀態：待本機 Cloudflare OAuth 重新登入後部署 Worker；純文件隨 git push 生效。
+- commit：見 git log。
+
 ### 2026-09-22 10:35 Asia/Taipei — 設計部即時動態串接 Google Calendar，自動辨識會議與休假
 
 - 修改目的：使用者提供 `machi.chen@emctaipei.com` 的 Google Calendar，要求「設計部即時動態」依行事曆自動切換成會議、休假等狀態，並詢問目前是否能讀取。

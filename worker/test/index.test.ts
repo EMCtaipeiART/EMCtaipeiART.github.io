@@ -4293,7 +4293,8 @@ describe('Pixel Office shared state', () => {
           start: { date: '2026-09-21' }, end: { date: '2026-09-22' }
         }],
         'amber.tian@emctaipei.com': [{
-          status: 'confirmed', eventType: 'default', summary: '特休',
+          status: 'confirmed', eventType: 'default', summary: '特休', transparency: 'transparent',
+          organizer: { email: 'amber.tian@emctaipei.com' },
           start: { date: '2026-09-21' }, end: { date: '2026-09-22' }
         }],
         // 事件內容沒分享，但 freeBusy 看得到：仍能保守判成會議。
@@ -4311,9 +4312,36 @@ describe('Pixel Office shared state', () => {
       expect(await statusOfPerson('Noise')).toMatchObject({ status: 'present' });
       fetchSpy.mockRestore();
 
-      // 電腦仍有心跳也不覆蓋行事曆休假；所有事件結束後才一起交還自動狀態。
+      // 電腦仍有心跳也不覆蓋行事曆休假。
       expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Anna', serviceKey: key, idleSeconds: 3 }))
         .toMatchObject({ status: 'leave', changed: false });
+
+      // 真實團隊行事曆會把「Leona休假」分享給每個人，而且事件本身設為空閒。共享事件只應
+      // 讓建立者／被標題點名的 Leona 休假，不能讓五個人的看板一起變成休假。
+      const sharedLeonaLeave = {
+        status: 'confirmed', eventType: 'default', summary: 'Leona休假', transparency: 'transparent',
+        organizer: { email: 'leona.chen@emctaipei.com' },
+        start: { date: '2026-09-21' }, end: { date: '2026-09-22' }
+      };
+      fetchSpy = mockCalendarApi({
+        'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      }, {
+        'machi.chen@emctaipei.com': [sharedLeonaLeave], 'anna.hsu@emctaipei.com': [sharedLeonaLeave],
+        'amber.tian@emctaipei.com': [sharedLeonaLeave], 'leona.chen@emctaipei.com': [sharedLeonaLeave],
+        'noise.zhong@emctaipei.com': [sharedLeonaLeave]
+      });
+      expect(await runCalendarSync(now + 60_000)).toMatchObject({
+        leave: ['Leona'], released: expect.arrayContaining(['Machi', 'Anna', 'Amber'])
+      });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      expect(await statusOfPerson('Anna')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      expect(await statusOfPerson('Amber')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      expect(await statusOfPerson('Leona')).toMatchObject({ status: 'leave', statusSource: 'calendar' });
+      expect(await statusOfPerson('Noise')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      fetchSpy.mockRestore();
+
+      // 所有事件結束後才交還自動狀態。
       fetchSpy = mockCalendarApi({
         'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
         'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
@@ -4321,9 +4349,7 @@ describe('Pixel Office shared state', () => {
         'machi.chen@emctaipei.com': [], 'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
         'leona.chen@emctaipei.com': { status: 403 }, 'noise.zhong@emctaipei.com': []
       });
-      expect(await runCalendarSync(now + 60_000)).toMatchObject({
-        released: expect.arrayContaining(['Machi', 'Anna', 'Amber', 'Leona'])
-      });
+      expect(await runCalendarSync(now + 120_000)).toMatchObject({ released: ['Leona'] });
       expect(await statusOfPerson('Anna')).toMatchObject({ status: 'present', statusSource: 'auto' });
       fetchSpy.mockRestore();
     } finally {

@@ -116,12 +116,25 @@ function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
 type PixelOfficeCalendarState = '' | 'meeting' | 'leave';
 
 /** 單一 Google Calendar event → 最新動態狀態。事件查詢本身已限制在「現在這一分鐘有重疊」。 */
-export function pixelOfficeCalendarEventState(event: Row): PixelOfficeCalendarState {
-  if (text(event.status) === 'cancelled' || text(event.transparency) === 'transparent') return '';
+export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', calendarName = ''): PixelOfficeCalendarState {
+  if (text(event.status) === 'cancelled') return '';
   const attendees = Array.isArray(event.attendees) ? event.attendees as Row[] : [];
   if (attendees.some(attendee => attendee.self === true && text(attendee.responseStatus) === 'declined')) return '';
   const eventType = text(event.eventType) || 'default';
-  if (eventType === 'outOfOffice' || PIXEL_OFFICE_LEAVE_KEYWORDS.test(text(event.summary))) return 'leave';
+  if (eventType === 'outOfOffice') return 'leave';
+  const summary = text(event.summary);
+  if (PIXEL_OFFICE_LEAVE_KEYWORDS.test(summary)) {
+    const organizer = event.organizer && typeof event.organizer === 'object' ? event.organizer as Row : {};
+    const organizerEmail = text(organizer.email).toLowerCase();
+    const ownerEmail = calendarEmail.trim().toLowerCase();
+    const ownerAliases = [calendarName.trim(), ownerEmail.split('@')[0] || ''].filter(Boolean);
+    const namesOwner = ownerAliases.some(alias => summary.toLowerCase().includes(alias.toLowerCase()));
+    // 休假常被設成「空閒」並分享給整組。只有活動建立者本人，或標題明確點名這份
+    // 行事曆的主人，才算該人休假；否則共享的「Leona休假」會讓全組都顯示休假。
+    if (!ownerEmail || organizerEmail === ownerEmail || namesOwner) return 'leave';
+  }
+  // 透明事件不是會議；但休假常刻意設成透明，必須先完成上面的休假辨識再排除。
+  if (text(event.transparency) === 'transparent') return '';
   // 專注時間、工作地點、生日等不是會議；一般事件與 Gmail 自動建立的行程才進一步看長度。
   if (!['default', 'fromGmail'].includes(eventType)) return '';
   const startRow = event.start && typeof event.start === 'object' ? event.start as Row : {};
@@ -132,10 +145,10 @@ export function pixelOfficeCalendarEventState(event: Row): PixelOfficeCalendarSt
   return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS ? 'meeting' : '';
 }
 
-function pixelOfficeCalendarEventsState(events: unknown): PixelOfficeCalendarState {
+function pixelOfficeCalendarEventsState(events: unknown, calendarEmail = '', calendarName = ''): PixelOfficeCalendarState {
   let state: PixelOfficeCalendarState = '';
   for (const event of Array.isArray(events) ? events as Row[] : []) {
-    const next = pixelOfficeCalendarEventState(event);
+    const next = pixelOfficeCalendarEventState(event, calendarEmail, calendarName);
     if (next === 'leave') return 'leave';
     if (next === 'meeting') state = 'meeting';
   }
@@ -1465,14 +1478,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', maxResults: '20', timeZone: 'Asia/Taipei',
-            fields: 'items(status,summary,eventType,start,end,transparency,attendees(self,responseStatus))'
+            fields: 'items(status,summary,eventType,start,end,transparency,organizer(email,self),attendees(self,responseStatus))'
           });
           const detailsResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
           });
           const details = await detailsResponse.json().catch(() => ({})) as Row;
           if (!detailsResponse.ok) { detailUnreadable.push(name); return; }
-          detailStates.set(name, pixelOfficeCalendarEventsState(details.items));
+          detailStates.set(name, pixelOfficeCalendarEventsState(details.items, email, name));
         } catch {
           detailUnreadable.push(name);
         }

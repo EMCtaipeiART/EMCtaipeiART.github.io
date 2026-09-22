@@ -135,8 +135,8 @@
 Worker 每分鐘的排程（`runPixelOfficeCalendarSync`，跟排程寄信同一個 cron）會查五位設計師的 Google 行事曆：一般短事件顯示「會議」，Google 原生「不在辦公室」或標題明確寫請假的事件顯示「休假」，事件結束後交還給電腦自動判斷。
 
 - **只用 `machi.chen@emctaipei.com` 一個帳號的授權**（`PIXEL_OFFICE_CALENDAR_ACCOUNT`）。授權要同時包含 `calendar.freebusy`（忙碌時段）與唯讀的 `calendar.events.readonly`（事件類型／標題）；`gmailStatus`／`pixelOfficeCalendarStatus` 分別以 `canReadCalendar`、`canReadCalendarDetails` 回報兩層權限。
-- 先查 **freeBusy**，再針對每人呼叫 Events:list，只要求 `status/summary/eventType/start/end/transparency/attendees(self,responseStatus)`。事件標題只在當次 Worker 記憶體內比對，**不寫進 Durable Object、log 或前端**。
-- `eventType:'outOfOffice'` 一律是休假；一般事件的標題包含「休假／請假／特休／年假／補休／病假／事假／婚假／產假／陪產／喪假／公假／生理假／家庭照顧假」或常見英文 PTO／leave／vacation／OOO 才判休假。其他 `default`／`fromGmail` 事件在四小時內判會議；`focusTime`、`workingLocation`、生日、已取消、透明或本人拒絕的事件不算會議。
+- 先查 **freeBusy**，再針對每人呼叫 Events:list，只要求 `status/summary/eventType/start/end/transparency/organizer(email,self)/attendees(self,responseStatus)`。事件標題只在當次 Worker 記憶體內比對，**不寫進 Durable Object、log 或前端**。
+- `eventType:'outOfOffice'` 一律是休假；一般事件的標題包含「休假／請假／特休／年假／補休／病假／事假／婚假／產假／陪產／喪假／公假／生理假／家庭照顧假」或常見英文 PTO／leave／vacation／OOO 才判休假。休假事件即使設成透明（空閒）仍會辨識，但共享給整組的休假只套用在事件建立者或標題明確點名的人，避免一筆「Leona休假」讓全組都顯示休假。其他 `default`／`fromGmail` 事件在四小時內判會議；`focusTime`、`workingLocation`、生日、已取消、透明或本人拒絕的事件不算會議。
 - 其他四位若只分享「忙碌／空閒」而沒有分享事件內容，該人會個別退回 freeBusy：四小時內的忙碌顯示會議，超過四小時不猜休假。要自動辨識休假，需把行事曆分享給 machi.chen 並允許查看活動詳細資料，或在 Google Calendar 使用原生「不在辦公室」事件且確保該類型可讀。
 - 只在平日 08:00～22:00 查（`PIXEL_OFFICE_CALENDAR_START_HOUR`／`END_HOUR`），假日直接跳過。
 - **手動指定的狀態優先**：行事曆不蓋掉使用者自己點的公出、出國、會議或休假，也只收回自己設的（`statusSource:'calendar'`）。
