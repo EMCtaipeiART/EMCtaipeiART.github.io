@@ -2327,6 +2327,78 @@ describe('Machi Design API Worker', () => {
     expect(deniedWithoutSession).toMatchObject({ ok: false, error: '請先登入後再執行此操作' });
   });
 
+  it('replies to a "串接"-bound thread whose subject has no English Re: prefix by retrying with the original subject before giving up threadId, and reports threaded:false only as a last resort', async () => {
+    await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+    await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-bound');
+    const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+    await seedCase('26080010', { 'Gmail信件串ID': 'outside-thread-1', 'Gmail寄件帳號': 'test.user@emctaipei.com' });
+    // 這條信件串的最後一封信主旨沒有英文 "Re:" 前綴（例如 Outlook 往來、或已經是 "回覆：" 這種中文前綴）——
+    // 模擬「串接」到一條完全在系統之外建立的既有討論串。
+    const threadMessages = [{
+      id: 'outside-msg-1', labelIds: ['INBOX'], snippet: '',
+      payload: {
+        mimeType: 'text/plain', body: { data: toBase64Url('原始內容') },
+        headers: [
+          { name: 'From', value: 'client@example.com' }, { name: 'To', value: 'test.user@emctaipei.com' },
+          { name: 'Message-Id', value: '<outside-1@mail.example.com>' }, { name: 'Subject', value: '回覆：舊系統討論串' }
+        ]
+      }
+    }];
+    const sentRaws: string[] = [];
+    let sendAttempts = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/outside-thread-1?format=full') {
+        return Response.json({ id: 'outside-thread-1', messages: threadMessages });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        sendAttempts += 1;
+        const body = JSON.parse(String(init?.body));
+        const decoded = decodeBase64UrlText(String(body.raw));
+        sentRaws.push(decoded);
+        // 第一次嘗試（推算出來的 "Re: 回覆：舊系統討論串"）刻意讓 Gmail 拒絕，模擬主旨跟討論串對不上；
+        // 第二次嘗試（原封不動的 "回覆：舊系統討論串"）才成功。
+        if (decoded.includes('Subject:') && sendAttempts === 1) {
+          return Response.json({ error: { message: 'Precondition check failed.' } }, { status: 400 });
+        }
+        expect(body.threadId).toBe('outside-thread-1');
+        return Response.json({ id: 'outside-msg-2', threadId: 'outside-thread-1' });
+      }
+      throw new Error(`unexpected fetch while replying to a bound external thread: ${url}`);
+    });
+    const replied = await api({ action: 'replyCaseMail', caseId: '26080010', bodyText: '回覆內容', to: 'client@example.com' }, token);
+    expect(replied).toMatchObject({ ok: true, gmailMessageId: 'outside-msg-2', threaded: true });
+    expect(sendAttempts).toBe(2);
+    const decodeMimeSubject = (raw: string) => {
+      const match = raw.match(/Subject: =\?UTF-8\?B\?([^?]+)\?=/);
+      return match ? decodeBase64UrlText(match[1]) : '';
+    };
+    // 第一次嘗試用推算出來的主旨（加上 Re:）；第二次改用信件串原封不動的主旨，理論上一定通過 Gmail 自己的驗證。
+    expect(decodeMimeSubject(sentRaws[0])).toBe('Re: 回覆：舊系統討論串');
+    expect(decodeMimeSubject(sentRaws[1])).toBe('回覆：舊系統討論串');
+
+    // 兩種主旨都被拒絕：最後才真的放棄 threadId，回報 threaded:false，不再悄悄假裝一切正常。
+    await seedCase('26080011', { 'Gmail信件串ID': 'outside-thread-2', 'Gmail寄件帳號': 'test.user@emctaipei.com' });
+    const stubbornThread = [{ ...threadMessages[0], payload: { ...threadMessages[0].payload, headers: threadMessages[0].payload.headers.map(h => h.name === 'Message-Id' ? { name: 'Message-Id', value: '<outside-2@mail.example.com>' } : h) } }];
+    let stubbornAttempts = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/threads/outside-thread-2?format=full') {
+        return Response.json({ id: 'outside-thread-2', messages: stubbornThread });
+      }
+      if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        stubbornAttempts += 1;
+        const body = JSON.parse(String(init?.body));
+        if (body.threadId) return Response.json({ error: { message: 'Precondition check failed.' } }, { status: 400 });
+        return Response.json({ id: 'outside-msg-3', threadId: 'brand-new-thread' });
+      }
+      throw new Error(`unexpected fetch while both subject variants are rejected: ${url}`);
+    });
+    const gaveUp = await api({ action: 'replyCaseMail', caseId: '26080011', bodyText: '回覆內容', to: 'client@example.com' }, token);
+    expect(gaveUp).toMatchObject({ ok: true, gmailMessageId: 'outside-msg-3', threaded: false });
+    expect(stubbornAttempts).toBe(3);
+  });
+
   it('2026-08-26: getCaseMailThread 用「所有已知簽名檔」逐一比對，不是只認目前的預設一組——一封用非預設命名簽名檔寄出的歷史信件，只有把該簽名檔一起放進 signatureCandidates 才會被正確截掉；同時回傳結構化的 bodyHtml（保留原始格式，不是壓平的純文字）與 images[].contentId（供前端把內嵌圖片安插回本文原本的位置）', async () => {
     await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
     await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
@@ -3474,19 +3546,24 @@ describe('Machi Design API Worker', () => {
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
           sendAttempts += 1;
           const body = JSON.parse(String(init?.body));
-          if (sendAttempts === 1) {
+          // 兩種主旨版本（推算出來的 "Re: 案件主旨"、信件串原封不動的 "案件主旨"）都用這個查到的
+          // （其實已經不準的）threadId 送出，一律拒絕；第三次徹底放棄 threadId 才成功。
+          if (body.threadId) {
             expect(body.threadId).toBe('stale-mismatched-thread');
             return new Response(JSON.stringify({ error: { message: 'Precondition check failed.' } }), { status: 400 });
           }
-          expect(body.threadId).toBeUndefined();
           return Response.json({ id: 'designer-scheduled-reply-fallback', threadId: 'brand-new-thread' });
         }
         throw new Error(`unexpected fetch during fallback reply dispatch: ${url}`);
       });
       const result = await (await schedulerStub()).runScheduledDispatch();
       expect(result).toEqual({ processed: 1, sent: 1, failed: 0 });
-      expect(sendAttempts).toBe(2);
-      expect((await scheduledMailRow(scheduledId))?.status).toBe('sent');
+      expect(sendAttempts).toBe(3);
+      const row = await scheduledMailRow(scheduledId);
+      expect(row?.status).toBe('sent');
+      // 完全放棄 threadId 之後的信在寄件人視角是一封孤立的新信，不再假裝一切正常：把原因記進這筆排程，
+      // 供之後查詢／除錯（目前排程清單只顯示待寄送與失敗項目，這則提醒暫時不會出現在畫面上）。
+      expect(row?.error_message).toContain('可能沒有正確歸進原本的 Gmail 信件串');
     });
 
     it('lists pending scheduled mail for a case and lets a pending item be canceled (but not twice, and not once already dispatched)', async () => {

@@ -192,6 +192,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-22 08:25 Asia/Taipei — 修正「串接」信件串的回覆有時不在原本信件串裡，變成一封孤立的 Re: 新信
+
+- 修改目的：使用者回報用「串接」串進去的既有信件串，回信寄出後沒有接進原本那條 Gmail 討論串，而是變成一封獨立的「Re: xxx」新信。
+- 根因：Gmail 的 `messages.send` 指定 `threadId` 時，會依它自己的判斷決定這封信的主旨是否「屬於」那條討論串，不符合就直接回錯，不會靜默忽略 `threadId` 改成新建。系統原本固定用「主旨已經是英文 `Re:` 開頭就照舊，否則加上 `Re:`」推算出來的主旨去送——這個推算對「這個系統自己建立的信件串」（第一封信一定是系統自己組的、之後永遠只加一次 `Re:`）向來準確；但「串接」既有信件串的原始往來完全發生在系統之外（例如 Outlook 或其他信箱寄來），主旨可能帶著中文「回覆：」等非英文前綴、甚至已經疊了好幾層，推算結果不一定能通過 Gmail 的驗證。原本的 `postGmailMessageWithThreadFallback()` 遇到這個錯誤會直接放棄 `threadId`，改寄一封完全脫離原本討論串的新信——寄件成功、畫面上完全看不出異常，只有事後去 Gmail 才會發現「回覆不見了」。這個放棄路徑在「查不到寄件帳號自己信箱裡對應 threadId」（跨帳號情境）時也會被觸發，同樣悄悄產生孤立信件，只是這次使用者具體回報的是「串接」情境。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - 新增 `sendThreadedGmailReply()`：依序嘗試①推算出來的主旨（沿用/加上 `Re:`）、②信件串最後一封信「原封不動」的主旨（這個字串保證是 Gmail 自己認定屬於這條討論串的主旨，理論上一定能通過它自己的驗證，用來涵蓋原始主旨帶有非英文前綴、推算失準的情況）；兩者都被 Gmail 拒絕才真正放棄 `threadId`，並在回傳值標記 `threaded:false`；`threadId` 從一開始就是空字串（跨帳號查不到對方信箱裡的 threadId）直接視為第一次嘗試就失敗，同樣標記 `threaded:false`，不再誤判成功。取代原本的 `postGmailMessageWithThreadFallback()`／`buildGmailReplyRaw()`（後者改名 `buildGmailReplyRawVariants()`，回傳可重建不同主旨版本的 `buildRaw` 函式，而不是單一固定的 raw 訊息）。
+  - `replyCaseMail`（立即送出）套用此邏輯，回傳值新增 `threaded` 欄位；前台 `sendGmailThreadReply()` 新增 `threadWarningNotice(data)`，`threaded===false` 時在成功訊息後面明確提醒「但這封信可能沒有正確歸進原本的信件串，請至 Gmail 確認」（沒有 `threaded` 欄位時視為沒問題，相容尚未部署更新的舊 Worker）。
+  - `dispatchScheduledMailItem`（排程背景寄出）的回覆分支同樣套用此邏輯；`threaded===false` 時把提醒記進這筆排程的 `error_message`，供之後查詢／除錯。
+- 風險區塊：①排程回覆的提醒目前**不會出現在畫面上**——`index.html` 的排程清單（`refreshScheduledMailList`）只顯示待寄送與失敗項目，已成功寄出的一律被過濾掉，不論有沒有這則提醒；這是已知限制，沒有在這次一併擴大排程清單 UI 的範圍，只先確保背景寄出時至少把原因記進資料庫。②這個修法解決的是「推算主旨不準」這一類已知、可驗證的失敗模式，不保證涵蓋 Gmail 端所有可能導致 threadId 驗證失敗的原因——如果兩種主旨都失敗，最終仍會送出一封孤立的新信（跟修改前一樣，只是現在使用者會被明確告知，立即送出時看得到提醒，排程送出時記在資料庫裡）。③「串接」流程本身、`bindExistingThread`、權限判斷都沒有修改，這次只改「送出時怎麼決定主旨與 threadId」這一段。④沒有真實 Gmail 帳號可以完整重現原始的失敗案例，這次修法是依 Gmail API 官方對 `threadId`＋主旨匹配的既有規則，針對「串接」情境的主旨來源差異推導出來、並用假的 Gmail API 回應模擬驗證，不是對案件 26090052／26090053 逐字重現後才修好的。
+- 已檢查／驗證方式：Worker vitest 91/91（新增：「串接」到主旨無英文 `Re:` 前綴的既有討論串，第一次推算主旨被拒絕、第二次改用原封不動的主旨成功歸進討論串，且 `replyCaseMail` 回傳 `threaded:true`；兩種主旨都被拒絕才真的放棄 `threadId`，回傳 `threaded:false`；更新既有的排程回覆 threadId-不準測試，驗證新的兩層重試後第三次才放棄，且該筆排程的 `error_message` 正確記下提醒文字）。`node --test backend/test/*.test.mjs` 183/183（更新 `sendGmailThreadReply` 的成功訊息組成斷言，加入 `threadNotice`）。真實瀏覽器（網路全換成假的）驗證 `threadWarningNotice`：`threaded:false` 時成功訊息接上警告文字且標記為醒目樣式；`threaded:true`／沒有 `threaded` 欄位（模擬舊版 Worker）都維持原本單純的「回覆已寄出」，不誤報。`tsc --noEmit`、`deploy:dry` 皆通過。
+- 部署狀態：**Worker 尚未部署**——這台電腦的 `wrangler` 登入權杖已過期（`CLOUDFLARE_API_TOKEN`／OAuth 都需要互動式登入才能刷新，這個環境無法互動完成），需要你自己執行 `cd worker && npx wrangler login` 重新登入後再 `npx wrangler deploy`，或設定 `CLOUDFLARE_API_TOKEN` 環境變數。**在部署完成前，這次修正完全不會生效**，`replyCaseMail`／排程回覆仍會用舊邏輯。前台 `index.html` 已 git push，但 `threadWarningNotice` 要等 Worker 回傳 `threaded` 欄位才有意義，單獨部署前台不會有效果。
+- commit：見 git log（`fix: retry with the thread's own subject before giving up threading a reply`）
+
 ### 2026-09-21 17:34 Asia/Taipei — 首頁雙欄等高、座位縮小與人物卡限寬
 
 - 修改目的：依使用者截圖修正左側「設計師專長與案件分配」底邊沒有對齊右側「最新案件列表」、下排設計師姓名被裁切，以及點選人物後資料卡過寬的問題。

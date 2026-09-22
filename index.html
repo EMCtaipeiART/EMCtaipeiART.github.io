@@ -13242,6 +13242,13 @@ async function applyReplyStatusUpdate(id,row){
 function missingDetailsNotice(row){
   return row&&!String(row.details||'').trim()?'；此案件「項目細節」尚未填寫，請盡快補上（影響加權計分）':'';
 }
+/** replyCaseMail 回傳 threaded:false 時（Gmail 判定這封回覆的主旨不屬於原本那條討論串，兩種主旨版本都被拒絕，
+ * 最後放棄 threadId 改成獨立新信——常見於「串接」既有信件串，原始往來完全發生在系統之外，見
+ * sendThreadedGmailReply 的說明），接在成功訊息後面明確提醒使用者，不要讓對方以為信件已經正常歸進討論串。
+ * 沒有 threaded 欄位（例如舊版 Worker 還沒部署更新）視為沒問題，不誤報。 */
+function threadWarningNotice(data){
+  return data&&data.threaded===false?'；但這封信可能沒有正確歸進原本的信件串，請至 Gmail 確認':'';
+}
 /** 設計師回覆信裡，用編輯器工具列「上傳照片」加入的照片（NAS 路徑出問題時的替代做法）原本只會變成信件內嵌圖片，
  * 不會進修改紀錄。寄出（或建立排程）成功後把這些照片交給 Worker，由它轉給 Apps Script 存進案件的 Drive 資料夾，
  * 寫入這封信所屬的那一輪修改紀錄——跟 NAS 備份、電腦上傳的設計圖放在同一個位置。同一張照片重送時以內容雜湊
@@ -13285,7 +13292,7 @@ async function sendGmailThreadReply(){
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
     // 輪次要在寄出前先記下：寄出後下面會把彈窗的 designerReplyRound 清空。
     const designerReplyRound=replyMode==='designer'?modal?.dataset.designerReplyRound:'';
-    await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,editorToken:currentEditorToken});
+    const replyData=await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,editorToken:currentEditorToken});
     editor.innerHTML='';
     const list=$('#gmailThreadModalList');
     const signatureCandidates=await allKnownGmailSignatureHtmlList();
@@ -13303,8 +13310,10 @@ async function sendGmailThreadReply(){
     // 不需要使用者自己再手動關閉。
     if(replyMode==='designer'||replyMode==='modification')closeGmailThreadModal();
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
+    const threadNotice=threadWarningNotice(replyData);
     const backupFailed=inlineImageBackupNotice.includes('失敗');
-    setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${inlineImageBackupNotice}${detailsNotice}`,Boolean(detailsNotice)||backupFailed,detailsNotice||backupFailed?5200:(inlineImageBackupNotice?3600:2600));
+    const hasWarning=Boolean(detailsNotice)||Boolean(threadNotice)||backupFailed;
+    setSync(`${replyMode==='modification'?'回覆已寄出，已記錄修改需求':'回覆已寄出'}${inlineImageBackupNotice}${threadNotice}${detailsNotice}`,hasWarning,hasWarning?5200:(inlineImageBackupNotice?3600:2600));
   }catch(err){
     setSync(`回覆寄送失敗：${err.message}`,true);
   }finally{

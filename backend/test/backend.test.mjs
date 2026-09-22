@@ -3738,9 +3738,9 @@ test('designer reply backs up photos added with the editor upload button into th
 
   // 寄出與排程兩條路徑的「設計師回覆信」分支都要呼叫，並把結果接在成功訊息後面。
   const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
-  assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
+  assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    const replyData=await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
   assert.match(send, /if\(replyMode==='designer'&&row\)\{await confirmLatestModificationRound\(id,row\); await applyReplyStatusUpdate\(id,row\); inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,designerReplyRound,editorPayload\.inlineImages\)\}/);
-  assert.match(send, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
+  assert.match(send, /\$\{inlineImageBackupNotice\}\$\{threadNotice\}\$\{detailsNotice\}/, '立即送出的成功訊息要接上信件串警告（threadWarningNotice）');
   const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
   assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,editorPayload\.inlineImages\)/);
   assert.match(schedule, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);

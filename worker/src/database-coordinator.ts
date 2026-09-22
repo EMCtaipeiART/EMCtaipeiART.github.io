@@ -901,7 +901,7 @@ async function fetchGmailThreadMessages(accessToken: string, threadId: string): 
  * 排程寄送（dispatchScheduledMailItem）跟立即回信（replyCaseMail）共用同一套組信邏輯，確保排程真正寄出時的
  * 信件格式跟使用者當下按「送出回覆」完全一致。一併回傳 lastMessageId，供呼叫端查詢寄件帳號自己信箱裡對應
  * 的 threadId（見 findOwnMailboxThreadId），不用另外重新解析一次標頭。 */
-function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[]; attachments?: GmailAttachment[] }): { raw: string; lastMessageId: string } {
+function buildGmailReplyRawVariants(threadMessages: unknown[], options: { to: string; cc: string; bodyHtml: string; signatureHtml: string; inlineImages: GmailInlineImage[]; attachments?: GmailAttachment[] }): { buildRaw: (subject: string) => string; lastSubject: string; candidateSubject: string; lastMessageId: string } {
   const lastMessage = replyAnchorMessage(threadMessages) || asRow(threadMessages[threadMessages.length - 1]);
   const headers = (asRow(lastMessage.payload).headers) as Array<{ name?: string; value?: string }> | undefined;
   const lastMessageId = gmailHeaderValue(headers, 'Message-Id');
@@ -909,12 +909,12 @@ function buildGmailReplyRaw(threadMessages: unknown[], options: { to: string; cc
   const lastSubject = gmailHeaderValue(headers, 'Subject');
   if (!lastMessageId) throw new Error('無法取得原始信件標頭，無法回覆');
   const quote = gmailThreadQuote(threadMessages, htmlToPlainText(options.signatureHtml), options.signatureHtml);
-  const raw = buildGmailRawMessage({
+  const buildRaw = (subject: string) => buildGmailRawMessage({
     to: options.to, cc: options.cc, subject: lastSubject, bodyHtml: options.bodyHtml, signatureHtml: options.signatureHtml,
     quotedHtml: quote.html, quotedText: quote.plainText, inlineImages: options.inlineImages, attachments: options.attachments,
-    threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
+    threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject }
   });
-  return { raw, lastMessageId };
+  return { buildRaw, lastSubject, candidateSubject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}`, lastMessageId };
 }
 
 /** 跨帳號回信（寄件帳號≠討論串擁有帳號）時，原本討論串的 threadId 是「擁有帳號」信箱裡的 ID，Google 官方
@@ -972,6 +972,37 @@ async function postGmailMessageWithThreadFallback(accessToken: string, raw: stri
   } catch {
     return postGmailMessage(accessToken, raw);
   }
+}
+
+/**
+ * 「串接」既有信件串（原始往來完全發生在這個系統之外，例如 Outlook 或其他信箱寄來，主旨可能帶著中文
+ * 「回覆：」等非英文前綴、甚至已經疊了好幾層）回信時，過去固定用「主旨已經是 Re: 開頭就照舊，否則加上
+ * Re: 」這個推算出來的主旨送出——推算對「這個系統自己建立的信件串」（第一封信本來就是系統自己組的、
+ * 後續固定只加一次 Re:）向來準確，但對外部信件串不一定準；Gmail 的 messages.send 指定 threadId 時，
+ * 主旨如果被判定「不屬於這條討論串」會直接回錯，不會靜默忽略 threadId 改成新建。舊寫法（見上面
+ * postGmailMessageWithThreadFallback）遇到這個錯誤會整個放棄 threadId，改寄一封完全脫離原本討論串的
+ * 新信——寄件成功、畫面上完全看不出異常，只有事後去 Gmail 才會發現「回覆不見了」，變成一封孤立的
+ * 「Re: xxx」（案件 26090052／26090053 的回報就是這個現象）。
+ *
+ * 修法：依序嘗試①推算出來的主旨、②信件串最後一封信「原封不動」的主旨（這個字串保證是 Gmail 自己認定
+ * 屬於這條討論串的主旨，理論上一定能通過它自己的驗證，用來涵蓋原始主旨帶有非英文前綴、推算失準的情況）；
+ * 兩者都被拒絕才真正放棄 threadId，並在回傳值標記 threaded:false，讓呼叫端可以明確告知使用者「可能沒有
+ * 正確歸進原本的信件串」，不再悄悄假裝一切正常。threadId 從一開始就是空字串（例如跨帳號查不到對方信箱
+ * 裡對應的 threadId）時，直接視為第一次嘗試就失敗，同樣標記 threaded:false，而不是誤判成功。
+ */
+async function sendThreadedGmailReply(
+  accessToken: string, threadId: string, lastSubject: string, candidateSubject: string, buildRaw: (subject: string) => string
+): Promise<{ threadId: string; messageId: string; threaded: boolean }> {
+  if (threadId) {
+    for (const subject of [...new Set([candidateSubject, lastSubject].filter(Boolean))]) {
+      try {
+        const result = await postGmailMessage(accessToken, buildRaw(subject), threadId);
+        return { ...result, threaded: true };
+      } catch { /* 換下一個主旨版本再試；都試完才真的放棄 threadId（見下方） */ }
+    }
+  }
+  const result = await postGmailMessage(accessToken, buildRaw(candidateSubject));
+  return { ...result, threaded: false };
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -2325,9 +2356,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!to) return { ok: false, action: 'replyCaseMail', error: '無法判斷回覆對象' };
     const cc = payload.cc !== undefined ? text(Array.isArray(payload.cc) ? payload.cc.join(',') : payload.cc) : suggestion.cc;
     const quote = gmailThreadQuote(threadMessages, htmlToPlainText(signatureHtml), signatureHtml);
-    const raw = buildGmailRawMessage({
+    const candidateSubject = /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}`;
+    const buildRaw = (subject: string) => buildGmailRawMessage({
       to, cc, subject: lastSubject, bodyHtml, signatureHtml, quotedHtml: quote.html, quotedText: quote.plainText, inlineImages, attachments,
-      threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject: /^re:/i.test(lastSubject) ? lastSubject : `Re: ${lastSubject}` }
+      threadHeaders: { inReplyTo: lastMessageId, references: [lastReferences, lastMessageId].filter(Boolean).join(' '), subject }
     });
     const senderAccessToken = await this.getValidGmailAccessToken(current.account);
     // 同一帳號（owner===current.account）本來就是同一個信箱，直接沿用讀到的 threadId 即可；不同帳號則
@@ -2336,13 +2368,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const ownThreadId = owner === canonicalAccount(current.account)
       ? threadId
       : await findOwnMailboxThreadId(senderAccessToken, lastMessageId);
-    let sendResult: { threadId: string; messageId: string };
+    let sendResult: { threadId: string; messageId: string; threaded: boolean };
     try {
-      sendResult = await postGmailMessageWithThreadFallback(senderAccessToken, raw, ownThreadId || undefined);
+      sendResult = await sendThreadedGmailReply(senderAccessToken, ownThreadId, lastSubject, candidateSubject, buildRaw);
     } catch (err) {
       return { ok: false, action: 'replyCaseMail', error: err instanceof Error ? err.message : String(err) };
     }
-    return { ok: true, action: 'replyCaseMail', gmailMessageId: sendResult.messageId };
+    return { ok: true, action: 'replyCaseMail', gmailMessageId: sendResult.messageId, threaded: sendResult.threaded };
   }
 
   private insertScheduledMail(options: {
@@ -2646,7 +2678,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   /** 實際把一筆排定的信寄出去——由 runScheduledDispatch() 對每一筆到期的排程各自呼叫。kind='send' 在真正
    * 寄出前重新檢查一次案件是否「已經有」Gmail 信件串（排程等待期間，案件有可能被用其他方式先寄出過），
    * 避免重複建立第二條信件串；成功後跟 sendCaseMail 一樣把 Gmail信件串ID／Gmail寄件帳號寫回 database 表。
-   * kind='reply' 一律在寄出前重新讀一次信件串現況（fetchGmailThreadMessages/buildGmailReplyRaw），不是沿用
+   * kind='reply' 一律在寄出前重新讀一次信件串現況（fetchGmailThreadMessages/buildGmailReplyRawVariants），不是沿用
    * 排程建立當下的舊標頭，確保接在正確的最新一封信後面。失敗直接讓例外往外拋，由呼叫端統一記錄失敗原因。 */
   private async dispatchScheduledMailItem(item: ScheduledMailRow): Promise<{ outcome: 'sent' | 'canceled'; note?: string }> {
     const inlineImages = JSON.parse(item.inline_images || '[]') as GmailInlineImage[];
@@ -2712,14 +2744,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       ? accessToken
       : await this.getValidGmailAccessToken(threadOwner);
     const threadMessages = await fetchGmailThreadMessages(threadAccessToken, threadId);
-    const { raw, lastMessageId } = buildGmailReplyRaw(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
+    const { lastSubject, candidateSubject, buildRaw, lastMessageId } = buildGmailReplyRawVariants(threadMessages, { to: item.to_address, cc: item.cc_address, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
     // 跟 replyCaseMail 同一套邏輯：同一帳號直接沿用既有 threadId；不同帳號則查寄件帳號自己信箱裡對應的
     // threadId，確保排程寄出的回覆一樣能正確歸進寄件人自己視角下的討論串（見 findOwnMailboxThreadId 說明）。
     const ownThreadId = threadOwner === canonicalAccount(item.owner_account)
       ? threadId
       : await findOwnMailboxThreadId(accessToken, lastMessageId);
-    await postGmailMessageWithThreadFallback(accessToken, raw, ownThreadId || undefined);
-    return { outcome: 'sent' };
+    const sendResult = await sendThreadedGmailReply(accessToken, ownThreadId, lastSubject, candidateSubject, buildRaw);
+    // 排程是背景寄出，使用者當下看不到——沒有正確歸進原本信件串時，把原因記進這筆排程（error_message），
+    // 供之後查詢／除錯；目前排程清單只顯示待寄送與失敗項目（見 index.html 的 refreshScheduledMailList），
+    // 這則提醒暫時不會出現在畫面上，是已知的限制，不是視為已完整解決。
+    return sendResult.threaded ? { outcome: 'sent' } : { outcome: 'sent', note: '回覆已寄出，但可能沒有正確歸進原本的 Gmail 信件串，請至寄件備份確認' };
   }
 
   /** Cron Trigger（wrangler.jsonc 的 triggers.crons，每分鐘一次）觸發的入口——找出所有「到期的待寄送排程」
