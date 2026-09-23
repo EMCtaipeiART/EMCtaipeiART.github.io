@@ -4222,19 +4222,57 @@ describe('Pixel Office shared state', () => {
       expect(await statusOfPerson('Leona')).toMatchObject({ status: 'present' });
       fetchSpy.mockRestore();
 
-      // 開會中打開筆電：心跳不會把「會議」改成在座（否則下一分鐘又被改回來，畫面會跳）。
+      // 開會中敲一下鍵盤還不算回座位：要連續在電腦前 3 分鐘才收回，不然畫面會一直閃。
       at('2026-09-21T06:10:00Z');
       expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 }))
         .toMatchObject({ status: 'meeting', changed: false });
 
-      // 開會中離開座位也不會被改成廁所。
+      // 開會中離開座位也不會被改成廁所，而且「連續在電腦前」的計時要被打斷重來。
+      at('2026-09-21T06:11:00Z');
       expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 30 * 60 }))
         .toMatchObject({ status: 'meeting' });
+      at('2026-09-21T06:14:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'meeting', changed: false });
 
-      // 散會：交還給電腦自動判斷。（中間電腦一直開著，不然會先被判成關機下班。）
-      for (const minute of ['15', '20', '25', '30', '35', '40', '44']) {
+      // 散會了但行事曆上的事件還沒結束：人連續在電腦前 3 分鐘，就把會議收回成在座
+      // （2026-09-23 使用者要求「人還在電腦前就把狀態改回位置上」）。
+      for (const minute of ['15', '16']) {
         at(`2026-09-21T06:${minute}:00Z`);
         await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 });
+      }
+      at('2026-09-21T06:17:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'present', changed: true });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present', statusSource: 'auto' });
+
+      // 而且行事曆下一分鐘不會再把他設回會議——兩邊來回設的話畫面就會一分鐘閃一次。
+      const during = Date.parse('2026-09-21T06:18:00Z');
+      at('2026-09-21T06:18:00Z');
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [[during - 20 * 60_000, during + 20 * 60_000]],
+        'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(during)).toMatchObject({ detected: { Machi: 'meeting' }, meeting: [], atDesk: ['Machi'] });
+      expect(await statusOfPerson('Machi')).toMatchObject({ status: 'present', statusSource: 'auto' });
+      fetchSpy.mockRestore();
+
+      // 換一個情境測「散會後交還」：人離開座位去會議室開會，事件結束才由行事曆收回。
+      at('2026-09-21T06:20:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 30 * 60 });
+      const inMeeting = Date.parse('2026-09-21T06:21:00Z');
+      at('2026-09-21T06:21:00Z');
+      fetchSpy = mockFreeBusy({
+        'machi.chen@emctaipei.com': [[inMeeting - 20 * 60_000, inMeeting + 20 * 60_000]],
+        'anna.hsu@emctaipei.com': [], 'amber.tian@emctaipei.com': [],
+        'leona.chen@emctaipei.com': [], 'noise.zhong@emctaipei.com': []
+      });
+      expect(await runCalendarSync(inMeeting)).toMatchObject({ meeting: ['Machi'] });
+      fetchSpy.mockRestore();
+      for (const minute of ['25', '30', '35', '40', '44']) {
+        at(`2026-09-21T06:${minute}:00Z`);
+        await api({ action: 'pixelOfficeHeartbeat', name: 'Machi', serviceKey: key, idleSeconds: 30 * 60 });
       }
       const after = Date.parse('2026-09-21T06:45:00Z');
       at('2026-09-21T06:45:00Z');
@@ -4300,6 +4338,82 @@ describe('Pixel Office shared state', () => {
       expect(await runCalendarSync(Date.parse('2026-09-21T16:00:00Z'))).toMatchObject({ skipped: 'off-hours' });
       expect(neverCalled).not.toHaveBeenCalled();
       neverCalled.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('puts 公出／用餐 back to 在座 once the person has been at the computer for a while', async () => {
+    const key = 'test-nas-watcher-key';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const at = (iso: string) => vi.setSystemTime(new Date(Date.parse(iso)));
+      // 平日下午（台北 15:00），電腦開著、人在座位上。
+      at('2026-09-21T07:00:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 });
+
+      // 自己點了公出。電腦判斷不出來，所以只要人不在電腦前就一直維持。
+      await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'out' } });
+      at('2026-09-21T07:01:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 30 * 60 }))
+        .toMatchObject({ status: 'out' });
+
+      // 回來了：頭兩分鐘還不算數（敲一下鍵盤就跳回去的話畫面會一直閃）。
+      at('2026-09-21T07:02:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'out', changed: false });
+      at('2026-09-21T07:04:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'out', changed: false });
+      // 連續滿 3 分鐘：收回成在座（2026-09-23 使用者要求）。
+      at('2026-09-21T07:05:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'present', changed: true });
+      expect(await statusOfPerson('Leona')).toMatchObject({ status: 'present', statusSource: 'auto' });
+
+      // 中間離開一次，計時要重來，不能把離開前後的時間加在一起。
+      await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'out' } });
+      at('2026-09-21T07:06:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 });
+      at('2026-09-21T07:08:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 30 * 60 });
+      at('2026-09-21T07:10:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'out', changed: false });
+
+      // 手動點的「用餐」也一樣收得回來（中午沒去吃、一直在電腦前）。
+      at('2026-09-21T04:00:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Amber', serviceKey: key, idleSeconds: 3 });
+      await api({ action: 'pixelOfficeUpdate', name: 'Amber', patch: { status: 'lunch' } });
+      for (const minute of ['01', '02', '03']) {
+        at(`2026-09-21T04:${minute}:00Z`);
+        await api({ action: 'pixelOfficeHeartbeat', name: 'Amber', serviceKey: key, idleSeconds: 3 });
+      }
+      at('2026-09-21T04:04:00Z');
+      expect(await api({ action: 'pixelOfficeHeartbeat', name: 'Amber', serviceKey: key, idleSeconds: 3 }))
+        .toMatchObject({ status: 'present' });
+
+      // 出國與休假不收：那兩個期間開電腦處理一點事很正常，不該被改成在座。
+      for (const [name, status] of [['Noise', 'abroad'], ['Anna', 'leave']] as const) {
+        at('2026-09-21T07:20:00Z');
+        await api({ action: 'pixelOfficeHeartbeat', name, serviceKey: key, idleSeconds: 3 });
+        await api({ action: 'pixelOfficeUpdate', name, patch: { status } });
+        for (const minute of ['21', '22', '23', '24', '25']) {
+          at(`2026-09-21T07:${minute}:00Z`);
+          await api({ action: 'pixelOfficeHeartbeat', name, serviceKey: key, idleSeconds: 3 });
+        }
+        expect(await statusOfPerson(name)).toMatchObject({ status, statusSource: 'manual' });
+      }
+
+      // 舊版爬蟲沒回報 idleSeconds：電腦開著不等於人在，不能拿來收回公出。
+      at('2026-09-21T08:00:00Z');
+      await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key, idleSeconds: 3 });
+      await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { status: 'out' } });
+      for (const minute of ['01', '02', '03', '04', '05']) {
+        at(`2026-09-21T08:${minute}:00Z`);
+        await api({ action: 'pixelOfficeHeartbeat', name: 'Leona', serviceKey: key });
+      }
+      expect(await statusOfPerson('Leona')).toMatchObject({ status: 'out', statusSource: 'manual' });
     } finally {
       vi.useRealTimers();
     }

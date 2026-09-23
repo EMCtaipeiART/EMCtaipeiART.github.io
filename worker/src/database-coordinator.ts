@@ -31,6 +31,13 @@ const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
 const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
 // 電腦開著但鍵鼠閒置這麼久就當作人離開座位了：午休時段顯示用餐，其他時段顯示廁所。
 const PIXEL_OFFICE_AWAY_IDLE_SECONDS = 5 * 60;
+// 反過來的判定：人明明就在電腦前敲鍵盤，卻還掛著公出／會議／用餐，就把狀態收回成在座。
+// 要「連續」這麼久都在動才收回——開會開到一半回座位拿個東西、敲一下鍵盤就跳回在座的話，畫面會一直閃。
+// 心跳每分鐘一次，3 分鐘 = 連續 3 次都在動。
+const PIXEL_OFFICE_RETURN_ACTIVE_MS = 3 * 60 * 1000;
+// 會被這個判定收回的狀態。出國與休假不收：那兩個期間本來就可能開電腦處理一點事，收回去只會擾民。
+// 廁所不必列，它本來就會隨閒置時間自己回到在座。
+const PIXEL_OFFICE_RETURN_STATUSES = ['out', 'meeting', 'lunch'];
 const PIXEL_OFFICE_LUNCH_START_HOUR = 12;
 const PIXEL_OFFICE_LUNCH_END_HOUR = 14;
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
@@ -76,6 +83,20 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   }
   if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
   return 'present';
+}
+
+/** 這次心跳代表「人就在電腦前」嗎。沒帶 idleSeconds 的舊版爬蟲只證明電腦開著，不算——開著電腦去開會是常態。 */
+export function pixelOfficeAtDesk(idleSeconds?: unknown): boolean {
+  const idle = Number(idleSeconds);
+  return Number.isFinite(idle) && idle < PIXEL_OFFICE_AWAY_IDLE_SECONDS;
+}
+
+/** 已經連續在電腦前夠久，可以把公出／會議／用餐收回成在座了嗎。
+ * activeSince 由心跳維護：偵測到人在動就記下起點，一閒置就清掉；電腦離線期間的舊起點不算數。 */
+export function pixelOfficeBackAtDesk(state: { activeSince?: unknown }, lastSeenMs: number, nowMs: number): boolean {
+  if (!(nowMs - Number(lastSeenMs) <= PIXEL_OFFICE_OFFLINE_MS)) return false;
+  const since = Number(state.activeSince);
+  return Number.isFinite(since) && since > 0 && nowMs - since >= PIXEL_OFFICE_RETURN_ACTIVE_MS;
 }
 // 行事曆自動狀態：只用這一個帳號的 Google 授權去查（其他四位不必重新連接）。Workspace 網域內通常
 // 看得到彼此的忙碌時段；若同事另有分享事件詳細資料，還能用事件類型／標題分辨「會議」與「休假」。
@@ -1405,9 +1426,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
  *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
-  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' {
-    const row = this.ctx.storage.sql.exec<{ state: string }>(
-      'SELECT state FROM pixel_office_people WHERE name = ?', name
+  private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
+    const row = this.ctx.storage.sql.exec<{ state: string; last_seen: number }>(
+      'SELECT state, last_seen FROM pixel_office_people WHERE name = ?', name
     ).toArray()[0];
     if (!row) return 'unchanged';
     let state: Row = {};
@@ -1421,8 +1442,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 公出、出國、以及自己點的會議／休假是電腦看不出來的，手動指定就一定保留。
       // 回報成 'manual' 而不是 'unchanged'，診斷時才分得出「沒偵測到」與「偵測到但被手動擋住」。
       if (source === 'manual' && !PIXEL_OFFICE_AUTO_STATUSES.includes(status)) return 'manual';
+      // 行事曆上有會議，但人一直在電腦前：不要套用。心跳那邊會立刻把會議收回成在座，這裡每分鐘
+      // 再設一次的話，畫面就會一分鐘閃一次（2026-09-23 加「人在電腦前就改回在座」時一起處理）。
+      // 休假照設：人在電腦前處理一點事不代表沒請假。
+      if (desired === 'meeting' && pixelOfficeBackAtDesk(state, Number(row.last_seen) || 0, nowMs)) return 'at-desk';
       state.status = desired;
       state.statusSource = 'calendar';
+      // 會議剛開始時同樣重新起算，否則開會前一直在電腦前的人會在第一次心跳就被收回成在座。
+      delete state.activeSince;
     } else {
       // 只收回自己設的；使用者手動點的會議／休假要自己取消。
       if (!['meeting', 'leave'].includes(status) || source !== 'calendar') return 'unchanged';
@@ -1495,7 +1522,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       }));
     }
     const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
-    const detected: Row = {}, manualHeld: string[] = [];
+    const detected: Row = {}, manualHeld: string[] = [], atDesk: string[] = [];
     for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) {
       const entry = calendars[email];
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
@@ -1517,9 +1544,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       else if (result === 'leave') leave.push(name);
       else if (result === 'released') released.push(name);
       else if (result === 'manual') manualHeld.push(name);
+      else if (result === 'at-desk') atDesk.push(name);
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
-    const result = { ok: true, detected, meeting, leave, released, manualHeld, unreadable, detailUnreadable };
+    const result = { ok: true, detected, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }
@@ -1573,6 +1601,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const current = text(state.status) || 'present';
     const idleSeconds = Number(payload.idleSeconds);
     const desired = pixelOfficeWorkStatus(nowMs, Number.isFinite(idleSeconds) ? idleSeconds : undefined);
+    // 「連續在電腦前多久」的起點。剛開機／剛醒來一律重新計時，否則關機前留下的舊起點會讓下面的
+    // 判定在第一次心跳就成立。
+    if (!wasOnline) delete state.activeSince;
+    if (pixelOfficeAtDesk(payload.idleSeconds)) { if (!Number(state.activeSince)) state.activeSince = nowMs; }
+    else delete state.activeSince;
     let next = current;
     let source = text(state.statusSource);
     // 手動指定只在同一個時段內有效：時間規則一換班（白天↔晚上↔假日，不含用餐／廁所這種同一時段內的
@@ -1582,7 +1615,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       && text(state.statusBaseline) !== pixelOfficeWorkStatus(nowMs);
     // 開會／休假期間電腦有心跳，不要被「剛開機」改成在座——下一分鐘行事曆同步又會改回去，畫面會來回跳。
     const inCalendarEvent = ['meeting', 'leave'].includes(current) && source === 'calendar';
+    // 人就在電腦前敲鍵盤，卻還掛著公出／會議／用餐：收回成在座（使用者 2026-09-23 要求）。
+    // 不管是自己點的還是行事曆設的都收——會議排到了但人沒去、或是提早散會回座位，都屬於這一類。
+    const returned = PIXEL_OFFICE_RETURN_STATUSES.includes(current)
+      && pixelOfficeBackAtDesk(state, nowMs, nowMs);
     if (!wasOnline && !inCalendarEvent) {
+      next = desired;
+      source = 'auto';
+    } else if (returned) {
       next = desired;
       source = 'auto';
     } else if (!inCalendarEvent && (manualExpired || (PIXEL_OFFICE_AUTO_STATUSES.includes(current) && source !== 'manual'))) {
@@ -1596,8 +1636,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.statusAt = nowMs;
     }
     if (!changed) {
-      // 狀態沒變：只更新最後心跳時間，不動 updated_at（不驚動其他人的遊戲畫面）。
-      this.ctx.storage.sql.exec('UPDATE pixel_office_people SET last_seen = ? WHERE name = ?', nowMs, name);
+      // 狀態沒變：更新最後心跳時間與 activeSince（「連續在電腦前多久」要能跨心跳累積），
+      // 但不動 updated_at——這兩個值遊戲端看不到，不需要驚動其他人的畫面。
+      this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, last_seen = ? WHERE name = ?', JSON.stringify(state), nowMs, name);
     } else {
       const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
       if (existing) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, last_seen = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), nowMs, version, name);
@@ -1647,6 +1688,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (status === 'auto') {
         state.status = pixelOfficeWorkStatus(Date.now());
         state.statusSource = 'auto';
+        delete state.activeSince;
         delete state.statusBaseline;
         state.statusAt = Date.now();
       } else {
@@ -1657,6 +1699,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 免得昨晚手動點的加班隔天中午還掛在那裡。
       state.statusSource = 'manual';
       state.statusBaseline = pixelOfficeWorkStatus(Date.now());
+      // 「連續在電腦前多久」重新起算。剛點下公出的人通常還坐在位子上收東西，沿用點之前累積的時間
+      // 會讓下一次心跳立刻把公出打回在座。
+      delete state.activeSince;
       state.statusAt = Date.now();
       }
     }
