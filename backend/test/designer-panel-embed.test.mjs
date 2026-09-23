@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=39"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=40"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -107,7 +107,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=46/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=47/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -368,4 +368,23 @@ test('個人資料卡一律夾在場景框內，右邊的人物不會被切掉',
   assert.match(fn, /top=Math\.max\(8,Math\.min\(holder\.height-cardH-8,top\)\);/, '上下夾在容器內');
   // 高度用當下量到的，卡片內容長短不一，夾邊界才會準。
   assert.match(fn, /const cardW=card\.offsetWidth\|\|232,cardH=card\.offsetHeight\|\|240/);
+});
+
+test('所有狀態的小膠囊排在同一條水平線上', async () => {
+  const js = await officeJs();
+  const marker = js.slice(js.indexOf('function drawStatusMarker('), js.indexOf('\nfunction ', js.indexOf('function drawStatusMarker(') + 1));
+  // 膠囊原本是用「縮放後」的圖示高度往上推，所以圖示有縮小的狀態（公出 .78、下班 .8）膠囊
+  // 就會比別人低 10～11px（2026-09-23 使用者回報）。高度改用未縮放的基準值，圖縮膠囊不跟著縮。
+  assert.match(js, /const DESK_ICON_BASE=104;/);
+  assert.match(marker, /iconSize=DESK_ICON_BASE\*\(DESK_ICON_SCALE\[status\.symbol\]\|\|1\)/, '圖示才吃縮放');
+  assert.match(marker, /labelY=iconY-DESK_ICON_BASE\/2-h-2;/, '膠囊高度不能吃縮放');
+  assert.doesNotMatch(marker, /labelY=iconY-iconSize\/2/, '不要再用縮放後的高度算膠囊');
+
+  // 縮小仍然只作用在圖示上——這兩張圖留白少，照 104 畫會比別人大一圈。
+  const scales = Object.fromEntries(js.match(/const DESK_ICON_SCALE=\{(.+?)\};/)[1]
+    .split(',').map(pair => pair.split(':')).map(([key, value]) => [key, Number(value)]));
+  assert.ok(scales.power < 1 && scales.briefcase < 1, '這兩張圖仍然維持縮小');
+  // 膠囊的 y 只能由常數決定，不能出現任何跟 symbol 有關的變數，否則又會各自高低不同。
+  const labelExpr = marker.match(/labelY=([^;]+);/)[1];
+  assert.doesNotMatch(labelExpr, /iconSize|DESK_ICON_SCALE|symbol/, `膠囊高度還是會隨圖示變：${labelExpr}`);
 });
