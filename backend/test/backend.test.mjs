@@ -822,7 +822,7 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
   // 工具列改由與信件範本共用的 richSettingsToolbarHtml() 產生，按鈕本身改在那支函式裡驗證
   //（見「signature and mail template editors in personal settings get the same rich toolbar」）。
   assert.match(rowHtmlSource, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/);
-  const sharedToolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0] || '';
+  const sharedToolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false,details=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0] || '';
   for (const cmd of ['bold', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
     assert.ok(sharedToolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
   }
@@ -4134,7 +4134,7 @@ test('mail editor toolbar offers undo/redo, font size, italic, underline, backgr
 
 test('signature and mail template editors in personal settings get the same rich toolbar as the mail editor', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false,details=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(toolbar, 'could not locate richSettingsToolbarHtml');
   for (const cmd of ['undo', 'redo', 'bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
     assert.ok(toolbar.includes(`data-rich-cmd="${cmd}"`), `共用工具列缺少 ${cmd}`);
@@ -4145,7 +4145,7 @@ test('signature and mail template editors in personal settings get the same rich
 
   // 兩處都用同一個產生器，功能才不會各走各的。
   // 信件範本多帶 recipientName（插入收件人名）選項。
-  assert.equal((html.match(/\$\{richSettingsToolbarHtml\('signature-preset-toolbar'(?:,\{recipientName:true\})?\)\}/g) || []).length, 2, '簽名檔與信件範本都要套用');
+  assert.equal((html.match(/\$\{richSettingsToolbarHtml\('signature-preset-toolbar'(?:,\{recipientName:true,details:true\})?\)\}/g) || []).length, 2, '簽名檔與信件範本都要套用');
 
   // 信件範本從純文字 textarea 改成格式化編輯區，存的是 HTML。
   assert.doesNotMatch(html, /<textarea data-reply-template-content/, '信件範本不該再是純文字欄位');
@@ -4371,7 +4371,7 @@ test('reply templates saved as formatted text are inserted as formatting, not as
       const looksLikeSignatureHtml = value => /<[a-z][\\s\\S]*>/i.test(String(value || ''));
       const setGmailEditorPlainText = (target, value) => { calls.push({ plain: value }); target.innerHTML = 'PLAIN:' + value; };
       const REPLY_TEMPLATE_RECIPIENT_TOKEN = '{收件人名}';
-      const applyTemplateRecipientName = value => String(value || '');
+      const applyTemplateTokens = value => String(value || '');
       ${block}
       setGmailEditorTemplateContent(editor, ${JSON.stringify(greeting)}, ${JSON.stringify(template)});
     `)(editor, calls);
@@ -4807,6 +4807,7 @@ test('設計師回覆信的預設內文依項目細節：社群貼文／廣告�
   assert.ok(sources.every(Boolean), 'could not locate the reply template helpers');
   const build = profiles => new Function('profiles', `
     const designerProfile = name => profiles[name] || {};
+    const REPLY_TEMPLATE_DETAILS_TOKEN = '{項目細節}';
     ${sources.join('\n')}
     return designerReplyTemplateForCase;
   `)(profiles);
@@ -4831,7 +4832,7 @@ test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名
   assert.match(section, /settings=\{signaturePresets:signaturePresetSettings\.presets,signaturePresetDefault:signaturePresetSettings\.defaultName\};/);
 
   // 只有信件範本的工具列有「插入收件人名」，簽名檔沒有。
-  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar',\{recipientName:true\}\)\}<div class="signature-preset-content" data-reply-template-content/);
+  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar',\{recipientName:true,details:true\}\)\}<div class="signature-preset-content" data-reply-template-content/);
   assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/);
   const apply = html.match(/function applyTemplateRecipientName\(template,editorId\)\{[\s\S]*?\n\}/)?.[0];
   const run = (template, name) => new Function(`
@@ -5005,4 +5006,81 @@ test('回信的 NAS 區塊：影片路徑要可編輯（不然整段選取連正
   assert.match(pickerServer, /JSON\.parse\(params\.get\('folders'\) \|\| '\[\]'\)/);
   assert.match(pickerServer, /if\(reuseFolders\.length > 1\)\{\n\s+selectedFolders = reuseFolders\.map/);
   assert.match(pickerServer, /const singlePath = \(params\.get\('path'\) \|\| ''\)\.trim\(\);/, '沒帶 folders 的舊版主頁面仍走原本單一路徑');
+});
+
+test('信件範本可插入 {項目細節}：套用時換成案件的項目細節（不含急件），設為預設就直接帶進回信內文', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+
+  // ── 快速按鈕：只有信件範本的工具列有，簽名檔沒有 ──
+  const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false,details=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(toolbar, 'could not locate richSettingsToolbarHtml');
+  assert.match(toolbar, /data-rich-details/);
+  assert.match(toolbar, /插入項目細節/);
+  assert.match(toolbar, /\+\(details\?/, '這顆按鈕要由 details 選項控制，不是所有工具列都有');
+  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar',\{recipientName:true,details:true\}\)\}<div class="signature-preset-content" data-reply-template-content/);
+  assert.match(html, /\$\{richSettingsToolbarHtml\('signature-preset-toolbar'\)\}/, '簽名檔那一列不帶任何代號按鈕');
+
+  // 兩顆代號按鈕共用同一段插入邏輯，各自插自己的代號。
+  const bind = html.match(/function bindRichSettingsEditor\(list,contentSelector\)\{[\s\S]*?\n\}\n/)?.[0] || html;
+  assert.match(bind, /const tokenButton=event\.target\.closest\('\[data-rich-recipient-name\]'\)\|\|event\.target\.closest\('\[data-rich-details\]'\);/);
+  assert.match(bind, /tokenButton\.hasAttribute\('data-rich-details'\)\?REPLY_TEMPLATE_DETAILS_TOKEN:REPLY_TEMPLATE_RECIPIENT_TOKEN/);
+
+  // ── 代號解析：真的執行 applyTemplateDetails ──
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0]
+    || html.split('\n').find(line => line.startsWith(`function ${name}(`));
+  const applySource = pick('applyTemplateDetails');
+  const itemsSource = pick('designerReplyDetailItems');
+  const splitSource = pick('splitWeightDetails');
+  assert.ok(applySource && itemsSource && splitSource, 'could not locate applyTemplateDetails and its helpers');
+  const resolve = (template, details) => new Function('details', `
+    const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const looksLikeSignatureHtml = value => /<[a-z][\\s\\S]*>/i.test(String(value || ''));
+    const REPLY_TEMPLATE_DETAILS_TOKEN = '{項目細節}';
+    const currentGmailEditorCaseRow = () => ({ details });
+    ${splitSource}
+    ${itemsSource}
+    ${applySource}
+    return applyTemplateDetails(${JSON.stringify(template)}, 'gmailThreadReplyEditor');
+  `)(details);
+  assert.equal(resolve('附上{項目細節}，再煩請查收。', '社群貼文'), '附上社群貼文，再煩請查收。');
+  assert.equal(resolve('附上{項目細節}，再煩請查收。', '社群貼文, 急件'), '附上社群貼文，再煩請查收。', '「急件」是急迫程度不是細節，一律略過');
+  assert.equal(resolve('附上{項目細節}，再煩請查收。', '廣告素材、2D 動畫'), '附上廣告素材、2D 動畫，再煩請查收。', '多個細節用「、」串起來');
+  assert.equal(resolve('附上{項目細節}，再煩請查收。', '急件'), '附上，再煩請查收。');
+  assert.equal(resolve('附上{項目細節}，再煩請查收。', ''), '附上，再煩請查收。', '沒填細節換成空字串，不可以把代號原樣寄出去');
+  assert.equal(resolve('附上{項目細節}，<br>查收', '<b>x</b>'), '附上&lt;b&gt;x&lt;/b&gt;，<br>查收', 'HTML 範本裡的細節要逃脫');
+  assert.equal(resolve('完全沒有代號', '社群貼文'), '完全沒有代號');
+  assert.equal(resolve('{項目細節}與{項目細節}', '社群貼文'), '社群貼文與社群貼文', '同一個代號出現多次都要換');
+
+  // ── 兩條套用路徑都要換代號（自動帶入預設範本、手動插入範本）──
+  assert.match(html, /function applyTemplateTokens\(template,editorId\)\{return applyTemplateDetails\(applyTemplateRecipientName\(template,editorId\),editorId\)\}/);
+  const setContent = html.match(/function setGmailEditorTemplateContent\(editor,greeting,template\)\{[\s\S]*?\n\}/)?.[0];
+  assert.match(setContent, /const body=applyTemplateTokens\(template,editor\.id\);/, '自動帶入預設範本時就要換好，使用者不必再手動插入');
+  const insert = html.match(/function insertTemplateIntoRichEditor\(editorId,content\)\{[\s\S]*?\n\}/)?.[0];
+  assert.match(insert, /const value=applyTemplateTokens\(content,editorId\);/);
+
+  // ── 設為「預設」且含代號的範本，回信時直接勝出 ──
+  const sources = ['splitWeightDetails', 'normalizeReplyTemplateSettings', 'defaultReplyTemplateContent', 'designerReplyDetailItems', 'designerReplyTemplateForCase'].map(pick);
+  assert.ok(sources.every(Boolean), 'could not locate the reply template helpers');
+  const chooseTemplate = profiles => new Function('profiles', `
+    const designerProfile = name => profiles[name] || {};
+    const REPLY_TEMPLATE_DETAILS_TOKEN = '{項目細節}';
+    ${sources.join('\n')}
+    return designerReplyTemplateForCase;
+  `)(profiles);
+  const withToken = chooseTemplate({ Machi: {
+    replyTemplates: { '範本 1': '附上廣告素材，<br>再煩請查收，謝謝。', '範本 2': '嗨，這次附上{項目細節}，<br>再麻煩確認，謝謝！' },
+    replyTemplateDefault: '範本 2'
+  } });
+  const tokenTemplate = '嗨，這次附上{項目細節}，<br>再麻煩確認，謝謝！';
+  assert.equal(withToken({ designer: 'Machi', details: '社群貼文' }), tokenTemplate, '含代號的預設範本本來就會自己帶入細節，不要再退回自動產生的內容');
+  assert.equal(withToken({ designer: 'Machi', details: '廣告素材' }), tokenTemplate, '預設範本排最前面，含代號時一律勝出');
+  assert.equal(withToken({ designer: 'Machi', details: '' }), tokenTemplate, '沒填細節也照樣用預設範本（代號會被換成空字串）');
+
+  // 沒有人用代號時，維持原本「挑提到該細節的範本，都沒有就自動產生」的行為。
+  const withoutToken = chooseTemplate({ Machi: {
+    replyTemplates: { '範本 1': '附上廣告素材，<br>再煩請查收，謝謝。', '範本 2': '附上社群貼文，<br>再煩請查收，謝謝。' },
+    replyTemplateDefault: '範本 2'
+  } });
+  assert.equal(withoutToken({ designer: 'Machi', details: '廣告素材' }), '附上廣告素材，<br>再煩請查收，謝謝。');
+  assert.equal(withoutToken({ designer: 'Machi', details: '素材重置' }), '附上素材重置，\n再煩請查收，謝謝。');
 });

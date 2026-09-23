@@ -8836,7 +8836,7 @@ function richContentPlainText(content){
 }
 /** 插入信件範本：舊的純文字範本沿用既有的逐行插入；新的 HTML 範本要保留格式插進游標位置。 */
 function insertTemplateIntoRichEditor(editorId,content){
-  const value=applyTemplateRecipientName(content,editorId);
+  const value=applyTemplateTokens(content,editorId);
   if(!looksLikeSignatureHtml(value)){insertPlainTextIntoRichEditor(editorId,value);return}
   const editor=document.getElementById(editorId);
   if(!editor||!value)return;
@@ -11077,7 +11077,7 @@ async function loadDesignerRoster({background=false}={}){
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!canAccessDesignerSettings()){setSync('此帳號沒有設計師設定或圖片管理權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
-function mailTemplateRowHtml(content='',index=0,{defaultName='',scope='mail'}={}){const name=`範本 ${index+1}`,radioName=`mail-template-default-${String(scope).replace(/[^a-z0-9_-]/gi,'-')}`;return `<div class="mail-template-row" data-reply-template-row><div class="mail-template-fields"><div class="mail-template-head"><b data-reply-template-label>${esc(name)}</b><label class="mail-template-default"><input type="radio" name="${esc(radioName)}" data-reply-template-default ${name===defaultName?'checked':''}>設為預設</label></div>${richSettingsToolbarHtml('signature-preset-toolbar',{recipientName:true})}<div class="signature-preset-content" data-reply-template-content contenteditable="true" data-placeholder="輸入信件範本內容——支援粗體／斜體／底線／對齊／文字大小／顏色／超連結">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-reply-template aria-label="刪除這個信件範本">×</button></div>`}
+function mailTemplateRowHtml(content='',index=0,{defaultName='',scope='mail'}={}){const name=`範本 ${index+1}`,radioName=`mail-template-default-${String(scope).replace(/[^a-z0-9_-]/gi,'-')}`;return `<div class="mail-template-row" data-reply-template-row><div class="mail-template-fields"><div class="mail-template-head"><b data-reply-template-label>${esc(name)}</b><label class="mail-template-default"><input type="radio" name="${esc(radioName)}" data-reply-template-default ${name===defaultName?'checked':''}>設為預設</label></div>${richSettingsToolbarHtml('signature-preset-toolbar',{recipientName:true,details:true})}<div class="signature-preset-content" data-reply-template-content contenteditable="true" data-placeholder="輸入信件範本內容——支援粗體／斜體／底線／對齊／文字大小／顏色／超連結">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-reply-template aria-label="刪除這個信件範本">×</button></div>`}
 function syncMailTemplateRows(list){if(!list)return;const rows=[...list.querySelectorAll('[data-reply-template-row]')];rows.forEach((row,index)=>{const label=row.querySelector('[data-reply-template-label]');if(label)label.textContent=`範本 ${index+1}`});if(rows.length&&!rows.some(row=>row.querySelector('[data-reply-template-default]')?.checked))rows[0].querySelector('[data-reply-template-default]').checked=true}
 function renderMailTemplateEditor(list,settings={},scope='mail'){if(!list)return;const normalized=normalizeReplyTemplateSettings(settings.templates??settings,settings.defaultName??settings.replyTemplateDefault);list.dataset.mailTemplateScope=scope;list.innerHTML=Object.entries(normalized.templates).map(([name,content],index)=>mailTemplateRowHtml(content,index,{defaultName:normalized.defaultName,scope})).join('');syncMailTemplateRows(list);bindMailTemplateEditor(list)}
 function addMailTemplateRow(list,content=''){if(!list)return;const index=list.querySelectorAll('[data-reply-template-row]').length,scope=list.dataset.mailTemplateScope||'mail';list.insertAdjacentHTML('beforeend',mailTemplateRowHtml(content,index,{defaultName:index?'':`範本 1`,scope}));syncMailTemplateRows(list);list.querySelector('[data-reply-template-row]:last-child textarea')?.focus()}
@@ -11110,7 +11110,7 @@ function collectMailTemplateEditor(list,{requireContent=true}={}){
 /** 個人設定裡「簽名檔設定」與「信件範本」共用的工具列——跟信件編輯器同一組功能（復原／重做、文字大小、
  * 粗體／斜體／底線、對齊、文字與背景顏色、超連結）。這兩處的 DOM 是動態插入的，所以按鈕不帶
  * data-rich-*-for（沒有固定的編輯器 id），改由 bindRichSettingsEditor() 依按鈕所在的那一列找對應的編輯區。 */
-function richSettingsToolbarHtml(extraClass='',{recipientName=false}={}){
+function richSettingsToolbarHtml(extraClass='',{recipientName=false,details=false}={}){
   return `<div class="gmail-rich-toolbar ${extraClass}">`
     +'<button type="button" data-rich-cmd="undo" title="復原（⌘Z）" aria-label="復原"><svg viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/></svg></button>'
     +'<button type="button" data-rich-cmd="redo" title="重做（⌘⇧Z）" aria-label="重做"><svg viewBox="0 0 24 24"><path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/></svg></button>'
@@ -11127,6 +11127,7 @@ function richSettingsToolbarHtml(extraClass='',{recipientName=false}={}){
     +'<button type="button" class="gmail-rich-color-btn" title="文字與背景顏色" aria-label="文字與背景顏色" aria-expanded="false"><span class="gmail-rich-color-swatch" style="--swatch-color:#17211d"></span></button>'
     +'<button type="button" class="gmail-rich-link-btn" data-rich-link title="插入超連結（⌘K）" aria-label="插入超連結"><svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg></button>'
     +(recipientName?'<span class="gmail-rich-toolbar-divider"></span><button type="button" class="gmail-rich-recipient-btn" data-rich-recipient-name title="插入 {收件人名}：套用範本時會自動換成收件人的名字">插入收件人名</button>':'')
+    +(details?'<button type="button" class="gmail-rich-recipient-btn" data-rich-details title="插入 {項目細節}：套用範本時會自動換成這個案件的項目細節（例如「社群貼文」；多個以「、」串接，不含「急件」）">插入項目細節</button>':'')
     +'</div>';
 }
 function signaturePresetRowHtml(name='',content='',index=0,{defaultKey='',scope='personal'}={}){
@@ -11161,18 +11162,19 @@ function bindRichSettingsEditor(list,contentSelector){
   const editorOf=el=>el?.closest('.mail-template-row')?.querySelector(contentSelector)||null;
   list.addEventListener('mousedown',event=>{
     if(event.target.closest('[data-rich-cmd]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection();return}
-    if(event.target.closest('[data-rich-size]')||event.target.closest('[data-rich-font]')||event.target.closest('.gmail-rich-color-btn')||event.target.closest('[data-rich-link]')||event.target.closest('[data-rich-recipient-name]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
+    if(event.target.closest('[data-rich-size]')||event.target.closest('[data-rich-font]')||event.target.closest('.gmail-rich-color-btn')||event.target.closest('[data-rich-link]')||event.target.closest('[data-rich-recipient-name]')||event.target.closest('[data-rich-details]')){event.preventDefault();savedRichSelectionRange=captureCurrentRichSelection()}
   });
   list.addEventListener('click',event=>{
     const cmdButton=event.target.closest('[data-rich-cmd]');
     if(cmdButton){editorOf(cmdButton)?.focus();restoreRichSelection();document.execCommand(cmdButton.dataset.richCmd);return}
-    const recipientButton=event.target.closest('[data-rich-recipient-name]');
-    if(recipientButton){
-      const target=editorOf(recipientButton);
+    // 「插入收件人名」與「插入項目細節」是同一種行為（把代號插進游標位置），只差插入的字串。
+    const tokenButton=event.target.closest('[data-rich-recipient-name]')||event.target.closest('[data-rich-details]');
+    if(tokenButton){
+      const target=editorOf(tokenButton);
       if(!target)return;
       target.focus();
       if(!restoreRichSelection()||!target.contains(window.getSelection().anchorNode)){const range=document.createRange();range.selectNodeContents(target);range.collapse(false);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range)}
-      document.execCommand('insertText',false,REPLY_TEMPLATE_RECIPIENT_TOKEN);
+      document.execCommand('insertText',false,tokenButton.hasAttribute('data-rich-details')?REPLY_TEMPLATE_DETAILS_TOKEN:REPLY_TEMPLATE_RECIPIENT_TOKEN);
       return;
     }
     const fontButton=event.target.closest('[data-rich-font]');
@@ -12585,11 +12587,28 @@ function applyTemplateRecipientName(template,editorId){
   const replacement=looksLikeSignatureHtml(value)?esc(name):name;
   return value.split(REPLY_TEMPLATE_RECIPIENT_TOKEN).join(replacement);
 }
+/** 信件範本裡的「{項目細節}」：套用範本時換成這個案件的項目細節（2026-09-23）。
+ * 細節取法完全沿用 designerReplyDetailItems()——也就是跟「設計師回覆信自動產生的預設內文」同一套規則：
+ * 多個細節以「、」串起來，「急件」是急迫程度、不是做什麼東西，一律不算細節（使用者明確要求省略）。
+ * 案件沒填項目細節時換成空字串，而不是原樣留著「{項目細節}」——範本可能被直接寄出去，讓收件人看到
+ * 未展開的代號比少一段文字更糟；「項目細節沒填」本來就另外有送出時的提醒（見 missingDetailsNotice）。 */
+const REPLY_TEMPLATE_DETAILS_TOKEN='{項目細節}';
+function applyTemplateDetails(template,editorId){
+  const value=String(template||'');
+  if(!value.includes(REPLY_TEMPLATE_DETAILS_TOKEN))return value;
+  const items=designerReplyDetailItems(currentGmailEditorCaseRow(editorId)||{});
+  const text=items.join('、');
+  const replacement=looksLikeSignatureHtml(value)?esc(text):text;
+  return value.split(REPLY_TEMPLATE_DETAILS_TOKEN).join(replacement);
+}
+/** 範本裡的代號一次全部換掉（{收件人名}、{項目細節}）。插入範本與自動帶入預設範本都要走這裡，
+ * 兩條路徑才不會一邊會換、一邊不會換。 */
+function applyTemplateTokens(template,editorId){return applyTemplateDetails(applyTemplateRecipientName(template,editorId),editorId)}
 function setGmailEditorTemplateContent(editor,greeting,template){
   if(!editor)return;
   // 範本自己放了 {收件人名}，代表設計師已經寫好招呼語，不再自動加「Hi ○○,」。
   if(String(template||'').includes(REPLY_TEMPLATE_RECIPIENT_TOKEN))greeting='';
-  const body=applyTemplateRecipientName(template,editor.id);
+  const body=applyTemplateTokens(template,editor.id);
   if(!looksLikeSignatureHtml(body)){setGmailEditorPlainText(editor,`${greeting||''}${body}`);return}
   const greetingHtml=String(greeting||'').split(/\r?\n/).map(line=>esc(line)).join('<br>');
   editor.replaceChildren();
@@ -12608,7 +12627,9 @@ function designerReplyTemplateForCase(row={}){
   const templates=Object.values(settings.templates||{});
   // 預設範本優先，其次依範本順序。
   const ordered=[settings.templates?.[settings.defaultName],...templates].filter(Boolean);
-  const matched=ordered.find(template=>items.some(item=>plain(template).includes(item)));
+  // 範本裡有 {項目細節} 代號＝這個範本本來就會自己帶入細節，視同「提到了這個細節」，優先採用
+  // （預設範本排在最前面，所以設為預設的範本會直接勝出，使用者不必再手動插入一次）。
+  const matched=ordered.find(template=>plain(template).includes(REPLY_TEMPLATE_DETAILS_TOKEN)||items.some(item=>plain(template).includes(item)));
   return matched||`附上${items.join('、')}，\n再煩請查收，謝謝。`;
 }
 function setGmailEditorPlainText(editor,value=''){const text=String(value);editor.replaceChildren();if(!text)return;text.split(/\r?\n/).forEach((line,index)=>{if(index)editor.append(document.createElement('br'));editor.append(document.createTextNode(line))})}
