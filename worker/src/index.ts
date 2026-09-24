@@ -133,7 +133,10 @@ export default {
       const headers = corsHeaders(request, env);
       headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
-      headers.set('Access-Control-Max-Age', '600');
+      // 每一次帶 Content-Type: application/json 的呼叫前面都會先跑一輪 preflight。從台北到這個
+      // Worker 的入口（聖荷西）一來回就要 140 ms 上下，600 秒的快取等於使用者每用十分鐘就重付一次。
+      // 7200 是 Chrome 的上限，設更大也只會被砍到 7200。
+      headers.set('Access-Control-Max-Age', '7200');
       headers.delete('Content-Type');
       return new Response(null, { status: 204, headers });
     }

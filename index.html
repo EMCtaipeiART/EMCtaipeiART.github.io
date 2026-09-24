@@ -4,6 +4,9 @@
 <head>
   <meta charset="utf-8" />
   <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
+  <!-- 先把跟 Worker 的 TCP/TLS 握手做掉。這條連線從台北出去要走到聖荷西（workers.dev 的入口
+       PoP 不在台灣），握手本身就要 260 ms 上下，等第一次 fetch 才開始等於白白多等一輪。 -->
+  <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="app-version" content="20260910-stage-pill-colors-135" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -11081,6 +11084,11 @@ const spotifyPlayingStates=new WeakMap();
 const designerSettingsSpotifyControllers=new WeakMap();
 const designerSettingsSpotifyStartApplied=new WeakSet();
 window.onSpotifyIframeApiReady=api=>{spotifyIframeApi=api; prepareDesignerMusicControllers(); refreshDesignerSettingsSpotifyPreviews()};
+// Spotify 的 iframe API 只剩「設計師設定」的音樂預覽在用，而音樂 2026-09-21 就從前台下架了
+// （.designer-setting-music 是 display:none）。每次進站都載一份第三方腳本、多開兩條連線，只為了
+// 一個藏起來的欄位太貴——改成打開設定視窗才載。要恢復音樂功能的話這裡不用動。
+let spotifyIframeApiRequested=false;
+function ensureSpotifyIframeApi(){if(spotifyIframeApiRequested||window.spotifyIframeApi)return; spotifyIframeApiRequested=true; const tag=document.createElement('script'); tag.src='https://open.spotify.com/embed/iframe-api/v1'; tag.async=true; document.head.append(tag)}
 function updateDesignerMusicButton(shell,playing=false){const button=shell?.querySelector('.poster-music-toggle'); if(!button)return; button.innerHTML=spotifyPlaybackIcon(playing); button.setAttribute('aria-pressed',playing?'true':'false'); button.setAttribute('aria-label',playing?'暫停分享音樂':'播放分享音樂')}
 function applySpotifyStart(shell,controller,{force=false}={}){if(!controller||(!force&&spotifyStartApplied.has(shell)))return; const startAt=spotifyStartTimes.get(shell)||0; if(startAt>0)controller.seek(startAt); spotifyStartApplied.add(shell)}
 function playSpotifyFromConfiguredStart(shell,controller){if(!controller)return; spotifyStartApplied.delete(shell); controller.play(); setTimeout(()=>applySpotifyStart(shell,controller,{force:true}),180)}
@@ -11112,7 +11120,7 @@ async function loadDesignerRoster({background=false}={}){
   if(changed||!background)renderDesigners();
   if(!background||changed)updateLoginUi();
 }
-function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!canAccessDesignerSettings()){setSync('此帳號沒有設計師設定或圖片管理權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
+function showDesignerSettings(){ensureSpotifyIframeApi(); if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!canAccessDesignerSettings()){setSync('此帳號沒有設計師設定或圖片管理權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 // 像素辦公室的編輯視窗。src 等到真的打開才給：這一頁本來就重，沒人要編輯時不該先下載一份遊戲。
 // 關掉時把 src 拿掉，那顆 canvas 與它的同步輪詢才會真的停下來，不會在背景一直跑。
@@ -16328,6 +16336,5 @@ document.addEventListener('pointerdown',event=>{const handle=event.target.closes
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
 	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus({onlyIfLost:true});refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
 </script>
-<script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 </body>
 </html>
