@@ -192,8 +192,11 @@ h2{font-size:24px}
 /* 手機的場景本來就小，卡片浮在人物旁邊會把整個房間蓋住。改成排在場景下方（position:relative 加上 left/top:auto
    會蓋掉 positionPersonCard() 寫進 style 的座標，關閉鈕也才會以卡片為定位基準），什麼都不遮，內容也不必擠在小框裡捲。 */
 @media (max-width:700px){
-  body:not(.embed) .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
-  body:not(.embed) .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+  /* 手機上把卡片排到場景下面，什麼都不遮。只給單獨開的遊戲頁——嵌入模式的 class 是加在
+     <html> 上，寫成 body:not(.embed) 等於永遠成立，窄框的嵌入版也會被這條打到
+     （以前被下面 640px 的 position:fixed 蓋過去才沒發現）。 */
+  html:not(.embed) .person-card{position:relative;left:auto!important;top:auto!important;width:auto;max-height:none;margin-top:10px;font-size:12px;box-shadow:none}
+  html:not(.embed) .person-card-cases{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 }
 
 /* 嵌入模式（?embed=1）：給設計需求系統的「設計師專長與案件分配」當展示用，只留場景本身。
@@ -224,5 +227,9 @@ html.embed .person-card.is-pinned{pointer-events:auto;border-color:#5b83bd;box-s
 /* 名字與職稱是短字串，讓它們正常斷行就好，anywhere 只留給可能很長的案件名。 */
 html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;word-break:keep-all}
 @media(max-width:640px){
-  html.embed .person-card{position:fixed!important;top:8px!important;right:8px!important;bottom:auto!important;left:auto!important;width:clamp(200px,calc(52% - 8px),286px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
+  /* 窄框以前把卡片用 position:fixed 釘在右上角，等於整個蓋掉 positionPersonCard() 算好的位置，
+     結果右邊兩位的臉照樣被擋住（2026-09-24 使用者回報「前台還是在右側擋住臉」）。
+     位置交回 JS——它會避開臉、優先往左開；這裡只留窄框要的字級與寬度，並且再窄一點，
+     蓋到的面積才小。 */
+  html.embed .person-card{width:clamp(190px,calc(48% - 8px),252px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
 }

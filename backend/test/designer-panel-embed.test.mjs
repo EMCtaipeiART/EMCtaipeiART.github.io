@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=44"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=45"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -143,11 +143,17 @@ test('iframe 的高度鏈完整，場景不會把框撐大而被裁掉', async (
   assert.match(css, /html\.embed \.canvas-wrap\{position:relative;margin:0;overflow:hidden\}/);
 });
 
-test('人物卡在嵌入的小框裡也夠寬', async () => {
+test('人物卡在嵌入的小框裡也夠寬，而且位置一律交給 JS 算', async () => {
   const css = await officeCss();
   // 340 px 的框取 46% 約 140 px，所以下限才是實際生效的那個值。
   assert.match(css, /html\.embed \.person-card\{width:clamp\(208px,calc\(46% - 16px\),286px\)/);
-  assert.match(css, /width:clamp\(200px,calc\(52% - 8px\),286px\)/, '小螢幕同樣要夠寬');
+  assert.match(css, /width:clamp\(190px,calc\(48% - 8px\),252px\)/, '小螢幕同樣要夠寬');
+  // 窄框以前用 position:fixed 把卡片釘在右上角，整個蓋掉 positionPersonCard() 算好的位置，
+  // 右邊兩位的臉照樣被擋住（2026-09-24 使用者回報）。CSS 不可以再自己決定位置。
+  const narrow = css.slice(css.indexOf('@media(max-width:640px)'));
+  assert.doesNotMatch(narrow, /html\.embed \.person-card\{[^}]*position:fixed/, '窄框不可以把卡片釘死');
+  assert.doesNotMatch(narrow, /html\.embed \.person-card\{[^}]*(top|right|left|bottom):[^;}]*!important/,
+    '位置要交回 JS，CSS 不能用 !important 蓋掉');
 });
 
 test('點技能膠囊會把設計種類、階段與設計負責人帶進需求表單', async () => {
@@ -477,4 +483,10 @@ test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗',
     '開視窗本身也要擋');
   // 遊戲自己會依框的大小縮放，剩下的高度全部給它；min-height:0 少了 flex 子元素撐不下去。
   assert.match(html, /\.office-editor-frame\{flex:1 1 auto;min-height:0;/);
+  // 完整版的場景畫在 1536×1024 裡、桌子只佔中間那塊，框越寬人物畫得越大，所以視窗要開大
+  // （2026-09-24 使用者要求）。這只動系統這邊的視窗，前台面板的 iframe 完全沒碰。
+  const card = html.match(/\.office-editor-card\{([^}]*)\}/)[1];
+  const width = Number(card.match(/width:min\((\d+)px/)[1]);
+  assert.ok(width >= 1400, `編輯視窗要夠寬才看得清楚，目前 ${width}`);
+  assert.match(html, /\.office-editor-modal\{padding:10px\}/, '外框留白要收一點，視窗才吃得到那個寬度');
 });

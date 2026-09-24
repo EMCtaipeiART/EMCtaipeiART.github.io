@@ -86,7 +86,10 @@
     .office-editor-open:hover,.office-editor-open:focus-visible{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important;outline:none!important}
     .office-editor-open[hidden]{display:none!important}
     .office-editor-modal[hidden]{display:none!important}
-    .office-editor-card{display:flex;flex-direction:column;gap:11px;width:min(1080px,100%);height:min(760px,calc(100vh - 36px));border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:14px}
+    /* 遊戲頁的場景是畫在 1536×1024 裡、桌子只佔中間那塊，框越寬人物就畫得越大。
+       外層 .login-modal 預設 padding:18px，這裡收成 10，讓視窗真的吃得到 1500。 */
+    .office-editor-modal{padding:10px}
+    .office-editor-card{display:flex;flex-direction:column;gap:10px;width:min(1500px,100%);height:min(960px,calc(100vh - 28px));border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:12px}
     .office-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
     .office-editor-head h3{margin:0}
     .office-editor-head p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:800;line-height:1.5}
@@ -11024,7 +11027,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=44" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=45" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
