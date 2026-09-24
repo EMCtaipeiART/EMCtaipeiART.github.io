@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6314,
+  "revision": 6315,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-24T11:29:49.951Z",
+  "updatedAt": "2026-09-24T11:30:12.455Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1600,7 +1600,7 @@
         {"案件編號":"26090190","修改次數":"1","建立日期":"2026/09/24 16:49:43","修改日期":"2026-09-24","修改內容":"中秋節的圖需要做調整(背景和排版微調)，文字要改黑體，詳細請看：調整需求。再麻煩了，感謝！","修改內容連結":"[{\"text\":\"調整需求\",\"url\":\"https://docs.google.com/presentation/d/1aAZ9QMrbZwawMNGC6XtWrxGwvh5fkfNu_hnGT452pOg/edit?slide=id.g3fbf44690c2_0_0#slide=id.g3fbf44690c2_0_0\"}]","修改人":"朱祖翎","確認修正日":"2026/09/24 17:25:43","待修改圖片":"","圖片連結":"[{\"fileName\":\"260924_富美家_10月社群貼文ˍ節慶祝賀ˍ中秋節.png\",\"url\":\"https://lh3.googleusercontent.com/d/1w2Y-tFLveYUIzXCUHC3fWB4Bn-i-B5QH=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 17:25:10"},
         {"案件編號":"26090207","修改次數":"0","建立日期":"2026/09/24 17:00:46","修改日期":"2026/09/24 17:00:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 17:00:46","圖片連結":"[{\"fileName\":\"260915_金士頓_加密隨身碟時事_JP-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/18yIJwioyAA34K4kjZ-D2eRCXAXUoajc_=w1600\"},{\"fileName\":\"260915_金士頓_加密隨身碟時事_JP-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1G8Lrj6BIcciYYS2rNxq6kVc2-76Ztz43=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 17:00:46"},
         {"案件編號":"26090206","修改次數":"0","建立日期":"2026/09/24 18:18:05","修改日期":"2026/09/24 18:18:05","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 18:18:05","圖片連結":"[{\"fileName\":\"260911_金士頓_IPC_工業記憶卡.png\",\"url\":\"https://lh3.googleusercontent.com/d/1aSH6ZXjEbHPAEzTifUr-LENT4GD_RVN2=w1600\"},{\"fileName\":\"260911_金士頓_IPC_工業記憶卡_EN.png\",\"url\":\"https://lh3.googleusercontent.com/d/18fR7HYF5KZpfMHAVYXus66USaBwKvZaS=w1600\"},{\"fileName\":\"260911_金士頓_IPC_工業記憶卡_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1tG5MPt9QVt0dU2wG4gWkPQ7Igecxnhna=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 18:18:05"},
-        {"案件編號":"26090132","修改次數":"2","建立日期":"2026/09/24 19:29:09","修改日期":"2026-09-24","修改內容":"來信提供修改需求，調整8平面2影片日期顯示方式，詳細如附件P54，因需於09/29下午進稿，再請協助於中午前協助調整，感恩","修改內容連結":"[{\"text\":\"附件P54\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.g3fbf2b47c77_0_4#slide=id.g3fbf2b47c77_0_4\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090132","修改次數":"2","建立日期":"2026/09/24 19:29:09","修改日期":"2026-09-24","修改內容":"來信提供修改需求，調整8平面2影片日期顯示方式，詳細如附件P54，因需於09/29下午進稿，再請協助於中午前協助調整，感恩","修改內容連結":"[{\"text\":\"附件P54\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.g3fbf2b47c77_0_4#slide=id.g3fbf2b47c77_0_4\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1zDRJM9rx4K328P7oLLjB7iD3J8oNWKzo=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qTifN4Wchwm07cBt5M-dXeX_NC3YxX5i=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zUXFQG4arxVj--KGeLZXWfiVRpaeEtoD=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-KzfxyF3L28y4LPwSwjEW-1JZiX1V83A=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 19:30:12"}
       ]
     },
     "補充資料連結": {
