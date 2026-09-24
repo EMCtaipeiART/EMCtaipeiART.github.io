@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6322,
+  "revision": 6323,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-24T12:15:28.417Z",
+  "updatedAt": "2026-09-24T12:15:36.397Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1602,7 +1602,7 @@
         {"案件編號":"26090206","修改次數":"0","建立日期":"2026/09/24 18:18:05","修改日期":"2026/09/24 18:18:05","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 18:18:05","圖片連結":"[{\"fileName\":\"260911_金士頓_IPC_工業記憶卡.png\",\"url\":\"https://lh3.googleusercontent.com/d/1aSH6ZXjEbHPAEzTifUr-LENT4GD_RVN2=w1600\"},{\"fileName\":\"260911_金士頓_IPC_工業記憶卡_EN.png\",\"url\":\"https://lh3.googleusercontent.com/d/18fR7HYF5KZpfMHAVYXus66USaBwKvZaS=w1600\"},{\"fileName\":\"260911_金士頓_IPC_工業記憶卡_JP.png\",\"url\":\"https://lh3.googleusercontent.com/d/1tG5MPt9QVt0dU2wG4gWkPQ7Igecxnhna=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 18:18:05"},
         {"案件編號":"26090132","修改次數":"2","建立日期":"2026/09/24 19:29:09","修改日期":"2026-09-24","修改內容":"來信提供修改需求，調整8平面2影片日期顯示方式，詳細如附件P54，因需於09/29下午進稿，再請協助於中午前協助調整，感恩","修改內容連結":"[{\"text\":\"附件P54\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.g3fbf2b47c77_0_4#slide=id.g3fbf2b47c77_0_4\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1zDRJM9rx4K328P7oLLjB7iD3J8oNWKzo=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qTifN4Wchwm07cBt5M-dXeX_NC3YxX5i=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zUXFQG4arxVj--KGeLZXWfiVRpaeEtoD=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-KzfxyF3L28y4LPwSwjEW-1JZiX1V83A=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 19:30:12"},
         {"案件編號":"26090169","修改次數":"0","建立日期":"2026/09/24 20:14:12","修改日期":"2026/09/24 20:14:12","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:14:12","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/165CM36qDXOQan2Z6-cql-T1ewXC_JL7n=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 20:14:12"},
-        {"案件編號":"26090166","修改次數":"0","建立日期":"2026/09/24 20:15:08","修改日期":"2026/09/24 20:15:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:15:08","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EzenSJzfMegRt6cwvns4Vhu1iBPzS3AI=w1600\"},{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1gTQOn3SEKP74uD3sFrQ4bG_N-6ht8Q0E=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 20:15:08"}
+        {"案件編號":"26090166","修改次數":"0","建立日期":"2026/09/24 20:15:08","修改日期":"2026/09/24 20:15:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:15:08","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EzenSJzfMegRt6cwvns4Vhu1iBPzS3AI=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 20:15:36"}
       ]
     },
     "補充資料連結": {
