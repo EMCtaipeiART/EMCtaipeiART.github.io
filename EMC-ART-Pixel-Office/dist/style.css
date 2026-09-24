@@ -34,21 +34,26 @@ h2{font-size:28px;margin:6px 0}
 #personDesc{font-size:13px;color:#a5b5ce;margin:0 0 12px}
 .mood-status{font-size:12px;color:#ffd979}
 .tool-section{border-top:1px solid #334864;padding:18px 0}
-/* 等級一覽表：兩組並排，每一列是一個級距＋可以直接改的稱號。 */
-.level-table-hint{margin:-6px 0 12px;font-size:11.5px;line-height:1.5;color:#8fa6c4}
-#levelTable{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+/* 等級一覽表：移到「選取設計師」那一排底下（2026-09-24 使用者指定），所以是淺色卡片的配色。
+   嵌入模式整個 .play 以外的東西都藏起來，這一塊也跟著不會出現在系統面板裡。 */
+.level-table-section{border-top:1px solid #e8edf4;padding:16px 22px 20px}
+.level-table-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.level-table-head h3{margin:0;font-size:14px;font-weight:700;color:#1b2c47}
+.level-table-head p{margin:0;font-size:12px;color:#7a8aa3}
+#levelTable{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 26px}
 .level-group{min-width:0;display:grid;gap:5px;align-content:start}
-.level-group-head{display:grid;gap:1px;padding-bottom:4px;border-bottom:1px solid #334864}
-.level-group-head strong{font-size:12.5px;color:#e8eef7}
-.level-group-head span{font-size:10.5px;color:#8fa6c4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.level-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px;min-width:0}
-.level-step{font-size:10px;font-weight:700;color:#7f94b3;font-variant-numeric:tabular-nums;white-space:nowrap}
-.level-row input{width:100%;min-width:0;padding:5px 7px;border-radius:7px;border:1px solid #334864;background:#16243a;color:#e8eef7;font:inherit;font-size:12px}
-.level-row input:focus{outline:none;border-color:#5b83bd;background:#1b2d47}
+.level-group-head{display:flex;align-items:baseline;gap:8px;padding-bottom:5px;border-bottom:1px solid #e3e9f2}
+.level-group-head strong{font-size:13px;color:#1b2c47}
+.level-group-head span{min-width:0;font-size:11px;color:#8494ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.level-row{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:8px;min-width:0}
+.level-step{font-size:11px;font-weight:700;color:#8494ab;font-variant-numeric:tabular-nums;white-space:nowrap}
+.level-row input{width:100%;min-width:0;padding:6px 9px;border-radius:8px;border:1px solid #dce3ed;background:#fff;color:#1b2c47;font:inherit;font-size:13px}
+.level-row input:hover{border-color:#b9c6da}
+.level-row input:focus{outline:none;border-color:#6387bb;box-shadow:0 0 0 3px #6387bb22}
 /* 被選到的人現在站在哪一階——一覽表才看得出自己的位置。 */
-.level-row.is-current .level-step{color:#ffdf75}
-.level-row.is-current input{border-color:#8a6f2a;background:#231d0f;color:#ffe9a6}
-@media (max-width:700px){#levelTable{grid-template-columns:1fr}}
+.level-row.is-current .level-step{color:#a9761a}
+.level-row.is-current input{border-color:#e8bd5c;background:#fffaec;font-weight:700}
+@media (max-width:700px){#levelTable{grid-template-columns:1fr;gap:14px}}
 h3,.tool-section>label:not(.upload){font-size:14px;font-weight:600;margin:0 0 13px;display:block}
 .moods{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .moods button{background:#243c5c;color:#bac9de;border:1px solid #3c526f;border-radius:9px;padding:9px 0;font-size:13px}
@@ -196,7 +201,7 @@ h2{font-size:24px}
 /* html 與 body 都要透明：body 自己有白底（給獨立開遊戲頁用），只清掉 html 的話
    嵌進設計需求系統時深色模式仍會卡著一塊白。 */
 html.embed,html.embed body{background:transparent}
-html.embed header,html.embed aside,html.embed .scene-bar,html.embed .scene-foot,html.embed #roster,html.embed #loading{display:none!important}
+html.embed header,html.embed aside,html.embed .scene-bar,html.embed .scene-foot,html.embed #roster,html.embed .level-table-section,html.embed #loading{display:none!important}
 /* height:100% 要一路從 html 接下來才算數。少了 html 這一層，body 的高度會反過來被 canvas 撐大，
    fitEmbedView() 就會以為框比實際的 iframe 還高，把下排畫到看不見的地方（2026-09-21 的裁切問題）。
    canvas 另外用 absolute 脫離文件流，確保它的大小永遠不會回頭影響框。 */

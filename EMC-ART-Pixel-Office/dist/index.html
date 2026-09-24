@@ -36,6 +36,10 @@
         </div></div>
       <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或右側搖桿移動人物</span><span>點選人物看資料與工具 · 點照片放大</span></div>
       <nav id="roster" aria-label="選取設計師"></nav>
+      <section class="level-table-section">
+        <div class="level-table-head"><h3>等級一覽表</h3><p>稱號的文字可以直接改，改完所有人看到的都會跟著換。級距固定。</p></div>
+        <div id="levelTable"></div>
+      </section>
     </section>
     <aside>
       <div class="panel-top"><span class="eyebrow">CHARACTER TOOLS</span><span id="selectedTag">已選取</span></div>
@@ -52,17 +56,12 @@
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
-      <section class="tool-section level-table-section">
-        <h3>等級一覽表</h3>
-        <p class="level-table-hint">稱號的文字可以直接改，改完所有人看到的都會跟著換。級距固定。</p>
-        <div id="levelTable"></div>
-      </section>
       </div>
       <p class="privacy">心情、對話、狀態、位置與照片會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
     </aside>
   </main>
   <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>

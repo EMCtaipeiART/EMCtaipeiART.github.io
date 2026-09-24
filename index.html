@@ -11024,7 +11024,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=43" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=44" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();

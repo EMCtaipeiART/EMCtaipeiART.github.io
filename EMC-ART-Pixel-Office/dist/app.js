@@ -55,25 +55,53 @@ const viewY=y=>embedMode&&y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_
 let viewPeople=[],viewStations=[];
 // 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣。嵌入模式就是把這一塊
 // 等比放到框裡置中，框變成什麼比例都不會裁到或偏一邊。
-// 上緣：上排對話框的最高點再往上 8（照片卡與心情圖示都在這條線以下）。
-// 下緣：下排名牌的最低點。兩者都跟著常數與壓縮比例走，改了不用重量一次。
-const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-150-BUBBLE_HEAD_GAP-BUBBLE_MAX_H-8,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE+PLATE_TOP+PLATE_NAME_H+8};
+// 下緣：下排名牌的最低點，跟著常數與壓縮比例走，改了不用重量一次。
+// 上緣（y0）是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂。
+// 本來是固定留四行的最大值，結果大家都只講一句話時上面空一大片、場景被白白縮小
+// （2026-09-24 使用者回報）。y0 由 sceneTopExtent() 每次重排時算，變了就重新 fit 一次。
+const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-158,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE+PLATE_TOP+PLATE_NAME_H+8};
+// 上緣的下限：頭頂（-150）再往上 8，順便包住照片卡（-151）與心情圖示（-152）的上緣。
+const SCENE_TOP_MIN=EMBED_ROW_TOP-158;
 const EMBED_FIT_PADDING=.94;
+let fitting=false;
 function fitEmbedView(){
-  if(!embedMode)return;
+  if(!embedMode||fitting)return;// syncSceneTop() 會回頭呼叫這裡，擋掉遞迴
+  fitting=true;
   markDirty();
   const wrap=game.parentElement.getBoundingClientRect();
-  if(!wrap.width||!wrap.height)return;
+  if(!wrap.width||!wrap.height){fitting=false;return;}
   const bw=EMBED_CONTENT.x1-EMBED_CONTENT.x0,bh=EMBED_CONTENT.y1-EMBED_CONTENT.y0;
   const scale=Math.min(wrap.width*EMBED_FIT_PADDING/bw,wrap.height*EMBED_FIT_PADDING/bh);
   const cx=(EMBED_CONTENT.x0+EMBED_CONTENT.x1)/2,cy=(EMBED_CONTENT.y0+EMBED_CONTENT.y1)/2;
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   game.style.transform=`translate(${wrap.width/2-cx*scale}px,${wrap.height/2-cy*scale}px)`;
+  fitting=false;
 }
 function syncViewLayout(){
   if(!embedMode){viewPeople=people;viewStations=stations;return;}
   viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
+  syncSceneTop();
+}
+/** 上排的東西現在最高畫到哪裡（場景座標）。只有上排會頂到框的上緣，下排的對話框往上長
+ *  最多到上排的名牌，那是另一條線（見 bubbleCeiling）。 */
+function sceneTopExtent(){
+  let top=SCENE_TOP_MIN;
+  for(const p of viewPeople){
+    if(p.y>EMBED_ROW_TOP+1||isAway(p))continue;
+    // 這裡要問「不管上面擋不擋得住，它想長多高」，否則會變成「因為框小所以少畫一行、
+    // 因為少畫一行所以框可以再小」的死循環。
+    const layout=bubbleLayout(p,true);
+    if(layout)top=Math.min(top,p.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout.h-8);
+  }
+  return Math.round(top);
+}
+/** 上緣變了就重新 fit 一次（fitEmbedView 自己會 markDirty，下一格就會用新的縮放重畫）。 */
+function syncSceneTop(){
+  const top=sceneTopExtent();
+  if(Math.abs(top-EMBED_CONTENT.y0)<1)return;
+  EMBED_CONTENT.y0=top;
+  fitEmbedView();
 }
 
 // 嵌入模式：設計需求系統用 iframe 把場景放進「設計師專長與案件分配」。
@@ -314,12 +342,12 @@ function escapeHtml(value){return String(value).replace(/[&<>"]/g,ch=>({'&':'&am
 function overlapArea(a,b){
   return Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
 }
-/** 把資料卡放在不會擋到人的地方。
- *  以前固定「右邊放不下就放左邊」，結果點最右邊那兩位時卡片一律翻到左邊，正好整片蓋住中間的同事，
- *  框窄一點的時候連被點的人自己都被蓋掉（2026-09-24 使用者回報）。
- *  改成四個位置都試（右、左、下、上），挑重疊面積最小的：被點的人算 100 倍，所以只要有一個位置
- *  擋不到他就一定會選；剩下的才比誰擋到的同事少。五個人幾乎塞滿整個框，擋到「某個人」躲不掉，
- *  但至少不會擋到你正在看的那一位。 */
+/** 把資料卡放在不會擋到人臉的地方，而且優先往左邊開。
+ *  一路修過來的原因：
+ *  - 最早是固定「右邊放不下就翻到左邊」，點最右邊那兩位時卡片一律翻左，正好蓋住中間的同事。
+ *  - 接著改成八個候選位置挑重疊面積最小的，但「身體」跟「臉」同分，結果還是會壓到臉。
+ *  現在：候選位置從左邊開始排，重疊只看臉（臉被擋住才是真的看不到人），被點的那一位加重
+ *  200 倍——只要有位置閃得開就一定閃得開。同分時選最左邊的（使用者 2026-09-24 指定往左開）。 */
 function positionPersonCard(){
   const card=$('personCard');
   if(card.hidden||selected===null)return;
@@ -330,39 +358,42 @@ function positionPersonCard(){
   if(!holder.width||!view.width)return;
   const scaleX=view.width/W,scaleY=view.height/H;
   const offsetX=view.left-holder.left,offsetY=view.top-holder.top;
-  // 人物在框裡佔到的矩形（含頭上到腳下）。
   const boxOf=person=>({x:offsetX+(person.x-53)*scaleX,y:offsetY+(person.y-150)*scaleY,w:106*scaleX,h:150*scaleY});
+  // 臉：頭頂往下 62，左右各收一點。擋到臉才算真的擋到人，擋到桌子或身體無所謂。
+  const faceOf=person=>({x:offsetX+(person.x-34)*scaleX,y:offsetY+(person.y-150)*scaleY,w:68*scaleX,h:62*scaleY});
   const p=viewPeople[selected]||people[selected];
-  const target=boxOf(p);
-  const others=viewPeople.filter((person,index)=>index!==selected&&!isAway(person)).map(boxOf);
+  const target=boxOf(p),targetFace=faceOf(p);
+  const otherFaces=viewPeople.filter((person,index)=>index!==selected&&!isAway(person)).map(faceOf);
   const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12;
-  const clampX=value=>Math.max(8,Math.min(Math.max(8,holder.width-cardW-8),value));
-  const clampY=value=>Math.max(8,Math.min(Math.max(8,holder.height-cardH-8),value));
-  const centerX=target.x+target.w/2,centerY=target.y+target.h/2;
   const farX=Math.max(8,holder.width-cardW-8),farY=Math.max(8,holder.height-cardH-8);
+  const clampX=value=>Math.max(8,Math.min(farX,value));
+  const clampY=value=>Math.max(8,Math.min(farY,value));
+  const centerX=target.x+target.w/2;
   const spots=[
-    // 先試貼著人物的四邊，卡片離被點的人越近越好讀。
-    {x:target.x+target.w+gap,y:target.y-6},
+    // 先往左：貼著人物的左邊 → 靠框的左緣（跟人物切齊）→ 左下角 → 左上角。
     {x:target.x-gap-cardW,y:target.y-6},
+    {x:8,y:target.y-6},
+    {x:8,y:farY},{x:8,y:8},
+    // 左邊都閃不開才往右／上下。
+    {x:target.x+target.w+gap,y:target.y-6},
+    {x:farX,y:target.y-6},
     {x:centerX-cardW/2,y:target.y+target.h+gap},
     {x:centerX-cardW/2,y:target.y-gap-cardH},
-    // 貼邊的四個位置都會壓到人時，退到框的四個角落。六個座位有一個是空的，通常角落找得到
-    // 一塊完全沒有人的地方——寧可卡片離遠一點，也不要把同事整個蓋掉。
-    {x:8,y:8},{x:farX,y:8},{x:8,y:farY},{x:farX,y:farY}
+    {x:farX,y:farY},{x:farX,y:8}
   ].map(spot=>{
     const box={x:clampX(spot.x),y:clampY(spot.y),w:cardW,h:cardH};
-    return {box,cost:overlapArea(box,target)*100+others.reduce((sum,other)=>sum+overlapArea(box,other),0)};
+    const cost=overlapArea(box,targetFace)*200+overlapArea(box,target)*20
+      +otherFaces.reduce((sum,face)=>sum+overlapArea(box,face),0);
+    return {box,cost};
   });
-  // 都擋得一樣多時，選離人物中心最近的那個，卡片才不會離被點的人太遠。
+  // 差一點點不算差（避免為了幾十個 px² 就把卡片甩到很遠的角落），同分就選最左邊的。
   const best=spots.reduce((a,b)=>{
-    if(b.cost!==a.cost)return b.cost<a.cost?b:a;
-    const da=Math.hypot(a.box.x+cardW/2-centerX,a.box.y+cardH/2-centerY);
-    const db=Math.hypot(b.box.x+cardW/2-centerX,b.box.y+cardH/2-centerY);
-    return db<da?b:a;
+    const rank=Math.round(a.cost/400)-Math.round(b.cost/400);
+    if(rank!==0)return rank>0?b:a;
+    return b.box.x<a.box.x?b:a;
   });
   card.style.left=Math.round(best.box.x)+'px';card.style.top=Math.round(best.box.y)+'px';
 }
-
 // 點技能膠囊：把設計種類、階段與設計負責人帶進設計需求表單。嵌進系統裡時用 postMessage 請
 // 外層處理（父子同源，只收自己這個站的訊息）；單獨開遊戲時沒有表單可填，就只提示一下。
 $('cardSkills').addEventListener('click',event=>{
@@ -601,23 +632,36 @@ function bubbleCeiling(p){
   return embedMode?EMBED_CONTENT.y0+4:10;
 }
 /** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
-function drawBubble(p){
+/** 算出這個人的對話框要多大（不畫）。ignoreCeiling 是「先不管上面擋不擋得住」——
+ *  版面要先知道對話框想長多高，才有辦法在框裡把上面的空間留剛好（見 sceneTopExtent）。 */
+function bubbleLayout(p,ignoreCeiling=false){
   const message=String(p.message||'').trim();
-  if(!message)return;
+  if(!message)return null;
   const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
   ctx.save();
   ctx.font=`600 ${font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
   const inner=BUBBLE_MAX_W-BUBBLE_PAD_X*2;
   let lines=wrapText(message,inner).filter(line=>line!=='');
-  if(!lines.length){ctx.restore();return;}
-  // 尾巴的尖端，也就是整塊往上長的起點。
+  if(!lines.length){ctx.restore();return null;}
   const tipY=Math.round(p.y-150-BUBBLE_HEAD_GAP);
-  const room=Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
+  const room=ignoreCeiling?BUBBLE_MAX_LINES:Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
   const limit=Math.max(1,Math.min(BUBBLE_MAX_LINES,room));
   if(lines.length>limit){lines=lines.slice(0,limit);lines[limit-1]=ellipsize(lines[limit-1],inner);}
   const textW=Math.max(...lines.map(line=>ctx.measureText(line).width));
-  const w=Math.round(Math.min(BUBBLE_MAX_W,Math.max(58,textW+BUBBLE_PAD_X*2)));
-  const h=Math.round(lines.length*lineHeight+BUBBLE_PAD_Y*2);
+  ctx.restore();
+  return {
+    font,lineHeight,lines,tipY,
+    w:Math.round(Math.min(BUBBLE_MAX_W,Math.max(58,textW+BUBBLE_PAD_X*2))),
+    h:Math.round(lines.length*lineHeight+BUBBLE_PAD_Y*2)
+  };
+}
+/** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
+function drawBubble(p){
+  const layout=bubbleLayout(p);
+  if(!layout)return;
+  const {lineHeight,lines,tipY,w,h}=layout;
+  ctx.save();
+  ctx.font=`600 ${layout.font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
   const y=tipY-BUBBLE_TAIL-h;
   const left=embedMode?EMBED_CONTENT.x0+4:10,right=embedMode?EMBED_CONTENT.x1-4:W-10;
   const x=Math.round(Math.max(left,Math.min(right-w,p.x-w/2)));
@@ -664,6 +708,6 @@ function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
-Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
+Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}

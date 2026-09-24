@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=43"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=44"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -71,7 +71,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   assert.match(js, /const embedMode=new URLSearchParams\(location\.search\)\.get\('embed'\)==='1'/);
   assert.match(js, /if\(embedMode\)\{document\.documentElement\.classList\.add\('embed'\);/);
   // 頁首、右側編輯工具、名單與標題列都不顯示，人物資料卡保留。
-  for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster']) {
+  for (const selector of ['header', 'aside', '.scene-bar', '.scene-foot', '#roster', '.level-table-section']) {
     assert.ok(new RegExp(`body\\.embed[^{]*${selector.replace('.', '\\.').replace('#', '#')}`).test(css)
       || css.includes(`html.embed ${selector}`), `嵌入模式應該隱藏 ${selector}`);
   }
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=50/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=51/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -170,8 +170,17 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
   assert.match(js, /const EMBED_ROW_SQUEEZE=Math\.min\(1,\(PLATE_TOP\+PLATE_NAME_H\+BUBBLE_CLEAR\+BUBBLE_MAX_H\+BUBBLE_HEAD_GAP\+150\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\);/);
   assert.match(js, /const viewY=y=>embedMode&&y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
-  // 上緣留給上排的對話框，下緣是下排名牌的最低點；兩者都跟著常數走，改了不用重新量一次。
-  assert.match(js, /y0:EMBED_ROW_TOP-150-BUBBLE_HEAD_GAP-BUBBLE_MAX_H-8/);
+  // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
+  // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
+  assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
+  assert.match(js, /function sceneTopExtent\(\)\{/);
+  assert.match(js, /top=Math\.min\(top,p\.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout\.h-8\)/);
+  assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;\s*fitEmbedView\(\);/,
+    '上緣變了要重新 fit');
+  // 算「想長多高」時不能看天花板，否則會變成「框小→少畫一行→框可以更小」的死循環。
+  assert.match(js, /const layout=bubbleLayout\(p,true\);/);
+  assert.match(js, /if\(!embedMode\|\|fitting\)return;/, 'syncSceneTop 會回頭呼叫 fitEmbedView，要擋遞迴');
+  // 下緣是下排名牌的最低點，跟著常數與壓縮比例走。
   assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+PLATE_TOP\+PLATE_NAME_H\+8/);
   // 算出來的比例要真的夠：下排的對話框長到最高時，不能碰到上排名牌的下緣。
   const c = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|BUBBLE_LINE|BUBBLE_MAX_LINES|BUBBLE_PAD_Y|BUBBLE_TAIL|BUBBLE_HEAD_GAP|BUBBLE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
@@ -364,39 +373,42 @@ test('深色模式下 iframe 的文件底色跟著主題', async () => {
   assert.match(js, /if\(event\.origin!==location\.origin\)return;/);
 });
 
-test('個人資料卡一律夾在場景框內，而且不會蓋住被點的人物', async () => {
+test('個人資料卡一律夾在場景框內，優先往左開，而且不會蓋到臉', async () => {
   const js = await officeJs();
   const fn = js.slice(js.indexOf('function positionPersonCard()'), js.indexOf('\nfunction ', js.indexOf('function positionPersonCard()') + 1));
   // 卡片是相對 .canvas-wrap 定位的，但嵌入模式下 canvas 被 fitEmbedView() 放大並平移過，
   // 兩者的矩形不一樣。之前拿 canvas 的矩形當邊界，右欄一關（場景變寬）右邊的人物就算出框外的
-  // 位置，卡片被切掉看不到（2026-09-22 使用者回報）。
+  // 位置，卡片被切掉看不到（2026-09-22 修）。
   assert.match(fn, /const holder=game\.parentElement\.getBoundingClientRect\(\),view=game\.getBoundingClientRect\(\);/,
     '位置基準要用卡片真正的容器');
   assert.match(fn, /const offsetX=view\.left-holder\.left,offsetY=view\.top-holder\.top;/,
     '人物位置要換算成相對容器的座標');
-  assert.match(fn, /clampX=value=>Math\.max\(8,Math\.min\(Math\.max\(8,holder\.width-cardW-8\),value\)\)/, '左右夾在容器內');
-  assert.match(fn, /clampY=value=>Math\.max\(8,Math\.min\(Math\.max\(8,holder\.height-cardH-8\),value\)\)/, '上下夾在容器內');
-  // 高度用當下量到的，卡片內容長短不一，夾邊界才會準。
+  assert.match(fn, /clampX=value=>Math\.max\(8,Math\.min\(farX,value\)\)/, '左右夾在容器內');
+  assert.match(fn, /clampY=value=>Math\.max\(8,Math\.min\(farY,value\)\)/, '上下夾在容器內');
   assert.match(fn, /const cardW=card\.offsetWidth\|\|232,cardH=card\.offsetHeight\|\|240/);
-  // 以前固定「右邊放不下就翻到左邊」，點最右邊那兩位時卡片一律翻到左邊，正好整片蓋住中間的
-  // 同事（2026-09-24 使用者回報）。改成多個候選位置挑重疊面積最小的。
   assert.doesNotMatch(fn, /if\(left\+cardW>holder\.width-8\)/, '不要再用「右邊放不下就翻左邊」的寫死規則');
-  assert.match(fn, /overlapArea\(box,target\)\*100\+others\.reduce/,
-    '被點的人要用大權重，有位置躲得開就一定要躲');
-  assert.match(fn, /\{x:8,y:8\},\{x:farX,y:8\},\{x:8,y:farY\},\{x:farX,y:farY\}/,
-    '貼邊都躲不開時要能退到框的四角');
+  // 擋到臉才算真的擋到人；被點的那一位加重 200 倍，只要閃得開就一定閃得開。
+  assert.match(fn, /const faceOf=person=>/, '要有臉的範圍');
+  assert.match(fn, /overlapArea\(box,targetFace\)\*200/, '被點的人的臉權重要最高');
+  assert.match(fn, /otherFaces\.reduce\(\(sum,face\)=>sum\+overlapArea\(box,face\),0\)/);
+  // 候選位置從左邊排起，同分選最左邊的（2026-09-24 使用者指定往左開）。
+  const spots = fn.slice(fn.indexOf('const spots=['), fn.indexOf('].map(spot=>'));
+  assert.match(spots, /^\s*const spots=\[[\s\S]{0,200}?\{x:target\.x-gap-cardW/, '第一個候選位置要是人物左邊');
+  assert.match(fn, /return b\.box\.x<a\.box\.x\?b:a;/, '同分時選最左邊的');
   assert.match(js, /function overlapArea\(a,b\)\{/);
 });
+
 
 test('對話框回到人物頭上：小、半透明，而且長不出場景外', async () => {
   const js = await officeJs();
   const fn = js.slice(js.indexOf('function drawBubble('), js.indexOf('\nfunction ', js.indexOf('function drawBubble(') + 1));
-  assert.ok(fn, '要有 drawBubble()');
+  const layout = js.slice(js.indexOf('function bubbleLayout('), js.indexOf('\nfunction ', js.indexOf('function bubbleLayout(') + 1));
+  assert.ok(fn && layout, '要有 drawBubble() 與 bubbleLayout()');
   // 上不會被切、下不會蓋到上排名牌：可用高度是算出來的，放不下就少畫幾行。
   assert.match(js, /function bubbleCeiling\(p\)\{/);
-  assert.match(fn, /const room=Math\.floor\(\(tipY-BUBBLE_TAIL-BUBBLE_PAD_Y\*2-bubbleCeiling\(p\)\)\/lineHeight\);/,
+  assert.match(layout, /const room=ignoreCeiling\?BUBBLE_MAX_LINES:Math\.floor\(\(tipY-BUBBLE_TAIL-BUBBLE_PAD_Y\*2-bubbleCeiling\(p\)\)\/lineHeight\);/,
     '行數要由實際可用高度決定，不能寫死');
-  assert.match(fn, /lines\[limit-1\]=ellipsize\(lines\[limit-1\],inner\)/, '放不下要用「…」收尾');
+  assert.match(layout, /lines\[limit-1\]=ellipsize\(lines\[limit-1\],inner\)/, '放不下要用「…」收尾');
   // 半透明＋柔和陰影＝浮在場景上的感覺（2026-09-24 使用者要求）。
   assert.match(fn, /glass\.addColorStop\(0,'rgba\(255,255,255,\.88\)'\)/, '底要是半透明的');
   assert.match(fn, /ctx\.shadowColor='rgba\(10,22,44,\.28\)'/, '要有柔和陰影');
