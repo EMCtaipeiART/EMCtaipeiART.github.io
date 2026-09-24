@@ -14,3 +14,6 @@ scripts/nas_design_image_watcher.secrets.json
 # 獨立 repo：EMCtaipeiART/emc-ai-stage-classifier
 EMC_AI_階段判定器_落地包/
 scripts/nas_design_image_watcher.local.json
+
+# 6.4 MB 的來源檔，只留在本機（使用者要求不要進版控）
+EMC-ART-Pixel-Office/dist/assets/*.psd

@@ -115,6 +115,32 @@
 - **深淺色**：iframe 的文件底色是瀏覽器依 `color-scheme` 畫的，`html`／`body` 設成 `transparent` 也蓋不掉。外層切換主題時用 `postMessage({type:'pixelOfficeTheme'})` 通知，嵌入端收到就設 `documentElement.style.colorScheme`；嵌入端載好後也會主動送 `pixelOfficeThemeRequest` 問一次（外層可能在它載好前就切換過）。
 - **進站不預載那 3.8 MB**：`ensureLevels()` 第一次真的要看人物資料時才載歷史快照，載完自動重畫卡片；快照本身用 `no-cache`，沒變就走 304。
 
+## 等級與稱號（2026-09-24 補上一覽表）
+
+**等級是真的在累積的。** 分數每天重算一次：
+
+- 來源：`data/database_archive.json`（每天重新產生，看 `generatedAt`）。
+- 算法（`scoreRows()`）：`狀態 === '已完成'` 且年份 ≥ 2023 的案件，一件加上它的「加權」；沒有加權就用「數量」，再沒有就算 1。
+- 等級（`levelFromScore()`）：`level = floor(√(score/10)) + 1`，也就是 Lv.n 的門檻是 `10(n-1)²`。顯示的 EXP 是分數 ×10。
+
+`app.js` 開頭的 `fallbackScores` 只是「還沒下載那份 3.8 MB 快照之前」先擋著用的舊值，會比真的少一點（例如 Leona 1907 → 實際 2024.5，差一級）。快照載進來就會蓋掉，不必手動維護。
+
+**稱號分兩組**，級距固定在 Lv.1／10／20／30／40／50，只有文字可以改：
+
+| | 平面組 | 影音組 |
+| --- | --- | --- |
+| 成員 | Leona、Amber、Anna、Machi | Noise |
+| 預設稱號 | 設計新秀／資深設計師／設計菁英／設計大師／傳奇設計師／設計神話 | 影音新秀／資深剪輯師／影音菁英／影音大師／傳奇導演／影像神話 |
+
+分組寫在後端的 `PIXEL_OFFICE_VIDEO_MEMBERS`（列在裡面的是影音組，其餘都是平面組），依歷史案件的「設計種類」分的。
+
+**稱號存在後端、所有人共用**（使用者 2026-09-24 決定），改的地方是完整版右側工具欄最下面的「等級一覽表」——跟心情／狀態一樣不用登入，誰打開這一頁都能改。
+
+- 存在 Durable Object 的 `pixel_office_settings` 表（key = `levelTitles`）。**刻意用 SQL 不用 `storage.put`**：`pixelOfficeState()` 是同步函式，要能在同一次呼叫裡把稱號一起回給前端。
+- `pixelOfficeVersion()` 把這張表的 `updated_at` 一起算進去，所以改了稱號，所有開著的畫面下一次輪詢（3 秒）就會換掉；不然要等到有人換狀態才會生效。
+- 動作：`pixelOfficeLevelTitles`（讀）、`pixelOfficeLevelTitlesUpdate`（寫，payload 是 `{titles:{graphic:[...]}}`）。寫入會**先跟現有的合併再洗**，所以只送一組不會把另一組洗回預設值；空字串補回預設、超過 12 字截斷。
+- 前端 `renderLevelTable()` 有一個「正在打字就不重畫」的保護，否則每 3 秒一次的輪詢會把游標踢掉。
+
 ## 頭上的對話框（2026-09-24）
 
 同一天先把對話改掛到名牌下面，因為頭上的泡泡在嵌入模式會越界：上排的被框的上緣切掉，下排的

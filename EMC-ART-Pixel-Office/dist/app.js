@@ -4,7 +4,16 @@ const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・�
 const starts=[[548,355],[768,355],[988,355],[768,695],[988,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
 descriptions[2]='藍帽・夏日休閒';
-let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackScores[name])]));
+// 等級稱號：平面組與影音組各一套，級距固定在 Lv.1／10／20／30／40／50（跟 levelFromScore 的門檻一致）。
+// 文字存在後端、所有人共用，可以在右邊「等級一覽表」直接改（使用者 2026-09-24 要求）。
+// 這裡的預設值只在還沒跟後端要到之前用，跟後端的 PIXEL_OFFICE_DEFAULT_LEVEL_TITLES 是同一份。
+const LEVEL_STEPS=[1,10,20,30,40,50];
+const LEVEL_GROUP_LABELS={graphic:'平面組',video:'影音組'};
+let levelTitles={graphic:['設計新秀','資深設計師','設計菁英','設計大師','傳奇設計師','設計神話'],video:['影音新秀','資深剪輯師','影音菁英','影音大師','傳奇導演','影像神話']};
+let levelVideoMembers=['Noise'];
+const levelGroupOf=name=>levelVideoMembers.includes(name)?'video':'graphic';
+let levelScores=null;
+let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackScores[name],name)]));
 let levelUpdatedAt='',levelIsLive=false;
 // type 是桌子素材、empty 是離席時換上的空桌。素材裡三張桌子的形狀本來就不一樣——最左邊那張有
 // 左斜邊、最右邊有右斜邊、中間是矩形——所以每個座位要用對應自己位置的那一種，接起來才是平整的一條。
@@ -127,22 +136,89 @@ function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0
 function select(i){selected=i;keys.clear();markDirty();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
-  if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);return;}
+  if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
   $('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();
   ensureLevels();
-  updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();}
+  updateMood();updateStatus();updatePhoto();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();renderLevelTable();}
 function numberText(value){return Number(value).toLocaleString('zh-TW',{maximumFractionDigits:1});}
-function levelTitle(level){if(level>=50)return '設計神話';if(level>=40)return '傳奇設計師';if(level>=30)return '設計大師';if(level>=20)return '設計菁英';if(level>=10)return '資深設計師';return '設計新秀';}
-function levelFromScore(score){
+function levelTitle(level,group='graphic'){
+  const list=levelTitles[group]||levelTitles.graphic;
+  let title=list[0];
+  LEVEL_STEPS.forEach((step,index)=>{if(level>=step&&list[index])title=list[index];});
+  return title;
+}
+function levelFromScore(score,name=''){
   const safe=Math.max(0,Number(score)||0),level=Math.floor(Math.sqrt(safe/10))+1,current=10*(level-1)**2,next=10*level**2,progress=(safe-current)/(next-current)*100;
-  return {score:safe,xp:safe*10,level,title:levelTitle(level),remaining:Math.max(0,next-safe),progress:Math.max(0,Math.min(100,progress))};
+  return {score:safe,xp:safe*10,level,title:levelTitle(level,levelGroupOf(name)),remaining:Math.max(0,next-safe),progress:Math.max(0,Math.min(100,progress))};
 }
 function updateLevel(){
   if(selected===null)return;
-  const stat=levelStats[people[selected].name]||levelFromScore(0);
+  const stat=levelStats[people[selected].name]||levelFromScore(0,people[selected].name);
   $('levelHeading').textContent='Lv.'+stat.level;$('levelTitle').textContent=stat.title;$('xpFill').style.width=stat.progress.toFixed(1)+'%';$('xpTrack').setAttribute('aria-valuenow',stat.progress.toFixed(1));
   $('scoreText').textContent=`${numberText(stat.score)} 分 · ${numberText(stat.xp)} EXP`;$('nextText').textContent=`距 Lv.${stat.level+1} 還差 ${numberText(stat.remaining)} 分`;
   $('levelSource').textContent=levelIsLive?`已同步歷史已完成案件 · ${levelUpdatedAt}`:'目前顯示最近同步值 · 連線後自動更新';
+}
+/** 等級一覽表：兩組各一欄，列出每個級距的稱號；稱號可以直接改。
+ *  只有完整版看得到（嵌入模式整個右側工具欄都是隱藏的），所以不必另外判斷 embedMode。 */
+function renderLevelTable(){
+  const holder=$('levelTable');
+  if(!holder)return;
+  const focused=document.activeElement;
+  // 正在打字時不要重畫，否則遠端輪詢一回來游標就被踢掉。
+  if(focused&&holder.contains(focused))return;
+  holder.textContent='';
+  const selectedName=selected===null?'':people[selected].name;
+  for(const group of ['graphic','video']){
+    const column=document.createElement('div');
+    column.className='level-group';
+    const head=document.createElement('div');
+    head.className='level-group-head';
+    const title=document.createElement('strong');
+    title.textContent=LEVEL_GROUP_LABELS[group];
+    const members=document.createElement('span');
+    members.textContent=names.filter(name=>levelGroupOf(name)===group).join('、')||'尚無成員';
+    head.append(title,members);
+    column.append(head);
+    LEVEL_STEPS.forEach((step,index)=>{
+      const row=document.createElement('label');
+      row.className='level-row';
+      // 這一列是不是「被選到的人現在的稱號」——一覽表才看得出自己站在哪一階。
+      const stat=selectedName?levelStats[selectedName]:null;
+      const reached=stat&&levelGroupOf(selectedName)===group&&stat.level>=step&&(index===LEVEL_STEPS.length-1||stat.level<LEVEL_STEPS[index+1]);
+      if(reached)row.classList.add('is-current');
+      const step_=document.createElement('span');
+      step_.className='level-step';
+      step_.textContent='Lv.'+step+(index<LEVEL_STEPS.length-1?'–'+(LEVEL_STEPS[index+1]-1):'+');
+      const input=document.createElement('input');
+      input.type='text';input.maxLength=12;input.value=levelTitles[group][index];
+      input.setAttribute('aria-label',`${LEVEL_GROUP_LABELS[group]} Lv.${step} 的稱號`);
+      input.onchange=()=>saveLevelTitle(group,index,input.value);
+      input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();input.blur();}};
+      row.append(step_,input);
+      column.append(row);
+    });
+    holder.append(column);
+  }
+}
+/** 存一個稱號。後端會把空白、過長與缺漏都洗乾淨，所以這裡直接把它回傳的那份當作準。 */
+function saveLevelTitle(group,index,value){
+  const next=levelTitles[group].slice();
+  next[index]=String(value||'').trim().slice(0,12);
+  if(next[index]===levelTitles[group][index])return;
+  syncCall({action:'pixelOfficeLevelTitlesUpdate',titles:{[group]:next}})
+    .then(data=>{applyLevelTitles(data);toast('已更新稱號');})
+    .catch(err=>{toast('稱號沒改成：'+err.message);renderLevelTable();});
+}
+/** 套用後端來的稱號，並把每個人的稱號重算一次（分數沒變，只有文字換了）。 */
+function applyLevelTitles(source){
+  const payload=source?.levels||source;
+  if(!payload||!payload.titles)return;
+  levelTitles=payload.titles;
+  if(Array.isArray(payload.videoMembers))levelVideoMembers=payload.videoMembers;
+  const scores=levelScores||fallbackScores;
+  levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(scores[name],name)]));
+  if(selected!==null){updateLevel();renderPersonCard();}
+  renderLevelTable();
 }
 function validNumber(value){const text=String(value??'').trim().replace(/,/g,'');if(!text)return null;const number=Number(text);return Number.isFinite(number)?number:null;}
 function rowYear(row){
@@ -171,9 +247,9 @@ async function syncLevels(){
   currentCaseIds=Array.isArray(payload.currentDatabaseRowKeys)
     ? new Set(payload.currentDatabaseRowKeys.map(key=>String(key).split('#')[0]))
     : null;
-  const totals=scoreRows(payload.rows);levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name])]));levelIsLive=true;
+  const totals=scoreRows(payload.rows);levelScores=totals;levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(totals[name],name)]));levelIsLive=true;
   const timestamp=new Date(payload.generatedAt||Date.now());levelUpdatedAt=Number.isNaN(timestamp.getTime())?'最新快照':timestamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
-  document.querySelectorAll('.roster-level').forEach((element,i)=>element.textContent='Lv.'+levelStats[names[i]].level);updateLevel();renderPersonCard();
+  document.querySelectorAll('.roster-level').forEach((element,i)=>element.textContent='Lv.'+levelStats[names[i]].level);updateLevel();renderPersonCard();renderLevelTable();
 }
 // 人物資料卡：等級與案件用 syncLevels() 已經下載的那份歷史快照（含未完成的案件），技能與「新專案找誰」
 // 另外跟 Worker 要一份很小的清單，這樣就不必在遊戲裡下載 1.5 MB 的 db.json。
@@ -208,7 +284,7 @@ function caseLabel(row){
 function renderPersonCard(){
   const card=$('personCard');
   if(selected===null){card.hidden=true;return;}
-  const p=people[selected],stat=levelStats[p.name]||levelFromScore(0),info=designerInfo?.[p.name];
+  const p=people[selected],stat=levelStats[p.name]||levelFromScore(0,p.name),info=designerInfo?.[p.name];
   $('cardName').textContent=p.name;
   $('cardLevel').textContent='Lv.'+stat.level;
   $('cardTitle').textContent=stat.title+(info?.group?` · ${info.group}組`:'');
@@ -386,8 +462,8 @@ function applyRemote(list){markDirty();
   if(!syncSeeded){syncSeeded=true;people.forEach((p,i)=>{if(seen.has(i))return;const patch={};if(p.message)patch.message=p.message;if(p.mood)patch.mood=p.mood;if(p.x!==starts[i][0]||p.y!==starts[i][1]){patch.x=p.x;patch.y=p.y;patch.dir=p.dir;}if(p.photo)patch.photo=p.photo;if(Object.keys(patch).length)pushChange(i,patch);});}
   save(false);
 }
-async function pollSync(){try{const data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,document.hidden?15000:3000);}}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
+async function pollSync(){try{const data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,document.hidden?15000:3000);}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 const walls=stations.map(s=>[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 function moving(dt){if(!ready||selected===null||$('lightbox').open||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
@@ -588,6 +664,6 @@ function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
-Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();requestAnimationFrame(render);
+Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}

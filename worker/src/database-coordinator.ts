@@ -38,6 +38,33 @@ const PIXEL_OFFICE_RETURN_ACTIVE_MS = 3 * 60 * 1000;
 // 會被這個判定收回的狀態。出國與休假不收：那兩個期間本來就可能開電腦處理一點事，收回去只會擾民。
 // 廁所不必列，它本來就會隨閒置時間自己回到在座。
 const PIXEL_OFFICE_RETURN_STATUSES = ['out', 'meeting', 'lunch'];
+// 等級稱號。級距固定在 Lv.1／10／20／30／40／50（跟 levelFromScore 的門檻一致），只有文字可以改。
+// 平面組與影音組各一套：同樣的等級，兩組看到的稱號不一樣。誰算影音組見 PIXEL_OFFICE_VIDEO_MEMBERS。
+const PIXEL_OFFICE_LEVEL_STEPS = [1, 10, 20, 30, 40, 50];
+const PIXEL_OFFICE_LEVEL_GROUPS = ['graphic', 'video'];
+// 依歷史案件的「設計種類」分的：Noise 的案件幾乎全是影片／影音／拍攝／動畫，其餘四位都是平面為大宗。
+const PIXEL_OFFICE_VIDEO_MEMBERS = ['Noise'];
+const PIXEL_OFFICE_DEFAULT_LEVEL_TITLES: Record<string, string[]> = {
+  graphic: ['設計新秀', '資深設計師', '設計菁英', '設計大師', '傳奇設計師', '設計神話'],
+  video: ['影音新秀', '資深剪輯師', '影音菁英', '影音大師', '傳奇導演', '影像神話']
+};
+const PIXEL_OFFICE_LEVEL_TITLE_MAX = 12;
+
+/** 把一套稱號洗乾淨：長度固定六個、每個去頭尾空白並截斷，空的就用預設值補。 */
+export function pixelOfficeLevelTitles(stored: unknown): Record<string, string[]> {
+  const source = (stored && typeof stored === 'object' ? stored : {}) as Record<string, unknown>;
+  const result: Record<string, string[]> = {};
+  for (const group of PIXEL_OFFICE_LEVEL_GROUPS) {
+    const fallback = PIXEL_OFFICE_DEFAULT_LEVEL_TITLES[group];
+    const list = Array.isArray(source[group]) ? source[group] as unknown[] : [];
+    result[group] = fallback.map((preset, index) => {
+      const value = text(list[index]).slice(0, PIXEL_OFFICE_LEVEL_TITLE_MAX).trim();
+      return value || preset;
+    });
+  }
+  return result;
+}
+
 const PIXEL_OFFICE_LUNCH_START_HOUR = 12;
 const PIXEL_OFFICE_LUNCH_END_HOUR = 14;
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
@@ -1382,6 +1409,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(10)) {
+        this.ctx.storage.transactionSync(() => {
+          // Pixel Office 的共用設定（目前只有等級稱號）。刻意用 SQL 而不是 storage.put：
+          // pixelOfficeState 是同步函式，要能在同一次呼叫裡把稱號一起回給前端，順便讓稱號的
+          // updated_at 併進版本號——改了稱號，所有開著的畫面下一次輪詢就會拿到新的。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS pixel_office_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL,
+              updated_at INTEGER NOT NULL
+            );
+          `);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            10, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1394,7 +1439,43 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * ------------------------------------------------------------------------------------------- */
   private pixelOfficeVersion(): number {
     const row = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_people').toArray()[0];
-    return Number(row?.v) || 0;
+    // 稱號也算進版本號，不然改了稱號要等到有人換狀態，別人的畫面才會跟著更新。
+    const settings = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_settings').toArray()[0];
+    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0);
+  }
+
+  /** 目前這套等級稱號。沒存過、或存的內容有缺，都會用預設值補齊。 */
+  private pixelOfficeStoredLevelTitles(): Record<string, string[]> {
+    const row = this.ctx.storage.sql.exec<{ value: string }>(
+      'SELECT value FROM pixel_office_settings WHERE key = ?', 'levelTitles'
+    ).toArray()[0];
+    let stored: unknown = null;
+    try { stored = row ? JSON.parse(row.value) : null; } catch { stored = null; }
+    return pixelOfficeLevelTitles(stored);
+  }
+
+  private pixelOfficeLevelTitlesResult(): ApiResult {
+    return {
+      ok: true, action: 'pixelOfficeLevelTitles',
+      steps: PIXEL_OFFICE_LEVEL_STEPS,
+      videoMembers: PIXEL_OFFICE_VIDEO_MEMBERS,
+      titles: this.pixelOfficeStoredLevelTitles()
+    };
+  }
+
+  /** 改等級稱號。跟心情／狀態一樣不用登入——這一頁本來就是誰打開誰都能改（使用者 2026-09-24 決定）。 */
+  private pixelOfficeLevelTitlesUpdate(payload: ApiPayload): ApiResult {
+    const incoming = payload.titles;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('稱號格式錯誤');
+    // 先跟現有的合併再洗，這樣只送一組（例如只改平面組）也不會把另一組洗回預設值。
+    const merged = { ...this.pixelOfficeStoredLevelTitles(), ...(incoming as Record<string, unknown>) };
+    const titles = pixelOfficeLevelTitles(merged);
+    const version = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+    this.ctx.storage.sql.exec(
+      'INSERT INTO pixel_office_settings(key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at',
+      'levelTitles', JSON.stringify(titles), version
+    );
+    return { ok: true, action: 'pixelOfficeLevelTitlesUpdate', version, titles };
   }
 
   /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人，「在座／加班／用餐／廁所」改成下班。
@@ -1659,7 +1740,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
       return { name: row.name, ...state, photoVersion: Number(row.photo_version) || 0, updatedAt: Number(row.updated_at) || 0 };
     });
-    return { ok: true, action: 'pixelOfficeState', version, people };
+    // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
+    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult() };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -3092,6 +3174,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
+      if (action === 'pixelOfficeLevelTitles') return this.pixelOfficeLevelTitlesResult();
+      if (action === 'pixelOfficeLevelTitlesUpdate') return this.pixelOfficeLevelTitlesUpdate(payload);
       if (action === 'googleLogin') return await this.googleLogin(payload, context);
       if (action === 'login') return await this.passwordLogin(payload, context);
       if (action === 'erpLogin') return await this.erpLogin(payload, context);

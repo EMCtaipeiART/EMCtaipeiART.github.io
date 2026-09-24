@@ -353,7 +353,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -4057,6 +4057,39 @@ describe('凱曜 department prefix', () => {
 });
 
 describe('Pixel Office shared state', () => {
+  it('keeps one set of level titles per team, shared by everyone and carried on the polling response', async () => {
+    const initial = await api({ action: 'pixelOfficeLevelTitles' });
+    expect(initial).toMatchObject({
+      ok: true,
+      steps: [1, 10, 20, 30, 40, 50],
+      videoMembers: ['Noise'],
+      titles: {
+        graphic: ['設計新秀', '資深設計師', '設計菁英', '設計大師', '傳奇設計師', '設計神話'],
+        video: ['影音新秀', '資深剪輯師', '影音菁英', '影音大師', '傳奇導演', '影像神話']
+      }
+    });
+
+    // 稱號跟著狀態一起回，前端不必為了它多打一次 API。
+    const state = await api({ action: 'pixelOfficeState' });
+    expect((state.levels as Record<string, unknown>).titles).toEqual(initial.titles);
+
+    // 只送一組不會把另一組洗回預設值；空字串補回預設值；過長的截斷。
+    const saved = await api({
+      action: 'pixelOfficeLevelTitlesUpdate',
+      titles: { graphic: ['小美工', '', '  切版王  ', '排版之神', '傳奇設計師', '一二三四五六七八九十十一十二十三'] }
+    });
+    expect((saved.titles as Record<string, string[]>).graphic)
+      .toEqual(['小美工', '資深設計師', '切版王', '排版之神', '傳奇設計師', '一二三四五六七八九十十一']);
+    expect((saved.titles as Record<string, string[]>).video[0]).toBe('影音新秀');
+
+    // 改了稱號也要讓別人的畫面更新：版本號要跟著跳，不能等到有人換狀態才生效。
+    const after = await api({ action: 'pixelOfficeState', since: state.version });
+    expect(after.unchanged).toBeUndefined();
+    expect((after.levels as Record<string, unknown>).titles).toEqual(saved.titles);
+
+    await expect(api({ action: 'pixelOfficeLevelTitlesUpdate', titles: ['壞掉的格式'] })).resolves.toMatchObject({ ok: false });
+  });
+
   it('shares mood, message, status, position and photos between visitors without a login, and never commits to GitHub', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const empty = await api({ action: 'pixelOfficeState' });
