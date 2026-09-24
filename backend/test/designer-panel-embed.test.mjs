@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=41"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=42"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -83,7 +83,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '人物上方應顯示可點選游標');
   // 桌牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
   // 連同桌牌整塊放進框裡，不會被底邊裁掉。桌牌上緣沿用原本名牌的位置。
-  assert.match(js, /const PLATE_TOP=56;/);
+  assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
   assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.y\+PLATE_TOP\);/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=48/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=49/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -165,20 +165,22 @@ test('點技能膠囊會把設計種類、階段與設計負責人帶進需求�
 
 test('六個座位收攏並在框裡置中，不裁切', async () => {
   const js = await officeJs();
-  // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能再寫死：上排的桌牌會往下長（名字底下
-  // 接對話），收過頭的話桌牌會壓到下排人物的頭。比例直接從桌牌高度推回來，改桌牌不用重算。
+  // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能寫死：下排的對話框往上長，不能蓋到
+  // 上排的名牌。比例直接從對話框的尺寸推回來，改對話框不用重算。
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
-  assert.match(js, /const EMBED_ROW_SQUEEZE=Math\.min\(1,\(150\+PLATE_TOP\+PLATE_MAX_H\+PLATE_CLEAR\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\);/);
+  assert.match(js, /const EMBED_ROW_SQUEEZE=Math\.min\(1,\(PLATE_TOP\+PLATE_NAME_H\+BUBBLE_CLEAR\+BUBBLE_MAX_H\+BUBBLE_HEAD_GAP\+150\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\);/);
   assert.match(js, /const viewY=y=>embedMode&&y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
-  // 下緣跟著壓縮比例與桌牌高度走，改了不用重新量一次。
-  assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+PLATE_TOP\+PLATE_MAX_H\+8/);
-  // 算出來的比例要真的夠：上排桌牌的最低點不能碰到下排人物的頭頂。
-  const plate = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|PLATE_MSG_LINE|PLATE_MSG_LINES|PLATE_GAP|PLATE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
-  const plateMaxH = plate.PLATE_NAME_H + plate.PLATE_GAP + plate.PLATE_MSG_LINES * plate.PLATE_MSG_LINE;
-  const squeeze = Math.min(1, (150 + plate.PLATE_TOP + plateMaxH + plate.PLATE_CLEAR) / (695 - 355));
-  const plateBottom = 355 + plate.PLATE_TOP + plateMaxH, nextHeadTop = 355 + (695 - 355) * squeeze - 150;
-  assert.ok(plateBottom + plate.PLATE_CLEAR <= nextHeadTop + 0.001,
-    `上排桌牌畫到 ${plateBottom}，下排的頭頂在 ${nextHeadTop}，會疊在一起`);
+  // 上緣留給上排的對話框，下緣是下排名牌的最低點；兩者都跟著常數走，改了不用重新量一次。
+  assert.match(js, /y0:EMBED_ROW_TOP-150-BUBBLE_HEAD_GAP-BUBBLE_MAX_H-8/);
+  assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+PLATE_TOP\+PLATE_NAME_H\+8/);
+  // 算出來的比例要真的夠：下排的對話框長到最高時，不能碰到上排名牌的下緣。
+  const c = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|BUBBLE_LINE|BUBBLE_MAX_LINES|BUBBLE_PAD_Y|BUBBLE_TAIL|BUBBLE_HEAD_GAP|BUBBLE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
+  const bubbleMaxH = c.BUBBLE_MAX_LINES * c.BUBBLE_LINE + c.BUBBLE_PAD_Y * 2 + c.BUBBLE_TAIL;
+  const squeeze = Math.min(1, (c.PLATE_TOP + c.PLATE_NAME_H + c.BUBBLE_CLEAR + bubbleMaxH + c.BUBBLE_HEAD_GAP + 150) / (695 - 355));
+  const bubbleTop = 355 + (695 - 355) * squeeze - 150 - c.BUBBLE_HEAD_GAP - bubbleMaxH;
+  const plateBottom = 355 + c.PLATE_TOP + c.PLATE_NAME_H;
+  assert.ok(bubbleTop >= plateBottom + c.BUBBLE_CLEAR - 0.001,
+    `下排的對話框畫到 ${bubbleTop}，上排名牌的下緣在 ${plateBottom}，會蓋住名字`);
   // 框的高度會跟著左右卡片對齊而變，所以縮放與置中要依實際尺寸算，不能寫死百分比。
   assert.match(js, /const scale=Math\.min\(wrap\.width\*EMBED_FIT_PADDING\/bw,wrap\.height\*EMBED_FIT_PADDING\/bh\);/);
   assert.match(js, /translate\(\$\{wrap\.width\/2-cx\*scale\}px,\$\{wrap\.height\/2-cy\*scale\}px\)/);
@@ -203,7 +205,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawPhotoCard\(i\);/);
+  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p\);drawPhotoCard\(i\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
@@ -386,25 +388,36 @@ test('個人資料卡一律夾在場景框內，而且不會蓋住被點的人�
   assert.match(js, /function overlapArea\(a,b\)\{/);
 });
 
-test('對話掛在自己的桌牌上，不再是會越界的頭頂泡泡', async () => {
+test('對話框回到人物頭上：小、半透明，而且長不出場景外', async () => {
   const js = await officeJs();
-  // 頭頂泡泡在嵌入模式下無解：上排的泡泡會被框的上緣切掉，下排的泡泡往上長就整個蓋住上排的
-  // 桌子與名牌——兩排之間根本沒有放泡泡的高度（2026-09-24 使用者回報）。
-  assert.doesNotMatch(js, /function bubble\(/, '頭頂泡泡要整個移除');
+  const fn = js.slice(js.indexOf('function drawBubble('), js.indexOf('\nfunction ', js.indexOf('function drawBubble(') + 1));
+  assert.ok(fn, '要有 drawBubble()');
+  // 上不會被切、下不會蓋到上排名牌：可用高度是算出來的，放不下就少畫幾行。
+  assert.match(js, /function bubbleCeiling\(p\)\{/);
+  assert.match(fn, /const room=Math\.floor\(\(tipY-BUBBLE_TAIL-BUBBLE_PAD_Y\*2-bubbleCeiling\(p\)\)\/lineHeight\);/,
+    '行數要由實際可用高度決定，不能寫死');
+  assert.match(fn, /lines\[limit-1\]=ellipsize\(lines\[limit-1\],inner\)/, '放不下要用「…」收尾');
+  // 半透明＋柔和陰影＝浮在場景上的感覺（2026-09-24 使用者要求）。
+  assert.match(fn, /glass\.addColorStop\(0,'rgba\(255,255,255,\.88\)'\)/, '底要是半透明的');
+  assert.match(fn, /ctx\.shadowColor='rgba\(10,22,44,\.28\)'/, '要有柔和陰影');
+  assert.doesNotMatch(fn, /softPanel\(/, 'softPanel 會補一層實色，把透明度蓋掉');
+  // 左右也要夾在看得到的範圍內。
+  assert.match(fn, /const left=embedMode\?EMBED_CONTENT\.x0\+4:10,right=embedMode\?EMBED_CONTENT\.x1-4:W-10;/);
+  // 縮小過了：字級與寬度都比舊版（17px／寬 254）小一截。
+  const c = Object.fromEntries([...js.matchAll(/\b(BUBBLE_FONT|BUBBLE_LINE|BUBBLE_MAX_W|BUBBLE_PAD_X|BUBBLE_MAX_LINES)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
+  assert.ok(c.BUBBLE_FONT <= 12 && c.BUBBLE_MAX_W <= 210, `對話框要比舊版小：${JSON.stringify(c)}`);
+  // 60 字（對話上限）在正常縮放下要放得完，不該被截掉。
+  const perLine = Math.floor((c.BUBBLE_MAX_W - c.BUBBLE_PAD_X * 2) / c.BUBBLE_FONT);
+  assert.ok(perLine * c.BUBBLE_MAX_LINES >= 60,
+    `一行 ${perLine} 個中文字 × ${c.BUBBLE_MAX_LINES} 行放不下 60 字的對話`);
+});
+
+test('名牌只放名字，對話不再擠在它下面', async () => {
+  const js = await officeJs();
   const plate = js.slice(js.indexOf('function drawDeskPlate('), js.indexOf('\nfunction ', js.indexOf('function drawDeskPlate(') + 1));
   assert.ok(plate, '要有 drawDeskPlate()');
-  assert.match(plate, /const message=person&&!isAway\(person\)\?String\(person\.message\|\|''\)\.trim\(\):'';/,
-    '離席的人不顯示對話，跟以前泡泡的規則一樣');
-  assert.match(plate, /const room=Math\.max\(0,Math\.floor\(\(PLATE_MAX_H-nameH-PLATE_GAP\)\/msgLine\)\)/,
-    '行數要由 PLATE_MAX_H 收住，字放大時寧可少顯示幾行也不能長出去');
-  assert.match(plate, /lines\[room-1\]=ellipsize\(lines\[room-1\],inner\)/, '放不下要用「…」收尾');
-  assert.match(plate, /Math\.min\(PLATE_MAX_W,Math\.max\(84,nameW\+24,msgW\+PLATE_PAD\*2\)\)/,
-    '桌牌寬度要有上限，否則會黏到隔壁桌');
-  // 60 字（對話上限）在正常縮放下要放得完，不該被截掉。
-  const plateConst = Object.fromEntries([...js.matchAll(/\b(PLATE_MAX_W|PLATE_PAD|PLATE_MSG_FONT|PLATE_MSG_LINES)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
-  const perLine = Math.floor((plateConst.PLATE_MAX_W - plateConst.PLATE_PAD * 2) / plateConst.PLATE_MSG_FONT);
-  assert.ok(perLine * plateConst.PLATE_MSG_LINES >= 60,
-    `桌牌一行 ${perLine} 個中文字 × ${plateConst.PLATE_MSG_LINES} 行放不下 60 字的對話`);
+  assert.doesNotMatch(plate, /message|wrapText|ellipsize/, '名牌上不該再有對話');
+  assert.match(plate, /ctx\.fillText\(s\.name,s\.x,y\+h\/2\+1\);/);
 });
 
 test('所有狀態的小膠囊排在同一條水平線上', async () => {
@@ -442,6 +455,14 @@ test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗',
   assert.match(html, /\$\('#officeEditorModal'\)\?\.addEventListener\('click',event=>\{if\(event\.target===event\.currentTarget\)hideOfficeEditor\(\)\}\)/);
   assert.match(html, /if\(event\.key==='Escape'&&!\$\('#officeEditorModal'\)\?\.hidden\)\{event\.preventDefault\(\);hideOfficeEditor\(\)\}/);
   assert.match(html, /SCROLL_LOCK_MODAL_IDS=\[[^\]]*'officeEditorModal'/, '打開時要鎖住背景捲動');
+  // 只開放給設計師帳號（2026-09-24 使用者補充）：預設藏著，登入狀態變了才決定顯不顯示，
+  // 登出時如果視窗還開著要收掉；就算有人硬叫 showOfficeEditor() 也擋得住。
+  assert.match(html, /id="officeEditorOpen"[^>]*hidden>編輯<\/button>/, '預設要藏起來，登入前不要閃一下');
+  assert.match(html, /\.office-editor-open\[hidden\]\{display:none!important\}/);
+  assert.match(html, /const officeEditorBtn=\$\('#officeEditorOpen'\);if\(officeEditorBtn\)officeEditorBtn\.hidden=!designLogin;if\(!designLogin\)hideOfficeEditor\(\);/,
+    '顯示與否跟著 isDesignerLogin\(\)，登出要收掉視窗');
+  assert.match(html, /function showOfficeEditor\(\)\{[^\n]*if\(!isDesignerLogin\(\)\)\{setSync\('請用設計師帳號登入後再編輯像素辦公室',true\)/,
+    '開視窗本身也要擋');
   // 遊戲自己會依框的大小縮放，剩下的高度全部給它；min-height:0 少了 flex 子元素撐不下去。
   assert.match(html, /\.office-editor-frame\{flex:1 1 auto;min-height:0;/);
 });
