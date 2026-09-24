@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6126,
+  "revision": 6127,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-24T01:46:32.977Z",
+  "updatedAt": "2026-09-24T01:46:36.482Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2263,7 +2263,7 @@
         {"客戶別":"Epson","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Emily組\",\"group:Joyce組\",\"livia.chu@emctaipei.com\",\"allen.li@emctaipei.com\"]","設計負責人":"[\"Leona\",\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"Emily組\",\"Joyce組\",\"livia.chu@emctaipei.com\",\"allen.li@emctaipei.com\"]","更新時間":"2026/09/23 23:59:54","更新者":"朱祖翎","排序":"4","預設信箱":"[\"Amber <amber.tian@emctaipei.com>\",\"Anna <anna.hsu@emctaipei.com>\",\"Leona <leona.chen@emctaipei.com>\",\"傅思凱 <eric.fu@emctaipei.com>\",\"Emily Chen <emily.chen@emctaipei.com>\",\"machi.chen@emctaipei.com\"]"},
         {"客戶別":"eufy","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Celine組\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"Celine組\",\"david.liao@emctaipei.com\"]","更新時間":"2026-08-20 18:11","更新者":"Machi","排序":"7"},
         {"客戶別":"soundcore","專案負責人":"[\"department:測試員\",\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"Celine組\",\"livia.chu@emctaipei.com\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\",\"lorraine.luo@emctaipei.com\",\"amber.tian@emctaipei.com\",\"anna.hsu@emctaipei.com\",\"leona.chen@emctaipei.com\",\"machi.chen@emctaipei.com\",\"noise.zhong@emctaipei.com\",\"riley.pan@emctaipei.com\",\"sasa.cheng@emctaipei.com\",\"hsuan.li@emctaipei.com\",\"celine.wang@emctaipei.com\"]","更新時間":"2026/09/22 12:15:48","更新者":"廖秦葦","排序":"6","預設信箱":"[\"朱祖翎 <livia.chu@emctaipei.com>\",\"吳冠賢 <saurman.wu@emctaipei.com>\",\"廖秦葦 <david.liao@emctaipei.com>\",\"Amber <amber.tian@emctaipei.com>\",\"Anna <anna.hsu@emctaipei.com>\",\"Leona <leona.chen@emctaipei.com>\",\"Machi <machi.chen@emctaipei.com>\",\"傅思凱 <eric.fu@emctaipei.com>\",\"潘炬晨 <riley.pan@emctaipei.com>\",\"鄭筱舢 <sasa.cheng@emctaipei.com>\",\"黎子瑄 <hsuan.li@emctaipei.com>\",\"Celine <celine.wang@emctaipei.com>\"]"},
-        {"客戶別":"測試","專案負責人":"[\"department:測試員\",\"machi.chen@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"machi.chen@emctaipei.com\"]","更新時間":"2026-09-18 09:03","更新者":"管理員","排序":"32","預設信箱":"[\"machi.chen@emctaipei.com\"]"},
+        {"客戶別":"測試","專案負責人":"[\"department:測試員\",\"machi.chen@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"machi.chen@emctaipei.com\"]","更新時間":"2026-09-18 09:03","更新者":"管理員","排序":"33","預設信箱":"machi.chen@emctaipei.com"},
         {"客戶別":"林口A7讚商場","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Celine組\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\"]","更新時間":"2026-08-26 11:14","更新者":"allen.li@emctaipei.com","排序":"30","預設信箱":""},
         {"客戶別":"工研院","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Odin組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-26 12:08","更新者":"david.liao@emctaipei.com","排序":"29","預設信箱":""},
         {"客戶別":"小米","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Odin組\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"Odin組\"]","更新時間":"2026-08-26 23:39","更新者":"Machi","排序":"11","預設信箱":""},
