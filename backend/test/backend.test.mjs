@@ -4013,7 +4013,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
     return { syncModalScrollLock, ids: SCROLL_LOCK_MODAL_IDS };
   `)({ modals, classes });
 
-  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal', 'personalSettingsModal', 'designerSettingsModal', 'aiStageModal']);
+  assert.deepEqual(api.ids, ['caseDetailModal', 'revisionModal', 'gmailThreadModal', 'gmailComposeModal', 'uploadModal', 'personalSettingsModal', 'designerSettingsModal', 'officeEditorModal', 'aiStageModal']);
   assert.equal(classes.has('modal-scroll-locked'), false, '一開始沒有彈窗就不鎖');
   modals.revisionModal.hidden = false;
   api.syncModalScrollLock();

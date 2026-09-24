@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=40"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=41"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -81,9 +81,10 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
     '嵌入場景要能點選人物');
   assert.match(js, /game\.addEventListener\('pointermove',e=>\{const hit=hitAt\(e\.clientX,e\.clientY\);game\.style\.cursor=hit\?'pointer':'default';/,
     '人物上方應顯示可點選游標');
-  // 姓名牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
-  // 連同姓名牌整塊放進框裡，不會被底邊裁掉。
-  assert.match(js, /labelY=s\.y\+56/);
+  // 桌牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
+  // 連同桌牌整塊放進框裡，不會被底邊裁掉。桌牌上緣沿用原本名牌的位置。
+  assert.match(js, /const PLATE_TOP=56;/);
+  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.y\+PLATE_TOP\);/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -107,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=47/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=48/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -164,11 +165,20 @@ test('點技能膠囊會把設計種類、階段與設計負責人帶進需求�
 
 test('六個座位收攏並在框裡置中，不裁切', async () => {
   const js = await officeJs();
-  // 下排往上收，中間的空地才不會佔掉一半高度；0.8 是不讓兩排疊在一起的極限。
-  assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_SQUEEZE=\.8,EMBED_ROW_BOTTOM=695;/);
+  // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能再寫死：上排的桌牌會往下長（名字底下
+  // 接對話），收過頭的話桌牌會壓到下排人物的頭。比例直接從桌牌高度推回來，改桌牌不用重算。
+  assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
+  assert.match(js, /const EMBED_ROW_SQUEEZE=Math\.min\(1,\(150\+PLATE_TOP\+PLATE_MAX_H\+PLATE_CLEAR\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\);/);
   assert.match(js, /const viewY=y=>embedMode&&y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
-  // 下緣跟著壓縮比例走，改了比例不用重新量一次。
-  assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+112/);
+  // 下緣跟著壓縮比例與桌牌高度走，改了不用重新量一次。
+  assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+PLATE_TOP\+PLATE_MAX_H\+8/);
+  // 算出來的比例要真的夠：上排桌牌的最低點不能碰到下排人物的頭頂。
+  const plate = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|PLATE_MSG_LINE|PLATE_MSG_LINES|PLATE_GAP|PLATE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
+  const plateMaxH = plate.PLATE_NAME_H + plate.PLATE_GAP + plate.PLATE_MSG_LINES * plate.PLATE_MSG_LINE;
+  const squeeze = Math.min(1, (150 + plate.PLATE_TOP + plateMaxH + plate.PLATE_CLEAR) / (695 - 355));
+  const plateBottom = 355 + plate.PLATE_TOP + plateMaxH, nextHeadTop = 355 + (695 - 355) * squeeze - 150;
+  assert.ok(plateBottom + plate.PLATE_CLEAR <= nextHeadTop + 0.001,
+    `上排桌牌畫到 ${plateBottom}，下排的頭頂在 ${nextHeadTop}，會疊在一起`);
   // 框的高度會跟著左右卡片對齊而變，所以縮放與置中要依實際尺寸算，不能寫死百分比。
   assert.match(js, /const scale=Math\.min\(wrap\.width\*EMBED_FIT_PADDING\/bw,wrap\.height\*EMBED_FIT_PADDING\/bh\);/);
   assert.match(js, /translate\(\$\{wrap\.width\/2-cx\*scale\}px,\$\{wrap\.height\/2-cy\*scale\}px\)/);
@@ -193,7 +203,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;bubble\(p,0\);/);
+  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawPhotoCard\(i\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
@@ -352,7 +362,7 @@ test('深色模式下 iframe 的文件底色跟著主題', async () => {
   assert.match(js, /if\(event\.origin!==location\.origin\)return;/);
 });
 
-test('個人資料卡一律夾在場景框內，右邊的人物不會被切掉', async () => {
+test('個人資料卡一律夾在場景框內，而且不會蓋住被點的人物', async () => {
   const js = await officeJs();
   const fn = js.slice(js.indexOf('function positionPersonCard()'), js.indexOf('\nfunction ', js.indexOf('function positionPersonCard()') + 1));
   // 卡片是相對 .canvas-wrap 定位的，但嵌入模式下 canvas 被 fitEmbedView() 放大並平移過，
@@ -360,14 +370,41 @@ test('個人資料卡一律夾在場景框內，右邊的人物不會被切掉',
   // 位置，卡片被切掉看不到（2026-09-22 使用者回報）。
   assert.match(fn, /const holder=game\.parentElement\.getBoundingClientRect\(\),view=game\.getBoundingClientRect\(\);/,
     '位置基準要用卡片真正的容器');
-  assert.match(fn, /personX=view\.left-holder\.left\+p\.x\*scaleX,personY=view\.top-holder\.top\+p\.y\*scaleY/,
+  assert.match(fn, /const offsetX=view\.left-holder\.left,offsetY=view\.top-holder\.top;/,
     '人物位置要換算成相對容器的座標');
-  assert.match(fn, /if\(left\+cardW>holder\.width-8\)left=personX-half-gap-cardW;/,
-    '右邊放不下要翻到人物左側');
-  assert.match(fn, /left=Math\.max\(8,Math\.min\(holder\.width-cardW-8,left\)\);/, '左右夾在容器內');
-  assert.match(fn, /top=Math\.max\(8,Math\.min\(holder\.height-cardH-8,top\)\);/, '上下夾在容器內');
+  assert.match(fn, /clampX=value=>Math\.max\(8,Math\.min\(Math\.max\(8,holder\.width-cardW-8\),value\)\)/, '左右夾在容器內');
+  assert.match(fn, /clampY=value=>Math\.max\(8,Math\.min\(Math\.max\(8,holder\.height-cardH-8\),value\)\)/, '上下夾在容器內');
   // 高度用當下量到的，卡片內容長短不一，夾邊界才會準。
   assert.match(fn, /const cardW=card\.offsetWidth\|\|232,cardH=card\.offsetHeight\|\|240/);
+  // 以前固定「右邊放不下就翻到左邊」，點最右邊那兩位時卡片一律翻到左邊，正好整片蓋住中間的
+  // 同事（2026-09-24 使用者回報）。改成多個候選位置挑重疊面積最小的。
+  assert.doesNotMatch(fn, /if\(left\+cardW>holder\.width-8\)/, '不要再用「右邊放不下就翻左邊」的寫死規則');
+  assert.match(fn, /overlapArea\(box,target\)\*100\+others\.reduce/,
+    '被點的人要用大權重，有位置躲得開就一定要躲');
+  assert.match(fn, /\{x:8,y:8\},\{x:farX,y:8\},\{x:8,y:farY\},\{x:farX,y:farY\}/,
+    '貼邊都躲不開時要能退到框的四角');
+  assert.match(js, /function overlapArea\(a,b\)\{/);
+});
+
+test('對話掛在自己的桌牌上，不再是會越界的頭頂泡泡', async () => {
+  const js = await officeJs();
+  // 頭頂泡泡在嵌入模式下無解：上排的泡泡會被框的上緣切掉，下排的泡泡往上長就整個蓋住上排的
+  // 桌子與名牌——兩排之間根本沒有放泡泡的高度（2026-09-24 使用者回報）。
+  assert.doesNotMatch(js, /function bubble\(/, '頭頂泡泡要整個移除');
+  const plate = js.slice(js.indexOf('function drawDeskPlate('), js.indexOf('\nfunction ', js.indexOf('function drawDeskPlate(') + 1));
+  assert.ok(plate, '要有 drawDeskPlate()');
+  assert.match(plate, /const message=person&&!isAway\(person\)\?String\(person\.message\|\|''\)\.trim\(\):'';/,
+    '離席的人不顯示對話，跟以前泡泡的規則一樣');
+  assert.match(plate, /const room=Math\.max\(0,Math\.floor\(\(PLATE_MAX_H-nameH-PLATE_GAP\)\/msgLine\)\)/,
+    '行數要由 PLATE_MAX_H 收住，字放大時寧可少顯示幾行也不能長出去');
+  assert.match(plate, /lines\[room-1\]=ellipsize\(lines\[room-1\],inner\)/, '放不下要用「…」收尾');
+  assert.match(plate, /Math\.min\(PLATE_MAX_W,Math\.max\(84,nameW\+24,msgW\+PLATE_PAD\*2\)\)/,
+    '桌牌寬度要有上限，否則會黏到隔壁桌');
+  // 60 字（對話上限）在正常縮放下要放得完，不該被截掉。
+  const plateConst = Object.fromEntries([...js.matchAll(/\b(PLATE_MAX_W|PLATE_PAD|PLATE_MSG_FONT|PLATE_MSG_LINES)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
+  const perLine = Math.floor((plateConst.PLATE_MAX_W - plateConst.PLATE_PAD * 2) / plateConst.PLATE_MSG_FONT);
+  assert.ok(perLine * plateConst.PLATE_MSG_LINES >= 60,
+    `桌牌一行 ${perLine} 個中文字 × ${plateConst.PLATE_MSG_LINES} 行放不下 60 字的對話`);
 });
 
 test('所有狀態的小膠囊排在同一條水平線上', async () => {
@@ -387,4 +424,24 @@ test('所有狀態的小膠囊排在同一條水平線上', async () => {
   // 膠囊的 y 只能由常數決定，不能出現任何跟 symbol 有關的變數，否則又會各自高低不同。
   const labelExpr = marker.match(/labelY=([^;]+);/)[1];
   assert.doesNotMatch(labelExpr, /iconSize|DESK_ICON_SCALE|symbol/, `膠囊高度還是會隨圖示變：${labelExpr}`);
+});
+
+test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗', async () => {
+  const html = await indexHtml();
+  // 面板裡的 iframe 是唯讀預覽（只放行點人物看資料），要改自己的心情／狀態／留言得開完整版。
+  assert.match(html, /<div class="designer-title-wrap"><h2>設計部即時動態<\/h2>[\s\S]{0,200}?id="officeEditorOpen"[^>]*>編輯<\/button><\/div>/,
+    '膠囊按鈕要接在標題（與說明鈕）後面');
+  assert.match(html, /const OFFICE_EDITOR_URL='https:\/\/emctaipeiart\.github\.io\/EMC-ART-Pixel-Office\/dist\/';/);
+  assert.match(html, /<iframe id="officeEditorFrame"/);
+  // src 等到打開才給，關掉就拿掉：不然這一頁會在背景一直跑 canvas 與同步輪詢。
+  assert.match(html, /if\(frame&&!frame\.getAttribute\('src'\)\)frame\.src=OFFICE_EDITOR_URL; modal\.hidden=false;/);
+  assert.match(html, /modal\.hidden=true; \$\('#officeEditorFrame'\)\?\.removeAttribute\('src'\)/);
+  // 按鈕長在 .designer-help-trigger 裡，不擋掉的話點擊會冒到面板的收合／說明上。
+  assert.match(html, /\$\('#officeEditorOpen'\)\?\.addEventListener\('click',event=>\{event\.preventDefault\(\);event\.stopPropagation\(\);showOfficeEditor\(\)\}\)/);
+  // 背景與 Esc 都能關。
+  assert.match(html, /\$\('#officeEditorModal'\)\?\.addEventListener\('click',event=>\{if\(event\.target===event\.currentTarget\)hideOfficeEditor\(\)\}\)/);
+  assert.match(html, /if\(event\.key==='Escape'&&!\$\('#officeEditorModal'\)\?\.hidden\)\{event\.preventDefault\(\);hideOfficeEditor\(\)\}/);
+  assert.match(html, /SCROLL_LOCK_MODAL_IDS=\[[^\]]*'officeEditorModal'/, '打開時要鎖住背景捲動');
+  // 遊戲自己會依框的大小縮放，剩下的高度全部給它；min-height:0 少了 flex 子元素撐不下去。
+  assert.match(html, /\.office-editor-frame\{flex:1 1 auto;min-height:0;/);
 });

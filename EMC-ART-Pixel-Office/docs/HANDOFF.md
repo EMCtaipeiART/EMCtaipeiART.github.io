@@ -36,7 +36,7 @@
 - `render` 按深度排序椅子、設備、人物與桌子；`drawOverlay` 顯示心情、對話與照片，`drawStatusMarker` 顯示離席狀態。
 - `sprite` 使用人物圖的正面、側面、背面；向左使用右側面鏡像。走路使用轉向與上下浮動，沒有完整逐格走路動畫。
 - `syncLevels()` 從 GitHub Pages 的 `data/database_archive.json` 讀取歷史完成案件，用 `scoreRows()` 累計分數，再用 `levelFromScore()` 換算 EXP、等級與進度。只讀取，不會寫回案件資料。
-- `bubble` 處理手動換行、自動折行、文字置中與泡泡邊界。
+- `drawDeskPlate` 畫桌牌：名字，底下接他的對話（手動換行、自動折行、文字置中、超過就用「…」收尾）。對話本來是人物頭上的泡泡（`bubble()`），2026-09-24 整個移除——見下面〈對話改掛桌牌〉。
 - 檔案照片會縮至最長邊 1200 px，以 JPEG 儲存。大於 8 MB 會拒絕。
 - localStorage 主資料鍵：`kaiyao-office-v1`；配置版本鍵：`kaiyao-office-layout`，目前值 `5`。版本不符只重設位置，仍讀取照片、訊息、心情與離席狀態。
 - 網頁在支援 `document.modelContext` 時註冊 `set_character_status`，不支援時遊戲仍正常運作。
@@ -109,17 +109,52 @@
 設計需求系統左上角的「設計師專長與案件分配」用 iframe 嵌入 `?embed=1`，設計師頭像、限時動態、大海報與分享音樂一併從前台下架。
 
 - **只留場景**：頁首、右側編輯工具、名單、標題列都隱藏，人物資料卡保留。鍵盤移動關閉。
-- **版面**：下排座位往上收（`EMBED_ROW_SQUEEZE=0.8`，再小兩排就會疊住）。只改 `viewPeople`／`viewStations` 這兩份「畫面用座標」，同步給大家的 `people`／`stations` 完全沒動。六個座位連同姓名牌由 `fitEmbedView()` 依框的實際尺寸等比縮放、水平垂直置中——框的高度會跟著左右卡片對齊而變，所以不能寫死放大倍率。內容範圍記在 `EMBED_CONTENT`，下緣跟著壓縮比例走。
+- **版面**：下排座位往上收（`EMBED_ROW_SQUEEZE`）。收多少**不是寫死的**，由桌牌高度推回來：上排桌牌的最低點加上 `PLATE_CLEAR` 不能碰到下排人物的頭頂，所以 `EMBED_ROW_SQUEEZE=(150+PLATE_TOP+PLATE_MAX_H+PLATE_CLEAR)/340`（目前約 0.894；2026-09-24 以前寫死 0.8，那是還沒有桌牌的年代）。改桌牌尺寸不用重算比例。只改 `viewPeople`／`viewStations` 這兩份「畫面用座標」，同步給大家的 `people`／`stations` 完全沒動。六個座位連同桌牌由 `fitEmbedView()` 依框的實際尺寸等比縮放、水平垂直置中——框的高度會跟著左右卡片對齊而變，所以不能寫死放大倍率。內容範圍記在 `EMBED_CONTENT`，上緣是頭頂再往上 8（順便包住照片卡與心情圖示），下緣是下排桌牌的最低點，兩者都跟著常數走。
 - **滑過就展開**：滑鼠移到人物上直接展開資料卡，移開收起；滑進卡片不算離開。觸控仍走點選。嵌入模式不顯示關閉鈕。
 - **技能膠囊帶入表單**：點了用 `postMessage({type:'pixelOfficeSkill',designer,skill})` 通知外層（`location.origin`，外層也只收同源），外層跑 `applyDesignerSkill()` 帶入設計種類、階段與設計負責人。
 - **深淺色**：iframe 的文件底色是瀏覽器依 `color-scheme` 畫的，`html`／`body` 設成 `transparent` 也蓋不掉。外層切換主題時用 `postMessage({type:'pixelOfficeTheme'})` 通知，嵌入端收到就設 `documentElement.style.colorScheme`；嵌入端載好後也會主動送 `pixelOfficeThemeRequest` 問一次（外層可能在它載好前就切換過）。
 - **進站不預載那 3.8 MB**：`ensureLevels()` 第一次真的要看人物資料時才載歷史快照，載完自動重畫卡片；快照本身用 `no-cache`，沒變就走 304。
 
+## 對話改掛桌牌（2026-09-24）
+
+對話原本是畫在人物頭上的泡泡。嵌入模式下這個形式無解，因為兩排之間**根本沒有放泡泡的高度**：
+
+- 上排（Y=355）的泡泡往上長，直接被框的上緣切掉。
+- 下排的泡泡往上長，整片蓋住上排的桌子與名牌（60 字會長到四行，等於把上排一整格吃掉）。
+
+所以泡泡整個移除，對話改成掛在**自己的桌牌**上：原本的名牌往下長一塊，名字下面用細分隔線接對話。兩排各自在自己的桌前，永遠不會越界，也不會蓋到別人。
+
+尺寸全部由 `app.js` 最上面那組常數決定，改一個其他都跟著算：
+
+| 常數 | 值 | 意思 |
+| --- | --- | --- |
+| `PLATE_TOP` | 56 | 桌牌上緣離座位中心多遠。沿用原本名牌的位置，所以**沒有對話的人看起來跟以前一模一樣** |
+| `PLATE_MAX_W` | 206 | 桌牌最寬。桌距 220，所以隔壁桌牌之間永遠留得下 14 的間隙 |
+| `PLATE_MSG_LINES` | 4 | 對話最多幾行 |
+| `PLATE_MSG_FONT`／`PLATE_MSG_LINE` | 11.5／15 | 對話的字級與行高。內寬 184 ÷ 11.5 ≈ 一行 16 個中文字，四行 64 字 ≥ 對話上限 60 字，**正常縮放下不會截字** |
+| `PLATE_MAX_H` | 89 | 桌牌最高（名字 23 ＋ 間距 6 ＋ 4×15） |
+| `PLATE_CLEAR` | 9 | 上排桌牌的最低點與下排人物頭頂之間留的空隙 |
+
+兩個要注意的地方：
+
+- **框很小時字會放大**（跟名字一樣，`11/screenScale`、`9/screenScale`），桌牌會跟著變高。這時 `PLATE_MAX_H` 會把行數收回來，放不下的用「…」收尾——**寧可少顯示幾行，也不能長出去壓到下一排的人**。
+- **離席的人不顯示對話**，跟以前泡泡的規則一樣（人都不在了，桌上掛一句話只會讓人以為他在）。
+
+## 從系統裡開編輯視窗（2026-09-24）
+
+面板裡的 iframe 是唯讀預覽（只放行點人物看資料），要改自己的心情／狀態／留言得開完整版。「設計部即時動態」標題後面加了一顆「編輯」小膠囊，點了開一個視窗，裡面嵌 `https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/`（不帶 `embed=1`，所以右側編輯工具都在）。
+
+- iframe 的 `src` **等到真的打開才給**，關掉時 `removeAttribute('src')`：不然這一頁會在背景一直跑 canvas 與同步輪詢。
+- 按鈕長在 `.designer-help-trigger` 裡面，click 要 `stopPropagation()`，否則會冒到面板的收合／說明上。
+- 視窗 id 是 `officeEditorModal`，已加進 `SCROLL_LOCK_MODAL_IDS`（打開時鎖住背景捲動）。
+
 ## 人物資料卡與「預設不選人」（2026-09-21）
 
 進站不再預設選取 Leona：`selected` 起始是 `null`，右側工具面板收起來、改顯示一行提示。點畫面上的人物才會選取，點場景空白處取消。所有讀 `people[selected]` 的函式都要先擋 `selected===null`（`updateMood`／`updateStatus`／`updatePhoto`／`updateLevel`／`updateStateText`／`moving`／`setMood`／`setStatus`）。
 
-選取之後在人物**右側**展開資料卡（`#personCard`，HTML 浮層疊在 canvas 上，不是畫進 canvas）。位置由 `positionPersonCard()` 每一幀更新，所以人物走動時卡片會跟著；右邊放不下就自動翻到左邊，上下夾在場景內。邊界基準是**卡片的容器 `.canvas-wrap`**，不是 canvas 自己——嵌入模式下 `fitEmbedView()` 會把 canvas 放大並平移，兩者的矩形不一樣，拿 canvas 當邊界的話右欄一關（場景變寬）右邊的人物就會被切到框外（2026-09-22 修）。手機（≤700px）改成排在場景下方（`position:relative` 加 `left/top:auto` 蓋掉每幀寫進去的座標），什麼都不遮、內容也不必擠在小框裡捲。
+選取之後展開資料卡（`#personCard`，HTML 浮層疊在 canvas 上，不是畫進 canvas）。位置由 `positionPersonCard()` 每一幀更新，所以人物走動時卡片會跟著。邊界基準是**卡片的容器 `.canvas-wrap`**，不是 canvas 自己——嵌入模式下 `fitEmbedView()` 會把 canvas 放大並平移，兩者的矩形不一樣，拿 canvas 當邊界的話右欄一關（場景變寬）右邊的人物就會被切到框外（2026-09-22 修）。手機（≤700px）改成排在場景下方（`position:relative` 加 `left/top:auto` 蓋掉每幀寫進去的座標），什麼都不遮、內容也不必擠在小框裡捲。
+
+**放哪裡是算出來的，不是固定右邊**（2026-09-24 改）：以前是「右邊放不下就翻到左邊」，結果點最右邊那兩位時卡片一律翻到左邊，正好整片蓋住中間的同事。現在試八個候選位置——貼著人物的右、左、下、上，再加框的四個角落——每個位置算重疊面積，**被點的那個人算 100 倍權重**，挑總分最低的；同分時選離人物比較近的那個。這保證只要有位置躲得開，被點的人一定不會被自己的卡片蓋住；五個人幾乎塞滿整個框，退到角落通常剛好落在左下那個空位上，誰都不擋。
 
 卡片內容與資料來源：
 

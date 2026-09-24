@@ -20,18 +20,34 @@ const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1'
 let needsRedraw=true;
 function markDirty(){needsRedraw=true;}
 
+// 桌牌（名字＋對話）的尺寸。對話本來畫成人物頭上的泡泡，但兩排之間根本沒有放泡泡的高度：
+// 上排的泡泡會被框的上緣切掉，下排的泡泡會整個蓋住上排的桌子與名牌（2026-09-24 使用者回報）。
+// 改成掛在自己的桌牌下面，兩排都有位子，也不會越界。
+// PLATE_TOP 沿用原本名牌的位置，換句話說沒有對話的人看起來跟以前一模一樣。
+const PLATE_TOP=56;
+// 桌距 220，桌牌最寬 206 → 隔壁桌牌之間永遠留得下 14 的間隙，不會黏在一起。
+const PLATE_MAX_W=206,PLATE_PAD=11,PLATE_GAP=6;
+// 對話最多四行。桌牌內寬 184、字 11.5 → 一行放得下 16 個中文字，四行 64 字 ≥ 對話上限 60 字，
+// 所以正常情況下不會截字；只有小框把字放大時才會截，那時本來也讀不完。
+const PLATE_NAME_H=23,PLATE_MSG_FONT=11.5,PLATE_MSG_LINE=15,PLATE_MSG_LINES=4;
+const PLATE_MAX_H=PLATE_NAME_H+PLATE_GAP+PLATE_MSG_LINES*PLATE_MSG_LINE;
+const PLATE_CLEAR=9;// 上排桌牌的最低點與下排人物頭頂之間要留的空隙
+
 // 嵌入模式的版面：上下兩排之間空了一大段，塞進側欄的小框裡會白白浪費一半高度。把下排往上收，
 // 六張桌子擠在一起之後才有空間放大。上排以上不動、之後線性壓縮，所以人物走到中間時位置是連續的，
 // 不會突然跳一格。只改「畫出來的位置」，同步給大家的座標完全沒動。
-// 0.8 是能收到的極限：再小的話下排人物的頭就會疊到上排的桌子上。
-const EMBED_ROW_TOP=355,EMBED_ROW_SQUEEZE=.8,EMBED_ROW_BOTTOM=695;
+// 能收多少由上排的桌牌決定：桌牌最低點 + 空隙 不能碰到下排人物的頭頂（頭頂在座位往上 150）。
+// 以前寫死 .8，那是還沒有桌牌、只算頭不疊到桌子的年代；現在直接從桌牌高度算回來。
+const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
+const EMBED_ROW_SQUEEZE=Math.min(1,(150+PLATE_TOP+PLATE_MAX_H+PLATE_CLEAR)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP));
 const viewY=y=>embedMode&&y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
-// 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣，上緣是人物頭頂，
-// 下緣是下排桌腳。嵌入模式就是把這一塊等比放到框裡置中，框變成什麼比例都不會裁到或偏一邊。
-// 上緣是上排人物的頭頂，下緣是下排桌子的桌腳（跟著上面的壓縮比例走，改了不用重量一次）。
-const EMBED_CONTENT={x0:424,x1:1112,y0:206,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE+112};
+// 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣。嵌入模式就是把這一塊
+// 等比放到框裡置中，框變成什麼比例都不會裁到或偏一邊。
+// 上緣：人物頭頂再往上 8，順便把頭旁邊的照片卡與心情圖示的上緣一起包進來（它們比頭頂再高一點點）。
+// 下緣：下排桌牌的最低點（跟著壓縮比例與桌牌高度走，改了不用重量一次）。
+const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-158,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE+PLATE_TOP+PLATE_MAX_H+8};
 const EMBED_FIT_PADDING=.94;
 function fitEmbedView(){
   if(!embedMode)return;
@@ -217,7 +233,16 @@ function renderPersonCard(){
   positionPersonCard();
 }
 function escapeHtml(value){return String(value).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
-/** 把卡片放在人物右邊；右邊擺不下就改放左邊，上下夾在場景裡面。 */
+/** 兩塊矩形重疊的面積。 */
+function overlapArea(a,b){
+  return Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+}
+/** 把資料卡放在不會擋到人的地方。
+ *  以前固定「右邊放不下就放左邊」，結果點最右邊那兩位時卡片一律翻到左邊，正好整片蓋住中間的同事，
+ *  框窄一點的時候連被點的人自己都被蓋掉（2026-09-24 使用者回報）。
+ *  改成四個位置都試（右、左、下、上），挑重疊面積最小的：被點的人算 100 倍，所以只要有一個位置
+ *  擋不到他就一定會選；剩下的才比誰擋到的同事少。五個人幾乎塞滿整個框，擋到「某個人」躲不掉，
+ *  但至少不會擋到你正在看的那一位。 */
 function positionPersonCard(){
   const card=$('personCard');
   if(card.hidden||selected===null)return;
@@ -226,16 +251,39 @@ function positionPersonCard(){
   // 位置用「canvas 相對 .canvas-wrap 的偏移」換算，邊界一律夾在 .canvas-wrap 之內。
   const holder=game.parentElement.getBoundingClientRect(),view=game.getBoundingClientRect();
   if(!holder.width||!view.width)return;
-  const p=viewPeople[selected]||people[selected];
   const scaleX=view.width/W,scaleY=view.height/H;
-  const personX=view.left-holder.left+p.x*scaleX,personY=view.top-holder.top+p.y*scaleY;
-  const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12,half=52*scaleX;
-  let left=personX+half+gap;
-  if(left+cardW>holder.width-8)left=personX-half-gap-cardW;
-  left=Math.max(8,Math.min(holder.width-cardW-8,left));
-  let top=personY-150*scaleY-6;
-  top=Math.max(8,Math.min(holder.height-cardH-8,top));
-  card.style.left=Math.round(left)+'px';card.style.top=Math.round(top)+'px';
+  const offsetX=view.left-holder.left,offsetY=view.top-holder.top;
+  // 人物在框裡佔到的矩形（含頭上到腳下）。
+  const boxOf=person=>({x:offsetX+(person.x-53)*scaleX,y:offsetY+(person.y-150)*scaleY,w:106*scaleX,h:150*scaleY});
+  const p=viewPeople[selected]||people[selected];
+  const target=boxOf(p);
+  const others=viewPeople.filter((person,index)=>index!==selected&&!isAway(person)).map(boxOf);
+  const cardW=card.offsetWidth||232,cardH=card.offsetHeight||240,gap=12;
+  const clampX=value=>Math.max(8,Math.min(Math.max(8,holder.width-cardW-8),value));
+  const clampY=value=>Math.max(8,Math.min(Math.max(8,holder.height-cardH-8),value));
+  const centerX=target.x+target.w/2,centerY=target.y+target.h/2;
+  const farX=Math.max(8,holder.width-cardW-8),farY=Math.max(8,holder.height-cardH-8);
+  const spots=[
+    // 先試貼著人物的四邊，卡片離被點的人越近越好讀。
+    {x:target.x+target.w+gap,y:target.y-6},
+    {x:target.x-gap-cardW,y:target.y-6},
+    {x:centerX-cardW/2,y:target.y+target.h+gap},
+    {x:centerX-cardW/2,y:target.y-gap-cardH},
+    // 貼邊的四個位置都會壓到人時，退到框的四個角落。六個座位有一個是空的，通常角落找得到
+    // 一塊完全沒有人的地方——寧可卡片離遠一點，也不要把同事整個蓋掉。
+    {x:8,y:8},{x:farX,y:8},{x:8,y:farY},{x:farX,y:farY}
+  ].map(spot=>{
+    const box={x:clampX(spot.x),y:clampY(spot.y),w:cardW,h:cardH};
+    return {box,cost:overlapArea(box,target)*100+others.reduce((sum,other)=>sum+overlapArea(box,other),0)};
+  });
+  // 都擋得一樣多時，選離人物中心最近的那個，卡片才不會離被點的人太遠。
+  const best=spots.reduce((a,b)=>{
+    if(b.cost!==a.cost)return b.cost<a.cost?b:a;
+    const da=Math.hypot(a.box.x+cardW/2-centerX,a.box.y+cardH/2-centerY);
+    const db=Math.hypot(b.box.x+cardW/2-centerX,b.box.y+cardH/2-centerY);
+    return db<da?b:a;
+  });
+  card.style.left=Math.round(best.box.x)+'px';card.style.top=Math.round(best.box.y)+'px';
 }
 
 // 點技能膠囊：把設計種類、階段與設計負責人帶進設計需求表單。嵌進系統裡時用 postMessage 請
@@ -300,7 +348,7 @@ function refreshIconCanvases(){document.querySelectorAll('canvas[data-symbol]').
 names.forEach((name,i)=>{const b=document.createElement('button');b.className='roster-button';b.setAttribute('aria-label','選取 '+name);const c=document.createElement('canvas'),label=document.createElement('span'),level=document.createElement('span');c.width=110;c.height=150;label.className='roster-name';label.textContent=name;level.className='roster-level';level.textContent='Lv.'+levelStats[name].level;b.append(c,label,level);b.onclick=()=>{select(i);game.focus({preventScroll:true});};$('roster').append(b);});
 moods.forEach(m=>{const b=document.createElement('button');b.dataset.mood=m.id;b.title=m.text;b.append(iconCanvas(m.symbol),document.createTextNode(m.label));b.onclick=()=>setMood(m.id);$('moods').append(b);});
 statuses.forEach(status=>{const b=document.createElement('button');b.dataset.status=status.id;b.title=status.text;b.append(iconCanvas(status.symbol,40),document.createTextNode(status.label));b.onclick=()=>setStatus(status.id);$('statuses').append(b);});
-$('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到人物上方':'已清除對話');game.focus({preventScroll:true});};
+$('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到你的桌牌上':'已清除對話');game.focus({preventScroll:true});};
 $('photo').onchange=async e=>{const file=e.target.files[0],index=selected;e.target.value='';if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('請選擇 JPG、PNG 或 WebP 圖片。');return;}if(file.size>8*1024*1024){toast('照片太大，請選擇 8 MB 以下的圖片。');return;}try{const url=URL.createObjectURL(file),img=new Image();img.src=url;try{await load(img);const c=document.createElement('canvas'),scale=Math.min(1,1200/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);people[index].photo=c.toDataURL('image/jpeg',.8);photoImages.delete(index);save();pushChange(index,{photo:people[index].photo});if(selected===index)updatePhoto();toast('照片已加入，點人物旁的小照片即可放大。');}finally{URL.revokeObjectURL(url);}}catch{toast('無法讀取這張圖片，請換一張再試。');}};
 $('expand').onclick=()=>openPhoto(selected);$('removePhoto').onclick=()=>{people[selected].photo='';photoImages.delete(selected);updatePhoto();save();pushChange(selected,{photo:''});};$('closePhoto').onclick=()=>$('lightbox').close();$('lightbox').onclick=e=>{if(e.target===$('lightbox'))$('lightbox').close();};
 $('home').onclick=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
@@ -363,11 +411,6 @@ game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);gam
 game.addEventListener('pointerleave',()=>{if(embedMode&&!cardPinned)select(null);});
 // 細緻版面板：細邊框、圓角、柔和陰影（取代原本粗像素切角框）。
 function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=14;context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
-function bubble(p,lift=0){if(!p.message)return;ctx.save();ctx.font='600 17px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const lines=[];let line='';for(const ch of p.message){if(ch==='\n'){lines.push(line);line='';continue;}if(ctx.measureText(line+ch).width>220&&line){lines.push(line);line=ch;}else line+=ch;}lines.push(line);const lineHeight=25,w=Math.max(90,...lines.map(text=>ctx.measureText(text).width+34)),h=lines.length*lineHeight+22,x=Math.max(10,Math.min(W-w-10,Math.round(p.x-w/2))),y=Math.max(10,Math.round(p.y-172-lift-h));const tipX=Math.max(x+20,Math.min(x+w-20,p.x));
-  // 泡泡與尾巴畫成同一個外框，邊線連續，不會有接縫。
-  const r=14,path=()=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(tipX+9,y+h);ctx.quadraticCurveTo(tipX+2,y+h+4,tipX,y+h+12);ctx.quadraticCurveTo(tipX-3,y+h+4,tipX-9,y+h);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();};
-  ctx.shadowColor='rgba(20,41,68,.18)';ctx.shadowBlur=14;ctx.shadowOffsetY=4;path();ctx.fillStyle='#fffdf7';ctx.fill();ctx.shadowColor='transparent';path();ctx.fillStyle='#fffdf7';ctx.fill();ctx.strokeStyle='#c9d3e0';ctx.lineWidth=1.5;ctx.stroke();
-  ctx.fillStyle='#1d3350';ctx.textAlign='center';ctx.textBaseline='middle';const centerY=y+h/2;lines.forEach((text,index)=>ctx.fillText(text,x+w/2,centerY+(index-(lines.length-1)/2)*lineHeight));ctx.restore();}
 /** 點選人物時，頭上顯示等級與稱號。 */
 function stationPerson(s){return s.name?people.find(person=>person.name===s.name):null;}
 function stationAway(s){const person=stationPerson(s);return person&&isAway(person);}
@@ -432,11 +475,69 @@ function drawDesk(s){
   if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,deskTop-upperDraw,drawW,upperDraw);
   ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,deskTop,drawW,faceDraw);
   ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,deskTop+faceDraw,drawW,footDraw);
-  if(s.name){const screenScale=game.getBoundingClientRect().width/W,fontSize=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;ctx.font=`bold ${fontSize}px sans-serif`;const labelW=Math.max(84,ctx.measureText(s.name).width+24),labelH=Math.max(23,fontSize+8),labelX=s.x-labelW/2,labelY=s.y+56;ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;ctx.fillRect(labelX,labelY,labelW,labelH);ctx.strokeRect(labelX,labelY,labelW,labelH);ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(s.name,s.x,labelY+labelH/2+1);ctx.textBaseline='alphabetic';}
+  drawDeskPlate(s);
+}
+/** 把一段文字折成不超過 maxWidth 的幾行（呼叫前要先設好 ctx.font）。 */
+function wrapText(text,maxWidth){
+  const lines=[];let line='';
+  for(const ch of text){
+    if(ch==='\n'){lines.push(line);line='';continue;}
+    if(line&&ctx.measureText(line+ch).width>maxWidth){lines.push(line);line=ch;}
+    else line+=ch;
+  }
+  lines.push(line);
+  return lines;
+}
+/** 放不下就砍到放得下再加「…」（呼叫前要先設好 ctx.font）。 */
+function ellipsize(text,maxWidth){
+  let out=text;
+  while(out&&ctx.measureText(out+'…').width>maxWidth)out=out.slice(0,-1);
+  return out+'…';
+}
+/** 桌牌：名字，底下接他的對話。畫在 drawDesk 裡，所以跟著桌子一起做深度排序——
+ *  上排的桌牌會蓋過上排的人物（本來就是貼在桌前緣），但不會蓋到下排的人（下排的人畫在更後面）。 */
+function drawDeskPlate(s){
+  if(!s.name)return;
+  const person=stationPerson(s);
+  // 框很小的時候字要放大，不然名字會被擠成「M/ac/hi」。放大之後桌牌會變高，所以下面用
+  // PLATE_MAX_H 把行數收回來——寧可少顯示幾行，也不要壓到下一排的人。
+  const screenScale=game.getBoundingClientRect().width/W;
+  const nameFont=embedMode?Math.min(32,Math.max(15,11/Math.max(screenScale,.01))):15;
+  const msgFont=embedMode?Math.min(24,Math.max(PLATE_MSG_FONT,9/Math.max(screenScale,.01))):PLATE_MSG_FONT;
+  const msgLine=Math.max(PLATE_MSG_LINE,Math.round(msgFont*1.3));
+  ctx.save();
+  ctx.font=`bold ${nameFont}px sans-serif`;
+  const nameW=ctx.measureText(s.name).width,nameH=Math.max(PLATE_NAME_H,nameFont+8);
+  // 離席的人不顯示對話：他人都不在了，桌上掛一句話只會讓人以為他在。跟以前泡泡的規則一樣。
+  const message=person&&!isAway(person)?String(person.message||'').trim():'';
+  const inner=PLATE_MAX_W-PLATE_PAD*2;
+  let lines=[];
+  if(message){
+    ctx.font=`600 ${msgFont}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
+    lines=wrapText(message,inner).filter(line=>line!=='');
+    const room=Math.max(0,Math.floor((PLATE_MAX_H-nameH-PLATE_GAP)/msgLine));
+    if(lines.length>room){lines=lines.slice(0,room);if(room)lines[room-1]=ellipsize(lines[room-1],inner);}
+  }
+  const msgW=lines.length?Math.max(...lines.map(line=>ctx.measureText(line).width)):0;
+  const w=Math.round(Math.min(PLATE_MAX_W,Math.max(84,nameW+24,msgW+PLATE_PAD*2)));
+  const h=Math.round(nameH+(lines.length?PLATE_GAP+lines.length*msgLine:0));
+  const x=Math.round(s.x-w/2),y=Math.round(s.y+PLATE_TOP);
+  ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;
+  ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#223652';ctx.font=`bold ${nameFont}px sans-serif`;
+  ctx.fillText(s.name,s.x,y+nameH/2+1);
+  if(lines.length){
+    ctx.strokeStyle='rgba(24,44,72,.22)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x+PLATE_PAD,y+nameH+.5);ctx.lineTo(x+w-PLATE_PAD,y+nameH+.5);ctx.stroke();
+    ctx.fillStyle='#55688a';ctx.font=`600 ${msgFont}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
+    lines.forEach((line,index)=>ctx.fillText(line,s.x,y+nameH+PLATE_GAP+msgLine*index+msgLine/2));
+  }
+  ctx.textBaseline='alphabetic';ctx.restore();
 }
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPhotoCard(i){const p=viewPeople[i];if(!p.photo)return;let image=photoImages.get(i);if(!image){image=new Image();image.src=p.photo;photoImages.set(i,image);}const side=p.x>W-155?-1:1,x=Math.round(side>0?p.x+64:p.x-140),y=Math.round(p.y-151),w=76,h=70;softPanel(ctx,x,y,w,h,{radius:10,fill:'#fff',stroke:'#c9d3e0'});if(image.complete&&image.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(x+5,y+5,w-10,h-24,7);ctx.clip();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const boxW=w-10,boxH=h-24,scale=Math.max(boxW/image.naturalWidth,boxH/image.naturalHeight),dw=image.naturalWidth*scale,dh=image.naturalHeight*scale;ctx.drawImage(image,x+5+(boxW-dw)/2,y+5+(boxH-dh)/2,dw,dh);ctx.restore();}ctx.save();ctx.fillStyle='#5b6d87';ctx.font='700 9px -apple-system,BlinkMacSystemFont,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('點開看看',x+w/2,y+h-9.5);ctx.restore();hits.push({type:'photo',i,x,y,w,h});}
-function drawOverlay(i){const p=viewPeople[i];if(isAway(p))return;bubble(p,0);drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
+function drawOverlay(i){const p=viewPeople[i];if(isAway(p))return;drawPhotoCard(i);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=p.photo?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
 // 用同樣的尺寸畫在桌上就會比別的狀態大一圈。面板按鈕有外框當基準、看不出來，所以只縮桌上這邊。

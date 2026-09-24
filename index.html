@@ -78,6 +78,21 @@
     .designer-title-wrap{display:flex;align-items:center;gap:8px;min-width:0}
     .designer-help-info{display:grid!important;place-items:center!important;flex:0 0 22px!important;width:22px!important;height:22px!important;min-height:22px!important;padding:0!important;border-radius:999px!important;background:#fff!important;color:#53625b!important;border:1px solid #d8e0dc!important;box-shadow:0 4px 10px rgba(23,33,29,.06)!important;font-size:13px!important;font-weight:900!important;font-style:normal!important;line-height:1!important}
     .designer-help-info:hover,.designer-help-info:focus-visible{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important;outline:none!important}
+    /* 標題後面的「編輯」：點開像素辦公室的編輯視窗（2026-09-24 使用者要求）。 */
+    .office-editor-open{flex:0 0 auto;min-height:24px!important;padding:3px 11px!important;border-radius:999px!important;background:#fff!important;color:#53625b!important;border:1px solid #d8e0dc!important;box-shadow:0 4px 10px rgba(23,33,29,.06)!important;font-size:12px!important;font-weight:900!important;line-height:1.4!important}
+    .office-editor-open:hover,.office-editor-open:focus-visible{background:var(--green2)!important;color:#075d42!important;border-color:#b8e4ce!important;outline:none!important}
+    .office-editor-modal[hidden]{display:none!important}
+    .office-editor-card{display:flex;flex-direction:column;gap:11px;width:min(1080px,100%);height:min(760px,calc(100vh - 36px));border-radius:16px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);padding:14px}
+    .office-editor-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .office-editor-head h3{margin:0}
+    .office-editor-head p{margin:3px 0 0;color:var(--muted);font-size:12px;font-weight:800;line-height:1.5}
+    .office-editor-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+    .office-editor-actions .office-editor-tab{display:inline-flex;align-items:center;min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink)!important;text-decoration:none!important;font-size:13px;font-weight:850}
+    .office-editor-actions .office-editor-tab:hover{background:var(--green2);color:#0f5138!important;border-color:#9bd4b4}
+    /* 遊戲自己會依框的大小縮放，所以這裡只要把剩下的高度全部給它。min-height:0 少了的話 flex 子元素撐不下去。 */
+    .office-editor-frame{flex:1 1 auto;min-height:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#101713}
+    .office-editor-frame iframe{display:block;width:100%;height:100%;border:0}
+    @media(max-width:640px){.office-editor-card{height:calc(100vh - 24px);padding:11px}.office-editor-head p{display:none}}
     .designer-help-popover{position:absolute;left:20px;top:58px;z-index:90;display:grid;gap:5px;width:min(430px,calc(100vw - 64px));padding:13px 15px;border:1px solid #cfe5d8;border-radius:12px;background:#fff;box-shadow:0 18px 36px rgba(18,38,28,.14);color:#43524b;font-size:13px;line-height:1.55;opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease}
     .designer-help-trigger:hover + .designer-help-popover,.designer-help-trigger:focus-within + .designer-help-popover{opacity:0;transform:translateY(-4px)}
     .designer-help-trigger:has(.designer-help-info:hover) + .designer-help-popover,.designer-help-trigger:has(.designer-help-info:focus-visible) + .designer-help-popover{opacity:1;transform:translateY(0)}
@@ -4731,12 +4746,15 @@
       color:#e2e3e4!important;
     }
     html[data-theme="dark"] .designer-help-info,
+    html[data-theme="dark"] .office-editor-open,
     html[data-theme="dark"] .request-help-info,
     html[data-theme="dark"] .panel-close-toggle,
     html[data-theme="dark"] .designer-help-info:hover,
+    html[data-theme="dark"] .office-editor-open:hover,
     html[data-theme="dark"] .request-help-info:hover,
     html[data-theme="dark"] .panel-close-toggle:hover,
     html[data-theme="dark"] .designer-help-info:focus-visible,
+    html[data-theme="dark"] .office-editor-open:focus-visible,
     html[data-theme="dark"] .request-help-info:focus-visible,
     html[data-theme="dark"] .panel-close-toggle:focus-visible{
       background:transparent!important;
@@ -4746,9 +4764,11 @@
       outline:none!important;
     }
     html[data-theme="dark"] .designer-help-info:hover,
+    html[data-theme="dark"] .office-editor-open:hover,
     html[data-theme="dark"] .request-help-info:hover,
     html[data-theme="dark"] .panel-close-toggle:hover,
     html[data-theme="dark"] .designer-help-info:focus-visible,
+    html[data-theme="dark"] .office-editor-open:focus-visible,
     html[data-theme="dark"] .request-help-info:focus-visible,
     html[data-theme="dark"] .panel-close-toggle:focus-visible{
       color:#f1f2f2!important;
@@ -6824,7 +6844,7 @@
     <div class="card help designer-help panel-managed" id="designerPanel">
       <div class="designer-help-trigger">
         <div class="section-head">
-          <div class="designer-title-wrap"><h2>設計部即時動態</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button></div>
+          <div class="designer-title-wrap"><h2>設計部即時動態</h2><button type="button" class="designer-help-info" aria-label="使用方法">i</button><button type="button" class="office-editor-open" id="officeEditorOpen" title="開啟像素辦公室，設定自己的狀態與留言">編輯</button></div>
           <div class="section-panel-actions">
             <button type="button" class="panel-close-toggle ui-close-button" data-close-panel="designer" title="關閉設計部即時動態" aria-label="關閉設計部即時動態"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button>
           </div>
@@ -7145,6 +7165,23 @@
     <div class="designer-settings-list" id="designerSettingsList"></div>
     <div class="login-actions"><button type="submit">儲存設定</button></div>
   </form>
+</div>
+<!-- 像素辦公室的編輯視窗：面板裡的 iframe 是唯讀預覽（pointer-events 只放行點人物看資料），
+     要改自己的心情／狀態／留言得開完整版，所以從標題旁的「編輯」開這個視窗。 -->
+<div class="login-modal office-editor-modal" id="officeEditorModal" hidden>
+  <div class="office-editor-card" role="dialog" aria-modal="true" aria-label="像素辦公室">
+    <div class="office-editor-head">
+      <div>
+        <h3>像素辦公室</h3>
+        <p>選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。</p>
+      </div>
+      <div class="office-editor-actions">
+        <a class="office-editor-tab" id="officeEditorTab" href="https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/" target="_blank" rel="noopener">另開分頁</a>
+        <button type="button" class="secondary" id="officeEditorClose">關閉</button>
+      </div>
+    </div>
+    <div class="office-editor-frame"><iframe id="officeEditorFrame" title="像素辦公室" loading="lazy" allow="clipboard-write"></iframe></div>
+  </div>
 </div>
 <div class="login-modal" id="flatProjectModal" hidden>
   <form class="new-project-card" id="flatProjectForm">
@@ -10983,7 +11020,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=40" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=41" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
@@ -11076,6 +11113,16 @@ async function loadDesignerRoster({background=false}={}){
 }
 function showDesignerSettings(){if(!isLoggedIn()){setSync('請先登入後再編輯設計師設定',true);showLoginModal();return} if(!canAccessDesignerSettings()){setSync('此帳號沒有設計師設定或圖片管理權限',true);return} renderDesignerSettingsForm(); $('#designerSettingsModal').hidden=false}
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
+// 像素辦公室的編輯視窗。src 等到真的打開才給：這一頁本來就重，沒人要編輯時不該先下載一份遊戲。
+// 關掉時把 src 拿掉，那顆 canvas 與它的同步輪詢才會真的停下來，不會在背景一直跑。
+const OFFICE_EDITOR_URL='https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/';
+function showOfficeEditor(){const modal=$('#officeEditorModal'); if(!modal)return; const frame=$('#officeEditorFrame'); if(frame&&!frame.getAttribute('src'))frame.src=OFFICE_EDITOR_URL; modal.hidden=false; $('#officeEditorClose')?.focus()}
+function hideOfficeEditor(){const modal=$('#officeEditorModal'); if(!modal||modal.hidden)return; modal.hidden=true; $('#officeEditorFrame')?.removeAttribute('src'); $('#officeEditorOpen')?.focus()}
+// 這顆按鈕長在 .designer-help-trigger 裡面，不擋掉的話點擊會一路冒到面板的收合／說明上。
+$('#officeEditorOpen')?.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();showOfficeEditor()});
+$('#officeEditorClose')?.addEventListener('click',hideOfficeEditor);
+$('#officeEditorModal')?.addEventListener('click',event=>{if(event.target===event.currentTarget)hideOfficeEditor()});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#officeEditorModal')?.hidden){event.preventDefault();hideOfficeEditor()}});
 function setPersonalSettingsStatus(text='',isError=false){const status=$('#personalSettingsStatus'); if(!status)return; status.textContent=text; status.classList.toggle('is-error',Boolean(text)&&isError); status.classList.toggle('is-ok',Boolean(text)&&!isError)}
 function mailTemplateRowHtml(content='',index=0,{defaultName='',scope='mail'}={}){const name=`範本 ${index+1}`,radioName=`mail-template-default-${String(scope).replace(/[^a-z0-9_-]/gi,'-')}`;return `<div class="mail-template-row" data-reply-template-row><div class="mail-template-fields"><div class="mail-template-head"><b data-reply-template-label>${esc(name)}</b><label class="mail-template-default"><input type="radio" name="${esc(radioName)}" data-reply-template-default ${name===defaultName?'checked':''}>設為預設</label></div>${richSettingsToolbarHtml('signature-preset-toolbar',{recipientName:true,details:true})}<div class="signature-preset-content" data-reply-template-content contenteditable="true" data-placeholder="輸入信件範本內容——支援粗體／斜體／底線／對齊／文字大小／顏色／超連結">${resolveSignaturePresetHtml(content)}</div></div><button type="button" class="mail-template-remove" data-remove-reply-template aria-label="刪除這個信件範本">×</button></div>`}
 function syncMailTemplateRows(list){if(!list)return;const rows=[...list.querySelectorAll('[data-reply-template-row]')];rows.forEach((row,index)=>{const label=row.querySelector('[data-reply-template-label]');if(label)label.textContent=`範本 ${index+1}`});if(rows.length&&!rows.some(row=>row.querySelector('[data-reply-template-default]')?.checked))rows[0].querySelector('[data-reply-template-default]').checked=true}
@@ -16089,7 +16136,7 @@ $('#revisionModal')?.addEventListener('click',event=>{if(event.target.id==='revi
 /** 這幾個彈窗開著時鎖住背景捲動。它們分散在很多地方用 hidden 屬性開關（開啟、關閉、切換案件、
  * 背景流程自動收合…），與其在每一個進出點各加一行，不如直接監看 hidden 屬性變化，任何一種開關
  * 方式都涵蓋得到，也不會有人日後新增流程時忘記解鎖。 */
-const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal','personalSettingsModal','designerSettingsModal','aiStageModal'];
+const SCROLL_LOCK_MODAL_IDS=['caseDetailModal','revisionModal','gmailThreadModal','gmailComposeModal','uploadModal','personalSettingsModal','designerSettingsModal','officeEditorModal','aiStageModal'];
 /** 彈窗打開後內容常常是非同步補進來的（信件草稿、範本、簽名檔），隔一下再掃一次。 */
 let openFontScanTimer=0;
 function scheduleOpenFontScan(){
