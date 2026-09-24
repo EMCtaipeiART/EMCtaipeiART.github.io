@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6110,
+  "revision": 6111,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-24T01:45:36.860Z",
+  "updatedAt": "2026-09-24T01:45:40.472Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2244,7 +2244,7 @@
         {"客戶別":"保誠人壽","專案負責人":"[\"department:測試員\",\"department:設計部\",\"saurman.wu@emctaipei.com\",\"odin.liao@emctaipei.com\",\"andrea.chou@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"Odin組\",\"saurman.wu@emctaipei.com\",\"odin.liao@emctaipei.com\",\"andrea.chou@emctaipei.com\"]","更新時間":"2026/09/23 22:39:22","更新者":"吳冠賢","排序":"14","預設信箱":"anna.hsu@emctaipei.com,amber.tian@emctaipei.com,leona.chen@emctaipei.com,eric.fu@emctaipei.com,Andrea Chou <andrea.chou@emctaipei.com>,廖家緯 <odin.liao@emctaipei.com>,machi.chen@emctaipei.com"},
         {"客戶別":"保麗淨","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Emily組\"]","設計負責人":"[]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Emily組\"]","更新時間":"2026-08-19 18:04","更新者":"Machi","排序":"15","預設信箱":""},
         {"客戶別":"席伊麗","專案負責人":"[\"department:測試員\",\"department:設計部\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Anna\"]","部門組別":"[\"測試員\",\"設計部\",\"david.liao@emctaipei.com\"]","更新時間":"2026-08-20 18:15","更新者":"Machi","排序":"16","預設信箱":""},
-        {"客戶別":"高露潔","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Joyce組\"]","設計負責人":"[\"Noise\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Joyce組\"]","更新時間":"2026-08-19 17:53","更新者":"Machi","排序":"16"},
+        {"客戶別":"高露潔","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Joyce組\"]","設計負責人":"[\"Noise\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Joyce組\"]","更新時間":"2026-08-19 17:53","更新者":"Machi","排序":"17","預設信箱":""},
         {"客戶別":"添可","專案負責人":"[\"department:測試員\",\"department:設計部\",\"group:Odin組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","設計負責人":"[\"Machi\"]","部門組別":"[\"測試員\",\"設計部\",\"Odin組\",\"saurman.wu@emctaipei.com\",\"david.liao@emctaipei.com\"]","更新時間":"2026-08-20 18:15","更新者":"Machi","排序":"17"},
         {"客戶別":"富美家","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Celine組\",\"group:Ann組\"]","設計負責人":"[\"Leona\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Celine組\",\"Ann組\"]","更新時間":"2026/09/21 17:39:27","更新者":"朱祖翎","排序":"18","預設信箱":"[\"Amber <amber.tian@emctaipei.com>\",\"Anna <anna.hsu@emctaipei.com>\",\"Machi <machi.chen@emctaipei.com>\",\"傅思凱 <eric.fu@emctaipei.com>\",\"Jerry Chang <jerry.chang@emctaipei.com>\",\"leona.chen@emctaipei.com\"]"},
         {"客戶別":"新安東京","專案負責人":"[\"department:測試員\",\"department:設計部\",\"department:企劃部\",\"group:Odin組\"]","設計負責人":"[\"Noise\"]","部門組別":"[\"測試員\",\"設計部\",\"企劃部\",\"Odin組\"]","更新時間":"2026-08-19 18:07","更新者":"Machi","排序":"20","預設信箱":""},
