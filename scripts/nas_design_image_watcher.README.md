@@ -504,17 +504,41 @@ NAS 資料夾」會用正確的 `caseId`/`token`/`nonce`/`origin` 開新分頁�
 
 ## 懶人安裝：讓其他設計師的電腦也自動備份（`install_nas_watcher.command`）
 
-目標是設計師不用任何設定，點兩下就讓自己的 Mac 變成會自動爬 NAS 備份設計圖的機器。
+目標是設計師不用任何設定就讓自己的 Mac 變成會自動爬 NAS 備份設計圖的機器。
 
-### 給設計師的操作
+### ⚠️ 「點兩下 NAS 上的 .command」這條路已經不能走了（2026-09-29）
 
-1. 打開 NAS：`設計部/設計管理/NAS自動備份安裝`
-2. 點兩下「安裝NAS自動備份.command」
-3. 第一次開啟時 macOS 可能問「確定要打開嗎」，選「打開」
-4. 跳出 NAS 帳號密碼視窗時輸入一次，勾選「記住這個密碼」
-5. 看到「安裝完成」就好了
+設計師回報點開之後跳「Apple 無法檢查是否包含惡意軟體」。原因**不是**檔案本身被標記，
+而是 **SMB 掛載點本身帶著 `quarantine` 旗標**：
 
-要停用就點兩下同一個資料夾裡的「移除NAS自動備份.command」。
+```
+$ mount | grep smb
+//…@EMCNAS_Prod.local/設計部 on /Volumes/設計部 (smbfs, nodev, nosuid, quarantine, …)
+```
+
+只要掛載點有這個旗標，macOS 就把「這顆磁碟上的所有可執行檔」都當成被隔離的，Gatekeeper
+一律擋。所以 `xattr -d com.apple.quarantine` **沒有用**（那個檔案上本來就沒有這個屬性），
+而且新版 macOS 連「按右鍵 →  開啟」這條繞道也拿掉了。
+
+**改用一行指令**（貼進終端機，不經過 NAS，每次都抓最新版）：
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/scripts/install_nas_watcher.command)"
+```
+
+停用是同一招，換成 `uninstall_nas_watcher.command`。
+
+兩個細節：
+
+- **一定要 `bash -c "$(curl …)"`，不能用 `curl … | bash`。** 安裝程式最後有 `read -n 1 -s`
+  等使用者按鍵；用管線的話 stdin 是腳本自己，那個 `read` 會把腳本剩下的字吃掉一個，
+  下一行就會變成 `cho: command not found`。實測過。
+- 要給設計師的完整說明放在 `scripts/nas_watcher_nas_instructions.txt`，那份就是 NAS 安裝
+  資料夾裡 `使用說明.txt` 該有的內容。
+
+> NAS 上那兩個 `.command` 目前還留著，但**已經是 2026-09-16 的舊版**——下載清單裡少了
+> `nas_watcher_launcher.mjs`、`nas_watcher_update.mjs` 與 `nas_watcher_release.json`，
+> 也就是沒有自動更新的那一版。就算 Gatekeeper 放行也不該再用它。
 
 ### 安裝程式實際做的事
 

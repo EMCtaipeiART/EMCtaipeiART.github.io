@@ -350,3 +350,27 @@ test('安裝器記下這台電腦是哪位設計師：只接受名單內的名�
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('NAS 上的 .command 已經不能點兩下，說明書改成用終端機貼一行', async () => {
+  const note = await readFile(new URL('../../scripts/nas_watcher_nas_instructions.txt', import.meta.url), 'utf8');
+  const readme = await readFile(new URL('../../scripts/nas_design_image_watcher.README.md', import.meta.url), 'utf8');
+  const url = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/scripts';
+  // 安裝與停用都要有可以直接複製的整行指令。
+  assert.ok(note.includes(`/bin/bash -c "$(curl -fsSL ${url}/install_nas_watcher.command)"`));
+  assert.ok(note.includes(`/bin/bash -c "$(curl -fsSL ${url}/uninstall_nas_watcher.command)"`));
+  // 一定要 bash -c "$(curl …)"：安裝程式最後有 read -n 1 -s，用 curl | bash 的話那個 read
+  // 會把腳本剩下的字吃掉一個，下一行就變成 cho: command not found（實測過）。
+  // 只看「真的要照抄的那幾行」：README 的內文會提到這個錯誤寫法當作警告，不能把它算進來。
+  const fenced = [...readme.matchAll(/```bash\n([\s\S]*?)```/g)].map(m => m[1]).join('\n');
+  const commandLines = [...`${note}\n${fenced}`.matchAll(/^.*curl.*$/gm)].map(m => m[0]);
+  assert.ok(commandLines.length >= 3, '至少要有安裝、停用與 README 裡那一行');
+  for (const line of commandLines) {
+    assert.doesNotMatch(line, /\|\s*(\/bin\/)?bash/, `不可以教人用管線：${line}`);
+  }
+  assert.match(readme, /read -n 1 -s/, 'README 要說明為什麼不能用管線');
+  // 原因要寫清楚，不然下次有人又會去 xattr -d（那對掛載點旗標沒用）。
+  assert.match(readme, /quarantine/, 'README 要指出是 SMB 掛載點的 quarantine 旗標');
+  assert.ok(note.includes('Apple 無法檢查是否包含惡意軟體'), '說明書要讓人對得上看到的訊息');
+  assert.match(note, /終端機/, '說明書要帶人去開終端機');
+  assert.doesNotMatch(note, /點兩下「[^」]*\.command/, '說明書不該再叫人去點 NAS 上的 .command');
+});

@@ -1,0 +1,36 @@
+EMC 設計需求系統：NAS 設計圖自動備份
+
+【安裝方法】（大約一分鐘）
+1. 按 Command + 空白鍵，輸入「終端機」，按 Enter 打開它。
+2. 把下面這一整行（含前後）複製起來，貼進終端機，按 Enter：
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/scripts/install_nas_watcher.command)"
+
+3. 如果跳出 NAS 帳號密碼視窗，輸入你的 NAS 帳號密碼，並勾選「記住這個密碼」。
+4. 看到「安裝完成」就可以關掉視窗了。
+
+【為什麼不能像以前一樣點兩下】
+新版 macOS 不允許直接執行「放在網路磁碟（NAS）上」的程式，點兩下只會跳出
+「Apple 無法檢查是否包含惡意軟體」，而且新版的 macOS 連「按右鍵→開啟」都
+不能用了。上面那一行是直接跟 GitHub 拿最新版來安裝，不經過 NAS，所以不會
+被擋，而且每次貼都是最新版。
+
+【裝好之後會怎樣】
+- 這台電腦每分鐘會自動檢查一次你負責的案件資料夾，有新圖就自動備份到系統的修改紀錄。
+- 開機後會自己啟動，不用每次手動執行。
+- 已經備份過的圖不會重複備份。
+- 之後管理者發布新版時，這台電腦會自己更新，不用再貼一次。
+
+【要停用】
+一樣打開終端機，貼這一行：
+
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/scripts/uninstall_nas_watcher.command)"
+
+NAS 與雲端上的圖片都不會被刪除。
+
+【常見狀況】
+- 出現「還沒有安裝 Node.js」：安裝程式會自動開啟下載頁，裝好之後再貼一次上面那行即可。
+- 有問題時，把終端機視窗的內容截圖給管理者。
+
+【記錄檔位置】
+~/Library/Logs/machi-nas-watcher.log
