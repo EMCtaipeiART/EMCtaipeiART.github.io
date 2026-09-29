@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6442,
+  "revision": 6443,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-29T08:26:11.066Z",
+  "updatedAt": "2026-09-29T08:31:14.710Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1620,7 +1620,7 @@
         {"案件編號":"26090148","修改次數":"4","建立日期":"2026/09/29 16:01:56","修改日期":"2026-09-29","修改內容":"3張 Liberty 5 Pro 的耳機收納包贈品資訊需移除，再麻煩了謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090208","修改次數":"1","建立日期":"2026/09/29 16:02:53","修改日期":"2026-09-29","修改內容":"感謝大神支援，客戶調整了一下資訊，這邊再麻煩您：\n\n\nhttps://docs.google.com/presentation/d/1-YbVdwZjELEiQVzrDyLCi17hat57oY6TNsWvN4teLa8/edit?usp=sharing","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1-YbVdwZjELEiQVzrDyLCi17hat57oY6TNsWvN4teLa8/edit?usp=sharing\",\"url\":\"https://docs.google.com/presentation/d/1-YbVdwZjELEiQVzrDyLCi17hat57oY6TNsWvN4teLa8/edit?usp=sharing\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260929_DJI_Avata360優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ww0fMSHOCSBV0Gs__t9xGI-Ukbz2tC79=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 16:04:08"},
         {"案件編號":"26090215","修改次數":"0","建立日期":"2026/09/29 16:13:55","修改日期":"2026/09/29 16:13:55","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/29 16:13:55","圖片連結":"[{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間_FB-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PWSiNqlXLNFRt_VNdeM5_HVPvCoywhZG=w1600\"},{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間_FB-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cQW5keHDKr3-RIgd-NCQbqW1ruIEs38H=w1600\"},{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間_FB-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iLbBE_UE-usqEOD-H0EYs2373m4l_ksC=w1600\"},{\"fileName\":\"260914_ANKER_剛換新iPhone最崩潰的3個瞬間_FB-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cT4stigv_wTRz4ScGMy3eIG6eF3sbBT9=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 16:13:55"},
-        {"案件編號":"26090107","修改次數":"2","建立日期":"2026/09/29 16:25:21","修改日期":"2026-09-29","修改內容":"客戶最終選擇Ｂ版圖，但需要更換機器和調整標題文字，詳細請看：調整需求。\n希望明天中午12點前能收到調整檔案(客戶較急收到調整內容)，再麻煩協助修改了，感恩的心。","修改內容連結":"[{\"text\":\"調整需求\",\"url\":\"https://docs.google.com/presentation/d/1KAvkhyqcmNudo4gcKFE1JRAjsH3BeeOQutssXmglARM/edit?slide=id.h7657e7d2ee111ae2_0_0#slide=id.h7657e7d2ee111ae2_0_0\"}]","修改人":"朱祖翎","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090107","修改次數":"2","建立日期":"2026/09/29 16:25:21","修改日期":"2026-09-29","修改內容":"客戶最終選擇Ｂ版圖，但需要更換機器和調整標題文字，詳細請看：調整需求。\n希望明天中午12點前能收到調整檔案(客戶較急收到調整內容)，再麻煩協助修改了，感恩的心。","修改內容連結":"[{\"text\":\"調整需求\",\"url\":\"https://docs.google.com/presentation/d/1KAvkhyqcmNudo4gcKFE1JRAjsH3BeeOQutssXmglARM/edit?slide=id.h7657e7d2ee111ae2_0_0#slide=id.h7657e7d2ee111ae2_0_0\"}]","修改人":"朱祖翎","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260915_Epson_台北紡織展_02_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1jSnF5vqoDvUqBFzethJF5T07xfOr7shl=w1600\"},{\"fileName\":\"260915_Epson_台北紡織展_02_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/15yERoJTNWqF-VUhszc71XhvgwAoMZyCI=w1600\"},{\"fileName\":\"260915_Epson_台北紡織展_02_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZIYaZs_-KQEHEtXrBCvrI6pAlZJsIT9-=w1600\"},{\"fileName\":\"260915_Epson_台北紡織展_02_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1gow7ZTBHLKxQKaE8h-MOP8R5Rv9Zl9AW=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 16:31:14"}
       ]
     },
     "補充資料連結": {
