@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6370,
+  "revision": 6371,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-29T03:51:09.312Z",
+  "updatedAt": "2026-09-29T03:51:14.960Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1606,7 +1606,7 @@
         {"案件編號":"26090169","修改次數":"0","建立日期":"2026/09/24 20:14:12","修改日期":"2026/09/24 20:14:12","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:14:12","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/165CM36qDXOQan2Z6-cql-T1ewXC_JL7n=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 20:14:12"},
         {"案件編號":"26090166","修改次數":"0","建立日期":"2026/09/24 20:15:08","修改日期":"2026/09/24 20:15:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:15:08","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EzenSJzfMegRt6cwvns4Vhu1iBPzS3AI=w1600\"},{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/17UXJ8EJqCTBfQPP8R8WgJ0ZC57OGAMIe=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 10:16:10"},
         {"案件編號":"26090209","修改次數":"0","建立日期":"2026/09/24 20:49:53","修改日期":"2026/09/24 20:49:53","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/24 20:49:53","圖片連結":"[{\"fileName\":\"260924_添可_九月_CPAS_i7Fold_電商動圖_折扣檔期_10-1.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Coq_k-nfQrrXmpeA1VFwa3_iUgUzk6i3=w1600\"},{\"fileName\":\"260924_添可_九月_CPAS_i7Fold_電商動圖_折扣檔期_10-9.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1_-cwcRPH5phjb7ys4irw421RIfGFipzd=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/24 20:49:53"},
-        {"案件編號":"26090148","修改次數":"3","建立日期":"2026/09/29 10:19:49","修改日期":"2026-09-29","修改內容":"除了一日限定的2張，其餘4張的日期為10/1-10/12，再請於14:50前協助調整，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""},
+        {"案件編號":"26090148","修改次數":"3","建立日期":"2026/09/29 10:19:49","修改日期":"2026-09-29","修改內容":"除了一日限定的2張，其餘4張的日期為10/1-10/12，再請於14:50前協助調整，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"2026/09/29 11:51:14","待修改圖片":""},
         {"案件編號":"26090132","修改次數":"3","建立日期":"2026/09/29 10:21:47","修改日期":"2026-09-29","修改內容":"來信提供調整需求，詳細如附件P54，在請協助，感恩","修改內容連結":"[{\"text\":\"附件P54\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.g3fbf2b47c77_0_4#slide=id.g3fbf2b47c77_0_4\"}]","修改人":"吳冠賢","確認修正日":"2026/09/29 11:49:10","待修改圖片":"","圖片連結":"[{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/108A8XoZ16bAs2aYGDBFkTsDd2bbqjCJo=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty 5_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iI2tpRZWk1HRpP7ZWs5Pbx07SBISsinu=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1IbAkijusARWY5P5j2JpAAc491HVUWDo7=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_Liberty Buds_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VPs75VbGeU0MJoJF7t1zRLMfUcLFBhdr=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_P41i_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/14cvDIKXcz3Go1zCKIpOWIlS5UxtlMJkZ=w1600\"},{\"fileName\":\"260921_Momo 百貨週年慶_CPAS_P41i_電商.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Aj-G5LG2g7J6GXFVGMp4RxYNeOV_znn8=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 11:12:54"}
       ]
     },
