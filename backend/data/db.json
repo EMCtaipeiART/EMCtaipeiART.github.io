@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6417,
+  "revision": 6418,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-29T06:47:03.206Z",
+  "updatedAt": "2026-09-29T06:47:13.172Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1614,7 +1614,7 @@
         {"案件編號":"26090208","修改次數":"0","建立日期":"2026/09/29 12:07:09","修改日期":"2026/09/29 12:07:09","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/29 12:07:09","圖片連結":"[{\"fileName\":\"260929_DJI_Avata360優惠_1000x300.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eGme51oNhhLZuNIYqJ1ZB5-wDTCmXajW=w1600\"},{\"fileName\":\"260929_DJI_Avata360優惠_1200x1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1c5YgRSfpJcDqzN3JLht5K65fjq8oHrfp=w1600\"},{\"fileName\":\"260929_DJI_Avata360優惠_A4.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1CXrSDiUeXWW9ffz_Eas6m_LVLYD74ftd=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/09/29 12:08:57"},
         {"案件編號":"26090196","修改次數":"0","建立日期":"2026/09/29 12:59:02","修改日期":"2026/09/29 12:59:02","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/29 12:59:02","圖片連結":"[{\"fileName\":\"260929_保誠人壽_藍領啟動圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eck-v1PfsNM2n-eElw6l9sQwLfEHcecZ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 12:59:02"},
         {"案件編號":"26090163","修改次數":"1","建立日期":"2026/09/29 14:27:44","修改日期":"2026-09-29","修改內容":"修正圖片的標題、產品正稱、產品顏色等","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260923_ANKER_A121A_蝦皮_1.png\",\"260923_ANKER_A121A_蝦皮_2.png\",\"260923_ANKER_A121D_蝦皮_2.png\"]","圖片連結":"[{\"fileName\":\"260923_ANKER_A121A_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1F8s4XSD5zz4E-5i1cqEE4654cl5mz5jV=w1600\"},{\"fileName\":\"260923_ANKER_A121D_蝦皮_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1AjNYvTF8AUd8cogV1ZLxlu53Q-cSldlX=w1600\"},{\"fileName\":\"260923_ANKER_A121D_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-M6aTQCRgUZiSaT2hTobRy1qRZiSJ3i2=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/29 14:29:55"},
-        {"案件編號":"26090174","修改次數":"2","建立日期":"2026/09/29 14:39:05","修改日期":"2026-09-29","修改內容":"來信最後修改歐恩CPAS蝦皮素材！修改說明如下\n\n「Brand Max Ads _ DD Card」雙券最高限折1,000需更改為1,800\n\n\n已同步更新於簡報P.30\n\n\n\n\n以上再麻煩了\n謝謝\n\n\n柒恩","修改內容連結":"[{\"text\":\"簡報P.30\",\"url\":\"https://docs.google.com/presentation/d/1IiaG1Z_310VI4nzv0Xb-XgGpajOk8y9Va7alRjTjmYA/edit?slide=id.h71c952f861670224_0_23#slide=id.h71c952f861670224_0_23\"}]","修改人":"潘炬晨","確認修正日":"2026/09/29 14:46:59","待修改圖片":""}
+        {"案件編號":"26090174","修改次數":"2","建立日期":"2026/09/29 14:39:05","修改日期":"2026-09-29","修改內容":"來信最後修改歐恩CPAS蝦皮素材！修改說明如下\n\n「Brand Max Ads _ DD Card」雙券最高限折1,000需更改為1,800\n\n\n已同步更新於簡報P.30\n\n\n\n\n以上再麻煩了\n謝謝\n\n\n柒恩","修改內容連結":"[{\"text\":\"簡報P.30\",\"url\":\"https://docs.google.com/presentation/d/1IiaG1Z_310VI4nzv0Xb-XgGpajOk8y9Va7alRjTjmYA/edit?slide=id.h71c952f861670224_0_23#slide=id.h71c952f861670224_0_23\"}]","修改人":"潘炬晨","確認修正日":"2026/09/29 14:46:59","待修改圖片":"","圖片連結":"[{\"fileName\":\"260922_ON_Brand Max Ads_DD Card.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RQSzq2yyK2h-2uY23BhRZHu7-Loe8ZYS=w1600\"},{\"fileName\":\"260923_ON_momo_BSN Syntha-6 5LB.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nrWMuQ5zEHua39vzb0jCthO8nBQGD-Q9=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/09/29 14:47:13"}
       ]
     },
     "補充資料連結": {
