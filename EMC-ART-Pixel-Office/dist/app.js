@@ -547,13 +547,16 @@ function ensureFurnitureGray(){
 }
 // 左下角那個位置還沒有人坐，但機器一直擺在那裡。上班時間（09:00–18:00）維持原本的顏色與椅子，
 // 18:00 之後到隔天 08:59 連椅子一起轉灰階——電腦留著，只是整組暗下來，看起來就是「今天沒人用了」。
+// 週六、週日與國定假日則整天都是灰階（使用者 2026-09-29 要求）：那幾天不會有人來坐，
+// 早上九點到六點還亮著反而奇怪。假日表用的是 TAIWAN_HOLIDAYS，跟加班濾鏡同一份。
 const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;
 const stationVacant=s=>!s.name;
 function stationDimmed(s){
   if(stationAway(s))return true;
   if(!stationVacant(s))return false;
-  const hour=currentTaipeiClock().hour;
-  return hour<VACANT_DESK_ON_HOUR||hour>=VACANT_DESK_OFF_HOUR;
+  const clock=currentTaipeiClock();
+  if(!clock.workday)return true;
+  return clock.hour<VACANT_DESK_ON_HOUR||clock.hour>=VACANT_DESK_OFF_HOUR;
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 // 嵌入時不填底色，讓外層卡片的顏色透進來（深色模式才不會卡著一塊白）。獨立開遊戲頁時仍是白底。
@@ -570,8 +573,9 @@ const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;
 const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;
 const DESK_DRAW_SCALE=DESK_SEAT_GAP/DESK_SRC_UNIT;
 function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitureRects[type];ctx.imageSmoothingEnabled=false;ctx.drawImage(art,sx,sy,sw,sh,x,y,w,h);}
-// 椅子只在「有人而且在座」時才畫。離席時本來就不畫；左下角那個空位到了灰階時段（18:00 之後）
-// 也把椅子收掉，只留灰階的桌子與桌上的電腦——stationDimmed() 兩種情況都涵蓋了。
+// 椅子只在「有人而且在座」時才畫。離席時本來就不畫；左下角那個空位到了灰階時段
+//（平日 18:00 之後，以及週末與國定假日整天）也把椅子收掉，只留灰階的桌子與桌上的電腦
+// ——stationDimmed() 這幾種情況都涵蓋了。
 function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 function drawDesk(s){
   const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];

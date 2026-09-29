@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=45"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=46"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=51/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=52/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -300,12 +300,22 @@ test('換上新的桌子素材，左中右三種形狀各就各位', async () =>
   assert.doesNotMatch(js, /furniture-packed\.webp|furniture-v2\.webp/);
 });
 
-test('左下角空位依時段轉灰階，電腦留著', async () => {
+test('左下角空位依時段轉灰階，週末與國定假日整天灰階，電腦留著', async () => {
   const js = await officeJs();
   assert.match(js, /const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;/);
   assert.match(js, /const stationVacant=s=>!s\.name;/);
-  // 09:00–18:00 正常，其餘時間連椅子一起暗下來。
-  assert.match(js, /return hour<VACANT_DESK_ON_HOUR\|\|hour>=VACANT_DESK_OFF_HOUR;/);
+  // 平日 09:00–18:00 正常，其餘時間連椅子一起暗下來。
+  assert.match(js, /return clock\.hour<VACANT_DESK_ON_HOUR\|\|clock\.hour>=VACANT_DESK_OFF_HOUR;/);
+  // 週末與國定假日整天灰階，不必等到 18:00（2026-09-29 使用者要求）。workday 已經同時涵蓋
+  // 週六日與 TAIWAN_HOLIDAYS，跟加班濾鏡用同一份假日表。
+  const fn = js.slice(js.indexOf('function stationDimmed(s){'), js.indexOf('\nconst furnitureFor='));
+  assert.match(fn, /const clock=currentTaipeiClock\(\);\s*\n\s*if\(!clock\.workday\)return true;/,
+    '非工作日一律灰階，而且要排在時段判斷之前');
+  assert.match(js, /workday:!\['Sat','Sun'\]\.includes\(parts\.weekday\)&&!\(TAIWAN_HOLIDAYS\[parts\.year\]\|\|\[\]\)\.includes\(date\)/,
+    'workday 要同時看週末與國定假日');
+  // 假日表要涵蓋到今天以後，否則這條判定會悄悄失效。
+  const years = [...js.matchAll(/(\d{4}):\['(\d{8})'/g)].map(m => Number(m[1]));
+  assert.ok(years.includes(new Date().getFullYear()), `TAIWAN_HOLIDAYS 沒有今年（${new Date().getFullYear()}）`);
   // 桌子的種類仍照 s.type 走（type 2 是有電腦的那張），只有配色換成灰階版本，電腦不會消失。
   assert.match(js, /const type=stationAway\(s\)\?s\.empty:s\.type,art=furnitureFor\(s\)/);
   assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?/);
