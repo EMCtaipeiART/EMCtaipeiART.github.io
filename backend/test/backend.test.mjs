@@ -2129,9 +2129,10 @@ test('scheduling a mail ends the compose flow and can never be followed by an im
   // 1. 單筆案件的「寄出」完全沒有檢查這封信是不是已經排程過（批次佇列的「全部寄出」一直都有）。
   const send = html.match(/async function sendGmailComposeModal\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(send, 'could not locate sendGmailComposeModal');
-  assert.match(send, /if\(await hasPendingScheduledMail\(id\)\)\{/);
+  assert.match(send, /if\(await pendingScheduleCheck\)\{/);
+  assert.match(send, /const pendingScheduleCheck=hasPendingScheduledMail\(id\);/, '排程檢查與等圖片上傳同時進行，不額外多等一趟');
   // 檢查必須在真正呼叫 sendCaseMail 之前。
-  assert.ok(send.indexOf('hasPendingScheduledMail') < send.indexOf("sheetApi('sendCaseMail'"), '排程檢查必須在寄出之前');
+  assert.ok(send.indexOf('await pendingScheduleCheck') < send.indexOf("sheetApi('sendCaseMail'"), '排程檢查必須在寄出之前');
 
   // 2. 排程成功後畫面仍停在一顆亮著的「寄出」按鈕上，使用者按下去就是立刻再寄一封。
   const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
@@ -3722,7 +3723,8 @@ test('designer reply backs up photos added with the editor upload button into th
   // 寄出與排程兩條路徑的「設計師回覆信」分支都要呼叫，並把結果接在成功訊息後面。
   const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    const replyData=await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
-  assert.match(send, /if\(replyMode==='designer'&&row\)\{await confirmLatestModificationRound\(id,row\); await applyReplyStatusUpdate\(id,row\); inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,designerReplyRound,editorPayload\.inlineImages\)\}/);
+  assert.match(send, /Promise\.all\(\[confirmLatestModificationRound\(id,row\),backupDesignerReplyInlineImages\(id,designerReplyRound,editorPayload\.inlineImages\)\]\)/, '寄出後的收尾（確認輪次、備份照片）在彈窗關閉後同時進行');
+  assert.ok(send.indexOf('closeGmailThreadModal()') < send.indexOf('backupDesignerReplyInlineImages'), '先收彈窗，再做收尾，使用者不必等');
   assert.match(send, /\$\{inlineImageBackupNotice\}\$\{threadNotice\}\$\{detailsNotice\}/, '立即送出的成功訊息要接上信件串警告（threadWarningNotice）');
   const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
   assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,editorPayload\.inlineImages\)/);

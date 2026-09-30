@@ -192,6 +192,18 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-30 Asia/Taipei — 寄出信件後不再多停留：收尾工作移到彈窗關閉之後
+
+- 修改目的：使用者回報「信件寄出去之後，都會停留一小段時間」。
+- 成因：`sendGmailThreadReply` 在 `replyCaseMail`（信其實已經寄出）成功後，還**依序、同步**等完四件與使用者無關的事才關彈窗：①重新抓整條信件串（`getCaseMailThread`，即使設計師／修改需求信寄完彈窗馬上要關、根本用不到）②寫修改紀錄 ③確認輪次 ④備份信內照片（上傳圖片到 Drive，最慢）。每一項都是一次 Worker／Apps Script 往返，全部加起來就是那段停留。`sendGmailComposeModal`（發信）另有一次「是否已排程」的檢查放在寄出前、且排在等圖片上傳之前，多一趟往返。
+- 修法：設計師回覆信／修改需求信寄出成功後**先關彈窗**，收尾改在關閉後進行（畫面顯示「回覆已寄出，正在記錄後續資料…」，做完換成最終訊息）；確認輪次與備份照片互不相依，改 `Promise.all` 同時跑；這兩種模式不再白白重抓信件串。一般回信仍會重抓信件串（畫面要顯示對話）。發信的排程檢查改成與等圖片上傳同時進行。
+- 影響檔案：`index.html`（`sendGmailThreadReply`、`sendGmailComposeModal`）、`backend/test/backend.test.mjs`（兩個鎖定舊程式形狀的斷言改成新形狀，保留原本意圖：排程檢查在寄出前、設計師收尾仍會執行並把結果接在成功訊息後）。
+- 影響功能：設計師回覆信、修改需求信、發信的寄出後體感等待時間。寄信本身（Gmail 往返）仍需要時間，這個沒有也無法省。
+- 風險區塊：收尾失敗時使用者看到的是彈窗已關、狀態列出現錯誤訊息（既有的 `recordModificationFromReply`／`confirmLatestModificationRound` 失敗提示不變，只是現在出現在彈窗關閉後）；收尾進行中若使用者立刻再開同一案件的信件視窗，修改紀錄可能短暫還沒更新。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 204/204；兩段內嵌 script 語法檢查通過。尚未以真實帳號在正式站量測實際秒數。
+- 部署狀態：純前端，git push 後 GitHub Pages 自動生效；不需要部署 Worker。
+- commit：見 git log（`perf: close the mail modal right after send and run follow-up bookkeeping afterwards`）
+
 ### 2026-09-30 09:24 Asia/Taipei — 排程信改成「選時間→按送出才成立」，待寄出的排程可從案件「信件」選單找回來
 
 - 修改目的：使用者回報兩件事——①「點選完『已排程』信件就直接寄出了」：在「指定排程時間」小視窗按下確認，排程就當場成立、視窗也跟著收掉，少了最後一次確認；希望改成選完時間之後還要按「送出」才算數。②「已排程的信，不知道可以去哪裡找回編輯或取消」：排程成立後信件視窗關閉，而「已排程」清單只長在那個視窗裡，等於沒有入口。

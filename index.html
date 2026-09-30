@@ -10375,12 +10375,13 @@ async function sendGmailComposeModal(){
   try{
     // 這封信如果已經排程過，按「寄出」就會變成同一封信寄兩次（一次現在、一次排程時間到）。批次佇列的
     // 「全部寄出」本來就有這道檢查（見 handlePostSubmitGmailSend），單筆案件這條路徑先前漏掉了。
-    if(await hasPendingScheduledMail(id)){
+    const pendingScheduleCheck=hasPendingScheduledMail(id);
+    await waitForGmailInlineImages(editor.id);
+    await waitForGmailAttachments(editor.id);
+    if(await pendingScheduleCheck){
       setSync('這封信已經排程，時間到會自動寄出。要立即寄出請先在下方「已排程」清單按「取消排程」',true,6000);
       return;
     }
-    await waitForGmailInlineImages(editor.id);
-    await waitForGmailAttachments(editor.id);
     const [editorPayload,automaticSignatureHtml]=await Promise.all([Promise.resolve(gmailEditorMailPayload(editor)),ensureGmailSignatureLoaded()]);
     const {bodyHtml,inlineImages,attachments}=editorPayload,signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
     const data=await sheetApi('sendCaseMail',{caseId:id,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,editorToken:currentEditorToken});
@@ -13468,21 +13469,31 @@ async function sendGmailThreadReply(){
     const designerReplyRound=replyMode==='designer'?modal?.dataset.designerReplyRound:'';
     const replyData=await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,editorToken:currentEditorToken});
     editor.innerHTML='';
-    const list=$('#gmailThreadModalList');
-    const signatureCandidates=await allKnownGmailSignatureHtmlList();
-    const data=await sheetApi('getCaseMailThread',{caseId:id,signatureCandidates,editorToken:currentEditorToken});
-    gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
-    if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
-    if(replyMode==='modification'&&row)await recordModificationFromReply(id,row,modificationContent,modification.links);
-    let inlineImageBackupNotice='';
-    if(replyMode==='designer'&&row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,designerReplyRound,editorPayload.inlineImages)}
-    else if(replyMode==='general'&&row)await applyReplyStatusUpdate(id,row);
+    // 信已經寄出去了，使用者要等的事情到這裡就結束。「設計師回覆信」「修改需求信」是一次性任務，馬上把彈窗收起來，
+    // 後面寫修改紀錄、確認輪次、備份照片這些收尾工作（每一項都是一次 Worker／Apps Script 往返，備份照片還要上傳圖片）
+    // 改在彈窗關閉後繼續進行，不要讓使用者盯著「寄送中」多等好幾秒。只有「一般回信」才需要重新抓討論串來顯示。
+    const closesAfterSend=replyMode==='designer'||replyMode==='modification';
     if(modal){modal.dataset.replyMode='general'; modal.dataset.designerReplyCaseId=''; modal.dataset.designerReplyRound=''}
     const titleLabel=$('#gmailThreadModalTitle'); if(titleLabel)titleLabel.textContent='Gmail 信件串';
-    // 「設計師回覆信」與「填寫修改需求信」都是一次性任務（附上設計圖／寫完這次的修改需求就結束），
-    // 不像「一般回信」使用者可能還想留在原地繼續看討論串來回內容，寄出成功後直接把彈窗收回，
-    // 不需要使用者自己再手動關閉。
-    if(replyMode==='designer'||replyMode==='modification')closeGmailThreadModal();
+    let inlineImageBackupNotice='';
+    if(closesAfterSend){
+      closeGmailThreadModal();
+      setSync('回覆已寄出，正在記錄後續資料...',false,8000);
+      if(replyMode==='modification'){if(row)await recordModificationFromReply(id,row,modificationContent,modification.links)}
+      else if(row){
+        // 確認輪次與備份照片互不相依，同時進行；案件狀態更新是本機樂觀更新，不必等。
+        applyReplyStatusUpdate(id,row);
+        const results=await Promise.all([confirmLatestModificationRound(id,row),backupDesignerReplyInlineImages(id,designerReplyRound,editorPayload.inlineImages)]);
+        inlineImageBackupNotice=results[1]||'';
+      }
+    }else{
+      const list=$('#gmailThreadModalList');
+      const signatureCandidates=await allKnownGmailSignatureHtmlList();
+      const data=await sheetApi('getCaseMailThread',{caseId:id,signatureCandidates,editorToken:currentEditorToken});
+      gmailThreadMessagesCache=Array.isArray(data.messages)?data.messages:[];
+      if(list)renderGmailThreadMessages(list,gmailThreadMessagesCache);
+      if(row)await applyReplyStatusUpdate(id,row);
+    }
     const detailsNotice=replyMode!=='modification'?missingDetailsNotice(row):'';
     const threadNotice=threadWarningNotice(replyData);
     const backupFailed=inlineImageBackupNotice.includes('失敗');
