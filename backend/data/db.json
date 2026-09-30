@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6611,
+  "revision": 6612,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-09-30T09:18:39.688Z",
+  "updatedAt": "2026-09-30T09:18:57.974Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1650,7 +1650,7 @@
         {"案件編號":"26090025","修改次數":"2","建立日期":"2026/09/30 15:33:13","修改日期":"2026-09-30","修改內容":"影片客戶希望可以再加速，保留影片3秒呈現就好。要再麻煩協助調整了，感謝！","修改內容連結":"","修改人":"朱祖翎","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_Emfusion_9月FB貼文_保養神機登場_vo3.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1cNUPi-EUMgTnOcaSjYQOAjUmuuYfKJkV=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 15:56:34"},
         {"案件編號":"26090223","修改次數":"0","建立日期":"2026/09/30 15:43:57","修改日期":"2026/09/30 15:43:57","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/30 15:43:57","圖片連結":"[{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_基站_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/15Rsmc4vUF0sfSjKpXtMsfFvdVeRjHLRw=w1600\"},{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_基站_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1BbLlrs8kfbcO34TPhvmcFawWXac7QGU-=w1600\"},{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_基站動態_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Kydpi9u6fXQTgt4yLBgCWKntqwY8N5uE=w1600\"},{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_基站動態_momo.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1tHyQHz10xX5eqMy8x6O7aUJ4BHoTEGcH=w1600\"},{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_油垢_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1lXFMxSiza0N3KByj4hTUUGXxjQGlVzjM=w1600\"},{\"fileName\":\"260930_添可_十月_CPAS_StationS9Artist_油垢_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ao4ruRraiDyaHGzUUlk8osTsyNx3Trzd=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 15:43:57"},
         {"案件編號":"26090227","修改次數":"0","建立日期":"2026/09/30 15:46:36","修改日期":"2026/09/30 15:46:36","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/30 15:46:36","圖片連結":"[{\"fileName\":\"260930_ANKER_1920x1080.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QkyzbEI9qNwq7MPv83raTanxXOnKGR1F=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 15:46:36"},
-        {"案件編號":"26090187","修改次數":"1","建立日期":"2026/09/30 16:57:28","修改日期":"2026-09-30","修改內容":"全館登記送3%mo幣，需要改成 \"指定品登記送3%mo點\"再請於今日(9/30)下班前提供修改檔案，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_迪朗奇_10月FB貼文_第一篇_雙十盛典-醇香綻放_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SWgj0euLmHHUhVQWNlHB0CayPOpvNTes=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 17:15:04"}
+        {"案件編號":"26090187","修改次數":"1","建立日期":"2026/09/30 16:57:28","修改日期":"2026-09-30","修改內容":"全館登記送3%mo幣，需要改成 \"指定品登記送3%mo點\"再請於今日(9/30)下班前提供修改檔案，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"2026/09/30 17:18:57","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_迪朗奇_10月FB貼文_第一篇_雙十盛典-醇香綻放_vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1SWgj0euLmHHUhVQWNlHB0CayPOpvNTes=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 17:15:04"}
       ]
     },
     "補充資料連結": {
