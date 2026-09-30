@@ -865,3 +865,24 @@ load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).
 Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}
+
+// 自動更新：嵌在主系統裡（或單獨開著）的畫面整天不會被重新整理。每 3 分鐘用 HEAD 問一次自己的 index.html
+// 的 ETag，跟載入當下比，不一樣就是有新版；等到不會打斷人的時候（沒開動態視窗、沒在打字）自己重新載入。
+// 狀態都存在後端，重新載入不會掉資料。剛重新載入過 2 分鐘內不再連續重整。
+(function autoUpdate(){
+  if(location.protocol==='file:')return;
+  const url=new URL('index.html',location.href).href,typingNow=()=>{const el=document.activeElement;return Boolean(el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable));};
+  let baseline='',pending=false,busy=false;
+  const fingerprint=async()=>{try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});return r.ok?(r.headers.get('etag')||r.headers.get('last-modified')||''):'';}catch{return '';}};
+  function apply(){
+    if(!pending||storyOpen()||typingNow())return;
+    let recent=false;try{recent=Date.now()-Number(sessionStorage.getItem('pixel-auto-update-at')||0)<120000;}catch{}
+    if(recent)return;
+    try{sessionStorage.setItem('pixel-auto-update-at',String(Date.now()));}catch{}
+    location.reload();
+  }
+  async function check(){if(busy)return;busy=true;try{const current=await fingerprint();if(!current)return;if(!baseline){baseline=current;return;}if(current!==baseline)pending=true;apply();}finally{busy=false;}}
+  fingerprint().then(value=>{baseline=baseline||value;});
+  setInterval(check,3*60*1000);setInterval(apply,20*1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
+})();

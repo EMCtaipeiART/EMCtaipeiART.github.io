@@ -11088,7 +11088,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=50" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=51" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();
@@ -16407,6 +16407,63 @@ document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
 	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus({onlyIfLost:true});refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+
+/* ───── 自動更新（2026-09-30）：大家常常整天開著這個頁面，不會自己按重新整理 ─────
+ * 每 3 分鐘（切回分頁時也會）用 HEAD 問一次首頁的 ETag，跟載入當下的比：不一樣就是有新版上線。
+ * 只在「不會弄丟東西」的時候才自己重新整理：沒有彈窗開著、沒在打字、也沒有寫到一半的內容、
+ * 45 秒沒操作，或是分頁在背景。其他情況只在下方顯示「有新版本」，等使用者自己按。
+ * 沒有背景 fetch 之外的任何代價：HEAD 幾乎沒有流量，也不需要 Service Worker。 */
+(function autoUpdate(){
+  if(location.protocol==='file:')return;
+  const url=location.href.split('#')[0],CHECK_MS=3*60*1000,IDLE_MS=45*1000;
+  let baseline='',pending=false,lastInput=Date.now(),dirty=false,banner=null,busy=false;
+  const fingerprint=async()=>{try{const r=await fetch(url,{method:'HEAD',cache:'no-store'});if(!r.ok)return '';return r.headers.get('etag')||r.headers.get('last-modified')||'';}catch(error){return '';}};
+  ['pointerdown','keydown','wheel','touchstart'].forEach(type=>document.addEventListener(type,()=>{lastInput=Date.now();},{passive:true,capture:true}));
+  // 寫到一半的內容（信件、留言、表單）：一碰就算，直到重新整理為止。
+  document.addEventListener('input',event=>{if(event.isTrusted&&event.target?.closest?.('textarea,[contenteditable],.gmail-rich-editor,form'))dirty=true;},true);
+  function modalOpen(){
+    if(document.querySelector('dialog[open]'))return true;
+    return [...document.querySelectorAll('.login-modal:not([hidden]),[role="dialog"]:not([hidden])')].some(el=>el.offsetParent!==null||getComputedStyle(el).position==='fixed');
+  }
+  function typing(){const el=document.activeElement;return Boolean(el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable));}
+  function safeNow(){
+    if(dirty||modalOpen()||typing())return false;
+    return document.hidden||Date.now()-lastInput>=IDLE_MS;
+  }
+  function showBanner(){
+    if(banner)return;
+    banner=document.createElement('div');banner.setAttribute('role','status');
+    banner.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;background:#0f5132;color:#fff;font:600 13px/1.2 system-ui,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.28)';
+    banner.innerHTML='<span>有新版本了</span>';
+    const btn=document.createElement('button');btn.type='button';btn.textContent='立即更新';
+    btn.style.cssText='border:0;border-radius:999px;padding:6px 12px;background:#fff;color:#0f5132;font:700 13px system-ui,sans-serif;cursor:pointer';
+    btn.onclick=()=>location.reload();banner.append(btn);document.body.append(banner);
+  }
+  function apply(){
+    if(!pending)return;
+    // 剛自動重新整理過（2 分鐘內）又偵測到不同：不再連續重整，改成顯示按鈕，避免任何意外造成無限重整。
+    let recent=false;try{recent=Date.now()-Number(sessionStorage.getItem('autoUpdateAt')||0)<120000;}catch(error){}
+    if(safeNow()&&!recent){try{sessionStorage.setItem('autoUpdateAt',String(Date.now()));}catch(error){}location.reload();return;}
+    showBanner();
+  }
+  async function check(){
+    if(busy)return;busy=true;
+    try{
+      const current=await fingerprint();if(!current)return;
+      if(!baseline){baseline=current;return;}
+      if(current!==baseline)pending=true;
+      apply();
+    }finally{busy=false;}
+  }
+  fingerprint().then(value=>{baseline=baseline||value;});
+  setInterval(check,CHECK_MS);
+  setInterval(apply,30*1000);// 等到使用者閒下來、關掉彈窗之後補上
+  let lastCheck=0;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){if(pending)apply();return;}
+    if(Date.now()-lastCheck>30000){lastCheck=Date.now();check();}
+  });
+})();
 </script>
 </body>
 </html>
