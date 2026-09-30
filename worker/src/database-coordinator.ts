@@ -1137,36 +1137,6 @@ function gmailApiErrorMessage(status: number, data: Row, fallback: string): stri
   return text((data.error as Row)?.message) || `${fallback}：${status}`;
 }
 
-/** 這個錯誤訊息是不是「授權範圍不足」——用來把 403 轉成使用者看得懂的「請重新連接 Gmail」而不是原始英文。 */
-function isGmailScopeError(message: string): boolean {
-  return /insufficient|scope|permission|not authorized/i.test(message);
-}
-
-async function createGmailDraft(accessToken: string, raw: string): Promise<string> {
-  const response = await fetch(GMAIL_DRAFTS_ENDPOINT, {
-    method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: { raw } })
-  });
-  const data = await response.json().catch(() => ({})) as Row;
-  if (!response.ok) throw new Error(gmailApiErrorMessage(response.status, data, 'Gmail 草稿建立失敗'));
-  const draftId = text(data.id);
-  if (!draftId) throw new Error('Gmail 沒有回傳草稿編號');
-  return draftId;
-}
-
-/** 更新既有草稿的內容。草稿如果已經被使用者在 Gmail 端自己刪掉（404），改成重新建立一份新的，
- * 讓「修改排程」這個動作在任何情況下都還是能讓使用者在信箱裡看到最新版本。 */
-async function updateGmailDraft(accessToken: string, draftId: string, raw: string): Promise<string> {
-  const response = await fetch(`${GMAIL_DRAFTS_ENDPOINT}/${encodeURIComponent(draftId)}`, {
-    method: 'PUT', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: { raw } })
-  });
-  if (response.status === 404) return createGmailDraft(accessToken, raw);
-  const data = await response.json().catch(() => ({})) as Row;
-  if (!response.ok) throw new Error(gmailApiErrorMessage(response.status, data, 'Gmail 草稿更新失敗'));
-  return text(data.id) || draftId;
-}
-
 /** 取消排程／排程已不需要寄出時，順手把那份草稿從使用者信箱裡刪掉，不留下一封永遠不會寄出的殘留草稿。
  * 刪除失敗不影響取消本身（草稿只是附屬品），所以這裡吞掉例外。 */
 async function deleteGmailDraft(accessToken: string, draftId: string): Promise<void> {
@@ -1175,28 +1145,6 @@ async function deleteGmailDraft(accessToken: string, draftId: string): Promise<v
       method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` }
     });
   } catch { /* 草稿刪不掉不算失敗 */ }
-}
-
-/** 草稿在 Gmail 端已經不存在了——使用者自己把它刪掉。這跟「Gmail 暫時出錯」是完全不同的兩件事，
- * 必須分開處理：刪草稿是使用者明確表達「這封不要寄了」（見 dispatchScheduledMailItem），其他錯誤則
- * 還是要想辦法把信寄出去。 */
-class GmailDraftMissingError extends Error {}
-
-/** 把草稿寄出去——寄的是 Gmail 端「現在」的草稿內容，所以使用者在等待期間做的任何修改都會生效，
- * 這正是這個功能存在的理由。 */
-async function sendGmailDraft(accessToken: string, draftId: string): Promise<{ threadId: string; messageId: string }> {
-  const response = await fetch(`${GMAIL_DRAFTS_ENDPOINT}/send`, {
-    method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: draftId })
-  });
-  const data = await response.json().catch(() => ({})) as Row;
-  const message = gmailApiErrorMessage(response.status, data, 'Gmail 草稿寄送失敗');
-  // Gmail 對「這個草稿編號不存在」回 404；少數情況會用 400 搭配 notFound 訊息表達同一件事。
-  if (response.status === 404 || (!response.ok && /not\s*found|notFound/i.test(message))) {
-    throw new GmailDraftMissingError(message);
-  }
-  if (!response.ok || !text(data.threadId)) throw new Error(message);
-  return { threadId: text(data.threadId), messageId: text(data.id) };
 }
 
 // 排程時間至少要在 60 秒之後（給每分鐘一次的 Cron Trigger 留緩衝，太接近「現在」的排程使用者體感上就等於
@@ -2657,27 +2605,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return id;
   }
 
-  /** 建立／更新這筆排程在使用者 Gmail 信箱裡的草稿，並把草稿編號寫回排程列。回傳給前端的提示字串：
-   * 空字串代表成功，有字代表草稿沒建起來（排程本身仍然成立，時間到照樣會寄出，只是不能在 Gmail 端改）。 */
-  private async syncScheduledMailDraft(scheduledId: string, ownerAccount: string, existingDraftId: string, raw: string): Promise<{ draftId: string; draftError: string }> {
-    try {
-      const accessToken = await this.getValidGmailAccessToken(ownerAccount);
-      const draftId = existingDraftId
-        ? await updateGmailDraft(accessToken, existingDraftId, raw)
-        : await createGmailDraft(accessToken, raw);
-      this.ctx.storage.sql.exec('UPDATE scheduled_mail SET draft_id = ?, updated_at = ? WHERE id = ?', draftId, new Date().toISOString(), scheduledId);
-      return { draftId, draftError: '' };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        draftId: existingDraftId,
-        draftError: isGmailScopeError(message)
-          ? 'Gmail 授權沒有「建立草稿」權限，請在案件的「信件」選單按「重新連接 Gmail（更新授權）」後再排程一次'
-          : `Gmail 草稿同步失敗：${message}`
-      };
-    }
-  }
-
   /** 這筆排程不再需要寄出（取消排程、或案件已用其他方式寄出）時，把對應的 Gmail 草稿一併清掉。 */
   private async discardScheduledMailDraft(item: { draft_id?: string | null; owner_account: string }): Promise<void> {
     const draftId = text(item.draft_id);
@@ -2697,9 +2624,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 都要通過 request.mail 檢查、都不能已經有信件串、也都不能已經有待寄出的排程；成功寄出後同一條
    * Gmail 信件串會綁到全部案件上（見 dispatchScheduledMailItem）。只帶 caseId 時行為與原本完全相同。
    *
-   * 排程登記完成後會在使用者的 Gmail 信箱裡同步建立一份草稿，讓使用者在等待寄出的期間可以直接進
-   * Gmail 修改內容，時間到了寄出的就是修改後的版本。草稿建立失敗不會讓排程失敗（排程仍會照時間寄出
-   * 排程當下的內容），只回一段 draftError 讓前端提示使用者。 */
+   * 2026-09-30 起**不再**在使用者的 Gmail 草稿匣同步建立草稿。原本的用意是讓使用者能在 Gmail 端直接改
+   * 內容，實際造成的後果卻是：那封信就這樣躺在「草稿」裡，同事看到「這封還沒寄出」就順手刪掉，時間到
+   * 反而整封信沒寄出去（使用者實際回報）。Gmail API 沒有任何排程寄送的端點，也沒有辦法把信放進 Gmail
+   * 的「已排程」檢視（那是 Gmail 前端自己的功能，API 不提供），所以「改放到已排程資料夾」做不到；改成
+   * 完全不在 Gmail 留下任何待處理的東西，排程內容只存在這裡（Durable Object），要看要改都在系統的
+   * 「已排程」清單（listScheduledMail／updateScheduledMail／cancelScheduledMail）。 */
   private async scheduleCaseMail(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const caseIds = [...new Set((Array.isArray(payload.caseIds) ? payload.caseIds : [payload.caseId || payload.id])
       .map(text).filter(Boolean))];
@@ -2745,9 +2675,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       caseId, caseIds, kind: 'send', ownerAccount: current.account, requestedBy: current.account,
       to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments, scheduledAt
     });
-    const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments });
-    const draft = await this.syncScheduledMailDraft(scheduledId, current.account, '', raw);
-    return { ok: true, action: 'scheduleCaseMail', scheduledId, scheduledAt, caseIds, draftId: draft.draftId, draftError: draft.draftError };
+    return { ok: true, action: 'scheduleCaseMail', scheduledId, scheduledAt, caseIds };
   }
 
   /** 「指定排程時間」回信——驗證跟 replyCaseMail 一致（含討論串相關人檢查），多一道 scheduledAt 檢查。
@@ -2861,15 +2789,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       to, cc, subject, bodyHtml, signatureHtml, JSON.stringify(inlineImages), JSON.stringify(attachments), scheduledAt, updatedAt, id
     ).toArray();
     if (updated.length !== 1) return { ok: false, action: 'updateScheduledMail', error: '這筆排程已經開始處理，無法再修改', reason: 'SCHEDULE_NOT_PENDING' };
-    // 「首次寄信」的排程在 Gmail 信箱裡有一份對應草稿，內容改了就要一起改，不然使用者在 Gmail 看到的
-    // 還是舊版本、時間到寄出的卻是新版本（drafts.send 寄的是草稿當下內容，兩邊必須一致）。回信排程
-    // 刻意不建草稿（回信的標頭要等真正寄出那一刻才依信件串現況重算，先寫死成草稿會接錯討論串）。
-    let draftError = '';
-    if (item.kind === 'send') {
-      const raw = buildGmailRawMessage({ to, cc, subject, bodyHtml, signatureHtml, inlineImages, attachments });
-      draftError = (await this.syncScheduledMailDraft(id, item.owner_account, text(item.draft_id), raw)).draftError;
-    }
-    return { ok: true, action: 'updateScheduledMail', id, scheduledAt, updatedAt, draftError };
+    // 排程內容只存在這裡，不再同步到 Gmail 草稿匣（見 scheduleCaseMail 的說明）。舊版留下來、還沒寄出
+    // 的排程可能仍帶著 draft_id，那份殘留草稿會在真正寄出或取消時一併清掉。
+    return { ok: true, action: 'updateScheduledMail', id, scheduledAt, updatedAt };
   }
 
   /** 給信件編輯器顯示「已排程」清單用——只有跟 sendCaseMail/replyCaseMail 同一套 request.mail 權限的帳號
@@ -2956,26 +2878,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         await this.discardScheduledMailDraft(item);
         return { outcome: 'canceled', note: '案件已經有 Gmail 信件串（可能已用其他方式寄出），排程未重複寄送' };
       }
-      // 有草稿就寄草稿（drafts.send 寄的是使用者在 Gmail 端修改後的「現在」內容，這正是排程同步草稿的
-      // 目的）。草稿如果已經不在了，代表使用者在 Gmail 裡把它刪掉了——依使用者指定的規則，**刪掉草稿
-      // 就等於取消這封排程**，不再退回用排程當下存下來的內容硬寄出去。其他 Gmail 錯誤（連線異常、
-      // 暫時性 5xx）不是使用者的意思表示，仍然退回用存下來的內容直接寄，避免一次偶發失敗就讓該寄的
-      // 信沒寄出去。
+      // 一律用這裡存下來的內容寄出。2026-09-30 之前是「有草稿就寄草稿，草稿被刪掉就視同取消不寄」——
+      // 那個規則正是這次要修掉的問題：同事在草稿匣看到一封沒寄出的信、順手刪掉，時間到整封信就沒寄出去
+      // （見 scheduleCaseMail 的說明）。舊版留下來的殘留草稿在寄出後順手清掉，免得草稿匣裡留著一封跟
+      // 已寄出內容重複、看起來還沒寄的信。
       const raw = buildGmailRawMessage({ to: item.to_address, cc: item.cc_address, subject: item.subject, bodyHtml: item.body_html, signatureHtml: item.signature_html, inlineImages, attachments });
-      const draftId = text(item.draft_id);
-      let result: { threadId: string; messageId: string };
-      if (draftId) {
-        try {
-          result = await sendGmailDraft(accessToken, draftId);
-        } catch (error) {
-          if (error instanceof GmailDraftMissingError) {
-            return { outcome: 'canceled', note: '草稿已在 Gmail 中被刪除，這封排程視同取消，未寄出' };
-          }
-          result = await postGmailMessage(accessToken, raw);
-        }
-      } else {
-        result = await postGmailMessage(accessToken, raw);
-      }
+      const result = await postGmailMessage(accessToken, raw);
+      await this.discardScheduledMailDraft(item);
       await this.mutate('scheduleCaseMail', { user: item.requested_by, account: item.requested_by, provider: 'password', expiresAt: Date.now() }, draft => {
         // 合併信件：同一條 Gmail 信件串要綁到這封信涵蓋的每一筆案件上，讓每一筆案件之後都能正常「回信」。
         for (const caseId of caseIds) {

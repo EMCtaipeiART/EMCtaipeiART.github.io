@@ -7362,7 +7362,6 @@
     </div>
     <div class="gmail-modal-body">
       <div class="gmail-scheduled-edit-banner" id="gmailComposeScheduledEditBanner" hidden></div>
-      <div class="gmail-modal-pending-banner is-warning" id="gmailComposeDraftScopeNotice" hidden>目前的 Gmail 授權沒有「建立草稿」權限，排程信不會出現在 Gmail 草稿匣（時間到仍會自動寄出）。<button type="button" class="gmail-btn-ghost gmail-inline-reconnect" id="gmailComposeDraftScopeReconnect">重新連接 Gmail 更新授權</button></div>
       <div class="gmail-modal-pending-banner" id="gmailComposeQueuePending" hidden></div>
       <div class="gmail-merge-panel" id="gmailComposeMergePanel" hidden>
         <div class="gmail-merge-head"><b>合併信件</b><span>同一個專案被拆成多筆案件時，勾選要打包成一封寄出的案件；相同的內容只會出現一次，數量會加總。</span></div>
@@ -8542,8 +8541,8 @@ async function openMailComposerMenu(event,id){
   const status=await ensureGmailStatusLoaded();
   if(fieldPopover.hidden||fieldPopover.dataset.mailComposerId!==String(id))return;
   let gmailOption;
-  // 已經連接的帳號也必須看得到「重新連接」：授權範圍會隨功能增加而變動（例如排程信要同步進 Gmail
-  // 草稿匣，需要 gmail.compose，舊的授權沒有），而 Google 的同意畫面只有重新跑一次授權流程才會出現。
+  // 已經連接的帳號也必須看得到「重新連接」：授權範圍會隨功能增加而變動（早期的授權不含後來才加上的
+  // scope），而 Google 的同意畫面只有重新跑一次授權流程才會出現。
   // 之前這個選單在已連接時只有「取消連接」，等於逼使用者先斷線才能重新授權——使用者回報的
   //「之前串接 Gmail 成功的用戶無法再串接一次」就是這個原因。
   const reconnectOption='<button type="button" class="gmail-mail-menu-option" onclick="startGmailConnectPopup()">重新連接 Gmail（更新授權）</button>';
@@ -10089,7 +10088,6 @@ function renderPostSubmitGmailDraft(){
   const item=items[index]; if(!item)return;
   const draft=queue.drafts[item.indexes[0]];
   const fromLabel=$('#gmailComposeModalFrom'); if(fromLabel)fromLabel.textContent=gmailConnectionState.gmailAddress?`寄件人：${gmailConnectionState.gmailAddress}`:'';
-  renderGmailDraftScopeNotice();
   const progress=$('#gmailComposeQueueProgress'); if(progress){const show=total>1||item.merged; progress.hidden=!show; progress.textContent=item.merged?`第 ${index+1} / ${total} 封（已合併 ${item.indexes.length} 筆案件）`:(total>1?`第 ${index+1} / ${total} 封`:'')}
   renderPostSubmitMergePanel();
   const {defaults,ids,ready,failed}=postSubmitItemDefaults(queue,item);
@@ -10301,7 +10299,6 @@ async function openGmailComposeModal(id){
   modal.dataset.caseId=String(id);
   delete modal.dataset.caseIds;   // 這是單筆案件的信，不要沿用上一次合併信件留下的整批編號
   const fromLabel=$('#gmailComposeModalFrom'); if(fromLabel)fromLabel.textContent=gmailConnectionState.gmailAddress?`寄件人：${gmailConnectionState.gmailAddress}`:'';
-  renderGmailDraftScopeNotice();
   setGmailRecipientEntries('gmailComposeTo',[draft.to]);
   setGmailRecipientEntries('gmailComposeCc',draft.cc);
   // 副本用客戶別的即時資料再算一次（剛在後台設定的預設信箱，Pages 的 db.json 可能還沒更新）。
@@ -10438,7 +10435,7 @@ function openScheduleTimePicker(event,kind){
   const minYear=Number(taipeiPartsFromDate(new Date(Date.now()+60*1000)).year);
   const maxYear=Number(taipeiPartsFromDate(new Date(Date.now()+365*24*60*60*1000)).year);
   const years=[]; for(let y=minYear;y<=maxYear;y++)years.push(y);
-  fieldPopover.innerHTML=`<h3>${editing?'儲存排程修改':'指定排程時間'}</h3><p class="schedule-picker-hint">${editing?'可同時調整寄出時間；按下確認前，原排程內容不會改變。':'信件會在你指定的台灣時間自動寄出，不需要保持頁面或瀏覽器開啟。'}</p>
+  fieldPopover.innerHTML=`<h3>${editing?'儲存排程修改':'指定排程時間'}</h3><p class="schedule-picker-hint">${editing?'可同時調整寄出時間；按下確認前，原排程內容不會改變。':'信件會在你指定的台灣時間自動寄出，不需要保持頁面或瀏覽器開啟；寄出前由系統保管，不會出現在 Gmail 草稿匣，要修改或取消請用下方的「已排程」清單。'}</p>
     <div class="schedule-picker-field"><label>日期</label><div class="schedule-date-group">
       <select id="scheduleMailYear" aria-label="年">${years.map(y=>`<option value="${y}"${String(y)===defaultParts.year?' selected':''}>${y}年</option>`).join('')}</select>
       <select id="scheduleMailMonth" aria-label="月">${Array.from({length:12},(_,i)=>{const m=String(i+1).padStart(2,'0');return `<option value="${m}"${m===defaultParts.month?' selected':''}>${m}月</option>`}).join('')}</select>
@@ -10536,9 +10533,7 @@ async function updateScheduledMailFromEditor(kind,scheduledAt){
     if(kind==='compose')watchScheduledCaseThread(state.caseId,scheduledAt);
     const label=scheduleDisplayLabel(data.scheduledAt||scheduledAt);
     if(kind==='compose')closeGmailComposeModal();else closeGmailThreadModal();
-    // 首次寄信的排程在 Gmail 草稿匣裡有一份對應草稿，內容改了那份草稿也會一起更新（後端 syncScheduledMailDraft）。
-    const draftError=String(data?.draftError||'');
-    setSync(draftError?`排程內容已更新，將於 ${label} 寄出，但${draftError}`:`排程內容已更新，將於 ${label} 寄出`,Boolean(draftError),draftError?6000:3600);
+    setSync(`排程內容已更新，將於 ${label} 寄出`,false,3600);
   }catch(err){
     setSync(`排程修改失敗：${err.message}`,true);
     refreshScheduledMailList(state.caseId,kind);
@@ -10556,12 +10551,6 @@ function gmailComposeCaseIds(modal){
     if(ids.length)return [...new Set(ids)];
   }catch{}
   return single?[single]:[];
-}
-/** 「排程信會同步進 Gmail 草稿匣」這件事需要 gmail.compose 授權，早期連接過的帳號沒有。與其等使用者
- * 排程完才用一則會自己消失的紅色提示告知，這裡在撰寫視窗一開就常駐顯示，並直接給重新授權的按鈕。 */
-function renderGmailDraftScopeNotice(){
-  const notice=$('#gmailComposeDraftScopeNotice'); if(!notice)return;
-  notice.hidden=!(gmailConnectionState.connected&&!gmailConnectionState.canCreateDraft);
 }
 /** 排程成立之後，這封信就「處理完了」——不能把使用者留在一個「寄出」按鈕仍然亮著的畫面上，那顆按鈕
  * 按下去就是立刻再寄一封，正是使用者回報的「排程完信件卻直接寄出」。佇列模式自動跳到下一封（沒有下
@@ -10595,15 +10584,9 @@ async function scheduleComposeMail(scheduledAt){
     const ids=gmailComposeCaseIds(modal);
     const data=await sheetApi('scheduleCaseMail',{caseId:ids[0]||id,caseIds:ids,to,cc,subject,bodyHtml,signatureHtml,inlineImages,attachments,scheduledAt,editorToken:currentEditorToken});
     ids.forEach(caseId=>watchScheduledCaseThread(caseId,scheduledAt));
-    // 排程同時會在使用者的 Gmail 信箱建立一份草稿，讓內容可以直接在 Gmail 改，時間到寄出的就是改過的
-    // 版本。草稿建不起來（多半是既有授權沒有 gmail.compose，需要重新連接 Gmail）不影響排程本身，
-    // 所以這裡只是把後端回報的原因一起顯示出來，不當成排程失敗。
-    const draftError=String(data?.draftError||'');
-    if(draftError)gmailConnectionState.canCreateDraft=false;
-    setSync(draftError
-      ? `已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出，但${draftError}`
-      : `已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出，並已存入 Gmail 草稿匣；可直接在 Gmail 修改內容，刪掉草稿就等於取消這封排程`,
-      Boolean(draftError),draftError?7000:4200);
+    // 2026-09-30 起排程信不再存進 Gmail 草稿匣（見 Worker 的 scheduleCaseMail 說明）：信件只由系統保管，
+    // 時間到才真的寄出，Gmail 那邊在寄出前看不到任何東西。訊息要主動講這件事，否則使用者會去草稿匣找。
+    setSync(`已排程於 ${scheduleDisplayLabel(scheduledAt)} 寄出；信件由系統保管，不會出現在 Gmail 草稿匣，要修改或取消請用下方的「已排程」清單`,false,5200);
     finishComposeAfterSchedule(ids.length?ids:[id]);
   }catch(err){
     setSync(`排程失敗：${err.message}`,true);
@@ -10676,9 +10659,9 @@ function scheduledMailItemHtml(item,kind,caseId){
 async function editScheduledMailItem(id,kind,caseId){
   const ui=scheduledMailEditUi(kind);
   if(!ui.modal||!ui.editor||String(ui.modal.dataset.caseId||'')!==String(caseId)||ui.modal.hidden)return;
-  if(!confirm('載入排程草稿會取代編輯器目前尚未儲存的內容，確定繼續嗎？'))return;
+  if(!confirm('載入這筆排程的內容會取代編輯器目前尚未儲存的內容，確定繼續嗎？'))return;
   try{
-    setSync('正在載入排程草稿...');
+    setSync('正在載入排程內容...');
     const data=await sheetApi('getScheduledMail',{id,editorToken:currentEditorToken});
     if(String(ui.modal.dataset.caseId||'')!==String(caseId)||ui.modal.hidden)return;
     const item=data.item||{},expectedKind=kind==='compose'?'send':'reply';
@@ -15172,7 +15155,7 @@ function isLocalAdminTokenValid(token=currentEditorToken){const value=String(tok
 function applyLocalPreviewSession(role,{announce=true}={}){const admin=role==='管理者'; currentEditor=admin?'管理員':'測試使用者'; currentEditorDisplayName=currentEditor; currentEditorAccount=admin?localAdminAccount:localTesterAccount; currentEditorToken=admin?todayAdminToken():todayTesterToken(); currentEditorGroup=admin?'管理者':'一般使用者'; currentEditorDepartment=admin?'管理者':'測試'; currentEditorRawGroup=''; persistEditorSession(); ownerTouchedByUser=false; applyCurrentUserProfile(); updateLoginUi(); render(); if(announce){setSync(`已登入：${currentEditor}（檢視模式，無法寫入）`); finishLoginOverlay(`登入成功：${currentEditor}`)}}
 function loginLocalAdmin(){applyLocalPreviewSession('管理者')}
 function loginLocalTester(){applyLocalPreviewSession('測試者')}
-function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentEditorRawGroup=''; currentAccountAvatar=''; selectedCaseIds.clear(); gmailConnectionState={connected:false,gmailAddress:'',canCreateDraft:false}; gmailConnectionChecked=false; resetGmailSignatureCache()}
+function clearLoginAuthState({revoke=false,account=currentEditorAccount}={}){try{window.google?.accounts?.id?.disableAutoSelect?.(); if(revoke&&account)window.google?.accounts?.id?.revoke?.(loginAccountFull(account),()=>{})}catch(err){console.warn('Google 登入狀態清除失敗',err)} [...editorSessionKeys,...legacyAuthStorageKeys].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); ['designRequestGoogleLoginState','designRequestErpLoginState','designRequestErpCodeVerifier','designRequestErpRedirectUri'].forEach(key=>{sessionStorage.removeItem(key); localStorage.removeItem(key)}); sessionStorage.setItem(editorLoggedOutKey,'1'); localStorage.setItem(editorLoggedOutKey,'1'); localStorage.removeItem('designRequestSavedAccount'); localStorage.removeItem('designRequestSavedPassword'); localStorage.removeItem('designRequestRememberLogin'); currentEditor=''; currentEditorDisplayName=''; currentEditorAccount=''; currentEditorToken=''; currentEditorGroup=''; currentEditorDepartment=''; currentEditorRawGroup=''; currentAccountAvatar=''; selectedCaseIds.clear(); gmailConnectionState={connected:false,gmailAddress:''}; gmailConnectionChecked=false; resetGmailSignatureCache()}
 function handleGoogleLoginError(error,context='Google 登入'){const apiReadFailed=error?.reason==='WORKER_API_READ_FAILED'||/Cloudflare Worker API 讀取失敗|ping/i.test(error?.message||''); const displayContext=apiReadFailed?'Cloudflare Worker API':context; console.error(`[${displayContext}]`,{error,reason:error?.reason,expectedClientId:error?.expectedClientId,receivedAud:error?.receivedAud,receivedEmail:error?.receivedEmail,emailVerified:error?.emailVerified,rawResponse:error?.rawResponse,apiUrl:error?.apiUrl||apiUrl}); const message=error?.message||error?.error||String(error||'未知錯誤'), clientMismatch=error?.reason==='CLIENT_ID_MISMATCH'||/client_id|OAuth client/i.test(message), apiLikely=apiReadFailed||/Cloudflare Worker|測試連線|驗證沒有回應|逾時/.test(message), hint=clientMismatch?'前端可能載到舊版 JS，請強制重新整理（Chrome：Shift + 重新整理或清除網站快取）。':(apiLikely?`請按「測試連線」確認 Cloudflare Worker 是否可執行。API：${apiUrl}`:googleFedCmHint()); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`${displayContext}失敗：${message}`,{skipGoogleInit:true}); setLoginNote(`${displayContext}失敗：${message}。${hint}`,true); setSync(`${displayContext}失敗：${message}`,true); updateLoginUi(); render()}
 function handleErpLoginError(error){console.error('[ERP 登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`ERP 登入失敗：${message}`,{skipGoogleInit:false}); setLoginNote(`ERP 登入失敗：${message}`,true); setSync(`ERP 登入失敗：${message}`,true); updateLoginUi(); render()}
 function handleAdminLoginError(error){console.error('[管理者登入]',error); const message=error?.message||error?.error||String(error||'未知錯誤'); clearLoginAuthState(); hideSubmitOverlay(); showLoginModal(`管理者登入失敗：${message}`,{skipGoogleInit:false}); const panel=$('#adminLoginPanel'); if(panel)panel.hidden=false; setLoginNote(`管理者登入失敗：${message}`,true); setSync(`管理者登入失敗：${message}`,true); updateLoginUi(); render()}
@@ -15252,7 +15235,7 @@ function startGooglePopupLogin(loginHint=''){const configError=googleLoginConfig
 function startGoogleRedirectLogin(){startGooglePopupLogin()}
 const gmailOauthChannelName='machi-gmail-oauth-v1';
 let gmailOauthChannel=null,gmailConnectPopup=null;
-let gmailConnectionState={connected:false,gmailAddress:'',canCreateDraft:false},gmailConnectionChecked=false;
+let gmailConnectionState={connected:false,gmailAddress:''},gmailConnectionChecked=false;
 function gmailOauthAuthorizationUrl(state,codeChallenge){const params=new URLSearchParams({client_id:gmailOAuthClientId,redirect_uri:googleAuthorizedOrigin,response_type:'code',access_type:'offline',prompt:'consent',scope:'email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.readonly',state,code_challenge:codeChallenge,code_challenge_method:'S256'});return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`}
 function ensureGmailOauthChannel(){if(gmailOauthChannel||!('BroadcastChannel' in window))return gmailOauthChannel;gmailOauthChannel=new BroadcastChannel(gmailOauthChannelName);gmailOauthChannel.onmessage=event=>applyGmailOauthPopupResult(event.data).catch(error=>setSync(`Gmail 連接失敗：${error.message}`,true));return gmailOauthChannel}
 async function applyGmailOauthPopupResult(result={}){
@@ -15269,10 +15252,9 @@ async function applyGmailOauthPopupResult(result={}){
   try{
     const wasConnected=gmailConnectionState.connected;
     const data=await sheetApi('gmailOauthConnect',{code:result.code,codeVerifier:verifier,redirectUri:googleAuthorizedOrigin,editorToken:currentEditorToken});
-    gmailConnectionState={connected:true,gmailAddress:data.gmailAddress||'',canCreateDraft:Boolean(data.canCreateDraft)};
+    gmailConnectionState={connected:true,gmailAddress:data.gmailAddress||''};
     gmailConnectionChecked=true;
     resetGmailSignatureCache();
-    renderGmailDraftScopeNotice();
     setSync(`${wasConnected?'已更新 Gmail 授權':'已連接 Gmail'}：${data.gmailAddress||''}`,false,3000);
     resumePostSubmitFlowAfterGmailConnect();
   }catch(err){
@@ -15324,9 +15306,9 @@ async function ensureGmailStatusLoaded(){
   if(gmailConnectionChecked)return gmailConnectionState;
   try{
     const data=await sheetApi('gmailStatus',{editorToken:currentEditorToken});
-    gmailConnectionState={connected:Boolean(data.connected),gmailAddress:data.gmailAddress||'',canCreateDraft:Boolean(data.canCreateDraft)};
+    gmailConnectionState={connected:Boolean(data.connected),gmailAddress:data.gmailAddress||''};
   }catch(err){
-    gmailConnectionState={connected:false,gmailAddress:'',canCreateDraft:false};
+    gmailConnectionState={connected:false,gmailAddress:''};
   }
   gmailConnectionChecked=true;
   return gmailConnectionState;
@@ -15335,7 +15317,7 @@ async function disconnectGmail(){
   closeFieldPopover();
   try{
     await sheetApi('gmailDisconnect',{editorToken:currentEditorToken});
-    gmailConnectionState={connected:false,gmailAddress:'',canCreateDraft:false};
+    gmailConnectionState={connected:false,gmailAddress:''};
     gmailConnectionChecked=true;
     resetGmailSignatureCache();
     setSync('已取消連接 Gmail',false,2200);
@@ -16179,7 +16161,6 @@ $('#gmailComposeModalClose')?.addEventListener('click',()=>{closeFieldPopover();
 $('#gmailComposeCancel')?.addEventListener('click',()=>{closeFieldPopover();closeGmailComposeModal()});
 $('#gmailComposeSend')?.addEventListener('click',()=>{postSubmitQueue?handlePostSubmitGmailSend():sendGmailComposeModal()});
 $('#gmailComposeSchedule')?.addEventListener('click',event=>openScheduleTimePicker(event,'compose'));
-$('#gmailComposeDraftScopeReconnect')?.addEventListener('click',()=>startGmailConnectPopup());
 $('#gmailComposeMergeApply')?.addEventListener('click',applyPostSubmitMerge);
 $('#gmailComposeMergeReset')?.addEventListener('click',resetPostSubmitMerge);
 $('#gmailComposeQueuePrev')?.addEventListener('click',()=>navigatePostSubmitQueue(-1));

@@ -2050,21 +2050,20 @@ test('a new 客戶別 is created with its 部門／組別 and 權限設定 alrea
   assert.match(html, /return list\.length\?list:\['企劃部','設計部'\];/);
 });
 
-test('deleting the Gmail draft cancels that schedule instead of sending the stored copy, and the case still shows why the mail never went out', async () => {
+test('排程信不進 Gmail 草稿匣，刪草稿也不再等於取消；系統判定不寄的那幾筆仍要看得見原因', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
-  // 使用者指定的規則：刪掉草稿＝取消這封排程。所以「草稿不存在」必須跟「Gmail 暫時出錯」分開處理，
-  // 前者取消、後者仍然要退回用排程當下存下來的內容寄出去（一次偶發失敗不該讓該寄的信沒寄出）。
-  assert.match(worker, /class GmailDraftMissingError extends Error \{\}/);
-  const sendDraft = worker.match(/async function sendGmailDraft\([\s\S]*?\n\}/)?.[0];
-  assert.ok(sendDraft, 'could not locate sendGmailDraft');
-  assert.match(sendDraft, /response\.status === 404/);
-  assert.match(sendDraft, /throw new GmailDraftMissingError\(message\);/);
+  // 2026-09-30：排程信不再在 Gmail 建草稿（躺在草稿匣會被同事當成沒寄出而刪掉，時間到整封信就沒寄
+  // 出去）。Gmail API 沒有排程寄送端點，也放不進「已排程」檢視，所以改成完全不在 Gmail 留待處理物件。
+  for (const gone of ['createGmailDraft', 'updateGmailDraft', 'sendGmailDraft', 'GmailDraftMissingError', 'syncScheduledMailDraft']) {
+    assert.ok(!worker.includes(gone), `${gone} 應該已經移除，排程不可以再碰 Gmail 草稿`);
+  }
   const dispatch = worker.match(/private async dispatchScheduledMailItem\([\s\S]*?\n  \}/)?.[0];
   assert.ok(dispatch, 'could not locate dispatchScheduledMailItem');
-  assert.match(dispatch, /if \(error instanceof GmailDraftMissingError\) \{\s*\n\s*return \{ outcome: 'canceled', note: '草稿已在 Gmail 中被刪除/);
-  assert.match(dispatch, /result = await postGmailMessage\(accessToken, raw\);/);
+  // 一律用系統存下來的內容寄出，舊版殘留的草稿寄完順手清掉。
+  assert.match(dispatch, /const result = await postGmailMessage\(accessToken, raw\);\n\s*await this\.discardScheduledMailDraft\(item\);/);
+  assert.doesNotMatch(dispatch, /drafts\/send|sendGmailDraft/);
   // 取消的原因要寫進那筆排程，資料本身才說得清楚為什麼沒寄。
   assert.match(worker, /UPDATE scheduled_mail SET status = \?, error_message = \?, updated_at = \? WHERE id = \?', outcome, note \|\| null/);
 
@@ -2112,9 +2111,14 @@ test('deleting the Gmail draft cancels that schedule instead of sending the stor
   );
   assert.equal(helpers.scheduleStatusSummary([]), null);
 
-  // 排程成功的提示要把這條規則講清楚，使用者才不會以為刪草稿只是「不想在 Gmail 看到它」。
+  // 排程成功的提示要主動說明信不在 Gmail 草稿匣，否則使用者會去草稿匣找、找不到就以為沒排成功。
   const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)[0];
-  assert.match(schedule, /刪掉草稿就等於取消這封排程/);
+  assert.match(schedule, /不會出現在 Gmail 草稿匣/);
+  assert.doesNotMatch(schedule, /draftError/);
+  // 「Gmail 沒有建立草稿權限」的常駐提示連同狀態欄位一起移除（已經不建草稿了）。
+  for (const gone of ['renderGmailDraftScopeNotice', 'gmailComposeDraftScopeNotice', 'canCreateDraft']) {
+    assert.ok(!html.includes(gone), `${gone} 應該已經移除`);
+  }
 });
 
 test('scheduling a mail ends the compose flow and can never be followed by an immediate second send, and a grant without the draft scope says so before anything is scheduled', async () => {
@@ -2159,29 +2163,11 @@ test('scheduling a mail ends the compose flow and can never be followed by an im
   // A single case outside the batch flow just closes.
   assert.deepEqual(runFinish(null, ['a']), { closed: 1, rendered: 0 });
 
-  // The missing draft scope is now reported by gmailStatus and shown as a standing notice with a
-  // reconnect button, instead of only surfacing as a toast after the user has already scheduled.
-  assert.match(worker, /function gmailScopesAllowDraft\(scopes: unknown\): boolean/);
-  assert.match(worker, /canCreateDraft: Boolean\(stored\) && gmailScopesAllowDraft\(stored\?\.scopes\)/);
-  assert.match(html, /id="gmailComposeDraftScopeNotice"/);
-  assert.match(html, /id="gmailComposeDraftScopeReconnect"/);
-  assert.match(html, /\$\('#gmailComposeDraftScopeReconnect'\)\?\.addEventListener\('click',\(\)=>startGmailConnectPopup\(\)\);/);
-  const notice = html.match(/function renderGmailDraftScopeNotice\(\)\{[\s\S]*?\n\}/)?.[0];
-  assert.ok(notice, 'could not locate renderGmailDraftScopeNotice');
-  const runNotice = state => {
-    const element = { hidden: null };
-    new Function('gmailConnectionState', 'element', `
-      const $ = () => element;
-      ${notice}
-      renderGmailDraftScopeNotice();
-    `)(state, element);
-    return element.hidden;
-  };
-  assert.equal(runNotice({ connected: true, canCreateDraft: false }), false, '授權缺草稿權限時必須顯示提示');
-  assert.equal(runNotice({ connected: true, canCreateDraft: true }), true);
-  assert.equal(runNotice({ connected: false, canCreateDraft: false }), true, '還沒連接 Gmail 不該用草稿提示打擾');
-  // Both entry points into the compose window paint the notice.
-  assert.equal((html.match(/renderGmailDraftScopeNotice\(\);/g) || []).length, 3);
+  // 2026-09-30：排程信不再建 Gmail 草稿，所以「缺草稿權限」的常駐提示與相關狀態一併移除
+  // （這個提示存在的唯一理由就是草稿建不起來）。
+  for (const gone of ['gmailComposeDraftScopeNotice', 'gmailComposeDraftScopeReconnect', 'renderGmailDraftScopeNotice', 'canCreateDraft']) {
+    assert.ok(!html.includes(gone), `${gone} 應該已經移除`);
+  }
 });
 
 test('an account that already connected Gmail can run the authorisation flow again, which is the only way to grant a scope added after it first connected', async () => {
@@ -2244,21 +2230,13 @@ test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and 
   assert.ok(authUrl, 'could not locate gmailOauthAuthorizationUrl');
   assert.match(authUrl, /https:\/\/www\.googleapis\.com\/auth\/gmail\.compose/);
 
-  // Schedule time: create the draft. Dispatch time: send that draft, so anything the user edited in
-  // Gmail while waiting is what actually goes out.
-  assert.match(worker, /async function createGmailDraft\(accessToken: string, raw: string\): Promise<string>/);
-  assert.match(worker, /async function sendGmailDraft\(accessToken: string, draftId: string\)/);
-  assert.match(worker, /result = await sendGmailDraft\(accessToken, draftId\);/);
-  // A Gmail hiccup must never stop the mail from going out at the appointed time. (A draft the user
-  // deleted is a separate, deliberate case -- see the deleted-draft test.)
-  assert.match(worker, /result = await postGmailMessage\(accessToken, raw\);/);
-  // Editing the schedule updates the draft; canceling it removes the draft from the mailbox.
-  assert.match(worker, /draftError = \(await this\.syncScheduledMailDraft\(id, item\.owner_account, text\(item\.draft_id\), raw\)\)\.draftError;/);
-  assert.match(worker, /await this\.discardScheduledMailDraft\(item\);/);
-  // The schedule itself must survive a failed draft (older Gmail grants have no gmail.compose scope).
+  // 2026-09-30：排程信完全不進 Gmail 草稿匣（見同檔另一支「排程信不進 Gmail 草稿匣」的測試）。
+  // 排程只登記在系統這邊，時間到用存下來的內容寄出；舊版留下的殘留草稿在寄出／取消時清掉。
   const scheduleFn = worker.match(/private async scheduleCaseMail\([\s\S]*?\n  \}/)?.[0];
   assert.ok(scheduleFn, 'could not locate scheduleCaseMail');
-  assert.match(scheduleFn, /draftId: draft\.draftId, draftError: draft\.draftError/);
+  assert.doesNotMatch(scheduleFn, /Draft/, '排程建立不可以再碰草稿');
+  assert.match(scheduleFn, /return \{ ok: true, action: 'scheduleCaseMail', scheduledId, scheduledAt, caseIds \};/);
+  assert.match(worker, /await this\.discardScheduledMailDraft\(item\);/);
 
   // Scheduling a merged mail: the Worker takes the whole id list, and one schedule blocks a second
   // one on any of the cases it covers.

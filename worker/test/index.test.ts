@@ -3203,18 +3203,14 @@ describe('Machi Design API Worker', () => {
       return row?.draft_id || '';
     }
 
-    /** 「指定排程時間」寄信現在會順手在使用者的 Gmail 信箱建立一份草稿（讓使用者能在寄出前直接改內容），
-     * 取消排程則會把那份草稿刪掉。多數測試的重點不在草稿本身，統一在這裡把 drafts 的 create/update/delete
-     * 擋下來回假資料；drafts.send（POST .../drafts/send）刻意不放進預設值，需要驗證「寄的是草稿內容」的
-     * 測試必須自己明確 mock，避免不小心把「有沒有走草稿路徑」測糊掉。 */
+    /** 2026-09-30 起排程信**不會**在使用者的 Gmail 信箱建立草稿（草稿躺在草稿匣裡會被同事當成「沒寄出」
+     * 刪掉，時間到整封信就沒寄出去）。這裡刻意只留 DELETE（清掉舊版殘留的草稿）——create／update／send
+     * 一律讓它炸掉，任何測試只要不小心又走回建草稿的老路就會立刻失敗。 */
     beforeEach(() => {
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
         const method = String(init?.method || 'GET').toUpperCase();
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts' && method === 'POST') {
-          return Response.json({ id: `draft-${crypto.randomUUID()}` });
-        }
-        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/drafts/') && (method === 'PUT' || method === 'DELETE')) {
+        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/drafts/') && method === 'DELETE') {
           return Response.json({ id: url.split('/').pop() });
         }
         throw new Error(`unexpected fetch (scheduled mail default stub): ${method} ${url}`);
@@ -3277,23 +3273,21 @@ describe('Machi Design API Worker', () => {
       const notYet = await (await schedulerStub()).runScheduledDispatch();
       expect(notYet).toEqual({ processed: 0, sent: 0, failed: 0 });
 
-      // 排程建立當下已經在使用者信箱裡放了一份草稿（預設 stub），到期時寄的就是那份草稿。
-      expect(await scheduledMailDraftId(scheduledId)).toBeTruthy();
+      // 排程期間不會在 Gmail 留下任何草稿；到期時寄的是系統存下來的內容。
+      expect(await scheduledMailDraftId(scheduledId)).toBe('');
       await forceScheduledAtDue(scheduledId);
       let sendCalls = 0;
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send') {
-          sendCalls += 1;
-          const body = JSON.parse(String(init?.body));
-          // drafts.send 只帶草稿編號，內容以 Gmail 端「當下」的草稿為準——這正是使用者可以在等待期間
-          // 直接進 Gmail 修改內容的原因；內文/簽名檔的組信正確性已有 sendCaseMail 既有測試涵蓋。
-          expect(String(body.id)).toBeTruthy();
-          expect(body.raw).toBeUndefined();
-          return Response.json({ id: 'scheduled-msg-1', threadId: 'scheduled-thread-1' });
+          throw new Error('不可以再走草稿寄送（drafts.send）');
         }
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
-          throw new Error('有草稿時不該退回用排程當下存下來的內容直接寄出');
+          sendCalls += 1;
+          const body = JSON.parse(String(init?.body));
+          expect(String(body.raw)).toBeTruthy();
+          expect(body.id).toBeUndefined();
+          return Response.json({ id: 'scheduled-msg-1', threadId: 'scheduled-thread-1' });
         }
         // 送出成功後，dispatchScheduledMailItem 會跟立即寄信（sendCaseMail）一樣呼叫 mutate() 把
         // Gmail信件串ID／Gmail寄件帳號寫回 database 表，這一步會真的呼叫 GitHub Contents API 提交。
@@ -3354,10 +3348,8 @@ describe('Machi Design API Worker', () => {
       let sendCalls = 0;
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-        // 先到期的那筆是這次新建的（有草稿），走 drafts.send；舊版複製出來的那筆沒有 draft_id，
-        // 兩條路徑都算一次寄出，確認整批只會真的寄出一封。
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send'
-          || url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
+        // 兩筆都用系統存下來的內容寄（不再有草稿路徑），確認整批只會真的寄出一封。
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
           sendCalls += 1;
           return Response.json({ id: 'single-message', threadId: 'single-thread' });
         }
@@ -3710,10 +3702,14 @@ describe('Machi Design API Worker', () => {
         state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
       });
 
+      // 新排程本身已經不會建草稿；這裡塞一個舊版留下來的 draft_id，驗證殘留草稿仍然會被清掉。
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET draft_id = ? WHERE id = ?', 'legacy-draft-1', scheduledId);
+      });
       let draftDeletes = 0;
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-        // 這封信不會再寄出，Gmail 草稿匣裡那份殘留草稿要一併刪掉，不留下使用者以為「還會自動寄」的草稿。
+        // 這封信不會再寄出，舊版留在 Gmail 草稿匣的那份殘留草稿要一併刪掉。
         if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/drafts/') && String(init?.method).toUpperCase() === 'DELETE') {
           draftDeletes += 1;
           return Response.json({});
@@ -3772,26 +3768,20 @@ describe('Machi Design API Worker', () => {
       expect(row?.status).toBe('sending');
     });
 
-    it('still schedules the mail when the Gmail account has not granted the draft scope, reports why, and falls back to sending the stored content at dispatch time', async () => {
+    it('2026-09-30：排程信完全不在 Gmail 建立草稿（草稿躺在草稿匣會被同事當成沒寄出而刪掉），時間到用系統存的內容寄出', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
       const token = await seedSession('test.user@emctaipei.com', '測試使用者');
 
-      // 既有帳號在重新授權之前，refresh token 沒有 gmail.compose，drafts.create 會回 403。
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
-        const url = String(input);
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts') {
-          return Response.json({ error: { message: 'Request had insufficient authentication scopes.' } }, { status: 403 });
-        }
-        throw new Error(`unexpected fetch while scheduling without draft scope: ${url}`);
-      });
+      // 預設 stub 只放行 drafts 的 DELETE；只要排程流程還想建立／更新草稿就會在這裡炸掉。
       const scheduled = await api({
-        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '沒有草稿權限', bodyText: '照樣要寄得出去',
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '不要進草稿匣', bodyText: '時間到再寄',
         scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
       }, token);
-      // 草稿建不起來不能讓排程本身失敗——信仍然會照排定時間寄出，只是不能在 Gmail 端改。
       expect(scheduled.ok).toBe(true);
-      expect(String(scheduled.draftError)).toContain('重新連接 Gmail');
+      // 回傳值不再有草稿相關欄位，前端也就沒有草稿訊息可顯示。
+      expect(scheduled.draftId).toBeUndefined();
+      expect(scheduled.draftError).toBeUndefined();
       const scheduledId = String(scheduled.scheduledId);
       expect(await scheduledMailDraftId(scheduledId)).toBe('');
 
@@ -3802,99 +3792,68 @@ describe('Machi Design API Worker', () => {
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
           sendCalls += 1;
           expect(decodeBase64UrlText(String(JSON.parse(String(init?.body)).raw))).toContain('To: client@example.com');
-          return Response.json({ id: 'fallback-msg-1', threadId: 'fallback-thread-1' });
+          return Response.json({ id: 'no-draft-msg', threadId: 'no-draft-thread' });
         }
         if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
-          return Response.json({ content: { sha: `fallback-file-${crypto.randomUUID()}` }, commit: { sha: 'fallback-commit-sha' } });
+          return Response.json({ content: { sha: `no-draft-file-${crypto.randomUUID()}` }, commit: { sha: 'no-draft-commit' } });
         }
-        throw new Error(`unexpected fetch during fallback dispatch: ${url}`);
+        throw new Error(`unexpected fetch during no-draft dispatch: ${url}`);
       });
       expect(await (await schedulerStub()).runScheduledDispatch()).toEqual({ processed: 1, sent: 1, failed: 0 });
       expect(sendCalls).toBe(1);
     });
 
-    it('treats a draft the user deleted in Gmail as a cancellation of that schedule, and says so on the schedule row', async () => {
+    it('2026-09-30：使用者把舊版留下的殘留草稿在 Gmail 刪掉，時間到照樣寄出（刪草稿不再等於取消排程）', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
       const token = await seedSession('test.user@emctaipei.com', '測試使用者');
 
       const scheduled = await api({
-        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '草稿被刪掉', bodyText: '不要寄了',
+        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: '草稿被刪掉', bodyText: '還是要寄出去',
         scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
       }, token);
       const scheduledId = String(scheduled.scheduledId);
-      expect(await scheduledMailDraftId(scheduledId)).toBeTruthy();
-      await forceScheduledAtDue(scheduledId);
-
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
-        const url = String(input);
-        // 使用者在等待期間自己把草稿刪掉了：drafts.send 回 404。依使用者指定的規則，刪掉草稿就是
-        // 「這封不要寄了」，不可以退回用排程當下存下來的內容硬寄出去。
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send') {
-          return Response.json({ error: { message: 'Requested entity was not found.' } }, { status: 404 });
-        }
-        throw new Error(`草稿被刪掉就不該再寄出任何東西: ${url}`);
+      // 模擬舊版留下來、還沒寄出的排程：帶著 draft_id，而使用者已經把那份草稿刪掉了。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET draft_id = ? WHERE id = ?', 'legacy-draft-gone', scheduledId);
       });
-      expect(await (await schedulerStub()).runScheduledDispatch()).toEqual({ processed: 1, sent: 0, failed: 0 });
-      // 信沒寄出去卻在畫面上什麼都看不到等於默默消失，所以原因要記在這筆排程上讓前端顯示得出來。
-      expect(await scheduledMailRow(scheduledId)).toMatchObject({ status: 'canceled' });
-      expect((await scheduledMailRow(scheduledId))?.error_message).toContain('草稿已在 Gmail 中被刪除');
-      const listed = await api({ action: 'listScheduledMail', caseId: '26080001' }, token);
-      expect((listed.items as Array<{ id: string; status: string; errorMessage: string }>)
-        .find(item => item.id === scheduledId)).toMatchObject({ status: 'canceled' });
-    });
-
-    it('still sends the stored content when drafts.send fails for a reason other than the draft being gone', async () => {
-      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
-      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
-      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
-
-      const scheduled = await api({
-        action: 'scheduleCaseMail', caseId: '26080001', to: 'client@example.com', subject: 'Gmail 暫時出錯', bodyText: '照樣要寄得出去',
-        scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString()
-      }, token);
-      const scheduledId = String(scheduled.scheduledId);
       await forceScheduledAtDue(scheduledId);
 
       let sendCalls = 0;
-      vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-        // 暫時性錯誤不是使用者的意思表示，不能當成取消——這封信還是要寄出去。
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send') {
-          return Response.json({ error: { message: 'Backend Error' } }, { status: 500 });
-        }
         if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') {
           sendCalls += 1;
-          return Response.json({ id: 'fallback-msg', threadId: 'fallback-thread' });
+          return Response.json({ id: 'sent-anyway', threadId: 'sent-anyway-thread' });
+        }
+        // 殘留草稿已經被使用者刪掉，清理時回 404 也不能影響寄出。
+        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/drafts/') && String(init?.method).toUpperCase() === 'DELETE') {
+          return Response.json({ error: { message: 'Requested entity was not found.' } }, { status: 404 });
         }
         if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
-          return Response.json({ content: { sha: `fallback-file-${crypto.randomUUID()}` }, commit: { sha: 'fallback-commit' } });
+          return Response.json({ content: { sha: `sent-anyway-${crypto.randomUUID()}` }, commit: { sha: 'sent-anyway-commit' } });
         }
-        throw new Error(`unexpected fetch during transient-failure dispatch: ${url}`);
+        throw new Error(`unexpected fetch: ${url}`);
       });
       expect(await (await schedulerStub()).runScheduledDispatch()).toEqual({ processed: 1, sent: 1, failed: 0 });
       expect(sendCalls).toBe(1);
       expect((await scheduledMailRow(scheduledId))?.status).toBe('sent');
     });
 
-    it('keeps the Gmail draft in step with an edited schedule and deletes it when the schedule is canceled', async () => {
+    it('2026-09-30：修改排程內容完全不碰 Gmail；取消排程才把舊版殘留的草稿清掉', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
       const token = await seedSession('test.user@emctaipei.com', '測試使用者');
 
-      const draftUpdates: string[] = [];
-      const draftDeletes: string[] = [];
+      const draftCalls: string[] = [];
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
         const method = String(init?.method || 'GET').toUpperCase();
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts' && method === 'POST') return Response.json({ id: 'draft-abc' });
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/draft-abc' && method === 'PUT') {
-          draftUpdates.push(decodeBase64UrlText(String(JSON.parse(String(init?.body)).message.raw)));
-          return Response.json({ id: 'draft-abc' });
-        }
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/draft-abc' && method === 'DELETE') {
-          draftDeletes.push('draft-abc');
-          return Response.json({});
+        if (url.startsWith('https://gmail.googleapis.com/gmail/v1/users/me/drafts')) {
+          draftCalls.push(`${method} ${url}`);
+          if (method === 'DELETE') return Response.json({});
+          throw new Error(`排程流程不可以再建立／更新 Gmail 草稿: ${method} ${url}`);
         }
         throw new Error(`unexpected fetch: ${method} ${url}`);
       });
@@ -3904,19 +3863,25 @@ describe('Machi Design API Worker', () => {
         scheduledAt: new Date(Date.now() + 6 * 60 * 1000).toISOString()
       }, token);
       const scheduledId = String(scheduled.scheduledId);
-      expect(scheduled).toMatchObject({ ok: true, draftId: 'draft-abc', draftError: '' });
+      expect(scheduled).toMatchObject({ ok: true });
+      expect(draftCalls).toEqual([]);
 
       const updated = await api({
         action: 'updateScheduledMail', id: scheduledId, to: 'new@example.com', cc: '', subject: '修改後主旨',
         bodyHtml: '修改後內容', inlineImages: [], signatureHtml: '', scheduledAt: new Date(Date.now() + 12 * 60 * 1000).toISOString()
       }, token);
-      expect(updated).toMatchObject({ ok: true, draftError: '' });
-      // 改過的收件人／主旨要同步進 Gmail 草稿，否則使用者在 Gmail 看到的跟時間到寄出的會是兩個版本。
-      expect(draftUpdates).toHaveLength(1);
-      expect(draftUpdates[0]).toContain('To: new@example.com');
+      expect(updated).toMatchObject({ ok: true });
+      expect(updated.draftError).toBeUndefined();
+      // 改內容只改系統這邊，完全不碰 Gmail。
+      expect(draftCalls).toEqual([]);
 
+      // 舊版留下來的殘留草稿：取消排程時要順手刪掉，不留一封看起來還會自動寄的草稿。
+      const stub = await schedulerStub();
+      await runInDurableObject(stub, async (_instance, state) => {
+        state.storage.sql.exec('UPDATE scheduled_mail SET draft_id = ? WHERE id = ?', 'legacy-draft-xyz', scheduledId);
+      });
       expect(await api({ action: 'cancelScheduledMail', id: scheduledId }, token)).toMatchObject({ ok: true });
-      expect(draftDeletes).toEqual(['draft-abc']);
+      expect(draftCalls).toEqual(['DELETE https://gmail.googleapis.com/gmail/v1/users/me/drafts/legacy-draft-xyz']);
     });
 
     it('schedules one merged mail covering several cases, refuses a second schedule that overlaps any of them, and binds one thread to every case at dispatch', async () => {
@@ -3957,7 +3922,7 @@ describe('Machi Design API Worker', () => {
       await forceScheduledAtDue(scheduledId);
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send') return Response.json({ id: 'merged-msg', threadId: 'merged-thread' });
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'merged-msg', threadId: 'merged-thread' });
         if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
           expect(init?.method).toBe('PUT');
           return Response.json({ content: { sha: `merged-file-${crypto.randomUUID()}` }, commit: { sha: 'merged-commit-sha' } });
@@ -4021,7 +3986,7 @@ describe('Machi Design API Worker', () => {
 
       vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
         const url = String(input);
-        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/drafts/send') return Response.json({ id: 'recovered-msg-1', threadId: 'recovered-thread-1' });
+        if (url === 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send') return Response.json({ id: 'recovered-msg-1', threadId: 'recovered-thread-1' });
         if (url === 'https://api.github.com/repos/EMCtaipeiART/EMCtaipeiART.github.io/contents/backend/data/db.json') {
           expect(init?.method).toBe('PUT');
           return Response.json({ content: { sha: `recovered-file-${crypto.randomUUID()}` }, commit: { sha: 'recovered-commit-sha' } });

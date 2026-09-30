@@ -192,6 +192,22 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-09-30 08:56 Asia/Taipei — 排程信不再放進 Gmail 草稿匣：刪草稿不會再害整封信沒寄出
+
+- 修改目的：使用者回報「之前把排程信放在草稿匣是我的誤解，應該放在『已排程』」——實際造成的災情是：那封信躺在 Gmail 草稿匣裡，同事看到「這封還沒寄出」就順手刪掉，時間到整封信反而沒寄出去。
+- 查證結果（重要）：**Gmail API 沒有任何排程寄送的端點**，`users.messages.send` 也沒有 `sendAt`／`scheduledTime` 之類的欄位；Gmail 的「已排程」是它前端自己的功能，API 無法把信放進去。所以「改放到已排程資料夾」做不到。改成**完全不在 Gmail 留下任何待處理的東西**：排程內容只存在系統（Durable Object），Gmail 那邊在寄出前看不到這封信，也就沒有東西可以被誤刪。
+- 影響檔案：`worker/src/database-coordinator.ts`、`worker/test/index.test.ts`、`index.html`、`backend/test/backend.test.mjs`。
+- 影響功能：
+  - **建立排程**（`scheduleCaseMail`）：不再呼叫 `drafts.create`，回傳值拿掉 `draftId`／`draftError`。（「排程回信」`scheduleCaseReply` 本來就沒建草稿，不受影響。）
+  - **修改排程**（`updateScheduledMail`）：不再同步草稿，回傳值拿掉 `draftError`。
+  - **時間到寄出**（`dispatchScheduledMailItem`）：一律用系統存下來的內容寄（`messages.send`）。**「草稿被刪＝取消這封排程」這條規則整個移除**——那正是災情本身。舊版留下、還沒寄出的排程仍帶著 `draft_id`，寄出後會順手把那份殘留草稿清掉；取消排程、或案件已用其他方式寄出時也照樣清掉。
+  - 移除只為草稿存在的程式：`createGmailDraft`／`updateGmailDraft`／`sendGmailDraft`／`GmailDraftMissingError`／`syncScheduledMailDraft`／`isGmailScopeError`。保留 `deleteGmailDraft`／`discardScheduledMailDraft`，用途只剩清理舊資料。
+  - 前台：排程成功與排程時間選擇器的說明都改成主動告知「信件由系統保管，不會出現在 Gmail 草稿匣，要修改或取消請用下方的『已排程』清單」（不講清楚的話使用者會去草稿匣找、找不到又以為沒排成功）。移除「Gmail 授權沒有建立草稿權限」的常駐提示、重新授權按鈕與 `canCreateDraft` 狀態（這個提示存在的唯一理由就是草稿建不起來）。「載入排程草稿」等字樣改成「排程內容」，避免跟草稿匣混淆。
+- 風險區塊：①**失去「在 Gmail 端直接改排程信」的能力**——這是這次刻意換掉的：要改內容請用信件視窗下方「已排程」清單的「編輯」（功能本來就在，只是從 Gmail 移回系統）。②**部署前已經建立、還沒寄出的排程**，草稿仍留在使用者的草稿匣裡，要等它寄出或被取消才會被清掉；在那之前如果有人把它刪掉，**新行為是照樣寄出**（正是要修的方向），但那個人可能以為自己已經取消了——真的要取消請用「已排程」清單的「取消排程」。③Worker 的 `gmailStatus` 仍會回傳 `canCreateDraft`、OAuth 仍要 `gmail.compose` scope，這次沒有一併縮小授權範圍（縮 scope 要所有人重新授權，風險大於效益），只是前台不再使用這個欄位。④Gmail API 之後若真的開放排程端點，可以再回頭改成原生排程；目前沒有這個選項。
+- 已檢查／驗證方式：查證 Gmail API 官方文件（`users.messages.send` 無任何排程參數）確認「放進已排程資料夾」不可行，才改用這個做法。Worker vitest 93/93（改寫 4 支釘住草稿行為的測試：①排程完全不建草稿、回傳值沒有草稿欄位、到期用存下來的內容寄出；②**舊版殘留草稿被使用者刪掉，時間到照樣寄出**——正是反轉掉的那條規則；③修改排程完全不碰 Gmail，取消排程才清掉殘留草稿；④「案件已用其他方式寄出」的取消路徑改成塞入舊版 `draft_id` 驗證殘留草稿仍會被清掉。另外把預設 fetch stub 收緊成「只放行 drafts 的 DELETE」，任何測試只要又走回建草稿的老路就會立刻失敗）。`node --test backend/test/*.test.mjs` 201/201（改寫 3 支前台測試）。真實瀏覽器實測：走完整的 `scheduleComposeMail` 流程，只呼叫 `scheduleCaseMail` 一支 API、訊息顯示「已排程於 2026/10/01 15:35 寄出；信件由系統保管，不會出現在 Gmail 草稿匣…」，排程時間選擇器的說明也同步更新。`tsc --noEmit`、`deploy:dry` 皆通過。未做：沒有用真實 Gmail 帳號實際排一封信、等到時間確認寄出。
+- 部署狀態：Worker 已部署；前台 git push 後 GitHub Pages 自動生效。
+- commit：見 git log（`fix: stop parking scheduled mail in Gmail drafts`）
+
 ### 2026-09-23 08:26 Asia/Taipei — 信件範本新增「插入項目細節」快速按鈕，設為預設的範本回信時直接帶入細節
 
 - 修改目的：使用者希望「個人設定 › 信件範本」有一個「插入項目細節」的快速按鈕，讓信件能快速帶入案件的項目細節（例如「社群貼文」「廣告素材」），後面複選的「急件」要省略；並且範本如果設為「預設」，回信時就要直接是帶好細節的文字，不需要再手動插入一次。
