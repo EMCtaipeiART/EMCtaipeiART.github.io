@@ -14,7 +14,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=28">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
   <header>
@@ -34,7 +34,7 @@
           <div class="person-card-block"><h4>手上的案件</h4><div class="person-card-cases" id="cardCases">—</div></div>
           <div class="person-card-foot" id="cardPriority">—</div>
         </div></div>
-      <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或右側搖桿移動人物</span><span>點選人物看資料與工具 · 點照片放大</span></div>
+      <div class="scene-foot"><span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 或右側搖桿移動人物</span><span>點選人物看資料與工具 · 點人物旁的氣泡看限時動態</span></div>
       <nav id="roster" aria-label="選取設計師"></nav>
       <section class="level-table-section">
         <div class="level-table-head"><h3>等級一覽表</h3><p>稱號的文字可以直接改，改完所有人看到的都會跟著換。級距固定。</p></div>
@@ -55,13 +55,25 @@
       <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button></section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
-      <section class="tool-section"><h3>想分享的照片</h3><label class="upload" id="uploadLabel" for="photo"><span>＋</span><strong>選擇一張照片</strong><small>JPG、PNG 或 WebP · 最大 8 MB</small></label><input type="file" id="photo" accept="image/jpeg,image/png,image/webp" hidden><div id="photoTools" hidden><button id="expand" class="photo-preview" aria-label="放大分享照片"><img id="thumb" alt="目前分享的照片"><span>↗ 點開看看</span></button><div class="photo-actions"><label for="photo">更換照片</label><button id="removePhoto" class="text-button">移除</button></div></div></section>
+      <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一張限時動態</strong><small>JPG、PNG 或 WebP · 最大 8 MB · 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp" hidden><div id="storyMine" class="story-mine"></div></section>
       </div>
-      <p class="privacy">心情、對話、狀態、位置與照片會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
+      <p class="privacy">心情、對話、狀態、位置與限時動態會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
     </aside>
   </main>
-  <dialog id="lightbox"><button id="closePhoto" aria-label="關閉照片">✕</button><img id="fullPhoto" alt="放大的分享照片"><p id="photoCaption"></p></dialog>
+  <dialog id="storyViewer" aria-label="限時動態">
+    <div class="sv-stage">
+      <div class="sv-progress" id="svProgress" aria-hidden="true"></div>
+      <div class="sv-head"><strong id="svName"></strong><span id="svTime"></span><span id="svPosition"></span><span id="svPaused" hidden>暫停中</span><span class="sv-count" id="svCount" title="剩餘秒數" aria-label="剩餘秒數"></span><button type="button" id="svClose" aria-label="關閉動態">✕</button></div>
+      <div class="sv-media" id="svMedia"><img id="svImage" alt="限時動態"><button type="button" class="sv-nav sv-prev" id="svPrev" aria-label="上一則"></button><button type="button" class="sv-nav sv-next" id="svNext" aria-label="下一則"></button></div>
+      <div class="sv-comments" id="svComments" aria-live="polite" hidden></div>
+      <div class="sv-actions">
+        <select id="svViewer" aria-label="以誰的身分按讚與留言"></select>
+        <button type="button" id="svLike" aria-label="按讚" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3 5.5 6.2 5.5c2 0 3.3 1.1 3.8 2.1.5-1 1.8-2.1 3.8-2.1 3.2 0 5 3.1 3.7 6.3C19.5 16.4 12 21 12 21z"/></svg><span id="svLikeCount">0</span></button>
+        <form id="svForm" autocomplete="off"><input id="svInput" maxlength="100" placeholder="留言…" aria-label="留言"><button type="submit">送出</button></form>
+      </div>
+    </div>
+  </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=53"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>

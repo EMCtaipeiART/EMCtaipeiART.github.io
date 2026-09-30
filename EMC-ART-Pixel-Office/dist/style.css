@@ -1,7 +1,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:#fff;color:#1b2c47;font-family:Inter,-apple-system,BlinkMacSystemFont,'Noto Sans TC',sans-serif;font-size:16px}
 button,input,textarea{font:inherit}
-button,a,label.upload,.photo-actions label{touch-action:manipulation}
+button,a,label.upload{touch-action:manipulation}
 button{cursor:pointer}
 button:focus-visible,a:focus-visible,textarea:focus-visible,canvas:focus-visible,label.upload:focus-within{outline:3px solid #eba92b;outline-offset:3px}
 header{height:90px;max-width:1600px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:0 38px}
@@ -77,8 +77,6 @@ textarea::placeholder{color:#8ba0bd}
 .photo-preview{position:relative;width:100%;border:0;padding:0;border-radius:10px;overflow:hidden;background:#0d213a}
 .photo-preview img{width:100%;height:125px;object-fit:cover;display:block}
 .photo-preview span{position:absolute;bottom:8px;right:8px;background:#10243ee6;color:white;padding:5px 8px;border-radius:6px;font-size:12px}
-.photo-actions{display:flex;justify-content:space-between;align-items:center;font-size:13px}
-.photo-actions label{cursor:pointer}
 /* 方向鍵放在人物名稱右側（手機版原本放在最下方，捲動到底才按得到） */
 .identity-text{min-width:0;flex:1}
 .dpad{flex:0 0 auto;display:grid;justify-items:center;gap:3px;margin-left:auto}
@@ -89,7 +87,6 @@ dialog{border:0;border-radius:16px;background:#fff;padding:16px;max-width:90vw;m
 dialog::backdrop{background:#07162cce;backdrop-filter:blur(5px)}
 dialog img{display:block;max-width:80vw;max-height:72vh;object-fit:contain}
 dialog p{margin:12px 0 0;font-size:14px}
-#closePhoto{position:absolute;right:22px;top:22px;border:0;border-radius:50%;width:35px;height:35px;color:white;background:#122942dd}
 #toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#193454;color:white;padding:13px 20px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;font-size:14px}
 #toast.visible{opacity:1}
 [hidden]{display:none!important}
@@ -233,3 +230,42 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
      蓋到的面積才小。 */
   html.embed .person-card{width:clamp(190px,calc(48% - 8px),252px);max-width:calc(100% - 16px);max-height:calc(100% - 16px);font-size:12px;box-shadow:0 16px 34px rgba(6,14,28,.55)}
 }
+
+/* ───────── 限時動態 ───────── */
+.story-hint{margin:-6px 0 10px;font-size:12px;color:#a6b6cd}
+.story-mine{display:grid;gap:8px;margin-top:10px}
+.story-mine-row{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;font-size:12px}
+.story-mine-thumb{width:52px;height:52px;padding:0;border:0;border-radius:8px;overflow:hidden;background:#0d213a}
+.story-mine-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.story-mine-info{display:grid;gap:2px}.story-mine-info span{color:#a6b6cd}
+#storyTip{position:fixed;z-index:30;pointer-events:none;background:#1c2b3fee;color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;white-space:nowrap;box-shadow:0 6px 16px rgba(6,14,28,.35)}
+#storyViewer{padding:0;border:0;background:transparent;width:min(420px,calc(100vw - 16px));max-width:none;max-height:none;overflow:visible;color:#fff}
+#storyViewer::backdrop{background:rgba(7,14,26,.72);backdrop-filter:blur(6px)}
+.sv-stage{position:relative;display:flex;flex-direction:column;height:min(calc(100dvh - 16px),720px);border-radius:16px;overflow:hidden;background:#0b1422;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.sv-progress{position:absolute;z-index:3;left:10px;right:10px;top:8px;display:flex;gap:4px}
+.sv-progress i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.35);overflow:hidden}
+.sv-progress b{display:block;height:100%;background:#fff;transform:scaleX(0);transform-origin:left}
+.sv-head{position:absolute;z-index:3;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:18px 12px 20px;font-size:12px;background:linear-gradient(rgba(0,0,0,.55),transparent)}
+.sv-head strong{font-size:14px}.sv-head span{opacity:.85}
+#svPaused{padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.2)}
+.sv-count{margin-left:auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid rgba(255,255,255,.8);font-weight:700;font-variant-numeric:tabular-nums}
+#svClose{width:28px;height:28px;border:0;border-radius:50%;color:#fff;background:rgba(255,255,255,.18)}
+.sv-media{position:relative;flex:1;min-height:0;display:grid;place-items:center;background:#000}
+.sv-media img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
+.sv-nav{position:absolute;top:56px;bottom:0;width:32%;border:0;background:transparent;opacity:0}
+.sv-prev{left:0}.sv-next{right:0}
+.sv-comments{position:absolute;z-index:2;left:10px;right:10px;bottom:62px;max-height:32%;overflow:auto;display:grid;gap:4px;scrollbar-width:none}
+.sv-comments::-webkit-scrollbar{display:none}
+.sv-comments p{margin:0;width:fit-content;max-width:100%;padding:5px 10px;border-radius:12px;font-size:12px;line-height:1.35;color:#fff;background:rgba(15,25,42,.55);backdrop-filter:blur(6px);overflow-wrap:anywhere}
+.sv-comments strong{margin-right:4px;color:#b8e8c2}
+.sv-actions{position:absolute;z-index:3;left:0;right:0;bottom:0;display:flex;align-items:center;gap:8px;padding:28px 10px 10px;background:linear-gradient(transparent,rgba(0,0,0,.62))}
+.sv-actions select{flex:0 0 auto;max-width:96px;height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;font-size:12px;padding:0 8px}
+#svLike{flex:0 0 auto;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;font-size:12px;font-weight:700}
+#svLike svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+#svLike.is-active{color:#ff5a6a}#svLike.is-active svg{fill:#ff5a6a;stroke:#ff5a6a}
+#svForm{flex:1;min-width:0;display:flex;gap:6px}
+#svInput{flex:1;min-width:0;height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;padding:0 12px;font-size:16px}
+#svInput::placeholder{color:rgba(255,255,255,.6)}
+#svForm button{height:34px;padding:0 12px;border:0;border-radius:999px;background:#008214;color:#fff;font-weight:700;font-size:12px}
+@media(max-width:480px){#storyViewer{width:calc(100vw - 8px)}.sv-stage{height:calc(100dvh - 8px);border-radius:12px}.sv-actions select{max-width:78px}}
+@media(prefers-reduced-motion:reduce){#storyTip{transition:none}}

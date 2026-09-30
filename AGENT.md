@@ -6142,3 +6142,9 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - Worker request 上限調整為 28 MiB，可容納既有 18 MiB 圖片總量的 Base64 與信件 JSON 開銷，不放寬 Gmail 圖片原始檔案上限。
 - 同一編輯器的貼上／拖放／選檔改為依序佇列；四種寄送入口都會先等待圖片讀取完成再產生 CID payload。剪貼簿檢查也改為先 `getAsFile()` 再以 `File.type` 判斷，相容 `DataTransferItem.type` 為空的貼圖來源。
 - 前端版本：`20260820-gmail-paste-image-119`；Worker 版本：`cloudflare-worker-gmail-paste-image-2026-08-20-8`。
+
+## 2026-09-30｜Pixel Office「想分享的照片」改成「限時動態」
+
+- 前台「設計部即時動態」人物旁的貼文縮圖改成像素風訊息氣泡（白底、深灰框、三個 #008214 綠點，固定在人物右上方）；有未讀時右上角有綠點並偶爾輕微跳動，滑鼠移入放大並顯示「查看 ○○ 的動態」，點擊（含手機直接點）開啟動態視窗；沒有動態就隱藏氣泡。
+- 動態視窗改成 Reels 樣式：每則 6 秒並倒數、可按讚與留言；貼出後 24 小時自動下架。資料存在 Worker DO（`pixel_office_stories`，migration 11），每次變動鏡射到 `reels` 資料表，後台「設計列表」的 REELS 卡片可見。
+- 詳見 `EMC-ART-Pixel-Office/docs/HANDOFF.md`「限時動態」。Pixel Office `app.js?v=54`、`style.css?v=29`；主系統 iframe `?embed=1&v=48`。

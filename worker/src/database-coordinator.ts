@@ -221,6 +221,13 @@ function pixelOfficeCalendarEventsState(events: unknown, calendarEmail = '', cal
 
 // 前端會把照片縮到最長邊 1200 px 的 JPEG（品質 0.8），通常 100～400 KB；base64 再大約 1.37 倍。
 const PIXEL_OFFICE_PHOTO_MAX_CHARS = 900_000;
+// 限時動態：貼出後 24 小時自動下架。圖片放在 Durable Object 的 SQL，過期後把圖片清掉、只留互動紀錄。
+const PIXEL_STORY_TTL_MS = 24 * 60 * 60 * 1000;
+const PIXEL_STORY_MAX_ACTIVE = 5;
+const PIXEL_STORY_MAX_COMMENTS = 60;
+const PIXEL_STORY_COMMENT_MAX_CHARS = 100;
+// 寫進 reels 資料表（後台「設計列表」的 REELS 卡片）的圖片連結。要用完整網址，後台頁面在別的網域。
+const PIXEL_STORY_IMAGE_BASE = 'https://machi-design-api.machi-chen.workers.dev/pixel-story/';
 // 同一份修改需求（內容完全相同）在這段時間內重複寫入，視為同一封信被送出兩次，不新增一輪。
 const MODIFICATION_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
 
@@ -1391,6 +1398,44 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(11)) {
+        this.ctx.storage.transactionSync(() => {
+          // 限時動態（取代「想分享的照片」）。跟其他 Pixel Office 資料一樣放在 SQL、不進 database.tables；
+          // 互動紀錄另外鏡射一份到 reels 資料表給後台看（見 pixelOfficeMirrorStory）。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS pixel_office_stories (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              image TEXT NOT NULL DEFAULT '',
+              created_at INTEGER NOT NULL,
+              expires_at INTEGER NOT NULL,
+              likes TEXT NOT NULL DEFAULT '[]',
+              comments TEXT NOT NULL DEFAULT '[]',
+              viewers TEXT NOT NULL DEFAULT '[]',
+              hidden INTEGER NOT NULL DEFAULT 0,
+              updated_at INTEGER NOT NULL
+            );
+          `);
+          // 舊的「分享照片」原本沒有期限：升級時轉成限時動態（從現在起算 24 小時），不讓它們憑空消失。
+          const now = Date.now();
+          const legacy = this.ctx.storage.sql.exec<{ name: string; photo: string }>(
+            "SELECT name, photo FROM pixel_office_people WHERE photo != ''"
+          ).toArray();
+          for (const row of legacy) {
+            this.ctx.storage.sql.exec(
+              'INSERT INTO pixel_office_stories(id, name, image, created_at, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+              crypto.randomUUID(), row.name, row.photo, now, now + PIXEL_STORY_TTL_MS, now
+            );
+            this.ctx.storage.sql.exec(
+              "UPDATE pixel_office_people SET photo = '', photo_version = 0, updated_at = ? WHERE name = ?", now, row.name
+            );
+          }
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            11, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1405,7 +1450,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const row = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_people').toArray()[0];
     // 稱號也算進版本號，不然改了稱號要等到有人換狀態，別人的畫面才會跟著更新。
     const settings = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_settings').toArray()[0];
-    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0);
+    const stories = this.ctx.storage.sql.exec<{ v: number | null; expired: number | null }>(
+      'SELECT MAX(updated_at) AS v, MAX(CASE WHEN expires_at <= ? THEN expires_at END) AS expired FROM pixel_office_stories', Date.now()
+    ).toArray()[0];
+    // 動態到期也要換版本號：沒有人動作的時候，過期的動態才會在下一次輪詢從每個人的畫面消失。
+    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0, Number(stories?.v) || 0, Number(stories?.expired) || 0);
   }
 
   /** 目前這套等級稱號。沒存過、或存的內容有缺，都會用預設值補齊。 */
@@ -1711,7 +1760,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return { name: row.name, ...state, photoVersion: Number(row.photo_version) || 0, updatedAt: Number(row.updated_at) || 0 };
     });
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
-    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult() };
+    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories() };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -1769,20 +1818,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.dir = dir;
     }
     const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
-    let photo: string | null = null;
-    if ('photo' in patch) {
-      photo = String(patch.photo ?? '');
-      if (photo && !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo)) throw new Error('照片格式不正確');
-      if (photo.length > PIXEL_OFFICE_PHOTO_MAX_CHARS) throw new Error('照片太大，請換一張小一點的照片');
-    }
-    const photoVersion = photo === null ? (Number(existing?.photo_version) || 0) : (photo ? now : 0);
-    if (existing) {
-      if (photo === null) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);
-      else this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, photo = ?, photo_version = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), photo, photoVersion, now, name);
-    } else {
-      this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), photo || '', photoVersion, now);
-    }
-    return { ok: true, action: 'pixelOfficeUpdate', name, version: now, person: { name, ...state, photoVersion, updatedAt: now } };
+    // 照片欄位已改成限時動態（pixelOfficeStoryAdd）。還沒重新整理的舊版畫面會送 photo 過來，直接忽略。
+    if (existing) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);
+    else this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), '', 0, now);
+    return { ok: true, action: 'pixelOfficeUpdate', name, version: now, person: { name, ...state, photoVersion: 0, updatedAt: now } };
   }
 
   private pixelOfficePhoto(payload: ApiPayload): ApiResult {
@@ -1790,6 +1829,163 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
     const row = this.ctx.storage.sql.exec<{ photo: string; photo_version: number }>('SELECT photo, photo_version FROM pixel_office_people WHERE name = ?', name).toArray()[0];
     return { ok: true, action: 'pixelOfficePhoto', name, photo: row?.photo || '', photoVersion: Number(row?.photo_version) || 0 };
+  }
+
+  /* ---------------------------------------------------------------------------------------------
+   * 限時動態（2026-09-30，取代「想分享的照片」）：不用登入，跟 Pixel Office 其他功能一樣誰打開誰都能用。
+   * - 貼出後 24 小時自動下架；過期的圖片會被清掉，互動紀錄留在後台的 reels 資料表。
+   * - 每位設計師同時最多 5 則。按讚／留言用「以誰的身分」的名字記錄。
+   * - 每次變動都會把那則動態鏡射到 reels 資料表（後台「設計列表」的 REELS 卡片），但不等它完成才回應。
+   * ------------------------------------------------------------------------------------------- */
+  private pixelOfficeStoryList(json: string): string[] {
+    try { const list = JSON.parse(json); return Array.isArray(list) ? list.map(item => text(item)).filter(Boolean) : []; } catch { return []; }
+  }
+
+  private pixelOfficeStoryComments(json: string): Row[] {
+    try { const list = JSON.parse(json); return Array.isArray(list) ? list.filter(item => item && text(item.name) && text(item.text)) : []; } catch { return []; }
+  }
+
+  private pixelOfficePublicStory(row: { id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }): Row {
+    const likes = this.pixelOfficeStoryList(row.likes);
+    return {
+      id: row.id, name: row.name,
+      createdAt: Number(row.created_at), expiresAt: Number(row.expires_at),
+      likes, comments: this.pixelOfficeStoryComments(row.comments),
+      viewerCount: this.pixelOfficeStoryList(row.viewers).length,
+      imageUrl: `${PIXEL_STORY_IMAGE_BASE}${row.id}`
+    };
+  }
+
+  /** 目前還在上架的動態（不含圖片本身，圖片用 imageUrl 另外載）。順便把過期動態的圖片清掉。 */
+  private pixelOfficeActiveStories(nowMs = Date.now()): Row[] {
+    this.ctx.storage.sql.exec("UPDATE pixel_office_stories SET image = '' WHERE expires_at <= ? AND image != ''", nowMs);
+    return this.ctx.storage.sql.exec<{ id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }>(
+      'SELECT id, name, created_at, expires_at, likes, comments, viewers FROM pixel_office_stories WHERE hidden = 0 AND expires_at > ? ORDER BY created_at ASC', nowMs
+    ).toArray().map(row => this.pixelOfficePublicStory(row));
+  }
+
+  private pixelOfficeStoryRow(id: string, nowMs = Date.now()) {
+    const row = this.ctx.storage.sql.exec<{ id: string; name: string; image: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number }>(
+      'SELECT id, name, image, created_at, expires_at, likes, comments, viewers, hidden FROM pixel_office_stories WHERE id = ?', id
+    ).toArray()[0];
+    if (!row || row.hidden || Number(row.expires_at) <= nowMs) throw new Error('這則動態已經下架');
+    return row;
+  }
+
+  private pixelOfficeTouchStory(id: string, sets: Record<string, string>): number {
+    const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+    const columns = Object.keys(sets);
+    this.ctx.storage.sql.exec(
+      `UPDATE pixel_office_stories SET ${columns.map(column => `${column} = ?`).join(', ')}${columns.length ? ', ' : ''}updated_at = ? WHERE id = ?`,
+      ...columns.map(column => sets[column]), now, id
+    );
+    return now;
+  }
+
+  /** 把一則動態的最新狀態寫進 reels 資料表。找不到就新增一列，找得到就更新（用圖片連結對應）。 */
+  private async pixelOfficeMirrorStory(id: string): Promise<void> {
+    const row = this.ctx.storage.sql.exec<{ id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number }>(
+      'SELECT id, name, created_at, expires_at, likes, comments, viewers, hidden FROM pixel_office_stories WHERE id = ?', id
+    ).toArray()[0];
+    if (!row) return;
+    const url = `${PIXEL_STORY_IMAGE_BASE}${row.id}`;
+    await this.mutate('pixelOfficeStory', null, draft => {
+      const rows = draft.tables.reels.rows;
+      let target = rows.find(item => text(item['限時動態連結']) === url);
+      if (!target) { target = {}; rows.push(target); }
+      Object.assign(target, {
+        '名字': row.name,
+        '限時動態連結': url,
+        '保留期限': '24小時',
+        '到期時間': new Date(Number(row.expires_at)).toISOString(),
+        '按讚': this.pixelOfficeStoryList(row.likes).join(' , '),
+        '倒讚': text(target['倒讚']),
+        '留言': JSON.stringify(this.pixelOfficeStoryComments(row.comments).map(({ id: commentId, name, text: body, createdAt }) => ({ id: commentId, name, avatar: '', text: body, createdAt }))),
+        '狀態': row.hidden ? '下架' : '',
+        '已讀': this.pixelOfficeStoryList(row.viewers).join(' , ')
+      });
+      return { result: { ok: true, action: 'pixelOfficeStory' }, changedTables: ['reels'] };
+    });
+  }
+
+  private pixelOfficeMirrorLater(id: string): void {
+    this.ctx.waitUntil(this.pixelOfficeMirrorStory(id).catch(() => undefined));
+  }
+
+  private pixelOfficeStoryAdd(payload: ApiPayload): ApiResult {
+    const name = text(payload.name);
+    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    const image = String(payload.image ?? payload.photo ?? '');
+    if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)) throw new Error('照片格式不正確');
+    if (image.length > PIXEL_OFFICE_PHOTO_MAX_CHARS) throw new Error('照片太大，請換一張小一點的照片');
+    const nowMs = Date.now();
+    const active = this.ctx.storage.sql.exec<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM pixel_office_stories WHERE name = ? AND hidden = 0 AND expires_at > ?', name, nowMs
+    ).toArray()[0];
+    if (Number(active?.n) >= PIXEL_STORY_MAX_ACTIVE) throw new Error(`同時最多只能有 ${PIXEL_STORY_MAX_ACTIVE} 則限時動態，請先移除一則`);
+    const id = crypto.randomUUID();
+    const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+    this.ctx.storage.sql.exec(
+      'INSERT INTO pixel_office_stories(id, name, image, created_at, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      id, name, image, nowMs, nowMs + PIXEL_STORY_TTL_MS, version
+    );
+    this.pixelOfficeMirrorLater(id);
+    return { ok: true, action: 'pixelOfficeStoryAdd', version, stories: this.pixelOfficeActiveStories(nowMs) };
+  }
+
+  private pixelOfficeStoryImage(payload: ApiPayload): ApiResult {
+    const row = this.pixelOfficeStoryRow(text(payload.id));
+    return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, image: row.image };
+  }
+
+  private pixelOfficeStoryViewer(payload: ApiPayload): string {
+    const viewer = text(payload.viewer).slice(0, 20);
+    if (!viewer) throw new Error('請先選擇以誰的身分互動');
+    return viewer;
+  }
+
+  private pixelOfficeStoryReact(payload: ApiPayload): ApiResult {
+    const row = this.pixelOfficeStoryRow(text(payload.id));
+    const viewer = this.pixelOfficeStoryViewer(payload);
+    const likes = this.pixelOfficeStoryList(row.likes);
+    const at = likes.indexOf(viewer);
+    if (at >= 0) likes.splice(at, 1); else likes.push(viewer);
+    const version = this.pixelOfficeTouchStory(row.id, { likes: JSON.stringify(likes) });
+    this.pixelOfficeMirrorLater(row.id);
+    return { ok: true, action: 'pixelOfficeStoryReact', version, stories: this.pixelOfficeActiveStories() };
+  }
+
+  private pixelOfficeStoryComment(payload: ApiPayload): ApiResult {
+    const row = this.pixelOfficeStoryRow(text(payload.id));
+    const viewer = this.pixelOfficeStoryViewer(payload);
+    const body = text(payload.text).replace(/\s+/g, ' ');
+    if (!body || body.length > PIXEL_STORY_COMMENT_MAX_CHARS) throw new Error(`留言必須為 1–${PIXEL_STORY_COMMENT_MAX_CHARS} 字`);
+    const comments = this.pixelOfficeStoryComments(row.comments);
+    if (comments.length >= PIXEL_STORY_MAX_COMMENTS) throw new Error('這則動態的留言已達上限');
+    comments.push({ id: crypto.randomUUID(), name: viewer, text: body, createdAt: new Date().toISOString() });
+    const version = this.pixelOfficeTouchStory(row.id, { comments: JSON.stringify(comments) });
+    this.pixelOfficeMirrorLater(row.id);
+    return { ok: true, action: 'pixelOfficeStoryComment', version, stories: this.pixelOfficeActiveStories() };
+  }
+
+  /** 被動記錄「已讀」：同一個名字只算一次，沒有變動就不驚動任何人的畫面。 */
+  private pixelOfficeStoryView(payload: ApiPayload): ApiResult {
+    const row = this.pixelOfficeStoryRow(text(payload.id));
+    const viewer = this.pixelOfficeStoryViewer(payload);
+    const viewers = this.pixelOfficeStoryList(row.viewers);
+    if (viewers.includes(viewer)) return { ok: true, action: 'pixelOfficeStoryView', changed: false };
+    viewers.push(viewer);
+    this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET viewers = ? WHERE id = ?', JSON.stringify(viewers), row.id);
+    this.pixelOfficeMirrorLater(row.id);
+    return { ok: true, action: 'pixelOfficeStoryView', changed: true };
+  }
+
+  private pixelOfficeStoryRemove(payload: ApiPayload): ApiResult {
+    const row = this.pixelOfficeStoryRow(text(payload.id));
+    const version = this.pixelOfficeTouchStory(row.id, { image: '' });
+    this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET hidden = 1 WHERE id = ?', row.id);
+    this.pixelOfficeMirrorLater(row.id);
+    return { ok: true, action: 'pixelOfficeStoryRemove', version, stories: this.pixelOfficeActiveStories() };
   }
 
   private async serialized<T>(work: () => Promise<T>): Promise<T> {
@@ -3105,6 +3301,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
+      if (action === 'pixelOfficeStoryAdd') return this.pixelOfficeStoryAdd(payload);
+      if (action === 'pixelOfficeStoryImage') return this.pixelOfficeStoryImage(payload);
+      if (action === 'pixelOfficeStoryReact') return this.pixelOfficeStoryReact(payload);
+      if (action === 'pixelOfficeStoryComment') return this.pixelOfficeStoryComment(payload);
+      if (action === 'pixelOfficeStoryView') return this.pixelOfficeStoryView(payload);
+      if (action === 'pixelOfficeStoryRemove') return this.pixelOfficeStoryRemove(payload);
       if (action === 'pixelOfficeLevelTitles') return this.pixelOfficeLevelTitlesResult();
       if (action === 'pixelOfficeLevelTitlesUpdate') return this.pixelOfficeLevelTitlesUpdate(payload);
       if (action === 'googleLogin') return await this.googleLogin(payload, context);

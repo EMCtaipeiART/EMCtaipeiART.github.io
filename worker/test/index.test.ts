@@ -353,7 +353,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -4076,24 +4076,108 @@ describe('Pixel Office shared state', () => {
     expect(partial.people).toEqual([expect.objectContaining({ name: 'Machi', mood: 'happy', message: '' })]);
     expect(Number(partial.version)).toBeGreaterThan(Number(state.version));
 
-    // 照片另外取：狀態只帶版本號。
+    // 舊的 photo 欄位已改成限時動態：還沒重新整理的舊版畫面送 photo 過來會被忽略，不會存進去。
     const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
-    const withPhoto = await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { photo } });
-    expect(Number((withPhoto.person as Record<string, unknown>).photoVersion)).toBeGreaterThan(0);
-    const listed = await api({ action: 'pixelOfficeState' });
-    const anna = (listed.people as Record<string, unknown>[]).find(person => person.name === 'Anna');
-    expect(anna).toMatchObject({ photoVersion: expect.any(Number) });
-    expect(JSON.stringify(listed)).not.toContain('base64');
-    expect(await api({ action: 'pixelOfficePhoto', name: 'Anna' })).toMatchObject({ ok: true, photo });
-    await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { photo: '' } });
+    const legacy = await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { photo, mood: 'joy' } });
+    expect(legacy).toMatchObject({ ok: true, person: { mood: 'joy', photoVersion: 0 } });
     expect(await api({ action: 'pixelOfficePhoto', name: 'Anna' })).toMatchObject({ photo: '', photoVersion: 0 });
 
     // 驗證：不存在的人、太長的對話、不合法的心情與照片都擋下。
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Karl', patch: { mood: 'happy' } })).toMatchObject({ ok: false });
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { message: 'x'.repeat(61) } })).toMatchObject({ ok: false });
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { mood: 'evil' } })).toMatchObject({ ok: false });
-    expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { photo: 'javascript:alert(1)' } })).toMatchObject({ ok: false });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('runs 限時動態: 24-hour expiry, like/comment/view, and mirrors every change into the reels table for the admin', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-30T02:00:00Z'));
+      const puts: Record<string, unknown>[] = [];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        if (String(input).endsWith('/backend/data/db.json') && init?.method === 'PUT') {
+          puts.push(JSON.parse(atob(String(JSON.parse(String(init.body)).content))) as Record<string, unknown>);
+          return Response.json({ content: { sha: `story-${crypto.randomUUID()}` }, commit: { sha: 'story-commit' } });
+        }
+        throw new Error(`unexpected fetch: ${String(input)}`);
+      });
+      const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+      const reelsRows = async () => {
+        const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+        return runInDurableObject(stub, async (_instance, state) => {
+          const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+          return (JSON.parse(stored.json) as DatabaseSnapshot).tables.reels.rows;
+        });
+      };
+
+      // 貼出：每位設計師才能貼、只收 data URL 圖片。
+      expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Karl', image })).toMatchObject({ ok: false });
+      expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Leona', image: 'javascript:alert(1)' })).toMatchObject({ ok: false });
+      const added = await api({ action: 'pixelOfficeStoryAdd', name: 'Leona', image });
+      expect(added.ok).toBe(true);
+      const story = (added.stories as Record<string, unknown>[])[0];
+      expect(story).toMatchObject({ name: 'Leona', likes: [], comments: [], expiresAt: Date.parse('2026-10-01T02:00:00Z') });
+      expect(JSON.stringify(added)).not.toContain('base64');
+      const id = String(story.id);
+
+      // 鏡射到後台 reels 資料表：名字、可直接開的圖片網址、24 小時、到期時間。
+      await vi.waitFor(async () => expect((await reelsRows()).length).toBeGreaterThan(0));
+      expect((await reelsRows()).find(row => String(row['限時動態連結']).endsWith(`/pixel-story/${id}`)))
+        .toMatchObject({ '名字': 'Leona', '保留期限': '24小時', '到期時間': '2026-10-01T02:00:00.000Z', '狀態': '' });
+
+      // 圖片網址可以直接開。
+      const served = await SELF.fetch(`https://worker.test/pixel-story/${id}`);
+      expect(served.status).toBe(200);
+      expect(served.headers.get('Content-Type')).toBe('image/jpeg');
+
+      // 按讚（再按一次取消）、留言、已讀。
+      expect(await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Amber' })).toMatchObject({ ok: true });
+      expect(await api({ action: 'pixelOfficeStoryReact', id })).toMatchObject({ ok: false });
+      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Noise' });
+      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Noise' });
+      expect(await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: '   ' })).toMatchObject({ ok: false });
+      expect(await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: 'x'.repeat(101) })).toMatchObject({ ok: false });
+      await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: '好可愛' });
+      expect(await api({ action: 'pixelOfficeStoryView', id, viewer: 'Anna' })).toMatchObject({ changed: true });
+      expect(await api({ action: 'pixelOfficeStoryView', id, viewer: 'Anna' })).toMatchObject({ changed: false });
+      const listed = (await api({ action: 'pixelOfficeState' })).stories as Record<string, unknown>[];
+      expect(listed[0]).toMatchObject({ likes: ['Amber'], viewerCount: 1, comments: [expect.objectContaining({ name: 'Amber', text: '好可愛' })] });
+      await vi.waitFor(async () => {
+        const row = (await reelsRows()).find(item => String(item['限時動態連結']).endsWith(`/pixel-story/${id}`));
+        expect(row).toMatchObject({ '按讚': 'Amber', '已讀': 'Anna' });
+        expect(String(row?.['留言'])).toContain('好可愛');
+      });
+
+      // 互動會換版本號：其他人的畫面下一次輪詢才會看到。
+      const state = await api({ action: 'pixelOfficeState' });
+      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Machi' });
+      expect((await api({ action: 'pixelOfficeState', since: state.version })).unchanged).toBeUndefined();
+
+      // 24 小時後自動下架：從列表消失、圖片網址 404，而且沒有人動作也會換版本號讓畫面更新。
+      const before = await api({ action: 'pixelOfficeState' });
+      vi.setSystemTime(new Date('2026-10-01T02:00:01Z'));
+      const after = await api({ action: 'pixelOfficeState', since: before.version });
+      expect(after.unchanged).toBeUndefined();
+      expect(after.stories).toEqual([]);
+      expect((await SELF.fetch(`https://worker.test/pixel-story/${id}`)).status).toBe(404);
+      expect(await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Amber' })).toMatchObject({ ok: false });
+      // 互動紀錄留在後台：按讚與留言沒有被清掉。
+      const kept = (await reelsRows()).find(item => String(item['限時動態連結']).endsWith(`/pixel-story/${id}`));
+      expect(kept).toMatchObject({ '名字': 'Leona' });
+      expect(String(kept?.['留言'])).toContain('好可愛');
+
+      // 同時最多 5 則；移除會下架並鏡射。
+      vi.setSystemTime(new Date('2026-10-02T02:00:00Z'));
+      const ids: string[] = [];
+      for (let n = 0; n < 5; n += 1) ids.push(String(((await api({ action: 'pixelOfficeStoryAdd', name: 'Amber', image })).stories as Record<string, unknown>[]).at(-1)?.id));
+      expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Amber', image })).toMatchObject({ ok: false });
+      const removed = await api({ action: 'pixelOfficeStoryRemove', id: ids[0] });
+      expect((removed.stories as unknown[]).length).toBe(4);
+      await vi.waitFor(async () => expect((await reelsRows()).find(item => String(item['限時動態連結']).endsWith(`/pixel-story/${ids[0]}`))).toMatchObject({ '狀態': '下架' }));
+      expect(puts.length).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {

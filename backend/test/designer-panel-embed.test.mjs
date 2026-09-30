@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=47"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=48"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=53/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=54/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -126,7 +126,7 @@ test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () =>
   // 點人物＝固定，點空白＝取消固定並收起。
   assert.match(js, /select\(hit\.i\);if\(embedMode\)setCardPinned\(true\)/);
   assert.match(js, /\{if\(embedMode\)setCardPinned\(false\);select\(null\);\}/);
-  assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
+  assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{setHoverStory\(-1\);if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
   // 關閉鈕要留著：固定之後卡片才吃得到滑鼠，剛好就是需要它的時候。
   assert.doesNotMatch(js, /\$\('personCardClose'\)\.hidden=true/, '不該再把關閉鈕藏起來');
   assert.doesNotMatch(css, /html\.embed \.person-card-close\{display:none\}/);
@@ -220,7 +220,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p\);drawPhotoCard\(i\);/);
+  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p\);drawStoryBubble\(i,time\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
@@ -502,4 +502,33 @@ test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗',
   const width = Number(card.match(/width:min\((\d+)px/)[1]);
   assert.ok(width >= 1400, `編輯視窗要夠寬才看得清楚，目前 ${width}`);
   assert.match(html, /\.office-editor-modal\{padding:10px\}/, '外框留白要收一點，視窗才吃得到那個寬度');
+});
+
+test('限時動態：人物右上角是像素氣泡，開啟 Reels 樣式視窗，取代舊的照片卡', async () => {
+  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
+  // 舊的照片卡與「想分享的照片」都不在了。
+  assert.doesNotMatch(js, /drawPhotoCard|openPhoto|loadRemotePhoto/);
+  assert.doesNotMatch(html, /想分享的照片|id="lightbox"/);
+  assert.match(html, /<h3>限時動態<\/h3>/);
+  // 氣泡：品牌綠 #008214 的三個點、固定在人物右上方，沒有動態就不畫，有動態的人心情圖示改放左邊。
+  assert.match(js, /g:'#008214'/);
+  assert.match(js, /function storyBubbleBox\(p\)\{return \{x:Math\.round\(p\.x\+38\),y:Math\.round\(p\.y-152\)/);
+  assert.match(js, /if\(!storiesOf\(p\.name\)\.length\)return;/);
+  assert.match(js, /const side=storiesOf\(p\.name\)\.length\?-1:/);
+  // 未讀才有綠點與輕微跳動，而且尊重「減少動態效果」。
+  assert.match(js, /if\(unread\)drawSprite\(STORY_DOT/);
+  assert.match(js, /unread&&!storyReducedMotion\.matches&&phase<\.5/);
+  // 滑鼠移入放大並顯示「查看 ○○ 的動態」；觸控不靠提示，點了就開。
+  assert.match(js, /`查看 \$\{people\[i\]\.name\} 的動態`/);
+  assert.match(js, /event\.pointerType==='touch'\)storyTip\.hidden=true/);
+  assert.match(js, /if\(hit\.type==='story'\)openStory\(hit\.i\)/);
+  // Reels 樣式：每則固定秒數並倒數、可以按讚與留言，互動都送到後端。
+  assert.match(js, /STORY_SECONDS=6/);
+  for (const action of ['pixelOfficeStoryAdd', 'pixelOfficeStoryReact', 'pixelOfficeStoryComment', 'pixelOfficeStoryView', 'pixelOfficeStoryRemove']) {
+    assert.ok(js.includes(action), `前端要呼叫 ${action}`);
+  }
+  for (const id of ['svProgress', 'svCount', 'svLike', 'svForm', 'svViewer']) assert.ok(html.includes(`id="${id}"`), `視窗要有 #${id}`);
+  // 視窗的標題列與底部列不能用 <header>／<footer>：嵌入版會把 header 整個藏起來。
+  assert.doesNotMatch(html.slice(html.indexOf('id="storyViewer"')), /<header|<footer/);
+  assert.match(css, /#storyViewer\{/);
 });

@@ -269,6 +269,16 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
 
 每台電腦要在 `scripts/nas_design_image_watcher.local.json`（不進 git）寫 `{"designerName":"Noise"}` 才會回報；設計師電腦由安裝器在安裝時跳出選單記下，主機這台已手動設為 Machi。
 
+## 限時動態（2026-09-30，取代「想分享的照片」）
+
+- 人物右上角只放一顆像素風訊息氣泡（`STORY_SPRITE`，18×13 格、白底、深灰框、三個 #008214 綠點），位置由 `storyBubbleBox()` 統一算，各人物大小與相對位置一致；有動態的人心情圖示固定改放左邊。沒有上架中的動態就不畫。
+- 有沒看過的動態：右上角綠點，偶爾輕微跳一下（`prefers-reduced-motion` 時不動）。看過的狀態記在瀏覽器（`localStorage: pixel-story-seen`），看完綠點消失，氣泡仍可點。
+- 滑鼠移入：放大 1.14 倍、顯示「查看 ○○ 的動態」（`#storyTip`）；觸控裝置不靠提示，點了直接開。點擊開 `#storyViewer`（Reels 樣式）：每則 6 秒（`STORY_SECONDS`）並顯示秒數倒數，左右點擊切換，滑鼠停在畫面上／打字／按住畫面會暫停。可按讚、留言；「以誰的身分」選單記在 `localStorage: pixel-story-viewer`（Pixel Office 不用登入，所以沒有帳號可以自動帶入）。
+- 貼文：完整版右側「限時動態」貼一張圖（縮到 1200 px JPEG），最多同時 5 則，貼出後 24 小時自動下架，也可以提前移除。
+- 後端（Worker）：DO 資料表 `pixel_office_stories`（migration 11，舊的分享照片會在升級時轉成限時動態、從升級當下起算 24 小時）。動作 `pixelOfficeStoryAdd / Image / React / Comment / View / Remove`；`pixelOfficeState` 多回 `stories`（不含圖片本身），到期時間也會換版本號，所以沒人操作時過期動態也會從畫面消失。圖片網址 `GET /pixel-story/<id>`，過期或下架回 404，過期後圖片內容會被清掉。
+- 後台：每次貼出／按讚／留言／已讀／下架都會鏡射到 `reels` 資料表（名字、圖片網址、24小時、到期時間、按讚、留言、已讀、狀態），所以資料庫後台「設計列表」的 REELS 卡片看得到。鏡射是背景進行（`ctx.waitUntil`），失敗不影響前台；代價是每次互動都會產生一次 `data: update via Cloudflare Worker` 的 GitHub commit，跟以前 Reels 一樣。反方向不同步：在後台把某筆 REELS 下架，前台那則動態仍會顯示到期為止。
+- 按讚／留言沒有驗證身分（跟 Pixel Office 其他功能一樣誰打開都能用），名字是自己選的。
+
 ## 驗證與已知限制
 
 目前已做 JavaScript 語法、角色起點/碰撞、圖層深度、移動、畫布像素密度、泡泡文字置中、照片上傳、離席切換、1280 px 桌面版及 390 px 手機版實際瀏覽器測試，且無主控台錯誤。後續調整時仍需檢查：桌子接縫/尺寸、人物與提示物避讓、最長對話、手機排版、照片上傳與重開頁面存檔。

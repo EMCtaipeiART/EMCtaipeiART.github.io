@@ -112,6 +112,18 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     if (request.method === 'DELETE') return jsonResponse(request, env, await dispatchAction(request, env, 'adminTableDelete', { ...payload, table, key }));
   }
 
+  // 限時動態的圖片：後台 REELS 卡片與前台都用這個網址直接顯示。過期或下架的動態回 404。
+  const storyMatch = path.match(/^\/pixel-story\/([0-9a-f-]{36})$/);
+  if (request.method === 'GET' && storyMatch) {
+    const result = await dispatchAction(request, env, 'pixelOfficeStoryImage', { id: storyMatch[1] });
+    const parsed = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(text(result.image));
+    if (!result.ok || !parsed) return jsonResponse(request, env, { ok: false, error: 'Not Found' }, 404);
+    const binary = atob(parsed[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new Response(bytes, { headers: { 'Content-Type': parsed[1], 'Cache-Control': 'public, max-age=3600', 'Cross-Origin-Resource-Policy': 'cross-origin' } });
+  }
+
   const supplementMatch = path.match(/^\/([a-d])\/(\d{8})$/i);
   const shortMatch = path.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})$/);
   if (request.method === 'GET' && (supplementMatch || shortMatch)) {
