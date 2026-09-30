@@ -112,6 +112,20 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   return 'present';
 }
 
+/** 電腦離線（關機／睡眠）時該顯示什麼。
+ * 平常是下班；中午 12–14 點是用餐——那個時段電腦睡著幾乎都是去吃飯了，掛「下班」會讓人以為他
+ * 今天不來了（使用者 2026-09-30 中午看到 Leona 與 Machi 掛著下班）。
+ * 只有「今天開過電腦」的人才會變用餐：整天沒開機的人維持下班，否則一到 12:00 全隊都會一起
+ * 變成用餐中。假日不套用，那幾天整天都是下班。
+ */
+export function pixelOfficeOfflineStatus(nowMs: number, lastSeenMs = 0): 'offwork' | 'lunch' {
+  if (!pixelOfficeIsWorkday(nowMs)) return 'offwork';
+  const now = taipeiClock(nowMs);
+  if (now.hour < PIXEL_OFFICE_LUNCH_START_HOUR || now.hour >= PIXEL_OFFICE_LUNCH_END_HOUR) return 'offwork';
+  const seen = Number(lastSeenMs);
+  return seen > 0 && taipeiClock(seen).date === now.date ? 'lunch' : 'offwork';
+}
+
 /** 這次心跳代表「人就在電腦前」嗎。沒帶 idleSeconds 的舊版爬蟲只證明電腦開著，不算——開著電腦去開會是常態。 */
 export function pixelOfficeAtDesk(idleSeconds?: unknown): boolean {
   const idle = Number(idleSeconds);
@@ -1478,7 +1492,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeLevelTitlesUpdate', version, titles };
   }
 
-  /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人，「在座／加班／用餐／廁所」改成下班。
+  /** 電腦關機／睡眠偵測：最後一次心跳超過 PIXEL_OFFICE_OFFLINE_MS 的人改成下班（中午改成用餐，見
+   * pixelOfficeOfflineStatus）。
    * 放在每次讀取狀態時檢查（不需要排程）：遊戲每 3 秒輪詢一次，關機後幾分鐘內就會被任何一個打開遊戲的人觸發。
    * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
   private pixelOfficeApplyOffline(nowMs: number): void {
@@ -1491,9 +1506,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       let state: Row = {};
       try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
       const status = text(state.status) || 'present';
-      if (!['present', 'overtime', 'lunch', 'toilet'].includes(status)) continue;
+      // 'offwork' 也要放行再判一次：中午電腦睡著的人會先在 12:00 前被判成下班，不讓它再被改的話
+      // 整個午休都會卡在下班——這正是使用者回報的那個情況。
+      if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
       if (state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
-      state.status = 'offwork';
+      const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
+      if (status === next) continue;
+      state.status = next;
       state.statusSource = 'auto';
       state.statusAt = nowMs;
       const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);

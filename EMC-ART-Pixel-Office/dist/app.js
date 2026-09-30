@@ -549,13 +549,16 @@ function ensureFurnitureGray(){
 // 18:00 之後到隔天 08:59 連椅子一起轉灰階——電腦留著，只是整組暗下來，看起來就是「今天沒人用了」。
 // 週六、週日與國定假日則整天都是灰階（使用者 2026-09-29 要求）：那幾天不會有人來坐，
 // 早上九點到六點還亮著反而奇怪。假日表用的是 TAIWAN_HOLIDAYS，跟加班濾鏡同一份。
+// 中午 12–14 點也一樣收掉（使用者 2026-09-30 要求）：大家都去吃飯了，只有那張空桌亮著很突兀。
 const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;
+const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;
 const stationVacant=s=>!s.name;
 function stationDimmed(s){
   if(stationAway(s))return true;
   if(!stationVacant(s))return false;
   const clock=currentTaipeiClock();
   if(!clock.workday)return true;
+  if(clock.hour>=VACANT_DESK_LUNCH_START&&clock.hour<VACANT_DESK_LUNCH_END)return true;
   return clock.hour<VACANT_DESK_ON_HOUR||clock.hour>=VACANT_DESK_OFF_HOUR;
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;

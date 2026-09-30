@@ -4190,11 +4190,12 @@ describe('Pixel Office shared state', () => {
       expect(await heartbeat('Noise')).toMatchObject({ status: 'present' });
 
       // 廁所：電腦關機超過門檻就是回家了，改成下班；使用者在電腦離線之後才手動指定的狀態則尊重。
+      // 時間用下午三點：中午 12–14 點關機會被判成用餐（見下面那一則），這裡要測的是「回家」。
       await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'toilet' } });
-      at('2026-09-22T05:10:00Z');
+      at('2026-09-22T07:10:00Z');
       expect(await statusOf('Noise')).toBe('offwork');
       await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { status: 'present' } });
-      at('2026-09-22T05:12:00Z');
+      at('2026-09-22T07:12:00Z');
       expect(await statusOf('Noise')).toBe('present');
 
       // 'auto' 不是狀態而是出口：把手動標記清掉、交還給電腦判斷。沒有它的話手動點過就只能等
@@ -4616,10 +4617,21 @@ describe('Pixel Office shared state', () => {
       at('2026-09-21T04:40:00Z');
       expect(await heartbeat()).toMatchObject({ status: 'present' });
 
-      // 午休時間電腦關機（超過門檻沒心跳）就是下班，不是用餐。
+      // 午休時間電腦關機／睡著（超過門檻沒心跳）＝去吃飯了，顯示用餐而不是下班
+      // （使用者 2026-09-30 中午看到 Leona 與 Machi 掛著下班）。
       at('2026-09-21T04:50:00Z');
-      const people = (await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[];
-      expect(people.find(person => person.name === 'Amber')?.status).toBe('offwork');
+      const statusNow = async () => ((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[])
+        .find(person => person.name === 'Amber')?.status;
+      expect(await statusNow()).toBe('lunch');
+
+      // 兩點過後同一台電腦還是沒心跳：回到下班。
+      at('2026-09-21T06:20:00Z');
+      expect(await statusNow()).toBe('offwork');
+
+      // 隔天中午，這台電腦整天都沒開過：維持下班，不會憑空變成用餐
+      // （不然一到 12:00 全隊都會一起變用餐中）。
+      at('2026-09-22T04:30:00Z');
+      expect(await statusNow()).toBe('offwork');
 
       // 星期六：電腦開著也是下班。
       at('2026-09-26T02:00:00Z');
