@@ -26,6 +26,8 @@ const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'o
 // 設計師電腦上的 NAS 爬蟲每分鐘會回報一次「電腦開著」（pixelOfficeHeartbeat）。超過這麼久沒收到，
 // 就當作電腦關機（或睡眠），把「在座／加班／用餐／廁所」改成下班。5 分鐘 = 容許漏報 4 次，避免網路小卡頓就誤判。
 const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
+// 人離席之後電腦常常跟著睡著、心跳就停了：離席（廁所）狀態在最後一次心跳後這段時間內不當成下班。
+const PIXEL_OFFICE_AWAY_GRACE_MS = 60 * 60 * 1000;
 // 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
 const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
 const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
@@ -1458,6 +1460,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 整個午休都會卡在下班——這正是使用者回報的那個情況。
       if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
       if (state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
+      if (status === 'toilet' && pixelOfficeIsWorkday(nowMs) && nowMs - lastSeen <= PIXEL_OFFICE_AWAY_GRACE_MS) continue;
       const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
       if (status === next) continue;
       state.status = next;

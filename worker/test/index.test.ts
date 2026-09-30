@@ -4570,6 +4570,18 @@ describe('Pixel Office shared state', () => {
       at('2026-09-21T07:06:00Z');
       expect(await heartbeat(3)).toMatchObject({ status: 'present' });
 
+      const statusNow = async () => ((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[])
+        .find(person => person.name === 'Amber')?.status;
+      // 離席後電腦跟著睡著、心跳停了：一小時內維持廁所，不當成下班；超過才轉下班。
+      at('2026-09-21T07:10:00Z');
+      expect(await heartbeat(5 * 60)).toMatchObject({ status: 'toilet' });
+      at('2026-09-21T07:40:00Z');
+      expect(await statusNow()).toBe('toilet');
+      at('2026-09-21T08:12:00Z');
+      expect(await statusNow()).toBe('offwork');
+      at('2026-09-21T08:20:00Z');
+      expect(await heartbeat(3)).toMatchObject({ status: 'present' });
+
       // 加班時段離開座位也是廁所——閒置著就不算還在工作。
       at('2026-09-21T11:30:00Z');
       expect(await heartbeat(3)).toMatchObject({ status: 'overtime' });
@@ -4585,8 +4597,6 @@ describe('Pixel Office shared state', () => {
       // 午休時間電腦關機／睡著（超過門檻沒心跳）＝去吃飯了，顯示用餐而不是下班
       // （使用者 2026-09-30 中午看到 Leona 與 Machi 掛著下班）。
       at('2026-09-21T04:50:00Z');
-      const statusNow = async () => ((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[])
-        .find(person => person.name === 'Amber')?.status;
       expect(await statusNow()).toBe('lunch');
 
       // 兩點過後同一台電腦還是沒心跳：回到下班。
