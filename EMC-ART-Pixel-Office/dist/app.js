@@ -451,7 +451,7 @@ function renderMyStories(){
   box.replaceChildren(...mine.map(story=>{
     const row=document.createElement('div');row.className='story-mine-row';
     const open=document.createElement('button');open.type='button';open.className='story-mine-thumb';open.setAttribute('aria-label','查看這則動態');
-    const img=document.createElement('img');img.alt='';img.loading='lazy';img.src=story.imageUrl;open.append(img);
+    const img=document.createElement(story.mediaType==='video'?'video':'img');if(story.mediaType==='video'){img.muted=true;img.preload='metadata';img.src=story.imageUrl+'#t=0.1';}else{img.alt='';img.loading='lazy';img.src=story.imageUrl;}open.append(img);
     open.onclick=()=>openStory(selected,story.id);
     const info=document.createElement('div');info.className='story-mine-info';
     info.innerHTML=`<strong>${storyTimeLeft(story)}</strong><span>♥ ${story.likes.length} · 留言 ${story.comments.length} · 已讀 ${story.viewerCount}</span>`;
@@ -507,7 +507,14 @@ function showStory(){
   if(!story){closeStory();return;}
   viewerState.elapsed=0;
   $('svName').textContent=viewerState.name;
-  const image=$('svImage');if(image.getAttribute('src')!==story.imageUrl)image.src=story.imageUrl;
+  const image=$('svImage'),video=$('svVideo'),isVideo=story.mediaType==='video';
+  viewerState.videoFailed=false;image.hidden=isVideo;video.hidden=!isVideo;$('svMute').hidden=!isVideo;
+  if(isVideo){
+    video.onerror=()=>{viewerState.videoFailed=true;toast('這則影片無法播放。');};
+    video.muted=viewerState.muted!==false;$('svMute').textContent=video.muted?'開聲音':'靜音';
+    video.src=story.imageUrl;video.currentTime=0;video.play().catch(()=>{});
+    image.removeAttribute('src');
+  }else{video.pause();video.removeAttribute('src');video.load();if(image.getAttribute('src')!==story.imageUrl)image.src=story.imageUrl;}
   $('svProgress').replaceChildren(...list.map(item=>{const seg=document.createElement('i');seg.dataset.id=item.id;seg.append(document.createElement('b'));return seg;}));
   renderStoryProgress();refreshStoryViewer();
   markStorySeen(story.id);
@@ -523,8 +530,10 @@ function refreshStoryViewer(){
   box.replaceChildren(...story.comments.map(comment=>{const row=document.createElement('p');const name=document.createElement('strong');name.textContent=comment.name;row.append(name,' '+comment.text);return row;}));
   box.hidden=!story.comments.length;if(atEnd)box.scrollTop=box.scrollHeight;
 }
+/** 影片播多久就是多久（最多 30 秒）；照片與 GIF 固定 STORY_SECONDS。 */
+function storyDuration(){const video=$('svVideo');if(video.hidden||viewerState.videoFailed)return STORY_SECONDS;return Number.isFinite(video.duration)&&video.duration>0?Math.min(video.duration,30):30;}
 function renderStoryProgress(){
-  const list=storiesOf(viewerState.name),at=storyIndex(),fraction=Math.min(1,viewerState.elapsed/STORY_SECONDS);
+  const list=storiesOf(viewerState.name),at=storyIndex(),fraction=Math.min(1,viewerState.elapsed/storyDuration());
   [...$('svProgress').children].forEach((seg,n)=>{seg.firstChild.style.transform=`scaleX(${n<at?1:n===at?fraction:0})`;});
   $('svPaused').hidden=!viewerState.paused;
   $('svPosition').textContent=list.length>1?`${at+1} / ${list.length}`:'';
@@ -534,6 +543,8 @@ function startStoryTimer(){
   viewerState.timer=setInterval(()=>{
     const now=performance.now(),dt=(now-viewerState.lastTick)/1000;viewerState.lastTick=now;
     if(viewerState.paused||document.hidden||!storyOpen())return;
+    const video=$('svVideo');
+    if(!video.hidden&&!viewerState.videoFailed){viewerState.elapsed=video.currentTime;if(video.ended)stepStory(1);else renderStoryProgress();return;}
     viewerState.elapsed+=dt;
     if(viewerState.elapsed>=STORY_SECONDS)stepStory(1);else renderStoryProgress();
   },100);
@@ -544,11 +555,13 @@ function stepStory(delta){
   if(next<0){viewerState.elapsed=0;renderStoryProgress();return;}
   viewerState.id=list[next].id;showStory();
 }
-function closeStory(){clearInterval(viewerState.timer);if(viewer.open)viewer.close();}
-function pauseStory(value){if(viewerState.paused===value)return;viewerState.paused=value;renderStoryProgress();}
+function stopStoryVideo(){const video=$('svVideo');video.pause();video.removeAttribute('src');video.load();}
+function closeStory(){clearInterval(viewerState.timer);stopStoryVideo();if(viewer.open)viewer.close();}
+function pauseStory(value){if(viewerState.paused===value)return;viewerState.paused=value;const video=$('svVideo');if(!video.hidden){if(value)video.pause();else video.play().catch(()=>{});}renderStoryProgress();}
 if(viewer){
   $('svClose').onclick=closeStory;$('svPrev').onclick=()=>stepStory(-1);$('svNext').onclick=()=>stepStory(1);
-  viewer.addEventListener('close',()=>{clearInterval(viewerState.timer);markDirty();});
+  viewer.addEventListener('close',()=>{clearInterval(viewerState.timer);stopStoryVideo();markDirty();});
+  $('svMute').onclick=()=>{const video=$('svVideo');video.muted=!video.muted;viewerState.muted=video.muted;$('svMute').textContent=video.muted?'開聲音':'靜音';};
   viewer.addEventListener('cancel',()=>clearInterval(viewerState.timer));
   viewer.onclick=e=>{if(e.target===viewer)closeStory();};
   // 想慢慢看：滑鼠停在畫面上、正在打字、或按住畫面都會暫停倒數。
@@ -601,13 +614,58 @@ names.forEach((name,i)=>{const b=document.createElement('button');b.className='r
 moods.forEach(m=>{const b=document.createElement('button');b.dataset.mood=m.id;b.title=m.text;b.append(iconCanvas(m.symbol),document.createTextNode(m.label));b.onclick=()=>setMood(m.id);$('moods').append(b);});
 statuses.forEach(status=>{const b=document.createElement('button');b.dataset.status=status.id;b.title=status.text;b.append(iconCanvas(status.symbol,40),document.createTextNode(status.label));b.onclick=()=>setStatus(status.id);$('statuses').append(b);});
 $('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到人物上方':'已清除對話');game.focus({preventScroll:true});};
-$('storyFile').onchange=async e=>{const file=e.target.files[0],index=selected;e.target.value='';if(!file||index===null)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)){toast('請選擇 JPG、PNG 或 WebP 圖片。');return;}if(file.size>8*1024*1024){toast('照片太大，請選擇 8 MB 以下的圖片。');return;}
-  const url=URL.createObjectURL(file),img=new Image();img.src=url;
-  try{await load(img);const c=document.createElement('canvas'),scale=Math.min(1,1200/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-    const data=await syncCall({action:'pixelOfficeStoryAdd',name:people[index].name,image:c.toDataURL('image/jpeg',.8)});setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');}
-  catch(err){toast(err&&err.message&&err.message!=='undefined'?'貼出失敗：'+err.message:'無法讀取這張圖片，請換一張再試。');}
-  finally{URL.revokeObjectURL(url);}};
-$('home').onclick=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
+// 上傳：照片縮到 1200 px；GIF 原檔（保留動畫，5 MB 內）；影片 30 秒內、10 MB 內——太大或是 iPhone 的 .mov
+// （可能是別的瀏覽器放不出來的 HEVC）就在瀏覽器裡重新錄成 720p，再送出。
+const STORY_GIF_MAX=5*1024*1024,STORY_VIDEO_MAX=10*1024*1024,STORY_VIDEO_SECONDS=30;
+const readDataURL=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('讀不到這個檔案'));reader.readAsDataURL(blob);});
+const cleanDataURL=(dataUrl,mime)=>`data:${mime};base64,${dataUrl.slice(dataUrl.indexOf(',')+1)}`;
+async function openVideo(url){
+  const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';video.src=url;
+  await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(Error('這個影片瀏覽器讀不出來，請改用 MP4（H.264）格式'));});
+  return video;
+}
+async function shrinkVideo(video){
+  const types=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+  const mime=window.MediaRecorder&&types.find(type=>MediaRecorder.isTypeSupported(type));
+  const canvas=document.createElement('canvas');
+  if(!mime||!canvas.captureStream)throw Error('這個瀏覽器無法壓縮影片，請先在手機上剪短到 10 MB 以內');
+  const scale=Math.min(1,720/Math.max(video.videoWidth,video.videoHeight));
+  canvas.width=Math.max(2,Math.round(video.videoWidth*scale/2)*2);canvas.height=Math.max(2,Math.round(video.videoHeight*scale/2)*2);
+  const context=canvas.getContext('2d'),chunks=[],recorder=new MediaRecorder(canvas.captureStream(30),{mimeType:mime,videoBitsPerSecond:2000000});
+  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  const stopped=new Promise(resolve=>{recorder.onstop=resolve;});
+  video.currentTime=0;recorder.start(500);try{await video.play();}catch{recorder.stop();throw Error('影片處理被中斷，請留在這個分頁、不要切換視窗，再試一次。');}
+  let over=false;
+  await new Promise(resolve=>{video.onended=resolve;setTimeout(resolve,(STORY_VIDEO_SECONDS+2)*1000);const timer=setInterval(()=>{if(video.ended||over){clearInterval(timer);return;}context.drawImage(video,0,0,canvas.width,canvas.height);},33);});// 用 setInterval 而不是 rAF：切到別的分頁時 rAF 會停
+  over=true;video.pause();recorder.stop();await stopped;
+  return new Blob(chunks,{type:mime.split(';')[0]});
+}
+$('storyFile').onchange=async e=>{
+  const file=e.target.files[0],index=selected;e.target.value='';if(!file||index===null)return;
+  const type=file.type,url=URL.createObjectURL(file);
+  try{
+    let media;
+    if(type==='image/gif'){
+      if(file.size>STORY_GIF_MAX)throw Error('GIF 太大，請選 5 MB 以下的檔案。');
+      media=cleanDataURL(await readDataURL(file),'image/gif');
+    }else if(['video/mp4','video/quicktime','video/webm'].includes(type)){
+      const video=await openVideo(url);
+      if(Number.isFinite(video.duration)&&video.duration>STORY_VIDEO_SECONDS+.5)throw Error(`影片太長，請剪到 ${STORY_VIDEO_SECONDS} 秒以內。`);
+      let blob=file,mime=type;
+      if(file.size>STORY_VIDEO_MAX||type==='video/quicktime'){toast('影片處理中，需要跟影片一樣長的時間，請稍候…');blob=await shrinkVideo(video);mime=blob.type;}
+      if(blob.size>STORY_VIDEO_MAX)throw Error('影片壓縮後還是太大，請縮短影片。');
+      media=cleanDataURL(await readDataURL(blob),mime);
+    }else if(['image/jpeg','image/png','image/webp'].includes(type)){
+      if(file.size>8*1024*1024)throw Error('照片太大，請選擇 8 MB 以下的圖片。');
+      const img=new Image();img.src=url;await load(img);
+      const c=document.createElement('canvas'),scale=Math.min(1,1200/Math.max(img.width,img.height));c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      media=c.toDataURL('image/jpeg',.8);
+    }else throw Error('請選擇照片、GIF 或 MP4／MOV 影片。');
+    const data=await syncCall({action:'pixelOfficeStoryAdd',name:people[index].name,media});
+    setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');
+  }catch(err){toast(err&&err.message&&err.message!=='undefined'?err.message:'無法讀取這個檔案，請換一個再試。');}
+  finally{URL.revokeObjectURL(url);}
+};$('home').onclick=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
 /* ---------------------------------------------------------------------------------------------
  * 多人同步（2026-09-18）：心情、對話、離席狀態、位置與照片存在主系統的 Cloudflare 後端，所有打開這個網頁的
  * 人看到同一個畫面。不用登入、任何人都能改（使用者決定）。每 3 秒輪詢一次（分頁在背景時 15 秒），沒有

@@ -251,7 +251,7 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
 #svClose{margin-left:auto;width:28px;height:28px;border:0;border-radius:50%;color:#fff;background:rgba(255,255,255,.18)}
 .sv-media{position:relative;flex:1 1 auto;min-height:0;background:#000}
 /* 絕對定位撐滿：flex 子項的高度不算「確定」，用 max-height:100% 長圖會把版面撐爆。 */
-.sv-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.sv-media img,.sv-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 .sv-nav{position:absolute;top:0;bottom:0;width:32%;border:0;background:transparent;opacity:0}
 .sv-prev{left:0}.sv-next{right:0}
 .sv-comments{position:absolute;z-index:2;left:8px;right:8px;bottom:6px;max-height:36%;overflow:auto;display:grid;gap:4px;scrollbar-width:none;pointer-events:none}
@@ -269,3 +269,6 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
 #svForm button{height:34px;padding:0 12px;border:0;border-radius:999px;background:#008214;color:#fff;font-weight:700;font-size:12px}
 @media(max-width:480px){#storyViewer{width:calc(100vw - 8px)}.sv-stage{height:calc(100dvh - 8px);border-radius:12px}}
 @media(prefers-reduced-motion:reduce){#storyTip{transition:none}}
+#svMute{margin-left:auto;margin-right:8px;height:26px;padding:0 10px;border:0;border-radius:999px;color:#fff;background:rgba(255,255,255,.18);font-size:12px}
+#svMute+#svClose{margin-left:0}
+.story-mine-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}

@@ -227,6 +227,10 @@ const PIXEL_STORY_MAX_ACTIVE = 5;
 const PIXEL_STORY_MAX_COMMENTS = 60;
 const PIXEL_STORY_COMMENT_MAX_CHARS = 100;
 // 寫進 reels 資料表（後台「設計列表」的 REELS 卡片）的圖片連結。要用完整網址，後台頁面在別的網域。
+// GIF 與影片（手機拍的短片）：太大的字串放不進 SQL 的單列（2 MB 上限），所以切成一段一段存。
+// 上限是 base64 字元數（約 10.5 MB 原檔）；影片由前端先縮小、限制長度。
+const PIXEL_STORY_MEDIA_MAX_CHARS = 14_000_000;
+const PIXEL_STORY_CHUNK_CHARS = 700_000; // 必須是 4 的倍數，每段才能各自解碼
 const PIXEL_STORY_IMAGE_BASE = 'https://machi-design-api.machi-chen.workers.dev/pixel-story/';
 // 同一份修改需求（內容完全相同）在這段時間內重複寫入，視為同一封信被送出兩次，不新增一輪。
 const MODIFICATION_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
@@ -1436,6 +1440,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(12)) {
+        this.ctx.storage.transactionSync(() => {
+          // 限時動態支援 GIF 與影片：記下檔案類型，大檔內容另外分段存放。
+          this.ctx.storage.sql.exec("ALTER TABLE pixel_office_stories ADD COLUMN mime TEXT NOT NULL DEFAULT ''");
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS pixel_office_story_chunks (
+              story_id TEXT NOT NULL,
+              seq INTEGER NOT NULL,
+              data TEXT NOT NULL,
+              PRIMARY KEY (story_id, seq)
+            );
+          `);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            12, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1845,10 +1867,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     try { const list = JSON.parse(json); return Array.isArray(list) ? list.filter(item => item && text(item.name) && text(item.text)) : []; } catch { return []; }
   }
 
-  private pixelOfficePublicStory(row: { id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }): Row {
+  private pixelOfficePublicStory(row: { id: string; name: string; mime: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }): Row {
     const likes = this.pixelOfficeStoryList(row.likes);
     return {
       id: row.id, name: row.name,
+      mime: row.mime || 'image/jpeg', mediaType: (row.mime || '').startsWith('video/') ? 'video' : 'image',
       createdAt: Number(row.created_at), expiresAt: Number(row.expires_at),
       likes, comments: this.pixelOfficeStoryComments(row.comments),
       viewerCount: this.pixelOfficeStoryList(row.viewers).length,
@@ -1858,15 +1881,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 目前還在上架的動態（不含圖片本身，圖片用 imageUrl 另外載）。順便把過期動態的圖片清掉。 */
   private pixelOfficeActiveStories(nowMs = Date.now()): Row[] {
+    // 過期的內容（圖片與分段的影片）清掉，只留互動紀錄。
     this.ctx.storage.sql.exec("UPDATE pixel_office_stories SET image = '' WHERE expires_at <= ? AND image != ''", nowMs);
-    return this.ctx.storage.sql.exec<{ id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }>(
-      'SELECT id, name, created_at, expires_at, likes, comments, viewers FROM pixel_office_stories WHERE hidden = 0 AND expires_at > ? ORDER BY created_at ASC', nowMs
+    this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id IN (SELECT id FROM pixel_office_stories WHERE expires_at <= ?)', nowMs);
+    return this.ctx.storage.sql.exec<{ id: string; name: string; mime: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }>(
+      'SELECT id, name, mime, created_at, expires_at, likes, comments, viewers FROM pixel_office_stories WHERE hidden = 0 AND expires_at > ? ORDER BY created_at ASC', nowMs
     ).toArray().map(row => this.pixelOfficePublicStory(row));
   }
 
   private pixelOfficeStoryRow(id: string, nowMs = Date.now()) {
-    const row = this.ctx.storage.sql.exec<{ id: string; name: string; image: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number }>(
-      'SELECT id, name, image, created_at, expires_at, likes, comments, viewers, hidden FROM pixel_office_stories WHERE id = ?', id
+    const row = this.ctx.storage.sql.exec<{ id: string; name: string; image: string; mime: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number }>(
+      'SELECT id, name, image, mime, created_at, expires_at, likes, comments, viewers, hidden FROM pixel_office_stories WHERE id = ?', id
     ).toArray()[0];
     if (!row || row.hidden || Number(row.expires_at) <= nowMs) throw new Error('這則動態已經下架');
     return row;
@@ -1915,9 +1940,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private pixelOfficeStoryAdd(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
     if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
-    const image = String(payload.image ?? payload.photo ?? '');
-    if (!/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image)) throw new Error('照片格式不正確');
-    if (image.length > PIXEL_OFFICE_PHOTO_MAX_CHARS) throw new Error('照片太大，請換一張小一點的照片');
+    const media = String(payload.media ?? payload.image ?? payload.photo ?? '');
+    const header = /^data:([a-z]+\/[a-z0-9.+-]+);base64,/.exec(media);
+    if (!header) throw new Error('檔案格式不正確');
+    const mime = header[1];
+    const base64 = media.slice(header[0].length);
+    // 一般照片（JPG／PNG／WebP）維持原本的單列存放；GIF 與影片可能很大，分段存放。
+    const isPhoto = ['image/jpeg', 'image/png', 'image/webp'].includes(mime);
+    if (!isPhoto && !['image/gif', 'video/mp4', 'video/webm', 'video/quicktime'].includes(mime)) throw new Error('只支援 JPG、PNG、WebP、GIF 與 MP4／MOV／WebM 影片');
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) throw new Error('檔案格式不正確');
+    if (isPhoto && media.length > PIXEL_OFFICE_PHOTO_MAX_CHARS) throw new Error('照片太大，請換一張小一點的照片');
+    if (!isPhoto && base64.length > PIXEL_STORY_MEDIA_MAX_CHARS) throw new Error('檔案太大，請縮短影片或換一個小一點的檔案（上限約 10 MB）');
     const nowMs = Date.now();
     const active = this.ctx.storage.sql.exec<{ n: number }>(
       'SELECT COUNT(*) AS n FROM pixel_office_stories WHERE name = ? AND hidden = 0 AND expires_at > ?', name, nowMs
@@ -1925,17 +1958,31 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (Number(active?.n) >= PIXEL_STORY_MAX_ACTIVE) throw new Error(`同時最多只能有 ${PIXEL_STORY_MAX_ACTIVE} 則限時動態，請先移除一則`);
     const id = crypto.randomUUID();
     const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
-    this.ctx.storage.sql.exec(
-      'INSERT INTO pixel_office_stories(id, name, image, created_at, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-      id, name, image, nowMs, nowMs + PIXEL_STORY_TTL_MS, version
-    );
+    this.ctx.storage.transactionSync(() => {
+      this.ctx.storage.sql.exec(
+        'INSERT INTO pixel_office_stories(id, name, image, mime, created_at, expires_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        id, name, isPhoto ? media : '', mime, nowMs, nowMs + PIXEL_STORY_TTL_MS, version
+      );
+      if (!isPhoto) {
+        for (let seq = 0, at = 0; at < base64.length; seq += 1, at += PIXEL_STORY_CHUNK_CHARS) {
+          this.ctx.storage.sql.exec('INSERT INTO pixel_office_story_chunks(story_id, seq, data) VALUES (?, ?, ?)', id, seq, base64.slice(at, at + PIXEL_STORY_CHUNK_CHARS));
+        }
+      }
+    });
     this.pixelOfficeMirrorLater(id);
     return { ok: true, action: 'pixelOfficeStoryAdd', version, stories: this.pixelOfficeActiveStories(nowMs) };
   }
 
+  /** 動態的檔案內容（給 GET /pixel-story/<id> 用）：回傳類型與 base64，由路由解成位元組並處理影片的 Range 請求。 */
   private pixelOfficeStoryImage(payload: ApiPayload): ApiResult {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, image: row.image };
+    if (row.image) {
+      const parsed = /^data:([^;]+);base64,(.*)$/s.exec(row.image);
+      if (parsed) return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, mime: parsed[1], base64: parsed[2] };
+    }
+    const chunks = this.ctx.storage.sql.exec<{ data: string }>('SELECT data FROM pixel_office_story_chunks WHERE story_id = ? ORDER BY seq', row.id).toArray();
+    if (!chunks.length) throw new Error('這則動態已經下架');
+    return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, mime: row.mime || 'image/jpeg', base64: chunks.map(chunk => chunk.data).join('') };
   }
 
   /** 按讚、留言、已讀的人一律取自登入的前台帳號，不信任前端自己報的名字；沒登入不能互動。 */
@@ -1986,6 +2033,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const row = this.pixelOfficeStoryRow(text(payload.id));
     const version = this.pixelOfficeTouchStory(row.id, { image: '' });
     this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET hidden = 1 WHERE id = ?', row.id);
+    this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id = ?', row.id);
     this.pixelOfficeMirrorLater(row.id);
     return { ok: true, action: 'pixelOfficeStoryRemove', version, stories: this.pixelOfficeActiveStories() };
   }

@@ -116,12 +116,23 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   const storyMatch = path.match(/^\/pixel-story\/([0-9a-f-]{36})$/);
   if (request.method === 'GET' && storyMatch) {
     const result = await dispatchAction(request, env, 'pixelOfficeStoryImage', { id: storyMatch[1] });
-    const parsed = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(text(result.image));
-    if (!result.ok || !parsed) return jsonResponse(request, env, { ok: false, error: 'Not Found' }, 404);
-    const binary = atob(parsed[2]);
+    if (!result.ok || !text(result.base64)) return jsonResponse(request, env, { ok: false, error: 'Not Found' }, 404);
+    const binary = atob(text(result.base64));
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    return new Response(bytes, { headers: { 'Content-Type': parsed[1], 'Cache-Control': 'public, max-age=3600', 'Cross-Origin-Resource-Policy': 'cross-origin' } });
+    const headers: Record<string, string> = {
+      'Content-Type': text(result.mime) || 'application/octet-stream', 'Accept-Ranges': 'bytes',
+      'Cache-Control': 'public, max-age=3600', 'Cross-Origin-Resource-Policy': 'cross-origin'
+    };
+    // Safari 播影片一定要有 Range（分段）回應，否則不會播。
+    const range = /^bytes=(\d*)-(\d*)$/.exec(text(request.headers.get('Range')));
+    if (range && (range[1] || range[2])) {
+      const start = range[1] ? Number(range[1]) : Math.max(0, bytes.length - Number(range[2]));
+      const end = range[1] && range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1;
+      if (start >= bytes.length || start > end) return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${bytes.length}` } });
+      return new Response(bytes.slice(start, end + 1), { status: 206, headers: { ...headers, 'Content-Range': `bytes ${start}-${end}/${bytes.length}` } });
+    }
+    return new Response(bytes, { headers });
   }
 
   const supplementMatch = path.match(/^\/([a-d])\/(\d{8})$/i);

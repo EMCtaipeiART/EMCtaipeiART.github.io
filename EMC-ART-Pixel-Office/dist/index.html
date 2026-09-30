@@ -14,7 +14,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=31">
+  <link rel="stylesheet" href="style.css?v=32">
 </head>
 <body>
   <header>
@@ -55,7 +55,7 @@
       <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button></section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
-      <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一張限時動態</strong><small>JPG、PNG 或 WebP · 最大 8 MB · 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp" hidden><div id="storyMine" class="story-mine"></div></section>
+      <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一則限時動態</strong><small>照片、GIF 或手機影片（30 秒內）· 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" hidden><div id="storyMine" class="story-mine"></div></section>
       </div>
       <p class="privacy">心情、對話、狀態、位置與限時動態會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
     </aside>
@@ -63,8 +63,8 @@
   <dialog id="storyViewer" aria-label="限時動態">
     <div class="sv-stage">
       <div class="sv-progress" id="svProgress" aria-hidden="true"></div>
-      <div class="sv-head"><strong id="svName"></strong><span id="svPosition"></span><span id="svPaused" hidden>暫停中</span><button type="button" id="svClose" aria-label="關閉動態">✕</button></div>
-      <div class="sv-media" id="svMedia"><img id="svImage" alt="限時動態"><button type="button" class="sv-nav sv-prev" id="svPrev" aria-label="上一則"></button><button type="button" class="sv-nav sv-next" id="svNext" aria-label="下一則"></button><div class="sv-comments" id="svComments" aria-live="polite" hidden></div></div>
+      <div class="sv-head"><strong id="svName"></strong><span id="svPosition"></span><span id="svPaused" hidden>暫停中</span><button type="button" id="svMute" hidden aria-label="開關聲音">開聲音</button><button type="button" id="svClose" aria-label="關閉動態">✕</button></div>
+      <div class="sv-media" id="svMedia"><img id="svImage" alt="限時動態"><video id="svVideo" playsinline muted preload="auto" hidden></video><button type="button" class="sv-nav sv-prev" id="svPrev" aria-label="上一則"></button><button type="button" class="sv-nav sv-next" id="svNext" aria-label="下一則"></button><div class="sv-comments" id="svComments" aria-live="polite" hidden></div></div>
       <div class="sv-actions">
         <button type="button" id="svLike" aria-label="按讚" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5C5.5 15.8 2.5 12.4 2.5 8.7A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 9.5 2.1c0 3.7-3 7.1-9.5 11.8z"/></svg><span id="svLikeCount">0</span></button>
         <form id="svForm" autocomplete="off"><input id="svInput" maxlength="100" placeholder="留言…" aria-label="留言"><button type="submit">送出</button></form>
@@ -72,6 +72,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=57"></script>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

@@ -353,7 +353,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -4182,6 +4182,57 @@ describe('Pixel Office shared state', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('限時動態 supports GIF and phone videos: chunked storage, Range playback, size limit, and cleanup on removal', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      if (String(input).endsWith('/backend/data/db.json')) return Response.json({ content: { sha: 'x' }, commit: { sha: 'y' } });
+      throw new Error(`unexpected fetch: ${String(input)}`);
+    });
+    const bytes = Uint8Array.from({ length: 1_200_000 }, (_, index) => index % 251);
+    let binary = '';
+    for (let index = 0; index < bytes.length; index += 8192) binary += String.fromCharCode(...bytes.subarray(index, index + 8192));
+    const base64 = btoa(binary);
+    const gif = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+    const video = `data:video/mp4;base64,${base64}`;
+
+    // 種類檢查：只收 GIF 與 mp4／webm／mov 影片，內容不是 base64 也擋下。
+    expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: 'data:video/x-msvideo;base64,AAAA' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: 'data:video/mp4;base64,@@@@' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: `data:video/mp4;base64,${'A'.repeat(14_000_004)}` })).toMatchObject({ ok: false });
+
+    const gifAdded = await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: gif });
+    expect(gifAdded.ok).toBe(true);
+    const gifStory = (gifAdded.stories as Record<string, unknown>[]).find(story => story.mime === 'image/gif');
+    expect(gifStory).toMatchObject({ mediaType: 'image', mime: 'image/gif' });
+    const gifServed = await SELF.fetch(`https://worker.test/pixel-story/${gifStory?.id}`);
+    expect(gifServed.headers.get('Content-Type')).toBe('image/gif');
+
+    // 影片（1.2 MB 超過單列上限，會分段存）：內容原樣還原，Safari 需要的 Range 也要對。
+    const added = await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: video });
+    expect(added.ok).toBe(true);
+    const story = (added.stories as Record<string, unknown>[]).find(item => item.mediaType === 'video');
+    expect(story).toMatchObject({ mime: 'video/mp4', mediaType: 'video' });
+    const url = `https://worker.test/pixel-story/${story?.id}`;
+    const whole = await SELF.fetch(url);
+    expect(whole.status).toBe(200);
+    expect(whole.headers.get('Accept-Ranges')).toBe('bytes');
+    expect(new Uint8Array(await whole.arrayBuffer())).toEqual(bytes);
+    const part = await SELF.fetch(url, { headers: { Range: 'bytes=100-199' } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get('Content-Range')).toBe(`bytes 100-199/${bytes.length}`);
+    expect(new Uint8Array(await part.arrayBuffer())).toEqual(bytes.slice(100, 200));
+    const tail = await SELF.fetch(url, { headers: { Range: 'bytes=1199990-' } });
+    expect(tail.status).toBe(206);
+    expect((await tail.arrayBuffer()).byteLength).toBe(10);
+    expect((await SELF.fetch(url, { headers: { Range: 'bytes=9999999-' } })).status).toBe(416);
+
+    // 移除後檔案就打不開，分段內容也一併清掉。
+    await api({ action: 'pixelOfficeStoryRemove', id: story?.id });
+    expect((await SELF.fetch(url)).status).toBe(404);
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const left = await runInDurableObject(stub, async (_instance, state) => state.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM pixel_office_story_chunks WHERE story_id = ?', String(story?.id)).one().n);
+    expect(left).toBe(0);
   });
 
   it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {

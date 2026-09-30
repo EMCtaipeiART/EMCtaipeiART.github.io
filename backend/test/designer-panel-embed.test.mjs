@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=51"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=52"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=57/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=58/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -555,4 +555,19 @@ test('自動更新：整天開著的頁面偵測到新版會自己更新，但�
   assert.match(parent, /autoUpdateAt/);
   // 像素辦公室：動態視窗開著、正在打字時不重整。
   assert.match(office, /if\(!pending\|\|storyOpen\(\)\|\|typingNow\(\)\)return;/);
+});
+
+test('限時動態支援 GIF 與手機影片：GIF 保留動畫、影片限長並在瀏覽器裡壓縮、播放器依影片長度倒數', async () => {
+  const [js, html] = await Promise.all([officeJs(), officeHtml()]);
+  assert.match(html, /accept="image\/jpeg,image\/png,image\/webp,image\/gif,video\/mp4,video\/quicktime,video\/webm"/);
+  assert.match(html, /<video id="svVideo" playsinline muted/);
+  assert.match(js, /STORY_GIF_MAX=5\*1024\*1024,STORY_VIDEO_MAX=10\*1024\*1024,STORY_VIDEO_SECONDS=30/);
+  // GIF 不能走縮圖（會失去動畫）；iPhone 的 .mov 一律重新錄成瀏覽器都放得出來的格式。
+  assert.match(js, /if\(type==='image\/gif'\)\{/);
+  assert.match(js, /file\.size>STORY_VIDEO_MAX\|\|type==='video\/quicktime'/);
+  assert.match(js, /new MediaRecorder\(canvas\.captureStream\(30\)/);
+  // webm 錄影檔的 duration 是 Infinity，不能拿來判斷「太長」。
+  assert.match(js, /Number\.isFinite\(video\.duration\)&&video\.duration>STORY_VIDEO_SECONDS/);
+  assert.match(js, /function storyDuration\(\)/);
+  assert.match(js, /if\(video\.ended\)stepStory\(1\)/);
 });
