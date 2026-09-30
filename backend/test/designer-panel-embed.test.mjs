@@ -571,3 +571,8 @@ test('限時動態支援 GIF 與手機影片：GIF 保留動畫、影片限長�
   assert.match(js, /function storyDuration\(\)/);
   assert.match(js, /if\(video\.ended\)stepStory\(1\)/);
 });
+
+test('動態視窗的關閉鈕固定在右上角，不受標題列內容（開聲音、暫停中）擠壓', async () => {
+  const css = await officeCss();
+  assert.match(css, /#svClose\{position:absolute;top:10px;right:10px;/);
+});
