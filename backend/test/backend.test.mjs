@@ -982,7 +982,7 @@ test('pending scheduled mail can be loaded back into the editor and updates the 
   assert.match(updateSource, /signatureHtml=editorPayload\.signatureInserted\?editorPayload\.insertedSignatureHtml:''/);
   assert.match(updateSource, /bodyHtml:editorPayload\.scheduledBodyHtml/);
   assert.doesNotMatch(updateSource, /scheduleCaseMail|scheduleCaseReply/);
-  assert.match(html, /if\(scheduledMailEditState\?\.kind===kind\)await updateScheduledMailFromEditor\(kind,scheduledAt\)/);
+  assert.match(html, /if\(scheduledMailEditState\?\.kind===kind\)\{await updateScheduledMailFromEditor\(kind,scheduledAt\);return\}/);
 });
 
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
@@ -2191,7 +2191,10 @@ test('an account that already connected Gmail can run the authorisation flow aga
     const setSync = () => {};
     const jsArg = value => String(value);
     const esc = value => String(value);
-    const mailComposerMenuHtml = (id, gmailOption) => gmailOption;
+    const mailComposerMenuHtml = (id, gmailOption, scheduledOption = '') => String(scheduledOption) + String(gmailOption);
+    const scheduleDisplayLabel = value => String(value);
+    const pendingScheduledMailForCase = async () => (row.pendingScheduled || []);
+    ${html.match(/function pendingScheduledMailOptionHtml\(id,items\)\{[\s\S]*?\n\}/)[0]}
     const ensureGmailStatusLoaded = async () => status;
     const event = { preventDefault() {}, stopPropagation() {}, currentTarget: {} };
     ${html.match(/async function openMailComposerMenu\(event,id\)\{[\s\S]*?\n\}/)[0]}
@@ -5061,4 +5064,95 @@ test('信件範本可插入 {項目細節}：套用時換成案件的項目細�
   } });
   assert.equal(withoutToken({ designer: 'Machi', details: '廣告素材' }), '附上廣告素材，<br>再煩請查收，謝謝。');
   assert.equal(withoutToken({ designer: 'Machi', details: '素材重置' }), '附上素材重置，\n再煩請查收，謝謝。');
+});
+
+test('選好排程時間只是「設定」，要再按送出才成立；待寄出的排程可以從案件「信件」選單找回來', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
+
+  // ── 1. 選完時間不再直接建立排程 ──
+  const confirm = html.match(/async function confirmScheduleMail\(kind\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(confirm, 'could not locate confirmScheduleMail');
+  assert.match(confirm, /setPendingSchedulePick\(kind,scheduledAt\);/);
+  assert.doesNotMatch(confirm, /await scheduleComposeMail|await scheduleThreadReply/, '選時間不可以直接送出');
+  // 編輯既有排程維持原本「按下去就成立」（那顆按鈕本來就叫「儲存排程修改」）。
+  assert.match(confirm, /if\(scheduledMailEditState\?\.kind===kind\)\{await updateScheduledMailFromEditor\(kind,scheduledAt\);return\}/);
+
+  // 送出鍵才是真正成立的那一步；沒選時間就照舊立即寄出。
+  assert.match(html, /\$\('#gmailThreadReplySend'\)\?\.addEventListener\('click',\(\)=>\{const at=pendingScheduleAt\.thread; if\(at\)\{scheduleThreadReply\(at\);return\} sendGmailThreadReply\(\)\}\);/);
+  assert.match(html, /\$\('#gmailComposeSend'\)\?\.addEventListener\('click',\(\)=>\{const at=pendingScheduleAt\.compose; if\(at\)\{scheduleComposeMail\(at\);return\} postSubmitQueue\?handlePostSubmitGmailSend\(\):sendGmailComposeModal\(\)\}\);/);
+  // 排程成立、關掉視窗都要把「選好但還沒送出」的狀態清乾淨，不可以帶到下一封信。
+  assert.match(html, /ids\.forEach\(caseId=>watchScheduledCaseThread\(caseId,scheduledAt\)\);\n\s*clearPendingSchedulePick\('compose'\);/);
+  assert.match(pick('closeGmailComposeModal'), /clearPendingSchedulePick\('compose'\);/);
+  assert.match(html, /function closeGmailThreadModal\(\)\{[^\n]*clearPendingSchedulePick\('thread'\);/);
+
+  // 真的跑一次：按鈕字樣與徽章要照「有沒有選過時間」切換。
+  const els = {
+    '#gmailComposeSchedule': { textContent: '指定排程時間' },
+    '#gmailComposeSend': { textContent: '寄出' },
+    '#gmailComposeScheduleStatus': { hidden: true, textContent: '', classes: new Set() }
+  };
+  const badge = els['#gmailComposeScheduleStatus'];
+  badge.classList = { add: c => badge.classes.add(c), remove: c => badge.classes.delete(c), toggle: (c, on) => (on ? badge.classes.add(c) : badge.classes.delete(c)) };
+  const api = new Function('els', `
+    const $ = sel => els[sel] || null;
+    const scheduleDisplayLabel = value => String(value);
+    const scheduledMailEditState = null;
+    const lastScheduleBadgeItems = { compose: [], thread: [] };
+    const scheduleStatusSummary = () => null;
+    let pendingScheduleAt = { compose: '', thread: '' };
+    ${pick('scheduledMailEditUi')}
+    ${pick('scheduleSendButtonLabel')}
+    ${pick('paintScheduleStatusBadge')}
+    ${pick('renderPendingSchedulePick')}
+    ${pick('setPendingSchedulePick')}
+    ${pick('clearPendingSchedulePick')}
+    return { set: setPendingSchedulePick, clear: clearPendingSchedulePick };
+  `)(els);
+
+  api.set('compose', '2026/10/01 15:35');
+  assert.equal(els['#gmailComposeSend'].textContent, '排程寄出', '選好時間後送出鍵要說清楚按下去是排程');
+  assert.match(els['#gmailComposeSchedule'].textContent, /排程：2026\/10\/01 15:35/);
+  assert.equal(badge.hidden, false);
+  assert.match(badge.textContent, /尚未成立/);
+  assert.ok(badge.classes.has('is-pending-pick'));
+
+  api.clear('compose');
+  assert.equal(els['#gmailComposeSend'].textContent, '寄出', '取消選定的時間要還原成立即寄出');
+  assert.equal(els['#gmailComposeSchedule'].textContent, '指定排程時間');
+  assert.equal(badge.hidden, true);
+  assert.ok(!badge.classes.has('is-pending-pick'));
+
+  // ── 2. 待寄出的排程要能從案件「信件」選單找回來 ──
+  const optionHtml = pick('pendingScheduledMailOptionHtml');
+  assert.ok(optionHtml, 'could not locate pendingScheduledMailOptionHtml');
+  const renderOptions = items => new Function('items', `
+    const esc = value => String(value);
+    const jsArg = value => String(value);
+    const scheduleDisplayLabel = value => String(value);
+    ${optionHtml}
+    return pendingScheduledMailOptionHtml('26090001', items);
+  `)(items);
+  assert.equal(renderOptions([]), '', '沒有待寄出的排程就不要多一個選項');
+  const sendOption = renderOptions([{ id: 's1', kind: 'send', status: 'pending', scheduledAt: '2026/10/01 15:35' }]);
+  assert.match(sendOption, /已排程 2026\/10\/01 15:35 寄出這封信件（編輯／取消）/);
+  assert.match(sendOption, /openScheduledMailFromMenu\('compose','26090001'\)/);
+  const replyOption = renderOptions([{ id: 's2', kind: 'reply', status: 'pending', scheduledAt: '2026/10/02 09:00' }]);
+  assert.match(replyOption, /寄出這封回信/);
+  assert.match(replyOption, /openScheduledMailFromMenu\('thread','26090001'\)/);
+
+  // 只列「還沒寄出」的，已寄出／已取消的不該出現在發信選單裡。
+  const fetcher = pick('pendingScheduledMailForCase');
+  assert.match(fetcher, /filter\(item=>item\.status==='pending'\)/);
+  assert.match(fetcher, /catch\{return \[\]\}/, '讀不到排程不可以擋住整個發信選單');
+  // 選單開啟時跟 Gmail 連接狀態一起查，不要多一次來回等待。
+  assert.match(html, /const \[status,scheduledItems\]=await Promise\.all\(\[ensureGmailStatusLoaded\(\),pendingScheduledMailForCase\(id\)\]\);/);
+  // 點下去就開對應的信件視窗，那個視窗本來就會載入「已排程」清單（含編輯／取消）。
+  const opener = html.match(/async function openScheduledMailFromMenu\(kind,caseId\)\{[\s\S]*?\n\}/)?.[0];
+  assert.ok(opener);
+  assert.match(opener, /openGmailComposeModal\(caseId\)/);
+  assert.match(opener, /openGmailThreadModal\(caseId\)/);
+  // 排程成立的提示要告訴使用者之後去哪裡找（視窗會收掉，下方清單看不到了）。
+  const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)[0];
+  assert.match(schedule, /要修改或取消請點案件的「信件」按鈕/);
 });
