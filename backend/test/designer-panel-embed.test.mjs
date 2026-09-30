@@ -20,7 +20,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=48"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=49"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=54/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=55/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -527,8 +527,18 @@ test('限時動態：人物右上角是像素氣泡，開啟 Reels 樣式視窗�
   for (const action of ['pixelOfficeStoryAdd', 'pixelOfficeStoryReact', 'pixelOfficeStoryComment', 'pixelOfficeStoryView', 'pixelOfficeStoryRemove']) {
     assert.ok(js.includes(action), `前端要呼叫 ${action}`);
   }
-  for (const id of ['svProgress', 'svCount', 'svLike', 'svForm', 'svViewer']) assert.ok(html.includes(`id="${id}"`), `視窗要有 #${id}`);
+  for (const id of ['svProgress', 'svLike', 'svForm']) assert.ok(html.includes(`id="${id}"`), `視窗要有 #${id}`);
   // 視窗的標題列與底部列不能用 <header>／<footer>：嵌入版會把 header 整個藏起來。
   assert.doesNotMatch(html.slice(html.indexOf('id="storyViewer"')), /<header|<footer/);
   assert.match(css, /#storyViewer\{/);
+  // 不顯示倒數時間；不再自己選身分——按讚留言記在登入前台的人名下，沒登入不能互動。
+  assert.doesNotMatch(html, /svTime|svCount|svViewer|選擇你是誰/);
+  assert.match(js, /if\(event\.origin!==location\.origin\|\|event\.source!==window\.parent\)return;/);
+  assert.match(js, /type:'pixelOfficeViewerRequest'/);
+  assert.doesNotMatch(js, /viewer:who/);
+  const parent = await indexHtml();
+  assert.match(parent, /type:'pixelOfficeViewer',name:isLoggedIn\(\)\?currentEditor:''/);
+  // 動態視窗的標題列與按鈕列在版面裡佔位，圖片放在中間，長圖不會被蓋住。
+  assert.match(css, /\.sv-head\{position:relative/);
+  assert.match(css, /\.sv-actions\{position:relative/);
 });

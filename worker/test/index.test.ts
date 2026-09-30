@@ -4101,6 +4101,10 @@ describe('Pixel Office shared state', () => {
         }
         throw new Error(`unexpected fetch: ${String(input)}`);
       });
+      const amber = await seedSession('amber@emctaipei.com', 'Amber');
+      const noise = await seedSession('noise@emctaipei.com', 'Noise');
+      const anna = await seedSession('anna@emctaipei.com', 'Anna');
+      const machi = await seedSession('machi@emctaipei.com', 'Machi');
       const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
       const reelsRows = async () => {
         const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
@@ -4131,15 +4135,15 @@ describe('Pixel Office shared state', () => {
       expect(served.headers.get('Content-Type')).toBe('image/jpeg');
 
       // 按讚（再按一次取消）、留言、已讀。
-      expect(await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Amber' })).toMatchObject({ ok: true });
+      expect(await api({ action: 'pixelOfficeStoryReact', id }, amber)).toMatchObject({ ok: true });
       expect(await api({ action: 'pixelOfficeStoryReact', id })).toMatchObject({ ok: false });
-      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Noise' });
-      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Noise' });
-      expect(await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: '   ' })).toMatchObject({ ok: false });
-      expect(await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: 'x'.repeat(101) })).toMatchObject({ ok: false });
-      await api({ action: 'pixelOfficeStoryComment', id, viewer: 'Amber', text: '好可愛' });
-      expect(await api({ action: 'pixelOfficeStoryView', id, viewer: 'Anna' })).toMatchObject({ changed: true });
-      expect(await api({ action: 'pixelOfficeStoryView', id, viewer: 'Anna' })).toMatchObject({ changed: false });
+      await api({ action: 'pixelOfficeStoryReact', id }, noise);
+      await api({ action: 'pixelOfficeStoryReact', id }, noise);
+      expect(await api({ action: 'pixelOfficeStoryComment', id, text: '   ' }, amber)).toMatchObject({ ok: false });
+      expect(await api({ action: 'pixelOfficeStoryComment', id, text: 'x'.repeat(101) }, amber)).toMatchObject({ ok: false });
+      await api({ action: 'pixelOfficeStoryComment', id, text: '好可愛' }, amber);
+      expect(await api({ action: 'pixelOfficeStoryView', id }, anna)).toMatchObject({ changed: true });
+      expect(await api({ action: 'pixelOfficeStoryView', id }, anna)).toMatchObject({ changed: false });
       const listed = (await api({ action: 'pixelOfficeState' })).stories as Record<string, unknown>[];
       expect(listed[0]).toMatchObject({ likes: ['Amber'], viewerCount: 1, comments: [expect.objectContaining({ name: 'Amber', text: '好可愛' })] });
       await vi.waitFor(async () => {
@@ -4150,7 +4154,7 @@ describe('Pixel Office shared state', () => {
 
       // 互動會換版本號：其他人的畫面下一次輪詢才會看到。
       const state = await api({ action: 'pixelOfficeState' });
-      await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Machi' });
+      await api({ action: 'pixelOfficeStoryReact', id }, machi);
       expect((await api({ action: 'pixelOfficeState', since: state.version })).unchanged).toBeUndefined();
 
       // 24 小時後自動下架：從列表消失、圖片網址 404，而且沒有人動作也會換版本號讓畫面更新。
@@ -4160,7 +4164,7 @@ describe('Pixel Office shared state', () => {
       expect(after.unchanged).toBeUndefined();
       expect(after.stories).toEqual([]);
       expect((await SELF.fetch(`https://worker.test/pixel-story/${id}`)).status).toBe(404);
-      expect(await api({ action: 'pixelOfficeStoryReact', id, viewer: 'Amber' })).toMatchObject({ ok: false });
+      expect(await api({ action: 'pixelOfficeStoryReact', id }, amber)).toMatchObject({ ok: false });
       // 互動紀錄留在後台：按讚與留言沒有被清掉。
       const kept = (await reelsRows()).find(item => String(item['限時動態連結']).endsWith(`/pixel-story/${id}`));
       expect(kept).toMatchObject({ '名字': 'Leona' });

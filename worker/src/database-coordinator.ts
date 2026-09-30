@@ -1938,15 +1938,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, image: row.image };
   }
 
-  private pixelOfficeStoryViewer(payload: ApiPayload): string {
-    const viewer = text(payload.viewer).slice(0, 20);
-    if (!viewer) throw new Error('請先選擇以誰的身分互動');
+  /** 按讚、留言、已讀的人一律取自登入的前台帳號，不信任前端自己報的名字；沒登入不能互動。 */
+  private async pixelOfficeStoryViewer(payload: ApiPayload): Promise<string> {
+    const session = await this.sessionFor(payload);
+    const viewer = text(session?.user || session?.account?.split('@')[0]).slice(0, 20);
+    if (!viewer) throw new Error('請先登入前台帳號，才能按讚與留言');
     return viewer;
   }
 
-  private pixelOfficeStoryReact(payload: ApiPayload): ApiResult {
+  private async pixelOfficeStoryReact(payload: ApiPayload): Promise<ApiResult> {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    const viewer = this.pixelOfficeStoryViewer(payload);
+    const viewer = await this.pixelOfficeStoryViewer(payload);
     const likes = this.pixelOfficeStoryList(row.likes);
     const at = likes.indexOf(viewer);
     if (at >= 0) likes.splice(at, 1); else likes.push(viewer);
@@ -1955,9 +1957,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeStoryReact', version, stories: this.pixelOfficeActiveStories() };
   }
 
-  private pixelOfficeStoryComment(payload: ApiPayload): ApiResult {
+  private async pixelOfficeStoryComment(payload: ApiPayload): Promise<ApiResult> {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    const viewer = this.pixelOfficeStoryViewer(payload);
+    const viewer = await this.pixelOfficeStoryViewer(payload);
     const body = text(payload.text).replace(/\s+/g, ' ');
     if (!body || body.length > PIXEL_STORY_COMMENT_MAX_CHARS) throw new Error(`留言必須為 1–${PIXEL_STORY_COMMENT_MAX_CHARS} 字`);
     const comments = this.pixelOfficeStoryComments(row.comments);
@@ -1969,9 +1971,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   /** 被動記錄「已讀」：同一個名字只算一次，沒有變動就不驚動任何人的畫面。 */
-  private pixelOfficeStoryView(payload: ApiPayload): ApiResult {
+  private async pixelOfficeStoryView(payload: ApiPayload): Promise<ApiResult> {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    const viewer = this.pixelOfficeStoryViewer(payload);
+    const viewer = await this.pixelOfficeStoryViewer(payload);
     const viewers = this.pixelOfficeStoryList(row.viewers);
     if (viewers.includes(viewer)) return { ok: true, action: 'pixelOfficeStoryView', changed: false };
     viewers.push(viewer);
@@ -3303,9 +3305,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
       if (action === 'pixelOfficeStoryAdd') return this.pixelOfficeStoryAdd(payload);
       if (action === 'pixelOfficeStoryImage') return this.pixelOfficeStoryImage(payload);
-      if (action === 'pixelOfficeStoryReact') return this.pixelOfficeStoryReact(payload);
-      if (action === 'pixelOfficeStoryComment') return this.pixelOfficeStoryComment(payload);
-      if (action === 'pixelOfficeStoryView') return this.pixelOfficeStoryView(payload);
+      if (action === 'pixelOfficeStoryReact') return await this.pixelOfficeStoryReact(payload);
+      if (action === 'pixelOfficeStoryComment') return await this.pixelOfficeStoryComment(payload);
+      if (action === 'pixelOfficeStoryView') return await this.pixelOfficeStoryView(payload);
       if (action === 'pixelOfficeStoryRemove') return this.pixelOfficeStoryRemove(payload);
       if (action === 'pixelOfficeLevelTitles') return this.pixelOfficeLevelTitlesResult();
       if (action === 'pixelOfficeLevelTitlesUpdate') return this.pixelOfficeLevelTitlesUpdate(payload);

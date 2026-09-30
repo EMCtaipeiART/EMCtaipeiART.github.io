@@ -425,8 +425,18 @@ const storyUnread=name=>storiesOf(name).some(story=>!storySeen.has(story.id));
 const storyReducedMotion=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
 function markStorySeen(id){if(storySeen.has(id))return;storySeen.add(id);pruneStorySeen();markDirty();}
 function pruneStorySeen(){if(storiesLoaded){const live=new Set(stories.map(story=>story.id));storySeen=new Set([...storySeen].filter(id=>live.has(id)));}try{localStorage.setItem('pixel-story-seen',JSON.stringify([...storySeen]));}catch{}}
-function storyViewerName(){try{const saved=localStorage.getItem('pixel-story-viewer');if(names.includes(saved))return saved;}catch{}return '';}
-function storyTimeLeft(story){const minutes=Math.max(0,Math.ceil((story.expiresAt-Date.now())/60000));return minutes>=60?`還剩 ${Math.floor(minutes/60)} 小時 ${minutes%60} 分`:`還剩 ${minutes} 分`;}
+// 按讚與留言記在「登入前台的人」名下：外層系統用 postMessage 把登入者（名字＋session token）交過來，
+// 只放記憶體、不存起來；後端靠 token 認人。沒登入（或直接開這個網頁）只能看，不能互動。
+let storyIdentity={name:'',token:''};
+const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  const data=event.data;if(!data||data.type!=='pixelOfficeViewer')return;
+  storyIdentity={name:String(data.name||''),token:String(data.token||'')};
+  if(storyOpen())refreshStoryViewer();
+});
+if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin);}catch{}
+function storyTimeLeft(story){const minutes=Math.max(0,Math.ceil((story.expiresAt-Date.now())/60000));return minutes>=60?`還剩 ${Math.floor(minutes/60)} 小時 ${minutes%60} 分`:`還剩 ${minutes} 分`;}// 只給自己的動態清單用；動態視窗裡不顯示倒數
 function applyStories(list){
   if(!Array.isArray(list))return;
   const key=JSON.stringify(list);if(storiesLoaded&&key===storiesKey)return;
@@ -487,8 +497,6 @@ function openStory(i,startId){
   const name=people[i].name,list=storiesOf(name);if(!list.length)return;
   keys.clear();setHoverStory(-1);
   viewerState={name,id:(list.find(story=>story.id===startId)||list.find(story=>!storySeen.has(story.id))||list[0]).id,elapsed:0,paused:false,timer:0,lastTick:0};
-  const select$=$('svViewer');select$.replaceChildren(new Option('選擇你是誰…',''),...names.map(item=>new Option(item,item)));
-  select$.value=storyViewerName()||(selected!==null&&!embedMode?people[selected].name:'');
   if(!viewer.open)viewer.showModal();
   showStory();startStoryTimer();
 }
@@ -498,28 +506,26 @@ function showStory(){
   const list=storiesOf(viewerState.name),story=currentStory();
   if(!story){closeStory();return;}
   viewerState.elapsed=0;
-  $('svName').textContent=viewerState.name;$('svTime').textContent=storyTimeLeft(story);
+  $('svName').textContent=viewerState.name;
   const image=$('svImage');if(image.getAttribute('src')!==story.imageUrl)image.src=story.imageUrl;
   $('svProgress').replaceChildren(...list.map(item=>{const seg=document.createElement('i');seg.dataset.id=item.id;seg.append(document.createElement('b'));return seg;}));
   renderStoryProgress();refreshStoryViewer();
   markStorySeen(story.id);
-  const who=$('svViewer').value;if(who)syncCall({action:'pixelOfficeStoryView',id:story.id,viewer:who}).catch(()=>{});
+  if(storyLoggedIn())syncCall({action:'pixelOfficeStoryView',id:story.id,token:storyIdentity.token}).catch(()=>{});
 }
 /** 按讚、留言、名單變動時只更新互動區，不重新開始倒數。 */
 function refreshStoryViewer(){
   const story=currentStory();if(!story){if(storyOpen()){const list=storiesOf(viewerState.name);if(list.length){viewerState.id=list[0].id;showStory();}else closeStory();}return;}
-  const who=$('svViewer').value,liked=Boolean(who)&&story.likes.includes(who);
-  $('svLike').classList.toggle('is-active',liked);$('svLike').setAttribute('aria-pressed',liked);$('svLikeCount').textContent=story.likes.length;
+  const liked=storyLoggedIn()&&story.likes.includes(storyIdentity.name),locked=!storyLoggedIn();
+  $('svLike').classList.toggle('is-active',liked);$('svLike').classList.toggle('is-locked',locked);$('svInput').disabled=locked;$('svForm').querySelector('button').disabled=locked;$('svInput').placeholder=locked?'登入前台帳號後才能留言':'留言…';$('svLike').setAttribute('aria-pressed',liked);$('svLikeCount').textContent=story.likes.length;
   $('svLike').title=story.likes.length?'按讚：'+story.likes.join('、'):'按讚';
   const box=$('svComments'),atEnd=box.scrollHeight-box.scrollTop-box.clientHeight<24;
   box.replaceChildren(...story.comments.map(comment=>{const row=document.createElement('p');const name=document.createElement('strong');name.textContent=comment.name;row.append(name,' '+comment.text);return row;}));
   box.hidden=!story.comments.length;if(atEnd)box.scrollTop=box.scrollHeight;
-  $('svTime').textContent=storyTimeLeft(story);
 }
 function renderStoryProgress(){
   const list=storiesOf(viewerState.name),at=storyIndex(),fraction=Math.min(1,viewerState.elapsed/STORY_SECONDS);
   [...$('svProgress').children].forEach((seg,n)=>{seg.firstChild.style.transform=`scaleX(${n<at?1:n===at?fraction:0})`;});
-  $('svCount').textContent=String(Math.max(0,Math.ceil(STORY_SECONDS-viewerState.elapsed)));
   $('svPaused').hidden=!viewerState.paused;
   $('svPosition').textContent=list.length>1?`${at+1} / ${list.length}`:'';
 }
@@ -549,10 +555,9 @@ if(viewer){
   const media=$('svMedia');media.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pauseStory(true);});media.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&document.activeElement!==$('svInput'))pauseStory(false);});
   media.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')pauseStory(true);});['pointerup','pointercancel'].forEach(type=>media.addEventListener(type,e=>{if(e.pointerType!=='mouse')pauseStory(false);}));
   $('svInput').addEventListener('focus',()=>pauseStory(true));$('svInput').addEventListener('blur',()=>pauseStory(false));
-  $('svViewer').onchange=()=>{try{localStorage.setItem('pixel-story-viewer',$('svViewer').value);}catch{}refreshStoryViewer();const story=currentStory(),who=$('svViewer').value;if(story&&who)syncCall({action:'pixelOfficeStoryView',id:story.id,viewer:who}).catch(()=>{});};
-  const needViewer=()=>{const who=$('svViewer').value;if(!who){toast('先選擇你是誰，才能按讚或留言。');$('svViewer').focus();}return who;};
-  $('svLike').onclick=async()=>{const story=currentStory(),who=needViewer();if(!story||!who)return;try{applyStories((await syncCall({action:'pixelOfficeStoryReact',id:story.id,viewer:who})).stories);}catch(err){toast('按讚失敗：'+err.message);}};
-  $('svForm').onsubmit=async e=>{e.preventDefault();const story=currentStory(),who=needViewer(),input=$('svInput'),body=input.value.trim();if(!story||!who||!body)return;input.disabled=true;try{const data=await syncCall({action:'pixelOfficeStoryComment',id:story.id,viewer:who,text:body});input.value='';applyStories(data.stories);$('svComments').scrollTop=$('svComments').scrollHeight;}catch(err){toast('留言失敗：'+err.message);}finally{input.disabled=false;input.focus();}};
+  const needLogin=()=>{if(!storyLoggedIn())toast('請先登入前台帳號，才能按讚與留言。');return storyLoggedIn();};
+  $('svLike').onclick=async()=>{const story=currentStory();if(!story||!needLogin())return;try{applyStories((await syncCall({action:'pixelOfficeStoryReact',id:story.id,token:storyIdentity.token})).stories);}catch(err){toast('按讚失敗：'+err.message);}};
+  $('svForm').onsubmit=async e=>{e.preventDefault();const story=currentStory(),input=$('svInput'),body=input.value.trim();if(!story||!body||!needLogin())return;input.disabled=true;try{const data=await syncCall({action:'pixelOfficeStoryComment',id:story.id,token:storyIdentity.token,text:body});input.value='';applyStories(data.stories);$('svComments').scrollTop=$('svComments').scrollHeight;}catch(err){toast('留言失敗：'+err.message);}finally{input.disabled=!storyLoggedIn();input.focus();}};
   viewer.addEventListener('keydown',e=>{if(typing())return;if(e.key==='ArrowRight')stepStory(1);else if(e.key==='ArrowLeft')stepStory(-1);});
 }
 const pixelSymbols={
