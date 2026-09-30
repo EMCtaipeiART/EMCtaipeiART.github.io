@@ -14,7 +14,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=30">
+  <link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
   <header>
@@ -66,12 +66,12 @@
       <div class="sv-head"><strong id="svName"></strong><span id="svPosition"></span><span id="svPaused" hidden>暫停中</span><button type="button" id="svClose" aria-label="關閉動態">✕</button></div>
       <div class="sv-media" id="svMedia"><img id="svImage" alt="限時動態"><button type="button" class="sv-nav sv-prev" id="svPrev" aria-label="上一則"></button><button type="button" class="sv-nav sv-next" id="svNext" aria-label="下一則"></button><div class="sv-comments" id="svComments" aria-live="polite" hidden></div></div>
       <div class="sv-actions">
-        <button type="button" id="svLike" aria-label="按讚" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.5-9.2C1.2 8.6 3 5.5 6.2 5.5c2 0 3.3 1.1 3.8 2.1.5-1 1.8-2.1 3.8-2.1 3.2 0 5 3.1 3.7 6.3C19.5 16.4 12 21 12 21z"/></svg><span id="svLikeCount">0</span></button>
+        <button type="button" id="svLike" aria-label="按讚" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5C5.5 15.8 2.5 12.4 2.5 8.7A4.7 4.7 0 0 1 12 6.6a4.7 4.7 0 0 1 9.5 2.1c0 3.7-3 7.1-9.5 11.8z"/></svg><span id="svLikeCount">0</span></button>
         <form id="svForm" autocomplete="off"><input id="svInput" maxlength="100" placeholder="留言…" aria-label="留言"><button type="submit">送出</button></form>
       </div>
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=55"></script>
+  <script src="app.js?v=56"></script>
 </body>
 </html>

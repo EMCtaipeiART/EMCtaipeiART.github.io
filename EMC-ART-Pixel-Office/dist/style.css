@@ -259,8 +259,8 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
 .sv-comments p{margin:0;width:fit-content;max-width:100%;padding:5px 10px;border-radius:12px;font-size:12px;line-height:1.35;color:#fff;background:rgba(15,25,42,.6);backdrop-filter:blur(6px);overflow-wrap:anywhere}
 .sv-comments strong{margin-right:4px;color:#b8e8c2}
 .sv-actions{position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px}
-#svLike{flex:0 0 auto;display:flex;align-items:center;gap:4px;height:34px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;font-size:12px;font-weight:700}
-#svLike svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+#svLike{flex:0 0 auto;display:flex;align-items:center;gap:5px;height:34px;padding:0 14px 0 11px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;font-size:12px;font-weight:700}
+#svLike svg{overflow:visible;flex:0 0 auto;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
 #svLike.is-active{color:#ff5a6a}#svLike.is-active svg{fill:#ff5a6a;stroke:#ff5a6a}
 #svForm{flex:1;min-width:0;display:flex;gap:6px}
 #svInput{flex:1;min-width:0;height:34px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(15,25,42,.6);color:#fff;padding:0 12px;font-size:16px}
