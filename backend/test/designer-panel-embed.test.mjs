@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=60/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=61/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -180,7 +180,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
   assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
   assert.match(js, /function sceneTopExtent\(\)\{/);
-  assert.match(js, /top=Math\.min\(top,p\.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout\.h-8\)/);
+  assert.match(js, /top=Math\.min\(top,p\.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout\.h-8-\(layout\.lift\|\|0\)\)/);
   assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;\s*fitEmbedView\(\);/,
     '上緣變了要重新 fit');
   // 算「想長多高」時不能看天花板，否則會變成「框小→少畫一行→框可以更小」的死循環。
@@ -220,7 +220,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p\);drawStoryBubble\(i,time\);/);
+  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p,i\);drawStoryBubble\(i,time\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
@@ -589,4 +589,22 @@ test('手機版（單欄）等級一覽表搬到最下面，走動搖桿才能�
   assert.match(js, /if\(section\.parentElement!==main\)main\.append\(section\)/);
   assert.match(js, /else if\(section\.parentElement!==play\)play\.append\(section\)/);
   assert.match(css, /main>\.level-table-section\{background:white;/);
+});
+
+test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈歌名與播放鈕，點歌名開網頁', async () => {
+  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
+  assert.match(html, /id="musicToggle"[\s\S]*id="musicUrl"[\s\S]*id="musicSave"[\s\S]*id="musicClear"/);
+  // 「現在的心情」那一區裡的音樂按鈕。
+  assert.ok(html.indexOf('id="moods"') < html.indexOf('id="musicToggle"') && html.indexOf('id="musicToggle"') < html.indexOf('id="message"'));
+  assert.match(js, /headphones\.src='assets\/headphones-v1\.webp/);
+  assert.match(js, /HP_FRAMES=6/);
+  assert.match(js, /Math\.floor\(t\*4\)%HP_FRAMES/, '六格音符輪流跳動');
+  assert.match(js, /if\(musicOf\(p\)\)bob\+=Math\.sin\(t\*9\)\*2\.2/, '點頭');
+  assert.match(js, /function musicOf\(p\)/, '要用 function 宣告：腳本開頭的 syncViewLayout 就會用到');
+  assert.match(js, /hits\.push\(\{type:'musicPlay'/);
+  assert.match(js, /hits\.push\(\{type:'musicLink'/);
+  assert.match(js, /window\.open\(music\.url,'_blank','noopener'\)/);
+  assert.match(js, /#008214/);
+  assert.match(js, /https:\/\/open\.spotify\.com\/embed\/iframe-api\/v1/);
+  assert.match(css, /#spotifyDock\{/);
 });

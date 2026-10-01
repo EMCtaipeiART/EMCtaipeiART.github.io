@@ -1839,6 +1839,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!['up', 'down', 'left', 'right'].includes(dir)) throw new Error('方向不正確');
       state.dir = dir;
     }
+    if ('music' in patch) {
+      // 正在聽的音樂：只收 Spotify 單曲與 Apple Music 的網址（點歌名會開這個網址，不能是任意連結）。空值＝停止分享。
+      const music = patch.music ? asRow(patch.music) : null;
+      if (!music || !text(music.url)) delete state.music;
+      else {
+        const url = text(music.url);
+        const provider = /^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]{22}(?:[/?][^\s]*)?$/.test(url) ? 'spotify'
+          : /^https:\/\/music\.apple\.com\/[a-z]{2}\/[^\s]+$/.test(url) ? 'apple' : '';
+        if (!provider || url.length > 300) throw new Error('請貼上 Spotify 單曲或 Apple Music 的網址');
+        state.music = { url, provider, title: text(music.title).replace(/\s+/g, ' ').slice(0, 80) || (provider === 'spotify' ? 'Spotify 單曲' : 'Apple Music 單曲') };
+      }
+    }
     const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
     // 照片欄位已改成限時動態（pixelOfficeStoryAdd）。還沒重新整理的舊版畫面會送 photo 過來，直接忽略。
     if (existing) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);

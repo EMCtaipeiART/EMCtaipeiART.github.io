@@ -283,6 +283,13 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
 
 大家常整天開著頁面、不會按重新整理，所以主系統（`index.html`）與像素辦公室（`app.js` 末尾）各有一段 `autoUpdate`：每 3 分鐘（切回分頁時也會）用 `HEAD` 問自己 `index.html` 的 ETag，跟載入當下比，不同就是新版上線（GitHub Pages 的 ETag 各節點一致，實測過）。主系統只在不會弄丟東西時自己重整：沒有彈窗、沒在打字、沒有寫到一半的內容（`textarea`／編輯器／表單）、45 秒沒操作或分頁在背景；否則在下方顯示「有新版本了 · 立即更新」。2 分鐘內剛自動重整過就不再連續重整。像素辦公室資料都在後端，動態視窗關著、沒在打字就直接重載。**只有 `index.html`（或像素辦公室的 `index.html`）內容有變才會被偵測到**——像素辦公室改 `app.js` 一定要一起把 `index.html` 裡的 `app.js?v=` 版本號加一，這本來就是既有規則。
 
+## 音樂（2026-10-01）
+
+- 「現在的心情」那一區多一顆「音樂」按鈕：貼 Spotify 單曲或 Apple Music 網址（判斷與主系統設計師設定的「分享音樂」同一套，歌名也是同樣抓法：Spotify oEmbed／iTunes lookup，都在瀏覽器端查）。資料存在人物狀態的 `music: {url, provider, title}`，Worker 的 `pixelOfficeUpdate` 只收 `open.spotify.com/track/<22 碼>` 與 `music.apple.com/<國碼>/…`，空值＝停止分享。
+- 畫面：`assets/headphones-v1.webp`（6 格 300×207，已去背、對齊；原稿是使用者提供的 6 格耳機圖）。每秒 4 格輪流跳音符、人物以 `sin(t*9)*2.2` 上下點頭；耳機畫在 `drawPerson` 裡跟著人一起動。
+- 原本對話框的位置改成音樂跑馬燈（`bubbleLayout` 回 `music:true`，`drawMusicContent` 畫）：左邊綠色播放小三角形（`musicPlay`），右邊歌名（`musicLink`，點了開網頁），歌名比框長才會捲動。**正在聽音樂時文字對話暫時不顯示**，停止分享後恢復。
+- ▶ 的行為：Apple Music 播 30 秒試聽；Spotify 打開官方 iframe 小播放器（`#spotifyDock`，右下角），因為瀏覽器只允許在使用者點擊後出聲。播放在各自的裝置上，不是同步給大家。
+
 ## 驗證與已知限制
 
 目前已做 JavaScript 語法、角色起點/碰撞、圖層深度、移動、畫布像素密度、泡泡文字置中、照片上傳、離席切換、1280 px 桌面版及 390 px 手機版實際瀏覽器測試，且無主控台錯誤。後續調整時仍需檢查：桌子接縫/尺寸、人物與提示物避讓、最長對話、手機排版、照片上傳與重開頁面存檔。

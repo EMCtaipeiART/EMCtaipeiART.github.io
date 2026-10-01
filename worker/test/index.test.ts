@@ -4235,6 +4235,27 @@ describe('Pixel Office shared state', () => {
     expect(left).toBe(0);
   });
 
+  it('shares what a designer is listening to (Spotify / Apple Music link + title) and only accepts those links', async () => {
+    const spotify = 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC';
+    const set = await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url: spotify, title: '  Never Gonna   Give You Up  ' } } });
+    expect(set).toMatchObject({ ok: true, person: { music: { url: spotify, provider: 'spotify', title: 'Never Gonna Give You Up' } } });
+    const state = await api({ action: 'pixelOfficeState' });
+    expect((state.people as Record<string, unknown>[]).find(person => person.name === 'Noise')).toMatchObject({ music: { provider: 'spotify' } });
+    // 其他欄位的更新不會洗掉正在聽的音樂。
+    await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { mood: 'happy' } });
+    expect(((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[]).find(person => person.name === 'Noise')).toMatchObject({ mood: 'happy', music: { url: spotify } });
+    const apple = 'https://music.apple.com/tw/album/some-song/1234567?i=1234568';
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url: apple, title: '' } } }))
+      .toMatchObject({ ok: true, person: { music: { provider: 'apple', title: 'Apple Music 單曲' } } });
+    // 不是這兩家的連結（含 javascript: 與冒名網域）一律擋下。
+    for (const url of ['javascript:alert(1)', 'https://evil.example/https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com.evil.example/track/4uLU6hMCjMI75M1A2tKUQC', 'http://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M']) {
+      expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url, title: 'x' } } })).toMatchObject({ ok: false });
+    }
+    // 停止分享。
+    const cleared = await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: '' } });
+    expect((cleared.person as Record<string, unknown>).music).toBeUndefined();
+  });
+
   it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const key = 'test-nas-watcher-key';

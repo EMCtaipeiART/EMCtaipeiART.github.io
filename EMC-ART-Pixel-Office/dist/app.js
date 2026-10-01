@@ -92,7 +92,7 @@ function sceneTopExtent(){
     // 這裡要問「不管上面擋不擋得住，它想長多高」，否則會變成「因為框小所以少畫一行、
     // 因為少畫一行所以框可以再小」的死循環。
     const layout=bubbleLayout(p,true);
-    if(layout)top=Math.min(top,p.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout.h-8);
+    if(layout)top=Math.min(top,p.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout.h-8-(layout.lift||0));
   }
   return Math.round(top);
 }
@@ -169,7 +169,7 @@ function select(i){selected=i;keys.clear();markDirty();document.querySelectorAll
   if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
   $('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();
   ensureLevels();
-  updateMood();updateStatus();renderMyStories();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();renderLevelTable();}
+  updateMood();updateStatus();renderMyStories();updateMusicPanel();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();renderLevelTable();}
 function numberText(value){return Number(value).toLocaleString('zh-TW',{maximumFractionDigits:1});}
 function levelTitle(level,group='graphic'){
   const list=levelTitles[group]||levelTitles.graphic;
@@ -417,6 +417,87 @@ function updateMood(){if(selected===null)return;updateStateText();document.query
 function setMood(id){if(selected===null)return;people[selected].mood=id;updateMood();save();pushChange(selected,{mood:id});}
 function updateStatus(){if(selected===null)return;updateStateText();const effective=effectiveStatusId(people[selected]);document.querySelectorAll('[data-status]').forEach(b=>{const active=b.dataset.status===effective;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});portrait($('portrait').getContext('2d'),selected);}
 function setStatus(id){if(selected===null)return;const p=people[selected];p.status=id;if(isAway(p))keys.clear();updateStatus();save();pushChange(selected,{status:id});toast(id==='present'?p.name+' 回到座位':p.name+' · '+statuses.find(status=>status.id===id).text);}
+// ───────── 音樂（現在正在聽的歌）─────────
+// 貼 Spotify 單曲或 Apple Music 網址分享：頭上戴耳機並跟著點頭、浮動音符；原本對話框的位置改成跑馬燈歌名
+// （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
+const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
+headphones.onload=()=>{markDirty();drawMusicIcon();};
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_SCALE=.34,HP_FRAMES=6,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;
+function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
+function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
+// 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
+function musicInfo(value){const text=String(value||'').trim();if(!text)return null;try{const parsed=new URL(text);if(parsed.protocol!=='https:')return null;
+  if(parsed.hostname==='open.spotify.com'){const match=parsed.pathname.match(/^\/(?:embed\/)?track\/([A-Za-z0-9]{22})(?:\/|$)/);return match?{provider:'spotify',label:'Spotify',id:match[1],url:`https://open.spotify.com/track/${match[1]}`}:null;}
+  if(parsed.hostname==='music.apple.com'){const parts=parsed.pathname.split('/').filter(Boolean),storefront=String(parts[0]||'us').toLowerCase(),pathId=[...parts].reverse().find(part=>/^\d+$/.test(part))||'',id=String(parsed.searchParams.get('i')||pathId);if(!/^[a-z]{2}$/.test(storefront)||!/^\d+$/.test(id))return null;return {provider:'apple',label:'Apple Music',id,storefront,url:`https://music.apple.com/${storefront}${parsed.pathname.slice(1+parts[0].length)}${parsed.search}`};}
+  return null;}catch{return null;}}
+const musicMetaCache=new Map();
+async function musicMetadata(info){
+  const key=`${info.provider}:${info.id}`;if(musicMetaCache.has(key))return musicMetaCache.get(key);
+  let meta={title:`${info.label} 單曲`,previewUrl:''};
+  try{
+    if(info.provider==='spotify'){const response=await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(info.url)}`);if(response.ok){const data=await response.json();meta.title=String(data.title||'').trim()||meta.title;}}
+    else{const response=await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(info.id)}&country=${encodeURIComponent(info.storefront||'us')}`);if(response.ok){const data=await response.json(),track=(data.results||[]).find(item=>String(item.trackId||'')===info.id)||data.results?.[0];if(track)meta={title:[track.trackName,track.artistName].filter(Boolean).join(' - ')||meta.title,previewUrl:String(track.previewUrl||'')};}}
+  }catch{}
+  musicMetaCache.set(key,meta);return meta;
+}
+function updateMusicPanel(){
+  const toggle=$('musicToggle');if(!toggle||selected===null)return;
+  const music=musicOf(people[selected]);
+  toggle.classList.toggle('is-sharing',Boolean(music));$('musicNow').textContent=music?`正在分享：${music.title}`:'分享現在正在聽的歌';
+  $('musicClear').hidden=!music;if(document.activeElement!==$('musicUrl'))$('musicUrl').value=music?music.url:'';
+}
+function setMusicHint(message,isError=false){const hint=$('musicHint');hint.textContent=message;hint.classList.toggle('is-error',isError);}
+if($('musicToggle')){
+  $('musicToggle').onclick=()=>{const open=$('musicPanel').hidden;$('musicPanel').hidden=!open;$('musicToggle').setAttribute('aria-expanded',String(open));if(open)$('musicUrl').focus();};
+  $('musicSave').onclick=async()=>{
+    const index=selected;if(index===null)return;
+    const info=musicInfo($('musicUrl').value);
+    if(!info){setMusicHint('網址看不懂：請貼 Spotify「單曲」或 Apple Music 的歌曲網址。',true);return;}
+    $('musicSave').disabled=true;setMusicHint('正在查歌名…');
+    try{
+      const meta=await musicMetadata(info);
+      people[index].music={url:info.url,provider:info.provider,title:meta.title};markDirty();save();updateMusicPanel();
+      await pushChange(index,{music:{url:info.url,title:meta.title}});
+      setMusicHint('已分享！頭上會戴耳機，大家點歌名可以開網頁。');toast('正在分享：'+meta.title);
+    }finally{$('musicSave').disabled=false;}
+  };
+  $('musicClear').onclick=()=>{const index=selected;if(index===null)return;people[index].music=null;if(musicPlaying.i===index)stopMusic();markDirty();save();updateMusicPanel();pushChange(index,{music:''});setMusicHint('已停止分享。');};
+}
+// 播放：Apple Music 播 30 秒試聽；Spotify 打開 Spotify 官方的小播放器（右下角），因為瀏覽器只允許在使用者點擊後播放。
+let musicPlaying={i:-1,paused:true,audio:null,controller:null};
+const isMusicPlaying=i=>musicPlaying.i===i&&!musicPlaying.paused;
+function stopMusic(){
+  if(musicPlaying.audio){musicPlaying.audio.pause();}
+  const dock=$('spotifyDock');if(dock){dock.hidden=true;dock.querySelector('.dock-host').replaceChildren();}
+  musicPlaying={i:-1,paused:true,audio:null,controller:null};markDirty();
+}
+let spotifyApiPromise=null;
+function spotifyApi(){return spotifyApiPromise||(spotifyApiPromise=new Promise((resolve,reject)=>{window.onSpotifyIframeApiReady=api=>resolve(api);const tag=document.createElement('script');tag.src='https://open.spotify.com/embed/iframe-api/v1';tag.async=true;tag.onerror=()=>{spotifyApiPromise=null;reject(Error('無法載入 Spotify 播放器'));};document.head.append(tag);}));}
+function ensureSpotifyDock(){let dock=$('spotifyDock');if(dock)return dock;dock=document.createElement('div');dock.id='spotifyDock';dock.innerHTML='<button type="button" aria-label="關閉播放器">✕</button><div class="dock-host"></div>';dock.querySelector('button').onclick=stopMusic;document.body.append(dock);return dock;}
+async function toggleMusic(i){
+  const music=musicOf(people[i]),info=music&&musicInfo(music.url);if(!info)return;
+  if(musicPlaying.i===i){
+    if(musicPlaying.audio){if(musicPlaying.paused){await musicPlaying.audio.play();musicPlaying.paused=false;}else{musicPlaying.audio.pause();musicPlaying.paused=true;}markDirty();return;}
+    if(musicPlaying.controller){musicPlaying.controller.togglePlay();return;}
+  }
+  stopMusic();
+  try{
+    if(info.provider==='apple'){
+      const meta=await musicMetadata(info);
+      if(!meta.previewUrl){window.open(info.url,'_blank','noopener');return;}
+      const audio=new Audio(meta.previewUrl);audio.onended=stopMusic;await audio.play();
+      musicPlaying={i,paused:false,audio,controller:null};markDirty();
+    }else{
+      const api=await spotifyApi(),dock=ensureSpotifyDock(),host=dock.querySelector('.dock-host'),target=document.createElement('div');
+      host.replaceChildren(target);dock.hidden=false;musicPlaying={i,paused:false,audio:null,controller:null};markDirty();
+      api.createController(target,{uri:`spotify:track:${info.id}`,width:'100%',height:80},controller=>{
+        if(musicPlaying.i!==i)return;musicPlaying.controller=controller;
+        controller.addListener('ready',()=>controller.play());
+        controller.addListener('playback_update',event=>{if(musicPlaying.i!==i)return;musicPlaying.paused=Boolean(event.data&&event.data.isPaused);markDirty();});
+      });
+    }
+  }catch(err){stopMusic();toast('無法播放：'+(err&&err.message?err.message:'請點歌名到網頁收聽'));}
+}
 // ───────── 限時動態 ─────────
 // 貼出後 24 小時自動下架（後端負責），可以按讚、留言，互動紀錄會同步到資料庫後台的 REELS。
 // 人物右上角只放一顆像素風訊息氣泡：有動態才出現，有沒看過的就多一顆綠色提示點。
@@ -689,9 +770,10 @@ function applyRemote(list){markDirty();
     if(typeof entry.message==='string')p.message=entry.message;
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
+    p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
-    if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();}
+    if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
   }
   // 第一次上線、後端還沒有某人的資料：把這台電腦上已經設定的內容補上去，大家從同一份開始。
   // 出勤狀態刻意不補：後端會把任何送上去的狀態當成「使用者手動指定」而暫停自動判斷，只是某台瀏覽器
@@ -712,7 +794,7 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else{select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});}}else{if(embedMode)setCardPinned(false);select(null);}});
+game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});}}else{if(embedMode)setCardPinned(false);select(null);}});
 // 點一下把資料卡固定住：固定之後滑鼠移開不會收起，也才點得到上面的技能膠囊。
 // 沒固定時只是滑過預覽（卡片不吃滑鼠事件，見 CSS），滑到別人身上就換人。
 let cardPinned=false;
@@ -722,7 +804,7 @@ game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);gam
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。
   setHoverStory(hit&&hit.type==='story'?hit.i:-1,e);
   if(!embedMode||e.pointerType==='touch'||cardPinned)return;
-  if(hit&&hit.type==='story'){if(selected!==null)select(null);}
+  if(hit&&['story','musicPlay','musicLink'].includes(hit.type)){if(selected!==null)select(null);}
   else if(hit&&hit.type!=='status'){if(hit.i!==selected)select(hit.i);}
   else if(selected!==null)select(null);});
 game.addEventListener('pointerleave',()=>{setHoverStory(-1);if(embedMode&&!cardPinned)select(null);});
@@ -847,10 +929,34 @@ function bubbleCeiling(p){
   if(p.y-150>=plateBottom)return plateBottom;
   return embedMode?EMBED_CONTENT.y0+4:10;
 }
+/** 音樂對話框的內容：左邊播放小三角形（綠色圓鈕）、右邊跑馬燈歌名（點歌名開網頁）。 */
+function drawMusicContent(p,i,layout,x,y,w,h){
+  const music=musicOf(p),cy=y+h/2,t=performance.now()/1000,playing=isMusicPlaying(i);
+  const bx=x+17,r=9;
+  ctx.shadowColor='transparent';
+  ctx.beginPath();ctx.arc(bx,cy,r,0,Math.PI*2);ctx.fillStyle='#008214';ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();
+  if(playing){ctx.rect(bx-4,cy-4.5,3,9);ctx.rect(bx+1,cy-4.5,3,9);}else{ctx.moveTo(bx-3,cy-5);ctx.lineTo(bx+5,cy);ctx.lineTo(bx-3,cy+5);ctx.closePath();}
+  ctx.fill();
+  if(i>=0)hits.push({type:'musicPlay',i,x:bx-r-4,y:y,w:r*2+8,h});
+  const tx=x+32,tw=w-32-10,label='♪ '+music.title;
+  ctx.font=`700 ${layout.font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
+  ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#1d3350';
+  const textW=ctx.measureText(label).width;
+  ctx.save();ctx.beginPath();ctx.rect(tx,y+2,tw,h-4);ctx.clip();
+  if(textW<=tw)ctx.fillText(label,tx,cy+.5);
+  else{const gap=40,offset=(t*32)%(textW+gap);ctx.fillText(label,tx-offset,cy+.5);ctx.fillText(label,tx-offset+textW+gap,cy+.5);}
+  ctx.restore();
+  if(i>=0)hits.push({type:'musicLink',i,x:tx,y,w:tw,h});
+}
 /** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
 /** 算出這個人的對話框要多大（不畫）。ignoreCeiling 是「先不管上面擋不擋得住」——
  *  版面要先知道對話框想長多高，才有辦法在框裡把上面的空間留剛好（見 sceneTopExtent）。 */
 function bubbleLayout(p,ignoreCeiling=false){
+  if(musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
+    const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
+    return {music:true,font,lineHeight,lines:[],tipY:Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
+  }
   const message=String(p.message||'').trim();
   if(!message)return null;
   const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
@@ -872,7 +978,7 @@ function bubbleLayout(p,ignoreCeiling=false){
   };
 }
 /** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
-function drawBubble(p){
+function drawBubble(p,personIndex=-1){
   const layout=bubbleLayout(p);
   if(!layout)return;
   const {lineHeight,lines,tipY,w,h}=layout;
@@ -901,12 +1007,13 @@ function drawBubble(p){
   tail();ctx.fillStyle=glass;ctx.fill();
   ctx.shadowColor='transparent';
   ctx.strokeStyle='rgba(140,162,192,.55)';ctx.lineWidth=1;ctx.stroke();
+  if(layout.music){drawMusicContent(p,personIndex,layout,x,y,w,h);ctx.restore();return;}
   ctx.fillStyle='#1d3350';ctx.textAlign='center';ctx.textBaseline='middle';
   lines.forEach((line,index)=>ctx.fillText(line,x+w/2,y+BUBBLE_PAD_Y+lineHeight*index+lineHeight/2));
   ctx.textBaseline='alphabetic';ctx.restore();
 }
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
-function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;if(musicOf(p))bob+=Math.sin(t*9)*2.2;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const frame=Math.floor(t*4)%HP_FRAMES;ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,-HP_FRAME_W*HP_SCALE/2,-159+bob,HP_FRAME_W*HP_SCALE,HP_FRAME_H*HP_SCALE);}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
 // 用同樣的尺寸畫在桌上就會比別的狀態大一圈。面板按鈕有外框當基準、看不出來，所以只縮桌上這邊。
@@ -916,7 +1023,7 @@ const DESK_ICON_SCALE={power:.8,briefcase:.78};
 /** 加班標籤：移除場景中的月亮，只把「加班中」置中畫在桌面中央。 */
 function drawOvertimeBadge(s,p){const status=statuses.find(item=>item.id==='overtime'),x=s.x,h=24;ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.text).width+22),labelY=s.y+24;softPanel(ctx,x-w/2,labelY-h/2,w,h,{radius:12,fill:'#fff6d6',stroke:'#e2b04a',lineWidth:1,shadow:true});ctx.fillStyle='#6a4a10';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.text,x,labelY+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-w/2,y:labelY-h/2,w,h});}
 function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=DESK_ICON_BASE*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=iconY-DESK_ICON_BASE/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:labelY,w:iconSize,h:iconY+iconSize/2-labelY});}
-const sceneAnimating=()=>people.some(p=>!isAway(p)&&(p.mood||(!storyReducedMotion.matches&&storyUnread(p.name))));
+const sceneAnimating=()=>people.some(p=>!isAway(p)&&(p.mood||musicOf(p)||(!storyReducedMotion.matches&&storyUnread(p.name))));
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
