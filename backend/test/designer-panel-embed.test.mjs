@@ -700,7 +700,7 @@ test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留�
   assert.match(js, /Promise\.all\(\[load\(wardrobeSheets\.heads\),load\(wardrobeSheets\.outfits\),load\(furniture\)\]\)\.then\(\(\)=>\{ready=true;loadAccessories\(\);/);
   assert.match(js, /function loadAccessories\(\)\{if\(!wardrobeSheets\.acc\.getAttribute\('src'\)\)/);
   // 耳機圖只有在有人聽音樂（或編輯畫面）才載。
-  assert.doesNotMatch(js, /headphones\.src='assets\/headphones-v1\.webp\?v=2';/);
+  assert.doesNotMatch(js, /const headphones=new Image\(\);headphones\.src/, '耳機圖不能在宣告時就載');
   assert.match(js, /function ensureHeadphones\(\)/);
   // 預載只留進站一定要用的三張；其他圖由 app.js 之後再載，不跟 app.js 搶頻寬。
   assert.match(html, /rel="preload" as="image" href="assets\/wardrobe-heads\.webp/);
