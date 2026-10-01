@@ -932,6 +932,17 @@ Promise.all([load(sheet),load(furniture)]).then(()=>{ready=true;markDirty();$('l
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}
 
+// 手機（單欄）版面：等級一覽表放到最下面，讓走動搖桿跟場景在同一個畫面裡。桌面版維持放在場景卡片底下，
+// 所以不是用 CSS 調順序（兩者不在同一層），而是跟著視窗寬度把這一塊搬到 main 的最後或搬回去。
+(function placeLevelTable(){
+  if(embedMode)return;
+  const section=document.querySelector('.level-table-section'),play=document.querySelector('.play'),main=document.querySelector('main');
+  if(!section||!play||!main||!window.matchMedia)return;
+  const query=matchMedia('(max-width:1000px)');
+  const place=()=>{if(query.matches){if(section.parentElement!==main)main.append(section);}else if(section.parentElement!==play)play.append(section);};
+  query.addEventListener('change',place);place();
+})();
+
 // 自動更新：嵌在主系統裡（或單獨開著）的畫面整天不會被重新整理。每 3 分鐘用 HEAD 問一次自己的 index.html
 // 的 ETag，跟載入當下比，不一樣就是有新版；等到不會打斷人的時候（沒開動態視窗、沒在打字）自己重新載入。
 // 狀態都存在後端，重新載入不會掉資料。剛重新載入過 2 分鐘內不再連續重整。

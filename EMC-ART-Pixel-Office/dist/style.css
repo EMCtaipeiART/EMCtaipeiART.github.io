@@ -274,3 +274,6 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
 
 /* 個人技能表只在嵌入（前台 index.html）顯示，編輯畫面不顯示 */
 html:not(.embed) .person-card{display:none!important}
+
+/* 手機版：等級一覽表搬到最下面（見 app.js placeLevelTable），自己是一張卡片 */
+main>.level-table-section{background:white;border:1px solid #dce3ed;border-radius:20px}

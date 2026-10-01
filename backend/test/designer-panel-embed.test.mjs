@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=59/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=60/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -581,4 +581,12 @@ test('個人技能表（人物資料卡）只在前台嵌入畫面顯示，編�
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   assert.match(js, /if\(selected===null\|\|!embedMode\)\{card\.hidden=true;return;\}/);
   assert.match(css, /html:not\(\.embed\) \.person-card\{display:none!important\}/);
+});
+
+test('手機版（單欄）等級一覽表搬到最下面，走動搖桿才能跟場景在同一個畫面', async () => {
+  const [js, css] = await Promise.all([officeJs(), officeCss()]);
+  assert.match(js, /matchMedia\('\(max-width:1000px\)'\)/);
+  assert.match(js, /if\(section\.parentElement!==main\)main\.append\(section\)/);
+  assert.match(js, /else if\(section\.parentElement!==play\)play\.append\(section\)/);
+  assert.match(css, /main>\.level-table-section\{background:white;/);
 });
