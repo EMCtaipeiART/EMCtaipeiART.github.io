@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=76/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=77/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -685,4 +685,10 @@ test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子�
 test('帽子比之前再往下一點（正面 .34、側面 .32 倍帽高）', async () => {
   const js = await officeJs();
   assert.match(js, /h\*\(view===1\?\.32:\.34\)\+WD_DROP\[i\]/);
+});
+
+test('Amber 的眼鏡與墨鏡跟 Leona 一樣大（臉比較窄所以放大 1.19 倍）', async () => {
+  const js = await officeJs();
+  assert.match(js, /WD_GLASSES_SIZE=\[1,1\.19,1,1,1\]/);
+  assert.match(js, /\*WD_GLASSES_SIZE\[i\],w=g\.w\*s/);
 });
