@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=67/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=68/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -612,7 +612,7 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
 
 test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spotify 播放器）', async () => {
   const js = await officeJs();
-  assert.match(js, /HP_OFFSET_X=-3,HP_OFFSET_Y=-155/);
+  assert.match(js, /HP_OFFSET_X=3,HP_OFFSET_Y=-160/);
   assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)\.catch/);
   assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
 });
@@ -667,4 +667,12 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
   assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
   assert.match(js, /y:WD_DROP\[i\],/);
   assert.equal((js.match(/\+WD_DROP\[i\]\}\)/g) || []).length, 2, '眼鏡與帽子都要加上');
+});
+
+test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
+  const js = await officeJs();
+  assert.match(js, /HP_SCALE=\.41/);
+  assert.match(js, /HP_FRAME_H\*HP_SCALE\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\);/);
+  assert.match(js, /function drawWardrobeCap\(/);
+  assert.match(js, /capCanvas/);
 });
