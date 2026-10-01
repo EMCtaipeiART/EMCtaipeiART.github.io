@@ -2919,7 +2919,7 @@ test('designer settings are reachable from media management accounts as well as 
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /function canAccessDesignerSettings\(\)\{return accessAllowed\('designer\.settings',hasDesignerAccountRole\(\)\)\|\|accessAllowed\('media\.manage',hasDesignerAccountRole\(\)\)\}/);
   assert.match(html, /if\(!canAccessDesignerSettings\(\)\)\{setSync\('此帳號沒有設計師設定或圖片管理權限',true\);return\}/);
-  assert.match(html, /show\('#accountDesignerSettings',loggedIn&&canAccessDesignerSettings\(\)\)/);
+  assert.doesNotMatch(html, /show\('#accountDesignerSettings'/);
 });
 
 test('case design uploader accepts files whose MIME type the browser could not infer, always explains an empty selection, and can never hang forever on a video frame grab', async () => {
@@ -4206,7 +4206,9 @@ test('designer settings gain their own signature presets, past story thumbnails 
   assert.match(html, /const radioName=`signature-preset-default-\$\{String\(scope\)\.replace\(/);
 
   // ② 設計師看得到設計師設定，就不再顯示個人設定入口（其他角色不受影響）；管理者例外，要用個人設定裡的客戶設定。
-  assert.match(html, /show\('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken\(\)&&accessAllowed\('profile\.edit',true\)&&\(isAdministrator\(\)\|\|!canAccessDesignerSettings\(\)\)\);/);
+  // 2026-10-01：設計師設定選單入口移除，設計師與其他角色一律使用個人設定。
+  assert.match(html, /show\('#accountPersonalSettings',loggedIn&&!isLocalPreviewToken\(\)&&accessAllowed\('profile\.edit',true\)\);/);
+  assert.doesNotMatch(html, /id="accountDesignerSettings"/);
 
   // ③ 管理照片欄位列出過往貼過的縮圖，滑鼠停留顯示互動狀況與最新留言。
   assert.match(html, /data-manage-designer-photo="\$\{esc\(name\)\}">管理圖片與 Reels<\/button>\$\{designerReelThumbsHtml\(name\)\}/);
@@ -4386,11 +4388,12 @@ test('reply templates saved as formatted text are inserted as formatting, not as
 test('personal settings 客戶設定 lists only customers the account can manage and saves just the customers that changed', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 區塊放在個人設定裡，開啟時渲染、儲存時一併送出、切換客戶別會先暫存勾選。
-  assert.match(html, /<section class="personal-mail-templates personal-customer-settings" id="personalCustomerSettings" hidden>/);
+  // 2026-10-01：個人設定畫面不再顯示客戶設定區塊（函式保留，區塊不存在時直接略過）。
+  assert.doesNotMatch(html, /id="personalCustomerSettings"/);
   assert.match(html, /renderPersonalCustomerSettings\(\);setPersonalSettingsStatus\(\);modal\.hidden=false;/);
   // 2026-09-18 起每個區塊各自儲存，客戶設定有自己的「儲存」。
   assert.match(html, /const saved=await savePersonalCustomerSettings\(\);/);
-  assert.match(html, /data-personal-save="customers"/);
+  assert.doesNotMatch(html, /data-personal-save="customers"/);
   assert.match(html, /\$\('#personalCustomerSelect'\)\?\.addEventListener\('change',event=>switchPersonalCustomer\(event\.target\.value\)\);/);
 
   const pick = name => html.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
@@ -4807,7 +4810,11 @@ test('設計師回覆信的預設內文依項目細節：社群貼文／廣告�
 
 test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名}，套用時換成收件人名字', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
-  for (const key of ['profile', 'templates', 'signatures', 'customers']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
+  // 2026-10-01：顯示名不可自行修改（無儲存鈕）、客戶設定從個人設定移除；範本／簽名檔區塊預設收合。
+  for (const key of ['templates', 'signatures']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
+  for (const key of ['profile', 'customers']) assert.doesNotMatch(html, new RegExp(`data-personal-save="${key}"`));
+  assert.match(html, /<input type="text" name="displayName"[^>]*readonly/);
+  assert.match(html, /<details class="personal-mail-templates personal-collapsible"><summary/);
   assert.match(html, /id="personalSettingsCancel">關閉<\/button><\/div>/, '底部不再有「一起儲存」');
   const section = html.match(/async function savePersonalSettingsSection\(section\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(section);
