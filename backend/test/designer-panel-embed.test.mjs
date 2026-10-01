@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=63/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=64/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -627,4 +627,13 @@ test('Spotify 播放器在畫面上隱藏（只聽音樂），用人物頭上的
 test('像素辦公室的 app.js 語法正確（只比對文字的測試抓不到整行被註解吃掉這種錯）', async () => {
   const source = await officeJs();
   assert.doesNotThrow(() => new vm.Script(source, { filename: 'app.js' }));
+});
+
+test('音樂可以分享 Spotify 的歌單、專輯與 Podcast，跑馬燈標明種類並用對應的 URI 播放', async () => {
+  const js = await officeJs();
+  assert.match(js, /\(track\|album\|playlist\|show\|episode\)/);
+  assert.match(js, /playlist:'♪ 歌單 · '/);
+  assert.match(js, /episode:'🎙 Podcast · '/);
+  assert.match(js, /uri:`spotify:\$\{info\.kind\}:\$\{info\.id\}`/);
+  assert.match(js, /label=musicPrefix\(music\)\+music\.title/);
 });

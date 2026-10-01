@@ -4248,8 +4248,13 @@ describe('Pixel Office shared state', () => {
     expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url: apple, title: '' } } }))
       .toMatchObject({ ok: true, person: { music: { provider: 'apple', title: 'Apple Music 單曲' } } });
     // 不是這兩家的連結（含 javascript: 與冒名網域）一律擋下。
-    for (const url of ['javascript:alert(1)', 'https://evil.example/https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com.evil.example/track/4uLU6hMCjMI75M1A2tKUQC', 'http://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M']) {
+    for (const url of ['javascript:alert(1)', 'https://evil.example/https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com.evil.example/track/4uLU6hMCjMI75M1A2tKUQC', 'http://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC', 'https://open.spotify.com/user/someone', 'https://open.spotify.com/artist/37i9dQZF1DXcBWIGoYBM5M', 'https://open.spotify.com/playlist/short']) {
       expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url, title: 'x' } } })).toMatchObject({ ok: false });
+    }
+    // Podcast 與歌單、專輯也可以分享。
+    for (const kind of ['episode', 'show', 'playlist', 'album']) {
+      expect(await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: { url: `https://open.spotify.com/${kind}/37i9dQZF1DXcBWIGoYBM5M`, title: kind } } }))
+        .toMatchObject({ ok: true, person: { music: { provider: 'spotify' } } });
     }
     // 停止分享。
     const cleared = await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: '' } });

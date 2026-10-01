@@ -427,13 +427,18 @@ function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
 function musicInfo(value){const text=String(value||'').trim();if(!text)return null;try{const parsed=new URL(text);if(parsed.protocol!=='https:')return null;
-  if(parsed.hostname==='open.spotify.com'){const match=parsed.pathname.match(/^\/(?:embed\/)?track\/([A-Za-z0-9]{22})(?:\/|$)/);return match?{provider:'spotify',label:'Spotify',id:match[1],url:`https://open.spotify.com/track/${match[1]}`}:null;}
+  if(parsed.hostname==='open.spotify.com'){// 單曲、專輯、歌單，以及 Podcast 的節目與單集（網址可能帶 intl-xx 之類的前綴）
+    const match=parsed.pathname.match(/^\/(?:intl-[a-z-]+\/)?(?:embed\/)?(track|album|playlist|show|episode)\/([A-Za-z0-9]{22})(?:\/|$)/);
+    return match?{provider:'spotify',label:'Spotify',kind:match[1],id:match[2],url:`https://open.spotify.com/${match[1]}/${match[2]}`}:null;}
   if(parsed.hostname==='music.apple.com'){const parts=parsed.pathname.split('/').filter(Boolean),storefront=String(parts[0]||'us').toLowerCase(),pathId=[...parts].reverse().find(part=>/^\d+$/.test(part))||'',id=String(parsed.searchParams.get('i')||pathId);if(!/^[a-z]{2}$/.test(storefront)||!/^\d+$/.test(id))return null;return {provider:'apple',label:'Apple Music',id,storefront,url:`https://music.apple.com/${storefront}${parsed.pathname.slice(1+parts[0].length)}${parsed.search}`};}
   return null;}catch{return null;}}
+// 分享的是什麼：跑馬燈歌名前面的小標。單曲用 ♪，其他標明種類，大家一看就知道不是單曲。
+const MUSIC_KIND_PREFIX={track:'♪ ',album:'♪ 專輯 · ',playlist:'♪ 歌單 · ',show:'🎙 Podcast · ',episode:'🎙 Podcast · '};
+const musicPrefix=music=>{const info=musicInfo(music.url);return MUSIC_KIND_PREFIX[info&&info.kind]||'♪ ';};
 const musicMetaCache=new Map();
 async function musicMetadata(info){
   const key=`${info.provider}:${info.id}`;if(musicMetaCache.has(key))return musicMetaCache.get(key);
-  let meta={title:`${info.label} 單曲`,previewUrl:''};
+  let meta={title:info.kind&&info.kind!=='track'?`${info.label} ${({album:'專輯',playlist:'歌單',show:'Podcast 節目',episode:'Podcast 單集'})[info.kind]||''}`.trim():`${info.label} 單曲`,previewUrl:''};
   try{
     if(info.provider==='spotify'){const response=await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(info.url)}`);if(response.ok){const data=await response.json();meta.title=String(data.title||'').trim()||meta.title;}}
     else{const response=await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(info.id)}&country=${encodeURIComponent(info.storefront||'us')}`);if(response.ok){const data=await response.json(),track=(data.results||[]).find(item=>String(item.trackId||'')===info.id)||data.results?.[0];if(track)meta={title:[track.trackName,track.artistName].filter(Boolean).join(' - ')||meta.title,previewUrl:String(track.previewUrl||'')};}}
@@ -452,7 +457,7 @@ if($('musicToggle')){
   $('musicSave').onclick=async()=>{
     const index=selected;if(index===null)return;
     const info=musicInfo($('musicUrl').value);
-    if(!info){setMusicHint('網址看不懂：請貼 Spotify「單曲」或 Apple Music 的歌曲網址。',true);return;}
+    if(!info){setMusicHint('網址看不懂：請貼 Spotify（單曲、專輯、歌單、Podcast）或 Apple Music 歌曲的網址。',true);return;}
     $('musicSave').disabled=true;setMusicHint('正在查歌名…');
     try{
       const meta=await musicMetadata(info);
@@ -492,7 +497,7 @@ async function toggleMusic(i){
       const api=await spotifyApi(),dock=ensureSpotifyDock(),host=dock.querySelector('.dock-host'),target=document.createElement('div');
       host.replaceChildren(target);dock.hidden=false;musicPlaying={i,paused:false,started:false,audio:null,controller:null};markDirty();
       setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)toast('瀏覽器擋住了自動播放，請再按一次綠色播放鍵。');},3000);
-      api.createController(target,{uri:`spotify:track:${info.id}`,width:'100%',height:80},controller=>{
+      api.createController(target,{uri:`spotify:${info.kind}:${info.id}`,width:'100%',height:80},controller=>{
         if(musicPlaying.i!==i)return;musicPlaying.controller=controller;
         controller.addListener('ready',()=>{controller.play();setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)controller.resume&&controller.resume();},800);});
         controller.addListener('playback_update',event=>{if(musicPlaying.i!==i)return;musicPlaying.paused=Boolean(event.data&&event.data.isPaused);if(!musicPlaying.paused)musicPlaying.started=true;markDirty();});
@@ -943,7 +948,7 @@ function drawMusicContent(p,i,layout,x,y,w,h){
   if(playing){ctx.rect(bx-4,cy-4.5,3,9);ctx.rect(bx+1,cy-4.5,3,9);}else{ctx.moveTo(bx-3,cy-5);ctx.lineTo(bx+5,cy);ctx.lineTo(bx-3,cy+5);ctx.closePath();}
   ctx.fill();
   if(i>=0)hits.push({type:'musicPlay',i,x:bx-r-4,y:y,w:r*2+8,h});
-  const tx=x+32,tw=w-32-10,label='♪ '+music.title;
+  const tx=x+32,tw=w-32-10,label=musicPrefix(music)+music.title;
   ctx.font=`700 ${layout.font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
   ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#1d3350';
   const textW=ctx.measureText(label).width;

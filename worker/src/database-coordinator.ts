@@ -1856,12 +1856,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       state.dir = dir;
     }
     if ('music' in patch) {
-      // 正在聽的音樂：只收 Spotify 單曲與 Apple Music 的網址（點歌名會開這個網址，不能是任意連結）。空值＝停止分享。
+      // 正在聽的音樂：只收 Spotify（單曲／專輯／歌單／Podcast 節目與單集）與 Apple Music 歌曲的網址（點歌名會開這個網址，不能是任意連結）。空值＝停止分享。
       const music = patch.music ? asRow(patch.music) : null;
       if (!music || !text(music.url)) delete state.music;
       else {
         const url = text(music.url);
-        const provider = /^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]{22}(?:[/?][^\s]*)?$/.test(url) ? 'spotify'
+        const provider = /^https:\/\/open\.spotify\.com\/(?:track|episode|show|playlist|album)\/[A-Za-z0-9]{22}(?:[/?][^\s]*)?$/.test(url) ? 'spotify'
           : /^https:\/\/music\.apple\.com\/[a-z]{2}\/[^\s]+$/.test(url) ? 'apple' : '';
         if (!provider || url.length > 300) throw new Error('請貼上 Spotify 單曲或 Apple Music 的網址');
         state.music = { url, provider, title: text(music.title).replace(/\s+/g, ' ').slice(0, 80) || (provider === 'spotify' ? 'Spotify 單曲' : 'Apple Music 單曲') };

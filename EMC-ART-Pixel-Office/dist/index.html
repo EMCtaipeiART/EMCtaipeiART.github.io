@@ -14,7 +14,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=37">
+  <link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
   <header>
@@ -55,9 +55,9 @@
       <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button>
         <button type="button" class="music-toggle" id="musicToggle" aria-expanded="false" aria-controls="musicPanel"><canvas id="musicIcon" width="60" height="42" aria-hidden="true"></canvas><span>音樂</span><small id="musicNow">分享現在正在聽的歌</small></button>
         <div class="music-panel" id="musicPanel" hidden>
-          <input type="url" id="musicUrl" placeholder="貼上 Spotify 單曲或 Apple Music 的網址" aria-label="音樂網址" autocomplete="off">
+          <input type="url" id="musicUrl" placeholder="貼上 Spotify（歌曲、歌單、Podcast）或 Apple Music 的網址" aria-label="音樂網址" autocomplete="off">
           <div class="music-actions"><button type="button" class="primary" id="musicSave">分享這首歌</button><button type="button" class="text-button" id="musicClear">停止分享</button></div>
-          <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示歌名，大家點歌名可以開網頁。</p>
+          <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示名稱，大家點名稱可以開網頁。</p>
         </div></section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
@@ -78,6 +78,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=63"></script>
+  <script src="app.js?v=64"></script>
 </body>
 </html>
