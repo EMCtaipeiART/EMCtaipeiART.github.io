@@ -192,6 +192,15 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-01 Asia/Taipei — 降低 Chrome 開啟首頁的卡頓：像素辦公室動畫節流、移除全螢幕彈窗模糊
+
+- 修改目的：使用者回報用 Chrome 開 index.html 非常卡。
+- 追查過程：未登入狀態在本機量測，載入 128ms、無 long task、閒置無重繪，頁面本身不重；剩下兩個全程／常態成本：①嵌入的像素辦公室 `render()` 只要有人設心情或有未讀動態，就每幀（60fps、最高 3x 解析度）整張重畫＋排序＋陰影，且 iframe 捲出畫面也照畫；②所有彈窗遮罩（`.login-modal`、`#caseDetailModal`、`#ownerProjectsModal`、確認視窗等）用 `backdrop-filter:blur`，Chrome 要對整個背景頁面做即時模糊。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/app.js`、`index.html`（iframe `?v=53` 破快取）、`backend/test/designer-panel-embed.test.mjs`。
+- 影響功能：嵌入模式動畫限制約 30fps、離開可視範圍暫停重畫、畫布縮放上限 3→2；移除全部 `backdrop-filter:blur`（遮罩只剩半透明深色，視覺上少了背景模糊）。
+- 風險／未驗證：**沒有在使用者實際的登入狀態與真實 Chrome 上量到前後數字**（本機瀏覽器窗格背景時 rAF 被節流，量到的幀率不可信），以上是依程式碼找出的最可能原因；若仍卡，請提供是哪個動作（載入、捲動、開彈窗）卡，再用 Chrome Performance 錄製。
+- 驗證：script 語法通過；`node --test` 206 全過。部署：純前端，push 後生效。
+
 ### 2026-10-01 Asia/Taipei — 個人設定：區塊預設收合、顯示名唯讀、客戶設定限管理者／Machi／企劃部／專案部、移除「設計師設定」選單入口
 
 - 修改目的：個人設定項目過多、畫面被拖很長；使用者要求預設收合、設計師設定併入個人設定、禁止改名、不顯示客戶設定。
