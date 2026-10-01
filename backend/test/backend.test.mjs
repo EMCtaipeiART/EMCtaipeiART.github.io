@@ -4389,7 +4389,7 @@ test('personal settings 客戶設定 lists only customers the account can manage
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 區塊放在個人設定裡，開啟時渲染、儲存時一併送出、切換客戶別會先暫存勾選。
   // 2026-10-01：客戶設定僅開放管理者、Machi、企劃部、專案部，設計部其他同仁不顯示。
-  assert.match(html, /<section class="personal-mail-templates personal-customer-settings" id="personalCustomerSettings" hidden>/);
+  assert.match(html, /<details class="personal-mail-templates personal-collapsible personal-customer-settings" id="personalCustomerSettings" hidden><summary/);
   assert.match(html, /function canUsePersonalCustomerSettings\(\)\{[\s\S]*?企劃部[\s\S]*?專案部/);
   assert.match(html, /renderPersonalCustomerSettings\(\);setPersonalSettingsStatus\(\);modal\.hidden=false;/);
   // 2026-09-18 起每個區塊各自儲存，客戶設定有自己的「儲存」。

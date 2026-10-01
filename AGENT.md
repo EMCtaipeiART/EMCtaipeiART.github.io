@@ -196,7 +196,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 - 修改目的：個人設定項目過多、畫面被拖很長；使用者要求預設收合、設計師設定併入個人設定、禁止改名、不顯示客戶設定。
 - 影響檔案：`index.html`、`backend/test/backend.test.mjs`。
-- 影響功能：信件範本／簽名檔設定改為 `<details>` 預設收合（儲存鈕移到展開內容底部）；顯示名僅對設計部同仁鎖定（`isPersonalDisplayNameLocked()`：唯讀＋隱藏儲存鈕），管理者／Machi／其他部門仍可修改；「客戶設定」區塊保留，但僅管理者、Machi、企劃部、專案部看得到（`canUsePersonalCustomerSettings()`），設計部其他同仁不顯示（2026-10-01 更正：先前誤整個移除）；帳號選單移除「設計師設定」，個人設定改為所有登入帳號都顯示。
+- 影響功能：信件範本／簽名檔設定／客戶設定改為 `<details>` 預設收合（儲存鈕移到展開內容底部）；顯示名僅對設計部同仁鎖定（`isPersonalDisplayNameLocked()`：唯讀＋隱藏儲存鈕），管理者／Machi／其他部門仍可修改；「客戶設定」區塊保留，但僅管理者、Machi、企劃部、專案部看得到（`canUsePersonalCustomerSettings()`），設計部其他同仁不顯示（2026-10-01 更正：先前誤整個移除）；帳號選單移除「設計師設定」，個人設定改為所有登入帳號都顯示。
 - 風險區塊：設計師設定視窗（技能／留言等）入口已從選單移除（`showDesignerSettings` 程式碼仍在）；測試中鎖住舊設計的斷言已改為新行為。
 - 驗證：兩段 script 語法通過；`node --test` 205 通過，1 條（archive snapshot）為修改前就失敗的既有問題。
 - 部署狀態：純前端，push 後生效。
