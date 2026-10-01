@@ -539,7 +539,7 @@ if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[s
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN=1.32,HP_EAR=.3,HP_DX=[0,0,0,0,0],HP_DY=[0,0,0,-4,-4],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN=1.32,HP_EAR=.3,HP_DX=[0,0,0,0,0],HP_DY=[0,0,0,-8,-4],HP_SIZE=[1,1,1,1.1,1],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
@@ -1143,7 +1143,7 @@ function drawBubble(p,personIndex=-1){
 // 聽音樂時身體不動，只有頭（連同耳機、帽子、眼鏡）點頭：nod 只加在頭的那幾層。
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*2.2:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);if(!(music&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const fr=wardrobeFrame(i,p.dir);if(fr){
     // 耳機跟著臉的大小與位置走（組合版每個人的頭不一樣大）：兩個耳罩外緣約是臉寬的 HP_SPAN 倍，耳罩中心在眼睛下方一點（耳朵）。
-    const g=fr.geom,S=WD_SCALE,fw=g.faceW*HP_SPAN/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx-fr.ax)*S+HP_DX[i],ear=(g.eyeY+g.faceH*HP_EAR-fr.ay)*S+HP_DY[i]+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
+    const g=fr.geom,S=WD_SCALE,fw=g.faceW*HP_SPAN*HP_SIZE[i]/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx-fr.ax)*S+HP_DX[i],ear=(g.eyeY+g.faceH*HP_EAR-fr.ay)*S+HP_DY[i]+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
     ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);drawWardrobeCap(ctx,i,p.dir,0,bob+nod);}}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
