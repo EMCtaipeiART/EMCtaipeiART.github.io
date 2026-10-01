@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-10-01T09:00:00+08:00" />
-<meta name="app-version" content="20261001-perf-27" />
+<meta name="app-version" content="20261001-quarter-table-sort-28" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <script>
 // 資料檔最大（約 6 MB、壓縮後約 650 KB），在解析其餘資源前就先開始下載。
@@ -338,20 +338,20 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 @media(max-width:820px){.enterprise .case-detail-groups,.enterprise .case-center-right{grid-template-columns:1fr}.enterprise .case-detail-list{max-height:190px}.enterprise .case-list-head,.enterprise .case-center-heading{align-items:flex-start}.enterprise .case-table-key{display:none}.enterprise .case-table{min-width:920px}.enterprise .case-share-layout{grid-template-columns:160px minmax(0,1fr)}}
 @media(max-width:540px){.enterprise .case-center-heading{display:block}.enterprise .case-heading-meta{width:max-content;max-width:100%;margin-top:12px}.enterprise .case-detail-panel,.enterprise .case-list-panel{padding:16px}.enterprise .case-panel-head{gap:8px}.enterprise .case-detail-total{min-width:55px}.enterprise .case-share-layout{grid-template-columns:1fr;justify-items:center;align-content:center;gap:14px}.enterprise .case-share-chart{width:min(220px,100%);height:210px}.enterprise .case-share-legend{width:min(260px,100%);margin-inline:auto}}
 .analysis-block .quarter-record-pane{padding:20px 22px 18px}.quarter-record-key{display:flex;gap:12px;color:#667085;font-size:12px;font-weight:800;white-space:nowrap}.quarter-record-key i{display:inline-block;width:9px;height:9px;margin-right:5px;border-radius:3px;vertical-align:-1px}.quarter-record-key .graphic{background:#12b76a}.quarter-record-key .video{background:#2e90fa}
-.quarter-record-wrap{overflow-x:auto;overflow-y:hidden;border:1px solid #e7ece9;border-radius:9px;scrollbar-width:thin}.quarter-record-table{border-collapse:separate;border-spacing:0;min-width:100%;color:#344054;font-size:12px;font-variant-numeric:tabular-nums}
-.quarter-record-table th,.quarter-record-table td{height:34px;padding:0 9px;border-bottom:1px solid #edf1ef;border-right:1px solid #f1f4f2;background:#fff;text-align:center;white-space:nowrap}.quarter-record-table thead th{position:sticky;z-index:3;background:#f4f7f5;color:#667085;font-size:11px;font-weight:900;border-bottom:1px solid #dde5e0}
-.quarter-record-table thead tr:nth-child(1) th{top:0;height:36px;font-size:12px;letter-spacing:.04em}.quarter-record-table thead tr:nth-child(2) th{top:36px;height:38px;padding:0 10px}
+.quarter-record-wrap{overflow-x:auto;overflow-y:hidden;border:1px solid #e7ece9;border-radius:9px;scrollbar-width:thin}.quarter-record-table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:var(--qr-min,900px);color:#344054;font-size:12px;font-variant-numeric:tabular-nums}.quarter-record-table col.q{width:64px}.quarter-record-table col.d{width:110px}.quarter-record-table col.t1{width:80px}.quarter-record-table col.t2{width:104px}
+.quarter-record-table th,.quarter-record-table td{height:34px;padding:0 3px;border-bottom:1px solid #edf1ef;border-right:1px solid #f1f4f2;background:#fff;text-align:center;white-space:nowrap}.quarter-record-table thead th{position:sticky;z-index:3;background:#f4f7f5;color:#667085;font-size:11px;font-weight:900;border-bottom:1px solid #dde5e0}
+.quarter-record-table thead tr:nth-child(1) th{top:0;height:36px;font-size:12px;letter-spacing:.04em}.quarter-record-table thead tr:nth-child(2) th{top:36px;height:44px;padding:2px 3px;white-space:normal;word-break:break-all;line-height:1.2}.quarter-record-table thead .sticky-end{white-space:normal;line-height:1.2}
 .quarter-record-table .g-graphic{background:#ecfdf3!important;color:#067647!important}.quarter-record-table .g-video{background:#eff8ff!important;color:#175cd3!important}.quarter-record-table .g-total{background:#fff6e5!important;color:#b54708!important}
 .quarter-record-table td.c-graphic{background:#fbfefc}.quarter-record-table td.c-video{background:#fafcff}.quarter-record-table td.c-total{background:#fffcf5}
-.quarter-record-table .sticky-quarter,.quarter-record-table .sticky-designer{position:sticky;z-index:2}.quarter-record-table .sticky-quarter{left:0;width:64px;min-width:64px;font-weight:900;color:#101828;background:#f8faf9!important;border-right:1px solid #dde5e0}.quarter-record-table .sticky-designer{left:64px;min-width:96px;text-align:left;font-weight:850;color:#182230;background:#fff!important;border-right:1px solid #dde5e0}
+.quarter-record-table .sticky-quarter,.quarter-record-table .sticky-designer{position:sticky;z-index:2}.quarter-record-table .sticky-quarter{left:0;width:64px;min-width:64px;font-weight:900;color:#101828;background:#f8faf9!important;border-right:1px solid #dde5e0}.quarter-record-table .sticky-designer{left:64px;padding-left:10px;text-align:left;overflow:hidden;text-overflow:ellipsis;font-weight:850;color:#182230;background:#fff!important;border-right:1px solid #dde5e0}
 .quarter-record-table thead .sticky-quarter,.quarter-record-table thead .sticky-designer{z-index:4;background:#f4f7f5!important;color:#667085}
-.quarter-record-table .sticky-end{position:sticky;z-index:2;font-weight:900;color:#101828}.quarter-record-table .sticky-end.qty{right:96px;min-width:76px;border-left:1px solid #dde5e0}.quarter-record-table .sticky-end.weight{right:0;min-width:96px}.quarter-record-table thead .sticky-end{z-index:4}
+.quarter-record-table .sticky-end{position:sticky;z-index:2;font-weight:900;color:#101828}.quarter-record-table .sticky-end.qty{right:104px;border-left:1px solid #dde5e0}.quarter-record-table .sticky-end.weight{right:0}.quarter-record-table thead .sticky-end{z-index:4}
 .quarter-record-table .zero{color:#c3cad4;font-weight:600}.quarter-record-table .has{font-weight:850;color:#101828}
 .quarter-record-table tr.quarter-first td,.quarter-record-table tr.quarter-first th{border-top:1px solid #cfd8d3}
 .quarter-record-table tr.quarter-sum td{height:36px;background:#f4f7f5!important;font-weight:900;color:#101828;border-bottom:2px solid #cfd8d3}.quarter-record-table tr.quarter-sum .sticky-designer{color:#067647}
 .quarter-record-table tbody tr:not(.quarter-sum):hover td:not(.sticky-quarter){background:#f1faf5}
 .quarter-record-empty{padding:32px 16px;color:#98a2b3;font-weight:800;text-align:center}
-@media(max-width:620px){.analysis-block .quarter-record-pane{padding:14px}.quarter-record-key{display:none}.quarter-record-table .sticky-quarter{width:46px;min-width:46px}.quarter-record-table .sticky-designer{left:46px;min-width:78px}.quarter-record-table .sticky-end.qty{right:84px;min-width:62px}.quarter-record-table .sticky-end.weight{min-width:84px}}
+@media(max-width:620px){.analysis-block .quarter-record-pane{padding:14px}.quarter-record-key{display:none}.quarter-record-table col.q{width:46px}.quarter-record-table col.d{width:78px}.quarter-record-table col.t1{width:62px}.quarter-record-table col.t2{width:84px}.quarter-record-table .sticky-designer{left:46px}.quarter-record-table .sticky-end.qty{right:84px}}
 .analysis-heading-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.analysis-pack-btn{height:34px;padding:0 14px;border:1px solid #079455;border-radius:8px;background:#079455;color:#fff;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;box-shadow:0 4px 10px rgba(7,148,85,.16)}.analysis-pack-btn:hover{background:#067647;border-color:#067647}.analysis-pack-btn:focus-visible{outline:3px solid rgba(18,183,106,.28);outline-offset:2px}.analysis-pack-btn:active{transform:translateY(1px)}.analysis-pack-btn:disabled{opacity:.7;cursor:progress}.analysis-pack-btn .icon{width:15px;height:15px}
 @media(max-width:620px){.analysis-heading-tools{justify-content:flex-start;margin-top:10px}.analysis-heading-tools .analysis-period{margin-top:0}}
 </style>
@@ -1279,13 +1279,14 @@ function renderQuarterRecordTable(y,m,designer){
     showSum=names.length>1,
     body=quarters.map(quarter=>{
       const quarterList=rows.filter(row=>quarterOf(row)===quarter),sum=summarize(quarterList);
-      const people=names.map((person,index)=>{
-        const result=summarize(quarterList.filter(row=>row['設計負責人']===person.name));
+      const ranked=names.map(person=>({person,result:summarize(quarterList.filter(row=>row['設計負責人']===person.name))})).sort((a,b)=>b.result.weighted-a.result.weighted||b.result.total-a.result.total||String(a.person.displayName||a.person.name).localeCompare(String(b.person.displayName||b.person.name),'zh-Hant'));
+      const people=ranked.map(({person,result},index)=>{
         return `<tr class="${index===0?'quarter-first':''}">${index===0?`<th class="sticky-quarter" rowspan="${names.length+(showSum?1:0)}" scope="rowgroup">Q${quarter}</th>`:''}<td class="sticky-designer">${escapeHtml(person.displayName||person.name)}</td>${cells(result.counts)}<td class="sticky-end qty c-total">${fmt(result.total)}</td><td class="sticky-end weight c-total">${fmt(result.weighted)}</td></tr>`
       }).join('');
       return people+(showSum?`<tr class="quarter-sum"><td class="sticky-designer">Q${quarter} 合計</td>${cells(sum.counts)}<td class="sticky-end qty">${fmt(sum.total)}</td><td class="sticky-end weight">${fmt(sum.weighted)}</td></tr>`:'')
     }).join('');
-  wrap.innerHTML=`<table class="quarter-record-table">${head}<tbody>${body}</tbody></table>`
+  const colgroup=`<colgroup><col class="q"><col class="d">${'<col>'.repeat(columnCount)}<col class="t1"><col class="t2"></colgroup>`;
+  wrap.innerHTML=`<table class="quarter-record-table" style="--qr-min:${64+110+80+104+columnCount*36}px">${colgroup}${head}<tbody>${body}</tbody></table>`
 }
 const PDF_LIB_URLS=['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'];
 function loadScriptOnce(url){return new Promise((resolve,reject)=>{const existing=[...document.scripts].find(script=>script.src===url);if(existing&&existing.dataset.loaded==='1')return resolve();const script=existing||document.createElement('script');script.addEventListener('load',()=>{script.dataset.loaded='1';resolve()},{once:true});script.addEventListener('error',()=>reject(new Error('PDF 工具載入失敗，請確認網路連線後再試')),{once:true});if(!existing){script.src=url;document.head.appendChild(script)}})}
@@ -1301,15 +1302,16 @@ async function exportQuarterPdf(){
     const body=await snap(page,{ignoreElements:node=>node===tableBlock||node===footer});
     const pieces=[{canvas:body,width:mainWidth}];
     if(tableBlock){
-      // 寬表另外擷取：解除固定欄與捲動，並壓縮欄寬（表頭折行）讓整張表落在頁寬附近。
-      let cloneWidth=mainWidth;const tableCanvas=await snap(tableBlock,{windowWidth:2400,onclone:(doc,node)=>{
-        const style=doc.createElement('style');style.textContent=`.quarter-record-wrap{overflow:visible!important}.analysis-block .quarter-record-pane{overflow:visible!important}.quarter-record-table th,.quarter-record-table td{position:static!important;padding:0 3px!important;font-size:10px!important;min-width:0!important}.quarter-record-table thead tr:nth-child(1) th{height:28px!important;font-size:11px!important}.quarter-record-table thead tr:nth-child(2) th{height:44px!important;white-space:normal!important;word-break:break-all!important;line-height:1.2!important;width:28px;font-size:10px!important}.quarter-record-table .sticky-quarter{width:40px!important}.quarter-record-table .sticky-designer{min-width:62px!important;font-size:11px!important}.quarter-record-table thead .sticky-end{white-space:normal!important;width:52px;line-height:1.2!important}.quarter-record-table td{white-space:nowrap}`;doc.head.appendChild(style);
-        node.style.width=`${mainWidth}px`;const cloneTable=node.querySelector('.quarter-record-table');if(cloneTable)cloneWidth=Math.max(mainWidth,Math.ceil(cloneTable.getBoundingClientRect().width)+50);node.style.width=`${cloneWidth}px`
+      // 寬表另外擷取：解除固定欄與捲動，格子壓到最密（欄寬固定），表格依內容寬度收合，再放大到接近頁寬。
+      const detailColumns=Math.max(0,(table?.querySelectorAll('col').length||4)-4),denseWidth=40+72+60+72+detailColumns*32,cloneWidth=denseWidth+50;
+      const tableCanvas=await snap(tableBlock,{windowWidth:2400,scale:3,onclone:(doc,node)=>{
+        const style=doc.createElement('style');style.textContent=`.quarter-record-wrap{overflow:visible!important}.analysis-block .quarter-record-pane{overflow:visible!important}.quarter-record-table{width:${denseWidth}px!important;min-width:0!important}.quarter-record-table col.q{width:40px!important}.quarter-record-table col.d{width:72px!important}.quarter-record-table col.t1{width:60px!important}.quarter-record-table col.t2{width:72px!important}.quarter-record-table th,.quarter-record-table td{position:static!important;padding:0 2px!important;font-size:10px!important}.quarter-record-table thead tr:nth-child(1) th{height:26px!important;font-size:11px!important}.quarter-record-table thead tr:nth-child(2) th{height:40px!important;font-size:10px!important}.quarter-record-table td,.quarter-record-table th{height:26px}.quarter-record-table .sticky-designer{padding-left:6px!important;font-size:11px!important}.quarter-record-table tr.quarter-sum td{height:28px!important}`;doc.head.appendChild(style);
+        node.style.width=`${cloneWidth}px`
       }});
-      pieces.push({canvas:tableCanvas,width:cloneWidth})
+      pieces.push({canvas:tableCanvas,width:cloneWidth,maxUp:1.6})
     }
     if(footer)pieces.push({canvas:await snap(footer),width:mainWidth});
-    const margin=24,gap=8,pageWidth=mainWidth+margin*2,placed=pieces.map(piece=>{const ratio=Math.min(1,mainWidth/piece.width);return {...piece,drawWidth:piece.width*ratio,drawHeight:piece.canvas.height/piece.canvas.width*piece.width*ratio}}),pageHeight=Math.ceil(margin*2+placed.reduce((sum,piece)=>sum+piece.drawHeight,0)+gap*(placed.length-1));
+    const margin=24,gap=8,pageWidth=mainWidth+margin*2,placed=pieces.map(piece=>{const ratio=Math.min(piece.maxUp||1,mainWidth/piece.width);return {...piece,drawWidth:piece.width*ratio,drawHeight:piece.canvas.height/piece.canvas.width*piece.width*ratio}}),pageHeight=Math.ceil(margin*2+placed.reduce((sum,piece)=>sum+piece.drawHeight,0)+gap*(placed.length-1));
     const pdf=new jsPDF({unit:'px',format:[pageWidth,pageHeight],orientation:pageWidth>pageHeight?'l':'p',hotfixes:['px_scaling'],compress:true});
     pdf.setFillColor(247,250,249);pdf.rect(0,0,pageWidth,pageHeight,'F');
     let top=margin;placed.forEach(piece=>{pdf.addImage(piece.canvas.toDataURL('image/jpeg',.92),'JPEG',margin,top,piece.drawWidth,piece.drawHeight,undefined,'FAST');top+=piece.drawHeight+gap});
