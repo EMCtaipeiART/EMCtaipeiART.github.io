@@ -155,7 +155,7 @@ const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":139,"s":[32,106,28,90]},{"x":
 const WARDROBE_OUTFITS=['街頭黃 T','藍 T 寬牛仔褲','黑色西裝外套','米白襯衫','丹寧外套短褲','黑色連帽衫'];
 const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',label:'藍帽'}],WARDROBE_GLASSES=[{id:'',label:'無'},{id:'clear',label:'黑框'},{id:'sun',label:'墨鏡'}];
 const OUTFIT_DEFAULT=[2,3,4,0,5];// 還是「原本」造型時選了帽子或眼鏡，自動換成這個人最接近的衣服
-const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12;
+const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10];// WD_DROP：每個人「衣服與配件」相對頭往下多少（Machi 使用者要求往下一點）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
 wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=1';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=1';wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=1';
 Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();};});
@@ -172,16 +172,16 @@ function buildWardrobe(i,view,look){
   const D=WARDROBE,K=WD_K,H=D.heads[i][view],oIdx=look.outfit>=0?look.outfit:OUTFIT_DEFAULT[i],B=D.outfits[oIdx][view],front=D.heads[i][0].s,sk=H.s||front;
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
   const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K;
-  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:'outfits',src:B,x:view===1?-WD_SIDE_BODY_SHIFT:0,y:0,w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
+  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:'outfits',src:B,x:view===1?-WD_SIDE_BODY_SHIFT:0,y:WD_DROP[i],w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
   const eye=D.eyes[i][view];
   if(look.glasses&&view<2){
     const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0],faceW=(front[1]-front[0])*K,s=faceW*.88/gf.w*(view===1?.95:1),w=g.w*s,h=g.h*s;
-    layers.push({sheet:'acc',src:g,w,h,x:view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18,y:hy+eye.y*K-h/2});
+    layers.push({sheet:'acc',src:g,w,h,x:view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18,y:hy+eye.y*K-h/2+WD_DROP[i]});
   }
   if(look.cap){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
-    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.22:.24)});
+    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.22:.24)+WD_DROP[i]});
   }
   const minX=Math.min(...layers.map(l=>l.x)),minY=Math.min(...layers.map(l=>l.y)),maxX=Math.max(...layers.map(l=>l.x+l.w)),maxY=Math.max(...layers.map(l=>l.y+l.h));
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(maxX-minX)+2;canvas.height=Math.ceil(maxY-minY)+2;

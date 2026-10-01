@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=66/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=67/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -660,4 +660,11 @@ test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子�
   // 側面眼睛位置（頭像圖上的 x）：Leona 約 88、Machi 約 77，不是原本誤抓的 68／49。
   const eyes = JSON.parse(js.match(/"eyes":(\[\[.*?\]\])\};/s)[1]);
   assert.ok(eyes[0][1].x > 85 && eyes[4][1].x > 74, '側面眼睛 x 要靠臉的前緣');
+});
+
+test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移', async () => {
+  const js = await officeJs();
+  assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
+  assert.match(js, /y:WD_DROP\[i\],/);
+  assert.equal((js.match(/\+WD_DROP\[i\]\}\)/g) || []).length, 2, '眼鏡與帽子都要加上');
 });
