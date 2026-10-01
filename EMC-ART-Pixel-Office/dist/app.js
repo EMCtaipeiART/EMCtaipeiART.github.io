@@ -107,6 +107,8 @@ function syncSceneTop(){
 // 嵌入模式：設計需求系統用 iframe 把場景放進「設計師專長與案件分配」。
 // 保留點選人物與資料卡，但關閉鍵盤移動與右側編輯工具；狀態仍照常同步。
 const embedMode=new URLSearchParams(location.search).get('embed')==='1';
+// 嵌入首頁時 canvas 模糊陰影的光柵化成本最高（實測占單幀約 2/3），改成不模糊的偏移陰影。
+const shadowBlurFor=v=>embedMode?0:v;
 if(embedMode){document.documentElement.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
 // 嵌在設計需求系統裡時，iframe 的文件底色是瀏覽器依 color-scheme 畫的——html 與 body 都設成透明
 // 也蓋不掉，深色模式下就會卡著一塊白。外層切換深淺色時會用 postMessage 告訴我們，跟著設就對了。
@@ -137,7 +139,7 @@ function toast(message){$('toast').textContent=message;$('toast').classList.add(
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const sheet=new Image(),furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
 sheet.src='assets/sprites-packed.webp?v=1';furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=2';overtimeSheet.src='assets/overtime-filter.webp?v=1';
-function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?2:3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
+function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?1.5:3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
 // sprites-packed.webp：5 列（Leona、Amber、Noise、Anna、Machi）× 3 欄（正面、右側面、背面），每欄寬 140，列高沿用原圖。
@@ -476,7 +478,7 @@ function drawStoryBubble(i,time){
   const phase=(time/1000)%4.6,hop=unread&&!storyReducedMotion.matches&&phase<.5?Math.sin(phase/.5*Math.PI)*5:0;
   const scale=hover?1.14:1,cx=box.x+box.w/2,cy=box.y+box.h/2-hop;
   ctx.save();ctx.translate(cx,cy);ctx.scale(scale,scale);ctx.translate(-box.w/2,-box.h/2);
-  ctx.shadowColor='rgba(10,22,44,.28)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
+  ctx.shadowColor='rgba(10,22,44,.28)';ctx.shadowBlur=shadowBlurFor(6);ctx.shadowOffsetY=2;
   drawSprite(STORY_SPRITE,0,0,STORY_CELL);
   ctx.shadowColor='transparent';
   if(unread)drawSprite(STORY_DOT,box.w-9,-7,2.4);
@@ -724,7 +726,7 @@ game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);gam
   else if(selected!==null)select(null);});
 game.addEventListener('pointerleave',()=>{setHoverStory(-1);if(embedMode&&!cardPinned)select(null);});
 // 細緻版面板：細邊框、圓角、柔和陰影（取代原本粗像素切角框）。
-function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=14;context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
+function softPanel(context,x,y,w,h,{radius=12,fill='#fffdf7',stroke='#c9d3e0',lineWidth=1.5,shadow=true}={}){context.save();const path=()=>{context.beginPath();context.roundRect(x,y,w,h,radius);};if(shadow){context.shadowColor='rgba(20,41,68,.18)';context.shadowBlur=shadowBlurFor(14);context.shadowOffsetY=4;path();context.fillStyle=fill;context.fill();context.shadowColor='transparent';}path();context.fillStyle=fill;context.fill();context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();context.restore();}
 /** 點選人物時，頭上顯示等級與稱號。 */
 function stationPerson(s){return s.name?people.find(person=>person.name===s.name):null;}
 function stationAway(s){const person=stationPerson(s);return person&&isAway(person);}
@@ -894,7 +896,7 @@ function drawBubble(p){
   const glass=ctx.createLinearGradient(0,y,0,y+h);
   glass.addColorStop(0,'rgba(255,255,255,.88)');
   glass.addColorStop(1,'rgba(243,248,255,.74)');
-  ctx.shadowColor='rgba(10,22,44,.28)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;
+  ctx.shadowColor='rgba(10,22,44,.28)';ctx.shadowBlur=shadowBlurFor(12);ctx.shadowOffsetY=5;
   tail();ctx.fillStyle=glass;ctx.fill();
   ctx.shadowColor='transparent';
   ctx.strokeStyle='rgba(140,162,192,.55)';ctx.lineWidth=1;ctx.stroke();
@@ -919,7 +921,7 @@ if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=
 function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
-  if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<33){requestAnimationFrame(render);return;}}
+  if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
   embedLastDraw=time;
   needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));viewStations.forEach(drawStatusMarker);positionPersonCard();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
