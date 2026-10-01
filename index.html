@@ -7104,6 +7104,7 @@
     </div>
     <details class="personal-mail-templates personal-collapsible"><summary class="personal-mail-templates-head"><div><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></div></summary><div class="personal-mail-template-list" id="personalMailTemplateList"></div><button type="button" class="mail-template-add" id="personalMailTemplateAdd">＋ 新增範本</button><div class="personal-collapsible-save"><button type="button" class="personal-section-save" data-personal-save="templates">儲存</button></div></details>
     <details class="personal-mail-templates personal-collapsible"><summary class="personal-mail-templates-head"><div><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以隨時用「插入簽名檔」按鈕改選其他組。</span></div></summary><div class="personal-mail-template-list" id="personalSignaturePresetList"></div><button type="button" class="mail-template-add" id="personalSignaturePresetAdd">＋ 新增簽名檔</button><div class="personal-collapsible-save"><button type="button" class="personal-section-save" data-personal-save="signatures">儲存</button></div></details>
+    <section class="personal-mail-templates personal-customer-settings" id="personalCustomerSettings" hidden><div class="personal-mail-templates-head"><div><b>客戶設定</b><span>調整你負責的客戶別：誰也能編輯與寄信、填完案件後的預設副本，以及填單時自動帶入的設計師。與資料庫後台「客戶別」同步。</span></div><button type="button" class="personal-section-save" data-personal-save="customers">儲存</button></div><label class="personal-customer-pick">客戶別<select id="personalCustomerSelect"></select></label><div class="personal-customer-body" id="personalCustomerBody"></div></section>
     <p class="login-note personal-settings-status" id="personalSettingsStatus" role="status" aria-live="polite"></p>
     <div class="login-actions"><button type="button" class="secondary" id="personalSettingsCancel">關閉</button></div>
   </form>
@@ -11375,7 +11376,14 @@ const personalCustomerDrafts=new Map();
 let personalCustomerCurrent='';
 const isCustomerGroupRule=rule=>/^(department|group):/i.test(String(rule||'').trim());
 function personalCustomerSelf(){return canonicalAccountClient(currentEditorAccount||currentEditor)}
+/** 客戶設定只開放管理者、Machi、企劃部、專案部；設計部其他同仁不顯示。 */
+function canUsePersonalCustomerSettings(){
+  if(isAdministrator()||currentEditor==='Machi')return true;
+  const department=String(currentEditorDepartment||'');
+  return department.includes('企劃部')||department.includes('專案部');
+}
 function personalCustomerNames(){
+  if(!canUsePersonalCustomerSettings())return [];
   const account=personalCustomerSelf(),admin=isAdministrator();
   return (customerDirectoryRows||[]).filter(row=>{
     const rules=parseNameListValue(row['專案負責人']);
