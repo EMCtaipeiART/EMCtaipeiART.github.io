@@ -539,7 +539,7 @@ if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[s
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN=1.32,HP_EAR=.3,HP_DX=[0,0,0,-4.4,0],HP_DY=[0,0,0,-13,-4],HP_SIZE=[1,1,1,1.32,1],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN=1.32,HP_EAR=.3,HP_DX=[0,0,0,-1.4,0],HP_DY=[0,0,0,-13,-4],HP_SIZE=[1,1,1,1.32,1],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
