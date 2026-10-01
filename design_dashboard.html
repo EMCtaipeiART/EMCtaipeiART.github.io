@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-10-01T09:00:00+08:00" />
-<meta name="app-version" content="20261001-quarter-record-table-25" />
+<meta name="app-version" content="20261001-quarter-pdf-26" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -346,6 +346,8 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 .quarter-record-table tbody tr:not(.quarter-sum):hover td:not(.sticky-quarter){background:#f1faf5}
 .quarter-record-empty{padding:32px 16px;color:#98a2b3;font-weight:800;text-align:center}
 @media(max-width:620px){.analysis-block .quarter-record-pane{padding:14px}.quarter-record-key{display:none}.quarter-record-table .sticky-quarter{width:46px;min-width:46px}.quarter-record-table .sticky-designer{left:46px;min-width:78px}.quarter-record-table .sticky-end.qty{right:84px;min-width:62px}.quarter-record-table .sticky-end.weight{min-width:84px}}
+.analysis-heading-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.analysis-pack-btn{height:34px;padding:0 14px;border:1px solid #079455;border-radius:8px;background:#079455;color:#fff;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;box-shadow:0 4px 10px rgba(7,148,85,.16)}.analysis-pack-btn:hover{background:#067647;border-color:#067647}.analysis-pack-btn:focus-visible{outline:3px solid rgba(18,183,106,.28);outline-offset:2px}.analysis-pack-btn:active{transform:translateY(1px)}.analysis-pack-btn:disabled{opacity:.7;cursor:progress}.analysis-pack-btn .icon{width:15px;height:15px}
+@media(max-width:620px){.analysis-heading-tools{justify-content:flex-start;margin-top:10px}.analysis-heading-tools .analysis-period{margin-top:0}}
 </style>
   <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
@@ -399,7 +401,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
       <footer class="analysis-footer">© 2026 EMC Design Team. All rights reserved.</footer>
     </section>
     <section class="page analysis-page quarterly-page" id="page-quarterly">
-      <div class="analysis-heading"><div><h1>季度分析</h1><p>從客戶工作量、項目細節與設計師分數占比掌握季度表現</p></div><div class="analysis-period"><svg class="icon icon-sm"><use href="#i-calendar"/></svg><span id="quarterlyPeriod">讀取中</span></div></div>
+      <div class="analysis-heading"><div><h1>季度分析</h1><p>從客戶工作量、項目細節與設計師分數占比掌握季度表現</p></div><div class="analysis-heading-tools" data-html2canvas-ignore="true"><button class="analysis-pack-btn" id="quarterPackBtn" type="button" aria-label="將季度分析整頁打包成 PDF 下載"><svg class="icon"><use href="#i-download"/></svg><span>一鍵打包</span></button><div class="analysis-period"><svg class="icon icon-sm"><use href="#i-calendar"/></svg><span id="quarterlyPeriod">讀取中</span></div></div></div>
       <section class="analysis-block"><header class="analysis-section-head"><h2>季度工作分布</h2><p>依季度比較客戶別與項目細節</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度工作量</h3><small>柱狀圖各季 5% 以下的品牌合併為「其他」</small></div></div><div class="quarter-workload-layout"><div class="analysis-chart compact"><canvas id="analysisQuarterChart"></canvas></div><div class="analysis-quarter-hover" id="analysisQuarterHover" role="region" aria-live="polite" aria-label="季度品牌完整明細"></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>季度項目占比</h3><small id="analysisQuarterSubtitle">所選季度、品牌的項目細節</small></div></div><div class="analysis-donut-layout"><div class="analysis-donut-wrap"><canvas id="analysisQuarterDetailChart"></canvas></div><div class="analysis-data-column"><div class="quarter-controls" id="analysisQuarterControls"><button type="button" data-quarter="1">Q1</button><button type="button" data-quarter="2">Q2</button><button type="button" data-quarter="3">Q3</button><button type="button" data-quarter="4">Q4</button></div><div class="analysis-center-control"><div class="analysis-switch-wrap"><div class="analysis-switch"><button id="analysisQuarterBrandPrev" type="button" aria-label="上一個品牌">‹</button><button class="analysis-switch-label" id="analysisQuarterBrandName" type="button" aria-haspopup="listbox" aria-expanded="false">全部品牌</button><button id="analysisQuarterBrandNext" type="button" aria-label="下一個品牌">›</button></div><div class="analysis-option-menu" id="analysisQuarterBrandMenu" role="listbox" hidden></div></div></div><div class="analysis-legend" id="analysisQuarterDetailLegend"></div></div></div></article></div></section>
       <section class="analysis-block"><header class="analysis-section-head"><h2>設計師季度表現</h2><p>目前選擇季度以彩色呈現，其餘季度灰階顯示</p></header><div class="analysis-split"><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>平面季度表現</h3><small id="analysisGraphicQuarterSubtitle">所選季度加權分數占比與排名</small></div></div><div class="quarter-performance-layout"><div class="quarter-performance-chart"><canvas id="analysisGraphicQuarterChart"></canvas></div><div class="quarter-performance-legend" id="analysisGraphicQuarterLegend"></div></div></article><article class="analysis-pane"><div class="analysis-pane-head"><div><h3>影音季度表現</h3><small id="analysisVideoQuarterSubtitle">所選季度加權分數占比與排名</small></div></div><div class="quarter-performance-layout"><div class="quarter-performance-chart"><canvas id="analysisVideoQuarterChart"></canvas></div><div class="quarter-performance-legend" id="analysisVideoQuarterLegend"></div></div></article></div></section>
       <section class="analysis-block"><header class="analysis-section-head"><h2>季度紀錄表</h2><p>依所選月份所在季度，統計平面／影音項目細節的設計師數量與加權分數</p></header><article class="analysis-pane quarter-record-pane"><div class="analysis-pane-head"><div><h3 id="quarterRecordTitle">季度紀錄</h3><small>儲存格為各項目細節的數量；急件不另列欄位，其加權倍率已計入項目加權分數</small></div><div class="quarter-record-key"><span><i class="graphic"></i>平面</span><span><i class="video"></i>影音</span></div></div><div class="quarter-record-wrap" id="quarterRecordWrap" tabindex="0" role="region" aria-label="季度紀錄表，可左右捲動"></div></article></section>
@@ -1255,6 +1257,37 @@ function renderQuarterRecordTable(y,m,designer){
     }).join('');
   wrap.innerHTML=`<table class="quarter-record-table">${head}<tbody>${body}</tbody></table>`
 }
+const PDF_LIB_URLS=['https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'];
+function loadScriptOnce(url){return new Promise((resolve,reject)=>{const existing=[...document.scripts].find(script=>script.src===url);if(existing&&existing.dataset.loaded==='1')return resolve();const script=existing||document.createElement('script');script.addEventListener('load',()=>{script.dataset.loaded='1';resolve()},{once:true});script.addEventListener('error',()=>reject(new Error('PDF 工具載入失敗，請確認網路連線後再試')),{once:true});if(!existing){script.src=url;document.head.appendChild(script)}})}
+async function exportQuarterPdf(){
+  const button=$('quarterPackBtn'),label=button.querySelector('span'),page=$('page-quarterly'),y=+$('yearFilter').value,m=+$('monthFilter').value,quarter=Math.ceil(m/3),designer=$('designerFilter').value;
+  if(button.disabled)return;button.disabled=true;label.textContent='打包中…';
+  try{
+    await Promise.all(PDF_LIB_URLS.map(loadScriptOnce));
+    const {jsPDF}=window.jspdf,bg='#f7faf9',tableBlock=page.querySelector('.quarter-record-pane')?.closest('.analysis-block'),footer=page.querySelector('.analysis-footer'),wrap=$('quarterRecordWrap'),table=wrap.querySelector('table');
+    const tableWidth=table?Math.ceil(table.scrollWidth+2):0,mainWidth=Math.ceil(page.getBoundingClientRect().width),scaleFor=(w,h)=>Math.max(1,Math.min(2,Math.sqrt(14e6/(w*h))));
+    const snap=(element,options={})=>{const rect=element.getBoundingClientRect();return window.html2canvas(element,{backgroundColor:bg,scale:scaleFor(rect.width,rect.height),useCORS:true,logging:false,scrollX:0,scrollY:0,...options})};
+    // 主體：整頁但先排除寬表與頁尾，兩者另外擷取以便保持完整寬度與順序。
+    const body=await snap(page,{ignoreElements:node=>node===tableBlock||node===footer});
+    const pieces=[{canvas:body,width:mainWidth}];
+    if(tableBlock){
+      // 寬表另外擷取：解除固定欄與捲動，並壓縮欄寬（表頭折行）讓整張表落在頁寬附近。
+      let cloneWidth=mainWidth;const tableCanvas=await snap(tableBlock,{windowWidth:2400,onclone:(doc,node)=>{
+        const style=doc.createElement('style');style.textContent=`.quarter-record-wrap{overflow:visible!important}.analysis-block .quarter-record-pane{overflow:visible!important}.quarter-record-table th,.quarter-record-table td{position:static!important;padding:0 3px!important;font-size:10px!important;min-width:0!important}.quarter-record-table thead tr:nth-child(1) th{height:28px!important;font-size:11px!important}.quarter-record-table thead tr:nth-child(2) th{height:44px!important;white-space:normal!important;word-break:break-all!important;line-height:1.2!important;width:28px;font-size:10px!important}.quarter-record-table .sticky-quarter{width:40px!important}.quarter-record-table .sticky-designer{min-width:62px!important;font-size:11px!important}.quarter-record-table thead .sticky-end{white-space:normal!important;width:52px;line-height:1.2!important}.quarter-record-table td{white-space:nowrap}`;doc.head.appendChild(style);
+        node.style.width=`${mainWidth}px`;const cloneTable=node.querySelector('.quarter-record-table');if(cloneTable)cloneWidth=Math.max(mainWidth,Math.ceil(cloneTable.getBoundingClientRect().width)+50);node.style.width=`${cloneWidth}px`
+      }});
+      pieces.push({canvas:tableCanvas,width:cloneWidth})
+    }
+    if(footer)pieces.push({canvas:await snap(footer),width:mainWidth});
+    const margin=24,gap=8,pageWidth=mainWidth+margin*2,placed=pieces.map(piece=>{const ratio=Math.min(1,mainWidth/piece.width);return {...piece,drawWidth:piece.width*ratio,drawHeight:piece.canvas.height/piece.canvas.width*piece.width*ratio}}),pageHeight=Math.ceil(margin*2+placed.reduce((sum,piece)=>sum+piece.drawHeight,0)+gap*(placed.length-1));
+    const pdf=new jsPDF({unit:'px',format:[pageWidth,pageHeight],orientation:pageWidth>pageHeight?'l':'p',hotfixes:['px_scaling'],compress:true});
+    pdf.setFillColor(247,250,249);pdf.rect(0,0,pageWidth,pageHeight,'F');
+    let top=margin;placed.forEach(piece=>{pdf.addImage(piece.canvas.toDataURL('image/jpeg',.92),'JPEG',margin,top,piece.drawWidth,piece.drawHeight,undefined,'FAST');top+=piece.drawHeight+gap});
+    const who=(designer&&designer!=='所有設計師'&&designer!=='全部')?`_${designer}`:'';
+    pdf.save(`EMC設計部_季度分析_${y}-Q${quarter}${who}.pdf`)
+  }catch(error){console.error(error);alert(`打包失敗：${error.message||error}`)}
+  finally{button.disabled=false;label.textContent='一鍵打包'}
+}
 function renderQuarterPage(y,m,designer){
   if(!$('page-quarterly'))return;const period=`${y}-${m}-${designer}-${dashboardSearchQuery()}`;if(period!==quarterLastPeriod){analysisQuarter=Math.ceil(m/3);analysisQuarterBrand='全部品牌';quarterLastPeriod=period}
   const selectedQuarter=Math.ceil(m/3);$('quarterlyPeriod').textContent=`${y} 年・Q${analysisQuarter}`;renderAnalysisQuarter(y,designer);renderDesignerQuarterPerformancePanels(y,designer,selectedQuarter);renderQuarterRecordTable(y,m,designer)
@@ -1380,6 +1413,7 @@ $('analysisBrandNext').addEventListener('click',()=>{analysisBrandIndex++;render
 $('analysisClientRank').addEventListener('click',event=>{const row=event.target.closest('[data-brand-index]');if(!row)return;analysisBrandIndex=Number(row.dataset.brandIndex)||0;renderAnalysisClients(+$('yearFilter').value,+$('monthFilter').value,$('designerFilter').value)});
 $('analysisBrandName').addEventListener('click',event=>{event.stopPropagation();const menu=$('analysisBrandMenu'),open=menu.hidden;closeAnalysisMenus();menu.hidden=!open;$('analysisBrandName').setAttribute('aria-expanded',String(open))});
 $('analysisBrandMenu').addEventListener('click',event=>{event.stopPropagation();const option=event.target.closest('[data-brand-index]');if(!option)return;analysisBrandIndex=Number(option.dataset.brandIndex)||0;renderAnalysisClients(+$('yearFilter').value,+$('monthFilter').value,$('designerFilter').value)});
+$('quarterPackBtn').addEventListener('click',exportQuarterPdf);
 $('analysisQuarterControls').addEventListener('click',event=>{const button=event.target.closest('[data-quarter]');if(!button)return;analysisQuarter=Number(button.dataset.quarter);analysisQuarterBrand='全部品牌';const year=+$('yearFilter').value,designer=$('designerFilter').value;renderAnalysisQuarterDetail(year,designer);renderDesignerQuarterPerformancePanels(year,designer,analysisQuarter)});
 $('analysisQuarterHover').addEventListener('click',event=>{const button=event.target.closest('[data-quarter-brand]');if(!button)return;analysisQuarter=Number(button.dataset.quarterIndex)+1;analysisQuarterBrand=button.dataset.brandName;document.querySelectorAll('#analysisQuarterHover .quarter-hover-brand').forEach(item=>item.classList.toggle('is-active',item===button));const year=+$('yearFilter').value,designer=$('designerFilter').value;renderAnalysisQuarterDetail(year,designer);renderDesignerQuarterPerformancePanels(year,designer,analysisQuarter)});
 $('analysisQuarterBrandPrev').addEventListener('click',()=>{const brands=['全部品牌',...group(quarterRows(+$('yearFilter').value,$('designerFilter').value,analysisQuarter),row=>row['客戶別'],qty).filter(([name])=>name!=='未分類').map(row=>row[0])],index=Math.max(0,brands.indexOf(analysisQuarterBrand)-1);analysisQuarterBrand=brands[index];renderAnalysisQuarterDetail(+$('yearFilter').value,$('designerFilter').value)});
