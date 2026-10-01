@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=70/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=71/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -600,7 +600,7 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
   assert.match(js, /headphones\.src='assets\/headphones-v1\.webp/);
   assert.match(js, /HP_FRAMES=6/);
   assert.match(js, /Math\.floor\(t\*4\)%HP_FRAMES/, '六格音符輪流跳動');
-  assert.match(js, /if\(musicOf\(p\)\)bob\+=Math\.sin\(t\*9\)\*2\.2/, '點頭');
+  assert.match(js, /nod=music\?Math\.sin\(t\*9\)\*2\.2:0/, '只有頭點頭');
   assert.match(js, /function musicOf\(p\)/, '要用 function 宣告：腳本開頭的 syncViewLayout 就會用到');
   assert.match(js, /hits\.push\(\{type:'musicPlay'/);
   assert.match(js, /hits\.push\(\{type:'musicLink'/);
@@ -612,7 +612,7 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
 
 test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spotify 播放器）', async () => {
   const js = await officeJs();
-  assert.match(js, /HP_SPAN=1\.32,HP_EAR=\.3,HP_DX=\[0,0,0,0,0\],HP_DY=\[0,0,0,0,0\]/);
+  assert.match(js, /HP_SPAN=1\.32,HP_EAR=\.3,HP_DX=\[0,0,0,0,0\],HP_DY=\[0,0,0,-4,-4\]/);
   assert.match(js, /const g=fr\.geom,S=WD_SCALE,fw=g\.faceW\*HP_SPAN\/\.8\*S/, '耳機跟著臉的大小與位置走');
   assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)\.catch/);
   assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
@@ -675,7 +675,9 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
   const js = await officeJs();
-  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\);/);
+  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\+nod\);/);
+  // 聽音樂時身體不搖，只有頭層加 nod。
+  assert.match(js, /layer\.isBody\?0:nod/);
   assert.match(js, /function drawWardrobeCap\(/);
   assert.match(js, /capCanvas/);
 });
