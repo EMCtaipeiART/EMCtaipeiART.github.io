@@ -6,7 +6,8 @@
   <title>凱曜設計部｜Pixel Office</title>
   <meta name="description" content="走進設計部的像素日常，查看設計師等級、移動人物、表達心情與留下對話。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23182e54'/%3E%3Cpath d='M7 9h18v11H7zM9 20v6m14-6v6' stroke='%23ffd45d' stroke-width='3'/%3E%3C/svg%3E">
-  <link rel="preload" as="image" href="assets/sprites-packed.webp?v=1" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/wardrobe-heads.webp?v=1" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/wardrobe-outfits.webp?v=1" fetchpriority="high">
   <link rel="preload" as="image" href="assets/furniture-v3.webp?v=1" fetchpriority="high">
   <link rel="preload" as="image" href="assets/icons-v3.webp?v=3">
   <link rel="preload" as="image" href="assets/icons-status-v4.webp?v=2">
@@ -14,7 +15,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=39">
+  <link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
   <header>
@@ -60,10 +61,11 @@
           <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示名稱，大家點名稱可以開網頁。</p>
         </div></section>
       <section class="tool-section" id="lookSection"><h3>造型</h3>
-        <div class="look-group"><span class="look-label">服裝</span><div id="lookOutfits" class="look-outfits"></div></div>
+        <div class="look-group" id="lookOutfitGroup"><span class="look-label">服裝</span><div id="lookOutfits" class="look-outfits"></div></div>
         <div class="look-group"><span class="look-label">帽子</span><div id="lookCaps" class="look-chips"></div></div>
         <div class="look-group"><span class="look-label">眼鏡</span><div id="lookGlasses" class="look-chips"></div></div>
-        <p class="look-hint">選好大家的畫面會一起換。選了帽子或眼鏡時，如果還是「原本」造型，會自動換上最接近的新服裝。</p>
+        <button type="button" class="text-button" id="lookReset" hidden>恢復預設造型</button>
+        <p class="look-hint">選好大家的畫面會一起換。衣服固定，只有 Anna 可以在藍色與黃色兩套之間換。</p>
       </section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
@@ -84,6 +86,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=69"></script>
+  <script src="app.js?v=70"></script>
 </body>
 </html>

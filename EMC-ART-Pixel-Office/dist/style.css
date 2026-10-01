@@ -296,7 +296,7 @@ main>.level-table-section{background:white;border:1px solid #dce3ed;border-radiu
 /* ───────── 造型 ───────── */
 .look-group{margin-top:12px}.look-group:first-of-type{margin-top:0}
 .look-label{display:block;margin-bottom:6px;font-size:12px;color:#a6b6cd}
-.look-outfits{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.look-outfits{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .look-outfits button,.look-chips button{border:1px solid #3c526f;border-radius:9px;background:#243c5c;color:#bac9de;font-size:12px}
 .look-outfits button{padding:6px 0 4px}
 .look-outfits button canvas{display:block;width:100%;height:58px;margin-bottom:2px}

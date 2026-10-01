@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=69/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=70/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -612,7 +612,8 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
 
 test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spotify 播放器）', async () => {
   const js = await officeJs();
-  assert.match(js, /HP_OFFSET_X=-1,HP_OFFSET_Y=-160,HP_DY=\[0,0,0,-5,0\]/);
+  assert.match(js, /HP_SPAN=1\.32,HP_EAR=\.3,HP_DX=\[0,0,0,0,0\],HP_DY=\[0,0,0,0,0\]/);
+  assert.match(js, /const g=fr\.geom,S=WD_SCALE,fw=g\.faceW\*HP_SPAN\/\.8\*S/, '耳機跟著臉的大小與位置走');
   assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)\.catch/);
   assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
 });
@@ -644,11 +645,14 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
   assert.match(js, /const layers=!WD_FEMALE\[i\]\|\|view===2\?\[body,head\]:\[head,body\]/);
   assert.match(js, /if\(look\.glasses&&view<2\)/, '背面不畫眼鏡');
-  assert.match(js, /OUTFIT_DEFAULT=\[2,3,4,0,5\]/);
-  // 原本的像素人物還是預設，沒選造型就不變。
-  assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{if\(wardrobeReady\(\)&&drawWardrobe\(context,index,dir,x,y,h\)\)return;/);
+  // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
+  assert.match(js, /\{outfit:2,cap:'',glasses:''\},\{outfit:3,cap:'',glasses:''\},\{outfit:4,cap:'blue',glasses:''\},\{outfit:1,cap:'',glasses:''\},\{outfit:5,cap:'',glasses:''\}/);
+  assert.match(js, /function outfitChoices\(i\)\{return i===3\?\[1,0\]:null;\}/);
+  // 原本的像素人物已下架：只剩組合版，不再載入舊圖集。
+  assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{drawWardrobe\(context,index,dir,x,y,h\);\}/);
+  assert.doesNotMatch(js, /sprites-packed|rowTops|colLefts/);
   for (const id of ['lookOutfits', 'lookCaps', 'lookGlasses']) assert.ok(html.includes(`id="${id}"`), id);
-  assert.match(js, /pushChange\(i,\{look:look\|\|''\}\)/);
+  assert.match(js, /pushChange\(i,\{look:isDefault\?'':next\}\)/);
   assert.match(css, /\.look-outfits\{/);
 });
 
@@ -671,8 +675,7 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
   const js = await officeJs();
-  assert.match(js, /HP_SCALE=\.41/);
-  assert.match(js, /HP_FRAME_H\*HP_SCALE\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\);/);
+  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\);/);
   assert.match(js, /function drawWardrobeCap\(/);
   assert.match(js, /capCanvas/);
 });

@@ -40,8 +40,12 @@ async function pupilBottoms() {
     .map((name, i) => [name, JSON.parse(`[${bottoms[1]}]`)[i]]));
 }
 
-test('黑眼圈貼在每位角色自己的黑色眼珠下方', async () => {
-  assert.deepEqual(await pupilBottoms(), PUPIL_BOTTOM);
+// 原本的像素人物已下架（2026-10-01），人物改成頭像＋服裝的組合：黑眼圈的位置不再用逐格量出來的眼珠下緣，
+// 而是跟著組合時算出來的眼睛位置走（見 buildWardrobe 的 geom）。
+test('黑眼圈貼在每位角色自己的眼睛下方（用組合頭像的眼睛位置，不是固定數字）', async () => {
+  const source = await overtimeFilterSource();
+  assert.match(source, /fr=wardrobeFrame\(index,'down'\)/);
+  assert.match(source, /fr\.geom\.eyeY/);
 });
 
 test('黑眼圈左右對稱，且對齊眼珠中心', async () => {
@@ -67,8 +71,8 @@ test('黑眼圈比眼珠略寬但不會外擴到頭髮或耳朵', async () => {
 
 test('黑眼圈的高度跟著各自的眼珠下緣走', async () => {
   const source = await overtimeFilterSource();
-  assert.match(source, /bagY=feetY-\(142-EYE_PUPIL_BOTTOM\[index\]\)\*scale/,
-    '黑眼圈的上緣要用該角色的眼珠下緣，不能共用一個固定值');
+  assert.match(source, /bagY=fr\?feetY\+\(fr\.geom\.eyeY\+8-fr\.ay\)\*WD_SCALE\*scale:/,
+    '黑眼圈的上緣要用該角色的眼睛位置，不能共用一個固定值');
 });
 
 test('鬼火的來源不含黑眼圈下緣，才不會在頭頂兩側留下殘影', async () => {
