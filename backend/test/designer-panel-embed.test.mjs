@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=79/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=80/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -712,9 +712,9 @@ test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留�
   assert.doesNotMatch(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)/);
 });
 
-test('Machi 回座位的高度對齊 Anna：座位附近往上抬 22，走遠了就不抬', async () => {
+test('Machi 對齊 Anna 的高度，Anna 與 Machi 坐下再往下約半個滑鼠高（10）：座位附近才位移，走遠了就不動', async () => {
   const js = await officeJs();
-  assert.match(js, /SEAT_LIFT=\[0,0,0,0,22\]/);
+  assert.match(js, /SEAT_LIFT=\[0,0,0,-10,12\]/);
   assert.match(js, /Math\.max\(0,1-Math\.hypot\(q\.x-o\[0\],q\.y-o\[1\]\)\/80\)/);
   assert.match(js, /-seatLift\(i\),tilt=0/);
 });

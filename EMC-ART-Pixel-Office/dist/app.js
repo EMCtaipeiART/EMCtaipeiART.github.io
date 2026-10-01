@@ -1153,7 +1153,7 @@ function drawBubble(p,personIndex=-1){
 // 回到座位時的高度對齊：Machi 的身形比 Anna 矮（組合後頭頂低約 22 px），坐在同一排桌子後面頭就比隔壁低一截。
 // 只在座位附近往上抬（離座位 80 px 以上就不抬，走路時腳才不會懸空），中間線性過渡所以走出去不會跳一格。
 // 數值＝兩人頭頂距腳底的差：(317-270) 原圖像素 × WD_SCALE。
-const SEAT_LIFT=[0,0,0,0,22];
+const SEAT_LIFT=[0,0,0,-10,12];// 負數＝往下：Anna 與 Machi 坐下的高度再往下約半個滑鼠高（10）；Machi 原本抬 22 對齊 Anna，現在跟著一起降 10 所以是 12
 function seatLift(i){if(!SEAT_LIFT[i])return 0;const o=starts[i],q=people[i];return SEAT_LIFT[i]*Math.max(0,1-Math.hypot(q.x-o[0],q.y-o[1])/80);}
 // 聽音樂時的點頭幅度（像素）。目前 0＝完全不搖（使用者 2026-10-01 要求）；要恢復只有頭點頭就改成 2.2，身體仍然不動。
 const MUSIC_NOD=0;
