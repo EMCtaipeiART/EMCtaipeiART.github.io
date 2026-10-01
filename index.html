@@ -14709,10 +14709,12 @@ function syncTimelineHeights(){
     const ticks=[...document.querySelectorAll('.case-timeline-panel .scale-tick,.case-sticky-timeline-head .scale-tick')];
     const scales=[...document.querySelectorAll('.case-timeline-panel .timeline-scale,.case-sticky-timeline-head .timeline-scale')];
     const scaleTracks=[...document.querySelectorAll('.case-timeline-panel .scale-track,.case-sticky-timeline-head .scale-track')];
-    scales.forEach(scale=>scale.style.setProperty('height',`${headHeight}px`,'important'));
-    scaleTracks.forEach(track=>track.style.setProperty('height',`${headHeight}px`,'important'));
-    ticks.forEach(tick=>tick.style.setProperty('height',`${headHeight}px`,'important'));
-    timelineRows.forEach(row=>row.style.setProperty('height',`${rowHeight}px`,'important'));
+    // 只在高度真的不同時才寫入，避免無謂的樣式重算。
+    const setHeight=(el,px)=>{const v=`${px}px`;if(el.style.getPropertyValue('height')!==v||el.style.getPropertyPriority('height')!=='important')el.style.setProperty('height',v,'important')};
+    scales.forEach(scale=>setHeight(scale,headHeight));
+    scaleTracks.forEach(track=>setHeight(track,headHeight));
+    ticks.forEach(tick=>setHeight(tick,headHeight));
+    timelineRows.forEach(row=>setHeight(row,rowHeight));
   });
 }
 function syncCaseHeaderScroll(){
@@ -16376,9 +16378,10 @@ document.addEventListener('pointerdown',applyOpenFiltersOnOutsideClick,true);
 document.querySelectorAll('[data-close-panel]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation(); setPanelClosed(button.dataset.closePanel,true)}));
 document.querySelectorAll('[data-restore-panel]').forEach(button=>button.addEventListener('click',()=>setPanelClosed(button.dataset.restorePanel,false,{reveal:true})));
 $('#restoreAllPanels')?.addEventListener('click',restoreAllPanels);
-document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll);
-document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll);
-document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{syncCaseHeaderScroll();syncTimelineHeights()}));
+document.querySelector('.case-table-wrap')?.addEventListener('scroll',syncCaseHeaderScroll,{passive:true});
+document.querySelector('.case-timeline-panel .timeline')?.addEventListener('scroll',syncCaseHeaderScroll,{passive:true});
+// 捲動時只同步橫向位置；列高／表頭高度由渲染時的 syncTimelineHeights 處理，不要在每次捲動事件重寫幾百個節點的 inline style（會造成捲動殘影）。
+document.querySelector('.case-split')?.addEventListener('scroll',()=>requestAnimationFrame(syncCaseHeaderScroll),{passive:true});
 window.addEventListener('resize',()=>{closeFieldPopover();closeGmailColorPalette(); scheduleCaseSplitSync(); syncTopPanelHeights(); syncModifyRecentRowHeights(); if(!$('#notificationToast')?.hidden)positionNotificationToastRegion(); if(!$('#caseDetailModal')?.hidden)syncCaseDetailScale()});
 document.querySelectorAll('.kpi[data-status]').forEach(card=>{
   card.addEventListener('click',()=>applyStatusFilter(card.dataset.status));

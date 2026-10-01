@@ -192,6 +192,15 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-01 Asia/Taipei — 捲動殘影：案件列表捲動時不再重寫時間軸列高
+
+- 修改目的：使用者回報滾動滑鼠時有殘影、游標移到連結文字有時間差（皆為主執行緒忙碌的徵兆）。
+- 追查過程：`.case-split` 的 scroll 事件每次都在 rAF 內呼叫 `syncTimelineHeights()`，把時間軸每一列、每個刻度的 inline `height!important` 全部重寫，捲動中等於每幀強制樣式重算。列高本來就在渲染時（`render` 後 rAF／60ms／240ms）同步過，捲動時重做沒有意義。
+- 影響檔案：`index.html`。
+- 影響功能：捲動只同步橫向位置（`syncCaseHeaderScroll`），三個 scroll 監聽改 `{passive:true}`；`syncTimelineHeights` 改為高度沒變就不寫入。
+- 風險／未驗證：沒在使用者登入的真實資料與 Chrome 上量測；若某些情境只靠捲動事件才觸發列高修正（理論上沒有），列高會延到下次渲染才更新。連結文字 hover 的延遲：設計圖連結會在 hover 時載入預覽圖，圖片網路載入本身有延遲，這次未改。
+- 驗證：script 語法通過；`node --test` 206 全過。部署：純前端。
+
 ### 2026-10-01 Asia/Taipei — 降低 Chrome 開啟首頁的卡頓：像素辦公室動畫節流、移除全螢幕彈窗模糊
 
 - 修改目的：使用者回報用 Chrome 開 index.html 非常卡。
