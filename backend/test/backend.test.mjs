@@ -1266,8 +1266,9 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
     for (const [key, value] of Object.entries(sourceRow)) assert.equal(archivedRow[key], value, `${id}.${key} is stale`);
   }
   assert.match(dashboard, /const ARCHIVE_JSON_URL='data\/database_archive\.json'/);
-  assert.match(dashboard, /Promise\.all\(\[fetch\(`\$\{ARCHIVE_JSON_URL\}\?v=\$\{stamp\}`/);
-  assert.match(dashboard, /fetch\(`\$\{PRIMARY_DATABASE_URL\}\?v=\$\{stamp\}`/);
+  // The data files are requested from <head> before Chart.js/fonts (revalidated with ETag), and the manual reload falls back to the same two sources.
+  assert.match(dashboard, /window\.__dashboardEarlyData=Promise\.all\(\['data\/database_archive\.json','backend\/data\/db\.json'\]\.map\(url=>fetch\(url,\{cache:'no-cache'\}\)\)\)/);
+  assert.match(dashboard, /Promise\.all\(\[ARCHIVE_JSON_URL,PRIMARY_DATABASE_URL\]\.map\(url=>fetch\(url,\{cache:forceFresh\?'reload':'no-cache'\}\)\)\)/);
   assert.match(dashboard, /database\?\.dashboardData\?\.settings/);
   assert.match(dashboard, /database\?\.dashboardData\?\.modifications/);
   assert.doesNotMatch(dashboard, /docs\.google\.com\/spreadsheets|fetchGvizJSONP|SHEET_JSONP_URL/);
@@ -1325,9 +1326,9 @@ test('dashboard follows the active designer directory and exposes quarterly perf
   assert.match(dashboard, /id="analysisVideoQuarterChart"/);
   assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'平面'/);
   assert.match(dashboard, /renderDesignerQuarterPerformance\(y,designer,'影音'/);
-  assert.match(dashboard, /const selectedQuarter=Math\.ceil\(m\/3\)/);
+  assert.match(dashboard, /renderDesignerQuarterPerformancePanels\(y,designer,analysisQuarter\);renderQuarterRecordTable\(y,analysisQuarter,designer\)/);
   assert.match(dashboard, /function renderDesignerQuarterPerformancePanels\(/);
-  assert.match(dashboard, /renderDesignerQuarterPerformancePanels\(year,designer,analysisQuarter\)/);
+  assert.match(dashboard, /function refreshQuarterView\(y,designer/);
   assert.match(dashboard, /quarter=>Math\.round\(rows\.filter/);
   assert.match(dashboard, /if\(index!==selectedIndex&&index!==chart\.\$performanceHoverIndex\)return/);
   assert.match(dashboard, /\.sort\(\(left,right\)=>right\.score-left\.score/);
