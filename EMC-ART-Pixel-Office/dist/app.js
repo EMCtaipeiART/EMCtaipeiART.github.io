@@ -149,15 +149,17 @@ function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.
 // eyes 是眼睛位置（眼鏡對位用）。組合規則（尺寸全部是照現有人物比例量出來的）：頭放大 WD_K 倍、下巴蓋住脖子上緣
 // 往下 WD_OV，整個人縮到跟原本的像素人物一樣高（WD_SCALE）。男生頭在衣服前面；女生有長髮，正面與側面頭髮在衣服後面、
 // 背面在前面。帽子對臉的上緣、眼鏡對眼睛；背面不畫眼鏡。
-const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":139,"s":[32,106,28,90]},{"x":156,"y":0,"w":117,"h":148,"s":[47,103,30,89]},{"x":312,"y":0,"w":125,"h":139}],[{"x":0,"y":156,"w":138,"h":136,"s":[38,100,26,88]},{"x":156,"y":156,"w":117,"h":136,"s":[47,104,28,86]},{"x":312,"y":156,"w":135,"h":135}],[{"x":0,"y":312,"w":104,"h":86,"s":[4,99,31,82]},{"x":156,"y":312,"w":110,"h":85,"s":[33,93,33,83]},{"x":312,"y":312,"w":103,"h":83,"s":[4,97,51,82]}],[{"x":0,"y":468,"w":141,"h":128,"s":[39,108,25,83]},{"x":156,"y":468,"w":122,"h":140,"s":[53,109,29,84]},{"x":312,"y":468,"w":136,"h":126}],[{"x":0,"y":624,"w":106,"h":80,"s":[7,100,12,76]},{"x":156,"y":624,"w":105,"h":80,"s":[24,92,14,78]},{"x":312,"y":624,"w":111,"h":79,"s":[8,103,17,63]}]],"outfits":[[{"x":0,"y":0,"w":157,"h":177,"n":78.5},{"x":200,"y":0,"w":110,"h":179,"n":49.5},{"x":400,"y":0,"w":157,"h":182,"n":78.0}],[{"x":0,"y":196,"w":158,"h":184,"n":79.0},{"x":200,"y":196,"w":115,"h":187,"n":51.0},{"x":400,"y":196,"w":160,"h":188,"n":79.5}],[{"x":0,"y":392,"w":160,"h":166,"n":80.5},{"x":200,"y":392,"w":107,"h":169,"n":39.0},{"x":400,"y":392,"w":160,"h":170,"n":79.5}],[{"x":0,"y":588,"w":170,"h":170,"n":85.0},{"x":200,"y":588,"w":117,"h":167,"n":52.5},{"x":400,"y":588,"w":169,"h":172,"n":84.0}],[{"x":0,"y":784,"w":177,"h":159,"n":88.0},{"x":200,"y":784,"w":113,"h":158,"n":52.5},{"x":400,"y":784,"w":172,"h":163,"n":84.0}],[{"x":0,"y":980,"w":174,"h":149,"n":85.0},{"x":200,"y":980,"w":90,"h":153,"n":24.0},{"x":400,"y":980,"w":175,"h":150,"n":87.0}]],"caps":[[{"x":0,"y":0,"w":335,"h":240},{"x":430,"y":0,"w":404,"h":237},{"x":860,"y":0,"w":320,"h":239}],[{"x":0,"y":260,"w":335,"h":240},{"x":430,"y":260,"w":403,"h":237},{"x":860,"y":260,"w":320,"h":239}]],"glasses":[[{"x":0,"y":520,"w":313,"h":102},{"x":430,"y":520,"w":287,"h":105}],[{"x":0,"y":650,"w":313,"h":106},{"x":430,"y":650,"w":289,"h":110}]],"eyes":[[{"x":66.1,"y":58.8},{"x":88.2,"y":55.2}],[{"x":65.7,"y":57.4},{"x":89.9,"y":54.2}],[{"x":52.5,"y":54.7},{"x":80.3,"y":58.3}],[{"x":78.6,"y":56.5},{"x":96.0,"y":53.5}],[{"x":53.9,"y":45.6},{"x":77.0,"y":46.6}]]};
+const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":139,"s":[32,106,28,90]},{"x":156,"y":0,"w":117,"h":148,"s":[47,103,30,89]},{"x":312,"y":0,"w":125,"h":139}],[{"x":0,"y":156,"w":138,"h":136,"s":[38,100,26,88]},{"x":156,"y":156,"w":117,"h":136,"s":[47,104,28,86]},{"x":312,"y":156,"w":135,"h":135}],[{"x":0,"y":312,"w":104,"h":86,"s":[4,99,31,82]},{"x":156,"y":312,"w":110,"h":85,"s":[33,93,33,83]},{"x":312,"y":312,"w":103,"h":83,"s":[4,97,51,82]}],[{"x":0,"y":468,"w":141,"h":128,"s":[39,108,25,83]},{"x":156,"y":468,"w":122,"h":140,"s":[53,109,29,84]},{"x":312,"y":468,"w":136,"h":126}],[{"x":0,"y":624,"w":106,"h":80,"s":[7,100,12,76]},{"x":156,"y":624,"w":105,"h":80,"s":[24,92,14,78]},{"x":312,"y":624,"w":111,"h":79,"s":[8,103,17,63]}]],"outfits":[[{"x":0,"y":0,"w":157,"h":177,"n":78.5},{"x":200,"y":0,"w":110,"h":179,"n":49.5},{"x":400,"y":0,"w":157,"h":182,"n":78.0}],[{"x":0,"y":196,"w":158,"h":184,"n":79.0},{"x":200,"y":196,"w":115,"h":187,"n":51.0},{"x":400,"y":196,"w":160,"h":188,"n":79.5}],[{"x":0,"y":392,"w":160,"h":166,"n":80.5},{"x":200,"y":392,"w":107,"h":169,"n":39.0},{"x":400,"y":392,"w":160,"h":170,"n":79.5}],[{"x":0,"y":588,"w":170,"h":170,"n":85.0},{"x":200,"y":588,"w":117,"h":167,"n":52.5},{"x":400,"y":588,"w":169,"h":172,"n":84.0}],[{"x":0,"y":784,"w":177,"h":159,"n":88.0},{"x":200,"y":784,"w":113,"h":158,"n":52.5},{"x":400,"y":784,"w":172,"h":163,"n":84.0}],[{"x":0,"y":980,"w":174,"h":149,"n":85.0},{"x":200,"y":980,"w":90,"h":153,"n":24.0},{"x":400,"y":980,"w":175,"h":150,"n":87.0}]],"caps":[[{"x":0,"y":0,"w":208,"h":149},{"x":267,"y":0,"w":250,"h":147},{"x":533,"y":0,"w":198,"h":148}],[{"x":0,"y":161,"w":208,"h":149},{"x":267,"y":161,"w":250,"h":147},{"x":533,"y":161,"w":198,"h":148}]],"glasses":[[{"x":0,"y":322,"w":194,"h":63},{"x":267,"y":322,"w":178,"h":65}],[{"x":0,"y":403,"w":194,"h":66},{"x":267,"y":403,"w":179,"h":68}]],"eyes":[[{"x":66.1,"y":58.8},{"x":88.2,"y":55.2}],[{"x":65.7,"y":57.4},{"x":89.9,"y":54.2}],[{"x":52.5,"y":54.7},{"x":80.3,"y":58.3}],[{"x":78.6,"y":56.5},{"x":96.0,"y":53.5}],[{"x":53.9,"y":45.6},{"x":77.0,"y":46.6}]]};
 const WARDROBE_OUTFITS=['街頭黃 T','藍 T 寬牛仔褲','黑色西裝外套','米白襯衫','丹寧外套短褲','黑色連帽衫'];
 const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',label:'藍帽'}],WARDROBE_GLASSES=[{id:'',label:'無'},{id:'clear',label:'黑框'},{id:'sun',label:'墨鏡'}];
 const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10],WD_GLASSES_SIZE=[1,1.19,1,1,1];// WD_GLASSES_SIZE：眼鏡大小是依臉寬算的，Amber 的臉比 Leona 窄 16%，眼鏡就小一圈；1.19 讓她的跟 Leona 一樣大// WD_DROP：每個人「衣服與配件」相對頭往下多少（Machi 使用者要求往下一點）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
-wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=1';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=1';wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=1';
-Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();};});
+wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=2';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=2';// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
+Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();};});
+function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=2';}
+const accessoriesReady=()=>wardrobeSheets.acc.complete&&wardrobeSheets.acc.naturalWidth>0;
 const wardrobeCache=new Map();
-const wardrobeReady=()=>Object.values(wardrobeSheets).every(img=>img.complete&&img.naturalWidth);
+const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=>img.complete&&img.naturalWidth);
 // 預設造型＝每個人現在的樣子（2026-10-01 使用者指定，原本的像素人物已下架）：Leona 黑西裝、Amber 米白襯衫、Noise 丹寧外套＋藍帽、
 // Machi 全黑連帽衫長褲、Anna 藍色 T 恤。只有 Anna 可以在藍色（1）與黃色（0）兩套之間換；其他人的衣服固定，帽子與眼鏡大家都可以換。
 // 用函式而不是常數：腳本最前面的版面計算（sceneTopExtent）就會用到，那時下面的 const 還沒宣告。
@@ -178,11 +180,11 @@ function buildWardrobe(i,view,look){
   const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:'outfits',src:B,x:view===1?-WD_SIDE_BODY_SHIFT:0,y:WD_DROP[i],w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
   const eye=D.eyes[i][view];
-  if(look.glasses&&view<2){
+  if(look.glasses&&view<2&&accessoriesReady()){
     const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0],faceW=(front[1]-front[0])*K,s=faceW*.88/gf.w*(view===1?.95:1)*WD_GLASSES_SIZE[i],w=g.w*s,h=g.h*s;
     layers.push({sheet:'acc',src:g,w,h,x:view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18,y:hy+eye.y*K-h/2+WD_DROP[i]});
   }
-  if(look.cap){
+  if(look.cap&&accessoriesReady()){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
     layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.32:.34)+WD_DROP[i]});
   }
@@ -192,7 +194,7 @@ function buildWardrobe(i,view,look){
   layers.forEach(l=>c2.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h));
   // 帽子單獨再存一張（跟整張同尺寸、同位置）：戴耳機時耳機要夾在頭與帽子之間，帽子得在耳機上面再蓋一次。
   let capCanvas=null;
-  if(look.cap){capCanvas=document.createElement('canvas');capCanvas.width=canvas.width;capCanvas.height=canvas.height;const cc=capCanvas.getContext('2d');cc.imageSmoothingQuality='high';const l=layers[layers.length-1];cc.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h);}
+  if(look.cap&&accessoriesReady()){capCanvas=document.createElement('canvas');capCanvas.width=canvas.width;capCanvas.height=canvas.height;const cc=capCanvas.getContext('2d');cc.imageSmoothingQuality='high';const l=layers[layers.length-1];cc.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h);}
   const eyeFront=D.eyes[i][Math.min(view,1)];
   // 臉的幾何（畫布座標、原圖像素）：耳機、加班黑眼圈用它對位，不再用固定數字。
   const geom={cx:hx+chin.x*K-minX,eyeY:hy+eyeFront.y*K-minY,faceW:(front[1]-front[0])*K,faceH:(front[3]-front[2])*K,topY:hy-minY};
@@ -508,7 +510,7 @@ function refreshRosterPortraits(){
 }
 function renderLookPanel(){
   const outfitBox=$('lookOutfits');if(!outfitBox||selected===null||!wardrobeReady())return;
-  const look=effectiveLook(selected),choices=outfitChoices(selected);
+  loadAccessories();const look=effectiveLook(selected),choices=outfitChoices(selected);
   // 衣服只有 Anna 可以換（藍色與黃色兩套），其他人的衣服固定，整個「服裝」區就不顯示。
   $('lookOutfitGroup').hidden=!choices;
   if(choices)outfitBox.replaceChildren(...choices.map(o=>{
@@ -520,7 +522,7 @@ function renderLookPanel(){
   }));
   const chips=(host,list,current,rowOf,key)=>host.replaceChildren(...list.map(item=>{
     const button=document.createElement('button');button.type='button';button.className=current===item.id?'active':'';
-    if(item.id){const canvas=document.createElement('canvas');canvas.width=88;canvas.height=52;const meta=rowOf(item.id)[0],k=Math.min(84/meta.w,48/meta.h);canvas.getContext('2d').drawImage(wardrobeSheets.acc,meta.x,meta.y,meta.w,meta.h,44-meta.w*k/2,26-meta.h*k/2,meta.w*k,meta.h*k);button.append(canvas);}
+    if(item.id&&accessoriesReady()){const canvas=document.createElement('canvas');canvas.width=88;canvas.height=52;const meta=rowOf(item.id)[0],k=Math.min(84/meta.w,48/meta.h);canvas.getContext('2d').drawImage(wardrobeSheets.acc,meta.x,meta.y,meta.w,meta.h,44-meta.w*k/2,26-meta.h*k/2,meta.w*k,meta.h*k);button.append(canvas);}
     button.append(item.label);button.onclick=()=>setLook({[key]:item.id});return button;
   }));
   chips($('lookCaps'),WARDROBE_CAPS,look.cap,id=>WARDROBE.caps[id==='blue'?1:0],'cap');
@@ -537,7 +539,8 @@ if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[s
 // ───────── 音樂（現在正在聽的歌）─────────
 // 貼 Spotify 單曲或 Apple Music 網址分享：頭上戴耳機並跟著點頭、浮動音符；原本對話框的位置改成跑馬燈歌名
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
-const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
+const headphones=new Image();
+function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-v1.webp?v=2';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
 headphones.onload=()=>{markDirty();drawMusicIcon();};
 const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN=1.32,HP_EAR=.3,HP_DX=[0,0,0,-1.4,0],HP_DY=[0,0,0,-13,-4],HP_SIZE=[1,1,1,1.32,1],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
@@ -563,6 +566,7 @@ async function musicMetadata(info){
   musicMetaCache.set(key,meta);return meta;
 }
 function updateMusicPanel(){
+  ensureHeadphones();
   const toggle=$('musicToggle');if(!toggle||selected===null)return;
   const music=musicOf(people[selected]);
   toggle.classList.toggle('is-sharing',Boolean(music));$('musicNow').textContent=music?`正在分享：${music.title}`:'分享現在正在聽的歌';
@@ -596,6 +600,11 @@ function stopMusic(){
 let spotifyApiPromise=null;
 function spotifyApi(){return spotifyApiPromise||(spotifyApiPromise=new Promise((resolve,reject)=>{window.onSpotifyIframeApiReady=api=>resolve(api);const tag=document.createElement('script');tag.src='https://open.spotify.com/embed/iframe-api/v1';tag.async=true;tag.onerror=()=>{spotifyApiPromise=null;reject(Error('無法載入 Spotify 播放器'));};document.head.append(tag);}));}
 // Spotify 官方播放器必須「存在於頁面上」才會出聲，但畫面上看不到（樣式是透明、不吃點擊）；播放／暫停都用人物頭上的綠色小鈕。
+// 先預載 Spotify 播放器程式，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播——但要等到使用者第一次有動作才載
+// （約 100 KB、兩個請求），進站時不搶頻寬；嵌入畫面沒人動就完全不載。
+let spotifyWanted=false,userTouched=false;
+function wantSpotifyApi(){spotifyWanted=true;if(userTouched)spotifyApi().catch(()=>{});}
+['pointermove','pointerdown','touchstart','keydown'].forEach(type=>window.addEventListener(type,()=>{userTouched=true;if(spotifyWanted)spotifyApi().catch(()=>{});},{once:true,passive:true}));
 function ensureSpotifyDock(){let dock=$('spotifyDock');if(dock)return dock;dock=document.createElement('div');dock.id='spotifyDock';dock.innerHTML='<div class="dock-host"></div>';dock.setAttribute('aria-hidden','true');document.body.append(dock);return dock;}
 async function toggleMusic(i){
   const music=musicOf(people[i]),info=music&&musicInfo(music.url);if(!info)return;
@@ -895,9 +904,10 @@ function applyRemote(list){markDirty();let lookChanged=false;
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
+    if(p.music)ensureHeadphones();
     if(!p.music&&musicPlaying.i===i)stopMusic();
     {const look=entry.look&&typeof entry.look==='object'?{outfit:entry.look.outfit,cap:entry.look.cap,glasses:entry.look.glasses}:null;if(JSON.stringify(look)!==JSON.stringify(p.look||null)){p.look=look;lookChanged=true;}}// 那個人停止分享了，正在播的也跟著停
-    if(p.music&&p.music.provider==='spotify')spotifyApi().catch(()=>{});// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
+    if(p.music&&p.music.provider==='spotify')wantSpotifyApi();// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
     if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
@@ -1140,9 +1150,14 @@ function drawBubble(p,personIndex=-1){
   lines.forEach((line,index)=>ctx.fillText(line,x+w/2,y+BUBBLE_PAD_Y+lineHeight*index+lineHeight/2));
   ctx.textBaseline='alphabetic';ctx.restore();
 }
+// 回到座位時的高度對齊：Machi 的身形比 Anna 矮（組合後頭頂低約 22 px），坐在同一排桌子後面頭就比隔壁低一截。
+// 只在座位附近往上抬（離座位 80 px 以上就不抬，走路時腳才不會懸空），中間線性過渡所以走出去不會跳一格。
+// 數值＝兩人頭頂距腳底的差：(317-270) 原圖像素 × WD_SCALE。
+const SEAT_LIFT=[0,0,0,0,22];
+function seatLift(i){if(!SEAT_LIFT[i])return 0;const o=starts[i],q=people[i];return SEAT_LIFT[i]*Math.max(0,1-Math.hypot(q.x-o[0],q.y-o[1])/80);}
 // 聽音樂時的點頭幅度（像素）。目前 0＝完全不搖（使用者 2026-10-01 要求）；要恢復只有頭點頭就改成 2.2，身體仍然不動。
 const MUSIC_NOD=0;
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const fr=wardrobeFrame(i,p.dir);if(fr){
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const fr=wardrobeFrame(i,p.dir);if(fr){
     // 耳機跟著臉的大小與位置走（組合版每個人的頭不一樣大）：兩個耳罩外緣約是臉寬的 HP_SPAN 倍，耳罩中心在眼睛下方一點（耳朵）。
     const g=fr.geom,S=WD_SCALE,fw=g.faceW*HP_SPAN*HP_SIZE[i]/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx-fr.ax)*S+HP_DX[i],ear=(g.eyeY+g.faceH*HP_EAR-fr.ay)*S+HP_DY[i]+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
     ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);drawWardrobeCap(ctx,i,p.dir,0,bob+nod);}}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
@@ -1168,7 +1183,7 @@ function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
-Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(wardrobeSheets.acc),load(furniture)]).then(()=>{ready=true;markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
+Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;loadAccessories();markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}
 

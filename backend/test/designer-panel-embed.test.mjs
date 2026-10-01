@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=78/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=79/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -260,7 +260,8 @@ test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
   }
   // 142 KB 的 PNG 濾鏡圖改成 WebP。
   assert.match(js, /overtimeSheet\.src='assets\/overtime-filter\.webp/);
-  assert.match(html, /preload[^>]*assets\/overtime-filter\.webp/);
+  // 加班濾鏡不是進站必要的圖：不預載（預載會跟 app.js、頭像、衣服搶頻寬，2026-10-01 瘦身），由 app.js 之後再載。
+  assert.doesNotMatch(html, /preload[^>]*assets\/overtime-filter\.webp/);
 });
 
 test('面板標題與說明是「設計部即時動態」的版本', async () => {
@@ -614,7 +615,7 @@ test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spot
   const js = await officeJs();
   assert.match(js, /HP_SPAN=1\.32,HP_EAR=\.3,HP_DX=\[0,0,0,-1\.4,0\],HP_DY=\[0,0,0,-13,-4\],HP_SIZE=\[1,1,1,1\.32,1\]/);
   assert.match(js, /const g=fr\.geom,S=WD_SCALE,fw=g\.faceW\*HP_SPAN\*HP_SIZE\[i\]\/\.8\*S/, '耳機跟著臉的大小與位置走');
-  assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)\.catch/);
+  assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)wantSpotifyApi\(\)/);
   assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
 });
 
@@ -644,7 +645,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
   assert.match(js, /const layers=!WD_FEMALE\[i\]\|\|view===2\?\[body,head\]:\[head,body\]/);
-  assert.match(js, /if\(look\.glasses&&view<2\)/, '背面不畫眼鏡');
+  assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)\)/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:''\},\{outfit:3,cap:'',glasses:''\},\{outfit:4,cap:'blue',glasses:''\},\{outfit:1,cap:'',glasses:''\},\{outfit:5,cap:'',glasses:''\}/);
   assert.match(js, /function outfitChoices\(i\)\{return i===3\?\[1,0\]:null;\}/);
@@ -691,4 +692,29 @@ test('Amber 的眼鏡與墨鏡跟 Leona 一樣大（臉比較窄所以放大 1.1
   const js = await officeJs();
   assert.match(js, /WD_GLASSES_SIZE=\[1,1\.19,1,1,1\]/);
   assert.match(js, /\*WD_GLASSES_SIZE\[i\],w=g\.w\*s/);
+});
+
+test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留必要的圖，Spotify 播放器等使用者有動作才載', async () => {
+  const [js, html] = await Promise.all([officeJs(), officeHtml()]);
+  // ready 只等頭像、衣服、家具；配件圖在 ready 之後才開始載。
+  assert.match(js, /Promise\.all\(\[load\(wardrobeSheets\.heads\),load\(wardrobeSheets\.outfits\),load\(furniture\)\]\)\.then\(\(\)=>\{ready=true;loadAccessories\(\);/);
+  assert.match(js, /function loadAccessories\(\)\{if\(!wardrobeSheets\.acc\.getAttribute\('src'\)\)/);
+  // 耳機圖只有在有人聽音樂（或編輯畫面）才載。
+  assert.doesNotMatch(js, /headphones\.src='assets\/headphones-v1\.webp\?v=2';/);
+  assert.match(js, /function ensureHeadphones\(\)/);
+  // 預載只留進站一定要用的三張；其他圖由 app.js 之後再載，不跟 app.js 搶頻寬。
+  assert.match(html, /rel="preload" as="image" href="assets\/wardrobe-heads\.webp/);
+  assert.match(html, /rel="preload" as="image" href="assets\/furniture-v3\.webp/);
+  assert.doesNotMatch(html, /preload[^>]*(icons-v3|icons-status-v4|overtime-filter)/);
+  assert.match(html, /<script src="app\.js\?v=\d+" fetchpriority="high">/);
+  // Spotify 播放器程式等第一次互動才載。
+  assert.match(js, /function wantSpotifyApi\(\)\{spotifyWanted=true;if\(userTouched\)/);
+  assert.doesNotMatch(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)/);
+});
+
+test('Machi 回座位的高度對齊 Anna：座位附近往上抬 22，走遠了就不抬', async () => {
+  const js = await officeJs();
+  assert.match(js, /SEAT_LIFT=\[0,0,0,0,22\]/);
+  assert.match(js, /Math\.max\(0,1-Math\.hypot\(q\.x-o\[0\],q\.y-o\[1\]\)\/80\)/);
+  assert.match(js, /-seatLift\(i\),tilt=0/);
 });
