@@ -108,7 +108,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=61/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=62/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -607,4 +607,11 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
   assert.match(js, /#008214/);
   assert.match(js, /https:\/\/open\.spotify\.com\/embed\/iframe-api\/v1/);
   assert.match(css, /#spotifyDock\{/);
+});
+
+test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spotify 播放器）', async () => {
+  const js = await officeJs();
+  assert.match(js, /HP_OFFSET_X=-6,HP_OFFSET_Y=-154/);
+  assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)spotifyApi\(\)\.catch/);
+  assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
 });

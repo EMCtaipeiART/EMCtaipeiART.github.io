@@ -422,7 +422,7 @@ function setStatus(id){if(selected===null)return;const p=people[selected];p.stat
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_SCALE=.34,HP_FRAMES=6,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_SCALE=.34,HP_FRAMES=6,HP_OFFSET_X=-6,HP_OFFSET_Y=-154,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
@@ -489,11 +489,12 @@ async function toggleMusic(i){
       musicPlaying={i,paused:false,audio,controller:null};markDirty();
     }else{
       const api=await spotifyApi(),dock=ensureSpotifyDock(),host=dock.querySelector('.dock-host'),target=document.createElement('div');
-      host.replaceChildren(target);dock.hidden=false;musicPlaying={i,paused:false,audio:null,controller:null};markDirty();
+      host.replaceChildren(target);dock.hidden=false;musicPlaying={i,paused:false,started:false,audio:null,controller:null};markDirty();
+      setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)toast('瀏覽器擋住了自動播放，請按右下角播放器的播放鍵。');},3000);
       api.createController(target,{uri:`spotify:track:${info.id}`,width:'100%',height:80},controller=>{
         if(musicPlaying.i!==i)return;musicPlaying.controller=controller;
-        controller.addListener('ready',()=>controller.play());
-        controller.addListener('playback_update',event=>{if(musicPlaying.i!==i)return;musicPlaying.paused=Boolean(event.data&&event.data.isPaused);markDirty();});
+        controller.addListener('ready',()=>{controller.play();setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)controller.resume&&controller.resume();},800);});
+        controller.addListener('playback_update',event=>{if(musicPlaying.i!==i)return;musicPlaying.paused=Boolean(event.data&&event.data.isPaused);if(!musicPlaying.paused)musicPlaying.started=true;markDirty();});
       });
     }
   }catch(err){stopMusic();toast('無法播放：'+(err&&err.message?err.message:'請點歌名到網頁收聽'));}
@@ -771,6 +772,7 @@ function applyRemote(list){markDirty();
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
+    if(p.music&&p.music.provider==='spotify')spotifyApi().catch(()=>{});// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
     if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
@@ -1012,7 +1014,7 @@ function drawBubble(p,personIndex=-1){
   lines.forEach((line,index)=>ctx.fillText(line,x+w/2,y+BUBBLE_PAD_Y+lineHeight*index+lineHeight/2));
   ctx.textBaseline='alphabetic';ctx.restore();
 }
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;if(musicOf(p))bob+=Math.sin(t*9)*2.2;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const frame=Math.floor(t*4)%HP_FRAMES;ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,-HP_FRAME_W*HP_SCALE/2,-159+bob,HP_FRAME_W*HP_SCALE,HP_FRAME_H*HP_SCALE);}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=walk&&selected===i?Math.sin(t*17)*3:0,tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;if(musicOf(p))bob+=Math.sin(t*9)*2.2;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const frame=Math.floor(t*4)%HP_FRAMES;ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,-HP_FRAME_W*HP_SCALE/2+HP_OFFSET_X,HP_OFFSET_Y+bob,HP_FRAME_W*HP_SCALE,HP_FRAME_H*HP_SCALE);}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
