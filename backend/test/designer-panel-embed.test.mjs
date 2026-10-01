@@ -625,5 +625,6 @@ test('Spotify 播放器在畫面上隱藏（只聽音樂），用人物頭上的
 });
 
 test('像素辦公室的 app.js 語法正確（只比對文字的測試抓不到整行被註解吃掉這種錯）', async () => {
-  assert.doesNotThrow(() => new vm.Script(null ?? await officeJs(), { filename: 'app.js' }));
+  const source = await officeJs();
+  assert.doesNotThrow(() => new vm.Script(source, { filename: 'app.js' }));
 });
