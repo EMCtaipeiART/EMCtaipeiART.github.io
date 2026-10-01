@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-10-01T09:00:00+08:00" />
-<meta name="app-version" content="20261001-keep-view-30" />
+<meta name="app-version" content="20261001-workload-v2-31" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <script>
 // 資料檔最大（約 6 MB、壓縮後約 650 KB），在解析其餘資源前就先開始下載。
@@ -355,6 +355,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
 .analysis-heading-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.analysis-pack-btn{height:34px;padding:0 14px;border:1px solid #079455;border-radius:8px;background:#079455;color:#fff;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;box-shadow:0 4px 10px rgba(7,148,85,.16)}.analysis-pack-btn:hover{background:#067647;border-color:#067647}.analysis-pack-btn:focus-visible{outline:3px solid rgba(18,183,106,.28);outline-offset:2px}.analysis-pack-btn:active{transform:translateY(1px)}.analysis-pack-btn:disabled{opacity:.7;cursor:progress}.analysis-pack-btn .icon{width:15px;height:15px}
 @media(max-width:620px){.analysis-heading-tools{justify-content:flex-start;margin-top:10px}.analysis-heading-tools .analysis-period{margin-top:0}}
 .quarter-switcher{display:flex;align-items:center;gap:10px}.quarter-year{color:#475467;font-size:12px;font-weight:800;white-space:nowrap}.analysis-heading-tools .quarter-controls{margin:0;width:auto;justify-content:flex-start}.analysis-heading-tools .quarter-controls button{height:34px;min-width:44px;padding:0 12px;font-size:12px;border-radius:8px}
+.workload .panel-title{flex-wrap:wrap;row-gap:4px}.workload .panel-title .status{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:4px 10px}.load-mode{margin:-2px 0 8px;color:#667085;font-size:11px;font-weight:700}.load-pct{display:grid;line-height:1.15;justify-items:end;white-space:nowrap}.load-pct small{font-size:9px;color:#667085;font-weight:700}.load-status.free{background:#e0f2fe;color:#0369a1}.load-status.idle{background:#f2f4f7;color:#667085}
 </style>
   <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
@@ -390,7 +391,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <section class="dashboard-grid">
       <div class="card panel brand-panel"><div class="panel-title"><h3>品牌工作量分佈</h3></div><div class="client-list" id="clientList"></div><button class="brand-all-btn" id="allBrandsBtn" type="button">查看全部品牌</button></div>
       <div class="middle-stack"><div class="card panel trend-panel"><div class="panel-title"><h3>案件趨勢 <span class="panel-sub" id="trendRange">近一整年</span></h3></div><div class="chart-box"><canvas id="trendChart"></canvas></div></div><div class="card panel status-panel"><div class="panel-title"><h3>項目細節分布</h3></div><div class="status-layout"><div class="status-chart-box"><canvas id="statusChart"></canvas></div><div class="status-legend" id="statusLegend"></div></div></div></div>
-      <div class="card panel workload"><div class="panel-title"><h3>設計師工作負載 <span class="info-wrap"><span class="info-dot" tabindex="0">i</span><span class="info-popover">負載率 = DLI × 100。DLI = 本週加權分數 / 個人每週標準容量 × 60% + 進行中案件數 / 個人平均進行中案件數 × 25% + 7天內到期案件數 / 個人平均7天內到期案件數 × 15%。每週標準容量 = 前一完整年度每週加權去除最高、最低各 10% 後的平均 × 70% + 近 3 個月平均 × 30%。進行中與 7 天內到期基準維持近 3 個月平均，資料不足時使用全設計部平均。</span></span></h3><div class="status"><span><i style="background:#22c55e"></i>適中</span><span><i style="background:#fbbf24"></i>偏高</span><span><i style="background:#f97316"></i>忙碌</span><span><i style="background:#f04438"></i>過高</span></div></div><div id="heatmap"></div></div>
+      <div class="card panel workload"><div class="panel-title"><h3>設計師工作負載 <span class="info-wrap"><span class="info-dot" tabindex="0">i</span><span class="info-popover">負載率 = 這一週實際落在設計師身上的加權分數 ÷ 個人每週常態量。案件分數依工作日平均攤到開始～結束日，已取消不計；已完成、過稿中視為設計師已無後續進度（提前完成的案件只算到今天，過稿中若被要求修改，狀態變成「修改中」才會重新計入）；跨月仍未結案的舊案件視為已完成。常態量 = 前 12 週（有工作量的週）中位數，資料不足時改用同組、全設計部中位數。看當月顯示本週並預估下週；看過去月份顯示該月週平均。灰色細線為 100%（常態週量）。</span></span></h3><div class="status"><span><i style="background:#38bdf8"></i>有餘裕</span><span><i style="background:#22c55e"></i>適中</span><span><i style="background:#fbbf24"></i>偏高</span><span><i style="background:#f97316"></i>忙碌</span><span><i style="background:#f04438"></i>過高</span></div></div><div class="load-mode" id="workloadMode"></div><div id="heatmap"></div></div>
       <div class="right-stack"><div class="card panel rank-panel"><div class="panel-title"><h3>平面設計師本月排行</h3></div><div class="rank" id="rankGraphic"></div></div><div class="card panel rank-panel"><div class="panel-title"><h3>影音設計師本月排行</h3></div><div class="rank" id="rankVideo"></div></div></div>
     </section>
     <footer class="dashboard-footer">© 2026 EMC Design Team. All rights reserved.</footer>
@@ -516,7 +517,7 @@ function configureDesignerDirectory(rows=[]){
     const group=String(row['組別']||'').trim(),visible=String(row['設計師顯示']||'').trim().toLowerCase(),name=String(row['原始名字']||row['名字']||'').trim();
     if(!/^(?:平面|影音)$/.test(group)||!name)return false;
     return visible?!/^(?:x|false|0|停用|否)$/.test(visible):fallbackNames.has(name)
-  }).map(row=>({name:String(row['原始名字']||row['名字']).trim(),displayName:String(row['顯示名']||row['原始名字']||row['名字']).trim(),group:String(row['組別']).trim(),rotation:Number(row['新專案輪值'])||99,avatar:String(row['頭像連結']||''),account:String(row['帳號']||'')})).sort((left,right)=>['平面','影音'].indexOf(left.group)-['平面','影音'].indexOf(right.group)||left.rotation-right.rotation||left.name.localeCompare(right.name,'zh-Hant'));
+  }).map(row=>({name:String(row['原始名字']||row['名字']).trim(),displayName:String(row['顯示名']||row['原始名字']||row['名字']).trim(),group:String(row['組別']).trim(),rotation:Number(row['新專案輪值'])||99,avatar:String(row['頭像連結']||''),account:String(row['帳號']||''),capacity:Number(row['每週標準分數'])||0})).sort((left,right)=>['平面','影音'].indexOf(left.group)-['平面','影音'].indexOf(right.group)||left.rotation-right.rotation||left.name.localeCompare(right.name,'zh-Hant'));
   designerDirectory=active.length?active:DEFAULT_DESIGNER_DIRECTORY.map(row=>({...row}));DESIGNERS=designerDirectory.map(row=>row.name);rebuildDesignerGroups()
 }
 rebuildDesignerGroups();
@@ -1041,92 +1042,111 @@ function overlapsRange(r,start,end){
   return s&&e&&strip(e)>=strip(start)&&strip(s)<=strip(end)
 }
 function isOpenCase(r){return !CLOSED_STATUS.has(r['案件狀態'])}
-// 負載計算會對整份資料掃描數百次（每週 × 每位設計師），日期解析與加權分數先算好一次、存在每筆案件上。
+// ===== 設計師工作負載 =====
+// 負載率 = 這一週實際會落在設計師身上的加權分數 ÷ 個人每週常態量（產能）。
+// 1. 每件案件的加權分數依「工作日」平均攤到開始～結束日；已取消／暫停不計。
+// 2. 已完成、過稿中代表設計師已無後續進度：提前結束的案件只算到今天，未來不再佔用時間。
+//    過稿中只是等客戶回覆、不一定要修改，所以不預先計入；若客戶要求修改，狀態會變成「修改中」並重新計入。
+// 3. 跨月仍掛著「執行中」的舊案件一律視為已完成，不算進行中案件。
+// 4. 個人每週常態量 = 基準週之前 12 週（有工作量的週）的中位數；不足 4 週退回同組，再退回全設計部。
+//    設定表若有「每週標準分數」欄位，會優先使用該值（例如要扣掉請假時手動指定）。
+const WORKLOAD_DONE_STATUS=new Set(['已完成','過稿中']);
+const WORKLOAD_SKIP_STATUS=new Set(['已取消','暫停']);
+const WORKLOAD_BASELINE_WEEKS=12;
+const WORKLOAD_BAR_MAX=150;
+const WORKLOAD_STATES=[[60,'有餘裕','free'],[105,'適中','normal'],[125,'偏高','high'],[150,'忙碌','busy'],[Infinity,'過高','over']];
 const rowInfoCache=new WeakMap();
 function rowInfo(r){
   let info=rowInfoCache.get(r);if(info)return info;
-  const time=value=>value?strip(value).getTime():null,work=workDate(r),start=normDate(r['開始日期'])||work,end=normDate(r['結束日期'])||work,due=normDate(r['結束日期']);
-  info={work:time(work),workYear:work?work.getFullYear():null,start:time(start),end:time(end),due:time(due),open:isOpenCase(r),score:score(r)};
+  const work=workDate(r),start=normDate(r['開始日期'])||work,end=normDate(r['結束日期'])||work;
+  info={start:start?strip(start).getTime():null,end:end?strip(end).getTime():null,score:score(r),status:r['案件狀態']};
   rowInfoCache.set(r,info);return info
 }
-function weeklyScoreFor(rows,designer,start,end,year){
-  const from=strip(start).getTime(),to=strip(end).getTime();let sum=0;
-  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.work!==null&&(!year||info.workYear===year)&&info.work>=from&&info.work<=to)sum+=info.score}
+let workloadCache=null;
+function workloadDailyLoads(){
+  if(workloadCache&&workloadCache.raw===raw&&workloadCache.rules===DETAIL_SCORE_MAP)return workloadCache.byDesigner;
+  const todayTs=strip(REPORT_TODAY).getTime(),byDesigner=new Map();
+  for(const r of raw){
+    const info=rowInfo(r);
+    if(WORKLOAD_SKIP_STATUS.has(info.status)||!(info.score>0)||info.start===null||info.end===null)continue;
+    const first=info.start;let last=Math.max(info.end,info.start);
+    if(WORKLOAD_DONE_STATUS.has(info.status)&&last>todayTs)last=todayTs;
+    if(last<first)continue;
+    last=Math.min(last,first+366*864e5);
+    const allDays=[],workdays=[],cursor=new Date(first);
+    while(cursor.getTime()<=last){const ts=cursor.getTime();allDays.push(ts);if(cursor.getDay()%6!==0)workdays.push(ts);cursor.setDate(cursor.getDate()+1)}
+    const days=workdays.length?workdays:allDays,share=info.score/days.length,name=r['設計負責人'];
+    let map=byDesigner.get(name);if(!map){map=new Map();byDesigner.set(name,map)}
+    days.forEach(ts=>map.set(ts,(map.get(ts)||0)+share))
+  }
+  workloadCache={raw,rules:DETAIL_SCORE_MAP,byDesigner};return byDesigner
+}
+function workloadSum(name,fromTs,toTs){
+  const map=workloadDailyLoads().get(name);if(!map)return 0;
+  let sum=0;const cursor=new Date(fromTs);
+  while(cursor.getTime()<=toTs){sum+=map.get(cursor.getTime())||0;cursor.setDate(cursor.getDate()+1)}
   return sum
 }
-function activeCasesFor(rows,designer,start,end){
-  const from=strip(start).getTime(),to=strip(end).getTime();let count=0;
-  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.open&&info.start!==null&&info.end!==null&&info.end>=from&&info.start<=to)count++}
-  return count
-}
-function activeCasesCurrent(rows,designer){
-  let count=0;for(const r of rows)if(r['設計負責人']===designer&&rowInfo(r).open)count++;return count
-}
-function dueSoonCasesFor(rows,designer,baseDate){
-  const today=strip(baseDate).getTime(),end=addDays(strip(baseDate),7).getTime();let count=0;
-  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.open&&info.due!==null&&info.due>=today&&info.due<=end)count++}
-  return count
-}
-function historyWeeks(anchor){
-  const end=addDays(weekBounds(anchor)[0],-1),start=addMonths(end,-3),weeks=[];
-  for(let d=weekBounds(start)[0];d<=end;d=addDays(d,7))weeks.push([d,addDays(d,6)]);
-  return weeks
-}
-function avg(nums){const vals=nums.filter(n=>Number.isFinite(n));return vals.length?vals.reduce((a,n)=>a+n,0)/vals.length:0}
-function avgPositive(nums){const vals=nums.filter(n=>Number.isFinite(n)&&n>0);return vals.length?vals.reduce((a,n)=>a+n,0)/vals.length:0}
-function trimmedAvgPositive(nums,ratio=.1){
-  const vals=nums.filter(n=>Number.isFinite(n)&&n>0).sort((a,b)=>a-b),cut=Math.floor(vals.length*ratio),kept=vals.length>cut*2?vals.slice(cut,vals.length-cut):vals;
-  return avg(kept)
-}
-function fullYearWeeks(year){
-  const start=weekBounds(new Date(year,0,1))[0],end=weekBounds(new Date(year,11,31))[1],weeks=[];
-  for(let d=start;d<=end;d=addDays(d,7))weeks.push([d,addDays(d,6)]);
-  return weeks
-}
-function annualScoreBenchmarks(year){
-  const weeks=fullYearWeeks(year),allScores=[],byDesigner={};
-  DESIGNERS.forEach(name=>{
-    const scores=weeks.map(([s,e])=>weeklyScoreFor(raw,name,s,e,year));
-    scores.filter(n=>n>0).forEach(n=>allScores.push(n));
-    byDesigner[name]=trimmedAvgPositive(scores)
-  });
-  const dept=trimmedAvgPositive(allScores)||avgPositive(allScores)||0;
-  DESIGNERS.forEach(name=>{if(!byDesigner[name])byDesigner[name]=dept});
-  return {dept,byDesigner}
-}
-function deptBenchmarks(weeks){
-  const designers=DESIGNERS,weekly=[],active=[],due=[];
-  weeks.forEach(([s,e])=>designers.forEach(name=>{weekly.push(weeklyScoreFor(raw,name,s,e));active.push(activeCasesFor(raw,name,s,e));due.push(dueSoonCasesFor(raw,name,s))}));
-  return {weekly:avgPositive(weekly)||avg(weekly)||1,active:avgPositive(active)||avg(active)||1,due:avgPositive(due)||avg(due)||1}
-}
-function designerBenchmarks(name,weeks,fallback,annual){
-  const rows=raw.filter(r=>r['設計負責人']===name),hasEnough=rows.length>=4&&weeks.some(([s,e])=>weeklyScoreFor(raw,name,s,e)>0||activeCasesFor(raw,name,s,e)>0);
-  const weekly=weeks.map(([s,e])=>weeklyScoreFor(raw,name,s,e)),active=weeks.map(([s,e])=>activeCasesFor(raw,name,s,e)),due=weeks.map(([s])=>dueSoonCasesFor(raw,name,s));
-  const recentWeekly=hasEnough?(avgPositive(weekly)||fallback.weekly):fallback.weekly,annualWeekly=annual.byDesigner[name]||annual.dept||0,blendedWeekly=annualWeekly?annualWeekly*.7+recentWeekly*.3:recentWeekly;
-  return {weekly:blendedWeekly,active:hasEnough?(avgPositive(active)||fallback.active):fallback.active,due:hasEnough?(avgPositive(due)||fallback.due):fallback.due}
+function median(values){const sorted=[...values].sort((a,b)=>a-b);if(!sorted.length)return 0;const mid=sorted.length>>1;return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2}
+function workloadCapacities(baseMonday){
+  const series=new Map(DESIGNERS.map(name=>[name,Array.from({length:WORKLOAD_BASELINE_WEEKS},(_,index)=>{const start=addDays(baseMonday,-7*(index+1));return workloadSum(name,start.getTime(),addDays(start,6).getTime())}).filter(value=>value>0)])),
+    pool=names=>median(names.flatMap(name=>series.get(name)||[]));
+  return new Map(designerDirectory.map(row=>{
+    const own=series.get(row.name)||[],groupValue=pool(designerDirectory.filter(item=>item.group===row.group).map(item=>item.name)),teamValue=pool(DESIGNERS);
+    if(row.capacity>0)return [row.name,{value:row.capacity,source:'設定表指定'}];
+    if(own.length>=4)return [row.name,{value:median(own),source:`近 ${WORKLOAD_BASELINE_WEEKS} 週中位數`}];
+    if(groupValue>0)return [row.name,{value:groupValue,source:'同組中位數（個人資料不足）'}];
+    if(teamValue>0)return [row.name,{value:teamValue,source:'全設計部中位數（個人資料不足）'}];
+    return [row.name,{value:0,source:'資料不足'}]
+  }))
 }
 function loadState(loadPercent){
-  if(loadPercent<=70)return {label:'適中',cls:'normal'};
-  if(loadPercent<=90)return {label:'偏高',cls:'high'};
-  if(loadPercent<=110)return {label:'忙碌',cls:'busy'};
-  return {label:'過高',cls:'over'}
+  if(loadPercent===null)return {label:'資料不足',cls:'idle'};
+  const hit=WORKLOAD_STATES.find(([limit])=>loadPercent<=limit);return {label:hit[1],cls:hit[2]}
 }
+function workloadReference(y,m){
+  const today=strip(REPORT_TODAY);
+  if(y===today.getFullYear()&&m===today.getMonth()+1){const [monday,sunday]=weekBounds(today);return {mode:'week',monday,sunday,today}}
+  const first=new Date(y,m-1,1),last=new Date(y,m,0);return {mode:'month',first,last,monday:weekBounds(first)[0],today}
+}
+function workloadWorkdays(first,last){let count=0;const cursor=new Date(first);while(cursor<=last){if(cursor.getDay()%6!==0)count++;cursor.setDate(cursor.getDate()+1)}return count||1}
 function designerLoadRows(y,m){
-  const anchor=anchorDate(y,m),[weekStart,weekEnd]=weekBounds(anchor),weeks=historyWeeks(anchor),fallback=deptBenchmarks(weeks),annual=annualScoreBenchmarks(y-1);
-  return DESIGNERS.map((name,idx)=>{
-    const monthRows=filtered.filter(r=>r['設計負責人']===name),monthScore=Math.round(monthRows.reduce((a,r)=>a+score(r),0));
-    const weeklyScore=weeklyScoreFor(filtered,name,weekStart,weekEnd),active=activeCasesCurrent(filtered,name),due=dueSoonCasesFor(filtered,name,anchor),bench=designerBenchmarks(name,weeks,fallback,annual);
-    const weeklyScoreRate=weeklyScore/(bench.weekly||fallback.weekly||1),activeCaseRate=active/(bench.active||fallback.active||1),dueSoonRate=due/(bench.due||fallback.due||1);
-    const loadPercent=Math.round((weeklyScoreRate*.6+activeCaseRate*.25+dueSoonRate*.15)*100),state=loadState(loadPercent);
-    return {name,idx,monthScore,weeklyScore:Math.round(weeklyScore),active,due,loadPercent,state}
-  }).filter(r=>r.monthScore||r.weeklyScore||r.active||r.due).sort((a,b)=>b.loadPercent-a.loadPercent||b.monthScore-a.monthScore)
+  const ref=workloadReference(y,m),capacities=workloadCapacities(ref.monday),todayTs=ref.today.getTime(),monthStartTs=new Date(ref.today.getFullYear(),ref.today.getMonth(),1).getTime(),weekEnd=ref.mode==='week'?addDays(ref.sunday,0).getTime():null,dueEnd=addDays(ref.today,7).getTime();
+  const percentOf=(value,capacity)=>capacity>0?Math.round(value/capacity*100):null;
+  return designerDirectory.map((person,idx)=>{
+    const name=person.name,capacity=capacities.get(name)||{value:0,source:'資料不足'};
+    let now,next=null,total=0,active=0,due=0,cases=0;
+    if(ref.mode==='week'){
+      now=workloadSum(name,ref.monday.getTime(),weekEnd);next=workloadSum(name,addDays(ref.monday,7).getTime(),addDays(ref.monday,13).getTime());
+      for(const r of raw){
+        if(r['設計負責人']!==name)continue;const info=rowInfo(r);
+        // 進行中：還有後續進度、且沒有「跨月未結」的舊案件；7 天內到期只看進行中案件。
+        if(WORKLOAD_DONE_STATUS.has(info.status)||WORKLOAD_SKIP_STATUS.has(info.status)||CLOSED_STATUS.has(info.status)||info.end===null||info.end<monthStartTs)continue;
+        active++;if(info.end>=todayTs&&info.end<=dueEnd)due++
+      }
+    }else{
+      total=workloadSum(name,ref.first.getTime(),ref.last.getTime());now=total/workloadWorkdays(ref.first,ref.last)*5;
+      for(const r of raw){if(r['設計負責人']!==name)continue;const info=rowInfo(r);if(WORKLOAD_SKIP_STATUS.has(info.status)||info.start===null||info.end===null)continue;if(info.start<=ref.last.getTime()&&info.end>=ref.first.getTime())cases++}
+    }
+    const loadPercent=percentOf(now,capacity.value),nextPercent=next===null?null:percentOf(next,capacity.value);
+    return {name,idx,displayName:person.displayName||name,now,next,total,capacity,active,due,cases,loadPercent,nextPercent,state:loadState(loadPercent),nextState:loadState(nextPercent),mode:ref.mode}
+  }).filter(row=>row.now>0||row.capacity.value>0||row.active>0).sort((a,b)=>(b.loadPercent??-1)-(a.loadPercent??-1)||a.name.localeCompare(b.name,'en'))
+}
+function workloadTooltip(row){
+  const fmt=value=>analysisNumber(value,Number.isInteger(value)?0:1),cap=row.capacity.value;
+  const gap=cap>0?(row.now>cap?`｜超出常態 ${fmt(row.now-cap)} 分`:`｜尚有餘裕 ${fmt(cap-row.now)} 分`):'';
+  if(row.mode==='week')return `本週 ${fmt(row.now)} 分／常態週量 ${fmt(cap)} 分（${row.capacity.source}）${gap}｜下週預估 ${fmt(row.next)} 分${row.nextPercent===null?'':`（${row.nextPercent}%）`}｜進行中 ${row.active} 件｜7 天內到期 ${row.due} 件`;
+  return `該月共 ${fmt(row.total)} 分，週平均 ${fmt(row.now)} 分／常態週量 ${fmt(cap)} 分（${row.capacity.source}）${gap}｜當月案件 ${row.cases} 件`
 }
 function renderHeatmap(y,m){
-  const rows=designerLoadRows(y,m);if(!rows.length){$('heatmap').innerHTML='<div class="empty">無資料</div>';return}
-  const stateColor={normal:'#22c55e',high:'#fbbf24',busy:'#f97316',over:'#f04438'};
-  let html='';
-  html+=rows.map((r,i)=>`<div class="load-row"><div class="person">${avatarHtml(r.name,`background:${COLORS[r.idx%COLORS.length]}`)}<span>${r.name}</span></div><div class="data-track load-track data-tip" tabindex="0" data-tooltip="本月 ${r.monthScore} 分｜本週 ${r.weeklyScore} 分｜進行中 ${r.active} 件｜7 天到期 ${r.due} 件"><div class="load-fill" style="width:${Math.min(r.loadPercent,100)}%;--load-color:${stateColor[r.state.cls]};--enter-delay:${i*55}ms"></div></div><div class="load-pct">${r.loadPercent}%</div><div class="load-status ${r.state.cls}">${r.state.label}</div></div>`).join('');
-  $('heatmap').innerHTML=html
+  const rows=designerLoadRows(y,m),ref=workloadReference(y,m),mode=$('workloadMode'),shortDate=date=>`${date.getMonth()+1}/${date.getDate()}`;
+  if(mode)mode.textContent=ref.mode==='week'?`本週 ${shortDate(ref.monday)}–${shortDate(ref.sunday)}・並預估下週`:`${y}/${String(m).padStart(2,'0')} 週平均`;
+  if(!rows.length){$('heatmap').innerHTML='<div class="empty">無資料</div>';return}
+  const stateColor={free:'#38bdf8',normal:'#22c55e',high:'#fbbf24',busy:'#f97316',over:'#f04438',idle:'#cbd5e1'},markAt=100/WORKLOAD_BAR_MAX*100;
+  $('heatmap').innerHTML=rows.map((r,i)=>{
+    const width=r.loadPercent===null?0:Math.min(r.loadPercent,WORKLOAD_BAR_MAX)/WORKLOAD_BAR_MAX*100,sub=r.mode==='week'?(r.nextPercent===null?'':`下週 ${r.nextPercent}%`):'週平均';
+    return `<div class="load-row"><div class="person">${avatarHtml(r.name,`background:${COLORS[r.idx%COLORS.length]}`)}<span>${escapeHtml(r.displayName)}</span></div><div class="data-track load-track data-tip" tabindex="0" style="background:linear-gradient(90deg,transparent calc(${markAt}% - 1px),#98a2b3 calc(${markAt}% - 1px),#98a2b3 ${markAt}%,transparent ${markAt}%),#eef2f6" data-tooltip="${escapeHtml(workloadTooltip(r))}"><div class="load-fill" style="width:${width}%;--load-color:${stateColor[r.state.cls]};--enter-delay:${i*55}ms"></div></div><div class="load-pct">${r.loadPercent===null?'—':r.loadPercent+'%'}<small>${sub}</small></div><div class="load-status ${r.state.cls}">${r.state.label}</div></div>`
+  }).join('')
 }
 function renderRank(){
   const medal=i=>i<4?`<svg class="medal ${['gold','silver','bronze','fourth'][i]}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="6" fill="currentColor"/><path d="M8 2h3l1 6-3 2zM13 2h3l-1 8-3-2z" fill="currentColor" opacity=".55"/><text x="12" y="16.5" text-anchor="middle" font-size="7" font-weight="900" fill="#fff">${i+1}</text></svg>`:'';
