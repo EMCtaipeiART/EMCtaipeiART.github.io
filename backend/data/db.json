@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6787,
+  "revision": 6788,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-01T09:37:04.619Z",
+  "updatedAt": "2026-10-01T09:40:56.158Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2070,7 +2070,7 @@
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1jo2c0gBSiXlebvcyek4xjKiHmnUkLXq7=w1600","保留期限":"24小時","到期時間":"2026-09-04T07:27:42.301Z","按讚":"","倒讚":"","留言":"[{\"id\":\"965a197c-3a54-4877-b409-15ed5f535534\",\"name\":\"Machi\",\"account\":\"machi.chen@emctaipei.com\",\"avatar\":\"https://drive.google.com/thumbnail?id=1L7QcV_EGLTLdNA8xMgSUFL_WCqZyi2Yi&sz=w1000\",\"text\":\"\\\"D\\\"esign + E.M.C\",\"createdAt\":\"2026-09-03T07:40:59.245Z\"}]","狀態":"","已讀":"Machi , Odin組測試人員 , Anna"},
         {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/11wdxkiFOICe1OpPE6UdrM9iGSUlBv_Dd=w1600","保留期限":"永久","到期時間":"","按讚":"","倒讚":"","留言":"[]","狀態":"下架"},
         {"名字":"Anna","限時動態連結":"https://lh3.googleusercontent.com/d/1K1ODn3lVOwNf-zJzW1KcscnfmTTfMAhf=w1600","保留期限":"24小時","到期時間":"2026-09-04T08:03:27.228Z","按讚":"","倒讚":"","留言":"[{\"id\":\"a66ce45f-66e7-41b5-af85-440e40026238\",\"name\":\"Anna\",\"account\":\"anna.hsu@emctaipei.com\",\"avatar\":\"https://ci3.googleusercontent.com/mail-sig/AIorK4zHvoa1GHX5gexC25l4YrHhBZn2mNJ8_gthNd7mMkSdrgbwLysHCBNopbNwbYSPyNBGu5gzU_g8cazt\",\"text\":\"9/17-9/24 ( ͡° ͜ʖ ͡°) 不在\",\"createdAt\":\"2026-09-04T02:39:03.741Z\"}]","狀態":"","已讀":"Machi , Anna , Odin組測試人員"},
-        {"名字":"Amber","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/0b12aa4d-1910-48d9-b3f4-4463cfecf0fe","保留期限":"24小時","到期時間":"2026-10-01T09:40:10.026Z","按讚":"Machi","倒讚":"","留言":"[]","狀態":"","已讀":"Leona , Machi , Mickey組測試員 , 吳冠賢 , Anna"},
+        {"名字":"Amber","限時動態連結":"https://lh3.googleusercontent.com/d/1wWsWDz5gQ4ryOjOmwue0kLt1TLlA3TtM=w1600","保留期限":"24小時","到期時間":"2026-10-01T09:40:10.026Z","按讚":"Machi","倒讚":"","留言":"[]","狀態":"","已讀":"Leona , Machi , Mickey組測試員 , 吳冠賢 , Anna"},
         {"名字":"Leona","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/592b100d-5640-4ac6-8e36-76f552b04836","保留期限":"24小時","到期時間":"2026-10-01T09:40:10.026Z","按讚":"Machi","倒讚":"","留言":"[{\"id\":\"245f64c1-cad0-4204-8851-8d4a7bf43615\",\"name\":\"Machi\",\"avatar\":\"\",\"text\":\"test\",\"createdAt\":\"2026-09-30T09:51:37.975Z\"}]","狀態":"","已讀":"Leona , Machi , Mickey組測試員 , 吳冠賢 , Anna"},
         {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/01fc27cb-5dbe-4930-a6c6-a165c88ea2b8","保留期限":"24小時","到期時間":"2026-10-01T10:17:21.911Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
         {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/e2dd39b1-81e6-4df0-924a-542ea685f449","保留期限":"24小時","到期時間":"2026-10-01T10:20:11.926Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"}
