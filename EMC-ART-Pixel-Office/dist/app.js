@@ -184,7 +184,7 @@ function buildWardrobe(i,view,look){
   }
   if(look.cap){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
-    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.22:.24)+WD_DROP[i]});
+    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.32:.34)+WD_DROP[i]});
   }
   const minX=Math.min(...layers.map(l=>l.x)),minY=Math.min(...layers.map(l=>l.y)),maxX=Math.max(...layers.map(l=>l.x+l.w)),maxY=Math.max(...layers.map(l=>l.y+l.h));
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(maxX-minX)+2;canvas.height=Math.ceil(maxY-minY)+2;
