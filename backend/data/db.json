@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6693,
+  "revision": 6694,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-01T01:47:06.051Z",
+  "updatedAt": "2026-10-01T01:47:31.506Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1665,7 +1665,7 @@
         {"案件編號":"26090192","修改次數":"0","建立日期":"2026/09/30 18:53:39","修改日期":"2026/09/30 18:53:39","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/30 18:53:39","圖片連結":"[{\"fileName\":\"260930_ANKER_A121A_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FqY9zGEDOy60xMi6p_E6kH4ddXWw3-4K=w1600\"},{\"fileName\":\"260930_ANKER_全品項_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/12mgplqgZwzCrVq4-6fvxJ8aTEh7A3SSd=w1600\"},{\"fileName\":\"260930_ANKER_全品項_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/18VCXk126ysqKEDL8RU_kRDVnYaKbFjcX=w1600\"},{\"fileName\":\"260930_ANKER_全品項_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1kk6BUgaJoi2_OiP5v9ppTf0YgN1d8dVd=w1600\"}]","圖片來源":"mail-inline-upload","圖片更新時間":"2026/09/30 19:01:33"},
         {"案件編號":"26090219","修改次數":"0","建立日期":"2026/09/30 19:09:46","修改日期":"2026/09/30 19:09:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/09/30 19:09:46","圖片連結":"[{\"fileName\":\"260930_Liberty-5-Pro_抽獎貼文vo2.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1eFPr4DnyKId9EABPl96bGJn6jWUHjueJ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/09/30 19:09:46"},
         {"案件編號":"26090219","修改次數":"1","建立日期":"2026/09/30 19:24:41","修改日期":"2026-09-30","修改內容":"發現圖面上有多字，詳細如附件P12，再請協助調整，感恩！","修改內容連結":"[{\"text\":\"附件P12\",\"url\":\"https://docs.google.com/presentation/d/1w2WaZuxu7DBdGXvUMW2QRqlYw6qgALIMS8-qJC8Btig/edit?slide=id.h4679dd9c8d2a0212_0_0#slide=id.h4679dd9c8d2a0212_0_0\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
-        {"案件編號":"26090198","修改次數":"1","建立日期":"2026/09/30 21:13:39","修改日期":"2026-09-30","修改內容":"A、B版的機器名稱需要做微調，詳細請看：調整需求。\n要再麻煩協助修改了，感謝！","修改內容連結":"","修改人":"朱祖翎","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_Epson_TIGAX台北國際印刷機材展_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Xp3XwdO38xr3bYmWdyUCEcBf8W4zwuqy=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/01 09:40:13"},
+        {"案件編號":"26090198","修改次數":"1","建立日期":"2026/09/30 21:13:39","修改日期":"2026-09-30","修改內容":"A、B版的機器名稱需要做微調，詳細請看：調整需求。\n要再麻煩協助修改了，感謝！","修改內容連結":"","修改人":"朱祖翎","確認修正日":"2026/10/01 09:47:31","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_Epson_TIGAX台北國際印刷機材展_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Xp3XwdO38xr3bYmWdyUCEcBf8W4zwuqy=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/01 09:40:13"},
         {"案件編號":"26090197","修改次數":"1","建立日期":"2026/09/30 21:14:31","修改日期":"2026-09-30","修改內容":"A、B版的機器名稱需要做微調，詳細請看：調整需求。\n要再麻煩協助修改了，感謝！","修改內容連結":"","修改人":"朱祖翎","確認修正日":"2026/10/01 09:46:20","待修改圖片":"","圖片連結":"[{\"fileName\":\"260930_Epson_TIGAX台北國際印刷機材展_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/18gn29hfBeNqM5ugVxePZvILb3MXQrjWZ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/01 09:42:13"}
       ]
     },
