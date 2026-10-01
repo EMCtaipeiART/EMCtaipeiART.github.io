@@ -422,7 +422,7 @@ function setStatus(id){if(selected===null)return;const p=people[selected];p.stat
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image();headphones.src='assets/headphones-v1.webp?v=1';
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_SCALE=.34,HP_FRAMES=6,HP_OFFSET_X=-6,HP_OFFSET_Y=-154,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_SCALE=.36,HP_FRAMES=6,HP_OFFSET_X=-3,HP_OFFSET_Y=-155,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
@@ -473,12 +473,13 @@ function stopMusic(){
 }
 let spotifyApiPromise=null;
 function spotifyApi(){return spotifyApiPromise||(spotifyApiPromise=new Promise((resolve,reject)=>{window.onSpotifyIframeApiReady=api=>resolve(api);const tag=document.createElement('script');tag.src='https://open.spotify.com/embed/iframe-api/v1';tag.async=true;tag.onerror=()=>{spotifyApiPromise=null;reject(Error('無法載入 Spotify 播放器'));};document.head.append(tag);}));}
-function ensureSpotifyDock(){let dock=$('spotifyDock');if(dock)return dock;dock=document.createElement('div');dock.id='spotifyDock';dock.innerHTML='<button type="button" aria-label="關閉播放器">✕</button><div class="dock-host"></div>';dock.querySelector('button').onclick=stopMusic;document.body.append(dock);return dock;}
+// Spotify 官方播放器必須「存在於頁面上」才會出聲，但畫面上看不到（樣式是透明、不吃點擊）；播放／暫停都用人物頭上的綠色小鈕。
+function ensureSpotifyDock(){let dock=$('spotifyDock');if(dock)return dock;dock=document.createElement('div');dock.id='spotifyDock';dock.innerHTML='<div class="dock-host"></div>';dock.setAttribute('aria-hidden','true');document.body.append(dock);return dock;}
 async function toggleMusic(i){
   const music=musicOf(people[i]),info=music&&musicInfo(music.url);if(!info)return;
   if(musicPlaying.i===i){
     if(musicPlaying.audio){if(musicPlaying.paused){await musicPlaying.audio.play();musicPlaying.paused=false;}else{musicPlaying.audio.pause();musicPlaying.paused=true;}markDirty();return;}
-    if(musicPlaying.controller){musicPlaying.controller.togglePlay();return;}
+    if(musicPlaying.controller){if(!musicPlaying.started||musicPlaying.paused)musicPlaying.controller.play();else musicPlaying.controller.pause();return;}
   }
   stopMusic();
   try{
@@ -490,7 +491,7 @@ async function toggleMusic(i){
     }else{
       const api=await spotifyApi(),dock=ensureSpotifyDock(),host=dock.querySelector('.dock-host'),target=document.createElement('div');
       host.replaceChildren(target);dock.hidden=false;musicPlaying={i,paused:false,started:false,audio:null,controller:null};markDirty();
-      setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)toast('瀏覽器擋住了自動播放，請按右下角播放器的播放鍵。');},3000);
+      setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)toast('瀏覽器擋住了自動播放，請再按一次綠色播放鍵。');},3000);
       api.createController(target,{uri:`spotify:track:${info.id}`,width:'100%',height:80},controller=>{
         if(musicPlaying.i!==i)return;musicPlaying.controller=controller;
         controller.addListener('ready',()=>{controller.play();setTimeout(()=>{if(musicPlaying.i===i&&!musicPlaying.started)controller.resume&&controller.resume();},800);});
@@ -772,6 +773,7 @@ function applyRemote(list){markDirty();
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
+    if(!p.music&&musicPlaying.i===i)stopMusic();// 那個人停止分享了，正在播的也跟著停
     if(p.music&&p.music.provider==='spotify')spotifyApi().catch(()=>{});// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}

@@ -290,6 +290,5 @@ main>.level-table-section{background:white;border:1px solid #dce3ed;border-radiu
 .music-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .music-hint{margin:0;font-size:12px;color:#a6b6cd;line-height:1.5}
 .music-hint.is-error{color:#ffb4b4}
-#spotifyDock{position:fixed;right:10px;bottom:10px;z-index:40;width:min(320px,calc(100vw - 20px));padding:6px;border-radius:14px;background:rgba(11,20,34,.92);box-shadow:0 14px 34px rgba(0,0,0,.4)}
-#spotifyDock button{position:absolute;right:8px;top:-12px;width:26px;height:26px;border:0;border-radius:50%;background:#fff;color:#223047;font-size:12px;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+#spotifyDock{position:fixed;right:0;bottom:0;z-index:-1;width:300px;height:80px;overflow:hidden;opacity:0;pointer-events:none}
 #spotifyDock iframe{display:block;border-radius:10px}
