@@ -313,7 +313,8 @@ function caseLabel(row){
 }
 function renderPersonCard(){
   const card=$('personCard');
-  if(selected===null){card.hidden=true;return;}
+  // 個人技能表（資料卡）只給前台 index.html 的嵌入畫面看；編輯畫面有右側工具列，不需要這張卡。
+  if(selected===null||!embedMode){card.hidden=true;return;}
   const p=people[selected],stat=levelStats[p.name]||levelFromScore(0,p.name),info=designerInfo?.[p.name];
   $('cardName').textContent=p.name;
   $('cardLevel').textContent='Lv.'+stat.level;

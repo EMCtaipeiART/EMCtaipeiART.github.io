@@ -576,3 +576,9 @@ test('動態視窗的關閉鈕固定在右上角，不受標題列內容（開�
   const css = await officeCss();
   assert.match(css, /#svClose\{position:absolute;top:10px;right:10px;/);
 });
+
+test('個人技能表（人物資料卡）只在前台嵌入畫面顯示，編輯畫面不顯示', async () => {
+  const [js, css] = await Promise.all([officeJs(), officeCss()]);
+  assert.match(js, /if\(selected===null\|\|!embedMode\)\{card\.hidden=true;return;\}/);
+  assert.match(css, /html:not\(\.embed\) \.person-card\{display:none!important\}/);
+});

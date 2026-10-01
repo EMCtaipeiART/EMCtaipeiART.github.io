@@ -271,3 +271,6 @@ html.embed .person-card-head,html.embed .person-card-title{overflow-wrap:normal;
 @media(prefers-reduced-motion:reduce){#storyTip{transition:none}}
 #svMute{margin-left:auto;height:26px;padding:0 10px;border:0;border-radius:999px;color:#fff;background:rgba(255,255,255,.18);font-size:12px}
 .story-mine-thumb video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+
+/* 個人技能表只在嵌入（前台 index.html）顯示，編輯畫面不顯示 */
+html:not(.embed) .person-card{display:none!important}
