@@ -7100,7 +7100,7 @@
     <h3>個人設定</h3>
     <div class="personal-settings-profile">
       <div class="personal-settings-avatar"><span class="personal-settings-avatar-preview" id="personalSettingsAvatarPreview"></span><button type="button" id="personalSettingsAvatarChange">更換頭像</button></div>
-      <div class="personal-settings-fields"><label>顯示名<input type="text" name="displayName" maxlength="40" autocomplete="nickname" readonly aria-readonly="true"></label><small>此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。</small></div>
+      <div class="personal-settings-fields"><label>顯示名<input type="text" name="displayName" maxlength="40" autocomplete="nickname" required></label><small id="personalDisplayNameHint">此名稱會顯示在帳號選單、案件與信件聯絡人中。</small><button type="submit" class="personal-section-save" data-personal-save="profile">儲存顯示名</button></div>
     </div>
     <details class="personal-mail-templates personal-collapsible"><summary class="personal-mail-templates-head"><div><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></div></summary><div class="personal-mail-template-list" id="personalMailTemplateList"></div><button type="button" class="mail-template-add" id="personalMailTemplateAdd">＋ 新增範本</button><div class="personal-collapsible-save"><button type="button" class="personal-section-save" data-personal-save="templates">儲存</button></div></details>
     <details class="personal-mail-templates personal-collapsible"><summary class="personal-mail-templates-head"><div><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以隨時用「插入簽名檔」按鈕改選其他組。</span></div></summary><div class="personal-mail-template-list" id="personalSignaturePresetList"></div><button type="button" class="mail-template-add" id="personalSignaturePresetAdd">＋ 新增簽名檔</button><div class="personal-collapsible-save"><button type="button" class="personal-section-save" data-personal-save="signatures">儲存</button></div></details>
@@ -11365,7 +11365,7 @@ function collectSignaturePresetEditor(list){
   return {presets,defaultName};
 }
 function renderPersonalSettingsAvatar(){const preview=$('#personalSettingsAvatarPreview');if(!preview)return;const url=currentAccountAvatarUrl(),name=currentUserDisplayName();preview.innerHTML=url?`<img src="${esc(url)}" alt="${esc(name)} 頭像" onerror="this.remove();this.parentNode.textContent='${esc(accountInitial(name))}'">`:esc(accountInitial(name))}
-function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return}if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return;if(isLocalPreviewToken()){setSync('本機檢視帳號無法儲存個人設定',true);return}closeAccountMenu();const modal=$('#personalSettingsModal'),form=$('#personalSettingsForm'),list=$('#personalMailTemplateList'),signatureList=$('#personalSignaturePresetList');if(!modal||!form||!list)return;form.elements.displayName.value=currentUserDisplayName();renderPersonalSettingsAvatar();renderMailTemplateEditor(list,{templates:currentAccountReplyTemplates,defaultName:currentAccountReplyTemplateDefault},'personal');renderSignaturePresetEditor(signatureList,{presets:currentAccountSignaturePresets,defaultName:currentAccountSignaturePresetDefault});renderPersonalCustomerSettings();setPersonalSettingsStatus();modal.hidden=false;setTimeout(()=>form.elements.displayName?.focus?.(),40)}
+function showPersonalSettings(){if(!isLoggedIn()){showLoginModal();return}if(!requireAccess('profile.edit','此帳號沒有編輯個人設定權限'))return;if(isLocalPreviewToken()){setSync('本機檢視帳號無法儲存個人設定',true);return}closeAccountMenu();const modal=$('#personalSettingsModal'),form=$('#personalSettingsForm'),list=$('#personalMailTemplateList'),signatureList=$('#personalSignaturePresetList');if(!modal||!form||!list)return;form.elements.displayName.value=currentUserDisplayName();applyPersonalDisplayNameLock();renderPersonalSettingsAvatar();renderMailTemplateEditor(list,{templates:currentAccountReplyTemplates,defaultName:currentAccountReplyTemplateDefault},'personal');renderSignaturePresetEditor(signatureList,{presets:currentAccountSignaturePresets,defaultName:currentAccountSignaturePresetDefault});renderPersonalCustomerSettings();setPersonalSettingsStatus();modal.hidden=false;setTimeout(()=>form.elements.displayName?.focus?.(),40)}
 function hidePersonalSettings(){const modal=$('#personalSettingsModal'); if(modal)modal.hidden=true}
 /* 個人設定 › 客戶設定：跟資料庫後台「客戶別」是同一份資料，寫入走 Worker 的 saveCustomerSettings。
  * 只列出「權限設定」名單有涵蓋自己的客戶別（管理者看得到全部）；後台設定的部門／組別規則只顯示、不能在這裡改，
@@ -11377,6 +11377,18 @@ let personalCustomerCurrent='';
 const isCustomerGroupRule=rule=>/^(department|group):/i.test(String(rule||'').trim());
 function personalCustomerSelf(){return canonicalAccountClient(currentEditorAccount||currentEditor)}
 /** 客戶設定只開放管理者、Machi、企劃部、專案部；設計部其他同仁不顯示。 */
+/** 顯示名只對設計部同仁鎖定（管理者、Machi 與其他部門可自行修改）。 */
+function isPersonalDisplayNameLocked(){
+  if(isAdministrator()||currentEditor==='Machi')return false;
+  return String(currentEditorDepartment||'').includes('設計部');
+}
+function applyPersonalDisplayNameLock(){
+  const form=$('#personalSettingsForm');if(!form)return;
+  const locked=isPersonalDisplayNameLocked(),input=form.elements.displayName,button=form.querySelector('[data-personal-save="profile"]'),hint=$('#personalDisplayNameHint');
+  input.readOnly=locked;input.required=!locked;input.setAttribute('aria-readonly',locked?'true':'false');
+  if(button)button.hidden=locked;
+  if(hint)hint.textContent=locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。';
+}
 function canUsePersonalCustomerSettings(){
   if(isAdministrator()||currentEditor==='Machi')return true;
   const department=String(currentEditorDepartment||'');
@@ -11606,6 +11618,7 @@ function savePersonalSettings(event){
 }
 async function savePersonalSettingsSection(section){
   if(!isLoggedIn()||isLocalPreviewToken()||!requireAccess('profile.edit'))return;
+  if(section==='profile'&&isPersonalDisplayNameLocked())return;
   const form=$('#personalSettingsForm'),button=form?.querySelector(`[data-personal-save="${section}"]`);
   if(!form||!button||button.disabled)return;
   let settings=null,after=()=>{},label='';

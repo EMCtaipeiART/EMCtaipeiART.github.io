@@ -4815,9 +4815,10 @@ test('設計師回覆信的預設內文依項目細節：社群貼文／廣告�
 test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名}，套用時換成收件人名字', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   // 2026-10-01：顯示名不可自行修改（無儲存鈕）、客戶設定從個人設定移除；範本／簽名檔區塊預設收合。
-  for (const key of ['templates', 'signatures', 'customers']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
-  for (const key of ['profile']) assert.doesNotMatch(html, new RegExp(`data-personal-save="${key}"`));
-  assert.match(html, /<input type="text" name="displayName"[^>]*readonly/);
+  for (const key of ['profile', 'templates', 'signatures', 'customers']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
+  // 顯示名只對設計部同仁鎖定（唯讀＋隱藏儲存鈕），管理者／Machi／其他部門可修改。
+  assert.match(html, /function isPersonalDisplayNameLocked\(\)\{[\s\S]*?isAdministrator\(\)[\s\S]*?設計部/);
+  assert.match(html, /applyPersonalDisplayNameLock\(\);renderPersonalSettingsAvatar\(\);/);
   assert.match(html, /<details class="personal-mail-templates personal-collapsible"><summary/);
   assert.match(html, /id="personalSettingsCancel">關閉<\/button><\/div>/, '底部不再有「一起儲存」');
   const section = html.match(/async function savePersonalSettingsSection\(section\)\{[\s\S]*?\n\}/)?.[0];
