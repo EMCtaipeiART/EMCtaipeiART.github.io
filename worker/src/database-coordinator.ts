@@ -231,6 +231,10 @@ const PIXEL_STORY_COMMENT_MAX_CHARS = 100;
 // 上限是 base64 字元數（約 10.5 MB 原檔）；影片由前端先縮小、限制長度。
 const PIXEL_STORY_MEDIA_MAX_CHARS = 14_000_000;
 const PIXEL_STORY_CHUNK_CHARS = 700_000; // 必須是 4 的倍數，每段才能各自解碼
+// 過期（或被移除）的內容先備份到 Google Drive 才會清掉。備份服務沒設定或一直失敗時，最多保留這麼久再清，
+// 不讓內容在資料庫裡無限增長。
+const PIXEL_STORY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const PIXEL_STORY_BACKUP_RETRY_MS = 5 * 60 * 1000;
 const PIXEL_STORY_IMAGE_BASE = 'https://machi-design-api.machi-chen.workers.dev/pixel-story/';
 // 同一份修改需求（內容完全相同）在這段時間內重複寫入，視為同一封信被送出兩次，不新增一輪。
 const MODIFICATION_DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
@@ -1458,6 +1462,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(13)) {
+        this.ctx.storage.transactionSync(() => {
+          // 備份到 Google Drive 的狀態：備份成功才會清掉內容；嘗試時間用來控制重試間隔。
+          this.ctx.storage.sql.exec("ALTER TABLE pixel_office_stories ADD COLUMN backup_url TEXT NOT NULL DEFAULT ''");
+          this.ctx.storage.sql.exec('ALTER TABLE pixel_office_stories ADD COLUMN backed_up INTEGER NOT NULL DEFAULT 0');
+          this.ctx.storage.sql.exec('ALTER TABLE pixel_office_stories ADD COLUMN backup_tried_at INTEGER NOT NULL DEFAULT 0');
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            13, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1893,9 +1909,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 目前還在上架的動態（不含圖片本身，圖片用 imageUrl 另外載）。順便把過期動態的圖片清掉。 */
   private pixelOfficeActiveStories(nowMs = Date.now()): Row[] {
-    // 過期的內容（圖片與分段的影片）清掉，只留互動紀錄。
-    this.ctx.storage.sql.exec("UPDATE pixel_office_stories SET image = '' WHERE expires_at <= ? AND image != ''", nowMs);
-    this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id IN (SELECT id FROM pixel_office_stories WHERE expires_at <= ?)', nowMs);
+    // 過期的內容（圖片與分段的影片）清掉，只留互動紀錄——但要等備份到 Google Drive 之後（backed_up = 1）；
+    // 備份沒成功的最多再留 30 天。
+    const keepUntil = nowMs - PIXEL_STORY_RETENTION_MS;
+    this.ctx.storage.sql.exec("UPDATE pixel_office_stories SET image = '' WHERE image != '' AND ((expires_at <= ? AND backed_up = 1) OR expires_at <= ?)", nowMs, keepUntil);
+    this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id IN (SELECT id FROM pixel_office_stories WHERE (expires_at <= ? AND backed_up = 1) OR expires_at <= ?)', nowMs, keepUntil);
     return this.ctx.storage.sql.exec<{ id: string; name: string; mime: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string }>(
       'SELECT id, name, mime, created_at, expires_at, likes, comments, viewers FROM pixel_office_stories WHERE hidden = 0 AND expires_at > ? ORDER BY created_at ASC', nowMs
     ).toArray().map(row => this.pixelOfficePublicStory(row));
@@ -1921,14 +1939,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 把一則動態的最新狀態寫進 reels 資料表。找不到就新增一列，找得到就更新（用圖片連結對應）。 */
   private async pixelOfficeMirrorStory(id: string): Promise<void> {
-    const row = this.ctx.storage.sql.exec<{ id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number }>(
-      'SELECT id, name, created_at, expires_at, likes, comments, viewers, hidden FROM pixel_office_stories WHERE id = ?', id
+    const row = this.ctx.storage.sql.exec<{ id: string; name: string; created_at: number; expires_at: number; likes: string; comments: string; viewers: string; hidden: number; backup_url: string }>(
+      'SELECT id, name, created_at, expires_at, likes, comments, viewers, hidden, backup_url FROM pixel_office_stories WHERE id = ?', id
     ).toArray()[0];
     if (!row) return;
-    const url = `${PIXEL_STORY_IMAGE_BASE}${row.id}`;
+    const workerUrl = `${PIXEL_STORY_IMAGE_BASE}${row.id}`;
+    // 備份到 Drive 之後，後台 REELS 的連結換成備份檔（原本的網址過期就 404 了）；兩種網址都能對到同一列。
+    const url = row.backup_url || workerUrl;
     await this.mutate('pixelOfficeStory', null, draft => {
       const rows = draft.tables.reels.rows;
-      let target = rows.find(item => text(item['限時動態連結']) === url);
+      let target = rows.find(item => text(item['限時動態連結']) === url || text(item['限時動態連結']) === workerUrl);
       if (!target) { target = {}; rows.push(target); }
       Object.assign(target, {
         '名字': row.name,
@@ -1985,16 +2005,65 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { ok: true, action: 'pixelOfficeStoryAdd', version, stories: this.pixelOfficeActiveStories(nowMs) };
   }
 
+  /** 一則動態的檔案內容（類型＋base64）：單列存放的照片或分段存放的 GIF／影片。內容已清掉則回 null。 */
+  private pixelOfficeStoryContent(row: { id: string; image: string; mime: string }): { mime: string; base64: string } | null {
+    if (row.image) {
+      const parsed = /^data:([^;]+);base64,(.*)$/s.exec(row.image);
+      if (parsed) return { mime: parsed[1], base64: parsed[2] };
+    }
+    const chunks = this.ctx.storage.sql.exec<{ data: string }>('SELECT data FROM pixel_office_story_chunks WHERE story_id = ? ORDER BY seq', row.id).toArray();
+    if (!chunks.length) return null;
+    return { mime: row.mime || 'image/jpeg', base64: chunks.map(chunk => chunk.data).join('') };
+  }
+
   /** 動態的檔案內容（給 GET /pixel-story/<id> 用）：回傳類型與 base64，由路由解成位元組並處理影片的 Range 請求。 */
   private pixelOfficeStoryImage(payload: ApiPayload): ApiResult {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    if (row.image) {
-      const parsed = /^data:([^;]+);base64,(.*)$/s.exec(row.image);
-      if (parsed) return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, mime: parsed[1], base64: parsed[2] };
+    const content = this.pixelOfficeStoryContent(row);
+    if (!content) throw new Error('這則動態已經下架');
+    return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, ...content };
+  }
+
+  /** 把到期（或被移除）、還沒備份的動態存到 Google Drive（設計師資料夾/限時動態/）。
+   * 每分鐘由排程呼叫；備份成功才清掉內容，失敗 5 分鐘後再試。後台 REELS 的連結會換成 Drive 上的備份。 */
+  async runPixelOfficeStoryBackup(nowMs = Date.now(), limit = 3): Promise<Row> {
+    const scriptUrl = text(this.env.UPLOAD_APPS_SCRIPT_URL);
+    const serviceKey = text(this.env.NAS_WATCHER_API_KEY);
+    if (!scriptUrl || !serviceKey) return { ok: true, skipped: 'not-configured' };
+    const due = this.ctx.storage.sql.exec<{ id: string; name: string; image: string; mime: string; created_at: number }>(
+      `SELECT id, name, image, mime, created_at FROM pixel_office_stories
+       WHERE backed_up = 0 AND (expires_at <= ? OR hidden = 1) AND backup_tried_at <= ?
+         AND (image != '' OR EXISTS (SELECT 1 FROM pixel_office_story_chunks WHERE story_id = pixel_office_stories.id))
+       ORDER BY expires_at LIMIT ?`, nowMs, nowMs - PIXEL_STORY_BACKUP_RETRY_MS, limit
+    ).toArray();
+    let backedUp = 0;
+    const failures: string[] = [];
+    for (const row of due) {
+      this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET backup_tried_at = ? WHERE id = ?', nowMs, row.id);
+      try {
+        const content = this.pixelOfficeStoryContent(row);
+        if (!content) continue;
+        let response = await fetch(scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          redirect: 'manual',
+          body: JSON.stringify({ action: 'backupPixelOfficeStory', serviceKey, designer: row.name, storyId: row.id, createdAt: new Date(Number(row.created_at)).toISOString(), mime: content.mime, base64: content.base64 })
+        });
+        const location = response.headers.get('location');
+        if (response.status >= 300 && response.status < 400 && location) response = await fetch(location);
+        const result = await response.json() as { success?: boolean; message?: string; url?: string };
+        if (!result.success || !text(result.url)) throw new Error(text(result.message) || '備份服務沒有回傳檔案連結');
+        this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET backed_up = 1, backup_url = ? WHERE id = ?', text(result.url), row.id);
+        // 備份在 Drive 上了：資料庫裡的內容清掉，後台 REELS 的圖片連結換成 Drive 上的備份。
+        this.ctx.storage.sql.exec("UPDATE pixel_office_stories SET image = '' WHERE id = ?", row.id);
+        this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id = ?', row.id);
+        await this.pixelOfficeMirrorStory(row.id).catch(() => undefined);
+        backedUp += 1;
+      } catch (error) {
+        failures.push(`${row.id.slice(0, 8)}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
-    const chunks = this.ctx.storage.sql.exec<{ data: string }>('SELECT data FROM pixel_office_story_chunks WHERE story_id = ? ORDER BY seq', row.id).toArray();
-    if (!chunks.length) throw new Error('這則動態已經下架');
-    return { ok: true, action: 'pixelOfficeStoryImage', id: row.id, mime: row.mime || 'image/jpeg', base64: chunks.map(chunk => chunk.data).join('') };
+    return { ok: true, due: due.length, backedUp, failures };
   }
 
   /** 按讚、留言、已讀的人一律取自登入的前台帳號，不信任前端自己報的名字；沒登入不能互動。 */
@@ -2043,9 +2112,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private pixelOfficeStoryRemove(payload: ApiPayload): ApiResult {
     const row = this.pixelOfficeStoryRow(text(payload.id));
-    const version = this.pixelOfficeTouchStory(row.id, { image: '' });
-    this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET hidden = 1 WHERE id = ?', row.id);
-    this.ctx.storage.sql.exec('DELETE FROM pixel_office_story_chunks WHERE story_id = ?', row.id);
+    // 提前下架＝現在就到期。內容先留著，等備份到 Google Drive 之後才由 pixelOfficeActiveStories 清掉。
+    const version = this.pixelOfficeTouchStory(row.id, {});
+    this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET hidden = 1, expires_at = ? WHERE id = ?', Math.min(Number(row.expires_at), Date.now()), row.id);
     this.pixelOfficeMirrorLater(row.id);
     return { ok: true, action: 'pixelOfficeStoryRemove', version, stories: this.pixelOfficeActiveStories() };
   }

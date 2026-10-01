@@ -857,3 +857,66 @@ test('Apps Script 回 302 時先向 Worker 確認，確認到就不去等結果�
   assert.deepEqual(denied, { success: false, message: '服務金鑰不正確，拒絕上傳' });
   assert.deepEqual(requests.map(item => item.url), ['https://x', 'https://echo.example/result']);
 });
+
+test('Apps Script backs a 限時動態 up into <設計師>/限時動態, rejects a wrong key, and reuses the file on retry', async () => {
+  const source = await readFile(new URL('../../upload/Code.gs', import.meta.url), 'utf8');
+  const created = [];
+  const folders = new Map();
+  const makeFolder = name => {
+    const files = new Map();
+    const children = new Map();
+    const folder = {
+      name, files, children,
+      getId: () => `folder-${name}`,
+      getFoldersByName: child => { const found = children.get(child); let used = false; return { hasNext: () => Boolean(found) && !used, next: () => { used = true; return found; } }; },
+      createFolder: child => { const made = makeFolder(child); children.set(child, made); folders.set(`${name}/${child}`, made); return made; },
+      getFilesByName: fileName => { const found = files.get(fileName); let used = false; return { hasNext: () => Boolean(found) && !used, next: () => { used = true; return found; } }; },
+      createFile: blob => {
+        const id = `file-${created.length + 1}`;
+        const file = { getId: () => id, getUrl: () => `https://drive.google.com/file/d/${id}/view`, setSharing: () => {}, blob };
+        created.push(blob); files.set(blob.name, file); return file;
+      }
+    };
+    return folder;
+  };
+  const root = makeFolder('root');
+  const context = vm.createContext({
+    console,
+    DriveApp: { Access: { ANYONE_WITH_LINK: 'link' }, Permission: { VIEW: 'view' }, getFolderById: () => root },
+    LockService: { getScriptLock: () => ({ waitLock: () => {}, releaseLock: () => {} }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => (key === 'NAS_WATCHER_API_KEY' ? 'secret-key' : '') }) },
+    Utilities: {
+      base64Decode: value => [...Buffer.from(value, 'base64')],
+      newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
+      formatDate: (date, zone, format) => `${format}@${zone}`
+    },
+    Session: { getScriptTimeZone: () => 'Asia/Taipei' },
+    Math, Date, JSON, String, Number, Array, Object, RegExp, Set, Map, isNaN
+  });
+  vm.runInContext(source, context);
+  const storyId = '0b12aa4d-1111-4222-8333-444455556666';
+  const payload = { serviceKey: 'secret-key', designer: 'Leona', storyId, createdAt: '2026-10-01T02:00:00Z', mime: 'image/jpeg', base64: Buffer.from('story-bytes').toString('base64') };
+
+  assert.equal(context.backupPixelOfficeStory({ ...payload, serviceKey: 'wrong' }).success, false);
+  assert.equal(context.backupPixelOfficeStory({ ...payload, designer: '../x' }).success, false);
+  assert.equal(context.backupPixelOfficeStory({ ...payload, mime: 'application/pdf' }).success, false);
+  assert.equal(created.length, 0);
+
+  const first = context.backupPixelOfficeStory(payload);
+  assert.equal(first.success, true);
+  assert.equal(created.length, 1);
+  assert.equal(created[0].mimeType, 'image/jpeg');
+  assert.match(created[0].name, /^yyyyMMdd_HHmmss@Asia\/Taipei_leona_0b12aa4d\.jpg$/);
+  // 資料夾是小寫的設計師名字，底下再一層「限時動態」。
+  assert.ok(folders.has('root/leona') && folders.has('leona/限時動態'));
+  assert.match(first.url, /lh3\.googleusercontent\.com\/d\/file-1=w1600/);
+  // 重送同一則：沿用同一個檔案。
+  const retry = context.backupPixelOfficeStory(payload);
+  assert.equal(created.length, 1);
+  assert.equal(retry.fileId, first.fileId);
+  // 影片給 Drive 檢視連結（不是圖片縮圖網址）。
+  const video = context.backupPixelOfficeStory({ ...payload, storyId: '1b12aa4d-1111-4222-8333-444455556666', mime: 'video/mp4' });
+  assert.equal(video.success, true);
+  assert.match(video.url, /drive\.google\.com\/file\/d\//);
+  assert.match(created[1].name, /\.mp4$/);
+});

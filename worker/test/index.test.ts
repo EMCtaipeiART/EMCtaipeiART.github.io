@@ -353,7 +353,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -4227,12 +4227,12 @@ describe('Pixel Office shared state', () => {
     expect((await tail.arrayBuffer()).byteLength).toBe(10);
     expect((await SELF.fetch(url, { headers: { Range: 'bytes=9999999-' } })).status).toBe(416);
 
-    // 移除後檔案就打不開，分段內容也一併清掉。
+    // 移除後檔案就打不開；內容先留著，要等備份到 Google Drive 之後才清（見下一個測試）。
     await api({ action: 'pixelOfficeStoryRemove', id: story?.id });
     expect((await SELF.fetch(url)).status).toBe(404);
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
     const left = await runInDurableObject(stub, async (_instance, state) => state.storage.sql.exec<{ n: number }>('SELECT COUNT(*) AS n FROM pixel_office_story_chunks WHERE story_id = ?', String(story?.id)).one().n);
-    expect(left).toBe(0);
+    expect(left).toBeGreaterThan(0);
   });
 
   it('shares what a designer is listening to (Spotify / Apple Music link + title) and only accepts those links', async () => {
@@ -4254,6 +4254,79 @@ describe('Pixel Office shared state', () => {
     // 停止分享。
     const cleared = await api({ action: 'pixelOfficeUpdate', name: 'Noise', patch: { music: '' } });
     expect((cleared.person as Record<string, unknown>).music).toBeUndefined();
+  });
+
+  it('backs expired 限時動態 up to Google Drive before clearing them, retries on failure, and falls back to a 30-day hold', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-30T02:00:00Z'));
+      const scriptCalls: Record<string, unknown>[] = [];
+      let driveOk = false;
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const target = String(input);
+        if (target.endsWith('/backend/data/db.json')) return Response.json({ content: { sha: 'x' }, commit: { sha: 'y' } });
+        if (target.startsWith('https://script.google.com/')) {
+          scriptCalls.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+          // Apps Script 的真實行為：先回 302，結果在 location 那一頁。
+          return new Response(null, { status: 302, headers: { location: 'https://script.googleusercontent.com/result' } });
+        }
+        if (target === 'https://script.googleusercontent.com/result') {
+          return driveOk ? Response.json({ success: true, url: 'https://drive.google.com/thumbnail?id=drive-file-1' }) : Response.json({ success: false, message: 'Drive 暫時無法使用' });
+        }
+        throw new Error(`unexpected fetch: ${target}`);
+      });
+      const amber = await seedSession('amber@emctaipei.com', 'Amber');
+      const image = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+      const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      const backup = () => runInDurableObject(stub, async instance => instance.runPixelOfficeStoryBackup());
+      const stored = (id: string) => runInDurableObject(stub, async (_instance, state) => state.storage.sql.exec<{ image: string; backed_up: number; backup_url: string }>('SELECT image, backed_up, backup_url FROM pixel_office_stories WHERE id = ?', id).one());
+      const reels = () => runInDurableObject(stub, async (_instance, state) => (JSON.parse(state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one().json) as DatabaseSnapshot).tables.reels.rows);
+
+      const added = await api({ action: 'pixelOfficeStoryAdd', name: 'Leona', media: image });
+      const id = String((added.stories as Record<string, unknown>[])[0].id);
+      await api({ action: 'pixelOfficeStoryReact', id }, amber);
+
+      // 還沒到期：不備份。
+      expect(await backup()).toMatchObject({ due: 0 });
+      // 到期後：備份失敗（Drive 回錯誤）→ 內容保留、沒有標成已備份。
+      vi.setSystemTime(new Date('2026-10-01T02:01:00Z'));
+      await api({ action: 'pixelOfficeState' });
+      expect(await backup()).toMatchObject({ due: 1, backedUp: 0, failures: [expect.stringContaining('Drive 暫時無法使用')] });
+      expect(await stored(id)).toMatchObject({ backed_up: 0, image });
+      // 5 分鐘內不重試，過了才再試。
+      expect(await backup()).toMatchObject({ due: 0 });
+      driveOk = true;
+      vi.setSystemTime(new Date('2026-10-01T02:07:00Z'));
+      expect(await backup()).toMatchObject({ due: 1, backedUp: 1, failures: [] });
+      // 送去備份的內容：設計師名、類型、原始內容。
+      expect(scriptCalls.at(-1)).toMatchObject({ action: 'backupPixelOfficeStory', serviceKey: 'test-nas-watcher-key', designer: 'Leona', storyId: id, mime: 'image/jpeg', base64: '/9j/4AAQSkZJRgABAQ==' });
+      // 備份成功才清掉內容；後台 REELS 的連結換成 Drive 上的備份，按讚紀錄還在。
+      expect(await stored(id)).toMatchObject({ backed_up: 1, image: '', backup_url: 'https://drive.google.com/thumbnail?id=drive-file-1' });
+      await vi.waitFor(async () => expect((await reels()).find(row => row['限時動態連結'] === 'https://drive.google.com/thumbnail?id=drive-file-1')).toMatchObject({ '名字': 'Leona', '按讚': 'Amber' }));
+      expect(await backup()).toMatchObject({ due: 0 });
+
+      // 提前移除也要備份。
+      vi.setSystemTime(new Date('2026-10-02T02:00:00Z'));
+      const second = await api({ action: 'pixelOfficeStoryAdd', name: 'Noise', media: image });
+      const secondId = String((second.stories as Record<string, unknown>[]).at(-1)?.id);
+      await api({ action: 'pixelOfficeStoryRemove', id: secondId });
+      expect(await stored(secondId)).toMatchObject({ image, backed_up: 0 });
+      expect(await backup()).toMatchObject({ due: 1, backedUp: 1 });
+      expect(await stored(secondId)).toMatchObject({ image: '', backed_up: 1 });
+
+      // 備份一直失敗：最多保留 30 天，不讓內容無限增長。
+      driveOk = false;
+      const third = await api({ action: 'pixelOfficeStoryAdd', name: 'Anna', media: image });
+      const thirdId = String((third.stories as Record<string, unknown>[]).at(-1)?.id);
+      vi.setSystemTime(new Date('2026-10-04T02:00:00Z'));
+      await api({ action: 'pixelOfficeState' });
+      expect((await stored(thirdId)).image).toBe(image);
+      vi.setSystemTime(new Date('2026-11-05T02:00:00Z'));
+      await api({ action: 'pixelOfficeState' });
+      expect((await stored(thirdId)).image).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {

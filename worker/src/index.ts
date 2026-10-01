@@ -181,6 +181,13 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 限時動態：到期或被移除的內容先備份到 Google Drive，成功才從資料庫清掉。
+    try {
+      const backup = await stub.runPixelOfficeStoryBackup();
+      if ((backup as { due?: number }).due) console.log(JSON.stringify({ event: 'pixel-office-story-backup', result: backup }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'pixel-office-story-backup-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 像素辦公室：行事曆上有會議的人自動顯示「會議」。失敗只記 log，不影響寄信排程。
     try {
       const calendar = await stub.runPixelOfficeCalendarSync();

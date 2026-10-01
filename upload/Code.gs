@@ -117,6 +117,8 @@ function doPost(e) {
     result = uploadCaseDesignImages(payload);
   } else if (action === 'backupDatabaseTableToSheet') {
     result = backupDatabaseTableToSheet(payload);
+  } else if (action === 'backupPixelOfficeStory') {
+    result = backupPixelOfficeStory(payload);
   } else {
     result = { success: false, message: '不支援的動作：' + (action || '（空白）') };
   }
@@ -430,6 +432,84 @@ function uploadCaseDesignImages(payload) {
   } catch (error) {
     console.error(error);
     return { success: false, message: error.message || '案件設計圖上傳失敗' };
+  }
+}
+
+// 像素辦公室「限時動態」的備份：24 小時到期（或被提前移除）的圖片／GIF／影片，存到
+// CASE_DESIGN_IMAGE_ROOT_FOLDER_ID 底下「設計師資料夾 / 限時動態」。單檔上限（base64 解碼後）。
+const MAX_PIXEL_STORY_BACKUP_MB = 15;
+const PIXEL_STORY_BACKUP_FOLDER_NAME = '限時動態';
+const PIXEL_STORY_BACKUP_MIME_EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/quicktime': 'mov'
+};
+
+/**
+ * 限時動態備份（服務端對服務端，走 doPost，由 Cloudflare Worker 在動態到期後呼叫）。
+ * 用 NAS_WATCHER_API_KEY 驗證，沒有正確金鑰一律被擋。
+ *
+ * @param {Object} payload
+ *   serviceKey  必填
+ *   designer    必填，設計師名字（資料夾名稱是小寫，例如 leona）
+ *   storyId     必填，動態 ID（UUID）
+ *   createdAt   選填，貼出時間（ISO），用來組檔名
+ *   mime        必填，image/jpeg｜png｜webp｜gif、video/mp4｜webm｜quicktime
+ *   base64      必填，檔案內容
+ * 同一則動態重送（網路逾時）會沿用已經存在的檔案，不會產生重複檔。
+ */
+function backupPixelOfficeStory(payload) {
+  const lock = LockService.getScriptLock();
+  try {
+    payload = payload || {};
+    verifyNasWatcherServiceKey_(payload.serviceKey);
+
+    const designer = String(payload.designer || '').trim().toLowerCase();
+    const storyId = String(payload.storyId || '').trim();
+    const mimeType = String(payload.mime || '').trim().toLowerCase();
+    const extension = PIXEL_STORY_BACKUP_MIME_EXTENSIONS[mimeType];
+    if (!/^[a-z0-9_-]{1,30}$/.test(designer)) throw new Error('設計師名稱不正確');
+    if (!/^[0-9a-f-]{36}$/.test(storyId)) throw new Error('動態 ID 不正確');
+    if (!extension) throw new Error('不支援的檔案類型：' + (mimeType || '（空白）'));
+    if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID');
+
+    const bytes = Utilities.base64Decode(removeDataUrlPrefix_(payload.base64 || ''));
+    if (!bytes.length) throw new Error('沒有收到檔案內容');
+    if (bytes.length > MAX_PIXEL_STORY_BACKUP_MB * 1024 * 1024) {
+      throw new Error('檔案超過 ' + MAX_PIXEL_STORY_BACKUP_MB + 'MB');
+    }
+
+    const createdAt = new Date(payload.createdAt || Date.now());
+    const stamp = Utilities.formatDate(isNaN(createdAt.getTime()) ? new Date() : createdAt, 'Asia/Taipei', 'yyyyMMdd_HHmmss');
+    const fileName = stamp + '_' + designer + '_' + storyId.slice(0, 8) + '.' + extension;
+
+    lock.waitLock(30000);
+    const folder = getOrCreateNestedFolder_(DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID), [designer, PIXEL_STORY_BACKUP_FOLDER_NAME]);
+    const existing = folder.getFilesByName(fileName);
+    const file = existing.hasNext() ? existing.next() : folder.createFile(Utilities.newBlob(bytes, mimeType, fileName));
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (sharingError) {
+      console.warn('限時動態備份分享設定失敗', sharingError);
+    }
+
+    return {
+      success: true,
+      fileId: file.getId(),
+      fileName: fileName,
+      // 圖片給後台 REELS 卡片直接顯示的連結；影片只能給 Drive 的檢視頁面。
+      url: mimeType.indexOf('video/') === 0 ? file.getUrl() : createUploadedImageUrl_(file.getId()),
+      folderUrl: createFolderUrl_(folder.getId())
+    };
+  } catch (error) {
+    console.error(error);
+    return { success: false, message: error.message || '限時動態備份失敗' };
+  } finally {
+    try { lock.releaseLock(); } catch (releaseError) { /* 沒拿到鎖就不用放 */ }
   }
 }
 

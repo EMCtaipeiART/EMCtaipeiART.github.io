@@ -290,6 +290,13 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
 - 原本對話框的位置改成音樂跑馬燈（`bubbleLayout` 回 `music:true`，`drawMusicContent` 畫）：左邊綠色播放小三角形（`musicPlay`），右邊歌名（`musicLink`，點了開網頁），歌名比框長才會捲動。**正在聽音樂時文字對話暫時不顯示**，停止分享後恢復。
 - ▶ 的行為：Apple Music 播 30 秒試聽；Spotify 打開官方 iframe 小播放器（`#spotifyDock`，右下角），因為瀏覽器只允許在使用者點擊後出聲。播放在各自的裝置上，不是同步給大家。
 
+## 限時動態備份到 Google Drive（2026-10-01）
+
+- 到期（或被提前移除）的動態，Worker 每分鐘排程會把檔案送到 Apps Script（`upload/Code.gs` 的 `backupPixelOfficeStory`，沿用 `NAS_WATCHER_API_KEY` 驗證），存到 Drive 根資料夾（`CASE_DESIGN_IMAGE_ROOT_FOLDER_ID`，也就是 `260627_update_space`）底下 **`<設計師小寫名字>/限時動態/`**，檔名 `yyyyMMdd_HHmmss_<設計師>_<動態ID前8碼>.<副檔名>`；同一則重送不會產生重複檔。
+- **備份成功才清掉資料庫裡的內容**（`backed_up = 1`）。失敗 5 分鐘後重試；備份服務沒設定或一直失敗，最多保留 30 天再清，不讓內容無限增長。提前移除的動態不會馬上清內容，同樣先備份。
+- 備份成功後，後台 `reels` 資料表那一列的「限時動態連結」換成 Drive 上的備份（圖片是 lh3 縮圖網址，影片是 Drive 檢視頁），過期的動態在後台「設計列表」的 REELS 卡片還看得到。
+- **上線步驟（要有人登入 Google）：** 開 Apps Script 專案（`UPLOAD_APPS_SCRIPT_URL` 那個）→ 把 `upload/Code.gs` 整份貼上 → 部署 → 管理部署作業 → 編輯 → 新版本 → 部署。沒部署前，備份會失敗（回「不支援的動作」），內容會保留、不會遺失。
+
 ## 驗證與已知限制
 
 目前已做 JavaScript 語法、角色起點/碰撞、圖層深度、移動、畫布像素密度、泡泡文字置中、照片上傳、離席切換、1280 px 桌面版及 390 px 手機版實際瀏覽器測試，且無主控台錯誤。後續調整時仍需檢查：桌子接縫/尺寸、人物與提示物避讓、最長對話、手機排版、照片上傳與重開頁面存檔。
