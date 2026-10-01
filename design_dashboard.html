@@ -5,8 +5,14 @@
 <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-10-01T09:00:00+08:00" />
-<meta name="app-version" content="20261001-quarter-pdf-26" />
+<meta name="app-version" content="20261001-perf-27" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
+<script>
+// 資料檔最大（約 6 MB、壓縮後約 650 KB），在解析其餘資源前就先開始下載。
+// cache:'no-cache' 每次都向伺服器驗證 ETag，沒更新時只回 304，不再整包重抓；有更新就一定拿到最新版。
+window.__dashboardEarlyData=Promise.all(['data/database_archive.json','backend/data/db.json'].map(url=>fetch(url,{cache:'no-cache'}))).catch(()=>null);
+</script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -646,12 +652,15 @@ function normalizeSettings(rows){
     password:r['密碼']||''
   }]}).filter(([name])=>DESIGNERS.includes(name)))
 }
-function normDate(v){if(!v)return null;const s=String(v).trim();let m=s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3]);return d.getFullYear()<MIN_YEAR?null:d}
+const normDateCache=new Map();
+function normDate(v){if(!v)return null;const s=String(v).trim();let ts=normDateCache.get(s);if(ts===undefined){const m=s.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/),d=m?new Date(+m[1],+m[2]-1,+m[3]):null;ts=d&&d.getFullYear()>=MIN_YEAR?d.getTime():-1;if(normDateCache.size>20000)normDateCache.clear();normDateCache.set(s,ts)}return ts<0?null:new Date(ts)}
 function dateKey(d){return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
 function daysBetween(a,b){return Math.max(1,Math.round((strip(b)-strip(a))/864e5)+1)}
 function strip(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
-function yearOf(r){const d=normDate(r['開始日期']||r['結束日期']||r['填單時間']||r['時間標記']);return d?d.getFullYear():null}
-function monthOf(r){const d=normDate(r['開始日期']||r['結束日期']||r['填單時間']||r['時間標記']);if(d)return d.getMonth()+1;const m=String(r['月份']||'').match(/\d+/);return m?+m[0]:null}
+const rowPeriodCache=new WeakMap();
+function rowPeriod(r){let hit=rowPeriodCache.get(r);if(hit)return hit;const d=normDate(r['開始日期']||r['結束日期']||r['填單時間']||r['時間標記']);let month=null;if(d)month=d.getMonth()+1;else{const m=String(r['月份']||'').match(/\d+/);month=m?+m[0]:null}hit={year:d?d.getFullYear():null,month};rowPeriodCache.set(r,hit);return hit}
+function yearOf(r){return rowPeriod(r).year}
+function monthOf(r){return rowPeriod(r).month}
 function scoredDetails(value){return [...new Set(String(value||'').split(/\s*[,，、\n]\s*/).map(item=>item.trim()).filter(Boolean))]}
 function scoringType(value){const type=String(value||'').trim();return ['影片','影像','影音'].includes(type)?'影音':type}
 function storedWeight(r){const raw=String(r?.['加權']??'').trim().replace(/,/g,'');if(raw==='')return null;const value=Number(raw);return Number.isFinite(value)?value:null}
@@ -690,8 +699,7 @@ async function refreshDashboardAccess(token=ACCOUNT_IDENTITY.authToken){
   return dashboardAdminAccess;
 }
 function dashboardSearchQuery(){return String($('dashboardSearch')?.value||'').trim().toLocaleLowerCase('zh-Hant')}
-function matchesDashboardSearch(row){
-  const query=dashboardSearchQuery();
+function matchesDashboardSearch(row,query=dashboardSearchQuery()){
   if(!query)return true;
   return ['案件編號','客戶別','專案名稱','設計負責人','設計總類','項目細節','案件狀態'].some(key=>String(row[key]||'').toLocaleLowerCase('zh-Hant').includes(query))
 }
@@ -1009,18 +1017,31 @@ function overlapsRange(r,start,end){
   return s&&e&&strip(e)>=strip(start)&&strip(s)<=strip(end)
 }
 function isOpenCase(r){return !CLOSED_STATUS.has(r['案件狀態'])}
+// 負載計算會對整份資料掃描數百次（每週 × 每位設計師），日期解析與加權分數先算好一次、存在每筆案件上。
+const rowInfoCache=new WeakMap();
+function rowInfo(r){
+  let info=rowInfoCache.get(r);if(info)return info;
+  const time=value=>value?strip(value).getTime():null,work=workDate(r),start=normDate(r['開始日期'])||work,end=normDate(r['結束日期'])||work,due=normDate(r['結束日期']);
+  info={work:time(work),workYear:work?work.getFullYear():null,start:time(start),end:time(end),due:time(due),open:isOpenCase(r),score:score(r)};
+  rowInfoCache.set(r,info);return info
+}
 function weeklyScoreFor(rows,designer,start,end,year){
-  return rows.filter(r=>r['設計負責人']===designer).reduce((sum,r)=>{const d=workDate(r),inYear=!year||(d&&d.getFullYear()===year);return d&&inYear&&strip(d)>=strip(start)&&strip(d)<=strip(end)?sum+score(r):sum},0)
+  const from=strip(start).getTime(),to=strip(end).getTime();let sum=0;
+  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.work!==null&&(!year||info.workYear===year)&&info.work>=from&&info.work<=to)sum+=info.score}
+  return sum
 }
 function activeCasesFor(rows,designer,start,end){
-  return rows.filter(r=>r['設計負責人']===designer&&isOpenCase(r)&&overlapsRange(r,start,end)).length
+  const from=strip(start).getTime(),to=strip(end).getTime();let count=0;
+  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.open&&info.start!==null&&info.end!==null&&info.end>=from&&info.start<=to)count++}
+  return count
 }
 function activeCasesCurrent(rows,designer){
-  return rows.filter(r=>r['設計負責人']===designer&&isOpenCase(r)).length
+  let count=0;for(const r of rows)if(r['設計負責人']===designer&&rowInfo(r).open)count++;return count
 }
 function dueSoonCasesFor(rows,designer,baseDate){
-  const today=strip(baseDate),end=addDays(today,7);
-  return rows.filter(r=>{const d=normDate(r['結束日期']);return r['設計負責人']===designer&&isOpenCase(r)&&d&&strip(d)>=today&&strip(d)<=end}).length
+  const today=strip(baseDate).getTime(),end=addDays(strip(baseDate),7).getTime();let count=0;
+  for(const r of rows){if(r['設計負責人']!==designer)continue;const info=rowInfo(r);if(info.open&&info.due!==null&&info.due>=today&&info.due<=end)count++}
+  return count
 }
 function historyWeeks(anchor){
   const end=addDays(weekBounds(anchor)[0],-1),start=addMonths(end,-3),weeks=[];
@@ -1094,8 +1115,12 @@ function renderRank(){
   })
 }
 const ANALYSIS_COLORS=['#079455','#2e90fa','#f79009','#7a5af8','#ef5da8','#14b8a6','#98a2b3'];
+let analysisRowsCache=new Map();
 function analysisRows(year,month,designer){
-  return raw.filter(r=>yearOf(r)===year&&(!month||monthOf(r)===month)&&(designer==='所有設計師'||designer==='全部'||r['設計負責人']===designer)&&matchesDashboardSearch(r))
+  const query=dashboardSearchQuery(),key=`${raw.length}\u0000${year}\u0000${month||''}\u0000${designer}\u0000${query}`,cached=analysisRowsCache.get(key);
+  if(cached)return cached;
+  const rows=raw.filter(r=>yearOf(r)===year&&(!month||monthOf(r)===month)&&(designer==='所有設計師'||designer==='全部'||r['設計負責人']===designer)&&matchesDashboardSearch(r,query));
+  if(analysisRowsCache.size>120)analysisRowsCache.clear();analysisRowsCache.set(key,rows);return rows
 }
 function analysisNumber(value,digits=0){
   return Number(value||0).toLocaleString('zh-TW',{minimumFractionDigits:digits,maximumFractionDigits:digits})
@@ -1182,7 +1207,12 @@ function renderAnalysisAnnual(y,m,designer){
   analysisYearDetailChart=createAnalysisDonut('analysisYearDetailChart','analysisYearDetailLegend',yearDetails,'年度工作量',analysisNumber(detailTotal,0),analysisYearDetailChart)
 }
 function quarterOf(row){const month=monthOf(row);return month?Math.ceil(month/3):null}
-function quarterRows(y,designer,quarter){return analysisRows(y,null,designer).filter(row=>quarterOf(row)===quarter)}
+let quarterRowsCache=new WeakMap();
+function quarterRows(y,designer,quarter){
+  const base=analysisRows(y,null,designer);let byQuarter=quarterRowsCache.get(base);
+  if(!byQuarter){byQuarter=[[],[],[],[],[]];base.forEach(row=>{const q=quarterOf(row);if(q>=1&&q<=4)byQuarter[q].push(row)});quarterRowsCache.set(base,byQuarter)}
+  return byQuarter[quarter]||[]
+}
 function renderAnalysisQuarterDetail(y,designer){
   const rows=quarterRows(y,designer,analysisQuarter),brands=group(rows,row=>row['客戶別'],qty).filter(([name])=>name!=='未分類'),brandNames=['全部品牌',...brands.map(row=>row[0])],available=new Set(brandNames);if(!available.has(analysisQuarterBrand))analysisQuarterBrand='全部品牌';const brandIndex=brandNames.indexOf(analysisQuarterBrand);$('quarterlyPeriod').textContent=`${y} 年・Q${analysisQuarter}`;$('analysisQuarterBrandName').textContent=analysisQuarterBrand==='全部品牌'?'全部品牌':`${brandIndex}・${analysisQuarterBrand}`;$('analysisQuarterBrandPrev').disabled=brandIndex<=0;$('analysisQuarterBrandNext').disabled=brandIndex>=brandNames.length-1;document.querySelectorAll('#analysisQuarterControls button').forEach(button=>button.classList.toggle('active',Number(button.dataset.quarter)===analysisQuarter));
   $('analysisQuarterBrandMenu').innerHTML=brandNames.map((name,index)=>`<button type="button" class="${name===analysisQuarterBrand?'active':''}" data-brand-name="${escapeHtml(name)}" role="option" aria-selected="${name===analysisQuarterBrand}">${index?`${index}・`:''}${escapeHtml(name)}</button>`).join('');$('analysisQuarterBrandMenu').hidden=true;$('analysisQuarterBrandName').setAttribute('aria-expanded','false');
@@ -1324,8 +1354,10 @@ function loadDashboardModifications(){
   const records=archiveDashboardData.modifications.map(normalizeModificationRecord),byCase=new Map();records.forEach(record=>{if(!record.caseId)return;if(!byCase.has(record.caseId))byCase.set(record.caseId,[]);byCase.get(record.caseId).push(record)});dashboardModificationRecords=byCase;
   renderDashboardNotifications()
 }
-async function fetchArchiveSnapshot(){
-  const stamp=Date.now(),responses=await Promise.all([fetch(`${ARCHIVE_JSON_URL}?v=${stamp}`,{cache:'no-store'}),fetch(`${PRIMARY_DATABASE_URL}?v=${stamp}`,{cache:'no-store'})]);
+async function fetchArchiveSnapshot(forceFresh=false){
+  // 首次載入沿用 <head> 先行發出的請求；手動重新整理則略過瀏覽器快取直接取最新。
+  const early=forceFresh?null:await window.__dashboardEarlyData;window.__dashboardEarlyData=null;
+  const responses=early||await Promise.all([ARCHIVE_JSON_URL,PRIMARY_DATABASE_URL].map(url=>fetch(url,{cache:forceFresh?'reload':'no-cache'})));
   if(!responses[0].ok)throw new Error(`歷史 JSON 資料庫回應失敗：${responses[0].status}`);
   if(!responses[1].ok)throw new Error(`目前 database 回應失敗：${responses[1].status}`);
   const database=await responses[0].json(),primary=await responses[1].json(),historyRows=Array.isArray(database?.rows)?database.rows:[],currentRows=primary?.tables?.database?.rows;
@@ -1341,14 +1373,14 @@ async function fetchArchiveSnapshot(){
   };
   return normalizeRows(rows)
 }
-async function fetchCSV(){
+async function fetchCSV(forceFresh){
   archiveSnapshotMeta=null;
-  return fetchArchiveSnapshot()
+  return fetchArchiveSnapshot(forceFresh)
 }
-async function load(){
+async function load(forceFresh=false){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
-  try{raw=await fetchCSV();normalizeSettings(archiveDashboardData.settings);syncDashboardIdentityWithDirectory();const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：歷史 JSON 資料庫，已與目前 database 對齊，並同步設計列表與加權規則（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
-  catch(e){raw=normalizeRows(FALLBACK);err.textContent='目前無法讀取 JSON 資料庫，已先顯示示範資料。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
+  try{raw=await fetchCSV(forceFresh===true);analysisRowsCache=new Map();quarterRowsCache=new WeakMap();normalizeSettings(archiveDashboardData.settings);syncDashboardIdentityWithDirectory();const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：歷史 JSON 資料庫，已與目前 database 對齊，並同步設計列表與加權規則（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
+  catch(e){raw=normalizeRows(FALLBACK);analysisRowsCache=new Map();quarterRowsCache=new WeakMap();err.textContent='目前無法讀取 JSON 資料庫，已先顯示示範資料。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
   finally{populateFilters();applyFilter();loadDashboardModifications();loading.classList.remove('show')}
 }
 function shiftMonth(step){
@@ -1394,7 +1426,7 @@ function hideDashboardLogin(){
   $('dashboardLoginModal').hidden=true;
   $('dashboardAdminPassword').value=''
 }
-$('reloadBtn').addEventListener('click',load);
+$('reloadBtn').addEventListener('click',()=>load(true));
 $('downloadCaseChangeSvg').addEventListener('click',exportCaseChangeSvg);$('downloadCaseYearSvg').addEventListener('click',exportCaseYearSvg);$('downloadCaseShareSvg').addEventListener('click',exportCaseShareSvg);
 $('yearFilter').addEventListener('change',()=>{const y=+$('yearFilter').value;const months=uniq(raw.filter(r=>yearOf(r)===y).map(monthOf)).sort((a,b)=>b-a);$('monthFilter').innerHTML=Array.from({length:12},(_,i)=>i+1).map(m=>`<option value="${m}" ${m===months[0]?'selected':''}>${String(m).padStart(2,'0')}月</option>`).join('');applyFilter()});
 $('monthFilter').addEventListener('change',applyFilter);$('designerFilter').addEventListener('change',applyFilter);
@@ -1432,7 +1464,9 @@ $('dashboardNotificationList').addEventListener('click',event=>{const item=event
 document.addEventListener('click',event=>{if(!event.target.closest('.analysis-switch-wrap'))closeAnalysisMenus();if(!document.querySelector('.top-tools').contains(event.target)){$('dashboardAccountDropdown').hidden=true;$('dashboardNotificationPopover').hidden=true;$('dashboardProfileButton').setAttribute('aria-expanded','false');$('dashboardBell').setAttribute('aria-expanded','false')}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('dashboardLoginModal').hidden)hideDashboardLogin()});
 window.addEventListener('storage',event=>{if(event.key===notificationReadKey())renderDashboardNotifications()});
-refreshDashboardAccess().catch(error=>console.warn('[儀表板權限] Cloudflare Worker 驗證失敗',error)).finally(load);
+// 權限驗證與資料載入同時進行；驗證完成後 refreshDashboardAccess 會自行更新右上角帳號區。
+refreshDashboardAccess().catch(error=>console.warn('[儀表板權限] Cloudflare Worker 驗證失敗',error));
+load();
 </script>
 </body>
 </html>

@@ -6176,3 +6176,12 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 季度紀錄表是寬表，擷取時另外處理：在複製出來的 DOM 中解除固定欄與捲動、表頭折行並壓縮欄寬，確保整張表完整落在頁寬內，不影響畫面上的表格。
 - 檔名：`EMC設計部_季度分析_<年>-Q<季>[_<設計師>].pdf`，內容跟隨目前的年／月／設計師篩選與搜尋。
 - 前端版本：`20261001-quarter-pdf-26`。
+
+## 2026-10-01｜儀表板進站與切換效能優化
+
+- 進站：資料檔（`data/database_archive.json`、`backend/data/db.json`）改成在 `<head>` 最前面就開始下載，不再等 Chart.js、字型與 Worker 權限驗證；原本 `load()` 要等 `refreshDashboardAccess()` 完成才開始抓資料，現在兩者同時進行。
+- 快取：由 `cache:'no-store'`＋時間戳記網址（每次整包重抓約 6 MB）改為 `cache:'no-cache'`（每次向伺服器驗證 ETag，沒更新回 304、有更新必拿到新版）。右上角「重新整理」改用 `cache:'reload'` 強制抓最新。新增 jsDelivr preconnect。
+- 計算：`yearOf/monthOf/normDate` 結果快取；`analysisRows/quarterRows` 以篩選條件為 key 做記憶（重新載入資料時清除）；搜尋關鍵字每次只讀一次；設計師負載（`weeklyScoreFor` 等）改用每筆案件預先算好的日期與加權（`rowInfo`），並已用實際資料比對新舊結果完全一致。
+- 實測（本機，7,440 筆）：季度分析頁渲染 ~790 ms → ~45 ms；設計總覽的設計師負載區塊 ~340 ms → ~55 ms。
+- 尚未處理（可再做）：兩個 JSON 檔本身偏大（未壓縮 4 MB + 1.8 MB，gzip 後約 650 KB），可由 GitHub Actions 產生只含儀表板所需欄位的精簡檔；Google 字型載入了 12 個字重。
+- 前端版本：`20261001-perf-27`。
