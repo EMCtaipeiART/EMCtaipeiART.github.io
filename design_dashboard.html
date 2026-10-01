@@ -5,7 +5,7 @@
 <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="last-modified" content="2026-10-01T09:00:00+08:00" />
-<meta name="app-version" content="20261001-quarter-switcher-29" />
+<meta name="app-version" content="20261001-keep-view-30" />
 <title>EMC設計部儀表板｜Enterprise Dashboard</title>
 <script>
 // 資料檔最大（約 6 MB、壓縮後約 650 KB），在解析其餘資源前就先開始下載。
@@ -719,6 +719,28 @@ function populateFilters(){
   $('periodFilter').innerHTML=years.flatMap(year=>Array.from({length:12},(_,index)=>12-index).map(month=>`<option value="${year}-${month}">${year} / ${String(month).padStart(2,'0')}</option>`)).join('');
   $('periodFilter').value=`${defaultYear}-${defaultMonth}`;
 }
+// 檢視狀態（分頁、年、月、設計師、季度）記在網址 # 後面：重新整理或分享連結都會回到同一個畫面。
+const VIEW_PAGES=['dashboard','analysis','quarterly','cases'];
+function parseViewState(){
+  try{const params=new URLSearchParams(location.hash.replace(/^#/,'')),page=params.get('p');return {page:VIEW_PAGES.includes(page)?page:'',year:params.get('y')||'',month:params.get('m')||'',designer:params.get('d')||'',quarter:Number(params.get('q'))||0}}
+  catch(error){return {page:'',year:'',month:'',designer:'',quarter:0}}
+}
+let viewState=parseViewState();
+function currentPageName(){return VIEW_PAGES.find(name=>$(`page-${name}`)?.classList.contains('active'))||'dashboard'}
+function saveViewState(){
+  if(!$('yearFilter')?.value)return;
+  viewState={page:currentPageName(),year:$('yearFilter').value,month:$('monthFilter').value,designer:$('designerFilter').value,quarter:currentPageName()==='quarterly'?(analysisQuarter||0):0};
+  const params=new URLSearchParams({p:viewState.page,y:viewState.year,m:viewState.month,d:viewState.designer});if(viewState.quarter)params.set('q',String(viewState.quarter));
+  try{history.replaceState(null,'',`${location.pathname}${location.search}#${params}`)}catch(error){}
+}
+function applyViewState(){
+  const state=viewState,hasOption=(select,value)=>value&&[...select.options].some(option=>option.value===value);
+  if(hasOption($('yearFilter'),state.year))$('yearFilter').value=state.year;
+  if(hasOption($('monthFilter'),state.month))$('monthFilter').value=state.month;
+  if(hasOption($('designerFilter'),state.designer))$('designerFilter').value=state.designer;
+  if(state.quarter>=1&&state.quarter<=4){analysisQuarter=state.quarter;quarterLastPeriod=`${$('yearFilter').value}-${+$('monthFilter').value}-${$('designerFilter').value}-${dashboardSearchQuery()}`}
+  if(state.page&&state.page!==currentPageName())showPage(state.page,{render:false})
+}
 function applyFilter(){
   const y=+$('yearFilter').value,m=+$('monthFilter').value,des=$('designerFilter').value,cli='全部';
   filtered=raw.filter(r=>yearOf(r)===y&&monthOf(r)===m&&(des==='所有設計師'||des==='全部'||r['設計負責人']===des)&&(cli==='全部'||r['客戶別']===cli)&&matchesDashboardSearch(r));
@@ -726,7 +748,8 @@ function applyFilter(){
   if($('page-analysis')?.classList.contains('active'))renderAnalysis(y,m,des);
   else if($('page-quarterly')?.classList.contains('active'))renderQuarterPage(y,m,des);
   else if($('page-cases')?.classList.contains('active'))renderCaseCenter(y,m,des);
-  else render(y,m,des,cli)
+  else render(y,m,des,cli);
+  saveViewState()
 }
 function updateProfile(){
   $('dashboardArchiveManager').hidden=!isDashboardAdmin();
@@ -1323,6 +1346,7 @@ async function exportQuarterPdf(){
 }
 // 季度切換（按鈕、長條圖、品牌點選）後，整頁一起更新：圖表、設計師表現與季度紀錄表。
 function refreshQuarterView(y,designer,{full=false}={}){
+  saveViewState();
   if(full)renderAnalysisQuarter(y,designer);else renderAnalysisQuarterDetail(y,designer);
   renderDesignerQuarterPerformancePanels(y,designer,analysisQuarter);renderQuarterRecordTable(y,analysisQuarter,designer)
 }
@@ -1389,7 +1413,7 @@ async function load(forceFresh=false){
   const loading=$('loading'),err=$('errorBox');loading.classList.add('show');err.classList.remove('show');
   try{raw=await fetchCSV(forceFresh===true);analysisRowsCache=new Map();quarterRowsCache=new WeakMap();normalizeSettings(archiveDashboardData.settings);syncDashboardIdentityWithDirectory();const snapshotDate=archiveSnapshotMeta?.generatedAt?new Date(archiveSnapshotMeta.generatedAt):null,updated=snapshotDate&&!Number.isNaN(snapshotDate.getTime())?snapshotDate:new Date();$('lastUpdated').textContent='最後更新：'+updated.toLocaleString('zh-TW',{hour12:false});$('sourceNote').textContent=`資料來源：歷史 JSON 資料庫，已與目前 database 對齊，並同步設計列表與加權規則（${archiveSnapshotMeta?.rowCount||raw.length} 筆）`;}
   catch(e){raw=normalizeRows(FALLBACK);analysisRowsCache=new Map();quarterRowsCache=new WeakMap();err.textContent='目前無法讀取 JSON 資料庫，已先顯示示範資料。錯誤：'+(e.message||e);err.classList.add('show');$('lastUpdated').textContent='最後更新：示範資料';$('sourceNote').textContent='資料來源：示範資料'}
-  finally{populateFilters();applyFilter();loadDashboardModifications();loading.classList.remove('show')}
+  finally{populateFilters();applyViewState();applyFilter();loadDashboardModifications();loading.classList.remove('show')}
 }
 function shiftMonth(step){
   let y=+$('yearFilter').value,m=+$('monthFilter').value+step;
@@ -1408,12 +1432,13 @@ function updateFilterSteppers(){
   const designer=$('designerFilter'),designerIndex=[...designer.options].findIndex(option=>option.value===designer.value);$('prevDesigner').disabled=designerIndex<=0;$('nextDesigner').disabled=designerIndex>=designer.options.length-1;
   const years=[...$('yearFilter').options].map(option=>Number(option.value)).filter(Number.isFinite),year=+$('yearFilter').value,month=+$('monthFilter').value,minYear=Math.min(...years),maxYear=Math.max(...years);$('prevMonth').disabled=year===minYear&&month===1;$('nextMonth').disabled=year===maxYear&&month===12
 }
-function showPage(name){
+function showPage(name,{render:shouldRender=true}={}){
   document.querySelectorAll('.topnav a').forEach(a=>a.classList.toggle('active',a.dataset.page===name));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===`page-${name}`));
   document.querySelector('.nav-side').classList.remove('open');
   $('menuToggle').setAttribute('aria-expanded','false');
-  if(raw.length)requestAnimationFrame(()=>{
+  saveViewState();
+  if(shouldRender&&raw.length)requestAnimationFrame(()=>{
     const y=+$('yearFilter').value,m=+$('monthFilter').value,designer=$('designerFilter').value;
     if(name==='analysis')renderAnalysis(y,m,designer);
     else if(name==='quarterly')renderQuarterPage(y,m,designer);

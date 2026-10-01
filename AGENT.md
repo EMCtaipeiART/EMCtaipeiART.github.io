@@ -6199,3 +6199,9 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 點選季度會同步更新：季度工作量（品牌明細）、季度項目占比、平面／影音設計師季度表現、季度紀錄表與其標題；點長條圖或品牌明細也走同一個 `refreshQuarterView`。
 - 季度紀錄表與 PDF 檔名改跟隨目前選取的季度（`analysisQuarter`），不再只看月份篩選；切換年／月／設計師時仍會回到該月所在季度。
 - 前端版本：`20261001-quarter-switcher-29`。
+
+## 2026-10-01｜儀表板重新整理後停留在原畫面
+
+- 目前檢視狀態（分頁、年、月、設計師；在季度分析頁另含所選季度）寫進網址 `#p=quarterly&y=2026&m=8&d=Machi&q=1`（`saveViewState`，用 `history.replaceState`，不產生瀏覽紀錄），重新整理或分享連結都會回到同一畫面。
+- 載入時 `applyViewState` 在 `populateFilters` 之後還原；選項不存在（例如該年份沒資料）就退回預設。右上角「重新整理」按鈕原本會把篩選重設成預設，現在同樣保留目前畫面。
+- 搜尋框文字不記錄。前端版本：`20261001-keep-view-30`。
