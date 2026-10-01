@@ -14,7 +14,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=38">
+  <link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
   <header>
@@ -59,6 +59,12 @@
           <div class="music-actions"><button type="button" class="primary" id="musicSave">分享這首歌</button><button type="button" class="text-button" id="musicClear">停止分享</button></div>
           <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示名稱，大家點名稱可以開網頁。</p>
         </div></section>
+      <section class="tool-section" id="lookSection"><h3>造型</h3>
+        <div class="look-group"><span class="look-label">服裝</span><div id="lookOutfits" class="look-outfits"></div></div>
+        <div class="look-group"><span class="look-label">帽子</span><div id="lookCaps" class="look-chips"></div></div>
+        <div class="look-group"><span class="look-label">眼鏡</span><div id="lookGlasses" class="look-chips"></div></div>
+        <p class="look-hint">選好大家的畫面會一起換。選了帽子或眼鏡時，如果還是「原本」造型，會自動換上最接近的新服裝。</p>
+      </section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一則限時動態</strong><small>照片、GIF 或手機影片（30 秒內）· 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" hidden><div id="storyMine" class="story-mine"></div></section>
@@ -78,6 +84,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=64"></script>
+  <script src="app.js?v=65"></script>
 </body>
 </html>

@@ -1867,6 +1867,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         state.music = { url, provider, title: text(music.title).replace(/\s+/g, ' ').slice(0, 80) || (provider === 'spotify' ? 'Spotify 單曲' : 'Apple Music 單曲') };
       }
     }
+    if ('look' in patch) {
+      // 造型（2026-10-01）：服裝 0–5（-1＝原本造型）、帽子、眼鏡。全部是預設值就不存。
+      const look = patch.look ? asRow(patch.look) : null;
+      if (!look) delete state.look;
+      else {
+        const outfit = Number.isInteger(look.outfit) ? Number(look.outfit) : -1;
+        const cap = text(look.cap), glasses = text(look.glasses);
+        if (outfit < -1 || outfit > 5 || !['', 'black', 'blue'].includes(cap) || !['', 'clear', 'sun'].includes(glasses)) throw new Error('造型不正確');
+        if (outfit === -1 && !cap && !glasses) delete state.look;
+        else state.look = { outfit, cap, glasses };
+      }
+    }
     const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
     // 照片欄位已改成限時動態（pixelOfficeStoryAdd）。還沒重新整理的舊版畫面會送 photo 過來，直接忽略。
     if (existing) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);

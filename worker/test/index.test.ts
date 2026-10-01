@@ -4334,6 +4334,21 @@ describe('Pixel Office shared state', () => {
     }
   });
 
+  it('shares each designer\'s look (outfit, cap, glasses) and rejects values outside the wardrobe', async () => {
+    const set = await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { look: { outfit: 3, cap: 'blue', glasses: 'sun' } } });
+    expect(set).toMatchObject({ ok: true, person: { look: { outfit: 3, cap: 'blue', glasses: 'sun' } } });
+    expect(((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[]).find(person => person.name === 'Anna')).toMatchObject({ look: { outfit: 3, cap: 'blue', glasses: 'sun' } });
+    // 其他欄位更新不會洗掉造型。
+    await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { mood: 'joy' } });
+    expect(((await api({ action: 'pixelOfficeState' })).people as Record<string, unknown>[]).find(person => person.name === 'Anna')).toMatchObject({ mood: 'joy', look: { outfit: 3 } });
+    for (const look of [{ outfit: 6, cap: '', glasses: '' }, { outfit: 0, cap: 'red', glasses: '' }, { outfit: 0, cap: '', glasses: 'monocle' }, { outfit: -2, cap: '', glasses: '' }]) {
+      expect(await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { look } })).toMatchObject({ ok: false });
+    }
+    // 全是預設值（原本造型）＝清掉。
+    const reset = await api({ action: 'pixelOfficeUpdate', name: 'Anna', patch: { look: { outfit: -1, cap: '', glasses: '' } } });
+    expect((reset.person as Record<string, unknown>).look).toBeUndefined();
+  });
+
   it('turns a designer computer heartbeat into 在座／加班／下班 automatically, without ever committing to GitHub', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const key = 'test-nas-watcher-key';

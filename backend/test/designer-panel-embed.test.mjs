@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=64/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=65/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -636,4 +636,18 @@ test('音樂可以分享 Spotify 的歌單、專輯與 Podcast，跑馬燈標明
   assert.match(js, /episode:'🎙 Podcast · '/);
   assert.match(js, /uri:`spotify:\$\{info\.kind\}:\$\{info\.id\}`/);
   assert.match(js, /label=musicPrefix\(music\)\+music\.title/);
+});
+
+test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物比例，男生頭在前、女生正面側面頭髮在後', async () => {
+  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
+  for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
+  assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
+  assert.match(js, /const layers=!WD_FEMALE\[i\]\|\|view===2\?\[body,head\]:\[head,body\]/);
+  assert.match(js, /if\(look\.glasses&&view<2\)/, '背面不畫眼鏡');
+  assert.match(js, /OUTFIT_DEFAULT=\[2,3,4,0,5\]/);
+  // 原本的像素人物還是預設，沒選造型就不變。
+  assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{if\(wardrobeReady\(\)&&drawWardrobe\(context,index,dir,x,y,h\)\)return;/);
+  for (const id of ['lookOutfits', 'lookCaps', 'lookGlasses']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.match(js, /pushChange\(i,\{look:look\|\|''\}\)/);
+  assert.match(css, /\.look-outfits\{/);
 });
