@@ -151,11 +151,11 @@ const rowTops=[0,192,381,572,757], rowHeights=[192,189,191,185,189], colLefts=[0
 // eyes 是眼睛位置（眼鏡對位用）。組合規則（尺寸全部是照現有人物比例量出來的）：頭放大 WD_K 倍、下巴蓋住脖子上緣
 // 往下 WD_OV，整個人縮到跟原本的像素人物一樣高（WD_SCALE）。男生頭在衣服前面；女生有長髮，正面與側面頭髮在衣服後面、
 // 背面在前面。帽子對臉的上緣、眼鏡對眼睛；背面不畫眼鏡。
-const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":139,"s":[32,106,28,90]},{"x":156,"y":0,"w":117,"h":148,"s":[47,103,30,89]},{"x":312,"y":0,"w":125,"h":139}],[{"x":0,"y":156,"w":138,"h":136,"s":[38,100,26,88]},{"x":156,"y":156,"w":117,"h":136,"s":[47,104,28,86]},{"x":312,"y":156,"w":135,"h":135}],[{"x":0,"y":312,"w":104,"h":86,"s":[4,99,31,82]},{"x":156,"y":312,"w":110,"h":85,"s":[33,93,33,83]},{"x":312,"y":312,"w":103,"h":83,"s":[4,97,51,82]}],[{"x":0,"y":468,"w":141,"h":128,"s":[39,108,25,83]},{"x":156,"y":468,"w":122,"h":140,"s":[53,109,29,84]},{"x":312,"y":468,"w":136,"h":126}],[{"x":0,"y":624,"w":106,"h":80,"s":[7,100,12,76]},{"x":156,"y":624,"w":105,"h":80,"s":[24,92,14,78]},{"x":312,"y":624,"w":111,"h":79,"s":[8,103,17,63]}]],"outfits":[[{"x":0,"y":0,"w":157,"h":177,"n":78.5},{"x":200,"y":0,"w":110,"h":179,"n":49.5},{"x":400,"y":0,"w":157,"h":182,"n":78.0}],[{"x":0,"y":196,"w":158,"h":184,"n":79.0},{"x":200,"y":196,"w":115,"h":187,"n":51.0},{"x":400,"y":196,"w":160,"h":188,"n":79.5}],[{"x":0,"y":392,"w":160,"h":166,"n":80.5},{"x":200,"y":392,"w":107,"h":169,"n":39.0},{"x":400,"y":392,"w":160,"h":170,"n":79.5}],[{"x":0,"y":588,"w":170,"h":170,"n":85.0},{"x":200,"y":588,"w":117,"h":167,"n":52.5},{"x":400,"y":588,"w":169,"h":172,"n":84.0}],[{"x":0,"y":784,"w":177,"h":159,"n":88.0},{"x":200,"y":784,"w":113,"h":158,"n":52.5},{"x":400,"y":784,"w":172,"h":163,"n":84.0}],[{"x":0,"y":980,"w":174,"h":149,"n":85.0},{"x":200,"y":980,"w":90,"h":153,"n":24.0},{"x":400,"y":980,"w":175,"h":150,"n":87.0}]],"caps":[[{"x":0,"y":0,"w":335,"h":240},{"x":430,"y":0,"w":404,"h":237},{"x":860,"y":0,"w":320,"h":239}],[{"x":0,"y":260,"w":335,"h":240},{"x":430,"y":260,"w":403,"h":237},{"x":860,"y":260,"w":320,"h":239}]],"glasses":[[{"x":0,"y":520,"w":313,"h":102},{"x":430,"y":520,"w":287,"h":105}],[{"x":0,"y":650,"w":313,"h":106},{"x":430,"y":650,"w":289,"h":110}]],"eyes":[[{"x":66.1,"y":58.8},{"x":67.7,"y":56.6}],[{"x":65.7,"y":57.4},{"x":71.5,"y":55.2}],[{"x":52.5,"y":54.7},{"x":56.5,"y":56.1}],[{"x":78.6,"y":56.5},{"x":80.6,"y":57.4}],[{"x":53.9,"y":45.6},{"x":49.3,"y":48.0}]]};
+const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":139,"s":[32,106,28,90]},{"x":156,"y":0,"w":117,"h":148,"s":[47,103,30,89]},{"x":312,"y":0,"w":125,"h":139}],[{"x":0,"y":156,"w":138,"h":136,"s":[38,100,26,88]},{"x":156,"y":156,"w":117,"h":136,"s":[47,104,28,86]},{"x":312,"y":156,"w":135,"h":135}],[{"x":0,"y":312,"w":104,"h":86,"s":[4,99,31,82]},{"x":156,"y":312,"w":110,"h":85,"s":[33,93,33,83]},{"x":312,"y":312,"w":103,"h":83,"s":[4,97,51,82]}],[{"x":0,"y":468,"w":141,"h":128,"s":[39,108,25,83]},{"x":156,"y":468,"w":122,"h":140,"s":[53,109,29,84]},{"x":312,"y":468,"w":136,"h":126}],[{"x":0,"y":624,"w":106,"h":80,"s":[7,100,12,76]},{"x":156,"y":624,"w":105,"h":80,"s":[24,92,14,78]},{"x":312,"y":624,"w":111,"h":79,"s":[8,103,17,63]}]],"outfits":[[{"x":0,"y":0,"w":157,"h":177,"n":78.5},{"x":200,"y":0,"w":110,"h":179,"n":49.5},{"x":400,"y":0,"w":157,"h":182,"n":78.0}],[{"x":0,"y":196,"w":158,"h":184,"n":79.0},{"x":200,"y":196,"w":115,"h":187,"n":51.0},{"x":400,"y":196,"w":160,"h":188,"n":79.5}],[{"x":0,"y":392,"w":160,"h":166,"n":80.5},{"x":200,"y":392,"w":107,"h":169,"n":39.0},{"x":400,"y":392,"w":160,"h":170,"n":79.5}],[{"x":0,"y":588,"w":170,"h":170,"n":85.0},{"x":200,"y":588,"w":117,"h":167,"n":52.5},{"x":400,"y":588,"w":169,"h":172,"n":84.0}],[{"x":0,"y":784,"w":177,"h":159,"n":88.0},{"x":200,"y":784,"w":113,"h":158,"n":52.5},{"x":400,"y":784,"w":172,"h":163,"n":84.0}],[{"x":0,"y":980,"w":174,"h":149,"n":85.0},{"x":200,"y":980,"w":90,"h":153,"n":24.0},{"x":400,"y":980,"w":175,"h":150,"n":87.0}]],"caps":[[{"x":0,"y":0,"w":335,"h":240},{"x":430,"y":0,"w":404,"h":237},{"x":860,"y":0,"w":320,"h":239}],[{"x":0,"y":260,"w":335,"h":240},{"x":430,"y":260,"w":403,"h":237},{"x":860,"y":260,"w":320,"h":239}]],"glasses":[[{"x":0,"y":520,"w":313,"h":102},{"x":430,"y":520,"w":287,"h":105}],[{"x":0,"y":650,"w":313,"h":106},{"x":430,"y":650,"w":289,"h":110}]],"eyes":[[{"x":66.1,"y":58.8},{"x":88.2,"y":55.2}],[{"x":65.7,"y":57.4},{"x":89.9,"y":54.2}],[{"x":52.5,"y":54.7},{"x":80.3,"y":58.3}],[{"x":78.6,"y":56.5},{"x":96.0,"y":53.5}],[{"x":53.9,"y":45.6},{"x":77.0,"y":46.6}]]};
 const WARDROBE_OUTFITS=['街頭黃 T','藍 T 寬牛仔褲','黑色西裝外套','米白襯衫','丹寧外套短褲','黑色連帽衫'];
 const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',label:'藍帽'}],WARDROBE_GLASSES=[{id:'',label:'無'},{id:'clear',label:'黑框'},{id:'sun',label:'墨鏡'}];
 const OUTFIT_DEFAULT=[2,3,4,0,5];// 還是「原本」造型時選了帽子或眼鏡，自動換成這個人最接近的衣服
-const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475;
+const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12;
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
 wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=1';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=1';wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=1';
 Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();};});
@@ -172,7 +172,7 @@ function buildWardrobe(i,view,look){
   const D=WARDROBE,K=WD_K,H=D.heads[i][view],oIdx=look.outfit>=0?look.outfit:OUTFIT_DEFAULT[i],B=D.outfits[oIdx][view],front=D.heads[i][0].s,sk=H.s||front;
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
   const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K;
-  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:'outfits',src:B,x:0,y:0,w:B.w,h:B.h};
+  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:'outfits',src:B,x:view===1?-WD_SIDE_BODY_SHIFT:0,y:0,w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
   const eye=D.eyes[i][view];
   if(look.glasses&&view<2){
@@ -181,13 +181,13 @@ function buildWardrobe(i,view,look){
   }
   if(look.cap){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
-    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*.24});
+    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.22:.24)});
   }
   const minX=Math.min(...layers.map(l=>l.x)),minY=Math.min(...layers.map(l=>l.y)),maxX=Math.max(...layers.map(l=>l.x+l.w)),maxY=Math.max(...layers.map(l=>l.y+l.h));
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(maxX-minX)+2;canvas.height=Math.ceil(maxY-minY)+2;
   const c2=canvas.getContext('2d');c2.imageSmoothingQuality='high';
   layers.forEach(l=>c2.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h));
-  return {canvas,ax:B.w/2-minX,ay:B.h-minY};
+  return {canvas,ax:B.w/2-minX,ay:B.h-minY};// 腳的落點仍以衣服原本的中心算，衣服往左之後腳會落在地面圓圈偏左一點，頭留在原處
 }
 function drawWardrobe(context,index,dir,x,y,h){
   const look=lookOf(index);if(!look)return false;
