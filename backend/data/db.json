@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6871,
+  "revision": 6872,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-02T06:57:53.962Z",
+  "updatedAt": "2026-10-02T06:58:08.128Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1692,7 +1692,7 @@
         {"案件編號":"26090161","修改次數":"0","建立日期":"2026/10/02 12:34:43","修改日期":"2026/10/02 12:34:43","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 12:34:43","圖片連結":"[{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_FB01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1HQguzjgUsOP_0uSZC_wkW-h0UDtxiI94=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_FB02.png\",\"url\":\"https://lh3.googleusercontent.com/d/12nyCbVZGJLTwmN7w7d1e910NOIhuKi_D=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_FB03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Q-95KlB3mAm95DtracSJt3LEhJeLYylz=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_FB04.png\",\"url\":\"https://lh3.googleusercontent.com/d/18wNpmay0ltMcoiHeV5iCDVMZWOo9s72T=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_FB05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1J6qRYdiAwX6qSdGqrnz2wgyWiGizvNr2=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 12:34:43"},
         {"案件編號":"26090162","修改次數":"0","建立日期":"2026/10/02 12:36:01","修改日期":"2026/10/02 12:36:01","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 12:36:01","圖片連結":"[{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_IG01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1pu1xca_I6JAlSZrF9YbsrLRchgl--qfo=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_IG02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Y55rmpd4sXU30Wt00PJ5Jx8WH8Ia809r=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_IG03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1NjoI4PQ0kGHFBIaKKbK1MYnnj1e-ExlI=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_IG04.png\",\"url\":\"https://lh3.googleusercontent.com/d/11XV7mAyYTlFEPGvYMi4uISXSVoEWGNLw=w1600\"},{\"fileName\":\"261001_富美家_10月社群貼文ˍDW+PH 空間展示情境應用_IG05.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Eeyz80mtd-2fH087c0OZ9z1ciurudZQs=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 12:36:01"},
         {"案件編號":"26090235","修改次數":"0","建立日期":"2026/10/02 14:51:37","修改日期":"2026/10/02 14:51:37","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 14:51:37","圖片連結":"[{\"fileName\":\"261002_添可_十月_CPAS_S9ArtistPro_KOL包框.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/13_Z8APy9-1nFOwNdnW0gufXSgo9sX-lt=w1600\"},{\"fileName\":\"261002_添可_十月_CPAS_S9ArtistPro_配件組.png\",\"url\":\"https://lh3.googleusercontent.com/d/1MD0mOHl7ZXRK2XziafJSv0-fI-AmE7TZ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 14:51:37"},
-        {"案件編號":"26090169","修改次數":"1","建立日期":"2026/10/02 14:57:29","修改日期":"2026-10-02","修改內容":"希望預覽畫面為AI人物有出現的畫面，請再開頭加入影片第3-4秒AI人物說\"這間廚房，你是不是也忍很久了\"的畫面","修改內容連結":"","修改人":"陳雅筠","確認修正日":"","待修改圖片":"[\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\"]"}
+        {"案件編號":"26090169","修改次數":"1","建立日期":"2026/10/02 14:57:29","修改日期":"2026-10-02","修改內容":"希望預覽畫面為AI人物有出現的畫面，請再開頭加入影片第3-4秒AI人物說\"這間廚房，你是不是也忍很久了\"的畫面","修改內容連結":"","修改人":"陳雅筠","確認修正日":"","待修改圖片":"[\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\"]","圖片連結":"[{\"fileName\":\"260923_櫻花整體廚房_名單型廣告_年末犒賞_動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1llTceRqHM-InHgVX1ogvafAthwmBUIpO=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 14:58:08"}
       ]
     },
     "補充資料連結": {
