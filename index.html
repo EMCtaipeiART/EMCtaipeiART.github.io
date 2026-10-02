@@ -6877,7 +6877,7 @@
         <span>• 這裡顯示設計部的即時狀態。</span>
         <span>• 直接點畫面中的人物，可查看他的等級、技能、案件量與新專案輪值。</span>
       </div>
-      <div class="designer-roster" id="designerRoster" aria-label="設計師功能"></div>
+      <div class="designer-roster" id="designerRoster" aria-label="設計師功能"><!-- 像素辦公室 iframe 直接寫在 HTML 裡：瀏覽器一解析就開始載，不必等案件資料載完、renderDesigners 跑到才建立（那樣在慢速網路上會晚好幾秒）。renderDesigners 看到已有 .office-embed 就不會重建；src 的 ?v= 要跟它裡面那一份一致。 --><div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=55" title="設計部即時狀態；點選人物可查看資料" scrolling="no"></iframe></div></div>
     </div>
     <div class="card panel-managed" id="recentPanel">
       <div class="section-head">

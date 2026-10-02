@@ -755,3 +755,13 @@ test('「設計部即時動態」載入加速：API 與圖片在 HTML 解析時�
     assert.ok(html.includes(`href="assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
   }
 });
+
+test('像素辦公室 iframe 直接寫在 HTML 裡，不等案件資料載完才建立；兩處 ?v= 一致', async () => {
+  const parent = await indexHtml();
+  const staticTag = parent.match(/<div class="designer-roster" id="designerRoster"[^>]*>(?:<!--.*?-->)?<div class="office-embed-shell"><iframe class="office-embed" src="([^"]+)"/s);
+  assert.ok(staticTag, 'designerRoster 裡要有寫死的 iframe');
+  const dynamic = parent.match(/designerRoster\.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="([^"]+)"/);
+  assert.ok(dynamic, 'renderDesigners 的備援 iframe 還要在');
+  assert.equal(staticTag[1], dynamic[1], '兩份 iframe 的網址（含 ?v=）要一樣，不然切換時會重載一次');
+  assert.match(parent, /if\(!designerRoster\.querySelector\('\.office-embed'\)\)\{/);
+});
