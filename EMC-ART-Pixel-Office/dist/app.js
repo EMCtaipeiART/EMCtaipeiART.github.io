@@ -152,7 +152,7 @@ function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.
 const WARDROBE={"heads":[[{"x":0,"y":0,"w":135,"h":130,"s":[41,106,27,84]},{"x":156,"y":0,"w":117,"h":132,"s":[47,103,30,85]},{"x":312,"y":0,"w":133,"h":124}],[{"x":0,"y":156,"w":138,"h":133,"s":[38,100,25,87]},{"x":156,"y":156,"w":117,"h":132,"s":[47,104,27,85]},{"x":312,"y":156,"w":135,"h":133}],[{"x":0,"y":312,"w":108,"h":82,"s":[5,102,27,78]},{"x":156,"y":312,"w":105,"h":85,"s":[33,93,33,83]},{"x":312,"y":312,"w":110,"h":83}],[{"x":0,"y":468,"w":141,"h":131,"s":[39,108,28,86]},{"x":156,"y":468,"w":122,"h":135,"s":[53,109,29,83]},{"x":312,"y":468,"w":136,"h":127}],[{"x":0,"y":624,"w":106,"h":80,"s":[7,100,12,76]},{"x":156,"y":624,"w":105,"h":80,"s":[24,91,21,78]},{"x":312,"y":624,"w":114,"h":80}]],"outfits":[[{"x":0,"y":0,"w":157,"h":168,"n":78.5},{"x":200,"y":0,"w":110,"h":172,"n":41.5},{"x":400,"y":0,"w":157,"h":172,"n":78.0}],[{"x":0,"y":196,"w":152,"h":170,"n":74.5},{"x":200,"y":196,"w":111,"h":172,"n":49.0},{"x":400,"y":196,"w":152,"h":171,"n":76.0}],[{"x":0,"y":392,"w":160,"h":166,"n":80.5},{"x":200,"y":392,"w":107,"h":169,"n":39.0},{"x":400,"y":392,"w":160,"h":170,"n":79.5}],[{"x":0,"y":588,"w":164,"h":169,"n":81.5},{"x":200,"y":588,"w":112,"h":167,"n":50.0},{"x":400,"y":588,"w":163,"h":167,"n":81.5}],[{"x":0,"y":784,"w":172,"h":169,"n":85.5},{"x":200,"y":784,"w":110,"h":168,"n":51.0},{"x":400,"y":784,"w":168,"h":170,"n":83.0}],[{"x":0,"y":980,"w":174,"h":171,"n":85.5},{"x":200,"y":980,"w":90,"h":169,"n":25.0},{"x":400,"y":980,"w":175,"h":170,"n":87.0}]],"caps":[[{"x":0,"y":0,"w":208,"h":149},{"x":267,"y":0,"w":250,"h":147},{"x":533,"y":0,"w":198,"h":148}],[{"x":0,"y":161,"w":208,"h":149},{"x":267,"y":161,"w":250,"h":147},{"x":533,"y":161,"w":198,"h":148}]],"glasses":[[{"x":0,"y":322,"w":194,"h":63},{"x":267,"y":322,"w":178,"h":65}],[{"x":0,"y":403,"w":194,"h":66},{"x":267,"y":403,"w":179,"h":68}]],"eyes":[[{"x":78.2,"y":54.6},{"x":88.4,"y":53.7}],[{"x":66.2,"y":56.4},{"x":89.7,"y":53.0}],[{"x":54.1,"y":50.7},{"x":80.3,"y":58.4}],[{"x":78.2,"y":59.3},{"x":95.7,"y":53.3}],[{"x":53.1,"y":45.5},{"x":74.4,"y":48.4}]]};
 const WARDROBE_OUTFITS=['街頭黃 T','藍 T 寬牛仔褲','黑色西裝外套','米白襯衫','丹寧外套短褲','黑色連帽衫'];
 const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',label:'藍帽'}],WARDROBE_GLASSES=[{id:'',label:'無'},{id:'clear',label:'黑框'},{id:'sun',label:'墨鏡'}];
-const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10],WD_BODY_DX=[-8,0,0,-8,0],WD_GLASSES_W=120;
+const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10],WD_BODY_DX=[-8,0,0,-8,0],WD_GLASSES_W=120,WD_GLASSES_DX=[-8,0,0,-8,0],WD_GLASSES_DY=[0,0,8,0,8];// 眼鏡位置微調（原圖像素）：Anna 與 Leona 往左、Noise 與 Machi 往下（使用者 2026-10-02）
 // WD_BODY_DX：衣服整體左右位移（原圖像素，負＝往左）：Leona 與 Anna 的衣服偏右（使用者 2026-10-02 回報）。
 // WD_GLASSES_W：眼鏡與墨鏡的寬度（原圖像素），所有人一樣大、約等於兩邊臉頰的寬度（原本 100 太小，2026-10-02 使用者要求放大切齊臉頰）；不依各人臉寬換算（皮膚框含耳朵，男生會偏大）。
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
@@ -184,7 +184,7 @@ function buildWardrobe(i,view,look){
   const eye=D.eyes[i][view];
   if(look.glasses&&view<2&&accessoriesReady()){
     const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0],s=WD_GLASSES_W/gf.w*(view===1?.95:1),w=g.w*s,h=g.h*s;
-    layers.push({sheet:'acc',src:g,w,h,x:view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18,y:hy+eye.y*K-h/2+WD_DROP[i]});
+    layers.push({sheet:'acc',src:g,w,h,x:(view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18)+WD_GLASSES_DX[i],y:hy+eye.y*K-h/2+WD_DROP[i]+WD_GLASSES_DY[i]});
   }
   if(look.cap&&accessoriesReady()){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
@@ -546,7 +546,7 @@ if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[s
 const headphones=new Image();
 function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-v1.webp?v=2';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,HP_DY=[0,0,0,0,8],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。
@@ -1162,8 +1162,8 @@ function seatLift(i){if(!SEAT_LIFT[i])return 0;const o=starts[i],q=people[i];ret
 // 聽音樂時的點頭幅度（像素）。目前 0＝完全不搖（使用者 2026-10-01 要求）；要恢復只有頭點頭就改成 2.2，身體仍然不動。
 const MUSIC_NOD=0;
 function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const fr=wardrobeFrame(i,p.dir);if(fr){
-    // 耳機全員同樣大小、同樣對位（2026-10-02 使用者要求統一，以 Anna 已確認的大小為準）：兩個耳罩外緣 HP_SPAN_W 原圖像素寬，耳罩中心在下巴上方 HP_CHIN_UP（照 Anna 確認過的位置換算；不能用眼睛位置，男生眼睛畫得比較高，耳機會比女生高一截）、臉中心左 HP_DX_NAT。
-    const g=fr.geom,S=WD_SCALE,fw=HP_SPAN_W/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx+HP_DX_NAT-fr.ax)*S,ear=(g.chinY-HP_CHIN_UP-fr.ay)*S+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
+    // 耳機全員同樣大小、同樣對位（2026-10-02 使用者要求統一，以 Anna 已確認的大小為準）：兩個耳罩外緣 HP_SPAN_W 原圖像素寬，耳罩中心在下巴上方 HP_CHIN_UP（照 Anna 確認過的位置換算；不能用眼睛位置，男生眼睛畫得比較高，耳機會比女生高一截）、臉中心左 HP_DX_NAT。HP_DY 是畫面像素的個別微調：Machi 的臉畫得比 Anna 高（眼睛高約 11 px，頭頂則是對齊的），使用者要求兩人耳機同高，所以他的耳機往下 8。
+    const g=fr.geom,S=WD_SCALE,fw=HP_SPAN_W/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx+HP_DX_NAT-fr.ax)*S,ear=(g.chinY-HP_CHIN_UP-fr.ay)*S+HP_DY[i]+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
     ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);drawWardrobeCap(ctx,i,p.dir,0,bob+nod);}}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
