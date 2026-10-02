@@ -12489,8 +12489,16 @@ function openRevisionMoveTargetPicker(event){
     const disabled=sourceRounds.size===1&&sourceRounds.has(round);
     return `<button type="button" class="option" data-move-round="${round}"${disabled?' disabled':''}><span>${esc(modificationLabel(round))}</span><small>${disabled?'選取的圖片已經在這一輪':`目前 ${(record.images||[]).length} 張`}</small></button>`;
   }).join('');
+  // 2026-10-02：合併信件一起寄出後，設計師回覆的圖片全記在其中一個案件，另一個案件的初稿沒有紀錄——
+  // 提供「移到其他案件」：先列出同一條信件串的其他案件，也可以直接輸入案件編號。搬到目標案件的同一輪
+  // （選取的圖片來自單一輪次時），混選則搬到初稿；目標案件沒有初稿時由 Worker 自動建立。
+  const thread=String(rows.find(r=>String(r.id)===String(id))?.gmailThreadId||'');
+  const siblings=thread?rows.filter(r=>String(r.id)!==String(id)&&String(r.gmailThreadId||'')===thread):[];
+  const crossRound=sourceRounds.size===1?[...sourceRounds][0]:0;
+  const siblingButtons=siblings.map(r=>`<button type="button" class="option" data-move-case="${esc(r.id)}"><span>${esc(r.id)}</span><small>${esc(r.project||'')}・同一封信件串</small></button>`).join('');
+  const crossCaseHtml=`<h3 style="margin-top:12px">移到其他案件（${esc(modificationLabel(crossRound))}）</h3>${siblingButtons?`<div class="option-list source-option-list">${siblingButtons}</div>`:''}<div class="gmail-recipient-row"><input type="text" class="gmail-recipient-search" id="revisionMoveCaseInput" inputmode="numeric" placeholder="輸入案件編號"><button type="button" class="gmail-recipient-pick" id="revisionMoveCaseGo">移動</button></div>`;
   closeFieldPopover();
-  fieldPopover.innerHTML=`<h3>移動 ${items.length} 張設計圖到</h3><p class="schedule-picker-hint">只會改變這幾張圖在修改紀錄裡屬於哪一輪，Google Drive 上的原始檔案不會被搬動或刪除。</p><div class="option-list source-option-list">${options||'<button type="button" class="option" disabled><span>這個案件目前沒有其他修改輪次</span></button>'}</div>`;
+  fieldPopover.innerHTML=`<h3>移動 ${items.length} 張設計圖到</h3><p class="schedule-picker-hint">只會改變這幾張圖在修改紀錄裡屬於哪一輪，Google Drive 上的原始檔案不會被搬動或刪除。</p><div class="option-list source-option-list">${options||'<button type="button" class="option" disabled><span>這個案件目前沒有其他修改輪次</span></button>'}</div>${crossCaseHtml}`;
   fieldPopover.hidden=false;
   positionFieldPopover(event.currentTarget||$('#revisionSelectionMove'),{center:true});
   fieldPopover.querySelectorAll('[data-move-round]').forEach(button=>button.addEventListener('click',clickEvent=>{
@@ -12498,19 +12506,25 @@ function openRevisionMoveTargetPicker(event){
     closeFieldPopover();
     moveSelectedCaseDesignImages(id,Number(button.dataset.moveRound)||0);
   }));
+  const goCase=toCaseId=>{toCaseId=String(toCaseId||'').trim();if(!toCaseId)return;closeFieldPopover();moveSelectedCaseDesignImages(id,crossRound,toCaseId)};
+  fieldPopover.querySelectorAll('[data-move-case]').forEach(button=>button.addEventListener('click',clickEvent=>{clickEvent.stopPropagation();goCase(button.dataset.moveCase)}));
+  fieldPopover.querySelector('#revisionMoveCaseGo')?.addEventListener('click',clickEvent=>{clickEvent.stopPropagation();goCase(fieldPopover.querySelector('#revisionMoveCaseInput')?.value)});
+  fieldPopover.querySelector('#revisionMoveCaseInput')?.addEventListener('keydown',keyEvent=>{if(keyEvent.key==='Enter'){keyEvent.preventDefault();goCase(keyEvent.target.value)}});
 }
-async function moveSelectedCaseDesignImages(id,toRound){
-  const items=revisionSelectionItems().filter(item=>item.round!==toRound);
+async function moveSelectedCaseDesignImages(id,toRound,toCaseId=''){
+  const crossCase=Boolean(toCaseId)&&String(toCaseId)!==String(id);
+  const items=revisionSelectionItems().filter(item=>crossCase||item.round!==toRound);
   if(!items.length){setSync('選取的圖片已經在這一輪了',true,3200);return}
-  const label=modificationLabel(toRound);
-  if(!(await showAppConfirm({title:`移動 ${items.length} 張設計圖`,message:`確定要把這 ${items.length} 張設計圖移到「${label}」的修改紀錄嗎？\n（Google Drive 原始檔案不會被搬動或刪除）`,confirmText:'確定移動'})))return;
+  const label=crossCase?`案件 ${toCaseId} 的${modificationLabel(toRound)}`:modificationLabel(toRound);
+  if(!(await showAppConfirm({title:`移動 ${items.length} 張設計圖`,message:`確定要把這 ${items.length} 張設計圖移到「${label}」的修改紀錄嗎？${crossCase?'\n（目標案件沒有初稿紀錄時會自動建立）':''}\n（Google Drive 原始檔案不會被搬動或刪除）`,confirmText:'確定移動'})))return;
   const moveBtn=$('#revisionSelectionMove'); if(moveBtn)moveBtn.disabled=true;
   setSync('移動圖片中...');
   try{
-    const data=await sheetApi('moveCaseDesignImages',{caseId:id,toRound,images:items,editorToken:currentEditorToken,_requireResponse:true});
+    const data=await sheetApi('moveCaseDesignImages',{caseId:id,toRound,...(crossCase?{toCaseId:String(toCaseId).trim()}:{}),images:items,editorToken:currentEditorToken,_requireResponse:true});
     revisionImageSelection.clear();
     try{await fetchModificationCounts()}catch(err){}
     render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id);
+    if(crossCase){refreshOpenRevisionModal(toCaseId); refreshOpenCaseDetail(toCaseId)}
     const moved=Number(data?.moved)||items.length, skipped=Number(data?.skipped)||0;
     setSync(`已把 ${moved} 張設計圖移到${label}${skipped?`（${skipped} 張略過，可能已經在那一輪）`:''}`,false,3200);
   }catch(err){

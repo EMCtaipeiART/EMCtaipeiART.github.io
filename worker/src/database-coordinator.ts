@@ -4175,9 +4175,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     if (action === 'moveCaseDesignImages') {
       // 把已經備份好的設計圖改歸到別的修改輪次：初稿備份完才發現其中幾張其實屬於一修／二修時用。
+      // 2026-10-02：新增 toCaseId，可以把圖搬到「另一個案件」的紀錄——合併信件一起寄出後，設計師回覆的
+      // 圖片會全部記在其中一個案件，另一個案件的初稿就沒有紀錄，用這個把圖片搬過去。
       // 只動「修改統計表」的圖片清單（同一個 Drive 網址從來源那一輪搬到目標那一輪），Drive 上的檔案不動。
       const current = this.requireAccess(database, session, 'media.manage');
       const caseId = text(payload.caseId || payload.id);
+      const toCaseId = text(payload.toCaseId) || caseId;
+      const crossCase = toCaseId !== caseId;
       const toRound = Math.trunc(Number(payload.toRound ?? payload.round));
       const items = (Array.isArray(payload.images) ? payload.images : [])
         .map(item => asRow(item))
@@ -4188,15 +4192,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (!items.length) throw new Error('沒有指定要搬移的圖片');
       return this.mutate(action, current, draft => {
         const rows = draft.tables['修改統計表'].rows;
-        const targetRow = rows.find(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === toRound);
-        // 目標輪次必須已經存在：自動補一筆空的修改紀錄會讓輪次編號憑空多出來，跟 NAS 同步的輪次判斷對不上。
-        if (!targetRow) throw new Error(`找不到${toRound === 0 ? '初稿' : `第 ${toRound} 輪`}的修改紀錄，請先建立那一輪再搬移`);
+        if (!draft.tables.database.rows.some(row => text(row['案件編號']) === caseId)) throw new Error('找不到來源案件');
+        if (crossCase && !draft.tables.database.rows.some(row => text(row['案件編號']) === toCaseId)) throw new Error(`找不到目標案件 ${toCaseId}`);
+        let targetRow = rows.find(row => text(row['案件編號']) === toCaseId && (Number(row['修改次數']) || 0) === toRound);
+        let createdRound = false;
+        if (!targetRow && crossCase && toRound === 0) {
+          // 跨案件搬到「初稿」時，目標案件常常還沒有任何紀錄（這就是要搬過去的原因），自動建立初稿，
+          // 做法跟 addCaseDesignImages 自動建立初稿一致（第 0 輪視為已完成，不會變成待確認的修改需求）。
+          const now = nowTaipei();
+          targetRow = {
+            '案件編號': toCaseId, '修改次數': '0', '建立日期': now, '修改日期': now,
+            '修改內容': '初稿完成（設計圖搬移）', '修改人': text(current.user || '系統'), '確認修正日': now, '圖片連結': '[]'
+          };
+          rows.push(targetRow);
+          createdRound = true;
+        }
+        // 目標輪次必須已經存在（跨案件搬到初稿除外）：自動補一筆空的修改紀錄會讓輪次編號憑空多出來，跟 NAS 同步的輪次判斷對不上。
+        if (!targetRow) throw new Error(`找不到${toCaseId === caseId ? '' : `案件 ${toCaseId} 的`}${toRound === 0 ? '初稿' : `第 ${toRound} 輪`}的修改紀錄，請先建立那一輪再搬移`);
         const targetImages = parseCaseDesignImages_(targetRow);
         const seenUrls = new Set(targetImages.map(item => item.url));
         let moved = 0;
         let skipped = 0;
         for (const item of items) {
-          const sourceRow = item.round === toRound
+          const sourceRow = (!crossCase && item.round === toRound)
             ? null
             : rows.find(row => text(row['案件編號']) === caseId && (Number(row['修改次數']) || 0) === item.round);
           if (!sourceRow) { skipped += 1; continue; }
@@ -4214,7 +4232,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         targetRow['圖片連結'] = JSON.stringify(targetImages);
         targetRow['圖片來源'] = 'manual-move';
         targetRow['圖片更新時間'] = nowTaipei();
-        return { result: { ok: true, action, caseId, toRound, moved, skipped, images: targetImages }, changedTables: ['修改統計表'] };
+        if (createdRound) recalculateDatabaseModificationCounts(draft);
+        return { result: { ok: true, action, caseId, toCaseId, toRound, moved, skipped, images: targetImages }, changedTables: createdRound ? ['修改統計表', 'database'] : ['修改統計表'] };
       });
     }
     if (action === 'removeCaseDesignImage') {

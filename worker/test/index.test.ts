@@ -1662,6 +1662,31 @@ describe('Machi Design API Worker', () => {
     expect(String(denied.error)).toContain('media.manage');
   });
 
+  it('moves design images to another case (merged-mail scenario), auto-creating that case\'s draft round and rejecting an unknown target case', async () => {
+    const token = await login();
+    await seedCase('26080002');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'xmove-file-sha' }, commit: { sha: 'xmove-commit-sha' } }));
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 0, images: [
+      { fileName: 'a1.jpg', url: 'https://lh3.googleusercontent.com/d/a1' },
+      { fileName: 'b1.jpg', url: 'https://lh3.googleusercontent.com/d/b1' }
+    ] });
+
+    const moved = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '26080002', toRound: 0, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/b1' }] }, token);
+    expect(moved).toMatchObject({ ok: true, caseId: '26080001', toCaseId: '26080002', toRound: 0, moved: 1 });
+
+    const imagesOf = async (caseId: string) => {
+      const records = await api({ action: 'listModificationRecords', ids: [caseId] }, token);
+      const row = (records.rows as Record<string, unknown>[]).find(item => Number(item['修改次數']) === 0 && item['案件編號'] === caseId);
+      return row ? (JSON.parse(String(row['圖片連結'] || '[]')) as { fileName: string }[]).map(image => image.fileName) : null;
+    };
+    expect(await imagesOf('26080001')).toEqual(['a1.jpg']);
+    expect(await imagesOf('26080002')).toEqual(['b1.jpg']); // 目標案件原本沒有初稿，自動建立
+
+    const unknownCase = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '29990101', toRound: 0, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/a1' }] }, token);
+    expect(unknownCase).toMatchObject({ ok: false });
+    expect(String(unknownCase.error)).toContain('找不到目標案件');
+  });
+
   it('treats the designer-reply photo backup as done when Apps Script already recorded the images, even if Google fails to return the result page', async () => {
     const token = await login();
     const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

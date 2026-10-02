@@ -3922,7 +3922,7 @@ test('revision modal keeps image selection across background re-renders and can 
   assert.match(html, /if\(moveBtn\)moveBtn\.disabled=!count;/);
 
   // ② 實際執行搬移流程：送出的內容、略過已在目標輪次的圖片、成功後清空選取並重新整理畫面。
-  const block = html.match(/function revisionSelectionItems\(\)\{[\s\S]*?\nasync function moveSelectedCaseDesignImages\(id,toRound\)\{[\s\S]*?\n\}/)?.[0];
+  const block = html.match(/function revisionSelectionItems\(\)\{[\s\S]*?\nasync function moveSelectedCaseDesignImages\(id,toRound,toCaseId=''\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(block, 'could not locate the move helpers');
   const run = async ({ confirm = true, fail = false } = {}) => {
     const calls = [];
@@ -3934,7 +3934,7 @@ test('revision modal keeps image selection across background re-renders and can 
       const modificationLabel = round => (round === 0 ? '初稿' : ['', '一修', '二修'][round] || round + '修');
       const showAppConfirm = async opts => { calls.push({ step: 'confirm', title: opts.title }); return ${confirm}; };
       const sheetApi = async (action, payload) => {
-        calls.push({ step: 'api', action, toRound: payload.toRound, images: payload.images });
+        calls.push({ step: 'api', action, toRound: payload.toRound, toCaseId: payload.toCaseId, images: payload.images });
         if (${fail}) throw new Error('沒有權限');
         return { ok: true, moved: payload.images.length, skipped: 0 };
       };
@@ -3961,6 +3961,15 @@ test('revision modal keeps image selection across background re-renders and can 
   assert.deepEqual(request.images, [{ round: 0, url: 'https://x/a' }, { round: 0, url: 'https://x/b' }], '已經在目標輪次的那張不送出');
   assert.equal(ok.api.selectionSize(), 0, '成功後清空選取');
   assert.match(ok.calls.at(-1).message, /已把 2 張設計圖移到一修/);
+
+  // 2026-10-02：搬到其他案件（合併信件後另一案件的初稿沒有圖片紀錄）：送出 toCaseId，且同輪次的圖片也要送出。
+  const cross = await run();
+  await cross.api.moveSelectedCaseDesignImages('26090107', 1, '26090108');
+  const crossRequest = cross.calls.find(call => call.step === 'api');
+  assert.equal(crossRequest.toCaseId, '26090108');
+  assert.equal(crossRequest.images.length, 3, '跨案件時不略過「同一輪」的圖片');
+  assert.match(cross.calls.at(-1).message, /案件 26090108 的一修/);
+  assert.match(html, /data-move-case="\$\{esc\(r\.id\)\}"/, '移動選單要列出同一封信件串的其他案件');
 
   const cancelled = await run({ confirm: false });
   await cancelled.api.moveSelectedCaseDesignImages('26090107', 1);
