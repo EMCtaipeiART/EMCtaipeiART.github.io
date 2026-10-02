@@ -6,9 +6,13 @@
   <title>凱曜設計部｜Pixel Office</title>
   <meta name="description" content="走進設計部的像素日常，查看設計師等級、移動人物、表達心情與留下對話。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23182e54'/%3E%3Cpath d='M7 9h18v11H7zM9 20v6m14-6v6' stroke='%23ffd45d' stroke-width='3'/%3E%3C/svg%3E">
-  <link rel="preload" as="image" href="assets/wardrobe-heads.webp?v=3" fetchpriority="high">
-  <link rel="preload" as="image" href="assets/wardrobe-outfits.webp?v=3" fetchpriority="high">
-  <link rel="preload" as="image" href="assets/furniture-v3.webp?v=1" fetchpriority="high">
+  <!-- 進站加速：把兩個一定會打的 API（人物狀態、設計師資料）在 HTML 一解析就送出去，不必等 app.js 下載完才開始。
+       app.js 的 pollSync／syncDesigners 第一次會直接用這裡的結果；沒拿到（網路失敗、後端回錯）就照舊自己再問一次。
+       網址與送法要跟 app.js 的 syncCall 一樣（text/plain 的簡單請求，沒有 preflight）。 -->
+  <script>window.__pixelP=(function(){var u='https://machi-design-api.machi-chen.workers.dev/api',go=function(a){return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(a),cache:'no-store'}).then(function(r){return r.json()}).catch(function(){return null})};return {state:go({action:'pixelOfficeState',since:0}),designers:go({action:'pixelOfficeDesigners'})}})();</script>
+  <link rel="preload" as="image" href="assets/wardrobe-heads.webp?v=3">
+  <link rel="preload" as="image" href="assets/wardrobe-outfits.webp?v=3">
+  <link rel="preload" as="image" href="assets/furniture-v3.webp?v=1">
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
@@ -83,6 +87,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=82" fetchpriority="high"></script>
+  <script src="app.js?v=83" fetchpriority="high"></script>
 </body>
 </html>

@@ -316,6 +316,7 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
 - 量測（線上實測）：進站時所有圖同時搶頻寬，`app.js` 要 3.5 秒才下載完；而且 `ready` 還在等 124 KB 的配件圖與 95 KB 的耳機圖，要到約 7.8 秒才把「載入中」拿掉。
 - 現在：`ready` 只等頭像、衣服、家具三張（約 290 KB）；配件圖（`loadAccessories`）在 `ready` 之後才載，載好自動重畫（Noise 的藍帽會晚一點點出現）；耳機圖只有在有人聽音樂（或編輯畫面）時才載（`ensureHeadphones`）；Spotify 播放器程式等使用者第一次有動作才載（`wantSpotifyApi`）。`index.html` 的預載只留頭像、衣服、家具，加班濾鏡與狀態圖示不再預載，`app.js` 加 `fetchpriority="high"`。
 - 圖檔重新壓縮：頭像 99→64 KB、衣服 220→146 KB、配件縮到 0.62 倍並壓成 127→47 KB、耳機 97→78 KB（素材版本 `?v=2`）。進站必載的總量從約 870 KB 降到約 420 KB。
+- 第二輪（2026-10-02，「設計部即時動態」載入還是慢）：線上量到 iframe 裡 `app.js`（44 KB）要 3.9 秒才下載完，因為跟主頁的 `db.json`（252 KB）、自己的三張圖搶頻寬，而且兩個 API 要等 `app.js` 跑起來才開始送。改成：①像素辦公室 `index.html` 的 `<head>` 一解析就把人物狀態與設計師資料兩個 API 送出去（`window.__pixelP`），`pollSync`／`syncDesigners` 第一次直接用那份結果，失敗才自己問，所以 API 的往返時間（約 0.35–0.7 秒）完全藏在圖片下載之後；②預載的圖片不再標 `fetchpriority="high"`，讓 `app.js` 先到；③主系統 `index.html` 的 `<head>` 預載那三張必要的圖（`?v=` 要跟像素辦公室一致，改素材版本時兩邊一起改，不然只是白載）；④iframe 拿掉 `loading="lazy"`（版面在摺線下面時會等捲動才開始載）。
 - 還沒做、可能再省的：`app.js` 約 116 KB（壓縮後 44 KB）沒有 minify；主系統那邊 iframe 何時才建立（登入後才建）也會影響使用者感受到的「進站時間」。
 
 ## 新版頭像與服裝（2026-10-02）

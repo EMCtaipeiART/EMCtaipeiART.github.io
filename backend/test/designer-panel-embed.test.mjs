@@ -21,7 +21,7 @@ test('「設計師專長與案件分配」嵌入像素辦公室，而不是畫�
   const source = renderDesignersSource(await indexHtml());
   assert.match(source, /class="office-embed"/, '應該嵌入像素辦公室');
   // 相對路徑：線上與本機預覽都會指到同一個 repo 裡的那份。
-  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=54"/);
+  assert.match(source, /src="EMC-ART-Pixel-Office\/dist\/\?embed=1&amp;v=55"/);
   assert.doesNotMatch(source, /designer-card/, '不該再畫設計師卡片');
   assert.doesNotMatch(source, /avatar-frame|avatar-shell/, '不該再畫頭像');
 });
@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=82/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=83/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -736,4 +736,22 @@ test('頭像與服裝換成 2026-10-02 的新版比例：圖集資料齊全，�
   assert.equal(data.eyes.length, 5);
   assert.match(js, /wardrobe-heads\.webp\?v=3/);
   assert.match(js, /wardrobe-outfits\.webp\?v=3/);
+});
+
+test('「設計部即時動態」載入加速：API 與圖片在 HTML 解析時就開始，不等 app.js，也不等 iframe 滾進畫面', async () => {
+  const [parent, html, js] = await Promise.all([indexHtml(), officeHtml(), officeJs()]);
+  // 像素辦公室：兩個 API 在 head 就送出，app.js 第一次直接用那份結果，失敗才自己再問。
+  assert.match(html, /window\.__pixelP=\(function\(\)\{var u='https:\/\/machi-design-api\.machi-chen\.workers\.dev\/api'/);
+  assert.match(html, /action:'pixelOfficeState',since:0/);
+  assert.match(html, /action:'pixelOfficeDesigners'/);
+  assert.ok(html.indexOf('window.__pixelP') < html.indexOf('app.js?v='), '提早送出要在 app.js 之前');
+  assert.match(js, /const early=window\.__pixelP&&window\.__pixelP\.state;/);
+  assert.match(js, /let data=early\?await early:null;if\(!data\|\|!data\.ok\)data=await syncCall\(\{action:'pixelOfficeState'/);
+  assert.match(js, /if\(!data\|\|!data\.ok\)data=await syncCall\(\{action:'pixelOfficeDesigners'\}\)/);
+  // 主系統：iframe 不再 lazy（版面在摺線下面時會拖到捲動才開始載），三張必要的圖在主頁 head 就預載。
+  assert.doesNotMatch(parent, /class="office-embed"[^>]*loading="lazy"/);
+  for (const asset of ['wardrobe-heads.webp?v=3', 'wardrobe-outfits.webp?v=3', 'furniture-v3.webp?v=1']) {
+    assert.ok(parent.includes(`<link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/${asset}" />`), `主頁要預載 ${asset}`);
+    assert.ok(html.includes(`href="assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
+  }
 });

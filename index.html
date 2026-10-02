@@ -7,6 +7,11 @@
   <!-- 先把跟 Worker 的 TCP/TLS 握手做掉。這條連線從台北出去要走到聖荷西（workers.dev 的入口
        PoP 不在台灣），握手本身就要 260 ms 上下，等第一次 fetch 才開始等於白白多等一輪。 -->
   <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin />
+  <!-- 設計部即時動態（像素辦公室 iframe）進站一定會用到的三張圖：主頁一解析就開始載，iframe 建好時已經在 HTTP 快取裡。
+       網址（含 ?v=）要跟 EMC-ART-Pixel-Office/dist/index.html 的預載一致，改素材版本時兩邊一起改，否則只是白載。 -->
+  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/wardrobe-heads.webp?v=3" />
+  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/wardrobe-outfits.webp?v=3" />
+  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/furniture-v3.webp?v=1" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="app-version" content="20260910-stage-pill-colors-135" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -11088,7 +11093,7 @@ function renderDesigners(){
   // 在遊戲裡點人物就看得到，「新開專案」按鈕在設計需求區塊那邊，不受影響。
   // iframe 只建立一次：案件資料每隔一段時間就會刷新並呼叫這個函式，每次重畫會讓場景重新載入。
   if(!designerRoster.querySelector('.office-embed')){
-    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=54" title="設計部即時狀態；點選人物可查看資料" loading="lazy" scrolling="no"></iframe></div>';
+    designerRoster.innerHTML='<div class="office-embed-shell"><iframe class="office-embed" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=55" title="設計部即時狀態；點選人物可查看資料" scrolling="no"></iframe></div>';
   }
   requestAnimationFrame(()=>{syncTopPanelHeights();syncModifyRecentRowHeights()});
   renderRequestProjectButtons();

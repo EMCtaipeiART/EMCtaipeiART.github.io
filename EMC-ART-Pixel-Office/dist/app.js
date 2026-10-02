@@ -377,7 +377,9 @@ const CARD_CASE_STATES=[{key:'未開始',color:'#ff5a5a'},{key:'執行中',color
 const CARD_CASE_PREVIEW=3;
 async function syncDesigners(){
   try{
-    const data=await syncCall({action:'pixelOfficeDesigners'});
+    // 第一次先用 index.html 提早送出的結果（見 __pixelP）；沒有或失敗就自己問。
+    const early=window.__pixelP&&window.__pixelP.designers;if(window.__pixelP)window.__pixelP.designers=null;
+    let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeDesigners'});
     designerInfo=Object.fromEntries((data.designers||[]).map(item=>[item.name,item]));
     newProjectPriority=data.priority||null;
     renderPersonCard();
@@ -922,7 +924,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
   if(lookChanged){refreshRosterPortraits();renderLookPanel();}
   save(false);
 }
-async function pollSync(){try{const data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,document.hidden?15000:3000);}}
+async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,document.hidden?15000:3000);}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
 const walls=stations.map(s=>[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
