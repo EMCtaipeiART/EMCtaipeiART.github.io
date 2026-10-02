@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=90/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=91/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -769,7 +769,7 @@ test('像素辦公室 iframe 直接寫在 HTML 裡，不等案件資料載完才
 
 test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材', async () => {
   const js = await officeJs();
-  assert.match(js, /drawHeadphones\(i,p,t,bob,nod,true\);const act=actionOf\(i\);/);
+  assert.match(js, /const act=actionOf\(i\);ctx\.rotate\(tilt\);if\(act\)ctx\.translate\(act\.dx,0\);drawHeadphones\(i,p,t,bob,nod,true\);/);
   assert.match(js, /if\(!musicOf\(p\)\|\|\(p\.dir==='up'&&!act\)!==behind\)return;/);
   assert.match(js, /headphones-side-v1\.webp/);
   assert.match(js, /WD_SIDE_CAP_BRIM/);
@@ -778,7 +778,7 @@ test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材',
 test('動作「閃身步」：只有 Machi、8 張依序播放、腳下顯示名稱、後端同樣限制', async () => {
   const js = await officeJs();
   const html = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/index.html', import.meta.url), 'utf8');
-  assert.match(js, /WARDROBE_ACTIONS=\{dodge:\{label:'閃身步',who:\[4\],frameMs:125,hold:\[0,4\],holdMs:450/);
+  assert.match(js, /WARDROBE_ACTIONS=\{dodge:\{label:'閃身步',who:\[4\],frameMs:125,hold:\[0,4\],holdMs:1500/);
   const frames = JSON.parse(js.match(/frames:(\[\{x:0.*?\}\])\}\};/s)[1].replace(/([a-z]+):/g, '"$1":'));
   assert.equal(frames.length, 8);
   assert.match(js, /function drawActionLabel\(i\)/);
