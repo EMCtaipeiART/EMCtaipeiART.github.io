@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6820,
+  "revision": 6821,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-02T03:59:26.184Z",
+  "updatedAt": "2026-10-02T04:00:04.194Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1684,7 +1684,7 @@
         {"案件編號":"26090219","修改次數":"2","建立日期":"2026/10/01 17:18:27","修改日期":"2026-10-01","修改內容":"客戶回饋調整，詳細如附件P13，再請協助，感恩","修改內容連結":"[{\"text\":\"附件P13\",\"url\":\"https://docs.google.com/presentation/d/1w2WaZuxu7DBdGXvUMW2QRqlYw6qgALIMS8-qJC8Btig/edit?slide=id.h5dc96359a8e6f522_0_0#slide=id.h5dc96359a8e6f522_0_0\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""},
         {"案件編號":"26090193","修改次數":"0","建立日期":"2026/10/01 19:13:14","修改日期":"2026/10/01 19:13:14","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/01 19:13:14","圖片連結":"[{\"fileName\":\"261001_ANKER_A121A_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TW38F1OVId1j0gb1hZHR45W2GmbrmRfI=w1600\"},{\"fileName\":\"261001_ANKER_A1665_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/193U-yxoVUGsN2wK9r8PRZHofK3wNGIX-=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/01 19:13:14"},
         {"案件編號":"26100003","修改次數":"0","建立日期":"2026/10/01 19:18:26","修改日期":"2026/10/01 19:18:26","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/01 19:18:26","圖片連結":"[{\"fileName\":\"261001_常態素材_Avata360_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1R66E0sET6WUrsbgX1zI1XHXCvK3aQH2g=w1600\"},{\"fileName\":\"261001_常態素材_Avata360_包框影片_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1clze6H_p_0mfrv_VkrePCp14l_kZZuoi=w1600\"},{\"fileName\":\"261001_常態素材_Mic系列.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1wQlDqu5aMcePqvrvY6eEnc1qUDl24wH7=w1600\"},{\"fileName\":\"261001_常態素材_OM360II.png\",\"url\":\"https://lh3.googleusercontent.com/d/1L6JUBqEJokxCCaDHXFJE55p82QB5nvZ7=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/01 19:18:26"},
-        {"案件編號":"26090134","修改次數":"3","建立日期":"2026/10/02 11:59:26","修改日期":"2026-10-02","修改內容":"一錯誤調整，詳細如附件P56，再請協助，感恩","修改內容連結":"[{\"text\":\"附件P56\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.h5b8dca9464048bf8_0_4#slide=id.h5b8dca9464048bf8_0_4\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090134","修改次數":"3","建立日期":"2026/10/02 11:59:26","修改日期":"2026-10-02","修改內容":"一錯誤調整，詳細如附件P56，再請協助，感恩","修改內容連結":"[{\"text\":\"附件P56\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.h5b8dca9464048bf8_0_4#slide=id.h5b8dca9464048bf8_0_4\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260922_官網_雙十_AeroClip_v03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PRHNfwi9IP8BoyvAMYqAUtp24qdsa4b7=w1600\"},{\"fileName\":\"260922_官網_雙十_C50i_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1s0s0sVKL96Zet94VF_mEQIirghvN9Dxq=w1600\"},{\"fileName\":\"260922_官網_雙十_Liberty 5 Pro_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1TBNymn8W58VnjQEfBBcu_LDCawPyYGNP=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 12:00:04"}
       ]
     },
     "補充資料連結": {
