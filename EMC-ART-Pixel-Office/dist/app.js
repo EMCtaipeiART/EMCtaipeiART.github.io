@@ -155,7 +155,7 @@ const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',
 const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10],WD_BODY_DX=[-8,0,0,-8,0],WD_GLASSES_W=120,WD_GLASSES_DX=[-8,0,0,-8,0],WD_GLASSES_DY=[0,0,8,0,8];// 眼鏡位置微調（原圖像素）：Anna 與 Leona 往左、Noise 與 Machi 往下（使用者 2026-10-02）
 // WD_BODY_DX：衣服整體左右位移（原圖像素，負＝往左）：Leona 與 Anna 的衣服偏右（使用者 2026-10-02 回報）。
 // WD_GLASSES_W：眼鏡與墨鏡的寬度（原圖像素），所有人一樣大、約等於兩邊臉頰的寬度（原本 100 太小，2026-10-02 使用者要求放大切齊臉頰）；不依各人臉寬換算（皮膚框含耳朵，男生會偏大）。
-const WD_SIDE_GLASSES_L=.15,WD_EAR_TOP=[1.5,3,-1,3,3],WD_SIDE_CAP_GROW=1.18,WD_SIDE_GLASSES_UP=.6;// 眼鏡桿（鏡框左端那一截）對到耳朵上沿：整副眼鏡往上提鏡高的 .6 倍
+const WD_SIDE_GLASSES_L=.15,WD_EAR_TOP=[1.5,3,-1,3,3],WD_SIDE_CAP_GROW=1.18,WD_SIDE_CAP_BRIM=55,WD_EAR_X=.06,WD_SIDE_GLASSES_UP=.6;// 眼鏡桿（鏡框左端那一截）對到耳朵上沿：整副眼鏡往上提鏡高的 .6 倍
 //// 側面眼鏡左緣在膚色框的比例、耳朵上沿相對眼睛的位置（頭圖像素）、側面帽子放大倍率（使用者 2026-10-02）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
 wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=3';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=3';// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
@@ -192,7 +192,8 @@ function buildWardrobe(i,view,look){
       layers.push({sheet:'acc',src:g,w,h,x:left,y:hy+(eye.y+WD_EAR_TOP[i])*K+WD_DROP[i]-h*WD_SIDE_GLASSES_UP});}
   }
   if(look.cap&&accessoriesReady()){
-    const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s,bigS=view===1?H.w*K*factor*WD_SIDE_CAP_GROW/c.w:s,bw=c.w*bigS,bh=c.h*bigS;
+    const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s,bigS=view===1?(female?(sk[1]*K+WD_SIDE_CAP_BRIM-w*.06)/c.w:H.w*K*factor*WD_SIDE_CAP_GROW/c.w):s,bw=c.w*bigS,bh=c.h*bigS;
+    // 女生頭像連長髮一起很寬，照頭寬放大帽沿到不了臉前面，所以改成帽沿尖端＝臉最前緣再往前 WD_SIDE_CAP_BRIM（頭圖放大後的像素）。
     // 側面：左緣固定、帽子放大，帽沿往前超出頭髮；下緣不動（往上長）
     layers.push(view===1?{sheet:'acc',src:c,w:bw,h:bh,x:hx+w*.06,y:hy+sk[2]*K-h+h*.32+WD_DROP[i]+h-bh}:{sheet:'acc',src:c,w,h,x:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*.34+WD_DROP[i]});
   }
@@ -205,7 +206,7 @@ function buildWardrobe(i,view,look){
   if(look.cap&&accessoriesReady()){capCanvas=document.createElement('canvas');capCanvas.width=canvas.width;capCanvas.height=canvas.height;const cc=capCanvas.getContext('2d');cc.imageSmoothingQuality='high';const l=layers[layers.length-1];cc.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h);}
   const eyeFront=D.eyes[i][Math.min(view,1)];
   // 臉的幾何（畫布座標、原圖像素）：耳機、加班黑眼圈用它對位，不再用固定數字。
-  const geom={cx:hx+chin.x*K-minX,chinY:hy+chin.y*K-minY,eyeY:hy+eyeFront.y*K-minY,faceW:(front[1]-front[0])*K,faceH:(front[3]-front[2])*K,topY:hy-minY};
+  const geom={cx:hx+chin.x*K-minX,chinY:hy+chin.y*K-minY,eyeY:hy+eyeFront.y*K-minY,faceW:(front[1]-front[0])*K,faceH:(front[3]-front[2])*K,topY:hy-minY,earX:hx+(sk[0]+(sk[1]-sk[0])*WD_EAR_X)*K-minX};
   return {canvas,capCanvas,geom,layers,minX,minY,ax:B.w/2-minX,ay:B.h-minY};// 腳的落點仍以衣服原本的中心算，衣服往左之後腳會落在地面圓圈偏左一點，頭留在原處
 }
 function wardrobeFrame(index,dir){
@@ -549,8 +550,9 @@ if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[s
 // ───────── 音樂（現在正在聽的歌）─────────
 // 貼 Spotify 單曲或 Apple Music 網址分享：頭上戴耳機並跟著點頭、浮動音符；原本對話框的位置改成跑馬燈歌名
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
-const headphones=new Image();
-function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-v1.webp?v=2';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
+const headphones=new Image(),headphonesSide=new Image();const HP_SIDE_SRC_W=160,HP_SIDE_CX=80,HP_SIDE_CY=205,HP_SIDE_D=30;// 側面耳機素材（單個耳罩＋頭帶，160x281）：耳罩圓心在 (80,205)，直徑約 160；HP_SIDE_D 是畫在人物身上的耳罩直徑（畫面像素）
+headphonesSide.onload=()=>markDirty();
+function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-v1.webp?v=2';if(!headphonesSide.getAttribute('src'))headphonesSide.src='assets/headphones-side-v1.webp?v=1';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
 headphones.onload=()=>{markDirty();drawMusicIcon();};
 const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,HP_DY=[0,0,0,0,8],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
@@ -1167,10 +1169,26 @@ const SEAT_LIFT=[0,0,0,-10,-2.4];// 負數＝往下：Anna 與 Machi 坐下的�
 function seatLift(i){if(!SEAT_LIFT[i])return 0;const o=starts[i],q=people[i];return SEAT_LIFT[i]*Math.max(0,1-Math.hypot(q.x-o[0],q.y-o[1])/80);}
 // 聽音樂時的點頭幅度（像素）。目前 0＝完全不搖（使用者 2026-10-01 要求）；要恢復只有頭點頭就改成 2.2，身體仍然不動。
 const MUSIC_NOD=0;
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);if(musicOf(p)&&headphones.complete&&headphones.naturalWidth){const fr=wardrobeFrame(i,p.dir);if(fr){
-    // 耳機全員同樣大小、同樣對位（2026-10-02 使用者要求統一，以 Anna 已確認的大小為準）：兩個耳罩外緣 HP_SPAN_W 原圖像素寬，耳罩中心在下巴上方 HP_CHIN_UP（照 Anna 確認過的位置換算；不能用眼睛位置，男生眼睛畫得比較高，耳機會比女生高一截）、臉中心左 HP_DX_NAT。HP_DY 是畫面像素的個別微調：Machi 的臉畫得比 Anna 高（眼睛高約 11 px，頭頂則是對齊的），使用者要求兩人耳機同高，所以他的耳機往下 8。
-    const g=fr.geom,S=WD_SCALE,fw=HP_SPAN_W/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx+HP_DX_NAT-fr.ax)*S,ear=(g.chinY-HP_CHIN_UP-fr.ay)*S+HP_DY[i]+bob+nod,frame=Math.floor(t*4)%HP_FRAMES;
-    ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);drawWardrobeCap(ctx,i,p.dir,0,bob+nod);}}ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+/** 耳機。背面（dir==='up'）要壓在人物後面，所以人物畫之前先畫一次（behind=true）；其餘方向在人物之後畫（behind=false）。
+ *  正面兩個耳罩；側面只有靠鏡頭那一側的單個耳罩（有側面素材），對到耳朵。 */
+function drawHeadphones(i,p,t,bob,nod,behind){
+  if(!musicOf(p)||(p.dir==='up')!==behind)return;
+  const side=p.dir==='left'||p.dir==='right';
+  if(!headphones.complete||!headphones.naturalWidth)return;
+  const fr=wardrobeFrame(i,p.dir);if(!fr)return;
+  const g=fr.geom,S=WD_SCALE,ear=(g.chinY-HP_CHIN_UP-fr.ay)*S+HP_DY[i]+bob+nod;
+  if(side){
+    if(!headphonesSide.complete||!headphonesSide.naturalWidth)return;
+    const k=HP_SIDE_D/HP_SIDE_SRC_W,dw=headphonesSide.naturalWidth*k,dh=headphonesSide.naturalHeight*k,dir=p.dir==='left'?-1:1,cx=dir*(g.earX-fr.ax)*S;
+    ctx.save();ctx.translate(cx,ear);ctx.scale(dir,1);ctx.drawImage(headphonesSide,-HP_SIDE_CX*k,-HP_SIDE_CY*k,dw,dh);ctx.restore();
+    drawWardrobeCap(ctx,i,p.dir,0,bob+nod);return;
+  }
+  // 耳機全員同樣大小、同樣對位（2026-10-02 使用者要求統一，以 Anna 已確認的大小為準）：兩個耳罩外緣 HP_SPAN_W 原圖像素寬，耳罩中心在下巴上方 HP_CHIN_UP（照 Anna 確認過的位置換算；不能用眼睛位置，男生眼睛畫得比較高，耳機會比女生高一截）、臉中心左 HP_DX_NAT。HP_DY 是畫面像素的個別微調：Machi 的臉畫得比 Anna 高（眼睛高約 11 px，頭頂則是對齊的），使用者要求兩人耳機同高，所以他的耳機往下 8。
+  const fw=HP_SPAN_W/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx+HP_DX_NAT-fr.ax)*S,frame=Math.floor(t*4)%HP_FRAMES;
+  ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);
+  if(!behind)drawWardrobeCap(ctx,i,p.dir,0,bob+nod);
+}
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}ctx.rotate(tilt);drawHeadphones(i,p,t,bob,nod,true);if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），

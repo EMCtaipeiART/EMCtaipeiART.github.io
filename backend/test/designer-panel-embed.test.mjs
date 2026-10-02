@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=87/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=88/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -616,7 +616,7 @@ test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spot
   // 耳機全員同大小、同對位（以 Anna 確認過的為準）。
   assert.match(js, /HP_SPAN_W=204,HP_CHIN_UP=43\.4,HP_DX_NAT=-3,HP_DY=\[0,0,0,0,8\]/);
   assert.doesNotMatch(js, /HP_SIZE/);
-  assert.match(js, /const g=fr\.geom,S=WD_SCALE,fw=HP_SPAN_W\/\.8\*S/, '耳機全員同大小，位置跟著臉中心與眼睛走');
+  assert.match(js, /const fw=HP_SPAN_W\/\.8\*S/, '耳機全員同大小，位置跟著臉中心與眼睛走');
   assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)wantSpotifyApi\(\)/);
   assert.match(js, /controller\.addListener\('ready',\(\)=>\{controller\.play\(\)/);
 });
@@ -679,7 +679,7 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
   const js = await officeJs();
-  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);drawWardrobeCap\(ctx,i,p\.dir,0,bob\+nod\);/);
+  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);\s*if\(!behind\)drawWardrobeCap\(ctx,i,p\.dir,0,bob\+nod\);/);
   // 聽音樂時身體不搖，只有頭層加 nod。
   assert.match(js, /layer\.isBody\?0:nod/);
   assert.match(js, /function drawWardrobeCap\(/);
@@ -695,7 +695,7 @@ test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算�
   const js = await officeJs();
   assert.match(js, /WD_GLASSES_W=120,WD_GLASSES_DX=\[-8,0,0,-8,0\],WD_GLASSES_DY=\[0,0,8,0,8\]/);
   assert.match(js, /const s=WD_GLASSES_W\/gf\.w,w=g\.w\*s/);
-  assert.match(js, /WD_SIDE_GLASSES_L=\.15,WD_EAR_TOP=\[1\.5,3,-1,3,3\],WD_SIDE_CAP_GROW=1\.18,WD_SIDE_GLASSES_UP=\.6/);
+  assert.match(js, /WD_SIDE_GLASSES_L=\.15,WD_EAR_TOP=\[1\.5,3,-1,3,3\],WD_SIDE_CAP_GROW=1\.18,WD_SIDE_CAP_BRIM=55,WD_EAR_X=\.06,WD_SIDE_GLASSES_UP=\.6/);
 });
 
 test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留必要的圖，Spotify 播放器等使用者有動作才載', async () => {
@@ -765,4 +765,12 @@ test('像素辦公室 iframe 直接寫在 HTML 裡，不等案件資料載完才
   assert.ok(dynamic, 'renderDesigners 的備援 iframe 還要在');
   assert.equal(staticTag[1], dynamic[1], '兩份 iframe 的網址（含 ?v=）要一樣，不然切換時會重載一次');
   assert.match(parent, /if\(!designerRoster\.querySelector\('\.office-embed'\)\)\{/);
+});
+
+test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材', async () => {
+  const js = await officeJs();
+  assert.match(js, /drawHeadphones\(i,p,t,bob,nod,true\);if\(!\(music&&MUSIC_NOD/);
+  assert.match(js, /if\(!musicOf\(p\)\|\|\(p\.dir==='up'\)!==behind\)return;/);
+  assert.match(js, /headphones-side-v1\.webp/);
+  assert.match(js, /WD_SIDE_CAP_BRIM/);
 });
