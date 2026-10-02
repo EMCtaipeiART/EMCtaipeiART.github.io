@@ -4990,3 +4990,46 @@ describe('Pixel Office calendar: freeBusy fallback', () => {
     expect(pixelOfficeBusyMeetingNow([span(1, 2), span(-3, -2)], now)).toBe(false);
   });
 });
+
+describe('ownerConfirmCases（專案負責人確認過稿中案件已完成）', () => {
+  const mockGitHubCommit = () => vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'owner-confirm-file-sha' }, commit: { sha: 'owner-confirm-commit-sha' } }));
+
+  it('lets the case owner (no request.status) turn their own 過稿中 cases into 已完成 and records who/when', async () => {
+    await seedCase('26090101', { '專案負責人': '王小明', '設計負責人': 'Anna', '狀態': '過稿中' });
+    await seedCase('26090102', { '專案負責人': 'wang@emctaipei.com', '設計負責人': 'Anna', '狀態': '過稿中' });
+    const nameToken = await seedSession('wang@emctaipei.com', '王小明');
+    mockGitHubCommit();
+
+    const result = await api({ action: 'ownerConfirmCases', caseIds: ['26090101', '26090102'] }, nameToken);
+    expect(result).toMatchObject({ ok: true, count: 2, skipped: [] });
+    const rows = result.rows as Record<string, unknown>[];
+    expect(rows.map(row => row.status)).toEqual(['已完成', '已完成']);
+    expect(rows[0].confirmedBy).toBe('王小明');
+    expect(String(rows[0].confirmedAt)).toMatch(/^\d{4}[-/]\d{2}[-/]\d{2}/);
+  });
+
+  it('skips cases that belong to someone else or are not 過稿中, and does not write anything', async () => {
+    await seedCase('26090103', { '專案負責人': '李小華', '設計負責人': 'Anna', '狀態': '過稿中' });
+    await seedCase('26090104', { '專案負責人': '王小明', '設計負責人': 'Anna', '狀態': '修改中' });
+    await seedCase('26090105', { '專案負責人': '王小明', '設計負責人': 'Anna', '狀態': '已完成' });
+    const token = await seedSession('wang@emctaipei.com', '王小明');
+    const fetchSpy = mockGitHubCommit();
+
+    const result = await api({ action: 'ownerConfirmCases', caseIds: ['26090103', '26090104', '26090105', '99999999'] }, token);
+    expect(result).toMatchObject({ ok: true, count: 0, unchanged: true });
+    const skipped = result.skipped as { id: string; reason: string }[];
+    expect(skipped.map(item => item.id)).toEqual(['26090103', '26090104', '26090105', '99999999']);
+    expect(skipped[0].reason).toContain('專案負責人');
+    expect(skipped[1].reason).toContain('不是過稿中');
+    expect(skipped[2].reason).toContain('已經是已完成');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('requires login and a non-empty case list', async () => {
+    const anonymous = await api({ action: 'ownerConfirmCases', caseIds: ['26090101'] });
+    expect(anonymous.ok).toBe(false);
+    const token = await seedSession('wang@emctaipei.com', '王小明');
+    const empty = await api({ action: 'ownerConfirmCases', caseIds: [] }, token);
+    expect(empty.ok).toBe(false);
+  });
+});

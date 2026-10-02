@@ -422,6 +422,36 @@
     .issue-report-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-width:0!important;min-height:20px!important;height:20px!important;border-radius:999px!important;padding:3px 8px!important;background:rgba(17,24,39,.9)!important;color:#fff!important;border:1px solid rgba(255,255,255,.8)!important;box-shadow:0 4px 10px rgba(15,23,42,.16)!important;font-size:10px!important;font-weight:900!important;line-height:1!important;white-space:nowrap!important}
     .issue-report-btn:hover,.issue-report-btn:focus-visible{background:rgba(17,24,39,.94)!important;color:#fff!important;outline:1px solid rgba(17,24,39,.2);outline-offset:1px}
     .issue-report-card{width:min(820px,100%);max-height:min(900px,calc(100vh - 36px));overflow:auto;border-radius:18px;background:#fff;border:1px solid var(--line);box-shadow:0 24px 70px rgba(16,24,40,.2);padding:26px 30px}
+    .owner-progress-card{width:min(640px,100%);max-height:min(760px,calc(100vh - 36px));display:flex;flex-direction:column;border-radius:18px;background:#fff;border:1px solid var(--line);box-shadow:0 24px 70px rgba(16,24,40,.2);padding:24px 26px}
+    .owner-progress-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:6px}
+    .owner-progress-card h3{margin:0;color:#17211d;font-size:24px}
+    .owner-progress-sub{margin:0 0 14px;color:#66736d;font-size:13.5px;line-height:1.6;font-weight:650}
+    .owner-progress-list{display:grid;gap:10px;overflow:auto;padding:2px 2px 4px;margin-bottom:16px}
+    .owner-progress-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#f8fbf9}
+    .owner-progress-item.is-checked{border-color:#10946a;background:#eaf7f1}
+    .owner-progress-check{flex:1;min-width:0;display:flex;align-items:center;gap:12px;margin:0!important;cursor:pointer}
+    .owner-progress-check input{width:20px;height:20px;flex:0 0 auto;accent-color:#10946a;cursor:pointer}
+    .owner-progress-main{display:grid;gap:3px;min-width:0}
+    .owner-progress-main b{color:#17211d;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+    .owner-progress-main small{color:#66736d;font-size:12.5px;font-weight:650;overflow-wrap:anywhere}
+    .owner-progress-check-label{color:#0f7a58;font-size:12.5px;font-weight:850}
+    .owner-progress-item .owner-progress-modify{flex:0 0 auto;min-height:34px!important;padding:0 14px!important;border-radius:999px!important;border:1px solid #f2c27a!important;background:#fff7e6!important;color:#8a5200!important;box-shadow:none!important;font-size:13px;font-weight:850;cursor:pointer}
+    .owner-progress-item .owner-progress-modify:hover{background:#ffeccb!important}
+    .owner-progress-empty{padding:26px 12px;text-align:center;color:#66736d;font-size:14px;font-weight:700}
+    .owner-progress-actions{display:flex;justify-content:flex-end;gap:10px}
+    .owner-progress-actions button{min-height:40px;padding:0 20px;border-radius:12px;font-size:14px;font-weight:850;cursor:pointer}
+    .owner-progress-actions #ownerProgressSubmit{border:0;background:#10946a;color:#fff}
+    .owner-progress-actions #ownerProgressSubmit:disabled{opacity:.45;cursor:not-allowed}
+    html[data-theme="dark"] .owner-progress-card{background:#1f2326;border-color:#33393d;box-shadow:0 24px 70px rgba(0,0,0,.5)}
+    html[data-theme="dark"] .owner-progress-card h3,html[data-theme="dark"] .owner-progress-main b{color:#eef3f0}
+    html[data-theme="dark"] .owner-progress-sub,html[data-theme="dark"] .owner-progress-main small,html[data-theme="dark"] .owner-progress-empty{color:#a9b4ae}
+    html[data-theme="dark"] .owner-progress-item{background:#262b2e;border-color:#3a4145}
+    html[data-theme="dark"] .owner-progress-item.is-checked{background:#1c3027;border-color:#2f8f68}
+    html[data-theme="dark"] .owner-progress-check-label{color:#8fe0bc}
+    html[data-theme="dark"] .owner-progress-item .owner-progress-modify{background:#3a2f17!important;border-color:#725d27!important;color:#f6d98c!important}
+    html[data-theme="dark"] .owner-progress-item .owner-progress-modify:hover{background:#463a1d!important}
+    @media(max-width:640px){.owner-progress-card{padding:18px 14px;border-radius:14px}.owner-progress-item{flex-wrap:wrap}.owner-progress-modify{width:100%}}
+    .notification-item.is-case-confirmed .notification-dot{background:#10946a;box-shadow:0 0 0 3px rgba(16,148,106,.12)}
     .issue-report-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
     .issue-report-card h3{margin:0;color:#17211d;font-size:26px}
     .issue-report-close{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;border:0!important;background:transparent!important;color:#66736d!important;font-size:27px!important;font-weight:400!important;line-height:1!important}
@@ -6933,6 +6963,7 @@ window.emcQuotes=[
     </button>
     <div class="account-dropdown" id="accountDropdown" hidden role="menu">
       <button type="button" id="accountPersonalSettings" role="menuitem">個人設定</button>
+      <button type="button" id="accountOwnerProgress" role="menuitem">您的案件進度</button>
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountGmailConnect" role="menuitem">連接 Gmail／更新授權</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
@@ -7593,6 +7624,14 @@ window.emcQuotes=[
     </div>
   </form>
 </div>
+<div class="login-modal" id="ownerProgressModal" hidden>
+  <div class="owner-progress-card" role="dialog" aria-modal="true" aria-labelledby="ownerProgressTitle">
+    <div class="owner-progress-head"><h3 id="ownerProgressTitle">您的案件進度</h3><button type="button" class="issue-report-close ui-close-button" id="ownerProgressClose" aria-label="關閉"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9M16.5 7.5l-9 9"/></svg></button></div>
+    <p class="owner-progress-sub" id="ownerProgressSub"></p>
+    <div class="owner-progress-list" id="ownerProgressList"></div>
+    <div class="owner-progress-actions"><button type="button" class="secondary" id="ownerProgressLater">稍後再說</button><button type="button" id="ownerProgressSubmit" disabled>確認送出</button></div>
+  </div>
+</div>
 <div class="login-modal" id="uploadModal" hidden>
   <section class="upload-modal-card" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
     <div class="upload-modal-head">
@@ -7902,7 +7941,7 @@ const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
   add:['database','補充資料連結'],append:['database','補充資料連結'],create:['database','補充資料連結'],submit:['database','補充資料連結'],save:['database','補充資料連結'],
   batchAdd:['database','補充資料連結'],batchAppend:['database','補充資料連結'],addRows:['database','補充資料連結'],batchUpdate:['database','補充資料連結'],update:['database','補充資料連結'],delete:['database'],createFlatProject:['database','設定','平面新開專案','影音新開專案'],
-  createShortLink:['短連結'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
+  createShortLink:['短連結'],ownerConfirmCases:['database'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
   saveUserSettings:['設定'],saveDesignerProfiles:['設定'],uploadUserAvatar:['設定'],
   toggleReelReaction:['reels'],addReelComment:['reels'],reportIssue:['bug_report'],updateIssueReportStatus:['bug_report'],markSystemAnnouncementRead:['系統公告欄']
 });
@@ -14082,7 +14121,7 @@ function safeJsonParseArray(value){if(Array.isArray(value))return value;if(!valu
 function normalizeDesignImageFolders(value){return safeJsonParseArray(value).map(item=>({path:String(item?.path||'').trim(),keyword:String(item?.keyword||'').trim()})).filter(item=>item.path)}
 function normalizeRow(r={}){
   const start=normalizeDate(r.start||r['開始日期']||r['預計收件日']||r['填表日期']||''), end=normalizeDate(r.end||r['結束日期']||r['繳件時間']||start), rawMonth=r.month||r['月份']||'', owner=r.owner||r['專案負責人']||r.contact||r['聯絡人']||'', rawQty=r.qty??r['數量']??'';
-  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',designImageFolderUrl:r.designImageFolderUrl||r['設計圖資料夾連結']||'',designImageFolderKeyword:r.designImageFolderKeyword||r['設計圖檔名關鍵字']||'',designImageFolders:normalizeDesignImageFolders(r.designImageFolders||r['設計圖資料夾清單']),gmailThreadId:r.gmailThreadId||r['Gmail信件串ID']||'',gmailThreadOwnerAccount:r.gmailThreadOwnerAccount||r['Gmail寄件帳號']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived']),pendingCreate:Boolean(r.pendingCreate),pendingCreateKey:String(r.pendingCreateKey||'')};
+  const normalized={id:r.id||r['案件編號']||'',sheetRow:r.sheetRow||r._sheetRow||r.rowNumber||'',month:canonicalMonth(rawMonth)||monthFromDate(start),client:r.client||r['客戶別']||'',project:r.project||r['專案名稱']||'',owner,ownerEmail:r.ownerEmail||r.email||r['Email']||r['email']||extractEmail(owner),type:r.type||r['設計類型']||r['設計種類']||r['設計總類']||r['設計項目']||'',stage:r.stage||r['階段']||'',qty:rawQty===''?'':Number(rawQty),start,end,designer:r.designer||r['設計負責人']||r['設計負責人 (填1人)']||'',platforms:r.platforms||r['使用平台']||'',submittedAt:r.submittedAt||r['填單時間']||'',briefNote:r.briefNote||r['設計簡報說明']||'',briefUrl:r.briefUrl||r['設計簡報連結']||'',assetNote:r.assetNote||r['客戶素材說明']||'',assetUrl:r.assetUrl||r['客戶素材連結']||'',referenceNote:r.referenceNote||r['參考範例說明']||'',referenceUrl:r.referenceUrl||r['參考範例連結']||'',otherNote:r.otherNote||r['其他說明']||'',otherUrl:r.otherUrl||r['其他連結']||'',designImageFolderUrl:r.designImageFolderUrl||r['設計圖資料夾連結']||'',designImageFolderKeyword:r.designImageFolderKeyword||r['設計圖檔名關鍵字']||'',designImageFolders:normalizeDesignImageFolders(r.designImageFolders||r['設計圖資料夾清單']),gmailThreadId:r.gmailThreadId||r['Gmail信件串ID']||'',gmailThreadOwnerAccount:r.gmailThreadOwnerAccount||r['Gmail寄件帳號']||'',confirmedBy:r.confirmedBy||r['客戶確認人']||'',confirmedAt:r.confirmedAt||r['客戶確認時間']||'',status:normalizeStatus(r.status||r['狀態']||r['案件狀態']||''),details:r.details||r['項目細節']||r['修正頻率']||'',weight:r.weight??r['加權']??'',archived:Boolean(r.archived||r['archived']),pendingCreate:Boolean(r.pendingCreate),pendingCreateKey:String(r.pendingCreateKey||'')};
   if(normalized.details)normalized.weight=calculateRowWeight(normalized);
   return normalized;
 }
@@ -14155,6 +14194,7 @@ async function loadSheet({full=false,background=false,quick=false,forceFresh=fal
       if(!full)scheduleFullDatabaseLoad();
     }
     setTimeout(consumeDashboardCaseFocus,0);
+    if(full)setTimeout(()=>maybeShowOwnerProgressDaily(),800); // 每日第一次進站：專案負責人名下有過稿中案件就跳出「您的案件進度」
     const modificationIds=current.map(row=>row.id).filter(Boolean);
     if(background) setTimeout(()=>fetchModificationCounts({ids:modificationIds,full}).then(()=>{renderNotifications();refreshOpenModificationViews()}).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),1600);
     else setTimeout(()=>fetchModificationCounts({ids:modificationIds,full}).then(()=>{renderModifyRecent(); renderTable(filtered()); refreshOpenModificationViews()}).catch(err=>console.warn('修改紀錄背景讀取失敗',err)),0);
@@ -14298,6 +14338,81 @@ function closeNotifications(){const popover=$('#notificationPopover'), bell=$('#
 function currentTheme(){return document.documentElement.dataset.theme==='dark'?'dark':'light'}
 function applyTheme(theme,{save=true}={}){const next=theme==='dark'?'dark':'light'; document.documentElement.dataset.theme=next; notifyOfficeTheme(next); const toggle=$('#themeToggle'), isDark=next==='dark'; if(toggle){toggle.setAttribute('aria-pressed',isDark?'true':'false'); toggle.setAttribute('aria-label',isDark?'切換淺色模式':'切換深色模式'); toggle.title=isDark?'切換淺色模式':'切換深色模式'} if(save)localStorage.setItem('designRequestThemeV1',next)}
 function toggleTheme(){applyTheme(currentTheme()==='dark'?'light':'dark'); saveRemoteSettingsForAccount('深淺模式已儲存')}
+/** 「您的案件進度」：專案負責人名下狀態為「過稿中」的案件，由負責人自己勾選「客戶已確認」→ 直接改為已完成
+ *  （設計師看不到客戶端的進度，所以完成的判斷交給專案負責人）。每天第一次進站、名下有過稿中案件時自動跳出一次；
+ *  個人下拉選單的「您的案件進度」隨時可以再開。要改成需要修改的案件，走既有的「填寫修改需求信」。 */
+function ownerProgressRows(){
+  if(!isLoggedIn())return [];
+  return rows.filter(row=>row.status==='過稿中'&&rowOwnerMatchesCurrentUser(row)).sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-Hant',{numeric:true}));
+}
+function ownerProgressDayKey(){return accountStorageKey('designRequestOwnerProgressDayV1')}
+function ownerProgressTodayText(){const {year,month,day}=taipeiDateParts();return `${year}-${month}-${day}`}
+function updateOwnerProgressMenuLabel(){
+  const button=$('#accountOwnerProgress');if(!button)return;
+  const count=ownerProgressRows().length;
+  button.textContent=count?`您的案件進度（${count}）`:'您的案件進度';
+}
+function renderOwnerProgressList(){
+  const list=$('#ownerProgressList'),sub=$('#ownerProgressSub');if(!list)return;
+  const items=ownerProgressRows();
+  if(sub)sub.textContent=items.length?`您有 ${items.length} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
+  list.innerHTML=items.length?items.map(row=>`<div class="owner-progress-item"><label class="owner-progress-check"><input type="checkbox" data-owner-progress-check value="${esc(row.id)}"><span class="owner-progress-main"><b>${esc(row.client||'未填客戶')}｜${esc(row.project||'未填專案')}</b><small>${esc(row.id)}｜設計師 ${esc(row.designer||'未指定')}｜${esc(slashDate(row.start)||'-')}-${esc(slashDate(row.end)||'-')}</small><span class="owner-progress-check-label">客戶已確認完成</span></span></label><button type="button" class="owner-progress-modify" data-owner-progress-modify="${esc(row.id)}">需要修改</button></div>`).join(''):'<div class="owner-progress-empty">目前沒有過稿中的案件需要確認</div>';
+  syncOwnerProgressSelection();
+}
+function syncOwnerProgressSelection(){
+  const checked=[...document.querySelectorAll('#ownerProgressList [data-owner-progress-check]')];
+  checked.forEach(input=>input.closest('.owner-progress-item')?.classList.toggle('is-checked',input.checked));
+  const count=checked.filter(input=>input.checked).length,submit=$('#ownerProgressSubmit');
+  if(submit){submit.disabled=!count;submit.textContent=count?`確認送出（${count}）`:'確認送出'}
+}
+function openOwnerProgressModal({auto=false}={}){
+  const modal=$('#ownerProgressModal');if(!modal||!isLoggedIn())return;
+  closeFieldPopover();closeNotifications();
+  renderOwnerProgressList();
+  if(auto){try{localStorage.setItem(ownerProgressDayKey(),ownerProgressTodayText())}catch(error){}}
+  modal.style.removeProperty('display');modal.hidden=false;
+}
+function closeOwnerProgressModal(){const modal=$('#ownerProgressModal');if(!modal)return;document.activeElement?.blur?.();modal.hidden=true;modal.style.display='none';setTimeout(()=>modal.style.removeProperty('display'),120)}
+function maybeShowOwnerProgressDaily(attempt=0){
+  if(!isLoggedIn())return;
+  let seen='';try{seen=localStorage.getItem(ownerProgressDayKey())||''}catch(error){}
+  if(seen===ownerProgressTodayText())return;
+  if(!ownerProgressRows().length)return; // 沒有過稿中的案件就不打擾，也不算「今天已提醒」，之後有案件過稿、再進站才會跳
+  if(document.querySelector('.login-modal:not([hidden]), #systemAnnouncementModal:not([hidden])')){ // 登入視窗、系統公告還開著就先等它們關掉
+    if(attempt<30)setTimeout(()=>maybeShowOwnerProgressDaily(attempt+1),2000);
+    return;
+  }
+  openOwnerProgressModal({auto:true});
+}
+async function submitOwnerProgress(){
+  const ids=[...document.querySelectorAll('#ownerProgressList [data-owner-progress-check]:checked')].map(input=>input.value);
+  if(!ids.length)return;
+  const submit=$('#ownerProgressSubmit');if(submit){submit.disabled=true;submit.textContent='送出中...'}
+  try{
+    setSync('正在確認案件完成...');
+    const data=await sheetApi('ownerConfirmCases',{caseIds:ids,editorToken:currentEditorToken});
+    const done=new Map((data.rows||[]).map(item=>[String(item.id),item]));
+    done.forEach((item,id)=>{const changes={status:'已完成',confirmedBy:item.confirmedBy||currentUserDisplayName(),confirmedAt:item.confirmedAt||data.confirmedAt||''};rememberLocalWrite(id,changes);rows=rows.map(row=>String(row.id)===id?normalizeRow({...row,...changes}):row)});
+    if(done.size){save();render();renderNotifications();publishDatabaseRefresh('ownerConfirmCases',data)}
+    const skipped=data.skipped||[];
+    setSync(skipped.length?`已完成 ${done.size} 筆，${skipped.length} 筆未變更：${skipped.map(item=>`${item.id}（${item.reason}）`).join('、')}`:`已確認 ${done.size} 筆案件完成`,Boolean(skipped.length&&!done.size),skipped.length?7000:3200);
+    renderOwnerProgressList();
+    if(!ownerProgressRows().length)closeOwnerProgressModal();
+  }catch(err){
+    setSync(`確認失敗：${err.message}`,true,6000);
+    syncOwnerProgressSelection();
+  }
+}
+/** 「需要修改」：沿用既有的「填寫修改需求信」（內容會同步記進修改紀錄、帶動一修／二修…），不另外做一套。 */
+async function ownerProgressRequestModification(id){
+  const row=rows.find(r=>String(r.id)===String(id));if(!row)return;
+  if(!requireAccess('request.mail','此帳號沒有回信權限'))return;
+  if(!row.gmailThreadId){setSync('這個案件還沒有透過系統寄出過需求信，請到案件列表使用「發信」',true,5200);return}
+  const status=await ensureGmailStatusLoaded();
+  if(!status.connected){setSync('尚未連接 Gmail，請先連接後再填寫修改需求信',true,5200);closeOwnerProgressModal();startGmailConnectPopup();return}
+  closeOwnerProgressModal();
+  openModificationRequestReplyModal(id);
+}
 function notificationReadKey(){return accountStorageKey('designRequestReadNotificationsV1')}
 function readNotificationIds(){try{return new Set(JSON.parse(localStorage.getItem(notificationReadKey())||'[]'))}catch(err){return new Set()}}
 function writeNotificationIds(ids){localStorage.setItem(notificationReadKey(),JSON.stringify([...ids].slice(-300)))}
@@ -14365,7 +14480,8 @@ function notificationItems(){
     const assigned=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status!=='已取消'&&row.status!=='已完成');
     const newCases=assigned.filter(row=>row.status==='未開始').map(row=>({kind:'case',key:`${version}:case:${row.id}`,id:String(row.id),title:`新案件｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${slashDate(row.start)||'-'}-${slashDate(row.end)||'-'}`,sortTime:notificationCaseTime(row)}));
     const modifyItems=assigned.flatMap(row=>modificationRecordsFor(row.id).filter(record=>!record.confirmedDate).map(record=>({kind:'revision',key:`${version}:revision:${row.id}:${record.count}:${record.date||record.created||''}`,id:String(row.id),title:`新修改需求｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${revisionDateRange(row,record)}｜${record.content||'未填寫修改內容'}`,sortTime:notificationDateTime(record.date||record.created)||notificationCaseTime(row)+(Number(record.count)||0)})));
-    return [...modifyItems,...newCases];
+    const confirmedItems=rows.filter(row=>row.designer===currentEditor&&isEditableRow(row)&&row.status==='已完成'&&row.confirmedAt).map(row=>({kind:'case-confirmed',key:`${version}:confirmed:${row.id}:${row.confirmedAt}`,id:String(row.id),title:`客戶已確認完成｜${row.client||'未填客戶'}`,meta:`${row.id}｜${row.project||'未填專案'}｜${row.confirmedBy||'專案負責人'} 於 ${row.confirmedAt} 確認，案件已改為已完成`,sortTime:notificationDateTime(row.confirmedAt)||notificationCaseTime(row)})).filter(item=>!item.sortTime||Date.now()-item.sortTime<14*86400000);
+    return [...modifyItems,...confirmedItems,...newCases];
   })():[];
   const ownerItems=rows.filter(rowOwnerMatchesCurrentUser).flatMap(row=>modificationRecordsFor(row.id).filter(record=>record.confirmedDate).map(record=>({kind:'revision-done',key:`${version}:revisionDone:${row.id}:${record.count}:${record.confirmedDate}:${record.date||record.created||''}`,id:String(row.id),title:`修改完成｜${modificationLabel(record.count)}`,meta:`${row.id}｜${row.project||'未填專案'}｜${record.confirmedDate}｜設計師已確認修正完成`,sortTime:notificationDateTime(record.confirmedDate)||notificationCaseTime(row)+(Number(record.count)||0)})));
   const issueItems=isIssueReportManager()?issueReports.filter(report=>report['狀態']==='回報中').map(report=>({kind:'issue',key:`issue-v1:${report.rowNumber}:${report['時間']}`,id:String(report.rowNumber),title:`新問題回報｜${report['姓名']||'未登入'}`,meta:`${report['時間']||'-'}｜${String(report['內容']||'').slice(0,80)}`,sortTime:notificationDateTime(report['時間'])||Number(report.rowNumber)||0})):[];
@@ -14446,7 +14562,7 @@ function openCurrentNotificationToast(){
   renderNotifications();
   openNotificationItem(item.kind,item.id);
 }
-function renderNotifications(highlightKeys=null,{hideBadge=false}={}){const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); syncNotificationToast(items,unread); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、限動互動、問題回報或完成通知</div>'}
+function renderNotifications(highlightKeys=null,{hideBadge=false}={}){updateOwnerProgressMenuLabel(); const badge=$('#accountBellBadge'), summary=$('#notificationSummary'), list=$('#notificationList'), bell=$('#accountBell'); const items=notificationItems(), unread=unreadNotificationItems(items), highlight=highlightKeys||new Set(unread.map(item=>item.key)); syncNotificationToast(items,unread); if(badge){badge.hidden=hideBadge||!unread.length; badge.textContent=unread.length>99?'99+':String(unread.length)} if(summary)summary.textContent=items.length?`你有 ${items.length} 則提醒${unread.length&&!hideBadge?`，${unread.length} 則未讀`:''}`:'目前沒有提醒'; if(bell)bell.hidden=!isLoggedIn(); if(!list)return; list.innerHTML=items.length?items.map(item=>`<button type="button" class="notification-item is-${esc(item.kind)} ${highlight.has(item.key)?'is-new':''}" data-notification-kind="${esc(item.kind)}" data-notification-id="${esc(item.id)}" role="menuitem"><span class="notification-dot" aria-hidden="true"></span><span><span class="notification-title">${esc(item.title)}</span><span class="notification-meta">${esc(item.meta)}</span></span></button>`).join(''):'<div class="notification-empty">目前沒有新的案件、修改需求、限動互動、問題回報或完成通知</div>'}
 function toggleNotifications(){if(!isLoggedIn()){showLoginModal();return} const popover=$('#notificationPopover'), bell=$('#accountBell'); if(!popover)return; closeAccountMenu(); const open=popover.hidden, openingUnreadItems=unreadNotificationItems(), openingUnread=new Set(openingUnreadItems.map(item=>item.key)); renderNotifications(open?openingUnread:null,{hideBadge:open&&openingUnreadItems.length>0}); popover.hidden=!open; if(open&&openingUnreadItems.length)markNotificationsRead(openingUnreadItems); if(bell)bell.setAttribute('aria-expanded',open?'true':'false')}
 function focusNotificationCase(id){closeNotifications(); closeAccountMenu(); const show=()=>{if(document.getElementById(`case-row-${id}`)){jumpToCase(id);return} if($('#q'))$('#q').value=''; yearFilterInitialized=false; monthFilterInitialized=false; filtersResetting=true; clearFilterSettingsForAccount(true); render(); filtersResetting=false; requestAnimationFrame(()=>jumpToCase(id))}; requestAnimationFrame(show)}
 function openStoryNotification(id){closeNotifications();closeAccountMenu(); const reel=designerReels.find(item=>String(item.id)===String(id)); if(!reel)return; const card=[...(designerRoster?.querySelectorAll('.designer-card')||[])].find(item=>item.dataset.designer===reel.name), shell=card?.querySelector('.avatar-shell'), stories=storiesForDesigner(reel.name), index=stories.findIndex(item=>String(item.id)===String(id)); if(!shell||index<0)return; openDesignerPoster(shell); showDesignerStorySlide(shell,index); card.scrollIntoView({behavior:'smooth',block:'center',inline:'center'})}
@@ -16170,6 +16286,7 @@ updateLoginUi=function(...args){
   // Gmail 授權原本只能從案件列表的「發信」選單進去，案件沒有發信按鈕的人就等於沒有入口
   //（使用者回報「只有串接沒有操作」）。這裡給一個固定入口，跟案件狀態無關。
   show('#accountGmailConnect',loggedIn&&!isLocalPreviewToken()&&accessAllowed('request.mail',true));
+  show('#accountOwnerProgress',loggedIn);
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
   show('#accountShortLinkTool',false);
   show('#accountNasPickerStatus',loggedIn&&accessAllowed('media.manage',isAdministrator()));
@@ -16398,6 +16515,12 @@ document.addEventListener('click',event=>{
 	window.addEventListener('focus',()=>{refreshCurrentAccountAvatar();refreshWhenPageReturns()});
 	window.addEventListener('pageshow',()=>refreshWhenPageReturns());
 	window.addEventListener('online',refreshWhenPageReturns);
+	$('#accountOwnerProgress')?.addEventListener('click',()=>{closeAccountMenu();openOwnerProgressModal()});
+	$('#ownerProgressClose')?.addEventListener('click',()=>closeOwnerProgressModal());
+	$('#ownerProgressLater')?.addEventListener('click',()=>closeOwnerProgressModal());
+	$('#ownerProgressSubmit')?.addEventListener('click',submitOwnerProgress);
+	$('#ownerProgressList')?.addEventListener('change',event=>{if(event.target.matches('[data-owner-progress-check]'))syncOwnerProgressSelection()});
+	$('#ownerProgressList')?.addEventListener('click',event=>{const btn=event.target.closest('[data-owner-progress-modify]');if(btn)ownerProgressRequestModification(btn.dataset.ownerProgressModify)});
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false))return;closeAccountMenu();window.open(archiveManagerUrl,'_blank','noopener')});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false))return;closeAccountMenu();window.open(jsonDatabaseAdminUrl,'_blank','noopener')});

@@ -867,6 +867,16 @@ function gmailThreadParticipantEmails(messages: unknown[]): Set<string> {
   return emails;
 }
 
+/** 這筆案件的「專案負責人」是不是登入者本人：負責人欄位可能是姓名、Email 或「姓名 <Email>」，跟前台的比對規則一致（姓名等於顯示名稱／帳號，或欄位裡的 Email 等於登入帳號）。 */
+function caseOwnerMatchesSession(row: Row, session: SessionRecord): boolean {
+  const owner = text(row['專案負責人']).toLowerCase();
+  if (!owner) return false;
+  const account = canonicalAccount(session.account);
+  const user = text(session.user).toLowerCase();
+  const ownerEmail = (owner.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i) || [''])[0];
+  return Boolean((user && owner === user) || (account && owner === account) || (ownerEmail && account && ownerEmail === account));
+}
+
 /** 目前登入帳號本身的 email 是否出現在這條信件串的收件人/寄件人/副本裡——只有「信件內容本身相關的人」
  * 才看得到內容、也才能回信，不是只要有系統層級的發信權限就行，其他帳號完全看不到這個案件的通信內容。 */
 function accountIsGmailThreadParticipant(account: unknown, messages: unknown[]): boolean {
@@ -4274,6 +4284,36 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         row['圖片連結'] = JSON.stringify(filtered);
         row['圖片更新時間'] = nowTaipei();
         return { result: { ok: true, action, caseId, round: roundNumber, images: filtered, record: row }, changedTables: ['修改統計表'] };
+      });
+    }
+    if (action === 'ownerConfirmCases') {
+      // 專案負責人確認「過稿中」的案件客戶已確認完成：只允許把自己負責的、目前狀態為「過稿中」的案件改成
+      // 「已完成」，並記下確認人與時間（設計師的系統內通知由這兩個欄位推導）。不走 request.status，
+      // 因為那是設計師專屬能力；這裡的權限改看「案件的專案負責人就是登入者本人」（管理者例外）。
+      const current = this.requireSession(session);
+      const rawIds = Array.isArray(payload.caseIds) ? payload.caseIds : [payload.caseId || payload.id];
+      const ids = unique(rawIds.map(text).filter(Boolean));
+      if (!ids.length) throw new Error('請選擇要確認的案件');
+      if (ids.length > 200) throw new Error('一次最多確認 200 筆案件');
+      const manager = isManager(database, current);
+      return this.mutate(action, current, draft => {
+        const stamp = nowTaipei();
+        const rows = draft.tables.database.rows;
+        const updated: Row[] = [];
+        const skipped: { id: string; reason: string }[] = [];
+        for (const id of ids) {
+          const index = rows.findIndex(row => text(row['案件編號']) === id);
+          if (index < 0) { skipped.push({ id, reason: '找不到案件' }); continue; }
+          const row = rows[index];
+          if (!manager && !caseOwnerMatchesSession(row, current)) { skipped.push({ id, reason: '只有這個案件的專案負責人可以確認' }); continue; }
+          const status = text(row['狀態']);
+          if (status !== '過稿中') { skipped.push({ id, reason: status === '已完成' ? '案件已經是已完成' : `案件目前是「${status || '未設定'}」，不是過稿中` }); continue; }
+          row['狀態'] = '已完成';
+          row['客戶確認人'] = current.user;
+          row['客戶確認時間'] = stamp;
+          updated.push(toApiRow(row, index));
+        }
+        return { result: { ok: true, action, count: updated.length, rows: updated, skipped, confirmedAt: stamp }, changedTables: updated.length ? ['database'] : [], changed: updated.length > 0 };
       });
     }
     if (action === 'createFlatProject') return this.createProject(payload, database, session);
