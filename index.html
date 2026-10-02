@@ -6805,6 +6805,8 @@
 #emcSplash .emc-splash-stage{position:relative;width:128px;height:150px;display:flex;align-items:flex-end;justify-content:center}
 #emcSplash .emc-splash-logo{width:112px;height:112px;display:block;transform-origin:50% 100%;animation:emcSplashHop 1.1s cubic-bezier(.3,0,.4,1) infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.18))}
 #emcSplash .emc-splash-shadow{position:absolute;bottom:-8px;left:50%;width:84px;height:12px;margin-left:-42px;border-radius:50%;background:rgba(0,0,0,.22);filter:blur(3px);animation:emcSplashShadow 1.1s cubic-bezier(.3,0,.4,1) infinite}
+#emcSplash .emc-splash-quote{width:min(520px,82vw);min-height:3em;margin:0;text-align:center;color:rgba(255,255,255,.92);font-size:15px;font-weight:600;line-height:1.6;letter-spacing:.02em;transition:opacity .25s ease}
+#emcSplash .emc-splash-quote.is-fading{opacity:0}
 #emcSplash .emc-splash-bar{width:min(220px,56vw);height:6px;border-radius:999px;background:rgba(255,255,255,.28);overflow:hidden}
 #emcSplash .emc-splash-fill{width:100%;height:100%;border-radius:inherit;background:#fff;transform:scaleX(0);transform-origin:left center;transition:transform .35s ease-out}
 /* 小老鼠式跳躍：蹲下蓄力 → 彈起拉長 → 頂點 → 落地壓扁 → 小回彈 */
@@ -6824,7 +6826,42 @@
 <div id="emcSplash" role="status" aria-live="polite" aria-label="載入中">
   <div class="emc-splash-stage"><span class="emc-splash-shadow"></span><img class="emc-splash-logo" src="assets/EMC_design_logo.ico" alt="" decoding="async" /></div>
   <div class="emc-splash-bar"><div class="emc-splash-fill" id="emcSplashFill"></div></div>
+  <p class="emc-splash-quote" id="emcSplashQuote" aria-live="off"></p>
 </div>
+<script>
+window.emcQuotes=[
+  '這不是做不好，是客戶還沒想好。',
+  '改一下很簡單。簡單的是嘴巴，不是滑鼠。',
+  '設計師每天都在做兩件事：找靈感，跟找昨天的版本。',
+  '客戶說：隨便發揮。五分鐘後：跟我想的不一樣。',
+  'Ctrl + Z 是我的心理醫生。',
+  '真正的設計流程：初稿 → 修改 → 再修改 → 再再修改 → 還是第一版最好。',
+  '不是沒有創意，是需求一直在進化。',
+  '設計沒有對錯，只有最後點頭的人。',
+  '我不是在發呆，我在等 Illustrator 回應。',
+  '今天不是加班，只是明天提早開始。',
+  '設計不是沒做好，只是預算先做完了。',
+  '客戶說改一下，我的一天就沒了。',
+  '這版一定過，我昨天也是這樣想。',
+  '今天最大的成就，就是檔案沒有壞掉。',
+  '不是我做得慢，是電腦在思考人生。',
+  '靈感來得很快，需求改得更快。',
+  '每天都在排版，每天都在懷疑人生。',
+  '設計師最常聽到的一句話：感覺不對。',
+  '字不是不能再大，只是快比標題還大。',
+  '圖不是不能再放，只是快放到隔壁版面了。',
+  '色彩學教了四年，最後還是改成老闆喜歡的藍。',
+  '最危險的一句話：我只有一個小修改。',
+  'Adobe 沒有當掉，我反而有點不習慣。',
+  '人生沒有 Ctrl + Z，幸好設計軟體有。',
+  '今天不是沒效率，是需求一直在更新。',
+  '設計沒有極限，修改次數也沒有。',
+  '排版五分鐘，找字型兩小時。',
+  '好的設計需要時間，客戶需要今天。',
+  '每個專案都有截止日，也都有新的截止日。',
+  '我以為快完成了，直到收到新的需求。'
+];
+</script>
 <script>
 (()=>{
   const splash=document.getElementById('emcSplash'),fill=document.getElementById('emcSplashFill');
@@ -6842,7 +6879,7 @@
   const finish=()=>{
     if(finished)return;
     finished=true;
-    clearTimeout(timer);
+    clearTimeout(timer);clearInterval(quoteTimer);
     const wait=Math.max(0,MIN_SHOW-(performance.now()-start));
     setTimeout(()=>{
       progress=1;paint();
@@ -6852,6 +6889,16 @@
       },380);
     },wait);
   };
+  // 進度條下方輪播設計師語錄（約 3.6 秒換一句，先隨機挑一句，連續不重複）
+  const quoteEl=document.getElementById('emcSplashQuote'),quotes=window.emcQuotes||[];
+  let quoteIdx=Math.floor(Math.random()*quotes.length),quoteTimer=0;
+  const showQuote=()=>{if(quoteEl&&quotes.length)quoteEl.textContent=quotes[quoteIdx]};
+  const nextQuote=()=>{
+    if(!quoteEl||quotes.length<2)return;
+    quoteEl.classList.add('is-fading');
+    setTimeout(()=>{quoteIdx=(quoteIdx+1+Math.floor(Math.random()*(quotes.length-1)))%quotes.length;showQuote();quoteEl.classList.remove('is-fading')},250);
+  };
+  showQuote();quoteTimer=setInterval(nextQuote,3600);
   tick();
   if(document.readyState==='complete')finish();else window.addEventListener('load',finish,{once:true});
   setTimeout(finish,MAX_SHOW);
@@ -7819,38 +7866,7 @@ const designerSettingsList = $('#designerSettingsList');
 const submitOverlay = $('#submitOverlay');
 const submitOverlayText = $('#submitOverlayText');
 const fieldPopover = $('#fieldPopover');
-const submitQuotes = [
-  '這不是做不好，是客戶還沒想好。',
-  '改一下很簡單。簡單的是嘴巴，不是滑鼠。',
-  '設計師每天都在做兩件事：找靈感，跟找昨天的版本。',
-  '客戶說：隨便發揮。五分鐘後：跟我想的不一樣。',
-  'Ctrl + Z 是我的心理醫生。',
-  '真正的設計流程：初稿 → 修改 → 再修改 → 再再修改 → 還是第一版最好。',
-  '不是沒有創意，是需求一直在進化。',
-  '設計沒有對錯，只有最後點頭的人。',
-  '我不是在發呆，我在等 Illustrator 回應。',
-  '今天不是加班，只是明天提早開始。',
-  '設計不是沒做好，只是預算先做完了。',
-  '客戶說改一下，我的一天就沒了。',
-  '這版一定過，我昨天也是這樣想。',
-  '今天最大的成就，就是檔案沒有壞掉。',
-  '不是我做得慢，是電腦在思考人生。',
-  '靈感來得很快，需求改得更快。',
-  '每天都在排版，每天都在懷疑人生。',
-  '設計師最常聽到的一句話：感覺不對。',
-  '字不是不能再大，只是快比標題還大。',
-  '圖不是不能再放，只是快放到隔壁版面了。',
-  '色彩學教了四年，最後還是改成老闆喜歡的藍。',
-  '最危險的一句話：我只有一個小修改。',
-  'Adobe 沒有當掉，我反而有點不習慣。',
-  '人生沒有 Ctrl + Z，幸好設計軟體有。',
-  '今天不是沒效率，是需求一直在更新。',
-  '設計沒有極限，修改次數也沒有。',
-  '排版五分鐘，找字型兩小時。',
-  '好的設計需要時間，客戶需要今天。',
-  '每個專案都有截止日，也都有新的截止日。',
-  '我以為快完成了，直到收到新的需求。'
-];
+const submitQuotes = window.emcQuotes; // 語錄清單定義在 <body> 開頭的載入動畫腳本（進站就要用），這裡共用同一份
 let submitQuoteTimer = null;
 const ownerContactMap = new Map();
 const weekNames = ['日','一','二','三','四','五','六'];
