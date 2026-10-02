@@ -606,9 +606,9 @@ function toggleAction(id){
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image(),headphonesSide=new Image();const HP_SIDE_SRC_W=160,HP_SIDE_CX=80,HP_SIDE_CY=205,HP_SIDE_D=30;// 側面耳機素材（單個耳罩＋頭帶，160x281）：耳罩圓心在 (80,205)，直徑約 160；HP_SIDE_D 是畫在人物身上的耳罩直徑（畫面像素）
 headphonesSide.onload=()=>markDirty();
-function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-v1.webp?v=2';if(!headphonesSide.getAttribute('src'))headphonesSide.src='assets/headphones-side-v1.webp?v=1';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
+function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-static-v1.webp?v=1';if(!headphonesSide.getAttribute('src'))headphonesSide.src='assets/headphones-side-v1.webp?v=1';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
 headphones.onload=()=>{markDirty();drawMusicIcon();};
-const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=6,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,HP_DY=[0,0,0,0,8],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
+const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=1,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,HP_DY=[0,0,0,0,8],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
 function drawMusicIcon(){const canvas=$('musicIcon');if(!canvas||!headphones.naturalWidth)return;const c=canvas.getContext('2d');c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(headphones,0,0,HP_FRAME_W,HP_FRAME_H,0,0,canvas.width,canvas.width*HP_FRAME_H/HP_FRAME_W);}
 // 跟主系統「設計師設定」的分享音樂同一套判斷：Spotify 只收單曲，Apple Music 抓歌曲 id。

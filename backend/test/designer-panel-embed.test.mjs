@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=94/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=95/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -598,9 +598,9 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
   assert.match(html, /id="musicToggle"[\s\S]*id="musicUrl"[\s\S]*id="musicSave"[\s\S]*id="musicClear"/);
   // 「現在的心情」那一區裡的音樂按鈕。
   assert.ok(html.indexOf('id="moods"') < html.indexOf('id="musicToggle"') && html.indexOf('id="musicToggle"') < html.indexOf('id="message"'));
-  assert.match(js, /headphones\.src='assets\/headphones-v1\.webp/);
-  assert.match(js, /HP_FRAMES=6/);
-  assert.match(js, /Math\.floor\(t\*4\)%HP_FRAMES/, '六格音符輪流跳動');
+  assert.match(js, /headphones\.src='assets\/headphones-static-v1\.webp/);
+  assert.match(js, /HP_FRAMES=1/);
+  assert.match(js, /Math\.floor\(t\*4\)%HP_FRAMES/, '耳機不動、沒有音符（只有一格）');
   assert.match(js, /const MUSIC_NOD=0;/, '聽音樂時完全不搖（身體與頭都不動）');
   assert.match(js, /function musicOf\(p\)/, '要用 function 宣告：腳本開頭的 syncViewLayout 就會用到');
   assert.match(js, /hits\.push\(\{type:'musicPlay'/);
