@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=91/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=92/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -646,8 +646,8 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
   for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
-  assert.match(js, /const layers=!WD_FEMALE\[i\]\|\|view===2\?\[body,head\]:\[head,body\]/);
-  assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)\)/, '背面不畫眼鏡');
+  assert.match(js, /const layers=\(!WD_FEMALE\[i\]\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
+  assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:''\},\{outfit:3,cap:'',glasses:''\},\{outfit:4,cap:'blue',glasses:''\},\{outfit:1,cap:'',glasses:''\},\{outfit:5,cap:'',glasses:''\}/);
   assert.match(js, /function outfitChoices\(i\)\{return i===3\?\[1,0\]:null;\}/);
@@ -673,7 +673,7 @@ test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子�
 test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移', async () => {
   const js = await officeJs();
   assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
-  assert.match(js, /y:WD_DROP\[i\],/);
+  assert.match(js, /y:WD_DROP\[i\]-\(act\?B\.t\|\|0:0\),/);
   assert.equal((js.match(/\+WD_DROP\[i\](?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 2, '正面眼鏡與正面帽子都要加上');
 });
 
@@ -769,7 +769,7 @@ test('像素辦公室 iframe 直接寫在 HTML 裡，不等案件資料載完才
 
 test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材', async () => {
   const js = await officeJs();
-  assert.match(js, /const act=actionOf\(i\);ctx\.rotate\(tilt\);if\(act\)ctx\.translate\(act\.dx,0\);drawHeadphones\(i,p,t,bob,nod,true\);/);
+  assert.match(js, /const act=actionOf\(i\);ctx\.rotate\(tilt\+\(act\?act\.rot:0\)\);if\(act\)ctx\.translate\(act\.dx,0\);drawHeadphones\(i,p,t,bob,nod,true\);/);
   assert.match(js, /if\(!musicOf\(p\)\|\|\(p\.dir==='up'&&!act\)!==behind\)return;/);
   assert.match(js, /headphones-side-v1\.webp/);
   assert.match(js, /WD_SIDE_CAP_BRIM/);
@@ -778,11 +778,13 @@ test('耳機：背面壓在人物後面、側面用單個耳罩的側面素材',
 test('動作「閃身步」：只有 Machi、8 張依序播放、腳下顯示名稱、後端同樣限制', async () => {
   const js = await officeJs();
   const html = await readFile(new URL('../../EMC-ART-Pixel-Office/dist/index.html', import.meta.url), 'utf8');
-  assert.match(js, /WARDROBE_ACTIONS=\{dodge:\{label:'閃身步',who:\[4\],frameMs:125,hold:\[0,4\],holdMs:1500/);
-  const frames = JSON.parse(js.match(/frames:(\[\{x:0.*?\}\])\}\};/s)[1].replace(/([a-z]+):/g, '"$1":'));
-  assert.equal(frames.length, 8);
+  assert.match(js, /dodge:\{label:'閃身步',who:\[4\],src:'assets\/wardrobe-action-dodge\.webp\?v=1',move:'slide',frameMs:125,hold:\[0,4\],holdMs:1500/);
+  const grab = id => JSON.parse(js.match(new RegExp(`${id}:\\{label.*?frames:(\\[\\{x:0.*?\\}\\])\\}`, 's'))[1].replace(/([a-z]+):/g, '"$1":'));
+  assert.equal(grab('dodge').length, 8);
+  assert.equal(grab('bear').length, 12);
+  assert.match(js, /bear:\{label:'狗熊哆嗦毛',who:\[4\]/);
   assert.match(js, /function drawActionLabel\(i\)/);
   assert.match(html, /id="actionSection" hidden/);
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
-  assert.match(worker, /PIXEL_OFFICE_ACTIONS: Record<string, string\[\]> = \{ dodge: \['Machi'\] \}/);
+  assert.match(worker, /PIXEL_OFFICE_ACTIONS: Record<string, string\[\]> = \{ dodge: \['Machi'\], bear: \['Machi'\] }/);
 });

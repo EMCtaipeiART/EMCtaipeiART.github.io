@@ -163,27 +163,36 @@ Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear(
 function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=2';}
 const accessoriesReady=()=>wardrobeSheets.acc.complete&&wardrobeSheets.acc.naturalWidth>0;
 const wardrobeCache=new Map();
-const WD_ACTION_HEAD_DROP=16;// 動作中頭比站姿再低一點（原圖像素，使用者 2026-10-02）
 // ───────── 動作（人物的小動畫，2026-10-02）─────────
 // 目前只有 Machi 的「閃身步」：8 張全身連續動作（無頭的身體），頭、帽子、眼鏡照樣疊在脖子上。
 // frames 的 x/y/w/h 是動作圖集（wardrobe-action-dodge.webp）上的裁切，n 是脖子中心的 x。圖集第一次要用才載。
 // 後端 PIXEL_OFFICE_ACTIONS 有同一份「誰可以用」，兩邊要一致。
-const WARDROBE_ACTIONS={dodge:{label:'閃身步',who:[4],frameMs:125,hold:[0,4],holdMs:1500,shift:28,ms:600000,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]}};
-const actionSheet=new Image();wardrobeSheets.action=actionSheet;
-actionSheet.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};
-function loadActionSheet(){if(!actionSheet.getAttribute('src'))actionSheet.src='assets/wardrobe-action-dodge.webp?v=1';}
+// 每個動作一張圖集（各自 lazy 載入）。move：'slide'＝0～3 張往右、4～7 張往左快速位移（閃身步）；'sway'＝身體左右小幅搖晃。
+// frames 的 n 是脖子中心 x、t 是脖子頂端離圖片上緣的距離（手舉過頭時圖片上緣不是脖子）。over：這幾張手在臉旁邊，身體要畫在頭上面。noGlasses：這幾張不畫眼鏡（手蓋住臉）。
+const WARDROBE_ACTIONS={
+  dodge:{label:'閃身步',who:[4],src:'assets/wardrobe-action-dodge.webp?v=1',move:'slide',frameMs:125,hold:[0,4],holdMs:1500,shift:28,headDrop:16,over:[],noGlasses:[],ms:600000,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]},
+  bear:{label:'狗熊哆嗦毛',who:[4],src:'assets/wardrobe-action-bear.webp?v=1',move:'sway',frameMs:100,hold:[],holdMs:0,sway:7,swayRot:.025,swayPeriods:2,headDrop:8,over:[5,6,7,8],noGlasses:[6,7],ms:600000,frames:[{x:0,y:29,w:167,h:180,n:83.9,t:9.4},{x:171,y:29,w:124,h:180,n:55.4,t:1.9},{x:299,y:29,w:136,h:180,n:61.3,t:6.9},{x:439,y:29,w:166,h:180,n:81.7,t:4.4},{x:609,y:4,w:134,h:205,n:67.3,t:27.5},{x:747,y:4,w:135,h:205,n:67.9,t:30.7},{x:886,y:4,w:109,h:205,n:54.8,t:39.4},{x:999,y:4,w:109,h:205,n:52.3,t:42.6},{x:1112,y:0,w:169,h:209,n:73.6,t:30.7},{x:1285,y:0,w:164,h:209,n:84.5,t:26.9},{x:1453,y:0,w:134,h:209,n:64.8,t:27.5},{x:1591,y:0,w:166,h:209,n:85.4,t:35.7}]}
+};
+Object.entries(WARDROBE_ACTIONS).forEach(([id,def])=>{def.img=new Image();wardrobeSheets['a_'+id]=def.img;def.img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};});
+function loadActionSheet(id){const def=WARDROBE_ACTIONS[id];if(def&&!def.img.getAttribute('src'))def.img.src=def.src;}
+const actionImgReady=def=>def.img.complete&&def.img.naturalWidth>0;
 /** 這個人現在正在做的動作（沒有就 null）：開始後 ms 毫秒內，依時間挑第幾張。function 宣告，原因同 lookDefault（TDZ）。 */
 function actionOf(i){
   const p=people[i],a=p&&p.action,def=a&&WARDROBE_ACTIONS[a.id];
-  if(!def||!def.who.includes(i)||!actionSheet.complete||!actionSheet.naturalWidth)return null;
+  if(!def||!def.who.includes(i)||!actionImgReady(def))return null;
   const age=Date.now()-a.at;if(!(age>-3000&&age<def.ms))return null;
-  // 循環播放：每一張 frameMs，第一排與第二排的第一張（hold）多停一下；整圈的長度是各張時間的總和。
-  const dur=def.frames.map((f,n)=>def.hold.includes(n)?def.holdMs:def.frameMs),cycle=dur.reduce((a,b)=>a+b,0);
-  let t=Math.max(0,age)%cycle,n=0;while(n<dur.length-1&&t>=dur[n]){t-=dur[n];n++;}
-  // 橫向位移（畫面像素）：0 號停在左邊，1～3 快速往右移到右邊；4 號停在右邊，5～7 快速往左移回左邊。
-  const half=def.frames.length/2,k=n%half,frac=t/dur[n],D=def.shift;
-  const dx=k===0?(n<half?-D:D):(n<half?-D+2*D*((k-1)+frac)/(half-1):D-2*D*((k-1)+frac)/(half-1));
-  return {id:a.id,n,dx};
+  // 循環播放：每一張 frameMs，hold 裡的那幾張多停 holdMs；整圈的長度是各張時間的總和。
+  const dur=def.frames.map((f,n)=>def.hold.includes(n)?def.holdMs:def.frameMs),cycle=dur.reduce((x,y)=>x+y,0),elapsed=Math.max(0,age)%cycle;
+  let t=elapsed,n=0;while(n<dur.length-1&&t>=dur[n]){t-=dur[n];n++;}
+  let dx=0,rot=0;
+  if(def.move==='slide'){
+    // 橫向位移（畫面像素）：0 號停在左邊，1～3 快速往右移到右邊；4 號停在右邊，5～7 快速往左移回左邊。
+    const half=def.frames.length/2,k=n%half,frac=t/dur[n],D=def.shift;
+    dx=k===0?(n<half?-D:D):(n<half?-D+2*D*((k-1)+frac)/(half-1):D-2*D*((k-1)+frac)/(half-1));
+  }else if(def.move==='sway'){
+    const w=Math.sin(elapsed/cycle*Math.PI*2*def.swayPeriods);dx=w*def.sway;rot=w*def.swayRot;
+  }
+  return {id:a.id,n,dx,rot};
 }
 const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=>img.complete&&img.naturalWidth);
 // 預設造型＝每個人現在的樣子（2026-10-01 使用者指定，原本的像素人物已下架）：Leona 黑西裝、Amber 米白襯衫、Noise 丹寧外套＋藍帽、
@@ -202,11 +211,11 @@ const sameLook=(a,b)=>a.outfit===b.outfit&&a.cap===b.cap&&a.glasses===b.glasses;
 function buildWardrobe(i,view,look,action){
   const D=WARDROBE,K=WD_K,H=D.heads[i][view],oIdx=look.outfit,act=action&&WARDROBE_ACTIONS[action.id],B=act?act.frames[action.n]:D.outfits[oIdx][view],front=D.heads[i][0].s,sk=H.s||front;
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
-  const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K+(act?WD_ACTION_HEAD_DROP:0);
-  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'action':'outfits',src:B,x:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:WD_DROP[i],w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
-  const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
+  const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K+(act?act.headDrop:0);
+  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:'outfits',src:B,x:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:WD_DROP[i]-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
+  const layers=(!WD_FEMALE[i]||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
   const eye=D.eyes[i][view];
-  if(look.glasses&&view<2&&accessoriesReady()){
+  if(look.glasses&&view<2&&accessoriesReady()&&!(act&&act.noGlasses.includes(action.n))){
     const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0];
     if(view===0){const s=WD_GLASSES_W/gf.w,w=g.w*s,h=g.h*s;layers.push({sheet:'acc',src:g,w,h,x:hx+chin.x*K-w/2+WD_GLASSES_DX[i],y:hy+eye.y*K-h/2+WD_DROP[i]+WD_GLASSES_DY[i]});}
     else{// 側面：左右從耳朵前緣到臉頰最前面、上緣對齊耳朵上沿
@@ -229,7 +238,7 @@ function buildWardrobe(i,view,look,action){
   const eyeFront=D.eyes[i][Math.min(view,1)];
   // 臉的幾何（畫布座標、原圖像素）：耳機、加班黑眼圈用它對位，不再用固定數字。
   const geom={cx:hx+chin.x*K-minX,chinY:hy+chin.y*K-minY,eyeY:hy+eyeFront.y*K-minY,faceW:(front[1]-front[0])*K,faceH:(front[3]-front[2])*K,topY:hy-minY,earX:hx+(sk[0]+(sk[1]-sk[0])*WD_EAR_X)*K-minX};
-  return {canvas,capCanvas,geom,layers,minX,minY,ax:(act?B.n:B.w/2)-minX,ay:B.h-minY};// 腳的落點仍以衣服原本的中心算，衣服往左之後腳會落在地面圓圈偏左一點，頭留在原處
+  return {canvas,capCanvas,geom,layers,minX,minY,ax:(act?B.n:B.w/2)-minX,ay:B.h-(act?B.t||0:0)-minY};// 腳的落點仍以衣服原本的中心算，衣服往左之後腳會落在地面圓圈偏左一點，頭留在原處
 }
 function wardrobeFrame(index,dir,action){
   if(!wardrobeReady())return null;const look=lookOf(index);
@@ -575,18 +584,19 @@ function renderActionPanel(){
   const section=$('actionSection'),list=$('actionList');if(!section||!list)return;
   const ids=selected===null?[]:Object.keys(WARDROBE_ACTIONS).filter(id=>WARDROBE_ACTIONS[id].who.includes(selected));
   section.hidden=!ids.length;if(!ids.length)return;
-  loadActionSheet();
+  ids.forEach(loadActionSheet);
   list.replaceChildren(...ids.map(id=>{
-    const def=WARDROBE_ACTIONS[id],button=document.createElement('button');button.type='button';button.className=actionOf(selected)?'active':'';
+    const def=WARDROBE_ACTIONS[id],button=document.createElement('button');button.type='button';const cur=actionOf(selected);button.className=cur&&cur.id===id?'active':'';
     const canvas=document.createElement('canvas');canvas.width=88;canvas.height=60;
-    if(actionSheet.complete&&actionSheet.naturalWidth){const f=def.frames[0],k=Math.min(84/f.w,56/f.h);canvas.getContext('2d').drawImage(actionSheet,f.x,f.y,f.w,f.h,44-f.w*k/2,58-f.h*k,f.w*k,f.h*k);}
+    if(actionImgReady(def)){const f=def.frames[0],k=Math.min(84/f.w,56/f.h);canvas.getContext('2d').drawImage(def.img,f.x,f.y,f.w,f.h,44-f.w*k/2,58-f.h*k,f.w*k,f.h*k);}
     button.append(canvas,def.label);button.onclick=()=>toggleAction(id);return button;
   }));
 }
 function toggleAction(id){
   const i=selected;if(i===null||!WARDROBE_ACTIONS[id]||!WARDROBE_ACTIONS[id].who.includes(i))return;
-  if(actionOf(i)){people[i].action=null;markDirty();renderActionPanel();pushChange(i,{action:''});return;}// 正在播放：再按一次停止
-  loadActionSheet();people[i].action={id,at:Date.now()};markDirty();
+  const cur=actionOf(i);
+  if(cur&&cur.id===id){people[i].action=null;markDirty();renderActionPanel();pushChange(i,{action:''});return;}// 正在播放：再按一次停止
+  loadActionSheet(id);people[i].action={id,at:Date.now()};markDirty();
   renderActionPanel();
   pushChange(i,{action:{id}}).then(data=>{if(data&&data.person&&data.person.action)people[i].action={id,at:Number(data.person.action.at)||Date.now()};});
 }
@@ -958,7 +968,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     if(typeof entry.message==='string')p.message=entry.message;
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
-    p.action=entry.action&&entry.action.id?{id:entry.action.id,at:Number(entry.action.at)||0}:null;if(p.action&&WARDROBE_ACTIONS[p.action.id])loadActionSheet();
+    p.action=entry.action&&entry.action.id?{id:entry.action.id,at:Number(entry.action.at)||0}:null;if(p.action&&WARDROBE_ACTIONS[p.action.id])loadActionSheet(p.action.id);
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
     if(p.music)ensureHeadphones();
     if(!p.music&&musicPlaying.i===i)stopMusic();
@@ -1243,7 +1253,7 @@ function drawActionLabel(i){
   ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,p.x+act.dx,y+h/2+1);
   ctx.restore();
 }
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt);if(act)ctx.translate(act.dx,0);drawHeadphones(i,p,t,bob,nod,true);if(act)drawWardrobe(ctx,i,'down',0,bob,142,act);else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,0);drawHeadphones(i,p,t,bob,nod,true);if(act)drawWardrobe(ctx,i,'down',0,bob,142,act);else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
