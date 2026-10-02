@@ -306,3 +306,5 @@ main>.level-table-section{background:white;border:1px solid #dce3ed;border-radiu
 .look-chips button canvas{display:block;width:44px;height:26px}
 .look-outfits button.active,.look-chips button.active{background:#ffda80;color:#223047;border-color:#ffda80}
 .look-hint{margin:12px 0 0;font-size:12px;color:#a6b6cd;line-height:1.5}
+
+.action-list button canvas{width:56px;height:38px}

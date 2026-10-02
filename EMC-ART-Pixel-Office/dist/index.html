@@ -16,7 +16,7 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <link rel="stylesheet" href="style.css?v=42">
+  <link rel="stylesheet" href="style.css?v=43">
 </head>
 <body>
   <header>
@@ -68,6 +68,10 @@
         <button type="button" class="text-button" id="lookReset" hidden>恢復預設造型</button>
         <p class="look-hint">選好大家的畫面會一起換。衣服固定，只有 Anna 可以在藍色與黃色兩套之間換。</p>
       </section>
+      <section class="tool-section" id="actionSection" hidden><h3>動作</h3>
+        <div class="look-chips action-list" id="actionList"></div>
+        <p class="look-hint">按下去人物會做一小段動作，並在腳下顯示動作名稱，大家的畫面會一起看到。</p>
+      </section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一則限時動態</strong><small>照片、GIF 或手機影片（30 秒內）· 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" hidden><div id="storyMine" class="story-mine"></div></section>
@@ -87,6 +91,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=88" fetchpriority="high"></script>
+  <script src="app.js?v=89" fetchpriority="high"></script>
 </body>
 </html>

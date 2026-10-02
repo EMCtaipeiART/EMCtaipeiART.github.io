@@ -157,6 +157,8 @@ const PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS = 4 * 60 * 60 * 1000;
 // Google 原生「不在辦公室」事件最可靠；一般事件則只在標題含這些明確字樣時視為休假。標題只在記憶體
 // 中判斷，不寫入 Durable Object、log 或前端，避免把行事曆內容帶進設計系統。
 const PIXEL_OFFICE_LEAVE_KEYWORDS = /(?:休假|請假|特休|年假|補休|病假|事假|婚假|產假|陪產|喪假|公假|生理假|家庭照顧假|vacation|\bpto\b|annual\s+leave|sick\s+leave|personal\s+leave|day\s+off|out\s+of\s+office|\booo\b)/i;
+// 動作（人物小動畫）：id → 可以使用的人。畫面那邊（app.js 的 WARDROBE_ACTIONS）要一致。
+const PIXEL_OFFICE_ACTIONS: Record<string, string[]> = { dodge: ['Machi'] };
 // 只在這個時段查行事曆，其餘時間不必浪費 API 配額（台北時間）。
 const PIXEL_OFFICE_CALENDAR_START_HOUR = 8;
 const PIXEL_OFFICE_CALENDAR_END_HOUR = 22;
@@ -1880,6 +1882,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (outfit < -1 || outfit > 5 || !['', 'black', 'blue'].includes(cap) || !['', 'clear', 'sun'].includes(glasses)) throw new Error('造型不正確');
         if (outfit === -1 && !cap && !glasses) delete state.look;
         else state.look = { outfit, cap, glasses };
+      }
+    }
+    if ('action' in patch) {
+      // 動作（2026-10-02）：目前只有 Machi 的「閃身步」。時間用伺服器的，畫面只在開始後幾秒內播放，不會一直卡著。
+      const action = patch.action ? asRow(patch.action) : null;
+      if (!action) delete state.action;
+      else {
+        const id = text(action.id);
+        if (!PIXEL_OFFICE_ACTIONS[id] || !PIXEL_OFFICE_ACTIONS[id].includes(name)) throw new Error('這個動作只有指定的人可以使用');
+        state.action = { id, at: Date.now() };
       }
     }
     const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
