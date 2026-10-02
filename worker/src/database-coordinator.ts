@@ -196,6 +196,9 @@ export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', ca
     // 休假常被設成「空閒」並分享給整組。只有活動建立者本人，或標題明確點名這份
     // 行事曆的主人，才算該人休假；否則共享的「Leona休假」會讓全組都顯示休假。
     if (!ownerEmail || organizerEmail === ownerEmail || namesOwner) return 'leave';
+    // 別人建立、標題是請假、也沒點名這個人：只是被 tag 的休假通知，既不是他的休假、也不是會議。
+    // 不能再往下當一般事件算——半天假、外出被 tag 給大家，會讓全組同時顯示「會議中」。
+    return '';
   }
   // 透明事件不是會議；但休假常刻意設成透明，必須先完成上面的休假辨識再排除。
   if (text(event.transparency) === 'transparent') return '';

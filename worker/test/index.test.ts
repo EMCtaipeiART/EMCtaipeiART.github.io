@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
+import { pixelOfficeCalendarEventState } from '../src/database-coordinator';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
 import type { DatabaseSnapshot, SessionRecord } from '../src/types';
@@ -4921,5 +4922,17 @@ describe('Pixel Office shared state', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Pixel Office calendar: tagged leave notices', () => {
+  const base = { eventType: 'default', start: { dateTime: '2026-10-02T09:00:00+08:00' }, end: { dateTime: '2026-10-02T12:00:00+08:00' } };
+  it('ignores a short leave notice created by someone else that does not name the owner', () => {
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '請假（半天）', organizer: { email: 'other@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('');
+  });
+  it('still treats a leave notice created by the owner or naming the owner as leave, and a plain event as a meeting', () => {
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '請假', organizer: { email: 'anna@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('leave');
+    expect(pixelOfficeCalendarEventState({ ...base, summary: 'Anna 休假', organizer: { email: 'x@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('leave');
+    expect(pixelOfficeCalendarEventState({ ...base, summary: '專案週會', organizer: { email: 'x@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('meeting');
   });
 });
