@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
-import { pixelOfficeCalendarEventState } from '../src/database-coordinator';
+import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState } from '../src/database-coordinator';
 import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
@@ -4973,5 +4973,20 @@ describe('database size: idempotency records', () => {
     expect(keys).toHaveLength(100);
     expect(keys[0]).toBe('req-150');
     expect(keys.at(-1)).toBe('req-249');
+  });
+});
+
+describe('Pixel Office calendar: freeBusy fallback', () => {
+  const now = Date.parse('2026-10-02T11:00:00Z');
+  const span = (startH: number, endH: number) => ({ start: new Date(now + startH * 3_600_000).toISOString(), end: new Date(now + endH * 3_600_000).toISOString() });
+  it('treats a short busy span that covers now as a meeting', () => {
+    expect(pixelOfficeBusyMeetingNow([span(-0.5, 0.5)], now)).toBe(true);
+  });
+  it('ignores an all-day or long busy span (leave, travel)', () => {
+    expect(pixelOfficeBusyMeetingNow([span(-9, 9)], now)).toBe(false);
+    expect(pixelOfficeBusyMeetingNow([span(-3, 3)], now)).toBe(false);
+  });
+  it('ignores spans that do not cover now', () => {
+    expect(pixelOfficeBusyMeetingNow([span(1, 2), span(-3, -2)], now)).toBe(false);
   });
 });

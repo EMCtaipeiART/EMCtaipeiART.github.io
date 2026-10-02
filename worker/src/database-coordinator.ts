@@ -181,6 +181,16 @@ function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
 
 type PixelOfficeCalendarState = '' | 'meeting' | 'leave';
 
+/** freeBusy 的忙碌區段裡，有沒有「現在這一刻正在進行、而且整段不超過 4 小時」的——整天的請假／出差不算會議。 */
+export function pixelOfficeBusyMeetingNow(busy: Row[], nowMs: number): boolean {
+  return busy.some(span => {
+    const start = Date.parse(text(span.start)), end = Date.parse(text(span.end));
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+    if (!(start <= nowMs + 60_000 && end > nowMs)) return false;
+    return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS;
+  });
+}
+
 /** 單一 Google Calendar event → 最新動態狀態。事件查詢本身已限制在「現在這一分鐘有重疊」。 */
 export function pixelOfficeCalendarEventState(event: Row, calendarEmail = '', calendarName = ''): PixelOfficeCalendarState {
   if (text(event.status) === 'cancelled') return '';
@@ -1630,9 +1640,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const response = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      // freeBusy 回傳的忙碌區段會被裁到查詢範圍裡：只查這一分鐘的話，連「整天請假」看起來也只有一分鐘長，
+      // 於是被當成會議（2026-10-02 有人請病假 tag 了大家，大家整天顯示「會議中」）。查前後 24 小時，才量得到真正的長度。
       body: JSON.stringify({
-        timeMin,
-        timeMax,
+        timeMin: new Date(nowMs - 24 * 60 * 60_000).toISOString(),
+        timeMax: new Date(nowMs + 24 * 60 * 60_000).toISOString(),
         items: Object.values(PIXEL_OFFICE_CALENDARS).map(id => ({ id }))
       })
     });
@@ -1671,11 +1683,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
       if (!entry || (Array.isArray(entry.errors) && entry.errors.length)) { unreadable.push(name); continue; }
       const busy = Array.isArray(entry.busy) ? entry.busy as Row[] : [];
-      const busyMeeting = busy.some(span => {
-        const start = Date.parse(text(span.start)), end = Date.parse(text(span.end));
-        if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
-        return end - start <= PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS;
-      });
+      const busyMeeting = pixelOfficeBusyMeetingNow(busy, nowMs);
       // 有成功讀到事件詳細資料時，以詳細資料為準（可排除專注時間、工作地點，也能辨識休假）；否則
       // 沿用 freeBusy 短忙碌區段＝會議的保守規則。
       const desired = detailStates.has(name) ? detailStates.get(name) || '' : busyMeeting ? 'meeting' : '';
