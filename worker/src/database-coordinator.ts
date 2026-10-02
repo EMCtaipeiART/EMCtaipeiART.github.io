@@ -588,7 +588,7 @@ function resolveBodyHtml(payload: ApiPayload): string {
 
 type GmailInlineImage = { contentId: string; fileName: string; mimeType: string; base64: string; bytes: number };
 const GMAIL_INLINE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-const GMAIL_INLINE_IMAGE_MAX_COUNT = 10;
+const GMAIL_INLINE_IMAGE_MAX_COUNT = 30;
 const GMAIL_INLINE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 const GMAIL_INLINE_IMAGE_MAX_TOTAL_BYTES = 18 * 1024 * 1024;
 /** 瀏覽信件串時，每封信最多回抓幾張內嵌圖片的縮圖、整條信件串最多回抓幾張——只是控制 Worker 對 Gmail API

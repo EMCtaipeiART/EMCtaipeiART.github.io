@@ -3253,25 +3253,37 @@ test('the designer reply can back up NAS or uploaded images without putting them
   // Run the real applyDesignerReplyImages: with skip on, no thumbnails go in, but video paths and send unlock still happen.
   const apply = html.match(/function applyDesignerReplyImages\(id,images,\{round=null\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(apply, 'could not locate applyDesignerReplyImages');
-  const runApply = skip => {
-    const calls = { thumbs: 0, videoPaths: null, removed: false };
-    const container = { textContent: 'x', remove() { calls.removed = true; } };
+  const runApply = (skip, earlyNames = []) => {
+    const calls = { thumbs: 0, videoPaths: null, removed: false, placeholderRemoved: false, cleared: false };
+    const container = {
+      get textContent() { return 'x'; },
+      set textContent(value) { calls.cleared = value === ''; },
+      remove() { calls.removed = true; },
+      querySelector: selector => selector === 'img' ? (calls.thumbs || earlyNames.length ? {} : null) : { remove() { calls.placeholderRemoved = true; } }
+    };
     const modal = { dataset: { replyMode: 'designer', designerReplyCaseId: '26090074', designerReplyRound: '0', designerReplySkipImages: skip ? '1' : '', designerReplyPending: '1' } };
     const send = { disabled: true, textContent: '圖片上傳中...' };
     const schedule = { disabled: true };
-    new Function('modal', 'container', 'send', 'schedule', 'calls', `
+    new Function('modal', 'container', 'send', 'schedule', 'calls', 'earlyNames', `
       const $ = selector => ({ '#gmailThreadModal': modal, '#gmailThreadReplySend': send, '#gmailThreadSchedule': schedule })[selector] || null;
       const document = { getElementById: id => id === 'gmailDesignerReplyImages' ? container : null };
+      const nasBackedInlineNames = () => new Set(earlyNames);
       const appendDesignerReplyImageThumb = () => { calls.thumbs += 1; };
       const applyDesignerReplyVideoPaths = images => { calls.videoPaths = images; };
       ${apply}
       applyDesignerReplyImages('26090074', [{ fileName: 'a.png' }, { fileName: 'b.mp4' }], { round: 0 });
-    `)(modal, container, send, schedule, calls);
+    `)(modal, container, send, schedule, calls, earlyNames);
     return { calls, modal, send, schedule };
   };
   const synced = runApply(false);
   assert.equal(synced.calls.thumbs, 2);
   assert.equal(synced.calls.removed, false);
+  // 先前已用本機預覽放進信件的圖（a.png）不再重複放，也不清掉容器；只補上還沒放進去的。
+  const withEarly = runApply(false, ['a.png']);
+  assert.equal(withEarly.calls.thumbs, 1, '只補 b.mp4，a.png 已經在信裡');
+  assert.equal(withEarly.calls.cleared, false, '不可以把已經放好的預覽圖清掉');
+  assert.equal(withEarly.calls.placeholderRemoved, true, '備份完成，拿掉「備份中」提示');
+  assert.equal(withEarly.calls.removed, false);
   const skipped = runApply(true);
   assert.equal(skipped.calls.thumbs, 0, '勾選不同步時不可以放任何縮圖進信件');
   assert.equal(skipped.calls.removed, true, '圖片區塊整個拿掉，信件裡不留空白佔位');
@@ -3724,11 +3736,11 @@ test('designer reply backs up photos added with the editor upload button into th
   // 寄出與排程兩條路徑的「設計師回覆信」分支都要呼叫，並把結果接在成功訊息後面。
   const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
   assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    const replyData=await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
-  assert.match(send, /Promise\.all\(\[confirmLatestModificationRound\(id,row\),backupDesignerReplyInlineImages\(id,designerReplyRound,editorPayload\.inlineImages\)\]\)/, '寄出後的收尾（確認輪次、備份照片）在彈窗關閉後同時進行');
+  assert.match(send, /Promise\.all\(\[confirmLatestModificationRound\(id,row\),backupDesignerReplyInlineImages\(id,designerReplyRound,inlineImagesNeedingBackup\(editor,editorPayload\.inlineImages\)\)\]\)/, '寄出後的收尾（確認輪次、備份照片）在彈窗關閉後同時進行');
   assert.ok(send.indexOf('closeGmailThreadModal()') < send.indexOf('backupDesignerReplyInlineImages'), '先收彈窗，再做收尾，使用者不必等');
   assert.match(send, /\$\{inlineImageBackupNotice\}\$\{threadNotice\}\$\{detailsNotice\}/, '立即送出的成功訊息要接上信件串警告（threadWarningNotice）');
   const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
-  assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,editorPayload\.inlineImages\)/);
+  assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,inlineImagesNeedingBackup\(editor,editorPayload\.inlineImages\)\)/);
   assert.match(schedule, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
   // 一般回信、修改需求信不備份。
   assert.equal((send.match(/backupDesignerReplyInlineImages/g) || []).length, 1);

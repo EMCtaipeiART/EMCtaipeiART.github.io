@@ -1255,7 +1255,12 @@ export function uploadEnabled(config, secrets) {
  * 標記為已歸類到這一輪。回傳結果供呼叫端（watcher 的批次迴圈／picker
  * server 的立即備份）各自決定怎麼呈現。
  */
-export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, roundState, persistState }) {
+/**
+ * onEligible（選用）：決定好「這次真的要上傳哪些」之後、開始上傳（最慢的那一段）之前呼叫一次，
+ * 參數是即將上傳的預覽清單 [{ relPath, previewPath, ... }]。立即備份用它把已經壓好的小檔先交給
+ * 瀏覽器放進信件，不必等 Google Drive 存完。回呼拋錯不影響上傳。
+ */
+export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, roundState, persistState, onEligible }) {
   const round = computeRound(dbData, caseId);
   const targetImages = computeTargetImages(dbData, caseId, round);
   let reconciledCount = 0;
@@ -1396,6 +1401,9 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
         : '沒有偵測到可上傳的圖片/影片';
     return { round, uploadedCount: 0, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, adoptedFromDatabaseCount, skippedByTarget, message };
   }
+  if (typeof onEligible === 'function') {
+    try { await onEligible(targetedPreviews); } catch { /* 預覽只是加速顯示，失敗不能影響備份本身 */ }
+  }
   const { year, month } = computeYearMonth(start);
   // 依 MAX_IMAGES_PER_UPLOAD_REQUEST 切成多個請求依序送出（不是一次全部塞進同一個
   // request）——Apps Script 端對單次請求的圖片數量有硬性上限，超過會整批拒絕；
@@ -1440,4 +1448,52 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     if (persistState) await persistState();
   }
   return { round, uploadedCount, uploadedFiles, reconciledCount, deferredCount, waitingForNextRoundCount, staleSealClearedCount, skippedAlreadyRecordedCount, adoptedFromDatabaseCount, skippedByTarget, targetFallback, jsonRevision };
+}
+
+/**
+ * 「先看到圖」：備份最慢的是把圖存進 Google Drive（Apps Script 一張一張建檔、設分享），
+ * 但壓好的小檔在掃描完一兩秒內就已經在這台電腦上了。立即備份決定好要上傳哪些之後，
+ * 先把這些小檔放進一個「預覽工作」，選擇器頁面一邊等備份、一邊輪詢這個工作，
+ * 拿到就轉交給信件編輯器先顯示；Drive 備份照常在背景完成。
+ * 只存在記憶體裡，備份結束一段時間後自動清掉。
+ */
+const PREVIEW_JOB_TTL_MS = 10 * 60 * 1000;
+const PREVIEW_MAX_FILE_BYTES = 3 * 1024 * 1024;
+const PREVIEW_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+const previewJobs = new Map();
+
+export function normalizePreviewJobId(value) {
+  const id = String(value || '').trim();
+  return /^[A-Za-z0-9_-]{8,80}$/.test(id) ? id : '';
+}
+
+export function createPreviewJob(jobId, now = Date.now()) {
+  for (const [key, job] of previewJobs) {
+    if (now - job.touchedAt > PREVIEW_JOB_TTL_MS) previewJobs.delete(key);
+  }
+  const job = { items: [], totalBytes: 0, finished: false, touchedAt: now };
+  previewJobs.set(jobId, job);
+  return job;
+}
+
+export function readPreviewJob(jobId, since = 0) {
+  const job = previewJobs.get(jobId);
+  if (!job) return null;
+  job.touchedAt = Date.now();
+  const start = Math.max(0, Number(since) || 0);
+  return { items: job.items.slice(start), next: job.items.length, finished: job.finished };
+}
+
+/** 把「即將上傳」的預覽小檔讀進預覽工作。單檔或總量太大的略過（它們之後照樣會以雲端網址出現在信裡）。 */
+export async function addPreviewsToJob(job, previews, folderPath = '') {
+  for (const item of Array.isArray(previews) ? previews : []) {
+    try {
+      const buffer = await fs.readFile(item.previewPath);
+      if (buffer.length > PREVIEW_MAX_FILE_BYTES || job.totalBytes + buffer.length > PREVIEW_MAX_TOTAL_BYTES) continue;
+      job.totalBytes += buffer.length;
+      job.items.push({ fileName: path.basename(item.relPath), mimeType: 'image/jpeg', base64: buffer.toString('base64'), size: buffer.length, folder: folderPath });
+    } catch {
+      // 讀不到這張預覽就略過，不影響備份
+    }
+  }
 }

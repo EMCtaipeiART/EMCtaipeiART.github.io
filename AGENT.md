@@ -192,6 +192,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-02 Asia/Taipei — 設計師回覆信：NAS 圖片先放進信件，Google Drive 備份改在背景完成
+
+- 修改目的：使用者回報「備份 NAS 路徑裡的圖片要等轉小檔並備份到 Google Drive 才貼進信件，太慢」。
+- 實測（本機唯讀）：掃描＋壓成 1600px 小檔每張僅 0.1～0.26 秒（13 張共 964 MB 原檔總計 2.2 秒），不是瓶頸；Apps Script 呼叫固定開銷 1～2 秒；慢的是 Apps Script 依序對每張做查同名檔／建檔／設分享（未實測，依程式結構與原始碼註解「實測常要 30 秒」推估）。
+- 做法（方案 A）：壓好的小檔一兩秒就有了，不必等 Drive。①`uploadPendingRound` 新增選用回呼 `onEligible`，在決定好「真的要上傳哪些」之後、開始上傳之前呼叫；②選擇器伺服器為每次確認建立「預覽工作」（記憶體，10 分鐘清除，單檔 ≤3 MB、總量 ≤20 MB），新增 `GET /api/confirm-previews`（驗 pickerToken）；③選擇器頁面一邊等 `/api/confirm`、一邊每 0.5 秒輪詢，用 `postMessage` 的 `machi-nas-folder-previews` 轉交主頁（主頁是 https，不能直接連 http 的選擇器，所以必須經由彈窗轉送）；④主頁 `applyDesignerReplyEarlyPreviews` 把預覽圖當作**信件內嵌圖片（cid）**放進回覆信的圖片區；⑤備份完成後 `applyDesignerReplyImages` 保留已放進去的圖（使用者可能已調整大小），只補資料庫裡有、但沒放進來的（超過預覽上限或這一輪先前就備份過的）改用雲端網址，並開放送出。
+- **刻意保留：送出鍵仍要等 Drive 備份完成才亮**（避免漏掉先前已備份的圖、也避免修改紀錄還沒寫入就寄出）。改善的是「圖片等待」：圖一兩秒就出現，設計師可邊等邊寫信、調整圖片。若之後要連「送出」也提前，需另外處理收尾（確認輪次依賴資料庫已有該輪紀錄）。
+- 信件格式變動（使用者已選方案 A）：NAS 圖片由「Google 圖片連結」變成「信件內嵌圖片」，每張約 0.4 MB。內嵌圖片張數上限由 10 提高到 30（前端 `gmailInlineImageMaxCount`、Worker `GMAIL_INLINE_IMAGE_MAX_COUNT` 同步；總量 18 MB、單張 8 MB 不變）；預覽放進信件的總量另設 12 MB 上限，超過的以雲端網址補上。
+- 修改紀錄不重複備份：寄出／排程時 `inlineImagesNeedingBackup` 排除 `nasBacked` 的內嵌圖，只有使用者自己用「上傳照片」加入的才進 `backupDesignerReplyInlineImages`。
+- 相容性：舊版選擇器不會送預覽 → 主頁照舊等備份完成；新選擇器搭配舊主頁 → 預覽訊息被忽略。兩邊獨立升級都安全。「信件編輯不同步圖片」勾選時不放預覽。
+- 影響檔案：`index.html`、`scripts/nas_design_image_lib.mjs`（`onEligible`、預覽工作函式）、`scripts/nas_folder_picker_server.mjs`、`worker/src/database-coordinator.ts`（張數上限）、`backend/test/backend.test.mjs`、新增 `backend/test/nas-early-preview.test.mjs`。
+- 風險區塊：①信件體積變大（內嵌 vs 連結），Gmail 單封 25 MB 上限，12 MB 預覽上限＋18 MB 總量上限已留餘裕；②預覽圖是本機壓縮檔，跟備份到 Drive 的是同一批檔案；③選擇器改動需「發布更新」才會到各台設計師電腦，在那之前他們維持舊行為。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 227/227；Worker `vitest` 98/98；隔離環境（獨立埠號、假 NAS 與假 Drive 端點，延遲 4 秒）實測預覽 0.3 秒到、備份 4.2 秒完成、錯誤 token 回 401；真實瀏覽器 DOM 實測：重複檔名只放一次、備份完成後只補缺的圖並解鎖送出、cid 與雲端網址並存、NAS 圖不再備份而使用者自傳照片仍會備份。尚未用真實案件在正式站走完一輪量測實際秒數。
+- 部署狀態：前端 push 後 GitHub Pages 自動生效；Worker 需部署（張數上限）；選擇器／lib 需執行「發布更新」。
+- commit：見 git log（`perf: show NAS previews in the designer reply mail before the Drive backup finishes`）
+
 ### 2026-10-01 Asia/Taipei — 像素辦公室再降載：嵌入模式不用模糊陰影、約 25fps、縮放上限 1.5
 
 - 修改目的：使用者確認關閉像素辦公室後首頁就變順，要求辦公室本身別那麼卡。

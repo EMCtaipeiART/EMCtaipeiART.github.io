@@ -9221,7 +9221,7 @@ const gmailInlineImagesByEditor=new Map();
 const gmailInlineImageTasksByEditor=new Map();
 const gmailInlineImageGenerationsByEditor=new Map();
 const gmailInlineImageTypes=new Set(['image/jpeg','image/png','image/webp','image/gif']);
-const gmailInlineImageMaxCount=10,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
+const gmailInlineImageMaxCount=30,gmailInlineImageMaxBytes=8*1024*1024,gmailInlineImageMaxTotalBytes=18*1024*1024;
 let gmailInlineImageDragged=null; // {image,editor}——目前正在編輯區裡拖曳搬移的圖片，drop/dragend 後清空
 let gmailInlineImageDropCaretEl=null; // 拖曳圖片經過一般文字內容時，標示插入點的細直線，drop/dragend 後隱藏（不移除節點，重用同一個）
 function gmailInlineImageStore(editorId){
@@ -10684,7 +10684,7 @@ async function scheduleThreadReply(scheduledAt){
     let inlineImageBackupNotice='';
     if(replyMode==='designer'){
       // 照片內容在建立排程當下就已經確定，跟確認輪次一樣現在就備份，不用等排程真正寄出。
-      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,modal?.dataset.designerReplyRound,editorPayload.inlineImages)}
+      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,modal?.dataset.designerReplyRound,inlineImagesNeedingBackup(editor,editorPayload.inlineImages))}
     }else if(replyMode==='modification'&&row){
       await recordModificationFromReply(id,row,modificationContent,modification.links);
     }else if(replyMode==='general'&&row){
@@ -11804,6 +11804,11 @@ function handleUploadFrameMessage(event){
     // data.paths 缺漏時當備援。
     const startedFolderPaths=(Array.isArray(data.paths)&&data.paths.length?data.paths:[data.path]).map(p=>String(p||'').trim()).filter(Boolean);
     if(nasFolderPickerAfterReply&&activeNasFolderPickerCaseId)openDesignerReplyMailModal(activeNasFolderPickerCaseId,{folders:startedFolderPaths,round:activeNasFolderPickerRound,skipImages:nasFolderPickerSkipReplyImages});
+    return;
+  }
+  if(data.type==='machi-nas-folder-previews'){
+    if(!activeNasFolderPickerNonce||data.nonce!==activeNasFolderPickerNonce)return;
+    if(nasFolderPickerAfterReply&&!nasFolderPickerSkipReplyImages&&String(data.caseId||'')===String(activeNasFolderPickerCaseId||''))void applyDesignerReplyEarlyPreviews(data.items).catch(err=>console.warn('NAS 預覽圖放入信件失敗，等備份完成後會改用雲端圖片',err));
     return;
   }
   if(data.type==='machi-nas-folder-selected'){
@@ -13263,6 +13268,48 @@ function applyDesignerReplyVideoPaths(images){
   });
   designerReplyVideoRenderedHtml.set(container,String(container.innerHTML||''));
 }
+/** 這個編輯器裡，來自 NAS 備份預覽、放進信件的內嵌圖片檔名（這些圖片已經由 NAS 備份流程存進 Drive 與修改紀錄）。 */
+function nasBackedInlineNames(editor){
+  if(!editor)return new Set();
+  return new Set([...gmailInlineImageStore(editor.id).values()].filter(item=>item.nasBacked).map(item=>item.fileName));
+}
+/** 寄出／排程時只把「使用者自己上傳的照片」交給修改紀錄備份；NAS 預覽圖本來就由 NAS 備份存過了，再備份一次會重複。 */
+function inlineImagesNeedingBackup(editor,inlineImages){
+  const nasIds=new Set(editor?[...gmailInlineImageStore(editor.id).values()].filter(item=>item.nasBacked).map(item=>item.contentId):[]);
+  return (Array.isArray(inlineImages)?inlineImages:[]).filter(item=>!nasIds.has(item?.contentId));
+}
+const DESIGNER_REPLY_EARLY_PREVIEW_MAX_TOTAL_BYTES=12*1024*1024;
+/** NAS 備份最慢的是存進 Google Drive，但壓好的小檔一兩秒就有了：選擇器把這些小檔先送過來，直接當作信件內嵌圖片
+ * 放進「設計師回覆信」，設計師馬上看得到圖、可以邊等備份邊寫信。Drive 備份照常在背景完成，完成後
+ * （applyDesignerReplyImages）才開放送出，並補上沒放進來的圖。超過上限的小檔略過，之後會以雲端網址補上。 */
+async function applyDesignerReplyEarlyPreviews(items){
+  if(designerReplyModalOpening)await designerReplyModalOpening.promise.catch(()=>{});
+  const modal=$('#gmailThreadModal'),editor=$('#gmailThreadReplyEditor');
+  if(!modal||modal.hidden||modal.dataset.replyMode!=='designer'||!editor)return 0;
+  if(modal.dataset.designerReplySkipImages==='1')return 0;
+  const container=document.getElementById('gmailDesignerReplyImages');
+  if(!container)return 0;
+  const store=pruneGmailInlineImages(editor),placeholder=container.querySelector('.gmail-designer-reply-uploading');
+  const existing=nasBackedInlineNames(editor);
+  let total=[...store.values()].reduce((sum,item)=>sum+(item.size||0),0),added=0;
+  for(const raw of Array.isArray(items)?items:[]){
+    const fileName=String(raw?.fileName||'').trim(),base64=String(raw?.base64||'').replace(/\s+/g,''),mimeType=String(raw?.mimeType||'').toLowerCase();
+    if(!fileName||!base64||!gmailInlineImageTypes.has(mimeType)||existing.has(fileName))continue;
+    const size=Math.floor(base64.length*3/4);
+    if(store.size>=gmailInlineImageMaxCount||total+size>DESIGNER_REPLY_EARLY_PREVIEW_MAX_TOTAL_BYTES)continue;
+    const item={contentId:gmailInlineContentId(),fileName,mimeType,size,dataUrl:`data:${mimeType};base64,${base64}`,base64,nasBacked:true};
+    store.set(item.contentId,item);existing.add(fileName);total+=size;added++;
+    const image=createGmailEditorImage({src:item.dataUrl,alt:fileName,contentId:item.contentId,defaultWidth:180});
+    container.insertBefore(image,placeholder||null);
+    container.insertBefore(document.createTextNode(' '),placeholder||null);
+  }
+  if(added){
+    if(placeholder)placeholder.textContent='　圖片已先放進信件，正在備份到雲端，完成後即可送出...';
+    const sendBtn=$('#gmailThreadReplySend');
+    if(sendBtn&&modal.dataset.designerReplyPending==='1')sendBtn.textContent='備份中，完成即可送出...';
+  }
+  return added;
+}
 /** 把實際抓到的設計圖（陣列 {url,fileName}）局部塞進「設計師回覆信」編輯區裡的圖片佔位區塊，
  * 取代原本的「圖片上傳中...」文字，並解除送出按鈕的停用狀態——只動這個佔位容器本身，不會動到
  * 使用者可能已經在其他地方打好的文字。編輯區已經不是這個案件的「設計師回覆信」（例如使用者中途
@@ -13276,12 +13323,15 @@ function applyDesignerReplyImages(id,images,{round=null}={}){
   // 影片的完整 NAS 路徑屬於「路徑資訊」，照樣放進信件。
   const skipImages=modal.dataset.designerReplySkipImages==='1';
   if(container){
-    container.textContent='';
+    // 先前已經用本機預覽小檔放進信件的圖（見 applyDesignerReplyEarlyPreviews）原樣保留，使用者可能已經調整過大小或位置；
+    // 只補上資料庫裡有、但還沒放進去的（超過預覽上限的，或這一輪先前就備份過的）。
+    const early=nasBackedInlineNames($('#gmailThreadReplyEditor'));
+    if(early.size)container.querySelector('.gmail-designer-reply-uploading')?.remove();
+    else container.textContent='';
     if(!skipImages&&Array.isArray(images)&&images.length){
-      images.forEach(img=>appendDesignerReplyImageThumb(container,img));
-    }else{
-      container.remove();
+      images.filter(img=>!early.has(String(img?.fileName||''))).forEach(img=>appendDesignerReplyImageThumb(container,img));
     }
+    if(!container.querySelector('img'))container.remove();
   }
   applyDesignerReplyVideoPaths(images);
   modal.dataset.designerReplyPending='';
@@ -13502,7 +13552,7 @@ async function sendGmailThreadReply(){
       else if(row){
         // 確認輪次與備份照片互不相依，同時進行；案件狀態更新是本機樂觀更新，不必等。
         applyReplyStatusUpdate(id,row);
-        const results=await Promise.all([confirmLatestModificationRound(id,row),backupDesignerReplyInlineImages(id,designerReplyRound,editorPayload.inlineImages)]);
+        const results=await Promise.all([confirmLatestModificationRound(id,row),backupDesignerReplyInlineImages(id,designerReplyRound,inlineImagesNeedingBackup(editor,editorPayload.inlineImages))]);
         inlineImageBackupNotice=results[1]||'';
       }
     }else{

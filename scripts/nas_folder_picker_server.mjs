@@ -231,7 +231,7 @@ function readJsonBody(req) {
  * 呼叫端一次只處理一個資料夾就呼叫一次這支函式，不會合併成一次呼叫塞多
  * 個路徑，個別資料夾失敗也只會影響它自己這一筆結果。
  */
-async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0 }) {
+async function backupSelectedFolder({ config, configDir, mountRoot, relPath, caseId, keyword, folderIndex = 0, onPreviews = null }) {
   const dbData = await lib.fetchDatabaseWithCase(config, caseId);
   const meta = lib.findCaseMeta(dbData, caseId);
   if (!meta) {
@@ -292,7 +292,8 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
         pendingPreviews: scanResult.pendingPreviews,
         stateFiles: state[stateKey].files,
         roundState: state[stateKey],
-        persistState: () => lib.saveState(stateFile, state)
+        persistState: () => lib.saveState(stateFile, state),
+        onEligible: onPreviews
       });
       await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
       if (!upload.uploadedCount) {
@@ -628,21 +629,46 @@ const PICKER_PAGE = `<!doctype html>
     setStatus('背景備份中，可以忽略這個視窗...', true);
     hideBehindOpener();
     let result = null;
+    // 備份最慢的是存進 Google Drive；小檔掃完就有了，所以一邊等備份、一邊向伺服器要「已經壓好、即將上傳」
+    // 的預覽圖，轉交給主頁面的信件編輯器先顯示。取不到（舊版伺服器、網路問題）就靜靜略過，不影響備份。
+    const previewJobId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2));
+    let previewCursor = 0;
+    let previewPollingStopped = false;
+    async function pollPreviewsOnce(){
+      try{
+        const res = await fetch('/api/confirm-previews?jobId=' + encodeURIComponent(previewJobId) + '&since=' + previewCursor + '&token=' + encodeURIComponent(token));
+        const data = await res.json();
+        if(!res.ok || !data.success) return;
+        previewCursor = Number(data.next) || previewCursor;
+        if(Array.isArray(data.items) && data.items.length && window.opener){
+          window.opener.postMessage({ type: 'machi-nas-folder-previews', caseId, nonce, items: data.items }, origin || '*');
+        }
+      }catch(error){}
+    }
+    (async function previewLoop(){
+      while(!previewPollingStopped){
+        await pollPreviewsOnce();
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    })();
     try{
       const res = await fetch('/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caseId, token, folders: foldersToSubmit })
+        body: JSON.stringify({ caseId, token, folders: foldersToSubmit, previewJobId })
       });
       const data = await res.json();
       if(!res.ok || !data.success) throw new Error(data.message || ('HTTP ' + res.status));
       result = data;
     }catch(error){
+      previewPollingStopped = true;
       restoreWindowForPrompt();
       showErrorPrompt(error.message);
       return;
     }
 
+    previewPollingStopped = true;
+    await pollPreviewsOnce(); // 收尾再要一次，確保最後一批也送到
     const results = Array.isArray(result.results) ? result.results : [];
     const successResults = results.filter(item => item.ok !== false);
     const failedResults = results.filter(item => item.ok === false);
@@ -1101,7 +1127,10 @@ async function main() {
       // 每個資料夾各自獨立驗證路徑、獨立呼叫 backupSelectedFolder()——不合併成一次呼叫塞
       // 多個 path，單一資料夾驗證失敗或備份失敗都只會標記這一筆，不會讓整批請求跟著失敗，
       // 其餘資料夾仍會照常繼續處理。
+      const previewJobId = lib.normalizePreviewJobId(body.previewJobId);
+      const previewJob = previewJobId ? lib.createPreviewJob(previewJobId) : null;
       const results = [];
+      try {
       for (let index = 0; index < rawFolders.length; index += 1) {
         const folder = rawFolders[index] || {};
         const rawPath = String(folder.path || '');
@@ -1118,7 +1147,10 @@ async function main() {
           continue;
         }
         try {
-          const backup = await backupSelectedFolder({ config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword, folderIndex: index });
+          const backup = await backupSelectedFolder({
+            config, configDir, mountRoot, relPath: safe.relPath, caseId, keyword, folderIndex: index,
+            onPreviews: previewJob ? previews => lib.addPreviewsToJob(previewJob, previews, safe.relPath) : null
+          });
           results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup });
         } catch (error) {
           // 就算立即備份這段整個爆炸（例如讀資料庫失敗），路徑本身已經驗證過存在，
@@ -1127,7 +1159,22 @@ async function main() {
           results.push({ path: safe.relPath, keyword: keyword || '', ok: true, backup: { attempted: false, uploadedCount: 0, message: `立即備份時發生未預期錯誤：${error.message}` } });
         }
       }
+      } finally {
+        if (previewJob) previewJob.finished = true;
+      }
       sendJson(res, 200, { success: true, results });
+      return;
+    }
+
+    if (url.pathname === '/api/confirm-previews') {
+      if (requestToken(url) !== pickerToken) {
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
+        return;
+      }
+      const jobId = lib.normalizePreviewJobId(url.searchParams.get('jobId'));
+      const snapshot = jobId ? lib.readPreviewJob(jobId, url.searchParams.get('since')) : null;
+      // 還沒建立的工作（確認請求還沒送到）不算錯誤，回空清單讓頁面繼續等。
+      sendJson(res, 200, snapshot ? { success: true, ...snapshot } : { success: true, items: [], next: 0, finished: false });
       return;
     }
 
