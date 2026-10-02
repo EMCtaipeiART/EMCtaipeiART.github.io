@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6958,
+  "revision": 6959,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-02T18:26:15.379Z",
+  "updatedAt": "2026-10-02T18:27:00.055Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -999,7 +999,7 @@
         {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/03 02:18:12","修改日期":"2026/10/03 02:18:12","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/03 02:18:12","圖片連結":"[{\"fileName\":\"wardrobe-outfits.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1XoJ-N_4E7CWRycjadXwVavqTG3bzw2bp=w1600\"},{\"fileName\":\"無頭Q版角色十二格踢腿動畫圖集.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1tLdR4jJS-053CGF85-7aROoGrDQ3NXnb=w1600\"},{\"fileName\":\"wardrobe-outfits.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1oQzKpaYKxMBPRRdRL2f_3Y7I4owKbTV0=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/03 02:18:59"},
         {"案件編號":"26100014","修改次數":"0","建立日期":"2026/10/03 02:20:03","修改日期":"2026/10/03 02:20:03","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/03 02:20:03","圖片連結":"[{\"fileName\":\"無頭Q版角色十二格踢腿動畫圖集.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kswq6kso22RkvZ7mmD-MvSjq4sUSAn4y=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/10/03 02:20:03"},
         {"案件編號":"26100014","修改次數":"1","建立日期":"2026/10/03 02:23:39","修改日期":"2026-10-03","修改內容":"TEST","修改內容連結":"","修改人":"Machi","確認修正日":"2026/10/03 02:25:52","待修改圖片":"","圖片連結":"[{\"fileName\":\"wardrobe-outfits.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1bH4dlrNvGD1znacgqAft5d39w_frqYqR=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/03 02:25:44"},
-        {"案件編號":"26100014","修改次數":"2","建立日期":"2026/10/03 02:26:15","修改日期":"2026-10-03","修改內容":"EDFFDSFSDF","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100014","修改次數":"2","建立日期":"2026/10/03 02:26:15","修改日期":"2026-10-03","修改內容":"EDFFDSFSDF","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"wardrobe-outfits.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kxpvIe3d-Q2BfyqWee5KIT9xKAs6pGZI=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/03 02:27:00"}
       ]
     },
     "補充資料連結": {
