@@ -350,3 +350,4 @@ Site ID：`appgprj_6aaca751308881918d954eafdffcbb43`。
 - 新增每張 `hd`：頭部額外下移（`buildWardrobe` 的 `hy` 加 `B.hd`），蹲下那張頭往下 17 px；其他張的腳底落差只套一半，避免頭上下跳太多。
 - 後端 `PIXEL_OFFICE_ACTIONS` 要加 `kick: ['Machi']`（已改原始碼），**需重新部署 Worker**（`cd worker && pnpm deploy`），否則按了只有本機看得到、同步會被拒絕。
 - 2026-10-03 微調：浪子踢球改用逐張秒數 `dur`（站 300／蹲下 650／起跳 350／勾腳 600／其餘 110／收尾 250 ms，整圈約 3.2 秒）；狗熊哆嗦毛加頭部左右橫移（`headSway:4` px、每圈 `headPeriods:2` 次，`actionOf` 回傳 `hx`，由 `drawWardrobeNod` 把頭／帽子／眼鏡層位移、身體層不動）。
+- 2026-10-03：側身帽子後緣往前（`WD_SIDE_CAP_BACK=.07`：左緣右移帽寬的 7%、寬度同量縮短，帽沿尖端不動）。想再前／後調這個常數即可。
