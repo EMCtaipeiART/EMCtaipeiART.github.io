@@ -192,6 +192,11 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-02 Asia/Taipei — 修改紀錄圖片勾選框貼回縮圖左下角
+
+- 原因：全站 `input` 規則給 `min-height:36px`，勾選框雖設 `height:14px!important`，`min-height` 仍把它撐成 36px，從 `bottom:5px` 往上長，看起來偏上。
+- 修法：`.revision-image-select` 補 `min-width/min-height:16px!important`、`padding:0`，並設 `bottom:4px;left:4px`。只改 `index.html`；`node --test` 231 全過。
+
 ### 2026-10-02 Asia/Taipei — 設計圖可「移到其他案件」：解決合併信件後案件 B 的初稿沒有紀錄
 
 - 修改目的：合併信件一起寄出後，設計師回覆的 A、B 兩案圖檔全記在其中一個案件，另一案件的初稿沒有紀錄；需要能把圖搬到別的案件。
