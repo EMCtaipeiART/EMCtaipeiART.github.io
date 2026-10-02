@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { applyWeightToRow } from '../backend/weighting.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_PATH = resolve(SCRIPT_DIR, '../data/database_archive.json');
+const OUTPUT_PATH = process.env.ARCHIVE_OUTPUT_PATH ? resolve(process.env.ARCHIVE_OUTPUT_PATH) : resolve(SCRIPT_DIR, '../data/database_archive.json');
 const PRIMARY_DATABASE_PATH = process.env.PRIMARY_DATABASE_PATH ? resolve(process.env.PRIMARY_DATABASE_PATH) : resolve(SCRIPT_DIR, '../backend/data/db.json');
 const ARCHIVE_BASE_PATH = process.env.ARCHIVE_BASE_PATH ? resolve(process.env.ARCHIVE_BASE_PATH) : OUTPUT_PATH;
 
@@ -81,15 +81,6 @@ const databaseTable = database?.tables?.database;
 if (!databaseTable || !Array.isArray(databaseTable.rows)) throw new Error('backend/data/db.json is missing tables.database.rows');
 const settingsRows = Array.isArray(database?.tables?.['設定']?.rows) ? database.tables['設定'].rows : [];
 const modificationRows = Array.isArray(database?.tables?.['修改統計表']?.rows) ? database.tables['修改統計表'].rows : [];
-const dashboardData = {
-  settings: settingsRows.map(row => ({
-    '名字': text(row['名字']),
-    '顯示名': text(row['顯示名']),
-    '頭像連結': text(row['頭像連結'])
-  })),
-  modifications: clone(modificationRows)
-};
-
 const previousSnapshot = await readJson(ARCHIVE_BASE_PATH, { rows: [], columns: [] });
 const previousRows = Array.isArray(previousSnapshot) ? previousSnapshot : (Array.isArray(previousSnapshot.rows) ? previousSnapshot.rows : []);
 const currentDatabaseRowKeys = rowKeysByOccurrence(databaseTable.rows);
@@ -124,6 +115,25 @@ for (const [sourceIndex, sourceRow] of databaseTable.rows.entries()) {
 }
 
 const removedCaseIds = deletionSync.removedCaseIds;
+// 儀表板用的資料。修改紀錄除了現行資料庫裡的，還要保留「已搬進歷史、不在現行資料庫」的案件的紀錄：
+// 這些案件的修改紀錄搬走之後主資料庫就沒有了，只留在上一份歷史資料庫裡，所以從上一份沿用。
+// 只沿用「歷史資料庫還留著那筆案件」的紀錄——案件被刪掉的話（deletionSync 已經從 rows 拿掉），它的紀錄也跟著消失。
+const currentCaseIds = new Set(databaseTable.rows.map(caseId).filter(Boolean));
+const currentModificationCaseIds = new Set(modificationRows.map(caseId).filter(Boolean));
+const archivedCaseIds = new Set(rows.map(caseId).filter(Boolean));
+const previousModifications = Array.isArray(previousSnapshot?.dashboardData?.modifications) ? previousSnapshot.dashboardData.modifications : [];
+const preservedModifications = previousModifications.filter(row => {
+  const id = caseId(row);
+  return id && archivedCaseIds.has(id) && !currentCaseIds.has(id) && !currentModificationCaseIds.has(id);
+});
+const dashboardData = {
+  settings: settingsRows.map(row => ({
+    '名字': text(row['名字']),
+    '顯示名': text(row['顯示名']),
+    '頭像連結': text(row['頭像連結'])
+  })),
+  modifications: [...clone(modificationRows), ...clone(preservedModifications)]
+};
 const columns = [...new Set([...(Array.isArray(previousSnapshot?.columns) ? previousSnapshot.columns : []), ...(Array.isArray(databaseTable.headers) ? databaseTable.headers : []), ...rows.flatMap(row => Object.keys(row))].filter(Boolean))];
 const rowsSha256 = hash(rows), sourceRowsSha256 = hash(databaseTable.rows), dashboardDataSha256 = hash(dashboardData);
 // 只看案件資料本身有沒有變。主資料庫的版本號每寫一次就加一（個人設定、修改紀錄、客戶別都會加），以前把

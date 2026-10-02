@@ -5192,3 +5192,25 @@ test('選好排程時間只是「設定」，要再按送出才成立；待寄�
   const schedule = html.match(/async function scheduleComposeMail\(scheduledAt\)\{[\s\S]*?\n\}/)[0];
   assert.match(schedule, /要修改或取消請點案件的「信件」按鈕/);
 });
+
+test('history database keeps the modification records of cases that were moved out of the live database, and drops them when the case is deleted', async () => {
+  const { mkdtemp, writeFile: write, readFile: read } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const dir = await mkdtemp(join(tmpdir(), 'archive-'));
+  const row = (id, extra = {}) => ({ '案件編號': id, '狀態': '已完成', '專案名稱': `P${id}`, ...extra });
+  const mod = (id, n) => ({ '案件編號': id, '修改次數': String(n), '修改內容': `m${id}-${n}` });
+  const db = { revision: 5, updatedAt: '2026-10-02T00:00:00.000Z', tables: { database: { headers: ['案件編號', '狀態', '專案名稱'], rows: [row('26100001')] }, '修改統計表': { rows: [mod('26100001', 1)] }, '設定': { rows: [] }, '加權計分標準': { rows: [] } } };
+  const archive = { rows: [row('26060001'), row('26070001'), row('26100001')], currentDatabaseRowKeys: ['26100001#1'], dashboardData: { modifications: [mod('26060001', 1), mod('26070001', 2), mod('26099999', 1), mod('26100001', 1)] } };
+  await write(join(dir, 'db.json'), JSON.stringify(db));
+  await write(join(dir, 'in.json'), JSON.stringify(archive));
+  const script = (await import('node:url')).fileURLToPath(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url));
+  const run = () => execFileSync(process.execPath, [script], { env: { ...process.env, PRIMARY_DATABASE_PATH: join(dir, 'db.json'), ARCHIVE_BASE_PATH: join(dir, 'in.json'), ARCHIVE_OUTPUT_PATH: join(dir, 'out.json'), FORCE_SNAPSHOT: '1' } });
+  run();
+  const out = JSON.parse(await read(join(dir, 'out.json'), 'utf8'));
+  const ids = out.dashboardData.modifications.map(item => `${item['案件編號']}:${item['修改次數']}`).sort();
+  // 26060001、26070001 是搬進歷史的案件（歷史資料庫還有那筆案件）→ 紀錄保留；26099999 沒有對應案件 → 不保留；26100001 是現行案件 → 用主資料庫的。
+  assert.deepEqual(ids, ['26060001:1', '26070001:2', '26100001:1']);
+  assert.equal(out.rowCount, 3);
+});
