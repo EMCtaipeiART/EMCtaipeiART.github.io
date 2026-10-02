@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=80/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=81/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -714,7 +714,23 @@ test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留�
 
 test('Machi 對齊 Anna 的高度，Anna 與 Machi 坐下再往下約半個滑鼠高（10）：座位附近才位移，走遠了就不動', async () => {
   const js = await officeJs();
-  assert.match(js, /SEAT_LIFT=\[0,0,0,-10,12\]/);
+  assert.match(js, /SEAT_LIFT=\[0,0,0,-10,-2\.4\]/);
   assert.match(js, /Math\.max\(0,1-Math\.hypot\(q\.x-o\[0\],q\.y-o\[1\]\)\/80\)/);
   assert.match(js, /-seatLift\(i\),tilt=0/);
+});
+
+test('頭像與服裝換成 2026-10-02 的新版比例：圖集資料齊全，背面不帶臉的皮膚框', async () => {
+  const js = await officeJs();
+  const data = JSON.parse(js.match(/const WARDROBE=(\{.*?\});\nconst WARDROBE_OUTFITS/s)[1]);
+  assert.equal(data.heads.length, 5);
+  assert.equal(data.outfits.length, 6);
+  for (const person of data.heads) {
+    assert.equal(person.length, 3);
+    assert.ok(Array.isArray(person[0].s) && Array.isArray(person[1].s), '正面與側面要有臉的範圍');
+    assert.equal(person[2].s, undefined, '背面不能帶皮膚框（男生後腦勺的耳朵會被誤當成臉，帽子位置就錯了）');
+  }
+  for (const outfit of data.outfits) assert.equal(outfit.length, 3);
+  assert.equal(data.eyes.length, 5);
+  assert.match(js, /wardrobe-heads\.webp\?v=3/);
+  assert.match(js, /wardrobe-outfits\.webp\?v=3/);
 });
