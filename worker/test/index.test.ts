@@ -1674,6 +1674,8 @@ describe('Machi Design API Worker', () => {
 
     const moved = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '26080002', toRound: 0, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/b1' }] }, token);
     expect(moved).toMatchObject({ ok: true, caseId: '26080001', toCaseId: '26080002', toRound: 0, moved: 1 });
+    // 目標案件收到初稿備份 → 狀態自動改成過稿中
+    expect(moved).toMatchObject({ status: '過稿中', statusChanged: true });
 
     const imagesOf = async (caseId: string) => {
       const records = await api({ action: 'listModificationRecords', ids: [caseId] }, token);
@@ -1686,6 +1688,31 @@ describe('Machi Design API Worker', () => {
     const unknownCase = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '29990101', toRound: 0, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/a1' }] }, token);
     expect(unknownCase).toMatchObject({ ok: false });
     expect(String(unknownCase.error)).toContain('找不到目標案件');
+  });
+
+  it('sets the target case to 過稿中 when it receives the 初稿 from another case, but leaves 過稿中／已完成／已取消 and same-case moves alone', async () => {
+    const token = await login();
+    await seedCase('26080003', { '狀態': '執行中' });
+    await seedCase('26080004', { '狀態': '已完成' });
+    await seedCase('26080005', { '狀態': '過稿中' });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'status-move-file-sha' }, commit: { sha: 'status-move-commit-sha' } }));
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 0, images: [
+      { fileName: 's1.jpg', url: 'https://lh3.googleusercontent.com/d/s1' },
+      { fileName: 's2.jpg', url: 'https://lh3.googleusercontent.com/d/s2' },
+      { fileName: 's3.jpg', url: 'https://lh3.googleusercontent.com/d/s3' }
+    ] });
+    const move = (toCaseId: string, name: string) => api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId, toRound: 0, images: [{ round: 0, url: `https://lh3.googleusercontent.com/d/${name}` }] }, token);
+
+    expect(await move('26080003', 's1')).toMatchObject({ ok: true, status: '過稿中', statusChanged: true });
+    expect(await move('26080004', 's2')).toMatchObject({ ok: true, status: '已完成', statusChanged: false });
+    expect(await move('26080005', 's3')).toMatchObject({ ok: true, status: '過稿中', statusChanged: false });
+
+    const list = await api({ action: 'list' }, token);
+    const statusOf = (id: string) => (list.rows as Record<string, unknown>[] | undefined)?.find(row => row.id === id)?.status;
+    if (list.rows) {
+      expect(statusOf('26080003')).toBe('過稿中');
+      expect(statusOf('26080004')).toBe('已完成');
+    }
   });
 
   it('treats the designer-reply photo backup as done when Apps Script already recorded the images, even if Google fails to return the result page', async () => {

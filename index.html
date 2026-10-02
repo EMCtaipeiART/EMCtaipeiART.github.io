@@ -7941,7 +7941,7 @@ const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
   add:['database','補充資料連結'],append:['database','補充資料連結'],create:['database','補充資料連結'],submit:['database','補充資料連結'],save:['database','補充資料連結'],
   batchAdd:['database','補充資料連結'],batchAppend:['database','補充資料連結'],addRows:['database','補充資料連結'],batchUpdate:['database','補充資料連結'],update:['database','補充資料連結'],delete:['database'],createFlatProject:['database','設定','平面新開專案','影音新開專案'],
-  createShortLink:['短連結'],ownerConfirmCases:['database'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
+  createShortLink:['短連結'],ownerConfirmCases:['database'],moveCaseDesignImages:['修改統計表','database'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
   saveUserSettings:['設定'],saveDesignerProfiles:['設定'],uploadUserAvatar:['設定'],
   toggleReelReaction:['reels'],addReelComment:['reels'],reportIssue:['bug_report'],updateIssueReportStatus:['bug_report'],markSystemAnnouncementRead:['系統公告欄']
 });
@@ -12638,17 +12638,21 @@ async function moveSelectedCaseDesignImages(id,toRound,toCaseId=''){
   const items=revisionSelectionItems().filter(item=>crossCase||item.round!==toRound);
   if(!items.length){setSync('選取的圖片已經在這一輪了',true,3200);return}
   const label=crossCase?`案件 ${toCaseId} 的${modificationLabel(toRound)}`:modificationLabel(toRound);
-  if(!(await showAppConfirm({title:`移動 ${items.length} 張設計圖`,message:`確定要把這 ${items.length} 張設計圖移到「${label}」的修改紀錄嗎？${crossCase?'\n（目標案件沒有初稿紀錄時會自動建立）':''}\n（Google Drive 原始檔案不會被搬動或刪除）`,confirmText:'確定移動'})))return;
+  if(!(await showAppConfirm({title:`移動 ${items.length} 張設計圖`,message:`確定要把這 ${items.length} 張設計圖移到「${label}」的修改紀錄嗎？${crossCase?(toRound===0?'\n（目標案件沒有初稿紀錄時會自動建立；案件狀態會改為「過稿中」，這幾張圖會從原案件的紀錄移除）':'\n（這幾張圖會從原案件的紀錄移除）'):''}\n（Google Drive 原始檔案不會被搬動或刪除）`,confirmText:'確定移動'})))return;
   const moveBtn=$('#revisionSelectionMove'); if(moveBtn)moveBtn.disabled=true;
   setSync('移動圖片中...');
   try{
     const data=await sheetApi('moveCaseDesignImages',{caseId:id,toRound,...(crossCase?{toCaseId:String(toCaseId).trim()}:{}),images:items,editorToken:currentEditorToken,_requireResponse:true});
     revisionImageSelection.clear();
+    // 目標案件收到初稿後 Worker 會把它的狀態改成過稿中：本機同步更新，不必等背景重新載入。
+    let targetStatusNote='';
+    if(crossCase&&data?.statusChanged){const targetId=String(toCaseId).trim(),changes={status:data.status||'過稿中'};rememberLocalWrite(targetId,changes);rows=rows.map(r=>String(r.id)===targetId?normalizeRow({...r,...changes}):r);save();targetStatusNote=`，案件 ${targetId} 已改為${changes.status}`}
+    if(crossCase)publishDatabaseRefresh('moveCaseDesignImages',data);
     try{await fetchModificationCounts()}catch(err){}
     render(); refreshOpenRevisionModal(id); refreshOpenCaseDetail(id);
     if(crossCase){refreshOpenRevisionModal(toCaseId); refreshOpenCaseDetail(toCaseId)}
     const moved=Number(data?.moved)||items.length, skipped=Number(data?.skipped)||0;
-    setSync(`已把 ${moved} 張設計圖移到${label}${skipped?`（${skipped} 張略過，可能已經在那一輪）`:''}`,false,3200);
+    setSync(`已把 ${moved} 張設計圖移到${label}${targetStatusNote}${skipped?`（${skipped} 張略過，可能已經在那一輪）`:''}`,false,4200);
   }catch(err){
     if(moveBtn)moveBtn.disabled=false;
     setSync(`移動圖片失敗：${err.message}`,true,4200);
