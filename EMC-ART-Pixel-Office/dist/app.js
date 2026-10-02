@@ -155,6 +155,7 @@ const WARDROBE_CAPS=[{id:'',label:'無'},{id:'black',label:'黑帽'},{id:'blue',
 const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_SIDE_BODY_SHIFT=12,WD_DROP=[0,0,0,0,10],WD_BODY_DX=[-8,0,0,-8,0],WD_GLASSES_W=120,WD_GLASSES_DX=[-8,0,0,-8,0],WD_GLASSES_DY=[0,0,8,0,8];// 眼鏡位置微調（原圖像素）：Anna 與 Leona 往左、Noise 與 Machi 往下（使用者 2026-10-02）
 // WD_BODY_DX：衣服整體左右位移（原圖像素，負＝往左）：Leona 與 Anna 的衣服偏右（使用者 2026-10-02 回報）。
 // WD_GLASSES_W：眼鏡與墨鏡的寬度（原圖像素），所有人一樣大、約等於兩邊臉頰的寬度（原本 100 太小，2026-10-02 使用者要求放大切齊臉頰）；不依各人臉寬換算（皮膚框含耳朵，男生會偏大）。
+const WD_SIDE_GLASSES_L=.15,WD_EAR_TOP=[1.5,3,-1,3,3],WD_SIDE_CAP_GROW=1.18;// 側面眼鏡左緣在膚色框的比例、耳朵上沿相對眼睛的位置（頭圖像素）、側面帽子放大倍率（使用者 2026-10-02）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
 wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=3';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=3';// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
 Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();};});
@@ -183,12 +184,16 @@ function buildWardrobe(i,view,look){
   const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
   const eye=D.eyes[i][view];
   if(look.glasses&&view<2&&accessoriesReady()){
-    const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0],s=WD_GLASSES_W/gf.w*(view===1?.95:1),w=g.w*s,h=g.h*s;
-    layers.push({sheet:'acc',src:g,w,h,x:(view===0?hx+chin.x*K-w/2:hx+eye.x*K-w+w*.18)+WD_GLASSES_DX[i],y:hy+eye.y*K-h/2+WD_DROP[i]+WD_GLASSES_DY[i]});
+    const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0];
+    if(view===0){const s=WD_GLASSES_W/gf.w,w=g.w*s,h=g.h*s;layers.push({sheet:'acc',src:g,w,h,x:hx+chin.x*K-w/2+WD_GLASSES_DX[i],y:hy+eye.y*K-h/2+WD_DROP[i]+WD_GLASSES_DY[i]});}
+    else{// 側面：左右從耳朵前緣到臉頰最前面、上緣對齊耳朵上沿
+      const span=sk[1]-sk[0],left=hx+(sk[0]+span*WD_SIDE_GLASSES_L)*K,right=hx+sk[1]*K,s=(right-left)/g.w,w=g.w*s,h=g.h*s;
+      layers.push({sheet:'acc',src:g,w,h,x:left,y:hy+(eye.y+WD_EAR_TOP[i])*K+WD_DROP[i]});}
   }
   if(look.cap&&accessoriesReady()){
-    const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s;
-    layers.push({sheet:'acc',src:c,w,h,x:view===1?hx+w*.06:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*(view===1?.32:.34)+WD_DROP[i]});
+    const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s,bigS=view===1?H.w*K*factor*WD_SIDE_CAP_GROW/c.w:s,bw=c.w*bigS,bh=c.h*bigS;
+    // 側面：左緣固定、帽子放大，帽沿往前超出頭髮；下緣不動（往上長）
+    layers.push(view===1?{sheet:'acc',src:c,w:bw,h:bh,x:hx+w*.06,y:hy+sk[2]*K-h+h*.32+WD_DROP[i]+h-bh}:{sheet:'acc',src:c,w,h,x:hx+H.w*K/2-w/2,y:hy+sk[2]*K-h+h*.34+WD_DROP[i]});
   }
   const minX=Math.min(...layers.map(l=>l.x)),minY=Math.min(...layers.map(l=>l.y)),maxX=Math.max(...layers.map(l=>l.x+l.w)),maxY=Math.max(...layers.map(l=>l.y+l.h));
   const canvas=document.createElement('canvas');canvas.width=Math.ceil(maxX-minX)+2;canvas.height=Math.ceil(maxY-minY)+2;

@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=85/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=86/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -664,7 +664,7 @@ test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子�
   assert.match(js, /WD_SIDE_BODY_SHIFT=12/);
   assert.match(js, /x:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[i\]/);
   assert.match(js, /WD_BODY_DX=\[-8,0,0,-8,0\]/);
-  assert.match(js, /x:view===1\?hx\+w\*\.06:/);
+  assert.match(js, /x:hx\+w\*\.06,y:hy\+sk\[2\]\*K-h\+h\*\.32\+WD_DROP\[i\]\+h-bh/);
   // 側面眼睛位置（頭像圖上的 x）：Leona 約 88、Machi 約 77，不是原本誤抓的 68／49。
   const eyes = JSON.parse(js.match(/"eyes":(\[\[.*?\]\])\};/s)[1]);
   assert.ok(eyes[0][1].x > 85 && eyes[4][1].x > 74, '側面眼睛 x 要靠臉的前緣');
@@ -674,7 +674,7 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
   const js = await officeJs();
   assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
   assert.match(js, /y:WD_DROP\[i\],/);
-  assert.equal((js.match(/\+WD_DROP\[i\](?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 2, '眼鏡與帽子都要加上');
+  assert.equal((js.match(/\+WD_DROP\[i\](?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 3, '眼鏡（正面、側面）與正面帽子都要加上');
 });
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
@@ -688,13 +688,14 @@ test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子�
 
 test('帽子比之前再往下一點（正面 .34、側面 .32 倍帽高）', async () => {
   const js = await officeJs();
-  assert.match(js, /h\*\(view===1\?\.32:\.34\)\+WD_DROP\[i\]/);
+  assert.match(js, /h\*\.32\+WD_DROP\[i\]\+h-bh[\s\S]*h\*\.34\+WD_DROP\[i\]/);
 });
 
 test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算）', async () => {
   const js = await officeJs();
   assert.match(js, /WD_GLASSES_W=120,WD_GLASSES_DX=\[-8,0,0,-8,0\],WD_GLASSES_DY=\[0,0,8,0,8\]/);
-  assert.match(js, /s=WD_GLASSES_W\/gf\.w\*\(view===1\?\.95:1\),w=g\.w\*s/);
+  assert.match(js, /const s=WD_GLASSES_W\/gf\.w,w=g\.w\*s/);
+  assert.match(js, /WD_SIDE_GLASSES_L=\.15,WD_EAR_TOP=\[1\.5,3,-1,3,3\],WD_SIDE_CAP_GROW=1\.18/);
 });
 
 test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留必要的圖，Spotify 播放器等使用者有動作才載', async () => {
