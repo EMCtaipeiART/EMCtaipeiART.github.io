@@ -343,3 +343,9 @@ Site ID：`appgprj_6aaca751308881918d954eafdffcbb43`。
 - 同步：`pixelOfficeUpdate` 的 `action` 欄位（後端 `PIXEL_OFFICE_ACTIONS` 限制誰能用，時間用伺服器的）；畫面只在開始後 `ms` 內播放。新增動作＝加圖集、`WARDROBE_ACTIONS` 一筆、後端 `PIXEL_OFFICE_ACTIONS` 一筆。
 - 第二個動作「狗熊哆嗦毛」（`WARDROBE_ACTIONS.bear`，只有 Machi）：12 張、每張 100 ms 循環，身體畫橢圓圈晃動（左右 ±8 px、上下 6 px、傾斜 ±.02 rad，每圈 1 次、逆時針）。手舉到臉旁的幾張（over）身體畫在頭上面、手蓋住臉的兩張（noGlasses）不畫眼鏡。每個動作各有自己的圖集（`def.src`），按下才載。
 - 進站再瘦身（2026-10-02）：後端會一直留著最後一次的動作，以前每次進站都因此下載 112 KB 的動作圖集；現在只有動作還在播放時間內才載。加班濾鏡圖（69 KB）改成第一次要畫時才載。耳機改成靜態單張（10 KB，原本 77 KB 的六格動態圖）。
+
+## 動作：浪子踢球（2026-10-03）
+- 第三個動作「浪子踢球」（`WARDROBE_ACTIONS.kick`，只有 Machi）：12 張、每張 110 ms 循環，第 0、11 張（站姿）各多停 250 ms；不位移（`move:'none'`）。三個動作現在都是 `ms:Infinity`（不限時，要自己再按一次停止）。
+- 素材 `assets/wardrobe-action-kick.webp`（92 KB）：使用者提供的 4×3 無頭身體圖，白底去背（從邊緣填色，邊緣半透明）、逐格裁切、縮 .61、橫排。每張的 `n`＝脖子中心 x、`t`＝身體往上提的量（依腳底對齊地面算）。
+- 新增每張 `hd`：頭部額外下移（`buildWardrobe` 的 `hy` 加 `B.hd`），蹲下那張頭往下 17 px；其他張的腳底落差只套一半，避免頭上下跳太多。
+- 後端 `PIXEL_OFFICE_ACTIONS` 要加 `kick: ['Machi']`（已改原始碼），**需重新部署 Worker**（`cd worker && pnpm deploy`），否則按了只有本機看得到、同步會被拒絕。

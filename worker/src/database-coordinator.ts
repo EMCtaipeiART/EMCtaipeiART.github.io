@@ -158,7 +158,7 @@ const PIXEL_OFFICE_CALENDAR_MAX_MEETING_MS = 4 * 60 * 60 * 1000;
 // 中判斷，不寫入 Durable Object、log 或前端，避免把行事曆內容帶進設計系統。
 const PIXEL_OFFICE_LEAVE_KEYWORDS = /(?:休假|請假|特休|年假|補休|病假|事假|婚假|產假|陪產|喪假|公假|生理假|家庭照顧假|vacation|\bpto\b|annual\s+leave|sick\s+leave|personal\s+leave|day\s+off|out\s+of\s+office|\booo\b)/i;
 // 動作（人物小動畫）：id → 可以使用的人。畫面那邊（app.js 的 WARDROBE_ACTIONS）要一致。
-const PIXEL_OFFICE_ACTIONS: Record<string, string[]> = { dodge: ['Machi'], bear: ['Machi'] };
+const PIXEL_OFFICE_ACTIONS: Record<string, string[]> = { dodge: ['Machi'], bear: ['Machi'], kick: ['Machi'] };
 // 只在這個時段查行事曆，其餘時間不必浪費 API 配額（台北時間）。
 const PIXEL_OFFICE_CALENDAR_START_HOUR = 8;
 const PIXEL_OFFICE_CALENDAR_END_HOUR = 22;
