@@ -3,6 +3,7 @@ import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
 import { pixelOfficeCalendarEventState } from '../src/database-coordinator';
+import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
 import type { DatabaseSnapshot, SessionRecord } from '../src/types';
@@ -4959,5 +4960,18 @@ describe('Pixel Office calendar: tagged leave notices', () => {
     expect(pixelOfficeCalendarEventState({ ...base, summary: '請假', organizer: { email: 'anna@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('leave');
     expect(pixelOfficeCalendarEventState({ ...base, summary: 'Anna 休假', organizer: { email: 'x@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('leave');
     expect(pixelOfficeCalendarEventState({ ...base, summary: '專案週會', organizer: { email: 'x@emctaipei.com' } }, 'anna@emctaipei.com', 'Anna')).toBe('meeting');
+  });
+});
+
+describe('database size: idempotency records', () => {
+  it('keeps only the newest entries so the published JSON does not grow forever', () => {
+    const idempotency: Record<string, Record<string, unknown>> = {};
+    for (let i = 0; i < 250; i += 1) idempotency[`req-${i}`] = { ok: true, n: i };
+    const database = { internal: { sessions: {}, idempotency } } as never;
+    pruneIdempotency(database, 100);
+    const keys = Object.keys(idempotency);
+    expect(keys).toHaveLength(100);
+    expect(keys[0]).toBe('req-150');
+    expect(keys.at(-1)).toBe('req-249');
   });
 });

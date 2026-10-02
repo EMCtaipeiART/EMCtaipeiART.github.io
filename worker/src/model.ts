@@ -104,6 +104,17 @@ export function normalizeSnapshot(input: unknown): DatabaseSnapshot {
   database.internal.idempotency ||= {};
   return database;
 }
+/** 冪等紀錄（重送同一個 requestId 時回放結果）只需要保留最近幾筆：重送都發生在幾分鐘內。
+ *  以前永遠不清，累積到 447 筆、約 340 KB，而這份資料庫是整個公開下載給每位使用者的（佔下載量近兩成）。
+ *  只留最新的 keep 筆（物件的插入順序＝時間順序；requestId 是 UUID，不是純數字，順序不會被打亂）。 */
+export const IDEMPOTENCY_KEEP = 100;
+export function pruneIdempotency(database: DatabaseSnapshot, keep = IDEMPOTENCY_KEEP): void {
+  const entries = database.internal?.idempotency;
+  if (!entries || typeof entries !== 'object') return;
+  const keys = Object.keys(entries);
+  if (keys.length <= keep) return;
+  for (const key of keys.slice(0, keys.length - keep)) delete entries[key];
+}
 export function weightRules(database: DatabaseSnapshot): Row[] { return database.tables['加權計分標準']?.rows || []; }
 type WeightRule = {
   '設計種類': string | number;

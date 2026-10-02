@@ -5,7 +5,7 @@ import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
-  hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot,
+  hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
@@ -2352,6 +2352,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         draft.revision = Math.max(0, Number(draft.revision) || 0) + 1;
         draft.updatedAt = new Date().toISOString();
         draft.internal.sessions = {};
+        pruneIdempotency(draft);
         try {
           const committed = await commitGitHubDatabase(this.env, draft, stored.sha, commitMessage(action, session));
           this.persistSnapshot({ database: committed.database, sha: committed.sha });
