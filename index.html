@@ -12337,11 +12337,17 @@ function populateDateSelectGroup(groupEl,dateValue){
   daySel.innerHTML=Array.from({length:maxDay},(_,i)=>{const d=String(i+1).padStart(2,'0'); return `<option value="${d}"${Number(d)===keepDay?' selected':''}>${d}日</option>`}).join('');
   syncDateSelectHidden(groupEl);
 }
-function resetDateSelectGroupsToToday(){dateSelectGroups().forEach(groupEl=>populateDateSelectGroup(groupEl,todayInputValue()))}
+/** 填需求時「開始／結束時間」的預設日：台北時間 18:00（下班）以後才發的需求算隔天開始，其他時間算今天。modifyDate 等紀錄日期仍用 todayInputValue()（真實今天）。 */
+function requestDefaultDateValue(){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+  const d=new Date(Date.UTC(+p.year,+p.month-1,+p.day));if(+p.hour>=18)d.setUTCDate(d.getUTCDate()+1);
+  return d.toISOString().slice(0,10);
+}
+function resetDateSelectGroupsToToday(){dateSelectGroups().forEach(groupEl=>populateDateSelectGroup(groupEl,requestDefaultDateValue()))}
 function syncDateSelectGroupsFromHidden(){
   dateSelectGroups().forEach(groupEl=>{
     const field=groupEl.dataset.dateField, hidden=field?formEl.elements[field]:null;
-    populateDateSelectGroup(groupEl,hidden?.value||todayInputValue());
+    populateDateSelectGroup(groupEl,hidden?.value||requestDefaultDateValue());
   });
 }
 function initDateSelectGroups(){
@@ -12384,8 +12390,8 @@ function openFlatProjectModal(designer){
   populateFlatProjectSelects(designer);
   form.elements.expectedDesigner.value=designer;
   if(currentLoginOwnerName())form.elements.owner.value=currentLoginOwnerName();
-  form.elements.start.value=todayInputValue();
-  form.elements.end.value=todayInputValue();
+  form.elements.start.value=requestDefaultDateValue();
+  form.elements.end.value=requestDefaultDateValue();
   $('#flatProjectTitle').textContent=`新開${group.kind}專案｜預計設計師：${designer}`;
   updateFlatProjectReasonVisibility();
   modal.hidden=false;
