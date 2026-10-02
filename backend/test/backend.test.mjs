@@ -5214,3 +5214,23 @@ test('history database keeps the modification records of cases that were moved o
   assert.deepEqual(ids, ['26060001:1', '26070001:2', '26100001:1']);
   assert.equal(out.rowCount, 3);
 });
+
+test('monthly archiving keeps the newest 3 months and only moves fully closed cases', async () => {
+  const { caseIdsToArchive, oldestKeptYymm, archiveOldCases } = await import('../../scripts/archive_old_cases.mjs');
+  const oct = new Date('2026-10-01T01:00:00Z');
+  assert.equal(oldestKeptYymm(oct, 3), 2608);
+  assert.equal(oldestKeptYymm(new Date('2027-01-05T01:00:00Z'), 3), 2611);
+  const row = (id, status) => ({ '案件編號': id, '狀態': status });
+  const rows = [row('26060001', '已完成'), row('26070001', '已完成'), row('26070002', '已完成'), row('26070002', '修改中'), row('26070003', '暫停中'), row('26070004', '已取消'), row('26080001', '已完成'), row('26100001', '已完成')];
+  assert.deepEqual([...caseIdsToArchive(rows, oct)].sort(), ['26060001', '26070001', '26070004']);
+  const db = { revision: 1, tables: { database: { rows: JSON.parse(JSON.stringify(rows)) }, '修改統計表': { rows: [{ '案件編號': '26060001' }, { '案件編號': '26100001' }] }, '補充資料連結': { rows: [{ '案件編號': '26070001' }] } } };
+  const archive = { rows: JSON.parse(JSON.stringify(rows)), currentDatabaseRowKeys: ['26060001#1', '26070001#1', '26100001#1'] };
+  const summary = archiveOldCases(db, archive, oct);
+  assert.equal(summary.cases, 3);
+  assert.deepEqual(db.tables.database.rows.map(r => r['案件編號']), ['26070002', '26070002', '26070003', '26080001', '26100001']);
+  assert.deepEqual(db.tables['修改統計表'].rows.map(r => r['案件編號']), ['26100001']);
+  assert.equal(db.tables['補充資料連結'].rows.length, 0);
+  assert.equal(archive.rows.length, rows.length, '歷史資料庫一列都不能少');
+  assert.deepEqual(archive.currentDatabaseRowKeys, ['26100001#1']);
+  assert.equal(db.revision, 2);
+});

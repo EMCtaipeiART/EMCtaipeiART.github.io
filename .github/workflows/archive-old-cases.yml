@@ -1,0 +1,75 @@
+name: Archive cases older than 3 months
+
+# 每月 1 日台北時間 09:00（UTC 01:00）把超過 3 個月的已結案案件搬進歷史資料庫，
+# 讓現行資料庫（每位使用者進站都要下載的 backend/data/db.json）只留最近 3 個月。規則與說明見 scripts/archive_old_cases.mjs。
+on:
+  schedule:
+    - cron: "0 1 1 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "只列出會搬什麼，不寫入（true / false）"
+        default: "true"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: archive-old-cases
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Move old cases to the history database
+        id: archive
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ "${DRY_RUN_INPUT}" = "true" ]; then
+            DRY_RUN=1 node scripts/archive_old_cases.mjs
+            exit 0
+          fi
+
+          # 資料庫隨時可能被寫入：每次都從最新的 main 重新算，推送失敗就重來。
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+
+            summary="$(node scripts/archive_old_cases.mjs)"
+            echo "$summary"
+            if git diff --quiet -- backend/data/db.json data/database_archive.json; then
+              echo "Nothing to archive."
+              exit 0
+            fi
+
+            node scripts/generate_database_archive_snapshot.mjs
+            git add backend/data/db.json data/database_archive.json
+            git commit -m "data: move cases older than 3 months to the history database" -m "$summary"
+            if git push origin HEAD:main; then
+              # 用 GITHUB_TOKEN 推送不會觸發其他 workflow，手動叫「同步歷史資料庫並部署網站」那支跑一次。
+              gh workflow run update-database-archive.yml || true
+              exit 0
+            fi
+            echo "Main changed during attempt ${attempt}; recalculating from the newest main."
+            sleep $((attempt * 2))
+          done
+
+          echo "::error::Could not archive old cases after five attempts because main kept changing."
+          exit 1
