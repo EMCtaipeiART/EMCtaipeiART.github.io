@@ -309,7 +309,7 @@ curl -s -X POST https://machi-design-api.machi-chen.workers.dev/api \
 
 - **原本的像素人物（`sprites-packed.webp` 圖集）已從遊戲下架**，`sprite()` 一律走組合版，不再載入、預載舊圖集（檔案還留在 `dist/assets/` 與 `tools/character-fitter.html` 只是歷史參考，遊戲不再讀）。
 - 預設造型（`lookDefault`）＝每個人現在的樣子：Leona 黑西裝（2）、Amber 米白襯衫（3）、Noise 丹寧外套＋藍帽（4）、Machi 黑色連帽衫（5）、Anna 藍色 T 恤（1）。**衣服只有 Anna 可以換**（藍／黃，`outfitChoices`），其他人衣服固定；帽子與眼鏡大家都能換。後端存的造型會被 `effectiveLook` 補上預設值，後端若存了不能換的衣服會被忽略。選回預設值就清掉後端的紀錄（「恢復預設造型」鈕也一樣）。
-- 耳機（2026-10-02 起）全員同樣大小、同樣對位，以 Anna 確認過的為準：兩個耳罩外緣 `HP_SPAN_W`＝204 原圖像素、耳罩中心在眼睛下方 `HP_EAR_DY`＝2、在臉中心左 `HP_DX_NAT`＝3；眼鏡與墨鏡寬度 `WD_GLASSES_W`＝100，也是全員一樣。之前依臉寬換算（皮膚框含耳朵，男生會偏大）已拿掉。Leona 與 Anna 的衣服往左 `WD_BODY_DX`＝-8。加班黑眼圈同樣改用這個眼睛位置。
+- 耳機（2026-10-02 起）全員同樣大小、同樣對位，以 Anna 確認過的為準：兩個耳罩外緣 `HP_SPAN_W`＝204 原圖像素、耳罩中心在**下巴上方** `HP_CHIN_UP`＝43.4、在臉中心左 `HP_DX_NAT`＝3（一開始用眼睛位置換算，但男生的眼睛畫得比較高，Machi 的耳機就比 Anna 高一截，所以改以下巴為基準）；眼鏡與墨鏡寬度 `WD_GLASSES_W`＝120，約等於兩邊臉頰的寬度，也是全員一樣。之前依臉寬換算（皮膚框含耳朵，男生會偏大）已拿掉。Leona 與 Anna 的衣服往左 `WD_BODY_DX`＝-8。加班黑眼圈同樣改用這個眼睛位置。
 
 ## 進站瘦身（2026-10-01）
 

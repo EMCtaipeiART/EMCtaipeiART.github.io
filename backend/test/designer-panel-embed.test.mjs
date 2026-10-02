@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=83/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=84/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -614,7 +614,7 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
 test('耳機位置往左下收、點綠色播放鈕直接播放（先預載 Spotify 播放器）', async () => {
   const js = await officeJs();
   // 耳機全員同大小、同對位（以 Anna 確認過的為準）。
-  assert.match(js, /HP_SPAN_W=204,HP_EAR_DY=2,HP_DX_NAT=-3/);
+  assert.match(js, /HP_SPAN_W=204,HP_CHIN_UP=43\.4,HP_DX_NAT=-3/);
   assert.doesNotMatch(js, /HP_SIZE|HP_DY=\[/);
   assert.match(js, /const g=fr\.geom,S=WD_SCALE,fw=HP_SPAN_W\/\.8\*S/, '耳機全員同大小，位置跟著臉中心與眼睛走');
   assert.match(js, /if\(p\.music&&p\.music\.provider==='spotify'\)wantSpotifyApi\(\)/);
@@ -693,7 +693,7 @@ test('帽子比之前再往下一點（正面 .34、側面 .32 倍帽高）', as
 
 test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算）', async () => {
   const js = await officeJs();
-  assert.match(js, /WD_GLASSES_W=100/);
+  assert.match(js, /WD_GLASSES_W=120/);
   assert.match(js, /s=WD_GLASSES_W\/gf\.w\*\(view===1\?\.95:1\),w=g\.w\*s/);
 });
 
