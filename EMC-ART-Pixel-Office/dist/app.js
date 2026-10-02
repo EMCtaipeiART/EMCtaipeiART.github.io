@@ -173,8 +173,8 @@ const wardrobeCache=new Map();
 // frames 的 n 是脖子中心 x、t 是脖子頂端離圖片上緣的距離（手舉過頭時圖片上緣不是脖子）。over：這幾張手在臉旁邊，身體要畫在頭上面。noGlasses：這幾張不畫眼鏡（手蓋住臉）。
 const WARDROBE_ACTIONS={
   dodge:{label:'閃身步',who:[4],src:'assets/wardrobe-action-dodge.webp?v=1',move:'slide',frameMs:125,hold:[0,4],holdMs:1500,shift:28,headDrop:16,over:[],noGlasses:[],ms:Infinity,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]},
-  bear:{label:'狗熊哆嗦毛',who:[4],src:'assets/wardrobe-action-bear.webp?v=1',move:'sway',frameMs:100,hold:[],holdMs:0,sway:8,swayY:6,swayRot:.02,swayPeriods:1,headDrop:8,over:[5,6,7,8],noGlasses:[6,7],ms:Infinity,frames:[{x:0,y:29,w:167,h:180,n:83.9,t:9.4},{x:171,y:29,w:124,h:180,n:55.4,t:1.9},{x:299,y:29,w:136,h:180,n:61.3,t:6.9},{x:439,y:29,w:166,h:180,n:81.7,t:4.4},{x:609,y:4,w:134,h:205,n:67.3,t:27.5},{x:747,y:4,w:135,h:205,n:67.9,t:30.7},{x:886,y:4,w:109,h:205,n:54.8,t:39.4},{x:999,y:4,w:109,h:205,n:52.3,t:42.6},{x:1112,y:0,w:169,h:209,n:73.6,t:30.7},{x:1285,y:0,w:164,h:209,n:84.5,t:26.9},{x:1453,y:0,w:134,h:209,n:64.8,t:27.5},{x:1591,y:0,w:166,h:209,n:85.4,t:35.7}]},
-  kick:{label:'浪子踢球',who:[4],src:'assets/wardrobe-action-kick.webp?v=1',move:'none',frameMs:110,hold:[0,11],holdMs:250,headDrop:16,over:[],noGlasses:[],ms:Infinity,frames:[{"x":0,"y":0,"w":177,"h":168,"n":91.6,"t":4.3,"hd":0},{"x":181,"y":0,"w":179,"h":151,"n":93.3,"t":-12.7,"hd":17},{"x":364,"y":0,"w":176,"h":172,"n":91,"t":6.3,"hd":-2},{"x":544,"y":0,"w":176,"h":172,"n":90.4,"t":6,"hd":-2.3},{"x":724,"y":0,"w":180,"h":183,"n":89.2,"t":11.5,"hd":-7.8},{"x":908,"y":0,"w":169,"h":185,"n":86.6,"t":12.8,"hd":-8.5},{"x":1081,"y":0,"w":173,"h":184,"n":87,"t":12.3,"hd":-8},{"x":1258,"y":0,"w":174,"h":188,"n":89.2,"t":14.3,"hd":-10},{"x":1436,"y":0,"w":174,"h":192,"n":83.7,"t":21.5,"hd":-6.8},{"x":1614,"y":0,"w":182,"h":183,"n":91.7,"t":11.8,"hd":-7.5},{"x":1800,"y":0,"w":179,"h":174,"n":91.4,"t":7.3,"hd":-3},{"x":1983,"y":0,"w":176,"h":170,"n":91.5,"t":5.3,"hd":-1}]}
+  bear:{label:'狗熊哆嗦毛',who:[4],src:'assets/wardrobe-action-bear.webp?v=1',move:'sway',frameMs:100,hold:[],holdMs:0,sway:8,swayY:6,swayRot:.02,swayPeriods:1,headSway:4,headPeriods:2,headDrop:8,over:[5,6,7,8],noGlasses:[6,7],ms:Infinity,frames:[{x:0,y:29,w:167,h:180,n:83.9,t:9.4},{x:171,y:29,w:124,h:180,n:55.4,t:1.9},{x:299,y:29,w:136,h:180,n:61.3,t:6.9},{x:439,y:29,w:166,h:180,n:81.7,t:4.4},{x:609,y:4,w:134,h:205,n:67.3,t:27.5},{x:747,y:4,w:135,h:205,n:67.9,t:30.7},{x:886,y:4,w:109,h:205,n:54.8,t:39.4},{x:999,y:4,w:109,h:205,n:52.3,t:42.6},{x:1112,y:0,w:169,h:209,n:73.6,t:30.7},{x:1285,y:0,w:164,h:209,n:84.5,t:26.9},{x:1453,y:0,w:134,h:209,n:64.8,t:27.5},{x:1591,y:0,w:166,h:209,n:85.4,t:35.7}]},
+  kick:{label:'浪子踢球',who:[4],src:'assets/wardrobe-action-kick.webp?v=1',move:'none',frameMs:110,hold:[0,11],holdMs:250,dur:[300,650,350,600,110,110,110,110,110,110,110,250],headDrop:16,over:[],noGlasses:[],ms:Infinity,frames:[{"x":0,"y":0,"w":177,"h":168,"n":91.6,"t":4.3,"hd":0},{"x":181,"y":0,"w":179,"h":151,"n":93.3,"t":-12.7,"hd":17},{"x":364,"y":0,"w":176,"h":172,"n":91,"t":6.3,"hd":-2},{"x":544,"y":0,"w":176,"h":172,"n":90.4,"t":6,"hd":-2.3},{"x":724,"y":0,"w":180,"h":183,"n":89.2,"t":11.5,"hd":-7.8},{"x":908,"y":0,"w":169,"h":185,"n":86.6,"t":12.8,"hd":-8.5},{"x":1081,"y":0,"w":173,"h":184,"n":87,"t":12.3,"hd":-8},{"x":1258,"y":0,"w":174,"h":188,"n":89.2,"t":14.3,"hd":-10},{"x":1436,"y":0,"w":174,"h":192,"n":83.7,"t":21.5,"hd":-6.8},{"x":1614,"y":0,"w":182,"h":183,"n":91.7,"t":11.8,"hd":-7.5},{"x":1800,"y":0,"w":179,"h":174,"n":91.4,"t":7.3,"hd":-3},{"x":1983,"y":0,"w":176,"h":170,"n":91.5,"t":5.3,"hd":-1}]}
 };
 Object.entries(WARDROBE_ACTIONS).forEach(([id,def])=>{def.img=new Image();wardrobeSheets['a_'+id]=def.img;def.img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};});
 function loadActionSheet(id){const def=WARDROBE_ACTIONS[id];if(def&&!def.img.getAttribute('src'))def.img.src=def.src;}
@@ -185,18 +185,18 @@ function actionOf(i){
   if(!def||!def.who.includes(i)||!actionImgReady(def))return null;
   const age=Date.now()-a.at;if(!(age>-3000&&age<def.ms))return null;
   // 循環播放：每一張 frameMs，hold 裡的那幾張多停 holdMs；整圈的長度是各張時間的總和。
-  const dur=def.frames.map((f,n)=>def.hold.includes(n)?def.holdMs:def.frameMs),cycle=dur.reduce((x,y)=>x+y,0),elapsed=Math.max(0,age)%cycle;
+  const dur=def.frames.map((f,n)=>def.dur?def.dur[n]:def.hold.includes(n)?def.holdMs:def.frameMs),cycle=dur.reduce((x,y)=>x+y,0),elapsed=Math.max(0,age)%cycle;
   let t=elapsed,n=0;while(n<dur.length-1&&t>=dur[n]){t-=dur[n];n++;}
-  let dx=0,dy=0,rot=0;
+  let dx=0,dy=0,rot=0,hx=0;
   if(def.move==='slide'){
     // 橫向位移（畫面像素）：0 號停在左邊，1～3 快速往右移到右邊；4 號停在右邊，5～7 快速往左移回左邊。
     const half=def.frames.length/2,k=n%half,frac=t/dur[n],D=def.shift;
     dx=k===0?(n<half?-D:D):(n<half?-D+2*D*((k-1)+frac)/(half-1):D-2*D*((k-1)+frac)/(half-1));
   }else if(def.move==='sway'){
     // 身體畫圈（橢圓形的「0」）：左右 sway、上下 swayY，一圈 = cycle / swayPeriods；傾斜跟著左右走。
-    const ang=elapsed/cycle*Math.PI*2*def.swayPeriods;dx=-Math.sin(ang)*def.sway;dy=-Math.cos(ang)*def.swayY+def.swayY;rot=-Math.sin(ang)*def.swayRot;
+    const ang=elapsed/cycle*Math.PI*2*def.swayPeriods;dx=-Math.sin(ang)*def.sway;dy=-Math.cos(ang)*def.swayY+def.swayY;rot=-Math.sin(ang)*def.swayRot;if(def.headSway)hx=Math.sin(elapsed/cycle*Math.PI*2*def.headPeriods)*def.headSway;
   }
-  return {id:a.id,n,dx,dy,rot};
+  return {id:a.id,n,dx,dy,rot,hx};
 }
 const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=>img.complete&&img.naturalWidth);
 // 預設造型＝每個人現在的樣子（2026-10-01 使用者指定，原本的像素人物已下架）：Leona 黑西裝、Amber 米白襯衫、Noise 丹寧外套＋藍帽、
@@ -252,16 +252,16 @@ function wardrobeFrame(index,dir,action){
 }
 /** 聽音樂時身體不動、只有頭（連同帽子、眼鏡）點頭：把每一層分開畫，衣服那層不加位移，其他層加 nod。
  *  各層的畫布第一次用到才建、之後快取在 frame 上。 */
-function drawWardrobeNod(context,index,dir,x,y,nod,h=142){
-  const frame=wardrobeFrame(index,dir);if(!frame)return false;
+function drawWardrobeNod(context,index,dir,x,y,nod,h=142,action,hdx=0){
+  const frame=wardrobeFrame(index,dir,action);if(!frame)return false;
   if(!frame.layerCanvases)frame.layerCanvases=frame.layers.map(layer=>{
     const canvas=document.createElement('canvas');canvas.width=frame.canvas.width;canvas.height=frame.canvas.height;
     const c=canvas.getContext('2d');c.imageSmoothingQuality='high';c.drawImage(wardrobeSheets[layer.sheet],layer.src.x,layer.src.y,layer.src.w,layer.src.h,layer.x-frame.minX,layer.y-frame.minY,layer.w,layer.h);
-    return {canvas,isBody:layer.sheet==='outfits'};
+    return {canvas,isBody:layer.sheet==='outfits'||layer.sheet.startsWith('a_')};
   });
   const s=WD_SCALE*(h/142);
-  context.save();context.translate(x,y);if(dir==='left')context.scale(-1,1);context.imageSmoothingEnabled=true;
-  frame.layerCanvases.forEach(layer=>context.drawImage(layer.canvas,-frame.ax*s,(layer.isBody?0:nod*(h/142))-frame.ay*s,layer.canvas.width*s,layer.canvas.height*s));
+  context.save();context.translate(x,y);if(dir==='left'&&!action)context.scale(-1,1);context.imageSmoothingEnabled=true;
+  frame.layerCanvases.forEach(layer=>context.drawImage(layer.canvas,(layer.isBody?0:hdx)-frame.ax*s,(layer.isBody?0:nod*(h/142))-frame.ay*s,layer.canvas.width*s,layer.canvas.height*s));
   context.restore();return true;
 }
 /** 帽子蓋在耳機上面：耳機畫好之後呼叫，把帽子（只有帽子）用同樣的位置再畫一次。 */
@@ -1245,7 +1245,7 @@ function drawHeadphones(i,p,t,bob,nod,behind){
   // 耳機全員同樣大小、同樣對位（2026-10-02 使用者要求統一，以 Anna 已確認的大小為準）：兩個耳罩外緣 HP_SPAN_W 原圖像素寬，耳罩中心在下巴上方 HP_CHIN_UP（照 Anna 確認過的位置換算；不能用眼睛位置，男生眼睛畫得比較高，耳機會比女生高一截）、臉中心左 HP_DX_NAT。HP_DY 是畫面像素的個別微調：Machi 的臉畫得比 Anna 高（眼睛高約 11 px，頭頂則是對齊的），使用者要求兩人耳機同高，所以他的耳機往下 8。
   const fw=HP_SPAN_W/.8*S,fh=fw*HP_FRAME_H/HP_FRAME_W,cx=(g.cx+HP_DX_NAT-fr.ax)*S,frame=Math.floor(t*4)%HP_FRAMES;
   ctx.drawImage(headphones,frame*HP_FRAME_W,0,HP_FRAME_W,HP_FRAME_H,cx-fw/2,ear-fh*.77,fw,fh);
-  if(!behind)drawWardrobeCap(ctx,i,p.dir,0,bob+nod,142,act);
+  if(!behind)drawWardrobeCap(ctx,i,p.dir,act?act.hx||0:0,bob+nod,142,act);
 }
 /** 動作進行中，在人物腳下顯示動作名稱（像素風小標籤，疊在桌子上面）。 */
 function drawActionLabel(i){
@@ -1257,7 +1257,7 @@ function drawActionLabel(i){
   ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,p.x+act.dx,y+h/2+1);
   ctx.restore();
 }
-function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act)drawWardrobe(ctx,i,'down',0,bob,142,act);else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p=viewPeople[i];if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
