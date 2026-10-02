@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 6942,
+  "revision": 6943,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-02T18:18:12.320Z",
+  "updatedAt": "2026-10-02T18:18:21.088Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -996,7 +996,7 @@
         {"案件編號":"26090192","修改次數":"1","建立日期":"2026/10/02 16:35:12","修改日期":"2026-10-02","修改內容":"標題設計需再更顯眼，如加粗、陰影或特效等方式呈現","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":"[\"260930_ANKER_A121A_蝦皮_1.png\"]","圖片連結":"[{\"fileName\":\"260930_ANKER_全品項_蝦皮_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1vBEpkuNhU5yggHDp3pKzAp2gMI9m0s_s=w1600\"},{\"fileName\":\"260930_ANKER_A121A_蝦皮_1_v02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FZmr5dPwUsSrNQvY68JxQ5Zx9C4gp18E=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 19:03:50"},
         {"案件編號":"26090213","修改次數":"0","建立日期":"2026/10/02 16:55:59","修改日期":"2026/10/02 16:55:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 16:55:59","圖片連結":"[{\"fileName\":\"261001_Emfusion_10月FB貼文_肌膚溫度曲線.png\",\"url\":\"https://lh3.googleusercontent.com/d/1D7nfuqmtyxAnKSvb9kkbF1wPHS_6l6qV=w1600\"},{\"fileName\":\"260929_Emfusion_10月FB貼文_40分鐘-留給自己.png\",\"url\":\"https://lh3.googleusercontent.com/d/1n32CfyxPoMIdZZSuRP0UpdYcYPuk47CQ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 16:57:12"},
         {"案件編號":"26090203","修改次數":"0","建立日期":"2026/10/02 17:59:08","修改日期":"2026/10/02 17:59:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 17:59:08","圖片連結":"[{\"fileName\":\"261002_ANKER_A121D_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VMW_QFJOcXRqXTtaEkYlUPMfoUi-04tr=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SlpsK1nmXLhRKh-ko4qOOauVDz-rq5u0=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DMVG_yhEzFR2TsqfQoy_xYbN5g6pglEb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 17:59:08"},
-        {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/03 02:18:12","修改日期":"2026/10/03 02:18:12","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/03 02:18:12","圖片連結":"[{\"fileName\":\"無頭Q版角色十二格踢腿動畫圖集.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kswq6kso22RkvZ7mmD-MvSjq4sUSAn4y=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/03 02:18:12"}
+        {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/03 02:18:12","修改日期":"2026/10/03 02:18:12","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/03 02:18:12","圖片連結":"[{\"fileName\":\"無頭Q版角色十二格踢腿動畫圖集.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1kswq6kso22RkvZ7mmD-MvSjq4sUSAn4y=w1600\"},{\"fileName\":\"wardrobe-outfits.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1XoJ-N_4E7CWRycjadXwVavqTG3bzw2bp=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/03 02:18:21"}
       ]
     },
     "補充資料連結": {
