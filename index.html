@@ -10683,13 +10683,15 @@ async function scheduleThreadReply(scheduledAt){
     const to=gmailRecipientHeaderValue('gmailThreadTo'),cc=gmailRecipientHeaderValue('gmailThreadCc');
     if(to===null||cc===null)return;
     if(!to){setSync('請填寫收件人',true);return}
+    const inlineAssignment=replyMode==='designer'?await askInlineImageCaseAssignment(id,inlineImagesNeedingBackup(editor,editorPayload.inlineImages)):null;
+    if(replyMode==='designer'&&!inlineAssignment){setSync('已取消排程',false,2200);return}
     setSync('排程建立中...');
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?editorPayload.insertedSignatureHtml:automaticSignatureHtml;
     await sheetApi('scheduleCaseReply',{caseId:id,to,cc,bodyHtml:editorPayload.scheduledBodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,scheduledAt,editorToken:currentEditorToken});
     let inlineImageBackupNotice='';
     if(replyMode==='designer'){
       // 照片內容在建立排程當下就已經確定，跟確認輪次一樣現在就備份，不用等排程真正寄出。
-      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupDesignerReplyInlineImages(id,modal?.dataset.designerReplyRound,inlineImagesNeedingBackup(editor,editorPayload.inlineImages))}
+      if(row){await confirmLatestModificationRound(id,row); await applyReplyStatusUpdate(id,row); inlineImageBackupNotice=await backupAssignedInlineImages(id,modal?.dataset.designerReplyRound,inlineAssignment)}
     }else if(replyMode==='modification'&&row){
       await recordModificationFromReply(id,row,modificationContent,modification.links);
     }else if(replyMode==='general'&&row){
@@ -13533,6 +13535,43 @@ async function backupDesignerReplyInlineImages(id,round,inlineImages){
     return `；但信件照片備份至修改紀錄失敗：${err.message}`;
   }
 }
+/** 2026-10-02：合併信件（同一條 Gmail 信件串綁了好幾個案件）的設計師回覆信，信裡手動上傳的照片原本一律記在
+ * 目前開啟的這個案件，其他案件的初稿就沒有紀錄。寄出（或排程）前先讓設計師決定每張照片屬於哪個案件；
+ * 沒有同信件串的其他案件、或沒有需要備份的照片時完全不出現。回傳 {案件編號:[照片…]}，取消回傳 null。 */
+function mergedThreadSiblingCases(id){
+  const row=rows.find(r=>String(r.id)===String(id)),thread=String(row?.gmailThreadId||'');
+  return thread?rows.filter(r=>String(r.id)!==String(id)&&String(r.gmailThreadId||'')===thread):[];
+}
+function askInlineImageCaseAssignment(id,images){
+  const list=(Array.isArray(images)?images:[]).filter(item=>item&&item.base64&&/^image\//.test(String(item.mimeType||'')));
+  const siblings=mergedThreadSiblingCases(id);
+  if(!list.length||!siblings.length)return Promise.resolve({[id]:images});
+  const self=rows.find(r=>String(r.id)===String(id)),cases=[self,...siblings].filter(Boolean);
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div');
+    overlay.className='app-confirm-backdrop';
+    const options=cases.map(r=>`<option value="${esc(r.id)}">${esc(r.id)}${r.project?`｜${esc(r.project)}`:''}</option>`).join('');
+    const items=list.map((item,index)=>`<div style="display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:center;margin:8px 0"><img alt="" src="data:${esc(item.mimeType)};base64,${item.base64}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e3e8e5"><label style="display:grid;gap:3px;text-align:left;font-size:12px;font-weight:800">${esc(item.fileName||'照片')}<select data-assign-index="${index}">${options}</select></label></div>`).join('');
+    overlay.innerHTML=`<div class="app-confirm-card" role="dialog" aria-modal="true" style="border-color:#d1e7dc;max-height:86vh;overflow:auto"><h3 style="margin:0 0 6px">這些照片屬於哪個案件？</h3><p class="schedule-picker-hint" style="margin:0 0 6px">這封信合併了多個案件。選好之後，照片會備份到各自案件的修改紀錄；沒有選的預設記在目前這個案件。</p>${items}<div class="app-confirm-actions"><button type="button" class="app-confirm-cancel" data-assign-cancel>取消寄出</button><button type="button" class="app-confirm-ok" style="background:#16a34a!important;border-color:#16a34a!important" data-assign-ok>確定並繼續</button></div></div>`;
+    const done=value=>{overlay.remove();resolve(value)};
+    overlay.querySelector('[data-assign-cancel]').addEventListener('click',()=>done(null));
+    overlay.querySelector('[data-assign-ok]').addEventListener('click',()=>{
+      const assignment={};
+      list.forEach((item,index)=>{const caseId=overlay.querySelector(`[data-assign-index="${index}"]`)?.value||String(id);(assignment[caseId]=assignment[caseId]||[]).push(item)});
+      done(assignment);
+    });
+    document.body.appendChild(overlay);
+  });
+}
+/** 依分配結果把照片備份到各自案件的修改紀錄（沿用既有的 backupDesignerReplyInlineImages，一個案件呼叫一次）。 */
+async function backupAssignedInlineImages(id,round,assignment){
+  const parts=[];
+  for(const [caseId,imgs] of Object.entries(assignment||{})){
+    const notice=await backupDesignerReplyInlineImages(caseId,round,imgs);
+    if(notice)parts.push(String(caseId)===String(id)?notice:notice.replace('；',`；案件 ${caseId}：`));
+  }
+  return parts.join('');
+}
 async function sendGmailThreadReply(){
   const modal=$('#gmailThreadModal'), id=modal?.dataset.caseId, editor=$('#gmailThreadReplyEditor'), button=$('#gmailThreadReplySend');
   if(!id||!editor)return;
@@ -13555,6 +13594,9 @@ async function sendGmailThreadReply(){
     const automaticSignatureHtml=await ensureGmailSignatureLoaded(),signatureHtml=editorPayload.signatureInserted?'':automaticSignatureHtml;
     // 輪次要在寄出前先記下：寄出後下面會把彈窗的 designerReplyRound 清空。
     const designerReplyRound=replyMode==='designer'?modal?.dataset.designerReplyRound:'';
+    // 合併信件：寄出前先讓設計師決定手動上傳的照片各屬於哪個案件（取消就不寄）。
+    const inlineAssignment=replyMode==='designer'?await askInlineImageCaseAssignment(id,inlineImagesNeedingBackup(editor,editorPayload.inlineImages)):null;
+    if(replyMode==='designer'&&!inlineAssignment){setSync('已取消寄出',false,2200);return}
     const replyData=await sheetApi('replyCaseMail',{caseId:id,to,cc,bodyHtml:editorPayload.bodyHtml,signatureHtml,inlineImages:editorPayload.inlineImages,attachments:editorPayload.attachments,editorToken:currentEditorToken});
     editor.innerHTML='';
     // 信已經寄出去了，使用者要等的事情到這裡就結束。「設計師回覆信」「修改需求信」是一次性任務，馬上把彈窗收起來，
@@ -13571,7 +13613,7 @@ async function sendGmailThreadReply(){
       else if(row){
         // 確認輪次與備份照片互不相依，同時進行；案件狀態更新是本機樂觀更新，不必等。
         applyReplyStatusUpdate(id,row);
-        const results=await Promise.all([confirmLatestModificationRound(id,row),backupDesignerReplyInlineImages(id,designerReplyRound,inlineImagesNeedingBackup(editor,editorPayload.inlineImages))]);
+        const results=await Promise.all([confirmLatestModificationRound(id,row),backupAssignedInlineImages(id,designerReplyRound,inlineAssignment)]);
         inlineImageBackupNotice=results[1]||'';
       }
     }else{

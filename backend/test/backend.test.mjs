@@ -3735,15 +3735,15 @@ test('designer reply backs up photos added with the editor upload button into th
 
   // 寄出與排程兩條路徑的「設計師回覆信」分支都要呼叫，並把結果接在成功訊息後面。
   const send = html.match(/async function sendGmailThreadReply\(\)\{[\s\S]*?\n\}/)?.[0];
-  assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n    const replyData=await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
-  assert.match(send, /Promise\.all\(\[confirmLatestModificationRound\(id,row\),backupDesignerReplyInlineImages\(id,designerReplyRound,inlineImagesNeedingBackup\(editor,editorPayload\.inlineImages\)\)\]\)/, '寄出後的收尾（確認輪次、備份照片）在彈窗關閉後同時進行');
-  assert.ok(send.indexOf('closeGmailThreadModal()') < send.indexOf('backupDesignerReplyInlineImages'), '先收彈窗，再做收尾，使用者不必等');
+  assert.match(send, /const designerReplyRound=replyMode==='designer'\?modal\?\.dataset\.designerReplyRound:'';\n(?:.*\n)*?    const replyData=await sheetApi\('replyCaseMail'/, '寄出前先記下輪次，寄出後彈窗會清空');
+  assert.match(send, /Promise\.all\(\[confirmLatestModificationRound\(id,row\),backupAssignedInlineImages\(id,designerReplyRound,inlineAssignment\)\]\)/, '寄出後的收尾（確認輪次、備份照片）在彈窗關閉後同時進行；2026-10-02 起照片依「合併信件分配」結果備份到各自案件');
+  assert.ok(send.indexOf('closeGmailThreadModal()') < send.indexOf('backupAssignedInlineImages'), '先收彈窗，再做收尾，使用者不必等');
   assert.match(send, /\$\{inlineImageBackupNotice\}\$\{threadNotice\}\$\{detailsNotice\}/, '立即送出的成功訊息要接上信件串警告（threadWarningNotice）');
   const schedule = html.match(/async function scheduleThreadReply\(scheduledAt\)\{[\s\S]*?\n\}/)?.[0];
-  assert.match(schedule, /inlineImageBackupNotice=await backupDesignerReplyInlineImages\(id,modal\?\.dataset\.designerReplyRound,inlineImagesNeedingBackup\(editor,editorPayload\.inlineImages\)\)/);
+  assert.match(schedule, /inlineImageBackupNotice=await backupAssignedInlineImages\(id,modal\?\.dataset\.designerReplyRound,inlineAssignment\)/);
   assert.match(schedule, /\$\{inlineImageBackupNotice\}\$\{detailsNotice\}/);
   // 一般回信、修改需求信不備份。
-  assert.equal((send.match(/backupDesignerReplyInlineImages/g) || []).length, 1);
+  assert.equal((send.match(/backupAssignedInlineImages/g) || []).length, 1);
 });
 
 test('case delete and 修改紀錄 trash buttons ask through the in-page warning dialog before deleting', async () => {

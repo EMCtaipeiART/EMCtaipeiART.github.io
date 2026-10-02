@@ -192,6 +192,14 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-02 Asia/Taipei — 設計師回覆合併信件時，寄出前先依案件分配照片
+
+- 修改目的：合併信件（同一條 Gmail 信件串綁多個案件）的設計師回覆，手動上傳的照片原本全記在目前開啟的案件，另一案件的初稿沒紀錄。
+- 影響檔案：`index.html`、`backend/test/backend.test.mjs`（無 Worker 變更，沿用既有 `backupReplyInlineImages`，一個案件呼叫一次）。
+- 影響功能：`sendGmailThreadReply()`／`scheduleThreadReply()` 在設計師回覆模式、且有需要備份的內嵌照片、且同信件串還有其他案件（`mergedThreadSiblingCases`）時，寄出／排程前跳出視窗（`askInlineImageCaseAssignment`），每張照片用下拉選案件（預設目前案件）；確認後各照片備份到各自案件的同一輪修改紀錄（目標案件沒有該輪時由 Apps Script／`addCaseDesignImages` 自動建立）；取消則不寄出／不排程。沒有同信件串案件或沒有照片時完全不出現。
+- 風險／未驗證：只處理「編輯器手動上傳」的照片；NAS 資料夾來源的圖片本來就依案件各自的資料夾記錄，未改動。分配視窗用本機模擬驗證（選案件、取消、單一案件不出現），沒有用真實合併信件寄出測試。
+- 驗證：script 語法通過；`node --test` 231 全過。部署：純前端。
+
 ### 2026-10-02 Asia/Taipei — 修改紀錄圖片勾選框貼回縮圖左下角
 
 - 原因：全站 `input` 規則給 `min-height:36px`，勾選框雖設 `height:14px!important`，`min-height` 仍把它撐成 36px，從 `bottom:5px` 往上長，看起來偏上。
