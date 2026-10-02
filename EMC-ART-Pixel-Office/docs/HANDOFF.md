@@ -342,3 +342,4 @@ Site ID：`appgprj_6aaca751308881918d954eafdffcbb43`。
 - 素材：`assets/wardrobe-action-dodge.webp`（8 張無頭身體，縮到跟服裝圖集同比例 .507，橫排；第一次用到才載）。頭／帽子／眼鏡用正面的疊在脖子上（`buildWardrobe` 的 `action` 參數，錨點是脖子 x）。
 - 同步：`pixelOfficeUpdate` 的 `action` 欄位（後端 `PIXEL_OFFICE_ACTIONS` 限制誰能用，時間用伺服器的）；畫面只在開始後 `ms` 內播放。新增動作＝加圖集、`WARDROBE_ACTIONS` 一筆、後端 `PIXEL_OFFICE_ACTIONS` 一筆。
 - 第二個動作「狗熊哆嗦毛」（`WARDROBE_ACTIONS.bear`，只有 Machi）：12 張、每張 100 ms 循環，身體畫橢圓圈晃動（左右 ±8 px、上下 6 px、傾斜 ±.02 rad，每圈 1 次、逆時針）。手舉到臉旁的幾張（over）身體畫在頭上面、手蓋住臉的兩張（noGlasses）不畫眼鏡。每個動作各有自己的圖集（`def.src`），按下才載。
+- 進站再瘦身（2026-10-02）：後端會一直留著最後一次的動作，以前每次進站都因此下載 112 KB 的動作圖集；現在只有動作還在播放時間內才載。加班濾鏡圖（69 KB）改成第一次要畫時才載。耳機改成靜態單張（10 KB，原本 77 KB 的六格動態圖）。

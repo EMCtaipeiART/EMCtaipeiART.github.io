@@ -139,7 +139,9 @@ syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=2';overtimeSheet.src='assets/overtime-filter.webp?v=1';
+furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=2';
+// 加班濾鏡圖（69 KB）只有有人加班（晚上、假日）才用得到，第一次要畫時才載，載好重畫。
+function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});overtimeSheet.src='assets/overtime-filter.webp?v=1';}
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?1.5:3,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
@@ -280,7 +282,7 @@ function sprite(context,index,dir,x,y,w=98,h=142){drawWardrobe(context,index,dir
 // 眼珠中心固定在 ±12（側面 +16），左右用同一組尺寸，所以兩邊一定對稱；寬度取 14（側面 12）比眼珠的
 // 10 略寬一點，外緣才不會壓到頭髮或耳朵。
 // 鬼火：原圖從 y160 才開始，來源要從 156 取（不是 145），否則黑眼圈下緣會被當成鬼火重畫在頭頂兩側。
-function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=false){if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
+function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=false){ensureOvertimeSheet();if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
   // 兩團鬼火分開畫，中心約在頭像左右 68 px。
   // 只保留頭像外側的鬼火區域，避免鬼火內側疊到臉上。
   context.save();context.beginPath();context.rect(-outer,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell,flameTop,half,flameHeight,leftX,flameY,flameWidth,flameDrawHeight);context.restore();
@@ -969,7 +971,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     if(typeof entry.message==='string')p.message=entry.message;
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
-    p.action=entry.action&&entry.action.id?{id:entry.action.id,at:Number(entry.action.at)||0}:null;if(p.action&&WARDROBE_ACTIONS[p.action.id])loadActionSheet(p.action.id);
+    p.action=entry.action&&entry.action.id?{id:entry.action.id,at:Number(entry.action.at)||0}:null;if(p.action&&WARDROBE_ACTIONS[p.action.id]&&Date.now()-p.action.at<WARDROBE_ACTIONS[p.action.id].ms)loadActionSheet(p.action.id);// 後端會一直留著最後一次的動作，過期的不必載圖（112 KB）
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
     if(p.music)ensureHeadphones();
     if(!p.music&&musicPlaying.i===i)stopMusic();
