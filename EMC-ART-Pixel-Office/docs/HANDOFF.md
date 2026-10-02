@@ -338,6 +338,6 @@ Site ID：`appgprj_6aaca751308881918d954eafdffcbb43`。
 原始託管設定可在 Git bundle 歷史的 `.openai/hosting.json` 找到。不要將新本地專案自動發布回原網站；只有使用者要求部署且具備權限時才操作。完整可執行原始碼已在 dist，不依赖原平台才能開發。
 
 ## 動作（2026-10-02）
-- 編輯畫面「動作」區：目前只有 Machi 有「閃身步」（`WARDROBE_ACTIONS.dodge`，`who:[4]`）。按下去播放 6 秒、每秒 8 張，腳下顯示「閃身步」標籤（`drawActionLabel`）。
+- 編輯畫面「動作」區：目前只有 Machi 有「閃身步」（`WARDROBE_ACTIONS.dodge`，`who:[4]`）。按下去循環播放（每張 125 ms，第一排與第二排第一張停 450 ms；再按一次停止，最長 10 分鐘），腳下顯示「閃身步」標籤（`drawActionLabel`）。
 - 素材：`assets/wardrobe-action-dodge.webp`（8 張無頭身體，縮到跟服裝圖集同比例 .507，橫排；第一次用到才載）。頭／帽子／眼鏡用正面的疊在脖子上（`buildWardrobe` 的 `action` 參數，錨點是脖子 x）。
 - 同步：`pixelOfficeUpdate` 的 `action` 欄位（後端 `PIXEL_OFFICE_ACTIONS` 限制誰能用，時間用伺服器的）；畫面只在開始後 `ms` 內播放。新增動作＝加圖集、`WARDROBE_ACTIONS` 一筆、後端 `PIXEL_OFFICE_ACTIONS` 一筆。

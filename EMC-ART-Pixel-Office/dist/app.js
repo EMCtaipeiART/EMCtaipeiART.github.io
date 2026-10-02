@@ -163,11 +163,12 @@ Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear(
 function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=2';}
 const accessoriesReady=()=>wardrobeSheets.acc.complete&&wardrobeSheets.acc.naturalWidth>0;
 const wardrobeCache=new Map();
+const WD_ACTION_HEAD_DROP=8;// 動作中頭比站姿再低一點（原圖像素，使用者 2026-10-02）
 // ───────── 動作（人物的小動畫，2026-10-02）─────────
 // 目前只有 Machi 的「閃身步」：8 張全身連續動作（無頭的身體），頭、帽子、眼鏡照樣疊在脖子上。
 // frames 的 x/y/w/h 是動作圖集（wardrobe-action-dodge.webp）上的裁切，n 是脖子中心的 x。圖集第一次要用才載。
 // 後端 PIXEL_OFFICE_ACTIONS 有同一份「誰可以用」，兩邊要一致。
-const WARDROBE_ACTIONS={dodge:{label:'閃身步',who:[4],fps:8,ms:6000,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]}};
+const WARDROBE_ACTIONS={dodge:{label:'閃身步',who:[4],frameMs:125,hold:[0,4],holdMs:450,ms:600000,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]}};
 const actionSheet=new Image();wardrobeSheets.action=actionSheet;
 actionSheet.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};
 function loadActionSheet(){if(!actionSheet.getAttribute('src'))actionSheet.src='assets/wardrobe-action-dodge.webp?v=1';}
@@ -176,7 +177,10 @@ function actionOf(i){
   const p=people[i],a=p&&p.action,def=a&&WARDROBE_ACTIONS[a.id];
   if(!def||!def.who.includes(i)||!actionSheet.complete||!actionSheet.naturalWidth)return null;
   const age=Date.now()-a.at;if(!(age>-3000&&age<def.ms))return null;
-  return {id:a.id,n:Math.floor(Math.max(0,age)/1000*def.fps)%def.frames.length};
+  // 循環播放：每一張 frameMs，第一排與第二排的第一張（hold）多停一下；整圈的長度是各張時間的總和。
+  const dur=def.frames.map((f,n)=>def.hold.includes(n)?def.holdMs:def.frameMs),cycle=dur.reduce((a,b)=>a+b,0);
+  let t=Math.max(0,age)%cycle,n=0;while(n<dur.length-1&&t>=dur[n]){t-=dur[n];n++;}
+  return {id:a.id,n};
 }
 const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=>img.complete&&img.naturalWidth);
 // 預設造型＝每個人現在的樣子（2026-10-01 使用者指定，原本的像素人物已下架）：Leona 黑西裝、Amber 米白襯衫、Noise 丹寧外套＋藍帽、
@@ -195,7 +199,7 @@ const sameLook=(a,b)=>a.outfit===b.outfit&&a.cap===b.cap&&a.glasses===b.glasses;
 function buildWardrobe(i,view,look,action){
   const D=WARDROBE,K=WD_K,H=D.heads[i][view],oIdx=look.outfit,act=action&&WARDROBE_ACTIONS[action.id],B=act?act.frames[action.n]:D.outfits[oIdx][view],front=D.heads[i][0].s,sk=H.s||front;
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
-  const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K;
+  const hx=B.n-chin.x*K,hy=WD_OV-chin.y*K+(act?WD_ACTION_HEAD_DROP:0);
   const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'action':'outfits',src:B,x:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:WD_DROP[i],w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=!WD_FEMALE[i]||view===2?[body,head]:[head,body];
   const eye=D.eyes[i][view];
@@ -573,12 +577,14 @@ function renderActionPanel(){
     const def=WARDROBE_ACTIONS[id],button=document.createElement('button');button.type='button';button.className=actionOf(selected)?'active':'';
     const canvas=document.createElement('canvas');canvas.width=88;canvas.height=60;
     if(actionSheet.complete&&actionSheet.naturalWidth){const f=def.frames[0],k=Math.min(84/f.w,56/f.h);canvas.getContext('2d').drawImage(actionSheet,f.x,f.y,f.w,f.h,44-f.w*k/2,58-f.h*k,f.w*k,f.h*k);}
-    button.append(canvas,def.label);button.onclick=()=>playAction(id);return button;
+    button.append(canvas,def.label);button.onclick=()=>toggleAction(id);return button;
   }));
 }
-function playAction(id){
+function toggleAction(id){
   const i=selected;if(i===null||!WARDROBE_ACTIONS[id]||!WARDROBE_ACTIONS[id].who.includes(i))return;
+  if(actionOf(i)){people[i].action=null;markDirty();renderActionPanel();pushChange(i,{action:''});return;}// 正在播放：再按一次停止
   loadActionSheet();people[i].action={id,at:Date.now()};markDirty();
+  renderActionPanel();
   pushChange(i,{action:{id}}).then(data=>{if(data&&data.person&&data.person.action)people[i].action={id,at:Number(data.person.action.at)||Date.now()};});
 }
 // ───────── 音樂（現在正在聽的歌）─────────

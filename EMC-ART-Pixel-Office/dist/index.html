@@ -70,7 +70,7 @@
       </section>
       <section class="tool-section" id="actionSection" hidden><h3>動作</h3>
         <div class="look-chips action-list" id="actionList"></div>
-        <p class="look-hint">按下去人物會做一小段動作，並在腳下顯示動作名稱，大家的畫面會一起看到。</p>
+        <p class="look-hint">按下去人物會循環做動作並在腳下顯示名稱，再按一次停止，最多連續 10 分鐘，大家的畫面會一起看到。</p>
       </section>
       <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
       <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
@@ -91,6 +91,6 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js?v=89" fetchpriority="high"></script>
+  <script src="app.js?v=90" fetchpriority="high"></script>
 </body>
 </html>
