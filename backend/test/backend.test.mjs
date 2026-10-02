@@ -3936,14 +3936,17 @@ test('revision modal keeps image selection across background re-renders and can 
       const sheetApi = async (action, payload) => {
         calls.push({ step: 'api', action, toRound: payload.toRound, toCaseId: payload.toCaseId, images: payload.images });
         if (${fail}) throw new Error('沒有權限');
-        return { ok: true, moved: payload.images.length, skipped: 0 };
+        // 跨案件搬到初稿：Worker 會把目標案件改成過稿中，並回傳 statusChanged。
+        return { ok: true, moved: payload.images.length, skipped: 0, ...(payload.toCaseId && payload.toRound === 0 ? { statusChanged: true, status: '過稿中' } : {}) };
       };
+      let rows = [{ id: '26090107', status: '執行中' }, { id: '26090108', status: '執行中' }];
+      const normalizeRow = row => row, rememberLocalWrite = () => {}, save = () => {}, publishDatabaseRefresh = () => {};
       const setSync = (message, isError) => calls.push({ step: 'sync', message, isError });
       const fetchModificationCounts = async () => {};
       const render = () => {}, refreshOpenRevisionModal = () => {}, refreshOpenCaseDetail = () => {};
       const currentEditorToken = 'tok';
       ${block}
-      return { moveSelectedCaseDesignImages, selectionSize: () => revisionImageSelection.size, items: revisionSelectionItems };
+      return { moveSelectedCaseDesignImages, selectionSize: () => revisionImageSelection.size, items: revisionSelectionItems, rows: () => rows };
     `)({ calls, nodes });
     return { api, calls, nodes };
   };
@@ -3969,6 +3972,13 @@ test('revision modal keeps image selection across background re-renders and can 
   assert.equal(crossRequest.toCaseId, '26090108');
   assert.equal(crossRequest.images.length, 3, '跨案件時不略過「同一輪」的圖片');
   assert.match(cross.calls.at(-1).message, /案件 26090108 的一修/);
+
+  // 2026-10-03：搬到其他案件的「初稿」→ 目標案件改成過稿中（畫面立刻同步），來源案件狀態不動。
+  const draftMove = await run();
+  await draftMove.api.moveSelectedCaseDesignImages('26090107', 0, '26090108');
+  assert.equal(draftMove.api.rows().find(row => row.id === '26090108').status, '過稿中');
+  assert.equal(draftMove.api.rows().find(row => row.id === '26090107').status, '執行中');
+  assert.match(draftMove.calls.at(-1).message, /案件 26090108 已改為過稿中/);
   assert.match(html, /data-move-case="\$\{esc\(r\.id\)\}"/, '移動選單要列出同一封信件串的其他案件');
 
   const cancelled = await run({ confirm: false });

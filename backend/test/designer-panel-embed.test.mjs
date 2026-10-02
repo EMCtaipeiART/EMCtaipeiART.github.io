@@ -109,7 +109,7 @@ test('像素辦公室提供休假狀態與獨立圖示', async () => {
   assert.match(js, /extraCells=\{meeting:0,bowl:1,calendar:2\}/, '休假要使用使用者提供的新椰子樹圖示');
   assert.match(js, /status:\{type:'string',enum:\[[^\]]*'meeting','leave','abroad'/,
     '頁面工具也要接受休假狀態');
-  assert.match(html, /app\.js\?v=96/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
+  assert.match(html, /app\.js\?v=102/, 'app.js 版本號要更新，避免瀏覽器沿用舊快取');
 });
 
 test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () => {
@@ -664,7 +664,7 @@ test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子�
   assert.match(js, /WD_SIDE_BODY_SHIFT=12/);
   assert.match(js, /x:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[i\]/);
   assert.match(js, /WD_BODY_DX=\[-8,0,0,-8,0\]/);
-  assert.match(js, /x:hx\+w\*\.06,y:hy\+sk\[2\]\*K-h\+h\*\.32\+WD_DROP\[i\]\+h-bh/);
+  assert.match(js, /w:bw\*\(1-WD_SIDE_CAP_BACK\),h:bh,x:hx\+w\*\.06\+bw\*WD_SIDE_CAP_BACK,y:hy\+sk\[2\]\*K-h\+h\*\.32\+WD_DROP\[i\]\+h-bh/);
   // 側面眼睛位置（頭像圖上的 x）：Leona 約 88、Machi 約 77，不是原本誤抓的 68／49。
   const eyes = JSON.parse(js.match(/"eyes":(\[\[.*?\]\])\};/s)[1]);
   assert.ok(eyes[0][1].x > 85 && eyes[4][1].x > 74, '側面眼睛 x 要靠臉的前緣');
@@ -679,7 +679,7 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
   const js = await officeJs();
-  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);\s*if\(!behind\)drawWardrobeCap\(ctx,i,p\.dir,0,bob\+nod,142,act\);/);
+  assert.match(js, /cx-fw\/2,ear-fh\*\.77,fw,fh\);\s*if\(!behind\)drawWardrobeCap\(ctx,i,p\.dir,act\?act\.hx\|\|0:0,bob\+nod,142,act\);/);
   // 聽音樂時身體不搖，只有頭層加 nod。
   assert.match(js, /layer\.isBody\?0:nod/);
   assert.match(js, /function drawWardrobeCap\(/);
@@ -695,7 +695,7 @@ test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算�
   const js = await officeJs();
   assert.match(js, /WD_GLASSES_W=120,WD_GLASSES_DX=\[-8,0,0,-8,0\],WD_GLASSES_DY=\[0,0,8,0,8\]/);
   assert.match(js, /const s=WD_GLASSES_W\/gf\.w,w=g\.w\*s/);
-  assert.match(js, /WD_SIDE_GLASSES_L=\.15,WD_EAR_TOP=\[1\.5,3,-1,3,3\],WD_SIDE_CAP_GROW=1\.18,WD_SIDE_CAP_BRIM=55,WD_EAR_X=\.06,WD_SIDE_GLASSES_UP=\.6/);
+  assert.match(js, /WD_SIDE_GLASSES_L=\.15,WD_EAR_TOP=\[1\.5,3,-1,3,3\],WD_SIDE_CAP_GROW=1\.18,WD_SIDE_CAP_BRIM=55,WD_SIDE_CAP_BACK=\.07,WD_EAR_X=\.06,WD_SIDE_GLASSES_UP=\.6/);
 });
 
 test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留必要的圖，Spotify 播放器等使用者有動作才載', async () => {
@@ -786,5 +786,5 @@ test('動作「閃身步」：只有 Machi、8 張依序播放、腳下顯示名
   assert.match(js, /function drawActionLabel\(i\)/);
   assert.match(html, /id="actionSection" hidden/);
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
-  assert.match(worker, /PIXEL_OFFICE_ACTIONS: Record<string, string\[\]> = \{ dodge: \['Machi'\], bear: \['Machi'\] }/);
+  assert.match(worker, /PIXEL_OFFICE_ACTIONS: Record<string, string\[\]> = \{ dodge: \['Machi'\], bear: \['Machi'\], kick: \['Machi'\] }/);
 });

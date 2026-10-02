@@ -435,6 +435,10 @@
     .owner-progress-main b{color:#17211d;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
     .owner-progress-main small{color:#66736d;font-size:12.5px;font-weight:650;overflow-wrap:anywhere}
     .owner-progress-check-label{color:#0f7a58;font-size:12.5px;font-weight:850}
+    .owner-progress-item .owner-progress-detail{flex:0 0 auto;min-height:34px!important;padding:0 14px!important;border-radius:999px!important;border:1px solid #cfd9d3!important;background:#fff!important;color:#35423c!important;box-shadow:none!important;font-size:13px;font-weight:850;cursor:pointer}
+    .owner-progress-item .owner-progress-detail:hover{background:#eef3f0!important}
+    html[data-theme="dark"] .owner-progress-item .owner-progress-detail{background:#2d3337!important;border-color:#454d52!important;color:#dbe4df!important}
+    html[data-theme="dark"] .owner-progress-item .owner-progress-detail:hover{background:#363d41!important}
     .owner-progress-item .owner-progress-modify{flex:0 0 auto;min-height:34px!important;padding:0 14px!important;border-radius:999px!important;border:1px solid #f2c27a!important;background:#fff7e6!important;color:#8a5200!important;box-shadow:none!important;font-size:13px;font-weight:850;cursor:pointer}
     .owner-progress-item .owner-progress-modify:hover{background:#ffeccb!important}
     .owner-progress-empty{padding:26px 12px;text-align:center;color:#66736d;font-size:14px;font-weight:700}
@@ -450,7 +454,7 @@
     html[data-theme="dark"] .owner-progress-check-label{color:#8fe0bc}
     html[data-theme="dark"] .owner-progress-item .owner-progress-modify{background:#3a2f17!important;border-color:#725d27!important;color:#f6d98c!important}
     html[data-theme="dark"] .owner-progress-item .owner-progress-modify:hover{background:#463a1d!important}
-    @media(max-width:640px){.owner-progress-card{padding:18px 14px;border-radius:14px}.owner-progress-item{flex-wrap:wrap}.owner-progress-modify{width:100%}}
+    @media(max-width:640px){.owner-progress-card{padding:18px 14px;border-radius:14px}.owner-progress-item{flex-wrap:wrap}.owner-progress-item .owner-progress-detail,.owner-progress-item .owner-progress-modify{flex:1 1 40%}}
     .notification-item.is-case-confirmed .notification-dot{background:#10946a;box-shadow:0 0 0 3px rgba(16,148,106,.12)}
     .issue-report-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
     .issue-report-card h3{margin:0;color:#17211d;font-size:26px}
@@ -7701,6 +7705,7 @@ let pendingCreateRequest = null;
 const backgroundFormEditTokens = new Map();
 let requestPlatformCloseTimer = null;
 let ownerProjectsReturnName = '';
+let ownerProgressReturn = false; // 從「您的案件進度」點進案件詳情時為 true，詳情頁的「返回」回到進度清單
 let ownerProjectsFullDataLoaded = false;
 let ownerProjectsFullLoadPromise = null;
 let notificationToastTimer = null;
@@ -14335,7 +14340,7 @@ function ensureOwnerProjectsFullData(){
 function openOwnerProjects(event,owner){event?.preventDefault?.();event?.stopPropagation?.(); const name=ownerDisplay(owner).trim(); if(!name)return; closeFieldPopover(); ownerProjectsReturnName=name; renderOwnerProjects(name); const modal=$('#ownerProjectsModal'), scroll=$('.owner-projects-table-wrap'); if(modal)modal.hidden=false; document.documentElement.classList.add('owner-projects-modal-open'); document.body.classList.add('owner-projects-modal-open'); if(scroll){scroll.scrollLeft=0;scroll.scrollTop=0} ensureOwnerProjectsFullData()}
 function closeOwnerProjects({preserveReturn=false}={}){const modal=$('#ownerProjectsModal'); if(modal)modal.hidden=true; document.documentElement.classList.remove('owner-projects-modal-open'); document.body.classList.remove('owner-projects-modal-open'); closeFieldPopover(); if(!preserveReturn)ownerProjectsReturnName=''}
 function openOwnerProjectCase(event,id){event?.preventDefault?.();event?.stopPropagation?.(); closeOwnerProjects({preserveReturn:true}); openCaseDetail(id,{preserveOwnerReturn:true})}
-function returnToOwnerProjects(){const owner=ownerProjectsReturnName; const modal=$('#caseDetailModal'); if(modal)modal.hidden=true; if(owner)openOwnerProjects(null,owner); else closeCaseDetail()}
+function returnToOwnerProjects(){if(ownerProgressReturn){closeCaseDetail();openOwnerProgressModal();return} const owner=ownerProjectsReturnName; const modal=$('#caseDetailModal'); if(modal)modal.hidden=true; if(owner)openOwnerProjects(null,owner); else closeCaseDetail()}
 function closeAccountMenu(){const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(menu)menu.classList.remove('is-open'); if(dropdown)dropdown.hidden=true; if(trigger)trigger.setAttribute('aria-expanded','false')}
 function toggleAccountMenu(){if(!isLoggedIn()){showLoginModal();return} const menu=$('#accountMenu'), dropdown=$('#accountDropdown'), trigger=$('#loginBtn'); if(!menu||!dropdown)return; closeNotifications(); const open=dropdown.hidden; dropdown.hidden=!open; menu.classList.toggle('is-open',open); if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false')}
 function closeNotifications(){const popover=$('#notificationPopover'), bell=$('#accountBell'); if(popover)popover.hidden=true; if(bell)bell.setAttribute('aria-expanded','false')}
@@ -14360,7 +14365,7 @@ function renderOwnerProgressList(){
   const list=$('#ownerProgressList'),sub=$('#ownerProgressSub');if(!list)return;
   const items=ownerProgressRows();
   if(sub)sub.textContent=items.length?`您有 ${items.length} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
-  list.innerHTML=items.length?items.map(row=>`<div class="owner-progress-item"><label class="owner-progress-check"><input type="checkbox" data-owner-progress-check value="${esc(row.id)}"><span class="owner-progress-main"><b>${esc(row.client||'未填客戶')}｜${esc(row.project||'未填專案')}</b><small>${esc(row.id)}｜設計師 ${esc(row.designer||'未指定')}｜${esc(slashDate(row.start)||'-')}-${esc(slashDate(row.end)||'-')}</small><span class="owner-progress-check-label">客戶已確認完成</span></span></label><button type="button" class="owner-progress-modify" data-owner-progress-modify="${esc(row.id)}">需要修改</button></div>`).join(''):'<div class="owner-progress-empty">目前沒有過稿中的案件需要確認</div>';
+  list.innerHTML=items.length?items.map(row=>`<div class="owner-progress-item"><label class="owner-progress-check"><input type="checkbox" data-owner-progress-check value="${esc(row.id)}"><span class="owner-progress-main"><b>${esc(row.client||'未填客戶')}｜${esc(row.project||'未填專案')}</b><small>${esc(row.id)}｜設計師 ${esc(row.designer||'未指定')}｜${esc(slashDate(row.start)||'-')}-${esc(slashDate(row.end)||'-')}</small><span class="owner-progress-check-label">客戶已確認完成</span></span></label><button type="button" class="owner-progress-detail" data-owner-progress-detail="${esc(row.id)}">查看詳情</button><button type="button" class="owner-progress-modify" data-owner-progress-modify="${esc(row.id)}">需要修改</button></div>`).join(''):'<div class="owner-progress-empty">目前沒有過稿中的案件需要確認</div>';
   syncOwnerProgressSelection();
 }
 function syncOwnerProgressSelection(){
@@ -14406,6 +14411,12 @@ async function submitOwnerProgress(){
     setSync(`確認失敗：${err.message}`,true,6000);
     syncOwnerProgressSelection();
   }
+}
+/** 「查看詳情」：先收起進度清單（兩個彈窗疊在同一層），開案件詳情；詳情頁的「返回」會回到清單。 */
+function ownerProgressOpenDetail(id){
+  if(!rows.some(r=>String(r.id)===String(id)))return;
+  closeOwnerProgressModal();
+  openCaseDetail(id,{fromOwnerProgress:true});
 }
 /** 「需要修改」：沿用既有的「填寫修改需求信」（內容會同步記進修改紀錄、帶動一修／二修…），不另外做一套。 */
 async function ownerProgressRequestModification(id){
@@ -15101,9 +15112,9 @@ function positionDesignImageHoverPreview(x,y){const preview=$('#designImageHover
 function showDesignImageHoverPreview(anchor,x,y){if(!anchor)return;const url=anchor.href||anchor.querySelector('img')?.currentSrc||anchor.querySelector('img')?.src;if(!url)return;const preview=designImageHoverPreviewElement(),image=preview.querySelector('img'),name=preview.querySelector('.design-image-hover-preview-name'),label=String(anchor.dataset.previewLabel||anchor.querySelector('img')?.alt||'設計圖').trim();designImageHoverPreviewAnchor=anchor;designImageHoverPreviewPoint={x,y};if(image.dataset.previewUrl!==url){image.dataset.previewUrl=url;image.src=url}image.alt=label;name.textContent=label;name.hidden=!label;preview.hidden=false;positionDesignImageHoverPreview(x,y);requestAnimationFrame(()=>preview.classList.add('is-visible'))}
 function hideDesignImageHoverPreview(anchor=null){if(anchor&&anchor!==designImageHoverPreviewAnchor)return;designImageHoverPreviewAnchor=null;const preview=$('#designImageHoverPreview');if(!preview)return;preview.classList.remove('is-visible');preview.hidden=true}
 function isDesignImageHoverPointer(event){return String(event?.pointerType||'mouse').toLowerCase()!=='touch'}
-function openCaseDetail(id,{preserveOwnerReturn=false}={}){hideDesignImageHoverPreview();if(!preserveOwnerReturn)ownerProjectsReturnName=''; const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','階段','狀態','數量','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改','設計圖記錄']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!ownerProjectsReturnName; modal.hidden=false; syncCaseDetailScale()}
+function openCaseDetail(id,{preserveOwnerReturn=false,fromOwnerProgress=false}={}){hideDesignImageHoverPreview();if(!preserveOwnerReturn){ownerProjectsReturnName='';ownerProgressReturn=fromOwnerProgress} const row=rows.find(r=>String(r.id)===String(id)), modal=$('#caseDetailModal'), grid=$('#caseDetailGrid'); if(!row||!modal||!grid)return; closeFilters(); const byLabel=new Map(caseDetailRows(row).map(item=>[item.label,item])); const pick=labels=>labels.map(label=>byLabel.get(label)).filter(Boolean); const iconBasic='<svg viewBox="0 0 24 24"><path d="M4.5 6.8c0-1 .8-1.8 1.8-1.8h11.4c1 0 1.8.8 1.8 1.8v10.4c0 1-.8 1.8-1.8 1.8H6.3c-1 0-1.8-.8-1.8-1.8V6.8Z"/><path d="M8 9h8M8 12h6M8 15h4"/></svg>', iconExec='<svg viewBox="0 0 24 24"><path d="M8.2 10.4a3.8 3.8 0 1 0 7.6 0 3.8 3.8 0 0 0-7.6 0Z"/><path d="M4.6 19.2c1.1-2.6 3.7-4.2 7.4-4.2s6.3 1.6 7.4 4.2"/><path d="M17.6 6.4l1.2-1.2M6.4 6.4 5.2 5.2"/></svg>', iconOther='<svg viewBox="0 0 24 24"><path d="M6.5 4.5h8.8l3.2 3.2v11.8h-12V4.5Z"/><path d="M15 4.8v3.4h3.3M9 12h6M9 15h5"/><path d="M5.2 18.4 4 21l2.6-1.2"/></svg>'; const actions=canCaseEditRow(row)?`<div class="case-detail-actions">${mailAction(row,{icon:true})}${actionButtons(row,{icon:true})}<button type="button" class="case-detail-close-action" onclick="closeCaseDetail()">關閉</button></div>`:''; grid.innerHTML=caseDetailSectionHtml('基本資訊','案件的基本資料',iconBasic,pick(['案件編號','客戶別','專案名稱']),'is-basic')+caseDetailSectionHtml('執行資訊','專案執行的相關設定',iconExec,pick(['專案負責人','設計負責人','設計類型','階段','狀態','數量','執行時間']),'is-exec')+caseDetailSectionHtml('其他資訊','補充說明與備註',iconOther,pick(['項目細節','修改','設計圖記錄']),'is-other')+actions; const back=$('#caseDetailBack'); if(back)back.hidden=!(ownerProjectsReturnName||ownerProgressReturn); modal.hidden=false; syncCaseDetailScale()}
 function refreshOpenCaseDetail(id){const modal=$('#caseDetailModal'); if(modal&&!modal.hidden)openCaseDetail(id,{preserveOwnerReturn:true})}
-function closeCaseDetail(){hideDesignImageHoverPreview();const modal=$('#caseDetailModal'), back=$('#caseDetailBack'); if(modal)modal.hidden=true; if(back)back.hidden=true; ownerProjectsReturnName=''}
+function closeCaseDetail(){hideDesignImageHoverPreview();const modal=$('#caseDetailModal'), back=$('#caseDetailBack'); if(modal)modal.hidden=true; if(back)back.hidden=true; ownerProjectsReturnName=''; ownerProgressReturn=false}
 function syncCaseDetailScale(){const modal=$('#caseDetailModal'); if(!modal)return; ['--case-detail-mobile-scale','--case-detail-mobile-body-size','--case-detail-mobile-title-size','--case-detail-mobile-section-size','--case-detail-mobile-separator-size'].forEach(name=>modal.style.removeProperty(name))}
 function closeFieldPopover(){fieldPopover.hidden=true;fieldPopover.innerHTML='';fieldPopover.classList.remove('is-modal-popover');fieldPopover.style.removeProperty('transform')}
 function positionFieldPopover(anchor,{center=false}={}){const width=Math.min(320,window.innerWidth-24), margin=12; fieldPopover.style.width=`${width}px`; fieldPopover.style.removeProperty('transform'); const forceCenter=center||Boolean(anchor.closest?.('.login-modal')); fieldPopover.classList.toggle('is-modal-popover',forceCenter); if(forceCenter){fieldPopover.style.left='50%'; fieldPopover.style.top='50%'; fieldPopover.style.transform='translate(-50%,-50%)'; fieldPopover.style.maxHeight=`${Math.max(180,window.innerHeight-48)}px`; return} const rect=anchor.getBoundingClientRect(); fieldPopover.style.left=`${Math.min(Math.max(margin,rect.left),window.innerWidth-width-margin)}px`; const naturalHeight=Math.min(fieldPopover.scrollHeight||280,360), below=window.innerHeight-rect.bottom-margin, above=rect.top-margin, useBelow=below>=Math.min(naturalHeight,220)||below>=above, maxHeight=Math.max(150,Math.min(360,useBelow?below:above)); fieldPopover.style.maxHeight=`${maxHeight}px`; fieldPopover.style.top=`${useBelow?rect.bottom+8:Math.max(margin,rect.top-8-maxHeight)}px`}
@@ -16524,7 +16535,7 @@ document.addEventListener('click',event=>{
 	$('#ownerProgressLater')?.addEventListener('click',()=>closeOwnerProgressModal());
 	$('#ownerProgressSubmit')?.addEventListener('click',submitOwnerProgress);
 	$('#ownerProgressList')?.addEventListener('change',event=>{if(event.target.matches('[data-owner-progress-check]'))syncOwnerProgressSelection()});
-	$('#ownerProgressList')?.addEventListener('click',event=>{const btn=event.target.closest('[data-owner-progress-modify]');if(btn)ownerProgressRequestModification(btn.dataset.ownerProgressModify)});
+	$('#ownerProgressList')?.addEventListener('click',event=>{const detail=event.target.closest('[data-owner-progress-detail]');if(detail){ownerProgressOpenDetail(detail.dataset.ownerProgressDetail);return}const btn=event.target.closest('[data-owner-progress-modify]');if(btn)ownerProgressRequestModification(btn.dataset.ownerProgressModify)});
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false))return;closeAccountMenu();window.open(archiveManagerUrl,'_blank','noopener')});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false))return;closeAccountMenu();window.open(jsonDatabaseAdminUrl,'_blank','noopener')});
