@@ -171,7 +171,7 @@ const wardrobeCache=new Map();
 // frames 的 n 是脖子中心 x、t 是脖子頂端離圖片上緣的距離（手舉過頭時圖片上緣不是脖子）。over：這幾張手在臉旁邊，身體要畫在頭上面。noGlasses：這幾張不畫眼鏡（手蓋住臉）。
 const WARDROBE_ACTIONS={
   dodge:{label:'閃身步',who:[4],src:'assets/wardrobe-action-dodge.webp?v=1',move:'slide',frameMs:125,hold:[0,4],holdMs:1500,shift:28,headDrop:16,over:[],noGlasses:[],ms:600000,frames:[{x:0,y:3,w:173,h:171,n:86.7},{x:177,y:3,w:167,h:171,n:93.8},{x:348,y:4,w:201,h:170,n:120.9},{x:553,y:7,w:197,h:167,n:133.3},{x:754,y:0,w:171,h:174,n:84.7},{x:929,y:0,w:168,h:174,n:76.3},{x:1101,y:0,w:199,h:174,n:77.1},{x:1304,y:2,w:173,h:172,n:86.2}]},
-  bear:{label:'狗熊哆嗦毛',who:[4],src:'assets/wardrobe-action-bear.webp?v=1',move:'sway',frameMs:100,hold:[],holdMs:0,sway:8,swayY:6,swayRot:.02,swayPeriods:2,headDrop:8,over:[5,6,7,8],noGlasses:[6,7],ms:600000,frames:[{x:0,y:29,w:167,h:180,n:83.9,t:9.4},{x:171,y:29,w:124,h:180,n:55.4,t:1.9},{x:299,y:29,w:136,h:180,n:61.3,t:6.9},{x:439,y:29,w:166,h:180,n:81.7,t:4.4},{x:609,y:4,w:134,h:205,n:67.3,t:27.5},{x:747,y:4,w:135,h:205,n:67.9,t:30.7},{x:886,y:4,w:109,h:205,n:54.8,t:39.4},{x:999,y:4,w:109,h:205,n:52.3,t:42.6},{x:1112,y:0,w:169,h:209,n:73.6,t:30.7},{x:1285,y:0,w:164,h:209,n:84.5,t:26.9},{x:1453,y:0,w:134,h:209,n:64.8,t:27.5},{x:1591,y:0,w:166,h:209,n:85.4,t:35.7}]}
+  bear:{label:'狗熊哆嗦毛',who:[4],src:'assets/wardrobe-action-bear.webp?v=1',move:'sway',frameMs:100,hold:[],holdMs:0,sway:8,swayY:6,swayRot:.02,swayPeriods:1,headDrop:8,over:[5,6,7,8],noGlasses:[6,7],ms:600000,frames:[{x:0,y:29,w:167,h:180,n:83.9,t:9.4},{x:171,y:29,w:124,h:180,n:55.4,t:1.9},{x:299,y:29,w:136,h:180,n:61.3,t:6.9},{x:439,y:29,w:166,h:180,n:81.7,t:4.4},{x:609,y:4,w:134,h:205,n:67.3,t:27.5},{x:747,y:4,w:135,h:205,n:67.9,t:30.7},{x:886,y:4,w:109,h:205,n:54.8,t:39.4},{x:999,y:4,w:109,h:205,n:52.3,t:42.6},{x:1112,y:0,w:169,h:209,n:73.6,t:30.7},{x:1285,y:0,w:164,h:209,n:84.5,t:26.9},{x:1453,y:0,w:134,h:209,n:64.8,t:27.5},{x:1591,y:0,w:166,h:209,n:85.4,t:35.7}]}
 };
 Object.entries(WARDROBE_ACTIONS).forEach(([id,def])=>{def.img=new Image();wardrobeSheets['a_'+id]=def.img;def.img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};});
 function loadActionSheet(id){const def=WARDROBE_ACTIONS[id];if(def&&!def.img.getAttribute('src'))def.img.src=def.src;}
@@ -191,7 +191,7 @@ function actionOf(i){
     dx=k===0?(n<half?-D:D):(n<half?-D+2*D*((k-1)+frac)/(half-1):D-2*D*((k-1)+frac)/(half-1));
   }else if(def.move==='sway'){
     // 身體畫圈（橢圓形的「0」）：左右 sway、上下 swayY，一圈 = cycle / swayPeriods；傾斜跟著左右走。
-    const ang=elapsed/cycle*Math.PI*2*def.swayPeriods;dx=Math.sin(ang)*def.sway;dy=-Math.cos(ang)*def.swayY+def.swayY;rot=Math.sin(ang)*def.swayRot;
+    const ang=elapsed/cycle*Math.PI*2*def.swayPeriods;dx=-Math.sin(ang)*def.sway;dy=-Math.cos(ang)*def.swayY+def.swayY;rot=-Math.sin(ang)*def.swayRot;
   }
   return {id:a.id,n,dx,dy,rot};
 }

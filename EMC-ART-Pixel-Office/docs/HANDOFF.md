@@ -341,4 +341,4 @@ Site ID：`appgprj_6aaca751308881918d954eafdffcbb43`。
 - 編輯畫面「動作」區：目前只有 Machi 有「閃身步」（`WARDROBE_ACTIONS.dodge`，`who:[4]`）。按下去循環播放（每張 125 ms，第一排與第二排第一張停 1500 ms，0–3 張往右快速位移、4–7 張往左（shift 28）；再按一次停止，最長 10 分鐘），腳下顯示「閃身步」標籤（`drawActionLabel`）。
 - 素材：`assets/wardrobe-action-dodge.webp`（8 張無頭身體，縮到跟服裝圖集同比例 .507，橫排；第一次用到才載）。頭／帽子／眼鏡用正面的疊在脖子上（`buildWardrobe` 的 `action` 參數，錨點是脖子 x）。
 - 同步：`pixelOfficeUpdate` 的 `action` 欄位（後端 `PIXEL_OFFICE_ACTIONS` 限制誰能用，時間用伺服器的）；畫面只在開始後 `ms` 內播放。新增動作＝加圖集、`WARDROBE_ACTIONS` 一筆、後端 `PIXEL_OFFICE_ACTIONS` 一筆。
-- 第二個動作「狗熊哆嗦毛」（`WARDROBE_ACTIONS.bear`，只有 Machi）：12 張、每張 100 ms 循環，身體畫橢圓圈晃動（左右 ±8 px、上下 6 px、傾斜 ±.02 rad，每圈 2 次）。手舉到臉旁的幾張（over）身體畫在頭上面、手蓋住臉的兩張（noGlasses）不畫眼鏡。每個動作各有自己的圖集（`def.src`），按下才載。
+- 第二個動作「狗熊哆嗦毛」（`WARDROBE_ACTIONS.bear`，只有 Machi）：12 張、每張 100 ms 循環，身體畫橢圓圈晃動（左右 ±8 px、上下 6 px、傾斜 ±.02 rad，每圈 1 次、逆時針）。手舉到臉旁的幾張（over）身體畫在頭上面、手蓋住臉的兩張（noGlasses）不畫眼鏡。每個動作各有自己的圖集（`def.src`），按下才載。
