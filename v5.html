@@ -2536,7 +2536,7 @@
     const SESSION_KEYS=['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment','designRequestEditorRawGroup'];
     const GOOGLE_CLIENT_ID='501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com',GOOGLE_ORIGIN='https://emctaipeiart.github.io',GOOGLE_CHANNEL='machi-google-oauth-v1';
     const login={error:'',busy:false,showPw:false,state:'',channel:null};
-    function startLogin(){if(state.view!=='login')state.back=state.view;login.error='';show('login')}
+    function startLogin(){if(state.view!=='login')state.back=state.view;login.error='';login.busy=false;login.pwBusy=false;show('login')}
     function renderLoginPage(){
       setTimeout(mountGoogle,0);
       $('stage').innerHTML=`<div class="login-page">
@@ -2545,7 +2545,7 @@
         <div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>
         <button type="button" class="lp-toggle" data-lp="google">Google 按鈕沒反應？改用彈出視窗登入</button>
         <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用密碼登入'}</button>
-        ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.busy?' disabled':''}>登入</button></form>`:''}
+        ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.pwBusy?' disabled':''}>${login.pwBusy?'登入中…':'登入'}</button></form>`:''}
         ${login.error?`<div class="lp-error" role="alert">${esc(login.error)}</div>`:''}
         <p class="lp-note">登入狀態與現行系統共用。<br><a href="#" data-lp="cancel">先不登入，返回</a></p>
       </div>`;
@@ -2557,7 +2557,7 @@
     }
     function finishLogin(data){
       if(!data||!data.token||!data.user)throw new Error(data?.error||'登入沒有完成驗證');
-      saveSession(data);login.busy=false;login.error='';
+      saveSession(data);login.busy=false;login.pwBusy=false;login.error='';
       const back=state.back;state.back='';
       afterLogin();
       if(state.view==='login')show(back&&back!=='login'&&back!=='form'?back:state.home);
@@ -2571,6 +2571,7 @@
       const win=window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`,'machiGoogleLogin','popup=yes,width=520,height=720');
       if(!win){login.error='瀏覽器擋住了彈出視窗，請允許本網站的彈出視窗後再試一次。';renderLoginPage();return}
       login.busy=true;login.error='';renderLoginPage();
+      clearInterval(login.watch);login.watch=setInterval(()=>{if(win.closed||!login.busy){clearInterval(login.watch);if(login.busy&&state.view==='login'){login.busy=false;login.state='';renderLoginPage();mountGoogle()}else login.busy=false}},800);
     }
     async function googleResult(r){
       if(!r||r.type!=='machi-google-oauth-result'||!login.state)return;
@@ -2583,9 +2584,9 @@
     async function passwordLogin(form){
       const password=String(form.elements.password.value||'');
       if(!password){login.error='請輸入密碼。';renderLoginPage();return}
-      login.busy=true;login.error='';renderLoginPage();
+      login.pwBusy=true;login.error='';renderLoginPage();
       try{finishLogin(await api('login',{account:'machi.chen@emctaipei.com',password}))}
-      catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;renderLoginPage()}
+      catch(err){login.pwBusy=false;login.busy=false;login.error=`登入失敗：${err.message}`;renderLoginPage()}
     }
     /* Google 登入：優先用頁面內的 Google 按鈕（不會跳到舊網站），失敗再用彈出視窗 */
     let gsiReady=false;

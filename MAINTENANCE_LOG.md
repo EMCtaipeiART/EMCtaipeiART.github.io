@@ -132,3 +132,5 @@
 - v5.0: timeline bars thinner (26px).
 
 - v5.0: filters (month/status/designer) remembered across refresh; grid status menu gets 全部隱藏; timeline bars 33px.
+
+- v5.0: login page — password 登入 button no longer disabled by a stuck Google "busy" state (separate pwBusy; popup-closed watcher resets Google busy; startLogin resets).
