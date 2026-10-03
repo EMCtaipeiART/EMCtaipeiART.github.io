@@ -245,7 +245,8 @@
     .face img.head{width:118%;height:auto;object-fit:contain;margin-top:8%}
     .face img.head.is-short{width:100%;margin-top:4%}
     .face.is-designer{background:#fff}
-    .card-info{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 6px;margin:0 0 0 auto}
+    .card-info{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px 6px;margin:8px 0 0}
+    .card-qty{margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
     .card-info span{font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;border:1px solid transparent}
     .card-info .ci-type{background:#e0e7ff;color:#3730a3;border-color:#c7d2fe}
     .card-info .ci-g-re{background:#e0f2fe;color:#075985;border-color:#bae6fd}
@@ -735,10 +736,11 @@
       return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}</div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
+        <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span></div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
-          <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span><span class="ci-qty">數量 ${esc(qty||'-')}</span></div>
+          <span class="card-qty">數量 ${esc(qty||'-')}</span>
         </div>
       </button>`;
     }
