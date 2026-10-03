@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7044,
+  "revision": 7045,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-03T20:16:13.501Z",
+  "updatedAt": "2026-10-03T20:16:17.147Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -996,7 +996,7 @@
         {"案件編號":"26090213","修改次數":"0","建立日期":"2026/10/02 16:55:59","修改日期":"2026/10/02 16:55:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 16:55:59","圖片連結":"[{\"fileName\":\"261001_Emfusion_10月FB貼文_肌膚溫度曲線.png\",\"url\":\"https://lh3.googleusercontent.com/d/1D7nfuqmtyxAnKSvb9kkbF1wPHS_6l6qV=w1600\"},{\"fileName\":\"260929_Emfusion_10月FB貼文_40分鐘-留給自己.png\",\"url\":\"https://lh3.googleusercontent.com/d/1n32CfyxPoMIdZZSuRP0UpdYcYPuk47CQ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 16:57:12"},
         {"案件編號":"26090203","修改次數":"0","建立日期":"2026/10/02 17:59:08","修改日期":"2026/10/02 17:59:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 17:59:08","圖片連結":"[{\"fileName\":\"261002_ANKER_A121D_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VMW_QFJOcXRqXTtaEkYlUPMfoUi-04tr=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SlpsK1nmXLhRKh-ko4qOOauVDz-rq5u0=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DMVG_yhEzFR2TsqfQoy_xYbN5g6pglEb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 17:59:08"},
         {"案件編號":"26100013","修改次數":"1","建立日期":"2026/10/04 03:38:01","修改日期":"2026-10-04","修改內容":"TWWATESTEST\nETSET","修改內容連結":"[{\"text\":\"ETSET\",\"url\":\"HTTP://WWW\"}]","修改人":"Machi","確認修正日":"2026/10/04 03:56:19","待修改圖片":"","圖片連結":"[{\"fileName\":\"original-1dadb5e5f0512e07991c6eec675595fe.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/19hVTibvHoa-_CZM8AXYrhyY2fJeOjp80=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/04 03:56:15"},
-        {"案件編號":"26100013","修改次數":"2","建立日期":"2026/10/04 04:15:18","修改日期":"2026-10-04","修改內容":"test\n\n**【Early Notice】**\n凱曜網路將於 7/20(一)至7/24(五) 舉辦企業內訓活動\n\n若有任何需求與問題煩請提早告知，以利提前協助處理，感謝！\n\nMachi Chen\nArt Director\nT  +886(2)2717-1277#6304\nM  +886(0)937-088-315\nA  台北市復興北路231巷19號5樓\nemctaipei.com\n|","修改內容連結":"[{\"text\":\"emctaipei.com\",\"url\":\"https://www.emctaipei.com/\"}]","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"original-1dadb5e5f0512e07991c6eec675595fe.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ijZV8I5zFpB1NPef7uc4ETI-F-kikdR9=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/04 04:16:13"}
+        {"案件編號":"26100013","修改次數":"2","建立日期":"2026/10/04 04:15:18","修改日期":"2026-10-04","修改內容":"test\n\n**【Early Notice】**\n凱曜網路將於 7/20(一)至7/24(五) 舉辦企業內訓活動\n\n若有任何需求與問題煩請提早告知，以利提前協助處理，感謝！\n\nMachi Chen\nArt Director\nT  +886(2)2717-1277#6304\nM  +886(0)937-088-315\nA  台北市復興北路231巷19號5樓\nemctaipei.com\n|","修改內容連結":"[{\"text\":\"emctaipei.com\",\"url\":\"https://www.emctaipei.com/\"}]","修改人":"Machi","確認修正日":"2026/10/04 04:16:17","待修改圖片":"","圖片連結":"[{\"fileName\":\"original-1dadb5e5f0512e07991c6eec675595fe.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1ijZV8I5zFpB1NPef7uc4ETI-F-kikdR9=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/04 04:16:13"}
       ]
     },
     "補充資料連結": {
