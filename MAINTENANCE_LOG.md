@@ -142,3 +142,5 @@
 - v5.0: 您的案件進度 restored (owner confirms 過稿中 cases → ownerConfirmCases; 查看詳情 returns to the list; 需要修改 → modification reply; daily auto popup; account-menu entry with count). Owners always see their own cases even if the customer visibility rule would hide them.
 
 - v5.0: legacy entry splash (green screen, hopping logo, progress bar, designer quotes) added; it fades out once the page and case data are loaded.
+
+- v5.0: 您的案件進度 moved from the avatar menu to a left-rail "進度" button with a red count badge.
