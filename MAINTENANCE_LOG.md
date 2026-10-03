@@ -130,3 +130,5 @@
 - v5.0: timeline divider snaps exactly to the end of the list columns (timeline keeps at least 300px).
 
 - v5.0: timeline bars thinner (26px).
+
+- v5.0: filters (month/status/designer) remembered across refresh; grid status menu gets 全部隱藏; timeline bars 33px.

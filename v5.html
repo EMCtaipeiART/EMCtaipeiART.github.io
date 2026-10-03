@@ -739,7 +739,7 @@
     .tl-label.is-today{color:#0f8f61}
     .tl-row{position:relative;z-index:1;height:45px;box-sizing:border-box;border-bottom:1px solid rgba(153,170,160,.12)}
     .tl-row.even{background:rgba(240,246,243,.45)}
-    .tl-bar{position:absolute;top:50%;height:26px;margin-top:-13px;border-radius:999px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .tl-bar{position:absolute;top:50%;height:33px;margin-top:-16.5px;border-radius:999px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
     .tl-bar:hover{filter:contrast(1.08) brightness(.97)}
     .tl-name{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:900;color:#103b28;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-align:left}
     .tl-bar.st-todo{background:#f5718a;border:0}
@@ -860,7 +860,7 @@
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{const a=JSON.parse(localStorage.getItem('v5Filters')||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)))}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -1108,7 +1108,7 @@
     function gridHide(){if(!state.gridHide){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridHide')||'[]')}catch(err){}state.gridHide=new Set(Array.isArray(a)?a:[])}return state.gridHide}
     function layoutGroupHtml(){
       ensureCols();const list=state.layout==='list',gh=gridHide();GRID_FIELDS.forEach(([k])=>document.body.classList.toggle('gh-'+k,gh.has(k)));
-      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list&&state.view==='projects')?`<button type="button" data-tl-toggle class="${timelineOn()?'on':''}" aria-pressed="${timelineOn()}" title="${timelineOn()?'隱藏':'顯示'}時間軸" aria-label="時間軸">${ICON_TL}</button>`:''}${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list&&state.view==='projects')?`<button type="button" data-tl-toggle class="${timelineOn()?'on':''}" aria-pressed="${timelineOn()}" title="${timelineOn()?'隱藏':'顯示'}時間軸" aria-label="時間軸">${ICON_TL}</button>`:''}${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><span><button type="button" data-grid-none>全部隱藏</button> <button type="button" data-grid-reset>全部顯示</button></span></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     /* ---------- 時間軸（舊網站案件列表右側的甘特式時間表） ---------- */
     const TL_HOLIDAYS=new Set(['2026-01-01','2026-02-14','2026-02-15','2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-21','2026-02-27','2026-02-28','2026-04-03','2026-04-04','2026-04-05','2026-04-06','2026-05-01','2026-06-19','2026-09-25','2026-09-28','2026-10-09','2026-10-10','2026-10-25','2026-10-26']);
@@ -1249,7 +1249,8 @@
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
-    function rerenderList(){if(state.view==='projects')renderProjects();else renderBoard()}
+    function saveFilters(){try{const f=state.filters;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}catch(err){}}
+    function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     function updateRail(){const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){state.tlLeft=null;
       state.view=view;
@@ -1290,7 +1291,7 @@
           
           <span class="board-sync">${esc(state.syncText)}</span></div></div>
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
-        ${state.layout==='list'?plistHtml(rows):`<div class="board five n${COLUMNS.filter(c=>!gridStatusHide().has(c.status)).length}">${cols}</div>`}`;
+        ${state.layout==='list'?plistHtml(rows):`<div class="board five n${COLUMNS.filter(c=>!gridStatusHide().has(c.status)).length}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
@@ -2664,6 +2665,7 @@
       const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete')deleteCase(id);return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
+      if(t.closest('[data-grid-none]')){const gh=gridStatusHide();COLUMNS.forEach(c=>gh.add(c.status));try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}rerenderList();return}
       if(t.closest('[data-grid-reset]')){gridStatusHide().clear();try{localStorage.setItem('v5GridStatus','[]')}catch(err){}rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
       const nav=t.closest('[data-nav]')?.dataset.nav;if(nav==='settings'){state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
@@ -2739,7 +2741,7 @@
     });
     document.addEventListener('change',async e=>{
       const t=e.target;
-      if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);if(gh.size>=COLUMNS.length)gh.clear();try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
+      if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
       if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
