@@ -112,3 +112,5 @@
 - v5.0: 已完成 cards show a round "+score" badge (加權) before the mail button.
 
 - v5.0: list layout gets the legacy timeline (甘特式時間表) on the right: day scale with weekday, weekend/holiday and today bands, status-colored bars with 🔥/⚠️, click opens detail, drag to scroll, draggable divider, toggle button (remembered).
+
+- v5.0: 專案列表 grid: when fewer than 5 status columns are shown, columns share the full width and cards in a column flow into several sub-columns to the right (>=1181px).

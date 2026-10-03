@@ -745,6 +745,16 @@
     .tl-bar.st-todo{background:#f59e9e}.tl-bar.st-doing{background:#f3d34a}.tl-bar.st-review{background:#7fcdf0}.tl-bar.st-revise{background:#f0ae7f}.tl-bar.st-done{background:#4fbf79}.tl-bar.st-cancel{background:#b8bec7}
     .tl-empty{padding:26px 10px;text-align:center;color:var(--faint);font-size:13px;font-weight:700}
     @media(max-width:900px){.case-split{grid-template-columns:1fr}.tl-resizer{display:none}.case-split .list-wrap{border-radius:16px 16px 0 0;border-right:1px solid var(--line)}.tl-panel{border-left:1px solid var(--line);border-top:0;border-radius:0 0 16px 16px}}
+    @media (min-width:1181px){
+      .board.five.n1,.board.five.n2,.board.five.n3,.board.five.n4{gap:16px}
+      .board.five.n1{grid-template-columns:minmax(0,1fr)}
+      .board.five.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .board.five.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .board.five.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .board.five.n1 .column,.board.five.n2 .column,.board.five.n3 .column,.board.five.n4 .column{grid-column:auto!important}
+      .board.five.n1 .cards,.board.five.n2 .cards,.board.five.n3 .cards,.board.five.n4 .cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));align-items:start}
+      .board.five.n1 .cards .empty,.board.five.n2 .cards .empty,.board.five.n3 .cards .empty,.board.five.n4 .cards .empty{grid-column:1/-1}
+    }
 </style>
 </head>
 <body>
@@ -1264,7 +1274,7 @@
           
           <span class="board-sync">${esc(state.syncText)}</span></div></div>
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
-        ${state.layout==='list'?plistHtml(rows):`<div class="board five">${cols}</div>`}`;
+        ${state.layout==='list'?plistHtml(rows):`<div class="board five n${COLUMNS.filter(c=>!gridStatusHide().has(c.status)).length}">${cols}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
