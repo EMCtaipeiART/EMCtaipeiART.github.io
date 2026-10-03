@@ -667,6 +667,23 @@
     .th-body{padding:8px 0 12px;border-top:1px solid var(--line);font-size:14px;line-height:1.7;overflow-wrap:anywhere;overflow:auto;max-height:420px}
     .th-body a{color:#0b57d0!important;text-decoration:underline}.th-body img{max-width:100%;height:auto}.th-pre{white-space:pre-wrap;font:inherit;margin:0}
     .th-imgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.th-img{max-width:240px;border-radius:8px}
+    /* 信件串（舊網站樣式）與聯絡人選擇 */
+    .thread-cards{display:grid;gap:12px;margin-bottom:18px}
+    .th-card{border:1px solid var(--line);border-radius:22px;background:color-mix(in srgb,var(--panel) 70%,var(--brand-soft));padding:14px 20px}
+    .th-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .th-meta-line{font-size:13px;font-weight:800;color:var(--muted);line-height:1.7}
+    .th-k{color:var(--muted)}
+    .th-name{text-decoration:underline dotted;text-underline-offset:3px;cursor:help;color:var(--ink)}
+    .th-date{margin-left:6px;color:var(--muted)}
+    .th-toggle{border:0;background:transparent;color:var(--muted);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;padding:2px 4px}
+    .th-toggle:hover{color:var(--brand-deep)}
+    .th-card .th-body{border-top:0;padding:14px 0 6px;font-size:15px;line-height:1.75;max-height:none;overflow:visible}
+    .mail-row.has-pick{grid-template-columns:78px minmax(0,1fr) auto}
+    .pick-btn{margin:6px 10px 6px 0;height:38px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13.5px;cursor:pointer;white-space:nowrap}
+    .pick-btn:hover{background:var(--bg)}
+    .chip-r.is-hidden{display:none}
+    .chip-more{height:28px;padding:0 12px;border-radius:99px;border:1px dashed var(--brand);background:transparent;color:var(--brand-deep);font-size:13px;font-weight:800;cursor:pointer}
+    #contactBody .cu-checks{padding-bottom:10px}
   </style>
 </head>
 <body>
@@ -709,6 +726,9 @@
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="mmTitle"><h3 id="mmTitle">修改紀錄</h3><p class="ai-sub" id="mmSub"></p><div id="mmList" class="mm-list"></div>
       <form id="mmForm" class="mm-form"><div class="field"><span class="label">修改日期</span><input class="input" type="date" name="modifyDate" required></div><div class="field"><span class="label">修改內容 <b>*</b></span><textarea class="input" name="content" rows="4" placeholder="請描述這一輪的修改需求" required style="padding:10px 14px;min-height:96px"></textarea></div>
         <div class="ai-actions"><button type="button" class="btn" data-mm="close">關閉</button><button type="submit" class="btn primary" id="mmSubmit">新增修改紀錄</button></div></form></div>
+  </div>
+  <div class="ai-modal" id="contactModal" hidden>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="contactTitle"><h3 id="contactTitle">選擇聯絡人</h3><div id="contactBody" class="mm-form"></div><div class="ai-actions"><button type="button" class="btn primary" data-contact-close>完成</button></div></div>
   </div>
   <div class="ai-modal" id="bindModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="bindTitle"><h3 id="bindTitle">串接既有信件串</h3><div id="bindBody"></div></div>
@@ -1712,18 +1732,23 @@
       };
       walk(doc.body);return doc.body.innerHTML;
     }
-    function threadMessageHtml(m,open){
+    function parseAddrs(str){
+      return String(str||'').split(/,(?![^<]*>)/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^"?(.*?)"?\s*<([^>]+)>$/);const email=m?m[2]:x,name=(m&&m[1].trim())||email.replace(/@.*$/,'');return {name,email}});
+    }
+    const addrHtml=str=>parseAddrs(str).map(a=>`<u class="th-name" title="${esc(a.email)}">${esc(a.name)}</u>`).join('、');
+    function threadMessageHtml(m,open,i){
+      const th=state.thread,isOpen=th.open&&th.open[i]!==undefined?th.open[i]:open;
       const used=new Set(),html=m.bodyHtml?sanitizeMailHtml(m.bodyHtml,m.images):`<pre class="th-pre">${esc(m.bodyText||m.snippet||'')}</pre>`;
-      (m.images||[]).forEach(i=>{if(i.contentId&&String(m.bodyHtml||'').includes(`cid:${i.contentId}`))used.add(i.contentId)});
-      const extra=(m.images||[]).filter(i=>!used.has(i.contentId)&&/^data:image\//i.test(i.dataUrl||'')).map(i=>`<img class="th-img" src="${esc(i.dataUrl)}" alt="">`).join('');
-      return `<details class="th-msg"${open?' open':''}><summary><b>${esc(String(m.from||'').replace(/\s*<.*?>\s*/,'')||'（未知寄件人）')}</b><span>${esc(m.date||'')}</span><small>${esc((m.snippet||'').slice(0,70))}</small></summary><div class="th-meta">收件人：${esc(m.to||'-')}${m.cc?`<br>副本：${esc(m.cc)}`:''}</div><div class="th-body">${html}${extra?`<div class="th-imgs">${extra}</div>`:''}</div></details>`;
+      (m.images||[]).forEach(im=>{if(im.contentId&&String(m.bodyHtml||'').includes(`cid:${im.contentId}`))used.add(im.contentId)});
+      const extra=(m.images||[]).filter(im=>!used.has(im.contentId)&&/^data:image\//i.test(im.dataUrl||'')).map(im=>`<img class="th-img" src="${esc(im.dataUrl)}" alt="">`).join('');
+      return `<div class="th-card${isOpen?' open':''}" data-th="${i}"><div class="th-head"><span class="th-meta-line"><span class="th-k">寄件人：</span>${addrHtml(m.from)||'（未知）'} <span class="th-k">收件人：</span>${addrHtml(m.to)||'-'}${m.cc?` <span class="th-k">副本人：</span>${addrHtml(m.cc)}`:''} <span class="th-date">${esc(m.date||'')}</span></span><button type="button" class="th-toggle" data-th-toggle="${i}">${isOpen?'收合':'展開'}</button></div>${isOpen?`<div class="th-body">${html}${extra?`<div class="th-imgs">${extra}</div>`:''}</div>`:''}</div>`;
     }
     function threadPanelHtml(readOnly){
       const th=state.thread;if(!th)return '';
-      if(th.loading)return '<div class="thread-panel"><div class="notice">正在讀取信件串…</div></div>';
-      if(th.error)return `<div class="thread-panel"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?'（需要重新連接 Gmail 時，請到現行系統的個人選單「連接 Gmail」）':''}</div></div>`;
+      if(th.loading)return '<div class="thread-cards"><div class="notice">正在讀取信件串…</div></div>';
+      if(th.error)return `<div class="thread-cards"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?'（需要重新連接 Gmail 時，請到現行系統的個人選單「連接 Gmail」）':''}</div></div>`;
       const msgs=th.messages||[];
-      return `<details class="thread-panel" open><summary>信件串（${msgs.length} 封）</summary>${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:i===msgs.length-1)).join('')||'<div class="empty">沒有信件</div>'}</details>`;
+      return `<div class="thread-cards" aria-label="Gmail 信件串">${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:i===msgs.length-1,i)).join('')||'<div class="empty">沒有信件</div>'}</div>`;
     }
     async function loadThread(id,applyReply){
       state.thread={id,loading:true,messages:[],error:''};
@@ -1766,6 +1791,12 @@
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
     /* 串接既有信件串（設計部：案件沒有 Gmail 信件串時） */
+    document.addEventListener('click',e=>{
+      const tg=e.target.closest?.('[data-th-toggle]');if(!tg)return;
+      const i=+tg.dataset.thToggle,th=state.thread;if(!th)return;th.open=th.open||{};
+      const card=tg.closest('.th-card'),cur=card.classList.contains('open');th.open[i]=!cur;
+      if(state.view==='mail'){saveMailDraft();renderMail()}else renderThreadPage();
+    });
     const bind={id:'',query:'',loading:false,threads:[],error:'',manual:false};
     function openBindModal(id){
       if(!loggedIn()){toast('請先登入',true);startLogin();return}
@@ -1804,6 +1835,45 @@
     document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='bindQuery'){e.preventDefault();runBindSearch(bind.id,e.target.value.trim()||bind.id)}});
     document.addEventListener('submit',e=>{if(e.target.id==='bindManualForm'){e.preventDefault();doBind({messageId:String(e.target.elements.mid.value||'').trim()})}});
 
+    /* 選擇聯絡人（收件人／副本） */
+    const cp={target:'to',q:''};
+    function contactEmailsIn(field){return new Set(readChips(field).map(e=>emailOf(e)))}
+    function renderContacts(){
+      const body=$('contactBody');if(!body)return;
+      const have=contactEmailsIn(cp.target),q=norm(cp.q),all=mailContacts([...readChips(cp.target)]);
+      const groups=new Map();for(const c of all){if(q&&!norm(c.name+c.email+c.group).includes(q))continue;if(!groups.has(c.group))groups.set(c.group,[]);groups.get(c.group).push(c)}
+      body.innerHTML=`<input class="input" id="contactSearch" type="search" placeholder="搜尋姓名或信箱" value="${esc(cp.q)}" autocomplete="off">${[...groups.entries()].map(([label,items])=>{const sel=items.filter(c=>have.has(c.email)).length;return `<details class="cu-group" open><summary><span>${esc(label)}（已選 ${sel}）</span><label class="cu-all" onclick="event.stopPropagation()"><input type="checkbox" data-ct-all="${esc(label)}"${sel===items.length?' checked':''}>全選</label></summary><div class="cu-checks">${items.map(c=>`<label class="cu-check" title="${esc(c.email)}"><input type="checkbox" data-ct="${esc(c.email)}" data-ct-name="${esc(c.name)}"${have.has(c.email)?' checked':''}><span>${esc(c.name)}</span></label>`).join('')}</div></details>`}).join('')||'<p class="set-note">沒有符合的聯絡人</p>'}`;
+      const s=$('contactSearch');if(s&&document.activeElement===document.body){/* keep */}
+    }
+    function setChip(field,email,name,on){
+      const box=document.querySelector(`[data-chip-field="${field}"]`),input=box.querySelector('[data-chip-input]');
+      const existing=[...box.querySelectorAll('[data-entry]')].find(c=>emailOf(c.dataset.entry)===email);
+      if(on&&!existing)input.insertAdjacentHTML('beforebegin',chipHtml(`${name} <${email}>`));
+      if(!on&&existing)existing.remove();
+      collapseChips(field);
+    }
+    function collapseChips(field){
+      const box=document.querySelector(`[data-chip-field="${field}"]`);if(!box)return;
+      const chips=[...box.querySelectorAll('.chip-r')],limit=3,more=box.querySelector('.chip-more');
+      const expanded=box.dataset.expanded==='1';
+      chips.forEach((c,i)=>c.classList.toggle('is-hidden',!expanded&&i>=limit));
+      if(chips.length>limit){const label=expanded?'收合':`+${chips.length-limit} 位`;if(more)more.textContent=label;else box.querySelector('[data-chip-input]').insertAdjacentHTML('beforebegin',`<button type="button" class="chip-more" data-chip-more="${field}">${label}</button>`)}
+      else more?.remove();
+    }
+    function openContactPicker(field){cp.target=field;cp.q='';$('contactTitle').textContent=field==='to'?'選擇收件人':'選擇副本';renderContacts();$('contactModal').hidden=false}
+    function closeContactPicker(){$('contactModal').hidden=true;collapseChips('to');collapseChips('cc')}
+    document.addEventListener('click',e=>{
+      const t=e.target;
+      const pb=t.closest('[data-pick-contact]');if(pb){openContactPicker(pb.dataset.pickContact);return}
+      const mb=t.closest('[data-chip-more]');if(mb){const box=document.querySelector(`[data-chip-field="${mb.dataset.chipMore}"]`);box.dataset.expanded=box.dataset.expanded==='1'?'0':'1';collapseChips(mb.dataset.chipMore);return}
+      if(t.closest('[data-contact-close]')||t.id==='contactModal'){closeContactPicker();return}
+    });
+    document.addEventListener('change',e=>{
+      const t=e.target;
+      if(t.matches?.('[data-ct]')){setChip(cp.target,t.dataset.ct,t.dataset.ctName,t.checked);renderContacts();return}
+      if(t.matches?.('[data-ct-all]')){t.closest('details').querySelectorAll('[data-ct]').forEach(b=>{if(b.checked!==t.checked)setChip(cp.target,b.dataset.ct,b.dataset.ctName,t.checked)});renderContacts()}
+    });
+    document.addEventListener('input',e=>{if(e.target.id==='contactSearch'){cp.q=e.target.value;const pos=e.target.selectionStart;renderContacts();const s=$('contactSearch');s.focus();s.setSelectionRange(pos,pos)}});
     /* ---------- 信件編輯器（沿用舊系統功能：收件人標籤、完整工具列、插入照片／附件／簽名檔、指定排程、合併信件、上一封／下一封） ---------- */
     const RC_COLORS=['#17211d','#6b7280','#dc2626','#ea580c','#ca8a04','#16a34a','#0d9488','#2563eb','#7c3aed','#db2777'];
     const IMG_TYPES=new Set(['image/jpeg','image/png','image/webp','image/gif']);
@@ -1860,7 +1930,8 @@
     const toIso=local=>`${String(local).slice(0,16)}:00+08:00`;
     function mailMinLocal(){const t=new Date(Date.now()+3*60000);return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(t).replace(' ','T')}
     function renderMail(){
-      const m=state.mail,stage=$('stage');if(!m){backToBoard();return}
+      const m=state.mail,stage=$('stage');if(!m){backToBoard();return;}
+      setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
       const d=m.drafts[m.index],total=m.drafts.length,g=state.gmail,locked=d.sent;
       const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
         :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}請到<a href="index.html">現行系統的個人選單「連接 Gmail」</a>完成連接，之後再從案件補寄；也可以先按「略過，回案件列表」。</div>`:'';
@@ -1878,8 +1949,8 @@
         ${mergePanel}
         <div class="mail-head">
           <div class="mail-row"><span>寄件人</span><div class="static">${esc(g?.address||'（Gmail 連接後顯示）')}</div></div>
-          <div class="mail-row"><span>收件人</span>${chipFieldHtml('to',splitEntries(d.to),'輸入信箱後按 Enter')}</div>
-          <div class="mail-row"><span>副本</span>${chipFieldHtml('cc',splitEntries(d.cc),'可手動輸入信箱')}</div>
+          <div class="mail-row has-pick"><span>收件人</span>${chipFieldHtml('to',splitEntries(d.to),'輸入信箱後按 Enter')}<button type="button" class="pick-btn" data-pick-contact="to">選擇聯絡人</button></div>
+          <div class="mail-row has-pick"><span>副本</span>${chipFieldHtml('cc',splitEntries(d.cc),'可手動輸入信箱')}<button type="button" class="pick-btn" data-pick-contact="cc">選擇聯絡人</button></div>
           <div class="mail-row"><span>主旨</span><input id="mSubject" value="${esc(d.subject)}" autocomplete="off" aria-label="主旨"></div>
         </div>
         <div class="editor-tools rich" role="toolbar" aria-label="格式">
