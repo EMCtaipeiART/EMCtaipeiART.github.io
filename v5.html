@@ -203,8 +203,10 @@
     .lt-detail{background:#fff;color:#344641;border-color:var(--line);max-width:170px;overflow:hidden;text-overflow:ellipsis;display:inline-block;line-height:18px}
     .lt-rev{background:#d1d5db;color:#17211d;min-width:44px;padding:4px 10px}
     .lt-rev.is-draft{background:#fff;border-color:var(--line)}
-    .lt-rev-add{width:30px;height:26px;border-radius:999px;border:1px solid rgba(23,33,29,.12);background:#e6e6e6;color:#17211d;font-size:17px;font-weight:900;line-height:1;cursor:pointer;padding:0}
-    .lt-rev-add:hover{background:#d8d8d8}
+    .lt-rev-add{display:inline-grid;place-items:center;width:28px;height:28px;aspect-ratio:1;border-radius:50%;border:1px solid var(--line);background:#fff;color:#344641;font-size:18px;font-weight:700;line-height:1;cursor:pointer;padding:0}
+    .lt-rev-add:hover{background:var(--bg)}
+    html[data-theme="dark"] .lt-rev-add{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
+    .mm-list .thumbs a{width:64px;height:64px;border-radius:9px}
     button.lt-rev{cursor:pointer;font-family:inherit}
     .mm-list{display:grid;gap:8px;max-height:30vh;overflow:auto;margin-bottom:14px}
     .mm-form{display:grid;gap:12px}
@@ -991,7 +993,7 @@
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
-      $('mmList').innerHTML=mods.length?mods.map(m=>{const n=+m['修改次數']||0;return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(m['修改內容']||'')}</div></div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      $('mmList').innerHTML=mods.length?mods.map(m=>{const n=+m['修改次數']||0;return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(m['修改內容']||'')}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
       const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';$('modModal').hidden=false;setTimeout(()=>f.elements.content.focus(),50);
     }
     function closeModModal(){$('modModal').hidden=true;state.modId=''}
