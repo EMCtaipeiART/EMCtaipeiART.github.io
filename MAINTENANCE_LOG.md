@@ -136,3 +136,5 @@
 - v5.0: login page — password 登入 button no longer disabled by a stuck Google "busy" state (separate pwBusy; popup-closed watcher resets Google busy; startLogin resets).
 
 - v5.0: permissions follow the legacy system — loads assets/access-control.js (帳號權限/角色範本 via Worker verifyToken); 客戶別 部門組別 controls which cases are visible, 客戶別 專案負責人 rules (or request.edit/delete/mail/status) control edit/delete/mail/inline-edit per case, modification.create/confirm and media.manage gate the related buttons; refreshed on login/logout.
+
+- v5.0: left rail gets 設計儀表板 (designers), 歷史資料庫管理 and 資料庫後台 (admins/Machi, by page.* + capability); settings entry follows profile.edit; request.create gate on 開始填寫.
