@@ -97,3 +97,6 @@
 - v5.0: thread body text bold 12px (signature table unchanged).
 
 - v5.0: revision pill gets red border when a modification round is unconfirmed; modification records render links (修改內容連結 + plain URLs).
+
+- v5.0: modification record modal — "確認修正完成" check button (updateModificationConfirm), add-record form collapsed behind a "＋ 新增修改紀錄" button.
+- v5.0: designer reply — choose source first (同上次路徑 / NAS 資料夾 / 電腦檔案上傳, 不同步圖片 option), editor opens straight away with NAS path/images/video-path blocks filled in when backup finishes; NAS picker popup + upload iframe via postMessage as in legacy; after sending: backup inline photos, auto-confirm round, status → 過稿中; toolbar "插入 NAS 路徑"; reply-editor thread cards default collapsed.

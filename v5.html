@@ -701,6 +701,19 @@
     .th-card .th-body table a[href^="http"]:not([href*="maps"]){color:inherit!important;text-decoration:none!important}
     .lt-rev.revision-pending{border:1px solid #dc2626!important;box-shadow:0 0 0 .5px rgba(220,38,38,.26)}
     .rev-text a{color:#0b57d0;text-decoration:underline;word-break:break-all}
+    .mm-add{margin:14px 0 4px}
+    .rev-head{align-items:center}
+    .rev-confirm{margin-left:auto;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:#6b7772;cursor:pointer;padding:0}
+    .rev-confirm svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+    .rev-confirm:hover{background:#e8f6ec;color:#0f8f61;border-color:#bfe3cb}
+    .rev-confirm.is-done{background:#0f8f61;border-color:#0f8f61;color:#fff}
+    .up-card{width:min(900px,100%)}
+    .up-frame{width:100%;height:min(640px,70vh);border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:10px}
+    .up-badge{position:fixed;right:18px;bottom:18px;z-index:1500;padding:10px 16px;border-radius:999px;background:var(--brand-deep,#0f5138);color:#fff;font-size:13px;font-weight:800;box-shadow:var(--shadow-lg);cursor:pointer}
+    .up-badge.nas{bottom:64px;cursor:default}
+    .designer-reply-skip-images{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin:10px 0;border:1px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
+    .designer-reply-skip-images small{display:block;color:var(--muted);font-weight:600;font-size:12px;margin-top:2px}
+    .dr-up{color:var(--muted);font-weight:700}
 </style>
 </head>
 <body>
@@ -741,7 +754,7 @@
   </div>
   <div class="ai-modal" id="modModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="mmTitle"><h3 id="mmTitle">修改紀錄</h3><p class="ai-sub" id="mmSub"></p><div id="mmList" class="mm-list"></div>
-      <form id="mmForm" class="mm-form"><div class="field"><span class="label">修改日期</span><input class="input" type="date" name="modifyDate" required></div><div class="field"><span class="label">修改內容 <b>*</b></span><textarea class="input" name="content" rows="4" placeholder="請描述這一輪的修改需求" required style="padding:10px 14px;min-height:96px"></textarea></div>
+      <div class="mm-add"><button type="button" class="btn primary" id="mmToggle" data-mm="toggle">＋ 新增修改紀錄</button></div><form id="mmForm" class="mm-form" hidden><div class="field"><span class="label">修改日期</span><input class="input" type="date" name="modifyDate" required></div><div class="field"><span class="label">修改內容 <b>*</b></span><textarea class="input" name="content" rows="4" placeholder="請描述這一輪的修改需求" required style="padding:10px 14px;min-height:96px"></textarea></div>
         <div class="ai-actions"><button type="button" class="btn" data-mm="close">關閉</button><button type="submit" class="btn primary" id="mmSubmit">新增修改紀錄</button></div></form></div>
   </div>
   <div class="ai-modal" id="contactModal" hidden>
@@ -754,6 +767,14 @@
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle"><h3 id="dmTitle">選擇項目細節</h3><p class="ai-sub" id="dmSub"></p><div class="detail-pick" id="dmList"></div><div class="ai-actions"><button type="button" class="btn" data-dm="cancel">取消</button><button type="button" class="btn primary" data-dm="ok">確認並改為執行中</button></div></div>
   </div>
   <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-btn lb-close" data-lb-act="close" aria-label="關閉">×</button><button type="button" class="lb-btn lb-prev" data-lb-act="prev" aria-label="上一張">‹</button><figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure><button type="button" class="lb-btn lb-next" data-lb-act="next" aria-label="下一張">›</button></div>
+  <div class="ai-modal" id="drModal" hidden>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="drTitle"><h3 id="drTitle">設計圖上傳方式</h3><p class="ai-sub" id="drSub"></p><div id="drBody"></div><div class="ai-actions"><button type="button" class="btn" data-dr-close>取消</button></div></div>
+  </div>
+  <div class="ai-modal" id="upModal" hidden>
+    <div class="ai-card up-card" role="dialog" aria-modal="true" aria-labelledby="upTitle"><h3 id="upTitle">設計圖上傳</h3><iframe id="upFrame" class="up-frame" title="設計圖上傳"></iframe><div class="ai-actions"><button type="button" class="btn" data-up="min">縮小到背景</button><button type="button" class="btn" data-up="close">關閉</button></div></div>
+  </div>
+  <div class="up-badge" id="upBadge" hidden role="status"><span>設計圖上傳中</span></div>
+  <div class="up-badge nas" id="nasBadge" hidden role="status"><span>NAS 資料夾備份中...</span></div>
   <div class="cell-pop" id="cellPop" hidden></div>
   <div class="toast" id="toast" role="status"></div>
 
@@ -1196,12 +1217,16 @@
       for(const k of c){if(k.a<pos)continue;out+=esc(src.slice(pos,k.a))+'<a href="'+esc(k.u)+'" target="_blank" rel="noopener noreferrer">'+esc(k.t)+'</a>';pos=k.b}
       return (out+esc(src.slice(pos))).replace(/\n/g,'<br>');
     }
+    function modListHtml(id){
+      const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
+      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession())?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+    }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
-      $('mmList').innerHTML=mods.length?mods.map(m=>{const n=+m['修改次數']||0;return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span></div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
-      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';$('modModal').hidden=false;setTimeout(()=>f.elements.content.focus(),50);
+      $('mmList').innerHTML=modListHtml(id);
+      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=false;$('modModal').hidden=false;
     }
     function closeModModal(){$('modModal').hidden=true;state.modId=''}
     async function submitMod(){
@@ -1501,7 +1526,7 @@
     }
     /* 編輯器工具列（沿用舊網站樣式：圖示按鈕、文字大小／字型選單、顏色圓點） */
     const SV=p=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
-    const ICO={undo:SV('<path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/>'),redo:SV('<path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/>'),
+    const ICO={nas:SV('<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6H10l2 2.2h6.5A1.5 1.5 0 0 1 20 9.7v7.8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/>'),undo:SV('<path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/>'),redo:SV('<path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/>'),
       left:SV('<path d="M4 6h16M4 12h10M4 18h13"/>'),center:SV('<path d="M4 6h16M7 12h10M5.5 18h13"/>'),right:SV('<path d="M4 6h16M10 12h10M7 18h13"/>'),
       ul:SV('<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>'),ol:SV('<path d="M10 6h10M10 12h10M10 18h10M4 5l1.2-.8V9M3.8 14.5h2.4L3.8 17.5h2.5"/>'),
       link:SV('<path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/>'),
@@ -1517,7 +1542,7 @@
         +`<span class="rc-color-wrap"><button type="button" class="tool" ${attr}="colorToggle" title="文字顏色" aria-label="文字顏色"><span class="rc-dot"></span></button><span class="rc-colors"${mail?' id="rcColors"':''} hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" ${colorKey}="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span>`
         +b('link','插入超連結（⌘K）',ICO.link)
         +(ins?sep+b('ins1','插入 {收件人名}：套用範本時會自動換成收件人的名字','插入收件人名',' tool-text')+b('ins2','插入 {項目細節}：套用範本時會自動換成這個案件的項目細節','插入項目細節',' tool-text'):'')
-        +(mail?sep+b('template','插入信件範本',ICO.tpl)+b('signature','插入簽名檔',ICO.sig,sigOn?' on':'')+b('image','上傳照片',ICO.img)+b('attach','附加檔案',ICO.att):'');
+        +(mail?sep+b('template','插入信件範本',ICO.tpl)+b('signature','插入簽名檔',ICO.sig,sigOn?' on':'')+b('image','上傳照片',ICO.img)+b('attach','附加檔案',ICO.att)+b('nas','插入 NAS 路徑（粗體）',ICO.nas):'');
     }
     const miniTools=(ins=false)=>`<div class="mini-tools" role="toolbar">${barHtml('data-sc',{ins})}</div>`;
     const SIZES=[['小','2'],['正常','3'],['大','5'],['特大','6']],FONTS=[['預設字型',''],['微軟正黑體','Microsoft JhengHei'],['新細明體','PMingLiU'],['標楷體','DFKai-SB'],['Arial','Arial'],['Georgia','Georgia'],['Courier New','Courier New']];
@@ -1777,7 +1802,7 @@
       if(th.loading)return '<div class="thread-cards"><div class="notice">正在讀取信件串…</div></div>';
       if(th.error)return `<div class="thread-cards"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?'（需要重新連接 Gmail 時，請到現行系統的個人選單「連接 Gmail」）':''}</div></div>`;
       const msgs=th.messages||[];
-      return `<div class="thread-cards" aria-label="Gmail 信件串">${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:i===msgs.length-1,i)).join('')||'<div class="empty">沒有信件</div>'}</div>`;
+      return `<div class="thread-cards" aria-label="Gmail 信件串">${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:false,i)).join('')||'<div class="empty">沒有信件</div>'}</div>`;
     }
     async function loadThread(id,applyReply){
       state.thread={id,loading:true,messages:[],error:''};
@@ -1796,24 +1821,24 @@
     }
     async function openReadThread(id){state.form=null;state.mail=null;state.thread={id,loading:true,messages:[]};show('thread');loadThread(id,false)}
     const greetingName=n=>String(n||'設計負責人').trim();
-    function designerReplyBody(row){
+    function designerReplyBody(row,dr){
       const t=st2.templates[st2.tplDefault],details=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'),name=greetingName(row['專案負責人']);
-      let html=t?t.html.replace(/\{收件人名\}/g,esc(name)).replace(/\{項目細節\}/g,esc(details)):`Hi ${esc(name)},<br><br>`;
-      const mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0)),imgs=mods.length?imageList(mods[0]):[];
-      if(imgs.length)html+=`<br><p>設計圖（${imgs.length} 張）：</p><ul>${imgs.slice(0,30).map(i=>`<li><a href="${esc(i.url)}">${esc(i.fileName||'設計圖')}</a></li>`).join('')}</ul>`;
-      return html;
+      let html=t?t.html.replace(/\{收件人名\}/g,esc(name)).replace(/\{項目細節\}/g,esc(details)):'Hi '+esc(name)+',<br><br>附上社群貼文內容，<br>再煩請查收，謝謝。';
+      return html+'<br><br>'+drPlaceholders(dr);
     }
-    async function startReply(id,mode){
+    async function startReply(id,mode,opts){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
-      const body=mode==='modification'?`Hi ${esc(greetingName(row['設計負責人']))},<br><br>`:mode==='designer'?designerReplyBody(row):'<br>';
-      const d={id,row,to:'',cc:'',subject:`Re: 【${id}】${row['客戶別']}_${row['專案名稱']}`,body,sent:false,reply:true,mode,existing:true};
+      if(mode==='designer'&&!opts){openDrChooser(id);return}
+      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true}:null;
+      const body=mode==='modification'?'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>':mode==='designer'?designerReplyBody(row,dr):'<br>';
+      const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();loadThread(id,true);
     }
     function openReplyChooser(id,anchor){
       const pop=$('cellPop');state.cellEdit={id,field:'reply'};
       const opt=(m,label,desc)=>`<button type="button" class="option reply-opt" data-reply-method="${m}"><span>${label}</span><small>${desc}</small></button>`;
-      pop.innerHTML=`<h3>回信方式</h3><div class="option-list reply-list">${opt('modification','填寫修改需求信','撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…')}${opt('designer','設計師回覆信','帶入預設範本與這一輪的設計圖連結（不含 NAS 資料夾選擇／上傳）')}${opt('general','一般回信','直接開啟信件編輯器，內容手動填寫')}${opt('read','直接讀信','只閱讀這條信件串，預設展開首封信')}</div>`;
+      pop.innerHTML=`<h3>回信方式</h3><div class="option-list reply-list">${opt('modification','填寫修改需求信','撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…')}${opt('designer','設計師回覆信','先選擇 NAS 資料夾或電腦檔案，備份後直接帶入設計圖與 NAS 路徑')}${opt('general','一般回信','直接開啟信件編輯器，內容手動填寫')}${opt('read','直接讀信','只閱讀這條信件串，預設展開首封信')}</div>`;
       pop.hidden=false;
       const r=anchor.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
@@ -1853,7 +1878,7 @@
     document.addEventListener('click',e=>{
       const t=e.target;
       const rm=t.closest('[data-reply-method]')?.dataset.replyMethod;
-      if(rm&&state.cellEdit?.field==='reply'){const id=state.cellEdit.id;closeCellPop();if(rm==='read')openReadThread(id);else startReply(id,rm);return}
+      if(rm&&state.cellEdit?.field==='reply'){const id=state.cellEdit.id;closeCellPop();if(rm==='read')openReadThread(id);else if(rm==='designer')openDrChooser(id);else startReply(id,rm);return}
       const bt=t.closest('[data-bind-thread]');if(bt){doBind({threadId:bt.dataset.bindThread});return}
       const ba=t.closest('[data-bind]')?.dataset.bind;
       if(ba==='close'||t.id==='bindModal'){closeBindModal();return}
@@ -1974,6 +1999,7 @@
         <div class="page-top"><div><h2 class="page-title">撰寫需求信件</h2><p class="page-sub">${d.reply?`${d.mode==='modification'?'填寫修改需求信':d.mode==='designer'?'設計師回覆信':'一般回信'}：回覆案件 ${esc(d.id)} 的 Gmail 信件串。${d.mode==='modification'?'寄出後內容會自動記錄進「修改紀錄」。':''}`:d.ids?`合併 ${d.ids.length} 筆案件（${esc(d.ids.join('、'))}）為一封信。`:d.existing?`案件 ${esc(d.id)}：確認收件人與內容後寄出。`:`案件 ${esc(d.id)} 已建立。確認收件人與內容後寄出，會回到案件列表。`}</p></div></div>
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
+        ${(d.dr&&d.dr.pending)?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
         <div class="mail-head">
@@ -1991,7 +2017,7 @@
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
         ${d.scheduleOpen?`<div class="schedule-row"><label>寄出時間（台北時間）<input type="datetime-local" id="mSchedule" min="${nowMin}" value="${esc(d.scheduledAt||'')}"></label><button type="button" class="btn" data-mail="schedule-clear">取消排程</button><span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div>`:''}
         <div class="form-actions">
-          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent)?' disabled':''}>${m.sending?'處理中…':(d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
+          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
           <button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>
           <button type="button" class="btn" data-mail="skip">略過，回案件列表</button>
         </div>
@@ -2033,6 +2059,7 @@
           d.scheduledDone=true;
         }else if(d.reply){await api('replyCaseMail',{caseId:d.id,...base});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
         else await api('sendCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject});
+        if(d.reply&&d.mode==='designer')afterDesignerSend(d,inlineImages);
         d.sent=true;m.sentCount++;m.sending=false;
         const next=m.drafts.findIndex(x=>!x.sent);
         if(d.scheduledDone)toast(`已排程於 ${d.scheduledAt.replace('T',' ')} 寄出`);
@@ -2098,6 +2125,7 @@
       if(cmd==='size'||cmd==='font'){openFmtMenu(cmd,document.querySelector(`[data-rc="${cmd}"]`));return}
       if(cmd==='image'){$('mImgInput').click();return}
       if(cmd==='attach'){$('mAttInput').click();return}
+      if(cmd==='nas'){saveMailRange();const m=state.mail,d=m&&m.drafts[m.index];nasOpen({id:d?d.id:'',purpose:'insert',mode:'insert'});nas.range=mailRange?mailRange.cloneRange():null;return}
       restoreMailRange();
       if(cmd==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url);saveMailRange();return}
       if(cmd==='template'){openPicker('template',document.querySelector('[data-rc="template"]'));return}
@@ -2111,6 +2139,199 @@
       }
       document.execCommand(cmd,false,null);saveMailRange();
     }
+
+    /* ---------- 修改紀錄：確認修正完成／設計師回覆信（NAS 與電腦上傳）---------- */
+    async function setConfirm(id,n,on){
+      const rec=(state.mods.get(id)||[]).find(m=>(+m['修改次數']||0)===n);if(!rec)return false;
+      const old=rec['確認修正日'],date=on?ymd(taipeiToday()):'';rec['確認修正日']=date;
+      try{const data=await api('updateModificationConfirm',{record:{caseId:id,count:n,confirmedDate:date}});rec['確認修正日']=(data.record&&(data.record['確認修正日']??data.record.confirmedDate))??date;return true}
+      catch(err){rec['確認修正日']=old;throw err}
+    }
+    async function refreshMods(id){
+      try{
+        const data=await api('listModificationRecords',{ids:[id]});
+        const rows=(Array.isArray(data.rows)?data.rows:[]).map(r=>r['案件編號']!==undefined?r:{'案件編號':r.caseId,'修改次數':r.count,'建立日期':r.created,'修改日期':r.date,'修改內容':r.content,'修改人':r.modifier,'確認修正日':r.confirmedDate,'圖片連結':typeof r.images==='string'?r.images:JSON.stringify(r.images||[]),'修改內容連結':typeof r.links==='string'?r.links:JSON.stringify(r.links||[])}).filter(r=>String(r['案件編號']||'')===id);
+        if(rows.length)state.mods.set(id,rows);
+      }catch(err){}
+    }
+    const roundOf=id=>(state.mods.get(id)||[]).reduce((n,m)=>Math.max(n,+m['修改次數']||0),0);
+    const roundLabel=n=>n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`;
+    const uuid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const showBadge=(id,text)=>{const b=$(id);if(!b)return;if(text)b.querySelector('span').textContent=text;b.hidden=false};
+    const hideBadge=id=>{const b=$(id);if(b)b.hidden=true};
+
+    /* NAS 資料夾選擇器（與舊網站同一套：彈出視窗＋postMessage） */
+    const NAS_MGR='http://iMac.local:8877',NAS_HOSTS=['http://localhost:8877',NAS_MGR],NAS_TOKEN='120236a2365606d65af445934e413e02033df8ba15912fa7',NAS_MEM='machiNasFolderPickerHost',NAS_STORE='v5NasFolders';
+    const UPLOAD_PAGE='https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
+    const nas={nonce:'',id:'',round:0,purpose:'case',afterReply:false,skip:false,backing:false,timer:0,readyHost:'',readyTimer:0,range:null};
+    function nasHostOrder(){let rem='';try{const s=JSON.parse(localStorage.getItem(NAS_MEM)||'null');if(s&&Date.now()-Number(s.at||0)<864e5)rem=String(s.host||'')}catch(e){}return rem&&NAS_HOSTS.includes(rem)?[rem,...NAS_HOSTS.filter(h=>h!==rem)]:[...NAS_HOSTS]}
+    function nasUrl(p){const u=new URL(NAS_MGR+'/picker');if(p.caseId)u.searchParams.set('caseId',p.caseId);u.searchParams.set('token',NAS_TOKEN);u.searchParams.set('nonce',p.nonce);u.searchParams.set('origin',location.origin);for(const k of ['mode','path','keyword','folders'])if(p[k])u.searchParams.set(k,p[k]);return u}
+    const nasForHost=(url,host)=>{const n=new URL(host);n.pathname=url.pathname;n.search=url.search;return n};
+    function nasClearWatch(){if(nas.timer){clearInterval(nas.timer);nas.timer=0}nas.backing=false}
+    function nasPopup(url){
+      const hosts=nasHostOrder();clearTimeout(nas.readyTimer);nas.readyHost='';
+      const w=520,h=640,win=window.open(nasForHost(url,hosts[0]).toString(),'machiNasFolderPicker',`width=${w},height=${h},left=${Math.max(0,Math.round((screen.width-w)/2))},top=${Math.max(0,Math.round((screen.height-h)/2))}`);
+      if(!win)return win;
+      const tryHost=i=>{clearTimeout(nas.readyTimer);nas.readyTimer=setTimeout(()=>{if(nas.readyHost||win.closed)return;const next=i+1;if(next>=hosts.length){toast('連不到 NAS 資料夾選擇器（你的電腦與管理者電腦都沒有回應），請改用電腦檔案上傳',true);return}window.open(nasForHost(url,hosts[next]).toString(),'machiNasFolderPicker');tryHost(next)},2500)};
+      tryHost(0);return win;
+    }
+    function nasWatch(win,nonce){
+      nasClearWatch();let ms=0;
+      nas.timer=setInterval(()=>{
+        ms+=1000;if(nas.nonce!==nonce){nasClearWatch();return}
+        if(win.closed){const was=nas.backing,id=nas.id,round=nas.round,reply=nas.afterReply;nasClearWatch();nas.nonce='';nas.afterReply=false;nas.skip=false;hideBadge('nasBadge');if(was&&id&&reply)drFinish(id,round,{}).catch(()=>{});toast(was?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true);return}
+        if(ms===20000&&!nas.backing)toast('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，請關閉分頁改用「選擇電腦檔案上傳」',true);
+      },1000);
+    }
+    function nasOpen({id='',round=0,mode='',folders=null,purpose='case',afterReply=false,skip=false}={}){
+      nasClearWatch();Object.assign(nas,{nonce:uuid(),id,round,purpose,afterReply,skip:Boolean(afterReply&&skip)});
+      const p={caseId:id,nonce:nas.nonce,mode};
+      if(mode==='reuse'&&folders&&folders.length){p.path=folders[0].path;p.keyword=folders[0].keyword||'';p.folders=JSON.stringify(folders)}
+      const win=nasPopup(nasUrl(p));
+      if(!win){toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);nas.nonce='';return}
+      toast(mode==='reuse'?'正在沿用 NAS 路徑並抓取最新圖片...':'請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...');
+      nasWatch(win,nas.nonce);
+    }
+    const nasStoreGet=()=>{try{return JSON.parse(localStorage.getItem(NAS_STORE)||'{}')}catch(e){return {}}};
+    function caseNasFolders(id,row){
+      let a=row&&row.designImageFolders;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=null}}
+      const l=Array.isArray(a)?a.map(i=>({path:String(i&&i.path||'').trim(),keyword:String(i&&i.keyword||'').trim()})).filter(i=>i.path):[];
+      if(l.length)return l;
+      const st=nasStoreGet()[id];if(Array.isArray(st)&&st.length)return st;
+      const p=String(row&&row.designImageFolderUrl||'').trim();return p?[{path:p,keyword:String(row.designImageFolderKeyword||'').trim()}]:[];
+    }
+    function saveCaseNas(id,ok){
+      const list=ok.map(f=>({path:f.path,keyword:f.keyword||''})),st=nasStoreGet();st[id]=list;try{localStorage.setItem(NAS_STORE,JSON.stringify(st))}catch(e){}
+      api('update',{id,row:{id,designImageFolderUrl:list[0].path,designImageFolderKeyword:list[0].keyword,designImageFolders:JSON.stringify(list)},forceHeaders:[],writeHeaders:[]}).catch(err=>toast(`NAS 資料夾已備份，但寫入案件設定失敗：${err.message}`,true));
+    }
+    function insertNasPath(path,range){
+      const ed=$('mBody');if(!ed)return;mailRange=range||mailRange;restoreMailRange();
+      document.execCommand('insertHTML',false,`<b>${esc(path)}</b>&nbsp;`);saveMailRange();
+    }
+
+    /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
+    const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
+    function drPlaceholders(dr){return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
+    function drMutate(d,fn){
+      const live=state.view==='mail'&&state.mail&&state.mail.drafts[state.mail.index]===d&&$('mBody');
+      const root=live?$('mBody'):(()=>{const x=document.createElement('div');x.innerHTML=d.body;return x})();
+      fn(root);if(!live)d.body=root.innerHTML;
+    }
+    function openDrChooser(id){
+      const row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
+      const round=roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse};
+      $('drSub').textContent=`${id}｜${row['專案名稱']||''}｜${roundLabel(round)}`;
+      $('drBody').innerHTML=`<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label><div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`;
+      $('drModal').hidden=false;
+    }
+    function openDrEditor(id,o){
+      const m=state.mail,cur=m&&m.drafts[m.index];
+      if(cur&&cur.reply&&cur.mode==='designer'&&cur.id===id&&cur.dr&&cur.dr.round===o.round&&state.view==='mail'){
+        if(o.folders&&o.folders.length){cur.dr.folders=o.folders;drMutate(cur,r=>{const b=r.querySelector('#v5DrNas');if(b){b.innerHTML=drNasHtml(o.folders)}})}
+        return;
+      }
+      startReply(id,'designer',{round:o.round,skip:o.skip,folders:o.folders||[]});
+    }
+    async function drFinish(id,round,{folders=null,fileFolders=null,skip=null}={}){
+      await refreshMods(id);
+      const m=state.mail,d=m&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr);if(!d)return;
+      const dr=d.dr;if(folders&&folders.length)dr.folders=folders;if(fileFolders)dr.fileFolders=fileFolders;if(skip!==null&&skip!==undefined)dr.skip=skip;
+      const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round),imgs=rec?imageList(rec):[];
+      drMutate(d,root=>{
+        const box=root.querySelector('#v5DrImages');
+        if(box){box.innerHTML='';if(!dr.skip)imgs.forEach(i=>{const im=document.createElement('img');im.src=i.url;im.alt=i.fileName||'設計圖';im.setAttribute('style','width:180px;max-width:100%');box.appendChild(im);box.appendChild(document.createTextNode(' '))});if(!box.querySelector('img'))box.remove()}
+        const nb=root.querySelector('#v5DrNas');if(nb&&dr.folders.length)nb.innerHTML=drNasHtml(dr.folders);
+        const vb=root.querySelector('#v5DrVideo');
+        if(vb){const vids=imgs.map(i=>String(i.fileName||'').trim()).filter(n=>/\.(mp4|mov|m4v)$/i.test(n)).map(n=>{const p=dr.fileFolders[n]||(dr.folders.length===1?dr.folders[0]:'');return p?`${p}/${n}`:''}).filter(Boolean);
+          if(vids.length)vb.innerHTML=`<br> 影片路徑${vids.length>1?`（共 ${vids.length} 支）`:''}`+vids.map(v=>`<br><b>${esc(v)}</b>`).join('');else vb.remove()}
+      });
+      dr.pending=false;
+      if(state.view==='mail'&&m.drafts[m.index]===d){saveMailDraft();renderMail()}
+    }
+    async function afterDesignerSend(d,imgs){
+      const round=d.dr?d.dr.round:null;
+      try{if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
+      if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
+      const row=allRows().find(r=>idKey(r)===d.id);if(row&&String(row['狀態']||'').trim()!=='過稿中')applyMove(d.id,'過稿中');
+      refreshView();
+    }
+
+    /* 電腦檔案上傳（Apps Script 上傳頁，放在 iframe 內） */
+    const up={nonce:'',id:'',round:0,skip:false,afterReply:true,inflight:false,last:null};
+    function openDrUpload(id,round,skip){
+      const row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      Object.assign(up,{nonce:uuid(),id,round,skip,inflight:false,last:null});
+      const start=parseDay(row['開始日期']),dt=isNaN(start)?null:new Date(start),url=new URL(UPLOAD_PAGE);
+      url.searchParams.set('mode','case-design');url.searchParams.set('caseId',id);url.searchParams.set('round',String(round));url.searchParams.set('designer',row['設計負責人']||'');url.searchParams.set('client',row['客戶別']||'');
+      url.searchParams.set('year',dt?String(dt.getUTCFullYear()):'');url.searchParams.set('month',dt?String(dt.getUTCMonth()+1).padStart(2,'0'):'');url.searchParams.set('closeNonce',up.nonce);
+      url.hash=new URLSearchParams({token:session().token}).toString();
+      $('upTitle').textContent=`${id}．${roundLabel(round)}設計圖上傳`;
+      const fr=$('upFrame');fr.credentialless=true;fr.referrerPolicy='no-referrer';fr.src=url.toString();$('upModal').hidden=false;
+    }
+    function closeUp(){const fr=$('upFrame');$('upModal').hidden=true;if(fr)fr.src='about:blank';hideBadge('upBadge');up.nonce='';up.inflight=false}
+    window.addEventListener('message',ev=>{
+      const data=ev.data;if(!data||typeof data!=='object'||typeof data.type!=='string')return;
+      if(data.type==='machi-nas-folder-picker-ready'){clearTimeout(nas.readyTimer);nas.readyHost=String(data.host||ev.origin||'');if(nas.readyHost)try{localStorage.setItem(NAS_MEM,JSON.stringify({host:nas.readyHost,at:Date.now()}))}catch(e){}return}
+      if(data.type==='machi-case-design-upload-progress'){
+        if(!up.nonce||data.closeNonce!==up.nonce)return;
+        const done=Number(data.done)||0,total=Number(data.total)||0,was=up.inflight;up.inflight=true;
+        if(!was){$('upModal').hidden=true;openDrEditor(up.id,{folders:[],round:up.round,skip:up.skip})}
+        showBadge('upBadge',`設計圖上傳中 ${done}/${total}${data.currentFileName?`：${data.currentFileName}`:''}`);return;
+      }
+      if(data.type==='machi-case-design-images-updated'){
+        if(!up.nonce||data.closeNonce!==up.nonce)return;
+        const id=String(data.caseId||up.id),count=Number(data.count)||0,failed=Number(data.failedCount)||0,round=up.round,skip=up.skip;
+        closeUp();toast(failed?`已上傳 ${count} 張，${failed} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failed));
+        openDrEditor(id,{folders:[],round,skip});
+        drFinish(id,round,{skip}).then(()=>{if(count&&round>0){const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())setConfirm(id,round,true).then(refreshView).catch(()=>{})}}).catch(err=>toast(`圖片已上傳成功，但自動帶入信件失敗：${err.message}`,true));
+        return;
+      }
+      if(data.type==='machi-nas-folder-backup-started'){
+        if(!nas.nonce||data.nonce!==nas.nonce)return;
+        nas.backing=true;showBadge('nasBadge','NAS 資料夾備份中，可以繼續操作頁面其他地方...');
+        const paths=(Array.isArray(data.paths)&&data.paths.length?data.paths:[data.path]).map(p=>String(p||'').trim()).filter(Boolean);
+        if(nas.afterReply&&nas.id)openDrEditor(nas.id,{folders:paths,round:nas.round,skip:nas.skip});return;
+      }
+      if(data.type==='machi-nas-folder-previews')return;
+      if(data.type==='machi-nas-folder-selected'){
+        if(!nas.nonce||data.nonce!==nas.nonce)return;
+        const {purpose,id,afterReply,skip,round,range}=nas;nas.nonce='';nasClearWatch();hideBadge('nasBadge');nas.purpose='case';nas.afterReply=false;nas.skip=false;nas.range=null;
+        if(purpose==='insert'){const p=String(data.path||'').trim();if(!p){toast('未選擇任何資料夾',true);return}insertNasPath(p,range);toast('已插入 NAS 路徑');return}
+        const folders=Array.isArray(data.folders)?data.folders:(data.path?[{path:data.path,keyword:data.keyword||''}]:[]);
+        if(!folders.length){toast('未選擇任何資料夾',true);return}
+        const ok=folders.filter(f=>f.ok!==false),failed=folders.length-ok.length;
+        if(!ok.length){toast(`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true);return}
+        saveCaseNas(id,ok);
+        const ff={};for(const f of ok){const p=String(f.path||'').trim();if(!p)continue;for(const n of (Array.isArray(f.backup&&f.backup.uploadedFiles)?f.backup.uploadedFiles:[])){const nm=String(n||'').trim();if(nm&&!ff[nm])ff[nm]=p}}
+        toast(String(data.summary||'').trim()||(failed?`已設定 ${ok.length} 個 NAS 來源資料夾（${failed} 個備份失敗，已略過）`:'已設定 NAS 來源資料夾'));
+        if(afterReply&&id)drFinish(id,round,{folders:ok.map(f=>f.path||'').filter(Boolean),fileFolders:ff,skip}).catch(err=>toast(`NAS 備份已完成，但自動帶入回信編輯器失敗：${err.message}`,true));
+        else if(id)refreshMods(id).then(refreshView);
+        return;
+      }
+    });
+    document.addEventListener('click',e=>{
+      const t=e.target;
+      const src=t.closest?.('[data-dr-src]')?.dataset.drSrc;
+      if(src&&state.drChoice){
+        const {id,round,reuse}=state.drChoice,skip=Boolean($('drSkip')&&$('drSkip').checked);$('drModal').hidden=true;state.drChoice=null;
+        if(src==='nas')nasOpen({id,round,afterReply:true,skip});
+        else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:true,skip});
+        else openDrUpload(id,round,skip);
+        return;
+      }
+      if(t.closest?.('[data-dr-close]')||t.id==='drModal'){$('drModal').hidden=true;state.drChoice=null;return}
+      if(t.closest?.('[data-up="min"]')){$('upModal').hidden=true;if(up.nonce)showBadge('upBadge','設計圖上傳視窗已縮小（點此還原）');return}
+      if(t.closest?.('[data-up="close"]')){if(up.inflight&&!confirm('上傳進行中，確定要關閉嗎？已上傳成功的圖片會保留。'))return;closeUp();return}
+      if(t.closest?.('#upBadge')&&up.nonce&&!up.inflight){$('upModal').hidden=false;hideBadge('upBadge');return}
+      const rc=t.closest?.('[data-rev-confirm]');
+      if(rc){
+        const id=state.modId,n=+rc.dataset.revConfirm,done=rc.classList.contains('is-done');rc.disabled=true;
+        setConfirm(id,n,!done).then(()=>{$('mmList').innerHTML=modListHtml(id);refreshView();toast(done?`已取消 ${id} ${roundLabel(n)} 修正確認`:`已確認 ${id} ${roundLabel(n)} 修正完成`)}).catch(err=>{rc.disabled=false;toast(`${done?'取消確認':'確認修正完成'}失敗：${err.message}`,true)});
+        return;
+      }
+      if(t.closest?.('[data-mm="toggle"]')){const f=$('mmForm');f.hidden=false;$('mmToggle').hidden=true;f.scrollIntoView({block:'nearest'});setTimeout(()=>f.elements.content.focus(),50);return}
+    });
 
     /* ---------- 案件詳情（直接在頁面展開，不用彈窗） ---------- */
     const slashNice=v=>{const ms=parseDay(v);return Number.isNaN(ms)?String(v||'-'):ymd(ms)};
@@ -2363,6 +2584,7 @@
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
       if(mail==='merge'){mergeSelected();return}
       if(mail==='unmerge'){unmergeCurrent();return}
+      if(mail==='dr-skip'){const d=state.mail.drafts[state.mail.index];if(d.dr){d.dr.pending=false;drMutate(d,r=>{r.querySelector('.dr-up')?.parentElement?.remove()});saveMailDraft();renderMail()}return}
       if(mail==='schedule-toggle'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduleOpen=!d.scheduleOpen;renderMail();return}
       if(mail==='schedule-clear'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduledAt='';d.scheduleOpen=false;renderMail();return}
       const fm=t.closest('[data-fmt-menu]')?.dataset.fmtMenu;if(fm){const [k,v]=[fm.slice(0,fm.indexOf(':')),fm.slice(fm.indexOf(':')+1)];document.getElementById('rcPick')?.remove();if(state.view==='mail')restoreMailRange();if(k==='size')document.execCommand('fontSize',false,v||'3');else if(v)document.execCommand('fontName',false,v);else document.execCommand('removeFormat',false,null);if(state.view==='mail')saveMailRange();return}
