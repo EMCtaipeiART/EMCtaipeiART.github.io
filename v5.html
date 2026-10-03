@@ -649,6 +649,24 @@
     .sort-mark.on{color:var(--brand-deep)}
     .list-table th{cursor:pointer}
     .list-table th[draggable]{cursor:pointer}
+    /* 信件欄／內容欄按鈕：與列表小膠囊同高同字級 */
+    .lt-act{min-height:26px;height:26px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:850;gap:5px;line-height:1}
+    .lt-act svg{width:13px;height:13px}
+    .lt-acts{gap:6px}
+    .cell-pop button.option.reply-opt,.reply-opt{display:grid;gap:3px;width:100%;justify-content:stretch;align-items:start;text-align:left;border-radius:12px;padding:10px 12px;background:#f8fbf9;border:1px solid #e3e9e5;color:#17211d;cursor:pointer}
+    .cell-pop button.option.reply-opt:hover,.reply-opt:hover{background:#eef6f1}
+    .reply-opt span{font-weight:900;font-size:14px}.reply-opt small{color:var(--muted);font-size:12px;font-weight:600;line-height:1.45}
+    .reply-list{display:grid!important;gap:8px}
+    .bind-search{display:flex;gap:8px;margin-bottom:12px}.bind-search .input{flex:1;min-height:42px}
+    .thread-panel{margin-bottom:16px;border:1px solid var(--line);border-radius:16px;background:var(--bg);padding:0 14px 6px}
+    .thread-panel>summary{padding:12px 0;font-weight:900;cursor:pointer}
+    .th-msg{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:8px;padding:0 12px}
+    .th-msg>summary{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:10px 0;cursor:pointer;font-size:13.5px}
+    .th-msg>summary span{color:var(--muted);font-weight:700;font-size:12px}.th-msg>summary small{color:var(--faint);font-weight:600;flex-basis:100%}
+    .th-meta{font-size:12px;color:var(--muted);font-weight:600;line-height:1.6;padding-bottom:8px}
+    .th-body{padding:8px 0 12px;border-top:1px solid var(--line);font-size:14px;line-height:1.7;overflow-wrap:anywhere;overflow:auto;max-height:420px}
+    .th-body a{color:#0b57d0!important;text-decoration:underline}.th-body img{max-width:100%;height:auto}.th-pre{white-space:pre-wrap;font:inherit;margin:0}
+    .th-imgs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.th-img{max-width:240px;border-radius:8px}
   </style>
 </head>
 <body>
@@ -691,6 +709,9 @@
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="mmTitle"><h3 id="mmTitle">修改紀錄</h3><p class="ai-sub" id="mmSub"></p><div id="mmList" class="mm-list"></div>
       <form id="mmForm" class="mm-form"><div class="field"><span class="label">修改日期</span><input class="input" type="date" name="modifyDate" required></div><div class="field"><span class="label">修改內容 <b>*</b></span><textarea class="input" name="content" rows="4" placeholder="請描述這一輪的修改需求" required style="padding:10px 14px;min-height:96px"></textarea></div>
         <div class="ai-actions"><button type="button" class="btn" data-mm="close">關閉</button><button type="submit" class="btn primary" id="mmSubmit">新增修改紀錄</button></div></form></div>
+  </div>
+  <div class="ai-modal" id="bindModal" hidden>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="bindTitle"><h3 id="bindTitle">串接既有信件串</h3><div id="bindBody"></div></div>
   </div>
   <div class="ai-modal" id="detailModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle"><h3 id="dmTitle">選擇項目細節</h3><p class="ai-sub" id="dmSub"></p><div class="detail-pick" id="dmList"></div><div class="ai-actions"><button type="button" class="btn" data-dm="cancel">取消</button><button type="button" class="btn primary" data-dm="ok">確認並改為執行中</button></div></div>
@@ -949,10 +970,10 @@
       {key:'stage',label:'階段',cell:(r,ed)=>{const g=String(r['階段']||'').trim();return `<td><span class="lt-stage lt-stage-${esc(g)}${ed?' lt-edit':''}"${ed?' data-edit="stage"':''}>${esc(g||'選擇')}</span></td>`}},
       {key:'start',label:'開始',cell:r=>`<td class="lt-date">${esc(slashNice(r['開始日期']))}</td>`},
       {key:'end',label:'結束',cell:r=>`<td class="lt-date">${esc(slashNice(r['結束日期']))}</td>`},
-      {key:'mail',label:'信件',cell:r=>{const id=esc(idKey(r)),has=String(r['Gmail信件串ID']||'').trim();return `<td><button type="button" class="lt-act lt-act-mail" data-row-act="${has?'reply':'send'}" data-id="${id}">${has?ICON_REPLY+'<span>回信</span>':ICON_MAIL+'<span>發信</span>'}</button></td>`}},
+      {key:'mail',label:'信件',cell:(r,ed)=>{const id=esc(idKey(r)),has=String(r['Gmail信件串ID']||'').trim(),act=has?'reply':(ed?'bind':'send'),label=has?'回信':(ed?'串接':'發信'),icon=has?ICON_REPLY:(ed?ICON_LINK:ICON_MAIL);return `<td><button type="button" class="lt-act lt-act-mail" data-row-act="${act}" data-id="${id}">${icon}<span>${label}</span></button></td>`}},
       {key:'actions',label:'內容',cell:(r,ed)=>{const id=esc(idKey(r));return `<td><span class="lt-acts"><button type="button" class="lt-act lt-act-edit" data-row-act="edit" data-id="${id}">${ICON_EDIT}<span>編輯</span></button>${ed?`<button type="button" class="lt-act lt-act-del" data-row-act="delete" data-id="${id}">${ICON_TRASH}<span>刪除</span></button>`:''}</span></td>`}}
     ];
-    const ICON_REPLY='<svg viewBox="0 0 24 24"><path d="M10 8V4l-7 7 7 7v-4c5 0 8 1.5 11 6-1-6-4-11-11-12z"/></svg>',ICON_MAIL='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>',ICON_EDIT='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/></svg>',ICON_TRASH='<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+    const ICON_LINK='<svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg>',ICON_REPLY='<svg viewBox="0 0 24 24"><path d="M10 8V4l-7 7 7 7v-4c5 0 8 1.5 11 6-1-6-4-11-11-12z"/></svg>',ICON_MAIL='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>',ICON_EDIT='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/></svg>',ICON_TRASH='<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
     const COL_WIDTH={id:110,month:84,client:120,project:300,qty:72,designer:130,status:116,details:200,rev:96,owner:140,type:104,stage:104,start:116,end:116,mail:120,actions:200};
     const COL_DEFAULT=['id','client','project','qty','designer','status','details','rev','owner','type','stage','start','end','mail','actions'];
     function loadCols(){
@@ -1048,11 +1069,11 @@
     function updateRail(){const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||(view==='detail'&&state.home==='projects'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||(view==='detail'&&state.home==='projects'));
       $('stage').classList.toggle('wide',view==='projects');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
-      if(view==='projects'||view==='login'||view==='settings')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
 
@@ -1657,6 +1678,132 @@
     });
     document.addEventListener('paste',e=>{const ed=e.target.closest?.('.mini-editor');if(!ed)return;/* 保留貼上的格式（例如從 Word／Google 文件貼簽名檔） */});
 
+
+    /* ---------- 回信：串接既有信件串／回信方式（修改需求信、設計師回覆信、一般回信、直接讀信）——比照舊網站 ---------- */
+    const SAFE_TAGS=new Set(['A','B','I','U','S','STRONG','EM','BR','P','DIV','SPAN','UL','OL','LI','TABLE','THEAD','TBODY','TFOOT','TR','TD','TH','IMG','BLOCKQUOTE','H1','H2','H3','H4','H5','H6','FONT','HR','PRE','CODE','SMALL','SUP','SUB','CENTER']);
+    const DROP_TAGS=new Set(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','FORM','LINK','META','BASE','TITLE','NOSCRIPT','SVG','MATH','VIDEO','AUDIO','INPUT','BUTTON','TEXTAREA','SELECT']);
+    /** 信件內容一律先經過這個白名單過濾才放進畫面（Worker 不做淨化）。 */
+    function sanitizeMailHtml(html,images=[]){
+      const doc=new DOMParser().parseFromString(`<body>${String(html||'')}</body>`,'text/html'),cidMap=new Map((images||[]).filter(i=>i&&i.contentId&&/^data:image\//i.test(i.dataUrl||'')).map(i=>[i.contentId,i.dataUrl]));
+      const walk=node=>{
+        for(const child of [...node.childNodes]){
+          if(child.nodeType===8){child.remove();continue}
+          if(child.nodeType!==1)continue;
+          const tag=child.tagName;
+          if(DROP_TAGS.has(tag)){child.remove();continue}
+          walk(child);
+          if(!SAFE_TAGS.has(tag)){child.replaceWith(...child.childNodes);continue}
+          for(const attr of [...child.attributes]){
+            const name=attr.name.toLowerCase(),val=attr.value;
+            if(name.startsWith('on')||name==='srcdoc'){child.removeAttribute(attr.name);continue}
+            if(name==='href'){if(!/^(https?:|mailto:|tel:)/i.test(val.trim()))child.removeAttribute(attr.name);continue}
+            if(name==='src'){
+              const cid=val.match(/^cid:(.+)$/i);
+              if(cid&&cidMap.has(cid[1].replace(/^<|>$/g,'')))child.setAttribute('src',cidMap.get(cid[1].replace(/^<|>$/g,'')));
+              else if(!/^data:image\//i.test(val)&&!/^https?:/i.test(val))child.removeAttribute('src');
+              continue;
+            }
+            if(name==='style'){const clean=val.split(';').filter(d=>d.trim()&&!/url\s*\(|expression|behavior|position\s*:\s*(fixed|absolute)/i.test(d)).join(';');clean?child.setAttribute('style',clean):child.removeAttribute('style');continue}
+            if(!['alt','title','width','height','colspan','rowspan','align','valign','color','face','size','target','rel','border','cellpadding','cellspacing','bgcolor','dir'].includes(name))child.removeAttribute(attr.name);
+          }
+          if(tag==='A'){child.setAttribute('target','_blank');child.setAttribute('rel','noopener noreferrer')}
+          if(tag==='IMG'){child.setAttribute('referrerpolicy','no-referrer');child.setAttribute('loading','lazy')}
+        }
+      };
+      walk(doc.body);return doc.body.innerHTML;
+    }
+    function threadMessageHtml(m,open){
+      const used=new Set(),html=m.bodyHtml?sanitizeMailHtml(m.bodyHtml,m.images):`<pre class="th-pre">${esc(m.bodyText||m.snippet||'')}</pre>`;
+      (m.images||[]).forEach(i=>{if(i.contentId&&String(m.bodyHtml||'').includes(`cid:${i.contentId}`))used.add(i.contentId)});
+      const extra=(m.images||[]).filter(i=>!used.has(i.contentId)&&/^data:image\//i.test(i.dataUrl||'')).map(i=>`<img class="th-img" src="${esc(i.dataUrl)}" alt="">`).join('');
+      return `<details class="th-msg"${open?' open':''}><summary><b>${esc(String(m.from||'').replace(/\s*<.*?>\s*/,'')||'（未知寄件人）')}</b><span>${esc(m.date||'')}</span><small>${esc((m.snippet||'').slice(0,70))}</small></summary><div class="th-meta">收件人：${esc(m.to||'-')}${m.cc?`<br>副本：${esc(m.cc)}`:''}</div><div class="th-body">${html}${extra?`<div class="th-imgs">${extra}</div>`:''}</div></details>`;
+    }
+    function threadPanelHtml(readOnly){
+      const th=state.thread;if(!th)return '';
+      if(th.loading)return '<div class="thread-panel"><div class="notice">正在讀取信件串…</div></div>';
+      if(th.error)return `<div class="thread-panel"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?'（需要重新連接 Gmail 時，請到現行系統的個人選單「連接 Gmail」）':''}</div></div>`;
+      const msgs=th.messages||[];
+      return `<details class="thread-panel" open><summary>信件串（${msgs.length} 封）</summary>${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:i===msgs.length-1)).join('')||'<div class="empty">沒有信件</div>'}</details>`;
+    }
+    async function loadThread(id,applyReply){
+      state.thread={id,loading:true,messages:[],error:''};
+      try{
+        const sigs=[state.signature,state.gmailSignature,...st2.presets.map(p=>p.html)].filter(Boolean);
+        const data=await api('getCaseMailThread',{caseId:id,signatureCandidates:sigs});
+        state.thread={id,loading:false,messages:data.messages||[],suggestedTo:data.suggestedTo||'',suggestedCc:data.suggestedCc||'',replyFrom:data.replyFrom||'',error:''};
+        if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc}}
+      }catch(err){state.thread={id,loading:false,messages:[],error:err.message||'讀取失敗'}}
+      if(state.view==='mail'&&state.mail)renderMail();
+      else if(state.view==='thread')renderThreadPage();
+    }
+    function renderThreadPage(){
+      const row=allRows().find(r=>idKey(r)===state.thread?.id);
+      $('stage').innerHTML=`<div class="page"><div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button><div><h2 class="page-title">讀信</h2><p class="page-sub">${esc(state.thread?.id||'')}｜${esc(row?.['專案名稱']||'')}（唯讀，預設展開首封信）</p></div></div>${threadPanelHtml(true)}</div>`;
+    }
+    async function openReadThread(id){state.form=null;state.mail=null;state.thread={id,loading:true,messages:[]};show('thread');loadThread(id,false)}
+    const greetingName=n=>String(n||'設計負責人').trim();
+    function designerReplyBody(row){
+      const t=st2.templates[st2.tplDefault],details=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'),name=greetingName(row['專案負責人']);
+      let html=t?t.html.replace(/\{收件人名\}/g,esc(name)).replace(/\{項目細節\}/g,esc(details)):`Hi ${esc(name)},<br><br>`;
+      const mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0)),imgs=mods.length?imageList(mods[0]):[];
+      if(imgs.length)html+=`<br><p>設計圖（${imgs.length} 張）：</p><ul>${imgs.slice(0,30).map(i=>`<li><a href="${esc(i.url)}">${esc(i.fileName||'設計圖')}</a></li>`).join('')}</ul>`;
+      return html;
+    }
+    async function startReply(id,mode){
+      const row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
+      const body=mode==='modification'?`Hi ${esc(greetingName(row['設計負責人']))},<br><br>`:mode==='designer'?designerReplyBody(row):'<br>';
+      const d={id,row,to:'',cc:'',subject:`Re: 【${id}】${row['客戶別']}_${row['專案名稱']}`,body,sent:false,reply:true,mode,existing:true};
+      state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();loadThread(id,true);
+    }
+    function openReplyChooser(id,anchor){
+      const pop=$('cellPop');state.cellEdit={id,field:'reply'};
+      const opt=(m,label,desc)=>`<button type="button" class="option reply-opt" data-reply-method="${m}"><span>${label}</span><small>${desc}</small></button>`;
+      pop.innerHTML=`<h3>回信方式</h3><div class="option-list reply-list">${opt('modification','填寫修改需求信','撰寫這次的修改需求，內容會自動記錄進「修改紀錄」，並帶動輪次跳到一修／二修…')}${opt('designer','設計師回覆信','帶入預設範本與這一輪的設計圖連結（不含 NAS 資料夾選擇／上傳）')}${opt('general','一般回信','直接開啟信件編輯器，內容手動填寫')}${opt('read','直接讀信','只閱讀這條信件串，預設展開首封信')}</div>`;
+      pop.hidden=false;
+      const r=anchor.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
+      pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
+      pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
+    }
+    /* 串接既有信件串（設計部：案件沒有 Gmail 信件串時） */
+    const bind={id:'',query:'',loading:false,threads:[],error:'',manual:false};
+    function openBindModal(id){
+      if(!loggedIn()){toast('請先登入',true);startLogin();return}
+      Object.assign(bind,{id,query:id,loading:true,threads:[],error:'',manual:false});$('bindModal').hidden=false;renderBind();runBindSearch(id,id);
+    }
+    function closeBindModal(){$('bindModal').hidden=true}
+    async function runBindSearch(id,query){
+      bind.query=query;bind.loading=true;bind.error='';renderBind();
+      try{const data=await api('searchGmailThreads',{caseId:id,query});bind.threads=Array.isArray(data.threads)?data.threads:[]}catch(err){bind.error=err.message||'搜尋失敗'}
+      bind.loading=false;renderBind();
+    }
+    function renderBind(){
+      const body=$('bindBody');
+      if(bind.manual){body.innerHTML=`<p class="ai-sub">到 Gmail 開啟那封信 → 右上角「更多」（⋮）→「顯示原始內容」，複製「Message-ID」貼在下面。</p><form id="bindManualForm" class="mm-form"><input class="input" name="mid" placeholder="例如：<abc123@mail.gmail.com>" required><div class="ai-actions"><button type="button" class="btn" data-bind="back">返回搜尋</button><button type="submit" class="btn primary">綁定</button></div></form>`;return}
+      const list=bind.loading?'<p class="ai-sub">正在搜尋「'+esc(bind.query)+'」…</p>':bind.error?`<div class="notice error">搜尋失敗：${esc(bind.error)}</div>`:bind.threads.length?`<div class="option-list reply-list">${bind.threads.map(t=>`<button type="button" class="option reply-opt" data-bind-thread="${esc(t.threadId)}"><span>${esc(t.subject||'（沒有主旨）')}</span><small>${esc(t.from||'未知寄件人')}${t.date?`｜${esc(t.date)}`:''}${t.count?`｜符合 ${esc(t.count)} 封`:''}</small></button>`).join('')}</div>`:`<p class="ai-sub">沒有找到符合「${esc(bind.query)}」的信件，可以換個關鍵字重新搜尋，或改用手動輸入 Message-ID。</p>`;
+      body.innerHTML=`<p class="ai-sub">用你登入帳號的 Gmail 搜尋往來信件，點選要串接的信件串即可。</p><div class="bind-search"><input class="input" id="bindQuery" value="${esc(bind.query)}" placeholder="搜尋關鍵字（案件編號、專案名稱…）"><button type="button" class="btn" data-bind="search">搜尋</button></div>${list}<div class="ai-actions"><button type="button" class="btn" data-bind="manual">手動輸入 Message-ID</button><button type="button" class="btn" data-bind="close">關閉</button></div>`;
+    }
+    async function doBind(payload){
+      try{
+        const data=await api('bindExistingThread',{caseId:bind.id,...payload});
+        applyLocalEdit(bind.id,{'Gmail信件串ID':data.threadId||payload.threadId||'bound'});
+        const id=bind.id;closeBindModal();refreshView();toast('已成功串接既有信件串，現在可以直接回信了');
+      }catch(err){toast(`串接失敗：${err.message}`,true)}
+    }
+    document.addEventListener('click',e=>{
+      const t=e.target;
+      const rm=t.closest('[data-reply-method]')?.dataset.replyMethod;
+      if(rm&&state.cellEdit?.field==='reply'){const id=state.cellEdit.id;closeCellPop();if(rm==='read')openReadThread(id);else startReply(id,rm);return}
+      const bt=t.closest('[data-bind-thread]');if(bt){doBind({threadId:bt.dataset.bindThread});return}
+      const ba=t.closest('[data-bind]')?.dataset.bind;
+      if(ba==='close'||t.id==='bindModal'){closeBindModal();return}
+      if(ba==='search'){runBindSearch(bind.id,($('bindQuery')?.value||'').trim()||bind.id);return}
+      if(ba==='manual'){bind.manual=true;renderBind();return}
+      if(ba==='back'){bind.manual=false;renderBind();return}
+    });
+    document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='bindQuery'){e.preventDefault();runBindSearch(bind.id,e.target.value.trim()||bind.id)}});
+    document.addEventListener('submit',e=>{if(e.target.id==='bindManualForm'){e.preventDefault();doBind({messageId:String(e.target.elements.mid.value||'').trim()})}});
+
     /* ---------- 信件編輯器（沿用舊系統功能：收件人標籤、完整工具列、插入照片／附件／簽名檔、指定排程、合併信件、上一封／下一封） ---------- */
     const RC_COLORS=['#17211d','#6b7280','#dc2626','#ea580c','#ca8a04','#16a34a','#0d9488','#2563eb','#7c3aed','#db2777'];
     const IMG_TYPES=new Set(['image/jpeg','image/png','image/webp','image/gif']);
@@ -1724,8 +1871,9 @@
       const sigShown=!d.sigInserted&&state.signature;
       const nowMin=mailMinLocal();
       stage.innerHTML=`<div class="page">
-        <div class="page-top"><div><h2 class="page-title">撰寫需求信件</h2><p class="page-sub">${d.reply?`回覆案件 ${esc(d.id)} 的 Gmail 信件串。`:d.ids?`合併 ${d.ids.length} 筆案件（${esc(d.ids.join('、'))}）為一封信。`:d.existing?`案件 ${esc(d.id)}：確認收件人與內容後寄出。`:`案件 ${esc(d.id)} 已建立。確認收件人與內容後寄出，會回到案件列表。`}</p></div></div>
+        <div class="page-top"><div><h2 class="page-title">撰寫需求信件</h2><p class="page-sub">${d.reply?`${d.mode==='modification'?'填寫修改需求信':d.mode==='designer'?'設計師回覆信':'一般回信'}：回覆案件 ${esc(d.id)} 的 Gmail 信件串。${d.mode==='modification'?'寄出後內容會自動記錄進「修改紀錄」。':''}`:d.ids?`合併 ${d.ids.length} 筆案件（${esc(d.ids.join('、'))}）為一封信。`:d.existing?`案件 ${esc(d.id)}：確認收件人與內容後寄出。`:`案件 ${esc(d.id)} 已建立。確認收件人與內容後寄出，會回到案件列表。`}</p></div></div>
         ${gmailNotice}
+        ${d.reply?threadPanelHtml(false):''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
         <div class="mail-head">
@@ -1755,6 +1903,19 @@
       div.querySelectorAll('img[data-gmail-inline-image-id]').forEach(img=>{const id=img.dataset.gmailInlineImageId,it=(d.images||{})[id];if(!it){img.remove();return}img.setAttribute('src',`cid:${id}`);img.removeAttribute('data-gmail-inline-image-id');used.push({contentId:id,fileName:it.fileName,mimeType:it.mimeType,base64:it.base64})});
       return {bodyHtml:div.innerHTML,inlineImages:used};
     }
+    function htmlToPlain(html){const div=document.createElement('div');div.innerHTML=String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n');return (div.textContent||'').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim()}
+    async function recordModificationFromReply(d,bodyHtml){
+      const content=htmlToPlain(bodyHtml).replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim();if(!content)return;
+      const div=document.createElement('div');div.innerHTML=bodyHtml;
+      const links=[...div.querySelectorAll('a[href]')].map(a=>({text:(a.textContent||'').trim(),url:a.getAttribute('href')})).filter(l=>l.text&&/^https?:/i.test(l.url)&&content.includes(l.text));
+      try{
+        const modifier=session().name||session().user,data=await api('addModificationRecord',{record:{caseId:d.id,modifyDate:todayInput(),content,links,modifier,targetImages:[]}});
+        const count=Number(data.count)||((state.mods.get(d.id)||[]).reduce((n,m)=>Math.max(n,+m['修改次數']||0),0)+1);
+        if(!data.deduplicated){const list=state.mods.get(d.id)||[];list.push({'案件編號':d.id,'修改次數':String(count),'修改日期':todayInput(),'修改內容':content,'修改人':modifier});state.mods.set(d.id,list);applyLocalEdit(d.id,{'修改次數':String(count)})}
+        if(data.statusChanged&&data.status)applyLocalEdit(d.id,{'狀態':data.status});
+        toast(`已記錄進修改紀錄（第 ${count} 輪）`);
+      }catch(err){toast(`信已寄出，但寫入修改紀錄失敗：${err.message}`,true)}
+    }
     async function sendCurrent(){
       const m=state.mail;if(!m||m.sending)return;
       const bad=saveMailDraft();if(bad){toast(bad,true);return}
@@ -1770,7 +1931,7 @@
           if(d.reply)await api('scheduleCaseReply',{caseId:d.id,...base,scheduledAt});
           else await api('scheduleCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject,scheduledAt});
           d.scheduledDone=true;
-        }else if(d.reply)await api('replyCaseMail',{caseId:d.id,...base});
+        }else if(d.reply){await api('replyCaseMail',{caseId:d.id,...base});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
         else await api('sendCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject});
         d.sent=true;m.sentCount++;m.sending=false;
         const next=m.drafts.findIndex(x=>!x.sent);
@@ -2053,7 +2214,7 @@
         if(auto){applyChange(id,{details:v,status:'執行中'},['項目細節','加權','案件狀態'],{'項目細節':v,'狀態':'執行中'});toast('已選擇項目細節，狀態自動改為「執行中」')}else applyChange(id,{details:v},['項目細節','加權'],{'項目細節':v});return}
       const revOpen=t.closest('[data-rev-open]');if(revOpen&&isDesignerSession()){openModModal(revOpen.dataset.revOpen);return}
       if(t.closest('[data-mm="close"]')||t.id==='modModal'){closeModModal();return}
-      const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')startRowMail(id,true);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}state.detailId=id;state.editing=false;show('detail');startEdit()}else if(a==='delete')deleteCase(id);return}
+      const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}state.detailId=id;state.editing=false;show('detail');startEdit()}else if(a==='delete')deleteCase(id);return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
