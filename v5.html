@@ -742,7 +742,18 @@
     .tl-bar{position:absolute;top:5px;bottom:5px;border-radius:999px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
     .tl-bar:hover{filter:contrast(1.08) brightness(.97)}
     .tl-name{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:900;color:#103b28;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-align:left}
-    .tl-bar.st-todo{background:#f59e9e}.tl-bar.st-doing{background:#f3d34a}.tl-bar.st-review{background:#7fcdf0}.tl-bar.st-revise{background:#f0ae7f}.tl-bar.st-done{background:#4fbf79}.tl-bar.st-cancel{background:#b8bec7}
+    .tl-bar.st-todo{background:var(--st-todo-bg);border:1px solid var(--st-todo-line);box-sizing:border-box}
+    .tl-bar.st-todo .tl-name{color:var(--st-todo-ink)}
+    .tl-bar.st-doing{background:var(--st-doing-bg);border:1px solid var(--st-doing-line);box-sizing:border-box}
+    .tl-bar.st-doing .tl-name{color:var(--st-doing-ink)}
+    .tl-bar.st-review{background:var(--st-review-bg);border:1px solid var(--st-review-line);box-sizing:border-box}
+    .tl-bar.st-review .tl-name{color:var(--st-review-ink)}
+    .tl-bar.st-revise{background:var(--st-revise-bg);border:1px solid var(--st-revise-line);box-sizing:border-box}
+    .tl-bar.st-revise .tl-name{color:var(--st-revise-ink)}
+    .tl-bar.st-done{background:var(--st-done-bg);border:1px solid var(--st-done-line);box-sizing:border-box}
+    .tl-bar.st-done .tl-name{color:var(--st-done-ink)}
+    .tl-bar.st-cancel{background:var(--st-cancel-bg);border:1px solid var(--st-cancel-line);box-sizing:border-box}
+    .tl-bar.st-cancel .tl-name{color:var(--st-cancel-ink)}
     .tl-empty{padding:26px 10px;text-align:center;color:var(--faint);font-size:13px;font-weight:700}
     @media(max-width:900px){.case-split{grid-template-columns:1fr}.tl-resizer{display:none}.case-split .list-wrap{border-radius:16px 16px 0 0;border-right:1px solid var(--line)}.tl-panel{border-left:1px solid var(--line);border-top:0;border-radius:0 0 16px 16px}}
     @media (min-width:1181px){

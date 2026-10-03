@@ -116,3 +116,5 @@
 - v5.0: 專案列表 grid: when fewer than 5 status columns are shown, columns share the full width and cards in a column flow into several sub-columns to the right (>=1181px).
 
 - v5.0: 專案列表 grid: all cards in a view share one width (5 columns = 3-wide grid with equal columns; fewer columns split into equal sub-columns).
+
+- v5.0: timeline bars use the same status colors as the pills/cards.
