@@ -235,8 +235,8 @@
     .progress{margin-top:12px}
     .progress-label{display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
     .progress-track{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
-    .progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a3e635 0%,#facc15 45%,#fb923c 100%);background-size:var(--bar-w,100%) 100%;transition:width .4s ease}
-    .progress.is-late .progress-track span{background:linear-gradient(90deg,#fb923c 0%,#ef4444 55%,#b91c1c 100%)}
+    .progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a3e635 0%,#facc15 50%,#f97316 100%);background-repeat:no-repeat;transition:width .4s ease}
+    
     .card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;margin-top:12px}
     .faces{display:flex;align-items:center}
     .face{position:relative;width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);background:var(--brand-soft);display:grid;place-items:center;overflow:hidden;font-size:12px;font-weight:900;color:var(--brand-deep)}
@@ -728,6 +728,7 @@
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
     function typeClass(row){const v=/影音/.test(String(row['設計種類']||row['設計類型']||'')),st=String(row['階段']||'').trim();return v?(st==='再製'?'ci-v-re':st==='新製'?'ci-video':'ci-video'):(st==='再製'?'ci-g-re':'')}
     function cdClass(s,status){if(['過稿中','已完成','已取消'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
+    const barStyle=p=>`width:${p}%;background-size:${p>0?(10000/p).toFixed(1):100}% 100%`;
     function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=status==='執行中';
@@ -737,7 +738,7 @@
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}</div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span></div>
-        ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
+        ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
           <span class="card-qty">數量 ${esc(qty||'-')}</span>
@@ -1243,7 +1244,7 @@
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
         <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="pill ${st.cls}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
-        ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
+        ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',[row['設計類型']||row['設計種類'],row['階段']].filter(Boolean).join('／'))}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
