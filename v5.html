@@ -1146,7 +1146,7 @@
       if(sc.dataset.ready!=='1'){
         sc.dataset.ready='1';
         const t=+sc.dataset.today;
-        sc.scrollLeft=state.tlLeft!==undefined&&state.tlLeft!==null?state.tlLeft:(t>=0?Math.max(0,(t-2)*TL_DAY_W):0);
+        sc.scrollLeft=state.tlLeft!==undefined&&state.tlLeft!==null?state.tlLeft:(t>=0?Math.max(0,Math.round(t*TL_DAY_W+TL_DAY_W/2-sc.clientWidth/4)):0);
       }
     }
     window.addEventListener('resize',()=>{if($('tlScroll'))syncTl()});
@@ -1249,7 +1249,7 @@
     }
     function rerenderList(){if(state.view==='projects')renderProjects();else renderBoard()}
     function updateRail(){const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
-    function show(view){
+    function show(view){state.tlLeft=null;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||(view==='detail'&&state.home==='projects'));
       $('stage').classList.toggle('wide',view==='projects');
