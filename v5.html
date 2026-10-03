@@ -161,28 +161,27 @@
     .list-table th.col-dragging{opacity:.4}
     .list-table th.col-over{box-shadow:inset 3px 0 0 var(--brand)}
     .lt-edit{cursor:pointer;transition:box-shadow .12s}
-    .lt-edit:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 45%,transparent)}
-    .cell-pop{position:fixed;z-index:120;min-width:170px;max-width:300px;max-height:min(420px,70vh);overflow:auto;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);display:grid;gap:6px}
-    .cell-pop h4{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:900}
-    .cp-opt{height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13px;cursor:pointer;text-align:left;padding:0 12px}
-    .cp-opt:hover{background:var(--bg)}
-    .cp-opt.on{border-color:var(--brand);background:var(--brand-soft)}
-    .cp-checks{display:grid;gap:6px}
-    .cp-checks label{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:13px;font-weight:700;cursor:pointer}
-    .cp-checks input{accent-color:var(--brand);margin:0}
-    .cp-apply{min-height:38px;margin-top:4px}
-    .dp-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .detail-head .edit-actions{align-items:center}
-    .detail-head .lt-status{min-height:36px;padding:0 18px;font-size:14px}
-    .lightbox{position:fixed;inset:0;z-index:300;background:rgba(8,14,11,.88);display:grid;place-items:center;padding:30px 70px}
-    .lightbox figure{margin:0;display:grid;gap:10px;justify-items:center;max-width:100%}
-    .lightbox img{max-width:min(1200px,100%);max-height:calc(100vh - 130px);border-radius:12px;background:#fff;object-fit:contain}
-    .lightbox figcaption{color:#e6efe9;font-size:13px;font-weight:700}
-    .lightbox figcaption a{color:#9be7b2}
-    .lb-btn{position:absolute;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:28px;line-height:1;cursor:pointer}
-    .lb-btn:hover{background:rgba(255,255,255,.3)}
-    .lb-close{top:18px;right:18px}.lb-prev{left:14px;top:50%;transform:translateY(-50%)}.lb-next{right:14px;top:50%;transform:translateY(-50%)}
-    .thumbs a{cursor:zoom-in}
+    .cell-pop{position:fixed;z-index:240;width:min(320px,calc(100vw - 24px));max-height:min(360px,calc(100vh - 24px));overflow:auto;border:1px solid #e3e9e5;border-radius:14px;background:#fff;color:#17211d;box-shadow:0 12px 30px rgba(16,24,40,.10);padding:10px}
+    .cell-pop h3{margin:0 0 8px;font-size:14px;font-weight:900}
+    .cell-pop .option-list{display:grid;gap:6px}
+    .cell-pop .empty{padding:10px 4px;color:#6b7772;font-size:13px;font-weight:700}
+    .cell-pop button.option{width:100%;display:flex;justify-content:space-between;align-items:center;background:#f8fbf9;color:#17211d;border:1px solid #e3e9e5;border-radius:10px;padding:8px 10px;font-size:14px;font-weight:700;text-align:left;cursor:pointer}
+    .cell-pop button.option:hover{background:#eef6f1}
+    .cell-pop button.option.active{border-color:#9bd4b4;background:#e7f6ef;color:#0f5138}
+    .cell-pop button.option b{font-weight:900}
+    .cell-pop label.option{display:flex;align-items:center;gap:8px;border:1px solid #e3e9e5;border-radius:10px;padding:8px 10px;background:#f8fbf9;font-weight:700;font-size:14px;cursor:pointer}
+    .cell-pop input{width:auto;min-height:auto;margin:0;accent-color:#159E31}
+    .cell-pop .status-option{border-radius:999px;justify-content:center;gap:8px;font-weight:900}
+    .cell-pop .status-option.active{box-shadow:inset 0 0 0 2px rgba(31,41,55,.12)}
+    .cell-pop button.option.status-option.st-todo{background:#fff1f2;color:#be123c;border-color:#fecdd3}
+    .cell-pop button.option.status-option.st-doing{background:#fff7cc;color:#9a6500;border-color:#fde68a}
+    .cell-pop button.option.status-option.st-review{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+    .cell-pop button.option.status-option.st-revise{background:#feece0;color:#a14503;border-color:#fdd6ba}
+    .cell-pop button.option.status-option.st-done{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .cell-pop button.option.status-option.st-cancel{background:#f1f3f2;color:#6b7280;border-color:#e5e7eb}
+    .cell-pop .popover-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    .cell-pop .popover-actions button{min-height:34px;border-radius:10px;padding:0 16px;font-weight:800;font-size:13px;cursor:pointer;border:1px solid #e3e9e5;background:#fff;color:#17211d}
+    .cell-pop .popover-actions button[data-cp-details]{background:#159E31;border-color:#159E31;color:#fff}
     .lt-id{color:#119466;font-weight:900;font-size:13px}
     .lt-proj{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
     .lt-qty,.lt-date{font-variant-numeric:tabular-nums}
@@ -782,7 +781,7 @@
       {key:'details',label:'項目細節',cell:(r,ed)=>{const d=String(r['項目細節']||'').trim();return `<td>${d||ed?`<span class="lt-detail${ed?' lt-edit':''}"${ed?' data-edit="details"':''} title="${esc(d)}">${esc(d||'選擇')}</span>`:'<span class="lt-dash">-</span>'}</td>`}},
       {key:'rev',label:'修改',cell:r=>`<td>${revisionPill(r)}</td>`},
       {key:'owner',label:'專案負責人',cell:r=>`<td><span class="lt-name">${esc(r['專案負責人'])}</span></td>`},
-      {key:'type',label:'設計類型',cell:r=>{const t=String(r['設計種類']||r['設計類型']||'').trim();return `<td><span class="lt-type lt-type-${esc(t)}">${esc(t)}</span></td>`}},
+      {key:'type',label:'設計類型',cell:(r,ed)=>{const t=String(r['設計種類']||r['設計類型']||'').trim();return `<td><span class="lt-type lt-type-${esc(t)}${ed?' lt-edit':''}"${ed?' data-edit="type"':''}>${esc(t)}</span></td>`}},
       {key:'stage',label:'階段',cell:(r,ed)=>{const g=String(r['階段']||'').trim();return `<td><span class="lt-stage lt-stage-${esc(g)}${ed?' lt-edit':''}"${ed?' data-edit="stage"':''}>${esc(g||'選擇')}</span></td>`}},
       {key:'start',label:'開始',cell:r=>`<td class="lt-date">${esc(slashNice(r['開始日期']))}</td>`},
       {key:'end',label:'結束',cell:r=>`<td class="lt-date">${esc(slashNice(r['結束日期']))}</td>`}
@@ -851,10 +850,12 @@
     function openCellPop(el){
       const tr=el.closest('[data-row-id]'),id=tr?tr.dataset.rowId:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
       const pop=$('cellPop');let html='';
-      if(field==='status')html=`<h4>修改狀態</h4>${STATUS_FILTER.map(k=>`<button type="button" class="cp-opt ${ST[k].cls}${k===String(row['狀態']||'').trim()?' on':''}" data-cp-status="${k}">${ST[k].label}</button>`).join('')}`;
-      else if(field==='designer')html=`<h4>設計負責人</h4>${designerNames().map(n=>`<button type="button" class="cp-opt${n===String(row['設計負責人']||'').trim()?' on':''}" data-cp-designer="${esc(n)}">${esc(n)}</button>`).join('')}`;
-      else if(field==='stage'){const type=String(row['設計種類']||row['設計類型']||'').trim();html=`<h4>階段</h4>${stagesFor(type).map(n=>`<button type="button" class="cp-opt${n===String(row['階段']||'').trim()?' on':''}" data-cp-stage="${esc(n)}">${esc(n)}</button>`).join('')||'<div class="empty">沒有可選階段</div>'}`}
-      else if(field==='details'){const chosen=new Set(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h4>項目細節（可複選）</h4><div class="cp-checks">${opts.map(o=>`<label><input type="checkbox" value="${esc(o)}"${chosen.has(o)?' checked':''}>${esc(o)}</label>`).join('')||'<div class="empty">沒有項目細節選項</div>'}</div><button type="button" class="btn primary cp-apply" data-cp-details>套用</button>`}
+      const cur=k=>String(row[k]||'').trim(),opt=(attr,v,on,extra='')=>`<button type="button" class="option${extra}${on?' active':''}" ${attr}="${esc(v)}"><span>${esc(extra?ST[v]?.label||v:v)}</span>${on?'<b>✓</b>':''}</button>`;
+      if(field==='status')html=`<h3>修改狀態</h3><div class="option-list">${STATUS_FILTER.map(k=>opt('data-cp-status',k,k===cur('狀態'),' status-option '+ST[k].cls)).join('')}</div>`;
+      else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
+      else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
+      else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
+      else if(field==='details'){const chosen=new Set(cur('項目細節').split(/\s*[,，、]\s*/).filter(Boolean)),opts=detailOptionsFor(row);for(const c of chosen)if(!opts.includes(c))opts.push(c);html=`<h3>修改項目細節</h3><div class="option-list">${opts.map(o=>`<label class="option"><input type="checkbox" value="${esc(o)}"${chosen.has(o)?' checked':''}>${esc(o)}</label>`).join('')||'<div class="empty">此種類與階段沒有項目細節選項</div>'}</div><div class="popover-actions"><button type="button" data-cp-close>關閉</button><button type="button" data-cp-details>套用</button></div>`}
       pop.innerHTML=html;pop.hidden=false;state.cellEdit={id,field};
       const r=el.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
@@ -1268,7 +1269,7 @@
         <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
         ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
-          ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t?`<span class="lt-type lt-type-${esc(t)}">${esc(t)}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
+          ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
           ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('項目細節',`<span class="dp-wrap${editAttr('details')}">${(()=>{const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);return items.length?items.map(d=>`<span class="lt-detail" title="${esc(d)}">${esc(d)}</span>`).join(''):(ed?'<span class="lt-detail">選擇</span>':'<span class="lt-dash">-</span>')})()}</span>`,true)}
         </dl>
@@ -1377,6 +1378,8 @@
       if(state.colsOpen&&!t.closest('.cols-wrap')){state.colsOpen=false;rerenderList()}
       const cpS=t.closest('[data-cp-status]');if(cpS){const id=state.cellEdit.id;closeCellPop();moveCase(id,cpS.dataset.cpStatus);return}
       const cpD=t.closest('[data-cp-designer]');if(cpD){const id=state.cellEdit.id,v=cpD.dataset.cpDesigner;closeCellPop();applyChange(id,{designer:v},['設計負責人'],{'設計負責人':v});return}
+      if(t.closest('[data-cp-close]')){closeCellPop();return}
+      const cpT=t.closest('[data-cp-type]');if(cpT){const id=state.cellEdit.id,v=cpT.dataset.cpType,row=allRows().find(r=>idKey(r)===id),cur=String(row['階段']||'').trim(),stage=stagesFor(v).includes(cur)?cur:defaultStage(v);closeCellPop();applyChange(id,{type:v,stage},['設計類型','階段','加權'],{'設計種類':v,'設計類型':v,'階段':stage});return}
       const cpG=t.closest('[data-cp-stage]');if(cpG){const id=state.cellEdit.id,v=cpG.dataset.cpStage;closeCellPop();applyChange(id,{stage:v},['階段','加權'],{'階段':v});return}
       if(t.closest('[data-cp-details]')){const id=state.cellEdit.id,v=[...document.querySelectorAll('#cellPop input:checked')].map(i=>i.value).join(', ');closeCellPop();applyChange(id,{details:v},['項目細節','加權'],{'項目細節':v});return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
