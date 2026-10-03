@@ -640,6 +640,9 @@
     .set-actions .btn.add-pill{border-radius:999px;background:#e8f6ec;border-color:#bfe3cb;color:#0f5138;min-height:42px;padding:0 20px;font-size:14.5px}
     .set-actions .btn.primary{border-radius:999px;background:#0f8f61;border-color:#0f8f61;min-height:42px;padding:0 24px;font-size:14.5px}
     .set-actions{justify-content:flex-start}
+    /* 簽名檔／信件內文的連結（電話、信箱、地址）要是藍色，不要被全站 a{color:inherit} 吃掉 */
+    .signature a,.editor a,.mini-editor a,.v5-sig a{color:#0b57d0!important;text-decoration:underline}
+    html[data-theme="dark"] .signature a,html[data-theme="dark"] .editor a,html[data-theme="dark"] .mini-editor a{color:#8ab4f8!important}
   </style>
 </head>
 <body>
