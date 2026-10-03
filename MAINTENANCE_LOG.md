@@ -154,3 +154,5 @@
 - v5.0: 進度 is now a full page (rail button); the popup is kept only for the first-visit-of-the-day reminder (with a button to the page). Added 問題 rail button + full 問題回報 page (list with status pills, managers change status via updateIssueReportStatus, report form via reportIssue).
 
 - v5.0: designer hover card counts use the shared status colors (5 tiles incl. 已完成, same order as the project columns).
+
+- v5.0: 問題 rail button sits directly above 設定 at the bottom group.
