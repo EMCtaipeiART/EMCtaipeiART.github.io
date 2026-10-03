@@ -201,6 +201,8 @@
     .card-info{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:8px}
     .card-info span{font-size:11px;font-weight:800;padding:2px 9px;border-radius:99px;white-space:nowrap;border:1px solid transparent}
     .card-info .ci-type{background:#e0e7ff;color:#3730a3;border-color:#c7d2fe}
+    .card-info .ci-video{background:#fce7f3;color:#9d174d;border-color:#fbcfe8}
+    html[data-theme="dark"] .card-info .ci-video{background:#4a1d36;color:#fbcfe8;border-color:#6b2a4d}
     .card-info .ci-date{background:#fef3c7;color:#92400e;border-color:#fde68a}
     .card-info .ci-qty{background:#ccfbf1;color:#0f766e;border-color:#99f6e4}
     html[data-theme="dark"] .card-info .ci-type{background:#25285a;color:#c7d2fe;border-color:#363b80}
@@ -230,7 +232,15 @@
     .lp-form .input{background:var(--bg)}
     .lp-error{margin-top:14px;font-size:13px;font-weight:700;color:#b42318;line-height:1.55}
     .lp-note{margin-top:14px;font-size:12px;color:var(--faint);font-weight:600}
-    .card-meta{font-size:11px;color:var(--faint);font-weight:700;text-align:right;line-height:1.4;white-space:nowrap}
+    .card-meta{font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;padding:3px 10px;border-radius:99px;border:1px solid transparent;background:var(--bg);color:var(--muted)}
+    .card-meta.cd-ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .card-meta.cd-soon{background:#fef9c3;color:#854d0e;border-color:#fde68a}
+    .card-meta.cd-today{background:#ffedd5;color:#9a3412;border-color:#fed7aa}
+    .card-meta.cd-late{background:#ffe3e3;color:#b42318;border-color:#fecaca}
+    html[data-theme="dark"] .card-meta.cd-ok{background:#16301f;color:#8fe0a5;border-color:#24502f}
+    html[data-theme="dark"] .card-meta.cd-soon{background:#3a3213;color:#f6dc7a;border-color:#5c4f1c}
+    html[data-theme="dark"] .card-meta.cd-today{background:#3a2515;color:#ffc596;border-color:#5c3a20}
+    html[data-theme="dark"] .card-meta.cd-late{background:#3d1d1d;color:#ffb4b4;border-color:#5c2a2a}
     .st-todo{--card-color:var(--st-todo)} .st-doing{--card-color:var(--st-doing)} .st-review{--card-color:var(--st-review)} .st-revise{--card-color:var(--st-revise)} .st-done{--card-color:var(--st-done)} .st-cancel{--card-color:var(--st-cancel)}
     .chip.st-todo,.pill.st-todo{background:var(--st-todo-bg);color:var(--st-todo-ink);border-color:var(--st-todo-line)}
     .chip.st-doing,.pill.st-doing{background:var(--st-doing-bg);color:var(--st-doing-ink);border-color:var(--st-doing-line)}
@@ -655,6 +665,7 @@
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
     const sortedLatest=rows=>{const list=[...rows].sort(byNewest);return state.sort==='asc'?list.reverse():list};
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
+    function cdClass(s,status){if(['過稿中','已完成','已取消'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
     function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=status==='執行中';
@@ -663,11 +674,11 @@
       return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="client-text">${esc(row['客戶別']||'未填客戶別')}</span>${inColumn?'':`<span class="chip ${st.cls}">${esc(st.label)}</span>`}${late?'<span class="chip late">逾期</span>':''}</div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
-        <div class="card-info"><span class="ci-type">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span><span class="ci-qty">數量 ${esc(qty||'-')}</span></div>
+        <div class="card-info"><span class="ci-type${/影音/.test(String(row['設計種類']||row['設計類型']||''))?' ci-video':''}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span><span class="ci-qty">數量 ${esc(qty||'-')}</span></div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
-          <span class="card-meta">${esc(countdownText(s))}</span>
+          <span class="card-meta ${cdClass(s,status)}">${esc(countdownText(s))}</span>
         </div>
       </button>`;
     }
