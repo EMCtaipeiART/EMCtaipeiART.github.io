@@ -152,3 +152,5 @@
 - Worker: ownerConfirmCases now also matches the case owner against the account 顯示名 (設定 table), not just session.user/account — e.g. 26100013 owner "一般測試員" (user 測試使用者) could not be confirmed. Deployed (version 35c115ce).
 
 - v5.0: 進度 is now a full page (rail button); the popup is kept only for the first-visit-of-the-day reminder (with a button to the page). Added 問題 rail button + full 問題回報 page (list with status pills, managers change status via updateIssueReportStatus, report form via reportIssue).
+
+- v5.0: designer hover card counts use the shared status colors (5 tiles incl. 已完成, same order as the project columns).

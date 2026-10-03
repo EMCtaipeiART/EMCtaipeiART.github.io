@@ -116,7 +116,7 @@
     .hc-xp span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2bbf4c,var(--brand))}
     .hc-xp-text{font-size:11px;color:var(--faint);font-weight:700}
     .hc-section{margin-top:11px;font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.04em}
-    .hc-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+    .hc-counts{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:6px}
     .hc-count{padding:7px 0;border-radius:10px;background:var(--bg);text-align:center}
     .hc-count b{display:block;font-size:17px;line-height:1.1}
     .hc-count small{font-size:10.5px;color:var(--muted);font-weight:700}
@@ -806,6 +806,17 @@
     .issue-st-已完成{background:#dcfce7;color:#166534;border-color:#bbf7d0}
     .issue-st-已否決{background:#fee2e2;color:#991b1b;border-color:#fecaca}
     @media(max-width:640px){.issue-item{grid-template-columns:1fr}}
+    .hc-count.st-todo{background:var(--st-todo-bg);border:1px solid var(--st-todo-line);color:var(--st-todo-ink)}
+    .hc-count.st-todo small{color:var(--st-todo-ink)}
+    .hc-count.st-doing{background:var(--st-doing-bg);border:1px solid var(--st-doing-line);color:var(--st-doing-ink)}
+    .hc-count.st-doing small{color:var(--st-doing-ink)}
+    .hc-count.st-review{background:var(--st-review-bg);border:1px solid var(--st-review-line);color:var(--st-review-ink)}
+    .hc-count.st-review small{color:var(--st-review-ink)}
+    .hc-count.st-revise{background:var(--st-revise-bg);border:1px solid var(--st-revise-line);color:var(--st-revise-ink)}
+    .hc-count.st-revise small{color:var(--st-revise-ink)}
+    .hc-count.st-done{background:var(--st-done-bg);border:1px solid var(--st-done-line);color:var(--st-done-ink)}
+    .hc-count.st-done small{color:var(--st-done-ink)}
+    .hc-count{box-sizing:border-box;padding:6px 0}
 </style>
 </head>
 <body>
@@ -1061,7 +1072,7 @@ window.emcQuotes=[
     }
 
     /* ---------- 設計師列 ---------- */
-    function designerCases(name){const c={'未開始':0,'執行中':0,'修改中':0,'過稿中':0};for(const r of allRows())if(norm(r['設計負責人'])===norm(name)&&r['狀態'] in c)c[r['狀態']]++;return c}
+    function designerCases(name){const c={'未開始':0,'執行中':0,'過稿中':0,'修改中':0,'已完成':0};for(const r of allRows())if(norm(r['設計負責人'])===norm(name)&&r['狀態'] in c)c[r['狀態']]++;return c}
     function levelInfo(name){
       const cfg=state.levelConfig||{steps:[1,10,20,30,40,50],videoMembers:['Noise'],titles:{graphic:['設計新秀','資深設計師','設計菁英','設計大師','傳奇設計師','設計神話'],video:['影音新秀','資深剪輯師','影音菁英','影音大師','傳奇導演','影像神話']}};
       if(!state.archive)return null;
@@ -1092,7 +1103,7 @@ window.emcQuotes=[
         <div class="hc-xp"><span style="width:${lv?lv.progress.toFixed(1):0}%"></span></div>
         <div class="hc-xp-text">${lv?`${fmt(lv.score)} 分 · 距 Lv.${lv.level+1} 還差 ${fmt(lv.remaining)} 分`:'&nbsp;'}</div>
         <div class="hc-section">目前案量</div>
-        <div class="hc-counts">${Object.entries(c).map(([k,v])=>`<div class="hc-count"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
+        <div class="hc-counts">${Object.entries(c).map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
         ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
       </div>`;
     }
