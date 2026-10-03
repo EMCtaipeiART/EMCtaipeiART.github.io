@@ -151,8 +151,9 @@
     .list-table th{position:sticky;top:0;background:#f0f6f3;color:#43524b;font-size:13px;font-weight:900;padding:13px 12px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line)}
     html[data-theme="dark"] .list-table th{background:#242c29;color:#c3cbc8}
     .list-table td{padding:11px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:700;vertical-align:middle}
-    .list-table tr[data-case]{cursor:pointer}
-    .list-table tr[data-case]:hover td{background:var(--brand-soft)}
+    .list-table tr:hover td{background:color-mix(in srgb,var(--brand-soft) 55%,transparent)}
+    .list-table td.lt-link{cursor:pointer}
+    .list-table td.lt-link:hover{color:var(--brand-deep);text-decoration:underline}
     .list-table td.l{text-align:left;min-width:220px;max-width:300px}
     .list-wrap{cursor:grab;user-select:none}
     .list-wrap.is-grabbing{cursor:grabbing}
@@ -771,10 +772,10 @@
     function revisionCount(r){const mods=state.mods.get(idKey(r))||[];const nums=mods.map(m=>+m['修改次數']||0);const fromRow=+r['修改次數']||0;return mods.length||fromRow?Math.max(0,fromRow,...nums):-1}
     function revisionPill(r){const n=revisionCount(r);if(n<0)return '<span class="lt-dash">-</span>';return n===0?'<span class="lt-rev is-draft">初稿</span>':`<span class="lt-rev">${n<=10?NUM_ZH[n]:n}修</span>`}
     const COL_DEFS=[
-      {key:'id',label:'案件編號',cell:r=>`<td class="lt-id">${esc(idKey(r))}</td>`},
+      {key:'id',label:'案件編號',cell:r=>`<td class="lt-id lt-link" data-case="${esc(idKey(r))}" tabindex="0">${esc(idKey(r))}</td>`},
       {key:'month',label:'月份',cell:r=>`<td>${esc(r['月份']||monthKey(r))}</td>`},
-      {key:'client',label:'客戶別',cell:r=>`<td>${esc(r['客戶別'])}</td>`},
-      {key:'project',label:'專案名稱',cell:r=>`<td class="l" title="${esc(r['專案名稱'])}"><span class="lt-proj">${esc(r['專案名稱'])}</span></td>`},
+      {key:'client',label:'客戶別',cell:r=>`<td class="lt-link" data-case="${esc(idKey(r))}" tabindex="0">${esc(r['客戶別'])}</td>`},
+      {key:'project',label:'專案名稱',cell:r=>`<td class="l lt-link" data-case="${esc(idKey(r))}" tabindex="0" title="${esc(r['專案名稱'])}"><span class="lt-proj">${esc(r['專案名稱'])}</span></td>`},
       {key:'qty',label:'數量',cell:r=>`<td class="lt-qty">${esc(r['數量'])}</td>`},
       {key:'designer',label:'設計負責人',cell:(r,ed)=>`<td><span class="lt-name${ed?' lt-edit':''}"${ed?' data-edit="designer"':''}>${esc(r['設計負責人']||'-')}</span></td>`},
       {key:'status',label:'狀態',cell:(r,ed)=>{const st=statusOf(r);return `<td><span class="lt-status ${st.cls}${ed?' lt-edit':''}"${ed?' data-edit="status"':''}>${esc(st.label)}</span></td>`}},
@@ -802,7 +803,7 @@
     function listTableHtml(rows){
       ensureCols();
       const defs=state.cols.order.map(k=>COL_DEFS.find(c=>c.key===k)).filter(c=>c&&!state.cols.hidden.has(c.key)),ed=isDesignerSession();
-      const body=rows.map(r=>`<tr data-case="${esc(idKey(r))}" tabindex="0">${defs.map(c=>c.cell(r,ed)).join('')}</tr>`).join('');
+      const body=rows.map(r=>`<tr data-row-id="${esc(idKey(r))}">${defs.map(c=>c.cell(r,ed)).join('')}</tr>`).join('');
       return `<div class="list-wrap" id="listWrap"><table class="list-table"><thead><tr>${defs.map(c=>`<th draggable="true" data-col="${c.key}" title="拖移可調整欄位順序">${c.label}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
     function renderBoard(){
@@ -848,7 +849,7 @@
     document.addEventListener('keydown',e=>{if($('lightbox').hidden)return;if(e.key==='Escape'){lbClose();e.stopPropagation()}else if(e.key==='ArrowLeft')lbStep(-1);else if(e.key==='ArrowRight')lbStep(1)},true);
     function closeCellPop(){const p=$('cellPop');if(p){p.hidden=true;p.innerHTML=''}state.cellEdit=null}
     function openCellPop(el){
-      const tr=el.closest('[data-case]'),id=tr?tr.dataset.case:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
+      const tr=el.closest('[data-row-id]'),id=tr?tr.dataset.rowId:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
       const pop=$('cellPop');let html='';
       if(field==='status')html=`<h4>修改狀態</h4>${STATUS_FILTER.map(k=>`<button type="button" class="cp-opt ${ST[k].cls}${k===String(row['狀態']||'').trim()?' on':''}" data-cp-status="${k}">${ST[k].label}</button>`).join('')}`;
       else if(field==='designer')html=`<h4>設計負責人</h4>${designerNames().map(n=>`<button type="button" class="cp-opt${n===String(row['設計負責人']||'').trim()?' on':''}" data-cp-designer="${esc(n)}">${esc(n)}</button>`).join('')}`;
@@ -1428,7 +1429,7 @@
     document.addEventListener('mousemove',e=>{if(!cal.open||!cal.picking)return;const day=e.target.closest?.('[data-day]');if(!day)return;const ms=+day.dataset.day;if(ms!==cal.hover){cal.hover=ms;renderCal()}});
     document.addEventListener('keydown',e=>{
       if(e.key==='Escape'){if(cal.open)closeCal();if(!$('aiModal').hidden)closeAi();if(state.filterOpen){state.filterOpen=false;rerenderList()}if(!$('detailModal').hidden)closeDetailModal();if(state.cellEdit)closeCellPop();if(state.colsOpen){state.colsOpen=false;rerenderList()}}
-      if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('tr[data-case]')){e.preventDefault();e.target.click()}
+      if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('td[data-case]')){e.preventDefault();e.target.click()}
     });
     document.addEventListener('paste',e=>{if($('aiModal').hidden||ai.view!=='input')return;const files=[...(e.clipboardData?.files||[])];if(files.length){e.preventDefault();addAiFiles(files)}});
     document.addEventListener('dragover',e=>{if(e.target.closest?.('[data-ai-drop]')){e.preventDefault();e.target.closest('[data-ai-drop]').classList.add('over')}});
