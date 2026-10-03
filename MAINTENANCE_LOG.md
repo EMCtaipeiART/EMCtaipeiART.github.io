@@ -146,3 +146,5 @@
 - v5.0: 您的案件進度 moved from the avatar menu to a left-rail "進度" button with a red count badge.
 
 - v5.0: settings rail button moved to the bottom; in-page Gmail connect (串接 Gmail button in mail notice, thread error, account menu and settings page; popup OAuth + gmailOauthConnect) replacing the broken link to index.html.
+
+- v5.0: background data refresh like the legacy site — polls db.json every 6s (304 when unchanged; ignores older revisions), redraws only on a new revision and defers while typing / modal or popover open / editing / tab hidden.

@@ -3068,9 +3068,12 @@ window.emcQuotes=[
     });
 
     /* ---------- 資料 ---------- */
-    async function loadDatabase(){
+    async function loadDatabase(background){
       try{
         const res=await fetch('backend/data/db.json',{cache:'no-cache'});const db=await res.json(),t=db.tables||{};
+        const rev=Number(db.revision)||0,stamp0=String(db.updatedAt||'');
+        if(background&&state.dbStamp!==undefined){if(rev<state.dbRev||(rev===state.dbRev&&stamp0===state.dbStamp))return}
+        state.dbRev=rev;state.dbStamp=stamp0;
         state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);
         state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
@@ -3081,7 +3084,9 @@ window.emcQuotes=[
         const stamp=new Date(db.updatedAt||Date.now());
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
         fillClients();
-      }catch(err){console.warn('案件資料讀取失敗',err);state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
+      }catch(err){console.warn('案件資料讀取失敗',err);if(background)return;state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
+      if(background&&bgBusy()){state.dirty=true;return}
+      state.dirty=false;
       if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam();renderLogin();
     }
     function fillClients(){
@@ -3106,7 +3111,10 @@ window.emcQuotes=[
     renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
     setInterval(loadOffice,60000);
-    setInterval(()=>{if(!document.hidden&&(state.view==='board'||state.view==='projects'))loadDatabase()},5*60000);
+    /* 背景刷新同舊網站：每 6 秒問一次（內容沒變走 304、沒有新版本就不動畫面）；打字、開著視窗／選單、編輯中、分頁在背景時暫停重畫 */
+    let lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
+    function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
+    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},6000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin()}});
     window.__v5=state; // 方便除錯
   })();
