@@ -102,3 +102,5 @@
 - v5.0: designer reply — choose source first (同上次路徑 / NAS 資料夾 / 電腦檔案上傳, 不同步圖片 option), editor opens straight away with NAS path/images/video-path blocks filled in when backup finishes; NAS picker popup + upload iframe via postMessage as in legacy; after sending: backup inline photos, auto-confirm round, status → 過稿中; toolbar "插入 NAS 路徑"; reply-editor thread cards default collapsed.
 
 - v5.0: 過稿中 cards get a quick-view revision pill before quantity; revision record modal has a close button and green confirmed meta line; grid layout gets a field show/hide menu (card parts, multi-select, remembered); fixed detail-pill split regex.
+
+- v5.0: grid 欄位 menu now selects which case statuses to show (multi-select, remembered, 全部顯示 resets); replaces the card-field toggle menu.

@@ -1056,10 +1056,11 @@
     const ICON_GRID='<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',ICON_LIST='<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',ICON_COLS='<svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9.5 4v16M15 4v16"/></svg>';
     /** 網格／列表／欄位：只留圖示、搭成同一組（欄位只在列表排列時出現） */
     const GRID_FIELDS=[['id','案件編號'],['client','客戶別'],['type','設計種類／階段'],['date','日期'],['detail','項目細節'],['progress','進度條'],['faces','負責人頭像'],['rev','修改膠囊'],['qty','數量'],['acts','右上按鈕']];
+    function gridStatusHide(){if(!state.gridStatus){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridStatus')||'[]')}catch(err){}state.gridStatus=new Set(Array.isArray(a)?a:[])}return state.gridStatus}
     function gridHide(){if(!state.gridHide){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridHide')||'[]')}catch(err){}state.gridHide=new Set(Array.isArray(a)?a:[])}return state.gridHide}
     function layoutGroupHtml(){
       ensureCols();const list=state.layout==='list',gh=gridHide();GRID_FIELDS.forEach(([k])=>document.body.classList.toggle('gh-'+k,gh.has(k)));
-      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button><button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button></div>${!list&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>卡牌顯示的欄位（勾選＝顯示，可複選）</h4><div class="chips">${GRID_FIELDS.map(([k,l])=>`<label><input type="checkbox" data-grid-show="${k}"${gh.has(k)?'':' checked'}>${l}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button><button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button></div>${!list&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的案件狀態（勾選＝顯示，可複選）</h4><div class="chips">${STATUS_FILTER.map(k=>`<label><input type="checkbox" data-grid-status="${k}"${gridStatusHide().has(k)?'':' checked'}>${ST[k].label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     function listTableHtml(rows){
       ensureCols();
@@ -1071,7 +1072,7 @@
     function renderBoard(){
       const stage=$('stage');
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
-      const rows=allRows().filter(matches).filter(passFilters),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
+      const rows=allRows().filter(matches).filter(passFilters).filter(r=>state.layout!=='grid'||!gridStatusHide().has(String(r['狀態']||'').trim())),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
       const hadFocus=document.activeElement?.id==='boardSearch',n=filterCount();
       const latestBody=!shown.length?'<div class="empty">沒有符合的案件</div>':state.layout==='list'?listTableHtml(shown):`<div class="latest-grid">${shown.map(r=>cardHtml(r,false)).join('')}</div>`;
       stage.innerHTML=`
@@ -2549,7 +2550,7 @@
       const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete')deleteCase(id);return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
-      if(t.closest('[data-grid-reset]')){gridHide().clear();try{localStorage.setItem('v5GridHide','[]')}catch(err){}rerenderList();return}
+      if(t.closest('[data-grid-reset]')){gridStatusHide().clear();try{localStorage.setItem('v5GridStatus','[]')}catch(err){}rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
       const nav=t.closest('[data-nav]')?.dataset.nav;if(nav==='settings'){state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
@@ -2624,7 +2625,7 @@
     });
     document.addEventListener('change',async e=>{
       const t=e.target;
-      if(t.matches?.('[data-grid-show]')){const gh=gridHide();t.checked?gh.delete(t.dataset.gridShow):gh.add(t.dataset.gridShow);try{localStorage.setItem('v5GridHide',JSON.stringify([...gh]))}catch(err){}rerenderList();return}
+      if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);if(gh.size>=STATUS_FILTER.length)gh.clear();try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
       if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
