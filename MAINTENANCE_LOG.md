@@ -120,3 +120,5 @@
 - v5.0: timeline bars use the same status colors as the pills/cards.
 
 - v5.0: timeline bar colors set to the approved solid palette (pink/yellow/blue...).
+
+- v5.0: timeline only on 專案列表 list layout (removed from 最新案件列表, incl. its toggle).
