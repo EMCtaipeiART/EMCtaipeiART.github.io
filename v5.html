@@ -309,6 +309,7 @@
     .login-page img.lp-logo{width:64px;height:64px;border-radius:18px;margin-bottom:12px}
     .login-page h2{margin:0 0 4px;font-size:22px;font-weight:900}
     .login-page p.lp-sub{margin:0 0 22px;color:var(--muted);font-size:13.5px;font-weight:600}
+    .gsi-slot{min-height:44px;display:grid;place-items:center}
     .google-btn{width:100%;height:48px;border-radius:14px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;font-size:15px;cursor:pointer}
     .google-btn:hover{background:var(--bg)}
     .google-btn b{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:#4285f4;font-size:14px}
@@ -1312,12 +1313,14 @@
     const login={error:'',busy:false,showPw:false,state:'',channel:null};
     function startLogin(){if(state.view!=='login')state.back=state.view;login.error='';show('login')}
     function renderLoginPage(){
+      setTimeout(mountGoogle,0);
       $('stage').innerHTML=`<div class="login-page">
         <img class="lp-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部">
         <h2>登入設計需求系統</h2><p class="lp-sub">請使用 @emctaipei.com 公司帳號登入</p>
-        <button type="button" class="google-btn" data-lp="google"${login.busy?' disabled':''}><b>G</b>${login.busy?'登入中…':'使用 Google 帳號登入'}</button>
-        <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用帳號密碼登入'}</button>
-        ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="account" placeholder="帳號（公司信箱或 @ 前面的部分）" autocomplete="username" required><input class="input" name="password" type="password" placeholder="密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.busy?' disabled':''}>登入</button></form>`:''}
+        <div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>
+        <button type="button" class="lp-toggle" data-lp="google">Google 按鈕沒反應？改用彈出視窗登入</button>
+        <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用密碼登入'}</button>
+        ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.busy?' disabled':''}>登入</button></form>`:''}
         ${login.error?`<div class="lp-error" role="alert">${esc(login.error)}</div>`:''}
         <p class="lp-note">登入狀態與現行系統共用。<br><a href="#" data-lp="cancel">先不登入，返回</a></p>
       </div>`;
@@ -1325,7 +1328,7 @@
     function saveSession(data){
       const st=data.settings||{},display=st.displayName||st['顯示名']||st.name||st['名字']||st['設計師名字']||data.user;
       const put={designRequestEditorUser:data.user,designRequestEditorDisplayName:display,designRequestEditorAccount:data.account||data.email||'',designRequestEditorToken:data.token,designRequestEditorGroup:st.designType||st['設計類型']||st.designGroup||'',designRequestEditorDepartment:st.department||st['部門']||'',designRequestEditorRawGroup:st.group||st['組別']||''};
-      try{localStorage.removeItem('designRequestEditorLoggedOut');sessionStorage.removeItem('designRequestEditorLoggedOut');for(const [k,v] of Object.entries(put)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}else{localStorage.removeItem(k);sessionStorage.removeItem(k)}}}catch(err){}
+      try{localStorage.setItem('v5SessionBackup',JSON.stringify(put));localStorage.removeItem('designRequestEditorLoggedOut');sessionStorage.removeItem('designRequestEditorLoggedOut');for(const [k,v] of Object.entries(put)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}else{localStorage.removeItem(k);sessionStorage.removeItem(k)}}}catch(err){}
     }
     function finishLogin(data){
       if(!data||!data.token||!data.user)throw new Error(data?.error||'登入沒有完成驗證');
@@ -1353,10 +1356,31 @@
       catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;if(state.view==='login')renderLoginPage()}
     }
     async function passwordLogin(form){
-      const raw=String(form.elements.account.value||'').trim().toLowerCase(),account=raw.includes('@')?raw:`${raw}@emctaipei.com`,password=form.elements.password.value;
+      const password=String(form.elements.password.value||'');
+      if(!password){login.error='請輸入密碼。';renderLoginPage();return}
       login.busy=true;login.error='';renderLoginPage();
-      try{finishLogin(await api('login',{account,password}))}
+      try{finishLogin(await api('login',{account:'machi.chen@emctaipei.com',password}))}
       catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;renderLoginPage()}
+    }
+    /* Google 登入：優先用頁面內的 Google 按鈕（不會跳到舊網站），失敗再用彈出視窗 */
+    let gsiReady=false;
+    function mountGoogle(){
+      const slot=$('gsiBtn');if(!slot||login.busy)return;
+      const go=()=>{
+        try{
+          if(!gsiReady){google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>googleCredential(r.credential),ux_mode:'popup',auto_select:false});gsiReady=true}
+          slot.innerHTML='';google.accounts.id.renderButton(slot,{type:'standard',theme:'outline',size:'large',shape:'pill',text:'signin_with',locale:'zh-TW',width:Math.min(340,slot.clientWidth||340)});
+        }catch(err){slot.innerHTML='<div class="lp-note">Google 登入元件載入失敗，請使用下方的彈出視窗登入。</div>'}
+      };
+      if(window.google&&google.accounts&&google.accounts.id){go();return}
+      let tag=document.getElementById('gsiScript');
+      if(!tag){tag=document.createElement('script');tag.id='gsiScript';tag.src='https://accounts.google.com/gsi/client';tag.async=true;document.head.appendChild(tag)}
+      tag.addEventListener('load',go,{once:true});tag.addEventListener('error',()=>{slot.innerHTML='<div class="lp-note">Google 登入元件載入失敗，請使用下方的彈出視窗登入。</div>'},{once:true});
+    }
+    async function googleCredential(credential){
+      login.busy=true;login.error='';if(state.view==='login')renderLoginPage();
+      try{finishLogin(await api('googleLogin',{credential:credential||''}))}
+      catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;if(state.view==='login'){renderLoginPage();mountGoogle()}}
     }
     function renderLogin(){
       const box=$('railLogin');if(!box)return;
@@ -1368,7 +1392,7 @@
     async function logout(){
       state.loginMenu=false;
       try{if(session().token)await api('logout')}catch(err){console.warn('後端登出失敗，仍會清除本機登入狀態',err)}
-      try{SESSION_KEYS.forEach(k=>{localStorage.removeItem(k);sessionStorage.removeItem(k)});localStorage.setItem('designRequestEditorLoggedOut','1');sessionStorage.setItem('designRequestEditorLoggedOut','1')}catch(err){}
+      try{localStorage.removeItem('v5SessionBackup');SESSION_KEYS.forEach(k=>{localStorage.removeItem(k);sessionStorage.removeItem(k)});localStorage.setItem('designRequestEditorLoggedOut','1');sessionStorage.setItem('designRequestEditorLoggedOut','1')}catch(err){}
       renderLogin();if(state.view==='form'||state.editing)rerender();toast('已登出');
     }
     function afterLogin(){
@@ -1538,6 +1562,8 @@
     (()=>{const slot=$('promptSlot'),bar=$('prompt'),band=$('stickBand');function stick(){if(document.body.classList.contains('no-hero')){band.classList.remove('show');bar.classList.remove('is-stuck');slot.style.height='';return}const stuck=bar.classList.contains('is-stuck'),top=slot.getBoundingClientRect().top;if(!stuck&&top<12){slot.style.height=bar.offsetHeight+'px';bar.classList.add('is-stuck')}else if(stuck&&top>=12){bar.classList.remove('is-stuck');slot.style.height=''}if(bar.classList.contains('is-stuck')){const r=slot.getBoundingClientRect();bar.style.left=r.left+'px';bar.style.width=r.width+'px'}else{bar.style.left='';bar.style.width=''}band.classList.toggle('show',bar.classList.contains('is-stuck'))}window.addEventListener('scroll',stick,{passive:true});window.addEventListener('resize',stick)})();
     /* 往下滾動收合設計師頭像，往上滾動再展開 */
     (()=>{let last=window.scrollY,lock=0;window.addEventListener('scroll',()=>{if(Date.now()<lock||state.view!=='board')return;const y=window.scrollY,team=$('team');if(y>last+6&&y>60&&!team.classList.contains('is-collapsed')){team.classList.add('is-collapsed');lock=Date.now()+450}else if(y<last-6&&team.classList.contains('is-collapsed')){team.classList.remove('is-collapsed');lock=Date.now()+450}last=y},{passive:true})})();
+    /* 登入資料被其他分頁／舊網站清掉時（沒有明確登出），從備份還原 */
+    try{if(!session().token&&localStorage.getItem('designRequestEditorLoggedOut')!=='1'&&sessionStorage.getItem('designRequestEditorLoggedOut')!=='1'){const bk=JSON.parse(localStorage.getItem('v5SessionBackup')||'null');if(bk&&bk.designRequestEditorToken)for(const [k,v] of Object.entries(bk)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}}}}catch(err){}
     renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
     setInterval(loadOffice,60000);
