@@ -485,7 +485,7 @@
     .rev-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
     .rev-no{font-weight:900;font-size:14px}
     .rev-meta{font-size:12px;color:var(--faint);font-weight:700}
-    .rev-text{font-size:14px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+    .rev-text{font-size:12px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
     .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .thumbs a{display:block;width:96px;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
     .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
@@ -1219,6 +1219,7 @@
     })();
     /* 修改紀錄：設計師在列表點「＋」或修改膠囊，新增下一輪修改紀錄（Worker addModificationRecord） */
     const todayInput=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
+    function stripSig(text){const v=String(text||''),m=v.match(/(^|\n)[\s​]*--[\s​]*(\n|$)/);if(!m)return v.trim();const b=v.slice(0,m.index).trim();return b||v.trim()}
     function linkify(text,links){
       const src=String(text||''),c=[];let L=links;if(typeof L==='string'){try{L=JSON.parse(L||'[]')}catch{L=[]}}
       const safe=u=>{try{const p=new URL(String(u||''));return /^https?:$/.test(p.protocol)?p.toString():''}catch{return ''}};
@@ -1230,7 +1231,7 @@
     }
     function modListHtml(id){
       const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
-      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession())?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession())?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
     }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
@@ -2042,7 +2043,7 @@
     }
     function htmlToPlain(html){const div=document.createElement('div');div.innerHTML=String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n');return (div.textContent||'').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim()}
     async function recordModificationFromReply(d,bodyHtml){
-      const content=htmlToPlain(bodyHtml).replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim();if(!content)return;
+      const content=stripSig(htmlToPlain(bodyHtml)).replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim();if(!content)return;
       const div=document.createElement('div');div.innerHTML=bodyHtml;
       const links=[...div.querySelectorAll('a[href]')].map(a=>({text:(a.textContent||'').trim(),url:a.getAttribute('href')})).filter(l=>l.text&&/^https?:/i.test(l.url)&&content.includes(l.text));
       try{

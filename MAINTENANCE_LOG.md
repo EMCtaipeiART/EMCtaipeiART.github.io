@@ -106,3 +106,5 @@
 - v5.0: grid 欄位 menu now selects which case statuses to show (multi-select, remembered, 全部顯示 resets); replaces the card-field toggle menu.
 
 - v5.0: 專案列表 grid layout 欄位 menu now hides/shows whole status columns (multi-select); removed the board status filter added earlier.
+
+- v5.0: modification record text 12px and signature (from "--" line) not shown/saved.
