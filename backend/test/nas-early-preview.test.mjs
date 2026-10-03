@@ -101,7 +101,7 @@ test('preview jobs hand out only new items per poll, skip oversized or unreadabl
 
 test('the page, picker page and picker server are wired so NAS previews reach the mail editor before the Drive backup finishes', async () => {
   const { readFile } = await import('node:fs/promises');
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
 
   // 選擇器頁面：確認時帶 previewJobId、輪詢預覽、轉交給主頁，備份結束後停止並再收一次。

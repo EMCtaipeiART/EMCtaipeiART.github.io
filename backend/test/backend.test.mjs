@@ -153,14 +153,14 @@ test('system announcement defaults to v4.7 and only exposes the latest enabled v
 });
 
 test('system announcement keeps only the header megaphone and centers its circular close button', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /system-announcement-icon[^>]*>📢<\/span>/);
   assert.match(html, /\.system-announcement-icon\{[^}]*background:transparent/);
   assert.match(html, /\.system-announcement-close\{[^}]*display:grid!important;place-items:center!important;[^}]*border-radius:50%!important/);
 });
 
 test('front end initializes weight rules before normalizing cached database rows', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.ok(
     html.indexOf('let activeWeightRules=[];') < html.indexOf("let rows = (sanitizedCachedRows?.length"),
     'activeWeightRules must be initialized before normalizeRow reads cached rows'
@@ -168,7 +168,7 @@ test('front end initializes weight rules before normalizing cached database rows
 });
 
 test('new-case copy modal replaces the final action with a red Gmail account link', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /nextBtn\.textContent=isLast\?'gmail帳號連結':'下一封'/);
   assert.match(html, /nextBtn\.classList\.toggle\('gmail-btn-danger',isLast\)/);
   assert.match(html, /\.gmail-btn-primary\.gmail-btn-danger\{background:var\(--red\)!important/);
@@ -176,7 +176,7 @@ test('new-case copy modal replaces the final action with a red Gmail account lin
 });
 
 test('Gmail thread messages all collapse by default (no auto-expanded message) and only expand on click', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 這次改成「不管是不是最新一封，開啟信件串一律先收合」——見 AGENT.md 2026-08-26 這則紀錄；
   // 舊版的 isLatest 參數（只自動展開最新一封）整個拿掉，這裡明確驗證整個檔案完全沒有殘留。
   assert.doesNotMatch(html, /isLatest/);
@@ -188,7 +188,7 @@ test('Gmail thread messages all collapse by default (no auto-expanded message) a
 });
 
 test('Gmail thread displays names only and keeps email addresses in name tooltips', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('function gmailAddressPeople(');
   const end = html.indexOf('function gmailThreadMessageHtml(', start);
   assert.ok(start > 0 && end > start);
@@ -211,7 +211,7 @@ test('Gmail thread displays names only and keeps email addresses in name tooltip
 });
 
 test('Gmail thread messages render sanitized rich HTML (real formatting, not flattened plain text) with a strict tag/attribute allowlist', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 危險標籤整段（含子節點）捨棄——script/iframe/svg/form 等常見注入向量都要在清單裡。
   assert.match(html, /GMAIL_THREAD_HTML_DROP_TAGS=new Set\(\[[^\]]*'script'[^\]]*'iframe'[^\]]*'svg'[^\]]*'form'[^\]]*\]\)/);
   // 保留清單只留下真正需要呈現格式的標籤（表格、連結、圖片、粗斜體等），且圖片/連結另外有各自的屬性白名單處理。
@@ -247,7 +247,7 @@ test('Gmail thread messages render sanitized rich HTML (real formatting, not fla
 });
 
 test('Gmail thread signature stripping checks every saved signature (Gmail account signature plus all custom presets), not only the current default', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function allKnownGmailSignatureHtmlList()');
   const end = html.indexOf('\n}', start);
   assert.ok(start > 0 && end > start);
@@ -262,7 +262,7 @@ test('Gmail thread signature stripping checks every saved signature (Gmail accou
 });
 
 test('gmailThreadTrustedImageSrc() allows https googleusercontent.com images (the app\'s own host plus Gmail\'s signature image proxy), rejecting other domains, domain-confusion tricks, and non-https', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('const GMAIL_THREAD_TRUSTED_IMAGE_HOSTS=');
   const end = html.indexOf('function sanitizeGmailThreadAttributes(', start);
   assert.ok(start > 0 && end > start);
@@ -284,7 +284,7 @@ test('gmailThreadTrustedImageSrc() allows https googleusercontent.com images (th
 });
 
 test('Gmail thread sanitizer allows images from the app\'s own trusted Drive host (for designer-reply auto-attached design images) in addition to cid: attachments, while every other external <img src> is still dropped', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 圖片來源判斷要先試 cid:，查不到再退回信任網域，不能反過來（否則寄件人可以用 cid: 開頭但內容其實
   // 指向信任網域外的字串繞過 cidMap 檢查）；也要求 !cidMatch 才走信任網域這條路，避免「看起來像 cid: 但
   // 其實 cidMap 沒有對應資料」時又被誤判成信任網域網址（cid: 開頭的字串本來就不會通過 URL 的網域檢查，
@@ -295,7 +295,7 @@ test('Gmail thread sanitizer allows images from the app\'s own trusted Drive hos
 });
 
 test('openDesignerReplyMailModal() restores the idempotency guard its own doc-comment describes but the code previously lacked: calling it again for the same already-open case+round is a no-op (does not wipe user-typed content or create a duplicate #gmailDesignerReplyImages), while a genuine round change still rebuilds', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function openDesignerReplyMailModal(id');
   const end = html.indexOf('/** 「設計師回覆信」自動帶入的設計圖縮圖', start);
   assert.ok(start > 0 && end > start);
@@ -311,7 +311,7 @@ test('openDesignerReplyMailModal() restores the idempotency guard its own doc-co
 });
 
 test('the "images-updated" handler no longer leaves the case-design-reply hand-off as a silent unhandled promise rejection: opening the reply editor and applying the just-uploaded images now has its own .catch() with an actionable message', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf("if(data.type==='machi-case-design-images-updated'){");
   const end = html.indexOf("if(data.type==='machi-nas-folder-backup-started'){", start);
   assert.ok(start > 0 && end > start);
@@ -320,7 +320,7 @@ test('the "images-updated" handler no longer leaves the case-design-reply hand-o
 });
 
 test('Gmail reply composer displays the current account as sender instead of the original thread owner', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function openGmailThreadModal(id');
   const end = html.indexOf('function closeGmailThreadModal()', start);
   assert.ok(start > 0 && end > start);
@@ -335,7 +335,7 @@ test('Gmail reply composer displays the current account as sender instead of the
 });
 
 test('designer reply can reuse the saved NAS path and only attaches the selected modification round', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(html, /data-source="same-nas"><span>同上次路徑<\/span>/);
   assert.match(html, /function reuseLastNasFolder\(id,round,\{afterReply=false,skipReplyImages=false\}=\{\}\)/);
@@ -361,7 +361,7 @@ test('designer reply can reuse the saved NAS path and only attaches the selected
 });
 
 test('front end keeps the earliest image for duplicate file names within the same revision round', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const source = html.match(/function normalizeRecordImageEntry\(item\)\{[^\n]+\}\nfunction parseRecordImages\(value\)\{[^\n]+\}/)?.[0] || '';
   assert.ok(source, 'could not locate modification image parser');
   const parse = new Function(`${source};return parseRecordImages;`)();
@@ -376,7 +376,7 @@ test('front end keeps the earliest image for duplicate file names within the sam
 });
 
 test('selecting multiple NAS folders for a designer reply attaches every folder\'s images and every folder\'s path, not just the first one', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   // openDesignerReplyMailModal / resolveDesignerReplyImages both take a `folders` array now, not a
   // single `folderPath` string -- the old signature silently dropped every folder past the first.
@@ -462,7 +462,7 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
 });
 
 test('concurrent designer-reply opens for the same case+round are de-duplicated before any await, so a slow first initialization cannot land after the images and re-stick the editor on "圖片上傳中..."', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // The bug: the old re-entrancy guard relied on modal.dataset.replyMode==='designer', which is only
   // set AFTER `await openGmailThreadModal(...)` (a network read of the whole Gmail thread). The NAS
@@ -522,7 +522,7 @@ test('concurrent designer-reply opens for the same case+round are de-duplicated 
 });
 
 test('designer reply lists every backed-up video\'s full NAS path (folder + filename + extension), attributing each video to the folder it actually came from even when several folders were picked', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
 
@@ -596,7 +596,7 @@ test('designer reply lists every backed-up video\'s full NAS path (folder + file
   assert.equal(run([{ fileName: 'clip.mp4' }], []).removed, true);
 });
 test('Gmail editors wait for pasted images before immediate or scheduled send', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /const gmailInlineImageTasksByEditor=new Map\(\)/);
   assert.match(html, /function queueGmailInlineImages\(editorId,fileList\)/);
   assert.match(html, /async function waitForGmailInlineImages\(editorId\)/);
@@ -615,7 +615,7 @@ test('Gmail editors wait for pasted images before immediate or scheduled send', 
 });
 
 test('Gmail compose/reply editors support attaching arbitrary non-inline files (not just images): a paperclip toolbar button + unrestricted-type hidden file input exist in both editors, added files render as removable chips outside the contenteditable body, gmailEditorMailPayload() exposes them as {fileName,mimeType,base64} (matching what the Worker\'s resolveGmailAttachments() expects), every outgoing send/schedule/update action forwards attachments, client-side limits mirror the Worker\'s 15MB/15MB/10-file limits, every editor-reset call site also clears stale attachments (so a previous case\'s attachments cannot leak into the next one), a reloaded scheduled draft restores its saved attachments, sending waits for in-flight attachment reads to finish before serializing the payload, and the batch post-submit queue (which cannot attribute attachments to the right draft) blocks the feature the same way it already blocks inline images', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 兩個編輯區（撰寫、回信）的工具列都要有附加檔案按鈕＋不限型別的隱藏 file input＋附件小卡片容器。
   for (const editorId of ['gmailComposeEditor', 'gmailThreadReplyEditor']) {
@@ -703,7 +703,7 @@ test('Gmail compose/reply editors support attaching arbitrary non-inline files (
 });
 
 test('Gmail editors show the connected account signature by default without appending it twice', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /gmailSignatureLoadPromise/);
   assert.match(html, /function resetGmailSignatureCache\(\)/);
   assert.match(html, /if\(gmailSignatureLoadPromise\)return gmailSignatureLoadPromise/);
@@ -765,7 +765,7 @@ test('Gmail editors show the connected account signature by default without appe
 });
 
 test('a manual "insert signature" button lets users pick between the Gmail account\'s multiple send-as signatures, in both the compose and reply/thread editors', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 按鈕本身要在發信（gmailComposeEditor）與回信（gmailThreadReplyEditor，涵蓋一般回信／填寫修改需求信／
   // 設計師回覆信三種模式，三者共用同一個編輯器）兩個工具列都要有。
   assert.match(html, /class="gmail-rich-signature-btn" data-rich-signature-for="gmailThreadReplyEditor" title="插入簽名檔"/);
@@ -802,7 +802,7 @@ test('a manual "insert signature" button lets users pick between the Gmail accou
 });
 
 test('custom named signature presets (e.g. "休假" vs "正常") sit in personal settings, merge into the picker alongside the Gmail account signature, and win as the auto-inserted default', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 個人設定要有獨立的「簽名檔設定」區塊：命名輸入框、設為預設的單選鈕、內容 contenteditable 富文字區塊、
   // 刪除鈕、新增按鈕。內容欄位不再是 textarea（純文字），改成支援貼上/編輯格式的 contenteditable div。
   assert.match(html, /id="personalSignaturePresetList"/);
@@ -921,7 +921,7 @@ test('custom named signature presets (e.g. "休假" vs "正常") sit in personal
 });
 
 test('signature preset content is excluded from the global table/th/td styling, and visually aligns with the mail-template box above it', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 全站有一條把 table/th/td 強制統一成單一字級/顏色/字重的規則（原本是給一般資料表格用的），這條規則
   // 2026-08-18 那次已經因為同一種理由排除過 .gmail-rich-editor（見信件內容編輯區的簽名檔顯示）——這次
   // 簽名檔設定的內容欄位（.signature-preset-content）也要比照排除，貼上的簽名檔如果本身是 <table> 排版
@@ -947,7 +947,7 @@ test('signature preset content is excluded from the global table/th/td styling, 
 });
 
 test('scheduled-mail results cannot leak from a previously opened case into the current mail modal', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('async function refreshScheduledMailList(caseId,kind)');
   const end = html.indexOf('async function cancelScheduledMailItem(', start);
   assert.ok(start > 0 && end > start);
@@ -958,7 +958,7 @@ test('scheduled-mail results cannot leak from a previously opened case into the 
 });
 
 test('pending scheduled mail can be loaded back into the editor and updates the original schedule', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /class="gmail-scheduled-item-edit"[^>]*>編輯<\/button>/);
   assert.match(html, /id="gmailComposeScheduledEditBanner"/);
   assert.match(html, /id="gmailThreadScheduledEditBanner"/);
@@ -986,7 +986,7 @@ test('pending scheduled mail can be loaded back into the editor and updates the 
 });
 
 test('Gmail thread restores safe labeled hyperlinks in the plain-text preview', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf('function safeHttpPreviewUrl(');
   const end = html.indexOf('function gmailThreadMessageImagesHtml(', start);
   assert.ok(start > 0 && end > start);
@@ -1025,7 +1025,7 @@ test('customer admin keeps scroll position, front end follows saved order, and o
   });
   assert.deepEqual([...new Set(customerEntries.customerDesignerEntries().map(entry => entry.group))], ['設計部']);
 
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const sortStart = html.indexOf('const CUSTOMER_DIRECTORY_COLLATOR=');
   const sortEnd = html.indexOf('function syncCustomerDirectoryFromDatabase(', sortStart);
   const sortSource = html.slice(sortStart, sortEnd);
@@ -1061,7 +1061,7 @@ test('customer admin keeps scroll position, front end follows saved order, and o
 });
 
 test('front end does not roll back newly written rows when a stale JSON refresh arrives', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /incomingRevision<cachedRevision/);
   assert.match(html, /localWriteConfirmedGraceMs\s*=\s*2\*60\*1000/);
   assert.match(html, /confirmedAt:0/);
@@ -1110,7 +1110,7 @@ test('front end does not roll back newly written rows when a stale JSON refresh 
 });
 
 test('mail contact picker merges designers, orders groups and excludes internal departments', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const start = html.indexOf("const gmailExcludedContactDepartments=");
   const end = html.indexOf('function openRecipientPicker(', start);
   assert.ok(start > 0 && end > start);
@@ -1144,7 +1144,7 @@ test('mail contact picker merges designers, orders groups and excludes internal 
 });
 
 test('designer JSON group and rotation still drive the separate new-project buttons after the roster is replaced', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const designers = [
     { name: 'Leona', group: '平面', rotation: 1 },
     { name: 'Anna', group: '平面', rotation: 2 },
@@ -1177,7 +1177,7 @@ test('designer JSON group and rotation still drive the separate new-project butt
 });
 
 test('designer music uses one timeline, JSON-only settings, and seeks Spotify after play', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const settingsFetch = html.match(/async function fetchDesignerProfiles\(\)[\s\S]*?\nasync function loadDesignerRoster/)?.[0] || '';
   const settingsSaveStart = html.indexOf('async function saveDesignerSettings(event)');
   const settingsSaveEnd = html.indexOf('\nfunction ', settingsSaveStart);
@@ -1193,7 +1193,7 @@ test('designer music uses one timeline, JSON-only settings, and seeks Spotify af
 });
 
 test('mail templates are numbered, support a default, appear in personal settings, and can be inserted in editors', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const appsScript = await readFile(new URL('../../GS/google_apps_script.gs', import.meta.url), 'utf8');
   const normalizeStart = html.indexOf('function normalizeReplyTemplateSettings(');
   const normalizeEnd = html.indexOf('\nfunction normalizeDesignerReplyTemplates', normalizeStart);
@@ -1219,7 +1219,7 @@ test('mail templates are numbered, support a default, appear in personal setting
 });
 
 test('front-end destructive actions require confirmation before deletion', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const functionSource = (start, end) => {
     const from = html.indexOf(start);
     const to = html.indexOf(end, from);
@@ -1239,7 +1239,7 @@ test('archive snapshot and dashboard use JSON database sources only', async () =
   const generator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   const dashboard = await readFile(new URL('../../design_dashboard.html', import.meta.url), 'utf8');
   const archiveAdmin = await readFile(new URL('../../database_archive_admin.html', import.meta.url), 'utf8');
-  const indexHtml = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const indexHtml = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const database = JSON.parse(await readFile(new URL('../data/db.json', import.meta.url), 'utf8'));
   const archive = JSON.parse(await readFile(new URL('../../data/database_archive.json', import.meta.url), 'utf8'));
   assert.match(generator, /backend\/data\/db\.json/);
@@ -1417,7 +1417,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
 test('JSON database admin renders actions first and updates JSON optimistically', async () => {
   const html = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
-  const front = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const front = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /const TABLE_LABELS=\{database:'資料庫','帳號權限':'帳號設定','加權計分標準':'加權設定','角色權限範本':'權限設定',bug_report:'問題回報','修改統計表':'修改列表'\};/);
   assert.match(html, /function tableLabel\(name\)\{return TABLE_LABELS\[name\]\|\|name\}/);
   // 左側選單改成分四組（案件資料／人員與權限／系統設定／問題回報）排列，TABLE_ORDER 由 TABLE_GROUPS 展開；
@@ -1897,7 +1897,7 @@ test('admin account save atomically creates personal settings and access', async
 });
 
 test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, offers a per-round delete, and its header buttons can actually be hidden', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // Both header buttons carry the .revision-modal-add class, whose display:inline-flex!important beat
   // the browser's [hidden]{display:none} -- so `add.hidden = ...` silently did nothing and the button
@@ -1934,7 +1934,7 @@ test('修改紀錄 modal exposes 新增初稿 only when the 初稿 is missing, o
 });
 
 test('batch-created cases can be merged into one mail: ids joined in the subject, shared text printed once, quantities summed, and the thread bound to every case', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
   // Single and merged mails must share one body template, or the two will drift apart.
@@ -2006,7 +2006,7 @@ test('batch-created cases can be merged into one mail: ids joined in the subject
 
 test('a new 客戶別 is created with its 部門／組別 and 權限設定 already filled in, from one shared rule both creation paths go through', async () => {
   const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const model = await readFile(new URL('../../worker/src/model.ts', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
@@ -2052,7 +2052,7 @@ test('a new 客戶別 is created with its 部門／組別 and 權限設定 alrea
 });
 
 test('排程信不進 Gmail 草稿匣，刪草稿也不再等於取消；系統判定不寄的那幾筆仍要看得見原因', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
   // 2026-09-30：排程信不再在 Gmail 建草稿（躺在草稿匣會被同事當成沒寄出而刪掉，時間到整封信就沒寄
@@ -2123,7 +2123,7 @@ test('排程信不進 Gmail 草稿匣，刪草稿也不再等於取消；系統�
 });
 
 test('scheduling a mail ends the compose flow and can never be followed by an immediate second send, and a grant without the draft scope says so before anything is scheduled', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
   // 「排程完信件卻直接寄出」有兩個成因，兩個都要堵住。
@@ -2173,7 +2173,7 @@ test('scheduling a mail ends the compose flow and can never be followed by an im
 });
 
 test('an account that already connected Gmail can run the authorisation flow again, which is the only way to grant a scope added after it first connected', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // The 信件 menu used to offer 連接 only while disconnected: once connected the sole account action was
   // 取消連接. That left an already-connected user with no way to re-run Google's consent screen, so a
@@ -2226,7 +2226,7 @@ test('an account that already connected Gmail can run the authorisation flow aga
 });
 
 test('a scheduled first-send mail is mirrored into the Gmail drafts folder, and batch/merged mails can be scheduled the same way a single case can', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
   // Gmail's drafts.* endpoints are not covered by gmail.send, so the connect flow has to ask for
@@ -2509,7 +2509,7 @@ test('weight settings can rename a stage or detail without disturbing any score,
 
 test('weight settings admin exposes stage/detail maintenance inline and drops the vague top-right add button, and a 下架 option never reaches the request form', async () => {
   const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
-  const index = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const index = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const schema = await readFile(new URL('../../backend/schema.mjs', import.meta.url), 'utf8');
 
   // 狀態 column backs the 下架 concept.
@@ -2595,7 +2595,7 @@ test('deleting a case also removes its modification records and supplement links
 });
 
 test('the front end warns that deleting a case takes its modification records with it, and drops the local caches for that id', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const deleteFn = html.match(/function deleteRow\(id\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(deleteFn, 'could not locate deleteRow');
   // Deleting now destroys the modification history too, so the confirm has to say so.
@@ -2820,7 +2820,7 @@ test('designer story sync stores 24-hour and permanent expiration in JSON', asyn
 });
 
 test('designer reel reactions and comments consume the shared story response contract', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const reactionHandler = html.match(/async function toggleDesignerReelReaction\(button\)\{[\s\S]*?\nasync function submitDesignerReelComment/)?.[0] || '';
   const commentHandler = html.match(/async function submitDesignerReelComment\(form\)\{[\s\S]*?\nlet spotifyIframeApi/)?.[0] || '';
 
@@ -2831,7 +2831,7 @@ test('designer reel reactions and comments consume the shared story response con
 });
 
 test('project detail and modification-history thumbnails support reliable viewport-bounded hover previews', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const thumbnailMarkup = html.match(/function caseDetailDesignImagesHtml\(row\)\{[^\n]+\}/)?.[0] || '';
   const revisionThumbnailMarkup = html.match(/function revisionImagesHtml\(row,record\)\{[^\n]+\}/)?.[0] || '';
 
@@ -2910,13 +2910,13 @@ test('designer media buttons persist replacements and deleted references in JSON
 });
 
 test('member avatar upload keeps the returned JSON avatar without an immediate stale refresh', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /lastAccountAvatarRefreshAt=Date\.now\(\);renderAccountAvatar\(\)/);
   assert.match(html, /closeUploadModal\(\{refreshUserAvatar:false\}\)/);
 });
 
 test('designer settings are reachable from media management accounts as well as designer settings accounts', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /function canAccessDesignerSettings\(\)\{return accessAllowed\('designer\.settings',hasDesignerAccountRole\(\)\)\|\|accessAllowed\('media\.manage',hasDesignerAccountRole\(\)\)\}/);
   assert.match(html, /if\(!canAccessDesignerSettings\(\)\)\{setSync\('此帳號沒有設計師設定或圖片管理權限',true\);return\}/);
   assert.doesNotMatch(html, /show\('#accountDesignerSettings'/);
@@ -2971,7 +2971,7 @@ test('upload page forwards editorToken when replacing a designer poster from rec
 });
 
 test('the recent case list\'s two split tables can grow past their nominal even-fill height so a taller wrapped row does not hide the last row with no way to scroll to it', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // #modifyRecent 是 display:grid，兩個直欄（.modify-fixed／.modify-scroll）本身有 overflow:hidden／auto，
   // 這會讓它們對 grid 列高度的「最小內容尺寸」貢獻歸零（CSS Grid／Flexbox 規格對 overflow 非 visible 的
   // 項目的既定行為），如果同時維持預設的 align-items:stretch，兩欄就會被鎖死在 grid 列本身算出來的高度，
@@ -2995,7 +2995,7 @@ test('the recent case list\'s two split tables can grow past their nominal even-
 });
 
 test('the issue report modal lists reports before the content/suggestion fields, and its textareas render at 10px corners instead of the global 24px textarea rule', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const formStart = html.indexOf('<form class="issue-report-card" id="issueReportForm">');
   const formEnd = html.indexOf('</form>', formStart);
   assert.ok(formStart > 0 && formEnd > formStart);
@@ -3023,7 +3023,7 @@ test('the issue report modal lists reports before the content/suggestion fields,
 });
 
 test('mailAction() branches into 串接／回信／發信 depending on gmailThreadId and whether the login is a designer, each respecting canSendMailRow permission', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 用配對括號/大括號深度計數精確擷取每個函式本體（不是用「找下一個 \n}」這種粗略字串比對——
   // jsArg 這類單行函式沒有獨立成行的 \n}，用字串比對會一路吃到後面幾十個函式之後才找到的 \n}，
   // mailAction 這種函式簽章裡帶解構預設值 {icon=false} 的情況，第一個 { 也不是真正的函式本體開頭，
@@ -3109,7 +3109,7 @@ test('mailAction() branches into 串接／回信／發信 depending on gmailThre
 });
 
 test('links written into a 修改紀錄 entry are clickable in the modal, while everything else stays escaped text', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 修改需求常直接貼 Google 簡報或雲端連結，原本整段用 esc() 當純文字輸出，網址點不開。
   // renderRevisionModal 已經不是單行（加入了保留選取的處理），整支函式一起抓。
   const render = html.match(/function renderRevisionModal\(id\)\{[\s\S]*?updateRevisionSelectionBar\(\);\}/)?.[0];
@@ -3144,7 +3144,7 @@ test('links written into a 修改紀錄 entry are clickable in the modal, while 
 });
 
 test('a computer upload started from the designer reply flow opens the mail editor right away and shows live upload progress where the images will go', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 以前按下「上傳全部」後上傳視窗只會縮到背景，角落剩一個小徽章，設計師以為沒上傳成功又重來一次。
   const handler = html.match(/if\(data\.type==='machi-case-design-upload-progress'\)\{[\s\S]*?\n    return;\n  \}/)?.[0];
@@ -3195,7 +3195,7 @@ test('a computer upload started from the designer reply flow opens the mail edit
 });
 
 test('adding a 客戶別 with an expired login sends the user back to log in instead of silently creating it without their project group', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
 
   // 後端：有帶憑證卻查不到登入就擋下，不再默默當成匿名建立。
@@ -3216,7 +3216,7 @@ test('adding a 客戶別 with an expired login sends the user back to log in ins
 });
 
 test('the designer reply can back up NAS or uploaded images without putting them into the mail, while still keeping the paths and unlocking send', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 選單：只有設計師回覆信流程才出現勾選框，三個上傳選項都讀取它的狀態。
   const chooser = html.match(/function openCaseDesignImageSourceChooser\(id,round,anchorEl,\{afterReply=false\}=\{\}\)\{[^\n]*/)?.[0];
@@ -3307,7 +3307,7 @@ test('the designer reply can back up NAS or uploaded images without putting them
 });
 
 test('修改中 is a first-class case status: its own colour in every theme, a KPI box that filters the list, and offered wherever a status can be chosen', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   const style = html.slice(0, html.lastIndexOf('</style>'));
   const count = (text, needle) => text.split(needle).length - 1;
@@ -3400,7 +3400,7 @@ test('a new modification request automatically moves the case to 修改中, and 
   assert.equal(second.statusChanged, false, '已經是修改中就不重複改');
 
   // 前台：兩個新增修改需求的入口寫入成功後都要同步狀態。
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const submit = html.match(/async function submitModificationRecord\(event\)\{[^\n]*/)?.[0];
   assert.ok(submit, 'could not locate submitModificationRecord');
   assert.match(submit, /modifier:finalModifier\}:item\)\); applyModificationStatusChange\(id,data\);/);
@@ -3438,7 +3438,7 @@ test('a new modification request automatically moves the case to 修改中, and 
 });
 
 test('page load downloads the database once, UI preference saves are batched and skipped when unchanged, and the history workflow no longer commits on every revision bump', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 1) 同時要資料庫的呼叫端共用同一次下載。
   const fetchDb = html.match(/let githubJsonDatabaseInflight=null;[\s\S]*?async function fetchGithubJsonDatabase\(\{fresh=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
@@ -3568,7 +3568,7 @@ test('page load downloads the database once, UI preference saves are batched and
 });
 
 test('designer workload helper still counts 未開始 + 執行中 + 修改中 cases after the avatar light is retired', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const block = html.match(/const DESIGNER_ACTIVE_STATUSES=[\s\S]*?function computedDesignerStatus\([^\n]*/)?.[0];
   assert.ok(block, 'could not locate the designer busy helpers');
   const make = rows => new Function('rows', `${block}\nreturn { designerActiveCount, computedDesignerStatus };`)(rows);
@@ -3595,7 +3595,7 @@ test('designer workload helper still counts 未開始 + 執行中 + 修改中 ca
 });
 
 test('reply method chooser offers 直接讀信, which opens the thread read-only with the first message expanded', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const chooser = html.match(/async function openReplyMethodChooser\(event,id\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(chooser, 'could not locate openReplyMethodChooser');
   // 已連接與未連接 Gmail 兩種選單最下方都有「直接讀信」，點了用唯讀模式開信件串。
@@ -3667,7 +3667,7 @@ test('reply method chooser offers 直接讀信, which opens the thread read-only
 });
 
 test('mobile case detail actions distribute every visible button at equal width', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(
     html,
     /#caseDetailModal \.case-detail-actions \.row-actions\{display:contents!important\}/,
@@ -3690,7 +3690,7 @@ test('mobile case detail actions distribute every visible button at equal width'
 });
 
 test('designer reply backs up photos added with the editor upload button into the reply round of 修改紀錄 on send and on schedule', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const backupFn = html.match(/async function backupDesignerReplyInlineImages\(id,round,inlineImages\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(backupFn, 'could not locate backupDesignerReplyInlineImages');
 
@@ -3747,7 +3747,7 @@ test('designer reply backs up photos added with the editor upload button into th
 });
 
 test('case delete and 修改紀錄 trash buttons ask through the in-page warning dialog before deleting', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 視窗標記與樣式存在，疊在其他彈窗之上。
   assert.match(html, /<div class="app-confirm-backdrop" id="appConfirmDialog" hidden>/);
@@ -3808,7 +3808,7 @@ test('case delete and 修改紀錄 trash buttons ask through the in-page warning
 });
 
 test('the NAS folder picker opens on the designer own machine first and falls back to the manager Mac when it does not answer', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const block = html.match(/const NAS_PICKER_MANAGER_HOST=[\s\S]*?\nfunction openNasFolderPickerPopupWindow\(url\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(block, 'could not locate the picker host helpers');
 
@@ -3881,7 +3881,7 @@ test('the NAS folder picker opens on the designer own machine first and falls ba
 
 test('first paint no longer preloads retired designer avatars, while reversible poster assets stay compressed', async () => {
   const { readdir, stat } = await import('node:fs/promises');
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const preloaded = [...html.matchAll(/<link rel="preload" as="image" href="(assets\/designers\/[^"]+)"/g)].map(match => match[1]);
   // 2026-09-21：首頁已改成像素辦公室，舊頭像卡不再畫出，因此不該還在 head 預載這些圖。
   assert.deepEqual(preloaded, [], '已下架的設計師頭像不應再跟首頁搶頻寬');
@@ -3906,7 +3906,7 @@ test('first paint no longer preloads retired designer avatars, while reversible 
 });
 
 test('revision modal keeps image selection across background re-renders and can move selected images to another round', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // ① 背景同步每次載入資料都會重繪這個彈窗；舊寫法無條件清空選取，使用者勾好圖片後按「刪除已選取」完全沒反應。
   const render = html.match(/function renderRevisionModal\(id\)\{[\s\S]*?updateRevisionSelectionBar\(\);\}/)?.[0];
@@ -3994,7 +3994,7 @@ test('revision modal keeps image selection across background re-renders and can 
 });
 
 test('the delete warning sits above every modal, and open modals stop the page behind them from scrolling', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // ① 警示視窗要蓋過所有彈窗：.login-modal 5000、#revisionModal 6500、圖片放大預覽 10000。
   const dialogZ = Number(html.match(/\.app-confirm-backdrop\{position:fixed;inset:0;z-index:(\d+)!important;/)?.[1]);
@@ -4045,7 +4045,7 @@ test('the delete warning sits above every modal, and open modals stop the page b
 });
 
 test('modification request mail closes the editor, a manual backup upload confirms that round, and 新增初稿 leads straight into picking an image source', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // ① 填寫修改需求信跟設計師回覆信一樣是一次性任務，寄出後要自動收合編輯器。
   assert.match(html, /if\(replyMode==='designer'\|\|replyMode==='modification'\)closeGmailThreadModal\(\);/);
@@ -4103,7 +4103,7 @@ test('modification request mail closes the editor, a manual backup upload confir
 });
 
 test('mail editor toolbar offers undo/redo, font size, italic, underline, background colour and ⌘K linking', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 兩個編輯器（回信、撰寫）的工具列都要有同一組按鈕。
   for (const editorId of ['gmailThreadReplyEditor', 'gmailComposeEditor']) {
@@ -4148,7 +4148,7 @@ test('mail editor toolbar offers undo/redo, font size, italic, underline, backgr
 });
 
 test('signature and mail template editors in personal settings get the same rich toolbar as the mail editor', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false,details=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(toolbar, 'could not locate richSettingsToolbarHtml');
   for (const cmd of ['undo', 'redo', 'bold', 'italic', 'underline', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
@@ -4190,7 +4190,7 @@ test('signature and mail template editors in personal settings get the same rich
 });
 
 test('modals people type into never close from a stray click on the backdrop', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 信件撰寫／回信：不可以再綁「點遮罩關閉」，信寫到一半誤點框外就整封消失。
   assert.doesNotMatch(html, /bindModalOverlayDismiss\(\$\('#gmailThreadModal'\)/);
@@ -4217,7 +4217,7 @@ test('modals people type into never close from a stray click on the backdrop', a
 });
 
 test('designer settings gain their own signature presets, past story thumbnails with tooltips, and replace the personal settings entry for designers', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // ① 每位設計師各有一組簽名檔設定，沿用個人設定那套編輯器。
   const block = html.match(/function designerSignaturePresetsHtml\(profile\)\{[\s\S]*?\n\}/)?.[0];
@@ -4261,7 +4261,7 @@ test('designer settings gain their own signature presets, past story thumbnails 
 });
 
 test('each customer carries its own default CC list for the mail composer, falling back to the default list when unset', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const { TABLE_SCHEMAS, DEFAULT_CUSTOMER_CC_EMAILS } = await import('../../backend/schema.mjs');
   const CUSTOMER_DEFAULTS = DEFAULT_CUSTOMER_CC_EMAILS;
 
@@ -4322,7 +4322,7 @@ test('each customer carries its own default CC list for the mail composer, falli
 });
 
 test('the header version no longer flips: nothing hardcoded in the HTML, last seen version applied immediately', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 寫死的版本號一定會過期，載入公告後就會當著使用者的面跳掉，所以標題與標頭都不帶版本。
   assert.match(html, /<title>設計需求系統<\/title>/);
@@ -4376,7 +4376,7 @@ test('the header version no longer flips: nothing hardcoded in the HTML, last se
 });
 
 test('reply templates saved as formatted text are inserted as formatting, not as literal <br> characters', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const block = html.match(/function setGmailEditorTemplateContent\(editor,greeting,template\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(block, 'could not locate setGmailEditorTemplateContent');
 
@@ -4417,7 +4417,7 @@ test('reply templates saved as formatted text are inserted as formatting, not as
 });
 
 test('personal settings 客戶設定 lists only customers the account can manage and saves just the customers that changed', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 區塊放在個人設定裡，開啟時渲染、儲存時一併送出、切換客戶別會先暫存勾選。
   // 2026-10-01：客戶設定僅開放管理者、Machi、企劃部、專案部，設計部其他同仁不顯示。
   assert.match(html, /<details class="personal-mail-templates personal-collapsible personal-customer-settings" id="personalCustomerSettings" hidden><summary/);
@@ -4495,7 +4495,7 @@ test('personal settings 客戶設定 lists only customers the account can manage
 });
 
 test('personal 客戶設定 permission tree mirrors the admin department:/group: rules and hides test units', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
   const line = prefix => html.split('\n').find(row => row.startsWith(prefix));
   const sources = [
@@ -4541,7 +4541,7 @@ test('personal 客戶設定 permission tree mirrors the admin department:/group:
 });
 
 test('信件編輯器、簽名檔與信件範本的工具列都有開源字型選單，且每個字型都帶備用字型', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   for (const editor of ['gmailThreadReplyEditor', 'gmailComposeEditor']) {
     assert.match(html, new RegExp(`<button type="button" class="gmail-rich-font-btn" data-rich-font-for="${editor}" title="字型"`));
   }
@@ -4565,7 +4565,7 @@ test('信件編輯器、簽名檔與信件範本的工具列都有開源字型�
 });
 
 test('頭像與海報工具保留可回復，但進站不再預載或畫出這些前台內容', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.split('\n').find(line => line.startsWith(`function ${name}(`));
   const api = new Function(`${pick('imageUrl')}\n${pick('avatarImageUrl')}\nreturn { avatarImageUrl };`)();
   assert.equal(api.avatarImageUrl('https://lh3.googleusercontent.com/d/abc123=w1000'), 'https://lh3.googleusercontent.com/d/abc123=w256-rw');
@@ -4603,7 +4603,7 @@ test('系統公告：最新的在最上面，v4.8 比 v4.72 新（版本號小�
   assert.ok(compareSystemAnnouncements({ '發布時間': '2026/9/17 08:00' }, { '發布時間': '2026-09-10' }) > 0);
 
   // 前台與資料庫後台使用同一套規則。
-  const index = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const index = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const admin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   assert.match(index, /rows\.sort\(compareSystemAnnouncements\);/);
   assert.match(admin, /const sorted=\[\.\.\.rows\]\.sort\(\(left,right\)=>compareSystemAnnouncements\(right,left\)\);/);
@@ -4617,7 +4617,7 @@ test('系統公告：最新的在最上面，v4.8 比 v4.72 新（版本號小�
 });
 
 test('手機案件列表一次只沿一個方向捲動，按住拖曳只給滑鼠用', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /if\(event\.pointerType!=='mouse'\|\|event\.button!==0\|\|event\.isPrimary===false/, '觸控不觸發拖曳捲動');
   assert.match(html, /@media \(hover:none\) and \(pointer:coarse\)\{\n      #casesSection \.case-table-wrap\{touch-action:pan-y\}/);
   assert.match(html, /initCaseTableDragScroll\(\); initCaseTableTouchAxisLock\(\);/);
@@ -4634,7 +4634,7 @@ test('手機案件列表一次只沿一個方向捲動，按住拖曳只給滑�
 });
 
 test('修改需求信寫入修改紀錄時保留文字超連結，並排除「--」之後的簽名檔（案件 26090053）', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const { TABLE_SCHEMAS } = await import('../../backend/schema.mjs');
   assert.ok(TABLE_SCHEMAS['修改統計表'].headers.includes('修改內容連結'));
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
@@ -4659,7 +4659,7 @@ test('修改需求信寫入修改紀錄時保留文字超連結，並排除「--
 });
 
 test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還原原本階段並開啟視窗', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
   const oneLine = prefix => html.split('\n').find(row => row.startsWith(prefix));
   const sources = [oneLine('const AI_STAGE_OPTION='), pick('addAiStageOption'), oneLine('function rememberStageValue('), pick('handleAiStageSelect')];
@@ -4707,7 +4707,7 @@ test('階段選單的 Ai判斷 只在有新製／再製時出現，選到後還�
 });
 
 test('信件編輯器快捷鍵在注音輸入法下也能用，超連結按鈕會保留選取範圍', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const source = html.match(/function richShortcutKey\(event\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(source);
   const key = new Function(`${source}\nreturn richShortcutKey;`)();
@@ -4723,7 +4723,7 @@ test('信件編輯器快捷鍵在注音輸入法下也能用，超連結按鈕�
 });
 
 test('新增案件信開啟後向 Worker 取即時客戶資料更新副本，但不覆蓋使用者手動改過的副本', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /openPostSubmitQueueModal\(\);\n  refreshPostSubmitCcFromWorker\(queue\);\n\}/);
   assert.match(html, /sheetApi\('listCustomers',\{\}\)/);
   assert.match(html, /refreshCustomerDirectoryFromWorker\(\)\.then\(updated=>\{if\(updated&&!modal\.hidden&&modal\.dataset\.caseId===String\(id\)\)replaceDefaultCcIfUntouched\('gmailComposeCc',draft\.cc,mailDraft\(row\)\.cc\)\}\);/);
@@ -4744,7 +4744,7 @@ test('新增案件信開啟後向 Worker 取即時客戶資料更新副本，但
 });
 
 test('收件人／副本的膠囊可以拖曳互換，副本可一鍵設為客戶別預設信箱', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /draggable="true" data-recipient-chip="\$\{esc\(entry\.email\)\}" data-recipient-chip-field="\$\{esc\(fieldId\)\}"/);
   assert.match(html, /initGmailRecipientDragAndDrop\(\);/);
   const move = html.match(/function moveGmailRecipient\(fromField,toField,email,beforeEmail=''\)\{[\s\S]*?\n\}/)?.[0];
@@ -4775,7 +4775,7 @@ test('收件人／副本的膠囊可以拖曳互換，副本可一鍵設為客�
 });
 
 test('信件內文圖片比照 Gmail：一般 <img>、倒退鍵可刪、可拖曳到任意位置、點圖片調整大小，寄出大小與編輯器一致', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 圖片上的小圖示（刪除鈕、拖曳把手、換行鈕、縮放把手）與不可編輯的外框全部移除。
   for (const legacy of ['gmail-inline-image-wrap', 'bindGmailInlineImageControls', 'gmail-inline-image-handle', 'gmail-inline-image-resize', 'gmail-inline-image-linebreak', 'gmail-inline-image-remove']) {
     assert.ok(!html.includes(legacy), `${legacy} 應該已移除`);
@@ -4814,7 +4814,7 @@ test('信件內文圖片比照 Gmail：一般 <img>、倒退鍵可刪、可拖�
 });
 
 test('插入 NAS 路徑時，路徑上方多一行一般文字「NAS路徑」', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   assert.match(html, /fragment\.append\(document\.createTextNode\('NAS路徑'\),document\.createElement\('br'\),bold\);/);
   assert.match(html, /const \{fragment,bold\}=nasPathInsertFragment\(path\);/);
   assert.match(html, /if\(nasPathNeedsLeadingBreak\(useRange\)\)fragment\.prepend\(document\.createElement\('br'\)\);/);
@@ -4823,7 +4823,7 @@ test('插入 NAS 路徑時，路徑上方多一行一般文字「NAS路徑」', 
 });
 
 test('設計師回覆信的預設內文依項目細節：社群貼文／廣告素材…，優先用設計師自己提到該細節的範本', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0] || html.split('\n').find(line => line.startsWith(`function ${name}(`));
   const sources = ['splitWeightDetails', 'normalizeReplyTemplateSettings', 'defaultReplyTemplateContent', 'designerReplyDetailItems', 'designerReplyTemplateForCase'].map(pick);
   assert.ok(sources.every(Boolean), 'could not locate the reply template helpers');
@@ -4844,7 +4844,7 @@ test('設計師回覆信的預設內文依項目細節：社群貼文／廣告�
 });
 
 test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名}，套用時換成收件人名字', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   // 2026-10-01：顯示名不可自行修改（無儲存鈕）、客戶設定從個人設定移除；範本／簽名檔區塊預設收合。
   for (const key of ['profile', 'templates', 'signatures', 'customers']) assert.match(html, new RegExp(`data-personal-save="${key}"`));
   // 顯示名只對設計部同仁鎖定（唯讀＋隱藏儲存鈕），管理者／Machi／其他部門可修改。
@@ -4880,7 +4880,7 @@ test('個人設定每個區塊各自儲存；信件範本可插入 {收件人名
 });
 
 test('同一封回信不能又排程又立即寄出，修改需求信也不會重複寫入修改紀錄（案件 26090052／26090053）', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // 1) 執行中鎖：真的執行 begin／end 兩個函式。
   const begin = html.match(/function beginGmailThreadReplyAction\(\)\{[\s\S]*?\n\}/)?.[0];
@@ -4947,7 +4947,7 @@ test('同一封回信不能又排程又立即寄出，修改需求信也不會�
 });
 
 test('回信的 NAS 區塊：影片路徑要可編輯（不然整段選取連正文都刪不掉），「同上次路徑」要沿用案件全部資料夾與各自的關鍵字', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pickerServer = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
 
   // ── 1. 影片路徑區塊不可以是 contenteditable=false ──
@@ -5036,7 +5036,7 @@ test('回信的 NAS 區塊：影片路徑要可編輯（不然整段選取連正
 });
 
 test('信件範本可插入 {項目細節}：套用時換成案件的項目細節（不含急件），設為預設就直接帶進回信內文', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
 
   // ── 快速按鈕：只有信件範本的工具列有，簽名檔沒有 ──
   const toolbar = html.match(/function richSettingsToolbarHtml\(extraClass='',\{recipientName=false,details=false\}=\{\}\)\{[\s\S]*?\n\}/)?.[0];
@@ -5113,7 +5113,7 @@ test('信件範本可插入 {項目細節}：套用時換成案件的項目細�
 });
 
 test('選好排程時間只是「設定」，要再按送出才成立；待寄出的排程可以從案件「信件」選單找回來', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../../legacy.html', import.meta.url), 'utf8');
   const pick = name => html.match(new RegExp(`function ${name}\\([^)]*\\)\\{[\\s\\S]*?\\n\\}`))?.[0];
 
   // ── 1. 選完時間不再直接建立排程 ──

@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const indexHtml = () => readFile(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+const indexHtml = () => readFile(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../legacy.html'), 'utf8');
 
 // Gmail 授權原本只能從案件列表某一列的「發信」選單進去。那顆按鈕要案件符合條件才會出現，
 // 所以手上沒有可發信案件的人就完全沒有入口（使用者回報「只有串接沒有操作」）。

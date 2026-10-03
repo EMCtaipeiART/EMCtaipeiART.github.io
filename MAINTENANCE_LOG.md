@@ -156,3 +156,8 @@
 - v5.0: designer hover card counts use the shared status colors (5 tiles incl. 已完成, same order as the project columns).
 
 - v5.0: 問題 rail button sits directly above 設定 at the bottom group.
+
+## 2026-10-04 新舊網站切換
+- 新版首頁 v5.html 改名為 index.html 上線；舊版 index.html 改名為 legacy.html 保留；v5.html 改為導向 index.html 的短檔。
+- 新版開頭加入 OAuth 返回處理（Google 登入／Gmail 連接彈出視窗廣播結果並關閉；其他舊流程轉交 legacy.html）。
+- 測試檔改讀 legacy.html；workflow 路徑同時監看 index.html 與 legacy.html。npm test 的 59 個既有失敗（Windows 路徑／舊測試）切換前後相同，沒有新增。
