@@ -1144,7 +1144,7 @@
       if(th&&scale)scale.style.height=th.getBoundingClientRect().height+'px';
       trs.forEach((tr,i)=>{if(rows[i])rows[i].style.height=tr.getBoundingClientRect().height+'px'});
       const split=$('caseSplit'),tbl=wrap.querySelector('table');
-      if(split&&tbl){const total=split.getBoundingClientRect().width-8;let list=state.tlList?state.tlList:Math.min(tbl.getBoundingClientRect().width+2,total*.6);list=Math.max(Math.min(360,total-240),Math.min(total-240,list));split.style.setProperty('--tl-list',list+'px');split.style.setProperty('--tl-w',(total-list)+'px')}
+      if(split&&tbl){const total=split.getBoundingClientRect().width-8;let list=state.tlList?state.tlList:Math.min(tbl.getBoundingClientRect().width+2,total-300);list=Math.max(Math.min(360,total-240),Math.min(total-240,list));split.style.setProperty('--tl-list',list+'px');split.style.setProperty('--tl-w',(total-list)+'px')}
       if(sc.dataset.ready!=='1'){
         sc.dataset.ready='1';
         const t=+sc.dataset.today;
