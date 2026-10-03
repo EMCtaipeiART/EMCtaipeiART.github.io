@@ -108,3 +108,5 @@
 - v5.0: 專案列表 grid layout 欄位 menu now hides/shows whole status columns (multi-select); removed the board status filter added earlier.
 
 - v5.0: modification record text 12px and signature (from "--" line) not shown/saved.
+
+- v5.0: 已完成 cards show a round "+score" badge (加權) before the mail button.

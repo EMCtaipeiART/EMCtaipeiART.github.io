@@ -722,6 +722,7 @@
     .mm-x{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:20px;line-height:1;cursor:pointer;color:var(--muted)}
     .mm-x:hover{background:var(--bg);color:var(--ink)}
     body.gh-id .card .id-pill,body.gh-client .card .client-pill,body.gh-type .card .ci-type,body.gh-date .card .ci-date,body.gh-detail .card .ci-detail,body.gh-progress .card .progress,body.gh-faces .card .faces,body.gh-rev .card .card-qtywrap .lt-rev,body.gh-qty .card .card-qty,body.gh-acts .card .card-acts{display:none!important}
+    .score-badge{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;box-sizing:border-box;border-radius:999px;border:1.5px solid #0f8f61;background:#e8f6ec;color:#0f5138;font-size:12px;font-weight:900;line-height:1}
 </style>
 </head>
 <body>
@@ -1000,7 +1001,7 @@
       const canDrag=state.dragOn&&inColumn;
       const ed=isDesignerSession(),acts=[["mail",ed],["actions",false]].map(([k,e])=>COL_DEFS.find(c=>c.key===k).cell(row,e).split("<td>").join("").split("</td>").join("")).join("").replace(/<button ([^>]*)>(.*?)<span>([^<]*)<\/span><\/button>/g,(m,at,ic,lab)=>`<button ${at} title="${lab}" aria-label="${lab}">${ic}<span>${lab}</span></button>`);
       return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
-        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${acts}</span></div>
+        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}${acts}</span></div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
