@@ -788,6 +788,24 @@
     .gm-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;margin-bottom:14px}
     .gm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
     .gm-row p{margin:4px 0 0}
+    .op-page-list{max-height:none;margin-bottom:16px}
+    .issue-form{display:grid;gap:14px;margin-bottom:22px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+    .issue-form .field{position:relative;display:grid;gap:6px}
+    .issue-count{position:absolute;right:12px;bottom:8px;color:var(--faint);font-size:12px;font-weight:650;pointer-events:none}
+    .issue-list-title{margin:0 0 10px;font-size:16px;font-weight:900}
+    .issue-list{display:grid;gap:8px}
+    .issue-item{display:grid;grid-template-columns:minmax(0,1fr) 168px;gap:10px 18px;border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--panel)}
+    .issue-content{font-size:14px;font-weight:850;white-space:pre-wrap;overflow-wrap:anywhere}
+    .issue-meta{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+    .issue-side{display:flex;flex-direction:column;justify-content:center;min-width:0}
+    .issue-status{width:100%;min-height:32px;border:1px solid transparent;border-radius:999px;padding:0 12px;font-size:13px;font-weight:900;text-align:center;display:grid;place-items:center;box-sizing:border-box;font-family:inherit}
+    select.issue-status{cursor:pointer}
+    .issue-st-回報中{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb}
+    .issue-st-評估中{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+    .issue-st-處理中{background:#fff3cd;color:#9a6500;border-color:#f6d982}
+    .issue-st-已完成{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+    .issue-st-已否決{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+    @media(max-width:640px){.issue-item{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -949,7 +967,7 @@ window.emcQuotes=[
   </div>
   <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-btn lb-close" data-lb-act="close" aria-label="關閉">×</button><button type="button" class="lb-btn lb-prev" data-lb-act="prev" aria-label="上一張">‹</button><figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure><button type="button" class="lb-btn lb-next" data-lb-act="next" aria-label="下一張">›</button></div>
   <div class="ai-modal" id="ownerModal" hidden>
-    <div class="ai-card op-card" role="dialog" aria-modal="true" aria-labelledby="opTitle"><button type="button" class="mm-x" data-op-close aria-label="關閉">×</button><h3 id="opTitle">您的案件進度</h3><p class="ai-sub" id="opSub"></p><div class="op-list" id="opList"></div><div class="ai-actions"><button type="button" class="btn" data-op-close>稍後再說</button><button type="button" class="btn primary" id="opSubmit" disabled>確認送出</button></div></div>
+    <div class="ai-card op-card" role="dialog" aria-modal="true" aria-labelledby="opTitle"><button type="button" class="mm-x" data-op-close aria-label="關閉">×</button><h3 id="opTitle">您的案件進度</h3><p class="ai-sub" id="opSub"></p><div class="op-list" id="opList"></div><div class="ai-actions"><button type="button" class="btn" data-op-close>稍後再說</button><button type="button" class="btn" data-op-page>開啟進度頁</button><button type="button" class="btn primary" id="opSubmit" disabled>確認送出</button></div></div>
   </div>
   <div class="ai-modal" id="drModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="drTitle"><h3 id="drTitle">設計圖上傳方式</h3><p class="ai-sub" id="drSub"></p><div id="drBody"></div><div class="ai-actions"><button type="button" class="btn" data-dr-close>取消</button></div></div>
@@ -1338,7 +1356,7 @@ window.emcQuotes=[
     }
 
     /* ---------- 檢視切換 ---------- */
-    function refreshView(){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard();else if(state.view==='detail')renderDetail()}
+    function refreshView(){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard();else if(state.view==='detail')renderDetail();else if(state.view==='owner')renderOwnerPage();else if(state.view==='issues')renderIssuesPage(true)}
     async function applyChange(id,payload,headers,local){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       const old=Object.fromEntries(Object.keys(local).map(k=>[k,row[k]]));
@@ -1382,15 +1400,17 @@ window.emcQuotes=[
     function saveFilters(){try{const f=state.filters;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}catch(err){}}
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
+      {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn(),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
       {k:'archive',label:'歷史庫',title:'歷史資料庫管理',ok:()=>loggedIn()&&acc('page.archive',isAdminAcct()||isMachi0())&&acc('archive.edit',isAdminAcct()||isMachi0()),svg:'<path d="M3.5 7.5h17v3h-17zM5 10.5V19h14v-8.5M10 14h4"/>'},
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'}
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const html=RAIL_EXT.filter(x=>x.ok()).map(x=>{const n=x.k==='owner'?ownerRows().length:0;return `<button type="button" class="rail-item" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const html=RAIL_EXT.filter(x=>x.ok()).map(x=>{const n=x.k==='owner'?ownerRows().length:0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     function openExt(k){
       if(k==='owner'){openOwner();return}
+      if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
@@ -1398,13 +1418,13 @@ window.emcQuotes=[
     function updateRail(){renderRailExtra();const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){state.tlLeft=null;
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||(view==='detail'&&state.home==='projects'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects'));
       $('stage').classList.toggle('wide',view==='projects');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
-      if(view==='projects'||view==='login'||view==='settings'||view==='thread')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
-    function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;if(ret)setTimeout(()=>openOwner(),60);state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
+    function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
 
     /* ---------- 專案頁：五個狀態欄，設計師可拖移卡牌改狀態 ---------- */
     /* ---------- 帳號權限／客戶別權限（沿用舊網站 assets/access-control.js） ---------- */
@@ -2647,26 +2667,39 @@ window.emcQuotes=[
     const ownerRows=()=>loggedIn()?allRowsRaw().filter(r=>String(r['狀態']||'').trim()==='過稿中'&&ownerMatches(r)).sort(byNewest):[];
     const ownerDayKey=()=>`v5OwnerProgressDay:${selfAccount()||session().user||''}`;
     function ownerMenuLabel(){const n=ownerRows().length;return n?`您的案件進度（${n}）`:'您的案件進度'}
+    function ownerItemsHtml(items){
+      return items.length?items.map(r=>{const id=esc(idKey(r));return `<div class="op-item"><label class="op-check"><input type="checkbox" data-op-check value="${id}"><span class="op-main"><b>${esc(r['客戶別']||'未填客戶')}｜${esc(r['專案名稱']||'未填專案')}</b><small>${id}｜設計師 ${esc(r['設計負責人']||'未指定')}｜${esc(r['開始日期']||'-')}-${esc(r['結束日期']||'-')}</small><span class="op-label">客戶已確認完成</span></span></label><button type="button" class="op-btn" data-op-detail="${id}">查看詳情</button><button type="button" class="op-btn warn" data-op-modify="${id}">需要修改</button></div>`}).join(''):'<div class="empty">目前沒有過稿中的案件需要確認</div>';
+    }
+    const ownerSubText=n=>n?`您有 ${n} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
+    /* 彈窗版（只有每天第一次進站的提醒使用）與整頁版（左側「進度」）共用同一份清單 */
     function renderOwnerList(){
       const items=ownerRows();
-      $('opSub').textContent=items.length?`您有 ${items.length} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
-      $('opList').innerHTML=items.length?items.map(r=>{const id=esc(idKey(r));return `<div class="op-item"><label class="op-check"><input type="checkbox" data-op-check value="${id}"><span class="op-main"><b>${esc(r['客戶別']||'未填客戶')}｜${esc(r['專案名稱']||'未填專案')}</b><small>${id}｜設計師 ${esc(r['設計負責人']||'未指定')}｜${esc(r['開始日期']||'-')}-${esc(r['結束日期']||'-')}</small><span class="op-label">客戶已確認完成</span></span></label><button type="button" class="op-btn" data-op-detail="${id}">查看詳情</button><button type="button" class="op-btn warn" data-op-modify="${id}">需要修改</button></div>`}).join(''):'<div class="empty">目前沒有過稿中的案件需要確認</div>';
+      $('opSub').textContent=ownerSubText(items.length);$('opList').innerHTML=ownerItemsHtml(items);syncOwnerSel();
+    }
+    function renderOwnerPage(){
+      const stage=$('stage');
+      if(!loggedIn()){stage.innerHTML='<div class="page"><h2 class="page-title">您的案件進度</h2><div class="notice error" role="alert">請先登入後再查看案件進度。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>';return}
+      const items=ownerRows();
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">您的案件進度</h2><p class="page-sub">${esc(ownerSubText(items.length)||'目前沒有過稿中的案件需要確認。')}</p></div></div><div class="op-list op-page-list" id="opPList">${ownerItemsHtml(items)}</div><div class="form-actions"><button type="button" class="btn primary" id="opPSubmit" disabled>確認送出</button></div></div>`;
       syncOwnerSel();
     }
     function syncOwnerSel(){
-      const checks=[...document.querySelectorAll('#opList [data-op-check]')];checks.forEach(i=>i.closest('.op-item')?.classList.toggle('is-checked',i.checked));
-      const n=checks.filter(i=>i.checked).length,b=$('opSubmit');b.disabled=!n;b.textContent=n?`確認送出（${n}）`:'確認送出';
+      const root=state.view==='owner'?$('opPList'):$('opList'),b=state.view==='owner'?$('opPSubmit'):$('opSubmit');if(!root||!b)return;
+      const checks=[...root.querySelectorAll('[data-op-check]')];checks.forEach(i=>i.closest('.op-item')?.classList.toggle('is-checked',i.checked));
+      const n=checks.filter(i=>i.checked).length;b.disabled=!n;b.textContent=n?`確認送出（${n}）`:'確認送出';
     }
     function openOwner(auto){
       if(!loggedIn()){startLogin();return}
+      if(auto!==true){closeOwner();show('owner');return}
       renderOwnerList();
-      if(auto===true){try{localStorage.setItem(ownerDayKey(),ymd(taipeiToday()))}catch(err){}}
+      try{localStorage.setItem(ownerDayKey(),ymd(taipeiToday()))}catch(err){}
       $('ownerModal').hidden=false;
     }
     const closeOwner=()=>{$('ownerModal').hidden=true};
     async function submitOwner(){
-      const ids=[...document.querySelectorAll('#opList [data-op-check]:checked')].map(i=>i.value);if(!ids.length)return;
-      const b=$('opSubmit');b.disabled=true;b.textContent='送出中…';
+      const page=state.view==='owner',root=page?$('opPList'):$('opList'),b=page?$('opPSubmit'):$('opSubmit');
+      const ids=[...root.querySelectorAll('[data-op-check]:checked')].map(i=>i.value);if(!ids.length)return;
+      b.disabled=true;b.textContent='送出中…';
       try{
         const data=await api('ownerConfirmCases',{caseIds:ids});
         const done=new Map((data.rows||[]).map(x=>[String(x.id),x]));
@@ -2674,8 +2707,8 @@ window.emcQuotes=[
         if(done.size)refreshView();
         const skipped=data.skipped||[];
         toast(skipped.length?`已完成 ${done.size} 筆，${skipped.length} 筆未變更：${skipped.map(x=>`${x.id}（${x.reason}）`).join('、')}`:`已確認 ${done.size} 筆案件完成`,Boolean(skipped.length&&!done.size));
-        renderOwnerList();renderLogin();
-        if(!ownerRows().length)closeOwner();
+        if(page)renderOwnerPage();else{renderOwnerList();if(!ownerRows().length)closeOwner()}
+        renderRailExtra();
       }catch(err){toast(`確認失敗：${err.message}`,true);syncOwnerSel()}
     }
     function maybeOwnerDaily(attempt=0){
@@ -2684,7 +2717,7 @@ window.emcQuotes=[
       window.__v5OwnerShown=true;
       let seen='';try{seen=localStorage.getItem(ownerDayKey())||''}catch(err){}
       if(seen===ymd(taipeiToday())||!ownerRows().length)return;
-      if(state.view==='login'||state.view==='mail'||state.view==='form'){return}
+      if(state.view==='login'||state.view==='mail'||state.view==='form'||state.view==='owner'){return}
       openOwner(true);
     }
     setTimeout(()=>maybeOwnerDaily(),1500);
@@ -2692,7 +2725,8 @@ window.emcQuotes=[
     document.addEventListener('click',e=>{
       const t=e.target;
       if(t.closest('[data-op-close]')||t.id==='ownerModal'){closeOwner();return}
-      if(t.closest('#opSubmit')){submitOwner();return}
+      if(t.closest('[data-op-page]')){closeOwner();show('owner');return}
+      if(t.closest('#opSubmit')||t.closest('#opPSubmit')){submitOwner();return}
       const d=t.closest('[data-op-detail]');if(d){closeOwner();state.ownerReturn=true;state.detailId=d.dataset.opDetail;state.editing=false;show('detail');return}
       const m=t.closest('[data-op-modify]');
       if(m){
@@ -2703,6 +2737,61 @@ window.emcQuotes=[
       }
     });
     document.addEventListener('change',e=>{if(e.target.matches?.('[data-op-check]'))syncOwnerSel()});
+
+    /* ---------- 問題回報（整頁；沿用舊網站的回報列表、狀態管理與送出） ---------- */
+    const ISSUE_STATUSES=['回報中','評估中','處理中','已完成','已否決'];
+    const issues={list:[],loading:false,loaded:false,error:''};
+    const isIssueManager=()=>acc('issue.manage',isAdminAcct());
+    const normIssue=(r,n)=>{const st=ISSUE_STATUSES.includes(String(r['狀態']||'').trim())?String(r['狀態']).trim():'回報中';return {rowNumber:Number(r.rowNumber||n)||0,'姓名':String(r['姓名']||''),'時間':String(r['時間']||''),'內容':String(r['內容']||''),'修改建議':String(r['修改建議']||''),'狀態':st,'狀態更改時間':String(r['狀態更改時間']||r[st]||r['時間']||'')}};
+    async function loadIssues(force){
+      if(issues.loading||(issues.loaded&&!force))return;
+      issues.loading=true;issues.error='';if(state.view==='issues')renderIssuesPage();
+      try{const data=await api('listIssueReports');issues.list=(Array.isArray(data.reports)?data.reports:[]).map(r=>normIssue(r));issues.loaded=true}
+      catch(err){issues.error=err.message||'讀取失敗'}
+      issues.loading=false;if(state.view==='issues')renderIssuesPage(true);
+    }
+    function issuesListHtml(){
+      if(issues.loading&&!issues.list.length)return '<div class="empty">載入中...</div>';
+      if(issues.error&&!issues.list.length)return `<div class="empty">列表載入失敗：${esc(issues.error)}　<button type="button" class="btn" data-issue-reload>重新讀取</button></div>`;
+      if(!issues.list.length)return '<div class="empty">目前尚無回報</div>';
+      const mgr=isIssueManager();
+      return issues.list.map(r=>{
+        const st=r['狀態'],ctl=mgr?`<select class="issue-status issue-st-${st}" data-issue-row="${r.rowNumber}" aria-label="回報狀態">${ISSUE_STATUSES.map(o=>`<option value="${o}"${o===st?' selected':''}>${o}</option>`).join('')}</select>`:`<span class="issue-status issue-st-${st}">${esc(st)}</span>`;
+        return `<article class="issue-item"><div class="issue-main"><div class="issue-content">${esc(r['內容'])}</div><div class="issue-meta">回報時間：${esc(r['時間']||'-')}${r['姓名']?` ・ ${esc(r['姓名'])}`:''}</div><div class="issue-meta">修改建議：${esc(r['修改建議']||'無')}</div></div><div class="issue-side">${ctl}<div class="issue-meta">狀態更改時間：${esc(r['狀態更改時間']||r['時間']||'-')}</div></div></article>`;
+      }).join('');
+    }
+    function renderIssuesPage(keepForm){
+      const stage=$('stage');
+      let draft={c:'',s:''};if(keepForm||$('issueForm')){const f=$('issueForm');if(f)draft={c:f.elements.content.value,s:f.elements.suggestion.value}}
+      const canReport=!loggedIn()||acc('issue.report',true);
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">問題回報${issues.list.length?` <small style="font-weight:700;color:var(--muted)">(${issues.list.length})</small>`:''}</h2><p class="page-sub">回報使用上遇到的問題或建議；管理者可以更新處理狀態。</p></div></div>
+        ${canReport?`<form class="issue-form" id="issueForm"><label class="field"><span class="label">內容 <b>*</b></span><textarea class="input" name="content" maxlength="300" placeholder="請描述遇到的問題" required style="padding:10px 14px;min-height:100px">${esc(draft.c)}</textarea><span class="issue-count" data-issue-count="content">${draft.c.length}/300</span></label><label class="field"><span class="label">修改建議 <small>（選填）</small></span><textarea class="input" name="suggestion" maxlength="300" placeholder="希望怎麼調整或改善" style="padding:10px 14px;min-height:100px">${esc(draft.s)}</textarea><span class="issue-count" data-issue-count="suggestion">${draft.s.length}/300</span></label><div class="form-actions"><button type="submit" class="btn primary" id="issueSubmit">送出</button></div></form>`:'<div class="notice">此帳號沒有新增問題回報的權限。</div>'}
+        <h3 class="issue-list-title">回報列表</h3><div class="issue-list" id="issueList">${issuesListHtml()}</div></div>`;
+      if(!issues.loaded&&!issues.loading&&!issues.error)loadIssues();
+    }
+    async function submitIssue(form){
+      const content=form.elements.content.value.trim(),suggestion=form.elements.suggestion.value.trim();
+      if(!content){toast('請填寫問題內容',true);return}
+      if(loggedIn()&&!acc('issue.report',true)){toast('此帳號沒有新增問題回報的權限',true);return}
+      const s=session(),reporter=s.name||s.user||selfAccount()||'未登入',b=$('issueSubmit');b.disabled=true;b.textContent='送出中…';
+      try{
+        const data=await api('reportIssue',{report:{name:reporter,content,suggestion}});
+        if(data.row){const c=normIssue(data.row,data.rowNumber);issues.list=[c,...issues.list.filter(x=>x.rowNumber!==c.rowNumber)]}else issues.loaded=false;
+        toast('問題回報已送出，謝謝回報');form.reset();renderIssuesPage();if(!issues.loaded)loadIssues(true);
+      }catch(err){toast(`問題回報送出失敗：${err.message}`,true);b.disabled=false;b.textContent='送出'}
+    }
+    async function changeIssueStatus(sel){
+      if(!acc('issue.manage',isAdminAcct())){toast('此帳號沒有更新問題狀態的權限',true);return}
+      const n=Number(sel.dataset.issueRow),r=issues.list.find(x=>x.rowNumber===n);if(!r||sel.value===r['狀態'])return;
+      const prev={...r};r['狀態']=sel.value;renderIssuesPage(true);
+      try{const data=await api('updateIssueReportStatus',{rowNumber:n,status:sel.value});Object.assign(r,normIssue(data.row||{...r},n));toast(`回報狀態已更新為${r['狀態']}`)}
+      catch(err){Object.assign(r,prev);toast(`回報狀態寫入失敗，已還原：${err.message}`,true)}
+      renderIssuesPage(true);
+    }
+    document.addEventListener('submit',e=>{if(e.target.id==='issueForm'){e.preventDefault();submitIssue(e.target)}});
+    document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#issueForm')&&t.name){const c=document.querySelector(`[data-issue-count="${t.name}"]`);if(c)c.textContent=`${t.value.length}/300`}});
+    document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-issue-row]'))changeIssueStatus(t)});
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-issue-reload]')){issues.error='';loadIssues(true)}});
 
     /* ---------- Gmail 串接（沿用舊網站：彈出視窗授權＋後台 gmailOauthConnect） ---------- */
     const GMAIL_CLIENT_ID='910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com',GMAIL_CHANNEL='machi-gmail-oauth-v1',GMAIL_ORIGIN='https://emctaipeiart.github.io';

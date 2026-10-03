@@ -150,3 +150,5 @@
 - v5.0: background data refresh like the legacy site — polls db.json every 6s (304 when unchanged; ignores older revisions), redraws only on a new revision and defers while typing / modal or popover open / editing / tab hidden.
 
 - Worker: ownerConfirmCases now also matches the case owner against the account 顯示名 (設定 table), not just session.user/account — e.g. 26100013 owner "一般測試員" (user 測試使用者) could not be confirmed. Deployed (version 35c115ce).
+
+- v5.0: 進度 is now a full page (rail button); the popup is kept only for the first-visit-of-the-day reminder (with a button to the page). Added 問題 rail button + full 問題回報 page (list with status pills, managers change status via updateIssueReportStatus, report form via reportIssue).
