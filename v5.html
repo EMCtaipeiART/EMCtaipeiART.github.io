@@ -170,6 +170,18 @@
     .cp-checks label{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:13px;font-weight:700;cursor:pointer}
     .cp-checks input{accent-color:var(--brand);margin:0}
     .cp-apply{min-height:38px;margin-top:4px}
+    .dp-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .detail-head .edit-actions{align-items:center}
+    .detail-head .lt-status{min-height:36px;padding:0 18px;font-size:14px}
+    .lightbox{position:fixed;inset:0;z-index:300;background:rgba(8,14,11,.88);display:grid;place-items:center;padding:30px 70px}
+    .lightbox figure{margin:0;display:grid;gap:10px;justify-items:center;max-width:100%}
+    .lightbox img{max-width:min(1200px,100%);max-height:calc(100vh - 130px);border-radius:12px;background:#fff;object-fit:contain}
+    .lightbox figcaption{color:#e6efe9;font-size:13px;font-weight:700}
+    .lightbox figcaption a{color:#9be7b2}
+    .lb-btn{position:absolute;width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:28px;line-height:1;cursor:pointer}
+    .lb-btn:hover{background:rgba(255,255,255,.3)}
+    .lb-close{top:18px;right:18px}.lb-prev{left:14px;top:50%;transform:translateY(-50%)}.lb-next{right:14px;top:50%;transform:translateY(-50%)}
+    .thumbs a{cursor:zoom-in}
     .lt-id{color:#119466;font-weight:900;font-size:13px}
     .lt-proj{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
     .lt-qty,.lt-date{font-variant-numeric:tabular-nums}
@@ -534,6 +546,7 @@
   <div class="ai-modal" id="detailModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle"><h3 id="dmTitle">選擇項目細節</h3><p class="ai-sub" id="dmSub"></p><div class="detail-pick" id="dmList"></div><div class="ai-actions"><button type="button" class="btn" data-dm="cancel">取消</button><button type="button" class="btn primary" data-dm="ok">確認並改為執行中</button></div></div>
   </div>
+  <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-btn lb-close" data-lb-act="close" aria-label="關閉">×</button><button type="button" class="lb-btn lb-prev" data-lb-act="prev" aria-label="上一張">‹</button><figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure><button type="button" class="lb-btn lb-next" data-lb-act="next" aria-label="下一張">›</button></div>
   <div class="cell-pop" id="cellPop" hidden></div>
   <div class="toast" id="toast" role="status"></div>
 
@@ -564,7 +577,7 @@
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -827,9 +840,15 @@
       catch(err){applyLocalEdit(id,old);state.edits.delete(id);refreshView();toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再操作':`更新失敗，已還原：${err.message}`,true)}
     }
     /* 列表中的膠囊直接編輯（設計師） */
+    const fullUrl=url=>String(url).replace(/=w\d+(-h\d+)?$/,'')+'=w1800';
+    function lbShow(){const list=state.lbList,i=state.lbIdx,it=list[i];$('lbImg').src=fullUrl(it.url);$('lbImg').referrerPolicy='no-referrer';$('lbCap').innerHTML=`${i+1} / ${list.length}${it.fileName?`｜${esc(it.fileName)}`:''}｜<a href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">開啟原圖</a>`;document.querySelectorAll('.lb-prev,.lb-next').forEach(b=>{b.hidden=list.length<2})}
+    function lbOpen(listIdx,i){const list=state.lb[listIdx];if(!list||!list.length)return;state.lbList=list;state.lbIdx=i;$('lightbox').hidden=false;lbShow()}
+    function lbStep(d){const n=state.lbList.length;state.lbIdx=(state.lbIdx+d+n)%n;lbShow()}
+    function lbClose(){$('lightbox').hidden=true;$('lbImg').removeAttribute('src');state.lbList=null}
+    document.addEventListener('keydown',e=>{if($('lightbox').hidden)return;if(e.key==='Escape'){lbClose();e.stopPropagation()}else if(e.key==='ArrowLeft')lbStep(-1);else if(e.key==='ArrowRight')lbStep(1)},true);
     function closeCellPop(){const p=$('cellPop');if(p){p.hidden=true;p.innerHTML=''}state.cellEdit=null}
     function openCellPop(el){
-      const tr=el.closest('[data-case]'),id=tr.dataset.case,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
+      const tr=el.closest('[data-case]'),id=tr?tr.dataset.case:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
       const pop=$('cellPop');let html='';
       if(field==='status')html=`<h4>修改狀態</h4>${STATUS_FILTER.map(k=>`<button type="button" class="cp-opt ${ST[k].cls}${k===String(row['狀態']||'').trim()?' on':''}" data-cp-status="${k}">${ST[k].label}</button>`).join('')}`;
       else if(field==='designer')html=`<h4>設計負責人</h4>${designerNames().map(n=>`<button type="button" class="cp-opt${n===String(row['設計負責人']||'').trim()?' on':''}" data-cp-designer="${esc(n)}">${esc(n)}</button>`).join('')}`;
@@ -844,7 +863,7 @@
     function updateRail(){const active=state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login');
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||(view==='detail'&&state.home==='projects'));
       $('stage').classList.toggle('wide',view==='projects');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
@@ -1237,22 +1256,23 @@
     function renderDetail(){
       const row=allRows().find(r=>idKey(r)===state.detailId),stage=$('stage');if(!row){backToBoard();return}
       if(state.editing&&state.editRow){renderEdit(row);return}
+      state.lb=[];
       const st=statusOf(row),s=schedule(row),status=String(row['狀態']||'').trim(),mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+a['修改次數']||0)-(+b['修改次數']||0));
+      const ed=isDesignerSession(),editAttr=f=>ed?` lt-edit" data-edit="${f}`:'';
       const kv=(label,value,raw)=>`<div class="kv"><dt>${label}</dt><dd>${raw?value:esc(value||'-')}</dd></div>`;
       const person=(name,role)=>`<span class="person">${faceHtml(name,role)}<span>${esc(name||'未填')}</span></span>`;
       const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>row[n]||row[u]);
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
-        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="pill ${st.cls}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
+        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
         ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
-          ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',[row['設計類型']||row['設計種類'],row['階段']].filter(Boolean).join('／'))}
+          ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t?`<span class="lt-type lt-type-${esc(t)}">${esc(t)}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
-          ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('修改輪數',String(mods.filter(m=>(+m['修改次數']||0)>0).length||row['修改次數']||0))}
+          ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('項目細節',`<span class="dp-wrap${editAttr('details')}">${(()=>{const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);return items.length?items.map(d=>`<span class="lt-detail" title="${esc(d)}">${esc(d)}</span>`).join(''):(ed?'<span class="lt-detail">選擇</span>':'<span class="lt-dash">-</span>')})()}</span>`,true)}
         </dl>
         ${supp.length?`<div class="detail-sec"><h3>補充資料</h3><div class="supp-list">${supp.map(([label,n,u])=>`<div class="supp-row"><b>${label}</b><span>${/^https?:\/\//i.test(row[u]||'')?`<a href="${esc(row[u])}" target="_blank" rel="noopener noreferrer">${esc(row[n]||row[u])}</a>`:esc(row[n]||row[u])}</span></div>`).join('')}</div></div>`:''}
-        <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
-        <div class="form-actions"><a class="btn" href="index.html">到現行系統處理圖片與修改</a></div>
+        <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod),li=(state.lb.push(imgs),state.lb.length-1);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map((i,n)=>`<a href="${esc(i.url)}" data-lb="${li}" data-i="${n}" title="${esc(i.fileName||'')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
       </div>`;
     }
 
@@ -1348,6 +1368,9 @@
       const t=e.target;
       if(state.loginMenu&&!t.closest('.rail-login')){state.loginMenu=false;renderLogin()}
       if(state.filterOpen&&!t.closest('.filter-wrap')){state.filterOpen=false;if(state.view==='board')renderBoard();if(state.view==='projects')renderProjects()}
+      const lbA=t.closest('[data-lb-act]')?.dataset.lbAct;if(lbA){lbA==='close'?lbClose():lbStep(lbA==='next'?1:-1);return}
+      if(t.id==='lightbox'){lbClose();return}
+      const lbT=t.closest('[data-lb]');if(lbT){e.preventDefault();lbOpen(+lbT.dataset.lb,+lbT.dataset.i);return}
       if(window.__v5Grabbed){window.__v5Grabbed=false;e.preventDefault();e.stopPropagation();return}
       if(state.cellEdit&&!t.closest('#cellPop')&&!t.closest('[data-edit]'))closeCellPop();
       if(state.colsOpen&&!t.closest('.cols-wrap')){state.colsOpen=false;rerenderList()}
