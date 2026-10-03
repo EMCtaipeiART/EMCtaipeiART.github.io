@@ -1,0 +1,436 @@
+<!doctype html>
+<!-- 設計需求系統 v5.0 新版首頁（試作）。現行系統仍是 index.html；這一頁只讀資料：
+     案件與人員頭像讀公開的 backend/data/db.json，設計師狀態／等級稱號讀 Worker 的 pixelOfficeState，
+     等級分數跟像素辦公室一樣第一次停到頭像上才載入 data/database_archive.json（約 4 MB）。 -->
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>設計需求系統 v5.0</title>
+  <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico" />
+  <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin />
+  <script>
+    (()=>{try{document.documentElement.dataset.theme=localStorage.getItem('designRequestThemeV1')==='dark'?'dark':'light'}catch(err){document.documentElement.dataset.theme='light'}})();
+  </script>
+  <style>
+    :root{
+      --brand:#159E31;--brand-deep:#0f7f27;--brand-soft:#e8f6ec;
+      --bg:#f5f7f6;--panel:#ffffff;--ink:#17211d;--muted:#6b7772;--faint:#98a39e;--line:#e3e9e5;
+      --todo:#6b7cff;--doing:#f59e0b;--review:#159E31;
+      --shadow:0 10px 30px rgba(18,38,28,.08);--shadow-lg:0 22px 50px rgba(18,38,28,.18);
+      --rail:76px;
+    }
+    html[data-theme="dark"]{
+      --bg:#141817;--panel:#1d2321;--ink:#e9efec;--muted:#a3aeaa;--faint:#78837f;--line:#2c3431;
+      --brand-soft:#173323;--shadow:0 10px 30px rgba(0,0,0,.35);--shadow-lg:0 22px 50px rgba(0,0,0,.55);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{min-height:100vh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+    button{font:inherit;color:inherit}
+    a{color:inherit}
+
+    /* 左側窄欄 */
+    .rail{position:fixed;inset:0 auto 0 0;width:var(--rail);z-index:50;display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0;background:var(--panel);border-right:1px solid var(--line)}
+    .rail-logo{width:42px;height:42px;border-radius:12px;margin-bottom:14px;display:block}
+    .rail-item{width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0 7px;border-radius:14px;border:0;background:transparent;color:var(--muted);font-size:11.5px;font-weight:700;text-decoration:none;cursor:pointer}
+    .rail-item svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .rail-item:hover{background:var(--brand-soft);color:var(--brand-deep)}
+    html[data-theme="dark"] .rail-item:hover{color:#8fe0a5}
+    .rail-item.is-active{background:var(--brand-soft);color:var(--brand)}
+    .rail-spacer{flex:1}
+    .rail-version{font-size:10.5px;color:var(--faint);font-weight:700}
+
+    main{margin-left:var(--rail)}
+
+    /* 綠色主視覺 */
+    .hero{position:relative;z-index:5;background:radial-gradient(1200px 500px at 50% -10%,#2bbf4c 0%,var(--brand) 45%,var(--brand-deep) 100%);color:#fff;padding:64px 24px 54px;text-align:center}
+    .hero::after{content:"";position:absolute;inset:auto 0 0 0;height:60px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.06));pointer-events:none}
+    .hero h1{margin:0 0 26px;font-size:clamp(26px,4vw,40px);font-weight:900;letter-spacing:.02em}
+    .prompt{position:relative;max-width:720px;margin:0 auto}
+    .prompt input{width:100%;height:58px;border:0;border-radius:18px;padding:0 132px 0 54px;font-size:16px;font-weight:600;color:#17211d;background:#fff;box-shadow:0 14px 34px rgba(0,0,0,.18);outline:none}
+    .prompt input:focus{box-shadow:0 14px 34px rgba(0,0,0,.18),0 0 0 4px rgba(255,255,255,.45)}
+    .prompt input::placeholder{color:#9aa6a0;font-weight:500}
+    .prompt-icon{position:absolute;left:18px;top:50%;width:22px;height:22px;transform:translateY(-50%);fill:none;stroke:#7b8a83;stroke-width:2;stroke-linecap:round}
+    .prompt-go{position:absolute;right:8px;top:8px;height:42px;padding:0 18px;border:0;border-radius:13px;background:var(--brand);color:#fff;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;display:flex;align-items:center}
+    .prompt-go:hover{background:var(--brand-deep)}
+    .prompt-hint{margin:10px 0 0;font-size:12.5px;color:rgba(255,255,255,.82);font-weight:600;min-height:1.4em}
+
+    .team{display:flex;justify-content:center;flex-wrap:wrap;gap:22px 30px;margin:38px auto 0;max-width:820px;padding:0;list-style:none}
+    .member{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;width:92px}
+    .avatar-btn{position:relative;width:84px;height:84px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.9);background:#fff;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.18);transition:transform .18s ease,box-shadow .18s ease;overflow:visible}
+    .avatar-btn:hover,.avatar-btn:focus-visible{transform:translateY(-4px);box-shadow:0 16px 30px rgba(0,0,0,.24);outline:none}
+    .avatar-clip{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#fff;display:grid;place-items:center}
+    .avatar-clip img.head{width:112%;height:auto;margin-top:18%;image-rendering:auto}
+    .avatar-clip img.head.is-short{width:96%;margin-top:6%}
+    .avatar-clip img.status-icon{width:66%;height:66%;object-fit:contain}
+    .member.is-away .avatar-clip{background:#eef2f0}
+    .member.is-away .avatar-btn{border-color:rgba(255,255,255,.55)}
+    .avatar-badge{position:absolute;right:-4px;bottom:-2px;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid var(--brand);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+    .avatar-badge img{width:22px;height:22px;object-fit:contain}
+    .avatar-plus{display:grid;place-items:center;background:rgba(255,255,255,.16);border:3px dashed rgba(255,255,255,.85);color:#fff}
+    .avatar-plus svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
+    .avatar-plus:hover,.avatar-plus:focus-visible{background:rgba(255,255,255,.26)}
+    .member-name{font-size:14px;font-weight:800;line-height:1.2}
+    .member-status{margin-top:-4px;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.85)}
+
+    /* 浮動資料卡 */
+    .hover-card{position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);width:260px;z-index:40;padding:14px 16px;border-radius:16px;background:var(--panel);color:var(--ink);text-align:left;box-shadow:var(--shadow-lg);border:1px solid var(--line);opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s;pointer-events:none}
+    .hover-card::before{content:"";position:absolute;top:-7px;left:50%;width:14px;height:14px;background:var(--panel);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:translateX(-50%) rotate(45deg)}
+    .member.is-open .hover-card{opacity:1;visibility:visible;pointer-events:auto}
+    .hc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+    .hc-name{font-size:16px;font-weight:900}
+    .hc-level{font-size:13px;font-weight:900;color:var(--brand)}
+    .hc-title{margin-top:2px;font-size:12px;color:var(--muted);font-weight:700}
+    .hc-xp{height:7px;margin:9px 0 4px;border-radius:99px;background:var(--line);overflow:hidden}
+    .hc-xp span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2bbf4c,var(--brand))}
+    .hc-xp-text{font-size:11px;color:var(--faint);font-weight:700}
+    .hc-section{margin-top:11px;font-size:11.5px;font-weight:800;color:var(--muted);letter-spacing:.04em}
+    .hc-counts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+    .hc-count{padding:7px 0;border-radius:10px;background:var(--bg);text-align:center}
+    .hc-count b{display:block;font-size:17px;line-height:1.1}
+    .hc-count small{font-size:10.5px;color:var(--muted);font-weight:700}
+    .hc-status{margin-top:10px;font-size:12px;font-weight:700;color:var(--muted)}
+
+    /* 案件看板 */
+    .board-wrap{max-width:1320px;margin:0 auto;padding:34px 28px 60px}
+    .board-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+    .board-head h2{margin:0;font-size:24px;font-weight:900}
+    .board-head p{margin:4px 0 0;color:var(--muted);font-size:13px;font-weight:600}
+    .board-sync{font-size:12px;color:var(--faint);font-weight:700}
+    .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+    .column{border-radius:22px;background:color-mix(in srgb,var(--panel) 55%,var(--bg));border:1px solid var(--line);padding:16px 14px}
+    .column-head{display:flex;align-items:center;gap:8px;padding:2px 6px 12px}
+    .column-dot{width:9px;height:9px;border-radius:50%}
+    .column-title{font-size:16px;font-weight:900}
+    .column-count{margin-left:auto;font-size:12px;font-weight:800;color:var(--muted);padding:3px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+    .column-bar{height:6px;border-radius:99px;margin:0 6px 14px}
+    .cards{display:grid;gap:12px}
+    .card{display:block;padding:14px 15px 12px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+    .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+    .card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .card-id{font-size:11.5px;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+    .tag{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px}
+    .tag-client{background:var(--brand-soft);color:var(--brand-deep)}
+    html[data-theme="dark"] .tag-client{color:#8fe0a5}
+    .tag-revise{background:#fff1d6;color:#9a5b00}
+    .tag-late{background:#ffe3e3;color:#b42318}
+    html[data-theme="dark"] .tag-revise{background:#3a2f17;color:#f6d98c}
+    html[data-theme="dark"] .tag-late{background:#3d1d1d;color:#ffb4b4}
+    .card-title{margin:0;font-size:15px;font-weight:800;line-height:1.45;overflow-wrap:anywhere}
+    .progress{margin-top:12px}
+    .progress-label{display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
+    .progress-track{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
+    .progress-track span{display:block;height:100%;border-radius:inherit;background:var(--doing)}
+    .progress.is-late .progress-track span{background:#e5484d}
+    .card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+    .faces{display:flex;align-items:center}
+    .face{position:relative;width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);background:var(--brand-soft);display:grid;place-items:center;overflow:hidden;font-size:12px;font-weight:900;color:var(--brand-deep)}
+    .face+.face{margin-left:-8px}
+    .face img{width:100%;height:100%;object-fit:cover}
+    .face img.head{width:118%;height:auto;object-fit:contain;margin-top:8%}
+    .face img.head.is-short{width:100%;margin-top:4%}
+    .face.is-designer{background:#fff}
+    .card-meta{font-size:11.5px;color:var(--faint);font-weight:700;text-align:right;line-height:1.45}
+    .column-more{width:100%;margin-top:12px;height:38px;border-radius:12px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-weight:800;font-size:13px;cursor:pointer}
+    .column-more:hover{background:var(--panel)}
+    .column-empty{padding:26px 10px;text-align:center;color:var(--faint);font-size:13px;font-weight:700}
+    .skeleton{height:110px;border-radius:18px;background:linear-gradient(90deg,var(--line),var(--panel),var(--line));background-size:200% 100%;animation:shimmer 1.2s infinite}
+    @keyframes shimmer{to{background-position:-200% 0}}
+
+    /* 多元凱躍宇宙（舊版像素辦公室） */
+    .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
+    .universe[hidden]{display:none}
+    .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
+    .universe-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+    .universe-head h3{margin:0;font-size:18px;font-weight:900}
+    .universe-close{width:36px;height:36px;border-radius:50%;border:0;background:var(--bg);cursor:pointer;font-size:20px;line-height:1}
+    .universe-frame{display:block;width:100%;aspect-ratio:16/10;max-height:calc(100vh - 110px);border:0;background:#eef8f2}
+
+    @media (max-width:980px){.board{grid-template-columns:1fr}}
+    @media (max-width:720px){
+      :root{--rail:0px}
+      .rail{inset:auto 0 0 0;width:100%;height:64px;flex-direction:row;justify-content:space-around;padding:0 8px;border-right:0;border-top:1px solid var(--line)}
+      .rail-logo,.rail-spacer,.rail-version{display:none}
+      body{padding-bottom:64px}
+      .hero{padding:44px 16px 40px}
+      .prompt input{padding-right:16px;height:54px}
+      .prompt-go{display:none}
+      .team{gap:18px 14px}
+      .member{width:76px}
+      .avatar-btn{width:68px;height:68px}
+      .hover-card{width:230px}
+      .board-wrap{padding:26px 16px 40px}
+    }
+    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+  <nav class="rail" aria-label="主選單">
+    <img class="rail-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部" />
+    <a class="rail-item is-active" href="#top" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</a>
+    <a class="rail-item" href="index.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</a>
+    <a class="rail-item" href="index.html" title="目前先開啟現行系統的個人設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</a>
+    <span class="rail-spacer"></span>
+    <span class="rail-version">v5.0</span>
+  </nav>
+
+  <main id="top">
+    <section class="hero">
+      <h1>你今天想設計些什麼呢？</h1>
+      <form class="prompt" id="prompt" role="search">
+        <svg class="prompt-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+        <input id="promptInput" type="search" autocomplete="off" placeholder="搜尋案件編號、客戶、專案名稱或負責人…" aria-label="搜尋案件或描述你想做的設計" />
+        <a class="prompt-go" href="index.html">填寫需求</a>
+      </form>
+      <p class="prompt-hint" id="promptHint"></p>
+      <ul class="team" id="team" aria-label="設計師"></ul>
+    </section>
+
+    <section class="board-wrap" aria-labelledby="boardTitle">
+      <div class="board-head">
+        <div><h2 id="boardTitle">最新案件列表</h2><p>依狀態分成未執行、執行中、過稿中；點卡片到現行系統查看案件。</p></div>
+        <span class="board-sync" id="boardSync">讀取中…</span>
+      </div>
+      <div class="board" id="board"></div>
+    </section>
+  </main>
+
+  <div class="universe" id="universe" hidden>
+    <div class="universe-card" role="dialog" aria-modal="true" aria-labelledby="universeTitle">
+      <div class="universe-head"><h3 id="universeTitle">多元凱躍宇宙</h3><button type="button" class="universe-close" id="universeClose" aria-label="關閉">×</button></div>
+      <div id="universeBody"></div>
+    </div>
+  </div>
+
+  <script>
+  (()=>{
+    'use strict';
+    const API='https://machi-design-api.machi-chen.workers.dev/api';
+    const DESIGNERS=['Machi','Anna','Amber','Leona','Noise'];
+    const SHORT_HEADS=new Set(['Machi','Noise']); // 男生頭像圖只到下巴，顯示比例要另外調
+    const STATUS_TEXT={present:'在座工作中',overtime:'加班中',lunch:'用餐中',meeting:'開會中',leave:'休假中',offwork:'已下班',toilet:'去廁所',abroad:'出國中',out:'公出工作中'};
+    const WORKING=new Set(['present','overtime']);
+    const COLUMNS=[
+      {key:'todo',title:'未執行',color:'var(--todo)',statuses:['未開始']},
+      {key:'doing',title:'執行中',color:'var(--doing)',statuses:['執行中','修改中']},
+      {key:'review',title:'過稿中',color:'var(--review)',statuses:['過稿中']}
+    ];
+    const PAGE=12;
+    const $=id=>document.getElementById(id);
+    const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const state={rows:[],people:{},levelConfig:null,avatars:new Map(),archive:null,archiveLoading:false,query:'',limits:{todo:PAGE,doing:PAGE,review:PAGE},loaded:false};
+
+    /* ---------- 日期（一律用台北時間的日子算） ---------- */
+    const DAY=86400000;
+    function taipeiToday(){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return Date.UTC(+p.year,+p.month-1,+p.day)}
+    function parseDay(value){const m=String(value||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);return m?Date.UTC(+m[1],+m[2]-1,+m[3]):NaN}
+    /** 倒數與進度：最後一天 99%，第一天約 1/總天數，還沒開始 0%，逾期維持 99% 並標紅。 */
+    function schedule(row){
+      const start=parseDay(row['開始日期']),end=parseDay(row['結束日期']),today=taipeiToday();
+      if(Number.isNaN(end))return {remaining:null,percent:0,late:false,total:null};
+      const remaining=Math.round((end-today)/DAY);
+      const total=Number.isNaN(start)?null:Math.max(1,Math.round((end-start)/DAY)+1);
+      let percent=0;
+      if(remaining<0)percent=99;
+      else if(remaining===0)percent=99;
+      else if(total){percent=Math.round((1-remaining/total)*100);percent=Math.max(0,Math.min(99,percent))}
+      return {remaining,percent,late:remaining<0,total};
+    }
+    function countdownText(s){
+      if(s.remaining===null)return '未填結束日';
+      if(s.remaining<0)return `已逾期 ${-s.remaining} 天`;
+      if(s.remaining===0)return '今天截止';
+      return `倒數 ${s.remaining} 天`;
+    }
+
+    /* ---------- 頭像 ---------- */
+    const norm=value=>String(value||'').trim().toLowerCase();
+    function buildAvatarMap(settingsRows){
+      const map=new Map();
+      for(const row of settingsRows||[]){
+        const url=String(row['頭像連結']||'').trim();if(!/^https?:\/\//.test(url))continue;
+        for(const key of [row['名字'],row['顯示名'],row['帳號']])if(norm(key))map.set(norm(key),url);
+      }
+      return map;
+    }
+    function personAvatar(name){
+      const key=norm(name),email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
+      return state.avatars.get(key)||(email&&state.avatars.get(email))||'';
+    }
+    function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
+    function headImg(name,extra=''){return `<img class="head${SHORT_HEADS.has(name)?' is-short':''}" src="assets/v5/heads/${esc(name)}.webp" alt="" ${extra}>`}
+    function faceHtml(name,role){
+      const label=`${role}：${name||'未填'}`;
+      if(role==='設計負責人'&&DESIGNERS.includes(String(name||'').trim()))return `<span class="face is-designer" title="${esc(label)}">${headImg(String(name).trim())}</span>`;
+      const url=personAvatar(name);
+      return `<span class="face" title="${esc(label)}">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))}</span>`;
+    }
+
+    /* ---------- 設計師列 ---------- */
+    function designerCases(name){
+      const counts={'未開始':0,'執行中':0,'修改中':0,'過稿中':0};
+      for(const row of state.rows)if(norm(row['設計負責人'])===norm(name)&&row['狀態'] in counts)counts[row['狀態']]++;
+      return counts;
+    }
+    function levelInfo(name){
+      const cfg=state.levelConfig||{steps:[1,10,20,30,40,50],videoMembers:['Noise'],titles:{graphic:['設計新秀','資深設計師','設計菁英','設計大師','傳奇設計師','設計神話'],video:['影音新秀','資深剪輯師','影音菁英','影音大師','傳奇導演','影像神話']}};
+      if(!state.archive)return null;
+      const score=state.archive[name]||0,level=Math.floor(Math.sqrt(score/10))+1,current=10*(level-1)**2,next=10*level**2;
+      const group=(cfg.videoMembers||[]).includes(name)?'video':'graphic',list=(cfg.titles&&cfg.titles[group])||[];
+      let title=list[0]||'';(cfg.steps||[]).forEach((step,i)=>{if(level>=step&&list[i])title=list[i]});
+      return {level,title,score,progress:Math.max(0,Math.min(100,(score-current)/(next-current)*100)),remaining:Math.max(0,next-score)};
+    }
+    /** 等級分數＝2023 年起已完成案件的加權（沒加權用數量，再沒有算 1），跟像素辦公室同一套算法與資料來源。 */
+    async function ensureArchive(){
+      if(state.archive||state.archiveLoading)return;state.archiveLoading=true;
+      try{
+        const res=await fetch('data/database_archive.json',{cache:'no-cache'});const payload=await res.json();
+        const totals=Object.fromEntries(DESIGNERS.map(n=>[n,0])),nameMap=Object.fromEntries(DESIGNERS.map(n=>[n.toLowerCase(),n]));
+        const num=v=>{const n=Number(String(v??'').trim());return String(v??'').trim()!==''&&Number.isFinite(n)?n:null};
+        const year=row=>{for(const k of ['開始日期','結束日期','填單時間','時間標記']){const m=String(row[k]||'').match(/(20\d{2})/);if(m)return +m[1]}const m=String(row['案件編號']||'').match(/^(\d{2})/);return m?2000+ +m[1]:0};
+        for(const row of payload.rows||[]){const name=nameMap[norm(row['設計負責人'])];if(!name||String(row['狀態']||'').trim()!=='已完成'||year(row)<2023)continue;const w=num(row['加權']),q=num(row['數量']);totals[name]+=w!==null?w:q!==null?q:1}
+        state.archive=totals;
+      }catch(err){console.warn('等級資料讀取失敗',err)}
+      state.archiveLoading=false;renderTeam();
+    }
+    function hoverCardHtml(name){
+      const c=designerCases(name),lv=levelInfo(name),p=state.people[name],status=p?.status;
+      const fmt=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});
+      return `<div class="hover-card" role="tooltip">
+        <div class="hc-head"><span class="hc-name">${esc(name)}</span><span class="hc-level">${lv?`Lv.${lv.level}`:'Lv.…'}</span></div>
+        <div class="hc-title">${lv?esc(lv.title):'等級讀取中…'}</div>
+        <div class="hc-xp"><span style="width:${lv?lv.progress.toFixed(1):0}%"></span></div>
+        <div class="hc-xp-text">${lv?`${fmt(lv.score)} 分 · 距 Lv.${lv.level+1} 還差 ${fmt(lv.remaining)} 分`:'&nbsp;'}</div>
+        <div class="hc-section">目前案量</div>
+        <div class="hc-counts">${Object.entries(c).map(([k,v])=>`<div class="hc-count"><b>${v}</b><small>${k}</small></div>`).join('')}</div>
+        ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
+      </div>`;
+    }
+    function renderTeam(){
+      const team=$('team'),openName=team.querySelector('.member.is-open')?.dataset.name||'';
+      team.innerHTML=DESIGNERS.map(name=>{
+        const p=state.people[name],status=p?.status||'',away=Boolean(status)&&!WORKING.has(status); // 還沒讀到狀態（或讀取失敗）就只顯示頭像，不假裝在座
+        const face=away
+          ? `<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`
+          : headImg(name);
+        const badge=status==='overtime'?`<span class="avatar-badge" aria-hidden="true"><img src="assets/v5/status/overtime.webp" alt=""></span>`:'';
+        return `<li class="member${away?' is-away':''}${openName===name?' is-open':''}" data-name="${esc(name)}">
+          <button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>
+          <span class="member-name">${esc(name)}</span>
+          <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>
+          ${hoverCardHtml(name)}
+        </li>`;
+      }).join('')+`<li class="member" data-universe>
+          <button type="button" class="avatar-btn avatar-plus" id="universeOpen" aria-label="多元凱躍宇宙：開啟像素辦公室"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <span class="member-name">多元凱躍宇宙</span>
+          <span class="member-status">像素辦公室</span>
+        </li>`;
+    }
+    function setOpen(member,open){
+      document.querySelectorAll('.member.is-open').forEach(el=>{if(el!==member)el.classList.remove('is-open')});
+      if(member)member.classList.toggle('is-open',open);
+      if(open)ensureArchive();
+    }
+    function bindTeam(){
+      const team=$('team');
+      team.addEventListener('mouseover',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.classList.contains('is-open'))setOpen(m,true)});
+      team.addEventListener('mouseleave',()=>setOpen(null,false));
+      team.addEventListener('mouseout',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.contains(e.relatedTarget))m.classList.remove('is-open')});
+      team.addEventListener('focusin',e=>{const m=e.target.closest('.member[data-name]');if(m)setOpen(m,true)});
+      team.addEventListener('focusout',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.contains(e.relatedTarget))m.classList.remove('is-open')});
+      team.addEventListener('click',e=>{
+        if(e.target.closest('[data-universe]')){openUniverse();return}
+        const m=e.target.closest('.member[data-name]');if(m&&e.target.closest('.avatar-btn'))setOpen(m,!m.classList.contains('is-open')); // 觸控裝置：點一下開關
+      });
+      document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(null,false);closeUniverse()}});
+    }
+
+    /* ---------- 多元凱躍宇宙：舊版首頁左上角的像素辦公室 ---------- */
+    function openUniverse(){
+      const body=$('universeBody');
+      if(!body.firstChild)body.innerHTML='<iframe class="universe-frame" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=55" title="設計部即時狀態（像素辦公室）"></iframe>';
+      $('universe').hidden=false;$('universeClose').focus();
+    }
+    function closeUniverse(){const u=$('universe');if(!u.hidden){u.hidden=true;$('universeOpen')?.focus()}}
+    $('universeClose').addEventListener('click',closeUniverse);
+    $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});
+
+    /* ---------- 看板 ---------- */
+    function matches(row){
+      const q=norm(state.query);if(!q)return true;
+      return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q));
+    }
+    function sortRows(key,rows){
+      const end=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};
+      if(key==='review')return rows.sort((a,b)=>String(b['案件編號']).localeCompare(String(a['案件編號']),'zh-Hant',{numeric:true}));
+      return rows.sort((a,b)=>end(a)-end(b)||String(a['案件編號']).localeCompare(String(b['案件編號'])));
+    }
+    function cardHtml(row,column){
+      const s=schedule(row),id=String(row['案件編號']||''),qty=String(row['數量']||'').trim();
+      const tags=[row['客戶別']?`<span class="tag tag-client">${esc(row['客戶別'])}</span>`:'',row['狀態']==='修改中'?'<span class="tag tag-revise">修改中</span>':'',s.late&&column.key!=='review'?'<span class="tag tag-late">逾期</span>':''].join('');
+      const progress=column.key==='doing'?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:'';
+      return `<a class="card" href="index.html" title="到現行系統查看案件 ${esc(id)}">
+        <div class="card-top"><span class="card-id">#${esc(id)}</span>${tags}</div>
+        <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
+        ${progress}
+        <div class="card-foot">
+          <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
+          <span class="card-meta">${esc(countdownText(s))}<br>數量 ${esc(qty||'-')}</span>
+        </div>
+      </a>`;
+    }
+    function renderBoard(){
+      const board=$('board');
+      if(!state.loaded){board.innerHTML=COLUMNS.map(c=>`<div class="column"><div class="column-head"><span class="column-dot" style="background:${c.color}"></span><span class="column-title">${c.title}</span></div><div class="cards"><div class="skeleton"></div><div class="skeleton"></div></div></div>`).join('');return}
+      let shown=0;
+      board.innerHTML=COLUMNS.map(column=>{
+        const rows=sortRows(column.key,state.rows.filter(r=>column.statuses.includes(String(r['狀態']||'').trim())&&matches(r)));
+        shown+=rows.length;
+        const limit=state.query?rows.length:state.limits[column.key],visible=rows.slice(0,limit);
+        return `<section class="column" aria-label="${column.title}">
+          <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${rows.length} 筆</span></div>
+          <div class="column-bar" style="background:${column.color}"></div>
+          <div class="cards">${visible.length?visible.map(r=>cardHtml(r,column)).join(''):`<div class="column-empty">${state.query?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
+          ${rows.length>visible.length?`<button type="button" class="column-more" data-more="${column.key}">顯示更多（還有 ${rows.length-visible.length} 筆）</button>`:''}
+        </section>`;
+      }).join('');
+      $('promptHint').textContent=state.query?`找到 ${shown} 筆符合「${state.query}」的案件`:'';
+    }
+    $('board').addEventListener('click',e=>{const btn=e.target.closest('[data-more]');if(!btn)return;state.limits[btn.dataset.more]+=PAGE*2;renderBoard()});
+    let queryTimer=0;
+    $('promptInput').addEventListener('input',e=>{clearTimeout(queryTimer);queryTimer=setTimeout(()=>{state.query=e.target.value.trim();renderBoard()},150)});
+    $('prompt').addEventListener('submit',e=>{e.preventDefault();state.query=$('promptInput').value.trim();renderBoard();document.querySelector('.board-wrap').scrollIntoView({behavior:'smooth'})});
+
+    /* ---------- 資料 ---------- */
+    async function loadDatabase(){
+      try{
+        const res=await fetch('backend/data/db.json',{cache:'no-cache'});const db=await res.json();
+        state.rows=(db.tables?.database?.rows||[]).filter(r=>r&&r['案件編號']);
+        state.avatars=buildAvatarMap(db.tables?.['設定']?.rows);
+        state.loaded=true;
+        const stamp=new Date(db.updatedAt||Date.now());
+        $('boardSync').textContent=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
+      }catch(err){
+        console.warn('案件資料讀取失敗',err);state.loaded=true;$('boardSync').textContent='案件資料讀取失敗，請重新整理';
+      }
+      renderBoard();renderTeam();
+    }
+    async function loadOffice(){
+      try{
+        const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'pixelOfficeState'}),cache:'no-store'});
+        const data=await res.json();
+        state.officeLoaded=true;
+        if(data&&data.ok){state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
+      }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
+    }
+
+    renderTeam();renderBoard();bindTeam();
+    loadDatabase();loadOffice();
+    setInterval(loadOffice,60000);
+    setInterval(()=>{if(!document.hidden)loadDatabase()},5*60000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadOffice()});
+  })();
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 
 ## 2026-10-03
 
+- **v5.0 新版首頁試作 `v5.html`**（現行 `index.html` 不動）：左側窄欄（首頁／專案／設定，後兩者先連到現行系統）、綠色主視覺＋標題「你今天想設計些什麼呢？」＋搜尋列（即時篩選下方案件）、五位設計師像素大頭（`assets/v5/heads/`，從 `wardrobe-heads.webp` 裁切，只有頭）＋第六格「多元凱躍宇宙」（彈窗開舊版像素辦公室）。頭像依像素辦公室狀態切換：離席類狀態換成狀態圖示（`assets/v5/status/`），加班加月亮徽章；滑鼠停留顯示等級（算法同像素辦公室，第一次停留才載 `data/database_archive.json`）與案量。下方「最新案件列表」三欄看板：未執行（未開始）、執行中（含修改中）、過稿中；卡片有案件編號、客戶別、專案名稱、專案負責人／設計負責人頭像、倒數天數與數量，執行中多進度條（最後一天 99%、逾期標紅）。資料：`backend/data/db.json`（案件、`設定`頭像連結）＋ Worker `pixelOfficeState`（只允許正式網址，本機測試會被 CORS 擋，畫面會改顯示「狀態讀取中」而不是假裝在座）。設計師頭像改版時要重新裁切 `assets/v5/heads/`。
 - **「您的案件進度」每筆新增「查看詳情」**：開案件詳情頁（進度清單先收起，因為兩個彈窗疊在同一層），詳情頁左上「返回」回到清單；從詳情按 X 關閉則不再跳回清單。
 - **修好 CI「Test JSON backend」失敗**（`backend/test` 的原始碼對照測試被這幾天的修改弄壞）：app.js 版本號 `?v=102`、側身帽子 `WD_SIDE_CAP_BACK`、耳機帽子 `act.hx`、`PIXEL_OFFICE_ACTIONS` 加 `kick`、修改紀錄搬移測試補 `publishDatabaseRefresh` 等沙盒函式並新增「搬到初稿→目標案件過稿中」斷言。注意：這類測試把程式碼寫死，之後改 `EMC-ART-Pixel-Office/dist/app.js`、`index.html` 的對應行要一起改測試。Windows 本機另有 3 個 NAS 路徑測試會失敗（Mac 路徑／`::` 檔名），CI（Linux）不受影響。
 - **修改紀錄「移到其他案件（初稿）」**：搬移時選取的圖片本來就會從來源案件 A 的紀錄移除（只動紀錄，Drive 檔案不動，確認視窗現在也寫明）；新增：目標案件 B 收到初稿（`toRound=0`）後，狀態自動改為「過稿中」（已是過稿中、已完成、已取消的不動）。Worker `moveCaseDesignImages` 回傳 `status`／`statusChanged`，前台立即同步 B 的狀態。Worker 已部署 `a14ca793`，測試在 `worker/test/index.test.ts`。
