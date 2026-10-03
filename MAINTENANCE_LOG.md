@@ -144,3 +144,5 @@
 - v5.0: legacy entry splash (green screen, hopping logo, progress bar, designer quotes) added; it fades out once the page and case data are loaded.
 
 - v5.0: 您的案件進度 moved from the avatar menu to a left-rail "進度" button with a red count badge.
+
+- v5.0: settings rail button moved to the bottom; in-page Gmail connect (串接 Gmail button in mail notice, thread error, account menu and settings page; popup OAuth + gmailOauthConnect) replacing the broken link to index.html.

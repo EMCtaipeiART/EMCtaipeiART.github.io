@@ -785,6 +785,9 @@
     .op-btn.warn{border-color:#f2c27a;background:#fff4e0;color:#8a4b00}
     .rail-item{position:relative}
     .rail-badge{position:absolute;top:2px;right:8px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:900;line-height:18px;text-align:center}
+    .gm-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;margin-bottom:14px}
+    .gm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+    .gm-row p{margin:4px 0 0}
 </style>
 </head>
 <body>
@@ -898,9 +901,9 @@ window.emcQuotes=[
     <img class="rail-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部" />
     <button type="button" class="rail-item is-active" data-nav="board" aria-label="首頁"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</button>
     <button type="button" class="rail-item" data-nav="projects" aria-label="專案"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</button>
-    <button type="button" class="rail-item" data-nav="settings" aria-label="設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
     <span id="railExtra" style="display:contents"></span>
     <span class="rail-spacer"></span>
+    <button type="button" class="rail-item" data-nav="settings" aria-label="設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
     <span class="rail-version">v5.0</span>
     <div class="rail-login" id="railLogin"></div>
   </nav>
@@ -1945,7 +1948,7 @@ window.emcQuotes=[
       const stage=$('stage');
       if(!loggedIn()){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2><div class="notice error" role="alert">請先登入後再使用設定。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>`;return}
       if(!st2.loaded){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2>${st2.error?`<div class="notice error" role="alert">${esc(st2.error)}</div><div class="form-actions"><button type="button" class="btn" data-set-reload>重新讀取</button></div>`:'<div class="notice">正在讀取你的設定…</div>'}</div>`;if(!st2.error)loadUserSettings();return}
-      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${profileHtml()}${templatesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${gmailCardHtml()}${profileHtml()}${templatesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
     }
     /* 讀取畫面上的編輯內容回 state（切換、新增、刪除前呼叫） */
     function captureSettings(){
@@ -2100,7 +2103,7 @@ window.emcQuotes=[
     function threadPanelHtml(readOnly){
       const th=state.thread;if(!th)return '';
       if(th.loading)return '<div class="thread-cards"><div class="notice">正在讀取信件串…</div></div>';
-      if(th.error)return `<div class="thread-cards"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?'（需要重新連接 Gmail 時，請到現行系統的個人選單「連接 Gmail」）':''}</div></div>`;
+      if(th.error)return `<div class="thread-cards"><div class="notice error" role="alert">讀取信件串失敗：${esc(th.error)}${/Gmail|授權|SCOPE/i.test(th.error)?' <button type="button" class="btn primary" data-gmail-connect style="margin-left:6px">串接 Gmail</button>':''}</div></div>`;
       const msgs=th.messages||[];
       return `<div class="thread-cards" aria-label="Gmail 信件串">${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:false,i)).join('')||'<div class="empty">沒有信件</div>'}</div>`;
     }
@@ -2288,7 +2291,7 @@ window.emcQuotes=[
       setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
       const d=m.drafts[m.index],total=m.drafts.length,g=state.gmail,locked=d.sent;
       const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
-        :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}請到<a href="index.html">現行系統的個人選單「連接 Gmail」</a>完成連接，之後再從案件補寄；也可以先按「略過，回案件列表」。</div>`:'';
+        :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}<button type="button" class="btn primary" data-gmail-connect style="margin-left:6px">串接 Gmail</button>　連接完成後即可寄信；也可以先按「略過，回案件列表」。</div>`:'';
       const canMerge=total>1&&m.drafts.every(x=>!x.reply)&&m.drafts.some(x=>!x.sent&&!x.ids);
       const mergedAny=m.drafts.some(x=>x.ids);
       const mergePanel=(canMerge||mergedAny)?`<details class="merge-panel"><summary>合併信件</summary><p>同一個專案被拆成多筆案件時，勾選要打包成一封寄出的案件；專案名稱會併在一起、數量加總。</p>${m.drafts.filter(x=>!x.sent&&!x.ids&&!x.reply).map(x=>`<label class="merge-row"><input type="checkbox" data-merge="${esc(x.id)}">${esc(x.id)}｜${esc(x.row['專案名稱']||'')}（數量 ${esc(x.row['數量']||'')}）</label>`).join('')}<div class="merge-actions"><button type="button" class="btn" data-mail="merge">合併勾選的案件</button>${mergedAny?'<button type="button" class="btn" data-mail="unmerge">取消合併</button>':''}</div></details>`:'';
@@ -2701,6 +2704,49 @@ window.emcQuotes=[
     });
     document.addEventListener('change',e=>{if(e.target.matches?.('[data-op-check]'))syncOwnerSel()});
 
+    /* ---------- Gmail 串接（沿用舊網站：彈出視窗授權＋後台 gmailOauthConnect） ---------- */
+    const GMAIL_CLIENT_ID='910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com',GMAIL_CHANNEL='machi-gmail-oauth-v1',GMAIL_ORIGIN='https://emctaipeiart.github.io';
+    const GMAIL_SCOPE='email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.readonly';
+    let gmailChannel=null,gmailPopup=null;
+    const b64u=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    function ensureGmailChannel(){if(gmailChannel||!('BroadcastChannel' in window))return;gmailChannel=new BroadcastChannel(GMAIL_CHANNEL);gmailChannel.onmessage=ev=>applyGmailResult(ev.data).catch(err=>toast(`Gmail 連接失敗：${err.message}`,true))}
+    async function startGmailConnect(){
+      if(!loggedIn()){toast('請先登入後再連接 Gmail',true);startLogin();return}
+      if(!acc('request.mail',true)){toast('此帳號沒有發送信件權限',true);return}
+      try{
+        const st=`machi_gmail_connect_${Date.now()}_${Math.random().toString(36).slice(2)}`,verifier=b64u(crypto.getRandomValues(new Uint8Array(32))),challenge=b64u(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
+        sessionStorage.setItem('designRequestGmailConnectState',st);sessionStorage.setItem('designRequestGmailConnectVerifier',verifier);
+        ensureGmailChannel();
+        const p=new URLSearchParams({client_id:GMAIL_CLIENT_ID,redirect_uri:GMAIL_ORIGIN,response_type:'code',access_type:'offline',prompt:'consent',scope:GMAIL_SCOPE,state:st,code_challenge:challenge,code_challenge_method:'S256'});
+        const w=520,h=720;
+        gmailPopup=window.open(`https://accounts.google.com/o/oauth2/v2/auth?${p}`,'machiGmailConnect',`popup=yes,width=${w},height=${h},left=${Math.max(0,Math.round((screen.width-w)/2))},top=${Math.max(0,Math.round((screen.height-h)/2))},resizable=yes,scrollbars=yes`);
+        if(!gmailPopup){toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);return}
+        toast('請在新視窗完成 Gmail 連接授權...');
+      }catch(err){toast(`無法開始 Gmail 連接：${err.message}`,true)}
+    }
+    async function applyGmailResult(r){
+      if(!r||r.type!=='machi-gmail-oauth-result')return;
+      const saved=sessionStorage.getItem('designRequestGmailConnectState')||'',verifier=sessionStorage.getItem('designRequestGmailConnectVerifier')||'';
+      sessionStorage.removeItem('designRequestGmailConnectState');sessionStorage.removeItem('designRequestGmailConnectVerifier');
+      try{gmailPopup&&gmailPopup.close&&gmailPopup.close()}catch(err){}gmailPopup=null;
+      if(!saved||String(r.state||'')!==saved){toast('Gmail 連接失敗：state 不一致，請重新連接',true);return}
+      if(r.error){toast(`Gmail 連接失敗：${r.errorDescription||r.error}`,true);return}
+      if(!r.code){toast('Gmail 連接失敗：沒有取得授權碼',true);return}
+      toast('Gmail 連接中...');
+      const data=await api('gmailOauthConnect',{code:r.code,codeVerifier:verifier,redirectUri:GMAIL_ORIGIN});
+      state.gmail={connected:true,address:data.gmailAddress||''};
+      toast(`已連接 Gmail：${data.gmailAddress||''}`);
+      try{await loadGmailContext()}catch(err){}
+      if(state.view==='mail'){saveMailDraft();renderMail()}else if(state.view==='settings')renderSettings();
+    }
+    ensureGmailChannel();
+    document.addEventListener('click',e=>{if(e.target.closest?.('[data-gmail-connect]')){e.preventDefault();startGmailConnect()}});
+    function gmailCardHtml(){
+      const g=state.gmail;
+      if(!g&&!state.gmailLoading){state.gmailLoading=true;api('gmailStatus').then(s=>{state.gmail={connected:Boolean(s.connected),address:s.gmailAddress||''}}).catch(err=>{state.gmail={connected:false,address:'',error:err.message}}).finally(()=>{state.gmailLoading=false;if(state.view==='settings')renderSettings()})}
+      return `<div class="set-card gm-card"><div class="gm-row"><div><b>Gmail 連接</b><p class="page-sub">${!g?'正在確認連接狀態…':g.connected?`已連接：${esc(g.address||'')}`:'尚未連接。連接後才能從系統寄信、回信與讀取信件串。'}</p></div><button type="button" class="btn${g&&g.connected?'':' primary'}" data-gmail-connect>${g&&g.connected?'重新授權':'串接 Gmail'}</button></div></div>`;
+    }
+
     /* ---------- 案件詳情（直接在頁面展開，不用彈窗） ---------- */
     const slashNice=v=>{const ms=parseDay(v);return Number.isNaN(ms)?String(v||'-'):ymd(ms)};
     const imageList=row=>{try{const list=JSON.parse(row['圖片連結']||'[]');return Array.isArray(list)?list.filter(i=>i&&/^https?:\/\//.test(i.url||'')):[]}catch(err){return []}};
@@ -2856,7 +2902,7 @@ window.emcQuotes=[
       const box=$('railLogin');if(!box)return;
       const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
-      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
+      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-gmail-connect role="menuitem">串接 Gmail</button><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
       $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
     }
     async function logout(){
