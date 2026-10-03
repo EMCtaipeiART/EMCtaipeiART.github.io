@@ -1306,9 +1306,8 @@ if(document.modelContext?.registerTool){try{document.modelContext.registerTool({
   function apply(){
     if(!pending||storyOpen()||typingNow())return;
     let recent=false;try{recent=Date.now()-Number(sessionStorage.getItem('pixel-auto-update-at')||0)<120000;}catch{}
-    if(recent)return;
-    try{sessionStorage.setItem('pixel-auto-update-at',String(Date.now()));}catch{}
-    location.reload();
+    // 2026-10-04：不再自動重新載入（會打斷使用中的畫面），新版等使用者下次自己重新整理就會套用。
+    void recent;
   }
   async function check(){if(busy)return;busy=true;try{const current=await fingerprint();if(!current)return;if(!baseline){baseline=current;return;}if(current!==baseline)pending=true;apply();}finally{busy=false;}}
   fingerprint().then(value=>{baseline=baseline||value;});

@@ -716,7 +716,7 @@
       });
       document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(null,false);closeUniverse()}});
     }
-    function openUniverse(){const body=$('universeBody');if(!body.firstChild)body.innerHTML='<iframe class="universe-frame" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=55" title="設計部即時狀態（像素辦公室）"></iframe>';$('universe').hidden=false;$('universeClose').focus()}
+    function openUniverse(){const body=$('universeBody');if(!body.firstChild)body.innerHTML='<iframe class="universe-frame" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=56" title="設計部即時狀態（像素辦公室）"></iframe>';$('universe').hidden=false;$('universeClose').focus()}
     function closeUniverse(){const u=$('universe');if(!u.hidden){u.hidden=true;$('universeOpen')?.focus()}}
     $('universeClose').addEventListener('click',closeUniverse);
     $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});
