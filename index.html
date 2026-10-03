@@ -16827,5 +16827,25 @@ document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},
   });
 })();
 </script>
+<script>
+// v5 首頁登入橋接：v5.html 的登入頭像會用 ?v5login=1 開啟這一頁；登入成功後通知原頁並自動關閉（或導回 v5.html）。
+(()=>{
+  const KEY='v5LoginReturn';
+  try{if(new URLSearchParams(location.search).get('v5login')==='1')localStorage.setItem(KEY,String(Date.now()))}catch(e){}
+  const pending=()=>{try{return Date.now()-Number(localStorage.getItem(KEY)||0)<10*60*1000}catch(e){return false}};
+  if(!pending())return;
+  if(typeof loginEditor==='function'){
+    const original=loginEditor;
+    loginEditor=function(){
+      const result=original.apply(this,arguments);
+      try{localStorage.removeItem(KEY);localStorage.setItem('v5LoginDone',String(Date.now()))}catch(e){}
+      try{if(window.opener&&!window.opener.closed){window.opener.postMessage({type:'v5-login'},location.origin);setTimeout(()=>window.close(),300);return result}}catch(e){}
+      setTimeout(()=>location.replace('v5.html'),400);
+      return result;
+    };
+  }
+  setTimeout(()=>{try{if(!isLoggedIn())showLoginModal()}catch(e){}},700);
+})();
+</script>
 </body>
 </html>

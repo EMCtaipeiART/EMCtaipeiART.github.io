@@ -54,15 +54,27 @@
     .rail-item.is-active{background:var(--brand-soft);color:var(--brand)}
     .rail-spacer{flex:1}
     .rail-version{font-size:10.5px;color:var(--faint);font-weight:700}
+    .rail-login{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:8px}
+    .login-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--bg);color:var(--muted);display:grid;place-items:center;overflow:hidden;cursor:pointer;padding:0;font-size:16px;font-weight:900}
+    .login-avatar:hover,.login-avatar:focus-visible{border-color:var(--brand);outline:none}
+    .login-avatar svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .login-avatar img{width:100%;height:100%;object-fit:cover}
+    .login-avatar.is-in{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+    .login-label{font-size:10.5px;color:var(--muted);font-weight:700;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .login-menu{position:absolute;left:calc(100% + 10px);bottom:0;min-width:190px;padding:12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);z-index:60}
+    .login-menu b{display:block;font-size:14px;font-weight:900}
+    .login-menu small{display:block;margin:2px 0 10px;color:var(--muted);font-weight:700;font-size:12px}
+    .login-menu button{width:100%;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13px;cursor:pointer;margin-top:6px}
+    .login-menu button:hover{background:var(--bg)}
     main{margin-left:var(--rail)}
 
     /* 綠色主視覺 */
     .hero{position:relative;z-index:5;background:radial-gradient(1200px 500px at 50% -10%,#2bbf4c 0%,var(--brand) 45%,var(--brand-deep) 100%);color:#fff;padding:64px 24px 54px;text-align:center}
     .hero h1{margin:0 0 26px;font-size:clamp(26px,4vw,40px);font-weight:900;letter-spacing:.02em}
-    .prompt{display:flex;align-items:center;gap:6px;max-width:720px;height:62px;margin:0 auto;padding:7px 8px 7px 16px;border-radius:20px;background:#fff;box-shadow:0 14px 34px rgba(0,0,0,.18);color:#17211d}
+    .prompt{position:relative;display:flex;align-items:center;gap:6px;max-width:720px;height:62px;margin:0 auto;padding:7px 8px 7px 16px;border-radius:20px;background:#fff;box-shadow:0 14px 34px rgba(0,0,0,.18);color:#17211d}
     .prompt:focus-within{box-shadow:0 14px 34px rgba(0,0,0,.18),0 0 0 4px rgba(255,255,255,.45)}
-    .prompt-plus{flex:0 0 auto;width:30px;height:30px;fill:none;stroke:var(--brand);stroke-width:2.6;stroke-linecap:round}
-    .prompt select{flex:1;min-width:0;height:100%;border:0;background:transparent;font-size:16px;font-weight:700;color:#17211d;outline:none;cursor:pointer;padding:0 34px 0 8px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b8a83' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center}
+    .prompt-plus{position:absolute;left:16px;top:50%;transform:translateY(-50%);pointer-events:none;z-index:1;width:30px;height:30px;fill:none;stroke:var(--brand);stroke-width:2.6;stroke-linecap:round}
+    .prompt select{flex:1;min-width:0;height:100%;border:0;background:transparent;font-size:16px;font-weight:700;color:#17211d;outline:none;cursor:pointer;padding:0 34px 0 46px;margin-left:-16px;border-radius:14px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b8a83' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center}
     .prompt select.is-empty{color:#8a968f;font-weight:500}
     .prompt select option{color:#17211d}
     .prompt-go{flex:0 0 auto;height:46px;padding:0 22px;border:0;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
@@ -113,7 +125,32 @@
     .section-head p{margin:4px 0 0;color:var(--muted);font-size:13px;font-weight:600}
     .section-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
     .board-sync{font-size:12px;color:var(--faint);font-weight:700}
+    .seg-btns{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
+    .seg-btns button{height:38px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .seg-btns button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .seg-btns button.on{background:var(--brand-soft);color:var(--brand-deep)}
+    .tool-btn{height:38px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:800;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .tool-btn:hover{background:var(--bg)}
+    .tool-btn.on{border-color:var(--brand);color:var(--brand-deep);background:var(--brand-soft)}
+    .tool-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .filter-wrap{position:relative}
+    .filter-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:45;width:min(380px,calc(100vw - 32px));padding:16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);display:grid;gap:14px}
+    .filter-pop h4{margin:0 0 8px;font-size:12.5px;color:var(--muted);font-weight:900}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}
+    .chips label{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-size:12.5px;font-weight:700;cursor:pointer;user-select:none}
+    .chips input{accent-color:var(--brand);margin:0}
+    .chips label:has(input:checked){border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+    .filter-foot{display:flex;justify-content:space-between;align-items:center}
+    .filter-foot button{height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13px;cursor:pointer}
     .search{position:relative}
+    .list-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+    .list-table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:980px}
+    .list-table th{position:sticky;top:0;background:var(--bg);color:var(--muted);font-size:12px;font-weight:900;padding:11px 12px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line)}
+    .list-table td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:600}
+    .list-table tr[data-case]{cursor:pointer}
+    .list-table tr[data-case]:hover td{background:var(--brand-soft)}
+    .list-table td.l{text-align:left;white-space:normal;min-width:200px;max-width:320px}
+    .list-table tr:last-child td{border-bottom:0}
     .search input{height:38px;width:230px;border-radius:12px;border:1px solid var(--line);background:var(--panel);padding:0 12px 0 34px;font-size:13.5px;font-weight:600;outline:none}
     .search input:focus{border-color:var(--brand)}
     .search svg{position:absolute;left:11px;top:50%;width:16px;height:16px;transform:translateY(-50%);fill:none;stroke:var(--faint);stroke-width:2.2;stroke-linecap:round}
@@ -138,10 +175,10 @@
 
     /* 卡牌 */
     .card{position:relative;display:block;width:100%;text-align:left;padding:14px 15px 12px;border-radius:18px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease;overflow:hidden}
-    .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--card-color,var(--line))}
-    .card:hover,.card:focus-visible{transform:translateY(-2px);box-shadow:var(--shadow-lg);outline:none}
+        .card:hover,.card:focus-visible{transform:translateY(-2px);box-shadow:var(--shadow-lg);outline:none}
     .card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-    .id-pill{font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;background:var(--brand);color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+    .id-pill{font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;background:var(--brand-soft);color:var(--brand-deep);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+    html[data-theme="dark"] .id-pill{color:#8fe0a5}
     .client-text{font-size:12.5px;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
     .chip{margin-left:auto;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;border:1px solid transparent}
     .chip.late{margin-left:0;background:#ffe3e3;color:#b42318;border-color:#fecaca}
@@ -209,10 +246,39 @@
     .batch-box{grid-column:span 6;display:grid;gap:12px;border:1px dashed var(--line);border-radius:16px;padding:16px;background:color-mix(in srgb,var(--bg) 60%,var(--panel))}
     .batch-box h4{margin:0;font-size:14px;font-weight:900}
     .batch-box p{margin:0;font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.55}
-    .batch-row{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) 90px 40px;gap:10px;align-items:center}
-    .batch-row .input,.batch-row select{min-height:42px;background:var(--panel);border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;font-weight:600;width:100%}
-    .batch-del{height:42px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:18px;color:var(--muted)}
+    .batch-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px 14px;align-items:start;padding:16px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+    .batch-row>h5{grid-column:1/-1;margin:0;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:900}
+    .batch-row .field.c6,.batch-row .supp{grid-column:span 6}
+    .batch-row .input,.batch-row select{min-height:42px;background:var(--bg);border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;font-weight:600;width:100%}
+    .batch-row .cal{z-index:35}
+    .batch-del{height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:12.5px;font-weight:800;color:var(--muted)}
     .batch-del:hover{color:#e11d48}
+    .batch-actions{display:flex;gap:10px;flex-wrap:wrap}
+    /* AI 判斷階段 */
+    .ai-modal{position:fixed;inset:0;z-index:150;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.5)}
+    .ai-card{width:min(560px,100%);max-height:calc(100vh - 40px);overflow:auto;border-radius:20px;background:var(--panel);box-shadow:var(--shadow-lg);padding:22px}
+    .ai-card h3{margin:0 0 4px;font-size:18px;font-weight:900}
+    .ai-sub{margin:0 0 14px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55}
+    .ai-drop{display:grid;place-items:center;gap:6px;min-height:110px;border:2px dashed var(--line);border-radius:14px;background:var(--bg);cursor:pointer;text-align:center;padding:14px;font-size:13px;font-weight:700;color:var(--muted)}
+    .ai-drop:hover,.ai-drop.over{border-color:var(--brand);background:var(--brand-soft)}
+    .ai-drop b{color:var(--ink);font-size:14px}
+    .ai-prev{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .ai-prev div{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+    .ai-prev img{width:100%;height:100%;object-fit:cover}
+    .ai-prev button{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;line-height:1}
+    .ai-err{color:#b42318;font-size:13px;font-weight:700;margin:10px 0 0}
+    .ai-verdict{padding:14px;border-radius:14px;background:var(--brand-soft);margin-bottom:10px}
+    .ai-verdict.is-rework{background:var(--st-revise-bg)}.ai-verdict.is-unknown{background:var(--bg)}
+    .ai-verdict-head{display:flex;justify-content:space-between;font-weight:900;font-size:16px}
+    .ai-verdict p{margin:6px 0 0;font-size:13.5px;line-height:1.6}
+    .ai-detail{margin-top:10px;font-size:13px;line-height:1.6}
+    .ai-detail b{display:block;font-size:12px;color:var(--muted)}
+    .ai-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+    .ai-loading{display:grid;gap:12px;text-align:center;padding:26px 0;font-weight:800}
+    .ai-loading small{color:var(--muted);font-weight:600}
+    .spin{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .edit-actions{display:flex;gap:10px;flex-wrap:wrap}
 
     /* 日期區間（旅遊網站式） */
     .range{position:relative}
@@ -300,7 +366,7 @@
     .toast.error{background:#b42318}
 
     @media (max-width:1180px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}.latest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width:980px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field.c2,.field.c3,.field.c4{grid-column:span 1}.field.c6,.supp,.batch-box{grid-column:span 2}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row{grid-template-columns:1fr 1fr}.batch-row .batch-del{grid-column:span 2}}
+    @media (max-width:980px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field.c2,.field.c3,.field.c4{grid-column:span 1}.field.c6,.supp,.batch-box{grid-column:span 2}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row .field.c2,.batch-row .field.c3,.batch-row .field.c4{grid-column:span 1}.batch-row .field.c6,.batch-row .supp{grid-column:span 2}}
     @media (max-width:720px){
       :root{--rail:0px}
       .rail{inset:auto 0 0 0;width:100%;height:64px;flex-direction:row;justify-content:space-around;padding:0 8px;border-right:0;border-top:1px solid var(--line)}
@@ -318,6 +384,8 @@
       .board,.latest-grid{grid-template-columns:1fr}
       .page{padding:20px 16px}
       .form-grid{grid-template-columns:1fr}.field.c6,.supp,.batch-box{grid-column:span 1}
+      .batch-row{grid-template-columns:1fr}.batch-row .field.c2,.batch-row .field.c3,.batch-row .field.c4,.batch-row .field.c6,.batch-row .supp{grid-column:span 1}
+      .rail-login{position:static;margin:0}.login-avatar{width:38px;height:38px}.login-menu{position:fixed;left:auto;right:12px;bottom:72px}
       .supp-grid,.detail-grid{grid-template-columns:1fr}
       .cal-months{flex-direction:column;gap:12px}.cal-month{width:100%}.cal{left:0;right:0;width:auto}
       .mail-row{grid-template-columns:62px minmax(0,1fr)}
@@ -333,6 +401,7 @@
     <a class="rail-item" href="index.html" title="目前先開啟現行系統的個人設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</a>
     <span class="rail-spacer"></span>
     <span class="rail-version">v5.0</span>
+    <div class="rail-login" id="railLogin"></div>
   </nav>
 
   <main id="top">
@@ -356,6 +425,9 @@
       <div id="universeBody"></div>
     </div>
   </div>
+  <div class="ai-modal" id="aiModal" hidden>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><h3 id="aiTitle">AI 判斷階段（beta）</h3><p class="ai-sub">上傳需求單截圖，AI 會判斷這是「新製」還是「再製」，再由你決定要填入哪一個。</p><div id="aiBody"></div></div>
+  </div>
   <div class="toast" id="toast" role="status"></div>
 
   <script>
@@ -378,13 +450,13 @@
     const PLATFORM_SPECS={Facebook:'1:1，1200 x 1200px',Instagram:'4:5，1080 x 1350px',Line:'1:1，1040 x 1040px'};
     const DEFAULT_CC=['machi.chen@emctaipei.com','anna.hsu@emctaipei.com','amber.tian@emctaipei.com','leona.chen@emctaipei.com','eric.fu@emctaipei.com'];
     const RECIPIENT_NAMES={Machi:'陳柏政',Anna:'許芷芸',Karl:'李卡爾',Noise:'Noise',Amber:'Amber Tian',Leona:'陳家蓁'};
-    const LATEST_PAGE=18,COLUMN_PAGE=10;
+    const LATEST_PAGE=12,COLUMN_PAGE=10;
     const $=id=>document.getElementById(id);
     const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE},
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE},
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -544,6 +616,7 @@
     function allRows(){const ids=new Set(state.rows.map(r=>String(r['案件編號'])));const local=[...state.localRows.values()].filter(r=>!ids.has(String(r['案件編號'])));return [...local,...state.rows]}
     const idKey=row=>String(row['案件編號']||'');
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
+    const sortedLatest=rows=>{const list=[...rows].sort(byNewest);return state.sort==='asc'?list.reverse():list};
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=status==='執行中';
@@ -558,29 +631,49 @@
         </div>
       </button>`;
     }
+    const STATUS_FILTER=['未開始','執行中','過稿中','修改中','已完成','已取消'];
+    function monthKey(r){const ms=parseDay(r['開始日期']);return Number.isNaN(ms)?'':ymd(ms).slice(0,7)}
+    const filterCount=()=>state.filters.months.size+state.filters.statuses.size+state.filters.designers.size;
+    function passFilters(r){const f=state.filters;return (!f.months.size||f.months.has(monthKey(r)))&&(!f.statuses.size||f.statuses.has(String(r['狀態']||'').trim()))&&(!f.designers.size||f.designers.has(String(r['設計負責人']||'').trim()))}
+    function filterPopHtml(){
+      const f=state.filters,months=[...new Set(allRows().map(monthKey).filter(Boolean))].sort().reverse();
+      const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label><input type="checkbox" data-filter="${key}" value="${esc(v)}"${f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
+      return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label]))}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>清除篩選</button></div></div>`;
+    }
+    function listTableHtml(rows){
+      const head=['案件編號','月份','客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始','結束','設計負責人','狀態'];
+      const body=rows.map(r=>{const st=statusOf(r);return `<tr data-case="${esc(idKey(r))}" tabindex="0"><td><span class="id-pill">${esc(idKey(r))}</span></td><td>${esc(r['月份']||monthKey(r))}</td><td>${esc(r['客戶別'])}</td><td class="l">${esc(r['專案名稱'])}</td><td>${esc(r['專案負責人'])}</td><td>${esc(r['設計種類']||r['設計類型'])}</td><td>${esc(r['階段'])}</td><td>${esc(r['數量'])}</td><td>${esc(slashNice(r['開始日期']))}</td><td>${esc(slashNice(r['結束日期']))}</td><td>${esc(r['設計負責人'])}</td><td><span class="pill ${st.cls}">${esc(st.label)}</span></td></tr>`}).join('');
+      return `<div class="list-wrap"><table class="list-table"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+    }
     function renderBoard(){
       const stage=$('stage');
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
-      const rows=allRows().filter(matches),latest=[...rows].sort(byNewest),shown=latest.slice(0,state.latestLimit);
+      const rows=allRows().filter(matches).filter(passFilters),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
       const cols=COLUMNS.map(column=>{
         const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return e(a)-e(b)||byNewest(a,b)});
-        const limit=state.query?list.length:state.limits[column.key],visible=list.slice(0,limit);
+        const limit=(state.query||filterCount())?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" aria-label="${column.title}">
           <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
           <div class="column-bar" style="background:${column.color}"></div>
-          <div class="cards">${visible.length?visible.map(r=>cardHtml(r,true)).join(''):`<div class="empty">${state.query?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
+          <div class="cards">${visible.length?visible.map(r=>cardHtml(r,true)).join(''):`<div class="empty">${state.query||filterCount()?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
           ${list.length>visible.length?`<button type="button" class="more-btn" data-more="${column.key}">顯示更多（還有 ${list.length-visible.length} 筆）</button>`:''}
         </section>`;
       }).join('');
-      const hadFocus=document.activeElement?.id==='boardSearch';
+      const hadFocus=document.activeElement?.id==='boardSearch',n=filterCount();
+      const latestBody=!shown.length?'<div class="empty">沒有符合的案件</div>':state.layout==='list'?listTableHtml(shown):`<div class="latest-grid">${shown.map(r=>cardHtml(r,false)).join('')}</div>`;
       stage.innerHTML=`
         <div class="section-head">
-          <div><h2>最新案件列表</h2><p>點卡片查看案件詳情；上方是由新到舊的全部案件，下方依狀態分欄。</p></div>
-          <div class="section-tools"><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label><span class="board-sync">${esc(state.syncText)}</span></div>
+          <div><h2>最新案件列表</h2></div>
+          <div class="section-tools">
+            <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
+            <div class="seg-btns" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${state.layout==='grid'?'on':''}" aria-pressed="${state.layout==='grid'}"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>網格排列</button><button type="button" data-layout="list" class="${state.layout==='list'?'on':''}" aria-pressed="${state.layout==='list'}"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>列表排列</button></div>
+            <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
+            <div class="seg-btns" role="group" aria-label="排序"><button type="button" data-sort="desc" class="${state.sort==='desc'?'on':''}" aria-pressed="${state.sort==='desc'}">新到舊</button><button type="button" data-sort="asc" class="${state.sort==='asc'?'on':''}" aria-pressed="${state.sort==='asc'}">舊到新</button></div>
+            <span class="board-sync">${esc(state.syncText)}</span>
+          </div>
         </div>
         <section class="latest" aria-label="最新案件">
-          <h3 class="block-title">最新案件 <small>由最新到最舊，共 ${latest.length} 筆</small></h3>
-          <div class="latest-grid">${shown.length?shown.map(r=>cardHtml(r,false)).join(''):'<div class="empty" style="grid-column:1/-1">沒有符合的案件</div>'}</div>
+          ${latestBody}
           ${latest.length>shown.length?`<button type="button" class="more-btn" data-more="latest">顯示更多（還有 ${latest.length-shown.length} 筆）</button>`:''}
         </section>
         <h3 class="block-title">依狀態檢視</h3>
@@ -590,11 +683,13 @@
 
     /* ---------- 檢視切換 ---------- */
     function show(view){state.view=view;if(view==='board')renderBoard();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();$('stage').scrollIntoView({behavior:'smooth',block:'start'})}
-    function backToBoard(){state.form=null;state.mail=null;state.detailId='';closeCal();show('board')}
+    function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show('board')}
 
-    /* ---------- 日期區間選擇（旅遊網站式） ---------- */
+    /* ---------- 日期區間選擇（旅遊網站式）：主表單、批次每一筆、編輯各自一個 ---------- */
     const WEEK=['日','一','二','三','四','五','六'];
-    const cal={open:false,anchor:0,start:NaN,end:NaN,picking:false,hover:NaN};
+    const cal={open:false,key:'',anchor:0,start:NaN,end:NaN,picking:false,hover:NaN};
+    function rowOf(key){const f=state.form;if(key==='main')return f;if(key==='edit')return state.editRow;return f?f.extra[+key]:null}
+    const rowEl=key=>document.querySelector(`[data-row="${key}"]`);
     function monthHtml(offset){
       const base=new Date(cal.anchor),date=new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth()+offset,1)),today=taipeiToday();
       const rangeEnd=!Number.isNaN(cal.end)?cal.end:(cal.picking&&!Number.isNaN(cal.hover)&&cal.hover>=cal.start?cal.hover:NaN);
@@ -611,55 +706,95 @@
     }
     const rangeDays=(s,e)=>(Number.isNaN(s)||Number.isNaN(e))?0:Math.round((e-s)/DAY)+1;
     function renderCal(){
-      const pop=$('calPop');if(!pop)return;
+      const pop=rowEl(cal.key)?.querySelector('[data-cal-pop]');if(!pop)return;
       const summary=Number.isNaN(cal.start)?'選擇開始與結束日期':Number.isNaN(cal.end)?`${ymd(cal.start)} → 選擇結束日期`:`${ymd(cal.start)} → ${ymd(cal.end)}（${rangeDays(cal.start,cal.end)} 天）`;
       pop.innerHTML=`<div class="cal-months">${monthHtml(0)}${monthHtml(1)}</div><div class="cal-foot"><span class="cal-summary">${esc(summary)}</span><span><button type="button" class="btn" data-cal-clear>清除</button> <button type="button" class="btn primary" data-cal-done>完成</button></span></div>`;
     }
-    function updateRangeButton(){
-      const f=state.form;if(!f)return;const text=$('rangeText'),days=$('rangeDays');
-      if(text)text.textContent=Number.isNaN(f.start)?'選擇開始與結束日期':`${ymd(f.start)} → ${Number.isNaN(f.end)?'選擇結束日期':ymd(f.end)}`;
-      if(days)days.textContent=rangeDays(f.start,f.end)?`共 ${rangeDays(f.start,f.end)} 天`:'';
+    function updateRangeButtons(){
+      document.querySelectorAll('[data-row]').forEach(el=>{
+        const r=rowOf(el.dataset.row),text=el.querySelector('[data-range-text]'),days=el.querySelector('[data-range-days]');if(!r||!text)return;
+        text.textContent=Number.isNaN(r.start)?'選擇開始與結束日期':`${ymd(r.start)} → ${Number.isNaN(r.end)?'選擇結束日期':ymd(r.end)}`;
+        days.textContent=rangeDays(r.start,r.end)?`共 ${rangeDays(r.start,r.end)} 天`:'';
+      });
     }
-    function openCal(){const f=state.form;cal.open=true;cal.start=f.start;cal.end=f.end;cal.picking=false;cal.hover=NaN;const d=new Date(Number.isNaN(f.start)?taipeiToday():f.start);cal.anchor=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1);$('calPop').hidden=false;$('rangeBtn').setAttribute('aria-expanded','true');renderCal()}
-    function closeCal(){cal.open=false;const pop=$('calPop');if(pop)pop.hidden=true;$('rangeBtn')?.setAttribute('aria-expanded','false')}
+    function openCal(key){
+      closeCal();const r=rowOf(key);if(!r)return;
+      cal.open=true;cal.key=key;cal.start=r.start;cal.end=r.end;cal.picking=false;cal.hover=NaN;
+      const d=new Date(Number.isNaN(r.start)?taipeiToday():r.start);cal.anchor=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1);
+      const el=rowEl(key);el.querySelector('[data-cal-pop]').hidden=false;el.querySelector('[data-range-btn]').setAttribute('aria-expanded','true');renderCal();
+    }
+    function closeCal(){cal.open=false;document.querySelectorAll('[data-cal-pop]').forEach(p=>{p.hidden=true});document.querySelectorAll('[data-range-btn]').forEach(b=>b.setAttribute('aria-expanded','false'))}
     function pickDay(ms){
       if(!cal.picking||Number.isNaN(cal.start)||ms<cal.start){cal.start=ms;cal.end=NaN;cal.picking=true}else{cal.end=ms;cal.picking=false}
-      const f=state.form;f.start=cal.start;f.end=cal.end;updateRangeButton();renderCal();
+      const r=rowOf(cal.key);r.start=cal.start;r.end=cal.end;updateRangeButtons();renderCal();
       if(!cal.picking&&!Number.isNaN(cal.end))setTimeout(closeCal,180);
     }
 
-    /* ---------- 新增案件：填寫頁 ---------- */
-    function newForm(client){
-      const s=session(),start=defaultStart(),types=designTypes();
-      return {client,project:'',owner:s.name||s.user||'',type:types.includes('平面')?'平面':types[0],stage:'',qty:'1',designer:defaultDesignerFor(client),start,end:start,platforms:[],
-        supp:{briefNote:'',briefUrl:'',assetNote:'',assetUrl:'',referenceNote:'',referenceUrl:'',otherNote:'',otherUrl:''},batch:false,extra:[],busy:false,designerTouched:false};
+    /* ---------- 案件欄位（主表單、批次每一筆、編輯共用同一組欄位，跟現行系統一致） ---------- */
+    const SUPP_GROUPS=[['brief','設計簡報'],['asset','客戶素材'],['reference','參考範例'],['other','其他']];
+    const SUPP_KEYS=['briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'];
+    const blankSupp=()=>Object.fromEntries(SUPP_KEYS.map(k=>[k,'']));
+    const clientNames=()=>sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean);
+    const defaultStage=type=>stagesFor(type).includes('新製')?'新製':'';
+    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,stage:defaultStage(type),...o,type}}
+    const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
+    function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
+    /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
+    function stageOptions(type,selected){
+      const list=stagesFor(type);
+      return '<option value="">請選擇</option>'+list.map(s=>`<option value="${esc(s)}"${s===selected?' selected':''}>${esc(s)}</option>`).join('')+(list.includes('新製')&&list.includes('再製')?'<option value="__ai__">AI判斷(beta)</option>':'');
     }
-    const stageOptions=(type,selected)=>'<option value="">請選擇</option>'+stagesFor(type).map(s=>`<option value="${esc(s)}"${s===selected?' selected':''}>${esc(s)}</option>`).join('');
+    function rowHtml(r,key,opt={}){
+      const names=designerNames(),types=designTypes(),clients=clientNames(),shownClients=!r.client||clients.includes(r.client)?clients:[r.client,...clients];
+      return `<div class="${opt.batch?'batch-row':'form-grid'}" data-row="${key}">
+        ${opt.title?`<h5><span>${esc(opt.title)}</span>${opt.removable?`<button type="button" class="batch-del" data-batch-del="${key}">移除這一筆</button>`:''}</h5>`:''}
+        <div class="field c2"><span class="label">客戶別 <b>*</b></span><select data-f="client" aria-label="客戶別">${shownClients.map(n=>`<option value="${esc(n)}"${n===r.client?' selected':''}>${esc(n)}</option>`).join('')}<option value="__new__">+ 新增客戶別</option></select></div>
+        <div class="field c4"><span class="label">專案名稱 <b>*</b></span><input class="input" data-f="project" value="${esc(r.project)}" placeholder="例如：10月社群貼文＿新品上市" autocomplete="off" aria-label="專案名稱"></div>
+        <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input" data-f="owner" value="${esc(r.owner)}" autocomplete="off" aria-label="專案負責人"></div>
+        <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
+        <div class="field c2"><span class="label">階段 <b>*</b></span><select data-f="stage" aria-label="階段">${stageOptions(r.type,r.stage)}</select></div>
+        <div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
+        <div class="field c2"><span class="label">數量 <b>*</b></span><input class="input" data-f="qty" value="${esc(r.qty)}" inputmode="numeric" autocomplete="off" aria-label="數量"></div>
+        ${opt.status?`<div class="field c2"><span class="label">案件狀態</span><select data-f="status" aria-label="案件狀態">${STATUS_FILTER.map(k=>`<option value="${k}"${k===r.status?' selected':''}>${esc(ST[k].label)}</option>`).join('')}</select></div>`:''}
+        <div class="field c4 range"><span class="label">開始／結束時間 <b>*</b></span>
+          <button type="button" class="range-btn" data-range-btn aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.4"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="range-text" data-range-text></span><span class="range-days" data-range-days></span></button>
+          <div class="cal" data-cal-pop role="dialog" aria-label="選擇開始與結束日期" hidden></div>
+        </div>
+        <div class="field c6"><span class="label">使用平台（可複選）</span><div class="seg">${PLATFORMS.map(p=>`<label><input type="checkbox" data-f="platform" value="${esc(p)}"${r.platforms.includes(p)?' checked':''}>${esc(p)}</label>`).join('')}</div></div>
+        <details class="supp"${Object.values(r.supp).some(Boolean)?' open':''}><summary>補充資料（選填）</summary><div class="supp-grid">
+          ${SUPP_GROUPS.map(([k,label])=>`<div class="supp-item"><span class="label">${label}</span><input class="input" data-f="${k}Note" value="${esc(r.supp[k+'Note'])}" placeholder="${label}說明" autocomplete="off"><input class="input" data-f="${k}Url" value="${esc(r.supp[k+'Url'])}" placeholder="${label}連結（https://…）" inputmode="url" autocomplete="off"></div>`).join('')}
+        </div></details>
+      </div>`;
+    }
+    function readRows(){
+      document.querySelectorAll('[data-rowform] [data-row]').forEach(el=>{
+        const r=rowOf(el.dataset.row);if(!r)return;
+        el.querySelectorAll('[data-f]').forEach(input=>{
+          const k=input.dataset.f;
+          if(k==='platform')return;
+          if(k==='type'){if(input.checked)r.type=input.value;return}
+          if(SUPP_KEYS.includes(k)){r.supp[k]=input.value.trim();return}
+          if(input.value==='__ai__'||input.value==='__new__')return;
+          r[k]=String(input.value).trim();
+        });
+        r.platforms=[...el.querySelectorAll('[data-f="platform"]:checked')].map(i=>i.value);
+      });
+    }
+    const readRowsSafe=()=>{try{readRows()}catch(err){}};
+    const rerender=()=>{if(state.view==='form')renderForm();else if(state.view==='detail')renderDetail()};
+
+    /* ---------- 新增案件：填寫頁 ---------- */
     function renderForm(){
       const f=state.form,stage=$('stage');if(!f){backToBoard();return}
-      const names=designerNames(),types=designTypes(),ok=loggedIn(),clients=sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean);
+      const ok=loggedIn();
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button><div><h2 class="page-title">新增設計需求</h2><p class="page-sub">填完按「送出並撰寫信件」，案件建立後會直接進入信件編輯。</p></div></div>
-        ${ok?'':'<div class="notice error" role="alert">尚未登入，無法新增案件。請先到<a href="index.html">現行系統登入</a>，登入後回到這一頁（登入狀態會共用）。</div>'}
-        <form id="requestForm" novalidate>
-          <div class="form-grid">
-            <div class="field c2"><label for="fClient">客戶別 <b>*</b></label><select id="fClient" name="client">${clients.map(n=>`<option value="${esc(n)}"${n===f.client?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
-            <div class="field c4"><label for="fProject">專案名稱 <b>*</b></label><input class="input" id="fProject" name="project" value="${esc(f.project)}" placeholder="例如：10月社群貼文＿新品上市" autocomplete="off"></div>
-            <div class="field c2"><label for="fOwner">專案負責人 <b>*</b></label><input class="input" id="fOwner" name="owner" value="${esc(f.owner)}" autocomplete="off"></div>
-            <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type" value="${esc(t)}"${t===f.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
-            <div class="field c2"><label for="fStage">階段 <b>*</b></label><select id="fStage" name="stage">${stageOptions(f.type,f.stage)}</select></div>
-            <div class="field c2"><label for="fQty">數量 <b>*</b></label><input class="input" id="fQty" name="qty" value="${esc(f.qty)}" inputmode="numeric" autocomplete="off"></div>
-            <div class="field c2"><label for="fDesigner">設計負責人 <b>*</b></label><select id="fDesigner" name="designer"><option value="">請選擇</option>${names.map(n=>`<option value="${esc(n)}"${n===f.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
-            <div class="field c4 range"><span class="label">開始／結束時間 <b>*</b></span>
-              <button type="button" class="range-btn" id="rangeBtn" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.4"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="range-text" id="rangeText"></span><span class="range-days" id="rangeDays"></span></button>
-              <div class="cal" id="calPop" role="dialog" aria-label="選擇開始與結束日期" hidden></div>
-            </div>
-            <div class="field c6"><span class="label">使用平台（可複選）</span><div class="seg">${PLATFORMS.map(p=>`<label><input type="checkbox" name="platform" value="${esc(p)}"${f.platforms.includes(p)?' checked':''}>${esc(p)}</label>`).join('')}</div></div>
-            <details class="supp"${Object.values(f.supp).some(Boolean)?' open':''}><summary>補充資料（選填）</summary><div class="supp-grid">
-              ${[['brief','設計簡報'],['asset','客戶素材'],['reference','參考範例'],['other','其他']].map(([k,label])=>`<div class="supp-item"><span class="label">${label}</span><input class="input" name="${k}Note" value="${esc(f.supp[k+'Note'])}" placeholder="${label}說明" autocomplete="off"><input class="input" name="${k}Url" value="${esc(f.supp[k+'Url'])}" placeholder="${label}連結（https://…）" inputmode="url" autocomplete="off"></div>`).join('')}
-            </div></details>
-            ${f.batch?batchBoxHtml(f,types):''}
-          </div>
+        ${ok?'':'<div class="notice error" role="alert">尚未登入，無法新增案件。請先點左下角的登入頭像登入。</div>'}
+        <form id="requestForm" data-rowform novalidate>
+          ${rowHtml(f,'main',{})}
+          ${f.batch?`<div class="batch-box" style="margin-top:18px"><h4>批次新增</h4><p>上面是第 1 筆，下面每一筆都有完整欄位。「往下套用」會把最後一筆的資料複製成新的一筆；每筆案件會各寄一封信。</p>
+            ${f.extra.map((row,i)=>rowHtml(row,String(i),{batch:true,title:`批次新增第 ${i+2} 筆`,removable:true})).join('')}
+            <div class="batch-actions"><button type="button" class="btn" data-act="batch-copy">往下套用</button><button type="button" class="btn ghost" data-act="batch-add">＋ 新增空白一筆</button></div></div>`:''}
           <div class="form-actions">
             <button type="submit" class="btn primary" id="submitBtn"${ok&&!f.busy?'':' disabled'}>${f.busy?'送出中…':(f.batch?`送出 ${1+f.extra.length} 筆並撰寫信件`:'送出並撰寫信件')}</button>
             <button type="button" class="btn ghost" data-act="batch">${f.batch?'取消批次':'＋ 批次新增'}</button>
@@ -667,64 +802,92 @@
           </div>
         </form>
       </div>`;
-      updateRangeButton();
+      updateRangeButtons();
     }
-    function batchBoxHtml(f,types){
-      return `<div class="batch-box"><h4>批次新增</h4><p>客戶別、專案負責人、設計負責人、日期、平台、補充資料是共用的；上面填的專案是第一筆，下面再加其他專案（專案名稱、種類、階段、數量各自填）。每筆案件會各寄一封信。</p>
-        ${f.extra.map((row,i)=>`<div class="batch-row" data-batch="${i}">
-          <input class="input" data-bf="project" value="${esc(row.project)}" placeholder="專案名稱" autocomplete="off" aria-label="第 ${i+2} 筆專案名稱">
-          <select data-bf="type" aria-label="設計種類">${types.map(t=>`<option value="${esc(t)}"${t===row.type?' selected':''}>${esc(t)}</option>`).join('')}</select>
-          <select data-bf="stage" aria-label="階段">${stageOptions(row.type,row.stage)}</select>
-          <input class="input" data-bf="qty" value="${esc(row.qty)}" inputmode="numeric" aria-label="數量">
-          <button type="button" class="batch-del" data-batch-del="${i}" aria-label="刪除這一筆">×</button></div>`).join('')}
-        <div><button type="button" class="btn" data-act="batch-add">＋ 再加一筆</button></div></div>`;
-    }
-    function readForm(){
-      const form=$('requestForm'),f=state.form;if(!form||!f)return;const v=n=>form.elements[n]?.value??'';
-      f.client=v('client');f.project=v('project').trim();f.owner=v('owner').trim();f.qty=v('qty').trim();f.designer=v('designer');f.stage=v('stage');
-      f.type=form.querySelector('input[name="type"]:checked')?.value||f.type;
-      f.platforms=[...form.querySelectorAll('input[name="platform"]:checked')].map(i=>i.value);
-      for(const k of ['briefNote','briefUrl','assetNote','assetUrl','referenceNote','referenceUrl','otherNote','otherUrl'])f.supp[k]=v(k).trim();
-      form.querySelectorAll('[data-batch]').forEach(el=>{const row=f.extra[+el.dataset.batch];if(!row)return;el.querySelectorAll('[data-bf]').forEach(input=>{row[input.dataset.bf]=String(input.value).trim()})});
-    }
-    const readFormSafe=()=>{try{readForm()}catch(err){}};
-    function validateForm(){
-      const f=state.form,missing=[];
-      if(!f.client)missing.push('客戶別');if(!f.project)missing.push('專案名稱');if(!f.owner)missing.push('專案負責人');if(!f.type)missing.push('設計種類');if(!f.stage)missing.push('階段');
-      if(!f.qty)missing.push('數量');if(!f.designer)missing.push('設計負責人');if(Number.isNaN(f.start)||Number.isNaN(f.end))missing.push('開始／結束時間');
-      f.extra.forEach((row,i)=>{if(!row.project)missing.push(`第 ${i+2} 筆專案名稱`);if(!row.stage)missing.push(`第 ${i+2} 筆階段`);if(!row.qty)missing.push(`第 ${i+2} 筆數量`)});
-      if(missing.length)return `請補齊資料：${[...new Set(missing)].join('、')}`;
-      if(![f.qty,...f.extra.map(r=>r.qty)].every(q=>/^[0-9]+$/.test(String(q))))return '數量請使用阿拉伯數字 0-9';
-      for(const key of ['briefUrl','assetUrl','referenceUrl','otherUrl'])if(f.supp[key]&&!/^https?:\/\//i.test(f.supp[key]))return '補充資料連結要以 http:// 或 https:// 開頭';
-      if(f.end<f.start)return '結束時間不能早於開始時間';
+    function validateRow(r,label){
+      const missing=[],p=label?`${label}`:'';
+      for(const [k,name] of [['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計種類'],['stage','階段'],['qty','數量'],['designer','設計負責人']])if(!String(r[k]||'').trim())missing.push(p+name);
+      if(Number.isNaN(r.start)||Number.isNaN(r.end))missing.push(p+'開始／結束時間');
+      if(missing.length)return `請補齊資料：${missing.join('、')}`;
+      if(!/^[0-9]+$/.test(String(r.qty)))return `${p}數量請使用阿拉伯數字 0-9`;
+      for(const key of ['briefUrl','assetUrl','referenceUrl','otherUrl'])if(r.supp[key]&&!/^https?:\/\//i.test(r.supp[key]))return `${p}補充資料連結要以 http:// 或 https:// 開頭`;
+      if(r.end<r.start)return `${p}結束時間不能早於開始時間`;
       return '';
     }
-    const platformText=f=>PLATFORMS.filter(p=>f.platforms.includes(p)).join(', ');
-    const rowHeaders=(f,item)=>({'客戶別':f.client,'專案名稱':item.project,'專案負責人':f.owner,'設計類型':item.type,'階段':item.stage,'數量':String(item.qty),'開始日期':ymd(f.start),'結束日期':ymd(f.end),'設計負責人':f.designer,'使用平台':platformText(f),
-      '設計簡報說明':f.supp.briefNote,'設計簡報連結':f.supp.briefUrl,'客戶素材說明':f.supp.assetNote,'客戶素材連結':f.supp.assetUrl,'參考範例說明':f.supp.referenceNote,'參考範例連結':f.supp.referenceUrl,'其他說明':f.supp.otherNote,'其他連結':f.supp.otherUrl});
-    /** Worker 的 add／batchAdd 吃前台的欄位 key（跟現行系統 formCreateRow 一致）。 */
-    const payloadRow=(f,item)=>({client:f.client,project:item.project,owner:f.owner,type:item.type,stage:item.stage,qty:item.qty,start:ymd(f.start),end:ymd(f.end),designer:f.designer,platforms:platformText(f),
-      briefNote:f.supp.briefNote,briefUrl:f.supp.briefUrl,assetNote:f.supp.assetNote,assetUrl:f.supp.assetUrl,referenceNote:f.supp.referenceNote,referenceUrl:f.supp.referenceUrl,otherNote:f.supp.otherNote,otherUrl:f.supp.otherUrl,status:'未開始'});
+    function validateForm(){const f=state.form;return validateRow(f,f.extra.length?'第 1 筆':'')||f.extra.map((r,i)=>validateRow(r,`第 ${i+2} 筆`)).find(Boolean)||''}
+    const platformText=r=>PLATFORMS.filter(p=>r.platforms.includes(p)).join(', ');
+    const rowHeaders=r=>({'客戶別':r.client,'專案名稱':r.project,'專案負責人':r.owner,'設計種類':r.type,'階段':r.stage,'數量':String(r.qty),'開始日期':ymd(r.start),'結束日期':ymd(r.end),'設計負責人':r.designer,'使用平台':platformText(r),
+      '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
+    const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
+    /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
+    const payloadRow=r=>({client:r.client,project:r.project,owner:r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,platforms:platformText(r),...r.supp});
     async function submitForm(){
-      readFormSafe();const f=state.form;if(!f||f.busy)return;
-      if(!loggedIn()){toast('請先登入現行系統',true);return}
+      readRowsSafe();const f=state.form;if(!f||f.busy)return;
+      if(!loggedIn()){toast('請先登入',true);startLogin();return}
       const problem=validateForm();if(problem){toast(problem,true);return}
       f.busy=true;renderForm();
-      const items=[{project:f.project,type:f.type,stage:f.stage,qty:f.qty},...f.extra.map(r=>({project:r.project,type:r.type,stage:r.stage,qty:r.qty}))];
+      const items=[f,...f.extra];
       const requestId=crypto.randomUUID?crypto.randomUUID():`v5-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       try{
-        const rows=items.map(item=>payloadRow(f,item));
+        const rows=items.map(item=>({...payloadRow(item),status:'未開始'}));
         const data=items.length>1?await api('batchAdd',{requestId,rows}):await api('add',{requestId,row:rows[0]});
         const created=(items.length>1?data.rows:[data.row]).filter(Boolean);
         if(!created.length||created.some(r=>!/^\d{8}$/.test(String(r.id||''))))throw new Error('寫入完成但沒有取得案件編號，請重新整理確認');
-        const drafts=created.map((r,i)=>{const id=String(r.id),item=items[i]||items[0],header={...rowHeaders(f,item),'案件編號':id,'狀態':'未開始','填單時間':ymd(taipeiToday())};state.localRows.set(id,header);return {id,row:header}});
+        const drafts=created.map((r,i)=>{const id=String(r.id),item=items[i]||items[0],header={...rowHeaders(item),'案件編號':id,'狀態':'未開始','填單時間':ymd(taipeiToday())};state.localRows.set(id,header);return {id,row:header}});
         toast(`已新增 ${drafts.length} 筆案件：${drafts.map(d=>d.id).join('、')}`);
         startMail(drafts);
       }catch(err){
         f.busy=false;renderForm();
-        toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請到現行系統重新登入後再回來送出':`新增失敗：${err.message}`,true);
+        toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新點左下角頭像登入後再送出':`新增失敗：${err.message}`,true);
       }
     }
+
+    /* ---------- AI 判斷階段（沿用現行系統的 AI 判定服務） ---------- */
+    const AI_API=(()=>{const online='https://emc-ai-stage-classifier.machi-chen.workers.dev';if(!/^(localhost|127\.0\.0\.1)$/.test(location.hostname))return online;try{return localStorage.getItem('emcAiStageApiOverride')||online}catch(err){return online}})();
+    const AI_MAX_FILES=3,AI_MAX_BYTES=10*1024*1024;
+    const ai={files:[],slides:'',view:'input',result:null,error:'',key:'',urls:[]};
+    function openAi(key){Object.assign(ai,{files:[],slides:'',view:'input',result:null,error:'',key});renderAi();$('aiModal').hidden=false}
+    function closeAi(){$('aiModal').hidden=true;ai.files=[];ai.urls.forEach(u=>URL.revokeObjectURL(u));ai.urls=[]}
+    function renderAi(){
+      const body=$('aiBody');ai.urls.forEach(u=>URL.revokeObjectURL(u));ai.urls=ai.files.map(f=>URL.createObjectURL(f));
+      const err=ai.error?`<p class="ai-err" role="alert">${esc(ai.error)}</p>`:'';
+      if(ai.view==='loading'){body.innerHTML='<div class="ai-loading"><div><span class="spin"></span>AI 分析中，約需 20–60 秒…</div><small>可以先不要關閉這個視窗</small></div>';return}
+      if(ai.view==='result'&&ai.result){
+        const r=ai.result,tone=r.stage==='新製'?'':r.stage==='再製'?'is-rework':'is-unknown',tasks=(r.tasks||[]).map(t=>`<li>${esc(t)}</li>`).join(''),missing=(r.missing||[]).map(t=>`<li>${esc(t)}</li>`).join('');
+        const fill=s=>`<button type="button" class="btn${r.stage===s?' primary':''}" data-ai-fill="${esc(s)}">填入「${esc(s)}」${r.stage===s?'（AI 建議）':''}</button>`;
+        body.innerHTML=`<div class="ai-verdict ${tone}"><div class="ai-verdict-head"><span>AI 判定：${esc(r.stage)}</span><small>信心度 ${Number(r.confidence)||0}%</small></div><p>${esc(r.reason)}</p></div>
+          ${tasks?`<div class="ai-detail"><b>辨識到的工作內容</b><ul style="margin:4px 0 0;padding-left:20px">${tasks}</ul></div>`:''}
+          ${r.basis?`<div class="ai-detail"><b>判斷依據</b>${esc(r.basis)}</div>`:''}
+          ${missing?`<div class="ai-detail"><b>建議補充</b><ul style="margin:4px 0 0;padding-left:20px">${missing}</ul></div>`:''}
+          <div class="ai-actions"><button type="button" class="btn" data-ai-restart>重新判斷</button>${fill('再製')}${fill('新製')}</div>`;
+        return;
+      }
+      body.innerHTML=`<div class="ai-drop" data-ai-drop tabindex="0" role="button" aria-label="上傳需求單截圖"><b>上傳截圖（首選）</b><span>點擊選擇、拖曳或直接貼上；最多 ${AI_MAX_FILES} 張，每張 10MB 內</span><input type="file" hidden multiple accept="image/png,image/jpeg,image/webp" data-ai-file></div>
+        ${ai.urls.length?`<div class="ai-prev">${ai.urls.map((u,i)=>`<div><img src="${esc(u)}" alt="截圖 ${i+1}"><button type="button" data-ai-remove="${i}" aria-label="移除截圖 ${i+1}">×</button></div>`).join('')}</div>`:''}
+        <div class="field" style="margin-top:12px"><span class="label">公開 Google Slides（沒有截圖時使用）</span><input class="input" data-ai-slides value="${esc(ai.slides)}" placeholder="貼上 docs.google.com/presentation 連結"></div>
+        ${err}<div class="ai-actions"><button type="button" class="btn" data-ai-close>取消</button><button type="button" class="btn primary" data-ai-run>開始 AI 分析</button></div>`;
+    }
+    function addAiFiles(list){
+      const incoming=[...list].filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type)),big=incoming.filter(f=>f.size>AI_MAX_BYTES);
+      ai.files=[...ai.files,...incoming.filter(f=>f.size<=AI_MAX_BYTES)].slice(0,AI_MAX_FILES);
+      ai.error=big.length?'有截圖超過 10MB，已略過。':(!incoming.length&&list.length?'只支援 PNG、JPG、WebP 圖片。':'');renderAi();
+    }
+    async function runAi(){
+      ai.slides=String(document.querySelector('[data-ai-slides]')?.value||'').trim();
+      if(!ai.files.length&&!ai.slides){ai.error='請上傳截圖，或貼上公開的 Google Slides 連結。';renderAi();return}
+      ai.view='loading';ai.error='';renderAi();
+      try{
+        const form=new FormData();form.set('slidesUrl',ai.slides);ai.files.forEach(f=>form.append('images',f));
+        const headers={};const token=session().token;if(token)headers['X-EMC-Editor-Token']=token;
+        const res=await fetch(`${AI_API}/api/analyze`,{method:'POST',headers,body:form});
+        const raw=await res.text();let payload={};try{payload=raw?JSON.parse(raw):{}}catch(err){throw new Error(res.status===413?'附件太大，請壓縮截圖後再試。':`AI 判定服務回應異常（${res.status}）`)}
+        if(res.status===401)throw new Error(payload.error||'AI 判定需要登入，請先登入後再試');
+        if(!res.ok)throw new Error(payload.error||`AI 判定服務回應失敗（${res.status}）`);
+        ai.result=payload;ai.view='result';
+      }catch(err){ai.error=err.message||'分析失敗，請稍後再試。';ai.view='input'}
+      renderAi();
+    }
+    function applyAiStage(stage){readRowsSafe();const r=rowOf(ai.key);if(r)r.stage=stage;closeAi();rerender();toast(`階段已填入「${stage}」`)}
 
     /* ---------- 新增後：信件編輯（不用彈窗） ---------- */
     function supplementHtml(note,url){const label=String(note||url||'').trim(),href=String(url||'').trim();if(!label)return '';return /^https?:\/\//i.test(href)?`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:esc(label)}
@@ -790,15 +953,61 @@
     const slashNice=v=>{const ms=parseDay(v);return Number.isNaN(ms)?String(v||'-'):ymd(ms)};
     const imageList=row=>{try{const list=JSON.parse(row['圖片連結']||'[]');return Array.isArray(list)?list.filter(i=>i&&/^https?:\/\//.test(i.url||'')):[]}catch(err){return []}};
     const thumbUrl=url=>String(url).replace(/=w\d+(-h\d+)?$/,'')+'=w300';
+    function editRowFrom(row){
+      return newRow({client:String(row['客戶別']||''),project:String(row['專案名稱']||''),owner:String(row['專案負責人']||''),type:String(row['設計種類']||row['設計類型']||'')||undefined,stage:String(row['階段']||''),qty:String(row['數量']||''),designer:String(row['設計負責人']||''),
+        start:parseDay(row['開始日期']),end:parseDay(row['結束日期']),platforms:String(row['使用平台']||'').split(/\s*,\s*/).filter(Boolean),designerTouched:true,status:String(row['狀態']||'未開始').trim(),
+        supp:{briefNote:row['設計簡報說明']||'',briefUrl:row['設計簡報連結']||'',assetNote:row['客戶素材說明']||'',assetUrl:row['客戶素材連結']||'',referenceNote:row['參考範例說明']||'',referenceUrl:row['參考範例連結']||'',otherNote:row['其他說明']||'',otherUrl:row['其他連結']||''}});
+    }
+    function startEdit(){
+      if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}
+      const row=allRows().find(r=>idKey(r)===state.detailId);if(!row)return;
+      state.editRow=editRowFrom(row);state.editing=true;renderDetail();
+    }
+    function cancelEdit(){state.editing=false;state.editRow=null;closeCal();renderDetail()}
+    function applyLocalEdit(id,headers){
+      const target=state.rows.find(r=>idKey(r)===id)||state.localRows.get(id);
+      if(target)Object.assign(target,headers);
+      state.edits.set(id,{headers,at:Date.now()});
+    }
+    async function saveEdit(){
+      readRowsSafe();const r=state.editRow,id=state.detailId,orig=allRows().find(x=>idKey(x)===id);if(!r||!orig||state.saving)return;
+      if(!loggedIn()){toast('請先登入',true);startLogin();return}
+      const problem=validateRow(r,'');if(problem){toast(problem,true);return}
+      const statusChanged=r.status&&r.status!==String(orig['狀態']||'').trim(),payload={...payloadRow(r)};
+      if(statusChanged)payload.status=r.status;
+      const headers=[...FORM_HEADERS,...(statusChanged?['案件狀態']:[])];
+      state.saving=true;renderDetail();
+      try{
+        await api('update',{id,row:{id,...payload},forceHeaders:headers,writeHeaders:headers});
+        const local={...rowHeaders(r)};if(statusChanged)local['狀態']=r.status;
+        applyLocalEdit(id,local);
+        state.editing=false;state.editRow=null;state.saving=false;toast(`案件 ${id} 已更新`);renderDetail();
+      }catch(err){
+        state.saving=false;renderDetail();
+        toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新點左下角頭像登入後再儲存':`更新失敗：${err.message}`,true);
+      }
+    }
+    function renderEdit(row){
+      const stage=$('stage'),r=state.editRow,id=idKey(row);
+      stage.innerHTML=`<div class="page">
+        <div class="page-top"><button type="button" class="back-btn" data-act="cancel-edit">← 取消編輯</button><div><h2 class="page-title">編輯案件 <span class="id-pill" style="font-size:13px;vertical-align:middle">${esc(id)}</span></h2><p class="page-sub">修改後按「儲存」，會直接更新資料庫；圖片與修改紀錄請到現行系統處理。</p></div></div>
+        <form id="editForm" data-rowform novalidate>
+          ${rowHtml(r,'edit',{status:true})}
+          <div class="form-actions"><button type="submit" class="btn primary"${state.saving?' disabled':''}>${state.saving?'儲存中…':'儲存'}</button><button type="button" class="btn" data-act="cancel-edit">取消</button></div>
+        </form>
+      </div>`;
+      updateRangeButtons();
+    }
     function renderDetail(){
       const row=allRows().find(r=>idKey(r)===state.detailId),stage=$('stage');if(!row){backToBoard();return}
+      if(state.editing&&state.editRow){renderEdit(row);return}
       const st=statusOf(row),s=schedule(row),status=String(row['狀態']||'').trim(),mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+a['修改次數']||0)-(+b['修改次數']||0));
       const kv=(label,value,raw)=>`<div class="kv"><dt>${label}</dt><dd>${raw?value:esc(value||'-')}</dd></div>`;
       const person=(name,role)=>`<span class="person">${faceHtml(name,role)}<span>${esc(name||'未填')}</span></span>`;
       const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>row[n]||row[u]);
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
-        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><span class="pill ${st.cls}">${esc(st.label)}</span></div>
+        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="pill ${st.cls}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
         ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',[row['設計類型']||row['設計種類'],row['階段']].filter(Boolean).join('／'))}
@@ -807,24 +1016,84 @@
         </dl>
         ${supp.length?`<div class="detail-sec"><h3>補充資料</h3><div class="supp-list">${supp.map(([label,n,u])=>`<div class="supp-row"><b>${label}</b><span>${/^https?:\/\//i.test(row[u]||'')?`<a href="${esc(row[u])}" target="_blank" rel="noopener noreferrer">${esc(row[n]||row[u])}</a>`:esc(row[n]||row[u])}</span></div>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
-        <div class="form-actions"><a class="btn" href="index.html">到現行系統管理這個案件</a></div>
+        <div class="form-actions"><a class="btn" href="index.html">到現行系統處理圖片與修改</a></div>
       </div>`;
+    }
+
+    /* ---------- 登入（沿用現行系統的登入：開新視窗到 index.html 完成，共用同一份登入狀態） ---------- */
+    const SESSION_KEYS=['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment','designRequestEditorRawGroup'];
+    function startLogin(){
+      const win=window.open('index.html?v5login=1','emcV5Login','popup=yes,width=520,height=780');
+      if(!win){location.href='index.html?v5login=1';return}
+      toast('請在彈出的視窗完成登入');
+    }
+    function renderLogin(){
+      const box=$('railLogin');if(!box)return;
+      const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
+      const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
+      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
+      $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
+    }
+    async function logout(){
+      state.loginMenu=false;
+      try{if(session().token)await api('logout')}catch(err){console.warn('後端登出失敗，仍會清除本機登入狀態',err)}
+      try{SESSION_KEYS.forEach(k=>{localStorage.removeItem(k);sessionStorage.removeItem(k)});localStorage.setItem('designRequestEditorLoggedOut','1');sessionStorage.setItem('designRequestEditorLoggedOut','1')}catch(err){}
+      renderLogin();if(state.view==='form'||state.editing)rerender();toast('已登出');
+    }
+    function afterLogin(){
+      state.loginMenu=false;renderLogin();
+      if(!loggedIn())return;
+      toast(`已登入：${session().name||session().user}`);
+      if(state.pendingStart){const client=state.pendingStart;state.pendingStart='';state.form=newForm(client);show('form');return}
+      if(state.view==='form'||state.editing){readRowsSafe();rerender()}
+    }
+    window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='v5-login')afterLogin()});
+    window.addEventListener('storage',e=>{if(e.key==='v5LoginDone'||e.key==='designRequestEditorToken')afterLogin()});
+
+    /* ---------- 新增客戶別（跟現行系統同一個用法：輸入名稱，Worker 建立） ---------- */
+    async function addCustomerFlow(){
+      if(!loggedIn()){toast('請先登入後再新增客戶別',true);startLogin();return ''}
+      const name=String(prompt('請輸入新客戶別名稱：')||'').trim();if(!name)return '';
+      try{
+        const res=await api('addCustomer',{name});
+        const row=res.customer||{'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'};
+        state.customers=sortCustomers([...state.customers.filter(r=>String(r['客戶別']||'').trim()!==name),row]);
+        fillClients();toast(`已新增客戶別「${name}」`);return name;
+      }catch(err){toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再新增客戶別':`新增客戶別失敗：${err.message}`,true);return ''}
     }
 
     /* ---------- 事件 ---------- */
     document.addEventListener('click',e=>{
       const t=e.target;
-      const card=t.closest('[data-case]');if(card&&state.view==='board'){state.detailId=card.dataset.case;show('detail');return}
+      if(state.loginMenu&&!t.closest('.rail-login')){state.loginMenu=false;renderLogin()}
+      if(state.filterOpen&&!t.closest('.filter-wrap')){state.filterOpen=false;if(state.view==='board')renderBoard()}
+      const login=t.closest('[data-login]')?.dataset.login;
+      if(login==='toggle'){if(loggedIn()){state.loginMenu=!state.loginMenu;renderLogin()}else startLogin();return}
+      if(login==='logout'){logout();return}
+      if(t.closest('[data-ai-close]')||t.id==='aiModal'){closeAi();return}
+      if(t.closest('[data-ai-run]')){runAi();return}
+      if(t.closest('[data-ai-restart]')){ai.view='input';ai.result=null;renderAi();return}
+      const aiFill=t.closest('[data-ai-fill]');if(aiFill){applyAiStage(aiFill.dataset.aiFill);return}
+      const aiRemove=t.closest('[data-ai-remove]');if(aiRemove){ai.files.splice(+aiRemove.dataset.aiRemove,1);renderAi();return}
+      if(t.closest('[data-ai-drop]')){document.querySelector('[data-ai-file]')?.click();return}
+      const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}renderBoard();return}
+      const sort=t.closest('[data-sort]');if(sort){state.sort=sort.dataset.sort;renderBoard();return}
+      if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;renderBoard();return}
+      if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;renderBoard();return}
+      const card=t.closest('[data-case]');if(card&&state.view==='board'){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
       const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else state.limits[k]+=COLUMN_PAGE;renderBoard();return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
-      if(act==='batch'){readFormSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push({project:'',type:f.type,stage:'',qty:'1'});if(!f.batch)f.extra=[];renderForm();return}
-      if(act==='batch-add'){readFormSafe();const f=state.form,last=f.extra[f.extra.length-1];f.extra.push({project:'',type:last?.type||f.type,stage:'',qty:'1'});renderForm();return}
-      const del=t.closest('[data-batch-del]');if(del){readFormSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
-      if(t.closest('#rangeBtn')){cal.open?closeCal():openCal();return}
+      if(act==='edit'){startEdit();return}
+      if(act==='cancel-edit'){cancelEdit();return}
+      if(act==='batch'){readRowsSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,type:f.type,start:f.start,end:f.end,platforms:[...f.platforms],supp:{...f.supp},designerTouched:f.designerTouched}));if(!f.batch)f.extra=[];renderForm();return}
+      if(act==='batch-add'){readRowsSafe();const f=state.form;f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,start:f.start,end:f.end}));renderForm();return}
+      if(act==='batch-copy'){readRowsSafe();const f=state.form,last=f.extra.length?f.extra[f.extra.length-1]:f;f.extra.push(copyRow(last));renderForm();toast(`已把第 ${f.extra.length} 筆的資料套用到第 ${f.extra.length+1} 筆`);return}
+      const del=t.closest('[data-batch-del]');if(del){readRowsSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
+      const rangeBtn=t.closest('[data-range-btn]');if(rangeBtn){const key=rangeBtn.closest('[data-row]').dataset.row;(cal.open&&cal.key===key)?closeCal():openCal(key);return}
       const nav=t.closest('[data-cal-nav]');if(nav){const d=new Date(cal.anchor);cal.anchor=Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+(+nav.dataset.calNav),1);renderCal();return}
       const day=t.closest('[data-day]');if(day){pickDay(+day.dataset.day);return}
-      if(t.closest('[data-cal-clear]')){cal.start=NaN;cal.end=NaN;cal.picking=false;state.form.start=NaN;state.form.end=NaN;updateRangeButton();renderCal();return}
+      if(t.closest('[data-cal-clear]')){cal.start=NaN;cal.end=NaN;cal.picking=false;const r=rowOf(cal.key);r.start=NaN;r.end=NaN;updateRangeButtons();renderCal();return}
       if(t.closest('[data-cal-done]')){closeCal();return}
       if(cal.open&&!t.closest('.range'))closeCal();
       const mail=t.closest('[data-mail]')?.dataset.mail;
@@ -835,25 +1104,48 @@
       if(fmt){$('mBody').focus();if(fmt==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url)}else document.execCommand(fmt,false,null)}
     });
     document.addEventListener('mousemove',e=>{if(!cal.open||!cal.picking)return;const day=e.target.closest?.('[data-day]');if(!day)return;const ms=+day.dataset.day;if(ms!==cal.hover){cal.hover=ms;renderCal()}});
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&cal.open)closeCal()});
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){if(cal.open)closeCal();if(!$('aiModal').hidden)closeAi();if(state.filterOpen){state.filterOpen=false;renderBoard()}}
+      if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('tr[data-case]')){e.preventDefault();e.target.click()}
+    });
+    document.addEventListener('paste',e=>{if($('aiModal').hidden||ai.view!=='input')return;const files=[...(e.clipboardData?.files||[])];if(files.length){e.preventDefault();addAiFiles(files)}});
+    document.addEventListener('dragover',e=>{if(e.target.closest?.('[data-ai-drop]')){e.preventDefault();e.target.closest('[data-ai-drop]').classList.add('over')}});
+    document.addEventListener('dragleave',e=>{e.target.closest?.('[data-ai-drop]')?.classList.remove('over')});
+    document.addEventListener('drop',e=>{const zone=e.target.closest?.('[data-ai-drop]');if(zone){e.preventDefault();zone.classList.remove('over');addAiFiles(e.dataTransfer.files)}});
     let searchTimer=0;
     document.addEventListener('input',e=>{
       const t=e.target;
       if(t.id==='boardSearch'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();renderBoard()},160)}
-      if(t.id==='fQty'||t.dataset?.bf==='qty')t.value=t.value.replace(/[^0-9]/g,'');
+      if(t.dataset?.f==='qty')t.value=t.value.replace(/[^0-9]/g,'');
     });
-    document.addEventListener('change',e=>{
-      const t=e.target,f=state.form;
-      if(t.id==='clientSelect'){t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;return}
-      if(!f||state.view!=='form')return;
-      if(t.id==='fClient'){readFormSafe();f.client=t.value;if(!f.designerTouched||!f.designer)f.designer=defaultDesignerFor(f.client);renderForm();toast(f.designer?`設計負責人已依客戶別設定帶入：${f.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇');return}
-      if(t.id==='fDesigner'){f.designerTouched=true;return}
-      if(t.name==='type'&&t.closest('#requestForm')){readFormSafe();f.type=t.value;f.stage='';renderForm();return}
-      if(t.dataset?.bf==='type'){readFormSafe();const row=f.extra[+t.closest('[data-batch]').dataset.batch];row.type=t.value;row.stage='';renderForm()}
+    document.addEventListener('change',async e=>{
+      const t=e.target;
+      if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
+      if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;renderBoard();return}
+      if(t.id==='clientSelect'){
+        if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;}
+        t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;return;
+      }
+      const rowBox=t.closest?.('[data-row]');if(!rowBox||!(state.view==='form'||state.editing))return;
+      const key=rowBox.dataset.row,r=rowOf(key),field=t.dataset?.f;if(!r)return;
+      if(field==='client'){
+        readRowsSafe();
+        if(t.value==='__new__'){const name=await addCustomerFlow();r.client=name||r.client}else r.client=t.value;
+        if(key!=='edit'&&(!r.designerTouched||!r.designer)){r.designer=defaultDesignerFor(r.client);toast(r.designer?`設計負責人已依客戶別設定帶入：${r.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇')}
+        rerender();return;
+      }
+      if(field==='designer'){r.designerTouched=true;return}
+      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=defaultStage(r.type);rerender();return}
+      if(field==='stage'&&t.value==='__ai__'){t.value=r.stage||'';readRowsSafe();openAi(key);return}
     });
     document.addEventListener('submit',e=>{
       if(e.target.id==='requestForm'){e.preventDefault();submitForm()}
-      if(e.target.id==='prompt'){e.preventDefault();const client=$('clientSelect').value;if(!client)return;state.form=newForm(client);show('form')}
+      if(e.target.id==='editForm'){e.preventDefault();saveEdit()}
+      if(e.target.id==='prompt'){
+        e.preventDefault();const client=$('clientSelect').value;if(!client||client==='__new__')return;
+        if(!loggedIn()){state.pendingStart=client;toast('請先登入才能新增設計需求',true);startLogin();return}
+        state.form=newForm(client);show('form');
+      }
     });
 
     /* ---------- 資料 ---------- */
@@ -864,17 +1156,18 @@
         state.settings=t['設定']?.rows||[];state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}
+        for(const [id,edit] of [...state.edits]){if(Date.now()-edit.at>10*60*1000){state.edits.delete(id);continue}const hit=state.rows.find(r=>String(r['案件編號'])===id);if(hit)Object.assign(hit,edit.headers)} // 剛編輯完、db.json 還沒更新時，先保留本機的修改
         const dbIds=new Set(state.rows.map(r=>String(r['案件編號'])));for(const id of [...state.localRows.keys()])if(dbIds.has(id))state.localRows.delete(id); // db.json 已經包含剛建立的案件，就不用本機暫存
         state.loaded=true;
         const stamp=new Date(db.updatedAt||Date.now());
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
         fillClients();
       }catch(err){console.warn('案件資料讀取失敗',err);state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
-      if(state.view==='board')renderBoard();renderTeam();
+      if(state.view==='board')renderBoard();renderTeam();renderLogin();
     }
     function fillClients(){
       const select=$('clientSelect'),keep=select.value;
-      select.innerHTML='<option value="">選擇客戶別，開始新增設計需求…</option>'+sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      select.innerHTML='<option value="">選擇客戶別，開始新增設計需求…</option>'+sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__new__">+ 新增客戶別</option>';
       select.value=keep;select.classList.toggle('is-empty',!select.value);$('promptGo').disabled=!select.value;
     }
     async function loadOffice(){
@@ -885,11 +1178,11 @@
       }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
     }
 
-    renderTeam();renderBoard();bindTeam();
+    renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
     setInterval(loadOffice,60000);
     setInterval(()=>{if(!document.hidden&&state.view==='board')loadDatabase()},5*60000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadOffice()});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin()}});
     window.__v5=state; // 方便除錯
   })();
   </script>
