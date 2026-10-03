@@ -302,9 +302,9 @@
     .no-hero .hero{display:none}
     .no-hero .stage-wrap{padding-top:30px}
     .stage-wrap.wide{max-width:1760px}
-    .board.five{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
-    .board.five .column:nth-child(-n+3){grid-column:span 2}
-    .board.five .column:nth-child(n+4){grid-column:span 3}
+    .board.five{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .board.five .column:nth-child(-n+3){grid-column:span 1}
+    .board.five .column:nth-child(n+4){grid-column:span 1}
     .drag-note{font-size:12.5px;color:var(--muted);font-weight:700;margin:-6px 0 14px}
     .detail-pick{display:grid;gap:8px;max-height:46vh;overflow:auto;margin:8px 0}
     .detail-pick label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:14px;cursor:pointer}
@@ -752,7 +752,10 @@
       .board.five.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
       .board.five.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
       .board.five.n1 .column,.board.five.n2 .column,.board.five.n3 .column,.board.five.n4 .column{grid-column:auto!important}
-      .board.five.n1 .cards,.board.five.n2 .cards,.board.five.n3 .cards,.board.five.n4 .cards{grid-template-columns:repeat(auto-fill,minmax(260px,1fr));align-items:start}
+      .board.five.n1 .cards,.board.five.n2 .cards,.board.five.n3 .cards,.board.five.n4 .cards{align-items:start}
+      .board.five.n1 .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .board.five.n2 .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .board.five.n3 .cards,.board.five.n4 .cards{grid-template-columns:minmax(0,1fr)}
       .board.five.n1 .cards .empty,.board.five.n2 .cards .empty,.board.five.n3 .cards .empty,.board.five.n4 .cards .empty{grid-column:1/-1}
     }
 </style>
