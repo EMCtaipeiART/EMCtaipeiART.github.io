@@ -222,7 +222,9 @@
     .no-hero .hero{display:none}
     .no-hero .stage-wrap{padding-top:30px}
     .stage-wrap.wide{max-width:1760px}
-    .board.five{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+    .board.five{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+    .board.five .column:nth-child(-n+3){grid-column:span 2}
+    .board.five .column:nth-child(n+4){grid-column:span 3}
     .drag-note{font-size:12.5px;color:var(--muted);font-weight:700;margin:-6px 0 14px}
     .detail-pick{display:grid;gap:8px;max-height:46vh;overflow:auto;margin:8px 0}
     .detail-pick label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:14px;cursor:pointer}
@@ -241,7 +243,7 @@
     .lp-error{margin-top:14px;font-size:13px;font-weight:700;color:#b42318;line-height:1.55}
     .lp-note{margin-top:14px;font-size:12px;color:var(--faint);font-weight:600}
     .card-meta{font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;padding:3px 10px;border-radius:99px;border:1px solid transparent;background:var(--bg);color:var(--muted)}
-    .card-meta.client-pill{background:#f1f3f2;color:#4b5563;border-color:#e0e4e2;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+    .card-meta.client-pill{background:#f1f3f2;color:#4b5563;border-color:#e0e4e2;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:1px;margin-right:4px;font-size:11px}
     html[data-theme="dark"] .card-meta.client-pill{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
     .card-meta.cd-ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}
     .card-meta.cd-soon{background:#fef9c3;color:#854d0e;border-color:#fde68a}
@@ -418,7 +420,7 @@
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .toast.error{background:#b42318}
 
-    @media (max-width:1180px){.board.five{grid-template-columns:repeat(3,minmax(0,1fr))}.board{grid-template-columns:repeat(2,minmax(0,1fr))}.latest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:1180px){.board.five{grid-template-columns:repeat(2,minmax(0,1fr))}.board.five .column:nth-child(n){grid-column:auto}.board{grid-template-columns:repeat(2,minmax(0,1fr))}.latest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media (max-width:980px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field.c2,.field.c3,.field.c4{grid-column:span 1}.field.c6,.supp,.batch-box{grid-column:span 2}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row .field.c2,.batch-row .field.c3,.batch-row .field.c4{grid-column:span 1}.batch-row .field.c6,.batch-row .supp{grid-column:span 2}}
     @media (max-width:720px){
       :root{--rail:0px}
@@ -500,8 +502,8 @@
     const COLUMNS=[
       {key:'todo',title:'未執行',color:'var(--st-todo)',status:'未開始'},
       {key:'doing',title:'執行中',color:'var(--st-doing)',status:'執行中'},
-      {key:'review',title:'過稿中',color:'var(--st-review)',status:'過稿中'},
       {key:'revise',title:'修改中',color:'var(--st-revise)',status:'修改中'},
+      {key:'review',title:'過稿中',color:'var(--st-review)',status:'過稿中'},
       {key:'done',title:'已完成',color:'var(--st-done)',status:'已完成'}
     ];
     const PLATFORMS=['Facebook','Instagram','Line','其他平台'];
@@ -685,12 +687,11 @@
       const canDrag=state.dragOn&&inColumn;
       return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span>${inColumn?'':`<span class="chip ${st.cls}">${esc(st.label)}</span>`}${late?'<span class="chip late">逾期</span>':''}</div>
-        <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
+        <h3 class="card-title"><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span> ${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span><span class="ci-qty">數量 ${esc(qty||'-')}</span></div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
-          <span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>
         </div>
       </button>`;
     }
