@@ -197,7 +197,32 @@
     .face img.head{width:118%;height:auto;object-fit:contain;margin-top:8%}
     .face img.head.is-short{width:100%;margin-top:4%}
     .face.is-designer{background:#fff}
-    .card-meta{font-size:11.5px;color:var(--faint);font-weight:700;text-align:right;line-height:1.45}
+    .card-info{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:8px}
+    .card-info span{font-size:11.5px;font-weight:700;color:var(--muted);padding:2px 8px;border-radius:7px;background:var(--bg);white-space:nowrap}
+    .card[draggable="true"]{cursor:grab}
+    .card.dragging{opacity:.4}
+    .column.drop-ok{outline:2px dashed var(--brand);outline-offset:-4px;background:var(--brand-soft)}
+    .no-hero .hero{display:none}
+    .no-hero .stage-wrap{padding-top:30px}
+    .stage-wrap.wide{max-width:1760px}
+    .board.five{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+    .drag-note{font-size:12.5px;color:var(--muted);font-weight:700;margin:-6px 0 14px}
+    .detail-pick{display:grid;gap:8px;max-height:46vh;overflow:auto;margin:8px 0}
+    .detail-pick label{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:14px;cursor:pointer}
+    .detail-pick input{accent-color:var(--brand);width:17px;height:17px;margin:0}
+    .detail-pick label:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+    .login-page{max-width:420px;margin:30px auto;padding:34px 30px 28px;border-radius:24px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);text-align:center}
+    .login-page img.lp-logo{width:64px;height:64px;border-radius:18px;margin-bottom:12px}
+    .login-page h2{margin:0 0 4px;font-size:22px;font-weight:900}
+    .login-page p.lp-sub{margin:0 0 22px;color:var(--muted);font-size:13.5px;font-weight:600}
+    .google-btn{width:100%;height:48px;border-radius:14px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;font-size:15px;cursor:pointer}
+    .google-btn:hover{background:var(--bg)}
+    .google-btn b{width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:#4285f4;font-size:14px}
+    .lp-toggle{margin-top:16px;background:none;border:0;color:var(--muted);font-weight:800;font-size:13px;cursor:pointer}
+    .lp-form{display:grid;gap:10px;margin-top:12px;text-align:left}
+    .lp-form .input{background:var(--bg)}
+    .lp-error{margin-top:14px;font-size:13px;font-weight:700;color:#b42318;line-height:1.55}
+    .lp-note{margin-top:14px;font-size:12px;color:var(--faint);font-weight:600}font-size:11.5px;color:var(--faint);font-weight:700;text-align:right;line-height:1.45}
     .st-todo{--card-color:var(--st-todo)} .st-doing{--card-color:var(--st-doing)} .st-review{--card-color:var(--st-review)} .st-revise{--card-color:var(--st-revise)} .st-done{--card-color:var(--st-done)} .st-cancel{--card-color:var(--st-cancel)}
     .chip.st-todo,.pill.st-todo{background:var(--st-todo-bg);color:var(--st-todo-ink);border-color:var(--st-todo-line)}
     .chip.st-doing,.pill.st-doing{background:var(--st-doing-bg);color:var(--st-doing-ink);border-color:var(--st-doing-line)}
@@ -365,7 +390,7 @@
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
     .toast.error{background:#b42318}
 
-    @media (max-width:1180px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}.latest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:1180px){.board.five{grid-template-columns:repeat(3,minmax(0,1fr))}.board{grid-template-columns:repeat(2,minmax(0,1fr))}.latest-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media (max-width:980px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.field.c2,.field.c3,.field.c4{grid-column:span 1}.field.c6,.supp,.batch-box{grid-column:span 2}.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row{grid-template-columns:repeat(2,minmax(0,1fr))}.batch-row .field.c2,.batch-row .field.c3,.batch-row .field.c4{grid-column:span 1}.batch-row .field.c6,.batch-row .supp{grid-column:span 2}}
     @media (max-width:720px){
       :root{--rail:0px}
@@ -381,7 +406,7 @@
       .avatar-btn{width:68px;height:68px}
       .hover-card{width:230px}
       .stage-wrap{padding:26px 16px 40px}
-      .board,.latest-grid{grid-template-columns:1fr}
+      .board,.board.five,.latest-grid{grid-template-columns:1fr}
       .page{padding:20px 16px}
       .form-grid{grid-template-columns:1fr}.field.c6,.supp,.batch-box{grid-column:span 1}
       .batch-row{grid-template-columns:1fr}.batch-row .field.c2,.batch-row .field.c3,.batch-row .field.c4,.batch-row .field.c6,.batch-row .supp{grid-column:span 1}
@@ -396,8 +421,8 @@
 <body>
   <nav class="rail" aria-label="主選單">
     <img class="rail-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部" />
-    <a class="rail-item is-active" href="v5.html" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</a>
-    <a class="rail-item" href="index.html"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</a>
+    <button type="button" class="rail-item is-active" data-nav="board" aria-label="首頁"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</button>
+    <button type="button" class="rail-item" data-nav="projects" aria-label="專案"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</button>
     <a class="rail-item" href="index.html" title="目前先開啟現行系統的個人設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</a>
     <span class="rail-spacer"></span>
     <span class="rail-version">v5.0</span>
@@ -428,6 +453,9 @@
   <div class="ai-modal" id="aiModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><h3 id="aiTitle">AI 判斷階段（beta）</h3><p class="ai-sub">上傳需求單截圖，AI 會判斷這是「新製」還是「再製」，再由你決定要填入哪一個。</p><div id="aiBody"></div></div>
   </div>
+  <div class="ai-modal" id="detailModal" hidden>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle"><h3 id="dmTitle">選擇項目細節</h3><p class="ai-sub" id="dmSub"></p><div class="detail-pick" id="dmList"></div><div class="ai-actions"><button type="button" class="btn" data-dm="cancel">取消</button><button type="button" class="btn primary" data-dm="ok">確認並改為執行中</button></div></div>
+  </div>
   <div class="toast" id="toast" role="status"></div>
 
   <script>
@@ -444,7 +472,8 @@
       {key:'todo',title:'未執行',color:'var(--st-todo)',status:'未開始'},
       {key:'doing',title:'執行中',color:'var(--st-doing)',status:'執行中'},
       {key:'review',title:'過稿中',color:'var(--st-review)',status:'過稿中'},
-      {key:'revise',title:'修改中',color:'var(--st-revise)',status:'修改中'}
+      {key:'revise',title:'修改中',color:'var(--st-revise)',status:'修改中'},
+      {key:'done',title:'已完成',color:'var(--st-done)',status:'已完成'}
     ];
     const PLATFORMS=['Facebook','Instagram','Line','其他平台'];
     const PLATFORM_SPECS={Facebook:'1:1，1200 x 1200px',Instagram:'4:5，1080 x 1350px',Line:'1:1，1040 x 1040px'};
@@ -456,7 +485,7 @@
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE},
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -618,16 +647,19 @@
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
     const sortedLatest=rows=>{const list=[...rows].sort(byNewest);return state.sort==='asc'?list.reverse():list};
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
+    function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=status==='執行中';
       const late=s.late&&!['過稿中','已完成','已取消'].includes(status);
-      return `<button type="button" class="card ${st.cls}" data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
+      const canDrag=state.dragOn&&inColumn;
+      return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="client-text">${esc(row['客戶別']||'未填客戶別')}</span>${inColumn?'':`<span class="chip ${st.cls}">${esc(st.label)}</span>`}${late?'<span class="chip late">逾期</span>':''}</div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
+        <div class="card-info"><span>${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span>${esc(shortRange(row))}</span><span>數量 ${esc(qty||'-')}</span></div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="width:${s.percent}%"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
-          <span class="card-meta">${esc(countdownText(s))}<br>數量 ${esc(qty||'-')}</span>
+          <span class="card-meta">${esc(countdownText(s))}</span>
         </div>
       </button>`;
     }
@@ -649,16 +681,6 @@
       const stage=$('stage');
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
       const rows=allRows().filter(matches).filter(passFilters),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
-      const cols=COLUMNS.map(column=>{
-        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return e(a)-e(b)||byNewest(a,b)});
-        const limit=(state.query||filterCount())?list.length:state.limits[column.key],visible=list.slice(0,limit);
-        return `<section class="column" aria-label="${column.title}">
-          <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
-          <div class="column-bar" style="background:${column.color}"></div>
-          <div class="cards">${visible.length?visible.map(r=>cardHtml(r,true)).join(''):`<div class="empty">${state.query||filterCount()?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
-          ${list.length>visible.length?`<button type="button" class="more-btn" data-more="${column.key}">顯示更多（還有 ${list.length-visible.length} 筆）</button>`:''}
-        </section>`;
-      }).join('');
       const hadFocus=document.activeElement?.id==='boardSearch',n=filterCount();
       const latestBody=!shown.length?'<div class="empty">沒有符合的案件</div>':state.layout==='list'?listTableHtml(shown):`<div class="latest-grid">${shown.map(r=>cardHtml(r,false)).join('')}</div>`;
       stage.innerHTML=`
@@ -676,14 +698,82 @@
           ${latestBody}
           ${latest.length>shown.length?`<button type="button" class="more-btn" data-more="latest">顯示更多（還有 ${latest.length-shown.length} 筆）</button>`:''}
         </section>
-        <h3 class="block-title">依狀態檢視</h3>
-        <div class="board">${cols}</div>`;
+        `;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
     }
 
     /* ---------- 檢視切換 ---------- */
-    function show(view){state.view=view;if(view==='board')renderBoard();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();$('stage').scrollIntoView({behavior:'smooth',block:'start'})}
-    function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show('board')}
+    function rerenderList(){if(state.view==='projects')renderProjects();else renderBoard()}
+    function updateRail(){const active=state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
+    function show(view){
+      state.view=view;
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login');
+      $('stage').classList.toggle('wide',view==='projects');
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      updateRail();
+      if(view==='projects'||view==='login')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
+
+    /* ---------- 專案頁：五個狀態欄，設計師可拖移卡牌改狀態 ---------- */
+    const isDesignerSession=()=>{const s=session();return loggedIn()&&(['平面','影音'].includes(sessionValue('designRequestEditorGroup'))||DESIGNERS.some(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).startsWith(norm(n)+' ')||norm(v).split(/[@\s]/)[0]===norm(n))))};
+    function detailOptionsFor(row){
+      const type=String(row['設計種類']||row['設計類型']||'').trim(),stage=String(row['階段']||'').trim();
+      return [...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['階段']||'').trim()===stage&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['項目細節']||'').trim()).filter(Boolean))];
+    }
+    function renderProjects(){
+      const stage=$('stage');
+      if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
+      state.dragOn=isDesignerSession();
+      const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
+      const cols=COLUMNS.map(column=>{
+        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return column.key==='done'?byNewest(a,b):(e(a)-e(b)||byNewest(a,b))});
+        const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
+        return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
+          <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
+          <div class="column-bar" style="background:${column.color}"></div>
+          <div class="cards">${visible.length?visible.map(r=>cardHtml(r,true)).join(''):`<div class="empty">${state.query||n?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
+          ${list.length>visible.length?`<button type="button" class="more-btn" data-more="${column.key}">顯示更多（還有 ${list.length-visible.length} 筆）</button>`:''}
+        </section>`;
+      }).join('');
+      const hadFocus=document.activeElement?.id==='boardSearch';
+      stage.innerHTML=`<div class="section-head"><div><h2>專案</h2></div><div class="section-tools">
+          <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
+          <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
+          <span class="board-sync">${esc(state.syncText)}</span></div></div>
+        <p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>
+        <div class="board five">${cols}</div>`;
+      if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
+    }
+    async function applyMove(id,status,details){
+      const row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      const payload={id,status},headers=['案件狀態'];
+      if(details!==undefined){payload.details=details;headers.push('項目細節','加權')}
+      const old={'狀態':row['狀態'],'項目細節':row['項目細節']};
+      const local={'狀態':status};if(details!==undefined)local['項目細節']=details;
+      applyLocalEdit(id,local);renderProjects();
+      try{await api('update',{id,row:payload,forceHeaders:headers,writeHeaders:headers});toast(`案件 ${id} 已改為「${ST[status]?.label||status}」`)}
+      catch(err){applyLocalEdit(id,old);state.edits.delete(id);renderProjects();toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再操作':`狀態更新失敗，已還原：${err.message}`,true)}
+    }
+    function moveCase(id,status){
+      const row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      const from=String(row['狀態']||'').trim();if(from===status)return;
+      if(!isDesignerSession()){toast('只有設計師可以拖移改狀態',true);return}
+      if(status==='執行中'){
+        const options=detailOptionsFor(row),chosen=new Set(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean));
+        for(const c of chosen)if(!options.includes(c))options.push(c);
+        state.pendingMove={id,status};
+        $('dmSub').textContent=`${id}｜${row['專案名稱']||''}（${[row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')}）：可複選，確認後狀態改為「執行中」。`;
+        $('dmList').innerHTML=options.length?options.map(o=>`<label><input type="checkbox" value="${esc(o)}"${chosen.has(o)?' checked':''}>${esc(o)}</label>`).join(''):'<div class="empty">這個種類與階段沒有項目細節選項，直接確認即可。</div>';
+        $('detailModal').hidden=false;return;
+      }
+      applyMove(id,status);
+    }
+    function closeDetailModal(){$('detailModal').hidden=true;state.pendingMove=null}
+    document.addEventListener('dragstart',e=>{const c=e.target.closest?.('.card[draggable="true"]');if(!c)return;state.drag=c.dataset.case;c.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',state.drag)}catch(err){}});
+    document.addEventListener('dragend',e=>{e.target.closest?.('.card')?.classList.remove('dragging');document.querySelectorAll('.column.drop-ok').forEach(c=>c.classList.remove('drop-ok'));state.drag=null});
+    document.addEventListener('dragover',e=>{const col=e.target.closest?.('.column[data-status]');if(col&&state.drag){e.preventDefault();document.querySelectorAll('.column.drop-ok').forEach(c=>{if(c!==col)c.classList.remove('drop-ok')});col.classList.add('drop-ok')}});
+    document.addEventListener('drop',e=>{const col=e.target.closest?.('.column[data-status]');if(!col||!state.drag)return;e.preventDefault();col.classList.remove('drop-ok');const id=state.drag;state.drag=null;moveCase(id,col.dataset.status)});
 
     /* ---------- 日期區間選擇（旅遊網站式）：主表單、批次每一筆、編輯各自一個 ---------- */
     const WEEK=['日','一','二','三','四','五','六'];
@@ -1022,10 +1112,55 @@
 
     /* ---------- 登入（沿用現行系統的登入：開新視窗到 index.html 完成，共用同一份登入狀態） ---------- */
     const SESSION_KEYS=['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment','designRequestEditorRawGroup'];
-    function startLogin(){
-      const win=window.open('index.html?v5login=1','emcV5Login','popup=yes,width=520,height=780');
-      if(!win){location.href='index.html?v5login=1';return}
-      toast('請在彈出的視窗完成登入');
+    const GOOGLE_CLIENT_ID='501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com',GOOGLE_ORIGIN='https://emctaipeiart.github.io',GOOGLE_CHANNEL='machi-google-oauth-v1';
+    const login={error:'',busy:false,showPw:false,state:'',channel:null};
+    function startLogin(){if(state.view!=='login')state.back=state.view;login.error='';show('login')}
+    function renderLoginPage(){
+      $('stage').innerHTML=`<div class="login-page">
+        <img class="lp-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部">
+        <h2>登入設計需求系統</h2><p class="lp-sub">請使用 @emctaipei.com 公司帳號登入</p>
+        <button type="button" class="google-btn" data-lp="google"${login.busy?' disabled':''}><b>G</b>${login.busy?'登入中…':'使用 Google 帳號登入'}</button>
+        <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用帳號密碼登入'}</button>
+        ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="account" placeholder="帳號（公司信箱或 @ 前面的部分）" autocomplete="username" required><input class="input" name="password" type="password" placeholder="密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.busy?' disabled':''}>登入</button></form>`:''}
+        ${login.error?`<div class="lp-error" role="alert">${esc(login.error)}</div>`:''}
+        <p class="lp-note">登入狀態與現行系統共用。<br><a href="#" data-lp="cancel">先不登入，返回</a></p>
+      </div>`;
+    }
+    function saveSession(data){
+      const st=data.settings||{},display=st.displayName||st['顯示名']||st.name||st['名字']||st['設計師名字']||data.user;
+      const put={designRequestEditorUser:data.user,designRequestEditorDisplayName:display,designRequestEditorAccount:data.account||data.email||'',designRequestEditorToken:data.token,designRequestEditorGroup:st.designType||st['設計類型']||st.designGroup||'',designRequestEditorDepartment:st.department||st['部門']||'',designRequestEditorRawGroup:st.group||st['組別']||''};
+      try{localStorage.removeItem('designRequestEditorLoggedOut');sessionStorage.removeItem('designRequestEditorLoggedOut');for(const [k,v] of Object.entries(put)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}else{localStorage.removeItem(k);sessionStorage.removeItem(k)}}}catch(err){}
+    }
+    function finishLogin(data){
+      if(!data||!data.token||!data.user)throw new Error(data?.error||'登入沒有完成驗證');
+      saveSession(data);login.busy=false;login.error='';
+      const back=state.back;state.back='';
+      afterLogin();
+      if(state.view==='login')show(back&&back!=='login'&&back!=='form'?back:state.home);
+    }
+    async function googleStart(){
+      if(location.origin!==GOOGLE_ORIGIN){login.error='Google 登入只能在正式網站（emctaipeiart.github.io）使用，本機測試請改用帳號密碼。';renderLoginPage();return}
+      const st=`v5_login_${Date.now()}_${Math.random().toString(36).slice(2)}`,nonce=`v5_nonce_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      login.state=st;
+      if(!login.channel&&'BroadcastChannel' in window){login.channel=new BroadcastChannel(GOOGLE_CHANNEL);login.channel.onmessage=ev=>googleResult(ev.data)}
+      const params=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:GOOGLE_ORIGIN,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state:st,nonce});
+      const win=window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`,'machiGoogleLogin','popup=yes,width=520,height=720');
+      if(!win){login.error='瀏覽器擋住了彈出視窗，請允許本網站的彈出視窗後再試一次。';renderLoginPage();return}
+      login.busy=true;login.error='';renderLoginPage();
+    }
+    async function googleResult(r){
+      if(!r||r.type!=='machi-google-oauth-result'||!login.state)return;
+      if(r.state!==login.state){return}
+      login.state='';
+      if(r.error){login.busy=false;login.error=r.errorDescription||r.error;if(state.view==='login')renderLoginPage();return}
+      try{finishLogin(await api('googleLogin',{credential:r.idToken||''}))}
+      catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;if(state.view==='login')renderLoginPage()}
+    }
+    async function passwordLogin(form){
+      const raw=String(form.elements.account.value||'').trim().toLowerCase(),account=raw.includes('@')?raw:`${raw}@emctaipei.com`,password=form.elements.password.value;
+      login.busy=true;login.error='';renderLoginPage();
+      try{finishLogin(await api('login',{account,password}))}
+      catch(err){login.busy=false;login.error=`登入失敗：${err.message}`;renderLoginPage()}
     }
     function renderLogin(){
       const box=$('railLogin');if(!box)return;
@@ -1066,10 +1201,18 @@
     document.addEventListener('click',e=>{
       const t=e.target;
       if(state.loginMenu&&!t.closest('.rail-login')){state.loginMenu=false;renderLogin()}
-      if(state.filterOpen&&!t.closest('.filter-wrap')){state.filterOpen=false;if(state.view==='board')renderBoard()}
-      const login=t.closest('[data-login]')?.dataset.login;
-      if(login==='toggle'){if(loggedIn()){state.loginMenu=!state.loginMenu;renderLogin()}else startLogin();return}
-      if(login==='logout'){logout();return}
+      if(state.filterOpen&&!t.closest('.filter-wrap')){state.filterOpen=false;if(state.view==='board')renderBoard();if(state.view==='projects')renderProjects()}
+      const nav=t.closest('[data-nav]')?.dataset.nav;if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
+      const dm=t.closest('[data-dm]')?.dataset.dm;
+      if(dm==='cancel'){closeDetailModal();return}
+      if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();applyMove(pm.id,pm.status,picked)}return}
+      const lp=t.closest('[data-lp]')?.dataset.lp;
+      if(lp==='google'){googleStart();return}
+      if(lp==='toggle'){login.showPw=!login.showPw;renderLoginPage();return}
+      if(lp==='cancel'){e.preventDefault();show(state.back&&state.back!=='login'&&state.back!=='form'?state.back:state.home);return}
+      const loginAct=t.closest('[data-login]')?.dataset.login;
+      if(loginAct==='toggle'){if(loggedIn()){state.loginMenu=!state.loginMenu;renderLogin()}else startLogin();return}
+      if(loginAct==='logout'){logout();return}
       if(t.closest('[data-ai-close]')||t.id==='aiModal'){closeAi();return}
       if(t.closest('[data-ai-run]')){runAi();return}
       if(t.closest('[data-ai-restart]')){ai.view='input';ai.result=null;renderAi();return}
@@ -1078,10 +1221,10 @@
       if(t.closest('[data-ai-drop]')){document.querySelector('[data-ai-file]')?.click();return}
       const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}renderBoard();return}
       const sort=t.closest('[data-sort]');if(sort){state.sort=sort.dataset.sort;renderBoard();return}
-      if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;renderBoard();return}
-      if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;renderBoard();return}
-      const card=t.closest('[data-case]');if(card&&state.view==='board'){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
-      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else state.limits[k]+=COLUMN_PAGE;renderBoard();return}
+      if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
+      if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;rerenderList();return}
+      const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
+      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
       if(act==='edit'){startEdit();return}
@@ -1091,7 +1234,7 @@
       if(act==='batch-copy'){readRowsSafe();const f=state.form,last=f.extra.length?f.extra[f.extra.length-1]:f;f.extra.push(copyRow(last));renderForm();toast(`已把第 ${f.extra.length} 筆的資料套用到第 ${f.extra.length+1} 筆`);return}
       const del=t.closest('[data-batch-del]');if(del){readRowsSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
       const rangeBtn=t.closest('[data-range-btn]');if(rangeBtn){const key=rangeBtn.closest('[data-row]').dataset.row;(cal.open&&cal.key===key)?closeCal():openCal(key);return}
-      const nav=t.closest('[data-cal-nav]');if(nav){const d=new Date(cal.anchor);cal.anchor=Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+(+nav.dataset.calNav),1);renderCal();return}
+      const calNav=t.closest('[data-cal-nav]');if(calNav){const d=new Date(cal.anchor);cal.anchor=Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+(+calNav.dataset.calNav),1);renderCal();return}
       const day=t.closest('[data-day]');if(day){pickDay(+day.dataset.day);return}
       if(t.closest('[data-cal-clear]')){cal.start=NaN;cal.end=NaN;cal.picking=false;const r=rowOf(cal.key);r.start=NaN;r.end=NaN;updateRangeButtons();renderCal();return}
       if(t.closest('[data-cal-done]')){closeCal();return}
@@ -1105,7 +1248,7 @@
     });
     document.addEventListener('mousemove',e=>{if(!cal.open||!cal.picking)return;const day=e.target.closest?.('[data-day]');if(!day)return;const ms=+day.dataset.day;if(ms!==cal.hover){cal.hover=ms;renderCal()}});
     document.addEventListener('keydown',e=>{
-      if(e.key==='Escape'){if(cal.open)closeCal();if(!$('aiModal').hidden)closeAi();if(state.filterOpen){state.filterOpen=false;renderBoard()}}
+      if(e.key==='Escape'){if(cal.open)closeCal();if(!$('aiModal').hidden)closeAi();if(state.filterOpen){state.filterOpen=false;rerenderList()}if(!$('detailModal').hidden)closeDetailModal()}
       if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('tr[data-case]')){e.preventDefault();e.target.click()}
     });
     document.addEventListener('paste',e=>{if($('aiModal').hidden||ai.view!=='input')return;const files=[...(e.clipboardData?.files||[])];if(files.length){e.preventDefault();addAiFiles(files)}});
@@ -1115,13 +1258,13 @@
     let searchTimer=0;
     document.addEventListener('input',e=>{
       const t=e.target;
-      if(t.id==='boardSearch'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();renderBoard()},160)}
+      if(t.id==='boardSearch'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();rerenderList()},160)}
       if(t.dataset?.f==='qty')t.value=t.value.replace(/[^0-9]/g,'');
     });
     document.addEventListener('change',async e=>{
       const t=e.target;
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
-      if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;renderBoard();return}
+      if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.id==='clientSelect'){
         if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;}
         t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;return;
@@ -1139,6 +1282,7 @@
       if(field==='stage'&&t.value==='__ai__'){t.value=r.stage||'';readRowsSafe();openAi(key);return}
     });
     document.addEventListener('submit',e=>{
+      if(e.target.id==='pwForm'){e.preventDefault();passwordLogin(e.target);return}
       if(e.target.id==='requestForm'){e.preventDefault();submitForm()}
       if(e.target.id==='editForm'){e.preventDefault();saveEdit()}
       if(e.target.id==='prompt'){
@@ -1163,7 +1307,7 @@
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
         fillClients();
       }catch(err){console.warn('案件資料讀取失敗',err);state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
-      if(state.view==='board')renderBoard();renderTeam();renderLogin();
+      if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam();renderLogin();
     }
     function fillClients(){
       const select=$('clientSelect'),keep=select.value;
@@ -1181,7 +1325,7 @@
     renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
     setInterval(loadOffice,60000);
-    setInterval(()=>{if(!document.hidden&&state.view==='board')loadDatabase()},5*60000);
+    setInterval(()=>{if(!document.hidden&&(state.view==='board'||state.view==='projects'))loadDatabase()},5*60000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin()}});
     window.__v5=state; // 方便除錯
   })();
