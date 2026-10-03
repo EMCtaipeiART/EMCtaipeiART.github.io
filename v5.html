@@ -578,6 +578,44 @@
     .merge-row input{accent-color:var(--brand)}
     .merge-actions{display:flex;gap:8px;padding:8px 0 14px}
     .merge-actions .btn{min-height:36px;padding:0 16px;font-size:13.5px;border-radius:10px}
+    /* 設定頁 */
+    .set-card{border:1px solid var(--line);border-radius:18px;margin-bottom:14px;background:var(--panel);overflow:hidden}
+    .set-card>summary{display:flex;flex-direction:column;gap:3px;padding:16px 20px;cursor:pointer;list-style:none}
+    .set-card>summary::-webkit-details-marker{display:none}
+    .set-card>summary b{font-size:16px;font-weight:900}
+    .set-card>summary span{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.5}
+    .set-card[open]>summary{border-bottom:1px solid var(--line);background:var(--bg)}
+    .set-body{padding:18px 20px;display:grid;gap:14px}
+    .set-profile{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+    .set-avatar{width:72px;height:72px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);display:grid;place-items:center;font-size:26px;font-weight:900;overflow:hidden;flex:0 0 auto}
+    .set-avatar img{width:100%;height:100%;object-fit:cover}
+    .set-fields{flex:1;min-width:240px;display:grid;gap:6px}
+    .set-fields small,.set-note{color:var(--muted);font-size:12.5px;font-weight:600;margin:0}
+    .set-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+    .set-status{font-size:13px;font-weight:700;color:var(--muted);min-height:1.4em}
+    .tpl-row{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:8px;background:var(--bg)}
+    .tpl-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .tpl-head b{font-weight:900}.tpl-head .input{flex:1;min-width:200px;min-height:38px;background:var(--panel)}
+    .tpl-default{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-left:auto}
+    .tpl-default input{accent-color:var(--brand)}
+    .mini-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .mini-editor{min-height:120px;background:var(--panel)}
+    .tpl-ins{display:flex;gap:8px;flex-wrap:wrap}
+    .cu-block{display:grid;gap:8px;border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--bg)}
+    .cu-block>b{font-weight:900}.cu-block>small{color:var(--muted);font-size:12.5px;font-weight:600;line-height:1.5}
+    .cu-group{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:0 12px}
+    .cu-group.nested{margin:6px 0 6px 10px}
+    .cu-group>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;cursor:pointer;font-weight:800;font-size:14px}
+    .cu-all{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--brand-deep)}
+    .cu-all input,.cu-check input{accent-color:var(--brand)}
+    .cu-checks{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 12px}
+    .cu-check{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-size:13px;font-weight:700;cursor:pointer}
+    .cu-check:has(input:checked){border-color:#8fd1a8;background:#e1f4e8;color:#0f5138}
+    .cu-check.is-locked{opacity:.8;cursor:default}
+    .rc-pick{position:fixed;z-index:260;width:300px;max-height:320px;overflow:auto;padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg);display:grid;gap:6px}
+    .rc-pick button{display:grid;gap:2px;text-align:left;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+    .rc-pick button:hover{background:var(--brand-soft)}
+    .rc-pick small{color:var(--muted);font-weight:600;font-size:12px}
   </style>
 </head>
 <body>
@@ -585,7 +623,7 @@
     <img class="rail-logo" src="assets/EMC_design_logo.ico" alt="EMC 設計部" />
     <button type="button" class="rail-item is-active" data-nav="board" aria-label="首頁"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</button>
     <button type="button" class="rail-item" data-nav="projects" aria-label="專案"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</button>
-    <a class="rail-item" href="index.html" title="目前先開啟現行系統的個人設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</a>
+    <button type="button" class="rail-item" data-nav="settings" aria-label="設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
     <span class="rail-spacer"></span>
     <span class="rail-version">v5.0</span>
     <div class="rail-login" id="railLogin"></div>
@@ -957,14 +995,14 @@
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
     function rerenderList(){if(state.view==='projects')renderProjects();else renderBoard()}
-    function updateRail(){const active=state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
+    function updateRail(){const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||(view==='detail'&&state.home==='projects'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||(view==='detail'&&state.home==='projects'));
       $('stage').classList.toggle('wide',view==='projects');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
-      if(view==='projects'||view==='login')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
 
@@ -1299,11 +1337,247 @@
       state.form=null;show('mail');loadGmailContext();
     }
     async function loadGmailContext(){
-      try{const [status,sig]=await Promise.all([api('gmailStatus'),api('getGmailSignature').catch(()=>({signature:''}))]);state.gmail={connected:Boolean(status.connected),address:status.gmailAddress||''};state.signature=sig.signature||''}
+      try{const [status,sig]=await Promise.all([api('gmailStatus'),api('getGmailSignature').catch(()=>({signature:''})),loadUserSettings(false).catch(()=>{})]);state.gmail={connected:Boolean(status.connected),address:status.gmailAddress||''};state.gmailSignature=sig.signature||'';state.signature=(st2.presets[st2.presetDefault]?.html)||sig.signature||''}
       catch(err){state.gmail={connected:false,address:'',error:err.message};state.signature=''}
       if(state.mail)state.mail.gmailChecked=true;
       if(state.view==='mail'){saveMailDraft();renderMail()}
     }
+
+    /* ---------- 設定頁：個人設定、信件範本、簽名檔設定、客戶設定（沿用舊網站，寫入同一份後台資料） ---------- */
+    const SET_LOCKED_DEPT=/設計部/;
+    const st2={loaded:false,loading:false,error:'',display:'',avatar:'',templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,signatures:false,customers:false,groups:new Set()},busy:''};
+    const selfAccount=()=>{const s=session();const a=String(s.account||s.user||'').trim().toLowerCase();return a.includes('@')?a:(a?`${a}@emctaipei.com`:'')};
+    const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
+    const sessionDept=()=>sessionValue('designRequestEditorDepartment');
+    const sessionRawGroup=()=>sessionValue('designRequestEditorRawGroup');
+    function permissionRole(){const acc=selfAccount();const row=(state.permissions||[]).find(r=>canonAcc(r['帳號'])===acc);return String(row?.['角色範本']||'').trim()}
+    const isAdminUser=()=>permissionRole()==='管理者';
+    const isMachiUser=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi';
+    const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部/.test(sessionDept());
+    const nameLocked=()=>!isAdminUser()&&!isMachiUser()&&SET_LOCKED_DEPT.test(sessionDept());
+    function normTemplates(value,def){
+      let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
+      const entries=Array.isArray(src)?src.map(i=>[String(i?.name||'').trim(),String(i?.content||i?.text||'').trim()]):(src&&typeof src==='object'?Object.entries(src).map(([k,v])=>[String(k).trim(),String(v??'').trim()]):[]);
+      const list=entries.filter(([,c])=>c).slice(0,80),idx=Math.max(0,list.findIndex(([n])=>n===String(def||'').trim()));
+      return {items:list.map(([,c])=>({html:c})),def:idx};
+    }
+    function normPresets(value,def){
+      let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
+      const list=(src&&typeof src==='object'&&!Array.isArray(src)?Object.entries(src):[]).map(([n,c])=>({name:String(n).trim(),html:String(c??'').trim()})).filter(p=>p.name&&p.html).slice(0,40);
+      const idx=Math.max(0,list.findIndex(p=>p.name===String(def||'').trim()));return {items:list,def:idx};
+    }
+    async function loadUserSettings(force){
+      if(!loggedIn())return;
+      if(st2.loaded&&!force)return;if(st2.loading)return;st2.loading=true;st2.error='';
+      try{
+        const data=await api('getUserSettings',{account:selfAccount()}),set=data.settings||{};
+        const t=normTemplates(set.replyTemplates??set['回信範本設定'],set.replyTemplateDefault??set['預設回信範本']);
+        const p=normPresets(set.signaturePresets??set['簽名檔清單'],set.signaturePresetDefault??set['預設簽名檔']);
+        st2.templates=t.items;st2.tplDefault=t.def;st2.presets=p.items;st2.presetDefault=p.def;
+        st2.display=String(set.displayName??set['顯示名']??session().name??'').trim();st2.avatar=String(set.avatar??set['頭像連結']??'').trim();
+        st2.loaded=true;
+      }catch(err){st2.error=err.message||'讀取設定失敗'}
+      st2.loading=false;
+      if(state.view==='settings')renderSettings();
+    }
+    const miniTools=()=>`<div class="mini-tools" role="toolbar">${[['undo','↶','復原'],['redo','↷','重做'],['bold','<b>B</b>','粗體'],['italic','<i>I</i>','斜體'],['underline','<u>U</u>','底線'],['justifyLeft','⟸','靠左'],['justifyCenter','≡','置中'],['justifyRight','⟹','靠右']].map(([c,l,t])=>`<button type="button" class="tool" data-sc="${c}" title="${t}">${l}</button>`).join('')}<span class="rc-color-wrap"><button type="button" class="tool" data-sc="colorToggle" title="文字顏色">A<span class="rc-swatch"></span></button><span class="rc-colors" hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" data-sc-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span><button type="button" class="tool" data-sc="link" title="超連結">連結</button></div>`;
+    const sectionOpen=k=>st2.open[k]?' open':'';
+    function profileHtml(){
+      const name=session().name||session().user,url=st2.avatar||personAvatar(name),locked=nameLocked();
+      return `<details class="set-card" data-set-sec="profile"${sectionOpen('profile')}><summary><b>個人設定</b><span>頭像與顯示名稱</span></summary>
+        <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
+        <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input" id="setDisplayName" maxlength="40" value="${esc(st2.display||name)}"${locked?' readonly':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
+        <p class="set-note">更換頭像請到現行系統的個人設定（需要上傳圖片）。</p>
+        <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
+    }
+    function templatesHtml(){
+      return `<details class="set-card" data-set-sec="templates"${sectionOpen('templates')}><summary><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></summary><div class="set-body">
+        ${st2.templates.map((t,i)=>`<div class="tpl-row" data-tpl-row="${i}"><div class="tpl-head"><b>範本 ${i+1}</b><label class="tpl-default"><input type="radio" name="tplDefault" value="${i}"${i===st2.tplDefault?' checked':''}>預設</label><button type="button" class="batch-del" data-tpl-del="${i}">刪除</button></div>${miniTools()}<div class="editor mini-editor" contenteditable="true" data-tpl-editor>${t.html}</div><div class="tpl-ins"><button type="button" class="tool" data-sc-ins="{收件人名}">插入收件人名</button><button type="button" class="tool" data-sc-ins="{項目細節}">插入項目細節</button></div></div>`).join('')||'<p class="set-note">還沒有範本。</p>'}
+        <div class="set-actions"><button type="button" class="btn" data-tpl-add>＋ 新增範本</button><button type="button" class="btn primary" data-set-save="templates"${st2.busy==='templates'?' disabled':''}>${st2.busy==='templates'?'儲存中…':'儲存'}</button></div></div></details>`;
+    }
+    function signaturesHtml(){
+      return `<details class="set-card" data-set-sec="signatures"${sectionOpen('signatures')}><summary><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以用「插入簽名檔」改選其他組。</span></summary><div class="set-body">
+        ${st2.presets.map((p,i)=>`<div class="tpl-row" data-sig-row="${i}"><div class="tpl-head"><input class="input" data-sig-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(p.name)}"><label class="tpl-default"><input type="radio" name="sigDefault" value="${i}"${i===st2.presetDefault?' checked':''}>預設</label><button type="button" class="batch-del" data-sig-del="${i}">刪除</button></div>${miniTools()}<div class="editor mini-editor" contenteditable="true" data-sig-editor>${p.html}</div></div>`).join('')||'<p class="set-note">還沒有簽名檔；沒有設定時會使用 Gmail 帳號本身的簽名。</p>'}
+        <div class="set-actions"><button type="button" class="btn" data-sig-add>＋ 新增簽名檔</button><button type="button" class="btn primary" data-set-save="signatures"${st2.busy==='signatures'?' disabled':''}>${st2.busy==='signatures'?'儲存中…':'儲存'}</button></div></div></details>`;
+    }
+    /* 客戶設定 */
+    const isGroupRule=r=>/^(department|group):/i.test(String(r||'').trim());
+    const hiddenUnit=/測試/;
+    function custNames(){
+      if(!canUseCustomerSettings())return [];
+      const acc=selfAccount(),dept=sessionDept(),grp=sessionRawGroup(),admin=isAdminUser()||isMachiUser();
+      const match=rule=>{const m=String(rule||'').trim().match(/^(department|group):(.+)$/i);if(!m)return canonAcc(rule)===acc;const kind=m[1].toLowerCase(),t=m[2].trim();return kind==='department'?(t==='設計部'?(dept==='設計部'||['平面','影音'].includes(grp)):dept===t):(grp===t)};
+      return state.customers.filter(r=>admin||parseList(r['專案負責人']).some(match)).map(r=>String(r['客戶別']||'').trim()).filter(Boolean);
+    }
+    function custStored(name){
+      const row=customerRow(name)||{},rules=parseList(row['專案負責人']),raw=row['預設信箱'],unset=raw===undefined||raw===null||String(raw).trim()==='';
+      return {rules:rules.filter(isGroupRule),owners:rules.filter(r=>!isGroupRule(r)).map(canonAcc).filter(Boolean),mails:unset?[...DEFAULT_CC]:parseList(raw),designers:parseList(row['設計負責人']).filter(n=>designerNames().includes(n))};
+    }
+    const custValues=name=>{const d=st2.custDrafts.get(name);return d?{rules:[...d.rules],owners:[...d.owners],mails:[...d.mails],designers:[...d.designers]}:custStored(name)};
+    function orgTree(rules){
+      const settings=state.settings.filter(r=>r['帳號']),disabled=new Set((state.permissions||[]).filter(r=>String(r['狀態']||'').trim()==='停用').map(r=>canonAcc(r['帳號'])));
+      const flat=['企劃部','設計部','負責人'],departments=new Map();
+      const node=(map,label,rule)=>{if(!map.has(label))map.set(label,{label,rule,members:[],children:new Map()});return map.get(label)};
+      for(const row of settings){
+        const account=canonAcc(row['帳號']);if(!account.includes('@')||disabled.has(account))continue;
+        let dept=String(row['部門']||'').trim();const group=String(row['組別']||'').trim();
+        if(hiddenUnit.test(dept)||hiddenUnit.test(group))continue;
+        if(['平面','影音'].includes(group))dept='設計部';if(!dept)dept='其他';
+        const m={account,name:String(row['顯示名']||row['名字']||'').trim()||account};
+        const top=node(departments,dept,dept==='其他'?'':`department:${dept}`);
+        if(group&&!flat.includes(dept))node(top.children,group,`group:${group}`).members.push(m);else top.members.push(m);
+      }
+      const rep=new Set();departments.forEach(n=>{rep.add(n.rule);n.children.forEach(c=>rep.add(c.rule))});
+      rules.filter(r=>!rep.has(r)&&!hiddenUnit.test(r)).forEach(r=>node(departments,r.slice(r.indexOf(':')+1),r));
+      const by=(a,b)=>String(a.name||a.label).localeCompare(String(b.name||b.label),'zh-Hant'),rank=l=>{const i=flat.indexOf(l);return i<0?flat.length:i};
+      const fin=n=>({...n,members:[...n.members].sort(by),children:[...n.children.values()].sort(by).map(fin)});
+      return [...departments.values()].sort((a,b)=>rank(a.label)-rank(b.label)||by(a,b)).map(fin);
+    }
+    function mailContacts(extra){
+      const seen=new Set(),list=[],add=(name,email,group)=>{const e=String(email||'').trim().toLowerCase();if(!e||seen.has(e))return;seen.add(e);list.push({name:name||e,email:e,group:group||'其他'})};
+      for(const r of state.settings){const acc=canonAcc(r['帳號']);if(!acc.includes('@'))continue;const dept=String(r['部門']||'').trim(),grp=String(r['組別']||'').trim();if(hiddenUnit.test(dept)||hiddenUnit.test(grp))continue;add(String(r['顯示名']||r['名字']||'').trim(),acc,grp||dept)}
+      for(const entry of extra){const e=emailOf(entry);if(e)add(String(entry).replace(/\s*<.*?>\s*/,'').trim(),e,'其他')}
+      return list;
+    }
+    function ownerNodeHtml(n,ctx,depth=0){
+      const ruleOn=Boolean(n.rule)&&ctx.rules.has(n.rule),cov=ctx.parentCovered||ruleOn;
+      const head=n.rule?`<label class="cu-all" onclick="event.stopPropagation()"><input type="checkbox" data-cu-rule="${esc(n.rule)}"${cov?' checked':''}${ctx.parentCovered?' disabled':''}>全選</label>`:'';
+      const members=n.members.map(m=>{const locked=m.account===ctx.self,on=cov||locked||ctx.owners.has(m.account);return `<label class="cu-check${locked?' is-locked':''}" title="${esc(m.account)}"><input type="checkbox" data-cu-owner="${esc(m.account)}"${on?' checked':''}${locked||cov?' disabled':''}><span>${esc(m.name)}</span></label>`}).join('');
+      const kids=n.children.map(c=>ownerNodeHtml(c,{...ctx,parentCovered:cov},depth+1)).join('');
+      const key=`o:${n.label}`,open=st2.open.groups.has(key)||ruleOn;
+      return `<details class="cu-group${depth?' nested':''}" data-cu-key="${esc(key)}"${open?' open':''}><summary><span>${esc(n.label)}</span>${head}</summary>${members?`<div class="cu-checks">${members}</div>`:''}${kids}${!members&&!kids?'<p class="set-note">目前沒有成員；勾選「全選」後，之後加入的人員會自動取得權限。</p>':''}</details>`;
+    }
+    function customersHtml(){
+      if(!canUseCustomerSettings())return '';
+      const names=custNames();
+      if(!names.includes(st2.custCurrent))st2.custCurrent=names[0]||'';
+      let body='<p class="set-note">你目前沒有任何客戶別的權限。</p>';
+      if(st2.custCurrent){
+        const v=custValues(st2.custCurrent),self=selfAccount(),tree=orgTree(v.rules);
+        const listed=new Set(tree.flatMap(n=>[...n.members,...n.children.flatMap(c=>c.members)]).map(m=>m.account));
+        const orphans=v.owners.filter(a=>!listed.has(a)&&a!==self).map(a=>({account:a,name:a}));if(self&&!listed.has(self))orphans.unshift({account:self,name:session().name||self});
+        if(orphans.length){const o=tree.find(n=>n.label==='其他');if(o)o.members.push(...orphans);else tree.push({label:'其他',rule:'',members:orphans,children:[]})}
+        const ctx={rules:new Set(v.rules),owners:new Set(v.owners),self,parentCovered:false};
+        const mailSet=new Set(v.mails.map(emailOf).filter(Boolean)),contacts=mailContacts(v.mails),groups=new Map();
+        for(const c of contacts){if(!groups.has(c.group))groups.set(c.group,[]);groups.get(c.group).push(c)}
+        const dset=new Set(v.designers);
+        body=`<div class="cu-block"><b>權限設定</b><small>勾選的人可以編輯、刪除這個客戶別的案件並寄信。部門或組別按「全選」會套用整個單位，之後新加入的成員也會自動取得權限（與資料庫後台相同）。</small>${tree.map(n=>ownerNodeHtml(n,ctx)).join('')}</div>
+          <div class="cu-block"><b>預設信箱</b><small>填完案件後，信件編輯器會自動把勾選的人放進副本（收件的設計師本人會自動略過）。</small>${[...groups.entries()].map(([label,items])=>{const sel=items.filter(c=>mailSet.has(c.email)).length,key=`m:${label}`;return `<details class="cu-group" data-cu-key="${esc(key)}"${st2.open.groups.has(key)||sel?' open':''}><summary><span>${esc(label)}（已選 ${sel}）</span><label class="cu-all" onclick="event.stopPropagation()"><input type="checkbox" data-cu-mail-all="${esc(label)}"${sel===items.length?' checked':''}>全選</label></summary><div class="cu-checks">${items.map(c=>`<label class="cu-check" title="${esc(c.email)}"><input type="checkbox" data-cu-mail="${esc(c.email)}"${mailSet.has(c.email)?' checked':''}><span>${esc(c.name)}</span></label>`).join('')}</div></details>`}).join('')}</div>
+          <div class="cu-block"><b>喜愛設定</b><small>前台填單選到這個客戶別時，會自動帶入第一位勾選的設計師。</small><div class="cu-checks">${designerNames().map(n=>`<label class="cu-check"><input type="checkbox" data-cu-designer="${esc(n)}"${dset.has(n)?' checked':''}><span>${esc(n)}</span></label>`).join('')}</div></div>`;
+      }
+      return `<details class="set-card" data-set-sec="customers"${sectionOpen('customers')}><summary><b>客戶設定</b><span>調整你負責的客戶別：誰也能編輯與寄信、預設副本信箱、喜愛的設計師。</span></summary><div class="set-body">
+        <label class="field" style="max-width:320px"><span class="label">客戶別</span><select id="custSelect">${names.map(n=>`<option value="${esc(n)}"${n===st2.custCurrent?' selected':''}>${esc(n)}</option>`).join('')}</select></label>
+        <div id="custBody">${body}</div>
+        <div class="set-actions"><button type="button" class="btn primary" data-set-save="customers"${st2.busy==='customers'?' disabled':''}>${st2.busy==='customers'?'儲存中…':'儲存'}</button></div></div></details>`;
+    }
+    function renderSettings(){
+      const stage=$('stage');
+      if(!loggedIn()){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2><div class="notice error" role="alert">請先登入後再使用設定。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>`;return}
+      if(!st2.loaded){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2>${st2.error?`<div class="notice error" role="alert">${esc(st2.error)}</div><div class="form-actions"><button type="button" class="btn" data-set-reload>重新讀取</button></div>`:'<div class="notice">正在讀取你的設定…</div>'}</div>`;if(!st2.error)loadUserSettings();return}
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${profileHtml()}${templatesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
+    }
+    /* 讀取畫面上的編輯內容回 state（切換、新增、刪除前呼叫） */
+    function captureSettings(){
+      const root=$('stage');if(state.view!=='settings')return;
+      const dn=$('setDisplayName');if(dn)st2.display=dn.value;
+      const tplRows=[...root.querySelectorAll('[data-tpl-row]')];if(tplRows.length||root.querySelector('[data-set-sec="templates"]')){st2.templates=tplRows.map(r=>({html:r.querySelector('[data-tpl-editor]').innerHTML.trim()}));const c=root.querySelector('input[name="tplDefault"]:checked');if(c)st2.tplDefault=+c.value}
+      const sigRows=[...root.querySelectorAll('[data-sig-row]')];if(sigRows.length||root.querySelector('[data-set-sec="signatures"]')){st2.presets=sigRows.map(r=>({name:r.querySelector('[data-sig-name]').value.trim(),html:r.querySelector('[data-sig-editor]').innerHTML.trim()}));const c=root.querySelector('input[name="sigDefault"]:checked');if(c)st2.presetDefault=+c.value}
+      root.querySelectorAll('details[data-set-sec]').forEach(d=>{st2.open[d.dataset.setSec]=d.open});
+      root.querySelectorAll('details[data-cu-key]').forEach(d=>{d.open?st2.open.groups.add(d.dataset.cuKey):st2.open.groups.delete(d.dataset.cuKey)});
+    }
+    function captureCustomerDraft(){
+      const body=$('custBody'),name=st2.custCurrent;if(!body||!name||!body.querySelector('[data-cu-owner],[data-cu-mail],[data-cu-designer]'))return;
+      const stored=custStored(name),self=selfAccount(),prev=custValues(name);
+      const rules=new Set([...stored.rules.filter(r=>hiddenUnit.test(r)),...[...body.querySelectorAll('[data-cu-rule]')].filter(i=>i.checked&&!i.disabled).map(i=>i.dataset.cuRule)]);
+      // 被上層規則涵蓋而 disabled 的子規則保留原本的選擇狀態
+      [...body.querySelectorAll('[data-cu-rule]')].filter(i=>i.disabled&&prev.rules.includes(i.dataset.cuRule)).forEach(i=>rules.add(i.dataset.cuRule));
+      const owners=new Set([...[...body.querySelectorAll('[data-cu-owner]')].filter(i=>i.checked&&!i.disabled).map(i=>i.dataset.cuOwner),...prev.owners.filter(a=>body.querySelector(`[data-cu-owner="${CSS.escape(a)}"]`)?.disabled),...(self?[self]:[])]);
+      const mails=[...body.querySelectorAll('[data-cu-mail]:checked')].map(i=>i.dataset.cuMail);
+      const picked=[...body.querySelectorAll('[data-cu-designer]:checked')].map(i=>i.dataset.cuDesigner);
+      const designers=[...stored.designers.filter(d=>picked.includes(d)),...picked.filter(d=>!stored.designers.includes(d))];
+      st2.custDrafts.set(name,{rules:[...rules],owners:[...owners],mails,designers});
+    }
+    const sameSet=(a,b)=>{const l=new Set(a),r=new Set(b);return l.size===r.size&&[...l].every(v=>r.has(v))};
+    function setStatus(msg,err){const el=$('setStatus');if(el){el.textContent=msg;el.style.color=err?'#b42318':'var(--muted)'}toast(msg,err)}
+    async function saveSettingsSection(section){
+      captureSettings();
+      if(st2.busy)return;
+      let settings=null,label='';
+      if(section==='profile'){
+        const name=st2.display.trim();if(!name){toast('請輸入顯示名',true);return}
+        settings={displayName:name};label='顯示名';
+      }else if(section==='templates'){
+        const items=st2.templates.filter(t=>t.html.replace(/<[^>]*>|&nbsp;/g,'').trim());
+        if(items.length!==st2.templates.length&&!confirm('有空白的範本，儲存時會略過這些空白範本。要繼續嗎？'))return;
+        const map={};items.forEach((t,i)=>{map[`範本 ${i+1}`]=t.html});
+        const defIdx=Math.max(0,items.indexOf(st2.templates[st2.tplDefault]));
+        settings={replyTemplates:map,replyTemplateDefault:items.length?`範本 ${defIdx+1}`:''};label=`${items.length} 筆信件範本`;
+      }else if(section==='signatures'){
+        const items=st2.presets.filter(p=>p.html.replace(/<[^>]*>|&nbsp;/g,'').trim());
+        if(items.some(p=>!p.name)){toast('請替每一組簽名檔命名',true);return}
+        if(new Set(items.map(p=>p.name)).size!==items.length){toast('簽名檔名稱不能重複',true);return}
+        const map=Object.fromEntries(items.map(p=>[p.name,p.html])),def=st2.presets[st2.presetDefault];
+        settings={signaturePresets:map,signaturePresetDefault:def&&map[def.name]?def.name:(items[0]?.name||'')};label=`${items.length} 組簽名檔`;
+      }
+      st2.busy=section;renderSettings();
+      try{
+        if(section==='customers'){
+          captureCustomerDraft();const self=selfAccount();let saved=0;
+          for(const [name,draft] of [...st2.custDrafts.entries()]){
+            const stored=custStored(name),payload={customer:name},w=l=>l.filter(a=>a!==self);
+            if(!sameSet(w(draft.owners),w(stored.owners)))payload.owners=draft.owners;
+            if(!sameSet(draft.rules,stored.rules))payload.rules=draft.rules;
+            if(!sameSet(draft.mails.map(emailOf),stored.mails.map(emailOf)))payload.mails=draft.mails;
+            if(draft.designers.join('\n')!==stored.designers.join('\n'))payload.designers=draft.designers;
+            if(!('owners' in payload||'rules' in payload||'mails' in payload||'designers' in payload)){st2.custDrafts.delete(name);continue}
+            const res=await api('saveCustomerSettings',payload);
+            if(res.customer)state.customers=sortCustomers([...state.customers.filter(r=>String(r['客戶別']||'').trim()!==name),res.customer]);
+            st2.custDrafts.delete(name);if(!res.unchanged)saved++;
+          }
+          st2.busy='';renderSettings();setStatus(saved?`已儲存 ${saved} 個客戶設定`:'客戶設定沒有變更');return;
+        }
+        const data=await api('saveUserSettings',{account:selfAccount(),settings}),saved=data.settings||{};
+        if(section==='profile'){
+          const nm=String(saved.displayName??saved['顯示名']??'').trim();if(!nm||nm!==settings.displayName)throw new Error('後端未回傳已儲存的顯示名');
+          try{localStorage.setItem('designRequestEditorDisplayName',nm);sessionStorage.setItem('designRequestEditorDisplayName',nm)}catch(e){}
+          st2.display=nm;renderLogin();
+        }
+        st2.busy='';renderSettings();setStatus(`已儲存${label}`);
+      }catch(err){st2.busy='';renderSettings();setStatus(`儲存失敗：${err.message}`,true)}
+    }
+    /* 事件：設定頁 */
+    document.addEventListener('mousedown',e=>{if(e.target.closest?.('.mini-tools button,[data-sc-ins],.mini-tools .rc-c'))e.preventDefault()});
+    document.addEventListener('click',e=>{
+      const t=e.target;if(state.view!=='settings')return;
+      const sc=t.closest('[data-sc]')?.dataset.sc;
+      if(sc){
+        const wrap=t.closest('.tpl-row'),ed=wrap?.querySelector('.mini-editor');if(!ed)return;
+        if(sc==='colorToggle'){const p=wrap.querySelector('.rc-colors');p.hidden=!p.hidden;return}
+        ed.focus();
+        if(sc==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url);return}
+        document.execCommand(sc,false,null);return;
+      }
+      const col=t.closest('[data-sc-color]');if(col){document.execCommand('foreColor',false,col.dataset.scColor);col.closest('.rc-colors').hidden=true;return}
+      const ins=t.closest('[data-sc-ins]');if(ins){const ed=ins.closest('.tpl-row').querySelector('.mini-editor');ed.focus();document.execCommand('insertText',false,ins.dataset.scIns);return}
+      const save=t.closest('[data-set-save]');if(save){saveSettingsSection(save.dataset.setSave);return}
+      if(t.closest('[data-tpl-add]')){captureSettings();st2.templates.push({html:''});renderSettings();return}
+      const td=t.closest('[data-tpl-del]');if(td){captureSettings();st2.templates.splice(+td.dataset.tplDel,1);if(st2.tplDefault>=st2.templates.length)st2.tplDefault=0;renderSettings();return}
+      if(t.closest('[data-sig-add]')){captureSettings();st2.presets.push({name:'',html:''});renderSettings();return}
+      const sd=t.closest('[data-sig-del]');if(sd){captureSettings();st2.presets.splice(+sd.dataset.sigDel,1);if(st2.presetDefault>=st2.presets.length)st2.presetDefault=0;renderSettings();return}
+      if(t.closest('[data-set-reload]')){st2.error='';loadUserSettings(true);renderSettings();return}
+      if(t.closest('[data-lp-open]')){startLogin();return}
+    });
+    document.addEventListener('change',e=>{
+      const t=e.target;if(state.view!=='settings')return;
+      if(t.id==='custSelect'){captureCustomerDraft();captureSettings();st2.custCurrent=t.value;renderSettings();return}
+      if(t.matches?.('[data-cu-rule],[data-cu-owner],[data-cu-mail],[data-cu-designer],[data-cu-mail-all]')){
+        const body=$('custBody');
+        if(t.matches('[data-cu-mail-all]')){t.closest('details').querySelectorAll('[data-cu-mail]').forEach(b=>{b.checked=t.checked})}
+        captureCustomerDraft();captureSettings();renderSettings();
+      }
+    });
+    document.addEventListener('paste',e=>{const ed=e.target.closest?.('.mini-editor');if(!ed)return;/* 保留貼上的格式（例如從 Word／Google 文件貼簽名檔） */});
+
     /* ---------- 信件編輯器（沿用舊系統功能：收件人標籤、完整工具列、插入照片／附件／簽名檔、指定排程、合併信件、上一封／下一封） ---------- */
     const RC_COLORS=['#17211d','#6b7280','#dc2626','#ea580c','#ca8a04','#16a34a','#0d9488','#2563eb','#7c3aed','#db2777'];
     const IMG_TYPES=new Set(['image/jpeg','image/png','image/webp','image/gif']);
@@ -1388,7 +1662,7 @@
           ${tb('justifyLeft','靠左對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>')}${tb('justifyCenter','置中對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg>')}${tb('justifyRight','靠右對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg>')}<span class="tool-sep"></span>
           <span class="rc-color-wrap"><button type="button" class="tool" data-rc="colorToggle" title="文字顏色" aria-label="文字顏色">A<span class="rc-swatch"></span></button><span class="rc-colors" id="rcColors" hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" data-rc-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span>
           ${tb('link','插入超連結','連結')}${tb('removeFormat','清除格式','清除格式')}<span class="tool-sep"></span>
-          ${tb('signature','插入簽名檔','簽名檔',d.sigInserted?' on':'')}${tb('image','上傳照片','照片')}${tb('attach','附加檔案','附件')}
+          ${tb('template','插入信件範本','範本')}${tb('signature','插入簽名檔','簽名檔',d.sigInserted?' on':'')}${tb('image','上傳照片','照片')}${tb('attach','附加檔案','附件')}
           <input type="file" id="mImgInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden><input type="file" id="mAttInput" multiple hidden>
         </div>
         <div class="editor" id="mBody" contenteditable="${locked?'false':'true'}" role="textbox" aria-multiline="true" aria-label="信件內容">${d.body}</div>
@@ -1463,6 +1737,27 @@
       if(t.id==='mImgInput'){await insertMailImages(t.files);t.value=''}
       if(t.id==='mAttInput'){await addMailAttachments(t.files);t.value=''}
     });
+    function insertSignatureHtml(html){
+      const ed=$('mBody');restoreMailRange();const box=document.createElement('div');box.className='v5-sig';box.innerHTML=html;
+      const sel=getSelection(),rg=sel.rangeCount?sel.getRangeAt(0):null;if(rg){rg.deleteContents();rg.insertNode(box)}else ed.appendChild(box);saveMailDraft();renderMail();
+    }
+    const stripHtml=h=>String(h||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+    function closePicker(){document.getElementById('rcPick')?.remove()}
+    function openPicker(kind,btn){
+      closePicker();if(!btn)return;
+      const items=kind==='template'?st2.templates.map((t,i)=>({label:`範本 ${i+1}${i===st2.tplDefault?'（預設）':''}`,sub:stripHtml(t.html).slice(0,46)})):st2.presets.map((p,i)=>({label:`${p.name}${i===st2.presetDefault?'（預設）':''}`,sub:''}));
+      const pop=document.createElement('div');pop.id='rcPick';pop.className='rc-pick';
+      pop.innerHTML=items.map((it,i)=>`<button type="button" data-pick="${kind}:${i}"><b>${esc(it.label)}</b>${it.sub?`<small>${esc(it.sub)}</small>`:''}</button>`).join('')||`<div class="empty">尚未設定${kind==='template'?'信件範本':'簽名檔'}，請到左側「設定」新增。</div>`;
+      document.body.appendChild(pop);const r=btn.getBoundingClientRect();pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left))+'px';pop.style.top=(r.bottom+6)+'px';
+    }
+    function applyPick(kind,i){
+      closePicker();const m=state.mail,d=m.drafts[m.index];
+      if(kind==='signature'){const p=st2.presets[i];if(p)insertSignatureHtml(p.html);return}
+      const t=st2.templates[i];if(!t)return;
+      const first=document.querySelector('[data-chip-field="to"] [data-entry]')?.dataset.entry||'',nm=(entryLabel(first)||'').replace(/@.*$/,'')||'您好',details=String(d.row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、');
+      const html=t.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(details));
+      restoreMailRange();document.execCommand('insertHTML',false,html);saveMailRange();toast('已插入信件範本');
+    }
     function runRichCmd(cmd){
       const ed=$('mBody');if(!ed||ed.getAttribute('contenteditable')!=='true')return;
       if(cmd==='colorToggle'){$('rcColors').hidden=!$('rcColors').hidden;return}
@@ -1470,11 +1765,14 @@
       if(cmd==='attach'){$('mAttInput').click();return}
       restoreMailRange();
       if(cmd==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url);saveMailRange();return}
+      if(cmd==='template'){openPicker('template',document.querySelector('[data-rc="template"]'));return}
       if(cmd==='signature'){
-        if(!state.signature){toast('尚未設定 Gmail 簽名檔（可在現行系統個人設定處理）',true);return}
         const has=ed.querySelector('.v5-sig');
         if(has){has.remove();saveMailDraft();renderMail();return}
-        const box=document.createElement('div');box.className='v5-sig';box.innerHTML=state.signature;const sel=getSelection(),rg=sel.rangeCount?sel.getRangeAt(0):null;if(rg){rg.deleteContents();rg.insertNode(box)}else ed.appendChild(box);saveMailDraft();renderMail();return;
+        if(st2.presets.length>1){openPicker('signature',document.querySelector('[data-rc="signature"]'));return}
+        const html=st2.presets[0]?.html||state.signature||state.gmailSignature;
+        if(!html){toast('尚未設定簽名檔（可到左側「設定」新增，或使用 Gmail 帳號本身的簽名）',true);return}
+        insertSignatureHtml(html);return;
       }
       document.execCommand(cmd,false,null);saveMailRange();
     }
@@ -1685,7 +1983,8 @@
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
-      const nav=t.closest('[data-nav]')?.dataset.nav;if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
+      const nav=t.closest('[data-nav]')?.dataset.nav;if(nav==='settings'){state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
+      if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
       if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();applyMove(pm.id,pm.status,picked)}return}
@@ -1730,6 +2029,8 @@
       if(mail==='unmerge'){unmergeCurrent();return}
       if(mail==='schedule-toggle'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduleOpen=!d.scheduleOpen;renderMail();return}
       if(mail==='schedule-clear'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduledAt='';d.scheduleOpen=false;renderMail();return}
+      const pick=t.closest('[data-pick]')?.dataset.pick;if(pick){const [k,i]=pick.split(':');applyPick(k,+i);return}
+      if(!t.closest('#rcPick')&&!t.closest('[data-rc="template"],[data-rc="signature"]'))closePicker();
       const rc=t.closest('[data-rc]')?.dataset.rc;if(rc){runRichCmd(rc);return}
       const rcColor=t.closest('[data-rc-color]')?.dataset.rcColor;if(rcColor){restoreMailRange();document.execCommand('foreColor',false,rcColor);saveMailRange();$('rcColors').hidden=true;return}
       const attDel=t.closest('[data-att-del]');if(attDel){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.attachments.splice(+attDel.dataset.attDel,1);renderMail();return}
@@ -1789,7 +2090,7 @@
       try{
         const res=await fetch('backend/data/db.json',{cache:'no-cache'});const db=await res.json(),t=db.tables||{};
         state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);
-        state.settings=t['設定']?.rows||[];state.avatars=buildAvatarMap(state.settings);
+        state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}
         for(const [id,edit] of [...state.edits]){if(Date.now()-edit.at>10*60*1000){state.edits.delete(id);continue}const hit=state.rows.find(r=>String(r['案件編號'])===id);if(hit)Object.assign(hit,edit.headers)} // 剛編輯完、db.json 還沒更新時，先保留本機的修改
