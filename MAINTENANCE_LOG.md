@@ -140,3 +140,5 @@
 - v5.0: left rail gets 設計儀表板 (designers), 歷史資料庫管理 and 資料庫後台 (admins/Machi, by page.* + capability); settings entry follows profile.edit; request.create gate on 開始填寫.
 
 - v5.0: 您的案件進度 restored (owner confirms 過稿中 cases → ownerConfirmCases; 查看詳情 returns to the list; 需要修改 → modification reply; daily auto popup; account-menu entry with count). Owners always see their own cases even if the customer visibility rule would hide them.
+
+- v5.0: legacy entry splash (green screen, hopping logo, progress bar, designer quotes) added; it fades out once the page and case data are loaded.
