@@ -643,6 +643,12 @@
     /* 簽名檔／信件內文的連結（電話、信箱、地址）要是藍色，不要被全站 a{color:inherit} 吃掉 */
     .signature a,.editor a,.mini-editor a,.v5-sig a{color:#0b57d0!important;text-decoration:underline}
     html[data-theme="dark"] .signature a,html[data-theme="dark"] .editor a,html[data-theme="dark"] .mini-editor a{color:#8ab4f8!important}
+    .seg-btns.icon-only button{width:42px;padding:0;justify-content:center}
+    .seg-btns.icon-only button svg{width:18px;height:18px}
+    .sort-mark{margin-left:6px;font-size:11px;color:var(--faint);font-weight:700}
+    .sort-mark.on{color:var(--brand-deep)}
+    .list-table th{cursor:pointer}
+    .list-table th[draggable]{cursor:pointer}
   </style>
 </head>
 <body>
@@ -720,7 +726,7 @@
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -880,7 +886,22 @@
     function allRows(){const ids=new Set(state.rows.map(r=>String(r['案件編號'])));const local=[...state.localRows.values()].filter(r=>!ids.has(String(r['案件編號'])));return [...local,...state.rows]}
     const idKey=row=>String(row['案件編號']||'');
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
-    const sortedLatest=rows=>{const list=[...rows].sort(byNewest);return state.sort==='asc'?list.reverse():list};
+    const STATUS_RANK=Object.fromEntries(['未開始','執行中','修改中','過稿中','已完成','已取消','暫停中'].map((k,i)=>[k,i]));
+    const SORT_VAL={id:r=>idKey(r),month:r=>r['月份']||monthKey(r),client:r=>String(r['客戶別']||''),project:r=>String(r['專案名稱']||''),qty:r=>+r['數量']||0,designer:r=>String(r['設計負責人']||''),status:r=>STATUS_RANK[String(r['狀態']||'').trim()]??99,details:r=>String(r['項目細節']||''),rev:r=>revisionCount(r),owner:r=>String(r['專案負責人']||''),type:r=>String(r['設計種類']||r['設計類型']||''),stage:r=>String(r['階段']||''),start:r=>{const v=parseDay(r['開始日期']);return Number.isNaN(v)?-1:v},end:r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?-1:v},mail:r=>String(r['Gmail信件串ID']||'').trim()?1:0};
+    const collator=new Intl.Collator('zh-Hant',{numeric:true});
+    /** 網格一律新到舊；列表依表頭點選的欄位排序（預設案件編號新到舊）。 */
+    const sortedLatest=rows=>{
+      const k=state.layout==='list'&&state.sortKey&&SORT_VAL[state.sortKey]?state.sortKey:'id',dir=state.layout==='list'?state.sortDir:'desc',f=SORT_VAL[k],m=dir==='asc'?1:-1;
+      return [...rows].sort((a,b)=>{const x=f(a),y=f(b),c=typeof x==='number'&&typeof y==='number'?x-y:collator.compare(String(x),String(y));return c*m||byNewest(a,b)});
+    };
+    const sortMark=k=>`<span class="sort-mark${state.sortKey===k?' on':''}">${state.sortKey===k?(state.sortDir==='asc'?'▲':'▼'):'↕'}</span>`;
+    function toggleSort(key){
+      if(!SORT_VAL[key])return;
+      if(state.sortKey!==key){state.sortKey=key;state.sortDir='asc'}
+      else if(state.sortDir==='asc')state.sortDir='desc';
+      else{state.sortKey='id';state.sortDir='desc'}
+      rerenderList();
+    }
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
     function typeClass(row){const v=/影音/.test(String(row['設計種類']||row['設計類型']||'')),st=String(row['階段']||'').trim();return v?(st==='再製'?'ci-v-re':st==='新製'?'ci-video':'ci-video'):(st==='再製'?'ci-g-re':'')}
     function cdClass(s,status){if(['過稿中','已完成','已取消'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
@@ -943,16 +964,18 @@
     }
     function saveCols(){try{localStorage.setItem('v5ListCols',JSON.stringify({order:state.cols.order,hidden:[...state.cols.hidden],widths:state.cols.widths||{}}))}catch(err){}}
     function ensureCols(){if(!state.cols)state.cols=loadCols()}
-    function colsToolHtml(){ensureCols();
-      if(state.layout!=='list')return '';
-      return `<div class="filter-wrap cols-wrap"><button type="button" class="tool-btn${state.colsOpen?' on':''}" data-cols-toggle aria-expanded="${state.colsOpen}"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9.5 4v16M15 4v16"/></svg>欄位</button>${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}</div>`;
+    const ICON_GRID='<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',ICON_LIST='<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',ICON_COLS='<svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9.5 4v16M15 4v16"/></svg>';
+    /** 網格／列表／欄位：只留圖示、搭成同一組（欄位只在列表排列時出現） */
+    function layoutGroupHtml(){
+      ensureCols();const list=state.layout==='list';
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${list?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     function listTableHtml(rows){
       ensureCols();
       const defs=state.cols.order.map(k=>COL_DEFS.find(c=>c.key===k)).filter(c=>c&&!state.cols.hidden.has(c.key)),ed=isDesignerSession();
       const body=rows.map(r=>`<tr data-row-id="${esc(idKey(r))}">${defs.map(c=>c.cell(r,ed)).join('')}</tr>`).join('');
       const wOf=k=>Math.max(50,+(state.cols.widths||{})[k]||COL_WIDTH[k]||120),total=defs.reduce((n,c)=>n+wOf(c.key),0);
-      return `<div class="list-wrap" id="listWrap"><table class="list-table" style="width:${total}px"><colgroup>${defs.map(c=>`<col data-col-w="${c.key}" style="width:${wOf(c.key)}px">`).join('')}</colgroup><thead><tr>${defs.map(c=>`<th draggable="true" data-col="${c.key}" title="拖移可調整欄位順序；拖曳右側邊線可調整寬度">${c.label}<span class="col-resize" data-resize="${c.key}" draggable="false"></span></th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+      return `<div class="list-wrap" id="listWrap"><table class="list-table" style="width:${total}px"><colgroup>${defs.map(c=>`<col data-col-w="${c.key}" style="width:${wOf(c.key)}px">`).join('')}</colgroup><thead><tr>${defs.map(c=>`<th draggable="true" data-col="${c.key}" title="點選排序；拖移可調整欄位順序；拖曳右側邊線可調整寬度">${c.label}${SORT_VAL[c.key]?sortMark(c.key):''}<span class="col-resize" data-resize="${c.key}" draggable="false"></span></th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
     function renderBoard(){
       const stage=$('stage');
@@ -965,10 +988,10 @@
           <div><h2>最新案件列表</h2></div>
           <div class="section-tools">
             <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
-            <div class="seg-btns" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${state.layout==='grid'?'on':''}" aria-pressed="${state.layout==='grid'}"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>網格排列</button><button type="button" data-layout="list" class="${state.layout==='list'?'on':''}" aria-pressed="${state.layout==='list'}"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>列表排列</button></div>
+            ${layoutGroupHtml()}
             <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
-            <div class="seg-btns" role="group" aria-label="排序"><button type="button" data-sort="desc" class="${state.sort==='desc'?'on':''}" aria-pressed="${state.sort==='desc'}">新到舊</button><button type="button" data-sort="asc" class="${state.sort==='asc'?'on':''}" aria-pressed="${state.sort==='asc'}">舊到新</button></div>
-            ${colsToolHtml()}<span class="board-sync">${esc(state.syncText)}</span>
+            
+            <span class="board-sync">${esc(state.syncText)}</span>
           </div>
         </div>
         <section class="latest" aria-label="最新案件">
@@ -1045,7 +1068,7 @@
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
       const cols=COLUMNS.map(column=>{
-        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return state.sort==='asc'?-byNewest(a,b):byNewest(a,b)});
+        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return byNewest(a,b)});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
           <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
@@ -1057,10 +1080,10 @@
       const hadFocus=document.activeElement?.id==='boardSearch';
       stage.innerHTML=`<div class="section-head"><div><h2>專案列表</h2></div><div class="section-tools">
           <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
-          <div class="seg-btns" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${state.layout==='grid'?'on':''}" aria-pressed="${state.layout==='grid'}"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>網格排列</button><button type="button" data-layout="list" class="${state.layout==='list'?'on':''}" aria-pressed="${state.layout==='list'}"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>列表排列</button></div>
+          ${layoutGroupHtml()}
           <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
-          <div class="seg-btns" role="group" aria-label="排序"><button type="button" data-sort="desc" class="${state.sort==='desc'?'on':''}" aria-pressed="${state.sort==='desc'}">新到舊</button><button type="button" data-sort="asc" class="${state.sort==='asc'?'on':''}" aria-pressed="${state.sort==='asc'}">舊到新</button></div>
-          ${colsToolHtml()}<span class="board-sync">${esc(state.syncText)}</span></div></div>
+          
+          <span class="board-sync">${esc(state.syncText)}</span></div></div>
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
         ${state.layout==='list'?plistHtml(rows):`<div class="board five">${cols}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
@@ -2053,7 +2076,7 @@
       const aiRemove=t.closest('[data-ai-remove]');if(aiRemove){ai.files.splice(+aiRemove.dataset.aiRemove,1);renderAi();return}
       if(t.closest('[data-ai-drop]')){document.querySelector('[data-ai-file]')?.click();return}
       const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}rerenderList();return}
-      const sort=t.closest('[data-sort]');if(sort){state.sort=sort.dataset.sort;rerenderList();return}
+      const thSort=t.closest('th[data-col]');if(thSort&&!t.closest('.col-resize')&&state.view!=='settings'){toggleSort(thSort.dataset.col);return}
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
       if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;rerenderList();return}
       const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
