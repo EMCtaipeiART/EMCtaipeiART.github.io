@@ -1060,7 +1060,7 @@
     function gridHide(){if(!state.gridHide){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridHide')||'[]')}catch(err){}state.gridHide=new Set(Array.isArray(a)?a:[])}return state.gridHide}
     function layoutGroupHtml(){
       ensureCols();const list=state.layout==='list',gh=gridHide();GRID_FIELDS.forEach(([k])=>document.body.classList.toggle('gh-'+k,gh.has(k)));
-      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button><button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button></div>${!list&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的案件狀態（勾選＝顯示，可複選）</h4><div class="chips">${STATUS_FILTER.map(k=>`<label><input type="checkbox" data-grid-status="${k}"${gridStatusHide().has(k)?'':' checked'}>${ST[k].label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     function listTableHtml(rows){
       ensureCols();
@@ -1072,7 +1072,7 @@
     function renderBoard(){
       const stage=$('stage');
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
-      const rows=allRows().filter(matches).filter(passFilters).filter(r=>state.layout!=='grid'||!gridStatusHide().has(String(r['狀態']||'').trim())),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
+      const rows=allRows().filter(matches).filter(passFilters),latest=sortedLatest(rows),shown=latest.slice(0,state.latestLimit);
       const hadFocus=document.activeElement?.id==='boardSearch',n=filterCount();
       const latestBody=!shown.length?'<div class="empty">沒有符合的案件</div>':state.layout==='list'?listTableHtml(shown):`<div class="latest-grid">${shown.map(r=>cardHtml(r,false)).join('')}</div>`;
       stage.innerHTML=`
@@ -1159,7 +1159,7 @@
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
-      const cols=COLUMNS.map(column=>{
+      const cols=COLUMNS.filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
         const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return byNewest(a,b)});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
@@ -2625,7 +2625,7 @@
     });
     document.addEventListener('change',async e=>{
       const t=e.target;
-      if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);if(gh.size>=STATUS_FILTER.length)gh.clear();try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
+      if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);if(gh.size>=COLUMNS.length)gh.clear();try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
       if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
