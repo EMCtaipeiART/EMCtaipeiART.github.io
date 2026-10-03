@@ -128,3 +128,5 @@
 - v5.0: timeline divider default snaps right after the column titles (table width, capped at 60% of the width); dragged position is remembered.
 
 - v5.0: timeline divider snaps exactly to the end of the list columns (timeline keeps at least 300px).
+
+- v5.0: timeline bars thinner (26px).
