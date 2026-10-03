@@ -643,7 +643,7 @@
     /* 簽名檔的電話／手機／地址：維持黑色，不要變成連結藍 */
     .signature a,.v5-sig a,.editor .v5-sig a{color:inherit!important;text-decoration:none}
     /* 信件串內文 13px */
-    .th-card .th-body,.th-card .th-body *,.th-pre{font-size:13px}
+    .th-card .th-body,.th-pre{font-size:11px}
     .card-acts{margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
     .card-acts .lt-act{width:28px;height:28px;min-height:28px;padding:0;border-radius:50%;justify-content:center;gap:0}
     .card-acts .lt-act span{display:none}
@@ -691,7 +691,14 @@
     .chip-more{height:28px;padding:0 12px;border-radius:99px;border:1px dashed var(--brand);background:transparent;color:var(--brand-deep);font-size:13px;font-weight:800;cursor:pointer}
     #contactBody .cu-checks{padding-bottom:10px}
     .detail-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
-  </style>
+      /* v5 thread 11px；簽名檔表格不折行跑版、連結改回黑字 */
+    .th-card .th-body{font-size:11px;line-height:1.6}
+    .th-card .th-body table{overflow-wrap:normal;word-break:normal;border-collapse:collapse;max-width:none}
+    .th-card .th-body td,.th-card .th-body th{vertical-align:top}
+    .th-card .th-body img{max-width:100%}
+    .th-card .th-body table a,.th-card .th-body a[href^="tel:"],.th-card .th-body a[href*="maps"]{color:inherit!important;text-decoration:none!important}
+    .th-card .th-body table a[href^="http"]:not([href*="maps"]){color:inherit!important;text-decoration:none!important}
+</style>
 </head>
 <body>
   <nav class="rail" aria-label="主選單">
@@ -1734,6 +1741,7 @@
             if(name==='style'){const clean=val.split(';').filter(d=>d.trim()&&!/url\s*\(|expression|behavior|position\s*:\s*(fixed|absolute)/i.test(d)).join(';');clean?child.setAttribute('style',clean):child.removeAttribute('style');continue}
             if(!['alt','title','width','height','colspan','rowspan','align','valign','color','face','size','target','rel','border','cellpadding','cellspacing','bgcolor','dir'].includes(name))child.removeAttribute(attr.name);
           }
+          if(tag==='A'&&(/^tel:/i.test(child.getAttribute('href')||'')||/(^|s)[+(]?d[ds()#-+]{6,}$/.test((child.textContent||'').trim())||/[縣市區路街巷號樓]/.test(child.textContent||'')&&/d/.test(child.textContent||''))){child.replaceWith(...child.childNodes);continue}
           if(tag==='A'){child.setAttribute('target','_blank');child.setAttribute('rel','noopener noreferrer')}
           if(tag==='IMG'){child.setAttribute('referrerpolicy','no-referrer');child.setAttribute('loading','lazy')}
         }

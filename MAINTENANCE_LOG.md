@@ -91,3 +91,5 @@
 - 填需求的「開始／結束時間」預設：台北時間 18:00 以後算隔天（`requestDefaultDateValue()`）。
 - 進站載入動畫：綠底＋設計部 logo 彈跳＋白色進度條，進度條下方輪播設計師語錄（語錄清單移到 `window.emcQuotes`，送出遮罩與 AI 等待畫面共用）。
 - 像素辦公室：Machi 新增動作「浪子踢球」（需部署 Worker，已部署）；閃身步、狗熊哆嗦毛、浪子踢球皆不限時；狗熊哆嗦毛加頭部左右橫移；側身帽子後緣往前；造型區移除提示文字。詳見 `EMC-ART-Pixel-Office/docs/HANDOFF.md`。
+
+- v5.0: thread text 11px; signature tables no longer wrap/break; phone/mobile/address links unwrapped to plain black text.
