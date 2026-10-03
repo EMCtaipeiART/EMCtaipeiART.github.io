@@ -714,6 +714,14 @@
     .designer-reply-skip-images{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin:10px 0;border:1px solid var(--line);border-radius:12px;background:var(--bg);cursor:pointer}
     .designer-reply-skip-images small{display:block;color:var(--muted);font-weight:600;font-size:12px;margin-top:2px}
     .dr-up{color:var(--muted);font-weight:700}
+    .card-qtywrap{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
+    .card-qtywrap .card-qty{margin-left:0}
+    .card-qtywrap .lt-rev{min-width:0;padding:2px 10px;font-size:12px;cursor:pointer}
+    .rev-meta.is-ok{color:#0f8f61;font-weight:800}
+    #modModal .ai-card{position:relative}
+    .mm-x{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-size:20px;line-height:1;cursor:pointer;color:var(--muted)}
+    .mm-x:hover{background:var(--bg);color:var(--ink)}
+    body.gh-id .card .id-pill,body.gh-client .card .client-pill,body.gh-type .card .ci-type,body.gh-date .card .ci-date,body.gh-detail .card .ci-detail,body.gh-progress .card .progress,body.gh-faces .card .faces,body.gh-rev .card .card-qtywrap .lt-rev,body.gh-qty .card .card-qty,body.gh-acts .card .card-acts{display:none!important}
 </style>
 </head>
 <body>
@@ -753,7 +761,7 @@
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><h3 id="aiTitle">AI 判斷階段（beta）</h3><p class="ai-sub">上傳需求單截圖，AI 會判斷這是「新製」還是「再製」，再由你決定要填入哪一個。</p><div id="aiBody"></div></div>
   </div>
   <div class="ai-modal" id="modModal" hidden>
-    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="mmTitle"><h3 id="mmTitle">修改紀錄</h3><p class="ai-sub" id="mmSub"></p><div id="mmList" class="mm-list"></div>
+    <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="mmTitle"><button type="button" class="mm-x" data-mm="close" aria-label="關閉" title="關閉">×</button><h3 id="mmTitle">修改紀錄</h3><p class="ai-sub" id="mmSub"></p><div id="mmList" class="mm-list"></div>
       <div class="mm-add"><button type="button" class="btn primary" id="mmToggle" data-mm="toggle">＋ 新增修改紀錄</button></div><form id="mmForm" class="mm-form" hidden><div class="field"><span class="label">修改日期</span><input class="input" type="date" name="modifyDate" required></div><div class="field"><span class="label">修改內容 <b>*</b></span><textarea class="input" name="content" rows="4" placeholder="請描述這一輪的修改需求" required style="padding:10px 14px;min-height:96px"></textarea></div>
         <div class="ai-actions"><button type="button" class="btn" data-mm="close">關閉</button><button type="submit" class="btn primary" id="mmSubmit">新增修改紀錄</button></div></form></div>
   </div>
@@ -994,11 +1002,11 @@
       return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${acts}</span></div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
-        <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/s*[,，、]s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
+        <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
-          <span class="card-qty">數量 ${esc(qty||'-')}</span>
+          <span class="card-qtywrap">${(status==='過稿中'&&revisionCount(row)>=0)?`<button type="button" class="lt-rev lt-edit${revisionCount(row)===0?' is-draft':''}${revisionCount(row)>0&&hasPendingMod(row)?' revision-pending':''}" data-rev-open="${esc(id)}" title="快速查看修改紀錄">${revisionCount(row)===0?'初稿':`${revisionCount(row)<=10?NUM_ZH[revisionCount(row)]:revisionCount(row)}修`}</button>`:''}<span class="card-qty">數量 ${esc(qty||'-')}</span></span>
         </div>
       </div>`;
     }
@@ -1047,9 +1055,11 @@
     function ensureCols(){if(!state.cols)state.cols=loadCols()}
     const ICON_GRID='<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>',ICON_LIST='<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',ICON_COLS='<svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M9.5 4v16M15 4v16"/></svg>';
     /** 網格／列表／欄位：只留圖示、搭成同一組（欄位只在列表排列時出現） */
+    const GRID_FIELDS=[['id','案件編號'],['client','客戶別'],['type','設計種類／階段'],['date','日期'],['detail','項目細節'],['progress','進度條'],['faces','負責人頭像'],['rev','修改膠囊'],['qty','數量'],['acts','右上按鈕']];
+    function gridHide(){if(!state.gridHide){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridHide')||'[]')}catch(err){}state.gridHide=new Set(Array.isArray(a)?a:[])}return state.gridHide}
     function layoutGroupHtml(){
-      ensureCols();const list=state.layout==='list';
-      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${list?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
+      ensureCols();const list=state.layout==='list',gh=gridHide();GRID_FIELDS.forEach(([k])=>document.body.classList.toggle('gh-'+k,gh.has(k)));
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button><button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button></div>${!list&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>卡牌顯示的欄位（勾選＝顯示，可複選）</h4><div class="chips">${GRID_FIELDS.map(([k,l])=>`<label><input type="checkbox" data-grid-show="${k}"${gh.has(k)?'':' checked'}>${l}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-grid-reset>全部顯示</button></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     function listTableHtml(rows){
       ensureCols();
@@ -1219,14 +1229,14 @@
     }
     function modListHtml(id){
       const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
-      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession())?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession())?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
     }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
       $('mmList').innerHTML=modListHtml(id);
-      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=false;$('modModal').hidden=false;
+      const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=!isDesignerSession();$('modModal').hidden=false;
     }
     function closeModModal(){$('modModal').hidden=true;state.modId=''}
     async function submitMod(){
@@ -2534,11 +2544,12 @@
       const cpG=t.closest('[data-cp-stage]');if(cpG){const id=state.cellEdit.id,v=cpG.dataset.cpStage;closeCellPop();applyChange(id,{stage:v},['階段','加權'],{'階段':v});return}
       if(t.closest('[data-cp-details]')){const id=state.cellEdit.id,v=[...document.querySelectorAll('#cellPop input:checked')].map(i=>i.value).join(', ');closeCellPop();const row0=allRows().find(r=>idKey(r)===id),auto=v&&String(row0?.['狀態']||'').trim()==='未開始';
         if(auto){applyChange(id,{details:v,status:'執行中'},['項目細節','加權','案件狀態'],{'項目細節':v,'狀態':'執行中'});toast('已選擇項目細節，狀態自動改為「執行中」')}else applyChange(id,{details:v},['項目細節','加權'],{'項目細節':v});return}
-      const revOpen=t.closest('[data-rev-open]');if(revOpen&&isDesignerSession()){openModModal(revOpen.dataset.revOpen);return}
+      const revOpen=t.closest('[data-rev-open]');if(revOpen){openModModal(revOpen.dataset.revOpen);return}
       if(t.closest('[data-mm="close"]')||t.id==='modModal'){closeModModal();return}
       const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete')deleteCase(id);return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
+      if(t.closest('[data-grid-reset]')){gridHide().clear();try{localStorage.setItem('v5GridHide','[]')}catch(err){}rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
       const nav=t.closest('[data-nav]')?.dataset.nav;if(nav==='settings'){state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
       if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
@@ -2613,6 +2624,7 @@
     });
     document.addEventListener('change',async e=>{
       const t=e.target;
+      if(t.matches?.('[data-grid-show]')){const gh=gridHide();t.checked?gh.delete(t.dataset.gridShow):gh.add(t.dataset.gridShow);try{localStorage.setItem('v5GridHide',JSON.stringify([...gh]))}catch(err){}rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
       if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
