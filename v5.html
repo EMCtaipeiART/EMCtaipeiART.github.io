@@ -503,7 +503,7 @@
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:{months:new Set(),statuses:new Set(),designers:new Set()},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -746,7 +746,7 @@
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
       const cols=COLUMNS.map(column=>{
-        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return column.key==='done'?byNewest(a,b):(e(a)-e(b)||byNewest(a,b))});
+        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return state.sort==='asc'?-byNewest(a,b):byNewest(a,b)});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
           <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
@@ -756,14 +756,17 @@
         </section>`;
       }).join('');
       const hadFocus=document.activeElement?.id==='boardSearch';
-      stage.innerHTML=`<div class="section-head"><div><h2>專案</h2></div><div class="section-tools">
+      stage.innerHTML=`<div class="section-head"><div><h2>專案列表</h2></div><div class="section-tools">
           <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="boardSearch" type="search" placeholder="搜尋編號、客戶、專案、負責人" value="${esc(state.query)}" aria-label="搜尋案件"></label>
+          <div class="seg-btns" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${state.layout==='grid'?'on':''}" aria-pressed="${state.layout==='grid'}"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>網格排列</button><button type="button" data-layout="list" class="${state.layout==='list'?'on':''}" aria-pressed="${state.layout==='list'}"><svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>列表排列</button></div>
           <div class="filter-wrap"><button type="button" class="tool-btn${n?' on':''}" data-filter-toggle aria-expanded="${state.filterOpen}"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.4V19l-3.6-1.8v-4.8z"/></svg>篩選${n?`（${n}）`:''}</button>${state.filterOpen?filterPopHtml():''}</div>
+          <div class="seg-btns" role="group" aria-label="排序"><button type="button" data-sort="desc" class="${state.sort==='desc'?'on':''}" aria-pressed="${state.sort==='desc'}">新到舊</button><button type="button" data-sort="asc" class="${state.sort==='asc'?'on':''}" aria-pressed="${state.sort==='asc'}">舊到新</button></div>
           <span class="board-sync">${esc(state.syncText)}</span></div></div>
-        <p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>
-        <div class="board five">${cols}</div>`;
+        ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
+        ${state.layout==='list'?plistHtml(rows):`<div class="board five">${cols}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
     }
+    function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
     async function applyMove(id,status,details){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       const payload={id,status},headers=['案件狀態'];
@@ -1238,12 +1241,12 @@
       const aiFill=t.closest('[data-ai-fill]');if(aiFill){applyAiStage(aiFill.dataset.aiFill);return}
       const aiRemove=t.closest('[data-ai-remove]');if(aiRemove){ai.files.splice(+aiRemove.dataset.aiRemove,1);renderAi();return}
       if(t.closest('[data-ai-drop]')){document.querySelector('[data-ai-file]')?.click();return}
-      const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}renderBoard();return}
-      const sort=t.closest('[data-sort]');if(sort){state.sort=sort.dataset.sort;renderBoard();return}
+      const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}rerenderList();return}
+      const sort=t.closest('[data-sort]');if(sort){state.sort=sort.dataset.sort;rerenderList();return}
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
       if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;rerenderList();return}
       const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
-      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
+      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
       if(act==='edit'){startEdit();return}
