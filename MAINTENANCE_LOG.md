@@ -118,3 +118,5 @@
 - v5.0: 專案列表 grid: all cards in a view share one width (5 columns = 3-wide grid with equal columns; fewer columns split into equal sub-columns).
 
 - v5.0: timeline bars use the same status colors as the pills/cards.
+
+- v5.0: timeline bar colors set to the approved solid palette (pink/yellow/blue...).
