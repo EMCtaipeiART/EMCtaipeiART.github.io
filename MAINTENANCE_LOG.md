@@ -161,3 +161,5 @@
 - 新版首頁 v5.html 改名為 index.html 上線；舊版 index.html 改名為 legacy.html 保留；v5.html 改為導向 index.html 的短檔。
 - 新版開頭加入 OAuth 返回處理（Google 登入／Gmail 連接彈出視窗廣播結果並關閉；其他舊流程轉交 legacy.html）。
 - 測試檔改讀 legacy.html；workflow 路徑同時監看 index.html 與 legacy.html。npm test 的 59 個既有失敗（Windows 路徑／舊測試）切換前後相同，沒有新增。
+
+- Mobile (<=720px) fixes: bottom nav scrolls horizontally with the active item centered; "+" in the start bar aligned to its first row, and a compact one-row sticky bar; designer hover card becomes a bottom sheet; toast above the nav; non-home pages hide the big hero so forms/mail/detail start at the top; audited 375px width for horizontal overflow on home, list, projects, settings, issues, owner, form, detail, mail (none).

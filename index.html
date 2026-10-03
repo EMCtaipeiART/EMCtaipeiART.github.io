@@ -817,6 +817,44 @@
     .hc-count.st-done{background:var(--st-done-bg);border:1px solid var(--st-done-line);color:var(--st-done-ink)}
     .hc-count.st-done small{color:var(--st-done-ink)}
     .hc-count{box-sizing:border-box;padding:6px 0}
+    /* ---------- 手機版修正（≤720px）：底部選單可左右滑動、填寫列的 + 對齊第一行、頭像資訊卡不超出畫面 ---------- */
+    @media (max-width:720px){
+      html,body{max-width:100%;overflow-x:hidden}
+      .rail{justify-content:flex-start;gap:2px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;overscroll-behavior-x:contain;padding:0 6px}
+      .rail::-webkit-scrollbar{display:none}
+      .rail>*{flex:0 0 auto}
+      #railExtra,#railBottom{display:contents!important}
+      .rail-item{width:64px;min-width:64px;scroll-snap-align:center;padding:8px 0 6px;font-size:11px}
+      .rail-login{flex:0 0 auto;width:64px;margin:0;gap:2px}
+      .rail-login .login-label{max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+      .rail-badge{right:10px}
+      .prompt{padding:10px 12px}
+      .prompt-plus{top:33px;left:14px;width:26px;height:26px}
+      .prompt select{padding:0 34px 0 40px;margin-left:-12px;flex:1 1 100%}
+      .prompt-go{flex:1 1 100%}
+      .prompt.is-stuck{left:10px;right:10px;width:auto;max-width:none;top:8px;flex-wrap:nowrap;height:56px;padding:6px 8px 6px 12px;border-radius:18px}
+      .prompt.is-stuck .prompt-plus{top:50%;left:14px}
+      .prompt.is-stuck select{flex:1 1 auto;height:44px}
+      .prompt.is-stuck .prompt-go{flex:0 0 auto;height:42px;padding:0 16px}
+      .stick-band{height:72px}
+      .toast{bottom:80px!important;max-width:calc(100vw - 24px)}
+      .hover-card{position:fixed;left:50%;top:auto;bottom:76px;transform:translateX(-50%);width:min(320px,calc(100vw - 24px));z-index:70;box-shadow:0 18px 44px rgba(0,0,0,.28)}
+      .hover-card::before{display:none}
+      .member{position:static}
+      .section-tools{width:100%;gap:8px}
+      .section-head{flex-wrap:wrap;gap:10px}
+      .search{flex:1 1 100%;min-width:0}
+      .card-top{flex-wrap:wrap}
+      .page{overflow-wrap:anywhere}
+      .op-item,.issue-item{flex-wrap:wrap}
+      .op-item .op-btn{flex:1 1 auto}
+      .issue-item{grid-template-columns:1fr}
+      .gm-row,.set-actions,.form-actions{flex-wrap:wrap}
+      .login-menu{max-width:calc(100vw - 24px)}
+      .ai-card{max-height:calc(100vh - 24px)}
+      .detail-actions{gap:8px}
+      .detail-actions .lt-act{flex:1 1 auto;justify-content:center}
+    }
 </style>
 </head>
 <body>
@@ -1457,10 +1495,10 @@ window.emcQuotes=[
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
-    function updateRail(){renderRailExtra();const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
+    function updateRail(){renderRailExtra();setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){state.tlLeft=null;
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'));
       $('stage').classList.toggle('wide',view==='projects');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
