@@ -770,6 +770,19 @@
       .board.five.n3 .cards,.board.five.n4 .cards{grid-template-columns:minmax(0,1fr)}
       .board.five.n1 .cards .empty,.board.five.n2 .cards .empty,.board.five.n3 .cards .empty,.board.five.n4 .cards .empty{grid-column:1/-1}
     }
+    .op-card{position:relative;width:min(640px,100%)}
+    .op-list{display:grid;gap:10px;max-height:min(520px,60vh);overflow:auto;padding:2px 2px 4px;margin-bottom:14px}
+    .op-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+    .op-item.is-checked{border-color:var(--brand);background:var(--brand-soft)}
+    .op-check{flex:1;min-width:0;display:flex;align-items:center;gap:12px;cursor:pointer}
+    .op-check input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--brand);cursor:pointer}
+    .op-main{display:grid;gap:3px;min-width:0}
+    .op-main b{font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+    .op-main small{color:var(--muted);font-size:12.5px;font-weight:650;overflow-wrap:anywhere}
+    .op-label{color:var(--brand-deep);font-size:12.5px;font-weight:850}
+    .op-btn{flex:0 0 auto;min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:800;cursor:pointer;color:var(--ink)}
+    .op-btn:hover{background:var(--bg)}
+    .op-btn.warn{border-color:#f2c27a;background:#fff4e0;color:#8a4b00}
 </style>
 </head>
 <body>
@@ -824,6 +837,9 @@
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="dmTitle"><h3 id="dmTitle">選擇項目細節</h3><p class="ai-sub" id="dmSub"></p><div class="detail-pick" id="dmList"></div><div class="ai-actions"><button type="button" class="btn" data-dm="cancel">取消</button><button type="button" class="btn primary" data-dm="ok">確認並改為執行中</button></div></div>
   </div>
   <div class="lightbox" id="lightbox" hidden><button type="button" class="lb-btn lb-close" data-lb-act="close" aria-label="關閉">×</button><button type="button" class="lb-btn lb-prev" data-lb-act="prev" aria-label="上一張">‹</button><figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure><button type="button" class="lb-btn lb-next" data-lb-act="next" aria-label="下一張">›</button></div>
+  <div class="ai-modal" id="ownerModal" hidden>
+    <div class="ai-card op-card" role="dialog" aria-modal="true" aria-labelledby="opTitle"><button type="button" class="mm-x" data-op-close aria-label="關閉">×</button><h3 id="opTitle">您的案件進度</h3><p class="ai-sub" id="opSub"></p><div class="op-list" id="opList"></div><div class="ai-actions"><button type="button" class="btn" data-op-close>稍後再說</button><button type="button" class="btn primary" id="opSubmit" disabled>確認送出</button></div></div>
+  </div>
   <div class="ai-modal" id="drModal" hidden>
     <div class="ai-card" role="dialog" aria-modal="true" aria-labelledby="drTitle"><h3 id="drTitle">設計圖上傳方式</h3><p class="ai-sub" id="drSub"></p><div id="drBody"></div><div class="ai-actions"><button type="button" class="btn" data-dr-close>取消</button></div></div>
   </div>
@@ -1019,7 +1035,8 @@
 
     /* ---------- 案件列表 ---------- */
     const statusOf=row=>ST[String(row['狀態']||'').trim()]||{label:String(row['狀態']||'未設定'),cls:'st-cancel'};
-    function allRows(){const ids=new Set(state.rows.map(r=>String(r['案件編號'])));const local=[...state.localRows.values()].filter(r=>!ids.has(String(r['案件編號'])));return [...local,...state.rows].filter(r=>canViewCustomerCases(r['客戶別']))}
+    function allRowsRaw(){const ids=new Set(state.rows.map(r=>String(r['案件編號'])));const local=[...state.localRows.values()].filter(r=>!ids.has(String(r['案件編號'])));return [...local,...state.rows]}
+    function allRows(){return allRowsRaw().filter(r=>canViewCustomerCases(r['客戶別'])||ownerMatches(r))}
     const idKey=row=>String(row['案件編號']||'');
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
     const STATUS_RANK=Object.fromEntries(['未開始','執行中','修改中','過稿中','已完成','已取消','暫停中'].map((k,i)=>[k,i]));
@@ -1274,7 +1291,7 @@
       updateRail();
       if(view==='projects'||view==='login'||view==='settings'||view==='thread')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
-    function backToBoard(){state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
+    function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;if(ret)setTimeout(()=>openOwner(),60);state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(state.home)}
 
     /* ---------- 專案頁：五個狀態欄，設計師可拖移卡牌改狀態 ---------- */
     /* ---------- 帳號權限／客戶別權限（沿用舊網站 assets/access-control.js） ---------- */
@@ -2507,6 +2524,72 @@
       if(t.closest?.('[data-mm="toggle"]')){const f=$('mmForm');f.hidden=false;$('mmToggle').hidden=true;f.scrollIntoView({block:'nearest'});setTimeout(()=>f.elements.content.focus(),50);return}
     });
 
+    /* ---------- 您的案件進度（專案負責人確認過稿中案件完成） ---------- */
+    const ownerMatches=r=>{
+      if(!loggedIn())return false;
+      const raw=String(r['專案負責人']||'').trim(),owner=norm(raw.startsWith('@')?raw:raw),email=norm((raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[''])[0]);
+      const s=session(),me=[s.user,s.name].map(norm).filter(Boolean),acct=selfAccount();
+      return Boolean((owner&&me.some(n=>n===owner))||(owner&&acct&&owner===acct)||(email&&acct&&email===acct));
+    };
+    const ownerRows=()=>loggedIn()?allRowsRaw().filter(r=>String(r['狀態']||'').trim()==='過稿中'&&ownerMatches(r)).sort(byNewest):[];
+    const ownerDayKey=()=>`v5OwnerProgressDay:${selfAccount()||session().user||''}`;
+    function ownerMenuLabel(){const n=ownerRows().length;return n?`您的案件進度（${n}）`:'您的案件進度'}
+    function renderOwnerList(){
+      const items=ownerRows();
+      $('opSub').textContent=items.length?`您有 ${items.length} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
+      $('opList').innerHTML=items.length?items.map(r=>{const id=esc(idKey(r));return `<div class="op-item"><label class="op-check"><input type="checkbox" data-op-check value="${id}"><span class="op-main"><b>${esc(r['客戶別']||'未填客戶')}｜${esc(r['專案名稱']||'未填專案')}</b><small>${id}｜設計師 ${esc(r['設計負責人']||'未指定')}｜${esc(r['開始日期']||'-')}-${esc(r['結束日期']||'-')}</small><span class="op-label">客戶已確認完成</span></span></label><button type="button" class="op-btn" data-op-detail="${id}">查看詳情</button><button type="button" class="op-btn warn" data-op-modify="${id}">需要修改</button></div>`}).join(''):'<div class="empty">目前沒有過稿中的案件需要確認</div>';
+      syncOwnerSel();
+    }
+    function syncOwnerSel(){
+      const checks=[...document.querySelectorAll('#opList [data-op-check]')];checks.forEach(i=>i.closest('.op-item')?.classList.toggle('is-checked',i.checked));
+      const n=checks.filter(i=>i.checked).length,b=$('opSubmit');b.disabled=!n;b.textContent=n?`確認送出（${n}）`:'確認送出';
+    }
+    function openOwner(auto){
+      if(!loggedIn()){startLogin();return}
+      renderOwnerList();
+      if(auto===true){try{localStorage.setItem(ownerDayKey(),ymd(taipeiToday()))}catch(err){}}
+      $('ownerModal').hidden=false;
+    }
+    const closeOwner=()=>{$('ownerModal').hidden=true};
+    async function submitOwner(){
+      const ids=[...document.querySelectorAll('#opList [data-op-check]:checked')].map(i=>i.value);if(!ids.length)return;
+      const b=$('opSubmit');b.disabled=true;b.textContent='送出中…';
+      try{
+        const data=await api('ownerConfirmCases',{caseIds:ids});
+        const done=new Map((data.rows||[]).map(x=>[String(x.id),x]));
+        done.forEach((x,id)=>applyLocalEdit(id,{'狀態':'已完成'}));
+        if(done.size)refreshView();
+        const skipped=data.skipped||[];
+        toast(skipped.length?`已完成 ${done.size} 筆，${skipped.length} 筆未變更：${skipped.map(x=>`${x.id}（${x.reason}）`).join('、')}`:`已確認 ${done.size} 筆案件完成`,Boolean(skipped.length&&!done.size));
+        renderOwnerList();renderLogin();
+        if(!ownerRows().length)closeOwner();
+      }catch(err){toast(`確認失敗：${err.message}`,true);syncOwnerSel()}
+    }
+    function maybeOwnerDaily(attempt=0){
+      if(attempt>30||window.__v5OwnerShown)return;
+      if(!state.loaded||!loggedIn()){setTimeout(()=>maybeOwnerDaily(attempt+1),2000);return}
+      window.__v5OwnerShown=true;
+      let seen='';try{seen=localStorage.getItem(ownerDayKey())||''}catch(err){}
+      if(seen===ymd(taipeiToday())||!ownerRows().length)return;
+      if(state.view==='login'||state.view==='mail'||state.view==='form'){return}
+      openOwner(true);
+    }
+    setTimeout(()=>maybeOwnerDaily(),1500);
+    document.addEventListener('click',e=>{
+      const t=e.target;
+      if(t.closest('[data-op-close]')||t.id==='ownerModal'){closeOwner();return}
+      if(t.closest('#opSubmit')){submitOwner();return}
+      const d=t.closest('[data-op-detail]');if(d){closeOwner();state.ownerReturn=true;state.detailId=d.dataset.opDetail;state.editing=false;show('detail');return}
+      const m=t.closest('[data-op-modify]');
+      if(m){
+        const id=m.dataset.opModify,r=allRows().find(x=>idKey(x)===id);if(!r)return;
+        if(!acc('request.mail',true)){toast('此帳號沒有回信權限',true);return}
+        if(!String(r['Gmail信件串ID']||'').trim()){toast('這個案件還沒有透過系統寄出過需求信，請到案件列表使用「發信」',true);return}
+        closeOwner();startReply(id,'modification');return;
+      }
+    });
+    document.addEventListener('change',e=>{if(e.target.matches?.('[data-op-check]'))syncOwnerSel()});
+
     /* ---------- 案件詳情（直接在頁面展開，不用彈窗） ---------- */
     const slashNice=v=>{const ms=parseDay(v);return Number.isNaN(ms)?String(v||'-'):ymd(ms)};
     const imageList=row=>{try{const list=JSON.parse(row['圖片連結']||'[]');return Array.isArray(list)?list.filter(i=>i&&/^https?:\/\//.test(i.url||'')):[]}catch(err){return []}};
@@ -2662,7 +2745,7 @@
       const box=$('railLogin');if(!box)return;
       const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
-      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
+      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-login="owner" role="menuitem">${esc(ownerMenuLabel())}</button><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
       $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
     }
     async function logout(){
@@ -2731,6 +2814,7 @@
       if(lp==='cancel'){e.preventDefault();show(state.back&&state.back!=='login'&&state.back!=='form'?state.back:state.home);return}
       const loginAct=t.closest('[data-login]')?.dataset.login;
       if(loginAct==='toggle'){if(loggedIn()){state.loginMenu=!state.loginMenu;renderLogin()}else startLogin();return}
+      if(loginAct==='owner'){state.loginMenu=false;renderLogin();openOwner();return}
       if(loginAct==='logout'){logout();return}
       if(t.closest('[data-ai-close]')||t.id==='aiModal'){closeAi();return}
       if(t.closest('[data-ai-run]')){runAi();return}
