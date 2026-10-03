@@ -110,3 +110,5 @@
 - v5.0: modification record text 12px and signature (from "--" line) not shown/saved.
 
 - v5.0: 已完成 cards show a round "+score" badge (加權) before the mail button.
+
+- v5.0: list layout gets the legacy timeline (甘特式時間表) on the right: day scale with weekday, weekend/holiday and today bands, status-colored bars with 🔥/⚠️, click opens detail, drag to scroll, draggable divider, toggle button (remembered).
