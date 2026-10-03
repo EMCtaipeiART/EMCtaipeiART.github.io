@@ -887,7 +887,7 @@
     const barStyle=p=>`width:${p}%;background-size:${p>0?(10000/p).toFixed(1):100}% 100%`;
     function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
     function cardHtml(row,inColumn){
-      const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=status==='執行中';
+      const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
       const late=s.late&&!['過稿中','已完成','已取消'].includes(status);
       const canDrag=state.dragOn&&inColumn;
       return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
@@ -1889,7 +1889,7 @@
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
         <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
-        ${status==='執行中'?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
+        ${['執行中','修改中'].includes(status)?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
