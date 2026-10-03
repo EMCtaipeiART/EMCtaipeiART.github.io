@@ -699,6 +699,8 @@
     .th-card .th-body img{max-width:100%}
     .th-card .th-body table a,.th-card .th-body a[href^="tel:"],.th-card .th-body a[href*="maps"]{color:inherit!important;text-decoration:none!important}
     .th-card .th-body table a[href^="http"]:not([href*="maps"]){color:inherit!important;text-decoration:none!important}
+    .lt-rev.revision-pending{border:1px solid #dc2626!important;box-shadow:0 0 0 .5px rgba(220,38,38,.26)}
+    .rev-text a{color:#0b57d0;text-decoration:underline;word-break:break-all}
 </style>
 </head>
 <body>
@@ -990,7 +992,8 @@
     }
     const NUM_ZH=['零','一','二','三','四','五','六','七','八','九','十'];
     function revisionCount(r){const mods=state.mods.get(idKey(r))||[];const nums=mods.map(m=>+m['修改次數']||0);const fromRow=+r['修改次數']||0;return mods.length||fromRow?Math.max(0,fromRow,...nums):-1}
-    function revisionPill(r,ed){const n=revisionCount(r),id=esc(idKey(r));if(n<0)return ed?`<button type="button" class="lt-rev-add" data-rev-open="${id}" title="新增修改紀錄" aria-label="新增修改紀錄">+</button>`:'<span class="lt-dash">-</span>';const label=n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`;return ed?`<button type="button" class="lt-rev${n===0?' is-draft':''} lt-edit" data-rev-open="${id}" title="查看／新增修改紀錄">${label}</button>`:`<span class="lt-rev${n===0?' is-draft':''}">${label}</span>`}
+    function hasPendingMod(r){return (state.mods.get(idKey(r))||[]).some(m=>(+m['修改次數']||0)>0&&!String(m['確認修正日']||'').trim())}
+    function revisionPill(r,ed){const n=revisionCount(r),id=esc(idKey(r)),pend=n>0&&hasPendingMod(r)?' revision-pending':'';if(n<0)return ed?`<button type="button" class="lt-rev-add" data-rev-open="${id}" title="新增修改紀錄" aria-label="新增修改紀錄">+</button>`:'<span class="lt-dash">-</span>';const label=n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`;return ed?`<button type="button" class="lt-rev${n===0?' is-draft':''}${pend} lt-edit" data-rev-open="${id}" title="${pend?'有尚未確認的修改需求，':''}查看／新增修改紀錄">${label}</button>`:`<span class="lt-rev${n===0?' is-draft':''}${pend}"${pend?' title="有尚未確認的修改需求"':''}>${label}</span>`}
     const COL_DEFS=[
       {key:'id',label:'案件編號',cell:r=>`<td class="lt-id lt-link" data-case="${esc(idKey(r))}" tabindex="0">${esc(idKey(r))}</td>`},
       {key:'month',label:'月份',cell:r=>`<td>${esc(r['月份']||monthKey(r))}</td>`},
@@ -1184,11 +1187,20 @@
     })();
     /* 修改紀錄：設計師在列表點「＋」或修改膠囊，新增下一輪修改紀錄（Worker addModificationRecord） */
     const todayInput=()=>{const p=taipeiParts();return `${p.year}-${p.month}-${p.day}`};
+    function linkify(text,links){
+      const src=String(text||''),c=[];let L=links;if(typeof L==='string'){try{L=JSON.parse(L||'[]')}catch{L=[]}}
+      const safe=u=>{try{const p=new URL(String(u||''));return /^https?:$/.test(p.protocol)?p.toString():''}catch{return ''}};
+      let from=0;(Array.isArray(L)?L:[]).forEach(l=>{const t=String(l?.text||''),u=safe(l?.url);if(!t||!u)return;let a=src.indexOf(t,from);if(a<0)a=src.indexOf(t);if(a<0)return;c.push({a,b:a+t.length,t,u,p:0});from=a+t.length});
+      for(const m of src.matchAll(/https?:\/\/[^\s　-〿！-／：-＠［-｀｛-･]+/g)){let t=m[0];while(t&&/[.,;:!?)\]'"]/.test(t[t.length-1]))t=t.slice(0,-1);const u=safe(t);if(t&&u)c.push({a:m.index,b:m.index+t.length,t,u,p:1})}
+      c.sort((x,y)=>x.a-y.a||x.p-y.p);let out='',pos=0;
+      for(const k of c){if(k.a<pos)continue;out+=esc(src.slice(pos,k.a))+'<a href="'+esc(k.u)+'" target="_blank" rel="noopener noreferrer">'+esc(k.t)+'</a>';pos=k.b}
+      return (out+esc(src.slice(pos))).replace(/\n/g,'<br>');
+    }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
-      $('mmList').innerHTML=mods.length?mods.map(m=>{const n=+m['修改次數']||0;return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(m['修改內容']||'')}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      $('mmList').innerHTML=mods.length?mods.map(m=>{const n=+m['修改次數']||0;return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span></div><div class="rev-text">${linkify(m['修改內容']||'',m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
       const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';$('modModal').hidden=false;setTimeout(()=>f.elements.content.focus(),50);
     }
     function closeModModal(){$('modModal').hidden=true;state.modId=''}

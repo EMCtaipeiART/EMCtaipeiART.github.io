@@ -95,3 +95,5 @@
 - v5.0: thread text 11px; signature tables no longer wrap/break; phone/mobile/address links unwrapped to plain black text.
 
 - v5.0: thread body text bold 12px (signature table unchanged).
+
+- v5.0: revision pill gets red border when a modification round is unconfirmed; modification records render links (修改內容連結 + plain URLs).
