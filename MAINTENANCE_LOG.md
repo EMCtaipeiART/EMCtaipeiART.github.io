@@ -134,3 +134,5 @@
 - v5.0: filters (month/status/designer) remembered across refresh; grid status menu gets 全部隱藏; timeline bars 33px.
 
 - v5.0: login page — password 登入 button no longer disabled by a stuck Google "busy" state (separate pwBusy; popup-closed watcher resets Google busy; startLogin resets).
+
+- v5.0: permissions follow the legacy system — loads assets/access-control.js (帳號權限/角色範本 via Worker verifyToken); 客戶別 部門組別 controls which cases are visible, 客戶別 專案負責人 rules (or request.edit/delete/mail/status) control edit/delete/mail/inline-edit per case, modification.create/confirm and media.manage gate the related buttons; refreshed on login/logout.
