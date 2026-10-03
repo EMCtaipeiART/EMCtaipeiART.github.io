@@ -640,9 +640,13 @@
     .set-actions .btn.add-pill{border-radius:999px;background:#e8f6ec;border-color:#bfe3cb;color:#0f5138;min-height:42px;padding:0 20px;font-size:14.5px}
     .set-actions .btn.primary{border-radius:999px;background:#0f8f61;border-color:#0f8f61;min-height:42px;padding:0 24px;font-size:14.5px}
     .set-actions{justify-content:flex-start}
-    /* 簽名檔／信件內文的連結（電話、信箱、地址）要是藍色，不要被全站 a{color:inherit} 吃掉 */
-    .signature a,.editor a,.mini-editor a,.v5-sig a{color:#0b57d0!important;text-decoration:underline}
-    html[data-theme="dark"] .signature a,html[data-theme="dark"] .editor a,html[data-theme="dark"] .mini-editor a{color:#8ab4f8!important}
+    /* 簽名檔的電話／手機／地址：維持黑色，不要變成連結藍 */
+    .signature a,.v5-sig a,.editor .v5-sig a{color:inherit!important;text-decoration:none}
+    /* 信件串內文 13px */
+    .th-card .th-body,.th-card .th-body *,.th-pre{font-size:13px}
+    .card-acts{margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+    .card-acts .lt-act{height:24px;min-height:24px;padding:0 10px;font-size:11.5px}
+    .card-acts .lt-acts{gap:6px}
     .seg-btns.icon-only button{width:42px;padding:0;justify-content:center}
     .seg-btns.icon-only button svg{width:18px;height:18px}
     .sort-mark{margin-left:6px;font-size:11px;color:var(--faint);font-weight:700}
@@ -953,8 +957,9 @@
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
       const late=s.late&&!['過稿中','已完成','已取消'].includes(status);
       const canDrag=state.dragOn&&inColumn;
-      return `<button type="button" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
-        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}</div>
+      const ed=isDesignerSession(),acts=["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("");
+      return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
+        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${acts}</span></div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/s*[,，、]s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
@@ -962,7 +967,7 @@
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
           <span class="card-qty">數量 ${esc(qty||'-')}</span>
         </div>
-      </button>`;
+      </div>`;
     }
     const STATUS_FILTER=['未開始','執行中','過稿中','修改中','已完成','已取消'];
     function monthKey(r){const ms=parseDay(r['開始日期']);return Number.isNaN(ms)?'':ymd(ms).slice(0,7)}
@@ -2349,7 +2354,7 @@
     document.addEventListener('mousemove',e=>{if(!cal.open||!cal.picking)return;const day=e.target.closest?.('[data-day]');if(!day)return;const ms=+day.dataset.day;if(ms!==cal.hover){cal.hover=ms;renderCal()}});
     document.addEventListener('keydown',e=>{
       if(e.key==='Escape'){if(cal.open)closeCal();if(!$('aiModal').hidden)closeAi();if(state.filterOpen){state.filterOpen=false;rerenderList()}if(!$('detailModal').hidden)closeDetailModal();if(!$('modModal').hidden)closeModModal();if(state.cellEdit)closeCellPop();if(state.colsOpen){state.colsOpen=false;rerenderList()}}
-      if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('td[data-case]')){e.preventDefault();e.target.click()}
+      if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('td[data-case],div.card[data-case]')){e.preventDefault();e.target.click()}
     });
     document.addEventListener('paste',e=>{if($('aiModal').hidden||ai.view!=='input')return;const files=[...(e.clipboardData?.files||[])];if(files.length){e.preventDefault();addAiFiles(files)}});
     document.addEventListener('dragover',e=>{if(e.target.closest?.('[data-ai-drop]')){e.preventDefault();e.target.closest('[data-ai-drop]').classList.add('over')}});
