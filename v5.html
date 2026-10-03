@@ -616,6 +616,30 @@
     .rc-pick button{display:grid;gap:2px;text-align:left;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
     .rc-pick button:hover{background:var(--brand-soft)}
     .rc-pick small{color:var(--muted);font-weight:600;font-size:12px}
+    /* 編輯器介面：還原成舊網站樣式 */
+    .editor-tools.rich,.mini-tools{display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:6px 10px;border:1px solid var(--line);border-radius:18px;background:var(--panel);margin-bottom:10px}
+    .editor-tools.rich .tool,.mini-tools .tool{min-width:34px;height:34px;padding:0 8px;border:0;border-radius:10px;background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:800;cursor:pointer}
+    .editor-tools.rich .tool:hover,.mini-tools .tool:hover{background:var(--bg)}
+    .editor-tools.rich .tool.on{background:var(--brand-soft);color:var(--brand-deep)}
+    .editor-tools.rich .tool svg,.mini-tools .tool svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .tool-lab{font-size:13px;font-weight:900}
+    .tool.tool-text{font-size:13px;font-weight:900;color:#0f5138}
+    .tool-sep{width:1px;height:22px;background:var(--line);margin:0 6px;flex:0 0 auto}
+    .rc-dot{display:block;width:16px;height:16px;border-radius:50%;background:#17211d}
+    .editor-tools.rich+.editor,.mini-tools+.editor{border-radius:22px;padding:18px 20px;margin-top:0}
+    .rc-pick.small{width:auto;min-width:150px}
+    .rc-pick.small button{padding:8px 14px}
+    .tpl-row{border-radius:22px;background:var(--bg);padding:14px 16px;gap:10px}
+    .tpl-head{gap:12px}
+    .tpl-head b{font-size:16px}
+    .tpl-head .input{border-radius:999px;padding:0 16px;min-height:42px}
+    .tpl-default{font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+    .tpl-default input{width:18px;height:18px;accent-color:#0f8f61}
+    .tpl-del{width:42px;height:42px;border-radius:50%;border:1px solid #fecaca;background:#fff;color:#b42318;font-size:20px;line-height:1;cursor:pointer;flex:0 0 auto}
+    .tpl-del:hover{background:#fff1f2}
+    .set-actions .btn.add-pill{border-radius:999px;background:#e8f6ec;border-color:#bfe3cb;color:#0f5138;min-height:42px;padding:0 20px;font-size:14.5px}
+    .set-actions .btn.primary{border-radius:999px;background:#0f8f61;border-color:#0f8f61;min-height:42px;padding:0 24px;font-size:14.5px}
+    .set-actions{justify-content:flex-start}
   </style>
 </head>
 <body>
@@ -1380,7 +1404,34 @@
       st2.loading=false;
       if(state.view==='settings')renderSettings();
     }
-    const miniTools=()=>`<div class="mini-tools" role="toolbar">${[['undo','↶','復原'],['redo','↷','重做'],['bold','<b>B</b>','粗體'],['italic','<i>I</i>','斜體'],['underline','<u>U</u>','底線'],['justifyLeft','⟸','靠左'],['justifyCenter','≡','置中'],['justifyRight','⟹','靠右']].map(([c,l,t])=>`<button type="button" class="tool" data-sc="${c}" title="${t}">${l}</button>`).join('')}<span class="rc-color-wrap"><button type="button" class="tool" data-sc="colorToggle" title="文字顏色">A<span class="rc-swatch"></span></button><span class="rc-colors" hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" data-sc-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span><button type="button" class="tool" data-sc="link" title="超連結">連結</button></div>`;
+    /* 編輯器工具列（沿用舊網站樣式：圖示按鈕、文字大小／字型選單、顏色圓點） */
+    const SV=p=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+    const ICO={undo:SV('<path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5h9a6 6 0 0 1 0 12H9"/>'),redo:SV('<path d="m15 14 4.5-4.5L15 5"/><path d="M19.5 9.5h-9a6 6 0 0 0 0 12H15"/>'),
+      left:SV('<path d="M4 6h16M4 12h10M4 18h13"/>'),center:SV('<path d="M4 6h16M7 12h10M5.5 18h13"/>'),right:SV('<path d="M4 6h16M10 12h10M7 18h13"/>'),
+      ul:SV('<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>'),ol:SV('<path d="M10 6h10M10 12h10M10 18h10M4 5l1.2-.8V9M3.8 14.5h2.4L3.8 17.5h2.5"/>'),
+      link:SV('<path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/>'),
+      tpl:SV('<path d="M6 3.5h9l3 3V20H6zM9 10h6M9 14h6M9 18h4"/>'),sig:SV('<path d="M3.5 16c1.6-4.2 3.1-7.4 4.6-7.4s.6 5.3 2.1 5.3 2.2-6.1 3.7-6.1 1 6.1 2.5 6.1 1.7-2.9 3.2-2.9" stroke-linecap="round"/>'),
+      img:SV('<path d="M4 5.5h16v13H4zM7 15l3.1-3.3 2.6 2.5 2.2-2.1 3.1 3.2M15.8 9h.1"/>'),att:SV('<path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>')};
+    function barHtml(attr,{mail=false,sigOn=false,ins=false}={}){
+      const b=(cmd,title,inner,cls='')=>`<button type="button" class="tool${cls}" ${attr}="${cmd}" title="${title}" aria-label="${title}">${inner}</button>`,sep='<span class="tool-sep"></span>';
+      const colorKey=mail?'data-rc-color':'data-sc-color';
+      return b('undo','復原（⌘Z）',ICO.undo)+b('redo','重做（⌘⇧Z）',ICO.redo)+sep
+        +b('size','文字大小','<span class="tool-lab">tT</span>')+b('font','字型','<span class="tool-lab">字</span>')+sep
+        +b('bold','粗體（⌘B）','<b>B</b>')+b('italic','斜體（⌘I）','<i>I</i>')+b('underline','底線（⌘U）','<u>U</u>')+sep
+        +b('justifyLeft','靠左對齊',ICO.left)+b('justifyCenter','置中對齊',ICO.center)+b('justifyRight','靠右對齊',ICO.right)+(mail?b('insertUnorderedList','項目符號',ICO.ul)+b('insertOrderedList','編號清單',ICO.ol):'')+sep
+        +`<span class="rc-color-wrap"><button type="button" class="tool" ${attr}="colorToggle" title="文字顏色" aria-label="文字顏色"><span class="rc-dot"></span></button><span class="rc-colors"${mail?' id="rcColors"':''} hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" ${colorKey}="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span>`
+        +b('link','插入超連結（⌘K）',ICO.link)
+        +(ins?sep+b('ins1','插入 {收件人名}：套用範本時會自動換成收件人的名字','插入收件人名',' tool-text')+b('ins2','插入 {項目細節}：套用範本時會自動換成這個案件的項目細節','插入項目細節',' tool-text'):'')
+        +(mail?sep+b('template','插入信件範本',ICO.tpl)+b('signature','插入簽名檔',ICO.sig,sigOn?' on':'')+b('image','上傳照片',ICO.img)+b('attach','附加檔案',ICO.att):'');
+    }
+    const miniTools=(ins=false)=>`<div class="mini-tools" role="toolbar">${barHtml('data-sc',{ins})}</div>`;
+    const SIZES=[['小','2'],['正常','3'],['大','5'],['特大','6']],FONTS=[['預設字型',''],['微軟正黑體','Microsoft JhengHei'],['新細明體','PMingLiU'],['標楷體','DFKai-SB'],['Arial','Arial'],['Georgia','Georgia'],['Courier New','Courier New']];
+    function openFmtMenu(kind,btn){
+      document.getElementById('rcPick')?.remove();
+      const list=kind==='size'?SIZES:FONTS,pop=document.createElement('div');pop.id='rcPick';pop.className='rc-pick small';
+      pop.innerHTML=list.map(([l,v])=>`<button type="button" data-fmt-menu="${kind}:${esc(v)}"${kind==='font'&&v?` style="font-family:'${esc(v)}'"`:''}><b>${esc(l)}</b></button>`).join('');
+      document.body.appendChild(pop);const r=btn.getBoundingClientRect();pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left))+'px';pop.style.top=(r.bottom+6)+'px';
+    }
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
       const name=session().name||session().user,url=st2.avatar||personAvatar(name),locked=nameLocked();
@@ -1392,13 +1443,13 @@
     }
     function templatesHtml(){
       return `<details class="set-card" data-set-sec="templates"${sectionOpen('templates')}><summary><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></summary><div class="set-body">
-        ${st2.templates.map((t,i)=>`<div class="tpl-row" data-tpl-row="${i}"><div class="tpl-head"><b>範本 ${i+1}</b><label class="tpl-default"><input type="radio" name="tplDefault" value="${i}"${i===st2.tplDefault?' checked':''}>預設</label><button type="button" class="batch-del" data-tpl-del="${i}">刪除</button></div>${miniTools()}<div class="editor mini-editor" contenteditable="true" data-tpl-editor>${t.html}</div><div class="tpl-ins"><button type="button" class="tool" data-sc-ins="{收件人名}">插入收件人名</button><button type="button" class="tool" data-sc-ins="{項目細節}">插入項目細節</button></div></div>`).join('')||'<p class="set-note">還沒有範本。</p>'}
-        <div class="set-actions"><button type="button" class="btn" data-tpl-add>＋ 新增範本</button><button type="button" class="btn primary" data-set-save="templates"${st2.busy==='templates'?' disabled':''}>${st2.busy==='templates'?'儲存中…':'儲存'}</button></div></div></details>`;
+        ${st2.templates.map((t,i)=>`<div class="tpl-row" data-tpl-row="${i}"><div class="tpl-head"><b>範本 ${i+1}</b><label class="tpl-default"><input type="radio" name="tplDefault" value="${i}"${i===st2.tplDefault?' checked':''}>設為預設</label><button type="button" class="tpl-del" data-tpl-del="${i}" aria-label="刪除這筆範本" title="刪除">×</button></div>${miniTools(true)}<div class="editor mini-editor" contenteditable="true" data-tpl-editor>${t.html}</div></div>`).join('')||'<p class="set-note">還沒有範本。</p>'}
+        <div class="set-actions"><button type="button" class="btn add-pill" data-tpl-add>＋ 新增範本</button><button type="button" class="btn primary" data-set-save="templates"${st2.busy==='templates'?' disabled':''}>${st2.busy==='templates'?'儲存中…':'儲存'}</button></div></div></details>`;
     }
     function signaturesHtml(){
       return `<details class="set-card" data-set-sec="signatures"${sectionOpen('signatures')}><summary><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以用「插入簽名檔」改選其他組。</span></summary><div class="set-body">
-        ${st2.presets.map((p,i)=>`<div class="tpl-row" data-sig-row="${i}"><div class="tpl-head"><input class="input" data-sig-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(p.name)}"><label class="tpl-default"><input type="radio" name="sigDefault" value="${i}"${i===st2.presetDefault?' checked':''}>預設</label><button type="button" class="batch-del" data-sig-del="${i}">刪除</button></div>${miniTools()}<div class="editor mini-editor" contenteditable="true" data-sig-editor>${p.html}</div></div>`).join('')||'<p class="set-note">還沒有簽名檔；沒有設定時會使用 Gmail 帳號本身的簽名。</p>'}
-        <div class="set-actions"><button type="button" class="btn" data-sig-add>＋ 新增簽名檔</button><button type="button" class="btn primary" data-set-save="signatures"${st2.busy==='signatures'?' disabled':''}>${st2.busy==='signatures'?'儲存中…':'儲存'}</button></div></div></details>`;
+        ${st2.presets.map((p,i)=>`<div class="tpl-row" data-sig-row="${i}"><div class="tpl-head"><input class="input" data-sig-name maxlength="80" placeholder="簽名檔名稱，例如：休假" value="${esc(p.name)}"><label class="tpl-default"><input type="radio" name="sigDefault" value="${i}"${i===st2.presetDefault?' checked':''}>設為預設</label><button type="button" class="tpl-del" data-sig-del="${i}" aria-label="刪除這組簽名檔" title="刪除">×</button></div>${miniTools()}<div class="editor mini-editor" contenteditable="true" data-sig-editor>${p.html}</div></div>`).join('')||'<p class="set-note">還沒有簽名檔；沒有設定時會使用 Gmail 帳號本身的簽名。</p>'}
+        <div class="set-actions"><button type="button" class="btn add-pill" data-sig-add>＋ 新增簽名檔</button><button type="button" class="btn primary" data-set-save="signatures"${st2.busy==='signatures'?' disabled':''}>${st2.busy==='signatures'?'儲存中…':'儲存'}</button></div></div></details>`;
     }
     /* 客戶設定 */
     const isGroupRule=r=>/^(department|group):/i.test(String(r||'').trim());
@@ -1546,13 +1597,15 @@
       }catch(err){st2.busy='';renderSettings();setStatus(`儲存失敗：${err.message}`,true)}
     }
     /* 事件：設定頁 */
-    document.addEventListener('mousedown',e=>{if(e.target.closest?.('.mini-tools button,[data-sc-ins],.mini-tools .rc-c'))e.preventDefault()});
+    document.addEventListener('mousedown',e=>{if(e.target.closest?.('.mini-tools button,[data-sc-ins],.mini-tools .rc-c,#rcPick button'))e.preventDefault()});
     document.addEventListener('click',e=>{
       const t=e.target;if(state.view!=='settings')return;
       const sc=t.closest('[data-sc]')?.dataset.sc;
       if(sc){
         const wrap=t.closest('.tpl-row'),ed=wrap?.querySelector('.mini-editor');if(!ed)return;
         if(sc==='colorToggle'){const p=wrap.querySelector('.rc-colors');p.hidden=!p.hidden;return}
+        if(sc==='size'||sc==='font'){openFmtMenu(sc,t.closest('[data-sc]'));return}
+        if(sc==='ins1'||sc==='ins2'){ed.focus();document.execCommand('insertText',false,sc==='ins1'?'{收件人名}':'{項目細節}');return}
         ed.focus();
         if(sc==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url);return}
         document.execCommand(sc,false,null);return;
@@ -1656,13 +1709,7 @@
           <div class="mail-row"><span>主旨</span><input id="mSubject" value="${esc(d.subject)}" autocomplete="off" aria-label="主旨"></div>
         </div>
         <div class="editor-tools rich" role="toolbar" aria-label="格式">
-          ${tb('undo','復原','↶')}${tb('redo','重做','↷')}<span class="tool-sep"></span>
-          ${tb('bold','粗體','<b>B</b>')}${tb('italic','斜體','<i>I</i>')}${tb('underline','底線','<u>U</u>')}${tb('strikeThrough','刪除線','<s>S</s>')}<span class="tool-sep"></span>
-          ${tb('insertUnorderedList','項目符號','• ≡')}${tb('insertOrderedList','編號清單','1. ≡')}<span class="tool-sep"></span>
-          ${tb('justifyLeft','靠左對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg>')}${tb('justifyCenter','置中對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5.5 18h13"/></svg>')}${tb('justifyRight','靠右對齊','<svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M7 18h13"/></svg>')}<span class="tool-sep"></span>
-          <span class="rc-color-wrap"><button type="button" class="tool" data-rc="colorToggle" title="文字顏色" aria-label="文字顏色">A<span class="rc-swatch"></span></button><span class="rc-colors" id="rcColors" hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" data-rc-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span>
-          ${tb('link','插入超連結','連結')}${tb('removeFormat','清除格式','清除格式')}<span class="tool-sep"></span>
-          ${tb('template','插入信件範本','範本')}${tb('signature','插入簽名檔','簽名檔',d.sigInserted?' on':'')}${tb('image','上傳照片','照片')}${tb('attach','附加檔案','附件')}
+          ${barHtml('data-rc',{mail:true,sigOn:d.sigInserted})}
           <input type="file" id="mImgInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden><input type="file" id="mAttInput" multiple hidden>
         </div>
         <div class="editor" id="mBody" contenteditable="${locked?'false':'true'}" role="textbox" aria-multiline="true" aria-label="信件內容">${d.body}</div>
@@ -1761,6 +1808,7 @@
     function runRichCmd(cmd){
       const ed=$('mBody');if(!ed||ed.getAttribute('contenteditable')!=='true')return;
       if(cmd==='colorToggle'){$('rcColors').hidden=!$('rcColors').hidden;return}
+      if(cmd==='size'||cmd==='font'){openFmtMenu(cmd,document.querySelector(`[data-rc="${cmd}"]`));return}
       if(cmd==='image'){$('mImgInput').click();return}
       if(cmd==='attach'){$('mAttInput').click();return}
       restoreMailRange();
@@ -2029,8 +2077,9 @@
       if(mail==='unmerge'){unmergeCurrent();return}
       if(mail==='schedule-toggle'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduleOpen=!d.scheduleOpen;renderMail();return}
       if(mail==='schedule-clear'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduledAt='';d.scheduleOpen=false;renderMail();return}
+      const fm=t.closest('[data-fmt-menu]')?.dataset.fmtMenu;if(fm){const [k,v]=[fm.slice(0,fm.indexOf(':')),fm.slice(fm.indexOf(':')+1)];document.getElementById('rcPick')?.remove();if(state.view==='mail')restoreMailRange();if(k==='size')document.execCommand('fontSize',false,v||'3');else if(v)document.execCommand('fontName',false,v);else document.execCommand('removeFormat',false,null);if(state.view==='mail')saveMailRange();return}
       const pick=t.closest('[data-pick]')?.dataset.pick;if(pick){const [k,i]=pick.split(':');applyPick(k,+i);return}
-      if(!t.closest('#rcPick')&&!t.closest('[data-rc="template"],[data-rc="signature"]'))closePicker();
+      if(!t.closest('#rcPick')&&!t.closest('[data-rc="template"],[data-rc="signature"],[data-rc="size"],[data-rc="font"],[data-sc="size"],[data-sc="font"]'))closePicker();
       const rc=t.closest('[data-rc]')?.dataset.rc;if(rc){runRichCmd(rc);return}
       const rcColor=t.closest('[data-rc-color]')?.dataset.rcColor;if(rcColor){restoreMailRange();document.execCommand('foreColor',false,rcColor);saveMailRange();$('rcColors').hidden=true;return}
       const attDel=t.closest('[data-att-del]');if(attDel){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.attachments.splice(+attDel.dataset.attDel,1);renderMail();return}
