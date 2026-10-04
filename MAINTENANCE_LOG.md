@@ -336,3 +336,5 @@
 - 2026-10-04: Realtime push: Worker DO accepts WebSocket at /ws (hibernation API, ping auto-response), broadcasts {type:pixel,v} when pixel-office version changes (after pixelOffice* actions and every cron minute); front-end reconnects with backoff and reloads office state on push; fallback poll 60s -> 5min while connected. Worker redeployed.
 
 - 2026-10-04: lunch icon moved 5px back left (net 5% right of centre).
+
+- 2026-10-04: Case data push: Worker action publicDatabase (db.json content from the DO snapshot, supports since=revision) + WebSocket {type:db,rev} after every committed write; front-end loadDatabase(background,viaWorker) fetches from the Worker on push and falls back to db.json; GitHub Pages poll slowed to ~24s while push is connected.

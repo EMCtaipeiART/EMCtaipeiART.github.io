@@ -2379,6 +2379,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const committed = await commitGitHubDatabase(this.env, draft, stored.sha, commitMessage(action, session));
           this.persistSnapshot({ database: committed.database, sha: committed.sha });
           try { await this.queueAudit(diffAudit(stored.database, draft, auditActor(session), action)); } catch { /* 紀錄失敗不影響資料寫入 */ }
+          this.pushDatabaseRevision(draft.revision);
           return {
             ...outcome.result,
             storage: 'cloudflare-worker-github-json',
@@ -3539,6 +3540,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   webSocketError(ws: WebSocket): void { try { ws.close(1011); } catch { /* 已關閉 */ } }
 
+  /** 案件資料寫入成功後，通知所有連線的前台「有新版本」，前台直接向本物件要最新資料（不必等 GitHub Pages 重新發布）。 */
+  private pushDatabaseRevision(revision: number): void {
+    try {
+      const message = JSON.stringify({ type: 'db', rev: revision });
+      for (const socket of this.ctx.getWebSockets()) { try { socket.send(message); } catch { /* 這條連線已失效 */ } }
+    } catch { /* 推送失敗不影響寫入 */ }
+  }
+
   private pixelLastPushed = 0;
   /** 版本（最後更新時間）有變才推送；沒人連線時只做兩次輕量查詢。 */
   pixelPushIfChanged(): void {
@@ -3651,6 +3660,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         let indexed = database.tables.database.rows.map((row, index) => ({ row, index })).filter(item => !year || rowYear(item.row) === year);
         if (action === 'recent') indexed = indexed.sort((a, b) => text(b.row['案件編號']).localeCompare(text(a.row['案件編號']))).slice(0, Math.min(200, Math.max(1, Number(payload.limit) || 30)));
         return { ok: true, action, rows: indexed.map(item => toApiRow(item.row, item.index)), revision: database.revision };
+      }
+      if (action === 'publicDatabase') {
+        if (Number(payload.since) === database.revision && database.revision > 0) return { ok: true, action, revision: database.revision, unchanged: true };
+        return { ok: true, action, revision: database.revision, database: { schemaVersion: database.schemaVersion, revision: database.revision, createdAt: database.createdAt, updatedAt: database.updatedAt, tables: database.tables } };
       }
       if (action === 'bundle' || action === 'statsData') {
         const year = text(payload.year);

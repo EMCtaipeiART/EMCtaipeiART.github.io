@@ -3623,9 +3623,13 @@ window.emcQuotes=[
     });
 
     /* ---------- 資料 ---------- */
-    async function loadDatabase(background){
+    async function loadDatabase(background,viaWorker){
       try{
-        const res=await fetch('backend/data/db.json',{cache:'no-cache'});const db=await res.json(),t=db.tables||{};
+        /* 收到後端「有新版本」的推送時，直接向後端要最新資料（不必等 GitHub Pages 重新發布）；失敗就退回讀 db.json */
+        let db=null;
+        if(viaWorker){try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'publicDatabase',since:state.dbRev}),cache:'no-store'});const j=await r.json();if(j&&j.ok){if(j.unchanged)return;db=j.database}}catch(err){}}
+        if(!db){const res=await fetch('backend/data/db.json',{cache:'no-cache'});db=await res.json()}
+        const t=db.tables||{};
         const rev=Number(db.revision)||0,stamp0=String(db.updatedAt||'');
         if(background&&state.dbStamp!==undefined){if(rev<state.dbRev||(rev===state.dbRev&&stamp0===state.dbStamp))return}
         state.dbRev=rev;state.dbStamp=stamp0;
@@ -3689,7 +3693,7 @@ window.emcQuotes=[
         if(ws&&ws.readyState<=1)return;
         try{ws=new WebSocket(url)}catch(err){return}
         ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
-        ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
+        ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='db'){if((Number(m.rev)||0)>(state.dbRev||0))loadDatabase(true,true);return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
         ws.onclose=()=>{state.pushOk=false;clearInterval(pingT);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)))};
         ws.onerror=()=>{try{ws.close()}catch(err){}};
       }
@@ -3697,9 +3701,9 @@ window.emcQuotes=[
       document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(!ws||ws.readyState>1)connect();else loadOffice()}});
     })();
     /* 背景刷新同舊網站：每 6 秒問一次（內容沒變走 304、沒有新版本就不動畫面）；打字、開著視窗／選單、編輯中、分頁在背景時暫停重畫 */
-    let lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
+    let dbTick=0,lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
-    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},8000);
+    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}if(!state.pushOk||(dbTick=(dbTick+1)%3)===0)loadDatabase(true)},8000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}}}
