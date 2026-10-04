@@ -286,3 +286,5 @@
 - 2026-10-04: Plain reply on 修改中 also -> 過稿中.
 
 - 2026-10-04: Plain reply from 修改中 now marks the latest unconfirmed modification round as done (setConfirm) before moving to 過稿中.
+
+- 2026-10-04: Story badge (avatar top-right) restyled: solid green bubble with white outline, red when unread, yellow dot; stronger shadow.
