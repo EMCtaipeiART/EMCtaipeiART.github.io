@@ -97,7 +97,7 @@
     .member-say{display:block;position:relative;box-sizing:border-box;margin:0 auto 7px;width:max-content;min-width:30px;max-width:84px;padding:4px 9px;border-radius:12px;background:rgba(255,255,255,.4);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#0b2a1a;font-size:11px;font-weight:800;line-height:1.35;text-align:center}
     .member-say .ms-win{display:block;overflow:hidden;white-space:nowrap}.member-say .ms-track{display:inline-block}.member-say .ms-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
     .member-say::after{content:"";position:absolute;left:50%;top:100%;width:0;height:0;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid rgba(255,255,255,.4)}
-    .member-music{display:flex;align-items:center;justify-content:center;gap:0;box-sizing:border-box;margin:2px auto 0;width:26px;height:26px;padding:3px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left;transition:width .28s ease,padding .28s ease,gap .28s ease,background .2s}
+    .member-music{position:relative;z-index:3;display:flex;align-items:center;justify-content:center;gap:0;box-sizing:border-box;margin:-15px auto 0;width:26px;height:26px;padding:3px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left;transition:width .28s ease,padding .28s ease,gap .28s ease,background .2s}
     .member-music:hover,.member-music:focus-visible{width:84px;justify-content:flex-start;gap:5px;padding:3px 8px 3px 3px}
     .member-music .mm-win{width:0;flex:0 0 auto;opacity:0;transition:opacity .2s ease}
     .member-music:hover .mm-win,.member-music:focus-visible .mm-win{width:auto;flex:1;opacity:1}
@@ -1233,9 +1233,9 @@ window.emcQuotes=[
         const say=!away&&pa&&pa.message?`<span class="member-say" title="${esc(pa.message)}"><span class="ms-win"><span class="ms-track">${esc(pa.message)}</span></span></span>`:'',tune=!away&&pa&&pa.music&&/^https:\/\//.test(pa.music.url||'')?`<button type="button" class="member-music${state.musicNow===name?' is-playing':''}" data-music="${esc(name)}" data-music-url="${esc(pa.music.url)}" title="點一下播放／暫停：${esc(pa.music.title||'分享音樂')}"><span class="mm-ic" aria-hidden="true">${musicIcon(state.musicNow===name,state.musicLoading===name)}</span><span class="mm-win"><span class="mm-track">♪ ${esc(pa.music.title||'分享音樂')}</span></span></button>`:'';
         const badge=status==='overtime'?`<span class="avatar-badge" aria-hidden="true"><img src="assets/v5/status/overtime.webp" alt=""></span>`:'';
         return `<li class="member${away?' is-away':''}${openName===name?' is-open':''}" data-name="${esc(name)}">
-          ${say||(anySay?'<span class="member-say-ph"></span>':'')}<button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>
+          ${say||(anySay?'<span class="member-say-ph"></span>':'')}<button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>${tune}
           <span class="member-name">${esc(name)}</span>
-          <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>${tune}
+          <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>
           ${hoverCardHtml(name)}
         </li>`;
       }).join('')+`<li class="member" data-universe>
@@ -3450,7 +3450,7 @@ window.emcQuotes=[
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;if(!document.querySelector('.member.is-open'))renderTeam()});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
-    window.addEventListener('load',()=>setTimeout(()=>{if(document.getElementById('avatarBridge'))return;const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=5';document.body.appendChild(f)},1500));
+    window.addEventListener('load',()=>setTimeout(()=>{if(document.getElementById('avatarBridge'))return;const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=6';document.body.appendChild(f)},1500));
     window.__v5=state; // 方便除錯
   })();
   </script>
