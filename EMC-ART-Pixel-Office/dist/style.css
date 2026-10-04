@@ -317,3 +317,11 @@ html.clean .scene-bar{justify-content:flex-end;padding:8px 12px 0}
 html.clean .play{border:0;border-radius:0;background:transparent;box-shadow:none}
 html.clean .canvas-wrap{overflow:hidden}
 html.clean #game{position:absolute;top:0;left:0;max-width:none;transform-origin:top left}
+html.clean #roster{display:none!important}
+html.clean .level-setting{grid-column:1/-1}
+html.clean .level-setting>summary{cursor:pointer;font-weight:700;font-size:14px;color:inherit;list-style:none}
+html.clean .level-setting>summary::-webkit-details-marker{display:none}
+html.clean .level-setting>summary::after{content:' ▾';opacity:.7}
+html.clean .level-setting[open]>summary::after{content:' ▴'}
+html.clean .level-setting-body{margin-top:12px;padding:12px;border-radius:14px;background:#fff;color:#1b2c47;overflow-x:auto}
+html.clean .level-setting-body .level-table-head{margin-bottom:10px}

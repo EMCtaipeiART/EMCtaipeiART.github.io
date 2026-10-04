@@ -17,7 +17,7 @@
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
   <script>if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean')</script>
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=45">
 </head>
 <body>
   <header>
@@ -91,6 +91,14 @@
     </div>
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
+  <script>
+/* ?clean=1：等級一覽表從場景下方搬到右側選單（同一批元素，id 不變，app.js 照常填內容） */
+(function(){if(!document.documentElement.classList.contains('clean'))return;
+var sec=document.querySelector('.level-table-section'),side=document.querySelector('aside');if(!sec||!side)return;
+var d=document.createElement('details');d.className='tool-section level-setting';var s=document.createElement('summary');s.textContent='等級一覽表設定';d.appendChild(s);
+var box=document.createElement('div');box.className='level-setting-body';while(sec.firstChild)box.appendChild(sec.firstChild);d.appendChild(box);
+var p=side.querySelector('.privacy');side.insertBefore(d,p||null);sec.remove();})();
+</script>
   <script src="app.js?v=109" fetchpriority="high"></script>
 </body>
 </html>
