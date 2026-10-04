@@ -314,3 +314,5 @@
 - 2026-10-04: Modification record from reply strips the leading "Hi 名字" greeting (stripGreeting) and stores only the body.
 
 - 2026-10-04: Settings: designers see the pixel-office avatar in 個人設定; Worker saveUserSettings now ignores avatar/displayName from non-admin designer accounts. Worker redeployed.
+
+- 2026-10-04: Home designer avatars ordered by 設計列表 輪值 (rotation, 平面 before 影音 on ties): Anna, Noise, Amber, Machi, Leona; applyDesignerOrder() re-sorts after db load.

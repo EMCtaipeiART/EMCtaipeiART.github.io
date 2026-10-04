@@ -1139,7 +1139,14 @@ window.emcQuotes=[
   (()=>{
     'use strict';
     const API='https://machi-design-api.machi-chen.workers.dev/api';
-    const DESIGNERS=['Machi','Anna','Amber','Leona','Noise'];
+    const DESIGNERS=['Anna','Noise','Amber','Machi','Leona'];// 預設＝後台設計列表的輪值順序（平面1>影音1>平面2>平面3>平面4）；讀到資料庫後會依「新專案輪值」重排（applyDesignerOrder）
+    function applyDesignerOrder(){
+      try{
+        const base=DESIGNERS.slice(),rank=n=>{const r=state.settings.find(x=>String(x['名字']||'').trim().toLowerCase()===n.toLowerCase());return [Number(r&&r['新專案輪值'])||99,r&&String(r['組別']||'').trim()==='影音'?1:0]};
+        const next=base.slice().sort((a,b)=>{const x=rank(a),y=rank(b);return x[0]-y[0]||x[1]-y[1]||base.indexOf(a)-base.indexOf(b)});
+        if(next.some((n,i)=>n!==DESIGNERS[i]))DESIGNERS.splice(0,DESIGNERS.length,...next);
+      }catch(err){}
+    }
     const SHORT_HEADS=new Set(['Machi','Noise']); // 男生頭像圖只到下巴，顯示比例要另外調
     const STATUS_TEXT={present:'在座工作中',overtime:'加班中',lunch:'用餐中',meeting:'開會中',leave:'休假中',offwork:'已下班',toilet:'去廁所',abroad:'出國中',out:'公出工作中'};
     const WORKING=new Set(['present','overtime']);
@@ -3496,7 +3503,7 @@ window.emcQuotes=[
         if(background&&state.dbStamp!==undefined){if(rev<state.dbRev||(rev===state.dbRev&&stamp0===state.dbStamp))return}
         state.dbRev=rev;state.dbStamp=stamp0;
         state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);
-        state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];state.avatars=buildAvatarMap(state.settings);
+        state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];applyDesignerOrder();state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}
         for(const [id,edit] of [...state.edits]){if(Date.now()-edit.at>10*60*1000){state.edits.delete(id);continue}const hit=state.rows.find(r=>String(r['案件編號'])===id);if(hit)Object.assign(hit,edit.headers)} // 剛編輯完、db.json 還沒更新時，先保留本機的修改
