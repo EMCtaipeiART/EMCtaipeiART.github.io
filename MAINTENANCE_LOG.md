@@ -330,3 +330,5 @@
 - 2026-10-04: 用餐中 (lunch) status icon in avatar +10% (66% -> 72.6%).
 
 - 2026-10-04: lunch status icon nudged 5% right.
+
+- 2026-10-04: lunch status icon nudged another 5px right.
