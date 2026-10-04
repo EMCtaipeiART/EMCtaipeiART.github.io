@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7057,
+  "revision": 7058,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-04T00:45:00.911Z",
+  "updatedAt": "2026-10-04T00:45:32.818Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -996,7 +996,7 @@
         {"案件編號":"26090213","修改次數":"0","建立日期":"2026/10/02 16:55:59","修改日期":"2026/10/02 16:55:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 16:55:59","圖片連結":"[{\"fileName\":\"261001_Emfusion_10月FB貼文_肌膚溫度曲線.png\",\"url\":\"https://lh3.googleusercontent.com/d/1D7nfuqmtyxAnKSvb9kkbF1wPHS_6l6qV=w1600\"},{\"fileName\":\"260929_Emfusion_10月FB貼文_40分鐘-留給自己.png\",\"url\":\"https://lh3.googleusercontent.com/d/1n32CfyxPoMIdZZSuRP0UpdYcYPuk47CQ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 16:57:12"},
         {"案件編號":"26090203","修改次數":"0","建立日期":"2026/10/02 17:59:08","修改日期":"2026/10/02 17:59:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 17:59:08","圖片連結":"[{\"fileName\":\"261002_ANKER_A121D_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VMW_QFJOcXRqXTtaEkYlUPMfoUi-04tr=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SlpsK1nmXLhRKh-ko4qOOauVDz-rq5u0=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DMVG_yhEzFR2TsqfQoy_xYbN5g6pglEb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 17:59:08"},
         {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/04 08:44:00","修改日期":"2026/10/04 08:44:00","修改內容":"初稿完成","修改人":"Machi","確認修正日":"2026/10/04 08:44:00","圖片連結":"[{\"fileName\":\"IMG_4975.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/16KfPX_oqJ0-59IE5m6RnqMZPEUJlJ0Ki=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/04 08:44:00"},
-        {"案件編號":"26100013","修改次數":"1","建立日期":"2026/10/04 08:45:00","修改日期":"2026-10-04","修改內容":"修正....","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100013","修改次數":"1","建立日期":"2026/10/04 08:45:00","修改日期":"2026-10-04","修改內容":"修正....","修改內容連結":"","修改人":"Machi","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"IMG_4972.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/198FrZXMEADzRllUY2SlifV1fsT5A2WzK=w1600\"}]","圖片來源":"manual-upload","圖片更新時間":"2026/10/04 08:45:32"}
       ]
     },
     "補充資料連結": {
