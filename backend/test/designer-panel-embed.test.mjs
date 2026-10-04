@@ -212,7 +212,7 @@ test('進站不再每 6 秒重抓整份 db.json，嵌入版也不預載歷史快
   assert.match(html, /const response=await fetch\(githubJsonDatabaseUrl,\{cache:'no-cache'\}\);/,
     '改用條件請求，內容沒變時走 304');
   // 3.8 MB 的歷史快照只在真的要看人物資料時才載。
-  assert.match(js, /function ensureLevels\(\)\{if\(levelsRequested\)return;levelsRequested=true;syncLevels\(\);\}/);
+  assert.match(js, /function ensureLevels\(\)\{if\(levelsRequested(?:\|\|.*?)?\)return;levelsRequested=true;syncLevels\(\);\}/);
   assert.match(js, /select\(null\);if\(!embedMode\)ensureLevels\(\);/, '嵌入模式進站不預載');
   assert.match(js, /const response=await fetch\(url,\{cache:'no-cache'\}\);/, '歷史快照也要能走 304');
 });

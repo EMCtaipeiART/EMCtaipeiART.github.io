@@ -294,3 +294,5 @@
 - 2026-10-04: Home bubbles/music/story badges now filled from the home page own pixelOfficeState (mergeOfficeIntoAvatars) instead of waiting for the hidden bridge iframe.
 
 - 2026-10-04: Avatar bridge (avatars=1) no longer downloads the 4MB database_archive.json (ensureLevels skipped). app.js v=127, bridge v=14.
+
+- 2026-10-04: CI fix: designer-panel-embed test regex for ensureLevels allows the avatars-mode guard. Workflow: compare failing tests vs last green commit before pushing.
