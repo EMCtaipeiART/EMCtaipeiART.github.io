@@ -2962,7 +2962,7 @@ window.emcQuotes=[
     /* 補充資料只開放給：設計部、企劃部、填單的專案負責人本人，以及同一組的組員（例如 Celine 填單，Celine 組的人都看得到）；其他人隱藏 */
     function settingsFor(value){
       const raw=String(value||'').trim();if(!raw)return null;
-      const email=(raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+.[A-Z]{2,}/i)||[''])[0],plain=raw.replace(/[（(].*?[）)]/g,'').trim();
+      const email=(raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)||[''])[0],plain=raw.replace(/[（(].*?[）)]/g,'').trim();
       const keys=[raw,plain,email].map(norm).filter(Boolean);
       return state.settings.find(x=>[x['名字'],x['顯示名'],x['帳號']].some(v=>keys.includes(norm(v))))||null;
     }
