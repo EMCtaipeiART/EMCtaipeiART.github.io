@@ -3041,7 +3041,7 @@ window.emcQuotes=[
       openOwner(true);
     }
     setTimeout(()=>maybeOwnerDaily(),1500);
-    setInterval(()=>{try{if(state.loaded)renderRailExtra()}catch(err){}},2500);
+    setInterval(()=>{try{if(!document.hidden&&state.loaded)renderRailExtra()}catch(err){}},2500);
     document.addEventListener('click',e=>{
       const t=e.target;
       if(t.closest('[data-op-close]')||t.id==='ownerModal'){closeOwner();return}
@@ -3508,7 +3508,7 @@ window.emcQuotes=[
       try{
         const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'pixelOfficeState'}),cache:'no-store'});
         const data=await res.json();state.officeLoaded=true;
-        if(data&&data.ok){state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
+        if(data&&data.ok){const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
       }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
     }
 
@@ -3520,11 +3520,11 @@ window.emcQuotes=[
     try{if(!session().token&&localStorage.getItem('designRequestEditorLoggedOut')!=='1'&&sessionStorage.getItem('designRequestEditorLoggedOut')!=='1'){const bk=JSON.parse(localStorage.getItem('v5SessionBackup')||'null');if(bk&&bk.designRequestEditorToken)for(const [k,v] of Object.entries(bk)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}}}}catch(err){}
     renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
-    setInterval(loadOffice,60000);
+    setInterval(()=>{if(!document.hidden)loadOffice()},60000);
     /* 背景刷新同舊網站：每 6 秒問一次（內容沒變走 304、沒有新版本就不動畫面）；打字、開著視窗／選單、編輯中、分頁在背景時暫停重畫 */
     let lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
-    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},6000);
+    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},8000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}}}

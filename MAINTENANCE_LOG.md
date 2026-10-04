@@ -274,3 +274,5 @@
 - 2026-10-04: Card expand shows 項目細節 row: designers get "＋ 新增項目細節" (未執行) / "編輯" (other statuses) using the existing details popover.
 
 - 2026-10-04: Home avatars cached in localStorage (v5PixAvCache) so the last pixel-office heads show immediately on load.
+
+- 2026-10-04: Health check: background timers skip while tab hidden (rail, office state), office state re-renders only when changed, db poll 6s->8s.
