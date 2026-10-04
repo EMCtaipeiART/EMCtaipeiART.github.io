@@ -493,7 +493,7 @@
 
     /* 凱躍多元宇宙（舊版像素辦公室） */
     .uni-page{max-width:1200px}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
-    .uni-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:560px;border:1px solid var(--line);border-radius:16px;background:#eef8f2;margin-top:12px}
+    .stage-wrap.uni{max-width:none;padding:0 0 24px}.uni-page .page-top{padding:14px 18px 8px}.uni-frame{display:block;width:100%;aspect-ratio:16/9;height:auto;max-height:calc(100vh - 150px);min-height:380px;border:0;border-radius:0;background:transparent}
     .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
     .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
     .universe-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
@@ -1548,7 +1548,7 @@ window.emcQuotes=[
     function show(view){state.tlLeft=null;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      $('stage').classList.toggle('wide',view==='projects');
+      $('stage').classList.toggle('wide',view==='projects');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
       if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
