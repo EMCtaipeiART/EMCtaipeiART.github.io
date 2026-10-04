@@ -785,7 +785,15 @@
     .op-btn.warn{border-color:#f2c27a;background:#fff4e0;color:#8a4b00}
     .rail-item{position:relative}
     .card.is-notify,tr.is-notify{outline:3px solid #e11d48;outline-offset:2px;animation:ntPulse 1.6s ease-in-out 3}
-    .card.is-notify::after{content:attr(data-nt);position:absolute;left:12px;top:-11px;padding:2px 9px;border-radius:99px;background:#e11d48;color:#fff;font-size:11.5px;font-weight:900;z-index:3}
+    .card.is-notify .card-top::before{content:attr(data-nt);flex:0 0 auto;padding:2px 9px;border-radius:99px;background:#e11d48;color:#fff;font-size:11.5px;font-weight:900;white-space:nowrap}
+    .nt-toast-region{position:fixed;top:max(18px,env(safe-area-inset-top));right:max(18px,env(safe-area-inset-right));z-index:1850;width:min(370px,calc(100vw - 24px));display:grid;gap:10px;pointer-events:none}
+    .nt-toast{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr) 28px;gap:10px;align-items:start;padding:13px 12px 12px;border:1px solid var(--line);border-left:4px solid #e11d48;border-radius:10px;background:var(--panel);color:var(--ink);box-shadow:0 20px 50px rgba(16,24,40,.18);cursor:pointer;pointer-events:auto;transform:translateX(calc(100% + 30px));opacity:0;transition:transform .28s cubic-bezier(.22,.9,.3,1),opacity .2s ease}
+    .nt-toast.is-visible{transform:none;opacity:1}
+    .nt-toast .nt-ic{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#fee2e8;color:#e11d48;font-size:18px}
+    .nt-toast .nt-eb{font-size:11px;font-weight:950;color:#e11d48}
+    .nt-toast .nt-ti{display:block;margin-top:4px;font-size:14px;font-weight:950;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nt-toast .nt-me{margin-top:3px;font-size:12px;font-weight:800;color:var(--muted)}
+    .nt-toast .nt-x{width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}
     @keyframes ntPulse{50%{outline-color:rgba(225,29,72,.25)}}
     .rail-badge{position:absolute;top:2px;right:8px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:900;line-height:18px;text-align:center}
     .gm-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;margin-bottom:14px}
@@ -2818,8 +2826,22 @@ window.emcQuotes=[
     function markNotifSeen(){try{const cur=notifItems().map(x=>x.key),sn=seenSet();cur.forEach(k=>sn.add(k));localStorage.setItem(seenKey(),JSON.stringify([...sn].slice(-400)))}catch(e){}}
     function applyHl(){
       if(state.view!=='projects'||!state.hl||!state.hl.size)return;let first=null;
-      for(const [id,label] of state.hl){const el=document.querySelector('[data-case="'+CSS.escape(id)+'"],[data-row-id="'+CSS.escape(id)+'"]');if(!el)continue;el.classList.add('is-notify');el.setAttribute('data-nt',label);if(!first)first=el}
+      for(const [id,label] of state.hl){const el=document.querySelector('[data-case="'+CSS.escape(id)+'"],[data-row-id="'+CSS.escape(id)+'"]');if(!el)continue;el.classList.add('is-notify');el.setAttribute('data-nt',label);const ct=el.querySelector('.card-top');if(ct)ct.setAttribute('data-nt',label);if(!first)first=el}
       if(first&&!state.hlScrolled){state.hlScrolled=true;first.scrollIntoView({block:'center',behavior:'smooth'})}
+    }
+    document.addEventListener('click',e=>{const el=e.target.closest?.('.is-notify');if(!el||!state.hl)return;const id=el.dataset.case||el.dataset.rowId;state.hl.delete(id);el.classList.remove('is-notify');el.removeAttribute('data-nt')},true);
+    const ntKnown=new Set();
+    function showNtToast(items){
+      let reg=$('ntRegion');if(!reg){reg=document.createElement('div');reg.id='ntRegion';reg.className='nt-toast-region';reg.setAttribute('aria-live','polite');document.body.appendChild(reg)}
+      const x=items[0],r=allRowsRaw().find(r=>idKey(r)===x.id)||{};
+      const t=document.createElement('div');t.className='nt-toast';t.setAttribute('role','status');
+      t.innerHTML='<span class="nt-ic">🔔</span><div><span class="nt-eb">'+esc(NT_LABEL[x.type])+'</span><span class="nt-ti">'+esc(x.id+' '+(r['專案名稱']||''))+'</span><div class="nt-me">'+esc((r['客戶別']||'')+(items.length>1?'　另有 '+(items.length-1)+' 則新通知':'　點此查看'))+'</div></div><button type="button" class="nt-x" aria-label="關閉">×</button>';
+      const kill=()=>{t.classList.remove('is-visible');setTimeout(()=>t.remove(),320)};
+      t.addEventListener('click',e=>{if(e.target.closest('.nt-x')){kill();return}kill();document.querySelector('[data-nav="projects"]')?.click()});
+      reg.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('is-visible')));setTimeout(kill,9000);
+    }
+    function checkNtToast(){
+      try{const fresh=unseenItems().filter(x=>!ntKnown.has(x.key));fresh.forEach(x=>ntKnown.add(x.key));if(fresh.length&&state.view!=='projects')showNtToast(fresh)}catch(e){}
     }
     function openNotify(){
       const items=unseenItems();if(!items.length)return;
@@ -3337,7 +3359,7 @@ window.emcQuotes=[
         state.loaded=true;
         const stamp=new Date(db.updatedAt||Date.now());
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
-        fillClients();try{updateProjBadge()}catch(e){}
+        fillClients();try{updateProjBadge()}catch(e){}checkNtToast();
       }catch(err){console.warn('案件資料讀取失敗',err);if(background)return;state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
       if(background&&bgBusy()){state.dirty=true;return}
       state.dirty=false;
