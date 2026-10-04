@@ -280,3 +280,5 @@
 - 2026-10-04: Reply/modification/plain reply now apply the default 信件範本 from personal settings (settings loaded first if needed).
 
 - 2026-10-04: HOTFIX: v5PixAvCache regex had an unescaped slash that broke the whole page script (site would not load data); fixed.
+
+- 2026-10-04: Mail send: plain reply on 執行中 -> 過稿中 (designer reply already did); modification reply -> 修改中 (backend + client fallback). Scheduled sends do not change status.

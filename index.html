@@ -2634,6 +2634,7 @@ window.emcQuotes=[
         }else if(d.reply){await api('replyCaseMail',{caseId:d.id,...base});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
         else await api('sendCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject});
         if(d.reply&&d.mode==='designer')afterDesignerSend(d,inlineImages);
+        else if(d.reply&&!d.scheduledDone&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===d.id),st0=String(r0&&r0['狀態']||'').trim();if(d.mode==='modification'){if(st0&&st0!=='修改中'&&st0!=='已取消')applyMove(d.id,'修改中')}else if(st0==='執行中')applyMove(d.id,'過稿中')}
         d.sent=true;m.sentCount++;m.sending=false;
         const next=m.drafts.findIndex(x=>!x.sent);
         if(d.scheduledDone)toast(`已排程於 ${d.scheduledAt.replace('T',' ')} 寄出`);
