@@ -304,3 +304,5 @@
 - 2026-10-04: Story badge: removed green outline (white bubble + green dots, shadow only).
 
 - 2026-10-04: Avatar hover card no longer shows the 已完成 count.
+
+- 2026-10-04: Hover card counts grid 5 -> 4 columns after removing 已完成.
