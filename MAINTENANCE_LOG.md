@@ -354,3 +354,5 @@
 - 2026-10-04: Case detail page: removed top-right 編輯案件 button; bottom-left 回信/編輯/刪除 buttons enlarged to the same size (36px, 14px font).
 
 - 2026-10-04: Case detail page: 回信/編輯/刪除 buttons moved from bottom-left to the top-right (where 編輯案件 was, same 36px size); 編輯案件 button removed.
+
+- 2026-10-04: Dark mode: rail toggle button (themeBtn) with localStorage + account sync (深淺模式); dark tweaks for access-denied gate, list timeline header, issue selects, wall placeholders. Existing html[data-theme=dark] stylesheet reused.
