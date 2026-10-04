@@ -2403,8 +2403,9 @@ window.emcQuotes=[
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
       if(mode==='designer'&&!opts){openDrChooser(id);return}
+      if(!st2.loaded&&loggedIn()){try{await loadUserSettings()}catch(err){}for(let i=0;i<30&&st2.loading;i++)await new Promise(r=>setTimeout(r,100))}
       const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true}:null;
-      const body=mode==='modification'?'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>':mode==='designer'?designerReplyBody(row,dr):'<br>';
+      const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/{收件人名}/g,esc(nm)).replace(/{項目細節}/g,esc(String(row['項目細節']||'').split(/s*[,，、]s*/).filter(x=>x&&x!=='急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();loadThread(id,true);
     }

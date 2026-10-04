@@ -276,3 +276,5 @@
 - 2026-10-04: Home avatars cached in localStorage (v5PixAvCache) so the last pixel-office heads show immediately on load.
 
 - 2026-10-04: Health check: background timers skip while tab hidden (rail, office state), office state re-renders only when changed, db poll 6s->8s.
+
+- 2026-10-04: Reply/modification/plain reply now apply the default 信件範本 from personal settings (settings loaded first if needed).
