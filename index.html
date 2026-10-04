@@ -301,6 +301,7 @@
     .card.dragging{opacity:.4}
     .column.drop-ok{outline:2px dashed var(--brand);outline-offset:-4px;background:var(--brand-soft)}
     .no-hero .hero{display:none}
+    body.uni-collapse .hero{padding:26px 24px 26px}body.uni-collapse .hero h1,body.uni-collapse .hero .team,body.uni-collapse .hero .prompt-hint{display:none}
     .no-hero .stage-wrap{padding-top:30px}
     .stage-wrap.wide{max-width:1760px}
     .board.five{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
@@ -1548,7 +1549,7 @@ window.emcQuotes=[
     function show(view){state.tlLeft=null;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      $('stage').classList.toggle('wide',view==='projects');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      document.body.classList.toggle('uni-collapse',view==='universe');$('stage').classList.toggle('wide',view==='projects');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
       if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
