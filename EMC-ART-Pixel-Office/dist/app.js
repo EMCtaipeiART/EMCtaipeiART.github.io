@@ -71,8 +71,12 @@ function fitCleanView(){
   if(!w)return;
   let top=EMBED_ROW_TOP-158;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;
-  const x0=424,x1=1112,y0=top,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8,bw=x1-x0,bh=y1-y0;
-  const fitW=w*.96/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
+  // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
+  const narrow=document.documentElement.classList.contains('clean-narrow');
+  if(narrow)top=Math.min(top,140);
+  cleanTop=top;
+  const x0=narrow?300:424,x1=narrow?1236:1112,y0=top,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8+(narrow?170:0),bw=x1-x0,bh=y1-y0;
+  const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam&&!narrow?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
   wrapEl.style.height=`${Math.round(bh*scale)}px`;
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   game.style.transform=`translate(${w/2-cx*scale}px,${-y0*scale}px)`;

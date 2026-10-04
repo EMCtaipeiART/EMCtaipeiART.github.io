@@ -17,7 +17,7 @@
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
   <script>if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
-  <link rel="stylesheet" href="style.css?v=46">
+  <link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
   <header>
@@ -92,6 +92,8 @@
   </dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <script>
+/* ?clean=1 手機：搖桿搬進場景框（右下角），走動與編輯在同一個畫面 */
+(function(){if(!document.documentElement.classList.contains('clean')||!window.matchMedia('(max-width:720px)').matches)return;document.documentElement.classList.add('clean-narrow');var j=document.getElementById('joystick'),w=document.querySelector('.canvas-wrap');if(j&&w)w.appendChild(j);})();
 /* ?clean=1：等級一覽表從場景下方搬到右側選單（同一批元素，id 不變，app.js 照常填內容） */
 (function(){if(!document.documentElement.classList.contains('clean'))return;
 var sec=document.querySelector('.level-table-section'),side=document.querySelector('aside');if(!sec||!side)return;
@@ -106,6 +108,6 @@ if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
  moodSec.style.display='none';
  [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
 </script>
-  <script src="app.js?v=117" fetchpriority="high"></script>
+  <script src="app.js?v=118" fetchpriority="high"></script>
 </body>
 </html>
