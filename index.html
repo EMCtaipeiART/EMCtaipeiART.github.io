@@ -1281,7 +1281,9 @@ window.emcQuotes=[
     function toggleCardOpen(card){
       const id=card.dataset.case;
       if(state.openCases.has(id)){state.openCases.delete(id);card.classList.remove('is-open');card.removeAttribute('aria-expanded');card.querySelector(':scope > .card-detail')?.remove();scheduleEqualize();return}
-      state.openCases.add(id);fillCardDetail(card);scheduleEqualize();
+      // 一次只展開一張：先收起其他已展開的卡牌
+      document.querySelectorAll('div.card.is-open').forEach(o=>{if(o!==card){o.classList.remove('is-open');o.removeAttribute('aria-expanded');o.querySelector(':scope > .card-detail')?.remove()}});
+      state.openCases.clear();state.openCases.add(id);fillCardDetail(card);scheduleEqualize();
     }
     document.addEventListener('click',e=>{const cd=e.target.closest?.('.card-detail');if(cd){const c=cd.closest('[data-case]');if(c)state.detailId=c.dataset.case}},true);
     /* 同一排的卡牌高度統一（依該排最高的那張），下排（頭像／數量）靠底部對齊；展開中的卡牌不參與，免得把旁邊撐高 */
