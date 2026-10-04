@@ -324,3 +324,5 @@
 - 2026-10-04: 補充資料 in card/detail only for 設計部/企劃部/admin, the case 專案負責人 and members of the owner group (canSeeSupp). UI-only: db.json stays public.
 
 - 2026-10-04: 作品牆: left-rail button, Pinterest-style masonry (random order, lazy 36/page, designer filter, shuffle), click opens modal with case details + 查看案件; images from 修改統計表 圖片連結 (lh3 googleusercontent, image files only).
+
+- 2026-10-04: 作品牆 placeholder aspect-ratio 4/5 so columns balance before images load.
