@@ -307,6 +307,7 @@
     .face+.face{margin-left:-8px}
     .face img{width:100%;height:100%;object-fit:cover}
     .face img.head{width:118%;height:auto;object-fit:contain;margin-top:8%}
+    .face img.head.pix{width:100%;height:100%;margin-top:0;object-fit:cover}
     .face img.head.is-short{width:100%;margin-top:4%}
     .face.is-designer{background:#fff}
     .card-info{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px 6px;margin:8px 0 0}
@@ -1185,7 +1186,8 @@ window.emcQuotes=[
     }
     function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return state.avatars.get(norm(name))||(email&&state.avatars.get(email))||''}
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
-    function headImg(name){return `<img class="head${SHORT_HEADS.has(name)?' is-short':''}" src="assets/v5/heads/${esc(name)}.webp" alt="">`}
+    const pixImg=name=>{const k=Object.keys(state.pixAvatars||{}).find(n=>norm(n)===norm(name));const v=k&&state.pixAvatars[k];return v&&/^data:image\/png/.test(v.img||'')?v.img:''};
+    function headImg(name){const px=pixImg(name);if(px)return `<img class="head pix" src="${px}" alt="">`;return `<img class="head${SHORT_HEADS.has(name)?' is-short':''}" src="assets/v5/heads/${esc(name)}.webp" alt="">`}
     function faceHtml(name,role){
       const label=`${role}：${name||'未填'}`;
       if(role==='設計負責人'&&DESIGNERS.includes(String(name||'').trim()))return `<span class="face is-designer" title="${esc(label)}">${headImg(String(name).trim())}</span>`;
@@ -3239,7 +3241,7 @@ window.emcQuotes=[
     }
     function renderLogin(){
       const box=$('railLogin');if(!box)return;
-      const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
+      const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(pixImg(name)||pixImg(s.user)||personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
       box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-gmail-connect role="menuitem">串接 Gmail</button><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
       $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
@@ -3458,10 +3460,10 @@ window.emcQuotes=[
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}}}
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
-    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;if(!document.querySelector('.member.is-open'))renderTeam()});
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
-    window.addEventListener('load',()=>setTimeout(()=>{if(document.getElementById('avatarBridge'))return;const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=11';document.body.appendChild(f)},1500));
+    window.addEventListener('load',()=>setTimeout(()=>{if(document.getElementById('avatarBridge'))return;const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=12';document.body.appendChild(f)},1500));
     window.__v5=state; // 方便除錯
   })();
   </script>

@@ -1343,6 +1343,8 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
       const list={};
       people.forEach((p,i)=>{
         // 畫布比原本的肖像高一截：戴帽子的人物會超出頭頂，不留空間帽子就被切平
+        const keepLook=p.look,eff=effectiveLook(i);
+        p.look={outfit:eff.outfit,cap:'',glasses:eff.glasses};// 頭像框一律不戴帽子（眼鏡保留）
         const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
         const o=document.createElement('canvas');o.width=o.height=160;
         // 每個人的下巴、臉中心用造型圖的幾何量出來，統一把下巴放在頭像框同一個高度（帽子、長髮不影響）
@@ -1351,6 +1353,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
           const fr=wardrobeFrame(i,'down');
           if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
         }catch(error){}
+        p.look=keepLook;
         if(chin===null)chin=110;
         const size=AV_CROP.w,sy=chin-size*AV_CROP.chin;
         o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
