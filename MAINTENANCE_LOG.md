@@ -340,3 +340,5 @@
 - 2026-10-04: Case data push: Worker action publicDatabase (db.json content from the DO snapshot, supports since=revision) + WebSocket {type:db,rev} after every committed write; front-end loadDatabase(background,viaWorker) fetches from the Worker on push and falls back to db.json; GitHub Pages poll slowed to ~24s while push is connected.
 
 - 2026-10-04: Pixel office app (embed/clean/avatars bridge) now also uses the WebSocket push: syncNow() on {type:pixel}; polling falls back to 60s while connected (3s otherwise). app.js v=129, iframes embed v=64, clean v=67, bridge v=16.
+
+- 2026-10-04: Universe opens directly in edit mode for designer/admin accounts (openUniverse sets uniEdit=canEditUniverse()); others still view-only.
