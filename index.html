@@ -91,6 +91,10 @@
     .avatar-btn{position:relative;width:84px;height:84px;padding:0;border-radius:50%;border:3px solid rgba(255,255,255,.9);background:#fff;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.18);transition:transform .18s ease,box-shadow .18s ease;overflow:visible}
     .avatar-btn:hover,.avatar-btn:focus-visible{transform:translateY(-4px);box-shadow:0 16px 30px rgba(0,0,0,.24);outline:none}
     .avatar-clip{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#fff;display:grid;place-items:center}
+    .avatar-clip img.head.pix{width:100%;height:100%;margin-top:0;object-fit:cover}
+    .member-say{display:block;position:relative;margin:9px auto 0;max-width:124px;padding:5px 9px;border-radius:12px;background:#fff;color:#17211d;font-size:11px;font-weight:800;line-height:1.35;text-align:center;overflow-wrap:anywhere;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+    .member-say::before{content:"";position:absolute;left:50%;top:-5px;width:10px;height:10px;background:#fff;transform:translateX(-50%) rotate(45deg)}
+    .member-music{display:block;margin:6px auto 0;max-width:124px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.55);color:#fff;font-size:11px;font-weight:800;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .avatar-clip img.head{width:112%;height:auto;margin-top:18%}
     .avatar-clip img.head.is-short{width:96%;margin-top:6%}
     .avatar-clip img.status-icon{width:66%;height:66%;object-fit:contain}
@@ -1200,12 +1204,13 @@ window.emcQuotes=[
       const team=$('team'),openName=team.querySelector('.member.is-open')?.dataset.name||'';
       team.innerHTML=DESIGNERS.map(name=>{
         const p=state.people[name],status=p?.status||'',away=Boolean(status)&&!WORKING.has(status); // 還沒讀到狀態就只顯示頭像，不假裝在座
-        const face=away?`<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`:headImg(name);
+        const pa=state.pixAvatars&&state.pixAvatars[name],face=away?`<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`:(pa&&/^data:image\/png/.test(pa.img||'')?`<img class="head pix" src="${pa.img}" alt="">`:headImg(name));
+        const say=!away&&pa&&pa.message?`<span class="member-say">${esc(pa.message)}</span>`:'',tune=!away&&pa&&pa.music&&/^https:\/\//.test(pa.music.url||'')?`<a class="member-music" href="${esc(pa.music.url)}" target="_blank" rel="noopener" title="${esc(pa.music.title||'分享音樂')}">♪ ${esc(pa.music.title||'分享音樂')}</a>`:'';
         const badge=status==='overtime'?`<span class="avatar-badge" aria-hidden="true"><img src="assets/v5/status/overtime.webp" alt=""></span>`:'';
         return `<li class="member${away?' is-away':''}${openName===name?' is-open':''}" data-name="${esc(name)}">
           <button type="button" class="avatar-btn" aria-label="${esc(name)}${STATUS_TEXT[status]?'，'+esc(STATUS_TEXT[status]):''}" aria-haspopup="true"><span class="avatar-clip">${face}</span>${badge}</button>
           <span class="member-name">${esc(name)}</span>
-          <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>
+          <span class="member-status">${esc(STATUS_TEXT[status]||(state.officeLoaded?'':'狀態讀取中…'))}</span>${say}${tune}
           ${hoverCardHtml(name)}
         </li>`;
       }).join('')+`<li class="member" data-universe>
@@ -3411,6 +3416,9 @@ window.emcQuotes=[
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}}}
+    /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;if(!document.querySelector('.member.is-open'))renderTeam()});
+    window.addEventListener('load',()=>setTimeout(()=>{if(document.getElementById('avatarBridge'))return;const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:absolute;width:320px;height:240px;left:-9999px;top:0;border:0;opacity:0;pointer-events:none';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=1';document.body.appendChild(f)},1500));
     window.__v5=state; // 方便除錯
   })();
   </script>

@@ -1326,3 +1326,21 @@ if(document.modelContext?.registerTool){try{document.modelContext.registerTool({
   setInterval(check,3*60*1000);setInterval(apply,20*1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
 })();
+
+// ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
+if(new URLSearchParams(location.search).get('avatars')==='1'){
+  const sendAvatars=()=>{
+    if(!ready||window.parent===window)return;
+    try{
+      const list={};
+      people.forEach((p,i)=>{
+        const c=document.createElement('canvas');c.width=130;c.height=155;portrait(c.getContext('2d'),i,false);
+        const o=document.createElement('canvas');o.width=o.height=160;o.getContext('2d').drawImage(c,AV_CROP.x,AV_CROP.y,AV_CROP.w,AV_CROP.w,0,0,160,160);
+        list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||''};
+      });
+      window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
+    }catch(error){}
+  };
+  setTimeout(sendAvatars,2500);setTimeout(sendAvatars,6000);setInterval(sendAvatars,5000);
+}
+const AV_CROP={x:23,y:4,w:84};

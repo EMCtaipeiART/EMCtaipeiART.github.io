@@ -327,3 +327,5 @@ html.clean .level-setting-body{margin-top:12px;padding:12px;border-radius:14px;b
 html.clean .level-setting-body .level-table-head{margin-bottom:10px}
 html.clean .level-setting-body #levelTable{grid-template-columns:1fr;gap:14px}
 html.clean .level-setting-body .level-row{grid-template-columns:56px minmax(0,1fr)}
+
+html.avatars body{visibility:hidden}
