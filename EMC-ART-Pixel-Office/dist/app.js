@@ -1290,7 +1290,8 @@ function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effecti
 const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||actionOf(i)||(!storyReducedMotion.matches&&storyUnread(p.name))));
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
-function render(time){const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
+const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
+function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
@@ -1362,7 +1363,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
     }catch(error){}
   };
-  let avatarsSent=false;const sendAvatarsOnce=()=>{sendAvatars();};const fastSend=setInterval(()=>{sendAvatars();if(ready&&accessoriesReady()){avatarsSent=true;clearInterval(fastSend)}},700);setInterval(sendAvatarsOnce,5000);
+  let avatarsSent=false;const sendAvatarsOnce=()=>{sendAvatars();};const fastSend=setInterval(()=>{sendAvatars();if(ready&&accessoriesReady()){avatarsSent=true;clearInterval(fastSend)}},700);setInterval(()=>{if(!document.hidden)sendAvatarsOnce()},10000);
   // 首頁頭像上的音樂框：點一下播放／暫停（播放器在這個隱藏視窗裡），並回報誰正在播。
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin||!event.data||event.data.type!=='pixelOfficeToggleMusic')return;
@@ -1386,4 +1387,4 @@ window.addEventListener('message',event=>{
 });
 
 // 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
-{let wasOpen=false;setInterval(()=>{const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}wasOpen=now;},250);}
+{let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}wasOpen=now;},250);}

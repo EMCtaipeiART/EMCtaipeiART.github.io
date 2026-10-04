@@ -268,3 +268,5 @@
 - 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題。
 
 - 捲動/回首頁收合後的綠底與固定下拉列同高，不再出現兩層綠底。
+
+- 2026-10-04: Mobile heat/lag fix: hidden avatar bridge iframe no longer redraws the pixel-office scene at 60fps (only when story viewer is open); avatar refresh 10s and paused when tab hidden; backdrop blur off on touch devices. app.js v=126, bridge v=13.
