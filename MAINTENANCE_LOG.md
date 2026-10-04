@@ -302,3 +302,5 @@
 - 2026-10-04: Story badge: white bubble, green outline, green dots; unread keeps yellow dot (no pulse/colour change).
 
 - 2026-10-04: Story badge: removed green outline (white bubble + green dots, shadow only).
+
+- 2026-10-04: Avatar hover card no longer shows the 已完成 count.

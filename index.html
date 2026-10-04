@@ -1250,7 +1250,7 @@ window.emcQuotes=[
         <div class="hc-xp"><span style="width:${lv?lv.progress.toFixed(1):0}%"></span></div>
         <div class="hc-xp-text">${lv?`${fmt(lv.score)} 分 · 距 Lv.${lv.level+1} 還差 ${fmt(lv.remaining)} 分`:'&nbsp;'}</div>
         <div class="hc-section">目前案量</div>
-        <div class="hc-counts">${Object.entries(c).map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
+        <div class="hc-counts">${Object.entries(c).filter(([k])=>k!=='已完成').map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
         ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
       </div>`;
     }
