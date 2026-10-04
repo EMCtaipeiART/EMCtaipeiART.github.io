@@ -1096,6 +1096,7 @@ window.emcQuotes=[
     <span id="railExtra" style="display:contents"></span>
     <span class="rail-spacer"></span>
     <span id="railBottom" style="display:contents"></span>
+    <button type="button" class="rail-item" id="themeBtn" data-theme-toggle aria-label="切換深淺模式" title="切換深淺模式"></button>
     <button type="button" class="rail-item" data-nav="settings" aria-label="設定"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>設定</button>
     <span class="rail-version">v5.0</span>
     <div class="rail-login" id="railLogin"></div>
@@ -1703,7 +1704,7 @@ window.emcQuotes=[
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}
+        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}try{applyCloudTheme(String((data.settings||{}).theme||''))}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         const cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
         const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
@@ -1805,6 +1806,30 @@ window.emcQuotes=[
     document.addEventListener('change',e=>{if(e.target&&e.target.id==='wallDesigner'){state.wallDesigner=e.target.value;wallLayout()}});
     document.addEventListener('keydown',e=>{const m=$('wallModal');if(m&&!m.hidden){if(e.key==='Escape')wallClose();else if(e.key==='ArrowRight')wallStep(1);else if(e.key==='ArrowLeft')wallStep(-1)}else if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.wall!==undefined)wallOpen(+e.target.dataset.wall)});
     window.addEventListener('resize',()=>{if(state.view==='wall'){clearTimeout(state.wallRz);state.wallRz=setTimeout(()=>{const box=$('wallCols');if(box){const n=Math.max(2,Math.min(6,Math.floor((box.clientWidth||innerWidth)/230)));if(n!==box.children.length)wallLayout()}},250)}});
+    /* ---------- 深淺模式：左側欄按鈕切換；記在這台電腦（localStorage）與帳號（設定表「深淺模式」） ---------- */
+    const THEME_KEY='designRequestThemeV1';
+    const THEME_SUN='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>';
+    const THEME_MOON='<svg viewBox="0 0 24 24"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>';
+    const currentTheme=()=>document.documentElement.dataset.theme==='dark'?'dark':'light';
+    let themeSynced=null;
+    function updateThemeBtn(){const b=$('themeBtn');if(!b)return;const dark=currentTheme()==='dark';b.innerHTML=(dark?THEME_SUN:THEME_MOON)+(dark?'淺色':'深色');b.title=dark?'切換成淺色模式':'切換成深色模式'}
+    function broadcastTheme(){const msg={type:'pixelOfficeTheme',theme:currentTheme()};['uniFrame','avatarBridge'].forEach(id=>{const f=$(id);try{f&&f.contentWindow&&f.contentWindow.postMessage(msg,location.origin)}catch(err){}})}
+    function applyTheme(t,fromCloud){
+      const theme=t==='dark'?'dark':'light';document.documentElement.dataset.theme=theme;
+      try{localStorage.setItem(THEME_KEY,theme)}catch(err){}
+      updateThemeBtn();broadcastTheme();if(!fromCloud)pushTheme();
+    }
+    async function pushTheme(){
+      if(!loggedIn())return;const t=currentTheme();if(t===themeSynced)return;
+      try{await api('saveUserSettings',{account:selfAccount(),settings:{theme:t}});themeSynced=t}catch(err){}
+    }
+    function applyCloudTheme(raw){
+      const cloud=raw==='dark'||raw==='light'?raw:'';
+      if(cloud){themeSynced=cloud;if(cloud!==currentTheme())applyTheme(cloud,true)}
+      else{themeSynced='';if(currentTheme()==='dark')pushTheme()}
+    }
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-theme-toggle]'))applyTheme(currentTheme()==='dark'?'light':'dark')});
+    updateThemeBtn();
     function openExt(k){
       if(k==='owner'){openOwner();return}
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
