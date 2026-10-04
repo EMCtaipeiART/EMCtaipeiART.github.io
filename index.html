@@ -303,6 +303,10 @@
     
     .card.is-open{cursor:default}
     .card-detail{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);cursor:default;text-align:left;font-weight:400}
+    .card-detail .thumbs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+    .card-detail .thumbs a{flex:0 0 auto;width:64px;height:64px;border-radius:10px}
+    .card-detail .rev{padding:10px 12px;margin-bottom:8px}
+    .card-detail{cursor:pointer}
     .card-detail .detail-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
     .card-detail .kv{padding:8px 10px!important;min-width:0}
     .card-detail .kv dt{font-size:11px}
@@ -3187,7 +3191,7 @@ window.emcQuotes=[
         <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod),li=(state.lb.push(imgs),state.lb.length-1);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map((i,n)=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}" aria-label="放大預覽 ${esc(i.fileName||'設計圖')}，點擊開啟原圖"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
         <div class="detail-actions">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</div>
       </div>`;
-      if(target){target.querySelector('.page-top')?.remove();target.querySelector('.detail-head')?.remove();target.querySelector('.page')?.classList.replace('page','card-detail')}
+      if(target){target.querySelectorAll('.page-top,.detail-head,.progress,.detail-grid,.detail-actions').forEach(n=>n.remove());target.querySelector('.page')?.classList.replace('page','card-detail')}
     }
 
     /* ---------- 登入（沿用現行系統的登入：開新視窗到 index.html 完成，共用同一份登入狀態） ---------- */
@@ -3353,7 +3357,7 @@ window.emcQuotes=[
       const thSort=t.closest('th[data-col]');if(thSort&&!t.closest('.col-resize')&&state.view!=='settings'){toggleSort(thSort.dataset.col);return}
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
       if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));state.filters.months.add(p.year+'/'+p.month)}state.latestLimit=LATEST_PAGE;rerenderList();return}
-      const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){if(t.closest('.card-detail'))return;if(card.matches('div.card')){toggleCardOpen(card);return}state.detailId=card.dataset.case;state.editing=false;show('detail');return}
+      const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){if(t.closest('.card-detail')&&t.closest('a,button,input,select,textarea,[data-lb],[data-edit]'))return;if(card.matches('div.card')){toggleCardOpen(card);return}state.detailId=card.dataset.case;state.editing=false;show('detail');return}
       const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
