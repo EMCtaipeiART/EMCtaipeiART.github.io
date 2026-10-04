@@ -412,7 +412,7 @@ function scoreRows(rows){
 let levelsRequested=false;
 // 嵌進設計需求系統時，進站不該為了等級與案件先扛一份 3.8 MB 的快照——那是整個首頁最大的一筆。
 // 改成第一次真的要看某個人的資料（滑到人物上）才載，載好會自動把卡片重畫一次。
-function ensureLevels(){if(levelsRequested)return;levelsRequested=true;syncLevels();}
+function ensureLevels(){if(levelsRequested||new URLSearchParams(location.search).get('avatars')==='1')return;levelsRequested=true;syncLevels();}
 async function syncLevels(){
   const urls=['/data/database_archive.json','https://emctaipeiart.github.io/data/database_archive.json'];let payload=null;
   // no-cache 而不是 no-store：這份快照有 3.8 MB，內容沒變時走 304 就好，不必每次重新下載。

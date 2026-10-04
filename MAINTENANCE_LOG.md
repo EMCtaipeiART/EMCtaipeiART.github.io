@@ -292,3 +292,5 @@
 - 2026-10-04: Unread story badge now bright green with gentle pulse (no red).
 
 - 2026-10-04: Home bubbles/music/story badges now filled from the home page own pixelOfficeState (mergeOfficeIntoAvatars) instead of waiting for the hidden bridge iframe.
+
+- 2026-10-04: Avatar bridge (avatars=1) no longer downloads the 4MB database_archive.json (ensureLevels skipped). app.js v=127, bridge v=14.
