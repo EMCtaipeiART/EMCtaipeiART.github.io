@@ -326,3 +326,5 @@
 - 2026-10-04: 作品牆: left-rail button, Pinterest-style masonry (random order, lazy 36/page, designer filter, shuffle), click opens modal with case details + 查看案件; images from 修改統計表 圖片連結 (lh3 googleusercontent, image files only).
 
 - 2026-10-04: 作品牆 placeholder aspect-ratio 4/5 so columns balance before images load.
+
+- 2026-10-04: 用餐中 (lunch) status icon in avatar +10% (66% -> 72.6%).
