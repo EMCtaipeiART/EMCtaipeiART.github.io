@@ -69,7 +69,7 @@ function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
   const x0=424,x1=1112,y0=EMBED_ROW_TOP-158,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8,bw=x1-x0,bh=y1-y0;
-  const scale=w*.96/bw,cx=(x0+x1)/2;
+  const scale=Number(new URLSearchParams(location.search).get('cs'))||w*.96/bw,cx=(x0+x1)/2;
   wrapEl.style.height=`${Math.round(bh*scale)}px`;
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   game.style.transform=`translate(${w/2-cx*scale}px,${-y0*scale}px)`;
