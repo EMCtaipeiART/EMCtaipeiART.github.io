@@ -318,3 +318,5 @@
 - 2026-10-04: Home designer avatars ordered by 設計列表 輪值 (rotation, 平面 before 影音 on ties): Anna, Noise, Amber, Machi, Leona; applyDesignerOrder() re-sorts after db load.
 
 - 2026-10-04: Universe page: loading overlay (spinner + 正在進入凱曜多元宇宙) over the iframe until the pixel office is ready (max 10s).
+
+- 2026-10-04: Logged-out users no longer see 編輯/發信/回信 buttons in cards or list (mail+actions cells empty, list columns hidden).
