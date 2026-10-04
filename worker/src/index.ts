@@ -181,6 +181,13 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 操作紀錄：佇列批次寫入 GitHub（audit-log.json）。失敗只記 log，下一分鐘再試。
+    try {
+      const audit = await stub.runAuditFlush();
+      if (audit.written) console.log(JSON.stringify({ event: 'audit-log-flush', ...audit }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'audit-log-flush-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 限時動態：到期或被移除的內容先備份到 Google Drive，成功才從資料庫清掉。
     try {
       const backup = await stub.runPixelOfficeStoryBackup();

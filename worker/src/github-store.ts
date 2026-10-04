@@ -1,5 +1,6 @@
 import { stringifyDatabaseForStorage } from '../../backend/schema.mjs';
 import { normalizeSnapshot, text } from './model';
+import { AUDIT_FILE, AUDIT_MAX_ROWS, type AuditEntry } from './audit';
 import type { DatabaseSnapshot, GitHubCommitResult, StoredSnapshot } from './types';
 
 const GITHUB_API_VERSION = '2022-11-28';
@@ -104,4 +105,49 @@ export async function commitGitHubDatabase(
   const nextSha = text(content?.sha);
   if (!nextSha) throw new Error('GitHub 寫入成功但未回傳檔案 SHA');
   return { database, sha: nextSha, commitSha: text(commit?.sha) };
+}
+
+function auditApiUrl(env: Env): string {
+  const parts = env.GITHUB_DATABASE_PATH.split('/');
+  parts[parts.length - 1] = AUDIT_FILE;
+  return `https://api.github.com/repos/${encodeURIComponent(env.GITHUB_OWNER)}/${encodeURIComponent(env.GITHUB_REPO)}/contents/${parts.map(encodeURIComponent).join('/')}`;
+}
+
+/** 讀取操作紀錄檔（還不存在就回空陣列） */
+export async function loadAuditFile(env: Env): Promise<{ rows: AuditEntry[]; sha: string }> {
+  const url = new URL(auditApiUrl(env));
+  url.searchParams.set('ref', env.GITHUB_BRANCH);
+  const response = await fetch(url, { method: 'GET', headers: githubHeaders(env, 'application/vnd.github.raw+json'), redirect: 'follow' });
+  if (response.status === 404) return { rows: [], sha: '' };
+  if (!response.ok) throw await githubError(response, '讀取操作紀錄');
+  const json = await response.text();
+  const meta = await fetch(url, { method: 'GET', headers: githubHeaders(env), redirect: 'follow' });
+  const sha = meta.ok ? text(((await meta.json()) as Record<string, unknown>).sha) : '';
+  let parsed: unknown = {};
+  try { parsed = JSON.parse(json); } catch { /* 損毀就當空的，下面會重寫 */ }
+  const rows = Array.isArray((parsed as { rows?: unknown }).rows) ? (parsed as { rows: AuditEntry[] }).rows : [];
+  return { rows, sha };
+}
+
+/** 把一批紀錄接在操作紀錄檔後面（只留最近 AUDIT_MAX_ROWS 筆），回傳寫入後的筆數 */
+export async function appendAuditFile(env: Env, entries: AuditEntry[]): Promise<number> {
+  if (!entries.length) return 0;
+  if (!text(env.GITHUB_TOKEN)) throw new Error('Cloudflare Worker 尚未設定 GITHUB_TOKEN Secret');
+  const current = await loadAuditFile(env);
+  const rows = current.rows.concat(entries).slice(-AUDIT_MAX_ROWS);
+  const json = JSON.stringify({ schemaVersion: 1, updatedAt: new Date().toISOString(), rows });
+  const body: Record<string, unknown> = {
+    message: `data: audit log +${entries.length}`,
+    content: bytesToBase64(new TextEncoder().encode(json)),
+    branch: env.GITHUB_BRANCH,
+    committer: { name: 'Machi Design API', email: 'machi.chen@emctaipei.com' }
+  };
+  if (current.sha) body.sha = current.sha;
+  const response = await fetch(auditApiUrl(env), {
+    method: 'PUT',
+    headers: new Headers({ ...Object.fromEntries(githubHeaders(env)), 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) throw await githubError(response, '寫入操作紀錄');
+  return rows.length;
 }

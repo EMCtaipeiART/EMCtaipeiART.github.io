@@ -12,7 +12,8 @@ import {
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
   normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments,
 } from './model';
-import { commitGitHubDatabase, loadGitHubDatabase } from './github-store';
+import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
+import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
 import type {
   ApiPayload, ApiResult, DatabaseSnapshot, RequestContext, Row, SessionRecord, StoredSnapshot
 } from './types';
@@ -2375,6 +2376,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const committed = await commitGitHubDatabase(this.env, draft, stored.sha, commitMessage(action, session));
           this.persistSnapshot({ database: committed.database, sha: committed.sha });
+          try { await this.queueAudit(diffAudit(stored.database, draft, auditActor(session), action)); } catch { /* 紀錄失敗不影響資料寫入 */ }
           return {
             ...outcome.result,
             storage: 'cloudflare-worker-github-json',
@@ -3319,6 +3321,55 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    *
    * 'sending' 狀態如果卡住超過 10 分鐘沒有變成 'sent'/'failed'（例如那次 Worker 執行被平台中途中止），
    * 视為異常中斷，下一輪執行一開始會先把它們收回 'pending' 重新排隊，不會永遠卡住不寄。 */
+  /** 操作紀錄先排進佇列，由 Cron 批次寫入 GitHub（見 runAuditFlush） */
+  private async queueAudit(entries: AuditEntry[]): Promise<void> {
+    if (!entries.length) return;
+    const queue = ((await this.ctx.storage.get<AuditEntry[]>('auditQueue')) || []).concat(entries).slice(-3000);
+    await this.ctx.storage.put('auditQueue', queue);
+  }
+
+  private async auditLogin(action: string, payload: ApiPayload, result: ApiResult): Promise<ApiResult> {
+    try {
+      const provider = action === 'googleLogin' ? 'Google' : action === 'erpLogin' ? 'ERP' : '密碼';
+      if (result.ok) await this.queueAudit([{ t: new Date().toISOString(), kind: '登入', actor: text(result.user || result.account), target: text(result.account), note: provider }]);
+      else await this.queueAudit([{ t: new Date().toISOString(), kind: '登入失敗', actor: text(payload.account || payload.user) || '未知帳號', note: `${provider}｜${text(result.reason || result.error).slice(0, 80)}` }]);
+    } catch { /* 紀錄失敗不影響登入 */ }
+    return result;
+  }
+
+  private async auditMail(action: string, payload: ApiPayload, session: SessionRecord | null, run: () => Promise<ApiResult>): Promise<ApiResult> {
+    const ids = Array.isArray(payload.caseIds) && payload.caseIds.length ? payload.caseIds.map(text).join('、') : text(payload.caseId);
+    const base = { t: new Date().toISOString(), actor: auditActor(session), caseId: ids };
+    const kindNote = action.startsWith('schedule') ? '排程' : action === 'replyCaseMail' ? '回覆' : '新案寄信';
+    try {
+      const result = await run();
+      await this.queueAudit([result.ok === false
+        ? { ...base, kind: '寄信失敗' as const, note: `${kindNote}｜${text(result.error).slice(0, 120)}` }
+        : { ...base, kind: '寄信' as const, to: maskRecipients(payload.to), note: kindNote }]).catch(() => {});
+      return result;
+    } catch (error) {
+      await this.queueAudit([{ ...base, kind: '寄信失敗' as const, note: `${kindNote}｜${(error instanceof Error ? error.message : String(error)).slice(0, 120)}` }]).catch(() => {});
+      throw error;
+    }
+  }
+
+  private auditFlushing = false;
+  /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
+  async runAuditFlush(force = false): Promise<{ queued: number; written: number }> {
+    if (this.auditFlushing) return { queued: 0, written: 0 };
+    const queue = (await this.ctx.storage.get<AuditEntry[]>('auditQueue')) || [];
+    if (!queue.length) return { queued: 0, written: 0 };
+    const oldest = Date.parse(queue[0].t) || 0;
+    if (!force && queue.length < 50 && Date.now() - oldest < 5 * 60 * 1000) return { queued: queue.length, written: 0 };
+    this.auditFlushing = true;
+    try {
+      await appendAuditFile(this.env, queue);
+      const rest = ((await this.ctx.storage.get<AuditEntry[]>('auditQueue')) || []).slice(queue.length);
+      if (rest.length) await this.ctx.storage.put('auditQueue', rest); else await this.ctx.storage.delete('auditQueue');
+      return { queued: rest.length, written: queue.length };
+    } finally { this.auditFlushing = false; }
+  }
+
   async runScheduledDispatch(): Promise<{ processed: number; sent: number; failed: number }> {
     const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     this.ctx.storage.sql.exec(
@@ -3345,7 +3396,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // note 只在 canceled 時有值，記的是「為什麼沒寄」（草稿被刪掉／案件已經有信件串），
         // 讓這筆資料本身說得清楚，不需要回頭看程式碼才知道發生什麼事。
         this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = ?, updated_at = ? WHERE id = ?', outcome, note || null, new Date().toISOString(), item.id);
-        if (outcome === 'sent') sent += 1;
+        if (outcome === 'sent') { sent += 1; try { await this.queueAudit([{ t: new Date().toISOString(), kind: '寄信', actor: `排程:${text(item.owner_account)}`, note: '排程寄出' }]); } catch { /* 不影響寄信 */ } }
       } catch (error) {
         const message = (error instanceof Error ? error.message : String(error)).slice(0, 500);
         this.ctx.storage.sql.exec('UPDATE scheduled_mail SET status = ?, error_message = ?, updated_at = ? WHERE id = ?', 'failed', message, new Date().toISOString(), item.id);
@@ -3487,9 +3538,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeStoryRemove') return this.pixelOfficeStoryRemove(payload);
       if (action === 'pixelOfficeLevelTitles') return this.pixelOfficeLevelTitlesResult();
       if (action === 'pixelOfficeLevelTitlesUpdate') return this.pixelOfficeLevelTitlesUpdate(payload);
-      if (action === 'googleLogin') return await this.googleLogin(payload, context);
-      if (action === 'login') return await this.passwordLogin(payload, context);
-      if (action === 'erpLogin') return await this.erpLogin(payload, context);
+      if (action === 'googleLogin') return await this.auditLogin(action, payload, await this.googleLogin(payload, context));
+      if (action === 'login') return await this.auditLogin(action, payload, await this.passwordLogin(payload, context));
+      if (action === 'erpLogin') return await this.auditLogin(action, payload, await this.erpLogin(payload, context));
       if (action === 'erpLoginConfig') return { ok: true, action, baseUrl: this.env.ERP_BASE_URL, clientId: this.env.ERP_CLIENT_ID, redirectUri: this.env.ERP_REDIRECT_URI, scope: 'openid profile' };
 
       const stored = await this.snapshot(action === 'refreshDatabase');
@@ -3539,13 +3590,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getGmailSignature') return await this.getGmailSignature(database, session);
       if (action === 'gmailOauthConnect') return await this.gmailOauthConnect(payload, database, session);
       if (action === 'gmailDisconnect') return await this.gmailDisconnect(database, session);
-      if (action === 'sendCaseMail') return await this.sendCaseMail(payload, database, session);
+      if (action === 'sendCaseMail') return await this.auditMail(action, payload, session, () => this.sendCaseMail(payload, database, session));
       if (action === 'searchGmailThreads') return await this.searchGmailThreads(payload, database, session);
       if (action === 'bindExistingThread') return await this.bindExistingThread(payload, database, session);
       if (action === 'getCaseMailThread') return await this.getCaseMailThread(payload, database, session);
-      if (action === 'replyCaseMail') return await this.replyCaseMail(payload, database, session);
-      if (action === 'scheduleCaseMail') return await this.scheduleCaseMail(payload, database, session);
-      if (action === 'scheduleCaseReply') return await this.scheduleCaseReply(payload, database, session);
+      if (action === 'replyCaseMail') return await this.auditMail(action, payload, session, () => this.replyCaseMail(payload, database, session));
+      if (action === 'scheduleCaseMail') return await this.auditMail(action, payload, session, () => this.scheduleCaseMail(payload, database, session));
+      if (action === 'scheduleCaseReply') return await this.auditMail(action, payload, session, () => this.scheduleCaseReply(payload, database, session));
       if (action === 'listScheduledMail') return this.listScheduledMail(payload, database, session);
       if (action === 'getScheduledMail') return this.getScheduledMail(payload, database, session);
       if (action === 'updateScheduledMail') return await this.updateScheduledMail(payload, database, session);
@@ -3628,6 +3679,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (ordered.length) priority[group] = ordered[0].name;
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
+      }
+      if (action === 'listAuditLog') {
+        this.requireAccess(database, session, 'database.manage');
+        const file = await loadAuditFile(this.env);
+        const queued = (await this.ctx.storage.get<AuditEntry[]>('auditQueue')) || [];
+        const limit = Math.max(1, Math.min(2000, Number(payload.limit) || 500));
+        return { ok: true, action, rows: file.rows.concat(queued).slice(-limit).reverse(), total: file.rows.length + queued.length };
       }
       if (action === 'listModificationRecords') {
         const ids = Array.isArray(payload.ids) && payload.ids.length ? new Set(payload.ids.map(text)) : null;
