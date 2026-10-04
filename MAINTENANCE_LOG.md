@@ -310,3 +310,5 @@
 - 2026-10-04: Audit log (worker): new worker/src/audit.ts + github-store append; mutate() diffs cases/permissions into 狀態變更/欄位修改/案件新增·刪除/權限變更; logins, login failures and mail sends logged; queue in DO storage, flushed by cron to backend/data/audit-log.json (batched >=50 entries or >=5 min); admin action listAuditLog; test workflow ignores audit-log.json. Needs `wrangler deploy` to go live.
 
 - 2026-10-04: json_database_admin.html: new 稽核 > 操作紀錄 sidebar view (listAuditLog; type filter, search, newest first, 500 rows shown).
+
+- 2026-10-04: Modification record from reply strips the leading "Hi 名字" greeting (stripGreeting) and stores only the body.

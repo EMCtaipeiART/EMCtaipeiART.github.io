@@ -2604,8 +2604,15 @@ window.emcQuotes=[
       return {bodyHtml:div.innerHTML,inlineImages:used};
     }
     function htmlToPlain(html){const div=document.createElement('div');div.innerHTML=String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n');return (div.textContent||'').replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n').trim()}
+    /* 修改紀錄只留內文：去掉開頭的「Hi 名字,」稱呼（單獨一行，或同一行後面接內文） */
+    function stripGreeting(t){
+      let v=String(t||'');
+      v=v.replace(/^\s*(?:Hi|Hello|Dear|哈囉|您好)[ \t]*[^,，\n]{0,40}[,，:：]?[ \t]*(?:\n+|$)/i,'');
+      v=v.replace(/^\s*(?:Hi|Hello|Dear)[ \t]+[^,，\n]{1,40}[,，][ \t]*(?=\S)/i,'');
+      return v.replace(/^\s+/,'');
+    }
     async function recordModificationFromReply(d,bodyHtml){
-      const content=stripSig(htmlToPlain(bodyHtml)).replace(/^\s*Hi[^\n]*,\s*\n+/,'').trim();if(!content)return;
+      const content=stripGreeting(stripSig(htmlToPlain(bodyHtml))).trim();if(!content)return;
       const div=document.createElement('div');div.innerHTML=bodyHtml;
       const links=[...div.querySelectorAll('a[href]')].map(a=>({text:(a.textContent||'').trim(),url:a.getAttribute('href')})).filter(l=>l.text&&/^https?:/i.test(l.url)&&content.includes(l.text));
       try{
