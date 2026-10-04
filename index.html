@@ -1227,7 +1227,7 @@ window.emcQuotes=[
         </li>`;
     }
     function marqueeTeam(){document.querySelectorAll('.member-music .mm-track').forEach(t=>{const w=t.parentElement.clientWidth,d=t.scrollWidth-w;if(d>2){t.style.setProperty('--md',d+'px');t.style.setProperty('--mt',Math.max(4,d/28+2)+'s');t.classList.add('is-marquee')}else t.classList.remove('is-marquee')})}
-    {const o=renderTeam;renderTeam=function(){o.apply(this,arguments);requestAnimationFrame(marqueeTeam)}}
+    {const o=renderTeam;renderTeam=function(){o.apply(this,arguments);setTimeout(marqueeTeam,60)}}
     function setOpen(member,open){document.querySelectorAll('.member.is-open').forEach(el=>{if(el!==member)el.classList.remove('is-open')});if(member)member.classList.toggle('is-open',open);if(open)ensureArchive()}
     function bindTeam(){
       const team=$('team');
