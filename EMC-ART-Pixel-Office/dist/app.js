@@ -62,7 +62,7 @@ let viewPeople=[],viewStations=[];
 const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-158,y1:EMBED_ROW_TOP+(EMBED_ROW_BOTTOM-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE+PLATE_TOP+PLATE_NAME_H+8};
 // 上緣的下限：頭頂（-150）再往上 8，順便包住照片卡（-151）與心情圖示（-152）的上緣。
 const SCENE_TOP_MIN=EMBED_ROW_TOP-158;
-const EMBED_FIT_PADDING=Math.min(.94,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
+const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
 let fitting=false;
 function fitEmbedView(){
   if(!embedMode||fitting)return;// syncSceneTop() 會回頭呼叫這裡，擋掉遞迴
