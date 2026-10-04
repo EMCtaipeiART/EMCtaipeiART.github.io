@@ -352,7 +352,9 @@
     .column.drop-ok{outline:2px dashed var(--brand);outline-offset:-4px;background:var(--brand-soft)}
     .no-hero .hero{display:none}
     html{overflow-anchor:none}
-.cd-items{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line,#e5e5e5);margin-bottom:8px}.cd-items>b{font-size:13px;white-space:nowrap;padding-top:4px}.cd-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cd-add{border:1px dashed #999;background:#fff;border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
+.cd-acts{display:flex;gap:8px;flex-wrap:wrap;padding:2px 0 10px;border-bottom:1px solid var(--line,#e5e5e5);margin-bottom:8px}.cd-acts .lt-acts{display:inline-flex;gap:8px;flex-wrap:wrap}.cd-acts .lt-act{width:auto;height:auto;min-height:34px;padding:0 14px;border-radius:12px;gap:6px;justify-content:center}.cd-acts .lt-act span{display:inline}.cd-acts .lt-act svg{width:15px;height:15px}
+    .card-status{flex:0 0 auto;min-height:24px;font-size:12px;padding:3px 11px}
+    .cd-items{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line,#e5e5e5);margin-bottom:8px}.cd-items>b{font-size:13px;white-space:nowrap;padding-top:4px}.cd-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cd-add{border:1px dashed #999;background:#fff;border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
 @media (hover:none){.member-say,.member-music,.mm-win{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 @media (prefers-reduced-motion:reduce){.ms-track{animation:none!important}}
     .hero{transition:padding .5s cubic-bezier(.4,0,.2,1)}
@@ -1335,14 +1337,21 @@ window.emcQuotes=[
     /* 點卡牌：卡牌往下展開顯示完整內容（含修改紀錄），再點一次收起 */
     state.openCases=new Set();
     /* 卡牌展開：項目細節（未執行＝新增按鈕；其他狀態＝可編輯，設計師才能改） */
+    /* 發信／回信／串接、編輯、刪除：原本是卡牌右上角三個圓形圖示，現在放在展開後的「項目細節」下面，並寫出中文 */
+    function cardActsHtml(row){
+      const ed=isDesignerSession();
+      return [["mail",ed],["actions",ed]].map(([k,e])=>COL_DEFS.find(c=>c.key===k).cell(row,e).split("<td>").join("").split("</td>").join("")).join("").replace(/<span class="lt-dash">-<\/span>/g,"").trim();
+    }
     function addCardDetailItems(box,row){
       const host=box.querySelector('.card-detail')||box,ed=isDesignerSession(),todo=String(row['狀態']||'').trim()==='未開始';
       const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);
-      if(!items.length&&!ed)return;
+      const actsHtml=cardActsHtml(row);
+      if(!items.length&&!ed&&!actsHtml)return;
       const chips=items.map(d=>'<span class="lt-detail" title="'+esc(d)+'">'+esc(d)+'</span>').join('');
       const btn=ed?'<button type="button" class="cd-add" data-edit="details">'+(todo&&!items.length?'＋ 新增項目細節':items.length?'編輯':'＋ 新增項目細節')+'</button>':'';
       const el=document.createElement('div');el.className='cd-items';el.innerHTML='<b>項目細節</b><div class="cd-chips">'+chips+btn+'</div>';
       host.insertBefore(el,host.firstChild);
+      if(actsHtml){const a=document.createElement('div');a.className='cd-acts';a.innerHTML=actsHtml;host.insertBefore(a,el.nextSibling)}
     }
     function fillCardDetail(card){
       const id=card.dataset.case,row=allRows().find(r=>idKey(r)===id);if(!row)return;
@@ -1478,9 +1487,8 @@ window.emcQuotes=[
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
       const late=s.late&&!['過稿中','已完成','已取消'].includes(status);
       const canDrag=state.dragOn&&inColumn;
-      const ed=isDesignerSession(),acts=[["mail",ed],["actions",ed]].map(([k,e])=>COL_DEFS.find(c=>c.key===k).cell(row,e).split("<td>").join("").split("</td>").join("")).join("").replace(/<button ([^>]*)>(.*?)<span>([^<]*)<\/span><\/button>/g,(m,at,ic,lab)=>`<button ${at} title="${lab}" aria-label="${lab}">${ic}<span>${lab}</span></button>`);
       return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
-        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}${acts}</span></div>
+        <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}<span class="lt-status card-status ${st.cls}">${esc(st.label)}</span></span></div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
