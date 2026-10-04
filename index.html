@@ -524,6 +524,7 @@
     /* 凱躍多元宇宙（舊版像素辦公室） */
     .uni-page{max-width:none;margin:0 auto}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
     .stage-wrap.uni{max-width:none;padding:0 0 24px}.uni-page{width:100%}.uni-page .page-top{width:min(720px,100%);margin:0 auto;padding:14px 0 8px;box-sizing:border-box;justify-content:center;text-align:center}.uni-page .page-top>div:first-child{text-align:center}.uni-page.is-edit .page-top{width:min(1280px,100%)}.uni-page.is-edit .uni-frame{width:min(1280px,100%);aspect-ratio:auto;height:calc(100vh - 150px);min-height:620px}
+    @media (max-width:720px){.uni-page.is-edit .uni-frame{height:calc(100vh - 220px);min-height:560px}.uni-page .page-top{padding:10px 12px 6px;box-sizing:border-box}.uni-page .page-sub{font-size:12.5px}}
     .uni-frame{display:block;width:min(796px,100%);margin:0 auto;aspect-ratio:796/616;height:auto;min-height:340px;border:0;border-radius:0;background:transparent}
     .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
     .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
@@ -1267,7 +1268,7 @@ window.emcQuotes=[
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=62':UNI_URL+'?embed=1&pad=.72&v=61';
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=63':UNI_URL+'?embed=1&pad=.72&v=61';
       $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(canEditUniverse()?'<button type="button" class="btn'+(edit?'':' primary')+'" data-uni-edit>'+(edit?'完成編輯':'編輯')+'</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe></div>';
     }
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){state.uniEdit=false;state.home='board';show('board');return}});

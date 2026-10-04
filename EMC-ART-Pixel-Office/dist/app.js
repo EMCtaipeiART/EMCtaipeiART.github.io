@@ -72,7 +72,7 @@ function fitCleanView(){
   let top=EMBED_ROW_TOP-158;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;
   const x0=424,x1=1112,y0=top,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8,bw=x1-x0,bh=y1-y0;
-  const scale=Number(new URLSearchParams(location.search).get('cs'))||w*.96/bw,cx=(x0+x1)/2;
+  const fitW=w*.96/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
   wrapEl.style.height=`${Math.round(bh*scale)}px`;
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   game.style.transform=`translate(${w/2-cx*scale}px,${-y0*scale}px)`;
