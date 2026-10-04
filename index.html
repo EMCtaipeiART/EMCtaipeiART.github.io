@@ -674,8 +674,9 @@
     .tool-sep{width:1px;height:22px;background:var(--line);margin:0 4px}
     .rc-color-wrap{position:relative;display:inline-flex}
     .rc-swatch{display:block;width:12px;height:3px;border-radius:2px;background:#17211d;margin-left:2px}
-    .rc-colors{position:absolute;top:calc(100% + 6px);left:0;z-index:40;display:flex;gap:6px;padding:8px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg)}
-    .rc-c{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+    .rc-colors{position:absolute;top:calc(100% + 6px);left:0;z-index:40;display:flex;gap:16px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-lg)}.rc-colors[hidden]{display:none}.rc-group{display:block}.rc-title{display:block;margin:0 0 7px;font-size:12px;font-weight:800;color:var(--muted)}.rc-grid{display:grid;grid-template-columns:repeat(8,22px);gap:4px}
+    @media (max-width:720px){.rc-colors{flex-direction:column;gap:10px;max-width:calc(100vw - 32px)}}
+    .rc-c{width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.18);box-shadow:none;cursor:pointer;padding:0}.rc-c:hover{transform:scale(1.18);outline:2px solid var(--brand);z-index:1;position:relative}
     .editor img{max-width:100%;height:auto;border-radius:6px}
     .att-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .att{display:inline-flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:700}
@@ -2319,7 +2320,7 @@ window.emcQuotes=[
         +b('size','文字大小','<span class="tool-lab">tT</span>')+b('font','字型','<span class="tool-lab">字</span>')+sep
         +b('bold','粗體（⌘B）','<b>B</b>')+b('italic','斜體（⌘I）','<i>I</i>')+b('underline','底線（⌘U）','<u>U</u>')+sep
         +b('justifyLeft','靠左對齊',ICO.left)+b('justifyCenter','置中對齊',ICO.center)+b('justifyRight','靠右對齊',ICO.right)+(mail?b('insertUnorderedList','項目符號',ICO.ul)+b('insertOrderedList','編號清單',ICO.ol):'')+sep
-        +`<span class="rc-color-wrap"><button type="button" class="tool" ${attr}="colorToggle" title="文字顏色" aria-label="文字顏色"><span class="rc-dot"></span></button><span class="rc-colors"${mail?' id="rcColors"':''} hidden>${RC_COLORS.map(c=>`<button type="button" class="rc-c" ${colorKey}="${c}" style="background:${c}" aria-label="${c}"></button>`).join('')}</span></span>`
+        +`<span class="rc-color-wrap"><button type="button" class="tool" ${attr}="colorToggle" title="文字顏色" aria-label="文字顏色"><span class="rc-dot"></span></button><span class="rc-colors"${mail?' id="rcColors"':''} hidden>${[['背景顏色','bg'],['文字顏色','tx']].map(([title,k])=>`<span class="rc-group"><span class="rc-title">${title}</span><span class="rc-grid">${RC_COLORS.map(c=>`<button type="button" class="rc-c" ${colorKey}="${c}" data-rc-kind="${k}" style="background:${c};--chk:${rcCheck(c)}" title="${c}" aria-label="${k==='bg'?'背景':'文字'} ${c}"></button>`).join('')}</span></span>`).join('')}</span></span>`
         +b('link','插入超連結（⌘K）',ICO.link)
         +(ins?sep+b('ins1','插入 {收件人名}：套用範本時會自動換成收件人的名字','插入收件人名',' tool-text')+b('ins2','插入 {項目細節}：套用範本時會自動換成這個案件的項目細節','插入項目細節',' tool-text'):'')
         +(mail?sep+b('template','插入信件範本',ICO.tpl)+b('signature','插入簽名檔',ICO.sig,sigOn?' on':'')+b('image','上傳照片',ICO.img)+b('attach','附加檔案',ICO.att)+b('nas','插入 NAS 路徑（粗體）',ICO.nas):'');
@@ -2510,7 +2511,7 @@ window.emcQuotes=[
         if(sc==='link'){const url=prompt('連結網址（https://…）');if(url&&/^https?:\/\//i.test(url))document.execCommand('createLink',false,url);return}
         document.execCommand(sc,false,null);return;
       }
-      const col=t.closest('[data-sc-color]');if(col){document.execCommand('foreColor',false,col.dataset.scColor);col.closest('.rc-colors').hidden=true;return}
+      const col=t.closest('[data-sc-color]');if(col){applyEditorColor(col.dataset.rcKind==='bg'?'bg':'tx',col.dataset.scColor);col.closest('.rc-colors').hidden=true;return}
       const ins=t.closest('[data-sc-ins]');if(ins){const ed=ins.closest('.tpl-row').querySelector('.mini-editor');ed.focus();document.execCommand('insertText',false,ins.dataset.scIns);return}
       const save=t.closest('[data-set-save]');if(save){saveSettingsSection(save.dataset.setSave);return}
       if(t.closest('[data-tpl-add]')){captureSettings();st2.templates.push({html:''});renderSettings();return}
@@ -2710,7 +2711,35 @@ window.emcQuotes=[
     });
     document.addEventListener('input',e=>{if(e.target.id==='contactSearch'){cp.q=e.target.value;const pos=e.target.selectionStart;renderContacts();const s=$('contactSearch');s.focus();s.setSelectionRange(pos,pos)}});
     /* ---------- 信件編輯器（沿用舊系統功能：收件人標籤、完整工具列、插入照片／附件／簽名檔、指定排程、合併信件、上一封／下一封） ---------- */
-    const RC_COLORS=['#17211d','#6b7280','#dc2626','#ea580c','#ca8a04','#16a34a','#0d9488','#2563eb','#7c3aed','#db2777'];
+    /* 文字與背景顏色：比照 Gmail／舊版網站，左邊「背景顏色」（螢光筆）、右邊「文字顏色」，兩邊用同一組 64 色 */
+    const RC_COLORS=[
+      '#000000','#434343','#666666','#999999','#cccccc','#d9d9d9','#efefef','#ffffff',
+      '#ff0000','#ff9900','#ffff00','#00ff00','#00ffff','#0000ff','#9900ff','#ff00ff',
+      '#f4cccc','#fce5cd','#fff2cc','#d9ead3','#d0e0e3','#c9daf8','#d9d2e9','#ead1dc',
+      '#ea9999','#f9cb9c','#ffe599','#b6d7a8','#a2c4c9','#9fc5e8','#b4a7d6','#d5a6bd',
+      '#e06666','#f6b26b','#ffd966','#93c47d','#76a5af','#6fa8dc','#8e7cc3','#c27ba0',
+      '#cc0000','#e69138','#f1c232','#6aa84f','#45818e','#3d85c6','#674ea7','#a64d79',
+      '#990000','#b45f06','#bf9000','#38761d','#134f5c','#0b5394','#351c75','#741b47',
+      '#660000','#783f04','#7f6000','#274e13','#0c343d','#073763','#20124d','#4c1130'];
+    const rcCheck=hex=>{const v=parseInt(hex.slice(1),16),r=(v>>16)&255,g=(v>>8)&255,b=v&255;return (.299*r+.587*g+.114*b)>175?'#111':'#fff'};
+    /* 套色：選取範圍若跨過 contenteditable=false 的區塊（設計圖／NAS 路徑），Chromium 會回報成功卻沒改內容，所以依唯讀區塊切開再分段套用（沿用舊版寫法） */
+    function applyEditorColor(kind,color){
+      const sel=window.getSelection();if(!sel.rangeCount)return;
+      const original=sel.getRangeAt(0).cloneRange(),start=original.startContainer.nodeType===1?original.startContainer:original.startContainer.parentElement;
+      const editor=start&&start.closest('[contenteditable="true"]');
+      const run=()=>{if(kind==='bg'){if(!document.execCommand('hiliteColor',false,color))document.execCommand('backColor',false,color)}else document.execCommand('foreColor',false,color)};
+      if(!editor||!editor.contains(original.endContainer)){run();return}
+      const ranges=[],remaining=original.cloneRange();
+      const locked=[...editor.querySelectorAll('[contenteditable="false"]')].filter(n=>!n.parentElement.closest('[contenteditable="false"]'));
+      for(const node of locked){
+        if(!remaining.intersectsNode(node))continue;
+        const before=remaining.cloneRange();before.setEndBefore(node);if(!before.collapsed)ranges.push(before);
+        if(node.contains(remaining.endContainer)){remaining.collapse(false);break}
+        remaining.setStartAfter(node);
+      }
+      if(!remaining.collapsed||original.collapsed)ranges.push(remaining);
+      for(const range of ranges.reverse()){sel.removeAllRanges();sel.addRange(range);run()}
+    }
     const IMG_TYPES=new Set(['image/jpeg','image/png','image/webp','image/gif']);
     const splitEntries=text=>String(text||'').split(/[,;，；]\s*(?![^<]*>)/).map(x=>x.trim()).filter(Boolean);
     const entryLabel=entry=>{const m=entry.match(/^(.*?)\s*<([^>]+)>$/);return m&&m[1].trim()?`${m[1].trim()}`:entry};
@@ -3679,7 +3708,7 @@ window.emcQuotes=[
       const pick=t.closest('[data-pick]')?.dataset.pick;if(pick){const [k,i]=pick.split(':');applyPick(k,+i);return}
       if(!t.closest('#rcPick')&&!t.closest('[data-rc="template"],[data-rc="signature"],[data-rc="size"],[data-rc="font"],[data-sc="size"],[data-sc="font"]'))closePicker();
       const rc=t.closest('[data-rc]')?.dataset.rc;if(rc){runRichCmd(rc);return}
-      const rcColor=t.closest('[data-rc-color]')?.dataset.rcColor;if(rcColor){restoreMailRange();document.execCommand('foreColor',false,rcColor);saveMailRange();$('rcColors').hidden=true;return}
+      const rcBtn=t.closest('[data-rc-color]'),rcColor=rcBtn?.dataset.rcColor;if(rcColor){restoreMailRange();applyEditorColor(rcBtn.dataset.rcKind==='bg'?'bg':'tx',rcColor);saveMailRange();$('rcColors').hidden=true;return}
       const attDel=t.closest('[data-att-del]');if(attDel){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.attachments.splice(+attDel.dataset.attDel,1);renderMail();return}
       const chipDel=t.closest('[data-chip-del]');if(chipDel){chipDel.closest('.chip-r').remove();return}
       if(state.view==='mail'&&$('rcColors')&&!$('rcColors').hidden&&!t.closest('.rc-color-wrap'))$('rcColors').hidden=true;

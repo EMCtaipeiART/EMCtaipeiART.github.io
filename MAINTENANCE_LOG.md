@@ -358,3 +358,5 @@
 - 2026-10-04: Dark mode: rail toggle button (themeBtn) with localStorage + account sync (深淺模式); dark tweaks for access-denied gate, list timeline header, issue selects, wall placeholders. Existing html[data-theme=dark] stylesheet reused.
 
 - 2026-10-04: Dark mode: darker hero/stick band/prompt/avatar frames, status pills via --st-* vars, dark 回信/編輯/刪除 buttons, dark cell-pop popovers.
+
+- 2026-10-04: Mail/signature editor colour palette restored to the old Gmail-style 64-colour grid with separate 背景顏色 (hiliteColor) and 文字顏色 groups; colour application splits around contenteditable=false blocks like the legacy site.
