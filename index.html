@@ -784,6 +784,9 @@
     .op-btn:hover{background:var(--bg)}
     .op-btn.warn{border-color:#f2c27a;background:#fff4e0;color:#8a4b00}
     .rail-item{position:relative}
+    .card.is-notify,tr.is-notify{outline:3px solid #e11d48;outline-offset:2px;animation:ntPulse 1.6s ease-in-out 3}
+    .card.is-notify::after{content:attr(data-nt);position:absolute;left:12px;top:-11px;padding:2px 9px;border-radius:99px;background:#e11d48;color:#fff;font-size:11.5px;font-weight:900;z-index:3}
+    @keyframes ntPulse{50%{outline-color:rgba(225,29,72,.25)}}
     .rail-badge{position:absolute;top:2px;right:8px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:900;line-height:18px;text-align:center}
     .gm-card{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:16px 18px;margin-bottom:14px}
     .gm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
@@ -1521,7 +1524,7 @@ window.emcQuotes=[
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
-    function updateRail(){renderRailExtra();setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
+    function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){state.tlLeft=null;
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'));
@@ -2784,6 +2787,48 @@ window.emcQuotes=[
       const s=session(),me=[s.user,s.name].map(norm).filter(Boolean),acct=selfAccount();
       return Boolean((owner&&me.some(n=>n===owner))||(owner&&acct&&owner===acct)||(email&&acct&&email===acct));
     };
+
+    /* ---------- 專案通知：設計師的新案件／新修改需求、提出需求者收到設計師回覆（過稿中）；用紅點數字顯示在左側「專案」，點開後標出該案件 ---------- */
+    const NT_LABEL={new:'新案件',mod:'新修改需求',reply:'設計師已回覆'};
+    function designerMatches(r){
+      if(!loggedIn())return false;const s=session(),me=[s.user,s.name,String(selfAccount()||'').split('@')[0]].map(norm).filter(Boolean);
+      return String(r['設計負責人']||'').split(/[,，、;；s]+/).map(norm).filter(Boolean).some(n=>me.includes(n));
+    }
+    function notifItems(){
+      if(!loggedIn()||!state.loaded)return [];const out=[],asDesigner=isDesignerSession();
+      for(const r of allRowsRaw()){
+        const id=idKey(r),st=String(r['狀態']||'').trim();
+        if(asDesigner&&designerMatches(r)){
+          if(st==='未開始')out.push({key:'new:'+id,id,type:'new'});
+          else if(hasPendingMod(r)||st==='修改中'){const n=(state.mods.get(id)||[]).filter(m=>!String(m['確認修正日']||'').trim()).reduce((a,m)=>Math.max(a,+m['修改次數']||0),0);if(hasPendingMod(r)||n)out.push({key:'mod:'+id+':'+n,id,type:'mod'})}
+        }
+        if(st==='過稿中'&&ownerMatches(r)){const ms=state.mods.get(id)||[];const last=ms.reduce((a,m)=>String(m['圖片更新時間']||'')>a?String(m['圖片更新時間']||''):a,'');out.push({key:'reply:'+id+':'+roundOf(id)+':'+last,id,type:'reply'})}
+      }
+      return out;
+    }
+    const seenKey=()=>'v5Seen:'+(selfAccount()||session().user||'');
+    const seenSet=()=>{try{const a=JSON.parse(localStorage.getItem(seenKey())||'null');return new Set(Array.isArray(a)?a:[])}catch(e){return new Set()}};
+    const unseenItems=()=>{const sn=seenSet();return notifItems().filter(x=>!sn.has(x.key))};
+    function updateProjBadge(){
+      const b=document.querySelector('[data-nav="projects"]');if(!b)return;const n=unseenItems().length;let el=b.querySelector('.rail-badge');
+      if(!n){el?.remove();return}
+      if(!el){el=document.createElement('span');el.className='rail-badge';b.appendChild(el)}
+      el.textContent=n>99?'99+':String(n);b.title='專案（'+n+' 則新通知）';
+    }
+    function markNotifSeen(){try{const cur=notifItems().map(x=>x.key),sn=seenSet();cur.forEach(k=>sn.add(k));localStorage.setItem(seenKey(),JSON.stringify([...sn].slice(-400)))}catch(e){}}
+    function applyHl(){
+      if(state.view!=='projects'||!state.hl||!state.hl.size)return;let first=null;
+      for(const [id,label] of state.hl){const el=document.querySelector('[data-case="'+CSS.escape(id)+'"],[data-row-id="'+CSS.escape(id)+'"]');if(!el)continue;el.classList.add('is-notify');el.setAttribute('data-nt',label);if(!first)first=el}
+      if(first&&!state.hlScrolled){state.hlScrolled=true;first.scrollIntoView({block:'center',behavior:'smooth'})}
+    }
+    function openNotify(){
+      const items=unseenItems();if(!items.length)return;
+      state.hl=new Map();state.hlScrolled=false;for(const x of items)state.hl.set(x.id,state.hl.has(x.id)?state.hl.get(x.id)+'＋'+NT_LABEL[x.type]:NT_LABEL[x.type]);
+      markNotifSeen();updateProjBadge();
+      const c={};items.forEach(x=>{c[x.type]=(c[x.type]||0)+1});
+      toast(Object.keys(NT_LABEL).filter(k=>c[k]).map(k=>NT_LABEL[k]+' '+c[k]+' 件').join('、'));
+      applyHl();
+    }
     const ownerRows=()=>loggedIn()?allRowsRaw().filter(r=>String(r['狀態']||'').trim()==='過稿中'&&ownerMatches(r)).sort(byNewest):[];
     const ownerDayKey=()=>`v5OwnerProgressDay:${selfAccount()||session().user||''}`;
     function ownerMenuLabel(){const n=ownerRows().length;return n?`您的案件進度（${n}）`:'您的案件進度'}
@@ -3170,7 +3215,7 @@ window.emcQuotes=[
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
       const ext=t.closest('[data-ext]')?.dataset.ext;if(ext){openExt(ext);return}
       const nav=t.closest('[data-nav]')?.dataset.nav;if(nav==='settings'){state.form=null;state.mail=null;state.editing=false;closeCal();show('settings');return}
-      if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();show(nav);return}
+      if(nav){state.home=nav;state.form=null;state.mail=null;state.editing=false;closeCal();state.hl=null;show(nav);if(nav==='projects')openNotify();return}
       const dm=t.closest('[data-dm]')?.dataset.dm;
       if(dm==='cancel'){closeDetailModal();return}
       if(dm==='ok'){const pm=state.pendingMove;if(pm){const picked=[...document.querySelectorAll('#dmList input:checked')].map(i=>i.value).join(', ');closeDetailModal();applyMove(pm.id,pm.status,picked)}return}
@@ -3292,7 +3337,7 @@ window.emcQuotes=[
         state.loaded=true;
         const stamp=new Date(db.updatedAt||Date.now());
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
-        fillClients();
+        fillClients();try{updateProjBadge()}catch(e){}
       }catch(err){console.warn('案件資料讀取失敗',err);if(background)return;state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
       if(background&&bgBusy()){state.dirty=true;return}
       state.dirty=false;
@@ -3326,6 +3371,7 @@ window.emcQuotes=[
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},6000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
+    {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}}}
     window.__v5=state; // 方便除錯
   })();
   </script>
