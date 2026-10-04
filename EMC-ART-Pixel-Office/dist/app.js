@@ -1349,9 +1349,10 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
   });
   let lastPlaying='';
   setInterval(()=>{
-    const now=isMusicPlaying(musicPlaying.i)&&people[musicPlaying.i]?people[musicPlaying.i].name:'';
-    if(now===lastPlaying)return;lastPlaying=now;
-    try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:now},location.origin)}catch(error){}
-  },500);
+    const p=musicPlaying.i>=0&&people[musicPlaying.i]?people[musicPlaying.i].name:'',active=Boolean(p)&&!musicPlaying.paused,real=active&&Boolean(musicPlaying.audio||musicPlaying.started);
+    const key=(real?'p:':active?'l:':'')+p;
+    if(key===lastPlaying)return;lastPlaying=key;
+    try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
+  },400);
 }
 const AV_CROP={x:23,y:4,w:84};
