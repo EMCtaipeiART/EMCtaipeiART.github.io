@@ -156,7 +156,15 @@
     .chips{display:flex;flex-wrap:wrap;gap:6px}
     .chips label{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-size:12.5px;font-weight:700;cursor:pointer;user-select:none}
     .chips input{accent-color:var(--brand);margin:0}
-    .chips label:has(input:checked){border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+    .chips label.st-todo{background:var(--st-todo-bg);color:var(--st-todo-ink);border-color:var(--st-todo-line)}
+    .chips label.st-doing{background:var(--st-doing-bg);color:var(--st-doing-ink);border-color:var(--st-doing-line)}
+    .chips label.st-review{background:var(--st-review-bg);color:var(--st-review-ink);border-color:var(--st-review-line)}
+    .chips label.st-revise{background:var(--st-revise-bg);color:var(--st-revise-ink);border-color:var(--st-revise-line)}
+    .chips label.st-done{background:var(--st-done-bg);color:var(--st-done-ink);border-color:var(--st-done-line)}
+    .chips label.st-cancel{background:var(--st-cancel-bg);color:var(--st-cancel-ink);border-color:var(--st-cancel-line)}
+    .chips label[class*="st-"]:not(:has(input:checked)){opacity:.5;filter:grayscale(.4)}
+    .chips label[class*="st-"]:has(input:checked){box-shadow:0 0 0 2px currentColor inset}
+    .chips label:not([class*="st-"]):has(input:checked){border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
     .filter-foot{display:flex;justify-content:space-between;align-items:center}
     .filter-foot button{height:34px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:13px;cursor:pointer}
     .search{position:relative}
@@ -1120,7 +1128,7 @@ window.emcQuotes=[
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{const a=JSON.parse(localStorage.getItem('v5Filters')||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)))}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{const raw=localStorage.getItem('v5Filters');const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -1342,7 +1350,7 @@ window.emcQuotes=[
     function passFilters(r){const f=state.filters;return (!f.months.size||f.months.has(monthKey(r)))&&(!f.statuses.size||f.statuses.has(String(r['狀態']||'').trim()))&&(!f.designers.size||f.designers.has(String(r['設計負責人']||'').trim()))}
     function filterPopHtml(){
       const f=state.filters,months=[...new Set(allRows().map(monthKey).filter(Boolean))].sort().reverse();
-      const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label><input type="checkbox" data-filter="${key}" value="${esc(v)}"${f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
+      const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label${key==='statuses'&&ST[v]?` class="${ST[v].cls}"`:''}><input type="checkbox" data-filter="${key}" value="${esc(v)}"${(key!=='months'&&!f[key].size)||f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
       return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label]))}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>清除篩選</button></div></div>`;
     }
     const NUM_ZH=['零','一','二','三','四','五','六','七','八','九','十'];
@@ -3351,7 +3359,7 @@ window.emcQuotes=[
       if(t.matches?.('[data-grid-status]')){const gh=gridStatusHide();t.checked?gh.delete(t.dataset.gridStatus):gh.add(t.dataset.gridStatus);try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.matches?.('[data-col-show]')){ensureCols();t.checked?state.cols.hidden.delete(t.dataset.colShow):state.cols.hidden.add(t.dataset.colShow);if(state.cols.hidden.size>=COL_DEFS.length)state.cols.hidden.delete('id');saveCols();rerenderList();return}
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
-      if(t.matches?.('[data-filter]')){const set=state.filters[t.dataset.filter];t.checked?set.add(t.value):set.delete(t.value);state.latestLimit=LATEST_PAGE;rerenderList();return}
+      if(t.matches?.('[data-filter]')){const key=t.dataset.filter,set=state.filters[key];if(key!=='months'){const all=[...document.querySelectorAll('[data-filter="'+key+'"]')].map(i=>i.value);if(!set.size)all.forEach(v=>set.add(v));t.checked?set.add(t.value):set.delete(t.value);if(set.size>=all.length||!set.size)set.clear()}else{t.checked?set.add(t.value):set.delete(t.value)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.id==='clientSelect'){
         if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;}
         t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;return;
