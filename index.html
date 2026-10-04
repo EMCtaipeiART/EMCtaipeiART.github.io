@@ -1479,7 +1479,31 @@ window.emcQuotes=[
       pop.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
-    function saveFilters(){try{const f=state.filters;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}catch(err){}}
+    /* 篩選條件同步到雲端（設定表 篩選月份／篩選狀態／篩選姓名），手機與電腦共用；本機 localStorage 仍當快取 */
+    const filtSnap=()=>{const f=state.filters;return JSON.stringify([[...f.months].sort(),[...f.statuses].sort(),[...f.designers].sort()])};
+    let filtSynced=null,filtTimer=0,filtPulledAt=0;
+    function saveFilters(){try{const f=state.filters;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}catch(err){}
+      if(filtSynced===null||!loggedIn()||filtSnap()===filtSynced)return;
+      clearTimeout(filtTimer);filtTimer=setTimeout(pushFilters,800)}
+    async function pushFilters(){
+      if(!loggedIn()||filtSynced===null)return;const snap=filtSnap(),f=state.filters;if(snap===filtSynced)return;
+      try{await api('saveUserSettings',{account:selfAccount(),settings:{filters:{month:[...f.months],status:[...f.statuses],designer:[...f.designers]}}});filtSynced=snap}catch(err){}}
+    async function pullFilters(force){
+      if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
+      try{
+        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};
+        const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
+        const cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
+        const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
+        if(filtSynced===null){
+          /* 第一次連線：雲端有設定就以雲端為準；雲端是空的就把這台的條件上傳 */
+          if(has){const f=state.filters;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}}
+          else{filtSynced='';const mine=filtSnap();filtSynced=JSON.stringify([[],[],[]]);if(mine!==filtSynced){filtSynced=filtSynced;pushFilters()}}
+          return}
+        if(filtSnap()!==filtSynced)return; /* 本機有尚未上傳的變更，不覆蓋 */
+        const c=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);
+        if(c!==filtSynced&&!document.querySelector('.filter-pop')){const f=state.filters;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
+      }catch(err){}}
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
@@ -3084,7 +3108,7 @@ window.emcQuotes=[
     }
     function afterLogin(){
       state.loginMenu=false;renderLogin();updateRail();
-      if(!loggedIn())return;
+      if(!loggedIn())return; filtSynced=null;pullFilters(true);
       toast(`已登入：${session().name||session().user}`);
       if(state.pendingStart){const client=state.pendingStart;state.pendingStart='';state.form=newForm(client);show('form');return}
       if(state.view==='form'||state.editing){readRowsSafe();rerender()}
@@ -3286,7 +3310,8 @@ window.emcQuotes=[
     let lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},6000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin()}});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
+    setTimeout(()=>pullFilters(true),600);
     window.__v5=state; // 方便除錯
   })();
   </script>
