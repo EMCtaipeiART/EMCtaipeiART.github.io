@@ -308,3 +308,12 @@ main>.level-table-section{background:white;border:1px solid #dce3ed;border-radiu
 .look-hint{margin:12px 0 0;font-size:12px;color:#a6b6cd;line-height:1.5}
 
 .action-list button canvas{width:56px;height:38px}
+
+/* ?clean=1（多元宇宙頁編輯模式）：拿掉頂部品牌列、場景標題與底部說明、邊框，場景由 app.js 放大置中 */
+html.clean,html.clean body{background:transparent}
+html.clean header,html.clean .scene-foot,html.clean .scene-bar>div:first-child{display:none!important}
+html.clean main{padding:0 0 24px}
+html.clean .scene-bar{justify-content:flex-end;padding:8px 12px 0}
+html.clean .play{border:0;border-radius:0;background:transparent;box-shadow:none}
+html.clean .canvas-wrap{overflow:hidden}
+html.clean #game{position:absolute;top:0;left:0;max-width:none;transform-origin:top left}
