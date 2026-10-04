@@ -1342,5 +1342,16 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     }catch(error){}
   };
   setTimeout(sendAvatars,2500);setTimeout(sendAvatars,6000);setInterval(sendAvatars,5000);
+  // 首頁頭像上的音樂框：點一下播放／暫停（播放器在這個隱藏視窗裡），並回報誰正在播。
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||!event.data||event.data.type!=='pixelOfficeToggleMusic')return;
+    const i=names.indexOf(String(event.data.name||''));if(i>=0)toggleMusic(i);
+  });
+  let lastPlaying='';
+  setInterval(()=>{
+    const now=isMusicPlaying(musicPlaying.i)&&people[musicPlaying.i]?people[musicPlaying.i].name:'';
+    if(now===lastPlaying)return;lastPlaying=now;
+    try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:now},location.origin)}catch(error){}
+  },500);
 }
 const AV_CROP={x:23,y:4,w:84};
