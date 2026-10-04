@@ -1383,4 +1383,4 @@ window.addEventListener('message',event=>{
 });
 
 // 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
-if($('storyViewer'))$('storyViewer').addEventListener('close',()=>{try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}});
+{let wasOpen=false;setInterval(()=>{const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}wasOpen=now;},250);}
