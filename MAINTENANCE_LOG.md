@@ -163,3 +163,6 @@
 - 測試檔改讀 legacy.html；workflow 路徑同時監看 index.html 與 legacy.html。npm test 的 59 個既有失敗（Windows 路徑／舊測試）切換前後相同，沒有新增。
 
 - Mobile (<=720px) fixes: bottom nav scrolls horizontally with the active item centered; "+" in the start bar aligned to its first row, and a compact one-row sticky bar; designer hover card becomes a bottom sheet; toast above the nav; non-home pages hide the big hero so forms/mail/detail start at the top; audited 375px width for horizontal overflow on home, list, projects, settings, issues, owner, form, detail, mail (none).
+
+## 2026-10-04 手機修正
+- 手機版篩選/欄位下拉改為固定置中（不再被左側裁切）；案件進度列文字不再被按鈕擠成直排。
