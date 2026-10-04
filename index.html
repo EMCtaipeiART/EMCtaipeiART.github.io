@@ -97,13 +97,16 @@
     .member-say{display:block;position:relative;box-sizing:border-box;margin:0 auto 7px;width:max-content;min-width:30px;max-width:84px;padding:4px 9px;border-radius:12px;background:rgba(255,255,255,.4);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#0b2a1a;font-size:11px;font-weight:800;line-height:1.35;text-align:center}
     .member-say .ms-win{display:block;overflow:hidden;white-space:nowrap}.member-say .ms-track{display:inline-block}.member-say .ms-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
     .member-say::after{content:"";position:absolute;left:50%;top:100%;width:0;height:0;margin-left:-6px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid rgba(255,255,255,.4)}
-    .member-music{display:flex;align-items:center;gap:5px;box-sizing:border-box;margin:2px auto 0;width:84px;padding:3px 8px 3px 4px;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
+    .member-music{display:flex;align-items:center;justify-content:center;gap:0;box-sizing:border-box;margin:2px auto 0;width:26px;height:26px;padding:3px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left;transition:width .28s ease,padding .28s ease,gap .28s ease,background .2s}
+    .member-music:hover,.member-music:focus-visible{width:84px;justify-content:flex-start;gap:5px;padding:3px 8px 3px 3px}
+    .member-music .mm-win{width:0;flex:0 0 auto;opacity:0;transition:opacity .2s ease}
+    .member-music:hover .mm-win,.member-music:focus-visible .mm-win{width:auto;flex:1;opacity:1}
     .member-music:hover{background:rgba(255,255,255,.32)}.member-music.is-playing{background:#fff;color:var(--brand-deep);border-color:#fff}
-    .member-music .mm-ic{flex:0 0 auto;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.28);line-height:0}
+    .member-music .mm-ic{flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.28);line-height:0}
     .member-music .mm-ic svg{width:11px;height:11px;display:block;fill:currentColor}.member-music.is-playing .mm-ic{background:var(--brand-soft)}
     .member-music .mm-win{min-width:0;flex:1;overflow:hidden;white-space:nowrap}
     .member-music .mm-track{display:inline-block}
-    .member-music .mm-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
+    .member-music:hover .mm-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
     @keyframes mmScroll{0%,12%{transform:translateX(0)}88%,100%{transform:translateX(calc(var(--md,0px) * -1))}}
     .team{align-items:flex-start}.member-say-ph{display:block;height:29px}
     .avatar-clip img.head{width:112%;height:auto;margin-top:18%}
@@ -1241,12 +1244,12 @@ window.emcQuotes=[
         </li>`;
     }
     const musicIcon=(on,loading)=>loading?'<svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg>':on?'<svg viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="2.2" height="7" rx=".6"/><rect x="9.3" y="4.5" width="2.2" height="7" rx=".6"/></svg>':'<svg viewBox="0 0 16 16"><path d="M6.2 4.8v6.4L11.3 8z"/></svg>';
-    function marqueeTeam(){document.querySelectorAll('.member-music .mm-track,.member-say .ms-track').forEach(t=>{const w=t.parentElement.clientWidth,d=t.scrollWidth-w;if(d>2){t.style.setProperty('--md',d+'px');t.style.setProperty('--mt',Math.max(4,d/28+2)+'s');t.classList.add('is-marquee')}else t.classList.remove('is-marquee')})}
+    function marqueeTeam(){document.querySelectorAll('.member-music .mm-track,.member-say .ms-track').forEach(t=>{const w=t.classList.contains('mm-track')?48:t.parentElement.clientWidth,d=t.scrollWidth-w;if(d>2){t.style.setProperty('--md',d+'px');t.style.setProperty('--mt',Math.max(4,d/28+2)+'s');t.classList.add('is-marquee')}else t.classList.remove('is-marquee')})}
     {const o=renderTeam;renderTeam=function(){o.apply(this,arguments);setTimeout(marqueeTeam,60)}}
     function setOpen(member,open){document.querySelectorAll('.member.is-open').forEach(el=>{if(el!==member)el.classList.remove('is-open')});if(member)member.classList.toggle('is-open',open);if(open)ensureArchive()}
     function bindTeam(){
       const team=$('team');
-      team.addEventListener('mouseover',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.classList.contains('is-open'))setOpen(m,true)});
+      team.addEventListener('mouseover',e=>{const m=e.target.closest('.member[data-name]');if(e.target.closest('.member-music'))return;if(m&&!m.classList.contains('is-open'))setOpen(m,true)});
       team.addEventListener('mouseleave',()=>setOpen(null,false));
       team.addEventListener('mouseout',e=>{const m=e.target.closest('.member[data-name]');if(m&&!m.contains(e.relatedTarget))m.classList.remove('is-open')});
       team.addEventListener('focusin',e=>{const m=e.target.closest('.member[data-name]');if(m)setOpen(m,true)});
