@@ -2959,6 +2959,31 @@ window.emcQuotes=[
       return Boolean((owner&&me.some(n=>n===owner))||(owner&&acct&&owner===acct)||(email&&acct&&email===acct));
     };
 
+    /* 補充資料只開放給：設計部、企劃部、填單的專案負責人本人，以及同一組的組員（例如 Celine 填單，Celine 組的人都看得到）；其他人隱藏 */
+    function settingsFor(value){
+      const raw=String(value||'').trim();if(!raw)return null;
+      const email=(raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+.[A-Z]{2,}/i)||[''])[0],plain=raw.replace(/[（(].*?[）)]/g,'').trim();
+      const keys=[raw,plain,email].map(norm).filter(Boolean);
+      return state.settings.find(x=>[x['名字'],x['顯示名'],x['帳號']].some(v=>keys.includes(norm(v))))||null;
+    }
+    function ownerGroupOf(row){
+      const raw=String(row['專案負責人']||'').trim(),hit=settingsFor(raw);
+      if(hit&&String(hit['組別']||'').trim())return String(hit['組別']).trim();
+      const plain=norm(raw.replace(/[（(].*?[）)]/g,'')),g=state.settings.map(x=>String(x['組別']||'').trim()).find(v=>v&&plain&&norm(v.replace(/組$/,''))===plain);
+      return g||'';
+    }
+    function canSeeSupp(row){
+      if(!loggedIn())return false;
+      if(isAdminAcct()||isMachiUser())return true;
+      const dept=String(sessionDept()||'').trim();
+      if(/設計部|企劃部/.test(dept)||hasDesignerRole()||isDesignerSession())return true;
+      if(ownerMatches(row))return true;
+      const mine=settingsFor(selfAccount())||settingsFor(session().name||session().user),myGroup=String((mine&&mine['組別'])||sessionRawGroup()||'').trim(),og=ownerGroupOf(row);
+      if(og&&myGroup&&norm(og)===norm(myGroup))return true;
+      const leader=norm(og.replace(/組$/,'')),me=[session().name,session().user].map(norm);
+      return Boolean(leader&&me.includes(leader));
+    }
+
     /* ---------- 專案通知：設計師的新案件／新修改需求、提出需求者收到設計師回覆（過稿中）；用紅點數字顯示在左側「專案」，點開後標出該案件 ---------- */
     const NT_LABEL={new:'新案件',mod:'新修改需求',reply:'設計師已回覆'};
     function designerMatches(r){
@@ -3243,7 +3268,7 @@ window.emcQuotes=[
       const ed=isDesignerSession(),editAttr=f=>ed?` lt-edit" data-edit="${f}`:'';
       const kv=(label,value,raw)=>`<div class="kv"><dt>${label}</dt><dd>${raw?value:esc(value||'-')}</dd></div>`;
       const person=(name,role)=>`<span class="person">${faceHtml(name,role)}<span>${esc(name||'未填')}</span></span>`;
-      const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>row[n]||row[u]);
+      const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>(row[n]||row[u])&&canSeeSupp(row));
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
         <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>

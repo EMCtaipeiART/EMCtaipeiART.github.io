@@ -320,3 +320,5 @@
 - 2026-10-04: Universe page: loading overlay (spinner + 正在進入凱曜多元宇宙) over the iframe until the pixel office is ready (max 10s).
 
 - 2026-10-04: Logged-out users no longer see 編輯/發信/回信 buttons in cards or list (mail+actions cells empty, list columns hidden).
+
+- 2026-10-04: 補充資料 in card/detail only for 設計部/企劃部/admin, the case 專案負責人 and members of the owner group (canSeeSupp). UI-only: db.json stays public.
