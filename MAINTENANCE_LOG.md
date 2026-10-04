@@ -342,3 +342,5 @@
 - 2026-10-04: Pixel office app (embed/clean/avatars bridge) now also uses the WebSocket push: syncNow() on {type:pixel}; polling falls back to 60s while connected (3s otherwise). app.js v=129, iframes embed v=64, clean v=67, bridge v=16.
 
 - 2026-10-04: Universe opens directly in edit mode for designer/admin accounts (openUniverse sets uniEdit=canEditUniverse()); others still view-only.
+
+- 2026-10-04: Removed the 編輯/完成編輯 toggle button from the universe page (designers always open in edit mode).
