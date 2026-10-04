@@ -1580,7 +1580,7 @@ window.emcQuotes=[
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
-    function show(view){state.tlLeft=null;
+    function show(view){const pv=state.view;state.tlLeft=null;if(view==='universe'||pv==='universe')window.scrollTo(0,0);
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe');$('stage').classList.toggle('wide',view==='projects');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
