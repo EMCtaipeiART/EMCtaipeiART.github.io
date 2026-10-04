@@ -3901,7 +3901,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const row = settingsRow(draft, account || current.user);
         if (!row) throw new Error('找不到個人設定資料');
         const before = JSON.stringify(row);
-        updateSettingsRow(row, asRow(payload.settings));
+        const incoming = { ...asRow(payload.settings) };
+        // 設計師的頭像與顯示名由管理者統一設定（像素辦公室與案件頭像都連動這兩欄），非管理者的設計師帳號即使送了也一律忽略。
+        if (isDesignerSettingsRow(row) && !hasCapability(database, current, 'database.manage')) {
+          for (const key of ['avatar', '頭像連結', 'displayName', '顯示名']) delete incoming[key];
+        }
+        updateSettingsRow(row, incoming);
         const result = { ok: true, action, account, settings: settingsResponse(row) };
         // 設定內容完全沒變（例如重新整理時送出一樣的篩選條件）就不提交到 GitHub——每一次提交都會觸發網站
         // 重新部署與歷史資料庫對齊流程，沒有實際變動的提交只會拖慢大家讀取前台。

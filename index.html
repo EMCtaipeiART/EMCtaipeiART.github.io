@@ -2127,7 +2127,7 @@ window.emcQuotes=[
     }
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
-      const name=session().name||session().user,url=st2.avatar||personAvatar(name),locked=nameLocked();
+      const name=session().name||session().user,locked=nameLocked(),url=locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name));
       return `<details class="set-card" data-set-sec="profile"${sectionOpen('profile')}><summary><b>個人設定</b><span>頭像與顯示名稱</span></summary>
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input" id="setDisplayName" maxlength="40" value="${esc(st2.display||name)}"${locked?' readonly':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>

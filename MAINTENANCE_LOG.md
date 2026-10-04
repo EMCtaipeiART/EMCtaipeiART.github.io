@@ -312,3 +312,5 @@
 - 2026-10-04: json_database_admin.html: new 稽核 > 操作紀錄 sidebar view (listAuditLog; type filter, search, newest first, 500 rows shown).
 
 - 2026-10-04: Modification record from reply strips the leading "Hi 名字" greeting (stripGreeting) and stores only the body.
+
+- 2026-10-04: Settings: designers see the pixel-office avatar in 個人設定; Worker saveUserSettings now ignores avatar/displayName from non-admin designer accounts. Worker redeployed.
