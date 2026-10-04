@@ -1344,7 +1344,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
         const c=document.createElement('canvas');c.width=130;c.height=155;portrait(c.getContext('2d'),i,false);
         const o=document.createElement('canvas');o.width=o.height=160;let cx=65;try{const px=c.getContext('2d').getImageData(0,4,130,84).data;let lo=130,hi=0;for(let y=0;y<84;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){if(x<lo)lo=x;if(x>hi)hi=x}if(hi>lo)cx=(lo+hi)/2}catch(error){}// 以頭部實際左右範圍的中心對齊（女生的長髮會讓人物偏左）
         o.getContext('2d').drawImage(c,cx-AV_CROP.w/2+(AV_ADJ[p.name]||0),AV_CROP.y,AV_CROP.w,AV_CROP.w,0,0,160,160);
-        list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||''};
+        list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
     }catch(error){}
@@ -1364,3 +1364,10 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
   },400);
 }
 const AV_CROP={x:23,y:-4,w:100},AV_ADJ={Machi:3};// 個別微調（原圖像素，正值＝頭往左移）
+
+// 首頁頭像右上角的限時動態氣泡：外層點了之後切到多元宇宙頁，再用這則訊息叫場景直接打開那個人的限時動態。
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||!event.data||event.data.type!=='pixelOfficeOpenStory')return;
+  const i=names.indexOf(String(event.data.name||''));
+  if(i>=0&&storiesOf(names[i]).length)openStory(i);
+});
