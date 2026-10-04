@@ -1341,9 +1341,18 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{
       const list={};
       people.forEach((p,i)=>{
-        const c=document.createElement('canvas');c.width=130;c.height=155;portrait(c.getContext('2d'),i,false);
-        const o=document.createElement('canvas');o.width=o.height=160;let cx=65;try{const px=c.getContext('2d').getImageData(0,4,130,84).data;let lo=130,hi=0;for(let y=0;y<84;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){if(x<lo)lo=x;if(x>hi)hi=x}if(hi>lo)cx=(lo+hi)/2}catch(error){}// 以頭部實際左右範圍的中心對齊（女生的長髮會讓人物偏左）
-        o.getContext('2d').drawImage(c,cx-AV_CROP.w/2+(AV_ADJ[p.name]||0),AV_CROP.y,AV_CROP.w,AV_CROP.w,0,0,160,160);
+        // 畫布比原本的肖像高一截：戴帽子的人物會超出頭頂，不留空間帽子就被切平
+        const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
+        const o=document.createElement('canvas');o.width=o.height=160;
+        let top=40,cx=65;
+        try{
+          const px=c.getContext('2d').getImageData(0,0,130,190).data;
+          let found=false;for(let y=0;y<190&&!found;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){top=y;found=true;break}
+          let lo=130,hi=0;for(let y=top;y<top+80&&y<190;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){if(x<lo)lo=x;if(x>hi)hi=x}
+          if(hi>lo)cx=(lo+hi)/2;
+        }catch(error){}// 以頭部實際的上緣與左右範圍對齊（帽子、長髮都跟著）
+        const cap=effectiveLook(i).cap,size=cap?108:AV_CROP.w,sy=top-(cap?14:12);
+        o.getContext('2d').drawImage(c,cx-size/2+(AV_ADJ[p.name]||0),sy,size,size,0,0,160,160);
         list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
