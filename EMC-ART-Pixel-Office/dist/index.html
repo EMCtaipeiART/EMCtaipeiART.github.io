@@ -17,7 +17,7 @@
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
   <script>if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
-  <link rel="stylesheet" href="style.css?v=47">
+  <link rel="stylesheet" href="style.css?v=48">
 </head>
 <body>
   <header>
@@ -108,6 +108,6 @@ if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
  moodSec.style.display='none';
  [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
 </script>
-  <script src="app.js?v=122" fetchpriority="high"></script>
+  <script src="app.js?v=123" fetchpriority="high"></script>
 </body>
 </html>

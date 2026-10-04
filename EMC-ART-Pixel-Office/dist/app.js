@@ -1345,15 +1345,15 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
         // 畫布比原本的肖像高一截：戴帽子的人物會超出頭頂，不留空間帽子就被切平
         const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
         const o=document.createElement('canvas');o.width=o.height=160;
-        let top=40,cx=65;
+        // 每個人的下巴、臉中心用造型圖的幾何量出來，統一把下巴放在頭像框同一個高度（帽子、長髮不影響）
+        let chin=null,cx=65;
         try{
-          const px=c.getContext('2d').getImageData(0,0,130,190).data;
-          let found=false;for(let y=0;y<190&&!found;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){top=y;found=true;break}
-          let lo=130,hi=0;for(let y=top;y<top+80&&y<190;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){if(x<lo)lo=x;if(x>hi)hi=x}
-          if(hi>lo)cx=(lo+hi)/2;
-        }catch(error){}// 以頭部實際的上緣與左右範圍對齊（帽子、長髮都跟著）
-        const cap=effectiveLook(i).cap,size=cap?108:AV_CROP.w,sy=top-(cap?14:12);
-        o.getContext('2d').drawImage(c,cx-size/2+(AV_ADJ[p.name]||0),sy,size,size,0,0,160,160);
+          const fr=wardrobeFrame(i,'down');
+          if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
+        }catch(error){}
+        if(chin===null)chin=110;
+        const size=AV_CROP.w,sy=chin-size*AV_CROP.chin;
+        o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
         list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
@@ -1373,7 +1373,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
   },400);
 }
-const AV_CROP={x:23,y:-4,w:100},AV_ADJ={Machi:3};// 個別微調（原圖像素，正值＝頭往左移）
+const AV_CROP={w:112,chin:.74};// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
 
 // 首頁頭像右上角的限時動態氣泡：外層點了之後切到多元宇宙頁，再用這則訊息叫場景直接打開那個人的限時動態。
 window.addEventListener('message',event=>{
@@ -1381,3 +1381,6 @@ window.addEventListener('message',event=>{
   const i=names.indexOf(String(event.data.name||''));
   if(i>=0&&storiesOf(names[i]).length)openStory(i);
 });
+
+// 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
+if($('storyViewer'))$('storyViewer').addEventListener('close',()=>{try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}});
