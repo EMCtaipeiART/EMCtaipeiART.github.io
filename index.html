@@ -1141,7 +1141,7 @@ window.emcQuotes=[
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{const raw=localStorage.getItem('v5Filters');const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -1370,7 +1370,7 @@ window.emcQuotes=[
     function filterPopHtml(){
       const f=state.filters,months=[...new Set(allRows().map(monthKey).filter(Boolean))].sort().reverse();
       const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label${key==='statuses'&&ST[v]?` class="${ST[v].cls}"`:''}><input type="checkbox" data-filter="${key}" value="${esc(v)}"${(key!=='months'&&!f[key].size)||f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
-      return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label]))}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>清除篩選</button></div></div>`;
+      return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label]))}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>恢復預設</button></div></div>`;
     }
     const NUM_ZH=['零','一','二','三','四','五','六','七','八','九','十'];
     function revisionCount(r){const mods=state.mods.get(idKey(r))||[];const nums=mods.map(m=>+m['修改次數']||0);const fromRow=+r['修改次數']||0;return mods.length||fromRow?Math.max(0,fromRow,...nums):-1}
@@ -1573,6 +1573,7 @@ window.emcQuotes=[
         const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
         if(filtSynced===null){
           /* 第一次連線：雲端有設定就以雲端為準；雲端是空的就把這台的條件上傳 */
+          if(window.__filtReset){window.__filtReset=false;filtSynced=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);saveFilters();pushFilters();return}
           if(has){const f=state.filters;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}}
           else{filtSynced='';const mine=filtSnap();filtSynced=JSON.stringify([[],[],[]]);if(mine!==filtSynced){filtSynced=filtSynced;pushFilters()}}
           return}
@@ -3323,7 +3324,7 @@ window.emcQuotes=[
       const layout=t.closest('[data-layout]');if(layout){state.layout=layout.dataset.layout;try{localStorage.setItem('v5Layout',state.layout)}catch(err){}rerenderList();return}
       const thSort=t.closest('th[data-col]');if(thSort&&!t.closest('.col-resize')&&state.view!=='settings'){toggleSort(thSort.dataset.col);return}
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
-      if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();state.latestLimit=LATEST_PAGE;rerenderList();return}
+      if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));state.filters.months.add(p.year+'/'+p.month)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
       const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
       const act=t.closest('[data-act]')?.dataset.act;
