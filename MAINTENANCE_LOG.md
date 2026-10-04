@@ -344,3 +344,5 @@
 - 2026-10-04: Universe opens directly in edit mode for designer/admin accounts (openUniverse sets uniEdit=canEditUniverse()); others still view-only.
 
 - 2026-10-04: Removed the 編輯/完成編輯 toggle button from the universe page (designers always open in edit mode).
+
+- 2026-10-04: 專案頁狀態欄可拖曳排序（設計師）；順序存 localStorage v5ColOrder 與帳號設定新欄位「專案欄位順序」(schema + settingsResponse.columnOrder + updateSettingsRow). Worker redeployed.

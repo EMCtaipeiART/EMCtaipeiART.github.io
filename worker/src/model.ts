@@ -196,6 +196,7 @@ export function settingsResponse(row: Row = {}): Row {
     replyTemplateDefault: normalizeReplyTemplateDefaultValue(row['預設回信範本'], normalizeReplyTemplatesValue(row['回信範本設定'])),
     signaturePresets: normalizeSignaturePresetsValue(row['簽名檔清單']),
     signaturePresetDefault: normalizeSignaturePresetDefaultValue(row['預設簽名檔'], normalizeSignaturePresetsValue(row['簽名檔清單'])), visibleColumns: ordered,
+    columnOrder: text(row['專案欄位順序']),
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
@@ -484,6 +485,13 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
     const value = text(settings.displayName || settings['顯示名']);
     if (!value || value.length > 40) throw new Error('顯示名必須為 1–40 個字');
     row['顯示名'] = value;
+  }
+  if ('columnOrder' in settings || '專案欄位順序' in settings) {
+    // 專案頁狀態欄的排列順序（設計師拖曳後的個人偏好）；只收已知的狀態名稱，去重。
+    const known = ['未開始', '執行中', '修改中', '過稿中', '已完成'];
+    const raw = settings.columnOrder ?? settings['專案欄位順序'];
+    const list = (Array.isArray(raw) ? raw.map(text) : text(raw).split(/\s*[,，]\s*/)).filter(item => known.includes(item));
+    row['專案欄位順序'] = [...new Set(list)].join(' , ');
   }
   if (Array.isArray(settings.visibleColumns)) {
     const order = new Map(settings.visibleColumns.map((key, index) => [String(key), index + 1]));

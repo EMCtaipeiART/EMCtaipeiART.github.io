@@ -563,6 +563,7 @@
     .wm-info{flex:1;min-width:260px;max-width:380px;padding:22px 22px 18px;overflow:auto}.wm-info h3{margin:0 0 14px;font-size:17px;line-height:1.4}.wm-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}.wm-kv span{color:var(--muted);white-space:nowrap}.wm-kv b{font-weight:700;text-align:right;word-break:break-all}.wm-acts{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
     .wm-x{position:absolute;top:10px;right:12px;z-index:3;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:22px;cursor:pointer;line-height:1}body.wall-lock{overflow:hidden}
     @media (max-width:720px){.wall-cols,.wall-col{gap:10px}.wm-card{flex-direction:column;overflow:auto}.wm-img{flex:none}.wm-img img{max-height:55vh}.wm-info{max-width:none;min-width:0}}
+.column-head[draggable="true"]{cursor:grab}.column.col-dragging{opacity:.5}.column.col-over-l{box-shadow:inset 4px 0 0 var(--brand)}.column.col-over-r{box-shadow:inset -4px 0 0 var(--brand)}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -1178,6 +1179,36 @@ window.emcQuotes=[
     const DEFAULT_CC=['machi.chen@emctaipei.com','anna.hsu@emctaipei.com','amber.tian@emctaipei.com','leona.chen@emctaipei.com','eric.fu@emctaipei.com'];
     const RECIPIENT_NAMES={Machi:'陳柏政',Anna:'許芷芸',Karl:'李卡爾',Noise:'Noise',Amber:'Amber Tian',Leona:'陳家蓁'};
     const LATEST_PAGE=12,COLUMN_PAGE=10;
+    /* 專案頁狀態欄順序：設計師可拖曳欄位標題調整；個人偏好，記在這台電腦（localStorage）與帳號（設定表「專案欄位順序」） */
+    const COL_ORDER_KEY='v5ColOrder',COL_STATUSES=COLUMNS.map(c=>c.status);
+    let colOrderSynced=null;
+    const cleanColOrder=list=>{const seen=new Set();return (Array.isArray(list)?list:[]).filter(s=>COL_STATUSES.includes(s)&&!seen.has(s)&&seen.add(s))};
+    function loadColOrder(){try{return cleanColOrder(JSON.parse(localStorage.getItem(COL_ORDER_KEY)||'[]'))}catch(err){return []}}
+    function orderedColumns(){
+      const order=isDesignerSession()?(state.colOrder||(state.colOrder=loadColOrder())):[];
+      if(!order.length)return COLUMNS.slice();
+      const idx=new Map(order.map((s,i)=>[s,i]));
+      return COLUMNS.slice().sort((a,b)=>(idx.has(a.status)?idx.get(a.status):99)-(idx.has(b.status)?idx.get(b.status):99));
+    }
+    async function pushColOrder(){
+      if(!loggedIn())return;const snap=JSON.stringify(state.colOrder||[]);if(snap===colOrderSynced)return;
+      try{await api('saveUserSettings',{account:selfAccount(),settings:{columnOrder:state.colOrder||[]}});colOrderSynced=snap}catch(err){}
+    }
+    function applyCloudColOrder(raw){
+      const cloud=cleanColOrder(String(raw||'').split(/\s*[,，]\s*/));
+      if(cloud.length){const changed=JSON.stringify(cloud)!==JSON.stringify(state.colOrder||loadColOrder());state.colOrder=cloud;colOrderSynced=JSON.stringify(cloud);try{localStorage.setItem(COL_ORDER_KEY,JSON.stringify(cloud))}catch(err){}if(changed&&state.view==='projects')renderProjects()}
+      else{const local=state.colOrder||loadColOrder();colOrderSynced='[]';if(local.length){state.colOrder=local;pushColOrder()}}
+    }
+    function moveColumn(from,to,after){
+      const cur=orderedColumns().map(c=>c.status).filter(s=>s!==from),at=cur.indexOf(to);if(at<0)return;
+      cur.splice(at+(after?1:0),0,from);state.colOrder=cur;
+      try{localStorage.setItem(COL_ORDER_KEY,JSON.stringify(cur))}catch(err){}
+      renderProjects();pushColOrder();
+    }
+    document.addEventListener('dragstart',e=>{const h=e.target.closest?.('.column-head[draggable="true"]');if(!h)return;state.stDrag=h.closest('.column').dataset.status;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','col:'+state.stDrag)}catch(err){}h.closest('.column').classList.add('col-dragging')});
+    document.addEventListener('dragover',e=>{if(!state.stDrag)return;const col=e.target.closest?.('.column[data-status]');if(!col)return;e.preventDefault();document.querySelectorAll('.column.col-over-l,.column.col-over-r').forEach(x=>{if(x!==col)x.classList.remove('col-over-l','col-over-r')});const r=col.getBoundingClientRect(),after=e.clientX>r.left+r.width/2;col.classList.toggle('col-over-r',after);col.classList.toggle('col-over-l',!after)});
+    document.addEventListener('drop',e=>{if(!state.stDrag)return;const col=e.target.closest?.('.column[data-status]');const from=state.stDrag;state.stDrag=null;document.querySelectorAll('.column.col-dragging,.column.col-over-l,.column.col-over-r').forEach(x=>x.classList.remove('col-dragging','col-over-l','col-over-r'));if(!col||col.dataset.status===from)return;e.preventDefault();const r=col.getBoundingClientRect();moveColumn(from,col.dataset.status,e.clientX>r.left+r.width/2)});
+    document.addEventListener('dragend',()=>{if(!state.stDrag)return;state.stDrag=null;document.querySelectorAll('.column.col-dragging,.column.col-over-l,.column.col-over-r').forEach(x=>x.classList.remove('col-dragging','col-over-l','col-over-r'))});
     const $=id=>document.getElementById(id);
     const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     const norm=value=>String(value||'').trim().toLowerCase();
@@ -1661,7 +1692,7 @@ window.emcQuotes=[
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};
+        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         const cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
         const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
@@ -1826,11 +1857,11 @@ window.emcQuotes=[
       if(!state.loaded){stage.innerHTML=`<div class="latest-grid">${'<div class="skeleton"></div>'.repeat(6)}</div>`;return}
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
-      const cols=COLUMNS.filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
+      const cols=orderedColumns().filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
         const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return byNewest(a,b)});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
-          <div class="column-head"><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
+          <div class="column-head"${state.dragOn&&state.layout!=='list'?' draggable="true" title="拖曳可調整欄位順序"':''}><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
           <div class="column-bar" style="background:${column.color}"></div>
           <div class="cards">${visible.length?visible.map(r=>cardHtml(r,true)).join(''):`<div class="empty">${state.query||n?'沒有符合的案件':'目前沒有案件'}</div>`}</div>
           ${list.length>visible.length?`<button type="button" class="more-btn" data-more="${column.key}">顯示更多（還有 ${list.length-visible.length} 筆）</button>`:''}
