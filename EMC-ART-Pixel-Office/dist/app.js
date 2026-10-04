@@ -1338,6 +1338,7 @@ if(document.modelContext?.registerTool){try{document.modelContext.registerTool({
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const sendAvatars=()=>{
     if(!ready||window.parent===window)return;
+    loadAccessories();if(!accessoriesReady())return;// 帽子、眼鏡的圖還沒載好時先不送，不然頭像會先是光頭
     try{
       const list={};
       people.forEach((p,i)=>{
@@ -1358,7 +1359,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
     }catch(error){}
   };
-  setTimeout(sendAvatars,2500);setTimeout(sendAvatars,6000);setInterval(sendAvatars,5000);
+  let avatarsSent=false;const sendAvatarsOnce=()=>{sendAvatars();};const fastSend=setInterval(()=>{sendAvatars();if(ready&&accessoriesReady()){avatarsSent=true;clearInterval(fastSend)}},700);setInterval(sendAvatarsOnce,5000);
   // 首頁頭像上的音樂框：點一下播放／暫停（播放器在這個隱藏視窗裡），並回報誰正在播。
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin||!event.data||event.data.type!=='pixelOfficeToggleMusic')return;
