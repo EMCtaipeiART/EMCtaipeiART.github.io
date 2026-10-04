@@ -351,6 +351,7 @@
     .column.drop-ok{outline:2px dashed var(--brand);outline-offset:-4px;background:var(--brand-soft)}
     .no-hero .hero{display:none}
     html{overflow-anchor:none}
+.cd-items{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line,#e5e5e5);margin-bottom:8px}.cd-items>b{font-size:13px;white-space:nowrap;padding-top:4px}.cd-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cd-add{border:1px dashed #999;background:#fff;border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
 @media (hover:none){.member-say,.member-music,.mm-win{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 @media (prefers-reduced-motion:reduce){.ms-track{animation:none!important}}
     .hero{transition:padding .5s cubic-bezier(.4,0,.2,1)}
@@ -1277,10 +1278,20 @@ window.emcQuotes=[
     {const o=renderTeam;renderTeam=function(){o.apply(this,arguments);setTimeout(marqueeTeam,60)}}
     /* 點卡牌：卡牌往下展開顯示完整內容（含修改紀錄），再點一次收起 */
     state.openCases=new Set();
+    /* 卡牌展開：項目細節（未執行＝新增按鈕；其他狀態＝可編輯，設計師才能改） */
+    function addCardDetailItems(box,row){
+      const host=box.querySelector('.card-detail')||box,ed=isDesignerSession(),todo=String(row['狀態']||'').trim()==='未開始';
+      const items=String(row['項目細節']||'').split(/s*[,，、]s*/).filter(Boolean);
+      if(!items.length&&!ed)return;
+      const chips=items.map(d=>'<span class="lt-detail" title="'+esc(d)+'">'+esc(d)+'</span>').join('');
+      const btn=ed?'<button type="button" class="cd-add" data-edit="details">'+(todo&&!items.length?'＋ 新增項目細節':items.length?'編輯':'＋ 新增項目細節')+'</button>':'';
+      const el=document.createElement('div');el.className='cd-items';el.innerHTML='<b>項目細節</b><div class="cd-chips">'+chips+btn+'</div>';
+      host.insertBefore(el,host.firstChild);
+    }
     function fillCardDetail(card){
       const id=card.dataset.case,row=allRows().find(r=>idKey(r)===id);if(!row)return;
       let box=card.querySelector(':scope > .card-detail-box');if(!box){box=document.createElement('div');box.className='card-detail-box';card.appendChild(box)}
-      renderDetail(box,row);card.classList.add('is-open');card.setAttribute('aria-expanded','true');
+      renderDetail(box,row);addCardDetailItems(box,row);card.classList.add('is-open');card.setAttribute('aria-expanded','true');
     }
     function toggleCardOpen(card){
       const id=card.dataset.case;
