@@ -1009,8 +1009,26 @@ function applyRemote(list){markDirty();let lookChanged=false;
   if(lookChanged){refreshRosterPortraits();renderLookPanel();}
   save(false);
 }
-async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,document.hidden?15000:3000);}}
+let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
+async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
+// 即時推送：後端（Durable Object）有人改狀態／對話框／音樂／造型／限時動態就通知這裡，馬上重讀，不必等輪詢。
+function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){applyRemote(data.people);applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});}
+(function pushConnect(){
+  if(!('WebSocket' in window)||typeof SYNC_API!=='string')return;
+  let ws=null,pingTimer=0,retry=0;
+  const url=SYNC_API.replace(/^http/i,'ws').replace(/\/api\/?$/,'')+'/ws';
+  function connect(){
+    if(ws&&ws.readyState<=1)return;
+    try{ws=new WebSocket(url);}catch{return;}
+    ws.onopen=()=>{retry=0;pushOpen=true;clearInterval(pingTimer);pingTimer=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping');}catch{}},25000);};
+    ws.onmessage=event=>{let m=null;try{m=JSON.parse(event.data);}catch{return;}if(m&&m.type==='pixel')syncNow();};
+    ws.onclose=()=>{pushOpen=false;clearInterval(pingTimer);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)));};
+    ws.onerror=()=>{try{ws.close();}catch{}};
+  }
+  connect();
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!ws||ws.readyState>1))connect();});
+})();
 const walls=stations.map(s=>[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
