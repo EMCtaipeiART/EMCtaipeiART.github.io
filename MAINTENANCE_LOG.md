@@ -334,3 +334,5 @@
 - 2026-10-04: lunch status icon nudged another 5px right.
 
 - 2026-10-04: Realtime push: Worker DO accepts WebSocket at /ws (hibernation API, ping auto-response), broadcasts {type:pixel,v} when pixel-office version changes (after pixelOffice* actions and every cron minute); front-end reconnects with backoff and reloads office state on push; fallback poll 60s -> 5min while connected. Worker redeployed.
+
+- 2026-10-04: lunch icon moved 5px back left (net 5% right of centre).
