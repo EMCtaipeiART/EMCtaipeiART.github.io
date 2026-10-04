@@ -284,3 +284,5 @@
 - 2026-10-04: Mail send: plain reply on 執行中 -> 過稿中 (designer reply already did); modification reply -> 修改中 (backend + client fallback). Scheduled sends do not change status.
 
 - 2026-10-04: Plain reply on 修改中 also -> 過稿中.
+
+- 2026-10-04: Plain reply from 修改中 now marks the latest unconfirmed modification round as done (setConfirm) before moving to 過稿中.
