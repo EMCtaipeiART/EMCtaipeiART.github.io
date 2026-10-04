@@ -278,3 +278,5 @@
 - 2026-10-04: Health check: background timers skip while tab hidden (rail, office state), office state re-renders only when changed, db poll 6s->8s.
 
 - 2026-10-04: Reply/modification/plain reply now apply the default 信件範本 from personal settings (settings loaded first if needed).
+
+- 2026-10-04: HOTFIX: v5PixAvCache regex had an unescaped slash that broke the whole page script (site would not load data); fixed.
