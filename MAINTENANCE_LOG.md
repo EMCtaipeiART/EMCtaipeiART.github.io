@@ -290,3 +290,5 @@
 - 2026-10-04: Story badge (avatar top-right) restyled: solid green bubble with white outline, red when unread, yellow dot; stronger shadow.
 
 - 2026-10-04: Unread story badge now bright green with gentle pulse (no red).
+
+- 2026-10-04: Home bubbles/music/story badges now filled from the home page own pixelOfficeState (mergeOfficeIntoAvatars) instead of waiting for the hidden bridge iframe.

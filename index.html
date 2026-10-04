@@ -3508,11 +3508,23 @@ window.emcQuotes=[
       select.innerHTML='<option value="">選擇客戶別，開始新增設計需求…</option>'+sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__new__">+ 新增客戶別</option>';
       select.value=keep;select.classList.toggle('is-empty',!select.value);$('promptGo').disabled=!select.value;
     }
+    /* 對話框／音樂／限時動態直接用首頁自己讀到的辦公室狀態，不用等隱藏辦公室載完（頭像圖仍由它提供） */
+    function mergeOfficeIntoAvatars(data){
+      try{
+        state.pixAvatars=state.pixAvatars||{};let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('pixel-story-seen')||'[]'))}catch(e){}
+        const now=Date.now(),st=(data.stories||[]).filter(x=>x&&(!x.expiresAt||x.expiresAt>now));
+        (data.people||[]).forEach(p=>{
+          const e=state.pixAvatars[p.name]||(state.pixAvatars[p.name]={img:'',message:'',music:null,status:'',story:{count:0,unread:false}}),mine=st.filter(x=>x.name===p.name);
+          e.message=p.message||'';e.music=p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null;e.status=p.status||'';
+          e.story={count:mine.length,unread:mine.some(x=>!seen.has(x.id))};
+        });
+      }catch(err){}
+    }
     async function loadOffice(){
       try{
         const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'pixelOfficeState'}),cache:'no-store'});
         const data=await res.json();state.officeLoaded=true;
-        if(data&&data.ok){const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
+        if(data&&data.ok){const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));mergeOfficeIntoAvatars(data);if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
       }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
     }
 
