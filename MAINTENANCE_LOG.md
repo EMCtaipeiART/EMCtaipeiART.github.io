@@ -352,3 +352,5 @@
 - 2026-10-04: Card: top-right now a coloured status pill (lt-status); 發信/回信/串接/編輯/刪除 buttons moved under 項目細節 in the expanded card with Chinese labels (cardActsHtml).
 
 - 2026-10-04: Case detail page: removed top-right 編輯案件 button; bottom-left 回信/編輯/刪除 buttons enlarged to the same size (36px, 14px font).
+
+- 2026-10-04: Case detail page: 回信/編輯/刪除 buttons moved from bottom-left to the top-right (where 編輯案件 was, same 36px size); 編輯案件 button removed.

@@ -772,7 +772,7 @@
     .chip-r.is-hidden{display:none}
     .chip-more{height:28px;padding:0 12px;border-radius:99px;border:1px dashed var(--brand);background:transparent;color:var(--brand-deep);font-size:13px;font-weight:800;cursor:pointer}
     #contactBody .cu-checks{padding-bottom:10px}
-    .detail-actions .lt-act{width:auto;height:auto;min-height:36px;padding:0 18px;font-size:14px;border-radius:12px;gap:6px;justify-content:center}.detail-actions .lt-act span{display:inline}.detail-actions .lt-act svg{width:16px;height:16px}
+    .detail-acts,.detail-acts .lt-acts{display:inline-flex;gap:10px;flex-wrap:wrap;align-items:center}.detail-acts .lt-act{width:auto;height:auto;min-height:36px;padding:0 18px;font-size:14px;border-radius:12px;gap:6px;justify-content:center}.detail-acts .lt-act span{display:inline}.detail-acts .lt-act svg{width:16px;height:16px}
     .detail-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
       /* v5 thread 11px；簽名檔表格不折行跑版、連結改回黑字 */
     .th-card .th-body{font-size:12px;font-weight:700;line-height:1.6}
@@ -3418,7 +3418,7 @@ window.emcQuotes=[
       const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>(row[n]||row[u])&&canSeeSupp(row));
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
-        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span></div></div>
+        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><span class="detail-acts">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</span></div></div>
         ${['執行中','修改中'].includes(status)?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
@@ -3427,7 +3427,6 @@ window.emcQuotes=[
         </dl>
         ${supp.length?`<div class="detail-sec"><h3>補充資料</h3><div class="supp-list">${supp.map(([label,n,u])=>`<div class="supp-row"><b>${label}</b><span>${/^https?:\/\//i.test(row[u]||'')?`<a href="${esc(row[u])}" target="_blank" rel="noopener noreferrer">${esc(row[n]||row[u])}</a>`:esc(row[n]||row[u])}</span></div>`).join('')}</div></div>`:''}
         <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod),li=(state.lb.push(imgs),state.lb.length-1);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map((i,n)=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}" aria-label="放大預覽 ${esc(i.fileName||'設計圖')}，點擊開啟原圖"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
-        <div class="detail-actions">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</div>
       </div>`;
       if(target){target.querySelectorAll('.page-top,.detail-head,.progress,.detail-grid,.detail-actions').forEach(n=>n.remove());target.querySelector('.page')?.classList.replace('page','card-detail')}
     }
