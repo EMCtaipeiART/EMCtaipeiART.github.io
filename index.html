@@ -552,6 +552,16 @@
     .uni-page{max-width:none;margin:0 auto}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
     .stage-wrap.uni{max-width:none;padding:0 0 24px}.uni-page{width:100%}.uni-page .page-top{width:min(720px,100%);margin:0 auto;padding:14px 0 8px;box-sizing:border-box;justify-content:center;text-align:center}.uni-page .page-top>div:first-child{text-align:center}.uni-page.is-edit .page-top{width:min(1280px,100%)}.uni-page.is-edit .uni-frame{width:min(1280px,100%);aspect-ratio:auto;height:calc(100vh - 150px);min-height:620px}
     @media (max-width:720px){.uni-page.is-edit .uni-frame{height:calc(100vh - 200px);min-height:600px}.uni-page .page-top{padding:10px 12px 6px;box-sizing:border-box}.uni-page .page-sub{font-size:12.5px}}
+    .wall-page{max-width:1280px;margin:0 auto}.wall-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto}.wall-tools select{min-height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px;font-size:13.5px}.wall-count{color:var(--muted);font-size:13px}
+    .wall-cols{display:flex;gap:14px;align-items:flex-start}.wall-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+    .wall-item{position:relative;margin:0;border-radius:14px;overflow:hidden;cursor:zoom-in;background:var(--line);min-height:120px;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease,box-shadow .2s}.wall-item.is-in{opacity:1;transform:none}.wall-item:hover,.wall-item:focus-visible{box-shadow:0 8px 22px rgba(0,0,0,.22);outline:none}
+    .wall-item img{display:block;width:100%;height:auto}.wall-item figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:#fff;font-size:12px;display:flex;flex-direction:column;gap:1px;opacity:0;transition:opacity .2s}.wall-item:hover figcaption,.wall-item:focus-visible figcaption{opacity:1}.wall-item figcaption b{font-size:12.5px}.wall-item figcaption span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wall-more{min-height:40px;text-align:center;color:var(--muted);font-size:13px;padding:18px 0}
+    .wall-modal{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:18px}.wall-modal[hidden]{display:none}.wm-bg{position:absolute;inset:0;background:rgba(0,0,0,.72)}.wm-card{position:relative;display:flex;width:min(1100px,100%);max-height:calc(100vh - 36px);background:var(--panel);border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+    .wm-img{position:relative;flex:1.5;min-width:0;display:flex;align-items:center;justify-content:center;background:#111}.wm-img img{max-width:100%;max-height:calc(100vh - 36px);object-fit:contain;display:block}.wm-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:56px;border:0;border-radius:10px;background:rgba(255,255,255,.18);color:#fff;font-size:28px;cursor:pointer}.wm-prev{left:10px}.wm-next{right:10px}.wm-nav:hover{background:rgba(255,255,255,.32)}
+    .wm-info{flex:1;min-width:260px;max-width:380px;padding:22px 22px 18px;overflow:auto}.wm-info h3{margin:0 0 14px;font-size:17px;line-height:1.4}.wm-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}.wm-kv span{color:var(--muted);white-space:nowrap}.wm-kv b{font-weight:700;text-align:right;word-break:break-all}.wm-acts{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+    .wm-x{position:absolute;top:10px;right:12px;z-index:3;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:22px;cursor:pointer;line-height:1}body.wall-lock{overflow:hidden}
+    @media (max-width:720px){.wall-cols,.wall-col{gap:10px}.wm-card{flex-direction:column;overflow:auto}.wm-img{flex:none}.wm-img img{max-height:55vh}.wm-info{max-width:none;min-width:0}}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -1667,15 +1677,94 @@ window.emcQuotes=[
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
+      {k:'wall',label:'作品牆',title:'作品牆',ok:()=>loggedIn(),svg:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn(),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
       {k:'archive',label:'歷史庫',title:'歷史資料庫管理',ok:()=>loggedIn()&&acc('page.archive',isAdminAcct()||isMachi0())&&acc('archive.edit',isAdminAcct()||isMachi0()),svg:'<path d="M3.5 7.5h17v3h-17zM5 10.5V19h14v-8.5M10 14h4"/>'},
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'}
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length:0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length:0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
+    const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
+    function wallBuild(){
+      const ok=new Map(allRows().map(r=>[idKey(r),r])),seen=new Set(),items=[];
+      for(const [id,recs] of state.mods){
+        const row=ok.get(id);if(!row)continue;
+        for(const rec of recs){
+          let list=[];try{list=JSON.parse(rec['圖片連結']||'[]')}catch(err){}
+          if(!Array.isArray(list))continue;
+          for(const im of list){
+            const url=String(im&&im.url||''),name=String(im&&im.fileName||'');
+            if(!/^https?:\/\//.test(url)||!(WALL_IMG.test(name)||WALL_IMG.test(url.split('?')[0]))||seen.has(url))continue;
+            seen.add(url);
+            items.push({id,row,name,thumb:url.replace(/=w\d+$/,'=w480'),full:url.replace(/=w\d+$/,'=w1600'),round:+rec['修改次數']||0,date:String(rec['圖片更新時間']||rec['修改日期']||rec['建立日期']||'').slice(0,10)});
+          }
+        }
+      }
+      return items;
+    }
+    function wallShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+    function renderWallPage(){
+      if(!loggedIn()){$('stage').innerHTML='<div class="page"><h2 class="page-title">作品牆</h2><p class="page-sub">請先登入後再瀏覽作品牆。</p></div>';return}
+      if(!state.wallItems){state.wallItems=wallShuffle(wallBuild());state.wallShown=0;state.wallDesigner=''}
+      const designers=[...new Set(state.wallItems.map(i=>String(i.row['設計負責人']||'').trim()).filter(Boolean))];
+      $('stage').innerHTML='<div class="page wall-page"><div class="page-top"><div><h2 class="page-title">作品牆</h2><p class="page-sub">設計師備份的圖片素材，隨機排列；點圖片查看案件細節。</p></div><div class="wall-tools"><select id="wallDesigner" aria-label="依設計師篩選"><option value="">全部設計師</option>'+designers.map(n=>'<option'+(n===state.wallDesigner?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select><button type="button" class="btn" data-wall-shuffle>重新排序</button><span class="wall-count" id="wallCount"></span></div></div><div class="wall-cols" id="wallCols"></div><div class="wall-more" id="wallMore"></div></div>';
+      wallLayout();
+    }
+    function wallList(){return state.wallItems.filter(i=>!state.wallDesigner||String(i.row['設計負責人']||'').trim()===state.wallDesigner)}
+    function wallLayout(){
+      const box=$('wallCols');if(!box)return;
+      const w=box.clientWidth||innerWidth,n=Math.max(2,Math.min(6,Math.floor(w/230)));
+      box.innerHTML=Array.from({length:n},()=>'<div class="wall-col"></div>').join('');
+      state.wallShown=0;wallMore();
+    }
+    function wallMore(){
+      const box=$('wallCols');if(!box||state.view!=='wall')return;
+      const list=wallList(),cols=[...box.children],slice=list.slice(state.wallShown,state.wallShown+WALL_PAGE);
+      slice.forEach((it,k)=>{
+        const col=cols.reduce((a,b)=>b.offsetHeight<a.offsetHeight?b:a,cols[0]),idx=state.wallShown+k;
+        const fig=document.createElement('figure');fig.className='wall-item';fig.dataset.wall=String(idx);fig.tabIndex=0;fig.setAttribute('role','button');
+        fig.innerHTML='<img loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="'+esc(it.name)+'" src="'+esc(it.thumb)+'"><figcaption><b>'+esc(it.id)+'</b><span>'+esc((it.row['客戶別']||'')+' '+(it.row['專案名稱']||''))+'</span></figcaption>';
+        const img=fig.querySelector('img');img.addEventListener('load',()=>fig.classList.add('is-in'));img.addEventListener('error',()=>fig.remove());
+        col.appendChild(fig);
+      });
+      state.wallShown+=slice.length;
+      const c=$('wallCount');if(c)c.textContent=list.length.toLocaleString('zh-TW')+' 張';
+      const more=$('wallMore');if(more){more.textContent=state.wallShown<list.length?'':(list.length?'已經到底了':'目前沒有可顯示的圖片');wallObserve()}
+    }
+    function wallObserve(){
+      const more=$('wallMore');if(!more||!('IntersectionObserver' in window))return;
+      if(state.wallIO)state.wallIO.disconnect();
+      state.wallIO=new IntersectionObserver(es=>{if(es.some(e=>e.isIntersecting)&&state.view==='wall'){const list=wallList();if(state.wallShown<list.length)wallMore()}},{rootMargin:'600px'});
+      state.wallIO.observe(more);
+    }
+    function wallOpen(i){
+      const list=wallList(),it=list[i];if(!it)return;state.wallIdx=i;
+      let m=$('wallModal');if(!m){m=document.createElement('div');m.id='wallModal';m.className='wall-modal';document.body.appendChild(m)}
+      const r=it.row,st=statusOf(r),kv=(k,v)=>v?'<div class="wm-kv"><span>'+k+'</span><b>'+v+'</b></div>':'';
+      const roundLabel=it.round===0?'初稿':(it.round<=10?NUM_ZH[it.round]:it.round)+'修';
+      m.innerHTML='<div class="wm-bg" data-wall-close></div><div class="wm-card" role="dialog" aria-modal="true"><button type="button" class="wm-x" data-wall-close aria-label="關閉">×</button><div class="wm-img"><button type="button" class="wm-nav wm-prev" data-wall-step="-1" aria-label="上一張">‹</button><img referrerpolicy="no-referrer" alt="'+esc(it.name)+'" src="'+esc(it.full)+'"><button type="button" class="wm-nav wm-next" data-wall-step="1" aria-label="下一張">›</button></div><div class="wm-info"><h3>'+esc((r['客戶別']||'')+'｜'+(r['專案名稱']||''))+'</h3>'
+        +kv('案件編號',esc(it.id))+kv('狀態','<span class="lt-status '+st.cls+'">'+esc(st.label)+'</span>')+kv('設計種類／階段',esc([r['設計種類']||r['設計類型'],r['階段']].filter(Boolean).join('／')))+kv('設計負責人',esc(r['設計負責人']||''))+kv('專案負責人',esc(r['專案負責人']||''))+kv('版次',esc(roundLabel))+kv('數量',esc(r['數量']||''))+kv('開始～結束',esc([r['開始日期'],r['結束日期']].filter(Boolean).join(' ～ ')))+kv('備份日期',esc(it.date))+kv('檔名',esc(it.name))
+        +'<div class="wm-acts"><button type="button" class="btn primary" data-wall-case="'+esc(it.id)+'">查看案件</button><a class="btn" href="'+esc(it.full)+'" target="_blank" rel="noopener noreferrer">開啟原圖</a></div></div></div>';
+      m.hidden=false;document.body.classList.add('wall-lock');
+    }
+    function wallClose(){const m=$('wallModal');if(m)m.hidden=true;document.body.classList.remove('wall-lock')}
+    function wallStep(d){const n=wallList().length;if(!n)return;wallOpen((state.wallIdx+d+n)%n)}
+    document.addEventListener('click',e=>{
+      const t=e.target;if(!t.closest)return;
+      const fig=t.closest('[data-wall]');if(fig){wallOpen(+fig.dataset.wall);return}
+      if(t.closest('[data-wall-close]')){wallClose();return}
+      const st=t.closest('[data-wall-step]');if(st){wallStep(+st.dataset.wallStep);return}
+      const cs=t.closest('[data-wall-case]');if(cs){const id=cs.dataset.wallCase;wallClose();state.detailId=id;state.editing=false;show('detail');return}
+      if(t.closest('[data-wall-shuffle]')){state.wallItems=wallShuffle(wallBuild());wallLayout();return}
+    });
+    document.addEventListener('change',e=>{if(e.target&&e.target.id==='wallDesigner'){state.wallDesigner=e.target.value;wallLayout()}});
+    document.addEventListener('keydown',e=>{const m=$('wallModal');if(m&&!m.hidden){if(e.key==='Escape')wallClose();else if(e.key==='ArrowRight')wallStep(1);else if(e.key==='ArrowLeft')wallStep(-1)}else if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.wall!==undefined)wallOpen(+e.target.dataset.wall)});
+    window.addEventListener('resize',()=>{if(state.view==='wall'){clearTimeout(state.wallRz);state.wallRz=setTimeout(()=>{const box=$('wallCols');if(box){const n=Math.max(2,Math.min(6,Math.floor((box.clientWidth||innerWidth)/230)));if(n!==box.children.length)wallLayout()}},250)}});
     function openExt(k){
       if(k==='owner'){openOwner();return}
+      if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
@@ -1684,11 +1773,11 @@ window.emcQuotes=[
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){const pv=state.view;if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
+      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
-      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
 
