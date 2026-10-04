@@ -97,7 +97,14 @@
 var sec=document.querySelector('.level-table-section'),side=document.querySelector('aside');if(!sec||!side)return;
 var d=document.createElement('details');d.className='tool-section level-setting';var s=document.createElement('summary');s.textContent='等級一覽表設定';d.appendChild(s);
 var box=document.createElement('div');box.className='level-setting-body';while(sec.firstChild)box.appendChild(sec.firstChild);d.appendChild(box);
-var p=side.querySelector('.privacy');side.insertBefore(d,p||null);sec.remove();})();
+var p=side.querySelector('.privacy');side.insertBefore(d,p||null);sec.remove();
+/* 角色工具欄：下架「現在的心情」，順序＝目前狀態＞造型＞動作＞分享音樂＞限時動態＞想說的話（音樂原本包在心情那一區，拆出來獨立一區） */
+var $=function(i){return document.getElementById(i)},up=function(e){return e&&e.closest('.tool-section')};
+var tools=$('tools'),moodSec=up($('moods')),music=document.createElement('section');
+if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
+ if($('musicToggle'))music.appendChild($('musicToggle'));if($('musicPanel'))music.appendChild($('musicPanel'));
+ moodSec.style.display='none';
+ [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
 </script>
   <script src="app.js?v=109" fetchpriority="high"></script>
 </body>
