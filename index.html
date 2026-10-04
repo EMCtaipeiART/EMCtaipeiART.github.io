@@ -301,6 +301,12 @@
     .progress-track{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
     .progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a3e635 0%,#facc15 50%,#f97316 100%);background-repeat:no-repeat;transition:width .4s ease}
     
+    .card.is-open{cursor:default}
+    .card-detail{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);cursor:default;text-align:left;font-weight:400}
+    .card-detail .detail-grid{grid-template-columns:1fr!important}
+    .card-detail .detail-sec h3{font-size:14px}
+    .card-detail .detail-actions{margin-top:12px}
+    .card-qtywrap{align-self:center}.card-qty{display:inline-flex;align-items:center;min-height:30px}
     .card-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 10px;margin-top:12px}
     .faces{display:flex;align-items:center}
     .face{position:relative;width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);background:var(--brand-soft);display:grid;place-items:center;overflow:hidden;font-size:12px;font-weight:900;color:var(--brand-deep)}
@@ -1256,6 +1262,23 @@ window.emcQuotes=[
     const musicIcon=(on,loading)=>loading?'<svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.5" cy="8" r="1.3"/></svg>':on?'<svg viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="2.2" height="7" rx=".6"/><rect x="9.3" y="4.5" width="2.2" height="7" rx=".6"/></svg>':'<svg viewBox="0 0 16 16"><path d="M6.2 4.8v6.4L11.3 8z"/></svg>';
     function marqueeTeam(){document.querySelectorAll('.member-music .mm-track,.member-say .ms-track').forEach(t=>{const w=t.classList.contains('mm-track')?48:t.parentElement.clientWidth,d=t.scrollWidth-w;if(d>2){t.style.setProperty('--md',d+'px');t.style.setProperty('--mt',Math.max(4,d/28+2)+'s');t.classList.add('is-marquee')}else t.classList.remove('is-marquee')})}
     {const o=renderTeam;renderTeam=function(){o.apply(this,arguments);setTimeout(marqueeTeam,60)}}
+    /* 點卡牌：卡牌往下展開顯示完整內容（含修改紀錄），再點一次收起 */
+    state.openCases=new Set();
+    function fillCardDetail(card){
+      const id=card.dataset.case,row=allRows().find(r=>idKey(r)===id);if(!row)return;
+      let box=card.querySelector(':scope > .card-detail');if(!box){box=document.createElement('div');card.appendChild(box)}
+      renderDetail(box,row);card.classList.add('is-open');card.setAttribute('aria-expanded','true');
+    }
+    function toggleCardOpen(card){
+      const id=card.dataset.case;
+      if(state.openCases.has(id)){state.openCases.delete(id);card.classList.remove('is-open');card.removeAttribute('aria-expanded');card.querySelector(':scope > .card-detail')?.remove();return}
+      state.openCases.add(id);fillCardDetail(card);
+    }
+    document.addEventListener('click',e=>{const cd=e.target.closest?.('.card-detail');if(cd){const c=cd.closest('[data-case]');if(c)state.detailId=c.dataset.case}},true);
+    function restoreOpenCards(){
+      if(!state.openCases.size)return;
+      document.querySelectorAll('div.card[data-case]').forEach(c=>{if(state.openCases.has(c.dataset.case))fillCardDetail(c)});
+    }
     function setOpen(member,open){document.querySelectorAll('.member.is-open').forEach(el=>{if(el!==member)el.classList.remove('is-open')});if(member)member.classList.toggle('is-open',open);if(open)ensureArchive()}
     function bindTeam(){
       const team=$('team');
@@ -3139,10 +3162,10 @@ window.emcQuotes=[
       </div>`;
       updateRangeButtons();
     }
-    function renderDetail(){
-      const row=allRows().find(r=>idKey(r)===state.detailId),stage=$('stage');if(!row){backToBoard();return}
-      if(state.editing&&state.editRow){renderEdit(row);return}
-      state.lb=[];
+    function renderDetail(target,inlineRow){
+      const row=inlineRow||allRows().find(r=>idKey(r)===state.detailId),stage=target||$('stage');if(!row){backToBoard();return}
+      if(!target&&state.editing&&state.editRow){renderEdit(row);return}
+      if(!target)state.lb=[];else state.lb=state.lb||[];
       const st=statusOf(row),s=schedule(row),status=String(row['狀態']||'').trim(),mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+a['修改次數']||0)-(+b['修改次數']||0));
       const ed=isDesignerSession(),editAttr=f=>ed?` lt-edit" data-edit="${f}`:'';
       const kv=(label,value,raw)=>`<div class="kv"><dt>${label}</dt><dd>${raw?value:esc(value||'-')}</dd></div>`;
@@ -3161,6 +3184,7 @@ window.emcQuotes=[
         <div class="detail-sec"><h3>修改紀錄</h3>${mods.length?mods.map(mod=>{const no=+mod['修改次數']||0,imgs=imageList(mod),li=(state.lb.push(imgs),state.lb.length-1);return `<div class="rev"><div class="rev-head"><span class="rev-no">${no===0?'初稿':`第 ${no} 輪修改`}</span><span class="rev-meta">${esc(mod['修改日期']||mod['建立日期']||'')}${mod['修改人']?`｜${esc(mod['修改人'])}`:''}${mod['確認修正日']&&no>0?`｜已確認修正 ${esc(mod['確認修正日'])}`:''}</span></div><div class="rev-text">${esc(mod['修改內容']||'')}</div>${imgs.length?`<div class="thumbs">${imgs.slice(0,24).map((i,n)=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}" aria-label="放大預覽 ${esc(i.fileName||'設計圖')}，點擊開啟原圖"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>'}</div>
         <div class="detail-actions">${["mail","actions"].map(k=>COL_DEFS.find(c=>c.key===k).cell(row,ed).replace(/^<td>|<\/td>$/g,"")).join("")}</div>
       </div>`;
+      if(target){target.querySelector('.page-top')?.remove();target.querySelector('.detail-head')?.remove();target.querySelector('.page')?.classList.replace('page','card-detail')}
     }
 
     /* ---------- 登入（沿用現行系統的登入：開新視窗到 index.html 完成，共用同一份登入狀態） ---------- */
@@ -3326,7 +3350,7 @@ window.emcQuotes=[
       const thSort=t.closest('th[data-col]');if(thSort&&!t.closest('.col-resize')&&state.view!=='settings'){toggleSort(thSort.dataset.col);return}
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
       if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));state.filters.months.add(p.year+'/'+p.month)}state.latestLimit=LATEST_PAGE;rerenderList();return}
-      const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){state.detailId=card.dataset.case;state.editing=false;show('detail');return}
+      const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){if(t.closest('.card-detail'))return;if(card.matches('div.card')){toggleCardOpen(card);return}state.detailId=card.dataset.case;state.editing=false;show('detail');return}
       const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
@@ -3460,7 +3484,8 @@ window.emcQuotes=[
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}loadDatabase(true)},6000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
-    {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}}}
+    {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}}}
+    {const o=renderBoard;renderBoard=function(){o.apply(this,arguments);try{restoreOpenCards()}catch(e){}}}
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
