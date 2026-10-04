@@ -92,18 +92,18 @@
     .avatar-btn:hover,.avatar-btn:focus-visible{transform:translateY(-4px);box-shadow:0 16px 30px rgba(0,0,0,.24);outline:none}
     .avatar-clip{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#fff;display:grid;place-items:center}
     .avatar-clip img.head.pix{width:100%;height:100%;margin-top:0;object-fit:cover}
-    .member-say{display:block;position:relative;margin:0 auto 2px;width:132px;padding:5px 10px;border-radius:12px;background:rgba(255,255,255,.82);backdrop-filter:blur(2px);color:#17211d;font-size:11px;font-weight:800;line-height:1.35;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.16)}
+    .member-say{display:block;position:relative;box-sizing:border-box;margin:0 auto 4px;width:84px;padding:4px 8px;border-radius:12px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#0b2a1a;font-size:11px;font-weight:800;line-height:1.35;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.14)}
     .member-say .ms-win{display:block;overflow:hidden;white-space:nowrap}.member-say .ms-track{display:inline-block}.member-say .ms-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
-    .member-say::after{content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;background:rgba(255,255,255,.82);transform:translateX(-50%) rotate(45deg)}
-    .member-music{display:flex;align-items:center;gap:6px;margin:2px auto 0;width:132px;max-width:150px;padding:4px 10px 4px 7px;border-radius:99px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.6);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
+    .member-say::after{content:"";position:absolute;left:50%;bottom:-5px;width:9px;height:9px;background:rgba(255,255,255,.4);border-right:1px solid rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.55);transform:translateX(-50%) rotate(45deg)}
+    .member-music{display:flex;align-items:center;gap:5px;box-sizing:border-box;margin:2px auto 0;width:84px;padding:3px 8px 3px 4px;border-radius:99px;background:rgba(255,255,255,.28);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);color:#fff;font:inherit;font-size:11px;font-weight:800;cursor:pointer;text-align:left}
     .member-music:hover{background:rgba(255,255,255,.32)}.member-music.is-playing{background:#fff;color:var(--brand-deep);border-color:#fff}
-    .member-music .mm-ic{flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.28);line-height:0}
-    .member-music .mm-ic svg{width:12px;height:12px;display:block;fill:currentColor}.member-music.is-playing .mm-ic{background:var(--brand-soft)}
+    .member-music .mm-ic{flex:0 0 auto;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.28);line-height:0}
+    .member-music .mm-ic svg{width:11px;height:11px;display:block;fill:currentColor}.member-music.is-playing .mm-ic{background:var(--brand-soft)}
     .member-music .mm-win{min-width:0;flex:1;overflow:hidden;white-space:nowrap}
     .member-music .mm-track{display:inline-block}
     .member-music .mm-track.is-marquee{animation:mmScroll var(--mt,8s) linear infinite alternate}
     @keyframes mmScroll{0%,12%{transform:translateX(0)}88%,100%{transform:translateX(calc(var(--md,0px) * -1))}}
-    .team{align-items:flex-start}.member-say-ph{display:block;height:31px}
+    .team{align-items:flex-start}.member-say-ph{display:block;height:30px}
     .avatar-clip img.head{width:112%;height:auto;margin-top:18%}
     .avatar-clip img.head.is-short{width:96%;margin-top:6%}
     .avatar-clip img.status-icon{width:66%;height:66%;object-fit:contain}
@@ -544,6 +544,7 @@
       .prompt-go{flex:1 1 100%}
       .team{gap:18px 14px}
       .member{width:76px}
+      .member-say,.member-music{width:68px}
       .avatar-btn{width:68px;height:68px}
       .hover-card{width:230px}
       .stage-wrap{padding:26px 16px 40px}
