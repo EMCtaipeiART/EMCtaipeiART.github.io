@@ -564,6 +564,8 @@
     .wm-x{position:absolute;top:10px;right:12px;z-index:3;width:34px;height:34px;border:0;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:22px;cursor:pointer;line-height:1}body.wall-lock{overflow:hidden}
     @media (max-width:720px){.wall-cols,.wall-col{gap:10px}.wm-card{flex-direction:column;overflow:auto}.wm-img{flex:none}.wm-img img{max-height:55vh}.wm-info{max-width:none;min-width:0}}
 .column-head[draggable="true"]{cursor:grab}.column.col-dragging{opacity:.5}.column.col-over-l{box-shadow:inset 4px 0 0 var(--brand)}.column.col-over-r{box-shadow:inset -4px 0 0 var(--brand)}
+.owner-search{margin-left:auto;min-width:240px}.owner-search input{width:100%}
+    @media (max-width:720px){.owner-search{margin-left:0;width:100%;min-width:0}}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -2976,9 +2978,11 @@ window.emcQuotes=[
     async function markLatestRoundDone(id){try{const list=state.mods.get(id)||[],last=list.reduce((m,x)=>Math.max(m,+x['修改次數']||0),0);if(last<=0)return;const rec=list.find(x=>(+x['修改次數']||0)===last);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(id,last,true)}catch(err){toast(`自動標記修改完成失敗：${err.message}`,true)}}
     async function afterDesignerSend(d,imgs){
       const round=d.dr?d.dr.round:null;
+      { /* 狀態先改（不等圖片備份與確認標記，那些比較慢），案件馬上變「過稿中」 */
+        const row0=allRows().find(r=>idKey(r)===d.id);if(row0&&String(row0['狀態']||'').trim()!=='過稿中')applyMove(d.id,'過稿中');
+      }
       try{if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
       if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
-      const row=allRows().find(r=>idKey(r)===d.id);if(row&&String(row['狀態']||'').trim()!=='過稿中')applyMove(d.id,'過稿中');
       refreshView();
     }
 
@@ -3166,6 +3170,19 @@ window.emcQuotes=[
     function ownerItemsHtml(items){
       return items.length?items.map(r=>{const id=esc(idKey(r));return `<div class="op-item"><label class="op-check"><input type="checkbox" data-op-check value="${id}"><span class="op-main"><b>${esc(r['客戶別']||'未填客戶')}｜${esc(r['專案名稱']||'未填專案')}</b><small>${id}｜設計師 ${esc(r['設計負責人']||'未指定')}｜${esc(r['開始日期']||'-')}-${esc(r['結束日期']||'-')}</small><span class="op-label">客戶已確認完成</span></span></label><button type="button" class="op-btn" data-op-detail="${id}">查看詳情</button><button type="button" class="op-btn warn" data-op-modify="${id}">需要修改</button></div>`}).join(''):'<div class="empty">目前沒有過稿中的案件需要確認</div>';
     }
+    /* 「您的案件進度」整頁的搜尋：編號、客戶別、專案名稱、設計師、日期 */
+    function ownerFilter(items){
+      const q=String(state.ownerQuery||'').trim().toLowerCase();if(!q)return items;
+      return items.filter(r=>[idKey(r),r['客戶別'],r['專案名稱'],r['設計負責人'],r['開始日期'],r['結束日期']].some(v=>String(v||'').toLowerCase().includes(q)));
+    }
+    document.addEventListener('input',e=>{
+      if(!e.target||e.target.id!=='ownerSearch'||state.view!=='owner')return;
+      state.ownerQuery=e.target.value;const list=$('opPList');if(!list)return;
+      const keep=new Set([...list.querySelectorAll('[data-op-check]:checked')].map(i=>i.value));
+      const shown=ownerFilter(ownerRows());
+      list.innerHTML=shown.length?ownerItemsHtml(shown):'<div class="empty">沒有符合的案件</div>';
+      list.querySelectorAll('[data-op-check]').forEach(i=>{if(keep.has(i.value))i.checked=true});syncOwnerSel();
+    });
     const ownerSubText=n=>n?`您有 ${n} 個案件正在過稿中。客戶確認完成的請勾選，按「確認送出」會直接改為已完成；客戶要調整的請按「需要修改」填寫修改需求。`:'';
     /* 彈窗版（只有每天第一次進站的提醒使用）與整頁版（左側「進度」）共用同一份清單 */
     function renderOwnerList(){
@@ -3176,7 +3193,7 @@ window.emcQuotes=[
       const stage=$('stage');
       if(!loggedIn()){stage.innerHTML='<div class="page"><h2 class="page-title">您的案件進度</h2><div class="notice error" role="alert">請先登入後再查看案件進度。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>';return}
       const items=ownerRows();
-      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">您的案件進度</h2><p class="page-sub">${esc(ownerSubText(items.length)||'目前沒有過稿中的案件需要確認。')}</p></div></div><div class="op-list op-page-list" id="opPList">${ownerItemsHtml(items)}</div><div class="form-actions"><button type="button" class="btn primary" id="opPSubmit" disabled>確認送出</button></div></div>`;
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">您的案件進度</h2><p class="page-sub">${esc(ownerSubText(items.length)||'目前沒有過稿中的案件需要確認。')}</p></div><label class="search owner-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="ownerSearch" type="search" placeholder="搜尋編號、客戶、專案、設計師" value="${esc(state.ownerQuery||'')}" aria-label="搜尋案件進度"></label></div><div class="op-list op-page-list" id="opPList">${ownerItemsHtml(ownerFilter(items))}</div><div class="form-actions"><button type="button" class="btn primary" id="opPSubmit" disabled>確認送出</button></div></div>`;
       syncOwnerSel();
     }
     function syncOwnerSel(){
