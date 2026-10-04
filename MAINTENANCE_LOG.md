@@ -350,3 +350,5 @@
 - 2026-10-04: afterDesignerSend now moves the case to 過稿中 first (parallel with image backup/confirm); 您的案件進度 page has a search box (編號/客戶/專案/設計師/日期).
 
 - 2026-10-04: Card: top-right now a coloured status pill (lt-status); 發信/回信/串接/編輯/刪除 buttons moved under 項目細節 in the expanded card with Chinese labels (cardActsHtml).
+
+- 2026-10-04: Case detail page: removed top-right 編輯案件 button; bottom-left 回信/編輯/刪除 buttons enlarged to the same size (36px, 14px font).

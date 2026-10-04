@@ -772,6 +772,7 @@
     .chip-r.is-hidden{display:none}
     .chip-more{height:28px;padding:0 12px;border-radius:99px;border:1px dashed var(--brand);background:transparent;color:var(--brand-deep);font-size:13px;font-weight:800;cursor:pointer}
     #contactBody .cu-checks{padding-bottom:10px}
+    .detail-actions .lt-act{width:auto;height:auto;min-height:36px;padding:0 18px;font-size:14px;border-radius:12px;gap:6px;justify-content:center}.detail-actions .lt-act span{display:inline}.detail-actions .lt-act svg{width:16px;height:16px}
     .detail-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
       /* v5 thread 11px；簽名檔表格不折行跑版、連結改回黑字 */
     .th-card .th-body{font-size:12px;font-weight:700;line-height:1.6}
@@ -3417,7 +3418,7 @@ window.emcQuotes=[
       const supp=[['設計簡報','設計簡報說明','設計簡報連結'],['客戶素材','客戶素材說明','客戶素材連結'],['參考範例','參考範例說明','參考範例連結'],['其他','其他說明','其他連結']].filter(([,n,u])=>(row[n]||row[u])&&canSeeSupp(row));
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button></div>
-        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span><button type="button" class="btn" data-act="edit" style="min-height:36px;padding:0 18px;font-size:14px;border-radius:12px">編輯案件</button></div></div>
+        <div class="detail-head"><div><div class="card-top" style="margin-bottom:6px"><span class="id-pill">${esc(idKey(row))}</span><span class="client-text">${esc(row['客戶別']||'')}</span></div><h2 class="page-title">${esc(row['專案名稱']||'未填專案名稱')}</h2></div><div class="edit-actions"><span class="lt-status ${st.cls}${editAttr('status')}">${esc(st.label)}</span></div></div>
         ${['執行中','修改中'].includes(status)?`<div class="progress${s.late?' is-late':''}" style="max-width:420px"><div class="progress-label"><span>進度</span><span>${s.percent}%｜${esc(countdownText(s))}</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
