@@ -1927,7 +1927,7 @@ window.emcQuotes=[
     const isAdminUser=()=>permissionRole()==='管理者';
     const isMachiUser=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi';
     const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部/.test(sessionDept());
-    const nameLocked=()=>!isAdminUser()&&!isMachiUser()&&SET_LOCKED_DEPT.test(sessionDept());
+    const nameLocked=()=>!isAdminUser()&&!isMachiUser()&&(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
     function normTemplates(value,def){
       let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
       const entries=Array.isArray(src)?src.map(i=>[String(i?.name||'').trim(),String(i?.content||i?.text||'').trim()]):(src&&typeof src==='object'?Object.entries(src).map(([k,v])=>[String(k).trim(),String(v??'').trim()]):[]);
@@ -1987,7 +1987,7 @@ window.emcQuotes=[
       return `<details class="set-card" data-set-sec="profile"${sectionOpen('profile')}><summary><b>個人設定</b><span>頭像與顯示名稱</span></summary>
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input" id="setDisplayName" maxlength="40" value="${esc(st2.display||name)}"${locked?' readonly':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
-        <p class="set-note">更換頭像請到現行系統的個人設定（需要上傳圖片）。</p>
+        ${locked?'<p class="set-note">設計師的頭像與顯示名由管理者統一設定，不能自行更換。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -2699,10 +2699,23 @@ window.emcQuotes=[
       $('upTitle').textContent=`${id}．${roundLabel(round)}設計圖上傳`;
       const fr=$('upFrame');fr.credentialless=true;fr.referrerPolicy='no-referrer';fr.src=url.toString();$('upModal').hidden=false;
     }
-    function closeUp(){const fr=$('upFrame');$('upModal').hidden=true;if(fr)fr.src='about:blank';hideBadge('upBadge');up.nonce='';up.inflight=false}
+    function openAvatarUpload(){
+      if(!loggedIn()||nameLocked())return;
+      Object.assign(up,{nonce:uuid(),id:'',round:0,skip:false,inflight:false,last:null,avatar:true});
+      const url=new URL(UPLOAD_PAGE);url.searchParams.set('mode','user');url.searchParams.set('account',selfAccount());url.searchParams.set('closeNonce',up.nonce);
+      url.hash=new URLSearchParams({token:session().token}).toString();
+      $('upTitle').textContent='設定我的頭像';
+      const fr=$('upFrame');fr.credentialless=true;fr.referrerPolicy='no-referrer';fr.src=url.toString();$('upModal').hidden=false;
+    }
+    function closeUp(){up.avatar=false;const fr=$('upFrame');$('upModal').hidden=true;if(fr)fr.src='about:blank';hideBadge('upBadge');up.nonce='';up.inflight=false}
     window.addEventListener('message',ev=>{
       const data=ev.data;if(!data||typeof data!=='object'||typeof data.type!=='string')return;
       if(data.type==='machi-nas-folder-picker-ready'){clearTimeout(nas.readyTimer);nas.readyHost=String(data.host||ev.origin||'');if(nas.readyHost)try{localStorage.setItem(NAS_MEM,JSON.stringify({host:nas.readyHost,at:Date.now()}))}catch(e){}return}
+      if(data.type==='machi-user-avatar-updated'){
+        if(!up.nonce||!up.avatar||data.closeNonce!==up.nonce)return;
+        const u=String(data.imageUrl||data.url||'').trim();closeUp();if(u.startsWith('http'))st2.avatar=u;
+        toast('頭像已更新');loadUserSettings(true).then(()=>{renderLogin();if(state.view==='settings')renderSettings()});renderLogin();if(state.view==='settings')renderSettings();return;
+      }
       if(data.type==='machi-case-design-upload-progress'){
         if(!up.nonce||data.closeNonce!==up.nonce)return;
         const done=Number(data.done)||0,total=Number(data.total)||0,was=up.inflight;up.inflight=true;
@@ -2751,6 +2764,7 @@ window.emcQuotes=[
         return;
       }
       if(t.closest?.('[data-dr-close]')||t.id==='drModal'){$('drModal').hidden=true;state.drChoice=null;return}
+      if(t.closest?.('[data-avatar-upload]')){openAvatarUpload();return}
       if(t.closest?.('[data-up="min"]')){$('upModal').hidden=true;if(up.nonce)showBadge('upBadge','設計圖上傳視窗已縮小（點此還原）');return}
       if(t.closest?.('[data-up="close"]')){if(up.inflight&&!confirm('上傳進行中，確定要關閉嗎？已上傳成功的圖片會保留。'))return;closeUp();return}
       if(t.closest?.('#upBadge')&&up.nonce&&!up.inflight){$('upModal').hidden=false;hideBadge('upBadge');return}
