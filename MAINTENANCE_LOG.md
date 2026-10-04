@@ -316,3 +316,5 @@
 - 2026-10-04: Settings: designers see the pixel-office avatar in 個人設定; Worker saveUserSettings now ignores avatar/displayName from non-admin designer accounts. Worker redeployed.
 
 - 2026-10-04: Home designer avatars ordered by 設計列表 輪值 (rotation, 平面 before 影音 on ties): Anna, Noise, Amber, Machi, Leona; applyDesignerOrder() re-sorts after db load.
+
+- 2026-10-04: Universe page: loading overlay (spinner + 正在進入凱曜多元宇宙) over the iframe until the pixel office is ready (max 10s).

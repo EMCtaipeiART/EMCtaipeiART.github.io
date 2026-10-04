@@ -552,6 +552,9 @@
     .uni-page{max-width:none;margin:0 auto}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
     .stage-wrap.uni{max-width:none;padding:0 0 24px}.uni-page{width:100%}.uni-page .page-top{width:min(720px,100%);margin:0 auto;padding:14px 0 8px;box-sizing:border-box;justify-content:center;text-align:center}.uni-page .page-top>div:first-child{text-align:center}.uni-page.is-edit .page-top{width:min(1280px,100%)}.uni-page.is-edit .uni-frame{width:min(1280px,100%);aspect-ratio:auto;height:calc(100vh - 150px);min-height:620px}
     @media (max-width:720px){.uni-page.is-edit .uni-frame{height:calc(100vh - 200px);min-height:600px}.uni-page .page-top{padding:10px 12px 6px;box-sizing:border-box}.uni-page .page-sub{font-size:12.5px}}
+    .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
+    .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
+    .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
     .uni-frame{display:block;width:min(796px,100%);margin:0 auto;aspect-ratio:796/616;height:auto;min-height:340px;border:0;border-radius:0;background:transparent}
     .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
     .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
@@ -1351,7 +1354,16 @@ window.emcQuotes=[
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=66':UNI_URL+'?embed=1&pad=.72&v=63';
-      $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(canEditUniverse()?'<button type="button" class="btn'+(edit?'':' primary')+'" data-uni-edit>'+(edit?'完成編輯':'編輯')+'</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe></div>';
+      $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(canEditUniverse()?'<button type="button" class="btn'+(edit?'':' primary')+'" data-uni-edit>'+(edit?'完成編輯':'編輯')+'</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
+      watchUniLoading();
+    }
+    /* 進入多元宇宙的過場：蓋住還在載入的像素辦公室，場景準備好（或最久 10 秒）就淡出 */
+    function watchUniLoading(){
+      const fr=$('uniFrame'),ov=$('uniLoading');if(!fr||!ov)return;
+      const t0=Date.now();let done=false;
+      const finish=()=>{if(done)return;done=true;clearInterval(iv);ov.classList.add('is-done');setTimeout(()=>ov.remove(),500)};
+      const ready=()=>{try{const d=fr.contentDocument,l=d&&d.getElementById('loading');return Boolean(d&&d.readyState==='complete'&&l&&l.hidden)}catch(err){return false}};
+      const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){state.uniEdit=false;state.home='board';show('board');return}});
