@@ -492,6 +492,8 @@
     .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
 
     /* 凱躍多元宇宙（舊版像素辦公室） */
+    .uni-page{max-width:1200px}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
+    .uni-frame{display:block;width:100%;height:calc(100vh - 170px);min-height:520px;border:1px solid var(--line);border-radius:16px;background:#eef8f2;margin-top:12px}
     .universe{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(10,20,14,.55)}
     .universe-card{width:min(1040px,100%);border-radius:22px;background:var(--panel);box-shadow:var(--shadow-lg);overflow:hidden}
     .universe-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
@@ -1221,8 +1223,18 @@ window.emcQuotes=[
       });
       document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(null,false);closeUniverse()}});
     }
-    function openUniverse(){const body=$('universeBody');if(!body.firstChild)body.innerHTML='<iframe class="universe-frame" src="EMC-ART-Pixel-Office/dist/?embed=1&amp;v=56" title="設計部即時狀態（像素辦公室）"></iframe>';$('universe').hidden=false;$('universeClose').focus()}
-    function closeUniverse(){const u=$('universe');if(!u.hidden){u.hidden=true;$('universeOpen')?.focus()}}
+    function openUniverse(){state.uniEdit=false;state.form=null;state.mail=null;state.editing=false;show('universe')}
+    function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
+    const UNI_URL='EMC-ART-Pixel-Office/dist/';
+    const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
+    function renderUniversePage(){
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?v=56':UNI_URL+'?embed=1&v=56';
+      $('stage').innerHTML='<div class="page uni-page"><div class="page-top"><div><h2 class="page-title">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(canEditUniverse()?'<button type="button" class="btn'+(edit?'':' primary')+'" data-uni-edit>'+(edit?'完成編輯':'編輯')+'</button>':'')+'<a class="btn" href="'+UNI_URL+'" target="_blank" rel="noopener">另開分頁</a></div></div><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe></div>';
+    }
+    document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
+      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage({type:'pixelOfficeViewer',name:loggedIn()?(session().name||session().user):'',token:loggedIn()?session().token:''},location.origin)}catch(err){}}
+      if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
     $('universeClose').addEventListener('click',closeUniverse);
     $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});
 
@@ -1535,9 +1547,9 @@ window.emcQuotes=[
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){state.tlLeft=null;
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='universe'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'));
       $('stage').classList.toggle('wide',view==='projects');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
       updateRail();
       if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
