@@ -298,3 +298,5 @@
 - 2026-10-04: CI fix: designer-panel-embed test regex for ensureLevels allows the avatars-mode guard. Workflow: compare failing tests vs last green commit before pushing.
 
 - 2026-10-04: Pixel office speed: non-embed (edit/clean) canvas scale cap 3->2 and redraw throttled to ~30fps when idle. app.js v=128; host iframes embed v=63, clean v=66, bridge v=15.
+
+- 2026-10-04: Story badge: white bubble, green outline, green dots; unread keeps yellow dot (no pulse/colour change).
