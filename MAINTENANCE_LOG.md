@@ -328,3 +328,5 @@
 - 2026-10-04: 作品牆 placeholder aspect-ratio 4/5 so columns balance before images load.
 
 - 2026-10-04: 用餐中 (lunch) status icon in avatar +10% (66% -> 72.6%).
+
+- 2026-10-04: lunch status icon nudged 5% right.
