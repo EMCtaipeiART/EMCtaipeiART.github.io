@@ -65,10 +65,13 @@ const SCENE_TOP_MIN=EMBED_ROW_TOP-158;
 const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
 let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
+let cleanTop=null;
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
-  const x0=424,x1=1112,y0=EMBED_ROW_TOP-158,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8,bw=x1-x0,bh=y1-y0;
+  let top=EMBED_ROW_TOP-158;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
+  cleanTop=top;
+  const x0=424,x1=1112,y0=top,y1=EMBED_ROW_BOTTOM+PLATE_TOP+PLATE_NAME_H+8,bw=x1-x0,bh=y1-y0;
   const scale=Number(new URLSearchParams(location.search).get('cs'))||w*.96/bw,cx=(x0+x1)/2;
   wrapEl.style.height=`${Math.round(bh*scale)}px`;
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
@@ -90,7 +93,7 @@ function fitEmbedView(){
   fitting=false;
 }
 function syncViewLayout(){
-  if(!embedMode){viewPeople=people;viewStations=stations;return;}
+  if(!embedMode){viewPeople=people;viewStations=stations;if(document.documentElement.classList.contains('clean')&&ready){let t=EMBED_ROW_TOP-158;try{t=Math.min(t,sceneTopExtent())}catch(error){}if(t!==cleanTop)fitCleanView();}return;}
   viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
   syncSceneTop();
