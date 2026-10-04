@@ -272,3 +272,5 @@
 - 2026-10-04: Mobile heat/lag fix: hidden avatar bridge iframe no longer redraws the pixel-office scene at 60fps (only when story viewer is open); avatar refresh 10s and paused when tab hidden; backdrop blur off on touch devices. app.js v=126, bridge v=13.
 
 - 2026-10-04: Card expand shows 項目細節 row: designers get "＋ 新增項目細節" (未執行) / "編輯" (other statuses) using the existing details popover.
+
+- 2026-10-04: Home avatars cached in localStorage (v5PixAvCache) so the last pixel-office heads show immediately on load.
