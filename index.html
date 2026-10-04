@@ -3677,7 +3677,25 @@ window.emcQuotes=[
     try{if(!session().token&&localStorage.getItem('designRequestEditorLoggedOut')!=='1'&&sessionStorage.getItem('designRequestEditorLoggedOut')!=='1'){const bk=JSON.parse(localStorage.getItem('v5SessionBackup')||'null');if(bk&&bk.designRequestEditorToken)for(const [k,v] of Object.entries(bk)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}}}}catch(err){}
     renderTeam();renderBoard();bindTeam();renderLogin();
     loadDatabase();loadOffice();
-    setInterval(()=>{if(!document.hidden)loadOffice()},60000);
+    /* 即時推送：後端（Durable Object）用 WebSocket 通知「人物狀態／對話框／音樂／限時動態有變」，收到就馬上重讀。
+       連線正常時備援輪詢拉長到 5 分鐘；斷線（或瀏覽器不支援）就維持每 60 秒。 */
+    let officeTick=0;
+    setInterval(()=>{if(document.hidden)return;officeTick+=1;if(!state.pushOk||officeTick%5===0)loadOffice()},60000);
+    (function pixelPush(){
+      if(!('WebSocket' in window))return;
+      let ws=null,pingT=0,retry=0;
+      const url=API.replace(/^http/i,'ws').replace(/\/api\/?$/,'')+'/ws';
+      function connect(){
+        if(ws&&ws.readyState<=1)return;
+        try{ws=new WebSocket(url)}catch(err){return}
+        ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
+        ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
+        ws.onclose=()=>{state.pushOk=false;clearInterval(pingT);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)))};
+        ws.onerror=()=>{try{ws.close()}catch(err){}};
+      }
+      connect();
+      document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(!ws||ws.readyState>1)connect();else loadOffice()}});
+    })();
     /* 背景刷新同舊網站：每 6 秒問一次（內容沒變走 304、沒有新版本就不動畫面）；打字、開著視窗／選單、編輯中、分頁在背景時暫停重畫 */
     let lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}

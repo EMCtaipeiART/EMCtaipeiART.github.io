@@ -152,6 +152,10 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = text(request.headers.get('Origin'));
     if (origin && !allowedOrigins(env).has(origin)) return jsonResponse(request, env, { ok: false, error: '不允許的網站來源' }, 403);
+    if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket' && new URL(request.url).pathname === '/ws') {
+      const stub = env.DATABASE_COORDINATOR.getByName('primary', { locationHint: 'apac' }) as DurableObjectStub<DatabaseCoordinator>;
+      return stub.fetch(request);
+    }
     if (request.method === 'OPTIONS') {
       const headers = corsHeaders(request, env);
       headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -201,6 +205,10 @@ export default {
       console.log(JSON.stringify({ event: 'pixel-office-calendar-sync', result: calendar }));
     } catch (error) {
       console.error(JSON.stringify({ event: 'pixel-office-calendar-sync-error', message: error instanceof Error ? error.message : String(error) }));
+    }
+    // 即時推送：上面這些背景變動（行事曆切換、限時動態到期…）有結果就通知前台。
+    try { await stub.runPixelPush(); } catch (error) {
+      console.error(JSON.stringify({ event: 'pixel-office-push-error', message: error instanceof Error ? error.message : String(error) }));
     }
   }
 } satisfies ExportedHandler<Env>;

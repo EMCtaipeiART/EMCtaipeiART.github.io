@@ -1227,6 +1227,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    // 前台連著的 WebSocket 每 25 秒送 ping 保持連線：自動回 pong，不會把休眠中的物件叫醒。
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
     ctx.blockConcurrencyWhile(async () => {
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS _sql_schema_migrations (
@@ -3522,7 +3524,47 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     });
   }
 
+  /** 像素辦公室的即時推送：前台用 WebSocket 連到這裡，狀態／對話框／音樂／限時動態一有變動就通知所有人重新讀取。 */
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
+    const pair = new WebSocketPair();
+    this.ctx.acceptWebSocket(pair[1]);
+    try { pair[1].send(JSON.stringify({ type: 'pixel', v: this.pixelOfficeVersion() })); } catch { /* 連線剛建立就斷了 */ }
+    return new Response(null, { status: 101, webSocket: pair[0] });
+  }
+
+  webSocketMessage(): void { /* ping 由 setWebSocketAutoResponse 處理；前台不會送其他訊息 */ }
+
+  webSocketClose(ws: WebSocket, code: number): void { try { ws.close(code >= 1000 && code < 5000 && code !== 1005 && code !== 1006 ? code : 1000); } catch { /* 已關閉 */ } }
+
+  webSocketError(ws: WebSocket): void { try { ws.close(1011); } catch { /* 已關閉 */ } }
+
+  private pixelLastPushed = 0;
+  /** 版本（最後更新時間）有變才推送；沒人連線時只做兩次輕量查詢。 */
+  pixelPushIfChanged(): void {
+    const sockets = this.ctx.getWebSockets();
+    if (!sockets.length) return;
+    this.pixelOfficeApplyOffline(Date.now());
+    const version = this.pixelOfficeVersion();
+    if (version === this.pixelLastPushed) return;
+    this.pixelLastPushed = version;
+    const message = JSON.stringify({ type: 'pixel', v: version });
+    for (const socket of sockets) { try { socket.send(message); } catch { /* 這條連線已失效，前台會自己重連 */ } }
+  }
+
+  /** Cron 每分鐘呼叫：行事曆自動切換、離線判定、限時動態到期這類沒有人操作的變動也要推出去。 */
+  async runPixelPush(): Promise<void> { this.pixelPushIfChanged(); }
+
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
+    const result = await this.handleCore(actionValue, payload, context);
+    const action = text(actionValue || payload.action || '');
+    if (action.startsWith('pixelOffice') && !['pixelOfficeStoryImage', 'pixelOfficeCalendarStatus'].includes(action)) {
+      try { this.pixelPushIfChanged(); } catch { /* 推送失敗不影響操作本身 */ }
+    }
+    return result;
+  }
+
+  private async handleCore(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
