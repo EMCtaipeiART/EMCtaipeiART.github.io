@@ -1962,7 +1962,7 @@ window.emcQuotes=[
       state.dragOn=isDesignerSession();
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
       const cols=orderedColumns().filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
-        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v};return byNewest(a,b)});
+        const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{if(['過稿中','已完成','已取消'].includes(column.status))return byNewest(a,b);const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v},x=e(a),y=e(b);return x===y?byNewest(a,b):x<y?-1:1});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
           <div class="column-head"${state.dragOn&&state.layout!=='list'?' draggable="true" title="拖曳可調整欄位順序"':''}><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
