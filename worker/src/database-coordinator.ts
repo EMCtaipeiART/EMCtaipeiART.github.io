@@ -14,6 +14,7 @@ import {
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
+import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
   ApiPayload, ApiResult, DatabaseSnapshot, RequestContext, Row, SessionRecord, StoredSnapshot
 } from './types';
@@ -1692,8 +1693,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
     const meeting: string[] = [], leave: string[] = [], released: string[] = [], unreadable: string[] = [];
     const detected: Row = {}, manualHeld: string[] = [], atDesk: string[] = [];
+    // 人資系統的假單優先於 Google 行事曆：Google 上沒有活動（或設成空閒）的請假也要算休假。
+    const femas = await this.femasLeaveNow(nowMs);
     for (const [name, email] of Object.entries(PIXEL_OFFICE_CALENDARS)) {
       const entry = calendars[email];
+      if (femas.names.has(name)) {
+        detected[name] = 'leave';
+        const applied = this.pixelOfficeApplyCalendar(name, 'leave', nowMs);
+        if (applied === 'leave') leave.push(name);
+        else if (applied === 'manual') manualHeld.push(name);
+        continue;
+      }
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
       if (!entry || (Array.isArray(entry.errors) && entry.errors.length)) { unreadable.push(name); continue; }
       const busy = Array.isArray(entry.busy) ? entry.busy as Row[] : [];
@@ -1712,7 +1722,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       else if (result === 'at-desk') atDesk.push(name);
     }
     detailUnreadable.sort((a, b) => PIXEL_OFFICE_NAMES.indexOf(a) - PIXEL_OFFICE_NAMES.indexOf(b));
-    const result = { ok: true, detected, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable };
+    const result = { ok: true, detected, meeting, leave, released, manualHeld, atDesk, unreadable, detailUnreadable, femas: { ok: femas.ok, events: femas.events, onLeave: [...femas.names], ...(femas.error ? { error: femas.error } : {}) } };
     await this.rememberCalendarSync(result, nowMs);
     return result;
   }
@@ -1721,6 +1731,31 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 出問題時如果只能翻 Worker 的 log 會很難查，所以把結果留下來，用服務金鑰就能查。 */
   private async rememberCalendarSync(result: Row, nowMs: number): Promise<void> {
     await this.ctx.storage.put('pixelOfficeCalendarSync', { ...result, at: new Date(nowMs).toISOString() });
+  }
+
+  /**
+   * 人資系統（Femas）的請假名單：現在這一刻誰在假單期間。網址與姓名對應放在 secret（FEMAS_ICAL_URL／FEMAS_NAME_MAP），
+   * 只把「設計師名字＋起訖時間」快取 5 分鐘，不存姓名全文或假別。抓不到就沿用最近一次的結果（一天內），不會讓同步失敗。
+   */
+  private async femasLeaveNow(nowMs: number): Promise<{ names: Set<string>; ok: boolean; events: number; error?: string }> {
+    const vars = this.env as unknown as Record<string, string | undefined>;
+    const url = text(vars.FEMAS_ICAL_URL), nameMap = parseFemasNameMap(vars.FEMAS_NAME_MAP);
+    if (!url || !Object.keys(nameMap).length) return { names: new Set(), ok: false, events: 0, error: 'not-configured' };
+    const cached = await this.ctx.storage.get<{ at: number; leaves: FemasLeave[] }>('femasLeaves');
+    let leaves = cached?.leaves || [];
+    let error = '';
+    if (!cached || nowMs - cached.at > 5 * 60_000) {
+      try {
+        const response = await fetch(url, { headers: { Accept: 'text/calendar' }, signal: AbortSignal.timeout(10_000) });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        leaves = parseFemasIcal(await response.text(), nameMap);
+        await this.ctx.storage.put('femasLeaves', { at: nowMs, leaves });
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+        if (!cached || nowMs - cached.at > 24 * 60 * 60_000) leaves = [];
+      }
+    }
+    return { names: femasOnLeave(leaves, nowMs), ok: !error, events: leaves.length, ...(error ? { error } : {}) };
   }
 
   private async pixelOfficeCalendarStatus(payload: ApiPayload): Promise<ApiResult> {
