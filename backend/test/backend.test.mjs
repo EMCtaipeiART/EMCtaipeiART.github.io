@@ -457,8 +457,9 @@ test('selecting multiple NAS folders for a designer reply attaches every folder\
     assert.deepEqual(JSON.parse(edited.container.dataset.nasFolders), ['NAS/備份完成']);
   }
 
-  // The picker page must not add the same path to the multi-select list twice either.
-  assert.match(pickerServer, /const existing = selectedFolders\.find\(item => item\.path === relPath\);/);
+  // The picker page must not add the same path+keyword to the multi-select list twice, but the same
+  // folder with a different keyword is a legitimate second source and must be added separately.
+  assert.match(pickerServer, /const existing = selectedFolders\.find\(item => item\.path === relPath && sameKey\(item\.keyword\) === sameKey\(keyword\)\);/);
 });
 
 test('concurrent designer-reply opens for the same case+round are de-duplicated before any await, so a slow first initialization cannot land after the images and re-stick the editor on "圖片上傳中..."', async () => {
