@@ -2809,7 +2809,10 @@ window.emcQuotes=[
       if(t.matches?.('[data-ct]')){setChip(cp.target,t.dataset.ct,t.dataset.ctName,t.checked);renderContacts();return}
       if(t.matches?.('[data-ct-all]')){t.closest('details').querySelectorAll('[data-ct]').forEach(b=>{if(b.checked!==t.checked)setChip(cp.target,b.dataset.ct,b.dataset.ctName,t.checked)});renderContacts()}
     });
-    document.addEventListener('input',e=>{if(e.target.id==='contactSearch'){cp.q=e.target.value;const pos=e.target.selectionStart;renderContacts();const s=$('contactSearch');s.focus();s.setSelectionRange(pos,pos)}});
+    const contactSearchRun=t=>{cp.q=t.value;const pos=t.selectionStart;renderContacts();const s=$('contactSearch');s.focus();s.setSelectionRange(pos,pos)};
+    /* 輸入法組字中不重畫（搜尋框會被換掉，組字視窗消失）；組字結束再搜尋 */
+    document.addEventListener('input',e=>{if(e.target.id==='contactSearch'&&!e.isComposing)contactSearchRun(e.target)});
+    document.addEventListener('compositionend',e=>{if(e.target.id==='contactSearch')contactSearchRun(e.target)},true);
     /* ---------- 信件編輯器（沿用舊系統功能：收件人標籤、完整工具列、插入照片／附件／簽名檔、指定排程、合併信件、上一封／下一封） ---------- */
     /* 文字與背景顏色：比照 Gmail／舊版網站，左邊「背景顏色」（螢光筆）、右邊「文字顏色」，兩邊用同一組 64 色 */
     const RC_COLORS=[
@@ -3830,10 +3833,13 @@ window.emcQuotes=[
     document.addEventListener('dragover',e=>{if(e.target.closest?.('[data-ai-drop]')){e.preventDefault();e.target.closest('[data-ai-drop]').classList.add('over')}});
     document.addEventListener('dragleave',e=>{e.target.closest?.('[data-ai-drop]')?.classList.remove('over')});
     document.addEventListener('drop',e=>{const zone=e.target.closest?.('[data-ai-drop]');if(zone){e.preventDefault();zone.classList.remove('over');addAiFiles(e.dataTransfer.files)}});
-    let searchTimer=0;
+    let searchTimer=0,searchComposing=false;
+    document.addEventListener('compositionstart',e=>{if(e.target.id==='boardSearch'){searchComposing=true;clearTimeout(searchTimer)}},true);
+    document.addEventListener('compositionend',e=>{const t=e.target;if(t.id!=='boardSearch')return;searchComposing=false;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();rerenderList()},60)},true);
     document.addEventListener('input',e=>{
       const t=e.target;
-      if(t.id==='boardSearch'){clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();rerenderList()},160)}
+      /* 輸入法組字中（Windows 注音／新酵／倉頡常見）不能重畫列表：搜尋框會被換掉，組字視窗跟著消失，造成「能打字、不能選字」。等組字結束（compositionend）再搜尋 */
+      if(t.id==='boardSearch'){if(e.isComposing||searchComposing)return;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{state.query=t.value.trim();rerenderList()},160)}
       if(t.dataset?.f==='qty')t.value=t.value.replace(/[^0-9]/g,'');
     });
     document.addEventListener('change',async e=>{
