@@ -512,6 +512,12 @@
     .cal-day.range-end{background:linear-gradient(90deg,var(--brand-soft) 50%,transparent 50%)}
     .cal-day.range-start.range-end{background:transparent}
     .cal-day.range-start span,.cal-day.range-end span{background:var(--brand);color:#fff}
+    .cal-day.wkend{color:#e11d48}.cal-day.hol{color:#e11d48}.cal-day.hol span{background:rgba(225,29,72,.10)}.cal-day.past.wkend,.cal-day.past.hol{color:rgba(225,29,72,.55)}
+    .cal-day .cal-hn{position:absolute;left:0;right:0;bottom:-1px;z-index:1;font-style:normal;font-size:8.5px;font-weight:800;line-height:1;text-align:center;color:#e11d48;pointer-events:none;white-space:nowrap;overflow:hidden}
+    .cal-day.range-start.hol span,.cal-day.range-end.hol span{background:var(--brand);color:#fff}
+    .cal-legend{display:flex;gap:14px;margin-top:8px;font-size:11.5px;font-weight:700;color:var(--muted)}.cal-lg::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:#e11d48;opacity:.55;vertical-align:baseline}.cal-lg.hd::before{opacity:1}
+    html[data-theme="dark"] .cal-day.wkend,html[data-theme="dark"] .cal-day.hol,html[data-theme="dark"] .cal-day .cal-hn{color:#ff8a9a}
+    html[data-theme="dark"] .cal-day.hol span{background:rgba(255,138,154,.14)}html[data-theme="dark"] .cal-day.past.wkend,html[data-theme="dark"] .cal-day.past.hol{color:rgba(255,138,154,.55)}html[data-theme="dark"] .cal-lg::before{background:#ff8a9a}
     .cal-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
     .cal-summary{font-size:13px;font-weight:800;color:var(--muted)}
     .cal-foot .btn{min-height:36px;padding:0 16px;font-size:13.5px;border-radius:10px}
@@ -1631,7 +1637,7 @@ window.emcQuotes=[
       return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list&&state.view==='projects')?`<button type="button" data-tl-toggle class="${timelineOn()?'on':''}" aria-pressed="${timelineOn()}" title="${timelineOn()?'隱藏':'顯示'}時間軸" aria-label="時間軸">${ICON_TL}</button>`:''}${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><span><button type="button" data-grid-none>全部隱藏</button> <button type="button" data-grid-reset>全部顯示</button></span></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     /* ---------- 時間軸（舊網站案件列表右側的甘特式時間表） ---------- */
-    const TL_HOLIDAYS=new Set(['2026-01-01','2026-02-14','2026-02-15','2026-02-16','2026-02-17','2026-02-18','2026-02-19','2026-02-20','2026-02-21','2026-02-27','2026-02-28','2026-04-03','2026-04-04','2026-04-05','2026-04-06','2026-05-01','2026-06-19','2026-09-25','2026-09-28','2026-10-09','2026-10-10','2026-10-25','2026-10-26']);
+    const TL_HOLIDAYS=new Map([['2026-01-01','元旦'],['2026-02-14','春節連假'],['2026-02-15','春節連假'],['2026-02-16','除夕'],['2026-02-17','春節'],['2026-02-18','春節'],['2026-02-19','春節'],['2026-02-20','春節連假'],['2026-02-21','春節連假'],['2026-02-27','和平紀念日補假'],['2026-02-28','和平紀念日'],['2026-04-03','兒童節補假'],['2026-04-04','兒童節'],['2026-04-05','清明節'],['2026-04-06','清明節補假'],['2026-05-01','勞動節'],['2026-06-19','端午節'],['2026-09-25','中秋節'],['2026-09-28','教師節'],['2026-10-09','國慶日補假'],['2026-10-10','國慶日'],['2026-10-25','光復節'],['2026-10-26','光復節補假']]);
     const TL_DAY_W=44,TL_WEEK=['日','一','二','三','四','五','六'];
     const timelineOn=()=>{if(state.timeline===undefined){try{state.timeline=localStorage.getItem('v5Timeline')!=='0'}catch(err){state.timeline=true}}return state.timeline};
     function timelineHtml(rows){
@@ -2132,9 +2138,11 @@ window.emcQuotes=[
       for(let d=1;d<=days;d++){
         const ms=Date.UTC(y,m,d),cls=['cal-day'];
         if(ms<today)cls.push('past');if(ms===today)cls.push('today');
+        const wd=new Date(ms).getUTCDay(),hn=TL_HOLIDAYS.get(ymd(ms).replace(/\//g,'-'));
+        if(hn)cls.push('hol');else if(wd===0||wd===6)cls.push('wkend');
         if(ms===cal.start)cls.push('range-start');if(!Number.isNaN(rangeEnd)&&ms===rangeEnd)cls.push('range-end');
         if(!Number.isNaN(cal.start)&&!Number.isNaN(rangeEnd)&&ms>cal.start&&ms<rangeEnd)cls.push('in-range');
-        cells.push(`<button type="button" class="${cls.join(' ')}" data-day="${ms}" aria-label="${ymd(ms)}"><span>${d}</span></button>`);
+        cells.push(`<button type="button" class="${cls.join(' ')}" data-day="${ms}" aria-label="${ymd(ms)}${hn?' '+hn:(wd===0||wd===6?' 週末':'')}"${hn?` title="${esc(hn)}"`:''}><span>${d}</span>${hn?`<i class="cal-hn">${esc(hn.replace(/補假|連假/,'').slice(0,3))}</i>`:''}</button>`);
       }
       return `<div class="cal-month"><div class="cal-head"><button type="button" class="cal-nav${offset===0?' show':''}" data-cal-nav="-1" aria-label="上個月">‹</button><span>${y} 年 ${m+1} 月</span><button type="button" class="cal-nav${offset===1?' show':''}" data-cal-nav="1" aria-label="下個月">›</button></div><div class="cal-week">${WEEK.map(w=>`<span>${w}</span>`).join('')}</div><div class="cal-days">${cells.join('')}</div></div>`;
     }
@@ -2142,7 +2150,7 @@ window.emcQuotes=[
     function renderCal(){
       const pop=rowEl(cal.key)?.querySelector('[data-cal-pop]');if(!pop)return;
       const summary=Number.isNaN(cal.start)?'選擇開始與結束日期':Number.isNaN(cal.end)?`${ymd(cal.start)} → 選擇結束日期`:`${ymd(cal.start)} → ${ymd(cal.end)}（${rangeDays(cal.start,cal.end)} 天）`;
-      pop.innerHTML=`<div class="cal-months">${monthHtml(0)}${monthHtml(1)}</div><div class="cal-foot"><span class="cal-summary">${esc(summary)}</span><span><button type="button" class="btn" data-cal-clear>清除</button> <button type="button" class="btn primary" data-cal-done>完成</button></span></div>`;
+      pop.innerHTML=`<div class="cal-months">${monthHtml(0)}${monthHtml(1)}</div><div class="cal-legend"><span class="cal-lg wk">週末</span><span class="cal-lg hd">國定假日／補假</span></div><div class="cal-foot"><span class="cal-summary">${esc(summary)}</span><span><button type="button" class="btn" data-cal-clear>清除</button> <button type="button" class="btn primary" data-cal-done>完成</button></span></div>`;
     }
     function updateRangeButtons(){
       document.querySelectorAll('[data-row]').forEach(el=>{
