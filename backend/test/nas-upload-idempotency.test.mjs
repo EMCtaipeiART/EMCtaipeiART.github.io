@@ -920,3 +920,13 @@ test('Apps Script backs a 限時動態 up into <設計師>/限時動態, rejects
   assert.match(video.url, /drive\.google\.com\/file\/d\//);
   assert.match(created[1].name, /\.mp4$/);
 });
+
+test('a same-name file saved after its recorded backup is not adopted as an old round', async () => {
+  const { parseTaipeiTimestamp, recordedTimesByBaseName } = await import('../../scripts/nas_design_image_lib.mjs');
+  assert.equal(parseTaipeiTimestamp('2026/09/24 10:18:10'), Date.UTC(2026, 8, 24, 2, 18, 10));
+  assert.equal(parseTaipeiTimestamp('2026-10-05'), null);
+  const dbData = { tables: { '修改統計表': { rows: [
+    { '案件編號': '26090186', '修改次數': '0', '圖片更新時間': '2026/09/24 10:18:10', '圖片連結': JSON.stringify([{ fileName: 'a.png', url: 'https://x/a' }]) }
+  ] } } };
+  assert.equal(recordedTimesByBaseName(dbData, '26090186').get('a'), Date.UTC(2026, 8, 24, 2, 18, 10));
+});

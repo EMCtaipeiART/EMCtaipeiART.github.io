@@ -1109,6 +1109,42 @@ export function recordedRoundsByBaseName(dbData, caseId) {
   return map;
 }
 
+/** 資料庫的台北時間文字（2026/09/24 10:18:10）轉成毫秒；只有日期或格式不明時回傳 null（無法比較就不要當成較新）。 */
+export function parseTaipeiTimestamp(value) {
+  const match = /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(value || '').trim());
+  if (!match) return null;
+  const [, y, mo, d, h, mi, sec] = match;
+  return Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h) - 8, Number(mi), Number(sec || 0));
+}
+
+/** 同名圖片在資料庫「最新那一輪」被記錄的時間（毫秒）。key 與 recordedRoundsByBaseName 相同。 */
+export function recordedTimesByBaseName(dbData, caseId) {
+  const rows = dbData?.tables?.['修改統計表']?.rows || [];
+  const best = new Map();
+  for (const row of rows) {
+    if (String(row['案件編號'] || '') !== String(caseId)) continue;
+    const round = Number(row['修改次數']) || 0;
+    let images = [];
+    try {
+      const parsed = JSON.parse(String(row['圖片連結'] || '[]'));
+      if (Array.isArray(parsed)) images = parsed;
+    } catch {
+      images = [];
+    }
+    const at = parseTaipeiTimestamp(row['圖片更新時間'] || row['建立日期']);
+    for (const image of images) {
+      const baseName = designImageBaseName(image?.fileName);
+      if (!baseName) continue;
+      const prev = best.get(baseName);
+      if (!prev || round >= prev.round) best.set(baseName, { round, at });
+    }
+  }
+  return new Map([...best].map(([name, v]) => [name, v.at]));
+}
+
+// 檔案存檔時間比資料庫備份時間晚超過這個值，就視為「備份之後又改過的新版本」。
+const NEWER_THAN_RECORDED_MS = 2 * 60 * 1000;
+
 /** 這個檔案在這台電腦完全沒有上傳歷史（第一次掃到）。 */
 export function fileHasNoLocalHistory(entry) {
   return trackedRound(entry?.assignedRound) === null
@@ -1337,6 +1373,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   const recordedBaseNames = recordedRoundImageBaseNames(dbData, caseId, round);
   // 另一台電腦（或更早的自己）已經備份過的圖，在這台電腦第一次掃描時不可以重新上傳到現在這一輪。
   const recordedRounds = recordedRoundsByBaseName(dbData, caseId);
+  const recordedTimes = recordedTimesByBaseName(dbData, caseId);
   let skippedAlreadyRecordedCount = 0;
   let adoptedFromDatabaseCount = 0;
   const notRecordedPreviews = (recordedBaseNames.size || recordedRounds.size)
@@ -1348,9 +1385,14 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
         const alreadyThisRound = recordedBaseNames.has(baseName);
         // ①這一輪已經有同名圖（多半是先用電腦上傳補過）；②這台電腦第一次掃到、但資料庫別的輪次已經有
         // 這張（多半是別台電腦備份過的舊圖）。兩種都不上傳，只把本機狀態補成「已歸在那一輪」。
+        // ③同名檔案在備份之後又存檔過（mtime 明顯比資料庫記錄時間晚）＝新版本，不能當成舊圖沿用，
+        // 否則改回原路徑、本機紀錄被清掉時，設計師改好的圖會被誤認成初稿而永遠不備份進這一輪。
+        const recordedAt = recordedTimes.get(baseName);
+        const savedAfterRecorded = Number.isFinite(item.mtimeMs) && Number.isFinite(recordedAt)
+          && item.mtimeMs > recordedAt + NEWER_THAN_RECORDED_MS;
         const adoptRound = alreadyThisRound
           ? round
-          : (recordedRound !== undefined && fileHasNoLocalHistory(entry) ? recordedRound : null);
+          : (recordedRound !== undefined && fileHasNoLocalHistory(entry) && !savedAfterRecorded ? recordedRound : null);
         if (adoptRound === null) return true;
         if (entry) {
           entry.assignedRound = adoptRound;
