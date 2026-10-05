@@ -674,6 +674,10 @@
     html[data-theme="dark"] .design-image-hover-preview-media{background:#0f1112}
     html[data-theme="dark"] .design-image-hover-preview-name{color:#d3d9d6}
     /* 信件編輯器（舊系統功能移植） */
+    .rc-suggest{position:fixed;z-index:2100;display:grid;max-height:320px;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow-lg)}
+    .rc-suggest button{display:grid;gap:1px;text-align:left;width:100%;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--ink);cursor:pointer;font-size:13.5px}
+    .rc-suggest button b{font-weight:800}.rc-suggest button small{color:var(--muted);font-size:12px;font-weight:600}
+    .rc-suggest button.on,.rc-suggest button:hover{background:var(--brand-soft)}
     .chip-field{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 14px 6px 0;min-height:46px}
     .chip-field input{flex:1 1 160px;min-width:120px;border:0;background:transparent;min-height:32px;padding:0;font-size:14.5px;font-weight:600;outline:none}
     .chip-r{display:inline-flex;align-items:center;gap:6px;padding:4px 6px 4px 12px;border-radius:999px;background:var(--brand-soft);color:var(--brand-deep);font-size:13px;font-weight:800;max-width:100%}
@@ -3013,7 +3017,47 @@ window.emcQuotes=[
       if(e.key==='Enter'||e.key===','||e.key===';'||e.key==='，'){e.preventDefault();if(!commitChipInput(input))toast('請輸入有效的信箱',true)}
       else if(e.key==='Backspace'&&!input.value){const last=input.previousElementSibling;if(last&&last.dataset.entry)last.remove()}
     });
-    document.addEventListener('focusout',e=>{const input=e.target.closest?.('[data-chip-input]');if(input&&input.value.trim())commitChipInput(input)});
+    /* ---------- 收件人／副本：輸入時顯示信箱建議（打 ma 就跳出 machi.chen@… 供點選） ---------- */
+    const sg={field:'',input:null,items:[],idx:-1};
+    function suggestPool(){
+      const pool=mailContacts([...readChips('to'),...readChips('cc')]),seen=new Set(pool.map(c=>c.email));
+      for(const r of state.rows){const raw=String(r['專案負責人']||'');const m=raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);if(!m)continue;const e=m[0].toLowerCase();if(seen.has(e))continue;seen.add(e);pool.push({name:raw.replace(/<.*?>|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig,'').replace(/[@()（）\s]+$/,'').trim()||e,email:e,group:'專案負責人'})}
+      return pool;
+    }
+    function suggestClose(){const el=$('rcSuggest');if(el)el.remove();sg.items=[];sg.idx=-1}
+    function suggestRender(){
+      const input=sg.input;if(!input||!document.contains(input)){suggestClose();return}
+      const q=norm(input.value).replace(/^.*<|>$/g,'');if(!q){suggestClose();return}
+      const have=contactEmailsIn(sg.field);
+      sg.items=suggestPool().filter(c=>!have.has(c.email)&&norm(`${c.name} ${c.email} ${c.group}`).includes(q))
+        .sort((a,b)=>(a.email.startsWith(q)||norm(a.name).startsWith(q)?0:1)-(b.email.startsWith(q)||norm(b.name).startsWith(q)?0:1)).slice(0,8);
+      let el=$('rcSuggest');
+      if(!sg.items.length){suggestClose();return}
+      if(sg.idx>=sg.items.length||sg.idx<0)sg.idx=0;
+      if(!el){el=document.createElement('div');el.id='rcSuggest';el.className='rc-suggest';el.setAttribute('role','listbox');document.body.appendChild(el)}
+      el.innerHTML=sg.items.map((c,i)=>`<button type="button" role="option" class="${i===sg.idx?'on':''}" data-sg="${i}"><b>${esc(c.name)}</b><small>${esc(c.email)}${c.group&&c.group!=='其他'?`・${esc(c.group)}`:''}</small></button>`).join('');
+      const box=input.closest('[data-chip-field]')||input,r=box.getBoundingClientRect();
+      el.style.left=Math.max(8,Math.min(innerWidth-300,r.left))+'px';el.style.top=(r.bottom+4)+'px';el.style.minWidth=Math.min(320,Math.max(240,r.width))+'px';
+    }
+    function suggestPick(i){
+      const c=sg.items[i],input=sg.input;if(!c||!input)return;
+      setChip(sg.field,c.email,c.name,true);input.value='';suggestClose();input.focus();
+    }
+    document.addEventListener('input',e=>{
+      const input=e.target.closest?.('[data-chip-input]');if(!input||e.isComposing)return;
+      sg.field=input.dataset.chipInput;sg.input=input;sg.idx=0;suggestRender();
+    });
+    document.addEventListener('compositionend',e=>{const input=e.target.closest?.('[data-chip-input]');if(!input)return;sg.field=input.dataset.chipInput;sg.input=input;sg.idx=0;suggestRender()},true);
+    document.addEventListener('keydown',e=>{
+      const input=e.target.closest?.('[data-chip-input]');if(!input||!$('rcSuggest')||e.isComposing)return;
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopPropagation();sg.idx=(sg.idx+(e.key==='ArrowDown'?1:-1)+sg.items.length)%sg.items.length;suggestRender();return}
+      if((e.key==='Enter'||e.key==='Tab')&&sg.idx>=0&&sg.items[sg.idx]){e.preventDefault();e.stopPropagation();suggestPick(sg.idx);return}
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();suggestClose()}
+    },true);
+    document.addEventListener('mousedown',e=>{const b=e.target.closest?.('#rcSuggest [data-sg]');if(b){e.preventDefault();suggestPick(+b.dataset.sg)}});
+    document.addEventListener('focusin',e=>{if(!e.target.closest?.('[data-chip-input]'))suggestClose()});
+    window.addEventListener('resize',suggestClose);
+    document.addEventListener('focusout',e=>{const input=e.target.closest?.('[data-chip-input]');if(!input)return;suggestClose();if(input.value.trim())commitChipInput(input)});
     document.addEventListener('change',async e=>{
       const t=e.target;
       if(t.id==='mImgInput'){await insertMailImages(t.files);t.value=''}
