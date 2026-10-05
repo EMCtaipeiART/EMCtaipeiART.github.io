@@ -821,6 +821,9 @@
     .mm-add{margin:14px 0 4px}
     .rev-head{align-items:center}
     .rev-confirm{margin-left:auto;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:#6b7772;cursor:pointer;padding:0}
+    .rev-addimg{margin-left:auto;min-height:26px;padding:0 10px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-size:12px;font-weight:800;cursor:pointer}
+    .rev-addimg:hover{background:var(--brand-soft);color:var(--brand-deep,#0f5138);border-color:var(--brand)}
+    .rev-addimg+.rev-confirm{margin-left:6px}
     .rev-confirm svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
     .rev-confirm:hover{background:#e8f6ec;color:#0f8f61;border-color:#bfe3cb}
     .rev-confirm.is-done{background:#0f8f61;border-color:#0f8f61;color:#fff}
@@ -2034,7 +2037,7 @@ window.emcQuotes=[
     }
     function modListHtml(id){
       const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
-      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';const ab=(loggedIn()&&isDesignerSession()&&acc('media.manage',false))?`<button type="button" class="rev-addimg" data-rev-addimg="${n}" title="手動補上這一輪的設計圖">＋ 補圖</button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
     }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
@@ -3072,13 +3075,13 @@ window.emcQuotes=[
       const root=live?$('mBody'):(()=>{const x=document.createElement('div');x.innerHTML=d.body;return x})();
       fn(root);if(!live)d.body=root.innerHTML;
     }
-    function openDrChooser(id){
+    function openDrChooser(id,suppRound){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
       if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
-      const round=roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse};
+      const supp=suppRound!==undefined,round=supp?suppRound:roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse,supp};$('drTitle').textContent=supp?'補上設計圖':'設計圖上傳方式';
       $('drSub').textContent=`${id}｜${row['專案名稱']||''}｜${roundLabel(round)}`;
-      $('drBody').innerHTML=`<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label><div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`;
+      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`;
       $('drModal').hidden=false;
     }
     function openDrEditor(id,o){
@@ -3119,9 +3122,9 @@ window.emcQuotes=[
 
     /* 電腦檔案上傳（Apps Script 上傳頁，放在 iframe 內） */
     const up={nonce:'',id:'',round:0,skip:false,afterReply:true,inflight:false,last:null};
-    function openDrUpload(id,round,skip){
+    function openDrUpload(id,round,skip,supp){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
-      Object.assign(up,{nonce:uuid(),id,round,skip,inflight:false,last:null});
+      Object.assign(up,{nonce:uuid(),id,round,skip,supp:Boolean(supp),avatar:false,inflight:false,last:null});
       const start=parseDay(row['開始日期']),dt=isNaN(start)?null:new Date(start),url=new URL(UPLOAD_PAGE);
       url.searchParams.set('mode','case-design');url.searchParams.set('caseId',id);url.searchParams.set('round',String(round));url.searchParams.set('designer',row['設計負責人']||'');url.searchParams.set('client',row['客戶別']||'');
       url.searchParams.set('year',dt?String(dt.getUTCFullYear()):'');url.searchParams.set('month',dt?String(dt.getUTCMonth()+1).padStart(2,'0'):'');url.searchParams.set('closeNonce',up.nonce);
@@ -3149,13 +3152,14 @@ window.emcQuotes=[
       if(data.type==='machi-case-design-upload-progress'){
         if(!up.nonce||data.closeNonce!==up.nonce)return;
         const done=Number(data.done)||0,total=Number(data.total)||0,was=up.inflight;up.inflight=true;
-        if(!was){$('upModal').hidden=true;openDrEditor(up.id,{folders:[],round:up.round,skip:up.skip})}
+        if(!was){$('upModal').hidden=true;if(!up.supp)openDrEditor(up.id,{folders:[],round:up.round,skip:up.skip})}
         showBadge('upBadge',`設計圖上傳中 ${done}/${total}${data.currentFileName?`：${data.currentFileName}`:''}`);return;
       }
       if(data.type==='machi-case-design-images-updated'){
         if(!up.nonce||data.closeNonce!==up.nonce)return;
         const id=String(data.caseId||up.id),count=Number(data.count)||0,failed=Number(data.failedCount)||0,round=up.round,skip=up.skip;
-        closeUp();toast(failed?`已上傳 ${count} 張，${failed} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failed));
+        const wasSupp=up.supp;closeUp();toast(failed?`已上傳 ${count} 張，${failed} 張失敗，請檢查後重新上傳`:`已上傳 ${count} 張設計圖`,Boolean(failed));
+        if(wasSupp){refreshMods(id).then(()=>{const ml=$('mmList');if(ml&&state.modId===id)ml.innerHTML=modListHtml(id);refreshView()}).catch(()=>{});return}
         openDrEditor(id,{folders:[],round,skip});
         drFinish(id,round,{skip}).then(()=>{if(count&&round>0){const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())setConfirm(id,round,true).then(refreshView).catch(()=>{})}}).catch(err=>toast(`圖片已上傳成功，但自動帶入信件失敗：${err.message}`,true));
         return;
@@ -3179,7 +3183,7 @@ window.emcQuotes=[
         const ff={};for(const f of ok){const p=String(f.path||'').trim();if(!p)continue;for(const n of (Array.isArray(f.backup&&f.backup.uploadedFiles)?f.backup.uploadedFiles:[])){const nm=String(n||'').trim();if(nm&&!ff[nm])ff[nm]=p}}
         toast(String(data.summary||'').trim()||(failed?`已設定 ${ok.length} 個 NAS 來源資料夾（${failed} 個備份失敗，已略過）`:'已設定 NAS 來源資料夾'));
         if(afterReply&&id)drFinish(id,round,{folders:ok.map(f=>f.path||'').filter(Boolean),fileFolders:ff,skip}).catch(err=>toast(`NAS 備份已完成，但自動帶入回信編輯器失敗：${err.message}`,true));
-        else if(id)refreshMods(id).then(refreshView);
+        else if(id)refreshMods(id).then(()=>{const ml=$('mmList');if(ml&&state.modId===id)ml.innerHTML=modListHtml(id);refreshView()});
         return;
       }
     });
@@ -3187,10 +3191,11 @@ window.emcQuotes=[
       const t=e.target;
       const src=t.closest?.('[data-dr-src]')?.dataset.drSrc;
       if(src&&state.drChoice){
-        const {id,round,reuse}=state.drChoice,skip=Boolean($('drSkip')&&$('drSkip').checked);$('drModal').hidden=true;state.drChoice=null;
-        if(src==='nas')nasOpen({id,round,afterReply:true,skip});
-        else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:true,skip});
-        else openDrUpload(id,round,skip);
+        const {id,round,reuse}=state.drChoice,skip=Boolean($('drSkip')&&$('drSkip').checked);state.drChoice0=state.drChoice;$('drModal').hidden=true;state.drChoice=null;
+        const supp=Boolean(state.drChoice0&&state.drChoice0.supp);
+        if(src==='nas')nasOpen({id,round,afterReply:!supp,skip});
+        else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:!supp,skip});
+        else openDrUpload(id,round,skip,supp);
         return;
       }
       if(t.closest?.('[data-dr-close]')||t.id==='drModal'){$('drModal').hidden=true;state.drChoice=null;return}
@@ -3198,6 +3203,7 @@ window.emcQuotes=[
       if(t.closest?.('[data-up="min"]')){$('upModal').hidden=true;if(up.nonce)showBadge('upBadge','設計圖上傳視窗已縮小（點此還原）');return}
       if(t.closest?.('[data-up="close"]')){if(up.inflight&&!confirm('上傳進行中，確定要關閉嗎？已上傳成功的圖片會保留。'))return;closeUp();return}
       if(t.closest?.('#upBadge')&&up.nonce&&!up.inflight){$('upModal').hidden=false;hideBadge('upBadge');return}
+      const ra=t.closest?.('[data-rev-addimg]');if(ra){openDrChooser(state.modId,+ra.dataset.revAddimg);return}
       const rc=t.closest?.('[data-rev-confirm]');
       if(rc){
         const id=state.modId,n=+rc.dataset.revConfirm,done=rc.classList.contains('is-done');rc.disabled=true;
