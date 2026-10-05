@@ -700,21 +700,21 @@ const PICKER_PAGE = `<!doctype html>
       // 資料夾的關鍵字。
       const keywordInput = document.getElementById('keywordInput');
       const keyword = keywordInput ? (keywordInput.value || '').trim() : '';
-      // 同一個路徑不重複加入：重複加入只會讓同一個資料夾被掃描/上傳兩次（產生重複圖片），
-      // 清單上也會出現兩筆長得一模一樣的項目，看起來像「多選了兩個資料夾」其實只有一個。
-      // 已經在清單裡的話就只更新關鍵字（使用者可能是想重填關鍵字才又按一次）。
-      const existing = selectedFolders.find(item => item.path === relPath);
+      // 「路徑＋關鍵字」都相同才算重複（重複加入只會讓同一組被掃描/上傳兩次，產生重複圖片）。
+      // 同一個資料夾搭配不同關鍵字是正常用法（例如同一資料夾裡 A_ 開頭、B_ 開頭的檔案各歸一組），
+      // 所以必須各自獨立加入，不能把第一組的關鍵字覆蓋掉——否則永遠只能留下最後一組。
+      const sameKey = value => String(value || '').trim().toLocaleLowerCase();
+      const existing = selectedFolders.find(item => item.path === relPath && sameKey(item.keyword) === sameKey(keyword));
       if(existing){
-        if(keyword) existing.keyword = keyword;
         if(keywordInput) keywordInput.value = '';
         renderSelectedFolders();
-        setStatus('「' + (relPath || '（根目錄）') + '」已經在清單裡了，沒有重複加入' + (keyword ? '（已更新關鍵字）' : ''), true);
+        setStatus('「' + (relPath || '（根目錄）') + '」搭配關鍵字「' + keyword + '」已經在清單裡了，沒有重複加入', true);
         return;
       }
       selectedFolders.push({ path: relPath, keyword });
       if(keywordInput) keywordInput.value = '';
       renderSelectedFolders();
-      setStatus('已加入「' + (relPath || '（根目錄）') + '」，可以繼續瀏覽其他資料夾', true);
+      setStatus('已加入「' + (relPath || '（根目錄）') + '」' + (keyword ? '（關鍵字：' + keyword + '）' : '') + '，可以繼續加入其他資料夾，或同一資料夾再搭配另一組關鍵字', true);
     });
   }
 
