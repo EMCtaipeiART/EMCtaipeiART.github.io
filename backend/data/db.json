@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7341,
+  "revision": 7342,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-05T08:01:34.499Z",
+  "updatedAt": "2026-10-05T08:01:48.934Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1012,7 +1012,7 @@
         {"案件編號":"26090188","修改次數":"0","建立日期":"2026/10/05 15:28:08","修改日期":"2026/10/05 15:28:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 15:28:08","圖片連結":"[{\"fileName\":\"261005_迪朗奇_10月FB貼文_第二篇_咖啡散策-從這一站開始.png\",\"url\":\"https://lh3.googleusercontent.com/d/1GHm3evjhRUtWbySvKAaJ5uyWwmGR5bsY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 15:28:08"},
         {"案件編號":"26100014","修改次數":"0","建立日期":"2026/10/05 15:36:39","修改日期":"2026/10/05 15:36:39","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 15:36:39","圖片連結":"[{\"fileName\":\"261005_Nutribullet_智慧感應影片_封面.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Tk2hYn440cn1o19WKqBf1Wyj3DFh0szp=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 15:36:39"},
         {"案件編號":"26100015","修改次數":"0","建立日期":"2026/10/05 15:37:30","修改日期":"2026/10/05 15:37:30","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 15:37:30","圖片連結":"[{\"fileName\":\"261005_Nutribullet_智慧感應影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1r91s8cxbyiMzTdQQn6ZJshQmKusdBNfb=w1600\"},{\"fileName\":\"261005_Nutribullet_智慧感應影片_封面.png\",\"url\":\"https://lh3.googleusercontent.com/d/1E9L76TsxXtUpiCfYkRN3Jfe0iUmDjWje=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 15:37:30"},
-        {"案件編號":"26090158","修改次數":"1","建立日期":"2026/10/05 15:55:22","修改日期":"2026-10-05","修改內容":"此篇客戶調整一下產品，\n再麻煩您：\n\nhttps://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0\",\"url\":\"https://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260922_DJI_揮汗運動_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dx1g0JBItEZNu10bY7bQtzGw_TTVYCoM=w1600\"},{\"fileName\":\"260922_DJI_揮汗運動_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XoCWppXvcb-jYpDGxll7AiyFUc_PYsPC=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 16:01:34"}
+        {"案件編號":"26090158","修改次數":"1","建立日期":"2026/10/05 15:55:22","修改日期":"2026-10-05","修改內容":"此篇客戶調整一下產品，\n再麻煩您：\n\nhttps://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0\",\"url\":\"https://docs.google.com/presentation/d/1BjVFBLnbut5Vhvo28AVu3OgryltIjbeSlbjjQShrITo/edit?slide=id.g40a0d039e11_0_0#slide=id.g40a0d039e11_0_0\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"260922_DJI_揮汗運動_01.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dx1g0JBItEZNu10bY7bQtzGw_TTVYCoM=w1600\"},{\"fileName\":\"260922_DJI_揮汗運動_03.png\",\"url\":\"https://lh3.googleusercontent.com/d/1XoCWppXvcb-jYpDGxll7AiyFUc_PYsPC=w1600\"},{\"fileName\":\"260922_DJI_揮汗運動_02.png\",\"url\":\"https://lh3.googleusercontent.com/d/1enT-4HjOxI5XOhOcDebWSbp7NoNtlLHb=w1600\"},{\"fileName\":\"260922_DJI_揮汗運動_04.png\",\"url\":\"https://lh3.googleusercontent.com/d/1RknLyVfQdWgQk8L028PiSILW9SKBTCKV=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 16:01:48"}
       ]
     },
     "補充資料連結": {
