@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7228,
+  "revision": 7229,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-05T02:23:24.184Z",
+  "updatedAt": "2026-10-05T02:24:30.439Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -996,7 +996,7 @@
         {"案件編號":"26090203","修改次數":"0","建立日期":"2026/10/02 17:59:08","修改日期":"2026/10/02 17:59:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/02 17:59:08","圖片連結":"[{\"fileName\":\"261002_ANKER_A121D_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1VMW_QFJOcXRqXTtaEkYlUPMfoUi-04tr=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1SlpsK1nmXLhRKh-ko4qOOauVDz-rq5u0=w1600\"},{\"fileName\":\"261002_ANKER_A1664+A121A_momo_2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DMVG_yhEzFR2TsqfQoy_xYbN5g6pglEb=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/02 17:59:08"},
         {"案件編號":"26090237","修改次數":"0","建立日期":"2026/10/05 09:55:47","修改日期":"2026/10/05 09:55:47","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 09:55:47","圖片連結":"[{\"fileName\":\"261002_添可_十月_CPAS_StationS9Artist_基站動態_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1OIJO8xaZxG69hf_fUXokBjkg3mIpRFf9=w1600\"},{\"fileName\":\"261002_添可_十月_CPAS_StationS9Artist_基站動態_momo.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Lzvgxmo36Jwj-L-3i4Wk0Jkx7eBnwO0g=w1600\"},{\"fileName\":\"261002_添可_十月_CPAS_StationS9Artist_重油汙_PChome.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1NhQ8bqWn7iy_afFkVumaL5aTvu74b-Bz=w1600\"},{\"fileName\":\"261002_添可_十月_CPAS_StationS9Artist_重油汙_momo.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1oILoVKG7fn6a-TOpvOAqG5XTgJw1LBUH=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 09:55:47"},
         {"案件編號":"26090238","修改次數":"0","建立日期":"2026/10/05 09:57:02","修改日期":"2026/10/05 09:57:02","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 09:57:02","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_StationS9Artist_廚房油污_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1gn5XYbRGnWyDXkKoQbzcH4KAwEigr4nV=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_StationS9Artist_廚房油污_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1l_n3l_n9lKWjAyYaNjhALYXVzNsMaRxD=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_StationS9Artist_淨化論_PChome.png\",\"url\":\"https://lh3.googleusercontent.com/d/19X3JaR2352nyJPLO9N-O2-5svgnxFXDu=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_StationS9Artist_淨化論_momo.png\",\"url\":\"https://lh3.googleusercontent.com/d/1BtjRjZgy_ZeP26DZjvrDVzPFC3dJRLNG=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 09:57:02"},
-        {"案件編號":"26090186","修改次數":"1","建立日期":"2026/10/05 10:06:10","修改日期":"2026-10-05","修改內容":"感謝大神支援，這篇體驗會資訊有一場微調，\n再麻煩哥：\n\nhttps://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0\",\"url\":\"https://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0\"}]","修改人":"李明庭","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26090186","修改次數":"1","建立日期":"2026/10/05 10:06:10","修改日期":"2026-10-05","修改內容":"感謝大神支援，這篇體驗會資訊有一場微調，\n再麻煩哥：\n\nhttps://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0","修改內容連結":"[{\"text\":\"https://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0\",\"url\":\"https://docs.google.com/presentation/d/1gYN8HBHw630Ke0WDLDT8ckRfNx_W9-9S/edit?slide=id.g3f9b2af029d_0_0#slide=id.g3f9b2af029d_0_0\"}]","修改人":"李明庭","確認修正日":"2026/10/05 10:24:30","待修改圖片":""}
       ]
     },
     "補充資料連結": {
