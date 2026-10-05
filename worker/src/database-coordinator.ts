@@ -20,7 +20,7 @@ import type {
 } from './types';
 
 const STATE_KEY = 'primary';
-import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
+import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
@@ -2295,7 +2295,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return {
       ok: true, action: 'coinMe', account: current.account, name, designer: Boolean(name), admin,
       balance: name ? tenthsToCoins(this.coinBalance(name)) : 0,
-      spendPerGeneration: tenthsToCoins(COIN_SPEND_PER_GENERATION), startDate: COIN_START_DATE,
+      spendPerGeneration: tenthsToCoins(COIN_SPEND_PER_GENERATION), spendPerRegeneration: tenthsToCoins(COIN_SPEND_PER_REGENERATION), startDate: COIN_START_DATE,
       recent, directory: PIXEL_OFFICE_NAMES.filter(item => item !== name)
     };
   }
@@ -2336,14 +2336,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const generationId = text(payload.ref);
     if (!/^[0-9a-f-]{36}$/.test(generationId)) throw new Error('缺少生成編號');
     const ref = `gen:${generationId}`;
-    const existing = this.ctx.storage.sql.exec('SELECT 1 FROM coin_ledger WHERE kind = ? AND ref = ?', 'spend', ref).toArray();
-    if (!existing.length) {
-      await this.coinAppend([{ kind: 'spend', holder: name, amount: -COIN_SPEND_PER_GENERATION, ref, memo: 'AI 服裝生成', actor: current.account }], () => {
+    const regenerate = payload.regenerate === true;
+    const cost = regenerate ? COIN_SPEND_PER_REGENERATION : COIN_SPEND_PER_GENERATION;
+    const existing = this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE kind = ? AND ref = ?', 'spend', ref).toArray()[0];
+    if (!existing) {
+      await this.coinAppend([{ kind: 'spend', holder: name, amount: -cost, ref, memo: regenerate ? 'AI 服裝重新生成（同一件服裝）' : 'AI 服裝生成', actor: current.account }], () => {
         const balance = this.coinBalance(name);
-        if (balance < COIN_SPEND_PER_GENERATION) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，每次生成需要 ${tenthsToCoins(COIN_SPEND_PER_GENERATION)} 點`);
+        if (balance < cost) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，${regenerate ? '重新生成' : '每次生成'}需要 ${tenthsToCoins(cost)} 點`);
       });
     }
-    return { ok: true, action: 'coinReserve', exempt: false, account: current.account, name, charged: tenthsToCoins(COIN_SPEND_PER_GENERATION), balance: tenthsToCoins(this.coinBalance(name)) };
+    return { ok: true, action: 'coinReserve', exempt: false, account: current.account, name, charged: tenthsToCoins(existing ? -existing.amount : cost), balance: tenthsToCoins(this.coinBalance(name)) };
   }
 
   /** 生成沒有成功（失敗、被內容檢查擋下）就把這筆扣款退回；同一筆只退一次。 */

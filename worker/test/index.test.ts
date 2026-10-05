@@ -5127,6 +5127,10 @@ describe('平台幣', () => {
     expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, charged: 200, balance: 250 });
     // 同一個生成編號重送不會再扣
     expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, balance: 250 });
+    // 同一件服裝重新生成：只扣 100 點
+    const again = uuid();
+    expect(await api({ action: 'coinReserve', ref: again, serviceKey: SERVICE, regenerate: true }, leona)).toMatchObject({ ok: true, charged: 100, balance: 150 });
+    expect(await api({ action: 'coinRefund', ref: again, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: true, balance: 250 });
     // 退回只有服務能做、而且只退一次
     expect(await api({ action: 'coinRefund', ref: generation }, leona)).toMatchObject({ ok: false });
     expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE, reason: '被內容檢查擋下' })).toMatchObject({ ok: true, refunded: true, balance: 450 });
