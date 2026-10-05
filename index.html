@@ -240,6 +240,11 @@
     .lt-rev-add:hover{background:var(--bg)}
     html[data-theme="dark"] .lt-rev-add{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
     .mm-list .thumbs a{width:64px;height:64px;border-radius:9px}
+    .thumbs .tw{position:relative;flex:0 0 auto;display:block}.thumbs .tw .rev-sel{position:absolute;top:4px;left:4px;z-index:3;width:17px;height:17px;margin:0;accent-color:var(--brand);cursor:pointer}
+    .mm-selbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:13px;font-weight:800}
+    .mm-selbar[hidden]{display:none}.mm-selall{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.mm-selbar .btn{min-height:32px;padding:0 12px;font-size:13px}
+    .mm-seldel{color:#be123c;border-color:#fecdd3}html[data-theme="dark"] .mm-seldel{color:#ffb4c0;border-color:#5c2a35}
+    .mv-h{margin:14px 0 8px;font-size:13px;color:var(--muted)}.mv-row{display:flex;gap:8px}.mv-row .input{flex:1}
     button.lt-rev{cursor:pointer;font-family:inherit}
     .mm-list{display:grid;gap:8px;max-height:30vh;overflow:auto;margin-bottom:14px}
     .mm-form{display:grid;gap:12px}
@@ -1293,7 +1298,7 @@ window.emcQuotes=[
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
       loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
-      form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
+      selImg:new Set(),form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
     /* ---------- 登入（與 index.html 共用 localStorage） ---------- */
@@ -2035,13 +2040,60 @@ window.emcQuotes=[
       for(const k of c){if(k.a<pos)continue;out+=esc(src.slice(pos,k.a))+'<a href="'+esc(k.u)+'" target="_blank" rel="noopener noreferrer">'+esc(k.t)+'</a>';pos=k.b}
       return (out+esc(src.slice(pos))).replace(/\n/g,'<br>');
     }
+    const selKey=(n,url)=>n+'::'+url;
+    function selItems(){return [...state.selImg].map(k=>{const i=k.indexOf('::');return {round:Number(k.slice(0,i))||0,url:k.slice(i+2)}})}
+    function selBarUpdate(){
+      const n=state.selImg.size,bar=$('mmSelBar');if(!bar)return;bar.hidden=!n;
+      const c=$('mmSelCount');if(c)c.textContent=n?`已選取 ${n} 張`:'';
+      const total=document.querySelectorAll('#mmList .rev-sel').length,all=$('mmSelAll');if(all){all.checked=total>0&&n===total;all.indeterminate=n>0&&n<total}
+    }
+    async function afterImgChange(ids){
+      for(const x of ids)await refreshMods(x).catch(()=>{});
+      const ml=$('mmList');if(ml&&state.modId)ml.innerHTML=modListHtml(state.modId);selBarUpdate();refreshView();
+    }
+    async function removeSelectedImages(){
+      const id=state.modId,items=selItems();if(!id||!items.length)return;
+      if(!confirm(`確定要從系統紀錄移除這 ${items.length} 張設計圖嗎？\n（Google Drive 原始檔案不會被刪除）`))return;
+      const btn=$('mmSelDel');if(btn)btn.disabled=true;let done=0,failed=0,last='';
+      for(const it of items){toast(`刪除圖片中...${done+failed}/${items.length}`);try{await api('removeCaseDesignImage',{caseId:id,round:it.round,url:it.url});state.selImg.delete(selKey(it.round,it.url));done++}catch(err){failed++;last=err.message}}
+      toast(failed?`已移除 ${done} 張，${failed} 張失敗：${last}`:`已移除 ${done} 張設計圖`,Boolean(failed));
+      await afterImgChange([id]);
+    }
+    function openMovePicker(){
+      const id=state.modId,items=selItems();if(!id||!items.length)return;
+      const recs=(state.mods.get(id)||[]).slice().sort((a,b)=>(+a['修改次數']||0)-(+b['修改次數']||0)),src=new Set(items.map(i=>i.round));
+      const opts=recs.map(r=>{const n=+r['修改次數']||0,dis=src.size===1&&src.has(n);return `<button type="button" class="option reply-opt" data-mv-round="${n}"${dis?' disabled':''}><span>${esc(roundLabel(n))}</span><small>${dis?'選取的圖片已經在這一輪':`目前 ${imageList(r).length} 張`}</small></button>`}).join('');
+      const crossRound=src.size===1?[...src][0]:0;
+      state.mvCtx={id,crossRound};
+      $('drTitle').textContent=`移動 ${items.length} 張設計圖到`;$('drSub').textContent='只會改變這幾張圖在修改紀錄裡屬於哪一輪，Google Drive 上的原始檔案不會被搬動或刪除。';
+      $('drBody').innerHTML=`<div class="option-list reply-list">${opts||'<div class="empty">這個案件目前沒有其他修改輪次</div>'}</div><h4 class="mv-h">移到其他案件（${esc(roundLabel(crossRound))}）</h4><div class="mv-row"><input class="input" id="mvCase" inputmode="numeric" placeholder="輸入案件編號，例如 26090185"><button type="button" class="btn primary" data-mv-case>移動</button></div>`;
+      state.drChoice=null;$('drModal').hidden=false;
+    }
+    async function moveSelectedImages(toRound,toCaseId=''){
+      const id=state.modId;if(!id)return;const cross=Boolean(toCaseId)&&String(toCaseId)!==String(id);
+      const items=selItems().filter(i=>cross||i.round!==toRound);if(!items.length){toast('選取的圖片已經在這一輪了',true);return}
+      const label=cross?`案件 ${toCaseId} 的${roundLabel(toRound)}`:roundLabel(toRound);
+      $('drModal').hidden=true;
+      if(!confirm(`確定要把這 ${items.length} 張設計圖移到「${label}」的修改紀錄嗎？${cross?'\n（這幾張圖會從原案件的紀錄移除；目標案件沒有初稿時會自動建立，狀態改為「過稿中」）':''}\n（Google Drive 原始檔案不會被搬動或刪除）`))return;
+      toast('移動圖片中...');
+      try{
+        const data=await api('moveCaseDesignImages',{caseId:id,toRound,...(cross?{toCaseId:String(toCaseId).trim()}:{}),images:items});
+        state.selImg.clear();
+        const moved=Number(data?.moved)||items.length,skipped=Number(data?.skipped)||0;
+        toast(`已把 ${moved} 張設計圖移到${label}${skipped?`（${skipped} 張略過，可能已經在那一輪）`:''}`);
+        await afterImgChange(cross?[id,String(toCaseId).trim()]:[id]);
+        if(cross)loadDatabase(true,true).catch(()=>{});
+      }catch(err){toast(`移動圖片失敗：${err.message}`,true)}
+    }
     function modListHtml(id){
       const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
-      return mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';const ab=(loggedIn()&&isDesignerSession())?`<button type="button" class="rev-addimg" data-rev-addimg="${n}" title="手動補上這一輪的設計圖">＋ 補圖</button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${ab}${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,24).map(i=>`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>';
+      const canImg=loggedIn()&&isDesignerSession()&&mods.some(m=>imageList(m).length);
+      const bar=canImg?`<div class="mm-selbar" id="mmSelBar"${state.selImg.size?'':' hidden'}><label class="mm-selall"><input type="checkbox" id="mmSelAll"><span>全選</span></label><span id="mmSelCount"></span><button type="button" class="btn" id="mmSelMove" data-sel="move">移動到…</button><button type="button" class="btn mm-seldel" id="mmSelDel" data-sel="delete">刪除已選取</button></div>`:'';
+      return bar+(mods.length?mods.map(m=>{const n=+m['修改次數']||0,done=Boolean(String(m['確認修正日']||'').trim()),cb=(n>0&&isDesignerSession()&&acc('modification.confirm',true))?`<button type="button" class="rev-confirm${done?' is-done':''}" data-rev-confirm="${n}" title="${done?'取消確認修正日':'確認修正完成'}" aria-label="${done?'取消確認修正':'確認修正完成'}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.2 8.2 3 3L12.8 4.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:'';const ab=(loggedIn()&&isDesignerSession())?`<button type="button" class="rev-addimg" data-rev-addimg="${n}" title="手動補上這一輪的設計圖">＋ 補圖</button>`:'';return `<div class="rev"><div class="rev-head"><span class="lt-rev${n===0?' is-draft':''}">${n===0?'初稿':`${n<=10?NUM_ZH[n]:n}修`}</span><span class="rev-meta${done?' is-ok':''}">${esc(m['修改日期']||'')}${m['修改人']?`｜${esc(m['修改人'])}`:''}${m['確認修正日']&&n>0?`｜已確認修正 ${esc(m['確認修正日'])}`:''}</span>${ab}${cb}</div><div class="rev-text">${linkify(stripSig(m['修改內容']||''),m['修改內容連結'])}</div>${(()=>{const imgs=imageList(m);return imgs.length?`<div class="thumbs">${imgs.slice(0,60).map(i=>{const a=`<a class="design-image-preview-link" href="${esc(i.url)}" target="_blank" rel="noopener noreferrer" title="${esc(i.fileName||'設計圖')}｜停留可放大預覽，點擊開啟原圖" data-design-image-hover-preview data-preview-label="${esc(i.fileName||'設計圖')}"><img src="${esc(thumbUrl(i.url))}" alt="${esc(i.fileName||'設計圖')}" loading="lazy" referrerpolicy="no-referrer"><span class="design-image-expand-icon" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M6 3H3v3M10 3h3v3M6 13H3v-3M10 13h3v-3"/></svg></span></a>`;if(!canImg)return a;const key=selKey(n,i.url);return `<span class="tw"><input type="checkbox" class="rev-sel" data-sel-key="${esc(key)}"${state.selImg.has(key)?' checked':''} aria-label="選取這張圖片">${a}</span>`}).join('')}</div>`:''})()}</div>`}).join(''):'<div class="empty">還沒有修改紀錄</div>');
     }
     function openModModal(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
-      state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
+      if(state.modId!==id)state.selImg.clear();state.modId=id;const mods=(state.mods.get(id)||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       $('mmSub').textContent=`${id}｜${row['專案名稱']||''}`;
       $('mmList').innerHTML=modListHtml(id);
       const f=$('mmForm');f.elements.modifyDate.value=todayInput();f.elements.content.value='';f.hidden=true;$('mmToggle').hidden=!(isDesignerSession()&&acc('modification.create',true)&&(()=>{const r0=allRows().find(r=>idKey(r)===id);return r0?canEditRow(r0):true})());$('modModal').hidden=false;
@@ -3203,6 +3255,11 @@ window.emcQuotes=[
       if(t.closest?.('[data-up="min"]')){$('upModal').hidden=true;if(up.nonce)showBadge('upBadge','設計圖上傳視窗已縮小（點此還原）');return}
       if(t.closest?.('[data-up="close"]')){if(up.inflight&&!confirm('上傳進行中，確定要關閉嗎？已上傳成功的圖片會保留。'))return;closeUp();return}
       if(t.closest?.('#upBadge')&&up.nonce&&!up.inflight){$('upModal').hidden=false;hideBadge('upBadge');return}
+      if(t.matches?.('.rev-sel')){const k=t.dataset.selKey;if(t.checked)state.selImg.add(k);else state.selImg.delete(k);selBarUpdate();return}
+      if(t.id==='mmSelAll'){document.querySelectorAll('#mmList .rev-sel').forEach(b=>{b.checked=t.checked;if(t.checked)state.selImg.add(b.dataset.selKey);else state.selImg.delete(b.dataset.selKey)});selBarUpdate();return}
+      const sa=t.closest?.('[data-sel]');if(sa){if(sa.dataset.sel==='delete')removeSelectedImages();else openMovePicker();return}
+      const mvr=t.closest?.('[data-mv-round]');if(mvr){moveSelectedImages(Number(mvr.dataset.mvRound)||0);return}
+      if(t.closest?.('[data-mv-case]')){const v=String($('mvCase')&&$('mvCase').value||'').trim();if(v)moveSelectedImages(state.mvCtx?state.mvCtx.crossRound:0,v);return}
       const ra=t.closest?.('[data-rev-addimg]');if(ra){openDrChooser(state.modId,+ra.dataset.revAddimg);return}
       const rc=t.closest?.('[data-rev-confirm]');
       if(rc){
@@ -3539,7 +3596,7 @@ window.emcQuotes=[
       const row=inlineRow||allRows().find(r=>idKey(r)===state.detailId),stage=target||$('stage');if(!row){backToBoard();return}
       if(!target&&state.editing&&state.editRow){renderEdit(row);return}
       if(!target)state.lb=[];else state.lb=state.lb||[];
-      const st=statusOf(row),s=schedule(row),status=String(row['狀態']||'').trim(),mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+a['修改次數']||0)-(+b['修改次數']||0));
+      const st=statusOf(row),s=schedule(row),status=String(row['狀態']||'').trim(),mods=(state.mods.get(idKey(row))||[]).slice().sort((a,b)=>(+b['修改次數']||0)-(+a['修改次數']||0));
       const ed=isDesignerSession(),editAttr=f=>ed?` lt-edit" data-edit="${f}`:'';
       const kv=(label,value,raw)=>`<div class="kv"><dt>${label}</dt><dd>${raw?value:esc(value||'-')}</dd></div>`;
       const person=(name,role)=>`<span class="person">${faceHtml(name,role)}<span>${esc(name||'未填')}</span></span>`;
