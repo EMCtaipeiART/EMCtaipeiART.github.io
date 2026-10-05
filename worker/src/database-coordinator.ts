@@ -1962,9 +1962,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const look = patch.look ? asRow(patch.look) : null;
       if (!look) delete state.look;
       else {
-        const outfit = Number.isInteger(look.outfit) ? Number(look.outfit) : -1;
+        // 服裝：0–5 是遊戲內建的六套、-1 是原本造型；'c:<uuid>' 是服裝生成器做好並發佈的自訂服裝（存不存在、是不是本人的由遊戲畫面端判斷，後端只擋格式）。
+        const customOutfit = typeof look.outfit === 'string' && /^c:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(look.outfit);
+        const outfit: number | string = customOutfit ? String(look.outfit) : Number.isInteger(look.outfit) ? Number(look.outfit) : -1;
         const cap = text(look.cap), glasses = text(look.glasses);
-        if (outfit < -1 || outfit > 5 || !['', 'black', 'blue'].includes(cap) || !['', 'clear', 'sun'].includes(glasses)) throw new Error('造型不正確');
+        if ((typeof outfit === 'number' && (outfit < -1 || outfit > 5)) || !['', 'black', 'blue'].includes(cap) || !['', 'clear', 'sun'].includes(glasses)) throw new Error('造型不正確');
         if (outfit === -1 && !cap && !glasses) delete state.look;
         else state.look = { outfit, cap, glasses };
       }

@@ -5159,3 +5159,16 @@ describe('平台幣', () => {
     expect(await api({ action: 'coinLedger' }, admin)).toMatchObject({ chain: { ok: false, brokenAtSeq: 1 } });
   });
 });
+
+describe('Pixel Office look: custom outfits', () => {
+  it('accepts a published custom outfit id and rejects malformed ones', async () => {
+    const id = `c:${crypto.randomUUID()}`;
+    const ok = await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { look: { outfit: id, cap: '', glasses: '' } } }) as { ok: boolean; person?: { look?: { outfit?: string } } };
+    expect(ok.ok).toBe(true);
+    expect(ok.person?.look?.outfit).toBe(id);
+    // 格式不對的字串一律當成「原本造型」，不會被存進去
+    const bad = await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { look: { outfit: 'c:not-a-uuid' } } }) as { ok: boolean; person?: { look?: unknown } };
+    expect(bad.ok).toBe(true);
+    expect(bad.person?.look).toBeUndefined();
+  });
+});

@@ -651,7 +651,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:''\},\{outfit:3,cap:'',glasses:''\},\{outfit:4,cap:'blue',glasses:''\},\{outfit:1,cap:'',glasses:''\},\{outfit:5,cap:'',glasses:''\}/);
-  assert.match(js, /function outfitChoices\(i\)\{return i===3\?\[1,0\]:null;\}/);
+  assert.match(js, /function outfitChoices\(i\)\{const base=i===3\?\[1,0\]:null,customs=customIdsOf\(i\);/);
   // 原本的像素人物已下架：只剩組合版，不再載入舊圖集。
   assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{drawWardrobe\(context,index,dir,x,y,h\);\}/);
   assert.doesNotMatch(js, /sprites-packed|rowTops|colLefts/);
@@ -663,9 +663,9 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
 test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子貼頭', async () => {
   const js = await officeJs();
   assert.match(js, /WD_SIDE_BODY_SHIFT=12/);
-  assert.match(js, /x:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[i\]/);
+  assert.match(js, /x:custom\?0:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[i\]/);
   assert.match(js, /WD_BODY_DX=\[-8,0,0,-8,0\]/);
-  assert.match(js, /w:bw\*\(1-WD_SIDE_CAP_BACK\),h:bh,x:hx\+w\*\.06\+bw\*WD_SIDE_CAP_BACK,y:hy\+sk\[2\]\*K-h\+h\*\.32\+WD_DROP\[i\]\+h-bh/);
+  assert.match(js, /w:bw\*\(1-WD_SIDE_CAP_BACK\),h:bh,x:hx\+w\*\.06\+bw\*WD_SIDE_CAP_BACK,y:hy\+sk\[2\]\*K-h\+h\*\.32\+dropI\+h-bh/);
   // 側面眼睛位置（頭像圖上的 x）：Leona 約 88、Machi 約 77，不是原本誤抓的 68／49。
   const eyes = JSON.parse(js.match(/"eyes":(\[\[.*?\]\])\};/s)[1]);
   assert.ok(eyes[0][1].x > 85 && eyes[4][1].x > 74, '側面眼睛 x 要靠臉的前緣');
@@ -674,8 +674,8 @@ test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子�
 test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移', async () => {
   const js = await officeJs();
   assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
-  assert.match(js, /y:WD_DROP\[i\]-\(act\?B\.t\|\|0:0\),/);
-  assert.equal((js.match(/\+WD_DROP\[i\](?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 2, '正面眼鏡與正面帽子都要加上');
+  assert.match(js, /y:dropI-\(act\?B\.t\|\|0:0\),/);
+  assert.equal((js.match(/\+dropI(?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 2, '正面眼鏡與正面帽子都要加上');
 });
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
@@ -689,7 +689,7 @@ test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子�
 
 test('帽子比之前再往下一點（正面 .34、側面 .32 倍帽高）', async () => {
   const js = await officeJs();
-  assert.match(js, /h\*\.32\+WD_DROP\[i\]\+h-bh[\s\S]*h\*\.34\+WD_DROP\[i\]/);
+  assert.match(js, /h\*\.32\+dropI\+h-bh[\s\S]*h\*\.34\+dropI/);
 });
 
 test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算）', async () => {
@@ -788,4 +788,16 @@ test('動作「閃身步」：只有 Machi、8 張依序播放、腳下顯示名
   assert.match(html, /id="actionSection" hidden/);
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
   assert.match(worker, /PIXEL_OFFICE_ACTIONS: Record<string, string\[\]> = \{ dodge: \['Machi'\], bear: \['Machi'\], kick: \['Machi'\] }/);
+});
+
+test('自訂服裝：遊戲讀公開 API、頭用頸頂接、造型欄列出本人的自訂服裝、預設服裝優先', async () => {
+  const js = await officeJs();
+  assert.match(js, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/api\/public\/outfits/);
+  assert.match(js, /function customOutfitView\(id,view\)/);
+  assert.match(js, /function lookDefault\(i\)\{const d=baseLookDefault\(i\),c=customDefaultId\(i\);/);
+  assert.match(js, /dropI=custom\?0:WD_DROP\[i\]/);
+  assert.match(js, /hx=B\.n-chin\.x\*K\+\(custom\?custom\.dx:0\)/);
+  assert.match(js, /loadCustomList\(\);setInterval\(loadCustomList,120000\)/);
+  // 腳本最前面的版面計算會用到造型，所以自訂服裝的狀態不能用還沒宣告的 const／let
+  assert.match(js, /function customState\(\)\{return window\.__pixelCustom/);
 });
