@@ -844,17 +844,18 @@
     .tl-panel{border:1px solid var(--line);border-left:0;border-radius:0 16px 16px 0;background:var(--panel);overflow:hidden;min-width:0}
     .tl-scroll{overflow-x:auto;overflow-y:hidden;cursor:grab;user-select:none}
     .tl-scroll.is-dragging{cursor:grabbing}
-    .tl-inner{position:relative;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--day) - 1px),rgba(153,170,160,.22) calc(var(--day) - 1px),rgba(153,170,160,.22) var(--day))}
+    .tl-inner{position:relative;isolation:isolate;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--day) - 1px),rgba(153,170,160,.22) calc(var(--day) - 1px),rgba(153,170,160,.22) var(--day))}
     .tl-bands{position:absolute;inset:0;pointer-events:none;z-index:0}
+    .tl-bands .tl-band{z-index:0}
     .tl-band{position:absolute;top:0;bottom:0}
     .tl-band.hol{background:rgba(150,160,155,.16)}
     .tl-band.today{background:rgba(15,143,97,.16)}
-    .tl-scale{position:relative;z-index:1;height:40px;background:#f0f6f3;border-bottom:1px solid var(--line);box-sizing:border-box}
+    .tl-scale{position:relative;z-index:2;height:40px;background:#f0f6f3;border-bottom:1px solid var(--line);box-sizing:border-box}
     .tl-label{position:absolute;top:50%;transform:translate(-50%,-50%);display:grid;gap:2px;line-height:1.05;font-size:10px;font-weight:800;color:#43524b;text-align:center;white-space:nowrap}
     .tl-label.is-today{color:#0f8f61}
-    .tl-row{position:relative;z-index:1;height:45px;box-sizing:border-box;border-bottom:1px solid rgba(153,170,160,.12)}
+    .tl-row{position:relative;z-index:2;height:45px;box-sizing:border-box;border-bottom:1px solid rgba(153,170,160,.12)}
     .tl-row.even{background:rgba(240,246,243,.45)}
-    .tl-bar{position:absolute;top:50%;height:33px;margin-top:-16.5px;border-radius:999px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .tl-bar{position:absolute;z-index:3;top:50%;height:33px;margin-top:-16.5px;border-radius:999px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.08)}
     .tl-bar:hover{filter:contrast(1.08) brightness(.97)}
     .tl-name{position:absolute;left:10px;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:900;color:#103b28;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-align:left}
     .tl-bar.st-todo{background:#f5718a;border:0}
