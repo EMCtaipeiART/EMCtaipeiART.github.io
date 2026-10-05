@@ -3049,11 +3049,11 @@ window.emcQuotes=[
     }
     const nasStoreGet=()=>{try{return JSON.parse(localStorage.getItem(NAS_STORE)||'{}')}catch(e){return {}}};
     function caseNasFolders(id,row){
-      let a=row&&row.designImageFolders;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=null}}
+      let a=row&&(row.designImageFolders||row['設計圖資料夾清單']);if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){a=null}}
       const l=Array.isArray(a)?a.map(i=>({path:String(i&&i.path||'').trim(),keyword:String(i&&i.keyword||'').trim()})).filter(i=>i.path):[];
       if(l.length)return l;
       const st=nasStoreGet()[id];if(Array.isArray(st)&&st.length)return st;
-      const p=String(row&&row.designImageFolderUrl||'').trim();return p?[{path:p,keyword:String(row.designImageFolderKeyword||'').trim()}]:[];
+      const p=String(row&&(row.designImageFolderUrl||row['設計圖資料夾連結'])||'').trim();return p?[{path:p,keyword:String(row.designImageFolderKeyword||row['設計圖檔名關鍵字']||'').trim()}]:[];
     }
     function saveCaseNas(id,ok){
       const list=ok.map(f=>({path:f.path,keyword:f.keyword||''})),st=nasStoreGet();st[id]=list;try{localStorage.setItem(NAS_STORE,JSON.stringify(st))}catch(e){}
