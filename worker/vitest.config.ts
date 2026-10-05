@@ -13,7 +13,8 @@ export default defineConfig({
           ADMIN_LOGIN_PASSWORD: 'test-admin-password',
           NAS_WATCHER_API_KEY: 'test-nas-watcher-key',
           DATABASE_BACKUP_API_KEY: 'test-database-backup-key',
-          GMAIL_OAUTH_CLIENT_SECRET: 'test-gmail-oauth-secret'
+          GMAIL_OAUTH_CLIENT_SECRET: 'test-gmail-oauth-secret',
+          COIN_SERVICE_KEY: 'test-coin-service-key'
         }
       }
     })

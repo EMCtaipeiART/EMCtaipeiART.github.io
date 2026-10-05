@@ -20,6 +20,7 @@ import type {
 } from './types';
 
 const STATE_KEY = 'primary';
+import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
@@ -1504,6 +1505,33 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(14)) {
+        this.ctx.storage.transactionSync(() => {
+          // 平台幣帳本（2026-10-05）：只新增不修改；每筆帶上一筆的雜湊，事後被改動可以驗出來。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS coin_ledger (
+              seq INTEGER PRIMARY KEY AUTOINCREMENT,
+              id TEXT NOT NULL UNIQUE,
+              at INTEGER NOT NULL,
+              kind TEXT NOT NULL,
+              holder TEXT NOT NULL,
+              amount INTEGER NOT NULL,
+              counterparty TEXT NOT NULL DEFAULT '',
+              ref TEXT NOT NULL DEFAULT '',
+              memo TEXT NOT NULL DEFAULT '',
+              actor TEXT NOT NULL DEFAULT '',
+              prev_hash TEXT NOT NULL,
+              hash TEXT NOT NULL
+            )
+          `);
+          this.ctx.storage.sql.exec("CREATE UNIQUE INDEX IF NOT EXISTS coin_ledger_kind_ref ON coin_ledger(kind, ref) WHERE ref != ''");
+          this.ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS coin_ledger_holder ON coin_ledger(holder, seq)');
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            14, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -2201,6 +2229,192 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     this.ctx.storage.sql.exec('UPDATE pixel_office_stories SET hidden = 1, expires_at = ? WHERE id = ?', Math.min(Number(row.expires_at), Date.now()), row.id);
     this.pixelOfficeMirrorLater(row.id);
     return { ok: true, action: 'pixelOfficeStoryRemove', version, stories: this.pixelOfficeActiveStories() };
+  }
+
+  /* ---------------------------------------------------------------------------------------------
+   * 平台幣（2026-10-05）。規則見 coins.ts：完成案件積分 1 點＝1 點平台幣（2026/10/01 起）、每次 AI 服裝生成扣 200 點、
+   * 設計師之間可以互轉（立即入帳）。帳本只新增不修改，每筆帶上一筆的雜湊；後台可以驗證與調整（調整也是一筆紀錄）。
+   * 扣點與退回只有「服裝生成器」那個 Worker 能呼叫（要帶 COIN_SERVICE_KEY），使用者自己打 API 不能退錢給自己。
+   * ------------------------------------------------------------------------------------------- */
+  private coinDesignerName(database: DatabaseSnapshot, session: SessionRecord | null): string {
+    if (!session) return '';
+    const row = settingsRow(database, session.account || session.user);
+    const name = text(row?.['名字']);
+    return PIXEL_OFFICE_NAMES.includes(name) ? name : '';
+  }
+
+  private coinBalance(holder: string): number {
+    const row = this.ctx.storage.sql.exec<{ total: number | null }>('SELECT SUM(amount) AS total FROM coin_ledger WHERE holder = ?', holder).toArray()[0];
+    return Number(row?.total) || 0;
+  }
+
+  private coinEntries(): CoinEntry[] {
+    return this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger ORDER BY seq ASC').toArray();
+  }
+
+  private coinPublic(entry: CoinEntry): Row {
+    return {
+      seq: entry.seq, id: entry.id, at: new Date(entry.at).toISOString(), kind: entry.kind, label: COIN_KIND_LABEL[entry.kind as CoinKind] || entry.kind,
+      holder: entry.holder, amount: tenthsToCoins(entry.amount), counterparty: entry.counterparty, ref: entry.ref, memo: entry.memo, actor: entry.actor,
+      hash: entry.hash.slice(0, 12)
+    };
+  }
+
+  /** 依序新增帳本紀錄。precheck 在同一把鎖裡先檢查（例如餘額夠不夠），之後才算雜湊與寫入，不會被別的扣款插隊。 */
+  private async coinAppend(inputs: Array<{ kind: CoinKind; holder: string; amount: number; counterparty?: string; ref?: string; memo?: string; actor?: string }>, precheck?: () => void): Promise<CoinEntry[]> {
+    return this.serialized(async () => {
+      precheck?.();
+      const sql = this.ctx.storage.sql;
+      let prev = sql.exec<{ hash: string }>('SELECT hash FROM coin_ledger ORDER BY seq DESC LIMIT 1').toArray()[0]?.hash || '';
+      const built: CoinEntry[] = [];
+      for (const input of inputs) {
+        const base = { id: crypto.randomUUID(), at: Date.now(), kind: input.kind, holder: input.holder, amount: input.amount, counterparty: input.counterparty || '', ref: input.ref || '', memo: input.memo || '', actor: input.actor || '' };
+        const hash = await coinHash(prev, base);
+        built.push({ seq: 0, ...base, prev_hash: prev, hash });
+        prev = hash;
+      }
+      this.ctx.storage.transactionSync(() => {
+        for (const entry of built) {
+          sql.exec(
+            'INSERT INTO coin_ledger(id, at, kind, holder, amount, counterparty, ref, memo, actor, prev_hash, hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            entry.id, entry.at, entry.kind, entry.holder, entry.amount, entry.counterparty, entry.ref, entry.memo, entry.actor, entry.prev_hash, entry.hash
+          );
+        }
+      });
+      return built;
+    });
+  }
+
+  private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const name = this.coinDesignerName(database, current);
+    const admin = hasCapability(database, current, 'database.manage');
+    const recent = name
+      ? this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE holder = ? ORDER BY seq DESC LIMIT 30', name).toArray().map(entry => this.coinPublic(entry))
+      : [];
+    return {
+      ok: true, action: 'coinMe', account: current.account, name, designer: Boolean(name), admin,
+      balance: name ? tenthsToCoins(this.coinBalance(name)) : 0,
+      spendPerGeneration: tenthsToCoins(COIN_SPEND_PER_GENERATION), startDate: COIN_START_DATE,
+      recent, directory: PIXEL_OFFICE_NAMES.filter(item => item !== name)
+    };
+  }
+
+  private async coinTransfer(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const from = this.coinDesignerName(database, current);
+    if (!from) throw new Error('只有設計師帳號可以轉讓平台幣');
+    const to = text(payload.to);
+    if (!PIXEL_OFFICE_NAMES.includes(to)) throw new Error('找不到收款的設計師');
+    if (to === from) throw new Error('不能轉給自己');
+    const amount = coinsToTenths(payload.amount, '轉讓點數');
+    const memo = text(payload.memo).replace(/\s+/g, ' ').slice(0, 60);
+    const ref = `tr:${crypto.randomUUID()}`;
+    await this.coinAppend([
+      { kind: 'transfer_out', holder: from, amount: -amount, counterparty: to, ref, memo, actor: current.account },
+      { kind: 'transfer_in', holder: to, amount, counterparty: from, ref, memo, actor: current.account }
+    ], () => {
+      const balance = this.coinBalance(from);
+      if (balance < amount) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點`);
+    });
+    return { ok: true, action: 'coinTransfer', transferId: ref, to, amount: tenthsToCoins(amount), balance: tenthsToCoins(this.coinBalance(from)) };
+  }
+
+  private coinServiceAuthorized(payload: ApiPayload): void {
+    if (!safeEqual(text(payload.serviceKey), text(this.env.COIN_SERVICE_KEY))) throw new Error('未授權的呼叫');
+  }
+
+  /** 服裝生成前先扣點（服務金鑰＋使用者 token）；管理員（沒有設計師身分）不扣點。 */
+  private async coinReserve(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    this.coinServiceAuthorized(payload);
+    const current = this.requireSession(session);
+    const name = this.coinDesignerName(database, current);
+    if (!name) {
+      if (hasCapability(database, current, 'database.manage')) return { ok: true, action: 'coinReserve', exempt: true, account: current.account, name: '', balance: 0 };
+      throw new Error('只有設計師帳號有平台幣，才能使用服裝生成器');
+    }
+    const generationId = text(payload.ref);
+    if (!/^[0-9a-f-]{36}$/.test(generationId)) throw new Error('缺少生成編號');
+    const ref = `gen:${generationId}`;
+    const existing = this.ctx.storage.sql.exec('SELECT 1 FROM coin_ledger WHERE kind = ? AND ref = ?', 'spend', ref).toArray();
+    if (!existing.length) {
+      await this.coinAppend([{ kind: 'spend', holder: name, amount: -COIN_SPEND_PER_GENERATION, ref, memo: 'AI 服裝生成', actor: current.account }], () => {
+        const balance = this.coinBalance(name);
+        if (balance < COIN_SPEND_PER_GENERATION) throw new Error(`平台幣不足：目前 ${tenthsToCoins(balance)} 點，每次生成需要 ${tenthsToCoins(COIN_SPEND_PER_GENERATION)} 點`);
+      });
+    }
+    return { ok: true, action: 'coinReserve', exempt: false, account: current.account, name, charged: tenthsToCoins(COIN_SPEND_PER_GENERATION), balance: tenthsToCoins(this.coinBalance(name)) };
+  }
+
+  /** 生成沒有成功（失敗、被內容檢查擋下）就把這筆扣款退回；同一筆只退一次。 */
+  private async coinRefund(payload: ApiPayload): Promise<ApiResult> {
+    this.coinServiceAuthorized(payload);
+    const generationId = text(payload.ref);
+    if (!/^[0-9a-f-]{36}$/.test(generationId)) throw new Error('缺少生成編號');
+    const ref = `gen:${generationId}`;
+    const spend = this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE kind = ? AND ref = ?', 'spend', ref).toArray()[0];
+    if (!spend) return { ok: true, action: 'coinRefund', refunded: false, reason: 'no-spend' };
+    const done = this.ctx.storage.sql.exec('SELECT 1 FROM coin_ledger WHERE kind = ? AND ref = ?', 'refund', ref).toArray();
+    if (done.length) return { ok: true, action: 'coinRefund', refunded: false, reason: 'already-refunded' };
+    await this.coinAppend([{ kind: 'refund', holder: spend.holder, amount: -spend.amount, counterparty: '', ref, memo: text(payload.reason).slice(0, 80) || '生成未成功', actor: 'system' }]);
+    return { ok: true, action: 'coinRefund', refunded: true, balance: tenthsToCoins(this.coinBalance(spend.holder)) };
+  }
+
+  /** 後台：完整帳本、各設計師餘額、帳本串接是否完整。 */
+  private async coinLedger(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    requireCapability(database, session, 'database.manage');
+    const all = this.coinEntries();
+    const chain = await verifyCoinChain(all);
+    const holder = text(payload.holder), kind = text(payload.kind);
+    const limit = Math.min(1000, Math.max(1, Number(payload.limit) || 200));
+    const filtered = all.filter(entry => (!holder || entry.holder === holder) && (!kind || entry.kind === kind));
+    const balances: Record<string, number> = {};
+    for (const name of PIXEL_OFFICE_NAMES) balances[name] = tenthsToCoins(this.coinBalance(name));
+    const totals: Record<string, number> = {};
+    for (const entry of all) totals[entry.kind] = (totals[entry.kind] || 0) + tenthsToCoins(entry.amount);
+    return {
+      ok: true, action: 'coinLedger', chain, balances, totals, count: all.length, startDate: COIN_START_DATE,
+      entries: filtered.slice(-limit).reverse().map(entry => this.coinPublic(entry))
+    };
+  }
+
+  /** 後台手動調整（補發、扣回、更正）：一定要寫原因，也是一筆帳本紀錄，不是改舊的。 */
+  private async coinAdjust(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = requireCapability(database, session, 'database.manage') as SessionRecord;
+    const holder = text(payload.holder);
+    if (!PIXEL_OFFICE_NAMES.includes(holder)) throw new Error('找不到這位設計師');
+    const reason = text(payload.reason).replace(/\s+/g, ' ');
+    if (reason.length < 4) throw new Error('請寫下調整原因（至少 4 個字），之後有爭議才查得到');
+    const negative = Number(payload.amount) < 0;
+    const amount = coinsToTenths(Math.abs(Number(payload.amount)), '調整點數') * (negative ? -1 : 1);
+    await this.coinAppend([{ kind: 'adjust', holder, amount, ref: `adj:${crypto.randomUUID()}`, memo: reason.slice(0, 120), actor: current.account }], () => {
+      if (amount < 0 && this.coinBalance(holder) + amount < 0) throw new Error('扣回的點數超過目前餘額');
+    });
+    return { ok: true, action: 'coinAdjust', holder, amount: tenthsToCoins(amount), balance: tenthsToCoins(this.coinBalance(holder)) };
+  }
+
+  /** 把「2026/10/01 起結束、狀態已完成」的案件積分記成平台幣（每個案件列只記一次）。Cron 定時呼叫，後台也能手動觸發。 */
+  async runCoinEarnSync(): Promise<Row> {
+    const stored = await this.snapshot();
+    const rows = stored.database.tables.database.rows;
+    const known = new Set(this.ctx.storage.sql.exec<{ ref: string }>("SELECT ref FROM coin_ledger WHERE kind = 'earn'").toArray().map(row => row.ref));
+    const occurrences = new Map<string, number>();
+    const pending: Array<{ kind: CoinKind; holder: string; amount: number; ref: string; memo: string; actor: string }> = [];
+    for (const row of rows) {
+      const id = text(row['案件編號']);
+      if (!id) continue;
+      const occurrence = (occurrences.get(id) || 0) + 1;
+      occurrences.set(id, occurrence);
+      if (text(row['狀態']) !== '已完成') continue;
+      const owner = text(row['設計負責人']);
+      if (!PIXEL_OFFICE_NAMES.includes(owner) || !endedOnOrAfterStart(row['結束日期'])) continue;
+      const amount = Math.round((Number(row['加權']) || 0) * 10);
+      const ref = `earn:${id}#${occurrence}`;
+      if (amount <= 0 || known.has(ref)) continue;
+      pending.push({ kind: 'earn', holder: owner, amount, ref, memo: `${id} ${text(row['專案名稱']).slice(0, 40)}（積分 ${tenthsToCoins(amount)}）`, actor: 'system' });
+    }
+    if (pending.length) await this.coinAppend(pending);
+    return { ok: true, added: pending.length };
   }
 
   private async serialized<T>(work: () => Promise<T>): Promise<T> {
@@ -3634,6 +3848,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const session = await this.sessionFor(payload);
       const baseUrl = text(payload.supplementBaseUrl) || context.baseUrl;
 
+      if (action === 'coinMe') return await this.coinMe(database, session);
+      if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
+      if (action === 'coinReserve') return await this.coinReserve(payload, database, session);
+      if (action === 'coinRefund') return await this.coinRefund(payload);
+      if (action === 'coinLedger') return await this.coinLedger(payload, database, session);
+      if (action === 'coinAdjust') return await this.coinAdjust(payload, database, session);
+      if (action === 'coinEarnSyncNow') { requireCapability(database, session, 'database.manage'); return { ok: true, ...(await this.runCoinEarnSync()), action }; }
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };
       if (action === 'getSystemAnnouncement') return { ok: true, action, announcement: publicSystemAnnouncement(database), revision: database.revision };
       if (action === 'markSystemAnnouncementRead') {

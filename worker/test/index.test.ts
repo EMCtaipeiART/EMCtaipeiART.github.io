@@ -355,7 +355,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -5058,5 +5058,100 @@ describe('ownerConfirmCases（專案負責人確認過稿中案件已完成）',
     const token = await seedSession('wang@emctaipei.com', '王小明');
     const empty = await api({ action: 'ownerConfirmCases', caseIds: [] }, token);
     expect(empty.ok).toBe(false);
+  });
+});
+
+describe('平台幣', () => {
+  async function seedDesigner(account: string, name: string): Promise<string> {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables['設定'].rows.push({ '名字': name, '顯示名': name, '帳號': account });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    return seedSession(account, name);
+  }
+  async function seedDoneCase(caseId: string, owner: string, end: string, weight: string, status = '已完成'): Promise<void> {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables.database.rows.push({ '案件編號': caseId, '月份': '10月', '客戶別': '測試客戶', '專案名稱': `平台幣 ${caseId}`, '設計負責人': owner, '狀態': status, '加權': weight, '結束日期': end });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+  }
+  const SERVICE = 'test-coin-service-key';
+  const uuid = () => crypto.randomUUID();
+
+  it('earns 1 coin per completed point from 2026/10/01 and never twice for the same case', async () => {
+    const admin = await login();
+    const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
+    await seedDoneCase('26100501', 'Leona', '2026/10/06', '4');
+    await seedDoneCase('26100502', 'Leona', '2026/10/02', '1.5');
+    await seedDoneCase('26090501', 'Leona', '2026/09/30', '9');      // 起算日之前
+    await seedDoneCase('26100503', 'Leona', '2026/10/07', '3', '執行中'); // 還沒完成
+    await seedDoneCase('26100504', 'Karl', '2026/10/07', '5');          // 不是設計師
+    expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true, added: 2 });
+    expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true, added: 0 });
+    expect(await api({ action: 'coinMe' }, leona)).toMatchObject({ ok: true, name: 'Leona', designer: true, balance: 5.5, spendPerGeneration: 200 });
+  });
+
+  it('transfers instantly between designers, refuses overdrafts and self-transfers, and records both sides', async () => {
+    const admin = await login();
+    const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
+    await seedDesigner('amber@emctaipei.test', 'Amber');
+    expect(await api({ action: 'coinAdjust', holder: 'Leona', amount: 10, reason: '測試補發' }, admin)).toMatchObject({ ok: true, balance: 10 });
+    expect(await api({ action: 'coinTransfer', to: 'Amber', amount: 3.5, memo: '請喝飲料' }, leona)).toMatchObject({ ok: true, balance: 6.5 });
+    expect(await api({ action: 'coinTransfer', to: 'Amber', amount: 100 }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinTransfer', to: 'Leona', amount: 1 }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinTransfer', to: 'Karl', amount: 1 }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinTransfer', to: 'Amber', amount: 0.25 }, leona)).toMatchObject({ ok: false });
+    const ledger = await api({ action: 'coinLedger' }, admin) as { balances: Record<string, number>; entries: Array<{ kind: string; holder: string; amount: number; memo: string }>; chain: { ok: boolean } };
+    expect(ledger.balances).toMatchObject({ Leona: 6.5, Amber: 3.5 });
+    expect(ledger.chain.ok).toBe(true);
+    expect(ledger.entries.filter(entry => entry.kind.startsWith('transfer'))).toHaveLength(2);
+    expect(ledger.entries.find(entry => entry.kind === 'transfer_in')).toMatchObject({ holder: 'Amber', amount: 3.5, memo: '請喝飲料' });
+  });
+
+  it('charges 200 per generation only for the generator service, once per generation, and refunds once', async () => {
+    const admin = await login();
+    const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
+    const generation = uuid();
+    // 沒有服務金鑰：任何人自己呼叫都不行
+    expect(await api({ action: 'coinReserve', ref: generation }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: 'wrong' }, leona)).toMatchObject({ ok: false });
+    // 點數不足
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: false });
+    await api({ action: 'coinAdjust', holder: 'Leona', amount: 450, reason: '測試補發' }, admin);
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, charged: 200, balance: 250 });
+    // 同一個生成編號重送不會再扣
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, balance: 250 });
+    // 退回只有服務能做、而且只退一次
+    expect(await api({ action: 'coinRefund', ref: generation }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE, reason: '被內容檢查擋下' })).toMatchObject({ ok: true, refunded: true, balance: 450 });
+    expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: false });
+  });
+
+  it('exempts admins without a designer identity and blocks other non-designers', async () => {
+    const boss = await seedSession('boss@emctaipei.test', 'Boss');
+    await seedAccountPermission('boss@emctaipei.test', '管理者', ['database.manage']);
+    const stranger = await seedSession('stranger@emctaipei.test', 'Stranger');
+    // 管理員但沒有設計師身分：不扣點；管理員本人如果也是設計師（例如 Machi），就照設計師算
+    expect(await api({ action: 'coinReserve', ref: uuid(), serviceKey: SERVICE }, boss)).toMatchObject({ ok: true, exempt: true });
+    expect(await api({ action: 'coinReserve', ref: uuid(), serviceKey: SERVICE }, stranger)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinLedger' }, stranger)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinAdjust', holder: 'Leona', amount: 5, reason: '測試補發' }, stranger)).toMatchObject({ ok: false });
+  });
+
+  it('detects tampering with the ledger and requires a reason for adjustments', async () => {
+    const admin = await login();
+    expect(await api({ action: 'coinAdjust', holder: 'Leona', amount: 5, reason: '' }, admin)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinAdjust', holder: 'Leona', amount: 5, reason: '補發 10 月獎勵' }, admin)).toMatchObject({ ok: true });
+    expect(await api({ action: 'coinAdjust', holder: 'Leona', amount: -50, reason: '扣回測試' }, admin)).toMatchObject({ ok: false });
+    expect(await api({ action: 'coinLedger' }, admin)).toMatchObject({ chain: { ok: true } });
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => { state.storage.sql.exec('UPDATE coin_ledger SET amount = 9999 WHERE seq = 1'); });
+    expect(await api({ action: 'coinLedger' }, admin)).toMatchObject({ chain: { ok: false, brokenAtSeq: 1 } });
   });
 });

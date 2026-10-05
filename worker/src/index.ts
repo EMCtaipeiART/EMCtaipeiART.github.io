@@ -206,6 +206,15 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'pixel-office-calendar-sync-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 平台幣：完成案件的積分記入帳本（每 10 分鐘一次，已記過的不會重複）。
+    if (new Date().getUTCMinutes() % 10 === 0) {
+      try {
+        const earn = await stub.runCoinEarnSync();
+        if ((earn as { added?: number }).added) console.log(JSON.stringify({ event: 'coin-earn-sync', result: earn }));
+      } catch (error) {
+        console.error(JSON.stringify({ event: 'coin-earn-sync-error', message: error instanceof Error ? error.message : String(error) }));
+      }
+    }
     // 即時推送：上面這些背景變動（行事曆切換、限時動態到期…）有結果就通知前台。
     try { await stub.runPixelPush(); } catch (error) {
       console.error(JSON.stringify({ event: 'pixel-office-push-error', message: error instanceof Error ? error.message : String(error) }));

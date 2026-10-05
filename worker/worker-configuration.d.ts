@@ -21,6 +21,7 @@ interface __BaseEnv_Env {
 	ADMIN_LOGIN_PASSWORD: string;
 	NAS_WATCHER_API_KEY: string;
 	DATABASE_BACKUP_API_KEY: string;
+	COIN_SERVICE_KEY: string;
 	GMAIL_OAUTH_CLIENT_SECRET: string;
 	DATABASE_COORDINATOR: DurableObjectNamespace<import("./src/index").DatabaseCoordinator>;
 }
@@ -36,7 +37,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ALLOWED_ORIGINS" | "GITHUB_OWNER" | "GITHUB_REPO" | "GITHUB_BRANCH" | "GITHUB_DATABASE_PATH" | "GOOGLE_OAUTH_CLIENT_ID" | "GMAIL_OAUTH_CLIENT_ID" | "ERP_BASE_URL" | "ERP_CLIENT_ID" | "ERP_REDIRECT_URI" | "ADMIN_LOGIN_ACCOUNTS" | "SESSION_TTL_SECONDS" | "UPLOAD_APPS_SCRIPT_URL" | "GITHUB_TOKEN" | "ERP_CLIENT_SECRET" | "ADMIN_LOGIN_PASSWORD" | "NAS_WATCHER_API_KEY" | "DATABASE_BACKUP_API_KEY" | "GMAIL_OAUTH_CLIENT_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "ENVIRONMENT" | "ALLOWED_ORIGINS" | "GITHUB_OWNER" | "GITHUB_REPO" | "GITHUB_BRANCH" | "GITHUB_DATABASE_PATH" | "GOOGLE_OAUTH_CLIENT_ID" | "GMAIL_OAUTH_CLIENT_ID" | "ERP_BASE_URL" | "ERP_CLIENT_ID" | "ERP_REDIRECT_URI" | "ADMIN_LOGIN_ACCOUNTS" | "SESSION_TTL_SECONDS" | "UPLOAD_APPS_SCRIPT_URL" | "GITHUB_TOKEN" | "ERP_CLIENT_SECRET" | "ADMIN_LOGIN_PASSWORD" | "NAS_WATCHER_API_KEY" | "DATABASE_BACKUP_API_KEY" | "COIN_SERVICE_KEY" | "GMAIL_OAUTH_CLIENT_SECRET">> {}
 }
 
 // Begin runtime types
