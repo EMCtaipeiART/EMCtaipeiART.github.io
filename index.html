@@ -695,6 +695,17 @@
     @media (max-width:720px){.rc-colors{flex-direction:column;gap:10px;max-width:calc(100vw - 32px)}}
     .rc-c{width:22px;height:22px;border-radius:4px;border:1px solid rgba(0,0,0,.18);box-shadow:none;cursor:pointer;padding:0}.rc-c:hover{transform:scale(1.18);outline:2px solid var(--brand);z-index:1;position:relative}
     .editor img{max-width:100%;height:auto;border-radius:6px}
+    .editor.is-image-dragover{border-color:var(--brand)!important;background:var(--brand-soft)!important;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
+    .editor img{cursor:pointer}.editor img.is-image-selected{outline:2px solid #1a73e8;outline-offset:1px}
+    .rc-img-menu{position:fixed;z-index:2200;display:flex;flex-wrap:wrap;align-items:center;gap:2px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow-lg)}
+    .rc-img-menu[hidden]{display:none!important}
+    .rc-img-menu button{min-height:28px;padding:0 10px;border:0;border-radius:7px;background:transparent;color:var(--ink);font-size:12.5px;font-weight:800;cursor:pointer}
+    .rc-img-menu button:hover,.rc-img-menu button.on{background:var(--brand-soft);color:var(--brand-deep,#0f5138)}
+    .rc-img-menu button.rm{color:#be123c}.rc-img-menu button.rm:hover{background:#fef2f2}
+    .rc-img-div{width:1px;align-self:stretch;margin:3px 2px;background:var(--line)}
+    .rc-img-caret{position:fixed;z-index:2200;width:2px;border-radius:1px;background:#1a73e8;pointer-events:none}.rc-img-caret[hidden]{display:none}
+    html[data-theme="dark"] .rc-img-menu button.rm{color:#ffb4c0}html[data-theme="dark"] .rc-img-menu button.rm:hover{background:#3d1d24}html[data-theme="dark"] .editor img.is-image-selected{outline-color:#8ab4f8}
+
     .att-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .att{display:inline-flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:700}
     .att button{width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.08);cursor:pointer;padding:0}
@@ -2867,6 +2878,101 @@ window.emcQuotes=[
     function restoreMailRange(){const ed=$('mBody');ed.focus();const sel=getSelection();let r=mailRange;if(!r||!ed.contains(r.startContainer)||!ed.contains(r.endContainer)){r=document.createRange();r.selectNodeContents(ed);r.collapse(false)}sel.removeAllRanges();sel.addRange(r)}
     const fileToBase64=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=()=>rej(new Error(`${file.name} 讀取失敗`));r.readAsDataURL(file)});
     function fmtSize(n){return n>=1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`}
+    /* ---------- 信件內文圖片：點圖片出現大小選單（小／中／大／最適大小／原始大小／移除）、拖曳圖片換位置、從電腦拖圖進來 ---------- */
+    const MAIL_IMG_SIZES=[{key:'small',label:'小',width:160},{key:'medium',label:'中',width:320},{key:'large',label:'大',width:480},{key:'fit',label:'最適大小'},{key:'original',label:'原始大小'}];
+    let imgMenu=null,imgTarget=null,imgDragged=null,imgCaret=null;
+    function setMailImgWidth(img,size){
+      let w='';
+      if(size==='fit')w='100%';else if(size==='original')w=img.naturalWidth?`${img.naturalWidth}px`:'';else if(Number(size)>0)w=`${Math.round(Number(size))}px`;
+      if(!w)return;
+      img.style.width=w;img.style.maxWidth='100%';img.style.height='auto';
+      if(/px$/.test(w))img.setAttribute('width',String(parseInt(w,10)));else img.removeAttribute('width');
+    }
+    function mailImgSizeKey(img){
+      const w=String(img.style.width||'');if(w==='100%')return 'fit';
+      const px=parseInt(w,10),preset=MAIL_IMG_SIZES.find(x=>x.width===px);
+      return preset?preset.key:(px&&px===img.naturalWidth?'original':'');
+    }
+    function imgMenuEl(){
+      if(imgMenu)return imgMenu;
+      const m=document.createElement('div');m.className='rc-img-menu';m.setAttribute('role','toolbar');m.setAttribute('aria-label','圖片大小');m.hidden=true;
+      m.innerHTML=MAIL_IMG_SIZES.map(x=>`<button type="button" data-img-size="${x.key}">${x.label}</button>`).join('')+'<span class="rc-img-div" aria-hidden="true"></span><button type="button" data-img-size="remove" class="rm">移除</button>';
+      m.addEventListener('mousedown',e=>e.preventDefault());
+      m.addEventListener('click',e=>{
+        const b=e.target.closest('[data-img-size]'),img=imgTarget;
+        if(!b||!img||!img.isConnected){imgMenuClose();return}
+        const key=b.dataset.imgSize,ed=$('mBody');
+        if(key==='remove'){imgMenuClose();img.remove();if(ed)ed.focus();saveMailDraft();return}
+        const sz=MAIL_IMG_SIZES.find(x=>x.key===key);setMailImgWidth(img,sz&&sz.width?sz.width:key);imgMenuPlace(img);imgMenuMark(img);saveMailDraft();
+      });
+      document.body.appendChild(m);imgMenu=m;return m;
+    }
+    function imgMenuMark(img){const k=mailImgSizeKey(img);imgMenu&&imgMenu.querySelectorAll('[data-img-size]').forEach(b=>b.classList.toggle('on',b.dataset.imgSize===k))}
+    function imgMenuPlace(img){
+      const m=imgMenuEl(),r=img.getBoundingClientRect(),g=8;m.hidden=false;
+      const w=m.offsetWidth,h=m.offsetHeight,left=Math.max(g,Math.min(r.left,innerWidth-w-g)),below=r.bottom+6,top=below+h<=innerHeight-g?below:Math.max(g,r.top-h-6);
+      m.style.left=`${Math.round(left)}px`;m.style.top=`${Math.round(top)}px`;
+    }
+    function imgMenuOpen(img){
+      document.querySelectorAll('#mBody img.is-image-selected').forEach(x=>{if(x!==img)x.classList.remove('is-image-selected')});
+      imgTarget=img;img.classList.add('is-image-selected');
+      const r=document.createRange();r.selectNode(img);const sel=getSelection();sel.removeAllRanges();sel.addRange(r); // 選取整張圖，按倒退鍵／Delete 就能刪除
+      imgMenuPlace(img);imgMenuMark(img);
+    }
+    function imgMenuClose(){if(imgMenu)imgMenu.hidden=true;if(imgTarget)imgTarget.classList.remove('is-image-selected');imgTarget=null}
+    function imgDropRange(ed,x,y){
+      let r=null;
+      if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
+      else if(document.caretPositionFromPoint){const p=document.caretPositionFromPoint(x,y);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true)}}
+      if(!r||!ed.contains(r.commonAncestorContainer))return null;
+      const el=r.startContainer.nodeType===1?r.startContainer:r.startContainer.parentElement;
+      if(el&&el.closest('[contenteditable="false"]'))return null; // 不能放進設計圖／NAS 路徑等唯讀區塊
+      return r;
+    }
+    function imgCaretShow(range){
+      if(!imgCaret){imgCaret=document.createElement('div');imgCaret.className='rc-img-caret';document.body.appendChild(imgCaret)}
+      const rects=range.getClientRects(),rect=rects.length?rects[0]:(range.startContainer.nodeType===1?range.startContainer.getBoundingClientRect():null);
+      if(!rect){imgCaretHide();return}
+      imgCaret.style.left=`${Math.round(rect.left)}px`;imgCaret.style.top=`${Math.round(rect.top)}px`;imgCaret.style.height=`${Math.max(18,Math.round(rect.height))}px`;imgCaret.hidden=false;
+    }
+    function imgCaretHide(){if(imgCaret)imgCaret.hidden=true}
+    document.addEventListener('click',e=>{
+      const ed=e.target.closest?.('#mBody');
+      if(ed&&ed.getAttribute('contenteditable')==='true'){const img=e.target.closest('img');if(img&&ed.contains(img)){imgMenuOpen(img);return}}
+      if(!e.target.closest?.('.rc-img-menu'))imgMenuClose();
+    });
+    document.addEventListener('keydown',e=>{if(imgTarget&&!['Shift','Meta','Control','Alt'].includes(e.key))imgMenuClose()},true);
+    window.addEventListener('scroll',()=>{if(imgTarget)imgMenuPlace(imgTarget)},true);
+    window.addEventListener('resize',()=>{if(imgTarget)imgMenuPlace(imgTarget)});
+    document.addEventListener('dragstart',e=>{
+      const ed=e.target.closest?.('#mBody'),img=e.target.closest?.('img');
+      if(!ed||!img||!ed.contains(img))return;
+      imgMenuClose();imgDragged={img,ed};e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','')}catch(err){}
+    });
+    document.addEventListener('dragend',()=>{imgDragged=null;imgCaretHide();const ed=$('mBody');if(ed)ed.classList.remove('is-image-dragover')});
+    document.addEventListener('dragover',e=>{
+      const ed=e.target.closest?.('#mBody');if(!ed||ed.getAttribute('contenteditable')!=='true')return;
+      if(imgDragged&&imgDragged.ed===ed){ // 先判斷是不是自己的圖在拖：瀏覽器拖圖片時也會帶 Files，走外部檔案那段會多複製一張
+        const r=imgDropRange(ed,e.clientX,e.clientY);if(!r){imgCaretHide();return}
+        e.preventDefault();e.dataTransfer.dropEffect='move';imgCaretShow(r);return;
+      }
+      if([...(e.dataTransfer?.types||[])].includes('Files')){e.preventDefault();ed.classList.add('is-image-dragover')}
+    });
+    document.addEventListener('dragleave',e=>{const ed=e.target.closest?.('#mBody');if(ed&&!ed.contains(e.relatedTarget)){ed.classList.remove('is-image-dragover');imgCaretHide()}});
+    document.addEventListener('drop',e=>{
+      const ed=e.target.closest?.('#mBody');if(!ed||ed.getAttribute('contenteditable')!=='true')return;
+      ed.classList.remove('is-image-dragover');imgCaretHide();
+      if(imgDragged&&imgDragged.ed===ed){
+        e.preventDefault();const img=imgDragged.img;imgDragged=null;
+        const r=imgDropRange(ed,e.clientX,e.clientY);if(!r||img.contains(r.startContainer))return;
+        r.insertNode(img);ed.focus();saveMailDraft();return;
+      }
+      const files=[...(e.dataTransfer?.files||[])].filter(f=>f.type.startsWith('image/'));
+      if(!files.length)return;
+      e.preventDefault();
+      const r=imgDropRange(ed,e.clientX,e.clientY);if(r){mailRange=r.cloneRange()}
+      insertMailImages(files);
+    });
     async function insertMailImages(files){
       const m=state.mail,d=m.drafts[m.index];d.images=d.images||{};let added=0;
       for(const file of [...files]){
