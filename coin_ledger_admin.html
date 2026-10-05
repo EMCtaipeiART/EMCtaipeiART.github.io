@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>平台幣帳本｜EMC 設計部</title>
+  <script>(()=>{try{document.documentElement.dataset.theme=localStorage.getItem('designRequestThemeV1')==='dark'?'dark':'light'}catch(error){document.documentElement.dataset.theme='light'}})()</script>
+  <style>
+    :root{--bg:#f5f7f6;--panel:#fff;--panel2:#f8faf9;--ink:#17211d;--muted:#68756f;--line:#dce4df;--green:#0f8f61;--green2:#e7f6ef;--red:#c93636;--red2:#fdeeee;--amber:#a76600;--amber2:#fff6e2;--shadow:0 10px 28px rgba(18,38,28,.08)}
+    html[data-theme="dark"]{--bg:#151b19;--panel:#202725;--panel2:#252e2b;--ink:#edf3f0;--muted:#a6b2ad;--line:#3c4743;--green:#55c796;--green2:#263f35;--red:#ff8989;--red2:#3a2424;--amber:#f4bd67;--amber2:#3a3120;--shadow:0 14px 34px rgba(0,0,0,.26)}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;font-size:14px}
+    button,input,select{font:inherit;color:inherit}button{cursor:pointer}a{color:inherit}
+    .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:10px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+    .topbar h1{margin:0;font-size:18px}.topbar small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+    .btn{height:36px;padding:0 14px;border:1px solid var(--line);border-radius:7px;background:var(--panel);display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none}.btn.primary{background:var(--green);border-color:var(--green);color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+    main{width:min(1500px,100%);margin:auto;padding:20px 24px 48px}
+    .notice{margin-bottom:14px;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);font-size:13px}
+    .notice.ok{border-color:var(--green);background:var(--green2);color:var(--green)}.notice.bad{border-color:var(--red);background:var(--red2);color:var(--red);font-weight:700}
+    .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}.card{padding:15px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}.card span{display:block;color:var(--muted);font-size:12px}.card b{display:block;font-size:26px;margin-top:6px;letter-spacing:-.5px}.card small{color:var(--muted);font-size:11px}
+    .panel{border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}.panel>h2{margin:0;padding:14px 16px;font-size:15px;border-bottom:1px solid var(--line);background:var(--panel2)}
+    .tools{display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);align-items:center}.tools select,.tools input{height:36px;border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:0 10px}
+    .table-wrap{overflow:auto;max-height:560px}table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{position:sticky;top:0;background:var(--panel2);font-size:12px;color:var(--muted);z-index:1}td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}td.plus{color:var(--green)}td.minus{color:var(--red)}td.memo{white-space:normal;min-width:240px;color:var(--muted)}td.hash{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted)}
+    .adjust{display:grid;grid-template-columns:160px 130px minmax(220px,1fr) auto;gap:10px;padding:16px;align-items:end}.adjust label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}.adjust select,.adjust input{width:100%;height:38px;border:1px solid var(--line);border-radius:7px;background:var(--panel);padding:0 10px}.adjust-note{padding:0 16px 14px;color:var(--muted);font-size:12px;line-height:1.7}
+    .gate{min-height:70vh;display:grid;place-items:center;padding:24px;text-align:center}.gate div{max-width:420px;padding:28px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+    .empty{padding:36px;text-align:center;color:var(--muted)}
+    @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.adjust{grid-template-columns:1fr 1fr}.adjust .wide{grid-column:1/-1}main{padding:14px}.topbar{padding:10px 14px}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><div><h1>平台幣帳本</h1><small>完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）· 每次 AI 服裝生成 200 點 · 只新增、不修改，每筆帶簽章</small></div><div><a class="btn" href="index.html">← 返回設計需求系統</a></div></header>
+  <main id="app"><div class="gate"><div>讀取中…</div></div></main>
+  <script>
+  (()=>{
+    const API='https://machi-design-api.machi-chen.workers.dev/api';
+    const $=id=>document.getElementById(id);
+    const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    function token(){try{if(localStorage.getItem('designRequestEditorLoggedOut')==='1'||sessionStorage.getItem('designRequestEditorLoggedOut')==='1')return '';return localStorage.getItem('designRequestEditorToken')||''}catch(error){return ''}}
+    async function api(action,payload={}){
+      const response=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action,...payload,editorToken:token()}),cache:'no-store'});
+      const data=await response.json();
+      if(!data||data.ok===false)throw new Error(data?.error||'操作失敗');
+      return data;
+    }
+    const NAMES=['Leona','Amber','Noise','Anna','Machi'];
+    const KINDS={earn:'完成案件回饋',spend:'服裝生成',refund:'生成失敗退回',transfer_out:'轉出',transfer_in:'轉入',adjust:'管理員調整'};
+    const fmt=value=>(Math.round(Number(value||0)*10)/10).toLocaleString('zh-TW',{maximumFractionDigits:1});
+    const taipei=iso=>new Date(iso).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+    let state={data:null,holder:'',kind:''};
+    function gate(message){$('app').innerHTML=`<div class="gate"><div><h2>無法開啟平台幣帳本</h2><p>${esc(message)}</p><a class="btn primary" href="index.html">返回設計需求系統</a></div></div>`}
+    async function load(){
+      if(!token()){gate('請先登入設計需求系統（需要管理者權限）。');return}
+      try{state.data=await api('coinLedger',{holder:state.holder,kind:state.kind,limit:1000});render()}
+      catch(error){gate(error.message||'讀取失敗；此頁面僅限管理者。')}
+    }
+    function render(note=''){
+      const d=state.data;
+      const chain=d.chain;
+      const holders=NAMES.map(name=>`<div class="card"><span>${esc(name)}</span><b>${fmt(d.balances[name])}</b><small>點</small></div>`).join('');
+      const rows=d.entries.map(entry=>`<tr><td>${esc(taipei(entry.at))}</td><td>${esc(entry.label)}</td><td>${esc(entry.holder)}</td><td class="num ${entry.amount>=0?'plus':'minus'}">${entry.amount>=0?'+':''}${fmt(entry.amount)}</td><td>${esc(entry.counterparty)}</td><td class="memo">${esc(entry.memo)}</td><td>${esc(entry.actor)}</td><td class="hash" title="${esc(entry.ref)}">#${entry.seq} · ${esc(entry.hash)}</td></tr>`).join('');
+      const totals=Object.entries(d.totals).map(([kind,value])=>`${KINDS[kind]||kind} ${fmt(value)}`).join(' ／ ');
+      $('app').innerHTML=`
+        <div class="notice ${chain.ok?'ok':'bad'}">${chain.ok?`帳本驗證通過：共 ${d.count} 筆，串接與簽章都完整，沒有被改動的痕跡。`:`帳本驗證失敗：第 ${chain.brokenAtSeq} 筆有問題（${esc(chain.reason)}）。請立即停止使用並保留現狀，交給維護者查證。`}${note?` ｜ ${esc(note)}`:''}</div>
+        <div class="cards">${holders}</div>
+        <div class="notice">累計：${esc(totals)||'尚無紀錄'}</div>
+        <section class="panel"><h2>帳本明細</h2>
+          <div class="tools"><select id="fHolder"><option value="">全部設計師</option>${NAMES.map(name=>`<option ${state.holder===name?'selected':''}>${name}</option>`).join('')}</select>
+            <select id="fKind"><option value="">全部類型</option>${Object.entries(KINDS).map(([kind,label])=>`<option value="${kind}" ${state.kind===kind?'selected':''}>${label}</option>`).join('')}</select>
+            <button class="btn" id="bReload">重新整理</button><button class="btn" id="bCsv">匯出 CSV</button><button class="btn" id="bSync" title="把已完成案件的積分立刻記入（平常每 10 分鐘自動記一次）">立即同步完成案件積分</button></div>
+          <div class="table-wrap">${rows?`<table><thead><tr><th>時間（台北）</th><th>類型</th><th>設計師</th><th>點數</th><th>對象</th><th>備註</th><th>操作者</th><th>序號 · 簽章</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">沒有符合的紀錄</div>'}</div></section>
+        <section class="panel"><h2>手動調整（補發、扣回、更正）</h2>
+          <div class="adjust"><div><label>設計師</label><select id="aHolder">${NAMES.map(name=>`<option>${name}</option>`).join('')}</select></div><div><label>點數（負數＝扣回）</label><input id="aAmount" type="number" step="0.1" placeholder="例如 50 或 -20"></div><div class="wide"><label>原因（必填，之後有爭議靠這個查）</label><input id="aReason" type="text" maxlength="120" placeholder="例如：10/3 轉讓誤轉，更正給 Amber"></div><button class="btn primary" id="bAdjust">確認調整</button></div>
+          <div class="adjust-note">調整不會改舊紀錄，而是新增一筆「管理員調整」並記下操作者與原因；扣回不能讓餘額變成負數。</div></section>`;
+      $('fHolder').onchange=event=>{state.holder=event.target.value;load()};
+      $('fKind').onchange=event=>{state.kind=event.target.value;load()};
+      $('bReload').onclick=()=>load();
+      $('bCsv').onclick=exportCsv;
+      $('bSync').onclick=async()=>{try{const result=await api('coinEarnSyncNow');await load();render(`已同步，新增 ${result.added} 筆`)}catch(error){alert(error.message)}};
+      $('bAdjust').onclick=async()=>{
+        const amount=Number($('aAmount').value),reason=$('aReason').value.trim(),holder=$('aHolder').value;
+        if(!amount||!reason){alert('請填寫點數與原因');return}
+        if(!confirm(`確定調整 ${holder} ${amount>0?'+':''}${amount} 點？\n原因：${reason}\n\n這會新增一筆無法刪除的帳本紀錄。`))return;
+        try{const result=await api('coinAdjust',{holder,amount,reason});await load();render(`已調整，${holder} 目前 ${fmt(result.balance)} 點`)}catch(error){alert(error.message)}
+      };
+    }
+    function exportCsv(){
+      const rows=[['序號','時間(台北)','類型','設計師','點數','對象','備註','操作者','簽章前12碼','參考編號']];
+      for(const entry of state.data.entries)rows.push([entry.seq,taipei(entry.at),entry.label,entry.holder,entry.amount,entry.counterparty,entry.memo,entry.actor,entry.hash,entry.ref]);
+      const csv='﻿'+rows.map(row=>row.map(cell=>`"${String(cell??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+      const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.download=`coin-ledger-${new Date().toISOString().slice(0,10)}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+    }
+    load();
+  })();
+  </script>
+</body>
+</html>

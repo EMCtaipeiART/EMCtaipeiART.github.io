@@ -5245,3 +5245,14 @@ test('monthly archiving keeps the newest 3 months and only moves fully closed ca
   assert.deepEqual(archive.currentDatabaseRowKeys, ['26100001#1']);
   assert.equal(db.revision, 2);
 });
+
+test('平台幣：前台左側選單有「服裝」入口（token 放在網址 #）、管理者有帳本頁，帳本頁只呼叫 Worker 的 coin 動作', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /\{k:'outfit',label:'服裝'/);
+  assert.match(html, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/outfit#t=/);
+  assert.match(html, /\{k:'coinadmin',label:'平台幣帳'/);
+  const admin = await readFile(new URL('../../coin_ledger_admin.html', import.meta.url), 'utf8');
+  for (const action of ['coinLedger', 'coinAdjust', 'coinEarnSyncNow']) assert.ok(admin.includes(`'${action}'`), action);
+  assert.match(admin, /帳本驗證/);
+  assert.doesNotMatch(admin, /serviceKey/, '服務金鑰不能出現在前端');
+});
