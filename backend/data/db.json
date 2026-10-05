@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7303,
+  "revision": 7304,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-05T05:09:00.577Z",
+  "updatedAt": "2026-10-05T05:10:38.163Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1004,7 +1004,7 @@
         {"案件編號":"26090224","修改次數":"0","建立日期":"2026/10/05 12:46:34","修改日期":"2026/10/05 12:46:34","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 12:46:34","圖片連結":"[{\"fileName\":\"261005_ANKER_全品項_pchome.png\",\"url\":\"https://lh3.googleusercontent.com/d/1EJOcNFIW7Ou6g15rAQm32XhU3vzyHt6u=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 12:46:34"},
         {"案件編號":"26100006","修改次數":"0","建立日期":"2026/10/05 13:03:45","修改日期":"2026/10/05 13:03:45","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 13:03:45","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_i7Fold_新青安.png\",\"url\":\"https://lh3.googleusercontent.com/d/1OYBwiQfi1VDcmmbYCJd7zYl4VRB0jflH=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_i7Fold_比較.png\",\"url\":\"https://lh3.googleusercontent.com/d/1qvwfNbIzvml83cCuzobWNOQbDeupTcg1=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_i7Fold_長輩送禮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Os1La2BLjDyA16fXdvnGncliRgfoTdA0=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 13:03:45"},
         {"案件編號":"26100007","修改次數":"0","建立日期":"2026/10/05 13:04:52","修改日期":"2026/10/05 13:04:52","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 13:04:52","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_i7Fold_比較.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yMIyLOpKv_ycf6JL6cuT4tszVeMmrcbo=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 13:04:52"},
-        {"案件編號":"26100008","修改次數":"0","建立日期":"2026/10/05 13:06:29","修改日期":"2026/10/05 13:06:29","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 13:06:29","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_比較動圖.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BukT9--9yqcDayaTvNA9ylO8nov4JS2b=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_滅菌.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/155bxJii5sDA_NRm3_GLdym4GWIS3-B38=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 13:06:29"},
+        {"案件編號":"26100008","修改次數":"0","建立日期":"2026/10/05 13:06:29","修改日期":"2026/10/05 13:06:29","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/05 13:06:29","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_比較動圖.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1BukT9--9yqcDayaTvNA9ylO8nov4JS2b=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_滅菌.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/155bxJii5sDA_NRm3_GLdym4GWIS3-B38=w1600\"},{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_0纏毛.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cxJiXYj1IAFMolJowLJGVTsKmz2e6sDJ=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/05 13:10:38"},
         {"案件編號":"26100009","修改次數":"0","建立日期":"2026/10/05 13:09:00","修改日期":"2026/10/05 13:09:00","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/05 13:09:00","圖片連結":"[{\"fileName\":\"261005_添可_十月_CPAS_ S7steam_0纏毛.png\",\"url\":\"https://lh3.googleusercontent.com/d/1cxJiXYj1IAFMolJowLJGVTsKmz2e6sDJ=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/10/05 13:09:00"}
       ]
     },
