@@ -37,7 +37,7 @@ EMC 設計部門的內部案件管理系統。設計需求單位（業務、專�
 
 | | 檔案 | 部署方式 | 現在的角色 |
 |---|---|---|---|
-| **A. 主系統 Apps Script** | `google_apps_script.gs`、`user_directory.gs` | Google Apps Script 編輯器手動部署（同一個專案的兩個檔案，兩個都要更新） | **正式環境唯一在跑的寫入後端**。`index.html` 在 `emctaipeiart.github.io` 這個網域、且沒有額外設定 API 網址時，預設就是打這支 Apps Script 的 `/exec` 網址（寫死在 `index.html` 的 `appsScriptFallbackApiUrl`）。 |
+| **A. 主系統 Apps Script（已移除）** | （原 `google_apps_script.gs`、`user_directory.gs`） | 2026-10-06 已從專案刪除 | 寫入後端早已改由 Cloudflare Worker（`worker/`）負責；專案內不再有這份舊 Apps Script。Google 那邊若還有舊部署可自行停用。 |
 | **B. 上傳用 Apps Script** | `upload/Code.gs`、`upload/upload.html` | 另一個獨立的 Google Apps Script 專案，也要手動部署 | 負責大頭貼、海報、限時動態圖片上傳到 Google Drive，以及限時動態 24 小時到期排程。前台「設定我的頭像」「管理照片與 Reels」都是開一個 iframe 指到這支 Web App。 |
 | **C. Node.js JSON 後台** | `backend/app.mjs` 等 | `npm start`，需要一台常駐 Node 主機 | **目前沒有正式部署**，只在本機/測試環境使用。GitHub Pages 是純靜態託管，不能跑 Node，所以正式站沒有走這條路。README 裡寫的「正式部署」是還沒真的做的建議方案。 |
 
@@ -135,7 +135,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - `backend/**`、`scripts/**`：GitHub Actions 會用它們跑測試、重新產生快照，但**不會部署成正式跑的 Node 服務**（目前沒有正式 Node 主機）。
 
 **不會自動生效，需要手動部署：**
-- `google_apps_script.gs`、`user_directory.gs` → 要到 Google Apps Script 編輯器貼上最新內容，「部署 → 管理部署 → 編輯 → 新版本」。**兩個檔案是同一個專案，要一起貼、一起部署一次**。
+- （已移除）`google_apps_script.gs`、`user_directory.gs`：2026-10-06 刪除，不需再部署。
 - `upload/Code.gs`、`upload/upload.html` → 另一個獨立的 Apps Script 專案，同樣要手動部署。
 
 **推送到 GitHub 的方式**：這台電腦沒有裝 `gh` CLI、沒有存 SSH key，用的是使用者提供的 GitHub Personal Access Token，透過 `git push https://x-access-token:<token>@github.com/...` 完成，token 只存在單次 session 的暫時環境變數，不會寫進任何檔案。
@@ -144,7 +144,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 9. 已知技術債 / 之後可以做的事
 
-- `google_apps_script.gs` 裡的 `weightMap_()`（讀 Google 試算表算加權）是**死代碼**：目前所有 action router 都不會呼叫到它（真正在跑的是 JSON-based 的 `githubJsonDatabaseAction_` 與 `recalculateDatabaseWeights_`）。保留著沒清掉，是這次修改刻意的保守選擇，避免動到不確定還有沒有其他地方依賴的舊函式。之後有空可以確認真的沒人用後整個刪掉。
+- （已移除）原 `google_apps_script.gs` 的 `weightMap_()` 等舊程式已隨整個 `GS/` 刪除。
 - `json_database_admin.html` 沒有把 `階段`、`平面新開專案`、`影音新開專案` 三張表放進管理介面。
 - 本機資料夾裡還有 7 個 `.codex_tmp_*` 開頭的資料夾，是之前 Codex session 留下的舊 git clone，跟現在的 git 設定無關，可以安全刪除，但目前還沒清。
 - Node.js 後台（`backend/`）功能完整（含 ERP OAuth、圖片上傳、八表 CRUD），但正式站沒在用，只用來本機測試前端邏輯。如果之後真的要換成 Node 為主的架構，需要先解決常駐主機部署的問題。

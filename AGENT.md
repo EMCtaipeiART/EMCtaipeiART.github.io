@@ -6300,3 +6300,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 已刪除：`scripts/generate_short_link_index.mjs`、`data/short_link_index.json`（含 `supplements` 快速索引；補充資料連結改直接問 API）、`backend/data/db.json` 的 `短連結` 資料表（9 筆）與來源資訊。
 - 未動：歷史紀錄裡的舊敘述。
 - 追加（同日）：`GS/google_apps_script.gs` 內的短連結工作表、`createShortLink`／`resolveShortLink` 與相關權限也一併刪除（補充資料連結的 `syncSupplementShortLinks_` 與 `/a–d` 轉址保留）。
+- 追加（同日）：整個 `GS/` 資料夾（舊 Apps Script：`google_apps_script.gs`、`user_directory.gs`）與一次性的 `scripts/migrate_user_directory_to_settings.mjs` 一併刪除；對應的 3 個測試移除。`upload/Code.gs`（圖片上傳用 Apps Script）保留。
