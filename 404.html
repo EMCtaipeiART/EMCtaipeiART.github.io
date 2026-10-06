@@ -1,14 +1,13 @@
 <!doctype html>
-<!-- LAST_MODIFIED: 2026-08-18 13:10 Asia/Taipei | build: 20260818-short-link-paused-1 -->
+<!-- LAST_MODIFIED: 2026-10-06 Asia/Taipei | build: 20261006-short-link-removed-1 -->
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <link rel="icon" type="image/png" href="assets/EMC_design_logo.ico">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta name="app-version" content="20260818-short-link-paused-1">
-  <link rel="preload" href="/data/short_link_index.json" as="fetch" crossorigin="anonymous">
-  <title>EMC 短連結</title>
+  <meta name="app-version" content="20261006-short-link-removed-1">
+  <title>EMC 找不到頁面</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
     *{box-sizing:border-box}
@@ -42,28 +41,12 @@
     @media(max-width:520px){body{padding:16px}main{padding:24px 18px}.input-row,.result-row{grid-template-columns:1fr}h1{font-size:24px}button{width:100%}}
     @media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   </style>
-  <script src="assets/access-control.js?v=20260811-worker-auth-4"></script>
 </head>
 <body>
-  <main id="creator">
-    <div class="brand"><span class="brand-mark">EMC</span><span>EMC SHORT LINK</span></div>
-    <h1>短網址功能已暫停</h1>
-    <p class="lead">新連結請直接使用原始長網址；既有短網址仍會維持轉址，不受影響。</p>
-    <form id="shortenForm" novalidate hidden>
-      <label for="longUrl">長連結</label>
-      <div class="input-row">
-        <input id="longUrl" name="url" type="url" inputmode="url" autocomplete="url" placeholder="https://example.com/very-long-link" required>
-        <button id="createButton" type="submit" disabled>暫停使用</button>
-      </div>
-    </form>
-    <p class="status" id="status" aria-live="polite"></p>
-    <section class="result" id="result" hidden>
-      <p class="result-label">你的短連結</p>
-      <div class="result-row">
-        <a class="short-url" id="shortUrl" href="#" target="_blank" rel="noopener"></a>
-        <button class="copy-button" id="copyButton" type="button">複製</button>
-      </div>
-    </section>
+  <main id="notfound">
+    <div class="brand"><span class="brand-mark">EMC</span><span>EMC 設計需求系統</span></div>
+    <h1>找不到這個頁面</h1>
+    <p class="lead">短網址功能已經移除。請改用原始網址，或回到<a class="home-link" href="/">設計需求系統</a>。</p>
   </main>
   <main class="redirect" id="redirector" hidden>
     <div class="spinner" id="spinner" aria-hidden="true"></div>
@@ -71,206 +54,27 @@
     <p id="redirectMessage">正在開啟目的頁面…</p>
   </main>
   <script>
+    /* 只保留舊的補充資料連結（/a/12345678 這種）轉址；其他路徑一律顯示找不到頁面。 */
     (() => {
-      const cloudflareWorkerApiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
-      let savedApiUrl = '';
-      try { savedApiUrl = localStorage.getItem('designRequestApiUrl') || ''; } catch (error) {}
-      const apiUrl = savedApiUrl || (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io' ? cloudflareWorkerApiUrl : `${location.origin}/api`);
+      const apiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
-      const shortMatch = location.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
-      const isCreatorPage = location.pathname === '/404.html' || location.pathname === '/404.html/' || location.pathname === '/';
-      const shortLinkCacheMs = 30 * 24 * 60 * 60 * 1000;
-      const resolverIndexUrl = '/data/short_link_index.json';
-      const creator = document.querySelector('#creator');
-      const redirector = document.querySelector('#redirector');
-      let resolverIndexPromise;
-
-      const loadResolverIndex = () => {
-        if (!resolverIndexPromise) {
-          resolverIndexPromise = fetch(resolverIndexUrl, {
-            credentials: 'omit',
-            cache: 'force-cache',
-            referrerPolicy: 'no-referrer'
-          }).then(response => {
-            if (!response.ok) throw new Error(`短連結索引回應失敗：${response.status}`);
-            return response.json();
-          }).catch(error => {
-            resolverIndexPromise = null;
-            throw error;
-          });
-        }
-        return resolverIndexPromise;
-      };
-
-      const jsonp = async (params, timeoutMs = 10000) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            credentials: 'omit',
-            cache: 'no-store',
-            redirect: 'follow',
-            referrerPolicy: 'no-referrer',
-            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-            body: JSON.stringify(params),
-            signal: controller.signal
-          });
-          if (!response.ok) throw new Error(`短連結服務回應失敗：${response.status}`);
-          const data = await response.json();
-          if (!data || !data.ok) throw new Error(data && data.error || '系統暫時無法處理。');
-          return data;
-        } catch (error) {
-          if (error && error.name === 'AbortError') throw new Error('連線逾時，請稍後再試。');
-          throw error;
-        } finally {
-          clearTimeout(timer);
-        }
-      };
-
-      const showRedirector = () => {
-        creator.hidden = true;
-        redirector.hidden = false;
-      };
-      const redirectFail = text => {
+      if (!legacyMatch) return;
+      const slot = legacyMatch[1].toLowerCase(), id = legacyMatch[2];
+      document.querySelector('#notfound').hidden = true;
+      document.querySelector('#redirector').hidden = false;
+      const fail = text => {
         document.querySelector('#spinner').hidden = true;
         document.querySelector('#redirectTitle').textContent = '無法開啟連結';
-        document.querySelector('#redirectMessage').innerHTML = `${text}<br><a class="home-link" href="/404.html">建立新的短連結</a>`;
+        document.querySelector('#redirectMessage').textContent = text;
       };
-      const redirect = url => {
-        if (!/^https?:\/\//i.test(url || '')) return false;
-        location.replace(url);
-        return true;
-      };
-      const cacheShortLink = (code, url) => {
-        if (!code || !/^https?:\/\//i.test(url || '')) return;
-        try { localStorage.setItem(`shortLink:${code}`, JSON.stringify({ url, expires: Date.now() + shortLinkCacheMs })); } catch (error) {}
-      };
-
-      const resolveShortLink = async code => {
-        showRedirector();
-        const cacheKey = `shortLink:${code}`;
-        try {
-          const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-          if (cached && cached.expires > Date.now() && redirect(cached.url)) return;
-        } catch (error) {}
-        try {
-          const index = await loadResolverIndex();
-          const indexedUrl = index && index.shortLinks && index.shortLinks[code];
-          if (indexedUrl) {
-            cacheShortLink(code, indexedUrl);
-            if (redirect(indexedUrl)) return;
-          }
-        } catch (error) {}
-        try {
-          const data = await jsonp({ action: 'resolveShortLink', code });
-          cacheShortLink(code, data.url);
-          if (!redirect(data.url)) throw new Error('目的網址格式不正確。');
-        } catch (error) {
-          redirectFail(error.message || '找不到這個短連結。');
-        }
-      };
-
-      const resolveLegacyLink = async (slot, id) => {
-        showRedirector();
-        const cacheKey = `supplementLink:${slot}:${id}`;
-        const finish = url => {
-          if (!/^https?:\/\//i.test(url || '')) return false;
-          try { localStorage.setItem(cacheKey, JSON.stringify({ url, expires: Date.now() + 600000 })); } catch (error) {}
-          location.replace(url);
-          return true;
-        };
-        try {
-          const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-          if (cached && cached.expires > Date.now() && finish(cached.url)) return;
-        } catch (error) {}
-        try {
-          const index = await loadResolverIndex();
-          const indexedUrl = index && index.supplements && index.supplements[id] && index.supplements[id][slot];
-          if (indexedUrl && finish(indexedUrl)) return;
-        } catch (error) {}
-        try {
-          const data = await jsonp({ action: 'resolveSupplementLink', id, slot }, 8000);
-          if (!finish(data.url)) throw new Error('目的網址格式不正確。');
-        } catch (error) {
-          redirectFail(error.message || '找不到對應的補充資料連結。');
-        }
-      };
-
-      if (legacyMatch) {
-        resolveLegacyLink(legacyMatch[1].toLowerCase(), legacyMatch[2]);
-        return;
-      }
-      if (shortMatch) {
-        resolveShortLink(shortMatch[1]);
-        return;
-      }
-      if (!isCreatorPage) {
-        showRedirector();
-        redirectFail('找不到這個短連結。');
-        return;
-      }
-
-      const form = document.querySelector('#shortenForm');
-      const input = document.querySelector('#longUrl');
-      const button = document.querySelector('#createButton');
-      const status = document.querySelector('#status');
-      const result = document.querySelector('#result');
-      const shortUrl = document.querySelector('#shortUrl');
-      const copyButton = document.querySelector('#copyButton');
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        await window.MachiAccess?.ready;
-        if(window.MachiAccess?.state.account&&!window.MachiAccess.can('short_link.create')){
-          status.textContent='此帳號沒有建立短網址權限。';status.classList.add('error');return;
-        }
-        const value = input.value.trim();
-        status.classList.remove('error');
-        result.hidden = true;
-        try {
-          const parsed = new URL(value);
-          if (!/^https?:$/.test(parsed.protocol)) throw new Error();
-        } catch (error) {
-          status.textContent = '請輸入以 http:// 或 https:// 開頭的完整網址。';
-          status.classList.add('error');
-          input.focus();
-          return;
-        }
-        button.disabled = true;
-        button.textContent = '產生中…';
-        status.textContent = '正在建立短連結…';
-        try {
-          let editorToken='';try{editorToken=localStorage.getItem('designRequestEditorToken')||sessionStorage.getItem('designRequestEditorToken')||''}catch(error){}
-          const data = await jsonp({ action: 'createShortLink', url: value, editorToken }, 15000);
-          const generatedUrl = `${location.origin}/${data.code}`;
-          cacheShortLink(data.code, data.url || value);
-          shortUrl.href = generatedUrl;
-          shortUrl.textContent = generatedUrl;
-          result.hidden = false;
-          status.textContent = '短連結已建立。';
-          copyButton.textContent = '複製';
-        } catch (error) {
-          status.textContent = error.message || '短連結建立失敗，請稍後再試。';
-          status.classList.add('error');
-        } finally {
-          button.disabled = false;
-          button.textContent = '產生短連結';
-        }
-      });
-      copyButton.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(shortUrl.href);
-          copyButton.textContent = '已複製';
-          status.textContent = '短連結已複製到剪貼簿。';
-        } catch (error) {
-          input.value = shortUrl.href;
-          input.select();
-          document.execCommand('copy');
-          copyButton.textContent = '已複製';
-        }
-      });
+      fetch(apiUrl, {
+        method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ action: 'resolveSupplementLink', id, slot })
+      }).then(r => r.json()).then(data => {
+        if (data && data.ok && /^https?:\/\//i.test(data.url || '')) location.replace(data.url);
+        else fail((data && data.error) || '找不到對應的補充資料連結。');
+      }).catch(() => fail('連線失敗，請稍後再試。'));
     })();
   </script>
 </body>
 </html>
-

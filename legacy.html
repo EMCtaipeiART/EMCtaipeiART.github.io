@@ -6972,7 +6972,6 @@ window.emcQuotes=[
       <button type="button" id="accountAvatarSettings" role="menuitem">設定我的頭像</button>
       <button type="button" id="accountGmailConnect" role="menuitem">連接 Gmail／更新授權</button>
       <button type="button" id="accountDesignDashboard" role="menuitem">設計儀表板</button>
-      <button type="button" id="accountShortLinkTool" role="menuitem" hidden>短網址工具</button>
       <button type="button" id="accountNasPickerStatus" role="menuitem" hidden>NAS 選擇器狀態</button>
       <button type="button" id="accountArchiveManager" role="menuitem" hidden>歷史資料庫管理</button>
       <button type="button" id="accountJsonDatabaseAdmin" role="menuitem" hidden>資料庫後台</button>
@@ -7941,13 +7940,12 @@ const designerStorySeenStorageKey = 'designerStorySeenV2';
 const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
 const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260820-announcement-read-receipts-8';
-const shortLinkToolUrl = '404.html';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
 const databaseRefreshStorageKey = 'machiDatabaseRefreshV1';
 const databaseWriteTablesByAction = Object.freeze({
   add:['database','補充資料連結'],append:['database','補充資料連結'],create:['database','補充資料連結'],submit:['database','補充資料連結'],save:['database','補充資料連結'],
   batchAdd:['database','補充資料連結'],batchAppend:['database','補充資料連結'],addRows:['database','補充資料連結'],batchUpdate:['database','補充資料連結'],update:['database','補充資料連結'],delete:['database'],createFlatProject:['database','設定','平面新開專案','影音新開專案'],
-  createShortLink:['短連結'],ownerConfirmCases:['database'],moveCaseDesignImages:['修改統計表','database'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
+  ownerConfirmCases:['database'],moveCaseDesignImages:['修改統計表','database'],addModificationRecord:['修改統計表'],deleteModificationRecord:['修改統計表'],updateModificationConfirm:['修改統計表'],
   saveUserSettings:['設定'],saveDesignerProfiles:['設定'],uploadUserAvatar:['設定'],
   toggleReelReaction:['reels'],addReelComment:['reels'],reportIssue:['bug_report'],updateIssueReportStatus:['bug_report'],markSystemAnnouncementRead:['系統公告欄']
 });
@@ -16304,7 +16302,6 @@ updateLoginUi=function(...args){
   show('#accountGmailConnect',loggedIn&&!isLocalPreviewToken()&&accessAllowed('request.mail',true));
   show('#accountOwnerProgress',loggedIn);
   show('#accountDesignDashboard',loggedIn&&accessAllowed('page.dashboard',canOpenDesignDashboard()));
-  show('#accountShortLinkTool',false);
   show('#accountNasPickerStatus',loggedIn&&accessAllowed('media.manage',isAdministrator()));
   show('#accountArchiveManager',loggedIn&&accessAllowed('page.archive',isAdministrator())&&accessAllowed('archive.edit',isAdministrator()));
   show('#accountJsonDatabaseAdmin',loggedIn&&accessAllowed('page.database_admin',isAdministrator())&&accessAllowed('database.manage',isAdministrator()));
@@ -16540,8 +16537,6 @@ document.addEventListener('click',event=>{
 	$('#accountDesignDashboard')?.addEventListener('click',()=>{closeAccountMenu();openDesignDashboard()});
 	$('#accountArchiveManager')?.addEventListener('click',()=>{if(!accessAllowed('page.archive',false)||!accessAllowed('archive.edit',false))return;closeAccountMenu();window.open(archiveManagerUrl,'_blank','noopener')});
 	$('#accountJsonDatabaseAdmin')?.addEventListener('click',()=>{if(!accessAllowed('page.database_admin',false)||!accessAllowed('database.manage',false))return;closeAccountMenu();window.open(jsonDatabaseAdminUrl,'_blank','noopener')});
-	// 短網址建立功能已暫停；按鈕維持隱藏，既有 404.html 短碼解析仍保留相容性。
-	$('#accountShortLinkTool')?.addEventListener('click',()=>{if(!accessAllowed('page.short_link',false))return;closeAccountMenu();window.open(shortLinkToolUrl,'_blank','noopener')});
 	$('#accountNasPickerStatus')?.addEventListener('click',()=>{if(!accessAllowed('media.manage',false))return;closeAccountMenu();openNasFolderPickerAdmin()});
 	$('#accountLogout')?.addEventListener('click',()=>{closeAccountMenu();logoutEditor()});
 	$('#issueReportOpen')?.addEventListener('click',openIssueReportModal);

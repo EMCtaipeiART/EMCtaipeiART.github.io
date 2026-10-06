@@ -5,22 +5,21 @@ import type { ApiPayload, DatabaseSnapshot, Row, SessionRecord } from './types';
 export const VERSION = 'cloudflare-worker-edit-scheduled-mail-2026-08-21-10';
 export const LOGIN_DOMAIN = '@emctaipei.com';
 export const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
-export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-export const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
+export const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload'];
 export const ACCESS_CAPABILITIES = [
   'request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'request.mail',
   'modification.create', 'modification.confirm', 'project.create', 'designer.settings',
   'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage',
-  'short_link.create', 'archive.edit', 'database.manage'
+  'archive.edit', 'database.manage'
 ];
 export const ACCESS_ROLE_TEMPLATES: Record<string, { pages: string[]; capabilities: string[] }> = {
   '管理者': { pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES },
   '設計師': {
-    pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
-    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+    pages: ['request', 'dashboard', 'media_admin', 'avatar_upload'],
+    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report']
   },
-  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
-  '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
+  '一般使用者': { pages: ['request', 'avatar_upload'], capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report'] },
+  '唯讀': { pages: ['request', 'dashboard'], capabilities: [] }
 };
 
 export const KEY_TO_HEADER: Record<string, string> = {
@@ -276,7 +275,7 @@ function accessTemplate(snapshot: DatabaseSnapshot, role: string): { pages: stri
   } : { pages: [...fallback.pages], capabilities: [...fallback.capabilities] };
 }
 export function accessProfile(snapshot: DatabaseSnapshot, session: SessionRecord | null): Row {
-  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request'], capabilities: ['request.create', 'issue.report'], explicit: false };
   const account = canonicalAccount(session.account || session.user);
   if (isManager(snapshot, session)) return { account, role: '管理者', status: '啟用', pages: [...ACCESS_PAGES], capabilities: [...ACCESS_CAPABILITIES], explicit: true };
   const row = snapshot.tables['帳號權限']?.rows?.find(item => canonicalAccount(item['帳號']) === account) || null;
@@ -567,15 +566,6 @@ export function findReelIndex(rows: Row[], payload: ApiPayload): number {
   const fileId = reelFileId(requestedUrl) || (!requestedId.startsWith('row-') ? requestedId : '');
   const requestedRow = Number(requestedId.replace(/^row-/, '')) || 0;
   return rows.findIndex((row, index) => (fileId && text(row['限時動態連結']).includes(fileId)) || (requestedUrl && text(row['限時動態連結']) === requestedUrl) || requestedRow === index + 2);
-}
-export function generateShortCode(existing: Set<string>): string {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const bytes = crypto.getRandomValues(new Uint8Array(6));
-    let code = '';
-    for (let index = 0; index < 6; index += 1) code += SHORT_CODE_CHARS[bytes[index] % SHORT_CODE_CHARS.length];
-    if (!existing.has(code)) return code;
-  }
-  throw new Error('暫時無法產生短碼，請再試一次');
 }
 export function tableNames(): string[] { return [...TABLE_NAMES]; }
 export function tableSchema(name: string): { headers: string[]; primaryKey: string | null } | undefined {

@@ -267,7 +267,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
-const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
+const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null; scopes: string | null };
@@ -3939,12 +3939,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (!isHttpUrl(url)) throw new Error('找不到可用的補充資料連結');
         return { ok: true, action, id, slot, url };
       }
-      if (action === 'resolveShortLink') {
-        const code = text(payload.code);
-        const record = database.tables['短連結'].rows.find(row => text(row['短碼']) === code);
-        if (!record || !isHttpUrl(record['原始網址'])) throw new Error('找不到這個短連結');
-        return { ok: true, action, code, url: record['原始網址'] };
-      }
 
       if (action === 'getUserSettings') {
         const current = this.requireSession(session);
@@ -4205,9 +4199,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     session: SessionRecord | null,
     baseUrl: string
   ): Promise<ApiResult> {
-    if (action === 'createShortLink') {
-      throw new Error('短網址建立功能目前暫停；請直接使用原始長網址');
-    }
     if (action === 'saveUserSettings') {
       const current = this.requireAccess(database, session, 'profile.edit');
       const account = canonicalAccount(payload.account || current.account);

@@ -16,10 +16,9 @@ const LOGIN_DOMAIN = '@emctaipei.com';
 const GOOGLE_CLIENT_ID = '501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com';
 const SESSION_SECONDS = 30 * 24 * 60 * 60;
 const ISSUE_STATUSES = ['回報中', '評估中', '處理中', '已完成', '已否決'];
-const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const WRITE_ACTIONS = new Set([
   'append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows', 'update', 'batchUpdate',
-  'delete', 'createShortLink', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment', 'markReelViewed',
+  'delete', 'saveUserSettings', 'saveDesignerProfiles', 'toggleReelReaction', 'addReelComment', 'markReelViewed',
   'reportIssue', 'updateIssueReportStatus', 'addModificationRecord', 'deleteModificationRecord', 'updateModificationConfirm', 'createFlatProject', 'logout',
   'uploadDesignerImage', 'uploadUserAvatar', 'deleteDesignerMedia', 'upsertDesignerStories', 'deleteDesignerStories',
   'deleteDesignerMediaFiles',
@@ -63,21 +62,21 @@ function normalizedReplyTemplateDefault(value, templates) {
   const keys = Object.keys(templates || {});
   return keys.includes(requested) ? requested : (keys[0] || '');
 }
-const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
+const ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload'];
 const ACCESS_CAPABILITIES = [
   'request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'request.mail',
   'modification.create', 'modification.confirm', 'project.create', 'designer.settings',
   'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage',
-  'short_link.create', 'archive.edit', 'database.manage'
+  'archive.edit', 'database.manage'
 ];
 const ACCESS_ROLE_TEMPLATES = {
   '管理者': { pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES },
   '設計師': {
-    pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
-    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+    pages: ['request', 'dashboard', 'media_admin', 'avatar_upload'],
+    capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report']
   },
-  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
-  '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
+  '一般使用者': { pages: ['request', 'avatar_upload'], capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report'] },
+  '唯讀': { pages: ['request', 'dashboard'], capabilities: [] }
 };
 
 const KEY_TO_HEADER = {
@@ -183,15 +182,6 @@ function activeReel(row, now = Date.now()) {
   if (reelHidden(row)) return false;
   const expiresAt = reelExpirationMs(row);
   return !expiresAt || expiresAt > now;
-}
-function generateShortCode(existing) {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const bytes = randomBytes(6);
-    let code = '';
-    for (let index = 0; index < 6; index += 1) code += SHORT_CODE_CHARS[bytes[index] % SHORT_CODE_CHARS.length];
-    if (!existing.has(code)) return code;
-  }
-  throw new Error('暫時無法產生短碼，請再試一次');
 }
 function nextCaseId(rows) {
   const p = taipeiDateParts();
@@ -324,7 +314,7 @@ function accessTemplate(snapshot, role) {
   } : { pages: [...fallback.pages], capabilities: [...fallback.capabilities] };
 }
 function accessProfile(snapshot, session) {
-  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request'], capabilities: ['request.create', 'issue.report'], explicit: false };
   const account = canonicalAccount(session.account || session.user);
   if (isManager(snapshot, session)) return { account, role: '管理者', status: '啟用', pages: [...ACCESS_PAGES], capabilities: [...ACCESS_CAPABILITIES], explicit: true };
   const row = snapshot.tables['帳號權限']?.rows?.find(item => canonicalAccount(item['帳號']) === account) || null;
@@ -657,15 +647,6 @@ export function createActionHandler(database, options = {}) {
       const url = text(record?.[SUPPLEMENT_SLOTS[slot].column]);
       if (!isHttpUrl(url)) throw new Error('找不到可用的補充資料連結');
       return { ok: true, action, id, slot, url };
-    }
-    if (action === 'resolveShortLink') {
-      const code = text(payload.code);
-      const record = snapshot.tables['短連結'].rows.find(row => text(row['短碼']) === code);
-      if (!record || !isHttpUrl(record['原始網址'])) throw new Error('找不到這個短連結');
-      return { ok: true, action, code, url: record['原始網址'] };
-    }
-    if (action === 'createShortLink') {
-      throw new Error('短網址建立功能目前暫停；請直接使用原始長網址');
     }
 
     if (action === 'login') {
@@ -1399,11 +1380,8 @@ export async function createApp(options = {}) {
       }
 
       const supplementMatch = url.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
-      const shortMatch = url.pathname.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})\/?$/);
-      if (req.method === 'GET' && (supplementMatch || shortMatch)) {
-        const result = supplementMatch
-          ? await handleAction('resolveSupplementLink', { slot: supplementMatch[1], id: supplementMatch[2] }, { baseUrl: requestBaseUrl(req) })
-          : await handleAction('resolveShortLink', { code: shortMatch[1] }, { baseUrl: requestBaseUrl(req) });
+      if (req.method === 'GET' && supplementMatch) {
+        const result = await handleAction('resolveSupplementLink', { slot: supplementMatch[1], id: supplementMatch[2] }, { baseUrl: requestBaseUrl(req) });
         res.writeHead(302, { Location: result.url, 'Cache-Control': 'private, max-age=600', 'X-Content-Type-Options': 'nosniff' });
         return res.end();
       }

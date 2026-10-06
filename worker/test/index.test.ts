@@ -407,14 +407,14 @@ describe('Machi Design API Worker', () => {
 
     const inserted = await api({
       action: 'adminTableInsert',
-      table: '短連結',
-      row: { '短碼': 'Abc234', '原始網址': 'https://example.com', '建立時間': '2026/08/11 12:00:00' }
+      table: '系統公告欄',
+      row: { '公告版本': 'v99', '公告標題': '測試公告', '公告內容': '內容', '是否啟用': '否' }
     }, token);
     expect(inserted).toMatchObject({
       ok: true,
       revision: 8,
       githubCommitSha: 'next-commit-sha',
-      changedTables: ['短連結']
+      changedTables: ['系統公告欄']
     });
     expect(requestBody).toMatchObject({ sha: 'test-file-sha', branch: 'main' });
 
@@ -426,10 +426,10 @@ describe('Machi Design API Worker', () => {
     expect(stored.github_sha).toBe('next-file-sha');
     const database = JSON.parse(stored.json) as DatabaseSnapshot;
     expect(database.revision).toBe(8);
-    expect(database.tables['短連結'].rows).toContainEqual(expect.objectContaining({ '短碼': 'Abc234' }));
+    expect(database.tables['系統公告欄'].rows).toContainEqual(expect.objectContaining({ '公告版本': 'v99' }));
   });
 
-  it('keeps supplement URLs long and pauses creation of new short links', async () => {
+  it('keeps supplement URLs long and no longer has a short link table', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       expect(init?.method).toBe('PUT');
       return Response.json({ content: { sha: 'supplement-file-sha' }, commit: { sha: 'supplement-commit-sha' } });
@@ -456,9 +456,7 @@ describe('Machi Design API Worker', () => {
     });
     expect(database.tables['補充資料連結'].rows).toContainEqual(expect.objectContaining({ A: longUrl }));
 
-    const paused = await api({ action: 'createShortLink', url: longUrl });
-    expect(paused).toMatchObject({ ok: false, error: expect.stringContaining('短網址建立功能目前暫停') });
-    expect(database.tables['短連結'].rows).toHaveLength(0);
+    expect((database.tables as Record<string, unknown>)['短連結']).toBeUndefined();
   });
 
   it('saves numbered mail templates and their default through personal settings', async () => {

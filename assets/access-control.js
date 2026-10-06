@@ -7,8 +7,7 @@
     { key: 'archive', label: '歷史資料庫管理', path: 'database_archive_admin.html' },
     { key: 'database_admin', label: 'JSON 資料庫後台', path: 'json_database_admin.html' },
     { key: 'media_admin', label: '圖片與 Reels 管理', path: 'json_upload.html' },
-    { key: 'avatar_upload', label: '頭像上傳工具', path: 'upload/upload.html' },
-    { key: 'short_link', label: '短網址工具', path: '404.html' }
+    { key: 'avatar_upload', label: '頭像上傳工具', path: 'upload/upload.html' }
   ]);
 
   const CAPABILITY_CATALOG = Object.freeze([
@@ -27,7 +26,6 @@
     { group: '個人與媒體', key: 'reel.interact', label: 'Reels 按讚、倒讚與留言' },
     { group: '問題回報', key: 'issue.report', label: '新增問題回報' },
     { group: '問題回報', key: 'issue.manage', label: '更新問題狀態' },
-    { group: '工具', key: 'short_link.create', label: '建立短網址' },
     { group: '系統管理', key: 'archive.edit', label: '編輯歷史資料庫' },
     { group: '系統管理', key: 'database.manage', label: '管理 JSON 資料庫與權限' }
   ]);
@@ -37,14 +35,14 @@
   const DEFAULT_ROLE_TEMPLATES = Object.freeze({
     '管理者': { pages: ALL_PAGES, capabilities: ALL_CAPABILITIES },
     '設計師': {
-      pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'],
-      capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']
+      pages: ['request', 'dashboard', 'media_admin', 'avatar_upload'],
+      capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'request.mail', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report']
     },
     '一般使用者': {
-      pages: ['request', 'avatar_upload', 'short_link'],
-      capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create']
+      pages: ['request', 'avatar_upload'],
+      capabilities: ['request.create', 'request.mail', 'profile.edit', 'reel.interact', 'issue.report']
     },
-    '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
+    '唯讀': { pages: ['request', 'dashboard'], capabilities: [] }
   });
   let roleTemplates = Object.fromEntries(Object.entries(DEFAULT_ROLE_TEMPLATES).map(([role, template]) => [role, {
     pages: [...template.pages], capabilities: [...template.capabilities]
@@ -222,7 +220,7 @@
   async function refresh(overrides = {}) {
     const identity = identityFromStorage(overrides);
     if (!identity.token) {
-      state = { loaded: true, account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+      state = { loaded: true, account: '', role: '訪客', status: '啟用', pages: ['request'], capabilities: ['request.create', 'issue.report'], explicit: false };
       apply(); removeDeniedOverlay(); return state;
     }
     if (/^local-(?:admin|tester):/.test(identity.token)) {

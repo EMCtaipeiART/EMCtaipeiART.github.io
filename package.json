@@ -8,7 +8,6 @@
     "import:sheets": "node backend/import_google_sheets.mjs",
     "weights:recalculate": "node scripts/recalculate_database_weights.mjs",
     "modifications:recalculate": "node scripts/recalculate_database_modification_stats.mjs",
-    "short-links:index": "node scripts/generate_short_link_index.mjs",
     "test": "node --test backend/test/*.test.mjs"
   },
   "engines": {

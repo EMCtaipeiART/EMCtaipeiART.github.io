@@ -90,7 +90,6 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 |---|---|---|
 | `database` | 案件編號 | 所有設計案件，前台填單/案件列表的主資料 |
 | `加權計分標準` | （無，用列序） | 設計種類→階段→項目細節 的加權分數規則；**同時也是前台選單「項目細節」選項的來源**（2026-08-11 起統一） |
-| `短連結` | 短碼 | 一般短網址對照表 |
 | `補充資料連結` | 案件編號 | 每個案件的補充資料 A–D 連結 |
 | `修改統計表` | （無，用列序） | 案件修改歷程 |
 | `設定` | 帳號 | 人員身分、喜愛設定與設計師公開資料（頭像、大圖、音樂、技能、對話框、輪值等）；後台不再獨立顯示此表，由可見頁籤「帳號設定」合併編輯 |
@@ -131,7 +130,6 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 - `database`：一般表格，維持原本樣式。
 - `加權計分標準`：依「設計種類→階段」分組的折疊清單，可以新增/編輯/刪除項目（不再只能改分數）。
-- `短連結`：表格，短碼用徽章樣式。
 - `補充資料連結`：卡片，依更新時間新到舊排序。
 - `修改統計表`：依案件編號分組的時間軸。
 - `帳號設定`：將底層 `設定` 與 `帳號權限` 合併為單一帳號編輯器，可新增帳號、維護身分與喜愛設定，並顯示角色／自訂權限；左側依組別收合，喜愛設定可收合且欄位順序可拖曳／上下移動。所有帳號可設定頭像；設計師另有大圖、音樂、技能、對話框、新專案輪值與 REELS 小卡。「設定」已從側邊頁籤移除。
@@ -150,7 +148,7 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 | `database_archive_admin.html` | 封存 JSON 的管理頁，讀寫 `data/database_archive.json` |
 | `json_upload.html` | 給 Node.js 後台用的圖片上傳頁，**正式站目前用不到**（正式站走上傳用 Apps Script） |
 | `upload/upload.html` | 上傳用 Apps Script 的前端頁面，正式站實際在用的圖片上傳介面 |
-| `404.html` | 短連結／補充資料連結導向頁 |
+| `404.html` | 找不到頁面；舊的補充資料連結（/a–d/案件編號）轉址（短網址功能已於 2026-10-06 移除） |
 
 ## 8. 部署方式
 
@@ -6294,3 +6292,10 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 滑過色條可看本週分數、常態量與來源、餘裕／超出分數、下週預估、進行中與 7 天內到期件數。
 - 驗證：以獨立的逐日計算比對各設計師當週分數與常態量，誤差僅四捨五入；用假案件確認進行中案件會分攤到下週、過稿中／已完成不會預留未來負載。
 - 前端版本：`20261001-workload-v2-31`。
+
+### 2026-10-06 Asia/Taipei — 移除短網址功能（含資料）
+
+- 修改目的：使用者要求刪除短連結功能，包含地端資料。
+- 影響檔案：`404.html`（改成找不到頁面，只保留舊 `/a–d/案件編號` 補充資料連結轉址）、`backend/schema.mjs`／`backend/app.mjs`／`worker/src/{model,index,database-coordinator}.ts`（移除 `短連結` 資料表、`createShortLink`／`resolveShortLink`、6 碼短碼路由、`short_link` 頁面權限與 `short_link.create` 功能權限）、`assets/access-control.js`、`json_database_admin.html`、`legacy.html`、`.github/workflows/update-database-archive.yml`、`package.json`、`backend/import_google_sheets.mjs`、測試。
+- 已刪除：`scripts/generate_short_link_index.mjs`、`data/short_link_index.json`（含 `supplements` 快速索引；補充資料連結改直接問 API）、`backend/data/db.json` 的 `短連結` 資料表（9 筆）與來源資訊。
+- 未動：`GS/` 內的舊 Apps Script（獨立部署、已不使用）；歷史紀錄裡的舊敘述。

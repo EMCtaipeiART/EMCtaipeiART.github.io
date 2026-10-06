@@ -283,7 +283,7 @@
     const TABLE_GROUPS=[
       {label:'案件資料',tables:['database','修改統計表']},
       {label:'人員與權限',tables:['設計列表','帳號權限','角色權限範本','客戶別']},
-      {label:'系統設定',tables:['加權計分標準','系統公告欄','短連結']},
+      {label:'系統設定',tables:['加權計分標準','系統公告欄']},
       {label:'問題回報',tables:['bug_report']}
     ];
     const TABLE_ORDER=TABLE_GROUPS.flatMap(group=>group.tables);
@@ -292,7 +292,6 @@
       '系統公告欄':{desc:'管理首頁彈出公告的開關、內容與已讀帳號；新版本會重新通知使用者'},
       '設計列表':{desc:'管理前台設計師頭像、公開資料、輪值與技能帶入規則'},
       '加權計分標準':{desc:'依設計種類與階段分組的加權分數規則'},
-      '短連結':{desc:'一般短網址與原始網址對照'},
       '修改統計表':{desc:'依案件分組的修改歷程時間軸'},
       '角色權限範本':{desc:'一次設定四種角色的預設權限；套用該角色的帳號會同步生效'},
       '帳號權限':{desc:'整合個人帳號、喜愛設定與系統權限'},
@@ -467,11 +466,6 @@
         return `<td class="clip ${columnClass}" title="${esc(row[header])}">${esc(row[header])}</td>`;
       }).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length+1}">沒有符合條件的資料</td></tr>`;
       return `<div class="table-wrap"><table class="database-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
-    }
-    function shortLinkTableHtml(data){
-      const head=`<th class="action-col">編輯／刪除</th><th>${sortButton('短碼')}</th><th>短網址</th><th>${sortButton('原始網址')}</th><th>${sortButton('建立時間')}</th>`;
-      const body=data.rows.length?data.rows.map(row=>{const full=`https://emctaipeiart.github.io/${row['短碼']||''}`;return `<tr data-key="${esc(rowKeyFor(row))}">${actionCell()}<td><span class="badge">${esc(row['短碼'])}</span></td><td class="clip"><a href="${esc(full)}" target="_blank" rel="noopener">${esc(full)}</a></td><td class="clip" title="${esc(row['原始網址'])}"><a href="${esc(row['原始網址'])}" target="_blank" rel="noopener">${esc(row['原始網址'])}</a></td><td>${esc(row['建立時間'])}</td></tr>`}).join(''):'<tr><td colspan="5">沒有符合條件的資料</td></tr>';
-      return `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
     function systemAnnouncementReadRecords(value){
       let source=value;try{if(typeof source==='string')source=JSON.parse(source)}catch(error){source=[]}if(!Array.isArray(source))return [];
@@ -1081,7 +1075,6 @@
       const view=$('view');
       if(tableName==='系統公告欄')view.innerHTML=systemAnnouncementAdminHtml(data.rows);
       else if(tableName==='設計列表')view.innerHTML=designerAdminHtml(data.rows);
-      else if(tableName==='短連結')view.innerHTML=shortLinkTableHtml(data);
       else if(tableName==='加權計分標準')view.innerHTML=weightGroupsHtml(data.rows);
       else if(tableName==='修改統計表')view.innerHTML=modificationHistoryHtml(data.rows);
       else if(tableName==='設定')view.innerHTML=settingsCardsHtml(data.rows);

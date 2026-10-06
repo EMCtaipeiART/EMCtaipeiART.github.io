@@ -136,11 +136,8 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   }
 
   const supplementMatch = path.match(/^\/([a-d])\/(\d{8})$/i);
-  const shortMatch = path.match(/^\/([23456789A-HJ-NP-Za-km-z]{6})$/);
-  if (request.method === 'GET' && (supplementMatch || shortMatch)) {
-    const result = supplementMatch
-      ? await dispatchAction(request, env, 'resolveSupplementLink', { slot: supplementMatch[1], id: supplementMatch[2] })
-      : await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch?.[1] || '' });
+  if (request.method === 'GET' && supplementMatch) {
+    const result = await dispatchAction(request, env, 'resolveSupplementLink', { slot: supplementMatch[1], id: supplementMatch[2] });
     if (!result.ok || !text(result.url)) return jsonResponse(request, env, result, 404);
     return Response.redirect(text(result.url), 302);
   }

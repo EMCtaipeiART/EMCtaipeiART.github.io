@@ -29,28 +29,28 @@ export const DEFAULT_CUSTOMER_ROWS = Object.freeze(DEFAULT_CUSTOMER_NAMES.map(na
 export const DEFAULT_ROLE_TEMPLATE_ROWS = Object.freeze([
   {
     '角色範本': '管理者',
-    '頁面權限': JSON.stringify(['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link']),
-    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'short_link.create', 'archive.edit', 'database.manage']),
+    '頁面權限': JSON.stringify(['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload']),
+    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'archive.edit', 'database.manage']),
     '更新時間': '',
     '更新者': '系統預設'
   },
   {
     '角色範本': '設計師',
-    '頁面權限': JSON.stringify(['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link']),
-    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create']),
+    '頁面權限': JSON.stringify(['request', 'dashboard', 'media_admin', 'avatar_upload']),
+    '功能權限': JSON.stringify(['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report']),
     '更新時間': '',
     '更新者': '系統預設'
   },
   {
     '角色範本': '一般使用者',
-    '頁面權限': JSON.stringify(['request', 'avatar_upload', 'short_link']),
-    '功能權限': JSON.stringify(['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create']),
+    '頁面權限': JSON.stringify(['request', 'avatar_upload']),
+    '功能權限': JSON.stringify(['request.create', 'profile.edit', 'reel.interact', 'issue.report']),
     '更新時間': '',
     '更新者': '系統預設'
   },
   {
     '角色範本': '唯讀',
-    '頁面權限': JSON.stringify(['request', 'dashboard', 'short_link']),
+    '頁面權限': JSON.stringify(['request', 'dashboard']),
     '功能權限': '[]',
     '更新時間': '',
     '更新者': '系統預設'
@@ -328,10 +328,6 @@ export const TABLE_SCHEMAS = {
     // （detailScoreMap 不會過濾狀態）——舊案件的加權因此不會因為停用一個選項就歸零。要真的讓分數消失
     // 才用刪除。
     headers: ['設計種類', '階段', '項目細節', '權重', '備註', '狀態']
-  },
-  '短連結': {
-    primaryKey: '短碼',
-    headers: ['短碼', '原始網址', '建立時間']
   },
   '系統公告欄': {
     primaryKey: '公告版本',

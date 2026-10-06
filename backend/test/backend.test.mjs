@@ -89,15 +89,14 @@ test('database storage compacts formatting without changing any JSON value', () 
   assert.match(compact, /    "request-test": \{"ok":true/);
 });
 
-test('404 short redirects use the small static JSON index before Apps Script fallback', async () => {
+test('404 page no longer has the short link feature and the short link data/index are gone', async () => {
   const root = path.resolve(import.meta.dirname, '..', '..');
   const page = await readFile(path.join(root, '404.html'), 'utf8');
-  const index = JSON.parse(await readFile(path.join(root, 'data', 'short_link_index.json'), 'utf8'));
-  assert.match(page, /loadResolverIndex/);
-  assert.match(page, /index\.shortLinks\[code\]/);
-  assert.match(page, /index\.supplements\[id\]\[slot\]/);
-  assert.equal(index.shortLinks['2Vnj7J'], 'https://www.youtube.com/watch?v=qrCrAJyjvmQ&ab_channel=LIONS%7CTheHomeofCreativity');
-  assert.equal(index.supplements['26080033'].a, 'https://docs.google.com/presentation/d/13Tzjb_21pPMIjUbQDfU4pGxgXMfP5giOdxvllRe3qHI/edit?usp=sharing');
+  assert.doesNotMatch(page, /createShortLink|resolveShortLink|short_link_index|loadResolverIndex/);
+  assert.match(page, /resolveSupplementLink/, '舊的補充資料連結轉址仍保留');
+  await assert.rejects(readFile(path.join(root, 'data', 'short_link_index.json'), 'utf8'), /ENOENT/);
+  const db = JSON.parse(await readFile(path.join(root, 'backend', 'data', 'db.json'), 'utf8'));
+  assert.equal(db.tables['短連結'], undefined, '短連結資料表已刪除');
 });
 
 test('item details calculate weights from the scoring table only after selection', () => {
@@ -1384,15 +1383,6 @@ test('front-end action API reads and atomically writes all requested JSON tables
   assert.equal(list.rows.length, 1);
   assert.equal(list.rows[0].project, 'JSON 後台串接');
 
-  const shortResponse = await fetch(`${app.baseUrl}/api`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'createShortLink', url: 'https://example.com/long/path' })
-  });
-  assert.equal(shortResponse.status, 400);
-  const short = await shortResponse.json();
-  assert.equal(short.ok, false);
-  assert.match(short.error, /短網址建立功能目前暫停/);
-
   const issue = await api(app.baseUrl, 'reportIssue', { report: { name: '訪客', content: '測試問題', suggestion: '測試建議' } });
   assert.equal(issue.row['狀態'], '回報中');
   const modification = await api(app.baseUrl, 'addModificationRecord', {
@@ -1408,7 +1398,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
   const persisted = JSON.parse(await readFile(app.dbPath, 'utf8'));
   assert.equal(persisted.tables.database.rows.length, 1);
-  assert.equal(persisted.tables['短連結'].rows.length, 0);
+  assert.equal(persisted.tables['短連結'], undefined);
   assert.equal(persisted.tables['修改統計表'].rows.length, 1);
   assert.equal(persisted.tables['補充資料連結'].rows.length, 1);
   assert.equal(persisted.tables['設定'].rows.length, 1);
@@ -1424,7 +1414,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   // 左側選單改成分四組（案件資料／人員與權限／系統設定／問題回報）排列，TABLE_ORDER 由 TABLE_GROUPS 展開；
   // reels 不另列側邊頁，設計師公開資料與 REELS 統一由「設計列表」管理，不在任何一組裡。
   assert.doesNotMatch(html.match(/const TABLE_GROUPS=\[[\s\S]*?\];\s*const TABLE_ORDER=/)?.[0] || '', /'reels'/);
-  assert.match(html, /const TABLE_GROUPS=\[\s*\{label:'案件資料',tables:\['database','修改統計表'\]\},\s*\{label:'人員與權限',tables:\['設計列表','帳號權限','角色權限範本','客戶別'\]\},\s*\{label:'系統設定',tables:\['加權計分標準','系統公告欄','短連結'\]\},\s*\{label:'問題回報',tables:\['bug_report'\]\}\s*\];/);
+  assert.match(html, /const TABLE_GROUPS=\[\s*\{label:'案件資料',tables:\['database','修改統計表'\]\},\s*\{label:'人員與權限',tables:\['設計列表','帳號權限','角色權限範本','客戶別'\]\},\s*\{label:'系統設定',tables:\['加權計分標準','系統公告欄'\]\},\s*\{label:'問題回報',tables:\['bug_report'\]\}\s*\];/);
   assert.match(html, /const TABLE_ORDER=TABLE_GROUPS\.flatMap\(group=>group\.tables\);/);
   assert.match(html, /function renderTabs\(\)\{\$\('tabs'\)\.innerHTML=TABLE_GROUPS\.map\(group=>\{/);
   assert.match(html, /class="side-group-label"/);
@@ -1467,7 +1457,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(front, /id="systemAnnouncementDismiss">\u4e0d再出現/);
   assert.match(front, /machiSystemAnnouncementDismissedVersionV1/);
   assert.match(front, /markSystemAnnouncementRead/);
-  assert.match(html, /function shortLinkTableHtml\(data\)/);
+  assert.doesNotMatch(html, /shortLinkTableHtml/);
   // 補充資料連結不再有獨立頁籤，也不再併入「修改列表」的案件群組顯示。
   assert.doesNotMatch(html.match(/const TABLE_GROUPS=\[[\s\S]*?\];\s*const TABLE_ORDER=/)?.[0] || '', /'補充資料連結'/);
   assert.doesNotMatch(html, /function supplementCardsHtml\(rows\)/);
@@ -1777,7 +1767,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '短連結', '系統公告欄', '修改統計表', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '系統公告欄', '修改統計表', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
   const announcement = await api(app.baseUrl, 'getSystemAnnouncement');
   assert.equal(announcement.announcement.version, 'v4.7');
   const userLogin = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });
@@ -1793,7 +1783,6 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
 
   const fixtures = {
     database: { '案件編號': '26990001', '專案名稱': 'JSON 管理驗收', '設計種類': '平面', '階段': '提案', '數量': '2', '項目細節': '社群貼文' },
-    '短連結': { '短碼': 'Adm001', '原始網址': 'https://example.com/admin' },
     '修改統計表': { '案件編號': '26990001', '修改次數': '1', '修改內容': '後台新增' },
     '補充資料連結': { '案件編號': '26990001', A: 'https://example.com/a' },
     '設定': { '帳號': 'admin.test@emctaipei.com', '名字': 'Admin Test' },
@@ -2704,7 +2693,7 @@ test('admin account bulk import creates accounts from a parsed roster and skips 
   assert.equal(ericPermission['角色範本'], '一般使用者');
   assert.equal(ericPermission['狀態'], '啟用');
   assert.equal(ericPermission['登入方式'], '公司信箱');
-  assert.deepEqual(JSON.parse(ericPermission['頁面權限']).sort(), ['avatar_upload', 'request', 'short_link'].sort());
+  assert.deepEqual(JSON.parse(ericPermission['頁面權限']).sort(), ['avatar_upload', 'request'].sort());
 
   // 同一批名單再匯入一次：全部視為已存在略過，不會建立重複帳號。
   const reimported = await api(app.baseUrl, 'adminAccountBulkImport', {
@@ -3534,38 +3523,6 @@ test('page load downloads the database once, UI preference saves are batched and
   const archiveGenerator = await readFile(new URL('../../scripts/generate_database_archive_snapshot.mjs', import.meta.url), 'utf8');
   assert.match(archiveGenerator, /const sourceChanged = previousSnapshot\?\.sources\?\.primaryDatabase\?\.rowsSha256 !== sourceRowsSha256;/);
   assert.doesNotMatch(archiveGenerator, /primaryDatabase\?\.revision !== database\.revision/);
-
-  // Run the real short link index generator in a scratch copy of the repo layout.
-  const { mkdtemp, mkdir, writeFile, copyFile, rm } = await import('node:fs/promises');
-  const { tmpdir } = await import('node:os');
-  const { execFile } = await import('node:child_process');
-  const run = (script) => new Promise((resolve, reject) => execFile(process.execPath, [script], (error, stdout, stderr) => error ? reject(new Error(stderr || error.message)) : resolve(stdout)));
-  const workdir = await mkdtemp(path.join(tmpdir(), 'short-link-index-'));
-  try {
-    await mkdir(path.join(workdir, 'scripts'), { recursive: true });
-    await mkdir(path.join(workdir, 'backend', 'data'), { recursive: true });
-    await mkdir(path.join(workdir, 'data'), { recursive: true });
-    const script = path.join(workdir, 'scripts', 'generate_short_link_index.mjs');
-    await copyFile(new URL('../../scripts/generate_short_link_index.mjs', import.meta.url), script);
-    const writeDb = (revision, url) => writeFile(path.join(workdir, 'backend', 'data', 'db.json'), JSON.stringify({
-      revision, updatedAt: `2026-09-15T00:00:0${revision}.000Z`,
-      tables: { '短連結': { rows: [{ '短碼': 'abc123', '原始網址': url }] }, '補充資料連結': { rows: [] } }
-    }));
-    const indexPath = path.join(workdir, 'data', 'short_link_index.json');
-    await writeDb(1, 'https://example.com/a');
-    await run(script);
-    const firstIndex = await readFile(indexPath, 'utf8');
-    await writeDb(2, 'https://example.com/a');
-    await run(script);
-    assert.equal(await readFile(indexPath, 'utf8'), firstIndex, '只有主資料庫版本號改變時，短網址索引要保持原檔不動');
-    await writeDb(3, 'https://example.com/b');
-    await run(script);
-    const updated = JSON.parse(await readFile(indexPath, 'utf8'));
-    assert.equal(updated.shortLinks.abc123, 'https://example.com/b', '短網址真的改變時照常更新');
-    assert.equal(updated.databaseRevision, 3);
-  } finally {
-    await rm(workdir, { recursive: true, force: true });
-  }
 });
 
 test('designer workload helper still counts 未開始 + 執行中 + 修改中 cases after the avatar light is retired', async () => {

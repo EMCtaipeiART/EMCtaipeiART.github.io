@@ -4,7 +4,6 @@
 
 - `database`
 - `加權計分標準`
-- `短連結`
 - `修改統計表`
 - `補充資料連結`
 - `設定`
@@ -78,7 +77,7 @@ Content-Type: application/json
 主要動作：
 
 - 案件：`list`、`recent`、`add`、`batchAdd`、`update`、`batchUpdate`、`delete`
-- 短網址：`createShortLink`、`resolveShortLink`、`resolveSupplementLink`
+- 補充資料連結轉址：`resolveSupplementLink`（短網址功能已於 2026-10-06 移除）
 - 設定、權限與登入：`login`、`googleLogin`、`erpLoginConfig`、`erpLogin`、`verifyToken`、`getAccessProfile`、`logout`、`getUserSettings`、`listDesignerProfiles`、`saveUserSettings`、`saveDesignerProfiles`
 - JSON 媒體：`listDesignerMedia`、`uploadDesignerImage`、`uploadUserAvatar`、`deleteDesignerMedia`
 - 限時動態：`listReels`、`toggleReelReaction`、`addReelComment`
@@ -123,4 +122,4 @@ Authorization: Bearer <admin token>
 npm test
 ```
 
-測試涵蓋各資料表持久化與管理 CRUD、可編輯加權規則、角色範本與個別帳號權限、案件流程、短連結、設定、限時動態、問題回報、修改紀錄、並行寫入、ERP OAuth PKCE，以及圖片上傳／讀取／刪除。
+測試涵蓋各資料表持久化與管理 CRUD、可編輯加權規則、角色範本與個別帳號權限、案件流程、設定、限時動態、問題回報、修改紀錄、並行寫入、ERP OAuth PKCE，以及圖片上傳／讀取／刪除。

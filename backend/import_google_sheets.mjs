@@ -9,7 +9,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_OUTPUT = path.join(HERE, 'data', 'db.json');
 const SOURCES = {
   database: `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=1244538986`,
-  '短連結': `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('短連結')}`,
   '修改統計表': `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=1240020248`,
   '補充資料連結': `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('補充資料連結')}`,
   '設定': `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=988186149`,
