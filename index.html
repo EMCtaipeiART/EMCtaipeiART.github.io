@@ -1045,7 +1045,7 @@
       .op-item .op-btn{flex:1 1 auto}
       .issue-item{grid-template-columns:1fr}
       .gm-row,.set-actions,.form-actions{flex-wrap:wrap}
-      .login-menu{position:fixed;left:auto;right:12px;bottom:84px;top:auto;max-width:calc(100vw - 24px);max-height:calc(100vh - 110px);overflow:auto;z-index:80}
+      .login-menu{position:fixed;left:auto;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));top:auto;max-width:calc(100vw - 24px);max-height:calc(100vh - 110px);overflow:auto;z-index:300}
       .ai-card{max-height:calc(100vh - 24px)}
       .detail-actions{gap:8px}
       .detail-actions .lt-act{flex:1 1 auto;justify-content:center}
@@ -3874,7 +3874,11 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
       const box=$('railLogin');if(!box)return;
       const s=session(),on=loggedIn(),name=s.name||s.user,url=on?(pixImg(name)||pixImg(s.user)||personAvatar(name)||personAvatar(s.user)||personAvatar(s.account)):'';
       const face=on?(url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(initial(name))}'))">`:esc(initial(name))):'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20c.9-3.6 3.8-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/></svg>';
-      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-gmail-connect role="menuitem">串接 Gmail</button><button type="button" data-login="logout" role="menuitem">登出</button></div>`:''}`;
+      const menuHtml=state.loginMenu&&on?`<div class="login-menu" role="menu"><b>${esc(name)}</b><small>${esc(s.account||s.user||'')}</small><button type="button" data-gmail-connect role="menuitem">串接 Gmail</button><button type="button" data-login="logout" role="menuitem">登出</button></div>`:'',mobile=matchMedia('(max-width:720px)').matches;
+      box.innerHTML=`<button type="button" class="login-avatar${on?' is-in':''}" data-login="toggle" aria-haspopup="true" aria-label="${on?`${esc(name)}，帳號選單`:'登入'}">${face}</button><span class="login-label">${on?esc(name):'登入'}</span>${mobile?'':menuHtml}`;
+      /* 手機：下方選單列是可橫向捲動的容器，裡面的選單會被它的堆疊層與裁切影響（登出按鈕被壓在下面點不到），所以改掛在 body 最外層、層級最高 */
+      let host=document.getElementById('loginMenuHost');
+      if(mobile){if(!host){host=document.createElement('div');host.id='loginMenuHost';document.body.appendChild(host)}host.innerHTML=menuHtml}else if(host)host.remove();
       $('promptHint').textContent=on?'':'登入後才能新增設計需求（點左下角頭像登入）';
     }
     async function logout(){
@@ -3908,7 +3912,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 事件 ---------- */
     document.addEventListener('click',e=>{
       const t=e.target;
-      if(state.loginMenu&&!t.closest('.rail-login')){state.loginMenu=false;renderLogin()}
+      if(state.loginMenu&&!t.closest('.rail-login')&&!t.closest('.login-menu')){state.loginMenu=false;renderLogin()}
       if(state.filterOpen&&!t.closest('.filter-wrap')){state.filterOpen=false;if(state.view==='board')renderBoard();if(state.view==='projects')renderProjects()}
       const lbA=t.closest('[data-lb-act]')?.dataset.lbAct;if(lbA){lbA==='close'?lbClose():lbStep(lbA==='next'?1:-1);return}
       if(t.id==='lightbox'){lbClose();return}
