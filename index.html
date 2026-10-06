@@ -325,6 +325,7 @@
     .latest-grid .card .card-foot,.board.five .cards .card .card-foot{margin-top:auto;padding-top:12px}
     .card.is-open{cursor:default}
     .input.is-locked{background:var(--bg);color:var(--muted);cursor:not-allowed}
+    #setDisplayName.is-locked{background:var(--line);color:var(--faint);opacity:.85;-webkit-text-fill-color:var(--faint)}
     .card-detail{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);cursor:default;text-align:left;font-weight:400}
     .card-detail .thumbs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;-webkit-overflow-scrolling:touch}
     .card-detail .thumbs a{flex:0 0 auto;width:64px;height:64px;border-radius:10px}
@@ -2520,7 +2521,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const isAdminUser=()=>permissionRole()==='管理者';
     const isMachiUser=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi';
     const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部/.test(sessionDept());
-    const nameLocked=()=>!isAdminUser()&&!isMachiUser()&&(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
+    /* 五位設計師（含 Machi）：頭像固定綁像素辦公室的像素大頭、顯示名固定，避免與像素辦公室、案件、信件聯絡人聯動出錯 */
+    const ownDesignerName=()=>{const s=session();if(!loggedIn())return '';return DESIGNERS.find(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).split(/[@\s]/)[0]===norm(n)))||''};
+    const nameLocked=()=>Boolean(ownDesignerName())||(!isAdminUser()&&!isMachiUser()&&(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession()));
     function normTemplates(value,def){
       let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
       const entries=Array.isArray(src)?src.map(i=>[String(i?.name||'').trim(),String(i?.content||i?.text||'').trim()]):(src&&typeof src==='object'?Object.entries(src).map(([k,v])=>[String(k).trim(),String(v??'').trim()]):[]);
@@ -2576,11 +2579,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
-      const name=session().name||session().user,locked=nameLocked(),url=locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name));
+      const own=ownDesignerName(),name=own||session().name||session().user,locked=nameLocked(),url=locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name));
       return `<details class="set-card" data-set-sec="profile"${sectionOpen('profile')}><summary><b>個人設定</b><span>頭像與顯示名稱</span></summary>
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
-        <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input" id="setDisplayName" maxlength="40" value="${esc(st2.display||name)}"${locked?' readonly':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
-        ${locked?'<p class="set-note">設計師的頭像與顯示名由管理者統一設定，不能自行更換。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
+        <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input${locked?' is-locked':''}" id="setDisplayName" maxlength="40" value="${esc(own||st2.display||name)}"${locked?' readonly disabled aria-disabled="true"':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，已與像素辦公室綁定，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
+        ${locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -4348,7 +4351,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     {const o=renderProjects;renderProjects=function(){keepBoardScroll(o,this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     {const o=renderBoard;renderBoard=function(){keepBoardScroll(o,this,arguments);try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
-    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}try{if(state.view==='settings'&&ownDesignerName())renderSettings()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
