@@ -182,6 +182,13 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'scheduled-mail-dispatch-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 資料遷移：「已取消」狀態已併入「暫停中」，把殘留的案件改掉（沒有殘留時什麼都不做）。
+    try {
+      const migration = await stub.runStatusMigration();
+      if ((migration as { migrated?: number }).migrated) console.log(JSON.stringify({ event: 'status-migration', result: migration }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'status-migration-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 操作紀錄：佇列批次寫入 GitHub（audit-log.json）。失敗只記 log，下一分鐘再試。
     try {
       const audit = await stub.runAuditFlush();

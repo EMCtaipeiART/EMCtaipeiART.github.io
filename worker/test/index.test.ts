@@ -1453,11 +1453,11 @@ describe('Machi Design API Worker', () => {
     const second = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '二修內容' } }, token);
     expect(second).toMatchObject({ ok: true, count: 2, status: '修改中', statusChanged: false });
 
-    // 已取消的案件不會因為一筆修改紀錄被救回來。
-    await setStatus('已取消');
+    // 暫停中（原「已取消」已併入）的案件不會因為一筆修改紀錄被救回來。
+    await setStatus('暫停中');
     const cancelled = await api({ action: 'addModificationRecord', record: { caseId: '26080001', modifyDate: '2026-09-15', content: '三修內容' } }, token);
-    expect(cancelled).toMatchObject({ ok: true, count: 3, status: '已取消', statusChanged: false });
-    expect(await statusOf()).toBe('已取消');
+    expect(cancelled).toMatchObject({ ok: true, count: 3, status: '暫停中', statusChanged: false });
+    expect(await statusOf()).toBe('暫停中');
   });
 
   it('does not add a second 修改紀錄 round when the same modification request is written twice within minutes (one mail both scheduled and sent now)', async () => {
@@ -1688,7 +1688,7 @@ describe('Machi Design API Worker', () => {
     expect(String(unknownCase.error)).toContain('找不到目標案件');
   });
 
-  it('sets the target case to 過稿中 when it receives the 初稿 from another case, but leaves 過稿中／已完成／已取消 and same-case moves alone', async () => {
+  it('sets the target case to 過稿中 when it receives the 初稿 from another case, but leaves 過稿中／已完成／暫停中 and same-case moves alone', async () => {
     const token = await login();
     await seedCase('26080003', { '狀態': '執行中' });
     await seedCase('26080004', { '狀態': '已完成' });

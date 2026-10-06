@@ -1139,10 +1139,10 @@ export function createActionHandler(database, options = {}) {
         const count = rows.filter(row => text(row['案件編號']) === caseId).reduce((max, row) => Math.max(max, Number(row['修改次數']) || 0), 0) + 1;
         const row = { '案件編號': caseId, '修改次數': String(count), '建立日期': nowTaipei(), '修改日期': modifyDate, '修改內容': content, '修改人': modifier, '確認修正日': '' };
         rows.push(row);
-        // 跟 Worker 同一套規則：新的修改需求把案件狀態改成「修改中」；已經是修改中或已取消的案件不動。
+        // 跟 Worker 同一套規則：新的修改需求把案件狀態改成「修改中」；已經是修改中或暫停中（原「已取消」已併入）的案件不動。
         const caseRow = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
         const previousStatus = text(caseRow?.['狀態']);
-        const statusChanged = Boolean(caseRow) && !['修改中', '已取消'].includes(previousStatus);
+        const statusChanged = Boolean(caseRow) && !['修改中', '暫停中'].includes(previousStatus);
         if (caseRow && statusChanged) caseRow['狀態'] = '修改中';
         return { ok: true, action, rowNumber: rows.length + 1, record: row, count, status: text(caseRow?.['狀態']), previousStatus, statusChanged };
       }, 'add modification');
@@ -1301,7 +1301,7 @@ export function createActionHandler(database, options = {}) {
       const session = sessionFor(snapshot, payload.editorToken), writeHeaders = [...(payload.writeHeaders || []), ...(payload.forceHeaders || [])];
       const changes = payload.row || payload.changes || payload;
       const touchesProtected = writeHeaders.some(header => ['案件狀態', '狀態', '項目細節'].includes(header)) || ['status', 'details'].some(key => changes[key] !== undefined);
-      if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '已取消') throw new Error('請先登入後再修改狀態或項目細節');
+      if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '暫停中') throw new Error('請先登入後再修改狀態或項目細節');
       if (session) requireCapability(snapshot, payload, payload.accessContext === 'archive' ? 'archive.edit' : (touchesProtected ? 'request.status' : 'request.edit'));
       const items = action === 'batchUpdate' ? (Array.isArray(payload.rows) ? payload.rows : []) : [{ id: payload.id || payload.caseId || changes.id, row: changes }];
       return database.transaction(draft => {

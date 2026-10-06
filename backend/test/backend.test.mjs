@@ -3286,7 +3286,7 @@ test('修改中 is a first-class case status: its own colour in every theme, a K
   assert.match(html, /const statusOrder = \{'未開始':0,'執行中':1,'過稿中':2,'修改中':3,'已完成':4,'已取消':5,'暫停中':6\};/);
   assert.match(html, /function statusClass\(s\)\{return \['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'\]\.includes\(s\)\?s:'未開始'\}/);
   assert.match(html, /<option>過稿中<\/option><option>修改中<\/option><option>已完成<\/option>/);
-  assert.match(admin, /const ACCOUNT_STATUS_OPTIONS=\['未開始','執行中','過稿中','修改中','已完成','已取消','暫停中'\];/);
+  assert.match(admin, /const ACCOUNT_STATUS_OPTIONS=\['未開始','執行中','過稿中','修改中','已完成','暫停中'\];/);
 
   // 上方矩形框：六格，修改中排在過稿中之後，點選走通用的 data-status 篩選。
   assert.match(html, /<b id="review">0<\/b><span>過稿中<\/span><\/div><div class="kpi status-修改中" data-status="修改中" role="button" tabindex="0"><b id="revising">0<\/b><span>修改中<\/span><\/div>/);

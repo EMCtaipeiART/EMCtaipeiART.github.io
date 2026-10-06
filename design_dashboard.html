@@ -391,7 +391,7 @@ body.enterprise{background:#f6f8fb;color:#101828;font-size:13px;overflow:hidden}
     <section class="dashboard-grid">
       <div class="card panel brand-panel"><div class="panel-title"><h3>品牌工作量分佈</h3></div><div class="client-list" id="clientList"></div><button class="brand-all-btn" id="allBrandsBtn" type="button">查看全部品牌</button></div>
       <div class="middle-stack"><div class="card panel trend-panel"><div class="panel-title"><h3>案件趨勢 <span class="panel-sub" id="trendRange">近一整年</span></h3></div><div class="chart-box"><canvas id="trendChart"></canvas></div></div><div class="card panel status-panel"><div class="panel-title"><h3>項目細節分布</h3></div><div class="status-layout"><div class="status-chart-box"><canvas id="statusChart"></canvas></div><div class="status-legend" id="statusLegend"></div></div></div></div>
-      <div class="card panel workload"><div class="panel-title"><h3>設計師工作負載 <span class="info-wrap"><span class="info-dot" tabindex="0">i</span><span class="info-popover">負載率 = 這一週實際落在設計師身上的加權分數 ÷ 個人每週常態量。案件分數依工作日平均攤到開始～結束日，已取消不計；已完成、過稿中視為設計師已無後續進度（提前完成的案件只算到今天，過稿中若被要求修改，狀態變成「修改中」才會重新計入）；跨月仍未結案的舊案件視為已完成。常態量 = 前 12 週（有工作量的週）中位數，資料不足時改用同組、全設計部中位數。看當月顯示本週並預估下週；看過去月份顯示該月週平均。灰色細線為 100%（常態週量）。</span></span></h3><div class="status"><span><i style="background:#38bdf8"></i>有餘裕</span><span><i style="background:#22c55e"></i>適中</span><span><i style="background:#fbbf24"></i>偏高</span><span><i style="background:#f97316"></i>忙碌</span><span><i style="background:#f04438"></i>過高</span></div></div><div class="load-mode" id="workloadMode"></div><div id="heatmap"></div></div>
+      <div class="card panel workload"><div class="panel-title"><h3>設計師工作負載 <span class="info-wrap"><span class="info-dot" tabindex="0">i</span><span class="info-popover">負載率 = 這一週實際落在設計師身上的加權分數 ÷ 個人每週常態量。案件分數依工作日平均攤到開始～結束日，暫停中不計；已完成、過稿中視為設計師已無後續進度（提前完成的案件只算到今天，過稿中若被要求修改，狀態變成「修改中」才會重新計入）；跨月仍未結案的舊案件視為已完成。常態量 = 前 12 週（有工作量的週）中位數，資料不足時改用同組、全設計部中位數。看當月顯示本週並預估下週；看過去月份顯示該月週平均。灰色細線為 100%（常態週量）。</span></span></h3><div class="status"><span><i style="background:#38bdf8"></i>有餘裕</span><span><i style="background:#22c55e"></i>適中</span><span><i style="background:#fbbf24"></i>偏高</span><span><i style="background:#f97316"></i>忙碌</span><span><i style="background:#f04438"></i>過高</span></div></div><div class="load-mode" id="workloadMode"></div><div id="heatmap"></div></div>
       <div class="right-stack"><div class="card panel rank-panel"><div class="panel-title"><h3>平面設計師本月排行</h3></div><div class="rank" id="rankGraphic"></div></div><div class="card panel rank-panel"><div class="panel-title"><h3>影音設計師本月排行</h3></div><div class="rank" id="rankVideo"></div></div></div>
     </section>
     <footer class="dashboard-footer">© 2026 EMC Design Team. All rights reserved.</footer>
@@ -563,8 +563,8 @@ const BRAND_COLORS=['#2fbd6b','#5aa6ff','#f7c84b','#a855f7','#14b8a6','#98a2b3']
 const WEEK=['一','二','三','四','五'];
 const ACTIVE_STATUS=new Set(['執行中','過稿中','未開始','未執行','進行中','待處理']);
 const DONE_STATUS=new Set(['已完成','結案','完成']);
-const CLOSED_STATUS=new Set(['已完成','結案','完成','已取消','取消','暫停']);
-const DUE_EXCLUDED_STATUS=new Set(['過稿中','已完成','已取消','取消','暫停']);
+const CLOSED_STATUS=new Set(['已完成','結案','完成','已取消','取消','暫停','暫停中']);
+const DUE_EXCLUDED_STATUS=new Set(['過稿中','已完成','已取消','取消','暫停','暫停中']);
 const FALLBACK_DETAIL_SCORE_ROWS=[
   ['平面','提案','社群貼文',1],['平面','提案','視覺設計',2],['平面','提案','字體設計',2],['平面','提案','色號設計',0],['平面','提案','素材參考',0],['平面','提案','預算參考',1],['平面','提案','急件',3],
   ...['社群貼文','廣告素材','美術設計','影音包框'].map(detail=>['平面','再製',detail,1]),['平面','再製','急件',3],
@@ -620,7 +620,7 @@ function normalizeDesigner(v){
 function normalizeStatus(v){
   const s=String(v||'').trim();
   if(DONE_STATUS.has(s))return '已完成';
-  if(['取消','已取消'].includes(s))return '已取消';
+  if(['取消','已取消','暫停','暫停中'].includes(s))return '暫停中';
   return s||'未開始'
 }
 function normalizeRows(rows){
@@ -858,11 +858,11 @@ function caseStatusClass(status){
   if(value==='已完成')return 'done';
   if(value==='過稿中')return 'review';
   if(['執行中','進行中'].includes(value))return 'running';
-  if(value==='已取消')return 'cancelled';
+  if(['已取消','暫停中'].includes(value))return 'cancelled';
   return 'pending'
 }
 function renderCaseTable(){
-  const order={未開始:0,未執行:0,待處理:0,執行中:1,進行中:1,過稿中:2,已完成:3,已取消:4},rows=[...filtered].sort((a,b)=>(order[normalizeStatus(a['案件狀態'])]??5)-(order[normalizeStatus(b['案件狀態'])]??5)||(normDate(b['開始日期'])?.getTime()||0)-(normDate(a['開始日期'])?.getTime()||0));
+  const order={未開始:0,未執行:0,待處理:0,執行中:1,進行中:1,過稿中:2,已完成:3,暫停中:4,已取消:4},rows=[...filtered].sort((a,b)=>(order[normalizeStatus(a['案件狀態'])]??5)-(order[normalizeStatus(b['案件狀態'])]??5)||(normDate(b['開始日期'])?.getTime()||0)-(normDate(a['開始日期'])?.getTime()||0));
   $('caseListSummary').textContent=`共 ${rows.length} 件案件・${caseMetric(rows.reduce((sum,row)=>sum+qty(row),0))} 項產出`;
   $('caseTableBody').innerHTML=rows.length?rows.map(row=>{const status=normalizeStatus(row['案件狀態']),details=splitDetails(row['項目細節']).join('、');return `<tr><td><span class="case-code" title="${escapeHtml(row['案件編號']||'—')}">${escapeHtml(row['案件編號']||'—')}</span></td><td><span class="case-client" title="${escapeHtml(row['客戶別']||'未分類')}">${escapeHtml(row['客戶別']||'未分類')}</span></td><td><span class="case-project" title="${escapeHtml(row['專案名稱']||'未命名案件')}">${escapeHtml(row['專案名稱']||'未命名案件')}</span></td><td><span class="case-detail-cell" title="${escapeHtml(details)}">${escapeHtml(details)}</span></td><td class="num">${caseMetric(qty(row))}</td><td class="num"><span class="case-score">${caseMetric(score(row))}</span></td><td><span class="case-status ${caseStatusClass(status)}">${escapeHtml(status)}</span></td></tr>`}).join(''):'<tr class="case-empty-row"><td colspan="7">此月份與篩選條件下沒有案件資料</td></tr>'
 }
@@ -1051,7 +1051,7 @@ function isOpenCase(r){return !CLOSED_STATUS.has(r['案件狀態'])}
 // 4. 個人每週常態量 = 基準週之前 12 週（有工作量的週）的中位數；不足 4 週退回同組，再退回全設計部。
 //    設定表若有「每週標準分數」欄位，會優先使用該值（例如要扣掉請假時手動指定）。
 const WORKLOAD_DONE_STATUS=new Set(['已完成','過稿中']);
-const WORKLOAD_SKIP_STATUS=new Set(['已取消','暫停']);
+const WORKLOAD_SKIP_STATUS=new Set(['已取消','暫停','暫停中']);
 const WORKLOAD_BASELINE_WEEKS=12;
 const WORKLOAD_BAR_MAX=150;
 const WORKLOAD_STATES=[[60,'有餘裕','free'],[105,'適中','normal'],[125,'偏高','high'],[150,'忙碌','busy'],[Infinity,'過高','over']];
@@ -1386,7 +1386,7 @@ function writeNotificationIds(ids){localStorage.setItem(notificationReadKey(),JS
 function shortDate(value){const d=normDate(value);return d?`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:String(value||'-').replace(/^\d{4}[\/-]/,'')}
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]))}
 function dashboardNotificationItems(){
-  const designer=ACCOUNT_IDENTITY.designer,version='n2',assigned=raw.filter(r=>r['設計負責人']===designer&&yearOf(r)>=REPORT_TODAY.getFullYear()&&!['已取消','已完成'].includes(normalizeStatus(r['案件狀態']))),items=[];
+  const designer=ACCOUNT_IDENTITY.designer,version='n2',assigned=raw.filter(r=>r['設計負責人']===designer&&yearOf(r)>=REPORT_TODAY.getFullYear()&&!['已取消','暫停中','已完成'].includes(normalizeStatus(r['案件狀態']))),items=[];
   assigned.filter(r=>normalizeStatus(r['案件狀態'])==='未開始').forEach(r=>items.push({kind:'case',key:`${version}:case:${r['案件編號']}`,id:String(r['案件編號']),title:`新案件｜${r['客戶別']||'未填客戶'}`,meta:`${r['案件編號']}｜${r['專案名稱']||'未填專案'}｜${shortDate(r['開始日期'])}-${shortDate(r['結束日期'])}`}));
   assigned.forEach(r=>{
     const records=dashboardModificationRecords.get(String(r['案件編號']))||[];

@@ -24,7 +24,8 @@
       --st-review:#0ea5e9;--st-review-bg:#e0f2fe;--st-review-ink:#0369a1;--st-review-line:#bae6fd;
       --st-revise:#f97316;--st-revise-bg:#feece0;--st-revise-ink:#a14503;--st-revise-line:#fdd6ba;
       --st-done:#22c55e;--st-done-bg:#dcfce7;--st-done-ink:#166534;--st-done-line:#bbf7d0;
-      --st-cancel:#9ca3af;--st-cancel-bg:#f3f4f6;--st-cancel-ink:#4b5563;--st-cancel-line:#d1d5db;
+      --st-pause:#8b5cf6;--st-pause-bg:#ede9fe;--st-pause-ink:#5b21b6;--st-pause-line:#c4b5fd;
+      --st-none:#9ca3af;--st-none-bg:#f3f4f6;--st-none-ink:#4b5563;--st-none-line:#d1d5db;
       --shadow:0 10px 30px rgba(18,38,28,.08);--shadow-lg:0 22px 50px rgba(18,38,28,.18);
       --rail:76px;
     }
@@ -36,7 +37,8 @@
       --st-review-bg:#13303f;--st-review-ink:#8fd3f4;--st-review-line:#1d4a60;
       --st-revise-bg:#3a2515;--st-revise-ink:#ffc596;--st-revise-line:#5c3a20;
       --st-done-bg:#16301f;--st-done-ink:#8fe0a5;--st-done-line:#24502f;
-      --st-cancel-bg:#262b2a;--st-cancel-ink:#b4bdb9;--st-cancel-line:#3a4140;
+      --st-pause-bg:#2b2147;--st-pause-ink:#cbb5ff;--st-pause-line:#46357a;
+      --st-none-bg:#262b2a;--st-none-ink:#b4bdb9;--st-none-line:#3a4140;
     }
     *{box-sizing:border-box}
     html,body{margin:0}
@@ -172,7 +174,8 @@
     .chips label.st-review{background:var(--st-review-bg);color:var(--st-review-ink);border-color:var(--st-review-line)}
     .chips label.st-revise{background:var(--st-revise-bg);color:var(--st-revise-ink);border-color:var(--st-revise-line)}
     .chips label.st-done{background:var(--st-done-bg);color:var(--st-done-ink);border-color:var(--st-done-line)}
-    .chips label.st-cancel{background:var(--st-cancel-bg);color:var(--st-cancel-ink);border-color:var(--st-cancel-line)}
+    .chips label.st-pause{background:var(--st-pause-bg);color:var(--st-pause-ink);border-color:var(--st-pause-line)}
+    .chips label.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
     .chips label[class*="st-"]:not(:has(input:checked)){opacity:.5;filter:grayscale(.4)}
     .chips label[class*="st-"]:has(input:checked){box-shadow:0 0 0 2px currentColor inset}
     .chips label:not([class*="st-"]):has(input:checked){border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
@@ -223,7 +226,7 @@
     .cell-pop button.option.status-option.st-review{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
     .cell-pop button.option.status-option.st-revise{background:#feece0;color:#a14503;border-color:#fdd6ba}
     .cell-pop button.option.status-option.st-done{background:#dcfce7;color:#166534;border-color:#bbf7d0}
-    .cell-pop button.option.status-option.st-cancel{background:#f1f3f2;color:#6b7280;border-color:#e5e7eb}
+    .cell-pop button.option.status-option.st-none{background:#f1f3f2;color:#6b7280;border-color:#e5e7eb}
     .cell-pop button.option.status-option.st-pause{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
     .cell-pop .popover-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
     .cell-pop .popover-actions button{min-height:38px;border-radius:12px;padding:0 22px;font-weight:800;font-size:14px;cursor:pointer;border:1px solid #d9dfdc;background:#fff;color:#17211d}
@@ -255,7 +258,8 @@
     .lt-status.st-review{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
     .lt-status.st-revise{background:#feece0;color:#a14503;border-color:#fdd6ba}
     .lt-status.st-done{background:#dcfce7;color:#166534;border-color:#bbf7d0}
-    .lt-status.st-cancel{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb}
+    .lt-status.st-pause{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+    .lt-status.st-none{background:#f3f4f6;color:#4b5563;border-color:#e5e7eb}
     .lt-type-平面{background:#fdeef4;color:#9f4566;border-color:#f7d5e0}
     .lt-type-影音{background:#eaf4ff;color:#25638f;border-color:#cfe6fb}
     .lt-type-採購{background:#fff4df;color:#8a5a00;border-color:#f4dfad}
@@ -403,13 +407,14 @@
     html[data-theme="dark"] .card-meta.cd-soon{background:#3a3213;color:#f6dc7a;border-color:#5c4f1c}
     html[data-theme="dark"] .card-meta.cd-today{background:#3a2515;color:#ffc596;border-color:#5c3a20}
     html[data-theme="dark"] .card-meta.cd-late{background:#3d1d1d;color:#ffb4b4;border-color:#5c2a2a}
-    .st-todo{--card-color:var(--st-todo)} .st-doing{--card-color:var(--st-doing)} .st-review{--card-color:var(--st-review)} .st-revise{--card-color:var(--st-revise)} .st-done{--card-color:var(--st-done)} .st-cancel{--card-color:var(--st-cancel)}
+    .st-todo{--card-color:var(--st-todo)} .st-doing{--card-color:var(--st-doing)} .st-review{--card-color:var(--st-review)} .st-revise{--card-color:var(--st-revise)} .st-done{--card-color:var(--st-done)} .st-pause{--card-color:var(--st-pause)} .st-none{--card-color:var(--st-none)}
     .chip.st-todo,.pill.st-todo{background:var(--st-todo-bg);color:var(--st-todo-ink);border-color:var(--st-todo-line)}
     .chip.st-doing,.pill.st-doing{background:var(--st-doing-bg);color:var(--st-doing-ink);border-color:var(--st-doing-line)}
     .chip.st-review,.pill.st-review{background:var(--st-review-bg);color:var(--st-review-ink);border-color:var(--st-review-line)}
     .chip.st-revise,.pill.st-revise{background:var(--st-revise-bg);color:var(--st-revise-ink);border-color:var(--st-revise-line)}
     .chip.st-done,.pill.st-done{background:var(--st-done-bg);color:var(--st-done-ink);border-color:var(--st-done-line)}
-    .chip.st-cancel,.pill.st-cancel{background:var(--st-cancel-bg);color:var(--st-cancel-ink);border-color:var(--st-cancel-line)}
+    .chip.st-pause,.pill.st-pause{background:var(--st-pause-bg);color:var(--st-pause-ink);border-color:var(--st-pause-line)}
+    .chip.st-none,.pill.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
     .pill{display:inline-block;font-size:12.5px;font-weight:800;padding:4px 12px;border-radius:99px;border:1px solid transparent}
 
     /* 通用「頁」外框：填寫／信件／詳情 */
@@ -588,7 +593,8 @@
     html[data-theme="dark"] .lt-status.st-review,html[data-theme="dark"] .cell-pop button.option.status-option.st-review{background:var(--st-review-bg);color:var(--st-review-ink);border-color:var(--st-review-line)}
     html[data-theme="dark"] .lt-status.st-revise,html[data-theme="dark"] .cell-pop button.option.status-option.st-revise{background:var(--st-revise-bg);color:var(--st-revise-ink);border-color:var(--st-revise-line)}
     html[data-theme="dark"] .lt-status.st-done,html[data-theme="dark"] .cell-pop button.option.status-option.st-done{background:var(--st-done-bg);color:var(--st-done-ink);border-color:var(--st-done-line)}
-    html[data-theme="dark"] .lt-status.st-cancel,html[data-theme="dark"] .cell-pop button.option.status-option.st-cancel,html[data-theme="dark"] .cell-pop button.option.status-option.st-pause{background:var(--st-cancel-bg);color:var(--st-cancel-ink);border-color:var(--st-cancel-line)}
+    html[data-theme="dark"] .lt-status.st-none,html[data-theme="dark"] .cell-pop button.option.status-option.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
+    html[data-theme="dark"] .lt-status.st-pause,html[data-theme="dark"] .cell-pop button.option.status-option.st-pause{background:var(--st-pause-bg);color:var(--st-pause-ink);border-color:var(--st-pause-line)}
     html[data-theme="dark"] .lt-act-mail{background:#16301f;color:#8fe0a5;border-color:#24502f}
     html[data-theme="dark"] .lt-act-edit{background:#3a3213;color:#f6dc7a;border-color:#5c4f1c}
     html[data-theme="dark"] .lt-act-del{background:#3d1d24;color:#ffb4c0;border-color:#5c2a35}
@@ -904,8 +910,10 @@
     .tl-bar.st-revise .tl-name{color:#17211d}
     .tl-bar.st-done{background:#4cc380;border:0}
     .tl-bar.st-done .tl-name{color:#17211d}
-    .tl-bar.st-cancel{background:#b8bec7;border:0}
-    .tl-bar.st-cancel .tl-name{color:#17211d}
+    .tl-bar.st-pause{background:#a78bfa;border:0}
+    .tl-bar.st-pause .tl-name{color:#17211d}
+    .tl-bar.st-none{background:#b8bec7;border:0}
+    .tl-bar.st-none .tl-name{color:#17211d}
     html[data-theme="dark"] .tl-inner{background:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--day) - 1px),rgba(255,255,255,.06) calc(var(--day) - 1px),rgba(255,255,255,.06) var(--day))}
     html[data-theme="dark"] .tl-band.hol{background:rgba(255,255,255,.04)}
     html[data-theme="dark"] .tl-band.today{background:rgba(52,211,153,.24)}
@@ -921,8 +929,9 @@
     html[data-theme="dark"] .tl-bar.st-review{background:#2f7396}
     html[data-theme="dark"] .tl-bar.st-revise{background:#9a5e2c}
     html[data-theme="dark"] .tl-bar.st-done{background:#2f8656}
-    html[data-theme="dark"] .tl-bar.st-cancel{background:#4a524f}
-    html[data-theme="dark"] .tl-bar.st-todo .tl-name,html[data-theme="dark"] .tl-bar.st-doing .tl-name,html[data-theme="dark"] .tl-bar.st-review .tl-name,html[data-theme="dark"] .tl-bar.st-revise .tl-name,html[data-theme="dark"] .tl-bar.st-done .tl-name,html[data-theme="dark"] .tl-bar.st-cancel .tl-name{color:#f1f5f3}
+    html[data-theme="dark"] .tl-bar.st-pause{background:#5b46a0}
+    html[data-theme="dark"] .tl-bar.st-none{background:#4a524f}
+    html[data-theme="dark"] .tl-bar.st-todo .tl-name,html[data-theme="dark"] .tl-bar.st-doing .tl-name,html[data-theme="dark"] .tl-bar.st-review .tl-name,html[data-theme="dark"] .tl-bar.st-revise .tl-name,html[data-theme="dark"] .tl-bar.st-done .tl-name,html[data-theme="dark"] .tl-bar.st-pause .tl-name,html[data-theme="dark"] .tl-bar.st-none .tl-name{color:#f1f5f3}
     html[data-theme="dark"] .tl-resizer{background:#2c3431}
     html[data-theme="dark"] .rev-text a{color:#8ab4f8}
     html[data-theme="dark"] .reply-opt{background:#242c29;color:#e9efec;border-color:#34403b}
@@ -943,17 +952,17 @@
     .tl-empty{padding:26px 10px;text-align:center;color:var(--faint);font-size:13px;font-weight:700}
     @media(max-width:900px){.case-split{grid-template-columns:1fr}.tl-resizer{display:none}.case-split .list-wrap{border-radius:16px 16px 0 0;border-right:1px solid var(--line)}.tl-panel{border-left:1px solid var(--line);border-top:0;border-radius:0 0 16px 16px}}
     @media (min-width:1181px){
-      .board.five.n1,.board.five.n2,.board.five.n3,.board.five.n4{gap:16px}
-      .board.five.n1{grid-template-columns:minmax(0,1fr)}
-      .board.five.n2{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .board.five.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
-      .board.five.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
-      .board.five.n1 .column,.board.five.n2 .column,.board.five.n3 .column,.board.five.n4 .column{grid-column:auto!important}
-      .board.five.n1 .cards,.board.five.n2 .cards,.board.five.n3 .cards,.board.five.n4 .cards{align-items:start}
-      .board.five.n1 .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
-      .board.five.n2 .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .board.five.n3 .cards,.board.five.n4 .cards{grid-template-columns:minmax(0,1fr)}
-      .board.five.n1 .cards .empty,.board.five.n2 .cards .empty,.board.five.n3 .cards .empty,.board.five.n4 .cards .empty{grid-column:1/-1}
+      .board.five{gap:16px}
+      .board.five.bc1{grid-template-columns:minmax(0,1fr)}
+      .board.five.bc2{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .board.five.bc3{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .board.five.bc4{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .board.five .column{grid-column:auto!important}
+      .board.five .cards{align-items:start}
+      .board.five.bc1 .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .board.five.bc2 .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .board.five.bc3 .cards,.board.five.bc4 .cards{grid-template-columns:minmax(0,1fr)}
+      .board.five.bc1 .cards .empty,.board.five.bc2 .cards .empty,.board.five.bc3 .cards .empty,.board.five.bc4 .cards .empty{grid-column:1/-1}
     }
     .op-card{position:relative;width:min(640px,100%)}
     .op-list{display:grid;gap:10px;max-height:min(520px,60vh);overflow:auto;padding:2px 2px 4px;margin-bottom:14px}
@@ -1275,13 +1284,14 @@ window.emcQuotes=[
     const STATUS_TEXT={present:'在座工作中',overtime:'加班中',lunch:'用餐中',meeting:'開會中',leave:'休假中',offwork:'已下班',toilet:'去廁所',abroad:'出國中',out:'公出工作中'};
     const WORKING=new Set(['present','overtime']);
     /* 狀態：顯示名稱、配色 class。「未執行」＝資料庫的「未開始」。 */
-    const ST={'未開始':{label:'未執行',cls:'st-todo'},'執行中':{label:'執行中',cls:'st-doing'},'過稿中':{label:'過稿中',cls:'st-review'},'修改中':{label:'修改中',cls:'st-revise'},'已完成':{label:'已完成',cls:'st-done'},'已取消':{label:'已取消',cls:'st-cancel'},'暫停中':{label:'暫停中',cls:'st-cancel'}};
+    const ST={'未開始':{label:'未執行',cls:'st-todo'},'執行中':{label:'執行中',cls:'st-doing'},'過稿中':{label:'過稿中',cls:'st-review'},'修改中':{label:'修改中',cls:'st-revise'},'已完成':{label:'已完成',cls:'st-done'},'暫停中':{label:'暫停中',cls:'st-pause'}};
     const COLUMNS=[
       {key:'todo',title:'未執行',color:'var(--st-todo)',status:'未開始'},
       {key:'doing',title:'執行中',color:'var(--st-doing)',status:'執行中'},
       {key:'revise',title:'修改中',color:'var(--st-revise)',status:'修改中'},
       {key:'review',title:'過稿中',color:'var(--st-review)',status:'過稿中'},
-      {key:'done',title:'已完成',color:'var(--st-done)',status:'已完成'}
+      {key:'done',title:'已完成',color:'var(--st-done)',status:'已完成'},
+      {key:'pause',title:'暫停中',color:'var(--st-pause)',status:'暫停中'}
     ];
     const PLATFORMS=['Facebook','Instagram','Line','其他平台'];
     const PLATFORM_SPECS={Facebook:'1:1，1200 x 1200px',Instagram:'4:5，1080 x 1350px',Line:'1:1，1040 x 1040px'};
@@ -1330,7 +1340,7 @@ window.emcQuotes=[
     const norm=value=>String(value||'').trim().toLowerCase();
     const state={
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
-      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE},home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layout:(()=>{try{return localStorage.getItem('v5Layout')==='list'?'list':'grid'}catch(err){return 'grid'}})(),sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE,pause:COLUMN_PAGE},boardCols:(()=>{try{const n=+localStorage.getItem('v5BoardCols');return n>=1&&n<=4?n:3}catch(err){return 3}})(),home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       selImg:new Set(),form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -1577,12 +1587,12 @@ window.emcQuotes=[
     }
 
     /* ---------- 案件列表 ---------- */
-    const statusOf=row=>ST[String(row['狀態']||'').trim()]||{label:String(row['狀態']||'未設定'),cls:'st-cancel'};
+    const statusOf=row=>ST[String(row['狀態']||'').trim()]||{label:String(row['狀態']||'未設定'),cls:'st-none'};
     function allRowsRaw(){const ids=new Set(state.rows.map(r=>String(r['案件編號'])));const local=[...state.localRows.values()].filter(r=>!ids.has(String(r['案件編號'])));const hide=new Set((state.delReq||[]).map(r=>String(r['案件編號'])));return [...local,...state.rows].filter(r=>!hide.has(String(r['案件編號'])))}
     function allRows(){return allRowsRaw().filter(r=>canViewCustomerCases(r['客戶別'])||ownerMatches(r))}
     const idKey=row=>String(row['案件編號']||'');
     const byNewest=(a,b)=>idKey(b).localeCompare(idKey(a),'zh-Hant',{numeric:true});
-    const STATUS_RANK=Object.fromEntries(['未開始','執行中','修改中','過稿中','已完成','已取消','暫停中'].map((k,i)=>[k,i]));
+    const STATUS_RANK=Object.fromEntries(['未開始','執行中','修改中','過稿中','已完成','暫停中'].map((k,i)=>[k,i]));
     const SORT_VAL={id:r=>idKey(r),month:r=>r['月份']||monthKey(r),client:r=>String(r['客戶別']||''),project:r=>String(r['專案名稱']||''),qty:r=>+r['數量']||0,designer:r=>String(r['設計負責人']||''),status:r=>STATUS_RANK[String(r['狀態']||'').trim()]??99,details:r=>String(r['項目細節']||''),rev:r=>revisionCount(r),owner:r=>String(r['專案負責人']||''),type:r=>String(r['設計種類']||r['設計類型']||''),stage:r=>String(r['階段']||''),start:r=>{const v=parseDay(r['開始日期']);return Number.isNaN(v)?-1:v},end:r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?-1:v},mail:r=>String(r['Gmail信件串ID']||'').trim()?1:0};
     const collator=new Intl.Collator('zh-Hant',{numeric:true});
     /** 網格一律新到舊；列表依表頭點選的欄位排序（預設案件編號新到舊）。 */
@@ -1600,12 +1610,12 @@ window.emcQuotes=[
     }
     function matches(row){const q=norm(state.query);if(!q)return true;return ['案件編號','客戶別','專案名稱','專案負責人','設計負責人'].some(k=>norm(row[k]).includes(q))}
     function typeClass(row){const v=/影音/.test(String(row['設計種類']||row['設計類型']||'')),st=String(row['階段']||'').trim();return v?(st==='再製'?'ci-v-re':st==='新製'?'ci-video':'ci-video'):(st==='再製'?'ci-g-re':'')}
-    function cdClass(s,status){if(['過稿中','已完成','已取消'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
+    function cdClass(s,status){if(['過稿中','已完成','暫停中'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
     const barStyle=p=>`width:${p}%;background-size:${p>0?(10000/p).toFixed(1):100}% 100%`;
     function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
-      const late=s.late&&!['過稿中','已完成','已取消'].includes(status);
+      const late=s.late&&!['過稿中','已完成','暫停中'].includes(status);
       const canDrag=state.dragOn&&inColumn;
       return `<div role="button" tabindex="0" class="card ${st.cls}"${canDrag?' draggable="true" data-dragok="1"':''} data-case="${esc(id)}" aria-label="${esc(id)} ${esc(row['專案名稱']||'')}，${esc(st.label)}">
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}<span class="lt-status card-status ${st.cls}">${esc(st.label)}</span></span></div>
@@ -1618,14 +1628,15 @@ window.emcQuotes=[
         </div>
       </div>`;
     }
-    const STATUS_FILTER=['未開始','執行中','過稿中','修改中','已完成','已取消'];
+    const STATUS_FILTER=['未開始','執行中','過稿中','修改中','已完成','暫停中'];
     function monthKey(r){const ms=parseDay(r['開始日期']);return Number.isNaN(ms)?'':ymd(ms).slice(0,7)}
-    const filterCount=()=>state.filters.months.size+state.filters.statuses.size+state.filters.designers.size;
-    function passFilters(r){const f=state.filters;return (!f.months.size||f.months.has(monthKey(r)))&&(!f.statuses.size||f.statuses.has(String(r['狀態']||'').trim()))&&(!f.designers.size||f.designers.has(String(r['設計負責人']||'').trim()))}
+    const statusFilterOn=()=>state.view!=='projects'; /* 專案頁的篩選器不提供「案件狀態」（狀態就是欄位），舊的狀態篩選一律不套用 */
+    const filterCount=()=>state.filters.months.size+(statusFilterOn()?state.filters.statuses.size:0)+state.filters.designers.size;
+    function passFilters(r){const f=state.filters;return (!f.months.size||f.months.has(monthKey(r)))&&(!statusFilterOn()||!f.statuses.size||f.statuses.has(String(r['狀態']||'').trim()))&&(!f.designers.size||f.designers.has(String(r['設計負責人']||'').trim()))}
     function filterPopHtml(){
       const f=state.filters,months=[...new Set(allRows().map(monthKey).filter(Boolean))].sort().reverse();
       const group=(title,key,items,scroll)=>`<div><h4>${title}</h4><div class="chips"${scroll?' style="max-height:132px;overflow:auto"':''}>${items.map(([v,l])=>`<label${key==='statuses'&&ST[v]?` class="${ST[v].cls}"`:''}><input type="checkbox" data-filter="${key}" value="${esc(v)}"${(key!=='months'&&!f[key].size)||f[key].has(v)?' checked':''}>${esc(l)}</label>`).join('')}</div></div>`;
-      return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label]))}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>恢復預設</button></div></div>`;
+      return `<div class="filter-pop" role="dialog" aria-label="篩選案件">${group('月份','months',months.map(m=>[m,m]),true)}${statusFilterOn()?group('案件狀態','statuses',STATUS_FILTER.map(k=>[k,ST[k].label])):''}${group('設計人','designers',designerNames().map(n=>[n,n]))}<div class="filter-foot"><span style="font-size:12px;color:var(--muted);font-weight:700">可複選；沒勾選＝不限</span><button type="button" data-filter-clear>恢復預設</button></div></div>`;
     }
     const NUM_ZH=['零','一','二','三','四','五','六','七','八','九','十'];
     function revisionCount(r){const mods=state.mods.get(idKey(r))||[];const nums=mods.map(m=>+m['修改次數']||0);const fromRow=+r['修改次數']||0;return mods.length||fromRow?Math.max(0,fromRow,...nums):-1}
@@ -1669,7 +1680,7 @@ window.emcQuotes=[
     function gridHide(){if(!state.gridHide){let a=[];try{a=JSON.parse(localStorage.getItem('v5GridHide')||'[]')}catch(err){}state.gridHide=new Set(Array.isArray(a)?a:[])}return state.gridHide}
     function layoutGroupHtml(){
       ensureCols();const list=state.layout==='list',gh=gridHide();GRID_FIELDS.forEach(([k])=>document.body.classList.toggle('gh-'+k,gh.has(k)));
-      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list&&state.view==='projects')?`<button type="button" data-tl-toggle class="${timelineOn()?'on':''}" aria-pressed="${timelineOn()}" title="${timelineOn()?'隱藏':'顯示'}時間軸" aria-label="時間軸">${ICON_TL}</button>`:''}${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><span><button type="button" data-grid-none>全部隱藏</button> <button type="button" data-grid-reset>全部顯示</button></span></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
+      return `<div class="filter-wrap cols-wrap"><div class="seg-btns icon-only" role="group" aria-label="排列方式"><button type="button" data-layout="grid" class="${!list?'on':''}" aria-pressed="${!list}" title="網格排列" aria-label="網格排列">${ICON_GRID}</button><button type="button" data-layout="list" class="${list?'on':''}" aria-pressed="${list}" title="列表排列" aria-label="列表排列">${ICON_LIST}</button>${(list&&state.view==='projects')?`<button type="button" data-tl-toggle class="${timelineOn()?'on':''}" aria-pressed="${timelineOn()}" title="${timelineOn()?'隱藏':'顯示'}時間軸" aria-label="時間軸">${ICON_TL}</button>`:''}${(list||state.view==='projects')?`<button type="button" data-cols-toggle class="${state.colsOpen?'on':''}" aria-expanded="${state.colsOpen}" title="顯示／隱藏欄位" aria-label="欄位">${ICON_COLS}</button>`:''}</div>${!list&&state.view==='projects'&&state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的狀態欄位（勾選＝顯示，取消勾選整欄隱藏，可複選）</h4><div class="chips">${COLUMNS.map(c=>`<label><input type="checkbox" data-grid-status="${c.status}"${gridStatusHide().has(c.status)?'':' checked'}>${c.title}</label>`).join('')}</div></div><div class="filter-foot"><span></span><span><button type="button" data-grid-none>全部隱藏</button> <button type="button" data-grid-reset>全部顯示</button></span></div><div><h4>每列顯示幾欄</h4><div class="seg-btns bc-seg" role="group" aria-label="每列欄數">${[['1','一欄'],['2','兩欄'],['3','三欄'],['4','四欄']].map(([n,l])=>`<button type="button" data-board-cols="${n}" class="${state.boardCols===+n?'on':''}" aria-pressed="${state.boardCols===+n}">${l}</button>`).join('')}</div></div></div>`:''}${list?`${state.colsOpen?`<div class="filter-pop" role="dialog" aria-label="顯示欄位"><div><h4>顯示的欄位（勾選＝顯示；表頭可拖移排序、點表頭排序、拖邊線調寬）</h4><div class="chips">${COL_DEFS.map(c=>`<label><input type="checkbox" data-col-show="${c.key}"${state.cols.hidden.has(c.key)?'':' checked'}>${c.label}</label>`).join('')}</div></div><div class="filter-foot"><span></span><button type="button" data-cols-reset>還原預設</button></div></div>`:''}`:''}</div>`;
     }
     /* ---------- 時間軸（舊網站案件列表右側的甘特式時間表） ---------- */
     const TL_HOLIDAYS=new Map([['2026-01-01','元旦'],['2026-02-14','春節連假'],['2026-02-15','春節連假'],['2026-02-16','除夕'],['2026-02-17','春節'],['2026-02-18','春節'],['2026-02-19','春節'],['2026-02-20','春節連假'],['2026-02-21','春節連假'],['2026-02-27','和平紀念日補假'],['2026-02-28','和平紀念日'],['2026-04-03','兒童節補假'],['2026-04-04','兒童節'],['2026-04-05','清明節'],['2026-04-06','清明節補假'],['2026-05-01','勞動節'],['2026-06-19','端午節'],['2026-09-25','中秋節'],['2026-09-28','教師節'],['2026-10-09','國慶日補假'],['2026-10-10','國慶日'],['2026-10-25','光復節'],['2026-10-26','光復節補假'],['2026-12-25','行憲紀念日'],['2027-01-01','元旦'],['2027-02-04','小年夜'],['2027-02-05','除夕'],['2027-02-06','春節'],['2027-02-07','春節'],['2027-02-08','春節'],['2027-02-09','春節補假'],['2027-02-10','春節補假'],['2027-02-28','和平紀念日'],['2027-03-01','和平紀念日補假'],['2027-04-04','兒童節'],['2027-04-05','清明節'],['2027-04-06','兒童節補假'],['2027-04-30','勞動節補假'],['2027-05-01','勞動節'],['2027-06-09','端午節'],['2027-09-15','中秋節'],['2027-09-28','教師節'],['2027-10-10','國慶日'],['2027-10-11','國慶日補假'],['2027-10-25','光復節'],['2027-12-24','行憲紀念日補假'],['2027-12-25','行憲紀念日'],['2027-12-31','開國紀念日補假']]);
@@ -1800,7 +1811,7 @@ window.emcQuotes=[
       const tr=el.closest('[data-row-id]'),id=tr?tr.dataset.rowId:state.detailId,row=allRows().find(r=>idKey(r)===id),field=el.dataset.edit;if(!row)return;
       const pop=$('cellPop');let html='';
       const cur=k=>String(row[k]||'').trim(),opt=(attr,v,on,extra='')=>`<button type="button" class="option${extra}${on?' active':''}" ${attr}="${esc(v)}"><span>${esc(extra?ST[v]?.label||v:v)}</span>${on?'<b>✓</b>':''}</button>`;
-      if(field==='status')html=`<h3>修改狀態</h3><div class="option-list">${[...STATUS_FILTER,'暫停中'].map(k=>opt('data-cp-status',k,k===cur('狀態'),' status-option '+(k==='暫停中'?'st-pause':ST[k].cls))).join('')}</div>`;
+      if(field==='status')html=`<h3>修改狀態</h3><div class="option-list">${STATUS_FILTER.map(k=>opt('data-cp-status',k,k===cur('狀態'),' status-option '+(k==='暫停中'?'st-pause':ST[k].cls))).join('')}</div>`;
       else if(field==='designer')html=`<h3>修改設計負責人</h3><div class="option-list">${designerNames().map(n=>opt('data-cp-designer',n,n===cur('設計負責人'))).join('')}</div>`;
       else if(field==='type')html=`<h3>修改設計類型</h3><div class="option-list">${designTypes().map(n=>opt('data-cp-type',n,n===(cur('設計種類')||cur('設計類型')))).join('')}</div>`;
       else if(field==='stage'){const type=cur('設計種類')||cur('設計類型');html=`<h3>修改階段</h3><div class="option-list">${stagesFor(type).map(n=>opt('data-cp-stage',n,n===cur('階段'))).join('')||'<div class="empty">此種類沒有可選階段</div>'}</div>`}
@@ -2027,7 +2038,7 @@ window.emcQuotes=[
       const rows=allRows().filter(matches).filter(passFilters),n=filterCount();
       const cols=orderedColumns().filter(c=>state.layout==='list'||!gridStatusHide().has(c.status)).map(column=>{
         const list=rows.filter(r=>String(r['狀態']||'').trim()===column.status).sort((a,b)=>{if(column.status==='過稿中'){const P=v=>{const m=String(v||'').match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);return m?Date.UTC(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0)):NaN},t=r=>{let v=NaN;for(const m of (state.mods.get(idKey(r))||[]))for(const f of ['建立日期','圖片更新時間']){const w=P(m[f]);if(!Number.isNaN(w)&&(Number.isNaN(v)||w>v))v=w}if(Number.isNaN(v))v=P(r['繳交時間']);return Number.isNaN(v)?-Infinity:v},x=t(a),y=t(b);return x===y?byNewest(a,b):x>y?-1:1}/* 過稿中：依「最近一次修改」的時間（修改紀錄的建立／圖片更新時間，沒有紀錄才用繳交時間），最新的在最上面 */
-if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v},x=e(a),y=e(b);return x===y?byNewest(a,b):x<y?-1:1});
+if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const e=r=>{const v=parseDay(r['結束日期']);return Number.isNaN(v)?Infinity:v},x=e(a),y=e(b);return x===y?byNewest(a,b):x<y?-1:1});
         const limit=(state.query||n)?list.length:state.limits[column.key],visible=list.slice(0,limit);
         return `<section class="column" data-status="${column.status}" aria-label="${column.title}">
           <div class="column-head"${state.dragOn&&state.layout!=='list'?' draggable="true" title="拖曳可調整欄位順序"':''}><span class="column-dot" style="background:${column.color}"></span><span class="column-title">${column.title}</span><span class="column-count">${list.length} 筆</span></div>
@@ -2044,7 +2055,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
           
           <span class="board-sync">${esc(state.syncText)}</span></div></div>
         ${state.layout==='list'?'':`<p class="drag-note">${state.dragOn?'把卡牌拖到其他欄就能改狀態；拖到「執行中」會讓你選擇項目細節。':'只有設計師登入後才能拖移卡牌改狀態；點卡牌可查看詳情。'}</p>`}
-        ${state.layout==='list'?plistHtml(rows):`<div class="board five n${COLUMNS.filter(c=>!gridStatusHide().has(c.status)).length}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
+        ${state.layout==='list'?plistHtml(rows):`<div class="board five bc${state.boardCols}">${cols||'<div class="empty" style="grid-column:1/-1">已隱藏所有狀態欄位，請從右上角的欄位按鈕勾選要顯示的欄位。</div>'}</div>`}`;
       if(hadFocus){const input=$('boardSearch');input.focus();input.setSelectionRange(input.value.length,input.value.length)}
     }
     function plistHtml(rows){const all=sortedLatest(rows),shown=all.slice(0,state.plistLimit);return shown.length?listTableHtml(shown)+(all.length>shown.length?`<button type="button" class="more-btn" data-more="plist">顯示更多（還有 ${all.length-shown.length} 筆）</button>`:''):'<div class="empty">沒有符合的案件</div>'}
@@ -3152,7 +3163,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
         }else if(d.reply){await api('replyCaseMail',{caseId:d.id,...base});if(d.mode==='modification')await recordModificationFromReply(d,bodyHtml)}
         else await api('sendCaseMail',{caseId:ids[0],caseIds:ids,...base,subject:d.subject});
         if(d.reply&&d.mode==='designer')afterDesignerSend(d,inlineImages);
-        else if(d.reply&&!d.scheduledDone&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===d.id),st0=String(r0&&r0['狀態']||'').trim();if(d.mode==='modification'){if(st0&&st0!=='修改中'&&st0!=='已取消')applyMove(d.id,'修改中')}else if(st0==='執行中'||st0==='修改中'){if(st0==='修改中')markLatestRoundDone(d.id);applyMove(d.id,'過稿中')}}
+        else if(d.reply&&!d.scheduledDone&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===d.id),st0=String(r0&&r0['狀態']||'').trim();if(d.mode==='modification'){if(st0&&st0!=='修改中'&&st0!=='暫停中')applyMove(d.id,'修改中')}else if(st0==='執行中'||st0==='修改中'){if(st0==='修改中')markLatestRoundDone(d.id);applyMove(d.id,'過稿中')}}
         d.sent=true;m.sentCount++;m.sending=false;
         const next=m.drafts.findIndex(x=>!x.sent);
         if(d.scheduledDone)toast(`已排程於 ${d.scheduledAt.replace('T',' ')} 寄出`);
@@ -3979,6 +3990,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
       const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}{const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canEditRow(r0)){toast('此帳號沒有編輯這個案件的權限',true);return}}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete'){const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canDeleteRow(r0)){toast('此帳號沒有刪除案件的權限',true);return}deleteCase(id)}return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===(editEl.closest('[data-row-id]')?editEl.closest('[data-row-id]').dataset.rowId:state.detailId));if(r0&&!canListEditRow(r0)){toast('此帳號沒有修改這個案件的權限',true);return}openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
+      const bc=t.closest('[data-board-cols]');if(bc){state.boardCols=+bc.dataset.boardCols;try{localStorage.setItem('v5BoardCols',String(state.boardCols))}catch(err){}rerenderList();return}
       if(t.closest('[data-grid-none]')){const gh=gridStatusHide();COLUMNS.forEach(c=>gh.add(c.status));try{localStorage.setItem('v5GridStatus',JSON.stringify([...gh]))}catch(err){}rerenderList();return}
       if(t.closest('[data-grid-reset]')){gridStatusHide().clear();try{localStorage.setItem('v5GridStatus','[]')}catch(err){}rerenderList();return}
       if(t.closest('[data-cols-reset]')){state.cols={order:COL_DEFS.map(c=>c.key),widths:{},hidden:new Set(COL_DEFS.map(c=>c.key).filter(k=>!COL_DEFAULT.includes(k)))};saveCols();rerenderList();return}
@@ -4104,7 +4116,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
         const rev=Number(db.revision)||0,stamp0=String(db.updatedAt||'');
         if(background&&state.dbStamp!==undefined){if(rev<state.dbRev||(rev===state.dbRev&&stamp0===state.dbStamp))return}
         state.dbRev=rev;state.dbStamp=stamp0;
-        state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);{const prevDel=(state.delReq||[]).length;state.delReq=(t['刪除申請']?.rows||[]).filter(r=>r&&r['案件編號']);if(state.delReq.length>prevDel&&delReviewCount())setTimeout(()=>{try{toast(`有 ${state.delReq.length} 件案件待刪除審核（進度頁）`)}catch(e){}},400);try{updateRail();if(state.view==='owner')renderOwnerPage()}catch(e){}}
+        state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);for(const r of state.rows)if(r['狀態']==='已取消')r['狀態']='暫停中';/* 「已取消」已併入「暫停中」；後端遷移完成前先在畫面上一併當成暫停中 */{const prevDel=(state.delReq||[]).length;state.delReq=(t['刪除申請']?.rows||[]).filter(r=>r&&r['案件編號']);if(state.delReq.length>prevDel&&delReviewCount())setTimeout(()=>{try{toast(`有 ${state.delReq.length} 件案件待刪除審核（進度頁）`)}catch(e){}},400);try{updateRail();if(state.view==='owner')renderOwnerPage()}catch(e){}}
         state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];applyDesignerOrder();state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}

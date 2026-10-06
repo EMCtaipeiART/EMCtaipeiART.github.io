@@ -10,7 +10,7 @@ import {
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
-  normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments,
+  normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments, normalizeCaseStatuses,
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
@@ -2628,6 +2628,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // 這兩欄是修改統計表的派生值，任何寫入在送往 GitHub 前都再校正一次。
         recalculateDatabaseModificationCounts(draft);
         normalizeSettingsDepartments(draft);
+        normalizeCaseStatuses(draft);
         draft.revision = Math.max(0, Number(draft.revision) || 0) + 1;
         draft.updatedAt = new Date().toISOString();
         draft.internal.sessions = {};
@@ -3615,6 +3616,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private auditFlushing = false;
   /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
+  /** 一次性資料遷移：把案件表裡還留著的「已取消」改成「暫停中」（之後任何寫入也會順手修正）。每分鐘排程呼叫，沒有殘留就什麼都不做。 */
+  async runStatusMigration(): Promise<Row> {
+    const stored = this.storedSnapshot();
+    if (!stored || !(stored.database.tables.database?.rows || []).some(row => text(row['狀態']) === '已取消')) return { ok: true, migrated: 0 };
+    const result = await this.mutate('migrateCancelledToPaused', null, draft => {
+      const migrated = normalizeCaseStatuses(draft);
+      return { result: { ok: true, migrated }, changed: migrated > 0, changedTables: ['database'] };
+    });
+    return result as Row;
+  }
+
   async runAuditFlush(force = false): Promise<{ queued: number; written: number }> {
     if (this.auditFlushing) return { queued: 0, written: 0 };
     const queue = (await this.ctx.storage.get<AuditEntry[]>('auditQueue')) || [];
@@ -4452,11 +4464,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         rows.push(row);
         recalculateDatabaseModificationCounts(draft);
         // 有新的修改需求（一修、二修…）時，案件狀態自動改成「修改中」，設計師回覆信寄出後會再改回過稿中。
-        // 初稿（上面的 draft 分支）不是修改需求，不會走到這裡。已經是修改中就不重複改；已取消的案件
+        // 初稿（上面的 draft 分支）不是修改需求，不會走到這裡。已經是修改中就不重複改；暫停中（原「已取消」已併入）的案件
         // 不因為一筆修改紀錄就被救回來，維持原狀。
         const caseRow = draft.tables.database.rows.find(item => text(item['案件編號']) === caseId);
         const previousStatus = text(caseRow?.['狀態']);
-        const statusChanged = Boolean(caseRow) && !['修改中', '已取消'].includes(previousStatus);
+        const statusChanged = Boolean(caseRow) && !['修改中', '暫停中'].includes(previousStatus);
         if (caseRow && statusChanged) caseRow['狀態'] = '修改中';
         return {
           result: { ok: true, action, rowNumber: rows.length + 1, record: row, count, status: text(caseRow?.['狀態']), previousStatus, statusChanged },
@@ -4639,13 +4651,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         targetRow['圖片更新時間'] = nowTaipei();
         if (createdRound) recalculateDatabaseModificationCounts(draft);
         // 跨案件搬到「初稿」＝目標案件收到初稿備份，案件進入過稿階段：狀態自動改成「過稿中」。
-        // 已經是過稿中就不動；已完成／已取消的案件不因為搬圖被改回來。
+        // 已經是過稿中就不動；已完成／暫停中的案件不因為搬圖被改回來。
         let statusChanged = false;
         let targetStatus = '';
         if (crossCase && toRound === 0) {
           const targetCase = draft.tables.database.rows.find(row => text(row['案件編號']) === toCaseId);
           targetStatus = text(targetCase?.['狀態']);
-          if (targetCase && !['過稿中', '已完成', '已取消'].includes(targetStatus)) {
+          if (targetCase && !['過稿中', '已完成', '暫停中'].includes(targetStatus)) {
             targetCase['狀態'] = '過稿中';
             targetStatus = '過稿中';
             statusChanged = true;
@@ -4863,8 +4875,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async updateRequests(action: string, payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null, baseUrl: string): Promise<ApiResult> {
     const changes = asRow(payload.row || payload.changes || payload);
     const writeHeaders = [...(Array.isArray(payload.writeHeaders) ? payload.writeHeaders.map(text) : []), ...(Array.isArray(payload.forceHeaders) ? payload.forceHeaders.map(text) : [])];
+    // 「已取消」狀態已併入「暫停中」：舊頁面（legacy）還在送已取消時，一律當成暫停中處理。
+    for (const key of ['status', '狀態', '案件狀態']) if (text(changes[key]) === '已取消') changes[key] = '暫停中';
     const touchesProtected = writeHeaders.some(header => ['案件狀態', '狀態', '項目細節'].includes(header)) || ['status', 'details'].some(key => changes[key] !== undefined);
-    if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '已取消') throw new Error('請先登入後再修改狀態或項目細節');
+    if (touchesProtected && !session && text(changes.status || changes['狀態'] || changes['案件狀態']) !== '暫停中') throw new Error('請先登入後再修改狀態或項目細節');
     const changedKeys = Object.keys(changes).filter(key => key !== 'id');
     // 「設計圖資料夾連結」與「設計圖檔名關鍵字」是同一組操作（設計師在 NAS 資料夾選擇器
     // 裡一起填），一起寫入時一樣只需要 media.manage、不需要完整的 request.edit——理由跟

@@ -339,6 +339,15 @@ export function normalizeSettingsDepartments(database: DatabaseSnapshot): boolea
   return changed;
 }
 
+/** 「已取消」狀態已併入「暫停中」：任何寫入前把案件表裡殘留的已取消改成暫停中。回傳改了幾筆。 */
+export function normalizeCaseStatuses(database: DatabaseSnapshot): number {
+  let changed = 0;
+  for (const row of database.tables.database?.rows || []) {
+    if (text(row['狀態']) === '已取消') { row['狀態'] = '暫停中'; changed += 1; }
+  }
+  return changed;
+}
+
 function normalizedDesignGroup(value: unknown): string {
   const group = text(value);
   if (/平面/.test(group)) return '平面';
