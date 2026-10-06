@@ -1832,7 +1832,7 @@ window.emcQuotes=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
       {k:'wall',label:'作品牆',title:'作品牆',ok:()=>loggedIn(),svg:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn(),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
-      {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
+      {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn()&&outfitAllowed(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
       {k:'archive',label:'歷史庫',title:'歷史資料庫管理',ok:()=>loggedIn()&&acc('page.archive',isAdminAcct()||isMachi0())&&acc('archive.edit',isAdminAcct()||isMachi0()),svg:'<path d="M3.5 7.5h17v3h-17zM5 10.5V19h14v-8.5M10 14h4"/>'},
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'}
@@ -1941,9 +1941,11 @@ window.emcQuotes=[
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-theme-toggle]'))applyTheme(currentTheme()==='dark'?'light':'dark')});
     updateThemeBtn();
     /* 服裝生成器（另一個網站）內嵌在右側：登入 token 與目前的深淺模式放在網址 # 後面（不會送到伺服器），之後切換深淺模式用 postMessage 同步 */
+    /* 服裝生成器只開放設計部同仁（平台幣也只發給設計師） */
+    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||String(sessionDept()||'').trim()==='設計部');
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
-      const t=session().token;if(!t){show(state.home||'board');return}
+      const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
       $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
@@ -1954,7 +1956,7 @@ window.emcQuotes=[
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       /* 服裝生成器在另一個網站：登入 token 放在網址 # 後面（不會送到伺服器，對方頁面收下後立刻從網址拿掉） */
-      if(k==='outfit'){if(!session().token){toast('請先登入');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
+      if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部同仁使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
