@@ -1842,7 +1842,7 @@ window.emcQuotes=[
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
-      const ok=new Map(allRows().map(r=>[idKey(r),r])),seen=new Set(),items=[];
+      /* 作品牆不看客戶別權限：每位登入者都能瀏覽全部作品（案件細節仍受原本權限限制） */const ok=new Map(allRowsRaw().map(r=>[idKey(r),r])),seen=new Set(),items=[];
       for(const [id,recs] of state.mods){
         const row=ok.get(id);if(!row)continue;
         for(const rec of recs){
@@ -1900,7 +1900,7 @@ window.emcQuotes=[
       const roundLabel=it.round===0?'初稿':(it.round<=10?NUM_ZH[it.round]:it.round)+'修';
       m.innerHTML='<div class="wm-bg" data-wall-close></div><div class="wm-card" role="dialog" aria-modal="true"><button type="button" class="wm-x" data-wall-close aria-label="關閉">×</button><div class="wm-img"><button type="button" class="wm-nav wm-prev" data-wall-step="-1" aria-label="上一張">‹</button><img referrerpolicy="no-referrer" alt="'+esc(it.name)+'" src="'+esc(it.full)+'"><button type="button" class="wm-nav wm-next" data-wall-step="1" aria-label="下一張">›</button></div><div class="wm-info"><h3>'+esc((r['客戶別']||'')+'｜'+(r['專案名稱']||''))+'</h3>'
         +kv('案件編號',esc(it.id))+kv('狀態','<span class="lt-status '+st.cls+'">'+esc(st.label)+'</span>')+kv('設計種類／階段',esc([r['設計種類']||r['設計類型'],r['階段']].filter(Boolean).join('／')))+kv('設計負責人',esc(r['設計負責人']||''))+kv('專案負責人',esc(r['專案負責人']||''))+kv('版次',esc(roundLabel))+kv('數量',esc(r['數量']||''))+kv('開始～結束',esc([r['開始日期'],r['結束日期']].filter(Boolean).join(' ～ ')))+kv('備份日期',esc(it.date))+kv('檔名',esc(it.name))
-        +'<div class="wm-acts"><button type="button" class="btn primary" data-wall-case="'+esc(it.id)+'">查看案件</button><a class="btn" href="'+esc(it.full)+'" target="_blank" rel="noopener noreferrer">開啟原圖</a></div></div></div>';
+        +'<div class="wm-acts">'+((canViewCustomerCases(r['客戶別'])||ownerMatches(r))?'<button type="button" class="btn primary" data-wall-case="'+esc(it.id)+'">查看案件</button>':'')+'<a class="btn" href="'+esc(it.full)+'" target="_blank" rel="noopener noreferrer">開啟原圖</a></div></div></div>';
       m.hidden=false;document.body.classList.add('wall-lock');
     }
     function wallClose(){const m=$('wallModal');if(m)m.hidden=true;document.body.classList.remove('wall-lock')}
