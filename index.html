@@ -2293,17 +2293,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       return `<div class="cal-month"><div class="cal-head"><button type="button" class="cal-nav${offset===0?' show':''}" data-cal-nav="-1" aria-label="上個月">‹</button><span>${y} 年 ${m+1} 月</span><button type="button" class="cal-nav${offset===1?' show':''}" data-cal-nav="1" aria-label="下個月">›</button></div><div class="cal-week">${WEEK.map(w=>`<span>${w}</span>`).join('')}</div><div class="cal-days">${cells.join('')}</div></div>`;
     }
-    const rangeDays=(s,e)=>(Number.isNaN(s)||Number.isNaN(e))?0:Math.round((e-s)/DAY)+1;
+    const rangeAll=(s,e)=>(Number.isNaN(s)||Number.isNaN(e))?0:Math.round((e-s)/DAY)+1;
+    const rangeDays=(s,e)=>{if(Number.isNaN(s)||Number.isNaN(e))return 0;let n=0;for(let ms=s;ms<=e;ms+=DAY){const wd=new Date(ms).getUTCDay();if(wd!==0&&wd!==6&&!TL_HOLIDAYS.has(ymd(ms).replace(/\//g,'-')))n++}return n};
+    const rangeNote=(s,e)=>{const a=rangeAll(s,e),w=rangeDays(s,e);return a&&a!==w?`${w} 個工作天，已扣 ${a-w} 天假日`:`${w} 天`};
     function renderCal(){
       const pop=rowEl(cal.key)?.querySelector('[data-cal-pop]');if(!pop)return;
-      const summary=Number.isNaN(cal.start)?'選擇開始與結束日期':Number.isNaN(cal.end)?`${ymd(cal.start)} → 選擇結束日期`:`${ymd(cal.start)} → ${ymd(cal.end)}（${rangeDays(cal.start,cal.end)} 天）`;
+      const summary=Number.isNaN(cal.start)?'選擇開始與結束日期':Number.isNaN(cal.end)?`${ymd(cal.start)} → 選擇結束日期`:`${ymd(cal.start)} → ${ymd(cal.end)}（${rangeNote(cal.start,cal.end)}）`;
       pop.innerHTML=`<div class="cal-months">${monthHtml(0)}${monthHtml(1)}</div><div class="cal-legend"><span class="cal-lg wk">週末</span><span class="cal-lg hd">國定假日／補假</span></div><div class="cal-foot"><span class="cal-summary">${esc(summary)}</span><span><button type="button" class="btn" data-cal-clear>清除</button> <button type="button" class="btn primary" data-cal-done>完成</button></span></div>`;
     }
     function updateRangeButtons(){
       document.querySelectorAll('[data-row]').forEach(el=>{
         const r=rowOf(el.dataset.row),text=el.querySelector('[data-range-text]'),days=el.querySelector('[data-range-days]');if(!r||!text)return;
         text.textContent=Number.isNaN(r.start)?'選擇開始與結束日期':`${ymd(r.start)} → ${Number.isNaN(r.end)?'選擇結束日期':ymd(r.end)}`;
-        days.textContent=rangeDays(r.start,r.end)?`共 ${rangeDays(r.start,r.end)} 天`:'';
+        days.textContent=rangeAll(r.start,r.end)?`共 ${rangeNote(r.start,r.end)}`:'';
       });
     }
     function openCal(key){
