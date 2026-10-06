@@ -10,9 +10,10 @@
        app.js 的 pollSync／syncDesigners 第一次會直接用這裡的結果；沒拿到（網路失敗、後端回錯）就照舊自己再問一次。
        網址與送法要跟 app.js 的 syncCall 一樣（text/plain 的簡單請求，沒有 preflight）。 -->
   <script>window.__pixelP=(function(){var u='https://machi-design-api.machi-chen.workers.dev/api',go=function(a){return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(a),cache:'no-store'}).then(function(r){return r.json()}).catch(function(){return null})};return {state:go({action:'pixelOfficeState',since:0}),designers:go({action:'pixelOfficeDesigners'})}})();</script>
-  <link rel="preload" as="image" href="assets/wardrobe-heads.webp?v=3">
-  <link rel="preload" as="image" href="assets/wardrobe-outfits.webp?v=3">
-  <link rel="preload" as="image" href="assets/furniture-v3.webp?v=1">
+  <link rel="preconnect" href="https://emc-pixel-assets.machi-chen.workers.dev" crossorigin>
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-heads.webp?v=3">
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-outfits.webp?v=3">
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/furniture-v3.webp?v=1">
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
@@ -108,6 +109,6 @@ if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
  moodSec.style.display='none';
  [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
 </script>
-  <script src="app.js?v=130" fetchpriority="high"></script>
+  <script src="app.js?v=131" fetchpriority="high"></script>
 </body>
 </html>

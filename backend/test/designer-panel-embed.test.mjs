@@ -259,7 +259,7 @@ test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
     assert.match(js, new RegExp(`function ${fn}\\([^)]*\\)\\{[^\n]*markDirty\\(\\)`), `${fn} 之後要重畫`);
   }
   // 142 KB 的 PNG 濾鏡圖改成 WebP。
-  assert.match(js, /overtimeSheet\.src='assets\/overtime-filter\.webp/);
+  assert.match(js, /setAsset\(overtimeSheet,'assets\/overtime-filter\.webp/);
   // 加班濾鏡不是進站必要的圖：不預載（預載會跟 app.js、頭像、衣服搶頻寬，2026-10-01 瘦身），由 app.js 之後再載。
   assert.doesNotMatch(html, /preload[^>]*assets\/overtime-filter\.webp/);
 });
@@ -279,7 +279,7 @@ test('面板標題與說明是「設計部即時動態」的版本', async () =>
 
 test('換上新的桌子素材，左中右三種形狀各就各位', async () => {
   const [js, html] = await Promise.all([officeJs(), officeHtml()]);
-  assert.match(js, /furniture\.src='assets\/furniture-v3\.webp/);
+  assert.match(js, /setAsset\(furniture,'assets\/furniture-v3\.webp/);
   assert.match(html, /preload[^>]*assets\/furniture-v3\.webp/);
   // 素材裡三張桌子形狀不同：最左有左斜邊、最右有右斜邊、中間是矩形。
   // 用錯位置的那一種，接起來就會缺一塊（使用者回報「桌子沒有換到」其實是接縫沒對上）。
@@ -599,7 +599,7 @@ test('音樂：耳機＋點頭＋浮動音符，對話框位置改成跑馬燈�
   assert.match(html, /id="musicToggle"[\s\S]*id="musicUrl"[\s\S]*id="musicSave"[\s\S]*id="musicClear"/);
   // 「現在的心情」那一區裡的音樂按鈕。
   assert.ok(html.indexOf('id="moods"') < html.indexOf('id="musicToggle"') && html.indexOf('id="musicToggle"') < html.indexOf('id="message"'));
-  assert.match(js, /headphones\.src='assets\/headphones-static-v1\.webp/);
+  assert.match(js, /setAsset\(headphones,'assets\/headphones-static-v1\.webp/);
   assert.match(js, /HP_FRAMES=1/);
   assert.match(js, /Math\.floor\(t\*4\)%HP_FRAMES/, '耳機不動、沒有音符（只有一格）');
   assert.match(js, /const MUSIC_NOD=0;/, '聽音樂時完全不搖（身體與頭都不動）');
@@ -708,8 +708,8 @@ test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留�
   assert.doesNotMatch(js, /const headphones=new Image\(\);headphones\.src/, '耳機圖不能在宣告時就載');
   assert.match(js, /function ensureHeadphones\(\)/);
   // 預載只留進站一定要用的三張；其他圖由 app.js 之後再載，不跟 app.js 搶頻寬。
-  assert.match(html, /rel="preload" as="image" href="assets\/wardrobe-heads\.webp/);
-  assert.match(html, /rel="preload" as="image" href="assets\/furniture-v3\.webp/);
+  assert.match(html, /rel="preload" as="image" crossorigin="anonymous" href="https:\/\/emc-pixel-assets\.machi-chen\.workers\.dev\/assets\/wardrobe-heads\.webp/);
+  assert.match(html, /rel="preload" as="image" crossorigin="anonymous" href="https:\/\/emc-pixel-assets\.machi-chen\.workers\.dev\/assets\/furniture-v3\.webp/);
   assert.doesNotMatch(html, /preload[^>]*(icons-v3|icons-status-v4|overtime-filter)/);
   assert.match(html, /<script src="app\.js\?v=\d+" fetchpriority="high">/);
   // Spotify 播放器程式等第一次互動才載。
@@ -753,8 +753,8 @@ test('「設計部即時動態」載入加速：API 與圖片在 HTML 解析時�
   // 主系統：iframe 不再 lazy（版面在摺線下面時會拖到捲動才開始載），三張必要的圖在主頁 head 就預載。
   assert.doesNotMatch(parent, /class="office-embed"[^>]*loading="lazy"/);
   for (const asset of ['wardrobe-heads.webp?v=3', 'wardrobe-outfits.webp?v=3', 'furniture-v3.webp?v=1']) {
-    assert.ok(parent.includes(`<link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/${asset}" />`), `主頁要預載 ${asset}`);
-    assert.ok(html.includes(`href="assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
+    assert.ok(parent.includes(`<link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/${asset}" />`), `主頁要預載 ${asset}`);
+    assert.ok(html.includes(`/assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
   }
 });
 

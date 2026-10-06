@@ -9,9 +9,10 @@
   <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin />
   <!-- 設計部即時動態（像素辦公室 iframe）進站一定會用到的三張圖：主頁一解析就開始載，iframe 建好時已經在 HTTP 快取裡。
        網址（含 ?v=）要跟 EMC-ART-Pixel-Office/dist/index.html 的預載一致，改素材版本時兩邊一起改，否則只是白載。 -->
-  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/wardrobe-heads.webp?v=3" />
-  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/wardrobe-outfits.webp?v=3" />
-  <link rel="preload" as="image" href="EMC-ART-Pixel-Office/dist/assets/furniture-v3.webp?v=1" />
+  <link rel="preconnect" href="https://emc-pixel-assets.machi-chen.workers.dev" crossorigin />
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-heads.webp?v=3" />
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-outfits.webp?v=3" />
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/furniture-v3.webp?v=1" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="app-version" content="20260910-stage-pill-colors-135" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />

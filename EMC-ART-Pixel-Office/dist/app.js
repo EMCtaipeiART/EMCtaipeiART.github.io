@@ -157,13 +157,16 @@ try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(
 syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
+// 圖片放在 Cloudflare（emc-pixel-assets），避開 GitHub Pages 每次推送後的冷快取；載入失敗會自動退回同站的 assets/。
+function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
+function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-furniture.src='assets/furniture-v3.webp?v=1';iconSheet.src='assets/icons-v3.webp?v=3';extraSheet.src='assets/icons-status-v4.webp?v=2';
+setAsset(furniture,'assets/furniture-v3.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
 // 加班濾鏡圖（69 KB）只有有人加班（晚上、假日）才用得到，第一次要畫時才載，載好重畫。
-function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});overtimeSheet.src='assets/overtime-filter.webp?v=1';}
+function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});setAsset(overtimeSheet,'assets/overtime-filter.webp?v=1');}
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?1.5:2,(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
-function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete&&img.naturalWidth)resolve();});}
+function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>{if(img.__fb){const p=img.__fb;img.__fb=null;img.crossOrigin=null;img.src=p;return;}reject();};if(img.complete&&img.naturalWidth)resolve();});}
 // ───────── 造型：頭像＋服裝＋配件組合（2026-10-01）─────────
 // 圖集：wardrobe-heads（5 人 × 正面／側面／背面）、wardrobe-outfits（6 套 × 三面，沒有頭）、wardrobe-acc（黑／藍棒球帽
 // 與黑框眼鏡／墨鏡）。資料是每格在圖集裡的位置：x y w h；頭的 s 是臉（皮膚）範圍 [x0,x1,y0,y1]；衣服的 n 是脖子中心 x；
@@ -179,9 +182,9 @@ const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_S
 const WD_SIDE_GLASSES_L=.15,WD_EAR_TOP=[1.5,3,-1,3,3],WD_SIDE_CAP_GROW=1.18,WD_SIDE_CAP_BRIM=55,WD_SIDE_CAP_BACK=.07,WD_EAR_X=.06,WD_SIDE_GLASSES_UP=.6;// 眼鏡桿（鏡框左端那一截）對到耳朵上沿：整副眼鏡往上提鏡高的 .6 倍
 //// 側面眼鏡左緣在膚色框的比例、耳朵上沿相對眼睛的位置（頭圖像素）、側面帽子放大倍率（使用者 2026-10-02）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
-wardrobeSheets.heads.src='assets/wardrobe-heads.webp?v=3';wardrobeSheets.outfits.src='assets/wardrobe-outfits.webp?v=3';// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
+setAsset(wardrobeSheets.heads,'assets/wardrobe-heads.webp?v=3');setAsset(wardrobeSheets.outfits,'assets/wardrobe-outfits.webp?v=3');// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
 Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();};});
-function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))wardrobeSheets.acc.src='assets/wardrobe-acc.webp?v=2';}
+function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))setAsset(wardrobeSheets.acc,'assets/wardrobe-acc.webp?v=2');}
 const accessoriesReady=()=>wardrobeSheets.acc.complete&&wardrobeSheets.acc.naturalWidth>0;
 const wardrobeCache=new Map();
 // ───────── 動作（人物的小動畫，2026-10-02）─────────
@@ -196,7 +199,7 @@ const WARDROBE_ACTIONS={
   kick:{label:'浪子踢球',who:[4],src:'assets/wardrobe-action-kick.webp?v=1',move:'none',frameMs:110,hold:[0,11],holdMs:250,dur:[300,650,350,600,110,110,110,110,110,110,110,250],headDrop:16,over:[],noGlasses:[],ms:Infinity,frames:[{"x":0,"y":0,"w":177,"h":168,"n":91.6,"t":4.3,"hd":0},{"x":181,"y":0,"w":179,"h":151,"n":93.3,"t":-12.7,"hd":17},{"x":364,"y":0,"w":176,"h":172,"n":91,"t":6.3,"hd":-2},{"x":544,"y":0,"w":176,"h":172,"n":90.4,"t":6,"hd":-2.3},{"x":724,"y":0,"w":180,"h":183,"n":89.2,"t":11.5,"hd":-7.8},{"x":908,"y":0,"w":169,"h":185,"n":86.6,"t":12.8,"hd":-8.5},{"x":1081,"y":0,"w":173,"h":184,"n":87,"t":12.3,"hd":-8},{"x":1258,"y":0,"w":174,"h":188,"n":89.2,"t":14.3,"hd":-10},{"x":1436,"y":0,"w":174,"h":192,"n":83.7,"t":21.5,"hd":-6.8},{"x":1614,"y":0,"w":182,"h":183,"n":91.7,"t":11.8,"hd":-7.5},{"x":1800,"y":0,"w":179,"h":174,"n":91.4,"t":7.3,"hd":-3},{"x":1983,"y":0,"w":176,"h":170,"n":91.5,"t":5.3,"hd":-1}]}
 };
 Object.entries(WARDROBE_ACTIONS).forEach(([id,def])=>{def.img=new Image();wardrobeSheets['a_'+id]=def.img;def.img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof renderActionPanel==='function')renderActionPanel();};});
-function loadActionSheet(id){const def=WARDROBE_ACTIONS[id];if(def&&!def.img.getAttribute('src'))def.img.src=def.src;}
+function loadActionSheet(id){const def=WARDROBE_ACTIONS[id];if(def&&!def.img.getAttribute('src'))setAsset(def.img,def.src);}
 const actionImgReady=def=>def.img.complete&&def.img.naturalWidth>0;
 /** 這個人現在正在做的動作（沒有就 null）：開始後 ms 毫秒內，依時間挑第幾張。function 宣告，原因同 lookDefault（TDZ）。 */
 function actionOf(i){
@@ -661,7 +664,7 @@ function toggleAction(id){
 // （左邊有播放小三角形，點歌名開網頁）。資料跟心情一樣存在後端、所有人都看得到。
 const headphones=new Image(),headphonesSide=new Image();const HP_SIDE_SRC_W=160,HP_SIDE_CX=80,HP_SIDE_CY=205,HP_SIDE_D=30;// 側面耳機素材（單個耳罩＋頭帶，160x281）：耳罩圓心在 (80,205)，直徑約 160；HP_SIDE_D 是畫在人物身上的耳罩直徑（畫面像素）
 headphonesSide.onload=()=>markDirty();
-function ensureHeadphones(){if(!headphones.getAttribute('src'))headphones.src='assets/headphones-static-v1.webp?v=1';if(!headphonesSide.getAttribute('src'))headphonesSide.src='assets/headphones-side-v1.webp?v=1';}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
+function ensureHeadphones(){if(!headphones.getAttribute('src'))setAsset(headphones,'assets/headphones-static-v1.webp?v=1');if(!headphonesSide.getAttribute('src'))setAsset(headphonesSide,'assets/headphones-side-v1.webp?v=1');}// 有人在聽音樂（或開編輯畫面）才載，平常進站不用下載
 headphones.onload=()=>{markDirty();drawMusicIcon();};
 const HP_FRAME_W=300,HP_FRAME_H=207,HP_FRAMES=1,HP_SPAN_W=204,HP_CHIN_UP=43.4,HP_DX_NAT=-3,HP_DY=[0,0,0,0,8],MUSIC_BUBBLE_W=190,MUSIC_LIFT=8;// 耳機相對人物腳底的位置：使用者說偏右上，往左下收一點
 function musicOf(p){return p&&p.music&&p.music.url?p.music:null;}// function 宣告：腳本最前面的 syncViewLayout() 就會用到
