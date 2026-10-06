@@ -1847,7 +1847,7 @@ window.emcQuotes=[
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'}
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length:0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
@@ -2416,6 +2416,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
       catch(err){state.delReq=state.delReq.filter(r=>r!==req);refreshView();toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再操作':`刪除失敗：${err.message}`,true)}
     }
     /* 管理者在「進度」頁審核待刪除的案件：勾選後「確定刪除」直接刪除，或「還原」讓案件重新顯示 */
+    const delReviewCount=()=>(isAdminUser()||isMachiUser())?(state.delReq||[]).length:0;
     function delReviewHtml(){
       if(!(isAdminUser()||isMachiUser())||!(state.delReq||[]).length)return '';
       const items=state.delReq.map(r=>{const id=esc(String(r['案件編號']));return `<label class="del-item"><input type="checkbox" data-del-check value="${id}"><span class="del-main"><b>${id}</b> ${esc(r['案件摘要']||'')}</span><span class="del-meta">${esc(r['申請人']||r['申請人帳號']||'')}・${esc(String(r['申請時間']||'').slice(0,16).replace('T',' '))}</span></label>`}).join('');
@@ -4103,7 +4104,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
         const rev=Number(db.revision)||0,stamp0=String(db.updatedAt||'');
         if(background&&state.dbStamp!==undefined){if(rev<state.dbRev||(rev===state.dbRev&&stamp0===state.dbStamp))return}
         state.dbRev=rev;state.dbStamp=stamp0;
-        state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);state.delReq=(t['刪除申請']?.rows||[]).filter(r=>r&&r['案件編號']);
+        state.rows=(t.database?.rows||[]).filter(r=>r&&r['案件編號']);{const prevDel=(state.delReq||[]).length;state.delReq=(t['刪除申請']?.rows||[]).filter(r=>r&&r['案件編號']);if(state.delReq.length>prevDel&&delReviewCount())setTimeout(()=>{try{toast(`有 ${state.delReq.length} 件案件待刪除審核（進度頁）`)}catch(e){}},400);try{updateRail();if(state.view==='owner')renderOwnerPage()}catch(e){}}
         state.permissions=t['帳號權限']?.rows||[];state.settings=t['設定']?.rows||[];applyDesignerOrder();state.avatars=buildAvatarMap(state.settings);
         state.customers=t['客戶別']?.rows||[];state.weights=t['加權計分標準']?.rows||[];
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}
