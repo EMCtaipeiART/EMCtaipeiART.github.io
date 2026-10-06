@@ -737,6 +737,11 @@
     .schedule-row label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--muted)}
     .schedule-row input{height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);padding:0 10px;font-weight:700}
     .sch-note{font-size:12px;color:var(--muted);font-weight:600}
+    .schedule-row.sch2{display:grid;gap:10px;align-items:start}.sch2 .sch-title{font-size:13px;font-weight:900;color:var(--muted)}
+    .sch-chips{display:flex;flex-wrap:wrap;gap:8px}.sch-chip{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:800;font-size:13px;cursor:pointer}
+    .sch-chip:hover{border-color:var(--brand)}.sch-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+    .sch-pick{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.sch-pick select{height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);padding:0 8px;font-weight:700;color:var(--ink)}
+    .sch-summary{font-size:15px;font-weight:900;color:var(--ink)}.sch-summary.warn{color:#b91c1c}.sch-summary.empty{color:var(--muted);font-weight:700}
     .merge-panel{margin-bottom:14px;border:1px solid var(--line);border-radius:14px;padding:0 16px;background:var(--bg)}
     .merge-panel summary{padding:12px 0;font-weight:800;cursor:pointer}
     .merge-panel p{margin:0 0 8px;color:var(--muted);font-size:12.5px;font-weight:600}
@@ -3170,6 +3175,54 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     const toIso=local=>`${String(local).slice(0,16)}:00+08:00`;
     function mailMinLocal(){const t=new Date(Date.now()+3*60000);return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(t).replace(' ','T')}
+    /* ---------- 排程時間選擇：常用時間一鍵選、日期＋時分下拉、即時顯示「將於…寄出」 ---------- */
+    const SCH_WEEK=['日','一','二','三','四','五','六'];
+    const taipeiNowLocal=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date()).replace(' ','T');
+    const schFake=local=>Date.parse(`${local}:00Z`),schLocal=ms=>new Date(ms).toISOString().slice(0,16);
+    function schedulePresets(){
+      const now=schFake(taipeiNowLocal()),day=86400000,at=(n,hm)=>`${schLocal(now+n*day).slice(0,10)}T${hm}`,dow=new Date(now).getUTCDay(),toMon=((8-dow)%7)||7;
+      return [['1 小時後',schLocal(Math.ceil((now+3600000)/300000)*300000)],['今天 17:00',at(0,'17:00')],['明天 09:00',at(1,'09:00')],['明天 14:00',at(1,'14:00')],['下週一 09:00',at(toMon,'09:00')]]
+        .filter(([,v])=>schFake(v)>=now+4*60000);
+    }
+    function schedSummary(local){
+      if(!local)return {text:'請選擇寄出時間：點上面的常用時間，或自己挑日期與時間',cls:'empty'};
+      const t=schFake(local),now=schFake(taipeiNowLocal());
+      if(t<now+3*60000)return {text:'這個時間已經過了或太近，請選 3 分鐘以後的時間',cls:'warn'};
+      const [y,m,d]=local.slice(0,10).split('-'),w=SCH_WEEK[new Date(t).getUTCDay()],diff=Math.round((schFake(local.slice(0,10)+'T00:00')-schFake(taipeiNowLocal().slice(0,10)+'T00:00'))/86400000);
+      const rel=diff===0?'（今天）':diff===1?'（明天）':diff===2?'（後天）':'';
+      return {text:`將於 ${y}/${m}/${d}（週${w}）${local.slice(11)} 寄出${rel}，時間到系統會自動寄出`,cls:''};
+    }
+    function schedulePickerHtml(d){
+      const cur=d.scheduledAt||'',date=cur.slice(0,10),hh=cur.slice(11,13),mm=cur.slice(14,16),sum=schedSummary(cur),today=taipeiNowLocal().slice(0,10);
+      const opt=(v,label,sel)=>`<option value="${v}"${sel?' selected':''}>${label}</option>`;
+      const hours=[opt('','時',!hh),...Array.from({length:24},(_,i)=>{const v=String(i).padStart(2,'0');return opt(v,v,v===hh)})].join('');
+      const mins=[opt('','分',!mm),...Array.from({length:12},(_,i)=>{const v=String(i*5).padStart(2,'0');return opt(v,v,v===mm)}),...(mm&&+mm%5?[opt(mm,mm,true)]:[])].join('');
+      return `<div class="schedule-row sch2"><div class="sch-title">寄出時間（台北時間）</div>
+        <div class="sch-chips">${schedulePresets().map(([label,v])=>`<button type="button" class="sch-chip${v===cur?' on':''}" data-sch-chip="${v}">${label}</button>`).join('')}</div>
+        <div class="sch-pick"><input type="date" id="mSchDate" min="${today}" value="${esc(date)}" aria-label="日期"><select id="mSchHour" aria-label="時">${hours}</select><span>：</span><select id="mSchMin" aria-label="分">${mins}</select></div>
+        <div class="sch-summary ${sum.cls}" id="mSchSummary" aria-live="polite">${esc(sum.text)}</div>
+        <input type="hidden" id="mSchedule" value="${esc(cur)}">
+        <div>${d.editSchedId?'':'<button type="button" class="btn" data-mail="schedule-clear">取消排程</button> '}<span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div></div>`;
+    }
+    function setScheduleLocal(local){
+      const m=state.mail,d=m&&m.drafts[m.index];if(!d)return;
+      d.scheduledAt=local;
+      const hid=$('mSchedule');if(hid)hid.value=local;
+      const dt=$('mSchDate'),hr=$('mSchHour'),mn=$('mSchMin');
+      if(dt)dt.value=local.slice(0,10);if(hr)hr.value=local.slice(11,13);
+      if(mn){if(local&&![...mn.options].some(o=>o.value===local.slice(14,16)))mn.add(new Option(local.slice(14,16),local.slice(14,16)));mn.value=local.slice(14,16)}
+      const sum=schedSummary(local),el=$('mSchSummary');if(el){el.textContent=sum.text;el.className='sch-summary '+sum.cls}
+      document.querySelectorAll('[data-sch-chip]').forEach(b=>b.classList.toggle('on',b.dataset.schChip===local));
+      const send=$('sendBtn');if(send&&!d.editSchedId&&!m.sending&&!d.sent&&!(d.dr&&d.dr.pending))send.textContent=local?'排程寄出':'寄出信件';
+    }
+    document.addEventListener('click',e=>{const c=e.target.closest?.('[data-sch-chip]');if(c&&state.view==='mail')setScheduleLocal(c.dataset.schChip)});
+    document.addEventListener('change',e=>{
+      if(state.view!=='mail'||!['mSchDate','mSchHour','mSchMin'].includes(e.target.id))return;
+      const date=$('mSchDate').value;let hh=$('mSchHour').value,mm=$('mSchMin').value;
+      if(!date){setScheduleLocal('');return}
+      if(!hh&&!mm){hh='09';mm='00'}else{hh=hh||'09';mm=mm||'00'}
+      setScheduleLocal(`${date}T${hh}:${mm}`);
+    });
     function renderMail(){
       const m=state.mail,stage=$('stage');if(!m){backToBoard();return;}
       setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
@@ -3203,7 +3256,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="editor" id="mBody" contenteditable="${locked?'false':'true'}" role="textbox" aria-multiline="true" aria-label="信件內容">${d.body}</div>
         ${(d.attachments&&d.attachments.length)?`<div class="att-list">${d.attachments.map((a,i)=>`<span class="att"><span>📎 ${esc(a.fileName)}（${fmtSize(a.size)}）</span><button type="button" data-att-del="${i}" aria-label="移除附件">×</button></span>`).join('')}</div>`:''}
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
-        ${d.scheduleOpen?`<div class="schedule-row"><label>寄出時間（台北時間）<input type="datetime-local" id="mSchedule" min="${nowMin}" value="${esc(d.scheduledAt||'')}"></label>${d.editSchedId?'':'<button type="button" class="btn" data-mail="schedule-clear">取消排程</button>'}<span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div>`:''}
+        ${d.scheduleOpen?schedulePickerHtml(d):''}
         <div class="form-actions mail-actions">
           <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
           ${d.editSchedId?'<button type="button" class="btn" data-mail="sched-abort">放棄修改，回已排程清單</button>':`<button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>`}
@@ -3243,6 +3296,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const d=m.drafts[m.index];
       if(!d.to){toast('請填寫收件人',true);return}if(!d.subject){toast('請填寫主旨',true);return}
       if(d.scheduleOpen&&!d.scheduledAt){toast('請選擇排程寄出時間',true);return}
+      if(d.scheduleOpen&&schedSummary(d.scheduledAt).cls==='warn'){toast('排程時間已經過了或太近，請選 3 分鐘以後的時間',true);return}
       m.sending=true;renderMail();
       try{
         const {bodyHtml,inlineImages}=prepareBody(d),signatureHtml=d.sigInserted?'':(state.signature||''),attachments=(d.attachments||[]).map(a=>({fileName:a.fileName,mimeType:a.mimeType,base64:a.base64})),ids=d.ids||[d.id];

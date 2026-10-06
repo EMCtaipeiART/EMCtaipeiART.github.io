@@ -33,3 +33,23 @@ test('v5 new-request form offers 送出並排程寄信, which opens the mail pag
   assert.match(html, /\.page \.mail-actions\{position:sticky;bottom:0/);
   assert.match(html, /<div class="form-actions mail-actions">/);
 });
+
+test('v5 schedule picker offers one-click presets, date plus hour/minute selects and a live summary, and refuses past times', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /function schedulePickerHtml\(d\)/);
+  assert.match(html, /data-sch-chip=/);
+  assert.match(html, /id="mSchDate"/);
+  assert.match(html, /<input type="hidden" id="mSchedule"/, '既有的 saveMailDraft 仍從 #mSchedule 讀值');
+  assert.match(html, /'今天 17:00'/);
+  assert.match(html, /'下週一 09:00'/);
+  assert.match(html, /schedSummary\(d\.scheduledAt\)\.cls==='warn'\)\{toast\(/, '送出前擋下過去或太近的時間');
+  // 純函式：摘要文字與過去時間判斷（用真的函式跑，星期與相對日期要對）。
+  const grab = name => html.match(new RegExp(`const ${name}=[^\\n]*\\n`))?.[0] || html.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n    \\}\\n`))?.[0];
+  const src = ['SCH_WEEK', 'taipeiNowLocal', 'schFake', 'schedSummary'].map(grab).join('\n');
+  const summary = new Function(`${src}; return schedSummary;`)();
+  assert.equal(summary('').cls, 'empty');
+  assert.equal(summary('2020-01-01T09:00').cls, 'warn');
+  const future = summary('2099-01-05T14:30');
+  assert.equal(future.cls, '');
+  assert.match(future.text, /2099\/01\/05（週一）14:30 寄出/);
+});
