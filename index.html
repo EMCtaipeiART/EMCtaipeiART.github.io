@@ -8,7 +8,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>設計需求系統 v5.0</title>
-  <link rel="icon" type="image/png" href="assets/EMC_design_logo-224.png" />
+  <link rel="icon" type="image/svg+xml" href="assets/EMC_design_logo.svg" />
   <link rel="preconnect" href="https://machi-design-api.machi-chen.workers.dev" crossorigin />
   <script src="assets/access-control.js"></script>
   <script>
@@ -1192,7 +1192,7 @@ window.emcQuotes=[
 })();
 </script>
   <nav class="rail" aria-label="主選單">
-    <img class="rail-logo" src="assets/EMC_design_logo-224.png" alt="EMC 設計部" />
+    <img class="rail-logo" src="assets/EMC_design_logo.svg" alt="EMC 設計部" />
     <button type="button" class="rail-item is-active" data-nav="board" aria-label="首頁"><svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg>首頁</button>
     <button type="button" class="rail-item" data-nav="projects" aria-label="專案"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="3.5" y="14" width="7" height="7" rx="1.6"/><rect x="13.5" y="14" width="7" height="7" rx="1.6"/></svg>專案</button>
     <span id="railExtra" style="display:contents"></span>
@@ -3809,7 +3809,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
     function renderLoginPage(){
       setTimeout(mountGoogle,0);
       $('stage').innerHTML=`<div class="login-page">
-        <img class="lp-logo" src="assets/EMC_design_logo-224.png" alt="EMC 設計部">
+        <img class="lp-logo" src="assets/EMC_design_logo.svg" alt="EMC 設計部">
         <h2>登入設計需求系統</h2><p class="lp-sub">請使用 @emctaipei.com 公司帳號登入</p>
         <div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>
         <button type="button" class="lp-toggle" data-lp="google">Google 按鈕沒反應？改用彈出視窗登入</button>
