@@ -6298,5 +6298,5 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 修改目的：使用者要求刪除短連結功能，包含地端資料。
 - 影響檔案：`404.html`（改成找不到頁面，只保留舊 `/a–d/案件編號` 補充資料連結轉址）、`backend/schema.mjs`／`backend/app.mjs`／`worker/src/{model,index,database-coordinator}.ts`（移除 `短連結` 資料表、`createShortLink`／`resolveShortLink`、6 碼短碼路由、`short_link` 頁面權限與 `short_link.create` 功能權限）、`assets/access-control.js`、`json_database_admin.html`、`legacy.html`、`.github/workflows/update-database-archive.yml`、`package.json`、`backend/import_google_sheets.mjs`、測試。
 - 已刪除：`scripts/generate_short_link_index.mjs`、`data/short_link_index.json`（含 `supplements` 快速索引；補充資料連結改直接問 API）、`backend/data/db.json` 的 `短連結` 資料表（9 筆）與來源資訊。
-- 未動：`GS/` 內的舊 Apps Script（獨立部署、已不使用）；歷史紀錄裡的舊敘述。
-- 追加（同日）： 內的短連結工作表、／ 與相關權限也一併刪除（補充資料連結的  與  轉址保留）。
+- 未動：歷史紀錄裡的舊敘述。
+- 追加（同日）：`GS/google_apps_script.gs` 內的短連結工作表、`createShortLink`／`resolveShortLink` 與相關權限也一併刪除（補充資料連結的 `syncSupplementShortLinks_` 與 `/a–d` 轉址保留）。
