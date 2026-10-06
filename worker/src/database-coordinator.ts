@@ -4709,15 +4709,60 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const current = payload.accessContext === 'archive'
         ? this.requireAccess(database, session, 'archive.edit')
         : this.requireRowAccess(database, session, 'request.delete', existingRow);
+      // 一般有刪除權限的人只能「申請刪除」：案件先隱藏，管理者（database.manage）審核後才真的刪除，避免誤刪。
+      // 管理者自己刪除、或歷史資料庫管理的刪除，仍然直接刪。
+      if (payload.accessContext !== 'archive' && !hasCapability(database, current, 'database.manage')) {
+        if (!existingRow) throw new Error('找不到案件');
+        return this.mutate(action, current, draft => {
+          const requests = draft.tables['刪除申請'].rows;
+          if (!requests.some(row => text(row['案件編號']) === id)) {
+            const source = draft.tables.database.rows.find(row => text(row['案件編號']) === id);
+            if (!source) throw new Error('找不到案件');
+            requests.push({
+              '案件編號': id, '申請人帳號': current.account, '申請人': text(current.user) || current.account,
+              '申請時間': new Date().toISOString(),
+              '案件摘要': `${text(source['客戶別'])}_${text(source['專案名稱'])}｜${text(source['設計負責人'])}｜${text(source['狀態'])}`
+            });
+          }
+          return { result: { ok: true, action, id, pending: true }, changedTables: ['刪除申請'] };
+        });
+      }
       return this.mutate(action, current, draft => {
         const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
         if (index < 0) throw new Error('找不到案件');
         const [row] = draft.tables.database.rows.splice(index, 1);
         const removed = removeCaseDependentRows(draft, id);
+        const requests = draft.tables['刪除申請'];
+        const hadRequest = requests.rows.some(item => text(item['案件編號']) === id);
+        requests.rows = requests.rows.filter(item => text(item['案件編號']) !== id);
         return {
           result: { ok: true, action, id, row: toApiRow(row), removedModificationRows: removed.modificationRows, removedSupplementRows: removed.supplementRows },
-          changedTables: ['database', ...(removed.modificationRows ? ['修改統計表'] : []), ...(removed.supplementRows ? ['補充資料連結'] : [])]
+          changedTables: ['database', ...(hadRequest ? ['刪除申請'] : []), ...(removed.modificationRows ? ['修改統計表'] : []), ...(removed.supplementRows ? ['補充資料連結'] : [])]
         };
+      });
+    }
+    if (action === 'confirmDeleteCases' || action === 'rejectDeleteCases') {
+      const current = this.requireAccess(database, session, 'database.manage');
+      const ids = [...new Set((Array.isArray(payload.ids) ? payload.ids : [payload.id]).map(value => text(value)).filter(Boolean))];
+      if (!ids.length) throw new Error('沒有選擇案件');
+      return this.mutate(action, current, draft => {
+        const requests = draft.tables['刪除申請'];
+        const pending = new Set(requests.rows.map(row => text(row['案件編號'])));
+        const targets = ids.filter(id => pending.has(id));
+        if (!targets.length) throw new Error('沒有可處理的刪除申請');
+        const changed = new Set<string>(['刪除申請']);
+        let deleted = 0;
+        if (action === 'confirmDeleteCases') {
+          for (const id of targets) {
+            const index = draft.tables.database.rows.findIndex(row => text(row['案件編號']) === id);
+            if (index >= 0) { draft.tables.database.rows.splice(index, 1); deleted += 1; changed.add('database'); }
+            const removed = removeCaseDependentRows(draft, id);
+            if (removed.modificationRows) changed.add('修改統計表');
+            if (removed.supplementRows) changed.add('補充資料連結');
+          }
+        }
+        requests.rows = requests.rows.filter(row => !targets.includes(text(row['案件編號'])));
+        return { result: { ok: true, action, ids: targets, deleted, restored: action === 'rejectDeleteCases' ? targets.length : 0 }, changedTables: [...changed] };
       });
     }
     if (action === 'adminAccountSave') return this.adminAccountSave(payload, database, session);

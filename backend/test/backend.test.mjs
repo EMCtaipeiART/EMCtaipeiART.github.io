@@ -1725,7 +1725,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '系統公告欄', '修改統計表', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '系統公告欄', '修改統計表', '刪除申請', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
   const announcement = await api(app.baseUrl, 'getSystemAnnouncement');
   assert.equal(announcement.announcement.version, 'v4.7');
   const userLogin = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });

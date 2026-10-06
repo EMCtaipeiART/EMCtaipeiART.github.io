@@ -2909,7 +2909,28 @@ describe('Machi Design API Worker', () => {
 
     // 刪除：同客戶別、案件本身專案負責人文字是別人的也放行（跟編輯一致）；不同客戶別仍被擋。
     const sameCustomerDelete = await api({ action: 'delete', id: '26080002' }, token);
-    expect(sameCustomerDelete).toMatchObject({ ok: true, id: '26080002' });
+    expect(sameCustomerDelete).toMatchObject({ ok: true, id: '26080002', pending: true });
+    // 一般帳號的「刪除」只是申請：案件還在資料表裡，只多一筆刪除申請；管理者審核後才真的刪除或還原。
+    {
+      const adminToken = await login();
+      const stubDel = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+      const read = () => runInDurableObject(stubDel, async (_instance, state) => JSON.parse(state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one().json) as DatabaseSnapshot);
+      let snap = await read();
+      expect(snap.tables.database.rows.some(row => String(row['案件編號']) === '26080002')).toBe(true);
+      expect(snap.tables['刪除申請'].rows.map(row => String(row['案件編號']))).toContain('26080002');
+      expect(await api({ action: 'confirmDeleteCases', ids: ['26080002'] }, token)).toMatchObject({ ok: false });
+      const restored = await api({ action: 'rejectDeleteCases', ids: ['26080002'] }, adminToken);
+      expect(restored).toMatchObject({ ok: true, restored: 1 });
+      snap = await read();
+      expect(snap.tables['刪除申請'].rows).toHaveLength(0);
+      expect(snap.tables.database.rows.some(row => String(row['案件編號']) === '26080002')).toBe(true);
+      await api({ action: 'delete', id: '26080002' }, token);
+      const confirmed = await api({ action: 'confirmDeleteCases', ids: ['26080002'] }, adminToken);
+      expect(confirmed).toMatchObject({ ok: true, deleted: 1 });
+      snap = await read();
+      expect(snap.tables.database.rows.some(row => String(row['案件編號']) === '26080002')).toBe(false);
+      expect(snap.tables['刪除申請'].rows).toHaveLength(0);
+    }
     const ownDelete = await api({ action: 'delete', id: '26080003' }, token);
     expect(ownDelete).toMatchObject({ ok: true, id: '26080003' });
     const otherCustomerDelete = await api({ action: 'delete', id: '26080004' }, token);
