@@ -311,8 +311,8 @@
     .progress-track{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
     .progress-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a3e635 0%,#facc15 50%,#f97316 100%);background-repeat:no-repeat;transition:width .4s ease}
     
-    .latest-grid .card{display:flex;flex-direction:column}
-    .latest-grid .card .card-foot{margin-top:auto;padding-top:12px}
+    .latest-grid .card,.board.five .cards .card{display:flex;flex-direction:column}
+    .latest-grid .card .card-foot,.board.five .cards .card .card-foot{margin-top:auto;padding-top:12px}
     .card.is-open{cursor:default}
     .input.is-locked{background:var(--bg);color:var(--muted);cursor:not-allowed}
     .card-detail{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);cursor:default;text-align:left;font-weight:400}
@@ -1498,7 +1498,7 @@ window.emcQuotes=[
     document.addEventListener('click',e=>{const cd=e.target.closest?.('.card-detail');if(cd){const c=cd.closest('[data-case]');if(c)state.detailId=c.dataset.case}},true);
     /* 同一排的卡牌高度統一（依該排最高的那張），下排（頭像／數量）靠底部對齊；展開中的卡牌不參與，免得把旁邊撐高 */
     function equalizeCards(){
-      document.querySelectorAll('.latest-grid').forEach(g=>{
+      document.querySelectorAll('.latest-grid,.board.five .cards').forEach(g=>{ /* 專案頁一欄裡並排的卡牌（一欄／兩欄設定）也一樣：同一排切齊最高的那張，落單的那張維持原高度 */
         const cards=[...g.querySelectorAll(':scope > div.card')];cards.forEach(c=>{c.style.minHeight=''});
         const rows=new Map();
         cards.forEach(c=>{if(c.classList.contains('is-open'))return;const k=c.offsetTop;if(!rows.has(k))rows.set(k,[]);rows.get(k).push(c)});
@@ -4189,7 +4189,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}if(!state.pushOk||(dbTick=(dbTick+1)%3)===0)loadDatabase(true)},8000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
-    {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}}}
+    {const o=renderProjects;renderProjects=function(){o.apply(this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     {const o=renderBoard;renderBoard=function(){o.apply(this,arguments);try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
