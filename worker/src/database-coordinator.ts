@@ -3891,6 +3891,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'coinReserve') return await this.coinReserve(payload, database, session);
       if (action === 'coinRefund') return await this.coinRefund(payload);
       if (action === 'coinLedger') return await this.coinLedger(payload, database, session);
+      if (action === 'forceReload') {
+        requireCapability(database, session, 'database.manage');
+        const message = JSON.stringify({ type: 'reload', t: Date.now() });
+        let sent = 0;
+        for (const socket of this.ctx.getWebSockets()) { try { socket.send(message); sent += 1; } catch { /* 已失效 */ } }
+        return { ok: true, action: 'forceReload', sent };
+      }
       if (action === 'coinAdjust') return await this.coinAdjust(payload, database, session);
       if (action === 'coinEarnSyncNow') { requireCapability(database, session, 'database.manage'); return { ok: true, ...(await this.runCoinEarnSync()), action }; }
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };
