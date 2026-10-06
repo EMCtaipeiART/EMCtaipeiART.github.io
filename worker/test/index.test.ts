@@ -3696,6 +3696,26 @@ describe('Machi Design API Worker', () => {
       expect(dispatch).toEqual({ processed: 0, sent: 0, failed: 0 });
     });
 
+    it('lists every pending scheduled mail across cases for the case board, hiding canceled ones and requiring a session', async () => {
+      await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
+      await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');
+      const token = await seedSession('test.user@emctaipei.com', '測試使用者');
+      const at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      const first = await api({ action: 'scheduleCaseMail', caseId: '26080001', to: 'a@example.com', subject: '甲', bodyText: 'x', scheduledAt: at }, token);
+      await api({ action: 'cancelScheduledMail', id: String(first.scheduledId) }, token);
+      const second = await api({ action: 'scheduleCaseMail', caseId: '26080001', to: 'b@example.com', subject: '乙', bodyText: 'x', scheduledAt: new Date(Date.now() + 9 * 60 * 1000).toISOString() }, token);
+      expect(second.ok).toBe(true);
+
+      const listed = await api({ action: 'listPendingScheduledMail' }, token);
+      expect(listed.ok).toBe(true);
+      expect(listed.items).toMatchObject([{ id: String(second.scheduledId), kind: 'send', to: 'b@example.com', subject: '乙', caseIds: ['26080001'] }]);
+      expect((listed.items as Array<Record<string, unknown>>)).toHaveLength(1);
+      expect((listed.items as Array<Record<string, unknown>>)[0]).not.toHaveProperty('bodyHtml');
+
+      const noSession = await api({ action: 'listPendingScheduledMail' });
+      expect(noSession.ok).toBe(false);
+    });
+
     it('reads and updates the original pending schedule without creating a second item, then blocks edits after dispatch claims it', async () => {
       await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
       await seedGmailTokens('test.user@emctaipei.com', 'gmail-access-1');

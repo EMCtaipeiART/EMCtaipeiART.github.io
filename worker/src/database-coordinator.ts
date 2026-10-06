@@ -3477,6 +3477,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     };
   }
 
+  /** 所有「還沒寄出」的排程（跨案件），給案件列表在每個案件旁標出「已排程」、並提供找回編輯／取消的入口。
+   * 只回傳這個帳號有「request.mail」權限的案件；只含清單需要的欄位（不含信件內文與附件）。 */
+  private listPendingScheduledMail(database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const rows = this.ctx.storage.sql.exec<ScheduledMailRow>(
+      `SELECT id, case_id, case_ids, kind, to_address, subject, scheduled_at, requested_by
+       FROM scheduled_mail WHERE status = 'pending' ORDER BY scheduled_at ASC LIMIT 200`
+    ).toArray();
+    const items = rows.filter(item => {
+      const row = database.tables.database.rows.find(record => text(record['案件編號']) === item.case_id);
+      return hasRowCapability(database, current, 'request.mail', row || {});
+    }).map(item => ({
+      id: item.id, kind: item.kind, to: item.to_address, subject: item.subject,
+      scheduledAt: item.scheduled_at, requestedBy: item.requested_by, caseIds: scheduledMailCaseIds(item)
+    }));
+    return { ok: true, action: 'listPendingScheduledMail', items };
+  }
+
   /** 取消一筆還沒寄出的排程——只有還是 pending 狀態的才能取消（已經在寄送中／已寄出／已失敗／已取消都不能
    * 再改動），權限判斷比照該筆排程所屬案件的 request.mail（跟建立排程時同一套邏輯，不是只看「是不是本人排
    * 的」，因為信件操作本來就是同一批有權限的人共用，不是個人專屬）。 */
@@ -3925,6 +3943,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'scheduleCaseMail') return await this.auditMail(action, payload, session, () => this.scheduleCaseMail(payload, database, session));
       if (action === 'scheduleCaseReply') return await this.auditMail(action, payload, session, () => this.scheduleCaseReply(payload, database, session));
       if (action === 'listScheduledMail') return this.listScheduledMail(payload, database, session);
+      if (action === 'listPendingScheduledMail') return this.listPendingScheduledMail(database, session);
       if (action === 'getScheduledMail') return this.getScheduledMail(payload, database, session);
       if (action === 'updateScheduledMail') return await this.updateScheduledMail(payload, database, session);
       if (action === 'cancelScheduledMail') return await this.cancelScheduledMail(payload, database, session);

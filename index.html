@@ -194,6 +194,10 @@
     .lt-act{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 13px;border-radius:12px;border:1px solid transparent;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}
     .lt-act svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .lt-act-mail{background:#dcfce7;color:#166534;border-color:#86efac}
+    .lt-act-sched{background:#fef3c7;color:#92400e;border-color:#fcd34d;margin-left:6px}
+    .sched-list{display:grid;gap:12px;margin-bottom:18px}.sched-item{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px;border:1px solid #fcd34d;background:#fffbeb;border-radius:14px}
+    .sched-main{min-width:0;flex:1 1 280px;font-size:14px;line-height:1.6}.sched-kind{display:inline-block;padding:1px 8px;border-radius:999px;background:#fde68a;color:#78350f;font-size:12px;font-weight:900}.sched-sub{color:#6b5b2e;font-size:13px;word-break:break-all}
+    .sched-acts{display:flex;gap:8px;flex-wrap:wrap}.sched-acts .btn{min-height:40px;padding:0 18px}
     .lt-act-edit{background:#fef3c7;color:#92400e;border-color:#fcd34d}
     .lt-act-del{background:#ffe4e6;color:#be123c;border-color:#fda4af}
     .lt-act:hover{filter:brightness(.97)}
@@ -602,6 +606,8 @@
     html[data-theme="dark"] .lt-status.st-none,html[data-theme="dark"] .cell-pop button.option.status-option.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
     html[data-theme="dark"] .lt-status.st-pause,html[data-theme="dark"] .cell-pop button.option.status-option.st-pause{background:var(--st-pause-bg);color:var(--st-pause-ink);border-color:var(--st-pause-line)}
     html[data-theme="dark"] .lt-act-mail{background:#16301f;color:#8fe0a5;border-color:#24502f}
+    html[data-theme="dark"] .lt-act-sched{background:#3a2f0f;color:#f6d77a;border-color:#6b5517}
+    html[data-theme="dark"] .sched-item{background:#2a2410;border-color:#6b5517}html[data-theme="dark"] .sched-kind{background:#5c4a14;color:#fde68a}html[data-theme="dark"] .sched-sub{color:#d9c88a}
     html[data-theme="dark"] .lt-act-edit{background:#3a3213;color:#f6dc7a;border-color:#5c4f1c}
     html[data-theme="dark"] .lt-act-del{background:#3d1d24;color:#ffb4c0;border-color:#5c2a35}
     html[data-theme="dark"] .cell-pop{background:#1d2321;color:#e9efec;border-color:#2c3431;box-shadow:0 14px 36px rgba(0,0,0,.55)}
@@ -1696,7 +1702,7 @@ window.emcQuotes=[
       {key:'stage',label:'階段',cell:(r,ed)=>{const g=String(r['階段']||'').trim();return `<td><span class="lt-stage lt-stage-${esc(g)}${ed?' lt-edit':''}"${ed?' data-edit="stage"':''}>${esc(g||'選擇')}</span></td>`}},
       {key:'start',label:'開始',cell:r=>`<td class="lt-date">${esc(slashNice(r['開始日期']))}</td>`},
       {key:'end',label:'結束',cell:r=>`<td class="lt-date">${esc(slashNice(r['結束日期']))}</td>`},
-      {key:'mail',label:'信件',cell:(r,ed)=>{if(!loggedIn())return '<td></td>';if(!canMailRow(r))return '<td><span class="lt-dash">-</span></td>';const id=esc(idKey(r)),has=String(r['Gmail信件串ID']||'').trim(),act=has?'reply':(ed?'bind':'send'),label=has?'回信':(ed?'串接':'發信'),icon=has?ICON_REPLY:(ed?ICON_LINK:ICON_MAIL);return `<td><button type="button" class="lt-act lt-act-mail" data-row-act="${act}" data-id="${id}">${icon}<span>${label}</span></button></td>`}},
+      {key:'mail',label:'信件',cell:(r,ed)=>{if(!loggedIn())return '<td></td>';if(!canMailRow(r))return '<td><span class="lt-dash">-</span></td>';const id=esc(idKey(r)),has=String(r['Gmail信件串ID']||'').trim(),act=has?'reply':(ed?'bind':'send'),label=has?'回信':(ed?'串接':'發信'),icon=has?ICON_REPLY:(ed?ICON_LINK:ICON_MAIL);return `<td><button type="button" class="lt-act lt-act-mail" data-row-act="${act}" data-id="${id}">${icon}<span>${label}</span></button>${(()=>{const sn=schedFor(idKey(r)).length;return sn?`<button type="button" class="lt-act lt-act-sched" data-row-act="sched" data-id="${id}" title="這個案件有 ${sn} 封待寄出的排程信件，點這裡編輯或取消">⏰<span>已排程${sn>1?' '+sn:''}</span></button>`:''})()}</td>`}},
       {key:'actions',label:'內容',cell:(r,ed)=>{const id=esc(idKey(r)),okEdit=loggedIn()&&canEditRow(r),okDel=loggedIn()&&canDeleteRow(r);if(!loggedIn())return '<td></td>';if(!okEdit&&!okDel)return '<td><span class="lt-dash">-</span></td>';return `<td><span class="lt-acts">${okEdit?`<button type="button" class="lt-act lt-act-edit" data-row-act="edit" data-id="${id}">${ICON_EDIT}<span>編輯</span></button>`:''}${((ed||plannerDeleteUser())&&okDel)?`<button type="button" class="lt-act lt-act-del" data-row-act="delete" data-id="${id}">${ICON_TRASH}<span>刪除</span></button>`:''}</span></td>`}}
     ];
     const ICON_LINK='<svg viewBox="0 0 24 24"><path d="M9.5 14.5 14.5 9.5M8 16l-1.6 1.6a3.2 3.2 0 0 1-4.5-4.5L6.6 8.4M16 8l1.6-1.6a3.2 3.2 0 0 1 4.5 4.5L17.4 15.6"/></svg>',ICON_REPLY='<svg viewBox="0 0 24 24"><path d="M10 8V4l-7 7 7 7v-4c5 0 8 1.5 11 6-1-6-4-11-11-12z"/></svg>',ICON_MAIL='<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>',ICON_EDIT='<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m14 6 4 4"/></svg>',ICON_TRASH='<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
@@ -2023,8 +2029,9 @@ window.emcQuotes=[
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();
+      if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
       if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
@@ -2844,6 +2851,49 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();loadThread(id,true);
     }
+    /* ---------- 已排程的信件：找回、編輯、取消 ---------- */
+    const sched={items:[],loaded:false,at:0,loading:false,caseId:''};
+    const schedFor=id=>sched.items.filter(i=>(i.caseIds||[]).includes(String(id)));
+    const schedSignature=items=>items.map(i=>`${i.id}@${i.scheduledAt}`).join('|');
+    async function refreshSched(force){
+      if(!loggedIn()||sched.loading)return;
+      if(!force&&Date.now()-sched.at<30000)return;
+      sched.loading=true;const before=schedSignature(sched.items);
+      try{const data=await api('listPendingScheduledMail');sched.items=Array.isArray(data.items)?data.items:[];sched.loaded=true;sched.at=Date.now()}
+      catch(err){/* 讀不到就維持現狀，不打擾使用者 */}
+      sched.loading=false;
+      if(state.view==='sched')renderSchedPage();
+      else if((state.view==='board'||state.view==='projects')&&schedSignature(sched.items)!==before)rerenderList();
+    }
+    function openSchedPage(id){state.form=null;state.mail=null;sched.caseId=String(id);show('sched')}
+    const schedTime=ms=>new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(Number(ms)));
+    const schedLocalInput=ms=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(Number(ms))).replace(' ','T');
+    function renderSchedPage(){
+      const stage=$('stage'),id=sched.caseId,items=schedFor(id),row=allRows().find(r=>idKey(r)===id);
+      const list=(sched.loading&&!sched.loaded)?'<div class="notice">讀取中…</div>':items.length?`<div class="sched-list">${items.map(i=>`<div class="sched-item"><div class="sched-main"><b>${esc(schedTime(i.scheduledAt))}</b> 寄出　<span class="sched-kind">${i.kind==='reply'?'回覆信':'發信'}</span><div class="sched-sub">收件人：${esc(i.to)}${i.subject?`<br>主旨：${esc(i.subject)}`:''}${i.requestedBy?`<br>排程人：${esc(i.requestedBy)}`:''}</div></div><div class="sched-acts"><button type="button" class="btn primary" data-sched="edit" data-sid="${esc(i.id)}">編輯</button><button type="button" class="btn" data-sched="cancel" data-sid="${esc(i.id)}">取消排程</button></div></div>`).join('')}</div>`:'<div class="notice">這個案件目前沒有待寄出的排程信件。</div>';
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">已排程的信件</h2><p class="page-sub">案件 ${esc(id)}${row?`・${esc(row['客戶別']||'')}_${esc(row['專案名稱']||'')}`:''}。時間到系統會自動寄出；寄出前都可以編輯或取消。</p></div></div>${list}<div class="form-actions"><button type="button" class="btn" data-sched="back">回案件列表</button></div></div>`;
+    }
+    async function cancelSched(sid){
+      if(!confirm('確定要取消這封排程信件嗎？取消後不會寄出，也無法復原。'))return;
+      try{await api('cancelScheduledMail',{id:sid});toast('已取消排程，這封信不會寄出')}catch(err){toast(`取消失敗：${err.message}`,true)}
+      await refreshSched(true);
+    }
+    async function editSched(sid){
+      try{
+        const data=await api('getScheduledMail',{id:sid}),item=data.item||{},id=String(item.caseId||''),row=allRows().find(r=>idKey(r)===id);
+        if(!row){toast('找不到這封排程對應的案件',true);return}
+        const reply=item.kind==='reply',images={},box=document.createElement('div');
+        box.innerHTML=String(item.bodyHtml||'');
+        (item.inlineImages||[]).forEach(im=>{images[im.contentId]={contentId:im.contentId,fileName:im.fileName||'照片',mimeType:im.mimeType,base64:im.base64}});
+        box.querySelectorAll('img').forEach(img=>{const m=/^cid:(.+)$/.exec(img.getAttribute('src')||''),im=m&&images[m[1]];if(!im)return;img.dataset.gmailInlineImageId=im.contentId;img.src=`data:${im.mimeType};base64,${im.base64}`});
+        const sig=String(item.signatureHtml||'').trim();
+        if(sig)box.insertAdjacentHTML('beforeend',`<div class="v5-sig">${sig}</div>`);
+        const d={id,row,to:item.to||'',cc:item.cc||'',subject:reply?`Re: 【${id}】${row['客戶別']}_${row['專案名稱']}`:(item.subject||''),body:box.innerHTML,images,
+          attachments:(item.attachments||[]).map(a=>({fileName:a.fileName,mimeType:a.mimeType,base64:a.base64,size:Math.floor(String(a.base64||'').length*3/4)})),
+          sigInserted:Boolean(sig),sent:false,reply,mode:'general',existing:true,scheduleOpen:true,scheduledAt:schedLocalInput(item.scheduledAt),editSchedId:String(sid)};
+        state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();if(reply)loadThread(id,true);
+      }catch(err){toast(`無法開啟這封排程：${err.message}`,true);await refreshSched(true)}
+    }
     function openReplyChooser(id,anchor){
       const pop=$('cellPop');state.cellEdit={id,field:'reply'};
       const opt=(m,label,desc)=>`<button type="button" class="option reply-opt" data-reply-method="${m}"><span>${label}</span><small>${desc}</small></button>`;
@@ -3132,6 +3182,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const nowMin=mailMinLocal();
       stage.innerHTML=`<div class="page">
         <div class="page-top"><div><h2 class="page-title">撰寫需求信件</h2><p class="page-sub">${d.reply?`${d.mode==='modification'?'填寫修改需求信':d.mode==='designer'?'設計師回覆信':'一般回信'}：回覆案件 ${esc(d.id)} 的 Gmail 信件串。${d.mode==='modification'?'寄出後內容會自動記錄進「修改紀錄」。':''}`:d.ids?`合併 ${d.ids.length} 筆案件（${esc(d.ids.join('、'))}）為一封信。`:d.existing?`案件 ${esc(d.id)}：確認收件人與內容後寄出。`:`案件 ${esc(d.id)} 已建立。確認收件人與內容後寄出，會回到案件列表。`}</p></div></div>
+        ${d.editSchedId?`<div class="notice">正在編輯「已排程」的信件（原本會在 ${esc(d.scheduledAt.replace('T',' '))} 寄出）。改好後按「儲存排程修改」才會更新；按「放棄修改」不會動到原本的排程。</div>`:(!d.sent&&schedFor(d.id).length?`<div class="notice">這個案件已有 ${schedFor(d.id).length} 封排程中的信件（時間到會自動寄出）。<button type="button" class="btn" data-mail="sched-open" style="margin-left:6px">查看／編輯／取消</button>（目前這封還沒寄的內容不會保留）</div>`:'')}
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
         ${(d.dr&&d.dr.pending)?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
@@ -3150,11 +3201,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="editor" id="mBody" contenteditable="${locked?'false':'true'}" role="textbox" aria-multiline="true" aria-label="信件內容">${d.body}</div>
         ${(d.attachments&&d.attachments.length)?`<div class="att-list">${d.attachments.map((a,i)=>`<span class="att"><span>📎 ${esc(a.fileName)}（${fmtSize(a.size)}）</span><button type="button" data-att-del="${i}" aria-label="移除附件">×</button></span>`).join('')}</div>`:''}
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
-        ${d.scheduleOpen?`<div class="schedule-row"><label>寄出時間（台北時間）<input type="datetime-local" id="mSchedule" min="${nowMin}" value="${esc(d.scheduledAt||'')}"></label><button type="button" class="btn" data-mail="schedule-clear">取消排程</button><span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div>`:''}
+        ${d.scheduleOpen?`<div class="schedule-row"><label>寄出時間（台北時間）<input type="datetime-local" id="mSchedule" min="${nowMin}" value="${esc(d.scheduledAt||'')}"></label>${d.editSchedId?'':'<button type="button" class="btn" data-mail="schedule-clear">取消排程</button>'}<span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div>`:''}
         <div class="form-actions">
-          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
-          <button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>
-          <button type="button" class="btn" data-mail="skip">略過，回案件列表</button>
+          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
+          ${d.editSchedId?'<button type="button" class="btn" data-mail="sched-abort">放棄修改，回已排程清單</button>':`<button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>`}
+          ${d.editSchedId?'':'<button type="button" class="btn" data-mail="skip">略過，回案件列表</button>'}
         </div>
       </div>`;
     }
@@ -3194,6 +3245,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{
         const {bodyHtml,inlineImages}=prepareBody(d),signatureHtml=d.sigInserted?'':(state.signature||''),attachments=(d.attachments||[]).map(a=>({fileName:a.fileName,mimeType:a.mimeType,base64:a.base64})),ids=d.ids||[d.id];
         const base={to:d.to,cc:d.cc,bodyHtml,signatureHtml,inlineImages,attachments};
+        if(d.editSchedId){
+          await api('updateScheduledMail',{id:d.editSchedId,...base,subject:d.reply?'':d.subject,scheduledAt:toIso(d.scheduledAt)});
+          state.mail=null;toast('已儲存排程修改');await refreshSched(true);openSchedPage(d.id);return;
+        }
         if(d.scheduleOpen&&d.scheduledAt){
           const scheduledAt=toIso(d.scheduledAt);
           if(d.reply)await api('scheduleCaseReply',{caseId:d.id,...base,scheduledAt});
@@ -3205,8 +3260,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         else if(d.reply&&!d.scheduledDone&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===d.id),st0=String(r0&&r0['狀態']||'').trim();if(d.mode==='modification'){if(st0&&st0!=='修改中'&&st0!=='暫停中')applyMove(d.id,'修改中')}else if(st0==='執行中'||st0==='修改中'){if(st0==='修改中')markLatestRoundDone(d.id);applyMove(d.id,'過稿中')}}
         d.sent=true;m.sentCount++;m.sending=false;
         const next=m.drafts.findIndex(x=>!x.sent);
-        if(d.scheduledDone)toast(`已排程於 ${d.scheduledAt.replace('T',' ')} 寄出`);
-        if(next>=0){m.index=next;if(!d.scheduledDone)toast(`已寄出 ${ids.join('、')}，繼續下一封`);renderMail()}else finishMail();
+        if(d.scheduledDone&&next>=0)toast(`已排程於 ${d.scheduledAt.replace('T',' ')} 寄出`);
+        if(d.scheduledDone)refreshSched(true);
+        const schedMsg=`已排程於 ${String(d.scheduledAt||'').replace('T',' ')} 寄出。要修改或取消，請到案件列表該案件旁的「已排程」按鈕`;
+        if(next>=0){m.index=next;if(!d.scheduledDone)toast(`已寄出 ${ids.join('、')}，繼續下一封`);renderMail()}else{finishMail();if(d.scheduledDone)toast(schedMsg)}
       }catch(err){m.sending=false;renderMail();toast(`寄信失敗：${err.message}`,true)}
     }
     function mergeSelected(){
@@ -4026,7 +4083,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(auto){applyChange(id,{details:v,status:'執行中'},['項目細節','加權','案件狀態'],{'項目細節':v,'狀態':'執行中'});toast('已選擇項目細節，狀態自動改為「執行中」')}else applyChange(id,{details:v},['項目細節','加權'],{'項目細節':v});return}
       const revOpen=t.closest('[data-rev-open]');if(revOpen){openModModal(revOpen.dataset.revOpen);return}
       if(t.closest('[data-mm="close"]')||t.id==='modModal'){closeModModal();return}
-      const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}{const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canEditRow(r0)){toast('此帳號沒有編輯這個案件的權限',true);return}}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete'){const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canDeleteRow(r0)){toast('此帳號沒有刪除案件的權限',true);return}deleteCase(id)}return}
+      const rowAct=t.closest('[data-row-act]');if(rowAct){const id=rowAct.dataset.id,a=rowAct.dataset.rowAct;if(a==='reply')openReplyChooser(id,rowAct);else if(a==='bind')openBindModal(id);else if(a==='sched')openSchedPage(id);else if(a==='send')startRowMail(id,false);else if(a==='edit'){if(!loggedIn()){toast('請先登入後再編輯案件',true);startLogin();return}{const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canEditRow(r0)){toast('此帳號沒有編輯這個案件的權限',true);return}}const from=state.view==='detail'?'detail':'list';state.detailId=id;state.editing=false;show('detail');startEdit(from)}else if(a==='delete'){const r0=allRows().find(r=>idKey(r)===id);if(r0&&!canDeleteRow(r0)){toast('此帳號沒有刪除案件的權限',true);return}deleteCase(id)}return}
       const editEl=t.closest('[data-edit]');if(editEl&&isDesignerSession()){const r0=allRows().find(r=>idKey(r)===(editEl.closest('[data-row-id]')?editEl.closest('[data-row-id]').dataset.rowId:state.detailId));if(r0&&!canListEditRow(r0)){toast('此帳號沒有修改這個案件的權限',true);return}openCellPop(editEl);return}
       if(t.closest('[data-cols-toggle]')){state.colsOpen=!state.colsOpen;rerenderList();return}
       const bc=t.closest('[data-board-cols]');if(bc){state.boardCols=+bc.dataset.boardCols;try{localStorage.setItem('v5BoardCols',String(state.boardCols))}catch(err){}rerenderList();return}
@@ -4074,6 +4131,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.closest('[data-cal-done]')){closeCal();return}
       if(cal.open&&!t.closest('.range'))closeCal();
       const mail=t.closest('[data-mail]')?.dataset.mail;
+      if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
+      if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
+      const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
