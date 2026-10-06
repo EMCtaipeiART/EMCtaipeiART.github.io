@@ -30,6 +30,7 @@
     .side-tab-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .side-tab small{flex:0 0 auto;color:var(--muted);font-weight:600;background:var(--soft);border-radius:999px;padding:2px 7px;font-size:10.5px}
     .side-tab.active small{background:#fff;color:var(--green)}
+    .coin-frame{display:block;width:100%;height:calc(100vh - 190px);min-height:560px;border:0;background:transparent}
     .side-foot{padding:10px;border-top:1px solid var(--line);display:grid;gap:8px}
     .content{flex:1;min-width:0;padding:20px 24px 60px}
     .content-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px}
@@ -242,7 +243,7 @@
           <div><h1>資料庫後台</h1><span id="apiLabel">/api</span></div>
         </div>
         <nav class="side-nav" id="tabs" aria-label="資料表"></nav>
-        <div class="side-foot"><a class="btn" id="coinLedgerLink" href="coin_ledger_admin.html" title="平台幣帳本：餘額、明細、驗證、手動調整">平台幣帳本</a><button class="btn" id="reload" type="button">重新讀取</button><button class="btn" id="logout" type="button">返回前台</button></div>
+        <div class="side-foot"><button class="btn" id="reload" type="button">重新讀取</button><button class="btn" id="logout" type="button">返回前台</button></div>
       </aside>
       <main class="content">
         <div class="content-head">
@@ -359,7 +360,8 @@
     function updateContentHead(){const info=TABLE_INFO[tableName]||{};$('tableTitle').textContent=tableLabel(tableName);$('tableSubtitle').textContent=info.desc||''}
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function tableTabButtonHtml(name){return `<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`}
-    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button>`;if(auditMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
+    const coinTabHtml=()=>`<button class="side-tab ${coinMode?'active':''}" type="button" data-coin title="餘額、明細、帳本驗證、手動調整"><span class="side-tab-label">平台幣帳本</span></button>`;
+    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
     function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}
@@ -1607,7 +1609,7 @@
     document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(pendingRefresh){const next=pendingRefreshMessage||{tables:[tableName]};pendingRefreshMessage=null;refreshFromBackend(next)}else backgroundPollTick()});
 
     /* 操作紀錄：Worker 的 listAuditLog（狀態變更、欄位修改、權限變更、登入、寄信），只有後台管理者讀得到 */
-    var auditMode=false,auditRows=[],auditKind='';
+    var auditMode=false,auditRows=[],auditKind='',coinMode=false;
     const AUDIT_KINDS=['狀態變更','欄位修改','案件新增','案件刪除','權限變更','登入','登入失敗','寄信','寄信失敗'];
     const auditTime=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?String(value||''):d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})};
     function renderAudit(){
@@ -1620,8 +1622,18 @@
       const body=shown.map(r=>`<tr><td>${esc(auditTime(r.t))}</td><td><span class="audit-kind k-${esc(r.kind)}">${esc(r.kind)}</span></td><td>${esc(r.actor)}</td><td>${esc(r.caseId||r.target||'')}</td><td>${esc(r.field||'')}</td><td>${change(r)}</td><td>${esc(r.note||'')}${r.to&&r.kind==='寄信'?`｜收件人 ${esc(r.to)}`:''}</td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#888;padding:24px">沒有符合的紀錄</td></tr>';
       $('view').innerHTML=`<div class="content-actions"><select id="auditKind" aria-label="依類型篩選"><option value="">全部類型</option>${AUDIT_KINDS.map(k=>`<option value="${k}"${k===auditKind?' selected':''}>${k}</option>`).join('')}</select><span class="count">最新在前，最多顯示 500 筆（共讀取 ${auditRows.length.toLocaleString('zh-TW')} 筆）；寫入約有數分鐘延遲</span></div><div class="table-wrap"><table><thead><tr><th>時間（台北）</th><th>類型</th><th>操作者</th><th>案件／帳號</th><th>欄位</th><th>變更內容</th><th>備註</th></tr></thead><tbody>${body}</tbody></table></div>`;
     }
+    /* 平台幣帳本：不跳頁，直接嵌在右側內容區（同網站，登入與深淺模式沿用） */
+    function leaveCoin(){if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
+    function showCoin(){
+      auditMode=false;coinMode=true;renderTabs();
+      $('tableTitle').textContent='平台幣帳本';$('tableSubtitle').textContent='完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）；只新增、不修改，每筆帶簽章';
+      $('currentTable').textContent='平台幣帳本';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;$('search').hidden=true;
+      const m=document.querySelector('.metrics');if(m)m.hidden=true;
+      $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1"></iframe>';
+    }
+    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-coin]'))showCoin()});
     async function showAudit(){
-      auditMode=true;renderTabs();
+      leaveCoin();auditMode=true;renderTabs();
       $('tableTitle').textContent='操作紀錄';$('tableSubtitle').textContent='案件狀態與欄位變更、權限變更、登入、寄信的稽核紀錄';
       $('currentTable').textContent='操作紀錄';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
       $('view').innerHTML='<div class="notice">正在讀取操作紀錄...</div>';
@@ -1630,7 +1642,7 @@
     }
     $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit()});
     $('view').addEventListener('change',event=>{if(auditMode&&event.target.id==='auditKind'){auditKind=event.target.value;renderAudit()}});
-    $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;auditMode=false;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
+    $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;leaveCoin();auditMode=false;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{
       // 每個設計種類的階段清單不一樣（平面：提案／再製／新製／印刷；影音：提案／拍攝／後製…），
       // 換了設計種類就要把階段選單換成該種類目前實際有的階段，否則會存到一個對不上加權規則的組合。
