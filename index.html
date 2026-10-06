@@ -459,6 +459,7 @@
     .supp-item{display:grid;gap:6px}
     .supp-item .input{background:var(--panel)}
     .form-actions{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+    .page .mail-actions{position:sticky;bottom:0;z-index:5;padding:12px 0;background:var(--bg,#fff);border-top:1px solid var(--line)}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 24px;border-radius:14px;border:1px solid var(--line);background:var(--panel);font-weight:800;font-size:15px;cursor:pointer;text-decoration:none}
     .btn:hover{background:var(--bg)}
     .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -2349,6 +2350,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
             <div class="batch-actions"><button type="button" class="btn" data-act="batch-copy">往下套用</button><button type="button" class="btn ghost" data-act="batch-add">＋ 新增空白一筆</button></div></div>`:''}
           <div class="form-actions">
             <button type="submit" class="btn primary" id="submitBtn"${ok&&!f.busy?'':' disabled'}>${f.busy?'送出中…':(f.batch?`送出 ${1+f.extra.length} 筆並撰寫信件`:'送出並撰寫信件')}</button>
+            <button type="button" class="btn" id="submitScheduleBtn" data-act="submit-schedule"${ok&&!f.busy?'':' disabled'} title="先建立案件，接著在信件頁挑寄出時間，時間到由系統自動寄出">⏰ ${f.batch?'送出並排程寄信':'送出並排程寄信'}</button>
             <button type="button" class="btn ghost" data-act="batch">${f.batch?'取消批次':'＋ 批次新增'}</button>
             <button type="button" class="btn" data-act="back">取消</button>
           </div>
@@ -2373,7 +2375,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
     const payloadRow=r=>({client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,platforms:platformText(r),...r.supp});
-    async function submitForm(){
+    async function submitForm(opts={}){
       readRowsSafe();const f=state.form;if(!f||f.busy)return;
       if(!loggedIn()){toast('請先登入',true);startLogin();return}
       const problem=validateForm();if(problem){toast(problem,true);return}
@@ -2387,7 +2389,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!created.length||created.some(r=>!/^\d{8}$/.test(String(r.id||''))))throw new Error('寫入完成但沒有取得案件編號，請重新整理確認');
         const drafts=created.map((r,i)=>{const id=String(r.id),item=items[i]||items[0],header={...rowHeaders(item),'案件編號':id,'狀態':'未開始','填單時間':ymd(taipeiToday())};state.localRows.set(id,header);return {id,row:header}});
         toast(`已新增 ${drafts.length} 筆案件：${drafts.map(d=>d.id).join('、')}`);
-        startMail(drafts);
+        startMail(drafts,{schedule:Boolean(opts.schedule)});
       }catch(err){
         f.busy=false;renderForm();
         toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新點左下角頭像登入後再送出':`新增失敗：${err.message}`,true);
@@ -2491,8 +2493,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }catch(err){toast(`處理失敗：${err.message}`,true)}
     }
     document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-del-confirm],[data-del-restore]');if(!c)return;delReviewRun(c.hasAttribute('data-del-confirm')?'confirm':'restore')});
-    function startMail(drafts){
-      state.mail={drafts:drafts.map(d=>({id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
+    function startMail(drafts,{schedule=false}={}){
+      state.mail={drafts:drafts.map(d=>({scheduleOpen:schedule,id:d.id,row:d.row,to:recipientFor(d.row['設計負責人']),cc:ccFor(d.row['客戶別'],d.row['設計負責人']).join(', '),subject:`【${d.id}】${d.row['客戶別']}_${d.row['專案名稱']}`,body:mailBodyHtml(d.row),sent:false})),index:0,sending:false,sentCount:0,gmailChecked:false};
       state.form=null;show('mail');loadGmailContext();
     }
     async function loadGmailContext(){
@@ -3202,7 +3204,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${(d.attachments&&d.attachments.length)?`<div class="att-list">${d.attachments.map((a,i)=>`<span class="att"><span>📎 ${esc(a.fileName)}（${fmtSize(a.size)}）</span><button type="button" data-att-del="${i}" aria-label="移除附件">×</button></span>`).join('')}</div>`:''}
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
         ${d.scheduleOpen?`<div class="schedule-row"><label>寄出時間（台北時間）<input type="datetime-local" id="mSchedule" min="${nowMin}" value="${esc(d.scheduledAt||'')}"></label>${d.editSchedId?'':'<button type="button" class="btn" data-mail="schedule-clear">取消排程</button>'}<span class="sch-note">排程信由系統保管，時間到才寄出，不會出現在 Gmail 草稿匣。</span></div>`:''}
-        <div class="form-actions">
+        <div class="form-actions mail-actions">
           <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
           ${d.editSchedId?'<button type="button" class="btn" data-mail="sched-abort">放棄修改，回已排程清單</button>':`<button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>`}
           ${d.editSchedId?'':'<button type="button" class="btn" data-mail="skip">略過，回案件列表</button>'}
@@ -4122,6 +4124,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(act==='cancel-edit'){cancelEdit();return}
       if(act==='batch'){readRowsSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,type:f.type,start:f.start,end:f.end,platforms:[...f.platforms],supp:{...f.supp},designerTouched:f.designerTouched}));if(!f.batch)f.extra=[];renderForm();return}
       if(act==='batch-add'){readRowsSafe();const f=state.form;f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,start:f.start,end:f.end}));renderForm();return}
+      if(act==='submit-schedule'){submitForm({schedule:true});return}
       if(act==='batch-copy'){readRowsSafe();const f=state.form,last=f.extra.length?f.extra[f.extra.length-1]:f;f.extra.push(copyRow(last));renderForm();toast(`已把第 ${f.extra.length} 筆的資料套用到第 ${f.extra.length+1} 筆`);return}
       const del=t.closest('[data-batch-del]');if(del){readRowsSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
       const rangeBtn=t.closest('[data-range-btn]');if(rangeBtn){const key=rangeBtn.closest('[data-row]').dataset.row;(cal.open&&cal.key===key)?closeCal():openCal(key);return}

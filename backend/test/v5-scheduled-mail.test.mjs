@@ -23,3 +23,13 @@ test('v5 case board and mail page can find, edit and cancel pending scheduled ma
   assert.match(html, /要修改或取消，請到案件列表該案件旁的「已排程」按鈕/);
   assert.match(html, /else\{finishMail\(\);if\(d\.scheduledDone\)toast\(schedMsg\)\}/);
 });
+
+test('v5 new-request form offers 送出並排程寄信, which opens the mail page with the schedule time already expanded; the mail action bar stays visible', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="submitScheduleBtn" data-act="submit-schedule"/);
+  assert.match(html, /if\(act==='submit-schedule'\)\{submitForm\(\{schedule:true\}\);return\}/);
+  assert.match(html, /startMail\(drafts,\{schedule:Boolean\(opts\.schedule\)\}\)/);
+  assert.match(html, /function startMail\(drafts,\{schedule=false\}=\{\}\)\{\s*state\.mail=\{drafts:drafts\.map\(d=>\(\{scheduleOpen:schedule,/);
+  assert.match(html, /\.page \.mail-actions\{position:sticky;bottom:0/);
+  assert.match(html, /<div class="form-actions mail-actions">/);
+});
