@@ -1579,7 +1579,9 @@ window.emcQuotes=[
         if(mu&&e.target.closest('.mm-win'))mu.dataset.armed=String(Date.now());
         if(mu){const br=document.getElementById('avatarBridge');if(br&&br.contentWindow)br.contentWindow.postMessage({type:'pixelOfficeToggleMusic',name:mu.dataset.music},location.origin);else window.open(mu.dataset.musicUrl,'_blank','noopener');return}
         if(e.target.closest('[data-universe]')){openUniverse();return}
-        const m=e.target.closest('.member[data-name]');if(m&&e.target.closest('.avatar-btn'))setOpen(m,!m.classList.contains('is-open'));
+        const m=e.target.closest('.member[data-name]');
+        /* 點頭像框直接進多元宇宙（滑鼠移上去仍會顯示名片）；沒有 hover 的觸控裝置維持原本「點一下開名片」 */
+        if(m&&e.target.closest('.avatar-btn')){if(window.matchMedia&&matchMedia('(hover:hover)').matches){openUniverse();return}setOpen(m,!m.classList.contains('is-open'))}
       });
       document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(null,false);closeUniverse()}});
     }
