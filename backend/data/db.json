@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7453,
+  "revision": 7454,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-06T02:11:46.637Z",
+  "updatedAt": "2026-10-06T02:12:18.903Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1766,7 +1766,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26100029","申請人帳號":"local:049050f9-1af6-40ca-a84e-62f778c87674","申請人":"Odin組測試人員","申請時間":"2026-10-06T02:12:18.903Z","案件摘要":"DJI_test｜Machi｜未開始"}
+      ]
     }
   },
   "internal": {
