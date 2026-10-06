@@ -5094,7 +5094,7 @@ describe('平台幣', () => {
     await seedDoneCase('26100504', 'Karl', '2026/10/07', '5');          // 不是設計師
     expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true, added: 2 });
     expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true, added: 0 });
-    expect(await api({ action: 'coinMe' }, leona)).toMatchObject({ ok: true, name: 'Leona', designer: true, balance: 5.5, spendPerGeneration: 200 });
+    expect(await api({ action: 'coinMe' }, leona)).toMatchObject({ ok: true, name: 'Leona', designer: true, balance: 5.5, spendPerGeneration: 100, spendPerRegeneration: 50 });
   });
 
   it('transfers instantly between designers, refuses overdrafts and self-transfers, and records both sides', async () => {
@@ -5114,7 +5114,7 @@ describe('平台幣', () => {
     expect(ledger.entries.find(entry => entry.kind === 'transfer_in')).toMatchObject({ holder: 'Amber', amount: 3.5, memo: '請喝飲料' });
   });
 
-  it('charges 200 per generation only for the generator service, once per generation, and refunds once', async () => {
+  it('charges 100 per generation (50 per regeneration) only for the generator service, once per generation, and refunds once', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
     const generation = uuid();
@@ -5123,17 +5123,17 @@ describe('平台幣', () => {
     expect(await api({ action: 'coinReserve', ref: generation, serviceKey: 'wrong' }, leona)).toMatchObject({ ok: false });
     // 點數不足
     expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: false });
-    await api({ action: 'coinAdjust', holder: 'Leona', amount: 450, reason: '測試補發' }, admin);
-    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, charged: 200, balance: 250 });
+    await api({ action: 'coinAdjust', holder: 'Leona', amount: 250, reason: '測試補發' }, admin);
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, charged: 100, balance: 150 });
     // 同一個生成編號重送不會再扣
-    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, balance: 250 });
-    // 同一件服裝重新生成：只扣 100 點
+    expect(await api({ action: 'coinReserve', ref: generation, serviceKey: SERVICE }, leona)).toMatchObject({ ok: true, balance: 150 });
+    // 同一件服裝這一輪不滿意重新生成：只扣 50 點
     const again = uuid();
-    expect(await api({ action: 'coinReserve', ref: again, serviceKey: SERVICE, regenerate: true }, leona)).toMatchObject({ ok: true, charged: 100, balance: 150 });
-    expect(await api({ action: 'coinRefund', ref: again, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: true, balance: 250 });
+    expect(await api({ action: 'coinReserve', ref: again, serviceKey: SERVICE, regenerate: true }, leona)).toMatchObject({ ok: true, charged: 50, balance: 100 });
+    expect(await api({ action: 'coinRefund', ref: again, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: true, balance: 150 });
     // 退回只有服務能做、而且只退一次
     expect(await api({ action: 'coinRefund', ref: generation }, leona)).toMatchObject({ ok: false });
-    expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE, reason: '被內容檢查擋下' })).toMatchObject({ ok: true, refunded: true, balance: 450 });
+    expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE, reason: '被內容檢查擋下' })).toMatchObject({ ok: true, refunded: true, balance: 250 });
     expect(await api({ action: 'coinRefund', ref: generation, serviceKey: SERVICE })).toMatchObject({ ok: true, refunded: false });
   });
 

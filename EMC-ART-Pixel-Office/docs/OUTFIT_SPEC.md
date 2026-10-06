@@ -79,7 +79,7 @@
 
 ## 7. 畫風（要跟現有六套一致）
 
-- **粗黑輪廓線**，顏色接近 `#302828`（暖黑，不是純黑），粗約 **8 px**（H 的 5%，2026-10-06 兩次加粗；內部結構線約一半粗），線條平滑、粗細一致，整件衣服都有。
+- **粗黑輪廓線**，顏色接近 `#302828`（暖黑，不是純黑），粗約 **10 px**（H 的 6%，2026-10-06 三次加粗；內部結構線約一半粗），線條平滑、粗細一致，整件衣服都有。
 - **賽璐璐上色**：每塊顏色有一層淡淡的陰影和少量高光，不要寫實的漸層、不要紋理雜訊。
 - **膚色**固定：`#F8B888`（高光 `#F8C890`，陰影 `#E8A070`）。手和脖子都用這組色。
 - 圖案和文字（例如 T 恤上的字、褲子上的星星）要**簡單、色塊分明**，不用細節到看不出來——遊戲裡只有約 80 px 高。
@@ -140,7 +140,7 @@ Proportions (relative to total body height H, from top of the neck to the sole):
 - Shoes: chunky, 15–19% of H tall, with thick soles, toes pointing forward (front), to the right (side).
 - Front/back width including arms ≈ 90–104% of H; side width ≈ 54–66% of H.
 
-Style: bold dark warm-black outline (#302828) about 5% of H thick, flat cel-shading with one soft shadow tone and small highlights, light from the upper left, no gradients, no textures. Cute chibi-like proportions identical to the reference. Simple, bold-color graphics on the clothes (no tiny details).
+Style: bold dark warm-black outline (#302828) about 6% of H thick, flat cel-shading with one soft shadow tone and small highlights, light from the upper left, no gradients, no textures. Cute chibi-like proportions identical to the reference. Simple, bold-color graphics on the clothes (no tiny details).
 
 The three views must show the SAME outfit consistently (same colors, graphics, lengths, pocket positions). The back view must show a plausible back of the garment.
 

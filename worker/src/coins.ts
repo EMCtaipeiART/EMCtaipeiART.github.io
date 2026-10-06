@@ -4,9 +4,9 @@
 
 export const COIN_START_DATE = '2026/10/01';       // 這天（含）以後結束的已完成案件才計算
 export const COIN_TENTHS = 10;                      // 1 點 = 10 個內部單位
-export const COIN_SPEND_PER_GENERATION = 200 * COIN_TENTHS;
-/** 同一件服裝（同一張製作單）不滿意重新生成：每次 100 點，完成前都算同一個執行狀態。 */
-export const COIN_SPEND_PER_REGENERATION = 100 * COIN_TENTHS;
+export const COIN_SPEND_PER_GENERATION = 100 * COIN_TENTHS;   // 一次生成（一次出三組供選）
+/** 同一件服裝（同一張製作單）這一輪不滿意重新生成（再出三組）：每次 50 點，完成前都算同一個執行狀態。 */
+export const COIN_SPEND_PER_REGENERATION = 50 * COIN_TENTHS;
 export const COIN_MAX_TRANSFER = 100_000 * COIN_TENTHS;
 
 export type CoinKind = 'earn' | 'spend' | 'refund' | 'transfer_out' | 'transfer_in' | 'adjust';
