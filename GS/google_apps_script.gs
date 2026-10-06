@@ -41,11 +41,6 @@ const SUPPLEMENT_LINK_SHEET_NAME = '補充資料連結';
 const SUPPLEMENT_LINK_HEADERS = ['案件編號', 'A', 'B', 'C', 'D', '更新時間'];
 const SUPPLEMENT_SHORT_LINK_BASE_URL = 'https://emctaipeiart.github.io';
 const SUPPLEMENT_LINK_CACHE_SECONDS = 21600;
-const SHORT_LINK_SHEET_NAME = '短連結';
-const SHORT_LINK_HEADERS = ['短碼', '原始網址', '建立時間'];
-const SHORT_LINK_CODE_LENGTH = 6;
-const SHORT_LINK_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const SHORT_LINK_CACHE_SECONDS = 21600;
 const SUPPLEMENT_LINK_SLOTS = {
   a: { key: 'briefUrl', header: '設計簡報連結' },
   b: { key: 'assetUrl', header: '客戶素材連結' },
@@ -80,7 +75,6 @@ const ERP_OAUTH_PROPERTY_KEYS = {
 const ADMIN_TABLE_CONFIG = {
   database: { sheetName: SHEET_NAME, primaryKey: '案件編號' },
   '加權計分標準': { sheetId: WEIGHTS_SHEET_ID, primaryKey: '' },
-  '短連結': { sheetName: SHORT_LINK_SHEET_NAME, primaryKey: '短碼' },
   '修改統計表': { sheetId: MODIFICATION_STATS_SHEET_ID, primaryKey: '' },
   '補充資料連結': { sheetName: SUPPLEMENT_LINK_SHEET_NAME, primaryKey: '案件編號' },
   '設定': { sheetId: SETTINGS_SHEET_ID, primaryKey: '帳號' },
@@ -430,14 +424,6 @@ function handleAction_(action, payload, params) {
 
   if (action === 'resolveSupplementLink') {
     return resolveSupplementLink_(payload);
-  }
-
-  if (action === 'createShortLink') {
-    return attachGithubJsonTableSync_(createShortLink_(payload), '短連結', action);
-  }
-
-  if (action === 'resolveShortLink') {
-    return resolveShortLink_(payload);
   }
 
   if (action === 'diagnose') {
@@ -2558,13 +2544,13 @@ function isIssueReportManagerToken_(token) {
 
 const ACCOUNT_ACCESS_JSON_URL = 'https://raw.githubusercontent.com/EMCtaipeiART/EMCtaipeiART.github.io/main/backend/data/db.json';
 const ACCOUNT_ACCESS_CACHE_KEY = 'machi-account-access-v2';
-const ACCOUNT_ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload', 'short_link'];
-const ACCOUNT_ACCESS_CAPABILITIES = ['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'short_link.create', 'archive.edit', 'database.manage'];
+const ACCOUNT_ACCESS_PAGES = ['request', 'dashboard', 'archive', 'database_admin', 'media_admin', 'avatar_upload'];
+const ACCOUNT_ACCESS_CAPABILITIES = ['request.create', 'request.edit', 'request.status', 'request.delete', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'issue.manage', 'archive.edit', 'database.manage'];
 const ACCOUNT_ACCESS_TEMPLATES = {
   '管理者': { pages: ACCOUNT_ACCESS_PAGES, capabilities: ACCOUNT_ACCESS_CAPABILITIES },
-  '設計師': { pages: ['request', 'dashboard', 'media_admin', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report', 'short_link.create'] },
-  '一般使用者': { pages: ['request', 'avatar_upload', 'short_link'], capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report', 'short_link.create'] },
-  '唯讀': { pages: ['request', 'dashboard', 'short_link'], capabilities: [] }
+  '設計師': { pages: ['request', 'dashboard', 'media_admin', 'avatar_upload'], capabilities: ['request.create', 'request.edit', 'request.status', 'request.export', 'modification.create', 'modification.confirm', 'project.create', 'designer.settings', 'profile.edit', 'media.manage', 'reel.interact', 'issue.report'] },
+  '一般使用者': { pages: ['request', 'avatar_upload'], capabilities: ['request.create', 'profile.edit', 'reel.interact', 'issue.report'] },
+  '唯讀': { pages: ['request', 'dashboard'], capabilities: [] }
 };
 
 function accountAccessList_(value) {
@@ -2589,7 +2575,7 @@ function accountAccessProfile_(token) {
   token = String(token || '').trim();
   if (isLocalAdminToken_(token)) return { account: 'local-admin', role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
   const session = readEditorSession_(token, false);
-  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request', 'short_link'], capabilities: ['request.create', 'issue.report', 'short_link.create'], explicit: false };
+  if (!session) return { account: '', role: '訪客', status: '啟用', pages: ['request'], capabilities: ['request.create', 'issue.report'], explicit: false };
   const account = normalizeLoginAccount_(session.account || ''), user = String(session.user || '').trim();
   if (user === '管理者' || user === 'Machi') return { account, role: '管理者', status: '啟用', pages: ACCOUNT_ACCESS_PAGES.slice(), capabilities: ACCOUNT_ACCESS_CAPABILITIES.slice(), explicit: true };
   const data = readAccountAccessData_();
@@ -2630,7 +2616,6 @@ function enforceActionAccess_(action, payload) {
   };
   if (direct[action]) return assertAccountCapability_(payload, direct[action], false);
   if (action === 'reportIssue') return assertAccountCapability_(payload, 'issue.report', true);
-  if (action === 'createShortLink') return assertAccountCapability_(payload, 'short_link.create', true);
   if (action === 'addModificationRecord') return assertAccountCapability_(payload, 'modification.create', true);
   if (['append', 'create', 'add', 'submit', 'save', 'batchAdd', 'batchAppend', 'addRows'].indexOf(action) >= 0) {
     if (String(payload && payload.editorToken || '').trim()) return assertAccountCapability_(payload, 'request.create', false);
@@ -2930,7 +2915,7 @@ function retryGithubJsonDatabaseBackups() {
 // （githubJsonDatabaseWriteAction_，也就是 add/batchAdd/update/batchUpdate/delete）；
 // (2) 資料庫後台（八張表管理介面）對 database 表的 adminTableUpdate_/adminTableDelete_
 // （2026-08-11 起比照填單行為，回寫 gid=1244538986 那個「案件資料」分頁）。
-// 其餘 7 張表（加權計分標準、短連結、補充資料連結、修改統計表、設定、reels、
+// 其餘 7 張表（加權計分標準、補充資料連結、修改統計表、設定、reels、
 // bug_report）以及 database 表的 adminTableInsert_（新案件一律走填單表單，見下方
 // user_directory.gs 的說明）一律不回寫試算表，JSON 才是唯一資料來源，避免後台編輯
 // （尤其是加權計分標準）意外把整張分頁覆寫回試算表。
@@ -3040,7 +3025,7 @@ function attachGithubJsonTableSync_(result, tableName, action) {
 }
 
 function syncSecondaryGithubJsonTablesNow() {
-  const tables = ['短連結', '修改統計表', '設定', 'reels', 'bug_report'];
+  const tables = ['修改統計表', '設定', 'reels', 'bug_report'];
   return {
     ok: true,
     action: 'syncSecondaryGithubJsonTablesNow',
@@ -3876,80 +3861,6 @@ function resolveSupplementLink_(payload) {
   if (!/^https?:\/\//i.test(url)) throw new Error('此補充資料沒有可用連結');
   CacheService.getScriptCache().put(cacheKey, url, SUPPLEMENT_LINK_CACHE_SECONDS);
   return { ok: true, action: 'resolveSupplementLink', id: caseId, slot, url };
-}
-
-function shortLinkSheet_() {
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-  let sheet = spreadsheet.getSheetByName(SHORT_LINK_SHEET_NAME);
-  if (!sheet) sheet = spreadsheet.insertSheet(SHORT_LINK_SHEET_NAME);
-  const currentHeaders = sheet.getRange(1, 1, 1, SHORT_LINK_HEADERS.length).getDisplayValues()[0];
-  const headersMatch = SHORT_LINK_HEADERS.every((header, index) => currentHeaders[index] === header);
-  if (!headersMatch) sheet.getRange(1, 1, 1, SHORT_LINK_HEADERS.length).setValues([SHORT_LINK_HEADERS]);
-  sheet.setFrozenRows(1);
-  return sheet;
-}
-
-function validShortLinkUrl_(value) {
-  const url = String(value || '').trim();
-  if (!/^https?:\/\/[^\s]+$/i.test(url)) throw new Error('請輸入有效的 http 或 https 網址');
-  if (url.length > 2048) throw new Error('網址長度不可超過 2048 個字元');
-  return url;
-}
-
-function randomShortLinkCode_() {
-  let code = '';
-  for (let index = 0; index < SHORT_LINK_CODE_LENGTH; index += 1) {
-    code += SHORT_LINK_CODE_CHARS.charAt(Math.floor(Math.random() * SHORT_LINK_CODE_CHARS.length));
-  }
-  return code;
-}
-
-function createShortLink_(payload) {
-  const url = validShortLinkUrl_(payload && payload.url);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try {
-    const sheet = shortLinkSheet_();
-    const lastRow = sheet.getLastRow();
-    const existingCodes = new Set(lastRow > 1
-      ? sheet.getRange(2, 1, lastRow - 1, 1).getDisplayValues().map(row => String(row[0] || '').trim())
-      : []);
-    let code = '';
-    for (let attempt = 0; attempt < 20 && !code; attempt += 1) {
-      const candidate = randomShortLinkCode_();
-      if (!existingCodes.has(candidate)) code = candidate;
-    }
-    if (!code) throw new Error('暫時無法產生短碼，請再試一次');
-    sheet.appendRow([
-      code,
-      url,
-      Utilities.formatDate(new Date(), ADMIN_LOGIN_PASSWORD_TIMEZONE, 'yyyy/MM/dd HH:mm:ss')
-    ]);
-    CacheService.getScriptCache().put('shortLink:' + code, url, SHORT_LINK_CACHE_SECONDS);
-    return { ok: true, action: 'createShortLink', code, url };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function resolveShortLink_(payload) {
-  const code = String(payload && payload.code || '').trim();
-  if (!new RegExp('^[' + SHORT_LINK_CODE_CHARS + ']{' + SHORT_LINK_CODE_LENGTH + '}$').test(code)) {
-    throw new Error('短碼格式錯誤');
-  }
-  const cacheKey = 'shortLink:' + code;
-  const cached = CacheService.getScriptCache().get(cacheKey);
-  if (cached) return { ok: true, action: 'resolveShortLink', code, url: cached };
-
-  const sheet = shortLinkSheet_();
-  const match = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1)
-    .createTextFinder(code)
-    .matchEntireCell(true)
-    .findNext();
-  if (!match) throw new Error('找不到這個短連結');
-  const url = validShortLinkUrl_(sheet.getRange(match.getRow(), 2).getDisplayValue());
-  CacheService.getScriptCache().put(cacheKey, url, SHORT_LINK_CACHE_SECONDS);
-  return { ok: true, action: 'resolveShortLink', code, url };
 }
 
 function appendRow_(row, options) {

@@ -45,7 +45,7 @@ const USER_DIRECTORY = readJsonUserDirectory_();
  * 資料庫後台新增資料列；直接提交至 GitHub JSON，不寫試算表。
  * database 有自己專屬的「填寫設計需求」新增流程，不走這裡。
  * 設定表額外要求帳號／名字／部門，並在成功後清除使用者名錄快取；
- * 其餘表（加權計分標準、短連結、補充資料連結、修改統計表、reels、bug_report）
+ * 其餘表（加權計分標準、補充資料連結、修改統計表、reels、bug_report）
  * 只依主鍵做基本檢查。
  */
 function adminTableInsert_(payload) {
