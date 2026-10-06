@@ -82,6 +82,34 @@
     .prompt select{flex:1;min-width:0;height:100%;border:0;background:transparent;font-size:16px;font-weight:700;color:#17211d;outline:none;cursor:pointer;padding:0 34px 0 46px;margin-left:-16px;border-radius:14px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b8a83' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center}
     .prompt select.is-empty{color:#8a968f;font-weight:500}
     .prompt select option{color:#17211d}
+    .prompt select.cs-native{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;padding:0;margin:0;border:0}
+    .cs-trigger{flex:1;min-width:0;height:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;font:inherit;font-size:16px;font-weight:700;color:#17211d;text-align:left;cursor:pointer;padding:0 14px 0 46px;margin-left:-16px;border-radius:14px;outline:none}
+    .cs-trigger.is-empty{color:#8a968f;font-weight:500}
+    .cs-trigger:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 25%,transparent)}
+    .cs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cs-chev{flex:0 0 auto;width:16px;height:16px;fill:none;stroke:#7b8a83;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+    .cs-trigger[aria-expanded="true"] .cs-chev{transform:rotate(180deg)}
+    .cs-pop{position:absolute;left:0;right:0;top:calc(100% + 10px);z-index:80;display:flex;flex-direction:column;max-height:min(420px,60vh);border-radius:18px;background:#fff;border:1px solid #e3e9e5;box-shadow:0 24px 54px rgba(10,30,18,.28);overflow:hidden;text-align:left;color:#17211d;animation:csIn .16s ease}
+    .cs-pop[hidden]{display:none}
+    @keyframes csIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+    .cs-search{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #edf1ee}
+    .cs-search svg{width:17px;height:17px;flex:0 0 auto;fill:none;stroke:#7b8a83;stroke-width:2;stroke-linecap:round}
+    .cs-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;font-size:15px;font-weight:600;color:inherit}
+    .cs-list{overflow-y:auto;padding:6px;display:grid;gap:2px;overscroll-behavior:contain}
+    .cs-item{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-radius:12px;background:transparent;color:inherit;font:inherit;font-size:14.5px;font-weight:700;text-align:left;cursor:pointer}
+    .cs-item .cs-ico{flex:0 0 auto;display:grid;place-items:center;width:30px;height:30px;border-radius:10px;font-size:13px;font-weight:900;color:#fff}
+    .cs-item .cs-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cs-item .cs-ck{display:none;width:16px;height:16px;fill:none;stroke:var(--brand);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+    .cs-item.is-sel .cs-ck{display:block}.cs-item.is-sel{background:#eef7f1}
+    .cs-item.on,.cs-item:hover{background:#e6f4ea}
+    .cs-item.cs-new{margin-top:4px;border-top:1px solid #edf1ee;border-radius:0 0 12px 12px;color:var(--brand-deep,#0f5138)}
+    .cs-item.cs-new .cs-ico{background:var(--brand-soft,#e6f4ea);color:var(--brand)}
+    .cs-empty{padding:22px 12px;text-align:center;color:#8a968f;font-size:13.5px;font-weight:600}
+    html[data-theme="dark"] .cs-trigger{color:#e9efec}html[data-theme="dark"] .cs-trigger.is-empty{color:#8a968f}
+    html[data-theme="dark"] .cs-pop{background:#1d2321;border-color:#2c3431;color:#e9efec;box-shadow:0 24px 54px rgba(0,0,0,.6)}
+    html[data-theme="dark"] .cs-search{border-bottom-color:#2c3431}
+    html[data-theme="dark"] .cs-item.on,html[data-theme="dark"] .cs-item:hover{background:#26302c}html[data-theme="dark"] .cs-item.is-sel{background:#1c2b22}
+    html[data-theme="dark"] .cs-item.cs-new{border-top-color:#2c3431}
     .prompt-go{flex:0 0 auto;height:46px;padding:0 22px;border:0;border-radius:14px;background:var(--brand);color:#fff;font-weight:800;font-size:15px;cursor:pointer}
     .prompt-go:hover{background:var(--brand-deep)}
     .prompt-go:disabled{opacity:.45;cursor:not-allowed}
@@ -661,7 +689,7 @@
       body{padding-bottom:64px}
       .hero{padding:44px 16px 40px}
       .prompt{height:auto;flex-wrap:wrap;padding:10px 12px}
-      .prompt select{height:46px;flex:1 1 60%}
+      .prompt select,.cs-trigger{height:46px;flex:1 1 60%}
       .prompt-go{flex:1 1 100%}
       .team{gap:18px 14px}
       .member{width:76px}
@@ -1054,11 +1082,11 @@
       .rail-badge{right:10px}
       .prompt{padding:10px 12px}
       .prompt-plus{top:33px;left:14px;width:26px;height:26px}
-      .prompt select{padding:0 34px 0 40px;margin-left:-12px;flex:1 1 100%}
+      .prompt select,.cs-trigger{padding:0 14px 0 40px;margin-left:-12px;flex:1 1 100%}
       .prompt-go{flex:1 1 100%}
       .prompt.is-stuck{left:10px;right:10px;width:auto;max-width:none;top:8px;flex-wrap:nowrap;height:56px;padding:6px 8px 6px 12px;border-radius:18px}
       .prompt.is-stuck .prompt-plus{top:50%;left:14px}
-      .prompt.is-stuck select{flex:1 1 auto;height:44px}
+      .prompt.is-stuck select,.prompt.is-stuck .cs-trigger{flex:1 1 auto;height:44px}
       .prompt.is-stuck .prompt-go{flex:0 0 auto;height:42px;padding:0 16px}
       .stick-band{height:72px}
       .toast{bottom:80px!important;max-width:calc(100vw - 24px)}
@@ -1239,7 +1267,9 @@ window.emcQuotes=[
       <div class="stick-band" id="stickBand"></div>
       <div class="prompt-slot" id="promptSlot"><form class="prompt" id="prompt">
         <svg class="prompt-plus" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        <select id="clientSelect" aria-label="選擇客戶別，開始新增設計需求" class="is-empty"><option value="">選擇客戶別，開始新增設計需求…</option></select>
+        <select id="clientSelect" class="is-empty cs-native" tabindex="-1" aria-hidden="true"><option value="">選擇客戶別，開始新增設計需求…</option></select>
+        <button type="button" class="cs-trigger is-empty" id="csTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="選擇客戶別，開始新增設計需求"><span class="cs-label" id="csLabel">選擇客戶別，開始新增設計需求…</span><svg class="cs-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="cs-pop" id="csPop" role="listbox" hidden><div class="cs-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="csSearch" type="text" placeholder="搜尋客戶別" autocomplete="off" aria-label="搜尋客戶別"></div><div class="cs-list" id="csList"></div></div>
         <button type="submit" class="prompt-go" id="promptGo" disabled>開始填寫</button>
       </form></div>
       <p class="prompt-hint" id="promptHint"></p>
@@ -4239,7 +4269,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.matches?.('[data-filter]')){const key=t.dataset.filter,set=state.filters[key];if(key!=='months'){const all=[...document.querySelectorAll('[data-filter="'+key+'"]')].map(i=>i.value);if(!set.size)all.forEach(v=>set.add(v));t.checked?set.add(t.value):set.delete(t.value);if(set.size>=all.length||!set.size)set.clear()}else{t.checked?set.add(t.value):set.delete(t.value)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.id==='clientSelect'){
         if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;}
-        t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;return;
+        t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;csSync();return;
       }
       const rowBox=t.closest?.('[data-row]');if(!rowBox||!(state.view==='form'||state.editing))return;
       const key=rowBox.dataset.row,r=rowOf(key),field=t.dataset?.f;if(!r)return;
@@ -4295,8 +4325,49 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function fillClients(){
       const select=$('clientSelect'),keep=select.value;
       select.innerHTML='<option value="">選擇客戶別，開始新增設計需求…</option>'+sortCustomers(state.customers).map(r=>String(r['客戶別']||'').trim()).filter(Boolean).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__new__">+ 新增客戶別</option>';
-      select.value=keep;select.classList.toggle('is-empty',!select.value);$('promptGo').disabled=!select.value;
+      select.value=keep;select.classList.toggle('is-empty',!select.value);$('promptGo').disabled=!select.value;csSync();
     }
+    /* 首頁客戶別選單：自訂下拉（可搜尋、有縮寫圖示），底層仍是 #clientSelect，原本的流程不變 */
+    const csHue=n=>{let h=0;for(const ch of String(n))h=(h*31+ch.charCodeAt(0))%360;return h};
+    const csState={idx:0,items:[]};
+    function csSync(){
+      const sel=$('clientSelect'),label=$('csLabel'),tr=$('csTrigger');if(!sel||!label||!tr)return;
+      const text=sel.value&&sel.value!=='__new__'?sel.value:'選擇客戶別，開始新增設計需求…';
+      label.textContent=text;tr.classList.toggle('is-empty',!sel.value||sel.value==='__new__');
+    }
+    function csRender(){
+      const sel=$('clientSelect'),list=$('csList');if(!sel||!list)return;
+      const q=norm($('csSearch').value),opts=[...sel.options].filter(o=>o.value&&o.value!=='__new__').map(o=>o.value).filter(v=>!q||norm(v).includes(q));
+      csState.items=opts;if(csState.idx>=opts.length)csState.idx=Math.max(0,opts.length-1);
+      list.innerHTML=(opts.length?opts.map((v,i)=>`<button type="button" role="option" class="cs-item${v===sel.value?' is-sel':''}${i===csState.idx?' on':''}" data-cs-v="${esc(v)}" aria-selected="${v===sel.value}"><span class="cs-ico" style="background:hsl(${csHue(v)} 52% 46%)">${esc([...v][0]||'?').toUpperCase()}</span><span class="cs-name">${esc(v)}</span><svg class="cs-ck" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>`).join(''):'<div class="cs-empty">沒有符合的客戶別</div>')
+        +([...sel.options].some(o=>o.value==='__new__')&&!q?'<button type="button" class="cs-item cs-new" data-cs-v="__new__"><span class="cs-ico">＋</span><span class="cs-name">新增客戶別</span></button>':'');
+      list.querySelector('.cs-item.on')?.scrollIntoView({block:'nearest'});
+    }
+    function csOpen(open){
+      const pop=$('csPop'),tr=$('csTrigger');if(!pop||!tr)return;
+      pop.hidden=!open;tr.setAttribute('aria-expanded',String(open));
+      if(open){const sel=$('clientSelect');$('csSearch').value='';csState.idx=Math.max(0,[...sel.options].filter(o=>o.value&&o.value!=='__new__').findIndex(o=>o.value===sel.value));csRender();setTimeout(()=>$('csSearch').focus(),30)}
+    }
+    function csPick(v){
+      const sel=$('clientSelect');csOpen(false);if(!sel||!v)return;
+      sel.value=v;sel.dispatchEvent(new Event('change',{bubbles:true}));csSync();setTimeout(csSync,400);$('csTrigger').focus();
+    }
+    document.addEventListener('click',e=>{
+      if(e.target.closest?.('#csTrigger')){csOpen($('csPop').hidden);return}
+      const it=e.target.closest?.('[data-cs-v]');if(it){csPick(it.dataset.csV);return}
+      if(!e.target.closest?.('#csPop'))csOpen(false);
+    });
+    document.addEventListener('input',e=>{if(e.target.id==='csSearch'&&!e.isComposing){csState.idx=0;csRender()}});
+    document.addEventListener('compositionend',e=>{if(e.target.id==='csSearch'){csState.idx=0;csRender()}},true);
+    document.addEventListener('keydown',e=>{
+      const pop=$('csPop');if(!pop)return;
+      if(e.target.id==='csTrigger'&&pop.hidden&&['ArrowDown','Enter',' '].includes(e.key)){e.preventDefault();csOpen(true);return}
+      if(pop.hidden||!e.target.closest?.('#csPop,#csTrigger'))return;
+      if(e.key==='Escape'){e.preventDefault();csOpen(false);$('csTrigger').focus();return}
+      if(e.isComposing)return;
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=csState.items.length;if(n){csState.idx=(csState.idx+(e.key==='ArrowDown'?1:-1)+n)%n;csRender()}return}
+      if(e.key==='Enter'){e.preventDefault();const v=csState.items[csState.idx];if(v)csPick(v)}
+    });
     /* 對話框／音樂／限時動態直接用首頁自己讀到的辦公室狀態，不用等隱藏辦公室載完（頭像圖仍由它提供） */
     function mergeOfficeIntoAvatars(data){
       try{
