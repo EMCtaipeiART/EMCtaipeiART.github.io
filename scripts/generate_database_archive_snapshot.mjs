@@ -142,6 +142,25 @@ const sourceChanged = previousSnapshot?.sources?.primaryDatabase?.rowsSha256 !==
 const rowsChanged = previousSnapshot?.rowsSha256 !== rowsSha256;
 const columnsChanged = JSON.stringify(previousSnapshot?.columns || []) !== JSON.stringify(columns);
 const dashboardDataChanged = previousSnapshot?.dashboardDataSha256 !== dashboardDataSha256;
+// 首頁頭像框的等級：只要每位設計師的累積分數，不必為了它下載整份 4 MB 的歷史快照。
+// 算法跟前台、像素辦公室相同（2023 年起、已完成案件的加權，沒加權用數量，再沒有算 1）。
+const levelYear = row => {
+  for (const key of ['開始日期', '結束日期', '填單時間', '時間標記']) { const match = String(row[key] || '').match(/(20\d{2})/); if (match) return Number(match[1]); }
+  const match = String(row['案件編號'] || '').match(/^(\d{2})/); return match ? 2000 + Number(match[1]) : 0;
+};
+const levelNumber = value => { const text = String(value ?? '').trim().replace(/,/g, ''); if (!text) return null; const number = Number(text); return Number.isFinite(number) ? number : null; };
+const levelScores = {};
+for (const row of rows) {
+  const name = String(row['設計負責人'] || '').trim().toLowerCase();
+  if (!name || String(row['狀態'] || '').trim() !== '已完成' || levelYear(row) < 2023) continue;
+  const weight = levelNumber(row['加權']), quantity = levelNumber(row['數量']);
+  levelScores[name] = (levelScores[name] || 0) + (weight !== null ? weight : quantity !== null ? quantity : 1);
+}
+const levelsJson = `${JSON.stringify({ version: 1, scores: Object.fromEntries(Object.entries(levelScores).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, Math.round(v * 1000) / 1000])) })}\n`;
+const levelsPath = resolve(dirname(OUTPUT_PATH), 'designer_levels.json');
+let previousLevels = ''; try { previousLevels = await readFile(levelsPath, 'utf8'); } catch { /* 第一次產生 */ }
+if (previousLevels !== levelsJson) await writeFile(levelsPath, levelsJson, 'utf8');
+
 if (process.env.FORCE_SNAPSHOT !== '1' && !sourceChanged && !rowsChanged && !columnsChanged && !dashboardDataChanged) {
   console.log(`database_archive JSON unchanged: ${rows.length} rows`);
   process.exit(0);
@@ -169,4 +188,5 @@ const snapshot = {
 
 await mkdir(dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, `${JSON.stringify(snapshot)}\n`, 'utf8');
+
 console.log(JSON.stringify({ ok: true, source: 'backend/data/db.json', databaseRevision: database.revision, databaseRows: databaseTable.rows.length, archiveRows: rows.length, added: addedCaseIds.length, updated: updatedCaseIds.length, removed: removedCaseIds.length, recalculatedArchiveRows }, null, 2));

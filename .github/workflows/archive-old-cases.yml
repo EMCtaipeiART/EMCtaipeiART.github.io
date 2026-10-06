@@ -54,13 +54,13 @@ jobs:
 
             summary="$(node scripts/archive_old_cases.mjs)"
             echo "$summary"
-            if git diff --quiet -- backend/data/db.json data/database_archive.json; then
+            if git diff --quiet -- backend/data/db.json data/database_archive.json data/designer_levels.json; then
               echo "Nothing to archive."
               exit 0
             fi
 
             node scripts/generate_database_archive_snapshot.mjs
-            git add backend/data/db.json data/database_archive.json
+            git add backend/data/db.json data/database_archive.json data/designer_levels.json
             git commit -m "data: move cases older than 3 months to the history database" -m "$summary"
             if git push origin HEAD:main; then
               # 用 GITHUB_TOKEN 推送不會觸發其他 workflow，手動叫「同步歷史資料庫並部署網站」那支跑一次。

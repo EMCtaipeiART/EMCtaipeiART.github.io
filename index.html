@@ -1398,6 +1398,14 @@ window.emcQuotes=[
     /** 等級分數＝2023 年起已完成案件的加權（沒加權用數量，再沒有算 1），跟像素辦公室同一套算法與資料來源。 */
     async function ensureArchive(){
       if(state.archive||state.archiveLoading)return;state.archiveLoading=true;
+      /* 等級先用上次記下的分數立刻顯示，再讀只有幾百 bytes 的 designer_levels.json 更新；讀不到才退回下載整份歷史快照。 */
+      try{const c=JSON.parse(localStorage.getItem('v5Levels')||'null');if(c&&typeof c==='object'){state.archive=Object.fromEntries(DESIGNERS.map(n=>[n,Number(c[n])||0]));renderTeam()}}catch(err){}
+      try{
+        const res=await fetch('data/designer_levels.json',{cache:'no-cache'});if(!res.ok)throw Error(res.status);
+        const scores=(await res.json()).scores||{};const totals=Object.fromEntries(DESIGNERS.map(n=>[n,Number(scores[n.toLowerCase()])||0]));
+        state.archive=totals;try{localStorage.setItem('v5Levels',JSON.stringify(totals))}catch(err){}
+        state.archiveLoading=false;renderTeam();return;
+      }catch(err){}
       try{
         const res=await fetch('data/database_archive.json',{cache:'no-cache'});const payload=await res.json();
         const totals=Object.fromEntries(DESIGNERS.map(n=>[n,0])),nameMap=Object.fromEntries(DESIGNERS.map(n=>[n.toLowerCase(),n]));
@@ -4145,7 +4153,8 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
-    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=16';document.body.appendChild(f)},1500));
+    window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
+    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=16';document.body.appendChild(f)},300));
     window.__v5=state; // 方便除錯
   })();
   </script>
