@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
-import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState } from '../src/database-coordinator';
+import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeOfflineStatus } from '../src/database-coordinator';
 import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
@@ -5189,5 +5189,23 @@ describe('Pixel Office look: custom outfits', () => {
     const bad = await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { look: { outfit: 'c:not-a-uuid' } } }) as { ok: boolean; person?: { look?: unknown } };
     expect(bad.ok).toBe(true);
     expect(bad.person?.look).toBeUndefined();
+  });
+});
+
+describe('pixel office offline status', () => {
+  const at = (iso: string) => Date.parse(`${iso}+08:00`);
+  it('a computer that just went to sleep on a weekday daytime counts as a short break, not off work', () => {
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T10:12:00'), at('2026-10-06T10:06:00'))).toBe('toilet');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T15:30:00'), at('2026-10-06T15:00:00'))).toBe('toilet');
+  });
+  it('is off work after a long silence, in the evening, on weekends, or when the computer was never on today', () => {
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T11:30:00'), at('2026-10-06T10:06:00'))).toBe('offwork');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T19:10:00'), at('2026-10-06T19:00:00'))).toBe('offwork');
+    expect(pixelOfficeOfflineStatus(at('2026-10-10T10:12:00'), at('2026-10-10T10:06:00'))).toBe('offwork');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T10:12:00'), at('2026-10-05T18:00:00'))).toBe('offwork');
+  });
+  it('keeps lunch at noon for people who were on today', () => {
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T12:20:00'), at('2026-10-06T12:00:00'))).toBe('lunch');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T12:20:00'), 0)).toBe('offwork');
   });
 });

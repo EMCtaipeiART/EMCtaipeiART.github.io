@@ -123,12 +123,16 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
  * 只有「今天開過電腦」的人才會變用餐：整天沒開機的人維持下班，否則一到 12:00 全隊都會一起
  * 變成用餐中。假日不套用，那幾天整天都是下班。
  */
-export function pixelOfficeOfflineStatus(nowMs: number, lastSeenMs = 0): 'offwork' | 'lunch' {
+export function pixelOfficeOfflineStatus(nowMs: number, lastSeenMs = 0): 'offwork' | 'lunch' | 'toilet' {
   if (!pixelOfficeIsWorkday(nowMs)) return 'offwork';
   const now = taipeiClock(nowMs);
-  if (now.hour < PIXEL_OFFICE_LUNCH_START_HOUR || now.hour >= PIXEL_OFFICE_LUNCH_END_HOUR) return 'offwork';
   const seen = Number(lastSeenMs);
-  return seen > 0 && taipeiClock(seen).date === now.date ? 'lunch' : 'offwork';
+  const seenToday = seen > 0 && taipeiClock(seen).date === now.date;
+  if (now.hour >= PIXEL_OFFICE_LUNCH_START_HOUR && now.hour < PIXEL_OFFICE_LUNCH_END_HOUR) return seenToday ? 'lunch' : 'offwork';
+  // 白天（加班時段之前）今天開過電腦、只是剛睡著或待機不到一小時：當作暫時離開座位（廁所），不是下班。
+  // 下班＝很久沒有心跳（超過一小時，或已經是晚上、或今天根本沒開過電腦）。
+  if (seenToday && now.hour >= PIXEL_OFFICE_OVERTIME_END_HOUR && now.hour < PIXEL_OFFICE_OVERTIME_START_HOUR && nowMs - seen <= PIXEL_OFFICE_AWAY_GRACE_MS) return 'toilet';
+  return 'offwork';
 }
 
 /** 這次心跳代表「人就在電腦前」嗎。沒帶 idleSeconds 的舊版爬蟲只證明電腦開著，不算——開著電腦去開會是常態。 */
