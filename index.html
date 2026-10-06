@@ -2402,7 +2402,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
     async function deleteCase(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       const final=isAdminUser();
-      if(!confirm(final?`確定刪除案件 ${id}？\n\n此動作無法復原（包含這個案件的修改紀錄）。`:`確定要刪除案件 ${id}？\n\n案件會先被隱藏，由管理者確認後才會真正刪除（管理者也可以選擇還原）。`))return;
+      if(!confirm(final?`確定刪除案件 ${id}？\n\n此動作無法復原（包含這個案件的修改紀錄）。`:`確定刪除案件 ${id}？`))return;
       if(final){
         const idx=state.rows.indexOf(row),local=state.localRows.get(id);
         if(idx>=0)state.rows.splice(idx,1);state.localRows.delete(id);refreshView();
@@ -2412,7 +2412,7 @@ if(['已完成','已取消'].includes(column.status))return byNewest(a,b);const 
       }
       state.delReq=state.delReq||[];const req={'案件編號':id,'申請人帳號':selfAccount(),'申請人':session().name||session().user||'','申請時間':new Date().toISOString(),'案件摘要':`${row['客戶別']||''}_${row['專案名稱']||''}｜${row['設計負責人']||''}｜${row['狀態']||''}`};
       state.delReq.push(req);refreshView();
-      try{const res=await api('delete',{id});if(res&&res.pending===false)state.delReq=state.delReq.filter(r=>r!==req);toast(`案件 ${id} 已隱藏，等管理者確認後才會刪除`)}
+      try{const res=await api('delete',{id});if(res&&res.pending===false)state.delReq=state.delReq.filter(r=>r!==req);toast(`案件 ${id} 已刪除`)}
       catch(err){state.delReq=state.delReq.filter(r=>r!==req);refreshView();toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再操作':`刪除失敗：${err.message}`,true)}
     }
     /* 管理者在「進度」頁審核待刪除的案件：勾選後「確定刪除」直接刪除，或「還原」讓案件重新顯示 */
