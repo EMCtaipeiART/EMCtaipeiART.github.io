@@ -28,7 +28,7 @@
   </style>
 </head>
 <body>
-  <header class="topbar"><div><h1>平台幣帳本</h1><small>完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）· 每次 AI 服裝生成 200 點 · 只新增、不修改，每筆帶簽章</small></div><div><a class="btn" href="index.html">← 返回設計需求系統</a></div></header>
+  <header class="topbar"><div><h1>平台幣帳本</h1><small>完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）· 每次 AI 服裝生成 200 點 · 只新增、不修改，每筆帶簽章</small></div><div><a class="btn" href="json_database_admin.html">← 返回資料庫後台</a></div></header>
   <main id="app"><div class="gate"><div>讀取中…</div></div></main>
   <script>
   (()=>{
@@ -47,7 +47,7 @@
     const fmt=value=>(Math.round(Number(value||0)*10)/10).toLocaleString('zh-TW',{maximumFractionDigits:1});
     const taipei=iso=>new Date(iso).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
     let state={data:null,holder:'',kind:''};
-    function gate(message){$('app').innerHTML=`<div class="gate"><div><h2>無法開啟平台幣帳本</h2><p>${esc(message)}</p><a class="btn primary" href="index.html">返回設計需求系統</a></div></div>`}
+    function gate(message){$('app').innerHTML=`<div class="gate"><div><h2>無法開啟平台幣帳本</h2><p>${esc(message)}</p><a class="btn primary" href="json_database_admin.html">返回資料庫後台</a></div></div>`}
     async function load(){
       if(!token()){gate('請先登入設計需求系統（需要管理者權限）。');return}
       try{state.data=await api('coinLedger',{holder:state.holder,kind:state.kind,limit:1000});render()}

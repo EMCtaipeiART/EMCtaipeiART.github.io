@@ -5250,7 +5250,9 @@ test('平台幣：前台左側選單有「服裝」入口（token 放在網址 #
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /\{k:'outfit',label:'服裝'/);
   assert.match(html, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/outfit#t=/);
-  assert.match(html, /\{k:'coinadmin',label:'平台幣帳'/);
+  assert.doesNotMatch(html, /coinadmin/, '平台幣帳本不放在前台');
+  const dbAdmin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
+  assert.match(dbAdmin, /href="coin_ledger_admin\.html"/, '資料庫後台要有平台幣帳本的入口');
   const admin = await readFile(new URL('../../coin_ledger_admin.html', import.meta.url), 'utf8');
   for (const action of ['coinLedger', 'coinAdjust', 'coinEarnSyncNow']) assert.ok(admin.includes(`'${action}'`), action);
   assert.match(admin, /帳本驗證/);

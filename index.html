@@ -1833,7 +1833,6 @@ window.emcQuotes=[
       {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
       {k:'archive',label:'歷史庫',title:'歷史資料庫管理',ok:()=>loggedIn()&&acc('page.archive',isAdminAcct()||isMachi0())&&acc('archive.edit',isAdminAcct()||isMachi0()),svg:'<path d="M3.5 7.5h17v3h-17zM5 10.5V19h14v-8.5M10 14h4"/>'},
-      {k:'coinadmin',label:'平台幣帳',title:'平台幣帳本（管理者）',ok:()=>loggedIn()&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5c.5-1 1.4-1.5 2.5-1.5 1.5 0 2.5.8 2.5 2s-1 1.6-2.5 2-2.5.8-2.5 2 1 2 2.5 2c1.1 0 2-.5 2.5-1.5M12 6.5V8M12 16v1.5"/>'},
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'}
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
@@ -1945,7 +1944,6 @@ window.emcQuotes=[
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
-      if(k==='coinadmin'){window.open('coin_ledger_admin.html','_blank','noopener');return}
       /* 服裝生成器在另一個網站：登入 token 放在網址 # 後面（不會送到伺服器，對方頁面收下後立刻從網址拿掉） */
       if(k==='outfit'){const t=session().token;if(!t){toast('請先登入');return}window.open('https://emc-ai-stage-classifier.machi-chen.workers.dev/outfit#t='+encodeURIComponent(t),'_blank','noopener');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
