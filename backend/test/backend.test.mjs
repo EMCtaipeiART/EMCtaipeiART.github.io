@@ -5249,7 +5249,9 @@ test('monthly archiving keeps the newest 3 months and only moves fully closed ca
 test('平台幣：前台左側選單有「服裝」入口（token 放在網址 #）、管理者有帳本頁，帳本頁只呼叫 Worker 的 coin 動作', async () => {
   const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
   assert.match(html, /\{k:'outfit',label:'服裝'/);
-  assert.match(html, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/outfit#t=/);
+  assert.match(html, /OUTFIT_ORIGIN\+'\/outfit#embed=1&theme='\+currentTheme\(\)\+'&t='\+encodeURIComponent\(t\)/, '服裝內嵌在右側，帶 token 與深淺模式');
+  assert.match(html, /\{type:'emcTheme',theme:currentTheme\(\)\}/);
+  assert.doesNotMatch(html, /window\.open\('https:\/\/emc-ai-stage-classifier/, '服裝不再另開分頁');
   assert.doesNotMatch(html, /coinadmin/, '平台幣帳本不放在前台');
   const dbAdmin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   assert.match(dbAdmin, /href="coin_ledger_admin\.html"/, '資料庫後台要有平台幣帳本的入口');
