@@ -1013,7 +1013,7 @@
     /* ---------- 手機版修正（≤720px）：底部選單可左右滑動、填寫列的 + 對齊第一行、頭像資訊卡不超出畫面 ---------- */
     @media (max-width:720px){
       html,body{max-width:100%;overflow-x:hidden}
-      .rail{justify-content:flex-start;gap:2px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;overscroll-behavior-x:contain;padding:0 6px}
+      .rail{justify-content:flex-start;gap:2px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;overscroll-behavior-x:auto;padding:0 6px}
       .rail::-webkit-scrollbar{display:none}
       .rail>*{flex:0 0 auto}
       #railExtra,#railBottom{display:contents!important}
