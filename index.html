@@ -123,19 +123,19 @@
     .nc-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
     html[data-theme="dark"] .nc-chip{background:#1c2b22;color:#cfe3d8}
     /* 液態玻璃：半透明染色＋模糊飽和（Safari／Chrome 都有）、內緣高光與折射邊（漸層疊出來）、Chromium 另外加 SVG 位移做真正的折射 */
-    .ann-bar,.ann-glass{--g-tint:rgba(255,255,255,.66);--g-rim:rgba(255,255,255,.85);--g-rim2:rgba(255,255,255,.18);--g-ink:#0f1a15;position:fixed;isolation:isolate;overflow:hidden;color:var(--g-ink);text-shadow:0 0 10px rgba(255,255,255,.85),0 0 2px rgba(255,255,255,.9);
-      background:linear-gradient(135deg,rgba(255,255,255,.8) 0%,var(--g-tint) 45%,rgba(255,255,255,.5) 100%);
-      -webkit-backdrop-filter:blur(20px) saturate(1.9) brightness(1.04);backdrop-filter:blur(20px) saturate(1.9) brightness(1.04);
+    .ann-bar,.ann-glass{--g-tint:rgba(255,255,255,.52);--g-rim:rgba(255,255,255,.85);--g-rim2:rgba(255,255,255,.18);--g-ink:#0f1a15;position:fixed;isolation:isolate;overflow:hidden;color:var(--g-ink);text-shadow:0 0 10px rgba(255,255,255,.85),0 0 2px rgba(255,255,255,.9);
+      background:linear-gradient(135deg,rgba(255,255,255,.7) 0%,var(--g-tint) 45%,rgba(255,255,255,.34) 100%);
+      -webkit-backdrop-filter:blur(34px) saturate(2.2) brightness(1.06);backdrop-filter:blur(34px) saturate(2.2) brightness(1.06);
       border:1px solid rgba(255,255,255,.55);
-      box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 1.5px 0 0 rgba(255,255,255,.35),inset -1.5px 0 0 rgba(255,255,255,.2),inset 0 0 22px rgba(255,255,255,.28),0 22px 50px rgba(8,28,18,.26),0 3px 8px rgba(8,28,18,.12)}
-    @supports (backdrop-filter:url(#annGlass)){.ann-bar,.ann-glass{backdrop-filter:url(#annGlass) blur(16px) saturate(1.9) brightness(1.04)}}
+      box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 1.5px 0 0 rgba(255,255,255,.35),inset -1.5px 0 0 rgba(255,255,255,.2),inset 0 0 28px rgba(255,255,255,.4),0 22px 50px rgba(8,28,18,.26),0 3px 8px rgba(8,28,18,.12)}
+    @supports (backdrop-filter:url(#annGlass)){.ann-bar,.ann-glass{backdrop-filter:url(#annGlass) blur(30px) saturate(2.2) brightness(1.06)}}
     .ann-bar::before,.ann-glass::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
-      background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.75),rgba(255,255,255,0) 52%),radial-gradient(90% 70% at 100% 130%,rgba(120,210,160,.28),rgba(120,210,160,0) 60%)}
+      background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.9),rgba(255,255,255,0) 55%),radial-gradient(90% 70% at 100% 130%,rgba(120,210,160,.4),rgba(120,210,160,0) 60%)}
     .ann-bar::after,.ann-glass::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;padding:1.5px;
       background:conic-gradient(from 210deg,rgba(255,255,255,.95),rgba(255,255,255,.05) 22%,rgba(255,255,255,.7) 48%,rgba(255,255,255,.05) 72%,rgba(255,255,255,.95));
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
-    html[data-theme="dark"] .ann-bar,html[data-theme="dark"] .ann-glass{text-shadow:0 0 10px rgba(0,0,0,.7);--g-tint:rgba(34,46,41,.68);--g-rim:rgba(255,255,255,.34);--g-rim2:rgba(255,255,255,.07);--g-ink:#eef4f1;border-color:rgba(255,255,255,.16);
-      background:linear-gradient(135deg,rgba(78,96,88,.78) 0%,var(--g-tint) 45%,rgba(18,26,22,.58) 100%);box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 0 0 22px rgba(255,255,255,.05),0 22px 50px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.3)}
+    html[data-theme="dark"] .ann-bar,html[data-theme="dark"] .ann-glass{text-shadow:0 0 10px rgba(0,0,0,.7);--g-tint:rgba(34,46,41,.52);--g-rim:rgba(255,255,255,.34);--g-rim2:rgba(255,255,255,.07);--g-ink:#eef4f1;border-color:rgba(255,255,255,.16);
+      background:linear-gradient(135deg,rgba(78,96,88,.66) 0%,var(--g-tint) 45%,rgba(18,26,22,.44) 100%);box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 0 0 22px rgba(255,255,255,.05),0 22px 50px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.3)}
     html[data-theme="dark"] .ann-bar::before,html[data-theme="dark"] .ann-glass::before{background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.22),rgba(255,255,255,0) 52%),radial-gradient(90% 70% at 100% 130%,rgba(80,170,120,.22),rgba(80,170,120,0) 60%)}
     html[data-theme="dark"] .ann-bar::after,html[data-theme="dark"] .ann-glass::after{background:conic-gradient(from 210deg,rgba(255,255,255,.5),rgba(255,255,255,.04) 22%,rgba(255,255,255,.34) 48%,rgba(255,255,255,.04) 72%,rgba(255,255,255,.5))}
     .ann-bar{left:50%;bottom:26px;transform:translateX(-50%);z-index:150;display:flex;align-items:center;gap:14px;width:min(640px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px 12px 18px;border-radius:26px;animation:annIn .35s cubic-bezier(.2,.9,.3,1.2)}
