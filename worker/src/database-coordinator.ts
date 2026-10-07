@@ -1790,6 +1790,76 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { names: femasOnLeave(leaves, nowMs), ok: !error, events: leaves.length, ...(error ? { error } : {}) };
   }
 
+  /** 設計部行事曆：五位設計師的 Google 行事曆（用同一個授權帳號讀）＋人資系統假單，供前台「行事曆」頁顯示。 */
+  private designCalendarCache = new Map<string, { at: number; data: Row }>();
+  private async designCalendar(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const department = text(settingsRow(database, current.account || current.user)?.['部門']);
+    if (department !== '設計部' && !isManager(database, current)) throw new Error('行事曆僅限設計部人員使用');
+    const from = text(payload.from), to = text(payload.to);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) throw new Error('日期格式錯誤');
+    const timeMin = `${from}T00:00:00+08:00`, timeMax = `${to}T23:59:59+08:00`;
+    const minMs = Date.parse(timeMin), maxMs = Date.parse(timeMax);
+    if (!(maxMs > minMs) || maxMs - minMs > 70 * 86_400_000) throw new Error('日期範圍不正確（最多 70 天）');
+    const key = `${from}|${to}`;
+    const hit = this.designCalendarCache.get(key);
+    if (hit && Date.now() - hit.at < 120_000) return hit.data as ApiResult;
+    const events: Row[] = [];
+    const unreadable: string[] = [];
+    let accessToken = '';
+    try { accessToken = await this.getValidGmailAccessToken(PIXEL_OFFICE_CALENDAR_ACCOUNT); } catch { accessToken = ''; }
+    const toMs = (value: Row | undefined): number => {
+      const v = value || {};
+      return text(v.dateTime) ? Date.parse(text(v.dateTime)) : (text(v.date) ? Date.parse(`${text(v.date)}T00:00:00+08:00`) : NaN);
+    };
+    if (accessToken) {
+      await Promise.all(Object.entries(PIXEL_OFFICE_CALENDARS).map(async ([name, email]) => {
+        try {
+          const params = new URLSearchParams({
+            timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250', timeZone: 'Asia/Taipei',
+            fields: 'items(id,status,summary,eventType,visibility,start,end,transparency,attendees(self,responseStatus))'
+          });
+          const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
+            headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
+          });
+          const data = await response.json().catch(() => ({})) as Row;
+          if (!response.ok) { unreadable.push(name); return; }
+          for (const item of (Array.isArray(data.items) ? data.items : []) as Row[]) {
+            if (text(item.status) === 'cancelled' || text(item.eventType) === 'workingLocation') continue;
+            const attendees = (Array.isArray(item.attendees) ? item.attendees : []) as Row[];
+            if (attendees.some(a => a.self === true && text(a.responseStatus) === 'declined')) continue;
+            const start = toMs(item.start as Row), end = toMs(item.end as Row);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+            const title = text(item.summary) || (text(item.visibility) === 'private' ? '忙碌' : '（無標題）');
+            const leave = text(item.eventType) === 'outOfOffice' || /休假|特休|請假|病假|事假|補休|出差|OOO|Out of office/i.test(title);
+            events.push({ who: name, title, start, end, allDay: Boolean((item.start as Row | undefined)?.date), kind: leave ? 'leave' : 'event', free: text(item.transparency) === 'transparent', src: 'google' });
+          }
+        } catch { unreadable.push(name); }
+      }));
+    } else {
+      unreadable.push(...Object.keys(PIXEL_OFFICE_CALENDARS));
+    }
+    // 人資系統假單：同一個人同一段時間，Google 上也有休假事件就只留人資這一筆。
+    let femasOk = false;
+    try {
+      const femas = await this.femasLeaveNow(Date.now());
+      femasOk = femas.ok;
+      const stored = await this.ctx.storage.get<{ at: number; leaves: FemasLeave[] }>('femasLeaves');
+      for (const leave of stored?.leaves || []) {
+        if (leave.end <= minMs || leave.start >= maxMs) continue;
+        for (let i = events.length - 1; i >= 0; i -= 1) {
+          if (events[i].kind === 'leave' && events[i].who === leave.who && Number(events[i].end) > leave.start && Number(events[i].start) < leave.end) events.splice(i, 1);
+        }
+        events.push({ who: leave.who, title: '休假（人資系統）', start: leave.start, end: leave.end, allDay: false, kind: 'leave', free: false, src: 'femas' });
+      }
+    } catch { /* 人資系統讀不到就只顯示 Google 行事曆 */ }
+    events.sort((a, b) => Number(a.start) - Number(b.start) || text(a.who).localeCompare(text(b.who)));
+    const data = { ok: true, action: 'designCalendar', from, to, designers: Object.keys(PIXEL_OFFICE_CALENDARS), events, unreadable, femas: femasOk } as ApiResult;
+    this.designCalendarCache.set(key, { at: Date.now(), data });
+    if (this.designCalendarCache.size > 12) this.designCalendarCache.delete(this.designCalendarCache.keys().next().value as string);
+    return data;
+  }
+
   private async pixelOfficeCalendarStatus(payload: ApiPayload): Promise<ApiResult> {
     const apiKey = text(payload.serviceKey || payload.apiKey);
     const authorized = Boolean(apiKey && this.env.NAS_WATCHER_API_KEY) && await secureEqual(apiKey, this.env.NAS_WATCHER_API_KEY);
@@ -3904,6 +3974,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         for (const socket of this.ctx.getWebSockets()) { try { socket.send(message); sent += 1; } catch { /* 已失效 */ } }
         return { ok: true, action: 'forceReload', sent, release };
       }
+      if (action === 'designCalendar') return await this.designCalendar(payload, database, session);
       if (action === 'coinAdjust') return await this.coinAdjust(payload, database, session);
       if (action === 'coinEarnSyncNow') { requireCapability(database, session, 'database.manage'); return { ok: true, ...(await this.runCoinEarnSync()), action }; }
       if (action === 'ping') return { ok: true, action, version: VERSION, storage: 'cloudflare-worker-github-json', revision: database.revision, message: 'connected' };

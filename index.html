@@ -154,6 +154,34 @@
     .ann-body{max-height:min(62vh,520px);overflow:auto;padding:4px 22px 6px;line-height:1.75;font-size:14.5px}
     .ann-body h1,.ann-body h2,.ann-body h3{margin:16px 0 6px;font-size:16px}.ann-body h1{font-size:19px}.ann-body p{margin:6px 0}.ann-body ul{margin:6px 0;padding-left:22px}
     @media(max-width:720px){.ann-bar{bottom:84px;flex-wrap:wrap;gap:10px}.ann-txt{flex:1 1 60%}}
+    /* 設計部行事曆頁 */
+    .dc-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:6px 0 12px}
+    .dc-top h3{margin:0 8px 0 4px;font-size:20px}
+    .dc-nav{display:inline-flex;gap:6px}.dc-nav .btn{height:38px;padding:0 14px}
+    .dc-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+    .dc-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+    .dc-chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+    .dc-chip.off{opacity:.45}.dc-chip.off i{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}
+    .dc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel)}
+    .dc-dow{padding:9px 6px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--line)}
+    .dc-day{position:relative;min-height:112px;padding:6px 6px 4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left;font:inherit;color:var(--ink);background:transparent;cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+    .dc-day:nth-child(7n+14){border-right:0}
+    .dc-day.out{opacity:.45}.dc-day.off{background:color-mix(in srgb,var(--bg) 70%,transparent)}
+    .dc-day.today .dc-n{background:var(--brand);color:#fff}
+    .dc-day.sel{box-shadow:inset 0 0 0 2px var(--brand)}
+    .dc-day:hover{background:color-mix(in srgb,var(--brand) 6%,transparent)}
+    .dc-n{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 5px;border-radius:12px;font-size:13px;font-weight:800;width:max-content}
+    .dc-hol{font-size:11px;font-weight:800;color:#d64550;margin-left:4px}
+    .dc-ev{display:block;width:100%;box-sizing:border-box;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--c) 22%,var(--panel));color:var(--ink);border-left:3px solid var(--c);font-size:11.5px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .dc-ev.leave{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 26%,var(--panel)) 0 6px,color-mix(in srgb,var(--c) 10%,var(--panel)) 6px 12px)}
+    .dc-more{font-size:11px;font-weight:800;color:var(--muted);padding-left:4px}
+    .dc-detail{margin-top:14px;padding:16px 18px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+    .dc-detail h4{margin:0 0 10px;font-size:16px}
+    .dc-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line)}.dc-row:first-of-type{border-top:0}
+    .dc-row .dc-dot{flex:0 0 auto;width:10px;height:10px;margin-top:6px;border-radius:50%;background:var(--c)}
+    .dc-row b{font-size:14px}.dc-row small{display:block;color:var(--muted);font-weight:700;font-size:12.5px}
+    .dc-note{margin:10px 2px 0;font-size:12.5px;font-weight:700;color:var(--muted)}
+    @media(max-width:720px){.dc-day{min-height:62px;padding:4px 3px}.dc-ev{font-size:0;height:6px;padding:0;border-left:0;border-radius:3px;margin-top:1px}.dc-ev.leave{height:6px}.dc-hol{display:none}.dc-more{font-size:10px}}
     .cs-empty{padding:22px 12px;text-align:center;color:#8a968f;font-size:13.5px;font-weight:600}
     html[data-theme="dark"] .cs-trigger{color:#e9efec}html[data-theme="dark"] .cs-trigger.is-empty{color:#8a968f}
     html[data-theme="dark"] .cs-pop{background:#1d2321;border-color:#2c3431;color:#e9efec;box-shadow:0 24px 54px rgba(0,0,0,.6)}
@@ -2005,6 +2033,7 @@ window.emcQuotes=[
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
+      {k:'calendar',label:'行事曆',title:'設計部行事曆',ok:()=>dcAllowed(),svg:'<rect x="3.5" y="5" width="17" height="15" rx="2.4"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'},
       {k:'wall',label:'作品牆',title:'作品牆',ok:()=>loggedIn(),svg:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn(),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
       {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn()&&outfitAllowed(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
@@ -2013,7 +2042,7 @@ window.emcQuotes=[
       {k:'dbadmin',label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'},
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
@@ -2127,6 +2156,7 @@ window.emcQuotes=[
     function openExt(k){
       if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;if(window.__relBusy)return;window.__relBusy=true;setTimeout(()=>{window.__relBusy=false},30000);api('forceReload').then(r=>{if(r.throttled){toast('剛剛已經發布過更新了，請 30 秒後再按');return}toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}
       if(k==='owner'){openOwner();return}
+      if(k==='calendar'){state.form=null;state.mail=null;state.editing=false;closeCal();show('calendar');return}
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
@@ -2138,12 +2168,12 @@ window.emcQuotes=[
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){const pv=state.view;if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
+      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='calendar');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
-      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='calendar'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
 
@@ -4226,6 +4256,53 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('storage',e=>{if(e.key==='v5LoginDone'||e.key==='designRequestEditorToken')afterLogin()});
 
     /* ---------- 新增客戶別（跟現行系統同一個用法：輸入名稱，Worker 建立） ---------- */
+    /* ---------- 設計部行事曆 ---------- */
+    const DC_COLORS={Machi:'#3f9b53',Anna:'#e0719a',Amber:'#e5a13a',Leona:'#8a6fd6',Noise:'#3d8fd6'};
+    const dcColor=n=>DC_COLORS[n]||'#7b8a83';
+    const dcCal=state.cal={y:0,m:0,sel:'',hidden:new Set(),cache:new Map(),loading:false,error:''};
+    const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());
+    const dcPad=n=>String(n).padStart(2,'0');
+    const dcKey=ms=>{const d=new Date(ms);return `${d.getUTCFullYear()}-${dcPad(d.getUTCMonth()+1)}-${dcPad(d.getUTCDate())}`};
+    const dcTime=ms=>{const d=new Date(ms+8*3600000);return `${dcPad(d.getUTCHours())}:${dcPad(d.getUTCMinutes())}`};
+    function dcRange(){const first=Date.UTC(dcCal.y,dcCal.m,1),start=first-new Date(first).getUTCDay()*DAY,last=Date.UTC(dcCal.y,dcCal.m+1,0),end=last+(6-new Date(last).getUTCDay())*DAY;return {start,end}}
+    function dcEventsOn(dayMs){const a=dayMs-8*3600000,b=a+DAY,data=dcCal.cache.get(dcRangeKey())?.data;if(!data)return [];return data.events.filter(e=>!dcCal.hidden.has(e.who)&&e.end>a&&e.start<b&&(e.end>e.start||e.start>=a))}
+    const dcRangeKey=()=>{const r=dcRange();return `${dcKey(r.start)}|${dcKey(r.end)}`};
+    async function dcLoad(force){
+      const r=dcRange(),key=dcRangeKey(),hit=dcCal.cache.get(key);
+      if(hit&&!force&&Date.now()-hit.at<120000)return;
+      dcCal.loading=true;dcCal.error='';renderCalendarPage();
+      try{const data=await api('designCalendar',{from:dcKey(r.start),to:dcKey(r.end)});dcCal.cache.set(key,{at:Date.now(),data})}
+      catch(err){dcCal.error=err.message||'行事曆讀取失敗'}
+      dcCal.loading=false;if(state.view==='calendar')renderCalendarPage();
+    }
+    function renderCalendarPage(){
+      if(!dcAllowed()){$('stage').innerHTML='<div class="page"><h2 class="page-title">行事曆</h2><p class="page-sub">行事曆僅限設計部人員使用，請先登入。</p></div>';return}
+      if(!dcCal.y){const t=taipeiToday(),d=new Date(t);dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(t)}
+      const today=dcKey(taipeiToday()),r=dcRange(),data=dcCal.cache.get(dcRangeKey())?.data;
+      const names=data?.designers||Object.keys(DC_COLORS);
+      let cells='';for(const w of ['日','一','二','三','四','五','六'])cells+=`<div class="dc-dow">${w}</div>`;
+      for(let ms=r.start;ms<=r.end;ms+=DAY){
+        const k=dcKey(ms),d=new Date(ms),inMonth=d.getUTCMonth()===dcCal.m,wd=d.getUTCDay(),hn=TL_HOLIDAYS.get(k),evs=dcEventsOn(ms),shown=evs.slice(0,3);
+        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}" style="--c:${dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${esc(e.who)} ${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
+      }
+      const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
+      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='leave'?'休假・':''}${e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
+      const warn=[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
+      $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
+        <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
+        <div class="dc-legend">${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
+        <div class="dc-grid">${cells}</div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}</div>`;
+    }
+    document.addEventListener('click',e=>{
+      if(state.view!=='calendar')return;
+      const day=e.target.closest?.('[data-dc-day]'),who=e.target.closest?.('[data-dc-who]'),act=e.target.closest?.('[data-dc]')?.dataset.dc;
+      if(day){dcCal.sel=day.dataset.dcDay;renderCalendarPage();return}
+      if(who){const n=who.dataset.dcWho;dcCal.hidden.has(n)?dcCal.hidden.delete(n):dcCal.hidden.add(n);renderCalendarPage();return}
+      if(!act)return;
+      if(act==='prev'||act==='next'){const d=new Date(Date.UTC(dcCal.y,dcCal.m+(act==='next'?1:-1),1));dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(d.getTime());dcLoad(false);return}
+      if(act==='today'){const t=taipeiToday(),d=new Date(t);dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(t);dcLoad(false);return}
+      if(act==='refresh')dcLoad(true);
+    });
     /* ---------- 系統公告：首頁下方圓角提示條；按「查看內容」或「關閉」都寫入查看紀錄，之後不再顯示 ---------- */
     const annDate=v=>{const m=String(v??'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/);return m?m[1]+m[2].padStart(2,'0')+m[3].padStart(2,'0'):''};
     const annVer=v=>{const m=String(v??'').match(/(\d+)(?:\.(\d+))?/);return m?[Number(m[1]),m[2]?Number('0.'+m[2]):0]:[0,0]};
