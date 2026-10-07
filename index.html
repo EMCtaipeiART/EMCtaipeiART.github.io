@@ -158,6 +158,7 @@
     .dc-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:6px 0 12px}
     .dc-top h3{margin:0 8px 0 4px;font-size:20px}
     .dc-nav{display:inline-flex;gap:6px}.dc-nav .btn{height:38px;padding:0 14px}
+    .dc-mode{display:inline-flex;gap:6px;margin-right:6px;padding-right:12px;border-right:1px solid var(--line)}
     .dc-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
     .dc-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
     .dc-chip i{width:10px;height:10px;border-radius:50%;background:var(--c)}
@@ -174,6 +175,7 @@
     .dc-hol{font-size:11px;font-weight:800;color:#d64550;margin-left:4px}
     .dc-ev{display:block;width:100%;box-sizing:border-box;padding:1px 6px;border-radius:6px;background:color-mix(in srgb,var(--c) 22%,var(--panel));color:var(--ink);border-left:3px solid var(--c);font-size:11.5px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .dc-ev.leave{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 26%,var(--panel)) 0 6px,color-mix(in srgb,var(--c) 10%,var(--panel)) 6px 12px)}
+    .dc-ev.done{opacity:.5;text-decoration:line-through}
     .dc-more{font-size:11px;font-weight:800;color:var(--muted);padding-left:4px}
     .dc-detail{margin-top:14px;padding:16px 18px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
     .dc-detail h4{margin:0 0 10px;font-size:16px}
@@ -4259,17 +4261,27 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 設計部行事曆 ---------- */
     const DC_COLORS={Machi:'#3f9b53',Anna:'#e0719a',Amber:'#e5a13a',Leona:'#8a6fd6',Noise:'#3d8fd6'};
     const dcColor=n=>DC_COLORS[n]||'#7b8a83';
-    const dcCal=state.cal={y:0,m:0,sel:'',hidden:new Set(),cache:new Map(),loading:false,error:''};
+    const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',hidden:new Set(),cache:new Map(),loading:false,error:''};
     const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());
     const dcPad=n=>String(n).padStart(2,'0');
     const dcKey=ms=>{const d=new Date(ms);return `${d.getUTCFullYear()}-${dcPad(d.getUTCMonth()+1)}-${dcPad(d.getUTCDate())}`};
     const dcTime=ms=>{const d=new Date(ms+8*3600000);return `${dcPad(d.getUTCHours())}:${dcPad(d.getUTCMinutes())}`};
     function dcRange(){const first=Date.UTC(dcCal.y,dcCal.m,1),start=first-new Date(first).getUTCDay()*DAY,last=Date.UTC(dcCal.y,dcCal.m+1,0),end=last+(6-new Date(last).getUTCDay())*DAY;return {start,end}}
-    function dcEventsOn(dayMs){const a=dayMs-8*3600000,b=a+DAY,data=dcCal.cache.get(dcRangeKey())?.data;if(!data)return [];return data.events.filter(e=>!dcCal.hidden.has(e.who)&&e.end>a&&e.start<b&&(e.end>e.start||e.start>=a))}
+    function dcDeadlinesOn(dayMs){
+      const key=dcKey(dayMs),names=Object.keys(DC_COLORS),out=[];
+      for(const r of allRowsRaw()){
+        if(dcKey(parseDay(r['結束日期']))!==key)continue;
+        const who=names.filter(n=>String(r['設計負責人']||'').split(/[,，、;；\s]+/).some(x=>norm(x)===norm(n)));
+        for(const w of who){if(dcCal.hidden.has(w))continue;const st=String(r['狀態']||'').trim();out.push({who:w,title:`${idKey(r)} ${String(r['客戶別']||'').trim()}｜${String(r['專案名稱']||'').trim()}`,status:st,done:st==='已完成'||st==='暫停中',kind:'due',allDay:true,start:0,end:0})}
+      }
+      return out.sort((a,b)=>Number(a.done)-Number(b.done)||a.who.localeCompare(b.who));
+    }
+    function dcEventsOn(dayMs){if(dcCal.mode==='due')return dcDeadlinesOn(dayMs);const a=dayMs-8*3600000,b=a+DAY,data=dcCal.cache.get(dcRangeKey())?.data;if(!data)return [];return data.events.filter(e=>!dcCal.hidden.has(e.who)&&e.end>a&&e.start<b&&(e.end>e.start||e.start>=a))}
     const dcRangeKey=()=>{const r=dcRange();return `${dcKey(r.start)}|${dcKey(r.end)}`};
     async function dcLoad(force){
       const r=dcRange(),key=dcRangeKey(),hit=dcCal.cache.get(key);
-      if(hit&&!force&&Date.now()-hit.at<120000)return;
+      if(dcCal.mode==='due'){renderCalendarPage();return}
+      if(hit&&!force&&Date.now()-hit.at<120000){renderCalendarPage();return}
       dcCal.loading=true;dcCal.error='';renderCalendarPage();
       try{const data=await api('designCalendar',{from:dcKey(r.start),to:dcKey(r.end)});dcCal.cache.set(key,{at:Date.now(),data})}
       catch(err){dcCal.error=err.message||'行事曆讀取失敗'}
@@ -4283,24 +4295,25 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let cells='';for(const w of ['日','一','二','三','四','五','六'])cells+=`<div class="dc-dow">${w}</div>`;
       for(let ms=r.start;ms<=r.end;ms+=DAY){
         const k=dcKey(ms),d=new Date(ms),inMonth=d.getUTCMonth()===dcCal.m,wd=d.getUTCDay(),hn=TL_HOLIDAYS.get(k),evs=dcEventsOn(ms),shown=evs.slice(0,3);
-        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}" style="--c:${dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${esc(e.who)} ${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
+        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.done?' done':''}" style="--c:${dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.kind==='due'?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
       }
       const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
-      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='leave'?'休假・':''}${e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
-      const warn=[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
+      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`案件交期・${esc(e.status||'未開始')}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
+      const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
       $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
         <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
-        <div class="dc-legend">${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
+        <div class="dc-legend"><span class="dc-mode" role="radiogroup" aria-label="顯示內容"><button type="button" class="dc-chip${dcCal.mode==='cal'?'':' off'}" style="--c:var(--brand)" data-dc-mode="cal"><i></i>行程與請假</button><button type="button" class="dc-chip${dcCal.mode==='due'?'':' off'}" style="--c:#d64550" data-dc-mode="due"><i></i>案件交期</button></span>${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
         <div class="dc-grid">${cells}</div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}</div>`;
     }
     document.addEventListener('click',e=>{
       if(state.view!=='calendar')return;
       const day=e.target.closest?.('[data-dc-day]'),who=e.target.closest?.('[data-dc-who]'),act=e.target.closest?.('[data-dc]')?.dataset.dc;
       if(day){dcCal.sel=day.dataset.dcDay;renderCalendarPage();return}
+      const mode=e.target.closest?.('[data-dc-mode]');if(mode){dcCal.mode=mode.dataset.dcMode;renderCalendarPage();if(dcCal.mode==='cal')dcLoad(false);return}
       if(who){const n=who.dataset.dcWho;dcCal.hidden.has(n)?dcCal.hidden.delete(n):dcCal.hidden.add(n);renderCalendarPage();return}
       if(!act)return;
       if(act==='prev'||act==='next'){const d=new Date(Date.UTC(dcCal.y,dcCal.m+(act==='next'?1:-1),1));dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(d.getTime());dcLoad(false);return}
-      if(act==='today'){const t=taipeiToday(),d=new Date(t);dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(t);dcLoad(false);return}
+      if(act==='today'){const t=taipeiToday(),d=new Date(t);dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(t);dcLoad(false);setTimeout(()=>document.querySelector('.dc-day.today')?.scrollIntoView({block:'center',behavior:'smooth'}),60);return}
       if(act==='refresh')dcLoad(true);
     });
     /* ---------- 系統公告：首頁下方圓角提示條；按「查看內容」或「關閉」都寫入查看紀錄，之後不再顯示 ---------- */
