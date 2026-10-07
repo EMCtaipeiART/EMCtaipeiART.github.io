@@ -1817,7 +1817,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         try {
           const params = new URLSearchParams({
             timeMin, timeMax, singleEvents: 'true', orderBy: 'startTime', maxResults: '250', timeZone: 'Asia/Taipei',
-            fields: 'items(id,status,summary,eventType,visibility,start,end,transparency,attendees(self,responseStatus))'
+            fields: 'items(id,status,summary,eventType,visibility,start,end,transparency,organizer(email),attendees(self,responseStatus))'
           });
           const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(email)}/events?${params.toString()}`, {
             headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' }
@@ -1832,6 +1832,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
             const title = text(item.summary) || (text(item.visibility) === 'private' ? '忙碌' : '（無標題）');
             const leave = text(item.eventType) === 'outOfOffice' || /休假|特休|請假|病假|事假|補休|出差|OOO|Out of office/i.test(title);
+            // 別人建立、只是把這個人 tag 進去的休假通知（例如 Leona 建了「Leona休假」並邀請 Machi）不算他的休假，不要顯示在他身上；
+            // 只有建立者本人、或標題點名這份行事曆主人的才算。休假者自己的行事曆本來就有這筆。
+            if (leave && text(item.eventType) !== 'outOfOffice') {
+              const organizerEmail = text((item.organizer as Row | undefined)?.email).toLowerCase();
+              const namesOwner = text(item.summary).toLowerCase().includes(name.toLowerCase()) || text(item.summary).toLowerCase().includes(email.split('@')[0].toLowerCase());
+              if (organizerEmail !== email.toLowerCase() && !namesOwner) continue;
+            }
             events.push({ who: name, title, start, end, allDay: Boolean((item.start as Row | undefined)?.date), kind: leave ? 'leave' : 'event', free: text(item.transparency) === 'transparent', src: 'google' });
           }
         } catch { unreadable.push(name); }
