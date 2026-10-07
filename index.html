@@ -165,7 +165,8 @@
     .dc-chip.off{opacity:.45}.dc-chip.off i{background:transparent;box-shadow:inset 0 0 0 2px var(--c)}
     .dc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel)}
     .dc-dow{padding:9px 6px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--line)}
-    .dc-day{position:relative;min-height:112px;padding:6px 6px 4px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:left;font:inherit;color:var(--ink);background:transparent;cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+    .dc-chip,.dc-ev{appearance:none;-webkit-appearance:none}
+    .dc-day{position:relative;min-height:112px;padding:6px 6px 4px;margin:0;appearance:none;-webkit-appearance:none;border:0 solid var(--line);border-right-width:1px;border-bottom-width:1px;border-radius:0;text-align:left;font:inherit;color:var(--ink);background:transparent;cursor:pointer;display:flex;flex-direction:column;gap:3px;overflow:hidden}
     .dc-day:nth-child(7n+14){border-right:0}
     .dc-day.out{opacity:.45}.dc-day.off{background:color-mix(in srgb,var(--bg) 70%,transparent)}
     .dc-day.today .dc-n{background:var(--brand);color:#fff}
@@ -2148,7 +2149,7 @@ window.emcQuotes=[
     updateThemeBtn();
     /* 服裝生成器（另一個網站）內嵌在右側：登入 token 與目前的深淺模式放在網址 # 後面（不會送到伺服器），之後切換深淺模式用 postMessage 同步 */
     /* 服裝生成器只開放設計部同仁（平台幣也只發給設計師） */
-    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||String(sessionDept()||'').trim()==='設計部');
+    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||String(sessionDept()||'').trim()==='設計部'||isAdminAcct());
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
@@ -2164,7 +2165,7 @@ window.emcQuotes=[
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       /* 服裝生成器在另一個網站：登入 token 放在網址 # 後面（不會送到伺服器，對方頁面收下後立刻從網址拿掉） */
-      if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部同仁使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
+      if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部同仁與管理者使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
