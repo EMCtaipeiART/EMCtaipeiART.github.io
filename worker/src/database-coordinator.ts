@@ -3894,6 +3894,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'coinLedger') return await this.coinLedger(payload, database, session);
       if (action === 'forceReload') {
         requireCapability(database, session, 'database.manage');
+        const last = Number(await this.ctx.storage.get('appRelease')) || 0;
+        // 連按保護：30 秒內已經發布過就不再發布，避免大家被連續重整好幾次。
+        if (Date.now() - last < 30000) return { ok: true, action: 'forceReload', sent: 0, release: last, throttled: true };
         const release = Date.now();
         await this.ctx.storage.put('appRelease', release);
         const message = JSON.stringify({ type: 'reload', rel: release });
