@@ -4194,13 +4194,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 新增客戶別（跟現行系統同一個用法：輸入名稱，Worker 建立） ---------- */
     function newCustomerDialog(){
       return new Promise(resolve=>{
-        const me=state.settings.find(r=>norm(r['帳號'])===norm(selfAccount())),dept=String(me?.['部門']||sessionDept()||'').trim(),grp=String(me?.['組別']||'').trim();
-        const units=['設計部','企劃部'];if(/專案/.test(dept)&&grp)units.push(`${grp}（你的專案組別）`);
-        const ck='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
         const back=document.createElement('div');back.className='nc-back';
         back.innerHTML=`<form class="nc-card" role="dialog" aria-modal="true" aria-label="新增客戶別"><div class="nc-head"><span class="nc-ico">＋</span><div><h3>新增客戶別</h3><p>建立後就能直接用它填寫設計需求</p></div></div>
-          <div class="nc-body"><label for="ncName">客戶別名稱</label><input class="nc-input" id="ncName" maxlength="40" autocomplete="off" placeholder="例如：品牌名稱（最多 40 字）"><div class="nc-err" id="ncErr" role="alert"></div>
-          <div class="nc-perm"><b>預設有權限的人員</b><div class="nc-chips">${units.map(u=>`<span class="nc-chip">${ck}${esc(u)}${/組/.test(u)?'':'全員'}</span>`).join('')}</div><small>之後可在「個人設定 › 客戶設定」調整權限與預設信箱。</small></div></div>
+          <div class="nc-body"><label for="ncName">客戶別名稱</label><input class="nc-input" id="ncName" maxlength="40" autocomplete="off" placeholder="例如：品牌名稱（最多 40 字）"><div class="nc-err" id="ncErr" role="alert"></div></div>
           <div class="nc-foot"><button type="button" class="btn" data-nc="cancel">取消</button><button type="submit" class="btn primary" data-nc="ok">建立客戶別</button></div></form>`;
         document.body.appendChild(back);
         const input=back.querySelector('#ncName'),err=back.querySelector('#ncErr'),form=back.querySelector('form');
