@@ -123,16 +123,16 @@
     .nc-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
     html[data-theme="dark"] .nc-chip{background:#1c2b22;color:#cfe3d8}
     /* 液態玻璃：半透明染色＋模糊飽和（Safari／Chrome 都有）、內緣高光與折射邊（漸層疊出來）、Chromium 另外加 SVG 位移做真正的折射 */
-    .ann-bar,.ann-glass{--g-tint:rgba(255,255,255,.52);--g-rim:rgba(255,255,255,.85);--g-rim2:rgba(255,255,255,.18);--g-ink:#0f1a15;position:fixed;isolation:isolate;overflow:hidden;color:var(--g-ink);text-shadow:0 0 10px rgba(255,255,255,.85),0 0 2px rgba(255,255,255,.9);
+    .ann-bar,.ann-glass{--g-tint:rgba(255,255,255,.58);--g-rim:rgba(255,255,255,.85);--g-rim2:rgba(255,255,255,.18);--g-ink:#0f1a15;position:fixed;isolation:isolate;overflow:hidden;color:var(--g-ink);text-shadow:0 0 10px rgba(255,255,255,.85),0 0 2px rgba(255,255,255,.9);
       background:linear-gradient(135deg,rgba(255,255,255,.7) 0%,var(--g-tint) 45%,rgba(255,255,255,.34) 100%);
-      -webkit-backdrop-filter:blur(34px) saturate(2.2) brightness(1.06);backdrop-filter:blur(34px) saturate(2.2) brightness(1.06);
+      -webkit-backdrop-filter:blur(70px) saturate(2.6) brightness(1.08) contrast(.95);backdrop-filter:blur(70px) saturate(2.6) brightness(1.08) contrast(.95);
       border:1px solid rgba(255,255,255,.55);
-      box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 1.5px 0 0 rgba(255,255,255,.35),inset -1.5px 0 0 rgba(255,255,255,.2),inset 0 0 28px rgba(255,255,255,.4),0 22px 50px rgba(8,28,18,.26),0 3px 8px rgba(8,28,18,.12)}
-    @supports (backdrop-filter:url(#annGlass)){.ann-bar,.ann-glass{backdrop-filter:url(#annGlass) blur(30px) saturate(2.2) brightness(1.06)}}
+      box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 1.5px 0 0 rgba(255,255,255,.35),inset -1.5px 0 0 rgba(255,255,255,.2),inset 0 0 34px rgba(255,255,255,.5),inset 0 8px 16px -8px rgba(255,255,255,.7),0 24px 54px rgba(8,28,18,.26),0 3px 8px rgba(8,28,18,.12)}
+    @supports (backdrop-filter:url(#annGlass)){.ann-bar,.ann-glass{backdrop-filter:url(#annGlass) blur(64px) saturate(2.6) brightness(1.08) contrast(.95)}}
     .ann-bar::before,.ann-glass::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
       background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.9),rgba(255,255,255,0) 55%),radial-gradient(90% 70% at 100% 130%,rgba(120,210,160,.4),rgba(120,210,160,0) 60%)}
-    .ann-bar::after,.ann-glass::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;padding:1.5px;
-      background:conic-gradient(from 210deg,rgba(255,255,255,.95),rgba(255,255,255,.05) 22%,rgba(255,255,255,.7) 48%,rgba(255,255,255,.05) 72%,rgba(255,255,255,.95));
+    .ann-bar::after,.ann-glass::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;padding:2px;
+      background:conic-gradient(from 210deg,rgba(255,255,255,1),rgba(255,255,255,.05) 22%,rgba(255,255,255,.7) 48%,rgba(255,255,255,.05) 72%,rgba(255,255,255,.95));
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
     html[data-theme="dark"] .ann-bar,html[data-theme="dark"] .ann-glass{text-shadow:0 0 10px rgba(0,0,0,.7);--g-tint:rgba(34,46,41,.52);--g-rim:rgba(255,255,255,.34);--g-rim2:rgba(255,255,255,.07);--g-ink:#eef4f1;border-color:rgba(255,255,255,.16);
       background:linear-gradient(135deg,rgba(78,96,88,.66) 0%,var(--g-tint) 45%,rgba(18,26,22,.44) 100%);box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 0 0 22px rgba(255,255,255,.05),0 22px 50px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.3)}
@@ -4252,7 +4252,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let bar=document.getElementById('annBar');
       const row=annLatest(),show=Boolean(row&&loggedIn()&&['board','projects'].includes(state.view)&&annDismissed()!==String(row['公告版本'])&&!annRead(row));
       if(!show){if(bar)bar.hidden=true;return}
-      if(!document.getElementById('annGlassSvg'))document.body.insertAdjacentHTML('beforeend','<svg id="annGlassSvg" width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="annGlass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.01" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="60" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
+      if(!document.getElementById('annGlassSvg'))document.body.insertAdjacentHTML('beforeend','<svg id="annGlassSvg" width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="annGlass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.01" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="90" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
       if(!bar){bar=document.createElement('div');bar.id='annBar';bar.className='ann-bar';bar.setAttribute('role','status');document.body.appendChild(bar)}
       const ver=String(row['公告版本']).trim();
       if(bar.dataset.v!==ver){bar.dataset.v=ver;bar.innerHTML=`<span class="ann-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></span><div class="ann-txt"><b>有最新公告通知</b><span>${esc(String(row['公告標題']||ver))}</span></div><button type="button" class="btn primary" data-ann="open">查看內容</button><button type="button" class="ann-x" data-ann="close">關閉</button>`}
