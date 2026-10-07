@@ -4339,8 +4339,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.matches?.('[data-ai-file]')){addAiFiles(t.files);return}
       if(t.matches?.('[data-filter]')){const key=t.dataset.filter,set=state.filters[key];if(key!=='months'){const all=[...document.querySelectorAll('[data-filter="'+key+'"]')].map(i=>i.value);if(!set.size)all.forEach(v=>set.add(v));t.checked?set.add(t.value):set.delete(t.value);if(set.size>=all.length||!set.size)set.clear()}else{t.checked?set.add(t.value):set.delete(t.value)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       if(t.id==='clientSelect'){
-        if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;}
-        t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;csSync();return;
+        let created=false;
+        if(t.value==='__new__'){const name=await addCustomerFlow();t.value=name;created=Boolean(name)}
+        t.classList.toggle('is-empty',!t.value);$('promptGo').disabled=!t.value;csSync();
+        if(created)$('prompt').requestSubmit();/* 新增完客戶別直接進入填單 */
+        return;
       }
       const rowBox=t.closest?.('[data-row]');if(!rowBox||!(state.view==='form'||state.editing))return;
       const key=rowBox.dataset.row,r=rowOf(key),field=t.dataset?.f;if(!r)return;
