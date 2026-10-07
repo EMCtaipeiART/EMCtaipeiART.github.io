@@ -1720,6 +1720,7 @@ window.emcQuotes=[
     function applyRotationPlan(f){
       const orders={};
       for(const r of [f,...(f.extra||[])]){
+        if(!isNewClient(r.client)){r.rot='';r.sub='';r.subReason='';continue}
         const g=r.type==='影音'?'影音':'平面',list=orders[g]||(orders[g]=rotationOrder(g));
         r.rot=list[0]||'';
         if(r.sub&&(r.sub===r.rot||!list.includes(r.sub)))r.sub='';
@@ -1727,7 +1728,10 @@ window.emcQuotes=[
         if(r.designer){const i=list.indexOf(r.designer);if(i>=0){list.splice(i,1);list.push(r.designer)}}
       }
     }
-    const newStage=type=>stagesFor(type).includes('提案')?'提案':defaultStage(type);
+    /** 「新開專案」＝這個客戶別還沒有任何案件（或剛在這次新增）：階段預設「提案」、負責人走輪替表。既有客戶別維持原本流程（階段新製、設計負責人自選）。 */
+    const newClientSet=new Set();
+    const isNewClient=c=>Boolean(c)&&(newClientSet.has(c)||!allRowsRaw().some(r=>String(r['客戶別']||'').trim()===c));
+    const newStage=(type,client)=>isNewClient(client)&&stagesFor(type).includes('提案')?'提案':defaultStage(type);
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
     const emailOf=text=>(String(text||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
@@ -2399,7 +2403,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 專案負責人：管理者與設計部人員可自行填寫，其他人固定為登入者本人 */
     const ownerSelf=()=>{const s=session();return s.name||s.user||''};
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
-    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type),...o,type}}
+    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type,o.client),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
     function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
     /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
@@ -2422,7 +2426,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input${ownerLocked()?' is-locked':''}" data-f="owner" value="${esc(ownerLocked()?ownerSelf():r.owner)}" autocomplete="off" aria-label="專案負責人"${ownerLocked()?' readonly tabindex="-1" title="專案負責人固定為登入者本人"':''}></div>
         <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
         <div class="field c2"><span class="label">階段 <b>*</b></span><select data-f="stage" aria-label="階段">${stageOptions(r.type,r.stage)}</select></div>
-        ${key==='edit'?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
+        ${key==='edit'||!isNewClient(r.client)?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
         <div class="field c2"><span class="label">數量 <b>*</b></span><input class="input" data-f="qty" value="${esc(r.qty)}" inputmode="numeric" autocomplete="off" aria-label="數量"></div>
         ${opt.status?`<div class="field c2"><span class="label">案件狀態</span><select data-f="status" aria-label="案件狀態">${STATUS_FILTER.map(k=>`<option value="${k}"${k===r.status?' selected':''}>${esc(ST[k].label)}</option>`).join('')}</select></div>`:''}
         <div class="field c4 range"><span class="label">開始／結束時間 <b>*</b></span>
@@ -4302,7 +4306,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const res=await api('addCustomer',{name});
         const row=res.customer||{'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'};
         state.customers=sortCustomers([...state.customers.filter(r=>String(r['客戶別']||'').trim()!==name),row]);
-        fillClients();toast(`已新增客戶別「${name}」`);return name;
+        newClientSet.add(name);fillClients();toast(`已新增客戶別「${name}」`);return name;
       }catch(err){toast(/TOKEN|過期|請先登入/.test(`${err.reason||''}${err.message}`)?'登入已過期，請重新登入後再新增客戶別':`新增客戶別失敗：${err.message}`,true);return ''}
     }
 
@@ -4431,11 +4435,15 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(field==='client'){
         readRowsSafe();
         if(t.value==='__new__'){const name=await addCustomerFlow();r.client=name||r.client}else r.client=t.value;
+        if(key!=='edit'){
+          r.stage=newStage(r.type,r.client);r.sub='';r.subReason='';
+          if(!isNewClient(r.client)&&(!r.designerTouched||!r.designer)){r.designer=defaultDesignerFor(r.client);toast(r.designer?`設計負責人已依客戶別設定帶入：${r.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇')}
+        }
         rerender();return;
       }
       if(field==='designer'){r.designerTouched=true;return}
       if(field==='sub'){readRowsSafe();r.sub=t.value;if(!r.sub)r.subReason='';rerender();return}
-      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type);r.sub='';r.subReason='';rerender();return}
+      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type,r.client);r.sub='';r.subReason='';rerender();return}
       if(field==='stage'&&t.value==='__ai__'){t.value=r.stage||'';readRowsSafe();openAi(key);return}
     });
     document.addEventListener('submit',e=>{
