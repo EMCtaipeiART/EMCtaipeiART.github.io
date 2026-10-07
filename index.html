@@ -2056,7 +2056,7 @@ window.emcQuotes=[
     }
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
     function openExt(k){
-      if(k==='reloadall'){if(!confirm('要讓目前所有開著系統的人立即重新整理嗎？'))return;api('forceReload').then(r=>{toast(`已通知 ${r.sent} 個連線重新整理`);setTimeout(forceReloadNow,1500)}).catch(e=>toast(e.message,true));return}
+      if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;api('forceReload').then(r=>{toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}
       if(k==='owner'){openOwner();return}
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
@@ -4405,10 +4405,31 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
        連線正常時備援輪詢拉長到 5 分鐘；斷線（或瀏覽器不支援）就維持每 60 秒。 */
     let officeTick=0;
     setInterval(()=>{if(document.hidden)return;officeTick+=1;if(!state.pushOk||officeTick%5===0)loadOffice()},60000);
-    function forceReloadNow(){
-      try{toast('管理者更新了系統，1 秒後自動重新整理…')}catch(e){}
-      setTimeout(()=>{try{const u=new URL(location.href);u.searchParams.set('_r',Date.now());location.replace(u.toString())}catch(e){location.reload()}},1200);
+    /* 全員重整：管理者按下後伺服器記一個「版本號」。每台瀏覽器記住自己已更新到哪一版；
+       連上線／切回分頁／收到推送時比對，落後就更新。正在填表、寫信、上傳、輸入中的人先不打斷，改顯示提示條，空下來自動更新。 */
+    const relGet=()=>{try{return Number(localStorage.getItem('appReleaseSeen'))||0}catch(e){return 0}};
+    const relSet=v=>{try{localStorage.setItem('appReleaseSeen',String(v))}catch(e){}};
+    let relPending=0,relTimer=0;
+    function relBusy(){return state.view==='form'||state.view==='mail'||state.view==='thread'||state.editing||Boolean(state.drag)||Date.now()-lastInputAt<20000||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.rc-pick'))||Boolean(nas.timer||nas.backing)}
+    function forceReloadNow(rel){
+      relSet(rel||relPending);
+      try{const u=new URL(location.href);u.searchParams.set('_r',Date.now());location.replace(u.toString())}catch(e){location.reload()}
     }
+    function relBanner(show){
+      let el=document.getElementById('relBanner');
+      if(!show){el?.remove();return}
+      if(!el){el=document.createElement('div');el.id='relBanner';el.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:#17211d;color:#fff;padding:10px 16px;border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:14px;font-weight:700;display:flex;gap:12px;align-items:center';el.innerHTML='<span>系統有新版本，你填完後會自動更新</span><button type="button" style="border:0;border-radius:10px;padding:6px 12px;font:inherit;font-weight:800;background:#4a9f4d;color:#fff;cursor:pointer">立即更新</button>';el.querySelector('button').onclick=()=>forceReloadNow();document.body.appendChild(el)}
+    }
+    function relCheck(rel){
+      if(!rel||rel<=relGet())return;
+      relPending=rel;
+      if(!relBusy()){relBanner(false);try{toast('系統已更新，正在重新整理…')}catch(e){}setTimeout(()=>forceReloadNow(),900);return}
+      relBanner(true);clearTimeout(relTimer);relTimer=setTimeout(()=>relCheck(relPending),10000);
+    }
+    async function relPoll(){try{const r=await api('releaseInfo');const cur=relGet();if(!cur){relSet(r.release||0);return}relCheck(r.release)}catch(e){}}
+    setTimeout(relPoll,2500);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)relPoll()});
+    setInterval(()=>{if(!document.hidden)relPoll()},300000);
     (function pixelPush(){
       if(!('WebSocket' in window))return;
       let ws=null,pingT=0,retry=0;
@@ -4417,7 +4438,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(ws&&ws.readyState<=1)return;
         try{ws=new WebSocket(url)}catch(err){return}
         ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
-        ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='reload'){if(Date.now()-(Number(m.t)||0)<120000)forceReloadNow();return}if(m&&m.type==='db'){if((Number(m.rev)||0)>(state.dbRev||0))loadDatabase(true,true);return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
+        ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='reload'){relCheck(Number(m.rel)||0);return}if(m&&m.type==='db'){if((Number(m.rev)||0)>(state.dbRev||0))loadDatabase(true,true);return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
         ws.onclose=()=>{state.pushOk=false;clearInterval(pingT);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)))};
         ws.onerror=()=>{try{ws.close()}catch(err){}};
       }

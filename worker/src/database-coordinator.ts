@@ -3863,6 +3863,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async handleCore(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
+      if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
@@ -3893,10 +3894,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'coinLedger') return await this.coinLedger(payload, database, session);
       if (action === 'forceReload') {
         requireCapability(database, session, 'database.manage');
-        const message = JSON.stringify({ type: 'reload', t: Date.now() });
+        const release = Date.now();
+        await this.ctx.storage.put('appRelease', release);
+        const message = JSON.stringify({ type: 'reload', rel: release });
         let sent = 0;
         for (const socket of this.ctx.getWebSockets()) { try { socket.send(message); sent += 1; } catch { /* 已失效 */ } }
-        return { ok: true, action: 'forceReload', sent };
+        return { ok: true, action: 'forceReload', sent, release };
       }
       if (action === 'coinAdjust') return await this.coinAdjust(payload, database, session);
       if (action === 'coinEarnSyncNow') { requireCapability(database, session, 'database.manage'); return { ok: true, ...(await this.runCoinEarnSync()), action }; }
