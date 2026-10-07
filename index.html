@@ -122,14 +122,35 @@
     .nc-perm small{display:block;margin-top:8px;font-size:12px;color:var(--faint);font-weight:600}
     .nc-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
     html[data-theme="dark"] .nc-chip{background:#1c2b22;color:#cfe3d8}
-    .ann-bar{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:150;display:flex;align-items:center;gap:14px;width:min(640px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px 12px 18px;border-radius:20px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 18px 44px rgba(10,30,18,.28);animation:annIn .25s ease}
-    @keyframes annIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+    /* 液態玻璃：半透明染色＋模糊飽和（Safari／Chrome 都有）、內緣高光與折射邊（漸層疊出來）、Chromium 另外加 SVG 位移做真正的折射 */
+    .ann-bar,.ann-glass{--g-tint:rgba(255,255,255,.42);--g-rim:rgba(255,255,255,.85);--g-rim2:rgba(255,255,255,.18);--g-ink:#14201b;position:fixed;isolation:isolate;overflow:hidden;color:var(--g-ink);
+      background:linear-gradient(135deg,rgba(255,255,255,.62) 0%,var(--g-tint) 38%,rgba(255,255,255,.22) 100%);
+      -webkit-backdrop-filter:blur(22px) saturate(1.9) brightness(1.04);backdrop-filter:blur(22px) saturate(1.9) brightness(1.04);
+      border:1px solid rgba(255,255,255,.55);
+      box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 1.5px 0 0 rgba(255,255,255,.35),inset -1.5px 0 0 rgba(255,255,255,.2),inset 0 0 22px rgba(255,255,255,.28),0 22px 50px rgba(8,28,18,.26),0 3px 8px rgba(8,28,18,.12)}
+    @supports (backdrop-filter:url(#annGlass)){.ann-bar,.ann-glass{backdrop-filter:blur(14px) saturate(1.9) brightness(1.04) url(#annGlass)}}
+    .ann-bar::before,.ann-glass::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;
+      background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.75),rgba(255,255,255,0) 52%),radial-gradient(90% 70% at 100% 130%,rgba(120,210,160,.28),rgba(120,210,160,0) 60%)}
+    .ann-bar::after,.ann-glass::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;padding:1.5px;
+      background:conic-gradient(from 210deg,rgba(255,255,255,.95),rgba(255,255,255,.05) 22%,rgba(255,255,255,.7) 48%,rgba(255,255,255,.05) 72%,rgba(255,255,255,.95));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+    html[data-theme="dark"] .ann-bar,html[data-theme="dark"] .ann-glass{--g-tint:rgba(40,52,47,.46);--g-rim:rgba(255,255,255,.34);--g-rim2:rgba(255,255,255,.07);--g-ink:#eef4f1;border-color:rgba(255,255,255,.16);
+      background:linear-gradient(135deg,rgba(70,86,79,.62) 0%,var(--g-tint) 40%,rgba(18,26,22,.4) 100%);box-shadow:inset 0 1.5px 0 var(--g-rim),inset 0 -1.5px 0 var(--g-rim2),inset 0 0 22px rgba(255,255,255,.05),0 22px 50px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.3)}
+    html[data-theme="dark"] .ann-bar::before,html[data-theme="dark"] .ann-glass::before{background:radial-gradient(120% 90% at 12% -20%,rgba(255,255,255,.22),rgba(255,255,255,0) 52%),radial-gradient(90% 70% at 100% 130%,rgba(80,170,120,.22),rgba(80,170,120,0) 60%)}
+    html[data-theme="dark"] .ann-bar::after,html[data-theme="dark"] .ann-glass::after{background:conic-gradient(from 210deg,rgba(255,255,255,.5),rgba(255,255,255,.04) 22%,rgba(255,255,255,.34) 48%,rgba(255,255,255,.04) 72%,rgba(255,255,255,.5))}
+    .ann-bar{left:50%;bottom:26px;transform:translateX(-50%);z-index:150;display:flex;align-items:center;gap:14px;width:min(640px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px 12px 18px;border-radius:26px;animation:annIn .35s cubic-bezier(.2,.9,.3,1.2)}
+    @keyframes annIn{from{opacity:0;transform:translate(-50%,18px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
     .ann-bar[hidden]{display:none}
-    .ann-ico{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:var(--brand-soft,#e6f4ea);color:var(--brand)}
+    #annModal.nc-back{background:rgba(10,20,15,.3);-webkit-backdrop-filter:none;backdrop-filter:none}
+    .ann-glass{position:relative;border-radius:30px}
+    .ann-glass .nc-head h3,.ann-glass .ann-body{color:var(--g-ink)}.ann-glass .nc-head p{color:color-mix(in srgb,var(--g-ink) 62%,transparent)}
+    .ann-glass .nc-ico{background:rgba(255,255,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
+    .ann-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:15px;background:rgba(255,255,255,.55);color:var(--brand);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 6px rgba(0,0,0,.08)}
+    html[data-theme="dark"] .ann-ico{background:rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
     .ann-ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-    .ann-txt{flex:1;min-width:0}.ann-txt b{display:block;font-size:14.5px}.ann-txt span{display:block;margin-top:1px;font-size:12.5px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ann-txt{flex:1;min-width:0}.ann-txt b{display:block;font-size:14.5px}.ann-txt span{display:block;margin-top:1px;font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--g-ink) 62%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .ann-bar .btn{height:38px;padding:0 16px;white-space:nowrap}
-    .ann-x{flex:0 0 auto;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:800;padding:8px 10px;border-radius:10px;cursor:pointer}.ann-x:hover{background:var(--bg)}
+    .ann-x{flex:0 0 auto;border:0;background:transparent;color:color-mix(in srgb,var(--g-ink) 70%,transparent);font:inherit;font-size:13.5px;font-weight:800;padding:8px 10px;border-radius:10px;cursor:pointer}.ann-x:hover{background:rgba(255,255,255,.35)}
     .ann-body{max-height:min(62vh,520px);overflow:auto;padding:4px 22px 6px;line-height:1.75;font-size:14.5px}
     .ann-body h1,.ann-body h2,.ann-body h3{margin:16px 0 6px;font-size:16px}.ann-body h1{font-size:19px}.ann-body p{margin:6px 0}.ann-body ul{margin:6px 0;padding-left:22px}
     @media(max-width:720px){.ann-bar{bottom:84px;flex-wrap:wrap;gap:10px}.ann-txt{flex:1 1 60%}}
@@ -4227,6 +4248,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let bar=document.getElementById('annBar');
       const row=annLatest(),show=Boolean(row&&loggedIn()&&['board','projects'].includes(state.view)&&annDismissed()!==String(row['公告版本'])&&!annRead(row));
       if(!show){if(bar)bar.hidden=true;return}
+      if(!document.getElementById('annGlassSvg'))document.body.insertAdjacentHTML('beforeend','<svg id="annGlassSvg" width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="annGlass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
       if(!bar){bar=document.createElement('div');bar.id='annBar';bar.className='ann-bar';bar.setAttribute('role','status');document.body.appendChild(bar)}
       const ver=String(row['公告版本']).trim();
       if(bar.dataset.v!==ver){bar.dataset.v=ver;bar.innerHTML=`<span class="ann-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></span><div class="ann-txt"><b>有最新公告通知</b><span>${esc(String(row['公告標題']||ver))}</span></div><button type="button" class="btn primary" data-ann="open">查看內容</button><button type="button" class="ann-x" data-ann="close">關閉</button>`}
@@ -4241,7 +4263,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       annMark(row);
       let m=document.getElementById('annModal');if(m)m.remove();
       m=document.createElement('div');m.id='annModal';m.className='nc-back';
-      m.innerHTML=`<div class="nc-card" role="dialog" aria-modal="true" aria-label="系統公告" style="width:min(640px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📢</span><div><h3>${esc(String(row['公告標題']||row['公告版本']))}</h3><p>${esc([row['公告版本'],row['發布時間']].filter(Boolean).join(' ｜ '))}</p></div></div><div class="ann-body">${annMarkdown(row['公告內容'])}</div><div class="nc-foot"><button type="button" class="btn primary" data-ann="done">我知道了</button></div></div>`;
+      m.innerHTML=`<div class="nc-card ann-glass" role="dialog" aria-modal="true" aria-label="系統公告" style="width:min(640px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📢</span><div><h3>${esc(String(row['公告標題']||row['公告版本']))}</h3><p>${esc([row['公告版本'],row['發布時間']].filter(Boolean).join(' ｜ '))}</p></div></div><div class="ann-body">${annMarkdown(row['公告內容'])}</div><div class="nc-foot"><button type="button" class="btn primary" data-ann="done">我知道了</button></div></div>`;
       document.body.appendChild(m);
     }
     document.addEventListener('click',e=>{
