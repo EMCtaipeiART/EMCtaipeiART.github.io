@@ -2439,9 +2439,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
     function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type,o.client),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
-    /** 批次新增下一筆：沿用上一筆的欄位值（客戶別、負責人、設計種類、階段、數量、日期、設計負責人、使用平台、補充資料），
-     * 只有「專案名稱」留白要重填；替代設計師與原因每一筆各自決定，不沿用。 */
-    const inheritRow=r=>newRow({client:r.client,owner:r.owner,designer:r.designer,type:r.type,stage:r.stage,qty:r.qty,start:r.start,end:r.end,platforms:[...r.platforms],supp:{...r.supp},designerTouched:r.designerTouched});
+    /** 批次新增下一筆：沿用上一筆的所有欄位值（含專案名稱、客戶別、負責人、設計種類、階段、數量、日期、設計負責人、
+     * 使用平台、補充資料）；替代設計師與原因每一筆各自決定，不沿用。 */
+    const inheritRow=r=>newRow({client:r.client,project:r.project,owner:r.owner,designer:r.designer,type:r.type,stage:r.stage,qty:r.qty,start:r.start,end:r.end,platforms:[...r.platforms],supp:{...r.supp},designerTouched:r.designerTouched});
     function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
     /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
     function stageOptions(type,selected){
