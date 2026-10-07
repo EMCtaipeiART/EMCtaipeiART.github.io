@@ -2610,7 +2610,23 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
       if(!loggedIn()){toast('請先登入後再寄信',true);startLogin();return}
       const d={id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`${reply?'Re: ':''}【${id}】${row['客戶別']}_${row['專案名稱']}`,body:reply?'<br>':mailBodyHtml(row),sent:false,reply:Boolean(reply),existing:true};
-      state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();
+      state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false,candidates:reply?[]:mergeCandidates(row)};state.form=null;show('mail');loadGmailContext();
+    }
+    /** 同一個客戶別、同一位設計師、還沒寄過需求信的其他案件：開新案件時沒有馬上寄信的，現在可以在編輯器裡勾選併成一封。 */
+    function mergeCandidates(row){
+      const id=idKey(row),client=norm(row['客戶別']),designer=norm(row['設計負責人']);
+      return allRows().filter(r=>idKey(r)!==id&&norm(r['客戶別'])===client&&norm(r['設計負責人'])===designer&&!String(r['Gmail信件串ID']||'').trim()&&!['已完成','暫停中','已取消'].includes(String(r['狀態']||'').trim())&&canMailRow(r))
+        .sort((a,b)=>idKey(a).localeCompare(idKey(b))).slice(0,30);
+    }
+    function mailDraftFor(row){const id=idKey(row);return {id,row,to:recipientFor(row['設計負責人']),cc:ccFor(row['客戶別'],row['設計負責人']).join(', '),subject:`【${id}】${row['客戶別']}_${row['專案名稱']}`,body:mailBodyHtml(row),sent:false,reply:false,existing:true}}
+    function mergeExtra(){
+      saveMailDraft();const m=state.mail,picks=[...document.querySelectorAll('[data-merge-extra]:checked')].map(i=>i.dataset.mergeExtra);
+      if(!picks.length){toast('請勾選要一起寄出的案件',true);return}
+      const base=m.drafts[m.index];if(!base||base.reply||base.ids||base.sent)return;
+      const extras=(m.candidates||[]).filter(r=>picks.includes(idKey(r))).map(mailDraftFor);if(!extras.length)return;
+      m.candidates=(m.candidates||[]).filter(r=>!picks.includes(idKey(r)));
+      m.drafts.splice(m.index+1,0,...extras);
+      mergeDrafts([base,...extras]);
     }
     async function deleteCase(id){
       const row=allRows().find(r=>idKey(r)===id);if(!row)return;
@@ -3382,7 +3398,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}<button type="button" class="btn primary" data-gmail-connect style="margin-left:6px">串接 Gmail</button>　連接完成後即可寄信；也可以先按「略過，回案件列表」。</div>`:'';
       const canMerge=total>1&&m.drafts.every(x=>!x.reply)&&m.drafts.some(x=>!x.sent&&!x.ids);
       const mergedAny=m.drafts.some(x=>x.ids);
-      const mergePanel=(canMerge||mergedAny)?`<details class="merge-panel"><summary>合併信件</summary><p>同一個專案被拆成多筆案件時，勾選要打包成一封寄出的案件；專案名稱會併在一起、數量加總。</p>${m.drafts.filter(x=>!x.sent&&!x.ids&&!x.reply).map(x=>`<label class="merge-row"><input type="checkbox" data-merge="${esc(x.id)}">${esc(x.id)}｜${esc(x.row['專案名稱']||'')}（數量 ${esc(x.row['數量']||'')}）</label>`).join('')}<div class="merge-actions"><button type="button" class="btn" data-mail="merge">合併勾選的案件</button>${mergedAny?'<button type="button" class="btn" data-mail="unmerge">取消合併</button>':''}</div></details>`:'';
+      const cand=(m.candidates||[]),extraPanel=cand.length&&!d.reply&&!d.ids&&!d.sent?`<details class="merge-panel" open><summary>合併其他還沒寄信的案件（${cand.length}）</summary><p>同一個客戶別、同一位設計師、還沒寄過需求信的案件；勾選後會和這封信併成一封寄出，專案名稱併在一起、數量加總。</p>${cand.map(r=>`<label class="merge-row"><input type="checkbox" data-merge-extra="${esc(idKey(r))}">${esc(idKey(r))}｜${esc(r['專案名稱']||'')}（數量 ${esc(r['數量']||'')}）</label>`).join('')}<div class="merge-actions"><button type="button" class="btn" data-mail="merge-extra">合併勾選的案件</button></div></details>`:'';
+      const mergePanel=extraPanel+((canMerge||mergedAny)?`<details class="merge-panel"><summary>合併信件</summary><p>同一個專案被拆成多筆案件時，勾選要打包成一封寄出的案件；專案名稱會併在一起、數量加總。</p>${m.drafts.filter(x=>!x.sent&&!x.ids&&!x.reply).map(x=>`<label class="merge-row"><input type="checkbox" data-merge="${esc(x.id)}">${esc(x.id)}｜${esc(x.row['專案名稱']||'')}（數量 ${esc(x.row['數量']||'')}）</label>`).join('')}<div class="merge-actions"><button type="button" class="btn" data-mail="merge">合併勾選的案件</button>${mergedAny?'<button type="button" class="btn" data-mail="unmerge">取消合併</button>':''}</div></details>`:'');
       const tb=(cmd,title,label,extra='')=>`<button type="button" class="tool${extra}" data-rc="${cmd}" title="${title}" aria-label="${title}">${label}</button>`;
       const sigShown=!d.sigInserted&&state.signature;
       const nowMin=mailMinLocal();
@@ -3477,6 +3494,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       saveMailDraft();const m=state.mail,picks=[...document.querySelectorAll('[data-merge]:checked')].map(i=>i.dataset.merge);
       if(picks.length<2){toast('請勾選至少 2 筆案件',true);return}
       const sel=m.drafts.filter(x=>picks.includes(x.id)&&!x.sent&&!x.reply&&!x.ids);if(sel.length<2)return;
+      mergeDrafts(sel);
+    }
+    function mergeDrafts(sel){
+      const m=state.mail;
       const names=[...new Set(sel.map(x=>String(x.row['專案名稱']||'').trim()).filter(Boolean))],qty=sel.reduce((n,x)=>n+(+x.row['數量']||0),0),ids=sel.map(x=>x.id);
       const row={...sel[0].row,'專案名稱':names.join('、'),'數量':String(qty)};
       const merged={id:ids[0],ids,row,to:sel[0].to,cc:sel[0].cc,subject:`【${ids.join('、')}】${row['客戶別']}_${names.join('、')}`,body:mailBodyHtml(row),sent:false,merged:sel};
@@ -4485,6 +4506,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
       if(mail==='merge'){mergeSelected();return}
+      if(mail==='merge-extra'){mergeExtra();return}
       if(mail==='unmerge'){unmergeCurrent();return}
       if(mail==='dr-skip'){const d=state.mail.drafts[state.mail.index];if(d.dr){d.dr.pending=false;drMutate(d,r=>{r.querySelector('.dr-up')?.parentElement?.remove()});saveMailDraft();renderMail()}return}
       if(mail==='schedule-toggle'){saveMailDraft();const d=state.mail.drafts[state.mail.index];d.scheduleOpen=!d.scheduleOpen;renderMail();return}
