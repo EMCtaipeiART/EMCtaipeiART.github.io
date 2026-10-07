@@ -426,6 +426,7 @@
     .chip.late{margin-left:0;background:#ffe3e3;color:#b42318;border-color:#fecaca}
     html[data-theme="dark"] .chip.late{background:#3d1d1d;color:#ffb4b4;border-color:#5c2a2a}
     .card-title{margin:0;font-size:15px;font-weight:800;line-height:1.45;overflow-wrap:anywhere}
+    .cards .card-title{overflow:hidden;white-space:nowrap;overflow-wrap:normal;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 46px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 46px),transparent)}
     .progress{margin-top:12px}
     .progress-label{display:flex;justify-content:space-between;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:5px}
     .progress-track{height:7px;border-radius:99px;background:var(--line);overflow:hidden}
@@ -1807,7 +1808,7 @@ window.emcQuotes=[
         <div class="card-top"><span class="id-pill">${esc(id)}</span><span class="card-meta client-pill" title="客戶別">${esc(row['客戶別']||'未填客戶別')}</span>${late?'<span class="chip late">逾期</span>':''}<span class="card-acts">${(status==='已完成'&&String(row['加權']||'').trim()!==''&&!Number.isNaN(+row['加權']))?`<span class="score-badge" title="此案件獲得的加權分數">+${esc(+row['加權'])}</span>`:''}<span class="lt-status card-status ${st.cls}">${esc(st.label)}</span></span></div>
         <h3 class="card-title">${esc(row['專案名稱']||'未填專案名稱')}</h3>
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
-        ${isDoing?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
+        ${isDoing&&!inColumn?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
           <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
           <span class="card-qtywrap">${(status==='過稿中'&&revisionCount(row)>=0)?`<button type="button" class="lt-rev lt-edit${revisionCount(row)===0?' is-draft':''}${revisionCount(row)>0&&hasPendingMod(row)?' revision-pending':''}" data-rev-open="${esc(id)}" title="快速查看修改紀錄">${revisionCount(row)===0?'初稿':`${revisionCount(row)<=10?NUM_ZH[revisionCount(row)]:revisionCount(row)}修`}</button>`:''}<span class="card-qty">數量 ${esc(qty||'-')}</span></span>
