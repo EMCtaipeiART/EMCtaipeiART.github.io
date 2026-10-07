@@ -53,3 +53,10 @@ test('v5 schedule picker offers one-click presets, date plus hour/minute selects
   assert.equal(future.cls, '');
   assert.match(future.text, /2099\/01\/05（週一）14:30 寄出/);
 });
+
+test('v5 batch add: every new row inherits the previous row\'s values (only 專案名稱 stays blank)', async () => {
+  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.match(html, /const inheritRow=r=>newRow\(\{client:r\.client,owner:r\.owner,designer:r\.designer,type:r\.type,stage:r\.stage,qty:r\.qty,start:r\.start,end:r\.end,platforms:\[\.\.\.r\.platforms\],supp:\{\.\.\.r\.supp\},designerTouched:r\.designerTouched\}\)/);
+  assert.match(html, /if\(f\.batch&&!f\.extra\.length\)f\.extra\.push\(inheritRow\(f\)\)/);
+  assert.match(html, /if\(act==='batch-add'\)\{readRowsSafe\(\);const f=state\.form;f\.extra\.push\(inheritRow\(f\.extra\.length\?f\.extra\[f\.extra\.length-1\]:f\)\)/, '「新增空白一筆」要沿用最後一筆，不是第一筆');
+});

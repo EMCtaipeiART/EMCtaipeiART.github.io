@@ -2439,6 +2439,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
     function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type,o.client),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
+    /** 批次新增下一筆：沿用上一筆的欄位值（客戶別、負責人、設計種類、階段、數量、日期、設計負責人、使用平台、補充資料），
+     * 只有「專案名稱」留白要重填；替代設計師與原因每一筆各自決定，不沿用。 */
+    const inheritRow=r=>newRow({client:r.client,owner:r.owner,designer:r.designer,type:r.type,stage:r.stage,qty:r.qty,start:r.start,end:r.end,platforms:[...r.platforms],supp:{...r.supp},designerTouched:r.designerTouched});
     function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
     /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
     function stageOptions(type,selected){
@@ -4531,8 +4534,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(act==='back'){backToBoard();return}
       if(act==='edit'){startEdit();return}
       if(act==='cancel-edit'){cancelEdit();return}
-      if(act==='batch'){readRowsSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,type:f.type,start:f.start,end:f.end,platforms:[...f.platforms],supp:{...f.supp},designerTouched:f.designerTouched}));if(!f.batch)f.extra=[];renderForm();return}
-      if(act==='batch-add'){readRowsSafe();const f=state.form;f.extra.push(newRow({client:f.client,owner:f.owner,designer:f.designer,start:f.start,end:f.end}));renderForm();return}
+      if(act==='batch'){readRowsSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push(inheritRow(f));if(!f.batch)f.extra=[];renderForm();return}
+      if(act==='batch-add'){readRowsSafe();const f=state.form;f.extra.push(inheritRow(f.extra.length?f.extra[f.extra.length-1]:f));renderForm();return}
       if(act==='submit-schedule'){submitForm({schedule:true});return}
       if(act==='batch-copy'){readRowsSafe();const f=state.form,last=f.extra.length?f.extra[f.extra.length-1]:f;f.extra.push(copyRow(last));renderForm();toast(`已把第 ${f.extra.length} 筆的資料套用到第 ${f.extra.length+1} 筆`);return}
       const del=t.closest('[data-batch-del]');if(del){readRowsSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
