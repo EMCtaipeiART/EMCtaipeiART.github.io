@@ -122,6 +122,17 @@
     .nc-perm small{display:block;margin-top:8px;font-size:12px;color:var(--faint);font-weight:600}
     .nc-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
     html[data-theme="dark"] .nc-chip{background:#1c2b22;color:#cfe3d8}
+    .ann-bar{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:150;display:flex;align-items:center;gap:14px;width:min(640px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px 12px 18px;border-radius:20px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 18px 44px rgba(10,30,18,.28);animation:annIn .25s ease}
+    @keyframes annIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+    .ann-bar[hidden]{display:none}
+    .ann-ico{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:var(--brand-soft,#e6f4ea);color:var(--brand)}
+    .ann-ico svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+    .ann-txt{flex:1;min-width:0}.ann-txt b{display:block;font-size:14.5px}.ann-txt span{display:block;margin-top:1px;font-size:12.5px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ann-bar .btn{height:38px;padding:0 16px;white-space:nowrap}
+    .ann-x{flex:0 0 auto;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:800;padding:8px 10px;border-radius:10px;cursor:pointer}.ann-x:hover{background:var(--bg)}
+    .ann-body{max-height:min(62vh,520px);overflow:auto;padding:4px 22px 6px;line-height:1.75;font-size:14.5px}
+    .ann-body h1,.ann-body h2,.ann-body h3{margin:16px 0 6px;font-size:16px}.ann-body h1{font-size:19px}.ann-body p{margin:6px 0}.ann-body ul{margin:6px 0;padding-left:22px}
+    @media(max-width:720px){.ann-bar{bottom:84px;flex-wrap:wrap;gap:10px}.ann-txt{flex:1 1 60%}}
     .cs-empty{padding:22px 12px;text-align:center;color:#8a968f;font-size:13.5px;font-weight:600}
     html[data-theme="dark"] .cs-trigger{color:#e9efec}html[data-theme="dark"] .cs-trigger.is-empty{color:#8a968f}
     html[data-theme="dark"] .cs-pop{background:#1d2321;border-color:#2c3431;color:#e9efec;box-shadow:0 24px 54px rgba(0,0,0,.6)}
@@ -2107,7 +2118,7 @@ window.emcQuotes=[
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
-      updateRail();
+      updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
       if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
@@ -4192,6 +4203,54 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('storage',e=>{if(e.key==='v5LoginDone'||e.key==='designRequestEditorToken')afterLogin()});
 
     /* ---------- 新增客戶別（跟現行系統同一個用法：輸入名稱，Worker 建立） ---------- */
+    /* ---------- 系統公告：首頁下方圓角提示條；按「查看內容」或「關閉」都寫入查看紀錄，之後不再顯示 ---------- */
+    const annDate=v=>{const m=String(v??'').match(/(\d{4})\D(\d{1,2})\D(\d{1,2})/);return m?m[1]+m[2].padStart(2,'0')+m[3].padStart(2,'0'):''};
+    const annVer=v=>{const m=String(v??'').match(/(\d+)(?:\.(\d+))?/);return m?[Number(m[1]),m[2]?Number('0.'+m[2]):0]:[0,0]};
+    function annLatest(){
+      const rows=(state.annRows||[]).filter(r=>/^(?:啟用|發布|公開|v|true|1|yes)$/i.test(String(r['是否啟用']||'').trim())&&String(r['公告版本']||'').trim()&&String(r['公告內容']||'').trim());
+      rows.sort((a,b)=>annDate(a['發布時間']).localeCompare(annDate(b['發布時間']))||annVer(a['公告版本'])[0]-annVer(b['公告版本'])[0]||annVer(a['公告版本'])[1]-annVer(b['公告版本'])[1]);
+      return rows.at(-1)||null;
+    }
+    const annInline=t=>esc(String(t||'').replace(/\\$/,'')).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    function annMarkdown(value){
+      const html=[];let para=[],list=[];
+      const fp=()=>{if(para.length){html.push(`<p>${para.map(annInline).join('<br>')}</p>`);para=[]}},fl=()=>{if(list.length){html.push(`<ul>${list.map(i=>`<li>${annInline(i)}</li>`).join('')}</ul>`);list=[]}};
+      for(const raw of String(value||'').replace(/\r\n?/g,'\n').split('\n')){const line=raw.trim();if(!line){fp();fl();continue}
+        const h=line.match(/^(#{1,3})\s+(.+)$/);if(h){fp();fl();html.push(`<h${h[1].length}>${annInline(h[2])}</h${h[1].length}>`);continue}
+        const li=line.match(/^[-*]\s+(.+)$/);if(li){fp();list.push(li[1]);continue}
+        fl();para.push(line)}
+      fp();fl();return html.join('');
+    }
+    const annDismissed=()=>{try{return localStorage.getItem('v5AnnDismissed')||''}catch(e){return ''}};
+    function annRead(row){const me=selfAccount();if(!me)return false;try{return JSON.parse(row['已讀紀錄']||'[]').some(x=>String(x.account||'').toLowerCase()===me)}catch(e){return false}}
+    function annSync(){
+      let bar=document.getElementById('annBar');
+      const row=annLatest(),show=Boolean(row&&loggedIn()&&['board','projects'].includes(state.view)&&annDismissed()!==String(row['公告版本'])&&!annRead(row));
+      if(!show){if(bar)bar.hidden=true;return}
+      if(!bar){bar=document.createElement('div');bar.id='annBar';bar.className='ann-bar';bar.setAttribute('role','status');document.body.appendChild(bar)}
+      const ver=String(row['公告版本']).trim();
+      if(bar.dataset.v!==ver){bar.dataset.v=ver;bar.innerHTML=`<span class="ann-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></span><div class="ann-txt"><b>有最新公告通知</b><span>${esc(String(row['公告標題']||ver))}</span></div><button type="button" class="btn primary" data-ann="open">查看內容</button><button type="button" class="ann-x" data-ann="close">關閉</button>`}
+      bar.hidden=false;
+    }
+    function annMark(row){
+      const ver=String(row['公告版本']).trim();try{localStorage.setItem('v5AnnDismissed',ver)}catch(e){}
+      const bar=document.getElementById('annBar');if(bar)bar.hidden=true;
+      api('markSystemAnnouncementRead',{version:ver}).catch(()=>{});
+    }
+    function annOpen(row){
+      annMark(row);
+      let m=document.getElementById('annModal');if(m)m.remove();
+      m=document.createElement('div');m.id='annModal';m.className='nc-back';
+      m.innerHTML=`<div class="nc-card" role="dialog" aria-modal="true" aria-label="系統公告" style="width:min(640px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📢</span><div><h3>${esc(String(row['公告標題']||row['公告版本']))}</h3><p>${esc([row['公告版本'],row['發布時間']].filter(Boolean).join(' ｜ '))}</p></div></div><div class="ann-body">${annMarkdown(row['公告內容'])}</div><div class="nc-foot"><button type="button" class="btn primary" data-ann="done">我知道了</button></div></div>`;
+      document.body.appendChild(m);
+    }
+    document.addEventListener('click',e=>{
+      const a=e.target.closest?.('[data-ann]')?.dataset.ann;
+      if(a==='done'){document.getElementById('annModal')?.remove();return}
+      if(!a)return;const row=annLatest();if(!row)return;
+      if(a==='open')annOpen(row);else if(a==='close')annMark(row);
+    });
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('annModal')?.remove()});
     function newCustomerDialog(){
       return new Promise(resolve=>{
         const back=document.createElement('div');back.className='nc-back';
@@ -4387,6 +4446,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         state.mods=new Map();for(const r of t['修改統計表']?.rows||[]){const k=String(r['案件編號']||'');if(!state.mods.has(k))state.mods.set(k,[]);state.mods.get(k).push(r)}
         for(const [id,edit] of [...state.edits]){if(Date.now()-edit.at>10*60*1000){state.edits.delete(id);continue}const hit=state.rows.find(r=>String(r['案件編號'])===id);if(hit)Object.assign(hit,edit.headers)} // 剛編輯完、db.json 還沒更新時，先保留本機的修改
         const dbIds=new Set(state.rows.map(r=>String(r['案件編號'])));for(const id of [...state.localRows.keys()])if(dbIds.has(id))state.localRows.delete(id); // db.json 已經包含剛建立的案件，就不用本機暫存
+        state.annRows=t['系統公告欄']?.rows||[];
         state.loaded=true;
         const stamp=new Date(db.updatedAt||Date.now());
         state.syncText=`資料更新：${stamp.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}`;
@@ -4394,7 +4454,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }catch(err){console.warn('案件資料讀取失敗',err);if(background)return;state.loaded=true;state.syncText='案件資料讀取失敗，請重新整理'}
       if(background&&bgBusy()){state.dirty=true;return}
       state.dirty=false;
-      if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam();renderLogin();
+      if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam();renderLogin();try{annSync()}catch(e){}
     }
     function fillClients(){
       const select=$('clientSelect'),keep=select.value;
