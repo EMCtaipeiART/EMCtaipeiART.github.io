@@ -4883,7 +4883,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return this.mutate(action, session, draft => {
       if (requestId && draft.internal.idempotency[requestId]) return { result: { ...draft.internal.idempotency[requestId], ok: true, deduplicated: true }, changed: false };
       const created: Row[] = [], rowNumbers: number[] = [];
+      const touched = new Set<string>(['database', '補充資料連結']);
       for (const source of sources) {
+        // 輪替：前台送 expectedDesigner（＝輪替順位第一）時，由伺服器依當下輪替表重算並登記到「平面／影音新開專案」。
+        if (text(source.expectedDesigner)) for (const table of this.applyRotation(draft, source)) touched.add(table);
         const row = toSheetRow(source, {}, weightRules(draft));
         row['案件編號'] ||= nextCaseId(draft.tables.database.rows);
         row['填單時間'] ||= nowTaipei().slice(0, 10).replace(/\//g, '-');
@@ -4897,8 +4900,38 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         ? { ok: true, action: 'batchAdd', count: created.length, rowNumbers, rows: created }
         : { ok: true, action: 'append', rowNumber: rowNumbers[0], row: created[0] };
       if (requestId) draft.internal.idempotency[requestId] = { ...result };
-      return { result, changedTables: ['database', '補充資料連結'] };
+      return { result, changedTables: [...touched] };
     });
+  }
+
+  /** 新案件的輪替登記：決定負責人（輪替第一位或替代設計師）、寫一列「新開專案」紀錄、把實際接案的人排到輪替最後。 */
+  private applyRotation(draft: DatabaseSnapshot, source: Row): string[] {
+    const type = text(source.type);
+    const group = type === '影音' ? '影音' : '平面';
+    const names = designerRowsForGroup(draft, group).map(row => text(row['名字']));
+    if (!names.length) return [];
+    const expected = names[0];
+    const replacement = text(source.replacement);
+    if (replacement && replacement !== expected) {
+      if (!names.includes(replacement)) throw new Error('替代設計師必須是同一輪替組別的設計師');
+      if (text(source.reason).length < 2) throw new Error('有替代設計師時，請填寫替代原因');
+    }
+    const designer = replacement && replacement !== expected ? replacement : expected;
+    source.designer = designer;
+    const projectTable = draft.tables[`${group}新開專案`];
+    if (projectTable) {
+      projectTable.rows.push({
+        '客戶別': text(source.client), '專案名稱': text(source.project), '專案負責人': text(source.owner),
+        '專案類型': text(source.stage), '數量': text(source.qty), '開始時間': text(source.start), '結束時間': text(source.end),
+        '預計設計師': expected, '替換(選填)': designer !== expected ? designer : '', '調整原因(選填)': designer !== expected ? text(source.reason) : ''
+      });
+    }
+    const settingsRows = draft.tables['設定'].rows;
+    const ranked = names.map((name, index) => ({ settings: settingsRows.find(item => text(item['名字']) === name), name, index }));
+    const consumed = ranked.findIndex(item => item.name === designer);
+    const reordered = [...ranked.slice(0, consumed), ...ranked.slice(consumed + 1), ranked[consumed]];
+    reordered.forEach((item, index) => { if (item.settings) item.settings['新專案輪值'] = String(index + 1); });
+    return projectTable ? [`${group}新開專案`, '設定'] : ['設定'];
   }
 
   private async updateRequests(action: string, payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null, baseUrl: string): Promise<ApiResult> {

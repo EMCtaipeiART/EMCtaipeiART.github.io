@@ -104,6 +104,24 @@
     .cs-item.on,.cs-item:hover{background:#e6f4ea}
     .cs-item.cs-new{margin-top:4px;border-top:1px solid #edf1ee;border-radius:0 0 12px 12px;color:var(--brand-deep,#0f5138)}
     .cs-item.cs-new .cs-ico{background:var(--brand-soft,#e6f4ea);color:var(--brand)}
+    .nc-back{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:18px;background:rgba(10,20,15,.5);backdrop-filter:blur(3px);animation:csIn .15s ease}
+    .nc-card{width:min(460px,100%);border-radius:22px;background:var(--panel);color:var(--ink);box-shadow:0 30px 70px rgba(0,0,0,.35);overflow:hidden}
+    .nc-head{display:flex;align-items:center;gap:12px;padding:20px 22px 6px}
+    .nc-ico{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:var(--brand-soft,#e6f4ea);color:var(--brand);font-size:24px;font-weight:700}
+    .nc-head h3{margin:0;font-size:18px}.nc-head p{margin:2px 0 0;font-size:13px;color:var(--muted);font-weight:600}
+    .nc-body{padding:14px 22px 6px}
+    .nc-body label{display:block;font-size:13px;font-weight:800;color:var(--muted);margin-bottom:6px}
+    .nc-input{width:100%;box-sizing:border-box;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:0 14px;font:inherit;font-size:15.5px;font-weight:700;color:var(--ink);outline:none}
+    .nc-input:focus{border-color:var(--brand);background:var(--panel);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}
+    .nc-err{min-height:18px;margin:6px 2px 0;font-size:12.5px;font-weight:700;color:#d64550}
+    .nc-perm{margin:8px 0 4px;padding:12px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
+    .nc-perm b{display:block;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+    .nc-chips{display:flex;flex-wrap:wrap;gap:6px}
+    .nc-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:var(--brand-soft,#e6f4ea);color:var(--brand-deep,#0f5138);font-size:12.5px;font-weight:800}
+    .nc-chip svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+    .nc-perm small{display:block;margin-top:8px;font-size:12px;color:var(--faint);font-weight:600}
+    .nc-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 22px 20px}
+    html[data-theme="dark"] .nc-chip{background:#1c2b22;color:#cfe3d8}
     .cs-empty{padding:22px 12px;text-align:center;color:#8a968f;font-size:13.5px;font-weight:600}
     html[data-theme="dark"] .cs-trigger{color:#e9efec}html[data-theme="dark"] .cs-trigger.is-empty{color:#8a968f}
     html[data-theme="dark"] .cs-pop{background:#1d2321;border-color:#2c3431;color:#e9efec;box-shadow:0 24px 54px rgba(0,0,0,.6)}
@@ -1661,6 +1679,23 @@ window.emcQuotes=[
     const designTypes=()=>{const t=[...new Set(state.weights.map(r=>String(r['設計種類']||'').trim()).filter(Boolean))];return t.length?t:['平面','影音']};
     const stagesFor=type=>[...new Set(state.weights.filter(r=>String(r['設計種類']||'').trim()===type&&String(r['狀態']||'').trim()!=='下架').map(r=>String(r['階段']||'').trim()).filter(Boolean))];
     function defaultDesignerFor(client){const row=customerRow(client),names=designerNames(),c=row?parseList(row['設計負責人']).filter(n=>names.includes(n)):[];return c[0]||''}
+    /** 新案件輪替：同組（平面／影音）裡「新專案輪值」最小的設計師是下一位；有替代設計師時，實際接案的人排到最後（跟後端 applyRotation 同一套）。 */
+    function rotationOrder(type){
+      const grp=type==='影音'?'影音':'平面';
+      return state.settings.filter(r=>String(r['組別']||'').trim()===grp&&String(r['名字']||'').trim()&&String(r['設計師顯示']||'v').toLowerCase()!=='x')
+        .sort((a,b)=>(Number(a['新專案輪值'])||99)-(Number(b['新專案輪值'])||99)||String(a['名字']).localeCompare(String(b['名字']),'zh-Hant')).map(r=>String(r['名字']).trim());
+    }
+    function applyRotationPlan(f){
+      const orders={};
+      for(const r of [f,...(f.extra||[])]){
+        const g=r.type==='影音'?'影音':'平面',list=orders[g]||(orders[g]=rotationOrder(g));
+        r.rot=list[0]||'';
+        if(r.sub&&(r.sub===r.rot||!list.includes(r.sub)))r.sub='';
+        r.designer=r.sub||r.rot;
+        if(r.designer){const i=list.indexOf(r.designer);if(i>=0){list.splice(i,1);list.push(r.designer)}}
+      }
+    }
+    const newStage=type=>stagesFor(type).includes('提案')?'提案':defaultStage(type);
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
     const emailOf=text=>(String(text||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();
@@ -2332,13 +2367,19 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 專案負責人：管理者與設計部人員可自行填寫，其他人固定為登入者本人 */
     const ownerSelf=()=>{const s=session();return s.name||s.user||''};
     const ownerLocked=()=>loggedIn()&&!isAdminUser()&&!isMachiUser()&&!(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession());
-    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,stage:defaultStage(type),...o,type}}
+    function newRow(o={}){const start=defaultStart(),types=designTypes(),type=o.type||(types.includes('平面')?'平面':types[0]);return {client:'',project:'',owner:'',qty:'1',designer:'',start,end:start,platforms:[],supp:blankSupp(),designerTouched:false,sub:'',subReason:'',rot:'',stage:newStage(type),...o,type}}
     const copyRow=r=>({...r,platforms:[...r.platforms],supp:{...r.supp}});
     function newForm(client){const s=session();return {...newRow({client,owner:s.name||s.user||'',designer:defaultDesignerFor(client)}),batch:false,extra:[],busy:false}}
     /** 階段選單：有「新製」與「再製」時，最後加上「AI判斷(beta)」（跟現行系統一致）。 */
     function stageOptions(type,selected){
       const list=stagesFor(type);
       return '<option value="">請選擇</option>'+list.map(s=>`<option value="${esc(s)}"${s===selected?' selected':''}>${esc(s)}</option>`).join('')+(list.includes('新製')&&list.includes('再製')?'<option value="__ai__">AI判斷(beta)</option>':'');
+    }
+    function rotationFields(r,key){
+      const list=rotationOrder(r.type),others=list.filter(n=>n!==r.rot);
+      return `<div class="field c2"><span class="label">設計負責人（輪替順位第一）</span><input class="input is-locked" value="${esc(r.rot||'無可輪替的設計師')}" readonly tabindex="-1" aria-label="設計負責人" title="依「${esc(r.type==='影音'?'影音':'平面')}輪替表」自動指定，不能更改"></div>
+        <div class="field c2"><span class="label">替代設計師（選填）</span><select data-f="sub" aria-label="替代設計師"><option value="">不替代</option>${others.map(n=>`<option value="${esc(n)}"${n===r.sub?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
+        ${r.sub?`<div class="field c4"><span class="label">替代原因 <b>*</b></span><input class="input" data-f="subReason" value="${esc(r.subReason)}" placeholder="例如：${esc(r.rot)} 請假／手上案量已滿" autocomplete="off" aria-label="替代原因"></div>`:''}`;
     }
     function rowHtml(r,key,opt={}){
       const names=designerNames(),types=designTypes(),clients=clientNames(),shownClients=!r.client||clients.includes(r.client)?clients:[r.client,...clients];
@@ -2349,7 +2390,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <div class="field c2"><span class="label">專案負責人 <b>*</b></span><input class="input${ownerLocked()?' is-locked':''}" data-f="owner" value="${esc(ownerLocked()?ownerSelf():r.owner)}" autocomplete="off" aria-label="專案負責人"${ownerLocked()?' readonly tabindex="-1" title="專案負責人固定為登入者本人"':''}></div>
         <div class="field c2"><span class="label">設計種類 <b>*</b></span><div class="seg" role="radiogroup" aria-label="設計種類">${types.map(t=>`<label><input type="radio" name="type-${key}" data-f="type" value="${esc(t)}"${t===r.type?' checked':''}>${esc(t)}</label>`).join('')}</div></div>
         <div class="field c2"><span class="label">階段 <b>*</b></span><select data-f="stage" aria-label="階段">${stageOptions(r.type,r.stage)}</select></div>
-        <div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
+        ${key==='edit'?`<div class="field c2"><span class="label">設計負責人 <b>*</b></span><select data-f="designer" aria-label="設計負責人"><option value="">請選擇</option>${(!r.designer||names.includes(r.designer)?names:[r.designer,...names]).map(n=>`<option value="${esc(n)}"${n===r.designer?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`:rotationFields(r,key)}
         <div class="field c2"><span class="label">數量 <b>*</b></span><input class="input" data-f="qty" value="${esc(r.qty)}" inputmode="numeric" autocomplete="off" aria-label="數量"></div>
         ${opt.status?`<div class="field c2"><span class="label">案件狀態</span><select data-f="status" aria-label="案件狀態">${STATUS_FILTER.map(k=>`<option value="${k}"${k===r.status?' selected':''}>${esc(ST[k].label)}</option>`).join('')}</select></div>`:''}
         <div class="field c4 range"><span class="label">開始／結束時間 <b>*</b></span>
@@ -2382,6 +2423,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 新增案件：填寫頁 ---------- */
     function renderForm(){
       const f=state.form,stage=$('stage');if(!f){backToBoard();return}
+      applyRotationPlan(f);
       const ok=loggedIn();
       stage.innerHTML=`<div class="page">
         <div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button><div><h2 class="page-title">新增設計需求</h2><p class="page-sub">填完按「送出並撰寫信件」，案件建立後會直接進入信件編輯。</p></div></div>
@@ -2405,6 +2447,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const missing=[],p=label?`${label}`:'';
       for(const [k,name] of [['client','客戶別'],['project','專案名稱'],['owner','專案負責人'],['type','設計種類'],['stage','階段'],['qty','數量'],['designer','設計負責人']])if(!String(r[k]||'').trim())missing.push(p+name);
       if(Number.isNaN(r.start)||Number.isNaN(r.end))missing.push(p+'開始／結束時間');
+      if(r.sub&&String(r.subReason||'').trim().length<2)missing.push(p+'替代原因');
       if(missing.length)return `請補齊資料：${missing.join('、')}`;
       if(!/^[0-9]+$/.test(String(r.qty)))return `${p}數量請使用阿拉伯數字 0-9`;
       for(const key of ['briefUrl','assetUrl','referenceUrl','otherUrl'])if(r.supp[key]&&!/^https?:\/\//i.test(r.supp[key]))return `${p}補充資料連結要以 http:// 或 https:// 開頭`;
@@ -2417,9 +2460,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       '設計簡報說明':r.supp.briefNote,'設計簡報連結':r.supp.briefUrl,'客戶素材說明':r.supp.assetNote,'客戶素材連結':r.supp.assetUrl,'參考範例說明':r.supp.referenceNote,'參考範例連結':r.supp.referenceUrl,'其他說明':r.supp.otherNote,'其他連結':r.supp.otherUrl});
     const FORM_HEADERS=['客戶別','專案名稱','專案負責人','設計類型','階段','數量','開始日期','結束日期','設計負責人','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     /** Worker 的 add／batchAdd／update 吃前台的欄位 key（跟現行系統 formWriteRow 一致）。 */
-    const payloadRow=r=>({client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,platforms:platformText(r),...r.supp});
+    const payloadRow=r=>({client:r.client,project:r.project,owner:ownerLocked()?ownerSelf():r.owner,type:r.type,stage:r.stage,qty:r.qty,start:ymd(r.start),end:ymd(r.end),designer:r.designer,expectedDesigner:r.rot,replacement:r.sub||'',reason:r.sub?String(r.subReason||'').trim():'',platforms:platformText(r),...r.supp});
     async function submitForm(opts={}){
       readRowsSafe();const f=state.form;if(!f||f.busy)return;
+      applyRotationPlan(f);
       if(!loggedIn()){toast('請先登入',true);startLogin();return}
       const problem=validateForm();if(problem){toast(problem,true);return}
       f.busy=true;renderForm();
@@ -2431,7 +2475,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const created=(items.length>1?data.rows:[data.row]).filter(Boolean);
         if(!created.length||created.some(r=>!/^\d{8}$/.test(String(r.id||''))))throw new Error('寫入完成但沒有取得案件編號，請重新整理確認');
         const drafts=created.map((r,i)=>{const id=String(r.id),item=items[i]||items[0],header={...rowHeaders(item),'案件編號':id,'狀態':'未開始','填單時間':ymd(taipeiToday())};state.localRows.set(id,header);return {id,row:header}});
-        toast(`已新增 ${drafts.length} 筆案件：${drafts.map(d=>d.id).join('、')}`);
+        toast(`已新增 ${drafts.length} 筆案件：${drafts.map(d=>d.id).join('、')}`);try{loadDatabase(true,true)}catch(e){}
         startMail(drafts,{schedule:Boolean(opts.schedule)});
       }catch(err){
         f.busy=false;renderForm();
@@ -4148,9 +4192,35 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('storage',e=>{if(e.key==='v5LoginDone'||e.key==='designRequestEditorToken')afterLogin()});
 
     /* ---------- 新增客戶別（跟現行系統同一個用法：輸入名稱，Worker 建立） ---------- */
+    function newCustomerDialog(){
+      return new Promise(resolve=>{
+        const me=state.settings.find(r=>norm(r['帳號'])===norm(selfAccount())),dept=String(me?.['部門']||sessionDept()||'').trim(),grp=String(me?.['組別']||'').trim();
+        const units=['設計部','企劃部'];if(/專案/.test(dept)&&grp)units.push(`${grp}（你的專案組別）`);
+        const ck='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+        const back=document.createElement('div');back.className='nc-back';
+        back.innerHTML=`<form class="nc-card" role="dialog" aria-modal="true" aria-label="新增客戶別"><div class="nc-head"><span class="nc-ico">＋</span><div><h3>新增客戶別</h3><p>建立後就能直接用它填寫設計需求</p></div></div>
+          <div class="nc-body"><label for="ncName">客戶別名稱</label><input class="nc-input" id="ncName" maxlength="40" autocomplete="off" placeholder="例如：品牌名稱（最多 40 字）"><div class="nc-err" id="ncErr" role="alert"></div>
+          <div class="nc-perm"><b>預設有權限的人員</b><div class="nc-chips">${units.map(u=>`<span class="nc-chip">${ck}${esc(u)}${/組/.test(u)?'':'全員'}</span>`).join('')}</div><small>之後可在「個人設定 › 客戶設定」調整權限與預設信箱。</small></div></div>
+          <div class="nc-foot"><button type="button" class="btn" data-nc="cancel">取消</button><button type="submit" class="btn primary" data-nc="ok">建立客戶別</button></div></form>`;
+        document.body.appendChild(back);
+        const input=back.querySelector('#ncName'),err=back.querySelector('#ncErr'),form=back.querySelector('form');
+        let composing=false;input.addEventListener('compositionstart',()=>{composing=true});input.addEventListener('compositionend',()=>{composing=false});
+        const done=v=>{document.removeEventListener('keydown',onKey,true);back.remove();resolve(v)};
+        const onKey=e=>{if(e.key==='Escape'&&!composing){e.preventDefault();done('')}};
+        document.addEventListener('keydown',onKey,true);
+        back.addEventListener('mousedown',e=>{if(e.target===back)done('')});
+        back.querySelector('[data-nc="cancel"]').onclick=()=>done('');
+        form.addEventListener('submit',e=>{e.preventDefault();if(composing)return;const name=input.value.trim();
+          if(!name){err.textContent='請輸入客戶別名稱';input.focus();return}
+          if(clientNames().some(n=>norm(n)===norm(name))){err.textContent='這個客戶別已經存在，直接從清單選擇即可';input.focus();return}
+          done(name)});
+        input.addEventListener('input',()=>{err.textContent=''});
+        setTimeout(()=>input.focus(),30);
+      });
+    }
     async function addCustomerFlow(){
       if(!loggedIn()){toast('請先登入後再新增客戶別',true);startLogin();return ''}
-      const name=String(prompt('請輸入新客戶別名稱：')||'').trim();if(!name)return '';
+      const name=await newCustomerDialog();if(!name)return '';
       try{
         const res=await api('addCustomer',{name});
         const row=res.customer||{'客戶別':name,'專案負責人':'[]','設計負責人':'[]','部門組別':'[]'};
@@ -4281,11 +4351,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(field==='client'){
         readRowsSafe();
         if(t.value==='__new__'){const name=await addCustomerFlow();r.client=name||r.client}else r.client=t.value;
-        if(key!=='edit'&&(!r.designerTouched||!r.designer)){r.designer=defaultDesignerFor(r.client);toast(r.designer?`設計負責人已依客戶別設定帶入：${r.designer}`:'這個客戶別沒有設定偏好設計師，請自行選擇')}
         rerender();return;
       }
       if(field==='designer'){r.designerTouched=true;return}
-      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=defaultStage(r.type);rerender();return}
+      if(field==='sub'){readRowsSafe();r.sub=t.value;if(!r.sub)r.subReason='';rerender();return}
+      if(field==='type'){readRowsSafe();r.type=t.value;r.stage=key==='edit'?defaultStage(r.type):newStage(r.type);r.sub='';r.subReason='';rerender();return}
       if(field==='stage'&&t.value==='__ai__'){t.value=r.stage||'';readRowsSafe();openAi(key);return}
     });
     document.addEventListener('submit',e=>{
