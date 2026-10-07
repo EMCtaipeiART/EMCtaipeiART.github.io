@@ -4261,14 +4261,15 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 設計部行事曆 ---------- */
     const DC_COLORS={Machi:'#3f9b53',Anna:'#e0719a',Amber:'#e5a13a',Leona:'#8a6fd6',Noise:'#3d8fd6'};
     const dcColor=n=>DC_COLORS[n]||'#7b8a83';
-    const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',hidden:new Set(),cache:new Map(),loading:false,error:''};
+    const DC_STATUS_COLOR={'未開始':['未執行','#d64550'],'執行中':['執行中','#e5b020'],'修改中':['修改中','#f08a24']};
+    const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',sets:{cal:new Set(),due:new Set()},hidden:null,cache:new Map(),loading:false,error:''};
     const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());
     const dcPad=n=>String(n).padStart(2,'0');
     const dcKey=ms=>{const d=new Date(ms);return `${d.getUTCFullYear()}-${dcPad(d.getUTCMonth()+1)}-${dcPad(d.getUTCDate())}`};
     const dcTime=ms=>{const d=new Date(ms+8*3600000);return `${dcPad(d.getUTCHours())}:${dcPad(d.getUTCMinutes())}`};
     function dcRange(){const first=Date.UTC(dcCal.y,dcCal.m,1),start=first-new Date(first).getUTCDay()*DAY,last=Date.UTC(dcCal.y,dcCal.m+1,0),end=last+(6-new Date(last).getUTCDay())*DAY;return {start,end}}
     /* 案件交期：「未開始（未執行）」與「執行中」的案件，從開始日到結束日的每個上班日都標在該設計師身上；結束日那天標「交」。 */
-    const DC_ACTIVE=new Set(['未開始','執行中']);
+    const DC_ACTIVE=new Set(['未開始','執行中','修改中']);
     function dcDeadlinesOn(dayMs){
       const key=dcKey(dayMs),names=Object.keys(DC_COLORS),wd=new Date(dayMs).getUTCDay(),out=[];
       if(wd===0||wd===6||TL_HOLIDAYS.has(key))return out;
@@ -4276,7 +4277,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const st=String(r['狀態']||'').trim();if(!DC_ACTIVE.has(st))continue;
         const a=parseDay(r['開始日期']),b=parseDay(r['結束日期']);if(Number.isNaN(b)||dayMs>b||(!Number.isNaN(a)&&dayMs<a))continue;
         const who=names.filter(n=>String(r['設計負責人']||'').split(/[,，、;；\s]+/).some(x=>norm(x)===norm(n)));
-        for(const w of who){if(dcCal.hidden.has(w))continue;out.push({who:w,title:`${idKey(r)} ${String(r['客戶別']||'').trim()}｜${String(r['專案名稱']||'').trim()}`,status:st==='未開始'?'未執行':st,isEnd:dayMs===b,period:`${Number.isNaN(a)?'?':ymd(a).slice(5)} – ${ymd(b).slice(5)}`,kind:'due',allDay:true,start:0,end:0})}
+        for(const w of who){if(dcCal.hidden.has(w))continue;out.push({color:DC_STATUS_COLOR[st][1],who:w,title:`${idKey(r)} ${String(r['客戶別']||'').trim()}｜${String(r['專案名稱']||'').trim()}`,status:DC_STATUS_COLOR[st][0],isEnd:dayMs===b,period:`${Number.isNaN(a)?'?':ymd(a).slice(5)} – ${ymd(b).slice(5)}`,kind:'due',allDay:true,start:0,end:0})}
       }
       return out.sort((x,y)=>Number(y.isEnd)-Number(x.isEnd)||x.who.localeCompare(y.who));
     }
@@ -4293,29 +4294,29 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     function renderCalendarPage(){
       if(!dcAllowed()){$('stage').innerHTML='<div class="page"><h2 class="page-title">行事曆</h2><p class="page-sub">行事曆僅限設計部人員使用，請先登入。</p></div>';return}
-      if(!dcCal.init){dcCal.init=true;const me=ownDesignerName();if(me&&DC_COLORS[me])Object.keys(DC_COLORS).forEach(n=>{if(n!==me)dcCal.hidden.add(n)})}
+      if(!dcCal.init){dcCal.init=true;const me=ownDesignerName();if(me&&DC_COLORS[me])Object.keys(DC_COLORS).forEach(n=>{if(n!==me)dcCal.sets.due.add(n)});dcCal.hidden=dcCal.sets[dcCal.mode]}
       if(!dcCal.y){const t=taipeiToday(),d=new Date(t);dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(t)}
       const today=dcKey(taipeiToday()),r=dcRange(),data=dcCal.cache.get(dcRangeKey())?.data;
       const names=data?.designers||Object.keys(DC_COLORS);
       let cells='';for(const w of ['日','一','二','三','四','五','六'])cells+=`<div class="dc-dow">${w}</div>`;
       for(let ms=r.start;ms<=r.end;ms+=DAY){
         const k=dcKey(ms),d=new Date(ms),inMonth=d.getUTCMonth()===dcCal.m,wd=d.getUTCDay(),hn=TL_HOLIDAYS.get(k),evs=dcEventsOn(ms),shown=evs.slice(0,3);
-        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
+        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${e.color||dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'&&Object.keys(DC_COLORS).filter(n=>!dcCal.hidden.has(n)).length<2?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
       }
       const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
-      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
+      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${e.color||dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
       const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
       $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
         <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
         <div class="dc-legend"><span class="dc-mode" role="radiogroup" aria-label="顯示內容"><button type="button" class="dc-chip${dcCal.mode==='cal'?'':' off'}" style="--c:var(--brand)" data-dc-mode="cal"><i></i>行程與請假</button><button type="button" class="dc-chip${dcCal.mode==='due'?'':' off'}" style="--c:#d64550" data-dc-mode="due" title="未執行與執行中的案件，從開始日標到交件日"><i></i>案件交期</button></span>${(()=>{const me=ownDesignerName();const all=dcCal.hidden.size===0;return me&&DC_COLORS[me]?`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="${all?'me':'all'}">${all?'只看我':'顯示全部'}</button>`:`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="all">顯示全部</button>`})()}${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
-        <div class="dc-grid">${cells}</div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}</div>`;
+        ${dcCal.mode==='due'?`<div class="dc-legend">${Object.values(DC_STATUS_COLOR).map(([n,c])=>`<span class="dc-chip" style="--c:${c};cursor:default"><i></i>${n}</span>`).join('')}<span class="dc-chip" style="--c:var(--muted);cursor:default">「交」＝當天交件</span></div>`:''}<div class="dc-grid">${cells}</div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}</div>`;
     }
     document.addEventListener('click',e=>{
       if(state.view!=='calendar')return;
       const day=e.target.closest?.('[data-dc-day]'),who=e.target.closest?.('[data-dc-who]'),act=e.target.closest?.('[data-dc]')?.dataset.dc;
-      if(day){dcCal.sel=day.dataset.dcDay;renderCalendarPage();return}
+      if(day){dcCal.sel=day.dataset.dcDay;renderCalendarPage();setTimeout(()=>document.querySelector('.dc-detail')?.scrollIntoView({behavior:'smooth',block:'nearest'}),40);return}
       const allBtn=e.target.closest?.('[data-dc-who-all]');if(allBtn){const me=ownDesignerName();dcCal.hidden.clear();if(allBtn.dataset.dcWhoAll==='me'&&me)Object.keys(DC_COLORS).forEach(n=>{if(n!==me)dcCal.hidden.add(n)});renderCalendarPage();return}
-      const mode=e.target.closest?.('[data-dc-mode]');if(mode){dcCal.mode=mode.dataset.dcMode;renderCalendarPage();if(dcCal.mode==='cal')dcLoad(false);return}
+      const mode=e.target.closest?.('[data-dc-mode]');if(mode){dcCal.mode=mode.dataset.dcMode;dcCal.hidden=dcCal.sets[dcCal.mode];renderCalendarPage();if(dcCal.mode==='cal')dcLoad(false);return}
       if(who){const n=who.dataset.dcWho;dcCal.hidden.has(n)?dcCal.hidden.delete(n):dcCal.hidden.add(n);renderCalendarPage();return}
       if(!act)return;
       if(act==='prev'||act==='next'){const d=new Date(Date.UTC(dcCal.y,dcCal.m+(act==='next'?1:-1),1));dcCal.y=d.getUTCFullYear();dcCal.m=d.getUTCMonth();dcCal.sel=dcKey(d.getTime());dcLoad(false);return}
