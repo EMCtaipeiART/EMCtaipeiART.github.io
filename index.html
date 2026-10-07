@@ -1758,9 +1758,9 @@ window.emcQuotes=[
         if(r.designer){const i=list.indexOf(r.designer);if(i>=0){list.splice(i,1);list.push(r.designer)}}
       }
     }
-    /** 「新開專案」＝這個客戶別還沒有任何案件（或剛在這次新增）：階段預設「提案」、負責人走輪替表。既有客戶別維持原本流程（階段新製、設計負責人自選）。 */
+    /** 「新開專案」＝剛用「新增客戶別」建立的客戶別（只限這次開著系統期間）：階段預設「提案」、負責人走輪替表。既有客戶別維持原本流程（階段新製、設計負責人自選）。 */
     const newClientSet=new Set();
-    const isNewClient=c=>Boolean(c)&&(newClientSet.has(c)||!allRowsRaw().some(r=>String(r['客戶別']||'').trim()===c));
+    const isNewClient=c=>Boolean(c)&&newClientSet.has(c);
     const newStage=(type,client)=>isNewClient(client)&&stagesFor(type).includes('提案')?'提案':defaultStage(type);
     function designerEmail(name){const row=state.settings.find(r=>norm(r['名字'])===norm(name)||norm(r['顯示名'])===norm(name)),account=String(row?.['帳號']||'').trim();return account||(name?`${String(name).replace(/\s+/g,'').toLowerCase()}@emctaipei.com`:'')}
     function recipientFor(name){const display=RECIPIENT_NAMES[name]||name,email=designerEmail(name);return display&&email?`${display} <${email}>`:email}
