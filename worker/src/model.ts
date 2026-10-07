@@ -196,6 +196,7 @@ export function settingsResponse(row: Row = {}): Row {
     signaturePresets: normalizeSignaturePresetsValue(row['簽名檔清單']),
     signaturePresetDefault: normalizeSignaturePresetDefaultValue(row['預設簽名檔'], normalizeSignaturePresetsValue(row['簽名檔清單'])), visibleColumns: ordered,
     columnOrder: text(row['專案欄位順序']),
+    nicknameMap: normalizeNicknameMapValue(row['稱呼對照']),
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
@@ -204,6 +205,26 @@ export function settingsResponse(row: Row = {}): Row {
     },
     theme: /深色|dark/i.test(rawTheme) ? 'dark' : (/淺色|light/i.test(rawTheme) ? 'light' : '')
   };
+}
+/** 稱呼對照：把案件上的全名換成回信時要用的暱稱（每人各自設定）。存成 JSON 陣列 [{name,nickname}]，
+ * 去掉空白、全名與暱稱相同的、重複的全名（比對時不分大小寫與空白），最多 200 筆、每欄 40 字。 */
+export function normalizeNicknameMapValue(value: unknown): Array<{ name: string; nickname: string }> {
+  let source: unknown = value;
+  if (typeof source === 'string') { try { source = JSON.parse(source || '[]'); } catch { source = []; } }
+  const entries = Array.isArray(source)
+    ? source.map(item => ({ name: text((item as Row)?.name).replace(/\s+/g, ' ').trim(), nickname: text((item as Row)?.nickname).replace(/\s+/g, ' ').trim() }))
+    : (source && typeof source === 'object' ? Object.entries(source as Row).map(([name, nickname]) => ({ name: text(name).replace(/\s+/g, ' ').trim(), nickname: text(nickname).replace(/\s+/g, ' ').trim() })) : []);
+  const seen = new Set<string>();
+  const result: Array<{ name: string; nickname: string }> = [];
+  for (const entry of entries) {
+    if (!entry.name || !entry.nickname || entry.name.length > 40 || entry.nickname.length > 40) continue;
+    const key = entry.name.toLowerCase();
+    if (key === entry.nickname.toLowerCase() || seen.has(key)) continue;
+    seen.add(key);
+    result.push(entry);
+    if (result.length >= 200) break;
+  }
+  return result;
 }
 export function normalizeReplyTemplatesValue(value: unknown): Record<string, string> {
   let source: unknown = value;
@@ -488,6 +509,9 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
   } else if ('signaturePresetDefault' in settings || '預設簽名檔' in settings) {
     const presets = normalizeSignaturePresetsValue(row['簽名檔清單']);
     row['預設簽名檔'] = normalizeSignaturePresetDefaultValue(settings.signaturePresetDefault ?? settings['預設簽名檔'], presets);
+  }
+  if ('nicknameMap' in settings || '稱呼對照' in settings) {
+    row['稱呼對照'] = JSON.stringify(normalizeNicknameMapValue(settings.nicknameMap ?? settings['稱呼對照']));
   }
   if ('displayName' in settings || '顯示名' in settings) {
     const value = text(settings.displayName || settings['顯示名']);

@@ -849,6 +849,8 @@
     .schedule-row label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--muted)}
     .schedule-row input{height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel);padding:0 10px;font-weight:700}
     .sch-note{font-size:12px;color:var(--muted);font-weight:600}
+    .nick-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;gap:10px;align-items:center;margin-bottom:10px}.nick-arrow{color:var(--muted);font-weight:900}
+    @media(max-width:640px){.nick-row{grid-template-columns:minmax(0,1fr) auto}.nick-arrow{display:none}}
     .schedule-row.sch2{display:grid;gap:10px;align-items:start}.sch2 .sch-title{font-size:13px;font-weight:900;color:var(--muted)}
     .sch-chips{display:flex;flex-wrap:wrap;gap:8px}.sch-chip{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:800;font-size:13px;cursor:pointer}
     .sch-chip:hover{border-color:var(--brand)}.sch-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
@@ -2677,7 +2679,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* ---------- 設定頁：個人設定、信件範本、簽名檔設定、客戶設定（沿用舊網站，寫入同一份後台資料） ---------- */
     const SET_LOCKED_DEPT=/設計部/;
-    const st2={loaded:false,loading:false,error:'',display:'',avatar:'',templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,signatures:false,customers:false,groups:new Set()},busy:''};
+    const st2={loaded:false,loading:false,error:'',display:'',avatar:'',nicknames:[],templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,nicknames:false,signatures:false,customers:false,groups:new Set()},busy:''};
     const selfAccount=()=>{const s=session();const a=String(s.account||s.user||'').trim().toLowerCase();return a.includes('@')?a:(a?`${a}@emctaipei.com`:'')};
     const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
     const sessionDept=()=>sessionValue('designRequestEditorDepartment');
@@ -2695,6 +2697,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const list=entries.filter(([,c])=>c).slice(0,80),idx=Math.max(0,list.findIndex(([n])=>n===String(def||'').trim()));
       return {items:list.map(([,c])=>({html:c})),def:idx};
     }
+    function normNicknames(value){
+      let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'[]')}catch(e){src=[]}}
+      return (Array.isArray(src)?src:[]).map(i=>({name:String(i?.name||'').trim(),nickname:String(i?.nickname||'').trim()})).filter(i=>i.name&&i.nickname).slice(0,200);
+    }
     function normPresets(value,def){
       let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
       const list=(src&&typeof src==='object'&&!Array.isArray(src)?Object.entries(src):[]).map(([n,c])=>({name:String(n).trim(),html:String(c??'').trim()})).filter(p=>p.name&&p.html).slice(0,40);
@@ -2707,6 +2713,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const data=await api('getUserSettings',{account:selfAccount()}),set=data.settings||{};
         const t=normTemplates(set.replyTemplates??set['回信範本設定'],set.replyTemplateDefault??set['預設回信範本']);
         const p=normPresets(set.signaturePresets??set['簽名檔清單'],set.signaturePresetDefault??set['預設簽名檔']);
+        st2.nicknames=normNicknames(set.nicknameMap??set['稱呼對照']);
         st2.templates=t.items;st2.tplDefault=t.def;st2.presets=p.items;st2.presetDefault=p.def;
         st2.display=String(set.displayName??set['顯示名']??session().name??'').trim();st2.avatar=String(set.avatar??set['頭像連結']??'').trim();
         st2.loaded=true;
@@ -2755,6 +2762,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return `<details class="set-card" data-set-sec="templates"${sectionOpen('templates')}><summary><b>信件範本</b><span>新增常用內容並指定一筆預設範本；可在信件編輯器中隨時插入。</span></summary><div class="set-body">
         ${st2.templates.map((t,i)=>`<div class="tpl-row" data-tpl-row="${i}"><div class="tpl-head"><b>範本 ${i+1}</b><label class="tpl-default"><input type="radio" name="tplDefault" value="${i}"${i===st2.tplDefault?' checked':''}>設為預設</label><button type="button" class="tpl-del" data-tpl-del="${i}" aria-label="刪除這筆範本" title="刪除">×</button></div>${miniTools(true)}<div class="editor mini-editor" contenteditable="true" data-tpl-editor>${t.html}</div></div>`).join('')||'<p class="set-note">還沒有範本。</p>'}
         <div class="set-actions"><button type="button" class="btn add-pill" data-tpl-add>＋ 新增範本</button><button type="button" class="btn primary" data-set-save="templates"${st2.busy==='templates'?' disabled':''}>${st2.busy==='templates'?'儲存中…':'儲存'}</button></div></div></details>`;
+    }
+    function nicknamesHtml(){
+      const owners=[...new Set(allRows().map(r=>String(r['專案負責人']||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+      const rowHtml=(n,i)=>`<div class="nick-row" data-nick-row="${i}"><input class="input" data-nick-name list="nickOwners" maxlength="40" placeholder="案件上的全名，例如：Lorraine Luo" value="${esc(n.name)}"><span class="nick-arrow" aria-hidden="true">→</span><input class="input" data-nick-nick maxlength="40" placeholder="回信要用的稱呼，例如：Lorraine" value="${esc(n.nickname)}"><button type="button" class="tpl-del" data-nick-del="${i}" aria-label="刪除這筆對照">✕</button></div>`;
+      return `<details class="set-card" data-set-sec="nicknames"${sectionOpen('nicknames')}><summary><b>稱呼對照</b><span>回信範本裡的「{收件人名}」預設是案件上「專案負責人」的全名；在這裡設定某些人要改用暱稱，之後回信會自動換成暱稱（只影響你自己的回信）。</span></summary><div class="set-body">
+        <datalist id="nickOwners">${owners.map(o=>`<option value="${esc(o)}">`).join('')}</datalist>
+        ${st2.nicknames.length?st2.nicknames.map(rowHtml).join(''):'<p class="ai-sub">還沒有對照。按下方「新增對照」，左邊填案件上的全名（可從建議清單選），右邊填想用的稱呼。</p>'}
+        <div class="set-actions"><button type="button" class="btn add-pill" data-nick-add>＋ 新增對照</button><button type="button" class="btn primary" data-set-save="nicknames"${st2.busy==='nicknames'?' disabled':''}>${st2.busy==='nicknames'?'儲存中…':'儲存'}</button></div></div></details>`;
     }
     function signaturesHtml(){
       return `<details class="set-card" data-set-sec="signatures"${sectionOpen('signatures')}><summary><b>簽名檔設定</b><span>自訂多組命名簽名檔（例如「正常」「休假」），指定一筆預設值；信件編輯器開啟時會自動帶入預設簽名檔，也可以用「插入簽名檔」改選其他組。</span></summary><div class="set-body">
@@ -2835,13 +2850,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const stage=$('stage');
       if(!loggedIn()){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2><div class="notice error" role="alert">請先登入後再使用設定。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>`;return}
       if(!st2.loaded){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2>${st2.error?`<div class="notice error" role="alert">${esc(st2.error)}</div><div class="form-actions"><button type="button" class="btn" data-set-reload>重新讀取</button></div>`:'<div class="notice">正在讀取你的設定…</div>'}</div>`;if(!st2.error)loadUserSettings();return}
-      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${gmailCardHtml()}${profileHtml()}${templatesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${gmailCardHtml()}${profileHtml()}${templatesHtml()}${nicknamesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
     }
     /* 讀取畫面上的編輯內容回 state（切換、新增、刪除前呼叫） */
     function captureSettings(){
       const root=$('stage');if(state.view!=='settings')return;
       const dn=$('setDisplayName');if(dn)st2.display=dn.value;
       const tplRows=[...root.querySelectorAll('[data-tpl-row]')];if(tplRows.length||root.querySelector('[data-set-sec="templates"]')){st2.templates=tplRows.map(r=>({html:r.querySelector('[data-tpl-editor]').innerHTML.trim()}));const c=root.querySelector('input[name="tplDefault"]:checked');if(c)st2.tplDefault=+c.value}
+      const nickRows=[...root.querySelectorAll('[data-nick-row]')];if(nickRows.length||root.querySelector('[data-set-sec="nicknames"]'))st2.nicknames=nickRows.map(r=>({name:r.querySelector('[data-nick-name]').value.trim(),nickname:r.querySelector('[data-nick-nick]').value.trim()}));
       const sigRows=[...root.querySelectorAll('[data-sig-row]')];if(sigRows.length||root.querySelector('[data-set-sec="signatures"]')){st2.presets=sigRows.map(r=>({name:r.querySelector('[data-sig-name]').value.trim(),html:r.querySelector('[data-sig-editor]').innerHTML.trim()}));const c=root.querySelector('input[name="sigDefault"]:checked');if(c)st2.presetDefault=+c.value}
       root.querySelectorAll('details[data-set-sec]').forEach(d=>{st2.open[d.dataset.setSec]=d.open});
       root.querySelectorAll('details[data-cu-key]').forEach(d=>{d.open?st2.open.groups.add(d.dataset.cuKey):st2.open.groups.delete(d.dataset.cuKey)});
@@ -2873,6 +2889,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const map={};items.forEach((t,i)=>{map[`範本 ${i+1}`]=t.html});
         const defIdx=Math.max(0,items.indexOf(st2.templates[st2.tplDefault]));
         settings={replyTemplates:map,replyTemplateDefault:items.length?`範本 ${defIdx+1}`:''};label=`${items.length} 筆信件範本`;
+      }else if(section==='nicknames'){
+        const rows=st2.nicknames.filter(n=>n.name||n.nickname);
+        if(rows.some(n=>!n.name||!n.nickname)){toast('每一筆對照都要同時填「全名」和「稱呼」',true);return}
+        const keys=rows.map(n=>nickKey(n.name));
+        if(new Set(keys).size!==keys.length){toast('同一個全名只能設定一個稱呼，請刪掉重複的',true);return}
+        settings={nicknameMap:rows.map(n=>({name:n.name,nickname:n.nickname}))};label=`${rows.length} 筆稱呼對照`;
       }else if(section==='signatures'){
         const items=st2.presets.filter(p=>p.html.replace(/<[^>]*>|&nbsp;/g,'').trim());
         if(items.some(p=>!p.name)){toast('請替每一組簽名檔命名',true);return}
@@ -2898,6 +2920,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           st2.busy='';renderSettings();setStatus(saved?`已儲存 ${saved} 個客戶設定`:'客戶設定沒有變更');return;
         }
         const data=await api('saveUserSettings',{account:selfAccount(),settings}),saved=data.settings||{};
+        if(section==='nicknames')st2.nicknames=normNicknames(saved.nicknameMap??saved['稱呼對照']);
         if(section==='profile'){
           const nm=String(saved.displayName??saved['顯示名']??'').trim();if(!nm||nm!==settings.displayName)throw new Error('後端未回傳已儲存的顯示名');
           try{localStorage.setItem('designRequestEditorDisplayName',nm);sessionStorage.setItem('designRequestEditorDisplayName',nm)}catch(e){}
@@ -2925,6 +2948,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const save=t.closest('[data-set-save]');if(save){saveSettingsSection(save.dataset.setSave);return}
       if(t.closest('[data-tpl-add]')){captureSettings();st2.templates.push({html:''});renderSettings();return}
       const td=t.closest('[data-tpl-del]');if(td){captureSettings();st2.templates.splice(+td.dataset.tplDel,1);if(st2.tplDefault>=st2.templates.length)st2.tplDefault=0;renderSettings();return}
+      if(t.closest('[data-nick-add]')){captureSettings();st2.nicknames.push({name:'',nickname:''});st2.open.nicknames=true;renderSettings();return}
+      const nd=t.closest('[data-nick-del]');if(nd){captureSettings();st2.nicknames.splice(+nd.dataset.nickDel,1);renderSettings();return}
       if(t.closest('[data-sig-add]')){captureSettings();st2.presets.push({name:'',html:''});renderSettings();return}
       const sd=t.closest('[data-sig-del]');if(sd){captureSettings();st2.presets.splice(+sd.dataset.sigDel,1);if(st2.presetDefault>=st2.presets.length)st2.presetDefault=0;renderSettings();return}
       if(t.closest('[data-set-reload]')){st2.error='';loadUserSettings(true);renderSettings();return}
@@ -3010,7 +3035,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       $('stage').innerHTML=`<div class="page"><div class="page-top"><button type="button" class="back-btn" data-act="back">← 返回案件列表</button><div><h2 class="page-title">讀信</h2><p class="page-sub">${esc(state.thread?.id||'')}｜${esc(row?.['專案名稱']||'')}（唯讀，預設展開首封信）</p></div></div>${threadPanelHtml(true)}</div>`;
     }
     async function openReadThread(id){state.form=null;state.mail=null;state.thread={id,loading:true,messages:[]};show('thread');loadThread(id,false)}
-    const greetingName=n=>String(n||'設計負責人').trim();
+    /* 稱呼對照（個人設定）：案件上的全名 → 回信時要用的暱稱。比對不分大小寫與空白，沒對到就維持原本的名字。 */
+    const nickKey=v=>String(v||'').replace(/<[^>]*>|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig,'').replace(/\s+/g,' ').trim().toLowerCase();
+    function greetingName(n){
+      const raw=String(n||'設計負責人').trim(),key=nickKey(raw);
+      const hit=key&&st2.nicknames.find(i=>nickKey(i.name)===key);
+      return hit?hit.nickname:raw;
+    }
     function designerReplyBody(row,dr){
       const t=st2.templates[st2.tplDefault],details=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'),name=greetingName(row['專案負責人']);
       let html=t?t.html.replace(/\{收件人名\}/g,esc(name)).replace(/\{項目細節\}/g,esc(details)):'Hi '+esc(name)+',<br><br>附上社群貼文內容，<br>再煩請查收，謝謝。';
@@ -3596,7 +3627,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       closePicker();const m=state.mail,d=m.drafts[m.index];
       if(kind==='signature'){const p=st2.presets[i];if(p)insertSignatureHtml(p.html);return}
       const t=st2.templates[i];if(!t)return;
-      const first=document.querySelector('[data-chip-field="to"] [data-entry]')?.dataset.entry||'',nm=(entryLabel(first)||'').replace(/@.*$/,'')||'您好',details=String(d.row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、');
+      const first=document.querySelector('[data-chip-field="to"] [data-entry]')?.dataset.entry||'',nm=greetingName((entryLabel(first)||'').replace(/@.*$/,'')||'您好'),details=String(d.row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、');
       const html=t.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(details));
       restoreMailRange();document.execCommand('insertHTML',false,html);saveMailRange();toast('已插入信件範本');
     }

@@ -193,6 +193,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-07 Asia/Taipei — v5 個人設定新增「稱呼對照」：回信範本的 {收件人名} 可把全名換成暱稱（每人各自設定）
+
+- 修改目的：使用者回報「回信時有些人名要改成暱稱，使用預設範例時該如何修改」。查證：`{收件人名}` 直接取案件「專案負責人」欄位原文（例如 `Lorraine Luo`），沒有任何轉換，只能每封手改，或改案件資料（會連列表上的名字一起變）。
+- 做法（使用者決定：每人各自設定、全名改暱稱）：①設定表新增欄位「稱呼對照」（JSON 陣列 `[{name,nickname}]`），Worker `normalizeNicknameMapValue` 正規化（去空白、全名與暱稱相同／空白／重複全名［不分大小寫與空白］的略過，最多 200 筆、每欄 40 字），`getUserSettings`／`saveUserSettings` 以 `nicknameMap` 讀寫，沒帶這個 key 的其他設定儲存不會動到它；②個人設定頁新增「稱呼對照」區塊：每筆「案件上的全名 → 回信要用的稱呼」，全名欄附案件現有專案負責人的建議清單，儲存前檢查空白與重複；③`greetingName()` 先查對照再退回原名（不分大小寫與空白、忽略信箱），套用到設計師回覆信、一般回信、修改需求信的預設範本，以及編輯器工具列手動「插入範本」。沒設定對照時行為與以前完全相同。
+- 影響檔案：`backend/schema.mjs`（設定表新欄位）、`worker/src/model.ts`、`worker/test/nickname-map.test.ts`、`index.html`、`backend/test/v5-nickname-map.test.mjs`。
+- 風險區塊：①**部署順序**：Worker 必須先於前端部署（舊 Worker 會忽略 `nicknameMap`，前端存檔後讀回空值會把畫面清掉）；②只對 v5 生效，`legacy.html` 沒有此功能；③對照以「全名完整相符」為準，案件上的專案負責人若寫法不同（多了職稱、中英混寫）就對不到，需另加一筆；④本機 `backend/app.mjs` 的設定處理（舊的本機後端）未加，正式站走 Worker。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 239/239；Worker vitest 133/133（含新增 3 項）；真實瀏覽器（模擬 API）：設定頁新增／空白擋下／重複擋下／儲存送出 `nicknameMap`、存後狀態同步、`greetingName` 大小寫空白信箱情境、`designerReplyBody` 實際產出「Hi Lorraine,」且沒對到的人仍為全名。**尚未用真實帳號在正式站存檔後重新整理驗證。**
+- 部署狀態：Worker 先部署，再 push 前端。
+- commit：見 git log（`feat(v5): per-user nickname map for reply greetings`）
+
 ### 2026-10-06 Asia/Taipei — v5 排程時間選擇器改版：常用時間一鍵選、日期＋時分下拉、即時顯示「將於…寄出」
 
 - 修改目的：使用者回報「點選排程按鈕選定時間介面不太友善」。原本是瀏覽器內建的 `datetime-local`（要用鍵盤逐格輸入年月日時分、各瀏覽器長相不同、手機難操作）。
