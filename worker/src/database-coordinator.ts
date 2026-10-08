@@ -4423,7 +4423,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (!match) throw new Error('月份格式錯誤');
         const year = Number(match[1]), month0 = Number(match[2]) - 1, target = text(payload.who);
         const nowWho = await this.dutyWho(year, month0);
-        if (canonicalAccount(current.account) !== canonicalAccount(this.dutyAccount(database, nowWho)) && !hasCapability(database, current, 'database.manage')) throw new Error('只有目前的值日生或管理者可以替換');
+        const mine = canonicalAccount(current.account);
+        const allowed = [nowWho, dutyOf(year, month0)].some(name => mine === canonicalAccount(this.dutyAccount(database, name)));
+        if (!allowed && !hasCapability(database, current, 'database.manage')) throw new Error('只有目前的值日生、原輪值的人或管理者可以替換');
         const overrides = await this.dutyOverrides();
         if (!target || target === dutyOf(year, month0)) delete overrides[month];
         else if (isDutyName(target)) overrides[month] = { who: target, by: auditActor(current), at: Date.now() };

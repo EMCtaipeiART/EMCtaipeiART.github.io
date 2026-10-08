@@ -5412,3 +5412,14 @@ describe('值日生：手動替換', () => {
     expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Leona' })).toMatchObject({ ok: false });
   });
 });
+
+describe('值日生：換人後原輪值的人仍可改回', () => {
+  it('allows the rotation person to undo a swap made away from them', async () => {
+    const admin = await login();
+    await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Anna' }, admin);
+    const machi = await seedSession('machi.chen@emctaipei.com', 'Machi'); // 12 月原輪值是 Machi（也是管理者）；用 Leona（非管理者、非當月）驗證被拒
+    const leona = await seedSession('leona.chen@emctaipei.com', 'Leona');
+    expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Leona' }, leona)).toMatchObject({ ok: false });
+    expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Machi' }, machi)).toMatchObject({ ok: true, who: 'Machi' });
+  });
+});

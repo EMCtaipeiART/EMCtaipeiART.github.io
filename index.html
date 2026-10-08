@@ -4549,7 +4549,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function dutyBarHtml(){
       if(!dutyOverLoaded&&!dutyOverBusy){dutyOverBusy=1;dutyLoadOver().then(()=>{if(state.view==='calendar')renderCalendarPage()})}
       const y=dcCal.y,m=dcCal.m,who=dutyWho(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
-      const mkey=dutyMonthKey(y,m),over=dutyOver[mkey],rot=dutyOf(y,m),canSwap=(me&&me===who)||isAdminAcct()||isMachiUser();
+      const mkey=dutyMonthKey(y,m),over=dutyOver[mkey],rot=dutyOf(y,m),canSwap=(me&&(me===who||me===rot))||isAdminAcct()||isMachiUser();
       const swapHtml=canSwap?'<div class="dc-swap"><label>替換值日生：<select id="dutySwapSel">'+DUTY_ORDER.map(n=>'<option value="'+n+'"'+(n===who?' selected':'')+'>'+n+(n===rot?'（原輪值）':'')+'</option>').join('')+'</select></label><button type="button" class="btn" data-duty-swap="'+mkey+'">確定替換</button>'+(over?'<button type="button" class="btn" data-duty-swap-clear="'+mkey+'">恢復輪值</button>':'')+'</div>':'';
       const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
       return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>'+(over?'已手動替換（原輪值 '+esc(rot)+'，由 '+esc(over.by)+' 換）・':'')+'每月 1 號提醒值日生，並自動預約兩場雙週會</small></div></div>'+swapHtml

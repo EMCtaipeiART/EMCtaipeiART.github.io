@@ -378,3 +378,5 @@
 - 2026-10-09: Duty text changed to "14:00–15:00・會議室 H・ Eric、Machi、Anna、Noise、Amber、Leona".
 
 - 2026-10-09: 值日生手動替換: Worker dutyOverrides in DO storage (actions getDutyOverrides/saveDutyOverride, allowed for the current duty person or admin, audited), front-end dutyWho() uses overrides; swap row in the calendar duty bar (替換/恢復輪值); swapped-in person gets the reminder once; cron/booking use the effective duty person. Worker redeployed.
+
+- 2026-10-09: Duty swap can also be undone by the original rotation person.
