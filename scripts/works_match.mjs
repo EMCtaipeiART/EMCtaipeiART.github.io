@@ -16,6 +16,7 @@ const idx = JSON.parse(await fs.readFile(path.join(here, 'nas_design_image_watch
 const db = JSON.parse(await fs.readFile(path.join(here, '..', 'data', 'database_archive.json'), 'utf8'));
 const aliasFile = JSON.parse(await fs.readFile(path.join(here, 'works_client_alias.json'), 'utf8'));
 const alias = { ...aliasFile['確定'], ...(trustPending ? aliasFile['待確認'] : {}) };
+const rules = aliasFile['規則'] || {};
 const cases = db.rows.filter((r) => r['案件編號'].startsWith(year));
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[\s_\-()（）【】\[\]．.,，、]/g, '');
@@ -31,6 +32,8 @@ const byFolder = new Map();
 for (const f of idx.files) {
   const d = fileDate(f.n);
   if (!d || d.yy !== year) continue;
+  const rule = rules[f.c];
+  if (rule?.pathIncludes && !f.p.includes(rule.pathIncludes)) continue;
   if (!byFolder.has(f.c)) byFolder.set(f.c, new Map());
   const key = `${d.t}|${norm(stemOf(f.n))}`;
   const m = byFolder.get(f.c);
@@ -53,13 +56,14 @@ for (const c of cases) {
   for (const n of names) {
     for (const w of byFolder.get(n)?.values() ?? []) {
       if (w.date < s - DAY || w.date > e + 2 * DAY) continue;
-      const score = Math.max(sim(proj, w.stem), kw && w.stem.includes(kw) ? 1 : 0);
-      pairs.push({ caseId: c['案件編號'], w, score });
+      const raw = Math.max(sim(proj, w.stem), kw && w.stem.includes(kw) ? 1 : 0);
+      const score = rules[n]?.trustDateOnly ? Math.max(raw, 0.5) : raw;
+      pairs.push({ caseId: c['案件編號'], w, score, raw });
     }
   }
 }
 // 一件作品只配給一個案件：分數高者優先；一個案件可有多件作品
-pairs.sort((a, b) => b.score - a.score);
+pairs.sort((a, b) => b.score - a.score || b.raw - a.raw);
 const taken = new Map();
 for (const p of pairs) if (!taken.has(p.w.key + p.w.client)) taken.set(p.w.key + p.w.client, p);
 const perCase = new Map();
