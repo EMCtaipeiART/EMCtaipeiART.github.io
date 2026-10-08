@@ -356,7 +356,7 @@
     .lt-rev-add{display:inline-grid;place-items:center;width:28px;height:28px;aspect-ratio:1;border-radius:50%;border:1px solid var(--line);background:#fff;color:#344641;font-size:18px;font-weight:700;line-height:1;cursor:pointer;padding:0}
     .lt-rev-add:hover{background:var(--bg)}
     html[data-theme="dark"] .lt-rev-add{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
-    .mm-list .thumbs a{width:64px;height:64px;border-radius:9px}
+    .mm-list .thumbs a{width:64px;height:auto;aspect-ratio:4/5;border-radius:9px}
     .thumbs .tw{position:relative;flex:0 0 auto;display:block}.thumbs .tw .rev-sel{position:absolute;top:4px;left:4px;z-index:3;width:17px;height:17px;margin:0;accent-color:var(--brand);cursor:pointer}
     .mm-selbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:13px;font-weight:800}
     .mm-selbar[hidden]{display:none}.mm-selall{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.mm-selbar .btn{min-height:32px;padding:0 12px;font-size:13px}
@@ -451,7 +451,7 @@
     #setDisplayName.is-locked{background:var(--line);color:var(--faint);opacity:.85;-webkit-text-fill-color:var(--faint)}
     .card-detail{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);cursor:default;text-align:left;font-weight:400}
     .card-detail .thumbs{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;-webkit-overflow-scrolling:touch}
-    .card-detail .thumbs a{flex:0 0 auto;width:64px;height:64px;border-radius:10px}
+    .card-detail .thumbs a{flex:0 0 auto;width:64px;height:auto;aspect-ratio:4/5;border-radius:10px}
     .card-detail .rev{padding:10px 12px;margin-bottom:8px}
     .card-detail{cursor:pointer}
     .card-detail .detail-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
@@ -704,8 +704,8 @@
     .rev-meta{font-size:12px;color:var(--faint);font-weight:700}
     .rev-text{font-size:12px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
     .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .thumbs a{display:block;width:96px;height:96px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
-    .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+    .thumbs a{display:block;width:96px;height:auto;aspect-ratio:4/5;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--bg)}
+    .thumbs img{width:100%;height:100%;object-fit:contain;display:block}
 
     /* 凱躍多元宇宙（舊版像素辦公室） */
     .uni-page{max-width:none;margin:0 auto}.uni-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.uni-acts .btn{text-decoration:none;display:inline-flex;align-items:center}
