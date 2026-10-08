@@ -65,6 +65,7 @@
         </div></section>
       <section class="tool-section" id="lookSection"><h3>造型</h3>
         <div class="look-group" id="lookOutfitGroup"><span class="look-label">服裝</span><div id="lookOutfits" class="look-outfits"></div></div>
+        <div class="look-group" id="lookHeadGroup" hidden><span class="look-label">頭像</span><div id="lookHeads" class="look-outfits"></div></div>
         <div class="look-group"><span class="look-label">帽子</span><div id="lookCaps" class="look-chips"></div></div>
         <div class="look-group"><span class="look-label">眼鏡</span><div id="lookGlasses" class="look-chips"></div></div>
         <button type="button" class="text-button" id="lookReset" hidden>恢復預設造型</button>
@@ -109,6 +110,6 @@ if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
  moodSec.style.display='none';
  [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
 </script>
-  <script src="app.js?v=131" fetchpriority="high"></script>
+  <script src="app.js?v=132" fetchpriority="high"></script>
 </body>
 </html>

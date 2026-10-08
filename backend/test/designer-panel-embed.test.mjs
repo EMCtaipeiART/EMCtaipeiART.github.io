@@ -650,7 +650,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   assert.match(js, /const layers=\(!WD_FEMALE\[i\]\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
   assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
-  assert.match(js, /\{outfit:2,cap:'',glasses:''\},\{outfit:3,cap:'',glasses:''\},\{outfit:4,cap:'blue',glasses:''\},\{outfit:1,cap:'',glasses:''\},\{outfit:5,cap:'',glasses:''\}/);
+  assert.match(js, /\{outfit:2,cap:'',glasses:'',head:''\},\{outfit:3,cap:'',glasses:'',head:''\},\{outfit:4,cap:'blue',glasses:'',head:''\},\{outfit:1,cap:'',glasses:'',head:''\},\{outfit:5,cap:'',glasses:'',head:''\}/);
   assert.match(js, /function outfitChoices\(i\)\{const base=i===3\?\[1,0\]:null,customs=customIdsOf\(i\);/);
   // 原本的像素人物已下架：只剩組合版，不再載入舊圖集。
   assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{drawWardrobe\(context,index,dir,x,y,h\);\}/);
@@ -799,5 +799,16 @@ test('自訂服裝：遊戲讀公開 API、頭用頸頂接、造型欄列出本�
   assert.match(js, /hx=B\.n-chin\.x\*K\+\(custom\?custom\.dx:0\)/);
   assert.match(js, /loadCustomList\(\);setInterval\(loadCustomList,120000\)/);
   // 腳本最前面的版面計算會用到造型，所以自訂服裝的狀態不能用還沒宣告的 const／let
-  assert.match(js, /function customState\(\)\{return window\.__pixelCustom/);
+  assert.match(js, /function customState\(\)\{const s=window\.__pixelCustom/);
+});
+
+test('自訂頭像：遊戲讀公開 API 的 heads、頭那層換成本人的頭像圖、其餘沿用原頭像數值，造型欄有頭像區，後端接受 h:<uuid>', async () => {
+  const [js, html] = await Promise.all([officeJs(), officeHtml()]);
+  assert.match(js, /j\.heads/);
+  assert.match(js, /function customHeadView\(id,view\)/);
+  assert.match(js, /sheet:chv\?chv\.sheetKey:'heads',src:chv\?chv\.src:H,x:hx,y:hy,w:H\.w\*K,h:H\.h\*K/, '位置與大小仍照原頭像');
+  assert.match(js, /key=`\$\{index\}\|\$\{look\.outfit\}\|\$\{look\.cap\}\|\$\{look\.glasses\}\|\$\{look\.head\|\|''\}/, '快取鍵要含頭像');
+  assert.match(html, /id="lookHeadGroup"[^>]*hidden[\s\S]*id="lookHeads"/);
+  const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
+  assert.match(worker, /\^h:\[0-9a-f\]\{8\}/);
 });

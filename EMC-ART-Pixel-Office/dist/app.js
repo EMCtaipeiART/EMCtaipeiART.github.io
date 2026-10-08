@@ -224,12 +224,12 @@ const wardrobeReady=()=>[wardrobeSheets.heads,wardrobeSheets.outfits].every(img=
 // 預設造型＝每個人現在的樣子（2026-10-01 使用者指定，原本的像素人物已下架）：Leona 黑西裝、Amber 米白襯衫、Noise 丹寧外套＋藍帽、
 // Machi 全黑連帽衫長褲、Anna 藍色 T 恤。只有 Anna 可以在藍色（1）與黃色（0）兩套之間換；其他人的衣服固定，帽子與眼鏡大家都可以換。
 // 用函式而不是常數：腳本最前面的版面計算（sceneTopExtent）就會用到，那時下面的 const 還沒宣告。
-function baseLookDefault(i){return [{outfit:2,cap:'',glasses:''},{outfit:3,cap:'',glasses:''},{outfit:4,cap:'blue',glasses:''},{outfit:1,cap:'',glasses:''},{outfit:5,cap:'',glasses:''}][i]||{outfit:2,cap:'',glasses:''};}
+function baseLookDefault(i){return [{outfit:2,cap:'',glasses:'',head:''},{outfit:3,cap:'',glasses:'',head:''},{outfit:4,cap:'blue',glasses:'',head:''},{outfit:1,cap:'',glasses:'',head:''},{outfit:5,cap:'',glasses:'',head:''}][i]||{outfit:2,cap:'',glasses:'',head:''};}
 // ───────── 自訂服裝（服裝生成器做好並發佈的）─────────
 // 資料在服裝生成器的公開 API；每件服裝是三個角度（正面、朝右側面、背面）裁好的透明身體圖，高度是遊戲服裝的兩倍（336），
 // 另有各角度尺寸與頸頂位置、頭的微調（上下左右、大小）。狀態放在 window 上、用函式取用：腳本最前面的版面計算就會用到造型，
 // 那時這裡的 const／let 還沒宣告（同 lookDefault 的原因）。
-function customState(){return window.__pixelCustom||(window.__pixelCustom={list:[],map:new Map()});}
+function customState(){const s=window.__pixelCustom||(window.__pixelCustom={list:[],map:new Map()});if(!s.hlist){s.hlist=[];s.hmap=new Map();}return s;}
 const CUSTOM_API=(new URLSearchParams(location.search).get('customApi')||'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/outfits').replace(/\/$/,'');
 function customReady(id){const e=customState().map.get(id);return !!(e&&e.ready);}
 function customIdsOf(i){return customState().list.filter(x=>x.owner===names[i]&&customReady(x.id)).map(x=>'c:'+x.id);}
@@ -240,6 +240,25 @@ function customOutfitView(id,view){
   const e=customState().map.get(String(id).slice(2));if(!e||!e.ready)return null;
   const g=e.meta.game,v=g.views[view],h=g.head||{};
   return {B:{x:0,y:0,w:v.w/2,h:v.h/2,n:v.n/2},src:{x:0,y:0,w:v.w,h:v.h},sheetKey:'c:'+e.meta.id+':'+view,scale:h.scale||1,dx:(h.dx&&h.dx[view])||0,dy:(h.dy&&h.dy[view])||0};
+}
+// 自訂頭像（頭像生成器做好並發佈的）：三張透明圖，大小是原頭像格子的 2 倍、已經依對位放好，所以只要換掉頭那層的圖，
+// 其餘（眼鏡、帽子、耳機、下巴接點）全部沿用原本那顆頭的數值。
+function customHeadIdsOf(i){return customState().hlist.filter(x=>x.owner===names[i]&&customHeadReady(x.id)&&x.game&&x.game.headIndex===i).map(x=>'h:'+x.id);}
+function customHeadReady(id){const e=customState().hmap.get(id);return !!(e&&e.ready);}
+function customHeadName(id){const x=customState().hlist.find(y=>'h:'+y.id===id);return x?x.name:'自訂頭像';}
+function customHeadView(id,view){
+  const e=customState().hmap.get(String(id).slice(2));if(!e||!e.ready)return null;
+  const img=wardrobeSheets['h:'+e.meta.id+':'+view];if(!img||!img.naturalWidth)return null;
+  return {sheetKey:'h:'+e.meta.id+':'+view,src:{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight}};
+}
+function ensureCustomHead(item){
+  const state=customState(),old=state.hmap.get(item.id);if(old&&old.v===item.v)return;
+  const entry={meta:item,v:item.v,loaded:0,ready:false};state.hmap.set(item.id,entry);
+  for(let view=0;view<3;view++){
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{wardrobeSheets['h:'+item.id+':'+view]=img;entry.loaded++;if(entry.loaded===3){entry.ready=true;wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();}};
+    img.src=CUSTOM_API+'/'+item.id+'/'+view+'.png?v='+encodeURIComponent(item.v);
+  }
 }
 function ensureCustomOutfit(item){
   const state=customState(),old=state.map.get(item.id);if(old&&old.v===item.v)return;
@@ -253,7 +272,9 @@ function ensureCustomOutfit(item){
 function loadCustomList(){
   fetch(CUSTOM_API,{cache:'no-store'}).then(r=>r.json()).then(j=>{
     const items=Array.isArray(j.items)?j.items.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
-    customState().list=items;items.forEach(ensureCustomOutfit);markDirty();
+    customState().list=items;items.forEach(ensureCustomOutfit);
+    const heads=Array.isArray(j.heads)?j.heads.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
+    customState().hlist=heads;heads.forEach(ensureCustomHead);markDirty();
   }).catch(()=>{});
 }
 function lookDefault(i){const d=baseLookDefault(i),c=customDefaultId(i);return c?{...d,outfit:c}:d;}
@@ -263,15 +284,16 @@ function outfitLabel(i,o){return typeof o==='string'?customName(o):i===3?(o===1?
 function effectiveLook(i){
   const d=lookDefault(i),l=people[i]&&people[i].look;if(!l||typeof l!=='object')return d;
   const choices=outfitChoices(i),outfit=choices&&choices.includes(l.outfit)?l.outfit:d.outfit;
-  return {outfit,cap:['','black','blue'].includes(l.cap)?l.cap:d.cap,glasses:['','clear','sun'].includes(l.glasses)?l.glasses:d.glasses};
+  const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:'';
+  return {outfit,cap:['','black','blue'].includes(l.cap)?l.cap:d.cap,glasses:['','clear','sun'].includes(l.glasses)?l.glasses:d.glasses,head};
 }
 const lookOf=effectiveLook;
-const sameLook=(a,b)=>a.outfit===b.outfit&&a.cap===b.cap&&a.glasses===b.glasses;
+const sameLook=(a,b)=>a.outfit===b.outfit&&a.cap===b.cap&&a.glasses===b.glasses&&(a.head||'')===(b.head||'');
 function buildWardrobe(i,view,look,action){
   const D=WARDROBE,act=action&&WARDROBE_ACTIONS[action.id],custom=!act&&typeof look.outfit==='string'?customOutfitView(look.outfit,view):null,oIdx=typeof look.outfit==='string'?(custom?look.outfit:baseLookDefault(i).outfit):look.outfit,K=WD_K*(custom?custom.scale:1),H=D.heads[i][view],B=act?act.frames[action.n]:custom?custom.B:D.outfits[oIdx][view],dropI=custom?0:WD_DROP[i],front=D.heads[i][0].s,sk=H.s||front;
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
   const hx=B.n-chin.x*K+(custom?custom.dx:0),hy=WD_OV-chin.y*K+(custom?custom.dy:0)+(act?act.headDrop+(B.hd||0):0);
-  const head={sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:custom?custom.sheetKey:'outfits',src:custom?custom.src:B,x:custom?0:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:dropI-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
+  const chv=typeof look.head==='string'&&look.head?customHeadView(look.head,view):null,head={sheet:chv?chv.sheetKey:'heads',src:chv?chv.src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:custom?custom.sheetKey:'outfits',src:custom?custom.src:B,x:custom?0:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:dropI-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=(!WD_FEMALE[i]||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
   const eye=D.eyes[i][view];
   if(look.glasses&&view<2&&accessoriesReady()&&!(act&&act.noGlasses.includes(action.n))){
@@ -301,7 +323,7 @@ function buildWardrobe(i,view,look,action){
 }
 function wardrobeFrame(index,dir,action){
   if(!wardrobeReady())return null;const look=lookOf(index);
-  const view=action?0:dir==='up'?2:dir==='left'||dir==='right'?1:0,key=`${index}|${look.outfit}|${look.cap}|${look.glasses}|${view}${action?`|${action.id}${action.n}`:''}`;
+  const view=action?0:dir==='up'?2:dir==='left'||dir==='right'?1:0,key=`${index}|${look.outfit}|${look.cap}|${look.glasses}|${look.head||''}|${view}${action?`|${action.id}${action.n}`:''}`;
   let frame=wardrobeCache.get(key);if(!frame){frame=buildWardrobe(index,view,look,action);wardrobeCache.set(key,frame);}
   return frame;
 }
@@ -620,6 +642,16 @@ function renderLookPanel(){
     const frame=buildWardrobe(selected,0,{outfit:o,cap:'',glasses:''}),k=Math.min(112/frame.canvas.height,112/frame.canvas.width);
     canvas.getContext('2d').drawImage(frame.canvas,60-frame.canvas.width*k/2,116-frame.canvas.height*k,frame.canvas.width*k,frame.canvas.height*k);
     button.append(canvas,label);button.onclick=()=>setLook({outfit:o});return button;
+  }));
+  // 頭像：本人在頭像生成器完成並發佈的自訂頭像（只有自己能用）；沒有就不顯示整個「頭像」區。
+  const headBox=$('lookHeads'),headChoices=customHeadIdsOf(selected);
+  if($('lookHeadGroup'))$('lookHeadGroup').hidden=!headChoices.length;
+  if(headBox&&headChoices.length)headBox.replaceChildren(...['',...headChoices].map(h=>{
+    const label=h?customHeadName(h):'原本',button=document.createElement('button');button.type='button';button.title=label;button.className=(look.head||'')===h?'active':'';
+    const canvas=document.createElement('canvas');canvas.width=120;canvas.height=120;
+    const rect=WARDROBE.heads[selected][0],chv=h?customHeadView(h,0):null,img=chv?wardrobeSheets[chv.sheetKey]:wardrobeSheets.heads,src=chv?chv.src:rect,k=Math.min(112/src.w,112/src.h);
+    canvas.getContext('2d').drawImage(img,src.x,src.y,src.w,src.h,60-src.w*k/2,116-src.h*k,src.w*k,src.h*k);
+    button.append(canvas,label);button.onclick=()=>setLook({head:h});return button;
   }));
   const chips=(host,list,current,rowOf,key)=>host.replaceChildren(...list.map(item=>{
     const button=document.createElement('button');button.type='button';button.className=current===item.id?'active':'';
@@ -1031,7 +1063,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     p.music=entry.music&&entry.music.url?entry.music:null;// 後端沒帶＝沒在分享
     if(p.music)ensureHeadphones();
     if(!p.music&&musicPlaying.i===i)stopMusic();
-    {const look=entry.look&&typeof entry.look==='object'?{outfit:entry.look.outfit,cap:entry.look.cap,glasses:entry.look.glasses}:null;if(JSON.stringify(look)!==JSON.stringify(p.look||null)){p.look=look;lookChanged=true;}}// 那個人停止分享了，正在播的也跟著停
+    {const look=entry.look&&typeof entry.look==='object'?{outfit:entry.look.outfit,cap:entry.look.cap,glasses:entry.look.glasses,...(entry.look.head?{head:entry.look.head}:{})}:null;if(JSON.stringify(look)!==JSON.stringify(p.look||null)){p.look=look;lookChanged=true;}}// 那個人停止分享了，正在播的也跟著停
     if(p.music&&p.music.provider==='spotify')wantSpotifyApi();// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
     if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}

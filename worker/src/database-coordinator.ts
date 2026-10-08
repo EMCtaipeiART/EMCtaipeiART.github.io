@@ -2049,9 +2049,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const customOutfit = typeof look.outfit === 'string' && /^c:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(look.outfit);
         const outfit: number | string = customOutfit ? String(look.outfit) : Number.isInteger(look.outfit) ? Number(look.outfit) : -1;
         const cap = text(look.cap), glasses = text(look.glasses);
+        // 頭像：'h:<uuid>' 是頭像生成器做好並發佈的自訂頭像（是不是本人的由遊戲畫面端判斷），空字串＝原本的頭
+        const head = typeof look.head === 'string' && /^h:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(look.head) ? look.head : '';
         if ((typeof outfit === 'number' && (outfit < -1 || outfit > 5)) || !['', 'black', 'blue'].includes(cap) || !['', 'clear', 'sun'].includes(glasses)) throw new Error('造型不正確');
-        if (outfit === -1 && !cap && !glasses) delete state.look;
-        else state.look = { outfit, cap, glasses };
+        if (outfit === -1 && !cap && !glasses && !head) delete state.look;
+        else state.look = head ? { outfit, cap, glasses, head } : { outfit, cap, glasses };
       }
     }
     if ('action' in patch) {
