@@ -2251,7 +2251,7 @@ window.emcQuotes=[
     }
     function nbBodyHtml(){
       const nb=state.nb,q=String(nb.q||'').trim().toLowerCase();
-      const items=nb.items.filter(i=>(nb.cat==='all'||i.category===nb.cat)&&nbMatches(i,q));
+      const catRank=nbCategories(),items=nb.items.filter(i=>(nb.cat==='all'||i.category===nb.cat)&&nbMatches(i,q)).map((i,k)=>[i,k]).sort((x,y)=>catRank.indexOf(x[0].category)-catRank.indexOf(y[0].category)||x[1]-y[1]).map(p=>p[0]);
       if(!nb.items.length)return '<div class="nb-hint">'+(nb.seedError?'<div class="notice error" role="alert">'+esc(nb.seedError)+'</div>':'<p>還沒有資料。</p>')+'<button type="button" class="btn primary" data-nb-new>＋ 新增第一張卡片</button></div>';
       if(!items.length)return '<div class="nb-hint"><p>沒有符合「'+esc(nb.q)+'」的卡片。</p></div>';
       const groups=[];for(const it of items){const key=(nb.cat==='all'?it.category+' / ':'')+(it.section||'未分區');let g=groups.find(x=>x.key===key);if(!g){g={key,list:[]};groups.push(g)}g.list.push(it)}
