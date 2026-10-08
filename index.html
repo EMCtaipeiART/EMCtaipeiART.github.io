@@ -406,6 +406,10 @@
     /* 專案頁網格：每個狀態欄最多顯示約四張卡牌的高度，超過的往下藏起來（底部漸層消失），欄內可往上滑，捲過去的卡牌在標題線條下方漸層消失 */
     .board.five .cards{position:relative;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain;padding:6px 6px 8px;margin:-6px -6px 0}
     .board.five .cards::-webkit-scrollbar{display:none}
+    .col-more{position:relative;height:0;z-index:4}.col-more[hidden]{display:none}
+    .col-more-btn{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);height:32px;padding:0 16px;border:0;border-radius:999px;background:var(--brand);color:#fff;font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 8px 20px rgba(20,90,40,.4),inset 0 1px 0 rgba(255,255,255,.35);animation:colBob 1.6s ease-in-out infinite}
+    .col-more-btn:hover{filter:brightness(1.08)}
+    @keyframes colBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,3px)}}
     .board.five .cards.is-clipped.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 76px),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - 76px),transparent 100%)}
     .board.five .cards.is-clipped.fade-t{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 100%)}
     .board.five .cards.is-clipped.fade-t.fade-b{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 calc(100% - 76px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 calc(100% - 76px),transparent 100%)}
@@ -1645,6 +1649,10 @@ window.emcQuotes=[
       const clipped=g.classList.contains('is-clipped');
       g.classList.toggle('fade-b',clipped&&g.scrollTop+g.clientHeight<g.scrollHeight-2);
       g.classList.toggle('fade-t',clipped&&g.scrollTop>2);
+      /* 還有幾張沒看到：欄底的小膠囊提示，點一下往下捲 */
+      let more=g.nextElementSibling;if(!more||!more.classList.contains('col-more')){more=document.createElement('div');more.className='col-more';more.innerHTML='<button type="button" class="col-more-btn" aria-label="往下看更多卡牌"></button>';g.after(more)}
+      const hid=clipped?[...g.querySelectorAll(':scope > div.card')].filter(c=>c.offsetTop+c.offsetHeight>g.scrollTop+g.clientHeight+6).length:0;
+      more.hidden=!hid;if(hid)more.firstElementChild.textContent=`↓ 還有 ${hid} 張`;
     }
     function fitBoardColumns(){
       document.querySelectorAll('.board.five .cards').forEach(g=>{
@@ -1658,6 +1666,7 @@ window.emcQuotes=[
         boardFade(g);
       });
     }
+    document.addEventListener('click',e=>{const b=e.target.closest?.('.col-more-btn');if(!b)return;const g=b.closest('.col-more')?.previousElementSibling;if(g)g.scrollBy({top:Math.round(g.clientHeight*.75),behavior:'smooth'})});
     document.addEventListener('scroll',e=>{
       const g=e.target;if(!g||!g.classList||!g.classList.contains('cards')||!g.closest('.board.five'))return;
       boardFade(g);
