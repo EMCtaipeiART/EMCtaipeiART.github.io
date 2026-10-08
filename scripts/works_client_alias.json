@@ -64,6 +64,10 @@
     "小米": {
       "pathIncludes": "廣告/",
       "trustDateOnly": true
+    },
+    "Nutribullet": {
+      "pathIncludes": "FB貼文/2026",
+      "trustDateOnly": true
     }
   }
 }
