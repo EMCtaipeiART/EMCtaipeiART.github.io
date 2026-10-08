@@ -500,6 +500,7 @@
     body.uni-collapse .hero h1,body.uni-collapse .hero .team,body.uni-collapse .hero .prompt-hint,body.uni-collapse .hero .team .member{max-height:0;opacity:0;overflow:hidden;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;pointer-events:none}
     .no-hero .stage-wrap{padding-top:30px}
     .stage-wrap.wide{max-width:1760px}
+    .stage-wrap.full{max-width:none;padding:14px 18px 28px}@media (max-width:720px){.stage-wrap.full{padding:10px 8px 24px}}
     .board.five{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
     .board.five .column:nth-child(-n+3){grid-column:span 1}
     .board.five .column:nth-child(n+4){grid-column:span 1}
@@ -750,7 +751,7 @@
 .owner-search{margin-left:auto;min-width:240px}.owner-search input{width:100%}
     @media (max-width:720px){.owner-search{margin-left:0;width:100%;min-width:0}}
     .del-review{margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel,var(--bg))}.del-head h3{margin:0 0 4px;font-size:16px}.del-head p{margin:0 0 10px;color:var(--muted);font-size:13px}.del-list{display:grid;gap:6px;margin-bottom:12px}.del-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}.del-item .del-meta{color:var(--muted);font-size:12px;white-space:nowrap}.btn.danger{background:#c0392b;border-color:#c0392b;color:#fff}@media (max-width:720px){.del-item{grid-template-columns:auto minmax(0,1fr)}.del-item .del-meta{grid-column:2}}
-    .outfit-page{margin:0 -4px}.outfit-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:720px;border:0;border-radius:14px;background:transparent}
+    .outfit-page{margin:0}.outfit-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:720px;border:0;border-radius:14px;background:transparent}
     @media (max-width:720px){.outfit-frame{height:calc(100vh - 150px)}}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
@@ -2188,7 +2189,7 @@ window.emcQuotes=[
     function show(view){const pv=state.view;if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
       document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='calendar');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
