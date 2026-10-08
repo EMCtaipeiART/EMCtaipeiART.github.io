@@ -781,6 +781,11 @@
     .del-review{margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel,var(--bg))}.del-head h3{margin:0 0 4px;font-size:16px}.del-head p{margin:0 0 10px;color:var(--muted);font-size:13px}.del-list{display:grid;gap:6px;margin-bottom:12px}.del-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}.del-item .del-meta{color:var(--muted);font-size:12px;white-space:nowrap}.btn.danger{background:#c0392b;border-color:#c0392b;color:#fff}@media (max-width:720px){.del-item{grid-template-columns:auto minmax(0,1fr)}.del-item .del-meta{grid-column:2}}
     .outfit-page{margin:0}.outfit-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:720px;overflow:hidden;border:0;border-radius:14px;background:transparent}
     @media (max-width:720px){.outfit-frame{height:calc(100vh - 150px)}}
+    .dc-dutybar{margin:0 0 14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);display:grid;gap:12px}
+    .dc-duty-head{display:flex;gap:12px;align-items:center}.dc-duty-ico{flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--brand);color:#fff;font-size:13px;font-weight:900}.dc-duty-head b{font-size:16px}.dc-duty-head small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}.dc-duty-name{font-weight:900}.dc-duty-me{margin-left:8px;font-style:normal;font-size:11.5px;font-weight:900;background:#ffe9a8;color:#7a5200;border-radius:99px;padding:1px 9px}
+    .dc-duty-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.dc-duty-meet{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--bg);border-left:4px solid var(--brand)}.dc-duty-meet b{font-size:13px;color:var(--brand)}.dc-duty-meet span{font-size:14px;font-weight:800}.dc-duty-meet small{font-size:12px;color:var(--muted);line-height:1.5}
+    .dc-duty-strip{display:flex;gap:8px;flex-wrap:wrap}.dc-duty-m{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-size:13px;font-weight:800;color:var(--ink)}.dc-duty-m b{color:var(--muted);font-weight:800}.dc-duty-m.cur{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+    .dc-duty-tag{display:block;margin-top:2px;padding:1px 6px;border-radius:6px;background:#e7f6ea;color:#17652a;font-size:11px;font-weight:800;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html[data-theme="dark"] .dc-duty-tag{background:#173323;color:#8fe0a5}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -4498,7 +4503,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function afterLogin(){
       state.loginMenu=false;renderLogin();updateRail();
       if(!loggedIn())return; filtSynced=null;pullFilters(true);
-      toast(`已登入：${session().name||session().user}`);
+      toast(`已登入：${session().name||session().user}`);setTimeout(dutyRemind,1500);
       if(state.pendingStart){const client=state.pendingStart;state.pendingStart='';state.form=newForm(client);show('form');return}
       if(state.view==='form'||state.editing){readRowsSafe();rerender()}
     }
@@ -4509,6 +4514,34 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 設計部行事曆 ---------- */
     const DC_COLORS={Machi:'#3f9b53',Anna:'#e0719a',Amber:'#e5a13a',Leona:'#8a6fd6',Noise:'#3d8fd6'};
     const dcColor=n=>DC_COLORS[n]||'#7b8a83';
+    /* 值日生輪值：每月一位，順序 Leona → Anna → Machi → Noise → Amber 循環（2026 年 10 月是 Leona，11 月 Anna，12 月 Machi，1 月 Noise，2 月 Amber，之後依此類推）。
+       值日生負責安排當月兩場「【設計部雙週會】N月上／下_案例分享」：第 2、第 4 個星期三 14:00–15:00，需 BOOKING 會議室 H，並 TAG 六位成員。 */
+    const DUTY_ORDER=['Leona','Anna','Machi','Noise','Amber'],DUTY_BASE=2026*12+9,DUTY_TAGS=['ERIC','MACHI','ANNA','NOISE','AMBER','LEONA'];
+    const dutyOf=(y,m)=>DUTY_ORDER[(((y*12+m-DUTY_BASE)%5)+5)%5];
+    const dutyNthWed=(y,m,n)=>Date.UTC(y,m,1+((3-new Date(Date.UTC(y,m,1)).getUTCDay()+7)%7)+(n-1)*7);
+    const dutyMeetings=(y,m)=>[{part:'上',ms:dutyNthWed(y,m,2),title:'【設計部雙週會】'+(m+1)+'月上_案例分享'},{part:'下',ms:dutyNthWed(y,m,4),title:'【設計部雙週會】'+(m+1)+'月下_案例分享'}];
+    const dutyDay=ms=>{const d=new Date(ms);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（三）'};
+    const dutyNeed='14:00–15:00・須 BOOKING 會議室 H・TAG '+DUTY_TAGS.join('、');
+    function dutyBarHtml(){
+      const y=dcCal.y,m=dcCal.m,who=dutyOf(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
+      const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
+      return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>每月 1 號提醒值日生安排兩場雙週會</small></div></div>'
+        +'<div class="dc-duty-list">'+meets.map(x=>'<div class="dc-duty-meet"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'</div>'
+        +'<div class="dc-duty-strip" aria-label="輪值表">'+strip+'</div></div>';
+    }
+    function dutyRemind(testMs){
+      if(!loggedIn())return;const me=ownDesignerName();if(!me)return;
+      const t=testMs||taipeiToday(),d=new Date(t),y=d.getUTCFullYear(),m=d.getUTCMonth();
+      if(d.getUTCDate()!==1||dutyOf(y,m)!==me)return;
+      const key='v5DutyRemind:'+y+'-'+(m+1)+':'+me;try{if(!testMs&&localStorage.getItem(key))return}catch(err){}
+      if(document.getElementById('dutyModal'))return;
+      const meets=dutyMeetings(y,m),back=document.createElement('div');back.id='dutyModal';back.className='nc-back';
+      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="值日生提醒" style="width:min(560px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📅</span><div><h3>'+(m+1)+' 月值日生提醒</h3><p>這個月輪到你（'+esc(me)+'）當值日生，請在行事曆安排兩場雙週會：</p></div></div>'
+        +'<div class="nc-body">'+meets.map(x=>'<div class="dc-duty-meet" style="margin-bottom:10px"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'<p class="page-sub" style="margin:6px 0 0">第 2 週與第 4 週的星期三下午兩點到三點；記得先 BOOKING 會議室 H，邀請 '+esc(DUTY_TAGS.join('、'))+' 六位。</p></div>'
+        +'<div class="nc-foot"><button type="button" class="btn" data-duty="ok">我知道了</button><button type="button" class="btn primary" data-duty="cal">前往行事曆</button></div></div>';
+      back.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-duty]');if(!a&&e.target!==back)return;try{localStorage.setItem(key,'1')}catch(err){}back.remove();if(a&&a.dataset.duty==='cal'){state.form=null;state.mail=null;state.editing=false;closeCal();dcCal.y=y;dcCal.m=m;dcCal.sel=dcKey(Date.UTC(y,m,1));show('calendar');dcLoad(false)}});
+      document.body.appendChild(back);
+    }
     const DC_STATUS_COLOR={'未開始':['未執行','#d64550'],'執行中':['執行中','#e5b020'],'修改中':['修改中','#f08a24']};
     const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',sets:{cal:new Set(),due:new Set()},hidden:null,cache:new Map(),loading:false,error:''};
     const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());
@@ -4549,12 +4582,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let cells='';for(const w of ['日','一','二','三','四','五','六'])cells+=`<div class="dc-dow">${w}</div>`;
       for(let ms=r.start;ms<=r.end;ms+=DAY){
         const k=dcKey(ms),d=new Date(ms),inMonth=d.getUTCMonth()===dcCal.m,wd=d.getUTCDay(),hn=TL_HOLIDAYS.get(k),evs=dcEventsOn(ms),shown=evs.slice(0,3);
-        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${e.color||dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'&&Object.keys(DC_COLORS).filter(n=>!dcCal.hidden.has(n)).length<2?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
+        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${(()=>{const mt=dutyMeetings(d.getUTCFullYear(),d.getUTCMonth()).find(x=>x.ms===ms);return mt?`<span class="dc-duty-tag" title="${esc(mt.title+'｜值日生 '+dutyOf(d.getUTCFullYear(),d.getUTCMonth())+'｜'+dutyNeed)}">雙週會・值日 ${esc(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))}</span>`:''})()}${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${e.color||dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'&&Object.keys(DC_COLORS).filter(n=>!dcCal.hidden.has(n)).length<2?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
       }
       const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
-      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${e.color||dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):'<p class="page-sub" style="margin:0">這一天沒有行程。</p>'}</div>`;
+      const dutyMt=Number.isNaN(selMs)?null:dutyMeetings(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()).find(x=>x.ms===selMs),dutyBlock=dutyMt?`<div class="dc-row" style="--c:${dcColor(dutyOf(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}"><span class="dc-dot"></span><div><b>${esc(dutyMt.title)}</b><small>值日生 ${esc(dutyOf(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}・${esc(dutyNeed)}</small></div></div>`:'';
+      const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${dutyBlock}${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${e.color||dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):(dutyBlock?'':'<p class="page-sub" style="margin:0">這一天沒有行程。</p>')}</div>`;
       const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
       $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>
+        ${dutyBarHtml()}
         <div class="dc-top"><div class="dc-nav"><button type="button" class="btn" data-dc="prev" aria-label="上個月">‹</button><button type="button" class="btn" data-dc="today">今天</button><button type="button" class="btn" data-dc="next" aria-label="下個月">›</button></div><h3>${dcCal.y} 年 ${dcCal.m+1} 月</h3>${dcCal.loading?'<span class="page-sub" style="margin:0">讀取中…</span>':'<button type="button" class="btn" data-dc="refresh">重新整理</button>'}</div>
         <div class="dc-legend"><span class="dc-mode" role="radiogroup" aria-label="顯示內容"><button type="button" class="dc-chip${dcCal.mode==='cal'?'':' off'}" style="--c:var(--brand)" data-dc-mode="cal"><i></i>行程與請假</button><button type="button" class="dc-chip${dcCal.mode==='due'?'':' off'}" style="--c:#d64550" data-dc-mode="due" title="未執行與執行中的案件，從開始日標到交件日"><i></i>案件交期</button></span>${(()=>{const me=ownDesignerName();const all=dcCal.hidden.size===0;return me&&DC_COLORS[me]?`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="${all?'me':'all'}">${all?'只看我':'顯示全部'}</button>`:`<button type="button" class="dc-chip" style="--c:var(--muted)" data-dc-who-all="all">顯示全部</button>`})()}${names.map(n=>`<button type="button" class="dc-chip${dcCal.hidden.has(n)?' off':''}" style="--c:${dcColor(n)}" data-dc-who="${esc(n)}"><i></i>${esc(n)}</button>`).join('')}</div>
         ${dcCal.mode==='due'?`<div class="dc-legend">${Object.values(DC_STATUS_COLOR).map(([n,c])=>`<span class="dc-chip" style="--c:${c};cursor:default"><i></i>${n}</span>`).join('')}<span class="dc-chip" style="--c:var(--muted);cursor:default">「交」＝當天交件</span></div>`:''}<div class="dc-grid">${cells}</div>${warn.length?`<p class="dc-note">${warn.join('；')}</p>`:''}${detail}</div>`;
@@ -4913,7 +4948,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 登入資料被其他分頁／舊網站清掉時（沒有明確登出），從備份還原 */
     try{if(!session().token&&localStorage.getItem('designRequestEditorLoggedOut')!=='1'&&sessionStorage.getItem('designRequestEditorLoggedOut')!=='1'){const bk=JSON.parse(localStorage.getItem('v5SessionBackup')||'null');if(bk&&bk.designRequestEditorToken)for(const [k,v] of Object.entries(bk)){if(v){localStorage.setItem(k,v);sessionStorage.setItem(k,v)}}}}catch(err){}
     renderTeam();renderBoard();bindTeam();renderLogin();
-    loadDatabase();loadOffice();
+    loadDatabase();loadOffice();setTimeout(dutyRemind,3500);
     /* 即時推送：後端（Durable Object）用 WebSocket 通知「人物狀態／對話框／音樂／限時動態有變」，收到就馬上重讀。
        連線正常時備援輪詢拉長到 5 分鐘；斷線（或瀏覽器不支援）就維持每 60 秒。 */
     let officeTick=0;
