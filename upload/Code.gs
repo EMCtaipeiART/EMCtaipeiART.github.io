@@ -115,6 +115,8 @@ function doPost(e) {
   let result;
   if (action === 'uploadCaseDesignImages') {
     result = uploadCaseDesignImages(payload);
+  } else if (action === 'uploadWorkWallImages') {
+    result = uploadWorkWallImages(payload);
   } else if (action === 'backupDatabaseTableToSheet') {
     result = backupDatabaseTableToSheet(payload);
   } else if (action === 'backupPixelOfficeStory') {
@@ -432,6 +434,54 @@ function uploadCaseDesignImages(payload) {
   } catch (error) {
     console.error(error);
     return { success: false, message: error.message || '案件設計圖上傳失敗' };
+  }
+}
+
+/**
+ * 作品牆歷史作品備份（服務端對服務端，走 doPost，由本機 scripts/works_upload.mjs 呼叫）。
+ * 與 uploadCaseDesignImages() 的差異：只存 Drive，**不回寫主資料庫**——上萬件歷史作品
+ * 的索引由前端另存成 data/works/*.json，避免撐大主資料庫與 Worker 的 GitHub 寫入。
+ * 資料夾：根目錄 / 作品牆 / 年度 / 客戶別 / 案件編號。
+ *
+ * @param {Object} payload
+ *   serviceKey  必填（NAS_WATCHER_API_KEY）
+ *   caseId, client, year  必填
+ *   images      必填，[{fileName, mimeType, base64, dedupeKey}, ...]，一次最多
+ *               MAX_CASE_DESIGN_IMAGES_PER_REQUEST 張；dedupeKey 為 64 碼 SHA-256，重送沿用同一檔案
+ * 回傳 images: [{fileName, fileId, url}]；縮圖把 url 結尾的 =w1600 改成 =w400 即可。
+ */
+function uploadWorkWallImages(payload) {
+  try {
+    payload = payload || {};
+    verifyNasWatcherServiceKey_(payload.serviceKey);
+    const caseId = String(payload.caseId || '').trim();
+    const client = String(payload.client || '').trim();
+    const year = String(payload.year || '').trim();
+    const images = Array.isArray(payload.images) ? payload.images : [];
+    if (!/^\d{8}$/.test(caseId)) throw new Error('案件編號格式不正確');
+    if (!client) throw new Error('缺少客戶別');
+    if (!/^\d{4}$/.test(year)) throw new Error('年度格式不正確');
+    if (!images.length) throw new Error('沒有收到任何圖片');
+    if (images.length > MAX_CASE_DESIGN_IMAGES_PER_REQUEST) {
+      throw new Error('一次最多上傳 ' + MAX_CASE_DESIGN_IMAGES_PER_REQUEST + ' 張');
+    }
+    if (!CASE_DESIGN_IMAGE_ROOT_FOLDER_ID) throw new Error('尚未設定 CASE_DESIGN_IMAGE_ROOT_FOLDER_ID');
+
+    const folder = getOrCreateNestedFolder_(DriveApp.getFolderById(CASE_DESIGN_IMAGE_ROOT_FOLDER_ID), ['作品牆', year, client, caseId]);
+    const uploaded = uploadImagesToFolder_(images, folder, MAX_FILE_SIZE_MB * 1024 * 1024);
+    return {
+      success: true,
+      caseId: caseId,
+      count: uploaded.length,
+      images: uploaded.map(function (item) {
+        const match = String(item.url).match(/\/d\/([^=\/?]+)/);
+        return { fileName: item.fileName, fileId: match ? match[1] : '', url: item.url };
+      }),
+      folderUrl: createFolderUrl_(folder.getId())
+    };
+  } catch (error) {
+    console.error(error);
+    return { success: false, message: error.message || '作品牆圖片上傳失敗' };
   }
 }
 
