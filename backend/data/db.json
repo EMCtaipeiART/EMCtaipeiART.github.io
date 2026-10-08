@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7813,
+  "revision": 7814,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-08T00:47:46.400Z",
+  "updatedAt": "2026-10-08T00:48:06.510Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1052,7 +1052,7 @@
         {"案件編號":"26100048","修改次數":"0","建立日期":"2026/10/07 18:02:32","修改日期":"2026/10/07 18:02:32","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/07 18:02:32","圖片連結":"[{\"fileName\":\"261007_添可_秋日升級.png\",\"url\":\"https://lh3.googleusercontent.com/d/1tnPqpNHnSI9CT0XXCV7odJeLaVVdlSCv=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/07 18:02:32"},
         {"案件編號":"26090214","修改次數":"0","建立日期":"2026/10/07 18:19:59","修改日期":"2026/10/07 18:19:59","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/07 18:19:59","圖片連結":"[{\"fileName\":\"261001_Emfusion_10月FB貼文_肌膚溫度曲線.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WiGz8mPjDQjhhxC-EjaYwTL8w6WL5h6y=w1600\"},{\"fileName\":\"261002_Emfusion_10月FB貼文_40分鐘-留給自己.png\",\"url\":\"https://lh3.googleusercontent.com/d/1R7LGjiGKhRkzfL_5wy-w24WyF95LNlfe=w1600\"},{\"fileName\":\"261007_Emfusion_10月FB貼文_保養新趨勢.png\",\"url\":\"https://lh3.googleusercontent.com/d/1csGDnA9Fl5ZRiVEvQ_gnr0ob-PUu-FhB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/07 18:19:59"},
         {"案件編號":"26100039","修改次數":"0","建立日期":"2026/10/07 18:50:33","修改日期":"2026/10/07 18:50:33","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/07 18:50:33","圖片連結":"[{\"fileName\":\"261007_添可_電商證言_Abee.png\",\"url\":\"https://lh3.googleusercontent.com/d/1KrhWzyh3p4QVoVVMkaIdZ7fbVVy530fC=w1600\"},{\"fileName\":\"261007_添可_電商證言_Naomi.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ehtURNSdExUqimsNz9Fnwet8R0T2iFGB=w1600\"},{\"fileName\":\"261007_添可_電商證言_李曼蒂.png\",\"url\":\"https://lh3.googleusercontent.com/d/1WfPk3U-qvPVkGOKmobD31z943Vo5yy4x=w1600\"},{\"fileName\":\"261007_添可_電商證言_柒柒帶你吃喝玩樂.png\",\"url\":\"https://lh3.googleusercontent.com/d/1P664yagr4duZlLDEiYsA68UQbGZoe8S1=w1600\"},{\"fileName\":\"261007_添可_電商證言_鳳鳳.png\",\"url\":\"https://lh3.googleusercontent.com/d/1W7F6srD85TPErYXdbhkv4UM8x1LB8c6r=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/07 18:50:33"},
-        {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/08 08:47:46","修改日期":"2026/10/08 08:47:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/08 08:47:46","圖片連結":"[{\"fileName\":\"260811_EMC_酒標外盒貼紙_聖誕.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1HOe2vWWp5UQAizXrE2dba5JPNcHBpw6q=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 08:47:46"}
+        {"案件編號":"26100013","修改次數":"0","建立日期":"2026/10/08 08:47:46","修改日期":"2026/10/08 08:47:46","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/08 08:47:46","圖片連結":"[{\"fileName\":\"260811_EMC_酒標外盒貼紙_聖誕.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1HOe2vWWp5UQAizXrE2dba5JPNcHBpw6q=w1600\"},{\"fileName\":\"260811_EMC_酒標外盒貼紙_過年.jpg\",\"url\":\"https://lh3.googleusercontent.com/d/1HMHRFwzRYq7-nLqcznWvMyTwchRTfHd3=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 08:48:06"}
       ]
     },
     "補充資料連結": {
