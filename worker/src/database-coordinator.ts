@@ -14,6 +14,7 @@ import {
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
+import { NOTEBOOK_TABS, notebookCsvUrl, notebookSheetUrl, parseCsv, trimGrid } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
   ApiPayload, ApiResult, DatabaseSnapshot, RequestContext, Row, SessionRecord, StoredSnapshot
@@ -3775,6 +3776,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
   }
 
+  private notebookCache: { at: number; tabs: Array<{ gid: string; name: string; url: string; rows: string[][] }> } | null = null;
+  private async notebookData(refresh: boolean): Promise<ApiResult> {
+    const fresh = this.notebookCache && Date.now() - this.notebookCache.at < 60_000;
+    if (!refresh && fresh && this.notebookCache) return { ok: true, action: 'getNotebook', fetchedAt: this.notebookCache.at, tabs: this.notebookCache.tabs };
+    const tabs = await Promise.all(NOTEBOOK_TABS.map(async tab => {
+      const response = await fetch(notebookCsvUrl(tab.gid), { headers: { Accept: 'text/csv' }, redirect: 'follow' });
+      if (!response.ok) throw new Error(`讀取試算表「${tab.name}」失敗（HTTP ${response.status}）。請確認試算表有開放「知道連結的人可檢視」，或改設服務帳號。`);
+      const body = await response.text();
+      if (/^\s*<(!doctype|html)/i.test(body)) throw new Error(`試算表「${tab.name}」需要登入才能讀取，請開放「知道連結的人可檢視」。`);
+      return { gid: tab.gid, name: tab.name, url: notebookSheetUrl(tab.gid), rows: trimGrid(parseCsv(body)) };
+    }));
+    this.notebookCache = { at: Date.now(), tabs };
+    return { ok: true, action: 'getNotebook', fetchedAt: this.notebookCache.at, tabs };
+  }
+
   private auditFlushing = false;
   /** Cron 每分鐘呼叫：佇列有 50 筆以上、或最舊的一筆超過 5 分鐘才寫入，避免頻繁 commit */
   /** 一次性資料遷移：把案件表裡還留著的「已取消」改成「暫停中」（之後任何寫入也會順手修正）。每分鐘排程呼叫，沒有殘留就什麼都不做。 */
@@ -4187,6 +4203,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (ordered.length) priority[group] = ordered[0].name;
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
+      }
+      if (action === 'getNotebook') {
+        // 記事本（試算表「EMC設計部資源」）含共用帳號密碼：登入且是設計部／管理者才讀得到，不放進公開的資料庫。
+        this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
+        return await this.notebookData(Boolean(payload.refresh));
       }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');

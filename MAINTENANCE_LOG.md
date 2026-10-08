@@ -364,3 +364,5 @@
 - 2026-10-04: Dark mode: darker hero/stick band/prompt/avatar frames, status pills via --st-* vars, dark 回信/編輯/刪除 buttons, dark cell-pop popovers.
 
 - 2026-10-04: Mail/signature editor colour palette restored to the old Gmail-style 64-colour grid with separate 背景顏色 (hiliteColor) and 文字顏色 groups; colour application splits around contenteditable=false blocks like the legacy site.
+
+- 2026-10-08: 記事本: left-rail button (設計部/管理者), Worker action getNotebook reads the 設計部資源 Google Sheet (2 tabs) server-side after auth, 60s cache; page renders tabs as grids, 密碼 cells masked with eye/copy. Sheet is NOT copied into the repo. Worker redeployed.
