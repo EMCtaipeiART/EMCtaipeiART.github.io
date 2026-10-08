@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 7884,
+  "revision": 7885,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-08T08:23:23.956Z",
+  "updatedAt": "2026-10-08T09:02:01.477Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1062,7 +1062,7 @@
         {"案件編號":"26100058","修改次數":"0","建立日期":"2026/10/08 14:50:35","修改日期":"2026/10/08 14:50:35","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/08 14:50:35","圖片連結":"[{\"fileName\":\"261008_添可_電商證言_肉媽.png\",\"url\":\"https://lh3.googleusercontent.com/d/1g5YU1yly3-zt_aggRjxfwb7qh2-IABLo=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 14:50:35"},
         {"案件編號":"26100049","修改次數":"0","建立日期":"2026/10/08 15:25:56","修改日期":"2026/10/08 15:25:56","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/08 15:25:56","圖片連結":"[{\"fileName\":\"261008_添可_吸完即收工_STATION5.png\",\"url\":\"https://lh3.googleusercontent.com/d/1vHEXGaeBH7g8WZq9FRANk0bNZh0MyuB1=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 15:25:56"},
         {"案件編號":"26100017","修改次數":"0","建立日期":"2026/10/08 15:43:56","修改日期":"2026/10/08 15:43:56","修改內容":"初稿完成（信件照片備份）","修改人":"信件照片備份","確認修正日":"2026/10/08 15:43:56","圖片連結":"[{\"fileName\":\"260902_金士頓_組裝電腦前必看-1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hqWhz1twVK25dKHHlf7MZlVUneSRx7sQ=w1600\"},{\"fileName\":\"260902_金士頓_組裝電腦前必看-2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QRCZXQw7LvtX2hwK4t1tiEzJ90A_Hkb5=w1600\"},{\"fileName\":\"260902_金士頓_組裝電腦前必看-3.png\",\"url\":\"https://lh3.googleusercontent.com/d/1LHZxXkvDoz5O6Bc-VuRkq0bvFjCB5Wgd=w1600\"},{\"fileName\":\"260902_金士頓_組裝電腦前必看-4.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eaO9829OFSh5YojY_ZKiOPpZFGOiGNPl=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 15:44:33"},
-        {"案件編號":"26100057","修改次數":"1","建立日期":"2026/10/08 16:23:23","修改日期":"2026-10-08","修改內容":"不好意思，擔心包框下方的bar亮度太高，四支影片的包框請協助調整成接近品牌色的那個紅色(或直接用也可)，感恩的心🥲","修改內容連結":"","修改人":"陳雅筠","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100057","修改次數":"1","建立日期":"2026/10/08 16:23:23","修改日期":"2026-10-08","修改內容":"不好意思，擔心包框下方的bar亮度太高，四支影片的包框請協助調整成接近品牌色的那個紅色(或直接用也可)，感恩的心🥲","修改內容連結":"","修改人":"陳雅筠","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261008_櫻花整體廚房_SP活動_影片包框_3D模擬.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15sASfOyHgZ3D8vt7VUveWmkdekxkiCIx=w1600\"},{\"fileName\":\"261008_櫻花整體廚房_SP活動_影片包框_告別老屋.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1H1XeHFS0ocXz8DgQ6tCJOzvhInyv9oYj=w1600\"},{\"fileName\":\"261008_櫻花整體廚房_SP活動_影片包框_直式口碑.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1MruXlpmifWRcG2yKgfGWXK0vBl69Jjtj=w1600\"},{\"fileName\":\"261008_櫻花整體廚房_SP活動_影片包框_預算有限.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1vBAf3v5I782Oz6POC_ni5rr3ud5sBpJj=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/08 17:02:01"}
       ]
     },
     "補充資料連結": {
