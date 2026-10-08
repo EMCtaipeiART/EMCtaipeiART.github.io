@@ -4006,6 +4006,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async handleCore(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
     const action = text(actionValue || payload.action || 'list');
     try {
+      // 只問目前的資料版本號：直接用 SQL 取 JSON 裡的 revision，不載入、不解析整份 1.2 MB 資料庫。前台背景輪詢用這個判斷有沒有新資料。
+      if (action === 'publicRevision') {
+        const row = this.ctx.storage.sql.exec<{ r: number | null }>("SELECT json_extract(json, '$.revision') AS r FROM database_state WHERE id = ?", STATE_KEY).toArray()[0];
+        return { ok: true, action, revision: Number(row?.r) || 0 };
+      }
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);

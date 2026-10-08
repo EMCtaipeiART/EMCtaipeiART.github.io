@@ -409,6 +409,14 @@
     .col-more{position:relative;height:0;z-index:4}.col-more[hidden]{display:none}
     .col-more-btn{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);height:32px;padding:0 16px;border:0;border-radius:999px;background:var(--brand);color:#fff;font:inherit;font-size:13px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 8px 20px rgba(20,90,40,.4),inset 0 1px 0 rgba(255,255,255,.35);animation:colBob 1.6s ease-in-out infinite}
     .col-more-btn:hover{filter:brightness(1.08)}
+    /* 手機／觸控裝置：不做即時模糊與無限動畫（會一直吃 GPU、很耗電），改用不透明底色與靜態樣式 */
+    @media (hover:none),(max-width:720px){
+      .ann-bar,.ann-glass,html.ann-refract .ann-bar,html.ann-refract .ann-glass{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:var(--panel)!important;text-shadow:none!important}
+      .ann-bar::before,.ann-bar::after,.ann-glass::before,.ann-glass::after{display:none}
+      .col-more-btn{animation:none}
+      #annGlassSvg{display:none}
+    }
+    @media (prefers-reduced-motion:reduce){.col-more-btn,.ann-bar{animation:none!important}}
     @keyframes colBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,3px)}}
     .board.five .cards.is-clipped.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 76px),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - 76px),transparent 100%)}
     .board.five .cards.is-clipped.fade-t{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 22px,#000 100%)}
@@ -751,7 +759,7 @@
 .owner-search{margin-left:auto;min-width:240px}.owner-search input{width:100%}
     @media (max-width:720px){.owner-search{margin-left:0;width:100%;min-width:0}}
     .del-review{margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel,var(--bg))}.del-head h3{margin:0 0 4px;font-size:16px}.del-head p{margin:0 0 10px;color:var(--muted);font-size:13px}.del-list{display:grid;gap:6px;margin-bottom:12px}.del-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}.del-item .del-meta{color:var(--muted);font-size:12px;white-space:nowrap}.btn.danger{background:#c0392b;border-color:#c0392b;color:#fff}@media (max-width:720px){.del-item{grid-template-columns:auto minmax(0,1fr)}.del-item .del-meta{grid-column:2}}
-    .outfit-page{margin:0}.outfit-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:720px;border:0;border-radius:14px;background:transparent}
+    .outfit-page{margin:0}.outfit-frame{display:block;width:100%;height:calc(100vh - 120px);min-height:720px;overflow:hidden;border:0;border-radius:14px;background:transparent}
     @media (max-width:720px){.outfit-frame{height:calc(100vh - 150px)}}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
@@ -2170,8 +2178,10 @@ window.emcQuotes=[
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
-      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
+      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
+    /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
+    window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
     function openExt(k){
       if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;if(window.__relBusy)return;window.__relBusy=true;setTimeout(()=>{window.__relBusy=false},30000);api('forceReload').then(r=>{if(r.throttled){toast('剛剛已經發布過更新了，請 30 秒後再按');return}toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}
@@ -4047,7 +4057,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       openOwner(true);
     }
     setTimeout(()=>maybeOwnerDaily(),1500);
-    setInterval(()=>{try{if(!document.hidden&&state.loaded)renderRailExtra()}catch(err){}},2500);
+    setInterval(()=>{try{if(!document.hidden&&state.loaded)renderRailExtra()}catch(err){}},10000);
     document.addEventListener('click',e=>{
       const t=e.target;
       if(t.closest('[data-op-close]')||t.id==='ownerModal'){closeOwner();return}
@@ -4647,6 +4657,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{
         /* 收到後端「有新版本」的推送時，直接向後端要最新資料（不必等 GitHub Pages 重新發布）；失敗就退回讀 db.json */
         let db=null;
+        /* 背景輪詢先只問「目前版本號」（極小的回應、後端不用解析整份資料庫）；沒有新版本就直接結束，不下載、不解析 1.2 MB 的 JSON */
+        if(background&&!viaWorker&&state.dbRev){try{const rr=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'publicRevision'}),cache:'no-store'});const rj=await rr.json();if(rj&&rj.ok&&rj.revision){if(Number(rj.revision)<=state.dbRev)return;viaWorker=true}}catch(err){}}
         if(viaWorker){try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'publicDatabase',since:state.dbRev}),cache:'no-store'});const j=await r.json();if(j&&j.ok){if(j.unchanged)return;db=j.database}}catch(err){}}
         if(!db){const res=await fetch('backend/data/db.json',{cache:'no-cache'});db=await res.json()}
         const t=db.tables||{};
