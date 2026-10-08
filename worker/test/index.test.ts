@@ -5230,3 +5230,67 @@ describe('pixel office offline status', () => {
     expect(pixelOfficeOfflineStatus(at('2026-10-06T12:20:00'), 0)).toBe('offwork');
   });
 });
+
+describe('記事本（notebook）', () => {
+  const SHEET_A = '"AI 工具","",""\n"","Tool A","Tool B"\n"網址","https://a.example",""\n"帳號","user@a","user@b"\n"密碼","pw-a-secret","pw-b-secret"\n';
+  const SHEET_B = '"印刷資訊 廠商甲 網址 所屬公司 帳號","https://v.example 公司甲 A1","",""\n"密碼","vp","",""\n';
+
+  function mockSheets() {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/gviz/tq')) return new Response(url.includes('gid=1529630212') ? SHEET_B : SHEET_A, { headers: { 'Content-Type': 'text/csv' } });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+  }
+
+  it('refuses anonymous access and accounts without design/admin rights', async () => {
+    expect(await api({ action: 'getNotebook' })).toMatchObject({ ok: false });
+    const outsider = await seedSession('someone@example.com', 'someone');
+    expect(await api({ action: 'getNotebook' }, outsider)).toMatchObject({ ok: false });
+  });
+
+  it('imports the old sheet once, then lets designers add, edit, move and delete cards without logging values', async () => {
+    const token = await login();
+    const fetchSpy = mockSheets();
+    const first = await api({ action: 'getNotebook' }, token) as { ok: boolean; items: Array<{ id: string; title: string; category: string; fields: Array<{ label: string; secret: boolean }> }> };
+    expect(first.ok).toBe(true);
+    expect(first.items.map(i => i.title)).toEqual(['Tool A', 'Tool B', '廠商甲']);
+    expect(first.items[0].fields.find(f => f.label === '密碼')?.secret).toBe(true);
+    const calls = fetchSpy.mock.calls.length;
+    await api({ action: 'getNotebook' }, token);
+    expect(fetchSpy.mock.calls.length).toBe(calls);
+
+    const created = await api({ action: 'saveNotebookItem', item: { category: 'AI 工具與素材', section: '新區', title: '  新工具 ', fields: [{ label: '帳號', value: 'me@x', secret: false }, { label: '密碼', value: 'brand-new-secret', secret: true }, { label: '', value: 'dropped', secret: false }] } }, token) as { ok: boolean; items: Array<{ id: string; title: string; fields: unknown[] }> };
+    expect(created.ok).toBe(true);
+    const mine = created.items.find(i => i.title === '新工具')!;
+    expect(mine.fields).toHaveLength(2);
+
+    const edited = await api({ action: 'saveNotebookItem', item: { id: mine.id, category: 'AI 工具與素材', section: '新區', title: '新工具 2', fields: [{ label: '帳號', value: 'me2@x', secret: false }] } }, token) as { items: Array<{ id: string; title: string }> };
+    expect(edited.items.find(i => i.id === mine.id)?.title).toBe('新工具 2');
+
+    const moved = await api({ action: 'moveNotebookItem', id: edited.items[0].id, dir: 1 }, token) as { items: Array<{ id: string }> };
+    expect(moved.items).toHaveLength(4);
+
+    const removed = await api({ action: 'deleteNotebookItem', id: mine.id }, token) as { items: Array<{ id: string }> };
+    expect(removed.items.find(i => i.id === mine.id)).toBeUndefined();
+    expect(await api({ action: 'deleteNotebookItem', id: mine.id }, token)).toMatchObject({ ok: false });
+
+    // 稽核佇列只記卡片名稱與動作，不含欄位內容（含密碼）
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const queue = await runInDurableObject(stub, async (_instance, state) => JSON.stringify((await state.storage.get('auditQueue')) || []));
+    expect(queue).toContain('記事本：新工具');
+    expect(queue).not.toContain('brand-new-secret');
+    expect(queue).not.toContain('pw-a-secret');
+  });
+
+  it('does not re-import after every card was deleted', async () => {
+    const token = await login();
+    const fetchSpy = mockSheets();
+    const first = await api({ action: 'getNotebook' }, token) as { items: Array<{ id: string }> };
+    for (const item of first.items) await api({ action: 'deleteNotebookItem', id: item.id }, token);
+    const calls = fetchSpy.mock.calls.length;
+    const again = await api({ action: 'getNotebook' }, token) as { items: unknown[] };
+    expect(again.items).toEqual([]);
+    expect(fetchSpy.mock.calls.length).toBe(calls);
+  });
+});
