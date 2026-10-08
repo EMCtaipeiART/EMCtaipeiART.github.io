@@ -788,6 +788,7 @@
     .dc-duty-tag{display:block;margin-top:2px;padding:1px 6px;border-radius:6px;background:#e7f6ea;color:#17652a;font-size:11px;font-weight:800;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html[data-theme="dark"] .dc-duty-tag{background:#173323;color:#8fe0a5}
     .dc-bk{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13.5px}.dc-bk>b{font-size:13px;color:var(--muted)}.dc-bk-ok{color:#17652a;font-weight:800}.dc-bk-bad{color:#b45309;font-weight:800}.dc-bk-none,.dc-bk-wait{color:var(--muted)}html[data-theme="dark"] .dc-bk-ok{color:#8fe0a5}html[data-theme="dark"] .dc-bk-bad{color:#f6dc7a}
     .dc-bk-items{display:inline-flex;flex-wrap:wrap;gap:6px 10px}.dc-bk-item{font-weight:800}.dc-bk-item.ok{color:#17652a}.dc-bk-item.bad{color:#b45309}.dc-bk-item small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}.dc-bk-item a{color:var(--brand);margin-left:4px}.dc-bk-btns{display:inline-flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+    .dc-swap{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;font-size:13.5px}.dc-swap select{min-height:34px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px;font-size:13.5px}.dc-swap .btn{min-height:34px;padding:0 14px;font-size:13px}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -4520,6 +4521,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
        值日生負責安排當月兩場「【設計部雙週會】N月上／下_案例分享」：第 2、第 4 個星期三 14:00–15:00，需 BOOKING 會議室 H，並 TAG 六位成員。 */
     const DUTY_ORDER=['Leona','Anna','Machi','Noise','Amber'],DUTY_BASE=2026*12+9,DUTY_TAGS=['Eric','Machi','Anna','Noise','Amber','Leona'];
     const dutyOf=(y,m)=>DUTY_ORDER[(((y*12+m-DUTY_BASE)%5)+5)%5];
+    /* 手動替換：值日生（或管理者）可把當月換成別人，全體共用，存在後端 */
+    const dutyOver={};let dutyOverLoaded=0,dutyOverBusy=0;
+    const dutyWho=(y,m)=>{const o=dutyOver[y+'-'+String(m+1).padStart(2,'0')];return o&&DUTY_ORDER.includes(o.who)?o.who:dutyOf(y,m)};
+    async function dutyLoadOver(force){if(dutyOverLoaded&&!force)return;try{const d=await api('getDutyOverrides',{});Object.keys(dutyOver).forEach(k=>delete dutyOver[k]);Object.assign(dutyOver,d.overrides||{});dutyOverLoaded=1}catch(err){}}
     const dutyNthWed=(y,m,n)=>Date.UTC(y,m,1+((3-new Date(Date.UTC(y,m,1)).getUTCDay()+7)%7)+(n-1)*7);
     const dutyMeetings=(y,m)=>[{part:'上',ms:dutyNthWed(y,m,2),title:'【設計部雙週會】'+(m+1)+'月上_案例分享'},{part:'下',ms:dutyNthWed(y,m,4),title:'【設計部雙週會】'+(m+1)+'月下_案例分享'}];
     const dutyDay=ms=>{const d=new Date(ms);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（三）'};
@@ -4536,35 +4541,51 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       else if(!st)line='<span class="dc-bk-none">尚未預約。每月 1 號上午 9 點後，系統會自動替值日生預約會議室 H 並建立兩場雙週會。</span>';
       else{
         const items=(st.results||[]).map(r=>'<span class="dc-bk-item '+(r.status==='failed'?'bad':'ok')+'">'+(r.status==='failed'?'✕':'✓')+' '+esc(r.date.slice(5).replace('-','/'))+(r.link?' <a href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">開啟</a>':'')+(r.note?'<small>'+esc(r.note)+'</small>':'')+'</span>').join('');
-        line='<span class="dc-bk-'+(st.status==='done'?'ok':'bad')+'">'+(st.status==='done'?'✓ ':'⚠ ')+esc(st.message||'')+'</span>'+(items?'<span class="dc-bk-items">'+items+'</span>':'');
+        line='<span class="dc-bk-'+(st.status==='done'?'ok':'bad')+'">'+(st.status==='done'?'✓ ':'⚠ ')+esc(st.message||'')+(st.who&&st.who!==who?'（先前由 '+esc(st.who)+' 預約）':'')+'</span>'+(items?'<span class="dc-bk-items">'+items+'</span>':'');
       }
       const btns=canBook?'<span class="dc-bk-btns"><button type="button" class="btn" data-duty-book="'+mk+'">'+(st&&st.status==='done'?'重新檢查／補建':'立即預約會議室 H')+'</button>'+(isDuty&&st&&st.status==='needs-auth'?'<button type="button" class="btn primary" data-duty-auth>授權 Google 行事曆</button>':'')+'</span>':'';
       return '<div class="dc-bk"><b>會議室 H 預約</b>'+line+btns+'</div>';
     }
     function dutyBarHtml(){
-      const y=dcCal.y,m=dcCal.m,who=dutyOf(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
-      const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
-      return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>每月 1 號提醒值日生安排兩場雙週會</small></div></div>'
+      if(!dutyOverLoaded&&!dutyOverBusy){dutyOverBusy=1;dutyLoadOver().then(()=>{if(state.view==='calendar')renderCalendarPage()})}
+      const y=dcCal.y,m=dcCal.m,who=dutyWho(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
+      const mkey=dutyMonthKey(y,m),over=dutyOver[mkey],rot=dutyOf(y,m),canSwap=(me&&me===who)||isAdminAcct()||isMachiUser();
+      const swapHtml=canSwap?'<div class="dc-swap"><label>替換值日生：<select id="dutySwapSel">'+DUTY_ORDER.map(n=>'<option value="'+n+'"'+(n===who?' selected':'')+'>'+n+(n===rot?'（原輪值）':'')+'</option>').join('')+'</select></label><button type="button" class="btn" data-duty-swap="'+mkey+'">確定替換</button>'+(over?'<button type="button" class="btn" data-duty-swap-clear="'+mkey+'">恢復輪值</button>':'')+'</div>':'';
+      const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
+      return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>'+(over?'已手動替換（原輪值 '+esc(rot)+'，由 '+esc(over.by)+' 換）・':'')+'每月 1 號提醒值日生，並自動預約兩場雙週會</small></div></div>'+swapHtml
         +'<div class="dc-duty-list">'+meets.map(x=>'<div class="dc-duty-meet"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'</div>'
         +dutyBookHtml(y,m,who,me)
         +'<div class="dc-duty-strip" aria-label="輪值表">'+strip+'</div></div>';
     }
-    function dutyRemind(testMs){
+    async function dutyRemind(testMs){
       if(!loggedIn())return;const me=ownDesignerName();if(!me)return;
-      const t=testMs||taipeiToday(),d=new Date(t),y=d.getUTCFullYear(),m=d.getUTCMonth();
-      if(d.getUTCDate()!==1||dutyOf(y,m)!==me)return;
-      const key='v5DutyRemind:'+y+'-'+(m+1)+':'+me;try{if(!testMs&&localStorage.getItem(key))return}catch(err){}
+      await dutyLoadOver();
+      const t=testMs||taipeiToday(),d=new Date(t),y=d.getUTCFullYear(),m=d.getUTCMonth(),mk=dutyMonthKey(y,m),over=dutyOver[mk];
+      const swapKey=over?'v5DutySwapSeen:'+mk+':'+over.at+':'+me:'';let swapSeen=true;try{swapSeen=!swapKey||Boolean(localStorage.getItem(swapKey))}catch(err){}
+      const swappedIn=Boolean(over&&over.who===me&&!swapSeen),normal=d.getUTCDate()===1&&dutyWho(y,m)===me;
+      if(!normal&&!swappedIn)return;
+      const key='v5DutyRemind:'+y+'-'+(m+1)+':'+me;try{if(normal&&!swappedIn&&!testMs&&localStorage.getItem(key))return}catch(err){}
       if(document.getElementById('dutyModal'))return;
       const meets=dutyMeetings(y,m),back=document.createElement('div');back.id='dutyModal';back.className='nc-back';
-      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="值日生提醒" style="width:min(560px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📅</span><div><h3>'+(m+1)+' 月值日生提醒</h3><p>這個月輪到你（'+esc(me)+'）當值日生，請在行事曆安排兩場雙週會：</p></div></div>'
+      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="值日生提醒" style="width:min(560px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📅</span><div><h3>'+(m+1)+' 月值日生提醒</h3><p>'+(swappedIn?esc(over.by)+' 把 '+(m+1)+' 月的值日生換成你（'+esc(me)+'）。':'這個月輪到你（'+esc(me)+'）當值日生。')+'系統會用你的 Google 行事曆自動預約會議室 H 並建立兩場雙週會：</p></div></div>'
         +'<div class="nc-body"><div id="dutyBookState" class="dc-bk" style="margin-bottom:12px"></div>'+meets.map(x=>'<div class="dc-duty-meet" style="margin-bottom:10px"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'<p class="page-sub" style="margin:6px 0 0">第 2、第 4 個星期三下午兩點到三點，會議室 H，參加：'+esc(DUTY_TAGS.join('、'))+'。</p></div>'
         +'<div class="nc-foot"><button type="button" class="btn" data-duty="ok">我知道了</button><button type="button" class="btn primary" data-duty="cal">前往行事曆</button></div></div>';
-      back.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-duty]');if(!a&&e.target!==back)return;try{localStorage.setItem(key,'1')}catch(err){}back.remove();if(a&&a.dataset.duty==='cal'){state.form=null;state.mail=null;state.editing=false;closeCal();dcCal.y=y;dcCal.m=m;dcCal.sel=dcKey(Date.UTC(y,m,1));show('calendar');dcLoad(false)}});
+      back.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-duty]');if(!a&&e.target!==back)return;try{localStorage.setItem(key,'1');if(swapKey)localStorage.setItem(swapKey,'1')}catch(err){}back.remove();if(a&&a.dataset.duty==='cal'){state.form=null;state.mail=null;state.editing=false;closeCal();dcCal.y=y;dcCal.m=m;dcCal.sel=dcKey(Date.UTC(y,m,1));show('calendar');dcLoad(false)}});
       document.body.appendChild(back);
-      const mk=dutyMonthKey(y,m),paint=()=>{const box=back.querySelector('#dutyBookState');if(box)box.innerHTML=dutyBookHtml(y,m,me,me).replace(/^<div class="dc-bk">|<\/div>$/g,'')};
+      const paint=()=>{const box=back.querySelector('#dutyBookState');if(box)box.innerHTML=dutyBookHtml(y,m,me,me).replace(/^<div class="dc-bk">|<\/div>$/g,'')};
       dutyCache[mk]=undefined;dutyFetch(mk).then(paint);paint();
     }
     document.addEventListener('click',e=>{
+      const sw=e.target.closest&&e.target.closest('[data-duty-swap],[data-duty-swap-clear]');
+      if(sw){
+        const clear=sw.hasAttribute('data-duty-swap-clear'),mk=clear?sw.dataset.dutySwapClear:sw.dataset.dutySwap,mm=mk.match(/^(\d+)-(\d+)$/),y=+mm[1],m=+mm[2]-1;
+        const to=clear?dutyOf(y,m):(document.getElementById('dutySwapSel')||{}).value;
+        if(!to||(!clear&&to===dutyWho(y,m))){toast('請選擇要換成的設計師');return}
+        if(!confirm(clear?'恢復成原輪值的 '+to+'？':'確定把 '+(m+1)+' 月值日生換成 '+to+'？換人後新的值日生登入時會收到提醒；如果本月會議已經預約過，系統不會自動重建。'))return;
+        sw.disabled=true;
+        api('saveDutyOverride',{month:mk,who:to}).then(d=>{Object.keys(dutyOver).forEach(k=>delete dutyOver[k]);Object.assign(dutyOver,d.overrides||{});dutyOverLoaded=1;delete dutyCache[mk];dutyBusy[mk]=0;toast('值日生已'+(clear?'恢復為':'換成')+' '+d.who);if(state.view==='calendar')renderCalendarPage()}).catch(err=>{toast('替換失敗：'+(err.message||err),true);sw.disabled=false});
+        return;
+      }
       const book=e.target.closest&&e.target.closest('[data-duty-book]');
       if(book){
         const mk=book.dataset.dutyBook;if(!confirm('將使用值日生的 Google 行事曆，建立 '+mk.replace('-','年')+'月的兩場「【設計部雙週會】」（第 2、第 4 個星期三 14:00–15:00），並寄出邀請給會議室 H 與 Eric、Machi、Anna、Noise、Amber、Leona。已建立過的不會重複。確定要預約嗎？'))return;
@@ -4614,10 +4635,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       let cells='';for(const w of ['日','一','二','三','四','五','六'])cells+=`<div class="dc-dow">${w}</div>`;
       for(let ms=r.start;ms<=r.end;ms+=DAY){
         const k=dcKey(ms),d=new Date(ms),inMonth=d.getUTCMonth()===dcCal.m,wd=d.getUTCDay(),hn=TL_HOLIDAYS.get(k),evs=dcEventsOn(ms),shown=evs.slice(0,3);
-        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${(()=>{const mt=dutyMeetings(d.getUTCFullYear(),d.getUTCMonth()).find(x=>x.ms===ms);return mt?`<span class="dc-duty-tag" title="${esc(mt.title+'｜值日生 '+dutyOf(d.getUTCFullYear(),d.getUTCMonth())+'｜'+dutyNeed)}">雙週會・值日 ${esc(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))}</span>`:''})()}${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${e.color||dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'&&Object.keys(DC_COLORS).filter(n=>!dcCal.hidden.has(n)).length<2?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
+        cells+=`<button type="button" class="dc-day${inMonth?'':' out'}${wd===0||wd===6||hn?' off':''}${k===today?' today':''}${k===dcCal.sel?' sel':''}" data-dc-day="${k}"><span><span class="dc-n">${d.getUTCDate()}</span>${hn?`<span class="dc-hol">${esc(hn)}</span>`:''}</span>${(()=>{const mt=dutyMeetings(d.getUTCFullYear(),d.getUTCMonth()).find(x=>x.ms===ms);return mt?`<span class="dc-duty-tag" title="${esc(mt.title+'｜值日生 '+dutyWho(d.getUTCFullYear(),d.getUTCMonth())+'｜'+dutyNeed)}">雙週會・值日 ${esc(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))}</span>`:''})()}${shown.map(e=>`<span class="dc-ev${e.kind==='leave'?' leave':''}${e.isEnd?' end':''}" style="--c:${e.color||dcColor(e.who)}" title="${esc(e.who+'｜'+e.title)}">${e.kind==='leave'?'休 ':''}${e.isEnd?'交 ':''}${e.kind==='due'&&Object.keys(DC_COLORS).filter(n=>!dcCal.hidden.has(n)).length<2?'':esc(e.who)+' '}${esc(e.title)}</span>`).join('')}${evs.length>3?`<span class="dc-more">+${evs.length-3} 更多</span>`:''}</button>`;
       }
       const sel=dcCal.sel,selMs=Date.parse(sel+'T00:00:00Z'),selEvs=Number.isNaN(selMs)?[]:dcEventsOn(selMs);
-      const dutyMt=Number.isNaN(selMs)?null:dutyMeetings(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()).find(x=>x.ms===selMs),dutyBlock=dutyMt?`<div class="dc-row" style="--c:${dcColor(dutyOf(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}"><span class="dc-dot"></span><div><b>${esc(dutyMt.title)}</b><small>值日生 ${esc(dutyOf(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}・${esc(dutyNeed)}</small></div></div>`:'';
+      const dutyMt=Number.isNaN(selMs)?null:dutyMeetings(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()).find(x=>x.ms===selMs),dutyBlock=dutyMt?`<div class="dc-row" style="--c:${dcColor(dutyWho(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}"><span class="dc-dot"></span><div><b>${esc(dutyMt.title)}</b><small>值日生 ${esc(dutyWho(new Date(selMs).getUTCFullYear(),new Date(selMs).getUTCMonth()))}・${esc(dutyNeed)}</small></div></div>`:'';
       const detail=`<div class="dc-detail"><h4>${esc(sel.replace(/-/g,'/'))}${TL_HOLIDAYS.get(sel)?`　${esc(TL_HOLIDAYS.get(sel))}`:''}</h4>${dutyBlock}${selEvs.length?selEvs.map(e=>`<div class="dc-row" style="--c:${e.color||dcColor(e.who)}"><span class="dc-dot"></span><div><b>${esc(e.who)}｜${esc(e.title)}</b><small>${e.kind==='due'?`${e.isEnd?'今天交件・':''}${esc(e.status)}・期間 ${esc(e.period)}`:''}${e.kind==='leave'?'休假・':''}${e.kind==='due'?'':e.allDay?'整天':(dcKey(e.start+8*3600000)!==dcKey(e.end-1+8*3600000)?'跨日':`${dcTime(e.start)}–${dcTime(e.end)}`)}${e.free?'・顯示為空閒':''}</small></div></div>`).join(''):(dutyBlock?'':'<p class="page-sub" style="margin:0">這一天沒有行程。</p>')}</div>`;
       const warn=dcCal.mode==='due'?[]:[dcCal.error?`讀取失敗：${esc(dcCal.error)}`:'',data?.unreadable?.length?`${esc(data.unreadable.join('、'))} 的 Google 行事曆讀不到（可能沒有分享或授權失效）`:'',data&&data.femas===false?'人資系統假單暫時讀不到，只顯示 Google 行事曆上的休假':''].filter(Boolean);
       $('stage').innerHTML=`<div class="page wide-cal"><div class="page-top"><div><h2 class="page-title">行事曆</h2><p class="page-sub">設計部五位設計師串聯的 Google 行事曆與人資系統假單。</p></div></div>

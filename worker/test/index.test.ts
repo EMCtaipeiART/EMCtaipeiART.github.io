@@ -5389,3 +5389,26 @@ describe('值日生：自動預約會議室 H 與雙週會', () => {
     expect(await api({ action: 'bookDutyMeetings', month: '2026-12' }, other)).toMatchObject({ ok: false });
   });
 });
+
+describe('值日生：手動替換', () => {
+  it('lets the duty person (or an admin) swap the month to someone else, and clear it again', async () => {
+    const token = await login(); // Machi 是管理者
+    expect(await api({ action: 'getDutyOverrides' }, token)).toMatchObject({ ok: true, overrides: {} });
+    const swapped = await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Anna' }, token) as { who: string; overrides: Record<string, { who: string; by: string }> };
+    expect(swapped.who).toBe('Anna');
+    expect(swapped.overrides['2026-12']).toMatchObject({ who: 'Anna', by: 'Machi' });
+    const booking = await api({ action: 'getDutyBooking', month: '2026-12' }, token) as { who: string; rotationWho: string; override: { who: string } | null };
+    expect(booking).toMatchObject({ who: 'Anna', rotationWho: 'Machi', override: { who: 'Anna' } });
+    expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Nobody' }, token)).toMatchObject({ ok: false });
+    // 換回原本輪值的人＝清除替換
+    const cleared = await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Machi' }, token) as { who: string; overrides: Record<string, unknown> };
+    expect(cleared.who).toBe('Machi');
+    expect(cleared.overrides['2026-12']).toBeUndefined();
+  });
+
+  it('refuses people who are neither the current duty person nor an admin', async () => {
+    const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Anna' }, outsider)).toMatchObject({ ok: false });
+    expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Leona' })).toMatchObject({ ok: false });
+  });
+});

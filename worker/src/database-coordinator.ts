@@ -14,7 +14,7 @@ import {
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
-import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMeetings, dutyMonthKey, dutyOf, type DutyMeeting } from './duty';
+import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMeetings, dutyMonthKey, dutyOf, isDutyName, type DutyMeeting, type DutyOverrides } from './duty';
 import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
@@ -3799,6 +3799,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private dutyReplyWaitMs = 3000;
+  private async dutyOverrides(): Promise<DutyOverrides> { return (await this.ctx.storage.get<DutyOverrides>('dutyOverrides')) || {}; }
+  /** 當月實際的值日生：有手動替換就用替換的人，否則照輪值表 */
+  private async dutyWho(year: number, month0: number): Promise<string> {
+    const over = (await this.dutyOverrides())[dutyMonthKey(year, month0)];
+    return over && isDutyName(over.who) ? over.who : dutyOf(year, month0);
+  }
   private dutyCurrentMonthKey(nowMs = Date.now()): string {
     const t = new Date(nowMs + 8 * 60 * 60 * 1000);
     return dutyMonthKey(t.getUTCFullYear(), t.getUTCMonth());
@@ -3824,7 +3830,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 結果存成「當月預約狀態」：done／failed／needs-auth（還沒連 Google、或授權只有唯讀，需要重新授權行事曆）。
    */
   private async dutyBook(database: DatabaseSnapshot, year: number, month0: number, actor: string): Promise<DutyState> {
-    const month = dutyMonthKey(year, month0), who = dutyOf(year, month0);
+    const month = dutyMonthKey(year, month0), who = await this.dutyWho(year, month0);
     const previous = await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`);
     const base = { who, month, results: [] as DutyResult[], at: Date.now(), attempts: (previous?.attempts || 0) + 1 };
     const finish = async (state: Omit<DutyState, 'who' | 'month' | 'at' | 'attempts'>): Promise<DutyState> => {
@@ -4410,14 +4416,30 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
       }
+      if (action === 'getDutyOverrides') { this.requireSession(session); return { ok: true, action, overrides: await this.dutyOverrides() }; }
+      if (action === 'saveDutyOverride') {
+        const current = this.requireSession(session);
+        const month = text(payload.month), match = month.match(/^(\d{4})-(\d{2})$/);
+        if (!match) throw new Error('月份格式錯誤');
+        const year = Number(match[1]), month0 = Number(match[2]) - 1, target = text(payload.who);
+        const nowWho = await this.dutyWho(year, month0);
+        if (canonicalAccount(current.account) !== canonicalAccount(this.dutyAccount(database, nowWho)) && !hasCapability(database, current, 'database.manage')) throw new Error('只有目前的值日生或管理者可以替換');
+        const overrides = await this.dutyOverrides();
+        if (!target || target === dutyOf(year, month0)) delete overrides[month];
+        else if (isDutyName(target)) overrides[month] = { who: target, by: auditActor(current), at: Date.now() };
+        else throw new Error('找不到這位設計師');
+        await this.ctx.storage.put('dutyOverrides', overrides);
+        try { await this.queueAudit([{ t: new Date().toISOString(), kind: '值日替換', actor: auditActor(current), caseId: `值日生 ${month}`, from: nowWho, to: overrides[month]?.who || dutyOf(year, month0), note: overrides[month] ? '手動替換' : '恢復輪值' }]); } catch { /* 不影響替換 */ }
+        return { ok: true, action, month, who: await this.dutyWho(year, month0), overrides };
+      }
       if (action === 'getDutyBooking' || action === 'bookDutyMeetings') {
         const current = this.requireSession(session);
         const month = text(payload.month) || this.dutyCurrentMonthKey();
         const match = month.match(/^(\d{4})-(\d{2})$/);
         if (!match) throw new Error('月份格式錯誤');
         const year = Number(match[1]), month0 = Number(match[2]) - 1;
-        const who = dutyOf(year, month0);
-        if (action === 'getDutyBooking') return { ok: true, action, month, who, state: (await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`)) || null };
+        const who = await this.dutyWho(year, month0);
+        if (action === 'getDutyBooking') return { ok: true, action, month, who, rotationWho: dutyOf(year, month0), override: (await this.dutyOverrides())[month] || null, state: (await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`)) || null };
         const dutyAccount = this.dutyAccount(database, who);
         if (canonicalAccount(current.account) !== canonicalAccount(dutyAccount) && !hasCapability(database, current, 'database.manage')) throw new Error('只有該月值日生或管理者可以預約');
         const state = await this.dutyBook(database, year, month0, auditActor(current));

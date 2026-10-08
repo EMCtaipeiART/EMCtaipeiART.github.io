@@ -51,3 +51,8 @@ export function dutyEventBody(meeting: DutyMeeting, who: string, attendeeEmails:
 }
 
 export function dutyMonthKey(year: number, month0: number): string { return `${year}-${pad(month0 + 1)}`; }
+
+/** 手動替換記錄：月份 → 換成誰、誰換的、什麼時候 */
+export interface DutyOverride { who: string; by: string; at: number }
+export type DutyOverrides = Record<string, DutyOverride>;
+export const isDutyName = (name: string): boolean => (DUTY_ORDER as readonly string[]).includes(name);

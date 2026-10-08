@@ -376,3 +376,5 @@
 - 2026-10-09: 值日生自動預約: Worker duty.ts + dutyBook (uses the duty person own Google connection to create the 2nd/4th Wednesday 14:00-15:00 meetings on their primary calendar, inviting room H meetingroomh.emc@gmail.com + six people, dedupe by title, room decline check); actions getDutyBooking/bookDutyMeetings; cron runDutyBooking (1st-3rd, 09:00+, retry every 30 min); requires calendar.events write scope (incremental consent via startGmailConnect(true)). UI: booking status in calendar duty bar + reminder modal, manual 立即預約 button. Worker redeployed.
 
 - 2026-10-09: Duty text changed to "14:00–15:00・會議室 H・ Eric、Machi、Anna、Noise、Amber、Leona".
+
+- 2026-10-09: 值日生手動替換: Worker dutyOverrides in DO storage (actions getDutyOverrides/saveDutyOverride, allowed for the current duty person or admin, audited), front-end dutyWho() uses overrides; swap row in the calendar duty bar (替換/恢復輪值); swapped-in person gets the reminder once; cron/booking use the effective duty person. Worker redeployed.
