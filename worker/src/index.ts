@@ -229,6 +229,13 @@ export default {
         console.error(JSON.stringify({ event: 'coin-earn-sync-error', message: error instanceof Error ? error.message : String(error) }));
       }
     }
+    // 值日生：每月 1 號自動替值日生預約會議室 H 並建立兩場雙週會（需要值日生已連接 Google 且授權行事曆寫入）。
+    try {
+      const duty = await stub.runDutyBooking();
+      if (duty.attempted) console.log(JSON.stringify({ event: 'duty-booking', ...duty }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'duty-booking-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 即時推送：上面這些背景變動（行事曆切換、限時動態到期…）有結果就通知前台。
     try { await stub.runPixelPush(); } catch (error) {
       console.error(JSON.stringify({ event: 'pixel-office-push-error', message: error instanceof Error ? error.message : String(error) }));

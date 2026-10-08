@@ -372,3 +372,5 @@
 - 2026-10-08: 記事本: category tabs drag-reorder (shared, saved via saveNotebookCategoryOrder in the DO), cards fixed to 3 columns (2 <=1100px, 1 <=720px), titles single line with ellipsis + tooltip, tools overlay on hover. Worker redeployed.
 
 - 2026-10-08: 行事曆: 值日生輪值（Leona→Anna→Machi→Noise→Amber 循環，2026/10=Leona）: banner with this month duty + next 5 months, tags on the 2nd/4th Wednesday, detail block, and a 1st-of-month reminder modal for the duty person (reminds to schedule 【設計部雙週會】N月上/下_案例分享, Wed 14:00-15:00, BOOKING room H, TAG six people). Reminder only; no calendar events are created automatically.
+
+- 2026-10-09: 值日生自動預約: Worker duty.ts + dutyBook (uses the duty person own Google connection to create the 2nd/4th Wednesday 14:00-15:00 meetings on their primary calendar, inviting room H meetingroomh.emc@gmail.com + six people, dedupe by title, room decline check); actions getDutyBooking/bookDutyMeetings; cron runDutyBooking (1st-3rd, 09:00+, retry every 30 min); requires calendar.events write scope (incremental consent via startGmailConnect(true)). UI: booking status in calendar duty bar + reminder modal, manual 立即預約 button. Worker redeployed.

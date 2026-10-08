@@ -14,6 +14,7 @@ import {
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
+import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMeetings, dutyMonthKey, dutyOf, type DutyMeeting } from './duty';
 import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
@@ -181,6 +182,15 @@ function gmailScopesAllowCalendar(scopes: unknown): boolean {
 }
 
 /** 能讀事件內容才有辦法可靠分辨會議與休假；calendar.freebusy 本身只能看見忙碌區段。 */
+/** 建立／修改行事曆活動需要寫入權限（calendar.events 或 calendar）；唯讀的 events.readonly 不夠 */
+function gmailScopesAllowCalendarWrite(scopes: unknown): boolean {
+  const list = text(scopes).split(/\s+/).filter(Boolean);
+  return list.some(scope => scope === 'https://www.googleapis.com/auth/calendar.events' || scope === 'https://www.googleapis.com/auth/calendar');
+}
+
+interface DutyResult { title: string; date: string; status: 'created' | 'exists' | 'failed'; link?: string; note?: string }
+interface DutyState { status: 'done' | 'failed' | 'needs-auth'; message: string; who: string; month: string; results: DutyResult[]; at: number; attempts: number }
+
 function gmailScopesAllowCalendarDetails(scopes: unknown): boolean {
   const list = text(scopes).split(/\s+/).filter(Boolean);
   return list.some(scope => scope === 'https://www.googleapis.com/auth/calendar.events.readonly'
@@ -3788,6 +3798,110 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
   }
 
+  private dutyReplyWaitMs = 3000;
+  private dutyCurrentMonthKey(nowMs = Date.now()): string {
+    const t = new Date(nowMs + 8 * 60 * 60 * 1000);
+    return dutyMonthKey(t.getUTCFullYear(), t.getUTCMonth());
+  }
+
+  private dutyAccount(database: DatabaseSnapshot, name: string): string {
+    const row = database.tables['設定'].rows.find(item => text(item['名字']).toLowerCase() === name.toLowerCase());
+    return canonicalAccount(row?.['帳號']);
+  }
+
+  /** ERIC＝傅思凱（固定帳號），其餘五位用「設定」表的名字找帳號 */
+  private dutyAttendeeEmails(database: DatabaseSnapshot): { emails: string[]; missing: string[] } {
+    const emails: string[] = [], missing: string[] = [];
+    for (const name of DUTY_ATTENDEES) {
+      const email = name === 'ERIC' ? DUTY_ERIC_EMAIL : this.dutyAccount(database, name);
+      if (email && email.includes('@')) emails.push(email); else missing.push(name);
+    }
+    return { emails, missing };
+  }
+
+  /**
+   * 用值日生自己的 Google 連線，在他的行事曆建立當月兩場雙週會（會議室 H＋六位成員都邀請），已經建立過的不會重複。
+   * 結果存成「當月預約狀態」：done／failed／needs-auth（還沒連 Google、或授權只有唯讀，需要重新授權行事曆）。
+   */
+  private async dutyBook(database: DatabaseSnapshot, year: number, month0: number, actor: string): Promise<DutyState> {
+    const month = dutyMonthKey(year, month0), who = dutyOf(year, month0);
+    const previous = await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`);
+    const base = { who, month, results: [] as DutyResult[], at: Date.now(), attempts: (previous?.attempts || 0) + 1 };
+    const finish = async (state: Omit<DutyState, 'who' | 'month' | 'at' | 'attempts'>): Promise<DutyState> => {
+      const full: DutyState = { ...base, ...state };
+      await this.ctx.storage.put(`dutyBooking:${month}`, full);
+      if (full.results.some(r => r.status === 'created')) {
+        try { await this.queueAudit([{ t: new Date().toISOString(), kind: '預約會議', actor, caseId: `雙週會 ${month}`, note: `值日生 ${who}｜${full.results.filter(r => r.status === 'created').map(r => r.date).join('、')}` }]); } catch { /* 不影響預約 */ }
+      }
+      return full;
+    };
+    const account = this.dutyAccount(database, who);
+    if (!account) return finish({ status: 'failed', message: `找不到值日生 ${who} 的帳號（請確認「設定」表）`, results: [] });
+    const { emails, missing } = this.dutyAttendeeEmails(database);
+    if (missing.length) return finish({ status: 'failed', message: `找不到這幾位的信箱：${missing.join('、')}`, results: [] });
+    const stored = this.getGmailTokens(account);
+    if (!stored) return finish({ status: 'needs-auth', message: `${who} 還沒有連接 Google。請 ${who} 登入網站，在「發信」選單連接 Gmail，並勾選允許「行事曆活動」權限。`, results: [] });
+    if (!gmailScopesAllowCalendarWrite(stored.scopes)) return finish({ status: 'needs-auth', message: `${who} 的 Google 授權目前只有讀取行事曆，無法建立會議。請 ${who} 重新授權行事曆（允許建立與編輯活動）。`, results: [] });
+    let token = '';
+    try { token = await this.getValidGmailAccessToken(account); } catch (error) { return finish({ status: 'needs-auth', message: error instanceof Error ? error.message : String(error), results: [] }); }
+    const results: DutyResult[] = [];
+    for (const meeting of dutyMeetings(year, month0)) results.push(await this.dutyBookOne(token, meeting, who, emails));
+    const failed = results.filter(r => r.status === 'failed');
+    const authFailed = failed.some(r => /權限|insufficient|forbidden|403/i.test(r.note || ''));
+    if (failed.length) return finish({ status: authFailed ? 'needs-auth' : 'failed', message: authFailed ? `${who} 的 Google 授權不足以建立會議，請重新授權行事曆。` : '有會議建立失敗，請稍後重試或手動建立。', results });
+    const declined = results.find(r => /已拒絕|無法使用/.test(r.note || ''));
+    return finish({ status: 'done', message: declined ? '會議已建立，但會議室 H 回覆無法使用，請確認時段或改期。' : '兩場雙週會都已建立並邀請會議室 H 與六位成員。', results });
+  }
+
+  private async dutyBookOne(token: string, meeting: DutyMeeting, who: string, emails: string[]): Promise<DutyResult> {
+    const result: DutyResult = { title: meeting.title, date: meeting.date, status: 'failed' };
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    try {
+      const params = new URLSearchParams({ timeMin: `${meeting.date}T00:00:00+08:00`, timeMax: `${meeting.date}T23:59:59+08:00`, q: meeting.title, singleEvents: 'true', fields: 'items(id,summary,status,htmlLink)' });
+      const listed = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, { headers });
+      if (listed.ok) {
+        const items = ((await listed.json()) as { items?: Array<{ summary?: string; status?: string; htmlLink?: string }> }).items || [];
+        const hit = items.find(item => item.summary === meeting.title && item.status !== 'cancelled');
+        if (hit) return { ...result, status: 'exists', link: hit.htmlLink, note: '已經建立過，沒有重複建立' };
+      } else if (listed.status === 403 || listed.status === 401) {
+        return { ...result, note: `沒有行事曆權限（HTTP ${listed.status}）` };
+      }
+      const created = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all', { method: 'POST', headers, body: JSON.stringify(dutyEventBody(meeting, who, emails)) });
+      if (!created.ok) {
+        const detail = ((await created.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message || `HTTP ${created.status}`;
+        return { ...result, note: created.status === 403 || created.status === 401 ? `沒有行事曆權限：${detail}` : `建立失敗：${detail}` };
+      }
+      const event = (await created.json()) as { id?: string; htmlLink?: string };
+      result.status = 'created'; result.link = event.htmlLink;
+      // 會議室 H 是一個獨立的 Google 帳號：它自動回覆後才算訂到。等幾秒看它有沒有拒絕（時段被占用時會拒絕）。
+      if (event.id) {
+        await new Promise(resolve => setTimeout(resolve, this.dutyReplyWaitMs));
+        const check = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(event.id)}?fields=attendees(email,responseStatus)`, { headers });
+        if (check.ok) {
+          const room = (((await check.json()) as { attendees?: Array<{ email?: string; responseStatus?: string }> }).attendees || []).find(a => text(a.email).toLowerCase() === DUTY_ROOM_EMAIL);
+          if (room?.responseStatus === 'declined') result.note = '會議室 H 已拒絕（該時段可能已被預約），請改期或另訂';
+          else if (room?.responseStatus === 'accepted') result.note = '會議室 H 已接受';
+          else result.note = '已邀請會議室 H，等待它回覆';
+        }
+      }
+      return result;
+    } catch (error) {
+      return { ...result, note: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /** Cron（每分鐘）：每月 1～3 號上午 9 點後，替當月值日生預約；失敗的每 30 分鐘重試一次，成功就停。 */
+  async runDutyBooking(nowMs = Date.now()): Promise<{ attempted: boolean; status?: string }> {
+    const t = new Date(nowMs + 8 * 60 * 60 * 1000);
+    if (t.getUTCDate() > 3 || t.getUTCHours() < 9) return { attempted: false };
+    const year = t.getUTCFullYear(), month0 = t.getUTCMonth(), month = dutyMonthKey(year, month0);
+    const previous = await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`);
+    if (previous && (previous.status === 'done' || nowMs - previous.at < 30 * 60 * 1000)) return { attempted: false, status: previous.status };
+    const stored = await this.snapshot();
+    const state = await this.dutyBook(stored.database, year, month0, '自動預約');
+    return { attempted: true, status: state.status };
+  }
+
   private notebookRows(): NotebookItem[] {
     return this.ctx.storage.sql.exec<{ id: string; category: string; section: string; title: string; fields: string; sort: number; updated_at: number; updated_by: string }>(
       'SELECT id, category, section, title, fields, sort, updated_at, updated_by FROM notebook_items ORDER BY sort ASC, updated_at ASC'
@@ -4295,6 +4409,19 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           if (ordered.length) priority[group] = ordered[0].name;
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
+      }
+      if (action === 'getDutyBooking' || action === 'bookDutyMeetings') {
+        const current = this.requireSession(session);
+        const month = text(payload.month) || this.dutyCurrentMonthKey();
+        const match = month.match(/^(\d{4})-(\d{2})$/);
+        if (!match) throw new Error('月份格式錯誤');
+        const year = Number(match[1]), month0 = Number(match[2]) - 1;
+        const who = dutyOf(year, month0);
+        if (action === 'getDutyBooking') return { ok: true, action, month, who, state: (await this.ctx.storage.get<DutyState>(`dutyBooking:${month}`)) || null };
+        const dutyAccount = this.dutyAccount(database, who);
+        if (canonicalAccount(current.account) !== canonicalAccount(dutyAccount) && !hasCapability(database, current, 'database.manage')) throw new Error('只有該月值日生或管理者可以預約');
+        const state = await this.dutyBook(database, year, month0, auditActor(current));
+        return { ok: true, action, month, who, state };
       }
       if (action === 'getNotebook' || action === 'saveNotebookItem' || action === 'deleteNotebookItem' || action === 'moveNotebookItem' || action === 'saveNotebookCategoryOrder') {
         // 記事本含共用帳號密碼：登入且是設計部／管理者才讀得到、改得了；內容只存在 Worker 的資料庫，不進公開的 GitHub。

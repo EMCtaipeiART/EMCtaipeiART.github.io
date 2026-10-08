@@ -786,6 +786,8 @@
     .dc-duty-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.dc-duty-meet{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--bg);border-left:4px solid var(--brand)}.dc-duty-meet b{font-size:13px;color:var(--brand)}.dc-duty-meet span{font-size:14px;font-weight:800}.dc-duty-meet small{font-size:12px;color:var(--muted);line-height:1.5}
     .dc-duty-strip{display:flex;gap:8px;flex-wrap:wrap}.dc-duty-m{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-size:13px;font-weight:800;color:var(--ink)}.dc-duty-m b{color:var(--muted);font-weight:800}.dc-duty-m.cur{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
     .dc-duty-tag{display:block;margin-top:2px;padding:1px 6px;border-radius:6px;background:#e7f6ea;color:#17652a;font-size:11px;font-weight:800;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html[data-theme="dark"] .dc-duty-tag{background:#173323;color:#8fe0a5}
+    .dc-bk{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13.5px}.dc-bk>b{font-size:13px;color:var(--muted)}.dc-bk-ok{color:#17652a;font-weight:800}.dc-bk-bad{color:#b45309;font-weight:800}.dc-bk-none,.dc-bk-wait{color:var(--muted)}html[data-theme="dark"] .dc-bk-ok{color:#8fe0a5}html[data-theme="dark"] .dc-bk-bad{color:#f6dc7a}
+    .dc-bk-items{display:inline-flex;flex-wrap:wrap;gap:6px 10px}.dc-bk-item{font-weight:800}.dc-bk-item.ok{color:#17652a}.dc-bk-item.bad{color:#b45309}.dc-bk-item small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}.dc-bk-item a{color:var(--brand);margin-left:4px}.dc-bk-btns{display:inline-flex;gap:8px;margin-left:auto;flex-wrap:wrap}
     .uni-wrap{position:relative;width:min(796px,100%);margin:0 auto}.uni-wrap .uni-frame{width:100%}.uni-page.is-edit .uni-wrap{width:min(1280px,100%)}.uni-page.is-edit .uni-wrap .uni-frame{width:100%}
     .uni-loading{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg);transition:opacity .45s ease,visibility .45s ease}.uni-loading.is-done{opacity:0;visibility:hidden;pointer-events:none}.uni-loading b{font-size:15px}.uni-loading small{color:var(--muted,#888)}
     .uni-spin{width:36px;height:36px;border:4px solid rgba(21,158,49,.2);border-top-color:#159E31;border-radius:50%;animation:spin .8s linear infinite}
@@ -4295,14 +4297,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let gmailChannel=null,gmailPopup=null;
     const b64u=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     function ensureGmailChannel(){if(gmailChannel||!('BroadcastChannel' in window))return;gmailChannel=new BroadcastChannel(GMAIL_CHANNEL);gmailChannel.onmessage=ev=>applyGmailResult(ev.data).catch(err=>toast(`Gmail 連接失敗：${err.message}`,true))}
-    async function startGmailConnect(){
+    async function startGmailConnect(withCalendarWrite){
       if(!loggedIn()){toast('請先登入後再連接 Gmail',true);startLogin();return}
       if(!acc('request.mail',true)){toast('此帳號沒有發送信件權限',true);return}
       try{
         const st=`machi_gmail_connect_${Date.now()}_${Math.random().toString(36).slice(2)}`,verifier=b64u(crypto.getRandomValues(new Uint8Array(32))),challenge=b64u(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
         sessionStorage.setItem('designRequestGmailConnectState',st);sessionStorage.setItem('designRequestGmailConnectVerifier',verifier);
         ensureGmailChannel();
-        const p=new URLSearchParams({client_id:GMAIL_CLIENT_ID,redirect_uri:GMAIL_ORIGIN,response_type:'code',access_type:'offline',prompt:'consent',scope:GMAIL_SCOPE,state:st,code_challenge:challenge,code_challenge_method:'S256'});
+        const p=new URLSearchParams({client_id:GMAIL_CLIENT_ID,redirect_uri:GMAIL_ORIGIN,response_type:'code',access_type:'offline',prompt:'consent',scope:GMAIL_SCOPE+(withCalendarWrite===true?' https://www.googleapis.com/auth/calendar.events':''),include_granted_scopes:'true',state:st,code_challenge:challenge,code_challenge_method:'S256'});
         const w=520,h=720;
         gmailPopup=window.open(`https://accounts.google.com/o/oauth2/v2/auth?${p}`,'machiGmailConnect',`popup=yes,width=${w},height=${h},left=${Math.max(0,Math.round((screen.width-w)/2))},top=${Math.max(0,Math.round((screen.height-h)/2))},resizable=yes,scrollbars=yes`);
         if(!gmailPopup){toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);return}
@@ -4522,11 +4524,29 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const dutyMeetings=(y,m)=>[{part:'上',ms:dutyNthWed(y,m,2),title:'【設計部雙週會】'+(m+1)+'月上_案例分享'},{part:'下',ms:dutyNthWed(y,m,4),title:'【設計部雙週會】'+(m+1)+'月下_案例分享'}];
     const dutyDay=ms=>{const d=new Date(ms);return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'（三）'};
     const dutyNeed='14:00–15:00・須 BOOKING 會議室 H・TAG '+DUTY_TAGS.join('、');
+    /* 每月 1 號上午 9 點後，後端自動用值日生自己的 Google 行事曆建立兩場雙週會並邀請會議室 H 與六位成員；結果存在後端，這裡顯示 */
+    const dutyCache={},dutyBusy={};
+    const dutyMonthKey=(y,m)=>y+'-'+String(m+1).padStart(2,'0');
+    async function dutyFetch(mk){try{const d=await api('getDutyBooking',{month:mk});dutyCache[mk]=d.state||null}catch(err){if(dutyCache[mk]===undefined)dutyCache[mk]=null}}
+    function dutyBookHtml(y,m,who,me){
+      const mk=dutyMonthKey(y,m),st=dutyCache[mk],isDuty=me&&me===who,canBook=isDuty||isAdminAcct()||isMachiUser();
+      if(st===undefined&&!dutyBusy[mk]){dutyBusy[mk]=1;dutyFetch(mk).then(()=>{if(state.view==='calendar')renderCalendarPage()})}
+      let line;
+      if(st===undefined)line='<span class="dc-bk-wait">讀取預約狀態…</span>';
+      else if(!st)line='<span class="dc-bk-none">尚未預約。每月 1 號上午 9 點後，系統會自動替值日生預約會議室 H 並建立兩場雙週會。</span>';
+      else{
+        const items=(st.results||[]).map(r=>'<span class="dc-bk-item '+(r.status==='failed'?'bad':'ok')+'">'+(r.status==='failed'?'✕':'✓')+' '+esc(r.date.slice(5).replace('-','/'))+(r.link?' <a href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">開啟</a>':'')+(r.note?'<small>'+esc(r.note)+'</small>':'')+'</span>').join('');
+        line='<span class="dc-bk-'+(st.status==='done'?'ok':'bad')+'">'+(st.status==='done'?'✓ ':'⚠ ')+esc(st.message||'')+'</span>'+(items?'<span class="dc-bk-items">'+items+'</span>':'');
+      }
+      const btns=canBook?'<span class="dc-bk-btns"><button type="button" class="btn" data-duty-book="'+mk+'">'+(st&&st.status==='done'?'重新檢查／補建':'立即預約會議室 H')+'</button>'+(isDuty&&st&&st.status==='needs-auth'?'<button type="button" class="btn primary" data-duty-auth>授權 Google 行事曆</button>':'')+'</span>':'';
+      return '<div class="dc-bk"><b>會議室 H 預約</b>'+line+btns+'</div>';
+    }
     function dutyBarHtml(){
       const y=dcCal.y,m=dcCal.m,who=dutyOf(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
       const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyOf(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
       return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>每月 1 號提醒值日生安排兩場雙週會</small></div></div>'
         +'<div class="dc-duty-list">'+meets.map(x=>'<div class="dc-duty-meet"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'</div>'
+        +dutyBookHtml(y,m,who,me)
         +'<div class="dc-duty-strip" aria-label="輪值表">'+strip+'</div></div>';
     }
     function dutyRemind(testMs){
@@ -4537,11 +4557,23 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(document.getElementById('dutyModal'))return;
       const meets=dutyMeetings(y,m),back=document.createElement('div');back.id='dutyModal';back.className='nc-back';
       back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="值日生提醒" style="width:min(560px,100%)"><div class="nc-head"><span class="nc-ico" style="font-size:20px">📅</span><div><h3>'+(m+1)+' 月值日生提醒</h3><p>這個月輪到你（'+esc(me)+'）當值日生，請在行事曆安排兩場雙週會：</p></div></div>'
-        +'<div class="nc-body">'+meets.map(x=>'<div class="dc-duty-meet" style="margin-bottom:10px"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'<p class="page-sub" style="margin:6px 0 0">第 2 週與第 4 週的星期三下午兩點到三點；記得先 BOOKING 會議室 H，邀請 '+esc(DUTY_TAGS.join('、'))+' 六位。</p></div>'
+        +'<div class="nc-body"><div id="dutyBookState" class="dc-bk" style="margin-bottom:12px"></div>'+meets.map(x=>'<div class="dc-duty-meet" style="margin-bottom:10px"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'<p class="page-sub" style="margin:6px 0 0">第 2 週與第 4 週的星期三下午兩點到三點；記得先 BOOKING 會議室 H，邀請 '+esc(DUTY_TAGS.join('、'))+' 六位。</p></div>'
         +'<div class="nc-foot"><button type="button" class="btn" data-duty="ok">我知道了</button><button type="button" class="btn primary" data-duty="cal">前往行事曆</button></div></div>';
       back.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-duty]');if(!a&&e.target!==back)return;try{localStorage.setItem(key,'1')}catch(err){}back.remove();if(a&&a.dataset.duty==='cal'){state.form=null;state.mail=null;state.editing=false;closeCal();dcCal.y=y;dcCal.m=m;dcCal.sel=dcKey(Date.UTC(y,m,1));show('calendar');dcLoad(false)}});
       document.body.appendChild(back);
+      const mk=dutyMonthKey(y,m),paint=()=>{const box=back.querySelector('#dutyBookState');if(box)box.innerHTML=dutyBookHtml(y,m,me,me).replace(/^<div class="dc-bk">|<\/div>$/g,'')};
+      dutyCache[mk]=undefined;dutyFetch(mk).then(paint);paint();
     }
+    document.addEventListener('click',e=>{
+      const book=e.target.closest&&e.target.closest('[data-duty-book]');
+      if(book){
+        const mk=book.dataset.dutyBook;if(!confirm('將使用值日生的 Google 行事曆，建立 '+mk.replace('-','年')+'月的兩場「【設計部雙週會】」（第 2、第 4 個星期三 14:00–15:00），並寄出邀請給會議室 H 與 ERIC、MACHI、ANNA、NOISE、AMBER、LEONA。已建立過的不會重複。確定要預約嗎？'))return;
+        book.disabled=true;book.textContent='預約中…（約需 10 秒）';
+        api('bookDutyMeetings',{month:mk}).then(d=>{dutyCache[mk]=d.state;toast(d.state.status==='done'?'已預約會議室 H 並建立雙週會':d.state.message,d.state.status!=='done');if(state.view==='calendar')renderCalendarPage();const box=document.getElementById('dutyBookState');if(box){const m=mk.match(/^(\d+)-(\d+)$/);box.innerHTML=dutyBookHtml(+m[1],+m[2]-1,ownDesignerName(),ownDesignerName()).replace(/^<div class="dc-bk">|<\/div>$/g,'')}}).catch(err=>{toast('預約失敗：'+(err.message||err),true);book.disabled=false;book.textContent='立即預約會議室 H'});
+        return;
+      }
+      if(e.target.closest&&e.target.closest('[data-duty-auth]')){toast('請在新視窗授權，並勾選允許「查看、編輯、建立與刪除行事曆活動」');startGmailConnect(true)}
+    });
     const DC_STATUS_COLOR={'未開始':['未執行','#d64550'],'執行中':['執行中','#e5b020'],'修改中':['修改中','#f08a24']};
     const dcCal=state.cal={y:0,m:0,sel:'',mode:'cal',sets:{cal:new Set(),due:new Set()},hidden:null,cache:new Map(),loading:false,error:''};
     const dcAllowed=()=>loggedIn()&&(/設計/.test(sessionDept())||isDesignerSession()||isAdminAcct());

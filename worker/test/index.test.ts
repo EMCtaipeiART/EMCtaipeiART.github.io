@@ -5312,3 +5312,80 @@ describe('記事本：分類順序', () => {
     expect(await api({ action: 'saveNotebookCategoryOrder', order: [] })).toMatchObject({ ok: false });
   });
 });
+
+describe('值日生：自動預約會議室 H 與雙週會', () => {
+  const WRITE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send';
+  const READ_ONLY = 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.freebusy';
+
+  async function seedStaff(): Promise<void> {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (instance, state) => {
+      (instance as unknown as { dutyReplyWaitMs: number }).dutyReplyWaitMs = 0;
+      const row = state.storage.sql.exec<{ json: string }>("SELECT json FROM database_state WHERE id = 'primary'").toArray()[0];
+      const database = JSON.parse(row.json) as DatabaseSnapshot;
+      for (const [name, account] of [['Anna', 'anna.hsu'], ['Noise', 'noise.zhong'], ['Amber', 'amber.tian'], ['Leona', 'leona.chen']]) {
+        database.tables['設定'].rows.push({ '部門': '設計部', '組別': '平面', '名字': name, '顯示名': name, '帳號': `${account}@emctaipei.com` });
+      }
+      state.storage.sql.exec("UPDATE database_state SET json = ? WHERE id = 'primary'", JSON.stringify(database));
+    });
+  }
+
+  function mockGoogle(existing: Array<{ summary: string }> = [], roomStatus = 'accepted') {
+    const posts: Array<Record<string, unknown>> = [];
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/calendars/primary/events?') && (!init || !init.method || init.method === 'GET')) return Response.json({ items: existing.map(e => ({ ...e, status: 'confirmed', htmlLink: 'https://cal.example/old' })) });
+      if (url.includes('/calendars/primary/events?') && init?.method === 'POST') { posts.push(JSON.parse(String(init.body))); return Response.json({ id: `evt-${posts.length}`, htmlLink: `https://cal.example/evt-${posts.length}` }); }
+      if (url.includes('/calendars/primary/events/evt-')) return Response.json({ attendees: [{ email: 'meetingroomh.emc@gmail.com', responseStatus: roomStatus }] });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    return { posts, spy };
+  }
+
+  it('needs authorization when the duty person has not connected Google, or only granted read access', async () => {
+    await seedStaff();
+    const token = await login();
+    const none = await api({ action: 'bookDutyMeetings', month: '2026-12' }, token) as { state: { status: string; who: string } };
+    expect(none.state).toMatchObject({ status: 'needs-auth', who: 'Machi' });
+    await seedGmailTokens('machi.chen@emctaipei.com', 'tok', 'machi@gmail.example', READ_ONLY);
+    const readOnly = await api({ action: 'bookDutyMeetings', month: '2026-12' }, token) as { state: { status: string; message: string } };
+    expect(readOnly.state.status).toBe('needs-auth');
+    expect(readOnly.state.message).toContain('只有讀取');
+  });
+
+  it("creates the 2nd and 4th Wednesday meetings with room H and the six people, and never duplicates", async () => {
+    await seedStaff();
+    await seedGmailTokens('machi.chen@emctaipei.com', 'tok', 'machi@gmail.example', WRITE);
+    const token = await login();
+    const { posts } = mockGoogle();
+    const first = await api({ action: 'bookDutyMeetings', month: '2026-12' }, token) as { state: { status: string; results: Array<{ status: string; date: string }> } };
+    expect(first.state.status).toBe('done');
+    expect(first.state.results.map(r => [r.status, r.date])).toEqual([['created', '2026-12-09'], ['created', '2026-12-23']]);
+    expect(posts.map(p => p.summary)).toEqual(['【設計部雙週會】12月上_案例分享', '【設計部雙週會】12月下_案例分享']);
+    const body = posts[0] as { start: { dateTime: string }; end: { dateTime: string }; attendees: Array<{ email: string; resource?: boolean }> };
+    expect(body.start.dateTime).toBe('2026-12-09T14:00:00+08:00');
+    expect(body.end.dateTime).toBe('2026-12-09T15:00:00+08:00');
+    expect(body.attendees.map(a => a.email)).toEqual(['eric.fu@emctaipei.com', 'machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'noise.zhong@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'meetingroomh.emc@gmail.com']);
+    expect(body.attendees.at(-1)?.resource).toBe(true);
+
+    vi.restoreAllMocks();
+    const again = mockGoogle([{ summary: '【設計部雙週會】12月上_案例分享' }, { summary: '【設計部雙週會】12月下_案例分享' }]);
+    const second = await api({ action: 'bookDutyMeetings', month: '2026-12' }, token) as { state: { status: string; results: Array<{ status: string }> } };
+    expect(second.state.results.map(r => r.status)).toEqual(['exists', 'exists']);
+    expect(again.posts).toHaveLength(0);
+    const stored = await api({ action: 'getDutyBooking', month: '2026-12' }, token) as { state: { attempts: number } };
+    expect(stored.state.attempts).toBe(2);
+  });
+
+  it('reports a room that declined, and refuses non-duty non-admin callers', async () => {
+    await seedStaff();
+    await seedGmailTokens('machi.chen@emctaipei.com', 'tok', 'machi@gmail.example', WRITE);
+    const token = await login();
+    mockGoogle([], 'declined');
+    const declined = await api({ action: 'bookDutyMeetings', month: '2026-12' }, token) as { state: { status: string; message: string } };
+    expect(declined.state.status).toBe('done');
+    expect(declined.state.message).toContain('無法使用');
+    const other = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'bookDutyMeetings', month: '2026-12' }, other)).toMatchObject({ ok: false });
+  });
+});

@@ -6,7 +6,7 @@ import type { DatabaseSnapshot, Row } from './types';
  * 另存成 backend/data/audit-log.json。先排在 Durable Object 的佇列裡，由每分鐘的 Cron 批次寫入 GitHub，
  * 避免每個操作都多一次 commit。
  */
-export type AuditKind = '狀態變更' | '欄位修改' | '案件新增' | '案件刪除' | '權限變更' | '登入' | '登入失敗' | '寄信' | '寄信失敗';
+export type AuditKind = '狀態變更' | '欄位修改' | '案件新增' | '案件刪除' | '權限變更' | '登入' | '登入失敗' | '寄信' | '寄信失敗' | '預約會議';
 
 export interface AuditEntry {
   t: string;
