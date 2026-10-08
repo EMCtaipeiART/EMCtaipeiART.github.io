@@ -15,7 +15,7 @@ const review = m.cases.filter((c) => (c.confidence === 'medium' || c.confidence 
 const rows = review.map((c) => {
   const works = c.works.slice().sort((a, b) => b.score - a.score).slice(0, 6);
   return `<section data-case="${c.caseId}"><h3>${esc(c.caseId)}｜${esc(c.client)}｜${esc(c.project)} <small>${esc(c.start)}～${esc(c.end)}・${c.confidence}</small></h3><div class="ws">` +
-    works.map((w, i) => { const f = w.files.find((x) => isImg(x.p)) || w.files[0]; return `<label class="w"><input type="checkbox" data-case="${c.caseId}" data-stem="${esc(w.stem)}"><img loading="lazy" src="file://${encodeURI(path.join(mount, f.p))}"><span>${esc(w.stem)}<br>相似度 ${w.score}・${w.files.length} 檔</span></label>`; }).join('') +
+    works.map((w, i) => { const f = w.files.find((x) => isImg(x.p)) || w.files[0]; return `<label class="w"><input type="checkbox" data-case="${c.caseId}" data-stem="${esc(w.stem)}"><img loading="lazy" src="/nas?p=${encodeURIComponent(f.p)}"><span>${esc(w.stem)}<br>相似度 ${w.score}・${w.files.length} 檔</span></label>`; }).join('') +
     `</div></section>`;
 }).join('\n');
 const html = `<!doctype html><meta charset="utf-8"><title>作品牆人工確認 20${year}</title>
@@ -26,3 +26,20 @@ function dl(){const d={year:'${year}',accepted:q().map(i=>({caseId:i.dataset.cas
 const out = path.join(here, '..', 'notes', `works-review-${year}.html`);
 await fs.writeFile(out, html);
 console.log(`${review.length} 案待確認 → ${out}`);
+if (args.includes('--serve')) {
+  const http = await import('node:http');
+  http.createServer(async (req, res) => {
+    const u = new URL(req.url, 'http://x');
+    try {
+      if (u.pathname === '/') { res.setHeader('content-type', 'text/html; charset=utf-8'); return res.end(html); }
+      if (u.pathname === '/nas') {
+        const rel = u.searchParams.get('p') || '';
+        const full = path.resolve(mount, rel);
+        if (!full.startsWith(mount + path.sep) || !/\.(jpe?g|png)$/i.test(full)) { res.statusCode = 403; return res.end(); }
+        res.setHeader('content-type', /png$/i.test(full) ? 'image/png' : 'image/jpeg');
+        return res.end(await fs.readFile(full));
+      }
+    } catch { /* fallthrough */ }
+    res.statusCode = 404; res.end();
+  }).listen(8890, '127.0.0.1', () => console.log('確認頁：http://127.0.0.1:8890/'));
+}
