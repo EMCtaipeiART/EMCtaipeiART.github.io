@@ -816,8 +816,8 @@
     .design-image-hover-preview{position:fixed;z-index:10000;width:min(440px,calc(100vw - 24px));padding:8px;border:1px solid rgba(15,143,97,.24);border-radius:14px;background:rgba(255,255,255,.98);box-shadow:0 24px 64px rgba(16,24,40,.28),0 6px 18px rgba(16,24,40,.12);pointer-events:none;opacity:0;transform:translateY(4px) scale(.985);transform-origin:center;transition:opacity .12s ease,transform .12s ease}
     .design-image-hover-preview[hidden]{display:none!important}
     .design-image-hover-preview.is-visible{opacity:1;transform:none}
-    .design-image-hover-preview-media{display:grid;place-items:center;width:100%;height:min(56vh,420px);overflow:hidden;border-radius:10px;background:#edf3f0}
-    .design-image-hover-preview img{display:block;width:100%;height:100%;object-fit:contain}
+    .design-image-hover-preview-media{position:relative;width:min(100%,calc(min(64vh,520px)*.8));aspect-ratio:4/5;margin:0 auto;overflow:hidden;border-radius:10px;background:#edf3f0}
+    .design-image-hover-preview img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain}
     .design-image-hover-preview-name{display:block;padding:7px 4px 1px;color:#43524b;font-size:11.5px;font-weight:850;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
     html[data-theme="dark"] .design-image-hover-preview{background:rgba(22,24,25,.98);border-color:#49534e}
     html[data-theme="dark"] .design-image-hover-preview-media{background:#0f1112}
