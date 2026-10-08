@@ -290,7 +290,7 @@ function ensureCustomOutfit(item){
   }
 }
 function loadCustomList(){
-  fetch(CUSTOM_API,{cache:'no-store'}).then(r=>r.json()).then(j=>{
+  return fetch(CUSTOM_API,{cache:'no-store'}).then(r=>r.json()).then(j=>{
     const items=Array.isArray(j.items)?j.items.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
     customState().list=items;items.forEach(ensureCustomOutfit);
     const heads=Array.isArray(j.heads)?j.heads.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
@@ -1418,7 +1418,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
-Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;loadAccessories();loadCustomList();setInterval(loadCustomList,120000);fitEmbedView();setTimeout(fitEmbedView,300);setTimeout(fitEmbedView,1200);markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
+Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;loadAccessories();loadCustomList();setInterval(loadCustomList,120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadCustomList();});fitEmbedView();setTimeout(fitEmbedView,300);setTimeout(fitEmbedView,1200);markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}
 
@@ -1473,7 +1473,8 @@ function avatarImageOf(i){
   o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
   return o.toDataURL('image/png');
 }
-const lookKeyOf=i=>{const e=effectiveLook(i);return e.outfit+'|'+e.glasses+'|'+(e.head||'');};
+// 頭像快照的造型代碼：自訂頭像、自訂眼鏡要帶「版本」（更新時間）——重新編輯過大小、位置後版本會變，才不會沿用舊的快照。
+const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'');};
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const sendAvatars=()=>{
@@ -1537,6 +1538,7 @@ window.addEventListener('message',async event=>{
     const i=names.findIndex(n=>n.toLowerCase()===String(storyIdentity.name||'').toLowerCase());
     if(i<0||!ready||!storyLoggedIn()){done();return;}
     loadAccessories();
+    try{await loadCustomList();}catch{}// 先讀一次最新的自訂頭像／配件，剛編輯過的才會用新版
     const key=lookKeyOf(i),base={action:'pixelOfficeAvatarSnapshot',token:storyIdentity.token,lookKey:key};
     const r=await syncCall(base);
     if(r&&r.need&&accessoriesReady())await syncCall({...base,png:avatarImageOf(i)});

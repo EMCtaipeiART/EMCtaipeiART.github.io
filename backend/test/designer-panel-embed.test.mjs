@@ -860,3 +860,10 @@ test('自訂帽子與眼鏡：遊戲讀公開 API 的 caps／glasses、依各角
   assert.match(js, /customList\('glasses'\)/);
   assert.match(worker, /accId\(cap\)/);
 });
+
+test('頭像快照的造型代碼帶自訂頭像／眼鏡的版本，編輯過大小後不會沿用舊快照', async () => {
+  const js = await officeJs();
+  assert.match(js, /const lookKeyOf=i=>\{const e=effectiveLook\(i\),ver=id=>/);
+  assert.match(js, /try\{await loadCustomList\(\);\}catch\{\}/);
+  assert.match(js, /document\.addEventListener\('visibilitychange',\(\)=>\{if\(!document\.hidden\)loadCustomList\(\);\}\)/);
+});
