@@ -825,3 +825,8 @@ test('人物工具欄：移除名字下方敘述與「全員回座位」按鈕�
   assert.match(js, /el\.addEventListener\('mouseleave'/);
   assert.match(js, /if\(status\.id==='present'\)returnEveryone\(\)/);
 });
+
+test('首頁頭像框（?avatars=1）保留自訂頭像', async () => {
+  const js = await officeJs();
+  assert.match(js, /p\.look=\{outfit:eff\.outfit,cap:'',glasses:eff\.glasses,head:eff\.head\|\|''\}/);
+});
