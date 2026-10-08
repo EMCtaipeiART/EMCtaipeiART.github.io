@@ -5221,6 +5221,7 @@ describe('pixel office offline status', () => {
   it('is off work after a long silence, in the evening, on weekends, or when the computer was never on today', () => {
     expect(pixelOfficeOfflineStatus(at('2026-10-06T11:30:00'), at('2026-10-06T10:06:00'))).toBe('offwork');
     expect(pixelOfficeOfflineStatus(at('2026-10-06T19:10:00'), at('2026-10-06T19:00:00'))).toBe('offwork');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T18:20:00'), at('2026-10-06T18:10:00'))).toBe('offwork');
     expect(pixelOfficeOfflineStatus(at('2026-10-10T10:12:00'), at('2026-10-10T10:06:00'))).toBe('offwork');
     expect(pixelOfficeOfflineStatus(at('2026-10-06T10:12:00'), at('2026-10-05T18:00:00'))).toBe('offwork');
   });

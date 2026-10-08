@@ -31,6 +31,8 @@ const PIXEL_OFFICE_AUTO_STATUSES = ['present', 'overtime', 'lunch', 'toilet', 'o
 const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
 // 人離席之後電腦常常跟著睡著、心跳就停了：離席（廁所）狀態在最後一次心跳後這段時間內不當成下班。
 const PIXEL_OFFICE_AWAY_GRACE_MS = 60 * 60 * 1000;
+// 這個鐘點之後沒心跳就當作下班（睡著與關機從心跳分不出來，下班時段寧可判下班，免得關機的人掛著廁所）。
+const PIXEL_OFFICE_SLEEP_AS_AWAY_UNTIL_HOUR = 18;
 // 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
 const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
 const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
@@ -131,7 +133,7 @@ export function pixelOfficeOfflineStatus(nowMs: number, lastSeenMs = 0): 'offwor
   if (now.hour >= PIXEL_OFFICE_LUNCH_START_HOUR && now.hour < PIXEL_OFFICE_LUNCH_END_HOUR) return seenToday ? 'lunch' : 'offwork';
   // 白天（加班時段之前）今天開過電腦、只是剛睡著或待機不到一小時：當作暫時離開座位（廁所），不是下班。
   // 下班＝很久沒有心跳（超過一小時，或已經是晚上、或今天根本沒開過電腦）。
-  if (seenToday && now.hour >= PIXEL_OFFICE_OVERTIME_END_HOUR && now.hour < PIXEL_OFFICE_OVERTIME_START_HOUR && nowMs - seen <= PIXEL_OFFICE_AWAY_GRACE_MS) return 'toilet';
+  if (seenToday && now.hour >= PIXEL_OFFICE_OVERTIME_END_HOUR && now.hour < PIXEL_OFFICE_SLEEP_AS_AWAY_UNTIL_HOUR && nowMs - seen <= PIXEL_OFFICE_AWAY_GRACE_MS) return 'toilet';
   return 'offwork';
 }
 
