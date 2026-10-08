@@ -5367,6 +5367,7 @@ describe('值日生：自動預約會議室 H 與雙週會', () => {
     expect(body.end.dateTime).toBe('2026-12-09T15:00:00+08:00');
     expect(body.attendees.map(a => a.email)).toEqual(['eric.fu@emctaipei.com', 'machi.chen@emctaipei.com', 'anna.hsu@emctaipei.com', 'noise.zhong@emctaipei.com', 'amber.tian@emctaipei.com', 'leona.chen@emctaipei.com', 'meetingroomh.emc@gmail.com']);
     expect(body.attendees.at(-1)?.resource).toBe(true);
+    expect((posts[0] as { description: string }).description).toBe('會議摘要：\n\n1. 摘要工作指標(量體/事件)\n\n2. 作品案例討論\n\n3. 提案討論\n\n4. 週會回饋');
 
     vi.restoreAllMocks();
     const again = mockGoogle([{ summary: '【設計部雙週會】12月上_案例分享' }, { summary: '【設計部雙週會】12月下_案例分享' }]);

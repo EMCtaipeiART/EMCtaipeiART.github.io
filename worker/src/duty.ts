@@ -11,6 +11,9 @@ export const DUTY_ROOM_NAME = '會議室 H';
 /** 必須 TAG 的六位（順序照需求）；ERIC 是 傅思凱（設定表以帳號辨識），其餘依「設定」表的名字找帳號 */
 export const DUTY_ATTENDEES = ['ERIC', 'MACHI', 'ANNA', 'NOISE', 'AMBER', 'LEONA'] as const;
 export const DUTY_ERIC_EMAIL = 'eric.fu@emctaipei.com';
+/** 兩場雙週會的說明（會議摘要），寫進 Google 行事曆活動的說明欄 */
+export const DUTY_AGENDA = ['摘要工作指標(量體/事件)', '作品案例討論', '提案討論', '週會回饋'] as const;
+export const dutyDescription = (): string => `會議摘要：\n\n${DUTY_AGENDA.map((item, i) => `${i + 1}. ${item}`).join('\n\n')}`;
 
 export const dutyOf = (year: number, month0: number): (typeof DUTY_ORDER)[number] =>
   DUTY_ORDER[(((year * 12 + month0 - DUTY_BASE) % 5) + 5) % 5];
@@ -39,7 +42,7 @@ export function dutyEventBody(meeting: DutyMeeting, who: string, attendeeEmails:
   return {
     summary: meeting.title,
     location: DUTY_ROOM_NAME,
-    description: `由設計需求系統依值日生輪值自動建立（${meeting.date.slice(5, 7).replace(/^0/, '')} 月值日生：${who}）。已邀請${DUTY_ROOM_NAME}與設計部成員。`,
+    description: dutyDescription(),
     start: { dateTime: `${meeting.date}T14:00:00+08:00`, timeZone: 'Asia/Taipei' },
     end: { dateTime: `${meeting.date}T15:00:00+08:00`, timeZone: 'Asia/Taipei' },
     attendees: [
