@@ -806,7 +806,7 @@ test('自訂頭像：遊戲讀公開 API 的 heads、頭那層換成本人的頭
   const [js, html] = await Promise.all([officeJs(), officeHtml()]);
   assert.match(js, /j\.heads/);
   assert.match(js, /function customHeadView\(id,view\)/);
-  assert.match(js, /sheet:chv\?chv\.sheetKey:'heads',src:chv\?chv\.src:H,x:hx,y:hy,w:H\.w\*K,h:H\.h\*K/, '位置與大小仍照原頭像');
+  assert.match(js, /sheet:chv\.sheetKey,src:chv\.src,x:hx-chv\.pad\[0\]\*K,y:hy-chv\.pad\[1\]\*K/, '位置與大小仍照原頭像');
   assert.match(js, /key=`\$\{index\}\|\$\{look\.outfit\}\|\$\{look\.cap\}\|\$\{look\.glasses\}\|\$\{look\.head\|\|''\}/, '快取鍵要含頭像');
   assert.match(html, /id="lookHeadGroup"[^>]*hidden[\s\S]*id="lookHeads"/);
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
