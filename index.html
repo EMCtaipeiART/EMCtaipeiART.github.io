@@ -745,6 +745,9 @@
     html[data-theme="dark"] .cell-pop small,html[data-theme="dark"] .reply-opt small{color:#a3aeaa}
     html[data-theme="dark"] .lt-detail,html[data-theme="dark"] .dp-wrap .lt-detail,html[data-theme="dark"] .cd-items .lt-detail{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
     html[data-theme="dark"] .cd-add{background:#242c29;color:#c3cbc8;border-color:#4a5651}
+    .notes-page{max-width:1280px;margin:0 auto}.nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.nt-tab{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:800;cursor:pointer}.nt-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+    .nt-table{border-collapse:collapse;min-width:100%;font-size:13.5px}.nt-table td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;min-width:110px;max-width:340px;word-break:break-word}.nt-table td.nt-lab{background:var(--bg);color:var(--muted);font-weight:800;white-space:nowrap;min-width:0}.nt-table tr.nt-head td{background:var(--brand-soft,#e6f4ea);font-weight:900;font-size:14.5px;border-color:var(--line)}
+    .nt-secret{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.nt-dots{letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace}.nt-eye,.nt-copy{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:1px 8px;font-size:12px;cursor:pointer}
     .wall-page{max-width:1280px;margin:0 auto}.wall-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto}.wall-tools select{min-height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px;font-size:13.5px}.wall-count{color:var(--muted);font-size:13px}
     .wall-cols{display:flex;gap:14px;align-items:flex-start}.wall-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
     .wall-item{position:relative;margin:0;border-radius:14px;overflow:hidden;cursor:zoom-in;background:var(--line);aspect-ratio:4/5;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease,box-shadow .2s}.wall-item.is-in{opacity:1;transform:none;aspect-ratio:auto}.wall-item:hover,.wall-item:focus-visible{box-shadow:0 8px 22px rgba(0,0,0,.22);outline:none}
@@ -2063,6 +2066,7 @@ window.emcQuotes=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
       {k:'calendar',label:'行事曆',title:'設計部行事曆',ok:()=>dcAllowed(),svg:'<rect x="3.5" y="5" width="17" height="15" rx="2.4"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'},
       {k:'wall',label:'作品牆',title:'作品牆',ok:()=>loggedIn(),svg:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>'},
+      {k:'notes',label:'記事本',title:'記事本（設計部資源）',ok:()=>loggedIn()&&(hasDesignerRole()||isAdminAcct()||isMachiUser()),svg:'<path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 17 20.5H6zM6 3.5v17M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/>'},
       {k:'owner',label:'進度',title:'您的案件進度',ok:()=>loggedIn()&&(isAdminAcct()||!(/設計/.test(sessionDept())||isDesignerSession())),svg:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/>'},
       {k:'outfit',label:'服裝',title:'AI 服裝生成器・平台幣',ok:()=>loggedIn()&&outfitAllowed(),svg:'<path d="M8.5 4 3.5 7l2 3.5L8 9.4V20h8V9.4l2.5 1.1 2-3.5-5-3c-.4 1.3-1.9 2.2-3.5 2.2S8.9 5.3 8.5 4z"/>'},
       {k:'dashboard',label:'儀表板',title:'設計儀表板',ok:()=>loggedIn()&&acc('page.dashboard',hasDesignerRole()),svg:'<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"/>'},
@@ -2070,7 +2074,7 @@ window.emcQuotes=[
       {k:'dbadmin',menu:true,label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'},
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='notes'&&state.view==='notes')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
@@ -2205,10 +2209,48 @@ window.emcQuotes=[
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
+    /* ---------- 記事本：設計部資源（Google 試算表）。Worker 檢查登入與權限後才回傳；密碼欄預設遮住，按眼睛才顯示，按複製可直接複製 ---------- */
+    const NOTE_LABELS=new Set(['密碼']);
+    function noteCellHtml(v,masked){
+      const t=String(v||'');if(!t.trim())return '';
+      if(masked)return '<span class="nt-secret" data-secret="'+esc(t)+'"><span class="nt-dots">••••••••</span><button type="button" class="nt-eye" data-nt-eye title="顯示／隱藏" aria-label="顯示或隱藏密碼">👁</button><button type="button" class="nt-copy" data-nt-copy title="複製" aria-label="複製">複製</button></span>';
+      return esc(t).replace(/(https?:\/\/[^\s<]+)/g,u=>'<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+u+'</a>').replace(/\n/g,'<br>');
+    }
+    function noteTableHtml(rows){
+      const maskedAt=(row,c)=>{ /* 同一列中「密碼」標籤右邊、到下一個空白格之前的格子都遮住 */
+        for(let i=c-1;i>=0;i--){if(!String(row[i]||'').trim())return false;if(NOTE_LABELS.has(String(row[i]).trim()))return true}return false};
+      const body=rows.map(row=>{
+        const filled=row.filter(c=>String(c||'').trim());
+        if(filled.length===1&&String(row[0]||'').trim()&&row.length>1)return '<tr class="nt-head"><td colspan="'+row.length+'">'+noteCellHtml(row[0],false)+'</td></tr>';
+        return '<tr>'+row.map((c,i)=>{const lab=NOTE_LABELS.has(String(c||'').trim())||/^(網址|種類|帳號|購買方式|備註|所屬公司|使用信箱|項目|信箱|手機|姓名|預約方式|預約格式|會員|消費紀錄)$/.test(String(c||'').trim());return '<td class="'+(lab?'nt-lab':'')+'">'+noteCellHtml(c,!lab&&maskedAt(row,i))+'</td>'}).join('')+'</tr>';
+      }).join('');
+      return '<div class="table-wrap"><table class="nt-table"><tbody>'+body+'</tbody></table></div>';
+    }
+    async function renderNotesPage(refresh){
+      const stage=$('stage');
+      if(!loggedIn()){stage.innerHTML='<div class="page"><h2 class="page-title">記事本</h2><p class="page-sub">請先登入後再查看。</p></div>';return}
+      if(!state.notes||refresh){
+        stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">正在讀取設計部資源…</p></div></div></div>';
+        try{const data=await api('getNotebook',{refresh:Boolean(refresh)});state.notes={tabs:data.tabs||[],at:data.fetchedAt||Date.now(),tab:0}}
+        catch(err){if(state.view==='notes')stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2></div></div><div class="notice error" role="alert">'+esc(/權限/.test(err.message||'')?'此帳號沒有查看記事本的權限（限設計部與管理者）。':'讀取失敗：'+(err.message||err))+'</div><div class="form-actions"><button type="button" class="btn" data-notes-reload>重新讀取</button></div></div>';return}
+      }
+      if(state.view!=='notes')return;
+      const n=state.notes,t=n.tabs[n.tab]||n.tabs[0];if(!t){stage.innerHTML='<div class="page"><h2 class="page-title">記事本</h2><p class="page-sub">沒有資料。</p></div>';return}
+      stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">設計部資源：AI 工具、素材與廠商資訊。密碼預設遮住，按眼睛顯示。</p></div><div class="wall-tools"><a class="btn" href="'+esc(t.url)+'" target="_blank" rel="noopener noreferrer">開啟原試算表</a><button type="button" class="btn" data-notes-reload>重新讀取</button></div></div>'
+        +'<div class="nt-tabs" role="tablist">'+n.tabs.map((x,i)=>'<button type="button" role="tab" class="nt-tab'+(i===n.tab?' on':'')+'" data-nt-tab="'+i+'">'+esc(x.name)+'</button>').join('')+'</div>'+noteTableHtml(t.rows)+'</div>';
+    }
+    document.addEventListener('click',e=>{
+      const t=e.target;if(!t.closest)return;
+      const tab=t.closest('[data-nt-tab]');if(tab&&state.notes){state.notes.tab=+tab.dataset.ntTab;renderNotesPage();return}
+      if(t.closest('[data-notes-reload]')){renderNotesPage(true);return}
+      const eye=t.closest('[data-nt-eye]');if(eye){const w=eye.closest('.nt-secret'),d=w.querySelector('.nt-dots'),on=w.classList.toggle('is-open');d.textContent=on?w.dataset.secret:'••••••••';return}
+      const cp=t.closest('[data-nt-copy]');if(cp){const v=cp.closest('.nt-secret').dataset.secret;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('已複製')).catch(()=>toast('無法複製，請按眼睛顯示後手動複製',true));return}
+    });
     function openExt(k){
       if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;if(window.__relBusy)return;window.__relBusy=true;setTimeout(()=>{window.__relBusy=false},30000);api('forceReload').then(r=>{if(r.throttled){toast('剛剛已經發布過更新了，請 30 秒後再按');return}toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}
       if(k==='owner'){openOwner();return}
       if(k==='calendar'){state.form=null;state.mail=null;state.editing=false;closeCal();show('calendar');return}
+      if(k==='notes'){state.form=null;state.mail=null;state.editing=false;closeCal();show('notes');return}
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
@@ -2220,12 +2262,12 @@ window.emcQuotes=[
     function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     function show(view){const pv=state.view;if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='notes'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
+      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='notes'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='notes')renderNotesPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
-      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='calendar'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='notes'||view==='calendar'||view==='outfit')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
 
