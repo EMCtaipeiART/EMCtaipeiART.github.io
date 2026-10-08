@@ -373,8 +373,8 @@ function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0
 function select(i){selected=i;keys.clear();markDirty();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
-  if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('personDesc').textContent='點人物開始';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
-  $('personName').textContent=people[i].name;$('personDesc').textContent=descriptions[i];$('message').value=people[i].message;updateCount();
+  if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
+  $('personName').textContent=people[i].name;$('message').value=people[i].message;updateCount();
   ensureLevels();
   updateMood();updateStatus();renderMyStories();updateMusicPanel();renderLookPanel();renderActionPanel();updateLevel();portrait($('portrait').getContext('2d'),i);renderPersonCard();renderLevelTable();}
 function numberText(value){return Number(value).toLocaleString('zh-TW',{maximumFractionDigits:1});}
@@ -985,7 +985,8 @@ function iconCanvas(symbol,size=46){const canvas=document.createElement('canvas'
 function refreshIconCanvases(){document.querySelectorAll('canvas[data-symbol]').forEach(canvas=>{const context=canvas.getContext('2d');context.clearRect(0,0,canvas.width,canvas.height);drawSymbol(context,canvas.dataset.symbol,canvas.width/2,canvas.height/2,canvas.height);});}
 names.forEach((name,i)=>{const b=document.createElement('button');b.className='roster-button';b.setAttribute('aria-label','選取 '+name);const c=document.createElement('canvas'),label=document.createElement('span'),level=document.createElement('span');c.width=110;c.height=150;label.className='roster-name';label.textContent=name;level.className='roster-level';level.textContent='Lv.'+levelStats[name].level;b.append(c,label,level);b.onclick=()=>{select(i);game.focus({preventScroll:true});};$('roster').append(b);});
 moods.forEach(m=>{const b=document.createElement('button');b.dataset.mood=m.id;b.title=m.text;b.append(iconCanvas(m.symbol),document.createTextNode(m.label));b.onclick=()=>setMood(m.id);$('moods').append(b);});
-statuses.forEach(status=>{const b=document.createElement('button');b.dataset.status=status.id;b.title=status.text;b.append(iconCanvas(status.symbol,40),document.createTextNode(status.label));b.onclick=()=>setStatus(status.id);$('statuses').append(b);});
+statuses.forEach(status=>{const b=document.createElement('button');b.dataset.status=status.id;b.title=status.text;b.append(iconCanvas(status.symbol,40),document.createTextNode(status.label));b.onclick=()=>{setStatus(status.id);if(status.id==='present')returnEveryone();};$('statuses').append(b);// 在座：自己回座位，順便讓大家都回到自己的座位（原本畫面上的「全員回座位」按鈕併進來）
+});
 $('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到人物上方':'已清除對話');game.focus({preventScroll:true});};
 // 上傳：照片縮到 1200 px；GIF 原檔（保留動畫，5 MB 內）；影片 30 秒內、10 MB 內——太大或是 iPhone 的 .mov
 // （可能是別的瀏覽器放不出來的 HEVC）就在瀏覽器裡重新錄成 720p，再送出。
@@ -1038,7 +1039,7 @@ $('storyFile').onchange=async e=>{
     setSyncStatus(true);applyStories(data.stories);toast('限時動態已貼出，24 小時後自動下架。');
   }catch(err){toast(err&&err.message&&err.message!=='undefined'?err.message:'無法讀取這個檔案，請換一個再試。');}
   finally{URL.revokeObjectURL(url);}
-};$('home').onclick=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
+};const returnEveryone=()=>{people.forEach((p,i)=>{p.x=starts[i][0];p.y=starts[i][1];p.dir='down';localMoveAt.set(i,Date.now());pushChange(i,{x:p.x,y:p.y,dir:'down'});});save();toast('大家都回到自己的座位附近了');};
 /* ---------------------------------------------------------------------------------------------
  * 多人同步（2026-09-18）：心情、對話、離席狀態、位置與照片存在主系統的 Cloudflare 後端，所有打開這個網頁的
  * 人看到同一個畫面。不用登入、任何人都能改（使用者決定）。每 3 秒輪詢一次（分頁在背景時 15 秒），沒有
@@ -1475,3 +1476,18 @@ window.addEventListener('message',event=>{
 
 // 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
 {let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}wasOpen=now;},250);}
+
+// 右側人物工具欄：目前狀態、造型、動作、音樂、限時動態、想說一句話預設收合；滑鼠移過去自動展開並捲到看得到、移開自動收合
+//（手機沒有滑鼠，改成點標題展開／收合）。正在輸入文字或展開著音樂欄時不收，免得打字打到一半被收起來。
+(()=>{
+  const sections=[...document.querySelectorAll('aside .tool-section.collapsible')];if(!sections.length)return;
+  const touch=window.matchMedia&&window.matchMedia('(hover:none)').matches,timers=new WeakMap();
+  const open=(el,on)=>{el.classList.toggle('is-open',on);};
+  sections.forEach(el=>{
+    const head=el.querySelector(':scope > .cs-head');
+    if(touch){if(head)head.addEventListener('click',()=>{const on=!el.classList.contains('is-open');sections.forEach(o=>open(o,false));open(el,on);if(on)el.scrollIntoView({block:'nearest',behavior:'smooth'});});return;}
+    el.addEventListener('mouseenter',()=>{clearTimeout(timers.get(el));if(el.classList.contains('is-open'))return;open(el,true);requestAnimationFrame(()=>el.scrollIntoView({block:'nearest',behavior:'smooth'}));});
+    el.addEventListener('mouseleave',()=>{clearTimeout(timers.get(el));timers.set(el,setTimeout(()=>{const a=document.activeElement;if(a&&el.contains(a)&&/^(INPUT|TEXTAREA)$/.test(a.tagName))return;if(el.querySelector('#musicPanel:not([hidden])'))return;open(el,false);},180));});
+    el.addEventListener('focusout',()=>{timers.set(el,setTimeout(()=>{if(!el.matches(':hover')&&!el.contains(document.activeElement))open(el,false);},250));});
+  });
+})();

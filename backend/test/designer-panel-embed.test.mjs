@@ -511,7 +511,7 @@ test('限時動態：人物右上角是像素氣泡，開啟 Reels 樣式視窗�
   // 舊的照片卡與「想分享的照片」都不在了。
   assert.doesNotMatch(js, /drawPhotoCard|openPhoto|loadRemotePhoto/);
   assert.doesNotMatch(html, /想分享的照片|id="lightbox"/);
-  assert.match(html, /<h3>限時動態<\/h3>/);
+  assert.match(html, /<h3 class="cs-head">限時動態<\/h3>/);
   // 氣泡：品牌綠 #008214 的三個點、固定在人物右上方，沒有動態就不畫，有動態的人心情圖示改放左邊。
   assert.match(js, /g:'#008214'/);
   assert.match(js, /function storyBubbleBox\(p\)\{return \{x:Math\.round\(p\.x\+38\),y:Math\.round\(p\.y-152\)/);
@@ -811,4 +811,17 @@ test('自訂頭像：遊戲讀公開 API 的 heads、頭那層換成本人的頭
   assert.match(html, /id="lookHeadGroup"[^>]*hidden[\s\S]*id="lookHeads"/);
   const worker = await readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8');
   assert.match(worker, /\^h:\[0-9a-f\]\{8\}/);
+});
+
+test('人物工具欄：移除名字下方敘述與「全員回座位」按鈕，狀態／造型／動作／音樂／限時動態／想說的話預設收合、滑過展開，在座按鈕讓大家回座位', async () => {
+  const [js, html, css] = await Promise.all([officeJs(), officeHtml(), readFile(new URL('../../EMC-ART-Pixel-Office/dist/style.css', import.meta.url), 'utf8')]);
+  assert.doesNotMatch(html, /id="personDesc"|id="home"|全員回座位/);
+  assert.doesNotMatch(js, /personDesc|\$\('home'\)/);
+  const order = ['目前狀態', '造型', '動作', '音樂', '限時動態', '想說的一句話'].map(label => html.indexOf(`>${label}<`));
+  assert.ok(order.every((at, index) => at > 0 && (index === 0 || at > order[index - 1])), '順序：狀態＞造型＞動作＞音樂＞限時動態＞想說的話');
+  assert.equal((html.match(/tool-section collapsible/g) || []).length, 6);
+  assert.match(css, /\.tool-section\.collapsible:not\(\.is-open\)>\*:not\(\.cs-head\)\{display:none!important\}/);
+  assert.match(js, /el\.addEventListener\('mouseenter'/);
+  assert.match(js, /el\.addEventListener\('mouseleave'/);
+  assert.match(js, /if\(status\.id==='present'\)returnEveryone\(\)/);
 });

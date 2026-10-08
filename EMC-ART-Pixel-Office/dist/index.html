@@ -18,7 +18,7 @@
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
   <script>if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
-  <link rel="stylesheet" href="style.css?v=49">
+  <link rel="stylesheet" href="style.css?v=50">
 </head>
 <body>
   <header>
@@ -27,7 +27,7 @@
   </header>
   <main>
     <section class="play">
-      <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div><button id="home" class="outline">全員回座位 ↺</button></div>
+      <div class="scene-bar"><div><span class="eyebrow">THE DESIGN ROOM</span><h1>今天，想說點什麼？</h1></div></div>
       <div class="canvas-wrap"><canvas id="game" width="1536" height="1024" tabindex="0" aria-label="設計部遊戲場景。點選人物，以方向鍵移動。"></canvas><p id="loading">正在整理設計部…</p>
         <div id="personCard" class="person-card" role="dialog" aria-label="設計師資料" hidden>
           <button type="button" class="person-card-close" id="personCardClose" aria-label="關閉">✕</button>
@@ -49,34 +49,35 @@
       <div class="panel-top"><span class="eyebrow">CHARACTER TOOLS</span><span id="selectedTag">已選取</span></div>
       <p class="tools-empty" id="toolsEmpty" hidden>點畫面上的人物，看他的資料與工具。</p>
       <div id="tools">
-      <div class="identity"><canvas id="portrait" width="130" height="155"></canvas><div class="identity-text"><h2 id="personName">Leona</h2><p id="personDesc">設計師</p><span class="mood-status" id="moodStatus">自在工作中</span></div><div class="joystick" id="joystick" role="application" aria-label="移動搖桿：按住拖曳控制人物方向"><span class="joystick-ring"></span><span class="joystick-knob"></span></div></div>
+      <div class="identity"><canvas id="portrait" width="130" height="155"></canvas><div class="identity-text"><h2 id="personName">Leona</h2><span class="mood-status" id="moodStatus">自在工作中</span></div><div class="joystick" id="joystick" role="application" aria-label="移動搖桿：按住拖曳控制人物方向"><span class="joystick-ring"></span><span class="joystick-knob"></span></div></div>
       <section class="level-card" aria-labelledby="levelHeading">
         <div class="level-head"><div><span class="level-kicker">DESIGNER LEVEL</span><strong id="levelHeading">Lv.14</strong></div><span id="levelTitle">資深設計師</span></div>
         <div class="xp-track" role="progressbar" aria-label="本級經驗進度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" id="xpTrack"><span id="xpFill"></span></div>
         <div class="xp-meta"><span id="scoreText">1,907 分 · 19,070 EXP</span><span id="nextText">距 Lv.15 還差 53 分</span></div>
         <p id="levelSource">正在同步歷史案件…</p>
       </section>
-      <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button>
-        <button type="button" class="music-toggle" id="musicToggle" aria-expanded="false" aria-controls="musicPanel"><canvas id="musicIcon" width="60" height="42" aria-hidden="true"></canvas><span>音樂</span><small id="musicNow">分享現在正在聽的歌</small></button>
-        <div class="music-panel" id="musicPanel" hidden>
-          <input type="url" id="musicUrl" placeholder="貼上 Spotify（歌曲、歌單、Podcast）或 Apple Music 的網址" aria-label="音樂網址" autocomplete="off">
-          <div class="music-actions"><button type="button" class="primary" id="musicSave">分享這首歌</button><button type="button" class="text-button" id="musicClear">停止分享</button></div>
-          <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示名稱，大家點名稱可以開網頁。</p>
-        </div></section>
-      <section class="tool-section" id="lookSection"><h3>造型</h3>
+      <section class="tool-section"><h3>現在的心情</h3><div id="moods" class="moods"></div><button class="text-button" id="neutral">恢復平常心情</button></section>
+      <section class="tool-section collapsible"><h3 class="cs-head">目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
+      <section class="tool-section collapsible" id="lookSection"><h3 class="cs-head">造型</h3>
         <div class="look-group" id="lookOutfitGroup"><span class="look-label">服裝</span><div id="lookOutfits" class="look-outfits"></div></div>
         <div class="look-group" id="lookHeadGroup" hidden><span class="look-label">頭像</span><div id="lookHeads" class="look-outfits"></div></div>
         <div class="look-group"><span class="look-label">帽子</span><div id="lookCaps" class="look-chips"></div></div>
         <div class="look-group"><span class="look-label">眼鏡</span><div id="lookGlasses" class="look-chips"></div></div>
         <button type="button" class="text-button" id="lookReset" hidden>恢復預設造型</button>
       </section>
-      <section class="tool-section" id="actionSection" hidden><h3>動作</h3>
+      <section class="tool-section collapsible" id="actionSection" hidden><h3 class="cs-head">動作</h3>
         <div class="look-chips action-list" id="actionList"></div>
         <p class="look-hint">按下去人物會循環做動作並在腳下顯示名稱，再按一次停止，最多連續 10 分鐘，大家的畫面會一起看到。</p>
       </section>
-      <section class="tool-section"><h3>目前狀態</h3><div id="statuses" class="statuses" aria-label="設定人物狀態"></div></section>
-      <section class="tool-section"><label for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
-      <section class="tool-section"><h3>限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一則限時動態</strong><small>照片、GIF 或手機影片（30 秒內）· 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" hidden><div id="storyMine" class="story-mine"></div></section>
+      <section class="tool-section collapsible" id="musicSection"><h3 class="cs-head">音樂</h3>
+        <button type="button" class="music-toggle" id="musicToggle" aria-expanded="false" aria-controls="musicPanel"><canvas id="musicIcon" width="60" height="42" aria-hidden="true"></canvas><span>音樂</span><small id="musicNow">分享現在正在聽的歌</small></button>
+        <div class="music-panel" id="musicPanel" hidden>
+          <input type="url" id="musicUrl" placeholder="貼上 Spotify（歌曲、歌單、Podcast）或 Apple Music 的網址" aria-label="音樂網址" autocomplete="off">
+          <div class="music-actions"><button type="button" class="primary" id="musicSave">分享這首歌</button><button type="button" class="text-button" id="musicClear">停止分享</button></div>
+          <p class="music-hint" id="musicHint">分享後頭上會戴耳機、跑馬燈顯示名稱，大家點名稱可以開網頁。</p>
+        </div></section>
+      <section class="tool-section collapsible"><h3 class="cs-head">限時動態</h3><p class="story-hint" id="storyHint">貼出後 24 小時自動下架，可以按讚與留言</p><label class="upload" id="storyUpload" for="storyFile"><span>＋</span><strong>貼一則限時動態</strong><small>照片、GIF 或手機影片（30 秒內）· 最多同時 5 則</small></label><input type="file" id="storyFile" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm" hidden><div id="storyMine" class="story-mine"></div></section>
+      <section class="tool-section collapsible"><label class="cs-head" for="message">想說的一句話</label><textarea id="message" maxlength="60" placeholder="輸入你的心聲…" rows="3"></textarea><div class="message-foot"><span id="count">0 / 60</span><button id="say" class="primary">送出對話 ↗</button></div></section>
       </div>
       <p class="privacy">心情、對話、狀態、位置與限時動態會同步給所有打開這個網頁的人。等級與案件資料只讀取後台的案件紀錄，不會寫回後台。</p>
     </aside>
@@ -104,12 +105,8 @@ var box=document.createElement('div');box.className='level-setting-body';while(s
 var p=side.querySelector('.privacy');side.insertBefore(d,p||null);sec.remove();
 /* 角色工具欄：下架「現在的心情」，順序＝目前狀態＞造型＞動作＞分享音樂＞限時動態＞想說的話（音樂原本包在心情那一區，拆出來獨立一區） */
 var $=function(i){return document.getElementById(i)},up=function(e){return e&&e.closest('.tool-section')};
-var tools=$('tools'),moodSec=up($('moods')),music=document.createElement('section');
-if(tools&&moodSec){music.className='tool-section';music.id='musicSection';
- if($('musicToggle'))music.appendChild($('musicToggle'));if($('musicPanel'))music.appendChild($('musicPanel'));
- moodSec.style.display='none';
- [up($('statuses')),$('lookSection'),$('actionSection'),music,up($('storyUpload')),up($('message'))].forEach(function(s){if(s)tools.appendChild(s)});}})();
+var moodSec=up($('moods'));if(moodSec)moodSec.style.display='none';})();
 </script>
-  <script src="app.js?v=132" fetchpriority="high"></script>
+  <script src="app.js?v=133" fetchpriority="high"></script>
 </body>
 </html>

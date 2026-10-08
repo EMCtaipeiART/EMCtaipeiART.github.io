@@ -333,3 +333,12 @@ html.clean-narrow .joystick{position:absolute;right:10px;bottom:10px;margin:0;z-
 html.clean-narrow .joystick-knob{width:40px;height:40px;margin:-20px 0 0 -20px}
 html.avatars,html.avatars body{background:transparent}
 html.avatars #storyViewer{visibility:visible}
+
+/* 人物工具欄的收合區塊：只露出標題，滑鼠移過去才展開 */
+.tool-section.collapsible{padding:12px 0}
+.tool-section.collapsible>.cs-head{display:flex;align-items:center;justify-content:space-between;margin:0;cursor:pointer;user-select:none}
+.tool-section.collapsible>.cs-head::after{content:'';width:7px;height:7px;border-right:2px solid #8aa0c0;border-bottom:2px solid #8aa0c0;transform:rotate(45deg);transition:transform .2s ease;margin-right:4px}
+.tool-section.collapsible.is-open>.cs-head::after{transform:rotate(-135deg)}
+.tool-section.collapsible:not(.is-open)>*:not(.cs-head){display:none!important}
+.tool-section.collapsible.is-open>.cs-head{margin-bottom:12px}
+html.clean .scene-bar{display:none!important}
