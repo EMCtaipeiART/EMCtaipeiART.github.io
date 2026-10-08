@@ -3829,7 +3829,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async notebookList(): Promise<ApiResult> {
     const seedError = await this.notebookSeedOnce();
     const items = this.notebookRows();
-    return { ok: true, action: 'getNotebook', items, seedError: items.length ? '' : seedError };
+    return { ok: true, action: 'getNotebook', items, categoryOrder: (await this.ctx.storage.get<string[]>('notebookCategoryOrder')) || [], seedError: items.length ? '' : seedError };
   }
 
   private async notebookSave(payload: ApiPayload, who: SessionRecord): Promise<ApiResult> {
@@ -3859,6 +3859,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     this.ctx.storage.sql.exec('DELETE FROM notebook_items WHERE id = ?', id);
     try { await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: `記事本：${existing.title}`, field: '刪除', note: '記事本' }]); } catch { /* 不影響刪除 */ }
     return { ok: true, action: 'deleteNotebookItem', items: this.notebookRows() };
+  }
+
+  /** 分類頁籤的排列順序（全體共用）：只收現有的分類名稱，去重 */
+  private async notebookSaveCategoryOrder(payload: ApiPayload): Promise<ApiResult> {
+    const known = new Set(this.notebookRows().map(item => item.category));
+    const order = [...new Set((Array.isArray(payload.order) ? payload.order : []).map(text).filter(name => known.has(name)))];
+    await this.ctx.storage.put('notebookCategoryOrder', order);
+    return { ok: true, action: 'saveNotebookCategoryOrder', categoryOrder: order };
   }
 
   /** 同一個分類內，把一張卡往前或往後移一格（跟相鄰那張交換排序） */
@@ -4288,12 +4296,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
       }
-      if (action === 'getNotebook' || action === 'saveNotebookItem' || action === 'deleteNotebookItem' || action === 'moveNotebookItem') {
+      if (action === 'getNotebook' || action === 'saveNotebookItem' || action === 'deleteNotebookItem' || action === 'moveNotebookItem' || action === 'saveNotebookCategoryOrder') {
         // 記事本含共用帳號密碼：登入且是設計部／管理者才讀得到、改得了；內容只存在 Worker 的資料庫，不進公開的 GitHub。
         const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
         if (action === 'saveNotebookItem') return await this.notebookSave(payload, who);
         if (action === 'deleteNotebookItem') return await this.notebookDelete(payload, who);
         if (action === 'moveNotebookItem') return this.notebookMove(payload);
+        if (action === 'saveNotebookCategoryOrder') return await this.notebookSaveCategoryOrder(payload);
         return await this.notebookList();
       }
       if (action === 'listAuditLog') {

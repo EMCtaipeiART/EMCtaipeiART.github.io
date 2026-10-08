@@ -746,12 +746,12 @@
     html[data-theme="dark"] .lt-detail,html[data-theme="dark"] .dp-wrap .lt-detail,html[data-theme="dark"] .cd-items .lt-detail{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
     html[data-theme="dark"] .cd-add{background:#242c29;color:#c3cbc8;border-color:#4a5651}
     .notes-page{max-width:1280px;margin:0 auto}.nb-search{min-width:240px}.nb-search input{width:100%}
-    .nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.nt-tab{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;transition:background .15s,border-color .15s}.nt-tab small{font-size:11.5px;font-weight:800;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 8px}.nt-tab:hover{border-color:var(--brand)}.nt-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}.nt-tab.on small{background:rgba(255,255,255,.25);color:#fff}
+    .nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.nt-tab{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;transition:background .15s,border-color .15s}.nt-tab small{font-size:11.5px;font-weight:800;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 8px}.nt-tab:hover{border-color:var(--brand)}.nt-tab[draggable="true"]{cursor:grab}.nt-tab.is-dragging{opacity:.45}.nt-tab.drop-l{box-shadow:inset 3px 0 0 var(--brand)}.nt-tab.drop-r{box-shadow:inset -3px 0 0 var(--brand)}.nt-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}.nt-tab.on small{background:rgba(255,255,255,.25);color:#fff}
     .nb-sec{margin:0 0 26px}.nb-sec>h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:16px;font-weight:900}.nb-sec>h3::before{content:"";width:4px;height:18px;border-radius:3px;background:var(--brand)}.nb-sec>h3 small{font-size:12px;font-weight:800;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 9px}
-    .nb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+    .nb-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
     .nb-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;transition:transform .15s,box-shadow .15s}.nb-card::before{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,var(--brand),#7be08f)}.nb-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-    .nb-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.nb-title{margin:0;font-size:16px;font-weight:900;line-height:1.35;word-break:break-word}
-    .nb-tools{display:inline-flex;gap:4px;opacity:.0;transition:opacity .15s;flex:0 0 auto}.nb-card:hover .nb-tools,.nb-card:focus-within .nb-tools{opacity:1}@media (hover:none){.nb-tools{opacity:1}}
+    .nb-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.nb-title{margin:0;min-width:0;flex:1;font-size:16px;font-weight:900;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nb-tools{position:absolute;right:10px;top:9px;display:inline-flex;gap:4px;padding:3px 3px 3px 10px;border-radius:10px;background:linear-gradient(90deg,transparent,var(--panel) 12px);opacity:0;transition:opacity .15s;z-index:2}.nb-card:hover .nb-tools,.nb-card:focus-within .nb-tools{opacity:1}@media (hover:none){.nb-tools{opacity:1}}
     .nb-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:2px 10px;font-size:12px;font-weight:800;cursor:pointer}.nb-btn:hover{border-color:var(--brand)}.nb-del:hover{border-color:#e11d48;color:#e11d48}
     .nb-ic{display:inline-grid;place-items:center;width:24px;height:24px;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0}.nb-ic:hover{background:var(--bg);color:var(--brand)}.nb-ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .nb-fields{margin:0;display:flex;flex-direction:column}.nb-row{display:grid;grid-template-columns:76px 1fr;gap:10px;padding:7px 0;border-top:1px dashed var(--line);align-items:start}.nb-row dt{color:var(--muted);font-size:12.5px;font-weight:800;padding-top:1px}.nb-row dd{margin:0;display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0}
@@ -763,6 +763,7 @@
     .nb-dialog{position:relative;width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:12px}.nb-dialog h3{margin:0;font-size:19px}.nbm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .nbf-head{display:flex;align-items:center;justify-content:space-between;margin-top:4px}.nbf-list{display:flex;flex-direction:column;gap:8px}.nbf-row{display:grid;grid-template-columns:130px 1fr auto auto;gap:8px;align-items:start}.nbf-row .input{min-height:38px}.nbf-value{resize:vertical;min-height:38px;line-height:1.4}.nbf-value.is-secret{-webkit-text-security:disc}.nbf-sec{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;white-space:nowrap;padding-top:9px}.nbf-x{font-size:20px;margin-top:6px}
     .nb-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+    @media (max-width:1100px){.nb-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media (max-width:720px){.nb-grid{grid-template-columns:1fr}.nb-search{min-width:0;width:100%}.nbm-grid{grid-template-columns:1fr}.nbf-row{grid-template-columns:1fr auto auto}.nbf-row .nbf-label{grid-column:1/-1}.nb-tools{opacity:1}}
     .wall-page{max-width:1280px;margin:0 auto}.wall-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto}.wall-tools select{min-height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px;font-size:13.5px}.wall-count{color:var(--muted);font-size:13px}
     .wall-cols{display:flex;gap:14px;align-items:flex-start}.wall-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
@@ -2230,7 +2231,11 @@ window.emcQuotes=[
     const NB_LABELS=['網址','種類','帳號','密碼','使用信箱','購買方式','備註','所屬公司','會員','項目','預約方式','預約格式','姓名','信箱','手機','公司名稱','公司電話','地址'];
     const nbIsUrl=v=>/^https?:\/\/\S+$/i.test(String(v||'').trim());
     const nbCopyIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M5.5 15.5v-9a2 2 0 0 1 2-2h9"/></svg>';
-    function nbCategories(){const seen=[];for(const i of state.nb.items)if(!seen.includes(i.category))seen.push(i.category);return seen}
+    function nbCategories(){
+      const seen=[];for(const i of state.nb.items)if(!seen.includes(i.category))seen.push(i.category);
+      const order=state.nb.catOrder||[];
+      return seen.map((c,i)=>[c,i]).sort((a,b)=>{const x=order.indexOf(a[0]),y=order.indexOf(b[0]);return (x<0?999:x)-(y<0?999:y)||a[1]-b[1]}).map(p=>p[0]);
+    }
     function nbMatches(it,q){if(!q)return true;const hay=[it.title,it.section,it.category,...it.fields.filter(f=>!f.secret).flatMap(f=>[f.label,f.value])].join(' ').toLowerCase();return hay.includes(q)}
     function nbFieldHtml(f){
       const label='<dt>'+esc(f.label)+'</dt>';
@@ -2240,7 +2245,7 @@ window.emcQuotes=[
     }
     function nbCardHtml(it){
       const when=it.updatedAt?new Date(it.updatedAt).toLocaleDateString('zh-TW'):'';
-      return '<article class="nb-card" data-nb-id="'+esc(it.id)+'"><header><h4 class="nb-title">'+esc(it.title)+'</h4><span class="nb-tools"><button type="button" class="nb-ic" data-nb-move="-1" title="往前移" aria-label="往前移">‹</button><button type="button" class="nb-ic" data-nb-move="1" title="往後移" aria-label="往後移">›</button><button type="button" class="nb-btn" data-nb-edit>編輯</button><button type="button" class="nb-btn nb-del" data-nb-del>刪除</button></span></header>'
+      return '<article class="nb-card" data-nb-id="'+esc(it.id)+'"><header><h4 class="nb-title" title="'+esc(it.title)+'">'+esc(it.title)+'</h4><span class="nb-tools"><button type="button" class="nb-ic" data-nb-move="-1" title="往前移" aria-label="往前移">‹</button><button type="button" class="nb-ic" data-nb-move="1" title="往後移" aria-label="往後移">›</button><button type="button" class="nb-btn" data-nb-edit>編輯</button><button type="button" class="nb-btn nb-del" data-nb-del>刪除</button></span></header>'
         +(it.fields.length?'<dl class="nb-fields">'+it.fields.map(nbFieldHtml).join('')+'</dl>':'<p class="nb-empty">還沒有欄位，按「編輯」新增。</p>')
         +'<footer class="nb-foot">'+esc([it.updatedBy,when].filter(Boolean).join('・'))+'</footer></article>';
     }
@@ -2256,7 +2261,7 @@ window.emcQuotes=[
       const stage=$('stage'),nb=state.nb;if(state.view!=='notes'||!nb)return;
       const cats=nbCategories();
       stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">設計部常用的工具、素材網站與廠商資訊。密碼預設遮住。</p></div><div class="wall-tools"><label class="search nb-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="nbSearch" type="search" placeholder="搜尋名稱、網址、帳號…" value="'+esc(nb.q||'')+'" aria-label="搜尋記事本"></label><button type="button" class="btn primary" data-nb-new>＋ 新增</button></div></div>'
-        +'<div class="nt-tabs" role="tablist"><button type="button" role="tab" class="nt-tab'+(nb.cat==='all'?' on':'')+'" data-nb-cat="all">全部<small>'+nb.items.length+'</small></button>'+cats.map(c=>'<button type="button" role="tab" class="nt-tab'+(nb.cat===c?' on':'')+'" data-nb-cat="'+esc(c)+'">'+esc(c)+'<small>'+nb.items.filter(i=>i.category===c).length+'</small></button>').join('')+'</div>'
+        +'<div class="nt-tabs" role="tablist"><button type="button" role="tab" class="nt-tab'+(nb.cat==='all'?' on':'')+'" data-nb-cat="all" draggable="false">全部<small>'+nb.items.length+'</small></button>'+cats.map(c=>'<button type="button" role="tab" draggable="true" title="拖曳可調整順序" class="nt-tab'+(nb.cat===c?' on':'')+'" data-nb-cat="'+esc(c)+'">'+esc(c)+'<small>'+nb.items.filter(i=>i.category===c).length+'</small></button>').join('')+'</div>'
         +'<div id="nbBody">'+nbBodyHtml()+'</div></div>';
     }
     async function renderNotesPage(){
@@ -2265,7 +2270,7 @@ window.emcQuotes=[
       if(!state.nb)state.nb={items:[],cat:'all',q:'',seedError:'',loaded:false};
       if(state.nb.loaded){nbPaint();return}
       stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">正在讀取…（第一次使用會先匯入舊資料，約需幾秒）</p></div></div></div>';
-      try{const data=await api('getNotebook',{});state.nb.items=data.items||[];state.nb.seedError=data.seedError||'';state.nb.loaded=true;nbPaint()}
+      try{const data=await api('getNotebook',{});state.nb.items=data.items||[];state.nb.catOrder=data.categoryOrder||[];state.nb.seedError=data.seedError||'';state.nb.loaded=true;nbPaint()}
       catch(err){if(state.view==='notes')stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2></div></div><div class="notice error" role="alert">'+esc(/權限/.test(err.message||'')?'此帳號沒有查看記事本的權限（限設計部與管理者）。':'讀取失敗：'+(err.message||err))+'</div><div class="form-actions"><button type="button" class="btn" data-nb-reload>重新讀取</button></div></div>'}
     }
     function nbFieldRow(f){
@@ -2319,6 +2324,18 @@ window.emcQuotes=[
       if(t.classList&&t.classList.contains('nbf-value')){t.style.height='auto';t.style.height=Math.min(160,t.scrollHeight)+'px'}
     });
     document.addEventListener('change',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('nbf-secret')){const v=t.closest('.nbf-row').querySelector('.nbf-value');v.classList.toggle('is-secret',t.checked)}});
+    /* 分類頁籤拖曳排序（全體共用，存在後端）；「全部」固定在最前面 */
+    document.addEventListener('dragstart',e=>{const tab=e.target.closest&&e.target.closest('.nt-tab[data-nb-cat]');if(!tab||tab.dataset.nbCat==='all'||!state.nb)return;state.nb.dragCat=tab.dataset.nbCat;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain','cat:'+tab.dataset.nbCat)}catch(err){}tab.classList.add('is-dragging')});
+    document.addEventListener('dragover',e=>{if(!state.nb||!state.nb.dragCat)return;const tab=e.target.closest&&e.target.closest('.nt-tab[data-nb-cat]');if(!tab||tab.dataset.nbCat==='all')return;e.preventDefault();document.querySelectorAll('.nt-tab.drop-l,.nt-tab.drop-r').forEach(x=>{if(x!==tab)x.classList.remove('drop-l','drop-r')});const r=tab.getBoundingClientRect(),after=e.clientX>r.left+r.width/2;tab.classList.toggle('drop-r',after);tab.classList.toggle('drop-l',!after)});
+    document.addEventListener('drop',e=>{
+      if(!state.nb||!state.nb.dragCat)return;const from=state.nb.dragCat;state.nb.dragCat=null;
+      const tab=e.target.closest&&e.target.closest('.nt-tab[data-nb-cat]');document.querySelectorAll('.nt-tab.is-dragging,.nt-tab.drop-l,.nt-tab.drop-r').forEach(x=>x.classList.remove('is-dragging','drop-l','drop-r'));
+      if(!tab||tab.dataset.nbCat==='all'||tab.dataset.nbCat===from)return;e.preventDefault();
+      const r=tab.getBoundingClientRect(),after=e.clientX>r.left+r.width/2,order=nbCategories().filter(c=>c!==from),at=order.indexOf(tab.dataset.nbCat);
+      order.splice(at+(after?1:0),0,from);state.nb.catOrder=order;nbPaint();
+      api('saveNotebookCategoryOrder',{order}).catch(err=>toast('分類順序儲存失敗：'+(err.message||err),true));
+    });
+    document.addEventListener('dragend',()=>{if(state.nb)state.nb.dragCat=null;document.querySelectorAll('.nt-tab.is-dragging,.nt-tab.drop-l,.nt-tab.drop-r').forEach(x=>x.classList.remove('is-dragging','drop-l','drop-r'))});
     document.addEventListener('keydown',e=>{const m=$('nbModal');if(m&&!m.hidden&&e.key==='Escape')nbCloseEditor()});
     function openExt(k){
       if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;if(window.__relBusy)return;window.__relBusy=true;setTimeout(()=>{window.__relBusy=false},30000);api('forceReload').then(r=>{if(r.throttled){toast('剛剛已經發布過更新了，請 30 秒後再按');return}toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}

@@ -5294,3 +5294,21 @@ describe('記事本（notebook）', () => {
     expect(fetchSpy.mock.calls.length).toBe(calls);
   });
 });
+
+describe('記事本：分類順序', () => {
+  it('saves a shared category order, ignoring unknown names and duplicates', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes('/gviz/tq')) return new Response(url.includes('gid=1529630212') ? '"印刷資訊 廠商甲 網址 所屬公司 帳號","https://v.example 公司甲 A1"\n' : '"AI 工具","",""\n"","Tool A",""\n"帳號","user@a",""\n', { headers: { 'Content-Type': 'text/csv' } });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const first = await api({ action: 'getNotebook' }, token) as { categoryOrder: string[]; items: Array<{ category: string }> };
+    expect(first.categoryOrder).toEqual([]);
+    const saved = await api({ action: 'saveNotebookCategoryOrder', order: ['廠商資訊', '不存在', '廠商資訊', 'AI 工具與素材'] }, token);
+    expect(saved).toMatchObject({ ok: true, categoryOrder: ['廠商資訊', 'AI 工具與素材'] });
+    const again = await api({ action: 'getNotebook' }, token) as { categoryOrder: string[] };
+    expect(again.categoryOrder).toEqual(['廠商資訊', 'AI 工具與素材']);
+    expect(await api({ action: 'saveNotebookCategoryOrder', order: [] })).toMatchObject({ ok: false });
+  });
+});
