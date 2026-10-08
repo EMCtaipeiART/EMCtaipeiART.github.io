@@ -250,7 +250,7 @@ function customHeadView(id,view){
   const e=customState().hmap.get(String(id).slice(2));if(!e||!e.ready)return null;
   const img=wardrobeSheets['h:'+e.meta.id+':'+view];if(!img||!img.naturalWidth)return null;
   const pad=e.meta.game&&e.meta.game.pads&&e.meta.game.pads[view];
-  return {sheetKey:'h:'+e.meta.id+':'+view,src:{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight},pad:pad&&pad.length===4?pad:[0,0,0,0]};// pad：輸出圖在原頭像格子外多留的邊（拉寬、拉高後不會被切掉）
+  return {sheetKey:'h:'+e.meta.id+':'+view,src:{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight},pad:pad&&pad.length===4?pad:[0,0,0,0],behind:typeof e.meta.game.behind==='boolean'?e.meta.game.behind:null};// behind：長髮，正面與側面的頭放在身體後面（沒設定就照這個人原本的）// pad：輸出圖在原頭像格子外多留的邊（拉寬、拉高後不會被切掉）
 }
 // 自訂帽子、眼鏡（生成器做好並發佈的）：每個角度一張透明圖，大小是（原頭像格子＋留邊）的 2 倍、已經依對位放好，
 // 所以只要蓋在頭的位置上（跟頭像同一個原點），不需要各人的眼鏡、帽子對位數值。
@@ -318,7 +318,7 @@ function buildWardrobe(i,view,look,action){
   const chin=view===2?{x:H.w/2,y:front[3]}:{x:(sk[0]+sk[1])/2,y:sk[3]};
   const hx=B.n-chin.x*K+(custom?custom.dx:0),hy=WD_OV-chin.y*K+(custom?custom.dy:0)+(act?act.headDrop+(B.hd||0):0);
   const chv=typeof look.head==='string'&&look.head?customHeadView(look.head,view):null,head=chv?{sheet:chv.sheetKey,src:chv.src,x:hx-chv.pad[0]*K,y:hy-chv.pad[1]*K,w:(H.w+chv.pad[0]+chv.pad[2])*K,h:(H.h+chv.pad[1]+chv.pad[3])*K}:{sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:custom?custom.sheetKey:'outfits',src:custom?custom.src:B,x:custom?0:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:dropI-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
-  const layers=(!WD_FEMALE[i]||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
+  const hairBehind=chv&&typeof chv.behind==='boolean'?chv.behind:WD_FEMALE[i],layers=(!hairBehind||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
   const eye=D.eyes[i][view];
   const cgl=typeof look.glasses==='string'&&look.glasses.startsWith('a:')&&view<2?customAccView(look.glasses,view):null,ccp=typeof look.cap==='string'&&look.cap.startsWith('a:')?customAccView(look.cap,view):null;
   const accLayer=c=>({sheet:c.sheetKey,src:c.src,x:hx-c.pad[0]*K,y:hy-c.pad[1]*K,w:(H.w+c.pad[0]+c.pad[2])*K,h:(H.h+c.pad[1]+c.pad[3])*K});

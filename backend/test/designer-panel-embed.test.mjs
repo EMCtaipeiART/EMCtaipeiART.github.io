@@ -647,7 +647,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
   for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
-  assert.match(js, /const layers=\(!WD_FEMALE\[i\]\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
+  assert.match(js, /hairBehind=chv&&typeof chv\.behind==='boolean'\?chv\.behind:WD_FEMALE\[i\],layers=\(!hairBehind\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
   assert.match(js, /else if\(look\.glasses&&!String\(look\.glasses\)\.startsWith\('a:'\)&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:'',head:''\},\{outfit:3,cap:'',glasses:'',head:''\},\{outfit:4,cap:'blue',glasses:'',head:''\},\{outfit:1,cap:'',glasses:'',head:''\},\{outfit:5,cap:'',glasses:'',head:''\}/);
