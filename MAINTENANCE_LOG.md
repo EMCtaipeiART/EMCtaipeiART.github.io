@@ -366,3 +366,5 @@
 - 2026-10-04: Mail/signature editor colour palette restored to the old Gmail-style 64-colour grid with separate 背景顏色 (hiliteColor) and 文字顏色 groups; colour application splits around contenteditable=false blocks like the legacy site.
 
 - 2026-10-08: 記事本: left-rail button (設計部/管理者), Worker action getNotebook reads the 設計部資源 Google Sheet (2 tabs) server-side after auth, 60s cache; page renders tabs as grids, 密碼 cells masked with eye/copy. Sheet is NOT copied into the repo. Worker redeployed.
+
+- 2026-10-08: 記事本 redesigned: card UI, add/edit/delete/reorder, search, categories; data now lives in the Worker DO (notebook_items, one-time import from the old Google Sheet, no sheet link). Actions getNotebook/saveNotebookItem/deleteNotebookItem/moveNotebookItem (designer/admin only); audit logs card title+action only, never values. Worker redeployed.

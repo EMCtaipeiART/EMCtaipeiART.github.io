@@ -745,9 +745,25 @@
     html[data-theme="dark"] .cell-pop small,html[data-theme="dark"] .reply-opt small{color:#a3aeaa}
     html[data-theme="dark"] .lt-detail,html[data-theme="dark"] .dp-wrap .lt-detail,html[data-theme="dark"] .cd-items .lt-detail{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
     html[data-theme="dark"] .cd-add{background:#242c29;color:#c3cbc8;border-color:#4a5651}
-    .notes-page{max-width:1280px;margin:0 auto}.nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.nt-tab{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 16px;font-size:14px;font-weight:800;cursor:pointer}.nt-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
-    .nt-table{border-collapse:collapse;min-width:100%;font-size:13.5px}.nt-table td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;min-width:110px;max-width:340px;word-break:break-word}.nt-table td.nt-lab{background:var(--bg);color:var(--muted);font-weight:800;white-space:nowrap;min-width:0}.nt-table tr.nt-head td{background:var(--brand-soft,#e6f4ea);font-weight:900;font-size:14.5px;border-color:var(--line)}
-    .nt-secret{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.nt-dots{letter-spacing:1px;font-family:ui-monospace,Menlo,Consolas,monospace}.nt-eye,.nt-copy{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:1px 8px;font-size:12px;cursor:pointer}
+    .notes-page{max-width:1280px;margin:0 auto}.nb-search{min-width:240px}.nb-search input{width:100%}
+    .nt-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}.nt-tab{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:800;cursor:pointer;transition:background .15s,border-color .15s}.nt-tab small{font-size:11.5px;font-weight:800;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 8px}.nt-tab:hover{border-color:var(--brand)}.nt-tab.on{background:var(--brand);border-color:var(--brand);color:#fff}.nt-tab.on small{background:rgba(255,255,255,.25);color:#fff}
+    .nb-sec{margin:0 0 26px}.nb-sec>h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:16px;font-weight:900}.nb-sec>h3::before{content:"";width:4px;height:18px;border-radius:3px;background:var(--brand)}.nb-sec>h3 small{font-size:12px;font-weight:800;color:var(--muted);background:var(--bg);border-radius:99px;padding:1px 9px}
+    .nb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+    .nb-card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;transition:transform .15s,box-shadow .15s}.nb-card::before{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,var(--brand),#7be08f)}.nb-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+    .nb-card header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}.nb-title{margin:0;font-size:16px;font-weight:900;line-height:1.35;word-break:break-word}
+    .nb-tools{display:inline-flex;gap:4px;opacity:.0;transition:opacity .15s;flex:0 0 auto}.nb-card:hover .nb-tools,.nb-card:focus-within .nb-tools{opacity:1}@media (hover:none){.nb-tools{opacity:1}}
+    .nb-btn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:2px 10px;font-size:12px;font-weight:800;cursor:pointer}.nb-btn:hover{border-color:var(--brand)}.nb-del:hover{border-color:#e11d48;color:#e11d48}
+    .nb-ic{display:inline-grid;place-items:center;width:24px;height:24px;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0}.nb-ic:hover{background:var(--bg);color:var(--brand)}.nb-ic svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .nb-fields{margin:0;display:flex;flex-direction:column}.nb-row{display:grid;grid-template-columns:76px 1fr;gap:10px;padding:7px 0;border-top:1px dashed var(--line);align-items:start}.nb-row dt{color:var(--muted);font-size:12.5px;font-weight:800;padding-top:1px}.nb-row dd{margin:0;display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0}
+    .nb-val{font-size:14px;line-height:1.5;word-break:break-word;white-space:pre-wrap;min-width:0}.nb-val a{color:var(--brand);font-weight:700;text-decoration:none}.nb-val a:hover{text-decoration:underline}
+    .nb-row .nb-ic{opacity:0;flex:0 0 auto}.nb-row:hover .nb-ic,.nb-row .nb-ic:focus-visible{opacity:1}@media (hover:none){.nb-row .nb-ic{opacity:1}}
+    .nb-secret{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.nb-dots{letter-spacing:2px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;word-break:break-all}.nb-mini{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:1px 9px;font-size:12px;font-weight:700;cursor:pointer}.nb-mini:hover{border-color:var(--brand)}
+    .nb-foot{margin-top:auto;padding-top:6px;font-size:11.5px;color:var(--faint,var(--muted))}.nb-empty{margin:0;color:var(--muted);font-size:13px}.nb-hint{padding:40px 0;text-align:center;color:var(--muted)}
+    .nb-modal{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}.nb-modal[hidden]{display:none}.nb-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+    .nb-dialog{position:relative;width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:20px;padding:22px 24px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:12px}.nb-dialog h3{margin:0;font-size:19px}.nbm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .nbf-head{display:flex;align-items:center;justify-content:space-between;margin-top:4px}.nbf-list{display:flex;flex-direction:column;gap:8px}.nbf-row{display:grid;grid-template-columns:130px 1fr auto auto;gap:8px;align-items:start}.nbf-row .input{min-height:38px}.nbf-value{resize:vertical;min-height:38px;line-height:1.4}.nbf-value.is-secret{-webkit-text-security:disc}.nbf-sec{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;white-space:nowrap;padding-top:9px}.nbf-x{font-size:20px;margin-top:6px}
+    .nb-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+    @media (max-width:720px){.nb-grid{grid-template-columns:1fr}.nb-search{min-width:0;width:100%}.nbm-grid{grid-template-columns:1fr}.nbf-row{grid-template-columns:1fr auto auto}.nbf-row .nbf-label{grid-column:1/-1}.nb-tools{opacity:1}}
     .wall-page{max-width:1280px;margin:0 auto}.wall-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-left:auto}.wall-tools select{min-height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 10px;font-size:13.5px}.wall-count{color:var(--muted);font-size:13px}
     .wall-cols{display:flex;gap:14px;align-items:flex-start}.wall-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
     .wall-item{position:relative;margin:0;border-radius:14px;overflow:hidden;cursor:zoom-in;background:var(--line);aspect-ratio:4/5;opacity:0;transform:translateY(8px);transition:opacity .4s ease,transform .4s ease,box-shadow .2s}.wall-item.is-in{opacity:1;transform:none;aspect-ratio:auto}.wall-item:hover,.wall-item:focus-visible{box-shadow:0 8px 22px rgba(0,0,0,.22);outline:none}
@@ -2209,43 +2225,101 @@ window.emcQuotes=[
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
-    /* ---------- 記事本：設計部資源（Google 試算表）。Worker 檢查登入與權限後才回傳；密碼欄預設遮住，按眼睛才顯示，按複製可直接複製 ---------- */
-    const NOTE_LABELS=new Set(['密碼']);
-    function noteCellHtml(v,masked){
-      const t=String(v||'');if(!t.trim())return '';
-      if(masked)return '<span class="nt-secret" data-secret="'+esc(t)+'"><span class="nt-dots">••••••••</span><button type="button" class="nt-eye" data-nt-eye title="顯示／隱藏" aria-label="顯示或隱藏密碼">👁</button><button type="button" class="nt-copy" data-nt-copy title="複製" aria-label="複製">複製</button></span>';
-      return esc(t).replace(/(https?:\/\/[^\s<]+)/g,u=>'<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+u+'</a>').replace(/\n/g,'<br>');
+    /* ---------- 記事本：設計部常用的工具、素材網站、廠商資訊（卡片式、可新增／編輯／刪除／調整順序）。
+       資料存在後端（Worker 資料庫，不進公開的 GitHub）；登入且是設計部／管理者才讀得到。密碼預設遮住，按眼睛顯示、按複製直接複製 ---------- */
+    const NB_LABELS=['網址','種類','帳號','密碼','使用信箱','購買方式','備註','所屬公司','會員','項目','預約方式','預約格式','姓名','信箱','手機','公司名稱','公司電話','地址'];
+    const nbIsUrl=v=>/^https?:\/\/\S+$/i.test(String(v||'').trim());
+    const nbCopyIcon='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M5.5 15.5v-9a2 2 0 0 1 2-2h9"/></svg>';
+    function nbCategories(){const seen=[];for(const i of state.nb.items)if(!seen.includes(i.category))seen.push(i.category);return seen}
+    function nbMatches(it,q){if(!q)return true;const hay=[it.title,it.section,it.category,...it.fields.filter(f=>!f.secret).flatMap(f=>[f.label,f.value])].join(' ').toLowerCase();return hay.includes(q)}
+    function nbFieldHtml(f){
+      const label='<dt>'+esc(f.label)+'</dt>';
+      if(f.secret)return '<div class="nb-row">'+label+'<dd><span class="nb-secret" data-secret="'+esc(f.value)+'"><span class="nb-dots">••••••••</span><button type="button" class="nb-mini" data-nb-eye title="顯示／隱藏" aria-label="顯示或隱藏密碼">顯示</button><button type="button" class="nb-mini" data-nb-copy="'+esc(f.value)+'" title="複製" aria-label="複製密碼">複製</button></span></dd></div>';
+      const val=nbIsUrl(f.value)?'<a href="'+esc(f.value)+'" target="_blank" rel="noopener noreferrer">'+esc(f.value.replace(/^https?:\/\//i,'').replace(/\/$/,''))+'</a>':esc(f.value);
+      return '<div class="nb-row">'+label+'<dd><span class="nb-val">'+val+'</span><button type="button" class="nb-ic" data-nb-copy="'+esc(f.value)+'" title="複製" aria-label="複製'+esc(f.label)+'">'+nbCopyIcon+'</button></dd></div>';
     }
-    function noteTableHtml(rows){
-      const maskedAt=(row,c)=>{ /* 同一列中「密碼」標籤右邊、到下一個空白格之前的格子都遮住 */
-        for(let i=c-1;i>=0;i--){if(!String(row[i]||'').trim())return false;if(NOTE_LABELS.has(String(row[i]).trim()))return true}return false};
-      const body=rows.map(row=>{
-        const filled=row.filter(c=>String(c||'').trim());
-        if(filled.length===1&&String(row[0]||'').trim()&&row.length>1)return '<tr class="nt-head"><td colspan="'+row.length+'">'+noteCellHtml(row[0],false)+'</td></tr>';
-        return '<tr>'+row.map((c,i)=>{const lab=NOTE_LABELS.has(String(c||'').trim())||/^(網址|種類|帳號|購買方式|備註|所屬公司|使用信箱|項目|信箱|手機|姓名|預約方式|預約格式|會員|消費紀錄)$/.test(String(c||'').trim());return '<td class="'+(lab?'nt-lab':'')+'">'+noteCellHtml(c,!lab&&maskedAt(row,i))+'</td>'}).join('')+'</tr>';
-      }).join('');
-      return '<div class="table-wrap"><table class="nt-table"><tbody>'+body+'</tbody></table></div>';
+    function nbCardHtml(it){
+      const when=it.updatedAt?new Date(it.updatedAt).toLocaleDateString('zh-TW'):'';
+      return '<article class="nb-card" data-nb-id="'+esc(it.id)+'"><header><h4 class="nb-title">'+esc(it.title)+'</h4><span class="nb-tools"><button type="button" class="nb-ic" data-nb-move="-1" title="往前移" aria-label="往前移">‹</button><button type="button" class="nb-ic" data-nb-move="1" title="往後移" aria-label="往後移">›</button><button type="button" class="nb-btn" data-nb-edit>編輯</button><button type="button" class="nb-btn nb-del" data-nb-del>刪除</button></span></header>'
+        +(it.fields.length?'<dl class="nb-fields">'+it.fields.map(nbFieldHtml).join('')+'</dl>':'<p class="nb-empty">還沒有欄位，按「編輯」新增。</p>')
+        +'<footer class="nb-foot">'+esc([it.updatedBy,when].filter(Boolean).join('・'))+'</footer></article>';
     }
-    async function renderNotesPage(refresh){
+    function nbBodyHtml(){
+      const nb=state.nb,q=String(nb.q||'').trim().toLowerCase();
+      const items=nb.items.filter(i=>(nb.cat==='all'||i.category===nb.cat)&&nbMatches(i,q));
+      if(!nb.items.length)return '<div class="nb-hint">'+(nb.seedError?'<div class="notice error" role="alert">'+esc(nb.seedError)+'</div>':'<p>還沒有資料。</p>')+'<button type="button" class="btn primary" data-nb-new>＋ 新增第一張卡片</button></div>';
+      if(!items.length)return '<div class="nb-hint"><p>沒有符合「'+esc(nb.q)+'」的卡片。</p></div>';
+      const groups=[];for(const it of items){const key=(nb.cat==='all'?it.category+' / ':'')+(it.section||'未分區');let g=groups.find(x=>x.key===key);if(!g){g={key,list:[]};groups.push(g)}g.list.push(it)}
+      return groups.map(g=>'<section class="nb-sec"><h3>'+esc(g.key)+'<small>'+g.list.length+'</small></h3><div class="nb-grid">'+g.list.map(nbCardHtml).join('')+'</div></section>').join('');
+    }
+    function nbPaint(){
+      const stage=$('stage'),nb=state.nb;if(state.view!=='notes'||!nb)return;
+      const cats=nbCategories();
+      stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">設計部常用的工具、素材網站與廠商資訊。密碼預設遮住。</p></div><div class="wall-tools"><label class="search nb-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><input id="nbSearch" type="search" placeholder="搜尋名稱、網址、帳號…" value="'+esc(nb.q||'')+'" aria-label="搜尋記事本"></label><button type="button" class="btn primary" data-nb-new>＋ 新增</button></div></div>'
+        +'<div class="nt-tabs" role="tablist"><button type="button" role="tab" class="nt-tab'+(nb.cat==='all'?' on':'')+'" data-nb-cat="all">全部<small>'+nb.items.length+'</small></button>'+cats.map(c=>'<button type="button" role="tab" class="nt-tab'+(nb.cat===c?' on':'')+'" data-nb-cat="'+esc(c)+'">'+esc(c)+'<small>'+nb.items.filter(i=>i.category===c).length+'</small></button>').join('')+'</div>'
+        +'<div id="nbBody">'+nbBodyHtml()+'</div></div>';
+    }
+    async function renderNotesPage(){
       const stage=$('stage');
       if(!loggedIn()){stage.innerHTML='<div class="page"><h2 class="page-title">記事本</h2><p class="page-sub">請先登入後再查看。</p></div>';return}
-      if(!state.notes||refresh){
-        stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">正在讀取設計部資源…</p></div></div></div>';
-        try{const data=await api('getNotebook',{refresh:Boolean(refresh)});state.notes={tabs:data.tabs||[],at:data.fetchedAt||Date.now(),tab:0}}
-        catch(err){if(state.view==='notes')stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2></div></div><div class="notice error" role="alert">'+esc(/權限/.test(err.message||'')?'此帳號沒有查看記事本的權限（限設計部與管理者）。':'讀取失敗：'+(err.message||err))+'</div><div class="form-actions"><button type="button" class="btn" data-notes-reload>重新讀取</button></div></div>';return}
-      }
-      if(state.view!=='notes')return;
-      const n=state.notes,t=n.tabs[n.tab]||n.tabs[0];if(!t){stage.innerHTML='<div class="page"><h2 class="page-title">記事本</h2><p class="page-sub">沒有資料。</p></div>';return}
-      stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">設計部資源：AI 工具、素材與廠商資訊。密碼預設遮住，按眼睛顯示。</p></div><div class="wall-tools"><a class="btn" href="'+esc(t.url)+'" target="_blank" rel="noopener noreferrer">開啟原試算表</a><button type="button" class="btn" data-notes-reload>重新讀取</button></div></div>'
-        +'<div class="nt-tabs" role="tablist">'+n.tabs.map((x,i)=>'<button type="button" role="tab" class="nt-tab'+(i===n.tab?' on':'')+'" data-nt-tab="'+i+'">'+esc(x.name)+'</button>').join('')+'</div>'+noteTableHtml(t.rows)+'</div>';
+      if(!state.nb)state.nb={items:[],cat:'all',q:'',seedError:'',loaded:false};
+      if(state.nb.loaded){nbPaint();return}
+      stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2><p class="page-sub">正在讀取…（第一次使用會先匯入舊資料，約需幾秒）</p></div></div></div>';
+      try{const data=await api('getNotebook',{});state.nb.items=data.items||[];state.nb.seedError=data.seedError||'';state.nb.loaded=true;nbPaint()}
+      catch(err){if(state.view==='notes')stage.innerHTML='<div class="page notes-page"><div class="page-top"><div><h2 class="page-title">記事本</h2></div></div><div class="notice error" role="alert">'+esc(/權限/.test(err.message||'')?'此帳號沒有查看記事本的權限（限設計部與管理者）。':'讀取失敗：'+(err.message||err))+'</div><div class="form-actions"><button type="button" class="btn" data-nb-reload>重新讀取</button></div></div>'}
+    }
+    function nbFieldRow(f){
+      f=f||{label:'',value:'',secret:false};
+      return '<div class="nbf-row"><input class="input nbf-label" list="nbLabels" placeholder="項目（例如：帳號）" value="'+esc(f.label)+'" maxlength="40"><textarea class="input nbf-value'+(f.secret?' is-secret':'')+'" rows="1" placeholder="內容" maxlength="2000">'+esc(f.value)+'</textarea><label class="nbf-sec" title="勾選後預設遮住"><input type="checkbox" class="nbf-secret"'+(f.secret?' checked':'')+'>遮住</label><button type="button" class="nb-ic nbf-x" data-nbf-del title="移除這個欄位" aria-label="移除欄位">×</button></div>';
+    }
+    function nbOpenEditor(id){
+      const nb=state.nb,it=id?nb.items.find(i=>i.id===id):null,cats=nbCategories();
+      const cat=it?it.category:(nb.cat!=='all'?nb.cat:(cats[0]||'AI 工具與素材'));
+      const sections=[...new Set(nb.items.filter(i=>i.category===cat).map(i=>i.section).filter(Boolean))];
+      let m=$('nbModal');if(!m){m=document.createElement('div');m.id='nbModal';m.className='nb-modal';document.body.appendChild(m)}
+      const rows=(it?it.fields:[{label:'網址',value:'',secret:false},{label:'帳號',value:'',secret:false},{label:'密碼',value:'',secret:true}]).map(nbFieldRow).join('');
+      m.dataset.id=it?it.id:'';
+      m.innerHTML='<div class="nb-bg" data-nb-close></div><div class="nb-dialog" role="dialog" aria-modal="true" aria-label="'+(it?'編輯':'新增')+'記事本卡片"><h3>'+(it?'編輯卡片':'新增卡片')+'</h3>'
+        +'<div class="nbm-grid"><label class="field"><span class="label">分類</span><input class="input" id="nbCat" list="nbCats" value="'+esc(cat)+'" maxlength="40" placeholder="例如：AI 工具與素材"></label><label class="field"><span class="label">區塊</span><input class="input" id="nbSec" list="nbSecs" value="'+esc(it?it.section:'')+'" maxlength="60" placeholder="例如：購買素材（目前使用中）"></label></div>'
+        +'<label class="field"><span class="label">名稱</span><input class="input" id="nbTitle" value="'+esc(it?it.title:'')+'" maxlength="80" placeholder="例如：Shutterstock"></label>'
+        +'<datalist id="nbCats">'+cats.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist><datalist id="nbSecs">'+sections.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist><datalist id="nbLabels">'+NB_LABELS.map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>'
+        +'<div class="nbf-head"><b>欄位</b><button type="button" class="nb-btn" data-nbf-add>＋ 新增欄位</button></div><div id="nbFields" class="nbf-list">'+rows+'</div>'
+        +'<div class="nb-actions"><button type="button" class="btn" data-nb-close>取消</button><button type="button" class="btn primary" data-nb-save>儲存</button></div></div>';
+      m.hidden=false;document.body.classList.add('wall-lock');setTimeout(()=>$('nbTitle')&&$('nbTitle').focus(),50);
+    }
+    function nbCloseEditor(){const m=$('nbModal');if(m)m.hidden=true;document.body.classList.remove('wall-lock')}
+    async function nbSave(btn){
+      const m=$('nbModal');if(!m)return;
+      const fields=[...m.querySelectorAll('.nbf-row')].map(r=>({label:r.querySelector('.nbf-label').value.trim(),value:r.querySelector('.nbf-value').value.trim(),secret:r.querySelector('.nbf-secret').checked})).filter(f=>f.label&&f.value);
+      const item={id:m.dataset.id||undefined,category:$('nbCat').value.trim(),section:$('nbSec').value.trim(),title:$('nbTitle').value.trim(),fields};
+      if(!item.title){toast('請填寫名稱',true);return}if(!item.category){toast('請填寫分類',true);return}
+      btn.disabled=true;
+      try{const data=await api('saveNotebookItem',{item});state.nb.items=data.items||state.nb.items;if(state.nb.cat!=='all'&&item.category!==state.nb.cat)state.nb.cat=item.category;nbCloseEditor();nbPaint();toast('已儲存')}
+      catch(err){toast('儲存失敗：'+(err.message||err),true);btn.disabled=false}
     }
     document.addEventListener('click',e=>{
-      const t=e.target;if(!t.closest)return;
-      const tab=t.closest('[data-nt-tab]');if(tab&&state.notes){state.notes.tab=+tab.dataset.ntTab;renderNotesPage();return}
-      if(t.closest('[data-notes-reload]')){renderNotesPage(true);return}
-      const eye=t.closest('[data-nt-eye]');if(eye){const w=eye.closest('.nt-secret'),d=w.querySelector('.nt-dots'),on=w.classList.toggle('is-open');d.textContent=on?w.dataset.secret:'••••••••';return}
-      const cp=t.closest('[data-nt-copy]');if(cp){const v=cp.closest('.nt-secret').dataset.secret;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('已複製')).catch(()=>toast('無法複製，請按眼睛顯示後手動複製',true));return}
+      const t=e.target;if(!t.closest||!state.nb)return;
+      const cat=t.closest('[data-nb-cat]');if(cat){state.nb.cat=cat.dataset.nbCat;nbPaint();return}
+      if(t.closest('[data-nb-reload]')){state.nb.loaded=false;renderNotesPage();return}
+      if(t.closest('[data-nb-new]')){nbOpenEditor('');return}
+      const card=t.closest('[data-nb-id]');
+      if(card&&t.closest('[data-nb-edit]')){nbOpenEditor(card.dataset.nbId);return}
+      if(card&&t.closest('[data-nb-del]')){const it=state.nb.items.find(i=>i.id===card.dataset.nbId);if(it&&confirm('確定刪除「'+it.title+'」？刪除後無法復原。'))api('deleteNotebookItem',{id:it.id}).then(d=>{state.nb.items=d.items||[];nbPaint();toast('已刪除')}).catch(err=>toast('刪除失敗：'+(err.message||err),true));return}
+      const mv=card&&t.closest('[data-nb-move]');if(mv){api('moveNotebookItem',{id:card.dataset.nbId,dir:+mv.dataset.nbMove}).then(d=>{state.nb.items=d.items||state.nb.items;nbPaint()}).catch(err=>toast('移動失敗：'+(err.message||err),true));return}
+      const eye=t.closest('[data-nb-eye]');if(eye){const w=eye.closest('.nb-secret'),d=w.querySelector('.nb-dots'),on=w.classList.toggle('is-open');d.textContent=on?w.dataset.secret:'••••••••';eye.textContent=on?'隱藏':'顯示';return}
+      const cp=t.closest('[data-nb-copy]');if(cp){const v=cp.dataset.nbCopy;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('已複製')).catch(()=>toast('無法複製，請手動選取',true));return}
+      if(t.closest('[data-nb-close]')){nbCloseEditor();return}
+      const sv=t.closest('[data-nb-save]');if(sv){nbSave(sv);return}
+      if(t.closest('[data-nbf-add]')){$('nbFields').insertAdjacentHTML('beforeend',nbFieldRow());$('nbFields').lastElementChild.querySelector('.nbf-label').focus();return}
+      const xd=t.closest('[data-nbf-del]');if(xd){xd.closest('.nbf-row').remove();return}
     });
+    document.addEventListener('input',e=>{
+      const t=e.target;if(!t||!t.id&&!t.classList)return;
+      if(t.id==='nbSearch'&&state.nb){state.nb.q=t.value;clearTimeout(state.nbT);state.nbT=setTimeout(()=>{const b=$('nbBody');if(b)b.innerHTML=nbBodyHtml()},150);return}
+      if(t.classList&&t.classList.contains('nbf-value')){t.style.height='auto';t.style.height=Math.min(160,t.scrollHeight)+'px'}
+    });
+    document.addEventListener('change',e=>{const t=e.target;if(t&&t.classList&&t.classList.contains('nbf-secret')){const v=t.closest('.nbf-row').querySelector('.nbf-value');v.classList.toggle('is-secret',t.checked)}});
+    document.addEventListener('keydown',e=>{const m=$('nbModal');if(m&&!m.hidden&&e.key==='Escape')nbCloseEditor()});
     function openExt(k){
       if(k==='reloadall'){if(!confirm('發布更新？線上的人會在不打斷填寫的情況下自動重新整理，沒上線的人上線後也會自動更新。'))return;if(window.__relBusy)return;window.__relBusy=true;setTimeout(()=>{window.__relBusy=false},30000);api('forceReload').then(r=>{if(r.throttled){toast('剛剛已經發布過更新了，請 30 秒後再按');return}toast(`已發布更新：${r.sent} 個連線收到通知，沒上線的人上線後會自動更新`);relSet(r.release);setTimeout(()=>forceReloadNow(r.release),1500)}).catch(e=>toast(e.message,true));return}
       if(k==='owner'){openOwner();return}

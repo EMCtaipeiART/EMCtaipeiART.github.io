@@ -14,7 +14,7 @@ import {
 } from './model';
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
-import { NOTEBOOK_TABS, notebookCsvUrl, notebookSheetUrl, parseCsv, trimGrid } from './notebook';
+import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
   ApiPayload, ApiResult, DatabaseSnapshot, RequestContext, Row, SessionRecord, StoredSnapshot
@@ -1239,6 +1239,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 前台連著的 WebSocket 每 25 秒送 ping 保持連線：自動回 pong，不會把休眠中的物件叫醒。
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
     ctx.blockConcurrencyWhile(async () => {
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS notebook_items (
+          id TEXT PRIMARY KEY,
+          category TEXT NOT NULL,
+          section TEXT NOT NULL DEFAULT '',
+          title TEXT NOT NULL,
+          fields TEXT NOT NULL DEFAULT '[]',
+          sort INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL DEFAULT 0,
+          updated_by TEXT NOT NULL DEFAULT ''
+        );
+      `);
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS _sql_schema_migrations (
           version INTEGER PRIMARY KEY,
@@ -3776,19 +3788,91 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
   }
 
-  private notebookCache: { at: number; tabs: Array<{ gid: string; name: string; url: string; rows: string[][] }> } | null = null;
-  private async notebookData(refresh: boolean): Promise<ApiResult> {
-    const fresh = this.notebookCache && Date.now() - this.notebookCache.at < 60_000;
-    if (!refresh && fresh && this.notebookCache) return { ok: true, action: 'getNotebook', fetchedAt: this.notebookCache.at, tabs: this.notebookCache.tabs };
-    const tabs = await Promise.all(NOTEBOOK_TABS.map(async tab => {
-      const response = await fetch(notebookCsvUrl(tab.gid), { headers: { Accept: 'text/csv' }, redirect: 'follow' });
-      if (!response.ok) throw new Error(`讀取試算表「${tab.name}」失敗（HTTP ${response.status}）。請確認試算表有開放「知道連結的人可檢視」，或改設服務帳號。`);
-      const body = await response.text();
-      if (/^\s*<(!doctype|html)/i.test(body)) throw new Error(`試算表「${tab.name}」需要登入才能讀取，請開放「知道連結的人可檢視」。`);
-      return { gid: tab.gid, name: tab.name, url: notebookSheetUrl(tab.gid), rows: trimGrid(parseCsv(body)) };
-    }));
-    this.notebookCache = { at: Date.now(), tabs };
-    return { ok: true, action: 'getNotebook', fetchedAt: this.notebookCache.at, tabs };
+  private notebookRows(): NotebookItem[] {
+    return this.ctx.storage.sql.exec<{ id: string; category: string; section: string; title: string; fields: string; sort: number; updated_at: number; updated_by: string }>(
+      'SELECT id, category, section, title, fields, sort, updated_at, updated_by FROM notebook_items ORDER BY sort ASC, updated_at ASC'
+    ).toArray().map(row => {
+      let fields: NotebookField[] = [];
+      try { fields = (JSON.parse(row.fields) as NotebookField[]).map(f => ({ label: text(f.label), value: text(f.value), secret: Boolean(f.secret) })); } catch { fields = []; }
+      return { id: row.id, category: row.category, section: row.section, title: row.title, fields, sort: Number(row.sort) || 0, updatedAt: Number(row.updated_at) || 0, updatedBy: row.updated_by };
+    });
+  }
+
+  /** 第一次使用且還沒有任何資料時，從原本的 Google 試算表匯入一次（之後完全在網站內編輯，不再讀試算表） */
+  private async notebookSeedOnce(): Promise<string> {
+    if (await this.ctx.storage.get<boolean>('notebookSeeded')) return '';
+    if (this.notebookRows().length) { await this.ctx.storage.put('notebookSeeded', true); return ''; }
+    try {
+      const grids = await Promise.all(NOTEBOOK_SEED_TABS.map(async tab => {
+        const response = await fetch(notebookCsvUrl(tab.gid), { headers: { Accept: 'text/csv' }, redirect: 'follow' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const body = await response.text();
+        if (/^\s*<(!doctype|html)/i.test(body)) throw new Error('試算表需要登入才能讀取');
+        return { gid: tab.gid, rows: trimGrid(parseCsv(body)) };
+      }));
+      const seeds = seedFromGrids(grids);
+      if (!seeds.length) return '試算表沒有可匯入的內容';
+      const now = Date.now();
+      this.ctx.storage.transactionSync(() => {
+        seeds.forEach((seed, index) => {
+          this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            crypto.randomUUID(), seed.category, seed.section, seed.title, JSON.stringify(seed.fields), (index + 1) * 10, now, '匯入');
+        });
+      });
+      await this.ctx.storage.put('notebookSeeded', true);
+      return '';
+    } catch (error) {
+      return `首次匯入失敗：${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  private async notebookList(): Promise<ApiResult> {
+    const seedError = await this.notebookSeedOnce();
+    const items = this.notebookRows();
+    return { ok: true, action: 'getNotebook', items, seedError: items.length ? '' : seedError };
+  }
+
+  private async notebookSave(payload: ApiPayload, who: SessionRecord): Promise<ApiResult> {
+    const raw = asRow(payload.item);
+    const title = text(raw.title).slice(0, 80), category = text(raw.category).slice(0, 40), section = text(raw.section).slice(0, 60);
+    if (!title) throw new Error('請填寫名稱');
+    if (!category) throw new Error('請選擇分類');
+    const fields: NotebookField[] = asRows(raw.fields).slice(0, 40).map(f => ({ label: text(f.label).slice(0, 40), value: text(f.value).slice(0, 2000), secret: Boolean(f.secret) })).filter(f => f.label && f.value);
+    const now = Date.now(), actor = auditActor(who), id = text(raw.id);
+    const existing = id ? this.notebookRows().find(item => item.id === id) : undefined;
+    if (id && !existing) throw new Error('找不到這筆記事本資料，可能已被刪除');
+    if (existing) {
+      this.ctx.storage.sql.exec('UPDATE notebook_items SET category = ?, section = ?, title = ?, fields = ?, updated_at = ?, updated_by = ? WHERE id = ?', category, section, title, JSON.stringify(fields), now, actor, id);
+    } else {
+      const max = this.ctx.storage.sql.exec<{ m: number | null }>('SELECT MAX(sort) AS m FROM notebook_items').toArray()[0]?.m || 0;
+      this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', crypto.randomUUID(), category, section, title, JSON.stringify(fields), Number(max) + 10, now, actor);
+    }
+    // 稽核只記「誰改了哪一張卡」，不記欄位內容（含密碼）
+    try { await this.queueAudit([{ t: new Date(now).toISOString(), kind: '欄位修改', actor, caseId: `記事本：${title}`, field: existing ? '修改' : '新增', note: '記事本' }]); } catch { /* 不影響儲存 */ }
+    return { ok: true, action: 'saveNotebookItem', items: this.notebookRows() };
+  }
+
+  private async notebookDelete(payload: ApiPayload, who: SessionRecord): Promise<ApiResult> {
+    const id = text(payload.id);
+    const existing = this.notebookRows().find(item => item.id === id);
+    if (!existing) throw new Error('找不到這筆記事本資料，可能已被刪除');
+    this.ctx.storage.sql.exec('DELETE FROM notebook_items WHERE id = ?', id);
+    try { await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: `記事本：${existing.title}`, field: '刪除', note: '記事本' }]); } catch { /* 不影響刪除 */ }
+    return { ok: true, action: 'deleteNotebookItem', items: this.notebookRows() };
+  }
+
+  /** 同一個分類內，把一張卡往前或往後移一格（跟相鄰那張交換排序） */
+  private notebookMove(payload: ApiPayload): ApiResult {
+    const id = text(payload.id), dir = Number(payload.dir) < 0 ? -1 : 1;
+    const all = this.notebookRows(), current = all.find(item => item.id === id);
+    if (!current) throw new Error('找不到這筆記事本資料');
+    const peers = all.filter(item => item.category === current.category && item.section === current.section);
+    const at = peers.findIndex(item => item.id === id), other = peers[at + dir];
+    if (other) {
+      this.ctx.storage.sql.exec('UPDATE notebook_items SET sort = ? WHERE id = ?', other.sort, current.id);
+      this.ctx.storage.sql.exec('UPDATE notebook_items SET sort = ? WHERE id = ?', current.sort, other.id);
+    }
+    return { ok: true, action: 'moveNotebookItem', items: this.notebookRows() };
   }
 
   private auditFlushing = false;
@@ -4204,10 +4288,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         return { ok: true, action, designers: rows, priority, revision: database.revision };
       }
-      if (action === 'getNotebook') {
-        // 記事本（試算表「EMC設計部資源」）含共用帳號密碼：登入且是設計部／管理者才讀得到，不放進公開的資料庫。
-        this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
-        return await this.notebookData(Boolean(payload.refresh));
+      if (action === 'getNotebook' || action === 'saveNotebookItem' || action === 'deleteNotebookItem' || action === 'moveNotebookItem') {
+        // 記事本含共用帳號密碼：登入且是設計部／管理者才讀得到、改得了；內容只存在 Worker 的資料庫，不進公開的 GitHub。
+        const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
+        if (action === 'saveNotebookItem') return await this.notebookSave(payload, who);
+        if (action === 'deleteNotebookItem') return await this.notebookDelete(payload, who);
+        if (action === 'moveNotebookItem') return this.notebookMove(payload);
+        return await this.notebookList();
       }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');
