@@ -2088,12 +2088,34 @@ window.emcQuotes=[
           }
         }
       }
+      /* 歷史作品索引（data/works/20YY.json，由 scripts/works_upload.mjs 產生）：不在目前資料庫的歷史案件，用索引內的欄位組出簡易案件資料 */
+      const base=u=>String(u).replace(/=w\d+$/,''),have=new Set(items.map(i=>base(i.full)));
+      for(const idx of state.worksIdx||[]){
+        const tpl=String(idx.imageUrl||'');
+        for(const w of idx.items||[]){
+          const row=ok.get(w.caseId)||{'案件編號':w.caseId,'客戶別':w.client,'專案名稱':w.project,'設計種類':w.type,'設計負責人':w.designer,'開始日期':w.start,'狀態':'已完成'};
+          for(const im of w.imgs||[]){
+            if(!/^[\w-]{10,}$/.test(im.id||''))continue;
+            const full=tpl.replace('{id}',im.id).replace('{size}','1600');
+            if(have.has(base(full)))continue;have.add(base(full));
+            items.push({id:w.caseId,row,name:String(im.name||''),thumb:tpl.replace('{id}',im.id).replace('{size}','480'),full,round:0,date:String(idx.generatedAt||'').slice(0,10),hist:!ok.has(w.caseId)});
+          }
+        }
+      }
       return items;
+    }
+    const WALL_INDEX_YEARS=[2026];
+    function wallLoadIndex(){
+      if(state.worksIdx!==undefined)return;state.worksIdx=null;
+      Promise.all(WALL_INDEX_YEARS.map(y=>fetch('data/works/'+y+'.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null))).then(list=>{
+        state.worksIdx=list.filter(Boolean);
+        if(state.worksIdx.length&&state.view==='wall'){state.wallItems=wallShuffle(wallBuild());renderWallPage()}
+      });
     }
     function wallShuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
     function renderWallPage(){
       if(!loggedIn()){$('stage').innerHTML='<div class="page"><h2 class="page-title">作品牆</h2><p class="page-sub">請先登入後再瀏覽作品牆。</p></div>';return}
-      if(!state.wallItems){state.wallItems=wallShuffle(wallBuild());state.wallShown=0;state.wallDesigner=''}
+      if(!state.wallItems){state.wallItems=wallShuffle(wallBuild());state.wallShown=0;state.wallDesigner=''}wallLoadIndex();
       const designers=[...new Set(state.wallItems.map(i=>String(i.row['設計負責人']||'').trim()).filter(Boolean))];
       $('stage').innerHTML='<div class="page wall-page"><div class="page-top"><div><h2 class="page-title">作品牆</h2><p class="page-sub">設計師備份的圖片素材，隨機排列；點圖片查看案件細節。</p></div><div class="wall-tools"><select id="wallDesigner" aria-label="依設計師篩選"><option value="">全部設計師</option>'+designers.map(n=>'<option'+(n===state.wallDesigner?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select><button type="button" class="btn" data-wall-shuffle>重新排序</button><span class="wall-count" id="wallCount"></span></div></div><div class="wall-cols" id="wallCols"></div><div class="wall-more" id="wallMore"></div></div>';
       wallLayout();
@@ -2132,7 +2154,7 @@ window.emcQuotes=[
       const roundLabel=it.round===0?'初稿':(it.round<=10?NUM_ZH[it.round]:it.round)+'修';
       m.innerHTML='<div class="wm-bg" data-wall-close></div><div class="wm-card" role="dialog" aria-modal="true"><button type="button" class="wm-x" data-wall-close aria-label="關閉">×</button><div class="wm-img"><button type="button" class="wm-nav wm-prev" data-wall-step="-1" aria-label="上一張">‹</button><img referrerpolicy="no-referrer" alt="'+esc(it.name)+'" src="'+esc(it.full)+'"><button type="button" class="wm-nav wm-next" data-wall-step="1" aria-label="下一張">›</button></div><div class="wm-info"><h3>'+esc((r['客戶別']||'')+'｜'+(r['專案名稱']||''))+'</h3>'
         +kv('案件編號',esc(it.id))+kv('狀態','<span class="lt-status '+st.cls+'">'+esc(st.label)+'</span>')+kv('設計種類／階段',esc([r['設計種類']||r['設計類型'],r['階段']].filter(Boolean).join('／')))+kv('設計負責人',esc(r['設計負責人']||''))+kv('專案負責人',esc(r['專案負責人']||''))+kv('版次',esc(roundLabel))+kv('數量',esc(r['數量']||''))+kv('開始～結束',esc([r['開始日期'],r['結束日期']].filter(Boolean).join(' ～ ')))+kv('備份日期',esc(it.date))+kv('檔名',esc(it.name))
-        +'<div class="wm-acts">'+((canViewCustomerCases(r['客戶別'])||ownerMatches(r))?'<button type="button" class="btn primary" data-wall-case="'+esc(it.id)+'">查看案件</button>':'')+'<a class="btn" href="'+esc(it.full)+'" target="_blank" rel="noopener noreferrer">開啟原圖</a></div></div></div>';
+        +'<div class="wm-acts">'+((!it.hist&&(canViewCustomerCases(r['客戶別'])||ownerMatches(r)))?'<button type="button" class="btn primary" data-wall-case="'+esc(it.id)+'">查看案件</button>':'')+'<a class="btn" href="'+esc(it.full)+'" target="_blank" rel="noopener noreferrer">開啟原圖</a></div></div></div>';
       m.hidden=false;document.body.classList.add('wall-lock');
     }
     function wallClose(){const m=$('wallModal');if(m)m.hidden=true;document.body.classList.remove('wall-lock')}
