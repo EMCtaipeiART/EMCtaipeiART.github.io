@@ -140,7 +140,7 @@ Proportions (relative to total body height H, from top of the neck to the sole):
 - Shoes: chunky, 15–19% of H tall, with thick soles, toes pointing forward (front), to the right (side).
 - Front/back width including arms ≈ 90–104% of H; side width ≈ 54–66% of H.
 
-Style: bold dark warm-black outline (#302828) about 6% of H thick, flat cel-shading with one soft shadow tone and small highlights, light from the upper left, no gradients, no textures. Cute chibi-like proportions identical to the reference. Simple, bold-color graphics on the clothes (no tiny details).
+Style: bold dark warm-black outline (#302828) about 12% of H thick, flat cel-shading with one soft shadow tone and small highlights, light from the upper left, no gradients, no textures. Cute chibi-like proportions identical to the reference. Simple, bold-color graphics on the clothes (no tiny details).
 
 The three views must show the SAME outfit consistently (same colors, graphics, lengths, pocket positions). The back view must show a plausible back of the garment.
 
