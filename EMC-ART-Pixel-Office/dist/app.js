@@ -229,7 +229,7 @@ function baseLookDefault(i){return [{outfit:2,cap:'',glasses:'',head:''},{outfit
 // 資料在服裝生成器的公開 API；每件服裝是三個角度（正面、朝右側面、背面）裁好的透明身體圖，高度是遊戲服裝的兩倍（336），
 // 另有各角度尺寸與頸頂位置、頭的微調（上下左右、大小）。狀態放在 window 上、用函式取用：腳本最前面的版面計算就會用到造型，
 // 那時這裡的 const／let 還沒宣告（同 lookDefault 的原因）。
-function customState(){const s=window.__pixelCustom||(window.__pixelCustom={list:[],map:new Map()});if(!s.hlist){s.hlist=[];s.hmap=new Map();}return s;}
+function customState(){const s=window.__pixelCustom||(window.__pixelCustom={list:[],map:new Map()});if(!s.hlist){s.hlist=[];s.hmap=new Map();}if(!s.alist){s.alist=[];s.amap=new Map();}return s;}
 const CUSTOM_API=(new URLSearchParams(location.search).get('customApi')||'https://emc-ai-stage-classifier.machi-chen.workers.dev/api/public/outfits').replace(/\/$/,'');
 function customReady(id){const e=customState().map.get(id);return !!(e&&e.ready);}
 function customIdsOf(i){return customState().list.filter(x=>x.owner===names[i]&&customReady(x.id)).map(x=>'c:'+x.id);}
@@ -250,6 +250,26 @@ function customHeadView(id,view){
   const e=customState().hmap.get(String(id).slice(2));if(!e||!e.ready)return null;
   const img=wardrobeSheets['h:'+e.meta.id+':'+view];if(!img||!img.naturalWidth)return null;
   return {sheetKey:'h:'+e.meta.id+':'+view,src:{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight}};
+}
+// 自訂帽子、眼鏡（生成器做好並發佈的）：每個角度一張透明圖，大小是（原頭像格子＋留邊）的 2 倍、已經依對位放好，
+// 所以只要蓋在頭的位置上（跟頭像同一個原點），不需要各人的眼鏡、帽子對位數值。
+function customAccIdsOf(i,kind){return customState().alist.filter(x=>x.owner===names[i]&&x.game&&x.game.kind===kind&&x.game.headIndex===i&&customAccReady(x.id)).map(x=>'a:'+x.id);}
+function customAccReady(id){const e=customState().amap.get(id);return !!(e&&e.ready);}
+function customAccName(id){const x=customState().alist.find(y=>'a:'+y.id===id);return x?x.name:'自訂配件';}
+function customAccView(id,view){
+  const e=customState().amap.get(String(id).slice(2));if(!e||!e.ready)return null;
+  const g=e.meta.game,key='x:'+e.meta.id+':'+view,img=wardrobeSheets[key],pad=g.pads&&g.pads[view];
+  if(!img||!img.naturalWidth||!pad||(g.kind==='glasses'&&view>1))return null;
+  return {sheetKey:key,src:{x:0,y:0,w:img.naturalWidth,h:img.naturalHeight},pad};
+}
+function ensureCustomAcc(item){
+  const state=customState(),old=state.amap.get(item.id);if(old&&old.v===item.v)return;
+  const need=item.game&&item.game.kind==='glasses'?2:3,entry={meta:item,v:item.v,loaded:0,ready:false};state.amap.set(item.id,entry);
+  for(let view=0;view<need;view++){
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{wardrobeSheets['x:'+item.id+':'+view]=img;entry.loaded++;if(entry.loaded===need){entry.ready=true;wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();}};
+    img.src=CUSTOM_API+'/'+item.id+'/'+view+'.png?v='+encodeURIComponent(item.v);
+  }
 }
 function ensureCustomHead(item){
   const state=customState(),old=state.hmap.get(item.id);if(old&&old.v===item.v)return;
@@ -274,7 +294,9 @@ function loadCustomList(){
     const items=Array.isArray(j.items)?j.items.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
     customState().list=items;items.forEach(ensureCustomOutfit);
     const heads=Array.isArray(j.heads)?j.heads.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
-    customState().hlist=heads;heads.forEach(ensureCustomHead);markDirty();
+    customState().hlist=heads;heads.forEach(ensureCustomHead);
+    const accs=[...(Array.isArray(j.caps)?j.caps:[]),...(Array.isArray(j.glasses)?j.glasses:[])].filter(x=>x&&x.id&&x.game&&x.game.pads);
+    customState().alist=accs;accs.forEach(ensureCustomAcc);markDirty();
   }).catch(()=>{});
 }
 function lookDefault(i){const d=baseLookDefault(i),c=customDefaultId(i);return c?{...d,outfit:c}:d;}
@@ -285,7 +307,8 @@ function effectiveLook(i){
   const d=lookDefault(i),l=people[i]&&people[i].look;if(!l||typeof l!=='object')return d;
   const choices=outfitChoices(i),outfit=choices&&choices.includes(l.outfit)?l.outfit:d.outfit;
   const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:'';
-  return {outfit,cap:['','black','blue'].includes(l.cap)?l.cap:d.cap,glasses:['','clear','sun'].includes(l.glasses)?l.glasses:d.glasses,head};
+  const capOk=['','black','blue'].includes(l.cap)||(typeof l.cap==='string'&&customAccIdsOf(i,'cap').includes(l.cap)),glassesOk=['','clear','sun'].includes(l.glasses)||(typeof l.glasses==='string'&&customAccIdsOf(i,'glasses').includes(l.glasses));
+  return {outfit,cap:capOk?l.cap:d.cap,glasses:glassesOk?l.glasses:d.glasses,head};
 }
 const lookOf=effectiveLook;
 const sameLook=(a,b)=>a.outfit===b.outfit&&a.cap===b.cap&&a.glasses===b.glasses&&(a.head||'')===(b.head||'');
@@ -296,14 +319,18 @@ function buildWardrobe(i,view,look,action){
   const chv=typeof look.head==='string'&&look.head?customHeadView(look.head,view):null,head={sheet:chv?chv.sheetKey:'heads',src:chv?chv.src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:custom?custom.sheetKey:'outfits',src:custom?custom.src:B,x:custom?0:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[i],y:dropI-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const layers=(!WD_FEMALE[i]||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
   const eye=D.eyes[i][view];
-  if(look.glasses&&view<2&&accessoriesReady()&&!(act&&act.noGlasses.includes(action.n))){
+  const cgl=typeof look.glasses==='string'&&look.glasses.startsWith('a:')&&view<2?customAccView(look.glasses,view):null,ccp=typeof look.cap==='string'&&look.cap.startsWith('a:')?customAccView(look.cap,view):null;
+  const accLayer=c=>({sheet:c.sheetKey,src:c.src,x:hx-c.pad[0]*K,y:hy-c.pad[1]*K,w:(H.w+c.pad[0]+c.pad[2])*K,h:(H.h+c.pad[1]+c.pad[3])*K});
+  if(cgl){if(!(act&&act.noGlasses.includes(action.n)))layers.push(accLayer(cgl));}
+  else if(look.glasses&&!String(look.glasses).startsWith('a:')&&view<2&&accessoriesReady()&&!(act&&act.noGlasses.includes(action.n))){
     const row=look.glasses==='sun'?1:0,g=D.glasses[row][view],gf=D.glasses[row][0];
     if(view===0){const s=WD_GLASSES_W/gf.w,w=g.w*s,h=g.h*s;layers.push({sheet:'acc',src:g,w,h,x:hx+chin.x*K-w/2+WD_GLASSES_DX[i],y:hy+eye.y*K-h/2+dropI+WD_GLASSES_DY[i]});}
     else{// 側面：左右從耳朵前緣到臉頰最前面、上緣對齊耳朵上沿
       const span=sk[1]-sk[0],left=hx+(sk[0]+span*WD_SIDE_GLASSES_L)*K,right=hx+sk[1]*K,s=(right-left)/g.w,w=g.w*s,h=g.h*s;
       layers.push({sheet:'acc',src:g,w,h,x:left,y:hy+(eye.y+WD_EAR_TOP[i])*K+dropI-h*WD_SIDE_GLASSES_UP});}
   }
-  if(look.cap&&accessoriesReady()){
+  if(ccp)layers.push(accLayer(ccp));
+  else if(look.cap&&!String(look.cap).startsWith('a:')&&accessoriesReady()){
     const row=look.cap==='blue'?1:0,c=D.caps[row][view],female=WD_FEMALE[i],factor=view===1?(female?.8:.98):(female?.72:.95),s=H.w*K*factor/c.w,w=c.w*s,h=c.h*s,bigS=view===1?(female?(sk[1]*K+WD_SIDE_CAP_BRIM-w*.06)/c.w:H.w*K*factor*WD_SIDE_CAP_GROW/c.w):s,bw=c.w*bigS,bh=c.h*bigS;
     // 女生頭像連長髮一起很寬，照頭寬放大帽沿到不了臉前面，所以改成帽沿尖端＝臉最前緣再往前 WD_SIDE_CAP_BRIM（頭圖放大後的像素）。
     // 側面：左緣固定、帽子放大，帽沿往前超出頭髮；下緣不動（往上長）
@@ -315,7 +342,7 @@ function buildWardrobe(i,view,look,action){
   layers.forEach(l=>c2.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h));
   // 帽子單獨再存一張（跟整張同尺寸、同位置）：戴耳機時耳機要夾在頭與帽子之間，帽子得在耳機上面再蓋一次。
   let capCanvas=null;
-  if(look.cap&&accessoriesReady()){capCanvas=document.createElement('canvas');capCanvas.width=canvas.width;capCanvas.height=canvas.height;const cc=capCanvas.getContext('2d');cc.imageSmoothingQuality='high';const l=layers[layers.length-1];cc.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h);}
+  if(look.cap&&(ccp||accessoriesReady())){capCanvas=document.createElement('canvas');capCanvas.width=canvas.width;capCanvas.height=canvas.height;const cc=capCanvas.getContext('2d');cc.imageSmoothingQuality='high';const l=layers[layers.length-1];cc.drawImage(wardrobeSheets[l.sheet],l.src.x,l.src.y,l.src.w,l.src.h,l.x-minX,l.y-minY,l.w,l.h);}
   const eyeFront=D.eyes[i][Math.min(view,1)];
   // 臉的幾何（畫布座標、原圖像素）：耳機、加班黑眼圈用它對位，不再用固定數字。
   const geom={cx:hx+chin.x*K-minX,chinY:hy+chin.y*K-minY,eyeY:hy+eyeFront.y*K-minY,faceW:(front[1]-front[0])*K,faceH:(front[3]-front[2])*K,topY:hy-minY,earX:hx+(sk[0]+(sk[1]-sk[0])*WD_EAR_X)*K-minX};
@@ -655,11 +682,14 @@ function renderLookPanel(){
   }));
   const chips=(host,list,current,rowOf,key)=>host.replaceChildren(...list.map(item=>{
     const button=document.createElement('button');button.type='button';button.className=current===item.id?'active':'';
-    if(item.id&&accessoriesReady()){const canvas=document.createElement('canvas');canvas.width=88;canvas.height=52;const meta=rowOf(item.id)[0],k=Math.min(84/meta.w,48/meta.h);canvas.getContext('2d').drawImage(wardrobeSheets.acc,meta.x,meta.y,meta.w,meta.h,44-meta.w*k/2,26-meta.h*k/2,meta.w*k,meta.h*k);button.append(canvas);}
+    if(item.custom){// 自訂帽子／眼鏡：用正面那張（連同留邊整張）縮進按鈕
+      const v=customAccView(item.id,0);if(v){const canvas=document.createElement('canvas');canvas.width=88;canvas.height=52;const k=Math.min(84/v.src.w,48/v.src.h);canvas.getContext('2d').drawImage(wardrobeSheets[v.sheetKey],0,0,v.src.w,v.src.h,44-v.src.w*k/2,26-v.src.h*k/2,v.src.w*k,v.src.h*k);button.append(canvas);}
+    }else if(item.id&&accessoriesReady()){const canvas=document.createElement('canvas');canvas.width=88;canvas.height=52;const meta=rowOf(item.id)[0],k=Math.min(84/meta.w,48/meta.h);canvas.getContext('2d').drawImage(wardrobeSheets.acc,meta.x,meta.y,meta.w,meta.h,44-meta.w*k/2,26-meta.h*k/2,meta.w*k,meta.h*k);button.append(canvas);}
     button.append(item.label);button.onclick=()=>setLook({[key]:item.id});return button;
   }));
-  chips($('lookCaps'),WARDROBE_CAPS,look.cap,id=>WARDROBE.caps[id==='blue'?1:0],'cap');
-  chips($('lookGlasses'),WARDROBE_GLASSES,look.glasses,id=>WARDROBE.glasses[id==='sun'?1:0],'glasses');
+  const customList=kind=>customAccIdsOf(selected,kind).map(id=>({id,label:customAccName(id),custom:true}));
+  chips($('lookCaps'),[...WARDROBE_CAPS,...customList('cap')],look.cap,id=>WARDROBE.caps[id==='blue'?1:0],'cap');
+  chips($('lookGlasses'),[...WARDROBE_GLASSES,...customList('glasses')],look.glasses,id=>WARDROBE.glasses[id==='sun'?1:0],'glasses');
   $('lookReset').hidden=sameLook(look,lookDefault(selected));
 }
 function setLook(patch){

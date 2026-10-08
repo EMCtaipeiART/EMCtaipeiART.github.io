@@ -648,7 +648,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
   assert.match(js, /const layers=\(!WD_FEMALE\[i\]\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
-  assert.match(js, /if\(look\.glasses&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
+  assert.match(js, /else if\(look\.glasses&&!String\(look\.glasses\)\.startsWith\('a:'\)&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:'',head:''\},\{outfit:3,cap:'',glasses:'',head:''\},\{outfit:4,cap:'blue',glasses:'',head:''\},\{outfit:1,cap:'',glasses:'',head:''\},\{outfit:5,cap:'',glasses:'',head:''\}/);
   assert.match(js, /function outfitChoices\(i\)\{const base=i===3\?\[1,0\]:null,customs=customIdsOf\(i\);/);
@@ -847,4 +847,16 @@ test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過�
   assert.match(worker, /need: true/);
   assert.match(worker, /LIMIT 16/);
   assert.match(router, /\/\^\\\/avatar\\\/\(\[A-Za-z\]\{1,20\}\)\$\//);
+});
+
+test('自訂帽子與眼鏡：遊戲讀公開 API 的 caps／glasses、依各角度留邊蓋在頭的位置上、造型欄列出本人的配件，後端接受 a:<uuid>', async () => {
+  const [js, worker] = await Promise.all([officeJs(), readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8')]);
+  assert.match(js, /j\.caps/);
+  assert.match(js, /j\.glasses/);
+  assert.match(js, /function customAccView\(id,view\)/);
+  assert.match(js, /x:hx-c\.pad\[0\]\*K,y:hy-c\.pad\[1\]\*K,w:\(H\.w\+c\.pad\[0\]\+c\.pad\[2\]\)\*K,h:\(H\.h\+c\.pad\[1\]\+c\.pad\[3\]\)\*K/);
+  assert.match(js, /if\(ccp\)layers\.push\(accLayer\(ccp\)\)/);
+  assert.match(js, /customList\('cap'\)/);
+  assert.match(js, /customList\('glasses'\)/);
+  assert.match(worker, /accId\(cap\)/);
 });
