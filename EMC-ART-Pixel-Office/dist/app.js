@@ -1423,6 +1423,27 @@ if(document.modelContext?.registerTool){try{document.modelContext.registerTool({
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
 })();
 
+// 首頁頭像框用的頭像圖（160×160）：下巴放在同一個高度、不戴帽子、保留眼鏡與自訂頭像。給 ?avatars=1 的隱藏小視窗，以及關閉元宇宙時的快照共用。
+function avatarImageOf(i){
+  const p=people[i];
+  // 畫布比原本的肖像高一截：戴帽子的人物會超出頭頂，不留空間帽子就被切平
+  const keepLook=p.look,eff=effectiveLook(i);
+  p.look={outfit:eff.outfit,cap:'',glasses:eff.glasses,head:eff.head||''};// 頭像框一律不戴帽子（眼鏡與自訂頭像保留）
+  const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
+  const o=document.createElement('canvas');o.width=o.height=160;
+  // 每個人的下巴、臉中心用造型圖的幾何量出來，統一把下巴放在頭像框同一個高度（帽子、長髮不影響）
+  let chin=null,cx=65;
+  try{
+    const fr=wardrobeFrame(i,'down');
+    if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
+  }catch(error){}
+  p.look=keepLook;
+  if(chin===null)chin=110;
+  const size=AV_CROP.w,sy=chin-size*AV_CROP.chin;
+  o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
+  return o.toDataURL('image/png');
+}
+const lookKeyOf=i=>{const e=effectiveLook(i);return e.outfit+'|'+e.glasses+'|'+(e.head||'');};
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const sendAvatars=()=>{
@@ -1431,22 +1452,8 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{
       const list={};
       people.forEach((p,i)=>{
-        // 畫布比原本的肖像高一截：戴帽子的人物會超出頭頂，不留空間帽子就被切平
-        const keepLook=p.look,eff=effectiveLook(i);
-        p.look={outfit:eff.outfit,cap:'',glasses:eff.glasses,head:eff.head||''};// 頭像框一律不戴帽子（眼鏡與自訂頭像保留）
-        const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
-        const o=document.createElement('canvas');o.width=o.height=160;
-        // 每個人的下巴、臉中心用造型圖的幾何量出來，統一把下巴放在頭像框同一個高度（帽子、長髮不影響）
-        let chin=null,cx=65;
-        try{
-          const fr=wardrobeFrame(i,'down');
-          if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
-        }catch(error){}
-        p.look=keepLook;
-        if(chin===null)chin=110;
-        const size=AV_CROP.w,sy=chin-size*AV_CROP.chin;
-        o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
-        list[p.name]={img:o.toDataURL('image/png'),message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
+        const img=avatarImageOf(i);
+        list[p.name]={img,message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
     }catch(error){}
@@ -1491,3 +1498,18 @@ window.addEventListener('message',event=>{
     el.addEventListener('focusout',()=>{timers.set(el,setTimeout(()=>{if(!el.matches(':hover')&&!el.contains(document.activeElement))open(el,false);},250));});
   });
 })();
+
+// 關閉元宇宙時：外層叫我把「本人目前造型」的頭像存成快照（首頁頭像框直接用）。這個造型以前存過就只換成它、不必重拍。
+window.addEventListener('message',async event=>{
+  if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeSnapshot')return;
+  const done=()=>{try{window.parent.postMessage({type:'pixelOfficeSnapshotDone'},location.origin)}catch{}};
+  try{
+    const i=names.findIndex(n=>n.toLowerCase()===String(storyIdentity.name||'').toLowerCase());
+    if(i<0||!ready||!storyLoggedIn()){done();return;}
+    loadAccessories();
+    const key=lookKeyOf(i),base={action:'pixelOfficeAvatarSnapshot',token:storyIdentity.token,lookKey:key};
+    const r=await syncCall(base);
+    if(r&&r.need&&accessoriesReady())await syncCall({...base,png:avatarImageOf(i)});
+  }catch{}
+  done();
+});

@@ -1520,7 +1520,7 @@ window.emcQuotes=[
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
     /* 上次的像素頭像先拿來顯示（只存圖），等隱藏辦公室算好再換成最新的，避免進站幾秒顯示舊頭像 */
     try{const c=JSON.parse(localStorage.getItem('v5PixAvCache')||'null');if(c&&typeof c==='object'&&!state.pixAvatars){const o={};Object.keys(c).forEach(k=>{if(/^data:image\/png/.test(c[k]||''))o[k]={img:c[k],message:'',music:null,status:'',story:{count:0,unread:false}}});if(Object.keys(o).length)state.pixAvatars=o}}catch(err){}
-    const pixImg=name=>{const k=Object.keys(state.pixAvatars||{}).find(n=>norm(n)===norm(name));const v=k&&state.pixAvatars[k];return v&&/^data:image\/png/.test(v.img||'')?v.img:''};
+    const pixImg=name=>{const k=Object.keys(state.pixAvatars||{}).find(n=>norm(n)===norm(name));const v=k&&state.pixAvatars[k];return v&&/^(data:image\/png|https:\/\/machi-design-api\.)/.test(v.img||'')?v.img:''};
     function headImg(name){const px=pixImg(name);if(px)return `<img class="head pix" src="${px}" alt="">`;return `<img class="head${SHORT_HEADS.has(name)?' is-short':''}" src="assets/v5/heads/${esc(name)}.webp" alt="">`}
     function faceHtml(name,role){
       const label=`${role}：${name||'未填'}`;
@@ -1578,7 +1578,7 @@ window.emcQuotes=[
       const anySay=DESIGNERS.some(n=>{const q=state.people[n],st=q&&q.status||'',aw=Boolean(st)&&!WORKING.has(st),z=state.pixAvatars&&state.pixAvatars[n];return !aw&&z&&z.message});
       team.innerHTML=DESIGNERS.map(name=>{
         const p=state.people[name],status=p?.status||'',away=Boolean(status)&&!WORKING.has(status); // 還沒讀到狀態就只顯示頭像，不假裝在座
-        const pa=state.pixAvatars&&state.pixAvatars[name],face=away?`<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`:(pa&&/^data:image\/png/.test(pa.img||'')?`<img class="head pix" src="${pa.img}" alt="">`:headImg(name));
+        const pa=state.pixAvatars&&state.pixAvatars[name],face=away?`<img class="status-icon" src="assets/v5/status/${esc(status)}.webp" alt="">`:(pa&&/^(data:image\/png|https:\/\/machi-design-api\.)/.test(pa.img||'')?`<img class="head pix" src="${pa.img}" alt="">`:headImg(name));
         const say=!away&&pa&&pa.message?`<span class="member-say" title="${esc(pa.message)}"><span class="ms-win"><span class="ms-track">${esc(pa.message)}</span></span></span>`:'',tune=!away&&pa&&pa.music&&/^https:\/\//.test(pa.music.url||'')?`<button type="button" class="member-music${state.musicNow===name?' is-playing':''}" data-music="${esc(name)}" data-music-url="${esc(pa.music.url)}" title="點一下播放／暫停：${esc(pa.music.title||'分享音樂')}"><span class="mm-ic" aria-hidden="true">${musicIcon(state.musicNow===name,state.musicLoading===name)}</span><span class="mm-win"><span class="mm-track">♪ ${esc(pa.music.title||'分享音樂')}</span></span></button>`:'';
         const stBadge=pa&&pa.story&&pa.story.count?`<span class="story-badge${pa.story.unread?' is-new':''}" data-story="${esc(name)}" role="button" tabindex="0" title="限時動態（${pa.story.count}）" aria-label="${esc(name)} 的限時動態"><svg viewBox="0 0 24 20" aria-hidden="true"><path d="M4 1h16a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6l-5 4v-4H4a3 3 0 0 1-3-3V4a3 3 0 0 1 3-3z"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="12" cy="8" r="1.4"/><circle cx="16.5" cy="8" r="1.4"/></svg></span>`:'';
         const badge=(stBadge)+(status==='overtime'?`<span class="avatar-badge" aria-hidden="true"><img src="assets/v5/status/overtime.webp" alt=""></span>`:'');
@@ -1717,7 +1717,11 @@ window.emcQuotes=[
       const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
-    document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){state.uniEdit=false;state.home='board';show('board');return}});
+    document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){
+      const go=()=>{state.uniEdit=false;state.home='board';show('board')},fr=$('uniFrame');
+      /* 關閉編輯中的元宇宙：先請遊戲把本人目前造型的頭像存成快照（存過的造型不必重拍），完成（最多等 3.5 秒）再關 */
+      if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=()=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go()},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish()},t=setTimeout(finish,3500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
+      go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
       if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage({type:'pixelOfficeViewer',name:loggedIn()?(session().name||session().user):'',token:loggedIn()?session().token:''},location.origin)}catch(err){}}
@@ -4702,6 +4706,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(e.key==='Enter'){e.preventDefault();const v=csState.items[csState.idx];if(v)csPick(v)}
     });
     /* 對話框／音樂／限時動態直接用首頁自己讀到的辦公室狀態，不用等隱藏辦公室載完（頭像圖仍由它提供） */
+    /* 關閉元宇宙時存的頭像快照：網址帶版本，換造型存了新快照就換新網址；有快照就直接用，不必等隱藏的像素辦公室畫出來 */
+    const snapUrl=name=>{const v=state.avatarSnap&&state.avatarSnap[name];return v?API.replace(/\/api\/?$/,'')+'/avatar/'+encodeURIComponent(name)+'?v='+v:''};
+    function applySnapshots(){if(!state.pixAvatars)state.pixAvatars={};for(const name of Object.keys(state.avatarSnap||{})){const u=snapUrl(name);if(!u)continue;const e=state.pixAvatars[name]||(state.pixAvatars[name]={img:'',message:'',music:null,status:'',story:{count:0,unread:false}});e.img=u}}
     function mergeOfficeIntoAvatars(data){
       try{
         state.pixAvatars=state.pixAvatars||{};let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('pixel-story-seen')||'[]'))}catch(e){}
@@ -4711,13 +4718,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           e.message=p.message||'';e.music=p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null;e.status=p.status||'';
           e.story={count:mine.length,unread:mine.some(x=>!seen.has(x.id))};
         });
+        applySnapshots();
       }catch(err){}
     }
     async function loadOffice(){
       try{
         const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'pixelOfficeState'}),cache:'no-store'});
         const data=await res.json();state.officeLoaded=true;
-        if(data&&data.ok){const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));mergeOfficeIntoAvatars(data);if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
+        if(data&&data.ok){state.avatarSnap=data.avatars||state.avatarSnap||{};const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));mergeOfficeIntoAvatars(data);if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
       }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
     }
 
@@ -4782,7 +4790,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     {const o=renderProjects;renderProjects=function(){keepBoardScroll(o,this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     {const o=renderBoard;renderBoard=function(){keepBoardScroll(o,this,arguments);try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     /* 隱藏的像素辦公室小視窗：把每個人的造型頭像（帽子、眼鏡、耳機）、對話與分享的音樂傳回來，顯示在上方頭像框 */
-    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}try{if(state.view==='settings'&&ownDesignerName())renderSettings()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeAvatars'||!e.data.list)return;const j=JSON.stringify(e.data.list);if(j===state.pixAvatarsJson)return;const ik=Object.values(e.data.list).map(v=>(v.img||'').length+':'+(v.img||'').slice(-24)).join('|'),imgChanged=ik!==state.pixImgKey;state.pixImgKey=ik;state.pixAvatarsJson=j;state.pixAvatars=e.data.list;applySnapshots();try{const o={};Object.keys(e.data.list).forEach(k=>{const v=e.data.list[k];if(v&&/^data:image\/png/.test(v.img||''))o[k]=v.img});localStorage.setItem('v5PixAvCache',JSON.stringify(o))}catch(err){}if(!document.querySelector('.member.is-open'))renderTeam();if(imgChanged){try{renderLogin()}catch(err){}try{if(state.view==='settings'&&ownDesignerName())renderSettings()}catch(err){}if(state.view==='board'||state.view==='projects'){if(typeof bgBusy==='function'&&bgBusy())state.dirty=true;else refreshView()}}});
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */

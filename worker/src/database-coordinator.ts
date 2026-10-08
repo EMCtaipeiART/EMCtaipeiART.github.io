@@ -1538,6 +1538,26 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(15)) {
+        this.ctx.storage.transactionSync(() => {
+          // 首頁頭像框的快照（2026-10-08）：使用者關閉元宇宙時，把「目前造型」的頭像存下來（每個造型各存一張，換回去不必重拍），
+          // 首頁直接顯示快照，不必等隱藏的像素辦公室畫出來。current 記每個人現在用哪一張。
+          this.ctx.storage.sql.exec(`
+            CREATE TABLE IF NOT EXISTS pixel_office_avatars (
+              name TEXT NOT NULL,
+              look_key TEXT NOT NULL,
+              png TEXT NOT NULL,
+              updated_at INTEGER NOT NULL,
+              PRIMARY KEY (name, look_key)
+            )
+          `);
+          this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS pixel_office_avatar_current (name TEXT PRIMARY KEY, look_key TEXT NOT NULL, updated_at INTEGER NOT NULL)');
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            15, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1971,7 +1991,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return { name: row.name, ...state, photoVersion: Number(row.photo_version) || 0, updatedAt: Number(row.updated_at) || 0 };
     });
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
-    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories() };
+    const avatars: Record<string, number> = {};
+    for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
+    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
@@ -2266,6 +2288,44 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   /** 按讚、留言、已讀的人一律取自登入的前台帳號，不信任前端自己報的名字；沒登入不能互動。 */
+  /** 關閉元宇宙時存下本人目前造型的頭像快照。沒帶 png：這個造型以前存過就直接換成它（不必重拍），沒存過回 need。 */
+  private async pixelOfficeAvatarSnapshot(payload: ApiPayload): Promise<ApiResult> {
+    const session = await this.sessionFor(payload);
+    const viewer = text(session?.user || session?.account?.split('@')[0]);
+    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase());
+    if (!name) throw new Error('只有設計師本人可以更新自己的頭像快照');
+    const lookKey = text(payload.lookKey);
+    if (!/^[\w:|.-]{1,140}$/.test(lookKey)) throw new Error('造型代碼不正確');
+    const now = Date.now();
+    const png = text(payload.png);
+    const sql = this.ctx.storage.sql;
+    if (png) {
+      const match = png.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
+      if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
+      sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
+      // 每個人最多留 16 個造型的快照，超過的丟掉最久沒用的
+      sql.exec('DELETE FROM pixel_office_avatars WHERE name = ? AND look_key NOT IN (SELECT look_key FROM pixel_office_avatars WHERE name = ? ORDER BY updated_at DESC LIMIT 16)', name, name);
+    } else if (!sql.exec('SELECT 1 FROM pixel_office_avatars WHERE name = ? AND look_key = ?', name, lookKey).toArray().length) {
+      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
+    } else {
+      sql.exec('UPDATE pixel_office_avatars SET updated_at = ? WHERE name = ? AND look_key = ?', now, name, lookKey);
+    }
+    sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
+    // 讓大家的畫面重新讀一次狀態，首頁才會拿到新的快照版本
+    sql.exec('UPDATE pixel_office_people SET updated_at = ? WHERE name = ?', Math.max(now, this.pixelOfficeVersion() + 1), name);
+    return { ok: true, action: 'pixelOfficeAvatarSnapshot', saved: Boolean(png), version: now };
+  }
+
+  private pixelOfficeAvatarGet(payload: ApiPayload): ApiResult {
+    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === text(payload.name).toLowerCase());
+    if (!name) throw new Error('找不到這位設計師');
+    const row = this.ctx.storage.sql.exec<{ png: string }>(
+      'SELECT a.png AS png FROM pixel_office_avatar_current c JOIN pixel_office_avatars a ON a.name = c.name AND a.look_key = c.look_key WHERE c.name = ?', name
+    ).toArray()[0];
+    if (!row) throw new Error('還沒有頭像快照');
+    return { ok: true, action: 'pixelOfficeAvatarGet', png: row.png };
+  }
+
   private async pixelOfficeStoryViewer(payload: ApiPayload): Promise<string> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]).slice(0, 20);
@@ -3950,6 +4010,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeHeartbeat') return await this.pixelOfficeHeartbeat(payload);
       if (action === 'pixelOfficeCalendarStatus') return await this.pixelOfficeCalendarStatus(payload);
       if (action === 'pixelOfficePhoto') return this.pixelOfficePhoto(payload);
+      if (action === 'pixelOfficeAvatarSnapshot') return await this.pixelOfficeAvatarSnapshot(payload);
+      if (action === 'pixelOfficeAvatarGet') return this.pixelOfficeAvatarGet(payload);
       if (action === 'pixelOfficeStoryAdd') return this.pixelOfficeStoryAdd(payload);
       if (action === 'pixelOfficeStoryImage') return this.pixelOfficeStoryImage(payload);
       if (action === 'pixelOfficeStoryReact') return await this.pixelOfficeStoryReact(payload);

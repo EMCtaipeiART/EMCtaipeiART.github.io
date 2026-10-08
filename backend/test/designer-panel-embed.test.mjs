@@ -830,3 +830,21 @@ test('首頁頭像框（?avatars=1）保留自訂頭像', async () => {
   const js = await officeJs();
   assert.match(js, /p\.look=\{outfit:eff\.outfit,cap:'',glasses:eff\.glasses,head:eff\.head\|\|''\}/);
 });
+
+test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過的造型不重拍），首頁優先用快照', async () => {
+  const [js, parent, worker, router] = await Promise.all([
+    officeJs(), readFile(new URL('../../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../../worker/src/index.ts', import.meta.url), 'utf8')
+  ]);
+  assert.match(js, /function avatarImageOf\(i\)/);
+  assert.match(js, /type!=='pixelOfficeSnapshot'/);
+  assert.match(js, /r&&r\.need&&accessoriesReady\(\)/, '沒存過的造型才送圖');
+  assert.match(parent, /type:'pixelOfficeSnapshot'/);
+  assert.match(parent, /pixelOfficeSnapshotDone/);
+  assert.match(parent, /applySnapshots\(\)/);
+  assert.match(worker, /pixel_office_avatars/);
+  assert.match(worker, /need: true/);
+  assert.match(worker, /LIMIT 16/);
+  assert.match(router, /\/\^\\\/avatar\\\/\(\[A-Za-z\]\{1,20\}\)\$\//);
+});
