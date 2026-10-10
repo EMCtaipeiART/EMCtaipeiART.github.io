@@ -3965,6 +3965,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         seedError = `首次匯入失敗：${error instanceof Error ? error.message : String(error)}`;
       }
     }
+    if (list.some(item => item.designer === '外發')) { list = list.filter(item => item.designer !== '外發'); await this.ctx.storage.put('assignments', list); }
     const actor = auditActor(who);
     const clip = (value: unknown, max: number): string => text(value).slice(0, max);
     if (action === 'saveAssignment') {

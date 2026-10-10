@@ -17,7 +17,7 @@ export function parseAssignments(rows: string[][]): AssignmentSeed[] {
   for (const row of rows) {
     const c = (i: number) => String(row[i] ?? '').trim();
     if (c(1) === '專案所屬') { designer = c(0); continue; }
-    if (!designer || !c(2)) continue;
+    if (!designer || designer === '外發' || !c(2)) continue;
     const last = row.length;
     out.push({ designer, team: c(1), client: c(2), monthly: c(last - 2), note: c(last - 1) });
   }
