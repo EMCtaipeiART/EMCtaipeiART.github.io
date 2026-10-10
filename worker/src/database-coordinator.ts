@@ -3971,7 +3971,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (action === 'saveAssignment') {
       const designer = clip(payload.designer, 20), client = clip(payload.client, 60);
       if (!designer || !client) throw new Error('請填寫設計師與客戶');
-      const fields = { designer, client, team: clip(payload.team, 80), monthly: clip(payload.monthly, 500), note: clip(payload.note, 1000) };
+      const fields = { designer, client, team: clip(payload.team, 300), monthly: clip(payload.monthly, 500), note: clip(payload.note, 1000) };
       const id = text(payload.id);
       const index = id ? list.findIndex(item => item.id === id) : -1;
       if (index >= 0) {
