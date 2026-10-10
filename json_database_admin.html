@@ -376,7 +376,7 @@
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function tableTabButtonHtml(name){return `<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`}
     const coinTabHtml=()=>`<button class="side-tab ${coinMode?'active':''}" type="button" data-coin title="餘額、明細、帳本驗證、手動調整"><span class="side-tab-label">平台幣帳本</span></button>`;
-    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode&&auditView==='audit'?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button><button class="side-tab ${auditMode&&auditView==='perm'?'active':''}" type="button" data-perm><span class="side-tab-label">權限總覽</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
+    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode&&auditView==='audit'?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button><button class="side-tab ${auditMode&&auditView==='perm'?'active':''}" type="button" data-perm><span class="side-tab-label">權限總覽</span></button><button class="side-tab ${auditMode&&auditView==='backup'?'active':''}" type="button" data-backup><span class="side-tab-label">備份與還原</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
     function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}
@@ -1625,7 +1625,7 @@
     var auditMode=false,auditRows=[],auditKind='',coinMode=false,auditView='audit',permData=null;
     const AUDIT_KINDS=['狀態變更','欄位修改','案件新增','案件刪除','權限變更','登入','登入失敗','寄信','寄信失敗'];
     const auditTime=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?String(value||''):d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})};
-    function renderAudit(){if(auditView==='perm'){renderPerm();return}
+    function renderAudit(){if(auditView==='perm'){renderPerm();return}if(auditView==='backup'){renderBackup();return}
       const q=$('search').value.trim().toLocaleLowerCase();
       const rows=auditRows.filter(r=>(!auditKind||r.kind===auditKind)&&(!q||Object.values(r).some(v=>String(v||'').toLocaleLowerCase().includes(q))));
       const shown=rows.slice(0,500);
@@ -1664,6 +1664,38 @@
       const body=rows.map(r=>'<tr'+(r.status==='停用'?' class="perm-off"':'')+'><td>'+esc(r.account)+'</td><td>'+esc(r.name)+'</td><td>'+esc([r.dept,r.group].filter(Boolean).join('／'))+'</td><td><span class="audit-kind">'+esc(r.role)+'</span></td><td>'+esc(r.status)+'</td><td>'+(r.explicit?'帳號權限表':'角色預設')+'</td>'+cols.map(c=>'<td class="perm-cell">'+((c[0]==='p'?r.pages:r.capabilities).includes(c[1])?'<b>✓</b>':'')+'</td>').join('')+'</tr>').join('');
       $('view').innerHTML='<div class="table-wrap"><table class="perm-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div><p class="notice" style="margin-top:10px">這裡是每個帳號「實際生效」的權限：有在帳號權限表設定的以設定為準，沒設定的依角色（管理者／設計師／一般使用者）預設。管理者擁有全部權限。要修改請到「帳號權限」表。</p>';
     }
+    var backupMsg='';
+    function renderBackup(){
+      $('count').textContent='';$('totalRows').textContent='';
+      $('view').innerHTML='<div class="notice" style="line-height:1.8"><b>備份範圍：</b>只存在後端、不在案件資料庫（db.json）裡的資料——記事本、專案分配、值日生替換。<br>系統每週會自動加密備份一次到 GitHub 的 <code>backend/data/do-backup.enc.json</code>；加密金鑰只在後端與你保管的金鑰檔裡。<br>案件資料本身每次寫入都有 git 紀錄，不在這裡處理。</div>'
+        +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button type="button" class="btn primary" id="backupNowBtn">立即備份</button><button type="button" class="btn danger" id="restoreBtn">從最近一次備份還原…</button></div>'
+        +(backupMsg?'<div class="notice" id="backupMsg">'+esc(backupMsg)+'</div>':'')
+        +'<div class="notice" style="margin-top:12px">還原會用備份裡的內容<b>覆蓋</b>目前的記事本、專案分配與值日生替換；還原之後這幾項在備份之後做的修改會消失。建議先按「立即備份」留一份目前的狀態，再還原舊的。（注意：立即備份會覆蓋 GitHub 上最近一次備份檔，之前的版本可以從 GitHub 的提交紀錄找回。）</div>';
+    }
+    async function showBackup(){
+      leaveCoin();auditMode=true;auditView='backup';renderTabs();
+      $('tableTitle').textContent='備份與還原';$('tableSubtitle').textContent='記事本、專案分配、值日生替換的加密備份';
+      $('currentTable').textContent='備份與還原';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      backupMsg='';renderBackup();
+    }
+    $('view').addEventListener('click',async event=>{
+      const now=event.target.closest('#backupNowBtn'),res=event.target.closest('#restoreBtn');
+      if(!now&&!res)return;
+      const btn=now||res;btn.disabled=true;
+      try{
+        if(now){
+          const d=await request('',{method:'POST',body:JSON.stringify({action:'backupNow'})});
+          backupMsg=d.status==='written'?'已備份：記事本 '+d.notebook+' 筆、專案分配 '+d.assignments+' 筆（'+new Date().toLocaleString('zh-TW',{hour12:false})+'）':'沒有備份：'+(d.status==='no-key'?'後端尚未設定加密金鑰':d.status);
+        }else{
+          if(!confirm('確定要從最近一次備份還原嗎？\n\n這會覆蓋目前的記事本、專案分配與值日生替換。'))return;
+          if(prompt('請輸入「還原」兩個字確認')!=='還原')return;
+          const d=await request('',{method:'POST',body:JSON.stringify({action:'restoreBackup',confirm:true})});
+          backupMsg='已還原（備份時間 '+(d.at?new Date(d.at).toLocaleString('zh-TW',{hour12:false}):'未知')+'）：記事本 '+d.notebook+' 筆、專案分配 '+d.assignments+' 筆';
+        }
+        note(backupMsg);
+      }catch(error){backupMsg='失敗：'+(error.message||error);note(backupMsg,'error')}
+      finally{btn.disabled=false;if(auditView==='backup')renderBackup()}
+    });
     async function showPerm(){
       leaveCoin();auditMode=true;auditView='perm';renderTabs();
       $('tableTitle').textContent='權限總覽';$('tableSubtitle').textContent='每個帳號實際生效的頁面與功能權限';
@@ -1672,7 +1704,7 @@
       try{permData=await request('',{method:'POST',body:JSON.stringify({action:'listPermissionOverview'})});note('已讀取權限總覽');renderPerm()}
       catch(error){$('view').innerHTML='';note('讀取權限總覽失敗：'+(error.message||error),'error')}
     }
-    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit();else if(event.target.closest('[data-perm]'))showPerm()});
+    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit();else if(event.target.closest('[data-perm]'))showPerm();else if(event.target.closest('[data-backup]'))showBackup()});
     $('view').addEventListener('change',event=>{if(auditMode&&event.target.id==='auditKind'){auditKind=event.target.value;renderAudit()}});
     $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;leaveCoin();auditMode=false;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{
