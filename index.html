@@ -3159,7 +3159,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const stage=$('stage');
       if(!loggedIn()){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2><div class="notice error" role="alert">請先登入後再使用設定。</div><div class="form-actions"><button type="button" class="btn primary" data-lp-open>登入</button></div></div>`;return}
       if(!st2.loaded){stage.innerHTML=`<div class="page"><h2 class="page-title">設定</h2>${st2.error?`<div class="notice error" role="alert">${esc(st2.error)}</div><div class="form-actions"><button type="button" class="btn" data-set-reload>重新讀取</button></div>`:'<div class="notice">正在讀取你的設定…</div>'}</div>`;if(!st2.error)loadUserSettings();return}
-      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${gmailCardHtml()}${profileHtml()}${templatesHtml()}${nicknamesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">設定</h2><p class="page-sub">這裡的內容與現行系統的「個人設定」是同一份資料，儲存後兩邊都會更新。</p></div></div>${gmailCardHtml()}${notifyCardHtml()}${profileHtml()}${templatesHtml()}${nicknamesHtml()}${signaturesHtml()}${customersHtml()}<p class="set-status" id="setStatus" role="status"></p></div>`;
     }
     /* 讀取畫面上的編輯內容回 state（切換、新增、刪除前呼叫） */
     function captureSettings(){
@@ -4258,8 +4258,23 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       t.addEventListener('click',e=>{if(e.target.closest('.nt-x')){kill();return}kill();document.querySelector('[data-nav="projects"]')?.click()});
       reg.appendChild(t);requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('is-visible')));setTimeout(kill,9000);
     }
+    /* 系統通知（瀏覽器／手機的通知中心）：使用者在「設定」自己開啟，分頁在背景或畫面隱藏時才跳，避免和網站內的提示重複 */
+    const bnOn=()=>{try{return localStorage.getItem('v5BrowserNotify')==='1'&&typeof Notification!=='undefined'&&Notification.permission==='granted'}catch(e){return false}};
+    function sysNotify(items){
+      if(!bnOn()||!document.hidden||!items.length)return;
+      try{const x=items[0],r=allRowsRaw().find(r=>idKey(r)===x.id)||{},n=new Notification('EMC 設計需求：'+NT_LABEL[x.type],{body:(x.id+' '+(r['客戶別']||'')+'_'+(r['專案名稱']||'')).slice(0,80)+(items.length>1?'　另有 '+(items.length-1)+' 則':''),tag:'emc-nt',icon:'assets/EMC_design_logo.svg'});n.onclick=()=>{window.focus();n.close();document.querySelector('[data-nav="projects"]')?.click()}}catch(e){}
+    }
+    function notifyCardHtml(){
+      const sup=typeof Notification!=='undefined',on=bnOn(),perm=sup?Notification.permission:'unsupported';
+      return '<div class="set-card gm-card"><div class="gm-row"><div><b>系統通知</b><p class="page-sub">'+(!sup?'這個瀏覽器不支援系統通知（iPhone 需先「加入主畫面」才支援）。':perm==='denied'?'瀏覽器已封鎖通知，請到瀏覽器的網站設定把通知改成允許。':on?'已開啟：被指派新案、有修改需求或收到回信時，會在背景用系統通知提醒你。':'開啟後，被指派新案、有修改需求或收到回信時，即使網站在背景也會用系統通知提醒你。')+'</p></div>'+(sup&&perm!=='denied'?'<button type="button" class="btn'+(on?'':' primary')+'" data-bn-toggle>'+(on?'關閉通知':'開啟通知')+'</button>':'')+'</div></div>';
+    }
+    document.addEventListener('click',async e=>{
+      if(!e.target.closest||!e.target.closest('[data-bn-toggle]'))return;
+      try{if(bnOn()){localStorage.setItem('v5BrowserNotify','0');toast('已關閉系統通知')}else{const p=Notification.permission==='granted'?'granted':await Notification.requestPermission();if(p==='granted'){localStorage.setItem('v5BrowserNotify','1');toast('已開啟系統通知');try{new Notification('EMC 設計需求',{body:'通知已開啟',icon:'assets/EMC_design_logo.svg'})}catch(err){}}else toast('沒有取得通知權限',true)}}catch(err){toast('無法設定通知',true)}
+      if(state.view==='settings')renderSettings();
+    });
     function checkNtToast(){
-      try{const fresh=unseenItems().filter(x=>!ntKnown.has(x.key));fresh.forEach(x=>ntKnown.add(x.key));if(fresh.length&&state.view!=='projects')showNtToast(fresh)}catch(e){}
+      try{const fresh=unseenItems().filter(x=>!ntKnown.has(x.key));fresh.forEach(x=>ntKnown.add(x.key));if(fresh.length&&state.view!=='projects')showNtToast(fresh);if(fresh.length)sysNotify(fresh)}catch(e){}
     }
     function openNotify(){
       const items=unseenItems();if(!items.length)return;
