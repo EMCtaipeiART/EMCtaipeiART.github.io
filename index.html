@@ -2296,15 +2296,15 @@ window.emcQuotes=[
         if(a.dataset.x==='del'){if(!confirm('刪除「'+it.client+'」（'+it.designer+'）這筆分配？'))return;try{const d=await api('deleteAssignment',{id});st.items=d.items||[];back.remove();toast('已刪除');asPaint()}catch(err){toast('刪除失敗：'+(err.message||err),true)}return}
         const g=k=>back.querySelector('#'+k).value.trim(),client=g('asC');if(!client){toast('請填寫客戶別',true);return}
         a.disabled=true;
-        try{const d=await api('saveAssignment',{id:id||'',designer:g('asD'),client,team:g('asT'),monthly:g('asM'),note:g('asN')});st.items=d.items||[];back.remove();toast('已儲存');asPaint()}catch(err){a.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
+        try{let d=await api('saveAssignment',{id:id||'',designer:g('asD'),client,team:g('asT'),monthly:g('asM'),note:g('asN')});for(const h of (d.items||[]).filter(x=>x.designer==='隱藏'&&asKey(x.client)===asKey(client)))d=await api('deleteAssignment',{id:h.id});st.items=d.items||[];back.remove();toast('已儲存');asPaint()}catch(err){a.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
       });
       document.body.appendChild(back);
     }
     async function asRowDel(name){
       const st=state.as,k=asKey(name),mine=st.items.filter(x=>asKey(x.client)===k);
-      if(!mine.length){toast('這個客戶別沒有可刪除的分配（設計負責人是在系統客戶別設定裡）',true);return}
-      if(!confirm('刪除「'+name+'」在專案分配表裡的所有分配（'+mine.map(x=>x.designer).join('、')+'）？'))return;
-      try{let d;for(const x of mine)d=await api('deleteAssignment',{id:x.id});st.items=(d&&d.items)||st.items.filter(x=>asKey(x.client)!==k);toast('已刪除');asPaint()}catch(err){toast('刪除失敗：'+(err.message||err),true)}
+      const sys=Boolean(asSysRow(name));
+      if(!confirm('從專案分配表移除「'+name+'」？'+(sys?'（只是不再顯示在這張表，系統的客戶別設定不會被刪除）':'')))return;
+      try{let d;for(const x of mine)d=await api('deleteAssignment',{id:x.id});if(sys)d=await api('saveAssignment',{designer:'隱藏',client:name});st.items=(d&&d.items)||st.items.filter(x=>asKey(x.client)!==k);toast('已移除');asPaint()}catch(err){toast('刪除失敗：'+(err.message||err),true)}
     }
     function asRowEdit(name){
       const st=state.as,k=asKey(name),mine=st.items.filter(x=>asKey(x.client)===k),sr=asSysRow(name),sysD=sr?parseList(sr['設計負責人']):[],names=asOwnerNames();
@@ -2331,7 +2331,7 @@ window.emcQuotes=[
     }
     function asPaint(){
       const st=state.as,stage=$('stage');if(state.view!=='assign'||!st)return;
-      const names=asOwnerNames(),items=st.items.filter(x=>AS_DESIGNERS.includes(x.designer));
+      const names=asOwnerNames(),items=st.items.filter(x=>AS_DESIGNERS.includes(x.designer)),hid=new Set(st.items.filter(x=>x.designer==='隱藏').map(x=>asKey(x.client)));
       const sys=(state.customers||[]).map(r=>String(r['客戶別']||'').trim()).filter(Boolean);
       const clients=[],seen=new Set();
       for(const n of sys){const k=asKey(n);if(!seen.has(k)){seen.add(k);clients.push({name:n,sys:true})}}
@@ -2342,7 +2342,7 @@ window.emcQuotes=[
       const rows=clients.map(c=>{
         const k=asKey(c.name),sr=asSysRow(c.name),mine=items.filter(x=>asKey(x.client)===k),own=asOwners(sr,names),sysD=sr?parseList(sr['設計負責人']):[];
         return {c,k,sr,mine,own,sysD};
-      }).filter(r=>(r.mine.length||r.sysD.length)&&(st.who==='all'||r.mine.some(x=>x.designer===st.who)||r.sysD.includes(st.who))).filter(r=>!q||(r.c.name+' '+r.own.groups.join(' ')+' '+r.own.people.join(' ')+' '+r.mine.map(x=>x.team+' '+x.monthly+' '+x.note+' '+x.designer).join(' ')+' '+r.sysD.join(' ')).toLowerCase().includes(q));
+      }).filter(r=>!hid.has(r.k)&&(r.mine.length||r.sysD.length)&&(st.who==='all'||r.mine.some(x=>x.designer===st.who)||r.sysD.includes(st.who))).filter(r=>!q||(r.c.name+' '+r.own.groups.join(' ')+' '+r.own.people.join(' ')+' '+r.mine.map(x=>x.team+' '+x.monthly+' '+x.note+' '+x.designer).join(' ')+' '+r.sysD.join(' ')).toLowerCase().includes(q));
       const cnt=n=>clients.filter(c=>items.some(x=>x.designer===n&&asKey(x.client)===asKey(c.name))).length;
       const chips='<button type="button" class="as-chip'+(st.who==='all'?' on':'')+'" data-as-who="all">全部</button>'+AS_DESIGNERS.map(n=>'<button type="button" class="as-chip'+(st.who===n?' on':'')+'" style="--c:'+dcColor(n)+'" data-as-who="'+n+'">'+n+'<small>'+cnt(n)+'</small></button>').join('');
       const cell=(r,d)=>{
