@@ -401,3 +401,4 @@
 - 2026-10-11 設定頁新增「系統通知」開關：新案／修改需求／回信時，分頁在背景會跳瀏覽器系統通知
 - 2026-10-11 後台新增「權限總覽」：每個帳號實際生效的頁面／功能權限矩陣（Worker action listPermissionOverview，限 database.manage）
 - 2026-10-11 效能：index.html 的樣式與程式拆成 site.css / site.js（帶內容雜湊版本，可被瀏覽器快取，回訪不再重抓約 175KB）；commit 前自動更新版本（.git/hooks/pre-commit + tools/stamp.cjs）；測試改讀三檔合併（backend/test/site-source.mjs）。若在別台電腦改 site.js/site.css，請先執行 node tools/stamp.cjs 再 commit
+- 2026-10-11 首頁：頭像點擊在觸控裝置第二下進多元宇宙、名片加「進入多元宇宙」按鈕；最新列表／專案列表捲到底自動載入更多

@@ -175,6 +175,7 @@
         <div class="hc-section">目前案量</div>
         <div class="hc-counts">${Object.entries(c).filter(([k])=>k!=='已完成').map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
         ${(()=>{const l=designerLoad(name),f=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});return `<div class="hc-section">工作負載 <b class="hc-load-tag" style="color:${l.color}">${l.label}</b></div><div class="hc-xp hc-load"><span style="width:${Math.min(100,l.mine/l.max*100).toFixed(1)}%;background:${l.color}"></span></div><div class="hc-xp-text">進行中加權 ${f(l.mine)}・${l.solo?l.grp+'組（無同組可比，用固定參考值）':l.grp+'組平均 '+f(l.avg)}</div>`})()}
+        <button type="button" class="hc-uni" data-universe>進入多元宇宙 →</button>
         ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
       </div>`;
     }
@@ -305,10 +306,18 @@
         if(e.target.closest('[data-universe]')){openUniverse();return}
         const m=e.target.closest('.member[data-name]');
         /* 點頭像框直接進多元宇宙（滑鼠移上去仍會顯示名片）；沒有 hover 的觸控裝置維持原本「點一下開名片」 */
-        if(m&&e.target.closest('.avatar-btn')){if(window.matchMedia&&matchMedia('(hover:hover)').matches){openUniverse();return}setOpen(m,!m.classList.contains('is-open'))}
+        if(m&&e.target.closest('.avatar-btn')){if(window.matchMedia&&(matchMedia('(hover:hover)').matches||matchMedia('(any-hover:hover)').matches)||m.classList.contains('is-open')){openUniverse();return}setOpen(m,true)}
       });
       document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(null,false);closeUniverse()}});
     }
+    /* 首頁「最新」與專案列表：捲到底部（按鈕快進入畫面）就自動載入下一批，不用再按「顯示更多」 */
+    let autoMoreBusy=0;
+    function autoMore(){
+      if(autoMoreBusy||document.hidden||(state.view!=='board'&&state.view!=='projects'))return;
+      const b=document.querySelector('.more-btn[data-more="latest"],.more-btn[data-more="plist"]');if(!b)return;
+      if(b.getBoundingClientRect().top<innerHeight+240){autoMoreBusy=1;setTimeout(()=>{autoMoreBusy=0},400);b.click()}
+    }
+    window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
     function openUniverse(){state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
@@ -3485,7 +3494,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(t.closest('[data-filter-toggle]')){state.filterOpen=!state.filterOpen;rerenderList();return}
       if(t.closest('[data-filter-clear]')){state.filters.months.clear();state.filters.statuses.clear();state.filters.designers.clear();{const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));state.filters.months.add(p.year+'/'+p.month)}state.latestLimit=LATEST_PAGE;rerenderList();return}
       const card=t.closest('[data-case]');if(card&&(state.view==='board'||state.view==='projects')){const sel=getSelection();if(sel&&!sel.isCollapsed&&String(sel).trim()&&card.contains(sel.anchorNode))return;/* 剛選取文字（拖曳反白、雙擊選字）放開滑鼠不要把卡牌展開／收合 */if(t.closest('.card-detail')&&t.closest('a,button,input,select,textarea,[data-lb],[data-edit]'))return;if(card.matches('div.card')){toggleCardOpen(card);return}state.detailId=card.dataset.case;state.editing=false;show('detail');return}
-      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();return}
+      const more=t.closest('[data-more]');if(more){const k=more.dataset.more;if(k==='latest')state.latestLimit+=LATEST_PAGE;else if(k==='plist')state.plistLimit+=50;else state.limits[k]+=COLUMN_PAGE;rerenderList();setTimeout(autoMore,350);return}
       const act=t.closest('[data-act]')?.dataset.act;
       if(act==='back'){backToBoard();return}
       if(act==='edit'){startEdit();return}

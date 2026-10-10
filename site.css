@@ -1222,3 +1222,6 @@
       .detail-actions{gap:8px}
       .detail-actions .lt-act{flex:1 1 auto;justify-content:center}
     }
+
+.hc-uni{display:none;width:100%;margin-top:8px;padding:6px 0;border:0;border-radius:10px;background:var(--brand);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+@media (hover:none){.hc-uni{display:block}}
