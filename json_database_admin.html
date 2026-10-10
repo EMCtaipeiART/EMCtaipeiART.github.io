@@ -23,7 +23,7 @@
     .side-nav{flex:1;overflow:auto;padding:8px;display:grid;gap:2px;align-content:start}
     .side-group-label{padding:14px 10px 4px;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
     .side-group-label:first-child{padding-top:4px}
-    .audit-kind{display:inline-block;padding:2px 8px;border-radius:99px;background:#eef2f7;font-size:12px;white-space:nowrap}.audit-kind.k-狀態變更{background:#dff3e4}.audit-kind.k-權限變更{background:#fde8c8}.audit-kind.k-登入失敗,.audit-kind.k-寄信失敗{background:#fbd5d5}.audit-kind.k-寄信{background:#dbe9fb}.audit-from{color:#888;text-decoration:line-through}
+    .perm-table{border-collapse:collapse;font-size:12.5px;min-width:100%}.perm-table th,.perm-table td{border-bottom:1px solid var(--line,#e5e7eb);padding:6px 8px;text-align:left;white-space:nowrap}.perm-col{height:96px;vertical-align:bottom!important;padding:4px!important}.perm-col span{display:inline-block;writing-mode:vertical-rl;font-weight:800}.perm-cell{text-align:center!important;color:#16a34a}.perm-off{opacity:.5}.audit-kind{display:inline-block;padding:2px 8px;border-radius:99px;background:#eef2f7;font-size:12px;white-space:nowrap}.audit-kind.k-狀態變更{background:#dff3e4}.audit-kind.k-權限變更{background:#fde8c8}.audit-kind.k-登入失敗,.audit-kind.k-寄信失敗{background:#fbd5d5}.audit-kind.k-寄信{background:#dbe9fb}.audit-from{color:#888;text-decoration:line-through}
     .side-tab{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:38px;border:0;border-radius:7px;background:transparent;color:var(--ink);padding:8px 10px;font-weight:500;font-size:12.5px;text-align:left}
     .side-tab:hover{background:var(--soft)}
     .side-tab.active{background:var(--green2);color:var(--green);font-weight:600}
@@ -376,7 +376,7 @@
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function tableTabButtonHtml(name){return `<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`}
     const coinTabHtml=()=>`<button class="side-tab ${coinMode?'active':''}" type="button" data-coin title="餘額、明細、帳本驗證、手動調整"><span class="side-tab-label">平台幣帳本</span></button>`;
-    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
+    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode&&auditView==='audit'?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button><button class="side-tab ${auditMode&&auditView==='perm'?'active':''}" type="button" data-perm><span class="side-tab-label">權限總覽</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
     function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}
@@ -1622,10 +1622,10 @@
     document.addEventListener('visibilitychange',()=>{if(document.hidden)return;if(pendingRefresh){const next=pendingRefreshMessage||{tables:[tableName]};pendingRefreshMessage=null;refreshFromBackend(next)}else backgroundPollTick()});
 
     /* 操作紀錄：Worker 的 listAuditLog（狀態變更、欄位修改、權限變更、登入、寄信），只有後台管理者讀得到 */
-    var auditMode=false,auditRows=[],auditKind='',coinMode=false;
+    var auditMode=false,auditRows=[],auditKind='',coinMode=false,auditView='audit',permData=null;
     const AUDIT_KINDS=['狀態變更','欄位修改','案件新增','案件刪除','權限變更','登入','登入失敗','寄信','寄信失敗'];
     const auditTime=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?String(value||''):d.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})};
-    function renderAudit(){
+    function renderAudit(){if(auditView==='perm'){renderPerm();return}
       const q=$('search').value.trim().toLocaleLowerCase();
       const rows=auditRows.filter(r=>(!auditKind||r.kind===auditKind)&&(!q||Object.values(r).some(v=>String(v||'').toLocaleLowerCase().includes(q))));
       const shown=rows.slice(0,500);
@@ -1645,7 +1645,7 @@
       $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1"></iframe>';
     }
     $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-coin]'))showCoin()});
-    async function showAudit(){
+    async function showAudit(){auditView='audit';
       leaveCoin();auditMode=true;renderTabs();
       $('tableTitle').textContent='操作紀錄';$('tableSubtitle').textContent='案件狀態與欄位變更、權限變更、登入、寄信的稽核紀錄';
       $('currentTable').textContent='操作紀錄';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
@@ -1653,7 +1653,26 @@
       try{const data=await request('',{method:'POST',body:JSON.stringify({action:'listAuditLog',limit:2000})});auditRows=Array.isArray(data.rows)?data.rows:[];note('已讀取操作紀錄');renderAudit()}
       catch(error){$('view').innerHTML='';note(`讀取操作紀錄失敗：${error.message||error}`,'error')}
     }
-    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit()});
+    const PERM_PAGE_LABEL={request:'需求單',dashboard:'設計師看板',archive:'封存頁',database_admin:'資料庫後台',media_admin:'媒體後台',avatar_upload:'頭像上傳'};
+    const PERM_CAP_LABEL={'request.create':'新增需求','request.edit':'編輯案件','request.status':'改狀態','request.delete':'刪除案件','request.export':'匯出','request.mail':'發信','modification.create':'提修改','modification.confirm':'確認修改','project.create':'建專案','designer.settings':'設計師設定','profile.edit':'個人資料','media.manage':'媒體管理','reel.interact':'互動','issue.report':'回報問題','issue.manage':'處理問題','archive.edit':'編輯封存','database.manage':'資料庫管理'};
+    function renderPerm(){
+      const q=$('search').value.trim().toLocaleLowerCase(),d=permData||{rows:[],pages:[],capabilities:[]};
+      const rows=d.rows.filter(r=>!q||[r.account,r.name,r.dept,r.group,r.role].some(v=>String(v||'').toLocaleLowerCase().includes(q)));
+      $('count').textContent=rows.length.toLocaleString('zh-TW')+' 個帳號';$('totalRows').textContent=d.rows.length.toLocaleString('zh-TW');
+      const cols=d.pages.map(p=>['p',p,PERM_PAGE_LABEL[p]||p]).concat(d.capabilities.map(c=>['c',c,PERM_CAP_LABEL[c]||c]));
+      const head='<tr><th>帳號</th><th>名字</th><th>部門／組別</th><th>角色</th><th>狀態</th><th>來源</th>'+cols.map(c=>'<th class="perm-col" title="'+esc(c[1])+'"><span>'+esc(c[2])+'</span></th>').join('')+'</tr>';
+      const body=rows.map(r=>'<tr'+(r.status==='停用'?' class="perm-off"':'')+'><td>'+esc(r.account)+'</td><td>'+esc(r.name)+'</td><td>'+esc([r.dept,r.group].filter(Boolean).join('／'))+'</td><td><span class="audit-kind">'+esc(r.role)+'</span></td><td>'+esc(r.status)+'</td><td>'+(r.explicit?'帳號權限表':'角色預設')+'</td>'+cols.map(c=>'<td class="perm-cell">'+((c[0]==='p'?r.pages:r.capabilities).includes(c[1])?'<b>✓</b>':'')+'</td>').join('')+'</tr>').join('');
+      $('view').innerHTML='<div class="table-wrap"><table class="perm-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div><p class="notice" style="margin-top:10px">這裡是每個帳號「實際生效」的權限：有在帳號權限表設定的以設定為準，沒設定的依角色（管理者／設計師／一般使用者）預設。管理者擁有全部權限。要修改請到「帳號權限」表。</p>';
+    }
+    async function showPerm(){
+      leaveCoin();auditMode=true;auditView='perm';renderTabs();
+      $('tableTitle').textContent='權限總覽';$('tableSubtitle').textContent='每個帳號實際生效的頁面與功能權限';
+      $('currentTable').textContent='權限總覽';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      $('view').innerHTML='<div class="notice">正在讀取權限總覽...</div>';
+      try{permData=await request('',{method:'POST',body:JSON.stringify({action:'listPermissionOverview'})});note('已讀取權限總覽');renderPerm()}
+      catch(error){$('view').innerHTML='';note('讀取權限總覽失敗：'+(error.message||error),'error')}
+    }
+    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit();else if(event.target.closest('[data-perm]'))showPerm()});
     $('view').addEventListener('change',event=>{if(auditMode&&event.target.id==='auditKind'){auditKind=event.target.value;renderAudit()}});
     $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;leaveCoin();auditMode=false;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{

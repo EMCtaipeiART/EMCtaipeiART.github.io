@@ -4506,6 +4506,29 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
         return await this.assignmentsHandle(action, payload, who);
       }
+      if (action === 'listPermissionOverview') {
+        // 權限總覽：每個帳號實際生效的頁面與功能權限（含沒有明確設定、吃角色預設的帳號），只有後台管理者讀得到
+        this.requireAccess(database, session, 'database.manage');
+        const seen = new Set<string>();
+        const accounts: Array<{ account: string; name: string; dept: string; group: string }> = [];
+        for (const row of database.tables['設定']?.rows || []) {
+          const account = canonicalAccount(row['帳號']);
+          if (!account || seen.has(account)) continue;
+          seen.add(account);
+          accounts.push({ account, name: text(row['名字']), dept: text(row['部門']), group: text(row['組別']) });
+        }
+        for (const row of database.tables['帳號權限']?.rows || []) {
+          const account = canonicalAccount(row['帳號']);
+          if (!account || seen.has(account)) continue;
+          seen.add(account);
+          accounts.push({ account, name: '', dept: '', group: '' });
+        }
+        const rows = accounts.map(item => {
+          const profile = accessProfile(database, { user: item.name || item.account, account: item.account, provider: 'google', expiresAt: 0 });
+          return { ...item, role: text(profile.role), status: text(profile.status), pages: profile.pages, capabilities: profile.capabilities, explicit: Boolean(profile.explicit) };
+        });
+        return { ok: true, action, rows, pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES };
+      }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');
         const file = await loadAuditFile(this.env);
