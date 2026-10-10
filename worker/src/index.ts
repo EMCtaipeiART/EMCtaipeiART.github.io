@@ -206,6 +206,13 @@ export default {
     } catch (error) {
       console.error(JSON.stringify({ event: 'audit-log-flush-error', message: error instanceof Error ? error.message : String(error) }));
     }
+    // 每週加密備份 Durable Object 內的資料（記事本、專案分配、值日替換）到 GitHub。沒設定 NOTEBOOK_KEY 或未到期時什麼都不做。
+    try {
+      const backup = await stub.runBackup();
+      if (backup.status === 'written') console.log(JSON.stringify({ event: 'do-backup', ...backup }));
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'do-backup-error', message: error instanceof Error ? error.message : String(error) }));
+    }
     // 限時動態：到期或被移除的內容先備份到 Google Drive，成功才從資料庫清掉。
     try {
       const backup = await stub.runPixelOfficeStoryBackup();

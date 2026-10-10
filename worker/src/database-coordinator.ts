@@ -12,9 +12,10 @@ import {
   text, toApiRow, toSheetRow, unique, updateSettingsRow, weightRules,
   normalizeSignaturePresetsValue, normalizeSignaturePresetDefaultValue, normalizeDepartmentName, normalizeSettingsDepartments, normalizeCaseStatuses,
 } from './model';
-import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
+import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile, loadBackupFile, saveBackupFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
 import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMeetings, dutyMonthKey, dutyOf, isDutyName, type DutyMeeting, type DutyOverrides } from './duty';
+import { importBoxKey, isSealed, openText, sealText } from './secure-box';
 import { assignCsvUrl, seedAssignments, type Assignment } from './assignments';
 import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
@@ -3909,20 +3910,50 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return { attempted: true, status: state.status };
   }
 
-  private notebookRows(): NotebookItem[] {
-    return this.ctx.storage.sql.exec<{ id: string; category: string; section: string; title: string; fields: string; sort: number; updated_at: number; updated_by: string }>(
+  private boxKey: CryptoKey | null | undefined;
+  private async notebookKey(): Promise<CryptoKey | null> {
+    if (this.boxKey === undefined) this.boxKey = await importBoxKey((this.env as unknown as { NOTEBOOK_KEY?: string }).NOTEBOOK_KEY);
+    return this.boxKey;
+  }
+  private async sealFields(fields: NotebookField[]): Promise<string> {
+    const json = JSON.stringify(fields), key = await this.notebookKey();
+    return key ? await sealText(key, json) : json;
+  }
+  private async openFields(raw: string): Promise<NotebookField[]> {
+    let json = raw;
+    if (isSealed(raw)) {
+      const key = await this.notebookKey();
+      if (!key) throw new Error('記事本已加密，但這個 Worker 沒有 NOTEBOOK_KEY');
+      json = await openText(key, raw);
+    }
+    try { return (JSON.parse(json) as NotebookField[]).map(f => ({ label: text(f.label), value: text(f.value), secret: Boolean(f.secret) })); } catch { return []; }
+  }
+  private async notebookRows(): Promise<NotebookItem[]> {
+    const rows = this.ctx.storage.sql.exec<{ id: string; category: string; section: string; title: string; fields: string; sort: number; updated_at: number; updated_by: string }>(
       'SELECT id, category, section, title, fields, sort, updated_at, updated_by FROM notebook_items ORDER BY sort ASC, updated_at ASC'
-    ).toArray().map(row => {
-      let fields: NotebookField[] = [];
-      try { fields = (JSON.parse(row.fields) as NotebookField[]).map(f => ({ label: text(f.label), value: text(f.value), secret: Boolean(f.secret) })); } catch { fields = []; }
+    ).toArray();
+    return Promise.all(rows.map(async row => {
+      const fields = await this.openFields(row.fields);
       return { id: row.id, category: row.category, section: row.section, title: row.title, fields, sort: Number(row.sort) || 0, updatedAt: Number(row.updated_at) || 0, updatedBy: row.updated_by };
-    });
+    }));
+  }
+
+  /** 把還是明文的記事本資料一次加密（只在有金鑰、且還沒做過時執行） */
+  private async notebookEncryptAll(): Promise<void> {
+    if (!(await this.notebookKey()) || await this.ctx.storage.get<boolean>('notebookEncrypted')) return;
+    const rows = this.ctx.storage.sql.exec<{ id: string; fields: string }>('SELECT id, fields FROM notebook_items').toArray();
+    for (const row of rows) {
+      if (isSealed(row.fields)) continue;
+      const sealed = await this.sealFields(await this.openFields(row.fields));
+      this.ctx.storage.sql.exec('UPDATE notebook_items SET fields = ? WHERE id = ?', sealed, row.id);
+    }
+    await this.ctx.storage.put('notebookEncrypted', true);
   }
 
   /** 第一次使用且還沒有任何資料時，從原本的 Google 試算表匯入一次（之後完全在網站內編輯，不再讀試算表） */
   private async notebookSeedOnce(): Promise<string> {
     if (await this.ctx.storage.get<boolean>('notebookSeeded')) return '';
-    if (this.notebookRows().length) { await this.ctx.storage.put('notebookSeeded', true); return ''; }
+    if ((await this.notebookRows()).length) { await this.ctx.storage.put('notebookSeeded', true); return ''; }
     try {
       const grids = await Promise.all(NOTEBOOK_SEED_TABS.map(async tab => {
         const response = await fetch(notebookCsvUrl(tab.gid), { headers: { Accept: 'text/csv' }, redirect: 'follow' });
@@ -3934,10 +3965,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const seeds = seedFromGrids(grids);
       if (!seeds.length) return '試算表沒有可匯入的內容';
       const now = Date.now();
+      const sealedSeeds = await Promise.all(seeds.map(seed => this.sealFields(seed.fields)));
       this.ctx.storage.transactionSync(() => {
         seeds.forEach((seed, index) => {
           this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            crypto.randomUUID(), seed.category, seed.section, seed.title, JSON.stringify(seed.fields), (index + 1) * 10, now, '匯入');
+            crypto.randomUUID(), seed.category, seed.section, seed.title, sealedSeeds[index], (index + 1) * 10, now, '匯入');
         });
       });
       await this.ctx.storage.put('notebookSeeded', true);
@@ -3994,7 +4026,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private async notebookList(): Promise<ApiResult> {
     const seedError = await this.notebookSeedOnce();
-    const items = this.notebookRows();
+    await this.notebookEncryptAll();
+    const items = await this.notebookRows();
     return { ok: true, action: 'getNotebook', items, categoryOrder: (await this.ctx.storage.get<string[]>('notebookCategoryOrder')) || [], seedError: items.length ? '' : seedError };
   }
 
@@ -4005,40 +4038,41 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (!category) throw new Error('請選擇分類');
     const fields: NotebookField[] = asRows(raw.fields).slice(0, 40).map(f => ({ label: text(f.label).slice(0, 40), value: text(f.value).slice(0, 2000), secret: Boolean(f.secret) })).filter(f => f.label && f.value);
     const now = Date.now(), actor = auditActor(who), id = text(raw.id);
-    const existing = id ? this.notebookRows().find(item => item.id === id) : undefined;
+    const existing = id ? (await this.notebookRows()).find(item => item.id === id) : undefined;
+    const sealedFields = await this.sealFields(fields);
     if (id && !existing) throw new Error('找不到這筆記事本資料，可能已被刪除');
     if (existing) {
-      this.ctx.storage.sql.exec('UPDATE notebook_items SET category = ?, section = ?, title = ?, fields = ?, updated_at = ?, updated_by = ? WHERE id = ?', category, section, title, JSON.stringify(fields), now, actor, id);
+      this.ctx.storage.sql.exec('UPDATE notebook_items SET category = ?, section = ?, title = ?, fields = ?, updated_at = ?, updated_by = ? WHERE id = ?', category, section, title, sealedFields, now, actor, id);
     } else {
       const max = this.ctx.storage.sql.exec<{ m: number | null }>('SELECT MAX(sort) AS m FROM notebook_items').toArray()[0]?.m || 0;
-      this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', crypto.randomUUID(), category, section, title, JSON.stringify(fields), Number(max) + 10, now, actor);
+      this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', crypto.randomUUID(), category, section, title, sealedFields, Number(max) + 10, now, actor);
     }
     // 稽核只記「誰改了哪一張卡」，不記欄位內容（含密碼）
     try { await this.queueAudit([{ t: new Date(now).toISOString(), kind: '欄位修改', actor, caseId: `記事本：${title}`, field: existing ? '修改' : '新增', note: '記事本' }]); } catch { /* 不影響儲存 */ }
-    return { ok: true, action: 'saveNotebookItem', items: this.notebookRows() };
+    return { ok: true, action: 'saveNotebookItem', items: await this.notebookRows() };
   }
 
   private async notebookDelete(payload: ApiPayload, who: SessionRecord): Promise<ApiResult> {
     const id = text(payload.id);
-    const existing = this.notebookRows().find(item => item.id === id);
+    const existing = (await this.notebookRows()).find(item => item.id === id);
     if (!existing) throw new Error('找不到這筆記事本資料，可能已被刪除');
     this.ctx.storage.sql.exec('DELETE FROM notebook_items WHERE id = ?', id);
     try { await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: `記事本：${existing.title}`, field: '刪除', note: '記事本' }]); } catch { /* 不影響刪除 */ }
-    return { ok: true, action: 'deleteNotebookItem', items: this.notebookRows() };
+    return { ok: true, action: 'deleteNotebookItem', items: await this.notebookRows() };
   }
 
   /** 分類頁籤的排列順序（全體共用）：只收現有的分類名稱，去重 */
   private async notebookSaveCategoryOrder(payload: ApiPayload): Promise<ApiResult> {
-    const known = new Set(this.notebookRows().map(item => item.category));
+    const known = new Set((await this.notebookRows()).map(item => item.category));
     const order = [...new Set((Array.isArray(payload.order) ? payload.order : []).map(text).filter(name => known.has(name)))];
     await this.ctx.storage.put('notebookCategoryOrder', order);
     return { ok: true, action: 'saveNotebookCategoryOrder', categoryOrder: order };
   }
 
   /** 同一個分類內，把一張卡往前或往後移一格（跟相鄰那張交換排序） */
-  private notebookMove(payload: ApiPayload): ApiResult {
+  private async notebookMove(payload: ApiPayload): Promise<ApiResult> {
     const id = text(payload.id), dir = Number(payload.dir) < 0 ? -1 : 1;
-    const all = this.notebookRows(), current = all.find(item => item.id === id);
+    const all = await this.notebookRows(), current = all.find(item => item.id === id);
     if (!current) throw new Error('找不到這筆記事本資料');
     const peers = all.filter(item => item.category === current.category && item.section === current.section);
     const at = peers.findIndex(item => item.id === id), other = peers[at + dir];
@@ -4046,7 +4080,52 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       this.ctx.storage.sql.exec('UPDATE notebook_items SET sort = ? WHERE id = ?', other.sort, current.id);
       this.ctx.storage.sql.exec('UPDATE notebook_items SET sort = ? WHERE id = ?', current.sort, other.id);
     }
-    return { ok: true, action: 'moveNotebookItem', items: this.notebookRows() };
+    return { ok: true, action: 'moveNotebookItem', items: await this.notebookRows() };
+  }
+
+  /** 每週把 Durable Object 裡「只存在這裡」的資料（記事本、專案分配、值日替換）加密後備份到 GitHub（do-backup.enc.json） */
+  private async backupPayload(): Promise<Record<string, unknown>> {
+    return {
+      at: new Date().toISOString(),
+      notebook: { items: await this.notebookRows(), categoryOrder: (await this.ctx.storage.get<string[]>('notebookCategoryOrder')) || [] },
+      assignments: (await this.ctx.storage.get<Assignment[]>('assignments')) || [],
+      dutyOverrides: await this.dutyOverrides()
+    };
+  }
+
+  async runBackup(force = false): Promise<{ status: string; notebook?: number; assignments?: number }> {
+    const key = await this.notebookKey();
+    if (!key) return { status: 'no-key' };
+    await this.notebookEncryptAll();
+    const last = (await this.ctx.storage.get<number>('lastBackupAt')) || 0;
+    if (!force && Date.now() - last < 7 * 24 * 3600 * 1000) return { status: 'not-due' };
+    const payload = await this.backupPayload();
+    const sealed = await sealText(key, JSON.stringify(payload));
+    await saveBackupFile(this.env, JSON.stringify({ schemaVersion: 1, updatedAt: payload.at, data: sealed }));
+    await this.ctx.storage.put('lastBackupAt', Date.now());
+    return { status: 'written', notebook: (payload.notebook as { items: unknown[] }).items.length, assignments: (payload.assignments as unknown[]).length };
+  }
+
+  private async restoreBackup(who: SessionRecord): Promise<ApiResult> {
+    const key = await this.notebookKey();
+    if (!key) throw new Error('沒有 NOTEBOOK_KEY，無法解密備份');
+    const file = await loadBackupFile(this.env);
+    if (!file.content) throw new Error('GitHub 上還沒有備份檔');
+    const wrapper = JSON.parse(file.content) as { data?: string };
+    if (!wrapper.data) throw new Error('備份檔格式不正確');
+    const data = JSON.parse(await openText(key, wrapper.data)) as { at?: string; notebook?: { items: NotebookItem[]; categoryOrder: string[] }; assignments?: Assignment[]; dutyOverrides?: DutyOverrides };
+    const items = data.notebook?.items || [];
+    const sealedRows = await Promise.all(items.map(item => this.sealFields(item.fields)));
+    this.ctx.storage.transactionSync(() => {
+      this.ctx.storage.sql.exec('DELETE FROM notebook_items');
+      items.forEach((item, index) => this.ctx.storage.sql.exec('INSERT INTO notebook_items(id, category, section, title, fields, sort, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', item.id, item.category, item.section, item.title, sealedRows[index], item.sort, item.updatedAt, item.updatedBy));
+    });
+    await this.ctx.storage.put('notebookSeeded', true);
+    await this.ctx.storage.put('notebookCategoryOrder', data.notebook?.categoryOrder || []);
+    await this.ctx.storage.put('assignments', data.assignments || []);
+    await this.ctx.storage.put('dutyOverrides', data.dutyOverrides || {});
+    await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '備份還原', field: '還原', note: `備份時間 ${data.at || ''}：記事本 ${items.length}、專案分配 ${(data.assignments || []).length}` }]);
+    return { ok: true, action: 'restoreBackup', at: data.at || '', notebook: items.length, assignments: (data.assignments || []).length };
   }
 
   private auditFlushing = false;
@@ -4505,6 +4584,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getAssignments' || action === 'saveAssignment' || action === 'deleteAssignment') {
         const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
         return await this.assignmentsHandle(action, payload, who);
+      }
+      if (action === 'backupNow' || action === 'restoreBackup') {
+        const who = this.requireAccess(database, session, 'database.manage');
+        if (action === 'backupNow') return { ok: true, action, ...(await this.runBackup(true)) };
+        if (payload.confirm !== true) throw new Error('還原會覆蓋目前的記事本、專案分配與值日替換，請帶 confirm: true');
+        return await this.restoreBackup(who);
       }
       if (action === 'listPermissionOverview') {
         // 權限總覽：每個帳號實際生效的頁面與功能權限（含沒有明確設定、吃角色預設的帳號），只有後台管理者讀得到

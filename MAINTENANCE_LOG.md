@@ -404,3 +404,4 @@
 - 2026-10-11 首頁：頭像點擊在觸控裝置第二下進多元宇宙、名片加「進入多元宇宙」按鈕；最新列表／專案列表捲到底自動載入更多
 - 2026-10-11 專案分配：長客戶別名稱不再把編輯／刪除鈕擠出欄位
 - 2026-10-11 新增瀏覽器煙霧測試（tests/smoke/smoke.mjs，puppeteer-core + 本機 Chrome，假後端資料）：首頁/專案/行事曆/專案分配/記事本/作品牆；npm run smoke；CI 與本機 pre-push 都會跑
+- 2026-10-11 安全：記事本欄位改以 AES-GCM 加密存放（Worker Secret NOTEBOOK_KEY；金鑰備份在本機 C:\Users\pcc10\.emc-notebook-key.txt，請另存密碼管理器）；每週自動把 DO 內資料（記事本、專案分配、值日替換）加密備份到 backend/data/do-backup.enc.json；後台 action backupNow / restoreBackup（restore 需 confirm:true）

@@ -151,3 +151,41 @@ export async function appendAuditFile(env: Env, entries: AuditEntry[]): Promise<
   if (!response.ok) throw await githubError(response, '寫入操作紀錄');
   return rows.length;
 }
+
+/** 備份檔（加密後的 Durable Object 資料）與資料庫放在同一個資料夾 */
+export const BACKUP_FILE = 'do-backup.enc.json';
+function backupApiUrl(env: Env): string {
+  const parts = env.GITHUB_DATABASE_PATH.split('/');
+  parts[parts.length - 1] = BACKUP_FILE;
+  return `https://api.github.com/repos/${encodeURIComponent(env.GITHUB_OWNER)}/${encodeURIComponent(env.GITHUB_REPO)}/contents/${parts.map(encodeURIComponent).join('/')}`;
+}
+
+export async function loadBackupFile(env: Env): Promise<{ content: string; sha: string }> {
+  const url = new URL(backupApiUrl(env));
+  url.searchParams.set('ref', env.GITHUB_BRANCH);
+  const meta = await fetch(url, { method: 'GET', headers: githubHeaders(env), redirect: 'follow' });
+  if (meta.status === 404) return { content: '', sha: '' };
+  if (!meta.ok) throw await githubError(meta, '讀取備份檔');
+  const sha = text(((await meta.json()) as Record<string, unknown>).sha);
+  const raw = await fetch(url, { method: 'GET', headers: githubHeaders(env, 'application/vnd.github.raw+json'), redirect: 'follow' });
+  if (!raw.ok) throw await githubError(raw, '讀取備份檔');
+  return { content: await raw.text(), sha };
+}
+
+export async function saveBackupFile(env: Env, content: string): Promise<void> {
+  if (!text(env.GITHUB_TOKEN)) throw new Error('Cloudflare Worker 尚未設定 GITHUB_TOKEN Secret');
+  const current = await loadBackupFile(env);
+  const body: Record<string, unknown> = {
+    message: 'data: encrypted backup',
+    content: bytesToBase64(new TextEncoder().encode(content)),
+    branch: env.GITHUB_BRANCH,
+    committer: { name: 'Machi Design API', email: 'machi.chen@emctaipei.com' }
+  };
+  if (current.sha) body.sha = current.sha;
+  const response = await fetch(backupApiUrl(env), {
+    method: 'PUT',
+    headers: new Headers({ ...Object.fromEntries(githubHeaders(env)), 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) throw await githubError(response, '寫入備份檔');
+}
