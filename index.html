@@ -1609,9 +1609,9 @@ window.emcQuotes=[
     function designerLoad(name){
       const act=new Set(['未開始','執行中','過稿中','修改中']),sum=new Map(),w=r=>{const n=Number(String(r['加權']??'').trim());return Number.isFinite(n)&&n>0?n:(Number(r['數量'])>0?Number(r['數量']):1)};
       for(const r of allRows()){if(!act.has(String(r['狀態']||'').trim()))continue;const d=String(r['設計負責人']||'').trim();if(d)sum.set(d,(sum.get(d)||0)+w(r))}
-      const team=DESIGNERS.map(n=>sum.get(n)||0),avg=team.reduce((a,b)=>a+b,0)/(team.length||1),mine=sum.get(name)||0,ratio=avg?mine/avg:0;
-      const lv=!mine?['空檔','#64748b']:ratio<0.6?['輕鬆','#16a34a']:ratio<1.2?['適中','#2563eb']:ratio<1.6?['偏高','#d97706']:['滿載','#dc2626'];
-      return {mine,avg,max:Math.max(...team,1),label:lv[0],color:lv[1]};
+      const grpOf=n=>{const r=(state.settings||[]).find(x=>String(x['顯示名']||x['名字']||'').trim()===n);const g=String(r&&r['組別']||'').trim();return g==='影音'||(!g&&n==='Noise')?'影音':'平面'};const mates=DESIGNERS.filter(n=>grpOf(n)===grpOf(name)),team=mates.map(n=>sum.get(n)||0),solo=mates.length<2,avg=solo?0:team.reduce((a,b)=>a+b,0)/team.length,mine=sum.get(name)||0,ratio=avg?mine/avg:0,grp=grpOf(name);
+      const lv=!mine?['空檔','#64748b']:solo?(mine<=6?['輕鬆','#16a34a']:mine<=14?['適中','#2563eb']:mine<=22?['偏高','#d97706']:['滿載','#dc2626']):ratio<0.6?['輕鬆','#16a34a']:ratio<1.2?['適中','#2563eb']:ratio<1.6?['偏高','#d97706']:['滿載','#dc2626'];
+      return {mine,avg,grp,solo,max:solo?22:Math.max(...team,1),label:lv[0],color:lv[1]};
     }
     function hoverCardHtml(name){
       const c=designerCases(name),lv=levelInfo(name),p=state.people[name],status=p?.status;
@@ -1623,7 +1623,7 @@ window.emcQuotes=[
         <div class="hc-xp-text">${lv?`${fmt(lv.score)} 分 · 距 Lv.${lv.level+1} 還差 ${fmt(lv.remaining)} 分`:'&nbsp;'}</div>
         <div class="hc-section">目前案量</div>
         <div class="hc-counts">${Object.entries(c).filter(([k])=>k!=='已完成').map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
-        ${(()=>{const l=designerLoad(name),f=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});return `<div class="hc-section">工作負載 <b class="hc-load-tag" style="color:${l.color}">${l.label}</b></div><div class="hc-xp hc-load"><span style="width:${Math.min(100,l.mine/l.max*100).toFixed(1)}%;background:${l.color}"></span></div><div class="hc-xp-text">進行中加權 ${f(l.mine)}・設計部平均 ${f(l.avg)}</div>`})()}
+        ${(()=>{const l=designerLoad(name),f=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});return `<div class="hc-section">工作負載 <b class="hc-load-tag" style="color:${l.color}">${l.label}</b></div><div class="hc-xp hc-load"><span style="width:${Math.min(100,l.mine/l.max*100).toFixed(1)}%;background:${l.color}"></span></div><div class="hc-xp-text">進行中加權 ${f(l.mine)}・${l.solo?l.grp+'組（無同組可比，用固定參考值）':l.grp+'組平均 '+f(l.avg)}</div>`})()}
         ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
       </div>`;
     }
