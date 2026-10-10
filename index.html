@@ -502,6 +502,7 @@
     .cd-items{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line,#e5e5e5);margin-bottom:8px}.cd-items>b{font-size:13px;white-space:nowrap;padding-top:4px}.cd-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.cd-add{border:1px dashed #999;background:#fff;border-radius:99px;padding:3px 10px;font-size:12px;cursor:pointer}
 @media (hover:none){.member-say,.member-music,.mm-win{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 @media (prefers-reduced-motion:reduce){.ms-track{animation:none!important}}
+@media (hover:none){.member-say .ms-track.is-marquee,.mm-win .mm-track{animation:none!important}}
     .hero{transition:padding .5s cubic-bezier(.4,0,.2,1)}
     .hero h1,.hero .team,.hero .prompt-hint{max-height:380px;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .3s ease,margin .5s cubic-bezier(.4,0,.2,1),padding .5s ease}
     body.uni-collapse .hero{padding-top:26px;padding-bottom:26px}
@@ -1366,11 +1367,11 @@ window.emcQuotes=[
   let quoteIdx=Math.floor(Math.random()*quotes.length),quoteTimer=0;
   const showQuote=()=>{if(quoteEl&&quotes.length)quoteEl.textContent=quotes[quoteIdx]};
   const nextQuote=()=>{
-    if(!quoteEl||quotes.length<2)return;
+    if(!quoteEl||quotes.length<2||document.hidden)return;
     quoteEl.classList.add('is-fading');
     setTimeout(()=>{quoteIdx=(quoteIdx+1+Math.floor(Math.random()*(quotes.length-1)))%quotes.length;showQuote();quoteEl.classList.remove('is-fading')},250);
   };
-  showQuote();quoteTimer=setInterval(nextQuote,3600);
+  showQuote();quoteTimer=setInterval(nextQuote,matchMedia('(hover:none)').matches?7000:3600);
   tick();
   const ready=()=>{if(document.readyState==='complete'&&window.__v5&&window.__v5.loaded)finish();else setTimeout(ready,150)};ready();
   setTimeout(finish,MAX_SHOW);
@@ -4327,7 +4328,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       openOwner(true);
     }
     setTimeout(()=>maybeOwnerDaily(),1500);
-    setInterval(()=>{try{if(!document.hidden&&state.loaded)renderRailExtra()}catch(err){}},10000);
+    setInterval(()=>{try{if(!document.hidden&&state.loaded)renderRailExtra()}catch(err){}},30000);
     document.addEventListener('click',e=>{
       const t=e.target;
       if(t.closest('[data-op-close]')||t.id==='ownerModal'){closeOwner();return}
@@ -5148,7 +5149,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       function connect(){
         if(ws&&ws.readyState<=1)return;
         try{ws=new WebSocket(url)}catch(err){return}
-        ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
+        ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(!document.hidden&&ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
         ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='reload'){relCheck(Number(m.rel)||0);return}if(m&&m.type==='db'){if((Number(m.rev)||0)>(state.dbRev||0))loadDatabase(true,true);return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
         ws.onclose=()=>{state.pushOk=false;clearInterval(pingT);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)))};
         ws.onerror=()=>{try{ws.close()}catch(err){}};
