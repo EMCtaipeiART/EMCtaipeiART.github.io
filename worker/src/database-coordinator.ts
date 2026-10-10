@@ -15,6 +15,7 @@ import {
 import { commitGitHubDatabase, loadGitHubDatabase, appendAuditFile, loadAuditFile } from './github-store';
 import { auditActor, diffAudit, maskRecipients, type AuditEntry } from './audit';
 import { DUTY_ATTENDEES, DUTY_ERIC_EMAIL, DUTY_ROOM_EMAIL, dutyEventBody, dutyMeetings, dutyMonthKey, dutyOf, isDutyName, type DutyMeeting, type DutyOverrides } from './duty';
+import { assignCsvUrl, seedAssignments, type Assignment } from './assignments';
 import { NOTEBOOK_SEED_TABS, notebookCsvUrl, parseCsv, seedFromGrids, trimGrid, type NotebookField, type NotebookItem } from './notebook';
 import { femasOnLeave, parseFemasIcal, parseFemasNameMap, type FemasLeave } from './femas-leave';
 import type {
@@ -3946,6 +3947,50 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     }
   }
 
+  /** 專案分配表：第一次使用時從 Google 試算表匯入一次，之後在網站內編輯 */
+  private async assignmentsHandle(action: string, payload: ApiPayload, who: SessionRecord): Promise<ApiResult> {
+    let list = (await this.ctx.storage.get<Assignment[]>('assignments')) || null;
+    let seedError = '';
+    if (!list) {
+      list = [];
+      try {
+        const response = await fetch(assignCsvUrl(), { headers: { Accept: 'text/csv' }, redirect: 'follow' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const body = await response.text();
+        if (/^\s*<(!doctype|html)/i.test(body)) throw new Error('試算表需要登入才能讀取');
+        list = seedAssignments(body).map((seed, index) => ({ id: crypto.randomUUID(), ...seed, sort: (index + 1) * 10 }));
+        if (!list.length) seedError = '試算表沒有可匯入的內容';
+        else await this.ctx.storage.put('assignments', list);
+      } catch (error) {
+        seedError = `首次匯入失敗：${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+    const actor = auditActor(who);
+    const clip = (value: unknown, max: number): string => text(value).slice(0, max);
+    if (action === 'saveAssignment') {
+      const designer = clip(payload.designer, 20), client = clip(payload.client, 60);
+      if (!designer || !client) throw new Error('請填寫設計師與客戶');
+      const fields = { designer, client, team: clip(payload.team, 80), monthly: clip(payload.monthly, 500), note: clip(payload.note, 1000) };
+      const id = text(payload.id);
+      const index = id ? list.findIndex(item => item.id === id) : -1;
+      if (index >= 0) {
+        const prev = list[index];
+        list[index] = { ...prev, ...fields };
+        if (prev.designer !== designer) await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor, target: client, field: '負責設計師', from: prev.designer, to: designer, note: '專案分配' }]);
+      } else {
+        const max = list.reduce((m, item) => Math.max(m, item.sort), 0);
+        list.push({ id: crypto.randomUUID(), ...fields, sort: max + 10 });
+        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor, target: client, field: '負責設計師', to: designer, note: '專案分配（新增）' }]);
+      }
+      await this.ctx.storage.put('assignments', list);
+    } else if (action === 'deleteAssignment') {
+      const id = text(payload.id);
+      list = list.filter(item => item.id !== id);
+      await this.ctx.storage.put('assignments', list);
+    }
+    return { ok: true, action, items: list, seedError: list.length ? '' : seedError };
+  }
+
   private async notebookList(): Promise<ApiResult> {
     const seedError = await this.notebookSeedOnce();
     const items = this.notebookRows();
@@ -4455,6 +4500,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         if (action === 'moveNotebookItem') return this.notebookMove(payload);
         if (action === 'saveNotebookCategoryOrder') return await this.notebookSaveCategoryOrder(payload);
         return await this.notebookList();
+      }
+      if (action === 'getAssignments' || action === 'saveAssignment' || action === 'deleteAssignment') {
+        const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
+        return await this.assignmentsHandle(action, payload, who);
       }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');

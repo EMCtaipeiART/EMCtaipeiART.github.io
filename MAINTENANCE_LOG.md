@@ -385,3 +385,4 @@
 
 - 2026-10-09: Calendar page no longer shows the meeting agenda (kept in the Google event description only).
 - 2026-10-10 行事曆值日生：移除下拉選單，輪值小膠囊移到標題下，點人名直接替換本月值日生
+- 2026-10-10 新增「專案分配」頁（左側欄「分配」）：客戶別分配表，依設計師／依客戶檢視、搜尋、新增編輯刪除；資料首次從 Google 試算表匯入，存在 Worker 資料庫（getAssignments/saveAssignment/deleteAssignment）；換負責人寫入操作紀錄
