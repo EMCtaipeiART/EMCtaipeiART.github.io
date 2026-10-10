@@ -1,9 +1,10 @@
+import { readSite } from './site-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('v5 case board and mail page can find, edit and cancel pending scheduled mail', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   // 資料來源：跨案件的待寄出排程清單，列表在案件旁標出「已排程」。
   assert.match(html, /api\('listPendingScheduledMail'\)/);
   assert.ok(html.includes('lt-act-sched') && html.includes('data-row-act=') && html.includes('已排程'));
@@ -25,7 +26,7 @@ test('v5 case board and mail page can find, edit and cancel pending scheduled ma
 });
 
 test('v5 new-request form offers 送出並排程寄信, which opens the mail page with the schedule time already expanded; the mail action bar stays visible', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   assert.match(html, /id="submitScheduleBtn" data-act="submit-schedule"/);
   assert.match(html, /if\(act==='submit-schedule'\)\{submitForm\(\{schedule:true\}\);return\}/);
   assert.match(html, /startMail\(drafts,\{schedule:Boolean\(opts\.schedule\)\}\)/);
@@ -35,7 +36,7 @@ test('v5 new-request form offers 送出並排程寄信, which opens the mail pag
 });
 
 test('v5 schedule picker offers one-click presets, date plus hour/minute selects and a live summary, and refuses past times', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   assert.match(html, /function schedulePickerHtml\(d\)/);
   assert.match(html, /data-sch-chip=/);
   assert.match(html, /id="mSchDate"/);
@@ -55,7 +56,7 @@ test('v5 schedule picker offers one-click presets, date plus hour/minute selects
 });
 
 test('v5 batch add: every new row inherits the previous row\'s values (including 專案名稱)', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   assert.match(html, /const inheritRow=r=>newRow\(\{client:r\.client,project:r\.project,owner:r\.owner,designer:r\.designer,type:r\.type,stage:r\.stage,qty:r\.qty,start:r\.start,end:r\.end,platforms:\[\.\.\.r\.platforms\],supp:\{\.\.\.r\.supp\},designerTouched:r\.designerTouched\}\)/);
   assert.match(html, /if\(f\.batch&&!f\.extra\.length\)f\.extra\.push\(inheritRow\(f\)\)/);
   assert.match(html, /if\(act==='batch-add'\)\{readRowsSafe\(\);const f=state\.form;f\.extra\.push\(inheritRow\(f\.extra\.length\?f\.extra\[f\.extra\.length-1\]:f\)\)/, '「新增空白一筆」要沿用最後一筆，不是第一筆');

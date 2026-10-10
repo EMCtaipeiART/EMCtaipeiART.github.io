@@ -1,3 +1,4 @@
+import { readSite } from './site-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -833,7 +834,7 @@ test('首頁頭像框（?avatars=1）保留自訂頭像', async () => {
 
 test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過的造型不重拍），首頁優先用快照', async () => {
   const [js, parent, worker, router] = await Promise.all([
-    officeJs(), readFile(new URL('../../index.html', import.meta.url), 'utf8'),
+    officeJs(), readSite(),
     readFile(new URL('../../worker/src/database-coordinator.ts', import.meta.url), 'utf8'),
     readFile(new URL('../../worker/src/index.ts', import.meta.url), 'utf8')
   ]);

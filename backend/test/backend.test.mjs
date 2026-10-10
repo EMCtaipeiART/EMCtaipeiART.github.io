@@ -1,3 +1,4 @@
+import { readSite } from './site-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -5162,7 +5163,7 @@ test('monthly archiving keeps the newest 3 months and only moves fully closed ca
 });
 
 test('平台幣：前台左側選單有「服裝」入口（token 放在網址 #）、管理者有帳本頁，帳本頁只呼叫 Worker 的 coin 動作', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   assert.match(html, /\{k:'outfit',label:'服裝'/);
   assert.match(html, /OUTFIT_ORIGIN\+'\/outfit#embed=1&theme='\+currentTheme\(\)\+'&t='\+encodeURIComponent\(t\)/, '服裝內嵌在右側，帶 token 與深淺模式');
   assert.match(html, /\{type:'emcTheme',theme:currentTheme\(\)\}/);

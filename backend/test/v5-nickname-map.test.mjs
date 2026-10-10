@@ -1,9 +1,10 @@
+import { readSite } from './site-source.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 test('v5 稱呼對照: a per-user full name → nickname map in 個人設定 feeds {收件人名} in every reply path', async () => {
-  const html = await readFile(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = await readSite();
   const schema = await readFile(new URL('../schema.mjs', import.meta.url), 'utf8');
   assert.match(schema, /'深淺模式', '專案欄位順序', '稱呼對照'/, '設定表要有「稱呼對照」欄位');
   // 設定頁：區塊、新增／刪除、儲存、重複與空白檢查。
