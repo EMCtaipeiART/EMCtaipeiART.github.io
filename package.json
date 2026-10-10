@@ -8,10 +8,13 @@
     "import:sheets": "node backend/import_google_sheets.mjs",
     "weights:recalculate": "node scripts/recalculate_database_weights.mjs",
     "modifications:recalculate": "node scripts/recalculate_database_modification_stats.mjs",
-    "test": "node --test backend/test/*.test.mjs"
+    "test": "node --test backend/test/*.test.mjs",
+    "smoke": "node tests/smoke/smoke.mjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.13.0"
   }
 }
-

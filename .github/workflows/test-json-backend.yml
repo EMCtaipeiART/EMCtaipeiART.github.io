@@ -13,6 +13,8 @@ on:
       - 'backend/**'
       - '!backend/data/audit-log.json'
       - 'package.json'
+      - 'package-lock.json'
+      - 'tests/**'
       - '.github/workflows/test-json-backend.yml'
 
 permissions:
@@ -41,3 +43,7 @@ jobs:
           node scripts/generate_database_archive_snapshot.mjs
       - name: Run backend tests
         run: npm test
+      - name: Browser smoke test (main pages open without errors)
+        run: |
+          npm ci
+          npm run smoke

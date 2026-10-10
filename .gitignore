@@ -17,3 +17,4 @@ scripts/nas_design_image_watcher.local.json
 
 # 6.4 MB 的來源檔，只留在本機（使用者要求不要進版控）
 EMC-ART-Pixel-Office/dist/assets/*.psd
+node_modules/

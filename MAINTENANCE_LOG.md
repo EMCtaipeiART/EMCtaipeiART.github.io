@@ -403,3 +403,4 @@
 - 2026-10-11 效能：index.html 的樣式與程式拆成 site.css / site.js（帶內容雜湊版本，可被瀏覽器快取，回訪不再重抓約 175KB）；commit 前自動更新版本（.git/hooks/pre-commit + tools/stamp.cjs）；測試改讀三檔合併（backend/test/site-source.mjs）。若在別台電腦改 site.js/site.css，請先執行 node tools/stamp.cjs 再 commit
 - 2026-10-11 首頁：頭像點擊在觸控裝置第二下進多元宇宙、名片加「進入多元宇宙」按鈕；最新列表／專案列表捲到底自動載入更多
 - 2026-10-11 專案分配：長客戶別名稱不再把編輯／刪除鈕擠出欄位
+- 2026-10-11 新增瀏覽器煙霧測試（tests/smoke/smoke.mjs，puppeteer-core + 本機 Chrome，假後端資料）：首頁/專案/行事曆/專案分配/記事本/作品牆；npm run smoke；CI 與本機 pre-push 都會跑
