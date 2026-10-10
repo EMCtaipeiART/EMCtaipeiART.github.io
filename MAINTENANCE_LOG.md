@@ -384,3 +384,4 @@
 - 2026-10-09: Both bi-weekly meetings get a description (會議摘要: 1 摘要工作指標(量體/事件) 2 作品案例討論 3 提案討論 4 週會回饋): in the auto-created Google event and shown in the calendar duty bar/detail. Worker redeployed.
 
 - 2026-10-09: Calendar page no longer shows the meeting agenda (kept in the Google event description only).
+- 2026-10-10 行事曆值日生：移除下拉選單，輪值小膠囊移到標題下，點人名直接替換本月值日生

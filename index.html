@@ -784,7 +784,7 @@
     .dc-dutybar{margin:0 0 14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:var(--panel);display:grid;gap:12px}
     .dc-duty-head{display:flex;gap:12px;align-items:center}.dc-duty-ico{flex:0 0 auto;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--brand);color:#fff;font-size:13px;font-weight:900}.dc-duty-head b{font-size:16px}.dc-duty-head small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}.dc-duty-name{font-weight:900}.dc-duty-me{margin-left:8px;font-style:normal;font-size:11.5px;font-weight:900;background:#ffe9a8;color:#7a5200;border-radius:99px;padding:1px 9px}
     .dc-duty-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.dc-duty-meet{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--bg);border-left:4px solid var(--brand)}.dc-duty-meet b{font-size:13px;color:var(--brand)}.dc-duty-meet span{font-size:14px;font-weight:800}.dc-duty-meet small{font-size:12px;color:var(--muted);line-height:1.5}
-    .dc-duty-strip{display:flex;gap:8px;flex-wrap:wrap}.dc-duty-m{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-size:13px;font-weight:800;color:var(--ink)}.dc-duty-m b{color:var(--muted);font-weight:800}.dc-duty-m.cur{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+    .dc-duty-strip{display:flex;gap:8px;flex-wrap:wrap}.dc-duty-m{cursor:default;background:none;font-family:inherit;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;border:1px solid var(--line);font-size:13px;font-weight:800;color:var(--ink)}.dc-duty-m b{color:var(--muted);font-weight:800}button.dc-duty-m{cursor:pointer}button.dc-duty-m:hover{border-color:var(--c)}.dc-duty-m.cur{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
     .dc-duty-tag{display:block;margin-top:2px;padding:1px 6px;border-radius:6px;background:#e7f6ea;color:#17652a;font-size:11px;font-weight:800;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html[data-theme="dark"] .dc-duty-tag{background:#173323;color:#8fe0a5}
     .dc-bk{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:13.5px}.dc-bk>b{font-size:13px;color:var(--muted)}.dc-bk-ok{color:#17652a;font-weight:800}.dc-bk-bad{color:#b45309;font-weight:800}.dc-bk-none,.dc-bk-wait{color:var(--muted)}html[data-theme="dark"] .dc-bk-ok{color:#8fe0a5}html[data-theme="dark"] .dc-bk-bad{color:#f6dc7a}
     .dc-bk-items{display:inline-flex;flex-wrap:wrap;gap:6px 10px}.dc-bk-item{font-weight:800}.dc-bk-item.ok{color:#17652a}.dc-bk-item.bad{color:#b45309}.dc-bk-item small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}.dc-bk-item a{color:var(--brand);margin-left:4px}.dc-bk-btns{display:inline-flex;gap:8px;margin-left:auto;flex-wrap:wrap}
@@ -4550,12 +4550,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!dutyOverLoaded&&!dutyOverBusy){dutyOverBusy=1;dutyLoadOver().then(()=>{if(state.view==='calendar')renderCalendarPage()})}
       const y=dcCal.y,m=dcCal.m,who=dutyWho(y,m),meets=dutyMeetings(y,m),me=ownDesignerName();
       const mkey=dutyMonthKey(y,m),over=dutyOver[mkey],rot=dutyOf(y,m),canSwap=(me&&(me===who||me===rot))||isAdminAcct()||isMachiUser();
-      const swapHtml=canSwap?'<div class="dc-swap"><label>替換值日生：<select id="dutySwapSel">'+DUTY_ORDER.map(n=>'<option value="'+n+'"'+(n===who?' selected':'')+'>'+n+(n===rot?'（原輪值）':'')+'</option>').join('')+'</select></label><button type="button" class="btn" data-duty-swap="'+mkey+'">確定替換</button>'+(over?'<button type="button" class="btn" data-duty-swap-clear="'+mkey+'">恢復輪值</button>':'')+'</div>':'';
-      const strip=Array.from({length:5},(_,i)=>{const d=new Date(Date.UTC(y,m+i,1));return '<span class="dc-duty-m'+(i===0?' cur':'')+'" style="--c:'+dcColor(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'"><b>'+(d.getUTCMonth()+1)+'月</b>'+esc(dutyWho(d.getUTCFullYear(),d.getUTCMonth()))+'</span>'}).join('');
+      const strip='<div class="dc-duty-strip" aria-label="輪值表">'+DUTY_ORDER.map(n=>'<'+(canSwap?'button type="button"':'span')+' class="dc-duty-m'+(n===who?' cur':'')+'" style="--c:'+dcColor(n)+'"'+(canSwap&&n!==who?' data-duty-swap="'+mkey+'" data-duty-to="'+n+'" title="換成 '+n+'"':'')+'><b>'+n+'</b>'+(n===rot?'原輪值':'')+'</'+(canSwap?'button':'span')+'>').join('')+(over&&canSwap?'<button type="button" class="dc-duty-m" data-duty-swap-clear="'+mkey+'">恢復輪值</button>':'')+'</div>';
       return '<div class="dc-dutybar"><div class="dc-duty-head"><span class="dc-duty-ico">值日</span><div><b>'+(m+1)+' 月值日生：<span class="dc-duty-name" style="color:'+dcColor(who)+'">'+esc(who)+'</span></b>'+(me&&me===who?'<em class="dc-duty-me">就是你</em>':'')+'<small>'+(over?'已手動替換（原輪值 '+esc(rot)+'，由 '+esc(over.by)+' 換）・':'')+'每月 1 號提醒值日生，並自動預約兩場雙週會</small></div></div>'+swapHtml
         +'<div class="dc-duty-list">'+meets.map(x=>'<div class="dc-duty-meet"><b>'+dutyDay(x.ms)+'</b><span>'+esc(x.title)+'</span><small>'+esc(dutyNeed)+'</small></div>').join('')+'</div>'
         +dutyBookHtml(y,m,who,me)
-        +'<div class="dc-duty-strip" aria-label="輪值表">'+strip+'</div></div>';
+        +'</div>';
     }
     async function dutyRemind(testMs){
       if(!loggedIn())return;const me=ownDesignerName();if(!me)return;
@@ -4579,7 +4578,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const sw=e.target.closest&&e.target.closest('[data-duty-swap],[data-duty-swap-clear]');
       if(sw){
         const clear=sw.hasAttribute('data-duty-swap-clear'),mk=clear?sw.dataset.dutySwapClear:sw.dataset.dutySwap,mm=mk.match(/^(\d+)-(\d+)$/),y=+mm[1],m=+mm[2]-1;
-        const to=clear?dutyOf(y,m):(document.getElementById('dutySwapSel')||{}).value;
+        const to=clear?dutyOf(y,m):sw.dataset.dutyTo;
         if(!to||(!clear&&to===dutyWho(y,m))){toast('請選擇要換成的設計師');return}
         if(!confirm(clear?'恢復成原輪值的 '+to+'？':'確定把 '+(m+1)+' 月值日生換成 '+to+'？換人後新的值日生登入時會收到提醒；如果本月會議已經預約過，系統不會自動重建。'))return;
         sw.disabled=true;
