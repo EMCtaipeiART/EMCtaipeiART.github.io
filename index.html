@@ -247,6 +247,7 @@
     .hc-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
     .hc-name{font-size:16px;font-weight:900}
     .hc-level{font-size:13px;font-weight:900;color:var(--brand)}
+    .hc-load-tag{margin-left:4px;font-weight:900}.hc-load{margin-top:4px}
     .hc-title{margin-top:2px;font-size:12px;color:var(--muted);font-weight:700}
     .hc-xp{height:7px;margin:9px 0 4px;border-radius:99px;background:var(--line);overflow:hidden}
     .hc-xp span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2bbf4c,var(--brand))}
@@ -1604,6 +1605,14 @@ window.emcQuotes=[
       }catch(err){console.warn('等級資料讀取失敗',err)}
       state.archiveLoading=false;renderTeam();
     }
+    /* 工作負載：進行中（未開始／執行中／過稿中／修改中）案件的「加權」加總，和設計部平均比較 */
+    function designerLoad(name){
+      const act=new Set(['未開始','執行中','過稿中','修改中']),sum=new Map(),w=r=>{const n=Number(String(r['加權']??'').trim());return Number.isFinite(n)&&n>0?n:(Number(r['數量'])>0?Number(r['數量']):1)};
+      for(const r of allRows()){if(!act.has(String(r['狀態']||'').trim()))continue;const d=String(r['設計負責人']||'').trim();if(d)sum.set(d,(sum.get(d)||0)+w(r))}
+      const team=DESIGNERS.map(n=>sum.get(n)||0),avg=team.reduce((a,b)=>a+b,0)/(team.length||1),mine=sum.get(name)||0,ratio=avg?mine/avg:0;
+      const lv=!mine?['空檔','#64748b']:ratio<0.6?['輕鬆','#16a34a']:ratio<1.2?['適中','#2563eb']:ratio<1.6?['偏高','#d97706']:['滿載','#dc2626'];
+      return {mine,avg,max:Math.max(...team,1),label:lv[0],color:lv[1]};
+    }
     function hoverCardHtml(name){
       const c=designerCases(name),lv=levelInfo(name),p=state.people[name],status=p?.status;
       const fmt=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});
@@ -1614,6 +1623,7 @@ window.emcQuotes=[
         <div class="hc-xp-text">${lv?`${fmt(lv.score)} 分 · 距 Lv.${lv.level+1} 還差 ${fmt(lv.remaining)} 分`:'&nbsp;'}</div>
         <div class="hc-section">目前案量</div>
         <div class="hc-counts">${Object.entries(c).filter(([k])=>k!=='已完成').map(([k,v])=>`<div class="hc-count ${(ST[k]||{}).cls||''}"><b>${v}</b><small>${k==='未開始'?'未執行':k}</small></div>`).join('')}</div>
+        ${(()=>{const l=designerLoad(name),f=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});return `<div class="hc-section">工作負載 <b class="hc-load-tag" style="color:${l.color}">${l.label}</b></div><div class="hc-xp hc-load"><span style="width:${Math.min(100,l.mine/l.max*100).toFixed(1)}%;background:${l.color}"></span></div><div class="hc-xp-text">進行中加權 ${f(l.mine)}・設計部平均 ${f(l.avg)}</div>`})()}
         ${status?`<div class="hc-status">狀態：${esc(STATUS_TEXT[status]||status)}${p.message?`｜「${esc(p.message)}」`:''}</div>`:''}
       </div>`;
     }
