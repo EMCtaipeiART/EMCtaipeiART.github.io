@@ -29,7 +29,7 @@
     const LATEST_PAGE=12,COLUMN_PAGE=10;
     /* 專案頁狀態欄順序：設計師可拖曳欄位標題調整；個人偏好，記在這台電腦（localStorage）與帳號（設定表「專案欄位順序」） */
     /* 首頁綠底漸層：全站共用（管理者與 Machi 可編輯，存在後端，所有人包含未登入都看得到）。
-       預設「依節慶日期自動換」：萬聖節 10/1–11/1、聖誕節 12/1–12/26、新年（除夕前後各約兩週）、情人節 2/7–2/14；
+       預設「依節慶日期自動換」，每個節慶只保留一週：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14；
        其他日子用 base 配色（沒設定就是預設綠）。也可以改成固定一組（fixed）。 */
     const HERO_KEY='v5HeroCfg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
     const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#8c9a54|#598349|#34522f'],['halloweennight','萬聖節·黑夜','#3d2257|#1b1226|#0b0610'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c']];
@@ -39,10 +39,10 @@
     function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest')}}
     function heroFestOn(dateMs){
       const d=new Date(dateMs+8*3600000),y=d.getUTCFullYear(),m=d.getUTCMonth()+1,day=d.getUTCDate(),md=m*100+day,DAY=86400000;
-      if(md>=1001&&md<=1101)return 'halloween';
-      if(md>=1201&&md<=1226)return 'xmas';
-      for(const yy of [y-1,y,y+1]){const c=HERO_CNY[yy];if(!c)continue;const cms=Date.parse(c+'T00:00:00Z'),now=Date.UTC(y,m-1,day);if(now>=cms-14*DAY&&now<=cms+15*DAY)return 'cny'}
-      if(md>=207&&md<=214)return 'valentine';
+      if(md>=1025&&md<=1031)return 'halloween';
+      if(md>=1219&&md<=1225)return 'xmas';
+      for(const yy of [y-1,y,y+1]){const c=HERO_CNY[yy];if(!c)continue;const cms=Date.parse(c+'T00:00:00Z'),now=Date.UTC(y,m-1,day);if(now>=cms-1*DAY&&now<=cms+5*DAY)return 'cny'}
+      if(md>=208&&md<=214)return 'valentine';
       return '';
     }
     function heroFestLabel(f){const x=HERO_FESTS.find(z=>z[0]===f);return x?x[1]:''}
@@ -81,7 +81,7 @@
       const refresh=()=>{
         q('hbFestBox').style.display=auto?'none':'';
         q('hbColorLb').textContent=auto?'非節慶日子的配色（預設綠）':'配色';
-        q('hbAutoNote').textContent=auto?'節慶期間自動換成：萬聖節 10/1–11/1、聖誕節 12/1–12/26、新年（農曆年前後約兩週）、情人節 2/7–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'固定使用下方選的主題與配色，不會依日期變動。';
+        q('hbAutoNote').textContent=auto?'節慶期間（每個節慶一週）自動換成：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'固定使用下方選的主題與配色，不會依日期變動。';
         const v=preview();q('hbPrev').style.background=grad(v);applyHeroBg(v);
         back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',(auto||!fest)&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));
         back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest));
