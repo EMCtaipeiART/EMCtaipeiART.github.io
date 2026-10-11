@@ -529,7 +529,7 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
   if ('heroBg' in settings || '首頁背景' in settings) {
     // 首頁綠底漸層的個人配色：三個色碼（中心｜中間｜邊緣），格式不對一律當作恢復預設（空字串）。
     const raw = text(settings.heroBg ?? settings['首頁背景']).toLowerCase();
-    row['首頁背景'] = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|xmas|cny|valentine))?$/.test(raw) ? raw : '';
+    row['首頁背景'] = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|xmas|cny|valentine|duanwu|midautumn))?$/.test(raw) ? raw : '';
   }
   if (Array.isArray(settings.visibleColumns)) {
     const order = new Map(settings.visibleColumns.map((key, index) => [String(key), index + 1]));

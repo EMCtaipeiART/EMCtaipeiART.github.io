@@ -29,20 +29,24 @@
     const LATEST_PAGE=12,COLUMN_PAGE=10;
     /* 專案頁狀態欄順序：設計師可拖曳欄位標題調整；個人偏好，記在這台電腦（localStorage）與帳號（設定表「專案欄位順序」） */
     /* 首頁綠底漸層：全站共用（管理者與 Machi 可編輯，存在後端，所有人包含未登入都看得到）。
-       預設「依節慶日期自動換」，每個節慶只保留一週：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14；
+       預設「依節慶日期自動換」，每個節慶只保留一週：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14、端午與中秋（節日前 5 天到後 1 天）；
        其他日子用 base 配色（沒設定就是預設綠）。也可以改成固定一組（fixed）。 */
     const HERO_KEY='v5HeroCfg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
-    const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#8c9a54|#598349|#34522f'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c']];
+    const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#8c9a54|#598349|#34522f'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c'],['duanwu','端午節','#8fcf7a|#3f9a5a|#1c5a3a'],['midautumn','中秋節','#2f4f94|#17305f|#0a1536']];
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
     const HERO_CNY={2026:'2026-02-17',2027:'2027-02-06',2028:'2028-01-26',2029:'2029-02-13',2030:'2030-02-03',2031:'2031-01-23',2032:'2032-02-11',2033:'2033-01-31',2034:'2034-02-19',2035:'2035-02-08',2036:'2036-01-28',2037:'2037-02-15',2038:'2038-02-04',2039:'2039-01-24',2040:'2040-02-12'};
+    const HERO_DUANWU={2026:'2026-06-19',2027:'2027-06-09',2028:'2028-05-28',2029:'2029-06-16',2030:'2030-06-05',2031:'2031-06-24',2032:'2032-06-12',2033:'2033-06-01',2034:'2034-06-20',2035:'2035-06-10'};
+    const HERO_ZHONGQIU={2026:'2026-09-25',2027:'2027-09-15',2028:'2028-10-03',2029:'2029-09-22',2030:'2030-09-12',2031:'2031-10-01',2032:'2032-09-19',2033:'2033-09-08',2034:'2034-09-27',2035:'2035-09-16'};
     const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return (p.length===3||(p.length===4&&HERO_FESTS.some(f=>f[0]&&f[0]===p[3])))&&p.slice(0,3).every(x=>/^#[0-9a-f]{6}$/.test(x))};
-    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');heroScene(['halloween','xmas','cny','valentine'].includes(p[3]),p[3])}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');heroScene(false,'')}}
+    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');heroScene(HERO_FESTS.some(f=>f[0]&&f[0]===p[3]),p[3])}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');heroScene(false,'')}}
     /* 萬聖節（鬼魅綠）的 3D 場景：只在這個主題時才建立，其他主題移除；電腦版滑鼠移動有輕微視差 */
     /* 聖誕／新年／情人節的 3D 場景（微軟 Fluent Emoji 3D，MIT）：資料驅動，每個物件 [圖, 位置, 寬, 手機寬(0=手機隱藏), 視差深度, 動畫, 吊繩長度] */
     const HX_DIR='assets/festival/fluent3d/';
     const HX_SCENES={
       xmas:[['christmas_tree',{l:'1%',b:'-6px'},170,92,10,''],['wrapped_gift',{l:'15%',b:'0'},84,0,16,'float'],['snowman',{r:'2%',b:'-4px'},160,88,10,''],['bell',{r:'20%',t:'0'},64,40,8,'swing',46],['bell',{l:'20%',t:'0'},52,0,8,'swing',30],['snowflake',{r:'5%',t:'6%'},92,54,14,'spin'],['snowflake',{l:'5%',t:'44%'},60,0,18,'spin'],['snowflake',{l:'12%',t:'18%'},44,0,20,'float']],
       cny:[['red_paper_lantern',{l:'5%',t:'0'},92,56,8,'swing',34],['red_paper_lantern',{l:'22%',t:'0'},64,0,8,'swing',12],['red_paper_lantern',{r:'22%',t:'0'},64,0,8,'swing',12],['red_paper_lantern',{r:'9%',t:'0'},92,56,8,'swing',34],['red_envelope',{l:'3%',b:'0'},120,70,12,'float'],['coin',{l:'17%',b:'6px'},72,0,18,'float'],['money_bag',{r:'3%',b:'0'},118,70,12,'float'],['firecracker',{r:'16%',b:'0'},84,0,16,'sway'],['coin',{l:'7%',t:'36%'},56,0,18,'float'],['coin',{r:'6%',t:'34%'},52,0,18,'float']],
+      duanwu:[['dragon',{l:'3%',t:'6%'},124,70,12,'float'],['dragon_face',{r:'5%',t:'6%'},104,60,12,'sway'],['tamale',{l:'2%',b:'-2px'},132,76,12,'float'],['tamale',{l:'16%',b:'6px'},78,0,18,'sway'],['canoe',{r:'2%',b:'-4px'},172,92,10,'sway'],['drum',{r:'13.5%',b:'0'},84,0,14,'float'],['herb',{l:'22%',t:'0'},64,0,8,'swing',34],['herb',{r:'22%',t:'0'},64,0,8,'swing',34],['leafy_green',{l:'7%',t:'46%'},64,0,18,'float'],['rice_ball',{r:'7%',t:'44%'},60,0,18,'float']],
+      midautumn:[['full_moon',{l:'3%',t:'-1%'},150,56,8,'float'],['rabbit',{l:'3%',b:'0'},120,70,14,'float'],['moon_cake',{r:'4%',b:'4px'},112,64,12,'float'],['teapot',{l:'16%',b:'0'},100,0,14,'sway'],['teacup_without_handle',{l:'26%',b:'4px'},60,0,18,'float'],['red_paper_lantern',{r:'4%',t:'0'},82,36,8,'swing',20],['red_paper_lantern',{r:'22%',t:'0'},56,0,8,'swing',12],['pear',{r:'13%',b:'2px'},68,0,16,'float'],['star',{l:'30%',t:'8%'},30,0,0,'pulse'],['star',{l:'64%',t:'6%'},26,0,0,'pulse'],['star',{r:'30%',t:'30%'},24,0,0,'pulse'],['sparkles',{l:'20%',t:'30%'},44,0,10,'pulse'],['sparkles',{r:'14%',t:'24%'},40,0,10,'pulse']],
       valentine:[['red_heart',{l:'7%',t:'12%'},104,60,12,'float'],['heart_with_arrow',{r:'6%',t:'8%'},110,62,12,'sway'],['love_letter',{l:'2%',b:'2px'},130,74,14,'float'],['rose',{l:'9%',t:'46%'},70,56,10,'sway'],['chocolate_bar',{l:'17%',b:'6px'},84,0,18,'float'],['teddy_bear',{r:'1%',b:'0'},124,70,12,'float'],['sparkling_heart',{r:'4%',t:'44%'},60,0,18,'pulse'],['red_heart',{l:'30%',b:'-30px'},30,0,0,'rise'],['red_heart',{l:'46%',b:'-30px'},38,0,0,'rise'],['red_heart',{l:'62%',b:'-30px'},28,0,0,'rise'],['red_heart',{l:'76%',b:'-30px'},34,0,0,'rise'],['red_heart',{l:'88%',b:'-30px'},26,0,0,'rise']]
     };
     function heroScene(on,fest){
@@ -66,6 +70,7 @@
       if(md>=1219&&md<=1225)return 'xmas';
       for(const yy of [y-1,y,y+1]){const c=HERO_CNY[yy];if(!c)continue;const cms=Date.parse(c+'T00:00:00Z'),now=Date.UTC(y,m-1,day);if(now>=cms-1*DAY&&now<=cms+5*DAY)return 'cny'}
       if(md>=208&&md<=214)return 'valentine';
+      for(const [tbl,name] of [[HERO_DUANWU,'duanwu'],[HERO_ZHONGQIU,'midautumn']]){const c=tbl[y];if(!c)continue;const cms=Date.parse(c+'T00:00:00Z'),now=Date.UTC(y,m-1,day);if(now>=cms-5*DAY&&now<=cms+1*DAY)return name}
       return '';
     }
     function heroFestLabel(f){const x=HERO_FESTS.find(z=>z[0]===f);return x?x[1]:''}
@@ -104,7 +109,7 @@
       const refresh=()=>{
         q('hbFestBox').style.display=auto?'none':'';
         q('hbColorLb').textContent=auto?'非節慶日子的配色（預設綠）':'配色';
-        q('hbAutoNote').textContent=auto?'節慶期間（每個節慶一週）自動換成：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'手動模式：首頁一直使用下方選的主題與配色（可選「無節慶」只換配色），不會依日期變動；要回到自動時再切回「自動」。';
+        q('hbAutoNote').textContent=auto?'節慶期間（每個節慶一週）自動換成：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14、端午節與中秋節（節日前 5 天到後 1 天）。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'手動模式：首頁一直使用下方選的主題與配色（可選「無節慶」只換配色），不會依日期變動；要回到自動時再切回「自動」。';
         const v=preview();q('hbPrev').style.background=grad(v);applyHeroBg(v);
         back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',(auto||!fest)&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));
         back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest));

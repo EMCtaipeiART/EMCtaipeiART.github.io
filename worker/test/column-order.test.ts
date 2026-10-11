@@ -46,3 +46,13 @@ describe('首頁背景 festival theme', () => {
     expect(row['首頁背景']).toBe('');
   });
 });
+
+describe('首頁背景 dragon boat and mid-autumn', () => {
+  it('accepts duanwu and midautumn festival codes', () => {
+    const row: Record<string, unknown> = { 名字: 'Anna' };
+    updateSettingsRow(row, { heroBg: '#8fcf7a|#3f9a5a|#1c5a3a|duanwu' });
+    expect(row['首頁背景']).toBe('#8fcf7a|#3f9a5a|#1c5a3a|duanwu');
+    updateSettingsRow(row, { heroBg: '#2f4f94|#17305f|#0a1536|midautumn' });
+    expect(row['首頁背景']).toBe('#2f4f94|#17305f|#0a1536|midautumn');
+  });
+});
