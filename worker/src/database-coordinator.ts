@@ -1644,10 +1644,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
   private pixelOfficeApplyOffline(nowMs: number): void {
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>(
-      'SELECT name, state, last_seen FROM pixel_office_people WHERE last_seen > 0'
+      'SELECT name, state, last_seen FROM pixel_office_people'
     ).toArray();
+    // 假日（週六日與國定假日）沒有心跳超過門檻就直接下班：連手動點的在座也一樣（使用者 2026-10-11 要求），
+    // 從來沒有心跳的人也算。平日的規則不變。
+    const holiday = !pixelOfficeIsWorkday(nowMs);
     for (const row of rows) {
       const lastSeen = Number(row.last_seen) || 0;
+      if (lastSeen <= 0 && !holiday) continue;
       if (nowMs - lastSeen <= PIXEL_OFFICE_OFFLINE_MS) continue;
       let state: Row = {};
       try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
@@ -1655,7 +1659,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 'offwork' 也要放行再判一次：中午電腦睡著的人會先在 12:00 前被判成下班，不讓它再被改的話
       // 整個午休都會卡在下班——這正是使用者回報的那個情況。
       if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
-      if (state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
+      if (!holiday && state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
       if (status === 'toilet' && pixelOfficeIsWorkday(nowMs) && nowMs - lastSeen <= PIXEL_OFFICE_AWAY_GRACE_MS) continue;
       const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
       if (status === next) continue;
