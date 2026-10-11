@@ -1671,6 +1671,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * - 剛開機／剛醒來（上一次心跳已經超過離線門檻，或從來沒有過）：不管原本是什麼狀態，一律改成「在座」或「加班」。
    * - 持續開著：沒被手動指定過的在座／加班／用餐／下班會隨時間互相切換；手動指定的狀態維持到電腦下次關機，
  *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
+  /** 行事曆設定的「會議／休假」已經持續多久（不是行事曆設的就回 0） */
+  private pixelOfficeCalendarStatusAge(name: string, nowMs: number): number {
+    const row = this.ctx.storage.sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+    if (!row) return 0;
+    try {
+      const state = JSON.parse(row.state) as Row;
+      if (text(state.statusSource) !== 'calendar' || !['meeting', 'leave'].includes(text(state.status))) return 0;
+      return Math.max(0, nowMs - (Number(state.statusAt) || nowMs));
+    } catch { return 0; }
+  }
+
   /** 行事曆同步：把某位設計師改成「會議／休假」，或事件結束後交還給電腦自動判斷。
    * 不碰使用者手動指定的狀態（使用者的選擇優先），也不碰後端還沒有資料的人。 */
   private pixelOfficeApplyCalendar(name: string, desired: PixelOfficeCalendarState, nowMs: number): 'meeting' | 'leave' | 'released' | 'unchanged' | 'manual' | 'at-desk' {
@@ -1784,7 +1795,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         continue;
       }
       // 看不到這個人的行事曆（沒有權限、信箱打錯）：完全不動他的狀態，總比猜錯好。
-      if (!entry || (Array.isArray(entry.errors) && entry.errors.length)) { unreadable.push(name); continue; }
+      if (!entry || (Array.isArray(entry.errors) && entry.errors.length)) {
+        unreadable.push(name);
+        // 讀不到行事曆又沒有人資假單時，行事曆設的「休假／會議」不會有人來收回，會一直卡著（Leona 的休假卡了一週）。
+        // 超過 12 小時還讀不到，就把它交還給電腦自動判斷；真的在休假的人仍可手動點「休假」或由人資假單維持。
+        if (this.pixelOfficeCalendarStatusAge(name, nowMs) > 12 * 3600_000 && this.pixelOfficeApplyCalendar(name, '', nowMs) === 'released') released.push(name);
+        continue;
+      }
       const busy = Array.isArray(entry.busy) ? entry.busy as Row[] : [];
       const busyMeeting = pixelOfficeBusyMeetingNow(busy, nowMs);
       // 有成功讀到事件詳細資料時，以詳細資料為準（可排除專注時間、工作地點，也能辨識休假）；否則
