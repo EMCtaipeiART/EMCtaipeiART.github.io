@@ -1278,7 +1278,46 @@ body.can-hero-edit .hero-edit{display:inline-flex}
 .hb-auto{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}.hb-auto input{width:auto}
 
 /* 萬聖節（鬼魅綠）：配色參考 bedimcode/responsive-halloween-website 的橄欖綠到卡其漸層＋橘色重點，圖案是自己畫的 */
-html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/fluent/full_moon.png),url(assets/festival/fluent/bat.png),url(assets/festival/fluent/bat.png),url(assets/festival/fluent/spider_web.png),url(assets/festival/fluent/spider.png),url(assets/festival/fluent/ghost.png),url(assets/festival/fluent/jack-o-lantern.png),url(assets/festival/fluent/candy.png),url(assets/festival/fluent/ghost.png),url(assets/festival/fluent/jack-o-lantern.png);background-position:2% 8px,15% 22px,80% 70px,98% 0,92% 66px,5% 48%,2% 100%,97% 100%,90% 54%,88% 100%;background-size:104px,52px,40px,128px,60px,92px,128px,72px,56px,88px}
+html[data-hero-fest="halloween"] .hero::before{display:none}
 html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
-@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:64px,34px,0,84px,0,54px,84px,46px,0,0;background-position:0 4px,24% 14px,80% 70px,100% 0,92% 66px,0 44%,0 100%,100% 100%,90% 54%,88% 100%}}
+
 .hb-modes{display:grid;gap:6px}
+
+/* 萬聖節場景（鬼魅綠）：3D 圖片疊成多層，電腦版有緩慢的漂浮／擺動／發光動畫與滑鼠視差；手機是靜態的 */
+.hero-scene{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;--mx:0;--my:0}
+.hero-scene .hs{position:absolute;transform:translate3d(calc(var(--mx)*var(--d)*1px),calc(var(--my)*var(--d)*.6px),0);transition:transform .35s ease-out}
+.hero-scene .hs img{display:block;width:100%;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.28))}
+.hs-moon{left:1%;top:-6px;width:210px;--d:6}
+.hs-ghost{left:6%;top:34%;width:112px;--d:18}
+.hs-hat{right:4%;top:5%;width:140px;--d:12}
+.hs-swing{right:23%;top:0;width:58px;--d:8;transform-origin:50% 0}
+.hs-swing::before{content:"";position:absolute;left:50%;top:0;width:1.5px;height:calc(100% - 52px);background:linear-gradient(rgba(255,255,255,.2),rgba(255,255,255,.7))}
+.hs-swing img{margin-top:auto}
+.hs-swing{display:flex;flex-direction:column;height:104px}
+.hs-pumpkins{left:0;bottom:-2px;width:236px;--d:10}
+.hs-pumpkins::before,.hs-glow::before{content:"";position:absolute;left:10%;right:10%;bottom:6%;height:60%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,170,60,.55),rgba(255,140,40,0));filter:blur(6px);z-index:-1}
+.hs-house{right:1%;bottom:-2px;width:196px;--d:10}
+.hs-candy{right:3%;top:40%;width:70px;--d:22}
+.hs-glow{display:none;left:21%;bottom:0;width:86px;--d:16}
+@media (min-width:1700px){.hs-glow{display:block}}
+.hs-fog{position:absolute;left:-10%;width:70%;height:55%;border-radius:50%;background:radial-gradient(closest-side,rgba(235,245,215,.22),rgba(235,245,215,0))}
+.hs-fog1{bottom:-18%}.hs-fog2{left:auto;right:-12%;top:-12%;width:60%;height:60%;background:radial-gradient(closest-side,rgba(255,230,170,.16),rgba(255,230,170,0))}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .hs>img{animation:hsFloat 4.2s ease-in-out infinite alternate}
+  .hs-ghost>img{animation-duration:3.6s}.hs-moon>img{animation-duration:6s}.hs-candy>img{animation-duration:3.1s;animation-delay:-1s}.hs-glow>img{animation:none}
+  .hs-hat>img{animation:hsSway 5s ease-in-out infinite alternate;transform-origin:60% 90%}
+  .hs-swing{animation:hsSwing 3.4s ease-in-out infinite alternate}.hs-swing>img{animation:none}
+  .hs-pumpkins::before,.hs-glow::before{animation:hsGlow 2.8s ease-in-out infinite alternate}
+  .hs-glow>img{animation:hsGlowImg 2.8s ease-in-out infinite alternate}
+  .hs-fog1{animation:hsFog 22s ease-in-out infinite alternate}.hs-fog2{animation:hsFog 28s ease-in-out infinite alternate-reverse}
+}
+@keyframes hsFloat{to{transform:translateY(-9px)}}
+@keyframes hsSway{from{transform:rotate(-3deg)}to{transform:rotate(4deg)}}
+@keyframes hsSwing{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+@keyframes hsGlow{from{opacity:.45}to{opacity:1}}
+@keyframes hsGlowImg{from{filter:drop-shadow(0 0 4px rgba(255,200,80,.2))}to{filter:drop-shadow(0 0 16px rgba(255,200,80,.85))}}
+@keyframes hsFog{to{transform:translateX(9%)}}
+@media (max-width:720px){
+  .hs-moon{width:104px}.hs-ghost,.hs-candy,.hs-glow{display:none}.hs-hat{width:68px;top:3px}.hs-swing{display:none}
+  .hs-pumpkins{width:124px}.hs-house{width:98px}.hero-scene .hs{transform:none}
+}

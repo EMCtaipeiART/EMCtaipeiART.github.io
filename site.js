@@ -36,7 +36,18 @@
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
     const HERO_CNY={2026:'2026-02-17',2027:'2027-02-06',2028:'2028-01-26',2029:'2029-02-13',2030:'2030-02-03',2031:'2031-01-23',2032:'2032-02-11',2033:'2033-01-31',2034:'2034-02-19',2035:'2035-02-08',2036:'2036-01-28',2037:'2037-02-15',2038:'2038-02-04',2039:'2039-01-24',2040:'2040-02-12'};
     const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return (p.length===3||(p.length===4&&HERO_FESTS.some(f=>f[0]&&f[0]===p[3])))&&p.slice(0,3).every(x=>/^#[0-9a-f]{6}$/.test(x))};
-    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest')}}
+    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');heroScene(p[3]==='halloween')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');heroScene(false)}}
+    /* 萬聖節（鬼魅綠）的 3D 場景：只在這個主題時才建立，其他主題移除；電腦版滑鼠移動有輕微視差 */
+    function heroScene(on){
+      const hero=document.querySelector('.hero');if(!hero)return;let sc=hero.querySelector('.hero-scene');
+      if(!on){if(sc)sc.remove();return}
+      if(sc)return;
+      const P='assets/festival/hw3d/',im=n=>'<img src="'+P+n+'.webp" alt="" decoding="async">';
+      sc=document.createElement('div');sc.className='hero-scene';sc.setAttribute('aria-hidden','true');
+      sc.innerHTML='<i class="hs-fog hs-fog1"></i><i class="hs-fog hs-fog2"></i><div class="hs hs-moon">'+im('moon-bats')+'</div><div class="hs hs-ghost">'+im('ghost')+'</div><div class="hs hs-hat">'+im('hat')+'</div><div class="hs hs-swing">'+im('spider')+'</div><div class="hs hs-pumpkins">'+im('pumpkins')+'</div><div class="hs hs-glow">'+im('glow-pumpkin')+'</div><div class="hs hs-house">'+im('house')+'</div><div class="hs hs-candy">'+im('candy')+'</div>';
+      hero.insertBefore(sc,hero.firstChild);
+      if(matchMedia('(hover:hover)').matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches){let raf=0;hero.addEventListener('mousemove',e=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const r=hero.getBoundingClientRect();sc.style.setProperty('--mx',((e.clientX-r.left)/r.width-.5)*2);sc.style.setProperty('--my',((e.clientY-r.top)/r.height-.5)*2)})},{passive:true});hero.addEventListener('mouseleave',()=>{sc.style.setProperty('--mx',0);sc.style.setProperty('--my',0)})}
+    }
     function heroFestOn(dateMs){
       const d=new Date(dateMs+8*3600000),y=d.getUTCFullYear(),m=d.getUTCMonth()+1,day=d.getUTCDate(),md=m*100+day,DAY=86400000;
       if(md>=1025&&md<=1031)return 'halloween';
