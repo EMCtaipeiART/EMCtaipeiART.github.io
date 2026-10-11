@@ -73,7 +73,7 @@
       const back=document.createElement('div');back.id='heroModal';back.className='nc-back';
       const grad=v=>{const p=v.split('|');return 'radial-gradient(120px 60px at 50% -10%,'+p[0]+' 0%,'+p[1]+' 45%,'+p[2]+' 100%)'};
       const nowFest=heroFestOn(Date.now());
-      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(500px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>全站共用，所有人看到的都一樣；只有管理者與 Machi 可以編輯。</p></div></div><div class="nc-body"><label class="hb-auto"><input type="checkbox" id="hbAuto"'+(auto?' checked':'')+'> 依節慶日期自動切換</label><p class="set-note" id="hbAutoNote"></p><div id="hbFestBox"><b class="hb-lb">固定使用的節慶主題</b><div class="hb-fest">'+HERO_FESTS.map(f=>'<button type="button" class="hb-chip" data-fest="'+f[0]+'">'+f[1]+'</button>').join('')+'</div></div><b class="hb-lb" id="hbColorLb"></b><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA"></label><label>中間<input type="color" id="hbB"></label><label>邊緣<input type="color" id="hbC"></label></div><p class="set-note" style="margin-top:10px">節慶裝飾在手機上是靜態的，比較省電；電腦版只有聖誕節的雪花會緩慢飄落。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
+      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(500px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>全站共用，所有人看到的都一樣；只有管理者與 Machi 可以編輯。</p></div></div><div class="nc-body"><div class="hb-modes"><label class="hb-auto"><input type="radio" name="hbMode" value="auto"'+(auto?' checked':'')+'> 自動：依節慶日期切換</label><label class="hb-auto"><input type="radio" name="hbMode" value="manual"'+(auto?'':' checked')+'> 手動：自己指定主題（立刻生效，不看日期）</label></div><p class="set-note" id="hbAutoNote"></p><div id="hbFestBox"><b class="hb-lb">手動指定的節慶主題</b><div class="hb-fest">'+HERO_FESTS.map(f=>'<button type="button" class="hb-chip" data-fest="'+f[0]+'">'+f[1]+'</button>').join('')+'</div></div><b class="hb-lb" id="hbColorLb"></b><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA"></label><label>中間<input type="color" id="hbB"></label><label>邊緣<input type="color" id="hbC"></label></div><p class="set-note" style="margin-top:10px">節慶裝飾在手機上是靜態的，比較省電；電腦版只有聖誕節的雪花會緩慢飄落。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
       const q=id=>back.querySelector('#'+id),colors=()=>[q('hbA').value,q('hbB').value,q('hbC').value].join('|');
       const setColors=v=>{const p=v.split('|');q('hbA').value=p[0];q('hbB').value=p[1];q('hbC').value=p[2]};
       const stash=()=>{if(auto)baseV=colors();else fixedV=colors()};
@@ -81,13 +81,13 @@
       const refresh=()=>{
         q('hbFestBox').style.display=auto?'none':'';
         q('hbColorLb').textContent=auto?'非節慶日子的配色（預設綠）':'配色';
-        q('hbAutoNote').textContent=auto?'節慶期間（每個節慶一週）自動換成：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'固定使用下方選的主題與配色，不會依日期變動。';
+        q('hbAutoNote').textContent=auto?'節慶期間（每個節慶一週）自動換成：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'手動模式：首頁一直使用下方選的主題與配色（可選「無節慶」只換配色），不會依日期變動；要回到自動時再切回「自動」。';
         const v=preview();q('hbPrev').style.background=grad(v);applyHeroBg(v);
         back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',(auto||!fest)&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));
         back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest));
       };
       setColors(auto?baseV:fixedV);refresh();
-      back.addEventListener('change',e=>{if(e.target.id==='hbAuto'){stash();auto=e.target.checked;setColors(auto?baseV:fixedV);refresh()}});
+      back.addEventListener('change',e=>{if(e.target.name==='hbMode'){stash();auto=e.target.value==='auto';setColors(auto?baseV:fixedV);refresh()}});
       back.addEventListener('input',e=>{if(e.target.type==='color'){stash();refresh()}});
       back.addEventListener('click',async e=>{
         const fe=e.target.closest('.hb-chip');if(fe){fest=fe.dataset.fest;const f=HERO_FESTS.find(x=>x[0]===fest);setColors(fest&&f?f[2]:HERO_DEFAULT);stash();refresh();return}
@@ -100,7 +100,7 @@
           try{const res=await api('saveHeroConfig',next);heroCfg=res.config||next;try{localStorage.setItem(HERO_KEY,JSON.stringify(heroCfg))}catch(err){}paintHero();back.remove();toast('已儲存首頁背景（全站生效）')}
           catch(err){act.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
           return}
-        if(k==='reset'){auto=true;fest='';baseV=HERO_DEFAULT;fixedV=HERO_DEFAULT;q('hbAuto').checked=true;setColors(HERO_DEFAULT);refresh();return}
+        if(k==='reset'){auto=true;fest='';baseV=HERO_DEFAULT;fixedV=HERO_DEFAULT;back.querySelector('input[name=hbMode][value=auto]').checked=true;setColors(HERO_DEFAULT);refresh();return}
         applyHeroBg(before);back.remove();
       });
       document.body.appendChild(back);

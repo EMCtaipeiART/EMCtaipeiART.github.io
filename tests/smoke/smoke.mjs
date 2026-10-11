@@ -120,13 +120,16 @@ try {
         const before = document.documentElement.style.getPropertyValue('--hero-b') + '|' + (document.documentElement.getAttribute('data-hero-fest') || '');
         btn.click(); await new Promise(r => setTimeout(r, 300));
         const modal = document.getElementById('heroModal'); if (!modal) return { error: '編輯背景視窗沒有打開' };
-        const hasAuto = Boolean(modal.querySelector('#hbAuto'));
+        const hasAuto = Boolean(modal.querySelector('input[name=hbMode]'));
+        const manual = modal.querySelector('input[name=hbMode][value=manual]'); manual.checked = true; manual.dispatchEvent(new Event('change', { bubbles: true }));
+        modal.querySelector('.hb-chip[data-fest="xmas"]').click();
+        const manualPreview = document.documentElement.getAttribute('data-hero-fest');
         modal.querySelector('[data-hb-act="cancel"]').click();
         const after = document.documentElement.style.getPropertyValue('--hero-b') + '|' + (document.documentElement.getAttribute('data-hero-fest') || '');
-        return { hasAuto, same: before === after, closed: !document.getElementById('heroModal') };
+        return { hasAuto, manualPreview, same: before === after, closed: !document.getElementById('heroModal') };
       });
       if (hero.error) failures.push('[首頁] ' + hero.error);
-      else if (!hero.hasAuto || !hero.same || !hero.closed) failures.push('[首頁] 編輯背景的開啟／取消不正常：' + JSON.stringify(hero));
+      else if (!hero.hasAuto || hero.manualPreview !== 'xmas' || !hero.same || !hero.closed) failures.push('[首頁] 編輯背景的開啟／取消不正常：' + JSON.stringify(hero));
     }
     if (check.expect && check.name !== '首頁' && !info.stage.includes(check.expect)) failures.push(`[${check.name}] 畫面沒有出現「${check.expect}」`);
     if (info.len < 200 && check.name !== '首頁') failures.push(`[${check.name}] 畫面是空的`);
