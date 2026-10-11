@@ -36,3 +36,13 @@ describe('首頁背景 setting strictness', () => {
     expect(row['首頁背景']).toBe('');
   });
 });
+
+describe('首頁背景 festival theme', () => {
+  it('accepts a known festival as a fourth token and rejects unknown ones', () => {
+    const row: Record<string, unknown> = { 名字: 'Anna' };
+    updateSettingsRow(row, { heroBg: '#3d2257|#1b1226|#0b0610|halloween' });
+    expect(row['首頁背景']).toBe('#3d2257|#1b1226|#0b0610|halloween');
+    updateSettingsRow(row, { heroBg: '#3d2257|#1b1226|#0b0610|easter' });
+    expect(row['首頁背景']).toBe('');
+  });
+});

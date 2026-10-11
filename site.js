@@ -28,11 +28,12 @@
     const RECIPIENT_NAMES={Machi:'陳柏政',Anna:'許芷芸',Karl:'李卡爾',Noise:'Noise',Amber:'Amber Tian',Leona:'陳家蓁'};
     const LATEST_PAGE=12,COLUMN_PAGE=10;
     /* 專案頁狀態欄順序：設計師可拖曳欄位標題調整；個人偏好，記在這台電腦（localStorage）與帳號（設定表「專案欄位順序」） */
-    /* 首頁綠底漸層的個人配色（中心｜中間｜邊緣）：記在這台電腦與帳號（設定表「首頁背景」），空值＝預設綠 */
+    /* 首頁綠底漸層的個人配色（中心｜中間｜邊緣｜節慶主題）：記在這台電腦與帳號（設定表「首頁背景」），空值＝預設綠 */
     const HERO_KEY='v5HeroBg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
+    const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#3d2257|#1b1226|#0b0610'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c']];
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
-    const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return p.length===3&&p.every(x=>/^#[0-9a-f]{6}$/.test(x))};
-    function applyHeroBg(v){const st=document.documentElement.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2])}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k))}}
+    const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return (p.length===3||(p.length===4&&HERO_FESTS.some(f=>f[0]&&f[0]===p[3])))&&p.slice(0,3).every(x=>/^#[0-9a-f]{6}$/.test(x))};
+    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest')}}
     const loadHeroBg=()=>{try{const v=localStorage.getItem(HERO_KEY)||'';return heroValid(v)?v:''}catch(err){return ''}};
     let heroSynced=null;
     async function pushHeroBg(v){if(!loggedIn())return;if(v===heroSynced)return;try{await api('saveUserSettings',{account:selfAccount(),settings:{heroBg:v}});heroSynced=v}catch(err){}}
@@ -40,19 +41,22 @@
     applyHeroBg(loadHeroBg());
     function openHeroEditor(){
       if(document.getElementById('heroModal'))return;
-      const before=loadHeroBg(),cur=heroValid(before)?before:HERO_DEFAULT,[a,b,c]=cur.split('|');
+      const before=loadHeroBg(),cur=heroValid(before)?before:HERO_DEFAULT,cp=cur.split('|');
+      let fest=cp[3]||'';
       const back=document.createElement('div');back.id='heroModal';back.className='nc-back';
       const grad=v=>{const p=v.split('|');return 'radial-gradient(120px 60px at 50% -10%,'+p[0]+' 0%,'+p[1]+' 45%,'+p[2]+' 100%)'};
-      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(460px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>選一組配色，或自己調整三個顏色（中心亮色、中間主色、邊緣深色）。</p></div></div><div class="nc-body"><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA" value="'+a+'"></label><label>中間<input type="color" id="hbB" value="'+b+'"></label><label>邊緣<input type="color" id="hbC" value="'+c+'"></label></div><p class="set-note" style="margin-top:10px">深色模式維持原本的深色背景，這裡的配色只用在淺色模式。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
-      const q=id=>back.querySelector('#'+id),val=()=>[q('hbA').value,q('hbB').value,q('hbC').value].join('|');
-      const live=()=>{const v=val();q('hbPrev').style.background=grad(v);applyHeroBg(v);back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',x.dataset.hb.toLowerCase()===v.toLowerCase()))};
+      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(480px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>選一組配色或節慶主題，也可以自己調整三個顏色。</p></div></div><div class="nc-body"><b class="hb-lb">節慶主題</b><div class="hb-fest">'+HERO_FESTS.map(f=>'<button type="button" class="hb-chip" data-fest="'+f[0]+'">'+f[1]+'</button>').join('')+'</div><b class="hb-lb">配色</b><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA" value="'+cp[0]+'"></label><label>中間<input type="color" id="hbB" value="'+cp[1]+'"></label><label>邊緣<input type="color" id="hbC" value="'+cp[2]+'"></label></div><p class="set-note" style="margin-top:10px">節慶主題會換成該節慶的配色並加上裝飾（手機上裝飾是靜態的、不會動，比較省電）。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
+      const q=id=>back.querySelector('#'+id),colors=()=>[q('hbA').value,q('hbB').value,q('hbC').value].join('|'),val=()=>colors()+(fest?'|'+fest:'');
+      const setColors=v=>{const p=v.split('|');q('hbA').value=p[0];q('hbB').value=p[1];q('hbC').value=p[2]};
+      const live=()=>{const v=val();q('hbPrev').style.background=grad(colors());applyHeroBg(v);back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',!fest&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest))};
       back.addEventListener('input',e=>{if(e.target.type==='color')live()});
       back.addEventListener('click',e=>{
-        const sw=e.target.closest('.hb-sw');if(sw){const p=sw.dataset.hb.split('|');q('hbA').value=p[0];q('hbB').value=p[1];q('hbC').value=p[2];live();return}
+        const fe=e.target.closest('.hb-chip');if(fe){fest=fe.dataset.fest;const f=HERO_FESTS.find(x=>x[0]===fest);if(fest&&f)setColors(f[2]);else if(!fest)setColors(HERO_DEFAULT);live();return}
+        const sw=e.target.closest('.hb-sw');if(sw){fest='';setColors(sw.dataset.hb);live();return}
         const act=e.target.closest('[data-hb-act]');if(!act&&e.target!==back)return;
         const k=act?act.dataset.hbAct:'cancel';
-        if(k==='save'){const v=val(),saved=v.toLowerCase()===HERO_DEFAULT?'':v.toLowerCase();try{if(saved)localStorage.setItem(HERO_KEY,saved);else localStorage.removeItem(HERO_KEY)}catch(err){}applyHeroBg(saved);pushHeroBg(saved);back.remove();toast('已儲存首頁背景');return}
-        if(k==='reset'){const p=HERO_DEFAULT.split('|');q('hbA').value=p[0];q('hbB').value=p[1];q('hbC').value=p[2];live();return}
+        if(k==='save'){const v=val().toLowerCase(),saved=v===HERO_DEFAULT?'':v;try{if(saved)localStorage.setItem(HERO_KEY,saved);else localStorage.removeItem(HERO_KEY)}catch(err){}applyHeroBg(saved);pushHeroBg(saved);back.remove();toast('已儲存首頁背景');return}
+        if(k==='reset'){fest='';setColors(HERO_DEFAULT);live();return}
         applyHeroBg(before);back.remove();
       });
       document.body.appendChild(back);live();

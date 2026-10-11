@@ -1254,3 +1254,22 @@ body.uni-collapse .hero-edit{display:none}
 .hb-prev{height:64px;border-radius:14px;margin:6px 0 10px}
 .hb-row{display:flex;gap:10px;flex-wrap:wrap}.hb-row label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
 .hb-row input[type=color]{width:42px;height:32px;padding:0;border:1px solid var(--line);border-radius:8px;background:none}
+
+/* 首頁節慶主題：裝飾是靜態 SVG（assets/festival/），只有聖誕飄雪與新年花紋在有滑鼠的電腦上才會動 */
+.hero::before,.hero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background-repeat:no-repeat;display:none}
+html[data-hero-fest] .hero::before{display:block}
+html[data-theme="dark"][data-hero-fest] .hero{background:radial-gradient(1200px 500px at 50% -10%,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%)}
+html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/halloween-web.svg),url(assets/festival/halloween-spider.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-pumpkin.svg),url(assets/festival/halloween-pumpkin.svg);background-position:left top,84% -6px,20% 22%,70% 34%,3% 100%,96% 100%;background-size:210px,54px,58px,40px,104px,84px}
+html[data-hero-fest="xmas"] .hero::before{background-image:url(assets/festival/xmas-snowman.svg),url(assets/festival/xmas-tree.svg);background-position:3% 100%,96% 100%;background-size:92px,82px}
+html[data-hero-fest="xmas"] .hero::after{display:block;background-image:url(assets/festival/xmas-snow.svg);background-repeat:repeat;background-size:320px}
+html[data-hero-fest="cny"] .hero::before{background-image:url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg)}
+html[data-hero-fest="cny"] .hero::before{background-position:4% -4px,24% -30px,76% -30px,96% -4px;background-size:58px,42px,42px,58px}
+html[data-hero-fest="cny"] .hero::after{display:block;background-image:url(assets/festival/cny-pattern.svg);background-repeat:repeat;background-size:160px}
+html[data-hero-fest="valentine"] .hero::after{display:block;background-image:url(assets/festival/valentine-heart.svg);background-repeat:repeat;background-size:240px}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){html[data-hero-fest="xmas"] .hero::after{animation:heroSnow 22s linear infinite}}
+@keyframes heroSnow{to{background-position:60px 320px}}
+@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:150px,42px,44px,30px,76px,62px}html[data-hero-fest="xmas"] .hero::before{background-size:68px,60px}html[data-hero-fest="cny"] .hero::before{background-size:44px,32px,32px,44px}}
+.hb-lb{display:block;font-size:12.5px;margin:6px 0 2px;color:var(--muted)}
+.hb-fest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.hb-chip{padding:5px 13px;border-radius:99px;border:1px solid var(--line);background:none;font:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
+.hb-chip.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 16%,transparent)}
