@@ -1671,6 +1671,35 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * - 剛開機／剛醒來（上一次心跳已經超過離線門檻，或從來沒有過）：不管原本是什麼狀態，一律改成「在座」或「加班」。
    * - 持續開著：沒被手動指定過的在座／加班／用餐／下班會隨時間互相切換；手動指定的狀態維持到電腦下次關機，
  *   或是時間規則換到下一個時段為止（白天↔晚上↔假日）。 */
+  /** 狀態來源診斷：每個人現在是什麼狀態、是誰（行事曆／人資假單／手動）設的、最近一次行事曆同步怎麼判斷。只有後台管理者讀得到，不含事件標題。 */
+  private async pixelOfficeDiagnose(): Promise<ApiResult> {
+    const nowMs = Date.now();
+    const femas = await this.femasLeaveNow(nowMs);
+    const cached = await this.ctx.storage.get<{ at: number; leaves: FemasLeave[] }>('femasLeaves');
+    const last = ((await this.ctx.storage.get('pixelOfficeCalendarSync')) || null) as Row | null;
+    const detected = ((last && last.detected) || {}) as Row;
+    const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>('SELECT name, state, last_seen FROM pixel_office_people').toArray();
+    const people = Object.keys(PIXEL_OFFICE_CALENDARS).map(name => {
+      const row = rows.find(item => item.name === name);
+      let state: Row = {};
+      try { state = row ? JSON.parse(row.state) as Row : {}; } catch { state = {}; }
+      const leaves = (cached?.leaves || []).filter(item => item.who === name && item.end > nowMs - 14 * 86_400_000 && item.start < nowMs + 45 * 86_400_000)
+        .map(item => ({ start: new Date(item.start).toISOString(), end: new Date(item.end).toISOString(), activeNow: item.start <= nowMs && nowMs < item.end }));
+      const seen = row ? Number(row.last_seen) || 0 : 0;
+      return {
+        name, status: text(state.status) || '', source: text(state.statusSource) || '', baseline: text(state.statusBaseline) || '',
+        since: Number(state.statusAt) ? new Date(Number(state.statusAt)).toISOString() : '',
+        calendarSays: text(detected[name]) || '', femasLeaveNow: femas.names.has(name), femasLeaves: leaves,
+        heartbeat: seen ? { at: new Date(seen).toISOString(), online: nowMs - seen <= PIXEL_OFFICE_OFFLINE_MS } : null
+      };
+    });
+    return {
+      ok: true, action: 'pixelOfficeDiagnose', now: new Date(nowMs).toISOString(), people,
+      femas: { configured: femas.ok || femas.error !== 'not-configured', ok: femas.ok, events: femas.events, error: femas.error || '', cachedAt: cached ? new Date(cached.at).toISOString() : '' },
+      lastSync: last ? { at: text(last.at), unreadable: last.unreadable || [], meeting: last.meeting || [], leave: last.leave || [], released: last.released || [], manualHeld: last.manualHeld || [], error: text(last.error) } : null
+    };
+  }
+
   /** 行事曆設定的「會議／休假」已經持續多久（不是行事曆設的就回 0） */
   private pixelOfficeCalendarStatusAge(name: string, nowMs: number): number {
     const row = this.ctx.storage.sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
@@ -4601,6 +4630,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'getAssignments' || action === 'saveAssignment' || action === 'deleteAssignment') {
         const who = this.requireAnyAccess(database, session, ['database.manage', 'designer.settings', 'media.manage']);
         return await this.assignmentsHandle(action, payload, who);
+      }
+      if (action === 'pixelOfficeDiagnose') {
+        this.requireAccess(database, session, 'database.manage');
+        return await this.pixelOfficeDiagnose();
       }
       if (action === 'backupNow' || action === 'restoreBackup') {
         const who = this.requireAccess(database, session, 'database.manage');
