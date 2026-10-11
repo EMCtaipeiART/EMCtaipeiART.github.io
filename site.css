@@ -1259,7 +1259,7 @@ body.uni-collapse .hero-edit{display:none}
 .hero::before,.hero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background-repeat:no-repeat;display:none}
 html[data-hero-fest] .hero::before{display:block}
 html[data-theme="dark"][data-hero-fest] .hero{background:radial-gradient(1200px 500px at 50% -10%,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%)}
-html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/halloween-web.svg),url(assets/festival/halloween-spider.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-pumpkin.svg),url(assets/festival/halloween-pumpkin.svg);background-position:left top,84% -6px,20% 22%,70% 34%,3% 100%,96% 100%;background-size:210px,54px,58px,40px,104px,84px}
+html[data-hero-fest="halloweennight"] .hero::before{background-image:url(assets/festival/halloween-web.svg),url(assets/festival/halloween-spider.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-bat.svg),url(assets/festival/halloween-pumpkin.svg),url(assets/festival/halloween-pumpkin.svg);background-position:left top,84% -6px,20% 22%,70% 34%,3% 100%,96% 100%;background-size:210px,54px,58px,40px,104px,84px}
 html[data-hero-fest="xmas"] .hero::before{background-image:url(assets/festival/xmas-snowman.svg),url(assets/festival/xmas-tree.svg);background-position:3% 100%,96% 100%;background-size:92px,82px}
 html[data-hero-fest="xmas"] .hero::after{display:block;background-image:url(assets/festival/xmas-snow.svg);background-repeat:repeat;background-size:320px}
 html[data-hero-fest="cny"] .hero::before{background-image:url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg)}
@@ -1268,7 +1268,7 @@ html[data-hero-fest="cny"] .hero::after{display:block;background-image:url(asset
 html[data-hero-fest="valentine"] .hero::after{display:block;background-image:url(assets/festival/valentine-heart.svg);background-repeat:repeat;background-size:240px}
 @media (hover:hover) and (prefers-reduced-motion:no-preference){html[data-hero-fest="xmas"] .hero::after{animation:heroSnow 22s linear infinite}}
 @keyframes heroSnow{to{background-position:60px 320px}}
-@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:150px,42px,44px,30px,76px,62px}html[data-hero-fest="xmas"] .hero::before{background-size:68px,60px}html[data-hero-fest="cny"] .hero::before{background-size:44px,32px,32px,44px}}
+@media (max-width:720px){html[data-hero-fest="halloweennight"] .hero::before{background-size:150px,42px,44px,30px,76px,62px}html[data-hero-fest="xmas"] .hero::before{background-size:68px,60px}html[data-hero-fest="cny"] .hero::before{background-size:44px,32px,32px,44px}}
 .hb-lb{display:block;font-size:12.5px;margin:6px 0 2px;color:var(--muted)}
 .hb-fest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hb-chip{padding:5px 13px;border-radius:99px;border:1px solid var(--line);background:none;font:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
@@ -1276,3 +1276,8 @@ html[data-hero-fest="valentine"] .hero::after{display:block;background-image:url
 
 body.can-hero-edit .hero-edit{display:inline-flex}
 .hb-auto{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}.hb-auto input{width:auto}
+
+/* 萬聖節（鬼魅綠）：配色參考 bedimcode/responsive-halloween-website 的橄欖綠到卡其漸層＋橘色重點，圖案是自己畫的 */
+html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/hw-moon-bats.svg),url(assets/festival/hw-ghost.svg),url(assets/festival/hw-hat.svg),url(assets/festival/hw-pumpkin.svg),url(assets/festival/hw-cauldron.svg),url(assets/festival/hw-ghost.svg);background-position:2% 4px,7% 52%,90% 20%,2% 100%,97% 100%,84% 78%;background-size:190px,74px,96px,112px,112px,46px}
+html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
+@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:84px,40px,52px,74px,76px,0;background-position:-8px -6px,2% 30%,98% 4px,0 100%,100% 100%,88% 70%}}
