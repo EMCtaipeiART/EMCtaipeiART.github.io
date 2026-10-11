@@ -46,13 +46,3 @@ describe('首頁背景 festival theme', () => {
     expect(row['首頁背景']).toBe('');
   });
 });
-
-describe('首頁背景 halloween variants', () => {
-  it('accepts both the green and the night halloween themes', () => {
-    const row: Record<string, unknown> = { 名字: 'Anna' };
-    updateSettingsRow(row, { heroBg: '#8c9a54|#598349|#34522f|halloween' });
-    expect(row['首頁背景']).toBe('#8c9a54|#598349|#34522f|halloween');
-    updateSettingsRow(row, { heroBg: '#3d2257|#1b1226|#0b0610|halloweennight' });
-    expect(row['首頁背景']).toBe('#3d2257|#1b1226|#0b0610|halloweennight');
-  });
-});

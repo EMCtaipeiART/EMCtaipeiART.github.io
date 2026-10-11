@@ -4646,7 +4646,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // 首頁背景是全站共用的設定：只有後台管理者（含 Machi）能改，所有人（含未登入）都讀得到
         const who = this.requireAccess(database, session, 'database.manage');
         const color3 = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}$/;
-        const withFest = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|halloweennight|xmas|cny|valentine))?$/;
+        const withFest = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|xmas|cny|valentine))?$/;
         const base = text(payload.base).toLowerCase(), fixed = text(payload.fixed).toLowerCase();
         const config: HeroConfig = { auto: payload.auto !== false, base: color3.test(base) ? base : '', fixed: withFest.test(fixed) ? fixed : '', updatedBy: auditActor(who), updatedAt: new Date().toISOString() };
         await this.ctx.storage.put('heroConfig', config);
