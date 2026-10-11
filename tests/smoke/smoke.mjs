@@ -116,16 +116,17 @@ try {
     if (check.name === '首頁' && info.team < 1) failures.push('[首頁] 設計師頭像沒有顯示');
     if (check.name === '首頁') {
       const hero = await page.evaluate(async () => {
-        const btn = document.getElementById('heroEdit'); if (!btn) return { error: '沒有「編輯背景」按鈕' };
+        const btn = document.getElementById('heroEdit'); if (!btn || getComputedStyle(btn).display === 'none') return { error: '管理者看不到「編輯背景」按鈕' };
+        const before = document.documentElement.style.getPropertyValue('--hero-b') + '|' + (document.documentElement.getAttribute('data-hero-fest') || '');
         btn.click(); await new Promise(r => setTimeout(r, 300));
         const modal = document.getElementById('heroModal'); if (!modal) return { error: '編輯背景視窗沒有打開' };
-        modal.querySelectorAll('.hb-sw')[1].click();
-        const applied = document.documentElement.style.getPropertyValue('--hero-b');
+        const hasAuto = Boolean(modal.querySelector('#hbAuto'));
         modal.querySelector('[data-hb-act="cancel"]').click();
-        return { applied, left: document.documentElement.style.getPropertyValue('--hero-b'), closed: !document.getElementById('heroModal') };
+        const after = document.documentElement.style.getPropertyValue('--hero-b') + '|' + (document.documentElement.getAttribute('data-hero-fest') || '');
+        return { hasAuto, same: before === after, closed: !document.getElementById('heroModal') };
       });
       if (hero.error) failures.push('[首頁] ' + hero.error);
-      else if (!hero.applied || hero.left || !hero.closed) failures.push('[首頁] 編輯背景的套用／取消不正常：' + JSON.stringify(hero));
+      else if (!hero.hasAuto || !hero.same || !hero.closed) failures.push('[首頁] 編輯背景的開啟／取消不正常：' + JSON.stringify(hero));
     }
     if (check.expect && check.name !== '首頁' && !info.stage.includes(check.expect)) failures.push(`[${check.name}] 畫面沒有出現「${check.expect}」`);
     if (info.len < 200 && check.name !== '首頁') failures.push(`[${check.name}] 畫面是空的`);

@@ -1243,6 +1243,8 @@ function formatGmailDateForDisplay(rawDate: string): string {
   return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
+interface HeroConfig { auto: boolean; base: string; fixed: string; updatedBy: string; updatedAt: string }
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -4414,6 +4416,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const row = this.ctx.storage.sql.exec<{ r: number | null }>("SELECT json_extract(json, '$.revision') AS r FROM database_state WHERE id = ?", STATE_KEY).toArray()[0];
         return { ok: true, action, revision: Number(row?.r) || 0 };
       }
+      if (action === 'getHeroConfig') return { ok: true, action, config: (await this.ctx.storage.get<HeroConfig>('heroConfig')) || null };
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
       if (action === 'pixelOfficeUpdate') return this.pixelOfficeUpdate(payload);
@@ -4638,6 +4641,17 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeDiagnose') {
         this.requireAccess(database, session, 'database.manage');
         return await this.pixelOfficeDiagnose();
+      }
+      if (action === 'saveHeroConfig') {
+        // 首頁背景是全站共用的設定：只有後台管理者（含 Machi）能改，所有人（含未登入）都讀得到
+        const who = this.requireAccess(database, session, 'database.manage');
+        const color3 = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}$/;
+        const withFest = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|xmas|cny|valentine))?$/;
+        const base = text(payload.base).toLowerCase(), fixed = text(payload.fixed).toLowerCase();
+        const config: HeroConfig = { auto: payload.auto !== false, base: color3.test(base) ? base : '', fixed: withFest.test(fixed) ? fixed : '', updatedBy: auditActor(who), updatedAt: new Date().toISOString() };
+        await this.ctx.storage.put('heroConfig', config);
+        await this.queueAudit([{ t: config.updatedAt, kind: '欄位修改', actor: config.updatedBy, caseId: '首頁背景', field: config.auto ? '依節慶自動' : '固定', to: config.auto ? config.base || '預設綠' : config.fixed || '預設綠', note: '首頁背景' }]);
+        return { ok: true, action, config };
       }
       if (action === 'backupNow' || action === 'restoreBackup') {
         const who = this.requireAccess(database, session, 'database.manage');

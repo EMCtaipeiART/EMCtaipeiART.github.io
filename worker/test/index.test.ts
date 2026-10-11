@@ -5424,3 +5424,16 @@ describe('值日生：換人後原輪值的人仍可改回', () => {
     expect(await api({ action: 'saveDutyOverride', month: '2026-12', who: 'Machi' }, machi)).toMatchObject({ ok: true, who: 'Machi' });
   });
 });
+
+describe('首頁背景：全站共用設定', () => {
+  it('is readable by anyone, writable only by admins, and validates the colors', async () => {
+    expect(await api({ action: 'getHeroConfig' })).toMatchObject({ ok: true, config: null });
+    const admin = await login(); // Machi 是管理者
+    const saved = await api({ action: 'saveHeroConfig', auto: false, fixed: '#3D2257|#1b1226|#0b0610|halloween', base: 'junk' }, admin) as { config: { auto: boolean; fixed: string; base: string } };
+    expect(saved.config).toMatchObject({ auto: false, fixed: '#3d2257|#1b1226|#0b0610|halloween', base: '' });
+    expect(await api({ action: 'getHeroConfig' })).toMatchObject({ config: { auto: false, fixed: '#3d2257|#1b1226|#0b0610|halloween' } });
+    const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'saveHeroConfig', auto: true }, outsider)).toMatchObject({ ok: false });
+    expect(await api({ action: 'saveHeroConfig', auto: true })).toMatchObject({ ok: false });
+  });
+});

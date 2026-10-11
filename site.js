@@ -28,40 +28,86 @@
     const RECIPIENT_NAMES={Machi:'陳柏政',Anna:'許芷芸',Karl:'李卡爾',Noise:'Noise',Amber:'Amber Tian',Leona:'陳家蓁'};
     const LATEST_PAGE=12,COLUMN_PAGE=10;
     /* 專案頁狀態欄順序：設計師可拖曳欄位標題調整；個人偏好，記在這台電腦（localStorage）與帳號（設定表「專案欄位順序」） */
-    /* 首頁綠底漸層的個人配色（中心｜中間｜邊緣｜節慶主題）：記在這台電腦與帳號（設定表「首頁背景」），空值＝預設綠 */
-    const HERO_KEY='v5HeroBg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
+    /* 首頁綠底漸層：全站共用（管理者與 Machi 可編輯，存在後端，所有人包含未登入都看得到）。
+       預設「依節慶日期自動換」：萬聖節 10/1–11/1、聖誕節 12/1–12/26、新年（除夕前後各約兩週）、情人節 2/7–2/14；
+       其他日子用 base 配色（沒設定就是預設綠）。也可以改成固定一組（fixed）。 */
+    const HERO_KEY='v5HeroCfg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
     const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#3d2257|#1b1226|#0b0610'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c']];
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
+    const HERO_CNY={2026:'2026-02-17',2027:'2027-02-06',2028:'2028-01-26',2029:'2029-02-13',2030:'2030-02-03',2031:'2031-01-23',2032:'2032-02-11',2033:'2033-01-31',2034:'2034-02-19',2035:'2035-02-08',2036:'2036-01-28',2037:'2037-02-15',2038:'2038-02-04',2039:'2039-01-24',2040:'2040-02-12'};
     const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return (p.length===3||(p.length===4&&HERO_FESTS.some(f=>f[0]&&f[0]===p[3])))&&p.slice(0,3).every(x=>/^#[0-9a-f]{6}$/.test(x))};
     function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest')}}
-    const loadHeroBg=()=>{try{const v=localStorage.getItem(HERO_KEY)||'';return heroValid(v)?v:''}catch(err){return ''}};
-    let heroSynced=null;
-    async function pushHeroBg(v){if(!loggedIn())return;if(v===heroSynced)return;try{await api('saveUserSettings',{account:selfAccount(),settings:{heroBg:v}});heroSynced=v}catch(err){}}
-    function applyCloudHero(raw){const cloud=heroValid(raw)?String(raw).toLowerCase():'';if(cloud){heroSynced=cloud;try{localStorage.setItem(HERO_KEY,cloud)}catch(err){}applyHeroBg(cloud)}else{heroSynced='';const local=loadHeroBg();if(local)pushHeroBg(local)}}
-    applyHeroBg(loadHeroBg());
+    function heroFestOn(dateMs){
+      const d=new Date(dateMs+8*3600000),y=d.getUTCFullYear(),m=d.getUTCMonth()+1,day=d.getUTCDate(),md=m*100+day,DAY=86400000;
+      if(md>=1001&&md<=1101)return 'halloween';
+      if(md>=1201&&md<=1226)return 'xmas';
+      for(const yy of [y-1,y,y+1]){const c=HERO_CNY[yy];if(!c)continue;const cms=Date.parse(c+'T00:00:00Z'),now=Date.UTC(y,m-1,day);if(now>=cms-14*DAY&&now<=cms+15*DAY)return 'cny'}
+      if(md>=207&&md<=214)return 'valentine';
+      return '';
+    }
+    function heroFestLabel(f){const x=HERO_FESTS.find(z=>z[0]===f);return x?x[1]:''}
+    const heroCfgClean=c=>({auto:!c||c.auto!==false,base:heroValid(c&&c.base)&&String(c.base).split('|').length===3?String(c.base).toLowerCase():'',fixed:heroValid(c&&c.fixed)?String(c.fixed).toLowerCase():''});
+    function heroValueFor(cfg,dateMs){
+      const c=heroCfgClean(cfg);
+      if(!c.auto)return c.fixed;
+      const f=heroFestOn(dateMs==null?Date.now():dateMs);
+      if(f){const x=HERO_FESTS.find(z=>z[0]===f);return x[2]+'|'+f}
+      return c.base;
+    }
+    const loadHeroCfg=()=>{try{return JSON.parse(localStorage.getItem(HERO_KEY)||'null')}catch(err){return null}};
+    let heroCfg=loadHeroCfg();
+    try{localStorage.removeItem('v5HeroBg')}catch(err){}
+    const paintHero=()=>applyHeroBg(heroValueFor(heroCfg));
+    paintHero();
+    async function pullHeroCfg(){
+      try{const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'getHeroConfig'}),cache:'no-store'});const j=await res.json();
+        if(j&&j.ok){heroCfg=j.config||null;try{if(j.config)localStorage.setItem(HERO_KEY,JSON.stringify(j.config));else localStorage.removeItem(HERO_KEY)}catch(err){}paintHero()}}catch(err){}
+    }
+    const heroCanEdit=()=>loggedIn()&&(isAdminAcct()||isMachiUser());
+    function syncHeroEdit(){document.body.classList.toggle('can-hero-edit',heroCanEdit())}
     function openHeroEditor(){
-      if(document.getElementById('heroModal'))return;
-      const before=loadHeroBg(),cur=heroValid(before)?before:HERO_DEFAULT,cp=cur.split('|');
-      let fest=cp[3]||'';
+      if(document.getElementById('heroModal')||!heroCanEdit())return;
+      const cfg=heroCfgClean(heroCfg),before=heroValueFor(heroCfg);
+      let auto=cfg.auto,fest=(cfg.fixed.split('|')[3])||'';
+      let baseV=cfg.base||HERO_DEFAULT,fixedV=(cfg.fixed&&cfg.fixed.split('|').slice(0,3).join('|'))||HERO_DEFAULT;
       const back=document.createElement('div');back.id='heroModal';back.className='nc-back';
       const grad=v=>{const p=v.split('|');return 'radial-gradient(120px 60px at 50% -10%,'+p[0]+' 0%,'+p[1]+' 45%,'+p[2]+' 100%)'};
-      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(480px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>選一組配色或節慶主題，也可以自己調整三個顏色。</p></div></div><div class="nc-body"><b class="hb-lb">節慶主題</b><div class="hb-fest">'+HERO_FESTS.map(f=>'<button type="button" class="hb-chip" data-fest="'+f[0]+'">'+f[1]+'</button>').join('')+'</div><b class="hb-lb">配色</b><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA" value="'+cp[0]+'"></label><label>中間<input type="color" id="hbB" value="'+cp[1]+'"></label><label>邊緣<input type="color" id="hbC" value="'+cp[2]+'"></label></div><p class="set-note" style="margin-top:10px">節慶主題會換成該節慶的配色並加上裝飾（手機上裝飾是靜態的、不會動，比較省電）。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
-      const q=id=>back.querySelector('#'+id),colors=()=>[q('hbA').value,q('hbB').value,q('hbC').value].join('|'),val=()=>colors()+(fest?'|'+fest:'');
+      const nowFest=heroFestOn(Date.now());
+      back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="編輯首頁背景" style="width:min(500px,100%)"><div class="nc-head"><div><h3>編輯首頁背景</h3><p>全站共用，所有人看到的都一樣；只有管理者與 Machi 可以編輯。</p></div></div><div class="nc-body"><label class="hb-auto"><input type="checkbox" id="hbAuto"'+(auto?' checked':'')+'> 依節慶日期自動切換</label><p class="set-note" id="hbAutoNote"></p><div id="hbFestBox"><b class="hb-lb">固定使用的節慶主題</b><div class="hb-fest">'+HERO_FESTS.map(f=>'<button type="button" class="hb-chip" data-fest="'+f[0]+'">'+f[1]+'</button>').join('')+'</div></div><b class="hb-lb" id="hbColorLb"></b><div class="hb-pre">'+HERO_PRESETS.map(p=>'<button type="button" class="hb-sw" data-hb="'+p[1]+'" title="'+p[0]+'" style="background:'+grad(p[1])+'"></button>').join('')+'</div><div class="hb-prev" id="hbPrev"></div><div class="hb-row"><label>中心<input type="color" id="hbA"></label><label>中間<input type="color" id="hbB"></label><label>邊緣<input type="color" id="hbC"></label></div><p class="set-note" style="margin-top:10px">節慶裝飾在手機上是靜態的，比較省電；電腦版只有聖誕節的雪花會緩慢飄落。</p></div><div class="nc-foot"><button type="button" class="btn" data-hb-act="reset" style="margin-right:auto">恢復預設</button><button type="button" class="btn" data-hb-act="cancel">取消</button><button type="button" class="btn primary" data-hb-act="save">儲存</button></div></div>';
+      const q=id=>back.querySelector('#'+id),colors=()=>[q('hbA').value,q('hbB').value,q('hbC').value].join('|');
       const setColors=v=>{const p=v.split('|');q('hbA').value=p[0];q('hbB').value=p[1];q('hbC').value=p[2]};
-      const live=()=>{const v=val();q('hbPrev').style.background=grad(colors());applyHeroBg(v);back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',!fest&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest))};
-      back.addEventListener('input',e=>{if(e.target.type==='color')live()});
-      back.addEventListener('click',e=>{
-        const fe=e.target.closest('.hb-chip');if(fe){fest=fe.dataset.fest;const f=HERO_FESTS.find(x=>x[0]===fest);if(fest&&f)setColors(f[2]);else if(!fest)setColors(HERO_DEFAULT);live();return}
-        const sw=e.target.closest('.hb-sw');if(sw){fest='';setColors(sw.dataset.hb);live();return}
+      const stash=()=>{if(auto)baseV=colors();else fixedV=colors()};
+      const preview=()=>{if(auto){const f=nowFest;if(f){const x=HERO_FESTS.find(z=>z[0]===f);return x[2]+'|'+f}return colors()}return colors()+(fest?'|'+fest:'')};
+      const refresh=()=>{
+        q('hbFestBox').style.display=auto?'none':'';
+        q('hbColorLb').textContent=auto?'非節慶日子的配色（預設綠）':'配色';
+        q('hbAutoNote').textContent=auto?'節慶期間自動換成：萬聖節 10/1–11/1、聖誕節 12/1–12/26、新年（農曆年前後約兩週）、情人節 2/7–2/14。'+(nowFest?'目前正在「'+heroFestLabel(nowFest)+'」期間，首頁會顯示節慶主題。':'目前不在節慶期間，首頁用下方配色。'):'固定使用下方選的主題與配色，不會依日期變動。';
+        const v=preview();q('hbPrev').style.background=grad(v);applyHeroBg(v);
+        back.querySelectorAll('.hb-sw').forEach(x=>x.classList.toggle('on',(auto||!fest)&&x.dataset.hb.toLowerCase()===colors().toLowerCase()));
+        back.querySelectorAll('.hb-chip').forEach(x=>x.classList.toggle('on',x.dataset.fest===fest));
+      };
+      setColors(auto?baseV:fixedV);refresh();
+      back.addEventListener('change',e=>{if(e.target.id==='hbAuto'){stash();auto=e.target.checked;setColors(auto?baseV:fixedV);refresh()}});
+      back.addEventListener('input',e=>{if(e.target.type==='color'){stash();refresh()}});
+      back.addEventListener('click',async e=>{
+        const fe=e.target.closest('.hb-chip');if(fe){fest=fe.dataset.fest;const f=HERO_FESTS.find(x=>x[0]===fest);setColors(fest&&f?f[2]:HERO_DEFAULT);stash();refresh();return}
+        const sw=e.target.closest('.hb-sw');if(sw){if(!auto)fest='';setColors(sw.dataset.hb);stash();refresh();return}
         const act=e.target.closest('[data-hb-act]');if(!act&&e.target!==back)return;
         const k=act?act.dataset.hbAct:'cancel';
-        if(k==='save'){const v=val().toLowerCase(),saved=v===HERO_DEFAULT?'':v;try{if(saved)localStorage.setItem(HERO_KEY,saved);else localStorage.removeItem(HERO_KEY)}catch(err){}applyHeroBg(saved);pushHeroBg(saved);back.remove();toast('已儲存首頁背景');return}
-        if(k==='reset'){fest='';setColors(HERO_DEFAULT);live();return}
+        if(k==='save'){
+          stash();act.disabled=true;
+          const next={auto,base:baseV.toLowerCase()===HERO_DEFAULT?'':baseV.toLowerCase(),fixed:auto?'':(fixedV+(fest?'|'+fest:'')).toLowerCase()};
+          try{const res=await api('saveHeroConfig',next);heroCfg=res.config||next;try{localStorage.setItem(HERO_KEY,JSON.stringify(heroCfg))}catch(err){}paintHero();back.remove();toast('已儲存首頁背景（全站生效）')}
+          catch(err){act.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
+          return}
+        if(k==='reset'){auto=true;fest='';baseV=HERO_DEFAULT;fixedV=HERO_DEFAULT;q('hbAuto').checked=true;setColors(HERO_DEFAULT);refresh();return}
         applyHeroBg(before);back.remove();
       });
-      document.body.appendChild(back);live();
+      document.body.appendChild(back);
     }
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#heroEdit'))openHeroEditor()});
+    setTimeout(()=>{pullHeroCfg();syncHeroEdit()},0);
+    setInterval(()=>{if(!document.hidden){pullHeroCfg()}},30*60*1000);
     const COL_ORDER_KEY='v5ColOrder',COL_STATUSES=COLUMNS.map(c=>c.status);
     let colOrderSynced=null;
     const cleanColOrder=list=>{const seen=new Set();return (Array.isArray(list)?list:[]).filter(s=>COL_STATUSES.includes(s)&&!seen.has(s)&&seen.add(s))};
@@ -679,7 +725,7 @@
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}try{applyCloudTheme(String((data.settings||{}).theme||''))}catch(err){}try{applyCloudHero(String((data.settings||{}).heroBg||''))}catch(err){}
+        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}try{applyCloudTheme(String((data.settings||{}).theme||''))}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
         const cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
         const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
@@ -1081,7 +1127,7 @@
       if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部同仁與管理者使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
-    function updateRail(){renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
+    function updateRail(){syncHeroEdit();renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
     const KEEP_VIEWS=['universe','projects','calendar','assign','notes','wall','issues'];
     function show(view){const pv=state.view;try{if(state.restored)sessionStorage.setItem('v5LastView',KEEP_VIEWS.includes(view)?view:'')}catch(err){}if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;

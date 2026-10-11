@@ -1243,7 +1243,7 @@
   .as-hint{font-size:12.5px}
 }
 
-.hero-edit{position:absolute;top:14px;right:16px;z-index:6;display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:1px solid rgba(255,255,255,.55);border-radius:99px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+.hero-edit{position:absolute;top:14px;right:16px;z-index:6;display:none;align-items:center;gap:6px;padding:6px 13px;border:1px solid rgba(255,255,255,.55);border-radius:99px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
 .hero-edit svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .hero-edit:hover{background:rgba(255,255,255,.26)}
 body.uni-collapse .hero-edit{display:none}
@@ -1273,3 +1273,6 @@ html[data-hero-fest="valentine"] .hero::after{display:block;background-image:url
 .hb-fest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hb-chip{padding:5px 13px;border-radius:99px;border:1px solid var(--line);background:none;font:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
 .hb-chip.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 16%,transparent)}
+
+body.can-hero-edit .hero-edit{display:inline-flex}
+.hb-auto{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}.hb-auto input{width:auto}
