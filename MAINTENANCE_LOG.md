@@ -407,3 +407,4 @@
 - 2026-10-11 安全：記事本欄位改以 AES-GCM 加密存放（Worker Secret NOTEBOOK_KEY；金鑰備份在本機 C:\Users\pcc10\.emc-notebook-key.txt，請另存密碼管理器）；每週自動把 DO 內資料（記事本、專案分配、值日替換）加密備份到 backend/data/do-backup.enc.json；後台 action backupNow / restoreBackup（restore 需 confirm:true）
 - 2026-10-11 後台新增「備份與還原」頁：立即備份、從最近一次備份還原（需輸入「還原」確認）
 - 2026-10-11 專案分配手機版：改成卡片清單（客戶別＋負責人＋設計師膠囊，可編輯／刪除／分配）
+- 2026-10-11 專案分配：修改負責設計師會同步寫回系統客戶別設定的「設計負責人」（修正欣格家居這類來自系統設定的設計師改不掉）

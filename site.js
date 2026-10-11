@@ -863,12 +863,20 @@
       back.addEventListener('click',async e=>{
         const a=e.target.closest&&e.target.closest('[data-x]');if(!a&&e.target!==back)return;
         if(!a||a.dataset.x==='no'){back.remove();return}
-        if(a.dataset.x==='del'){if(!confirm('刪除「'+it.client+'」（'+it.designer+'）這筆分配？'))return;try{const d=await api('deleteAssignment',{id});st.items=d.items||[];back.remove();toast('已刪除');asPaint()}catch(err){toast('刪除失敗：'+(err.message||err),true)}return}
+        if(a.dataset.x==='del'){if(!confirm('刪除「'+it.client+'」（'+it.designer+'）這筆分配？'))return;try{const d=await api('deleteAssignment',{id});st.items=d.items||[];const sr0=asSysRow(it.client);if(sr0)await asSysDesigners(it.client,parseList(sr0['設計負責人']).filter(n=>n!==it.designer));back.remove();toast('已刪除');asPaint()}catch(err){toast('刪除失敗：'+(err.message||err),true)}return}
         const g=k=>back.querySelector('#'+k).value.trim(),client=g('asC');if(!client){toast('請填寫客戶別',true);return}
         a.disabled=true;
-        try{let d=await api('saveAssignment',{id:id||'',designer:g('asD'),client,team:g('asT'),monthly:g('asM'),note:g('asN')});for(const h of (d.items||[]).filter(x=>x.designer==='隱藏'&&asKey(x.client)===asKey(client)))d=await api('deleteAssignment',{id:h.id});st.items=d.items||[];back.remove();toast('已儲存');asPaint()}catch(err){a.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
+        try{let d=await api('saveAssignment',{id:id||'',designer:g('asD'),client,team:g('asT'),monthly:g('asM'),note:g('asN')});for(const h of (d.items||[]).filter(x=>x.designer==='隱藏'&&asKey(x.client)===asKey(client)))d=await api('deleteAssignment',{id:h.id});st.items=d.items||[];{const sr1=asSysRow(client);if(sr1){const cur=parseList(sr1['設計負責人']);await asSysDesigners(client,cur.includes(g('asD'))?cur:cur.concat(g('asD')))}}back.remove();toast('已儲存');asPaint()}catch(err){a.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
       });
       document.body.appendChild(back);
+    }
+    /* 專案分配的負責設計師也要同步回系統的「客戶別」設定（設計負責人），新案預設設計師才會跟著變 */
+    async function asSysDesigners(client,next){
+      const sr=asSysRow(client);if(!sr)return;
+      const ok=designerNames(),cur=parseList(sr['設計負責人']).filter(n=>ok.includes(n)),want=next.filter(n=>ok.includes(n)),nm=String(sr['客戶別']||'').trim();
+      if([...cur].sort().join('|')===[...want].sort().join('|'))return;
+      const res=await api('saveCustomerSettings',{customer:nm,designers:want});
+      if(res.customer)state.customers=sortCustomers([...state.customers.filter(r=>String(r['客戶別']||'').trim()!==nm),res.customer]);
     }
     async function asRowDel(name){
       const st=state.as,k=asKey(name),mine=st.items.filter(x=>asKey(x.client)===k);
@@ -894,7 +902,9 @@
         try{let d;
           for(const x of mine)if(!on.includes(x.designer))d=await api('deleteAssignment',{id:x.id});
           for(const dn of on){const e0=mine.find(x=>x.designer===dn);d=await api('saveAssignment',{id:e0?e0.id:'',designer:dn,client,team:tm,monthly:e0?e0.monthly:'',note:e0?e0.note:''})}
-          if(d)st.items=d.items||st.items;back.remove();toast('已儲存');asPaint()}
+          if(d)st.items=d.items||st.items;
+          await asSysDesigners(client,on);
+          back.remove();toast('已儲存');asPaint()}
         catch(err){a.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
       });
       document.body.appendChild(back);
