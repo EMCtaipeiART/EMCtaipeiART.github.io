@@ -114,6 +114,19 @@ try {
     }
     const info = await page.evaluate(() => ({ stage: (document.getElementById('stage') || {}).innerText || '', len: (document.getElementById('stage') || {}).innerHTML?.length || 0, team: document.getElementById('team')?.children.length || 0 }));
     if (check.name === '首頁' && info.team < 1) failures.push('[首頁] 設計師頭像沒有顯示');
+    if (check.name === '首頁') {
+      const hero = await page.evaluate(async () => {
+        const btn = document.getElementById('heroEdit'); if (!btn) return { error: '沒有「編輯背景」按鈕' };
+        btn.click(); await new Promise(r => setTimeout(r, 300));
+        const modal = document.getElementById('heroModal'); if (!modal) return { error: '編輯背景視窗沒有打開' };
+        modal.querySelectorAll('.hb-sw')[1].click();
+        const applied = document.documentElement.style.getPropertyValue('--hero-b');
+        modal.querySelector('[data-hb-act="cancel"]').click();
+        return { applied, left: document.documentElement.style.getPropertyValue('--hero-b'), closed: !document.getElementById('heroModal') };
+      });
+      if (hero.error) failures.push('[首頁] ' + hero.error);
+      else if (!hero.applied || hero.left || !hero.closed) failures.push('[首頁] 編輯背景的套用／取消不正常：' + JSON.stringify(hero));
+    }
     if (check.expect && check.name !== '首頁' && !info.stage.includes(check.expect)) failures.push(`[${check.name}] 畫面沒有出現「${check.expect}」`);
     if (info.len < 200 && check.name !== '首頁') failures.push(`[${check.name}] 畫面是空的`);
   }

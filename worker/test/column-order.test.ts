@@ -15,3 +15,24 @@ describe('專案欄位順序 setting', () => {
     expect(row['專案欄位順序']).toBe('執行中');
   });
 });
+
+describe('首頁背景 setting', () => {
+  it('keeps a valid three-color value and clears anything else', () => {
+    const row: Record<string, unknown> = { 名字: 'Anna' };
+    updateSettingsRow(row, { heroBg: '#2BBF4C|#0f8f61|#0a5a3d' });
+    expect(row['首頁背景']).toBe('#2bbf4c|#0f8f61|#0a5a3d');
+    expect(settingsResponse(row).heroBg).toBe('#2bbf4c|#0f8f61|#0a5a3d');
+    updateSettingsRow(row, { heroBg: 'red|blue' });
+    expect(row['首頁背景']).toBe('');
+  });
+});
+
+describe('首頁背景 setting strictness', () => {
+  it('rejects values with extra text around the three colors', () => {
+    const row: Record<string, unknown> = { 名字: 'Anna' };
+    updateSettingsRow(row, { heroBg: '#112233 evil|#445566|#778899' });
+    expect(row['首頁背景']).toBe('');
+    updateSettingsRow(row, { heroBg: '#112233|#445566|#778899x' });
+    expect(row['首頁背景']).toBe('');
+  });
+});
