@@ -6354,3 +6354,21 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 未動：歷史紀錄裡的舊敘述。
 - 追加（同日）：`GS/google_apps_script.gs` 內的短連結工作表、`createShortLink`／`resolveShortLink` 與相關權限也一併刪除（補充資料連結的 `syncSupplementShortLinks_` 與 `/a–d` 轉址保留）。
 - 追加（同日）：整個 `GS/` 資料夾（舊 Apps Script：`google_apps_script.gs`、`user_directory.gs`）與一次性的 `scripts/migrate_user_directory_to_settings.mjs` 一併刪除；對應的 3 個測試移除。`upload/Code.gs`（圖片上傳用 Apps Script）保留。
+
+### 2026-10-11｜首頁可愛 3D emoji 背景調整
+- 六節慶改用統一 Fluent 3D emoji 素材，每個主題六物件；萬聖節新增微軟 MIT 授權南瓜、幽靈、糖果、蝙蝠 PNG，替換原 hw3d 拼貼。
+- 加入不同步的漂浮與搖擺、柔光光暈、微光粒子、滑鼠景深視差；手機也有慢速漂浮，減少動態模式停止動畫。
+- 保留自動日期與手動配色，六節慶恢復原有背景配色；切換場景清理事件與影格。
+- 更新首頁快取版本及編輯器說明。node --check、npm run smoke，以及六主題圖片載入、桌機/手機截圖、減少動態與場景移除檢查通過。
+
+- 2026-10-12：本機 tools/festival-preview.mjs 加入免登入六節慶切換列；六主題瀏覽器確認原配色與圖片載入通過，預覽不寫入正式設定。
+
+### 2026-10-12｜節慶素材與萬聖節配色調整
+- 萬聖節預設改為炭灰到黑色漸層；其餘五節慶保持原配色。
+- 新年改用自製可愛舞獅頭、煙火、鞭炮、禮物及星光；端午左上改為綠葉棉繩粽子。
+- 兩張透明 PNG 使用內建 image_gen 生成，存於 assets/festival/custom/，提示詞與來源記於該目錄 README.md。
+- 更新 JS 快取版本；node --check 與三主題桌機圖片載入、端午手機截圖檢查通過，無頁面例外。
+
+### 2026-10-12｜正式發布節慶背景
+- 依使用者授權提交並推送節慶 3D emoji 背景。
+- 移除本機免登入切換預覽工具 tools/festival-preview.mjs；測試截圖移至專案外，正式頁面沿用原有背景編輯權限。

@@ -1255,14 +1255,14 @@ body.uni-collapse .hero-edit{display:none}
 .hb-row{display:flex;gap:10px;flex-wrap:wrap}.hb-row label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800}
 .hb-row input[type=color]{width:42px;height:32px;padding:0;border:1px solid var(--line);border-radius:8px;background:none}
 
-/* 首頁節慶主題：裝飾是靜態 SVG（assets/festival/），只有聖誕飄雪與新年花紋在有滑鼠的電腦上才會動 */
+/* 節慶背景沿用管理者配色設定 */
 .hero::before,.hero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background-repeat:no-repeat;display:none}
 html[data-hero-fest] .hero::before{display:block}
 html[data-theme="dark"][data-hero-fest] .hero{background:radial-gradient(1200px 500px at 50% -10%,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%)}
-html[data-hero-fest="xmas"] .hero::after{display:block;background-image:url(assets/festival/xmas-snow.svg);background-repeat:repeat;background-size:320px}
-html[data-hero-fest="cny"] .hero::after{display:block;background-image:url(assets/festival/cny-pattern.svg);background-repeat:repeat;background-size:160px}
-@media (hover:hover) and (prefers-reduced-motion:no-preference){html[data-hero-fest="xmas"] .hero::after{animation:heroSnow 22s linear infinite}}
-@keyframes heroSnow{to{background-position:60px 320px}}
+
+
+
+
 .hb-lb{display:block;font-size:12.5px;margin:6px 0 2px;color:var(--muted)}
 .hb-fest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .hb-chip{padding:5px 13px;border-radius:99px;border:1px solid var(--line);background:none;font:inherit;font-size:13px;font-weight:800;color:var(--ink);cursor:pointer}
@@ -1271,70 +1271,35 @@ html[data-hero-fest="cny"] .hero::after{display:block;background-image:url(asset
 body.can-hero-edit .hero-edit{display:inline-flex}
 .hb-auto{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}.hb-auto input{width:auto}
 
-/* 萬聖節（鬼魅綠）：配色參考 bedimcode/responsive-halloween-website 的橄欖綠到卡其漸層＋橘色重點，圖案是自己畫的 */
-html[data-hero-fest="halloween"] .hero::before{display:none}
-html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
-
-.hb-modes{display:grid;gap:6px}
-
-/* 萬聖節場景（鬼魅綠）：3D 圖片疊成多層，電腦版有緩慢的漂浮／擺動／發光動畫與滑鼠視差；手機是靜態的 */
-.hero-scene{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;--mx:0;--my:0}
-.hero-scene .hs{position:absolute;transform:translate3d(calc(var(--mx)*var(--d)*1px),calc(var(--my)*var(--d)*.6px),0);transition:transform .35s ease-out}
-.hero-scene .hs img{display:block;width:100%;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.28))}
-.hs-moon{left:1%;top:-6px;width:210px;--d:6}
-.hs-ghost{left:6%;top:34%;width:112px;--d:18}
-.hs-hat{right:4%;top:5%;width:140px;--d:12}
-.hs-swing{right:23%;top:0;width:58px;--d:8;transform-origin:50% 0}
-.hs-swing::before{content:"";position:absolute;left:50%;top:0;width:1.5px;height:calc(100% - 52px);background:linear-gradient(rgba(255,255,255,.2),rgba(255,255,255,.7))}
-.hs-swing img{margin-top:auto}
-.hs-swing{display:flex;flex-direction:column;height:104px}
-.hs-pumpkins{left:0;bottom:-2px;width:236px;--d:10}
-.hs-pumpkins::before,.hs-glow::before{content:"";position:absolute;left:10%;right:10%;bottom:6%;height:60%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,170,60,.55),rgba(255,140,40,0));filter:blur(6px);z-index:-1}
-.hs-house{right:1%;bottom:-2px;width:196px;--d:10}
-.hs-candy{right:3%;top:40%;width:70px;--d:22}
-.hs-glow{display:none;left:21%;bottom:0;width:86px;--d:16}
-@media (min-width:1700px){.hs-glow{display:block}}
-.hs-f{z-index:1;opacity:.7}.hero-scene .hs-f img{filter:blur(1.4px) drop-shadow(0 4px 6px rgba(0,0,0,.18))}
-.hs-n{z-index:3}.hero-scene .hs-n img{filter:drop-shadow(0 18px 22px rgba(0,0,0,.34))}
-.hs-f1{left:36%;top:14%;width:44px;--d:4}.hs-f2{right:34%;top:30%;width:30px;--d:4}.hs-f3{left:44%;top:0;width:26px;--d:4;display:none}.hs-f4{left:40%;bottom:0;width:70px;--d:5}.hs-f5{right:36%;top:8%;width:44px;--d:4}
-.hs-n1{left:-3%;bottom:-26px;width:300px;--d:26}.hs-n2{right:-2%;top:-6%;width:170px;--d:28}
-.hs-fog{position:absolute;left:-10%;width:70%;height:55%;border-radius:50%;background:radial-gradient(closest-side,rgba(235,245,215,.22),rgba(235,245,215,0))}
-.hs-fog1{bottom:-18%}.hs-fog2{left:auto;right:-12%;top:-12%;width:60%;height:60%;background:radial-gradient(closest-side,rgba(255,230,170,.16),rgba(255,230,170,0))}
-@media (hover:hover) and (prefers-reduced-motion:no-preference){
-  .hs>img{animation:hsFloat 4.2s ease-in-out infinite alternate}
-  .hs-ghost>img{animation-duration:3.6s}.hs-moon>img{animation-duration:6s}.hs-candy>img{animation-duration:3.1s;animation-delay:-1s}.hs-glow>img{animation:none}
-  .hs-hat>img{animation:hsSway 5s ease-in-out infinite alternate;transform-origin:60% 90%}
-  .hs-swing{animation:hsSwing 3.4s ease-in-out infinite alternate}.hs-swing>img{animation:none}
-  .hs-pumpkins::before,.hs-glow::before{animation:hsGlow 2.8s ease-in-out infinite alternate}
-  .hs-glow>img{animation:hsGlowImg 2.8s ease-in-out infinite alternate}
-  .hs-fog1{animation:hsFog 22s ease-in-out infinite alternate}.hs-fog2{animation:hsFog 28s ease-in-out infinite alternate-reverse}
+/* 可愛 3D 節慶場景：兩側懸浮，中央保持清楚 */
+html[data-hero-fest] .hero{--hf-light:#ffd193;--hf-cool:#ab8cff;isolation:isolate}
+html[data-hero-fest="xmas"] .hero{--hf-light:#bfefff;--hf-cool:#6ccfbe}
+html[data-hero-fest="cny"] .hero{--hf-light:#ffd293;--hf-cool:#ed7d7d}
+html[data-hero-fest="valentine"] .hero{--hf-light:#ffb9db;--hf-cool:#bba3ff}
+html[data-hero-fest="duanwu"] .hero{--hf-light:#c4eaa2;--hf-cool:#67dad1}
+html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
+.hero-scene{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:-1;--mx:0;--my:0;contain:paint}
+.hf-aura{position:absolute;inset:0;background:radial-gradient(ellipse at 0% 45%,color-mix(in srgb,var(--hf-cool) 24%,transparent),transparent 40%),radial-gradient(ellipse at 100% 75%,color-mix(in srgb,var(--hf-light) 18%,transparent),transparent 38%)}
+.hf-halo{position:absolute;width:250px;height:250px;border:1px solid color-mix(in srgb,var(--hf-light) 18%,transparent);border-radius:50%;box-shadow:0 0 60px color-mix(in srgb,var(--hf-cool) 14%,transparent),inset 0 0 45px color-mix(in srgb,var(--hf-light) 8%,transparent)}
+.hf-halo-left{left:-60px;top:0}.hf-halo-right{right:-50px;bottom:-80px}
+.he{position:absolute;transform:translate3d(calc(var(--mx)*var(--depth)*-1px),calc(var(--my)*var(--depth)*-.6px),0);transition:transform .6s ease-out}
+.he img{display:block;width:100%;height:auto;filter:drop-shadow(0 18px 16px rgba(0,0,0,.22));}
+.he-0{left:1.5%;top:8%;width:clamp(95px,12vw,174px);rotate:-12deg}
+.he-1{right:1%;bottom:2%;width:clamp(110px,14vw,196px);rotate:10deg}
+.he-2{left:9%;bottom:3%;width:clamp(65px,7vw,102px);rotate:16deg}
+.he-3{right:7%;top:5%;width:clamp(62px,7vw,100px);rotate:-16deg}
+.he-4{left:-25px;bottom:18%;width:76px;opacity:.48;filter:blur(1.4px)}
+.he-5{right:17%;top:38%;width:42px;opacity:.6}
+.hf-dust{position:absolute;inset:0;mask-image:linear-gradient(90deg,#000,transparent 30%,transparent 70%,#000)}
+.hf-dust i{position:absolute;left:var(--x);top:var(--y);width:3px;height:3px;border-radius:50%;background:var(--hf-light);box-shadow:0 0 9px var(--hf-light);opacity:.5}
+@media(prefers-reduced-motion:no-preference){
+.he-float{animation:heFloat var(--duration) ease-in-out infinite;animation-delay:var(--delay)}
+.hf-halo{animation:heGlow 8s ease-in-out infinite alternate}.hf-halo-right{animation-delay:-4s}
+.hf-dust i{animation:heDust 7s ease-in-out infinite;animation-delay:var(--delay)}
 }
-@keyframes hsFloat{to{transform:translateY(-9px)}}
-@keyframes hsSway{from{transform:rotate(-3deg)}to{transform:rotate(4deg)}}
-@keyframes hsSwing{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
-@keyframes hsGlow{from{opacity:.45}to{opacity:1}}
-@keyframes hsGlowImg{from{filter:drop-shadow(0 0 4px rgba(255,200,80,.2))}to{filter:drop-shadow(0 0 16px rgba(255,200,80,.85))}}
-@keyframes hsFog{to{transform:translateX(9%)}}
-@media (max-width:720px){
-  .hs-moon{width:104px}.hs-ghost,.hs-candy,.hs-glow{display:none}.hs-hat{width:68px;top:3px}.hs-swing{display:none}
-  .hs-f,.hs-n2{display:none}.hs-n1{width:150px;bottom:-12px}.hs-pumpkins{width:124px}.hs-house{width:98px}.hero-scene .hs{transform:none}
-}
-
-/* 聖誕／新年／情人節的 3D 場景（資料驅動，見 site.js 的 HX_SCENES）：電腦版有漂浮／擺動／旋轉／脈動／上升動畫與滑鼠視差，手機靜態 */
-.hx{position:absolute;width:var(--w);transform:translate3d(calc(var(--mx)*var(--d,8)*1px),calc(var(--my)*var(--d,8)*.6px),0);transition:transform .35s ease-out}
-.hx.tf{z-index:1;opacity:.72}.hx.tf img{filter:blur(1.4px) drop-shadow(0 4px 6px rgba(0,0,0,.18))}.hx.tn{z-index:3}.hx.tn img{filter:drop-shadow(0 18px 22px rgba(0,0,0,.32))}
-.hx img{display:block;width:100%;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.25))}
-.hxi.th{display:flex;flex-direction:column;align-items:center;transform-origin:50% 0}
-.hxi.th::before{content:"";width:1.5px;height:var(--t);background:linear-gradient(rgba(255,230,160,.25),rgba(255,230,160,.9))}
-@media (hover:hover) and (prefers-reduced-motion:no-preference){
-  .a-float{animation:hsFloat 4.2s ease-in-out infinite alternate;animation-delay:var(--dl)}
-  .a-sway{animation:hsSway 4.8s ease-in-out infinite alternate;animation-delay:var(--dl);transform-origin:50% 90%}
-  .a-swing{animation:hsSwing 3.6s ease-in-out infinite alternate;animation-delay:var(--dl)}
-  .a-spin{animation:hxSpin 26s linear infinite}
-  .a-pulse{animation:hxPulse 2.6s ease-in-out infinite alternate;animation-delay:var(--dl)}
-  .a-rise{animation:hxRise 7s ease-in infinite;animation-delay:var(--dl)}
-}
-@keyframes hxSpin{to{transform:rotate(360deg)}}
-@keyframes hxPulse{from{opacity:.55;transform:scale(.94)}to{opacity:1;transform:scale(1.06)}}
-@keyframes hxRise{0%{transform:translateY(0) scale(.8);opacity:0}15%{opacity:.9}100%{transform:translateY(-420px) scale(1.15);opacity:0}}
-@media (max-width:720px){.hx{width:var(--mw);transform:none}.hx.m0{display:none}}
+@keyframes heFloat{0%,100%{transform:translate3d(0,0,0) rotate(-3deg)}50%{transform:translate3d(7px,-22px,0) rotate(4deg)}}
+@keyframes heGlow{to{opacity:.4;transform:scale(1.12)}}
+@keyframes heDust{0%,100%{opacity:.12;transform:translateY(0)}50%{opacity:.8;transform:translateY(-24px)}}
+@media(max-width:1100px) and (min-width:721px){.he-2{left:2%}.he-5{right:2%}}
+@media(max-width:720px){.he-0{left:-25px;top:0;width:94px;opacity:.7}.he-1{right:-25px;bottom:0;width:120px;opacity:.7}.he-2{left:-20px;bottom:12%;width:60px;opacity:.5}.he-3{right:-18px;top:5%;width:67px;opacity:.6}.he-4,.he-5{display:none}.he{transform:none}.hf-halo{width:160px;height:160px}.hf-dust i:nth-child(n+9){display:none}.he-float{animation-duration:9s}}
+@media(prefers-reduced-motion:reduce){.he{transform:none;transition:none}}
