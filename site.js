@@ -36,14 +36,26 @@
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
     const HERO_CNY={2026:'2026-02-17',2027:'2027-02-06',2028:'2028-01-26',2029:'2029-02-13',2030:'2030-02-03',2031:'2031-01-23',2032:'2032-02-11',2033:'2033-01-31',2034:'2034-02-19',2035:'2035-02-08',2036:'2036-01-28',2037:'2037-02-15',2038:'2038-02-04',2039:'2039-01-24',2040:'2040-02-12'};
     const heroValid=v=>{const p=String(v||'').toLowerCase().split('|');return (p.length===3||(p.length===4&&HERO_FESTS.some(f=>f[0]&&f[0]===p[3])))&&p.slice(0,3).every(x=>/^#[0-9a-f]{6}$/.test(x))};
-    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');heroScene(p[3]==='halloween')}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');heroScene(false)}}
+    function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');heroScene(['halloween','xmas','cny','valentine'].includes(p[3]),p[3])}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');heroScene(false,'')}}
     /* 萬聖節（鬼魅綠）的 3D 場景：只在這個主題時才建立，其他主題移除；電腦版滑鼠移動有輕微視差 */
-    function heroScene(on){
+    /* 聖誕／新年／情人節的 3D 場景（微軟 Fluent Emoji 3D，MIT）：資料驅動，每個物件 [圖, 位置, 寬, 手機寬(0=手機隱藏), 視差深度, 動畫, 吊繩長度] */
+    const HX_DIR='assets/festival/fluent3d/';
+    const HX_SCENES={
+      xmas:[['christmas_tree',{l:'1%',b:'-6px'},170,92,10,''],['wrapped_gift',{l:'15%',b:'0'},84,0,16,'float'],['snowman',{r:'2%',b:'-4px'},160,88,10,''],['bell',{r:'20%',t:'0'},64,40,8,'swing',46],['bell',{l:'20%',t:'0'},52,0,8,'swing',30],['snowflake',{r:'5%',t:'6%'},92,54,14,'spin'],['snowflake',{l:'5%',t:'44%'},60,0,18,'spin'],['snowflake',{l:'12%',t:'18%'},44,0,20,'float']],
+      cny:[['red_paper_lantern',{l:'5%',t:'0'},92,56,8,'swing',34],['red_paper_lantern',{l:'22%',t:'0'},64,0,8,'swing',12],['red_paper_lantern',{r:'22%',t:'0'},64,0,8,'swing',12],['red_paper_lantern',{r:'9%',t:'0'},92,56,8,'swing',34],['red_envelope',{l:'3%',b:'0'},120,70,12,'float'],['coin',{l:'17%',b:'6px'},72,0,18,'float'],['money_bag',{r:'3%',b:'0'},118,70,12,'float'],['firecracker',{r:'16%',b:'0'},84,0,16,'sway'],['coin',{l:'7%',t:'36%'},56,0,18,'float'],['coin',{r:'6%',t:'34%'},52,0,18,'float']],
+      valentine:[['red_heart',{l:'7%',t:'12%'},104,60,12,'float'],['heart_with_arrow',{r:'6%',t:'8%'},110,62,12,'sway'],['love_letter',{l:'2%',b:'2px'},130,74,14,'float'],['rose',{l:'9%',t:'46%'},70,56,10,'sway'],['chocolate_bar',{l:'17%',b:'6px'},84,0,18,'float'],['teddy_bear',{r:'1%',b:'0'},124,70,12,'float'],['sparkling_heart',{r:'4%',t:'44%'},60,0,18,'pulse'],['red_heart',{l:'30%',b:'-30px'},30,0,0,'rise'],['red_heart',{l:'46%',b:'-30px'},38,0,0,'rise'],['red_heart',{l:'62%',b:'-30px'},28,0,0,'rise'],['red_heart',{l:'76%',b:'-30px'},34,0,0,'rise'],['red_heart',{l:'88%',b:'-30px'},26,0,0,'rise']]
+    };
+    function heroScene(on,fest){
       const hero=document.querySelector('.hero');if(!hero)return;let sc=hero.querySelector('.hero-scene');
       if(!on){if(sc)sc.remove();return}
-      if(sc)return;
+      if(sc&&sc.dataset.fest===fest)return;
+      if(sc)sc.remove();
       const P='assets/festival/hw3d/',im=n=>'<img src="'+P+n+'.webp" alt="" decoding="async">';
-      sc=document.createElement('div');sc.className='hero-scene';sc.setAttribute('aria-hidden','true');
+      sc=document.createElement('div');sc.className='hero-scene';sc.dataset.fest=fest;sc.setAttribute('aria-hidden','true');
+      if(fest!=='halloween'){
+        const items=HX_SCENES[fest]||[];
+        sc.innerHTML=items.map((it,i)=>{const pos=Object.entries(it[1]).map(([k,v])=>({l:'left',r:'right',t:'top',b:'bottom'}[k])+':'+v).join(';');return '<div class="hx'+(it[3]?'':' m0')+'" style="'+pos+';--w:'+it[2]+'px;--mw:'+(it[3]||it[2])+'px;--d:'+it[4]+';--dl:'+(-(i%5)*0.9)+'s"><div class="hxi'+(it[5]?' a-'+it[5]:'')+(it[6]?' th':'')+'"'+(it[6]?' style="--t:'+it[6]+'px"':'')+'><img src="'+HX_DIR+it[0]+'.webp" alt="" decoding="async"></div></div>'}).join('');
+      }else
       sc.innerHTML='<i class="hs-fog hs-fog1"></i><i class="hs-fog hs-fog2"></i><div class="hs hs-moon">'+im('moon-bats')+'</div><div class="hs hs-ghost">'+im('ghost')+'</div><div class="hs hs-hat">'+im('hat')+'</div><div class="hs hs-swing">'+im('spider')+'</div><div class="hs hs-pumpkins">'+im('pumpkins')+'</div><div class="hs hs-glow">'+im('glow-pumpkin')+'</div><div class="hs hs-house">'+im('house')+'</div><div class="hs hs-candy">'+im('candy')+'</div>';
       hero.insertBefore(sc,hero.firstChild);
       if(matchMedia('(hover:hover)').matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches){let raf=0;hero.addEventListener('mousemove',e=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;const r=hero.getBoundingClientRect();sc.style.setProperty('--mx',((e.clientX-r.left)/r.width-.5)*2);sc.style.setProperty('--my',((e.clientY-r.top)/r.height-.5)*2)})},{passive:true});hero.addEventListener('mouseleave',()=>{sc.style.setProperty('--mx',0);sc.style.setProperty('--my',0)})}

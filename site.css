@@ -1259,10 +1259,7 @@ body.uni-collapse .hero-edit{display:none}
 .hero::before,.hero::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;background-repeat:no-repeat;display:none}
 html[data-hero-fest] .hero::before{display:block}
 html[data-theme="dark"][data-hero-fest] .hero{background:radial-gradient(1200px 500px at 50% -10%,var(--hero-a) 0%,var(--hero-b) 45%,var(--hero-c) 100%)}
-html[data-hero-fest="xmas"] .hero::before{background-image:url(assets/festival/xmas-snowman.svg),url(assets/festival/xmas-tree.svg);background-position:3% 100%,96% 100%;background-size:92px,82px}
 html[data-hero-fest="xmas"] .hero::after{display:block;background-image:url(assets/festival/xmas-snow.svg);background-repeat:repeat;background-size:320px}
-html[data-hero-fest="cny"] .hero::before{background-image:url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg),url(assets/festival/cny-lantern.svg)}
-html[data-hero-fest="cny"] .hero::before{background-position:4% -4px,24% -30px,76% -30px,96% -4px;background-size:58px,42px,42px,58px}
 html[data-hero-fest="cny"] .hero::after{display:block;background-image:url(assets/festival/cny-pattern.svg);background-repeat:repeat;background-size:160px}
 html[data-hero-fest="valentine"] .hero::after{display:block;background-image:url(assets/festival/valentine-heart.svg);background-repeat:repeat;background-size:240px}
 @media (hover:hover) and (prefers-reduced-motion:no-preference){html[data-hero-fest="xmas"] .hero::after{animation:heroSnow 22s linear infinite}}
@@ -1319,3 +1316,21 @@ html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
   .hs-moon{width:104px}.hs-ghost,.hs-candy,.hs-glow{display:none}.hs-hat{width:68px;top:3px}.hs-swing{display:none}
   .hs-pumpkins{width:124px}.hs-house{width:98px}.hero-scene .hs{transform:none}
 }
+
+/* 聖誕／新年／情人節的 3D 場景（資料驅動，見 site.js 的 HX_SCENES）：電腦版有漂浮／擺動／旋轉／脈動／上升動畫與滑鼠視差，手機靜態 */
+.hx{position:absolute;width:var(--w);transform:translate3d(calc(var(--mx)*var(--d,8)*1px),calc(var(--my)*var(--d,8)*.6px),0);transition:transform .35s ease-out}
+.hx img{display:block;width:100%;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.25))}
+.hxi.th{display:flex;flex-direction:column;align-items:center;transform-origin:50% 0}
+.hxi.th::before{content:"";width:1.5px;height:var(--t);background:linear-gradient(rgba(255,230,160,.25),rgba(255,230,160,.9))}
+@media (hover:hover) and (prefers-reduced-motion:no-preference){
+  .a-float{animation:hsFloat 4.2s ease-in-out infinite alternate;animation-delay:var(--dl)}
+  .a-sway{animation:hsSway 4.8s ease-in-out infinite alternate;animation-delay:var(--dl);transform-origin:50% 90%}
+  .a-swing{animation:hsSwing 3.6s ease-in-out infinite alternate;animation-delay:var(--dl)}
+  .a-spin{animation:hxSpin 26s linear infinite}
+  .a-pulse{animation:hxPulse 2.6s ease-in-out infinite alternate;animation-delay:var(--dl)}
+  .a-rise{animation:hxRise 7s ease-in infinite;animation-delay:var(--dl)}
+}
+@keyframes hxSpin{to{transform:rotate(360deg)}}
+@keyframes hxPulse{from{opacity:.55;transform:scale(.94)}to{opacity:1;transform:scale(1.06)}}
+@keyframes hxRise{0%{transform:translateY(0) scale(.8);opacity:0}15%{opacity:.9}100%{transform:translateY(-420px) scale(1.15);opacity:0}}
+@media (max-width:720px){.hx{width:var(--mw);transform:none}.hx.m0{display:none}}
