@@ -664,7 +664,7 @@
       const card=button.closest('[data-account-reel-card]'),originalLabel=button.textContent,originalClassName=button.className;
       button.disabled=true;button.textContent=wasActive?'下架中…':'重新上架中…';
       try{
-        await appsScriptRequest('adminTableUpdate',{table:'reels',rowNumber:row._rowNumber,expectedRow:row,row:updated,...spreadsheetBackupOptions('reels')});
+        await appsScriptRequest('adminTableUpdate',{table:'reels',rowNumber:row._rowNumber,expectedRow:row,row:updated});
         const cacheIndex=accountReelsRows.findIndex(item=>item._rowNumber===row._rowNumber);
         if(cacheIndex>=0)accountReelsRows[cacheIndex]={...accountReelsRows[cacheIndex],...updated};
         if(card)card.outerHTML=accountReelCardHtml(updated,String(updated['名字']||''));
@@ -1010,7 +1010,7 @@
       if(customerRowsCache.some(row=>row['客戶別']===name)){note('這個客戶別已經存在','error');return}
       try{
         const row={'客戶別':name,'排序':'','專案負責人':'[]','設計負責人':'[]','部門組別':'[]','預設信箱':JSON.stringify(CUSTOMER_DEFAULT_CC_EMAILS),'更新時間':'','更新者':stored(FRONT_USER_KEY)||'管理者'};
-        await appsScriptRequest('adminTableInsert',{table:'客戶別',row,...spreadsheetBackupOptions('客戶別')});
+        await appsScriptRequest('adminTableInsert',{table:'客戶別',row});
         customerSelected=name;
         await loadRows();
         note(`已新增客戶別「${name}」。`,'ok');
@@ -1045,7 +1045,7 @@
       renderTable({table:'客戶別',total:customerRowsCache.length,offset:0,limit:1000,rows:customerRowsCache});
       note(`「${name}」已先套用；JSON 正在背景寫入。`,'ok');
       try{
-        const data=await appsScriptRequest('adminTableUpdate',{table:'客戶別',key:name,row,...spreadsheetBackupOptions('客戶別')});
+        const data=await appsScriptRequest('adminTableUpdate',{table:'客戶別',key:name,row});
         if(data?.jsonRevision){appliedRevision=Math.max(appliedRevision,Number(data.jsonRevision)||0);$('revision').textContent=String(data.jsonRevision)}
         customerWritesPending.delete(name);
         if(tableName==='客戶別'){
@@ -1142,7 +1142,7 @@
       if(button){button.disabled=true;button.textContent=active?'關閉中…':'開啟中…'}note(`正在${active?'關閉':'開啟'} ${version} 公告…`);
       try{
         const data=APPS_SCRIPT_MODE
-          ? await appsScriptRequest('adminTableUpdate',{table:'系統公告欄',rowNumber:row._rowNumber,expectedRow:row,row:updated,...spreadsheetBackupOptions('系統公告欄')})
+          ? await appsScriptRequest('adminTableUpdate',{table:'系統公告欄',rowNumber:row._rowNumber,expectedRow:row,row:updated})
           : await request(`/table/${encodeURIComponent('系統公告欄')}/${encodeURIComponent(version)}`,{method:'PATCH',body:JSON.stringify({row:updated})});
         if(!APPS_SCRIPT_MODE)publishDatabaseRefresh('adminTableUpdate',data);
         await loadMetadata({fresh:true,commitSha:String(data?.githubCommitSha||'')});
@@ -1150,7 +1150,6 @@
       }catch(error){if(button){button.disabled=false;button.textContent=active?'關閉公告':'開啟公告'}note(`公告開關更新失敗：${error.message}`,'error')}
     }
     function directRowIndex(table,row,name=tableName){const source=directDatabase?.tables?.[name];if(!source)return -1;const primaryKey=table.primaryKey;return primaryKey?source.rows.findIndex(item=>String(item[primaryKey]||'')===String(row[primaryKey]||'')):Number(row._rowNumber)-2}
-    function spreadsheetBackupOptions(name=tableName){const backupToSpreadsheet=name==='database';return {backupToSpreadsheet,skipSpreadsheetBackup:!backupToSpreadsheet,backupMode:backupToSpreadsheet?'database-only':'json-only'}}
     /**
      * 後台寫入一律「畫面先更新、寫入在背景排隊」。
      *
@@ -1378,7 +1377,7 @@
     async function resetPermission(){
       const editor=permissionEditorElement(),account=editor?.dataset.permissionEditor,model=permissionModelsCache.find(row=>row['帳號']===account);if(!model?._explicit||permissionWritesPending.has(account)||!confirm(`確定讓 ${account} 改回角色預設權限？`))return;
       if(!APPS_SCRIPT_MODE){try{await request(`/table/${encodeURIComponent('帳號權限')}/${encodeURIComponent(account)}`,{method:'DELETE',body:'{}'});note(`${account} 已改回角色預設權限。`,'ok');void loadMetadata().catch(()=>{})}catch(error){note(`還原預設值失敗：${error.message}`,'error')}return}
-      const table=directDatabase.tables['帳號權限'],index=table.rows.findIndex(item=>MachiAccess.canonicalAccount(item['帳號'])===account);if(index<0){note('找不到權限資料，請重新讀取。','error');return}const previous={...table.rows[index]},payload={table:'帳號權限',rowNumber:index+2,expectedRow:previous,...spreadsheetBackupOptions('帳號權限')};permissionWritesPending.add(account);table.rows.splice(index,1);metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows();note(`${account} 已先改回角色預設；JSON 正在背景寫入。`,'ok');
+      const table=directDatabase.tables['帳號權限'],index=table.rows.findIndex(item=>MachiAccess.canonicalAccount(item['帳號'])===account);if(index<0){note('找不到權限資料，請重新讀取。','error');return}const previous={...table.rows[index]},payload={table:'帳號權限',rowNumber:index+2,expectedRow:previous};permissionWritesPending.add(account);table.rows.splice(index,1);metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows();note(`${account} 已先改回角色預設；JSON 正在背景寫入。`,'ok');
       enqueueAccessWrite(()=>appsScriptRequest('adminTableDelete',payload)).then(data=>{applyReturnedRevision(data);if(tableName==='帳號權限'&&permissionSelectedAccount===account)note(`${account} 已完成移除個別權限。`,'ok')}).catch(error=>{if(!table.rows.some(item=>MachiAccess.canonicalAccount(item['帳號'])===account))table.rows.splice(Math.min(index,table.rows.length),0,previous);note(`還原預設值背景寫入失敗，已恢復原設定：${error.message}`,'error')}).finally(()=>{permissionWritesPending.delete(account);refreshPermissionPendingUi(account)})
     }
     function roleTemplateEditorElement(){return $('view').querySelector('[data-role-template-editor]')}
@@ -1390,7 +1389,7 @@
     async function saveRoleTemplate(){
       const editor=roleTemplateEditorElement();if(!editor)return;const {model,row}=roleTemplatePayloadFromEditor(),role=row['角色範本'];if(roleTemplateWritesPending.has(role)){note(`「${role}」上一筆範本仍在背景寫入。`,'error');return}
       if(!APPS_SCRIPT_MODE){try{await request(`/table/${encodeURIComponent('角色權限範本')}/${encodeURIComponent(role)}`,{method:'PATCH',body:JSON.stringify({row})});const data=await request(`/table/${encodeURIComponent('角色權限範本')}?offset=0&limit=10`);roleTemplateRowsCache=data.rows||[];MachiAccess.applyRoleTemplates({tables:{'角色權限範本':{rows:roleTemplateRowsCache}}});renderTable(data);note(`「${role}」預設已更新。`,'ok')}catch(error){note(`角色範本儲存失敗：${error.message}`,'error')}return}
-      const table=directDatabase.tables['角色權限範本'],index=table.rows.findIndex(item=>String(item['角色範本']||'')===role);if(index<0){note('找不到角色範本資料，請重新讀取。','error');return}const previous={...table.rows[index]},payload={table:'角色權限範本',rowNumber:index+2,expectedRow:previous,row,...spreadsheetBackupOptions('角色權限範本')};roleTemplateWritesPending.add(role);table.rows[index]={...row};MachiAccess.applyRoleTemplates(directDatabase);metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows();note(`「${role}」範本已先套用；JSON 正在背景依序寫入。`,'ok');
+      const table=directDatabase.tables['角色權限範本'],index=table.rows.findIndex(item=>String(item['角色範本']||'')===role);if(index<0){note('找不到角色範本資料，請重新讀取。','error');return}const previous={...table.rows[index]},payload={table:'角色權限範本',rowNumber:index+2,expectedRow:previous,row};roleTemplateWritesPending.add(role);table.rows[index]={...row};MachiAccess.applyRoleTemplates(directDatabase);metadata=metadataFromDatabase(directDatabase);renderTabs();await loadRows();note(`「${role}」範本已先套用；JSON 正在背景依序寫入。`,'ok');
       enqueueAccessWrite(()=>appsScriptRequest('adminTableUpdate',payload)).then(data=>{applyReturnedRevision(data);if(tableName==='角色權限範本'&&roleTemplateSelected===role)note(`「${role}」範本已完成寫入 JSON；同角色且未使用自訂權限的帳號會同步套用。`,'ok')}).catch(error=>{table.rows[index]=previous;MachiAccess.applyRoleTemplates(directDatabase);note(`角色範本背景寫入失敗，已還原「${role}」：${error.message}`,'error')}).finally(()=>{roleTemplateWritesPending.delete(role);refreshRoleTemplatePendingUi(role)})
     }
     async function saveEditor(event){
@@ -1406,7 +1405,7 @@
           if(original)directDatabase.tables[editedTable].rows[index]={...row};
           else{insertedIndex=directDatabase.tables[editedTable].rows.length;directDatabase.tables[editedTable].rows.push({...row})}
           closeEditor();refreshCachedTableView();note(`${editedLabel} 已先更新畫面，JSON 背景寫入中…`);
-          data=await appsScriptRequest(original?'adminTableUpdate':'adminTableInsert',original?{table:editedTable,rowNumber:original._rowNumber,expectedRow:original,row,...spreadsheetBackupOptions(editedTable)}:{table:editedTable,row,...spreadsheetBackupOptions(editedTable)});
+          data=await appsScriptRequest(original?'adminTableUpdate':'adminTableInsert',original?{table:editedTable,rowNumber:original._rowNumber,expectedRow:original,row}:{table:editedTable,row});
           if(data.jsonRevision)directDatabase.revision=data.jsonRevision;refreshCachedTableView();
         }else{
           // 先關掉編輯視窗並就地更新畫面，寫入丟到背景排隊——原本是 await 寫入再 await loadMetadata()
@@ -1556,7 +1555,7 @@
       note(`「${row['項目細節']}」權重 ${value} 分，背景寫入中…`);
       enqueueAdminWrite(async()=>{
         try{
-          const data=await request('',{method:'POST',body:JSON.stringify({action:'adminTableUpdate',table:'加權計分標準',rowNumber:row._rowNumber,expectedRow:{...row,'權重':previousWeight},row:updated,...spreadsheetBackupOptions('加權計分標準')})});
+          const data=await request('',{method:'POST',body:JSON.stringify({action:'adminTableUpdate',table:'加權計分標準',rowNumber:row._rowNumber,expectedRow:{...row,'權重':previousWeight},row:updated})});
           publishDatabaseRefresh('adminTableUpdate',data);
           if(data?.jsonRevision){appliedRevision=Math.max(appliedRevision,Number(data.jsonRevision)||0);$('revision').textContent=String(data.jsonRevision)}
           note(`「${row['項目細節']}」已設定為 ${value} 分。`,'ok');
@@ -1576,7 +1575,7 @@
         if(APPS_SCRIPT_MODE){
           if(index<0)throw new Error('找不到要刪除的資料，請重新讀取');
           directDatabase.tables[deletedTable].rows.splice(index,1);refreshCachedTableView();note(`${deletedLabel} 已先從畫面移除，JSON 背景刪除中…`);
-          const data=await appsScriptRequest('adminTableDelete',{table:deletedTable,rowNumber:row._rowNumber,expectedRow:row,...spreadsheetBackupOptions(deletedTable)});
+          const data=await appsScriptRequest('adminTableDelete',{table:deletedTable,rowNumber:row._rowNumber,expectedRow:row});
           if(data.jsonRevision)directDatabase.revision=data.jsonRevision;refreshCachedTableView();
         }else{
           // 先把這一列從畫面移除、請求丟到背景排隊，使用者可以馬上刪下一筆；失敗才把資料放回去。
