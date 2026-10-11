@@ -1278,6 +1278,6 @@ body.can-hero-edit .hero-edit{display:inline-flex}
 .hb-auto{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px}.hb-auto input{width:auto}
 
 /* 萬聖節（鬼魅綠）：配色參考 bedimcode/responsive-halloween-website 的橄欖綠到卡其漸層＋橘色重點，圖案是自己畫的 */
-html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/hw-moon-bats.svg),url(assets/festival/hw-ghost.svg),url(assets/festival/hw-hat.svg),url(assets/festival/hw-pumpkin.svg),url(assets/festival/hw-cauldron.svg),url(assets/festival/hw-ghost.svg);background-position:2% 4px,7% 52%,90% 20%,2% 100%,97% 100%,84% 78%;background-size:190px,74px,96px,112px,112px,46px}
+html[data-hero-fest="halloween"] .hero::before{background-image:url(assets/festival/fluent/full_moon.png),url(assets/festival/fluent/bat.png),url(assets/festival/fluent/bat.png),url(assets/festival/fluent/spider_web.png),url(assets/festival/fluent/spider.png),url(assets/festival/fluent/ghost.png),url(assets/festival/fluent/jack-o-lantern.png),url(assets/festival/fluent/candy.png),url(assets/festival/fluent/ghost.png),url(assets/festival/fluent/jack-o-lantern.png);background-position:2% 8px,15% 22px,80% 70px,98% 0,92% 66px,5% 48%,2% 100%,97% 100%,90% 54%,88% 100%;background-size:104px,52px,40px,128px,60px,92px,128px,72px,56px,88px}
 html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
-@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:84px,40px,52px,74px,76px,0;background-position:-8px -6px,2% 30%,98% 4px,0 100%,100% 100%,88% 70%}}
+@media (max-width:720px){html[data-hero-fest="halloween"] .hero::before{background-size:64px,34px,0,84px,0,54px,84px,46px,0,0;background-position:0 4px,24% 14px,80% 70px,100% 0,92% 66px,0 44%,0 100%,100% 100%,90% 54%,88% 100%}}
