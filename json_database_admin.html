@@ -50,7 +50,11 @@
       .side-tab{width:auto;white-space:nowrap}
       .side-foot{border-top:0;border-left:1px solid var(--line);flex-direction:row;flex:0 0 auto}
       .content{padding:12px}
-      .metrics{grid-template-columns:1fr}
+      .metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      .metric{padding:7px 9px;min-width:0}.metric span{font-size:10.5px}.metric b{font-size:15px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .side-foot{flex-direction:column;gap:4px;padding:6px}.side-foot .btn{min-height:30px;padding:3px 10px;font-size:12px;white-space:nowrap}
+      .table-wrap{max-height:78vh;-webkit-overflow-scrolling:touch}
+      .content-actions{flex-wrap:wrap}
     }
 
     /* Generic table */
@@ -1633,11 +1637,13 @@
       $('view').innerHTML=`<div class="content-actions"><select id="auditKind" aria-label="依類型篩選"><option value="">全部類型</option>${AUDIT_KINDS.map(k=>`<option value="${k}"${k===auditKind?' selected':''}>${k}</option>`).join('')}</select><span class="count">最新在前，最多顯示 500 筆（共讀取 ${auditRows.length.toLocaleString('zh-TW')} 筆）；寫入約有數分鐘延遲</span></div><div class="table-wrap"><table><thead><tr><th>時間（台北）</th><th>類型</th><th>操作者</th><th>案件／帳號</th><th>欄位</th><th>變更內容</th><th>備註</th></tr></thead><tbody>${body}</tbody></table></div>`;
     }
     /* 平台幣帳本：不跳頁，直接嵌在右側內容區（同網站，登入與深淺模式沿用） */
-    function leaveCoin(){if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
+    /* 稽核、權限、備份、診斷這些「工具頁」不是資料表：隱藏資料表專用的統計卡、匯入與新增按鈕（手機上尤其佔版面） */
+    function toolChrome(){const m=document.querySelector('.metrics');if(m)m.hidden=true;$('importAccounts').hidden=true;$('add').hidden=true}
+    function leaveCoin(){const m0=document.querySelector('.metrics');if(m0)m0.hidden=false;$('search').hidden=false;if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
     function showCoin(){
       auditMode=false;coinMode=true;renderTabs();
       $('tableTitle').textContent='平台幣帳本';$('tableSubtitle').textContent='完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）；只新增、不修改，每筆帶簽章';
-      $('currentTable').textContent='平台幣帳本';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;$('search').hidden=true;
+      $('currentTable').textContent='平台幣帳本';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();$('search').hidden=true;
       const m=document.querySelector('.metrics');if(m)m.hidden=true;
       $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1"></iframe>';
     }
@@ -1645,7 +1651,7 @@
     async function showAudit(){auditView='audit';
       leaveCoin();auditMode=true;renderTabs();
       $('tableTitle').textContent='操作紀錄';$('tableSubtitle').textContent='案件狀態與欄位變更、權限變更、登入、寄信的稽核紀錄';
-      $('currentTable').textContent='操作紀錄';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      $('currentTable').textContent='操作紀錄';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取操作紀錄...</div>';
       try{const data=await request('',{method:'POST',body:JSON.stringify({action:'listAuditLog',limit:2000})});auditRows=Array.isArray(data.rows)?data.rows:[];note('已讀取操作紀錄');renderAudit()}
       catch(error){$('view').innerHTML='';note(`讀取操作紀錄失敗：${error.message||error}`,'error')}
@@ -1659,7 +1665,7 @@
       const cols=d.pages.map(p=>['p',p,PERM_PAGE_LABEL[p]||p]).concat(d.capabilities.map(c=>['c',c,PERM_CAP_LABEL[c]||c]));
       const head='<tr><th>帳號</th><th>名字</th><th>部門／組別</th><th>角色</th><th>狀態</th><th>來源</th>'+cols.map(c=>'<th class="perm-col" title="'+esc(c[1])+'"><span>'+esc(c[2])+'</span></th>').join('')+'</tr>';
       const body=rows.map(r=>'<tr'+(r.status==='停用'?' class="perm-off"':'')+'><td>'+esc(r.account)+'</td><td>'+esc(r.name)+'</td><td>'+esc([r.dept,r.group].filter(Boolean).join('／'))+'</td><td><span class="audit-kind">'+esc(r.role)+'</span></td><td>'+esc(r.status)+'</td><td>'+(r.explicit?'帳號權限表':'角色預設')+'</td>'+cols.map(c=>'<td class="perm-cell">'+((c[0]==='p'?r.pages:r.capabilities).includes(c[1])?'<b>✓</b>':'')+'</td>').join('')+'</tr>').join('');
-      $('view').innerHTML='<div class="table-wrap"><table class="perm-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div><p class="notice" style="margin-top:10px">這裡是每個帳號「實際生效」的權限：有在帳號權限表設定的以設定為準，沒設定的依角色（管理者／設計師／一般使用者）預設。管理者擁有全部權限。要修改請到「帳號權限」表。</p>';
+      $('view').innerHTML='<div class="table-wrap"><table class="perm-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div><p class="notice" style="margin-top:10px;display:block">這裡是每個帳號「實際生效」的權限：有在帳號權限表設定的以設定為準，沒設定的依角色（管理者／設計師／一般使用者）預設。管理者擁有全部權限。要修改請到「帳號權限」表。</p>';
     }
     var diagData=null;
     const DIAG_STATUS={present:'在座',meeting:'會議',leave:'休假',offwork:'下班',lunch:'用餐',away:'離開',overtime:'加班',trip:'公出',abroad:'出國',toilet:'廁所'};
@@ -1677,37 +1683,37 @@
       if(p.source==='manual')return '目前是本人手動指定的「'+st+'」。';
       return '目前「'+st+'」，來源：'+(DIAG_SOURCE[p.source]||p.source||'未知')+'。';
     }
-    function renderDiag(){
+    function renderDiag(){$('search').hidden=true;
       const d=diagData;$('count').textContent='';$('totalRows').textContent='';
       if(!d){$('view').innerHTML='';return}
       const head='<tr><th>人員</th><th>目前狀態</th><th>設定來源</th><th>起算時間</th><th>行事曆判斷</th><th>人資假單</th><th>電腦心跳</th><th>說明</th></tr>';
       const body=d.people.map(p=>'<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(DIAG_STATUS[p.status]||p.status||'—')+'</td><td>'+esc(DIAG_SOURCE[p.source]||p.source||'—')+'</td><td>'+esc(diagTime(p.since))+'</td><td>'+esc(p.calendarSays?(DIAG_STATUS[p.calendarSays]||p.calendarSays):'（沒有特殊狀態）')+'</td><td>'+(p.femasLeaves.length?p.femasLeaves.map(l=>'<div'+(l.activeNow?' style="font-weight:800;color:#b45309"':'')+'>'+esc(diagTime(l.start))+' ～ '+esc(diagTime(l.end))+(l.activeNow?'（現在有效）':'')+'</div>').join(''):'—')+'</td><td>'+(p.heartbeat?(p.heartbeat.online?'在線':'離線')+'<br><small>'+esc(diagTime(p.heartbeat.at))+'</small>':'—')+'</td><td style="min-width:260px;white-space:normal">'+esc(diagVerdict(p))+'</td></tr>').join('');
       const ls=d.lastSync;
       $('view').innerHTML='<div class="table-wrap"><table class="perm-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'
-        +'<div class="notice" style="margin-top:12px;line-height:1.8"><b>最近一次行事曆同步：</b>'+(ls?esc(diagTime(ls.at))+'｜休假 '+esc((ls.leave||[]).join('、')||'無')+'｜會議 '+esc((ls.meeting||[]).join('、')||'無')+'｜讀不到行事曆 '+esc((ls.unreadable||[]).join('、')||'無')+(ls.error?'｜錯誤：'+esc(ls.error):''):'尚無紀錄')
+        +'<div class="notice" style="margin-top:12px;line-height:1.8;display:block"><b>最近一次行事曆同步：</b>'+(ls?esc(diagTime(ls.at))+'｜休假 '+esc((ls.leave||[]).join('、')||'無')+'｜會議 '+esc((ls.meeting||[]).join('、')||'無')+'｜讀不到行事曆 '+esc((ls.unreadable||[]).join('、')||'無')+(ls.error?'｜錯誤：'+esc(ls.error):''):'尚無紀錄')
         +'<br><b>人資假單：</b>'+(d.femas.configured?(d.femas.ok?'讀取正常，共 '+d.femas.events+' 筆':'讀取失敗：'+esc(d.femas.error)):'後端尚未設定人資假單連結')+'（上次更新 '+esc(diagTime(d.femas.cachedAt))+'）'
         +'<br><small>這裡不顯示行事曆活動的標題或內容，只能看出「是行事曆還是假單」造成目前狀態。</small></div>';
     }
     async function showDiag(){
       leaveCoin();auditMode=true;auditView='diag';renderTabs();
       $('tableTitle').textContent='狀態來源診斷';$('tableSubtitle').textContent='頭像上的人物狀態，是誰、依據什麼設定的';
-      $('currentTable').textContent='狀態來源診斷';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      $('currentTable').textContent='狀態來源診斷';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取狀態來源...</div>';
       try{diagData=await request('',{method:'POST',body:JSON.stringify({action:'pixelOfficeDiagnose'})});note('已讀取狀態來源');renderDiag()}
       catch(error){$('view').innerHTML='';note('讀取狀態來源失敗：'+(error.message||error),'error')}
     }
     var backupMsg='';
-    function renderBackup(){
+    function renderBackup(){$('search').hidden=true;
       $('count').textContent='';$('totalRows').textContent='';
-      $('view').innerHTML='<div class="notice" style="line-height:1.8"><b>備份範圍：</b>只存在後端、不在案件資料庫（db.json）裡的資料——記事本、專案分配、值日生替換。<br>系統每週會自動加密備份一次到 GitHub 的 <code>backend/data/do-backup.enc.json</code>；加密金鑰只在後端與你保管的金鑰檔裡。<br>案件資料本身每次寫入都有 git 紀錄，不在這裡處理。</div>'
+      $('view').innerHTML='<div class="notice" style="line-height:1.8;display:block"><b>備份範圍：</b>只存在後端、不在案件資料庫（db.json）裡的資料——記事本、專案分配、值日生替換。<br>系統每週會自動加密備份一次到 GitHub 的 <code>backend/data/do-backup.enc.json</code>；加密金鑰只在後端與你保管的金鑰檔裡。<br>案件資料本身每次寫入都有 git 紀錄，不在這裡處理。</div>'
         +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button type="button" class="btn primary" id="backupNowBtn">立即備份</button><button type="button" class="btn danger" id="restoreBtn">從最近一次備份還原…</button></div>'
         +(backupMsg?'<div class="notice" id="backupMsg">'+esc(backupMsg)+'</div>':'')
-        +'<div class="notice" style="margin-top:12px">還原會用備份裡的內容<b>覆蓋</b>目前的記事本、專案分配與值日生替換；還原之後這幾項在備份之後做的修改會消失。建議先按「立即備份」留一份目前的狀態，再還原舊的。（注意：立即備份會覆蓋 GitHub 上最近一次備份檔，之前的版本可以從 GitHub 的提交紀錄找回。）</div>';
+        +'<div class="notice" style="margin-top:12px;display:block">還原會用備份裡的內容<b>覆蓋</b>目前的記事本、專案分配與值日生替換；還原之後這幾項在備份之後做的修改會消失。建議先按「立即備份」留一份目前的狀態，再還原舊的。（注意：立即備份會覆蓋 GitHub 上最近一次備份檔，之前的版本可以從 GitHub 的提交紀錄找回。）</div>';
     }
     async function showBackup(){
       leaveCoin();auditMode=true;auditView='backup';renderTabs();
       $('tableTitle').textContent='備份與還原';$('tableSubtitle').textContent='記事本、專案分配、值日生替換的加密備份';
-      $('currentTable').textContent='備份與還原';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      $('currentTable').textContent='備份與還原';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       backupMsg='';renderBackup();
     }
     $('view').addEventListener('click',async event=>{
@@ -1731,7 +1737,7 @@
     async function showPerm(){
       leaveCoin();auditMode=true;auditView='perm';renderTabs();
       $('tableTitle').textContent='權限總覽';$('tableSubtitle').textContent='每個帳號實際生效的頁面與功能權限';
-      $('currentTable').textContent='權限總覽';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;
+      $('currentTable').textContent='權限總覽';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();
       $('view').innerHTML='<div class="notice">正在讀取權限總覽...</div>';
       try{permData=await request('',{method:'POST',body:JSON.stringify({action:'listPermissionOverview'})});note('已讀取權限總覽');renderPerm()}
       catch(error){$('view').innerHTML='';note('讀取權限總覽失敗：'+(error.message||error),'error')}
