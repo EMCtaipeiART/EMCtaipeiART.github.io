@@ -1443,9 +1443,7 @@ test('JSON database admin renders actions first and updates JSON optimistically'
   assert.match(html, /\.action-col\{position:sticky!important;left:0/);
   assert.match(html, /const DATABASE_FILE_URL=new URL\('backend\/data\/db\.json',location\.href\)\.href/);
   assert.doesNotMatch(html, /DATABASE_CONTENTS_API|api\.github\.com\/repos\/EMCtaipeiART/);
-  assert.match(html, /function spreadsheetBackupOptions\(name=tableName\)/);
-  assert.match(html, /backupToSpreadsheet=name==='database'/);
-  assert.match(html, /skipSpreadsheetBackup:!backupToSpreadsheet/);
+  assert.doesNotMatch(html, /spreadsheetBackupOptions|backupToSheet/); // 雲端試算表備份功能已移除
   assert.match(html, /已先更新畫面，JSON 背景寫入中/);
   assert.match(html, /已先從畫面移除，JSON 背景刪除中/);
   assert.match(html, /function systemAnnouncementAdminHtml\(rows\)/);
