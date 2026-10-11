@@ -1294,6 +1294,10 @@ html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
 .hs-candy{right:3%;top:40%;width:70px;--d:22}
 .hs-glow{display:none;left:21%;bottom:0;width:86px;--d:16}
 @media (min-width:1700px){.hs-glow{display:block}}
+.hs-f{z-index:1;opacity:.7}.hero-scene .hs-f img{filter:blur(1.4px) drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+.hs-n{z-index:3}.hero-scene .hs-n img{filter:drop-shadow(0 18px 22px rgba(0,0,0,.34))}
+.hs-f1{left:36%;top:14%;width:44px;--d:4}.hs-f2{right:34%;top:30%;width:30px;--d:4}.hs-f3{left:44%;top:0;width:26px;--d:4;display:none}.hs-f4{left:40%;bottom:0;width:70px;--d:5}.hs-f5{right:36%;top:8%;width:44px;--d:4}
+.hs-n1{left:-3%;bottom:-26px;width:300px;--d:26}.hs-n2{right:-2%;top:-6%;width:170px;--d:28}
 .hs-fog{position:absolute;left:-10%;width:70%;height:55%;border-radius:50%;background:radial-gradient(closest-side,rgba(235,245,215,.22),rgba(235,245,215,0))}
 .hs-fog1{bottom:-18%}.hs-fog2{left:auto;right:-12%;top:-12%;width:60%;height:60%;background:radial-gradient(closest-side,rgba(255,230,170,.16),rgba(255,230,170,0))}
 @media (hover:hover) and (prefers-reduced-motion:no-preference){
@@ -1313,7 +1317,7 @@ html[data-hero-fest="halloween"] .hero{--hw-accent:#f4511f}
 @keyframes hsFog{to{transform:translateX(9%)}}
 @media (max-width:720px){
   .hs-moon{width:104px}.hs-ghost,.hs-candy,.hs-glow{display:none}.hs-hat{width:68px;top:3px}.hs-swing{display:none}
-  .hs-pumpkins{width:124px}.hs-house{width:98px}.hero-scene .hs{transform:none}
+  .hs-f,.hs-n2{display:none}.hs-n1{width:150px;bottom:-12px}.hs-pumpkins{width:124px}.hs-house{width:98px}.hero-scene .hs{transform:none}
 }
 
 /* 聖誕／新年／情人節的 3D 場景（資料驅動，見 site.js 的 HX_SCENES）：電腦版有漂浮／擺動／旋轉／脈動／上升動畫與滑鼠視差，手機靜態 */
