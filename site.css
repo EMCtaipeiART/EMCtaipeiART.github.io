@@ -1310,3 +1310,5 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 @media(max-width:1100px) and (min-width:721px){.he-2{left:2%}.he-5{right:2%}}
 @media(max-width:720px){.he-0{left:-25px;top:0;width:94px;opacity:.7}.he-1{right:-25px;bottom:0;width:120px;opacity:.7}.he-2{left:-20px;bottom:12%;width:60px;opacity:.5}.he-3{right:-18px;top:5%;width:67px;opacity:.6}.he-4,.he-5{display:none}.he{transform:none}.hf-halo{width:160px;height:160px}.hf-dust i:nth-child(n+9){display:none}.he-float{animation-duration:9s}}
 @media(prefers-reduced-motion:reduce){.he{transform:none;transition:none}}
+
+.hero-scene img{opacity:0;transition:opacity .5s ease}.hero-scene img.ld{opacity:1}
