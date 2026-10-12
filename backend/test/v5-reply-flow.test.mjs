@@ -57,9 +57,9 @@ test('v5 local image source: the file dialog is bound to a persistent input (not
   // 圖片寫進草稿本身，且信件串讀完重畫前先存編輯內容。
   assert.match(site, /async function drAddLocalImages\(d,files\)/);
   assert.match(site, /if\(state\.view==='mail'&&state\.mail\)\{saveMailDraft\(\);renderMail\(\)\}/);
-  // 自動追蹤 NAS 路徑：案件沒有路徑才找；視窗被擋就提示按鈕（按鈕同樣會自動找）。
-  assert.match(site, /function drAutoTrack\(d\)/);
-  assert.match(site, /names:d\.dr\.localFiles,auto:true,quiet:true/);
+  // NAS 追蹤只在使用者按「指定 NAS 路徑」時才開視窗（會依檔名自動找）。
+  assert.doesNotMatch(site, /drAutoTrack/, '電腦上傳完不可再自動跳出 NAS 視窗（使用者明確要求拿掉）');
+  assert.doesNotMatch(site, /quiet:true/);
   assert.match(site, /names:d\.dr&&d\.dr\.localFiles,auto:true/);
   assert.match(site, /for\(const k of \['mode','path','keyword','folders','names','auto'\]\)/);
   // 選擇器：/api/locate（驗 token）＋頁面在 track 模式帶 names 時自動找資料夾、預填關鍵字、全數命中才自動記錄。

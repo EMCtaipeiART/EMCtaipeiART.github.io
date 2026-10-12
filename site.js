@@ -2767,12 +2767,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(added)toast(`已放入 ${added} 張圖片（寄出後會備份到這一輪的修改紀錄）`);
       return added;
     }
-    /* 案件還沒有 NAS 路徑時，依剛選的檔名到 NAS 自動找出資料夾並記錄追蹤；視窗被瀏覽器擋就留給上方「指定 NAS 路徑」按鈕（同樣會自動找）。 */
-    function drAutoTrack(d){
-      if(!d.dr||(d.dr.folders&&d.dr.folders.length)||!(d.dr.localFiles&&d.dr.localFiles.length))return;
-      const ok=nasOpen({id:d.id,round:d.dr.round,mode:'track',afterReply:false,names:d.dr.localFiles,auto:true,quiet:true});
-      if(!ok)toast('圖片已放進信件。要追蹤 NAS 路徑，請按信件上方的「指定 NAS 路徑」，系統會依圖片檔名自動找出資料夾');
-    }
+    /* NAS 追蹤不再自動跳視窗（使用者回報：電腦上傳還要被問 NAS 路徑，比一開始就選 NAS 更麻煩）。信件上方的「NAS 路徑追蹤」列
+     * 一直在，需要時按「指定 NAS 路徑」（會依檔名自動找出資料夾），不需要就完全不用理它。 */
     drLocalInput.addEventListener('change',async()=>{
       const ctx=state.drLocal,all=[...drLocalInput.files];drLocalInput.value='';
       if(!ctx||!all.length)return;
@@ -2784,7 +2780,6 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         else d=state.mail&&state.mail.drafts[state.mail.index];
         if(!d||!d.dr){toast('無法開啟信件編輯器，請再試一次',true);return}
         await drAddLocalImages(d,files);
-        drAutoTrack(d);
       }catch(err){toast(`放入圖片失敗：${err.message}`,true)}
     });
     /** 圖片放進信件的位置：游標停在「設計圖區塊」裡，拖進來或按「選擇圖片」的圖就會落在這裡。 */
