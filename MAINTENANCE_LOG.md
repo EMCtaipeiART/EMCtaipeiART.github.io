@@ -4,6 +4,8 @@
 
 ## 2026-10-12
 
+- v5.0 篩選器下拉：沒勾選的小膠囊一律灰階，勾選了才顯示各自的顏色（`site.css` 的 `.filter-pop .chips label:not(:has(input:checked))`）。已 stamp。
+
 - v5.0 篩選器（月份／狀態／設計人）：首頁「最新案件列表」與專案頁各自一份，不再連動（`site.js` 的 `state.filtersHome`／`state.filtersProjects`，`state.filters` 依目前頁面取其一）。雲端帳號同步維持只綁首頁那份（localStorage `v5Filters`）；專案頁那份只存在該瀏覽器（`v5FiltersProjects`），第一次會複製首頁當時的條件。已 stamp。
 
 - v5.0 篩選器／欄位選單：兩個下拉不再同時開啟（開一個會關另一個，外部點擊只認各自的外框）；選單小膠囊加上顏色（狀態沿用狀態色、設計人用設計師色、月份淡藍）。`site.js`／`site.css`，已 stamp。

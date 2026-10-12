@@ -272,6 +272,9 @@
     .chips label.mon{background:color-mix(in srgb,#3b82f6 10%,var(--bg));border-color:color-mix(in srgb,#3b82f6 32%,var(--line))}
     .chips label.dsg{background:color-mix(in srgb,var(--dc) 14%,var(--bg));border-color:color-mix(in srgb,var(--dc) 48%,var(--line))}
     .chips label.dsg input{accent-color:var(--dc)}
+    /* 沒勾選的膠囊一律灰階，勾選了才顯示各自的顏色 */
+    .filter-pop .chips label:not(:has(input:checked)){background:var(--bg)!important;color:var(--faint)!important;border-color:var(--line)!important}
+    .filter-pop .chips label:not(:has(input:checked)) input{accent-color:var(--faint)}
     .chips label.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
     .chips label[class*="st-"]:not(:has(input:checked)){opacity:.5;filter:grayscale(.4)}
     .chips label[class*="st-"]:has(input:checked){box-shadow:0 0 0 2px currentColor inset}
