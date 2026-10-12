@@ -6451,3 +6451,5 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 ### 2026-10-12｜正式發布節慶背景
 - 依使用者授權提交並推送節慶 3D emoji 背景。
 - 移除本機免登入切換預覽工具 tools/festival-preview.mjs；測試截圖移至專案外，正式頁面沿用原有背景編輯權限。
+
+- 修正：設計師回覆信讀完信件串後，建議收件人／副本會被尚未重畫的空欄位覆蓋而變空白（`loadThread` 的第二次 `saveMailDraft`）；帶入成功後不再覆蓋。

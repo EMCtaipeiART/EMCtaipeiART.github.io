@@ -2009,14 +2009,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       return `<div class="thread-cards" aria-label="Gmail 信件串">${msgs.map((m,i)=>threadMessageHtml(m,readOnly?i===0:false,i)).join('')||'<div class="empty">沒有信件</div>'}</div>`;
     }
     async function loadThread(id,applyReply){
-      state.thread={id,loading:true,messages:[],error:''};
+      state.thread={id,loading:true,messages:[],error:''};let applied=false;
       try{
         const sigs=[state.signature,state.gmailSignature,...st2.presets.map(p=>p.html)].filter(Boolean);
         const data=await api('getCaseMailThread',{caseId:id,signatureCandidates:sigs});
         state.thread={id,loading:false,messages:data.messages||[],suggestedTo:data.suggestedTo||'',suggestedCc:data.suggestedCc||'',replyFrom:data.replyFrom||'',error:''};
-        if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc}}
+        if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc;applied=true}}
       }catch(err){state.thread={id,loading:false,messages:[],error:err.message||'讀取失敗'}}
-      if(state.view==='mail'&&state.mail){saveMailDraft();renderMail()}
+      if(state.view==='mail'&&state.mail){if(!applied)saveMailDraft();renderMail()}
       else if(state.view==='thread')renderThreadPage();
     }
     function renderThreadPage(){

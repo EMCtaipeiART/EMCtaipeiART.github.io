@@ -47,3 +47,10 @@ test('v5 designer reply: with preview images in the mail the send button is no l
   const finish = site.indexOf('async function drFinish');
   assert.ok(site.indexOf('dr.pending=false;drLive.delete', finish) > finish);
 });
+
+test('載入信件串後不會用空的欄位蓋掉剛帶入的建議收件人', async () => {
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  assert.match(src, /let applied=false/);
+  assert.match(src, /applied=true/);
+  assert.match(src, /if\(!applied\)saveMailDraft\(\);renderMail\(\)/);
+});
