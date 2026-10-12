@@ -2461,6 +2461,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
         ${drBlock?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
+        ${(d.dr&&d.mode==='designer'&&!d.sent)?`<div class="notice dr-track">NAS 路徑：${esc(nasTrackLabel(d.id)||'尚未指定')}　<button type="button" class="btn" data-mail="dr-track">${nasTrackLabel(d.id)?'更換／追加 NAS 路徑':'補上 NAS 路徑'}</button></div>`:''}
         ${drEarly?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
@@ -2700,8 +2701,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       nasClearWatch();let ms=0;
       nas.timer=setInterval(()=>{
         ms+=1000;if(nas.nonce!==nonce){nasClearWatch();return}
-        if(win.closed){const was=nas.backing,id=nas.id,round=nas.round,reply=nas.afterReply;nasClearWatch();nas.nonce='';nas.afterReply=false;nas.skip=false;hideBadge('nasBadge');if(was&&id&&reply)drFinish(id,round,{}).catch(()=>{});toast(was?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「選擇電腦檔案上傳」）',true);return}
-        if(ms===20000&&!nas.backing)toast('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，請關閉分頁改用「選擇電腦檔案上傳」',true);
+        if(win.closed){const was=nas.backing,id=nas.id,round=nas.round,reply=nas.afterReply;nasClearWatch();nas.nonce='';nas.afterReply=false;nas.skip=false;hideBadge('nasBadge');if(was&&id&&reply)drFinish(id,round,{}).catch(()=>{});toast(was?'NAS 資料夾備份視窗已意外關閉，備份可能未完成，請重新確認':'NAS 資料夾選擇視窗已關閉，尚未選擇資料夾（如果剛剛那個分頁顯示連不上網站，可改用「電腦上傳」）',true);return}
+        if(ms===20000&&!nas.backing)toast('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，請關閉分頁改用「電腦上傳」',true);
       },1000);
     }
     function nasOpen({id='',round=0,mode='',folders=null,purpose='case',afterReply=false,skip=false}={}){
@@ -2730,6 +2731,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       document.execCommand('insertHTML',false,`<b>${esc(path)}</b>&nbsp;`);saveMailRange();
     }
 
+    /* 補上／更換 NAS 路徑（隨時可用）：只記錄路徑與關鍵字、不備份，之後該資料夾裡修改過的圖由爬蟲自動追蹤到後續輪次。
+     * 入口：案件詳情頁、設計師回覆信編輯器。電腦上傳時案件沒有 NAS 路徑，事後用它補記。 */
+    const nasTrackLabel=id=>{const l=caseNasFolders(id,allRows().find(r=>idKey(r)===id));return l.length?l.map(i=>i.path+(i.keyword?`（關鍵字：${i.keyword}）`:'')).join('、'):''};
+    function nasTrackOpen(id,round){
+      if(!loggedIn()){toast('請先登入',true);startLogin();return}
+      if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
+      nasOpen({id,round:round||0,mode:'track',afterReply:false});
+    }
     /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
     const drLive=new Map();
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
@@ -2745,7 +2754,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
       const supp=suppRound!==undefined,round=supp?suppRound:roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse,supp};$('drTitle').textContent=supp?'補上設計圖':'設計圖上傳方式';
       $('drSub').textContent=`${id}｜${row['專案名稱']||''}｜${roundLabel(round)}`;
-      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`;
+      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>電腦上傳</span><small>NAS 連線中斷、選擇器沒開時的備援：從電腦挑選圖片／影片上傳這一輪的設計圖。這種方式不會記錄 NAS 路徑，之後可隨時用「補上 NAS 路徑」補記，讓後續修改圖自動追蹤</small></button></div>`;
       const chk=$('drSkip');if(chk){try{chk.checked=localStorage.getItem('drSkipPref')==='1'}catch(e){}chk.addEventListener('change',()=>{try{localStorage.setItem('drSkipPref',chk.checked?'1':'')}catch(e){}})}
       $('drModal').hidden=false;
       setTimeout(()=>{const first=document.querySelector('#drBody [data-dr-src]');if(first)first.focus()},0);
@@ -2882,6 +2891,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!folders.length){toast('未選擇任何資料夾',true);return}
         const ok=folders.filter(f=>f.ok!==false),failed=folders.length-ok.length;
         if(!ok.length){toast(`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true);return}
+        if(data.trackOnly){
+          if(!ok.some(f=>String(f.path||'').trim())){toast('請先點進要追蹤的資料夾',true);return}
+          saveCaseNas(id,ok);
+          const paths=ok.map(f=>String(f.path||'').trim()).filter(Boolean),d=state.mail&&state.mail.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr);
+          if(d){d.dr.folders=paths;drMutate(d,r=>{const b=r.querySelector('#v5DrNas');if(b)b.innerHTML=drNasHtml(paths)});if(state.view==='mail'){saveMailDraft();renderMail()}}
+          if(state.view==='detail')renderDetail();
+          toast('已記錄 NAS 路徑，之後這個資料夾裡修改過的圖會自動追蹤備份到後續輪次');return;
+        }
         saveCaseNas(id,ok);
         const ff={};for(const f of ok){const p=String(f.path||'').trim();if(!p)continue;for(const n of (Array.isArray(f.backup&&f.backup.uploadedFiles)?f.backup.uploadedFiles:[])){const nm=String(n||'').trim();if(nm&&!ff[nm])ff[nm]=p}}
         toast(String(data.summary||'').trim()||(failed?`已設定 ${ok.length} 個 NAS 來源資料夾（${failed} 個備份失敗，已略過）`:'已設定 NAS 來源資料夾'));
@@ -3274,6 +3291,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         <dl class="detail-grid">
           ${kv('專案負責人',person(row['專案負責人'],'專案負責人'),true)}${kv('設計負責人',person(row['設計負責人'],'設計負責人'),true)}${kv('設計種類／階段',`<span class="dp-wrap">${(()=>{const t=String(row['設計類型']||row['設計種類']||'').trim(),g=String(row['階段']||'').trim();return (t||ed?`<span class="lt-type lt-type-${esc(t)}${editAttr('type')}">${esc(t||'選擇')}</span>`:'')+(g||ed?`<span class="lt-stage lt-stage-${esc(g)}${editAttr('stage')}">${esc(g||'選擇')}</span>`:'')||'-'})()}</span>`,true)}
           ${kv('開始日期',slashNice(row['開始日期']))}${kv('結束日期',`${slashNice(row['結束日期'])}（${countdownText(s)}）`)}${kv('數量',row['數量'])}
+          ${loggedIn()&&acc('media.manage',false)?kv('NAS 路徑',`<span>${esc(nasTrackLabel(idKey(row))||'尚未指定')}</span> <button type="button" class="btn" data-act="nas-track" data-id="${esc(idKey(row))}" style="min-height:32px;padding:0 12px;margin-left:6px">${nasTrackLabel(idKey(row))?'更換／追加':'補上 NAS 路徑'}</button>`,true):''}
           ${kv('使用平台',row['使用平台'])}${kv('填單時間',row['填單時間'])}${kv('項目細節',`<span class="dp-wrap${editAttr('details')}">${(()=>{const items=String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean);return items.length?items.map(d=>`<span class="lt-detail" title="${esc(d)}">${esc(d)}</span>`).join(''):(ed?'<span class="lt-detail">選擇</span>':'<span class="lt-dash">-</span>')})()}</span>`,true)}
         </dl>
         ${supp.length?`<div class="detail-sec"><h3>補充資料</h3><div class="supp-list">${supp.map(([label,n,u])=>`<div class="supp-row"><b>${label}</b><span>${/^https?:\/\//i.test(row[u]||'')?`<a href="${esc(row[u])}" target="_blank" rel="noopener noreferrer">${esc(row[n]||row[u])}</a>`:esc(row[n]||row[u])}</span></div>`).join('')}</div></div>`:''}
@@ -3682,6 +3700,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(act==='batch'){readRowsSafe();const f=state.form;f.batch=!f.batch;if(f.batch&&!f.extra.length)f.extra.push(inheritRow(f));if(!f.batch)f.extra=[];renderForm();return}
       if(act==='batch-add'){readRowsSafe();const f=state.form;f.extra.push(inheritRow(f.extra.length?f.extra[f.extra.length-1]:f));renderForm();return}
       if(act==='submit-schedule'){submitForm({schedule:true});return}
+      if(act==='nas-track'){nasTrackOpen(t.closest('[data-act]').dataset.id,roundOf(t.closest('[data-act]').dataset.id));return}
       if(act==='batch-copy'){readRowsSafe();const f=state.form,last=f.extra.length?f.extra[f.extra.length-1]:f;f.extra.push(copyRow(last));renderForm();toast(`已把第 ${f.extra.length} 筆的資料套用到第 ${f.extra.length+1} 筆`);return}
       const del=t.closest('[data-batch-del]');if(del){readRowsSafe();state.form.extra.splice(+del.dataset.batchDel,1);if(!state.form.extra.length)state.form.batch=false;renderForm();return}
       const rangeBtn=t.closest('[data-range-btn]');if(rangeBtn){const key=rangeBtn.closest('[data-row]').dataset.row;(cal.open&&cal.key===key)?closeCal():openCal(key);return}
@@ -3694,6 +3713,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
       if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
       const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
+      if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasTrackOpen(d.id,d.dr?d.dr.round:0);return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
