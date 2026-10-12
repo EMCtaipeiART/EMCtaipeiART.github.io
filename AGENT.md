@@ -6454,3 +6454,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 - 修正：設計師回覆信讀完信件串後，建議收件人／副本會被尚未重畫的空欄位覆蓋而變空白（`loadThread` 的第二次 `saveMailDraft`）；帶入成功後不再覆蓋。
 - 移除早期預覽後信件內自動補上的「圖片已先放進信件，雲端備份進行中...」字樣。
+- 跨案件搬移設計圖時，NAS 追蹤跟著搬：來源案件的資料夾設定記 skip（不再補回搬走的檔），目標案件接手同資料夾並 pin 這些檔名（之後修改版歸目標案件）。資料夾清單項目新增選填欄位 pin／skip／pinOnly；Worker moveCaseDesignImages、nas_design_image_lib.folderAcceptsFile 實作。

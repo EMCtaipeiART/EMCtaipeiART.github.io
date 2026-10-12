@@ -190,7 +190,7 @@ async function runScan(args, configInput, configDir, stateFile) {
       const folder = project.folders[folderIndex];
       const label = multiFolder ? `[資料夾 ${folderIndex + 1}/${project.folders.length}] ` : '';
       const stateKey = lib.folderStateKey(project.caseId, folderIndex);
-      const scanInput = { caseId: stateKey, rawFolderPath: folder.path, keyword: folder.keyword, designer: project.designer, client: project.client, start: project.start };
+      const scanInput = { caseId: stateKey, rawFolderPath: folder.path, keyword: folder.keyword, pin: folder.pin, skip: folder.skip, pinOnly: folder.pinOnly, designer: project.designer, client: project.client, start: project.start };
 
       // scanProject() 內部大部分已知的失敗情況（資料夾不存在、路徑不是資料夾）
       // 都是用回傳 { error } 處理，不會丟例外；但仍有少數情況（例如資料夾存在、

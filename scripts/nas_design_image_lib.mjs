@@ -668,7 +668,7 @@ export async function scanProject(project, config, state, previewDir, warnings) 
   // changedItems/pendingPreviews 裡，就像它們根本不在這個資料夾一樣。這是刻意
   // 的設計：如果之後案件補填/修改了關鍵字，之前沒對到的檔案會被當成「全新」重新
   // 判斷一次（而不是因為曾經被略過而卡住），行為比較好預期。
-  const mediaFiles = allMediaFiles.filter(media => matchesKeyword(path.basename(media.filePath), project.keyword));
+  const mediaFiles = allMediaFiles.filter(media => folderAcceptsFile(path.basename(media.filePath), project));
   const skippedByKeywordCount = allMediaFiles.length - mediaFiles.length;
   const previousState = state[project.caseId] || { files: {} };
   const previousFiles = previousState.files || {};
@@ -859,6 +859,19 @@ export async function workerRoundImageCounts(config, caseId, round, options = {}
  * 透過這支函式，不要各自重新實作一次解析＋fallback 邏輯，否則容易漏掉
  * 相容判斷、讓舊案件的既有設定在某個呼叫點突然失效。
  */
+export function designImageNameList(value) {
+  return Array.isArray(value) ? [...new Set(value.map(name => designImageBaseName(name)).filter(Boolean))] : [];
+}
+
+/** 這個檔名要不要算在這個資料夾設定底下：skip 優先排除，pin 直接收下，pinOnly 只收 pin，其餘照關鍵字。 */
+export function folderAcceptsFile(fileName, folder) {
+  const baseName = designImageBaseName(fileName);
+  if ((folder?.skip || []).includes(baseName)) return false;
+  if ((folder?.pin || []).includes(baseName)) return true;
+  if (folder?.pinOnly) return false;
+  return matchesKeyword(fileName, folder?.keyword);
+}
+
 export function resolveCaseFolders(row) {
   const raw = String(row?.['設計圖資料夾清單'] || '').trim();
   if (raw) {
@@ -866,7 +879,17 @@ export function resolveCaseFolders(row) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         const cleaned = parsed
-          .map(item => ({ path: String(item?.path || '').trim(), keyword: String(item?.keyword || '').trim() }))
+          .map(item => {
+            const entry = { path: String(item?.path || '').trim(), keyword: String(item?.keyword || '').trim() };
+            // pin／skip：跨案件搬移設計圖後的追蹤例外（去副檔名、小寫的檔名）。pin＝即使不含關鍵字也算這個案件；
+            // skip＝已經搬去別的案件，不要再補回來；pinOnly＝這個資料夾只追蹤 pin 指定的檔案。
+            const pin = designImageNameList(item?.pin);
+            const skip = designImageNameList(item?.skip);
+            if (pin.length) entry.pin = pin;
+            if (skip.length) entry.skip = skip;
+            if (item?.pinOnly === true) entry.pinOnly = true;
+            return entry;
+          })
           .filter(item => item.path);
         if (cleaned.length) return cleaned;
       }

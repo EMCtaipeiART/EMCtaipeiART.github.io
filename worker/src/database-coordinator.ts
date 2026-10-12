@@ -1245,6 +1245,65 @@ function formatGmailDateForDisplay(rawDate: string): string {
 
 interface HeroConfig { auto: boolean; base: string; fixed: string; updatedBy: string; updatedAt: string }
 
+const designImageBaseNameOf = (name: unknown) => text(name).replace(/\.[^./\\]+$/, '').toLowerCase();
+
+type NasFolderEntry = { path: string; keyword: string; pin?: string[]; skip?: string[]; pinOnly?: boolean };
+
+function readNasFolders(row: Row): NasFolderEntry[] {
+  const raw = text(row['設計圖資料夾清單']);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const list = parsed.map((item: Row) => {
+          const entry: NasFolderEntry = { path: text(item?.path), keyword: text(item?.keyword) };
+          if (Array.isArray(item?.pin) && item.pin.length) entry.pin = item.pin.map(designImageBaseNameOf).filter(Boolean);
+          if (Array.isArray(item?.skip) && item.skip.length) entry.skip = item.skip.map(designImageBaseNameOf).filter(Boolean);
+          if (item?.pinOnly === true) entry.pinOnly = true;
+          return entry;
+        }).filter(entry => entry.path);
+        if (list.length) return list;
+      }
+    } catch { /* 壞掉就改讀單一欄位 */ }
+  }
+  const legacy = text(row['設計圖資料夾連結']);
+  return legacy ? [{ path: legacy, keyword: text(row['設計圖檔名關鍵字']) }] : [];
+}
+
+/** 跨案件搬移設計圖後，讓 NAS 追蹤跟著搬：來源排除這幾個檔名，目標釘選這幾個檔名。回傳有沒有改動。 */
+function moveNasTracking(sourceCase: Row, targetCase: Row, fileNames: string[]): boolean {
+  const names = [...new Set(fileNames.map(designImageBaseNameOf).filter(Boolean))];
+  const sourceFolders = readNasFolders(sourceCase);
+  if (!names.length || !sourceFolders.length) return false;
+  const targetFolders = readNasFolders(targetCase);
+  const merge = (a: string[] | undefined, add: string[]) => [...new Set([...(a || []), ...add])];
+  const without = (a: string[] | undefined, remove: string[]) => (a || []).filter(name => !remove.includes(name));
+  const setList = (list: string[] | undefined, entry: NasFolderEntry, key: 'pin' | 'skip') => {
+    if (list && list.length) entry[key] = list; else delete entry[key];
+  };
+  for (const entry of sourceFolders) {
+    setList(merge(entry.skip, names), entry, 'skip');
+    setList(without(entry.pin, names), entry, 'pin');
+  }
+  for (const folder of sourceFolders) {
+    let entry = targetFolders.find(item => item.path === folder.path);
+    if (!entry) {
+      entry = { path: folder.path, keyword: '', pinOnly: true };
+      targetFolders.push(entry);
+    }
+    setList(without(entry.skip, names), entry, 'skip');
+    // 這個資料夾本來就沒設關鍵字（整個資料夾都算目標案件）時不必釘選。
+    if (entry.pinOnly || text(entry.keyword)) setList(merge(entry.pin, names), entry, 'pin');
+  }
+  sourceCase['設計圖資料夾清單'] = JSON.stringify(sourceFolders);
+  targetCase['設計圖資料夾清單'] = JSON.stringify(targetFolders);
+  if (!text(targetCase['設計圖資料夾連結'])) {
+    targetCase['設計圖資料夾連結'] = targetFolders[0].path;
+    targetCase['設計圖檔名關鍵字'] = targetFolders[0].keyword;
+  }
+  return true;
+}
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -5307,6 +5366,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const seenUrls = new Set(targetImages.map(item => item.url));
         let moved = 0;
         let skipped = 0;
+        const movedNames: string[] = [];
         for (const item of items) {
           const sourceRow = (!crossCase && item.round === toRound)
             ? null
@@ -5321,12 +5381,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           seenUrls.add(image.url);
           targetImages.push(image);
           moved += 1;
+          movedNames.push(text((image as Row).fileName));
         }
         if (!moved) throw new Error('沒有任何圖片被搬移（可能已經在目標輪次，或來源紀錄剛好被更新過）');
         targetRow['圖片連結'] = JSON.stringify(targetImages);
         targetRow['圖片來源'] = 'manual-move';
         targetRow['圖片更新時間'] = nowTaipei();
         if (createdRound) recalculateDatabaseModificationCounts(draft);
+        // 跨案件搬移：NAS 追蹤要跟著走。來源案件把這幾個檔名排除（不然爬蟲會因為「這輪沒有這張」又補回去），
+        // 目標案件接手同一批 NAS 資料夾並釘選這幾個檔名，之後這幾張圖在 NAS 的修改版會歸到目標案件。
+        let trackingMoved = false;
+        if (crossCase) {
+          const sourceCase = draft.tables.database.rows.find(row => text(row['案件編號']) === caseId);
+          const targetCase = draft.tables.database.rows.find(row => text(row['案件編號']) === toCaseId);
+          trackingMoved = Boolean(sourceCase && targetCase) && moveNasTracking(sourceCase as Row, targetCase as Row, movedNames);
+        }
         // 跨案件搬到「初稿」＝目標案件收到初稿備份，案件進入過稿階段：狀態自動改成「過稿中」。
         // 已經是過稿中就不動；已完成／暫停中的案件不因為搬圖被改回來。
         let statusChanged = false;
@@ -5340,7 +5409,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             statusChanged = true;
           }
         }
-        return { result: { ok: true, action, caseId, toCaseId, toRound, moved, skipped, images: targetImages, status: targetStatus, statusChanged }, changedTables: createdRound || statusChanged ? ['修改統計表', 'database'] : ['修改統計表'] };
+        return { result: { ok: true, action, caseId, toCaseId, toRound, moved, skipped, images: targetImages, status: targetStatus, statusChanged }, changedTables: createdRound || statusChanged || trackingMoved ? ['修改統計表', 'database'] : ['修改統計表'] };
       });
     }
     if (action === 'removeCaseDesignImage') {

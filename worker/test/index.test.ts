@@ -1661,6 +1661,24 @@ describe('Machi Design API Worker', () => {
     expect(String(denied.error)).toContain('media.manage');
   });
 
+  it('cross-case image move carries NAS tracking: source skips the moved files, target pins them on the same folder', async () => {
+    const token = await login();
+    await seedCase('26080002');
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'trk-file-sha' }, commit: { sha: 'trk-commit-sha' } }));
+    await api({ action: 'update', id: '26080001', row: { id: '26080001', designImageFolderUrl: '客戶/資料夾', designImageFolderKeyword: 'KW', designImageFolders: JSON.stringify([{ path: '客戶/資料夾', keyword: 'KW' }]) } }, token);
+    await api({ action: 'addCaseDesignImages', serviceKey: 'test-nas-watcher-key', caseId: '26080001', round: 0, images: [
+      { fileName: 'a1.jpg', url: 'https://lh3.googleusercontent.com/d/ta1' },
+      { fileName: 'B1.png', url: 'https://lh3.googleusercontent.com/d/tb1' }
+    ] });
+    const moved = await api({ action: 'moveCaseDesignImages', caseId: '26080001', toCaseId: '26080002', toRound: 0, images: [{ round: 0, url: 'https://lh3.googleusercontent.com/d/tb1' }] }, token);
+    expect(moved).toMatchObject({ ok: true, moved: 1 });
+    const listed = await api({ action: 'list' }, token);
+    const rows = (listed.rows || listed.data) as Record<string, unknown>[];
+    const folders = (id: string) => JSON.parse(String(rows.find(r => (r.id || r['案件編號']) === id)?.designImageFolders || '[]'));
+    expect(folders('26080001')).toEqual([{ path: '客戶/資料夾', keyword: 'KW', skip: ['b1'] }]);
+    expect(folders('26080002')).toEqual([{ path: '客戶/資料夾', keyword: '', pinOnly: true, pin: ['b1'] }]);
+  });
+
   it('moves design images to another case (merged-mail scenario), auto-creating that case\'s draft round and rejecting an unknown target case', async () => {
     const token = await login();
     await seedCase('26080002');
