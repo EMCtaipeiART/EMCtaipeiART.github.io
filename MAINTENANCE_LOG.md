@@ -2,6 +2,10 @@
 
 > 每次修改網站後在最上面補一筆（新的在上）。AGENT.md 要求的修改紀錄放這裡。
 
+## 2026-10-12
+
+- v5.0：首頁「最新案件列表」與「專案列表」的網格／列表切換改成各自記住（`site.js` 的 `state.layouts`，localStorage 鍵 `v5LayoutHome`／`v5LayoutProjects`；`state.layout` 依目前頁面讀寫對應那一份）。舊的單一鍵 `v5Layout` 只當兩邊的初始值，不再寫入。已用 `node tools/stamp.cjs` 更新 `index.html` 的快取版本號。
+
 ## 2026-10-06
 
 - 資料庫後台「修改列表」圖片：縮圖網址改 `=w150`（原圖連結不變），每輪圖片收進「顯示圖片（N）」摺疊區、展開才載入（`json_database_admin.html` 的 `modificationThumbUrl()`＋`toggle` 監聽）；純前端，未做瀏覽器實測。
