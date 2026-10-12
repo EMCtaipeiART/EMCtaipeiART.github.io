@@ -4741,6 +4741,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         });
         return { ok: true, action, rows, pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES };
       }
+      if (action === 'pixelOfficeHeartbeatDiag') {
+        // 心跳診斷（管理者專用）：每位設計師的電腦最後一次心跳、是否在線、目前狀態與依規則該顯示什麼
+        this.requireAccess(database, session, 'database.manage');
+        const now = Date.now();
+        const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>('SELECT name, state, last_seen FROM pixel_office_people ORDER BY name').toArray();
+        const people = rows.map(row => {
+          let state: Row = {};
+          try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
+          const lastSeen = Number(row.last_seen) || 0;
+          return {
+            name: row.name, lastSeen, agoSeconds: lastSeen ? Math.round((now - lastSeen) / 1000) : null,
+            online: lastSeen > 0 && now - lastSeen <= PIXEL_OFFICE_OFFLINE_MS,
+            status: text(state.status), statusSource: text(state.statusSource), statusAt: Number(state.statusAt) || 0,
+            activeSince: Number(state.activeSince) || 0, baseline: text(state.statusBaseline),
+            ifOffline: pixelOfficeOfflineStatus(now, lastSeen), ifOnline: pixelOfficeWorkStatus(now)
+          };
+        });
+        return { ok: true, action, now, workday: pixelOfficeIsWorkday(now), offlineAfterSeconds: PIXEL_OFFICE_OFFLINE_MS / 1000, people };
+      }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');
         const file = await loadAuditFile(this.env);

@@ -5455,3 +5455,17 @@ describe('首頁背景：全站共用設定', () => {
     expect(await api({ action: 'saveHeroConfig', auto: true })).toMatchObject({ ok: false });
   });
 });
+
+describe('pixel office heartbeat diagnostic', () => {
+  it('is admin only and lists last heartbeat, online flag and the status the rules would show', async () => {
+    const token = await login();
+    const anonymous = await api({ action: 'pixelOfficeHeartbeatDiag' });
+    expect(anonymous).toMatchObject({ ok: false });
+    await api({ action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 'test-nas-key', idleSeconds: 3 });
+    const diag = await api({ action: 'pixelOfficeHeartbeatDiag' }, token) as { ok: boolean; people?: Array<{ name: string; online: boolean; lastSeen: number; agoSeconds: number | null }>; offlineAfterSeconds?: number };
+    expect(diag.ok).toBe(true);
+    expect(diag.offlineAfterSeconds).toBe(300);
+    const noise = diag.people?.find(person => person.name === 'Noise');
+    if (noise && noise.lastSeen) expect(noise.online).toBe(true);
+  });
+});

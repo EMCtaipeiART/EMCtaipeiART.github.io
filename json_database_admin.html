@@ -378,7 +378,7 @@
     function updateViewChrome(){const board=isBoardView();$('pageSizeWrap').hidden=board;$('footer').hidden=board}
     function tableTabButtonHtml(name){return `<button class="side-tab ${name===tableName?'active':''}" type="button" data-table="${name}"><span class="side-tab-label">${tableLabel(name)}</span><small>${Number(metadata[name].rowCount||0).toLocaleString('zh-TW')}</small></button>`}
     const coinTabHtml=()=>`<button class="side-tab ${coinMode?'active':''}" type="button" data-coin title="餘額、明細、帳本驗證、手動調整"><span class="side-tab-label">平台幣帳本</span></button>`;
-    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode&&auditView==='audit'?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button><button class="side-tab ${auditMode&&auditView==='perm'?'active':''}" type="button" data-perm><span class="side-tab-label">權限總覽</span></button><button class="side-tab ${auditMode&&auditView==='backup'?'active':''}" type="button" data-backup><span class="side-tab-label">備份與還原</span></button><button class="side-tab ${auditMode&&auditView==='diag'?'active':''}" type="button" data-diag><span class="side-tab-label">狀態來源診斷</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
+    function renderTabs(){$('tabs').innerHTML=TABLE_GROUPS.map(group=>{const tables=group.tables.filter(name=>metadata[name]);return tables.length?`<div class="side-group-label">${group.label}</div>${tables.map(tableTabButtonHtml).join('')}${group.label==='系統設定'?coinTabHtml():''}`:''}).join('')+`<div class="side-group-label">稽核</div><button class="side-tab ${auditMode&&auditView==='audit'?'active':''}" type="button" data-audit><span class="side-tab-label">操作紀錄</span></button><button class="side-tab ${auditMode&&auditView==='perm'?'active':''}" type="button" data-perm><span class="side-tab-label">權限總覽</span></button><button class="side-tab ${auditMode&&auditView==='backup'?'active':''}" type="button" data-backup><span class="side-tab-label">備份與還原</span></button><button class="side-tab ${auditMode&&auditView==='diag'?'active':''}" type="button" data-diag><span class="side-tab-label">狀態來源診斷</span></button><button class="side-tab ${auditMode&&auditView==='hb'?'active':''}" type="button" data-hb><span class="side-tab-label">心跳診斷</span></button>`;if(auditMode||coinMode){$('tabs').querySelectorAll('[data-table].active').forEach(b=>b.classList.remove('active'))}updateAddButton();updateContentHead()}
     function queryPath(){const size=effectivePageSize(),params=new URLSearchParams({offset:String((page-1)*size),limit:String(size)});if($('search').value.trim())params.set('q',$('search').value.trim());if(sortKey){params.set('sort',sortKey);params.set('order',sortOrder)}const activeFilters=tableName==='database'?Object.fromEntries(Object.entries(databaseFilters).filter(([,value])=>value)):{};if(Object.keys(activeFilters).length)params.set('filters',JSON.stringify(activeFilters));return `/table/${encodeURIComponent(tableName)}?${params}`}
     function modificationGroupTime(row){const raw=String(row['建立日期']||row['修改日期']||'').replace(/-/g,'/'),time=Date.parse(raw);return Number.isFinite(time)?time:0}
     function parseDateLike(value){const raw=String(value||'').trim();if(!raw)return 0;const time=Date.parse(raw.replace(/\//g,'-'));return Number.isFinite(time)?time:0}
@@ -1639,7 +1639,7 @@
     /* 平台幣帳本：不跳頁，直接嵌在右側內容區（同網站，登入與深淺模式沿用） */
     /* 稽核、權限、備份、診斷這些「工具頁」不是資料表：隱藏資料表專用的統計卡、匯入與新增按鈕（手機上尤其佔版面） */
     function toolChrome(){const m=document.querySelector('.metrics');if(m)m.hidden=true;$('importAccounts').hidden=true;$('add').hidden=true}
-    function leaveCoin(){const m0=document.querySelector('.metrics');if(m0)m0.hidden=false;$('search').hidden=false;if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
+    function leaveCoin(){clearInterval(window.__hbTimer);const m0=document.querySelector('.metrics');if(m0)m0.hidden=false;$('search').hidden=false;if(!coinMode)return;coinMode=false;const m=document.querySelector('.metrics');if(m)m.hidden=false;$('search').hidden=false}
     function showCoin(){
       auditMode=false;coinMode=true;renderTabs();
       $('tableTitle').textContent='平台幣帳本';$('tableSubtitle').textContent='完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）；只新增、不修改，每筆帶簽章';
@@ -1702,6 +1702,28 @@
       try{diagData=await request('',{method:'POST',body:JSON.stringify({action:'pixelOfficeDiagnose'})});note('已讀取狀態來源');renderDiag()}
       catch(error){$('view').innerHTML='';note('讀取狀態來源失敗：'+(error.message||error),'error')}
     }
+    /* 心跳診斷：每位設計師電腦最後一次回報「電腦開著」的時間、是否在線、依規則應顯示什麼（每 30 秒自動更新，只有管理者看得到） */
+    const HB_STATUS={present:'在座',overtime:'加班',lunch:'用餐',toilet:'廁所',offwork:'下班',meeting:'會議',leave:'休假',abroad:'出國',out:'公出'};
+    const HB_SOURCE={auto:'自動',manual:'手動',calendar:'行事曆'};
+    const hbAgo=sec=>sec===null?'從來沒有':sec<90?sec+' 秒前':sec<5400?Math.round(sec/60)+' 分鐘前':(Math.round(sec/360)/10)+' 小時前';
+    const hbTime=ms=>ms?new Date(ms).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false,month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+    async function renderHeartbeatView(){
+      try{
+        const data=await request('',{method:'POST',body:JSON.stringify({action:'pixelOfficeHeartbeatDiag'})});
+        if(!(auditMode&&auditView==='hb'))return;
+        const rows=data.people.map(p=>'<tr><td><b>'+esc(p.name)+'</b></td><td>'+(p.online?'<span style="color:#1a8f4b;font-weight:700">● 在線</span>':'<span style="color:#b42318;font-weight:700">● 離線</span>')+'</td><td>'+esc(hbAgo(p.agoSeconds))+'</td><td>'+esc(hbTime(p.lastSeen))+'</td><td>'+esc(HB_STATUS[p.status]||p.status||'—')+(p.statusSource?'（'+esc(HB_SOURCE[p.statusSource]||p.statusSource)+'）':'')+'</td><td>'+esc(hbTime(p.statusAt))+'</td><td>'+esc(hbTime(p.activeSince))+'</td><td>'+esc(HB_STATUS[p.online?p.ifOnline:p.ifOffline]||'—')+'</td></tr>').join('');
+        $('view').innerHTML='<div class="notice" style="display:block;line-height:1.7">現在台北時間 '+esc(hbTime(data.now))+'，今天'+(data.workday?'是上班日':'不是上班日（週末或國定假日）')+'。超過 '+(data.offlineAfterSeconds/60)+' 分鐘沒收到心跳就判定離線（18:00 前變廁所、之後變下班、中午 12–14 點變用餐）。每 30 秒自動更新。</div><div class="table-wrap"><table class="perm-table"><thead><tr><th>設計師</th><th>電腦</th><th>最後心跳</th><th>時間</th><th>目前狀態</th><th>狀態更新</th><th>這次開機／醒來</th><th>依規則應顯示</th></tr></thead><tbody>'+(rows||'<tr><td colspan="8">還沒有資料</td></tr>')+'</tbody></table></div>';
+        note('已更新心跳診斷');
+      }catch(error){if(auditMode&&auditView==='hb'){$('view').innerHTML='';note('讀取心跳診斷失敗：'+(error.message||error),'error')}}
+    }
+    function showHeartbeat(){
+      leaveCoin();auditMode=true;auditView='hb';renderTabs();
+      $('tableTitle').textContent='心跳診斷';$('tableSubtitle').textContent='每位設計師電腦最後一次回報「電腦開著」的時間，用來判斷在線、休眠或關機';
+      $('currentTable').textContent='心跳診斷';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();$('search').hidden=true;
+      $('count').textContent='';$('totalRows').textContent='';
+      $('view').innerHTML='<div class="notice">正在讀取心跳…</div>';
+      renderHeartbeatView();window.__hbTimer=setInterval(()=>{if(auditMode&&auditView==='hb'&&!document.hidden)renderHeartbeatView()},30000);
+    }
     var backupMsg='';
     function renderBackup(){$('search').hidden=true;
       $('count').textContent='';$('totalRows').textContent='';
@@ -1742,7 +1764,7 @@
       try{permData=await request('',{method:'POST',body:JSON.stringify({action:'listPermissionOverview'})});note('已讀取權限總覽');renderPerm()}
       catch(error){$('view').innerHTML='';note('讀取權限總覽失敗：'+(error.message||error),'error')}
     }
-    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit();else if(event.target.closest('[data-perm]'))showPerm();else if(event.target.closest('[data-backup]'))showBackup();else if(event.target.closest('[data-diag]'))showDiag()});
+    $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-audit]'))showAudit();else if(event.target.closest('[data-perm]'))showPerm();else if(event.target.closest('[data-backup]'))showBackup();else if(event.target.closest('[data-diag]'))showDiag();else if(event.target.closest('[data-hb]'))showHeartbeat()});
     $('view').addEventListener('change',event=>{if(auditMode&&event.target.id==='auditKind'){auditKind=event.target.value;renderAudit()}});
     $('tabs').addEventListener('click',event=>{const button=event.target.closest('[data-table]');if(!button)return;leaveCoin();auditMode=false;tableName=button.dataset.table;page=1;resetDatabaseFilters();if(tableName==='database'){sortKey='案件編號';sortOrder='desc'}else if(tableName==='修改統計表'){sortKey='建立日期';sortOrder='desc'}else{sortKey='';sortOrder='asc'}renderTabs();loadRows()});
     $('view').addEventListener('change',event=>{
