@@ -1,10 +1,10 @@
 {
-  "version": "20261012-0940",
-  "publishedAt": "2026-10-12T01:40:41.038Z",
+  "version": "20261012-1755",
+  "publishedAt": "2026-10-12T09:55:27.892Z",
   "files": {
-    "nas_design_image_lib.mjs": "e52c97650e286c78dce09bc21b2ec456dc98074e071d0182ca0335636d6762f2",
+    "nas_design_image_lib.mjs": "b6dd6c2bb28931be0d3821b26c3ecc358a6180aa755bc1d57e646f05edffcb89",
     "nas_design_image_watcher.config.json": "88d12378e0ee24417d91ad802a9fbfef4f16ddc650c7e3b4e1af2af3b3594949",
-    "nas_design_image_watcher.mjs": "59b496fce9e7e347131d61b7e5c2016f0278295ee5fb514b448a7efa373384c4",
+    "nas_design_image_watcher.mjs": "37637da0d032c40bec17c51cc6cbfa6bb4dfb3eec2d7a252c31fc3fa06b5f437",
     "nas_folder_picker_server.mjs": "ff87cbcfb8a85017c5d4007f5ee700a55185b8e4f5403177dcd1ca1ba2fdffb8",
     "nas_watcher_installer.mjs": "85dade7569b864b9b1c1005e3537892ed36c111681002920c434f3fe32945acf"
   }
