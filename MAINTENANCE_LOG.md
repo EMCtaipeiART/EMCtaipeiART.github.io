@@ -4,6 +4,8 @@
 
 ## 2026-10-12
 
+- v5.0 篩選器／欄位選單：兩個下拉不再同時開啟（開一個會關另一個，外部點擊只認各自的外框）；選單小膠囊加上顏色（狀態沿用狀態色、設計人用設計師色、月份淡藍）。`site.js`／`site.css`，已 stamp。
+
 - v5.0：首頁「最新案件列表」與「專案列表」的網格／列表切換改成各自記住（`site.js` 的 `state.layouts`，localStorage 鍵 `v5LayoutHome`／`v5LayoutProjects`；`state.layout` 依目前頁面讀寫對應那一份）。舊的單一鍵 `v5Layout` 只當兩邊的初始值，不再寫入。已用 `node tools/stamp.cjs` 更新 `index.html` 的快取版本號。
 
 ## 2026-10-06

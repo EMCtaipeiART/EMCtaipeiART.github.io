@@ -269,6 +269,9 @@
     .chips label.st-revise{background:var(--st-revise-bg);color:var(--st-revise-ink);border-color:var(--st-revise-line)}
     .chips label.st-done{background:var(--st-done-bg);color:var(--st-done-ink);border-color:var(--st-done-line)}
     .chips label.st-pause{background:var(--st-pause-bg);color:var(--st-pause-ink);border-color:var(--st-pause-line)}
+    .chips label.mon{background:color-mix(in srgb,#3b82f6 10%,var(--bg));border-color:color-mix(in srgb,#3b82f6 32%,var(--line))}
+    .chips label.dsg{background:color-mix(in srgb,var(--dc) 14%,var(--bg));border-color:color-mix(in srgb,var(--dc) 48%,var(--line))}
+    .chips label.dsg input{accent-color:var(--dc)}
     .chips label.st-none{background:var(--st-none-bg);color:var(--st-none-ink);border-color:var(--st-none-line)}
     .chips label[class*="st-"]:not(:has(input:checked)){opacity:.5;filter:grayscale(.4)}
     .chips label[class*="st-"]:has(input:checked){box-shadow:0 0 0 2px currentColor inset}
