@@ -421,9 +421,11 @@ const PICKER_PAGE = `<!doctype html>
   // mode=insert：只是要挑一個資料夾路徑插進信件內容裡（例如 Gmail 撰寫/回信），
   // 不需要關鍵字、也不會觸發任何備份／上傳，選好資料夾直接把路徑丟回去、關閉視窗；
   // mode=reuse：由主頁傳入案件既有路徑與關鍵字，頁面載入後直接執行備份，不再要求使用者重選；
+  // mode=track：只「記錄」案件的 NAS 路徑與關鍵字供之後追蹤修改（圖片是用電腦上傳／拖曳放進信件的），
+  // 一樣可以填關鍵字、加入多個資料夾，但不呼叫 /api/confirm、不立即備份，選好就把路徑丟回去；
   // 預設（mode 不帶或 'case'）維持既有的「設定案件 NAS 來源資料夾＋立即備份」行為不變。
   const requestedMode = params.get('mode');
-  const mode = requestedMode === 'insert' ? 'insert' : (requestedMode === 'reuse' ? 'reuse' : 'case');
+  const mode = requestedMode === 'insert' ? 'insert' : (requestedMode === 'reuse' ? 'reuse' : (requestedMode === 'track' ? 'track' : 'case'));
   document.getElementById('caseLabel').textContent = caseId ? ('案件編號：' + caseId) : '';
   if(mode === 'insert'){
     const keywordField = document.querySelector('.keyword-field');
@@ -433,7 +435,11 @@ const PICKER_PAGE = `<!doctype html>
   }
   // 複選多個資料夾（各自關鍵字）只在預設的 'case' 模式才有意義：'insert' 純粹選一個路徑
   // 插進信件內容，'reuse' 是沿用主頁面傳入的既有單一路徑直接自動送出，都不需要這個 UI。
-  if(mode !== 'case'){
+  if(mode === 'track'){
+    const confirmBtnT = document.getElementById('confirmBtn');
+    if(confirmBtnT) confirmBtnT.textContent = '記錄這個資料夾（之後自動追蹤）';
+  }
+  if(mode !== 'case' && mode !== 'track'){
     const addBtn0 = document.getElementById('addFolderBtn');
     if(addBtn0) addBtn0.hidden = true;
   }
@@ -610,6 +616,16 @@ const PICKER_PAGE = `<!doctype html>
         const proceed = confirm('以下資料夾尚未填寫「設計圖檔名關鍵字」：\\n' + list + '\\n\\n如果這些資料夾同時放了其他案件的檔案，之後可能會誤抓進不相關的圖片。\\n\\n確定要繼續送出嗎？');
         if(!proceed) return;
       }
+    }
+
+    if(mode === 'track'){
+      if(!foldersToSubmit.some(item => item.path)){ setStatus('請先點進要追蹤的資料夾，再按「記錄」', true); return; }
+      // 只記錄、不備份：不顯示「背景備份中」、不呼叫 /api/confirm，直接把路徑清單丟回主頁面並關閉。
+      if(window.opener){
+        window.opener.postMessage({ type: 'machi-nas-folder-selected', caseId, nonce, trackOnly: true, folders: foldersToSubmit.map(item => ({ path: item.path, keyword: item.keyword, ok: true })), summary: '已記錄 NAS 路徑' }, origin || '*');
+      }
+      window.close();
+      return;
     }
 
     // 點選當下立刻通知主頁面（讓它顯示右下角小提示卡片）並把焦點還給主頁

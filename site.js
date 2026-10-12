@@ -2041,10 +2041,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!loggedIn()){toast('請先登入後再回信',true);startLogin();return}
       if(mode==='designer'&&!opts){openDrChooser(id);return}
       if(!st2.loaded&&loggedIn()){try{await loadUserSettings()}catch(err){}for(let i=0;i<30&&st2.loading;i++)await new Promise(r=>setTimeout(r,100))}
-      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:true}:null;
+      const dr=mode==='designer'?{round:opts.round,skip:Boolean(opts.skip),folders:opts.folders||[],fileFolders:{},pending:!opts.local,local:Boolean(opts.local)}:null;
       const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
-      state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;show('mail');loadGmailContext();loadThread(id,true);
+      state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;if(dr)drLive.set(`${id}|${dr.round}`,d);show('mail');loadGmailContext();loadThread(id,true);
+      if(dr&&dr.local)setTimeout(()=>{drPlaceCaret();try{$('mImgInput')&&$('mImgInput').click()}catch(e){}},0);
     }
     /* ---------- 已排程的信件：找回、編輯、取消 ---------- */
     const sched={items:[],loaded:false,at:0,loading:false,caseId:''};
@@ -2342,14 +2343,32 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const r=imgDropRange(ed,e.clientX,e.clientY);if(r){mailRange=r.cloneRange()}
       insertMailImages(files);
     });
+    /** 放進信件的圖片先縮小：最長邊 1600px、JPEG 品質 82（跟 NAS 備份的縮圖同一個尺寸等級）；GIF 保留動畫不處理，
+     * 本來就夠小的（≤900KB 且最長邊 ≤1600px）原樣放入。透明背景的 PNG 縮小後會以白底呈現。解不開的圖回傳 null 走原檔。 */
+    async function shrinkMailImage(file){
+      if(file.type==='image/gif')return null;
+      const url=URL.createObjectURL(file);
+      try{
+        const img=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>bad(new Error('decode'));i.src=url});
+        const w=img.naturalWidth,h=img.naturalHeight,scale=Math.min(1,1600/Math.max(w,h));
+        if(!w||!h||(scale===1&&file.size<=900*1024))return null;
+        const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*scale));cv.height=Math.max(1,Math.round(h*scale));
+        const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(img,0,0,cv.width,cv.height);
+        const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.82));
+        if(!blob||(scale===1&&blob.size>=file.size))return null;
+        return {blob,fileName:(file.name||'照片').replace(/\.[^.\/]+$/,'')+'.jpg'};
+      }catch(e){return null}finally{URL.revokeObjectURL(url)}
+    }
     async function insertMailImages(files){
       const m=state.mail,d=m.drafts[m.index];d.images=d.images||{};let added=0;
       for(const file of [...files]){
         if(!IMG_TYPES.has(file.type)){toast(`${file.name}：照片僅支援 JPG、PNG、WebP、GIF`,true);continue}
-        if(file.size>8*1024*1024){toast(`${file.name} 超過 8 MB，請壓縮後再放入`,true);continue}
-        const dataUrl=await fileToBase64(file),id=newCid();
-        d.images[id]={contentId:id,fileName:file.name||'照片',mimeType:file.type,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
-        restoreMailRange();document.execCommand('insertHTML',false,`<img src="${dataUrl}" alt="${esc(file.name||'照片')}" data-gmail-inline-image-id="${id}" style="width:320px;max-width:100%">`);saveMailRange();added++;
+        if(file.size>40*1024*1024){toast(`${file.name} 超過 40 MB，請先壓縮後再放入`,true);continue}
+        const small=await shrinkMailImage(file),use=small?small.blob:file,name=small?small.fileName:(file.name||'照片');
+        if(use.size>8*1024*1024){toast(`${file.name} 超過 8 MB，請壓縮後再放入`,true);continue}
+        const dataUrl=await fileToBase64(use),id=newCid(),mime=small?'image/jpeg':file.type;
+        d.images[id]={contentId:id,fileName:name,mimeType:mime,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
+        restoreMailRange();document.execCommand('insertHTML',false,`<img src="${dataUrl}" alt="${esc(name)}" data-gmail-inline-image-id="${id}" style="width:${d.dr&&d.dr.local?180:320}px;max-width:100%">`);saveMailRange();added++;
       }
       if(added)toast(`已放入 ${added} 張照片（寄出時以內嵌方式附上）`);
     }
@@ -2427,6 +2446,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const m=state.mail,stage=$('stage');if(!m){backToBoard();return;}
       setTimeout(()=>{collapseChips('to');collapseChips('cc')},0);
       const d=m.drafts[m.index],total=m.drafts.length,g=state.gmail,locked=d.sent;
+      const drBlock=Boolean(d.dr&&d.dr.pending&&!(d.dr.early&&d.dr.early.size)),drEarly=Boolean(d.dr&&d.dr.pending&&d.dr.early&&d.dr.early.size);
       const gmailNotice=!m.gmailChecked?'<div class="notice">正在確認 Gmail 連線…</div>'
         :!g?.connected?`<div class="notice error" role="alert">${g?.error?`無法確認 Gmail 連線狀態：${esc(g.error)}。`:'您的帳號尚未連接 Gmail，現在無法從系統寄信。'}<button type="button" class="btn primary" data-gmail-connect style="margin-left:6px">串接 Gmail</button>　連接完成後即可寄信；也可以先按「略過，回案件列表」。</div>`:'';
       const canMerge=total>1&&m.drafts.every(x=>!x.reply)&&m.drafts.some(x=>!x.sent&&!x.ids);
@@ -2441,7 +2461,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${d.editSchedId?`<div class="notice">正在編輯「已排程」的信件（原本會在 ${esc(d.scheduledAt.replace('T',' '))} 寄出）。改好後按「儲存排程修改」才會更新；按「放棄修改」不會動到原本的排程。</div>`:(!d.sent&&schedFor(d.id).length?`<div class="notice">這個案件已有 ${schedFor(d.id).length} 封排程中的信件（時間到會自動寄出）。<button type="button" class="btn" data-mail="sched-open" style="margin-left:6px">查看／編輯／取消</button>（目前這封還沒寄的內容不會保留）</div>`:'')}
         ${gmailNotice}
         ${d.reply?threadPanelHtml(false):''}
-        ${(d.dr&&d.dr.pending)?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
+        ${drBlock?'<div class="notice">圖片備份／上傳中，完成後信件會自動帶入圖片並可寄出。 <button type="button" class="btn" data-mail="dr-skip">不等圖片，直接寄出</button></div>':''}
+        ${drEarly?'<div class="notice">圖片已先放進信件，雲端備份在背景進行；現在就可以寄出，備份不會中斷（請先不要關閉這個頁面）。</div>':''}
+        ${(d.dr&&d.dr.local)?'<div class="notice">請把設計圖拖進下方信件，或 <button type="button" class="btn" data-mail="dr-pick">選擇圖片</button>（可一次選多張，會自動縮小；寄出後會備份到這一輪的修改紀錄）。</div>':''}
+        ${(d.dr&&d.mode==='designer'&&!d.sent)?`<div class="notice dr-track">NAS 路徑追蹤：${d.dr.folders&&d.dr.folders.length?esc(d.dr.folders.join('、')):'尚未指定'}　<button type="button" class="btn" data-mail="dr-track">${d.dr.folders&&d.dr.folders.length?'更換／追加 NAS 路徑':'指定 NAS 路徑（追蹤後續修改）'}</button><small style="display:block;margin-top:4px">只記錄路徑與關鍵字，之後這個資料夾裡修改過的圖會自動備份到後續輪次；已經放進信件的圖不會重複備份。</small></div>`:''}
         <div class="queue-bar"><span class="queue-step">${total>1?`第 ${m.index+1} / ${total} 封`:'1 封'}</span>${d.sent?`<span class="pill st-done">${d.scheduledDone?'已排程':'這封已寄出'}</span>`:''}${total>1?`<button type="button" class="btn" data-mail="prev"${m.index===0?' disabled':''}>上一封</button><button type="button" class="btn" data-mail="next"${m.index===total-1?' disabled':''}>下一封</button>`:''}</div>
         ${mergePanel}
         <div class="mail-head">
@@ -2459,7 +2482,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         ${sigShown?`<div class="signature"><span class="signature-label">簽名檔（寄出時自動附上；也可按工具列「簽名檔」放進內文指定位置）</span>${state.signature}</div>`:''}
         ${d.scheduleOpen?schedulePickerHtml(d):''}
         <div class="form-actions mail-actions">
-          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||(d.dr&&d.dr.pending))?' disabled':''}>${m.sending?'處理中…':(d.dr&&d.dr.pending)?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
+          <button type="button" class="btn primary" id="sendBtn" data-mail="send"${(!g?.connected||m.sending||d.sent||drBlock)?' disabled':''}>${m.sending?'處理中…':drBlock?'圖片上傳中…':(d.editSchedId?'儲存排程修改':d.scheduleOpen&&d.scheduledAt?'排程寄出':(total>1?(m.drafts.filter(x=>!x.sent).length===1?'寄出這封並完成':'寄出這封，下一封'):'寄出信件'))}</button>
           ${d.editSchedId?'<button type="button" class="btn" data-mail="sched-abort">放棄修改，回已排程清單</button>':`<button type="button" class="btn" data-mail="schedule-toggle"${d.sent?' disabled':''}>${d.scheduleOpen?'立即寄出':'指定排程時間'}</button>`}
           ${d.editSchedId?'':'<button type="button" class="btn" data-mail="skip">略過，回案件列表</button>'}
         </div>
@@ -2711,8 +2734,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
 
     /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
+    const drLive=new Map();
+    /** 圖片放進信件的位置：游標停在「設計圖區塊」裡，拖進來或按「選擇圖片」的圖就會落在這裡。 */
+    function drPlaceCaret(){const box=$('v5DrImages');if(!box)return;const r=document.createRange();r.selectNodeContents(box);r.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);mailRange=r.cloneRange()}
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
-    function drPlaceholders(dr){return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
+    function drPlaceholders(dr){if(dr.local)return `<div id="v5DrImages"><br></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`;return `<div id="v5DrImages"><span class="dr-up">　${dr.skip?'圖片備份中，這次不會放進信件...':'圖片上傳中...'}</span></div><div id="v5DrNas">${drNasHtml(dr.folders)}</div><div id="v5DrVideo"></div>`}
     function drMutate(d,fn){
       const live=state.view==='mail'&&state.mail&&state.mail.drafts[state.mail.index]===d&&$('mBody');
       const root=live?$('mBody'):(()=>{const x=document.createElement('div');x.innerHTML=d.body;return x})();
@@ -2724,8 +2750,10 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(!acc('media.manage',false)){toast('此帳號沒有管理案件設計圖的權限',true);return}
       const supp=suppRound!==undefined,round=supp?suppRound:roundOf(id),reuse=caseNasFolders(id,row);state.drChoice={id,round,reuse,supp};$('drTitle').textContent=supp?'補上設計圖':'設計圖上傳方式';
       $('drSub').textContent=`${id}｜${row['專案名稱']||''}｜${roundLabel(round)}`;
-      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button><button type="button" class="option reply-opt" data-dr-src="upload"><span>選擇電腦檔案上傳</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖（NAS 資料夾選擇器沒開時的備援選項）</small></button></div>`;
+      $('drBody').innerHTML=`${supp?'':'<label class="designer-reply-skip-images"><input type="checkbox" id="drSkip"><span><b>信件編輯不同步圖片</b><small>圖片照常備份到修改紀錄，信件裡只放 NAS 路徑，適合素材很多張、不想全部塞進信件時</small></span></label>'}<div class="option-list reply-list">${reuse.length?`<button type="button" class="option reply-opt" data-dr-src="same"><span>同上次路徑</span><small>沿用 ${esc(reuse.map(i=>i.path).join('、'))} 與原本的檔名關鍵字，立即抓取這一輪最新修改圖${supp?'，補進這一輪的修改紀錄':''}</small></button>`:''}<button type="button" class="option reply-opt" data-dr-src="nas"><span>選擇 NAS 資料夾</span><small>立即備份資料夾內目前的圖片／影片，之後同一資料夾有新圖也會自動追蹤上傳，直到案件離開過稿中；下一步會請你填寫檔名關鍵字</small></button>${supp?'':`<button type="button" class="option reply-opt" data-dr-src="local"><span>電腦圖片／拖曳進信件</span><small>圖片馬上放進信件（自動縮小），寄出後備份到這一輪的修改紀錄；之後也能在信件裡「指定 NAS 路徑」追蹤後續修改</small></button>`}<button type="button" class="option reply-opt" data-dr-src="upload"><span>${supp?'選擇電腦檔案上傳':'電腦上傳（含影片，較慢）'}</span><small>從電腦挑選圖片／影片，手動上傳這一輪的設計圖到雲端（影片請用這個）</small></button></div>`;
+      const chk=$('drSkip');if(chk){try{chk.checked=localStorage.getItem('drSkipPref')==='1'}catch(e){}chk.addEventListener('change',()=>{try{localStorage.setItem('drSkipPref',chk.checked?'1':'')}catch(e){}})}
       $('drModal').hidden=false;
+      setTimeout(()=>{const first=document.querySelector('#drBody [data-dr-src]');if(first)first.focus()},0);
     }
     function openDrEditor(id,o){
       const m=state.mail,cur=m&&m.drafts[m.index];
@@ -2762,13 +2790,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           const im=document.createElement('img');im.src=`data:${f.mimeType};base64,${f.base64}`;im.alt=f.fileName;im.dataset.gmailInlineImageId=f.cid;im.setAttribute('style','width:180px;max-width:100%');
           box.insertBefore(im,ph||null);box.insertBefore(document.createTextNode(' '),ph||null);
         }
-        if(ph)ph.textContent='　圖片已先放進信件，正在備份到雲端，完成後即可寄出...';
+        if(ph)ph.textContent='　圖片已先放進信件，雲端備份進行中...';
       });
-      const note=document.querySelector('[data-mail="dr-skip"]')?.closest('.notice');if(note&&note.firstChild&&note.firstChild.nodeType===3)note.firstChild.textContent='圖片已先放進信件，正在備份到雲端，完成後即可寄出。 ';
+      if(state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();renderMail()}
     }
     async function drFinish(id,round,{folders=null,fileFolders=null,skip=null}={}){
       await refreshMods(id);
-      const m=state.mail,d=m&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr);if(!d)return;
+      const m=state.mail,d=(m&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr))||drLive.get(`${id}|${round}`);if(!d)return;
       const dr=d.dr;if(folders&&folders.length)dr.folders=folders;if(fileFolders)dr.fileFolders=fileFolders;if(skip!==null&&skip!==undefined)dr.skip=skip;
       const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round),imgs=rec?imageList(rec):[];
       drMutate(d,root=>{
@@ -2779,8 +2807,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(vb){const vids=imgs.map(i=>String(i.fileName||'').trim()).filter(n=>/\.(mp4|mov|m4v)$/i.test(n)).map(n=>{const p=dr.fileFolders[n]||(dr.folders.length===1?dr.folders[0]:'');return p?`${p}/${n}`:''}).filter(Boolean);
           if(vids.length)vb.innerHTML=`<br> 影片路徑${vids.length>1?`（共 ${vids.length} 支）`:''}`+vids.map(v=>`<br><b>${esc(v)}</b>`).join('');else vb.remove()}
       });
-      dr.pending=false;
-      if(state.view==='mail'&&m.drafts[m.index]===d){saveMailDraft();renderMail()}
+      dr.pending=false;drLive.delete(`${id}|${round}`);
+      if(state.view==='mail'&&m&&m.drafts[m.index]===d){saveMailDraft();renderMail()}
     }
     /* 修改中用一般回覆寄出：把最新一輪尚未確認的修改標記為已修改（同設計師回覆的做法） */
     async function markLatestRoundDone(id){try{const list=state.mods.get(id)||[],last=list.reduce((m,x)=>Math.max(m,+x['修改次數']||0),0);if(last<=0)return;const rec=list.find(x=>(+x['修改次數']||0)===last);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(id,last,true)}catch(err){toast(`自動標記修改完成失敗：${err.message}`,true)}}
@@ -2789,6 +2817,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       { /* 狀態先改（不等圖片備份與確認標記，那些比較慢），案件馬上變「過稿中」 */
         const row0=allRows().find(r=>idKey(r)===d.id);if(row0&&String(row0['狀態']||'').trim()!=='過稿中')applyMove(d.id,'過稿中');
       }
+      /* 備份還在背景進行就先寄出（有預覽圖時允許）：輪次確認要等資料庫有這一輪紀錄，所以等備份完成再做（最久 3 分鐘）。 */
+      if(d.dr&&d.dr.pending){toast('信已寄出，圖片備份仍在背景進行，請先不要關閉頁面');for(let i=0;i<360&&d.dr.pending;i++)await new Promise(r=>setTimeout(r,500))}
       try{const nasIds=(d.dr&&d.dr.nasIds)||new Set();imgs=imgs.filter(i=>!nasIds.has(i.contentId));if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
       if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
       refreshView();
@@ -2857,7 +2887,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(!folders.length){toast('未選擇任何資料夾',true);return}
         const ok=folders.filter(f=>f.ok!==false),failed=folders.length-ok.length;
         if(!ok.length){toast(`全部 ${folders.length} 個資料夾都設定失敗，請重新選擇`,true);return}
+        if(data.trackOnly&&!ok.some(f=>String(f.path||'').trim())){toast('請先點進要追蹤的資料夾',true);return}
         saveCaseNas(id,ok);
+        if(data.trackOnly){
+          const paths=ok.map(f=>String(f.path||'').trim()).filter(Boolean),d=state.mail&&state.mail.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr);
+          if(d){d.dr.folders=paths;drMutate(d,r=>{const b=r.querySelector('#v5DrNas');if(b)b.innerHTML=drNasHtml(paths)});if(state.view==='mail'){saveMailDraft();renderMail()}}
+          toast('已記錄 NAS 路徑，之後這個資料夾裡修改過的圖會自動追蹤備份到後續輪次');return;
+        }
         const ff={};for(const f of ok){const p=String(f.path||'').trim();if(!p)continue;for(const n of (Array.isArray(f.backup&&f.backup.uploadedFiles)?f.backup.uploadedFiles:[])){const nm=String(n||'').trim();if(nm&&!ff[nm])ff[nm]=p}}
         toast(String(data.summary||'').trim()||(failed?`已設定 ${ok.length} 個 NAS 來源資料夾（${failed} 個備份失敗，已略過）`:'已設定 NAS 來源資料夾'));
         if(afterReply&&id)drFinish(id,round,{folders:ok.map(f=>f.path||'').filter(Boolean),fileFolders:ff,skip}).catch(err=>toast(`NAS 備份已完成，但自動帶入回信編輯器失敗：${err.message}`,true));
@@ -2873,6 +2909,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const supp=Boolean(state.drChoice0&&state.drChoice0.supp);
         if(src==='nas')nasOpen({id,round,afterReply:!supp,skip});
         else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:!supp,skip});
+        else if(src==='local')startReply(id,'designer',{round,skip:false,folders:(reuse||[]).map(i=>i.path),local:true});
         else openDrUpload(id,round,skip,supp);
         return;
       }
@@ -3669,6 +3706,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
       if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
       const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
+      if(mail==='dr-pick'){drPlaceCaret();$('mImgInput').click();return}
+      if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasOpen({id:d.id,round:d.dr?d.dr.round:0,mode:'track',afterReply:false});return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}
