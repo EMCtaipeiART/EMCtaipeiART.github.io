@@ -748,30 +748,48 @@
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
     /* 篩選條件同步到雲端（設定表 篩選月份／篩選狀態／篩選姓名），手機與電腦共用；本機 localStorage 仍當快取 */
-    const filtSnap=()=>{const f=state.filtersHome;return JSON.stringify([[...f.months].sort(),[...f.statuses].sort(),[...f.designers].sort()])};
-    let filtSynced=null,filtTimer=0,filtPulledAt=0;
-    function saveFilters(){try{const f=state.filtersHome;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}));if(state._fp){const g=state._fp;localStorage.setItem('v5FiltersProjects',JSON.stringify({months:[...g.months],statuses:[...g.statuses],designers:[...g.designers]}))}}catch(err){}
-      if(filtSynced===null||!loggedIn()||filtSnap()===filtSynced)return;
+    /* 篩選條件雲端同步：首頁「最新案件列表」（filters）與專案頁（projectFilters）各存一份在帳號設定，各自同步、互不影響 */
+    const filtArr=f=>JSON.stringify([[...f.months].sort(),[...f.statuses].sort(),[...f.designers].sort()]);
+    const FILT={
+      home:{synced:null,ls:'v5Filters',cloud:'filters',get f(){return state.filtersHome}},
+      projects:{synced:null,ls:'v5FiltersProjects',cloud:'projectFilters',get f(){return state.filtersProjects}}
+    };
+    const filtSnap=k=>filtArr(FILT[k].f);
+    let filtTimer=0,filtPulledAt=0;
+    const filtDirty=()=>Object.keys(FILT).some(k=>FILT[k].synced!==null&&filtSnap(k)!==FILT[k].synced);
+    function saveFilters(){
+      try{for(const k of Object.keys(FILT)){if(k==='projects'&&!state._fp)continue;const f=FILT[k].f;localStorage.setItem(FILT[k].ls,JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}}catch(err){}
+      if(!loggedIn()||!filtDirty())return;
       clearTimeout(filtTimer);filtTimer=setTimeout(pushFilters,800)}
     async function pushFilters(){
-      if(!loggedIn()||filtSynced===null)return;const snap=filtSnap(),f=state.filtersHome;if(snap===filtSynced)return;
-      try{await api('saveUserSettings',{account:selfAccount(),settings:{filters:{month:[...f.months],status:[...f.statuses],designer:[...f.designers]}}});filtSynced=snap}catch(err){}}
+      if(!loggedIn())return;
+      const settings={},sent=[];
+      for(const k of Object.keys(FILT)){
+        if(FILT[k].synced===null)continue;const snap=filtSnap(k);if(snap===FILT[k].synced)continue;
+        const f=FILT[k].f;settings[FILT[k].cloud]={month:[...f.months],status:[...f.statuses],designer:[...f.designers]};sent.push([k,snap])}
+      if(!sent.length)return;
+      try{await api('saveUserSettings',{account:selfAccount(),settings});sent.forEach(([k,snap])=>{FILT[k].synced=snap})}catch(err){}}
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
       try{
-        const data=await api('getUserSettings',{account:selfAccount()}),fl=(data.settings||{}).filters||{};try{applyCloudColOrder((data.settings||{}).columnOrder||(data.settings||{})['專案欄位順序'])}catch(err){}try{applyCloudTheme(String((data.settings||{}).theme||''))}catch(err){}
+        const data=await api('getUserSettings',{account:selfAccount()}),st=data.settings||{};try{applyCloudColOrder(st.columnOrder||st['專案欄位順序'])}catch(err){}try{applyCloudTheme(String(st.theme||''))}catch(err){}
         const sp=v=>String(v||'').split(/\s*,\s*/).map(x=>x.trim()).filter(Boolean);
-        const cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
-        const has=cloud.months.length||cloud.statuses.length||cloud.designers.length;
-        if(filtSynced===null){
-          /* 第一次連線：雲端有設定就以雲端為準；雲端是空的就把這台的條件上傳 */
-          if(window.__filtReset){window.__filtReset=false;filtSynced=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);saveFilters();pushFilters();return}
-          if(has){const f=state.filtersHome;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}}
-          else{filtSynced='';const mine=filtSnap();filtSynced=JSON.stringify([[],[],[]]);if(mine!==filtSynced){filtSynced=filtSynced;pushFilters()}}
-          return}
-        if(filtSnap()!==filtSynced)return; /* 本機有尚未上傳的變更，不覆蓋 */
-        const c=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);
-        if(c!==filtSynced&&!document.querySelector('.filter-pop')){const f=state.filtersHome;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
+        let applied=false,needPush=false;
+        for(const k of Object.keys(FILT)){
+          const fl=st[FILT[k].cloud]||{},cloud={months:sp(fl.month),statuses:sp(fl.status),designers:sp(fl.designer)};
+          const has=cloud.months.length||cloud.statuses.length||cloud.designers.length,cs=filtArr({months:cloud.months,statuses:cloud.statuses,designers:cloud.designers});
+          const apply=()=>{const f=FILT[k].f;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);FILT[k].synced=filtSnap(k);try{localStorage.setItem(FILT[k].ls,JSON.stringify(cloud))}catch(e){}applied=true};
+          if(FILT[k].synced===null){
+            /* 第一次連線：雲端有設定就以雲端為準；雲端是空的就把這台的條件上傳 */
+            if(k==='home'&&window.__filtReset){window.__filtReset=false;FILT[k].synced=cs;needPush=true;continue}
+            if(has)apply();
+            else{FILT[k].synced=filtArr({months:[],statuses:[],designers:[]});if(filtSnap(k)!==FILT[k].synced)needPush=true}
+            continue}
+          if(filtSnap(k)!==FILT[k].synced)continue; /* 本機有尚未上傳的變更，不覆蓋 */
+          if(cs!==FILT[k].synced&&!document.querySelector('.filter-pop'))apply();
+        }
+        if(applied&&!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
+        if(needPush){saveFilters();pushFilters()}
       }catch(err){}}
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
@@ -3402,7 +3420,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     function afterLogin(){
       state.loginMenu=false;renderLogin();updateRail();
-      if(!loggedIn())return; filtSynced=null;pullFilters(true);
+      if(!loggedIn())return; FILT.home.synced=null;FILT.projects.synced=null;pullFilters(true);
       toast(`已登入：${session().name||session().user}`);setTimeout(dutyRemind,1500);
       if(state.pendingStart){const client=state.pendingStart;state.pendingStart='';state.form=newForm(client);show('form');return}
       if(state.view==='form'||state.editing){readRowsSafe();rerender()}

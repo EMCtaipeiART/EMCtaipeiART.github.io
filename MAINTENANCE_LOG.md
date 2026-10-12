@@ -4,6 +4,8 @@
 
 ## 2026-10-12
 
+- v5.0 專案頁篩選也跟著帳號跨裝置同步：帳號設定多存一份 `projectFilters`（設定表新增欄位「專案篩選月份／專案篩選狀態／專案篩選姓名」，`backend/schema.mjs`、`worker/src/model.ts`、`backend/app.mjs`），首頁那份仍是 `filters`。前台 `site.js` 的 `FILT.home`／`FILT.projects` 各自同步（各自的 synced 快照、只上傳有變動的那份）。已 stamp、Worker 已部署。
+
 - v5.0 篩選器下拉：沒勾選的小膠囊一律灰階，勾選了才顯示各自的顏色（`site.css` 的 `.filter-pop .chips label:not(:has(input:checked))`）。已 stamp。
 
 - v5.0 篩選器（月份／狀態／設計人）：首頁「最新案件列表」與專案頁各自一份，不再連動（`site.js` 的 `state.filtersHome`／`state.filtersProjects`，`state.filters` 依目前頁面取其一）。雲端帳號同步維持只綁首頁那份（localStorage `v5Filters`）；專案頁那份只存在該瀏覽器（`v5FiltersProjects`），第一次會複製首頁當時的條件。已 stamp。

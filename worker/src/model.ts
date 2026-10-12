@@ -199,6 +199,7 @@ export function settingsResponse(row: Row = {}): Row {
     heroBg: text(row['首頁背景']),
     nicknameMap: normalizeNicknameMapValue(row['稱呼對照']),
     filters: { year: text(row['篩選年份']), month: text(row['篩選月份']), status: text(row['篩選狀態']), designer: text(row['篩選姓名']) },
+    projectFilters: { month: text(row['專案篩選月份']), status: text(row['專案篩選狀態']), designer: text(row['專案篩選姓名']) },
     selectEnabled: text(row['選擇']).toLowerCase() === 'v', timelineEnabled: text(row['時間表']).toLowerCase() === 'v',
     collapseSettings: {
       designer: /^[vx]$/i.test(text(row['收合設計師專長與案件分配'])),
@@ -541,6 +542,13 @@ export function updateSettingsRow(row: Row, settings: ApiPayload = {}): void {
     row['篩選月份'] = Array.isArray(filters.month) ? filters.month.join(' , ') : text(filters.month || filters.months);
     row['篩選狀態'] = Array.isArray(filters.status) ? filters.status.join(' , ') : text(filters.status || filters.statuses);
     row['篩選姓名'] = Array.isArray(filters.designer) ? filters.designer.join(' , ') : text(filters.designer || filters.designers);
+  }
+  const projectFilters = settings.projectFilters as ApiPayload | undefined;
+  if (projectFilters) {
+    // 專案頁自己的一份篩選（跟首頁「最新案件列表」的 filters 分開存）。
+    row['專案篩選月份'] = Array.isArray(projectFilters.month) ? projectFilters.month.join(' , ') : text(projectFilters.month);
+    row['專案篩選狀態'] = Array.isArray(projectFilters.status) ? projectFilters.status.join(' , ') : text(projectFilters.status);
+    row['專案篩選姓名'] = Array.isArray(projectFilters.designer) ? projectFilters.designer.join(' , ') : text(projectFilters.designer);
   }
   if ('selectEnabled' in settings || 'editEnabled' in settings) row['選擇'] = (settings.selectEnabled ?? settings.editEnabled) === false ? '' : 'v';
   if ('timelineEnabled' in settings) row['時間表'] = settings.timelineEnabled ? 'v' : '';
