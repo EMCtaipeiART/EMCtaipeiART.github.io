@@ -4,6 +4,8 @@
 
 ## 2026-10-12
 
+- v5.0 專案頁「顯示的狀態欄位」從欄位選單搬進篩選器（`site.js`）：網格與列表共用（列表也會依勾選隱藏該狀態的案件），篩選鈕的數字包含被隱藏的狀態欄位數，「恢復預設」一併恢復；欄位選單在網格模式只剩「每列顯示幾欄」。已 stamp。
+
 - v5.0 專案頁篩選也跟著帳號跨裝置同步：帳號設定多存一份 `projectFilters`（設定表新增欄位「專案篩選月份／專案篩選狀態／專案篩選姓名」，`backend/schema.mjs`、`worker/src/model.ts`、`backend/app.mjs`），首頁那份仍是 `filters`。前台 `site.js` 的 `FILT.home`／`FILT.projects` 各自同步（各自的 synced 快照、只上傳有變動的那份）。已 stamp、Worker 已部署。
 
 - v5.0 篩選器下拉：沒勾選的小膠囊一律灰階，勾選了才顯示各自的顏色（`site.css` 的 `.filter-pop .chips label:not(:has(input:checked))`）。已 stamp。
