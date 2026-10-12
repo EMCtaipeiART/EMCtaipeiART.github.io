@@ -1755,11 +1755,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         name, status: text(state.status) || '', source: text(state.statusSource) || '', baseline: text(state.statusBaseline) || '',
         since: Number(state.statusAt) ? new Date(Number(state.statusAt)).toISOString() : '',
         calendarSays: text(detected[name]) || '', femasLeaveNow: femas.names.has(name), femasLeaves: leaves,
-        heartbeat: seen ? { at: new Date(seen).toISOString(), online: nowMs - seen <= PIXEL_OFFICE_OFFLINE_MS } : null
+        heartbeat: seen ? { at: new Date(seen).toISOString(), online: nowMs - seen <= PIXEL_OFFICE_OFFLINE_MS, agoSeconds: Math.round((nowMs - seen) / 1000) } : null,
+        // 心跳診斷（合併進來）：這次開機／醒來的時間、依規則現在應該顯示什麼
+        activeSince: Number(state.activeSince) ? new Date(Number(state.activeSince)).toISOString() : '',
+        ruleStatus: seen && nowMs - seen <= PIXEL_OFFICE_OFFLINE_MS ? pixelOfficeWorkStatus(nowMs) : pixelOfficeOfflineStatus(nowMs, seen)
       };
     });
     return {
-      ok: true, action: 'pixelOfficeDiagnose', now: new Date(nowMs).toISOString(), people,
+      ok: true, action: 'pixelOfficeDiagnose', now: new Date(nowMs).toISOString(), people, workday: pixelOfficeIsWorkday(nowMs), offlineAfterSeconds: PIXEL_OFFICE_OFFLINE_MS / 1000,
       femas: { configured: femas.ok || femas.error !== 'not-configured', ok: femas.ok, events: femas.events, error: femas.error || '', cachedAt: cached ? new Date(cached.at).toISOString() : '' },
       lastSync: last ? { at: text(last.at), unreadable: last.unreadable || [], meeting: last.meeting || [], leave: last.leave || [], released: last.released || [], manualHeld: last.manualHeld || [], error: text(last.error) } : null
     };
@@ -4740,25 +4743,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           return { ...item, role: text(profile.role), status: text(profile.status), pages: profile.pages, capabilities: profile.capabilities, explicit: Boolean(profile.explicit) };
         });
         return { ok: true, action, rows, pages: ACCESS_PAGES, capabilities: ACCESS_CAPABILITIES };
-      }
-      if (action === 'pixelOfficeHeartbeatDiag') {
-        // 心跳診斷（管理者專用）：每位設計師的電腦最後一次心跳、是否在線、目前狀態與依規則該顯示什麼
-        this.requireAccess(database, session, 'database.manage');
-        const now = Date.now();
-        const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>('SELECT name, state, last_seen FROM pixel_office_people ORDER BY name').toArray();
-        const people = rows.map(row => {
-          let state: Row = {};
-          try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
-          const lastSeen = Number(row.last_seen) || 0;
-          return {
-            name: row.name, lastSeen, agoSeconds: lastSeen ? Math.round((now - lastSeen) / 1000) : null,
-            online: lastSeen > 0 && now - lastSeen <= PIXEL_OFFICE_OFFLINE_MS,
-            status: text(state.status), statusSource: text(state.statusSource), statusAt: Number(state.statusAt) || 0,
-            activeSince: Number(state.activeSince) || 0, baseline: text(state.statusBaseline),
-            ifOffline: pixelOfficeOfflineStatus(now, lastSeen), ifOnline: pixelOfficeWorkStatus(now)
-          };
-        });
-        return { ok: true, action, now, workday: pixelOfficeIsWorkday(now), offlineAfterSeconds: PIXEL_OFFICE_OFFLINE_MS / 1000, people };
       }
       if (action === 'listAuditLog') {
         this.requireAccess(database, session, 'database.manage');

@@ -5456,16 +5456,15 @@ describe('首頁背景：全站共用設定', () => {
   });
 });
 
-describe('pixel office heartbeat diagnostic', () => {
-  it('is admin only and lists last heartbeat, online flag and the status the rules would show', async () => {
+describe('pixel office status diagnostic', () => {
+  it('is admin only and includes the heartbeat details (last seen, online flag, rule status)', async () => {
     const token = await login();
-    const anonymous = await api({ action: 'pixelOfficeHeartbeatDiag' });
-    expect(anonymous).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeDiagnose' })).toMatchObject({ ok: false });
     await api({ action: 'pixelOfficeHeartbeat', name: 'Noise', serviceKey: 'test-nas-key', idleSeconds: 3 });
-    const diag = await api({ action: 'pixelOfficeHeartbeatDiag' }, token) as { ok: boolean; people?: Array<{ name: string; online: boolean; lastSeen: number; agoSeconds: number | null }>; offlineAfterSeconds?: number };
+    const diag = await api({ action: 'pixelOfficeDiagnose' }, token) as { ok: boolean; offlineAfterSeconds?: number; people?: Array<{ name: string; heartbeat: { online: boolean; agoSeconds: number } | null; ruleStatus: string }> };
     expect(diag.ok).toBe(true);
     expect(diag.offlineAfterSeconds).toBe(300);
     const noise = diag.people?.find(person => person.name === 'Noise');
-    if (noise && noise.lastSeen) expect(noise.online).toBe(true);
+    if (noise?.heartbeat) { expect(noise.heartbeat.online).toBe(true); expect(typeof noise.ruleStatus).toBe('string'); }
   });
 });
