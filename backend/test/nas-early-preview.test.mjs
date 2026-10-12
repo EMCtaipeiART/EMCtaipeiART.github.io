@@ -126,3 +126,19 @@ test('the page, picker page and picker server are wired so NAS previews reach th
   assert.match(html, /gmailInlineImageMaxCount=30,/);
   assert.match(worker, /const GMAIL_INLINE_IMAGE_MAX_COUNT = 30;/);
 });
+
+test('v5 (site.js) actually consumes the picker previews: puts them in the designer reply as inline images, keeps them when the backup finishes, and never backs them up twice', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const site = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  // 之前 v5 收到預覽訊息是直接 return（只有舊版 legacy.html 有處理），這裡鎖住不能退回去。
+  assert.doesNotMatch(site, /machi-nas-folder-previews'\)return;/);
+  assert.match(site, /data\.type==='machi-nas-folder-previews'\)\{\s*if\(!nas\.nonce\|\|data\.nonce!==nas\.nonce\)return;/);
+  assert.match(site, /nas\.afterReply&&!nas\.skip&&nas\.id&&String\(data\.caseId\|\|''\)===String\(nas\.id\)\)drEarlyPreviews\(nas\.id,data\.items\)/);
+  assert.match(site, /function drEarlyPreviews\(id,items,tries=0\)/);
+  assert.match(site, /DR_EARLY_MAX_BYTES=12\*1024\*1024,DR_MAX_IMAGES=30/);
+  // 備份完成後保留已放進去的預覽圖，只補沒放進去的。
+  assert.match(site, /const early=dr\.early&&dr\.early\.size\?dr\.early:null;if\(early\)box\.querySelector\('\.dr-up'\)\?\.remove\(\);else box\.innerHTML=''/);
+  assert.match(site, /imgs\.filter\(i=>!early\|\|!early\.has\(String\(i\.fileName\|\|''\)\)\)/);
+  // 寄出後的修改紀錄備份排除 NAS 預覽圖。
+  assert.match(site, /const nasIds=\(d\.dr&&d\.dr\.nasIds\)\|\|new Set\(\);imgs=imgs\.filter\(i=>!nasIds\.has\(i\.contentId\)\)/);
+});

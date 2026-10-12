@@ -2735,6 +2735,37 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
       startReply(id,'designer',{round:o.round,skip:o.skip,folders:o.folders||[]});
     }
+    /* NAS 備份最慢的是存進 Google Drive，但壓好的小檔一兩秒就有了：選擇器把小檔先送過來，直接當信件內嵌圖片（cid）放進
+     * 回覆信，設計師馬上看到圖、可以邊等備份邊寫信；Drive 備份照常在背景完成（drFinish 才解除等待並補上沒放進來的圖）。
+     * 這些圖已經由 NAS 備份存進修改紀錄，寄出時不再備份第二次（見 afterDesignerSend 的 nasIds）。 */
+    const DR_EARLY_MAX_BYTES=12*1024*1024,DR_MAX_IMAGES=30;
+    function drEarlyPreviews(id,items,tries=0){
+      const m=state.mail,d=m&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.dr&&x.id===id);
+      // 備份一開始才呼叫 openDrEditor，信件草稿可能還在建（要先讀個人設定），晚一點再試。
+      if(!d){if(tries<20)setTimeout(()=>drEarlyPreviews(id,items,tries+1),300);return}
+      const dr=d.dr;if(dr.skip||!dr.pending)return;
+      d.images=d.images||{};dr.early=dr.early||new Set();dr.nasIds=dr.nasIds||new Set();
+      let total=Object.values(d.images).reduce((n,i)=>n+Math.floor(String(i.base64||'').length*3/4),0);
+      const fresh=[];
+      for(const raw of Array.isArray(items)?items:[]){
+        const fileName=String(raw&&raw.fileName||'').trim(),base64=String(raw&&raw.base64||'').replace(/\s+/g,''),mimeType=String(raw&&raw.mimeType||'').toLowerCase();
+        if(!fileName||!base64||!IMG_TYPES.has(mimeType)||dr.early.has(fileName))continue;
+        const size=Math.floor(base64.length*3/4);
+        if(Object.keys(d.images).length>=DR_MAX_IMAGES||total+size>DR_EARLY_MAX_BYTES)continue;
+        const cid=newCid();d.images[cid]={contentId:cid,fileName,mimeType,base64};dr.early.add(fileName);dr.nasIds.add(cid);total+=size;fresh.push({cid,fileName,mimeType,base64});
+      }
+      if(!fresh.length)return;
+      drMutate(d,root=>{
+        const box=root.querySelector('#v5DrImages');if(!box)return;
+        const ph=box.querySelector('.dr-up');
+        for(const f of fresh){
+          const im=document.createElement('img');im.src=`data:${f.mimeType};base64,${f.base64}`;im.alt=f.fileName;im.dataset.gmailInlineImageId=f.cid;im.setAttribute('style','width:180px;max-width:100%');
+          box.insertBefore(im,ph||null);box.insertBefore(document.createTextNode(' '),ph||null);
+        }
+        if(ph)ph.textContent='　圖片已先放進信件，正在備份到雲端，完成後即可寄出...';
+      });
+      const note=document.querySelector('[data-mail="dr-skip"]')?.closest('.notice');if(note&&note.firstChild&&note.firstChild.nodeType===3)note.firstChild.textContent='圖片已先放進信件，正在備份到雲端，完成後即可寄出。 ';
+    }
     async function drFinish(id,round,{folders=null,fileFolders=null,skip=null}={}){
       await refreshMods(id);
       const m=state.mail,d=m&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr);if(!d)return;
@@ -2742,7 +2773,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const rec=(state.mods.get(id)||[]).find(x=>(+x['修改次數']||0)===round),imgs=rec?imageList(rec):[];
       drMutate(d,root=>{
         const box=root.querySelector('#v5DrImages');
-        if(box){box.innerHTML='';if(!dr.skip)imgs.forEach(i=>{const im=document.createElement('img');im.src=i.url;im.alt=i.fileName||'設計圖';im.setAttribute('style','width:180px;max-width:100%');box.appendChild(im);box.appendChild(document.createTextNode(' '))});if(!box.querySelector('img'))box.remove()}
+        if(box){const early=dr.early&&dr.early.size?dr.early:null;if(early)box.querySelector('.dr-up')?.remove();else box.innerHTML='';if(!dr.skip)imgs.filter(i=>!early||!early.has(String(i.fileName||''))).forEach(i=>{const im=document.createElement('img');im.src=i.url;im.alt=i.fileName||'設計圖';im.setAttribute('style','width:180px;max-width:100%');box.appendChild(im);box.appendChild(document.createTextNode(' '))});if(!box.querySelector('img'))box.remove()}
         const nb=root.querySelector('#v5DrNas');if(nb&&dr.folders.length)nb.innerHTML=drNasHtml(dr.folders);
         const vb=root.querySelector('#v5DrVideo');
         if(vb){const vids=imgs.map(i=>String(i.fileName||'').trim()).filter(n=>/\.(mp4|mov|m4v)$/i.test(n)).map(n=>{const p=dr.fileFolders[n]||(dr.folders.length===1?dr.folders[0]:'');return p?`${p}/${n}`:''}).filter(Boolean);
@@ -2758,7 +2789,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       { /* 狀態先改（不等圖片備份與確認標記，那些比較慢），案件馬上變「過稿中」 */
         const row0=allRows().find(r=>idKey(r)===d.id);if(row0&&String(row0['狀態']||'').trim()!=='過稿中')applyMove(d.id,'過稿中');
       }
-      try{if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
+      try{const nasIds=(d.dr&&d.dr.nasIds)||new Set();imgs=imgs.filter(i=>!nasIds.has(i.contentId));if(imgs.length&&round!==null){await api('backupReplyInlineImages',{caseId:d.id,round,images:imgs.filter(i=>i.base64&&/^image\//.test(i.mimeType||'')).map(i=>({fileName:i.fileName||'照片',mimeType:i.mimeType,base64:i.base64}))});await refreshMods(d.id)}}catch(err){toast(`信已寄出，但信件照片備份至修改紀錄失敗：${err.message}`,true)}
       if(round>0){try{const rec=(state.mods.get(d.id)||[]).find(x=>(+x['修改次數']||0)===round);if(rec&&!String(rec['確認修正日']||'').trim())await setConfirm(d.id,round,true)}catch(err){toast(`自動標記${roundLabel(round)}設計完成確認失敗：${err.message}`,true)}}
       refreshView();
     }
@@ -2813,7 +2844,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const paths=(Array.isArray(data.paths)&&data.paths.length?data.paths:[data.path]).map(p=>String(p||'').trim()).filter(Boolean);
         if(nas.afterReply&&nas.id)openDrEditor(nas.id,{folders:paths,round:nas.round,skip:nas.skip});return;
       }
-      if(data.type==='machi-nas-folder-previews')return;
+      if(data.type==='machi-nas-folder-previews'){
+        if(!nas.nonce||data.nonce!==nas.nonce)return;
+        if(nas.afterReply&&!nas.skip&&nas.id&&String(data.caseId||'')===String(nas.id))drEarlyPreviews(nas.id,data.items);
+        return;
+      }
       if(data.type==='machi-nas-folder-selected'){
         if(!nas.nonce||data.nonce!==nas.nonce)return;
         const {purpose,id,afterReply,skip,round,range}=nas;nas.nonce='';nasClearWatch();hideBadge('nasBadge');nas.purpose='case';nas.afterReply=false;nas.skip=false;nas.range=null;

@@ -193,6 +193,16 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-12 Asia/Taipei — 補回：v5 的設計師回覆信也要「NAS 圖片先放進信件、Drive 備份在背景」
+
+- 修改目的：使用者問「之前改過的『先匯入圖片、後端再慢慢備份』有在這版本執行嗎？」。查證結果：**沒有**。10/2 的改動只寫在當時的 `index.html`，10/4 網站換成 v5（舊版移到 `legacy.html`，v5 程式後來又搬到 `site.js`）之後，v5 的訊息處理對 `machi-nas-folder-previews` 是直接 `return`（只有 `legacy.html` 有處理）。選擇器端（已發布 20261002-0841）一直有送預覽，但 v5 把它丟掉，所以設計師還是要等 Drive 備份完才看到圖。
+- 做法（在 `site.js`）：①收到預覽訊息（驗 nonce、同案件、非「不同步圖片」）→ `drEarlyPreviews` 把小檔當信件內嵌圖片（cid）放進 `#v5DrImages`，信件草稿還沒建好（要先讀個人設定）時每 0.3 秒重試、最多 20 次；上限 12 MB／30 張，超過的略過；②`drFinish`（備份完成）保留已放進去的圖（使用者可能已調整），只補資料庫有但沒放進去的（雲端網址）；③`afterDesignerSend` 的修改紀錄照片備份排除 NAS 預覽圖（`dr.nasIds`），只備份使用者自己上傳的；④「寄出」仍等備份完成才亮（原因同 10/2：補圖、確認輪次要等資料庫有該輪紀錄），但按「不等圖片，直接寄出」仍可提前寄。
+- 影響檔案：`site.js`（`index.html` 的快取版本號由 `node tools/stamp.cjs` 更新）、`backend/test/nas-early-preview.test.mjs`。純前端，不動 Worker 與選擇器。
+- 風險區塊：①信件內嵌圖片 vs 雲端連結的差異與 10/2 相同（每張約 0.4 MB、Worker 張數上限 30）；②這台電腦沒有 pre-commit hook，所以手動跑了 `node tools/stamp.cjs`；③`legacy.html` 維持 10/2 的行為。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 247/247；真實瀏覽器（用 `site.js` 的偵錯副本＋模擬 API）：錯誤 nonce 被忽略、兩批預覽（含重複檔名）共放入 3 張 cid 圖、備份完成後保留 3 張並只補 1 張雲端網址圖、`prepareBody` 輸出 3 張內嵌＋1 個網址、`afterDesignerSend` 的備份只含使用者自傳照片。**尚未用真實案件在正式站量測實際秒數。**
+- 部署狀態：前端 push 後 GitHub Pages 自動生效。選擇器端早已發布，無需再發布。
+- commit：見 git log（`fix(v5): show NAS previews in the designer reply before the Drive backup finishes`）
+
 ### 2026-10-07 Asia/Taipei — v5 批次新增：新增的下一筆沿用上一筆的欄位值
 
 - 修改目的：使用者回報「批次新增時，沒有套用欄位值到下一個專案欄」。
