@@ -1539,3 +1539,74 @@ export async function addPreviewsToJob(job, previews, folderPath = '') {
     }
   }
 }
+
+/**
+ * 「電腦上傳／拖曳」的圖片通常本來就是從 NAS 資料夾選的：瀏覽器拿不到完整路徑，但拿得到檔名與大小。
+ * 從案件客戶的資料夾（baseRel）往下找（廣度優先、有深度／數量／時間上限），回傳含有這些檔名的資料夾，
+ * 命中最多的排最前面。比對不分大小寫；大小相同者視為更可信（同名但不同檔會排在後面）。
+ */
+export async function locateFolderByFiles(mountRoot, baseRel, files, { maxDepth = 5, maxDirs = 1500, deadlineMs = 8000, ignore = [] } = {}) {
+  const want = new Map();
+  for (const file of Array.isArray(files) ? files : []) {
+    const name = String(file?.name || '').trim().toLowerCase();
+    if (name) want.set(name, Number(file?.size) || 0);
+  }
+  if (!want.size) return [];
+  const ignored = new Set((ignore || []).map(item => String(item).toLowerCase()));
+  const started = Date.now();
+  const queue = [{ rel: String(baseRel || ''), depth: 0 }];
+  const hits = [];
+  let scanned = 0;
+  while (queue.length) {
+    const current = queue.shift();
+    scanned += 1;
+    if (scanned > maxDirs || Date.now() - started > deadlineMs) break;
+    let entries;
+    try { entries = await fs.readdir(path.join(mountRoot, current.rel), { withFileTypes: true }); } catch { continue; }
+    const matched = [];
+    let sizeMatches = 0;
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const key = entry.name.toLowerCase();
+      if (!want.has(key)) continue;
+      matched.push(entry.name);
+      const wantedSize = want.get(key);
+      if (wantedSize) {
+        try { if ((await fs.stat(path.join(mountRoot, current.rel, entry.name))).size === wantedSize) sizeMatches += 1; } catch { /* 讀不到大小就不加分 */ }
+      }
+    }
+    if (matched.length) hits.push({ relPath: current.rel, matched, count: matched.length, sizeMatches });
+    if (current.depth < maxDepth) {
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('.') || ignored.has(entry.name.toLowerCase())) continue;
+        queue.push({ rel: current.rel ? `${current.rel}/${entry.name}` : entry.name, depth: current.depth + 1 });
+      }
+    }
+  }
+  hits.sort((a, b) => b.count - a.count || b.sizeMatches - a.sizeMatches || a.relPath.length - b.relPath.length);
+  return hits;
+}
+
+/**
+ * 從命中的檔名猜「檔名關鍵字」：取共同開頭、去掉結尾的版本號／分隔符（v2、_03、-final 這類），
+ * 這樣之後同一組檔案的新版本（v3、v4）仍然比對得到。少於 5 個字就不猜（回傳空字串，交給人填），
+ * 因為關鍵字太短會把同資料夾其他案件的圖一起抓進來。
+ */
+export function suggestKeywordFromNames(names) {
+  const stems = (Array.isArray(names) ? names : []).map(name => String(name || '').replace(/\.[^./\\]+$/, '')).filter(Boolean);
+  if (!stems.length) return '';
+  let prefix = stems[0];
+  for (const stem of stems.slice(1)) {
+    let i = 0;
+    while (i < prefix.length && i < stem.length && prefix[i] === stem[i]) i += 1;
+    prefix = prefix.slice(0, i);
+  }
+  let cleaned = prefix;
+  for (let n = 0; n < 4; n += 1) {
+    const next = cleaned.replace(/[\s_\-.]*(?:v|ver|final|最終|修改?)?\d*[\s_\-.]*$/i, '');
+    if (next === cleaned) break;
+    cleaned = next;
+  }
+  cleaned = cleaned.replace(/[\s_\-.]+$/, '').trim();
+  return cleaned.length >= 5 ? cleaned : '';
+}

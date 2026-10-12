@@ -791,7 +791,30 @@ const PICKER_PAGE = `<!doctype html>
         }
       }
     }catch{ /* 猜預設路徑失敗就從根目錄開始，不影響手動瀏覽 */ }
-    loadDir(initialPath);
+    // mode=track＋names：主頁把「電腦上傳／拖曳」的檔名與大小帶來，這裡去 NAS 找含有這些檔名的資料夾，
+    // 找到就直接停在那個資料夾並預填猜到的關鍵字；auto=1 且全部檔名都在同一個資料夾、關鍵字也猜得出來時，
+    // 不需要使用者做任何事，直接記錄並關閉。
+    let autoRecord = false;
+    if(mode === 'track' && params.get('names')){
+      try{
+        const res = await fetch('/api/locate?caseId=' + encodeURIComponent(caseId) + '&token=' + encodeURIComponent(token) + '&names=' + encodeURIComponent(params.get('names')));
+        const data = await res.json();
+        const best = res.ok && data.success && data.folders && data.folders[0];
+        if(best){
+          initialPath = best.path;
+          const hint = document.getElementById('defaultHint');
+          hint.textContent = '已依你選的圖片找到這個資料夾（' + best.count + ' 個同名檔案）' + (data.keyword ? '，關鍵字已自動填入，確認後按「記錄」即可' : '，請補上檔名關鍵字後按「記錄」');
+          hint.hidden = false;
+          if(data.keyword){
+            document.getElementById('keywordInput').value = data.keyword;
+            lastKeywordValue = data.keyword;
+          }
+          autoRecord = params.get('auto') === '1' && best.count === data.total && Boolean(data.keyword);
+        }
+      }catch{ /* 找不到就維持手動選資料夾 */ }
+    }
+    await loadDir(initialPath);
+    if(autoRecord) await doConfirm();
   })();
 })();
 </script>
@@ -1179,6 +1202,38 @@ async function main() {
         if (previewJob) previewJob.finished = true;
       }
       sendJson(res, 200, { success: true, results });
+      return;
+    }
+
+    if (url.pathname === '/api/locate') {
+      if (requestToken(url) !== pickerToken) {
+        sendJson(res, 401, { success: false, message: TOKEN_ERROR_MESSAGE });
+        return;
+      }
+      if (!(await ensureMountRoot())) {
+        sendJson(res, 400, { success: false, message: mountMissingMessage });
+        return;
+      }
+      try {
+        let files = [];
+        try { files = JSON.parse(url.searchParams.get('names') || '[]'); } catch { files = []; }
+        files = (Array.isArray(files) ? files : []).slice(0, 60).map(item => ({ name: String(item?.name || ''), size: Number(item?.size) || 0 })).filter(item => item.name);
+        let client = '';
+        const caseId = url.searchParams.get('caseId') || '';
+        if (caseId) {
+          try { client = lib.findCaseMeta(await lib.fetchDatabaseWithCase(config, caseId), caseId)?.client || ''; } catch { /* 查不到客戶就從預設根目錄找 */ }
+        }
+        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client);
+        const hits = await lib.locateFolderByFiles(mountRoot, guess.relPath, files, { ignore: config.ignoreFolderNames });
+        const best = hits[0];
+        sendJson(res, 200, {
+          success: true, total: files.length,
+          folders: hits.slice(0, 5).map(hit => ({ path: hit.relPath, count: hit.count, sizeMatches: hit.sizeMatches })),
+          keyword: best ? lib.suggestKeywordFromNames(best.matched) : ''
+        });
+      } catch (error) {
+        sendJson(res, 200, { success: true, total: 0, folders: [], keyword: '' });
+      }
       return;
     }
 

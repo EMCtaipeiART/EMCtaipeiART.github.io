@@ -2016,7 +2016,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         state.thread={id,loading:false,messages:data.messages||[],suggestedTo:data.suggestedTo||'',suggestedCc:data.suggestedCc||'',replyFrom:data.replyFrom||'',error:''};
         if(applyReply&&state.mail){if(state.view==='mail')saveMailDraft();const d=state.mail.drafts[state.mail.index];if(d&&d.reply&&d.id===id){if(!d.to&&state.thread.suggestedTo)d.to=state.thread.suggestedTo;if(!d.cc&&state.thread.suggestedCc)d.cc=state.thread.suggestedCc}}
       }catch(err){state.thread={id,loading:false,messages:[],error:err.message||'讀取失敗'}}
-      if(state.view==='mail'&&state.mail)renderMail();
+      if(state.view==='mail'&&state.mail){saveMailDraft();renderMail()}
       else if(state.view==='thread')renderThreadPage();
     }
     function renderThreadPage(){
@@ -2045,7 +2045,6 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const tplT=st2.templates[st2.tplDefault],tplBody=nm=>tplT?tplT.html.replace(/\{收件人名\}/g,esc(nm)).replace(/\{項目細節\}/g,esc(String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(x=>x&&x!=='急件').join('、'))):'',body=mode==='modification'?(tplBody(greetingName(row['設計負責人']))||'Hi '+esc(greetingName(row['設計負責人']))+',<br><br>'):mode==='designer'?designerReplyBody(row,dr):(tplBody(greetingName(row['專案負責人']))||'<br>');
       const d={id,row,to:'',cc:'',subject:'Re: 【'+id+'】'+row['客戶別']+'_'+row['專案名稱'],body,sent:false,reply:true,mode,existing:true,dr};
       state.mail={drafts:[d],index:0,sending:false,sentCount:0,gmailChecked:false};state.form=null;if(dr)drLive.set(`${id}|${dr.round}`,d);show('mail');loadGmailContext();loadThread(id,true);
-      if(dr&&dr.local)setTimeout(()=>{drPlaceCaret();try{$('mImgInput')&&$('mImgInput').click()}catch(e){}},0);
     }
     /* ---------- 已排程的信件：找回、編輯、取消 ---------- */
     const sched={items:[],loaded:false,at:0,loading:false,caseId:''};
@@ -2689,7 +2688,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const UPLOAD_PAGE='https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec';
     const nas={nonce:'',id:'',round:0,purpose:'case',afterReply:false,skip:false,backing:false,timer:0,readyHost:'',readyTimer:0,range:null};
     function nasHostOrder(){let rem='';try{const s=JSON.parse(localStorage.getItem(NAS_MEM)||'null');if(s&&Date.now()-Number(s.at||0)<864e5)rem=String(s.host||'')}catch(e){}return rem&&NAS_HOSTS.includes(rem)?[rem,...NAS_HOSTS.filter(h=>h!==rem)]:[...NAS_HOSTS]}
-    function nasUrl(p){const u=new URL(NAS_MGR+'/picker');if(p.caseId)u.searchParams.set('caseId',p.caseId);u.searchParams.set('token',NAS_TOKEN);u.searchParams.set('nonce',p.nonce);u.searchParams.set('origin',location.origin);for(const k of ['mode','path','keyword','folders'])if(p[k])u.searchParams.set(k,p[k]);return u}
+    function nasUrl(p){const u=new URL(NAS_MGR+'/picker');if(p.caseId)u.searchParams.set('caseId',p.caseId);u.searchParams.set('token',NAS_TOKEN);u.searchParams.set('nonce',p.nonce);u.searchParams.set('origin',location.origin);for(const k of ['mode','path','keyword','folders','names','auto'])if(p[k])u.searchParams.set(k,p[k]);return u}
     const nasForHost=(url,host)=>{const n=new URL(host);n.pathname=url.pathname;n.search=url.search;return n};
     function nasClearWatch(){if(nas.timer){clearInterval(nas.timer);nas.timer=0}nas.backing=false}
     function nasPopup(url){
@@ -2707,14 +2706,15 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         if(ms===20000&&!nas.backing)toast('還在等待 NAS 資料夾選擇結果...如果新分頁顯示連不上網站，請關閉分頁改用「選擇電腦檔案上傳」',true);
       },1000);
     }
-    function nasOpen({id='',round=0,mode='',folders=null,purpose='case',afterReply=false,skip=false}={}){
+    function nasOpen({id='',round=0,mode='',folders=null,purpose='case',afterReply=false,skip=false,names=null,auto=false,quiet=false}={}){
       nasClearWatch();Object.assign(nas,{nonce:uuid(),id,round,purpose,afterReply,skip:Boolean(afterReply&&skip)});
       const p={caseId:id,nonce:nas.nonce,mode};
+      if(names&&names.length){p.names=JSON.stringify(names.slice(0,60).map(n=>({name:String(n.name||''),size:Number(n.size)||0})));if(auto)p.auto='1'}
       if(mode==='reuse'&&folders&&folders.length){p.path=folders[0].path;p.keyword=folders[0].keyword||'';p.folders=JSON.stringify(folders)}
       const win=nasPopup(nasUrl(p));
-      if(!win){toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);nas.nonce='';return}
-      toast(mode==='reuse'?'正在沿用 NAS 路徑並抓取最新圖片...':'請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...');
-      nasWatch(win,nas.nonce);
+      if(!win){if(!quiet)toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);nas.nonce='';return false}
+      if(!quiet)toast(mode==='reuse'?'正在沿用 NAS 路徑並抓取最新圖片...':'請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...');
+      nasWatch(win,nas.nonce);return true;
     }
     const nasStoreGet=()=>{try{return JSON.parse(localStorage.getItem(NAS_STORE)||'{}')}catch(e){return {}}};
     function caseNasFolders(id,row){
@@ -2735,6 +2735,58 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* 設計師回覆信：先選圖片來源，再直接進信件編輯器 */
     const drLive=new Map();
+    /* 電腦圖片：選檔視窗綁在「常駐」的 input（放在 body 底下、不會被信件頁重畫換掉）。以前是進編輯器後才自動開視窗，
+     * 信件頁隨後因為讀取 Gmail／信件串重畫，視窗綁的 input 被換掉，選好的圖就掉了。現在：先在點擊當下開選檔視窗，
+     * 選好才建立信件並把圖直接寫進信件草稿，之後怎麼重畫都不會掉。 */
+    const drLocalInput=(()=>{const i=document.createElement('input');i.type='file';i.multiple=true;i.accept='image/jpeg,image/png,image/webp,image/gif';i.hidden=true;document.body.appendChild(i);return i})();
+    function drPickLocal(ctx){state.drLocal=ctx;drLocalInput.value='';drLocalInput.click()}
+    async function drWaitDraft(id,round){
+      for(let i=0;i<50;i++){
+        const m=state.mail,d=m&&state.view==='mail'&&m.drafts.find(x=>x.reply&&x.mode==='designer'&&x.id===id&&x.dr&&x.dr.round===round);
+        if(d&&$('v5DrImages'))return d;await new Promise(r=>setTimeout(r,100));
+      }
+      return null;
+    }
+    async function drAddLocalImages(d,files){
+      d.images=d.images||{};d.dr.localFiles=d.dr.localFiles||[];let added=0;
+      for(const file of files){
+        if(file.size>40*1024*1024){toast(`${file.name} 超過 40 MB，請先壓縮後再放入`,true);continue}
+        if(Object.keys(d.images).length>=DR_MAX_IMAGES){toast(`信件最多放 ${DR_MAX_IMAGES} 張圖片，其餘略過`,true);break}
+        const small=await shrinkMailImage(file),use=small?small.blob:file,name=small?small.fileName:(file.name||'照片');
+        if(use.size>8*1024*1024){toast(`${file.name} 超過 8 MB，請壓縮後再放入`,true);continue}
+        const dataUrl=await fileToBase64(use),id=newCid(),mime=small?'image/jpeg':file.type;
+        d.images[id]={contentId:id,fileName:name,mimeType:mime,base64:dataUrl.slice(dataUrl.indexOf(',')+1)};
+        d.dr.localFiles.push({name:file.name,size:file.size});
+        drMutate(d,root=>{
+          const box=root.querySelector('#v5DrImages')||root,im=document.createElement('img');
+          im.src=dataUrl;im.alt=name;im.dataset.gmailInlineImageId=id;im.setAttribute('style','width:180px;max-width:100%');
+          const br=box.querySelector&&box.querySelector(':scope > br');box.insertBefore(im,br||null);box.insertBefore(document.createTextNode(' '),br||null);
+        });
+        added++;
+      }
+      if(added)toast(`已放入 ${added} 張圖片（寄出後會備份到這一輪的修改紀錄）`);
+      return added;
+    }
+    /* 案件還沒有 NAS 路徑時，依剛選的檔名到 NAS 自動找出資料夾並記錄追蹤；視窗被瀏覽器擋就留給上方「指定 NAS 路徑」按鈕（同樣會自動找）。 */
+    function drAutoTrack(d){
+      if(!d.dr||(d.dr.folders&&d.dr.folders.length)||!(d.dr.localFiles&&d.dr.localFiles.length))return;
+      const ok=nasOpen({id:d.id,round:d.dr.round,mode:'track',afterReply:false,names:d.dr.localFiles,auto:true,quiet:true});
+      if(!ok)toast('圖片已放進信件。要追蹤 NAS 路徑，請按信件上方的「指定 NAS 路徑」，系統會依圖片檔名自動找出資料夾');
+    }
+    drLocalInput.addEventListener('change',async()=>{
+      const ctx=state.drLocal,all=[...drLocalInput.files];drLocalInput.value='';
+      if(!ctx||!all.length)return;
+      const files=all.filter(f=>IMG_TYPES.has(f.type));
+      if(!files.length){toast('沒有可用的圖片（支援 JPG、PNG、WebP、GIF；影片請用「電腦上傳（含影片）」）',true);return}
+      try{
+        let d;
+        if(ctx.mode==='start'){await startReply(ctx.id,'designer',{round:ctx.round,skip:false,folders:ctx.folders,local:true});d=await drWaitDraft(ctx.id,ctx.round)}
+        else d=state.mail&&state.mail.drafts[state.mail.index];
+        if(!d||!d.dr){toast('無法開啟信件編輯器，請再試一次',true);return}
+        await drAddLocalImages(d,files);
+        drAutoTrack(d);
+      }catch(err){toast(`放入圖片失敗：${err.message}`,true)}
+    });
     /** 圖片放進信件的位置：游標停在「設計圖區塊」裡，拖進來或按「選擇圖片」的圖就會落在這裡。 */
     function drPlaceCaret(){const box=$('v5DrImages');if(!box)return;const r=document.createRange();r.selectNodeContents(box);r.collapse(false);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);mailRange=r.cloneRange()}
     const drNasHtml=folders=>folders.length?`<br> NAS路徑${folders.length>1?`（共 ${folders.length} 個資料夾）`:''}`+folders.map(p=>`<br><b>${esc(p)}</b>`).join(''):'';
@@ -2909,7 +2961,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const supp=Boolean(state.drChoice0&&state.drChoice0.supp);
         if(src==='nas')nasOpen({id,round,afterReply:!supp,skip});
         else if(src==='same')nasOpen({id,round,mode:'reuse',folders:reuse,afterReply:!supp,skip});
-        else if(src==='local')startReply(id,'designer',{round,skip:false,folders:(reuse||[]).map(i=>i.path),local:true});
+        else if(src==='local')drPickLocal({mode:'start',id,round,folders:(reuse||[]).map(i=>i.path)});
         else openDrUpload(id,round,skip,supp);
         return;
       }
@@ -3706,8 +3758,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(mail==='sched-open'){saveMailDraft();openSchedPage(state.mail.drafts[state.mail.index].id);return}
       if(mail==='sched-abort'){const sid=state.mail.drafts[state.mail.index].id;state.mail=null;openSchedPage(sid);return}
       const sc=t.closest('[data-sched]');if(sc){const k=sc.dataset.sched;if(k==='edit')editSched(sc.dataset.sid);else if(k==='cancel')cancelSched(sc.dataset.sid);else if(k==='back')backToBoard();return}
-      if(mail==='dr-pick'){drPlaceCaret();$('mImgInput').click();return}
-      if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasOpen({id:d.id,round:d.dr?d.dr.round:0,mode:'track',afterReply:false});return}
+      if(mail==='dr-pick'){saveMailDraft();drPlaceCaret();drPickLocal({mode:'append'});return}
+      if(mail==='dr-track'){const d=state.mail.drafts[state.mail.index];saveMailDraft();nasOpen({id:d.id,round:d.dr?d.dr.round:0,mode:'track',afterReply:false,names:d.dr&&d.dr.localFiles,auto:true});return}
       if(mail==='send'){sendCurrent();return}
       if(mail==='skip'){saveMailDraft();const m=state.mail;toast(m&&m.sentCount?`已寄出 ${m.sentCount} 封；其餘案件已建立，可稍後補寄`:'案件已建立，信件稍後再寄');state.mail=null;show(state.home);return}
       if(mail==='prev'||mail==='next'){saveMailDraft();state.mail.index+=mail==='next'?1:-1;renderMail();return}

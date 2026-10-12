@@ -9,7 +9,6 @@ test('v5 designer reply: computer images / drag-and-drop go straight into the ma
   assert.match(site, /電腦上傳（含影片，較慢）/);
   assert.match(site, /localStorage\.getItem\('drSkipPref'\)==='1'/);
   assert.match(site, /document\.querySelector\('#drBody \[data-dr-src\]'\)/);
-  assert.match(site, /else if\(src==='local'\)startReply\(id,'designer',\{round,skip:false,folders:\(reuse\|\|\[\]\)\.map\(i=>i\.path\),local:true\}\)/);
   // 本機模式沒有「圖片上傳中」佔位文字（不然會被寄出），也不擋寄出。
   assert.match(site, /if\(dr\.local\)return `<div id="v5DrImages"><br><\/div>/);
   assert.match(site, /pending:!opts\.local,local:Boolean\(opts\.local\)/);
@@ -24,7 +23,7 @@ test('v5 designer reply: NAS path can be recorded for tracking without any backu
   const site = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(site, /data-mail="dr-track"/);
-  assert.match(site, /nasOpen\(\{id:d\.id,round:d\.dr\?d\.dr\.round:0,mode:'track',afterReply:false\}\)/);
+  assert.match(site, /mode:'track',afterReply:false,names:d\.dr&&d\.dr\.localFiles,auto:true/);
   assert.match(site, /if\(data\.trackOnly&&!ok\.some\(f=>String\(f\.path\|\|''\)\.trim\(\)\)\)\{toast\('請先點進要追蹤的資料夾',true\);return\}/);
   assert.match(picker, /requestedMode === 'track' \? 'track'/);
   // track 模式：不呼叫 /api/confirm、不備份，只把路徑與關鍵字丟回主頁。
@@ -44,4 +43,28 @@ test('v5 designer reply: with preview images in the mail the send button is no l
   assert.match(site, /for\(let i=0;i<360&&d\.dr\.pending;i\+\+\)await new Promise\(r=>setTimeout\(r,500\)\)/);
   const finish = site.indexOf('async function drFinish');
   assert.ok(site.indexOf('dr.pending=false;drLive.delete', finish) > finish);
+});
+
+test('v5 local image source: the file dialog is bound to a persistent input (not the re-rendered mail page), images are written into the draft, and NAS tracking is located from the file names', async () => {
+  const site = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  // 事故原因：自動在信件頁的 input 上開選檔視窗，信件頁隨後重畫、input 被換掉，選好的圖就掉了。
+  assert.match(site, /const drLocalInput=\(\(\)=>\{const i=document\.createElement\('input'\);i\.type='file'[\s\S]*?document\.body\.appendChild\(i\)/);
+  assert.match(site, /function drPickLocal\(ctx\)\{state\.drLocal=ctx;drLocalInput\.value='';drLocalInput\.click\(\)\}/);
+  assert.doesNotMatch(site, /setTimeout\(\(\)=>\{drPlaceCaret\(\);try\{\$\('mImgInput'\)/, '不可再自動在信件頁的 input 上開選檔視窗');
+  assert.match(site, /else if\(src==='local'\)drPickLocal\(\{mode:'start',id,round,folders:/);
+  assert.match(site, /await startReply\(ctx\.id,'designer',\{round:ctx\.round,skip:false,folders:ctx\.folders,local:true\}\);d=await drWaitDraft\(ctx\.id,ctx\.round\)/);
+  // 圖片寫進草稿本身，且信件串讀完重畫前先存編輯內容。
+  assert.match(site, /async function drAddLocalImages\(d,files\)/);
+  assert.match(site, /if\(state\.view==='mail'&&state\.mail\)\{saveMailDraft\(\);renderMail\(\)\}/);
+  // 自動追蹤 NAS 路徑：案件沒有路徑才找；視窗被擋就提示按鈕（按鈕同樣會自動找）。
+  assert.match(site, /function drAutoTrack\(d\)/);
+  assert.match(site, /names:d\.dr\.localFiles,auto:true,quiet:true/);
+  assert.match(site, /names:d\.dr&&d\.dr\.localFiles,auto:true/);
+  assert.match(site, /for\(const k of \['mode','path','keyword','folders','names','auto'\]\)/);
+  // 選擇器：/api/locate（驗 token）＋頁面在 track 模式帶 names 時自動找資料夾、預填關鍵字、全數命中才自動記錄。
+  assert.match(picker, /url\.pathname === '\/api\/locate'\) \{\n      if \(requestToken\(url\) !== pickerToken\)/);
+  assert.match(picker, /lib\.locateFolderByFiles\(mountRoot, guess\.relPath, files/);
+  assert.match(picker, /autoRecord = params\.get\('auto'\) === '1' && best\.count === data\.total && Boolean\(data\.keyword\)/);
+  assert.match(picker, /await loadDir\(initialPath\);\n    if\(autoRecord\) await doConfirm\(\);/);
 });

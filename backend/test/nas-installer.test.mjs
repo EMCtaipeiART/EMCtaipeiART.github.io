@@ -167,7 +167,7 @@ test('a missing NAS mount is reported in plain language and retried, instead of 
 
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
   assert.match(picker, /const mountMissingMessage = `NAS 尚未掛載/);
-  assert.equal((picker.match(/if \(!\(await ensureMountRoot\(\)\)\) \{/g) || []).length, 3, '瀏覽資料夾、預設路徑、確認備份三個入口都要先確認掛載');
+  assert.equal((picker.match(/if \(!\(await ensureMountRoot\(\)\)\) \{/g) || []).length, 4, '瀏覽資料夾、預設路徑、依檔名找資料夾、確認備份四個入口都要先確認掛載');
   assert.match(picker, /const mountRootExists = Boolean\(await ensureMountRoot\(\)\);/);
   assert.match(picker, /TOKEN_ERROR_MESSAGE = '缺少或錯誤的 token。如果這是你自己電腦上的選擇器，請重跑/);
   assert.doesNotMatch(picker, /message: '缺少或錯誤的 token' \}/, 'token 錯誤一律用含排除方式的訊息');
