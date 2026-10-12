@@ -193,6 +193,17 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-12 Asia/Taipei — 選擇器新增「客戶別 → NAS 客戶資料夾」對照（clientFolderAliases）
+
+- 修改目的：使用者要求補上客戶別與 NAS 資料夾名稱不同的對照，讓選擇器與「依檔名自動找資料夾」能直接開到正確的客戶資料夾。
+- 查證（實際對照 NAS `專案企劃部/執行中` 的 90 個資料夾與資料庫的 26 個客戶別）：原本只有名稱完全相同（忽略前後空白與英文大小寫）才對得到，16 個對到、10 個對不到。
+- 做法：設定檔範本新增 `clientFolderAliases`（客戶別→資料夾名；值為空字串＝沒有固定資料夾）；`resolveClientFolderName`（lib，可單元測試）先查對照、沒有再名稱比對；對照指到不存在的資料夾時退回名稱比對；選擇器兩個入口（預設路徑、依檔名找）都傳入。使用者提供的 8 組對照：金士頓→Kingston、欣格家居→Nutribullet、Optimum Nutrition TW（ON）→歐恩ON、BAT英美菸草→B.A.T英美菸草、林口A7讚商場→A7 Mall 早晚商城、席伊麗→Sealy、新光人壽→新光銀行、新安東京→新安東京海上產險；EMC、測試＝沒有固定資料夾。對照跟著「發布更新」送到各台電腦（設定檔更新時此欄位以新範本為準，不屬於各電腦自己的欄位）。
+- 影響檔案：`scripts/nas_design_image_watcher.config.json`、`scripts/nas_design_image_lib.mjs`、`scripts/nas_folder_picker_server.mjs`、`backend/test/nas-client-alias.test.mjs`。
+- 風險區塊：①以後新增客戶別或資料夾改名，要在設定檔補一行並發布更新；②設定檔因重新排版，`ignoreFolderNames` 改成多行（內容不變）；③對照只影響「預設開啟哪個資料夾」與「依檔名找資料夾的搜尋範圍」，不影響已經記錄的案件路徑。
+- 已檢查／驗證方式：`node --test backend/test/*.test.mjs` 255/255；用真實 NAS 與資料庫的 26 個客戶別跑 `resolveClientFolderName`：16 個名稱直接對到、8 個靠對照、2 個明確沒有固定資料夾、0 個對不到。
+- 部署狀態：需「發布更新」，並重啟本機選擇器。
+- commit：見 git log（`feat(nas): client → NAS folder aliases for the folder picker`）
+
 ### 2026-10-12 Asia/Taipei — 修正「電腦圖片」沒帶進信件＋依檔名自動找出並記錄 NAS 路徑
 
 - 修改目的：使用者實際使用後回報：選了電腦圖片，信件編輯器沒有帶入圖片，必須重新帶入；NAS 還是要自己點選追蹤——「步驟完全沒有節省，反而更多」。

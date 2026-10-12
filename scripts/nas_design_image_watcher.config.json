@@ -1,11 +1,13 @@
 {
-  "_說明": "mountRoot 是 NAS 分享掛載後的本機根目錄——如果用 nas_design_image_watcher.setup.mjs 執行，這欄會自動偵測更新，不用手動改。smbUrl／expectedVolumeName 是自動掛載用的連線位址與預期分享名稱。案件清單不用在這裡維護：程式每次執行會讀 dbJsonUrl，自動找出「狀態＝過稿中」且已經在網頁上選過來源資料夾（用 nas_folder_picker_server.mjs 這支資料夾選擇器，或手動貼路徑）的案件。appsScriptUploadUrl 留空時，程式只會掃描＋產生本機預覽圖，不會嘗試上傳；serviceKey／pickerToken 不寫在這個檔案裡，是寫在同資料夾、不進 git 的 nas_design_image_watcher.secrets.json。pickerPort 是 nas_folder_picker_server.mjs（資料夾選擇器伺服器，跟這支掃描程式共用同一份設定檔）監聽的埠號，只有跑那支程式才會用到。defaultBrowseRoot 是選擇器開啟時的預設瀏覽起點（相對於 mountRoot，例如「專案企劃部/執行中」）——選擇器會在這一層底下嘗試找跟案件「客戶別」同名的子資料夾直接打開，找不到就停在這一層，都可以再用麵包屑點回更上層，不會被鎖死。ignoreFolderNames 是掃描時一律跳過、不遞迴進去的資料夾名稱清單（不分大小寫比對）——預設只有「Links」，如果實際 NAS 上還有其他放參考素材、不是設計交付圖的資料夾名稱（例如「素材」「參考」「舊檔」），可以直接加進這個陣列，不用改程式碼。每個案件實際要不要抓進哪些檔案，主要靠案件自己的「設計圖檔名關鍵字」欄位（在 NAS 資料夾選擇器畫面填）比對檔名子字串，這裡的 ignoreFolderNames 只負責排除掉整個資料夾層級的已知非設計圖來源。",
+  "_說明": "mountRoot 是 NAS 分享掛載後的本機根目錄——如果用 nas_design_image_watcher.setup.mjs 執行，這欄會自動偵測更新，不用手動改。smbUrl／expectedVolumeName 是自動掛載用的連線位址與預期分享名稱。案件清單不用在這裡維護：程式每次執行會讀 dbJsonUrl，自動找出「狀態＝過稿中」且已經在網頁上選過來源資料夾（用 nas_folder_picker_server.mjs 這支資料夾選擇器，或手動貼路徑）的案件。appsScriptUploadUrl 留空時，程式只會掃描＋產生本機預覽圖，不會嘗試上傳；serviceKey／pickerToken 不寫在這個檔案裡，是寫在同資料夾、不進 git 的 nas_design_image_watcher.secrets.json。pickerPort 是 nas_folder_picker_server.mjs（資料夾選擇器伺服器，跟這支掃描程式共用同一份設定檔）監聽的埠號，只有跑那支程式才會用到。defaultBrowseRoot 是選擇器開啟時的預設瀏覽起點（相對於 mountRoot，例如「專案企劃部/執行中」）——選擇器會在這一層底下嘗試找跟案件「客戶別」同名的子資料夾直接打開，找不到就停在這一層，都可以再用麵包屑點回更上層，不會被鎖死。ignoreFolderNames 是掃描時一律跳過、不遞迴進去的資料夾名稱清單（不分大小寫比對）——預設只有「Links」，如果實際 NAS 上還有其他放參考素材、不是設計交付圖的資料夾名稱（例如「素材」「參考」「舊檔」），可以直接加進這個陣列，不用改程式碼。每個案件實際要不要抓進哪些檔案，主要靠案件自己的「設計圖檔名關鍵字」欄位（在 NAS 資料夾選擇器畫面填）比對檔名子字串，這裡的 ignoreFolderNames 只負責排除掉整個資料夾層級的已知非設計圖來源。 clientFolderAliases 是「客戶別 → NAS 客戶資料夾名稱」的對照（兩邊寫法不同時用，例如「金士頓」→「Kingston」）；對應值留空字串代表這個客戶別沒有固定資料夾（例如內部案件、測試）。選擇器依客戶別找資料夾時先查這份對照，沒有對照才用名稱比對。這份對照跟著「發布更新」一起送到各台電腦。",
   "smbUrl": "smb://EMCNAS_Prod.local/設計部",
   "expectedVolumeName": "設計部",
   "mountRoot": "/Volumes/設計部",
   "pickerPort": 8877,
   "defaultBrowseRoot": "專案企劃部/執行中",
-  "ignoreFolderNames": ["Links"],
+  "ignoreFolderNames": [
+    "Links"
+  ],
   "useHash": false,
   "maxDimension": 1600,
   "jpegQuality": 70,
@@ -13,5 +15,17 @@
   "previewDir": "./nas_design_image_watcher.state/previews",
   "secretsFile": "./nas_design_image_watcher.secrets.json",
   "dbJsonUrl": "https://emctaipeiart.github.io/backend/data/db.json",
-  "appsScriptUploadUrl": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec"
+  "appsScriptUploadUrl": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec",
+  "clientFolderAliases": {
+    "金士頓": "Kingston",
+    "欣格家居": "Nutribullet",
+    "Optimum Nutrition TW（ON）": "歐恩ON",
+    "BAT英美菸草": "B.A.T英美菸草",
+    "林口A7讚商場": "A7 Mall 早晚商城",
+    "席伊麗": "Sealy",
+    "新光人壽": "新光銀行",
+    "新安東京": "新安東京海上產險",
+    "EMC": "",
+    "測試": ""
+  }
 }

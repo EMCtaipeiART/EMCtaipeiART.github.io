@@ -1610,3 +1610,23 @@ export function suggestKeywordFromNames(names) {
   cleaned = cleaned.replace(/[\s_\-.]+$/, '').trim();
   return cleaned.length >= 5 ? cleaned : '';
 }
+
+/**
+ * 客戶別 → NAS 客戶資料夾名稱。優先查設定檔的 clientFolderAliases（客戶別與資料夾名稱不一樣時用，例如
+ * 「金士頓」→「Kingston」；對應值留空字串＝這個客戶別沒有固定資料夾），沒有對照再用名稱比對（忽略前後空白與英文大小寫）。
+ * 回傳 { folder, source }：source 是 'alias'、'name' 或 'none-by-alias'（明確沒有固定資料夾）、'' （找不到）。
+ */
+export function resolveClientFolderName(siblings, client, aliases = {}) {
+  const wanted = String(client || '').trim();
+  const list = Array.isArray(siblings) ? siblings : [];
+  const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  const key = Object.keys(aliases || {}).find(name => same(name, wanted));
+  if (key !== undefined) {
+    const target = String(aliases[key] ?? '').trim();
+    if (!target) return { folder: '', source: 'none-by-alias' };
+    const folder = list.find(name => name === target) || list.find(name => same(name, target));
+    if (folder) return { folder, source: 'alias' };
+  }
+  const exact = list.find(name => name === wanted) || list.find(name => same(name, wanted));
+  return exact ? { folder: exact, source: 'name' } : { folder: '', source: '' };
+}

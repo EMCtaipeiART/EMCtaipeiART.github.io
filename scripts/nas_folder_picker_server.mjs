@@ -141,7 +141,7 @@ async function dirExists(absPath) {
  * 不管哪一種，回傳的都只是「初始瀏覽位置」，使用者仍然可以透過麵包屑點回
  * 任何上層資料夾，不會被鎖死在猜測結果裡。
  */
-async function resolveDefaultBrowsePath(mountRoot, defaultBrowseRoot, client) {
+async function resolveDefaultBrowsePath(mountRoot, defaultBrowseRoot, client, aliases = {}) {
   const trimmedRoot = String(defaultBrowseRoot || '').trim();
   if (!trimmedRoot) return { relPath: '', matched: false, baseOk: false, note: '' };
 
@@ -166,11 +166,14 @@ async function resolveDefaultBrowsePath(mountRoot, defaultBrowseRoot, client) {
   } catch {
     return { relPath: baseDir.relPath, matched: false, baseOk: true, note: '讀取預設瀏覽路徑失敗，已開啟到上一層資料夾' };
   }
-  const exact = siblings.find(name => name === trimmedClient);
-  const loose = exact || siblings.find(name => name.trim().toLowerCase() === trimmedClient.toLowerCase());
+  const found = lib.resolveClientFolderName(siblings, trimmedClient, aliases);
+  if (found.source === 'none-by-alias') {
+    return { relPath: baseDir.relPath, matched: false, baseOk: true, note: `「${trimmedClient}」沒有固定的 NAS 資料夾，已開啟到上一層` };
+  }
+  const loose = found.folder;
   if (loose) {
     const matchedRel = baseDir.relPath ? `${baseDir.relPath}/${loose}` : loose;
-    return { relPath: matchedRel, matched: true, baseOk: true, note: `已自動開啟到「${loose}」資料夾` };
+    return { relPath: matchedRel, matched: true, baseOk: true, note: found.source === 'alias' ? `已依客戶對照開啟到「${loose}」資料夾` : `已自動開啟到「${loose}」資料夾` };
   }
   return { relPath: baseDir.relPath, matched: false, baseOk: true, note: `找不到「${trimmedClient}」對應的資料夾，已開啟到上一層` };
 }
@@ -1127,7 +1130,7 @@ async function main() {
             // 讀不到案件資料庫也不影響瀏覽，只是猜不出預設路徑/既有關鍵字，從 defaultBrowseRoot 或根目錄開始
           }
         }
-        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client);
+        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client, config.clientFolderAliases);
         sendJson(res, 200, { success: true, relPath: guess.relPath, matched: guess.matched, note: guess.note, keyword: existingKeyword });
       } catch (error) {
         sendJson(res, 200, { success: true, relPath: '', matched: false, note: '', keyword: '' });
@@ -1223,7 +1226,7 @@ async function main() {
         if (caseId) {
           try { client = lib.findCaseMeta(await lib.fetchDatabaseWithCase(config, caseId), caseId)?.client || ''; } catch { /* 查不到客戶就從預設根目錄找 */ }
         }
-        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client);
+        const guess = await resolveDefaultBrowsePath(mountRoot, config.defaultBrowseRoot, client, config.clientFolderAliases);
         const hits = await lib.locateFolderByFiles(mountRoot, guess.relPath, files, { ignore: config.ignoreFolderNames });
         const best = hits[0];
         sendJson(res, 200, {
