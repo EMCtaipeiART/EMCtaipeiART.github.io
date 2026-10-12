@@ -180,7 +180,10 @@
       rows:[],localRows:new Map(),settings:[],avatars:new Map(),customers:[],weights:[],mods:new Map(),people:{},levelConfig:null,archive:null,archiveLoading:false,
       loaded:false,view:'board',query:'',latestLimit:LATEST_PAGE,layouts:(()=>{const rd=k=>{try{return localStorage.getItem(k)}catch(err){return null}},old=rd('v5Layout'),pick=k=>{const v=rd(k)||old;return v==='list'?'list':'grid'};return {home:pick('v5LayoutHome'),projects:pick('v5LayoutProjects')}})(),
       /* 首頁「最新案件列表」與專案頁各自記住網格／列表，不再互相連動（沿用舊的單一設定當作兩邊的初始值） */
-      get layout(){return this.layouts[this.view==='projects'?'projects':'home']},set layout(v){this.layouts[this.view==='projects'?'projects':'home']=v==='list'?'list':'grid'},sort:'desc',filters:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE,pause:COLUMN_PAGE},boardCols:(()=>{try{const n=+localStorage.getItem('v5BoardCols');return n>=1&&n<=4?n:3}catch(err){return 3}})(),home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
+      get layout(){return this.layouts[this.view==='projects'?'projects':'home']},set layout(v){this.layouts[this.view==='projects'?'projects':'home']=v==='list'?'list':'grid'},sort:'desc',filtersHome:(()=>{const f={months:new Set(),statuses:new Set(),designers:new Set()};try{let raw=localStorage.getItem('v5Filters');if(localStorage.getItem('v5FiltersV')!=='2'){raw=null;localStorage.setItem('v5FiltersV','2');window.__filtReset=true}const a=JSON.parse(raw||'null');if(a)for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)));if(!raw){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));f.months.add(p.year+'/'+p.month)}}catch(err){}return f})(),_fp:null,
+      /* 首頁「最新案件列表」與專案頁各自一份篩選（月份／狀態／設計人），不再互相連動；雲端同步沿用在首頁那份（filtersHome），專案頁的只記在這個瀏覽器 */
+      get filtersProjects(){if(!this._fp){const f={months:new Set(),statuses:new Set(),designers:new Set()};let raw=null;try{raw=localStorage.getItem('v5FiltersProjects')}catch(err){}if(raw){try{const a=JSON.parse(raw);for(const k of Object.keys(f))if(Array.isArray(a[k]))a[k].forEach(v=>f[k].add(String(v)))}catch(err){}}else for(const k of Object.keys(f))this.filtersHome[k].forEach(v=>f[k].add(v));this._fp=f}return this._fp},
+      get filters(){return this.view==='projects'?this.filtersProjects:this.filtersHome},filterOpen:false,loginMenu:false,pendingStart:'',editing:false,editRow:null,saving:false,edits:new Map(),limits:{todo:COLUMN_PAGE,doing:COLUMN_PAGE,review:COLUMN_PAGE,revise:COLUMN_PAGE,done:COLUMN_PAGE,pause:COLUMN_PAGE},boardCols:(()=>{try{const n=+localStorage.getItem('v5BoardCols');return n>=1&&n<=4?n:3}catch(err){return 3}})(),home:'board',sortKey:'id',sortDir:'desc',lb:[],lbList:null,lbIdx:0,cols:null,colsOpen:false,colDrag:'',plistLimit:50,drag:null,pendingMove:null,
       selImg:new Set(),form:null,mail:null,detailId:'',gmail:null,signature:null,officeLoaded:false,syncText:''
     };
 
@@ -745,13 +748,13 @@
       pop.style.top=(r.bottom+8+h>innerHeight?Math.max(8,r.top-h-8):r.bottom+8)+'px';
     }
     /* 篩選條件同步到雲端（設定表 篩選月份／篩選狀態／篩選姓名），手機與電腦共用；本機 localStorage 仍當快取 */
-    const filtSnap=()=>{const f=state.filters;return JSON.stringify([[...f.months].sort(),[...f.statuses].sort(),[...f.designers].sort()])};
+    const filtSnap=()=>{const f=state.filtersHome;return JSON.stringify([[...f.months].sort(),[...f.statuses].sort(),[...f.designers].sort()])};
     let filtSynced=null,filtTimer=0,filtPulledAt=0;
-    function saveFilters(){try{const f=state.filters;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}))}catch(err){}
+    function saveFilters(){try{const f=state.filtersHome;localStorage.setItem('v5Filters',JSON.stringify({months:[...f.months],statuses:[...f.statuses],designers:[...f.designers]}));if(state._fp){const g=state._fp;localStorage.setItem('v5FiltersProjects',JSON.stringify({months:[...g.months],statuses:[...g.statuses],designers:[...g.designers]}))}}catch(err){}
       if(filtSynced===null||!loggedIn()||filtSnap()===filtSynced)return;
       clearTimeout(filtTimer);filtTimer=setTimeout(pushFilters,800)}
     async function pushFilters(){
-      if(!loggedIn()||filtSynced===null)return;const snap=filtSnap(),f=state.filters;if(snap===filtSynced)return;
+      if(!loggedIn()||filtSynced===null)return;const snap=filtSnap(),f=state.filtersHome;if(snap===filtSynced)return;
       try{await api('saveUserSettings',{account:selfAccount(),settings:{filters:{month:[...f.months],status:[...f.statuses],designer:[...f.designers]}}});filtSynced=snap}catch(err){}}
     async function pullFilters(force){
       if(!loggedIn())return;if(!force&&Date.now()-filtPulledAt<20000)return;filtPulledAt=Date.now();
@@ -763,12 +766,12 @@
         if(filtSynced===null){
           /* 第一次連線：雲端有設定就以雲端為準；雲端是空的就把這台的條件上傳 */
           if(window.__filtReset){window.__filtReset=false;filtSynced=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);saveFilters();pushFilters();return}
-          if(has){const f=state.filters;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}}
+          if(has){const f=state.filtersHome;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(!document.querySelector('.filter-pop')){if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}}
           else{filtSynced='';const mine=filtSnap();filtSynced=JSON.stringify([[],[],[]]);if(mine!==filtSynced){filtSynced=filtSynced;pushFilters()}}
           return}
         if(filtSnap()!==filtSynced)return; /* 本機有尚未上傳的變更，不覆蓋 */
         const c=JSON.stringify([[...cloud.months].sort(),[...cloud.statuses].sort(),[...cloud.designers].sort()]);
-        if(c!==filtSynced&&!document.querySelector('.filter-pop')){const f=state.filters;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
+        if(c!==filtSynced&&!document.querySelector('.filter-pop')){const f=state.filtersHome;f.months=new Set(cloud.months);f.statuses=new Set(cloud.statuses);f.designers=new Set(cloud.designers);filtSynced=filtSnap();try{localStorage.setItem('v5Filters',JSON.stringify(cloud))}catch(e){}if(state.view==='projects')renderProjects();else if(state.view==='board')renderBoard()}
       }catch(err){}}
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
