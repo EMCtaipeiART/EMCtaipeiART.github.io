@@ -6453,3 +6453,4 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 - 移除本機免登入切換預覽工具 tools/festival-preview.mjs；測試截圖移至專案外，正式頁面沿用原有背景編輯權限。
 
 - 修正：設計師回覆信讀完信件串後，建議收件人／副本會被尚未重畫的空欄位覆蓋而變空白（`loadThread` 的第二次 `saveMailDraft`）；帶入成功後不再覆蓋。
+- 移除早期預覽後信件內自動補上的「圖片已先放進信件，雲端備份進行中...」字樣。

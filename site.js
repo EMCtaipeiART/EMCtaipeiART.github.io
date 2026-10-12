@@ -2794,7 +2794,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
           const im=document.createElement('img');im.src=`data:${f.mimeType};base64,${f.base64}`;im.alt=f.fileName;im.dataset.gmailInlineImageId=f.cid;im.setAttribute('style','width:180px;max-width:100%');
           box.insertBefore(im,ph||null);box.insertBefore(document.createTextNode(' '),ph||null);
         }
-        if(ph)ph.textContent='　圖片已先放進信件，雲端備份進行中...';
+        if(ph)ph.remove();
       });
       if(state.view==='mail'&&state.mail.drafts[state.mail.index]===d){saveMailDraft();renderMail()}
     }
