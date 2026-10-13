@@ -189,7 +189,7 @@ const WD_FEMALE=[true,true,false,true,false],WD_K=1.7,WD_OV=8,WD_SCALE=.475,WD_S
 const WD_SIDE_GLASSES_L=.15,WD_EAR_TOP=[1.5,3,-1,3,3],WD_SIDE_CAP_GROW=1.18,WD_SIDE_CAP_BRIM=55,WD_SIDE_CAP_BACK=.07,WD_EAR_X=.06,WD_SIDE_GLASSES_UP=.6;// 眼鏡桿（鏡框左端那一截）對到耳朵上沿：整副眼鏡往上提鏡高的 .6 倍
 //// 側面眼鏡左緣在膚色框的比例、耳朵上沿相對眼睛的位置（頭圖像素）、側面帽子放大倍率（使用者 2026-10-02）
 const wardrobeSheets={heads:new Image(),outfits:new Image(),acc:new Image()};
-setAsset(wardrobeSheets.heads,'assets/wardrobe-heads.webp?v=3');setAsset(wardrobeSheets.outfits,'assets/wardrobe-outfits.webp?v=3');// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
+setAsset(wardrobeSheets.heads,'assets/wardrobe-heads.webp?v=4');setAsset(wardrobeSheets.outfits,'assets/wardrobe-outfits.webp?v=3');// 配件圖（帽子、眼鏡，46 KB）不擋進站：場景準備好之後才載（loadAccessories），載好會自動重畫。
 Object.values(wardrobeSheets).forEach(img=>{img.onload=()=>{wardrobeCache.clear();markDirty();if(typeof refreshRosterPortraits==='function')refreshRosterPortraits();if(typeof renderLookPanel==='function'&&selected!==null)renderLookPanel();};});
 function loadAccessories(){if(!wardrobeSheets.acc.getAttribute('src'))setAsset(wardrobeSheets.acc,'assets/wardrobe-acc.webp?v=2');}
 const accessoriesReady=()=>wardrobeSheets.acc.complete&&wardrobeSheets.acc.naturalWidth>0;

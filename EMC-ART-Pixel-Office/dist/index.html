@@ -11,7 +11,7 @@
        網址與送法要跟 app.js 的 syncCall 一樣（text/plain 的簡單請求，沒有 preflight）。 -->
   <script>window.__pixelP=(function(){var u='https://machi-design-api.machi-chen.workers.dev/api',go=function(a){return fetch(u,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(a),cache:'no-store'}).then(function(r){return r.json()}).catch(function(){return null})};return {state:go({action:'pixelOfficeState',since:0}),designers:go({action:'pixelOfficeDesigners'})}})();</script>
   <link rel="preconnect" href="https://emc-pixel-assets.machi-chen.workers.dev" crossorigin>
-  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-heads.webp?v=3">
+  <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-heads.webp?v=4">
   <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/wardrobe-outfits.webp?v=3">
   <link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/furniture-v3.webp?v=1">
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
@@ -107,6 +107,6 @@ var p=side.querySelector('.privacy');side.insertBefore(d,p||null);sec.remove();
 var $=function(i){return document.getElementById(i)},up=function(e){return e&&e.closest('.tool-section')};
 var moodSec=up($('moods'));if(moodSec)moodSec.style.display='none';})();
 </script>
-  <script src="app.js?v=161" fetchpriority="high"></script>
+  <script src="app.js?v=162" fetchpriority="high"></script>
 </body>
 </html>
