@@ -50,7 +50,7 @@ const BUBBLE_CLEAR=8;// 下排的對話框與上排名牌之間要留的空隙
 // 以前寫死 .8，那是還沒算對話框的年代；現在直接從對話框的尺寸算回來，改尺寸不用重算。
 const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 // 上下兩排桌子合併成一張：下排人物坐在桌子下側、背對畫面。邏輯座標不動（存在後端的位置照用），畫面上把下排往上收到 BOTTOM_FEET。
-const BOTTOM_FEET=620,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
+const BOTTOM_FEET=595,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
 const viewY=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
@@ -1232,7 +1232,7 @@ function drawDesk(s){
 const bottomArt={imac:new Image(),minimon:new Image(),chair:new Image()},bottomGray=new Map();
 setAsset(bottomArt.imac,'assets/bottom-imac.webp?v=2');setAsset(bottomArt.minimon,'assets/bottom-minimon.webp?v=2');setAsset(bottomArt.chair,'assets/bottom-chairback.webp?v=2');
 Object.values(bottomArt).forEach(img=>img.addEventListener('load',markDirty));
-const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=125,BD_CENTER=BD_TOP+Math.round(BD_FACE/2),BD_MARK_Y=BD_TOP+BD_FACE-25,BCHAIR_W=76,BCHAIR_H=119;
+const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=125,BD_CENTER=BD_TOP+Math.round(BD_FACE/2)-14,BD_MARK_Y=BD_TOP+BD_FACE-25,BCHAIR_W=76,BCHAIR_H=119;
 function grayOfImage(img){
   if(bottomGray.has(img))return bottomGray.get(img);
   const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
@@ -1278,7 +1278,7 @@ function drawDeskPlate(s){
   ctx.save();
   ctx.font=`bold ${font}px sans-serif`;
   const w=Math.max(84,ctx.measureText(s.name).width+24),h=Math.max(PLATE_NAME_H,font+8);
-  const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:BD_TOP-h);
+  const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:BD_TOP-h-12);
   ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;
   ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
   ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1290,7 +1290,7 @@ function drawDeskPlate(s){
  *  下排：上排名牌的下緣（再高就把別人的名字蓋掉——這是舊版最醜的那個問題）。
  *  判斷用「頭頂有沒有低於上排名牌」，所以在完整版走到兩排中間的人也會自己挑對的那一條。 */
 function bubbleCeiling(p){
-  const plateBottom=BD_TOP+BUBBLE_CLEAR;
+  const plateBottom=BD_TOP-8;
   if(p.y-150>=plateBottom)return plateBottom;
   return embedMode?EMBED_CONTENT.y0+4:10;
 }
@@ -1606,7 +1606,7 @@ window.addEventListener('message',async event=>{
     const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
     box.style.left=cx+'px';box.style.top=cy+'px';
     if(level===1){
-      const keys=defs.map(d=>d[0]).filter(k=>{const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(74,Math.min(104,holder.height*.2));
+      const keys=defs.map(d=>d[0]).filter(k=>{const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(94,Math.min(130,holder.height*.22));
       defs.forEach(([k])=>{btns[k].hidden=!keys.includes(k);});
       keys.forEach((k,j)=>{const a=-Math.PI/2+j*2*Math.PI/n;btns[k].style.transform='translate('+Math.round(Math.cos(a)*R)+'px,'+Math.round(Math.sin(a)*R)+'px)';});
     }else if(level===2){

@@ -86,7 +86,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   // 桌牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
   // 連同桌牌整塊放進框裡，不會被底邊裁掉。桌牌上緣沿用原本名牌的位置。
   assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
-  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.row\?s\.y\+14:BD_TOP-h\);/);
+  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.row\?s\.y\+14:BD_TOP-h-12\);/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -176,7 +176,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能寫死：下排的對話框往上長，不能蓋到
   // 上排的名牌。比例直接從對話框的尺寸推回來，改對話框不用重算。
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
-  assert.match(js, /const BOTTOM_FEET=620,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
+  assert.match(js, /const BOTTOM_FEET=595,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
   assert.match(js, /const viewY=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
   // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
