@@ -79,7 +79,7 @@ function fitCleanView(){
   const x0=narrow?300:424,x1=narrow?1236:1112,y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
   const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam&&!narrow?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
-  wrapEl.style.height=`${Math.round(bh*scale)+padY*2}px`;
+  wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
   game.style.transform=`translate(${w/2-cx*scale}px,${-y0*scale+padY}px)`;
   markDirty();
@@ -1251,7 +1251,7 @@ function drawDeskBottom(s){
   const drawW=Math.round(sw*DESK_DRAW_SCALE),left=Math.round(s.x-drawW/2),footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
   ctx.imageSmoothingEnabled=false;
   ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP,drawW,BD_FACE);
-  ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT,left,BD_TOP+BD_FACE,drawW,footDraw);
+  ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT-3,left,BD_TOP+BD_FACE,drawW,Math.round(footDraw*(DESK_SRC_FOOT-3)/DESK_SRC_FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
   if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
 }
