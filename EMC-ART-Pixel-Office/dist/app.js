@@ -1139,7 +1139,7 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});}}else{if(embedMode)setCardPinned(false);select(null);}});
+game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}});
 // 點一下把資料卡固定住：固定之後滑鼠移開不會收起，也才點得到上面的技能膠囊。
 // 沒固定時只是滑過預覽（卡片不吃滑鼠事件，見 CSS），滑到別人身上就換人。
 let cardPinned=false;
@@ -1415,7 +1415,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(drawStatusMarker);positionPersonCard();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(drawStatusMarker);positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
@@ -1546,3 +1546,51 @@ window.addEventListener('message',async event=>{
   }catch{}
   done();
 });
+
+// 人物四周的圓形選單（多元宇宙編輯頁）：點人物 → 一圈圖示（狀態、造型、動作、音樂、限時動態、對話）；
+// 點圖示 → 第一圈收起，改顯示該功能的面板，中間留返回鈕。右側只剩人物資料、等級與等級一覽表。
+(()=>{
+  if(embedMode||!document.documentElement.classList.contains('clean'))return;
+  const wrap=game.parentElement,ICONS={
+    status:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3M9 9.5h.01M15 9.5h.01"/>',
+    look:'<path d="M8 4 4 7l2.5 3L8 9v11h8V9l1.5 1L20 7l-4-3c-.6 1.5-2 2.3-4 2.3S8.6 5.5 8 4z"/>',
+    action:'<circle cx="14.5" cy="5" r="2"/><path d="m9 21 2.5-6-2-2.5 1-4 3.5 2 3 .5M7 11l3-3M11.5 15l4 2.5"/>',
+    music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+    story:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4"/>',
+    say:'<path d="M4 5.5h16v10H12l-4.5 4v-4H4z"/>'};
+  const defs=[['status','目前狀態'],['look','造型'],['action','動作'],['music','音樂'],['story','限時動態'],['say','想說的話']];
+  const find={status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),music:()=>$('musicSection'),story:()=>$('storyUpload'),say:()=>$('message')};
+  const secOf=k=>{const e=find[k]();return e&&(e.closest('.tool-section'));};
+  const box=document.createElement('div');box.id='radial';box.hidden=true;
+  const ring=document.createElement('div');ring.className='radial-ring';
+  const back=document.createElement('button');back.type='button';back.className='radial-back';back.setAttribute('aria-label','返回');back.hidden=true;back.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>';
+  const panel=document.createElement('div');panel.className='radial-panel';panel.hidden=true;
+  const title=document.createElement('strong');title.className='radial-title';panel.appendChild(title);
+  const btns={};
+  defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>show(k);ring.appendChild(b);btns[k]=b;});
+  box.append(ring,back,panel);wrap.appendChild(box);
+  defs.forEach(([k])=>{const s=secOf(k);if(!s)return;s.classList.remove('collapsible');s.classList.add('radial-sec');s.dataset.rk=k;s.hidden=s.hidden;panel.appendChild(s);});
+  let level=0,cur='';
+  function show(k){level=2;cur=k;ring.hidden=true;back.hidden=false;panel.hidden=false;title.textContent=defs.find(d=>d[0]===k)[1];panel.querySelectorAll('.radial-sec').forEach(s=>{s.style.display=s.dataset.rk===k?'':'none';});place();}
+  function toRing(){level=1;cur='';ring.hidden=false;back.hidden=true;panel.hidden=true;place();}
+  back.onclick=toRing;
+  window.radialOpen=i=>{box.hidden=false;box.dataset.i=i;toRing();const c=$('personCard');if(c)c.classList.add('radial-hide');};
+  window.radialClose=()=>{box.hidden=true;level=0;};
+  function place(){
+    if(box.hidden||selected===null)return;
+    const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect();if(!holder.width||!view.width)return;
+    const sx=view.width/W,sy=view.height/H,p=viewPeople[selected]||people[selected];
+    const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
+    box.style.left=cx+'px';box.style.top=cy+'px';
+    if(level===1){
+      const keys=defs.map(d=>d[0]).filter(k=>{const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(74,Math.min(104,holder.height*.2));
+      defs.forEach(([k])=>{btns[k].hidden=!keys.includes(k);});
+      keys.forEach((k,j)=>{const a=-Math.PI/2+j*2*Math.PI/n;btns[k].style.transform='translate('+Math.round(Math.cos(a)*R)+'px,'+Math.round(Math.sin(a)*R)+'px)';});
+    }else if(level===2){
+      const left=cx>holder.width*.55;panel.style.maxHeight=Math.max(160,holder.height-24)+'px';
+      panel.style.left=left?'auto':'44px';panel.style.right=left?'44px':'auto';
+      const h=panel.offsetHeight||240;panel.style.top=Math.round(Math.max(12-cy,Math.min(-h/2,holder.height-12-cy-h)))+'px';
+    }
+  }
+  window.radialPlace=place;
+})();

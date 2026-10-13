@@ -342,3 +342,20 @@ html.avatars #storyViewer{visibility:visible}
 .tool-section.collapsible:not(.is-open)>*:not(.cs-head){display:none!important}
 .tool-section.collapsible.is-open>.cs-head{margin-bottom:12px}
 html.clean .scene-bar{display:none!important}
+
+/* 人物四周的圓形選單 */
+#radial{position:absolute;z-index:8;width:0;height:0;pointer-events:none}
+#radial[hidden]{display:none}
+.radial-ring,.radial-panel,.radial-back{pointer-events:auto}
+.radial-btn{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:2px solid #e9b94e;background:rgba(19,35,58,.94);color:#ffdd78;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 16px rgba(6,14,28,.45);transition:transform .18s ease,background .15s;padding:0}
+.radial-btn:hover{background:#2a4670}
+.radial-btn svg,.radial-back svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.radial-btn span{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none}
+.radial-btn[hidden]{display:none}
+.radial-back{position:absolute;left:-23px;top:-23px;width:46px;height:46px;border-radius:50%;border:2px solid #e9b94e;background:rgba(19,35,58,.96);color:#ffdd78;display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 6px 16px rgba(6,14,28,.45)}
+.radial-back[hidden],.radial-panel[hidden],.radial-ring[hidden]{display:none}
+.radial-panel{position:absolute;width:260px;overflow:auto;padding:12px 14px;border-radius:14px;background:rgba(19,35,58,.97);border:1px solid #33507a;box-shadow:0 16px 34px rgba(6,14,28,.45);color:#e8eef7;font-size:12px}
+.radial-title{display:block;font-size:14px;margin-bottom:6px}
+.radial-sec{border-top:0!important;padding:0!important}
+.radial-sec>.cs-head{display:none}
+.person-card.radial-hide{display:none!important}

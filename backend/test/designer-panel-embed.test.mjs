@@ -127,7 +127,7 @@ test('滑過預覽、點一下固定；固定後才吃得到滑鼠', async () =>
   assert.match(js, /function setCardPinned\(value\)\{cardPinned=value;\$\('personCard'\)\.classList\.toggle\('is-pinned',value\);\}/);
   // 點人物＝固定，點空白＝取消固定並收起。
   assert.match(js, /select\(hit\.i\);if\(embedMode\)setCardPinned\(true\)/);
-  assert.match(js, /\{if\(embedMode\)setCardPinned\(false\);select\(null\);\}/);
+  assert.match(js, /\{if\(embedMode\)setCardPinned\(false\);select\(null\);if\(window\.radialClose\)window\.radialClose\(\);\}/);
   assert.match(js, /game\.addEventListener\('pointerleave',\(\)=>\{setHoverStory\(-1\);if\(embedMode&&!cardPinned\)select\(null\);\}\)/);
   // 關閉鈕要留著：固定之後卡片才吃得到滑鼠，剛好就是需要它的時候。
   assert.doesNotMatch(js, /\$\('personCardClose'\)\.hidden=true/, '不該再把關閉鈕藏起來');
