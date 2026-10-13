@@ -139,7 +139,7 @@ const shadowBlurFor=v=>embedMode?0:v;
 if(embedMode){document.documentElement.classList.add('embed');game.tabIndex=-1;game.setAttribute('aria-label','設計部即時狀態場景');}
 // 嵌在設計需求系統裡時，iframe 的文件底色是瀏覽器依 color-scheme 畫的——html 與 body 都設成透明
 // 也蓋不掉，深色模式下就會卡著一塊白。外層切換深淺色時會用 postMessage 告訴我們，跟著設就對了。
-if(embedMode){
+if(embedMode||document.documentElement.classList.contains('clean')){// 編輯版（clean）也要跟外層同色系，不然外層宣告深色時會被塗成白底
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin)return;
     const data=event.data;
