@@ -1325,10 +1325,10 @@ function drawMusicContent(p,i,layout,x,y,w,h){
 /** 算出這個人的對話框要多大（不畫）。ignoreCeiling 是「先不管上面擋不擋得住」——
  *  版面要先知道對話框想長多高，才有辦法在框裡把上面的空間留剛好（見 sceneTopExtent）。 */
 // 下排人物（背對畫面、坐在桌子下側）的對話框放在名牌下方，尾巴朝上。
-const bubbleBelow=p=>names.indexOf(p.name)>=3;
-const belowTipY=p=>Math.round(p.y+14+PLATE_NAME_H+6);
+function bubbleBelow(p){return names.indexOf(p.name)>=3;}// function 宣告（會提升）：載入時 syncSceneTop 就會呼叫，用 const 會踩到 TDZ 讓整個場景空白
+function belowTipY(p){return Math.round(p.y+14+PLATE_NAME_H+6);}
 // 同時有音樂跑馬燈與對話：跑馬燈在原位，對話疊在它外側（上排往上、下排往下）。
-const musicBubbleH=()=>{const font=scaledFont(BUBBLE_FONT,9,22),lh=Math.max(BUBBLE_LINE,Math.round(font*1.28));return Math.round(lh+BUBBLE_PAD_Y*2+4);};
+function musicBubbleH(){const font=scaledFont(BUBBLE_FONT,9,22),lh=Math.max(BUBBLE_LINE,Math.round(font*1.28));return Math.round(lh+BUBBLE_PAD_Y*2+4);}
 function bubbleLayout(p,ignoreCeiling=false,part=''){
   if(part!=='text'&&musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
     const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
