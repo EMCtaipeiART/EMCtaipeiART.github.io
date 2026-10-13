@@ -1225,7 +1225,7 @@ function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitur
 // 椅子只在「有人而且在座」時才畫。離席時本來就不畫；左下角那個空位到了灰階時段
 //（平日 18:00 之後，以及週末與國定假日整天）也把椅子收掉，只留灰階的桌子與桌上的電腦
 // ——stationDimmed() 這幾種情況都涵蓋了。
-function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
+function drawChair(s){if(stationDimmed(s))return;if(s.row){if(bottomArt.chair.complete&&bottomArt.chair.naturalWidth){ctx.imageSmoothingEnabled=false;ctx.drawImage(bottomArt.chair,s.x-BCHAIR_W/2,s.y+40-BCHAIR_H,BCHAIR_W,BCHAIR_H);}return;}furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 function drawDesk(s){
   const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);
@@ -1238,8 +1238,8 @@ function drawDesk(s){
   ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,deskTop+faceDraw,drawW,footDraw);
 }
 // 下排桌面：接在上排桌面正下方（BD_TOP 起），電腦用正面圖放在桌面上，椅子是背面圖（蓋在人物前面）。
-const bottomArt={imac:new Image(),minimon:new Image()},bottomGray=new Map();
-setAsset(bottomArt.imac,'assets/bottom-imac.webp?v=2');setAsset(bottomArt.minimon,'assets/bottom-minimon.webp?v=2');
+const bottomArt={imac:new Image(),minimon:new Image(),chair:new Image()},bottomGray=new Map();
+setAsset(bottomArt.imac,'assets/bottom-imac.webp?v=2');setAsset(bottomArt.minimon,'assets/bottom-minimon.webp?v=2');setAsset(bottomArt.chair,'assets/bottom-chairback.webp?v=2');
 Object.values(bottomArt).forEach(img=>img.addEventListener('load',markDirty));
 const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_CENTER=BD_TOP+Math.round(BD_FACE/2)-6,BD_MARK_Y=BD_TOP+58,BCHAIR_W=76,BCHAIR_H=119;
 function grayOfImage(img){
@@ -1466,7 +1466,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){requestAnimationFrame(render);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:99999,draw:()=>drawDeskPlate(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(s=>drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s));positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:50000,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:99999,draw:()=>drawDeskPlate(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(s=>drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s));positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
