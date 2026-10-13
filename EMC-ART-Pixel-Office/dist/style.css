@@ -387,3 +387,5 @@ html.clean .canvas-wrap{margin-top:0}html.clean #game:focus,html.clean #game:foc
 /* 元宇宙編輯頁：限時動態滿版（外層會把 iframe 放大成整個視窗，這裡讓播放視窗填滿） */
 html.clean #storyViewer{width:100vw;height:100dvh;max-width:none;max-height:none}
 html.clean .sv-stage{height:100dvh;border-radius:0}
+
+.radial-panel [data-status="present"]{display:none}

@@ -437,7 +437,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=86':UNI_URL+'?embed=1&pad=.72&v=72';
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=87':UNI_URL+'?embed=1&pad=.72&v=73';
       $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -3907,7 +3907,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 對話框／音樂／限時動態直接用首頁自己讀到的辦公室狀態，不用等隱藏辦公室載完（頭像圖仍由它提供） */
     /* 關閉元宇宙時存的頭像快照：網址帶版本，換造型存了新快照就換新網址；有快照就直接用，不必等隱藏的像素辦公室畫出來 */
     const snapUrl=name=>{const v=state.avatarSnap&&state.avatarSnap[name];return v?API.replace(/\/api\/?$/,'')+'/avatar/'+encodeURIComponent(name)+'?v='+v:''};
-    function applySnapshots(){if(!state.pixAvatars)state.pixAvatars={};for(const name of Object.keys(state.avatarSnap||{})){const u=snapUrl(name);if(!u)continue;const e=state.pixAvatars[name]||(state.pixAvatars[name]={img:'',message:'',music:null,status:'',story:{count:0,unread:false}});e.img=u}}
+    function applySnapshots(){if(!state.pixAvatars)state.pixAvatars={};for(const name of Object.keys(state.avatarSnap||{})){const u=snapUrl(name);if(!u)continue;const e=state.pixAvatars[name]||(state.pixAvatars[name]={img:'',message:'',music:null,status:'',story:{count:0,unread:false}});if(!/^data:image\/png/.test(e.img||''))e.img=u}}
     function mergeOfficeIntoAvatars(data){
       try{
         state.pixAvatars=state.pixAvatars||{};let seen=new Set();try{seen=new Set(JSON.parse(localStorage.getItem('pixel-story-seen')||'[]'))}catch(e){}
