@@ -50,7 +50,7 @@ const BUBBLE_CLEAR=8;// 下排的對話框與上排名牌之間要留的空隙
 // 以前寫死 .8，那是還沒算對話框的年代；現在直接從對話框的尺寸算回來，改尺寸不用重算。
 const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 // 上下兩排桌子合併成一張：下排人物坐在桌子下側、背對畫面。邏輯座標不動（存在後端的位置照用），畫面上把下排往上收到 BOTTOM_FEET。
-const BOTTOM_FEET=640,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
+const BOTTOM_FEET=620,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
 const viewY=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
@@ -399,7 +399,7 @@ function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=fal
     for(const[sx,sy,sw,sh,cx0,bagWidth]of bags){const cx=eyeDx?Math.sign(cx0)*eyeDx:cx0,dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
 function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
-function select(i){selected=i;keys.clear();markDirty();document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
+function select(i){selected=i;keys.clear();markDirty();document.documentElement.classList.toggle('has-sel',i!==null&&i!==undefined);document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
   if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
@@ -1232,7 +1232,7 @@ function drawDesk(s){
 const bottomArt={imac:new Image(),minimon:new Image(),chair:new Image()},bottomGray=new Map();
 setAsset(bottomArt.imac,'assets/bottom-imac.webp?v=2');setAsset(bottomArt.minimon,'assets/bottom-minimon.webp?v=2');setAsset(bottomArt.chair,'assets/bottom-chairback.webp?v=2');
 Object.values(bottomArt).forEach(img=>img.addEventListener('load',markDirty));
-const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=125,BD_COMPUTER_BASE=BD_TOP+BD_FACE-8,BD_MARK_Y=BD_TOP+BD_FACE-34,BCHAIR_W=76,BCHAIR_H=119;
+const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=125,BD_CENTER=BD_TOP+Math.round(BD_FACE/2),BD_MARK_Y=BD_TOP+BD_FACE-25,BCHAIR_W=76,BCHAIR_H=119;
 function grayOfImage(img){
   if(bottomGray.has(img))return bottomGray.get(img);
   const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
@@ -1246,7 +1246,7 @@ function drawDeskBottom(s){
   ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP,drawW,BD_FACE);
   ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT,left,BD_TOP+BD_FACE,drawW,footDraw);
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
-  if(img.complete&&img.naturalWidth){const w=mini?190:120,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_COMPUTER_BASE-h,w,h);}
+  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?190:120,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
 }
 /** 把一段文字折成不超過 maxWidth 的幾行（呼叫前要先設好 ctx.font）。 */
 function wrapText(text,maxWidth){
@@ -1278,7 +1278,7 @@ function drawDeskPlate(s){
   ctx.save();
   ctx.font=`bold ${font}px sans-serif`;
   const w=Math.max(84,ctx.measureText(s.name).width+24),h=Math.max(PLATE_NAME_H,font+8);
-  const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:s.y+PLATE_TOP);
+  const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:BD_TOP-h);
   ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;
   ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
   ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1290,7 +1290,7 @@ function drawDeskPlate(s){
  *  下排：上排名牌的下緣（再高就把別人的名字蓋掉——這是舊版最醜的那個問題）。
  *  判斷用「頭頂有沒有低於上排名牌」，所以在完整版走到兩排中間的人也會自己挑對的那一條。 */
 function bubbleCeiling(p){
-  const plateBottom=EMBED_ROW_TOP+PLATE_TOP+Math.max(PLATE_NAME_H,scaledFont(15,11,32)+8)+BUBBLE_CLEAR;
+  const plateBottom=BD_TOP+BUBBLE_CLEAR;
   if(p.y-150>=plateBottom)return plateBottom;
   return embedMode?EMBED_CONTENT.y0+4:10;
 }

@@ -359,3 +359,11 @@ html.clean .scene-bar{display:none!important}
 .radial-sec{border-top:0!important;padding:0!important}
 .radial-sec>.cs-head{display:none}
 .person-card.radial-hide{display:none!important}
+
+/* 編輯版（桌機）：辦公室置中；右側工具欄先收起來，點選人物才從右邊滑出（浮在上面，不推擠場景） */
+html.clean .canvas-wrap{margin-top:26px}
+@media (min-width:900px){
+  html.clean main{display:block;position:relative}
+  html.clean aside{position:absolute;top:8px;right:8px;width:340px;max-height:calc(100% - 16px);overflow:auto;z-index:9;transition:opacity .2s ease,transform .2s ease}
+  html.clean:not(.has-sel) aside{opacity:0;transform:translateX(24px);pointer-events:none}
+}
