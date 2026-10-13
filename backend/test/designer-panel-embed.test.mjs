@@ -176,7 +176,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能寫死：下排的對話框往上長，不能蓋到
   // 上排的名牌。比例直接從對話框的尺寸推回來，改對話框不用重算。
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
-  assert.match(js, /const BOTTOM_FEET=595,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
+  assert.match(js, /const BOTTOM_FEET=568,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
   assert.match(js, /const viewY=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
   // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
