@@ -392,6 +392,4 @@ html.clean .sv-stage{height:100dvh;border-radius:0}
 
 html.ro aside,html.ro .joystick,html.ro #radial{display:none!important}
 
-.share-tabs{display:flex;gap:6px;margin:10px 0 8px}.share-tab{flex:1;border:1px solid #3c526f;background:#0f2038;color:#a6b6cd;border-radius:8px;padding:7px 0;font-size:13px;font-weight:700;cursor:pointer}.share-tab.on{background:#1d3a63;color:#fff;border-color:#4f7bb5}
 .say-btns{display:flex;align-items:center;gap:8px}
-.radial-panel .share-tab{background:#f1f5fa;color:#33475f;border-color:#c9d3e0}.radial-panel .share-tab.on{background:#dbe8fb;color:#1b2c47;border-color:#7da3d8}
