@@ -1721,7 +1721,6 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       // 整個午休都會卡在下班——這正是使用者回報的那個情況。
       if (!['present', 'overtime', 'lunch', 'toilet', 'offwork'].includes(status)) continue;
       if (!holiday && state.statusSource === 'manual' && Number(state.statusAt) > lastSeen + PIXEL_OFFICE_OFFLINE_MS) continue;
-      if (status === 'toilet' && pixelOfficeIsWorkday(nowMs) && nowMs - lastSeen <= PIXEL_OFFICE_AWAY_GRACE_MS) continue;
       const next = pixelOfficeOfflineStatus(nowMs, lastSeen);
       if (status === next) continue;
       state.status = next;
