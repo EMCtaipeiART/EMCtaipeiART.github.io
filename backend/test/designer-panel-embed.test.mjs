@@ -86,7 +86,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   // 桌牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
   // 連同桌牌整塊放進框裡，不會被底邊裁掉。桌牌上緣沿用原本名牌的位置。
   assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
-  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.y\+PLATE_TOP\);/);
+  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.row\?s\.y\+14:s\.y\+PLATE_TOP\);/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -176,8 +176,8 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 下排往上收，中間的空地才不會佔掉一半高度。收多少不能寫死：下排的對話框往上長，不能蓋到
   // 上排的名牌。比例直接從對話框的尺寸推回來，改對話框不用重算。
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
-  assert.match(js, /const EMBED_ROW_SQUEEZE=Math\.min\(1,\(PLATE_TOP\+PLATE_NAME_H\+BUBBLE_CLEAR\+BUBBLE_MAX_H\+BUBBLE_HEAD_GAP\+150\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\);/);
-  assert.match(js, /const viewY=y=>embedMode&&y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
+  assert.match(js, /const BOTTOM_FEET=640,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
+  assert.match(js, /const viewY=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
   // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
   assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
@@ -189,7 +189,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   assert.match(js, /const layout=bubbleLayout\(p,true\);/);
   assert.match(js, /if\(!embedMode\|\|fitting\)return;/, 'syncSceneTop 會回頭呼叫 fitEmbedView，要擋遞迴');
   // 下緣是下排名牌的最低點，跟著常數與壓縮比例走。
-  assert.match(js, /y1:EMBED_ROW_TOP\+\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE\+PLATE_TOP\+PLATE_NAME_H\+8/);
+  assert.match(js, /y1:BOTTOM_FEET\+40/);
   // 算出來的比例要真的夠：下排的對話框長到最高時，不能碰到上排名牌的下緣。
   const c = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|BUBBLE_LINE|BUBBLE_MAX_LINES|BUBBLE_PAD_Y|BUBBLE_TAIL|BUBBLE_HEAD_GAP|BUBBLE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
   const bubbleMaxH = c.BUBBLE_MAX_LINES * c.BUBBLE_LINE + c.BUBBLE_PAD_Y * 2 + c.BUBBLE_TAIL;
@@ -289,8 +289,8 @@ test('換上新的桌子素材，左中右三種形狀各就各位', async () =>
   assert.match(js, /\{x:548,y:355,type:0,empty:6,name:'Leona'\}/);
   assert.match(js, /\{x:768,y:355,type:1,empty:7,name:'Amber'\}/);
   assert.match(js, /\{x:988,y:355,type:3,empty:8,name:'Noise'\}/);
-  assert.match(js, /\{x:548,y:695,type:4,empty:6,name:''\}/);
-  assert.match(js, /\{x:988,y:695,type:2,empty:8,name:'Machi'\}/);
+  assert.match(js, /\{x:548,y:695,type:4,empty:6,name:'',row:1\}/);
+  assert.match(js, /\{x:988,y:695,type:2,empty:8,name:'Machi',row:1\}/);
   // 繪製寬度要讓素材的分隔線對齊座位間距，相鄰兩張才接得平整。
   assert.match(js, /const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;/);
   assert.match(js, /const DESK_DRAW_SCALE=DESK_SEAT_GAP\/DESK_SRC_UNIT;/);
@@ -328,7 +328,8 @@ test('左下角空位依時段轉灰階，週末與國定假日整天灰階，�
   // 椅子也要跟著灰，且六張椅背上緣都要降低到人物頭部中線。
   assert.match(js, /const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;/);
   // 椅子只在「有人而且在座」時才畫：離席不畫，左下角空位到了灰階時段也收掉，只留桌子與桌上電腦。
-  assert.match(js, /function drawChair\(s\)\{if\(stationDimmed\(s\)\)return;furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
+  assert.match(js, /function drawChair\(s\)\{if\(stationDimmed\(s\)\)return;if\(s\.row\)\{/);
+  assert.match(js, /furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
 });
 
 test('人物卡的「未開始」是紅燈', async () => {
