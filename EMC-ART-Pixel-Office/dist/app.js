@@ -1225,7 +1225,7 @@ function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitur
 // 椅子只在「有人而且在座」時才畫。離席時本來就不畫；左下角那個空位到了灰階時段
 //（平日 18:00 之後，以及週末與國定假日整天）也把椅子收掉，只留灰階的桌子與桌上的電腦
 // ——stationDimmed() 這幾種情況都涵蓋了。
-function drawChair(s){if(stationDimmed(s))return;if(s.row){if(bottomArt.chair.complete&&bottomArt.chair.naturalWidth){ctx.imageSmoothingEnabled=false;ctx.drawImage(bottomArt.chair,s.x-BCHAIR_W/2,s.y+40-BCHAIR_H,BCHAIR_W,BCHAIR_H);}return;}furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
+function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 function drawDesk(s){
   const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);
@@ -1285,22 +1285,24 @@ function drawDeskPlate(s){
   if(!s.name)return;
   const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st&&st.id!=='present'?s.name+' ('+st.text+')':s.name;
   const seated=!st||st.id==='present'||st.id==='overtime';
-  const font=scaledFont(12,9,26);
+  const col=PLATE_COLORS[(st&&st.id)||'present']||PLATE_COLORS.present;
   ctx.save();
-  ctx.font=`bold ${font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
-  const w=Math.max(64,Math.round(ctx.measureText(name).width+20)),h=font+8;
+  ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';
+  const w=Math.max(64,Math.round(ctx.measureText(name).width+22)),h=22;
   const iconSize=DESK_ICON_BASE*((st&&DESK_ICON_SCALE[st.symbol])||1);
-  // 上排：人在座位上＝壓在電腦中間；沒人（開會、廁所…）＝圖示上方。下排：桌子下緣。
+  // 上排：人在座位上＝壓在電腦中間；沒人（開會、廁所…）＝圖示上方。下排：人在座＝頭頂上方；沒人＝桌子下緣。
   let y;
-  if(s.row)y=BD_TOP+BD_FACE-h+12;
+  if(s.row)y=seated&&p?Math.round(p.y-150-h-PLATE_HEAD_GAP):BD_TOP+BD_FACE-h+12;
   else if(seated)y=s.y-40-PLATE_MONITOR_MID-Math.round(h/2);
   else y=s.y-24-Math.round(iconSize/2)-h-2;
   const x=Math.round(s.x-w/2);y=Math.round(y);
-  softPanel(ctx,x,y,w,h,{radius:Math.round(h/2),fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});
+  softPanel(ctx,x,y,w,h,{radius:11,fill:col[0],stroke:col[1],lineWidth:1,shadow:true});
   ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(name,s.x,y+h/2+1);
+  ctx.fillText(name,s.x,y+h/2+.5);
   ctx.textBaseline='alphabetic';ctx.restore();
 }
+const PLATE_HEAD_GAP=84;
+const PLATE_COLORS={present:['#ffffff','#c9d3e0'],overtime:['#fff6d6','#e2b04a'],lunch:['#ffe8d4','#e8a064'],meeting:['#e3ecff','#7da3d8'],leave:['#e3f6ea','#6cc08a'],offwork:['#e9edf2','#aab4c2'],toilet:['#e2f3fa','#6fb7d6'],abroad:['#efe6fb','#a98bd6'],out:['#fde6e6','#e08a8a']};
 const PLATE_MONITOR_MID=-14;
 /** 對話框往上最多能長到哪裡。
  *  上排：場景的上緣（再高就被框切掉）。
@@ -1466,7 +1468,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){requestAnimationFrame(render);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:50000,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:99999,draw:()=>drawDeskPlate(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(s=>drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s));positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:99999,draw:()=>drawDeskPlate(s)});});viewPeople.forEach((p,i)=>layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)}));layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>drawOverlay(i,time));people.forEach((p,i)=>drawActionLabel(i));viewStations.forEach(s=>drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s));positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
