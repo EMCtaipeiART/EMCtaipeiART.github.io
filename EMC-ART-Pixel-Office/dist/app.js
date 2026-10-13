@@ -1283,7 +1283,7 @@ function scaledFont(base,screenTarget,max){
 /** 名牌：貼在桌子前緣，只有名字。 */
 function drawDeskPlate(s){
   if(!s.name)return;
-  const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st?s.name+' ('+st.text+')':s.name;
+  const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st&&st.id!=='present'?s.name+' ('+st.text+')':s.name;
   const font=scaledFont(15,11,32);
   ctx.save();
   ctx.font=`bold ${font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
