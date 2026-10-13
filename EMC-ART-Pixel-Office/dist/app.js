@@ -1292,7 +1292,7 @@ function drawDeskPlate(s){
   const iconSize=DESK_ICON_BASE*((st&&DESK_ICON_SCALE[st.symbol])||1);
   // 上排：人在座位上＝壓在電腦中間；沒人（開會、廁所…）＝圖示上方。下排：人在座＝頭頂上方；沒人＝桌子下緣。
   let y;
-  if(s.row)y=seated&&p?Math.round(p.y-150-h-PLATE_HEAD_GAP):BD_TOP+BD_FACE-h+12;
+  if(s.row)y=seated?Math.round(s.y-PLATE_SEAT_RISE):BD_TOP+BD_FACE-h+12;
   else if(seated)y=s.y-40-PLATE_MONITOR_MID-Math.round(h/2);
   else y=s.y-24-Math.round(iconSize/2)-h-2;
   const x=Math.round(s.x-w/2);y=Math.round(y);
@@ -1301,7 +1301,7 @@ function drawDeskPlate(s){
   ctx.fillText(name,s.x,y+h/2+.5);
   ctx.textBaseline='alphabetic';ctx.restore();
 }
-const PLATE_HEAD_GAP=116;
+const PLATE_SEAT_RISE=152;
 const PLATE_COLORS={present:['#ffffff','#c9d3e0'],overtime:['#fff6d6','#e2b04a'],lunch:['#ffe8d4','#e8a064'],meeting:['#e3ecff','#7da3d8'],leave:['#e3f6ea','#6cc08a'],offwork:['#e9edf2','#aab4c2'],toilet:['#e2f3fa','#6fb7d6'],abroad:['#efe6fb','#a98bd6'],out:['#fde6e6','#e08a8a']};
 const PLATE_MONITOR_MID=-14;
 /** 對話框往上最多能長到哪裡。
