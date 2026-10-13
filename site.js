@@ -437,7 +437,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=77':UNI_URL+'?embed=1&pad=.72&v=66';
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=78':UNI_URL+'?embed=1&pad=.72&v=66';
       $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -453,7 +453,7 @@
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){
       const go=()=>{state.uniEdit=false;state.home='board';show('board')},fr=$('uniFrame');
       /* 關閉編輯中的元宇宙：先請遊戲把本人目前造型的頭像存成快照（存過的造型不必重拍），完成（最多等 3.5 秒）再關 */
-      if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=()=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go()},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish()},t=setTimeout(finish,3500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
+      if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=()=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go()},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish()},t=setTimeout(finish,2000);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
       go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;

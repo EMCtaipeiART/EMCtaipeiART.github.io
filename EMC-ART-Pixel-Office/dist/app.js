@@ -1563,10 +1563,14 @@ window.addEventListener('message',async event=>{
     const i=names.findIndex(n=>n.toLowerCase()===String(storyIdentity.name||'').toLowerCase());
     if(i<0||!ready||!storyLoggedIn()){done();return;}
     loadAccessories();
-    try{await loadCustomList();}catch{}// 先讀一次最新的自訂頭像／配件，剛編輯過的才會用新版
+    // 造型跟上次存過的快照一樣就直接結束（不重讀清單、不打網路），關閉元宇宙才不用等
+    const memo='pixelSnap:'+String(storyIdentity.name||'').toLowerCase();let last='';try{last=localStorage.getItem(memo)||'';}catch{}
+    if(last&&accessoriesReady()&&lookKeyOf(i)===last){done();return;}
+    try{await loadCustomList();}catch{}// 造型有變：先讀一次最新的自訂頭像／配件，剛編輯過的才會用新版
     const key=lookKeyOf(i),base={action:'pixelOfficeAvatarSnapshot',token:storyIdentity.token,lookKey:key};
     const r=await syncCall(base);
     if(r&&r.need&&accessoriesReady())await syncCall({...base,png:avatarImageOf(i)});
+    if(r&&(!r.need||accessoriesReady())){try{localStorage.setItem(memo,key);}catch{}}
   }catch{}
   done();
 });
