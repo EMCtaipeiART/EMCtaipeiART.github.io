@@ -1283,15 +1283,15 @@ function scaledFont(base,screenTarget,max){
 /** 名牌：貼在桌子前緣，只有名字。 */
 function drawDeskPlate(s){
   if(!s.name)return;
+  const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st?s.name+' ('+st.text+')':s.name;
   const font=scaledFont(15,11,32);
   ctx.save();
-  ctx.font=`bold ${font}px sans-serif`;
-  const w=Math.max(84,ctx.measureText(s.name).width+24),h=Math.max(PLATE_NAME_H,font+8);
+  ctx.font=`bold ${font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
+  const w=Math.max(84,Math.round(ctx.measureText(name).width+26)),h=Math.max(PLATE_NAME_H,font+8);
   const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:BD_TOP-h-12);
-  ctx.fillStyle='#fff7e5';ctx.strokeStyle='#182c48';ctx.lineWidth=2;
-  ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);
-  ctx.fillStyle='#223652';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(s.name,s.x,y+h/2+1);
+  softPanel(ctx,x,y,w,h,{radius:Math.round(h/2),fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});
+  ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(name,s.x,y+h/2+1);
   ctx.textBaseline='alphabetic';ctx.restore();
 }
 /** 對話框往上最多能長到哪裡。
@@ -1446,7 +1446,7 @@ const DESK_ICON_BASE=104;
 const DESK_ICON_SCALE={power:.8,briefcase:.78};
 /** 加班標籤：移除場景中的月亮，只把「加班中」置中畫在桌面中央。 */
 function drawOvertimeBadge(s,p){const status=statuses.find(item=>item.id==='overtime'),x=s.x,h=24;ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.text).width+22),labelY=s.y+(s.row?54:24);softPanel(ctx,x-w/2,labelY-h/2,w,h,{radius:12,fill:'#fff6d6',stroke:'#e2b04a',lineWidth:1,shadow:true});ctx.fillStyle='#6a4a10';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.text,x,labelY+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-w/2,y:labelY-h/2,w,h});}
-function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=DESK_ICON_BASE*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=s.row?iconY+DESK_ICON_BASE*.4+2:iconY-DESK_ICON_BASE/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:s.row?iconY-iconSize/2:labelY,w:iconSize,h:s.row?iconSize+h+2:iconY+iconSize/2-labelY});}
+function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime')return;const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=DESK_ICON_BASE*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:iconY-iconSize/2,w:iconSize,h:iconSize});}
 const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||actionOf(i)||(!storyReducedMotion.matches&&storyUnread(p.name))));
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
