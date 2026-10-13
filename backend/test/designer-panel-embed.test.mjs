@@ -183,7 +183,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
   assert.match(js, /function sceneTopExtent\(\)\{/);
   assert.match(js, /top=Math\.min\(top,p\.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout\.h-8-\(layout\.lift\|\|0\)\)/);
-  assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;\s*fitEmbedView\(\);/,
+  assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;EMBED_CONTENT\.y1=bottom;\s*fitEmbedView\(\);/,
     '上緣變了要重新 fit');
   // 算「想長多高」時不能看天花板，否則會變成「框小→少畫一行→框可以更小」的死循環。
   assert.match(js, /const layout=bubbleLayout\(p,true\);/);
@@ -429,7 +429,7 @@ test('對話框回到人物頭上：小、半透明，而且長不出場景外',
   assert.ok(fn && layout, '要有 drawBubble() 與 bubbleLayout()');
   // 上不會被切、下不會蓋到上排名牌：可用高度是算出來的，放不下就少畫幾行。
   assert.match(js, /function bubbleCeiling\(p\)\{/);
-  assert.match(layout, /const room=ignoreCeiling\?BUBBLE_MAX_LINES:Math\.floor\(\(tipY-BUBBLE_TAIL-BUBBLE_PAD_Y\*2-bubbleCeiling\(p\)\)\/lineHeight\);/,
+  assert.match(layout, /const room=ignoreCeiling\|\|below\?BUBBLE_MAX_LINES:Math\.floor\(\(tipY-BUBBLE_TAIL-BUBBLE_PAD_Y\*2-bubbleCeiling\(p\)\)\/lineHeight\);/,
     '行數要由實際可用高度決定，不能寫死');
   assert.match(layout, /lines\[limit-1\]=ellipsize\(lines\[limit-1\],inner\)/, '放不下要用「…」收尾');
   // 半透明＋柔和陰影＝浮在場景上的感覺（2026-09-24 使用者要求）。

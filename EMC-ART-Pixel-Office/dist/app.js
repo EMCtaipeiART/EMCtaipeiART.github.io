@@ -66,17 +66,17 @@ const SCENE_TOP_MIN=EMBED_ROW_TOP-158;
 const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
 let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
-let cleanTop=null;
+let cleanTop=null,cleanBottom=BOTTOM_FEET+40;
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
   let top=EMBED_ROW_TOP-158;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
-  cleanTop=top;
+  cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
   const narrow=document.documentElement.classList.contains('clean-narrow');
   if(narrow)top=Math.min(top,140);
   cleanTop=top;
-  const x0=narrow?300:424,x1=narrow?1236:1112,y0=top,y1=BOTTOM_FEET+40+(narrow?170:0),bw=x1-x0,bh=y1-y0;
+  const x0=narrow?300:424,x1=narrow?1236:1112,y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
   const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam&&!narrow?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
   wrapEl.style.height=`${Math.round(bh*scale)+padY*2}px`;
@@ -99,7 +99,7 @@ function fitEmbedView(){
   fitting=false;
 }
 function syncViewLayout(){
-  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(document.documentElement.classList.contains('clean')&&ready){let t=EMBED_ROW_TOP-158;try{t=Math.min(t,sceneTopExtent())}catch(error){}if(t!==cleanTop)fitCleanView();}return;}
+  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(document.documentElement.classList.contains('clean')&&ready){let t=EMBED_ROW_TOP-158;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom)fitCleanView();}return;}
   viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
   syncSceneTop();
@@ -119,10 +119,15 @@ function sceneTopExtent(){
   return Math.round(top);
 }
 /** 上緣變了就重新 fit 一次（fitEmbedView 自己會 markDirty，下一格就會用新的縮放重畫）。 */
+function sceneBottomExtent(){
+  let bottom=BOTTOM_FEET+40;
+  for(const p of viewPeople){if(isAway(p)||!bubbleBelow(p))continue;const l=bubbleLayout(p,true);if(l)bottom=Math.max(bottom,l.tipY+BUBBLE_TAIL+l.h+10);}
+  return Math.round(bottom);
+}
 function syncSceneTop(){
-  const top=sceneTopExtent();
-  if(Math.abs(top-EMBED_CONTENT.y0)<1)return;
-  EMBED_CONTENT.y0=top;
+  const top=sceneTopExtent(),bottom=sceneBottomExtent();
+  if(Math.abs(top-EMBED_CONTENT.y0)<1&&Math.abs(bottom-EMBED_CONTENT.y1)<1)return;
+  EMBED_CONTENT.y0=top;EMBED_CONTENT.y1=bottom;
   fitEmbedView();
 }
 
@@ -1319,10 +1324,13 @@ function drawMusicContent(p,i,layout,x,y,w,h){
 /** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
 /** 算出這個人的對話框要多大（不畫）。ignoreCeiling 是「先不管上面擋不擋得住」——
  *  版面要先知道對話框想長多高，才有辦法在框裡把上面的空間留剛好（見 sceneTopExtent）。 */
+// 下排人物（背對畫面、坐在桌子下側）的對話框放在名牌下方，尾巴朝上。
+const bubbleBelow=p=>names.indexOf(p.name)>=3;
+const belowTipY=p=>Math.round(p.y+14+PLATE_NAME_H+6);
 function bubbleLayout(p,ignoreCeiling=false){
   if(musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
     const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
-    return {music:true,font,lineHeight,lines:[],tipY:Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
+    return {music:true,below:bubbleBelow(p),font,lineHeight,lines:[],tipY:bubbleBelow(p)?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
   }
   const message=String(p.message||'').trim();
   if(!message)return null;
@@ -1332,14 +1340,14 @@ function bubbleLayout(p,ignoreCeiling=false){
   const inner=BUBBLE_MAX_W-BUBBLE_PAD_X*2;
   let lines=wrapText(message,inner).filter(line=>line!=='');
   if(!lines.length){ctx.restore();return null;}
-  const tipY=Math.round(p.y-150-BUBBLE_HEAD_GAP);
-  const room=ignoreCeiling?BUBBLE_MAX_LINES:Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
+  const below=bubbleBelow(p),tipY=below?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP);
+  const room=ignoreCeiling||below?BUBBLE_MAX_LINES:Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
   const limit=Math.max(1,Math.min(BUBBLE_MAX_LINES,room));
   if(lines.length>limit){lines=lines.slice(0,limit);lines[limit-1]=ellipsize(lines[limit-1],inner);}
   const textW=Math.max(...lines.map(line=>ctx.measureText(line).width));
   ctx.restore();
   return {
-    font,lineHeight,lines,tipY,
+    font,lineHeight,lines,tipY,below,
     w:Math.round(Math.min(BUBBLE_MAX_W,Math.max(58,textW+BUBBLE_PAD_X*2))),
     h:Math.round(lines.length*lineHeight+BUBBLE_PAD_Y*2)
   };
@@ -1351,12 +1359,16 @@ function drawBubble(p,personIndex=-1){
   const {lineHeight,lines,tipY,w,h}=layout;
   ctx.save();
   ctx.font=`600 ${layout.font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
-  const y=tipY-BUBBLE_TAIL-h;
+  const y=layout.below?tipY+BUBBLE_TAIL:tipY-BUBBLE_TAIL-h;
   const left=embedMode?EMBED_CONTENT.x0+4:10,right=embedMode?EMBED_CONTENT.x1-4:W-10;
   const x=Math.round(Math.max(left,Math.min(right-w,p.x-w/2)));
   const tipX=Math.max(x+14,Math.min(x+w-14,p.x));
   const r=11,tail=()=>{
     ctx.beginPath();
+    if(layout.below){
+      ctx.moveTo(x+r,y);ctx.lineTo(tipX-7,y);ctx.quadraticCurveTo(tipX-2,y-3,tipX,y-BUBBLE_TAIL);ctx.quadraticCurveTo(tipX+2,y-3,tipX+7,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+      ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();return;
+    }
     ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
     ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
     ctx.lineTo(tipX+7,y+h);ctx.quadraticCurveTo(tipX+2,y+h+3,tipX,y+h+BUBBLE_TAIL);
