@@ -1509,12 +1509,12 @@ function avatarImageOf(i){
   }catch(error){}
   p.look=keepLook;
   if(chin===null)chin=110;
-  const size=AV_CROP.w,sy=chin-size*AV_CROP.chin;
-  o.getContext('2d').drawImage(c,cx-size/2,sy,size,size,0,0,160,160);
+  const size=AV_CROP.w,sy=chin-size*AV_CROP.chin,ax=cx+AV_DX[i];// AV_DX：Leona、Anna 的頭在框裡偏左，裁切窗往左移讓頭回到正中
+  o.getContext('2d').drawImage(c,ax-size/2,sy,size,size,0,0,160,160);
   return o.toDataURL('image/png');
 }
 // 頭像快照的造型代碼：自訂頭像、自訂眼鏡要帶「版本」（更新時間）——重新編輯過大小、位置後版本會變，才不會沿用舊的快照。
-const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'');};
+const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'')+'|c2';};
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const sendAvatars=()=>{
@@ -1543,7 +1543,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
   },400);
 }
-const AV_CROP={w:112,chin:.74};// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
+const AV_CROP={w:112,chin:.74},AV_DX=[-4.5,0,0,-1.8,0];// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
 
 // 首頁頭像右上角的限時動態氣泡：外層點了之後切到多元宇宙頁，再用這則訊息叫場景直接打開那個人的限時動態。
 window.addEventListener('message',event=>{
