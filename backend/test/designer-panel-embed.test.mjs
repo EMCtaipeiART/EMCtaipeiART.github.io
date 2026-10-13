@@ -462,7 +462,7 @@ test('所有狀態的小膠囊排在同一條水平線上', async () => {
   // 就會比別人低 10～11px（2026-09-23 使用者回報）。高度改用未縮放的基準值，圖縮膠囊不跟著縮。
   assert.match(js, /const DESK_ICON_BASE=104;/);
   assert.match(marker, /iconSize=DESK_ICON_BASE\*\(DESK_ICON_SCALE\[status\.symbol\]\|\|1\)/, '圖示才吃縮放');
-  assert.match(marker, /labelY=iconY-DESK_ICON_BASE\/2-h-2;/, '膠囊高度不能吃縮放');
+  assert.match(marker, /labelY=s\.row\?iconY\+DESK_ICON_BASE\*\.4\+2:iconY-DESK_ICON_BASE\/2-h-2;/, '膠囊高度不能吃縮放');
   assert.doesNotMatch(marker, /labelY=iconY-iconSize\/2/, '不要再用縮放後的高度算膠囊');
 
   // 縮小仍然只作用在圖示上——這兩張圖留白少，照 104 畫會比別人大一圈。

@@ -368,3 +368,18 @@ html.clean .canvas-wrap{margin-top:0}html.clean #game:focus,html.clean #game:foc
   html.clean:not(.has-sel) aside{opacity:0;transform:translateX(24px);pointer-events:none}
 }
 .radial-btn{width:56px;height:56px;left:-28px;top:-28px}.radial-btn span{top:60px}
+
+/* 圓形選單：白底淺色（深色底會跟辦公室的藍色桌面混在一起） */
+.radial-btn,.radial-back{background:#fff;color:#1b2c47;border:2px solid #c9d3e0;box-shadow:0 4px 14px rgba(20,35,60,.28)}
+.radial-btn:hover,.radial-back:hover{background:#eef3fa;border-color:#8fa6c4}
+.radial-btn span{color:#1b2c47;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff}
+.radial-panel{background:#fff;color:#1b2c47;border:1px solid #c9d3e0;box-shadow:0 14px 32px rgba(20,35,60,.3)}
+.radial-panel .statuses button,.radial-panel .look-outfits button,.radial-panel .look-chips button,.radial-panel .music-toggle{background:#f1f5fa;color:#33475f;border-color:#c9d3e0}
+.radial-panel .statuses button.active,.radial-panel .look-outfits button.active,.radial-panel .look-chips button.active{background:#fff1c9;color:#18314f;border-color:#e9b94e;box-shadow:none}
+.radial-panel .look-label,.radial-panel .look-hint,.radial-panel .story-hint,.radial-panel .music-hint,.radial-panel .upload small,.radial-panel .story-mine-info span,.radial-panel .music-toggle small{color:#5c6f88}
+.radial-panel .upload{border-color:#b6c3d4}.radial-panel .upload>span{color:#b97b00}
+.radial-panel textarea,.radial-panel .music-panel input{background:#fff;color:#1b2c47;border-color:#c9d3e0}
+.radial-panel textarea::placeholder{color:#8a9bb2}
+.radial-panel .text-button{color:#3f6aa8}
+.radial-panel .story-mine-thumb{background:#e6edf5}
+.radial-panel #count{color:#5c6f88}

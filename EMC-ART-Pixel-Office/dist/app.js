@@ -1131,7 +1131,8 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
   connect();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!ws||ws.readyState>1))connect();});
 })();
-const walls=stations.map(s=>[s.x-122,s.y+18,244,80]);
+// 下排桌子在畫面上接在上排正下方（見 drawDeskBottom），邏輯座標 431～650 是桌面與桌腳，人坐在 695（桌子下側）。
+const walls=stations.map(s=>s.row?[s.x-122,431,244,219]:[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
@@ -1233,7 +1234,7 @@ function drawDesk(s){
 const bottomArt={imac:new Image(),minimon:new Image(),chair:new Image()},bottomGray=new Map();
 setAsset(bottomArt.imac,'assets/bottom-imac.webp?v=2');setAsset(bottomArt.minimon,'assets/bottom-minimon.webp?v=2');setAsset(bottomArt.chair,'assets/bottom-chairback.webp?v=2');
 Object.values(bottomArt).forEach(img=>img.addEventListener('load',markDirty));
-const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=125,BD_CENTER=BD_TOP+Math.round(BD_FACE/2)-14,BD_MARK_Y=BD_TOP+BD_FACE-25,BCHAIR_W=76,BCHAIR_H=119;
+const BD_TOP=EMBED_ROW_TOP-40+Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_FACE=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE),BD_CENTER=BD_TOP+Math.round(BD_FACE/2)-6,BD_MARK_Y=BD_TOP+58,BCHAIR_W=76,BCHAIR_H=119;
 function grayOfImage(img){
   if(bottomGray.has(img))return bottomGray.get(img);
   const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
@@ -1247,7 +1248,7 @@ function drawDeskBottom(s){
   ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP,drawW,BD_FACE);
   ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT,left,BD_TOP+BD_FACE,drawW,footDraw);
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
-  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?190:120,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
+  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
 }
 /** 把一段文字折成不超過 maxWidth 的幾行（呼叫前要先設好 ctx.font）。 */
 function wrapText(text,maxWidth){
@@ -1426,7 +1427,7 @@ const DESK_ICON_BASE=104;
 const DESK_ICON_SCALE={power:.8,briefcase:.78};
 /** 加班標籤：移除場景中的月亮，只把「加班中」置中畫在桌面中央。 */
 function drawOvertimeBadge(s,p){const status=statuses.find(item=>item.id==='overtime'),x=s.x,h=24;ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.text).width+22),labelY=s.y+24;softPanel(ctx,x-w/2,labelY-h/2,w,h,{radius:12,fill:'#fff6d6',stroke:'#e2b04a',lineWidth:1,shadow:true});ctx.fillStyle='#6a4a10';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.text,x,labelY+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-w/2,y:labelY-h/2,w,h});}
-function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=DESK_ICON_BASE*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=iconY-DESK_ICON_BASE/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:labelY,w:iconSize,h:iconY+iconSize/2-labelY});}
+function drawStatusMarker(s){const p=stationPerson(s);if(!p)return;const effective=effectiveStatusId(p);if(effective==='present')return;if(effective==='overtime'){drawOvertimeBadge(s,p);return;}const status=statuses.find(item=>item.id===effective),x=s.x,iconY=s.y-24,iconSize=DESK_ICON_BASE*(DESK_ICON_SCALE[status.symbol]||1);drawSymbol(ctx,status.symbol,x,iconY,iconSize);ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';const w=Math.round(ctx.measureText(status.label).width+22),h=22,labelY=s.row?iconY+DESK_ICON_BASE*.4+2:iconY-DESK_ICON_BASE/2-h-2;softPanel(ctx,x-w/2,labelY,w,h,{radius:11,fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(status.label,x,labelY+h/2+.5);ctx.restore();hits.push({type:'status',i:names.indexOf(p.name),x:x-iconSize/2,y:s.row?iconY-iconSize/2:labelY,w:iconSize,h:s.row?iconSize+h+2:iconY+iconSize/2-labelY});}
 const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||actionOf(i)||(!storyReducedMotion.matches&&storyUnread(p.name))));
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
