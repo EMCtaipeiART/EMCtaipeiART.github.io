@@ -1502,22 +1502,22 @@ function avatarImageOf(i){
   const c=document.createElement('canvas');c.width=130;c.height=190;portrait(c.getContext('2d'),i,false);
   const o=document.createElement('canvas');o.width=o.height=160;
   // 每個人的下巴、臉中心用造型圖的幾何量出來，統一把下巴放在頭像框同一個高度（帽子、長髮不影響）
-  let chin=null,cx=65;
+  let chin=null,cx=65,eyeC=null;
   try{
     const fr=wardrobeFrame(i,'down');
-    if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
+    if(fr&&fr.geom){const s=WD_SCALE*(144/142);chin=(190-3)+(fr.geom.chinY-fr.ay)*s;eyeC=(190-3)+(fr.geom.eyeY-fr.ay)*s;cx=65+(fr.geom.cx-fr.ax)*s;}
   }catch(error){}
   p.look=keepLook;
   if(chin===null)chin=110;
-  // 頭頂到下巴的高度（男生頭髮矮、女生長髮高）不同會讓框裡的頭對不齊：依實際頭頂位置調整裁切大小，讓所有人「頭頂與下巴」落在同樣的高度
-  let size=AV_CROP.w;
-  try{const px=c.getContext('2d').getImageData(0,0,130,190).data;let y0=-1;for(let y=0;y<190&&y0<0;y++)for(let x=0;x<130;x++)if(px[(y*130+x)*4+3]>40){y0=y;break;}if(y0>=0&&chin>y0)size=Math.max(98,Math.min(126,(chin-y0)/AV_TOP_SPAN));}catch(error){}
-  const sy=chin-size*AV_CROP.chin,ax=cx+AV_DX[i];// AV_DX：Leona、Anna 的頭在框裡偏左，裁切窗往左移讓頭回到正中
+  if(eyeC===null)eyeC=chin-24;
+  // 所有人的「眼睛」放在框裡同一個高度、臉大小一致（以前對下巴、再改對頭頂，男生臉會被放太大）
+  const size=AV_CROP.w;
+  const sy=eyeC-size*AV_EYE,ax=cx+AV_DX[i];// AV_DX：Leona、Anna 的頭在框裡偏左，裁切窗往左移讓頭回到正中
   o.getContext('2d').drawImage(c,ax-size/2,sy,size,size,0,0,160,160);
   return o.toDataURL('image/png');
 }
 // 頭像快照的造型代碼：自訂頭像、自訂眼鏡要帶「版本」（更新時間）——重新編輯過大小、位置後版本會變，才不會沿用舊的快照。
-const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'')+'|c3';};
+const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'')+'|c4';};
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const sendAvatars=()=>{
@@ -1546,7 +1546,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
   },400);
 }
-const AV_CROP={w:112,chin:.74},AV_DX=[-3,0,0,-1.5,0],AV_TOP_SPAN=.625;// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
+const AV_CROP={w:112,chin:.74},AV_DX=[-3,0,0,-1.5,0],AV_EYE=.528;// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
 
 // 首頁頭像右上角的限時動態氣泡：外層點了之後切到多元宇宙頁，再用這則訊息叫場景直接打開那個人的限時動態。
 window.addEventListener('message',event=>{
