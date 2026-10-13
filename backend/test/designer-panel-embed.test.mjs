@@ -841,7 +841,7 @@ test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過�
   ]);
   assert.match(js, /function avatarImageOf\(i\)/);
   assert.match(js, /type!=='pixelOfficeSnapshot'/);
-  assert.match(js, /r&&r\.need&&accessoriesReady\(\)/, '沒存過的造型才送圖');
+  assert.match(parent, /if\(r\.need\)\{const r2=await post/, '沒存過的造型才送圖（背景上傳）');
   assert.match(parent, /type:'pixelOfficeSnapshot'/);
   assert.match(parent, /pixelOfficeSnapshotDone/);
   assert.match(parent, /applySnapshots\(\)/);
@@ -866,6 +866,6 @@ test('自訂帽子與眼鏡：遊戲讀公開 API 的 caps／glasses、依各角
 test('頭像快照的造型代碼帶自訂頭像／眼鏡的版本，編輯過大小後不會沿用舊快照', async () => {
   const js = await officeJs();
   assert.match(js, /const lookKeyOf=i=>\{const e=effectiveLook\(i\),ver=id=>/);
-  assert.match(js, /try\{await loadCustomList\(\);\}catch\{\}/);
+  assert.match(js, /done\(\{who,lookKey:key,png:avatarImageOf\(i\)\}\)/);
   assert.match(js, /document\.addEventListener\('visibilitychange',\(\)=>\{if\(!document\.hidden\)loadCustomList\(\);\}\)/);
 });

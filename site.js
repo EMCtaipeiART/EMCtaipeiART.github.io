@@ -437,7 +437,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=78':UNI_URL+'?embed=1&pad=.72&v=66';
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=79':UNI_URL+'?embed=1&pad=.72&v=66';
       $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -450,10 +450,21 @@
       const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
+    /* 頭像快照在背景上傳：遊戲只在本機算好造型代碼與圖片，關閉畫面不用等網路；上傳成功才記下「這個造型已存過」 */
+    async function uploadAvatarSnapshot(p){
+      try{
+        const token=session().token,post=body=>fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body),cache:'no-store'}).then(r=>r.json());
+        const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};
+        const r=await post(base);if(!r||!r.ok)return;
+        if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return}
+        try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}
+        if(typeof refreshAvatarSnapshots==='function')refreshAvatarSnapshots()
+      }catch(err){}
+    }
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-close]')){
       const go=()=>{state.uniEdit=false;state.home='board';show('board')},fr=$('uniFrame');
       /* 關閉編輯中的元宇宙：先請遊戲把本人目前造型的頭像存成快照（存過的造型不必重拍），完成（最多等 3.5 秒）再關 */
-      if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=()=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go()},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish()},t=setTimeout(finish,2000);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
+      if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=payload=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go();if(payload&&payload.lookKey&&payload.png)uploadAvatarSnapshot(payload)},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish(ev.data)},t=setTimeout(finish,1500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
       go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;

@@ -1555,24 +1555,20 @@ window.addEventListener('message',event=>{
   });
 })();
 
-// 關閉元宇宙時：外層叫我把「本人目前造型」的頭像存成快照（首頁頭像框直接用）。這個造型以前存過就只換成它、不必重拍。
-window.addEventListener('message',async event=>{
+// 關閉元宇宙時：外層叫我把「本人目前造型」的頭像準備好（首頁頭像框直接用）。這裡只在本機算出造型代碼與圖片交給外層，
+// 上傳到後端由外層在背景做，關閉畫面不必等網路。造型跟上次存過的一樣就回報不用存。
+window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeSnapshot')return;
-  const done=()=>{try{window.parent.postMessage({type:'pixelOfficeSnapshotDone'},location.origin)}catch{}};
+  const done=extra=>{try{window.parent.postMessage({type:'pixelOfficeSnapshotDone',...extra},location.origin)}catch{}};
   try{
-    const i=names.findIndex(n=>n.toLowerCase()===String(storyIdentity.name||'').toLowerCase());
-    if(i<0||!ready||!storyLoggedIn()){done();return;}
+    const who=String(storyIdentity.name||'').toLowerCase(),i=names.findIndex(n=>n.toLowerCase()===who);
+    if(i<0||!ready||!storyLoggedIn()||!accessoriesReady()){done({});return;}
     loadAccessories();
-    // 造型跟上次存過的快照一樣就直接結束（不重讀清單、不打網路），關閉元宇宙才不用等
-    const memo='pixelSnap:'+String(storyIdentity.name||'').toLowerCase();let last='';try{last=localStorage.getItem(memo)||'';}catch{}
-    if(last&&accessoriesReady()&&lookKeyOf(i)===last){done();return;}
-    try{await loadCustomList();}catch{}// 造型有變：先讀一次最新的自訂頭像／配件，剛編輯過的才會用新版
-    const key=lookKeyOf(i),base={action:'pixelOfficeAvatarSnapshot',token:storyIdentity.token,lookKey:key};
-    const r=await syncCall(base);
-    if(r&&r.need&&accessoriesReady())await syncCall({...base,png:avatarImageOf(i)});
-    if(r&&(!r.need||accessoriesReady())){try{localStorage.setItem(memo,key);}catch{}}
-  }catch{}
-  done();
+    const memo='pixelSnap:'+who;let last='';try{last=localStorage.getItem(memo)||'';}catch{}
+    const key=lookKeyOf(i);
+    if(last&&key===last){done({});return;}
+    done({who,lookKey:key,png:avatarImageOf(i)});
+  }catch{done({});}
 });
 
 // 人物四周的圓形選單（多元宇宙編輯頁）：點人物 → 一圈圖示（狀態、造型、動作、音樂、限時動態、對話）；
