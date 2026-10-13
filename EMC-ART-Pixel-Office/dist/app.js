@@ -1027,7 +1027,7 @@ names.forEach((name,i)=>{const b=document.createElement('button');b.className='r
 moods.forEach(m=>{const b=document.createElement('button');b.dataset.mood=m.id;b.title=m.text;b.append(iconCanvas(m.symbol),document.createTextNode(m.label));b.onclick=()=>setMood(m.id);$('moods').append(b);});
 statuses.forEach(status=>{const b=document.createElement('button');b.dataset.status=status.id;b.title=status.text;b.append(iconCanvas(status.symbol,40),document.createTextNode(status.label));b.onclick=()=>{setStatus(status.id);if(status.id==='present')returnEveryone();};$('statuses').append(b);// 在座：自己回座位，順便讓大家都回到自己的座位（原本畫面上的「全員回座位」按鈕併進來）
 });
-$('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到人物上方':'已清除對話');game.focus({preventScroll:true});};
+document.querySelectorAll('.share-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.share-tab').forEach(x=>{const on=x===t;x.classList.toggle('on',on);x.setAttribute('aria-selected',String(on))});document.querySelectorAll('.share-pane').forEach(p=>{p.hidden=p.id!==t.dataset.pane})});$('sayClear').onclick=()=>{$('message').value='';updateCount();$('say').click()};$('neutral').onclick=()=>setMood('');$('message').oninput=updateCount;$('say').onclick=()=>{people[selected].message=$('message').value.trim();save();pushChange(selected,{message:people[selected].message});toast(people[selected].message?'對話已放到人物上方':'已清除對話');game.focus({preventScroll:true});};
 // 上傳：照片縮到 1200 px；GIF 原檔（保留動畫，5 MB 內）；影片 30 秒內、10 MB 內——太大或是 iPhone 的 .mov
 // （可能是別的瀏覽器放不出來的 HEVC）就在瀏覽器裡重新錄成 720p，再送出。
 const STORY_GIF_MAX=5*1024*1024,STORY_VIDEO_MAX=10*1024*1024,STORY_VIDEO_SECONDS=30;
@@ -1600,11 +1600,11 @@ window.addEventListener('message',event=>{
     status:'<circle cx="12" cy="12" r="8.5"/><path d="M8.5 13.5c1 1.6 2.2 2.3 3.5 2.3s2.5-.7 3.5-2.3M9 9.5h.01M15 9.5h.01"/>',
     look:'<path d="M8 4 4 7l2.5 3L8 9v11h8V9l1.5 1L20 7l-4-3c-.6 1.5-2 2.3-4 2.3S8.6 5.5 8 4z"/>',
     action:'<circle cx="14.5" cy="5" r="2"/><path d="m9 21 2.5-6-2-2.5 1-4 3.5 2 3 .5M7 11l3-3M11.5 15l4 2.5"/>',
-    music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+    share:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
     story:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4"/>',
     say:'<path d="M4 5.5h16v10H12l-4.5 4v-4H4z"/>'};
-  const defs=[['seat','在座'],['status','目前狀態'],['look','造型'],['action','動作'],['music','音樂'],['story','限時動態'],['say','想說的話']];
-  const find={seat:()=>null,status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),music:()=>$('musicSection'),story:()=>$('storyUpload'),say:()=>$('message')};
+  const defs=[['seat','在座'],['status','目前狀態'],['look','造型'],['action','動作'],['share','音樂／對話'],['story','限時動態']];
+  const find={seat:()=>null,status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),share:()=>$('shareSection'),story:()=>$('storyUpload')};
   const secOf=k=>{const e=find[k]();return e&&(e.closest('.tool-section'));};
   const box=document.createElement('div');box.id='radial';box.hidden=true;
   const ring=document.createElement('div');ring.className='radial-ring';
