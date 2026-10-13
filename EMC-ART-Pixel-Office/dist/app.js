@@ -1578,6 +1578,7 @@ window.addEventListener('message',async event=>{
   window.radialClose=()=>{box.hidden=true;level=0;};
   function place(){
     if(box.hidden||selected===null)return;
+    if(keys.size){window.radialClose();return;}// 人物走動時收合選單
     const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect();if(!holder.width||!view.width)return;
     const sx=view.width/W,sy=view.height/H,p=viewPeople[selected]||people[selected];
     const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
