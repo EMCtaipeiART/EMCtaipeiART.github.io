@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8272,
+  "revision": 8273,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-13T13:03:32.003Z",
+  "updatedAt": "2026-10-13T13:05:47.415Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1588,7 +1588,7 @@
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1n2tws9_bX6GwrcCl7LtDLN_luC_Tr04A=w1600","保留期限":"24小時","到期時間":"2026-10-04T08:46:10.247Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1VcHEPpO-5LTgTkVhDqx_KKErckpL-1Cs=w1600","保留期限":"24小時","到期時間":"2026-10-04T09:51:24.132Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1GcYOgu5TCx_rMQKHnXsblQ6NJX-VWHzk=w1600","保留期限":"24小時","到期時間":"2026-10-13T02:44:31.552Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
-        {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/2d86c498-b9ba-47f0-81f8-3438aeda3b48","保留期限":"24小時","到期時間":"2026-10-14T13:00:58.140Z","按讚":"","倒讚":"","留言":"[]","狀態":"","已讀":"Machi , Odin組測試人員"}
+        {"名字":"Machi","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/2d86c498-b9ba-47f0-81f8-3438aeda3b48","保留期限":"24小時","到期時間":"2026-10-13T13:05:47.415Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi , Odin組測試人員"}
       ]
     },
     "bug_report": {
