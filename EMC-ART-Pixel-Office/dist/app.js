@@ -1594,4 +1594,5 @@ window.addEventListener('message',async event=>{
     }
   }
   window.radialPlace=place;
+  $('statuses').addEventListener('click',e=>{if(e.target.closest('[data-status]'))setTimeout(window.radialClose,0);});// 選好狀態（含在座）就收合
 })();
