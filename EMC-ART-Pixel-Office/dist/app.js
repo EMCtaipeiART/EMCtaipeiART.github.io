@@ -1301,7 +1301,7 @@ function drawDeskPlate(s){
   ctx.fillText(name,s.x,y+h/2+.5);
   ctx.textBaseline='alphabetic';ctx.restore();
 }
-const PLATE_HEAD_GAP=84;
+const PLATE_HEAD_GAP=116;
 const PLATE_COLORS={present:['#ffffff','#c9d3e0'],overtime:['#fff6d6','#e2b04a'],lunch:['#ffe8d4','#e8a064'],meeting:['#e3ecff','#7da3d8'],leave:['#e3f6ea','#6cc08a'],offwork:['#e9edf2','#aab4c2'],toilet:['#e2f3fa','#6fb7d6'],abroad:['#efe6fb','#a98bd6'],out:['#fde6e6','#e08a8a']};
 const PLATE_MONITOR_MID=-14;
 /** 對話框往上最多能長到哪裡。
