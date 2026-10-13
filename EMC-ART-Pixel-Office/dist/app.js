@@ -1284,16 +1284,24 @@ function scaledFont(base,screenTarget,max){
 function drawDeskPlate(s){
   if(!s.name)return;
   const p=stationPerson(s),st=p&&statuses.find(item=>item.id===effectiveStatusId(p)),name=st&&st.id!=='present'?s.name+' ('+st.text+')':s.name;
-  const font=scaledFont(15,11,32);
+  const seated=!st||st.id==='present'||st.id==='overtime';
+  const font=scaledFont(12,9,26);
   ctx.save();
   ctx.font=`bold ${font}px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif`;
-  const w=Math.max(84,Math.round(ctx.measureText(name).width+26)),h=Math.max(PLATE_NAME_H,font+8);
-  const x=Math.round(s.x-w/2),y=Math.round(s.row?s.y+14:BD_TOP-h-12);
+  const w=Math.max(64,Math.round(ctx.measureText(name).width+20)),h=font+8;
+  const iconSize=DESK_ICON_BASE*((st&&DESK_ICON_SCALE[st.symbol])||1);
+  // 上排：人在座位上＝壓在電腦中間；沒人（開會、廁所…）＝圖示上方。下排：桌子下緣。
+  let y;
+  if(s.row)y=BD_TOP+BD_FACE-h+12;
+  else if(seated)y=s.y-40-PLATE_MONITOR_MID-Math.round(h/2);
+  else y=s.y-24-Math.round(iconSize/2)-h-2;
+  const x=Math.round(s.x-w/2);y=Math.round(y);
   softPanel(ctx,x,y,w,h,{radius:Math.round(h/2),fill:'#ffffff',stroke:'#c9d3e0',lineWidth:1,shadow:true});
   ctx.fillStyle='#273b50';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(name,s.x,y+h/2+1);
   ctx.textBaseline='alphabetic';ctx.restore();
 }
+const PLATE_MONITOR_MID=-14;
 /** 對話框往上最多能長到哪裡。
  *  上排：場景的上緣（再高就被框切掉）。
  *  下排：上排名牌的下緣（再高就把別人的名字蓋掉——這是舊版最醜的那個問題）。
