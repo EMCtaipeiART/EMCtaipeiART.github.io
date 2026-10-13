@@ -1553,7 +1553,7 @@ window.addEventListener('message',event=>{
 });
 
 // 首頁直接顯示限時動態：隱藏視窗被外層放大成全螢幕後，動態看完（或關閉）要通知外層縮回去。
-{let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}wasOpen=now;},250);}
+{let wasOpen=false;setInterval(()=>{if(document.hidden&&!wasOpen)return;const now=Boolean(viewer&&viewer.open);if(wasOpen&&!now){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryClosed'},location.origin)}catch(error){}}if(now!==wasOpen&&document.documentElement.classList.contains('clean')){try{if(window.parent!==window)window.parent.postMessage({type:'pixelOfficeStoryState',open:now},location.origin)}catch(error){}}wasOpen=now;},250);}
 
 // 右側人物工具欄：目前狀態、造型、動作、音樂、限時動態、想說一句話預設收合；滑鼠移過去自動展開並捲到看得到、移開自動收合
 //（手機沒有滑鼠，改成點標題展開／收合）。正在輸入文字或展開著音樂欄時不收，免得打字打到一半被收起來。

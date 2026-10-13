@@ -437,7 +437,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=81':UNI_URL+'?embed=1&pad=.72&v=68';
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=edit?UNI_URL+'?clean=1&cs=.78&v=82':UNI_URL+'?embed=1&pad=.72&v=68';
       $('stage').innerHTML='<div class="uni-page'+(edit?' is-edit':'')+'"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -450,6 +450,8 @@
       const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
+    /* 元宇宙編輯頁播放限時動態時，把遊戲框放大成整個視窗（滿版），看完還原 */
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeStoryState')return;const fr=$('uniFrame');if(!fr)return;fr.style.cssText=e.data.open?'position:fixed;inset:0;width:100vw;height:100vh;max-width:none;z-index:2000;background:#000;border-radius:0;margin:0':''});
     /* 頭像快照在背景上傳：遊戲只在本機算好造型代碼與圖片，關閉畫面不用等網路；上傳成功才記下「這個造型已存過」 */
     async function uploadAvatarSnapshot(p){
       try{
