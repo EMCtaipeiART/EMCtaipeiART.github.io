@@ -113,15 +113,15 @@ function sceneTopExtent(){
     if(effectiveLook(names.indexOf(p.name)).cap)top=Math.min(top,p.y-172);// 戴帽子的頭比原本高一點，上緣多留一些
     // 這裡要問「不管上面擋不擋得住，它想長多高」，否則會變成「因為框小所以少畫一行、
     // 因為少畫一行所以框可以再小」的死循環。
-    const layout=bubbleLayout(p,true);
-    if(layout)top=Math.min(top,p.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout.h-8-(layout.lift||0));
+    for(const part of ['','text']){const layout=bubbleLayout(p,true,part);
+    if(layout)top=Math.min(top,layout.tipY-BUBBLE_TAIL-layout.h-8);}
   }
   return Math.round(top);
 }
 /** 上緣變了就重新 fit 一次（fitEmbedView 自己會 markDirty，下一格就會用新的縮放重畫）。 */
 function sceneBottomExtent(){
   let bottom=BOTTOM_FEET+40;
-  for(const p of viewPeople){if(isAway(p)||!bubbleBelow(p))continue;const l=bubbleLayout(p,true);if(l)bottom=Math.max(bottom,l.tipY+BUBBLE_TAIL+l.h+10);}
+  for(const p of viewPeople){if(isAway(p)||!bubbleBelow(p))continue;for(const part of ['','text']){const l=bubbleLayout(p,true,part);if(l)bottom=Math.max(bottom,l.tipY+BUBBLE_TAIL+l.h+10);}}
   return Math.round(bottom);
 }
 function syncSceneTop(){
@@ -1327,8 +1327,10 @@ function drawMusicContent(p,i,layout,x,y,w,h){
 // 下排人物（背對畫面、坐在桌子下側）的對話框放在名牌下方，尾巴朝上。
 const bubbleBelow=p=>names.indexOf(p.name)>=3;
 const belowTipY=p=>Math.round(p.y+14+PLATE_NAME_H+6);
-function bubbleLayout(p,ignoreCeiling=false){
-  if(musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
+// 同時有音樂跑馬燈與對話：跑馬燈在原位，對話疊在它外側（上排往上、下排往下）。
+const musicBubbleH=()=>{const font=scaledFont(BUBBLE_FONT,9,22),lh=Math.max(BUBBLE_LINE,Math.round(font*1.28));return Math.round(lh+BUBBLE_PAD_Y*2+4);};
+function bubbleLayout(p,ignoreCeiling=false,part=''){
+  if(part!=='text'&&musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
     const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
     return {music:true,below:bubbleBelow(p),font,lineHeight,lines:[],tipY:bubbleBelow(p)?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
   }
@@ -1340,7 +1342,8 @@ function bubbleLayout(p,ignoreCeiling=false){
   const inner=BUBBLE_MAX_W-BUBBLE_PAD_X*2;
   let lines=wrapText(message,inner).filter(line=>line!=='');
   if(!lines.length){ctx.restore();return null;}
-  const below=bubbleBelow(p),tipY=below?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP);
+  const below=bubbleBelow(p),stacked=part==='text'&&musicOf(p),mh=stacked?musicBubbleH():0;
+  const tipY=below?belowTipY(p)+(stacked?BUBBLE_TAIL+mh+8:0):Math.round(p.y-150-BUBBLE_HEAD_GAP)-(stacked?MUSIC_LIFT+BUBBLE_TAIL+mh+4:0);
   const room=ignoreCeiling||below?BUBBLE_MAX_LINES:Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
   const limit=Math.max(1,Math.min(BUBBLE_MAX_LINES,room));
   if(lines.length>limit){lines=lines.slice(0,limit);lines[limit-1]=ellipsize(lines[limit-1],inner);}
@@ -1353,8 +1356,8 @@ function bubbleLayout(p,ignoreCeiling=false){
   };
 }
 /** 頭上的對話框。小、半透明、柔和陰影——像一塊浮在場景上面的玻璃，不搶人物的戲。 */
-function drawBubble(p,personIndex=-1){
-  const layout=bubbleLayout(p);
+function drawBubble(p,personIndex=-1,part=''){
+  const layout=bubbleLayout(p,false,part);
   if(!layout)return;
   const {lineHeight,lines,tipY,w,h}=layout;
   ctx.save();
@@ -1430,7 +1433,7 @@ function drawActionLabel(i){
 }
 const seatedUp=i=>i>=3&&(i!==selected||!keys.size)&&Math.hypot(people[i].x-starts[i][0],people[i].y-starts[i][1])<8;
 function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
-function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
+function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;if(musicOf(p)&&String(p.message||'').trim())drawBubble(p,i,'text');drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
 // 用同樣的尺寸畫在桌上就會比別的狀態大一圈。面板按鈕有外框當基準、看不出來，所以只縮桌上這邊。

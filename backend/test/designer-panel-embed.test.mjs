@@ -182,11 +182,11 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
   assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
   assert.match(js, /function sceneTopExtent\(\)\{/);
-  assert.match(js, /top=Math\.min\(top,p\.y-150-BUBBLE_HEAD_GAP-BUBBLE_TAIL-layout\.h-8-\(layout\.lift\|\|0\)\)/);
+  assert.match(js, /top=Math\.min\(top,layout\.tipY-BUBBLE_TAIL-layout\.h-8\)/);
   assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;EMBED_CONTENT\.y1=bottom;\s*fitEmbedView\(\);/,
     '上緣變了要重新 fit');
   // 算「想長多高」時不能看天花板，否則會變成「框小→少畫一行→框可以更小」的死循環。
-  assert.match(js, /const layout=bubbleLayout\(p,true\);/);
+  assert.match(js, /const layout=bubbleLayout\(p,true,part\);/);
   assert.match(js, /if\(!embedMode\|\|fitting\)return;/, 'syncSceneTop 會回頭呼叫 fitEmbedView，要擋遞迴');
   // 下緣是下排名牌的最低點，跟著常數與壓縮比例走。
   assert.match(js, /y1:BOTTOM_FEET\+40/);
@@ -222,7 +222,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawBubble\(p,i\);drawStoryBubble\(i,time\);/);
+  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;if\(musicOf\(p\)&&String\(p\.message\|\|''\)\.trim\(\)\)drawBubble\(p,i,'text'\);drawBubble\(p,i\);drawStoryBubble\(i,time\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
