@@ -1313,3 +1313,6 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 @media(prefers-reduced-motion:reduce){.he{transform:none;transition:none}}
 
 .hero-scene img{opacity:0;transition:opacity .5s ease}.hero-scene img.ld{opacity:1}
+
+    /* 深色模式：iframe 元素與裡面文件的 color-scheme 一致才會透明，否則瀏覽器會塗一塊不同色的底（辦公室看起來像一小塊黑框） */
+    html[data-theme="dark"] .uni-frame{color-scheme:dark}
