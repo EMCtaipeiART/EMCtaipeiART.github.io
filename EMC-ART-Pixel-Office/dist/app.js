@@ -1543,7 +1543,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
     try{window.parent.postMessage({type:'pixelOfficeMusicState',playing:real?p:'',loading:active&&!real?p:''},location.origin)}catch(error){}
   },400);
 }
-const AV_CROP={w:112,chin:.74},AV_DX=[-5.5,0,0,-2.5,0];// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
+const AV_CROP={w:112,chin:.74},AV_DX=[-3,0,0,-1.5,0];// 裁切邊長（原圖像素）與下巴在框內的高度比例（所有人一致）
 
 // 首頁頭像右上角的限時動態氣泡：外層點了之後切到多元宇宙頁，再用這則訊息叫場景直接打開那個人的限時動態。
 window.addEventListener('message',event=>{
@@ -1607,7 +1607,7 @@ window.addEventListener('message',event=>{
   const panel=document.createElement('div');panel.className='radial-panel';panel.hidden=true;
   const title=document.createElement('strong');title.className='radial-title';panel.appendChild(title);
   const btns={};
-  defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){setStatus('present');window.radialClose();return;}show(k);};ring.appendChild(b);btns[k]=b;});
+  defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){const i=selected;if(i===null)return;setStatus('present');const p=people[i];p.x=starts[i][0];p.y=starts[i][1];p.dir='down';keys.clear();markDirty();save();queuePosition(i);window.radialClose();return;}/* 在座＝狀態設為在座並回到自己的座位 */show(k);};ring.appendChild(b);btns[k]=b;});
   box.append(ring,back,panel);wrap.appendChild(box);
   defs.forEach(([k])=>{const s=secOf(k);if(!s)return;s.classList.remove('collapsible');s.classList.add('radial-sec');s.dataset.rk=k;s.hidden=s.hidden;panel.appendChild(s);});
   let level=0,cur='';
