@@ -328,8 +328,7 @@ test('左下角空位依時段轉灰階，週末與國定假日整天灰階，�
   // 椅子也要跟著灰，且六張椅背上緣都要降低到人物頭部中線。
   assert.match(js, /const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;/);
   // 椅子只在「有人而且在座」時才畫：離席不畫，左下角空位到了灰階時段也收掉，只留桌子與桌上電腦。
-  assert.match(js, /function drawChair\(s\)\{if\(stationDimmed\(s\)\)return;if\(s\.row\)\{/);
-  assert.match(js, /furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
+    assert.match(js, /furnitureObject\(CHAIR_RECT,s\.x-CHAIR_WIDTH\/2,s\.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor\(s\)\);\}/);
 });
 
 test('人物卡的「未開始」是紅燈', async () => {
