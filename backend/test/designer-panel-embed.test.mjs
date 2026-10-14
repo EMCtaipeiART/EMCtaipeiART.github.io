@@ -87,9 +87,9 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   // 連同桌牌整塊放進框裡，不會被底邊裁掉。名牌（2026-10-14 起是「名字（狀態）」膠囊）依座位算位置：
   // 人在座＝以座位為準（上排 PLATE_SEAT_RISE、下排頭頂上方），沒人＝圖示上方／桌子下緣，水平置中於座位。
   assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
-  assert.match(js, /const PLATE_SEAT_RISE=\d+;/);
+  assert.match(js, /const PLATE_SEAT_RISE=\d+,PLATE_BELOW_FEET=\d+;/);
   assert.match(js, /const x=Math\.round\(s\.x-w\/2\);y=Math\.round\(y\);/);
-  assert.match(js, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
+  assert.match(js, /if\(s\.row\)y=seated\?Math\.round\(s\.y\+PLATE_BELOW_FEET\):BD_TOP\+BD_FACE-h\+12;/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -192,7 +192,7 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   assert.match(js, /const layout=bubbleLayout\(p,true,part\);/);
   assert.match(js, /if\(!embedMode\|\|fitting\)return;/, 'syncSceneTop 會回頭呼叫 fitEmbedView，要擋遞迴');
   // 下緣是下排名牌的最低點，跟著常數與壓縮比例走。
-  assert.match(js, /y1:BOTTOM_FEET\+40/);
+  assert.match(js, /y1:BOTTOM_FEET\+64/);
   // 算出來的比例要真的夠：下排的對話框長到最高時，不能碰到上排名牌的下緣。
   const c = Object.fromEntries([...js.matchAll(/\b(PLATE_TOP|PLATE_NAME_H|BUBBLE_LINE|BUBBLE_MAX_LINES|BUBBLE_PAD_Y|BUBBLE_TAIL|BUBBLE_HEAD_GAP|BUBBLE_CLEAR)=([\d.]+)/g)].map(m => [m[1], Number(m[2])]));
   const bubbleMaxH = c.BUBBLE_MAX_LINES * c.BUBBLE_LINE + c.BUBBLE_PAD_Y * 2 + c.BUBBLE_TAIL;
@@ -473,7 +473,7 @@ test('狀態圖示的縮放只作用在圖示上；座位上與下排的名牌�
   assert.ok(scales.power < 1 && scales.briefcase < 1, '這兩張圖仍然維持縮小');
   // 人在座位上的名牌（上排壓在電腦中間、下排在頭頂上方）與下排沒人的名牌，高度只由常數決定，
   // 不會隨狀態圖示的縮放高低不同。
-  assert.match(plate, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
+  assert.match(plate, /if\(s\.row\)y=seated\?Math\.round\(s\.y\+PLATE_BELOW_FEET\):BD_TOP\+BD_FACE-h\+12;/);
   assert.match(plate, /else if\(seated\)y=s\.y-40-PLATE_MONITOR_MID-Math\.round\(h\/2\);/);
   assert.match(plate, /const iconSize=DESK_ICON_BASE\*\(\(st&&DESK_ICON_SCALE\[st\.symbol\]\)\|\|1\);/, '上排沒人的名牌貼在圖示上緣');
 });
