@@ -5,10 +5,47 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
   <title>刷卡研究所</title>
-  <style>html,body{margin:0;height:100%;background:#f7f7fb}iframe{display:block;width:100%;height:100%;border:0}.fallback{position:fixed;right:12px;bottom:12px;font:12px sans-serif}.fallback a{color:#5142aa}</style>
+  <style>
+    html,body{margin:0;height:100%;background:#f7f7fb;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#23243b}
+    iframe{display:block;width:100%;height:100%;border:0}
+    #gate{position:fixed;inset:0;display:none;place-items:center;background:#f7f7fb;padding:24px}
+    #gate.show{display:grid}
+    .box{width:min(420px,100%);background:#fff;border:1px solid #ebebf3;border-radius:18px;padding:32px;box-shadow:0 5px 24px #25243d10;text-align:center}
+    h1{margin:0 0 8px;font-size:22px}
+    p{margin:0 0 22px;color:#6b6c80;font-size:14px;line-height:1.7}
+    a.btn,button{display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:13px;border-radius:11px;border:0;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
+    a.btn{background:#7564e8;color:#fff}
+    button{background:#eeecfa;color:#5142aa}
+    #loading{position:fixed;inset:0;display:grid;place-items:center;color:#8b8da0;font-size:14px;pointer-events:none}
+  </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbyxxyQBR_1hYZjCvCsf7MNqYJMAYTANIxSpv5zhq49DRYVYbWdqQULX4cYA33vumeQAFA/exec" title="刷卡研究所" allow="clipboard-write"></iframe>
-  <div class="fallback"><a href="https://script.google.com/macros/s/AKfycbyxxyQBR_1hYZjCvCsf7MNqYJMAYTANIxSpv5zhq49DRYVYbWdqQULX4cYA33vumeQAFA/exec">無法顯示？直接開啟</a></div>
+  <div id="loading">載入中…</div>
+  <iframe id="app" title="刷卡研究所" allow="clipboard-write"></iframe>
+  <div id="gate">
+    <div class="box">
+      <h1>✦ 刷卡研究所</h1>
+      <p>這是私人網站，請先登入有權限的 Google 帳號才能進入。</p>
+      <a class="btn" id="login" href="#">登入 Google 並進入</a>
+      <button id="retry" type="button">我已登入，重新載入</button>
+    </div>
+  </div>
+  <script>
+    const APP = 'https://script.google.com/macros/s/AKfycbyxxyQBR_1hYZjCvCsf7MNqYJMAYTANIxSpv5zhq49DRYVYbWdqQULX4cYA33vumeQAFA/exec';
+    const frame = document.getElementById('app'), gate = document.getElementById('gate'), loading = document.getElementById('loading');
+    let ready = false, timer;
+    document.getElementById('login').href = APP;
+    window.addEventListener('message', e => {
+      if (e.data && e.data.cardLab === 'ready') { ready = true; clearTimeout(timer); gate.classList.remove('show'); loading.hidden = true; }
+    });
+    function start() {
+      ready = false; gate.classList.remove('show'); loading.hidden = false;
+      frame.src = APP + (APP.includes('?') ? '&' : '?') + 't=' + Date.now();
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (!ready) { loading.hidden = true; gate.classList.add('show'); } }, 9000);
+    }
+    document.getElementById('retry').onclick = start;
+    start();
+  </script>
 </body>
 </html>
