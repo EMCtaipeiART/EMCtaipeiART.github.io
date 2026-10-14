@@ -84,9 +84,12 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   assert.match(js, /game\.addEventListener\('pointermove',e=>\{const hit=hitAt\(e\.clientX,e\.clientY\);game\.style\.cursor=hit\?'pointer':'default';/,
     '人物上方應顯示可點選游標');
   // 桌牌不再需要「下排特別上移」的特例：整排已經收上來，而且 fitEmbedView() 會把六個座位
-  // 連同桌牌整塊放進框裡，不會被底邊裁掉。桌牌上緣沿用原本名牌的位置。
+  // 連同桌牌整塊放進框裡，不會被底邊裁掉。名牌（2026-10-14 起是「名字（狀態）」膠囊）依座位算位置：
+  // 人在座＝以座位為準（上排 PLATE_SEAT_RISE、下排頭頂上方），沒人＝圖示上方／桌子下緣，水平置中於座位。
   assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
-  assert.match(js, /const x=Math\.round\(s\.x-w\/2\),y=Math\.round\(s\.row\?s\.y\+14:BD_TOP-h-12\);/);
+  assert.match(js, /const PLATE_SEAT_RISE=\d+;/);
+  assert.match(js, /const x=Math\.round\(s\.x-w\/2\);y=Math\.round\(y\);/);
+  assert.match(js, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -446,31 +449,33 @@ test('對話框回到人物頭上：小、半透明，而且長不出場景外',
     `一行 ${perLine} 個中文字 × ${c.BUBBLE_MAX_LINES} 行放不下 60 字的對話`);
 });
 
-test('名牌只放名字，對話不再擠在它下面', async () => {
+test('名牌只放名字與狀態（名字後面附括號），對話不再擠在它下面', async () => {
   const js = await officeJs();
   const plate = js.slice(js.indexOf('function drawDeskPlate('), js.indexOf('\nfunction ', js.indexOf('function drawDeskPlate(') + 1));
   assert.ok(plate, '要有 drawDeskPlate()');
   assert.doesNotMatch(plate, /message|wrapText|ellipsize/, '名牌上不該再有對話');
-  assert.match(plate, /ctx\.fillText\(s\.name,s\.x,y\+h\/2\+1\);/);
+  // 在座（present）只顯示名字；其他狀態是「名字 (狀態)」，同一個膠囊，不再另外畫狀態膠囊。
+  assert.match(plate, /name=st&&st\.id!=='present'\?s\.name\+' \('\+st\.text\+'\)':s\.name/);
+  assert.match(plate, /ctx\.fillText\(name,s\.x,y\+h\/2\+\.5\);/);
 });
 
-test('所有狀態的小膠囊排在同一條水平線上', async () => {
+test('狀態圖示的縮放只作用在圖示上；座位上與下排的名牌高度由常數決定', async () => {
   const js = await officeJs();
   const marker = js.slice(js.indexOf('function drawStatusMarker('), js.indexOf('\nfunction ', js.indexOf('function drawStatusMarker(') + 1));
-  // 膠囊原本是用「縮放後」的圖示高度往上推，所以圖示有縮小的狀態（公出 .78、下班 .8）膠囊
-  // 就會比別人低 10～11px（2026-09-23 使用者回報）。高度改用未縮放的基準值，圖縮膠囊不跟著縮。
+  const plate = js.slice(js.indexOf('function drawDeskPlate('), js.indexOf('\nfunction ', js.indexOf('function drawDeskPlate(') + 1));
+  // 2026-10-14 起狀態文字併進名牌「名字 (狀態)」，drawStatusMarker() 只剩畫圖示。
+  // 公出（.78）、下班（.8）這兩張圖留白少，照 104 畫會比別人大一圈，所以只有圖示本身縮小。
   assert.match(js, /const DESK_ICON_BASE=104;/);
   assert.match(marker, /iconSize=DESK_ICON_BASE\*\(DESK_ICON_SCALE\[status\.symbol\]\|\|1\)/, '圖示才吃縮放');
-  assert.match(marker, /labelY=s\.row\?iconY\+DESK_ICON_BASE\*\.4\+2:iconY-DESK_ICON_BASE\/2-h-2;/, '膠囊高度不能吃縮放');
-  assert.doesNotMatch(marker, /labelY=iconY-iconSize\/2/, '不要再用縮放後的高度算膠囊');
-
-  // 縮小仍然只作用在圖示上——這兩張圖留白少，照 104 畫會比別人大一圈。
+  assert.doesNotMatch(marker, /fillText|softPanel/, '狀態圖示函式不再畫文字膠囊');
   const scales = Object.fromEntries(js.match(/const DESK_ICON_SCALE=\{(.+?)\};/)[1]
     .split(',').map(pair => pair.split(':')).map(([key, value]) => [key, Number(value)]));
   assert.ok(scales.power < 1 && scales.briefcase < 1, '這兩張圖仍然維持縮小');
-  // 膠囊的 y 只能由常數決定，不能出現任何跟 symbol 有關的變數，否則又會各自高低不同。
-  const labelExpr = marker.match(/labelY=([^;]+);/)[1];
-  assert.doesNotMatch(labelExpr, /iconSize|DESK_ICON_SCALE|symbol/, `膠囊高度還是會隨圖示變：${labelExpr}`);
+  // 人在座位上的名牌（上排壓在電腦中間、下排在頭頂上方）與下排沒人的名牌，高度只由常數決定，
+  // 不會隨狀態圖示的縮放高低不同。
+  assert.match(plate, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
+  assert.match(plate, /else if\(seated\)y=s\.y-40-PLATE_MONITOR_MID-Math\.round\(h\/2\);/);
+  assert.match(plate, /const iconSize=DESK_ICON_BASE\*\(\(st&&DESK_ICON_SCALE\[st\.symbol\]\)\|\|1\);/, '上排沒人的名牌貼在圖示上緣');
 });
 
 test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗', async () => {
