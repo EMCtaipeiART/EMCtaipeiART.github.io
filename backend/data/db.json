@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8406,
+  "revision": 8407,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-14T08:50:35.424Z",
+  "updatedAt": "2026-10-14T08:50:39.129Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1146,7 +1146,7 @@
         {"案件編號":"26100091","修改次數":"0","建立日期":"2026/10/14 16:37:35","修改日期":"2026/10/14 16:37:35","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/14 16:37:35","圖片連結":"[{\"fileName\":\"261015_添可_十月_CPAS_ S7steam_滅菌動態.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Ld-0TrUtLd8nsEvoqYxT-sShPg3yld6d=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/10/14 16:37:35"},
         {"案件編號":"26090225","修改次數":"1","建立日期":"2026/10/14 16:39:50","修改日期":"2026-10-14","修改內容":"來信提供一修修改回饋，產品特點3C1A部分，文字請調整為以下：3C1A設計 多裝置適用\n\n以上再請協助，感謝！","修改內容連結":"","修改人":"羅珮云","確認修正日":"","待修改圖片":""},
         {"案件編號":"26100090","修改次數":"0","建立日期":"2026/10/14 16:43:58","修改日期":"2026/10/14 16:43:58","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/14 16:43:58","圖片連結":"[{\"fileName\":\"261015_添可_十月_CPAS_ S7steam_贈品.png\",\"url\":\"https://lh3.googleusercontent.com/d/1FYvwmIV0bg_pJOiXHA6rWjRle2zq5yfJ=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_ S7steam_0纏毛.png\",\"url\":\"https://lh3.googleusercontent.com/d/16fpTns1y2qy65oSAzYd0u-MQdC0vLKAX=w1600\"}]","圖片來源":"manual-move","圖片更新時間":"2026/10/14 16:43:58"},
-        {"案件編號":"26100089","修改次數":"0","建立日期":"2026/10/14 16:44:52","修改日期":"2026/10/14 16:44:52","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/14 16:44:52","圖片連結":"[{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_新青安.png\",\"url\":\"https://lh3.googleusercontent.com/d/16sQa27C5ntmEoEQoAVezy3-mHxSSap5C=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_長輩送禮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZJGsMFsBqFdhgplh_dJvZeO5CPemL8wA=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_StationS9Artist_廚房油污.png\",\"url\":\"https://lh3.googleusercontent.com/d/1DCnFYp_TNfd1zH6GK1r5DZo2YI8FxXJ_=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_比較.png\",\"url\":\"https://lh3.googleusercontent.com/d/1n_KsM22EfRCQo4bXJanFNKsKTyt8TahD=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/14 16:50:35"}
+        {"案件編號":"26100089","修改次數":"0","建立日期":"2026/10/14 16:44:52","修改日期":"2026/10/14 16:44:52","修改內容":"初稿完成（設計圖搬移）","修改人":"Machi","確認修正日":"2026/10/14 16:44:52","圖片連結":"[{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_新青安.png\",\"url\":\"https://lh3.googleusercontent.com/d/16sQa27C5ntmEoEQoAVezy3-mHxSSap5C=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_長輩送禮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1ZJGsMFsBqFdhgplh_dJvZeO5CPemL8wA=w1600\"},{\"fileName\":\"261015_添可_十月_CPAS_i7Fold_比較.png\",\"url\":\"https://lh3.googleusercontent.com/d/1n_KsM22EfRCQo4bXJanFNKsKTyt8TahD=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/14 16:50:39"}
       ]
     },
     "補充資料連結": {
