@@ -50,7 +50,7 @@ const BUBBLE_CLEAR=8;// 下排的對話框與上排名牌之間要留的空隙
 // 以前寫死 .8，那是還沒算對話框的年代；現在直接從對話框的尺寸算回來，改尺寸不用重算。
 const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 // 上下兩排桌子合併成一張：下排人物坐在桌子下側、背對畫面。邏輯座標不動（存在後端的位置照用），畫面上把下排往上收到 BOTTOM_FEET。
-const BOTTOM_FEET=568,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
+const BOTTOM_FEET=588,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
 const viewY=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
