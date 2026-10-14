@@ -812,7 +812,7 @@
       .prompt-go{flex:1 1 100%}
       .team{gap:18px 14px}
       .member{width:76px}
-      .member-say,.member-music{width:68px}
+      .member-say{width:68px}/* 音樂鈕維持預設的圓形（26px），手機版不要撐成膠囊 */
       .avatar-btn{width:68px;height:68px}
       .hover-card{width:230px}
       .stage-wrap{padding:26px 16px 40px}
