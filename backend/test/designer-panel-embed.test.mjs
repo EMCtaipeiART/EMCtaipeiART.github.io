@@ -852,7 +852,7 @@ test('頭像快照：關閉元宇宙時存本人目前造型的頭像（存過�
   assert.match(worker, /pixel_office_avatars/);
   assert.match(worker, /need: true/);
   assert.match(worker, /LIMIT 16/);
-  assert.match(router, /\/\^\\\/avatar\\\/\(\[A-Za-z\]\{1,20\}\)\$\//);
+  assert.match(router, /\/\^\\\/avatar\\\/\(\[\^\/\]\{1,60\}\)\$\//);
 });
 
 test('自訂帽子與眼鏡：遊戲讀公開 API 的 caps／glasses、依各角度留邊蓋在頭的位置上、造型欄列出本人的配件，後端接受 a:<uuid>', async () => {
