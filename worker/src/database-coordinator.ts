@@ -26,6 +26,8 @@ import type {
 const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
+const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
+const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;   // 場景寬度加寬後的座標上限
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
@@ -1656,6 +1658,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(17)) {
+        this.ctx.storage.transactionSync(() => {
+          // 企劃／專案同仁的元宇宙座位（2026-10-15）：座位 0–2 上排由左到右、3–5 下排由左到右；一人一席，完成角色的順序入座。
+          this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS pixel_office_staff (seat INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, account TEXT NOT NULL DEFAULT \'\', joined_at INTEGER NOT NULL)');
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            17, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1666,6 +1678,28 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * - pixelOfficeUpdate：更新一位設計師的部分欄位（有帶的才改），逐欄驗證。
    * - pixelOfficePhoto：取某位設計師目前的照片（data URL），只有版本變了前端才會來拿。
    * ------------------------------------------------------------------------------------------- */
+  private pixelOfficeStaff(): Array<{ seat: number; name: string; account: string }> {
+    return this.ctx.storage.sql.exec<{ seat: number; name: string; account: string }>('SELECT seat, name, account FROM pixel_office_staff ORDER BY seat').toArray();
+  }
+
+  private pixelOfficeKnownName(name: string): boolean {
+    return PIXEL_OFFICE_NAMES.includes(name) || this.pixelOfficeStaff().some(item => item.name === name);
+  }
+
+  /** 完成「建立你的角色」的企劃／專案同仁：一人一席、依序入座；座位滿了回傳 -1。已經有座位的人回傳原本的座位。 */
+  private pixelOfficeAssignSeat(name: string, account: string): number {
+    const sql = this.ctx.storage.sql;
+    const taken = this.pixelOfficeStaff();
+    const mine = taken.find(item => item.name === name);
+    if (mine) return mine.seat;
+    for (let seat = 0; seat < PIXEL_OFFICE_STAFF_SEATS; seat += 1) {
+      if (taken.some(item => item.seat === seat)) continue;
+      sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', seat, name, account, Date.now());
+      return seat;
+    }
+    return -1;
+  }
+
   private pixelOfficeVersion(): number {
     const row = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_people').toArray()[0];
     // 稱號也算進版本號，不然改了稱號要等到有人換狀態，別人的畫面才會跟著更新。
@@ -1674,8 +1708,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       'SELECT MAX(updated_at) AS v, MAX(CASE WHEN expires_at <= ? THEN expires_at END) AS expired FROM pixel_office_stories', Date.now()
     ).toArray()[0];
     // 動態到期也要換版本號：沒有人動作的時候，過期的動態才會在下一次輪詢從每個人的畫面消失。
+    const staffJoined = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(joined_at) AS v FROM pixel_office_staff').toArray()[0];
     const avatars = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_avatar_current').toArray()[0];   // 企劃／專案同仁的頭像快照更新也要換版本號
-    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0, Number(stories?.v) || 0, Number(stories?.expired) || 0, Number(avatars?.v) || 0);
+    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0, Number(stories?.v) || 0, Number(stories?.expired) || 0, Number(avatars?.v) || 0, Number(staffJoined?.v) || 0);
   }
 
   /** 目前這套等級稱號。沒存過、或存的內容有缺，都會用預設值補齊。 */
@@ -2144,12 +2179,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     // 稱號跟著狀態一起回：前端不必為了它多打一次 API，改了也會隨輪詢傳到每個人的畫面。
     const avatars: Record<string, number> = {};
     for (const row of this.ctx.storage.sql.exec<{ name: string; updated_at: number }>('SELECT name, updated_at FROM pixel_office_avatar_current').toArray()) avatars[row.name] = Number(row.updated_at) || 0;
-    return { ok: true, action: 'pixelOfficeState', version, people, levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars };
+    return { ok: true, action: 'pixelOfficeState', version, people, staff: this.pixelOfficeStaff().map(item => ({ seat: item.seat, name: item.name })), levels: this.pixelOfficeLevelTitlesResult(), stories: this.pixelOfficeActiveStories(), avatars };
   }
 
   private pixelOfficeUpdate(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
-    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    if (!this.pixelOfficeKnownName(name)) throw new Error('找不到這位同仁');
     const patch = asRow(payload.patch);
     const existing = this.ctx.storage.sql.exec<{ state: string; photo_version: number }>(
       'SELECT state, photo_version FROM pixel_office_people WHERE name = ?', name
@@ -2193,8 +2228,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if ('x' in patch || 'y' in patch) {
       const x = Number(patch.x), y = Number(patch.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('位置不正確');
-      state.x = Math.round(Math.max(0, Math.min(1536, x)));
-      state.y = Math.round(Math.max(0, Math.min(1024, y)));
+      state.x = Math.round(Math.max(0, Math.min(PIXEL_OFFICE_MAX_X, x)));
+      state.y = Math.round(Math.max(0, Math.min(PIXEL_OFFICE_MAX_Y, y)));
     }
     if ('dir' in patch) {
       const dir = text(patch.dir);
@@ -2250,7 +2285,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private pixelOfficePhoto(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
-    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    if (!this.pixelOfficeKnownName(name)) throw new Error('找不到這位同仁');
     const row = this.ctx.storage.sql.exec<{ photo: string; photo_version: number }>('SELECT photo, photo_version FROM pixel_office_people WHERE name = ?', name).toArray()[0];
     return { ok: true, action: 'pixelOfficePhoto', name, photo: row?.photo || '', photoVersion: Number(row?.photo_version) || 0 };
   }
@@ -2345,7 +2380,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private pixelOfficeStoryAdd(payload: ApiPayload): ApiResult {
     const name = text(payload.name);
-    if (!PIXEL_OFFICE_NAMES.includes(name)) throw new Error('找不到這位設計師');
+    if (!this.pixelOfficeKnownName(name)) throw new Error('找不到這位同仁');
     const media = String(payload.media ?? payload.image ?? payload.photo ?? '');
     const header = /^data:([a-z]+\/[a-z0-9.+-]+);base64,/.exec(media);
     if (!header) throw new Error('檔案格式不正確');
@@ -2445,8 +2480,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async pixelOfficeAvatarSnapshot(payload: ApiPayload): Promise<ApiResult> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]);
-    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase());
-    if (!name) throw new Error('只有設計師本人可以更新自己的頭像快照');
+    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase())
+      || this.pixelOfficeStaff().find(item => item.account && item.account === text(session?.account))?.name;
+    if (!name) throw new Error('只有設計師或已入座的同仁本人可以更新自己的頭像快照');
     const lookKey = text(payload.lookKey);
     if (!/^[\w:|.-]{1,140}$/.test(lookKey)) throw new Error('造型代碼不正確');
     const now = Date.now();
@@ -2629,7 +2665,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const before = sql.exec<{ look_key: string }>('SELECT look_key FROM pixel_office_avatar_current WHERE name = ?', name).toArray()[0];
     sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
     sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
-    return { ok: true, action: 'personaAvatarSnapshot', name, version: now, changed: !before || before.look_key !== lookKey };
+    // 元宇宙座位：完成角色的企劃／專案同仁依序入座，造型用剛做好的頭像與身體（之後可以在元宇宙裡自己換）
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    let seat = -1;
+    if (/^(企劃部|專案部)$/.test(department) && uuid.test(text(payload.headId)) && uuid.test(text(payload.outfitId))) {
+      seat = this.pixelOfficeAssignSeat(name, current.account);
+      if (seat >= 0) {
+        const look = { outfit: `c:${text(payload.outfitId)}`, cap: '', glasses: '', head: `h:${text(payload.headId)}` };
+        const existing = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+        let state: Row = {};
+        try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+        if (!state.look) state.look = look;
+        if (!state.status) state.status = 'present';
+        const version = Math.max(now, this.pixelOfficeVersion() + 1);
+        if (existing) sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), version, name);
+        else sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), '', 0, version);
+      }
+    }
+    return { ok: true, action: 'personaAvatarSnapshot', name, version: now, seat, changed: !before || before.look_key !== lookKey };
   }
 
   private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {

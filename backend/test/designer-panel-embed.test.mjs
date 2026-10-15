@@ -653,7 +653,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   const [js, html, css] = await Promise.all([officeJs(), officeHtml(), officeCss()]);
   for (const file of ['wardrobe-heads.webp', 'wardrobe-outfits.webp', 'wardrobe-acc.webp']) assert.ok(js.includes(`assets/${file}`), file);
   assert.match(js, /WD_FEMALE=\[true,true,false,true,false\],WD_K=1\.7,WD_OV=8,WD_SCALE=\.475/);
-  assert.match(js, /hairBehind=chv&&typeof chv\.behind==='boolean'\?chv\.behind:WD_FEMALE\[i\],layers=\(!hairBehind\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
+  assert.match(js, /hairBehind=chv&&typeof chv\.behind==='boolean'\?chv\.behind:WD_FEMALE\[gi\],layers=\(!hairBehind\|\|view===2\)&&!\(act&&act\.over\.includes\(action\.n\)\)\?\[body,head\]:\[head,body\]/);
   assert.match(js, /else if\(look\.glasses&&!String\(look\.glasses\)\.startsWith\('a:'\)&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:'',head:''\},\{outfit:3,cap:'',glasses:'',head:''\},\{outfit:4,cap:'blue',glasses:'',head:''\},\{outfit:1,cap:'',glasses:'',head:''\},\{outfit:5,cap:'',glasses:'',head:''\}/);
@@ -669,7 +669,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
 test('造型側面：眼鏡對到眼睛（偏右）、衣服往左收、帽子貼頭', async () => {
   const js = await officeJs();
   assert.match(js, /WD_SIDE_BODY_SHIFT=12/);
-  assert.match(js, /x:custom\?0:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[i\]/);
+  assert.match(js, /x:custom\?0:\(view===1\?-WD_SIDE_BODY_SHIFT:0\)\+WD_BODY_DX\[gi\]/);
   assert.match(js, /WD_BODY_DX=\[-8,0,0,-8,0\]/);
   assert.match(js, /w:bw\*\(1-WD_SIDE_CAP_BACK\),h:bh,x:hx\+w\*\.06\+bw\*WD_SIDE_CAP_BACK,y:hy\+sk\[2\]\*K-h\+h\*\.32\+dropI\+h-bh/);
   // 側面眼睛位置（頭像圖上的 x）：Leona 約 88、Machi 約 77，不是原本誤抓的 68／49。
@@ -681,7 +681,7 @@ test('Machi 的衣服與配件（帽子、眼鏡、墨鏡）相對頭往下移',
   const js = await officeJs();
   assert.match(js, /WD_DROP=\[0,0,0,0,10\]/);
   assert.match(js, /y:dropI-\(act\?B\.t\|\|0:0\),/);
-  assert.equal((js.match(/\+dropI(?:\+WD_GLASSES_DY\[i\])?\}\)/g) || []).length, 2, '正面眼鏡與正面帽子都要加上');
+  assert.equal((js.match(/\+dropI(?:\+WD_GLASSES_DY\[gi\])?\}\)/g) || []).length, 2, '正面眼鏡與正面帽子都要加上');
 });
 
 test('耳機放大、往右，並且在帽子下層（耳機畫完再把帽子蓋上去）', async () => {
@@ -801,7 +801,7 @@ test('自訂服裝：遊戲讀公開 API、頭用頸頂接、造型欄列出本�
   assert.match(js, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/api\/public\/outfits/);
   assert.match(js, /function customOutfitView\(id,view\)/);
   assert.match(js, /function lookDefault\(i\)\{const d=baseLookDefault\(i\),c=customDefaultId\(i\);/);
-  assert.match(js, /dropI=custom\?0:WD_DROP\[i\]/);
+  assert.match(js, /dropI=custom\?0:WD_DROP\[gi\]/);
   assert.match(js, /hx=B\.n-chin\.x\*K\+\(custom\?custom\.dx:0\)/);
   assert.match(js, /loadCustomList\(\);setInterval\(loadCustomList,120000\)/);
   // 腳本最前面的版面計算會用到造型，所以自訂服裝的狀態不能用還沒宣告的 const／let

@@ -355,7 +355,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }, { version: 17 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -5181,6 +5181,32 @@ describe('平台幣', () => {
     const ledger = await api({ action: 'coinLedger' }, admin) as { balances: Record<string, number>; chain: { ok: boolean } };
     expect(ledger.balances).toMatchObject({ 吳企劃: 2.5, 李專案: 4 });
     expect(ledger.chain.ok).toBe(true);
+  });
+
+  it('seats planning/project staff in the universe in the order they finish their character (6 seats, one each)', async () => {
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    const accounts = Array.from({ length: 7 }, (_, index) => ({ account: `seat${index}@emctaipei.test`, name: `座位${index}` }));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      for (const item of accounts) database.tables['設定'].rows.push({ '名字': item.name, '顯示名': item.name, '帳號': item.account, '部門': '專案部' });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    const head = '11111111-1111-1111-1111-111111111111', outfit = '22222222-2222-2222-2222-222222222222';
+    const seats: number[] = [];
+    for (const item of accounts) {
+      const session = await seedSession(item.account, item.name);
+      const result = await api({ action: 'personaAvatarSnapshot', png, lookKey: 'persona-1', headId: head, outfitId: outfit }, session) as { seat: number };
+      seats.push(result.seat);
+      if (item.name === '座位0') expect(await api({ action: 'personaAvatarSnapshot', png, lookKey: 'persona-2', headId: head, outfitId: outfit }, session)).toMatchObject({ ok: true, seat: 0 });   // 已入座的人不會換座位
+    }
+    expect(seats).toEqual([0, 1, 2, 3, 4, 5, -1]);
+    const state = await api({ action: 'pixelOfficeState' }) as { staff: Array<{ seat: number; name: string }>; people: Array<{ name: string; look?: { outfit: string; head: string } }> };
+    expect(state.staff.map(item => item.name)).toEqual(['座位0', '座位1', '座位2', '座位3', '座位4', '座位5']);
+    expect(state.people.find(item => item.name === '座位2')?.look).toMatchObject({ outfit: `c:${outfit}`, head: `h:${head}` });
+    expect(await api({ action: 'pixelOfficeUpdate', name: '座位1', patch: { message: '哈囉', x: 2000, y: 700 } })).toMatchObject({ ok: true });
+    expect(await api({ action: 'pixelOfficeUpdate', name: '座位6', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
   });
 
   it('transfers instantly between designers, refuses overdrafts and self-transfers, and records both sides', async () => {
