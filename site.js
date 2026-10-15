@@ -228,7 +228,7 @@
     }
     /* 企劃／專案同仁完成「個人形象」後的頭像快照（設計師用像素大頭，不走這裡） */
     function personaSnapAvatar(name){try{const snap=state.avatarSnap||{},want=norm(name);if(!want)return '';const key=Object.keys(snap).find(k=>norm(k)===want&&!['leona','amber','noise','anna','machi'].includes(norm(k)));return key?snapUrl(key):''}catch(err){return ''}}
-    function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return state.avatars.get(norm(name))||(email&&state.avatars.get(email))||personaSnapAvatar(name)||''}
+    function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return personaSnapAvatar(name)||state.avatars.get(norm(name))||(email&&state.avatars.get(email))||''}
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
     /* 上次的像素頭像先拿來顯示（只存圖），等隱藏辦公室算好再換成最新的，避免進站幾秒顯示舊頭像 */
     try{const c=JSON.parse(localStorage.getItem('v5PixAvCache')||'null');if(c&&typeof c==='object'&&!state.pixAvatars){const o={};Object.keys(c).forEach(k=>{if(/^data:image\/png/.test(c[k]||''))o[k]={img:c[k],message:'',music:null,status:'',story:{count:0,unread:false}}});if(Object.keys(o).length)state.pixAvatars=o}}catch(err){}
@@ -439,7 +439,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=107&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=107&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=108&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=108&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -1780,11 +1780,11 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     const sectionOpen=k=>st2.open[k]?' open':'';
     function profileHtml(){
-      const own=ownDesignerName(),name=own||session().name||session().user,locked=nameLocked(),url=locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name));
+      const own=ownDesignerName(),name=own||session().name||session().user,locked=nameLocked(),snapAv=own?'':(personaSnapAvatar(name)||personaSnapAvatar(session().user)||''),url=snapAv||(locked?(pixImg(name)||personAvatar(name)):(st2.avatar||personAvatar(name)));/* snapAv：已用「服裝」頁建立的個人形象快照當頭像，就不再提供上傳照片更換 */
       return `<details class="set-card" data-set-sec="profile"${sectionOpen('profile')}><summary><b>個人設定</b><span>頭像與顯示名稱</span></summary>
         <div class="set-body"><div class="set-profile"><span class="set-avatar">${url?`<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:esc(initial(name))}</span>
         <div class="set-fields"><label class="field"><span class="label">顯示名</span><input class="input${locked?' is-locked':''}" id="setDisplayName" maxlength="40" value="${esc(own||st2.display||name)}"${locked?' readonly disabled aria-disabled="true"':''}></label><small>${locked?'此名稱會顯示在帳號選單、案件與信件聯絡人中，已與像素辦公室綁定，不能自行修改。':'此名稱會顯示在帳號選單、案件與信件聯絡人中。'}</small></div></div>
-        ${locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
+        ${snapAv?'<p class="set-note">頭像使用你在「服裝」頁建立的個人形象快照，不能上傳照片更換。</p>':locked?'<p class="set-note">頭像固定使用像素辦公室的像素大頭，顯示名也已綁定，不能自行更換或修改。</p>':'<div class="set-actions"><button type="button" class="btn" data-avatar-upload>上傳／更換頭像</button></div>'}
         <div class="set-actions">${locked?'':`<button type="button" class="btn primary" data-set-save="profile"${st2.busy==='profile'?' disabled':''}>${st2.busy==='profile'?'儲存中…':'儲存'}</button>`}</div></div></details>`;
     }
     function templatesHtml(){
@@ -2882,6 +2882,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     function openAvatarUpload(){
       if(!loggedIn()||nameLocked())return;
+      if(personaSnapAvatar(session().name||session().user)||personaSnapAvatar(session().user)){toast('頭像使用個人形象快照，不能上傳照片更換');return}
       Object.assign(up,{nonce:uuid(),id:'',round:0,skip:false,inflight:false,last:null,avatar:true});
       const url=new URL(UPLOAD_PAGE);url.searchParams.set('mode','user');url.searchParams.set('account',selfAccount());url.searchParams.set('closeNonce',up.nonce);
       url.hash=new URLSearchParams({token:session().token}).toString();
