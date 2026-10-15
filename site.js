@@ -439,7 +439,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=106&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=106&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=107&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=107&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -950,7 +950,7 @@
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
-      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+(new URLSearchParams(location.search).get('persona')==='1'||VIEW_AS?'&persona=1':'')+(VIEW_AS?'&as='+(VIEW_AS==='企劃部'?'planner':'project'):'')+'"></iframe></div>';
+      $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     /* 個人形象完成（頭像快照已存）：重新載入一次，頭像框就會換成新的 */
@@ -1214,11 +1214,8 @@
     const acc=(key,fb=true)=>{const a=window.MachiAccess;if(!a||!a.state.loaded)return fb;return a.can(key)};
     const accRole=()=>window.MachiAccess&&window.MachiAccess.state&&window.MachiAccess.state.loaded?String(window.MachiAccess.state.role||''):'';
     const hasDesignerRole=()=>['設計師','管理者'].includes(accRole())||['平面','影音','管理者'].includes(sessionValue('designRequestEditorGroup'));
-    /* ?as=企劃（或 planner／專案／project）：只改畫面，模擬企劃部／專案部同仁看到的樣子（不是設計師、不是管理者）；實際權限仍是登入的帳號 */
-    const VIEW_AS=(()=>{const v=new URLSearchParams(location.search).get('as')||'';return /^(planner|企劃)$/i.test(v)?'企劃部':/^(project|專案)$/i.test(v)?'專案部':''})();
-    if(VIEW_AS)document.addEventListener('DOMContentLoaded',()=>{const b=document.createElement('div');b.textContent='模擬視角：'+VIEW_AS+'同仁（僅畫面，實際權限仍是你登入的帳號）';b.style.cssText='position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:3000;padding:6px 14px;border-radius:99px;background:#159E31;color:#fff;font:700 12px/1.4 system-ui;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none';document.body.appendChild(b)});
-    const isAdminAcct=()=>!VIEW_AS&&loggedIn()&&(accRole()==='管理者'||sessionValue('designRequestEditorGroup')==='管理者'||permissionRole()==='管理者');
-    const isDesignerByName=()=>{const s=session();return !VIEW_AS&&loggedIn()&&(['平面','影音'].includes(sessionValue('designRequestEditorGroup'))||DESIGNERS.some(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).startsWith(norm(n)+' ')||norm(v).split(/[@\s]/)[0]===norm(n))))};
+    const isAdminAcct=()=>loggedIn()&&(accRole()==='管理者'||sessionValue('designRequestEditorGroup')==='管理者'||permissionRole()==='管理者');
+    const isDesignerByName=()=>{const s=session();return loggedIn()&&(['平面','影音'].includes(sessionValue('designRequestEditorGroup'))||DESIGNERS.some(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).startsWith(norm(n)+' ')||norm(v).split(/[@\s]/)[0]===norm(n))))};
     const isDesignerSession=()=>loggedIn()&&acc('request.status',isDesignerByName());
     const normGroup=g=>String(g||'').trim().replace(/組$/,'');
     const editRules=name=>{const row=customerRow(name);return row?parseList(row['專案負責人']):[]};
@@ -1714,14 +1711,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const st2={loaded:false,loading:false,error:'',display:'',avatar:'',nicknames:[],templates:[],tplDefault:0,presets:[],presetDefault:0,custCurrent:'',custDrafts:new Map(),open:{profile:true,templates:false,nicknames:false,signatures:false,customers:false,groups:new Set()},busy:''};
     const selfAccount=()=>{const s=session();const a=String(s.account||s.user||'').trim().toLowerCase();return a.includes('@')?a:(a?`${a}@emctaipei.com`:'')};
     const canonAcc=v=>{const a=String(v||'').trim().toLowerCase();return !a||a.startsWith('local:')?a:(a.includes('@')?a:`${a}@emctaipei.com`)};
-    const sessionDept=()=>VIEW_AS||sessionValue('designRequestEditorDepartment');
+    const sessionDept=()=>sessionValue('designRequestEditorDepartment');
     const sessionRawGroup=()=>sessionValue('designRequestEditorRawGroup');
     function permissionRole(){const acc=selfAccount();const row=(state.permissions||[]).find(r=>canonAcc(r['帳號'])===acc);return String(row?.['角色範本']||'').trim()}
-    const isAdminUser=()=>!VIEW_AS&&permissionRole()==='管理者';
-    const isMachiUser=()=>!VIEW_AS&&(String(session().user||'').trim()==='Machi'||norm(session().name)==='machi');
+    const isAdminUser=()=>permissionRole()==='管理者';
+    const isMachiUser=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi';
     const canUseCustomerSettings=()=>isAdminUser()||isMachiUser()||/企劃部|專案部/.test(sessionDept());
     /* 五位設計師（含 Machi）：頭像固定綁像素辦公室的像素大頭、顯示名固定，避免與像素辦公室、案件、信件聯絡人聯動出錯 */
-    const ownDesignerName=()=>{const s=session();if(!loggedIn()||VIEW_AS)return '';return DESIGNERS.find(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).split(/[@\s]/)[0]===norm(n)))||''};
+    const ownDesignerName=()=>{const s=session();if(!loggedIn())return '';return DESIGNERS.find(n=>[s.name,s.user].some(v=>norm(v)===norm(n)||norm(v).split(/[@\s]/)[0]===norm(n)))||''};
     const nameLocked=()=>Boolean(ownDesignerName())||(!isAdminUser()&&!isMachiUser()&&(SET_LOCKED_DEPT.test(sessionDept())||isDesignerSession()));
     function normTemplates(value,def){
       let src=value;if(typeof src==='string'){try{src=JSON.parse(src||'{}')}catch(e){src={}}}
