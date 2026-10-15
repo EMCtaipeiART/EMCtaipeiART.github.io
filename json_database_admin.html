@@ -1645,7 +1645,7 @@
       $('tableTitle').textContent='平台幣帳本';$('tableSubtitle').textContent='完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）；只新增、不修改，每筆帶簽章';
       $('currentTable').textContent='平台幣帳本';$('add').hidden=true;$('pageSizeWrap').hidden=true;$('footer').hidden=true;$('databaseFilters').hidden=true;toolChrome();$('search').hidden=true;
       const m=document.querySelector('.metrics');if(m)m.hidden=true;
-      $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1"></iframe>';
+      $('view').innerHTML='<iframe class="coin-frame" title="平台幣帳本" src="coin_ledger_admin.html?embed=1&v=3"></iframe>';
     }
     $('tabs').addEventListener('click',event=>{if(event.target.closest('[data-coin]'))showCoin()});
     async function showAudit(){auditView='audit';
