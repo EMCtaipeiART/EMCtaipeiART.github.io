@@ -27,7 +27,8 @@
     .gate{min-height:70vh;display:grid;place-items:center;padding:24px;text-align:center}.gate div{max-width:420px;padding:28px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
     .empty{padding:36px;text-align:center;color:var(--muted)}
     @media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.adjust{grid-template-columns:1fr 1fr}.adjust .wide{grid-column:1/-1}main{padding:14px}.topbar{padding:10px 14px}}
-  </style>
+  .group-title{margin:18px 0 8px;font-size:14px;color:#44546a}
+</style>
 </head>
 <body>
   <header class="topbar"><div><h1>平台幣帳本</h1><small>完成案件積分 1 點 = 平台幣 1 點（2026/10/01 起）· 每次 AI 服裝生成 200 點 · 只新增、不修改，每筆帶簽章</small></div><div><a class="btn" href="json_database_admin.html">← 返回資料庫後台</a></div></header>
@@ -58,21 +59,25 @@
     function render(note=''){
       const d=state.data;
       const chain=d.chain;
-      const ALL=[...NAMES,...Object.keys(d.balances||{}).filter(n=>!NAMES.includes(n))];/* 設計師＋有帳本紀錄的企劃／專案同仁 */
-      const holders=ALL.map(name=>`<div class="card"><span>${esc(name)}</span><b>${fmt(d.balances[name])}</b><small>點</small></div>`).join('');
+      const groups=(d.groups&&d.groups.length?d.groups:[{label:'設計部',names:NAMES}]);
+      const listed=new Set(groups.flatMap(g=>g.names)),others=Object.keys(d.balances||{}).filter(n=>!listed.has(n));
+      if(others.length)groups.push({label:'其他（已離開或改部門）',names:others});
+      const ALL=groups.flatMap(g=>g.names);
+      const card=name=>`<div class="card"><span>${esc(name)}</span><b>${fmt(d.balances[name])}</b><small>點</small></div>`;
+      const holders=groups.filter(g=>g.names.length).map(g=>`<h3 class="group-title">${esc(g.label)}（${g.names.length} 人 · 合計 ${fmt(g.names.reduce((sum,n)=>sum+(d.balances[n]||0),0))} 點）</h3><div class="cards">${g.names.map(card).join('')}</div>`).join('');
       const rows=d.entries.map(entry=>`<tr><td>${esc(taipei(entry.at))}</td><td>${esc(entry.label)}</td><td>${esc(entry.holder)}</td><td class="num ${entry.amount>=0?'plus':'minus'}">${entry.amount>=0?'+':''}${fmt(entry.amount)}</td><td>${esc(entry.counterparty)}</td><td class="memo">${esc(entry.memo)}</td><td>${esc(entry.actor)}</td><td class="hash" title="${esc(entry.ref)}">#${entry.seq} · ${esc(entry.hash)}</td></tr>`).join('');
       const totals=Object.entries(d.totals).map(([kind,value])=>`${KINDS[kind]||kind} ${fmt(value)}`).join(' ／ ');
       $('app').innerHTML=`
         <div class="notice ${chain.ok?'ok':'bad'}">${chain.ok?`帳本驗證通過：共 ${d.count} 筆，串接與簽章都完整，沒有被改動的痕跡。`:`帳本驗證失敗：第 ${chain.brokenAtSeq} 筆有問題（${esc(chain.reason)}）。請立即停止使用並保留現狀，交給維護者查證。`}${note?` ｜ ${esc(note)}`:''}</div>
-        <div class="cards">${holders}</div>
+        ${holders}
         <div class="notice">累計：${esc(totals)||'尚無紀錄'}</div>
         <section class="panel"><h2>帳本明細</h2>
-          <div class="tools"><select id="fHolder"><option value="">全部同仁</option>${ALL.map(name=>`<option ${state.holder===name?'selected':''}>${name}</option>`).join('')}</select>
+          <div class="tools"><select id="fHolder"><option value="">全部同仁</option>${groups.map(g=>`<optgroup label="${esc(g.label)}">${g.names.map(name=>`<option ${state.holder===name?'selected':''}>${esc(name)}</option>`).join('')}</optgroup>`).join('')}</select>
             <select id="fKind"><option value="">全部類型</option>${Object.entries(KINDS).map(([kind,label])=>`<option value="${kind}" ${state.kind===kind?'selected':''}>${label}</option>`).join('')}</select>
             <button class="btn" id="bReload">重新整理</button><button class="btn" id="bCsv">匯出 CSV</button><button class="btn" id="bSync" title="把已完成案件的積分立刻記入（平常每 10 分鐘自動記一次）">立即同步完成案件積分</button></div>
           <div class="table-wrap">${rows?`<table><thead><tr><th>時間（台北）</th><th>類型</th><th>設計師</th><th>點數</th><th>對象</th><th>備註</th><th>操作者</th><th>序號 · 簽章</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">沒有符合的紀錄</div>'}</div></section>
         <section class="panel"><h2>手動調整（補發、扣回、更正）</h2>
-          <div class="adjust"><div><label>同仁</label><select id="aHolder">${ALL.map(name=>`<option>${name}</option>`).join('')}</select></div><div><label>點數（負數＝扣回）</label><input id="aAmount" type="number" step="0.1" placeholder="例如 50 或 -20"></div><div class="wide"><label>原因（必填，之後有爭議靠這個查）</label><input id="aReason" type="text" maxlength="120" placeholder="例如：10/3 轉讓誤轉，更正給 Amber"></div><button class="btn primary" id="bAdjust">確認調整</button></div>
+          <div class="adjust"><div><label>同仁</label><select id="aHolder">${groups.map(g=>`<optgroup label="${esc(g.label)}">${g.names.map(name=>`<option>${esc(name)}</option>`).join('')}</optgroup>`).join('')}</select></div><div><label>點數（負數＝扣回）</label><input id="aAmount" type="number" step="0.1" placeholder="例如 50 或 -20"></div><div class="wide"><label>原因（必填，之後有爭議靠這個查）</label><input id="aReason" type="text" maxlength="120" placeholder="例如：10/3 轉讓誤轉，更正給 Amber"></div><button class="btn primary" id="bAdjust">確認調整</button></div>
           <div class="adjust-note">調整不會改舊紀錄，而是新增一筆「管理員調整」並記下操作者與原因；扣回不能讓餘額變成負數。</div></section>`;
       $('fHolder').onchange=event=>{state.holder=event.target.value;load()};
       $('fKind').onchange=event=>{state.kind=event.target.value;load()};

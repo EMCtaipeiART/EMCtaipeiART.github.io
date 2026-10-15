@@ -2721,11 +2721,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const filtered = all.filter(entry => (!holder || entry.holder === holder) && (!kind || entry.kind === kind));
     const balances: Record<string, number> = {};
     for (const name of PIXEL_OFFICE_NAMES) balances[name] = tenthsToCoins(this.coinBalance(name));
-    for (const entry of all) if (!(entry.holder in balances)) balances[entry.holder] = tenthsToCoins(this.coinBalance(entry.holder));   // 企劃／專案同仁
+    const staff = this.coinStaffRows(database);
+    const groups = [
+      { label: '設計部', names: [...PIXEL_OFFICE_NAMES] },
+      { label: '企劃部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '企劃部').map(row => text(row['名字'])) },
+      { label: '專案部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '專案部').map(row => text(row['名字'])) }
+    ];
+    for (const group of groups) for (const name of group.names) balances[name] = tenthsToCoins(this.coinBalance(name));   // 企劃部、專案部同仁（沒有紀錄的也列出，餘額 0）
+    for (const entry of all) if (!(entry.holder in balances)) balances[entry.holder] = tenthsToCoins(this.coinBalance(entry.holder));   // 已離開或改部門但還有紀錄的人
     const totals: Record<string, number> = {};
     for (const entry of all) totals[entry.kind] = (totals[entry.kind] || 0) + tenthsToCoins(entry.amount);
     return {
-      ok: true, action: 'coinLedger', chain, balances, totals, count: all.length, startDate: COIN_START_DATE,
+      ok: true, action: 'coinLedger', chain, balances, groups, totals, count: all.length, startDate: COIN_START_DATE,
       entries: filtered.slice(-limit).reverse().map(entry => this.coinPublic(entry))
     };
   }
