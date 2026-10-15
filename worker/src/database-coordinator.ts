@@ -1248,7 +1248,7 @@ function formatGmailDateForDisplay(rawDate: string): string {
   return `${parts.year}/${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
-interface HeroConfig { auto: boolean; base: string; fixed: string; updatedBy: string; updatedAt: string }
+interface HeroConfig { auto: boolean; base: string; fixed: string; frame: boolean; updatedBy: string; updatedAt: string }
 
 const designImageBaseNameOf = (name: unknown) => text(name).replace(/\.[^./\\]+$/, '').toLowerCase();
 
@@ -4875,7 +4875,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const color3 = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}$/;
         const withFest = /^#[0-9a-f]{6}\|#[0-9a-f]{6}\|#[0-9a-f]{6}(?:\|(?:halloween|xmas|cny|valentine|duanwu|midautumn))?$/;
         const base = text(payload.base).toLowerCase(), fixed = text(payload.fixed).toLowerCase();
-        const config: HeroConfig = { auto: payload.auto !== false, base: color3.test(base) ? base : '', fixed: withFest.test(fixed) ? fixed : '', updatedBy: auditActor(who), updatedAt: new Date().toISOString() };
+        const config: HeroConfig = { auto: payload.auto !== false, base: color3.test(base) ? base : '', fixed: withFest.test(fixed) ? fixed : '', frame: payload.frame !== false, updatedBy: auditActor(who), updatedAt: new Date().toISOString() };
         await this.ctx.storage.put('heroConfig', config);
         await this.queueAudit([{ t: config.updatedAt, kind: '欄位修改', actor: config.updatedBy, caseId: '首頁背景', field: config.auto ? '依節慶自動' : '固定', to: config.auto ? config.base || '預設綠' : config.fixed || '預設綠', note: '首頁背景' }]);
         return { ok: true, action, config };

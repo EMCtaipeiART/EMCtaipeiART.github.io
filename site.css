@@ -1316,3 +1316,6 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 
     /* 深色模式：iframe 元素與裡面文件的 color-scheme 一致才會透明，否則瀏覽器會塗一塊不同色的底（辦公室看起來像一小塊黑框） */
     html[data-theme="dark"] .uni-frame{color-scheme:dark}
+
+    /* 萬聖節頭像框：首頁頭像套上幽靈框（編輯背景可關）。框內圓圈對齊頭像圓，幽靈與星星在外側 */
+    html[data-hero-fest="halloween"][data-hero-frame="1"] .avatar-btn:not(.avatar-plus)::after{content:"";position:absolute;width:130%;height:130%;left:-13.8%;top:-17.3%;background:url("assets/festival/halloween-avatar-frame.webp") center/100% 100% no-repeat;pointer-events:none;z-index:4}
