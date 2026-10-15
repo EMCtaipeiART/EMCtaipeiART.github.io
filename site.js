@@ -439,7 +439,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=110&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=110&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=111&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=111&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -955,6 +955,8 @@
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
     /* 個人形象完成（頭像快照已存）：重新載入一次，頭像框就會換成新的 */
     window.addEventListener('message',e=>{if(e.origin===OUTFIT_ORIGIN&&e.data&&e.data.type==='emcPersonaDone')setTimeout(()=>location.reload(),800)});
+    /* 服裝頁（iframe）要求捲回它的頂端：外層捲到 iframe 上緣（留出上方固定列的高度） */
+    window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitScroll')return;const f=$('outfitFrame');if(!f)return;const top=f.getBoundingClientRect().top+window.scrollY+(Number(e.data.y)||0)-96;window.scrollTo({top:Math.max(0,top),behavior:'smooth'})});
     window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
     /* ---------- 記事本：設計部常用的工具、素材網站、廠商資訊（卡片式、可新增／編輯／刪除／調整順序）。
