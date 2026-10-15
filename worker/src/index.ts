@@ -1,5 +1,5 @@
 import type { ApiPayload, ApiResult, RequestContext } from './types';
-import { DatabaseCoordinator } from './database-coordinator';
+import { DatabaseCoordinator, isQuietHours } from './database-coordinator';
 import { text } from './model';
 
 export { DatabaseCoordinator };
@@ -244,6 +244,8 @@ export default {
       console.error(JSON.stringify({ event: 'duty-booking-error', message: error instanceof Error ? error.message : String(error) }));
     }
     // 即時推送：上面這些背景變動（行事曆切換、限時動態到期…）有結果就通知前台。
+    // 夜間（台北 20:00～08:00）每 5 分鐘才比對一次，降低每日讀取量。
+    if (isQuietHours(Date.now()) && new Date().getUTCMinutes() % 5 !== 0) return;
     try { await stub.runPixelPush(); } catch (error) {
       console.error(JSON.stringify({ event: 'pixel-office-push-error', message: error instanceof Error ? error.message : String(error) }));
     }

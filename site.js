@@ -3952,7 +3952,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 即時推送：後端（Durable Object）用 WebSocket 通知「人物狀態／對話框／音樂／限時動態有變」，收到就馬上重讀。
        連線正常時備援輪詢拉長到 5 分鐘；斷線（或瀏覽器不支援）就維持每 60 秒。 */
     let officeTick=0;
-    setInterval(()=>{if(document.hidden)return;officeTick+=1;if(!state.pushOk||officeTick%5===0)loadOffice()},60000);
+    /* 夜間減量時段（台北 20:00～隔天 08:00）：後端免費額度每天 08:00 重置，這段時間降低背景輪詢頻率 */
+    const quietHours=()=>{const h=new Date(Date.now()+8*3600000).getUTCHours();return h>=20||h<8};
+    setInterval(()=>{if(document.hidden)return;officeTick+=1;if(quietHours()?officeTick%5===0:(!state.pushOk||officeTick%5===0))loadOffice()},60000);
     /* 全員重整：管理者按下後伺服器記一個「版本號」。每台瀏覽器記住自己已更新到哪一版；
        連上線／切回分頁／收到推送時比對，落後就更新。正在填表、寫信、上傳、輸入中的人先不打斷，改顯示提示條，空下來自動更新。 */
     const relGet=()=>{try{return Number(localStorage.getItem('appReleaseSeen'))||0}catch(e){return 0}};
@@ -3996,7 +3998,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* 背景刷新同舊網站：每 6 秒問一次（內容沒變走 304、沒有新版本就不動畫面）；打字、開著視窗／選單、編輯中、分頁在背景時暫停重畫 */
     let dbTick=0,lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
-    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}if(!state.pushOk||(dbTick=(dbTick+1)%3)===0)loadDatabase(true)},8000);
+    setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}dbTick=(dbTick+1)%15;if(quietHours()?((state.pushOk?dbTick===0:dbTick%5===0)):(!state.pushOk||dbTick%3===0))loadDatabase(true)},8000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){keepBoardScroll(o,this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}scheduleEqualize()}}

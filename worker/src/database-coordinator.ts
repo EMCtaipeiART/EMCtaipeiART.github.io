@@ -1309,6 +1309,12 @@ function moveNasTracking(sourceCase: Row, targetCase: Row, fileNames: string[]):
   return true;
 }
 
+/** 台北時間 20:00～隔天 08:00。 */
+export function isQuietHours(nowMs: number): boolean {
+  const hour = new Date(nowMs + 8 * 3600_000).getUTCHours();
+  return hour >= 20 || hour < 8;
+}
+
 export class DatabaseCoordinator extends DurableObject<Env> {
   private writeTail: Promise<void> = Promise.resolve();
 
@@ -1671,6 +1677,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(18)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-15：Durable Objects 免費額度的 rows_read 逼近每日上限。pixelOfficeVersion() 每次呼叫都對這幾張表做
+          // SELECT MAX(...)，沒有索引就是整張表掃一遍（動態表還包含 30 天內過期但保留備份的列），心跳、輪詢、每分鐘排程都會呼叫。
+          // 加上索引後 MAX() 只讀一列，行為完全不變。
+          for (const statement of [
+            'CREATE INDEX IF NOT EXISTS idx_pixel_people_updated ON pixel_office_people(updated_at)',
+            'CREATE INDEX IF NOT EXISTS idx_pixel_settings_updated ON pixel_office_settings(updated_at)',
+            'CREATE INDEX IF NOT EXISTS idx_pixel_stories_updated ON pixel_office_stories(updated_at)',
+            'CREATE INDEX IF NOT EXISTS idx_pixel_stories_expires ON pixel_office_stories(expires_at)',
+            'CREATE INDEX IF NOT EXISTS idx_pixel_avatar_current_updated ON pixel_office_avatar_current(updated_at)',
+            'CREATE INDEX IF NOT EXISTS idx_pixel_staff_joined ON pixel_office_staff(joined_at)'
+          ]) this.ctx.storage.sql.exec(statement);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            18, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
@@ -1703,12 +1728,21 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return -1;
   }
 
+  /** 夜間減量時段（台北 20:00～隔天 08:00）：Durable Objects 免費額度每天 08:00（UTC 00:00）重置，這段時間降低背景讀取。 */
+  private pixelVersionMemo: { v: number; at: number } | null = null;
   private pixelOfficeVersion(): number {
+    const quiet = isQuietHours(Date.now());
+    if (quiet && this.pixelVersionMemo && Date.now() - this.pixelVersionMemo.at < 120_000) return this.pixelVersionMemo.v;
+    const v = this.pixelOfficeVersionFresh();
+    this.pixelVersionMemo = { v, at: Date.now() };
+    return v;
+  }
+  private pixelOfficeVersionFresh(): number {
     const row = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_people').toArray()[0];
     // 稱號也算進版本號，不然改了稱號要等到有人換狀態，別人的畫面才會跟著更新。
     const settings = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_settings').toArray()[0];
     const stories = this.ctx.storage.sql.exec<{ v: number | null; expired: number | null }>(
-      'SELECT MAX(updated_at) AS v, MAX(CASE WHEN expires_at <= ? THEN expires_at END) AS expired FROM pixel_office_stories', Date.now()
+      'SELECT (SELECT MAX(updated_at) FROM pixel_office_stories) AS v, (SELECT MAX(expires_at) FROM pixel_office_stories WHERE expires_at <= ?) AS expired', Date.now()
     ).toArray()[0];
     // 動態到期也要換版本號：沒有人動作的時候，過期的動態才會在下一次輪詢從每個人的畫面消失。
     const staffJoined = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(joined_at) AS v FROM pixel_office_staff').toArray()[0];
@@ -4628,7 +4662,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const result = await this.handleCore(actionValue, payload, context);
     const action = text(actionValue || payload.action || '');
     if (action.startsWith('pixelOffice') && !['pixelOfficeStoryImage', 'pixelOfficeCalendarStatus'].includes(action)) {
-      try { this.pixelPushIfChanged(); } catch { /* 推送失敗不影響操作本身 */ }
+      // 夜間：電腦心跳（每台每分鐘一次）不立刻比對版本，交給每 5 分鐘的排程；其他操作（改狀態、貼動態…）照舊即時推送。
+      if (!['pixelOfficeState'].includes(action)) this.pixelVersionMemo = null;
+      if (!(action === 'pixelOfficeHeartbeat' && isQuietHours(Date.now()))) {
+        try { this.pixelPushIfChanged(); } catch { /* 推送失敗不影響操作本身 */ }
+      }
     }
     return result;
   }
