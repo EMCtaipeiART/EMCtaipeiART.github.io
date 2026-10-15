@@ -393,3 +393,6 @@ html.clean .sv-stage{height:100dvh;border-radius:0}
 html.ro aside,html.ro .joystick,html.ro #radial{display:none!important}
 
 .say-btns{display:flex;align-items:center;gap:8px}
+
+/* 企劃部、專案部沒有等級制度：同仁自己的畫面、或選到同仁的人物時，不顯示等級卡與等級一覽表 */
+html.staff-view .level-card,html.staff-view .level-setting,html.sel-staff .level-card{display:none!important}

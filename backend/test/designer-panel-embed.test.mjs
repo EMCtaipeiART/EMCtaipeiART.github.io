@@ -708,7 +708,7 @@ test('眼鏡與墨鏡全員同樣大（固定寬度，不依各人臉寬換算�
 test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留必要的圖，Spotify 播放器等使用者有動作才載', async () => {
   const [js, html] = await Promise.all([officeJs(), officeHtml()]);
   // ready 只等頭像、衣服、家具；配件圖在 ready 之後才開始載。
-  assert.match(js, /Promise\.all\(\[load\(wardrobeSheets\.heads\),load\(wardrobeSheets\.outfits\),load\(furniture\)\]\)\.then\(\(\)=>\{ready=true;loadAccessories\(\);/);
+  assert.match(js, /Promise\.all\(\[load\(wardrobeSheets\.heads\),load\(wardrobeSheets\.outfits\),load\(furniture\)\]\)\.then\(\(\)=>\{ready=true;try\{applyViewerRole\(\);\}catch\(e\)\{\}loadAccessories\(\);/);
   assert.match(js, /function loadAccessories\(\)\{if\(!wardrobeSheets\.acc\.getAttribute\('src'\)\)/);
   // 耳機圖只有在有人聽音樂（或編輯畫面）才載。
   assert.doesNotMatch(js, /const headphones=new Image\(\);headphones\.src/, '耳機圖不能在宣告時就載');
