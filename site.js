@@ -2730,10 +2730,12 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function nasUrl(p){const u=new URL(NAS_MGR+'/picker');if(p.caseId)u.searchParams.set('caseId',p.caseId);u.searchParams.set('token',NAS_TOKEN);u.searchParams.set('nonce',p.nonce);u.searchParams.set('origin',location.origin);for(const k of ['mode','path','keyword','folders'])if(p[k])u.searchParams.set(k,p[k]);return u}
     const nasForHost=(url,host)=>{const n=new URL(host);n.pathname=url.pathname;n.search=url.search;return n};
     function nasClearWatch(){if(nas.timer){clearInterval(nas.timer);nas.timer=0}nas.backing=false}
-    function nasPopup(url){
+    function nasPopup(url,quiet){
       const hosts=nasHostOrder();clearTimeout(nas.readyTimer);nas.readyHost='';
-      const w=520,h=640,win=window.open(nasForHost(url,hosts[0]).toString(),'machiNasFolderPicker',`width=${w},height=${h},left=${Math.max(0,Math.round((screen.width-w)/2))},top=${Math.max(0,Math.round((screen.height-h)/2))}`);
+      /* quiet：沿用路徑只是背景作業，視窗開成小小一個擠在螢幕右下角，並立刻把焦點還給本頁。 */
+      const w=quiet?200:520,h=quiet?100:640,l=quiet?Math.max(0,screen.width-w-4):Math.max(0,Math.round((screen.width-w)/2)),t=quiet?Math.max(0,screen.height-h-4):Math.max(0,Math.round((screen.height-h)/2)),win=window.open(nasForHost(url,hosts[0]).toString(),'machiNasFolderPicker',`width=${w},height=${h},left=${l},top=${t}`);
       if(!win)return win;
+      if(quiet){try{win.blur();window.focus()}catch(e){}}
       const tryHost=i=>{clearTimeout(nas.readyTimer);nas.readyTimer=setTimeout(()=>{if(nas.readyHost||win.closed)return;const next=i+1;if(next>=hosts.length){toast('連不到 NAS 資料夾選擇器（你的電腦與管理者電腦都沒有回應），請改用電腦檔案上傳',true);return}window.open(nasForHost(url,hosts[next]).toString(),'machiNasFolderPicker');tryHost(next)},2500)};
       tryHost(0);return win;
     }
@@ -2749,7 +2751,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       nasClearWatch();Object.assign(nas,{nonce:uuid(),id,round,purpose,afterReply,skip:Boolean(afterReply&&skip)});
       const p={caseId:id,nonce:nas.nonce,mode};
       if(mode==='reuse'&&folders&&folders.length){p.path=folders[0].path;p.keyword=folders[0].keyword||'';p.folders=JSON.stringify(folders)}
-      const win=nasPopup(nasUrl(p));
+      const win=nasPopup(nasUrl(p),mode==='reuse');
       if(!win){toast('瀏覽器封鎖了新視窗，請允許彈出視窗後再試一次',true);nas.nonce='';return}
       toast(mode==='reuse'?'正在沿用 NAS 路徑並抓取最新圖片...':'請在新分頁選擇 NAS 資料夾，選好後會自動回到這裡...');
       nasWatch(win,nas.nonce);

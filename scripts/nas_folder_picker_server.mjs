@@ -581,6 +581,7 @@ const PICKER_PAGE = `<!doctype html>
   }
 
   function restoreWindowForPrompt(){
+    if(window.__hideTimer) clearInterval(window.__hideTimer);
     const width=520,height=640,left=Math.max(0,Math.round((screen.width-width)/2)),top=Math.max(0,Math.round((screen.height-height)/2));
     try{ window.resizeTo(width,height); }catch(error){}
     try{ window.moveTo(left,top); }catch(error){}
@@ -739,6 +740,10 @@ const PICKER_PAGE = `<!doctype html>
 
   (async function init(){
     if(mode === 'reuse'){
+      // 沿用路徑是背景作業：一開起來就收到畫面外／縮到最小，並重複幾次（部分瀏覽器第一次呼叫會被忽略）。
+      hideBehindOpener();
+      let hideTries = 0;
+      window.__hideTimer = setInterval(() => { hideBehindOpener(); if(++hideTries >= 10) clearInterval(window.__hideTimer); }, 300);
       // 主頁面帶 folders（JSON 陣列 [{path,keyword}]）時沿用案件目前「全部」的來源資料夾，每個各自
       // 帶自己的關鍵字——案件設定了兩個資料夾時，以前只會沿用第一組、第二組的關鍵字完全用不到，而且
       // 備份完回寫還會把案件的多資料夾設定覆蓋成只剩那一組。沒有帶 folders（舊版主頁面）就退回原本
