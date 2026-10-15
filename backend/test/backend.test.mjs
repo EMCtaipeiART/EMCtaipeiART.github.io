@@ -5169,7 +5169,7 @@ test('平台幣：前台左側選單有「服裝」入口（token 放在網址 #
   assert.doesNotMatch(html, /coinadmin/, '平台幣帳本不放在前台');
   const dbAdmin = await readFile(new URL('../../json_database_admin.html', import.meta.url), 'utf8');
   assert.match(dbAdmin, /data-coin/, '資料庫後台要有平台幣帳本的入口（左側選單）');
-  assert.match(dbAdmin, /<iframe class="coin-frame"[^>]*src="coin_ledger_admin\.html\?embed=1"/, '帳本嵌在右側內容區，不跳頁');
+  assert.match(dbAdmin, /<iframe class="coin-frame"[^>]*src="coin_ledger_admin\.html\?embed=1(?:&v=\d+)?"/, '帳本嵌在右側內容區，不跳頁');
   assert.doesNotMatch(dbAdmin, /href="coin_ledger_admin\.html"/, '不再用連結跳頁');
   const admin = await readFile(new URL('../../coin_ledger_admin.html', import.meta.url), 'utf8');
   for (const action of ['coinLedger', 'coinAdjust', 'coinEarnSyncNow']) assert.ok(admin.includes(`'${action}'`), action);
