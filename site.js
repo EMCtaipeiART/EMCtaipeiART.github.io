@@ -437,7 +437,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=101&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=101&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=102&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=102&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -944,7 +944,7 @@
     updateThemeBtn();
     /* 服裝生成器（另一個網站）內嵌在右側：登入 token 與目前的深淺模式放在網址 # 後面（不會送到伺服器），之後切換深淺模式用 postMessage 同步 */
     /* 服裝生成器只開放設計部同仁（平台幣也只發給設計師） */
-    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||String(sessionDept()||'').trim()==='設計部'||isAdminAcct());
+    const outfitAllowed=()=>loggedIn()&&(isDesignerByName()||/^(設計部|企劃部|專案部)$/.test(String(sessionDept()||'').trim())||isAdminAcct());
     const OUTFIT_ORIGIN='https://emc-ai-stage-classifier.machi-chen.workers.dev';
     function renderOutfitPage(){
       const t=session().token;if(!t||!outfitAllowed()){show(state.home||'board');return}
@@ -1189,7 +1189,7 @@
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       /* 服裝生成器在另一個網站：登入 token 放在網址 # 後面（不會送到伺服器，對方頁面收下後立刻從網址拿掉） */
-      if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部同仁與管理者使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
+      if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部、企劃部、專案部同仁與管理者使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
     function updateRail(){syncHeroEdit();renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
