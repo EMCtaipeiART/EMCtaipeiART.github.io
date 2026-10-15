@@ -26,8 +26,8 @@ const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'a
 const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'meeting',symbol:'meeting',label:'會議',text:'開會中'},{id:'leave',symbol:'calendar',label:'休假',text:'休假中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
 const workingStatusIds=['present','overtime'];
-// 企劃／專案同仁沒有電腦心跳：預設「在座」只在平日 8:00–19:00 算在座，其餘時間顯示下班（手動指定的狀態照用）。
-function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=8&&c.hour<19))return 'offwork';}return p.status;}
+// 企劃部、專案部：上班時間平日 10:00–19:00，其餘時間一律下班（人物與椅子隱藏、桌子灰階）；沒有電腦心跳，所以用時間規則。
+function statusOf(p){if(p.staff&&p.status==='present'){const c=currentTaipeiClock();if(!(c.workday&&c.hour>=10&&c.hour<19))return 'offwork';}return p.status;}
 const isAway=p=>!workingStatusIds.includes(statusOf(p));
 const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1';
 // 嵌入版不能走動，畫面多數時間是完全靜止的（只有心情動畫會動），沒必要每秒重畫 60 次。
@@ -1241,6 +1241,7 @@ const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;
 const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;
 const stationVacant=s=>!s.name;
 function stationDimmed(s){
+  if(s.grp){const c=currentTaipeiClock();return !(c.workday&&c.hour>=10&&c.hour<19)||Boolean(stationAway(s));}// 企劃部、專案部的桌子：非上班時間（平日 10:00–19:00 以外）整張灰階、椅子收起來
   if(stationAway(s))return true;
   if(!stationVacant(s))return false;
   const clock=currentTaipeiClock();
