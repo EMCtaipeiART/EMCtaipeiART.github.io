@@ -351,6 +351,7 @@ function buildWardrobe(i,view,look,action){
   const hx=B.n-chin.x*K+(custom?custom.dx:0),hy=WD_OV-chin.y*K+(custom?custom.dy:0)+(act?act.headDrop+(B.hd||0):0);
   const chv=typeof look.head==='string'&&look.head?customHeadView(look.head,view):null,head=chv?{sheet:chv.sheetKey,src:chv.src,x:hx-chv.pad[0]*K,y:hy-chv.pad[1]*K,w:(H.w+chv.pad[0]+chv.pad[2])*K,h:(H.h+chv.pad[1]+chv.pad[3])*K}:{sheet:'heads',src:H,x:hx,y:hy,w:H.w*K,h:H.h*K},body={sheet:act?'a_'+action.id:custom?custom.sheetKey:'outfits',src:custom?custom.src:B,x:custom?0:(view===1?-WD_SIDE_BODY_SHIFT:0)+WD_BODY_DX[gi],y:dropI-(act?B.t||0:0),w:B.w,h:B.h};// 側面：衣服往左收一點（使用者回報側身衣服偏右），頭與配件不動
   const hairBehind=chv&&typeof chv.behind==='boolean'?chv.behind:WD_FEMALE[gi],layers=(!hairBehind||view===2)&&!(act&&act.over.includes(action.n))?[body,head]:[head,body];
+  if(look&&look.noHead){const hi=layers.indexOf(head);if(hi>=0)layers.splice(hi,1);}// 造型面板的服裝縮圖只畫衣服，不拼頭
   const eye=D.eyes[gi][view];
   const cgl=typeof look.glasses==='string'&&look.glasses.startsWith('a:')&&view<2?customAccView(look.glasses,view):null,ccp=typeof look.cap==='string'&&look.cap.startsWith('a:')?customAccView(look.cap,view):null;
   const accLayer=c=>({sheet:c.sheetKey,src:c.src,x:hx-c.pad[0]*K,y:hy-c.pad[1]*K,w:(H.w+c.pad[0]+c.pad[2])*K,h:(H.h+c.pad[1]+c.pad[3])*K});
@@ -699,7 +700,7 @@ function renderLookPanel(){
   if(choices)outfitBox.replaceChildren(...choices.map(o=>{
     const label=outfitLabel(selected,o),button=document.createElement('button');button.type='button';button.title=label;button.className=look.outfit===o?'active':'';
     const canvas=document.createElement('canvas');canvas.width=120;canvas.height=120;
-    const frame=buildWardrobe(selected,0,{outfit:o,cap:'',glasses:''}),k=Math.min(112/frame.canvas.height,112/frame.canvas.width);
+    const frame=buildWardrobe(selected,0,{outfit:o,cap:'',glasses:'',noHead:true}),k=Math.min(112/frame.canvas.height,112/frame.canvas.width);
     canvas.getContext('2d').drawImage(frame.canvas,60-frame.canvas.width*k/2,116-frame.canvas.height*k,frame.canvas.width*k,frame.canvas.height*k);
     button.append(canvas,label);button.onclick=()=>setLook({outfit:o});return button;
   }));
