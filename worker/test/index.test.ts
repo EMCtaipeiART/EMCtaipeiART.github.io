@@ -5212,6 +5212,23 @@ describe('平台幣', () => {
     expect(await api({ action: 'pixelOfficeUpdate', name: '座位6', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
   });
 
+  it('lets the monitor (admin or Machi) punish someone: stuck at the seat, no moving or changing clothes, with a reason and a day count', async () => {
+    const admin = await login();
+    const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { x: 700, y: 500 } })).toMatchObject({ ok: true });
+    expect(await api({ action: 'pixelOfficePunish', name: 'Leona', reason: '遲到', days: 2 }, leona)).toMatchObject({ ok: false });   // 一般人不能處罰
+    const punished = await api({ action: 'pixelOfficePunish', name: 'Leona', reason: '遲到', days: 2 }, admin) as { ok: boolean; punish: { reason: string; days: number; until: number } };
+    expect(punished).toMatchObject({ ok: true, punish: { reason: '遲到', days: 2 } });
+    expect(punished.punish.until).toBeGreaterThan(Date.now() + 86_400_000);
+    const state = await api({ action: 'pixelOfficeState' }) as { people: Array<{ name: string; x?: number; y?: number; punish?: { reason: string } }> };
+    expect(state.people.find(item => item.name === 'Leona')).toMatchObject({ x: 548, y: 355, punish: { reason: '遲到' } });   // 被放回自己的座位
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { x: 700, y: 500 } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { look: { outfit: -1, cap: 'black', glasses: '' } } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { message: '我知道錯了' } })).toMatchObject({ ok: true });   // 對話、心情仍可以
+    expect(await api({ action: 'pixelOfficePunish', name: 'Leona', days: 0 }, admin)).toMatchObject({ ok: true, punish: null });
+    expect(await api({ action: 'pixelOfficeUpdate', name: 'Leona', patch: { x: 700, y: 500 } })).toMatchObject({ ok: true });
+  });
+
   it('transfers instantly between designers, refuses overdrafts and self-transfers, and records both sides', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');

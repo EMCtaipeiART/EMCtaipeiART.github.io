@@ -27,7 +27,10 @@ const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
-const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;   // 場景寬度加寬後的座標上限
+const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;
+// 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
+const PIXEL_OFFICE_DESIGNER_SEATS: Record<string, [number, number]> = { Leona: [548, 355], Amber: [768, 355], Noise: [988, 355], Anna: [768, 695], Machi: [988, 695] };
+const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = [[1428, 355], [1648, 355], [1868, 355], [1428, 695], [1648, 695], [1868, 695]];   // 場景寬度加寬後的座標上限
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
@@ -2191,6 +2194,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     ).toArray()[0];
     let state: Row = {};
     try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
+    // 班長處罰中：坐在自己的位置上，不能移動、不能變裝、不能做動作（到期前一律擋下）
+    const punish = asRow(state.punish);
+    if (Number(punish.until) > Date.now() && ['x', 'y', 'dir', 'look', 'action'].some(key => key in patch)) throw new Error('處罰中：' + text(punish.reason) + '，不能移動或變裝');
     if ('message' in patch) {
       const message = String(patch.message ?? '');
       if (message.length > 60) throw new Error('對話最多 60 個字');
@@ -2647,6 +2653,36 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       });
       return built;
     });
+  }
+
+  /** 班長（管理者與 Machi）處罰：坐在自己的位置上整整 N 天，不能移動、變裝；人物上方顯示原因與剩餘天數。days = 0 解除。 */
+  private async pixelOfficePunish(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
+    const current = this.requireSession(session);
+    const isMonitor = hasCapability(database, current, 'database.manage') || this.coinDesignerName(database, current) === 'Machi';
+    if (!isMonitor) throw new Error('只有班長（管理者與 Machi）可以處罰');
+    const name = text(payload.name);
+    if (!this.pixelOfficeKnownName(name)) throw new Error('找不到這位同仁');
+    const days = Math.round(Number(payload.days));
+    if (!Number.isFinite(days) || days < 0 || days > 30) throw new Error('天數請填 0（解除）到 30');
+    const row = this.ctx.storage.sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', name).toArray()[0];
+    let state: Row = {};
+    try { state = row ? JSON.parse(row.state) as Row : {}; } catch { state = {}; }
+    if (days === 0) delete state.punish;
+    else {
+      const reason = text(payload.reason).replace(/\s+/g, ' ').slice(0, 30);
+      if (reason.length < 2) throw new Error('請寫下處罰原因（至少 2 個字）');
+      const now = Date.now(), parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(now)).map(part => [part.type, part.value]));
+      const dayStart = Date.parse(`${parts.year}-${parts.month}-${parts.day}T00:00:00+08:00`);
+      state.punish = { reason, days, from: now, until: dayStart + days * 86_400_000, by: current.account };
+      const staffSeat = this.pixelOfficeStaff().find(item => item.name === name);
+      const seat = PIXEL_OFFICE_DESIGNER_SEATS[name] || (staffSeat ? PIXEL_OFFICE_STAFF_SEAT_POS[staffSeat.seat] : null);
+      if (seat) { state.x = seat[0]; state.y = seat[1]; state.dir = 'down'; }
+      delete state.action;
+    }
+    const now = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+    if (row) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), now, name);
+    else this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), '', 0, now);
+    return { ok: true, action: 'pixelOfficePunish', name, punish: state.punish || null, version: now };
   }
 
   /** 企劃／專案同仁完成「個人形象」後的頭像快照：存成他們的站內頭像（首頁、側邊欄頭像框用）。設計師自己的快照走 pixelOfficeAvatarSnapshot。 */
@@ -4634,6 +4670,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
       if (action === 'coinMe') return await this.coinMe(database, session);
       if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
+      if (action === 'pixelOfficePunish') return await this.pixelOfficePunish(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
       if (action === 'coinReserve') return await this.coinReserve(payload, database, session);
       if (action === 'coinRefund') return await this.coinRefund(payload);

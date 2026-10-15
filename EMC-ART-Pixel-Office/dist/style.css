@@ -396,3 +396,5 @@ html.ro aside,html.ro .joystick,html.ro #radial{display:none!important}
 
 /* 企劃部、專案部沒有等級制度：同仁自己的畫面、或選到同仁的人物時，不顯示等級卡與等級一覽表 */
 html.staff-view .level-card,html.staff-view .level-setting,html.sel-staff .level-card{display:none!important}
+
+.radial-panel .punish-label{display:block;font-size:12px;color:#5c6f88;margin:8px 0 4px}.radial-panel #punishReason,.radial-panel #punishDays{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #c9d3e0;background:#fff;color:#1b2c47;font-size:14px}

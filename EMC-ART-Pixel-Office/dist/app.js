@@ -171,6 +171,9 @@ function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status
 const effectiveStatusId=p=>isOvertime(p)?'overtime':statusOf(p);
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 const staffGeoDefault=4;
+/** 班長處罰中：坐在自己的位置上，不能移動、變裝、做動作；人物上方顯示原因與剩餘天數。 */
+function isPunishedP(p){return Boolean(p&&p.punish&&Number(p.punish.until)>Date.now());}
+function punishDaysLeft(p){return Math.max(1,Math.ceil((Number(p.punish.until)-Date.now())/86400000));}
 function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).length>0;}
 /** 後端回報的同仁座位（seat 0–5）：加入名單、放進桌子；已經在名單裡的只更新桌子的名牌。 */
 let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人坐也看得到桌子），首頁小框才只看設計部
@@ -740,11 +743,12 @@ function renderLookPanel(){
 }
 function setLook(patch){
   const i=selected;if(i===null)return;
+  if(isPunishedP(people[i])){toast('處罰中，不能變裝');return;}
   const next={...effectiveLook(i),...patch},isDefault=sameLook(next,lookDefault(i));
   people[i].look=isDefault?null:next;markDirty();save();renderLookPanel();refreshRosterPortraits();
   pushChange(i,{look:isDefault?'':next});
 }
-if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});};
+if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;if(isPunishedP(people[selected])){toast('處罰中，不能變裝');return;}people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});};
 // ───────── 動作（閃身步）─────────
 /** 「動作」區：只有這個人有可以用的動作時才顯示（目前只有 Machi）。 */
 function renderActionPanel(){
@@ -760,6 +764,7 @@ function renderActionPanel(){
   }));
 }
 function toggleAction(id){
+  if(selected!==null&&isPunishedP(people[selected])){toast('處罰中，不能做動作');return;}
   const i=selected;if(i===null||!WARDROBE_ACTIONS[id]||!WARDROBE_ACTIONS[id].who.includes(i))return;
   const cur=actionOf(i);
   if(cur&&cur.id===id){people[i].action=null;markDirty();renderActionPanel();pushChange(i,{action:''});return;}// 正在播放：再按一次停止
@@ -876,7 +881,7 @@ function markStorySeen(id){if(storySeen.has(id))return;storySeen.add(id);pruneSt
 function pruneStorySeen(){if(storiesLoaded){const live=new Set(stories.map(story=>story.id));storySeen=new Set([...storySeen].filter(id=>live.has(id)));}try{localStorage.setItem('pixel-story-seen',JSON.stringify([...storySeen]));}catch{}}
 // 按讚與留言記在「登入前台的人」名下：外層系統用 postMessage 把登入者（名字＋session token）交過來，
 // 只放記憶體、不存起來；後端靠 token 認人。沒登入（或直接開這個網頁）只能看，不能互動。
-let storyIdentity={name:'',token:'',staff:false};
+let storyIdentity={name:'',token:'',staff:false,monitor:false};
 /* 企劃部、專案部同仁：只能操控自己的人物（點別人不會選取），右側沒有等級欄（他們沒有等級制度）。 */
 function viewerIsStaff(){return Boolean(storyIdentity.staff);}
 function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();return who?names.findIndex(n=>n.toLowerCase()===who):-1;}
@@ -885,7 +890,7 @@ const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
 window.addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==window.parent)return;
   const data=event.data;if(!data||data.type!=='pixelOfficeViewer')return;
-  storyIdentity={name:String(data.name||''),token:String(data.token||''),staff:Boolean(data.staff)};
+  storyIdentity={name:String(data.name||''),token:String(data.token||''),staff:Boolean(data.staff),monitor:Boolean(data.monitor)};
   applyViewerRole();
   if(storyOpen())refreshStoryViewer();
 });
@@ -1139,6 +1144,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
   for(const entry of list||[]){
     const i=names.indexOf(entry.name);if(i<0)continue;seen.add(i);const p=people[i];
     if(typeof entry.message==='string')p.message=entry.message;
+    p.punish=entry.punish&&typeof entry.punish==='object'&&Number(entry.punish.until)>Date.now()?entry.punish:null;// 班長的處罰（原因、天數、到期時間）
     if(typeof entry.mood==='string')p.mood=entry.mood;
     if(typeof entry.status==='string')p.status=entry.status;
     p.action=entry.action&&entry.action.id?{id:entry.action.id,at:Number(entry.action.at)||0}:null;if(p.action&&WARDROBE_ACTIONS[p.action.id]&&Date.now()-p.action.at<WARDROBE_ACTIONS[p.action.id].ms)loadActionSheet(p.action.id);// 後端會一直留著最後一次的動作，過期的不必載圖（112 KB）
@@ -1182,7 +1188,7 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 // 下排桌子在畫面上接在上排正下方（見 drawDeskBottom），邏輯座標 431～650 是桌面與桌腳，人坐在 695（桌子下側）。
 const walls=stations.map(s=>s.row?[s.x-122,431,244,219]:[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
-function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
+function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
 window.addEventListener('keydown',e=>{if(embedMode||roMode||!e.key.startsWith('Arrow')||typing()||storyOpen())return;e.preventDefault();keys.add(e.key);});window.addEventListener('keyup',e=>keys.delete(e.key));window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 // 搖桿：按住拖曳，依拖曳方向換算成 8 個方向（沿用鍵盤的 keys 集合），放開就停。
@@ -1388,7 +1394,7 @@ function bubbleLayout(p,ignoreCeiling=false,part=''){
   if(musicOf(p)&&String(p.message||'').trim()){const turn=Math.floor(Date.now()/6000)%2===0?'music':'text';if((part==='text'?'text':'music')!==turn)return null;}
   if(part!=='text'&&musicOf(p)){// 正在聽音樂：這個位置改放跑馬燈（比一般對話框矮，略往上抬避開耳機）
     const font=scaledFont(BUBBLE_FONT,9,22),lineHeight=Math.max(BUBBLE_LINE,Math.round(font*1.28));
-    return {music:true,below:bubbleBelow(p),font,lineHeight,lines:[],tipY:bubbleBelow(p)?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
+    return {music:true,below:bubbleBelow(p),font,lineHeight,lines:[],tipY:bubbleBelow(p)?belowTipY(p):Math.round(p.y-150-BUBBLE_HEAD_GAP-MUSIC_LIFT)-(isPunishedP(p)?30:0),lift:MUSIC_LIFT,w:MUSIC_BUBBLE_W,h:Math.round(lineHeight+BUBBLE_PAD_Y*2+4)};
   }
   const message=String(p.message||'').trim();
   if(!message)return null;
@@ -1399,7 +1405,7 @@ function bubbleLayout(p,ignoreCeiling=false,part=''){
   let lines=wrapText(message,inner).filter(line=>line!=='');
   if(!lines.length){ctx.restore();return null;}
   const below=bubbleBelow(p),stacked=false,mh=stacked?musicBubbleH():0;
-  const tipY=below?belowTipY(p)+(stacked?BUBBLE_TAIL+mh+8:0):Math.round(p.y-150-BUBBLE_HEAD_GAP)-(stacked?MUSIC_LIFT+BUBBLE_TAIL+mh+4:0);
+  const tipY=below?belowTipY(p)+(stacked?BUBBLE_TAIL+mh+8:0):Math.round(p.y-150-BUBBLE_HEAD_GAP)-(stacked?MUSIC_LIFT+BUBBLE_TAIL+mh+4:0)-(!below&&isPunishedP(p)?30:0);
   const room=ignoreCeiling||below?BUBBLE_MAX_LINES:Math.floor((tipY-BUBBLE_TAIL-BUBBLE_PAD_Y*2-bubbleCeiling(p))/lineHeight);
   const limit=Math.max(1,Math.min(BUBBLE_MAX_LINES,room));
   if(lines.length>limit){lines=lines.slice(0,limit);lines[limit-1]=ellipsize(lines[limit-1],inner);}
@@ -1489,7 +1495,15 @@ function drawActionLabel(i){
 }
 const seatedUp=i=>false;// 下排人物改回面向畫面（正面），不再轉背面
 function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
-function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;if(musicOf(p)&&String(p.message||'').trim())drawBubble(p,i,'text');drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
+function drawPunishBadge(p){
+  if(!isPunishedP(p))return;
+  const text='處罰中｜'+String(p.punish.reason||'')+'（剩 '+punishDaysLeft(p)+' 天）',below=bubbleBelow(p),y=below?p.y-PLATE_SEAT_RISE-18:p.y-150-BUBBLE_HEAD_GAP-14;
+  ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';
+  const w=Math.round(ctx.measureText(text).width+22),h=24,x=Math.round(p.x-w/2);
+  softPanel(ctx,x,Math.round(y-h/2),w,h,{radius:12,fill:'#c0392b',stroke:'#7e1f15',lineWidth:1,shadow:true});
+  ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,p.x,Math.round(y)+.5);ctx.restore();
+}
+function drawOverlay(i,time){const p=viewPeople[i];if(isAway(p))return;drawPunishBadge(p);if(musicOf(p)&&String(p.message||'').trim())drawBubble(p,i,'text');drawBubble(p,i);drawStoryBubble(i,time);const mood=moods.find(item=>item.id===p.mood);if(mood){const side=storiesOf(p.name).length?-1:(p.x>W-120?-1:1),x=p.x+side*80,y=p.y-124;drawSymbol(ctx,mood.symbol,x,y,56);}}
 /** 離席狀態：椅子與電腦都不畫，只留灰階空桌；狀態圖示放在原本電腦的位置、大小與電腦相當（104），文字在圖示上方。 */
 // 圖示在桌上的縮放。電源鍵與公事包的圖形本身幾乎填滿整個格子（不透明面積是其他圖示的 1.6 倍），
 // 用同樣的尺寸畫在桌上就會比別的狀態大一圈。面板按鈕有外框當基準、看不出來，所以只縮桌上這邊。
@@ -1656,9 +1670,10 @@ window.addEventListener('message',event=>{
     action:'<circle cx="14.5" cy="5" r="2"/><path d="m9 21 2.5-6-2-2.5 1-4 3.5 2 3 .5M7 11l3-3M11.5 15l4 2.5"/>',
     music:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
     story:'<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m4 17 5-4.5 3.5 3 3-2.5 4.5 4"/>',
-    say:'<path d="M4 5.5h16v10H12l-4.5 4v-4H4z"/>'};
-  const defs=[['seat','在座'],['status','目前狀態'],['look','造型'],['action','動作'],['music','音樂'],['story','限時動態'],['say','想說的話']];
-  const find={seat:()=>null,status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),music:()=>$('musicSection'),story:()=>$('storyUpload'),say:()=>$('message')};
+    say:'<path d="M4 5.5h16v10H12l-4.5 4v-4H4z"/>',
+    punish:'<path d="M12 3 5 6v5c0 4.5 3 8 7 9 4-1 7-4.5 7-9V6z"/><path d="M9 12l2 2 4-4"/>'};
+  const defs=[['seat','在座'],['status','目前狀態'],['look','造型'],['action','動作'],['music','音樂'],['story','限時動態'],['say','想說的話'],['punish','班長']];
+  const find={punish:()=>$('punishSec'),seat:()=>null,status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),music:()=>$('musicSection'),story:()=>$('storyUpload'),say:()=>$('message')};
   const secOf=k=>{const e=find[k]();return e&&(e.closest('.tool-section'));};
   const box=document.createElement('div');box.id='radial';box.hidden=true;
   const ring=document.createElement('div');ring.className='radial-ring';
@@ -1668,6 +1683,10 @@ window.addEventListener('message',event=>{
   const btns={};
   defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){const i=selected;if(i===null)return;setStatus('present');const p=people[i];p.x=starts[i][0];p.y=starts[i][1];p.dir='down';keys.clear();markDirty();save();queuePosition(i);window.radialClose();return;}/* 在座＝狀態設為在座並回到自己的座位 */show(k);};ring.appendChild(b);btns[k]=b;});
   box.append(ring,back,panel);wrap.appendChild(box);
+  // 班長（管理者與 Machi）：處罰違反規則的人——坐在自己的位置上整整 N 天，不能移動、不能變裝；人物上方顯示原因與剩餘天數
+  const ps=document.createElement('section');ps.className='tool-section radial-sec';ps.id='punishSec';
+  ps.innerHTML='<label class="punish-label" for="punishReason">處罰原因（最多 30 字）</label><input type="text" id="punishReason" maxlength="30" placeholder="例如：上班時間遲到" autocomplete="off"><label class="punish-label" for="punishDays">天數</label><select id="punishDays">'+[1,2,3,5,7,14,30].map(n=>'<option value="'+n+'">'+n+' 天</option>').join('')+'</select><div class="music-actions"><button type="button" class="primary" id="punishGo">處罰</button><button type="button" class="text-button" id="punishCancel">解除處罰</button></div><p class="look-hint" id="punishNote"></p>';
+  document.body.appendChild(ps);
   defs.forEach(([k])=>{const s=secOf(k);if(!s)return;s.classList.remove('collapsible');s.classList.add('radial-sec');s.dataset.rk=k;s.hidden=s.hidden;panel.appendChild(s);});
   let level=0,cur='';
   function show(k){level=2;cur=k;ring.hidden=true;back.hidden=false;panel.hidden=false;title.textContent=defs.find(d=>d[0]===k)[1];panel.querySelectorAll('.radial-sec').forEach(s=>{s.style.display=s.dataset.rk===k?'':'none';});place();}
@@ -1683,7 +1702,7 @@ window.addEventListener('message',event=>{
     const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
     box.style.left=cx+'px';box.style.top=cy+'px';
     if(level===1){
-      const keys=defs.map(d=>d[0]).filter(k=>{if(k==='seat')return true;const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(94,Math.min(130,holder.height*.22));
+      const pun=isPunishedP(people[selected]),keys=defs.map(d=>d[0]).filter(k=>{if(k==='seat')return true;if(k==='punish')return Boolean(storyIdentity.monitor);if(pun&&(k==='look'||k==='action'))return false;const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(94,Math.min(130,holder.height*.22));
       defs.forEach(([k])=>{btns[k].hidden=!keys.includes(k);});
       keys.forEach((k,j)=>{const a=-Math.PI/2+j*2*Math.PI/n;btns[k].style.transform='translate('+Math.round(Math.cos(a)*R)+'px,'+Math.round(Math.sin(a)*R)+'px)';});
     }else if(level===2){
@@ -1693,5 +1712,17 @@ window.addEventListener('message',event=>{
     }
   }
   window.radialPlace=place;
+  const punishCall=async(days)=>{
+    const i=selected;if(i===null)return;const note=$('punishNote'),p=people[i];
+    try{
+      const r=await syncCall({action:'pixelOfficePunish',token:storyIdentity.token,name:p.name,reason:$('punishReason').value.trim(),days});
+      p.punish=r.punish&&Number(r.punish.until)>Date.now()?r.punish:null;
+      if(p.punish){p.x=starts[i][0];p.y=starts[i][1];p.dir='down';}
+      markDirty();note.textContent=days?'已處罰 '+p.name+'：'+p.punish.reason+'，'+days+' 天':'已解除 '+p.name+' 的處罰';toast(note.textContent);
+      if(typeof syncNow==='function')syncNow();
+    }catch(error){note.textContent=error.message||'處罰失敗';toast(note.textContent);}
+  };
+  $('punishGo').onclick=()=>{if($('punishReason').value.trim().length<2){$('punishNote').textContent='請先寫處罰原因（至少 2 個字）';return;}punishCall(Number($('punishDays').value)||1);};
+  $('punishCancel').onclick=()=>punishCall(0);
   $('statuses').addEventListener('click',e=>{if(e.target.closest('[data-status]'))setTimeout(window.radialClose,0);});// 選好狀態（含在座）就收合
 })();

@@ -225,7 +225,7 @@ test('人物頭上不再掛等級標籤，嵌入版也不顯示載入中的字',
   const [js, css] = await Promise.all([officeJs(), officeCss()]);
   // 等級在資料卡與右側面板都看得到，頭上再掛一個只是擋住人。
   assert.doesNotMatch(js, /levelTag/, '等級標籤應該整個移除');
-  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;if\(musicOf\(p\)&&String\(p\.message\|\|''\)\.trim\(\)\)drawBubble\(p,i,'text'\);drawBubble\(p,i\);drawStoryBubble\(i,time\);/);
+  assert.match(js, /function drawOverlay\(i,time\)\{const p=viewPeople\[i\];if\(isAway\(p\)\)return;drawPunishBadge\(p\);if\(musicOf\(p\)&&String\(p\.message\|\|''\)\.trim\(\)\)drawBubble\(p,i,'text'\);drawBubble\(p,i\);drawStoryBubble\(i,time\);/);
   // 「正在整理設計部…」是給遊戲頁看的，嵌在系統裡只會變成一行突兀的字。
   assert.match(css, /html\.embed[^{]*#loading\{display:none!important\}/);
 });
