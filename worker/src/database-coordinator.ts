@@ -2588,9 +2588,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const match = text(payload.png).match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
     if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
     const now = Date.now(), sql = this.ctx.storage.sql;
+    const before = sql.exec<{ look_key: string }>('SELECT look_key FROM pixel_office_avatar_current WHERE name = ?', name).toArray()[0];
     sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
     sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
-    return { ok: true, action: 'personaAvatarSnapshot', name, version: now };
+    return { ok: true, action: 'personaAvatarSnapshot', name, version: now, changed: !before || before.look_key !== lookKey };
   }
 
   private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
