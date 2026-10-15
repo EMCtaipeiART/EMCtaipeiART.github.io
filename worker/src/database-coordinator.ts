@@ -2545,6 +2545,32 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     return PIXEL_OFFICE_NAMES.includes(name) ? name : '';
   }
 
+  /** 企劃部、專案部同仁（2026-10-15 起也有平台幣）：帳本的持有人就是設定表的「名字」。 */
+  private coinStaffRows(database: DatabaseSnapshot): Row[] {
+    return (database.tables['設定']?.rows || []).filter(row => /^(企劃部|專案部)$/.test(normalizeDepartmentName(row['部門'])) && text(row['名字']) && !PIXEL_OFFICE_NAMES.includes(text(row['名字'])));
+  }
+
+  /** 這個登入者在帳本裡的持有人：設計師用 Pixel Office 的名字，企劃／專案同仁用設定表的名字；沒有錢包回傳空字串。 */
+  private coinHolderName(database: DatabaseSnapshot, session: SessionRecord | null): string {
+    const designer = this.coinDesignerName(database, session);
+    if (designer || !session) return designer;
+    const row = settingsRow(database, session.account || session.user);
+    const name = text(row?.['名字']);
+    return row && /^(企劃部|專案部)$/.test(normalizeDepartmentName(row['部門'])) && name ? name : '';
+  }
+
+  /** 專案負責人欄位寫的可能是名字、顯示名或帳號：對到企劃／專案同仁的持有人名字。 */
+  private coinStaffHolderByLabel(database: DatabaseSnapshot, label: string): string {
+    const needle = text(label).toLowerCase();
+    if (!needle) return '';
+    const row = this.coinStaffRows(database).find(item => [item['名字'], item['顯示名'], text(item['帳號']).split('@')[0]].some(value => text(value).toLowerCase() === needle));
+    return row ? text(row['名字']) : '';
+  }
+
+  private isCoinHolder(database: DatabaseSnapshot, holder: string): boolean {
+    return PIXEL_OFFICE_NAMES.includes(holder) || this.coinStaffRows(database).some(row => text(row['名字']) === holder);
+  }
+
   private coinBalance(holder: string): number {
     const row = this.ctx.storage.sql.exec<{ total: number | null }>('SELECT SUM(amount) AS total FROM coin_ledger WHERE holder = ?', holder).toArray()[0];
     return Number(row?.total) || 0;
@@ -2608,26 +2634,27 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
-    const name = this.coinDesignerName(database, current);
+    const name = this.coinHolderName(database, current);
+    const pixelDesigner = Boolean(this.coinDesignerName(database, current));
     const admin = hasCapability(database, current, 'database.manage');
     const recent = name
       ? this.ctx.storage.sql.exec<CoinEntry>('SELECT * FROM coin_ledger WHERE holder = ? ORDER BY seq DESC LIMIT 30', name).toArray().map(entry => this.coinPublic(entry))
       : [];
     return {
-      ok: true, action: 'coinMe', account: current.account, name, designer: Boolean(name), admin,
+      ok: true, action: 'coinMe', account: current.account, name, designer: Boolean(name), pixelDesigner, admin,
       department: normalizeDepartmentName(settingsRow(database, current.account || current.user)?.['部門']),
       balance: name ? tenthsToCoins(this.coinBalance(name)) : 0,
       spendPerGeneration: tenthsToCoins(COIN_SPEND_PER_GENERATION), spendPerRegeneration: tenthsToCoins(COIN_SPEND_PER_REGENERATION), startDate: COIN_START_DATE,
-      recent, directory: PIXEL_OFFICE_NAMES.filter(item => item !== name)
+      recent, directory: [...PIXEL_OFFICE_NAMES, ...this.coinStaffRows(database).map(row => text(row['名字']))].filter(item => item !== name)
     };
   }
 
   private async coinTransfer(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = this.requireSession(session);
-    const from = this.coinDesignerName(database, current);
-    if (!from) throw new Error('只有設計師帳號可以轉讓平台幣');
+    const from = this.coinHolderName(database, current);
+    if (!from) throw new Error('只有設計師、企劃部、專案部同仁可以轉讓平台幣');
     const to = text(payload.to);
-    if (!PIXEL_OFFICE_NAMES.includes(to)) throw new Error('找不到收款的設計師');
+    if (!this.isCoinHolder(database, to)) throw new Error('找不到收款的同仁');
     if (to === from) throw new Error('不能轉給自己');
     const amount = coinsToTenths(payload.amount, '轉讓點數');
     const memo = text(payload.memo).replace(/\s+/g, ' ').slice(0, 60);
@@ -2650,10 +2677,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async coinReserve(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     this.coinServiceAuthorized(payload);
     const current = this.requireSession(session);
-    const name = this.coinDesignerName(database, current);
+    const name = this.coinHolderName(database, current);
     if (!name) {
       if (hasCapability(database, current, 'database.manage')) return { ok: true, action: 'coinReserve', exempt: true, account: current.account, name: '', balance: 0 };
-      throw new Error('只有設計師帳號有平台幣，才能使用服裝生成器');
+      throw new Error('只有設計師、企劃部、專案部帳號有平台幣，才能使用服裝生成器');
     }
     const generationId = text(payload.ref);
     if (!/^[0-9a-f-]{36}$/.test(generationId)) throw new Error('缺少生成編號');
@@ -2694,6 +2721,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const filtered = all.filter(entry => (!holder || entry.holder === holder) && (!kind || entry.kind === kind));
     const balances: Record<string, number> = {};
     for (const name of PIXEL_OFFICE_NAMES) balances[name] = tenthsToCoins(this.coinBalance(name));
+    for (const entry of all) if (!(entry.holder in balances)) balances[entry.holder] = tenthsToCoins(this.coinBalance(entry.holder));   // 企劃／專案同仁
     const totals: Record<string, number> = {};
     for (const entry of all) totals[entry.kind] = (totals[entry.kind] || 0) + tenthsToCoins(entry.amount);
     return {
@@ -2706,7 +2734,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async coinAdjust(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
     const current = requireCapability(database, session, 'database.manage') as SessionRecord;
     const holder = text(payload.holder);
-    if (!PIXEL_OFFICE_NAMES.includes(holder)) throw new Error('找不到這位設計師');
+    if (!this.isCoinHolder(database, holder)) throw new Error('找不到這位同仁');
     const reason = text(payload.reason).replace(/\s+/g, ' ');
     if (reason.length < 4) throw new Error('請寫下調整原因（至少 4 個字），之後有爭議才查得到');
     const negative = Number(payload.amount) < 0;
@@ -2730,12 +2758,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const occurrence = (occurrences.get(id) || 0) + 1;
       occurrences.set(id, occurrence);
       if (text(row['狀態']) !== '已完成') continue;
-      const owner = text(row['設計負責人']);
-      if (!PIXEL_OFFICE_NAMES.includes(owner) || !endedOnOrAfterStart(row['結束日期'])) continue;
+      if (!endedOnOrAfterStart(row['結束日期'])) continue;
       const amount = Math.round((Number(row['加權']) || 0) * 10);
+      if (amount <= 0) continue;
+      const owner = text(row['設計負責人']);
       const ref = `earn:${id}#${occurrence}`;
-      if (amount <= 0 || known.has(ref)) continue;
-      pending.push({ kind: 'earn', holder: owner, amount, ref, memo: `${id} ${text(row['專案名稱']).slice(0, 40)}（積分 ${tenthsToCoins(amount)}）`, actor: 'system' });
+      if (PIXEL_OFFICE_NAMES.includes(owner) && !known.has(ref)) pending.push({ kind: 'earn', holder: owner, amount, ref, memo: `${id} ${text(row['專案名稱']).slice(0, 40)}（積分 ${tenthsToCoins(amount)}）`, actor: 'system' });
+      // 企劃部、專案部同仁（案件的專案負責人）：同一件已完成案件的積分，同樣 1 點回饋 1 點平台幣（2026/10/01 起）
+      const staff = this.coinStaffHolderByLabel(stored.database, text(row['專案負責人']));
+      const staffRef = `earn-p:${id}#${occurrence}`;
+      if (staff && !known.has(staffRef)) pending.push({ kind: 'earn', holder: staff, amount, ref: staffRef, memo: `${id} ${text(row['專案名稱']).slice(0, 40)}（專案負責人，積分 ${tenthsToCoins(amount)}）`, actor: 'system' });
     }
     if (pending.length) await this.coinAppend(pending);
     return { ok: true, added: pending.length };

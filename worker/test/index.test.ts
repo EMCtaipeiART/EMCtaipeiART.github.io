@@ -5154,6 +5154,35 @@ describe('平台幣', () => {
     expect(await api({ action: 'coinMe' }, leona)).toMatchObject({ ok: true, name: 'Leona', designer: true, balance: 5.5, spendPerGeneration: 100, spendPerRegeneration: 50 });
   });
 
+  it('also earns coins for planning/project staff (案件的專案負責人) with the same points, once per case, and lets them transfer', async () => {
+    const admin = await login();
+    const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
+    await runInDurableObject(stub, async (_instance, state) => {
+      const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
+      const database = JSON.parse(stored.json) as DatabaseSnapshot;
+      database.tables['設定'].rows.push({ '名字': '吳企劃', '顯示名': 'Planner Wu', '帳號': 'planner.wu@emctaipei.test', '部門': '企劃部' });
+      database.tables['設定'].rows.push({ '名字': '李專案', '顯示名': '李專案', '帳號': 'pm.li@emctaipei.test', '部門': '凱曜專案部' });
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+      const add = (id: string, owner: string, end: string, weight: string) => database.tables.database.rows.push({ '案件編號': id, '月份': '10月', '客戶別': '測試客戶', '專案名稱': `staff ${id}`, '專案負責人': owner, '設計負責人': 'Leona', '狀態': '已完成', '加權': weight, '結束日期': end } as never);
+      add('26100601', 'Planner Wu', '2026/10/05', '2');     // 用顯示名寫
+      add('26100602', '吳企劃', '2026/10/06', '1.5');        // 用名字寫
+      add('26100603', '李專案', '2026/10/07', '3');
+      add('26090601', '吳企劃', '2026/09/29', '9');          // 起算日之前
+      add('26100604', '路人', '2026/10/07', '4');            // 不是企劃／專案同仁
+      state.storage.sql.exec('UPDATE database_state SET json = ? WHERE id = ?', JSON.stringify(database), 'primary');
+    });
+    expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true });
+    expect(await api({ action: 'coinEarnSyncNow' }, admin)).toMatchObject({ ok: true, added: 0 });
+    const planner = await seedSession('planner.wu@emctaipei.test', '吳企劃');
+    expect(await api({ action: 'coinMe' }, planner)).toMatchObject({ ok: true, name: '吳企劃', designer: true, pixelDesigner: false, department: '企劃部', balance: 3.5 });
+    const pm = await seedSession('pm.li@emctaipei.test', '李專案');
+    expect(await api({ action: 'coinMe' }, pm)).toMatchObject({ ok: true, name: '李專案', balance: 3 });
+    expect(await api({ action: 'coinTransfer', to: '李專案', amount: 1, memo: '謝謝' }, planner)).toMatchObject({ ok: true, balance: 2.5 });
+    const ledger = await api({ action: 'coinLedger' }, admin) as { balances: Record<string, number>; chain: { ok: boolean } };
+    expect(ledger.balances).toMatchObject({ 吳企劃: 2.5, 李專案: 4 });
+    expect(ledger.chain.ok).toBe(true);
+  });
+
   it('transfers instantly between designers, refuses overdrafts and self-transfers, and records both sides', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
