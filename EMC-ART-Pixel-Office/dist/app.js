@@ -171,6 +171,7 @@ function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status
 const effectiveStatusId=p=>isOvertime(p)?'overtime':statusOf(p);
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 const staffGeoDefault=4;
+function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).length>0;}
 /** 後端回報的同仁座位（seat 0–5）：加入名單、放進桌子；已經在名單裡的只更新桌子的名牌。 */
 let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人坐也看得到桌子），首頁小框才只看設計部
 function applyStaff(list){
@@ -321,14 +322,25 @@ function ensureCustomOutfit(item){
     img.src=CUSTOM_API+'/'+item.id+'/'+view+'.png?v='+encodeURIComponent(item.v);
   }
 }
+// 自訂服裝／頭像／配件的圖只先載「現在用得到的」：每個人目前穿的、各人的預設服裝、已入座同仁自己的全部素材、被選取的人自己的全部素材（造型面板要顯示縮圖）。
+// 以前一次把所有人的所有素材（每件三張圖）全部抓下來，進元宇宙會等很久。
+function customNeededIds(){
+  const need=new Set(),st=customState();
+  people.forEach(p=>{const l=p.look;if(l)[l.outfit,l.head,l.cap,l.glasses].forEach(v=>{if(typeof v==='string'&&/^[cha]:/.test(v))need.add(v.slice(2));});});
+  st.list.forEach(x=>{if(x.isDefault)need.add(x.id);});
+  const owners=new Set(people.filter(p=>p.staff).map(p=>p.name));if(selected!==null&&people[selected])owners.add(people[selected].name);
+  [...st.list,...st.hlist,...st.alist].forEach(x=>{if(owners.has(x.owner))need.add(x.id);});
+  return need;
+}
+function ensureCustomNeeded(){const st=customState(),need=customNeededIds();st.list.forEach(x=>{if(need.has(x.id))ensureCustomOutfit(x);});st.hlist.forEach(x=>{if(need.has(x.id))ensureCustomHead(x);});st.alist.forEach(x=>{if(need.has(x.id))ensureCustomAcc(x);});}
 function loadCustomList(){
   return fetch(CUSTOM_API,{cache:'no-store'}).then(r=>r.json()).then(j=>{
     const items=Array.isArray(j.items)?j.items.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
-    customState().list=items;items.forEach(ensureCustomOutfit);
+    customState().list=items;
     const heads=Array.isArray(j.heads)?j.heads.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
-    customState().hlist=heads;heads.forEach(ensureCustomHead);
+    customState().hlist=heads;
     const accs=[...(Array.isArray(j.caps)?j.caps:[]),...(Array.isArray(j.glasses)?j.glasses:[])].filter(x=>x&&x.id&&x.game&&x.game.pads);
-    customState().alist=accs;accs.forEach(ensureCustomAcc);markDirty();
+    customState().alist=accs;ensureCustomNeeded();markDirty();
   }).catch(()=>{});
 }
 function lookDefault(i){const d=baseLookDefault(i);if(i>=5){/* 企劃／專案同仁：造型只用自己的頭像與身體，沒有設計部的內建衣服與頭 */const c=customDefaultId(i)||customIdsOf(i)[0]||null,h=customHeadIdsOf(i)[0]||'';return {...d,outfit:c||d.outfit,head:h};}const c=customDefaultId(i);return c?{...d,outfit:c}:d;}
@@ -431,7 +443,7 @@ function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=fal
     for(const[sx,sy,sw,sh,cx0,bagWidth]of bags){const cx=eyeDx?Math.sign(cx0)*eyeDx:cx0,dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
   context.restore();}
 function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
-function select(i){selected=i;keys.clear();markDirty();document.documentElement.classList.toggle('has-sel',i!==null&&i!==undefined);document.documentElement.classList.toggle('sel-staff',i!==null&&i!==undefined&&Boolean(people[i]&&people[i].staff));document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
+function select(i){selected=i;keys.clear();markDirty();try{ensureCustomNeeded();}catch(e){}document.documentElement.classList.toggle('has-sel',i!==null&&i!==undefined);document.documentElement.classList.toggle('sel-staff',i!==null&&i!==undefined&&Boolean(people[i]&&people[i].staff));document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
   if(!chosen){cardPinned=false;$('personCard').classList.remove('is-pinned');$('personCard').hidden=true;$('personName').textContent='—';$('moodStatus').textContent='';portrait($('portrait').getContext('2d'),0,false,true);renderLevelTable();return;}
@@ -1144,7 +1156,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
   // 留著舊的 localStorage 就害那個人的在座／加班／用餐／廁所停止自動更新。狀態一律交給電腦心跳決定，
   // 要手動改就按狀態按鈕。
   if(!syncSeeded){syncSeeded=true;people.forEach((p,i)=>{if(seen.has(i))return;const patch={};if(p.message)patch.message=p.message;if(p.mood)patch.mood=p.mood;if(p.x!==starts[i][0]||p.y!==starts[i][1]){patch.x=p.x;patch.y=p.y;patch.dir=p.dir;}if(Object.keys(patch).length)pushChange(i,patch);});}
-  if(lookChanged){refreshRosterPortraits();renderLookPanel();}
+  if(lookChanged){try{ensureCustomNeeded();}catch(e){}refreshRosterPortraits();renderLookPanel();}
   save(false);
 }
 let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
@@ -1497,7 +1509,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){requestAnimationFrame(render);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&s.grp)return;/* 首頁小框只看設計部 */if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&s.grp))drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&s.grp)return;/* 首頁小框只看設計部 */if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&s.grp))drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
