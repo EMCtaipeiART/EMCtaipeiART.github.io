@@ -657,7 +657,7 @@ test('造型：頭像＋服裝＋配件在瀏覽器裡組合，依現有人物�
   assert.match(js, /else if\(look\.glasses&&!String\(look\.glasses\)\.startsWith\('a:'\)&&view<2&&accessoriesReady\(\)&&/, '背面不畫眼鏡');
   // 預設造型＝現在的樣子；只有 Anna 可以換衣服（藍色／黃色）。
   assert.match(js, /\{outfit:2,cap:'',glasses:'',head:''\},\{outfit:3,cap:'',glasses:'',head:''\},\{outfit:4,cap:'blue',glasses:'',head:''\},\{outfit:1,cap:'',glasses:'',head:''\},\{outfit:5,cap:'',glasses:'',head:''\}/);
-  assert.match(js, /function outfitChoices\(i\)\{const base=i===3\?\[1,0\]:null,customs=customIdsOf\(i\);/);
+  assert.match(js, /function outfitChoices\(i\)\{if\(i>=5\)\{const cs=customIdsOf\(i\);return cs\.length\?cs:null;\}const base=i===3\?\[1,0\]:null,customs=customIdsOf\(i\);/);
   // 原本的像素人物已下架：只剩組合版，不再載入舊圖集。
   assert.match(js, /function sprite\(context,index,dir,x,y,w=98,h=142\)\{drawWardrobe\(context,index,dir,x,y,h\);\}/);
   assert.doesNotMatch(js, /sprites-packed|rowTops|colLefts/);
@@ -800,7 +800,7 @@ test('自訂服裝：遊戲讀公開 API、頭用頸頂接、造型欄列出本�
   const js = await officeJs();
   assert.match(js, /emc-ai-stage-classifier\.machi-chen\.workers\.dev\/api\/public\/outfits/);
   assert.match(js, /function customOutfitView\(id,view\)/);
-  assert.match(js, /function lookDefault\(i\)\{const d=baseLookDefault\(i\),c=customDefaultId\(i\);/);
+  assert.match(js, /function lookDefault\(i\)\{const d=baseLookDefault\(i\);if\(i>=5\)\{[^\n]*?\}const c=customDefaultId\(i\);/);
   assert.match(js, /dropI=custom\?0:WD_DROP\[gi\]/);
   assert.match(js, /hx=B\.n-chin\.x\*K\+\(custom\?custom\.dx:0\)/);
   assert.match(js, /loadCustomList\(\);setInterval\(loadCustomList,120000\)/);

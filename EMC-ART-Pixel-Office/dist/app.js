@@ -331,14 +331,14 @@ function loadCustomList(){
     customState().alist=accs;accs.forEach(ensureCustomAcc);markDirty();
   }).catch(()=>{});
 }
-function lookDefault(i){const d=baseLookDefault(i),c=customDefaultId(i);return c?{...d,outfit:c}:d;}
-function outfitChoices(i){const base=i===3?[1,0]:null,customs=customIdsOf(i);if(!base&&!customs.length)return null;return [...(base||[baseLookDefault(i).outfit]),...customs];}
+function lookDefault(i){const d=baseLookDefault(i);if(i>=5){/* 企劃／專案同仁：造型只用自己的頭像與身體，沒有設計部的內建衣服與頭 */const c=customDefaultId(i)||customIdsOf(i)[0]||null,h=customHeadIdsOf(i)[0]||'';return {...d,outfit:c||d.outfit,head:h};}const c=customDefaultId(i);return c?{...d,outfit:c}:d;}
+function outfitChoices(i){if(i>=5){const cs=customIdsOf(i);return cs.length?cs:null;}const base=i===3?[1,0]:null,customs=customIdsOf(i);if(!base&&!customs.length)return null;return [...(base||[baseLookDefault(i).outfit]),...customs];}
 function outfitLabel(i,o){return typeof o==='string'?customName(o):i===3?(o===1?'藍色':'黃色'):'原本造型';}
 /** 這個人現在實際的造型：後端存的造型（有的話）補上預設值；不能換的衣服一律用預設。 */
 function effectiveLook(i){
   const d=lookDefault(i),l=people[i]&&people[i].look;if(!l||typeof l!=='object')return d;
   const choices=outfitChoices(i),outfit=choices&&choices.includes(l.outfit)?l.outfit:d.outfit;
-  const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:'';
+  const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:d.head;
   const capOk=['','black','blue'].includes(l.cap)||(typeof l.cap==='string'&&customAccIdsOf(i,'cap').includes(l.cap)),glassesOk=['','clear','sun'].includes(l.glasses)||(typeof l.glasses==='string'&&customAccIdsOf(i,'glasses').includes(l.glasses));
   return {outfit,cap:capOk?l.cap:d.cap,glasses:glassesOk?l.glasses:d.glasses,head};
 }
@@ -706,7 +706,7 @@ function renderLookPanel(){
   // 頭像：本人在頭像生成器完成並發佈的自訂頭像（只有自己能用）；沒有就不顯示整個「頭像」區。
   const headBox=$('lookHeads'),headChoices=customHeadIdsOf(selected);
   if($('lookHeadGroup'))$('lookHeadGroup').hidden=!headChoices.length;
-  if(headBox&&headChoices.length)headBox.replaceChildren(...['',...headChoices].map(h=>{
+  if(headBox&&headChoices.length)headBox.replaceChildren(...(selected>=5?headChoices:['',...headChoices]).map(h=>{
     const label=h?customHeadName(h):'原本',button=document.createElement('button');button.type='button';button.title=label;button.className=(look.head||'')===h?'active':'';
     const canvas=document.createElement('canvas');canvas.width=120;canvas.height=120;
     const rect=WARDROBE.heads[geoIdx(selected,effectiveLook(selected))][0],chv=h?customHeadView(h,0):null,img=chv?wardrobeSheets[chv.sheetKey]:wardrobeSheets.heads,src=chv?chv.src:rect,k=Math.min(112/src.w,112/src.h);
