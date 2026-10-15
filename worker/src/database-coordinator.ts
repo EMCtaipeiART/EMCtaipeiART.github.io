@@ -2721,7 +2721,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const filtered = all.filter(entry => (!holder || entry.holder === holder) && (!kind || entry.kind === kind));
     const balances: Record<string, number> = {};
     for (const name of PIXEL_OFFICE_NAMES) balances[name] = tenthsToCoins(this.coinBalance(name));
-    const staff = this.coinStaffRows(database);
+    const isTestAccount = (row: Row) => /^local:/i.test(text(row['帳號'])) || /測試/.test(text(row['名字']) + text(row['顯示名']));   // 測試帳號不列在帳本裡
+    const staff = this.coinStaffRows(database).filter(row => !isTestAccount(row));
     const groups = [
       { label: '設計部', names: [...PIXEL_OFFICE_NAMES] },
       { label: '企劃部', names: staff.filter(row => normalizeDepartmentName(row['部門']) === '企劃部').map(row => text(row['名字'])) },

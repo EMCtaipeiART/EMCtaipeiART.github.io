@@ -64,7 +64,7 @@
       if(others.length)groups.push({label:'其他（已離開或改部門）',names:others});
       const ALL=groups.flatMap(g=>g.names);
       const card=name=>`<div class="card"><span>${esc(name)}</span><b>${fmt(d.balances[name])}</b><small>點</small></div>`;
-      const holders=groups.filter(g=>g.names.length).map(g=>`<h3 class="group-title">${esc(g.label)}（${g.names.length} 人 · 合計 ${fmt(g.names.reduce((sum,n)=>sum+(d.balances[n]||0),0))} 點）</h3><div class="cards">${g.names.map(card).join('')}</div>`).join('');
+      const holders=groups.map(g=>({label:g.label,all:g.names,shown:g.names.filter(n=>(d.balances[n]||0)!==0)})).filter(g=>g.shown.length).map(g=>`<h3 class="group-title">${esc(g.label)}（${g.shown.length} 人 · 合計 ${fmt(g.all.reduce((sum,n)=>sum+(d.balances[n]||0),0))} 點）</h3><div class="cards">${g.shown.map(card).join('')}</div>`).join('');/* 餘額 0 點的不顯示卡片（篩選與調整的選單仍可選） */
       const rows=d.entries.map(entry=>`<tr><td>${esc(taipei(entry.at))}</td><td>${esc(entry.label)}</td><td>${esc(entry.holder)}</td><td class="num ${entry.amount>=0?'plus':'minus'}">${entry.amount>=0?'+':''}${fmt(entry.amount)}</td><td>${esc(entry.counterparty)}</td><td class="memo">${esc(entry.memo)}</td><td>${esc(entry.actor)}</td><td class="hash" title="${esc(entry.ref)}">#${entry.seq} · ${esc(entry.hash)}</td></tr>`).join('');
       const totals=Object.entries(d.totals).map(([kind,value])=>`${KINDS[kind]||kind} ${fmt(value)}`).join(' ／ ');
       $('app').innerHTML=`
