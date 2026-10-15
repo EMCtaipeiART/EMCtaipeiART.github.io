@@ -339,7 +339,7 @@ function effectiveLook(i){
   const d=lookDefault(i),l=people[i]&&people[i].look;if(!l||typeof l!=='object')return d;
   const choices=outfitChoices(i),outfit=choices&&choices.includes(l.outfit)?l.outfit:d.outfit;
   const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:d.head;
-  const capOk=['','black','blue'].includes(l.cap)||(typeof l.cap==='string'&&customAccIdsOf(i,'cap').includes(l.cap)),glassesOk=['','clear','sun'].includes(l.glasses)||(typeof l.glasses==='string'&&customAccIdsOf(i,'glasses').includes(l.glasses));
+  const capOk=(i>=5?l.cap==='':['','black','blue'].includes(l.cap))||(typeof l.cap==='string'&&customAccIdsOf(i,'cap').includes(l.cap)),glassesOk=(i>=5?l.glasses==='':['','clear','sun'].includes(l.glasses))||(typeof l.glasses==='string'&&customAccIdsOf(i,'glasses').includes(l.glasses));
   return {outfit,cap:capOk?l.cap:d.cap,glasses:glassesOk?l.glasses:d.glasses,head};
 }
 const lookOf=effectiveLook;
@@ -722,8 +722,8 @@ function renderLookPanel(){
     button.append(item.label);button.onclick=()=>setLook({[key]:item.id});return button;
   }));
   const customList=kind=>customAccIdsOf(selected,kind).map(id=>({id,label:customAccName(id),custom:true}));
-  chips($('lookCaps'),[...WARDROBE_CAPS,...customList('cap')],look.cap,id=>WARDROBE.caps[id==='blue'?1:0],'cap');
-  chips($('lookGlasses'),[...WARDROBE_GLASSES,...customList('glasses')],look.glasses,id=>WARDROBE.glasses[id==='sun'?1:0],'glasses');
+  chips($('lookCaps'),[...(selected>=5?WARDROBE_CAPS.slice(0,1):WARDROBE_CAPS),...customList('cap')],look.cap,id=>WARDROBE.caps[id==='blue'?1:0],'cap');
+  chips($('lookGlasses'),[...(selected>=5?WARDROBE_GLASSES.slice(0,1):WARDROBE_GLASSES),...customList('glasses')],look.glasses,id=>WARDROBE.glasses[id==='sun'?1:0],'glasses');
   $('lookReset').hidden=sameLook(look,lookDefault(selected));
 }
 function setLook(patch){

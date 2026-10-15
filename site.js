@@ -227,7 +227,9 @@
       return map;
     }
     /* 企劃／專案同仁完成「個人形象」後的頭像快照（設計師用像素大頭，不走這裡） */
-    function personaSnapAvatar(name){try{const snap=state.avatarSnap||{},want=norm(name);if(!want)return '';const key=Object.keys(snap).find(k=>norm(k)===want&&!['leona','amber','noise','anna','machi'].includes(norm(k)));return key?snapUrl(key):''}catch(err){return ''}}
+    /* 企劃／專案同仁在元宇宙裡的名字是設定表的「名字」（登入顯示名可能不同） */
+    function staffCanonicalName(){try{const s=session(),me=[s.account,s.user,s.name].map(v=>String(v||'').trim().toLowerCase()).filter(Boolean);const row=(state.settings||[]).find(r=>/^(企劃部|專案部)$/.test(String(r['部門']||'').replace(/^凱曜/,'').trim())&&me.some(v=>v===String(r['帳號']||'').toLowerCase()||v===String(r['名字']||'').toLowerCase()||v===String(r['顯示名']||'').toLowerCase()));return row?String(row['名字']||''):''}catch(err){return ''}}
+    function personaSnapAvatar(name){try{const snap=state.avatarSnap||{},want=new Set([norm(name)].filter(Boolean));if(!want.size)return '';/* 顯示名與設定表的「名字」可能不同（例如 Jerry Chang／張鈞皓）：把同一列設定的名字、顯示名都當成可比對的名字 */const row=(state.settings||[]).find(r=>[r['名字'],r['顯示名'],String(r['帳號']||'').split('@')[0]].some(v=>norm(v)===norm(name)));if(row)[row['名字'],row['顯示名']].forEach(v=>{if(norm(v))want.add(norm(v))});const key=Object.keys(snap).find(k=>want.has(norm(k))&&!['leona','amber','noise','anna','machi'].includes(norm(k)));return key?snapUrl(key):''}catch(err){return ''}}
     function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return personaSnapAvatar(name)||state.avatars.get(norm(name))||(email&&state.avatars.get(email))||''}
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
     /* 上次的像素頭像先拿來顯示（只存圖），等隱藏辦公室算好再換成最新的，避免進站幾秒顯示舊頭像 */
@@ -439,7 +441,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=111&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=111&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=113&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=113&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -472,7 +474,7 @@
       go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
-      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage({type:'pixelOfficeViewer',name:loggedIn()?(session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim())},location.origin)}catch(err){}}
+      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage({type:'pixelOfficeViewer',name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim())},location.origin)}catch(err){}}
       if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
     $('universeClose').addEventListener('click',closeUniverse);
     $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});
@@ -3933,7 +3935,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{
         const res=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'pixelOfficeState'}),cache:'no-store'});
         const data=await res.json();state.officeLoaded=true;
-        if(data&&data.ok){state.avatarSnap=data.avatars||state.avatarSnap||{};const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));mergeOfficeIntoAvatars(data);if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
+        if(data&&data.ok){const snapBefore=JSON.stringify(state.avatarSnap||{});state.avatarSnap=data.avatars||state.avatarSnap||{};if(JSON.stringify(state.avatarSnap)!==snapBefore){try{renderLogin()}catch(err){}/* 個人形象快照到了：側邊欄頭像跟著換 */}const oj=JSON.stringify([data.people,data.levels]);if(oj===state.officeJson&&state.officeLoaded2)return;state.officeJson=oj;state.officeLoaded2=true;state.people=Object.fromEntries((data.people||[]).map(p=>[p.name,p]));mergeOfficeIntoAvatars(data);if(data.levels&&data.levels.ok)state.levelConfig=data.levels;renderTeam()}
       }catch(err){console.warn('像素辦公室狀態讀取失敗',err);if(!state.officeLoaded){state.officeLoaded=true;renderTeam()}}
     }
 
@@ -4002,7 +4004,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeStoryClosed'){const br=document.getElementById('avatarBridge');if(br)br.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1'}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeMusicState')return;state.musicNow=String(e.data.playing||'');state.musicLoading=String(e.data.loading||'');clearTimeout(state.musicWarn);if(state.musicLoading)state.musicWarn=setTimeout(()=>{if(state.musicLoading&&!state.musicNow)toast('瀏覽器擋住了自動播放，請再點一次音樂框')},3500);document.querySelectorAll('.member-music').forEach(b=>{const on=b.dataset.music===state.musicNow,ld=b.dataset.music===state.musicLoading;b.classList.toggle('is-playing',on);const ic=b.querySelector('.mm-ic');if(ic)ic.innerHTML=musicIcon(on,ld)})});
     window.addEventListener('load',()=>setTimeout(ensureArchive,200));/* 等級資料很小，進站就先讀，不等到滑過頭像才開始 */
-    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=30&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
+    window.addEventListener('load',()=>setTimeout(function mk(){if(document.getElementById('avatarBridge'))return;if(document.getElementById('uniLoading')){setTimeout(mk,800);return}/* 正在進入多元宇宙時先不開這個隱藏的第二份像素辦公室，免得跟主畫面搶頻寬 */const f=document.createElement('iframe');f.id='avatarBridge';f.title='設計師頭像';f.setAttribute('aria-hidden','true');f.tabIndex=-1;f.style.cssText='position:fixed;width:320px;height:120px;right:0;bottom:0;border:0;opacity:.01;pointer-events:none;z-index:-1';f.src='EMC-ART-Pixel-Office/dist/?avatars=1&v=31&t='+Math.floor(Date.now()/300000)+'';document.body.appendChild(f)},300));
     window.__v5=state; // 方便除錯
   })();
   
