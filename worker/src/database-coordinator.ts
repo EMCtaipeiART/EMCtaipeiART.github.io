@@ -1644,6 +1644,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(16)) {
+        this.ctx.storage.transactionSync(() => {
+          // 企劃／專案同仁「個人形象」重新開始（2026-10-15）：測試期留下的非設計師頭像快照一次清掉（設計師的快照不動）。
+          const keep = PIXEL_OFFICE_NAMES.map(() => '?').join(',');
+          this.ctx.storage.sql.exec(`DELETE FROM pixel_office_avatar_current WHERE name NOT IN (${keep})`, ...PIXEL_OFFICE_NAMES);
+          this.ctx.storage.sql.exec(`DELETE FROM pixel_office_avatars WHERE name NOT IN (${keep})`, ...PIXEL_OFFICE_NAMES);
+          this.ctx.storage.sql.exec(
+            'INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)',
+            16, new Date().toISOString()
+          );
+        });
+      }
     });
   }
 
