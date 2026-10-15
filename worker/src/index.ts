@@ -136,9 +136,9 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   }
 
   // 首頁頭像框的快照（關閉元宇宙時存的）：網址帶版本號，瀏覽器可以長期快取
-  const avatarMatch = path.match(/^\/avatar\/([A-Za-z]{1,20})$/);
+  const avatarMatch = path.match(/^\/avatar\/([^/]{1,60})$/);   // 設計師是英文名，企劃／專案同仁是中文名（網址編碼過）
   if (request.method === 'GET' && avatarMatch) {
-    const result = await dispatchAction(request, env, 'pixelOfficeAvatarGet', { name: avatarMatch[1] });
+    const result = await dispatchAction(request, env, 'pixelOfficeAvatarGet', { name: (() => { try { return decodeURIComponent(avatarMatch[1]); } catch { return avatarMatch[1]; } })() });
     if (!result.ok || !text(result.png)) return new Response('Not Found', { status: 404 });
     const binary = atob(text(result.png)), bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);

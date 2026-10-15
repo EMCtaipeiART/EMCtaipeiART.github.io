@@ -5202,6 +5202,9 @@ describe('平台幣', () => {
       if (item.name === '座位0') expect(await api({ action: 'personaAvatarSnapshot', png, lookKey: 'persona-2', headId: head, outfitId: outfit }, session)).toMatchObject({ ok: true, seat: 0 });   // 已入座的人不會換座位
     }
     expect(seats).toEqual([0, 1, 2, 3, 4, 5, -1]);
+    const avatar = await SELF.fetch(`https://worker.test/avatar/${encodeURIComponent('座位1')}`);   // 中文名字的頭像快照也要拿得到（首頁、側邊欄的頭像框）
+    expect(avatar.status).toBe(200);
+    expect(avatar.headers.get('Content-Type')).toBe('image/png');
     const state = await api({ action: 'pixelOfficeState' }) as { staff: Array<{ seat: number; name: string }>; people: Array<{ name: string; look?: { outfit: string; head: string } }> };
     expect(state.staff.map(item => item.name)).toEqual(['座位0', '座位1', '座位2', '座位3', '座位4', '座位5']);
     expect(state.people.find(item => item.name === '座位2')?.look).toMatchObject({ outfit: `c:${outfit}`, head: `h:${head}` });
