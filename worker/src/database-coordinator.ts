@@ -1662,7 +1662,8 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       'SELECT MAX(updated_at) AS v, MAX(CASE WHEN expires_at <= ? THEN expires_at END) AS expired FROM pixel_office_stories', Date.now()
     ).toArray()[0];
     // 動態到期也要換版本號：沒有人動作的時候，過期的動態才會在下一次輪詢從每個人的畫面消失。
-    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0, Number(stories?.v) || 0, Number(stories?.expired) || 0);
+    const avatars = this.ctx.storage.sql.exec<{ v: number | null }>('SELECT MAX(updated_at) AS v FROM pixel_office_avatar_current').toArray()[0];   // 企劃／專案同仁的頭像快照更新也要換版本號
+    return Math.max(Number(row?.v) || 0, Number(settings?.v) || 0, Number(stories?.v) || 0, Number(stories?.expired) || 0, Number(avatars?.v) || 0);
   }
 
   /** 目前這套等級稱號。沒存過、或存的內容有缺，都會用預設值補齊。 */
@@ -2457,8 +2458,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   }
 
   private pixelOfficeAvatarGet(payload: ApiPayload): ApiResult {
-    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === text(payload.name).toLowerCase());
-    if (!name) throw new Error('找不到這位設計師');
+    const wanted = text(payload.name).toLowerCase();
+    const name = this.ctx.storage.sql.exec<{ name: string }>('SELECT name FROM pixel_office_avatar_current').toArray().map(item => item.name).find(item => item.toLowerCase() === wanted)
+      || PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === wanted);
+    if (!name) throw new Error('找不到這位同仁');
     const row = this.ctx.storage.sql.exec<{ png: string }>(
       'SELECT a.png AS png FROM pixel_office_avatar_current c JOIN pixel_office_avatars a ON a.name = c.name AND a.look_key = c.look_key WHERE c.name = ?', name
     ).toArray()[0];
@@ -2570,6 +2573,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       });
       return built;
     });
+  }
+
+  /** 企劃／專案同仁完成「個人形象」後的頭像快照：存成他們的站內頭像（首頁、側邊欄頭像框用）。設計師自己的快照走 pixelOfficeAvatarSnapshot。 */
+  private personaAvatarSnapshot(payload: ApiPayload, database: DatabaseSnapshot, session: SessionRecord | null): ApiResult {
+    const current = this.requireSession(session);
+    const row = settingsRow(database, current.account || current.user);
+    const department = normalizeDepartmentName(row?.['部門']);
+    if (!/^(企劃部|專案部)$/.test(department) && !hasCapability(database, current, 'database.manage')) throw new Error('只有企劃部、專案部同仁可以建立個人形象');
+    const name = text(row?.['名字']) || text(current.user) || text(current.account);
+    if (!name || PIXEL_OFFICE_NAMES.includes(name)) throw new Error('設計師請使用元宇宙的頭像快照');
+    const lookKey = text(payload.lookKey) || 'persona';
+    if (!/^[\w:|.@-]{1,140}$/.test(lookKey)) throw new Error('造型代碼不正確');
+    const match = text(payload.png).match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
+    if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
+    const now = Date.now(), sql = this.ctx.storage.sql;
+    sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
+    sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
+    return { ok: true, action: 'personaAvatarSnapshot', name, version: now };
   }
 
   private async coinMe(database: DatabaseSnapshot, session: SessionRecord | null): Promise<ApiResult> {
@@ -4506,6 +4527,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const baseUrl = text(payload.supplementBaseUrl) || context.baseUrl;
 
       if (action === 'coinMe') return await this.coinMe(database, session);
+      if (action === 'personaAvatarSnapshot') return this.personaAvatarSnapshot(payload, database, session);
       if (action === 'coinTransfer') return await this.coinTransfer(payload, database, session);
       if (action === 'coinReserve') return await this.coinReserve(payload, database, session);
       if (action === 'coinRefund') return await this.coinRefund(payload);

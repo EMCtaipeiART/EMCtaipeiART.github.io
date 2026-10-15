@@ -226,7 +226,9 @@
       for(const row of settingsRows||[]){const url=String(row['頭像連結']||'').trim();if(!/^https?:\/\//.test(url))continue;for(const key of [row['名字'],row['顯示名'],row['帳號']])if(norm(key))map.set(norm(key),url)}
       return map;
     }
-    function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return state.avatars.get(norm(name))||(email&&state.avatars.get(email))||''}
+    /* 企劃／專案同仁完成「個人形象」後的頭像快照（設計師用像素大頭，不走這裡） */
+    function personaSnapAvatar(name){try{const snap=state.avatarSnap||{},want=norm(name);if(!want)return '';const key=Object.keys(snap).find(k=>norm(k)===want&&!['leona','amber','noise','anna','machi'].includes(norm(k)));return key?snapUrl(key):''}catch(err){return ''}}
+    function personAvatar(name){const email=(String(name||'').match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)||[''])[0].toLowerCase();return state.avatars.get(norm(name))||(email&&state.avatars.get(email))||personaSnapAvatar(name)||''}
     function initial(name){const text=String(name||'').replace(/<[^>]*>/g,'').trim();return text?[...text][0].toUpperCase():'?'}
     /* 上次的像素頭像先拿來顯示（只存圖），等隱藏辦公室算好再換成最新的，避免進站幾秒顯示舊頭像 */
     try{const c=JSON.parse(localStorage.getItem('v5PixAvCache')||'null');if(c&&typeof c==='object'&&!state.pixAvatars){const o={};Object.keys(c).forEach(k=>{if(/^data:image\/png/.test(c[k]||''))o[k]={img:c[k],message:'',music:null,status:'',story:{count:0,unread:false}}});if(Object.keys(o).length)state.pixAvatars=o}}catch(err){}
@@ -437,7 +439,7 @@
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser());
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=102&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=102&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=104&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=104&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
@@ -951,6 +953,8 @@
       $('stage').innerHTML='<div class="outfit-page"><iframe class="outfit-frame" id="outfitFrame" scrolling="no" title="AI 服裝生成器" allow="clipboard-write" src="'+OUTFIT_ORIGIN+'/outfit#embed=1&theme='+currentTheme()+'&t='+encodeURIComponent(t)+'"></iframe></div>';
     }
     /* 服裝頁（iframe）會回報內容高度：把 iframe 撐到那麼高，整頁由這一層捲動，左右空白處也能滑 */
+    /* 個人形象完成（頭像快照已存）：重新載入一次，頭像框就會換成新的 */
+    window.addEventListener('message',e=>{if(e.origin===OUTFIT_ORIGIN&&e.data&&e.data.type==='emcPersonaDone')setTimeout(()=>location.reload(),800)});
     window.addEventListener('message',e=>{if(e.origin!==OUTFIT_ORIGIN||!e.data||e.data.type!=='emcOutfitHeight')return;const f=$('outfitFrame'),h=Math.round(Number(e.data.height)||0);if(f&&h>200)f.style.height=h+'px'});
     function sendOutfitTheme(){const f=$('outfitFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'emcTheme',theme:currentTheme()},OUTFIT_ORIGIN)}catch(err){}}
     /* ---------- 記事本：設計部常用的工具、素材網站、廠商資訊（卡片式、可新增／編輯／刪除／調整順序）。
