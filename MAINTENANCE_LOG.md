@@ -2,6 +2,10 @@
 
 > 每次修改網站後在最上面補一筆（新的在上）。AGENT.md 要求的修改紀錄放這裡。
 
+## 2026-10-16
+
+- v5.0 首頁「最新案件列表」與專案頁網格卡牌的負責人標示（`site.js`、`site.css`）：沿用 `faceHtml()`，改成不重疊的「頭像＋專案／設計＋姓名」細邊圓角膠囊；空白不顯示，同人兼任合併為「專案＋設計」，多人支援逗號／全形逗號／頓號並去重。姓名單行省略、title 保留完整姓名，配色使用主站深淺色變數；左側可用寬度大於 260px 時並排，窄版上下兩列保留角色，可用寬度不超過 160px 時膠囊內角色與姓名分成上下兩行，右側數量／修改紀錄不縮小。列表模式未改。新增 `backend/test/v5-card-people.test.mjs` 6 項測試（兩角色與原頭像、空值、同人兼任、多人去重、長名與 HTML 跳脫、首頁／專案卡牌含數量與修改紀錄），未刪改既有檢查。已執行 `node tools/stamp.cjs` 更新 `index.html` 快取版本；`node --check site.js`、`git diff --check` 通過；`node --test backend/test/*.test.mjs` 共 271 項，251 通過、20 項因環境禁止本機監聽（`listen EPERM 127.0.0.1`）失敗，新增 6 項全數通過。本機預覽伺服器同樣遭 `EPERM` 阻擋，瀏覽器亦禁止 `file:` 預覽，未完成截圖／實際渲染驗證；需人工確認四欄、手機與深色模式。未 commit、push 或部署。
+
 ## 2026-10-15
 
 - Cloudflare 通知 Durable Objects 免費額度 rows_read 已用 90%（每日 500 萬列，台北 08:00 重置）。減量：①Worker 新增 SQL 遷移 18：`pixel_office_*` 六張表的 `updated_at`／`expires_at`／`joined_at` 加索引，`pixelOfficeVersion()` 的 `MAX()` 不再整表掃描（行為不變，全天生效）；②夜間減量時段（台北 20:00～隔天 08:00，`isQuietHours()`）：`pixelOfficeVersion()` 結果快取 120 秒、電腦心跳不再立刻比對版本推送、每分鐘排程的 `runPixelPush` 改每 5 分鐘一次；③前台 `site.js`（`quietHours()`）：夜間案件資料背景輪詢由 8／24 秒改 40／120 秒（即時推送連著時 120 秒）、像素辦公室輪詢每 5 分鐘。白天維持原樣。測試：`worker/test/quiet-hours.test.ts`，`index.test.ts` 的遷移版本清單補 18。已 stamp、Worker 已部署。

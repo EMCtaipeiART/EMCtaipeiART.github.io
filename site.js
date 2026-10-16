@@ -558,6 +558,20 @@
     function cdClass(s,status){if(['過稿中','已完成','暫停中'].includes(status)||s.remaining===null)return '';return s.remaining<0?'cd-late':s.remaining===0?'cd-today':s.remaining<=2?'cd-soon':'cd-ok'}
     const barStyle=p=>`width:${p}%;background-size:${p>0?(10000/p).toFixed(1):100}% 100%`;
     function shortRange(row){const a=parseDay(row['開始日期']),b=parseDay(row['結束日期']),f=ms=>ymd(ms).slice(5);return Number.isNaN(a)&&Number.isNaN(b)?'未填時間':`${Number.isNaN(a)?'?':f(a)} ~ ${Number.isNaN(b)?'?':f(b)}`}
+    function cardPeopleHtml(row){
+      const names=value=>[...new Map(String(value||'').split(/[,，、]/).map(n=>n.trim()).filter(Boolean).map(n=>[norm(n),n])).values()];
+      const owners=names(row['專案負責人']),designers=names(row['設計負責人']);
+      const shared=owners.filter(n=>designers.some(d=>norm(d)===norm(n)));
+      const groups=[
+        ['專案＋設計',shared,'設計負責人'],
+        ['專案',owners.filter(n=>!shared.some(s=>norm(s)===norm(n))),'專案負責人'],
+        ['設計',designers.filter(n=>!shared.some(s=>norm(s)===norm(n))),'設計負責人']
+      ];
+      return groups.filter(([,people])=>people.length).map(([role,people,avatarRole])=>{
+        const fullName=people.join('、');
+        return `<span class="card-person">${faceHtml(people[0],avatarRole)}<span class="card-person-role">${role}</span><span class="card-person-name" title="${esc(fullName)}">${esc(fullName)}</span></span>`;
+      }).join('');
+    }
     function cardHtml(row,inColumn){
       const s=schedule(row),st=statusOf(row),id=idKey(row),qty=String(row['數量']||'').trim(),status=String(row['狀態']||'').trim(),isDoing=['執行中','修改中'].includes(status);
       const late=s.late&&!['過稿中','已完成','暫停中'].includes(status);
@@ -568,7 +582,7 @@
         <div class="card-info"><span class="ci-type ${typeClass(row)}">${esc([row['設計種類']||row['設計類型'],row['階段']].filter(Boolean).join('／')||'未填種類')}</span><span class="ci-date">${esc(shortRange(row))}</span>${String(row['項目細節']||'').split(/\s*[,，、]\s*/).filter(Boolean).map(d=>`<span class="ci-detail">${esc(d)}</span>`).join('')}</div>
         ${isDoing&&!inColumn?`<div class="progress${s.late?' is-late':''}"><div class="progress-label"><span>進度</span><span>${s.percent}%</span></div><div class="progress-track"><span style="${barStyle(s.percent)}"></span></div></div>`:''}
         <div class="card-foot">
-          <span class="faces">${faceHtml(row['專案負責人'],'專案負責人')}${faceHtml(row['設計負責人'],'設計負責人')}</span>
+          <span class="faces card-people">${cardPeopleHtml(row)}</span>
           <span class="card-qtywrap">${(status==='過稿中'&&revisionCount(row)>=0)?`<button type="button" class="lt-rev lt-edit${revisionCount(row)===0?' is-draft':''}${revisionCount(row)>0&&hasPendingMod(row)?' revision-pending':''}" data-rev-open="${esc(id)}" title="快速查看修改紀錄">${revisionCount(row)===0?'初稿':`${revisionCount(row)<=10?NUM_ZH[revisionCount(row)]:revisionCount(row)}修`}</button>`:''}<span class="card-qty">數量 ${esc(qty||'-')}</span></span>
         </div>
       </div>`;

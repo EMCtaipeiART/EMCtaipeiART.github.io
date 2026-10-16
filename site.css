@@ -462,6 +462,21 @@
     .login-avatar img[src^="data:image"]{transform:scale(.9);transform-origin:50% 56%}
     .face img.head.is-short{width:100%;margin-top:4%}
     .face.is-designer{background:#fff}
+    /* 卡牌負責人：依左側實際可用寬度排列，數量／修改紀錄保留自己的空間。 */
+    .card .card-foot{flex-wrap:nowrap;gap:8px}
+    .card .card-qtywrap{flex:0 0 auto}
+    .card .card-people{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px 6px;container:card-people / inline-size}
+    .card-person{display:flex;align-items:center;gap:4px;flex:1 1 0;min-width:0;height:30px;padding:2px 7px 2px 3px;border:1px solid var(--line);border-radius:99px;background:var(--bg);color:var(--ink)}
+    .card-person .face{flex:0 0 22px;width:22px;height:22px;margin:0;border-width:1px;color:var(--ink)}
+    .card-person-role{flex:0 0 auto;font-size:10px;line-height:1.4;font-weight:700;color:var(--st-done-ink);white-space:nowrap}
+    .card-person-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.4;font-weight:700}
+    @container card-people (max-width:260px){.card-person{flex-basis:100%}}
+    @container card-people (max-width:160px){
+      .card-person{display:grid;grid-template-columns:22px minmax(0,1fr);grid-template-rows:12px 14px;gap:0 4px;height:32px}
+      .card-person .face{grid-row:1 / 3}
+      .card-person-role{line-height:12px;overflow:hidden;text-overflow:ellipsis}
+      .card-person-name{line-height:14px}
+    }
     .card-info{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px 6px;margin:8px 0 0}
     .card-info .ci-detail{background:#fff;color:#344641;border-color:#d9dfdc}
     html[data-theme="dark"] .card-info .ci-detail{background:#2a2f2e;color:#c3cbc8;border-color:#3a4140}
