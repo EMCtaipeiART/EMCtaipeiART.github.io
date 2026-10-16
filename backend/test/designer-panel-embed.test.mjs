@@ -483,7 +483,7 @@ test('標題後面的「編輯」開出嵌著完整像素辦公室的小視窗',
   // 面板裡的 iframe 是唯讀預覽（只放行點人物看資料），要改自己的心情／狀態／留言得開完整版。
   assert.match(html, /<div class="designer-title-wrap"><h2>設計部即時動態<\/h2>[\s\S]{0,200}?id="officeEditorOpen"[^>]*>編輯<\/button><\/div>/,
     '膠囊按鈕要接在標題（與說明鈕）後面');
-  assert.match(html, /const OFFICE_EDITOR_URL='https:\/\/emctaipeiart\.github\.io\/EMC-ART-Pixel-Office\/dist\/';/);
+  assert.match(html, /const OFFICE_EDITOR_URL='https:\/\/emc-art\.com\/EMC-ART-Pixel-Office\/dist\/';/);
   assert.match(html, /<iframe id="officeEditorFrame"/);
   // src 等到打開才給，關掉就拿掉：不然這一頁會在背景一直跑 canvas 與同步輪詢。
   assert.match(html, /if\(frame&&!frame\.getAttribute\('src'\)\)frame\.src=OFFICE_EDITOR_URL; modal\.hidden=false;/);
