@@ -78,6 +78,20 @@ const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(locati
 let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
 let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=false,cleanScale=0,cleanY0=0,cleanPadY=0,followPrev=null;
+/* 手機（窄螢幕）：不縮成一整張小圖，而是用固定的可讀倍率，鏡頭跟著自己的角色移動（沒有角色就跟選取的人，再沒有就看原本那組） */
+const cam={on:false,s:.5,w:0,h:0,x:0,y:0,tx:0,ty:0,init:false};
+function updateCamera(){
+  if(!cam.on||!cam.w)return;
+  let p=null;try{const oi=ownIndex();p=oi>=0?viewPeople[oi]:null;if(!p&&selected!==null)p=viewPeople[selected];}catch(error){}
+  const px=p?p.x:1100,py=p?p.y-60:BOTTOM_FEET-110;
+  if(!cam.init||(cam.x===0&&cam.y===0)){cam.x=px;cam.y=py;cam.init=true;}
+  else{cam.x+=(px-cam.x)*.2;cam.y+=(py-cam.y)*.2;}
+  const tx=Math.min(0,Math.max(cam.w-W*cam.s,cam.w/2-cam.x*cam.s)),ty=Math.min(0,Math.max(cam.h-H*cam.s,cam.h/2-(cam.y+OY)*cam.s));
+  if(Math.abs(tx-cam.tx)>.3||Math.abs(ty-cam.ty)>.3){
+    const far=Math.abs(ty-cam.ty)>30||Math.abs(tx-cam.tx)>30;
+    cam.tx=tx;cam.ty=ty;game.style.transform=`translate(${tx}px,${ty}px)`;if(far)markDirty();
+  }
+}
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
@@ -85,6 +99,12 @@ function fitCleanView(){
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
   const narrow=document.documentElement.classList.contains('clean-narrow');
+  if(narrow){
+    cleanStaff=staffSeated;cam.on=true;cam.w=w;cam.h=window.innerHeight;cam.s=Math.max(.34,Math.min(.62,w/760));cleanScale=0;
+    wrapEl.style.height=cam.h+'px';wrapEl.style.overflow='hidden';
+    game.style.width=`${W*cam.s}px`;game.style.height=`${H*cam.s}px`;game.style.left='0';game.style.top='0';
+    cam.init=false;cam.tx=cam.ty=1e9;updateCamera();markDirty();return;
+  }
   if(narrow)top=Math.min(top,140);
   cleanTop=top;
   cleanStaff=staffSeated;
@@ -101,6 +121,7 @@ function fitCleanView(){
 }
 /** 編輯版場景很高：只畫目前捲到的範圍（上下各多留一點），畫面外的桌子、人物、名牌整個跳過，動作動畫才不會卡。 */
 function inView(y){
+  if(cam.on){const top=-cam.ty/cam.s-OY-320,bottom=(cam.h-cam.ty)/cam.s-OY+320;return y>=top&&y<=bottom;}
   if(!cleanScale||embedMode)return true;
   const top=(window.scrollY-cleanPadY)/cleanScale+cleanY0-320,bottom=top+window.innerHeight/cleanScale+640;
   return y>=top&&y<=bottom;
@@ -1566,7 +1587,7 @@ const sceneAnimating=()=>people.some((p,i)=>!isAway(p)&&(p.mood||musicOf(p)||act
 let embedVisible=true,embedLastDraw=0;
 if(embedMode&&'IntersectionObserver' in window)new IntersectionObserver(entries=>{embedVisible=entries[entries.length-1].isIntersecting;if(embedVisible)markDirty()}).observe(document.documentElement);
 const avatarOnly=new URLSearchParams(location.search).get('avatars')==='1';
-function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
+function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&viewer.open)){setTimeout(()=>requestAnimationFrame(render),400);return;}const dt=Math.min((time-last)/1000||0,.04);last=time;const walk=moving(dt);
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
