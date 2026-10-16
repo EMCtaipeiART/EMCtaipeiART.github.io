@@ -5,5 +5,5 @@
   "workers_dev": true,
   "routes": [{ "pattern": "go.emc-art.com", "custom_domain": true }],
   "vars": { "FALLBACK_URL": "https://emctaipeiart.github.io" },
-  "kv_namespaces": [{ "binding": "LINKS" }]
+  "kv_namespaces": [{ "binding": "LINKS", "id": "767676f9d61744caab6f505eaad3bcfd" }]
 }
