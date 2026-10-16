@@ -486,3 +486,4 @@ html.clean aside .xp-track{margin:5px 0 0;height:6px}
 html.clean-narrow aside{display:none!important}
 /* 手機：場景變高要捲動，搖桿固定在畫面右下角，捲到哪都摸得到 */
 html.clean-narrow .joystick{position:fixed;right:12px;bottom:14px}
+html.clean-narrow #game{touch-action:none}

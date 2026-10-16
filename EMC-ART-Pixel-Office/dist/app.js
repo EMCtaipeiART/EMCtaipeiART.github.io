@@ -79,11 +79,13 @@ let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
 let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=false,cleanScale=0,cleanY0=0,cleanPadY=0,followPrev=null;
 /* 手機（窄螢幕）：不縮成一整張小圖，而是用固定的可讀倍率，鏡頭跟著自己的角色移動（沒有角色就跟選取的人，再沒有就看原本那組） */
-const cam={on:false,s:.5,w:0,h:0,x:0,y:0,tx:0,ty:0,init:false};
+const cam={on:false,s:.5,w:0,h:0,x:0,y:0,tx:0,ty:0,init:false,free:false,fx:0,fy:0,ox:null,oy:null};
 function updateCamera(){
   if(!cam.on||!cam.w)return;
   let p=null;try{const oi=ownIndex();p=oi>=0?viewPeople[oi]:null;if(!p&&selected!==null)p=viewPeople[selected];}catch(error){}
-  const px=p?p.x:1100,py=p?p.y-60:BOTTOM_FEET-110;
+  let px=p?p.x:1100,py=p?p.y-60:BOTTOM_FEET-110;
+  if(p){if(cam.ox!==null&&(Math.abs(p.x-cam.ox)>1||Math.abs(p.y-cam.oy)>1))cam.free=false;cam.ox=p.x;cam.oy=p.y;}/* 自己的角色走動：回到跟隨 */
+  if(cam.free){px=cam.fx;py=cam.fy;}
   if(!cam.init||(cam.x===0&&cam.y===0)){cam.x=px;cam.y=py;cam.init=true;}
   else{cam.x+=(px-cam.x)*.2;cam.y+=(py-cam.y)*.2;}
   const tx=Math.min(0,Math.max(cam.w-W*cam.s,cam.w/2-cam.x*cam.s)),ty=Math.min(0,Math.max(cam.h-H*cam.s,cam.h/2-(cam.y+OY)*cam.s));
@@ -1242,7 +1244,15 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height-OY;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{if(roMode)return;if(viewerIsStaff()&&hit.i!==ownIndex()){toast('你只能操控自己的人物');return;}select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}});
+const onGamePress=e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height-OY;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{if(roMode)return;if(viewerIsStaff()&&hit.i!==ownIndex()){toast('你只能操控自己的人物');return;}select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}};
+/* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
+game.addEventListener('pointerdown',e=>{
+  if(!cam.on||e.pointerType==='mouse'){onGamePress(e);return;}
+  const sx=e.clientX,sy=e.clientY,bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;let dragged=false;
+  const move=m=>{const dx=m.clientX-sx,dy=m.clientY-sy;if(!dragged&&Math.hypot(dx,dy)<10)return;dragged=true;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(W-cam.w/2/cam.s,bx-dx/cam.s));cam.fy=Math.max(cam.h/2/cam.s-OY,Math.min(H0-cam.h/2/cam.s+120,by-dy/cam.s));cam.x=cam.fx;cam.y=cam.fy;m.preventDefault();};
+  const up=u=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);if(!dragged&&u.type==='pointerup')onGamePress(u);};
+  window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+});
 // 點一下把資料卡固定住：固定之後滑鼠移開不會收起，也才點得到上面的技能膠囊。
 // 沒固定時只是滑過預覽（卡片不吃滑鼠事件，見 CSS），滑到別人身上就換人。
 let cardPinned=false;
