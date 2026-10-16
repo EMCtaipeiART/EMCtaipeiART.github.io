@@ -5492,6 +5492,36 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         };
       });
     }
+    if (action === 'createShortLinksBatch') {
+      const current = this.requireSession(session);
+      const me = canonicalAccount(current.account || current.user);
+      const items = Array.isArray(payload.items) ? payload.items as Array<Record<string, unknown>> : [];
+      if (!items.length) throw new Error('請貼上至少一個網址');
+      if (items.length > 200) throw new Error('一次最多 200 筆，請分批貼上');
+      const project = text(payload.project).slice(0, 60), visibility = normalizeShortVisibility(payload.visibility);
+      return this.mutate(action, current, draft => {
+        const rows = draft.tables['短連結'].rows;
+        const used = new Set(rows.map(row => text(row['短碼']).toLowerCase()));
+        const time = nowTaipei();
+        const created: Row[] = [], failed: Array<{ index: number; url: string; error: string }> = [];
+        items.forEach((item, index) => {
+          const url = text(item?.url);
+          try {
+            if (!isHttpUrl(url)) throw new Error('網址必須以 http:// 或 https:// 開頭');
+            const wanted = text(item?.code);
+            const code = wanted ? normalizeShortCode(wanted) : generateShortCode(used);
+            if (used.has(code.toLowerCase())) throw new Error(`短碼「${code}」已經被使用`);
+            used.add(code.toLowerCase());
+            const row: Row = { '短碼': code, '原始網址': url, '名稱': text(item?.name).slice(0, 60), '專案': project, '可見範圍': visibility, '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+            rows.push(row);
+            created.push({ code, url, name: text(row['名稱']), project, visibility, clicks: 0, owner: text(row['建立者']), createdAt: time, updatedAt: time, canEdit: true });
+          } catch (error) {
+            failed.push({ index, url, error: error instanceof Error ? error.message : String(error) });
+          }
+        });
+        return { result: { ok: true, action, created, failed }, changed: created.length > 0, changedTables: created.length ? ['短連結'] : [] };
+      });
+    }
     if (action === 'createShortLink' || action === 'updateShortLink' || action === 'deleteShortLink') {
       const current = this.requireSession(session);
       const me = canonicalAccount(current.account || current.user);
