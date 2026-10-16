@@ -5,7 +5,7 @@ import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
-  generateShortCode, normalizeShortCode, hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
+  generateShortCode, normalizeShortCode, normalizeShortVisibility, hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
@@ -4940,9 +4940,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         // 隱私：只看得到自己建立的，或「建立者目前的組別」與自己相同的短網址；管理者看全部。
         const groupOf = (account: unknown) => text(settingsRow(database, account)?.['組別']);
         const myGroup = groupOf(me);
-        const visible = (row: Row) => manager || canonicalAccount(row['建立者帳號']) === me || (myGroup !== '' && groupOf(row['建立者帳號']) === myGroup);
+        const visible = (row: Row) => {
+          if (manager || canonicalAccount(row['建立者帳號']) === me) return true;
+          const range = normalizeShortVisibility(row['可見範圍']);
+          if (range === '全部') return true;
+          return range === '同組' && myGroup !== '' && groupOf(row['建立者帳號']) === myGroup;
+        };
         const links = [...database.tables['短連結'].rows].filter(visible).reverse().map(row => ({
-          group: groupOf(row['建立者帳號']),
+          group: groupOf(row['建立者帳號']), visibility: normalizeShortVisibility(row['可見範圍']),
           code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), owner: text(row['建立者']),
           clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
           createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
@@ -5494,7 +5499,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const result = await this.mutate(action, current, draft => {
         const rows = draft.tables['短連結'].rows;
         const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.toLowerCase());
-        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
+        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), visibility: normalizeShortVisibility(row['可見範圍']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
         const time = nowTaipei();
         if (action === 'createShortLink') {
           const url = text(payload.url);
@@ -5502,7 +5507,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const wanted = text(payload.code);
           const code = wanted ? normalizeShortCode(wanted) : generateShortCode(new Set(rows.map(row => text(row['短碼']).toLowerCase())));
           if (find(code) >= 0) throw new Error(`短碼「${code}」已經被使用，請換一個`);
-          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '專案': text(payload.project).slice(0, 60), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '專案': text(payload.project).slice(0, 60), '可見範圍': normalizeShortVisibility(payload.visibility), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
           rows.push(row);
           return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
         }
@@ -5521,6 +5526,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         }
         if (payload.name !== undefined) row['名稱'] = text(payload.name).slice(0, 60);
         if (payload.project !== undefined) row['專案'] = text(payload.project).slice(0, 60);
+        if (payload.visibility !== undefined) row['可見範圍'] = normalizeShortVisibility(payload.visibility);
         if (payload.newCode !== undefined && text(payload.newCode) && text(payload.newCode) !== text(row['短碼'])) {
           const next = normalizeShortCode(payload.newCode);
           const clash = find(next);

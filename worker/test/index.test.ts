@@ -501,6 +501,12 @@ describe('Machi Design API Worker', () => {
     const created2 = await api({ action: 'createShortLink', url: 'https://example.com/private', code: 'Private1' }, other);
     expect(created2.ok).toBe(true);
     expect(((await api({ action: 'listShortLinks' }, tester)).links as Array<{ code: string }>).map(l => l.code)).not.toContain('Private1');
+    // 可見範圍「全部」：所有登入者都看得到；「僅自己」：連同組也看不到（建立者與管理者除外）
+    await api({ action: 'updateShortLink', code: 'Private1', visibility: 'all' }, other);
+    expect(((await api({ action: 'listShortLinks' }, tester)).links as Array<{ code: string }>).map(l => l.code)).toContain('Private1');
+    await api({ action: 'updateShortLink', code: 'Private1', visibility: 'self' }, other);
+    expect(((await api({ action: 'listShortLinks' }, tester)).links as Array<{ code: string }>).map(l => l.code)).not.toContain('Private1');
+    expect(await api({ action: 'resolveShortLink', code: 'Private1' })).toMatchObject({ ok: true });
     expect(await api({ action: 'resolveShortLink', code: 'Autumn2026' })).toMatchObject({ ok: false });
   });
 

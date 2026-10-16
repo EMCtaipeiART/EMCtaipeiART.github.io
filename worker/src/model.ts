@@ -623,6 +623,11 @@ export function normalizeShortCode(value: unknown): string {
   if (SHORT_CODE_RESERVED.has(code.toLowerCase())) throw new Error('這個短碼是系統保留字，請換一個');
   return code;
 }
+// 短網址可見範圍：同組（預設，含舊資料）／全部（所有登入者）／僅自己。
+export function normalizeShortVisibility(value: unknown): '同組' | '全部' | '僅自己' {
+  const v = text(value);
+  return v === 'all' || v === '全部' ? '全部' : (v === 'self' || v === '僅自己' ? '僅自己' : '同組');
+}
 export function generateShortCode(existing: Set<string>): string {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const bytes = crypto.getRandomValues(new Uint8Array(6));

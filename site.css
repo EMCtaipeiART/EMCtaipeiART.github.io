@@ -1412,3 +1412,8 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 
     /* 萬聖節頭像框：首頁頭像套上幽靈框（編輯背景可關）。框內圓圈對齊頭像圓，幽靈與星星在外側 */
     html[data-hero-fest="halloween"][data-hero-frame="1"] .avatar-btn:not(.avatar-plus)::after{content:"";position:absolute;width:130%;height:130%;left:-13.8%;top:-17.3%;background:url("assets/festival/halloween-avatar-frame.webp?v=2") center/100% 100% no-repeat;pointer-events:none;z-index:4}
+
+    .link-tag-vis{background:#eef2ff;color:#4338ca}
+    .link-vis-all{background:#e8f6ec;color:#0f7f27}
+    .link-vis-self{background:#fff1f2;color:#be123c}
+    .link-visibility{grid-column:1/-1}
