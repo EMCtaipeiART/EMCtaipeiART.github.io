@@ -8,7 +8,7 @@
   <meta name="robots" content="noindex">
   <meta name="app-version" content="20261006-short-link-removed-1">
   <script>if(/^\/(?:[A-Za-z0-9]{3,32}|[a-d]\/\d{8})\/?$/i.test(location.pathname))document.documentElement.style.visibility='hidden'</script>
-  <title>EMC 找不到頁面</title>
+  <title>EMC 連結</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
     *{box-sizing:border-box}
@@ -47,7 +47,7 @@
   <main id="notfound">
     <div class="brand"><span class="brand-mark">EMC</span><span>EMC 設計需求系統</span></div>
     <h1>找不到這個頁面</h1>
-    <p class="lead">短網址功能已經移除。請改用原始網址，或回到<a class="home-link" href="/">設計需求系統</a>。</p>
+    <p class="lead">這個網址不存在或已被刪除。請確認連結是否正確，或回到<a class="home-link" href="/">設計需求系統</a>。</p>
   </main>
   <main class="redirect" id="redirector" hidden>
     <div class="spinner" id="spinner" aria-hidden="true"></div>
@@ -69,9 +69,10 @@
       if (legacyMatch) document.querySelector('#redirector').hidden = false;
       const fail = text => {
         document.documentElement.style.visibility = '';
+        document.title = 'EMC 找不到連結';
         document.querySelector('#redirector').hidden = false;
         document.querySelector('#spinner').hidden = true;
-        document.querySelector('#redirectTitle').textContent = '無法開啟連結';
+        document.querySelector('#redirectTitle').textContent = '找不到這個連結';
         document.querySelector('#redirectMessage').textContent = text;
       };
       fetch(apiUrl, {
