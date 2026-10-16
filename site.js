@@ -246,7 +246,7 @@
     }
 
     /* ---------- 設計師列 ---------- */
-    function designerCases(name){const c={'未開始':0,'執行中':0,'過稿中':0,'修改中':0,'已完成':0};for(const r of allRows())if(norm(r['設計負責人'])===norm(name)&&r['狀態'] in c)c[r['狀態']]++;return c}
+    function designerCases(name){const c={'未開始':0,'執行中':0,'過稿中':0,'修改中':0,'已完成':0};/* 團隊案量是全體共用的數字，不受檢視者的客戶別權限影響 */for(const r of allRowsRaw())if(norm(r['設計負責人'])===norm(name)&&r['狀態'] in c)c[r['狀態']]++;return c}
     function levelInfo(name){
       const cfg=state.levelConfig||{steps:[1,10,20,30,40,50],videoMembers:['Noise'],titles:{graphic:['設計新秀','資深設計師','設計菁英','設計大師','傳奇設計師','設計神話'],video:['影音新秀','資深剪輯師','影音菁英','影音大師','傳奇導演','影像神話']}};
       if(!state.archive)return null;
@@ -279,7 +279,7 @@
     /* 工作負載：進行中（未開始／執行中／過稿中／修改中）案件的「加權」加總，和設計部平均比較 */
     function designerLoad(name){
       const act=new Set(['未開始','執行中','過稿中','修改中']),sum=new Map(),w=r=>{const n=Number(String(r['加權']??'').trim());return Number.isFinite(n)&&n>0?n:(Number(r['數量'])>0?Number(r['數量']):1)};
-      for(const r of allRows()){if(!act.has(String(r['狀態']||'').trim()))continue;const d=String(r['設計負責人']||'').trim();if(d)sum.set(d,(sum.get(d)||0)+w(r))}
+      for(const r of allRowsRaw()){if(!act.has(String(r['狀態']||'').trim()))continue;const d=String(r['設計負責人']||'').trim();if(d)sum.set(d,(sum.get(d)||0)+w(r))}
       const grpOf=n=>{const r=(state.settings||[]).find(x=>String(x['顯示名']||x['名字']||'').trim()===n);const g=String(r&&r['組別']||'').trim();return g==='影音'||(!g&&n==='Noise')?'影音':'平面'};const mates=DESIGNERS.filter(n=>grpOf(n)===grpOf(name)),team=mates.map(n=>sum.get(n)||0),solo=mates.length<2,avg=solo?0:team.reduce((a,b)=>a+b,0)/team.length,mine=sum.get(name)||0,ratio=avg?mine/avg:0,grp=grpOf(name);
       const lv=!mine?['空檔','#64748b']:solo?(mine<=6?['輕鬆','#16a34a']:mine<=14?['適中','#2563eb']:mine<=22?['偏高','#d97706']:['滿載','#dc2626']):ratio<0.6?['輕鬆','#16a34a']:ratio<1.2?['適中','#2563eb']:ratio<1.6?['偏高','#d97706']:['滿載','#dc2626'];
       return {mine,avg,grp,solo,max:solo?22:Math.max(...team,1),label:lv[0],color:lv[1]};
