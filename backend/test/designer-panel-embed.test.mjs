@@ -406,7 +406,7 @@ test('個人資料卡一律夾在場景框內，優先往左開，而且不會�
   // 位置，卡片被切掉看不到（2026-09-22 修）。
   assert.match(fn, /const holder=game\.parentElement\.getBoundingClientRect\(\),view=game\.getBoundingClientRect\(\);/,
     '位置基準要用卡片真正的容器');
-  assert.match(fn, /const offsetX=view\.left-holder\.left,offsetY=view\.top-holder\.top\+OY\*scaleY;/,
+  assert.match(fn, /const offsetX=cam\.on\?view\.left-holder\.left-cam\.left\*cam\.s:view\.left-holder\.left,offsetY=cam\.on\?view\.top-holder\.top-cam\.top\*cam\.s:view\.top-holder\.top\+OY\*scaleY;/,
     '人物位置要換算成相對容器的座標');
   assert.match(fn, /clampX=value=>Math\.max\(8,Math\.min\(farX,value\)\)/, '左右夾在容器內');
   assert.match(fn, /clampY=value=>Math\.max\(8,Math\.min\(farY,value\)\)/, '上下夾在容器內');
