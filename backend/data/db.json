@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8675,
+  "revision": 8676,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-16T06:34:21.550Z",
+  "updatedAt": "2026-10-16T06:34:32.195Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1668,7 +1668,7 @@
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1VcHEPpO-5LTgTkVhDqx_KKErckpL-1Cs=w1600","保留期限":"24小時","到期時間":"2026-10-04T09:51:24.132Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/1GcYOgu5TCx_rMQKHnXsblQ6NJX-VWHzk=w1600","保留期限":"24小時","到期時間":"2026-10-13T02:44:31.552Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi"},
         {"名字":"Machi","限時動態連結":"https://lh3.googleusercontent.com/d/15o6Dxhi_F0Q0lXhjGYecUeXEn2IJwz7S=w1600","保留期限":"24小時","到期時間":"2026-10-13T13:05:47.415Z","按讚":"","倒讚":"","留言":"[]","狀態":"下架","已讀":"Machi , Odin組測試人員"},
-        {"名字":"李明庭","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/e7f3a28e-9224-48af-9541-424b6bd9222f","保留期限":"24小時","到期時間":"2026-10-17T02:47:19.562Z","按讚":"","倒讚":"","留言":"[{\"id\":\"a4a6419c-3ade-4dce-b165-1a1083397a29\",\"name\":\"Machi\",\"avatar\":\"\",\"text\":\"噁男 下去\",\"createdAt\":\"2026-10-16T03:11:09.130Z\"}]","狀態":"","已讀":"李明庭 , Machi , Odin組測試人員 , 吳冠賢"}
+        {"名字":"李明庭","限時動態連結":"https://machi-design-api.machi-chen.workers.dev/pixel-story/e7f3a28e-9224-48af-9541-424b6bd9222f","保留期限":"24小時","到期時間":"2026-10-17T02:47:19.562Z","按讚":"","倒讚":"","留言":"[{\"id\":\"a4a6419c-3ade-4dce-b165-1a1083397a29\",\"name\":\"Machi\",\"avatar\":\"\",\"text\":\"噁男 下去\",\"createdAt\":\"2026-10-16T03:11:09.130Z\"}]","狀態":"","已讀":"李明庭 , Machi , Odin組測試人員 , 吳冠賢 , 余采馨"}
       ]
     },
     "bug_report": {
