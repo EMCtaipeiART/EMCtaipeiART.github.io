@@ -26,7 +26,7 @@ import type {
 const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
-const PIXEL_OFFICE_STAFF_EMPTY_SEATS = [2];   // 右上（3 號）座位固定空著（2026-10-16 使用者指定），自動入座要跳過
+const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
 const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
 const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;
 // 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
@@ -1759,6 +1759,37 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             }
           }
           sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 20, new Date().toISOString());
+        });
+      }
+      if (!applied.has(21)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-16 座位定案：1 廖秦葦、2 李明庭、3 鄭筱舢、4 吳冠賢、5 余采馨、6 黎子瑄。
+          // 余采馨、黎子瑄還在建立角色，先保留座位（joined_at = 0，不動版本號），完成後直接入座。
+          const sql = this.ctx.storage.sql;
+          const final: Array<[string, number, string]> = [['廖秦葦', 0, ''], ['李明庭', 1, ''], ['鄭筱舢', 2, ''], ['吳冠賢', 3, ''], ['余采馨', 4, 'cindy.yu@emctaipei.com'], ['黎子瑄', 5, 'hsuan.li@emctaipei.com']];
+          const rows = sql.exec<{ seat: number; name: string; account: string; joined_at: number }>('SELECT seat, name, account, joined_at FROM pixel_office_staff').toArray();
+          if (rows.length > 0) {
+            const finalNames = final.map(item => item[0]);
+            const next = final.map(([name, seat, account]) => {
+              const old = rows.find(item => item.name === name);
+              return { name, seat, account: old ? old.account : account, joined_at: old ? old.joined_at : 0 };
+            });
+            const leftover = rows.filter(item => !finalNames.includes(item.name));   // 名單之外已入座的人：沒有空位就不留（目前沒有這種人）
+            sql.exec('DELETE FROM pixel_office_staff');
+            for (const item of next) sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', item.seat, item.name, item.account, item.joined_at);
+            void leftover;
+            const stamp = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+            for (const item of next) {
+              const person = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', item.name).toArray()[0];
+              if (!person) continue;
+              let state: Row = {};
+              try { state = JSON.parse(person.state) as Row; } catch { state = {}; }
+              const pos = PIXEL_OFFICE_STAFF_SEAT_POS[item.seat];
+              if (pos) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+              sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), stamp, item.name);
+            }
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 21, new Date().toISOString());
         });
       }
     });

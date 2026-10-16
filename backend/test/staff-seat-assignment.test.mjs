@@ -10,7 +10,9 @@ test('right-side staff seats are pinned: 廖秦葦 1, 李明庭 2, empty 3, 吳�
   assert.match(source, /applied\.has\(19\)/);
 });
 
-test('seat 3 (top right) stays empty for auto seating; migration 20 moves anyone put there', () => {
-  assert.match(source, /PIXEL_OFFICE_STAFF_EMPTY_SEATS = \[2\]/);
-  assert.match(source, /applied\.has\(20\)/);
+test('final seating (migration 21): 3 鄭筱舢, 5 余采馨, 6 黎子瑄 reserved', () => {
+  assert.match(source, /\['鄭筱舢', 2, ''\]/);
+  assert.match(source, /\['余采馨', 4, 'cindy\.yu@emctaipei\.com'\]/);
+  assert.match(source, /\['黎子瑄', 5, 'hsuan\.li@emctaipei\.com'\]/);
+  assert.match(source, /applied\.has\(21\)/);
 });

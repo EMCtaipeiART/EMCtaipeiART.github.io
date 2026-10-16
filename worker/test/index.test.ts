@@ -355,7 +355,7 @@ describe('Machi Design API Worker', () => {
     }));
     expect(stored.plainTokenRows).toBe(0);
     expect(stored.sessionRows).toBe(1);
-    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }, { version: 17 }, { version: 18 }, { version: 19 }, { version: 20 }]);
+    expect(stored.migrations).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }, { version: 6 }, { version: 7 }, { version: 8 }, { version: 9 }, { version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }, { version: 14 }, { version: 15 }, { version: 16 }, { version: 17 }, { version: 18 }, { version: 19 }, { version: 20 }, { version: 21 }]);
   });
 
   it('issues real sessions for the tester and admin shortcut passwords', async () => {
@@ -5239,12 +5239,12 @@ describe('平台幣', () => {
       seats.push(result.seat);
       if (item.name === '座位0') expect(await api({ action: 'personaAvatarSnapshot', png, lookKey: 'persona-2', headId: head, outfitId: outfit }, session)).toMatchObject({ ok: true, seat: 0 });   // 已入座的人不會換座位
     }
-    expect(seats).toEqual([0, 1, 3, 4, 5, -1, -1]);   // 3 號（右上）座位固定空著
+    expect(seats).toEqual([0, 1, 2, 3, 4, 5, -1]);
     const avatar = await SELF.fetch(`https://worker.test/avatar/${encodeURIComponent('座位1')}`);   // 中文名字的頭像快照也要拿得到（首頁、側邊欄的頭像框）
     expect(avatar.status).toBe(200);
     expect(avatar.headers.get('Content-Type')).toBe('image/png');
     const state = await api({ action: 'pixelOfficeState' }) as { staff: Array<{ seat: number; name: string }>; people: Array<{ name: string; look?: { outfit: string; head: string } }> };
-    expect(state.staff.map(item => item.name)).toEqual(['座位0', '座位1', '座位2', '座位3', '座位4']);
+    expect(state.staff.map(item => item.name)).toEqual(['座位0', '座位1', '座位2', '座位3', '座位4', '座位5']);
     expect(state.people.find(item => item.name === '座位2')?.look).toMatchObject({ outfit: `c:${outfit}`, head: `h:${head}` });
     expect(await api({ action: 'pixelOfficeUpdate', name: '座位1', patch: { message: '哈囉', x: 2000, y: 700 } })).toMatchObject({ ok: true });
     expect(await api({ action: 'pixelOfficeUpdate', name: '座位6', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
