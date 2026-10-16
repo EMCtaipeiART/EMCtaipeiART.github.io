@@ -758,7 +758,7 @@ test('「設計部即時動態」載入加速：API 與圖片在 HTML 解析時�
   assert.match(js, /if\(!data\|\|!data\.ok\)data=await syncCall\(\{action:'pixelOfficeDesigners'\}\)/);
   // 主系統：iframe 不再 lazy（版面在摺線下面時會拖到捲動才開始載），三張必要的圖在主頁 head 就預載。
   assert.doesNotMatch(parent, /class="office-embed"[^>]*loading="lazy"/);
-  for (const asset of ['wardrobe-heads.webp?v=4', 'wardrobe-outfits.webp?v=3', 'furniture-v4.webp?v=1']) {
+  for (const asset of ['wardrobe-heads.webp?v=4', 'wardrobe-outfits.webp?v=3', 'furniture-v4.webp?v=2']) {
     assert.ok(parent.includes(`<link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/${asset}" />`), `主頁要預載 ${asset}`);
     assert.ok(html.includes(`/assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
   }

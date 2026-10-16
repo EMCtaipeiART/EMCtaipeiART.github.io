@@ -242,7 +242,7 @@ function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStora
 function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-setAsset(furniture,'assets/furniture-v4.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
+setAsset(furniture,'assets/furniture-v4.webp?v=2');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
 // 加班濾鏡圖（69 KB）只有有人加班（晚上、假日）才用得到，第一次要畫時才載，載好重畫。
 function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});setAsset(overtimeSheet,'assets/overtime-filter.webp?v=1');}
 function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,OY*game.height/H);ctx.imageSmoothingEnabled=false;}
