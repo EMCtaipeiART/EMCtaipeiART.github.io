@@ -1696,6 +1696,41 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           );
         });
       }
+      if (!applied.has(19)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-16：右側座位指定——1 廖秦葦、2 李明庭、3 無人、4 吳冠賢；其他人排到 5、6（最後才用 3）。
+          // 還沒建立角色的人先保留座位（account 空白），之後完成角色時由 pixelOfficeAssignSeat 補上帳號。
+          const sql = this.ctx.storage.sql;
+          const rows = sql.exec<{ seat: number; name: string; account: string; joined_at: number }>('SELECT seat, name, account, joined_at FROM pixel_office_staff').toArray();
+          const wanted: Array<[string, number]> = rows.length === 0 ? [] : [['廖秦葦', 0], ['李明庭', 1], ['吳冠賢', 3]];
+          const next: Array<{ seat: number; name: string; account: string; joined_at: number }> = [];
+          const used = new Set<number>(wanted.map(item => item[1]));
+          const now = Date.now();
+          for (const [name, seat] of wanted) {
+            const old = rows.find(item => item.name === name);
+            next.push({ seat, name, account: old ? old.account : '', joined_at: old ? old.joined_at : now });
+          }
+          const free = [4, 5, 2].filter(seat => !used.has(seat));
+          for (const old of rows.filter(item => !wanted.some(([name]) => name === item.name)).sort((a, b) => a.joined_at - b.joined_at)) {
+            const seat = free.shift();
+            if (seat !== undefined) next.push({ seat, name: old.name, account: old.account, joined_at: old.joined_at });
+          }
+          if (rows.length > 0) sql.exec('DELETE FROM pixel_office_staff');
+          for (const item of next) sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', item.seat, item.name, item.account, item.joined_at);
+          // 換座位後把他們的位置回到新座位（罰坐中的人一併重置到新座位上）
+          const stamp = Math.max(now, this.pixelOfficeVersion() + 1);
+          for (const item of next) {
+            const row = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', item.name).toArray()[0];
+            if (!row) continue;
+            let state: Row = {};
+            try { state = JSON.parse(row.state) as Row; } catch { state = {}; }
+            const pos = PIXEL_OFFICE_STAFF_SEAT_POS[item.seat];
+            if (pos) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+            sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), stamp, item.name);
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 19, new Date().toISOString());
+        });
+      }
     });
   }
 
@@ -1719,7 +1754,10 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const sql = this.ctx.storage.sql;
     const taken = this.pixelOfficeStaff();
     const mine = taken.find(item => item.name === name);
-    if (mine) return mine.seat;
+    if (mine) {
+      if (!mine.account && account) sql.exec('UPDATE pixel_office_staff SET account = ? WHERE seat = ?', account, mine.seat);
+      return mine.seat;
+    }
     for (let seat = 0; seat < PIXEL_OFFICE_STAFF_SEATS; seat += 1) {
       if (taken.some(item => item.seat === seat)) continue;
       sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', seat, name, account, Date.now());
