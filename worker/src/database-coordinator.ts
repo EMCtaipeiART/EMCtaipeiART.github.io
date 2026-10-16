@@ -31,7 +31,7 @@ const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（
 const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;
 // 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
 const PIXEL_OFFICE_DESIGNER_SEATS: Record<string, [number, number]> = { Leona: [548, 355], Amber: [768, 355], Noise: [988, 355], Anna: [768, 695], Machi: [988, 695] };
-const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = [[1428, 355], [1648, 355], [1868, 355], [1428, 695], [1648, 695], [1868, 695]];   // 場景寬度加寬後的座標上限
+const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = [[1318, 355], [1538, 355], [1758, 355], [1318, 695], [1538, 695], [1758, 695]];   // 場景寬度加寬後的座標上限
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
@@ -1790,6 +1790,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             }
           }
           sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 21, new Date().toISOString());
+        });
+      }
+      if (!applied.has(22)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-16：兩組桌子的間隔縮成半張桌子寬，同仁桌整組左移 110，把已入座同仁的位置一起搬過去。
+          const sql = this.ctx.storage.sql;
+          const stamp = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+          for (const item of sql.exec<{ seat: number; name: string }>('SELECT seat, name FROM pixel_office_staff').toArray()) {
+            const person = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', item.name).toArray()[0];
+            if (!person) continue;
+            let state: Row = {};
+            try { state = JSON.parse(person.state) as Row; } catch { state = {}; }
+            if (typeof state.x === 'number' && state.x >= 1300) state.x = Number(state.x) - 110;
+            sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), stamp, item.name);
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 22, new Date().toISOString());
         });
       }
     });
