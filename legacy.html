@@ -8319,7 +8319,7 @@ function readScheduledThreadWatches(){
 }
 let scheduledThreadWatches = readScheduledThreadWatches();
 let scheduledThreadRefreshPromise = null;
-const backgroundRefreshMs = 6000;
+const backgroundRefreshMs = 15000;
 const backgroundFullRefreshMs = 30000;
 let lastFullBackgroundRefreshAt = 0;
 const editorSessionKeepAliveMs = 60 * 60 * 1000;
@@ -15129,6 +15129,7 @@ function enqueueInlineWrite(task){
 function hasPriorityWritePending(){return inlineWritePending>0||updatingCells.size>0}
 function backgroundRefreshInteractionActive(){const recentlyTyping=Date.now()-lastBackgroundRefreshInputAt<1500; return document.hidden||recentlyTyping||Boolean(document.querySelector('.login-modal:not([hidden]),.field-popover:not([hidden]),.multi-filter[open]'))}
 function refreshLatestInBackground(){
+  if(document.hidden)return;/* 分頁在背景時不輪詢，節省 Cloudflare Workers 免費額度 */
   if(!apiUrl||editingId||hasPriorityWritePending()||backgroundRefreshInteractionActive())return;
   const now=Date.now(), full=now-lastFullBackgroundRefreshAt>=backgroundFullRefreshMs;
   if(full)lastFullBackgroundRefreshAt=now;
@@ -16764,7 +16765,7 @@ document.addEventListener('drop',handleColumnHeaderDrop);
 document.addEventListener('dragend',handleColumnHeaderDragEnd);
 document.addEventListener('pointerdown',event=>{const handle=event.target.closest?.('.column-resize-handle'); if(handle)startColumnResize(event,handle.dataset.resizeColumn||'')});
 document.addEventListener('input',()=>{lastBackgroundRefreshInputAt=Date.now()},{capture:true});
-	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus({onlyIfLost:true});refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>loadDesignerRoster({background:true}),30000); setInterval(()=>loadIssueReports({background:true}),30000); setInterval(()=>renderNotifications(),60000);
+	applyTheme(currentTheme(),{save:false}); populateDesignSelects(); populateDesignerSelect(); populateCustomerSelect(); setRequestKind('new'); initDateSelectGroups(); resetDateSelectGroupsToToday(); applyCurrentUserProfile(); renderCollapsibleSections(); initTimelineResizer(); initTimelineDragScroll(); initCaseTableDragScroll(); initCaseTableTouchAxisLock(); initDatabaseRefreshListener(); loadDesignLists(); loadDesignerRoster(); loadIssueReports({background:true}); setTimeout(loadSystemAnnouncement,700); renderOverviewOnly(); scheduleHeavyRender(); const startSheetLoad=()=>loadSheet({quick:true,forceFresh:true}); dataReady?setTimeout(startSheetLoad,350):startSheetLoad(); handleErpRedirectReturn().then(async erpHandled=>{if(erpHandled)return true; const gmailHandled=await handleGmailOauthConnectRedirectReturn(); if(gmailHandled)return true; return handleGoogleRedirectReturn()}).then(async handled=>{if(!handled){if(pendingEditorSession.token)await verifyStoredEditorToken(); else {clearLoginAuthState(); updateLoginUi(); render()} trySavedLogin()}}); setTimeout(initGoogleLogin,600); setInterval(refreshLatestInBackground,backgroundRefreshMs); setInterval(()=>keepEditorSessionAlive(),15*60*1000); document.addEventListener('visibilitychange',()=>{if(!document.hidden){restoreOpenGmailEditorFocus({onlyIfLost:true});refreshWhenPageReturns();keepEditorSessionAlive()}}); setInterval(()=>{if(!document.hidden)loadDesignerRoster({background:true})},60000); setInterval(()=>{if(!document.hidden)loadIssueReports({background:true})},60000); setInterval(()=>renderNotifications(),60000);
 
 /* ───── 自動更新（2026-09-30）：大家常常整天開著這個頁面，不會自己按重新整理 ─────
  * 每 3 分鐘（切回分頁時也會）用 HEAD 問一次首頁的 ETag，跟載入當下的比：不一樣就是有新版上線。
