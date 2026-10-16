@@ -92,6 +92,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   const body = request.method === 'POST' || request.method === 'PATCH' || request.method === 'DELETE' ? await readBody(request) : {};
   const payload = { ...query, ...body };
 
+  // 短網址專用網域：根網址導回主站；找不到的短碼顯示簡單文字頁（不是 JSON）。
+  const onShortHost = url.hostname === 'go.emc-art.com';
+  if (onShortHost && request.method === 'GET' && path === '/') return new Response(null, { status: 302, headers: { Location: 'https://emc-art.com/', 'Cache-Control': 'no-store' } });
+
   if (path === '/api' || path === '/') {
     const action = text(payload.action || 'ping');
     return jsonResponse(request, env, await dispatchAction(request, env, action, payload));
@@ -148,7 +152,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   const shortMatch = path.match(/^\/([A-Za-z0-9]{3,32})$/);
   if (request.method === 'GET' && shortMatch) {
     const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch[1], count: true });
-    if (!result.ok || !text(result.url)) return jsonResponse(request, env, result, 404);
+    if (!result.ok || !text(result.url)) {
+      if (onShortHost) return new Response('找不到這個短網址', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+      return jsonResponse(request, env, result, 404);
+    }
     // 每次都要打到這裡才算得到點擊數，所以不能讓瀏覽器或 CDN 快取這個 302。
     return new Response(null, { status: 302, headers: { Location: text(result.url), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
   }

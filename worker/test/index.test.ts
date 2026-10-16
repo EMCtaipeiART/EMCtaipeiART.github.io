@@ -492,8 +492,15 @@ describe('Machi Design API Worker', () => {
     expect((listed.links as unknown[]).length).toBe(2);
     expect(listed.links).toContainEqual(expect.objectContaining({ code: 'Autumn2026', project: '夏季檔期', clicks: 2 }));
 
+    // 隱私：沒有組別相同的人，別人（非管理者）看不到；管理者看得到全部。
+    const adminList = await api({ action: 'listShortLinks' }, String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token));
+    expect((adminList.links as unknown[]).length).toBe(2);
     const other = String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token);
     expect(await api({ action: 'deleteShortLink', code: 'Autumn2026' }, other)).toMatchObject({ ok: true });
+    // 另一個沒有組別、非建立者的帳號：看不到管理者建立的短網址
+    const created2 = await api({ action: 'createShortLink', url: 'https://example.com/private', code: 'Private1' }, other);
+    expect(created2.ok).toBe(true);
+    expect(((await api({ action: 'listShortLinks' }, tester)).links as Array<{ code: string }>).map(l => l.code)).not.toContain('Private1');
     expect(await api({ action: 'resolveShortLink', code: 'Autumn2026' })).toMatchObject({ ok: false });
   });
 
@@ -1896,7 +1903,7 @@ describe('Machi Design API Worker', () => {
     const tester = await api({ action: 'login', password: 'test' });
     const token = String(tester.token);
 
-    const blocked = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+    const blocked = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: 'https://emc-art.com' }, token);
     expect(blocked).toMatchObject({ ok: false, error: '此帳號沒有「request.mail」權限' });
 
     await seedAccountPermission('test.user@emctaipei.com', '自訂', ['request.mail']);
@@ -1918,7 +1925,7 @@ describe('Machi Design API Worker', () => {
       }
       throw new Error(`unexpected fetch during connect: ${url}`);
     });
-    const connected = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+    const connected = await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: 'https://emc-art.com' }, token);
     expect(connected).toMatchObject({ ok: true, gmailAddress: 'designer.mailbox@gmail.com' });
 
     const status = await api({ action: 'gmailStatus' }, token);
@@ -2789,7 +2796,7 @@ describe('Machi Design API Worker', () => {
       if (url === 'https://www.googleapis.com/oauth2/v2/userinfo') return Response.json({ email: 'designer.mailbox@gmail.com' });
       throw new Error(`unexpected fetch during connect: ${url}`);
     });
-    await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: ORIGIN }, token);
+    await api({ action: 'gmailOauthConnect', code: 'auth-code', redirectUri: 'https://emc-art.com' }, token);
 
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input);

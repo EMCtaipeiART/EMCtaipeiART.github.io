@@ -5,6 +5,7 @@
   "compatibility_date": "2026-08-11",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "routes": [{ "pattern": "go.emc-art.com", "custom_domain": true }],
   "preview_urls": true,
   "vars": {
     "ENVIRONMENT": "production",

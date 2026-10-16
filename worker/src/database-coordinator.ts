@@ -4937,7 +4937,12 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const current = this.requireSession(session);
         const manager = isManager(database, current), me = canonicalAccount(current.account || current.user);
         const clicks = new Map(this.ctx.storage.sql.exec<{ code: string; clicks: number; last_at: string }>('SELECT code, clicks, last_at FROM short_link_clicks').toArray().map(r => [r.code, r]));
-        const links = [...database.tables['短連結'].rows].reverse().map(row => ({
+        // 隱私：只看得到自己建立的，或「建立者目前的組別」與自己相同的短網址；管理者看全部。
+        const groupOf = (account: unknown) => text(settingsRow(database, account)?.['組別']);
+        const myGroup = groupOf(me);
+        const visible = (row: Row) => manager || canonicalAccount(row['建立者帳號']) === me || (myGroup !== '' && groupOf(row['建立者帳號']) === myGroup);
+        const links = [...database.tables['短連結'].rows].filter(visible).reverse().map(row => ({
+          group: groupOf(row['建立者帳號']),
           code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), owner: text(row['建立者']),
           clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
           createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
