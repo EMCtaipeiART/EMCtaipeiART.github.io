@@ -26,6 +26,7 @@ import type {
 const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
+const PIXEL_OFFICE_STAFF_EMPTY_SEATS = [2];   // 右上（3 號）座位固定空著（2026-10-16 使用者指定），自動入座要跳過
 const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
 const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;
 // 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
@@ -1739,6 +1740,27 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 19, new Date().toISOString());
         });
       }
+      if (!applied.has(20)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-16：3 號座位（右上）要空著。遷移 19 之後有人完成角色時被排進去了，把他移到下一個空位（5、6 號）。
+          const sql = this.ctx.storage.sql;
+          const taken = new Set(sql.exec<{ seat: number }>('SELECT seat FROM pixel_office_staff').toArray().map(row => Number(row.seat)));
+          for (const row of sql.exec<{ seat: number; name: string }>('SELECT seat, name FROM pixel_office_staff WHERE seat = 2').toArray()) {
+            const target = [4, 5].find(seat => !taken.has(seat));
+            if (target === undefined) continue;
+            sql.exec('UPDATE pixel_office_staff SET seat = ? WHERE seat = ?', target, row.seat);
+            const person = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', row.name).toArray()[0];
+            if (person) {
+              let state: Row = {};
+              try { state = JSON.parse(person.state) as Row; } catch { state = {}; }
+              const pos = PIXEL_OFFICE_STAFF_SEAT_POS[target];
+              if (pos) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+              sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), Math.max(Date.now(), this.pixelOfficeVersion() + 1), row.name);
+            }
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 20, new Date().toISOString());
+        });
+      }
     });
   }
 
@@ -1767,7 +1789,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       return mine.seat;
     }
     for (let seat = 0; seat < PIXEL_OFFICE_STAFF_SEATS; seat += 1) {
-      if (taken.some(item => item.seat === seat)) continue;
+      if (PIXEL_OFFICE_STAFF_EMPTY_SEATS.includes(seat) || taken.some(item => item.seat === seat)) continue;
       sql.exec('INSERT INTO pixel_office_staff (seat, name, account, joined_at) VALUES (?, ?, ?, ?)', seat, name, account, Date.now());
       return seat;
     }
