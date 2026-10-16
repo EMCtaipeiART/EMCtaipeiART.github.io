@@ -248,7 +248,7 @@ test('離席的灰階空桌不靠 ctx.filter（Safari 的 canvas 不支援）', 
   // 改成圖集載入後先做一張灰階版本快取，各家瀏覽器結果一致。
   assert.match(js, /function ensureFurnitureGray\(\)\{/);
   assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?\(ensureFurnitureGray\(\)\|\|furniture\):furniture;/);
-  assert.match(js, /const type=stationAway\(s\)\?s\.empty:s\.type,art=furnitureFor\(s\)/);
+  assert.match(js, /const type=stationAway\(s\)\|\|s\.grp\?s\.empty:s\.type,art=furnitureFor\(s\)/);
 });
 
 test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
@@ -326,7 +326,7 @@ test('左下角空位依時段轉灰階，週末與國定假日整天灰階，�
   const years = [...js.matchAll(/(\d{4}):\['(\d{8})'/g)].map(m => Number(m[1]));
   assert.ok(years.includes(new Date().getFullYear()), `TAIWAN_HOLIDAYS 沒有今年（${new Date().getFullYear()}）`);
   // 桌子的種類仍照 s.type 走（type 2 是有電腦的那張），只有配色換成灰階版本，電腦不會消失。
-  assert.match(js, /const type=stationAway\(s\)\?s\.empty:s\.type,art=furnitureFor\(s\)/);
+  assert.match(js, /const type=stationAway\(s\)\|\|s\.grp\?s\.empty:s\.type,art=furnitureFor\(s\)/);
   assert.match(js, /const furnitureFor=s=>stationDimmed\(s\)\?/);
   // 椅子也要跟著灰，且六張椅背上緣都要降低到人物頭部中線。
   assert.match(js, /const CHAIR_WIDTH=102,CHAIR_HEIGHT=135,CHAIR_TOP_FROM_FEET=107;/);
