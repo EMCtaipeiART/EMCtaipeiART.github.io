@@ -3270,7 +3270,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     const linkVisCode=v=>({'全部':'all','僅自己':'self'}[v]||'group');
     function linkVisibilityField(draft,id){
       const sel=draft.v||'group';
-      return `<div class="field link-visibility"><label class="label" for="${id}">誰看得到</label><div class="link-select-wrap"><select class="input link-select" id="${id}" name="visibility">${LINK_VIS.map(([k,n,d])=>`<option value="${k}"${k===sel?' selected':''}>${n}（${d}）</option>`).join('')}</select>${linkIcon('chevron')}</div></div>`;
+      return `<div class="field link-visibility"><label class="label" for="${id}">誰看得到</label><div class="link-select-wrap"><select class="input link-select" id="${id}" name="visibility">${LINK_VIS.map(([k,n,d])=>`<option value="${k}"${k===sel?' selected':''} title="${d}">${n}</option>`).join('')}</select>${linkIcon('chevron')}</div></div>`;
     }
     function linkProjectField(draft,id){
       const projects=linkProjects(),selected=draft.p||'',isNew=selected==='new';
