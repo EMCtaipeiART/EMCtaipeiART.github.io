@@ -89,14 +89,15 @@ test('database storage compacts formatting without changing any JSON value', () 
   assert.match(compact, /    "request-test": \{"ok":true/);
 });
 
-test('404 page no longer has the short link feature and the short link data/index are gone', async () => {
+test('404 page resolves short links through the API; the old static short link index stays gone', async () => {
   const root = path.resolve(import.meta.dirname, '..', '..');
   const page = await readFile(path.join(root, '404.html'), 'utf8');
-  assert.doesNotMatch(page, /createShortLink|resolveShortLink|short_link_index|loadResolverIndex/);
+  assert.doesNotMatch(page, /short_link_index|loadResolverIndex/);
+  assert.match(page, /resolveShortLink/, '短網址由 API 即時解析，改名或改目標後立刻生效');
   assert.match(page, /resolveSupplementLink/, '舊的補充資料連結轉址仍保留');
   await assert.rejects(readFile(path.join(root, 'data', 'short_link_index.json'), 'utf8'), /ENOENT/);
   const db = JSON.parse(await readFile(path.join(root, 'backend', 'data', 'db.json'), 'utf8'));
-  assert.equal(db.tables['短連結'], undefined, '短連結資料表已刪除');
+  assert.deepEqual(db.tables['短連結']?.rows ?? [], [], '尚未建立任何短連結');
 });
 
 test('item details calculate weights from the scoring table only after selection', () => {
@@ -1396,7 +1397,7 @@ test('front-end action API reads and atomically writes all requested JSON tables
 
   const persisted = JSON.parse(await readFile(app.dbPath, 'utf8'));
   assert.equal(persisted.tables.database.rows.length, 1);
-  assert.equal(persisted.tables['短連結'], undefined);
+  assert.equal(persisted.tables['短連結'].rows.length, 0);
   assert.equal(persisted.tables['修改統計表'].rows.length, 1);
   assert.equal(persisted.tables['補充資料連結'].rows.length, 1);
   assert.equal(persisted.tables['設定'].rows.length, 1);
@@ -1724,7 +1725,7 @@ test('admin API manages JSON tables and editable weighting rules', async t => {
   assert.equal(login.ok, true);
   const metadata = await request(app.baseUrl, '/api/tables', { token: login.token });
   assert.equal(metadata.response.status, 200);
-  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '系統公告欄', '修改統計表', '刪除申請', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
+  assert.deepEqual(Object.keys(metadata.data.tables), ['database', '加權計分標準', '系統公告欄', '修改統計表', '刪除申請', '短連結', '補充資料連結', '設定', '帳號權限', '組織選項', '客戶別', '角色權限範本', 'reels', 'bug_report', '平面新開專案', '影音新開專案']);
   const announcement = await api(app.baseUrl, 'getSystemAnnouncement');
   assert.equal(announcement.announcement.version, 'v4.7');
   const userLogin = await api(app.baseUrl, 'login', { account: 'machi.chen', password: 'secret' });

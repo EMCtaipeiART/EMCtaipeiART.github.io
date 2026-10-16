@@ -5,7 +5,7 @@ import {
   VERSION, ACCESS_CAPABILITIES, ACCESS_PAGES, ACCESS_ROLE_TEMPLATES, ISSUE_STATUSES, SUPPLEMENT_SLOTS,
   SHORTCUT_ADMIN_ACCOUNT, SHORTCUT_TESTER_ACCOUNT,
   accessList, accessProfile, activeReel, canonicalAccount, findReelIndex, newCustomerDefaults,
-  hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
+  generateShortCode, normalizeShortCode, hasCapability, hasRowCapability, isHttpUrl, issueRow, monthFromDate, nextCaseId, normalizeSnapshot, pruneIdempotency,
   nowTaipei, parseComments, publicReel, recalculateDatabaseModificationCounts, recalculateDatabaseWeights, reelFileId, requireCapability,
   designerRowsForGroup, isDesignerSettingsRow, isManager, matchesCustomerEditRule,
   rowYear, settingsResponse, settingsRow, splitNames, syncSupplementLinks, tableNames,
@@ -291,7 +291,7 @@ const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 // Cloudflare Workers caps Web Crypto PBKDF2 at 100,000 iterations.
 const LOCAL_PASSWORD_ITERATIONS = 100_000;
 const LOCAL_PASSWORD_PREFIX = 'pbkdf2-sha256';
-const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
+const ADMIN_TABLE_ORDER = ['database', '系統公告欄', '加權計分標準', '短連結', '補充資料連結', '修改統計表', '設定', '角色權限範本', '客戶別', '帳號權限', '組織選項', 'reels', 'bug_report'];
 
 type MutatorResult = { result: ApiResult; changed?: boolean; changedTables?: string[] };
 type GmailTokenRow = { account: string; refresh_token: string; access_token: string | null; access_token_expires_at: number | null; gmail_address: string | null; scopes: string | null };
@@ -4839,6 +4839,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         return { ok: true, action: 'bundle', version: VERSION, rows: rows.map((row, index) => toApiRow(row, index)), databaseRows: rows, weights: database.tables['加權計分標準'].rows, stages: [], revision: database.revision };
       }
       if (action === 'createRequestStatus') return { ok: true, action, pending: !database.internal.idempotency[text(payload.requestId)], result: database.internal.idempotency[text(payload.requestId)] || null };
+      if (action === 'resolveShortLink') {
+        const code = text(payload.code).toLowerCase();
+        const record = database.tables['短連結'].rows.find(row => text(row['短碼']).toLowerCase() === code);
+        if (!record || !isHttpUrl(record['原始網址'])) throw new Error('找不到這個短連結');
+        return { ok: true, action, code: text(record['短碼']), url: text(record['原始網址']) };
+      }
+      if (action === 'listShortLinks') {
+        const current = this.requireSession(session);
+        const manager = isManager(database, current), me = canonicalAccount(current.account || current.user);
+        const links = [...database.tables['短連結'].rows].reverse().map(row => ({
+          code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), owner: text(row['建立者']),
+          createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
+          canEdit: manager || canonicalAccount(row['建立者帳號']) === me
+        }));
+        return { ok: true, action, links };
+      }
       if (action === 'resolveSupplementLink') {
         const id = text(payload.id || payload.caseId), slot = text(payload.slot).toLowerCase();
         if (!/^\d{8}$/.test(id) || !SUPPLEMENT_SLOTS[slot]) throw new Error('補充資料連結格式錯誤');
@@ -5374,6 +5390,48 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           changed: changedTables.length > 0,
           changedTables
         };
+      });
+    }
+    if (action === 'createShortLink' || action === 'updateShortLink' || action === 'deleteShortLink') {
+      const current = this.requireSession(session);
+      const me = canonicalAccount(current.account || current.user);
+      return this.mutate(action, current, draft => {
+        const rows = draft.tables['短連結'].rows;
+        const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.toLowerCase());
+        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
+        const time = nowTaipei();
+        if (action === 'createShortLink') {
+          const url = text(payload.url);
+          if (!isHttpUrl(url)) throw new Error('請輸入以 http:// 或 https:// 開頭的完整網址');
+          const wanted = text(payload.code);
+          const code = wanted ? normalizeShortCode(wanted) : generateShortCode(new Set(rows.map(row => text(row['短碼']).toLowerCase())));
+          if (find(code) >= 0) throw new Error(`短碼「${code}」已經被使用，請換一個`);
+          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+          rows.push(row);
+          return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
+        }
+        const index = find(text(payload.code));
+        if (index < 0) throw new Error('找不到這個短連結');
+        const row = rows[index];
+        if (!isManager(draft, current) && canonicalAccount(row['建立者帳號']) !== me) throw new Error('只有建立者或管理者可以修改這個短連結');
+        if (action === 'deleteShortLink') {
+          rows.splice(index, 1);
+          return { result: { ok: true, action, code: text(payload.code) }, changedTables: ['短連結'] };
+        }
+        if (payload.url !== undefined) {
+          const url = text(payload.url);
+          if (!isHttpUrl(url)) throw new Error('請輸入以 http:// 或 https:// 開頭的完整網址');
+          row['原始網址'] = url;
+        }
+        if (payload.name !== undefined) row['名稱'] = text(payload.name).slice(0, 60);
+        if (payload.newCode !== undefined && text(payload.newCode) && text(payload.newCode) !== text(row['短碼'])) {
+          const next = normalizeShortCode(payload.newCode);
+          const clash = find(next);
+          if (clash >= 0 && clash !== index) throw new Error(`短碼「${next}」已經被使用，請換一個`);
+          row['短碼'] = next;
+        }
+        row['更新時間'] = time;
+        return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
       });
     }
     if (action === 'reportIssue') {

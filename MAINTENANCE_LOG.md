@@ -484,3 +484,4 @@
 - 多元宇宙 iframe 網址加 5 分鐘時間戳，避免 Ctrl+F5 刷不到新版像素辦公室（iframe 會吃舊快取）。
 
 - 下排膠囊改為固定在座位上（不再隨人物走動飄移）。
+- 2026-10-16: 短網址 restored in the left rail (短網址): new table 短連結 (短碼/原始網址/名稱/建立者帳號/建立者/建立時間/更新時間); Worker actions listShortLinks/createShortLink/updateShortLink/deleteShortLink/resolveShortLink + GET /<code> redirect; codes are custom or auto 6 chars, English+digits 3-32, case-insensitive unique, reserved words blocked; any logged-in account can create, owner/管理者 can edit/rename/re-target/delete; 404.html resolves via API (no static index). Worker redeployed.

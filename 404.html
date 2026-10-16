@@ -54,12 +54,15 @@
     <p id="redirectMessage">正在開啟目的頁面…</p>
   </main>
   <script>
-    /* 只保留舊的補充資料連結（/a/12345678 這種）轉址；其他路徑一律顯示找不到頁面。 */
+    /* 舊的補充資料連結（/a/12345678）與短網址（/abc123）轉址；其他路徑顯示找不到頁面。 */
     (() => {
       const apiUrl = 'https://machi-design-api.machi-chen.workers.dev/api';
       const legacyMatch = location.pathname.match(/^\/([a-d])\/(\d{8})\/?$/i);
-      if (!legacyMatch) return;
-      const slot = legacyMatch[1].toLowerCase(), id = legacyMatch[2];
+      const shortMatch = location.pathname.match(/^\/([A-Za-z0-9]{3,32})\/?$/);
+      if (!legacyMatch && !shortMatch) return;
+      const request = legacyMatch
+        ? { action: 'resolveSupplementLink', id: legacyMatch[2], slot: legacyMatch[1].toLowerCase() }
+        : { action: 'resolveShortLink', code: shortMatch[1] };
       document.querySelector('#notfound').hidden = true;
       document.querySelector('#redirector').hidden = false;
       const fail = text => {
@@ -69,10 +72,10 @@
       };
       fetch(apiUrl, {
         method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ action: 'resolveSupplementLink', id, slot })
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(request)
       }).then(r => r.json()).then(data => {
         if (data && data.ok && /^https?:\/\//i.test(data.url || '')) location.replace(data.url);
-        else fail((data && data.error) || '找不到對應的補充資料連結。');
+        else fail((data && data.error) || '找不到這個連結。');
       }).catch(() => fail('連線失敗，請稍後再試。'));
     })();
   </script>

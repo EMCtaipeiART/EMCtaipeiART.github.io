@@ -614,6 +614,24 @@ export function findReelIndex(rows: Row[], payload: ApiPayload): number {
   const requestedRow = Number(requestedId.replace(/^row-/, '')) || 0;
   return rows.findIndex((row, index) => (fileId && text(row['限時動態連結']).includes(fileId)) || (requestedUrl && text(row['限時動態連結']) === requestedUrl) || requestedRow === index + 2);
 }
+// 短網址：短碼只允許英文與數字；這些字會跟網站既有檔案／路徑撞名，不能拿來當短碼。
+export const SHORT_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const SHORT_CODE_RESERVED = new Set(['api', 'index', 'legacy', 'v5', 'assets', 'data', 'images', 'upload', 'tools', 'scripts', 'card', 'avatar', 'health', 'ws', 'admin', 'login', 'site', 'robots', 'favicon', 'sitemap']);
+export function normalizeShortCode(value: unknown): string {
+  const code = text(value);
+  if (!/^[A-Za-z0-9]{3,32}$/.test(code)) throw new Error('短碼只能使用英文與數字，長度 3～32 個字');
+  if (SHORT_CODE_RESERVED.has(code.toLowerCase())) throw new Error('這個短碼是系統保留字，請換一個');
+  return code;
+}
+export function generateShortCode(existing: Set<string>): string {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    let code = '';
+    for (let index = 0; index < 6; index += 1) code += SHORT_CODE_CHARS[bytes[index] % SHORT_CODE_CHARS.length];
+    if (!existing.has(code.toLowerCase())) return code;
+  }
+  throw new Error('暫時無法產生短碼，請再試一次');
+}
 export function tableNames(): string[] { return [...TABLE_NAMES]; }
 export function tableSchema(name: string): { headers: string[]; primaryKey: string | null } | undefined {
   const schemas: Record<string, { headers: string[]; primaryKey: string | null }> = TABLE_SCHEMAS;

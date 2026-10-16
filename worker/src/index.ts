@@ -145,6 +145,13 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     return new Response(bytes, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=31536000, immutable', 'Access-Control-Allow-Origin': '*' } });
   }
 
+  const shortMatch = path.match(/^\/([A-Za-z0-9]{3,32})$/);
+  if (request.method === 'GET' && shortMatch) {
+    const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch[1] });
+    if (!result.ok || !text(result.url)) return jsonResponse(request, env, result, 404);
+    return Response.redirect(text(result.url), 302);
+  }
+
   const supplementMatch = path.match(/^\/([a-d])\/(\d{8})$/i);
   if (request.method === 'GET' && supplementMatch) {
     const result = await dispatchAction(request, env, 'resolveSupplementLink', { slot: supplementMatch[1], id: supplementMatch[2] });

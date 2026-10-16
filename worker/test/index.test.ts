@@ -429,7 +429,7 @@ describe('Machi Design API Worker', () => {
     expect(database.tables['系統公告欄'].rows).toContainEqual(expect.objectContaining({ '公告版本': 'v99' }));
   });
 
-  it('keeps supplement URLs long and no longer has a short link table', async () => {
+  it('keeps supplement URLs long and never rewrites them into short links', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       expect(init?.method).toBe('PUT');
       return Response.json({ content: { sha: 'supplement-file-sha' }, commit: { sha: 'supplement-commit-sha' } });
@@ -456,7 +456,42 @@ describe('Machi Design API Worker', () => {
     });
     expect(database.tables['補充資料連結'].rows).toContainEqual(expect.objectContaining({ A: longUrl }));
 
-    expect((database.tables as Record<string, unknown>)['短連結']).toBeUndefined();
+    expect(database.tables['短連結'].rows).toHaveLength(0);
+  });
+
+  it('creates, renames, edits, resolves and deletes short links with custom alphanumeric codes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'short-link-file-sha' }, commit: { sha: 'short-link-commit-sha' } }));
+    const tester = String((await api({ action: 'login', password: 'test' })).token);
+    expect(await api({ action: 'listShortLinks' })).toMatchObject({ ok: false });
+
+    const created = await api({ action: 'createShortLink', url: 'https://example.com/a/very/long/path', name: '夏季素材', code: 'Summer2026' }, tester);
+    expect(created).toMatchObject({ ok: true, link: { code: 'Summer2026', name: '夏季素材', url: 'https://example.com/a/very/long/path', canEdit: true } });
+
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'summer2026' }, tester)).toMatchObject({ ok: false });
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'ab' }, tester)).toMatchObject({ ok: false });
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'bad-code' }, tester)).toMatchObject({ ok: false });
+    expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'index' }, tester)).toMatchObject({ ok: false });
+    expect(await api({ action: 'createShortLink', url: 'ftp://example.com/x', code: 'okcode' }, tester)).toMatchObject({ ok: false });
+
+    const auto = await api({ action: 'createShortLink', url: 'https://example.com/auto' }, tester);
+    expect(String((auto.link as Record<string, unknown>).code)).toMatch(/^[A-Za-z0-9]{6}$/);
+
+    const redirect = await SELF.fetch('https://worker.test/Summer2026', { redirect: 'manual' });
+    expect(redirect.status).toBe(302);
+    expect(redirect.headers.get('Location')).toBe('https://example.com/a/very/long/path');
+    expect((await SELF.fetch('https://worker.test/nope123', { redirect: 'manual' })).status).toBe(404);
+
+    const updated = await api({ action: 'updateShortLink', code: 'Summer2026', newCode: 'Autumn2026', name: '秋季素材', url: 'https://example.com/new' }, tester);
+    expect(updated).toMatchObject({ ok: true, link: { code: 'Autumn2026', name: '秋季素材', url: 'https://example.com/new' } });
+    expect(await api({ action: 'resolveShortLink', code: 'Summer2026' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'resolveShortLink', code: 'autumn2026' })).toMatchObject({ ok: true, url: 'https://example.com/new' });
+
+    const listed = await api({ action: 'listShortLinks' }, tester);
+    expect((listed.links as unknown[]).length).toBe(2);
+
+    const other = String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token);
+    expect(await api({ action: 'deleteShortLink', code: 'Autumn2026' }, other)).toMatchObject({ ok: true });
+    expect(await api({ action: 'resolveShortLink', code: 'Autumn2026' })).toMatchObject({ ok: false });
   });
 
   it('saves numbered mail templates and their default through personal settings', async () => {

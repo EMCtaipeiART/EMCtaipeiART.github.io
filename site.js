@@ -827,6 +827,7 @@
     function rerenderList(){saveFilters();if(state.view==='projects')renderProjects();else renderBoard()}
     const RAIL_EXT=[
       {k:'issues',label:'問題',title:'問題回報',ok:()=>!loggedIn()||acc('issue.report',true)||acc('issue.manage',isAdminAcct()),svg:'<path d="M12 3.5 2.8 19.5h18.4zM12 10v4.5M12 17.2h.01"/>'},
+      {k:'links',label:'短網址',title:'短網址',ok:()=>loggedIn(),svg:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'},
       {k:'calendar',label:'行事曆',title:'設計部行事曆',ok:()=>dcAllowed(),svg:'<rect x="3.5" y="5" width="17" height="15" rx="2.4"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'},
       {k:'wall',label:'作品牆',title:'作品牆',ok:()=>loggedIn(),svg:'<rect x="3.5" y="3.5" width="7" height="9" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7" height="8.5" rx="1.6"/><rect x="3.5" y="15.5" width="7" height="5" rx="1.6"/>'},
       {k:'notes',label:'記事本',title:'記事本（設計部資源）',ok:()=>loggedIn()&&(hasDesignerRole()||isAdminAcct()||isMachiUser()),svg:'<path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 17 20.5H6zM6 3.5v17M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/>'},
@@ -838,7 +839,7 @@
       {k:'dbadmin',menu:true,label:'資料庫',title:'資料庫後台',ok:()=>loggedIn()&&acc('page.database_admin',isAdminAcct()||isMachi0())&&acc('database.manage',isAdminAcct()||isMachi0()),svg:'<ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>'},
     ];
     const isMachi0=()=>String(session().user||'').trim()==='Machi'||norm(session().name)==='machi'||norm(session().user)==='machi.chen@emctaipei.com';
-    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='wall'&&state.view==='wall')||(x.k==='notes'&&state.view==='notes')||(x.k==='assign'&&state.view==='assign')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
+    function renderRailExtra(){const box=$('railExtra');if(!box)return;const mk=list=>list.map(x=>{const n=x.k==='owner'?ownerRows().length+delReviewCount():0;return `<button type="button" class="rail-item${(x.k==='owner'&&state.view==='owner')||(x.k==='issues'&&state.view==='issues')||(x.k==='links'&&state.view==='links')||(x.k==='wall'&&state.view==='wall')||(x.k==='notes'&&state.view==='notes')||(x.k==='assign'&&state.view==='assign')||(x.k==='calendar'&&state.view==='calendar')||(x.k==='outfit'&&state.view==='outfit')?' is-active':''}" data-ext="${x.k}" title="${x.title}${n?`（${n}）`:''}" aria-label="${x.title}"><svg viewBox="0 0 24 24">${x.svg}</svg>${x.label}${n?`<span class="rail-badge">${n>99?'99+':n}</span>`:''}</button>`}).join('');const on=RAIL_EXT.filter(x=>!x.menu&&x.ok()),html=mk(on.filter(x=>x.k!=='issues')),html2=mk(on.filter(x=>x.k==='issues')),box2=$('railBottom');if(box.dataset.h!==html){box.dataset.h=html;box.innerHTML=html}if(box2&&box2.dataset.h!==html2){box2.dataset.h=html2;box2.innerHTML=html2}const st=document.querySelector('[data-nav="settings"]');if(st)st.hidden=loggedIn()&&!acc('profile.edit',true)}
     /* ---------- 作品牆：設計師備份的圖片素材，Pinterest 式瀑布流（隨機排序），點圖看案件細節 ---------- */
     const WALL_IMG=/\.(png|jpe?g|gif|webp|bmp|avif)$/i,WALL_PAGE=36;
     function wallBuild(){
@@ -1209,6 +1210,7 @@
       if(k==='assign'){state.form=null;state.mail=null;state.editing=false;closeCal();show('assign');return}
       if(k==='notes'){state.form=null;state.mail=null;state.editing=false;closeCal();show('notes');return}
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
+      if(k==='links'){state.form=null;state.mail=null;state.editing=false;closeCal();show('links');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
       if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
@@ -1217,15 +1219,15 @@
       if(k==='dbadmin'){window.open('json_database_admin.html','_blank','noopener')}
     }
     function updateRail(){syncHeroEdit();renderRailExtra();try{updateProjBadge()}catch(e){}setTimeout(()=>{try{if(innerWidth<=720){const a=document.querySelector('.rail .is-active');if(a)a.scrollIntoView({inline:'center',block:'nearest'})}}catch(err){}},0);const active=state.view==='settings'?'settings':state.view==='projects'?'projects':(['board','form','mail','detail','universe'].includes(state.view)?(state.home==='projects'&&state.view!=='form'&&state.view!=='mail'?'projects':'board'):'');document.querySelectorAll('[data-nav]').forEach(b=>{const on=b.dataset.nav===active;b.classList.toggle('is-active',on);on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')})}
-    const KEEP_VIEWS=['universe','projects','calendar','assign','notes','wall','issues'];
+    const KEEP_VIEWS=['universe','projects','calendar','assign','notes','wall','issues','links'];
     function show(view){const pv=state.view;try{if(state.restored)sessionStorage.setItem('v5LastView',KEEP_VIEWS.includes(view)?view:'')}catch(err){}if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
+      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
       document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');$('stage').classList.toggle('wide',view==='projects'||view==='wall'||view==='notes'||view==='assign'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
-      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='wall')renderWallPage();else if(view==='notes')renderNotesPage();else if(view==='assign')renderAssignPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
+      if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='links')renderLinksPage();else if(view==='wall')renderWallPage();else if(view==='notes')renderNotesPage();else if(view==='assign')renderAssignPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
-      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||view==='universe')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
+      if(view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||view==='universe')window.scrollTo({top:0,behavior:'smooth'});else $('stage').scrollIntoView({behavior:'smooth',block:'start'});
     }
     function backToBoard(){const ret=state.ownerReturn;state.ownerReturn=false;state.form=null;state.mail=null;state.detailId='';state.editing=false;state.editRow=null;closeCal();show(ret?'owner':state.home)}
 
@@ -3245,6 +3247,71 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     document.addEventListener('input',e=>{const t=e.target;if(t.closest&&t.closest('#issueForm')&&t.name){const c=document.querySelector(`[data-issue-count="${t.name}"]`);if(c)c.textContent=`${t.value.length}/300`}});
     document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-issue-row]'))changeIssueStatus(t)});
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-issue-reload]')){issues.error='';loadIssues(true)}});
+
+
+    /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
+    const links={list:[],loading:false,loaded:false,error:'',editing:''};
+    const SHORT_BASE=()=>`${location.origin}/`;
+    const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
+    async function loadLinks(force){
+      if(links.loading||(links.loaded&&!force))return;
+      links.loading=true;links.error='';if(state.view==='links')renderLinksPage(true);
+      try{const data=await api('listShortLinks');links.list=Array.isArray(data.links)?data.links:[];links.loaded=true}
+      catch(err){links.error=err.message||'讀取失敗'}
+      links.loading=false;if(state.view==='links')renderLinksPage(true);
+    }
+    function linkCardHtml(l){
+      const full=SHORT_BASE()+l.code;
+      if(links.editing===l.code)return `<form class="link-item link-edit" data-link-edit="${esc(l.code)}"><label class="field"><span class="label">名稱</span><input class="input" name="name" maxlength="60" value="${esc(l.name)}" placeholder="例如：夏季活動素材"></label><label class="field"><span class="label">短碼（英文、數字 3～32 碼）</span><input class="input" name="code" maxlength="32" value="${esc(l.code)}" autocapitalize="off" autocomplete="off" spellcheck="false"></label><label class="field"><span class="label">原始網址</span><input class="input" name="url" type="url" value="${esc(l.url)}" required></label><div class="form-actions"><button type="button" class="btn" data-link-cancel>取消</button><button type="submit" class="btn primary">儲存</button></div></form>`;
+      return `<article class="link-item"><div class="link-main"><div class="link-name">${esc(l.name||l.code)}</div><a class="link-short" href="${esc(full)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta" title="${esc(l.url)}">→ ${esc(l.url)}</div><div class="link-meta">${esc(l.owner||'')}${l.owner?' ・ ':''}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-actions"><button type="button" class="btn" data-link-copy="${esc(l.code)}">複製</button>${l.canEdit?`<button type="button" class="btn" data-link-editbtn="${esc(l.code)}">編輯</button><button type="button" class="btn" data-link-del="${esc(l.code)}">刪除</button>`:''}</div></article>`;
+    }
+    function linksListHtml(){
+      if(links.loading&&!links.list.length)return '<div class="empty">載入中...</div>';
+      if(links.error&&!links.list.length)return `<div class="empty">列表載入失敗：${esc(links.error)}　<button type="button" class="btn" data-link-reload>重新讀取</button></div>`;
+      if(!links.list.length)return '<div class="empty">還沒有短網址</div>';
+      return links.list.map(linkCardHtml).join('');
+    }
+    function renderLinksPage(keepForm){
+      const stage=$('stage');
+      let draft={n:'',c:'',u:''};const f=$('linkForm');if(keepForm&&f)draft={n:f.elements.name.value,c:f.elements.code.value,u:f.elements.url.value};
+      stage.innerHTML=`<div class="page"><div class="page-top"><div><h2 class="page-title">短網址${links.list.length?` <small style="font-weight:700;color:var(--muted)">(${links.list.length})</small>`:''}</h2><p class="page-sub">把長網址縮短，可自訂名稱與短碼（英文、數字）；建立者與管理者可以隨時編輯或刪除。</p></div></div>
+        <form class="issue-form" id="linkForm"><label class="field"><span class="label">原始網址 <b>*</b></span><input class="input" name="url" type="url" required placeholder="https://example.com/very-long-link" value="${esc(draft.u)}"></label><label class="field"><span class="label">名稱 <small>（選填，方便辨識）</small></span><input class="input" name="name" maxlength="60" placeholder="例如：夏季活動素材" value="${esc(draft.n)}"></label><label class="field"><span class="label">自訂短碼 <small>（選填，英文、數字 3～32 碼；留空會自動產生）</small></span><div class="link-code-row"><span class="link-base">${esc(SHORT_BASE())}</span><input class="input" name="code" maxlength="32" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="summer2026" value="${esc(draft.c)}"></div></label><div class="form-actions"><button type="submit" class="btn primary" id="linkSubmit">建立短網址</button></div></form>
+        <h3 class="issue-list-title">短網址列表</h3><div class="link-list" id="linkList">${linksListHtml()}</div></div>`;
+      if(!links.loaded&&!links.loading&&!links.error)loadLinks();
+    }
+    async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(err){const i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove()}}
+    async function submitLink(form){
+      const url=form.elements.url.value.trim(),name=form.elements.name.value.trim(),code=form.elements.code.value.trim();
+      if(code&&!SHORT_CODE_RE.test(code)){toast('短碼只能使用英文與數字，長度 3～32 個字',true);return}
+      const b=$('linkSubmit');b.disabled=true;b.textContent='建立中…';
+      try{
+        const data=await api('createShortLink',{url,name,code});
+        links.list=[data.link,...links.list.filter(x=>x.code!==data.link.code)];
+        await copyText(SHORT_BASE()+data.link.code);toast('短網址已建立並複製到剪貼簿');renderLinksPage();
+      }catch(err){toast(`建立失敗：${err.message}`,true);b.disabled=false;b.textContent='建立短網址'}
+    }
+    async function saveLinkEdit(form){
+      const old=form.dataset.linkEdit,code=form.elements.code.value.trim();
+      if(!SHORT_CODE_RE.test(code)){toast('短碼只能使用英文與數字，長度 3～32 個字',true);return}
+      try{
+        const data=await api('updateShortLink',{code:old,newCode:code,name:form.elements.name.value.trim(),url:form.elements.url.value.trim()});
+        links.list=links.list.map(x=>x.code===old?data.link:x);links.editing='';toast('短網址已更新');renderLinksPage(true);
+      }catch(err){toast(`儲存失敗：${err.message}`,true)}
+    }
+    async function deleteLink(code){
+      if(!confirm(`確定要刪除短網址「${code}」？刪除後這個短網址會失效。`))return;
+      try{await api('deleteShortLink',{code});links.list=links.list.filter(x=>x.code!==code);toast('短網址已刪除');renderLinksPage(true)}
+      catch(err){toast(`刪除失敗：${err.message}`,true)}
+    }
+    document.addEventListener('submit',e=>{if(e.target.id==='linkForm'){e.preventDefault();submitLink(e.target)}else if(e.target.dataset&&e.target.dataset.linkEdit){e.preventDefault();saveLinkEdit(e.target)}});
+    document.addEventListener('click',e=>{
+      const t=e.target.closest&&e.target.closest('[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t)return;
+      if(t.dataset.linkCopy){copyText(SHORT_BASE()+t.dataset.linkCopy).then(()=>toast('已複製短網址'))}
+      else if(t.dataset.linkEditbtn!==undefined){links.editing=t.dataset.linkEditbtn;renderLinksPage(true)}
+      else if(t.dataset.linkDel){deleteLink(t.dataset.linkDel)}
+      else if(t.hasAttribute('data-link-cancel')){links.editing='';renderLinksPage(true)}
+      else if(t.hasAttribute('data-link-reload')){links.error='';loadLinks(true)}
+    });
 
     /* ---------- Gmail 串接（沿用舊網站：彈出視窗授權＋後台 gmailOauthConnect） ---------- */
     const GMAIL_CLIENT_ID='910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com',GMAIL_CHANNEL='machi-gmail-oauth-v1',GMAIL_ORIGIN='https://emctaipeiart.github.io';
