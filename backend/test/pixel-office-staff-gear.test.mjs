@@ -128,19 +128,11 @@ test('failure of both staff image locations is nonfatal and does not loop', asyn
   assert.equal(img.src, 'assets/staff-gear-v1.webp?v=1');
 });
 
-test('away staff equipment reuses one grayscale canvas, preserving alpha without filters', async () => {
+test('off-duty or away staff desks are cleared: nothing drawn, gray desk only', async () => {
   const f = fixture();
   await f.loaded();
-  assert.equal(f.canvases.length, 1, 'precompute on image load');
   for (let seat = 0; seat < 6; seat++) f.draw(seat, true);
-  assert.equal(f.canvases.length, 1, 'reuse the cached image for all six seats');
-  assert.ok(f.draws.every(({ args }) => args[0] === f.canvases[0]));
-  const px = f.canvases[0].pixels;
-  assert.deepEqual([px[3], px[7], px[11]], [255, 0, 128]);
-  assert.equal(px[0], px[1]);
-  assert.equal(px[1], px[2]);
-  assert.ok(px[0] > 40, 'match the existing vacant-desk brightness curve');
-  f.draws.length = 0;
+  assert.equal(f.draws.length, 0);
   f.draw(0, false);
-  assert.ok(f.draws.every(({ args }) => args[0] === f.images[0]), 'return to original artwork when present');
+  assert.ok(f.draws.length > 0 && f.draws.every(({ args }) => args[0] === f.images[0]), 'on duty: original artwork');
 });

@@ -1283,7 +1283,7 @@ const STAFF_GEAR=['L','LM','P','LM','P','L'];
 // [來源 x, y, 寬, 高, 相對物件中心 x 的偏移, 相對 baseY 的偏移]；1:1 畫出，不插值。
 const STAFF_GEAR_RECTS={laptop:[0,0,76,48,-38,-48],monitor:[80,0,84,62,-42,-62],mouse:[168,0,14,19,-7,-17],phone:[188,0,80,34,-34,-30]};
 function drawStaffGear(s,baseY,dimmed){
-  if(dimmed||stationAway(s))return;/* 下班（灰階）或離席：桌上清空 */
+  if(dimmed)return;/* 下班或離席（stationDimmed 已涵蓋）：桌上清空，只留灰階桌面 */
   if(!staffGearSheet.complete||!staffGearSheet.naturalWidth)return;
   const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548)/220))),kind=STAFF_GEAR[(s.row?3:0)+col];
   const art=dimmed?grayOfImage(staffGearSheet):staffGearSheet;
