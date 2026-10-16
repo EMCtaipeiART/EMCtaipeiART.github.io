@@ -1274,25 +1274,23 @@ function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitur
 //（平日 18:00 之後，以及週末與國定假日整天）也把椅子收掉，只留灰階的桌子與桌上的電腦
 // ——stationDimmed() 這幾種情況都涵蓋了。
 function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
-/* 專案部／企劃部桌上的設備（用程式畫，不吃圖檔）：1 筆電＋黑滑鼠；2、4 筆電＋外接螢幕＋黑滑鼠；3、5 白色室內電話；6 筆電＋黑滑鼠 */
+/* 專案部／企劃部桌上設備：透明像素圖集；座標與尺寸另見 assets/staff-gear-v1.json。 */
+const staffGearSheet=new Image();
+setAsset(staffGearSheet,'assets/staff-gear-v1.webp?v=1');
+// 沿用 CDN → 同站備援；不阻擋場景進站。灰階只算一次，Safari 也能使用。
+load(staffGearSheet).then(()=>{grayOfImage(staffGearSheet);markDirty();}).catch(()=>{});
 const STAFF_GEAR=['L','LM','P','LM','P','L'];
+// [來源 x, y, 寬, 高, 相對物件中心 x 的偏移, 相對 baseY 的偏移]；1:1 畫出，不插值。
+const STAFF_GEAR_RECTS={laptop:[0,0,76,48,-38,-48],monitor:[80,0,84,62,-42,-62],mouse:[168,0,14,19,-7,-17],phone:[188,0,80,34,-34,-30]};
 function drawStaffGear(s,baseY,dimmed){
+  if(!staffGearSheet.complete||!staffGearSheet.naturalWidth)return;
   const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548)/220))),kind=STAFF_GEAR[(s.row?3:0)+col];
-  const C=h=>{if(!dimmed)return h;const n=parseInt(h.slice(1),16),l=Math.round(((n>>16)&255)*.299+((n>>8)&255)*.587+(n&255)*.114);return'rgb('+l+','+l+','+l+')';};
-  const R=(x,y,w,h,c,r)=>{ctx.fillStyle=C(c);if(r&&ctx.roundRect){ctx.beginPath();ctx.roundRect(Math.round(x),Math.round(y),w,h,r);ctx.fill();}else ctx.fillRect(Math.round(x),Math.round(y),w,h);};
+  const art=dimmed?grayOfImage(staffGearSheet):staffGearSheet;
+  const item=(name,x)=>{const[sx,sy,w,h,dx,dy]=STAFF_GEAR_RECTS[name];ctx.drawImage(art,sx,sy,w,h,Math.round(x+dx),Math.round(baseY+dy),w,h);};
   const cx=s.x;ctx.save();ctx.imageSmoothingEnabled=false;
-  const shadow=(x,w)=>{ctx.fillStyle='rgba(0,0,0,.16)';ctx.beginPath();ctx.ellipse(x,baseY+1,w/2,3.5,0,0,7);ctx.fill();};
-  const laptop=x=>{shadow(x,78);R(x-31,baseY-48,62,40,'#111216',4);R(x-28,baseY-45,56,32,'#1b1d23',2);R(x-28,baseY-45,56,10,'#262932',2);R(x-6,baseY-39,12,2,'#3a3e49');R(x-38,baseY-9,76,7,'#26282e',3);R(x-38,baseY-4,76,3,'#101115',2);R(x-7,baseY-9,14,2,'#3a3d45');};
-  const monitor=x=>{shadow(x,52);R(x-6,baseY-14,12,13,'#1a1b20');R(x-20,baseY-4,40,4,'#25272d',2);R(x-42,baseY-62,84,50,'#101115',4);R(x-39,baseY-59,78,42,'#1b1d23',2);R(x-39,baseY-59,78,14,'#262932',2);R(x-9,baseY-47,18,2,'#3a3e49');R(x-42,baseY-17,84,5,'#0b0c0f',2);};
-  const mouse=x=>{ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(x,baseY+1,8,3,0,0,7);ctx.fill();R(x-7,baseY-17,14,19,'#1b1c20',7);R(x-.75,baseY-16,1.5,7,'#454852');R(x-4,baseY-13,3,5,'#33353c',2);};
-  const phone=x=>{shadow(x,70);R(x-32,baseY-18,64,19,'#f4f5f7',6);R(x-32,baseY-3,64,4,'#cfd2d8',2);
-    for(let i=0;i<3;i++)for(let j=0;j<3;j++)R(x-8+i*7,baseY-14+j*4,4,2.5,'#b9bdc5',1);
-    R(x-26,baseY-14,12,7,'#9fc9d6',1);R(x+16,baseY-14,10,9,'#e4e6ea',2);
-    R(x-34,baseY-30,68,13,'#fbfbfc',6);R(x-34,baseY-21,68,4,'#d4d7dc',2);R(x-31,baseY-27,10,5,'#e6e8ec',2);R(x+21,baseY-27,10,5,'#e6e8ec',2);R(x-5,baseY-28,10,2,'#eceef1',1);
-    ctx.strokeStyle=C('#cfd2d8');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+34,baseY-24);ctx.bezierCurveTo(x+48,baseY-24,x+44,baseY-8,x+34,baseY-8);ctx.stroke();};
-  if(kind==='P')phone(cx);
-  else if(kind==='LM'){laptop(cx-46);monitor(cx+34);mouse(cx+90);}
-  else{laptop(cx-10);mouse(cx+54);}
+  if(kind==='P')item('phone',cx);
+  else if(kind==='LM'){item('laptop',cx-46);item('monitor',cx+34);item('mouse',cx+90);}
+  else{item('laptop',cx-10);item('mouse',cx+54);}
   ctx.restore();
 }
 function drawDesk(s){

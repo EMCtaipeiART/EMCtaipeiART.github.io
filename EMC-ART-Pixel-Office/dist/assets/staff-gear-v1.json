@@ -1,0 +1,102 @@
+{
+  "image": "staff-gear-v1.webp",
+  "width": 272,
+  "height": 64,
+  "palette": [
+    "#0c0c0c",
+    "#141414",
+    "#1c1c1c",
+    "#242424",
+    "#2c2c2c",
+    "#343434",
+    "#3c3c3c",
+    "#484848",
+    "#545454",
+    "#646464",
+    "#787878",
+    "#909090",
+    "#a4a4a4",
+    "#b8b8b8",
+    "#c8c8c8",
+    "#d4d4d4",
+    "#e0e0e0",
+    "#ececec",
+    "#f4f4f4",
+    "#fcfcfc"
+  ],
+  "anchor": "object center x / desk baseY; dx,dy are destination offsets",
+  "sprites": {
+    "laptop": {
+      "x": 0,
+      "y": 0,
+      "w": 76,
+      "h": 48,
+      "dx": -38,
+      "dy": -48
+    },
+    "monitor": {
+      "x": 80,
+      "y": 0,
+      "w": 84,
+      "h": 62,
+      "dx": -42,
+      "dy": -62
+    },
+    "mouse": {
+      "x": 168,
+      "y": 0,
+      "w": 14,
+      "h": 19,
+      "dx": -7,
+      "dy": -17
+    },
+    "phone": {
+      "x": 188,
+      "y": 0,
+      "w": 80,
+      "h": 34,
+      "dx": -34,
+      "dy": -30
+    }
+  },
+  "layouts": {
+    "L": [
+      [
+        "laptop",
+        -10
+      ],
+      [
+        "mouse",
+        54
+      ]
+    ],
+    "LM": [
+      [
+        "laptop",
+        -46
+      ],
+      [
+        "monitor",
+        34
+      ],
+      [
+        "mouse",
+        90
+      ]
+    ],
+    "P": [
+      [
+        "phone",
+        0
+      ]
+    ]
+  },
+  "seats": [
+    "L",
+    "LM",
+    "P",
+    "LM",
+    "P",
+    "L"
+  ]
+}
