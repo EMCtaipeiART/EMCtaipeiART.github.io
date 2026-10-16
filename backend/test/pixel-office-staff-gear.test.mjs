@@ -14,12 +14,15 @@ const functionSource = name => {
 };
 
 function fixture() {
-  const draws = [], images = [], canvases = [];
+  const draws = [], images = [], canvases = [], fills = [];
   let dirty = 0;
   const ctx = {
     imageSmoothingEnabled: true,
-    save() { this.savedSmoothing = this.imageSmoothingEnabled; },
-    restore() { this.imageSmoothingEnabled = this.savedSmoothing; },
+    stack: [],
+    save() { this.stack.push(this.imageSmoothingEnabled); },
+    restore() { this.imageSmoothingEnabled = this.stack.pop(); },
+    fillRect(...args) { fills.push(args); },
+    translate() {}, scale() {},
     drawImage(...args) { draws.push({ args, smoothing: this.imageSmoothingEnabled }); },
     set filter(_) { assert.fail('Safari must not need canvas filters'); },
   };
@@ -51,7 +54,7 @@ function fixture() {
   vm.runInContext(functionSource('grayOfImage'), context);
   vm.runInContext(gearSource, context);
   return {
-    draws, images, canvases, ctx, context, get dirty() { return dirty; },
+    draws, fills, images, canvases, ctx, context, get dirty() { return dirty; },
     draw(index, dimmed = false, baseY = 400) {
       sandbox.drawStaffGear({ x: 1428+(index%3)*220, row: index >= 3 ? 1 : 0 }, baseY, dimmed);
     },
@@ -76,8 +79,17 @@ test('six staff desks keep equipment order, original anchors and clear the desk 
   ];
   for (let seat = 0; seat < 6; seat++) {
     f.draws.length = 0;
+    f.draws.length = 0; f.fills.length = 0;
     f.draw(seat);
     const cx = 1428+(seat%3)*220;
+    if (seat < 3) {
+      // 上排的人面向畫面：筆電與螢幕只看得到背面（程式畫的色塊），電話轉 180°，滑鼠照舊
+      const names = expected[seat].map(([n]) => n);
+      assert.equal(f.draws.length, names.filter(n => n !== 'laptop' && n !== 'monitor').length);
+      assert.equal(f.fills.length > 0, names.includes('laptop'));
+      f.draws.forEach(({ args }) => assert.equal(args[0], f.images[0]));
+      continue;
+    }
     assert.equal(f.draws.length, expected[seat].length);
     expected[seat].forEach(([name, offset], index) => {
       const r = atlas.sprites[name], { args, smoothing } = f.draws[index];
@@ -100,7 +112,7 @@ test('staff gear skips incomplete and failed images without attempting canvas dr
   assert.equal(f.draws.length, 0);
   assert.equal(f.canvases.length, 0);
   await f.loaded();
-  f.draw(0);
+  f.draw(5);
   assert.equal(f.draws.length, 2);
 });
 
