@@ -1212,7 +1212,7 @@
       if(k==='wall'){state.form=null;state.mail=null;state.editing=false;closeCal();state.wallItems=null;show('wall');return}
       if(k==='links'){state.form=null;state.mail=null;state.editing=false;closeCal();show('links');return}
       if(k==='issues'){state.form=null;state.mail=null;state.editing=false;closeCal();show('issues');return}
-      if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emctaipeiart.github.io/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
+      if(k==='dashboard'){const s0=session();try{localStorage.setItem('designDashboardIdentityV1',JSON.stringify({designer:s0.user,account:selfAccount(),group:sessionValue('designRequestEditorGroup'),authToken:s0.token,returnUrl:location.href,updatedAt:Date.now()}))}catch(err){}const u=new URL('https://emc-art.com/design_dashboard');u.searchParams.set('designer',s0.user||s0.name||'');window.open(u.toString(),'_blank','noopener');return}
       if(k==='archive'){window.open('database_archive_admin.html','_blank','noopener');return}
       /* 服裝生成器在另一個網站：登入 token 放在網址 # 後面（不會送到伺服器，對方頁面收下後立刻從網址拿掉） */
       if(k==='outfit'){if(!session().token){toast('請先登入');return}if(!outfitAllowed()){toast('服裝生成器僅限設計部、企劃部、專案部同仁與管理者使用');return}state.form=null;state.mail=null;state.editing=false;closeCal();show('outfit');return}
@@ -3252,7 +3252,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
     const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',creating:false,saving:false};
     /* 短網址維持 GitHub Pages 網域：/<短碼> 由 404.html 查詢後直接轉址並計點擊 */
-    const SHORT_BASE=()=>'https://emctaipeiart.github.io/';
+    const SHORT_BASE=()=>'https://emc-art.com/';
     const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
     async function loadLinks(force){
       if(links.loading||(links.loaded&&!force))return;
@@ -3353,7 +3353,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     });
 
     /* ---------- Gmail 串接（沿用舊網站：彈出視窗授權＋後台 gmailOauthConnect） ---------- */
-    const GMAIL_CLIENT_ID='910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com',GMAIL_CHANNEL='machi-gmail-oauth-v1',GMAIL_ORIGIN='https://emctaipeiart.github.io';
+    const GMAIL_CLIENT_ID='910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com',GMAIL_CHANNEL='machi-gmail-oauth-v1',GMAIL_ORIGIN='https://emc-art.com';
     const GMAIL_SCOPE='email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.settings.basic https://www.googleapis.com/auth/calendar.freebusy https://www.googleapis.com/auth/calendar.events.readonly';
     let gmailChannel=null,gmailPopup=null;
     const b64u=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -3471,7 +3471,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* ---------- 登入（沿用現行系統的登入：開新視窗到 index.html 完成，共用同一份登入狀態） ---------- */
     const SESSION_KEYS=['designRequestEditorUser','designRequestEditorDisplayName','designRequestEditorAccount','designRequestEditorToken','designRequestEditorGroup','designRequestEditorDepartment','designRequestEditorRawGroup'];
-    const GOOGLE_CLIENT_ID='501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com',GOOGLE_ORIGIN='https://emctaipeiart.github.io',GOOGLE_CHANNEL='machi-google-oauth-v1';
+    const GOOGLE_CLIENT_ID='501170620928-dh3e431763b4ah8crq7kirmsu8m17bdj.apps.googleusercontent.com',GOOGLE_ORIGIN='https://emc-art.com',GOOGLE_CHANNEL='machi-google-oauth-v1';
     const login={error:'',busy:false,showPw:false,state:'',channel:null};
     function startLogin(){if(state.view!=='login')state.back=state.view;login.error='';login.busy=false;login.pwBusy=false;show('login')}
     function renderLoginPage(){

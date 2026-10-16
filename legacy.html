@@ -7339,7 +7339,7 @@ window.emcQuotes=[
         <p>選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。</p>
       </div>
       <div class="office-editor-actions">
-        <a class="office-editor-tab" id="officeEditorTab" href="https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/" target="_blank" rel="noopener">另開分頁</a>
+        <a class="office-editor-tab" id="officeEditorTab" href="https://emc-art.com/EMC-ART-Pixel-Office/dist/" target="_blank" rel="noopener">另開分頁</a>
         <button type="button" class="secondary" id="officeEditorClose">關閉</button>
       </div>
     </div>
@@ -7753,7 +7753,7 @@ function resolveDesignApiUrl(){
   try{savedValue=localStorage.getItem('designRequestApiUrl')||''}catch(err){}
   const configured=String(queryValue||metaValue||savedValue).trim();
   if(configured)return configured;
-  if(location.protocol==='file:'||location.hostname==='emctaipeiart.github.io')return cloudflareWorkerApiUrl;
+  if(location.protocol==='file:'||['emctaipeiart.github.io','emc-art.com'].includes(location.hostname))return cloudflareWorkerApiUrl;
   return `${location.origin}/api`;
 }
 const apiUrl = resolveDesignApiUrl();
@@ -7896,11 +7896,11 @@ const erpPublicFallbackConfig = {
   action: 'erpLoginConfig',
   baseUrl: 'https://manage.emctaipei.com',
   clientId: 'oauth_n3gUqm5r84Mu',
-  redirectUri: 'https://emctaipeiart.github.io',
+  redirectUri: 'https://emc-art.com',
   scope: 'openid profile',
   fallback: true
 };
-const googleAuthorizedOrigin = 'https://emctaipeiart.github.io';
+const googleAuthorizedOrigin = 'https://emc-art.com';
 const $=s=>document.querySelector(s), tbody=$('#tbody'), thead=$('#thead'), modifyTbody=$('#modifyTbody'), modifyThead=$('#modifyThead'), modifyFixedTbody=$('#modifyFixedTbody'), modifyFixedThead=$('#modifyFixedThead'), msg=$('#msg');
 const syncStatus = $('#syncStatus');
 const ownerList = $('#ownerList');
@@ -7937,7 +7937,7 @@ const requestPlatformOptions = ['Facebook','Instagram','Line','其他平台'];
 const designerImageMaxBytes = 8 * 1024 * 1024;
 const designerStoryDurationMs = 10000;
 const designerStorySeenStorageKey = 'designerStorySeenV2';
-const designDashboardUrl = 'https://emctaipeiart.github.io/design_dashboard';
+const designDashboardUrl = 'https://emc-art.com/design_dashboard';
 const archiveManagerUrl = 'database_archive_admin.html';
 const jsonDatabaseAdminUrl = 'json_database_admin.html?v=20260820-announcement-read-receipts-8';
 const databaseRefreshChannelName = 'machi-database-refresh-v1';
@@ -11321,7 +11321,7 @@ function showDesignerSettings(){ensureSpotifyIframeApi(); if(!isLoggedIn()){setS
 function hideDesignerSettings(){const modal=$('#designerSettingsModal'); if(modal)modal.hidden=true}
 // 像素辦公室的編輯視窗。src 等到真的打開才給：這一頁本來就重，沒人要編輯時不該先下載一份遊戲。
 // 關掉時把 src 拿掉，那顆 canvas 與它的同步輪詢才會真的停下來，不會在背景一直跑。
-const OFFICE_EDITOR_URL='https://emctaipeiart.github.io/EMC-ART-Pixel-Office/dist/';
+const OFFICE_EDITOR_URL='https://emc-art.com/EMC-ART-Pixel-Office/dist/';
 function showOfficeEditor(){const modal=$('#officeEditorModal'); if(!modal)return; if(!isDesignerLogin()){setSync('請用設計師帳號登入後再編輯像素辦公室',true);if(!isLoggedIn())showLoginModal();return} const frame=$('#officeEditorFrame'); if(frame&&!frame.getAttribute('src'))frame.src=OFFICE_EDITOR_URL; modal.hidden=false; $('#officeEditorClose')?.focus()}
 function hideOfficeEditor(){const modal=$('#officeEditorModal'); if(!modal||modal.hidden)return; modal.hidden=true; $('#officeEditorFrame')?.removeAttribute('src'); $('#officeEditorOpen')?.focus()}
 // 這顆按鈕長在 .designer-help-trigger 裡面，不擋掉的話點擊會一路冒到面板的收合／說明上。
@@ -15664,7 +15664,7 @@ async function keepEditorSessionAlive(){
     return false;
   }
 }
-function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&location.hostname==='emctaipeiart.github.io'&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
+function googleLoginConfigError(){if(!googleOAuthClientId||!googleOAuthClientId.endsWith('.apps.googleusercontent.com'))return 'Google OAuth client_id 未正確設定'; if(location.protocol==='https:'&&['emctaipeiart.github.io','emc-art.com'].includes(location.hostname)&&location.origin!==googleAuthorizedOrigin)return `目前來源 ${location.origin} 不符合授權來源 ${googleAuthorizedOrigin}`; return ''}
 function initGoogleLogin(){const target=$('#googleSignInButton'); if(!target)return; const configError=googleLoginConfigError(); console.info(`[登入診斷] app=${appBuildVersion}, origin=${location.origin}, expectedOrigin=${googleAuthorizedOrigin}, clientId=${googleOAuthClientId}`); if(configError){setLoginNote(`${configError}。請確認 Google OAuth Authorized JavaScript origins 包含 ${googleAuthorizedOrigin}`,true); console.error('[Google OAuth 設定錯誤]',configError); return} ensureGoogleOauthChannel(); target.innerHTML='<button type="button" class="google-redirect-login" aria-label="使用 Google 帳號登入"><span class="google-g">G</span><span>使用 Google 帳號登入</span></button>'; const button=target.querySelector('button'); if(button)button.onclick=startGooglePopupLogin; target.dataset.ready='1'}
 async function handleGoogleCredential(response){const credential=response?.credential||'', googleEmail=decodeGoogleCredentialEmail(credential); if(googleEmail)setGoogleLoginEmail(googleEmail); console.info('[Google 登入回傳]',{email:googleEmail||'(未解析)',selectBy:response?.select_by||'', hasCredential:Boolean(credential), appBuildVersion}); if(!credential){handleGoogleLoginError(new Error(`Google 沒有回傳登入憑證。${googleFedCmHint()}`),'Google 登入');return} showLoginPendingOverlay(loginPendingText(googleEmail)); clearLoginAuthState({account:googleEmail||currentEditorAccount}); try{const data=await googleLoginByFrame(credential); if(!data?.ok||!data?.token||!data?.user)throw new Error(data?.error||'Cloudflare Worker 未完成登入驗證'); console.info('[Google 登入成功]',data.loginDebug||{account:data.account||data.email,user:data.user}); localStorage.removeItem('designRequestSavedPassword'); localStorage.setItem('designRequestSavedAccount',data.account||data.email||googleEmail||''); localStorage.setItem('designRequestRememberLogin','0'); loginEditor(data.user,data.token,data.settings,data.account||data.email||googleEmail||''); finishLoginOverlay(`登入成功：${currentUserDisplayName()}`)}catch(err){const context=err?.reason==='WORKER_API_READ_FAILED'?'Cloudflare Worker API':(googleEmail?`Google 登入（${googleEmail}）`:'Google 登入'); handleGoogleLoginError(err,context)}}
 const googleOauthChannelName='machi-google-oauth-v1';

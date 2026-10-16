@@ -141,7 +141,7 @@
     try { saved = localStorage.getItem('designRequestApiUrl') || ''; } catch (error) {}
     const configured = String(query || meta || saved).trim();
     if (configured) return configured;
-    if (location.protocol === 'file:' || location.hostname === 'emctaipeiart.github.io') return 'https://machi-design-api.machi-chen.workers.dev/api';
+    if (location.protocol === 'file:' || ['emctaipeiart.github.io','emc-art.com'].includes(location.hostname)) return 'https://machi-design-api.machi-chen.workers.dev/api';
     return new URL('/api', location.origin).href;
   }
   async function fetchServerAccess(identity) {

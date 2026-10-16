@@ -66,7 +66,7 @@
     const PRIMARY_DATABASE_URL='backend/data/db.json';
     const CLOUDFLARE_WORKER_API='https://machi-design-api.machi-chen.workers.dev/api';
     function configuredApi(){try{const value=new URL(location.href).searchParams.get('api')||localStorage.getItem('designRequestApiUrl')||'';return String(value).trim()}catch(error){return ''}}
-    const DATABASE_API=configuredApi()||((location.hostname.endsWith('github.io')||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
+    const DATABASE_API=configuredApi()||(((location.hostname.endsWith('github.io')||location.hostname==='emc-art.com')||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href);
     const AUTO_REFRESH_MS=15000;
     const DEFAULT_COLUMNS=['案件編號','月份','客戶別','專案名稱','專案負責人','設計種類','階段','數量','開始日期','結束日期','設計負責人','項目細節','狀態','加權','填單時間','時間標記','繳交時間','使用平台','設計簡報說明','設計簡報連結','客戶素材說明','客戶素材連結','參考範例說明','參考範例連結','其他說明','其他連結'];
     const LONG_FIELDS=new Set(['項目細節','設計簡報說明','客戶素材說明','參考範例說明','其他說明']);

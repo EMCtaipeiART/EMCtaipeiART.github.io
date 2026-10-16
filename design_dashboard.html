@@ -692,7 +692,7 @@ function anchorDate(y,m){
 function dueInSevenDays(arr,baseDate){
   return arr.filter(r=>{const d=normDate(r['結束日期']);const left=d?(strip(d)-baseDate)/864e5:null;return d&&!DUE_EXCLUDED_STATUS.has(r['案件狀態'])&&left>=0&&left<=7}).length
 }
-function dashboardApiUrl(){let saved='';try{saved=localStorage.getItem('designRequestApiUrl')||''}catch(error){}return saved||((location.hostname==='emctaipeiart.github.io'||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href)}
+function dashboardApiUrl(){let saved='';try{saved=localStorage.getItem('designRequestApiUrl')||''}catch(error){}return saved||((['emctaipeiart.github.io','emc-art.com'].includes(location.hostname)||location.protocol==='file:')?CLOUDFLARE_WORKER_API:new URL('/api',location.origin).href)}
 function isDashboardAdmin(){return dashboardAdminAccess}
 async function refreshDashboardAccess(token=ACCOUNT_IDENTITY.authToken){
   const access=await window.MachiAccess?.refresh({token,account:ACCOUNT_IDENTITY.account,user:ACCOUNT_IDENTITY.designer,group:ACCOUNT_IDENTITY.group});
