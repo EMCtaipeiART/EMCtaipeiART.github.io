@@ -17,7 +17,7 @@
     "GMAIL_OAUTH_CLIENT_ID": "910684492076-ehgnu9u5sbgir0lm6pscdlaj0vgcsrpu.apps.googleusercontent.com",
     "ERP_BASE_URL": "https://manage.emctaipei.com",
     "ERP_CLIENT_ID": "oauth_n3gUqm5r84Mu",
-    "ERP_REDIRECT_URI": "https://emctaipeiart.github.io",
+    "ERP_REDIRECT_URI": "https://emc-art.com",
     "ADMIN_LOGIN_ACCOUNTS": "machi.chen@emctaipei.com",
     "SESSION_TTL_SECONDS": "2592000",
     "UPLOAD_APPS_SCRIPT_URL": "https://script.google.com/macros/s/AKfycbzgK-0G-MQ1xk3veoI19aFWgkRA6jvsMvFa2TPC8jax9sDf5GUCXUT9h-iqwu0VZDjZ/exec"
