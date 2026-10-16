@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex">
   <meta name="app-version" content="20261006-short-link-removed-1">
+  <script>if(/^\/(?:[A-Za-z0-9]{3,32}|[a-d]\/\d{8})\/?$/i.test(location.pathname))document.documentElement.style.visibility='hidden'</script>
   <title>EMC 找不到頁面</title>
   <style>
     :root{font-family:Arial,"Noto Sans TC",sans-serif;color:#1d2924;background:#f3f6f4;letter-spacing:0}
@@ -67,6 +68,7 @@
       // 短網址不顯示任何轉址提示，查到就直接跳；只有失敗才顯示訊息。
       if (legacyMatch) document.querySelector('#redirector').hidden = false;
       const fail = text => {
+        document.documentElement.style.visibility = '';
         document.querySelector('#redirector').hidden = false;
         document.querySelector('#spinner').hidden = true;
         document.querySelector('#redirectTitle').textContent = '無法開啟連結';

@@ -3251,8 +3251,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
     const links={list:[],loading:false,loaded:false,error:'',editing:'',project:''};
-    /* 短網址指向 Worker：伺服器端直接 302，沒有中間頁，也才算得到點擊數 */
-    const SHORT_BASE=()=>String(API).replace(/\/api\/?$/,'/')+(String(API).endsWith('/')?'':'');
+    /* 短網址維持 GitHub Pages 網域：/<短碼> 由 404.html 查詢後直接轉址並計點擊 */
+    const SHORT_BASE=()=>'https://emctaipeiart.github.io/';
     const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
     async function loadLinks(force){
       if(links.loading||(links.loaded&&!force))return;
