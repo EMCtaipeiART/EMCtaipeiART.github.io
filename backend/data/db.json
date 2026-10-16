@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8691,
+  "revision": 8692,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-16T06:47:56.588Z",
+  "updatedAt": "2026-10-16T06:48:05.101Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2041,7 +2041,8 @@
       "primaryKey": "短碼",
       "rows": [
         {"短碼":"6w7qV9","原始網址":"https://docs.google.com/presentation/d/1G5vrfzsPWMydX0ZP8NjUuDeB-BCYIaw8SH-SlEy-CHA/edit?slide=id.h6fec29e6383b6479_0_351#slide=id.h6fec29e6383b6479_0_351","名稱":"epson","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/16 14:30:42","更新時間":"2026/10/16 14:40:50"},
-        {"短碼":"ecwife","原始網址":"https://docs.google.com/document/d/1AGMwbuRcL7D3sRTk2ktUSgcx-H8_XsdPCDbMO-vwylA/edit?tab=t.0#heading=h.vh80hydkp504","名稱":"〔AeroClip 2〕KOL_電商人妻","專案":"Soundcore","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/16 14:47:15","更新時間":"2026/10/16 14:47:15"}
+        {"短碼":"ecwife","原始網址":"https://docs.google.com/document/d/1AGMwbuRcL7D3sRTk2ktUSgcx-H8_XsdPCDbMO-vwylA/edit?tab=t.0#heading=h.vh80hydkp504","名稱":"〔AeroClip 2〕KOL_電商人妻","專案":"Soundcore","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/16 14:47:15","更新時間":"2026/10/16 14:47:15"},
+        {"短碼":"NLAvuj","原始網址":"https://docs.google.com/presentation/d/1G5vrfzsPWMydX0ZP8NjUuDeB-BCYIaw8SH-SlEy-CHA/edit?slide=id.h6fec29e6383b6479_0_351#slide=id.h6fec29e6383b6479_0_351","名稱":"Epson 新光三越攝影展贊助案","專案":"EPSON","建立者帳號":"machi.chen@emctaipei.com","建立者":"Machi","建立時間":"2026/10/16 14:48:05","更新時間":"2026/10/16 14:48:05"}
       ]
     }
   },
