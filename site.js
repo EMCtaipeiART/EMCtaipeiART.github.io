@@ -3305,14 +3305,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     function parseBatchLines(raw){
       return String(raw||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
         const m=line.match(/https?:\/\/[^\s,，\t]+/i);
-        if(!m)return {url:line,name:''};
+        if(!m)return {url:line,name:'',before:'',after:''};
         const name=(line.slice(0,m.index)+' '+line.slice(m.index+m[0].length)).replace(/[,，\t]+/g,' ').replace(/\s+/g,' ').trim();
-        return {url:m[0],name};
+        return {url:m[0],name,before:line.slice(0,m.index),after:line.slice(m.index+m[0].length)};
       });
     }
     function linkBatchHtml(){
       const b=links.batch,r=b.result,n=parseBatchLines(b.text).length;
-      const res=r?`<div class="link-batch-result"><div class="link-section-head"><h3>已建立 ${r.created.length} 筆${r.failed.length?`，${r.failed.length} 筆失敗`:''}</h3><span><button type="button" class="btn link-btn link-btn-copy" data-batch-copy>複製全部短網址</button> <button type="button" class="btn link-btn" data-batch-clear>清除結果</button></span></div>${r.created.length?`<ol class="link-batch-list">${r.created.map(l=>`<li><b>${esc(SHORT_BASE()+l.code)}</b><span title="${esc(l.url)}">${esc(l.name||l.url)}</span></li>`).join('')}</ol>`:''}${r.failed.length?`<ul class="link-batch-fail">${r.failed.map(f=>`<li>第 ${f.index+1} 行：${esc(f.error)}　<small>${esc(f.url)}</small></li>`).join('')}</ul>`:''}</div>`:'';
+      const res=r?`<div class="link-batch-result"><div class="link-section-head"><h3>已建立 ${r.created.length} 筆${r.failed.length?`，${r.failed.length} 筆失敗`:''}</h3><span><button type="button" class="btn link-btn link-btn-copy" data-batch-copy>複製全部（含名稱）</button> <button type="button" class="btn link-btn" data-batch-clear>清除結果</button></span></div>${r.created.length?`<ol class="link-batch-list">${r.created.map(l=>`<li><b>${esc(SHORT_BASE()+l.code)}</b><span title="${esc(l.url)}">${esc(l.name||l.url)}</span></li>`).join('')}</ol>`:''}${r.failed.length?`<ul class="link-batch-fail">${r.failed.map(f=>`<li>第 ${f.index+1} 行：${esc(f.error)}　<small>${esc(f.url)}</small></li>`).join('')}</ul>`:''}</div>`:'';
       return `<details class="link-batch" id="linkBatchBox"${b.open||r?' open':''}><summary>批次建立（一次貼上大量網址）</summary><form class="link-form link-batch-form" id="linkBatchForm"><label class="field link-wide"><span class="label">網址清單 <small>（每行一個；可在網址前面或後面加名稱，最多 200 筆）</small></span><textarea class="input link-batch-text" name="batchText" rows="8" spellcheck="false" placeholder="https://example.com/a&#10;夏季素材 https://example.com/b&#10;https://example.com/c 秋季素材">${esc(b.text)}</textarea></label>${linkProjectField({p:b.p,np:b.np},'linkBatchProject')}${linkVisibilityField({v:b.v},'linkBatchVisibility')}<div class="link-form-actions link-wide"><span class="link-hint" id="linkBatchCount">${n?`偵測到 ${n} 筆`:'短碼會自動產生'}</span><button type="submit" class="btn link-btn link-btn-primary" id="linkBatchSubmit"${b.busy?' disabled':''}>${b.busy?'建立中…':'批次建立'}</button></div></form>${res}</details>`;
     }
     function renderLinksPage(keepForm){
@@ -3352,11 +3352,14 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       try{
         const data=await api('createShortLinksBatch',{items,project,visibility:form.elements.visibility.value});
         links.list=[...data.created,...links.list];
-        links.batch.result={created:data.created,failed:data.failed};
+        const bad=new Set(data.failed.map(f=>f.index));
+        /* 複製內容＝原本那一行，只把網址換成短網址，前後文字（名稱、備註）原樣保留 */
+        const lines=items.filter((_,i)=>!bad.has(i)).map((it,i)=>`${it.before}${SHORT_BASE()}${data.created[i].code}${it.after}`.trim());
+        links.batch.result={created:data.created,failed:data.failed,lines};
         if(!data.failed.length)links.batch.text='';
         else links.batch.text=data.failed.map(f=>items[f.index]).map(i=>`${i.name?i.name+' ':''}${i.url}`).join('\n');
-        if(data.created.length)await copyText(data.created.map(l=>SHORT_BASE()+l.code).join('\n'));
-        toast(data.created.length?`已建立 ${data.created.length} 筆，短網址已複製到剪貼簿`:'沒有成功建立任何短網址',!data.created.length);
+        if(data.created.length)await copyText(links.batch.result.lines.join('\n'));
+        toast(data.created.length?`已建立 ${data.created.length} 筆，內容（含名稱與短網址）已複製到剪貼簿`:'沒有成功建立任何短網址',!data.created.length);
       }catch(err){toast(`批次建立失敗：${err.message}`,true)}
       links.batch.busy=false;if(state.view==='links')renderLinksPage(false);
     }
@@ -3388,7 +3391,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     });
     document.addEventListener('click',e=>{
       const t=e.target.closest&&e.target.closest('[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
-      if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText(r.created.map(l=>SHORT_BASE()+l.code).join('\n')).then(()=>toast('已複製全部短網址'));return}
+      if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText((r.lines||r.created.map(l=>SHORT_BASE()+l.code)).join('\n')).then(()=>toast('已複製全部內容（含名稱與短網址）'));return}
       if(t.hasAttribute('data-batch-clear')){links.batch.result=null;renderLinksPage(true);return}
       if(t.dataset.linkCopy){copyText(SHORT_BASE()+t.dataset.linkCopy).then(()=>toast('已複製短網址'))}
       else if(t.dataset.linkEditbtn!==undefined){links.editing=t.dataset.linkEditbtn;renderLinksPage(true)}
