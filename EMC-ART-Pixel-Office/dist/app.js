@@ -1276,24 +1276,19 @@ function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitur
 function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
 /* 專案部／企劃部桌上設備：透明像素圖集；座標與尺寸另見 assets/staff-gear-v1.json。 */
 const staffGearSheet=new Image();
-setAsset(staffGearSheet,'assets/staff-gear-v1.webp?v=1');
+setAsset(staffGearSheet,'assets/staff-gear-v1.webp?v=2');
 // 沿用 CDN → 同站備援；不阻擋場景進站。灰階只算一次，Safari 也能使用。
 load(staffGearSheet).then(()=>{grayOfImage(staffGearSheet);markDirty();}).catch(()=>{});
 const STAFF_GEAR=['L','LM','P','LM','P','L'];
 // [來源 x, y, 寬, 高, 相對物件中心 x 的偏移, 相對 baseY 的偏移]；1:1 畫出，不插值。
-const STAFF_GEAR_RECTS={laptop:[0,0,76,48,-38,-48],monitor:[80,0,84,62,-42,-62],mouse:[168,0,14,19,-7,-17],phone:[188,0,80,34,-34,-30]};
+const STAFF_GEAR_RECTS={laptop:[0,0,76,48,-38,-48],monitor:[80,0,84,62,-42,-62],mouse:[168,0,14,19,-7,-17],phone:[188,0,80,34,-34,-30],laptop_back:[272,0,76,48,-38,-48],monitor_back:[352,0,84,62,-42,-62],phone_back:[440,0,80,34,-34,-30]};
 function drawStaffGear(s,baseY,dimmed){
   if(dimmed)return;/* 下班或離席（stationDimmed 已涵蓋）：桌上清空，只留灰階桌面 */
   if(!staffGearSheet.complete||!staffGearSheet.naturalWidth)return;
   const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548)/220))),kind=STAFF_GEAR[(s.row?3:0)+col];
   const art=dimmed?grayOfImage(staffGearSheet):staffGearSheet;
-  const back=!s.row;/* 上排的人坐在桌子後面、面向畫面：螢幕朝人，我們看到的是背面；電話轉 180° */
-  const R=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);};
-  const item=(name,x)=>{const[sx,sy,w,h,dx,dy]=STAFF_GEAR_RECTS[name];
-    if(back&&name==='laptop'){R(x-33,baseY-40,66,32,'#141414');R(x-33,baseY-40,66,2,'#2c2c2c');R(x-33,baseY-10,66,2,'#0c0c0c');R(x-4,baseY-27,8,6,'#3c3c3c');R(x-3,baseY-26,6,4,'#545454');R(x-36,baseY-8,72,4,'#242424');return;}
-    if(back&&name==='monitor'){R(x-42,baseY-62,84,48,'#141414');R(x-42,baseY-62,84,2,'#2c2c2c');R(x-42,baseY-16,84,2,'#0c0c0c');R(x-4,baseY-33,8,6,'#3c3c3c');R(x-9,baseY-14,18,14,'#1c1c1c');R(x-24,baseY-4,48,4,'#242424');return;}
-    if(back&&name==='phone'){ctx.save();ctx.translate(Math.round(x),Math.round(baseY));ctx.scale(-1,-1);ctx.drawImage(art,sx,sy,w,h,-dx-w,-dy-h,w,h);ctx.restore();return;}
-    ctx.drawImage(art,sx,sy,w,h,Math.round(x+dx),Math.round(baseY+dy),w,h);};
+  const back=!s.row;/* 上排的人坐在桌子後面、面向畫面：螢幕朝人，我們看到的是設備背面（圖集裡另有背面圖） */
+  const item=(name,x)=>{const key=back&&name!=='mouse'?name+'_back':name,[sx,sy,w,h,dx,dy]=STAFF_GEAR_RECTS[key];ctx.drawImage(art,sx,sy,w,h,Math.round(x+dx),Math.round(baseY+dy),w,h);};
   const cx=s.x;ctx.save();ctx.imageSmoothingEnabled=false;
   if(kind==='P')item('phone',cx);
   else if(kind==='LM'){item('laptop',cx-46);item('monitor',cx+34);item('mouse',cx+90);}
