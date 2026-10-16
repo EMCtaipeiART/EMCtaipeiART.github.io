@@ -1274,8 +1274,29 @@ function furnitureObject(type,x,y,w,h,art=furniture){const[sx,sy,sw,sh]=furnitur
 //（平日 18:00 之後，以及週末與國定假日整天）也把椅子收掉，只留灰階的桌子與桌上的電腦
 // ——stationDimmed() 這幾種情況都涵蓋了。
 function drawChair(s){if(stationDimmed(s))return;furnitureObject(CHAIR_RECT,s.x-CHAIR_WIDTH/2,s.y-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(s));}
+/* 專案部／企劃部桌上的設備（用程式畫，不吃圖檔）：1 筆電＋黑滑鼠；2、4 筆電＋外接螢幕＋黑滑鼠；3、5 白色室內電話；6 筆電＋黑滑鼠 */
+const STAFF_GEAR=['L','LM','P','LM','P','L'];
+function drawStaffGear(s,baseY,dimmed){
+  const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548)/220))),kind=STAFF_GEAR[(s.row?3:0)+col];
+  const C=h=>{if(!dimmed)return h;const n=parseInt(h.slice(1),16),l=Math.round(((n>>16)&255)*.299+((n>>8)&255)*.587+(n&255)*.114);return'rgb('+l+','+l+','+l+')';};
+  const R=(x,y,w,h,c,r)=>{ctx.fillStyle=C(c);if(r&&ctx.roundRect){ctx.beginPath();ctx.roundRect(Math.round(x),Math.round(y),w,h,r);ctx.fill();}else ctx.fillRect(Math.round(x),Math.round(y),w,h);};
+  const cx=s.x;ctx.save();ctx.imageSmoothingEnabled=false;
+  const shadow=(x,w)=>{ctx.fillStyle='rgba(0,0,0,.16)';ctx.beginPath();ctx.ellipse(x,baseY+1,w/2,3.5,0,0,7);ctx.fill();};
+  const laptop=x=>{shadow(x,78);R(x-31,baseY-48,62,40,'#25272d',4);R(x-28,baseY-45,56,32,'#dbe9f7',2);R(x-28,baseY-45,56,12,'#eef5fc',2);R(x-6,baseY-39,12,2,'#b4c6da');R(x-38,baseY-9,76,7,'#d7dade',3);R(x-38,baseY-4,76,3,'#aeb3ba',2);R(x-7,baseY-9,14,2,'#b8bcc3');};
+  const monitor=x=>{shadow(x,52);R(x-6,baseY-14,12,13,'#b9bec6');R(x-20,baseY-4,40,4,'#c9cdd3',2);R(x-42,baseY-62,84,50,'#1f2127',4);R(x-39,baseY-59,78,42,'#cfe0f3',2);R(x-39,baseY-59,78,14,'#e9f2fb',2);R(x-9,baseY-47,18,2,'#a9bdd3');R(x-42,baseY-17,84,5,'#2b2e36',2);};
+  const mouse=x=>{ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(x,baseY+1,8,3,0,0,7);ctx.fill();R(x-7,baseY-17,14,19,'#1b1c20',7);R(x-.75,baseY-16,1.5,7,'#454852');R(x-4,baseY-13,3,5,'#33353c',2);};
+  const phone=x=>{shadow(x,70);R(x-32,baseY-18,64,19,'#f4f5f7',6);R(x-32,baseY-3,64,4,'#cfd2d8',2);
+    for(let i=0;i<3;i++)for(let j=0;j<3;j++)R(x-8+i*7,baseY-14+j*4,4,2.5,'#b9bdc5',1);
+    R(x-26,baseY-14,12,7,'#9fc9d6',1);R(x+16,baseY-14,10,9,'#e4e6ea',2);
+    R(x-34,baseY-30,68,13,'#fbfbfc',6);R(x-34,baseY-21,68,4,'#d4d7dc',2);R(x-31,baseY-27,10,5,'#e6e8ec',2);R(x+21,baseY-27,10,5,'#e6e8ec',2);R(x-5,baseY-28,10,2,'#eceef1',1);
+    ctx.strokeStyle=C('#cfd2d8');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+34,baseY-24);ctx.bezierCurveTo(x+48,baseY-24,x+44,baseY-8,x+34,baseY-8);ctx.stroke();};
+  if(kind==='P')phone(cx);
+  else if(kind==='LM'){laptop(cx-46);monitor(cx+34);mouse(cx+90);}
+  else{laptop(cx-10);mouse(cx+54);}
+  ctx.restore();
+}
 function drawDesk(s){
-  const type=stationAway(s)?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
+  const type=stationAway(s)||s.grp?s.empty:s.type,art=furnitureFor(s),[sx,sy,sw,sh,upper]=furnitureRects[type];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),faceDraw=Math.round(DESK_SRC_FACE*DESK_DRAW_SCALE);
   const footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE),upperDraw=Math.round(upper*DESK_DRAW_SCALE);
   const faceTop=sy+upper,footTop=faceTop+DESK_SRC_FACE,left=Math.round(s.x-drawW/2),deskTop=s.y-40;
@@ -1284,6 +1305,7 @@ function drawDesk(s){
   if(upper>0)ctx.drawImage(art,sx,sy,sw,upper,left,deskTop-upperDraw,drawW,upperDraw);
   ctx.drawImage(art,sx,faceTop,sw,DESK_SRC_FACE,left,deskTop,drawW,faceDraw);
   ctx.drawImage(art,sx,footTop,sw,DESK_SRC_FOOT,left,deskTop+faceDraw,drawW,footDraw);
+  if(s.grp)drawStaffGear(s,deskTop+faceDraw-22,stationDimmed(s));
 }
 // 下排桌面：接在上排桌面正下方（BD_TOP 起），電腦用正面圖放在桌面上，椅子是背面圖（蓋在人物前面）。
 const bottomArt={imac:new Image(),minimon:new Image(),chair:new Image()},bottomGray=new Map();
@@ -1302,6 +1324,7 @@ function drawDeskBottom(s){
   ctx.imageSmoothingEnabled=false;
   ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP,drawW,BD_FACE);
   ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT-3,left,BD_TOP+BD_FACE,drawW,Math.round(footDraw*(DESK_SRC_FOOT-3)/DESK_SRC_FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
+  if(s.grp){drawStaffGear(s,BD_TOP+BD_FACE-22,dimmed);return;}
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
   if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
 }
