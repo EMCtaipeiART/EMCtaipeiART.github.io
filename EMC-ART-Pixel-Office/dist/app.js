@@ -171,7 +171,7 @@ function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status
 const effectiveStatusId=p=>isOvertime(p)?'overtime':statusOf(p);
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
 const staffGeoDefault=4;
-/** 班長處罰中：坐在自己的位置上，不能移動、變裝、做動作；人物上方顯示原因與剩餘天數。 */
+/** 班長罰坐中：坐在自己的位置上，不能移動、變裝、做動作；人物上方顯示原因與剩餘天數。 */
 function isPunishedP(p){return Boolean(p&&p.punish&&Number(p.punish.until)>Date.now());}
 function punishDaysLeft(p){return Math.max(1,Math.ceil((Number(p.punish.until)-Date.now())/86400000));}
 function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).length>0;}
@@ -743,12 +743,12 @@ function renderLookPanel(){
 }
 function setLook(patch){
   const i=selected;if(i===null)return;
-  if(isPunishedP(people[i])){toast('處罰中，不能變裝');return;}
+  if(isPunishedP(people[i])){toast('罰坐中，不能變裝');return;}
   const next={...effectiveLook(i),...patch},isDefault=sameLook(next,lookDefault(i));
   people[i].look=isDefault?null:next;markDirty();save();renderLookPanel();refreshRosterPortraits();
   pushChange(i,{look:isDefault?'':next});
 }
-if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;if(isPunishedP(people[selected])){toast('處罰中，不能變裝');return;}people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});};
+if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;if(isPunishedP(people[selected])){toast('罰坐中，不能變裝');return;}people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});};
 // ───────── 動作（閃身步）─────────
 /** 「動作」區：只有這個人有可以用的動作時才顯示（目前只有 Machi）。 */
 function renderActionPanel(){
@@ -764,7 +764,7 @@ function renderActionPanel(){
   }));
 }
 function toggleAction(id){
-  if(selected!==null&&isPunishedP(people[selected])){toast('處罰中，不能做動作');return;}
+  if(selected!==null&&isPunishedP(people[selected])){toast('罰坐中，不能做動作');return;}
   const i=selected;if(i===null||!WARDROBE_ACTIONS[id]||!WARDROBE_ACTIONS[id].who.includes(i))return;
   const cur=actionOf(i);
   if(cur&&cur.id===id){people[i].action=null;markDirty();renderActionPanel();pushChange(i,{action:''});return;}// 正在播放：再按一次停止
@@ -1520,7 +1520,7 @@ const seatedUp=i=>false;// 下排人物改回面向畫面（正面），不再�
 function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPunishBadge(p){
   if(!isPunishedP(p))return;
-  const text='處罰中｜'+String(p.punish.reason||'')+'（剩 '+punishDaysLeft(p)+' 天）',below=bubbleBelow(p),y=below?p.y-PLATE_SEAT_RISE-18:p.y-150-BUBBLE_HEAD_GAP-14;
+  const text='罰坐中｜'+String(p.punish.reason||'')+'（剩 '+punishDaysLeft(p)+' 天）',below=bubbleBelow(p),y=below?p.y-PLATE_SEAT_RISE-18:p.y-150-BUBBLE_HEAD_GAP-14;
   ctx.save();ctx.font='700 13px -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif';
   const w=Math.round(ctx.measureText(text).width+22),h=24,x=Math.round(p.x-w/2);
   softPanel(ctx,x,Math.round(y-h/2),w,h,{radius:12,fill:'#c0392b',stroke:'#7e1f15',lineWidth:1,shadow:true});

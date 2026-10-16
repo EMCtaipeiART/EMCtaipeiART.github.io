@@ -2228,9 +2228,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     ).toArray()[0];
     let state: Row = {};
     try { state = existing ? JSON.parse(existing.state) as Row : {}; } catch { state = {}; }
-    // 班長處罰中：坐在自己的位置上，不能移動、不能變裝、不能做動作（到期前一律擋下）
+    // 班長罰坐中：坐在自己的位置上，不能移動、不能變裝、不能做動作（到期前一律擋下）
     const punish = asRow(state.punish);
-    if (Number(punish.until) > Date.now() && ['x', 'y', 'dir', 'look', 'action'].some(key => key in patch)) throw new Error('處罰中：' + text(punish.reason) + '，不能移動或變裝');
+    if (Number(punish.until) > Date.now() && ['x', 'y', 'dir', 'look', 'action'].some(key => key in patch)) throw new Error('罰坐中：' + text(punish.reason) + '，不能移動或變裝');
     if ('message' in patch) {
       const message = String(patch.message ?? '');
       if (message.length > 60) throw new Error('對話最多 60 個字');
