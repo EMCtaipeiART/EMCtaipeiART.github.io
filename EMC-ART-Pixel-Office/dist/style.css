@@ -343,21 +343,77 @@ html.avatars #storyViewer{visibility:visible}
 .tool-section.collapsible.is-open>.cs-head{margin-bottom:12px}
 html.clean .scene-bar{display:none!important}
 
-/* 人物四周的圓形選單 */
-#radial{position:absolute;z-index:8;width:0;height:0;pointer-events:none}
-#radial[hidden]{display:none}
-.radial-ring,.radial-panel,.radial-back{pointer-events:auto}
-.radial-btn{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:2px solid #e9b94e;background:rgba(19,35,58,.94);color:#ffdd78;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 16px rgba(6,14,28,.45);transition:transform .18s ease,background .15s;padding:0}
-.radial-btn:hover{background:#2a4670}
-.radial-btn svg,.radial-back svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.radial-btn span{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none}
-.radial-btn[hidden]{display:none}
-.radial-back{position:absolute;left:-23px;top:-23px;width:46px;height:46px;border-radius:50%;border:2px solid #e9b94e;background:rgba(19,35,58,.96);color:#ffdd78;display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 6px 16px rgba(6,14,28,.45)}
-.radial-back[hidden],.radial-panel[hidden],.radial-ring[hidden]{display:none}
-.radial-panel{position:absolute;width:260px;overflow:auto;padding:12px 14px;border-radius:14px;background:rgba(19,35,58,.97);border:1px solid #33507a;box-shadow:0 16px 34px rgba(6,14,28,.45);color:#e8eef7;font-size:12px}
-.radial-title{display:block;font-size:14px;margin-bottom:6px}
-.radial-sec{border-top:0!important;padding:0!important}
+/* 人物四周的圓形選單：v5 品牌色，樣式與控制項覆寫僅限 radial */
+#radial{--r-brand:#159e31;--r-green:#0f7f27;--r-soft:#e8f6ec;--r-panel:#fff;--r-bg:#f5f7f6;--r-line:#e3e9e5;--r-ink:#17211d;--r-muted:#6b7772;--r-shadow:0 12px 32px rgba(18,38,28,.14);position:absolute;z-index:8;width:0;height:0;pointer-events:none;color:var(--r-ink);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;font-size:12px;font-weight:700}
+#radial[hidden],.radial-btn[hidden],.radial-panel[hidden],.radial-ring[hidden]{display:none}
+.radial-ring,.radial-panel{pointer-events:auto}
+.radial-btn{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:1px solid var(--r-line);background:var(--r-panel);color:var(--r-green);display:grid;place-items:center;cursor:pointer;box-shadow:var(--r-shadow),inset 0 1px 0 #ffffff80;padding:0;transform:translate(var(--rx),var(--ry));transition:background .16s,border-color .16s,box-shadow .16s,translate .16s}
+.radial-btn svg,.radial-back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.radial-btn span{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;line-height:18px;font-weight:800;color:var(--r-ink);background:var(--r-panel);border:1px solid var(--r-line);border-radius:999px;padding:1px 8px;box-shadow:0 4px 12px rgba(18,38,28,.08);pointer-events:none;text-shadow:none}
+.radial-ring:not(.is-closing) .radial-btn{animation:radial-in .3s cubic-bezier(.2,.8,.25,1.12) both;animation-delay:var(--enter-delay)}
+.radial-ring.is-closing .radial-btn{animation:radial-out .18s ease-in both;animation-delay:var(--exit-delay);pointer-events:none}
+@keyframes radial-in{from{opacity:0;transform:translate(0,0) scale(.35)}to{opacity:1;transform:translate(var(--rx),var(--ry)) scale(1)}}
+@keyframes radial-out{from{opacity:1;transform:translate(var(--rx),var(--ry)) scale(1)}to{opacity:0;transform:translate(0,0) scale(.35)}}
+.radial-panel{position:absolute;display:flex;flex-direction:column;width:292px;overflow:hidden;border-radius:18px;background:var(--r-panel);border:1px solid var(--r-line);box-shadow:0 20px 48px rgba(18,38,28,.18);color:var(--r-ink);font-size:12px;animation:radial-panel-in .18s ease-out}
+@keyframes radial-panel-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.radial-panel.is-closing{opacity:0;transition:opacity .16s}
+.radial-head{display:flex;align-items:center;gap:12px;flex:none;padding:8px 14px;border-bottom:1px solid var(--r-line)}
+.radial-title{font-size:14px;font-weight:800;line-height:1.4}
+.radial-back{display:inline-flex;align-items:center;justify-content:center;gap:2px;min-width:72px;min-height:44px;padding:0 10px;border:1px solid var(--r-line);border-radius:999px;background:var(--r-bg);color:var(--r-green);font:inherit;cursor:pointer}
+.radial-back svg{width:18px;height:18px}
+.radial-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px;scrollbar-width:thin;scrollbar-color:var(--r-line) transparent}
+.radial-panel .radial-sec{border-top:0;padding:0;margin:0;min-width:0}
 .radial-sec>.cs-head{display:none}
+.radial-panel button,.radial-panel .upload{min-height:44px;min-width:44px;font-family:inherit;font-weight:700}
+.radial-panel button{border:1px solid var(--r-line);border-radius:999px;padding:8px 12px;background:var(--r-bg);color:var(--r-ink);box-shadow:none;transition:background .16s,border-color .16s}
+.radial-panel .statuses{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.radial-panel .statuses button,.radial-panel .look-outfits button,.radial-panel .look-chips button{border-radius:16px;padding:8px 4px}
+.radial-panel .look-outfits{gap:8px}
+.radial-panel .look-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:8px}
+.radial-panel .look-group+.look-group{margin-top:16px}
+.radial-panel .music-toggle{margin-top:0;border-radius:16px;padding:10px;grid-template-columns:44px minmax(0,1fr)}
+.radial-panel button.active,.radial-panel .music-toggle[aria-expanded="true"],.radial-panel .music-toggle.is-sharing{background:var(--r-soft);color:var(--r-green);border-color:var(--r-brand);box-shadow:none}
+.radial-panel .primary{background:var(--r-green);border-color:var(--r-green);color:var(--r-panel);font-size:13px;font-weight:800}
+.radial-panel .text-button{color:var(--r-green);background:transparent}
+.radial-panel .look-label,.radial-panel .look-hint,.radial-panel .story-hint,.radial-panel .music-hint,.radial-panel .upload small,.radial-panel .story-mine-info span,.radial-panel .music-toggle small,.radial-panel #count,.radial-panel .punish-label{color:var(--r-muted);line-height:1.6}
+.radial-panel .story-hint{margin:0 0 12px}
+.radial-panel .music-hint.is-error{color:#bd3449}
+.radial-panel .upload{border:1px dashed var(--r-line);border-radius:16px;background:var(--r-bg);padding:16px 12px;text-align:center;gap:8px}
+.radial-panel .upload>span{color:var(--r-green)}
+.radial-panel textarea,.radial-panel .music-panel input,.radial-panel #punishReason,.radial-panel #punishDays{width:100%;min-width:0;min-height:44px;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid var(--r-line);background:var(--r-bg);color:var(--r-ink);font:inherit;font-size:14px;line-height:1.5}
+.radial-panel textarea::placeholder,.radial-panel input::placeholder{color:var(--r-muted)}
+.radial-panel .punish-label{display:block;margin:12px 0 6px}.radial-panel .punish-label:first-child{margin-top:0}
+.radial-panel .music-panel{gap:12px;margin-top:12px}
+.radial-panel .music-actions{flex-wrap:wrap;gap:8px}.radial-panel #punishSec .music-actions{margin-top:16px}
+.radial-panel .message-foot{flex-wrap:wrap;gap:8px}
+.radial-panel .story-mine-info{min-width:0;overflow-wrap:anywhere}
+.radial-panel .story-mine-thumb{padding:0;border-radius:12px;background:var(--r-bg)}
+#radial :is(button,input,select,textarea,[role="button"]):focus-visible{outline:2px solid var(--r-brand);outline-offset:3px}
+#radial button:disabled{opacity:.5;cursor:not-allowed}
+@media(hover:hover){
+  .radial-btn:hover{translate:0 -3px;background:var(--r-soft);border-color:var(--r-brand);box-shadow:0 16px 34px rgba(18,38,28,.18)}
+  .radial-panel button:not(:disabled):hover,.radial-panel .upload:hover{background:var(--r-soft);color:var(--r-green);border-color:var(--r-brand)}
+}
+.radial-btn:active{translate:0 1px;background:var(--r-soft);border-color:var(--r-brand)}
+.radial-panel button:not(:disabled):active{background:var(--r-soft);color:var(--r-green);border-color:var(--r-brand)}
+/* 使用嵌入頁既有的 color-scheme，不新增主題來源。 */
+html[style*="color-scheme: dark"] #radial{--r-green:#8fe0a5;--r-brand:#53c773;--r-soft:#173323;--r-panel:#1d2321;--r-bg:#141817;--r-line:#35433c;--r-ink:#e9efec;--r-muted:#a3aeaa;--r-shadow:0 12px 32px rgba(0,0,0,.28)}
+html[style*="color-scheme: dark"] .radial-panel .music-hint.is-error{color:#ffb4c0}
+/* 模糊只對寬螢幕滑鼠裝置啟用；觸控裝置與小 iframe 一律實色。 */
+@media(min-width:721px) and (hover:hover) and (pointer:fine){
+  .radial-btn{background:color-mix(in srgb,var(--r-panel) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+}
+@media(max-width:720px),(any-pointer:coarse){
+  .radial-btn{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--r-panel)}
+  .radial-panel textarea,.radial-panel input,.radial-panel #punishReason,.radial-panel #punishDays{font-size:16px}
+}
+/* 極矮或極窄視窗無法容納 44px 點擊區的圓環，保留可捲動的所有入口。 */
+.radial-ring.is-compact{position:absolute;display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:14px 4px;padding:8px 4px;overflow:auto;overscroll-behavior:contain;background:var(--r-panel);border:1px solid var(--r-line);border-radius:18px;box-shadow:var(--r-shadow)}
+.radial-ring.is-compact .radial-btn{position:relative;left:auto;top:auto;justify-self:center;margin-bottom:24px;transform:none;animation:none;box-shadow:none}
+@media(prefers-reduced-motion:reduce){
+  #radial *,#radial *::before,#radial *::after{animation:none!important;transition:none!important}
+  .radial-btn:hover,.radial-btn:active{translate:none}
+}
 .person-card.radial-hide{display:none!important}
 
 /* 編輯版（桌機）：辦公室置中；右側工具欄先收起來，點選人物才從右邊滑出（浮在上面，不推擠場景） */
@@ -367,23 +423,6 @@ html.clean .canvas-wrap{margin-top:0}html.clean #game:focus,html.clean #game:foc
   html.clean aside{position:absolute;top:140px;right:16px;width:320px;max-height:calc(100% - 16px);overflow:auto;z-index:9;transition:opacity .2s ease,transform .2s ease}
   html.clean:not(.has-sel) aside{opacity:0;transform:translateX(24px);pointer-events:none}
 }
-.radial-btn{width:56px;height:56px;left:-28px;top:-28px}.radial-btn span{top:60px}
-
-/* 圓形選單：白底淺色（深色底會跟辦公室的藍色桌面混在一起） */
-.radial-btn,.radial-back{background:#fff;color:#1b2c47;border:2px solid #c9d3e0;box-shadow:0 4px 14px rgba(20,35,60,.28)}
-.radial-btn:hover,.radial-back:hover{background:#eef3fa;border-color:#8fa6c4}
-.radial-btn span{color:#1b2c47;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff}
-.radial-panel{background:#fff;color:#1b2c47;border:1px solid #c9d3e0;box-shadow:0 14px 32px rgba(20,35,60,.3)}
-.radial-panel .statuses button,.radial-panel .look-outfits button,.radial-panel .look-chips button,.radial-panel .music-toggle{background:#f1f5fa;color:#33475f;border-color:#c9d3e0}
-.radial-panel .statuses button.active,.radial-panel .look-outfits button.active,.radial-panel .look-chips button.active{background:#fff1c9;color:#18314f;border-color:#e9b94e;box-shadow:none}
-.radial-panel .look-label,.radial-panel .look-hint,.radial-panel .story-hint,.radial-panel .music-hint,.radial-panel .upload small,.radial-panel .story-mine-info span,.radial-panel .music-toggle small{color:#5c6f88}
-.radial-panel .upload{border-color:#b6c3d4}.radial-panel .upload>span{color:#b97b00}
-.radial-panel textarea,.radial-panel .music-panel input{background:#fff;color:#1b2c47;border-color:#c9d3e0}
-.radial-panel textarea::placeholder{color:#8a9bb2}
-.radial-panel .text-button{color:#3f6aa8}
-.radial-panel .story-mine-thumb{background:#e6edf5}
-.radial-panel #count{color:#5c6f88}
-
 /* 元宇宙編輯頁：限時動態滿版（外層會把 iframe 放大成整個視窗，這裡讓播放視窗填滿） */
 html.clean #storyViewer{width:100vw;height:100dvh;max-width:none;max-height:none}
 html.clean .sv-stage{height:100dvh;border-radius:0}
@@ -396,5 +435,3 @@ html.ro aside,html.ro .joystick,html.ro #radial{display:none!important}
 
 /* 企劃部、專案部沒有等級制度：同仁自己的畫面、或選到同仁的人物時，不顯示等級卡與等級一覽表 */
 html.staff-view .level-card,html.staff-view .level-setting,html.sel-staff .level-card{display:none!important}
-
-.radial-panel .punish-label{display:block;font-size:12px;color:#5c6f88;margin:8px 0 4px}.radial-panel #punishReason,.radial-panel #punishDays{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #c9d3e0;background:#fff;color:#1b2c47;font-size:14px}

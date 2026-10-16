@@ -1660,7 +1660,7 @@ window.addEventListener('message',event=>{
 });
 
 // 人物四周的圓形選單（多元宇宙編輯頁）：點人物 → 一圈圖示（狀態、造型、動作、音樂、限時動態、對話）；
-// 點圖示 → 第一圈收起，改顯示該功能的面板，中間留返回鈕。右側只剩人物資料、等級與等級一覽表。
+// 點圖示 → 第一圈收起，面板標題列提供返回。右側只剩人物資料、等級與等級一覽表。
 (()=>{
   if(embedMode||!document.documentElement.classList.contains('clean'))return;
   const wrap=game.parentElement,ICONS={
@@ -1676,39 +1676,102 @@ window.addEventListener('message',event=>{
   const find={punish:()=>$('punishSec'),seat:()=>null,status:()=>$('statuses'),look:()=>$('lookSection'),action:()=>$('actionSection'),music:()=>$('musicSection'),story:()=>$('storyUpload'),say:()=>$('message')};
   const secOf=k=>{const e=find[k]();return e&&(e.closest('.tool-section'));};
   const box=document.createElement('div');box.id='radial';box.hidden=true;
-  const ring=document.createElement('div');ring.className='radial-ring';
-  const back=document.createElement('button');back.type='button';back.className='radial-back';back.setAttribute('aria-label','返回');back.hidden=true;back.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>';
+  const ring=document.createElement('div');ring.className='radial-ring';ring.setAttribute('role','group');ring.setAttribute('aria-label','人物功能');
+  const back=document.createElement('button');back.type='button';back.className='radial-back';back.setAttribute('aria-label','返回');back.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg><span>返回</span>';
   const panel=document.createElement('div');panel.className='radial-panel';panel.hidden=true;
-  const title=document.createElement('strong');title.className='radial-title';panel.appendChild(title);
+  const title=document.createElement('strong');title.className='radial-title';title.id='radialTitle';
+  panel.setAttribute('role','region');panel.setAttribute('aria-labelledby',title.id);
+  const head=document.createElement('div');head.className='radial-head';head.append(back,title);
+  const body=document.createElement('div');body.className='radial-body';panel.append(head,body);
   const btns={};
   defs.forEach(([k,t])=>{const b=document.createElement('button');b.type='button';b.className='radial-btn';b.title=t;b.setAttribute('aria-label',t);b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+ICONS[k]+'</svg><span>'+t+'</span>';b.onclick=()=>{if(k==='seat'){const i=selected;if(i===null)return;setStatus('present');const p=people[i];p.x=starts[i][0];p.y=starts[i][1];p.dir='down';keys.clear();markDirty();save();queuePosition(i);window.radialClose();return;}/* 在座＝狀態設為在座並回到自己的座位 */show(k);};ring.appendChild(b);btns[k]=b;});
-  box.append(ring,back,panel);wrap.appendChild(box);
+  box.append(ring,panel);wrap.appendChild(box);
   // 班長（管理者與 Machi）：處罰違反規則的人——坐在自己的位置上整整 N 天，不能移動、不能變裝；人物上方顯示原因與剩餘天數
   const ps=document.createElement('section');ps.className='tool-section radial-sec';ps.id='punishSec';
   ps.innerHTML='<label class="punish-label" for="punishReason">處罰原因（最多 30 字）</label><input type="text" id="punishReason" maxlength="30" placeholder="例如：上班時間遲到" autocomplete="off"><label class="punish-label" for="punishDays">天數</label><select id="punishDays">'+[1,2,3,5,7,14,30].map(n=>'<option value="'+n+'">'+n+' 天</option>').join('')+'</select><div class="music-actions"><button type="button" class="primary" id="punishGo">處罰</button><button type="button" class="text-button" id="punishCancel">解除處罰</button></div><p class="look-hint" id="punishNote"></p>';
   document.body.appendChild(ps);
-  defs.forEach(([k])=>{const s=secOf(k);if(!s)return;s.classList.remove('collapsible');s.classList.add('radial-sec');s.dataset.rk=k;s.hidden=s.hidden;panel.appendChild(s);});
-  let level=0,cur='';
-  function show(k){level=2;cur=k;ring.hidden=true;back.hidden=false;panel.hidden=false;title.textContent=defs.find(d=>d[0]===k)[1];panel.querySelectorAll('.radial-sec').forEach(s=>{s.style.display=s.dataset.rk===k?'':'none';});place();}
-  function toRing(){level=1;cur='';ring.hidden=false;back.hidden=true;panel.hidden=true;place();}
+  defs.forEach(([k])=>{const s=secOf(k);if(!s)return;s.classList.remove('collapsible');s.classList.add('radial-sec');s.dataset.rk=k;body.appendChild(s);});
+  const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  let level=0,cur='',ringTimer=0,closeTimer=0;
+  function resetMotion(){
+    clearTimeout(ringTimer);clearTimeout(closeTimer);
+    box.inert=false;ring.inert=false;ring.classList.remove('is-closing');panel.classList.remove('is-closing');
+  }
+  function foldRing(done){
+    ring.inert=true;ring.classList.add('is-closing');
+    const n=Object.values(btns).filter(b=>!b.hidden).length;
+    const duration=motion.matches||ring.classList.contains('is-compact')?0:180+Math.max(0,n-1)*35;
+    if(duration)ringTimer=setTimeout(done,duration);else done();
+  }
+  function show(k){
+    resetMotion();level=2;cur=k;panel.hidden=false;
+    title.textContent=defs.find(d=>d[0]===k)[1];
+    body.querySelectorAll('.radial-sec').forEach(s=>{s.style.display=s.dataset.rk===k?'':'none';});
+    body.scrollTop=0;place();back.focus({preventScroll:true});
+    foldRing(()=>{ring.hidden=true;});
+  }
+  function toRing(){
+    const previous=cur;resetMotion();level=1;cur='';panel.hidden=true;
+    // 重啟進場動畫只在層級切換時進行，place() 每幀僅更新位置。
+    ring.hidden=true;void ring.offsetWidth;ring.hidden=false;place();
+    const target=previous&& !btns[previous].hidden?btns[previous]:Object.values(btns).find(b=>!b.hidden);
+    if(target)target.focus({preventScroll:true});
+  }
   back.onclick=toRing;
   window.radialOpen=i=>{box.hidden=false;box.dataset.i=i;toRing();const c=$('personCard');if(c)c.classList.add('radial-hide');};
-  window.radialClose=()=>{box.hidden=true;level=0;};
+  window.radialClose=()=>{
+    if(box.hidden||level===0)return;
+    const fromRing=level===1;resetMotion();level=0;
+    if(box.contains(document.activeElement))game.focus({preventScroll:true});
+    box.inert=true;
+    const finish=()=>{box.hidden=true;};
+    if(fromRing)foldRing(finish);
+    else{ring.hidden=true;panel.classList.add('is-closing');if(motion.matches)finish();else closeTimer=setTimeout(finish,160);}
+  };
+  document.addEventListener('keydown',e=>{
+    if(e.key!=='Escape'||e.defaultPrevented||e.isComposing||box.hidden||level===0||storyOpen())return;
+    e.preventDefault();window.radialClose();
+  });
+  // 原上傳 label 對滑鼠可用；補上鍵盤操作，不更動檔案選取流程。
+  const upload=$('storyUpload');upload.tabIndex=0;upload.setAttribute('role','button');upload.setAttribute('aria-label','貼一則限時動態');
+  upload.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('storyFile').click();}});
   function place(){
-    if(box.hidden||selected===null)return;
+    if(box.hidden||level===0||selected===null)return;
     if(keys.size){window.radialClose();return;}// 人物走動時收合選單
     const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect();if(!holder.width||!view.width)return;
     const sx=view.width/W,sy=view.height/H,p=viewPeople[selected]||people[selected];
     const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
     box.style.left=cx+'px';box.style.top=cy+'px';
+    // 同時限制在場景與 iframe 可見範圍，標籤、焦點環也保留安全距離。
+    const x0=Math.max(8,8-holder.left),y0=Math.max(8,8-holder.top);
+    const x1=Math.min(holder.width-8,window.innerWidth-holder.left-8),y1=Math.min(holder.height-8,window.innerHeight-holder.top-8);
+    const width=Math.max(0,x1-x0),height=Math.max(0,y1-y0);
+    const clamp=(v,min,max)=>Math.max(min,Math.min(v,Math.max(min,max)));
     if(level===1){
-      const pun=isPunishedP(people[selected]),keys=defs.map(d=>d[0]).filter(k=>{if(k==='seat')return true;if(k==='punish')return Boolean(storyIdentity.monitor);if(pun&&(k==='look'||k==='action'))return false;const s=secOf(k);return s&&!s.hidden;}),n=keys.length,R=Math.max(94,Math.min(130,holder.height*.22));
-      defs.forEach(([k])=>{btns[k].hidden=!keys.includes(k);});
-      keys.forEach((k,j)=>{const a=-Math.PI/2+j*2*Math.PI/n;btns[k].style.transform='translate('+Math.round(Math.cos(a)*R)+'px,'+Math.round(Math.sin(a)*R)+'px)';});
+      const pun=isPunishedP(people[selected]),visible=defs.map(d=>d[0]).filter(k=>{if(k==='seat')return true;if(k==='punish')return Boolean(storyIdentity.monitor);if(pun&&(k==='look'||k==='action'))return false;const s=secOf(k);return s&&!s.hidden;}),n=visible.length;
+      defs.forEach(([k])=>{btns[k].hidden=!visible.includes(k);});
+      const compact=height<216||width<240;
+      ring.classList.toggle('is-compact',compact);
+      if(compact){
+        const w=Math.min(320,width);
+        ring.style.width=w+'px';ring.style.maxHeight=height+'px';
+        ring.style.left=(clamp(cx-w/2,x0,x1-w)-cx)+'px';
+        ring.style.top=(clamp(cy-90,y0,y1-Math.min(180,height))-cy)+'px';
+      }else{
+        ring.style.width='';ring.style.maxHeight='';ring.style.left='';ring.style.top='';
+      }
+      const R=Math.min(130,Math.max(90,height*.28),(width-80)/2);
+      const ry=Math.min(R,(height-84)/2),ox=clamp(cx,x0+R+40,x1-R-40)-cx,oy=clamp(cy,y0+ry+30,y1-ry-54)-cy;
+      visible.forEach((k,j)=>{
+        const a=-Math.PI/2+j*2*Math.PI/n,b=btns[k];
+        b.style.setProperty('--rx',Math.round(ox+Math.cos(a)*R)+'px');b.style.setProperty('--ry',Math.round(oy+Math.sin(a)*ry)+'px');
+        b.style.setProperty('--enter-delay',j*35+'ms');b.style.setProperty('--exit-delay',(n-1-j)*35+'ms');
+      });
     }else if(level===2){
-      const left=cx>holder.width*.55;panel.style.maxHeight=Math.max(160,holder.height-24)+'px';
-      panel.style.left=left?'auto':'44px';panel.style.right=left?'44px':'auto';
-      const h=panel.offsetHeight||240;panel.style.top=Math.round(Math.max(12-cy,Math.min(-h/2,holder.height-12-cy-h)))+'px';
+      const w=Math.min(292,width);panel.style.width=w+'px';panel.style.maxHeight=height+'px';
+      const right=x1-cx,left=cx-x0,preferRight=right>=w+44||right>=left;
+      panel.style.left=(clamp(preferRight?cx+44:cx-44-w,x0,x1-w)-cx)+'px';
+      const h=panel.offsetHeight;panel.style.top=(clamp(cy-h/2,y0,y1-h)-cy)+'px';
     }
   }
   window.radialPlace=place;
