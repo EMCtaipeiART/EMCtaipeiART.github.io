@@ -5223,7 +5223,7 @@ describe('平台幣', () => {
 
   it('seats planning/project staff in the universe in the order they finish their character (6 seats, one each)', async () => {
     const stub = env.DATABASE_COORDINATOR.getByName('primary') as DurableObjectStub<DatabaseCoordinator>;
-    const accounts = Array.from({ length: 7 }, (_, index) => ({ account: `seat${index}@emctaipei.test`, name: `座位${index}` }));
+    const accounts = Array.from({ length: 19 }, (_, index) => ({ account: `seat${index}@emctaipei.test`, name: `座位${index}` }));
     await runInDurableObject(stub, async (_instance, state) => {
       const stored = state.storage.sql.exec<{ json: string }>('SELECT json FROM database_state WHERE id = ?', 'primary').one();
       const database = JSON.parse(stored.json) as DatabaseSnapshot;
@@ -5239,15 +5239,15 @@ describe('平台幣', () => {
       seats.push(result.seat);
       if (item.name === '座位0') expect(await api({ action: 'personaAvatarSnapshot', png, lookKey: 'persona-2', headId: head, outfitId: outfit }, session)).toMatchObject({ ok: true, seat: 0 });   // 已入座的人不會換座位
     }
-    expect(seats).toEqual([0, 1, 2, 3, 4, 5, -1]);
+    expect(seats).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, -1]);   // 18 個座位（三組），滿了回 -1
     const avatar = await SELF.fetch(`https://worker.test/avatar/${encodeURIComponent('座位1')}`);   // 中文名字的頭像快照也要拿得到（首頁、側邊欄的頭像框）
     expect(avatar.status).toBe(200);
     expect(avatar.headers.get('Content-Type')).toBe('image/png');
     const state = await api({ action: 'pixelOfficeState' }) as { staff: Array<{ seat: number; name: string }>; people: Array<{ name: string; look?: { outfit: string; head: string } }> };
-    expect(state.staff.map(item => item.name)).toEqual(['座位0', '座位1', '座位2', '座位3', '座位4', '座位5']);
+    expect(state.staff.map(item => item.name)).toEqual(Array.from({ length: 18 }, (_, index) => `座位${index}`));
     expect(state.people.find(item => item.name === '座位2')?.look).toMatchObject({ outfit: `c:${outfit}`, head: `h:${head}` });
     expect(await api({ action: 'pixelOfficeUpdate', name: '座位1', patch: { message: '哈囉', x: 2000, y: 700 } })).toMatchObject({ ok: true });
-    expect(await api({ action: 'pixelOfficeUpdate', name: '座位6', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
+    expect(await api({ action: 'pixelOfficeUpdate', name: '座位18', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
   });
 
   it('lets the monitor (admin or Machi) punish someone: stuck at the seat, no moving or changing clothes, with a reason and a day count', async () => {

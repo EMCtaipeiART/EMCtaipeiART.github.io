@@ -27,11 +27,15 @@ const STATE_KEY = 'primary';
 import { COIN_KIND_LABEL, COIN_SPEND_PER_GENERATION, COIN_SPEND_PER_REGENERATION, COIN_START_DATE, coinHash, coinsToTenths, endedOnOrAfterStart, safeEqual, tenthsToCoins, verifyCoinChain, type CoinEntry, type CoinKind } from './coins';
 const PIXEL_OFFICE_NAMES = ['Leona', 'Amber', 'Noise', 'Anna', 'Machi'];
 const PIXEL_OFFICE_STAFF_EMPTY_SEATS: number[] = [];   // 要固定空著的座位（2026-10-16 曾指定 3 號空著，後來改成鄭筱舢坐 3 號，現在六個座位都可用）
-const PIXEL_OFFICE_STAFF_SEATS = 6;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
-const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024;
+const PIXEL_OFFICE_STAFF_SEATS = 18;   // 企劃部、專案部同仁的座位（設計部六張桌子右側再六張，完成「建立你的角色」的人依序入座）
+const PIXEL_OFFICE_MAX_X = 2160, PIXEL_OFFICE_MAX_Y = 1024, PIXEL_OFFICE_MIN_Y = -1300;   // 往上複製的兩組桌子在畫面上方，邏輯 y 是負的
 // 座位（場景座標）：班長處罰時把人放回自己的座位。設計部五位 + 企劃／專案同仁六席（座位 0–2 上排、3–5 下排）。
 const PIXEL_OFFICE_DESIGNER_SEATS: Record<string, [number, number]> = { Leona: [548, 355], Amber: [768, 355], Noise: [988, 355], Anna: [768, 695], Machi: [988, 695] };
-const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = [[1318, 355], [1538, 355], [1758, 355], [1318, 695], [1538, 695], [1758, 695]];   // 場景寬度加寬後的座標上限
+const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = Array.from({ length: 18 }, (_, seat) => {   // 座位 0–5 原本那組，6–11、12–17 往上複製的兩組（每組 y 差 604）
+  const base: Array<[number, number]> = [[1318, 355], [1538, 355], [1758, 355], [1318, 695], [1538, 695], [1758, 695]];
+  const [x, y] = base[seat % 6];
+  return [x, y - Math.floor(seat / 6) * 604];
+});
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
 // 電腦開著時由時間決定、不需要手動點的狀態。其餘（會議／出國／公出）電腦判斷不出來，一律尊重手動指定。
@@ -2384,7 +2388,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       const x = Number(patch.x), y = Number(patch.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('位置不正確');
       state.x = Math.round(Math.max(0, Math.min(PIXEL_OFFICE_MAX_X, x)));
-      state.y = Math.round(Math.max(0, Math.min(PIXEL_OFFICE_MAX_Y, y)));
+      state.y = Math.round(Math.max(PIXEL_OFFICE_MIN_Y, Math.min(PIXEL_OFFICE_MAX_Y, y)));
     }
     if ('dir' in patch) {
       const dir = text(patch.dir);

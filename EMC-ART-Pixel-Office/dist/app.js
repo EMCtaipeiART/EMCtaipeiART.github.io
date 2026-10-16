@@ -1,5 +1,5 @@
 'use strict';
-const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), W=/[?&]embed=1/.test(location.search)?1536:2050,H=1024;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
+const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), W=/[?&]embed=1/.test(location.search)?1536:2050,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:900/* 畫布往上多留的高度（放新增的兩組桌子） */,H=H0+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
 const starts=[[548,355],[768,355],[988,355],[768,695],[988,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
@@ -20,8 +20,10 @@ let levelUpdatedAt='',levelIsLive=false;
 const stations=[{x:548,y:355,type:0,empty:6,name:'Leona'},{x:768,y:355,type:1,empty:7,name:'Amber'},{x:988,y:355,type:9,empty:11,name:'Noise'},{x:548,y:695,type:4,empty:6,name:'',row:1},{x:768,y:695,type:1,empty:7,name:'Anna',row:1},{x:988,y:695,type:10,empty:11,name:'Machi',row:1}];
 // 企劃部、專案部同仁的六張桌子：設計部六張桌子的右側空一張桌子的距離（+880），同樣配置（上排三張、下排三張，左下是 Mac mini 桌）。座位 0–2 上排、3–5 下排；
 // 完成「建立你的角色」的人依序入座（後端 pixel_office_staff）。沒人坐的桌子名牌是空的。
-const STAFF_DX=770,STAFF_POS=[[548+STAFF_DX,355],[768+STAFF_DX,355],[988+STAFF_DX,355],[548+STAFF_DX,695],[768+STAFF_DX,695],[988+STAFF_DX,695]];
+const STAFF_DX=770,STAFF_POS=Array.from({length:18},(_,n)=>{const g=Math.floor(n/6),k=n%6;return [[548,355],[768,355],[988,355],[548,695],[768,695],[988,695]][k].map((v,j)=>j?v-g*GP:v+STAFF_DX);});
 stations.push({x:548+STAFF_DX,y:355,type:12,empty:14,name:'',grp:1},{x:768+STAFF_DX,y:355,type:1,empty:7,name:'',grp:1},{x:988+STAFF_DX,y:355,type:3,empty:8,name:'',grp:1},{x:548+STAFF_DX,y:695,type:13,empty:14,name:'',row:1,grp:1},{x:768+STAFF_DX,y:695,type:1,empty:7,name:'',row:1,grp:1},{x:988+STAFF_DX,y:695,type:2,empty:8,name:'',row:1,grp:1});
+// 往上複製的兩組桌子（2026-10-16）：右側同仁桌再 12 個座位（座位 6–17，依序入座），左側設計部桌子再 12 張空桌（先空著）。
+{const base=stations.slice(0,12);for(let g=1;g<=2;g++)for(const s0 of base)stations.push({...s0,y:s0.y-g*GP,name:'',...(s0.grp?{grp:1}:{ext:1})});}
 const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'angry',symbol:'burst',label:'怒',text:'爆炸氣噗噗'},{id:'sad',symbol:'drop',label:'哀',text:'大水滴低落中'},{id:'joy',symbol:'heart',label:'樂',text:'愛心滿格'}];
 const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'meeting',symbol:'meeting',label:'會議',text:'開會中'},{id:'leave',symbol:'calendar',label:'休假',text:'休假中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
@@ -58,7 +60,9 @@ const BUBBLE_CLEAR=8;// 下排的對話框與上排名牌之間要留的空隙
 const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;
 // 上下兩排桌子合併成一張：下排人物坐在桌子下側、背對畫面。邏輯座標不動（存在後端的位置照用），畫面上把下排往上收到 BOTTOM_FEET。
 const BOTTOM_FEET=588,EMBED_ROW_SQUEEZE=(BOTTOM_FEET-EMBED_ROW_TOP)/(EMBED_ROW_BOTTOM-EMBED_ROW_TOP);
-const viewY=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
+const viewY0=y=>y>EMBED_ROW_TOP?EMBED_ROW_TOP+(y-EMBED_ROW_TOP)*EMBED_ROW_SQUEEZE:y;
+// 往上複製的兩組桌子（g=1、2）：邏輯座標是原本的 y - g*GP，畫面上是原本的畫面座標 - g*GPV。兩段在 y≈90 處剛好接上（連續）。
+const viewY=y=>{if(y>=90)return viewY0(y);const g=Math.min(2,Math.ceil((90-y)/GP));return viewY0(y+g*GP)-g*GPV;};
 // 畫面用的座標（嵌入模式下把下排往上收過）。資料一律用 people／stations，畫面一律用這兩個。
 let viewPeople=[],viewStations=[];
 // 六張桌子實際佔到的範圍（場景座標，下排收上來之後量的）：左右是桌子邊緣。嵌入模式就是把這一塊
@@ -69,15 +73,15 @@ let viewPeople=[],viewStations=[];
 // （2026-09-24 使用者回報）。y0 由 sceneTopExtent() 每次重排時算，變了就重新 fit 一次。
 const EMBED_CONTENT={x0:424,x1:1112,y0:EMBED_ROW_TOP-158,y1:BOTTOM_FEET+40};
 // 上緣的下限：頭頂（-150）再往上 8，順便包住照片卡（-151）與心情圖示（-152）的上緣。
-const SCENE_TOP_MIN=EMBED_ROW_TOP-158;
+const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY?SCENE_TOP_MIN-2*GPV:SCENE_TOP_MIN;/* 整頁／編輯版要把最上面那組桌子也算進來 */
 const EMBED_FIT_PADDING=Math.min(1,Math.max(.4,Number(new URLSearchParams(location.search).get('pad'))||.94)); // 外層可用 ?pad= 縮小場景（預設 .94）
 let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
-let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false;
+let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=false;
 function fitCleanView(){
   const wrapEl=game.parentElement,w=wrapEl.getBoundingClientRect().width;
   if(!w)return;
-  let top=EMBED_ROW_TOP-158;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
+  let top=TOP_BASE;try{top=Math.min(top,sceneTopExtent())}catch(error){}// 上排的帽子、對話框現在畫到哪就留到哪，不然會被切掉
   cleanTop=top;try{cleanBottom=sceneBottomExtent()}catch(error){cleanBottom=BOTTOM_FEET+40}
   // 手機（窄螢幕）：桌子四周要留走動的空間，搖桿也要在同一個畫面，所以放大倍率改成「整個可走動範圍剛好放進寬度」
   const narrow=document.documentElement.classList.contains('clean-narrow');
@@ -87,10 +91,12 @@ function fitCleanView(){
   const x0=narrow?300:424,x1=narrow?(staffSeated?2080:1236):(staffSeated?2000:1112),y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
   const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam&&!narrow?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
-  wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
+  wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H0-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
-  game.style.transform=`translate(${w/2-cx*scale}px,${-y0*scale+padY}px)`;
+  game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;
   markDirty();
+  /* 場景變高了（往上多兩組桌子）：第一次進來把畫面捲到自己的座位（沒有就捲到原本那組），不用自己往下找 */
+  if(!narrow&&ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
 }
 function fitEmbedView(){
   if(document.documentElement.classList.contains('clean')){fitCleanView();return;}
@@ -107,7 +113,7 @@ function fitEmbedView(){
   fitting=false;
 }
 function syncViewLayout(){
-  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(document.documentElement.classList.contains('clean')&&ready){let t=EMBED_ROW_TOP-158;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
+  if(!embedMode){viewPeople=people.map(p=>({...p,y:viewY(p.y)}));viewStations=stations.map(s=>({...s,y:viewY(s.y)}));if(document.documentElement.classList.contains('clean')&&ready){let t=TOP_BASE;try{t=Math.min(t,sceneTopExtent())}catch(error){}let b=BOTTOM_FEET+40;try{b=sceneBottomExtent()}catch(error){}if(t!==cleanTop||b!==cleanBottom||staffSeated!==cleanStaff)fitCleanView();}return;}
   viewPeople=people.map(p=>({...p,y:viewY(p.y)}));
   viewStations=stations.map(s=>({...s,y:viewY(s.y)}));
   syncSceneTop();
@@ -177,11 +183,12 @@ function punishDaysLeft(p){return Math.max(1,Math.ceil((Number(p.punish.until)-D
 function staffLookReady(i){return customIdsOf(i).length>0&&customHeadIdsOf(i).length>0;}
 /** 後端回報的同仁座位（seat 0–5）：加入名單、放進桌子；已經在名單裡的只更新桌子的名牌。 */
 let staffSeated=true;// 編輯／整頁畫面一律含六張同仁桌（沒人坐也看得到桌子），首頁小框才只看設計部
+const staffStationIndex=seat=>{const g=Math.floor(seat/6);return g?12*g+6+seat%6:6+seat;};/* 座位 0–5 在原本那組，6–17 在往上複製的兩組 */
 function applyStaff(list){
   if(!Array.isArray(list)||!list.length)return;let changed=false;
   for(const item of list){
     const seat=Number(item.seat),name=String(item.name||'');if(!name||!(seat>=0&&seat<STAFF_POS.length))continue;
-    const station=stations[6+seat];if(station&&station.name!==name){station.name=name;changed=true;}
+    const station=stations[staffStationIndex(seat)];if(station&&station.name!==name){station.name=name;changed=true;}
     if(names.indexOf(name)<0){names.push(name);const pos=STAFF_POS[seat];starts.push(pos.slice());people.push({name,x:pos[0],y:pos[1],dir:'down',mood:'',status:'present',message:'',photo:'',staff:true});levelStats[name]=levelFromScore(0,name);changed=true;}
   }
   if(changed){staffSeated=true;markDirty();try{applyViewerRole();}catch(e){}if(typeof refreshRosterPortraits==='function'&&ready)try{refreshRosterPortraits();}catch(e){}}
@@ -197,7 +204,7 @@ const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtim
 setAsset(furniture,'assets/furniture-v4.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
 // 加班濾鏡圖（69 KB）只有有人加班（晚上、假日）才用得到，第一次要畫時才載，載好重畫。
 function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});setAsset(overtimeSheet,'assets/overtime-filter.webp?v=1');}
-function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,0);ctx.imageSmoothingEnabled=false;}
+function resizeCanvas(){markDirty();const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,OY*game.height/H);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>{if(img.__fb){const p=img.__fb;img.__fb=null;img.crossOrigin=null;img.src=p;return;}reject();};if(img.complete&&img.naturalWidth)resolve();});}
 // ───────── 造型：頭像＋服裝＋配件組合（2026-10-01）─────────
@@ -645,7 +652,7 @@ function positionPersonCard(){
   const holder=game.parentElement.getBoundingClientRect(),view=game.getBoundingClientRect();
   if(!holder.width||!view.width)return;
   const scaleX=view.width/W,scaleY=view.height/H;
-  const offsetX=view.left-holder.left,offsetY=view.top-holder.top;
+  const offsetX=view.left-holder.left,offsetY=view.top-holder.top+OY*scaleY;
   const boxOf=person=>({x:offsetX+(person.x-53)*scaleX,y:offsetY+(person.y-150)*scaleY,w:106*scaleX,h:150*scaleY});
   // 臉：頭頂往下 62，左右各收一點。擋到臉才算真的擋到人，擋到桌子或身體無所謂。
   const faceOf=person=>({x:offsetX+(person.x-34)*scaleX,y:offsetY+(person.y-150)*scaleY,w:68*scaleX,h:62*scaleY});
@@ -1186,8 +1193,8 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(!ws||ws.readyState>1))connect();});
 })();
 // 下排桌子在畫面上接在上排正下方（見 drawDeskBottom），邏輯座標 431～650 是桌面與桌腳，人坐在 695（桌子下側）。
-const walls=stations.map(s=>s.row?[s.x-122,431,244,219]:[s.x-122,s.y+18,244,80]);
-function blocked(x,y){return x<65||x>W-65||y<180||y>H-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
+const walls=stations.map(s=>s.row?[s.x-122,431+(s.y-695),244,219]:[s.x-122,s.y+18,244,80]);
+function blocked(x,y){return x<65||x>W-65||y<180-2*GP||y>H0-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
 function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
 window.addEventListener('keydown',e=>{if(embedMode||roMode||!e.key.startsWith('Arrow')||typing()||storyOpen())return;e.preventDefault();keys.add(e.key);});window.addEventListener('keyup',e=>keys.delete(e.key));window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
@@ -1196,12 +1203,12 @@ const joystick=$('joystick'),joystickKnob=joystick?.querySelector('.joystick-kno
 function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.width/2-joystickKnob.offsetWidth/2;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const length=Math.hypot(dx,dy);if(length>max){dx=dx/length*max;dy=dy/length*max;}joystickKnob.style.transform=`translate(${dx}px,${dy}px)`;arrowKeys.forEach(key=>keys.delete(key));if(length<max*.28)return;const ax=dx/Math.hypot(dx,dy),ay=dy/Math.hypot(dx,dy);if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');}
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
-game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{if(roMode)return;if(viewerIsStaff()&&hit.i!==ownIndex()){toast('你只能操控自己的人物');return;}select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}});
+game.addEventListener('pointerdown',e=>{if(!ready)return;const rect=game.getBoundingClientRect(),x=(e.clientX-rect.left)*W/rect.width,y=(e.clientY-rect.top)*H/rect.height-OY;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{if(roMode)return;if(viewerIsStaff()&&hit.i!==ownIndex()){toast('你只能操控自己的人物');return;}select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}});
 // 點一下把資料卡固定住：固定之後滑鼠移開不會收起，也才點得到上面的技能膠囊。
 // 沒固定時只是滑過預覽（卡片不吃滑鼠事件，見 CSS），滑到別人身上就換人。
 let cardPinned=false;
 function setCardPinned(value){cardPinned=value;$('personCard').classList.toggle('is-pinned',value);}
-function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const x=(clientX-r.left)*W/r.width,y=(clientY-r.top)*H/r.height;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
+function hitAt(clientX,clientY){const r=game.getBoundingClientRect();if(!r.width||!r.height)return null;const x=(clientX-r.left)*W/r.width,y=(clientY-r.top)*H/r.height-OY;return [...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h)||null;}
 game.addEventListener('pointermove',e=>{const hit=hitAt(e.clientX,e.clientY);game.style.cursor=hit?'pointer':'default';
   // 嵌入的是展示用畫面，滑過人物就直接展開資料卡（不用點、也沒有關閉鈕）。
   setHoverStory(hit&&hit.type==='story'?hit.i:-1,e);
@@ -1257,7 +1264,7 @@ function stationDimmed(s){
 }
 const furnitureFor=s=>stationDimmed(s)?(ensureFurnitureGray()||furniture):furniture;
 // 嵌入時不填底色，讓外層卡片的顏色透進來（深色模式才不會卡著一塊白）。獨立開遊戲頁時仍是白底。
-function drawOffice(){if(embedMode){ctx.clearRect(0,0,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,0,W,H);return;}ctx.fillRect(0,0,W,H);}
+function drawOffice(){if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillStyle='#fff';if(document.documentElement.classList.contains('clean')){ctx.clearRect(0,-OY,W,H);return;}ctx.fillRect(0,-OY,W,H);}
 // furniture-v3.webp：桌子分「左端／中間／右端」三種形狀（素材裡本來就是這樣畫的），
 // 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
 // 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，
@@ -1319,14 +1326,15 @@ function grayOfImage(img){
   try{const image=context.getImageData(0,0,canvas.width,canvas.height),px=image.data;for(let i=0;i<px.length;i+=4){const luma=px[i]*.299+px[i+1]*.587+px[i+2]*.114,v=Math.min(255,Math.max(0,(Math.min(255,luma*1.9)-128)*.85+128));px[i]=px[i+1]=px[i+2]=v;}context.putImageData(image,0,0);bottomGray.set(img,canvas);return canvas;}catch{return img;}
 }
 function drawDeskBottom(s){
+  const oy=s.y-BOTTOM_FEET;/* 往上複製的那幾組，下排桌面跟著上移 */
   const dimmed=stationDimmed(s),art=furnitureFor(s),[sx,sy,sw]=furnitureRects[s.empty];
   const drawW=Math.round(sw*DESK_DRAW_SCALE),left=Math.round(s.x-drawW/2),footDraw=Math.round(DESK_SRC_FOOT*DESK_DRAW_SCALE);
   ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP,drawW,BD_FACE);
-  ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT-3,left,BD_TOP+BD_FACE,drawW,Math.round(footDraw*(DESK_SRC_FOOT-3)/DESK_SRC_FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
-  if(s.grp){drawStaffGear(s,BD_TOP+BD_FACE-22,dimmed);return;}
+  ctx.drawImage(art,sx,sy,sw,DESK_SRC_FACE,left,BD_TOP+oy,drawW,BD_FACE);
+  ctx.drawImage(art,sx,sy+DESK_SRC_FACE,sw,DESK_SRC_FOOT-3,left,BD_TOP+BD_FACE+oy,drawW,Math.round(footDraw*(DESK_SRC_FOOT-3)/DESK_SRC_FOOT));// 少取 3 px：素材最底下接著下一張圖的邊，縮放時會滲出一條黑線
+  if(s.grp){drawStaffGear(s,BD_TOP+BD_FACE-22+oy,dimmed);return;}
   const mini=!s.name,img=mini?bottomArt.minimon:bottomArt.imac;
-  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER-Math.round(h/2),w,h);}
+  if(!stationAway(s)&&img.complete&&img.naturalWidth){const w=mini?165:104,h=Math.round(w*img.naturalHeight/img.naturalWidth);ctx.drawImage(dimmed?grayOfImage(img):img,Math.round(s.x-w/2),BD_CENTER+oy-Math.round(h/2),w,h);}
 }
 /** 把一段文字折成不超過 maxWidth 的幾行（呼叫前要先設好 ctx.font）。 */
 function wrapText(text,maxWidth){
@@ -1363,7 +1371,7 @@ function drawDeskPlate(s){
   const iconSize=DESK_ICON_BASE*((st&&DESK_ICON_SCALE[st.symbol])||1);
   // 上排：人在座位上＝壓在電腦中間；沒人（開會、廁所…）＝圖示上方。下排：人在座＝頭頂上方；沒人＝桌子下緣。
   let y;
-  if(s.row)y=seated?Math.round(s.y-PLATE_SEAT_RISE):BD_TOP+BD_FACE-h+12;// 下排人在座：名牌在頭頂上方，且畫在人物後面（頭壓在膠囊上）
+  if(s.row)y=seated?Math.round(s.y-PLATE_SEAT_RISE):BD_TOP+BD_FACE-h+12+(s.y-BOTTOM_FEET);// 下排人在座：名牌在頭頂上方，且畫在人物後面（頭壓在膠囊上）
   else if(seated)y=s.y-40-PLATE_MONITOR_MID-Math.round(h/2);
   else y=s.y-24-Math.round(iconSize/2)-h-2;
   const x=Math.round(s.x-w/2);y=Math.round(y);
@@ -1380,9 +1388,9 @@ const PLATE_MONITOR_MID=-14;
  *  下排：上排名牌的下緣（再高就把別人的名字蓋掉——這是舊版最醜的那個問題）。
  *  判斷用「頭頂有沒有低於上排名牌」，所以在完整版走到兩排中間的人也會自己挑對的那一條。 */
 function bubbleCeiling(p){
-  const plateBottom=BD_TOP-8;
+  const g=p.y>166?0:p.y>166-GPV?1:2,plateBottom=BD_TOP-8-g*GPV;/* 往上複製的組：用那一組自己的上排名牌 */
   if(p.y-150>=plateBottom)return plateBottom;
-  return embedMode?EMBED_CONTENT.y0+4:10;
+  return embedMode?EMBED_CONTENT.y0+4:10-OY;
 }
 /** 音樂對話框的內容：左邊播放小三角形（綠色圓鈕）、右邊跑馬燈歌名（點歌名開網頁）。 */
 function drawMusicContent(p,i,layout,x,y,w,h){
@@ -1547,7 +1555,7 @@ function render(time){if(avatarOnly&&!(typeof viewer!=='undefined'&&viewer&&view
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){requestAnimationFrame(render);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();ctx.clearRect(0,0,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&s.grp)return;/* 首頁小框只看設計部 */if(s.row){layers.push({depth:EMBED_ROW_TOP+115,draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&s.grp))drawStatusMarker(s.row?{...s,y:BD_MARK_Y}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&s.grp))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
@@ -1763,7 +1771,7 @@ window.addEventListener('message',event=>{
     if(keys.size){window.radialClose();return;}// 人物走動時收合選單
     const holder=wrap.getBoundingClientRect(),view=game.getBoundingClientRect();if(!holder.width||!view.width)return;
     const sx=view.width/W,sy=view.height/H,p=viewPeople[selected]||people[selected];
-    const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y-78)*sy;
+    const cx=view.left-holder.left+p.x*sx,cy=view.top-holder.top+(p.y+OY-78)*sy;
     box.style.left=cx+'px';box.style.top=cy+'px';
     // 同時限制在場景與 iframe 可見範圍，標籤、焦點環也保留安全距離。
     const x0=Math.max(8,8-holder.left),y0=Math.max(8,8-holder.top);

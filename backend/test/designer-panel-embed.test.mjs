@@ -89,7 +89,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   assert.match(js, /const PLATE_TOP=56,PLATE_NAME_H=23;/);
   assert.match(js, /const PLATE_SEAT_RISE=\d+;/);
   assert.match(js, /const x=Math\.round\(s\.x-w\/2\);y=Math\.round\(y\);/);
-  assert.match(js, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
+  assert.match(js, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12\+\(s\.y-BOTTOM_FEET\);/);
   assert.doesNotMatch(js, /embedMode&&s\.y>500/, '不該再用下排特例調姓名牌');
   // 大小與位置由 fitEmbedView() 算，CSS 不再寫死放大倍率與位移。
   assert.doesNotMatch(css, /html\.embed #game\{width:\d/, '不該再用寫死的百分比放大');
@@ -180,10 +180,10 @@ test('六個座位收攏並在框裡置中，不裁切', async () => {
   // 上排的名牌。比例直接從對話框的尺寸推回來，改對話框不用重算。
   assert.match(js, /const EMBED_ROW_TOP=355,EMBED_ROW_BOTTOM=695;/);
   assert.match(js, /const BOTTOM_FEET=588,EMBED_ROW_SQUEEZE=\(BOTTOM_FEET-EMBED_ROW_TOP\)\/\(EMBED_ROW_BOTTOM-EMBED_ROW_TOP\);/);
-  assert.match(js, /const viewY=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
+  assert.match(js, /const viewY0=y=>y>EMBED_ROW_TOP\?EMBED_ROW_TOP\+\(y-EMBED_ROW_TOP\)\*EMBED_ROW_SQUEEZE:y;/);
   // 上緣是「動」的：照上排現在真的有多少對話框去留，沒人講話就只留到頭頂，場景才不會被
   // 一直空著的四行保留區白白縮小（2026-09-24 使用者回報）。
-  assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158;/);
+  assert.match(js, /const SCENE_TOP_MIN=EMBED_ROW_TOP-158,TOP_BASE=OY\?SCENE_TOP_MIN-2\*GPV:SCENE_TOP_MIN;/);
   assert.match(js, /function sceneTopExtent\(\)\{/);
   assert.match(js, /top=Math\.min\(top,layout\.tipY-BUBBLE_TAIL-layout\.h-8\)/);
   assert.match(js, /function syncSceneTop\(\)\{[\s\S]*?EMBED_CONTENT\.y0=top;EMBED_CONTENT\.y1=bottom;\s*fitEmbedView\(\);/,
@@ -371,7 +371,7 @@ test('右欄關掉時場景不會塌掉', async () => {
 test('深色模式下場景背景跟著主題，不會是一塊白', async () => {
   const [html, js] = await Promise.all([indexHtml(), officeJs()]);
   // 三層都要處理：canvas 自己別填白、iframe 透明、外框跟著主題變數走。
-  assert.match(js, /function drawOffice\(\)\{if\(embedMode\)\{ctx\.clearRect\(0,0,W,H\);return;\}ctx\.fillStyle='#fff';/,
+  assert.match(js, /function drawOffice\(\)\{if\(embedMode\)\{ctx\.clearRect\(0,-OY,W,H\);return;\}ctx\.fillStyle='#fff';/,
     '嵌入模式不填白底，獨立開遊戲頁時仍是白底');
   assert.match(html, /\.office-embed\{display:block;width:100%;height:100%;border:0;background:transparent/);
   assert.match(html, /\.office-embed-shell\{[^}]*background:var\(--panel,#fff\)/);
@@ -406,7 +406,7 @@ test('個人資料卡一律夾在場景框內，優先往左開，而且不會�
   // 位置，卡片被切掉看不到（2026-09-22 修）。
   assert.match(fn, /const holder=game\.parentElement\.getBoundingClientRect\(\),view=game\.getBoundingClientRect\(\);/,
     '位置基準要用卡片真正的容器');
-  assert.match(fn, /const offsetX=view\.left-holder\.left,offsetY=view\.top-holder\.top;/,
+  assert.match(fn, /const offsetX=view\.left-holder\.left,offsetY=view\.top-holder\.top\+OY\*scaleY;/,
     '人物位置要換算成相對容器的座標');
   assert.match(fn, /clampX=value=>Math\.max\(8,Math\.min\(farX,value\)\)/, '左右夾在容器內');
   assert.match(fn, /clampY=value=>Math\.max\(8,Math\.min\(farY,value\)\)/, '上下夾在容器內');
@@ -473,7 +473,7 @@ test('狀態圖示的縮放只作用在圖示上；座位上與下排的名牌�
   assert.ok(scales.power < 1 && scales.briefcase < 1, '這兩張圖仍然維持縮小');
   // 人在座位上的名牌（上排壓在電腦中間、下排在頭頂上方）與下排沒人的名牌，高度只由常數決定，
   // 不會隨狀態圖示的縮放高低不同。
-  assert.match(plate, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12;/);
+  assert.match(plate, /if\(s\.row\)y=seated\?Math\.round\(s\.y-PLATE_SEAT_RISE\):BD_TOP\+BD_FACE-h\+12\+\(s\.y-BOTTOM_FEET\);/);
   assert.match(plate, /else if\(seated\)y=s\.y-40-PLATE_MONITOR_MID-Math\.round\(h\/2\);/);
   assert.match(plate, /const iconSize=DESK_ICON_BASE\*\(\(st&&DESK_ICON_SCALE\[st\.symbol\]\)\|\|1\);/, '上排沒人的名牌貼在圖示上緣');
 });
