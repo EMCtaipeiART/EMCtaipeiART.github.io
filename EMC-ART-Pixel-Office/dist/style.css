@@ -350,6 +350,8 @@ html.clean .scene-bar{display:none!important}
 .radial-btn{position:absolute;left:-26px;top:-26px;width:52px;height:52px;border-radius:50%;border:1px solid var(--r-line);background:var(--r-panel);color:var(--r-green);display:grid;place-items:center;cursor:pointer;box-shadow:var(--r-shadow),inset 0 1px 0 #ffffff80;padding:0;transform:translate(var(--rx),var(--ry));transition:background .16s,border-color .16s,box-shadow .16s,translate .16s}
 .radial-btn svg,.radial-back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .radial-btn span{position:absolute;top:56px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;line-height:18px;font-weight:800;color:var(--r-ink);background:var(--r-panel);border:1px solid var(--r-line);border-radius:999px;padding:1px 8px;box-shadow:0 4px 12px rgba(18,38,28,.08);pointer-events:none;text-shadow:none}
+.radial-ring.is-small .radial-btn{width:44px;height:44px;left:-22px;top:-22px}
+.radial-ring.is-small .radial-btn span{top:48px}
 .radial-ring:not(.is-closing) .radial-btn{animation:radial-in .3s cubic-bezier(.2,.8,.25,1.12) both;animation-delay:var(--enter-delay)}
 .radial-ring.is-closing .radial-btn{animation:radial-out .18s ease-in both;animation-delay:var(--exit-delay);pointer-events:none}
 @keyframes radial-in{from{opacity:0;transform:translate(0,0) scale(.35)}to{opacity:1;transform:translate(var(--rx),var(--ry)) scale(1)}}
@@ -373,6 +375,7 @@ html.clean .scene-bar{display:none!important}
 .radial-panel .look-group+.look-group{margin-top:16px}
 .radial-panel .music-toggle{margin-top:0;border-radius:16px;padding:10px;grid-template-columns:44px minmax(0,1fr)}
 .radial-panel button.active,.radial-panel .music-toggle[aria-expanded="true"],.radial-panel .music-toggle.is-sharing{background:var(--r-soft);color:var(--r-green);border-color:var(--r-brand);box-shadow:none}
+.radial-panel .radial-back{color:var(--r-green)}
 .radial-panel .primary{background:var(--r-green);border-color:var(--r-green);color:var(--r-panel);font-size:13px;font-weight:800}
 .radial-panel .text-button{color:var(--r-green);background:transparent}
 .radial-panel .look-label,.radial-panel .look-hint,.radial-panel .story-hint,.radial-panel .music-hint,.radial-panel .upload small,.radial-panel .story-mine-info span,.radial-panel .music-toggle small,.radial-panel #count,.radial-panel .punish-label{color:var(--r-muted);line-height:1.6}
@@ -435,3 +438,33 @@ html.ro aside,html.ro .joystick,html.ro #radial{display:none!important}
 
 /* 企劃部、專案部沒有等級制度：同仁自己的畫面、或選到同仁的人物時，不顯示等級卡與等級一覽表 */
 html.staff-view .level-card,html.staff-view .level-setting,html.sel-staff .level-card{display:none!important}
+
+/* 編輯版右側人物資料欄：精簡成窄卡片，等級一覽表改成彈窗（不再佔位擋視線） */
+html.clean aside{--a-ink:#17211d;--a-muted:#6b7772;--a-line:#e3e9e5;--a-green:#0f7f27;--a-soft:#e8f6ec;background:#fff;color:var(--a-ink);border:1px solid var(--a-line);border-radius:18px;padding:12px 14px;box-shadow:0 20px 48px rgba(18,38,28,.18);display:block}
+html.clean .panel-top .eyebrow{color:var(--a-muted);letter-spacing:.08em}
+html.clean #selectedTag{color:var(--a-green);background:var(--a-soft);border-radius:999px;padding:1px 9px;font-weight:800}
+html.clean .identity{padding:8px 0 10px;gap:10px}
+html.clean .identity canvas{width:56px;height:74px}
+html.clean .identity-text h2{font-size:20px;margin:0;color:var(--a-ink)}
+html.clean .mood-status{color:var(--a-green);font-weight:700}
+html.clean .level-card{background:var(--a-soft);border:1px solid #cfe9d6;box-shadow:none;margin:0;padding:10px 12px}
+html.clean .level-kicker{color:var(--a-muted)}
+html.clean .level-head strong{color:var(--a-green);font-size:22px}
+html.clean .level-head>span{color:var(--a-ink)}
+html.clean .xp-track{background:#fff;border-color:#cfe9d6;height:8px}
+html.clean .xp-track span{background:linear-gradient(90deg,#53c773,#159e31)}
+html.clean .xp-meta,html.clean .xp-meta span:last-child{color:var(--a-muted)}
+html.clean #levelSource{color:var(--a-muted);margin:6px 0 0;font-size:11px}
+html.clean .level-head{align-items:center;flex-wrap:wrap}
+html.clean .level-open{margin-left:auto;border:1px solid var(--a-line);background:#fff;color:var(--a-green);border-radius:999px;padding:2px 10px;font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+html.clean .level-open:hover{border-color:var(--a-green);background:var(--a-soft)}
+html.clean aside .privacy{display:none}
+.level-modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:16px;background:rgba(18,38,28,.38)}
+.level-modal[hidden]{display:none}
+.level-modal-card{position:relative;width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:#fff;color:#17211d;border-radius:18px;padding:18px;box-shadow:0 24px 60px rgba(18,38,28,.3)}
+.level-modal-x{position:absolute;top:8px;right:10px;width:36px;height:36px;border:0;border-radius:50%;background:#f5f7f6;color:#17211d;font-size:20px;cursor:pointer}
+.level-modal-card #levelTable{grid-template-columns:1fr;gap:14px}
+.level-modal-card .level-row{grid-template-columns:56px minmax(0,1fr)}
+@media(min-width:900px){html.clean aside{width:268px;top:96px}}
+html.clean aside .joystick{width:68px;height:68px;background:radial-gradient(circle at 50% 45%,#f5f7f6,#e3e9e5);border:1px solid #d3dcd6;box-shadow:inset 0 2px 6px rgba(18,38,28,.08)}
+html.clean aside .joystick-knob{width:30px;height:30px;margin:-15px 0 0 -15px;background:radial-gradient(circle at 38% 32%,#7fdc96,#159e31);box-shadow:0 3px 8px rgba(18,38,28,.25)}

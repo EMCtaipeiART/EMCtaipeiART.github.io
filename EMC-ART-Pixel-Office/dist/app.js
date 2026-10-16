@@ -1750,18 +1750,20 @@ window.addEventListener('message',event=>{
     if(level===1){
       const pun=isPunishedP(people[selected]),visible=defs.map(d=>d[0]).filter(k=>{if(k==='seat')return true;if(k==='punish')return Boolean(storyIdentity.monitor);if(pun&&(k==='look'||k==='action'))return false;const s=secOf(k);return s&&!s.hidden;}),n=visible.length;
       defs.forEach(([k])=>{btns[k].hidden=!visible.includes(k);});
-      const compact=height<216||width<240;
+      const small=height<340||width<340,minR=small?102:112,top=small?26:30,bottom=small?50:54;
+      const compact=height<minR*2+top+bottom||width<minR*2+80;
+      ring.classList.toggle('is-small',small);
       ring.classList.toggle('is-compact',compact);
       if(compact){
         const w=Math.min(320,width);
         ring.style.width=w+'px';ring.style.maxHeight=height+'px';
         ring.style.left=(clamp(cx-w/2,x0,x1-w)-cx)+'px';
-        ring.style.top=(clamp(cy-90,y0,y1-Math.min(180,height))-cy)+'px';
+        const h=ring.offsetHeight;ring.style.top=(clamp(cy-h/2,y0,y1-h)-cy)+'px';
       }else{
         ring.style.width='';ring.style.maxHeight='';ring.style.left='';ring.style.top='';
       }
-      const R=Math.min(130,Math.max(90,height*.28),(width-80)/2);
-      const ry=Math.min(R,(height-84)/2),ox=clamp(cx,x0+R+40,x1-R-40)-cx,oy=clamp(cy,y0+ry+30,y1-ry-54)-cy;
+      const R=Math.min(130,Math.max(minR,height*.28),(width-80)/2);
+      const ry=Math.min(R,(height-top-bottom)/2),ox=clamp(cx,x0+R+40,x1-R-40)-cx,oy=clamp(cy,y0+ry+top,y1-ry-bottom)-cy;
       visible.forEach((k,j)=>{
         const a=-Math.PI/2+j*2*Math.PI/n,b=btns[k];
         b.style.setProperty('--rx',Math.round(ox+Math.cos(a)*R)+'px');b.style.setProperty('--ry',Math.round(oy+Math.sin(a)*ry)+'px');
