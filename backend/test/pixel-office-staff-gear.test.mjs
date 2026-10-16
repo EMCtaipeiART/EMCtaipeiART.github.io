@@ -82,17 +82,9 @@ test('six staff desks keep equipment order, original anchors and clear the desk 
     f.draws.length = 0; f.fills.length = 0;
     f.draw(seat);
     const cx = 1428+(seat%3)*220;
-    if (seat < 3) {
-      // 上排的人面向畫面：筆電與螢幕只看得到背面（程式畫的色塊），電話轉 180°，滑鼠照舊
-      const names = expected[seat].map(([n]) => n);
-      assert.equal(f.draws.length, names.filter(n => n !== 'laptop' && n !== 'monitor').length);
-      assert.equal(f.fills.length > 0, names.includes('laptop'));
-      f.draws.forEach(({ args }) => assert.equal(args[0], f.images[0]));
-      continue;
-    }
     assert.equal(f.draws.length, expected[seat].length);
     expected[seat].forEach(([name, offset], index) => {
-      const r = atlas.sprites[name], { args, smoothing } = f.draws[index];
+      const r = atlas.sprites[seat < 3 && name !== 'mouse' ? name + '_back' : name], { args, smoothing } = f.draws[index];
       assert.equal(args[0], f.images[0]);
       assert.deepEqual(args.slice(1), [r.x, r.y, r.w, r.h, cx+offset+r.dx, 400+r.dy, r.w, r.h]);
       assert.equal(smoothing, false);
@@ -118,10 +110,10 @@ test('staff gear skips incomplete and failed images without attempting canvas dr
 
 test('staff sheet retries same-origin assets after CDN failure and redraws after load', async () => {
   const f = fixture(), img = f.images[0];
-  assert.equal(img.src, 'https://assets.invalid/assets/staff-gear-v1.webp?v=1');
+  assert.equal(img.src, 'https://assets.invalid/assets/staff-gear-v1.webp?v=2');
   assert.equal(img.crossOrigin, 'anonymous');
   img.onerror();
-  assert.equal(img.src, 'assets/staff-gear-v1.webp?v=1');
+  assert.equal(img.src, 'assets/staff-gear-v1.webp?v=2');
   assert.equal(img.crossOrigin, null);
   assert.equal(img.__fb, null);
   await f.loaded();
@@ -137,7 +129,7 @@ test('failure of both staff image locations is nonfatal and does not loop', asyn
   f.draw(0, true);
   assert.equal(f.draws.length, 0);
   assert.equal(f.dirty, 0);
-  assert.equal(img.src, 'assets/staff-gear-v1.webp?v=1');
+  assert.equal(img.src, 'assets/staff-gear-v1.webp?v=2');
 });
 
 test('off-duty or away staff desks are cleared: nothing drawn, gray desk only', async () => {
