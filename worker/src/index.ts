@@ -147,9 +147,10 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
   const shortMatch = path.match(/^\/([A-Za-z0-9]{3,32})$/);
   if (request.method === 'GET' && shortMatch) {
-    const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch[1] });
+    const result = await dispatchAction(request, env, 'resolveShortLink', { code: shortMatch[1], count: true });
     if (!result.ok || !text(result.url)) return jsonResponse(request, env, result, 404);
-    return Response.redirect(text(result.url), 302);
+    // 每次都要打到這裡才算得到點擊數，所以不能讓瀏覽器或 CDN 快取這個 302。
+    return new Response(null, { status: 302, headers: { Location: text(result.url), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
   }
 
   const supplementMatch = path.match(/^\/([a-d])\/(\d{8})$/i);

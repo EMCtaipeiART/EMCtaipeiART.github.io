@@ -1335,6 +1335,14 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           updated_by TEXT NOT NULL DEFAULT ''
         );
       `);
+      // 短網址點擊數：每點一次就寫一次，不能進 database.tables（否則每次點擊都會提交一次 GitHub JSON）。
+      this.ctx.storage.sql.exec(`
+        CREATE TABLE IF NOT EXISTS short_link_clicks (
+          code TEXT PRIMARY KEY,
+          clicks INTEGER NOT NULL DEFAULT 0,
+          last_at TEXT NOT NULL DEFAULT ''
+        );
+      `);
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS _sql_schema_migrations (
           version INTEGER PRIMARY KEY,
@@ -4843,13 +4851,22 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const code = text(payload.code).toLowerCase();
         const record = database.tables['短連結'].rows.find(row => text(row['短碼']).toLowerCase() === code);
         if (!record || !isHttpUrl(record['原始網址'])) throw new Error('找不到這個短連結');
+        if (payload.count === true || payload.count === 'true') {
+          this.ctx.storage.sql.exec(
+            `INSERT INTO short_link_clicks (code, clicks, last_at) VALUES (?, 1, ?)
+             ON CONFLICT(code) DO UPDATE SET clicks = clicks + 1, last_at = excluded.last_at`,
+            text(record['短碼']).toLowerCase(), nowTaipei()
+          );
+        }
         return { ok: true, action, code: text(record['短碼']), url: text(record['原始網址']) };
       }
       if (action === 'listShortLinks') {
         const current = this.requireSession(session);
         const manager = isManager(database, current), me = canonicalAccount(current.account || current.user);
+        const clicks = new Map(this.ctx.storage.sql.exec<{ code: string; clicks: number; last_at: string }>('SELECT code, clicks, last_at FROM short_link_clicks').toArray().map(r => [r.code, r]));
         const links = [...database.tables['短連結'].rows].reverse().map(row => ({
-          code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), owner: text(row['建立者']),
+          code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), owner: text(row['建立者']),
+          clicks: Number(clicks.get(text(row['短碼']).toLowerCase())?.clicks || 0), lastClickAt: text(clicks.get(text(row['短碼']).toLowerCase())?.last_at),
           createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']),
           canEdit: manager || canonicalAccount(row['建立者帳號']) === me
         }));
@@ -5395,10 +5412,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     if (action === 'createShortLink' || action === 'updateShortLink' || action === 'deleteShortLink') {
       const current = this.requireSession(session);
       const me = canonicalAccount(current.account || current.user);
-      return this.mutate(action, current, draft => {
+      const oldCode = text(payload.code).toLowerCase();
+      const result = await this.mutate(action, current, draft => {
         const rows = draft.tables['短連結'].rows;
         const find = (code: string) => rows.findIndex(row => text(row['短碼']).toLowerCase() === code.toLowerCase());
-        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
+        const toLink = (row: Row) => ({ code: text(row['短碼']), url: text(row['原始網址']), name: text(row['名稱']), project: text(row['專案']), clicks: Number(this.ctx.storage.sql.exec<{ clicks: number }>('SELECT clicks FROM short_link_clicks WHERE code = ?', text(row['短碼']).toLowerCase()).toArray()[0]?.clicks || 0), owner: text(row['建立者']), createdAt: text(row['建立時間']), updatedAt: text(row['更新時間']), canEdit: true });
         const time = nowTaipei();
         if (action === 'createShortLink') {
           const url = text(payload.url);
@@ -5406,7 +5424,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           const wanted = text(payload.code);
           const code = wanted ? normalizeShortCode(wanted) : generateShortCode(new Set(rows.map(row => text(row['短碼']).toLowerCase())));
           if (find(code) >= 0) throw new Error(`短碼「${code}」已經被使用，請換一個`);
-          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
+          const row: Row = { '短碼': code, '原始網址': url, '名稱': text(payload.name).slice(0, 60), '專案': text(payload.project).slice(0, 60), '建立者帳號': me, '建立者': text(current.user || me), '建立時間': time, '更新時間': time };
           rows.push(row);
           return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
         }
@@ -5424,6 +5442,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
           row['原始網址'] = url;
         }
         if (payload.name !== undefined) row['名稱'] = text(payload.name).slice(0, 60);
+        if (payload.project !== undefined) row['專案'] = text(payload.project).slice(0, 60);
         if (payload.newCode !== undefined && text(payload.newCode) && text(payload.newCode) !== text(row['短碼'])) {
           const next = normalizeShortCode(payload.newCode);
           const clash = find(next);
@@ -5433,6 +5452,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         row['更新時間'] = time;
         return { result: { ok: true, action, link: toLink(row) }, changedTables: ['短連結'] };
       });
+      // 點擊數跟著短碼走：改短碼就搬過去，刪除就清掉。
+      if (result.ok) {
+        if (action === 'deleteShortLink') this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', oldCode);
+        else if (action === 'updateShortLink') {
+          const next = text((result.link as Row | undefined)?.code).toLowerCase();
+          if (next && next !== oldCode) {
+            this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', next);
+            this.ctx.storage.sql.exec('UPDATE short_link_clicks SET code = ? WHERE code = ?', next, oldCode);
+          }
+        }
+      }
+      return result;
     }
     if (action === 'reportIssue') {
       if (session) this.requireAccess(database, session, 'issue.report');

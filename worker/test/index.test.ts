@@ -464,8 +464,8 @@ describe('Machi Design API Worker', () => {
     const tester = String((await api({ action: 'login', password: 'test' })).token);
     expect(await api({ action: 'listShortLinks' })).toMatchObject({ ok: false });
 
-    const created = await api({ action: 'createShortLink', url: 'https://example.com/a/very/long/path', name: '夏季素材', code: 'Summer2026' }, tester);
-    expect(created).toMatchObject({ ok: true, link: { code: 'Summer2026', name: '夏季素材', url: 'https://example.com/a/very/long/path', canEdit: true } });
+    const created = await api({ action: 'createShortLink', url: 'https://example.com/a/very/long/path', name: '夏季素材', code: 'Summer2026', project: '夏季檔期' }, tester);
+    expect(created).toMatchObject({ ok: true, link: { code: 'Summer2026', name: '夏季素材', project: '夏季檔期', clicks: 0, url: 'https://example.com/a/very/long/path', canEdit: true } });
 
     expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'summer2026' }, tester)).toMatchObject({ ok: false });
     expect(await api({ action: 'createShortLink', url: 'https://example.com/x', code: 'ab' }, tester)).toMatchObject({ ok: false });
@@ -479,6 +479,8 @@ describe('Machi Design API Worker', () => {
     const redirect = await SELF.fetch('https://worker.test/Summer2026', { redirect: 'manual' });
     expect(redirect.status).toBe(302);
     expect(redirect.headers.get('Location')).toBe('https://example.com/a/very/long/path');
+    expect(redirect.headers.get('Cache-Control')).toBe('no-store');
+    await SELF.fetch('https://worker.test/summer2026', { redirect: 'manual' });
     expect((await SELF.fetch('https://worker.test/nope123', { redirect: 'manual' })).status).toBe(404);
 
     const updated = await api({ action: 'updateShortLink', code: 'Summer2026', newCode: 'Autumn2026', name: '秋季素材', url: 'https://example.com/new' }, tester);
@@ -488,6 +490,7 @@ describe('Machi Design API Worker', () => {
 
     const listed = await api({ action: 'listShortLinks' }, tester);
     expect((listed.links as unknown[]).length).toBe(2);
+    expect(listed.links).toContainEqual(expect.objectContaining({ code: 'Autumn2026', project: '夏季檔期', clicks: 2 }));
 
     const other = String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token);
     expect(await api({ action: 'deleteShortLink', code: 'Autumn2026' }, other)).toMatchObject({ ok: true });

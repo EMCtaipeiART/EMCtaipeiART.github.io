@@ -62,10 +62,12 @@
       if (!legacyMatch && !shortMatch) return;
       const request = legacyMatch
         ? { action: 'resolveSupplementLink', id: legacyMatch[2], slot: legacyMatch[1].toLowerCase() }
-        : { action: 'resolveShortLink', code: shortMatch[1] };
+        : { action: 'resolveShortLink', code: shortMatch[1], count: true };
       document.querySelector('#notfound').hidden = true;
-      document.querySelector('#redirector').hidden = false;
+      // 短網址不顯示任何轉址提示，查到就直接跳；只有失敗才顯示訊息。
+      if (legacyMatch) document.querySelector('#redirector').hidden = false;
       const fail = text => {
+        document.querySelector('#redirector').hidden = false;
         document.querySelector('#spinner').hidden = true;
         document.querySelector('#redirectTitle').textContent = '無法開啟連結';
         document.querySelector('#redirectMessage').textContent = text;
