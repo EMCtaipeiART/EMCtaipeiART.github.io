@@ -93,11 +93,11 @@ function fitCleanView(){
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
   wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H0-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
-  cleanScale=narrow?0:scale;cleanY0=y0;cleanPadY=padY;
+  cleanScale=scale;cleanY0=y0;cleanPadY=padY;
   game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;
   markDirty();
   /* 場景變高了（往上多兩組桌子）：第一次進來把畫面捲到自己的座位（沒有就捲到原本那組），不用自己往下找 */
-  if(!narrow&&ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
+  if(ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
 }
 /** 編輯版：畫面鎖定在自己的角色，走動時跟著捲（只在位置真的變了才捲，不跟手動捲動打架）。 */
 function followOwn(){

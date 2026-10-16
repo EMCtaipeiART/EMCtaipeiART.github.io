@@ -468,3 +468,21 @@ html.clean aside .privacy{display:none}
 @media(min-width:900px){html.clean aside{width:268px;top:96px}}
 html.clean aside .joystick{width:68px;height:68px;background:radial-gradient(circle at 50% 45%,#f5f7f6,#e3e9e5);border:1px solid #d3dcd6;box-shadow:inset 0 2px 6px rgba(18,38,28,.08)}
 html.clean aside .joystick-knob{width:30px;height:30px;margin:-15px 0 0 -15px;background:radial-gradient(circle at 38% 32%,#7fdc96,#159e31);box-shadow:0 3px 8px rgba(18,38,28,.25)}
+
+/* 角色資料欄再瘦身（2026-10-16）：只留「頭像＋名字＋等級」一條小卡，不再遮住場景；手機整個不顯示（搖桿已搬進場景） */
+html.clean aside{width:auto;min-width:0;padding:8px 10px;border-radius:14px;box-shadow:0 8px 24px rgba(18,38,28,.16)}
+html.clean aside .panel-top,html.clean aside .privacy,html.clean aside .xp-meta,html.clean aside #levelSource,html.clean aside .level-kicker{display:none}
+html.clean aside .identity{padding:0 0 6px;gap:8px}
+html.clean aside .identity canvas{width:34px;height:45px}
+html.clean aside .identity-text h2{font-size:15px}
+html.clean aside .mood-status{font-size:11px}
+html.clean aside .level-card{padding:6px 10px}
+html.clean aside .level-head{gap:6px}
+html.clean aside .level-head strong{font-size:16px}
+html.clean aside .level-head>span:not(.level-open){font-size:11px}
+html.clean aside .xp-track{margin:5px 0 0;height:6px}
+@media(pointer:fine){html.clean aside .joystick{display:none}}
+@media(min-width:900px){html.clean aside{position:fixed;width:auto;max-width:230px;top:12px;right:12px}}
+html.clean-narrow aside{display:none!important}
+/* 手機：場景變高要捲動，搖桿固定在畫面右下角，捲到哪都摸得到 */
+html.clean-narrow .joystick{position:fixed;right:12px;bottom:14px}
