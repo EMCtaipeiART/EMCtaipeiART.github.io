@@ -5492,6 +5492,28 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         };
       });
     }
+    if (action === 'deleteShortLinks') {
+      const current = this.requireSession(session);
+      const me = canonicalAccount(current.account || current.user);
+      const codes = [...new Set((Array.isArray(payload.codes) ? payload.codes as unknown[] : []).map(text).filter(Boolean))];
+      if (!codes.length) throw new Error('請先選取要刪除的短網址');
+      if (codes.length > 500) throw new Error('一次最多刪除 500 筆');
+      const result = await this.mutate(action, current, draft => {
+        const rows = draft.tables['短連結'].rows;
+        const manager = isManager(draft, current);
+        const deleted: string[] = [], skipped: string[] = [];
+        for (const code of codes) {
+          const index = rows.findIndex(row => text(row['短碼']).toLowerCase() === code.toLowerCase());
+          if (index < 0) { deleted.push(code); continue; }   // 已經不存在視同刪除成功
+          if (!manager && canonicalAccount(rows[index]['建立者帳號']) !== me) { skipped.push(code); continue; }
+          deleted.push(text(rows[index]['短碼']));
+          rows.splice(index, 1);
+        }
+        return { result: { ok: true, action, deleted, skipped }, changed: deleted.length > 0, changedTables: deleted.length ? ['短連結'] : [] };
+      });
+      if (result.ok) for (const code of (result.deleted as string[]) || []) this.ctx.storage.sql.exec('DELETE FROM short_link_clicks WHERE code = ?', code.toLowerCase());
+      return result;
+    }
     if (action === 'createShortLinksBatch') {
       const current = this.requireSession(session);
       const me = canonicalAccount(current.account || current.user);

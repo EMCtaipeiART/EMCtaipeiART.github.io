@@ -501,9 +501,13 @@ describe('Machi Design API Worker', () => {
     expect((batch.failed as Array<{ index: number }>).map(f => f.index)).toEqual([2, 3]);
     expect(await api({ action: 'resolveShortLink', code: 'batch2' })).toMatchObject({ ok: true, url: 'https://example.com/b2' });
     expect(await api({ action: 'createShortLinksBatch', items: [] }, tester)).toMatchObject({ ok: false });
+    const bulkDel = await api({ action: 'deleteShortLinks', codes: ['Batch2', 'nonexistent'] }, tester);
+    expect(bulkDel).toMatchObject({ ok: true, skipped: [] });
+    expect(await api({ action: 'resolveShortLink', code: 'Batch2' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'deleteShortLinks', codes: [] }, tester)).toMatchObject({ ok: false });
     // 隱私：沒有組別相同的人，別人（非管理者）看不到；管理者看得到全部。
     const adminList = await api({ action: 'listShortLinks' }, String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token));
-    expect((adminList.links as unknown[]).length).toBe(4);
+    expect((adminList.links as unknown[]).length).toBe(3);
     const other = String((await api({ action: 'login', account: 'machi.chen@emctaipei.com', password: 'test-admin-password' })).token);
     expect(await api({ action: 'deleteShortLink', code: 'Autumn2026' }, other)).toMatchObject({ ok: true });
     // 另一個沒有組別、非建立者的帳號：看不到管理者建立的短網址

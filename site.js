@@ -3250,7 +3250,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
-    const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',creating:false,saving:false,batch:{open:false,text:'',p:'',np:'',v:'group',busy:false,result:null}};
+    const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',selected:new Set(),creating:false,saving:false,batch:{open:false,text:'',p:'',np:'',v:'group',busy:false,result:null}};
     /* 短網址用主站網域 emc-art.com/<短碼>：DNS 走 Cloudflare 代理時由 Worker 直接 302 並計點擊，否則由 404.html 轉址；go.emc-art.com 舊連結仍有效 */
     const SHORT_BASE=()=>'https://emc-art.com/';
     const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
@@ -3291,9 +3291,22 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         const draft=links.editDraft&&links.editDraft.key===l.code?links.editDraft:{n:l.name||'',p:l.project?'project:'+l.project:'',np:'',v:linkVisCode(l.visibility),c:l.code,u:l.url};
         return `<form class="link-item link-edit" data-link-edit="${esc(l.code)}"><div class="link-section-head link-wide"><h3>編輯短網址</h3><span class="link-hint">儲存後立即更新</span></div><label class="field"><span class="label">名稱</span><input class="input" name="name" maxlength="60" value="${esc(draft.n)}" placeholder="例如：夏季活動素材"></label>${linkProjectField(draft,'linkEditProject')}${linkVisibilityField(draft,'linkEditVisibility')}${linkCodeField(draft.c,true)}<label class="field link-wide"><span class="label">原始網址 <b>*</b></span><input class="input" name="url" type="url" value="${esc(draft.u)}" required></label><div class="link-form-actions link-wide"><button type="button" class="btn link-btn" data-link-cancel>取消</button><button type="submit" class="btn link-btn link-btn-primary"${links.saving?' disabled':''}>${links.saving?'儲存中…':'儲存變更'}</button></div></form>`;
       }
-      return `<article class="link-item"><div class="link-main"><div class="link-card-heading"><h3 class="link-name">${esc(l.name||l.code)}</h3><span class="link-tag${l.project?'':' link-tag-none'}">${esc(l.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(l.visibility)}">${linkVisLabel(linkVisCode(l.visibility))}</span></div><a class="link-short" href="${esc(full)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta link-destination" title="${esc(l.url)}">原始網址 · ${esc(l.url)}</div><div class="link-meta">${esc(l.owner||'')}${l.group?` ・ ${esc(l.group)}`:''}${l.owner?' · ':''}${l.updatedAt?'更新於 ':'建立於 '}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-clicks" title="${l.lastClickAt?`最後點擊：${esc(l.lastClickAt)}`:'尚無點擊'}"><b>${Number(l.clicks||0).toLocaleString('zh-TW')}</b><span>累計點擊</span></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-link-copy="${esc(l.code)}">${linkIcon('copy')}複製</button>${l.canEdit?`<button type="button" class="btn link-btn link-btn-edit" data-link-editbtn="${esc(l.code)}">${linkIcon('edit')}編輯</button><button type="button" class="btn link-btn link-btn-delete" data-link-del="${esc(l.code)}">${linkIcon('delete')}刪除</button>`:''}</div></article>`;
+      return `<article class="link-item"><div class="link-main"><div class="link-card-heading">${l.canEdit?`<label class="link-check" title="選取"><input type="checkbox" data-link-sel="${esc(l.code)}"${links.selected.has(l.code)?' checked':''} aria-label="選取 ${esc(l.name||l.code)}"></label>`:''}<h3 class="link-name">${esc(l.name||l.code)}</h3><span class="link-tag${l.project?'':' link-tag-none'}">${esc(l.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(l.visibility)}">${linkVisLabel(linkVisCode(l.visibility))}</span></div><a class="link-short" href="${esc(full)}" target="_blank" rel="noopener">${esc(full)}</a><div class="link-meta link-destination" title="${esc(l.url)}">原始網址 · ${esc(l.url)}</div><div class="link-meta">${esc(l.owner||'')}${l.group?` ・ ${esc(l.group)}`:''}${l.owner?' · ':''}${l.updatedAt?'更新於 ':'建立於 '}${esc(l.updatedAt||l.createdAt||'')}</div></div><div class="link-clicks" title="${l.lastClickAt?`最後點擊：${esc(l.lastClickAt)}`:'尚無點擊'}"><b>${Number(l.clicks||0).toLocaleString('zh-TW')}</b><span>累計點擊</span></div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-link-copy="${esc(l.code)}">${linkIcon('copy')}複製</button>${l.canEdit?`<button type="button" class="btn link-btn link-btn-edit" data-link-editbtn="${esc(l.code)}">${linkIcon('edit')}編輯</button><button type="button" class="btn link-btn link-btn-delete" data-link-del="${esc(l.code)}">${linkIcon('delete')}刪除</button>`:''}</div></article>`;
     }
     const linkVisible=()=>links.project?links.list.filter(l=>(links.project==='__none'?!l.project:l.project===links.project)):links.list;
+    const linkEditable=()=>linkVisible().filter(l=>l.canEdit);
+    function linkBulkHtml(){
+      const ed=linkEditable();if(!ed.length)return '';
+      const n=ed.filter(l=>links.selected.has(l.code)).length;
+      return `<div class="link-bulk" id="linkBulk"><label class="link-check link-check-all"><input type="checkbox" data-link-selall${n&&n===ed.length?' checked':''}> <span>全選（${ed.length}）</span></label><span class="link-hint" data-link-selcount>${n?`已選 ${n} 筆`:'勾選後可一次刪除多筆'}</span><button type="button" class="btn link-btn link-btn-delete" data-link-delsel${n?'':' disabled'}>${linkIcon('delete')}刪除選取${n?`（${n}）`:''}</button></div>`;
+    }
+    function updateLinkBulk(){
+      const box=$('linkBulk');if(!box)return;
+      const ed=linkEditable(),n=ed.filter(l=>links.selected.has(l.code)).length;
+      const all=box.querySelector('[data-link-selall]');if(all){all.checked=!!n&&n===ed.length;all.indeterminate=!!n&&n<ed.length}
+      box.querySelector('[data-link-selcount]').textContent=n?`已選 ${n} 筆`:'勾選後可一次刪除多筆';
+      const b=box.querySelector('[data-link-delsel]');b.disabled=!n;b.innerHTML=`${linkIcon('delete')}刪除選取${n?`（${n}）`:''}`;
+    }
     function linksListHtml(){
       if(links.loading&&!links.list.length)return '<div class="empty">載入中...</div>';
       if(links.error&&!links.list.length)return `<div class="empty">列表載入失敗：${esc(links.error)}　<button type="button" class="btn" data-link-reload>重新讀取</button></div>`;
@@ -3325,7 +3338,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       stage.innerHTML=`<div class="page link-page"><div class="page-top"><div><h2 class="page-title">短網址 <span class="link-total">${links.list.length}</span></h2><p class="page-sub">讓每個連結更好分享。自訂名稱、整理專案，隨時掌握點擊成效。短網址列表只有同組別的同事（與管理者）看得到。</p></div></div>
         <form class="link-form" id="linkForm"><div class="link-section-head link-wide"><h3>建立短網址</h3><span class="link-hint">建立後自動複製連結</span></div><label class="field link-wide"><span class="label">原始網址 <b>*</b></span><input class="input" name="url" type="url" required placeholder="https://example.com/very-long-link" value="${esc(draft.u)}"></label><label class="field"><span class="label">名稱 <small>（選填，方便辨識）</small></span><input class="input" name="name" maxlength="60" placeholder="例如：夏季活動素材" value="${esc(draft.n)}"></label>${linkProjectField(draft,'linkCreateProject')}${linkVisibilityField(draft,'linkCreateVisibility')}${linkCodeField(draft.c,false)}<div class="link-form-actions link-wide"><span class="link-hint">建立者與管理者可以編輯或刪除</span><button type="submit" class="btn link-btn link-btn-primary" id="linkSubmit"${links.creating?' disabled':''}>${links.creating?'建立中…':'建立短網址'}</button></div></form>
         ${linkBatchHtml()}
-        <div class="link-filter"><h3 class="link-list-title">短網址列表 <span class="link-hint">${linkVisible().length} 筆</span></h3><div class="link-filter-field"><label for="linkProjectFilter">專案篩選</label><div class="link-select-wrap"><select class="input link-select" id="linkProjectFilter"><option value="">全部專案</option>${[...new Set(links.list.map(l=>l.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(n=>`<option value="${esc(n)}"${links.project===n?' selected':''}>${esc(n)}（${links.list.filter(l=>l.project===n).length}）</option>`).join('')}<option value="__none"${links.project==='__none'?' selected':''}>未分類（${links.list.filter(l=>!l.project).length}）</option></select>${linkIcon('chevron')}</div></div></div><div class="link-list" id="linkList">${linksListHtml()}</div></div>`;
+        <div class="link-filter"><h3 class="link-list-title">短網址列表 <span class="link-hint">${linkVisible().length} 筆</span></h3><div class="link-filter-field"><label for="linkProjectFilter">專案篩選</label><div class="link-select-wrap"><select class="input link-select" id="linkProjectFilter"><option value="">全部專案</option>${[...new Set(links.list.map(l=>l.project).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(n=>`<option value="${esc(n)}"${links.project===n?' selected':''}>${esc(n)}（${links.list.filter(l=>l.project===n).length}）</option>`).join('')}<option value="__none"${links.project==='__none'?' selected':''}>未分類（${links.list.filter(l=>!l.project).length}）</option></select>${linkIcon('chevron')}</div></div></div>${linkBulkHtml()}<div class="link-list" id="linkList">${linksListHtml()}</div></div>`;
       if(!links.loaded&&!links.loading&&!links.error)loadLinks();
     }
     async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(err){const i=document.createElement('input');i.value=t;document.body.appendChild(i);i.select();document.execCommand('copy');i.remove()}}
@@ -3374,14 +3387,27 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
         links.list=links.list.map(x=>x.code===old?data.link:x);links.editing='';links.saving=false;toast('短網址已更新');renderLinksPage(true);
       }catch(err){links.saving=false;toast(`儲存失敗：${err.message}`,true);if(state.view==='links')renderLinksPage(true)}
     }
-    async function deleteLink(code){
-      if(!confirm(`確定要刪除短網址「${code}」？刪除後這個短網址會失效。`))return;
-      try{await api('deleteShortLink',{code});links.list=links.list.filter(x=>x.code!==code);toast('短網址已刪除');renderLinksPage(true)}
-      catch(err){toast(`刪除失敗：${err.message}`,true)}
+    /* 刪除採「先從畫面移除、背景寫入」：伺服器要把資料庫寫回 GitHub 需要幾秒，失敗再還原 */
+    async function deleteLinks(codes,label){
+      codes=[...new Set(codes)].filter(c=>links.list.some(x=>x.code===c));if(!codes.length)return;
+      const text=codes.length===1?`確定要刪除短網址「${label||codes[0]}」？刪除後這個短網址會失效。`:`確定要刪除選取的 ${codes.length} 筆短網址？刪除後這些短網址會失效。`;
+      if(!confirm(text))return;
+      const removed=links.list.filter(x=>codes.includes(x.code));
+      links.list=links.list.filter(x=>!codes.includes(x.code));codes.forEach(c=>links.selected.delete(c));
+      if(state.view==='links')renderLinksPage(true);
+      try{
+        const data=codes.length===1?await api('deleteShortLink',{code:codes[0]}).then(()=>({deleted:codes,skipped:[]})):await api('deleteShortLinks',{codes});
+        if(data.skipped&&data.skipped.length){links.list=[...removed.filter(x=>data.skipped.includes(x.code)),...links.list];toast(`已刪除 ${data.deleted.length} 筆；${data.skipped.length} 筆不是你建立的，未刪除`,true)}
+        else toast(codes.length===1?'短網址已刪除':`已刪除 ${codes.length} 筆短網址`);
+      }catch(err){links.list=[...removed,...links.list];toast(`刪除失敗，已還原：${err.message}`,true)}
+      if(state.view==='links')renderLinksPage(true);
     }
+    const deleteLink=code=>deleteLinks([code],(links.list.find(x=>x.code===code)||{}).name);
     document.addEventListener('input',e=>{if(e.target.name==='batchText'){const c=$('linkBatchCount');if(c){const n=parseBatchLines(e.target.value).length;c.textContent=n?`偵測到 ${n} 筆`:'短碼會自動產生'}}});
     document.addEventListener('submit',e=>{if(e.target.id==='linkBatchForm'){e.preventDefault();submitBatch(e.target)}else if(e.target.id==='linkForm'){e.preventDefault();submitLink(e.target)}else if(e.target.dataset&&e.target.dataset.linkEdit){e.preventDefault();saveLinkEdit(e.target)}});
     document.addEventListener('change',e=>{
+      if(e.target.matches&&e.target.matches('[data-link-sel]')){const c=e.target.dataset.linkSel;e.target.checked?links.selected.add(c):links.selected.delete(c);updateLinkBulk();return}
+      if(e.target.matches&&e.target.matches('[data-link-selall]')){linkEditable().forEach(l=>e.target.checked?links.selected.add(l.code):links.selected.delete(l.code));document.querySelectorAll('[data-link-sel]').forEach(i=>{i.checked=links.selected.has(i.dataset.linkSel)});updateLinkBulk();return}
       if(e.target.id==='linkProjectFilter'){links.project=e.target.value;renderLinksPage(true)}
       else if(e.target.matches('[data-link-project]')){
         const isNew=e.target.value==='new',field=e.target.closest('.link-project'),input=field.querySelector('[name=newProject]');
@@ -3390,7 +3416,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
     });
     document.addEventListener('click',e=>{
-      const t=e.target.closest&&e.target.closest('[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
+      const t=e.target.closest&&e.target.closest('[data-link-delsel],[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
+      if(t.hasAttribute('data-link-delsel')){deleteLinks([...links.selected]);return}
       if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText((r.lines||r.created.map(l=>SHORT_BASE()+l.code)).join('\n')).then(()=>toast('已複製全部內容（含名稱與短網址）'));return}
       if(t.hasAttribute('data-batch-clear')){links.batch.result=null;renderLinksPage(true);return}
       if(t.dataset.linkCopy){copyText(SHORT_BASE()+t.dataset.linkCopy).then(()=>toast('已複製短網址'))}
