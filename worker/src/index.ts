@@ -170,8 +170,26 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   return jsonResponse(request, env, { ok: false, error: 'Not Found' }, 404);
 }
 
+// 主站網域 emc-art.com 也掛在這個 Worker 前面：單一段、英數字的路徑如果是已建立的短碼就直接 302 並計點擊；
+// 其他所有請求（頁面、資產、API）原封不動轉給 GitHub Pages。任何錯誤都放行到主站，不能因為短網址壞掉而讓主站打不開。
+const SITE_HOSTS = new Set(['emc-art.com', 'www.emc-art.com']);
+async function handleSiteHost(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const match = (request.method === 'GET' || request.method === 'HEAD') ? url.pathname.match(/^\/([A-Za-z0-9]{3,32})\/?$/) : null;
+  if (match) {
+    try {
+      const result = await dispatchAction(request, env, 'resolveShortLink', { code: match[1], count: request.method === 'GET' });
+      if (result.ok && text(result.url)) return new Response(null, { status: 302, headers: { Location: text(result.url), 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'short-host-error', message: error instanceof Error ? error.message : String(error) }));
+    }
+  }
+  return fetch(request);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (SITE_HOSTS.has(new URL(request.url).hostname)) return handleSiteHost(request, env);
     const origin = text(request.headers.get('Origin'));
     if (origin && !allowedOrigins(env).has(origin)) return jsonResponse(request, env, { ok: false, error: '不允許的網站來源' }, 403);
     if (request.headers.get('Upgrade')?.toLowerCase() === 'websocket' && new URL(request.url).pathname === '/ws') {

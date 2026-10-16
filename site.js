@@ -3251,8 +3251,8 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
 
     /* ---------- 短網址（左側欄「短網址」：建立、命名、自訂短碼、編輯、刪除） ---------- */
     const links={list:[],loading:false,loaded:false,error:'',editing:'',editDraft:null,project:'',creating:false,saving:false};
-    /* 短網址走 go.emc-art.com（綁在 Worker 上，伺服器端直接 302 並計點擊；舊的 emc-art.com/<短碼> 仍由 404.html 轉址） */
-    const SHORT_BASE=()=>'https://go.emc-art.com/';
+    /* 短網址用主站網域 emc-art.com/<短碼>：DNS 走 Cloudflare 代理時由 Worker 直接 302 並計點擊，否則由 404.html 轉址；go.emc-art.com 舊連結仍有效 */
+    const SHORT_BASE=()=>'https://emc-art.com/';
     const SHORT_CODE_RE=/^[A-Za-z0-9]{3,32}$/;
     async function loadLinks(force){
       if(links.loading||(links.loaded&&!force))return;
