@@ -79,7 +79,7 @@ test('像素辦公室的嵌入模式只留場景與可點選的人物卡', async
   }
   assert.doesNotMatch(css, /html\.embed[^\n{]*\.person-card\{display:none!important\}/,
     '嵌入模式不可隱藏人物卡');
-  assert.match(js, /game\.addEventListener\('pointerdown',e=>\{if\(!ready\)return;/,
+  assert.match(js, /const onGamePress=e=>\{if\(!ready\)return;/,
     '嵌入場景要能點選人物');
   assert.match(js, /game\.addEventListener\('pointermove',e=>\{const hit=hitAt\(e\.clientX,e\.clientY\);game\.style\.cursor=hit\?'pointer':'default';/,
     '人物上方應顯示可點選游標');
