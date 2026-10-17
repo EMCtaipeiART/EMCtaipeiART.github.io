@@ -1759,13 +1759,16 @@ function avatarImageOf(i){
 const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=String(id).startsWith('h:')?st.hmap.get(String(id).slice(2)):st.amap.get(String(id).slice(2));return m?'@'+String(m.v).replace(/\D/g,''):'';};return e.outfit+'|'+e.glasses+(String(e.glasses).startsWith('a:')?ver(e.glasses):'')+'|'+(e.head||'')+(e.head?ver(e.head):'')+'|c4';};
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
+  const avatarMemo=new Map();
   const sendAvatars=()=>{
     if(!ready||window.parent===window)return;
     loadAccessories();if(!accessoriesReady())return;// 帽子、眼鏡的圖還沒載好時先不送，不然頭像會先是光頭
     try{
       const list={};
       people.forEach((p,i)=>{
-        const img=avatarImageOf(i);
+        /* 頭像圖只在「造型或音樂狀態變了」才重畫，其餘時候沿用上次的圖（以前每 10 秒全部重畫一次） */
+        const ak=lookKeyOf(i)+'|'+(p.music&&p.music.url?'m':''),memo=avatarMemo.get(p.name),img=memo&&memo.key===ak?memo.img:avatarImageOf(i);
+        if(!memo||memo.key!==ak)avatarMemo.set(p.name,{key:ak,img});
         list[p.name]={img,message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
