@@ -193,6 +193,20 @@ Google 試算表本身（`1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY`）現在
 
 ## 11. 修改紀錄
 
+### 2026-10-17 Asia/Taipei — 像素辦公室：加班特效改成舞台聚光＋冷色調＋藍紫鬼火（取代貼圖黑眼圈與鬼火）
+
+- 修改目的：貼圖式黑眼圈與鬼火要靠每個角色的眼睛、頭部位置對位，頭型不同就常常錯位，想換成不依賴臉的表現方式；同時要顧到手機發燙與白色背景。
+- 影響檔案：`EMC-ART-Pixel-Office/dist/app.js`、`backend/test/pixel-office-overtime-filter.test.mjs`（改寫）、`backend/test/designer-panel-embed.test.mjs`、`design/overtime-fx/`（Codex 出的視覺稿 v1/v2/v3/v3b 與 BRIEF）。
+- 影響功能：
+  1. 移除 `drawOvertimeFilter`、`ensureOvertimeSheet`、`overtimeSheet`，不再下載 `overtime-filter.webp`。
+  2. 新增 `drawOvertimeFx(context,feetX,feetY,H,t,light,layer,compact)`：layer `back` 在人物之前畫（聚光錐、地面光斑與光環、人物後方的鬼火），`front` 在人物之後畫（人物前方的鬼火）。位置只用腳底與身高比例。
+  3. 新增 `drawOvertimeTint()`：整身冷藍灰遮罩，快取在衣服組合畫面（`frame.overtimeTone`）；動作或音樂點頭時不畫，避免頭部錯位。不使用 `ctx.filter`（iOS Safari 不支援）。
+  4. 新增 `overtimeFxLight(el)`：往上找第一個不透明背景色算亮度，每秒才重算一次；白底用較淡的暗角與淡藍光錐，並加藍紫細邊線，白光在白底看不見所以靠邊線與填色。
+  5. 效能：聚光、光環、鬼火預畫成離屏 canvas，依身高 8px 一級與亮暗底快取，每幀只 drawImage；三人合計耗時量測約 0.04 ms（舊版 v3 約 0.15 ms，僅計 JS 端指令提交，不含 GPU 填色）。
+- 風險區塊：①只在桌面瀏覽器量過耗時，沒有在實機手機量過發燙；②選取頭像小框的 compact 版（鬼火繞得較近）只看過程式邏輯，尚未在完整版右側面板肉眼確認；③聚光範圍比舊鬼火大，相鄰座位的人物可能被輕微重疊。
+- 已檢查／驗證方式：新測試 6/6 通過；本機載入 `?overtime=1` 預覽，白底場景聚光與鬼火正常、無 JS 錯誤；`designer-panel-embed.test.mjs` 有 3 個測試在改動前就失敗（markDirty 等），與本次無關。
+- commit：見 git log
+
 ### 2026-10-12 Asia/Taipei — 舊的「選擇電腦檔案上傳」改名「電腦上傳」（NAS 中斷備援），並新增隨時可用的「補上 NAS 路徑」窗口
 
 - 修改目的：使用者要求「把舊的電腦檔案上傳改為電腦上傳，當作 NAS 中斷的備援，同時補上 NAS 資料夾路徑隨時補上的窗口」。

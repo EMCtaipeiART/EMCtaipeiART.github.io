@@ -243,10 +243,8 @@ function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStora
 // 圖片放在 Cloudflare（emc-pixel-assets），避開 GitHub Pages 每次推送後的冷快取；載入失敗會自動退回同站的 assets/。
 function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
-const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image(),overtimeSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
+const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
 setAsset(furniture,'assets/furniture-v4.webp?v=2');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
-// 加班濾鏡圖（69 KB）只有有人加班（晚上、假日）才用得到，第一次要畫時才載，載好重畫。
-function ensureOvertimeSheet(){if(overtimeSheet.getAttribute('src'))return;overtimeSheet.addEventListener('load',()=>{markDirty();if(ready&&selected!==null)portrait($('portrait').getContext('2d'),selected);});setAsset(overtimeSheet,'assets/overtime-filter.webp?v=1');}
 function resizeCanvas(){markDirty();if(cam.on&&cam.w){const pr=Math.min(1.5,window.devicePixelRatio||1);cam.pr=pr;game.width=Math.round(cam.w*pr);game.height=Math.round(cam.h*pr);ctx.setTransform(pr*cam.s,0,0,pr*cam.s,-cam.left*pr*cam.s,-cam.top*pr*cam.s);ctx.imageSmoothingEnabled=false;return;}const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,OY*game.height/H);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>{if(img.__fb){const p=img.__fb;img.__fb=null;img.crossOrigin=null;img.src=p;return;}reject();};if(img.complete&&img.naturalWidth)resolve();});}
@@ -481,21 +479,52 @@ function drawWardrobe(context,index,dir,x,y,h,action){
   context.drawImage(frame.canvas,-frame.ax*s,-frame.ay*s,frame.canvas.width*s,frame.canvas.height*s);context.restore();return true;
 }
 function sprite(context,index,dir,x,y,w=98,h=142){drawWardrobe(context,index,dir,x,y,h);}
-// overtime-filter.webp：正面、側面、背面三格（每格 362）。黑眼圈與鬼火分層繪製。
-// 黑眼圈：原圖正面兩團（x116/x200，y122 起高 28）、側面一團（x190，y124 起高 28），各自貼到眼珠正下方。
-// 眼珠中心固定在 ±12（側面 +16），左右用同一組尺寸，所以兩邊一定對稱；寬度取 14（側面 12）比眼珠的
-// 10 略寬一點，外緣才不會壓到頭髮或耳朵。
-// 鬼火：原圖從 y160 才開始，來源要從 156 取（不是 145），否則黑眼圈下緣會被當成鬼火重畫在頭頂兩側。
-function drawOvertimeFilter(context,index,dir,feetX,feetY,height=142,compact=false){ensureOvertimeSheet();if(!overtimeSheet.complete||!overtimeSheet.naturalWidth)return;const frame=dir==='up'?2:dir==='left'||dir==='right'?1:0,cell=overtimeSheet.naturalWidth/3,scale=height/142,size=150*scale,top=feetY-159*scale,half=cell/2,flameTop=156,flameHeight=102,flameWidth=(compact?50:half/cell*150)*scale,flameDrawHeight=flameHeight/cell*size,flameY=top+flameTop/cell*size-38*scale,leftX=(compact?-64:-105)*scale,rightX=(compact?14:30)*scale,inner=(compact?24:43)*scale,outer=(compact?70:112)*scale;context.save();context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.translate(feetX,0);if(dir==='left')context.scale(-1,1);
-  // 兩團鬼火分開畫，中心約在頭像左右 68 px。
-  // 只保留頭像外側的鬼火區域，避免鬼火內側疊到臉上。
-  context.save();context.beginPath();context.rect(-outer,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell,flameTop,half,flameHeight,leftX,flameY,flameWidth,flameDrawHeight);context.restore();
-  context.save();context.beginPath();context.rect(inner,flameY,outer-inner,flameDrawHeight);context.clip();context.drawImage(overtimeSheet,frame*cell+half,flameTop,half,flameHeight,rightX,flameY,flameWidth,flameDrawHeight);context.restore();
-  // 背面原稿沒有黑眼圈；正面兩團、側面一團，分別對齊各自的眼睛中心。
-  if(frame!==2){const bags=frame===1?[[190,124,52,28,16,12]]:[[116,122,50,28,-12,14],[200,122,51,28,12,14]],faceScale=(compact?95/98:1)*scale,fr=wardrobeFrame(index,'down'),bagY=fr?feetY+(fr.geom.eyeY+8-fr.ay)*WD_SCALE*scale:feetY-95*scale,eyeDx=fr&&frame===0?fr.geom.faceW*.23*WD_SCALE*scale/faceScale:0;
-    for(const[sx,sy,sw,sh,cx0,bagWidth]of bags){const cx=eyeDx?Math.sign(cx0)*eyeDx:cx0,dw=bagWidth*faceScale,dh=dw*sh/sw;context.drawImage(overtimeSheet,frame*cell+sx,sy,sw,sh,cx*faceScale-dw/2,bagY,dw,dh);}}
-  context.restore();}
-function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3;sprite(context,i,'down',x,y,95,144);if(showOvertime&&isOvertime(people[i]))drawOvertimeFilter(context,i,'down',x,y,144,true);}}
+// 加班特效（2026-10-17 改版）：舞台聚光＋整身冷色調＋三簇藍紫鬼火。
+// 全部只用腳底位置與身高比例定位、完全不碰臉，所以眼睛、頭多大都不會錯位（舊版貼圖黑眼圈就是這裡錯位）。
+// 效能：聚光、光環、鬼火都預畫成離屏 canvas 並依身高（8px 一級）與亮暗底快取，每幀只 drawImage，不再每幀建漸層，手機才不會發燙。
+const overtimeFxCache=new Map();
+function overtimeFxAssets(H,light){
+  const B=Math.max(8,Math.round(H/8)*8),key=B+':'+light;let f=overtimeFxCache.get(key);if(f)return f;
+  const x=Math.ceil(B*1.1),y=Math.ceil(B*1.65),bottom=Math.ceil(B*.55);
+  const surface=()=>{const c=document.createElement('canvas');c.width=2*x;c.height=y+bottom;const g=c.getContext('2d');g.translate(x,y);return [c,g];};
+  const [base,g]=surface(),[beam,q]=surface();
+  // 暗角：偏藍紫的柔和陰影；白底降到 .22，不然會變成一團髒灰。
+  const dark=g.createRadialGradient(0,-B*.55,B*.25,0,-B*.55,B*1.05);dark.addColorStop(0,'rgba(40,35,90,0)');dark.addColorStop(.72,light?'rgba(40,35,90,.22)':'rgba(40,35,90,.55)');dark.addColorStop(1,'rgba(40,35,90,0)');g.fillStyle=dark;g.fillRect(-x,-y,2*x,y+bottom);
+  // 地面光斑＋細光環：白底時白光看不見，靠淡藍填色與藍紫細邊線才看得出聚光範圍。
+  g.save();g.scale(1,.24);const pool=g.createRadialGradient(0,0,0,0,0,B*.67);pool.addColorStop(0,light?'rgba(150,180,255,.32)':'rgba(232,244,255,.532)');pool.addColorStop(.65,'rgba(197,219,255,.152)');pool.addColorStop(1,'rgba(197,219,255,0)');g.fillStyle=pool;g.fillRect(-B*.7,-B*.7,B*1.4,B*1.4);g.restore();
+  g.strokeStyle='rgba(120,110,255,.55)';g.lineWidth=1;g.beginPath();g.ellipse(0,0,B*.67,B*.1608,0,0,Math.PI*2);g.stroke();
+  const cone=q.createLinearGradient(0,-B*1.62,0,0);cone.addColorStop(0,light?'rgba(150,180,255,.08)':'rgba(232,244,255,.095)');cone.addColorStop(.8,light?'rgba(150,180,255,.22)':'rgba(232,244,255,.38)');cone.addColorStop(1,light?'rgba(150,180,255,.12)':'rgba(232,244,255,.152)');q.fillStyle=cone;q.strokeStyle='rgba(120,110,255,.55)';q.lineWidth=1;q.beginPath();q.moveTo(-B*.05,-B*1.62);q.lineTo(B*.05,-B*1.62);q.lineTo(B*.64,0);q.lineTo(-B*.64,0);q.closePath();q.fill();q.stroke();
+  // 鬼火：像素火焰連光暈預畫成一張小圖。
+  const fire=document.createElement('canvas'),size=B*.125,step=size/7,pad=Math.ceil(size*2);fire.width=fire.height=pad*2;const fg=fire.getContext('2d');fg.translate(pad,pad);
+  const glow=fg.createRadialGradient(0,-size*.4,0,0,-size*.4,size*1.5);glow.addColorStop(0,'rgba(125,92,255,.32)');glow.addColorStop(1,'rgba(125,92,255,0)');fg.fillStyle=glow;fg.fillRect(-pad,-pad,2*pad,2*pad);
+  ['0001000','0011000','0011100','0111110','1111110','1111111','0111110','0011100'].forEach((row,j)=>{for(let i=0;i<7;i++)if(row[i]==='1'){fg.fillStyle=j>3&&i>1&&i<5?'#B9DEFF':i<3?'#586BFF':'#9565FF';fg.fillRect(Math.round((i-3)*step),Math.round((j-7)*step),Math.ceil(step),Math.ceil(step));}});
+  f={B,base,beam,fire,x,y,pad};overtimeFxCache.set(key,f);return f;
+}
+/** 背景亮不亮：往上找第一個不透明的背景色算亮度（場景畫布是白底、嵌入模式是透明所以看頁面），每秒才重算一次。 */
+function overtimeFxLight(el){
+  const now=performance.now(),cached=el&&el.__fxLight;if(cached&&now-cached.at<1000)return cached.v;
+  let v=true;
+  try{for(let n=el;n;n=n.parentElement){const m=getComputedStyle(n).backgroundColor.match(/rgba?\(([^)]+)\)/);if(!m)continue;const p=m[1].split(',').map(Number);if(p.length<4||p[3]>.5){v=.299*p[0]+.587*p[1]+.114*p[2]>140;break;}}}catch(e){}
+  if(el)el.__fxLight={at:now,v};return v;
+}
+/** layer='back'：聚光＋在人物後面的鬼火（人物之前畫）；layer='front'：在人物前面的鬼火（人物之後畫）。t 單位秒。compact＝選取頭像小框，鬼火繞得近一點。 */
+function drawOvertimeFx(context,feetX,feetY,H,t,light,layer,compact=false){
+  const f=overtimeFxAssets(H,light),r=H/f.B,alpha=context.globalAlpha,orbit=compact?.34:.48,back=layer==='back';
+  context.save();context.translate(feetX,feetY);context.imageSmoothingEnabled=false;
+  if(back){context.drawImage(f.base,-f.x*r,-f.y*r,f.base.width*r,f.base.height*r);context.globalAlpha=alpha*(.97+.03*Math.sin(t));context.drawImage(f.beam,-f.x*r,-f.y*r,f.beam.width*r,f.beam.height*r);}
+  for(let i=0;i<3;i++){const angle=t*.3+i*Math.PI*2/3;if((Math.sin(angle)<0)!==back)continue;context.globalAlpha=alpha*(.68+.32*(.5+.5*Math.sin(t*1.8+i)));context.drawImage(f.fire,Math.cos(angle)*H*orbit-f.pad*r,(-.48+Math.sin(angle)*.15)*H-f.pad*r,f.fire.width*r,f.fire.height*r);}
+  context.restore();
+}
+/** 整身冷色調：只蓋在人物實心像素上的冷藍灰（遮罩在每個衣服組合的畫面上快取），位置與 drawWardrobe 完全一樣。 */
+function drawOvertimeTint(context,index,dir,x,y,h,action){
+  const frame=wardrobeFrame(index,dir,action);if(!frame)return;
+  let tone=frame.overtimeTone;
+  if(!tone){tone=document.createElement('canvas');tone.width=frame.canvas.width;tone.height=frame.canvas.height;const c=tone.getContext('2d');c.drawImage(frame.canvas,0,0);c.globalCompositeOperation='source-in';c.fillStyle='rgba(120,140,180,.32)';c.fillRect(0,0,tone.width,tone.height);frame.overtimeTone=tone;}
+  const s=WD_SCALE*(h/142);
+  context.save();context.translate(x,y);if(dir==='left'&&!action)context.scale(-1,1);context.imageSmoothingEnabled=true;
+  context.drawImage(tone,-frame.ax*s,-frame.ay*s,tone.width*s,tone.height*s);context.restore();
+}
+function portrait(context,i,showOvertime=true,blank=false){context.clearRect(0,0,context.canvas.width,context.canvas.height);if(blank)return;if(ready){const x=context.canvas.width/2,y=context.canvas.height-3,fx=showOvertime&&isOvertime(people[i]),light=fx&&overtimeFxLight(context.canvas),t=performance.now()/1000;if(fx)drawOvertimeFx(context,x,y,144,t,light,'back',true);sprite(context,i,'down',x,y,95,144);if(fx){drawOvertimeTint(context,i,'down',x,y,144);drawOvertimeFx(context,x,y,144,t,light,'front',true);}}}
 function select(i){selected=i;keys.clear();markDirty();try{ensureCustomNeeded();}catch(e){}document.documentElement.classList.toggle('has-sel',i!==null&&i!==undefined);document.documentElement.classList.toggle('sel-staff',i!==null&&i!==undefined&&Boolean(people[i]&&people[i].staff));document.querySelectorAll('.roster-button').forEach((b,n)=>b.classList.toggle('active',n===i));
   const chosen=i!==null&&i!==undefined;
   $('tools').hidden=!chosen;$('toolsEmpty').hidden=chosen;$('selectedTag').textContent=chosen?'已選取':'未選取';
@@ -1603,7 +1632,7 @@ function drawActionLabel(i){
   ctx.restore();
 }
 const seatedUp=i=>false;// 下排人物改回面向畫面（正面），不再轉背面
-function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(isOvertime(p))drawOvertimeFilter(ctx,i,p.dir,0,bob);drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const fxOn=isOvertime(p),fxLight=fxOn&&overtimeFxLight(ctx.canvas);if(fxOn)drawOvertimeFx(ctx,0,bob,142,t,fxLight,'back');const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(fxOn){if(!act&&!(music&&MUSIC_NOD))drawOvertimeTint(ctx,i,p.dir,0,bob,142);drawOvertimeFx(ctx,0,bob,142,t,fxLight,'front');}drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPunishBadge(p){
   if(!isPunishedP(p))return;
   const text='罰坐中｜'+String(p.punish.reason||'')+'（剩 '+punishDaysLeft(p)+' 天）',below=bubbleBelow(p),y=below?p.y-PLATE_SEAT_RISE-18:p.y-150-BUBBLE_HEAD_GAP-14;
@@ -1637,7 +1666,6 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
-load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
 Promise.all([load(wardrobeSheets.heads),load(wardrobeSheets.outfits),load(furniture)]).then(()=>{ready=true;try{applyViewerRole();}catch(e){}loadAccessories();loadCustomList();setInterval(loadCustomList,120000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadCustomList();});fitEmbedView();setTimeout(fitEmbedView,300);setTimeout(fitEmbedView,1200);markDirty();$('loading').hidden=true;refreshIconCanvases();select(null);document.querySelectorAll('.roster-button canvas:not([data-symbol])').forEach((canvas,i)=>portrait(canvas.getContext('2d'),i,false));}).catch(()=>{$('loading').textContent='場景圖片載入失敗，請重新整理頁面。';});select(null);if(!embedMode)ensureLevels();syncDesigners();pollSync();renderLevelTable();requestAnimationFrame(render);
 setInterval(()=>{const before=currentTaipeiClock().hour;taipeiClock=null;taipeiClockCheckedAt=0;if(currentTaipeiClock().hour!==before)updateStatus();},60000);
 if(document.modelContext?.registerTool){try{document.modelContext.registerTool({name:'set_character_status',description:'選取設計師並設定心情、出勤狀態與頭頂對話。照片與對話僅儲存於本機瀏覽器。',inputSchema:{type:'object',properties:{name:{type:'string',enum:names},message:{type:'string',maxLength:60},mood:{type:'string',enum:['','happy','angry','sad','joy']},status:{type:'string',enum:['present','overtime','lunch','offwork','toilet','meeting','leave','abroad','out']}},required:['name'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||!names.includes(input.name)||input.message!==undefined&&(typeof input.message!=='string'||input.message.length>60)||input.mood!==undefined&&!['','happy','angry','sad','joy'].includes(input.mood)||input.status!==undefined&&!statuses.some(status=>status.id===input.status))throw Error('人物、對話、心情或狀態無效');const i=names.indexOf(input.name);if(input.message!==undefined)people[i].message=input.message;if(input.mood!==undefined)people[i].mood=input.mood;if(input.status!==undefined)people[i].status=input.status;select(i);save();const patch={};for(const key of ['message','mood','status'])if(input[key]!==undefined)patch[key]=input[key];pushChange(i,patch);return {name:people[i].name,message:people[i].message,mood:people[i].mood,status:people[i].status};}});}catch{}}

@@ -6,81 +6,58 @@ import { fileURLToPath } from 'node:url';
 
 const appJs = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../EMC-ART-Pixel-Office/dist/app.js');
 
-// 五位角色正面／側面圖的實測值（人物繪製高度 142、寬度 98，原點在頭頂）：
-// 黑色眼珠的下緣逐張都不同，眼珠中心正面在 ±12、側面在 +16，眼珠寬約 10，臉頰外緣約 ±22。
-const PUPIL_BOTTOM = { Leona: 47, Amber: 47, Noise: 50, Anna: 47, Machi: 45 };
-const PUPIL_CENTRE_FRONT = 12;
-const PUPIL_CENTRE_SIDE = 16;
-const PUPIL_WIDTH = 10;
-const FACE_HALF_WIDTH = 22;
-// overtime-filter.png 的內容實測：黑眼圈只畫到 y151，鬼火從 y160 才開始。
-const EYE_BAG_SOURCE_BOTTOM = 151;
-const FLAME_SOURCE_TOP = 160;
-
-async function overtimeFilterSource() {
+// 2026-10-17：貼圖黑眼圈＋鬼火（會因為每個人眼睛、頭大小不同而錯位）改成程式繪製的
+// 舞台聚光＋整身冷色調＋三簇藍紫鬼火，位置只看腳底與身高比例，完全不碰臉。
+// 整段特效程式：從快取宣告到 drawOvertimeTint 結束。
+async function fxSource() {
   const source = await readFile(appJs, 'utf8');
-  const start = source.indexOf('function drawOvertimeFilter(');
-  assert.notEqual(start, -1, 'app.js 應該有 drawOvertimeFilter');
-  return source.slice(start, source.indexOf('\nfunction ', start + 1));
+  const start = source.indexOf('const overtimeFxCache=');
+  const tint = source.indexOf('function drawOvertimeTint(');
+  const tintEnd = source.indexOf('\n}', tint);
+  assert.ok(start !== -1 && tint !== -1 && tintEnd !== -1, '找不到加班特效程式');
+  return source.slice(start, tintEnd + 2);
 }
 
-/** 黑眼圈的來源矩形與位置：[來源 x, 來源 y, 寬, 高, 對齊的眼珠中心, 畫出來的寬度]。 */
-function eyeBags(source) {
-  const line = source.match(/const bags=frame===1\?(\[\[.+?\]\]):(\[\[.+?\]\]),/);
-  assert.ok(line, '找不到黑眼圈的來源與位置設定');
-  return { side: JSON.parse(line[1]), front: JSON.parse(line[2]) };
-}
-
-async function pupilBottoms() {
+test('舊的貼圖黑眼圈與鬼火已移除，也不再載入濾鏡圖', async () => {
   const source = await readFile(appJs, 'utf8');
-  const names = source.match(/const names=\[(.+?)\]/);
-  const bottoms = source.match(/const EYE_PUPIL_BOTTOM=\[(.+?)\]/);
-  assert.ok(names && bottoms, '找不到角色名單或眼珠下緣');
-  return Object.fromEntries(JSON.parse(`[${names[1].replace(/'/g, '"')}]`)
-    .map((name, i) => [name, JSON.parse(`[${bottoms[1]}]`)[i]]));
-}
-
-// 原本的像素人物已下架（2026-10-01），人物改成頭像＋服裝的組合：黑眼圈的位置不再用逐格量出來的眼珠下緣，
-// 而是跟著組合時算出來的眼睛位置走（見 buildWardrobe 的 geom）。
-test('黑眼圈貼在每位角色自己的眼睛下方（用組合頭像的眼睛位置，不是固定數字）', async () => {
-  const source = await overtimeFilterSource();
-  assert.match(source, /fr=wardrobeFrame\(index,'down'\)/);
-  assert.match(source, /fr\.geom\.eyeY/);
+  assert.doesNotMatch(source, /drawOvertimeFilter|ensureOvertimeSheet|overtimeSheet|EYE_PUPIL_BOTTOM/);
 });
 
-test('黑眼圈左右對稱，且對齊眼珠中心', async () => {
-  const source = await overtimeFilterSource();
-  const { front, side } = eyeBags(source);
-  const [left, right] = front;
-  assert.equal(left[4], -PUPIL_CENTRE_FRONT, '左邊要對齊左眼珠');
-  assert.equal(right[4], PUPIL_CENTRE_FRONT, '右邊要對齊右眼珠');
-  assert.equal(left[4], -right[4], '兩邊要左右對稱');
-  assert.equal(left[5], right[5], '兩邊要一樣寬，看起來才對稱');
-  assert.equal(side[0][4], PUPIL_CENTRE_SIDE, '側面要對齊朝右那隻眼珠');
+test('特效位置只用腳底與身高比例，不碰臉部幾何（眼睛位置、頭寬）', async () => {
+  const fx = await fxSource();
+  assert.doesNotMatch(fx, /geom\.|eyeY|faceW|wardrobeFrame\(index,'down'\)\.geom/);
 });
 
-test('黑眼圈比眼珠略寬但不會外擴到頭髮或耳朵', async () => {
-  const source = await overtimeFilterSource();
-  const { front, side } = eyeBags(source);
-  for (const [, , , , centre, width] of [...front, ...side]) {
-    assert.ok(width > PUPIL_WIDTH, `黑眼圈寬 ${width} 應該比眼珠 ${PUPIL_WIDTH} 寬一點`);
-    const outer = Math.abs(centre) + width / 2;
-    assert.ok(outer <= FACE_HALF_WIDTH, `黑眼圈外緣 ${outer} 超出臉頰 ${FACE_HALF_WIDTH}`);
-  }
+test('效能：漸層只在建立快取時畫，每幀只 drawImage', async () => {
+  const source = await readFile(appJs, 'utf8');
+  const draw = source.slice(source.indexOf('function drawOvertimeFx('), source.indexOf('/** 整身冷色調'));
+  assert.doesNotMatch(draw, /createRadialGradient|createLinearGradient|fillRect|ellipse/, '每幀不能再建漸層或逐點填色');
+  assert.match(draw, /drawImage/);
+  const fx = await fxSource();
+  assert.match(fx, /overtimeFxCache\.get\(key\)/);
+  assert.match(fx, /Math\.round\(H\/8\)\*8/, '要依身高 8px 一級快取');
 });
 
-test('黑眼圈的高度跟著各自的眼珠下緣走', async () => {
-  const source = await overtimeFilterSource();
-  assert.match(source, /bagY=fr\?feetY\+\(fr\.geom\.eyeY\+8-fr\.ay\)\*WD_SCALE\*scale:/,
-    '黑眼圈的上緣要用該角色的眼睛位置，不能共用一個固定值');
+test('不用 ctx.filter（iOS Safari 不支援），整身冷色調改用快取遮罩', async () => {
+  const fx = await fxSource();
+  assert.doesNotMatch(fx, /\.filter\s*=/);
+  assert.match(fx, /frame\.overtimeTone/);
+  assert.match(fx, /source-in/);
 });
 
-test('鬼火的來源不含黑眼圈下緣，才不會在頭頂兩側留下殘影', async () => {
-  const source = await overtimeFilterSource();
-  const flame = source.match(/flameTop=(\d+),flameHeight=(\d+)/);
-  assert.ok(flame, '找不到鬼火的來源範圍');
-  const [, flameTop, flameHeight] = flame.map(Number);
-  assert.ok(flameTop > EYE_BAG_SOURCE_BOTTOM, `鬼火來源從 ${flameTop} 起，會把黑眼圈下緣一起畫出來`);
-  assert.ok(flameTop <= FLAME_SOURCE_TOP, `鬼火來源從 ${flameTop} 起，會切掉火苗頂端`);
-  assert.ok(flameTop + flameHeight >= 256, '鬼火來源高度不足，底部會被切掉');
+test('亮底（白色）與暗底用不同參數，且聚光有藍紫邊線才看得到', async () => {
+  const fx = await fxSource();
+  assert.match(fx, /light\?'rgba\(40,35,90,\.22\)':'rgba\(40,35,90,\.55\)'/);
+  assert.match(fx, /strokeStyle='rgba\(120,110,255,\.55\)'/);
+  assert.match(fx, /function overtimeFxLight\(/);
+});
+
+test('人物與頭像小框都用同一組特效：背景層在人物之前、前景鬼火在人物之後', async () => {
+  const source = await readFile(appJs, 'utf8');
+  const person = source.slice(source.indexOf('function drawPerson('), source.indexOf('function drawPunishBadge('));
+  assert.ok(person.indexOf("'back'") !== -1 && person.indexOf("'front'") > person.indexOf("'back'"));
+  assert.ok(person.indexOf("'back'") < person.indexOf('drawHeadphones(i,p,t,bob,nod,true)'), '聚光要在人物之前畫');
+  const portrait = source.slice(source.indexOf('function portrait('), source.indexOf('function select('));
+  assert.match(portrait, /drawOvertimeFx\(context,x,y,144,t,light,'back',true\)/);
+  assert.match(portrait, /drawOvertimeFx\(context,x,y,144,t,light,'front',true\)/);
 });

@@ -1,0 +1,40 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V3 · 最後的聚光</title><style>*{box-sizing:border-box}body{margin:0;background:#090E1B;color:#E8F4FF;font:15px/1.7 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:40px 24px}header,footer{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #293247;padding-bottom:18px}small{color:#A59AFF;letter-spacing:.16em}nav{display:flex;gap:20px}a{color:#94A4BF;text-decoration:none}a[aria-current]{color:#E8F4FF;border-bottom:2px solid #9565FF}h1{font-size:32px;margin:24px 0 8px}p{color:#A4B2CA;margin:0 0 24px}canvas{display:block;width:100%;height:auto;border:1px solid #293247;image-rendering:pixelated}.labels{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:18px 0;color:#A4B2CA;font-size:12px}.labels span{display:block;font-size:11px;color:#7587A5}footer{border-top:1px solid #293247;border-bottom:0;padding-top:18px;color:#7587A5;font-size:12px}button{background:transparent;color:#B9DEFF;border:1px solid #465174;padding:8px 14px;cursor:pointer}@media(max-width:600px){main{padding:24px 12px}small{font-size:9px}h1{font-size:26px}.labels{font-size:10px}}</style><main><header><small>AFTER HOURS / OVERTIME FX ? 03</small><nav aria-label="加班特效預覽"><a href="v1.html" >V1</a><a href="v2.html" >V2</a><a href="v3.html" aria-current="page">V3</a></nav></header><h1>最後的聚光</h1><p>強烈舞台聚光與明顯暗場，三簇藍紫鬼火緩慢繞身公轉。</p><canvas id="scene" width="1080" height="480" aria-label="加班特效預覽"></canvas><div class="labels"><div>矮身 · 方頭 · 淺膚<span>H = 116 px</span></div><div>標準 · 圓頭 · 中膚<span>H = 142 px</span></div><div>高身 · 寬頭 · 深膚<span>H = 170 px</span></div></div><footer><div>冷白 × 藍紫鬼火<br>腳底錨點 · 全身冷調 · 10 FPS</div><button id="pause" type="button">暫停動畫</button></footer></main><script>
+function drawOvertimeFx(ctx, feetX, feetY, H = 142, t = 0, sprite) {
+ const C={"id":3,"name":"?????","desc":"?????????????????????????","light":0.38,"dark":0.72,"fire":0.125,"count":3}, s=H, u=t/1000;
+ ctx.save();ctx.translate(feetX,feetY);ctx.imageSmoothingEnabled=false;
+ 
+ const dark=ctx.createRadialGradient(0,-s*.55,s*.25,0,-s*.55,s*1.05);
+ dark.addColorStop(0,'rgba(3,7,20,0)');dark.addColorStop(.72,'rgba(3,7,20,'+C.dark+')');dark.addColorStop(1,'rgba(3,7,20,0)');
+ ctx.fillStyle=dark;ctx.fillRect(-s*1.05,-s*1.6,s*2.1,s*2.1);
+ const flicker=C.id===2?.86+.09*Math.sin(u*2.7)+.05*Math.sin(u*7.3):.97+.03*Math.sin(u);
+ const beam=ctx.createLinearGradient(0,-s*1.62,0,0);
+ beam.addColorStop(0,'rgba(232,244,255,'+C.light*.25*flicker+')');beam.addColorStop(.8,'rgba(232,244,255,'+C.light*flicker+')');beam.addColorStop(1,'rgba(232,244,255,'+C.light*.4*flicker+')');
+ ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(-s*.05,-s*1.62);ctx.lineTo(s*.05,-s*1.62);ctx.lineTo(s*.64,0);ctx.lineTo(-s*.64,0);ctx.closePath();ctx.fill();
+ ctx.save();ctx.scale(1,.24);const pool=ctx.createRadialGradient(0,0,0,0,0,s*.67);pool.addColorStop(0,'rgba(232,244,255,'+C.light*1.4+')');pool.addColorStop(.65,'rgba(197,219,255,'+C.light*.4+')');pool.addColorStop(1,'rgba(197,219,255,0)');ctx.fillStyle=pool;ctx.fillRect(-s*.7,-s*.7,s*1.4,s*1.4);ctx.restore();
+ function pos(i,time){const a=time*.3+i*Math.PI*2/C.count;return C.id===3?{x:Math.cos(a)*s*.48,y:(-.48+Math.sin(a)*.15)*s,back:Math.sin(a)<0}:{x:(i===0?-1:1)*(.39+.035*Math.sin(time*.6+i))*s+(i===2?s*.10:0),y:(-.43-(i===2?.34:0)+.045*Math.sin(time*.9+i*2))*s,back:false};}
+ function fire(i,time,alpha=1,trail=false){const p=pos(i,time),size=s*C.fire*(.92+.08*Math.sin(time*2+i)),q=size/7;
+ ctx.save();ctx.translate(Math.round(p.x),Math.round(p.y));ctx.globalAlpha=alpha*(.68+.32*(.5+.5*Math.sin(time*1.8+i)));
+ if(!trail){const glow=ctx.createRadialGradient(0,-size*.4,0,0,-size*.4,size*1.5);glow.addColorStop(0,'rgba(125,92,255,.32)');glow.addColorStop(1,'rgba(125,92,255,0)');ctx.fillStyle=glow;ctx.fillRect(-size*1.5,-size*1.9,size*3,size*3);}
+ ['0001000','0011000','0011100','0111110','1111110','1111111','0111110','0011100'].forEach((row,y)=>{for(let x=0;x<7;x++)if(row[x]==='1'){ctx.fillStyle=y>3&&x>1&&x<5?'#B9DEFF':x<3?'#586BFF':'#9565FF';const sway=y<3?Math.round(Math.sin(time*2+i)):0;ctx.fillRect(Math.round((x-3+sway)*q),Math.round((y-7)*q),Math.ceil(q),Math.ceil(q));}});ctx.restore();}
+ function layer(back){for(let i=0;i<C.count;i++)if(pos(i,u).back===back){if(C.id===2)for(let j=7;j>=1;j--)fire(i,u-j*.18,(1-j/8)*.16,true);fire(i,u);if(C.id===2)for(let j=0;j<4;j++){const p=pos(i,u),age=(u*.19+j*.25+i*.17)%1;ctx.globalAlpha=(1-age)*.32;ctx.fillStyle=j%2?'#9565FF':'#B9DEFF';const px=Math.max(1,s*.012);ctx.fillRect(p.x+Math.sin(j*3+u*.5)*s*.07,p.y-age*s*.30,px,px);ctx.globalAlpha=1;}}}
+ layer(true);
+ if(sprite){const w=s*sprite.width/sprite.height;
+ 
+ const cache=drawOvertimeFx._cache||(drawOvertimeFx._cache=new WeakMap());let toned=cache.get(sprite);
+ if(!toned){toned=document.createElement('canvas');toned.width=sprite.width;toned.height=sprite.height;const tc=toned.getContext('2d');tc.filter='saturate(.42)';tc.drawImage(sprite,0,0);tc.filter='none';tc.globalCompositeOperation='source-atop';tc.fillStyle='rgba(150,182,232,.24)';tc.fillRect(0,0,toned.width,toned.height);cache.set(sprite,toned);}ctx.drawImage(toned,-w/2,-s,w,s);}
+ layer(false);ctx.restore();
+}
+
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+function sprite(k){const c=document.createElement('canvas');c.width=48;c.height=76;const g=c.getContext('2d'),skin=['#F0C9AD','#B67E60','#724E43'][k],shirt=['#668995','#807599','#6F829C'][k];function r(x,y,w,h,col){g.fillStyle=col;g.fillRect(x,y,w,h)}
+ r(14,65,8,9,'#303C55');r(26,65,8,9,'#303C55');r(11,73,12,3,'#101927');r(26,73,12,3,'#101927');r(11,34,26,31,shirt);r(7,39,5,22,skin);r(37,39,5,22,skin);r(22,30,5,7,skin);
+ if(k===0){r(13,6,22,25,skin);r(12,4,24,7,'#253042');r(12,10,4,12,'#253042')}
+ if(k===1){r(14,4,20,29,skin);r(10,10,28,17,skin);r(14,2,20,7,'#242239');r(10,7,5,12,'#242239')}
+ if(k===2){r(8,11,32,19,skin);r(12,6,24,25,skin);r(8,7,32,7,'#343441');r(7,12,5,15,'#343441')}
+ r(17,19,3,3,'#253042');r(29,19,3,3,'#253042');r(22,27,5,2,'#7E6469');return c;}
+const actors=[{x:180,h:116,s:sprite(0)},{x:540,h:142,s:sprite(1)},{x:900,h:170,s:sprite(2)}];
+function render(t){ctx.fillStyle='#141E30';ctx.fillRect(0,0,1080,480);ctx.strokeStyle='#202C41';for(let y=260;y<480;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1080,y);ctx.stroke()}for(let x=-240;x<1400;x+=120){ctx.beginPath();ctx.moveTo(540+(x-540)*.55,220);ctx.lineTo(x,480);ctx.stroke()}
+ actors.forEach(a=>{ctx.fillStyle='#202C40';ctx.fillRect(a.x-100,142,200,12);ctx.fillStyle='#101827';ctx.fillRect(a.x-87,154,8,91);ctx.fillRect(a.x+79,154,8,91);ctx.fillStyle='#34425A';ctx.fillRect(a.x-35,83,70,49);ctx.fillStyle='#18273C';ctx.fillRect(a.x-30,88,60,39);ctx.fillStyle='#34425A';ctx.fillRect(a.x-3,132,6,10)});actors.forEach(a=>drawOvertimeFx(ctx,a.x,374,a.h,t,a.s));}
+let previous=-Infinity,paused=false,elapsed=0,last=null;document.getElementById('pause').onclick=()=>{paused=!paused;document.getElementById('pause').textContent=paused?'繼續動畫':'暫停動畫'};
+function tick(now){requestAnimationFrame(tick);if(last!==null&&!paused)elapsed+=now-last;last=now;if(now-previous<100)return;previous=now;if(!paused)render(elapsed)}render(0);requestAnimationFrame(tick);
+</script></html>

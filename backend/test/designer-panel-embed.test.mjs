@@ -262,9 +262,8 @@ test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
   for (const fn of ['applyRemote', 'resizeCanvas', 'select']) {
     assert.match(js, new RegExp(`function ${fn}\\([^)]*\\)\\{[^\n]*markDirty\\(\\)`), `${fn} 之後要重畫`);
   }
-  // 142 KB 的 PNG 濾鏡圖改成 WebP。
-  assert.match(js, /setAsset\(overtimeSheet,'assets\/overtime-filter\.webp/);
-  // 加班濾鏡不是進站必要的圖：不預載（預載會跟 app.js、頭像、衣服搶頻寬，2026-10-01 瘦身），由 app.js 之後再載。
+  // 加班特效改成程式繪製（2026-10-17），不再下載 overtime-filter.webp，也就不會預載。
+  assert.doesNotMatch(js, /overtimeSheet|overtime-filter\.webp/);
   assert.doesNotMatch(html, /preload[^>]*assets\/overtime-filter\.webp/);
 });
 
