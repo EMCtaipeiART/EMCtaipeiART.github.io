@@ -491,3 +491,9 @@ html.clean-narrow #game{touch-action:none}
 html.clean-narrow .joystick{display:none!important}
 
 .zoom-btns{position:absolute;right:10px;bottom:14px;z-index:7;display:flex;flex-direction:column;gap:8px}.zoom-btns button{width:42px;height:42px;border-radius:50%;border:1px solid #c9d3e0;background:rgba(255,255,255,.92);color:#273b50;font-size:22px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.18);touch-action:manipulation}
+/* 獨立整頁模式（2026-10-17）：不設最大寬度也不要卡片邊框，場景隨視窗放大；
+   上限 1.2 倍（場景寬 2050 → 2460px），超寬螢幕置中，避免像素糊成一片。嵌入與 clean 版不受影響。 */
+html:not(.embed):not(.clean) header,html:not(.embed):not(.clean) main{max-width:none}
+html:not(.embed):not(.clean) main{padding-left:0;padding-right:16px}
+html:not(.embed):not(.clean) .play{border:0;border-radius:0;background:transparent}
+html:not(.embed):not(.clean) #game{max-width:2460px;margin-left:auto;margin-right:auto}
