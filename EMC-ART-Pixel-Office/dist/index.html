@@ -17,8 +17,8 @@
   <!-- 嵌入模式要在 CSS 套用前就標記好，否則設計需求系統那邊會先閃一下遊戲的頁首與「今天，想說點什麼？」。
        放在 head、在 stylesheet 之前，比等 app.js 執行早非常多。 -->
   <script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');</script>
-  <script>if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(/[?&]ro=1/.test(location.search))document.documentElement.classList.add('ro');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
-  <link rel="stylesheet" href="style.css?v=70">
+  <script>/* 直接開本頁（沒帶任何模式參數）就用最新的整頁模式：場景滿版、右側工具只在選取人物時浮出、沒有下方欄位、用圓形選單選人；要看舊的完整版面加 ?full=1 */if(!/[?&](clean|embed|avatars|full)=1/.test(location.search)){try{history.replaceState(null,"",location.pathname+(location.search?location.search+"&":"?")+"clean=1&cs=1.2"+location.hash)}catch(e){}}if(/[?&]clean=1/.test(location.search))document.documentElement.classList.add('clean');if(window.top===window)document.documentElement.classList.add('solo');/* 單獨開啟（不是嵌在別頁的 iframe）：clean 模式背景是透明的，要補白底 */if(/[?&]ro=1/.test(location.search))document.documentElement.classList.add('ro');if(/[?&]avatars=1/.test(location.search))document.documentElement.classList.add('avatars')</script>
+  <link rel="stylesheet" href="style.css?v=71">
 </head>
 <body>
   <header>

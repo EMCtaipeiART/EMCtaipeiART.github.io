@@ -497,3 +497,6 @@ html:not(.embed):not(.clean) header,html:not(.embed):not(.clean) main{max-width:
 html:not(.embed):not(.clean) main{padding-left:0;padding-right:16px}
 html:not(.embed):not(.clean) .play{border:0;border-radius:0;background:transparent}
 html:not(.embed):not(.clean) #game{max-width:2460px;margin-left:auto;margin-right:auto}
+
+/* 整頁模式單獨開啟時補白底（嵌入別頁時維持透明） */
+html.clean.solo,html.clean.solo body{background:#fff}
