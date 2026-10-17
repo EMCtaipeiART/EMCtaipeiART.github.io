@@ -440,6 +440,9 @@
     window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
     /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
     function viewerPayload(){return {type:'pixelOfficeViewer',name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
+    /* 登入交接資料常保持新鮮：登入狀態下每次載入與每 20 分鐘寫一次（手機重新整理多元宇宙分頁時才還認得出自己） */
+    function stashViewer(){try{if(loggedIn())localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())))}catch(err){}}
+    setTimeout(stashViewer,1500);setInterval(stashViewer,20*60*1000);
     function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=117&t=':'?clean=1&ro=1&cs=.78&v=117&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}

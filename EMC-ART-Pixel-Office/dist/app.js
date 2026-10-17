@@ -971,8 +971,8 @@ function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();retur
 function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
 /* 新分頁拿不到 window.opener（部分手機瀏覽器）時，改讀主站開分頁前存的登入交接資料（同網域 localStorage，10 分鐘內有效）。 */
-function applyHandoff(){if(storyIdentity.name)return;try{const h=JSON.parse(localStorage.getItem('pixelViewerHandoff')||'null');if(h&&h.name&&Date.now()-Number(h.at)<600000){storyIdentity={name:String(h.name),token:String(h.token||''),staff:Boolean(h.staff),monitor:Boolean(h.monitor)};applyViewerRole();}}catch(error){}}
-if(window.parent===window){applyHandoff();setTimeout(applyHandoff,1500);}
+function applyHandoff(){if(storyIdentity.name)return;try{const h=JSON.parse(localStorage.getItem('pixelViewerHandoff')||'null');if(h&&h.name&&Date.now()-Number(h.at)<86400000){storyIdentity={name:String(h.name),token:String(h.token||''),staff:Boolean(h.staff),monitor:Boolean(h.monitor)};applyViewerRole();}}catch(error){}}
+if(window.parent===window){applyHandoff();setTimeout(applyHandoff,1500);setTimeout(()=>{if(!storyIdentity.name&&document.documentElement.classList.contains('clean-narrow'))toast('還沒取得登入身分：請先在網站首頁登入，再從頭像點進多元宇宙');},4000);}
 window.addEventListener('message',event=>{
   if(event.origin!==location.origin||(event.source!==window.parent&&event.source!==window.opener))return;
   const data=event.data;if(!data||data.type!=='pixelOfficeViewer')return;
