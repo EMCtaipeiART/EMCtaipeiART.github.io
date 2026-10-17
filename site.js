@@ -328,8 +328,8 @@
     /* 卡牌展開：項目細節（未執行＝新增按鈕；其他狀態＝可編輯，設計師才能改） */
     /* 發信／回信／串接、編輯、刪除：原本是卡牌右上角三個圓形圖示，現在放在展開後的「項目細節」下面，並寫出中文 */
     function cardActsHtml(row){
-      const ed=isDesignerSession();
-      return [["mail",ed],["actions",ed]].map(([k,e])=>COL_DEFS.find(c=>c.key===k).cell(row,e).split("<td>").join("").split("</td>").join("")).join("").replace(/<span class="lt-dash">-<\/span>/g,"").trim();
+      const ed=isDesignerSession();noModBtn=true;try{
+      return [["mail",ed],["actions",ed]].map(([k,e])=>COL_DEFS.find(c=>c.key===k).cell(row,e).split("<td>").join("").split("</td>").join("")).join("").replace(/<span class="lt-dash">-<\/span>/g,"").trim();}finally{noModBtn=false}
     }
     function addCardDetailItems(box,row){
       const host=box.querySelector('.card-detail')||box,ed=isDesignerSession(),todo=String(row['狀態']||'').trim()==='未開始';
@@ -1302,7 +1302,8 @@
     /* 專案部／企劃部（或案件的專案負責人、管理者）在網格與列表直接「填寫修改」：沿用「填寫修改需求信」流程（記錄進修改紀錄並寄給設計師） */
     const canDirectMod=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser())&&acc('modification.create',true);
     const canFileMod=r=>loggedIn()&&['過稿中','修改中'].includes(String(r['狀態']||'').trim())&&(canDirectMod()||acc('request.mail',true));
-    const modBtnHtml=(r,cls)=>canFileMod(r)?(canDirectMod()?`<button type="button" class="${cls}" data-row-act="modify-direct" data-id="${esc(idKey(r))}" title="直接記錄進修改紀錄（不寄信）">新增修改</button>`:`<button type="button" class="${cls}" data-row-act="modify" data-id="${esc(idKey(r))}" title="填寫修改需求（會記錄進修改紀錄並寄信給設計師）">填寫修改</button>`):'';
+    let noModBtn=false;/* 卡片展開區（cardActsHtml）不再重複放修改按鈕：卡片右下已經有一顆 */
+    const modBtnHtml=(r,cls)=>canFileMod(r)&&!noModBtn?(canDirectMod()?`<button type="button" class="${cls}" data-row-act="modify-direct" data-id="${esc(idKey(r))}" title="直接記錄進修改紀錄（不寄信）">新增修改</button>`:`<button type="button" class="${cls}" data-row-act="modify" data-id="${esc(idKey(r))}" title="填寫修改需求（會記錄進修改紀錄並寄信給設計師）">填寫修改</button>`):'';
     const canListEditRow=r=>acc('request.status',hasDesignerRole())&&isEditableYear(r);
     function canViewCustomerCases(name){
       if(!loggedIn()||isAdminAcct())return true;
