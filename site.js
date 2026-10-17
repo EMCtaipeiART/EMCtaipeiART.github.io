@@ -468,7 +468,7 @@
     }
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-uni-hours]'))openHoursEditor()});
     document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-uni-allwork]');if(!b)return;
-      if(!confirm('把所有設計師的狀態一次設成「上班中」（晚上算加班）？ 休假與出國的人不動。  提醒：若今天是假日、或規則開著且沒有心跳，時間規則可能很快又把大家改回下班；測試時請先到「上下班設定」關閉規則。'))return;
+      if(!confirm('把所有設計師的狀態一次設成「上班中」（晚上算加班）？ 休假與出國的人不動。  提醒：按下後到今天 24:00 為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，大家會維持上班中。'))return;
       b.disabled=true;try{const r=await api('pixelOfficeAllWork',{});toast('已設成上班：'+(r.changed||[]).length+' 人'+((r.skipped||[]).length?'（略過休假／出國：'+r.skipped.join('、')+'）':''));const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=116&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=116&t='+Math.floor(Date.now()/300000));

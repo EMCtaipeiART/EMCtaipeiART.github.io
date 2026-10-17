@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { reset, runInDurableObject, SELF } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CUSTOMER_NAMES, emptyDatabase } from '../../backend/schema.mjs';
-import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeOfflineStatus } from '../src/database-coordinator';
+import { pixelOfficeBusyMeetingNow, pixelOfficeCalendarEventState, pixelOfficeOfflineStatus, pixelOfficeIsWorkday, setPixelAllWorkUntil } from '../src/database-coordinator';
 import { pruneIdempotency } from '../src/model';
 import type { DatabaseCoordinator } from '../src/database-coordinator';
 import { hasRowCapability, matchesCustomerEditRule, normalizeDepartmentName, normalizeSettingsDepartments } from '../src/model';
@@ -5605,6 +5605,18 @@ describe('上下班時段設定', () => {
     const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
     expect(await api({ action: 'savePixelHours', enabled: false }, outsider)).toMatchObject({ ok: false });
     expect(await api({ action: 'savePixelHours', enabled: false })).toMatchObject({ ok: false });
+  });
+});
+
+describe('全員上班與時間規則', () => {
+  it('treats a Saturday as a workday during the all-work window', () => {
+    const saturday = Date.parse('2026-10-17T10:00:00+08:00');
+    setPixelAllWorkUntil(0);
+    expect(pixelOfficeIsWorkday(saturday)).toBe(false);
+    setPixelAllWorkUntil(saturday + 3600000);
+    expect(pixelOfficeIsWorkday(saturday)).toBe(true);
+    expect(pixelOfficeIsWorkday(saturday + 7200000)).toBe(false);
+    setPixelAllWorkUntil(0);
   });
 });
 

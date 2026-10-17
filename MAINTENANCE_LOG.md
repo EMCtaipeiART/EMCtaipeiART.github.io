@@ -507,3 +507,5 @@
 - Worker：getPixelHours（公開讀）／savePixelHours（database.manage），設定存 DO pixelHours；測試已補。
 
 - 全員上班：多元宇宙頁新增「全員上班」按鈕（管理者與 Machi），一次把所有設計師設成在座（晚上加班），休假／出國的人不動。Worker 動作 pixelOfficeAllWork（database.manage），測試已補。
+
+- 修正：全員上班與時間規則衝突。按下後到台北時間當天 24:00 為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用（DO pixelAllWorkUntil）。
