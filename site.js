@@ -441,6 +441,32 @@
     /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
     function viewerPayload(){return {type:'pixelOfficeViewer',name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
     /* 登入交接資料常保持新鮮：登入狀態下每次載入與每 20 分鐘寫一次（手機重新整理多元宇宙分頁時才還認得出自己） */
+    /* 手機：左右滑動切換主要頁面（首頁→專案→行事曆…，順序同底部選單）。避開輸入框、橫向可捲動區域（看板欄、表格）、地圖／iframe、彈出視窗與螢幕邊緣（系統返回手勢） */
+    (function(){
+      const phone=()=>matchMedia('(max-width:720px)').matches&&matchMedia('(pointer:coarse)').matches;
+      let t0=null;
+      const blocked=el=>{
+        if(!el||!el.closest)return true;
+        if(el.closest('input,textarea,select,[contenteditable="true"],canvas,iframe,video,.rail,dialog,.nc-back,.modal,[role="dialog"],#cellPop,.login-menu,.cal-grid,.gantt,.hp-card'))return true;
+        for(let n=el;n&&n!==document.body;n=n.parentElement){const cs=getComputedStyle(n);if(/(auto|scroll)/.test(cs.overflowX)&&n.scrollWidth>n.clientWidth+4)return true}
+        return false;
+      };
+      document.addEventListener('touchstart',e=>{
+        t0=null;if(!phone()||e.touches.length!==1)return;
+        const t=e.touches[0];if(t.clientX<28||t.clientX>innerWidth-28)return;
+        if(blocked(e.target)||document.querySelector('.nc-back:not([hidden]),dialog[open]'))return;
+        t0={x:t.clientX,y:t.clientY,at:Date.now()};
+      },{passive:true});
+      document.addEventListener('touchend',e=>{
+        if(!t0)return;const t=e.changedTouches[0],dx=t.clientX-t0.x,dy=t.clientY-t0.y,dt=Date.now()-t0.at;t0=null;
+        if(Math.abs(dx)<90||Math.abs(dx)<Math.abs(dy)*2||dt>800)return;
+        if(String(getSelection&&getSelection())!=='')return;
+        const items=[...document.querySelectorAll('.rail .rail-item[data-nav],.rail .rail-item[data-ext]')].filter(b=>b.offsetParent!==null);
+        const i=items.findIndex(b=>b.classList.contains('is-active'));if(i<0)return;
+        const next=items[i+(dx<0?1:-1)];if(!next)return;
+        next.click();
+      },{passive:true});
+    })();
     function stashViewer(){try{if(loggedIn())localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())))}catch(err){}}
     setTimeout(stashViewer,1500);setInterval(stashViewer,20*60*1000);
     function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=117&t=':'?clean=1&ro=1&cs=.78&v=117&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
