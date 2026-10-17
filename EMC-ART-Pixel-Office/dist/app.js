@@ -82,8 +82,8 @@ let fitting=false;
 let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=false,cleanScale=0,cleanY0=0,cleanPadY=0,followPrev=null;
 /* 手機（窄螢幕）：不縮成一整張小圖，而是用固定的可讀倍率，鏡頭跟著自己的角色移動（沒有角色就跟選取的人，再沒有就看原本那組） */
 /* 桌機整頁模式的縮放：＋／－ 按鈕，每次 0.1，範圍鎖在 DZ_MIN～DZ_MAX（再大也不會超出視窗寬度），偏好記在 localStorage。 */
-const DZ_MIN=.7,DZ_MAX=1.6;let deskZoom=1,deskCapped=false,dzSync=()=>{};try{deskZoom=Math.max(DZ_MIN,Math.min(DZ_MAX,Number(localStorage.getItem('pixelZoomDesk'))||1))}catch(error){}
-let zoomFactor=1;try{zoomFactor=Math.max(.6,Math.min(1.8,Number(localStorage.getItem('pixelZoom'))||1))}catch(error){}
+const DZ_MIN=.7,DZ_MAX=1.6;let deskZoom=1,deskCapped=false,dzSync=()=>{};try{localStorage.removeItem('pixelZoomDesk')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都是預設大小 */
+let zoomFactor=1;try{localStorage.removeItem('pixelZoom')}catch(error){}/* 縮放只在這次進入期間有效，每次進來都回到預設大小 */
 const ZOOM_MIN=.3,ZOOM_MAX=.95;
 let pinching=false;
 const cam={on:false,s:.5,w:0,h:0,x:0,y:0,tx:0,ty:0,init:false,free:false,fx:0,fy:0,ox:null,oy:null,left:0,top:0,pr:1};
@@ -1292,11 +1292,11 @@ const onGamePress=e=>{if(!ready)return;const rect=game.getBoundingClientRect(),p
   document.body.appendChild(box);
   const inBtn=box.querySelector('#dzIn'),outBtn=box.querySelector('#dzOut');
   dzSync=()=>{outBtn.disabled=deskZoom<=DZ_MIN+.001;inBtn.disabled=deskZoom>=DZ_MAX-.001||deskCapped;};
-  const step=d=>{deskZoom=Math.max(DZ_MIN,Math.min(DZ_MAX,Math.round((deskZoom+d)*10)/10));try{localStorage.setItem('pixelZoomDesk',String(deskZoom))}catch(error){}fitCleanView();resizeCanvas();markDirty();dzSync();};
+  const step=d=>{deskZoom=Math.max(DZ_MIN,Math.min(DZ_MAX,Math.round((deskZoom+d)*10)/10));fitCleanView();resizeCanvas();markDirty();dzSync();};
   inBtn.onclick=()=>step(.1);outBtn.onclick=()=>step(-.1);dzSync();
 })();
 /* 手機縮放：兩指捏合，或右下角 ＋／－ 按鈕；縮放範圍鎖在 ZOOM_MIN～ZOOM_MAX，偏好記在 localStorage。 */
-function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,target));cam.s=s;zoomFactor=s/base;try{localStorage.setItem('pixelZoom',String(zoomFactor))}catch(error){}resizeCanvas();updateCamera();markDirty();}
+function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,target));cam.s=s;zoomFactor=s/base;resizeCanvas();updateCamera();markDirty();}
 (function(){
   if(!document.documentElement.classList.contains('clean-narrow'))return;
   const tps=new Map();let d0=0,s0=0;
