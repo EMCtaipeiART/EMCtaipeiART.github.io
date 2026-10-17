@@ -1307,7 +1307,16 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
+/* 站內多元宇宙（電腦版 iframe）：整個畫面鎖定不用滾輪捲動，空白處按住滑鼠拖曳來平移場景；點人物照舊。 */
+const dragPanMode=()=>window.parent!==window&&document.documentElement.classList.contains('clean')&&!embedMode&&!cam.on&&!matchMedia('(max-width:720px)').matches;
+window.addEventListener('wheel',e=>{if(dragPanMode())e.preventDefault();},{passive:false});
 game.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button===0&&dragPanMode()&&!hitAt(e.clientX,e.clientY)){
+    const sx=e.clientX,sy=e.clientY,bx=window.scrollX,by=window.scrollY;let dragged=false;
+    const mv=m=>{const dx=m.clientX-sx,dy=m.clientY-sy;if(!dragged&&Math.hypot(dx,dy)<5)return;dragged=true;game.style.cursor='grabbing';window.scrollTo(bx-dx,by-dy);m.preventDefault();};
+    const up=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);game.style.cursor='';if(!dragged&&u.type==='pointerup')onGamePress(u);};
+    window.addEventListener('pointermove',mv,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+    return;}
   if(!cam.on||e.pointerType==='mouse'){onGamePress(e);return;}
   /* 手機：手指在畫面任何地方按住拖動＝自己的人物往那個方向走（浮動搖桿），鏡頭固定跟著自己；輕點照舊選人。 */
   const ownI=ownIndex();

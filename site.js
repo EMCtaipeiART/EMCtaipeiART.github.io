@@ -474,8 +474,11 @@
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=117&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=117&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>全員上班</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
-      watchUniLoading();
+      watchUniLoading();fitUniFrame();
     }
+    /* 電腦版：整頁鎖定在一個畫面——iframe 高度＝視窗剩下的高度，標題與右上按鈕、右下＋／－一直看得到；場景用滑鼠按住拖曳平移，不靠滾輪 */
+    function fitUniFrame(){const fr=$('uniFrame');if(!fr||!matchMedia('(min-width:721px)').matches)return;window.scrollTo(0,0);fr.style.aspectRatio='auto';fr.style.minHeight='0';fr.style.height=Math.max(320,window.innerHeight-fr.getBoundingClientRect().top-34)+'px';}
+    window.addEventListener('resize',()=>{try{fitUniFrame()}catch(err){}});
     /* 進入多元宇宙的過場：蓋住還在載入的像素辦公室，場景準備好（或最久 10 秒）就淡出 */
     function watchUniLoading(){
       const fr=$('uniFrame'),ov=$('uniLoading');if(!fr||!ov)return;
