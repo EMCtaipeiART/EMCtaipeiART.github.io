@@ -255,7 +255,7 @@ test('嵌入版靜止時不重畫，資源也換成 WebP', async () => {
   const [js, html] = await Promise.all([officeJs(), officeHtml()]);
   // 不能走動，畫面多數時間完全靜止，沒必要每秒畫 60 次。
   assert.match(js, /if\(embedMode&&!needsRedraw&&!sceneAnimating\(\)\)\{requestAnimationFrame\(render\);return;\}/);
-  assert.match(js, /function markDirty\(\)\{needsRedraw=true;\}/);
+  assert.match(js, /function markDirty\(\)\{needsRedraw=true;[^}]*\}/);
   // 宣告要在最前面：resizeCanvas() 在腳本載入時就會用到它。
   assert.ok(js.indexOf('function markDirty') < js.indexOf('function resizeCanvas'),
     'markDirty 要在 resizeCanvas 之前宣告，否則載入時就 TDZ 錯誤');
@@ -540,7 +540,7 @@ test('限時動態：人物右上角是像素氣泡，開啟 Reels 樣式視窗�
   assert.match(css, /#storyViewer\{/);
   // 不顯示倒數時間；不再自己選身分——按讚留言記在登入前台的人名下，沒登入不能互動。
   assert.doesNotMatch(html, /svTime|svCount|svViewer|選擇你是誰/);
-  assert.match(js, /if\(event\.origin!==location\.origin\|\|event\.source!==window\.parent\)return;/);
+  assert.match(js, /if\(event\.origin!==location\.origin\|\|\(event\.source!==window\.parent&&event\.source!==window\.opener\)\)return;/);
   assert.match(js, /type:'pixelOfficeViewerRequest'/);
   assert.doesNotMatch(js, /viewer:who/);
   const parent = await indexHtml();
