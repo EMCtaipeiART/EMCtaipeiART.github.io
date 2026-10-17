@@ -32,7 +32,7 @@
        預設「依節慶日期自動換」，每個節慶只保留一週：萬聖節 10/25–10/31、聖誕節 12/19–12/25、新年（除夕到初五）、情人節 2/8–2/14、端午與中秋（節日前 5 天到後 1 天）；
        其他日子用 base 配色（沒設定就是預設綠）。也可以改成固定一組（fixed）。 */
     const HERO_KEY='v5HeroCfg',HERO_DEFAULT='#2bbf4c|#0f8f61|#0a5a3d';
-    const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#343434|#171717|#050505'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c'],['duanwu','端午節','#8fcf7a|#3f9a5a|#1c5a3a'],['midautumn','中秋節','#2f4f94|#17305f|#0a1536']];
+    const HERO_FESTS=[['','無節慶',''],['halloween','萬聖節','#3b1c6e|#160a29|#050507'],['xmas','聖誕節','#e8493e|#b3202a|#650e19'],['cny','新年','#ff4d3d|#c4161c|#7a0c10'],['valentine','情人節','#ff9ec0|#e8588e|#9c2a5c'],['duanwu','端午節','#8fcf7a|#3f9a5a|#1c5a3a'],['midautumn','中秋節','#2f4f94|#17305f|#0a1536']];
     const HERO_PRESETS=[['預設綠','#2bbf4c|#0f8f61|#0a5a3d'],['海洋藍','#4aa8ff|#1f6fd1|#123a7a'],['薰衣草','#b79cff|#7a55d6|#3f2a8a'],['夕陽橘','#ffb15c|#f07a22|#a8420f'],['玫瑰粉','#ff8fb1|#e0457a|#8e1f4a'],['石墨灰','#8b97a3|#4a5560|#222a31']];
     const HERO_CNY={2026:'2026-02-17',2027:'2027-02-06',2028:'2028-01-26',2029:'2029-02-13',2030:'2030-02-03',2031:'2031-01-23',2032:'2032-02-11',2033:'2033-01-31',2034:'2034-02-19',2035:'2035-02-08',2036:'2036-01-28',2037:'2037-02-15',2038:'2038-02-04',2039:'2039-01-24',2040:'2040-02-12'};
     const HERO_DUANWU={2026:'2026-06-19',2027:'2027-06-09',2028:'2028-05-28',2029:'2029-06-16',2030:'2030-06-05',2031:'2031-06-24',2032:'2032-06-12',2033:'2033-06-01',2034:'2034-06-20',2035:'2035-06-10'};
@@ -42,7 +42,7 @@
     function applyHeroBg(v){const h=document.documentElement,st=h.style;if(heroValid(v)){const p=String(v).toLowerCase().split('|');st.setProperty('--hero-a',p[0]);st.setProperty('--hero-b',p[1]);st.setProperty('--hero-c',p[2]);if(p[3])h.setAttribute('data-hero-fest',p[3]);else h.removeAttribute('data-hero-fest');if(p[3]&&heroFrameOn)h.setAttribute('data-hero-frame','1');else h.removeAttribute('data-hero-frame');heroScene(HERO_FESTS.some(f=>f[0]&&f[0]===p[3]),p[3])}else{['--hero-a','--hero-b','--hero-c'].forEach(k=>st.removeProperty(k));h.removeAttribute('data-hero-fest');h.removeAttribute('data-hero-frame');heroScene(false,'')}}
     /* 統一 Fluent 3D emoji：四個主物件與兩個景深配件，中央保留操作空間。 */
     const HERO_EMOJI={
-      halloween:['jack-o-lantern','ghost','candy','bat','star','sparkles'],
+      halloween:['jack-o-lantern','ghost','balloon-purple','bat','balloon-orange','sparkles'],
       xmas:['christmas_tree','snowman','wrapped_gift','bell','snowflake','star'],
       cny:['custom-lion','fireworks','firecracker','wrapped_gift','star','sparkles'],
       valentine:['red_heart','teddy_bear','love_letter','rose','sparkling_heart','sparkles'],
