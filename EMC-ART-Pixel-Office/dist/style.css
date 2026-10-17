@@ -489,3 +489,5 @@ html.clean-narrow .joystick{position:fixed;right:12px;bottom:14px}
 html.clean-narrow #game{touch-action:none}
 
 html.clean-narrow .joystick{display:none!important}
+
+.zoom-btns{position:absolute;right:10px;bottom:14px;z-index:7;display:flex;flex-direction:column;gap:8px}.zoom-btns button{width:42px;height:42px;border-radius:50%;border:1px solid #c9d3e0;background:rgba(255,255,255,.92);color:#273b50;font-size:22px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.18);touch-action:manipulation}
