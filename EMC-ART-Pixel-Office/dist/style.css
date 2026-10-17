@@ -503,5 +503,3 @@ html.clean.solo,html.clean.solo body{background:#fff}
 
 /* 桌機整頁模式的縮放按鈕（固定在視窗右下角，範圍在 app.js 的 DZ_MIN～DZ_MAX） */
 .dz-btns{position:fixed;right:18px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}.dz-btns button{width:42px;height:42px;border-radius:50%;border:1px solid #c9d3e0;background:rgba(255,255,255,.94);color:#273b50;font-size:22px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}.dz-btns button:hover:not(:disabled){background:#fff;border-color:#8aa0bb}.dz-btns button:disabled{opacity:.4;cursor:default}
-
-html.clean:not(.solo):not(.embed){overflow:hidden}

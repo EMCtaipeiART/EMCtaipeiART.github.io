@@ -120,11 +120,11 @@ function fitCleanView(){
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
   wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H0-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
-  cleanScale=scale;cleanY0=y0;cleanPadY=padY;dzSync();reportFrameHeight();
+  cleanScale=scale;cleanY0=y0;cleanPadY=padY;dzSync();
   game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;
   markDirty();
   /* 場景變高了（往上多兩組桌子）：第一次進來把畫面捲到自己的座位（沒有就捲到原本那組），不用自己往下找 */
-  if(ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{if(inHostFrame())hostPost({type:'pixelOfficeFollowY',y:(wy-y0)*scale+padY,first:true});else window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
+  if(ready&&!cleanScrolled){cleanScrolled=true;let oi=-1;try{oi=ownIndex()}catch(error){}const p0=oi>=0&&people[oi]?viewPeople[oi]||people[oi]:null,wy=p0?p0.y:BOTTOM_FEET-120;setTimeout(()=>{try{window.scrollTo(0,Math.max(0,(wy-y0)*scale+padY-window.innerHeight/2))}catch(error){}},60);}
 }
 /** 編輯版場景很高：只畫目前捲到的範圍（上下各多留一點），畫面外的桌子、人物、名牌整個跳過，動作動畫才不會卡。 */
 function inView(y){
@@ -135,10 +135,6 @@ function inView(y){
 }
 window.addEventListener('scroll',()=>{if(cleanScale)markDirty();},{passive:true});
 /** 編輯版：畫面鎖定在自己的角色，走動時跟著捲（只在位置真的變了才捲，不跟手動捲動打架）。 */
-/* 站內多元宇宙頁（desktop iframe）：iframe 長到跟場景一樣高，只留外層一條捲軸；跟隨自己的角色改成請外層頁面捲動。 */
-const inHostFrame=()=>window.parent!==window&&document.documentElement.classList.contains('clean')&&!embedMode&&!matchMedia('(max-width:720px)').matches;
-function hostPost(msg){try{window.parent.postMessage(msg,location.origin)}catch(error){}}
-function reportFrameHeight(){if(!inHostFrame())return;const b=game.parentElement.getBoundingClientRect();hostPost({type:'pixelOfficeHeight',h:Math.ceil(b.bottom+window.scrollY+12)});}
 function followOwn(){
   if(!cleanScale||embedMode||roMode)return;
   const oi=ownIndex();if(oi<0||!viewPeople[oi])return;
@@ -146,7 +142,6 @@ function followOwn(){
   if(followPrev===key)return;
   const first=followPrev===null||!followPrev.endsWith(':'+oi);followPrev=key;
   const want=(p.y-78-cleanY0)*cleanScale+cleanPadY-window.innerHeight/2,cur=window.scrollY,diff=want-cur;
-  if(inHostFrame()){hostPost({type:'pixelOfficeFollowY',y:want+window.innerHeight/2,first});return;}
   if(first||Math.abs(diff)>6)window.scrollTo(0,first?Math.max(0,want):cur+diff*.35);
 }
 function fitEmbedView(){
