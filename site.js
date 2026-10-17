@@ -439,7 +439,8 @@
     }
     window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
     /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
-    function openUniverseTab(){try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=116&t=':'?clean=1&ro=1&cs=.78&v=116&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
+    function viewerPayload(){return {type:'pixelOfficeViewer',name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
+    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=116&t=':'?clean=1&ro=1&cs=.78&v=116&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
@@ -504,7 +505,7 @@
       go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
-      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage({type:'pixelOfficeViewer',name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())},location.origin)}catch(err){}}
+      if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage(viewerPayload(),location.origin)}catch(err){}}
       if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
     $('universeClose').addEventListener('click',closeUniverse);
     $('universe').addEventListener('click',e=>{if(e.target.id==='universe')closeUniverse()});

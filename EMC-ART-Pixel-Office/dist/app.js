@@ -936,6 +936,9 @@ function viewerIsStaff(){return Boolean(storyIdentity.staff);}
 function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();return who?names.findIndex(n=>n.toLowerCase()===who):-1;}
 function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
+/* 新分頁拿不到 window.opener（部分手機瀏覽器）時，改讀主站開分頁前存的登入交接資料（同網域 localStorage，10 分鐘內有效）。 */
+function applyHandoff(){if(storyIdentity.name)return;try{const h=JSON.parse(localStorage.getItem('pixelViewerHandoff')||'null');if(h&&h.name&&Date.now()-Number(h.at)<600000){storyIdentity={name:String(h.name),token:String(h.token||''),staff:Boolean(h.staff),monitor:Boolean(h.monitor)};applyViewerRole();}}catch(error){}}
+if(window.parent===window){applyHandoff();setTimeout(applyHandoff,1500);}
 window.addEventListener('message',event=>{
   if(event.origin!==location.origin||(event.source!==window.parent&&event.source!==window.opener))return;
   const data=event.data;if(!data||data.type!=='pixelOfficeViewer')return;
