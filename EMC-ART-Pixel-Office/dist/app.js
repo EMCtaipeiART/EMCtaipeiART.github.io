@@ -1246,6 +1246,16 @@ const onGamePress=e=>{if(!ready)return;const rect=game.getBoundingClientRect(),p
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
 game.addEventListener('pointerdown',e=>{
   if(!cam.on||e.pointerType==='mouse'){onGamePress(e);return;}
+  /* 手機：手指在畫面任何地方按住拖動＝自己的人物往那個方向走（浮動搖桿），鏡頭固定跟著自己；輕點照舊選人。 */
+  const ownI=ownIndex();
+  if(ownI>=0&&!roMode){
+    const ox=e.clientX,oy=e.clientY;let dragged=false;
+    const setKeys=(dx,dy)=>{arrowKeys.forEach(k=>keys.delete(k));const len=Math.hypot(dx,dy);if(len<12)return;const ax=dx/len,ay=dy/len;if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');};
+    const mv=m=>{const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<10)return;dragged=true;if(selected!==ownI)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
+    const end=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);arrowKeys.forEach(k=>keys.delete(k));if(!dragged&&u.type==='pointerup')onGamePress(u);};
+    window.addEventListener('pointermove',mv,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+    return;
+  }
   const sx=e.clientX,sy=e.clientY,bx=cam.free?cam.fx:cam.x,by=cam.free?cam.fy:cam.y;let dragged=false;
   const move=m=>{const dx=m.clientX-sx,dy=m.clientY-sy;if(!dragged&&Math.hypot(dx,dy)<10)return;dragged=true;cam.free=true;cam.fx=Math.max(cam.w/2/cam.s,Math.min(W-cam.w/2/cam.s,bx-dx/cam.s));cam.fy=Math.max(cam.h/2/cam.s-OY,Math.min(H0-cam.h/2/cam.s+120,by-dy/cam.s));cam.x=cam.fx;cam.y=cam.fy;m.preventDefault();};
   const up=u=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);if(!dragged&&u.type==='pointerup')onGamePress(u);};

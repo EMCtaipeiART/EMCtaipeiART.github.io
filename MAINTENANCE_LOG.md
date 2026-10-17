@@ -494,3 +494,6 @@
 - 2026-10-16: 短網址 隱私分類: new column 可見範圍 (同組=default/全部/僅自己) chosen per link in create/edit forms; list visibility = owner + 管理者 always, 全部 -> every logged-in user, 同組 -> same 設定.組別 as creator, 僅自己 -> nobody else; badge on each card; redirect itself stays public. Worker redeployed.
 - 2026-10-16: 短網址 批次建立: collapsible box above the list; paste up to 200 URLs (one per line, optional name before/after URL), shared 專案/可見範圍; Worker action createShortLinksBatch (one commit, per-line failures reported, failed lines stay in the box); all new short URLs auto-copied. Worker redeployed.
 - 2026-10-16: 短網址 delete UX: optimistic delete (row disappears at once, restored with a toast if the write fails); per-card checkbox (own links / 管理者 all) + 全選 bar + 刪除選取; Worker action deleteShortLinks (one commit, skips links you don't own and reports them). Worker redeployed.
+
+## 2026-10-17 手機多元宇宙：拖動畫面走路
+- 手機（窄螢幕）在畫面任何位置按住拖動＝自己的人物往該方向走（浮動搖桿），鏡頭固定跟著自己，不再平移；開始走動時環形選單收起。輕點照舊選人。原本的搖桿在手機隱藏。
