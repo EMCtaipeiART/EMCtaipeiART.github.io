@@ -240,7 +240,7 @@ function applyStaff(list){
   }
   if(changed){staffSeated=true;markDirty();try{applyViewerRole();}catch(e){}if(typeof refreshRosterPortraits==='function'&&ready)try{refreshRosterPortraits();}catch(e){}}
 }
-try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo='';if(['4','5'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
+try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';if(s.look&&typeof s.look==='object')p.look=s.look;p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo='';if(['4','5'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
 syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
 function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
@@ -824,14 +824,15 @@ function renderLookPanel(){
   chips($('lookGlasses'),[...(selected>=5?WARDROBE_GLASSES.slice(0,1):WARDROBE_GLASSES),...customList('glasses')],look.glasses,id=>WARDROBE.glasses[id==='sun'?1:0],'glasses');
   $('lookReset').hidden=sameLook(look,lookDefault(selected));
 }
+let lookNotifyTimer=0;function lookChangedNotify(){clearTimeout(lookNotifyTimer);lookNotifyTimer=setTimeout(()=>{if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeLookChanged'},location.origin)}catch(error){}},800);}
 function setLook(patch){
   const i=selected;if(i===null)return;
   if(isPunishedP(people[i])){toast('罰坐中，不能變裝');return;}
   const next={...effectiveLook(i),...patch},isDefault=sameLook(next,lookDefault(i));
   people[i].look=isDefault?null:next;markDirty();save();renderLookPanel();refreshRosterPortraits();
-  pushChange(i,{look:isDefault?'':next});
+  pushChange(i,{look:isDefault?'':next});lookChangedNotify();
 }
-if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;if(isPunishedP(people[selected])){toast('罰坐中，不能變裝');return;}people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});};
+if($('lookReset'))$('lookReset').onclick=()=>{if(selected===null)return;if(isPunishedP(people[selected])){toast('罰坐中，不能變裝');return;}people[selected].look=null;markDirty();save();renderLookPanel();refreshRosterPortraits();pushChange(selected,{look:''});lookChangedNotify();};
 // ───────── 動作（閃身步）─────────
 /** 「動作」區：只有這個人有可以用的動作時才顯示（目前只有 Machi）。 */
 function renderActionPanel(){

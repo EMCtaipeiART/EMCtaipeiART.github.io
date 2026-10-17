@@ -510,6 +510,10 @@
       if(fr&&state.uniEdit&&loggedIn()){let fin=false;const finish=payload=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);go();if(payload&&payload.lookKey&&payload.png)uploadAvatarSnapshot(payload)},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish(ev.data)},t=setTimeout(finish,1500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}return}
       go();return}});
     document.addEventListener('click',e=>{if(e.target.closest?.('[data-uni-edit]')){if(!canEditUniverse()){toast('請用設計師帳號登入後再編輯',true);return}state.uniEdit=!state.uniEdit;renderUniversePage()}});
+    /* 選完造型就先把頭像快照存起來（不必等關閉多元宇宙）；首頁、側邊欄直接用快照，進元宇宙也不會先跳舊造型 */
+    let lookSnapTimer=0;
+    window.addEventListener('message',e=>{const fr=$('uniFrame');if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeLookChanged'||!fr||e.source!==fr.contentWindow||!loggedIn())return;
+      clearTimeout(lookSnapTimer);lookSnapTimer=setTimeout(()=>{let fin=false;const finish=p=>{if(fin)return;fin=true;window.removeEventListener('message',onMsg);clearTimeout(t);if(p&&p.lookKey&&p.png)uploadAvatarSnapshot(p)},onMsg=ev=>{if(ev.origin===location.origin&&ev.data&&ev.data.type==='pixelOfficeSnapshotDone')finish(ev.data)},t=setTimeout(finish,2500);window.addEventListener('message',onMsg);try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshot'},location.origin)}catch(err){finish()}},600)});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
       if(e.data.type==='pixelOfficeViewerRequest'){try{e.source.postMessage(viewerPayload(),location.origin)}catch(err){}}
       if(e.data.type==='pixelOfficeThemeRequest'){try{e.source.postMessage({type:'pixelOfficeTheme',theme:document.documentElement.dataset.theme==='dark'?'dark':'light'},location.origin)}catch(err){}}});
