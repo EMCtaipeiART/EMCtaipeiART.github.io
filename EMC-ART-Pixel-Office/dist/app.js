@@ -1307,6 +1307,8 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
+/* iframe 大小改變（視窗縮放、外層調整高度）或登入身分晚到：重新把畫面對到自己的座位 */
+window.addEventListener('resize',()=>{if(dragPanMode()){followPrev=null;setTimeout(()=>{try{followOwn()}catch(error){}},120);}});
 /* 站內多元宇宙（電腦版 iframe）：整個畫面鎖定不用滾輪捲動，空白處按住滑鼠拖曳來平移場景；點人物照舊。 */
 const dragPanMode=()=>window.parent!==window&&document.documentElement.classList.contains('clean')&&!embedMode&&!cam.on&&!matchMedia('(max-width:720px)').matches;
 window.addEventListener('wheel',e=>{if(dragPanMode())e.preventDefault();},{passive:false});
