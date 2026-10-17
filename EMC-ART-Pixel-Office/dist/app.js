@@ -94,7 +94,8 @@ function updateCamera(){
   if(p){if(cam.ox!==null&&(Math.abs(p.x-cam.ox)>1||Math.abs(p.y-cam.oy)>1))cam.free=false;cam.ox=p.x;cam.oy=p.y;}/* 自己的角色走動：回到跟隨 */
   if(cam.free){px=cam.fx;py=cam.fy;}
   if(!cam.init||(cam.x===0&&cam.y===0)){cam.x=px;cam.y=py;cam.init=true;}
-  else{cam.x+=(px-cam.x)*.2;cam.y+=(py-cam.y)*.2;}
+  else{const now=performance.now(),f=Math.max(.5,Math.min(3,(now-(cam.t||now))/16.67)),k=1-Math.pow(.8,f);cam.x+=(px-cam.x)*k;cam.y+=(py-cam.y)*k;}
+  cam.t=performance.now();
   const vw=cam.w/cam.s,vh=cam.h/cam.s,minTop=TOP_BASE-60,maxTop=Math.max(minTop,H0+60-vh);
   const left=Math.max(0,Math.min(Math.max(0,W-vw),cam.x-vw/2)),top=Math.max(minTop,Math.min(maxTop,cam.y-vh/2));
   if(Math.abs(left-cam.left)>.2||Math.abs(top-cam.top)>.2){cam.left=left;cam.top=top;markDirty();}
@@ -1686,8 +1687,8 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!(performance.now()<fxWakeUntil&&people.some((p,i)=>!isAway(p)&&isOvertime(p)))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
-  if(!embedMode&&!needsRedraw){const gap=!walk&&!sceneAnimating()?100:30;if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
-  if(!embedMode&&needsRedraw&&time-embedLastDraw<15){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
+  if(!embedMode&&!needsRedraw){const gap=!walk&&!sceneAnimating()?100:(walk?8:30);if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
+  if(!embedMode&&needsRedraw&&time-embedLastDraw<(walk?7:15)){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
   needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
