@@ -505,3 +505,5 @@
 ## 2026-10-17 上下班時段設定（管理者與 Machi）
 - 多元宇宙頁新增「上下班設定」按鈕：可關閉整組時間規則（假日／下班／加班／沒心跳自動下班都不套用，手動狀態保留，測試用），並可設定上班開始、午休、下班、加班開始的整點。
 - Worker：getPixelHours（公開讀）／savePixelHours（database.manage），設定存 DO pixelHours；測試已補。
+
+- 全員上班：多元宇宙頁新增「全員上班」按鈕（管理者與 Machi），一次把所有設計師設成在座（晚上加班），休假／出國的人不動。Worker 動作 pixelOfficeAllWork（database.manage），測試已補。

@@ -459,7 +459,7 @@
         if(act&&act.dataset.hrAct==='save'){
           act.disabled=true;const body={enabled:q('hrOn').checked};hrs.forEach(h=>{body[h[0]]=Number(q('hr_'+h[0]).value)});
           try{const res=await api('savePixelHours',body);const c=res.config||body;back.remove();toast(c.enabled?'已儲存上下班時段':'已關閉上下班時段規則（測試用）');
-            const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=d+/,'&t='+Date.now())}
+            const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}
           catch(err){act.disabled=false;toast('儲存失敗：'+(err.message||err),true)}
           return}
         back.remove();
@@ -467,9 +467,12 @@
       document.body.appendChild(back);
     }
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-uni-hours]'))openHoursEditor()});
+    document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-uni-allwork]');if(!b)return;
+      if(!confirm('把所有設計師的狀態一次設成「上班中」（晚上算加班）？ 休假與出國的人不動。  提醒：若今天是假日、或規則開著且沒有心跳，時間規則可能很快又把大家改回下班；測試時請先到「上下班設定」關閉規則。'))return;
+      b.disabled=true;try{const r=await api('pixelOfficeAllWork',{});toast('已設成上班：'+(r.changed||[]).length+' 人'+((r.skipped||[]).length?'（略過休假／出國：'+r.skipped.join('、')+'）':''));const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
     function renderUniversePage(){
       const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=116&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=116&t='+Math.floor(Date.now()/300000));
-      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
+      $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>全員上班</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();
     }
     /* 進入多元宇宙的過場：蓋住還在載入的像素辦公室，場景準備好（或最久 10 秒）就淡出 */

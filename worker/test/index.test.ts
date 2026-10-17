@@ -5608,6 +5608,20 @@ describe('上下班時段設定', () => {
   });
 });
 
+describe('全員上班', () => {
+  it('sets everyone to working, admin only', async () => {
+    const admin = await login();
+    await api({ action: 'savePixelHours', enabled: false }, admin);
+    const res = await api({ action: 'pixelOfficeAllWork' }, admin) as { ok: boolean; changed: string[] };
+    expect(res.ok).toBe(true);
+    expect(res.changed).toEqual(expect.arrayContaining(['Machi', 'Anna']));
+    const state = await api({ action: 'pixelOfficeState', since: 0 }) as { people?: Record<string, { status?: string }> };
+    expect(JSON.stringify(state)).toContain('present');
+    const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'pixelOfficeAllWork' }, outsider)).toMatchObject({ ok: false });
+  });
+});
+
 describe('pixel office status diagnostic', () => {
   it('is admin only and includes the heartbeat details (last seen, online flag, rule status)', async () => {
     const token = await login();

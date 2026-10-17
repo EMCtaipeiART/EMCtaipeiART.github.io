@@ -1924,6 +1924,28 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * pixelOfficeOfflineStatus）。
    * 放在每次讀取狀態時檢查（不需要排程）：遊戲每 3 秒輪詢一次，關機後幾分鐘內就會被任何一個打開遊戲的人觸發。
    * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
+  /** 全員上班：每個人（含還沒有資料列的）的狀態設成 在座／加班，來源記為手動；休假、出國的人跳過。 */
+  private pixelOfficeAllWork(nowMs: number): { changed: string[]; skipped: string[] } {
+    const changed: string[] = [], skipped: string[] = [];
+    const hour = taipeiClock(nowMs).hour;
+    const status = pixelHours.enabled && (hour >= pixelHours.overtimeStart || hour < pixelHours.dayStart) ? 'overtime' : 'present';
+    const rows = this.ctx.storage.sql.exec<{ name: string; state: string }>('SELECT name, state FROM pixel_office_people').toArray();
+    const version = Math.max(nowMs, this.pixelOfficeVersion() + 1);
+    for (const name of Object.keys(PIXEL_OFFICE_CALENDARS)) {
+      const row = rows.find(item => item.name === name);
+      let state: Row = {};
+      try { state = row ? JSON.parse(row.state) as Row : {}; } catch { state = {}; }
+      const current = text(state.status);
+      if (current === 'leave' || current === 'abroad') { skipped.push(name); continue; }
+      state.status = status; state.statusSource = 'manual'; state.statusAt = nowMs;
+      if (row) this.ctx.storage.sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), version, name);
+      else this.ctx.storage.sql.exec('INSERT INTO pixel_office_people(name, state, photo, photo_version, updated_at) VALUES (?, ?, ?, ?, ?)', name, JSON.stringify(state), '', 0, version);
+      changed.push(name);
+    }
+    this.pixelVersionMemo = null;
+    return { changed, skipped };
+  }
+
   private pixelOfficeApplyOffline(nowMs: number): void {
     if (!pixelHours.enabled) return;// 上下班時段規則關閉（測試用）：不自動改成下班
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>(
@@ -5081,6 +5103,13 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeDiagnose') {
         this.requireAccess(database, session, 'database.manage');
         return await this.pixelOfficeDiagnose();
+      }
+      if (action === 'pixelOfficeAllWork') {
+        // 全員上班：把所有設計師的狀態一次設成上班中（依現在時間：晚上算加班，其餘在座）。休假與出國的人不動。
+        const who = this.requireAccess(database, session, 'database.manage');
+        const result = this.pixelOfficeAllWork(Date.now());
+        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '像素辦公室', field: '全員上班', to: String(result.changed.length) + ' 人' }]);
+        return { ok: true, action, ...result };
       }
       if (action === 'savePixelHours') {
         // 上下班時段設定：只有後台管理者（含 Machi）能改；enabled=false 代表整個時間規則關閉（測試用）
