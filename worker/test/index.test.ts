@@ -5595,6 +5595,19 @@ describe('首頁背景：全站共用設定', () => {
   });
 });
 
+describe('上下班時段設定', () => {
+  it('is readable by anyone, writable only by admins, and falls back to defaults on bad hours', async () => {
+    expect(await api({ action: 'getPixelHours' })).toMatchObject({ ok: true, config: { enabled: true, dayStart: 6, lunchStart: 12, lunchEnd: 14, workEnd: 18, overtimeStart: 19 } });
+    const admin = await login();
+    expect(await api({ action: 'savePixelHours', enabled: false, dayStart: 8, lunchStart: 12, lunchEnd: 13, workEnd: 18, overtimeStart: 20 }, admin)).toMatchObject({ ok: true, config: { enabled: false, dayStart: 8, lunchEnd: 13, overtimeStart: 20 } });
+    expect(await api({ action: 'getPixelHours' })).toMatchObject({ config: { enabled: false, dayStart: 8, overtimeStart: 20 } });
+    expect(await api({ action: 'savePixelHours', enabled: true, dayStart: 20, lunchStart: 3, lunchEnd: 2, workEnd: 1, overtimeStart: 0 }, admin)).toMatchObject({ config: { enabled: true, dayStart: 6, lunchStart: 12, workEnd: 18 } });
+    const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
+    expect(await api({ action: 'savePixelHours', enabled: false }, outsider)).toMatchObject({ ok: false });
+    expect(await api({ action: 'savePixelHours', enabled: false })).toMatchObject({ ok: false });
+  });
+});
+
 describe('pixel office status diagnostic', () => {
   it('is admin only and includes the heartbeat details (last seen, online flag, rule status)', async () => {
     const token = await login();

@@ -46,10 +46,10 @@ const PIXEL_OFFICE_OFFLINE_MS = 5 * 60 * 1000;
 // 人離席之後電腦常常跟著睡著、心跳就停了：離席（廁所）狀態在最後一次心跳後這段時間內不當成下班。
 const PIXEL_OFFICE_AWAY_GRACE_MS = 60 * 60 * 1000;
 // 這個鐘點之後沒心跳就當作下班（睡著與關機從心跳分不出來，下班時段寧可判下班，免得關機的人掛著廁所）。
-const PIXEL_OFFICE_SLEEP_AS_AWAY_UNTIL_HOUR = 18;
+
 // 台北時間 19:00 之後（含隔天凌晨 6 點前）電腦還開著就算加班。
-const PIXEL_OFFICE_OVERTIME_START_HOUR = 19;
-const PIXEL_OFFICE_OVERTIME_END_HOUR = 6;
+
+
 // 電腦開著但鍵鼠閒置這麼久就當作人離開座位了：午休時段顯示用餐，其他時段顯示廁所。
 const PIXEL_OFFICE_AWAY_IDLE_SECONDS = 5 * 60;
 // 反過來的判定：人明明就在電腦前敲鍵盤，卻還掛著公出／會議／用餐，就把狀態收回成在座。
@@ -86,8 +86,24 @@ export function pixelOfficeLevelTitles(stored: unknown): Record<string, string[]
   return result;
 }
 
-const PIXEL_OFFICE_LUNCH_START_HOUR = 12;
-const PIXEL_OFFICE_LUNCH_END_HOUR = 14;
+/** 上下班時段設定（後台管理者與 Machi 可改，存在 DO 的 pixelHours）。enabled=false 就完全不套用時間規則：
+ * 假日不強制下班、晚上不算加班、沒心跳也不自動下班——方便測試手動狀態。數字都是台北時間的整點。 */
+export interface PixelHours { enabled: boolean; dayStart: number; lunchStart: number; lunchEnd: number; workEnd: number; overtimeStart: number }
+export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 6, lunchStart: 12, lunchEnd: 14, workEnd: 18, overtimeStart: 19 };
+let pixelHours: PixelHours = { ...PIXEL_HOURS_DEFAULT };
+export function setPixelHours(config: Partial<PixelHours> | null | undefined): void { pixelHours = cleanPixelHours(config); }
+export function cleanPixelHours(config: Partial<PixelHours> | null | undefined): PixelHours {
+  const hour = (value: unknown, fallback: number): number => { const n = Math.floor(Number(value)); return Number.isFinite(n) && n >= 0 && n <= 23 ? n : fallback; };
+  const c = config || {};
+  const next: PixelHours = {
+    enabled: c.enabled !== false,
+    dayStart: hour(c.dayStart, PIXEL_HOURS_DEFAULT.dayStart), lunchStart: hour(c.lunchStart, PIXEL_HOURS_DEFAULT.lunchStart),
+    lunchEnd: hour(c.lunchEnd, PIXEL_HOURS_DEFAULT.lunchEnd), workEnd: hour(c.workEnd, PIXEL_HOURS_DEFAULT.workEnd), overtimeStart: hour(c.overtimeStart, PIXEL_HOURS_DEFAULT.overtimeStart)
+  };
+  // 順序要合理：上班 < 午休開始 < 午休結束 ≤ 下班 ≤ 加班開始；亂填就整組回預設，避免狀態判斷錯亂
+  if (!(next.dayStart < next.lunchStart && next.lunchStart < next.lunchEnd && next.lunchEnd <= next.workEnd && next.workEnd <= next.overtimeStart)) return { ...PIXEL_HOURS_DEFAULT, enabled: next.enabled };
+  return next;
+}
 // 台灣的國定假日與補假（台北時間 YYYYMMDD）。週六日不用列，程式自己判斷。
 // 每年行政院公布新行事曆之後要補一年上去，來源：
 // https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/<西元年>.json（取 isHoliday 為 true 且 description 不是空字串的日期）。
@@ -110,6 +126,7 @@ function taipeiClock(nowMs: number): { date: string; weekday: number; hour: numb
 
 /** 台北時間的這一天要不要上班：週六日與國定假日都不用。 */
 export function pixelOfficeIsWorkday(nowMs: number): boolean {
+  if (!pixelHours.enabled) return true;
   const { date, weekday } = taipeiClock(nowMs);
   if (weekday === 0 || weekday === 6) return false;
   return !(PIXEL_OFFICE_HOLIDAYS[date.slice(0, 4)] || []).includes(date);
@@ -127,9 +144,9 @@ export function pixelOfficeWorkStatus(nowMs: number, idleSeconds?: number): 'pre
   const { hour } = taipeiClock(nowMs);
   const idle = Number(idleSeconds);
   if (Number.isFinite(idle) && idle >= PIXEL_OFFICE_AWAY_IDLE_SECONDS) {
-    return hour >= PIXEL_OFFICE_LUNCH_START_HOUR && hour < PIXEL_OFFICE_LUNCH_END_HOUR ? 'lunch' : 'toilet';
+    return hour >= pixelHours.lunchStart && hour < pixelHours.lunchEnd ? 'lunch' : 'toilet';
   }
-  if (hour >= PIXEL_OFFICE_OVERTIME_START_HOUR || hour < PIXEL_OFFICE_OVERTIME_END_HOUR) return 'overtime';
+  if (pixelHours.enabled && (hour >= pixelHours.overtimeStart || hour < pixelHours.dayStart)) return 'overtime';
   return 'present';
 }
 
@@ -144,10 +161,10 @@ export function pixelOfficeOfflineStatus(nowMs: number, lastSeenMs = 0): 'offwor
   const now = taipeiClock(nowMs);
   const seen = Number(lastSeenMs);
   const seenToday = seen > 0 && taipeiClock(seen).date === now.date;
-  if (now.hour >= PIXEL_OFFICE_LUNCH_START_HOUR && now.hour < PIXEL_OFFICE_LUNCH_END_HOUR) return seenToday ? 'lunch' : 'offwork';
+  if (now.hour >= pixelHours.lunchStart && now.hour < pixelHours.lunchEnd) return seenToday ? 'lunch' : 'offwork';
   // 白天（加班時段之前）今天開過電腦、只是剛睡著或待機不到一小時：當作暫時離開座位（廁所），不是下班。
   // 下班＝很久沒有心跳（超過一小時，或已經是晚上、或今天根本沒開過電腦）。
-  if (seenToday && now.hour >= PIXEL_OFFICE_OVERTIME_END_HOUR && now.hour < PIXEL_OFFICE_SLEEP_AS_AWAY_UNTIL_HOUR && nowMs - seen <= PIXEL_OFFICE_AWAY_GRACE_MS) return 'toilet';
+  if (seenToday && now.hour >= pixelHours.dayStart && now.hour < pixelHours.workEnd && nowMs - seen <= PIXEL_OFFICE_AWAY_GRACE_MS) return 'toilet';
   return 'offwork';
 }
 
@@ -1908,6 +1925,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 放在每次讀取狀態時檢查（不需要排程）：遊戲每 3 秒輪詢一次，關機後幾分鐘內就會被任何一個打開遊戲的人觸發。
    * 「出國／公出」本來就常常沒開電腦，不動它。使用者在電腦離線之後才手動指定的狀態（例如用手機點在座）也尊重，不覆蓋。 */
   private pixelOfficeApplyOffline(nowMs: number): void {
+    if (!pixelHours.enabled) return;// 上下班時段規則關閉（測試用）：不自動改成下班
     const rows = this.ctx.storage.sql.exec<{ name: string; state: string; last_seen: number }>(
       'SELECT name, state, last_seen FROM pixel_office_people'
     ).toArray();
@@ -2027,6 +2045,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
    * 任何一步失敗（沒授權、沒開 API、某個人的行事曆看不到）都只是這一輪不動狀態，不會把人改錯。
    */
   async runPixelOfficeCalendarSync(nowMs = Date.now()): Promise<Row> {
+    setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     if (!pixelOfficeIsWorkday(nowMs)) return { ok: true, skipped: 'holiday' };
     const { hour } = taipeiClock(nowMs);
     if (hour < PIXEL_OFFICE_CALENDAR_START_HOUR || hour >= PIXEL_OFFICE_CALENDAR_END_HOUR) return { ok: true, skipped: 'off-hours' };
@@ -4778,6 +4797,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   async runPixelPush(): Promise<void> { this.pixelPushIfChanged(); }
 
   async handle(actionValue: string, payload: ApiPayload = {}, context: RequestContext): Promise<ApiResult> {
+    setPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours'));
     const result = await this.handleCore(actionValue, payload, context);
     const action = text(actionValue || payload.action || '');
     if (action.startsWith('pixelOffice') && !['pixelOfficeStoryImage', 'pixelOfficeCalendarStatus'].includes(action)) {
@@ -4798,6 +4818,7 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         const row = this.ctx.storage.sql.exec<{ r: number | null }>("SELECT json_extract(json, '$.revision') AS r FROM database_state WHERE id = ?", STATE_KEY).toArray()[0];
         return { ok: true, action, revision: Number(row?.r) || 0 };
       }
+      if (action === 'getPixelHours') return { ok: true, action, config: { ...cleanPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours')) }, defaults: PIXEL_HOURS_DEFAULT };
       if (action === 'getHeroConfig') return { ok: true, action, config: (await this.ctx.storage.get<HeroConfig>('heroConfig')) || null };
       if (action === 'releaseInfo') return { ok: true, action: 'releaseInfo', release: Number(await this.ctx.storage.get('appRelease')) || 0 };
       if (action === 'pixelOfficeState') return this.pixelOfficeState(payload);
@@ -5060,6 +5081,16 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'pixelOfficeDiagnose') {
         this.requireAccess(database, session, 'database.manage');
         return await this.pixelOfficeDiagnose();
+      }
+      if (action === 'savePixelHours') {
+        // 上下班時段設定：只有後台管理者（含 Machi）能改；enabled=false 代表整個時間規則關閉（測試用）
+        const who = this.requireAccess(database, session, 'database.manage');
+        const config = cleanPixelHours({ enabled: payload.enabled !== false, dayStart: payload.dayStart as number, lunchStart: payload.lunchStart as number, lunchEnd: payload.lunchEnd as number, workEnd: payload.workEnd as number, overtimeStart: payload.overtimeStart as number });
+        await this.ctx.storage.put('pixelHours', config);
+        setPixelHours(config);
+        this.pixelVersionMemo = null;
+        await this.queueAudit([{ t: new Date().toISOString(), kind: '欄位修改', actor: auditActor(who), caseId: '上下班時段', field: config.enabled ? '時間規則開啟' : '時間規則關閉', to: JSON.stringify(config) }]);
+        return { ok: true, action, config };
       }
       if (action === 'saveHeroConfig') {
         // 首頁背景是全站共用的設定：只有後台管理者（含 Machi）能改，所有人（含未登入）都讀得到
