@@ -81,6 +81,8 @@ let fitting=false;
 // 外層（多元宇宙頁的編輯模式）用 ?clean=1 開完整版：不要邊框與標題文字，並把六張桌子放大到佔滿寬度。
 let cleanTop=null,cleanBottom=BOTTOM_FEET+40,cleanStaff=false,cleanScrolled=false,cleanScale=0,cleanY0=0,cleanPadY=0,followPrev=null;
 /* 手機（窄螢幕）：不縮成一整張小圖，而是用固定的可讀倍率，鏡頭跟著自己的角色移動（沒有角色就跟選取的人，再沒有就看原本那組） */
+/* 桌機整頁模式的縮放：＋／－ 按鈕，每次 0.1，範圍鎖在 DZ_MIN～DZ_MAX（再大也不會超出視窗寬度），偏好記在 localStorage。 */
+const DZ_MIN=.7,DZ_MAX=1.6;let deskZoom=1,deskCapped=false,dzSync=()=>{};try{deskZoom=Math.max(DZ_MIN,Math.min(DZ_MAX,Number(localStorage.getItem('pixelZoomDesk'))||1))}catch(error){}
 let zoomFactor=1;try{zoomFactor=Math.max(.6,Math.min(1.8,Number(localStorage.getItem('pixelZoom'))||1))}catch(error){}
 const ZOOM_MIN=.3,ZOOM_MAX=.95;
 let pinching=false;
@@ -114,11 +116,11 @@ function fitCleanView(){
   cleanTop=top;
   cleanStaff=staffSeated;
   const x0=narrow?300:424,x1=narrow?(staffSeated?2080:1236):(staffSeated?2000:1112),y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
-  const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,scale=csParam&&!narrow?Math.min(csParam,fitW):fitW,cx=(x0+x1)/2;// 窄螢幕（手機）不能超過可用寬度
+  const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,baseScale=csParam&&!narrow?Math.min(csParam,fitW):fitW,scale=narrow?baseScale:Math.min(baseScale*deskZoom,fitW),cx=(x0+x1)/2;deskCapped=!narrow&&baseScale*deskZoom>=fitW-1e-6;// 窄螢幕（手機）不能超過可用寬度
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
   wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H0-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
   game.style.width=`${W*scale}px`;game.style.height=`${H*scale}px`;
-  cleanScale=scale;cleanY0=y0;cleanPadY=padY;
+  cleanScale=scale;cleanY0=y0;cleanPadY=padY;dzSync();
   game.style.transform=`translate(${w/2-cx*scale}px,${-(y0+OY)*scale+padY}px)`;
   markDirty();
   /* 場景變高了（往上多兩組桌子）：第一次進來把畫面捲到自己的座位（沒有就捲到原本那組），不用自己往下找 */
@@ -1281,6 +1283,18 @@ function joystickMove(e){const rect=joystick.getBoundingClientRect(),max=rect.wi
 function joystickEnd(e){if(e.pointerId!==joystickPointer)return;joystickPointer=null;joystick.classList.remove('active');joystickKnob.style.transform='';arrowKeys.forEach(key=>keys.delete(key));}
 if(joystick){joystick.addEventListener('pointerdown',e=>{e.preventDefault();joystickPointer=e.pointerId;try{joystick.setPointerCapture(e.pointerId);}catch{}joystick.classList.add('active');joystickMove(e);});joystick.addEventListener('pointermove',e=>{if(e.pointerId!==joystickPointer)return;e.preventDefault();joystickMove(e);});['pointerup','pointercancel','lostpointercapture'].forEach(type=>joystick.addEventListener(type,joystickEnd));joystick.addEventListener('contextmenu',e=>e.preventDefault());joystick.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});}
 const onGamePress=e=>{if(!ready)return;const rect=game.getBoundingClientRect(),pt=toScene(e.clientX,e.clientY,rect),x=pt.x,y=pt.y;const hit=[...hits].reverse().find(h=>x>=h.x&&x<=h.x+h.w&&y>=h.y&&y<=h.y+h.h);if(hit){if(hit.type==='story')openStory(hit.i);else if(hit.type==='musicPlay')toggleMusic(hit.i);else if(hit.type==='musicLink'){const music=musicOf(people[hit.i]);if(music)window.open(music.url,'_blank','noopener');}else{if(roMode)return;if(viewerIsStaff()&&hit.i!==ownIndex()){toast('你只能操控自己的人物');return;}select(hit.i);if(embedMode)setCardPinned(true);else game.focus({preventScroll:true});if(window.radialOpen)window.radialOpen(hit.i);}}else{if(embedMode)setCardPinned(false);select(null);if(window.radialClose)window.radialClose();}};
+/* 桌機整頁模式：右下角 ＋／－ 縮放按鈕（嵌入小框與手機不顯示；手機另有兩指捏合）。 */
+(function(){
+  const root=document.documentElement;
+  if(!root.classList.contains('clean')||embedMode||matchMedia('(max-width:720px)').matches)return;
+  const box=document.createElement('div');box.className='dz-btns';
+  box.innerHTML='<button type="button" id="dzIn" aria-label="放大畫面" title="放大">＋</button><button type="button" id="dzOut" aria-label="縮小畫面" title="縮小">－</button>';
+  document.body.appendChild(box);
+  const inBtn=box.querySelector('#dzIn'),outBtn=box.querySelector('#dzOut');
+  dzSync=()=>{outBtn.disabled=deskZoom<=DZ_MIN+.001;inBtn.disabled=deskZoom>=DZ_MAX-.001||deskCapped;};
+  const step=d=>{deskZoom=Math.max(DZ_MIN,Math.min(DZ_MAX,Math.round((deskZoom+d)*10)/10));try{localStorage.setItem('pixelZoomDesk',String(deskZoom))}catch(error){}fitCleanView();resizeCanvas();markDirty();dzSync();};
+  inBtn.onclick=()=>step(.1);outBtn.onclick=()=>step(-.1);dzSync();
+})();
 /* 手機縮放：兩指捏合，或右下角 ＋／－ 按鈕；縮放範圍鎖在 ZOOM_MIN～ZOOM_MAX，偏好記在 localStorage。 */
 function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,target));cam.s=s;zoomFactor=s/base;try{localStorage.setItem('pixelZoom',String(zoomFactor))}catch(error){}resizeCanvas();updateCamera();markDirty();}
 (function(){
