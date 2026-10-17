@@ -1250,15 +1250,12 @@ const onGamePress=e=>{if(!ready)return;const rect=game.getBoundingClientRect(),p
 function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,target));cam.s=s;zoomFactor=s/base;try{localStorage.setItem('pixelZoom',String(zoomFactor))}catch(error){}resizeCanvas();updateCamera();markDirty();}
 (function(){
   if(!document.documentElement.classList.contains('clean-narrow'))return;
-  let d0=0,s0=0;const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
-  game.addEventListener('touchstart',e=>{if(e.touches.length===2){pinching=true;arrowKeys.forEach(k=>keys.delete(k));d0=dist(e.touches);s0=cam.s;}},{passive:true});
-  game.addEventListener('touchmove',e=>{if(pinching&&e.touches.length===2&&d0>0){e.preventDefault();setZoom(s0*dist(e.touches)/d0);}},{passive:false});
-  const endPinch=e=>{if(e.touches.length<2)setTimeout(()=>{pinching=false},250);};
-  game.addEventListener('touchend',endPinch,{passive:true});game.addEventListener('touchcancel',endPinch,{passive:true});
-  const box=document.createElement('div');box.className='zoom-btns';box.innerHTML='<button type="button" aria-label="放大">＋</button><button type="button" aria-label="縮小">－</button>';
-  box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setZoom(cam.s*(b.textContent==='＋'?1.2:1/1.2));});
-  box.addEventListener('pointerdown',e=>e.stopPropagation());
-  game.parentElement.appendChild(box);
+  const tps=new Map();let d0=0,s0=0;
+  const spread=()=>{const v=[...tps.values()];return Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);};
+  game.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;tps.set(e.pointerId,{x:e.clientX,y:e.clientY});if(tps.size===2){pinching=true;arrowKeys.forEach(k=>keys.delete(k));d0=spread();s0=cam.s;}},true);
+  window.addEventListener('pointermove',e=>{const t=tps.get(e.pointerId);if(!t)return;t.x=e.clientX;t.y=e.clientY;if(pinching&&tps.size>=2&&d0>0)setZoom(s0*spread()/d0);},{passive:true});
+  const up=e=>{if(!tps.delete(e.pointerId))return;if(tps.size<2)setTimeout(()=>{if(tps.size<2)pinching=false;},200);};
+  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
 game.addEventListener('pointerdown',e=>{
@@ -1269,7 +1266,7 @@ game.addEventListener('pointerdown',e=>{
     const ox=e.clientX,oy=e.clientY;let dragged=false;
     const setKeys=(dx,dy)=>{arrowKeys.forEach(k=>keys.delete(k));const len=Math.hypot(dx,dy);if(len<5)return;const ax=dx/len,ay=dy/len;if(ax>.3)keys.add('ArrowRight');if(ax<-.3)keys.add('ArrowLeft');if(ay>.3)keys.add('ArrowDown');if(ay<-.3)keys.add('ArrowUp');};
     const mv=m=>{if(pinching){arrowKeys.forEach(k=>keys.delete(k));m.preventDefault();return;}const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<4)return;dragged=true;if(selected!==ownI)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
-    const end=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);arrowKeys.forEach(k=>keys.delete(k));if(!dragged&&u.type==='pointerup')onGamePress(u);};
+    const end=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);arrowKeys.forEach(k=>keys.delete(k));if(!dragged&&!pinching&&u.type==='pointerup')onGamePress(u);};
     window.addEventListener('pointermove',mv,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
     return;
   }
@@ -1631,7 +1628,7 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){requestAnimationFrame(render);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw&&time-embedLastDraw<30){requestAnimationFrame(render);return;}// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
-  needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,game.width,game.height);ctx.setTransform(k,0,0,k,-Math.round(cam.left*k),-Math.round(cam.top*k));}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
+  needsRedraw=false;syncViewLayout();try{followOwn()}catch(error){}if(cam.on&&cam.w){const k=cam.pr*cam.s;ctx.setTransform(k,0,0,k,-cam.left*k,-cam.top*k);ctx.clearRect(cam.left,cam.top,cam.w/cam.s+2,cam.h/cam.s+2);}else ctx.clearRect(0,-OY,W,H);drawOffice();if(ready){hits=[];const layers=[];viewStations.forEach(s=>{if(embedMode&&(s.grp||s.ext))return;/* 首頁小框只看設計部 */if(!inView(s.y))return;if(s.row){layers.push({depth:EMBED_ROW_TOP+115+(s.y-BOTTOM_FEET),draw:()=>drawDeskBottom(s)});layers.push({depth:s.y-20,draw:()=>drawChair(s)});}else{layers.push({depth:s.y-20,draw:()=>drawChair(s)});layers.push({depth:s.y+106,draw:()=>drawDesk(s)});}layers.push({depth:s.row?s.y-1:99999,draw:()=>drawDeskPlate(s)});/* 下排名牌排在人物之前畫：頭會壓在膠囊上 */});viewPeople.forEach((p,i)=>{if(embedMode&&p.staff)return;if(!inView(p.y))return;if(p.staff&&!staffLookReady(i))return;/* 自己的頭像與服裝載好才畫，避免先閃出一個內建（Machi）的人 */layers.push({depth:p.y,draw:()=>drawPerson(i,time,walk)});});layers.sort((a,b)=>a.depth-b.depth).forEach(layer=>layer.draw());people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawOverlay(i,time);});people.forEach((p,i)=>{if(!(embedMode&&p.staff)&&inView(viewY(p.y)))drawActionLabel(i);});viewStations.forEach(s=>{if(!(embedMode&&(s.grp||s.ext))&&inView(s.y))drawStatusMarker(s.row?{...s,y:BD_MARK_Y+(s.y-BOTTOM_FEET)}:s);});positionPersonCard();if(window.radialPlace)window.radialPlace();}requestAnimationFrame(render);}
 // 圖示不擋進站：人物與家具載好就開始畫，圖示載入前先用內建的像素小圖。
 load(iconSheet).then(refreshIconCanvases).catch(()=>{});load(extraSheet).then(refreshIconCanvases).catch(()=>{});
 load(overtimeSheet).then(()=>portrait($('portrait').getContext('2d'),selected)).catch(()=>{});
