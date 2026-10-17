@@ -1312,6 +1312,17 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
   window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
 })();
 /* 手機：手指拖曳平移（鏡頭暫時不跟角色）；沒拖動的輕點照舊選人。自己的角色一走動，鏡頭就回來跟著。 */
+/* 手機單獨開啟的多元宇宙（新分頁／主畫面 App）沒有外層頁面的「關閉」可用：左上角放返回鈕，回到系統首頁 */
+(function(){
+  if(window.parent!==window||!document.documentElement.classList.contains('clean')||!matchMedia('(max-width:720px)').matches)return;
+  const b=document.createElement('button');b.type='button';b.className='exit-btn';b.setAttribute('aria-label','返回系統');b.innerHTML='<span aria-hidden="true">‹</span> 返回系統';
+  b.onclick=()=>{
+    const home=new URL('../../',location.href).href;
+    if(window.opener){try{window.close()}catch(error){}setTimeout(()=>{location.href=home},350);return;}
+    location.href=home;
+  };
+  document.body.appendChild(b);
+})();
 /* iframe 大小改變（視窗縮放、外層調整高度）或登入身分晚到：重新把畫面對到自己的座位 */
 window.addEventListener('resize',()=>{if(dragPanMode()){followPrev=null;setTimeout(()=>{try{followOwn()}catch(error){}},120);}});
 /* 站內多元宇宙（電腦版 iframe）：整個畫面鎖定不用滾輪捲動，空白處按住滑鼠拖曳來平移場景；點人物照舊。 */
