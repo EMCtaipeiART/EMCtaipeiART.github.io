@@ -14,7 +14,7 @@
   <script>
     (()=>{try{document.documentElement.dataset.theme=localStorage.getItem('designRequestThemeV1')==='dark'?'dark':'light'}catch(err){document.documentElement.dataset.theme='light'}})();
   </script>
-  <link rel="stylesheet" href="site.css?v=618c66329c" />
+  <link rel="stylesheet" href="site.css?v=62ba500daa" />
 </head>
 <body>
 <!-- OAuth 返回頁：Google 登入／Gmail 連接的彈出視窗會導回網站根網址（這一頁）。彈出視窗把結果廣播給原頁後自動關閉；
@@ -32,6 +32,8 @@
         if(!ok&&window.opener){try{window.opener.postMessage(result,location.origin);ok=true}catch(e){}}
         if(ok){history.replaceState(null,'',location.pathname);done('Google 登入完成');return}
       }
+      /* 加到主畫面的 App 整頁跳轉登入：回到這頁時由 site.js 完成登入，不要轉去舊版 */
+      try{const sv=JSON.parse(localStorage.getItem('v5GoogleRedirect')||'null');if(sv&&sv.state&&sv.state===(hash.get('state')||''))return}catch(e){}
       location.replace('legacy.html'+location.search+location.hash);return;
     }
     const code=query.get('code')||'',qState=query.get('state')||'',qErr=query.get('error')||'';
@@ -222,6 +224,6 @@ window.emcQuotes=[
   <div class="cell-pop" id="cellPop" hidden></div>
   <div class="toast" id="toast" role="status"></div>
 
-  <script src="site.js?v=e90e53b37a"></script>
+  <script src="site.js?v=36a55aa7d7"></script>
 </body>
 </html>

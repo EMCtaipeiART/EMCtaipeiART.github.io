@@ -3646,10 +3646,28 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       afterLogin();
       if(state.view==='login')show(back&&back!=='login'&&back!=='form'?back:state.home);
     }
+    const isStandaloneApp=()=>{try{return navigator.standalone===true||matchMedia('(display-mode: standalone)').matches}catch(err){return false}};
+    /* 整頁跳轉登入回來：網址 #id_token=...&state=...，state 要跟出發前存的一致才採用 */
+    async function handleRedirectLogin(){
+      try{
+        const h=new URLSearchParams(location.hash.replace(/^#/,'')),tok=h.get('id_token')||'',st=h.get('state')||'',err=h.get('error')||'';
+        if(!(tok||err)||!st.startsWith('v5_login_'))return;
+        let saved=null;try{saved=JSON.parse(localStorage.getItem('v5GoogleRedirect')||'null')}catch(e){}
+        history.replaceState(null,'',location.pathname+location.search);
+        if(!saved||saved.state!==st||Date.now()-Number(saved.at)>15*60*1000)return;
+        try{localStorage.removeItem('v5GoogleRedirect')}catch(e){}
+        if(err){login.error=h.get('error_description')||err;startLogin();return}
+        login.busy=true;login.error='';if(state.view!=='login')startLogin();
+        await googleCredential(tok);
+      }catch(e){login.busy=false}
+    }
+    setTimeout(handleRedirectLogin,700);
     async function googleStart(){
       if(location.origin!==GOOGLE_ORIGIN){login.error='Google 登入只能在正式網站（emctaipeiart.github.io）使用，本機測試請改用帳號密碼。';renderLoginPage();return}
       const st=`v5_login_${Date.now()}_${Math.random().toString(36).slice(2)}`,nonce=`v5_nonce_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       login.state=st;
+      /* 加到主畫面的 App（standalone）：彈出視窗在 iOS 會跑到另一個瀏覽環境，結果傳不回來（要重試好幾次、最後跳 401）；改成整頁跳轉去 Google，回來後在同一個畫面完成登入 */
+      if(isStandaloneApp()){try{localStorage.setItem('v5GoogleRedirect',JSON.stringify({state:st,at:Date.now()}))}catch(err){}const rp=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:GOOGLE_ORIGIN,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state:st,nonce});location.href='https://accounts.google.com/o/oauth2/v2/auth?'+rp;return}
       if(!login.channel&&'BroadcastChannel' in window){login.channel=new BroadcastChannel(GOOGLE_CHANNEL);login.channel.onmessage=ev=>googleResult(ev.data)}
       const params=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:GOOGLE_ORIGIN,response_type:'id_token',scope:'openid email profile',prompt:'select_account',state:st,nonce});
       const win=window.open(`https://accounts.google.com/o/oauth2/v2/auth?${params}`,'machiGoogleLogin','popup=yes,width=520,height=720');
@@ -3676,6 +3694,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let gsiReady=false;
     function mountGoogle(){
       const slot=$('gsiBtn');if(!slot||login.busy)return;
+      if(isStandaloneApp()){slot.innerHTML='<button type="button" class="btn primary" data-lp="google" style="width:100%;min-height:46px">使用 Google 帳號登入</button>';return}
       const go=()=>{
         try{
           if(!gsiReady){google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>googleCredential(r.credential),ux_mode:'popup',auto_select:false});gsiReady=true}

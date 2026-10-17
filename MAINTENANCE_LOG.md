@@ -568,3 +568,7 @@
 - 手機左右滑動切換主要頁面（順序同選單）：避開輸入框、橫向可捲動區域、地圖／iframe、彈出視窗與螢幕左右邊緣 28px；html/body 加 overscroll-behavior-x:none。
 
 - 手機底部選單改回單排可左右滑動（兩排太醜）：按鈕放大（74px 寬、約 77px 高）、整排抬高並在底部留 16px＋safe-area 空白避開 iPhone 底部手勢區。
+
+## 2026-10-17 主畫面 App 登入修正、底部選單空白縮小
+- 加到主畫面的 App（standalone）改用整頁跳轉登入 Google（彈出視窗在 iOS 會跑到另一個瀏覽環境，結果傳不回來，要重試好幾次、最後 401）；回到 index.html 時由 site.js 驗證 state 後完成登入，不再轉去 legacy.html。standalone 只顯示自己的「使用 Google 帳號登入」按鈕。
+- 手機底部選單下方空白縮小（safe-area 只取 60 趴＋6px）。

@@ -1456,10 +1456,10 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 
 /* 手機底部選單（iPhone）：維持單排、可左右滑動；整排抬高，底下留一段空白給 iPhone 底部手勢區（避免在最底部滑動時誤切換／關閉 App）。按鈕放大一點增加感應範圍。 */
 @media (max-width:720px){
-  .rail{height:calc(78px + 16px + env(safe-area-inset-bottom,0px))!important;padding:0 6px calc(16px + env(safe-area-inset-bottom,0px))!important;align-items:stretch}
+  .rail{height:calc(78px + 6px + env(safe-area-inset-bottom,0px)*.6)!important;padding:0 6px calc(6px + env(safe-area-inset-bottom,0px)*.6)!important;align-items:stretch}
   .rail-item{width:74px!important;min-width:74px!important;padding:11px 0 9px!important;font-size:11.5px}
   .rail-item svg{width:26px;height:26px}
   .rail-login{width:74px!important;padding-top:4px}
-  body{padding-bottom:calc(98px + env(safe-area-inset-bottom,0px))}
-  .login-menu{bottom:calc(106px + env(safe-area-inset-bottom,0px))!important}
+  body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px)*.6)}
+  .login-menu{bottom:calc(96px + env(safe-area-inset-bottom,0px)*.6)!important}
 }
