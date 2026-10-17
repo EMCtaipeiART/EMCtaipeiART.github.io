@@ -486,6 +486,10 @@
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
     /* 元宇宙編輯頁播放限時動態時，把遊戲框放大成整個視窗（滿版），看完還原 */
+    /* 像素辦公室（電腦版 iframe）回報場景高度／要跟隨的位置：iframe 長高到整個場景，外層頁面負責捲動（只剩一條捲軸） */
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;const fr=$('uniFrame');if(!fr||e.source!==fr.contentWindow)return;
+      if(e.data.type==='pixelOfficeHeight'){const h=Number(e.data.h);if(h>200&&h<20000){fr.style.aspectRatio='auto';fr.style.minHeight='0';fr.style.height=h+'px'}}
+      if(e.data.type==='pixelOfficeFollowY'){const y=Number(e.data.y);if(!Number.isFinite(y))return;const target=Math.max(0,fr.getBoundingClientRect().top+window.scrollY+y-window.innerHeight/2),cur=window.scrollY;if(e.data.first||Math.abs(target-cur)>6)window.scrollTo(0,e.data.first?target:cur+(target-cur)*.35)}});
     window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeStoryState')return;const fr=$('uniFrame');if(!fr)return;fr.style.cssText=e.data.open?'position:fixed;inset:0;width:100vw;height:100vh;max-width:none;z-index:2000;background:#000;border-radius:0;margin:0':''});
     /* 頭像快照在背景上傳：遊戲只在本機算好造型代碼與圖片，關閉畫面不用等網路；上傳成功才記下「這個造型已存過」 */
     async function uploadAvatarSnapshot(p){
