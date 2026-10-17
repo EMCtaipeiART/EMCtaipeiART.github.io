@@ -438,7 +438,9 @@
       if(b.getBoundingClientRect().top<innerHeight+240){autoMoreBusy=1;setTimeout(()=>{autoMoreBusy=0},400);b.click()}
     }
     window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
-    function openUniverse(){state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
+    /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
+    function openUniverseTab(){try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=116&t=':'?clean=1&ro=1&cs=.78&v=116&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
+    function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
     const canEditUniverse=()=>loggedIn()&&(isDesignerSession()||isAdminUser()||isMachiUser()||/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()));/* 企劃部、專案部同仁有自己的座位，也能進編輯版 */
@@ -4064,7 +4066,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(background&&bgBusy()){state.dirty=true;return}
       state.dirty=false;
       if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam();renderLogin();try{annSync()}catch(e){}
-      if(!state.restored){state.restored=true;try{const v=sessionStorage.getItem('v5LastView');if(v&&KEEP_VIEWS.includes(v)&&loggedIn()&&state.view==='board'){state.form=null;state.mail=null;state.editing=false;if(v==='projects'){state.home='projects';show('projects')}else if(v==='universe')openUniverse();else openExt(v)}}catch(err){}}
+      if(!state.restored){state.restored=true;try{const v=sessionStorage.getItem('v5LastView');if(v&&KEEP_VIEWS.includes(v)&&!(v==='universe'&&matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches)&&loggedIn()&&state.view==='board'){state.form=null;state.mail=null;state.editing=false;if(v==='projects'){state.home='projects';show('projects')}else if(v==='universe')openUniverse();else openExt(v)}}catch(err){}}
     }
     function fillClients(){
       const select=$('clientSelect'),keep=select.value;

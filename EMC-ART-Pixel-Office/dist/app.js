@@ -934,13 +934,13 @@ function ownIndex(){const who=String(storyIdentity.name||'').toLowerCase();retur
 function applyViewerRole(){document.documentElement.classList.toggle('staff-view',viewerIsStaff());if(viewerIsStaff()){const i=ownIndex();if(i>=0&&selected!==i&&ready){select(i);}}}
 const storyLoggedIn=()=>Boolean(storyIdentity.name&&storyIdentity.token);
 window.addEventListener('message',event=>{
-  if(event.origin!==location.origin||event.source!==window.parent)return;
+  if(event.origin!==location.origin||(event.source!==window.parent&&event.source!==window.opener))return;
   const data=event.data;if(!data||data.type!=='pixelOfficeViewer')return;
   storyIdentity={name:String(data.name||''),token:String(data.token||''),staff:Boolean(data.staff),monitor:Boolean(data.monitor)};
   applyViewerRole();
   if(storyOpen())refreshStoryViewer();
 });
-if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin);}catch{}
+{const host=window.parent!==window?window.parent:window.opener;if(host)try{host.postMessage({type:'pixelOfficeViewerRequest'},location.origin);}catch{}}
 function storyTimeLeft(story){const minutes=Math.max(0,Math.ceil((story.expiresAt-Date.now())/60000));return minutes>=60?`還剩 ${Math.floor(minutes/60)} 小時 ${minutes%60} 分`:`還剩 ${minutes} 分`;}// 只給自己的動態清單用；動態視窗裡不顯示倒數
 function applyStories(list){
   if(!Array.isArray(list))return;
@@ -1234,7 +1234,7 @@ function syncNow(){return syncCall({action:'pixelOfficeState',since:syncVersion}
 // 下排桌子在畫面上接在上排正下方（見 drawDeskBottom），邏輯座標 431～650 是桌面與桌腳，人坐在 695（桌子下側）。
 const walls=stations.map(s=>s.row?[s.x-122,431+(s.y-695),244,219]:[s.x-122,s.y+18,244,80]);
 function blocked(x,y){return x<65||x>W-65||y<180-2*GP||y>H0-20||walls.some(([a,b,w,h])=>x>a-14&&x<a+w+14&&y>b-4&&y<b+h+4);}
-function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');dx=dx/length*210*dt;dy=dy/length*210*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
+function moving(dt){if(!ready||selected===null||storyOpen()||isAway(people[selected])||isPunishedP(people[selected]))return false;let dx=(keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0),dy=(keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0);if(!dx&&!dy)return false;const p=people[selected],length=Math.hypot(dx,dy);p.dir=dx?(dx>0?'right':'left'):(dy>0?'down':'up');const spd=document.documentElement.classList.contains('clean-narrow')?290:210;dx=dx/length*spd*dt;dy=dy/length*spd*dt;if(!blocked(p.x+dx,p.y))p.x+=dx;if(!blocked(p.x,p.y+dy))p.y+=dy;save();queuePosition(selected);return true;}
 function typing(){const el=document.activeElement;return el&&(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)||el.isContentEditable);}
 window.addEventListener('keydown',e=>{if(embedMode||roMode||!e.key.startsWith('Arrow')||typing()||storyOpen())return;e.preventDefault();keys.add(e.key);});window.addEventListener('keyup',e=>keys.delete(e.key));window.addEventListener('blur',()=>keys.clear());document.addEventListener('visibilitychange',()=>keys.clear());
 // 搖桿：按住拖曳，依拖曳方向換算成 8 個方向（沿用鍵盤的 keys 集合），放開就停。
@@ -1250,8 +1250,8 @@ game.addEventListener('pointerdown',e=>{
   const ownI=ownIndex();
   if(ownI>=0&&!roMode){
     const ox=e.clientX,oy=e.clientY;let dragged=false;
-    const setKeys=(dx,dy)=>{arrowKeys.forEach(k=>keys.delete(k));const len=Math.hypot(dx,dy);if(len<12)return;const ax=dx/len,ay=dy/len;if(ax>.38)keys.add('ArrowRight');if(ax<-.38)keys.add('ArrowLeft');if(ay>.38)keys.add('ArrowDown');if(ay<-.38)keys.add('ArrowUp');};
-    const mv=m=>{const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<10)return;dragged=true;if(selected!==ownI)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
+    const setKeys=(dx,dy)=>{arrowKeys.forEach(k=>keys.delete(k));const len=Math.hypot(dx,dy);if(len<5)return;const ax=dx/len,ay=dy/len;if(ax>.3)keys.add('ArrowRight');if(ax<-.3)keys.add('ArrowLeft');if(ay>.3)keys.add('ArrowDown');if(ay<-.3)keys.add('ArrowUp');};
+    const mv=m=>{const dx=m.clientX-ox,dy=m.clientY-oy;if(!dragged){if(Math.hypot(dx,dy)<4)return;dragged=true;if(selected!==ownI)select(ownI);if(window.radialClose)window.radialClose();cam.free=false;}setKeys(dx,dy);m.preventDefault();};
     const end=u=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);arrowKeys.forEach(k=>keys.delete(k));if(!dragged&&u.type==='pointerup')onGamePress(u);};
     window.addEventListener('pointermove',mv,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
     return;
