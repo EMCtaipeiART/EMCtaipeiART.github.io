@@ -572,3 +572,5 @@
 ## 2026-10-17 主畫面 App 登入修正、底部選單空白縮小
 - 加到主畫面的 App（standalone）改用整頁跳轉登入 Google（彈出視窗在 iOS 會跑到另一個瀏覽環境，結果傳不回來，要重試好幾次、最後 401）；回到 index.html 時由 site.js 驗證 state 後完成登入，不再轉去 legacy.html。standalone 只顯示自己的「使用 Google 帳號登入」按鈕。
 - 手機底部選單下方空白縮小（safe-area 只取 60 趴＋6px）。
+
+- 主畫面 App 登入頁：Google 按鈕改為直接寫在頁面裡的固定按鈕（原本事後塞進容器，iOS 第一次進入會畫成破圖、重新整理才好）。

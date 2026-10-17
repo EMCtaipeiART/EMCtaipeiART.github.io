@@ -3624,7 +3624,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       $('stage').innerHTML=`<div class="login-page">
         <img class="lp-logo" src="assets/EMC_design_logo.svg" alt="EMC 設計部">
         <h2>登入設計需求系統</h2><p class="lp-sub">請使用 @emctaipei.com 公司帳號登入</p>
-        <div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>
+        ${isStandaloneApp()?(login.busy?'<div class="gsi-slot" id="gsiBtn"><div class="lp-note">登入中…</div></div>':'<button type="button" class="lp-google" data-lp="google">使用 Google 帳號登入</button><div id="gsiBtn" hidden></div>'):`<div class="gsi-slot" id="gsiBtn">${login.busy?'<div class="lp-note">登入中…</div>':''}</div>`}
         <button type="button" class="lp-toggle" data-lp="google">Google 按鈕沒反應？改用彈出視窗登入</button>
         <button type="button" class="lp-toggle" data-lp="toggle">${login.showPw?'收起密碼登入':'改用密碼登入'}</button>
         ${login.showPw?`<form class="lp-form" id="pwForm"><input class="input" name="password" type="password" placeholder="請輸入密碼" autocomplete="current-password" required><button type="submit" class="btn primary"${login.pwBusy?' disabled':''}>${login.pwBusy?'登入中…':'登入'}</button></form>`:''}
@@ -3694,7 +3694,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let gsiReady=false;
     function mountGoogle(){
       const slot=$('gsiBtn');if(!slot||login.busy)return;
-      if(isStandaloneApp()){slot.innerHTML='<button type="button" class="btn primary" data-lp="google" style="width:100%;min-height:46px">使用 Google 帳號登入</button>';return}
+      if(isStandaloneApp())return;
       const go=()=>{
         try{
           if(!gsiReady){google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>googleCredential(r.credential),ux_mode:'popup',auto_select:false});gsiReady=true}

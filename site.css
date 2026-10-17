@@ -1463,3 +1463,6 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
   body{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px)*.6)}
   .login-menu{bottom:calc(96px + env(safe-area-inset-bottom,0px)*.6)!important}
 }
+
+.lp-google{display:block;width:100%;height:48px;margin:0 0 4px;border:0;border-radius:999px;background:#159e31;color:#fff;font-size:15px;font-weight:800;cursor:pointer;-webkit-appearance:none;appearance:none;box-sizing:border-box}
+.lp-google:active{background:#0f8a29}
