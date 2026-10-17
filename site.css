@@ -1445,3 +1445,7 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
     .link-check-all span{font-size:13px;font-weight:800}
     .link-bulk .link-hint{flex:1;min-width:0}
     .link-bulk .link-btn-delete:disabled{opacity:.45;cursor:not-allowed}
+
+.card-mod,.lt-act-mod{border:1px solid var(--line,#d6dde6);background:#fff;color:#0f8f4a;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.card-mod:hover,.lt-act-mod:hover{background:#eaf7ef}.card-foot .card-mod{margin-left:8px}.lt-act-mod{margin-left:6px;min-height:28px}
+.rev-confirmed{margin-left:10px;color:#0f8f4a;font-weight:700;font-size:12px;white-space:nowrap}
