@@ -566,3 +566,5 @@
 ## 2026-10-17 手機底部選單避開 iPhone 底部手勢＋滑動切頁
 - 手機（≤720px）底部選單改為多排格狀（每排 7 個），不能橫向滑動，整排抬高並加 safe-area 底部留白（viewport 加 viewport-fit=cover）。iPhone 螢幕最底部左右滑會切換／關閉 App，原本可橫向捲動的選單一滑就誤觸。
 - 手機左右滑動切換主要頁面（順序同選單）：避開輸入框、橫向可捲動區域、地圖／iframe、彈出視窗與螢幕左右邊緣 28px；html/body 加 overscroll-behavior-x:none。
+
+- 手機底部選單改回單排可左右滑動（兩排太醜）：按鈕放大（74px 寬、約 77px 高）、整排抬高並在底部留 16px＋safe-area 空白避開 iPhone 底部手勢區。
