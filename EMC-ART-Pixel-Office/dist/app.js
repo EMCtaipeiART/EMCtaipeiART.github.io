@@ -36,8 +36,9 @@ const overtimePreview=new URLSearchParams(location.search).get('overtime')==='1'
 // 有變化時才畫：遠端同步、選取、框變大小都會標記一次。省下來的 CPU 讓外層系統的進站更順。
 // 宣告放在最前面：resizeCanvas() 在腳本載入時就會被呼叫一次，那時就要用到 markDirty。
 let needsRedraw=true;
+let fxWakeUntil=0;// 加班特效（聚光、鬼火）只在有動靜後的 6 秒內動畫，之後畫面定格、完全不重畫，手機才不會一直發燙；任何同步、選取、走動都會再喚醒。
 let idleTimer=0;
-function markDirty(){needsRedraw=true;if(idleTimer){clearTimeout(idleTimer);idleTimer=0;requestAnimationFrame(render);}}
+function markDirty(){needsRedraw=true;fxWakeUntil=performance.now()+6000;if(idleTimer){clearTimeout(idleTimer);idleTimer=0;requestAnimationFrame(render);}}
 
 // 桌上的名牌。
 const PLATE_TOP=56,PLATE_NAME_H=23;
@@ -1659,7 +1660,7 @@ function render(time){try{updateCamera()}catch(error){}if(avatarOnly&&!(typeof v
   if(embedMode&&!needsRedraw&&!sceneAnimating()){requestAnimationFrame(render);return;}
   // 嵌入首頁時：畫面不在可視範圍就不重畫；持續動畫（心情／未讀動態）限制在約 30fps，避免整張場景每幀全畫拖慢首頁。
   if(embedMode&&!needsRedraw){if(!embedVisible||time-embedLastDraw<40){requestAnimationFrame(render);return;}}
-  if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!people.some((p,i)=>!isAway(p)&&isOvertime(p))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
+  if(!embedMode&&!needsRedraw&&!walk&&!sceneAnimating()&&!(performance.now()<fxWakeUntil&&people.some((p,i)=>!isAway(p)&&isOvertime(p)))){if(keys.size||embedMode)requestAnimationFrame(render);else idleTimer=setTimeout(()=>{idleTimer=0;requestAnimationFrame(render);},250);return;}// 全版／編輯：場景靜止（沒人走動、沒有心情／音樂／動作／動態）就完全不重畫，手機才不會發燙
   if(!embedMode&&!needsRedraw){const gap=!walk&&!sceneAnimating()?100:30;if(time-embedLastDraw<gap){if(gap>30)setTimeout(()=>requestAnimationFrame(render),Math.max(8,gap-(time-embedLastDraw)));else requestAnimationFrame(render);return;}}
   if(!embedMode&&needsRedraw&&time-embedLastDraw<15){requestAnimationFrame(render);return;}// 走路／操作時最多約 60fps（120Hz 螢幕不要每幀都全畫）// 編輯／全版：最多約 30fps，整張大畫布不必每幀都重畫
   embedLastDraw=time;
