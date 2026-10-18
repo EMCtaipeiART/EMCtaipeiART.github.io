@@ -145,4 +145,12 @@
   document.addEventListener('auxclick',e=>{if(!editable(e))e.preventDefault();});
   ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
  }
+ /* 深色模式：?theme=dark、主站的 pixelOfficeTheme 訊息、或系統深色設定（獨立開啟時） */
+ {
+  const root=document.documentElement,setTheme=t=>{if(t==='dark')root.setAttribute('data-theme','dark');else root.removeAttribute('data-theme');};
+  const q=new URLSearchParams(location.search).get('theme');
+  if(q)setTheme(q);else if(window.parent===window&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)setTheme('dark');
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeTheme')return;setTheme(e.data.theme);});
+  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeThemeRequest'},location.origin)}catch(error){}
+ }
 })();

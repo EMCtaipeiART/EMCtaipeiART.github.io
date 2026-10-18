@@ -502,7 +502,7 @@
       b.disabled=true;try{const r=await api('pixelOfficeAllWork',{});toast('已設成上班：'+(r.changed||[]).length+' 人'+((r.skipped||[]).length?'（略過休假／出國：'+r.skipped.join('、')+'）':''));const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
     /* ---------- 出氣擂台（元宇宙小遊戲）：在原視窗執行（內嵌 vent-arena 遊戲），左側功能列保留 ---------- */
     function renderArenaPage(){
-      $('stage').innerHTML='<div class="arena-page"><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1&t='+Math.floor(Date.now()/300000)+'" title="出氣擂台" allow="autoplay"></iframe></div>';
+      $('stage').innerHTML='<div class="arena-page"><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1&theme='+(document.documentElement.dataset.theme==='dark'?'dark':'light')+'&t='+Math.floor(Date.now()/300000)+'" title="出氣擂台" allow="autoplay"></iframe></div>';
       fitArenaFrame();[150,600,1500].forEach(t=>setTimeout(()=>{try{fitArenaFrame()}catch(err){}},t));
     }
     /* 像素辦公室隱藏小視窗送來的「全身正面快照」：存起來，轉給出氣擂台（遊戲開啟時也會來要） */
@@ -1029,7 +1029,7 @@
     const currentTheme=()=>document.documentElement.dataset.theme==='dark'?'dark':'light';
     let themeSynced=null;
     function updateThemeBtn(){const b=$('themeBtn');if(!b)return;const dark=currentTheme()==='dark';b.innerHTML=(dark?THEME_SUN:THEME_MOON)+(dark?'淺色':'深色');b.title=dark?'切換成淺色模式':'切換成深色模式'}
-    function broadcastTheme(){sendOutfitTheme();const msg={type:'pixelOfficeTheme',theme:currentTheme()};['uniFrame','avatarBridge'].forEach(id=>{const f=$(id);try{f&&f.contentWindow&&f.contentWindow.postMessage(msg,location.origin)}catch(err){}})}
+    function broadcastTheme(){sendOutfitTheme();const msg={type:'pixelOfficeTheme',theme:currentTheme()};['uniFrame','avatarBridge','arenaFrame'].forEach(id=>{const f=$(id);try{f&&f.contentWindow&&f.contentWindow.postMessage(msg,location.origin)}catch(err){}})}
     function applyTheme(t,fromCloud){
       const theme=t==='dark'?'dark':'light';document.documentElement.dataset.theme=theme;
       try{localStorage.setItem(THEME_KEY,theme)}catch(err){}

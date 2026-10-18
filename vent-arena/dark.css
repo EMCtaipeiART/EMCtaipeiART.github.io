@@ -1,0 +1,5 @@
+/* 出氣擂台深色模式：整頁反相＋色相轉回（綠色仍是綠色），角色圖／畫布／圖示再反相一次還原原色。
+   由 arena.js 依 ?theme=dark、主站訊息或系統深色設定，在 <html> 加上 data-theme="dark"。 */
+html[data-theme="dark"]{color-scheme:dark;background:#101418}
+html[data-theme="dark"] body{filter:invert(1) hue-rotate(180deg) brightness(.93) contrast(.96);background:#fff}
+html[data-theme="dark"] body canvas,html[data-theme="dark"] body img,html[data-theme="dark"] body svg,html[data-theme="dark"] body video{filter:invert(1) hue-rotate(180deg)}
