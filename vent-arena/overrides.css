@@ -4,3 +4,5 @@
 .opponent-hud>span:nth-child(2){text-shadow:0 0 3px #fff}
 /* 深色模式整頁反相時，這塊再反相一次，維持「深色字＋白色光暈」壓在亮場景上 */
 html[data-theme="dark"] .opponent-hud{filter:invert(1) hue-rotate(180deg)}
+/* K.O. 大字比照被打擊的狀聲詞（POW!／SUPER!!）：粗斜體、深紫色粗外框、亮黃色字，不用等寬字型 */
+#stage-message{font-family:system-ui,'Microsoft JhengHei',sans-serif!important;font-weight:900!important;font-style:italic!important;letter-spacing:0!important;color:#ffed45!important;-webkit-text-stroke:7px #291039;paint-order:stroke fill;text-shadow:none!important}
