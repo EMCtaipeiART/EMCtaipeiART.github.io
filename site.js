@@ -3400,7 +3400,33 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       if(links.error&&!links.list.length)return `<div class="empty">列表載入失敗：${esc(links.error)}　<button type="button" class="btn" data-link-reload>重新讀取</button></div>`;
       if(!links.list.length)return '<div class="empty">還沒有短網址</div>';
       const shown=linkVisible();if(!shown.length)return '<div class="empty">這個分類沒有短網址</div>';
-      return shown.map(linkCardHtml).join('');
+      const gk=l=>(l.owner||'')+'|'+(l.createdAt||''),cnt={};shown.forEach(l=>{cnt[gk(l)]=(cnt[gk(l)]||0)+1});
+      const done={};
+      return shown.map(l=>{const k=gk(l);if(!l.createdAt||cnt[k]<2)return linkCardHtml(l);if(done[k])return '';done[k]=1;return linkGroupHtml(k,shown.filter(x=>gk(x)===k))}).join('');
+    }
+    const linkGroupLine=l=>(l.name?l.name+' ':'')+SHORT_BASE()+l.code;
+    function linkGroupHtml(key,items){
+      const open=links.groupOpen&&links.groupOpen.has(key),head=items[0],canEdit=items.every(l=>l.canEdit);
+      if(links.groupEdit===key){
+        const text=links.groupDraft!=null?links.groupDraft:items.map(l=>(l.name?l.name+' ':'')+l.url).join(String.fromCharCode(10));
+        return `<form class="link-item link-group link-edit" data-group-edit="${esc(key)}"><div class="link-section-head link-wide"><h3>編輯整包（${items.length} 筆）</h3><span class="link-hint">每行對應一筆，格式「名稱 原始網址」，行數需相同</span></div><textarea class="input link-batch-text link-wide" name="gtext" rows="${Math.min(items.length+2,16)}" spellcheck="false">${esc(text)}</textarea><div class="link-form-actions link-wide"><button type="submit" class="btn primary link-btn">儲存整包</button><button type="button" class="btn link-btn" data-group-cancel>取消</button></div></form>`;
+      }
+      return `<article class="link-item link-group" data-group="${esc(key)}"><div class="link-main"><div class="link-card-heading"><h3 class="link-name">批次建立 ${items.length} 筆</h3><span class="link-tag">${esc(head.project||'未分類')}</span><span class="link-tag link-tag-vis link-vis-${linkVisCode(head.visibility)}">${linkVisLabel(linkVisCode(head.visibility))}</span></div><div class="link-meta">${esc(head.owner||'')} · ${esc(head.createdAt)}</div>${open?`<ol class="link-batch-list">${items.map(l=>`<li><b><a href="${esc(SHORT_BASE()+l.code)}" target="_blank" rel="noopener">${esc(SHORT_BASE()+l.code)}</a></b><span>${esc(l.name||'')} → ${esc(l.url)}</span></li>`).join('')}</ol>`:''}</div><div class="link-actions"><button type="button" class="btn link-btn link-btn-copy" data-group-copy="${esc(key)}">複製整包</button><button type="button" class="btn link-btn" data-group-toggle="${esc(key)}">${open?'收合':'展開'}</button>${canEdit?`<button type="button" class="btn link-btn" data-group-editbtn="${esc(key)}">編輯整包</button><button type="button" class="btn link-btn" data-group-del="${esc(key)}">刪除整包</button>`:''}</div></article>`;
+    }
+    const linkGroupItems=key=>links.list.filter(l=>l.createdAt&&(l.owner||'')+'|'+l.createdAt===key);
+    async function saveLinkGroup(form){
+      const key=form.dataset.groupEdit,items=linkGroupItems(key),lines=parseBatchLines(form.elements.gtext.value);
+      links.groupDraft=form.elements.gtext.value;
+      if(lines.length!==items.length){toast(`行數需為 ${items.length} 行（目前 ${lines.length} 行）`,true);return}
+      if(links.saving)return;links.saving=true;const b=form.querySelector('[type=submit]');b.disabled=true;b.textContent='儲存中…';
+      try{
+        for(let i=0;i<items.length;i++){
+          const l=items[i],n=lines[i];if(n.name===(l.name||'')&&n.url===l.url)continue;
+          const data=await api('updateShortLink',{code:l.code,newCode:l.code,name:n.name,project:l.project||'',visibility:linkVisCode(l.visibility),url:n.url});
+          links.list=links.list.map(x=>x.code===l.code?data.link:x);
+        }
+        links.groupEdit='';links.groupDraft=null;links.saving=false;toast('整包已更新');renderLinksPage(true);
+      }catch(err){links.saving=false;toast(`儲存失敗：${err.message}`,true);if(state.view==='links')renderLinksPage(true)}
     }
     /* 批次：每行一個網址，可在網址前或後加名稱（例如「夏季素材 https://…」）；逗號、Tab 也行 */
     function parseBatchLines(raw){
@@ -3492,7 +3518,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     const deleteLink=code=>deleteLinks([code],(links.list.find(x=>x.code===code)||{}).name);
     document.addEventListener('input',e=>{if(e.target.name==='batchText'){const c=$('linkBatchCount');if(c){const n=parseBatchLines(e.target.value).length;c.textContent=n?`偵測到 ${n} 筆`:'短碼會自動產生'}}});
-    document.addEventListener('submit',e=>{if(e.target.id==='linkBatchForm'){e.preventDefault();submitBatch(e.target)}else if(e.target.id==='linkForm'){e.preventDefault();submitLink(e.target)}else if(e.target.dataset&&e.target.dataset.linkEdit){e.preventDefault();saveLinkEdit(e.target)}});
+    document.addEventListener('submit',e=>{if(e.target.id==='linkBatchForm'){e.preventDefault();submitBatch(e.target)}else if(e.target.dataset.groupEdit!==undefined){e.preventDefault();saveLinkGroup(e.target)}else if(e.target.id==='linkForm'){e.preventDefault();submitLink(e.target)}else if(e.target.dataset&&e.target.dataset.linkEdit){e.preventDefault();saveLinkEdit(e.target)}});
     document.addEventListener('change',e=>{
       if(e.target.matches&&e.target.matches('[data-link-sel]')){const c=e.target.dataset.linkSel;e.target.checked?links.selected.add(c):links.selected.delete(c);updateLinkBulk();return}
       if(e.target.matches&&e.target.matches('[data-link-selall]')){linkEditable().forEach(l=>e.target.checked?links.selected.add(l.code):links.selected.delete(l.code));document.querySelectorAll('[data-link-sel]').forEach(i=>{i.checked=links.selected.has(i.dataset.linkSel)});updateLinkBulk();return}
@@ -3504,8 +3530,13 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       }
     });
     document.addEventListener('click',e=>{
-      const t=e.target.closest&&e.target.closest('[data-link-delsel],[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
+      const t=e.target.closest&&e.target.closest('[data-link-delsel],[data-group-copy],[data-group-toggle],[data-group-editbtn],[data-group-del],[data-group-cancel],[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
       if(t.hasAttribute('data-link-delsel')){deleteLinks([...links.selected]);return}
+      if(t.dataset.groupCopy){const it=linkGroupItems(t.dataset.groupCopy);copyText(it.map(linkGroupLine).join(String.fromCharCode(10))).then(()=>toast(`已複製整包（${it.length} 筆）`));return}
+      if(t.dataset.groupToggle){links.groupOpen=links.groupOpen||new Set();const k=t.dataset.groupToggle;links.groupOpen.has(k)?links.groupOpen.delete(k):links.groupOpen.add(k);renderLinksPage(true);return}
+      if(t.dataset.groupEditbtn){links.groupEdit=t.dataset.groupEditbtn;links.groupDraft=null;renderLinksPage(true);return}
+      if(t.hasAttribute('data-group-cancel')){links.groupEdit='';links.groupDraft=null;renderLinksPage(true);return}
+      if(t.dataset.groupDel){const it=linkGroupItems(t.dataset.groupDel);deleteLinks(it.map(l=>l.code),`這一整包 ${it.length} 筆`);return}
       if(t.hasAttribute('data-batch-copy')){const r=links.batch.result;if(r)copyText((r.lines||r.created.map(l=>SHORT_BASE()+l.code)).join('\n')).then(()=>toast('已複製全部內容（含名稱與短網址）'));return}
       if(t.hasAttribute('data-batch-clear')){links.batch.result=null;renderLinksPage(true);return}
       if(t.dataset.linkCopy){copyText(SHORT_BASE()+t.dataset.linkCopy).then(()=>toast('已複製短網址'))}
