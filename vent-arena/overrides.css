@@ -1,0 +1,6 @@
+/* 出氣擂台小調整：陪練血量區塊移除白色底框（只留血條與名字） */
+.opponent-hud{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+.opponent-hud>span:first-child{text-shadow:0 0 4px #fff,0 0 2px #fff,1px 1px 0 #fff}
+.opponent-hud>span:nth-child(2){text-shadow:0 0 3px #fff}
+/* 深色模式整頁反相時，這塊再反相一次，維持「深色字＋白色光暈」壓在亮場景上 */
+html[data-theme="dark"] .opponent-hud{filter:invert(1) hue-rotate(180deg)}

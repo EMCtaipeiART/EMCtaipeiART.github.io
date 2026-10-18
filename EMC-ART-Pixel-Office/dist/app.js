@@ -1777,7 +1777,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
   /* 這個人的造型是否「完整載入」：自訂清單已回來、伺服器記的造型沒被當成無效而退回預設、用到的自訂圖都載好了 */
   const bodyLookReady=i=>{
     try{
-      const st=customState();if(!st.loaded)return false;
+      const st=customState();if(!st.loaded||!(syncVersion>0))return false;/* 伺服器狀態還沒回來時造型是空的，會被當成預設（例如白衣服）；要等狀態同步完才畫 */
       const raw=people[i]&&people[i].look,eff=effectiveLook(i);
       if(raw&&typeof raw==='object'&&(String(raw.outfit)!==String(eff.outfit)||String(raw.cap||'')!==String(eff.cap||'')||String(raw.glasses||'')!==String(eff.glasses||'')||String(raw.head||'')!==String(eff.head||'')))return false;
       const okId=id=>{if(id===undefined||id===null||id==='')return true;const s=String(id);const m=s.startsWith('h:')?st.hmap.get(s.slice(2)):s.startsWith('a:')?st.amap.get(s.slice(2)):st.map.get(s);return !m||m.ready;};
