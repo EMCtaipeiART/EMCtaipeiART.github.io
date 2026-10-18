@@ -136,4 +136,13 @@
  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
  /* 在系統內開啟時：「返回元宇宙」交給主站切頁（直接連過去會在 iframe 裡又開一份像素辦公室） */
  document.querySelectorAll('.arena-home').forEach(a=>a.addEventListener('click',e=>{if(window.parent!==window){e.preventDefault();try{window.parent.postMessage({type:'ventArenaBack'},location.origin)}catch(error){}}}));
+ /* 攻擊範圍鎖住左右鍵與選取：右鍵選單、長按選單、拖曳、文字／圖片選取、雙擊縮放都關掉（手機長時間連點才不會變成選取狀態）；輸入框除外 */
+ {
+  const css=document.createElement('style');css.textContent='html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}#stage,#arena,#arena *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important;touch-action:manipulation}img,canvas{-webkit-user-drag:none;user-drag:none}';document.head.appendChild(css);
+  const editable=e=>e.target&&e.target.closest&&e.target.closest('input,textarea');
+  ['contextmenu','selectstart','dragstart'].forEach(t=>document.addEventListener(t,e=>{if(!editable(e))e.preventDefault();}));
+  document.addEventListener('mousedown',e=>{if(e.button!==0&&!editable(e))e.preventDefault();});
+  document.addEventListener('auxclick',e=>{if(!editable(e))e.preventDefault();});
+  ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+ }
 })();
