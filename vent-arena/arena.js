@@ -16,17 +16,18 @@
   {name:'雷擊',power:18,rage:4,color:'#bdfb9b'},
   {name:'文件風暴',power:14,rage:5,color:'#b8dfdb'}
  ];
- const scenes=[{name:'下班後的茶水間',wall:'#d9ece3',accent:'#ffbc7c',floor:'#c8dfd4'},{name:'頂樓晚風俱樂部',wall:'#cdebdd',accent:'#87ecbb',floor:'#c8e3d6'},{name:'最後一間會議室',wall:'#d2edf0',accent:'#c0f5db',floor:'#d4d5ec'}];
+ const scenes=(window.ArenaScenes?window.ArenaScenes.names:['辦公室','擂台場','練舞室','垃圾場']).map(name=>({name}));
  const lines=['這個修改，真的是最後一版！','先喝口水，我們再來！','我的咖啡還沒喝完耶！','好啦好啦，今天準時下班！','有事好商量，先別加需求！','收到！這次一定不已讀！'];
- let state={player:3,target:7,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
+ let state={player:0,target:7,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
  let best=0,sound=true,audio,particles=[],texts=[],holding=false,nextAuto=0,lastFrame=0,raf=0,toastTimer=0,bubbleUntil=0,width=0,height=0;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  try{best=Math.max(0,Number(localStorage.getItem('emcVentArenaBestV1'))||0);}catch{}
  function saveBest(){if(state.score>best){best=state.score;try{localStorage.setItem('emcVentArenaBestV1',String(best));}catch{}}}
  function toast(text){$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),2500);}
  function say(text){$('#bubble').textContent=text;bubbleUntil=performance.now()+3500;}
+ let boundPlayer=-1;/* 登入帳號對應的角色（沒登入或不在名單內＝-1，預設 Amber） */
  function roster(){
-  $('#roster').replaceChildren(...characters.map((c,i)=>{const b=document.createElement('button');b.className='person';const chosen=state[state.role]===i;b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));b.setAttribute('aria-label',`選擇 ${c.name} 為${state.role==='player'?'我的角色':'陪練角色'}`);const img=c.image.cloneNode();img.alt='';const text=document.createElement('span');text.innerHTML=`<strong>${c.name}</strong>`;const number=document.createElement('span');number.textContent=chosen?'✓':String(i+1).padStart(2,'0');b.append(img,text,number);b.onclick=()=>{if(state[state.role]!==i){state[state.role]=i;state.hp=300;combatFX.reset();state.knockUntil=0;state.combo=0;state.lastHit=-Infinity;particles=[];texts=[];say(`${c.name} 已上場，輕鬆玩一局！`);}roster();update();wake();};return b;}));
+  $('#roster').replaceChildren(...characters.map((c,i)=>{const b=document.createElement('button');b.className='person';const chosen=state[state.role]===i;b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));b.setAttribute('aria-label',`選擇 ${c.name} 為${state.role==='player'?'我的角色':'陪練角色'}`);const img=c.image.cloneNode();img.alt='';const text=document.createElement('span');text.innerHTML=`<strong>${c.name}</strong>`;const number=document.createElement('span');number.textContent=chosen?'✓':String(i+1).padStart(2,'0');b.append(img,text,number);b.onclick=()=>{if(state.role==='player'&&boundPlayer>=0&&i!==boundPlayer){say(`你的角色已綁定帳號：${names[boundPlayer]}`);return;}if(state[state.role]!==i){state[state.role]=i;state.hp=300;combatFX.reset();state.knockUntil=0;state.combo=0;state.lastHit=-Infinity;particles=[];texts=[];say(`${c.name} 已上場，輕鬆玩一局！`);}roster();update();wake();};return b;}));
  }
  function update(){
   const now=performance.now(),ready=state.rage>=100&&state.running&&now>=state.knockUntil,combo=state.combo>=2&&now-state.lastHit<1200?state.combo:0,seconds=Math.ceil(state.remaining),impact=now<state.hitUntil,ult=now<state.ultUntil;
@@ -68,20 +69,7 @@
  function stopHold(){holding=false;}
  function wake(){if(!raf)raf=requestAnimationFrame(frame);}
  function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));}
- function paintRoom(c){
-  const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));},s=scenes[state.scene],floorY=combatFX.geometry(width,height,state.target).floorY;
-  rect(0,0,width,height,s.wall);rect(0,floorY,width,height-floorY,s.floor);rect(0,floorY-4,width,4,'#9ccdb1');
-  c.lineWidth=1;c.strokeStyle='#6ea28930';for(let x=-width;x<width*2;x+=65){c.beginPath();c.moveTo(width/2+(x-width/2)*.4,floorY);c.lineTo(x,height);c.stroke();}for(let j=1;j<6;j++){const y=floorY+(height-floorY)*(j*j/25);c.beginPath();c.moveTo(0,y);c.lineTo(width,y);c.stroke();}
-  if(state.scene===0){
-   const wy=floorY-height*.43,wh=height*.22;rect(width*.07,wy,width*.28,wh,'#a1c1b2');rect(width*.08,wy+5,width*.26,wh-10,'#73ddd9');rect(width*.20,wy+5,4,wh-10,'#4eaaa6');rect(width*.08,wy+wh*.54,width*.26,3,'#4eaaa6');
-   const counterY=floorY-height*.12;rect(width*.05,counterY,width*.32,floorY-counterY,'#a1c2b2');rect(width*.04,counterY-6,width*.34,6,'#efd2aa');rect(width*.10,counterY-height*.08,25,height*.08,'#8cb2a0');rect(width*.11,counterY-height*.07,17,11,'#dcf0d7');rect(width*.28,counterY-20,13,20,'#fff3d1');rect(width*.87,floorY-height*.37,23,height*.10,'#b3cfc1');
-  }else if(state.scene===1){
-   const skyline=floorY-height*.12;rect(0,0,width,skyline,'#d0eee1');rect(width*.76,skyline-height*.31,28,28,'#fff2c7');for(let j=0;j<12;j++){const x=j*width/11,bh=30+(j*29%65);rect(x,skyline-bh,width/14,bh,'#9cc3b0');for(let k=0;k<3;k++)rect(x+6,skyline-bh+8+k*13,4,4,'#dff2cf');}rect(0,skyline,width,5,'#8bcbb0');for(let x=10;x<width;x+=55)rect(x,skyline,3,floorY-skyline,'#84c5a7');
-  }else{
-   const by=floorY-height*.43;rect(width*.05,by,width*.34,height*.22,'#b4c4d6');rect(width*.06,by+5,width*.32,height*.20,'#e6eddb');for(let i=0;i<4;i++)rect(width*.09,by+height*(.04+i*.035),width*(.12+i*.02),3,'#91ae9a');rect(width*.75,by+height*.05,width*.17,height*.20,'#abc3d5');rect(width*.77,by+height*.065,width*.13,height*.17,'#d5e7df');const tableY=floorY-height*.08;rect(width*.025,tableY,width*.37,7,'#c6bda0');rect(width*.055,tableY+7,7,floorY-tableY-7,'#97b2a5');
-  }
-  rect(width*.45,height*.18,width*.13,4,'#c4d3b4');c.fillStyle='#669d79';c.font='700 '+Math.max(9,width*.025)+'px monospace';c.globalAlpha=.14;c.globalAlpha=1;
- }
+ function paintRoom(c){const floorY=combatFX.geometry(width,height,state.target).floorY;if(window.ArenaScenes)window.ArenaScenes.paint(c,width,height,floorY,state.scene);}
  function room(){const key=[Math.round(width),Math.round(height),state.scene].join(':');if(key!==roomKey){roomCache.width=Math.max(1,Math.round(width));roomCache.height=Math.max(1,Math.round(height));paintRoom(roomCache.getContext('2d'));roomKey=key;}ctx.drawImage(roomCache,0,0,width,height);}
  function sprite(index,x,y,h,rotation=0,scaleX=1,isTarget=false,scaleY=1){const im=characters[index].image;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im);ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.scale(scaleX,scaleY);ctx.fillStyle='#55765826';ctx.beginPath();ctx.ellipse(0,0,h*.23,h*.035,0,0,Math.PI*2);ctx.fill();const w=h*b.w/b.h;ctx.imageSmoothingEnabled=true;ctx.drawImage(im,b.x,b.y,b.w,b.h,-w/2,-h,w,h);if(isTarget)combatFX.overlay(ctx,im,index,w,h);ctx.restore();}
  function playerBack(attacking){const im=characters[state.player].back;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im),w=Math.min(320,width*.70),fullH=w*b.h/b.w,reveal=fullH*.23+(attacking&&!reduced?5:0);ctx.save();ctx.shadowColor='#263f4f33';ctx.shadowBlur=0;ctx.drawImage(im,b.x,b.y,b.w,b.h,width/2-w/2,height-reveal,w,fullH);ctx.restore();}
@@ -139,4 +127,11 @@
    const im=new Image();im.onload=()=>{characters[i].image=im;if(i===state.player||i===state.target)combatFX.reset();wake();roster();};im.src=src;});
  });
  if(window.parent!==window)try{window.parent.postMessage({type:'ventArenaBodiesRequest'},location.origin)}catch(error){}
+ /* 我的角色綁定登入帳號：向主站要登入者名字；沒登入或不在 11 位名單內就維持預設 Amber */
+ window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeViewer')return;
+  const i=names.indexOf(String(e.data.name||''));if(i<0)return;
+  boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();
+ });
+ if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
 })();
