@@ -17,7 +17,7 @@ let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackS
 let levelUpdatedAt='',levelIsLive=false;
 // type 是桌子素材、empty 是離席時換上的空桌。素材裡三張桌子的形狀本來就不一樣——最左邊那張有
 // 左斜邊、最右邊有右斜邊、中間是矩形——所以每個座位要用對應自己位置的那一種，接起來才是平整的一條。
-const stations=[{x:548+LX,y:355,type:0,empty:6,name:'Leona'},{x:768+LX,y:355,type:1,empty:7,name:'Amber'},{x:988+LX,y:355,type:9,empty:11,name:'Noise'},{x:548+LX,y:695,type:4,empty:6,name:'',row:1},{x:768+LX,y:695,type:1,empty:7,name:'Anna',row:1},{x:988+LX,y:695,type:10,empty:11,name:'Machi',row:1}];
+const stations=[{x:548+LX,y:355,type:12,empty:14,name:'Leona'},{x:768+LX,y:355,type:1,empty:7,name:'Amber'},{x:988+LX,y:355,type:9,empty:11,name:'Noise'},{x:548+LX,y:695,type:13,empty:14,name:'',row:1},{x:768+LX,y:695,type:1,empty:7,name:'Anna',row:1},{x:988+LX,y:695,type:10,empty:11,name:'Machi',row:1}];
 // 企劃部、專案部同仁的六張桌子：設計部六張桌子的右側空一張桌子的距離（+880），同樣配置（上排三張、下排三張，左下是 Mac mini 桌）。座位 0–2 上排、3–5 下排；
 // 完成「建立你的角色」的人依序入座（後端 pixel_office_staff）。沒人坐的桌子名牌是空的。
 const STAFF_DX=770,STAFF_POS=Array.from({length:18},(_,n)=>{const g=Math.floor(n/6),k=n%6;return [[548+LX,355],[768+LX,355],[988+LX,355],[548+LX,695],[768+LX,695],[988+LX,695]][k].map((v,j)=>j?v-g*GP:v+STAFF_DX);});
