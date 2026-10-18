@@ -395,7 +395,7 @@ function loadCustomList(){
     const heads=Array.isArray(j.heads)?j.heads.filter(x=>x&&x.id&&x.game&&Array.isArray(x.game.views)&&x.game.views.length===3):[];
     customState().hlist=heads;
     const accs=[...(Array.isArray(j.caps)?j.caps:[]),...(Array.isArray(j.glasses)?j.glasses:[])].filter(x=>x&&x.id&&x.game&&x.game.pads);
-    customState().alist=accs;ensureCustomNeeded();markDirty();
+    customState().alist=accs;customState().loaded=true;ensureCustomNeeded();markDirty();
   }).catch(()=>{});
 }
 function lookDefault(i){const d=baseLookDefault(i);if(i>=5){/* 企劃／專案同仁：造型只用自己的頭像與身體，沒有設計部的內建衣服與頭 */const c=customDefaultId(i)||customIdsOf(i)[0]||null,h=customHeadIdsOf(i)[0]||'';return {...d,outfit:c||d.outfit,head:h};}const c=customDefaultId(i);return c?{...d,outfit:c}:d;}
@@ -1772,6 +1772,16 @@ const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=S
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const avatarMemo=new Map();
   const bodyMemo=new Map();
+  /* 這個人的造型是否「完整載入」：自訂清單已回來、伺服器記的造型沒被當成無效而退回預設、用到的自訂圖都載好了 */
+  const bodyLookReady=i=>{
+    try{
+      const st=customState();if(!st.loaded)return false;
+      const raw=people[i]&&people[i].look,eff=effectiveLook(i);
+      if(raw&&typeof raw==='object'&&(String(raw.outfit)!==String(eff.outfit)||String(raw.cap||'')!==String(eff.cap||'')||String(raw.glasses||'')!==String(eff.glasses||'')||String(raw.head||'')!==String(eff.head||'')))return false;
+      const okId=id=>{if(id===undefined||id===null||id==='')return true;const s=String(id);const m=s.startsWith('h:')?st.hmap.get(s.slice(2)):s.startsWith('a:')?st.amap.get(s.slice(2)):st.map.get(s);return !m||m.ready;};
+      return okId(eff.outfit)&&okId(eff.head)&&okId(eff.glasses)&&okId(eff.cap);
+    }catch(error){return false}
+  };
   const sendAvatars=()=>{
     if(!ready||window.parent===window)return;
     loadAccessories();if(!accessoriesReady())return;// 帽子、眼鏡的圖還沒載好時先不送，不然頭像會先是光頭
@@ -1789,6 +1799,7 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
         let changed=false;
         people.forEach((p,i)=>{
           const key=lookKeyOf(i),m=bodyMemo.get(p.name);if(m&&m.key===key)return;
+          if(!bodyLookReady(i))return;/* 自訂造型清單或圖還沒載好時不畫：否則會畫成「頭和身體對不上」的半成品，還被快取住 */
           const frame=wardrobeFrame(i,'down');if(!frame)return;
           const sc=WD_SCALE*3,cw=Math.ceil(frame.canvas.width*sc),ch=Math.ceil(frame.canvas.height*sc),c=document.createElement('canvas');c.width=cw;c.height=ch;
           const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.drawImage(frame.canvas,0,0,cw,ch);bodyMemo.set(p.name,{key,png:c.toDataURL('image/png')});changed=true;
