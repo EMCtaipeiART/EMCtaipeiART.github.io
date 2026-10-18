@@ -3406,7 +3406,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     }
     const linkGroupLine=l=>(l.name?l.name+' ':'')+SHORT_BASE()+l.code;
     function linkGroupHtml(key,items){
-      const open=links.groupOpen&&links.groupOpen.has(key),head=items[0],canEdit=items.every(l=>l.canEdit);
+      const open=!(links.groupClosed&&links.groupClosed.has(key)),head=items[0],canEdit=items.every(l=>l.canEdit);
       if(links.groupEdit===key){
         const text=links.groupDraft!=null?links.groupDraft:items.map(l=>(l.name?l.name+' ':'')+l.url).join(String.fromCharCode(10));
         return `<form class="link-item link-group link-edit" data-group-edit="${esc(key)}"><div class="link-section-head link-wide"><h3>編輯整包（${items.length} 筆）</h3><span class="link-hint">每行對應一筆，格式「名稱 原始網址」，行數需相同</span></div><textarea class="input link-batch-text link-wide" name="gtext" rows="${Math.min(items.length+2,16)}" spellcheck="false">${esc(text)}</textarea><div class="link-form-actions link-wide"><button type="submit" class="btn primary link-btn">儲存整包</button><button type="button" class="btn link-btn" data-group-cancel>取消</button></div></form>`;
@@ -3533,7 +3533,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       const t=e.target.closest&&e.target.closest('[data-link-delsel],[data-group-copy],[data-group-toggle],[data-group-editbtn],[data-group-del],[data-group-cancel],[data-batch-copy],[data-batch-clear],[data-link-copy],[data-link-editbtn],[data-link-del],[data-link-cancel],[data-link-reload]');if(!t||t.disabled)return;
       if(t.hasAttribute('data-link-delsel')){deleteLinks([...links.selected]);return}
       if(t.dataset.groupCopy){const it=linkGroupItems(t.dataset.groupCopy);copyText(it.map(linkGroupLine).join(String.fromCharCode(10))).then(()=>toast(`已複製整包（${it.length} 筆）`));return}
-      if(t.dataset.groupToggle){links.groupOpen=links.groupOpen||new Set();const k=t.dataset.groupToggle;links.groupOpen.has(k)?links.groupOpen.delete(k):links.groupOpen.add(k);renderLinksPage(true);return}
+      if(t.dataset.groupToggle){links.groupClosed=links.groupClosed||new Set();const k=t.dataset.groupToggle;links.groupClosed.has(k)?links.groupClosed.delete(k):links.groupClosed.add(k);renderLinksPage(true);return}
       if(t.dataset.groupEditbtn){links.groupEdit=t.dataset.groupEditbtn;links.groupDraft=null;renderLinksPage(true);return}
       if(t.hasAttribute('data-group-cancel')){links.groupEdit='';links.groupDraft=null;renderLinksPage(true);return}
       if(t.dataset.groupDel){const it=linkGroupItems(t.dataset.groupDel);deleteLinks(it.map(l=>l.code),`這一整包 ${it.length} 筆`);return}
