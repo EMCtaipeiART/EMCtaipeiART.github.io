@@ -1470,3 +1470,8 @@ html[data-hero-fest="midautumn"] .hero{--hf-light:#ffe5af;--hf-cool:#8bb8ff}
 /* 出氣擂台（內嵌遊戲） */
 .arena-page{width:100%;margin:0 auto}.arena-page .page-top{padding:14px 4px 8px;display:flex;justify-content:space-between;align-items:center}
 .arena-frame{display:block;width:100%;border:0;border-radius:16px;background:#101a2c;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+
+/* 出氣擂台：電腦版滿版、不要上方綠色列與外框 */
+body.arena-on .stage-wrap{padding:0!important;max-width:none!important}
+body.arena-on .stage{padding:0!important;max-width:none!important}
+body.arena-on .arena-frame{border-radius:0;box-shadow:none;background:transparent}

@@ -134,4 +134,6 @@
   boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();
  });
  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
+ /* 在系統內開啟時：「返回元宇宙」交給主站切頁（直接連過去會在 iframe 裡又開一份像素辦公室） */
+ document.querySelectorAll('.arena-home').forEach(a=>a.addEventListener('click',e=>{if(window.parent!==window){e.preventDefault();try{window.parent.postMessage({type:'ventArenaBack'},location.origin)}catch(error){}}}));
 })();

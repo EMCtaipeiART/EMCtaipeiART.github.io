@@ -502,7 +502,7 @@
       b.disabled=true;try{const r=await api('pixelOfficeAllWork',{});toast('已設成上班：'+(r.changed||[]).length+' 人'+((r.skipped||[]).length?'（略過休假／出國：'+r.skipped.join('、')+'）':''));const fr=$('uniFrame');if(fr)fr.src=fr.src.replace(/&t=\d+/,'&t='+Date.now())}catch(err){toast('失敗：'+(err.message||err),true)}b.disabled=false});
     /* ---------- 出氣擂台（元宇宙小遊戲）：在原視窗執行（內嵌 vent-arena 遊戲），左側功能列保留 ---------- */
     function renderArenaPage(){
-      $('stage').innerHTML='<div class="arena-page"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">出氣擂台</h2></div><div class="uni-acts"><button type="button" class="btn" data-arena-back>返回元宇宙</button></div></div><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1" title="出氣擂台" allow="autoplay"></iframe></div>';
+      $('stage').innerHTML='<div class="arena-page"><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1" title="出氣擂台" allow="autoplay"></iframe></div>';
       fitArenaFrame();[150,600,1500].forEach(t=>setTimeout(()=>{try{fitArenaFrame()}catch(err){}},t));
     }
     /* 像素辦公室隱藏小視窗送來的「全身正面快照」：存起來，轉給出氣擂台（遊戲開啟時也會來要） */
@@ -510,8 +510,10 @@
       if(e.data.type==='pixelOfficeBodies'&&e.data.list){state.pixBodies=Object.assign(state.pixBodies||{},e.data.list);const f=$('arenaFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'ventArenaBodies',list:e.data.list},location.origin)}catch(err){}}
       else if(e.data.type==='ventArenaBodiesRequest'){const f=$('arenaFrame');if(f&&e.source===f.contentWindow&&state.pixBodies){try{e.source.postMessage({type:'ventArenaBodies',list:state.pixBodies},location.origin)}catch(err){}}}
     });
-    function fitArenaFrame(){const f=$('arenaFrame');if(!f)return;const top=f.getBoundingClientRect().top;f.style.height=Math.max(520,innerHeight-top-12)+'px'}
+    function fitArenaFrame(){const f=$('arenaFrame');if(!f)return;const top=f.getBoundingClientRect().top;f.style.height=Math.max(520,innerHeight-top-(innerWidth<=720?96:0))+'px'}
     window.addEventListener('resize',()=>{try{fitArenaFrame()}catch(err){}});
+    /* 遊戲裡的「返回元宇宙」：在系統內開啟時由主站切回元宇宙頁（不要在 iframe 裡再開一份像素辦公室） */
+    window.addEventListener('message',e=>{const f=$('arenaFrame');if(e.origin===location.origin&&e.data&&e.data.type==='ventArenaBack'&&f&&e.source===f.contentWindow)openUniverse()});
     document.addEventListener('click',e=>{
       if(e.target.closest?.('[data-uni-arena]')){show('arena');return}
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
@@ -1303,8 +1305,8 @@
     const KEEP_VIEWS=['universe','projects','calendar','assign','notes','wall','issues','links'];
     function show(view){const pv=state.view;try{if(state.restored)sessionStorage.setItem('v5LastView',KEEP_VIEWS.includes(view)?view:'')}catch(err){}if(view==='universe')setTimeout(openPendingStory,0);state.tlLeft=null;if(view==='universe'||pv==='universe'||view==='form'||view==='mail'||view==='arena'||pv==='arena'){window.scrollTo(0,0)}if(view==='board'&&pv!=='board'){window.scrollTo(0,0);/* 回首頁：綠底收成只剩下拉列，畫面停在「最新案件列表」標題 */setTimeout(()=>{$('team')?.classList.add('is-collapsed');setTimeout(()=>{const h=document.querySelector('.section-head');if(h&&state.view==='board')window.scrollTo(0,Math.max(0,h.getBoundingClientRect().top+window.scrollY-86))},560)},0)}else if(view==='board'){$('team')?.classList.remove('is-collapsed')}
       state.view=view;
-      document.body.classList.toggle('no-hero',view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
-      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail'||view==='arena');$('stage').classList.toggle('wide',view==='arena'||view==='projects'||view==='wall'||view==='notes'||view==='assign'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
+      document.body.classList.toggle('no-hero',view==='arena'||view==='projects'||view==='login'||view==='settings'||view==='thread'||view==='owner'||view==='issues'||view==='links'||view==='wall'||view==='notes'||view==='assign'||view==='calendar'||view==='outfit'||(view==='detail'&&state.home==='projects')||(innerWidth<=720&&view!=='board'&&view!=='universe'));
+      document.body.classList.toggle('uni-collapse',view==='universe'||view==='form'||view==='mail');document.body.classList.toggle('arena-on',view==='arena');$('stage').classList.toggle('wide',view==='arena'||view==='projects'||view==='wall'||view==='notes'||view==='assign'||view==='calendar');$('stage').classList.toggle('full',view==='outfit');$('stage').closest('.stage-wrap')?.classList.toggle('uni',view==='universe');
       if(view==='board')renderBoard();else if(view==='projects')renderProjects();else if(view==='login')renderLoginPage();else if(view==='settings')renderSettings();else if(view==='thread')renderThreadPage();else if(view==='owner')renderOwnerPage();else if(view==='issues')renderIssuesPage();else if(view==='links')renderLinksPage();else if(view==='wall')renderWallPage();else if(view==='notes')renderNotesPage();else if(view==='assign')renderAssignPage();else if(view==='calendar'){renderCalendarPage();dcLoad(false)}else if(view==='outfit')renderOutfitPage();else if(view==='universe')renderUniversePage();else if(view==='arena')renderArenaPage();else if(view==='form')renderForm();else if(view==='mail')renderMail();else if(view==='sched')renderSchedPage();else if(view==='detail')renderDetail();
       updateRail();try{annSync()}catch(e){}
       if(['board','projects','sched'].includes(view))refreshSched(view==='sched');
