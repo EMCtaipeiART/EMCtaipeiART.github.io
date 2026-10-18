@@ -154,11 +154,11 @@
   document.addEventListener('auxclick',e=>{if(!editable(e))e.preventDefault();});
   ['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
  }
- /* 深色模式：?theme=dark、主站的 pixelOfficeTheme 訊息、或系統深色設定（獨立開啟時） */
+ /* 深色模式：預設淺色。?theme=dark、主站的 pixelOfficeTheme 訊息、或網站自己的深色設定（獨立開啟時） */
  {
   const root=document.documentElement,setTheme=t=>{if(t==='dark')root.setAttribute('data-theme','dark');else root.removeAttribute('data-theme');};
   const q=new URLSearchParams(location.search).get('theme');
-  if(q)setTheme(q);else if(window.parent===window&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)setTheme('dark');
+  if(q)setTheme(q);else{try{if(localStorage.getItem('designRequestThemeV1')==='dark')setTheme('dark');}catch(error){}}/* 預設淺色；只有網站本身選了深色模式才跟著變深（不看系統深色設定） */
   window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeTheme')return;setTheme(e.data.theme);});
   if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeThemeRequest'},location.origin)}catch(error){}
  }
