@@ -18,7 +18,7 @@
  ];
  const scenes=[{name:'下班後的茶水間',wall:'#d9ece3',accent:'#ffbc7c',floor:'#c8dfd4'},{name:'頂樓晚風俱樂部',wall:'#cdebdd',accent:'#87ecbb',floor:'#c8e3d6'},{name:'最後一間會議室',wall:'#d2edf0',accent:'#c0f5db',floor:'#d4d5ec'}];
  const lines=['這個修改，真的是最後一版！','先喝口水，我們再來！','我的咖啡還沒喝完耶！','好啦好啦，今天準時下班！','有事好商量，先別加需求！','收到！這次一定不已讀！'];
- let state={player:3,target:4,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
+ let state={player:3,target:7,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
  let best=0,sound=true,audio,particles=[],texts=[],holding=false,nextAuto=0,lastFrame=0,raf=0,toastTimer=0,bubbleUntil=0,width=0,height=0;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  try{best=Math.max(0,Number(localStorage.getItem('emcVentArenaBestV1'))||0);}catch{}
@@ -132,4 +132,11 @@
  document.addEventListener('pointerdown',unlockMusic);document.addEventListener('keydown',unlockMusic);
  document.addEventListener('visibilitychange',syncMusic);
  $('#result').addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r')$('#again').click();});
+ /* 在系統內開啟時：用像素辦公室即時送來的「目前造型」全身正面快照取代內建圖（沒有快照或獨立開啟就沿用 assets 內建圖） */
+ window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||!e.data||e.data.type!=='ventArenaBodies'||!e.data.list)return;
+  Object.keys(e.data.list).forEach(name=>{const i=names.indexOf(name),src=e.data.list[name];if(i<0||typeof src!=='string'||!src.startsWith('data:image/png;base64,'))return;
+   const im=new Image();im.onload=()=>{characters[i].image=im;if(i===state.player||i===state.target)combatFX.reset();wake();roster();};im.src=src;});
+ });
+ if(window.parent!==window)try{window.parent.postMessage({type:'ventArenaBodiesRequest'},location.origin)}catch(error){}
 })();

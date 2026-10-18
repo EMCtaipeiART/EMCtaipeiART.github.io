@@ -505,6 +505,11 @@
       $('stage').innerHTML='<div class="arena-page"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">出氣擂台</h2></div><div class="uni-acts"><button type="button" class="btn" data-arena-back>返回元宇宙</button></div></div><iframe id="arenaFrame" class="arena-frame" src="vent-arena/index.html?embed=1" title="出氣擂台" allow="autoplay"></iframe></div>';
       fitArenaFrame();[150,600,1500].forEach(t=>setTimeout(()=>{try{fitArenaFrame()}catch(err){}},t));
     }
+    /* 像素辦公室隱藏小視窗送來的「全身正面快照」：存起來，轉給出氣擂台（遊戲開啟時也會來要） */
+    window.addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;
+      if(e.data.type==='pixelOfficeBodies'&&e.data.list){state.pixBodies=Object.assign(state.pixBodies||{},e.data.list);const f=$('arenaFrame');try{f&&f.contentWindow&&f.contentWindow.postMessage({type:'ventArenaBodies',list:e.data.list},location.origin)}catch(err){}}
+      else if(e.data.type==='ventArenaBodiesRequest'){const f=$('arenaFrame');if(f&&e.source===f.contentWindow&&state.pixBodies){try{e.source.postMessage({type:'ventArenaBodies',list:state.pixBodies},location.origin)}catch(err){}}}
+    });
     function fitArenaFrame(){const f=$('arenaFrame');if(!f)return;const top=f.getBoundingClientRect().top;f.style.height=Math.max(520,innerHeight-top-12)+'px'}
     window.addEventListener('resize',()=>{try{fitArenaFrame()}catch(err){}});
     document.addEventListener('click',e=>{

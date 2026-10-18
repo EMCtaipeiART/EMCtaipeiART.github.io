@@ -1771,6 +1771,7 @@ const lookKeyOf=i=>{const e=effectiveLook(i),ver=id=>{const st=customState(),m=S
 // ?avatars=1：給新版首頁的隱藏小視窗用。把每個人目前的造型（帽子、眼鏡、耳機）畫成頭像圖，連同對話與分享的音樂一起傳給外層，首頁的頭像框就能顯示一樣的樣子。
 if(new URLSearchParams(location.search).get('avatars')==='1'){
   const avatarMemo=new Map();
+  const bodyMemo=new Map();
   const sendAvatars=()=>{
     if(!ready||window.parent===window)return;
     loadAccessories();if(!accessoriesReady())return;// 帽子、眼鏡的圖還沒載好時先不送，不然頭像會先是光頭
@@ -1783,6 +1784,17 @@ if(new URLSearchParams(location.search).get('avatars')==='1'){
         list[p.name]={img,message:p.message||'',music:p.music&&p.music.url?{url:p.music.url,title:p.music.title||''}:null,status:p.status||'',story:{count:storiesOf(p.name).length,unread:storyUnread(p.name)}};
       });
       window.parent.postMessage({type:'pixelOfficeAvatars',list},location.origin);
+      /* 全身正面快照（出氣擂台等小遊戲用）：每個人目前造型的正面全身圖，只在造型變了才重畫、才送出 */
+      try{
+        let changed=false;
+        people.forEach((p,i)=>{
+          const key=lookKeyOf(i),m=bodyMemo.get(p.name);if(m&&m.key===key)return;
+          const frame=wardrobeFrame(i,'down');if(!frame)return;
+          const sc=WD_SCALE*3,cw=Math.ceil(frame.canvas.width*sc),ch=Math.ceil(frame.canvas.height*sc),c=document.createElement('canvas');c.width=cw;c.height=ch;
+          const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.drawImage(frame.canvas,0,0,cw,ch);bodyMemo.set(p.name,{key,png:c.toDataURL('image/png')});changed=true;
+        });
+        if(changed){const out={};bodyMemo.forEach((v,k)=>{out[k]=v.png});window.parent.postMessage({type:'pixelOfficeBodies',list:out},location.origin)}
+      }catch(error){}
     }catch(error){}
   };
   let avatarsSent=false;const sendAvatarsOnce=()=>{sendAvatars();};const fastSend=setInterval(()=>{sendAvatars();if(ready&&accessoriesReady()){avatarsSent=true;clearInterval(fastSend)}},700);setInterval(()=>{if(!document.hidden)sendAvatarsOnce()},10000);
