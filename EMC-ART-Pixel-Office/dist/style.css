@@ -509,3 +509,6 @@ html.clean:not(.solo):not(.embed) #game{cursor:grab}
 
 .exit-btn{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:30;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 14px 0 10px;border:1px solid #c9d3e0;border-radius:999px;background:rgba(255,255,255,.94);color:#273b50;font-size:14px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.16);touch-action:manipulation}
 .exit-btn span{font-size:22px;line-height:1;margin-top:-2px}
+/* Published mini-game entry, including clean mobile universe view. */
+.vent-arena-entry{display:inline-flex;align-items:center;justify-content:center;padding:9px 15px;border:2px solid #171d19;border-radius:9px;background:#e8f6ec;color:#0f7f27;font-size:13px;font-weight:800;text-decoration:none;box-shadow:0 3px #171d19;margin-left:auto}.vent-arena-entry:hover{background:#d0edda}.vent-arena-entry:active{transform:translateY(2px);box-shadow:0 1px #171d19}html.embed .vent-arena-entry,html.avatars .vent-arena-entry{display:none}html.clean .scene-bar{display:flex}
+html.clean:not(.embed):not(.avatars) .scene-bar{display:flex!important}
