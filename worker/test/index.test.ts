@@ -5634,6 +5634,23 @@ describe('全員上班', () => {
   });
 });
 
+describe('出氣擂台排行榜', () => {
+  it('shows anonymous scores as 未登入使用者, keeps one best per signed-in user and mode, and validates scores', async () => {
+    expect(await api({ action: 'ventArenaRanking' })).toMatchObject({ ok: true, items: [] });
+    const anon = await api({ action: 'ventArenaScore', score: 120, mode: 'timed', kos: 1, roundId: 'r1' }) as { items: Array<{ name: string; score: number }> };
+    expect(anon.items[0]).toMatchObject({ name: '未登入使用者', score: 120 });
+    const admin = await login();
+    await api({ action: 'ventArenaScore', score: 300, mode: 'timed', kos: 2, roundId: 'r2', token: admin });
+    const again = await api({ action: 'ventArenaScore', score: 200, mode: 'timed', kos: 1, roundId: 'r3', token: admin }) as { items: Array<{ name: string; score: number; mode: string }> };
+    const mine = again.items.filter(item => item.name !== '未登入使用者' && item.mode === 'timed');
+    expect(mine).toHaveLength(1);
+    expect(mine[0].score).toBe(300);
+    expect(again.items[0].score).toBe(300);
+    expect(await api({ action: 'ventArenaScore', score: 0, mode: 'free' })).toMatchObject({ ok: false });
+    expect(await api({ action: 'ventArenaScore', score: 999999, mode: 'free' })).toMatchObject({ ok: false });
+  });
+});
+
 describe('pixel office status diagnostic', () => {
   it('is admin only and includes the heartbeat details (last seen, online flag, rule status)', async () => {
     const token = await login();

@@ -2681,6 +2681,11 @@ export class DatabaseCoordinator extends DurableObject<Env> {
 
   /** 按讚、留言、已讀的人一律取自登入的前台帳號，不信任前端自己報的名字；沒登入不能互動。 */
   /** 關閉元宇宙時存下本人目前造型的頭像快照。沒帶 png：這個造型以前存過就直接換成它（不必重拍），沒存過回 need。 */
+  private async ventArenaTop(): Promise<Array<{ name: string; score: number; mode: string; kos: number; at: number }>> {
+    const list = (await this.ctx.storage.get<Array<{ name: string; score: number; mode: string; kos: number; at: number }>>('ventArenaRank')) || [];
+    return list.slice(0, 10).map(item => ({ name: item.name, score: item.score, mode: item.mode, kos: item.kos, at: item.at }));
+  }
+
   private async pixelOfficeAvatarSnapshot(payload: ApiPayload): Promise<ApiResult> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]);
@@ -4844,6 +4849,25 @@ export class DatabaseCoordinator extends DurableObject<Env> {
       if (action === 'publicRevision') {
         const row = this.ctx.storage.sql.exec<{ r: number | null }>("SELECT json_extract(json, '$.revision') AS r FROM database_state WHERE id = ?", STATE_KEY).toArray()[0];
         return { ok: true, action, revision: Number(row?.r) || 0 };
+      }
+      /* 出氣擂台排行榜：所有人讀得到；送成績時有登入就記帳號名字，沒登入就是「未登入使用者」。
+         每個登入的人每種模式只留最高分，未登入的成績各自一筆；只留前 50 名，回傳前 10 名。 */
+      if (action === 'ventArenaRanking') return { ok: true, action, items: await this.ventArenaTop() };
+      if (action === 'ventArenaScore') {
+        const session = await this.sessionFor(payload);
+        const mode = payload.mode === 'timed' ? 'timed' : 'free';
+        const score = Math.floor(Number(payload.score)), kos = Math.max(0, Math.min(999, Math.floor(Number(payload.kos)) || 0));
+        const roundId = text(payload.roundId).slice(0, 40);
+        if (!Number.isFinite(score) || score < 1 || score > 250000) throw new Error('成績不正確');
+        const user = session ? auditActor(session) : '';
+        const list = ((await this.ctx.storage.get<Array<{ id: string; user: string; name: string; score: number; mode: string; kos: number; at: number }>>('ventArenaRank')) || []).slice();
+        const name = user || '未登入使用者';
+        const idx = list.findIndex(item => (user ? item.user === user && item.mode === mode : roundId !== '' && item.id === roundId && !item.user));
+        const entry = { id: roundId || crypto.randomUUID().slice(0, 12), user, name, score, mode, kos, at: Date.now() };
+        if (idx >= 0) { if (score > list[idx].score) list[idx] = entry; else list[idx] = { ...list[idx], name }; } else list.push(entry);
+        list.sort((a, b) => b.score - a.score);
+        await this.ctx.storage.put('ventArenaRank', list.slice(0, 50));
+        return { ok: true, action, items: await this.ventArenaTop() };
       }
       if (action === 'getPixelHours') return { ok: true, action, config: { ...cleanPixelHours(await this.ctx.storage.get<PixelHours>('pixelHours')) }, defaults: PIXEL_HOURS_DEFAULT };
       if (action === 'getHeroConfig') return { ok: true, action, config: (await this.ctx.storage.get<HeroConfig>('heroConfig')) || null };

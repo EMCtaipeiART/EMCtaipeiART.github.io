@@ -105,8 +105,17 @@
  const weaponCursor=i=>'url("data:image/svg+xml,'+encodeURIComponent(window.ArenaWeaponArt.svg(i).replace('viewBox=', 'width="40" height="40" viewBox='))+'") 20 20, crosshair';
  canvas.style.cursor=weaponCursor(0);
  let roundId=Date.now();let rankings=[];try{const saved=JSON.parse(localStorage.getItem('emcVentArenaRankV1')||'[]');if(Array.isArray(saved))rankings=saved.filter(r=>Number.isFinite(r.score)&&r.score>0).slice(0,10);}catch{}
- function recordRound(){if(!state.score)return;rankings=rankings.filter(r=>r.id!==roundId);rankings.push({id:roundId,score:state.score,mode:state.mode,kos:state.kos,name:names[state.player]});rankings.sort((a,b)=>b.score-a.score);rankings=rankings.slice(0,10);try{localStorage.setItem('emcVentArenaRankV1',JSON.stringify(rankings));}catch{}}
- $('#leaderboard-open').onclick=()=>{recordRound();const list=$('#leaderboard-list');list.replaceChildren();if(!rankings.length){const li=document.createElement('li');li.textContent='尚無紀錄，來打一局吧！';list.append(li);}rankings.forEach((r,i)=>{const li=document.createElement('li');const label=document.createElement('span'),score=document.createElement('strong');label.textContent=(i+1)+'. '+r.name+' · '+(r.mode==='timed'?'60秒':'自由');score.textContent=r.score.toLocaleString();li.append(label,score);list.append(li);});$('#leaderboard').showModal();};
+ const RANK_API='https://machi-design-api.machi-chen.workers.dev/api';
+ const viewer={name:'',token:''};/* 登入者（由主站傳來）；沒登入＝空，排行榜顯示「未登入使用者」 */
+ const who=()=>viewer.name||'未登入使用者';
+ let lastSent={id:0,score:0};
+ function submitScore(){
+  if(!state.score||(lastSent.id===roundId&&lastSent.score===state.score))return;lastSent={id:roundId,score:state.score};
+  try{fetch(RANK_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'ventArenaScore',token:viewer.token,roundId:String(roundId),score:state.score,mode:state.mode,kos:state.kos}),cache:'no-store'}).catch(()=>{});}catch(error){}
+ }
+ function recordRound(){if(!state.score)return;rankings=rankings.filter(r=>r.id!==roundId);rankings.push({id:roundId,score:state.score,mode:state.mode,kos:state.kos,name:who()});submitScore();rankings.sort((a,b)=>b.score-a.score);rankings=rankings.slice(0,10);try{localStorage.setItem('emcVentArenaRankV1',JSON.stringify(rankings));}catch{}}
+ function paintBoard(items){const list=$('#leaderboard-list');list.replaceChildren();if(!items.length){const li=document.createElement('li');li.textContent='尚無紀錄，來打一局吧！';list.append(li);}items.forEach((r,i)=>{const li=document.createElement('li');const label=document.createElement('span'),score=document.createElement('strong');label.textContent=(i+1)+'. '+r.name+' · '+(r.mode==='timed'?'60秒':'自由');score.textContent=Number(r.score).toLocaleString();li.append(label,score);list.append(li);});}
+ $('#leaderboard-open').onclick=()=>{recordRound();paintBoard(rankings);$('#leaderboard').showModal();try{fetch(RANK_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'ventArenaRanking'}),cache:'no-store'}).then(r=>r.json()).then(d=>{if(d&&d.ok&&Array.isArray(d.items))paintBoard(d.items);}).catch(()=>{});}catch(error){}};
  $('#leaderboard-close').onclick=()=>$('#leaderboard').close();
  roster();reset();
 
@@ -130,7 +139,7 @@
  /* 我的角色綁定登入帳號：向主站要登入者名字；沒登入或不在 11 位名單內就維持預設 Amber */
  window.addEventListener('message',e=>{
   if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeViewer')return;
-  const i=names.indexOf(String(e.data.name||''));if(i<0)return;
+  viewer.name=String(e.data.name||'');viewer.token=String(e.data.token||'');const i=names.indexOf(viewer.name);if(i<0)return;
   boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();
  });
  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
