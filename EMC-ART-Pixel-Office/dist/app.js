@@ -1,7 +1,7 @@
 'use strict';
-const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), W=/[?&]embed=1/.test(location.search)?1536:2050,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:900/* 畫布往上多留的高度（放新增的兩組桌子） */,H=H0+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
+const $=id=>document.getElementById(id), game=$('game'), ctx=game.getContext('2d'), LX=/[?&]embed=1/.test(location.search)?0:200/* 往左多出來、放新桌子群的寬度（首頁小框不用） */,W=/[?&]embed=1/.test(location.search)?1536:2050+LX,H0=1024,GP=604/* 往上複製的桌子群：邏輯座標間距 */,GPV=497/* 畫面上的間距：群高 403 + 一張桌子的深度 94 */,OY=/[?&]embed=1/.test(location.search)?0:900/* 畫布往上多留的高度（放新增的兩組桌子） */,H=H0+OY;// 首頁小框（embed）只看設計部，畫布維持 1536；整頁／編輯版含六張同仁桌，加寬到 2160
 const names=['Leona','Amber','Noise','Anna','Machi'], descriptions=['黑髮・時髦日常','暖色・樸素自在','短髮・專注模式','長髮・粉色靈感','挑染・街頭風格'];
-const starts=[[548,355],[768,355],[988,355],[768,695],[988,695]];
+const starts=[[548+LX,355],[768+LX,355],[988+LX,355],[768+LX,695],[988+LX,695]];
 const fallbackScores={Machi:10832,Anna:4749.5,Amber:2905,Leona:1907,Noise:1404.5};
 descriptions[2]='藍帽・夏日休閒';
 // 等級稱號：平面組與影音組各一套，級距固定在 Lv.1／10／20／30／40／50（跟 levelFromScore 的門檻一致）。
@@ -17,13 +17,15 @@ let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackS
 let levelUpdatedAt='',levelIsLive=false;
 // type 是桌子素材、empty 是離席時換上的空桌。素材裡三張桌子的形狀本來就不一樣——最左邊那張有
 // 左斜邊、最右邊有右斜邊、中間是矩形——所以每個座位要用對應自己位置的那一種，接起來才是平整的一條。
-const stations=[{x:548,y:355,type:0,empty:6,name:'Leona'},{x:768,y:355,type:1,empty:7,name:'Amber'},{x:988,y:355,type:9,empty:11,name:'Noise'},{x:548,y:695,type:4,empty:6,name:'',row:1},{x:768,y:695,type:1,empty:7,name:'Anna',row:1},{x:988,y:695,type:10,empty:11,name:'Machi',row:1}];
+const stations=[{x:548+LX,y:355,type:0,empty:6,name:'Leona'},{x:768+LX,y:355,type:1,empty:7,name:'Amber'},{x:988+LX,y:355,type:9,empty:11,name:'Noise'},{x:548+LX,y:695,type:4,empty:6,name:'',row:1},{x:768+LX,y:695,type:1,empty:7,name:'Anna',row:1},{x:988+LX,y:695,type:10,empty:11,name:'Machi',row:1}];
 // 企劃部、專案部同仁的六張桌子：設計部六張桌子的右側空一張桌子的距離（+880），同樣配置（上排三張、下排三張，左下是 Mac mini 桌）。座位 0–2 上排、3–5 下排；
 // 完成「建立你的角色」的人依序入座（後端 pixel_office_staff）。沒人坐的桌子名牌是空的。
-const STAFF_DX=770,STAFF_POS=Array.from({length:18},(_,n)=>{const g=Math.floor(n/6),k=n%6;return [[548,355],[768,355],[988,355],[548,695],[768,695],[988,695]][k].map((v,j)=>j?v-g*GP:v+STAFF_DX);});
-stations.push({x:548+STAFF_DX,y:355,type:12,empty:14,name:'',grp:1},{x:768+STAFF_DX,y:355,type:1,empty:7,name:'',grp:1},{x:988+STAFF_DX,y:355,type:3,empty:8,name:'',grp:1},{x:548+STAFF_DX,y:695,type:13,empty:14,name:'',row:1,grp:1},{x:768+STAFF_DX,y:695,type:1,empty:7,name:'',row:1,grp:1},{x:988+STAFF_DX,y:695,type:2,empty:8,name:'',row:1,grp:1});
+const STAFF_DX=770,STAFF_POS=Array.from({length:18},(_,n)=>{const g=Math.floor(n/6),k=n%6;return [[548+LX,355],[768+LX,355],[988+LX,355],[548+LX,695],[768+LX,695],[988+LX,695]][k].map((v,j)=>j?v-g*GP:v+STAFF_DX);});
+stations.push({x:548+LX+STAFF_DX,y:355,type:12,empty:14,name:'',grp:1},{x:768+LX+STAFF_DX,y:355,type:1,empty:7,name:'',grp:1},{x:988+LX+STAFF_DX,y:355,type:3,empty:8,name:'',grp:1},{x:548+LX+STAFF_DX,y:695,type:13,empty:14,name:'',row:1,grp:1},{x:768+LX+STAFF_DX,y:695,type:1,empty:7,name:'',row:1,grp:1},{x:988+LX+STAFF_DX,y:695,type:2,empty:8,name:'',row:1,grp:1});
 // 往上複製的兩組桌子（2026-10-16）：右側同仁桌再 12 個座位（座位 6–17，依序入座），左側設計部桌子再 12 張空桌（先空著）。
 {const base=stations.slice(0,12);for(let g=1;g<=2;g++)for(const s0 of base)stations.push({...s0,y:s0.y-g*GP,name:'',...(s0.grp?{grp:1}:{ext:1}),g});}
+// 設計部左側的新桌子群（2026-10-18）：三組，每組 4 張（2×2、兩兩合併），先空著；只在整頁／編輯版出現（首頁小框 LX=0 不畫）。
+if(LX>0){const lx2=548+LX-330,lx1=lx2-220;for(let g=0;g<3;g++){const dy=-g*GP;stations.push({x:lx1,y:355+dy,type:0,empty:6,name:'',ext:1,lg:1,g},{x:lx2,y:355+dy,type:9,empty:11,name:'',ext:1,lg:1,g},{x:lx1,y:695+dy,type:4,empty:6,name:'',row:1,ext:1,lg:1,g},{x:lx2,y:695+dy,type:10,empty:11,name:'',row:1,ext:1,lg:1,g});}}
 const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'angry',symbol:'burst',label:'怒',text:'爆炸氣噗噗'},{id:'sad',symbol:'drop',label:'哀',text:'大水滴低落中'},{id:'joy',symbol:'heart',label:'樂',text:'愛心滿格'}];
 const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'meeting',symbol:'meeting',label:'會議',text:'開會中'},{id:'leave',symbol:'calendar',label:'休假',text:'休假中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
@@ -116,7 +118,7 @@ function fitCleanView(){
   if(narrow)top=Math.min(top,140);
   cleanTop=top;
   cleanStaff=staffSeated;
-  const x0=narrow?300:424,x1=narrow?(staffSeated?2080:1236):(staffSeated?2000:1112),y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
+  const x0=narrow?300+LX:LX-130,x1=narrow?(staffSeated?2080+LX:1236+LX):(staffSeated?2000+LX:1112+LX),y0=top,y1=cleanBottom+(narrow?170:0),bw=x1-x0,bh=y1-y0;
   const fitW=w*(narrow?.98:.96)/bw,csParam=Number(new URLSearchParams(location.search).get('cs'))||0,baseScale=csParam&&!narrow?Math.min(csParam,fitW):fitW,scale=narrow?baseScale:Math.min(baseScale*deskZoom,fitW),cx=(x0+x1)/2;deskCapped=!narrow&&baseScale*deskZoom>=fitW-1e-6;// 窄螢幕（手機）不能超過可用寬度
   const padY=narrow?0:130;// 上下留空間給人物四周的圓形選單（外面有 overflow:hidden）
   wrapEl.style.height=`${(narrow?Math.round(bh*scale):Math.max(Math.round(bh*scale),Math.round((H0-y0)*scale)))+padY*2}px`;// 桌機：高度含整個可走動範圍（走到桌子下面也不會被切掉）
@@ -240,10 +242,10 @@ function applyStaff(list){
   }
   if(changed){staffSeated=true;markDirty();try{applyViewerRole();}catch(e){}if(typeof refreshRosterPortraits==='function'&&ready)try{refreshRosterPortraits();}catch(e){}}
 }
-try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';if(s.look&&typeof s.look==='object')p.look=s.look;p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo='';if(['4','5'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
+try{const saved=JSON.parse(localStorage.getItem('kaiyao-office-v1')||'null');if(Array.isArray(saved))people.forEach((p,i)=>{const s=saved[i];if(!s)return;p.message=typeof s.message==='string'?s.message.slice(0,60):'';if(s.look&&typeof s.look==='object')p.look=s.look;p.mood=moods.some(m=>m.id===s.mood)?s.mood:'';p.status=statuses.some(status=>status.id===s.status)?s.status:'present';p.photo='';if(['6'].includes(localStorage.getItem('kaiyao-office-layout'))&&Number.isFinite(s.x)&&Number.isFinite(s.y)){p.x=Math.max(65,Math.min(W-65,s.x));p.y=Math.max(180,Math.min(H-20,s.y));}});}catch{}
 syncViewLayout();
 function toast(message){$('toast').textContent=message;$('toast').classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('visible'),2500);}
-function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','5');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
+function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem('kaiyao-office-v1',JSON.stringify(people));localStorage.setItem('kaiyao-office-layout','6');}catch{toast('瀏覽器空間不足，這次變更尚未保存。請移除部分照片。');}},200);}
 // 圖片放在 Cloudflare（emc-pixel-assets），避開 GitHub Pages 每次推送後的冷快取；載入失敗會自動退回同站的 assets/。
 function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
@@ -1223,7 +1225,7 @@ let syncVersion=0,syncOnline=null,syncSeeded=false;
 const localMoveAt=new Map(),pendingPositions=new Map();
 async function syncCall(payload){const response=await fetch(SYNC_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(payload),cache:'no-store'});const data=await response.json();if(!data.ok)throw Error(data.error||'同步失敗');return data;}
 function setSyncStatus(online){if(syncOnline===online)return;syncOnline=online;const tag=$('syncTag');if(tag){tag.textContent=online?'多人同步中 · 大家看到同一個畫面':'離線中 · 變更先存在這台電腦';tag.classList.toggle('offline',!online);}}
-function pushChange(i,patch){const name=people[i].name;return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
+function pushChange(i,patch){const name=people[i].name;if(patch&&typeof patch.x==='number'&&LX)patch={...patch,x:patch.x-LX};/* 伺服器存的是舊座標（沒有左側桌子群的寬度） */return syncCall({action:'pixelOfficeUpdate',name,patch}).then(data=>{setSyncStatus(true);return data;}).catch(err=>{setSyncStatus(false);toast('同步失敗：'+err.message);});}
 /** 走路時位置很頻繁，最多每 350 ms 送一次；最後停下來的位置一定會送出。 */
 function queuePosition(i){localMoveAt.set(i,Date.now());if(pendingPositions.has(i))return;pendingPositions.set(i,setTimeout(()=>{pendingPositions.delete(i);const p=people[i];pushChange(i,{x:p.x,y:p.y,dir:p.dir});},350));}
 function applyRemote(list){markDirty();let lookChanged=false;
@@ -1241,7 +1243,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
     {const look=entry.look&&typeof entry.look==='object'?{outfit:entry.look.outfit,cap:entry.look.cap,glasses:entry.look.glasses,...(entry.look.head?{head:entry.look.head}:{})}:null;if(JSON.stringify(look)!==JSON.stringify(p.look||null)){p.look=look;lookChanged=true;}}// 那個人停止分享了，正在播的也跟著停
     if(p.music&&p.music.provider==='spotify')wantSpotifyApi();// 先把播放器程式載好，點播放鈕時才來得及在「使用者剛點擊」的有效時間內開始播
     // 自己剛移動過的人物，短時間內不被遠端的舊位置拉回去。
-    if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
+    if(Number.isFinite(entry.x)&&Number.isFinite(entry.y)&&Date.now()-(localMoveAt.get(i)||0)>1500&&!(i===selected&&keys.size)){p.x=entry.x+LX;p.y=entry.y;if(entry.dir)p.dir=entry.dir;}
     if(i===selected){if(document.activeElement!==$('message')){$('message').value=p.message;updateCount();}updateMood();updateStatus();updateMusicPanel();}
   }
   // 第一次上線、後端還沒有某人的資料：把這台電腦上已經設定的內容補上去，大家從同一份開始。
@@ -1441,7 +1443,7 @@ const STAFF_GEAR_RECTS={laptop:[0,0,76,48,-38,-48],monitor:[80,0,84,62,-42,-62],
 function drawStaffGear(s,baseY,dimmed){
   if(dimmed)return;/* 下班或離席（stationDimmed 已涵蓋）：桌上清空，只留灰階桌面 */
   if(!staffGearSheet.complete||!staffGearSheet.naturalWidth)return;
-  const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548)/220))),kind=s.g?'L':STAFF_GEAR[(s.row?3:0)+col];/* 往上複製的新桌子（g≥1）：只放黑色筆電＋黑色滑鼠 */
+  const col=Math.max(0,Math.min(2,Math.round((s.x-STAFF_DX-548-LX)/220))),kind=s.g?'L':STAFF_GEAR[(s.row?3:0)+col];/* 往上複製的新桌子（g≥1）：只放黑色筆電＋黑色滑鼠 */
   const art=dimmed?grayOfImage(staffGearSheet):staffGearSheet;
   const back=!s.row;/* 上排的人坐在桌子後面、面向畫面：螢幕朝人，我們看到的是設備背面（圖集裡另有背面圖） */
   const item=(name,x)=>{const key=back&&name!=='mouse'?name+'_back':name,[sx,sy,w,h,dx,dy]=STAFF_GEAR_RECTS[key];ctx.drawImage(art,sx,sy,w,h,Math.round(x+dx),Math.round(baseY+dy),w,h);};

@@ -27,7 +27,7 @@ function fixture() {
     set filter(_) { assert.fail('Safari must not need canvas filters'); },
   };
   const sandbox = {
-    ctx, STAFF_DX: 880, bottomGray: new Map(), markDirty() { dirty++; },
+    ctx, LX: 0, STAFF_DX: 880, bottomGray: new Map(), markDirty() { dirty++; },
     assetBase: () => 'https://assets.invalid/',
     Image: class {
       complete = false;
