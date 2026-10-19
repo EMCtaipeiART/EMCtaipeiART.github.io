@@ -439,7 +439,8 @@
     }
     window.addEventListener('scroll',()=>{if(!autoMoreBusy)autoMore()},{passive:true});
     /* 手機：畫面太小，多元宇宙改開新分頁（全螢幕）；新分頁用 window.opener 跟本頁要登入身分。被擋住就退回站內顯示。 */
-    function viewerPayload(){return {type:'pixelOfficeViewer',aliases:loggedIn()?[session().name,session().user,session().account].filter(Boolean):[],name:loggedIn()?(staffCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
+    function designerCanonicalName(){try{const s=session(),vals=[s.user,s.account,s.name].map(v=>norm(v)).filter(Boolean);return DESIGNERS.find(d=>vals.some(x=>x===norm(d)||x.startsWith(norm(d)+' ')||x.split(/[@\s._-]/)[0]===norm(d)))||''}catch(err){return ''}}
+    function viewerPayload(){return {type:'pixelOfficeViewer',aliases:loggedIn()?[session().name,session().user,session().account].filter(Boolean):[],name:loggedIn()?(staffCanonicalName()||designerCanonicalName()||session().name||session().user):'',token:loggedIn()?session().token:'',staff:loggedIn()&&!isDesignerByName()&&!isAdminUser()&&!isMachiUser()&&/^(企劃部|專案部)$/.test(String(sessionDept()||'').trim()),monitor:loggedIn()&&(isAdminUser()||isMachiUser())}}
     /* 登入交接資料常保持新鮮：登入狀態下每次載入與每 20 分鐘寫一次（手機重新整理多元宇宙分頁時才還認得出自己） */
     /* 手機：左右滑動切換主要頁面（首頁→專案→行事曆…，順序同底部選單）。避開輸入框、橫向可捲動區域（看板欄、表格）、地圖／iframe、彈出視窗與螢幕邊緣（系統返回手勢） */
     (function(){
