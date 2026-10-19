@@ -1,0 +1,37 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dashboard-static",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/static-server.mjs"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "stage-classifier",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "EMC_AI_階段判定器_落地包/site-source",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5175",
+        "--host",
+        "localhost"
+      ],
+      "port": 5175
+    },
+    {
+      "name": "vent-arena",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "vent-arena/serve.mjs"
+      ],
+      "port": 4180
+    }
+  ]
+}

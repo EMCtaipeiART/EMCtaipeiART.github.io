@@ -118,6 +118,7 @@
  $('#leaderboard-open').onclick=()=>{recordRound();paintBoard(rankings);$('#leaderboard').showModal();try{fetch(RANK_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:'ventArenaRanking'}),cache:'no-store'}).then(r=>r.json()).then(d=>{if(d&&d.ok&&Array.isArray(d.items))paintBoard(d.items);}).catch(()=>{});}catch(error){}};
  $('#leaderboard-close').onclick=()=>$('#leaderboard').close();
  roster();reset();
+ window.ArenaDuelInfo=()=>({char:state.player,name:viewer.name||names[state.player]});
 
  const shortcutLabels={'#ultimate':'F','#change-scene':'C','#heal':'H','#sound':'M','#start':'R','#role-player':'A','#role-target':'S','[data-mode=free]':'Q','[data-mode=timed]':'W','#leaderboard-open':'L','#again':'R','#close-result':'Esc'};
  for(const [selector,key] of Object.entries(shortcutLabels)){const b=$(selector);b.dataset.hotkey=key;b.setAttribute('aria-keyshortcuts',key);}

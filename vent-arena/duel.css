@@ -1,0 +1,72 @@
+/* 出氣擂台 · 一對一對戰（獨立浮層，不依賴其他樣式） */
+.duel-open-btn{display:block;width:100%;margin-top:10px;padding:12px;border-radius:12px;font-weight:900;font-size:13px;color:#fff;background:linear-gradient(120deg,#ff5fa8,#ff8a3d);border:2px solid #fff3;box-shadow:0 4px #b3306f}
+.duel-open-btn:active{transform:translateY(2px);box-shadow:0 2px #b3306f}
+body.duel-open{overflow:hidden}
+.duel{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#201031d9;padding:12px;color:#3a2150;font-family:system-ui,'Microsoft JhengHei',sans-serif}
+.duel[hidden]{display:none}
+.duel-card{position:relative;width:min(760px,100%);max-height:100%;overflow:auto;background:linear-gradient(160deg,#fff8d6,#ffe4f2);border:3px solid #291039;border-radius:18px;box-shadow:8px 8px #ff5fa8;padding:22px 20px}
+.duel-x{position:absolute;right:10px;top:8px;width:34px;height:34px;border-radius:50%;font-size:16px;font-weight:900;background:#fff;border:2px solid #291039}
+.duel [data-view]{display:none}.duel [data-view].on{display:block}
+.duel h2{margin:4px 0 6px;font-size:30px;font-style:italic;font-weight:900;color:#ff3f93;text-shadow:2px 2px #291039;letter-spacing:1px}
+.duel-eyebrow{margin:0;font:700 10px monospace;letter-spacing:2px;color:#7a4aa3}
+.duel-sub{margin:0 0 14px;font-size:13px;color:#6b4a86}
+.duel-entries{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.duel-entries button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 10px;border:3px solid #291039;border-radius:14px;background:#fff;box-shadow:4px 4px #291039;text-align:center}
+.duel-entries button:hover{background:#fff6a8}.duel-entries button>span{font-size:34px}.duel-entries b{font-size:16px}.duel-entries small{display:block;font-weight:500;font-size:11px;color:#7a4aa3;margin-top:3px}
+.duel-rules{margin:16px 0 0;padding:12px 14px 12px 30px;font-size:12px;line-height:1.9;background:#fff9;border-radius:10px}
+.duel-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.duel-row button,.duel-main{padding:11px 18px;border-radius:12px;border:2px solid #291039;background:#fff;font-weight:800}
+.duel-main{background:linear-gradient(#fff974,#ffd03f);box-shadow:0 4px #b3306f}
+.duel-main:disabled{opacity:.5}
+.duel-code{margin:6px 0;padding:16px;text-align:center;font:900 52px/1 ui-monospace,Menlo,monospace;letter-spacing:10px;color:#291039;background:#fff;border:3px dashed #ff5fa8;border-radius:14px;user-select:all!important;-webkit-user-select:all!important}
+.duel-input{width:100%;padding:14px;font:900 22px ui-monospace,Menlo,monospace;letter-spacing:4px;text-transform:uppercase;border:3px solid #291039;border-radius:12px;background:#fff;color:#291039}
+.duel-status{min-height:20px;margin:12px 0 0;font-size:13px;color:#6b4a86}.duel-status.bad{color:#d4144f;font-weight:700}
+/* 戰鬥畫面 */
+.duel-hud{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.duel-side[data-i=foe]{text-align:right}.duel-name{font-size:14px}
+.duel-hp{position:relative;height:22px;margin-top:3px;border:3px solid #291039;border-radius:11px;background:#fff;overflow:hidden}
+.duel-side[data-i=foe] .duel-hp i{margin-left:auto}
+.duel-hp i{display:block;height:100%;width:100%;background:#22c55e;transition:width .15s}.duel-hp i[data-low="1"]{background:#ff5a6e}
+.duel-hp em{position:absolute;inset:0;display:grid;place-items:center;font:800 11px monospace;font-style:normal;color:#291039;text-shadow:0 0 3px #fff}
+.duel-clock{text-align:center;min-width:64px}.duel-clock strong{display:block;font:900 34px/1 Impact,Arial Black,sans-serif;color:#291039}.duel-clock small{font-size:10px;color:#7a4aa3}
+.duel-ring{position:relative;height:min(40vh,300px);margin:10px 0;border:3px solid #291039;border-radius:14px;background:linear-gradient(#bfe9ff 0 62%,#d9c18f 62%);overflow:hidden}
+.duel-fighter{position:absolute;bottom:6%;width:34%;height:88%;display:flex;align-items:flex-end;justify-content:center;transition:transform .12s}
+.duel-fighter.me{left:8%}.duel-fighter.foe{right:8%}
+.duel-fighter img{max-width:100%;max-height:100%;object-fit:contain;object-position:bottom;pointer-events:none}
+.duel-fighter.foe img{transform:scaleX(-1)}
+.duel-shield,.duel-stars{position:absolute;opacity:0;pointer-events:none;transition:opacity .1s}
+.duel-shield{top:18%;font-size:64px;filter:drop-shadow(0 0 8px #4bd7ff)}
+.duel-stars{top:2%;font-size:22px;color:#ffb400;letter-spacing:4px}
+.duel-fighter.guarding .duel-shield{opacity:1}.duel-fighter.stunned .duel-stars{opacity:1;animation:duel-spin 1s linear infinite}
+.duel-fighter.stunned img{filter:grayscale(.5)}
+.duel-fighter.me.lunge{transform:translateX(26%)}.duel-fighter.foe.lunge{transform:translateX(-26%)}
+.duel-fighter.hurt img{animation:duel-shake .4s}.duel-fighter.blockfx .duel-shield{opacity:1;animation:duel-flash .4s}
+.duel-ring.slam{animation:duel-shake .5s}
+@keyframes duel-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px) rotate(-2deg)}50%{transform:translateX(9px) rotate(2deg)}80%{transform:translateX(-5px)}}
+.duel-fighter.hurt img{filter:brightness(1.5) sepia(.5) saturate(4) hue-rotate(-30deg)}
+@keyframes duel-flash{0%{transform:scale(1.5)}100%{transform:scale(1)}}
+@keyframes duel-spin{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+.duel-pops{position:absolute;inset:0;pointer-events:none}
+.duel-pop{position:absolute;top:30%;font:900 italic 26px/1 Impact,Arial Black,sans-serif;-webkit-text-stroke:5px #291039;paint-order:stroke fill;animation:duel-pop .9s ease-out forwards;white-space:nowrap}
+.duel-pop.hit{color:#ffed45}.duel-pop.block{color:#6fe0ff}.duel-pop.heavy{color:#ff5fa8;font-size:34px}
+@keyframes duel-pop{from{transform:translate(calc(-50% + var(--dx)),0) scale(.6);opacity:1}to{transform:translate(calc(-50% + var(--dx)),-70px) scale(1.1);opacity:0}}
+.duel-banner{position:absolute;inset:0;display:grid;place-items:center;font:900 italic 64px/1 Impact,Arial Black,sans-serif;color:#ffed45;-webkit-text-stroke:8px #291039;paint-order:stroke fill;opacity:0;pointer-events:none;transition:opacity .12s}
+.duel-banner.show{opacity:1}
+.duel-rage{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800}
+.duel-rage>div{flex:1;height:14px;border:3px solid #291039;border-radius:8px;background:#fff;overflow:hidden}
+.duel-rage i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb400,#ff3f93);transition:width .15s}
+.duel-rage>div.full{animation:duel-flash .6s infinite alternate;box-shadow:0 0 12px #ff3f93}
+.duel-controls{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:10px}
+.duel-circle{width:84px;height:84px;border-radius:50%;border:3px solid #291039;font-weight:900;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;box-shadow:0 5px #291039;background:#7fd8ff}
+.duel-circle>span{font-size:26px;line-height:1}.duel-circle small{font-size:9px;opacity:.7}
+.duel-circle.heavy{background:#c9c9d4}.duel-circle.heavy.ready:not(:disabled){background:linear-gradient(#ff8fc3,#ff3f93);color:#fff;animation:duel-flash .5s infinite alternate}
+.duel-circle.on{background:#2fb6ff;color:#fff}.duel-circle:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px #291039}
+.duel-circle:disabled{opacity:.45}
+.duel-weapons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.duel-weapon{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:2px solid #291039;border-radius:10px;background:#fff;font-size:10px;font-weight:800}
+.duel-weapon[aria-pressed=true]{background:#fff6a8;box-shadow:2px 2px #291039}.duel-weapon span{width:30px;height:30px;display:block}.duel-weapon svg{width:100%;height:100%}.duel-weapon:disabled{opacity:.5}
+.duel-over{position:absolute;inset:0;z-index:2;display:grid;place-content:center;justify-items:center;text-align:center;background:#fff8d6f2;border-radius:15px}
+.duel-over[hidden]{display:none}.duel-over h3{margin:0;font:900 italic 44px/1.1 Impact,Arial Black,sans-serif;color:#ff3f93;text-shadow:3px 3px #291039}
+.duel-fight.on{position:relative;min-height:420px}
+@media(max-width:560px){.duel-entries{grid-template-columns:1fr}.duel-code{font-size:38px;letter-spacing:6px}.duel-circle{width:68px;height:68px;font-size:11px}.duel-controls{grid-template-columns:auto auto;grid-template-areas:"w w" "b h";justify-content:space-between}.duel-weapons{grid-area:w}.duel-circle.block{grid-area:b}.duel-circle.heavy{grid-area:h}.duel-banner{font-size:44px}}
+@media(prefers-reduced-motion:reduce){.duel *{animation:none!important;transition:none!important}}
