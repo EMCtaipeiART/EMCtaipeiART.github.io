@@ -5,6 +5,8 @@
 (() => {
  const D={hp:200,hit:3,block:10,rageHit:4,comboStep:5,maxBonus:9,comboGap:1200,heavy:50,stun:3000,round:60000,count:3000,cd:220,guard:600,guardCd:1100};
  const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄'];
+ /* 連線設定：除了 Google STUN，另外加上公用 TURN 中繼（雙方在公司網路／行動網路、無法點對點直連時改走中繼，避免「連線逾時」） */
+ const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},{urls:'turns:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}],iceCandidatePoolSize:4};
  const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',PREFIX='emcvent-',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
  const $=s=>document.querySelector(s),bridge=()=>window.ArenaDuelBridge;
  let root,peer,conn,isHost=false,code='',me=0,G=null,snap=null,snapAt=0,timer=0,lastSnapSent=0,foeWants=false,iWant=false,closed=true,inMatch=false,foe={name:'對手',char:4},self={name:'',char:3},toastTimer=0,lastAct=0,overShown=false;
@@ -39,8 +41,9 @@
  async function openHost(){
   show('host');isHost=true;me=0;say('#duel-wait-status','連線中…');$('#duel-code').textContent='······';
   try{await loadPeer();}catch{say('#duel-wait-status','無法載入連線元件，請檢查網路後重試。',true);return;}
-  const tryOpen=n=>{if(closed||n>5){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}const c=newCode(),p=new window.Peer(PREFIX+c);
+  const tryOpen=n=>{if(closed||n>5){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}const c=newCode(),p=new window.Peer(PREFIX+c,{config:ICE});
    p.on('open',()=>{peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…');});
+   p.on('disconnected',()=>{/* 與配對伺服器斷線（網路切換、分頁休眠）：序號會失效，別人就會看到「找不到戰場」，所以自動重連 */if(!closed&&!conn&&peer===p){let k=0;const again=()=>{if(closed||conn||peer!==p||p.destroyed||!p.disconnected)return;try{p.reconnect();}catch{}if(++k<8)setTimeout(again,2000*k);};setTimeout(again,500);}});
    p.on('error',err=>{if(err.type==='unavailable-id'){p.destroy();tryOpen(n+1);}else if(!conn)say('#duel-wait-status','連線失敗（'+err.type+'），請重試。',true);});
    p.on('connection',c2=>{if(conn&&conn.open){c2.on('open',()=>{c2.send({t:'full'});setTimeout(()=>c2.close(),300);});return;}setupConn(c2);});};
   tryOpen(0);
@@ -54,10 +57,14 @@
   if(!m){say('#duel-join-status','請輸入 6 碼戰場序號。',true);return;}
   isHost=false;me=1;code=m[1];say('#duel-join-status','連線中…');
   try{await loadPeer();}catch{say('#duel-join-status','無法載入連線元件，請檢查網路後重試。',true);return;}
-  const p=new window.Peer();peer=p;
-  const fail=msg=>{say('#duel-join-status',msg,true);try{p.destroy();}catch{}if(peer===p)peer=conn=null;};
-  p.on('error',err=>fail(err.type==='peer-unavailable'?'找不到這個戰場，請確認序號。':'連線失敗（'+err.type+'）。'));
-  p.on('open',()=>{const c=p.connect(PREFIX+code,{reliable:true});const to=setTimeout(()=>{if(!c.open)fail('連線逾時，對方可能已離開。');},12000);c.on('open',()=>{clearTimeout(to);setupConn(c);});});
+  let tries=0;
+  const attempt=()=>{
+   const p=new window.Peer(undefined,{config:ICE});peer=p;let settled=false;
+   const fail=(msg,retry)=>{if(settled)return;settled=true;try{p.destroy();}catch{}if(peer===p)peer=conn=null;if(retry&&++tries<3&&!closed){say('#duel-join-status','連線中…（第 '+(tries+1)+' 次嘗試）');setTimeout(attempt,1200);}else say('#duel-join-status',msg,true);};
+   p.on('error',err=>fail(err.type==='peer-unavailable'?'找不到這個戰場，請確認序號，或請對方重新開一個戰場。':'連線失敗（'+err.type+'）。',err.type==='peer-unavailable'||err.type==='network'||err.type==='server-error'||err.type==='socket-error'));
+   p.on('open',()=>{const c=p.connect(PREFIX+code,{reliable:true});const to=setTimeout(()=>{if(!c.open)fail('連線逾時：雙方網路可能無法直連，請換一個網路（例如手機熱點）再試。',true);},15000);c.on('open',()=>{settled=true;clearTimeout(to);setupConn(c);});c.on('error',()=>fail('連線失敗，請重試。',true));});
+  };
+  attempt();
  }
 
  /* ---------- 共用連線 ---------- */
