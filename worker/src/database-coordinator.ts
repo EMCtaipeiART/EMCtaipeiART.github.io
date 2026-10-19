@@ -2708,6 +2708,9 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     } else {
       sql.exec('UPDATE pixel_office_avatars SET updated_at = ? WHERE name = ? AND look_key = ?', now, name, lookKey);
     }
+    // 目前指向的造型已經是這個了：不必再寫入、也不要推動版本號（每次關閉元宇宙都會帶著造型代碼來問，不該讓所有人的畫面跟著重讀）。
+    const currentRow = sql.exec<{ look_key: string }>('SELECT look_key FROM pixel_office_avatar_current WHERE name = ?', name).toArray()[0];
+    if (!png && currentRow?.look_key === lookKey) return { ok: true, action: 'pixelOfficeAvatarSnapshot', saved: false, unchanged: true };
     sql.exec('INSERT INTO pixel_office_avatar_current (name, look_key, updated_at) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET look_key = excluded.look_key, updated_at = excluded.updated_at', name, lookKey, now);
     // 讓大家的畫面重新讀一次狀態，首頁才會拿到新的快照版本
     sql.exec('UPDATE pixel_office_people SET updated_at = ? WHERE name = ?', Math.max(now, this.pixelOfficeVersion() + 1), name);

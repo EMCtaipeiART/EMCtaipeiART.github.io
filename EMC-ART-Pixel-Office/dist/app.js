@@ -1864,7 +1864,9 @@ window.addEventListener('message',event=>{
     const who=String(storyIdentity.name||'').toLowerCase(),i=names.findIndex(n=>n.toLowerCase()===who);
     if(i<0||!ready||!storyLoggedIn()||!accessoriesReady()){done({});return;}
     loadAccessories();
-    const memo='pixelSnap:'+who;let last='';try{last=localStorage.getItem(memo)||'';}catch{}
+    // 不再相信「本機記得上次存過這個造型」就略過：後端的「目前頭像」可能被別台裝置／別的分頁改回舊造型（首頁頭像退回舊衣服、
+    // 進元宇宙又是新衣服），本機卻一直認為已存過而不再更正。每次都交給外層，外層先問後端（不帶圖片的小請求），後端判斷
+    // 目前指向的造型相同就什麼都不做，不同才更新；後端沒有這個造型時才補傳圖片。
     const key=lookKeyOf(i);
     if(last&&key===last){done({});return;}
     done({who,lookKey:key,png:avatarImageOf(i)});

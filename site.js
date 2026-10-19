@@ -470,7 +470,7 @@
     })();
     function stashViewer(){try{if(loggedIn())localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())))}catch(err){}}
     setTimeout(stashViewer,1500);setInterval(stashViewer,20*60*1000);
-    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=117&t=':'?clean=1&ro=1&cs=.78&v=117&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
+    function openUniverseTab(){try{localStorage.setItem('pixelViewerHandoff',JSON.stringify(Object.assign({at:Date.now()},viewerPayload())));}catch(err){}try{if(!(matchMedia('(max-width:720px)').matches&&matchMedia('(hover:none)').matches))return false;const edit=canEditUniverse(),w=window.open('EMC-ART-Pixel-Office/dist/'+(edit?'?clean=1&cs=.78&v=118&t=':'?clean=1&ro=1&cs=.78&v=118&t=')+Math.floor(Date.now()/300000),'_blank');return Boolean(w)}catch(err){return false}}
     function openUniverse(){if(openUniverseTab())return;state.uniEdit=canEditUniverse();state.form=null;state.mail=null;state.editing=false;show('universe')}
     function closeUniverse(){const u=$('universe');if(u&&!u.hidden)u.hidden=true}
     const UNI_URL='EMC-ART-Pixel-Office/dist/';
@@ -520,7 +520,7 @@
       if(e.target.closest?.('[data-arena-back]')){openUniverse()}
     });
     function renderUniversePage(){
-      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=117&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=117&t='+Math.floor(Date.now()/300000));
+      const edit=Boolean(state.uniEdit)&&canEditUniverse(),src=UNI_URL+(edit?'?clean=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000):'?clean=1&ro=1&cs=.78&v=118&t='+Math.floor(Date.now()/300000));
       $('stage').innerHTML='<div class="uni-page is-edit"><div class="page-top"><div><h2 class="page-title" style="font-size:20px">凱躍多元宇宙</h2><p class="page-sub">'+(edit?'選自己的人物，設定心情、狀態與想說的一句話。改完會同步給所有打開這個系統的人。':'設計部即時狀態（像素辦公室）')+'</p></div><div class="uni-acts">'+(loggedIn()&&(isAdminUser()||isMachiUser())?'<button type="button" class="btn" data-uni-allwork>全員上班</button><button type="button" class="btn" data-uni-hours>上下班設定</button>':'')+'<button type="button" class="btn" data-uni-arena>出氣擂台</button><button type="button" class="btn" data-uni-close>關閉</button></div></div><div class="uni-wrap"><iframe class="uni-frame" id="uniFrame" src="'+src+'" title="設計部即時狀態（像素辦公室）" allow="clipboard-write"></iframe><div class="uni-loading" id="uniLoading" role="status" aria-live="polite"><span class="uni-spin" aria-hidden="true"></span><b>正在進入凱曜多元宇宙…</b><small>載入像素辦公室</small></div></div></div>';
       watchUniLoading();fitUniFrame();[120,500,1200,2500].forEach(t=>setTimeout(()=>{try{fitUniFrame()}catch(err){}},t));{const f=$('uniFrame');if(f)f.addEventListener('load',()=>{try{fitUniFrame()}catch(err){}});}
     }
