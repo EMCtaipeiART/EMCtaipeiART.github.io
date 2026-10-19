@@ -307,9 +307,9 @@ test('換上新的桌子素材，左中右三種形狀各就各位', async () =>
 
 test('左下角空位依時段轉灰階，週末與國定假日整天灰階，電腦留著', async () => {
   const js = await officeJs();
-  assert.match(js, /const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;/);
+  assert.match(js, /const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=19;/);
   assert.match(js, /const stationVacant=s=>!s\.name;/);
-  // 平日 09:00–18:00 正常，其餘時間連椅子一起暗下來。
+  // 平日 09:00–19:00 正常，其餘時間連椅子一起暗下來。
   assert.match(js, /return clock\.hour<VACANT_DESK_ON_HOUR\|\|clock\.hour>=VACANT_DESK_OFF_HOUR;/);
   // 週末與國定假日整天灰階，不必等到 18:00（2026-09-29 使用者要求）。workday 已經同時涵蓋
   // 週六日與 TAIWAN_HOLIDAYS，跟加班濾鏡用同一份假日表。
@@ -318,7 +318,7 @@ test('左下角空位依時段轉灰階，週末與國定假日整天灰階，�
     '非工作日一律灰階，而且要排在時段判斷之前');
   // 中午 12–14 點也收掉（2026-09-30 使用者要求）：大家都去吃飯了，只有那張空桌亮著很突兀。
   assert.match(js, /const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;/);
-  assert.match(fn, /if\(clock\.hour>=VACANT_DESK_LUNCH_START&&clock\.hour<VACANT_DESK_LUNCH_END\)return true;/);
+  assert.doesNotMatch(fn, /VACANT_DESK_LUNCH_START/, '2026-10-19 起空桌不再午休變灰，統一 09:00–19:00');
   assert.match(js, /workday:!\['Sat','Sun'\]\.includes\(parts\.weekday\)&&!\(TAIWAN_HOLIDAYS\[parts\.year\]\|\|\[\]\)\.includes\(date\)/,
     'workday 要同時看週末與國定假日');
   // 假日表要涵蓋到今天以後，否則這條判定會悄悄失效。

@@ -89,7 +89,7 @@ export function pixelOfficeLevelTitles(stored: unknown): Record<string, string[]
 /** 上下班時段設定（後台管理者與 Machi 可改，存在 DO 的 pixelHours）。enabled=false 就完全不套用時間規則：
  * 假日不強制下班、晚上不算加班、沒心跳也不自動下班——方便測試手動狀態。數字都是台北時間的整點。 */
 export interface PixelHours { enabled: boolean; dayStart: number; lunchStart: number; lunchEnd: number; workEnd: number; overtimeStart: number }
-export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 6, lunchStart: 12, lunchEnd: 14, workEnd: 18, overtimeStart: 19 };
+export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 9, lunchStart: 12, lunchEnd: 14, workEnd: 19, overtimeStart: 19 };
 let pixelHours: PixelHours = { ...PIXEL_HOURS_DEFAULT };
 /** 「全員上班」之後到台北時間當天結束為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，不然按完馬上又被改回下班。 */
 let pixelAllWorkUntil = 0;

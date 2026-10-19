@@ -5378,7 +5378,7 @@ describe('pixel office offline status', () => {
   it('is off work after a long silence, in the evening, on weekends, or when the computer was never on today', () => {
     expect(pixelOfficeOfflineStatus(at('2026-10-06T11:30:00'), at('2026-10-06T10:06:00'))).toBe('offwork');
     expect(pixelOfficeOfflineStatus(at('2026-10-06T19:10:00'), at('2026-10-06T19:00:00'))).toBe('offwork');
-    expect(pixelOfficeOfflineStatus(at('2026-10-06T18:20:00'), at('2026-10-06T18:10:00'))).toBe('offwork');
+    expect(pixelOfficeOfflineStatus(at('2026-10-06T18:20:00'), at('2026-10-06T18:10:00'))).toBe('toilet');
     expect(pixelOfficeOfflineStatus(at('2026-10-10T10:12:00'), at('2026-10-10T10:06:00'))).toBe('offwork');
     expect(pixelOfficeOfflineStatus(at('2026-10-06T10:12:00'), at('2026-10-05T18:00:00'))).toBe('offwork');
   });
@@ -5597,11 +5597,11 @@ describe('首頁背景：全站共用設定', () => {
 
 describe('上下班時段設定', () => {
   it('is readable by anyone, writable only by admins, and falls back to defaults on bad hours', async () => {
-    expect(await api({ action: 'getPixelHours' })).toMatchObject({ ok: true, config: { enabled: true, dayStart: 6, lunchStart: 12, lunchEnd: 14, workEnd: 18, overtimeStart: 19 } });
+    expect(await api({ action: 'getPixelHours' })).toMatchObject({ ok: true, config: { enabled: true, dayStart: 9, lunchStart: 12, lunchEnd: 14, workEnd: 19, overtimeStart: 19 } });
     const admin = await login();
     expect(await api({ action: 'savePixelHours', enabled: false, dayStart: 8, lunchStart: 12, lunchEnd: 13, workEnd: 18, overtimeStart: 20 }, admin)).toMatchObject({ ok: true, config: { enabled: false, dayStart: 8, lunchEnd: 13, overtimeStart: 20 } });
     expect(await api({ action: 'getPixelHours' })).toMatchObject({ config: { enabled: false, dayStart: 8, overtimeStart: 20 } });
-    expect(await api({ action: 'savePixelHours', enabled: true, dayStart: 20, lunchStart: 3, lunchEnd: 2, workEnd: 1, overtimeStart: 0 }, admin)).toMatchObject({ config: { enabled: true, dayStart: 6, lunchStart: 12, workEnd: 18 } });
+    expect(await api({ action: 'savePixelHours', enabled: true, dayStart: 20, lunchStart: 3, lunchEnd: 2, workEnd: 1, overtimeStart: 0 }, admin)).toMatchObject({ config: { enabled: true, dayStart: 9, lunchStart: 12, workEnd: 19 } });
     const outsider = await seedSession('anna.hsu@emctaipei.com', 'Anna');
     expect(await api({ action: 'savePixelHours', enabled: false }, outsider)).toMatchObject({ ok: false });
     expect(await api({ action: 'savePixelHours', enabled: false })).toMatchObject({ ok: false });
