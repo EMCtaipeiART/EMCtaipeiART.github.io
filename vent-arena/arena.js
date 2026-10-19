@@ -8,9 +8,7 @@
  const characters=names.map((name,i)=>{const image=new Image(),back=new Image();back.src=`assets/${i<5?'designer':'staff'}_${name}_back.png`;image.src=`assets/${i<5?'designer':'staff'}_${name}_front.png`;return {name,image,back};});
  /* 未登入使用者：第 12 位「半透明人」，只當自己的身份用（一對一對戰），不會出現在上場名單／陪練角色 */
  const GHOST=names.length;
- {const g={name:'未登入使用者',image:new Image(),back:new Image()};characters.push(g);
-  const ghostOf=(src,dst)=>{const make=()=>{try{const cv=document.createElement('canvas');cv.width=src.naturalWidth;cv.height=src.naturalHeight;const c=cv.getContext('2d');c.globalAlpha=.42;try{c.filter='grayscale(1) brightness(1.2)';}catch{}c.drawImage(src,0,0);dst.src=cv.toDataURL('image/png');}catch{}};if(src.complete&&src.naturalWidth)make();else src.addEventListener('load',make,{once:true});};
-  ghostOf(characters[0].image,g.image);ghostOf(characters[0].back,g.back);}
+ {const g={name:'未登入使用者',image:new Image(),back:new Image()};g.back.src='assets/ghost_unknown_back.png';g.image.src='assets/ghost_unknown_front.png';characters.push(g);}
  const weapons=[
   {name:'拳頭',power:8,rage:7,color:'#f6b89d'},
   {name:'藍白拖',power:11,rage:6,color:'#89c8f6'},
