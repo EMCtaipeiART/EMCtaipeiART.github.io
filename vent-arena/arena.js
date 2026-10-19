@@ -74,7 +74,15 @@
  function paintRoom(c){const floorY=combatFX.geometry(width,height,state.target).floorY;if(window.ArenaScenes)window.ArenaScenes.paint(c,width,height,floorY,state.scene);}
  function room(){const key=[Math.round(width),Math.round(height),state.scene].join(':');if(key!==roomKey){roomCache.width=Math.max(1,Math.round(width));roomCache.height=Math.max(1,Math.round(height));paintRoom(roomCache.getContext('2d'));roomKey=key;}ctx.drawImage(roomCache,0,0,width,height);}
  function sprite(index,x,y,h,rotation=0,scaleX=1,isTarget=false,scaleY=1){const im=characters[index].image;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im);ctx.save();ctx.translate(x,y);ctx.rotate(rotation);ctx.scale(scaleX,scaleY);ctx.fillStyle='#55765826';ctx.beginPath();ctx.ellipse(0,0,h*.23,h*.035,0,0,Math.PI*2);ctx.fill();const w=h*b.w/b.h;ctx.imageSmoothingEnabled=true;ctx.drawImage(im,b.x,b.y,b.w,b.h,-w/2,-h,w,h);if(isTarget)combatFX.overlay(ctx,im,index,w,h);ctx.restore();}
- function playerBack(attacking){const im=characters[state.player].back;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im),w=Math.min(320,width*.70),fullH=w*b.h/b.w,reveal=fullH*.23+(attacking&&!reduced?5:0);ctx.save();ctx.shadowColor='#263f4f33';ctx.shadowBlur=0;ctx.drawImage(im,b.x,b.y,b.w,b.h,width/2-w/2,height-reveal,w,fullH);ctx.restore();}
+ function hurtShape(now){/* 自己被打到：下方的大頭（背面）被壓扁再彈回，重擊更誇張 */
+  const dur=state.hurtHeavy?460:300;if(reduced||!state.hurtUntil||now>=state.hurtUntil)return null;
+  const t=Math.max(0,Math.min(1,1-(state.hurtUntil-now)/dur)),k=state.hurtHeavy?1.7:1;
+  const keys=[[0,1,1,0],[.2,1+.2*k,1-.17*k,-.05*k],[.5,1-.1*k,1+.12*k,.04*k],[.75,1+.03*k,1-.03*k,-.015*k],[1,1,1,0]];
+  let a=keys[0],b=keys[1];for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){a=keys[i-1];b=keys[i];break;}}
+  const f=(1-Math.cos(Math.PI*(t-a[0])/(b[0]-a[0])))/2;
+  return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f,r:a[3]+(b[3]-a[3])*f,dx:Math.sin(now*.09)*4*(1-t)*k};
+ }
+ function playerBack(attacking,now){const im=characters[state.player].back;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im),w=Math.min(320,width*.70),fullH=w*b.h/b.w,reveal=fullH*.23+(attacking&&!reduced?5:0),hs=hurtShape(now||performance.now());ctx.save();ctx.shadowColor='#263f4f33';ctx.shadowBlur=0;if(hs){ctx.translate(width/2+hs.dx,height);ctx.rotate(hs.r);ctx.scale(hs.x,hs.y);ctx.translate(-width/2,-height);}ctx.drawImage(im,b.x,b.y,b.w,b.h,width/2-w/2,height-reveal,w,fullH);ctx.restore();}
  function hitShape(now){if(reduced||now>=state.hitUntil)return {x:1,y:1};const t=Math.max(0,Math.min(1,1-(state.hitUntil-now)/320));let keys=[[0,1,1],[.22,1.34,.66],[.56,.82,1.24],[.78,1.06,.94],[1,1,1]];if(state.weapon===2)keys=[[0,1,1],[.22,1.45,.60],[.56,.79,1.28],[.78,1.08,.93],[1,1,1]];if(state.weapon===6)keys=[[0,1,1],[.22,.74,1.37],[.56,1.23,.78],[.78,.95,1.05],[1,1,1]];let a=keys[0],b=keys[1];for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){a=keys[i-1];b=keys[i];break;}}const f=(1-Math.cos(Math.PI*(t-a[0])/(b[0]-a[0])))/2;return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f};}
  function draw(now){ctx.clearRect(0,0,width,height);ctx.save();if(!reduced&&now<state.hitUntil){const strength=(state.hitUntil-now)/320;ctx.translate(Math.sin(now*.11)*5*strength,Math.cos(now*.09)*3*strength);}room();const layout=combatFX.geometry(width,height,state.target),h=layout.unit,foot=layout.foot,hitActive=now<state.hitUntil,ko=now<state.knockUntil,attacking=now<state.attackUntil;
   const pose=hitShape(now),wobble=!reduced&&hitActive?Math.sin(now*.055)*.075:0;
@@ -82,7 +90,7 @@
   combatFX.draw(ctx,now,width,height,reduced,state.target);
   if(ko){ctx.fillStyle='#ffe494';ctx.font='22px sans-serif';ctx.fillText('✦ ✦ ✦',width*.42,height*.36);}
   if(now<state.ultUntil){ctx.fillStyle='#e7ffb51a';ctx.fillRect(0,0,width,height);ctx.strokeStyle='#e4ffb7';ctx.lineWidth=5;ctx.beginPath();ctx.arc(width*.50,height*.54,(1-(state.ultUntil-now)/650)*width*.70,0,Math.PI*2);ctx.stroke();}
-  for(const p of particles){ctx.globalAlpha=Math.max(0,p.life);if(p.kind===7){rect(p.x,p.y,p.size*2,p.size*2.8,'#e9ecdc');rect(p.x+2,p.y+3,p.size,1,'#849a98');}else if(p.kind===6){ctx.strokeStyle=p.color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-7);ctx.lineTo(p.x-4,p.y);ctx.lineTo(p.x+3,p.y);ctx.lineTo(p.x,p.y+8);ctx.stroke();}else if(p.kind===4){ctx.fillStyle='#fff3d5';ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}else rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;for(const t of texts){ctx.globalAlpha=Math.min(1,t.life*2);ctx.fillStyle=t.color;ctx.font='900 italic 32px monospace';ctx.textAlign='center';ctx.strokeStyle='#193c2b';ctx.lineWidth=5;ctx.strokeText(t.text,t.x,t.y);ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;ctx.textAlign='left';playerBack(attacking);ctx.restore();
+  for(const p of particles){ctx.globalAlpha=Math.max(0,p.life);if(p.kind===7){rect(p.x,p.y,p.size*2,p.size*2.8,'#e9ecdc');rect(p.x+2,p.y+3,p.size,1,'#849a98');}else if(p.kind===6){ctx.strokeStyle=p.color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y-7);ctx.lineTo(p.x-4,p.y);ctx.lineTo(p.x+3,p.y);ctx.lineTo(p.x,p.y+8);ctx.stroke();}else if(p.kind===4){ctx.fillStyle='#fff3d5';ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();}else rect(p.x,p.y,p.size,p.size,p.color);}ctx.globalAlpha=1;for(const t of texts){ctx.globalAlpha=Math.min(1,t.life*2);ctx.fillStyle=t.color;ctx.font='900 italic 32px monospace';ctx.textAlign='center';ctx.strokeStyle='#193c2b';ctx.lineWidth=5;ctx.strokeText(t.text,t.x,t.y);ctx.fillText(t.text,t.x,t.y);}ctx.globalAlpha=1;ctx.textAlign='left';playerBack(attacking,now);ctx.restore();
  }
  function frame(now){const workStart=performance.now();raf=0;if(document.hidden)return;const elapsed=Math.max(0,(now-(lastFrame||now))/1000),dt=Math.min(.1,elapsed);lastFrame=now;
   if(state.mode==='timed'&&state.running){state.remaining=Math.max(0,state.remaining-elapsed);if(state.remaining<=0)finish();}
@@ -91,7 +99,7 @@
   if(state.combo&&now-state.lastHit>=1200){state.combo=0;}
   if(bubbleUntil&&now> bubbleUntil){bubbleUntil=0;$('#bubble').textContent='深呼吸，壞心情慢慢退散。';}
   particles=particles.filter(p=>{p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=240*dt;return p.life>0;});texts=texts.filter(t=>{t.life-=dt;t.y-=45*dt;return t.life>0;});update();draw(now);renderWork+=performance.now()-workStart;renderCount++;if(now-metricsAt>1000){canvas.dataset.renderWorkMs=(renderWork/renderCount).toFixed(2);canvas.dataset.activeEffects=String(combatFX.events.length);canvas.dataset.particles=String(particles.length);renderCount=0;renderWork=0;metricsAt=now;}
-  if(holding||state.running&&state.mode==='timed'||state.knockUntil||particles.length||texts.length||now<state.ultUntil||now<state.hitUntil||state.combo||bubbleUntil||combatFX.active(now))wake();
+  if(holding||state.running&&state.mode==='timed'||state.knockUntil||particles.length||texts.length||now<state.ultUntil||now<state.hitUntil||now<(state.hurtUntil||0)||state.combo||bubbleUntil||combatFX.active(now))wake();
  }
  new ResizeObserver(()=>{const b=canvas.getBoundingClientRect();width=b.width;height=b.height;const dpr=Math.min(devicePixelRatio||1,1.5);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);wake();}).observe(canvas);
  characters.forEach(c=>{c.back.onload=wake;c.back.onerror=()=>toast(`角色 ${c.name} 背面圖載入失敗。`);c.image.onload=wake;c.image.onerror=()=>toast(`角色 ${c.name} 載入失敗，請重新整理。`);});
@@ -166,7 +174,7 @@
     }else{
      const A=$('#arena');
      if(e.k==='block')dtext(width*.5,height*.76,'格擋成功！+5','#7fd8ff');
-     else{dtext(width*.5,height*.8,e.k==='heavy'?'重擊 -'+e.dmg:'-'+e.dmg,e.k==='heavy'?'#ff3f93':'#ff6b7a');A.classList.add('impact');setTimeout(()=>A.classList.remove('impact'),e.k==='heavy'?500:250);if(!reduced){const c=e.k==='heavy'?'duel-shake-heavy':'duel-shake';A.classList.remove('duel-shake','duel-shake-heavy');void A.offsetWidth;A.classList.add(c);setTimeout(()=>A.classList.remove(c),e.k==='heavy'?520:260);}if(e.k==='heavy')say('被重擊了！暈眩 3 秒');}
+     else{dtext(width*.5,height*.8,e.k==='heavy'?'重擊 -'+e.dmg:'-'+e.dmg,e.k==='heavy'?'#ff3f93':'#ff6b7a');state.hurtHeavy=e.k==='heavy';state.hurtUntil=now+(state.hurtHeavy?460:300);A.classList.add('impact');setTimeout(()=>A.classList.remove('impact'),e.k==='heavy'?500:250);if(!reduced){const c=e.k==='heavy'?'duel-shake-heavy':'duel-shake';A.classList.remove('duel-shake','duel-shake-heavy');void A.offsetWidth;A.classList.add(c);setTimeout(()=>A.classList.remove(c),e.k==='heavy'?520:260);}if(e.k==='heavy')say('被重擊了！暈眩 3 秒');}
     }
     wake();
    },
