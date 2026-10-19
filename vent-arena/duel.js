@@ -27,7 +27,7 @@
   document.addEventListener('keyup',e=>{if(!root.hidden)e.stopImmediatePropagation();},true);
  }
  function show(v){root.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('on',s.dataset.view===v));}
- function open(){if(!root)build();if(inMatch)return;closed=false;root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
+ function open(){if(!root)build();if(inMatch)return;const who=info();if(who.blocked){toast('一對一對戰使用帳號本人的角色，請先登入帳號');return;}closed=false;root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
  function say(sel,text,bad){const e=$(sel);if(e){e.textContent=text;e.classList.toggle('bad',!!bad);}}
  function loadPeer(){return window.Peer?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src=PEER_SRC;s.onload=ok;s.onerror=()=>no(new Error('load'));document.head.appendChild(s);});}
  function teardown(){clearInterval(timer);timer=0;try{conn&&conn.close();}catch{}try{peer&&peer.destroy();}catch{}conn=peer=null;G=snap=null;foeWants=iWant=overShown=false;if(inMatch){inMatch=false;bridge().leave();}}

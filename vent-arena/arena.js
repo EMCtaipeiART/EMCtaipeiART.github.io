@@ -181,7 +181,7 @@
    }
   };
  }
- window.ArenaDuelInfo=()=>({char:state.player,name:viewer.name||names[state.player]});
+ window.ArenaDuelInfo=()=>boundPlayer>=0?{char:boundPlayer,name:viewer.name||names[boundPlayer]}:{char:state.player,name:names[state.player],blocked:window.parent!==window};/* 一對一對戰一律用登入帳號本人的角色 */
 
  const shortcutLabels={'#ultimate':'F','#change-scene':'C','#heal':'H','#sound':'M','#start':'R','#role-player':'A','#role-target':'S','[data-mode=free]':'Q','[data-mode=timed]':'W','#leaderboard-open':'L','#again':'R','#close-result':'Esc'};
  for(const [selector,key] of Object.entries(shortcutLabels)){const b=$(selector);b.dataset.hotkey=key;b.setAttribute('aria-keyshortcuts',key);}
