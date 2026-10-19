@@ -225,6 +225,9 @@ const currentTaipeiHour=()=>currentTaipeiClock().hour;
 function isOvertime(p){if(p.status==='overtime')return true;if(p.staff||p.status!=='present')return false;if(overtimePreview)return true;const clock=currentTaipeiClock();return clock.workday&&(clock.hour>=19||clock.hour<6);}
 const effectiveStatusId=p=>isOvertime(p)?'overtime':statusOf(p);
 let people=names.map((name,i)=>({name,x:starts[i][0],y:starts[i][1],dir:'down',mood:'',status:'present',message:'',photo:''})), selected=null,ready=false, keys=new Set(), last=0, saveTimer, photoImages=new Map(), hits=[];
+/* 進站就用上次存的造型，不要先畫預設衣服、等後端回來才換（造型資料到了會照常覆蓋） */
+try{const c=JSON.parse(localStorage.getItem('pixelLooksV1')||'{}');people.forEach(p=>{const l=c&&c[p.name];if(l&&typeof l==='object'&&typeof l.outfit!=='undefined')p.look=l;});}catch{}
+const bootAt=performance.now();
 const staffGeoDefault=4;
 /** 班長罰坐中：坐在自己的位置上，不能移動、變裝、做動作；人物上方顯示原因與剩餘天數。 */
 function isPunishedP(p){return Boolean(p&&p.punish&&Number(p.punish.until)>Date.now());}
@@ -406,8 +409,8 @@ function outfitLabel(i,o){return typeof o==='string'?customName(o):i===3?(o===1?
 /** 這個人現在實際的造型：後端存的造型（有的話）補上預設值；不能換的衣服一律用預設。 */
 function effectiveLook(i){
   const d=lookDefault(i),l=people[i]&&people[i].look;if(!l||typeof l!=='object')return d;
-  const choices=outfitChoices(i),outfit=choices&&choices.includes(l.outfit)?l.outfit:d.outfit;
-  const head=typeof l.head==='string'&&customHeadIdsOf(i).includes(l.head)?l.head:d.head;
+  const choices=outfitChoices(i),unloaded=!customState().loaded,outfit=(choices&&choices.includes(l.outfit))||(unloaded&&typeof l.outfit==='string')?l.outfit:d.outfit;
+  const head=typeof l.head==='string'&&(customHeadIdsOf(i).includes(l.head)||unloaded)?l.head:d.head;
   const capOk=(i>=5?l.cap==='':['','black','blue'].includes(l.cap))||(typeof l.cap==='string'&&customAccIdsOf(i,'cap').includes(l.cap)),glassesOk=(i>=5?l.glasses==='':['','clear','sun'].includes(l.glasses))||(typeof l.glasses==='string'&&customAccIdsOf(i,'glasses').includes(l.glasses));
   return {outfit,cap:capOk?l.cap:d.cap,glasses:glassesOk?l.glasses:d.glasses,head};
 }
@@ -1254,6 +1257,7 @@ function applyRemote(list){markDirty();let lookChanged=false;
   if(lookChanged){try{ensureCustomNeeded();}catch(e){}refreshRosterPortraits();renderLookPanel();}
   save(false);
 }
+{const _applyRemote=applyRemote;applyRemote=function(list){const r=_applyRemote(list);try{const c={};people.forEach(p=>{if(p.look&&typeof p.look==='object')c[p.name]=p.look;});localStorage.setItem('pixelLooksV1',JSON.stringify(c));}catch{}return r;};}
 let pushOpen=false;// 後端推送連線正常時，輪詢只當備援（60 秒）；沒連上就維持原本每 3 秒
 async function pollSync(){try{const early=window.__pixelP&&window.__pixelP.state;if(window.__pixelP)window.__pixelP.state=null;let data=early?await early:null;if(!data||!data.ok)data=await syncCall({action:'pixelOfficeState',since:syncVersion});setSyncStatus(true);if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}catch{setSyncStatus(false);}finally{setTimeout(pollSync,pushOpen?60000:(document.hidden?15000:3000));}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCall({action:'pixelOfficeState',since:syncVersion}).then(data=>{if(!data.unchanged){(applyStaff(data.staff),applyRemote(data.people));applyLevelTitles(data);applyStories(data.stories);syncVersion=Number(data.version)||0;}}).catch(()=>{});});
@@ -1676,7 +1680,7 @@ function drawActionLabel(i){
   ctx.restore();
 }
 const seatedUp=i=>false;// 下排人物改回面向畫面（正面），不再轉背面
-function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const fxOn=isOvertime(p),fxLight=fxOn&&overtimeFxLight(ctx.canvas);if(fxOn)drawOvertimeFx(ctx,0,bob,142,t,fxLight,'back');const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(fxOn){if(!act&&!(music&&MUSIC_NOD))drawOvertimeTint(ctx,i,p.dir,0,bob,142);drawOvertimeFx(ctx,0,bob,142,t,fxLight,'front');}drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
+function drawPerson(i,time,walk){const p0=viewPeople[i],p=seatedUp(i)?{...p0,dir:'up'}:p0;if(isAway(p))return;if(performance.now()-bootAt<6000){const lk=effectiveLook(i);if(typeof lk.outfit==='string'&&!customOutfitView(lk.outfit,0))return;}/* 自訂衣服還在載入：先不畫，避免閃一下預設衣服 */const t=time/1000;let bob=(walk&&selected===i?Math.sin(t*17)*3:0)-seatLift(i),tilt=0;if(p.mood==='happy')bob-=Math.abs(Math.sin(t*4))*12;if(p.mood==='angry')bob+=Math.sin(t*24)*2;if(p.mood==='joy'){tilt=Math.sin(t*7)*.1;bob-=Math.abs(Math.sin(t*7))*8;}if(p.mood==='sad')tilt=Math.sin(t*2)*.035;const music=musicOf(p),nod=music?Math.sin(t*9)*MUSIC_NOD:0;ctx.save();ctx.translate(p.x,p.y);if(i===selected){ctx.strokeStyle='#e9b94e';ctx.fillStyle='#ffdd7828';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,-2,45,12,0,0,Math.PI*2);ctx.fill();ctx.stroke();}const fxOn=isOvertime(p),fxLight=fxOn&&overtimeFxLight(ctx.canvas);if(fxOn)drawOvertimeFx(ctx,0,bob,142,t,fxLight,'back');const act=actionOf(i);ctx.rotate(tilt+(act?act.rot:0));if(act)ctx.translate(act.dx,act.dy);drawHeadphones(i,p,t,bob,nod,true);if(act){if(!(act.hx&&drawWardrobeNod(ctx,i,'down',0,bob,0,142,act,act.hx)))drawWardrobe(ctx,i,'down',0,bob,142,act);}else if(!(music&&MUSIC_NOD&&drawWardrobeNod(ctx,i,p.dir,0,bob,nod)))sprite(ctx,i,p.dir,0,bob);if(fxOn){if(!act&&!(music&&MUSIC_NOD))drawOvertimeTint(ctx,i,p.dir,0,bob,142);drawOvertimeFx(ctx,0,bob,142,t,fxLight,'front');}drawHeadphones(i,p,t,bob,nod,false);ctx.restore();hits.push({type:'person',i,x:p.x-53,y:p.y-150,w:106,h:150});}
 function drawPunishBadge(p){
   if(!isPunishedP(p))return;
   const text='罰坐中｜'+String(p.punish.reason||'')+'（剩 '+punishDaysLeft(p)+' 天）',below=bubbleBelow(p),y=below?p.y-PLATE_SEAT_RISE-18:p.y-150-BUBBLE_HEAD_GAP-14;
