@@ -4,7 +4,7 @@
    對戰畫面沿用原本的擂台（arena.js 的 ArenaDuelBridge）；這裡只負責開戰場／輸入序號的小視窗與連線、規則運算。 */
 (() => {
  const D={hp:200,hit:3,block:10,rageHit:4,comboStep:5,maxBonus:9,comboGap:1200,heavy:50,stun:3000,round:60000,count:3000,cd:220,guard:600,guardCd:1100};
- const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄'];
+ const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄','未登入使用者'];
  /* 連線設定：除了 Google STUN，另外加上公用 TURN 中繼（雙方在公司網路／行動網路、無法點對點直連時改走中繼，避免「連線逾時」） */
  const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'},{urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},{urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},{urls:'turns:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}],iceCandidatePoolSize:4};
  const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',PREFIX='emcvent-',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -29,7 +29,7 @@
   document.addEventListener('keyup',e=>{if(!root.hidden)e.stopImmediatePropagation();},true);
  }
  function show(v){root.querySelectorAll('[data-view]').forEach(s=>s.classList.toggle('on',s.dataset.view===v));}
- function open(){if(!root)build();if(inMatch)return;const who=info();if(who.blocked){toast('一對一對戰使用帳號本人的角色，請先登入帳號');return;}closed=false;root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
+ function open(){if(!root)build();if(inMatch)return;closed=false;root.hidden=false;document.body.classList.add('duel-open');const i=info();self={name:i.name||names[i.char]||'玩家',char:i.char};show('menu');}
  function say(sel,text,bad){const e=$(sel);if(e){e.textContent=text;e.classList.toggle('bad',!!bad);}}
  function loadPeer(){return window.Peer?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');s.src=PEER_SRC;s.onload=ok;s.onerror=()=>no(new Error('load'));document.head.appendChild(s);});}
  function teardown(){clearInterval(timer);timer=0;try{conn&&conn.close();}catch{}try{peer&&peer.destroy();}catch{}conn=peer=null;G=snap=null;foeWants=iWant=overShown=false;if(inMatch){inMatch=false;bridge().leave();}}

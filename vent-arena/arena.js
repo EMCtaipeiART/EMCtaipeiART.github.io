@@ -6,6 +6,11 @@
  const combatFX=new window.ArenaCombatFX();
  const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄'];
  const characters=names.map((name,i)=>{const image=new Image(),back=new Image();back.src=`assets/${i<5?'designer':'staff'}_${name}_back.png`;image.src=`assets/${i<5?'designer':'staff'}_${name}_front.png`;return {name,image,back};});
+ /* 未登入使用者：第 12 位「半透明人」，只當自己的身份用（一對一對戰），不會出現在上場名單／陪練角色 */
+ const GHOST=names.length;
+ {const g={name:'未登入使用者',image:new Image(),back:new Image()};characters.push(g);
+  const ghostOf=(src,dst)=>{const make=()=>{try{const cv=document.createElement('canvas');cv.width=src.naturalWidth;cv.height=src.naturalHeight;const c=cv.getContext('2d');c.globalAlpha=.42;try{c.filter='grayscale(1) brightness(1.2)';}catch{}c.drawImage(src,0,0);dst.src=cv.toDataURL('image/png');}catch{}};if(src.complete&&src.naturalWidth)make();else src.addEventListener('load',make,{once:true});};
+  ghostOf(characters[0].image,g.image);ghostOf(characters[0].back,g.back);}
  const weapons=[
   {name:'拳頭',power:8,rage:7,color:'#f6b89d'},
   {name:'藍白拖',power:11,rage:6,color:'#89c8f6'},
@@ -28,7 +33,7 @@
  function say(text){$('#bubble').textContent=text;bubbleUntil=performance.now()+3500;}
  let boundPlayer=-1;/* 登入帳號對應的角色（沒登入或不在名單內＝-1，預設 Amber） */
  function roster(){
-  $('#roster').replaceChildren(...characters.map((c,i)=>{const b=document.createElement('button');b.className='person';const chosen=state[state.role]===i;b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));b.setAttribute('aria-label',`選擇 ${c.name} 為${state.role==='player'?'我的角色':'陪練角色'}`);const img=c.image.cloneNode();img.alt='';const text=document.createElement('span');text.innerHTML=`<strong>${c.name}</strong>`;const number=document.createElement('span');number.textContent=chosen?'✓':String(i+1).padStart(2,'0');b.append(img,text,number);b.onclick=()=>{if(duel){say('對戰中不能更換角色');return;}if(state.role==='player'&&boundPlayer>=0&&i!==boundPlayer){say(`你的角色已綁定帳號：${names[boundPlayer]}`);return;}if(state[state.role]!==i){state[state.role]=i;state.hp=300;combatFX.reset();state.knockUntil=0;state.combo=0;state.lastHit=-Infinity;particles=[];texts=[];say(`${c.name} 已上場，輕鬆玩一局！`);}roster();update();wake();};return b;}));
+  $('#roster').replaceChildren(...characters.slice(0,GHOST).map((c,i)=>{const b=document.createElement('button');b.className='person';const chosen=state[state.role]===i;b.classList.toggle('active',chosen);b.setAttribute('aria-pressed',String(chosen));b.setAttribute('aria-label',`選擇 ${c.name} 為${state.role==='player'?'我的角色':'陪練角色'}`);const img=c.image.cloneNode();img.alt='';const text=document.createElement('span');text.innerHTML=`<strong>${c.name}</strong>`;const number=document.createElement('span');number.textContent=chosen?'✓':String(i+1).padStart(2,'0');b.append(img,text,number);b.onclick=()=>{if(duel){say('對戰中不能更換角色');return;}if(state.role==='player'&&boundPlayer>=0&&i!==boundPlayer){say(`你的角色已綁定帳號：${names[boundPlayer]}`);return;}if(state[state.role]!==i){state[state.role]=i;state.hp=300;combatFX.reset();state.knockUntil=0;state.combo=0;state.lastHit=-Infinity;particles=[];texts=[];say(`${c.name} 已上場，輕鬆玩一局！`);}roster();update();wake();};return b;}));
  }
  function update(){
   if(duel)return;
@@ -194,7 +199,7 @@
    }
   };
  }
- window.ArenaDuelInfo=()=>boundPlayer>=0?{char:boundPlayer,name:viewer.name||names[boundPlayer]}:{char:state.player,name:names[state.player],blocked:window.parent!==window};/* 一對一對戰一律用登入帳號本人的角色 */
+ window.ArenaDuelInfo=()=>boundPlayer>=0?{char:boundPlayer,name:viewer.name||names[boundPlayer]}:{char:GHOST,name:'未登入使用者'};/* 一對一對戰一律用登入帳號本人的角色 */
 
  const shortcutLabels={'#ultimate':'F','#change-scene':'C','#heal':'H','#sound':'M','#start':'R','#role-player':'A','#role-target':'S','[data-mode=free]':'Q','[data-mode=timed]':'W','#leaderboard-open':'L','#again':'R','#close-result':'Esc'};
  for(const [selector,key] of Object.entries(shortcutLabels)){const b=$(selector);b.dataset.hotkey=key;b.setAttribute('aria-keyshortcuts',key);}
