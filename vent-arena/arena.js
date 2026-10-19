@@ -201,14 +201,21 @@
  });
  if(window.parent!==window)try{window.parent.postMessage({type:'ventArenaBodiesRequest'},location.origin)}catch(error){}
  /* 我的角色綁定登入帳號：向主站要登入者名字；沒登入或不在 11 位名單內就維持預設 Amber */
+ const normName=v=>String(v||'').trim().toLowerCase(),findName=v=>{const n=normName(v);if(!n)return -1;const lower=names.map(normName);let k=lower.indexOf(n);if(k<0)k=lower.indexOf(n.split(/[@\s._-]/)[0]);if(k<0)k=lower.findIndex(x=>n.startsWith(x+' '));return k;};
+ function bindAccount(list,token){
+  let i=-1;for(const v of list){i=findName(v);if(i>=0)break;}
+  if(i<0||boundPlayer===i)return i>=0;
+  viewer.name=names[i];if(token)viewer.token=String(token);
+  boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();return true;
+ }
  window.addEventListener('message',e=>{
   if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeViewer')return;
   viewer.name=String(e.data.name||'');viewer.token=String(e.data.token||'');
-  const norm=v=>String(v||'').trim().toLowerCase(),find=v=>{const n=norm(v);if(!n)return -1;const lower=names.map(norm);let k=lower.indexOf(n);if(k<0)k=lower.indexOf(n.split(/[@\s._-]/)[0]);if(k<0)k=lower.findIndex(x=>n.startsWith(x+' '));return k;};
-  let i=-1;for(const v of [viewer.name,...(Array.isArray(e.data.aliases)?e.data.aliases:[])]){i=find(v);if(i>=0)break;}
-  if(i<0)return;viewer.name=names[i];
-  boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();
+  bindAccount([viewer.name,...(Array.isArray(e.data.aliases)?e.data.aliases:[])],viewer.token);
  });
+ /* 同網域直接讀主站的登入資料當備援（主站訊息沒到或名字對不上時）；並在綁定成功前重問幾次 */
+ function bindFromStorage(){try{if(localStorage.getItem('designRequestEditorLoggedOut')==='1'||sessionStorage.getItem('designRequestEditorLoggedOut')==='1')return;const g=k=>localStorage.getItem(k)||sessionStorage.getItem(k)||'';bindAccount([g('designRequestEditorDisplayName'),g('designRequestEditorUser'),g('designRequestEditorAccount')],g('designRequestEditorToken'));}catch(error){}}
+ bindFromStorage();[700,2000,4500].forEach(t=>setTimeout(()=>{if(boundPlayer<0){bindFromStorage();if(boundPlayer<0&&window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}}},t));
  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
  /* 在系統內開啟時：「返回元宇宙」交給主站切頁（直接連過去會在 iframe 裡又開一份像素辦公室） */
  document.querySelectorAll('.arena-home').forEach(a=>a.addEventListener('click',e=>{if(window.parent!==window){e.preventDefault();try{window.parent.postMessage({type:'ventArenaBack'},location.origin)}catch(error){}}}));
