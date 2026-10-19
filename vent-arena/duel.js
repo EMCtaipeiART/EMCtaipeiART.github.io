@@ -103,12 +103,12 @@
  function emit(e){e.t='ev';send(e);bridge().fx(e,me);}
  function apply(by,d){
   if(!G||G.phase!=='fight')return;const now=performance.now(),s=G.P[by],o=G.P[1-by];
-  if(d.a==='block'){if(now>=s.guardReady){s.guardUntil=now+D.guard;s.guardReady=now+D.guardCd;emit({k:'guard',by});}}
+  if(d.a==='block'){if(now>=s.guardReady&&now>=s.stunUntil){s.guardUntil=now+D.guard;s.guardReady=now+D.guardCd;emit({k:'guard',by});}}
   else if(now<s.stunUntil||now<s.next)return;
   else if(d.a==='atk'){s.next=now+D.cd;const w=Math.max(0,Math.min(7,Number(d.w)|0));
    if(now<o.guardUntil){o.rage=Math.min(100,o.rage+D.block);o.guardUntil=0;s.combo=0;emit({k:'block',by,w});}
    else{s.combo=now-s.lastHit<D.comboGap?s.combo+1:1;s.lastHit=now;o.combo=0;const dmg=D.hit+Math.min(D.maxBonus,Math.floor(s.combo/D.comboStep));o.hp=Math.max(0,o.hp-dmg);s.rage=Math.min(100,s.rage+D.rageHit);emit({k:'hit',by,w,dmg,combo:s.combo});}}
-  else if(d.a==='heavy'){if(s.rage<100)return;s.next=now+D.cd;s.rage=0;o.hp=Math.max(0,o.hp-D.heavy);o.stunUntil=now+D.stun;emit({k:'heavy',by,dmg:D.heavy});}
+  else if(d.a==='heavy'){if(s.rage<100)return;s.next=now+D.cd;s.rage=0;o.hp=Math.max(0,o.hp-D.heavy);o.stunUntil=now+D.stun;o.guardUntil=0;emit({k:'heavy',by,dmg:D.heavy});}
   if(o.hp<=0)finish();
   send(snapOf(now));render();
  }

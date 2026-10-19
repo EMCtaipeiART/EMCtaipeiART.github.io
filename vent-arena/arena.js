@@ -148,7 +148,7 @@
     $('#self-fill').style.width=v.hp[me]/HP*100+'%';$('#self-fill').style.background=v.hp[me]/HP>.5?'#22c55e':v.hp[me]/HP>.25?'#ffd27c':'#ff8c8f';put('#self-hp',v.hp[me]+' / '+HP);
     $('#rage-fill').style.width=v.rage[me]+'%';put('#rage-text',v.rage[me]+'%');
     const ready=fight&&v.rage[me]>=100&&!stun;$('#ultimate').disabled=!ready;$('#ultimate').classList.toggle('ready',ready);$('.rage-panel').classList.toggle('charged',ready);
-    $('#duel-block').disabled=!fight||v.gcd[me]>0;$('#duel-block').classList.toggle('on',v.guard[me]>0);
+    $('#duel-block').disabled=!fight||v.gcd[me]>0||stun;$('#duel-block').classList.toggle('on',v.guard[me]>0);
     put('#timer',String(Math.ceil(v.left/1000)).padStart(2,'0'));put('#combo strong',state.combo);$('#combo').classList.toggle('visible',state.combo>=2&&now-state.lastHit<1200);$('#arena').classList.toggle('me-stun',stun);$('#arena').classList.toggle('danger',v.hp[me]<HP*.3);$('#arena').classList.toggle('low-hp',v.hp[me]>0&&v.hp[me]<HP*.35);$('#arena').classList.toggle('low-hp-critical',v.hp[me]>0&&v.hp[me]<HP*.15);
     if(v.stun[f]>0)combatFX.dizzyUntil=now+300;
     if(v.phase==='over'&&v.hp[f]<=0)state.knockUntil=1e15;else if(state.knockUntil>=1e14){state.knockUntil=0;combatFX.reset();}
