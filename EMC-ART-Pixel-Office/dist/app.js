@@ -1503,7 +1503,7 @@ function drawProps(){
   for(let b=0;b<3;b++){
     drawProp('black_bookshelf',DL-92,88,220,b,false);/* 左側桌子群與設計部之間 */
     if(b===1){drawProp('black_bookshelf_narrow',DR-6,59,196,b,false);drawProp('black_bookshelf_narrow',DR+268,61,196,b,false);}/* 中排：搬進間隙的兩張桌子兩側 */
-    else drawProp('white_pillar',DR+11,86,294,b,false);/* 設計部與同仁桌之間 */
+    else drawProp('white_pillar',DR+11,86,bandFeet()-315,b,false);/* 高度＝上排桌沿（y 315）到桌腳落地線 *//* 設計部與同仁桌之間 */
   }
 }
 function drawDesk(s){
