@@ -282,17 +282,17 @@ test('面板標題與說明是「設計部即時動態」的版本', async () =>
 
 test('換上新的桌子素材，左中右三種形狀各就各位', async () => {
   const [js, html] = await Promise.all([officeJs(), officeHtml()]);
-  assert.match(js, /setAsset\(furniture,'assets\/furniture-v4\.webp/);
-  assert.match(html, /preload[^>]*assets\/furniture-v4\.webp/);
+  assert.match(js, /setAsset\(furniture,'assets\/furniture-v5\.webp/);
+  assert.match(html, /preload[^>]*assets\/furniture-v5\.webp/);
   // 素材裡三張桌子形狀不同：最左有左斜邊、最右有右斜邊、中間是矩形。
   // 用錯位置的那一種，接起來就會缺一塊（使用者回報「桌子沒有換到」其實是接縫沒對上）。
-  assert.match(js, /const furnitureRects=\[\[0,0,520,328,37\],\[0,328,517,328,37\],\[0,656,520,325,34\],\[0,981,520,325,34\],\[0,1306,520,316,25\],\[520,0,237,372,0\],\[0,1622,520,291,0\],\[0,1913,517,291,0\],\[0,2204,520,291,0\],\[0,2495,520,325,34\],\[0,2820,520,325,34\],\[0,3145,520,291,0\],\[0,3436,520,328,37\],\[0,3764,520,316,25\],\[0,4080,520,291,0\]\];/);
+  assert.match(js, /const furnitureRects=\[\[0,0,520,328,37\],\[0,328,517,328,37\],\[0,656,520,325,34\],\[0,981,520,325,34\],\[0,1306,520,316,25\],\[520,0,237,372,0\],\[0,1622,520,291,0\],\[0,1913,517,291,0\],\[0,2204,520,291,0\]\];/);
   // 每個座位指定自己的桌子與離席時的空桌：左端 0/6、中間 1/7、右端 2/8。
-  assert.match(js, /\{x:548\+LX,y:355,type:12,empty:14,name:'Leona'\}/);
+  assert.match(js, /\{x:548\+LX,y:355,type:0,empty:6,name:'Leona'\}/);
   assert.match(js, /\{x:768\+LX,y:355,type:1,empty:7,name:'Amber'\}/);
-  assert.match(js, /\{x:988\+LX,y:355,type:9,empty:11,name:'Noise'\}/);
-  assert.match(js, /\{x:548\+LX,y:695,type:13,empty:14,name:'',row:1\}/);
-  assert.match(js, /\{x:988\+LX,y:695,type:10,empty:11,name:'Machi',row:1\}/);
+  assert.match(js, /\{x:988\+LX,y:355,type:3,empty:8,name:'Noise'\}/);
+  assert.match(js, /\{x:548\+LX,y:695,type:4,empty:6,name:'',row:1\}/);
+  assert.match(js, /\{x:988\+LX,y:695,type:2,empty:8,name:'Machi',row:1\}/);
   // 繪製寬度要讓素材的分隔線對齊座位間距，相鄰兩張才接得平整。
   assert.match(js, /const DESK_SRC_FACE=221,DESK_SRC_FOOT=70,DESK_SRC_UNIT=517,DESK_SEAT_GAP=220;/);
   assert.match(js, /const DESK_DRAW_SCALE=DESK_SEAT_GAP\/DESK_SRC_UNIT;/);
@@ -714,7 +714,7 @@ test('進站瘦身：配件與耳機延後載入、不擋 ready，預載只留�
   assert.match(js, /function ensureHeadphones\(\)/);
   // 預載只留進站一定要用的三張；其他圖由 app.js 之後再載，不跟 app.js 搶頻寬。
   assert.match(html, /rel="preload" as="image" crossorigin="anonymous" href="https:\/\/emc-pixel-assets\.machi-chen\.workers\.dev\/assets\/wardrobe-heads\.webp/);
-  assert.match(html, /rel="preload" as="image" crossorigin="anonymous" href="https:\/\/emc-pixel-assets\.machi-chen\.workers\.dev\/assets\/furniture-v4\.webp/);
+  assert.match(html, /rel="preload" as="image" crossorigin="anonymous" href="https:\/\/emc-pixel-assets\.machi-chen\.workers\.dev\/assets\/furniture-v5\.webp/);
   assert.doesNotMatch(html, /preload[^>]*(icons-v3|icons-status-v4|overtime-filter)/);
   assert.match(html, /<script src="app\.js\?v=\d+" fetchpriority="high">/);
   // Spotify 播放器程式等第一次互動才載。
@@ -757,7 +757,7 @@ test('「設計部即時動態」載入加速：API 與圖片在 HTML 解析時�
   assert.match(js, /if\(!data\|\|!data\.ok\)data=await syncCall\(\{action:'pixelOfficeDesigners'\}\)/);
   // 主系統：iframe 不再 lazy（版面在摺線下面時會拖到捲動才開始載），三張必要的圖在主頁 head 就預載。
   assert.doesNotMatch(parent, /class="office-embed"[^>]*loading="lazy"/);
-  for (const asset of ['wardrobe-heads.webp?v=4', 'wardrobe-outfits.webp?v=3', 'furniture-v4.webp?v=2']) {
+  for (const asset of ['wardrobe-heads.webp?v=4', 'wardrobe-outfits.webp?v=3', 'furniture-v5.webp?v=1']) {
     assert.ok(parent.includes(`<link rel="preload" as="image" crossorigin="anonymous" href="https://emc-pixel-assets.machi-chen.workers.dev/assets/${asset}" />`), `主頁要預載 ${asset}`);
     assert.ok(html.includes(`/assets/${asset}"`), `像素辦公室也要預載 ${asset}（兩邊網址要一致才會共用快取）`);
   }

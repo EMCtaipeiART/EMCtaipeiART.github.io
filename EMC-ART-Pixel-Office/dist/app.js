@@ -17,15 +17,15 @@ let levelStats=Object.fromEntries(names.map(name=>[name,levelFromScore(fallbackS
 let levelUpdatedAt='',levelIsLive=false;
 // type 是桌子素材、empty 是離席時換上的空桌。素材裡三張桌子的形狀本來就不一樣——最左邊那張有
 // 左斜邊、最右邊有右斜邊、中間是矩形——所以每個座位要用對應自己位置的那一種，接起來才是平整的一條。
-const stations=[{x:548+LX,y:355,type:12,empty:14,name:'Leona'},{x:768+LX,y:355,type:1,empty:7,name:'Amber'},{x:988+LX,y:355,type:9,empty:11,name:'Noise'},{x:548+LX,y:695,type:13,empty:14,name:'',row:1},{x:768+LX,y:695,type:1,empty:7,name:'Anna',row:1},{x:988+LX,y:695,type:10,empty:11,name:'Machi',row:1}];
+const stations=[{x:548+LX,y:355,type:0,empty:6,name:'Leona'},{x:768+LX,y:355,type:1,empty:7,name:'Amber'},{x:988+LX,y:355,type:3,empty:8,name:'Noise'},{x:548+LX,y:695,type:4,empty:6,name:'',row:1},{x:768+LX,y:695,type:1,empty:7,name:'Anna',row:1},{x:988+LX,y:695,type:2,empty:8,name:'Machi',row:1}];
 // 企劃部、專案部同仁的六張桌子：設計部六張桌子的右側空一張桌子的距離（+880），同樣配置（上排三張、下排三張，左下是 Mac mini 桌）。座位 0–2 上排、3–5 下排；
 // 完成「建立你的角色」的人依序入座（後端 pixel_office_staff）。沒人坐的桌子名牌是空的。
 const STAFF_DX=770,STAFF_POS=Array.from({length:18},(_,n)=>{const g=Math.floor(n/6),k=n%6;return [[548+LX,355],[768+LX,355],[988+LX,355],[548+LX,695],[768+LX,695],[988+LX,695]][k].map((v,j)=>j?v-g*GP:v+STAFF_DX);});
-stations.push({x:548+LX+STAFF_DX,y:355,type:12,empty:14,name:'',grp:1},{x:768+LX+STAFF_DX,y:355,type:1,empty:7,name:'',grp:1},{x:988+LX+STAFF_DX,y:355,type:3,empty:8,name:'',grp:1},{x:548+LX+STAFF_DX,y:695,type:13,empty:14,name:'',row:1,grp:1},{x:768+LX+STAFF_DX,y:695,type:1,empty:7,name:'',row:1,grp:1},{x:988+LX+STAFF_DX,y:695,type:2,empty:8,name:'',row:1,grp:1});
+stations.push({x:548+LX+STAFF_DX,y:355,type:0,empty:6,name:'',grp:1},{x:768+LX+STAFF_DX,y:355,type:1,empty:7,name:'',grp:1},{x:988+LX+STAFF_DX,y:355,type:3,empty:8,name:'',grp:1},{x:548+LX+STAFF_DX,y:695,type:4,empty:6,name:'',row:1,grp:1},{x:768+LX+STAFF_DX,y:695,type:1,empty:7,name:'',row:1,grp:1},{x:988+LX+STAFF_DX,y:695,type:2,empty:8,name:'',row:1,grp:1});
 // 往上複製的兩組桌子（2026-10-16）：右側同仁桌再 12 個座位（座位 6–17，依序入座），左側設計部桌子再 12 張空桌（先空著）。
 {const base=stations.slice(0,12);for(let g=1;g<=2;g++)for(const s0 of base)stations.push({...s0,y:s0.y-g*GP,name:'',...(s0.grp?{grp:1}:{ext:1}),g});}
 // 設計部左側的新桌子群（2026-10-18）：三組，每組 4 張（2×2、兩兩合併），先空著；只在整頁／編輯版出現（首頁小框 LX=0 不畫）。
-if(LX>0){const lx2=548+LX-330,lx1=lx2-220;for(let g=0;g<3;g++){const dy=-g*GP;stations.push({x:lx1,y:355+dy,type:0,empty:6,name:'',ext:1,lg:1,g},{x:lx2,y:355+dy,type:9,empty:11,name:'',ext:1,lg:1,g},{x:lx1,y:695+dy,type:4,empty:6,name:'',row:1,ext:1,lg:1,g},{x:lx2,y:695+dy,type:10,empty:11,name:'',row:1,ext:1,lg:1,g});}}
+if(LX>0){const lx2=548+LX-330,lx1=lx2-220;for(let g=0;g<3;g++){const dy=-g*GP;stations.push({x:lx1,y:355+dy,type:0,empty:6,name:'',ext:1,lg:1,g},{x:lx2,y:355+dy,type:3,empty:8,name:'',ext:1,lg:1,g},{x:lx1,y:695+dy,type:4,empty:6,name:'',row:1,ext:1,lg:1,g},{x:lx2,y:695+dy,type:2,empty:8,name:'',row:1,ext:1,lg:1,g});}}
 const moods=[{id:'happy',symbol:'sun',label:'喜',text:'陽光好心情'},{id:'angry',symbol:'burst',label:'怒',text:'爆炸氣噗噗'},{id:'sad',symbol:'drop',label:'哀',text:'大水滴低落中'},{id:'joy',symbol:'heart',label:'樂',text:'愛心滿格'}];
 const statuses=[{id:'present',symbol:'person',label:'在座',text:'在座工作中'},{id:'overtime',symbol:'moon',label:'加班',text:'加班中'},{id:'lunch',symbol:'bowl',label:'用餐',text:'用餐中'},{id:'meeting',symbol:'meeting',label:'會議',text:'開會中'},{id:'leave',symbol:'calendar',label:'休假',text:'休假中'},{id:'offwork',symbol:'power',label:'下班',text:'已下班'},{id:'toilet',symbol:'toilet',label:'廁所',text:'去廁所'},{id:'abroad',symbol:'plane',label:'出國',text:'出國中'},{id:'out',symbol:'briefcase',label:'公出',text:'公出工作中'}];
 // 在座與加班都是「人還坐在位子上工作」（人物、椅子、電腦都要畫，也能走動）；其餘狀態才是離席（灰階空桌）。
@@ -253,7 +253,7 @@ function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStora
 function assetBase(){return (new URLSearchParams(location.search).get('assetBase')||'https://emc-pixel-assets.machi-chen.workers.dev/').replace(/\/?$/,'/');}
 function setAsset(img,path){img.crossOrigin='anonymous';img.__fb=path;img.src=assetBase()+path;}
 const furniture=new Image(),iconSheet=new Image(),extraSheet=new Image();// 進站加速（2026-09-18）：只保留實際用到的區塊並改存 WebP。
-setAsset(furniture,'assets/furniture-v4.webp?v=2');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
+setAsset(furniture,'assets/furniture-v5.webp?v=1');setAsset(iconSheet,'assets/icons-v3.webp?v=3');setAsset(extraSheet,'assets/icons-status-v4.webp?v=2');
 function resizeCanvas(){markDirty();if(cam.on&&cam.w){const pr=Math.min(1.5,window.devicePixelRatio||1);cam.pr=pr;game.width=Math.round(cam.w*pr);game.height=Math.round(cam.h*pr);ctx.setTransform(pr*cam.s,0,0,pr*cam.s,-cam.left*pr*cam.s,-cam.top*pr*cam.s);ctx.imageSmoothingEnabled=false;return;}const scale=Math.max(1,Math.min(embedMode?(matchMedia("(hover:none)").matches?1.25:1.5):(matchMedia("(hover:none)").matches?1.25:2),(window.devicePixelRatio||1)*game.getBoundingClientRect().width/W));game.width=Math.round(W*scale);game.height=Math.round(H*scale);ctx.setTransform(game.width/W,0,0,game.height/H,0,OY*game.height/H);ctx.imageSmoothingEnabled=false;}
 new ResizeObserver(()=>{resizeCanvas();fitEmbedView();}).observe(game);new ResizeObserver(fitEmbedView).observe(game.parentElement);window.addEventListener('resize',()=>{resizeCanvas();fitEmbedView();});resizeCanvas();
 function load(img){return new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>{if(img.__fb){const p=img.__fb;img.__fb=null;img.crossOrigin=null;img.src=p;return;}reject();};if(img.complete&&img.naturalWidth)resolve();});}
@@ -1424,7 +1424,7 @@ function drawOffice(){if(embedMode){ctx.clearRect(0,-OY,W,H);return;}ctx.fillSty
 // 0 一般桌左、1 一般桌中、2 一般桌右、3 副螢幕桌右、4 Mac mini 桌左、5 椅子、6-8 對應三種空桌。
 // 每筆是 [x, y, 寬, 高, 螢幕露出桌面的高度]。桌子本體一律是「桌面 221 + 桌腳 70」，
 // 差別只在螢幕露出多少，所以繪製時桌面與桌腳的高度固定，螢幕再按各自的 upper 等比縮。
-const furnitureRects=[[0,0,520,328,37],[0,328,517,328,37],[0,656,520,325,34],[0,981,520,325,34],[0,1306,520,316,25],[520,0,237,372,0],[0,1622,520,291,0],[0,1913,517,291,0],[0,2204,520,291,0],[0,2495,520,325,34],[0,2820,520,325,34],[0,3145,520,291,0],[0,3436,520,328,37],[0,3764,520,316,25],[0,4080,520,291,0]];/* 9–14：把朝向兩組之間那一側的斜邊拉直（9、10、11＝設計部右端；12、13、14＝同仁左端） */
+const furnitureRects=[[0,0,520,328,37],[0,328,517,328,37],[0,656,520,325,34],[0,981,520,325,34],[0,1306,520,316,25],[520,0,237,372,0],[0,1622,520,291,0],[0,1913,517,291,0],[0,2204,520,291,0]];
 const CHAIR_RECT=5;
 // 人物高 142 px，頭部約佔最上方 70 px；椅背上緣放在頭部中線（腳底往上 107 px）。
 // 六個座位共用這個定位，避免椅背一路頂到頭頂、搶走人物輪廓。
