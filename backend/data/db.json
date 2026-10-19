@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8832,
+  "revision": 8833,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-19T02:34:41.740Z",
+  "updatedAt": "2026-10-19T02:35:17.429Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -2049,7 +2049,9 @@
         "案件摘要"
       ],
       "primaryKey": "案件編號",
-      "rows": []
+      "rows": [
+        {"案件編號":"26100122","申請人帳號":"livia.chu@emctaipei.com","申請人":"朱祖翎","申請時間":"2026-10-19T02:35:17.429Z","案件摘要":"soundcore_11月官網Pmax_AeroClip 2_影片英翻中字幕｜Machi｜未開始"}
+      ]
     },
     "短連結": {
       "headers": [
