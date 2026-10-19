@@ -1,0 +1,43 @@
+{
+  "image": "office-extras-v2.webp",
+  "width": 1346,
+  "height": 882,
+  "sprites": {
+    "peach_desk": {
+      "x": 0,
+      "y": 365,
+      "w": 517,
+      "h": 291
+    },
+    "white_desk_row": {
+      "x": 0,
+      "y": 0,
+      "w": 832,
+      "h": 357
+    },
+    "white_small_desk_v": {
+      "x": 525,
+      "y": 365,
+      "w": 258,
+      "h": 512
+    },
+    "black_bookshelf": {
+      "x": 791,
+      "y": 365,
+      "w": 207,
+      "h": 517
+    },
+    "black_bookshelf_narrow": {
+      "x": 1006,
+      "y": 365,
+      "w": 130,
+      "h": 460
+    },
+    "white_pillar": {
+      "x": 1144,
+      "y": 0,
+      "w": 202,
+      "h": 691
+    }
+  }
+}
