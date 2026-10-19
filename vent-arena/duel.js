@@ -19,11 +19,11 @@
    <section class="duel-menu" data-view="menu"><p class="duel-eyebrow">1 VS 1 · ONLINE</p><h2>一對一對戰</h2><p class="duel-sub">邀請同事，在擂台上正面對決。60 秒一回合，血量多的人獲勝！</p>
     <div class="duel-entries"><button data-act="host"><span>⚔</span><b>新開戰場<small>產生序號，等朋友加入</small></b></button><button data-act="joinview"><span>⌨</span><b>輸入序號<small>加入朋友的戰場</small></b></button></div>
     <ul class="duel-rules"><li>每個攻擊道具傷害相同：<b>-${D.hit}</b></li><li>🛡 格擋成功不扣血，並 <b>+${D.block}</b> 怒氣</li><li>打擊成功 <b>+${D.rageHit}</b> 怒氣，滿 100% 可使用「重擊」</li><li>連擊越高越痛：每 ${D.comboStep} 連擊傷害 +1（最高 +${D.maxBonus}）</li><li>重擊無視格擋 <b>-${D.heavy}</b> 血，並暈眩對手 3 秒</li></ul></section>
-   <section class="duel-wait" data-view="host"><p class="duel-eyebrow">WAITING FOR CHALLENGER</p><h2>戰場已開啟</h2><p class="duel-sub">把序號傳給對手，對方輸入後立即開打。</p><div class="duel-code" id="duel-code">······</div><div class="duel-row"><button class="duel-main" data-act="copy">複製邀請</button><button data-act="back">取消</button></div><p class="duel-status" id="duel-wait-status">連線中…</p></section>
+   <section class="duel-wait" data-view="host"><p class="duel-eyebrow">WAITING FOR CHALLENGER</p><h2>戰場已開啟</h2><p class="duel-sub">把序號傳給對手，對方輸入後立即開打。</p><div class="duel-code" id="duel-code">······</div><div class="duel-row"><button class="duel-main" data-act="copycode">複製序號</button><button class="duel-main" data-act="copy">複製邀請連結</button></div><div class="duel-row"><button data-act="back">取消</button></div><p class="duel-sub">「複製序號」只複製 6 碼序號（對方在擂台裡輸入）；「複製邀請連結」會連同點了就加入的連結一起複製。</p><p class="duel-status" id="duel-wait-status">連線中…</p></section>
    <section class="duel-join" data-view="join"><p class="duel-eyebrow">JOIN A BATTLE</p><h2>輸入戰場序號</h2><p class="duel-sub">貼上序號或整段邀請文字都可以。</p><input id="duel-input" class="duel-input" maxlength="200" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例如 K7Q3MD"><div class="duel-row"><button class="duel-main" data-act="join">加入戰場</button><button data-act="back">返回</button></div><p class="duel-status" id="duel-join-status"></p></section>
   </div>`;
   document.body.appendChild(root);
-  root.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;({host:openHost,joinview:()=>{show('join');setTimeout(()=>$('#duel-input').focus(),30);},back:backToMenu,copy:copyInvite,join:()=>joinFrom($('#duel-input').value),close:()=>{leave();}})[b.dataset.act]?.();});
+  root.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;({host:openHost,joinview:()=>{show('join');setTimeout(()=>$('#duel-input').focus(),30);},back:backToMenu,copy:copyInvite,copycode:copyCode,join:()=>joinFrom($('#duel-input').value),close:()=>{leave();}})[b.dataset.act]?.();});
   $('#duel-input').addEventListener('keydown',e=>{if(e.key==='Enter')joinFrom(e.target.value);});
   document.addEventListener('keydown',e=>{if(!root.hidden){e.stopImmediatePropagation();if(e.key==='Escape')leave();}},true);
   document.addEventListener('keyup',e=>{if(!root.hidden)e.stopImmediatePropagation();},true);
@@ -51,7 +51,9 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!closed&&isHost&&!conn&&peer&&peer.disconnected&&!peer.destroyed){try{peer.reconnect();}catch{}}});
  }
  function inviteText(){const link=location.origin+location.pathname+'?room='+code;return `${self.name} 邀請您一同參加「EMC 出氣擂台」一對一對戰！\n戰場序號：${code}\n點此直接加入：${link}\n（開啟出氣擂台 → 遊戲模式 → 一對一對戰 → 輸入序號 也可以）`;}
- async function copyInvite(){const text=inviteText();try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}say('#duel-wait-status','已複製邀請文字，貼給對手吧！');}
+ async function copyText(text){try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}}
+ async function copyCode(){if(!/^[A-Z0-9]{6}$/.test(code)){say('#duel-wait-status','序號還沒產生，請稍等一下。',true);return;}await copyText(code);say('#duel-wait-status','已複製序號 '+code+'，貼給對手，請他在「一對一對戰 → 輸入序號」輸入。');}
+ async function copyInvite(){const text=inviteText();try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}say('#duel-wait-status','已複製邀請連結，貼給對手，點開就會自動加入。');}
 
  /* ---------- 對手 ---------- */
  async function joinFrom(raw){
