@@ -1335,9 +1335,8 @@ function setZoom(target){const base=Math.max(.34,Math.min(.62,cam.w/760)),s=Math
 })();
 /* iframe 大小改變（視窗縮放、外層調整高度）或登入身分晚到：重新把畫面對到自己的座位 */
 window.addEventListener('resize',()=>{if(dragPanMode()){followPrev=null;setTimeout(()=>{try{followOwn()}catch(error){}},120);}});
-/* 站內多元宇宙（電腦版 iframe）：整個畫面鎖定不用滾輪捲動，空白處按住滑鼠拖曳來平移場景；點人物照舊。 */
+/* 站內多元宇宙（電腦版 iframe）：滑鼠滾輪可以上下捲動畫面；空白處按住滑鼠拖曳也能平移場景；點人物照舊。 */
 const dragPanMode=()=>window.parent!==window&&document.documentElement.classList.contains('clean')&&!embedMode&&!cam.on&&!matchMedia('(max-width:720px)').matches;
-window.addEventListener('wheel',e=>{if(dragPanMode())e.preventDefault();},{passive:false});
 game.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'&&e.button===0&&dragPanMode()&&!hitAt(e.clientX,e.clientY)){
     const sx=e.clientX,sy=e.clientY,bx=window.scrollX,by=window.scrollY;let dragged=false;
