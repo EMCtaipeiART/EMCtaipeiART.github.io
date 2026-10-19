@@ -82,7 +82,12 @@
   const f=(1-Math.cos(Math.PI*(t-a[0])/(b[0]-a[0])))/2;
   return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f,r:a[3]+(b[3]-a[3])*f,dx:Math.sin(now*.09)*4*(1-t)*k};
  }
- function playerBack(attacking,now){const im=characters[state.player].back;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im),w=Math.min(320,width*.70),fullH=w*b.h/b.w,reveal=fullH*.23+(attacking&&!reduced?5:0),hs=hurtShape(now||performance.now());ctx.save();ctx.shadowColor='#263f4f33';ctx.shadowBlur=0;if(hs){ctx.translate(width/2+hs.dx,height);ctx.rotate(hs.r);ctx.scale(hs.x,hs.y);ctx.translate(-width/2,-height);}ctx.drawImage(im,b.x,b.y,b.w,b.h,width/2-w/2,height-reveal,w,fullH);ctx.restore();}
+ function playerBack(attacking,now){const im=characters[state.player].back;if(!im.complete||!im.naturalWidth)return;const b=combatFX.bounds(im),w=Math.min(320,width*.70),fullH=w*b.h/b.w,reveal=fullH*.23+(attacking&&!reduced?5:0),hs=hurtShape(now||performance.now());ctx.save();ctx.shadowColor='#263f4f33';ctx.shadowBlur=0;if(hs){ctx.translate(width/2+hs.dx,height);ctx.rotate(hs.r);ctx.scale(hs.x,hs.y);ctx.translate(-width/2,-height);}ctx.drawImage(im,b.x,b.y,b.w,b.h,width/2-w/2,height-reveal,w,fullH);selfBumps(width/2,height-reveal,w,reveal);ctx.restore();}
+ function selfBumps(cx,topY,w,reveal){/* 自己被打：頭上跟對手一樣長腫包，越痛越多（1～3 顆） */
+  const d=state.selfDamage||0;if(d<=.04)return;const count=d>.55?3:d>.22?2:1;
+  for(let i=0;i<count;i++){const t=count>1?(i-(count-1)/2)/((count-1)/2):0,x=cx+t*w*.2,y=topY+reveal*.06+t*t*reveal*.1,r=w*(.06+d*.035)*(i%2?.8:1);
+   ctx.save();ctx.translate(x,y);ctx.rotate(t*.42);ctx.fillStyle=i%2?'#efa18c':'#f6b0a0';ctx.strokeStyle='#b85c5e';ctx.lineWidth=Math.max(1.5,w*.008);ctx.beginPath();ctx.moveTo(-r,r*.25);ctx.bezierCurveTo(-r*1.15,-r*.8,-r*.55,-r*1.25,0,-r*1.2);ctx.bezierCurveTo(r*.75,-r*1.2,r*1.15,-r*.45,r,r*.25);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle='#ffe4cf';ctx.lineWidth=w*.01;ctx.beginPath();ctx.moveTo(-r*.45,-r*.65);ctx.quadraticCurveTo(-r*.25,-r*.95,r*.12,-r*.9);ctx.stroke();ctx.restore();}
+ }
  function hitShape(now){if(reduced||now>=state.hitUntil)return {x:1,y:1};const t=Math.max(0,Math.min(1,1-(state.hitUntil-now)/320));let keys=[[0,1,1],[.22,1.34,.66],[.56,.82,1.24],[.78,1.06,.94],[1,1,1]];if(state.weapon===2)keys=[[0,1,1],[.22,1.45,.60],[.56,.79,1.28],[.78,1.08,.93],[1,1,1]];if(state.weapon===6)keys=[[0,1,1],[.22,.74,1.37],[.56,1.23,.78],[.78,.95,1.05],[1,1,1]];let a=keys[0],b=keys[1];for(let i=1;i<keys.length;i++){if(t<=keys[i][0]){a=keys[i-1];b=keys[i];break;}}const f=(1-Math.cos(Math.PI*(t-a[0])/(b[0]-a[0])))/2;return {x:a[1]+(b[1]-a[1])*f,y:a[2]+(b[2]-a[2])*f};}
  function draw(now){ctx.clearRect(0,0,width,height);ctx.save();if(!reduced&&now<state.hitUntil){const strength=(state.hitUntil-now)/320;ctx.translate(Math.sin(now*.11)*5*strength,Math.cos(now*.09)*3*strength);}room();const layout=combatFX.geometry(width,height,state.target),h=layout.unit,foot=layout.foot,hitActive=now<state.hitUntil,ko=now<state.knockUntil,attacking=now<state.attackUntil;
   const pose=hitShape(now),wobble=!reduced&&hitActive?Math.sin(now*.055)*.075:0;
@@ -138,7 +143,7 @@
    enter({me,foe}){
     if(!duel)duelSaved={player:state.player,target:state.target,mode:state.mode};
     duel={me,foe,prev:'',fightMsg:0};
-    Object.assign(state,{player:me.char,target:foe.char,mode:'duel',running:true,hp:HP,rage:0,combo:0,knockUntil:0,ultUntil:0,hitUntil:0,attackUntil:0});
+    Object.assign(state,{player:me.char,target:foe.char,mode:'duel',running:true,hp:HP,rage:0,combo:0,knockUntil:0,ultUntil:0,hitUntil:0,attackUntil:0,selfDamage:0,hurtUntil:0});
     particles=[];texts=[];combatFX.reset();stopHold();
     $('#arena').classList.add('in-duel');$('#stage-message').textContent='';$('#start').textContent='離開對戰 ↗';$('#mode-label').textContent='一對一對戰';$('#timer-hint').textContent='1–8 換道具，空白鍵／點擊出招，B 格擋，E 重擊';
     $('#ultimate .ultimate-label').textContent='💥 重擊';$('#heal').disabled=true;$('#ultimate').dataset.hotkey='E';$('#ultimate').setAttribute('aria-keyshortcuts','E');
@@ -153,7 +158,7 @@
     duel.prev=v.phase;
     const hf=$('#health-fill');hf.style.width=pct+'%';hf.style.background=pct>50?'#22c55e':pct>25?'#ffd27c':'#ff8c8f';
     put('#hp-number',v.hp[f]+' / '+HP);put('#injury-status',pct>=100?'狀態完好':pct>70?'鼻子紅紅的':pct>30?'流鼻血、頭頂長包':'腫包累積、暈頭轉向');
-    $('#self-fill').style.width=v.hp[me]/HP*100+'%';$('#self-fill').style.background=v.hp[me]/HP>.5?'#22c55e':v.hp[me]/HP>.25?'#ffd27c':'#ff8c8f';put('#self-hp',v.hp[me]+' / '+HP);
+    state.selfDamage=Math.max(0,1-v.hp[me]/HP);$('#self-fill').style.width=v.hp[me]/HP*100+'%';$('#self-fill').style.background=v.hp[me]/HP>.5?'#22c55e':v.hp[me]/HP>.25?'#ffd27c':'#ff8c8f';put('#self-hp',v.hp[me]+' / '+HP);
     $('#rage-fill').style.width=v.rage[me]+'%';put('#rage-text',v.rage[me]+'%');
     const ready=fight&&v.rage[me]>=100&&!stun;$('#ultimate').disabled=!ready;$('#ultimate').classList.toggle('ready',ready);$('.rage-panel').classList.toggle('charged',ready);
     $('#duel-block').disabled=!fight||v.gcd[me]>0||stun;$('#duel-block').classList.toggle('on',v.guard[me]>0);
@@ -185,7 +190,7 @@
     if(!duel)return;duel=null;const s=duelSaved;duelSaved=null;const {r,h2,p,span}=pr();if(r.open)r.close();
     h2.textContent=orig.h2;p.textContent=orig.p;span.textContent=orig.span;$('#again').textContent=orig.again;$('#again').disabled=false;$('#close-result').textContent=orig.close;
     $('#arena').classList.remove('in-duel','me-stun','low-hp','low-hp-critical','duel-shake','duel-shake-heavy');$('#ultimate .ultimate-label').textContent='✦ 下班衝擊波';$('#heal').disabled=false;$('#ultimate').dataset.hotkey='F';$('#ultimate').setAttribute('aria-keyshortcuts','F');$('#stage-message').textContent='';
-    Object.assign(state,{player:s.player,target:s.target,mode:s.mode});uiKey='';reset();roster();
+    Object.assign(state,{player:s.player,target:s.target,mode:s.mode,selfDamage:0,hurtUntil:0});uiKey='';reset();roster();
    }
   };
  }
