@@ -49,3 +49,7 @@ body.duel-open{overflow:hidden}
 .duel-copyicon{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border-radius:50%;border:2px solid currentColor;background:rgba(255,255,255,.85);color:inherit;cursor:pointer}
 .duel-copyicon:hover{background:#fff}
 .duel-copyicon:active{transform:translateY(-50%) scale(.94)}
+/* 等待畫面：按鈕與下面的說明文字之間留空隙（按鈕貼到字） */
+.duel-wait .duel-row{margin:16px 0 18px}
+.duel-wait .duel-sub{margin:0 0 8px;line-height:1.6}
+.duel-wait .duel-status{margin-top:10px}
