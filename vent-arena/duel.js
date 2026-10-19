@@ -42,11 +42,13 @@
   show('host');isHost=true;me=0;say('#duel-wait-status','連線中…');$('#duel-code').textContent='······';
   try{await loadPeer();}catch{say('#duel-wait-status','無法載入連線元件，請檢查網路後重試。',true);return;}
   const tryOpen=n=>{if(closed||n>5){say('#duel-wait-status','無法建立戰場，請稍後再試。',true);return;}const c=newCode(),p=new window.Peer(PREFIX+c,{config:ICE});
-   p.on('open',()=>{peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…');});
+   p.on('open',()=>{peer=p;code=c;$('#duel-code').textContent=c;say('#duel-wait-status','等待對手加入…（請保持這個分頁在前景，切到別的分頁序號可能失效）');});
    p.on('disconnected',()=>{/* 與配對伺服器斷線（網路切換、分頁休眠）：序號會失效，別人就會看到「找不到戰場」，所以自動重連 */if(!closed&&!conn&&peer===p){let k=0;const again=()=>{if(closed||conn||peer!==p||p.destroyed||!p.disconnected)return;try{p.reconnect();}catch{}if(++k<8)setTimeout(again,2000*k);};setTimeout(again,500);}});
    p.on('error',err=>{if(err.type==='unavailable-id'){p.destroy();tryOpen(n+1);}else if(!conn)say('#duel-wait-status','連線失敗（'+err.type+'），請重試。',true);});
    p.on('connection',c2=>{if(conn&&conn.open){c2.on('open',()=>{c2.send({t:'full'});setTimeout(()=>c2.close(),300);});return;}setupConn(c2);});};
   tryOpen(0);
+  /* 分頁開太多時瀏覽器會把背景分頁凍結／回收，房主與配對伺服器的連線就斷了（對方會看到「找不到戰場」）。切回這個分頁時立刻重連。 */
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!closed&&isHost&&!conn&&peer&&peer.disconnected&&!peer.destroyed){try{peer.reconnect();}catch{}}});
  }
  function inviteText(){const link=location.origin+location.pathname+'?room='+code;return `${self.name} 邀請您一同參加「EMC 出氣擂台」一對一對戰！\n戰場序號：${code}\n點此直接加入：${link}\n（開啟出氣擂台 → 遊戲模式 → 一對一對戰 → 輸入序號 也可以）`;}
  async function copyInvite(){const text=inviteText();try{await navigator.clipboard.writeText(text);}catch{const t=el('textarea');t.value=text;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch{}t.remove();}say('#duel-wait-status','已複製邀請文字，貼給對手吧！');}
