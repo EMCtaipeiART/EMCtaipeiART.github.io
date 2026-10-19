@@ -42,3 +42,10 @@ body.duel-open{overflow:hidden}
 #arena.low-hp-critical::after{box-shadow:inset 0 0 90px 30px rgba(255,10,40,.85);animation-duration:.7s}
 @keyframes duel-pulse{0%,100%{opacity:.45}50%{opacity:1}}
 @media(prefers-reduced-motion:reduce){#arena.low-hp::after{animation:none}}
+
+/* 序號欄右側的小複製圖示 */
+.duel-codewrap{position:relative}
+.duel-codewrap .duel-code{padding-right:64px}
+.duel-copyicon{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;padding:0;border-radius:50%;border:2px solid currentColor;background:rgba(255,255,255,.85);color:inherit;cursor:pointer}
+.duel-copyicon:hover{background:#fff}
+.duel-copyicon:active{transform:translateY(-50%) scale(.94)}
