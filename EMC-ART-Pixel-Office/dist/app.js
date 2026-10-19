@@ -1485,7 +1485,20 @@ function drawLongDesk(){
 }
 function drawLongDeskChair(){if(!LX||!stations.some(t=>t.big))return;const st=stations.find(t=>t.big);if(stationDimmed(st))return;furnitureObject(CHAIR_RECT,LONG_DESK.chairX-CHAIR_WIDTH/2,LONG_DESK.chairY-CHAIR_TOP_FROM_FEET,CHAIR_WIDTH,CHAIR_HEIGHT,furnitureFor(st));}
 /** 書櫃與方柱：底部對齊桌腳落地線；band＝第幾組（0 最下面） */
-function drawProp(name,x,w,h,band,dimmed){exDraw(name,x,bandFeet()-band*GPV-h,w,h,dimmed);}
+function drawProp(name,x,w,h,band,dimmed){
+  /* 照使用者畫的樣子：書櫃＝黑色方塊（下 30% 是矮櫃，中間一條分隔線）；方柱＝白色方塊（上 23% 是柱頭，一條分隔線）。 */
+  const y=Math.round(bandFeet()-band*GPV-h);x=Math.round(x);w=Math.round(w);h=Math.round(h);
+  ctx.save();ctx.imageSmoothingEnabled=false;
+  const box=(c,bx,by,bw,bh)=>{ctx.fillStyle=c;ctx.fillRect(bx,by,bw,bh);};
+  if(name==='white_pillar'){
+    const cap=Math.round(h*.23);
+    box('#0a0c0b',x,y,w,h);box('#efefeb',x+1,y+1,w-2,cap-1);box('#1a1b22',x+1,y+cap,w-2,1);box('#d2d7d5',x+1,y+cap+1,w-2,h-cap-2);
+  }else{
+    const split=Math.round(h*.7);
+    box('#0a0c0c',x,y,w,h);box('#1d2223',x+1,y+1,w-2,split-1);box('#0c1011',x+1,y+split,w-2,2);box('#1f2324',x+1,y+split+2,w-2,h-split-3);
+  }
+  ctx.restore();
+}
 function drawProps(){
   if(!LX)return;
   for(let b=0;b<3;b++){
