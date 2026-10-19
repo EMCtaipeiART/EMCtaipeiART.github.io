@@ -3,7 +3,7 @@
    連線用 PeerJS（WebRTC 點對點），戰場序號 = 房主的 peer id 尾碼。
    對戰畫面沿用原本的擂台（arena.js 的 ArenaDuelBridge）；這裡只負責開戰場／輸入序號的小視窗與連線、規則運算。 */
 (() => {
- const D={hp:200,hit:3,block:5,rageHit:1,heavy:50,stun:3000,round:60000,count:3000,cd:220,guard:600,guardCd:1100};
+ const D={hp:200,hit:3,block:10,rageHit:4,comboStep:5,maxBonus:9,comboGap:1200,heavy:50,stun:3000,round:60000,count:3000,cd:220,guard:600,guardCd:1100};
  const names=['Amber','Anna','Leona','Machi','Noise','余采馨','吳冠賢','李明庭','廖秦葦','鄭筱舢','黎子瑄'];
  const PEER_SRC='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',PREFIX='emcvent-',ALPHABET='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
  const $=s=>document.querySelector(s),bridge=()=>window.ArenaDuelBridge;
@@ -16,7 +16,7 @@
    <button class="duel-x" data-act="close" aria-label="關閉">✕</button>
    <section class="duel-menu" data-view="menu"><p class="duel-eyebrow">1 VS 1 · ONLINE</p><h2>一對一對戰</h2><p class="duel-sub">邀請同事，在擂台上正面對決。60 秒一回合，血量多的人獲勝！</p>
     <div class="duel-entries"><button data-act="host"><span>⚔</span><b>新開戰場<small>產生序號，等朋友加入</small></b></button><button data-act="joinview"><span>⌨</span><b>輸入序號<small>加入朋友的戰場</small></b></button></div>
-    <ul class="duel-rules"><li>每個攻擊道具傷害相同：<b>-${D.hit}</b></li><li>🛡 格擋成功不扣血，並 <b>+${D.block}</b> 怒氣</li><li>打擊成功 <b>+${D.rageHit}</b> 怒氣，滿 100% 可使用「重擊」</li><li>重擊無視格擋 <b>-${D.heavy}</b> 血，並暈眩對手 3 秒</li></ul></section>
+    <ul class="duel-rules"><li>每個攻擊道具傷害相同：<b>-${D.hit}</b></li><li>🛡 格擋成功不扣血，並 <b>+${D.block}</b> 怒氣</li><li>打擊成功 <b>+${D.rageHit}</b> 怒氣，滿 100% 可使用「重擊」</li><li>連擊越高越痛：每 ${D.comboStep} 連擊傷害 +1（最高 +${D.maxBonus}）</li><li>重擊無視格擋 <b>-${D.heavy}</b> 血，並暈眩對手 3 秒</li></ul></section>
    <section class="duel-wait" data-view="host"><p class="duel-eyebrow">WAITING FOR CHALLENGER</p><h2>戰場已開啟</h2><p class="duel-sub">把序號傳給對手，對方輸入後立即開打。</p><div class="duel-code" id="duel-code">······</div><div class="duel-row"><button class="duel-main" data-act="copy">複製邀請</button><button data-act="back">取消</button></div><p class="duel-status" id="duel-wait-status">連線中…</p></section>
    <section class="duel-join" data-view="join"><p class="duel-eyebrow">JOIN A BATTLE</p><h2>輸入戰場序號</h2><p class="duel-sub">貼上序號或整段邀請文字都可以。</p><input id="duel-input" class="duel-input" maxlength="200" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例如 K7Q3MD"><div class="duel-row"><button class="duel-main" data-act="join">加入戰場</button><button data-act="back">返回</button></div><p class="duel-status" id="duel-join-status"></p></section>
   </div>`;
@@ -85,7 +85,7 @@
  function enter(){inMatch=true;root.hidden=true;document.body.classList.remove('duel-open');bridge().enter({me:{char:self.char,name:self.name},foe});}
 
  /* ---------- 房主裁判 ---------- */
- const mk=()=>({hp:D.hp,rage:0,guardUntil:0,guardReady:0,stunUntil:0,next:0});
+ const mk=()=>({combo:0,lastHit:0,hp:D.hp,rage:0,guardUntil:0,guardReady:0,stunUntil:0,next:0});
  function beginMatch(){
   const now=performance.now();G={phase:'count',countEnd:now+D.count,endAt:0,P:[mk(),mk()],winner:-2};iWant=foeWants=overShown=false;
   enter();clearInterval(timer);timer=setInterval(tick,50);tick(true);
@@ -106,8 +106,8 @@
   if(d.a==='block'){if(now>=s.guardReady){s.guardUntil=now+D.guard;s.guardReady=now+D.guardCd;emit({k:'guard',by});}}
   else if(now<s.stunUntil||now<s.next)return;
   else if(d.a==='atk'){s.next=now+D.cd;const w=Math.max(0,Math.min(7,Number(d.w)|0));
-   if(now<o.guardUntil){o.rage=Math.min(100,o.rage+D.block);o.guardUntil=0;emit({k:'block',by,w});}
-   else{o.hp=Math.max(0,o.hp-D.hit);s.rage=Math.min(100,s.rage+D.rageHit);emit({k:'hit',by,w,dmg:D.hit});}}
+   if(now<o.guardUntil){o.rage=Math.min(100,o.rage+D.block);o.guardUntil=0;s.combo=0;emit({k:'block',by,w});}
+   else{s.combo=now-s.lastHit<D.comboGap?s.combo+1:1;s.lastHit=now;o.combo=0;const dmg=D.hit+Math.min(D.maxBonus,Math.floor(s.combo/D.comboStep));o.hp=Math.max(0,o.hp-dmg);s.rage=Math.min(100,s.rage+D.rageHit);emit({k:'hit',by,w,dmg,combo:s.combo});}}
   else if(d.a==='heavy'){if(s.rage<100)return;s.next=now+D.cd;s.rage=0;o.hp=Math.max(0,o.hp-D.heavy);o.stunUntil=now+D.stun;emit({k:'heavy',by,dmg:D.heavy});}
   if(o.hp<=0)finish();
   send(snapOf(now));render();
