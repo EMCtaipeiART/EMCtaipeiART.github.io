@@ -97,7 +97,7 @@
  characters.forEach(c=>{c.back.onload=wake;c.back.onerror=()=>toast(`角色 ${c.name} 背面圖載入失敗。`);c.image.onload=wake;c.image.onerror=()=>toast(`角色 ${c.name} 載入失敗，請重新整理。`);});
  canvas.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();canvas.focus({preventScroll:true});holding=true;nextAuto=performance.now()+220;canvas.setPointerCapture(e.pointerId);hit();wake();});canvas.addEventListener('pointerup',stopHold);canvas.addEventListener('pointercancel',stopHold);canvas.addEventListener('lostpointercapture',stopHold);window.addEventListener('blur',stopHold);
  document.addEventListener('visibilitychange',()=>{stopHold();if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else{lastFrame=performance.now();if(state.mode==='timed'&&state.running)toast('歡迎回來，挑戰繼續！');wake();}});
- document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;if(e.target.closest('input,textarea,summary,dialog'))return;if(e.target.closest('button')){if(!(duel&&/^([1-8]|b|f)$/i.test(e.key)))return;}if(e.code==='Space'){e.preventDefault();if(!holding){holding=true;nextAuto=performance.now()+220;hit();wake();}}else if(/^[1-8]$/.test(e.key))selectWeapon(Number(e.key)-1);else if(e.key.toLowerCase()==='f')hit(true);else if(duel){if(e.key.toLowerCase()==='b')window.ArenaDuel.act({a:'block'});else if(e.key.toLowerCase()==='c')$('#change-scene').click();}else {const shortcuts={c:'#change-scene',h:'#heal',m:'#sound',r:'#start',a:'#role-player',s:'#role-target',q:'[data-mode=free]',w:'[data-mode=timed]',l:'#leaderboard-open'};const selector=shortcuts[e.key.toLowerCase()];if(selector){e.preventDefault();$(selector).click();}}});document.addEventListener('keyup',e=>{if(e.code==='Space')stopHold();});
+ document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;if(e.target.closest('input,textarea,summary,dialog'))return;if(e.target.closest('button')){if(!(duel&&/^([1-8]|b|e)$/i.test(e.key)))return;}if(e.code==='Space'){e.preventDefault();if(!holding){holding=true;nextAuto=performance.now()+220;hit();wake();}}else if(/^[1-8]$/.test(e.key))selectWeapon(Number(e.key)-1);else if(e.key.toLowerCase()==='f'&&!duel)hit(true);else if(duel){if(e.key.toLowerCase()==='e')hit(true);else if(e.key.toLowerCase()==='b')window.ArenaDuel.act({a:'block'});else if(e.key.toLowerCase()==='c')$('#change-scene').click();}else {const shortcuts={c:'#change-scene',h:'#heal',m:'#sound',r:'#start',a:'#role-player',s:'#role-target',q:'[data-mode=free]',w:'[data-mode=timed]',l:'#leaderboard-open'};const selector=shortcuts[e.key.toLowerCase()];if(selector){e.preventDefault();$(selector).click();}}});document.addEventListener('keyup',e=>{if(e.code==='Space')stopHold();});
  function selectWeapon(i){state.weapon=i;if(document.activeElement&&document.activeElement.classList.contains('weapon'))document.activeElement.blur();canvas.style.cursor=weaponCursor(i);document.querySelectorAll('.weapon').forEach((b,n)=>b.setAttribute('aria-pressed',String(n===i)));wake();}
  $('#weapons').replaceChildren(...weapons.map((w,i)=>{const b=document.createElement('button');b.className='weapon';b.style.setProperty('--weapon-color',w.color);b.setAttribute('aria-pressed',String(i===0));b.title=w.name+'（'+(i+1)+'）';b.dataset.hotkey=String(i+1);b.setAttribute('aria-keyshortcuts',String(i+1));b.innerHTML=`<span aria-hidden="true">${window.ArenaWeaponArt.svg(i)}</span><b>${w.name}</b>`;b.onclick=()=>selectWeapon(i);return b;}));
  for(const role of ['player','target'])$('#role-'+role).onclick=()=>{state.role=role;$('#role-player').setAttribute('aria-pressed',String(role==='player'));$('#role-target').setAttribute('aria-pressed',String(role==='target'));roster();};
@@ -132,8 +132,8 @@
     duel={me,foe,prev:'',fightMsg:0};
     Object.assign(state,{player:me.char,target:foe.char,mode:'duel',running:true,hp:HP,rage:0,combo:0,knockUntil:0,ultUntil:0,hitUntil:0,attackUntil:0});
     particles=[];texts=[];combatFX.reset();stopHold();
-    $('#arena').classList.add('in-duel');$('#stage-message').textContent='';$('#start').textContent='離開對戰 ↗';$('#mode-label').textContent='一對一對戰';$('#timer-hint').textContent='1–8 換道具，空白鍵／點擊出招，B 格擋，F 重擊';
-    $('#ultimate .ultimate-label').textContent='💥 重擊';$('#heal').disabled=true;
+    $('#arena').classList.add('in-duel');$('#stage-message').textContent='';$('#start').textContent='離開對戰 ↗';$('#mode-label').textContent='一對一對戰';$('#timer-hint').textContent='1–8 換道具，空白鍵／點擊出招，B 格擋，E 重擊';
+    $('#ultimate .ultimate-label').textContent='💥 重擊';$('#heal').disabled=true;$('#ultimate').dataset.hotkey='E';$('#ultimate').setAttribute('aria-keyshortcuts','E');
     put('#target-name',foe.name);put('#foe-name',foe.name);put('#player-name',me.name);put('#self-name',me.name);
     if($('#result').open)$('#result').close();roster();wake();
    },
@@ -176,7 +176,7 @@
    leave(){
     if(!duel)return;duel=null;const s=duelSaved;duelSaved=null;const {r,h2,p,span}=pr();if(r.open)r.close();
     h2.textContent=orig.h2;p.textContent=orig.p;span.textContent=orig.span;$('#again').textContent=orig.again;$('#again').disabled=false;$('#close-result').textContent=orig.close;
-    $('#arena').classList.remove('in-duel','me-stun');$('#ultimate .ultimate-label').textContent='✦ 下班衝擊波';$('#heal').disabled=false;$('#stage-message').textContent='';
+    $('#arena').classList.remove('in-duel','me-stun');$('#ultimate .ultimate-label').textContent='✦ 下班衝擊波';$('#heal').disabled=false;$('#ultimate').dataset.hotkey='F';$('#ultimate').setAttribute('aria-keyshortcuts','F');$('#stage-message').textContent='';
     Object.assign(state,{player:s.player,target:s.target,mode:s.mode});uiKey='';reset();roster();
    }
   };
