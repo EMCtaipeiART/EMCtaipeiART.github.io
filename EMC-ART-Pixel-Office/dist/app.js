@@ -1418,6 +1418,7 @@ const VACANT_DESK_ON_HOUR=9,VACANT_DESK_OFF_HOUR=18;
 const VACANT_DESK_LUNCH_START=12,VACANT_DESK_LUNCH_END=14;
 const stationVacant=s=>!s.name;
 function stationDimmed(s){
+  if(s.lg)return false;/* 左側新增的桌子群是固定擺設：不隨上下班／午休轉灰階，保持原本顏色（蜜桃米、白色） */
   if(s.grp){const c=currentTaipeiClock();return !(c.workday&&c.hour>=10&&c.hour<19)||Boolean(stationAway(s));}// 企劃部、專案部的桌子：非上班時間（平日 10:00–19:00 以外）整張灰階、椅子收起來
   if(stationAway(s))return true;
   if(!stationVacant(s))return false;
