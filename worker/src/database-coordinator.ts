@@ -34,7 +34,7 @@ const PIXEL_OFFICE_DESIGNER_SEATS: Record<string, [number, number]> = { Leona: [
 const PIXEL_OFFICE_STAFF_SEAT_POS: Array<[number, number]> = Array.from({ length: 18 }, (_, seat) => {   // 座位 0–5 原本那組，6–11、12–17 往上複製的兩組（每組 y 差 604）
   const base: Array<[number, number]> = [[1318, 355], [1538, 355], [1758, 355], [1318, 695], [1538, 695], [1758, 695]];
   const [x, y] = base[seat % 6];
-  return [x, y - Math.floor(seat / 6) * 604];
+  return [seat === 6 || seat === 9 ? x - 110 : x, y - Math.floor(seat / 6) * 604];   // 座位 6、9（中排最左一行）搬到兩個桌子群中間，x 少 110
 });
 // 出勤狀態。'overtime'（加班）與其他離席狀態不同：人還在座位上工作，只是過了下班時間。
 const PIXEL_OFFICE_STATUSES = ['present', 'overtime', 'lunch', 'offwork', 'toilet', 'meeting', 'leave', 'abroad', 'out'];
@@ -1830,6 +1830,23 @@ export class DatabaseCoordinator extends DurableObject<Env> {
             sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), stamp, item.name);
           }
           sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 22, new Date().toISOString());
+        });
+      }
+      if (!applied.has(23)) {
+        this.ctx.storage.transactionSync(() => {
+          // 2026-10-19：座位 6、9 的桌子搬到兩個桌子群中間（x 少 110），已入座的人一起搬。
+          const sql = this.ctx.storage.sql;
+          const stamp = Math.max(Date.now(), this.pixelOfficeVersion() + 1);
+          for (const item of sql.exec<{ seat: number; name: string }>('SELECT seat, name FROM pixel_office_staff WHERE seat IN (6, 9)').toArray()) {
+            const person = sql.exec<{ state: string }>('SELECT state FROM pixel_office_people WHERE name = ?', item.name).toArray()[0];
+            if (!person) continue;
+            let state: Row = {};
+            try { state = JSON.parse(person.state) as Row; } catch { state = {}; }
+            const pos = PIXEL_OFFICE_STAFF_SEAT_POS[item.seat];
+            if (pos) { state.x = pos[0]; state.y = pos[1]; state.dir = 'down'; }
+            sql.exec('UPDATE pixel_office_people SET state = ?, updated_at = ? WHERE name = ?', JSON.stringify(state), stamp, item.name);
+          }
+          sql.exec('INSERT INTO _sql_schema_migrations(version, applied_at) VALUES (?, ?)', 23, new Date().toISOString());
         });
       }
     });
