@@ -139,7 +139,7 @@ function inView(y){
   const top=(window.scrollY-cleanPadY)/cleanScale+cleanY0-320,bottom=top+window.innerHeight/cleanScale+640;
   return y>=top&&y<=bottom;
 }
-window.addEventListener('scroll',()=>{if(cleanScale)markDirty();},{passive:true});
+window.addEventListener('scroll',()=>{if(cleanScale)markDirty();},{passive:true});window.addEventListener('resize',()=>{if(cleanScale)markDirty();});
 /** 編輯版：畫面鎖定在自己的角色，走動時跟著捲（只在位置真的變了才捲，不跟手動捲動打架）。 */
 function followOwn(){
   if(!cleanScale||embedMode||roMode)return;

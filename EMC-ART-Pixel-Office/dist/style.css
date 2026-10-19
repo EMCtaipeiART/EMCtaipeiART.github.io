@@ -504,7 +504,7 @@ html.clean.solo,html.clean.solo body{background:#fff}
 /* 桌機整頁模式的縮放按鈕（固定在視窗右下角，範圍在 app.js 的 DZ_MIN～DZ_MAX） */
 .dz-btns{position:fixed;right:18px;bottom:18px;z-index:40;display:flex;flex-direction:column;gap:8px}.dz-btns button{width:42px;height:42px;border-radius:50%;border:1px solid #c9d3e0;background:rgba(255,255,255,.94);color:#273b50;font-size:22px;font-weight:700;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.18);cursor:pointer}.dz-btns button:hover:not(:disabled){background:#fff;border-color:#8aa0bb}.dz-btns button:disabled{opacity:.4;cursor:default}
 
-html.clean:not(.solo):not(.embed){overflow:hidden}
+html.clean:not(.solo):not(.embed){overscroll-behavior:contain}/* 滑鼠滾輪可以捲動畫面（2026-10-19 使用者要求），捲到頭不要把外層頁面一起捲走 */
 html.clean:not(.solo):not(.embed) #game{cursor:grab}
 
 .exit-btn{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:30;display:inline-flex;align-items:center;gap:4px;height:38px;padding:0 14px 0 10px;border:1px solid #c9d3e0;border-radius:999px;background:rgba(255,255,255,.94);color:#273b50;font-size:14px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.16);touch-action:manipulation}
