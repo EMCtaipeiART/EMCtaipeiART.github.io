@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8911,
+  "revision": 8912,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-19T10:33:50.694Z",
+  "updatedAt": "2026-10-19T10:34:45.980Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1226,7 +1226,7 @@
         {"案件編號":"26100115","修改次數":"0","建立日期":"2026/10/19 17:26:48","修改日期":"2026/10/19 17:26:48","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/19 17:26:48","圖片連結":"[{\"fileName\":\"261019_DJI_九月體驗會花絮.png\",\"url\":\"https://lh3.googleusercontent.com/d/1bKD2MMzEA1K3bGtN8g533wBsCvPACUKY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/19 17:26:48"},
         {"案件編號":"26100065","修改次數":"0","建立日期":"2026/10/19 17:59:11","修改日期":"2026/10/19 17:59:11","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/19 17:59:11","圖片連結":"[{\"fileName\":\"261019_ANKER_好市多促銷.png\",\"url\":\"https://lh3.googleusercontent.com/d/1z3q9zXFGGZab9Knf2XW2sFf1aRsToMVH=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/19 17:59:11"},
         {"案件編號":"26100052","修改次數":"0","建立日期":"2026/10/19 18:04:28","修改日期":"2026/10/19 18:04:28","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/19 18:04:28","圖片連結":"[{\"fileName\":\"261019_Shopee商城日_CPAS_AeroFit 2_情境.png\",\"url\":\"https://lh3.googleusercontent.com/d/1rB5pKkyaumRmPs1a8DJwrXliTuNCfzjS=w1600\"},{\"fileName\":\"261019_Shopee商城日_CPAS_AeroFit 2_電商_折1000.png\",\"url\":\"https://lh3.googleusercontent.com/d/1r2706OoPT0UaKUD4dcdWxgMl7SvOu814=w1600\"},{\"fileName\":\"261019_Shopee商城日_CPAS_AeroFit 2_電商_折1200.png\",\"url\":\"https://lh3.googleusercontent.com/d/1nfIZ8iUQL-tBCKEPtb98Gzobahtu_gQM=w1600\"},{\"fileName\":\"261019_Shopee商城日_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1UFYX-YiAuDCBeN_2BqAG1E8MZD9jDYSc=w1600\"},{\"fileName\":\"261019_Shopee商城日_CPAS_Liberty 5_電商_折1000.png\",\"url\":\"https://lh3.googleusercontent.com/d/1-E8msMX0Ote_C-KSLk9jUshAez9zd9jP=w1600\"},{\"fileName\":\"261019_Shopee商城日_CPAS_Liberty 5_電商_折800.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Bkpg3XREijdGVPHnPSTLp8FUfijDMRXE=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/19 18:04:28"},
-        {"案件編號":"26100063","修改次數":"2","建立日期":"2026/10/19 18:33:50","修改日期":"2026-10-19","修改內容":"客戶臨時調整蝦皮Liberty 5 折扣幅度，擴大到1,300，詳細如附件P101、102，在請協助於周二早上提供，感恩","修改內容連結":"[{\"text\":\"附件P101、102\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.h1c8ce9553e3a2cb2_0_92#slide=id.h1c8ce9553e3a2cb2_0_92\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100063","修改次數":"2","建立日期":"2026/10/19 18:33:50","修改日期":"2026-10-19","修改內容":"客戶臨時調整蝦皮Liberty 5 折扣幅度，擴大到1,300，詳細如附件P101、102，在請協助於周二早上提供，感恩","修改內容連結":"[{\"text\":\"附件P101、102\",\"url\":\"https://docs.google.com/presentation/d/1CmE0Aq60LJ3i4YjytLstE2MNXGZytDb-CmJ-0Z-4wsE/edit?slide=id.h1c8ce9553e3a2cb2_0_92#slide=id.h1c8ce9553e3a2cb2_0_92\"}]","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261019_shopee_蝦皮商城日_sc館_Liberty-5_情境_vo2.png\",\"url\":\"https://lh3.googleusercontent.com/d/1eVPNteu2oU84yqVTjMK0C5t1rjVkaQ-h=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/19 18:34:45"}
       ]
     },
     "補充資料連結": {
