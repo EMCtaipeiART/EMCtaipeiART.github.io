@@ -23,7 +23,7 @@
  ];
  const scenes=(window.ArenaScenes?window.ArenaScenes.names:['辦公室','擂台場','練舞室','垃圾場']).map(name=>({name}));
  const lines=['這個修改，真的是最後一版！','先喝口水，我們再來！','我的咖啡還沒喝完耶！','好啦好啦，今天準時下班！','有事好商量，先別加需求！','收到！這次一定不已讀！'];
- let state={player:GHOST,target:7,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
+ let state={player:GHOST,target:GHOST,role:'target',weapon:0,scene:0,mode:'free',running:true,remaining:60,score:0,kos:0,hits:0,hp:300,rage:0,combo:0,maxCombo:0,lastHit:-Infinity,hitUntil:0,attackUntil:0,knockUntil:0,ultUntil:0,ultCount:0};
  let best=0,sound=true,audio,particles=[],texts=[],holding=false,nextAuto=0,lastFrame=0,raf=0,toastTimer=0,bubbleUntil=0,width=0,height=0;
  let duel=null,duelSaved=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -42,7 +42,7 @@
   $('#ultimate').classList.toggle('ready',ready);$('.rage-panel').classList.toggle('charged',ready);$('#arena').classList.toggle('ultimate-scene',ult);$('#arena').classList.toggle('impact',impact);$('#arena').classList.toggle('danger',state.hp<90);
   put('#injury-status',state.hp===300?'狀態完好':state.hp>210?'鼻子紅紅的':state.hp>90?'流鼻血、頭頂長包':'腫包累積、暈頭轉向');$('#injury-status').dataset.level=state.hp>210?'light':state.hp>90?'medium':'heavy';
   $('#health-fill').style.background=state.hp>150?'#22c55e':state.hp>75?'#ffd27c':'#ff8c8f';$('#health-fill').style.width=state.hp/3+'%';$('#rage-fill').style.width=state.rage+'%';$('#ultimate').disabled=!ready;
-  put('#score',state.score.toLocaleString());put('#hud-score',state.score.toLocaleString());put('#kos',state.kos);put('#best',best.toLocaleString());put('#target-name',names[state.target]);put('#foe-name',names[state.target]);put('#player-name',characters[state.player].name);put('#hp-number',state.hp+' / 300');put('#rage-text',state.rage+'%');put('#combo strong',state.combo);$('#combo').classList.toggle('visible',combo>0);put('#timer',state.mode==='free'?'∞':String(seconds).padStart(2,'0'));
+  put('#score',state.score.toLocaleString());put('#hud-score',state.score.toLocaleString());put('#kos',state.kos);put('#best',best.toLocaleString());put('#target-name',characters[state.target].name);put('#foe-name',characters[state.target].name);put('#player-name',characters[state.player].name);put('#hp-number',state.hp+' / 300');put('#rage-text',state.rage+'%');put('#combo strong',state.combo);$('#combo').classList.toggle('visible',combo>0);put('#timer',state.mode==='free'?'∞':String(seconds).padStart(2,'0'));
  }
  // Short cartoon Foley motifs, with bounded voices during rapid-fire attacks.
  let fxBus,fxVoices=[];
