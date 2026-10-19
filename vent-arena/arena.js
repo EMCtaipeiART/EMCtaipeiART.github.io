@@ -203,7 +203,10 @@
  /* 我的角色綁定登入帳號：向主站要登入者名字；沒登入或不在 11 位名單內就維持預設 Amber */
  window.addEventListener('message',e=>{
   if(e.origin!==location.origin||!e.data||e.data.type!=='pixelOfficeViewer')return;
-  viewer.name=String(e.data.name||'');viewer.token=String(e.data.token||'');const i=names.indexOf(viewer.name);if(i<0)return;
+  viewer.name=String(e.data.name||'');viewer.token=String(e.data.token||'');
+  const norm=v=>String(v||'').trim().toLowerCase(),find=v=>{const n=norm(v);if(!n)return -1;const lower=names.map(norm);let k=lower.indexOf(n);if(k<0)k=lower.indexOf(n.split(/[@\s._-]/)[0]);if(k<0)k=lower.findIndex(x=>n.startsWith(x+' '));return k;};
+  let i=-1;for(const v of [viewer.name,...(Array.isArray(e.data.aliases)?e.data.aliases:[])]){i=find(v);if(i>=0)break;}
+  if(i<0)return;viewer.name=names[i];
   boundPlayer=i;state.player=i;if(state.target===i)state.target=i===7?3:7;state.hp=300;combatFX.reset();say(`歡迎 ${names[i]}，你的角色已綁定帳號`);roster();update();wake();
  });
  if(window.parent!==window)try{window.parent.postMessage({type:'pixelOfficeViewerRequest'},location.origin)}catch(error){}
