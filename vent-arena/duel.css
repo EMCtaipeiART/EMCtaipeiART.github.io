@@ -1,6 +1,4 @@
 /* 出氣擂台 · 一對一對戰（獨立浮層，不依賴其他樣式） */
-.duel-open-btn{display:block;width:100%;margin-top:10px;padding:12px;border-radius:12px;font-weight:900;font-size:13px;color:#fff;background:linear-gradient(120deg,#ff5fa8,#ff8a3d);border:2px solid #fff3;box-shadow:0 4px #b3306f}
-.duel-open-btn:active{transform:translateY(2px);box-shadow:0 2px #b3306f}
 body.duel-open{overflow:hidden}
 .duel{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#201031d9;padding:12px;color:#3a2150;font-family:system-ui,'Microsoft JhengHei',sans-serif}
 .duel[hidden]{display:none}
