@@ -479,7 +479,7 @@
     async function openHoursEditor(){
       if(document.getElementById('hoursModal')||!(loggedIn()&&(isAdminUser()||isMachiUser())))return;
       let cfg;try{cfg=(await api('getPixelHours',{})).config}catch(err){toast('讀取失敗：'+(err.message||err),true);return}
-      const hrs=[['dayStart','上班開始（之前算加班）'],['lunchStart','午休開始'],['lunchEnd','午休結束'],['workEnd','下班（之後沒心跳＝下班）'],['overtimeStart','加班開始']];
+      const hrs=[['dayStart','上班開始（用餐／離席判斷用；加班固定 19:00～隔天 06:00）'],['lunchStart','午休開始'],['lunchEnd','午休結束'],['workEnd','下班（之後沒心跳＝下班）'],['overtimeStart','加班開始']];
       const back=document.createElement('div');back.id='hoursModal';back.className='nc-back';
       back.innerHTML='<div class="nc-card" role="dialog" aria-modal="true" aria-label="上下班設定" style="width:min(440px,100%)"><div class="nc-head"><div><h3>上下班時段設定</h3><p>全站共用，只有管理者與 Machi 可以改。數字是台北時間的整點（0–23）。</p></div></div><div class="nc-body"><label style="display:flex;gap:8px;align-items:center;font-weight:700;margin-bottom:10px"><input type="checkbox" id="hrOn"> 套用上下班時段規則</label><p class="muted" id="hrNote" style="font-size:12px;margin:0 0 10px"></p><div style="display:grid;grid-template-columns:1fr 80px;gap:8px;align-items:center">'+hrs.map(h=>'<label for="hr_'+h[0]+'">'+h[1]+'</label><input type="number" min="0" max="23" id="hr_'+h[0]+'" style="padding:6px;border:1px solid var(--line,#ccd);border-radius:8px">').join('')+'</div></div><div class="nc-foot"><button type="button" class="btn" data-hr-act="cancel">取消</button><button type="button" class="btn primary" data-hr-act="save">儲存</button></div></div>';
       const q=id=>back.querySelector('#'+id),note=()=>{q('hrNote').textContent=q('hrOn').checked?'依下面的時段判斷在座／用餐／加班／下班；假日與國定假日一律下班。':'已關閉：不判斷假日、加班與下班，沒有心跳也不會自動變下班，手動點的狀態會一直保留（測試用）。'};
