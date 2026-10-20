@@ -54,3 +54,10 @@ test('載入信件串後不會用空的欄位蓋掉剛帶入的建議收件人',
   assert.match(src, /applied=true/);
   assert.match(src, /if\(!applied\)saveMailDraft\(\);renderMail\(\)/);
 });
+
+test('背景分頁的系統通知不會因為連線閒置或計時器暫停而晚到：重連／回到分頁補抓、背景持續 ping、背景每分鐘問版本號', async () => {
+  const src = await readFile(new URL('../../site.js', import.meta.url), 'utf8');
+  assert.match(src, /pingT=setInterval\(\(\)=>\{try\{if\(ws\.readyState===1\)ws\.send\('ping'\)\}catch\(err\)\{\}\},25000\);[^\n]*loadDatabase\(true,true\)/);
+  assert.match(src, /renderLogin\(\);pullFilters\(\);loadDatabase\(true,true\)/);
+  assert.match(src, /document\.hidden&&state\.loaded&&loggedIn\(\)&&bnOn\(\)\)loadDatabase\(true\)\}catch\(err\)\{\}\},60000\)/);
+});

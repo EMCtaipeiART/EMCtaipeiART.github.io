@@ -4322,7 +4322,7 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
       function connect(){
         if(ws&&ws.readyState<=1)return;
         try{ws=new WebSocket(url)}catch(err){return}
-        ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(!document.hidden&&ws.readyState===1)ws.send('ping')}catch(err){}},25000)};
+        ws.onopen=()=>{retry=0;state.pushOk=true;clearInterval(pingT);pingT=setInterval(()=>{try{if(ws.readyState===1)ws.send('ping')}catch(err){}},25000);/* 斷線期間漏掉的更新（例如分頁在背景、電腦睡眠）重連後馬上補抓；分頁在背景也持續 ping，避免連線被閒置斷掉 */loadDatabase(true,true)};
         ws.onmessage=e=>{let m=null;try{m=JSON.parse(e.data)}catch(err){return}if(m&&m.type==='reload'){relCheck(Number(m.rel)||0);return}if(m&&m.type==='db'){if((Number(m.rev)||0)>(state.dbRev||0))loadDatabase(true,true);return}if(m&&m.type==='pixel'&&m.v!==state.pushV){state.pushV=m.v;loadOffice()}};
         ws.onclose=()=>{state.pushOk=false;clearInterval(pingT);setTimeout(connect,Math.min(30000,1000*Math.pow(2,retry++)))};
         ws.onerror=()=>{try{ws.close()}catch(err){}};
@@ -4334,7 +4334,9 @@ if(['已完成','暫停中'].includes(column.status))return byNewest(a,b);const 
     let dbTick=0,lastInputAt=0;['keydown','input','compositionupdate'].forEach(ev=>document.addEventListener(ev,()=>{lastInputAt=Date.now()},true));
     function bgBusy(){return document.hidden||Date.now()-lastInputAt<1500||Boolean(document.querySelector('.ai-modal:not([hidden]),.cell-pop:not([hidden]),.filter-pop,.rc-pick'))||state.editing||Boolean(state.drag)||Boolean(state.colDrag)||(state.view!=='board'&&state.view!=='projects')}
     setInterval(()=>{if(document.hidden)return;if(state.dirty&&!bgBusy()){state.dirty=false;if(state.view==='board')renderBoard();else if(state.view==='projects')renderProjects();renderTeam()}dbTick=(dbTick+1)%15;if(quietHours()?((state.pushOk?dbTick===0:dbTick%5===0)):(!state.pushOk||dbTick%3===0))loadDatabase(true)},8000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters()}});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden){loadOffice();renderLogin();pullFilters();loadDatabase(true,true)}});
+    /* 分頁在背景時瀏覽器會把計時器與連線降速甚至暫停，系統通知（修改需求、新案、回信）可能晚好幾小時才跳；已開啟系統通知時，背景每分鐘輕量問一次版本號（沒變就不下載）。 */
+    setInterval(()=>{try{if(document.hidden&&state.loaded&&loggedIn()&&bnOn())loadDatabase(true)}catch(err){}},60000);
     setTimeout(()=>pullFilters(true),600);
     {const o=renderProjects;renderProjects=function(){keepBoardScroll(o,this,arguments);try{applyHl()}catch(e){}try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
     {const o=renderBoard;renderBoard=function(){keepBoardScroll(o,this,arguments);try{restoreOpenCards()}catch(e){}scheduleEqualize()}}
