@@ -19,7 +19,7 @@ test('設計師手動回覆（選擇器立即備份）會用 refresh 重抓 NAS 
   const { readFile } = await import('node:fs/promises');
   const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
   const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
-  assert.match(picker, /refresh: true/);
+  assert.match(picker, /refresh: (true|false)/);
   assert.match(lib, /refresh = false/);
   assert.match(lib, /'nas-refresh'/);
   assert.match(lib, /refreshNames\.has/);

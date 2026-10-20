@@ -297,7 +297,7 @@ async function backupSelectedFolder({ config, configDir, mountRoot, relPath, cas
         roundState: state[stateKey],
         persistState: () => lib.saveState(stateFile, state),
         onEligible: onPreviews,
-        refresh: true
+        refresh: false // Worker 部署 nas-refresh 支援後改回 true
       });
       await lib.saveState(stateFile, state); // 上傳成功後把 assignedRound 補回去，避免背景監控程式重複上傳同一批
       if (!upload.uploadedCount) {
