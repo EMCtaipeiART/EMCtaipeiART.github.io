@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 8985,
+  "revision": 8986,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-20T09:21:07.370Z",
+  "updatedAt": "2026-10-20T09:21:10.897Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1237,7 +1237,7 @@
         {"案件編號":"26100099","修改次數":"0","建立日期":"2026/10/19 20:51:48","修改日期":"2026/10/19 20:51:48","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/19 20:51:48","圖片連結":"[{\"fileName\":\"261020_ANKER_A1664_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1d6KC-orp0wSdQV-9ICXtBlYvKbgRESCI=w1600\"},{\"fileName\":\"261020_ANKER_A1665_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1dFFlbhwVgR-fjzeLp83wIkEc0OJxNyMx=w1600\"},{\"fileName\":\"261020_ANKER_A1695_1.png\",\"url\":\"https://lh3.googleusercontent.com/d/1hryHq_DZoUCmNtEOI46Mfr4UbUkQJvAr=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/19 20:51:48"},
         {"案件編號":"26100121","修改次數":"1","建立日期":"2026/10/20 11:26:51","修改日期":"2026-10-20","修改內容":"11月AeroClip 2 的官網PMax 需要做調整， 主要因為都是新的耳機上市宣傳(可拿掉價錢)，需以新機上市和品名+贈品為主要溝通。\n詳細請看：附件，再麻煩協助修改了，感恩的心！","修改內容連結":"[{\"text\":\"附件\",\"url\":\"https://docs.google.com/presentation/d/1Tko97RojDQGqij1Bf8WO55y1B1ha7zJA/edit?slide=id.h2f26c89cf160131d_2_4#slide=id.h2f26c89cf160131d_2_4\"}]","修改人":"朱祖翎","確認修正日":"2026/10/20 16:43:42","待修改圖片":"","圖片連結":"[{\"fileName\":\"261019_10月PMax_AeroClip2_B款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1Gg2KnIFbmQnFsRdWdcMZ3wzb259B_IFd=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_C款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1zTh5E5QO1I4N8uye0eoPuskT1ryP2AX1=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_D款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1iRUvyU322uyaz69w7EArw92UiPqh9QMK=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_E款.png\",\"url\":\"https://lh3.googleusercontent.com/d/18Dr0AGQE2btUYxN7RLB-zp-9Zd79Pbvc=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_包框_01.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1Lr_wRIViksaHtknSYY1xrFcKLcT0_C6O=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_包框_02.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1IcNLhNtuxGM7u6akfCQNr_lnRQoVhSc1=w1600\"},{\"fileName\":\"261019_10月PMax_AeroClip2_Ａ款.png\",\"url\":\"https://lh3.googleusercontent.com/d/1IF-GojW8GwxYONQQ8dYyZDgqY8r8gGbl=w1600\"}]","圖片來源":"nas-refresh","圖片更新時間":"2026/10/20 16:56:38"},
         {"案件編號":"26100134","修改次數":"0","建立日期":"2026/10/20 12:34:31","修改日期":"2026/10/20 12:34:31","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/20 12:34:31","圖片連結":"[{\"fileName\":\"261020_保誠人壽_55688_啟動圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1PyhOzG0LUjOJXz0enk1t8QIFmwbswDJB=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/20 12:34:31"},
-        {"案件編號":"26100105","修改次數":"2","建立日期":"2026/10/20 17:20:20","修改日期":"2026-10-20","修改內容":"客戶莫名堅持選項不要圓頂，再請協助調整，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261015_保誠人壽_55688.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yAWGN1jHquAOkbc3Gqrss20yYgXJsg3v=w1600\"},{\"fileName\":\"261020_保誠人壽_55688_啟動圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QtSoX9ALthokj3daAfO-U6x0I-nLI_sO=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/20 17:21:00"}
+        {"案件編號":"26100105","修改次數":"2","建立日期":"2026/10/20 17:20:20","修改日期":"2026-10-20","修改內容":"客戶莫名堅持選項不要圓頂，再請協助調整，感恩","修改內容連結":"","修改人":"吳冠賢","確認修正日":"2026/10/20 17:21:10","待修改圖片":"","圖片連結":"[{\"fileName\":\"261015_保誠人壽_55688.png\",\"url\":\"https://lh3.googleusercontent.com/d/1yAWGN1jHquAOkbc3Gqrss20yYgXJsg3v=w1600\"},{\"fileName\":\"261020_保誠人壽_55688_啟動圖.png\",\"url\":\"https://lh3.googleusercontent.com/d/1QtSoX9ALthokj3daAfO-U6x0I-nLI_sO=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/20 17:21:00"}
       ]
     },
     "補充資料連結": {
