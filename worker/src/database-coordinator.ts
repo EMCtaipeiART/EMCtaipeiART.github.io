@@ -5900,12 +5900,24 @@ export class DatabaseCoordinator extends DurableObject<Env> {
         let ignoredImages = 0;
         let addedImages = 0;
         const lockNasFileNames = serviceAuthorized && source === 'nas-watcher';
+        // nas-refresh：設計師在回覆時按「沿用路徑／選資料夾」手動重新抓取，同檔名在 NAS 又存過新版時，
+        // 用新版取代這一輪原本那張（原位置、不多出一張），不是排到下一輪。
+        const refreshSameName = serviceAuthorized && source === 'nas-refresh';
         for (const item of images) {
           if (seenUrls.has(item.url)) {
             ignoredImages += 1;
             continue;
           }
           const fileNameKey = text(item.fileName).toLocaleLowerCase();
+          if (refreshSameName && fileNameKey) {
+            const at = merged.findIndex(old => text(old.fileName).toLocaleLowerCase() === fileNameKey);
+            if (at >= 0) {
+              merged[at] = item;
+              seenUrls.add(item.url);
+              addedImages += 1;
+              continue;
+            }
+          }
           // NAS 自動同步只允許同一檔名在同一輪寫入一次。來源檔後續儲存出的
           // 新版本要由 watcher 留到下一修，不能在初稿／一修已完成後追加第二張。
           // 手動上傳維持原行為，讓有權限的使用者仍可明確補圖或更正。

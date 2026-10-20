@@ -1725,6 +1725,20 @@ describe('Machi Design API Worker', () => {
     expect(String(denied.error)).toContain('media.manage');
   });
 
+  it('nas-refresh upload replaces the same-named image in that round instead of waiting for the next round', async () => {
+    const token = await login();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => Response.json({ content: { sha: 'rf-file-sha' }, commit: { sha: 'rf-commit-sha' } }));
+    const key = 'test-nas-watcher-key';
+    await api({ action: 'addCaseDesignImages', serviceKey: key, caseId: '26080001', round: 0, images: [{ fileName: 'x.png', url: 'https://lh3.googleusercontent.com/d/old1' }, { fileName: 'y.png', url: 'https://lh3.googleusercontent.com/d/y1' }] });
+    // 一般 NAS 自動同步：同檔名新版被擋（留給下一輪）。
+    const locked = await api({ action: 'addCaseDesignImages', serviceKey: key, source: 'nas-watcher', caseId: '26080001', round: 0, images: [{ fileName: 'x.png', url: 'https://lh3.googleusercontent.com/d/new1' }] });
+    expect(locked).toMatchObject({ ignoredImages: 1 });
+    // 設計師手動回覆（nas-refresh）：原位置換成新版，不多出一張。
+    const refreshed = await api({ action: 'addCaseDesignImages', serviceKey: key, source: 'nas-refresh', caseId: '26080001', round: 0, images: [{ fileName: 'x.png', url: 'https://lh3.googleusercontent.com/d/new1' }, { fileName: 'z.png', url: 'https://lh3.googleusercontent.com/d/z1' }] });
+    expect((refreshed.images as { fileName: string; url: string }[]).map(i => `${i.fileName}=${i.url.split('/').pop()}`)).toEqual(['x.png=new1', 'y.png=y1', 'z.png=z1']);
+    void token;
+  });
+
   it('cross-case image move carries NAS tracking: source skips the moved files, target pins them on the same folder', async () => {
     const token = await login();
     await seedCase('26080002');

@@ -1209,7 +1209,7 @@ export function createCaseDesignUploadDedupeKey({ caseId, round, relPath, mtimeM
   ].join('\0')).digest('hex');
 }
 
-export async function uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews }) {
+export async function uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews, source = 'nas-watcher' }) {
   const images = [];
   for (const item of pendingPreviews) {
     const buffer = await fs.readFile(item.previewPath);
@@ -1240,7 +1240,7 @@ export async function uploadRound({ config, secrets, caseId, round, designer, cl
     client,
     year,
     month,
-    source: 'nas-watcher',
+    source,
     images
   });
   const fileNames = images.map(image => image.fileName);
@@ -1319,7 +1319,7 @@ export function uploadEnabled(config, secrets) {
  * 參數是即將上傳的預覽清單 [{ relPath, previewPath, ... }]。立即備份用它把已經壓好的小檔先交給
  * 瀏覽器放進信件，不必等 Google Drive 存完。回呼拋錯不影響上傳。
  */
-export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, roundState, persistState, onEligible }) {
+export async function uploadPendingRound({ config, secrets, dbData, caseId, designer, client, start, pendingPreviews, stateFiles, roundState, persistState, onEligible, refresh = false }) {
   const round = computeRound(dbData, caseId);
   const targetImages = computeTargetImages(dbData, caseId, round);
   let reconciledCount = 0;
@@ -1340,6 +1340,15 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
   // 封存標記本身不夠，這一輪要真的交付過才擋（見 roundDelivered 的說明）。
   const currentRoundDelivered = roundDelivered({ dbData, caseId, round, stateFiles });
   let staleSealClearedCount = 0;
+  // refresh（設計師手動按「沿用路徑／選資料夾」回覆）：NAS 上存檔時間比這一輪資料庫備份晚的同名檔，是這輪回覆前才改好的新版，
+  // 直接取代這一輪原本那張，不再被「封存／等下一輪」擋掉。
+  const refreshRecordedTimes = refresh ? recordedTimesByBaseName(dbData, caseId) : null;
+  const refreshRecordedThisRound = refresh ? recordedRoundImageBaseNames(dbData, caseId, round) : null;
+  const refreshNames = new Set();
+  const isNewerThanRecorded = item => {
+    const recordedAt = refreshRecordedTimes.get(designImageBaseName(path.basename(item.relPath)));
+    return Number.isFinite(item.mtimeMs) && Number.isFinite(recordedAt) && item.mtimeMs > recordedAt + NEWER_THAN_RECORDED_MS;
+  };
   for (const item of pendingPreviews) {
     const entry = stateFiles[item.relPath];
     const attempt = entry && entry.uploadAttempt;
@@ -1367,6 +1376,12 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
       }
     }
 
+    if (refresh && entry && refreshRecordedThisRound.has(designImageBaseName(path.basename(item.relPath))) && isNewerThanRecorded(item)) {
+      entry.pendingAfterRound = null;
+      refreshNames.add(path.basename(item.relPath));
+      eligiblePreviews.push(item);
+      continue;
+    }
     let pendingAfterRound = trackedRound(entry?.pendingAfterRound);
     // 「等下一輪」只有在被等的那一輪真的交付過時才成立。沒交付過代表這是殘留標記（重複使用的案件
     // 編號、或檔案離開同步紀錄後留下的封存），清掉讓這個檔案照一般流程上傳，不然會永遠卡在下一輪。
@@ -1405,7 +1420,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
         if (!baseName) return true;
         const entry = stateFiles[item.relPath];
         const recordedRound = recordedRounds.get(baseName);
-        const alreadyThisRound = recordedBaseNames.has(baseName);
+        const alreadyThisRound = recordedBaseNames.has(baseName) && !refreshNames.has(path.basename(item.relPath));
         // ①這一輪已經有同名圖（多半是先用電腦上傳補過）；②這台電腦第一次掃到、但資料庫別的輪次已經有
         // 這張（多半是別台電腦備份過的舊圖）。兩種都不上傳，只把本機狀態補成「已歸在那一輪」。
         // ③同名檔案在備份之後又存檔過（mtime 明顯比資料庫記錄時間晚）＝新版本，不能當成舊圖沿用，
@@ -1496,7 +1511,7 @@ export async function uploadPendingRound({ config, secrets, dbData, caseId, desi
     // 必須在 POST 前先落地：即使 Node 行程在等待回應時被中止，下一輪也知道
     // 這批可能已在遠端生效，會先核對資料庫而不是立刻重送。
     if (persistState) await persistState();
-    const uploadResult = await uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews: chunk });
+    const uploadResult = await uploadRound({ config, secrets, caseId, round, designer, client, year, month, pendingPreviews: chunk, source: refresh && chunk.some(item => refreshNames.has(path.basename(item.relPath))) ? 'nas-refresh' : 'nas-watcher' });
     for (const item of chunk) {
       if (stateFiles[item.relPath]) {
         stateFiles[item.relPath].assignedRound = round;

@@ -14,3 +14,13 @@ test('跨案件搬移後的 NAS 追蹤：skip 排除、pin 收下、pinOnly 只�
   assert.equal(folderAcceptsFile('k1.jpg', plain), true);
   assert.equal(folderAcceptsFile('z.jpg', plain), false);
 });
+
+test('設計師手動回覆（選擇器立即備份）會用 refresh 重抓 NAS 上較新的同名檔，並以 nas-refresh 取代這一輪原圖', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const lib = await readFile(new URL('../../scripts/nas_design_image_lib.mjs', import.meta.url), 'utf8');
+  const picker = await readFile(new URL('../../scripts/nas_folder_picker_server.mjs', import.meta.url), 'utf8');
+  assert.match(picker, /refresh: true/);
+  assert.match(lib, /refresh = false/);
+  assert.match(lib, /'nas-refresh'/);
+  assert.match(lib, /refreshNames\.has/);
+});
