@@ -67,3 +67,6 @@ body.duel-open{overflow:hidden}
 .hotkeys dt{justify-self:start;min-width:34px;text-align:center;padding:1px 6px;border:1px solid #9ab;border-bottom-width:2px;border-radius:5px;background:#fff8;font:700 11px ui-monospace,Menlo,monospace}
 .hotkeys dd{margin:0;line-height:1.4}
 .hotkeys{text-align:left}.hotkeys dl{grid-template-columns:76px 1fr}.hotkeys dt{justify-self:stretch}.hotkeys dd{text-align:left}
+
+#arena .duel-block{position:absolute}
+#arena .duel-block[data-hotkey]:after{top:6px;right:6px;font-size:9px;padding:1px 4px}
