@@ -91,6 +91,10 @@ export function pixelOfficeLevelTitles(stored: unknown): Record<string, string[]
 export interface PixelHours { enabled: boolean; dayStart: number; lunchStart: number; lunchEnd: number; workEnd: number; overtimeStart: number }
 /** 加班（及加班遮罩）固定是 19:00 到隔天 06:00（使用者 2026-10-20 指定），不隨「上班開始」設定移動。 */
 export const PIXEL_OVERTIME_END_HOUR = 6;
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
 export const PIXEL_HOURS_DEFAULT: PixelHours = { enabled: true, dayStart: 9, lunchStart: 12, lunchEnd: 14, workEnd: 19, overtimeStart: 19 };
 let pixelHours: PixelHours = { ...PIXEL_HOURS_DEFAULT };
 /** 「全員上班」之後到台北時間當天結束為止，時間規則（假日、下班、沒心跳自動下班）暫時不套用，不然按完馬上又被改回下班。 */
@@ -2743,13 +2747,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
     const now = Date.now();
     const png = text(payload.png);
     const sql = this.ctx.storage.sql;
+    const hashKey = `snapHash:${name}:${lookKey}`;
     if (png) {
       const match = png.match(/^data:image\/png;base64,([A-Za-z0-9+/=]+)$/);
       if (!match || match[1].length > 150_000) throw new Error('頭像圖片不正確或太大');
+      await this.ctx.storage.put(hashKey, await sha256Hex(match[1]));   // 記下存進去的圖的指紋，管理者之後可以比對「同一個造型代碼、圖卻不一樣」的舊快照
       sql.exec('INSERT INTO pixel_office_avatars (name, look_key, png, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(name, look_key) DO UPDATE SET png = excluded.png, updated_at = excluded.updated_at', name, lookKey, match[1], now);
       // 每個人最多留 16 個造型的快照，超過的丟掉最久沒用的
       sql.exec('DELETE FROM pixel_office_avatars WHERE name = ? AND look_key NOT IN (SELECT look_key FROM pixel_office_avatars WHERE name = ? ORDER BY updated_at DESC LIMIT 16)', name, name);
     } else if (!sql.exec('SELECT 1 FROM pixel_office_avatars WHERE name = ? AND look_key = ?', name, lookKey).toArray().length) {
+      return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
+    } else if (target && /^[0-9a-f]{64}$/.test(text(payload.hash)) && (await this.ctx.storage.get<string>(hashKey)) !== text(payload.hash)) {
+      // 管理者幫別人更新：造型代碼相同、但存著的圖跟管理者畫面上算出來的不一樣（例如以前在造型圖沒載完時存到舊衣服）→ 要求補傳圖片覆蓋
       return { ok: true, action: 'pixelOfficeAvatarSnapshot', need: true };
     } else {
       sql.exec('UPDATE pixel_office_avatars SET updated_at = ? WHERE name = ? AND look_key = ?', now, name, lookKey);

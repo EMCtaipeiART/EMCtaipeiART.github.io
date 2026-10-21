@@ -554,7 +554,7 @@
     async function uploadAvatarSnapshot(p){
       try{
         const token=session().token,post=body=>fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body),cache:'no-store'}).then(r=>r.json());
-        const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};if(p.target)base.target=p.target;
+        const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};if(p.target){base.target=p.target;try{const raw=String(p.png||'').replace(/^data:image\/png;base64,/,''),buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));base.hash=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch(err){}}
         const r=await post(base);if(!r||!r.ok)return;
         if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return}
         if(!p.target){try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}}
