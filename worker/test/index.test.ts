@@ -5290,6 +5290,16 @@ describe('平台幣', () => {
     expect(await api({ action: 'pixelOfficeUpdate', name: '座位18', patch: { message: '沒座位' } })).toMatchObject({ ok: false });
   });
 
+  it('lets the monitor refresh someone else\'s avatar snapshot (target), but nobody else', async () => {
+    const admin = await login();
+    const leona = await seedDesigner('leona@emctaipei.test', 'Leona');
+    const png = 'data:image/png;base64,iVBORw0KGgo=';
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1', png }, admin)).toMatchObject({ ok: true, saved: true });
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-1' }, admin)).toMatchObject({ ok: true, unchanged: true });   // 已經是這個造型：什麼都不做
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: 'Anna', lookKey: 'k-anna-2', png }, leona)).toMatchObject({ ok: false });   // 一般人不能代別人更新
+    expect(await api({ action: 'pixelOfficeAvatarSnapshot', target: '路人甲', lookKey: 'k-x', png }, admin)).toMatchObject({ ok: false });   // 不認識的名字
+  });
+
   it('lets the monitor (admin or Machi) punish someone: stuck at the seat, no moving or changing clothes, with a reason and a day count', async () => {
     const admin = await login();
     const leona = await seedDesigner('leona@emctaipei.test', 'Leona');

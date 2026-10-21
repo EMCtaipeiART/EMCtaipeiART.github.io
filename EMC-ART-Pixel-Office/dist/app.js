@@ -1928,6 +1928,18 @@ window.addEventListener('message',event=>{
   }catch{done({});}
 });
 
+/* 管理者與 Machi 進元宇宙時：外層請遊戲把「每個人目前造型」的頭像都算一份回報，外層逐一問後端，快照不一致的就更新（吳冠賢快照停在舊衣服的問題）。 */
+window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent||!event.data||event.data.type!=='pixelOfficeSnapshotAll')return;
+  const reply=list=>{try{window.parent.postMessage({type:'pixelOfficeSnapshotAllDone',list},location.origin)}catch{}};
+  try{
+    if(!ready||!accessoriesReady()||!customState().loaded){loadAccessories();reply(null);return;}
+    const list=[];
+    people.forEach((p,i)=>{if(i<5||(p.staff&&staffLookReady(i)))list.push({who:p.name,lookKey:lookKeyOf(i),png:avatarImageOf(i)});});
+    reply(list);
+  }catch{reply(null);}
+});
+
 // 人物四周的圓形選單（多元宇宙編輯頁）：點人物 → 一圈圖示（狀態、造型、動作、音樂、限時動態、對話）；
 // 點圖示 → 第一圈收起，面板標題列提供返回。右側只剩人物資料、等級與等級一覽表。
 (()=>{

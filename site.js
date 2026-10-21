@@ -531,9 +531,21 @@
     function watchUniLoading(){
       const fr=$('uniFrame'),ov=$('uniLoading');if(!fr||!ov)return;
       const t0=Date.now();let done=false;
-      const finish=()=>{if(done)return;done=true;clearInterval(iv);ov.classList.add('is-done');setTimeout(()=>ov.remove(),500)};
+      const finish=()=>{if(done)return;done=true;clearInterval(iv);ov.classList.add('is-done');setTimeout(()=>ov.remove(),500);setTimeout(()=>{try{snapshotEveryone(0)}catch(err){}},3500)};
       const ready=()=>{try{const d=fr.contentDocument,l=d&&d.getElementById('loading');return Boolean(d&&d.readyState==='complete'&&l&&l.hidden)}catch(err){return false}};
       const iv=setInterval(()=>{if(state.view!=='universe'||!document.body.contains(ov)){done=true;clearInterval(iv);return}const age=Date.now()-t0;if((ready()&&age>700)||age>10000)setTimeout(finish,250)},150);
+    }
+    /* 管理者與 Machi 進元宇宙（編輯）時，順便把「快照與目前造型不一致」的人更新（請遊戲算每個人的頭像，再逐一問後端） */
+    let snapAllBusy=false;
+    function snapshotEveryone(tries){
+      const fr=$('uniFrame');if(!fr||snapAllBusy||!state.uniEdit||!loggedIn()||!(isAdminUser()||isMachiUser()))return;
+      snapAllBusy=true;let fin=false;
+      const done=list=>{if(fin)return;fin=true;snapAllBusy=false;window.removeEventListener('message',onMsg);clearTimeout(t);
+        if(!list){if((tries||0)<4)setTimeout(()=>snapshotEveryone((tries||0)+1),4000);return}
+        (async()=>{for(const item of list){if(!item||!item.who||!item.lookKey)continue;try{await uploadAvatarSnapshot({who:item.who,lookKey:item.lookKey,png:item.png,target:item.who})}catch(err){}}})();};
+      const onMsg=e=>{if(e.origin===location.origin&&e.data&&e.data.type==='pixelOfficeSnapshotAllDone'&&e.source===fr.contentWindow)done(e.data.list||null)};
+      const t=setTimeout(()=>done(null),6000);window.addEventListener('message',onMsg);
+      try{fr.contentWindow.postMessage({type:'pixelOfficeSnapshotAll'},location.origin)}catch(err){done(null)}
     }
     function openPendingStory(){const n=state.pendingStory;state.pendingStory='';const fr=$('uniFrame');if(!n||!fr)return;fr.addEventListener('load',()=>setTimeout(()=>{try{fr.contentWindow.postMessage({type:'pixelOfficeOpenStory',name:n},location.origin)}catch(err){}},1800),{once:true})}
     /* 元宇宙編輯頁播放限時動態時，把遊戲框放大成整個視窗（滿版），看完還原 */
@@ -542,10 +554,10 @@
     async function uploadAvatarSnapshot(p){
       try{
         const token=session().token,post=body=>fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify(body),cache:'no-store'}).then(r=>r.json());
-        const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};
+        const base={action:'pixelOfficeAvatarSnapshot',token,lookKey:p.lookKey};if(p.target)base.target=p.target;
         const r=await post(base);if(!r||!r.ok)return;
         if(r.need){const r2=await post({...base,png:p.png});if(!r2||!r2.ok)return}
-        try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}
+        if(!p.target){try{localStorage.setItem('pixelSnap:'+p.who,p.lookKey)}catch(err){}}
         if(typeof refreshAvatarSnapshots==='function')refreshAvatarSnapshots()
       }catch(err){}
     }

@@ -2725,8 +2725,18 @@ export class DatabaseCoordinator extends DurableObject<Env> {
   private async pixelOfficeAvatarSnapshot(payload: ApiPayload): Promise<ApiResult> {
     const session = await this.sessionFor(payload);
     const viewer = text(session?.user || session?.account?.split('@')[0]);
-    const name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase())
+    let name = PIXEL_OFFICE_NAMES.find(item => item.toLowerCase() === viewer.toLowerCase())
       || this.pixelOfficeStaff().find(item => item.account && item.account === text(session?.account))?.name;
+    // 管理者與 Machi 進元宇宙時，順便幫「快照與目前造型不一致」的人更新（帶 target＝對方名字）
+    const target = text(payload.target);
+    if (target) {
+      const current = this.requireSession(session);
+      const { database } = await this.snapshot();
+      const isMonitor = hasCapability(database, current, 'database.manage') || this.coinDesignerName(database, current) === 'Machi';
+      if (!isMonitor) throw new Error('只有管理者與 Machi 可以更新別人的頭像快照');
+      if (!this.pixelOfficeKnownName(target)) throw new Error('找不到這位同仁');
+      name = target;
+    }
     if (!name) throw new Error('只有設計師或已入座的同仁本人可以更新自己的頭像快照');
     const lookKey = text(payload.lookKey);
     if (!/^[\w:|.-]{1,140}$/.test(lookKey)) throw new Error('造型代碼不正確');
