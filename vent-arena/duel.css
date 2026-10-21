@@ -58,3 +58,12 @@ body.duel-open{overflow:hidden}
 .duel-log:hover{background:#fff}
 .duel-card{padding-bottom:36px}
 .duel-log-inline{display:block;margin:8px auto 0;padding:4px 12px;border-radius:99px;border:1px solid #9aa;background:none;font-size:11px;color:#789}
+
+/* 熱鍵說明欄 */
+.hotkeys{margin-top:12px;font-size:12px}
+.hotkeys summary{cursor:pointer;font-weight:800;padding:8px 2px}
+.hotkeys h3{margin:8px 0 4px;font-size:11px;letter-spacing:1px;color:#789}
+.hotkeys dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0 0 6px;align-items:baseline}
+.hotkeys dt{justify-self:start;min-width:34px;text-align:center;padding:1px 6px;border:1px solid #9ab;border-bottom-width:2px;border-radius:5px;background:#fff8;font:700 11px ui-monospace,Menlo,monospace}
+.hotkeys dd{margin:0;line-height:1.4}
+.hotkeys{text-align:left}.hotkeys dl{grid-template-columns:76px 1fr}.hotkeys dt{justify-self:stretch}.hotkeys dd{text-align:left}
