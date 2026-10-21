@@ -658,3 +658,7 @@
 - 原因：使用者連線日誌顯示「已連上配對伺服器、但 WebRTC 直連 15 秒失敗」（公司／NAT 網路擋 P2P，公用 TURN 不可靠）。
 - 改法：新增 Durable Object `DuelRoom`（worker/src/duel-room.ts，migration v2，路由 `/duel`），雙方都連到 Worker、由房間轉送；關閉碼 4404 找不到戰場、4409 已滿／序號重複。前台 vent-arena/duel.js 移除 PeerJS，改 WebSocket，含斷線重連（房主）、重試（對手）、心跳。
 - 驗證：worker vitest 172/172（含 test/duel-room.test.ts）、tsc 通過；已部署；本機（允許的來源 127.0.0.1:8787）兩分頁走真實 Worker 完成配對、出招同步、錯誤序號提示、對方離開偵測。
+
+## 2026-10-21 出氣擂台 Safari 一直顯示舊版（快取）
+- 原因：GitHub Pages 對所有檔案回 `cache-control: max-age=600`，Safari 對 iframe 內頁與子資源（css／js）的快取較積極，且 vent-arena 的檔案版本字串是手動維護、容易忘記改。
+- 修正：①`tools/stamp.cjs` 新增 vent-arena/index.html 的 css／js 內容雜湊版本（執行 `node tools/stamp.cjs` 會自動更新，不必再手動改版本字串）；②site.js 內嵌出氣擂台的網址 `&t=` 改為每次開啟用 `Date.now()`，內頁 HTML 每次都重新抓。
