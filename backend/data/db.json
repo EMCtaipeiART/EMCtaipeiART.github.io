@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "revision": 9063,
+  "revision": 9064,
   "createdAt": "2026-08-07T07:39:26.514Z",
-  "updatedAt": "2026-10-21T06:19:05.532Z",
+  "updatedAt": "2026-10-21T06:19:51.006Z",
   "source": {
     "type": "github-json-primary",
     "spreadsheetId": "1cHxWBed715H0XufNhMOOk3hcZPTSpq5rA64-b5m8vWY",
@@ -1258,7 +1258,7 @@
         {"案件編號":"26100108","修改次數":"1","建立日期":"2026/10/21 12:23:19","修改日期":"2026-10-20","修改內容":"22g 蛋白質與贈品修改","修改內容連結":"","修改人":"Anna","確認修正日":"","待修改圖片":""},
         {"案件編號":"26100108","修改次數":"2","建立日期":"2026/10/21 12:30:27","修改日期":"2026-10-21","修改內容":"22g蛋白質放大與贈品放大修改","修改內容連結":"","修改人":"Anna","確認修正日":"","待修改圖片":""},
         {"案件編號":"26100145","修改次數":"0","建立日期":"2026/10/21 12:44:08","修改日期":"2026/10/21 12:44:08","修改內容":"初稿完成（NAS 自動建立）","修改人":"NAS 自動同步","確認修正日":"2026/10/21 12:44:08","圖片連結":"[{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框A_Abee_洗地機三點.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/13IvIzfJ-B1JLd2edqnZ-OqLylJ4MMwZe=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框A_Mandy_洗地機三點.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1ayxXTjnJc1ZWbHBH45-49kQtg0ZTxVVV=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框A_柒柒_保固更安心.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/15L_Xj1xZVtwGC0fWYCd55dIU02IG667b=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框A_鳳鳳_新舊比較.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1db5rGiITGT79Z2qF53nYuu_GPOec2d01=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框B_Abee_入門價格.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1-k3-AP9RiBL7pS336Qpk8bfBVz_YDsFX=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框B_Mandy_入門最強.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1sdQbJMak8eHWwVpzi8DXlgVfpV1oHzIk=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框B_Naomi2_烘乾篇.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/17-H5TAiWY7ErtWQOtOHCX1EILrMyTJ0V=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框B_鳳鳳_早點買.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1CgPSdTzWisAwVDFi5nkrNDm7f1BUkVUy=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框C_Naomi1_小孩清潔篇.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1sOUvJnP151BzfzibT5TDHhcGAdhckcKg=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框C_柒柒_小孩.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1POZv_9_BBzZ47mC4A6tn8__nwpv9rw-Q=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框C_肉媽_寵物.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1d_EaP1NO9-QrI3yaRu-Mvs-tNizLKSZW=w1600\"},{\"fileName\":\"261021_添可_十一月_CPAS_i6_包框C_肉媽_小孩.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1pwrpZkdCuVtZyc0V4RF2TaNRsTmUMlXR=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/21 12:44:08"},
-        {"案件編號":"26100052","修改次數":"1","建立日期":"2026/10/21 14:19:05","修改日期":"2026-10-21","修改內容":"Liberty 5 的3張素材價格需要做調整\n\n電商A\n-標題：現省$800 改為 現省$1,000\n-售價：$2,690 改為 $2,490\n\n電商B\n-標題：現省$1,000 改為 現省$1,300\n-售價：$2,490 改為 $2,190\n\n影片\n-標題：現省$800 改為 現省$1,000\n-售價：$2,690 改為 $2,490\n\n以上請協助在明天(10/22) 12:00前提供，再麻煩了，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":""}
+        {"案件編號":"26100052","修改次數":"1","建立日期":"2026/10/21 14:19:05","修改日期":"2026-10-21","修改內容":"Liberty 5 的3張素材價格需要做調整\n\n電商A\n-標題：現省$800 改為 現省$1,000\n-售價：$2,690 改為 $2,490\n\n電商B\n-標題：現省$1,000 改為 現省$1,300\n-售價：$2,490 改為 $2,190\n\n影片\n-標題：現省$800 改為 現省$1,000\n-售價：$2,690 改為 $2,490\n\n以上請協助在明天(10/22) 12:00前提供，再麻煩了，謝謝","修改內容連結":"","修改人":"廖秦葦","確認修正日":"","待修改圖片":"","圖片連結":"[{\"fileName\":\"261019_Shopee商城日_CPAS_Liberty 5_包框影片.mp4\",\"url\":\"https://lh3.googleusercontent.com/d/1h79lzouTm-FGhSyZbseVT_gRJXPw1VOY=w1600\"}]","圖片來源":"nas-watcher","圖片更新時間":"2026/10/21 14:19:51"}
       ]
     },
     "補充資料連結": {
